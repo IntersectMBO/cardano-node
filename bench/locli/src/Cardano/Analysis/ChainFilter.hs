@@ -34,12 +34,13 @@ data ChainFilter
 
 -- | Block classification -- primary for validity as subjects of analysis.
 data BlockCond
-  = BUnitaryChainDelta        -- ^ All timings account for
-                              --    processing of a single block.
-  | BFullnessGEq       Double -- ^ Block fullness is above fraction.
-  | BFullnessLEq       Double -- ^ Block fullness is below fraction.
-  | BSizeGEq           Word64
-  | BSizeLEq           Word64
+  = BUnitaryChainDelta            -- ^ All timings account for
+                                  --    processing of a single block.
+  | BFullnessGEq           Double -- ^ Block fullness is above fraction.
+  | BFullnessLEq           Double -- ^ Block fullness is below fraction.
+  | BSizeGEq               Word64
+  | BSizeLEq               Word64
+  | BMinimumAdoptions      Word64 -- ^ At least this many adoptions
   deriving (FromJSON, Generic, NFData, Show, ToJSON)
 
 data SlotCond
@@ -79,6 +80,17 @@ argChainFilterset optname desc =
       $ long optname
       <> metavar "FILTERSET-FILE"
       <> help desc
+
+argChainFilterExpr :: Parser ChainFilter
+argChainFilterExpr =
+  fmap (\arg ->
+          either (error . mconcat . (["Error while parsing JSON filter expression __", arg, "__: "] <>) . (:[])) identity
+        . eitherDecode @ChainFilter
+        $ LBS.pack arg) $
+    Opt.option Opt.str
+      $ long "filter-expr"
+      <> metavar "JSON"
+      <> help "A directly specified filter JSON expression"
 
 readFilters :: [JsonFilterFile] -> ExceptT Text IO ([ChainFilter], [FilterName])
 readFilters fltfs = do

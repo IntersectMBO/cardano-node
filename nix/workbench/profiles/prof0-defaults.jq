@@ -77,20 +77,7 @@ def era_defaults($era):
     , tracing_backend:                "trace-dispatcher"  ## or "iohk-monitoring"
     , tracer:                         true
     , verbatim:
-      { EnableP2P:                       false
-
-      , MempoolCapacityBytesOverride:    "NoOverride"
-      , ProtocolIdleTimeout:             5
-      , TimeWaitTimeout:                 60
-      , AcceptedConnectionsLimit:
-        { hardLimit:                     512
-        , softLimit:                     384
-        , delay:                         5
-        }
-      , TargetNumberOfRootPeers:         100
-      , TargetNumberOfKnownPeers:        100
-      , TargetNumberOfEstablishedPeers:  50
-      , TargetNumberOfActivePeers:       20
+      {
       }
     }
 
@@ -102,7 +89,7 @@ def era_defaults($era):
     , silence_since_last_block_s:     120
     , tx_loss_ratio:                  0.02
     , finish_patience:                21
-    , filters:                        ["base", "size-full"]
+    , filters:                        ["unitary"]
     }
   }
 

@@ -19,13 +19,12 @@ module Data.CDF
   , briefCentiles
   , stdCentiles
   , nEquicentiles
+  , Divisible (..)
+  , weightedAverage
   , CDFError (..)
   , CDF(..)
-  , CDFIx (..)
-  , KnownCDF (..)
-  , liftCDFVal
-  , unliftCDFVal
-  , unliftCDFValExtra
+  , cdf
+  , cdfAverageVal
   , centilesCDF
   , filterCDF
   , subsetCDF
@@ -33,11 +32,14 @@ module Data.CDF
   , projectCDF
   , projectCDF'
   , indexCDF
-  , DirectCDF
-  , cdf
-  , mapToCDF
-  , cdfCentilesCDF
-  , Divisible (..)
+  , CDFIx (..)
+  , KnownCDF (..)
+  , liftCDFVal
+  , unliftCDFVal
+  , unliftCDFValExtra
+  , cdfArity
+  , cdfArity'
+  , mapCDFCentiles
   , Combine (..)
   , stdCombine1
   , stdCombine2
@@ -48,18 +50,16 @@ module Data.CDF
   , module Data.SOP.Strict
   ) where
 
-import Prelude (String, (!!), error, head, show)
+import Prelude ((!!), head, show)
 import Cardano.Prelude hiding (head, show)
 
-import Control.Arrow ((&&&))
 import Data.Aeson (FromJSON(..), ToJSON(..))
 import Data.SOP.Strict
 import Data.Time.Clock (NominalDiffTime)
 import Data.Vector qualified as Vec
 import Statistics.Sample qualified as Stat
-import Text.Printf (printf)
 
-import Ouroboros.Consensus.Util.Time (secondsToNominalDiffTime)
+import Cardano.Util
 
 
 -- | Centile specifier: a fractional in range of [0; 1].
@@ -114,21 +114,121 @@ vecCentile :: Vec.Vector a -> Int -> Centile -> a
 vecCentile vec n (Centile c) = vec Vec.! runCentile n c
 
 --
+-- | Avoiding `Fractional`
+--
+class Real a => Divisible a where
+  divide     :: a -> Double -> a
+  fromDouble :: Double -> a
+
+instance Divisible Double where
+  divide = (/)
+  fromDouble = identity
+
+instance Divisible Int where
+  divide x by = round $ fromIntegral x / by
+  fromDouble = ceiling
+
+instance Divisible Integer where
+  divide x by = round $ fromIntegral x / by
+  fromDouble = ceiling
+
+instance Divisible Word32 where
+  divide x by = round $ fromIntegral x / by
+  fromDouble = ceiling
+
+instance Divisible Word64 where
+  divide x by = round $ fromIntegral x / by
+  fromDouble = ceiling
+
+instance Divisible NominalDiffTime where
+  divide x by = x / secondsToNominalDiffTime by
+  fromDouble = secondsToNominalDiffTime
+
+weightedAverage :: forall b. (Divisible b) => [(Int, b)] -> b
+weightedAverage xs =
+  (`divide` (fromIntegral . sum $ fst <$> xs)) . sum $
+  xs <&> \(size, avg) -> fromIntegral size * avg
+
+--
 -- * Parametric CDF (cumulative distribution function)
 --
 data CDF p a =
   CDF
   { cdfSize      :: Int
-  , cdfAverage   :: Double
+  , cdfAverage   :: p a
   , cdfStddev    :: Double
   , cdfRange     :: (a, a)
-  , cdfSamples  :: [(Centile, p a)]
+  , cdfSamples   :: [(Centile, p a)]
   }
   deriving (Eq, Functor, Generic, Show)
   deriving anyclass NFData
 
 instance (FromJSON (p a), FromJSON a) => FromJSON (CDF p a)
 instance (  ToJSON (p a),   ToJSON a) => ToJSON   (CDF p a)
+
+cdfAverageVal :: (KnownCDF p, Divisible a) => CDF p a -> Double
+cdfAverageVal =
+  cdfArity
+    (toDouble . unI . cdfAverage)
+    \x ->
+      let sizes = cdfSize . snd <$> cdfSamples x
+      in
+        weightedAverage (zip sizes $ fmap (toDouble . unI . snd) . cdfSamples $ cdfAverage x)
+
+centilesCDF :: CDF p a -> [Centile]
+centilesCDF = fmap fst . cdfSamples
+
+filterCDF :: ((Centile, p a) -> Bool) -> CDF p a -> CDF p a
+filterCDF f d =
+  d { cdfSamples = cdfSamples d & filter f }
+
+subsetCDF :: [Centile] ->  CDF p b -> CDF p b
+subsetCDF = filterCDF . \cs c -> elem (fst c) cs
+
+indexCDF :: Int -> CDF p a -> p a
+indexCDF i d = snd $ cdfSamples d !! i
+
+projectCDF :: Centile -> CDF p a -> Maybe (p a)
+projectCDF p = fmap snd . find ((== p) . fst) . cdfSamples
+
+projectCDF' :: String -> Centile -> CDF p a -> p a
+projectCDF' desc p x =
+  maybe (error er) snd . find ((== p) . fst) $ cdfSamples x
+ where
+   er = printf "Missing centile %f in %s (samples %s)" (unCentile p) desc (show $ fst <$> cdfSamples x)
+
+zeroCDF :: (Real a, KnownCDF p) => CDF p a
+zeroCDF =
+  CDF
+  { cdfSize    = 0
+  , cdfAverage = liftCDFVal 0 cdfIx
+  , cdfStddev  = 0
+  , cdfRange   = (0, 0)
+  , cdfSamples = mempty
+  }
+
+-- | Simple, monomorphic, first-order CDF.
+cdf :: forall a. Divisible a => [Centile] -> [a] -> CDF I a
+cdf centiles (sort -> sorted) =
+  CDF
+  { cdfSize        = size
+  , cdfAverage     = I . fromDouble $ Stat.mean doubleVec
+  , cdfStddev      = Stat.stdDev doubleVec
+  , cdfRange       = (mini, maxi)
+  , cdfSamples =
+    centiles <&>
+      \spec ->
+        let sample = if size == 0 then 0
+                     else vecCentile vec size spec
+        in (,) spec (I sample)
+  }
+ where vec         = Vec.fromList sorted
+       size        = length vec
+       doubleVec   = fromRational . toRational <$> vec
+       (,) mini maxi =
+         if size == 0
+         then (0,           0)
+         else (vec Vec.! 0, Vec.last vec)
 
 -- * Singletons
 --
@@ -142,49 +242,16 @@ class KnownCDF a where
 instance KnownCDF      I  where cdfIx = CDFI
 instance KnownCDF (CDF I) where cdfIx = CDF2
 
-centilesCDF :: CDF p a -> [Centile]
-centilesCDF = fmap fst . cdfSamples
-
-zeroCDF :: (Num a) => CDF p a
-zeroCDF =
-  CDF
-  { cdfSize    = 0
-  , cdfAverage = 0
-  , cdfStddev  = 0
-  , cdfRange   = (0, 0)
-  , cdfSamples = mempty
-  }
-
-filterCDF :: ((Centile, p a) -> Bool) -> CDF p a -> CDF p a
-filterCDF f d =
-  d { cdfSamples = cdfSamples d & filter f }
-
-subsetCDF :: [Centile] ->  CDF p b -> CDF p b
-subsetCDF = filterCDF . \cs c -> elem (fst c) cs
-
-indexCDF :: Int -> CDF p a -> p a
-indexCDF i d = snd $ cdfSamples d !! i
+type family CDFProj a where
+  CDFProj (CDF I a) = I a
+  CDFProj (CDF (CDF I) a) = CDF I a
 -- indexCDF i d = snd $ cdfSamples (trace (printf "i=%d of %d" i (length $ cdfSamples d) :: String) d) !! i
 
-projectCDF :: Centile -> CDF p a -> Maybe (p a)
-projectCDF p = fmap snd . find ((== p) . fst) . cdfSamples
-
-projectCDF' :: String -> Centile -> CDF p a -> p a
-projectCDF' desc p x =
-  maybe (error er) snd . find ((== p) . fst) $ cdfSamples x
- where
-   er = printf "Missing centile %f in %s (samples %s)" (unCentile p) desc (show $ fst <$> cdfSamples x)
-
---
--- * Trivial instantiation: samples are value points
---
-type DirectCDF a = CDF I a
-
-liftCDFVal :: Real a => a -> CDFIx p -> p a
+liftCDFVal :: forall a p. a -> CDFIx p -> p a
 liftCDFVal x = \case
   CDFI -> I x
   CDF2 -> CDF { cdfSize    = 1
-              , cdfAverage = fromRational (toRational x)
+              , cdfAverage = I x
               , cdfStddev  = 0
               , cdfRange   = (x, x)
               , cdfSamples = []
@@ -192,7 +259,7 @@ liftCDFVal x = \case
 
 unliftCDFVal :: forall a p. Divisible a => CDFIx p -> p a -> a
 unliftCDFVal CDFI (I x) = x
-unliftCDFVal CDF2 CDF{cdfAverage} = (1 :: a) `divide` (1 / cdfAverage)
+unliftCDFVal CDF2 CDF{cdfAverage=I cdfAverage} = (1 :: a) `divide` (1 / toDouble cdfAverage)
 
 unliftCDFValExtra :: forall a p. Divisible a => CDFIx p -> p a -> [a]
 unliftCDFValExtra CDFI (I x) = [x]
@@ -205,39 +272,20 @@ unliftCDFValExtra i@CDF2 c@CDF{cdfRange=(mi, ma), ..} = [ mean
  where mean   = unliftCDFVal i c
        stddev = (1 :: a) `divide` (1 / cdfStddev)
 
-cdf :: (Real a, KnownCDF p) => [Centile] -> [a] -> CDF p a
-cdf centiles (sort -> sorted) =
-  CDF
-  { cdfSize        = size
-  , cdfAverage     = Stat.mean   doubleVec
-  , cdfStddev      = Stat.stdDev doubleVec
-  , cdfRange       = (mini, maxi)
-  , cdfSamples =
-    centiles <&>
-      \spec ->
-        let sample = if size == 0 then 0
-                     else vecCentile vec size spec
-        in (,) spec (liftCDFVal sample ix)
-  }
- where ix          = cdfIx
-       vec         = Vec.fromList sorted
-       size        = length vec
-       doubleVec   = fromRational . toRational <$> vec
-       (,) mini maxi =
-         if size == 0
-         then (0,           0)
-         else (vec Vec.! 0, Vec.last vec)
+cdfArity :: forall p a b. KnownCDF p => (CDF I a -> b) -> (CDF (CDF I) a -> b) -> CDF p a -> b
+cdfArity fi fcdf x =
+  case cdfIx @p of
+    CDFI -> fi   x
+    CDF2 -> fcdf x
 
-mapToCDF :: (KnownCDF p, Real a) => (b -> a) -> [Centile] -> [b] -> CDF p a
-mapToCDF f pspecs xs = cdf pspecs (f <$> xs)
+cdfArity' :: forall p a. KnownCDF p => (CDF I a -> I a) -> (CDF (CDF I) a -> CDF I a) -> CDF p a -> p a
+cdfArity' fi fcdf x =
+  case cdfIx @p of
+    CDFI -> fi   x
+    CDF2 -> fcdf x
 
-cdfCentilesCDF :: forall p a. KnownCDF p => CDF p a -> CDF p Double
-cdfCentilesCDF c =
-  (mapToCDF unCentile cs cs :: CDF p Double)
-  { cdfSamples = (identity &&& flip liftCDFVal cdfIx . unCentile) <$> cs }
- where
-   cs :: [Centile]
-   cs = centilesCDF c
+mapCDFCentiles :: (Centile -> p a -> b) -> CDF p a -> [b]
+mapCDFCentiles f CDF{..} = fmap (uncurry f) cdfSamples
 
 type CDF2 a = CDF (CDF I) a
 
@@ -246,28 +294,6 @@ data CDFError
   | CDFIncoherentSamplingCentiles [[Centile]]
   | CDFEmptyDataset
   deriving Show
-
--- | Avoiding `Fractional`
-class Real a => Divisible a where
-  divide   :: a -> Double -> a
-
-instance Divisible Double where
-  divide = (/)
-
-instance Divisible Int where
-  divide x by = round $ fromIntegral x / by
-
-instance Divisible Integer where
-  divide x by = round $ fromIntegral x / by
-
-instance Divisible Word32 where
-  divide x by = round $ fromIntegral x / by
-
-instance Divisible Word64 where
-  divide x by = round $ fromIntegral x / by
-
-instance Divisible NominalDiffTime where
-  divide x by = x / secondsToNominalDiffTime by
 
 -- * Combining population stats
 data Combine p a
@@ -289,9 +315,6 @@ stdCombine1 cs =
   , cCDF              = Right . cdf cs . fmap unI
   }
   where
-    weightedAverage :: forall b. (Divisible b) => [(Int, b)] -> b
-    weightedAverage xs = (`divide` (fromIntegral . sum $ fst <$> xs)) . sum $
-                          xs <&> \(size, avg) -> fromIntegral size * avg
     outerRange      xs = (,) (minimum $ fst <$> xs)
                              (maximum $ snd <$> xs)
 
@@ -303,9 +326,9 @@ stdCombine2 cs =
   , ..
   }
 
--- | Collapse:  Given a ([Value] -> CDF I) function, and a list of (CDF I), produce a (CDF I).
---
-collapseCDFs :: forall a. Combine I a -> [CDF I a] -> Either CDFError (CDF I a)
+-- | Collapse basic CDFs.
+collapseCDFs :: forall a. Divisible a
+             => Combine I a -> [CDF I a] -> Either CDFError (CDF I a)
 collapseCDFs _ [] = Left CDFEmptyDataset
 collapseCDFs Combine{..} xs = do
   unless (all (head lengths ==) lengths) $
@@ -314,7 +337,7 @@ collapseCDFs Combine{..} xs = do
     Left $ CDFIncoherentSamplingCentiles (fmap fst <$> incoherent)
   pure CDF
     { cdfSize    = sum sizes
-    , cdfAverage = xs <&> cdfAverage & cWeightedAverages . zip sizes
+    , cdfAverage = I . fromDouble . cWeightedAverages $ zip sizes avgs
     , cdfRange   = xs <&> cdfRange   & cRanges
     , cdfStddev  = xs <&> cdfStddev  & cStddevs
     , cdfSamples = coherent <&>
@@ -322,8 +345,9 @@ collapseCDFs Combine{..} xs = do
     }
  where
    sizes   = xs <&> cdfSize
+   avgs    = xs <&> toDouble . unI . cdfAverage
    samples = xs <&> cdfSamples
-   lengths = length <$> samples
+   lengths = samples <&> length
 
    centileOrdered :: [[(Centile, I a)]] -- Each sublist must (checked) have the same Centile.
    centileOrdered = transpose samples
@@ -339,7 +363,8 @@ collapseCDFs Combine{..} xs = do
 -- | Polymorphic, but practically speaking, intended for either:
 --    1. given a ([I]     -> CDF I) function, and a list of (CDF I),       produce a CDF (CDF I), or
 --    2. given a ([CDF I] -> CDF I) function, and a list of (CDF (CDF I)), produce a CDF (CDF I)
-cdf2OfCDFs :: forall a p. Combine p a -> [CDF p a] -> Either CDFError (CDF (CDF I) a)
+cdf2OfCDFs :: forall a p. (Divisible a, KnownCDF p)
+           => Combine p a -> [CDF p a] -> Either CDFError (CDF (CDF I) a)
 cdf2OfCDFs _ [] = Left CDFEmptyDataset
 cdf2OfCDFs Combine{..} xs = do
   unless (all (head lengths ==) lengths) $
@@ -349,17 +374,22 @@ cdf2OfCDFs Combine{..} xs = do
 
   cdfSamples <- mapM sequence -- ..to  Either CDFError [(Centile, CDF I a)]
                   (coherent <&> fmap cCDF :: [(Centile, Either CDFError (CDF I a))])
+
   pure CDF
     { cdfSize    = sum sizes
-    , cdfAverage = xs <&> cdfAverage & cWeightedAverages . zip sizes
     , cdfRange   = xs <&> cdfRange   & cRanges
     , cdfStddev  = xs <&> cdfStddev  & cStddevs
-    , cdfSamples = cdfSamples
+    , cdfAverage = cdf (nEquicentiles nCDFs) averages -- XXX: unweighted
+    , ..
     }
  where
-   sizes   = xs <&> cdfSize
-   samples = xs <&> cdfSamples
-   lengths = length <$> samples
+   nCDFs    = length xs
+   averages :: [a]
+   averages = xs <&> unI . cdfAverage . cdfArity identity cdfAverage
+
+   sizes    = xs <&> cdfSize
+   samples  = xs <&> cdfSamples
+   lengths  = length <$> samples
 
    centileOrdered :: [[(Centile, p a)]]
    centileOrdered = transpose samples

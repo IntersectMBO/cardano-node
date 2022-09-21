@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-partial-fields #-}
 {-# LANGUAGE StrictData #-}
-module Cardano.Unlog.Org (module Cardano.Unlog.Org) where
+module Cardano.Org (module Cardano.Org) where
 
 import Cardano.Prelude
 import Data.Text                qualified as T

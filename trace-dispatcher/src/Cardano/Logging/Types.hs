@@ -369,7 +369,7 @@ emptyTraceConfig = TraceConfig {
   , tcForwarder = defaultForwarder
   , tcNodeName = Nothing
   , tcPeerFrequency = Just 2000 -- Every 2 seconds
-  , tcResourceFrequency = Just 1000 -- Every second
+  , tcResourceFrequency = Just 5000 -- Every five seconds
   }
 
 ---------------------------------------------------------------------------

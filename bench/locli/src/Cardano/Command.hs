@@ -23,8 +23,8 @@ import Cardano.Analysis.Context
 import Cardano.Analysis.Ground
 import Cardano.Analysis.MachPerf
 import Cardano.Analysis.Run
+import Cardano.Render
 import Cardano.Unlog.LogObject          hiding (Text)
-import Cardano.Unlog.Render
 import Cardano.Report
 import Data.CDF
 
@@ -80,31 +80,22 @@ parseChainCommand =
        (optJsonLogfile     "log"             "JSON log stream"))
    ]) <|>
 
-   subparser (mconcat [ commandGroup "Block propagation:  chain input"
-   , op "build-chain" "Rebuild chain"
-     (RebuildChain & pure)
+   subparser (mconcat [ commandGroup "Block propagation"
+   , op "rebuild-chain" "Rebuild chain"
+     (RebuildChain
+       <$> many
+       (argChainFilterset  "filter"          "JSON list of block/slot selection criteria")
+       <*> many argChainFilterExpr)
    , op "read-chain" "Read reconstructed chain"
      (ReadChain
        <$> optJsonInputFile  "chain"         "Block event stream (JSON)")
-   , op "dump-chain-raw" "Dump raw chain"
-     (DumpChainRaw
-       <$> optJsonOutputFile "chain"         "JSON unfiltered chain output file")
-   , op "timeline-chain-raw" "Render unfiltered chain timeline"
-     (TimelineChainRaw
-       <$> optTextOutputFile "timeline"      "Render a human-readable reconstructed unfiltered chain view")
-   ]) <|>
-
-   subparser (mconcat [ commandGroup "Block propagation:  chain filtering"
-   , op "filter-chain" "Filter chain"
-     (FilterChain
-       <$> many
-       (argChainFilterset  "filter"          "JSON list of block/slot selection criteria"))
-   , op "dump-chain" "Dump filtered chain"
+   , op "dump-chain" "Dump chain"
      (DumpChain
-       <$> optJsonOutputFile "chain"         "JSON filtered chain output file")
+       <$> optJsonOutputFile "chain"         "JSON chain output file")
    , op "timeline-chain" "Render chain timeline"
      (TimelineChain
-       <$> optTextOutputFile "timeline"      "Render a human-readable reconstructed chain view")
+       <$> optTextOutputFile "timeline"      "Render a human-readable reconstructed chain view"
+       <*> many parseRTCommentsBP)
    ]) <|>
 
    subparser (mconcat [ commandGroup "Machine performance analysis:  slot stats"
@@ -117,7 +108,8 @@ parseChainCommand =
    , op "filter-slots" "Filter per-slot performance stats"
      (FilterSlots
        <$> many
-       (argChainFilterset  "filter"          "JSON list of slot selection criteria"))
+       (argChainFilterset  "filter"          "JSON list of slot selection criteria")
+       <*> many argChainFilterExpr)
    , op "dump-slots" "Dump filtered slot stats stream, alongside input files"
      (DumpSlots & pure)
    , op "timeline-slots" "Render machine slot timelines, alongside input files"
@@ -138,7 +130,8 @@ parseChainCommand =
      (ComputeMultiPropagation & pure)
    , op "render-multi-propagation" "Write multi-run block propagation stats"
      (writerOpts RenderMultiPropagation "Render"
-      <*> parsePropSubset)
+      <*> parsePropSubset
+      <*> parseCDF2Aspect)
    ]) <|>
 
    subparser (mconcat [ commandGroup "Machine performance:  analysis"
@@ -163,7 +156,8 @@ parseChainCommand =
      (ComputeMultiClusterPerf & pure)
    , op "render-multi-clusterperf" "Write multi-run cluster performance results"
      (writerOpts RenderMultiClusterPerf "Render"
-      <*> parsePerfSubset)
+      <*> parsePerfSubset
+      <*> parseCDF2Aspect)
 
    , op "compare" "Generate a report comparing multiple runs"
      (Compare
@@ -190,8 +184,16 @@ parseChainCommand =
      <> Opt.help desc
      )
 
-parseRenderMode :: Parser RenderMode
-parseRenderMode =
+parseRTCommentsBP :: Parser (RTComments BlockEvents)
+parseRTCommentsBP =
+  [ Opt.flag' BEErrors     (Opt.long "chain-errors"   <> Opt.help "Show per-block anomalies")
+  , Opt.flag' BEFilterOuts (Opt.long "filter-reasons" <> Opt.help "Explain per-block filter-out reasons")
+  ] & \case
+        (x:xs) -> foldl (<|>) x xs
+        [] -> error "Crazy world."
+
+parseRenderFormat :: Parser RenderFormat
+parseRenderFormat =
   [ Opt.flag' AsJSON    (Opt.long "json"    <> Opt.help "Full JSON dump output file")
   , Opt.flag' AsGnuplot (Opt.long "gnuplot" <> Opt.help "%s-pattern for separate Gnuplot output files, per CDF")
   , Opt.flag' AsOrg     (Opt.long "org"     <> Opt.help "Org mode table output file")
@@ -201,11 +203,11 @@ parseRenderMode =
         (x:xs) -> foldl (<|>) x xs
         [] -> error "Crazy world."
 
-writerOpt :: (RenderMode -> TextOutputFile -> a) -> String -> RenderMode -> Parser a
+writerOpt :: (RenderFormat -> TextOutputFile -> a) -> String -> RenderFormat -> Parser a
 writerOpt ctor desc mode = ctor mode <$> optTextOutputFile opt (desc <> descSuf)
  where
    (,) opt descSuf = optDescSuf mode
-   optDescSuf :: RenderMode -> (String, String)
+   optDescSuf :: RenderFormat -> (String, String)
    optDescSuf = \case
      AsJSON    -> (,) "json"    " results as complete JSON dump"
      AsGnuplot -> (,) "gnuplot" " as individual Gnuplot files"
@@ -213,7 +215,7 @@ writerOpt ctor desc mode = ctor mode <$> optTextOutputFile opt (desc <> descSuf)
      AsReport  -> (,) "report"  " as Org-mode summary table"
      AsPretty  -> (,) "pretty"  " as text report"
 
-writerOpts :: (RenderMode -> TextOutputFile -> a) -> String -> Parser a
+writerOpts :: (RenderFormat -> TextOutputFile -> a) -> String -> Parser a
 writerOpts ctor desc = enumFromTo minBound maxBound
                        <&> writerOpt ctor desc
                        & \case
@@ -233,36 +235,33 @@ data ChainCommand
   |         DumpMachViews
   |         ReadMachViews   [JsonLogfile]
 
-  |         RebuildChain
-  |            ReadChain    (JsonInputFile [BlockEvents])
-  |            DumpChainRaw (JsonOutputFile [BlockEvents])
-  |        TimelineChainRaw TextOutputFile
-  |          FilterChain    [JsonFilterFile]
+  |         RebuildChain    [JsonFilterFile] [ChainFilter]
   |            DumpChain    (JsonOutputFile [BlockEvents])
-  |        TimelineChain    TextOutputFile
+  |            ReadChain    (JsonInputFile [BlockEvents])
+  |        TimelineChain    TextOutputFile [RTComments BlockEvents]
 
   |         CollectSlots    [JsonLogfile]
   |            DumpSlotsRaw
-  |          FilterSlots    [JsonFilterFile]
+  |          FilterSlots    [JsonFilterFile] [ChainFilter]
   |            DumpSlots
   |        TimelineSlots
 
   |      ComputePropagation
-  |       RenderPropagation RenderMode TextOutputFile PropSubset
+  |       RenderPropagation RenderFormat TextOutputFile PropSubset
   |        ReadPropagations [JsonInputFile BlockPropOne]
 
   | ComputeMultiPropagation
-  |  RenderMultiPropagation RenderMode TextOutputFile PropSubset
+  |  RenderMultiPropagation RenderFormat TextOutputFile PropSubset CDF2Aspect
 
   |         ComputeMachPerf
-  |          RenderMachPerf RenderMode PerfSubset
+  |          RenderMachPerf RenderFormat PerfSubset
 
   |      ComputeClusterPerf
-  |       RenderClusterPerf RenderMode TextOutputFile PerfSubset
+  |       RenderClusterPerf RenderFormat TextOutputFile PerfSubset
 
   |    ReadMultiClusterPerf [JsonInputFile MultiClusterPerf]
   | ComputeMultiClusterPerf
-  |  RenderMultiClusterPerf RenderMode TextOutputFile PerfSubset
+  |  RenderMultiClusterPerf RenderFormat TextOutputFile PerfSubset CDF2Aspect
 
   |             Compare     InputDir (Maybe TextInputFile) TextOutputFile
                             [(JsonInputFile RunPartial, JsonInputFile Genesis)]
@@ -281,14 +280,13 @@ data State
   , sDomBlocks        :: Maybe (DataDomain BlockNo)
     -- propagation
   , sMachViews        :: Maybe [(JsonLogfile, MachView)]
-  , sChainRaw         :: Maybe [BlockEvents]
   , sChain            :: Maybe [BlockEvents]
   , sBlockProp        :: Maybe [BlockPropOne]
   , sMultiBlockProp   :: Maybe MultiBlockProp
     -- performance
-  , sSlotsRaw         :: Maybe [(JsonLogfile, [SlotStats])]
+  , sSlotsRaw         :: Maybe [(JsonLogfile, [SlotStats NominalDiffTime])]
   , sScalars          :: Maybe [(JsonLogfile, RunScalars)]
-  , sSlots            :: Maybe [(JsonLogfile, [SlotStats])]
+  , sSlots            :: Maybe [(JsonLogfile, [SlotStats NominalDiffTime])]
   , sMachPerf         :: Maybe [(JsonLogfile, MachPerfOne)]
   , sClusterPerf      :: Maybe [ClusterPerf]
   , sMultiClusterPerf :: Maybe MultiClusterPerf
@@ -356,64 +354,47 @@ runChainCommand s c@(ReadMachViews fs) = do
   pure s { sMachViews = Just machViews }
 
 runChainCommand s@State{sRun=Just run, sMachViews=Just mvs}
-  RebuildChain = do
-  chainRaw <- rebuildChain run mvs & liftIO
-  pure s { sChainRaw = Just chainRaw }
-runChainCommand _ c@RebuildChain = missingCommandData c
+  c@(RebuildChain fltfs fltExprs) = do
+  (fltFiles,
+   (<> [ FilterName "inline-expr" | not (null fltExprs)])
+    -> fltNames) <- readFilters fltfs
+          & firstExceptT (CommandError c)
+  let flts = fltFiles <> fltExprs
+  (domSlot, domBlock, chain) <- rebuildChain run flts fltNames mvs
+                                & liftIO
+  pure s { sChain = Just chain
+         , sDomSlots = Just domSlot
+         , sDomBlocks = Just domBlock
+         , sFilters = fltNames
+         }
+  -- pure s { sChain = Just chain }
+runChainCommand _ c@RebuildChain{} = missingCommandData c
   ["run metadata & genesis", "reconstructed chain"]
 
 runChainCommand s
   c@(ReadChain f) = do
-  chainRaw <- mapM (Aeson.eitherDecode @BlockEvents)
-              . filter ((> 5) . LBS.length)
-              . LBS.split '\n'
-              <$> LBS.readFile (unJsonInputFile f)
-              & newExceptT
-              & firstExceptT (CommandError c . pack)
-  pure s { sChainRaw = Just chainRaw, sChain = Just chainRaw }
-
-runChainCommand s@State{sChainRaw=Just chainRaw}
-  c@(DumpChainRaw f) = do
-  dumpObjects "raw-chain" chainRaw f & firstExceptT (CommandError c)
-  pure s
-runChainCommand _ c@DumpChainRaw{} = missingCommandData c
-  ["unfiltered chain"]
-
-runChainCommand s@State{sRun=Just run, sChainRaw=Just chainRaw}
-  c@(TimelineChainRaw f) = do
-  dumpText "chain" (renderTimeline run (const True) False chainRaw) f
-    & firstExceptT (CommandError c)
-  pure s
-runChainCommand _ c@TimelineChainRaw{} = missingCommandData c
-  ["run metadata & genesis", "unfiltered chain"]
-
-runChainCommand s@State{sRun=Just run, sChainRaw=Just chainRaw}
-  c@(FilterChain fltfs) = do
-  flts <- readFilters fltfs
-          & firstExceptT (CommandError c)
-  (domSlot, domBlock, fltNames, chain) <- filterChain run flts chainRaw
-                                & liftIO & firstExceptT (CommandError c)
-  when (ddFilteredCount domBlock == 0) $
-    throwE $ CommandError c $ mconcat
-      [ "All ", show (ddRawCount domBlock), " blocks filtered out." ]
-  pure s { sChain = Just chain, sDomSlots = Just domSlot, sDomBlocks = Just domBlock, sFilters = fltNames }
-runChainCommand _ c@FilterChain{} = missingCommandData c
-  ["run metadata & genesis", "unfiltered slot stats"]
+  chain <- mapM (Aeson.eitherDecode @BlockEvents)
+           . filter ((> 5) . LBS.length)
+           . LBS.split '\n'
+           <$> LBS.readFile (unJsonInputFile f)
+           & newExceptT
+           & firstExceptT (CommandError c . pack)
+  pure s { sChain = Just chain }
 
 runChainCommand s@State{sChain=Just chain}
   c@(DumpChain f) = do
   dumpObjects "chain" chain f & firstExceptT (CommandError c)
   pure s
 runChainCommand _ c@DumpChain{} = missingCommandData c
-  ["filtered chain"]
+  ["chain"]
 
 runChainCommand s@State{sRun=Just run, sChain=Just chain}
-  c@(TimelineChain f) = do
-  dumpText "chain" (renderTimeline run (const True) False chain) f
+  c@(TimelineChain f comments) = do
+  dumpText "chain" (renderTimeline run (const True) comments chain) f
     & firstExceptT (CommandError c)
   pure s
 runChainCommand _ c@TimelineChain{} = missingCommandData c
-  ["run metadata & genesis", "filtered chain"]
+  ["run metadata & genesis", "chain"]
 
 runChainCommand s@State{sRun=Just run, sObjLists=Just objs}
   c@(CollectSlots ignores) = do
@@ -424,7 +405,7 @@ runChainCommand s@State{sRun=Just run, sObjLists=Just objs}
     fmap (mapAndUnzip redistribute) <$> collectSlotStats run nonIgnored
     & newExceptT
     & firstExceptT (CommandError c)
-  pure s { sScalars = Just scalars, sSlotsRaw = Just slotsRaw }
+  pure s { sScalars = Just scalars, sSlotsRaw = Just (fmap (fmap (deltifySlotStats (genesis run))) <$> slotsRaw) }
 runChainCommand _ c@CollectSlots{} = missingCommandData c
   ["run metadata & genesis", "lifted logobjects"]
 
@@ -436,16 +417,21 @@ runChainCommand _ c@DumpSlotsRaw = missingCommandData c
   ["unfiltered slots"]
 
 runChainCommand s@State{sRun=Just run, sSlotsRaw=Just slotsRaw}
-  c@(FilterSlots fltfs) = do
-  flts <- readFilters fltfs
-          & firstExceptT (CommandError c)
+  c@(FilterSlots fltfs fltExprs) = do
+  (fltFiles,
+    (<> [ FilterName "inline-expr" | not (null fltExprs)])
+    -> fltNames) <- readFilters fltfs & firstExceptT (CommandError c)
+  let flts = fltFiles <> fltExprs
   (domSlots, fltrd) <- runSlotFilters run flts slotsRaw
                        & liftIO
                        & firstExceptT (CommandError c)
   when (maximum (length . snd <$> fltrd) == 0) $
     throwE $ CommandError c $ mconcat
       [ "All ", show $ maximum (length . snd <$> slotsRaw), " slots filtered out." ]
-  pure s { sSlots = Just fltrd, sDomSlots = Just domSlots }
+  pure s { sSlots = Just fltrd
+         , sDomSlots = Just domSlots
+         , sFilters = fltNames
+         }
 runChainCommand _ c@FilterSlots{} = missingCommandData c
   ["run metadata & genesis", "unfiltered slot stats"]
 
@@ -459,7 +445,7 @@ runChainCommand _ c@DumpSlots = missingCommandData c
 runChainCommand s@State{sRun=Just run, sSlots=Just slots}
   c@TimelineSlots = do
   dumpAssociatedTextStreams "mach"
-    (fmap (fmap $ renderTimeline run (const True) False) slots)
+    (fmap (fmap $ renderTimeline run (const True) []) slots)
     & firstExceptT (CommandError c)
   pure s
 runChainCommand _ c@TimelineSlots{} = missingCommandData c
@@ -470,11 +456,11 @@ runChainCommand s@State{sRun=Just run, sChain=Just chain, sDomSlots=Just domS, s
   prop <- blockProp run chain domS domB & liftIO
   pure s { sBlockProp = Just [prop] }
 runChainCommand _ c@ComputePropagation = missingCommandData c
-  ["run metadata & genesis", "filtered chain", "data domains for slots & blocks"]
+  ["run metadata & genesis", "chain", "data domains for slots & blocks"]
 
 runChainCommand s@State{sBlockProp=Just [prop]}
   c@(RenderPropagation mode f subset) = do
-  forM_ (renderCDF (sRunAnchor s) (propSubsetFn subset) Nothing mode prop) $
+  forM_ (renderAnalysisCDFs (sRunAnchor s) (propSubsetFn subset) OfOverallDataset Nothing mode prop) $
     \(name, body) ->
       dumpText (T.unpack name) body (modeFilename f name mode)
       & firstExceptT (CommandError c)
@@ -501,8 +487,8 @@ runChainCommand _ c@ComputeMultiPropagation{} = missingCommandData c
   ["block propagation"]
 
 runChainCommand s@State{sMultiBlockProp=Just prop}
-  c@(RenderMultiPropagation mode f subset) = do
-  forM_ (renderCDF (sTagsAnchor s) (propSubsetFn subset) Nothing mode prop) $
+  c@(RenderMultiPropagation mode f subset aspect) = do
+  forM_ (renderAnalysisCDFs (sTagsAnchor s) (propSubsetFn subset) aspect Nothing mode prop) $
     \(name, body) ->
       dumpText (T.unpack name) body (modeFilename f name mode)
       & firstExceptT (CommandError c)
@@ -539,7 +525,7 @@ runChainCommand _ c@ComputeClusterPerf{} = missingCommandData c
 
 runChainCommand s@State{sClusterPerf=Just [prop]}
   c@(RenderClusterPerf mode f subset) = do
-  forM_ (renderCDF (sRunAnchor s) (perfSubsetFn subset) Nothing mode prop) $
+  forM_ (renderAnalysisCDFs (sRunAnchor s) (perfSubsetFn subset) OfOverallDataset Nothing mode prop) $
     \(name, body) ->
       dumpText (T.unpack name) body (modeFilename f name mode)
       & firstExceptT (CommandError c)
@@ -566,8 +552,8 @@ runChainCommand _ c@ComputeMultiClusterPerf{} = missingCommandData c
   ["cluster performance stats"]
 
 runChainCommand s@State{sMultiClusterPerf=Just (MultiClusterPerf perf)}
-  c@(RenderMultiClusterPerf mode f subset) = do
-  forM_ (renderCDF (sTagsAnchor s) (perfSubsetFn subset) Nothing mode perf) $
+  c@(RenderMultiClusterPerf mode f subset aspect) = do
+  forM_ (renderAnalysisCDFs (sTagsAnchor s) (perfSubsetFn subset) aspect Nothing mode perf) $
     \(name, body) ->
       dumpText (T.unpack name) body (modeFilename f name mode)
       & firstExceptT (CommandError c)
@@ -628,7 +614,7 @@ runCommand (ChainCommand cs) = do
            Nothing Nothing Nothing Nothing
            Nothing Nothing Nothing Nothing
            Nothing Nothing Nothing Nothing
-           Nothing Nothing Nothing
+           Nothing Nothing
 
 opts :: ParserInfo Command
 opts =

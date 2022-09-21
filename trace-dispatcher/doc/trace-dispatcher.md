@@ -27,7 +27,7 @@
    9. [Configuration](#Configuration)
    10. [Documentation](#Documentation)
    11. [Metrics](#Metrics)
-   10. [DataPoints](#DataPoints)   
+   10. [DataPoints](#DataPoints)
 4. [Integration and implementation in the node](#Integration-and-implementation-in-the-node)
    1. [Overall tracing setup](#Overall-tracing-setup)
    2. [Cardano tracer](#Cardano-tracer)
@@ -506,7 +506,7 @@ data ConfigOption =
   | ConfBackend [BackendConfig]
   -- | Construct a limiter with name (Text) and limiting to the Double,
   -- which represents frequency in number of messages per second
-  | ConfLimiter Text Double
+  | ConfLimiter Double
 
 data BackendConfig =
     Forwarder
@@ -555,6 +555,8 @@ message per second, then add this to your configuration file:
     maxFrequency: 1.0
 ```
 
+In Cardano a default configuration is given in the module [Cardano.Node.Tracing.DefaultTraceConfig](https://github.com/input-output-hk/cardano-node/blob/master/cardano-node/src/Cardano/Node/Tracing/DefaultTraceConfig.hs). In the config file all entries of the default configuration can be overridden. To remove a frequency limiter, define a limiter with maxFrequency 0.0.
+
 ## Documentation
 
 The self-documentation features of `trace-dispatcher` are provided by a combination of:
@@ -589,7 +591,7 @@ data DocMsg a = DocMsg {
 Metrics are provided by normal trace messages, which implement the `asMetrics` function
 of the `LogFormatting` typeclass. For this reason all the configuration mechanisms for
 filtering and routing can be used with metrics. `ekgTracer`is used as the metrics backend.
-It forwards the metrics to cardano-tracer for further processing.  
+It forwards the metrics to cardano-tracer for further processing.
 
 ## DataPoints
 
@@ -661,7 +663,7 @@ mkCardanoTracer :: forall evt.
   -> (evt -> [Text])
   -> (evt -> SeverityS)
   -> (evt -> Privacy)
-  -> IO (Trace IO evt)    
+  -> IO (Trace IO evt)
 
 -- | Configure this tracer with a configuration, which needs as well the documentation.
 --
@@ -758,7 +760,7 @@ data TraceDocumentationCmd
 runTraceDocumentationCmd
   :: TraceDocumentationCmd
   -> IO ()
-```      
+```
 
 A periodically generated documentation of the tracers can be found in the cardano-node repository in the path `cardano-node/doc/new-tracing/tracers_doc_generated.md`
 

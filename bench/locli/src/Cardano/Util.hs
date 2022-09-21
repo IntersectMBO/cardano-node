@@ -37,6 +37,8 @@ import Cardano.Analysis.Ground
 import Cardano.Ledger.BaseTypes         (StrictMaybe (..), fromSMaybe)
 
 
+type SMaybe a = StrictMaybe a
+
 smaybe :: b -> (a -> b) -> StrictMaybe a -> b
 smaybe x _  SNothing = x
 smaybe _ f (SJust x) = f x

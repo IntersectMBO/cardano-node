@@ -6,7 +6,7 @@ import Cardano.Prelude
 
 import Hedgehog
 
-import Cardano.Unlog.Org
+import Cardano.Org
 import Cardano.Util
 
 

@@ -2,22 +2,22 @@ global_genesis_format_version=March-14-2022
 
 usage_genesis() {
      usage "genesis" "Genesis" <<EOF
-    prepare-cache-entry [--force] PROFILE-JSON RUN-META-JSON CACHEDIR TOPO-DIR OUTDIR
+    $(helpcmd prepare-cache-entry [--force] PROFILE-JSON CACHEDIR NODE-SPECS OUTDIR)
                      Prepare a genesis cache entry for the specified profile.
-                       Cache entry regeneration can be --force 'd
+                       Cache entry regeneration can be $(yellow --force)'d
 
-    profile-cache-key-input PROFILE-JSON
-                     Output effective profile parameters factoring into the
-                       genesis cache key
+    $(helpcmd derive-from-cache PROFILE-DIR TIMING-JSON-EXPR CACHE-ENTRY-DIR OUTDIR)
+                     Instantiate genesis from a cache entry
 
-    profile-cache-key PROFILE-JSON
-                     Output a genesis cache key for the specified profile
+    $(helpcmd genesis-from-preset PRESET-NAME OUTDIR)
+                     ($(red DEV)) Prepare genesis for an environment preset,
+                       like $(yellow mainnet)
 
-    actually-genesis PROFILE-JSON TOPO-DIR DIR
-                     (DEV) Internal procedure to actually generate genesis
+    $(helpcmd actually-genesis PROFILE-JSON NODE-SPECS OUTDIR CACHE-KEY-INPUT CACHE-KEY)
+                     ($(red DEV)) Internal procedure to actually generate genesis
 
-    finalise-cache-entry PROFILE-JSON TIMING-JSON-EXPR DIR
-                     (DEV) Update a genesis cache entry to the given profile
+    $(helpcmd finalise-cache-entry PROFILE-JSON TIMING-JSON-EXPR OUTDIR)
+                     ($(red DEV)) Update a genesis cache entry to the given profile
 EOF
 }
 

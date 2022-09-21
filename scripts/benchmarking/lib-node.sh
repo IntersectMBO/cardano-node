@@ -77,7 +77,7 @@ _run_node() {
         local profile_suffix=
         local no_stats=
         local redirect_stdout=
-        local tag=
+        local run=
         while test -n "$1"
         do case "$1" in
            --config-name )      config_id=$2;   shift;;
@@ -93,7 +93,7 @@ _run_node() {
            --no-stats )         no_stats=t;;
            --profile )          profile=$2;     shift;;
            --profile-suffix )   profile_suffix=$2; shift;;
-           --tag )              tag=$2;         shift;;
+           --tag )              run=$2;         shift;;
            * ) break;; esac; shift; done
 
         local RUNNER_ARGS=(
@@ -107,8 +107,8 @@ _run_node() {
         if test -n "${no_stats}"; then RUNNER_ARGS+=(
           --no-stats
         ); fi
-        if test -n "${tag}"; then RUNNER_ARGS+=(
-          --tag "${tag}"
+        if test -n "$run"; then RUNNER_ARGS+=(
+          --tag "$run"
         ); fi
 
         dprint "config_id=${config_id}"
@@ -116,7 +116,7 @@ _run_node() {
         dprint "state_id=${state_id}"
         dprint "delegate_id=${delegate_id}"
         dprint "port=${port}"
-        dprint "tag=${tag}"
+        dprint "tag=$run"
         dprint "run_node binary extra args:  $*"
 
         local topo_id="${topo_id:-$config_id}"

@@ -28,6 +28,7 @@ import           Cardano.Logging.Resources
 import           Cardano.Logging.Resources.Types
 import           Cardano.Prelude hiding (trace)
 
+import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
 import           Cardano.Node.Tracing.Formatting ()
 import qualified Cardano.Node.Tracing.StateRep as SR
 import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
@@ -183,7 +184,7 @@ docTracers :: forall blk peer remotePeer.
   -> Proxy remotePeer
   -> IO ()
 docTracers configFileName outputFileName _ _ _ = do
-    trConfig      <- readConfiguration configFileName
+    trConfig      <- readConfigurationWithDefault configFileName defaultCardanoConfig
     let trBase    :: Trace IO FormattedMessage = docTracer (Stdout MachineFormat)
         trForward :: Trace IO FormattedMessage = docTracer Forwarder
         trDataPoint = docTracerDatapoint DatapointBackend
@@ -339,6 +340,12 @@ docTracers configFileName outputFileName _ _ _ = do
       (docBlockFetchClient :: Documented (BlockFetch.TraceLabelPeer
                                 remotePeer
                                 (BlockFetch.TraceFetchClientState (Header blk))))
+
+    clientMetricsDoc <- documentTracer trConfig blockFetchClientTr
+      (docBlockFetchClientMetrics :: Documented (BlockFetch.TraceLabelPeer
+                                remotePeer
+                                (BlockFetch.TraceFetchClientState (Header blk))))
+
 
     blockFetchServerTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
@@ -885,6 +892,7 @@ docTracers configFileName outputFileName _ _ _ = do
             <> chainSyncServerBlockTrDoc
             <> blockFetchDecisionTrDoc
             <> blockFetchClientTrDoc
+            <> clientMetricsDoc
             <> blockFetchServerTrDoc
             <> forgeKESInfoTrDoc
             <> txInboundTrDoc

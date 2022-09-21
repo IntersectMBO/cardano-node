@@ -1,7 +1,8 @@
 {-# LANGUAGE TypeInType #-}
-module Cardano.Unlog.Render (module Cardano.Unlog.Render) where
+{-# LANGUAGE ScopedTypeVariables #-}
+module Cardano.Render (module Cardano.Render) where
 
-import Prelude                  (head, id, last, tail, show)
+import Prelude                  (head, id, show)
 import Cardano.Prelude          hiding (head, show)
 
 import Data.Aeson               (ToJSON)
@@ -15,7 +16,7 @@ import Data.CDF
 
 import Cardano.Analysis.Ground
 import Cardano.Analysis.Run
-import Cardano.Unlog.Org
+import Cardano.Org
 import Cardano.Util
 
 
@@ -23,11 +24,16 @@ class RenderCDFs a p where
   rdFields :: [Field DSelect p a]
 
 class RenderTimeline a where
+  data RTComments a :: Type
   rtFields     :: Run -> [Field ISelect I a]
-  rtCommentary :: a -> [Text]
-  rtCommentary _ = []
+  rtCommentary :: a -> RTComments a -> [Text]
+  rtCommentary _ _ = []
 
--- | Incapsulate all information necessary to render a column.
+-- | Encapsulate all information necessary to render a column (projection) of
+--   a certain projectible (a kind of analysis results):
+--     - first parameter encapsulates the projection descriptor
+--     - second parameter sets the arity (I vs. CDF I)
+--     - third parameter is the projectible indexed by arity
 data Field (s :: (Type -> Type) -> k -> Type) (p :: Type -> Type) (a :: k)
   = Field
   { fWidth   :: Int
@@ -46,6 +52,9 @@ mapField x cdfProj Field{..} =
     DWord64 (cdfProj . ($x) ->r) -> r
     DFloat  (cdfProj . ($x) ->r) -> r
     DDeltaT (cdfProj . ($x) ->r) -> r
+
+renderCentiles :: Int -> [Centile] -> [Text]
+renderCentiles wi = fmap (T.take wi . T.pack . printf "%f" . unCentile)
 
 renderFieldCentiles :: a p -> (forall v. Divisible v => CDF p v -> [[v]]) -> Field DSelect p a -> [[Text]]
 renderFieldCentiles x cdfProj Field{..} =
@@ -78,20 +87,25 @@ data ISelect p a
   | IDeltaT (a -> NominalDiffTime)
   | IText   (a -> Text)
 
-mapSomeFieldDirectCDF :: forall p c a. (forall b. CDF p b -> c) -> a p -> DSelect p a -> c
-mapSomeFieldDirectCDF f a = \case
+mapSomeFieldCDF :: forall p c a. (forall b. Divisible b => CDF p b -> c) -> a p -> DSelect p a -> c
+mapSomeFieldCDF f a = \case
   DInt    s -> f (s a)
   DWord64 s -> f (s a)
   DFloat  s -> f (s a)
   DDeltaT s -> f (s a)
 
-renderTimeline :: forall (a :: Type). RenderTimeline a => Run -> (Field ISelect I a -> Bool) -> Bool -> [a] -> [Text]
-renderTimeline run flt withCommentary xs =
+renderTimeline :: forall (a :: Type). RenderTimeline a => Run -> (Field ISelect I a -> Bool) -> [RTComments a] -> [a] -> [Text]
+renderTimeline run flt comments xs =
   concatMap (uncurry fLine) $ zip xs [(0 :: Int)..]
  where
    fLine :: a -> Int -> [Text]
-   fLine l i = (if i `mod` 33 == 0 then catMaybes [head1, head2] else [])
-               <> (entry l : if withCommentary then rtCommentary l else [])
+   fLine l i =
+     -- 0. a periodic header
+     (if i `mod` 33 == 0 then catMaybes [head1, head2] else [])
+     -- 1. actual timeline entry
+     <> (entry l
+     -- 2. per-entry commentary, if any
+         : concat (fmap (rtCommentary l) comments))
 
    entry :: a -> Text
    entry v = renderLineDist $
@@ -121,34 +135,37 @@ renderTimeline run flt withCommentary xs =
    renderLine' lpfn wfn rfn = renderField lpfn wfn rfn <$> fields
    renderField lpfn wfn rfn f = T.replicate (lpfn f) " " <> T.center (wfn f) ' ' (rfn f)
 
-mapRenderCDF :: forall p a. (RenderCDFs a p, KnownCDF p) => (Field DSelect p a -> Bool) -> Maybe [Centile] -> (forall c. Divisible c => p c -> [c]) -> a p -> [[Text]]
+mapRenderCDF :: forall p a. RenderCDFs a p
+             => (Field DSelect p a -> Bool) -> Maybe [Centile]
+             -> (forall c. Divisible c => p c -> [c])
+             -> a p
+             -> [[Text]]
 mapRenderCDF fieldSelr centiSelr fSampleProps x =
   fields                                    -- list of fields
   <&> renderFieldCentiles x cdfSamplesProps -- for each field, list of per-sample lists of properties
+  & ([renderCentiles 6 centiles] :)
   & transpose                               -- for each sample, list of per-field lists of properties
-  & fmap (mapHead $ take 1)                 -- drop all extra properties of the centile field
   & fmap (fmap $ T.intercalate " ")
  where
    -- Pick relevant fields:
    fields :: [Field DSelect p a]
-   fields = centiField : filter fieldSelr rdFields
+   fields = filter fieldSelr rdFields
 
    -- Pick relevant centiles:
-   subset :: CDF p b -> CDF p b
-   subset = maybe id subsetCDF centiSelr
+   subsetCenti :: CDF p b -> CDF p b
+   subsetCenti = maybe id subsetCDF centiSelr
+
+   centiles :: [Centile]
+   centiles = mapSomeFieldCDF
+              (centilesCDF . subsetCenti)
+              x
+              (fSelect $ head rdFields)
 
    -- Get relevant values: for each selected sample, a list of properties (avg, min, max, avg-/+stddev)
    cdfSamplesProps :: Divisible c => CDF p c -> [[c]]
-   cdfSamplesProps = fmap (fSampleProps . snd) . cdfSamples . subset
+   cdfSamplesProps = fmap (fSampleProps . snd) . cdfSamples . subsetCenti
 
-   -- The leftmost index "CDF":  just list the centiles
-   centiField :: Field DSelect p a
-   centiField = Field 6 0 "centi" "" "centi" (DFloat $ const centiCDF) "Centile"
-   centiCDF   = mapSomeFieldDirectCDF (cdfCentilesCDF . subset) x (fSelect $ head rdFields)
-
-data family RenderMode
-
-data instance RenderMode
+data RenderFormat
   = AsJSON
   | AsGnuplot
   | AsOrg
@@ -156,7 +173,13 @@ data instance RenderMode
   | AsPretty
   deriving (Show, Bounded, Enum)
 
-modeFilename :: TextOutputFile -> Text -> RenderMode -> TextOutputFile
+-- | When rendering a CDF-of-CDFs _and_ subsetting the data, how to subset:
+data CDF2Aspect
+  = OfOverallDataset   -- ^ Overall dataset statistical summary.
+  | OfInterCDF         -- ^ Inter-sample (i.e. inter-CDF) stats.
+  deriving (Show, Bounded, Enum)
+
+modeFilename :: TextOutputFile -> Text -> RenderFormat -> TextOutputFile
 modeFilename orig@(TextOutputFile f) name = \case
   AsJSON    -> orig
   AsGnuplot -> printf f name & TextOutputFile
@@ -164,12 +187,12 @@ modeFilename orig@(TextOutputFile f) name = \case
   AsReport  -> orig
   AsPretty  -> orig
 
-renderCDF :: forall a p. (RenderCDFs a p, KnownCDF p, ToJSON (a p)) => Anchor -> (Field DSelect p a -> Bool) -> Maybe [Centile] -> RenderMode -> a p -> [(Text, [Text])]
+renderAnalysisCDFs :: forall a p. (RenderCDFs a p, KnownCDF p, ToJSON (a p)) => Anchor -> (Field DSelect p a -> Bool) -> CDF2Aspect -> Maybe [Centile] -> RenderFormat -> a p -> [(Text, [Text])]
 
-renderCDF _anchor _fieldSelr _centileSelr AsJSON x = (:[]) . ("",) . (:[]) . LT.toStrict $
+renderAnalysisCDFs _anchor _fieldSelr _c2a _centileSelr AsJSON x = (:[]) . ("",) . (:[]) . LT.toStrict $
   encodeToLazyText x
 
-renderCDF anchor fieldSelr _centileSelr AsGnuplot x =
+renderAnalysisCDFs anchor fieldSelr _c2a _centileSelr AsGnuplot x =
   filter fieldSelr rdFields <&>
   \Field{fId=cdfField} ->
     (,) cdfField $
@@ -177,7 +200,7 @@ renderCDF anchor fieldSelr _centileSelr AsGnuplot x =
     (mapRenderCDF ((== cdfField) . fId) Nothing (unliftCDFValExtra cdfIx) x
      & fmap (T.intercalate " "))
 
-renderCDF a@Anchor{..} fieldSelr centileSelr AsOrg x =
+renderAnalysisCDFs a@Anchor{..} fieldSelr _c2a centileSelr AsOrg x =
   (:[]) . ("",) . render $
   Props
   { oProps = [ ("TITLE",    renderAnchorRuns a )
@@ -195,7 +218,7 @@ renderCDF a@Anchor{..} fieldSelr centileSelr AsOrg x =
     , tRowHeaders     = percSpecs <&> T.take 6 . T.pack . printf "%.4f" . unCentile
     , tSummaryHeaders = ["avg", "samples"]
     , tSummaryValues  = [ fields <&>
-                          \f@Field{..} -> mapField x (T.take (fWidth + 1) . T.pack . printf "%f" . cdfAverage) f
+                          \f@Field{..} -> mapField x (T.take (fWidth + 1) . T.pack . printf "%f" . cdfAverageVal) f
                         , fields <&>
                           \f@Field{}   -> mapField x (T.pack . printf "%d" . cdfSize) f
                         ] & transpose
@@ -207,25 +230,17 @@ renderCDF a@Anchor{..} fieldSelr centileSelr AsOrg x =
    cdfSamplesProps = fmap (pure . unliftCDFVal cdfIx . snd) . cdfSamples . restrictCDF
 
    fields :: [Field DSelect p a]
-   fields = nsamplesField : filter fieldSelr rdFields
+   fields = filter fieldSelr rdFields
 
    restrictCDF :: forall c. CDF p c -> CDF p c
    restrictCDF = maybe id subsetCDF centileSelr
 
    percSpecs :: [Centile]
-   percSpecs = maybe (mapSomeFieldDirectCDF centilesCDF x (fSelect . head $ rdFields @a @p))
+   percSpecs = maybe (mapSomeFieldCDF centilesCDF x (fSelect . head $ rdFields @a @p))
                      id
                      centileSelr
 
-   nsamplesField :: Field DSelect p a
-   nsamplesField = Field 6 0 "Nsamp" "" "Nsamp" (DInt $ const nsamplesDistrib) "Samples upto centile"
-   nsamplesDistrib = cdf percSpecs populationIndices
-   populationIndices :: [Int]
-   populationIndices = [1..maxPopulationSize]
-   maxPopulationSize :: Int
-   maxPopulationSize = last . sort $ mapSomeFieldDirectCDF cdfSize x . fSelect <$> rdFields @a @p
-
-renderCDF a@Anchor{..} fieldSelr _centileSelr AsReport x =
+renderAnalysisCDFs a@Anchor{..} fieldSelr aspect _centileSelr AsReport x =
   (:[]) . ("",) . render $
   Props
   { oProps = [ ("TITLE",    renderAnchorRuns a )
@@ -236,20 +251,13 @@ renderCDF a@Anchor{..} fieldSelr _centileSelr AsReport x =
   , oConstants = []
   , oBody = (:[]) $
     Table
-    { tColHeaders     = ["average", "min", "max", "stddev", "size"]
+    { tColHeaders     = fst (hdrsProjs @Integer) -- This is crazy.
     , tExtended       = True
     , tApexHeader     = Just "metric"
     , tColumns        = transpose $
                         fields <&>
                         fmap (T.take 6 . T.pack . printf "%f")
-                        . mapField x
-                        \CDF{..} ->
-                          [ cdfAverage
-                          , toDouble $ fst cdfRange
-                          , toDouble $ snd cdfRange
-                          , cdfStddev
-                          , fromIntegral cdfSize
-                          ]
+                        . mapField x (snd hdrsProjs)
     , tRowHeaders     = fields <&> fDesc
     , tSummaryHeaders = []
     , tSummaryValues  = []
@@ -260,60 +268,97 @@ renderCDF a@Anchor{..} fieldSelr _centileSelr AsReport x =
    fields :: [Field DSelect p a]
    fields = filter fieldSelr rdFields
 
-renderCDF a fieldSelr centiSelr AsPretty x =
+   hdrsProjs :: forall v. (Divisible v) => ([Text], CDF p v -> [Double])
+   hdrsProjs = aspectColHeadersAndProjections aspect
+
+   aspectColHeadersAndProjections :: forall v. (Divisible v)
+                                  => CDF2Aspect -> ([Text], CDF p v -> [Double])
+   aspectColHeadersAndProjections = \case
+     OfOverallDataset ->
+       (,)
+       ["average", "CoV", "min", "max", "stddev", "size"]
+       \c@CDF{..} ->
+         let avg = cdfAverageVal c & toDouble in
+         [ avg
+         , cdfStddev / avg
+         , fromRational . toRational $ fst cdfRange
+         , fromRational . toRational $ snd cdfRange
+         , cdfStddev
+         , fromIntegral cdfSize
+         ]
+     OfInterCDF ->
+       (,)
+       ["average", "CoV", "min", "max", "stddev", "size"]
+       (cdfArity
+         (error "Cannot do inter-CDF statistics on plain CDFs")
+         (\CDF{cdfAverage} ->
+             let avg = cdfAverageVal cdfAverage & toDouble in
+             [ avg
+             , cdfStddev cdfAverage / avg
+             , toDouble . fst $ cdfRange cdfAverage
+             , toDouble . snd $ cdfRange cdfAverage
+             , cdfStddev cdfAverage
+             , fromIntegral $ cdfSize cdfAverage
+             ]))
+
+renderAnalysisCDFs a fieldSelr _c2a centiSelr AsPretty x =
   (:[]) . ("",) $
   renderAnchor a
   :  catMaybes [head1, head2]
   <> pLines
   <> sizeAvg
-  -- CSV mode used to be:
-  -- (T.intercalate "," $ fId <$> fields)
-  -- :  pLines
  where
    head1, head2 :: Maybe Text
    head1 = if all ((== 0) . T.length . fHead1) fields then Nothing
            else Just (renderLineHead1 (uncurry T.take . ((+1) . fWidth &&& fHead1)))
    head2 = if all ((== 0) . T.length . fHead2) fields then Nothing
            else Just (renderLineHead2 (uncurry T.take . ((+1) . fWidth &&& fHead2)))
-   renderLineHead1 = mconcat . renderLine' (const 0) ((+ 1) . fWidth)
-   renderLineHead2 = mconcat . renderLine' fLeftPad  ((+ 1) . fWidth)
-
-   percSpecs :: [Centile]
-   percSpecs = maybe (mapSomeFieldDirectCDF centilesCDF x (fSelect . head $ rdFields @a @p))
-                     id
-                     centiSelr
-
-   restrictCDF :: forall c. CDF p c -> CDF p c
-   restrictCDF = maybe id subsetCDF centiSelr
+   renderLineHead1 = mconcat . ("       ":) . renderLine' (const 0) ((+ 1) . fWidth)
+   renderLineHead2 = mconcat . (" %tile ":) . renderLine' fLeftPad  ((+ 1) . fWidth)
 
    pLines :: [Text]
    pLines = fields
             <&>
             fmap (T.intercalate " ") .
             renderFieldCentilesWidth x cdfSamplesProps
+            & ((T.justifyLeft 6 ' ' <$> renderCentiles 6 centiles) :)
             & transpose
             & fmap (T.intercalate " ")
-            -- fLine <$> [0..(nCentis - 1)]
 
    fields :: [Field DSelect p a]
-   fields = percField : nsamplesField : filter fieldSelr rdFields
+   fields = filter fieldSelr rdFields
+
+   centiles :: [Centile]
+   centiles = mapSomeFieldCDF
+              centilesCDF
+              x
+              (fSelect $ head rdFields)
 
    cdfSamplesProps :: Divisible c => CDF p c -> [[c]]
-   cdfSamplesProps = fmap (pure . unliftCDFVal cdfIx . snd) . cdfSamples . restrictCDF
+   cdfSamplesProps = fmap (pure . unliftCDFVal cdfIx . snd)
+                     . cdfSamples
+                     . maybe id subsetCDF centiSelr
 
    sizeAvg :: [Text]
    sizeAvg = fmap (T.intercalate " ")
-     [ (T.center (fWidth (head fields)) ' ' "avg" :) $
+     [ (T.center 6 ' ' "avg" :) $
        (\f -> flip (renderField fLeftPad fWidth) f $ const $
-                mapSomeFieldDirectCDF
-                  (T.take (fWidth f) .T.pack . printf "%F" . cdfAverage)  x (fSelect f))
-       <$> tail fields
-     , (T.center (fWidth (head fields)) ' ' "size" :) $
+                mapSomeFieldCDF
+                  (fit (fWidth f) .T.pack . printf "%F" . cdfAverageVal)  x (fSelect f))
+       <$> fields
+     , (T.center 6 ' ' "size" :) $
        (\f -> flip (renderField fLeftPad fWidth) f $ const $
-                mapSomeFieldDirectCDF
-                  (T.take (fWidth f) . T.pack . show . cdfSize)    x (fSelect f))
-       <$> tail fields
+                mapSomeFieldCDF
+                  (fit (fWidth f) . T.pack . show . cdfSize)    x (fSelect f))
+       <$> fields
      ]
+
+   fit :: Int -> Text -> Text
+   fit w t = if T.length t > w &&
+                -- Drop all non-floats, and floats with significant digit overflowing:
+                maybe True (> w) (T.findIndex (== '.') t)
+             then "..."
+             else T.take w t
 
    renderLine' ::
      (Field DSelect p a -> Int) -> (Field DSelect p a -> Int) -> (Field DSelect p a -> Text) -> [Text]
@@ -323,14 +368,7 @@ renderCDF a fieldSelr centiSelr AsPretty x =
      --T.replicate (lefPad f) " " <>
      T.center (width f) ' ' (rend f)
 
-   percField :: Field DSelect p a
-   percField = Field 6 0 "%tile" "" "%tile" (DFloat $ const percsDistrib) "Centile"
-   percsDistrib = mapSomeFieldDirectCDF (cdfCentilesCDF . restrictCDF) x (fSelect $ head rdFields)
-
-   nsamplesField :: Field DSelect p a
-   nsamplesField = Field 6 0 "Nsamp" "" "Nsamp" (DInt $ const nsamplesDistrib) "Samples upto centile"
-   nsamplesDistrib = cdf percSpecs populationIndices
-   populationIndices :: [Int]
-   populationIndices = [1..maxPopulationSize]
-   maxPopulationSize :: Int
-   maxPopulationSize = last . sort $ mapSomeFieldDirectCDF cdfSize x . fSelect <$> rdFields @a @p
+   -- populationIndices :: [Int]
+   -- populationIndices = [1..maxPopulationSize]
+   -- maxPopulationSize :: Int
+   -- maxPopulationSize = last . sort $ mapSomeFieldCDF cdfSize x . fSelect <$> rdFields @a @p

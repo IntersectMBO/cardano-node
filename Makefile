@@ -19,6 +19,8 @@ RUN     ?=
 
 lint hlint: ## Run the CI version of hlint
 	nix build --no-link '.#checks/hlint' --cores 0
+haddock-hoogle haddocks hoogle:
+	if test -z "$$IN_NIX_SHELL"; then nix-shell --run 'cabal haddock all --haddock-hoogle'; else cabal haddock all --haddock-hoogle; fi
 host-hlint: ## Run the system (not Nix) version of hlint
 	hlint bench cardano-{api,cli,client-demo,node,node-capi,node-chairman,submit-api,testnet,tracer}
 
@@ -37,7 +39,7 @@ trace-documentation:
 ###
 ### Workbench
 ###
-CI_TARGETS := hlint workbench-ci-test
+CI_TARGETS := hlint workbench-ci-test haddock-hoogle
 ci:  ci-report ci-targets
 ci-report:
 	@echo -e "\033[34mGoals under test\033[0m:  \033[33m$(CI_TARGETS)\033[0m"

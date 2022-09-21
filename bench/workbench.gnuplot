@@ -31,3 +31,33 @@ cdfI_4(cdf, title, run1ti, run1, run2ti, run2, run3ti, run3, run4ti, run4) = \
            rundir."/".run3."/analysis/".cdf.".cdf' using 1:2 t '".run3ti."', '". \
            rundir."/".run4."/analysis/".cdf.".cdf' using 1:2 t '".run4ti."'   ". \
            ""
+
+cdfI_5(cdf, title, run1ti, run1, run2ti, run2, run3ti, run3, run4ti, run4, run5ti, run5) = \
+  "set title '".title."';". \
+  "plot '".rundir."/".run1."/analysis/".cdf.".cdf' using 1:2 t '".run1ti."', '". \
+           rundir."/".run2."/analysis/".cdf.".cdf' using 1:2 t '".run2ti."', '". \
+           rundir."/".run3."/analysis/".cdf.".cdf' using 1:2 t '".run3ti."', '". \
+           rundir."/".run4."/analysis/".cdf.".cdf' using 1:2 t '".run4ti."', '". \
+           rundir."/".run5."/analysis/".cdf.".cdf' using 1:2 t '".run5ti."'   ". \
+           ""
+
+cdfI_6(cdf, title, run1ti, run1, run2ti, run2, run3ti, run3, run4ti, run4, run5ti, run5, run6ti, run6) = \
+  "set title '".title."';". \
+  "plot '".rundir."/".run1."/analysis/".cdf.".cdf' using 1:2 t '".run1ti."', '". \
+           rundir."/".run2."/analysis/".cdf.".cdf' using 1:2 t '".run2ti."', '". \
+           rundir."/".run3."/analysis/".cdf.".cdf' using 1:2 t '".run3ti."', '". \
+           rundir."/".run4."/analysis/".cdf.".cdf' using 1:2 t '".run4ti."', '". \
+           rundir."/".run5."/analysis/".cdf.".cdf' using 1:2 t '".run5ti."', '". \
+           rundir."/".run6."/analysis/".cdf.".cdf' using 1:2 t '".run6ti."'   ". \
+           ""
+
+cdfI_7(cdf, title, run1ti, run1, run2ti, run2, run3ti, run3, run4ti, run4, run5ti, run5, run6ti, run6, run7ti, run7) = \
+  "set title '".title."';". \
+  "plot '".rundir."/".run1."/analysis/".cdf.".cdf' using 1:2 t '".run1ti."', '". \
+           rundir."/".run2."/analysis/".cdf.".cdf' using 1:2 t '".run2ti."', '". \
+           rundir."/".run3."/analysis/".cdf.".cdf' using 1:2 t '".run3ti."', '". \
+           rundir."/".run4."/analysis/".cdf.".cdf' using 1:2 t '".run4ti."', '". \
+           rundir."/".run5."/analysis/".cdf.".cdf' using 1:2 t '".run5ti."', '". \
+           rundir."/".run6."/analysis/".cdf.".cdf' using 1:2 t '".run6ti."', '". \
+           rundir."/".run7."/analysis/".cdf.".cdf' using 1:2 t '".run7ti."'   ". \
+           ""

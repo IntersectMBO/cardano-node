@@ -265,7 +265,7 @@ mkConsensusTracers trBase trForward mbTrEKG _trDataPoint trConfig nodeKernel = d
            contramap
               (const
                 (FormattedMetrics
-                  [CounterM "cardano.node.metrics.served.header" Nothing]))
+                  [CounterM "ChainSync.HeadersServed" Nothing]))
               (mkMetricsTracer mbTrEKG)
 
     chainSyncServerBlockTr <- mkCardanoTracer

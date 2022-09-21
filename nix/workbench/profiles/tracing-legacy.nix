@@ -1,4 +1,6 @@
-{ profile, nodeSpec }:
+{ nodeSpec
+, ...
+}:
 {
   defaultScribes = [
     [ "StdoutSK" "stdout" ]

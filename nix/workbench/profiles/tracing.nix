@@ -1,36 +1,28 @@
-{ profile, nodeSpec }:
+{ nodeSpec
+, tracer
+}:
 {
   UseTraceDispatcher   = true;
 
+  ## Please see the generated tracing configuration reference at:
+  ##
+  ## https://github.com/input-output-hk/cardano-node/blob/master/doc/new-tracing/tracers_doc_generated.md#trace-messages
+  ##
   TraceOptions  = {
-    ""                            = { severity = "Notice";
-                                      backends = [
-                                        "Stdout MachineFormat"
-                                        "EKGBackend"
-                                      ] ++ (if !profile.node.tracer then [] else
-                                      [
-                                        "Forwarder"
-                                      ]);
-                                    };
-    "BlockFetch.Client"                                       = { severity = "Info"; detail = "DMinimal"; };
-    "BlockFetch.Client.CompletedBlockFetch"                   = { maxFrequency = 2.0; };
-    "BlockFetch.Server"                                       = { severity = "Info"; };
-    "ChainDB"                                                 = { severity = "Info"; };
-    "ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate" = { maxFrequency = 2.0; };
-    "ChainDB.AddBlockEvent.AddedBlockToQueue"                 = { maxFrequency = 2.0; };
-    "ChainDB.AddBlockEvent.AddedBlockToVolatileDB"            = { maxFrequency = 2.0; };
-    "ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB" = { maxFrequency = 2.0; };
-    "ChainSync.Client"                                        = { severity = "Info"; detail = "DMinimal"; };
-    "ChainSync.ServerBlock"                                   = { severity = "Info"; };
-    "ChainSync.ServerHeader"                                  = { severity = "Info"; };
-    "Forge"                                                   = { severity = "Info"; };
-    "Mempool"                                                 = { severity = "Info"; };
-    "Net.AcceptPolicy"                                        = { severity = "Info"; };
-    "Net.DNSResolver"                                         = { severity = "Info"; };
-    "Net.ErrorPolicy"                                         = { severity = "Info"; };
-    "Net.Subscription"                                        = { severity = "Info"; };
-    "Resources"                                               = { severity = "Info"; };
-    "Startup.DiffusionInit"                                   = { severity = "Info"; };
-    "TxSubmission.Remote"                                     = { detail = "DMinimal"; };
+    "" =
+      { severity = "Notice";
+        backends = [
+          "Stdout MachineFormat"
+          "EKGBackend"
+        ] ++ (if !tracer then [] else
+          [
+            "Forwarder"
+          ]);
+      };
+    BlockFetch.severity = "Info";
+    ChainSync.severity = "Info";
+    "Forge.Loop.BlockContext".severity = "Info";
+    "Forge.Loop.LedgerView".severity = "Info";
+    "Forge.Loop.LedgerState".severity = "Info";
   };
 }

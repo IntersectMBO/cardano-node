@@ -3,6 +3,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+-- | The module 'Cardano.Tracer.Handlers.RTView.UI.JS.Charts' contains the tools
+--   for rendering/updating charts using Chart.JS library, via JS FFI.
+--
+--   This module contains common tools for charts' state. We need it to be able
+--   to re-render their values after web-page reloading.
+
 module Cardano.Tracer.Handlers.RTView.UI.Charts
   ( initColors
   , initDatasetsIndices
@@ -18,12 +24,6 @@ module Cardano.Tracer.Handlers.RTView.UI.Charts
   , restoreLastHistoryOnAllCharts
   , restoreLastHistoryOnCharts
   ) where
-
--- | The module 'Cardano.Tracer.Handlers.RTView.UI.JS.Charts' contains the tools
---   for rendering/updating charts using Chart.JS library, via JS FFI.
---
---   This module contains common tools for charts' state. We need it to be able
---   to re-render their values after web-page reloading.
 
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TBQueue (newTBQueueIO, tryReadTBQueue, writeTBQueue)

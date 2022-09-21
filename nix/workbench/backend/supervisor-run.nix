@@ -121,10 +121,10 @@ in
             rm -rf cache
             rm -f run/{current,-current}
             find $out -type s | xargs rm -f
-            tag=$(cd run; ls)
-            (cd run; tar c $tag --zstd) > archive.tar.zst
-            mv       run/$tag/*  .
-            rmdir    run/$tag    run
+            run=$(cd run; ls)
+            (cd run; tar c $run --zstd) > archive.tar.zst
+            mv       run/$run/*  .
+            rmdir    run/$run    run
 
             cat > $out/nix-support/hydra-build-products <<EOF
             report workbench-log   $out wb-start.log
@@ -134,7 +134,7 @@ in
             report archive-tar-zst $out archive.tar.zst
             EOF
 
-            echo "workbench-test:  completed run $tag"
+            echo "workbench-test:  completed run $run"
             '';
   in
     run // {

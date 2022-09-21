@@ -74,33 +74,36 @@ library
                        Cardano.Analysis.MachPerf
                        Cardano.Analysis.Version
 
+                       Cardano.Org
+                       Cardano.Render
+
                        Cardano.Unlog.LogObject
-                       Cardano.Unlog.Org
-                       Cardano.Unlog.Render
                        Cardano.Unlog.Resources
 
   other-modules:       Paths_locli
+  autogen-modules:     Paths_locli
 
   build-depends:       aeson
+                     , Histogram
                      , aeson-pretty
                      , async
                      , attoparsec
                      , attoparsec-iso8601
                      , bytestring
                      , cardano-git-rev
-                     , cardano-prelude
                      , cardano-ledger-core
-                     , iohk-monitoring
+                     , cardano-prelude
                      , cardano-slotting
                      , containers
                      , deepseq
                      , directory
                      , ede
                      , extra
-                     , filepath
                      , file-embed
+                     , filepath
+                     , ghc
                      , gnuplot
-                     , Histogram
+                     , iohk-monitoring
                      , optparse-applicative-fork
                      , optparse-generic
                      , ouroboros-consensus

@@ -84,6 +84,7 @@ library
                        Cardano.Node.Types
                        Cardano.Node.Tracing.API
                        Cardano.Node.Tracing.Compat
+                       Cardano.Node.Tracing.DefaultTraceConfig
                        Cardano.Node.Tracing.Documentation
                        Cardano.Node.Tracing.Era.Byron
                        Cardano.Node.Tracing.Era.HardFork

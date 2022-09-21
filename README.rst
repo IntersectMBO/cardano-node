@@ -473,38 +473,17 @@ Without further ado (**NOTE**: *the order of steps is important!*):
 
       This command will produce a HUGE ``deps.png`` file, which will contain the entire chart of the project dependencies.  The important part to look for will be the subset of packages highlighted in red -- those, which belong to the ``ouroboros-network`` repository.  This will be the full *leaf dependency set*.
 6. Edit the ``cardano-node/cabal.project`` as follows:
-    - for the *leaf dependency set*
-        1. in the very beginning of the ``cabal.project``, add their relative paths to the ``packages:`` section, e.g.:
-            .. code-block:: console
+    - for the *leaf dependency set*, in the very beginning of the ``cabal.project``, add their relative paths to the ``packages:`` section, e.g.:
+        .. code-block:: console
 
-                packages:
-                    cardano-api
-                    cardano-cli
-                    ...
-                    trace-resources
-                    trace-forward
-                    ../ouroboros-network/ouroboros-consensus-shelley
-                    ../ouroboros-network/ouroboros-consensus-cardano
-
-        2. in the corresponding ``source-repository-package`` section, comment out mentions of the packages, e.g.:
-            .. code-block:: console
-
-                source-repository-package
-                  type: git
-                  location: https://github.com/input-output-hk/ouroboros-network
-                  tag: c764553561bed8978d2c6753d1608dc65449617a
-                  --sha256: 0hdh7xdrvxw943r6qr0xr4kwszindh5mnsn1lww6qdnxnmn7wcsc
-                  subdir:
-                    monoidal-synchronisation
-                    network-mux
-                    ouroboros-consensus
-                    ouroboros-consensus-byron
-                    -- ouroboros-consensus-cardano
-                    ouroboros-consensus-protocol
-                    -- ouroboros-consensus-shelley
-                    ouroboros-network
-                    ouroboros-network-framework
-                    ouroboros-network-testing
+            packages:
+                cardano-api
+                cardano-cli
+                ...
+                trace-resources
+                trace-forward
+                ../ouroboros-network/ouroboros-consensus-shelley
+                ../ouroboros-network/ouroboros-consensus-cardano
 
 7. The two packages have now became **local** -- when you try ``cabal build exe:cardano-node`` now, you'll see that Cabal starts to build these dependencies you just localised.  Hacking time!
 

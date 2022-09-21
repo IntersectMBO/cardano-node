@@ -16,7 +16,7 @@ case "${op}" in
         local real_dir=$(realpath "$dir")
 
         local args=(
-            --null-input
+            --slurp --raw-input
             --arg dir               "$real_dir"
             --arg node              "$node_rev"
             --arg node_branch       $(manifest_local_repo_branch          "$dir")
@@ -28,10 +28,11 @@ case "${op}" in
             --arg cardano_base      $(manifest_cabal_project_dep_pin_hash "$dir" cardano-base)
             --arg cardano_prelude   $(manifest_cabal_project_dep_pin_hash "$dir" cardano-prelude)
         )
-        jq '
+        manifest_cabal_package_localisations "$dir" | jq '
         { "cardano-node":        $node
         , "cardano-node-branch": $node_branch
         , "cardano-node-status": $node_status
+        , "cardano-node-package-localisations": (. | split("\n") | unique | map(select(. != "")))
         , "ouroboros-network":   $ouroboros_network
         , "cardano-ledger":      $cardano_ledger
         , "plutus":              $plutus
@@ -42,6 +43,7 @@ case "${op}" in
         | ($manifest
           | del(."cardano-node-status")
           | del(."cardano-node-branch")
+          | del(."cardano-node-package-localisations")
           | to_entries
           | map(if .value | length | (. == 40) then . else
                 error ([ "While collecting software manifest from \"\($dir)\":  "
@@ -75,10 +77,11 @@ case "${op}" in
               " (branch \(colorly("yellow"; $manifest."cardano-node-branch")) - \(repo_status($manifest."cardano-node-status")))"
           }[$repo] // "";
 
-        . as $manifest
-        | ($manifest
+          (."cardano-node-package-localisations") as $localisations
+        | . as $manifest
           | del(."cardano-node-status")
           | del(."cardano-node-branch")
+          | del(."cardano-node-package-localisations")
           | to_entries
           | (map(.key | length) | max | . + 1) as $maxlen
           | map([ "   \(.key): "
@@ -87,10 +90,23 @@ case "${op}" in
                 , repo_comment($manifest; .key)
                 , "\n"
                 ] | add)
-          | add
-          )
+        | . +
+          if $localisations == [] then []
+          else "\n" +
+               "   \(colorly("yellow"; "localised packages")): " +
+               "\(colorly("red";    $localisations | join(" ")))"
+               | [.]
+          end +
+          ["\n"]
+        | add
         ' --raw-output -L$global_basedir <<<$json
         ;;
+
+    collect-and-report )
+        local usage="USAGE: wb manifest $0 CARDANO-NODE-CHECKOUT"
+        local dir=${1:-.}; if test $# -ge 1; then shift; fi
+
+        manifest report "$(manifest collect-from-checkout "$dir")";;
 
     * ) usage_manifest;; esac
 }
@@ -128,4 +144,14 @@ manifest_local_repo_branch() {
             sed 's_^\(.*/\|\)\([^/]*\)$_\2_'
     else echo      -n "unknown-branch"
     fi
+}
+
+manifest_cabal_package_localisations() {
+    local dir=$1
+    if ! git -C "$dir" diff --exit-code --quiet -- cabal.project || \
+       ! git -C "$dir" diff --exit-code --quiet -- cabal.project --staged
+    then
+        git -C "$dir" diff --exit-code -- cabal.project
+        git -C "$dir" diff --exit-code -- cabal.project --staged
+    fi | grep -F '+    ../' | cut -d/ -f2-3
 }

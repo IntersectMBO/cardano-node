@@ -2,33 +2,44 @@ global_rundir_def=$PWD/run
 
 usage_run() {
      usage "run" "Managing cluster runs" <<EOF
-    list                  List cluster runs
+    $(helpcmd list)                 List cluster runs
 
-    allocate BATCH-NAME PROFILE-NAME [ENV-CONFIG-OPTS..]
+    $(helpcmd allocate BATCH-NAME PROFILE-NAME [ENV-CONFIG-OPTS..])
                           Allocate a cluster run with the specified:
                             - batch key (no semantics attached)
                             - profile name
                           A unique name would be allocated for this run,
-                            and a run alias 'current' will be created for it.
+                            and a run alias $(green current) will be created for it.
 
-    start [--scenario NAME] [--idle] [--analyse] TAG
+    $(helpcmd list-aws)             List AWS runs
+     $(blk lsaws)
+    $(helpcmd allocate-from-aws RUN)
+                          Fetch an AWS run
+     $(blk aws-get)
+    $(helpcmd analysis-from-aws RUN..)
+     $(blk fetch-analysis fa)    Fetch analyses of AWS runs
+    $(helpcmd analyse-aws RUN..)     Run analyses of AWS runs, remotely
+
+    $(helpcmd describe RUN)
+
+    $(helpcmd start [--scenario NAME] [--idle] [--analyse] RUN)
                           Start the named run.
                             --scenario forces a scenario, different from what
-                                is implied by the run profile;
+                                is specified by the run profile;
                                 See 'wb scenario --help' for scenario descriptions
                             --idle is a short-cut for '--scenario idle'
                             --analyse triggers analysis after 'start' returns
 
-    stop TAG              Stop the named run
+    $(helpcmd stop RUN)              Stop the named run
 
-    restart [--no-generator] BACKEND-START-ARGS..
+    $(helpcmd restart [--no-generator] BACKEND-START-ARGS..)
                           Stop and restart the current run (without a new allocation)
 
-  Options:
+  $(red run) $(blue options):
 
-    --rundir DIR          Set the runs directory.  Defaults to $global_rundir_def,
-                            if it exists, otherwise to \$WB_RUNDIR, if that
-                            exists, and finally unconditionally to $global_rundir_def.
+    $(helpopt --rundir DIR)          Set the runs directory.  Defaults to $(green $global_rundir_def),
+                            if it exists, otherwise to $(blue \$WB_RUNDIR), if that
+                            exists, and finally unconditionally to $(green $global_rundir_def)
 EOF
 }
 
@@ -77,9 +88,9 @@ case "$op" in
         fi;;
 
     fix-legacy-run-structure | fix-legacy )
-        local usage="USAGE: wb run $op TAG"
-        local tag=${1:?$usage}
-        local dir=$(run compute-path "$tag")
+        local usage="USAGE: wb run $op RUN"
+        local run=${1:?$usage}
+        local dir=$(run compute-path "$run")
 
         if test ! -f "$dir"/genesis-shelley.json
         then msg "fixing up genesis naming in:  $dir"
@@ -99,32 +110,39 @@ case "$op" in
                      mv "$logdir" "$dir"/$logs_less; done; fi
         else msg "fixing up a cardano-ops run in:  $dir"; fi
 
-        jq '.meta.profile_content' "$dir"/meta.json > "$dir"/profile.json;;
+        progress "run | aws-get" "adding manifest"
+        jq_fmutate "$dir"/meta.json '
+           .meta.manifest = $manifest
+           ' --argjson manifest "$(legacy_run_manifest $dir)"
+
+        jq ' .meta.profile_content
+           | .analysis.filters += ["model"]
+           ' "$dir"/meta.json > "$dir"/profile.json;;
 
     check )
-        local usage="USAGE: wb run $op TAG"
-        local tag=${1:?$usage}
-        local dir=$(run compute-path "$tag")
+        local usage="USAGE: wb run $op RUN"
+        local run=${1:?$usage}
+        local dir=$(run compute-path "$run")
 
         if ! jq_check_json "$dir"/meta.json
-        then if test $tag = 'current'
+        then if test $run = 'current'
              then local alt=$(run list | tail -n1)
                   progress 'run | check' "$(with_color white current) missing, resetting to $(with_color white $alt)"
                   run set-current $alt
-             else fatal "run $tag (at $dir) missing a file:  meta.json"; fi; fi
+             else fatal "run $run (at $dir) missing a file:  meta.json"; fi; fi
 
         test -f "$dir"/profile.json -a -f "$dir"/genesis-shelley.json ||
-            run fix-legacy-run-structure "$tag";;
+            run fix-legacy-run-structure "$run";;
 
     fix-systemstart )
-        local usage="USAGE: wb run $op TAG [MACH=node-1]"
-        local tag=${1:?$usage}
+        local usage="USAGE: wb run $op RUN [MACH=node-1]"
+        local run=${1:?$usage}
         local mach=${2:-node-1}
-        local dir=$(run compute-path "$tag")
+        local dir=$(run compute-path "$run")
         local nodelog=$(ls $dir/logs/$mach/node-*.json | head -n1)
         local genesis=$dir/genesis-shelley.json
 
-        msg "cross-checking systemStart of $tag:  $nodelog"
+        msg "cross-checking systemStart of $run:  $nodelog"
         local apparent_systemStart=$(grep -F 'TraceStartLeadershipCheck' $nodelog |
                                      head -n2 |
                                      tail -n1 |
@@ -135,7 +153,7 @@ case "$op" in
         local genesis_systemStart=$(jq .systemStart $genesis -r)
 
         if test "$genesis_systemStart" != "$apparent_systemStart"
-        then msg "Fixing genesis systemStart in $tag:  $apparent_systemStart (log), $genesis_systemStart (genesis)"
+        then msg "Fixing genesis systemStart in $run:  $apparent_systemStart (log), $genesis_systemStart (genesis)"
              jq_fmutate "$dir"/genesis-shelley.json '. *
                { systemStart: $systemStart
                }
@@ -144,25 +162,25 @@ case "$op" in
         fi;;
 
     get-path | get )
-        local usage="USAGE: wb run $op TAG"
-        local tag=${1:?$usage}
-        run check        "$tag"
-        run compute-path "$tag";;
+        local usage="USAGE: wb run $op RUN"
+        local run=${1:?$usage}
+        run check        "$run"
+        run compute-path "$run";;
 
     show-meta | show | meta | s )
-        local usage="USAGE: wb run $op TAG"
-        local tag=${1:?$usage}
+        local usage="USAGE: wb run $op RUN"
+        local run=${1:?$usage}
 
-        jq '.' "$(run get "$tag")"/meta.json;;
+        jq '.' "$(run get "$run")"/meta.json;;
 
     set-current | set )
-        local usage="USAGE: wb run $op TAG"
-        local tag=${1:?$usage}
-        local dir=$(run get "$tag")
+        local usage="USAGE: wb run $op RUN"
+        local run=${1:?$usage}
+        local dir=$(run get "$run")
 
         rm -f      "$global_rundir"/{current,-current}
-        ln -s $tag "$global_rundir"/-current
-        ln -s $tag "$global_rundir"/current;;
+        ln -s $run "$global_rundir"/-current
+        ln -s $run "$global_rundir"/current;;
 
     current-run-path | current-path | path )
         realpath "$global_rundir"/current;;
@@ -175,6 +193,163 @@ case "$op" in
 
     current-run-profile | current-profile | profile | p )
         jq '.' "$(run current-path)"/profile.json;;
+
+    allocate )
+        local usage="USAGE: wb run $op BATCH-NAME PROFILE-NAME [ENV-CONFIG-OPTS..] [-- BACKEND-ARGS-AND-ENV-CONFIG-OPTS..]"
+        local batch=${1:?$usage}; shift
+        local profile_name=${1:?$usage}; shift
+
+        local profile= topology= genesis_cache_entry= manifest= preset= cabal_mode=
+        while test $# -gt 0
+        do case "$1" in
+               --manifest )            manifest=$2; shift;;
+               --profile )             profile=$2; shift;;
+               --topology )            topology=$2; shift;;
+               --genesis-cache-entry ) genesis_cache_entry=$2; shift;;
+               --cabal-mode | --cabal ) cabal_mode=t;;
+               -- ) shift; break;;
+               --* ) msg "FATAL:  unknown flag '$1'"; usage_run;;
+               * ) break;; esac; shift; done
+
+        local node_specs="$profile"/node-specs.json
+
+        if profile has-preset "$profile"/profile.json
+        then preset=$(profile json "$profile"/profile.json | jq '.preset' -r)
+             progress "run" "allocating from preset '$preset'"
+        else progress "run" "allocating a new one"
+        fi
+
+        local hash=$(jq '."cardano-node" | .[:5]' -r <<<$manifest)
+
+        ## 1. compute cluster composition
+
+        ## 2. genesis cache entry population
+        progress "run | genesis" "cache entry:  $(if test -n "$genesis_cache_entry"; then echo pre-supplied; else echo preparing a new one..; fi)"
+        if test  -z "$genesis_cache_entry"
+        then local genesis_tmpdir=$(mktemp --directory)
+             local cacheDir=$(envjqr 'cacheDir')
+             mkdir -p "$cacheDir" && test -w "$cacheDir" ||
+                     fatal "profile | allocate failed to create writable cache directory:  $cacheDir"
+             local genesis_args=(
+                 ## Positionals:
+                 "$profile"/profile.json
+                 "$cacheDir"/genesis
+                 "$node_specs"
+                 "$genesis_tmpdir"/genesis
+             )
+             genesis prepare-cache-entry "${genesis_args[@]}"
+             genesis_cache_entry=$(realpath "$genesis_tmpdir"/genesis)
+             rm -f "$genesis_tmpdir"/genesis
+             rmdir "$genesis_tmpdir"
+        fi
+
+        ## 2. allocate time
+        progress "run | time" "allocating time:"
+        local timing=$(profile allocate-time "$profile"/profile.json)
+        profile describe-timing "$timing"
+
+        ## 3. decide the tag:
+        local run=$(jq '.start_tag' -r <<<$timing)$(if test "$batch" != 'plain'; then echo -n .$batch; fi).$hash.$profile_name$(test -z "$cabal_mode" && echo '.nix')
+        progress "run | tag" "allocated run identifier (tag):  $(with_color white $run)"
+
+        ## 4. allocate directory:
+        local dir=$global_rundir/$run
+        local realdir=$(realpath --canonicalize-missing "$dir")
+
+        test "$(dirname "$realdir")" = "$(realpath "$global_rundir")" ||
+            fatal "profile | allocate bad tag/run dir:  $run @ $dir"
+        test ! -e "$dir" ||
+            fatal "profile | allocate tag busy:  $run @ $dir"
+        mkdir -p "$dir"/flag && test -w "$dir" ||
+            fatal "profile | allocate failed to create writable run directory:  $dir"
+
+        ## 5. populate the directory:
+        progress "run | profile" "$(if test -n "$profile"; then echo "pre-supplied ($profile_name):  $profile"; else echo "computed:  $profile_name"; fi)"
+        if test -n "$profile"
+        then
+            test "$(jq -r .name $profile/profile.json)" = "$profile_name" ||
+                fatal "profile | allocate incoherence:  --profile $profile/profile.json mismatches '$profile_name'"
+            ln -s "$profile"                 "$dir"/profile
+            cp    "$profile"/profile.json    "$dir"/profile.json
+            cp    "$profile"/node-specs.json "$dir"/node-specs.json
+        else
+            fail "Mode no longer supported:  operation without profile/ directory."
+        fi
+
+        local args=(
+            --arg       run              "$run"
+            --arg       batch            "$batch"
+            --arg       profile_name     "$profile_name"
+            --argjson   timing           "$timing"
+            --slurpfile profile_content  "$dir"/profile.json
+            --argjson   manifest         "$manifest"
+        )
+        jq_fmutate "$dir"/meta.json '. *
+           { meta:
+             { tag:              $run
+             , batch:            $batch
+             , profile:          $profile_name
+             , timing:           $timing
+             , manifest:         $manifest
+             , profile_content:  $profile_content[0]
+             }
+           }
+           ' "${args[@]}"
+
+        progress "run | topology"  "$(if test -n "$topology"; then echo pre-supplied; else echo computed; fi)"
+        if test -n "$topology"
+        then ln -s "$topology"                    "$dir"/topology
+        else topology make    "$dir"/profile.json "$dir"/topology
+        fi
+
+        if      test -z "$genesis_cache_entry"
+        then fail "internal error:  no genesis cache entry"
+
+        else genesis derive-from-cache      \
+                     "$profile"             \
+                     "$timing"              \
+                     "$genesis_cache_entry" \
+                     "$dir"/genesis
+        fi
+        ## Record geneses
+        cp "$dir"/genesis/genesis-shelley.json "$dir"/genesis-shelley.json
+        cp "$dir"/genesis/genesis.alonzo.json  "$dir"/genesis.alonzo.json
+        echo >&2
+
+        local svcs=$profile/node-services.json
+        for node in $(jq_tolist 'keys' "$dir"/node-specs.json)
+        do local node_dir="$dir"/$node
+           mkdir -p                                          "$node_dir"
+           jq      '."'"$node"'"' "$dir"/node-specs.json   > "$node_dir"/node-spec.json
+           cp $(jq '."'"$node"'"."config"'         -r $svcs) "$node_dir"/config.json
+           cp $(jq '."'"$node"'"."service-config"' -r $svcs) "$node_dir"/service-config.json
+           cp $(jq '."'"$node"'"."start"'          -r $svcs) "$node_dir"/start.sh
+           cp $(jq '."'"$node"'"."topology"'       -r $svcs) "$node_dir"/topology.json
+        done
+
+        local gtor=$profile/generator-service.json
+        gen_dir="$dir"/generator
+        mkdir -p                              "$gen_dir"
+        cp $(jq '."run-script"'     -r $gtor) "$gen_dir"/run-script.json
+        cp $(jq '."service-config"' -r $gtor) "$gen_dir"/service-config.json
+        cp $(jq '."start"'          -r $gtor) "$gen_dir"/start.sh
+        ln -s          ../node-0/config.json  "$gen_dir"
+
+        local trac=$profile/tracer-service.json
+        trac_dir="$dir"/tracer
+        mkdir -p                              "$trac_dir"
+        cp $(jq '."tracer-config"'        -r $trac) "$trac_dir"/tracer-config.json
+        cp $(jq '."nixos-service-config"' -r $trac) "$trac_dir"/nixos-service-config.json
+        cp $(jq '."config"'               -r $trac) "$trac_dir"/config.json
+        cp $(jq '."start"'                -r $trac) "$trac_dir"/start.sh
+
+        backend allocate-run "$dir"
+
+        progress "run" "allocated $(with_color white $run) @ $dir"
+        run     describe "$run"
+        profile describe "$dir"/profile.json
+        run  set-current "$run"
+        ;;
 
     allocate-from-machine-run-slice | alloc-from-mrs )
         local usage="USAGE: wb run $op MACH RUN-SLICE-ID PRESET"
@@ -200,8 +375,8 @@ case "$op" in
               }
           | { meta: . }
           ' "${args[@]}" --null-input)
-        local tag=$(jq '.meta.tag' -r <<<$meta)
-        local dir="$global_rundir"/$tag
+        local run=$(jq '.meta.tag' -r <<<$meta)
+        local dir="$global_rundir"/$run
 
         mkdir -p "$dir"/$mach
         local genesis=$(profile preset-get-file "$preset" 'genesis' 'genesis/genesis-shelley.json')
@@ -270,7 +445,7 @@ case "$op" in
         )
         run_aws_get "${args[@]}";;
 
-    analysis-from-aws | aws-get-analysis | aws-geta | fetch-analysis | fa )
+    analysis-from-aws | aws-get-analysis | fetch-analysis | fa )
         local usage="USAGE: wb run $op RUN.."
         local runs=($*) run
         local env='bench'
@@ -284,7 +459,7 @@ case "$op" in
            then fail "aws-analysis:  run has not been analysed on AWS: $(white $run)"
            else local analysis_files=(
                    $(ssh $env -- \
-                     sh -c "'cd $depl/runs/$run && ls analysis/*.{json,cdf,org,txt} | grep -v flt.json | grep -v flt.logobjs.json | grep -v flt.mach.txt | grep -v flt.perf-stats.json'" \
+                     sh -c "'cd $depl/runs/$run && ls analysis/*.{json,cdf,org,txt} | grep -v flt.json | grep -v flt.logobjs.json | grep -v flt.perf-stats.json'" \
                      2>/dev/null)
                 )
                 local args=(
@@ -301,7 +476,7 @@ case "$op" in
         done
         ;;
 
-    analyse-aws | awsa )
+    analyse-aws )
         local usage="USAGE: wb run $op RUN [MACHINE] [DEPLOYMENT=bench-1] [ENV=bench]"
         local run=${1:?$usage}
         local mach=${2:-}
@@ -310,174 +485,14 @@ case "$op" in
 
         if   test "$(ssh $env -- sh -c "'ls -ld $depl/runs/$run          | wc -l'")" = 0
         then fail "aws-analysis:  run does not exist on AWS: $(white $run)"
-        else ssh $env -- sh -c "'export WB_RUNDIR=../$depl/runs && cd cardano-node && echo env: $(yellow $env), rundir: $(color blue)\$WB_RUNDIR$(color reset), workbench: $(color yellow)\$(git log -n1)$(color reset) && make analyse TAG=$run'"
+        else ssh $env -- sh -c "'export WB_RUNDIR=../$depl/runs && cd cardano-node && echo env: $(yellow $env), rundir: $(color blue)\$WB_RUNDIR$(color reset), workbench: $(color yellow)\$(git log -n1)$(color reset) && make analyse RUN=$run'"
         fi
-        ;;
-
-    allocate )
-        local usage="USAGE: wb run $op BATCH-NAME PROFILE-NAME [ENV-CONFIG-OPTS..] [-- BACKEND-ARGS-AND-ENV-CONFIG-OPTS..]"
-        local batch=${1:?$usage}; shift
-        local profile_name=${1:?$usage}; shift
-
-        local profile= topology= genesis_cache_entry= manifest= preset= cabal_mode=
-        while test $# -gt 0
-        do case "$1" in
-               --manifest )            manifest=$2; shift;;
-               --profile )             profile=$2; shift;;
-               --topology )            topology=$2; shift;;
-               --genesis-cache-entry ) genesis_cache_entry=$2; shift;;
-               --cabal-mode | --cabal ) cabal_mode=t;;
-               -- ) shift; break;;
-               --* ) msg "FATAL:  unknown flag '$1'"; usage_run;;
-               * ) break;; esac; shift; done
-
-        local node_specs="$profile"/node-specs.json
-
-        if profile has-preset "$profile"/profile.json
-        then preset=$(profile json "$profile"/profile.json | jq '.preset' -r)
-             progress "run" "allocating from preset '$preset'"
-        else progress "run" "allocating a new one"
-        fi
-
-        ## 0. report software manifest
-        progress "run | manifest" "component versions:"
-        manifest report "$manifest"
-        local hash=$(jq '."cardano-node" | .[:5]' -r <<<$manifest)
-
-        ## 1. compute cluster composition
-
-        ## 2. genesis cache entry population
-        progress "run | genesis" "cache entry:  $(if test -n "$genesis_cache_entry"; then echo pre-supplied; else echo preparing a new one..; fi)"
-        if test  -z "$genesis_cache_entry"
-        then local genesis_tmpdir=$(mktemp --directory)
-             local cacheDir=$(envjqr 'cacheDir')
-             mkdir -p "$cacheDir" && test -w "$cacheDir" ||
-                     fatal "profile | allocate failed to create writable cache directory:  $cacheDir"
-             local genesis_args=(
-                 ## Positionals:
-                 "$profile"/profile.json
-                 "$cacheDir"/genesis
-                 "$node_specs"
-                 "$genesis_tmpdir"/genesis
-             )
-             genesis prepare-cache-entry "${genesis_args[@]}"
-             genesis_cache_entry=$(realpath "$genesis_tmpdir"/genesis)
-             rm -f "$genesis_tmpdir"/genesis
-             rmdir "$genesis_tmpdir"
-        fi
-
-        ## 2. allocate time
-        progress "run | time" "allocating time:"
-        local timing=$(profile allocate-time "$profile"/profile.json)
-        profile describe-timing "$timing"
-
-        ## 3. decide the tag:
-        local tag=$(jq '.start_tag' -r <<<$timing)$(if test "$batch" != 'plain'; then echo -n .$batch; fi).$hash.$profile_name$(test -z "$cabal_mode" && echo '.nix')
-        progress "run | tag" "allocated run identifier (tag):  $(with_color white $tag)"
-
-        ## 4. allocate directory:
-        local dir=$global_rundir/$tag
-        local realdir=$(realpath --canonicalize-missing "$dir")
-
-        test "$(dirname "$realdir")" = "$(realpath "$global_rundir")" ||
-            fatal "profile | allocate bad tag/run dir:  $tag @ $dir"
-        test ! -e "$dir" ||
-            fatal "profile | allocate tag busy:  $tag @ $dir"
-        mkdir -p "$dir"/flag && test -w "$dir" ||
-            fatal "profile | allocate failed to create writable run directory:  $dir"
-
-        ## 5. populate the directory:
-        progress "run | profile" "$(if test -n "$profile"; then echo "pre-supplied ($profile_name):  $profile"; else echo "computed:  $profile_name"; fi)"
-        if test -n "$profile"
-        then
-            test "$(jq -r .name $profile/profile.json)" = "$profile_name" ||
-                fatal "profile | allocate incoherence:  --profile $profile/profile.json mismatches '$profile_name'"
-            ln -s "$profile"                 "$dir"/profile
-            cp    "$profile"/profile.json    "$dir"/profile.json
-            cp    "$profile"/node-specs.json "$dir"/node-specs.json
-        else
-            fail "Mode no longer supported:  operation without profile/ directory."
-        fi
-
-        local args=(
-            --arg       tag              "$tag"
-            --arg       batch            "$batch"
-            --arg       profile_name     "$profile_name"
-            --argjson   timing           "$timing"
-            --slurpfile profile_content  "$dir"/profile.json
-            --argjson   manifest         "$manifest"
-        )
-        jq_fmutate "$dir"/meta.json '. *
-           { meta:
-             { tag:              $tag
-             , batch:            $batch
-             , profile:          $profile_name
-             , timing:           $timing
-             , manifest:         $manifest
-             , profile_content:  $profile_content[0]
-             }
-           }
-           ' "${args[@]}"
-
-        progress "run | topology"  "$(if test -n "$topology"; then echo pre-supplied; else echo computed; fi)"
-        if test -n "$topology"
-        then ln -s "$topology"                    "$dir"/topology
-        else topology make    "$dir"/profile.json "$dir"/topology
-        fi
-
-        if      test -z "$genesis_cache_entry"
-        then fail "internal error:  no genesis cache entry"
-
-        else genesis derive-from-cache      \
-                     "$profile"             \
-                     "$timing"              \
-                     "$genesis_cache_entry" \
-                     "$dir"/genesis
-        fi
-        ## Record geneses
-        cp "$dir"/genesis/genesis-shelley.json "$dir"/genesis-shelley.json
-        cp "$dir"/genesis/genesis.alonzo.json  "$dir"/genesis.alonzo.json
-        echo >&2
-
-        local svcs=$profile/node-services.json
-        for node in $(jq_tolist 'keys' "$dir"/node-specs.json)
-        do local node_dir="$dir"/$node
-           mkdir -p                                          "$node_dir"
-           jq      '."'"$node"'"' "$dir"/node-specs.json   > "$node_dir"/node-spec.json
-           cp $(jq '."'"$node"'"."config"'         -r $svcs) "$node_dir"/config.json
-           cp $(jq '."'"$node"'"."service-config"' -r $svcs) "$node_dir"/service-config.json
-           cp $(jq '."'"$node"'"."start"'          -r $svcs) "$node_dir"/start.sh
-           cp $(jq '."'"$node"'"."topology"'       -r $svcs) "$node_dir"/topology.json
-        done
-
-        local gtor=$profile/generator-service.json
-        gen_dir="$dir"/generator
-        mkdir -p                              "$gen_dir"
-        cp $(jq '."run-script"'     -r $gtor) "$gen_dir"/run-script.json
-        cp $(jq '."service-config"' -r $gtor) "$gen_dir"/service-config.json
-        cp $(jq '."start"'          -r $gtor) "$gen_dir"/start.sh
-        ln -s          ../node-0/config.json  "$gen_dir"
-
-        local trac=$profile/tracer-service.json
-        trac_dir="$dir"/tracer
-        mkdir -p                              "$trac_dir"
-        cp $(jq '."tracer-config"'        -r $trac) "$trac_dir"/tracer-config.json
-        cp $(jq '."nixos-service-config"' -r $trac) "$trac_dir"/nixos-service-config.json
-        cp $(jq '."config"'               -r $trac) "$trac_dir"/config.json
-        cp $(jq '."start"'                -r $trac) "$trac_dir"/start.sh
-
-        backend allocate-run "$dir"
-
-        progress "run" "allocated $(with_color white $tag) @ $dir"
-        run     describe "$tag"
-        profile describe "$dir"/profile.json
-        run  set-current "$tag"
         ;;
 
     list-hosts | hosts )
-        local usage="USAGE: wb run $op TAG"
-        local tag=${1:?$usage}
-        local dir=$global_rundir/$tag
+        local usage="USAGE: wb run $op RUN"
+        local run=${1:?$usage}
+        local dir=$global_rundir/$run
 
         if test -f "$dir"/node-specs.json
         then jq             'keys | .[]' -r "$dir"/node-specs.json
@@ -514,9 +529,9 @@ case "$op" in
         ;;
 
     trim )
-        local usage="USAGE: wb run $op TAG"
-        local tag=${1:?$usage}
-        local dir=$global_rundir/$tag
+        local usage="USAGE: wb run $op RUN"
+        local run=${1:?$usage}
+        local dir=$global_rundir/$run
         local genesis="$dir"/genesis-shelley.json
         local genesis_orig="$genesis".orig
 
@@ -530,12 +545,12 @@ case "$op" in
              ' "$genesis_orig"; fi;;
 
     describe )
-        local usage="USAGE: wb run $op TAG"
-        local tag=${1:?$usage}
-        local dir=$global_rundir/$tag
+        local usage="USAGE: wb run $op RUN"
+        local run=${1:?$usage}
+        local dir=$global_rundir/$run
 
-        if ! run check "$tag"
-        then fatal "run fails sanity checks:  $tag at $dir"; fi
+        if ! run check "$run"
+        then fatal "run fails sanity checks:  $run at $dir"; fi
 
         cat <<EOF
   - run dir:         $dir
@@ -548,9 +563,9 @@ EOF
         ;;
 
     compat-meta-fixups | compat-f )
-        local usage="USAGE: wb run $op TAG"
-        local tag=${1:?$usage}
-        local dir=$(run get "$tag")
+        local usage="USAGE: wb run $op RUN"
+        local run=${1:?$usage}
+        local dir=$(run get "$run")
 
         jq_fmutate "$dir"/meta.json '
            def compat_fixups:
@@ -568,7 +583,7 @@ EOF
                }';;
 
     start )
-        local usage="USAGE: wb run $op [--idle] [--scenario NAME] [--analyse] TAG"
+        local usage="USAGE: wb run $op [--idle] [--scenario NAME] [--analyse] RUN"
 
         local scenario_override= analyse=yes analysis_can_fail=
         while test $# -gt 0
@@ -581,25 +596,25 @@ EOF
                --* ) msg "FATAL:  unknown flag '$1'"; usage_run;;
                * ) break;; esac; shift; done
 
-        local tag=${1:-?$usage}; shift
-        local dir=$(run get "$tag")
+        local run=${1:-?$usage}; shift
+        local dir=$(run get "$run")
         test -d "$dir" ||
-            fatal "invalid run tag: $tag"
+            fatal "invalid run identifier: $run"
 
-        progress "run" "starting $(with_color white $tag)"
+        progress "run" "starting $(with_color white $run)"
 
-        run set-current "$tag"
+        run set-current "$run"
 
         ## Execute the scenario
         local scenario=${scenario_override:-$(jq -r .scenario "$dir"/profile.json)}
         scenario "$scenario" "$dir"
 
-        run compat-meta-fixups "$tag"
+        run compat-meta-fixups "$run"
         ;;
 
     stop )
-        local tag=${1:-current}
-        local dir=$(run get "$tag")
+        local run=${1:-current}
+        local dir=$(run get "$run")
 
         if backend is-running "$dir"
         then progress "run" "terminating.."
@@ -609,21 +624,21 @@ EOF
         ;;
 
     restart )
-        local tag=$(run current-tag)
-        local dir=$(run get "$tag")
+        local run=$(run current-tag)
+        local dir=$(run get "$run")
 
         test -d "$dir" ||
             fatal "no valid current run to restart:  please set run/current appropriately"
 
         progress "run" "restarting cluster in the same run directory: $dir"
 
-        run stop                "$tag"
+        run stop                "$run"
         jq_fmutate "$dir"/meta.json '
           { modifiers: { wiped_and_restarted: true }
           } * .
         '
         backend cleanup-cluster "$dir"
-        run start          "$@" "$tag"
+        run start          "$@" "$run"
 
         msg "cluster re-started in the same run directory: $dir"
         ;;
