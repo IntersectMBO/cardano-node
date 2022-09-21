@@ -24,7 +24,7 @@ import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.IO.Unlift (MonadUnliftIO)
 import qualified Control.Tracer as T
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
-import           Data.List (maximumBy, nub)
+import           Data.List (isPrefixOf, maximumBy, nub)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe, mapMaybe)
 import           Data.Text (Text, intercalate, unpack)
@@ -56,7 +56,8 @@ configureTracers config (Documented documented) tracers = do
                             , Left control))
         documented
 
-
+-- | Switch off any message of a particular tracer based on the configuration.
+-- If the top tracer is silent and no subtracer is not silent, then switch it off
 maybeSilent :: forall m a. (MonadIO m) =>
      Namespace
   -> Trace m a
@@ -74,11 +75,25 @@ maybeSilent ns tr = do
       let val = isSilentTracer c ns
       liftIO $ writeIORef ref val
       T.traceWith (unpackTrace tr) (lc,  Left (Config c))
+    mkTrace ref (lc, Left Reset) = do
+      liftIO $ writeIORef ref False
+      T.traceWith (unpackTrace tr) (lc,  Left Reset)
     mkTrace _ref (lc, Left other) =
       T.traceWith (unpackTrace tr) (lc,  Left other)
 
 isSilentTracer :: TraceConfig -> Namespace -> Bool
-isSilentTracer tc ns = getSeverity tc ns == SeverityF Nothing
+-- If the top tracer is silent and no subtracer is not silent, then switch it off
+isSilentTracer tc ns =
+    if getSeverity tc ns == SeverityF Nothing
+      then
+        let entries = filter (\(nsf,_opts) -> isPrefixOf ns nsf) $ Map.toList (tcOptions tc)
+            blockers = filter (\(_nsf,opts) -> null (filter filterOpts opts)) entries
+        in null blockers
+      else False
+  where
+      filterOpts (ConfSeverity (SeverityF Nothing)) = False
+      filterOpts (ConfSeverity (SeverityF (Just _))) = True
+      filterOpts _ = False
 
 -- | Take a selector function called 'extract'.
 -- Take a function from trace to trace with this config dependent value.
