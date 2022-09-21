@@ -13,6 +13,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
 {- HLINT ignore "Avoid lambda using `infix`" -}
@@ -175,6 +176,7 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes, fromMaybe, maybeToList)
 import           Data.Scientific (toBoundedInteger)
+import           Data.Semigroup (Last (..))
 import qualified Data.Sequence.Strict as Seq
 import           Data.Set (Set)
 import qualified Data.Set as Set
@@ -285,6 +287,14 @@ data ScriptValidity
 
   deriving (Eq, Show)
 
+instance Semigroup ScriptValidity where
+    ScriptInvalid <> x = x
+    x <> ScriptInvalid = x
+    ScriptValid <> ScriptValid = ScriptValid
+
+instance Monoid ScriptValidity where
+    mempty = ScriptInvalid
+
 instance ToCBOR ScriptValidity where
   toCBOR = toCBOR . scriptValidityToIsValid
 
@@ -314,6 +324,14 @@ data TxScriptValidity era where
 
 deriving instance Eq   (TxScriptValiditySupportedInEra era)
 deriving instance Show (TxScriptValiditySupportedInEra era)
+
+instance Semigroup (TxScriptValidity era) where
+    TxScriptValidityNone <> x = x
+    x <> TxScriptValidityNone = x
+    (TxScriptValidity wit l) <> (TxScriptValidity _ r) = TxScriptValidity wit (l <> r)
+
+instance Monoid (TxScriptValidity era) where
+    mempty = TxScriptValidityNone
 
 data TxScriptValiditySupportedInEra era where
   TxScriptValiditySupportedInAlonzoEra  :: TxScriptValiditySupportedInEra AlonzoEra
@@ -1159,6 +1177,20 @@ data BuildTxWith build a where
      ViewTx      ::      BuildTxWith ViewTx  a
      BuildTxWith :: a -> BuildTxWith BuildTx a
 
+instance Semigroup a => Semigroup (BuildTxWith build a) where
+    ViewTx <> ViewTx = ViewTx
+    (BuildTxWith l) <> (BuildTxWith r) = BuildTxWith (l <> r)
+
+instance Semigroup a => Monoid (BuildTxWith ViewTx a) where
+    mempty = ViewTx
+
+instance Monoid a => Monoid (BuildTxWith BuildTx a) where
+    mempty = BuildTxWith mempty
+
+instance Functor (BuildTxWith build) where
+    fmap _ ViewTx = ViewTx
+    fmap f (BuildTxWith x) = BuildTxWith (f x)
+
 deriving instance Eq   a => Eq   (BuildTxWith build a)
 deriving instance Show a => Show (BuildTxWith build a)
 
@@ -1176,6 +1208,15 @@ data TxInsCollateral era where
                          -> [TxIn] -- Only key witnesses, no scripts.
                          -> TxInsCollateral era
 
+instance Semigroup (TxInsCollateral era) where
+    TxInsCollateralNone <> x = x
+    x <> TxInsCollateralNone = x
+    (TxInsCollateral wit l) <> (TxInsCollateral _ r) =
+      TxInsCollateral wit (l <> r)
+
+instance Monoid (TxInsCollateral era) where
+    mempty = TxInsCollateralNone
+
 deriving instance Eq   (TxInsCollateral era)
 deriving instance Show (TxInsCollateral era)
 
@@ -1189,6 +1230,14 @@ data TxInsReference build era where
 
 deriving instance Eq   (TxInsReference build era)
 deriving instance Show (TxInsReference build era)
+
+instance Semigroup (TxInsReference build era) where
+    TxInsReferenceNone <> x = x
+    x <> TxInsReferenceNone = x
+    (TxInsReference wit l) <> (TxInsReference _ r) = TxInsReference wit (l <> r)
+
+instance Monoid (TxInsReference build era) where
+    mempty = TxInsReferenceNone
 
 -- ----------------------------------------------------------------------------
 -- Transaction output values (era-dependent)
@@ -1215,6 +1264,25 @@ instance EraCast TxOutValue where
 deriving instance Eq   (TxOutValue era)
 deriving instance Show (TxOutValue era)
 deriving instance Generic (TxOutValue era)
+
+instance Semigroup (TxOutValue era) where
+    (TxOutAdaOnly wit l) <> (TxOutAdaOnly _ r) = TxOutAdaOnly wit (l <> r)
+    (TxOutAdaOnly _ l) <> (TxOutValue wit r) = TxOutValue wit (lovelaceToValue l <> r)
+    (TxOutValue wit l) <> (TxOutAdaOnly _ r) = TxOutValue wit (l <> lovelaceToValue r)
+    (TxOutValue wit l) <> (TxOutValue _ r) = TxOutValue wit (l <> r)
+
+instance Monoid (TxOutValue ByronEra) where
+    mempty = TxOutAdaOnly AdaOnlyInByronEra mempty
+instance Monoid (TxOutValue ShelleyEra) where
+    mempty = TxOutAdaOnly AdaOnlyInShelleyEra mempty
+instance Monoid (TxOutValue AllegraEra) where
+    mempty = TxOutAdaOnly AdaOnlyInAllegraEra mempty
+instance Monoid (TxOutValue MaryEra) where
+    mempty = TxOutValue MultiAssetInMaryEra mempty
+instance Monoid (TxOutValue AlonzoEra) where
+    mempty = TxOutValue MultiAssetInAlonzoEra mempty
+instance Monoid (TxOutValue BabbageEra) where
+    mempty = TxOutValue MultiAssetInBabbageEra mempty
 
 instance ToJSON (TxOutValue era) where
   toJSON (TxOutAdaOnly _ ll) = toJSON ll
@@ -1295,6 +1363,14 @@ data TxReturnCollateral ctx era where
 deriving instance Eq   (TxReturnCollateral ctx era)
 deriving instance Show (TxReturnCollateral ctx era)
 
+instance Semigroup (TxReturnCollateral ctx era) where
+    TxReturnCollateralNone <> x = x
+    x <> TxReturnCollateralNone = x
+    _ <> x@TxReturnCollateral{} = x -- Keep the last
+
+instance Monoid (TxReturnCollateral ctx era) where
+    mempty = TxReturnCollateralNone
+
 data TxTotalCollateral era where
 
      TxTotalCollateralNone :: TxTotalCollateral era
@@ -1306,12 +1382,21 @@ data TxTotalCollateral era where
 deriving instance Eq   (TxTotalCollateral era)
 deriving instance Show (TxTotalCollateral era)
 
+instance Semigroup (TxTotalCollateral era) where
+    x <> TxTotalCollateralNone = x
+    TxTotalCollateralNone <> x = x
+    (TxTotalCollateral wit l) <> (TxTotalCollateral _ r) = TxTotalCollateral wit (l <> r)
+
+instance Monoid (TxTotalCollateral era) where
+    mempty = TxTotalCollateralNone
+
 data TxTotalAndReturnCollateralSupportedInEra era where
 
      TxTotalAndReturnCollateralInBabbageEra :: TxTotalAndReturnCollateralSupportedInEra BabbageEra
 
 deriving instance Eq   (TxTotalAndReturnCollateralSupportedInEra era)
 deriving instance Show (TxTotalAndReturnCollateralSupportedInEra era)
+
 
 totalAndReturnCollateralSupportedInEra
   :: CardanoEra era -> Maybe (TxTotalAndReturnCollateralSupportedInEra era)
@@ -1406,6 +1491,20 @@ data TxFee era where
 deriving instance Eq   (TxFee era)
 deriving instance Show (TxFee era)
 
+instance Semigroup (TxFee era) where
+    (TxFeeImplicit _) <> x = x
+    x <> (TxFeeImplicit _) = x
+    (TxFeeExplicit wit l) <> (TxFeeExplicit _ r) = TxFeeExplicit wit (l <> r)
+
+instance IsCardanoEra era => Monoid (TxFee era) where
+    mempty = case cardanoEra @era of
+      ByronEra -> TxFeeImplicit TxFeesImplicitInByronEra
+      ShelleyEra -> TxFeeExplicit TxFeesExplicitInShelleyEra mempty
+      AllegraEra -> TxFeeExplicit TxFeesExplicitInAllegraEra mempty
+      MaryEra -> TxFeeExplicit TxFeesExplicitInMaryEra mempty
+      AlonzoEra -> TxFeeExplicit TxFeesExplicitInAlonzoEra mempty
+      BabbageEra -> TxFeeExplicit TxFeesExplicitInBabbageEra mempty
+
 
 -- ----------------------------------------------------------------------------
 -- Transaction validity range
@@ -1425,6 +1524,19 @@ data TxValidityUpperBound era where
 deriving instance Eq   (TxValidityUpperBound era)
 deriving instance Show (TxValidityUpperBound era)
 
+instance Semigroup (TxValidityUpperBound era) where
+    (TxValidityNoUpperBound _) <> x = x
+    x <> (TxValidityNoUpperBound _) = x
+    (TxValidityUpperBound wit l) <> (TxValidityUpperBound _ r) = TxValidityUpperBound wit (min l r)
+
+instance IsCardanoEra era => Monoid (TxValidityUpperBound era) where
+    mempty = case cardanoEra @era of
+      ByronEra -> TxValidityNoUpperBound ValidityNoUpperBoundInByronEra
+      ShelleyEra -> TxValidityUpperBound ValidityUpperBoundInShelleyEra maxBound
+      AllegraEra -> TxValidityNoUpperBound ValidityNoUpperBoundInAllegraEra
+      MaryEra -> TxValidityNoUpperBound ValidityNoUpperBoundInMaryEra
+      AlonzoEra -> TxValidityNoUpperBound ValidityNoUpperBoundInAlonzoEra
+      BabbageEra -> TxValidityNoUpperBound ValidityNoUpperBoundInBabbageEra
 
 data TxValidityLowerBound era where
 
@@ -1437,6 +1549,13 @@ data TxValidityLowerBound era where
 deriving instance Eq   (TxValidityLowerBound era)
 deriving instance Show (TxValidityLowerBound era)
 
+instance Semigroup (TxValidityLowerBound era) where
+    TxValidityNoLowerBound <> x = x
+    x <> TxValidityNoLowerBound = x
+    (TxValidityLowerBound wit l) <> (TxValidityLowerBound _ r) = TxValidityLowerBound wit (max l r)
+
+instance Monoid (TxValidityLowerBound era) where
+    mempty = TxValidityNoLowerBound
 
 -- ----------------------------------------------------------------------------
 -- Transaction metadata (era-dependent)
@@ -1453,6 +1572,13 @@ data TxMetadataInEra era where
 deriving instance Eq   (TxMetadataInEra era)
 deriving instance Show (TxMetadataInEra era)
 
+instance Semigroup (TxMetadataInEra era) where
+    TxMetadataNone <> x = x
+    x <> TxMetadataNone = x
+    (TxMetadataInEra wit l) <> (TxMetadataInEra _ r) = TxMetadataInEra wit (l <> r)
+
+instance Monoid (TxMetadataInEra era) where
+    mempty = TxMetadataNone
 
 -- ----------------------------------------------------------------------------
 -- Auxiliary scripts (era-dependent)
@@ -1469,6 +1595,14 @@ data TxAuxScripts era where
 deriving instance Eq   (TxAuxScripts era)
 deriving instance Show (TxAuxScripts era)
 
+instance Semigroup (TxAuxScripts era) where
+    TxAuxScriptsNone <> x = x
+    x <> TxAuxScriptsNone = x
+    (TxAuxScripts wit l) <> (TxAuxScripts _ r) = TxAuxScripts wit (l <> r)
+
+instance Monoid (TxAuxScripts era) where
+    mempty = TxAuxScriptsNone
+
 -- ----------------------------------------------------------------------------
 -- Optionally required signatures (era-dependent)
 --
@@ -1483,6 +1617,14 @@ data TxExtraKeyWitnesses era where
 
 deriving instance Eq   (TxExtraKeyWitnesses era)
 deriving instance Show (TxExtraKeyWitnesses era)
+
+instance Semigroup (TxExtraKeyWitnesses era) where
+    TxExtraKeyWitnessesNone <> x = x
+    x <> TxExtraKeyWitnessesNone = x
+    (TxExtraKeyWitnesses wit l) <> (TxExtraKeyWitnesses _ r) = TxExtraKeyWitnesses wit (l <> r)
+
+instance Monoid (TxExtraKeyWitnesses era) where
+    mempty = TxExtraKeyWitnessesNone
 
 -- ----------------------------------------------------------------------------
 -- Withdrawals within transactions (era-dependent)
@@ -1500,6 +1642,13 @@ data TxWithdrawals build era where
 deriving instance Eq   (TxWithdrawals build era)
 deriving instance Show (TxWithdrawals build era)
 
+instance Semigroup (TxWithdrawals build era) where
+    TxWithdrawalsNone <> x = x
+    x <> TxWithdrawalsNone = x
+    (TxWithdrawals wit l) <> (TxWithdrawals _ r) = TxWithdrawals wit (l <> r)
+
+instance Monoid (TxWithdrawals build era) where
+    mempty = TxWithdrawalsNone
 
 -- ----------------------------------------------------------------------------
 -- Certificates within transactions (era-dependent)
@@ -1518,6 +1667,14 @@ data TxCertificates build era where
 deriving instance Eq   (TxCertificates build era)
 deriving instance Show (TxCertificates build era)
 
+instance Semigroup (TxCertificates build era) where
+    TxCertificatesNone <> x = x
+    x <> TxCertificatesNone = x
+    (TxCertificates wit lcerts lbuild) <> (TxCertificates _ rcerts rbuild) =
+      TxCertificates wit (lcerts <> rcerts) (lbuild <> rbuild)
+
+instance Monoid (TxCertificates build era) where
+    mempty = TxCertificatesNone
 
 -- ----------------------------------------------------------------------------
 -- Transaction update proposal (era-dependent)
@@ -1534,6 +1691,13 @@ data TxUpdateProposal era where
 deriving instance Eq   (TxUpdateProposal era)
 deriving instance Show (TxUpdateProposal era)
 
+instance Semigroup (TxUpdateProposal era) where
+    TxUpdateProposalNone <> x = x
+    x <> TxUpdateProposalNone = x
+    _ <> x@TxUpdateProposal{} = x -- Keep the last one
+
+instance Monoid (TxUpdateProposal era) where
+    mempty = TxUpdateProposalNone
 
 -- ----------------------------------------------------------------------------
 -- Value minting within transactions (era-dependent)
@@ -1552,6 +1716,14 @@ data TxMintValue build era where
 deriving instance Eq   (TxMintValue build era)
 deriving instance Show (TxMintValue build era)
 
+instance Semigroup (TxMintValue build era) where
+    TxMintNone <> x = x
+    x <> TxMintNone = x
+    (TxMintValue wit lValue lPolicies) <> (TxMintValue _ rValue rPolicies) =
+      TxMintValue wit (lValue <> rValue) (lPolicies <> rPolicies)
+
+instance Monoid (TxMintValue build era) where
+    mempty = TxMintNone
 
 -- ----------------------------------------------------------------------------
 -- Transaction body content
@@ -1579,6 +1751,48 @@ data TxBodyContent build era =
        txScriptValidity   :: TxScriptValidity era
      }
      deriving (Eq, Show)
+
+instance Semigroup (TxBodyContent build era) where
+    l <> r = TxBodyContent
+      { txIns = txIns l <> txIns r
+      , txInsCollateral = txInsCollateral l <> txInsCollateral r
+      , txInsReference = txInsReference l <> txInsReference r
+      , txOuts = txOuts l <> txOuts r
+      , txTotalCollateral = txTotalCollateral l <> txTotalCollateral r
+      , txReturnCollateral = txReturnCollateral l <> txReturnCollateral r
+      , txFee = txFee l <> txFee r
+      , txValidityRange = txValidityRange l <> txValidityRange r
+      , txMetadata = txMetadata l <> txMetadata r
+      , txAuxScripts = txAuxScripts l <> txAuxScripts r
+      , txExtraKeyWits = txExtraKeyWits l <> txExtraKeyWits r
+      , txProtocolParams = getLast $ Last (txProtocolParams l) <> Last (txProtocolParams r)
+      , txWithdrawals = txWithdrawals l <> txWithdrawals r
+      , txCertificates = txCertificates l <> txCertificates r
+      , txUpdateProposal = txUpdateProposal l <> txUpdateProposal r
+      , txMintValue = txMintValue l <> txMintValue r
+      , txScriptValidity = txScriptValidity l <> txScriptValidity r
+      }
+
+instance (Monoid (BuildTxWith build ()), IsCardanoEra era) => Monoid (TxBodyContent build era) where
+    mempty = TxBodyContent
+      { txIns = mempty
+      , txInsCollateral = mempty
+      , txInsReference = mempty
+      , txOuts = mempty
+      , txTotalCollateral = mempty
+      , txReturnCollateral = TxReturnCollateralNone
+      , txFee = mempty
+      , txValidityRange = (mempty, mempty)
+      , txMetadata = mempty
+      , txAuxScripts = mempty
+      , txExtraKeyWits = mempty
+      , txProtocolParams = Nothing <$ (mempty :: BuildTxWith build ())
+      , txWithdrawals = mempty
+      , txCertificates = mempty
+      , txUpdateProposal = TxUpdateProposalNone
+      , txMintValue = mempty
+      , txScriptValidity = mempty
+      }
 
 
 -- ----------------------------------------------------------------------------
