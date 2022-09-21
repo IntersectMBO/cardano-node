@@ -219,9 +219,6 @@ case "$op" in
         else progress "run" "allocating a new one"
         fi
 
-        ## 0. report software manifest
-        progress "run | manifest" "component versions:"
-        manifest report "$manifest"
         local hash=$(jq '."cardano-node" | .[:5]' -r <<<$manifest)
 
         ## 1. compute cluster composition

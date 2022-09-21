@@ -21,18 +21,16 @@ export WB_NODE_EXECPREFIX="eval ${WB_TIME[*]@Q}"
 
 function workbench-prebuild-executables()
 {
-    local local_changes=
-
-    git diff --exit-code --quiet && echo -n ' ' || echo -n '[31mlocal changes + '
+    msg "prebuilding executables (because of useCabalRun)"
+    git diff --exit-code --quiet && echo -n ' ' || echo -n "$(yellow local changes +) "
     git --no-pager log -n1 --alternate-refs --pretty=format:"%Cred%cr %Cblue%h %Cgreen%D %Cblue%s%Creset" --color
-    echo
+    newline
+    newline
 
-    echo "workbench:  prebuilding executables (because of useCabalRun)"
     unset NIX_ENFORCE_PURITY
     for exe in cardano-node cardano-cli cardano-topology cardano-tracer tx-generator locli
     do echo "workbench:    $(blue prebuilding) $(red $exe)"
-       cabal -v0 build ${WB_FLAGS_CABAL} -- exe:$exe 2>&1 >/dev/null |
-           { grep -v 'exprType TYPE'; true; } || return 1
+       cabal $(test -z "$verbose" && echo '-v0') build ${WB_FLAGS_CABAL} -- exe:$exe 2>&1 >/dev/null || return 1
     done
     echo
 }

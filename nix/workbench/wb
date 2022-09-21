@@ -105,6 +105,7 @@ start()
     local node_rev=
     local cabal_mode=
     local skip_prebuild=
+    local prebuild_done=
     local genesis_cache_entry_dir=
     local topology_dir=
     local verbose=
@@ -144,7 +145,7 @@ start()
         --supervisor | --backend-supervisor )
                                          backend=supervisor;;
 
-        --verbose )                      export verbose=t;;
+        --verbose | -v )                 export verbose=t;;
         --trace | --debug )              set -x;;
         --trace-wb | --trace-workbench ) export WB_EXTRA_FLAGS=--trace;;
         --help )                         usage_start
@@ -154,10 +155,6 @@ start()
 
     if test -n "$cabal_mode"
     then . $(dirname "$0")/lib-cabal.sh
-         if test -z "$skip_prebuild"
-         then workbench-prebuild-executables
-         else progress "workbench | cabal" "skipping Cabal prebuilding due to $(yellow --skip-prebuild)"
-         fi
     fi
 
     backend assert-is $backend
@@ -169,10 +166,24 @@ start()
 
     local top_i
     for ((top_i=0; top_i<$iterations; top_i++))
-    do progress "top-level" "profile $(with_color 'yellow' $profile_name), iteration $(with_color 'white' $((top_i+1))) of $(with_color 'yellow' $iterations)"
+    do newline
+       progress "manifest" "component versions:"
+       local manifest=$(manifest collect-from-checkout "$node_source" $node_rev)
+       manifest report "$manifest"
+
+       if test -z "$cabal_mode" -o -n "$prebuild_done"
+       then true
+       elif test -n "$skip_prebuild"
+       then progress "workbench | cabal" "skipping Cabal prebuilding due to $(yellow --skip-prebuild)"
+       else workbench-prebuild-executables
+            prebuild_done=t
+       fi
+
+       progress "top-level" "profile $(with_color 'yellow' $profile_name), iteration $(with_color 'white' $((top_i+1))) of $(with_color 'yellow' $iterations)"
+
        local args=(
             ${run_allocate_args[@]}
-            --manifest "$(manifest collect-from-checkout "$node_source" $node_rev)"
+            --manifest "$manifest"
         )
        run ${run_args[@]} 'allocate' $batch_name $profile_name "${args[@]}"
        local run=$(run current-tag)

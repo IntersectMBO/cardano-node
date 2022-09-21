@@ -91,6 +91,10 @@ colorise() {
     done
 }
 
+newline() {
+    echo >&2
+}
+
 msg() {
     echo "workbench:  $*" >&2
 }
