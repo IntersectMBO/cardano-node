@@ -17,9 +17,9 @@ import           Cardano.Benchmarking.Script.Core (parseSigningKey)
 
 import           Cardano.TxGenerator.Fund (Fund (..), FundInEra (..))
 import           Cardano.TxGenerator.Tx (genTx, sourceToStoreTransaction)
-import           Cardano.TxGenerator.Types (TxGenerator)
-import           Cardano.TxGenerator.Utils (inputsToOutputsWithFee)
+import           Cardano.TxGenerator.Types (TxGenError (..), TxGenerator)
 import           Cardano.TxGenerator.UTxO (makeToUTxOList, mkUTxOVariant)
+import           Cardano.TxGenerator.Utils (inputsToOutputsWithFee)
 
 import           Paths_tx_generator
 
@@ -33,7 +33,7 @@ demo' parametersFile = do
   foldM_ (worker $ generateTx protocolParameters) [genesisFund] [1..10]
   where
     worker ::
-         Generator (Either String (Tx BabbageEra))
+         Generator (Either TxGenError (Tx BabbageEra))
       -> [Fund]
       -> Int
       -> IO [Fund]
@@ -76,7 +76,7 @@ type Generator = State [Fund]
 
 generateTx ::
      ProtocolParameters
-  -> Generator (Either String (Tx BabbageEra))
+  -> Generator (Either TxGenError (Tx BabbageEra))
 generateTx protocolParameters
   = sourceToStoreTransaction
         generator
@@ -109,7 +109,7 @@ generateTx protocolParameters
         collateralFunds = (TxInsCollateralNone, [])
 
 -- Create a transaction that uses all the available funds.
-    consumeInputFunds :: Generator (Either String [Fund])
+    consumeInputFunds :: Generator (Either TxGenError [Fund])
     consumeInputFunds = do
       funds <- get
       put []

@@ -55,6 +55,7 @@ library
                        
                        Cardano.TxGenerator.Fund
                        Cardano.TxGenerator.FundQueue
+                       Cardano.TxGenerator.Genesis
                        Cardano.TxGenerator.PureExample
                        Cardano.TxGenerator.Types
                        Cardano.TxGenerator.Tx

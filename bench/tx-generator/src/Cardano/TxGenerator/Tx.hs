@@ -8,6 +8,7 @@ module  Cardano.TxGenerator.Tx
         (module Cardano.TxGenerator.Tx)
         where
 
+import           Data.Bifunctor (bimap)
 import           Data.Maybe (mapMaybe)
 
 import           Cardano.Api
@@ -30,13 +31,11 @@ sourceToStoreTransaction ::
   -> ([Lovelace] -> split)
   -> ToUTxOList era split
   -> FundToStoreList m                --inline to ToUTxOList
-  -> m (Either String (Tx era))
-sourceToStoreTransaction txGenerator fundSource inToOut mkTxOut fundToStore = do
-  fundSource >>= \case
-    Left err -> return $ Left err
-    Right inputFunds -> work inputFunds
+  -> m (Either TxGenError (Tx era))
+sourceToStoreTransaction txGenerator fundSource inToOut mkTxOut fundToStore =
+  fundSource >>= either (return . Left) go
  where
-  work inputFunds = do
+  go inputFunds = do
     let
       outValues = inToOut $ map getFundLovelace inputFunds
       (outputs, toFunds) = mkTxOut outValues
@@ -52,13 +51,11 @@ sourceToStoreTransactionNew ::
   -> FundSource m
   -> ([Lovelace] -> split)
   -> CreateAndStoreList m era split
-  -> m (Either String (Tx era))
-sourceToStoreTransactionNew txGenerator fundSource valueSplitter toStore = do
-  fundSource >>= \case
-    Left err -> return $ Left err
-    Right inputFunds -> work inputFunds
+  -> m (Either TxGenError (Tx era))
+sourceToStoreTransactionNew txGenerator fundSource valueSplitter toStore =
+  fundSource >>= either (return . Left) go
  where
-  work inputFunds = do
+  go inputFunds = do
     let
       split = valueSplitter $ map getFundLovelace inputFunds
       (outputs, storeAction) = toStore split
@@ -75,11 +72,10 @@ genTx :: forall era. IsShelleyBasedEra era =>
   -> TxMetadataInEra era
   -> TxGenerator era
 genTx protocolParameters (collateral, collFunds) fee metadata inFunds outputs
-  = case createAndValidateTransactionBody txBodyContent of
-      Left err -> Left $ show err
-      Right b -> Right ( signShelleyTransaction b $ map WitnessPaymentKey allKeys
-                       , getTxId b
-                       )
+  = bimap
+      ApiError
+      (\b -> (signShelleyTransaction b $ map WitnessPaymentKey allKeys, getTxId b))
+      (createAndValidateTransactionBody txBodyContent)
  where
   allKeys = mapMaybe getFundKey $ inFunds ++ collFunds
   txBodyContent = TxBodyContent {

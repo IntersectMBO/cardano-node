@@ -55,7 +55,6 @@ data Error where
   NodeConfigError :: Cardano.Node.Types.ConfigError -> Error
   ProtocolInstantiationError :: !String -> Error
   MkNodeConfigError :: !String -> Error
-  ApiError    :: !String     -> Error
   UserError   :: !String     -> Error
   WalletError :: !String     -> Error
   MetadataError :: !String   -> Error
@@ -64,6 +63,7 @@ deriving instance Show Error
 
 liftTxGenError :: TxGenError -> ActionM a
 liftTxGenError = throwE . TxGenError
+
 
 askIOManager :: ActionM IOManager
 askIOManager = lift RWS.ask
