@@ -114,6 +114,7 @@ import qualified Ouroboros.Network.Diffusion as ND
 
 instance HasPrivacyAnnotation (ND.InitializationTracer ntnAddr ntcAddr)
 instance HasSeverityAnnotation (ND.InitializationTracer ntnAddr ntcAddr) where
+  getSeverityAnnotation ND.DiffusionErrored {} = Alert
   getSeverityAnnotation _ = Info
 
 instance HasPrivacyAnnotation (NtC.HandshakeTr LocalAddress NodeToClientVersion)
