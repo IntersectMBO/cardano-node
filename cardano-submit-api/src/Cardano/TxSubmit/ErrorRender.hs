@@ -42,15 +42,15 @@ renderTxValidationError tve =
   "Tx Validation: " <>
     case tve of
       TxValidationLovelaceError txt e ->
-        sformat ("Lovelace error "% stext %": "% build) txt e
+        sformat ("Lovelace error " % stext % ": " % build) txt e
       TxValidationFeeTooSmall tx expected actual ->
-        sformat ("Tx "% build %" fee "% build %"too low, expected "% build) tx actual expected
+        sformat ("Tx " % build % " fee " % build % "too low, expected " % build) tx actual expected
       TxValidationWitnessWrongSignature wit pmid sig ->
-        sformat ("Bad witness "% build %" for signature "% stext %" protocol magic id "% stext) wit (textShow sig) (textShow pmid)
+        sformat ("Bad witness " % build % " for signature " % stext % " protocol magic id " % stext) wit (textShow sig) (textShow pmid)
       TxValidationWitnessWrongKey wit addr ->
-        sformat ("Bad witness "% build %" for address "% build) wit addr
+        sformat ("Bad witness " % build % " for address " % build) wit addr
       TxValidationMissingInput tx ->
-        sformat ("Validation cannot find input tx "% build) tx
+        sformat ("Validation cannot find input tx " % build) tx
       -- Fields are <expected> <actual>
       TxValidationNetworkMagicMismatch expected actual ->
         mconcat [ "Bad network magic  ", textShow actual, ", expected ", textShow expected ]
@@ -65,7 +65,7 @@ renderUTxOError :: UTxOError -> Text
 renderUTxOError ue =
   "UTxOError: " <>
     case ue of
-      UTxOMissingInput tx -> sformat ("Lookup of tx "% build %" failed") tx
+      UTxOMissingInput tx -> sformat ("Lookup of tx " % build % " failed") tx
       UTxOOverlappingUnion -> "Union or two overlapping UTxO sets"
 
 renderEraMismatch :: EraMismatch -> Text

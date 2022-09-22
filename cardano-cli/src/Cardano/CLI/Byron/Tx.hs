@@ -22,7 +22,7 @@ module Cardano.CLI.Byron.Tx
   )
 where
 
-import           Cardano.Prelude hiding (option, trace, (%))
+import           Cardano.Prelude hiding (trace, (%))
 import           Prelude (error)
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left)
@@ -80,7 +80,7 @@ newtype NewTxFile =
 --   its full structure.
 prettyAddress :: Address ByronAddr -> Text
 prettyAddress (ByronAddress addr) = sformat
-  (Common.addressF %"\n"%Common.addressDetailedF)
+  (Common.addressF % "\n" % Common.addressDetailedF)
   addr addr
 
 readByronTx :: TxFile -> ExceptT ByronTxError IO (UTxO.ATxAux ByteString)

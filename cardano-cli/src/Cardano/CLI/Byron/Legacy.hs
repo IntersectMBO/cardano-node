@@ -4,6 +4,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# OPTIONS_GHC -Wno-dodgy-imports #-}
+
 module Cardano.CLI.Byron.Legacy (
       LegacyDelegateKey(..)
     , encodeLegacyDelegateKey

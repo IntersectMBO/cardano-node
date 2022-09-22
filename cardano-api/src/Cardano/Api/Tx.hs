@@ -143,6 +143,8 @@ instance Eq (Tx era) where
 
     (==) ByronTx{} (ShelleyTx era _) = case era of {}
 
+    (==) _ _ = error "Error: Eq (Tx era)"
+
 -- The GADT in the ShelleyTx case requires a custom instance
 instance Show (Tx era) where
     showsPrec p (ByronTx tx) =

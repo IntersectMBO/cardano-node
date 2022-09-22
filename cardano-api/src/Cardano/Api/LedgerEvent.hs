@@ -42,8 +42,8 @@ import           Data.Functor (fmap)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (Maybe (Just, Nothing))
-import           Data.SOP.Strict
 import           Data.Set (Set)
+import           Data.SOP.Strict
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import           Ouroboros.Consensus.Cardano.Block (HardForkBlock)
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (getOneEraLedgerEvent)
@@ -97,7 +97,7 @@ instance
 instance All ConvertLedgerEvent xs => ConvertLedgerEvent (HardForkBlock xs) where
   toLedgerEvent =
     hcollapse
-      . hcmap (Proxy @ ConvertLedgerEvent) (K . toLedgerEvent)
+      . hcmap (Proxy @ConvertLedgerEvent) (K . toLedgerEvent)
       . getOneEraLedgerEvent
       . unwrapLedgerEvent
 

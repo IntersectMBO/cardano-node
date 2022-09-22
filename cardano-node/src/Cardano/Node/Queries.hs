@@ -106,7 +106,7 @@ instance All ConvertTxId xs
       => ConvertTxId (HardForkBlock xs) where
   txIdToRawBytes =
     hcollapse
-      . hcmap (Proxy @ ConvertTxId) (K . txIdToRawBytes . unwrapGenTxId)
+      . hcmap (Proxy @ConvertTxId) (K . txIdToRawBytes . unwrapGenTxId)
       . getOneEraGenTxId
       . getHardForkGenTxId
 

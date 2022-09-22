@@ -82,7 +82,7 @@ import           Data.SOP.Strict (NP (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import           Data.Text.Lazy (toStrict)
+import           Data.Text.Lazy as Text (toStrict)
 import           Data.Text.Lazy.Builder (toLazyText)
 import           Data.Word
 import qualified Data.Yaml as Yaml
@@ -1296,7 +1296,7 @@ instance Error LeadershipError where
   displayError LeaderErrDecodeLedgerStateFailure =
     "Failed to successfully decode ledger state"
   displayError (LeaderErrDecodeProtocolStateFailure (_, decErr)) =
-    "Failed to successfully decode protocol state: " <> Text.unpack (toStrict . toLazyText $ build decErr)
+    "Failed to successfully decode protocol state: " <> Text.unpack (Text.toStrict . toLazyText $ build decErr)
   displayError LeaderErrGenesisSlot =
     "Leadership schedule currently cannot be calculated from genesis"
   displayError (LeaderErrStakePoolHasNoStake poolId) =

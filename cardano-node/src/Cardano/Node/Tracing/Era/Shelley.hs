@@ -12,6 +12,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Node.Tracing.Era.Shelley () where
 
@@ -931,8 +932,8 @@ instance LogFormatting (UpecPredicateFailure era) where
 --------------------------------------------------------------------------------
 -- Alonzo related
 --------------------------------------------------------------------------------
-instance ( Ledger.Era era
-         , ShelleyBasedEra era
+instance ( ShelleyBasedEra era
+         , Core.Crypto (Ledger.Crypto era)
          , ToJSON (Ledger.Value era)
          , ToJSON (Ledger.TxOut era)
          , Show (Ledger.Value era)

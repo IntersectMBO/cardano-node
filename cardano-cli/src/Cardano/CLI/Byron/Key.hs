@@ -14,11 +14,11 @@ module Cardano.CLI.Byron.Key
   )
 where
 
-import           Cardano.Prelude hiding (option, show, trace, (%))
+import           Cardano.Prelude hiding (show, trace, (%))
 import           Prelude (show)
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, left,
-                     right)
+                   right)
 import qualified Data.ByteString as SB
 import qualified Data.ByteString.UTF8 as UTF8
 import           Data.String (fromString)

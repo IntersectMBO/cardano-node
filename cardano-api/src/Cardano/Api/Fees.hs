@@ -142,8 +142,7 @@ transactionFee txFeeFixed txFeePerByte tx =
        ByronTx _ -> case shelleyBasedEra :: ShelleyBasedEra ByronEra of {}
  where
   obtainHasField
-    :: ShelleyLedgerEra era ~ ledgerera
-    => ShelleyBasedEra era
+    :: ShelleyBasedEra era
     -> ( HasField "txsize" (Ledger.Tx (ShelleyLedgerEra era)) Integer
         => a)
     -> a
@@ -1098,8 +1097,8 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
                 returnCollateral = fromShelleyLovelace . Ledger.rationalToCoinViaFloor $ amt % 100
 
             case (txReturnCollateral, txTotalCollateral) of
-              (rc@TxReturnCollateral{}, tc@TxTotalCollateral{}) ->
-                (rc, tc)
+              -- (rc@TxReturnCollateral{}, tc@TxTotalCollateral{}) ->
+              --   (rc, tc)
               (rc@TxReturnCollateral{}, TxTotalCollateralNone) ->
                 (rc, TxTotalCollateralNone)
               (TxReturnCollateralNone, tc@TxTotalCollateral{}) ->

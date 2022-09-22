@@ -155,6 +155,8 @@ toConsensusGenTx (TxInMode (ShelleyTx _ tx) BabbageEraInCardanoMode) =
   where
     tx' = Consensus.mkShelleyTx tx
 
+toConsensusGenTx _ = error "TODO: toConsensusGenTx"
+
 -- ----------------------------------------------------------------------------
 -- Transaction ids in the context of a consensus mode
 --

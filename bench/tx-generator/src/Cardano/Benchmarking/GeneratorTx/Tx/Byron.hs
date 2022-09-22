@@ -67,5 +67,5 @@ byronGenesisUTxOTxIn gc vk genAddr =
 
   prettyAddress :: Common.Address -> Text
   prettyAddress addr = sformat
-    (Common.addressF %"\n"%Common.addressDetailedF)
+    (Common.addressF % "\n"%Common.addressDetailedF)
     addr addr

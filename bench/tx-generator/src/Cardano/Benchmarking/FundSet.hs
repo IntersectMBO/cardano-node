@@ -1,11 +1,11 @@
 {-# OPTIONS_GHC -Wwarn #-}
-{-# Language DataKinds #-}
-{-# Language FlexibleInstances #-}
-{-# Language GADTs #-}
-{-# Language MultiParamTypeClasses #-}
-{-# Language RankNTypes #-}
-{-# Language TypeApplications #-}
-{-# Language ScopedTypeVariables #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Benchmarking.FundSet
 where
@@ -13,7 +13,7 @@ import           Prelude
 
 import           Cardano.Api as Api
 
-import Cardano.Benchmarking.Fifo as Fifo
+import           Cardano.Benchmarking.Fifo as Fifo
 
 -- Outputs that are available for spending.
 -- When building a new TX they provide the TxIn parts.
@@ -47,7 +47,7 @@ getFundLovelace (Fund (InAnyCardanoEra _ a)) = case _fundVal a of
 -- This effectively rules out era-transitions for transactions !
 -- This is not what we want !!
 getFundWitness :: forall era. IsShelleyBasedEra era => Fund -> Witness WitCtxTxIn era
-getFundWitness fund = case (cardanoEra @ era, fund) of
+getFundWitness fund = case (cardanoEra @era, fund) of
   (ByronEra   , Fund (InAnyCardanoEra ByronEra   a)) -> _fundWitness a
   (ShelleyEra , Fund (InAnyCardanoEra ShelleyEra a)) -> _fundWitness a
   (AllegraEra , Fund (InAnyCardanoEra AllegraEra a)) -> _fundWitness a
@@ -84,7 +84,7 @@ liftAnyEra f x = case x of
   InAnyCardanoEra AllegraEra a ->   InAnyCardanoEra AllegraEra $ f a
   InAnyCardanoEra MaryEra a    ->   InAnyCardanoEra MaryEra $ f a
   InAnyCardanoEra AlonzoEra a  ->   InAnyCardanoEra AlonzoEra $ f a
-  InAnyCardanoEra BabbageEra a  ->  InAnyCardanoEra BabbageEra $ f a  
+  InAnyCardanoEra BabbageEra a  ->  InAnyCardanoEra BabbageEra $ f a
 
 -- Todo: check sufficient funds and minimumValuePerUtxo
 inputsToOutputsWithFee :: Lovelace -> Int -> [Lovelace] -> [Lovelace]

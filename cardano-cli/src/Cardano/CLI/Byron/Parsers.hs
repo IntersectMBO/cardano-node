@@ -21,7 +21,7 @@ module Cardano.CLI.Byron.Parsers
   , parseUpdateVoteThd
   ) where
 
-import           Cardano.Prelude hiding (option)
+import           Cardano.Prelude
 import           Prelude (String)
 
 import           Control.Monad (fail)

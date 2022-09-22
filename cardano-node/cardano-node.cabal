@@ -128,7 +128,6 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , deepseq
                       , cardano-api
                       , cardano-data
                       , cardano-git-rev
@@ -175,7 +174,6 @@ library
                       , scientific
                       , strict-stm
                       , cardano-ledger-shelley
-                      , small-steps
                       , stm
                       , text
                       , time

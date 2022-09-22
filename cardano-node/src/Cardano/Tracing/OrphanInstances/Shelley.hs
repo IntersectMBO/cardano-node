@@ -878,7 +878,6 @@ instance ToObject (UpecPredicateFailure era) where
 
 instance ( Ledger.Era era
          , ToJSON (Ledger.Value era)
-         , Show (Ledger.Value era)
          , ToJSON (Ledger.TxOut era)
          , ToObject (PredicateFailure (Ledger.EraRule "UTXOS" era))
          , ShelleyBasedEra era
