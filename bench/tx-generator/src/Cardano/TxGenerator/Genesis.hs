@@ -1,7 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
+
 module Cardano.TxGenerator.Genesis
   ( genesisInitialFunds
   , genesisInitialFundForKey
