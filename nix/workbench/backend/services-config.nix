@@ -87,9 +87,9 @@ with lib;
         svc: recursiveUpdate svc
           ({
             sigKey         = "./genesis/utxo-keys/utxo1.skey";
-            nodeConfigFile = "config.json";
             runScriptFile  = "run-script.json";
-            ## path to the socket of the locally running node.
+            ## path to the config and socket of the locally running node.
+            nodeConfigFile = "./node-0/config.json";
             localNodeSocketPath = "./node-0/node.socket";
           } // optionalAttrs useCabalRun {
             executable     = "cabal run exe:tx-generator --";
