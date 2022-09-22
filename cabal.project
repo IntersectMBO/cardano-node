@@ -310,7 +310,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: 066f7002aac5a0efc20e49643fea45454f226caa
+  tag: 7d1986ef317048f96b7c20b05c27c7d00a60ee35
   --sha256: 0s6x4in11k5ba7nl7la896g28sznf9185xlqg9c604jqz58vj9nj
   subdir:
     contra-tracer
@@ -331,7 +331,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: d2ab4d94c86e54e08926110248f3e380a1b41379
+  tag: 512cfb478fb18a600147703cc1393e3745294f1c
   --sha256: 0hdh7xdrvxw943r6qr0xr4kwszindh5mnsn1lww6qdnxnmn7wcsc
   subdir:
     monoidal-synchronisation
@@ -358,7 +358,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/typed-protocols
-  tag: 181601bc3d9e9d21a671ce01e0b481348b3ca104
+  tag: 5ee65af2b1ebdabd8554b63d39abc6ef51bf2d06
   --sha256: 1lr97b2z7l0rpsmmz92rsv27qzd5vavz10cf7n25svya4kkiysp5
   subdir:
     typed-protocols

@@ -10,7 +10,7 @@ module Cardano.Api.TxSubmit.Types
 
 import           Cardano.Api.TxSubmit.ErrorRender
 import           Cardano.Binary (DecoderError)
-import           Cardano.Chain.Byron.API (ApplyMempoolPayloadErr(..))
+import           Cardano.Chain.Byron.API (ApplyMempoolPayloadErr (..))
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.UTxO as Utxo
 
@@ -60,7 +60,7 @@ convertJson st =
 renderTxSubmitStatus :: TxSubmitStatus -> Text
 renderTxSubmitStatus st =
   case st of
-    TxSubmitOk tx -> sformat ("Tx "% build %" submitted successfully") tx
+    TxSubmitOk tx -> sformat ("Tx " % build % " submitted successfully") tx
     TxSubmitDecodeHex -> "Provided data was hex encoded and this webapi expects raw binary"
     TxSubmitEmpty -> "Provided transaction has zero length"
     TxSubmitDecodeFail err -> sformat build err

@@ -96,7 +96,7 @@ withNamespaceConfig name extract withConfig tr = do
       T.traceWith (unpackTrace tt) (lc, Left Reset)
 
     mkTrace ref (lc, Left (Config c)) = do
-      ! val <- extract c (lcNamespace lc)
+      !val <- extract c (lcNamespace lc)
       eitherConf <- liftIO $ readIORef ref
       case eitherConf of
         Left (cmap, Nothing) ->
