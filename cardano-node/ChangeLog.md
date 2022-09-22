@@ -1,5 +1,284 @@
 # Changelog for cardano-node
 
+## 1.35.3 -- August 2022
+
+### node changes
+
+- Update ledger and Plutus to the tip of release/1.0.0 (#4242)
+- Bump block header protocol version (#4260)
+
+### consensus changes
+
+None
+
+### network changes
+
+None
+
+### ledger changes
+
+- Fix the alonzo UTxO rule to use alonzo minfee function (#2938)
+
+## 1.35.2 -- July 2022 (not released)
+
+### node changes
+
+- Bump Babbage to report it supports 7.1 in block header (#4211)
+- Update Plutus, Ledger, and Network dependencies (#4220)
+
+### consensus changes
+
+- The obsolete node check in the new 'Praos' protocol was not performing the
+   check that was intended. It is supposed to check that the current protocol
+   version is no greater than the max major protocol version. It was instead
+   checking that the max major protocol version was not greater than the
+   protocol version listed in the block header (which is currently not supposed
+   to have any semantic meaning, and is used to manually check the readiness
+   of the network for a hard fork). Note that this mistake is only in the Praos
+   protocol, not in TPraos. The consequence of this incorrect check is that
+   nodes will not properly halt after a hard fork when they do not have the
+   required software for the hard fork. (#3891)
+
+### network changes
+
+None
+
+### ledger changes
+
+- Update plutus #2917
+
+## 1.35.1 -- July 2022 (not released)
+
+### node changes
+
+- Update ledger to tip of release/1.0.0 (#4146)
+
+### consensus changes
+
+None
+
+### network changes
+
+None
+
+### ledger changes
+
+- Ensure Babbage TxOut decoder can't fail due to malformed Ptr. This bug manifests itself if a node is running in the Babbage era and shuts down, it has to re-sync from genesis when started back up. (#2897)
+
+## 1.35.0 -- June 2022
+
+### node changes
+- RTS workaround converting SIGTERM into SIGINT (#3641)
+- Install a dummy SIGHUP handler for non p2p mode (#3896)
+- Add --shutdown-on-slot-synced test and ensure ExitSuccess (#3670)
+- cardano-node: implement --shutdown-on-block-synced (#3932)
+- Update dependencies and pins. (#3700)
+- Propagate protocol in block type (#3818)
+- Create VRF signing key file with correct permissions (#1948)
+- Fix for eliding of the ChainDB tracer (#4038)
+- Tracing infra updates:
+  - Configuration structure rework, for better UX: (#3867)
+  - Rework implementation to eliminate prototypes from trace definitions (#3731)
+  - Fix tracing config to allow selection of the new tracing system (#3655)
+  - Register GC metrics. (#3858)
+  - Metrics are no longer impacted by severities and frequency limits (#3876)
+  - Porting ekg-direct metrics to new-tracing (#3873)
+  - Node state data point extensions and fixes: (#3854, #3656)
+  - Old peers tracing was erroneously called in new tracing (#3880)
+  - Remove unused constraints from TraceConstraints (#3822)
+  - Properly init trace forwarding when needed. (#3634)
+- cardano-tracer:
+  - Format fixes for forwarded traces: (#3640, #3654, #3660, #3671).
+  - Test fixes: (#3714)
+  - Remove symlink, fix logs cut off. (#3930)
+  - Fix bug with empty line (#3962)
+  - RTView, a web performance dashboard, as part of cardano-tracer (#3852)
+  - RTView: CPU usage (GC + App) as pct, https by default, errors export (#3934)
+- Documentation updates;
+  - Update Haskell installation method and mention libsecp256k1 (#3796)
+  - Update cardano-node-cli-reference.md (#3630)
+  - Documentation improvements for new tracing. (#3834, #3842)
+  - Recommended system requirements. (#4005)
+  - Further explain the `libsodium` installation (#4000)
+- Various workbench, build, testing and benchmarking infrastructure improvements. (#3638, #3643, #3705, #3789, #3812, #3824, #3941, #3851)
+
+### consensus changes
+- Block diffusion pipelining (#3688, #3742, #3752, #3688)
+- Moving from two VRF checks to one, as of Babbage (#3595)
+- Restricted opcert issue number increment, as of Babbage (#3595)
+- New function getOpCertCounters (#3781)
+- Bugfix: transaction validity intervals will actually be limited, as of Babbage (#3754)
+- Simplification: Babbage will run proper Praos protocol instead of Transitional Praos, since d will remain at 0 (#3595)
+- protocol: add `PraosProtocolSupportsNode` class (#3758)
+- Provide an `EpochInfo` that can fail to ledger. (#3770)
+- Add `COMPLETE` pragma for `FallingEdge` pattern synonym (#3766)
+- Simplification: remove stale handshake versions (#3696, #3699)
+
+### network changes
+- Multinode Diffusion Simulation (#3497)
+- Trace exceptions thrown by inboundGovernorLoop (#3591)
+- Added prop_timeouts_enforced (#3532)
+- Connection Manager tests using IOSimPOR (#3632)
+- Don't overwrite localrootpeers lookup results (#3641)
+- Extract tcp_info for mux tcp bearer (#3648)
+- IOSim MonadFix instance (#3647)
+- io-classes: added strict versions of traceTVar & traceTMVar (#3654)
+- Platform independent TCPInfo trace (#3660)
+- Connection manager transition order test using IOSimPOR (#3640)
+- Removed ST effects from IOSimPOR (#3662)
+- RootPeersDNS: garbage collect DNS results && test single source of truth (#3643)
+- Enabled accept errors in net-sim testing (#3668)
+- Update supported protocol versions of cardano-ping" (#3700)
+- Add `yield` to `MonadFork` (#3713)
+- Diffusion Tests (#3619, #3629, #3633, #3636, #3707, #3727, #3728, #3761)
+- cardano-ping: fix misplaced `unless quiet` (#3729)
+- Import `getMonotonicNSec` from base rather than via FFI (#3735)
+- connection-manager: mini-protocol params ([#3606](https://github.com/input-output-hk/ouroboros-network/pull/3606))
+- Remove TxSubmission V1 and all node-to-node versions smaller or equal to NodeToNodeV_6 (#3696)
+- Remove NodeToClientV_8 and below (#3699)
+- Relax overly strict disconnection rule for known-invalid blocks (#3726)
+- Moved io-sim & typed-protocols to new repositories (#3747)
+- Fix NodeToNodeVersion for Babbage and P2P. (#3775)
+- Various changes (#3736)
+- Documentation updates;
+  - Update chain-sync documentation (#3594)
+  - Fixed typos in network-mux (#3666)
+  - Reflect recent nix build changes in documentation links. (#3651)
+  - Fix typos (#3635)
+
+### ledger changes
+
+- Implementing the Babbage era. (#2560, #2599, #2602, #2613, #2618, #2619,
+  #2629, #2633, #2643, #2645, #2654, #2661, #2664, #2666, #2678, #2681, #2689,
+  #2694, #2700, #2701, #2702, #2708, #2710, #2711, #2712, #2716, #2717, #2723,
+  #2727, #2751, #2766, #2789, #2799, #2807, #2813, #2814, #2815, #2816, #2819,
+  #2821, #2822, #2848, #2852)
+- Fix a bug in the computation of the exponential function via Taylor series
+  approximation. This bug was not ever exhibited in code, but the fix is useful
+  for future resilience. (#2591)
+- Add missing protocol parameters to the Alonzo CDDL spec. (#2590)
+- Work to separate the ledger from the TPraos protocol. (#2575, #2605, #2628,
+  #2630, #2711, #2748, #2763, #2776)
+- For Plutus V2, encode the cost model in the integrity hash using a definite
+  length list. (#2589)
+- Additional testing across all eras. (#2338, #2598, #2620, #2656, #2674, #2695,
+  #2696, #2698, #2747, #2758, #2760, #2790, #2817)
+- Various internal refactorings and small fixes. (#2596, #2597, #2600, #2603,
+  #2606, #2608, #2611, #2621, #2622, #2623, #2624, #2639, #2644, #2650, #2660,
+  #2671, #2706, #2709, #2721, #2722, #2733, #2735, #2752, #2755, #2768, #2769,
+  #2773, #2777, #2795, #2803)
+- Add a check to ensure that only positive transfers are allowed in MIR certs.
+  (#2579)
+- Various work to reduce the memory usage of a running ledger. (#2584, #2592,
+  #2607, #2609, #2616, #2625, #2637, #2675, #2707, #2759)
+- Various work to increase the performance of the ledger. (#2632, #2636, #2667,
+  #2668, #2699, #2731, #2750, #2761, #2767, #2771, #2772, #2801, #2804)
+- Add JSON serialiser/deserialiser for Alonzo genesis. This is not used in the
+  ledger, but may be used by the node. (#2627)
+- Add two new events related to rewards - `DeltaRewardEvent` and
+  `TotalRewardEvent`. The former gives incremental rewards as they are being
+  computed, and the latter gives a report of the result at the end of
+  computation. (#2615, #2647, #2673, #2690)
+- Add an additional reward event, `RestrainedRewards`, which contains details of
+  any rewards which are subsequently not paid out owing to e.g. deregistered
+  addresses. (#2726)
+- Add an event which yields the stake distribution at the time where it is
+  snapshotted. (#2652)
+- Add two new events related to Plutus script execution.
+  `SuccessfulPlutusScriptsEvent` is emitted in the case of no failures where
+  `IsValid` is true. This event contains all the information needed to rerun all
+  the scripts in a transaction. In the case of `IsValid` being false and
+  failures being present, two events are emitted; the preceding event with
+  successful scripts and a `FailedPlutusScriptsEvent` with the details for
+  failing scripts. (#2670)
+- Add an event `TotalAdaPotEvent` which is emitted on the epoch boundary and
+  reports the size of the various ADA pots (reserves, treasury, reward pot etc.)
+  (#2797)
+- Disallow the spending of Byron outputs in transactions also spending from
+  Plutus V2 locked outputs. Plutus V1 scripts could be spent in the same
+  transaction as Byron outputs, but the Byron outputs would not be visible to
+  Plutus. (#2617)
+- Fix a memory leak in the tests. (#2648)
+- Add a reference for the cost model keys. (#2635)
+- Specify how seeds are computed, and how a slot is converted to a seed, in the
+  Shelley specification. (#2626)
+- Significant improvements to the benchmarking suite. (#2668, #2669, #2699)
+- Fix the pulsing size used for incremental computation of rewards. This should
+  result in a more even spread of load over the epoch. (#2676)
+- Prune the unused `cardano-ledger-example-shelley` package. (#2693)
+- Add logic to the STS rules to run certain things only if no failures have yet
+  been accumulated. This is useful to e.g. avoid evaluating Plutus scripts in places where the transaction is broken. (#2679, #2847)
+- Hide the `CostModel` constructor. The appropriate way to construct a
+  `CostModel` is using `costModelParamsToCostModel`. (#2703, #2730)
+- Support querying the set of UTxO entries which are required to process a
+  block. This is an important feature required for moving the UTxO onto disk.
+  (#2715)
+- Add support for stashing the AVVM addresses at the Byron/Shelley transition.
+  This is slightly annoying work to enable on-disk UTxO, since the AVVM
+  addresses must be removed on the Shelley/Allegra boundary, but by the time
+  UTxO is on disk (from Shelley onwards) we disallow full queries over the UTxO.
+  (#2728)
+- Remove ledger-based validation of `Datum`. This is now done entirely by Plutus
+  on deserialisation. (#2757)
+- Add documentation on all ledger events. This can be found at
+  https://github.com/input-output-hk/cardano-ledger/blob/master/docs/LedgerEvents.md(#2778)
+- In the Alonzo era, extend the epoch info provided by Plutus to allow time
+  translation arbitrarily into the future. This pertains to a bug in consensus
+  which was allowing arbitrarily distant translation only in the last era. This
+  bug has been fixed, but the ledger must preserve the previous behaviour in the
+  existing era. (#2785)
+- Translate legacy cost mode parameter names in the JSON deserialiser. The
+  deserialiser now does not care about the names, only about the ordering of the
+  parameters. This is consistent with how cost model parameters are treated in
+  update proposals. (#2792)
+- Ensure pure `EpochInfo` is not overused. (#2818)
+- Do not serialize empty txbody fields (#2863)
+- Remove empty `SuccessfulPlutusScriptsEvent` events (#2861)
+- Disable staking Ptr optimization (#2875)
+- integrity hash not needed for all ref scripts (#2878)
+
+### Infrastructure changes
+- Nix changes (#3592, #3711, #3707, #3716, #3722, #3717, #3736, #3785, #4015, #3637, #3649, #3698, #3722, #3749, #3760, #3789)
+- CI changes (#3754, #3745, #3767, #3995, #3797, #4031, #4035, #3589, #3599, #3618, #3625, #3661, #3694, #3687, #3690, #3703, #3712, #3737, #3792, #3801, #4059, #4063)
+
+## 1.34.1 -- March 2022
+
+### node changes
+- Fix tracer config mismatches #3668
+- Fix #3664: Restore legacy metrics #3676
+
+## 1.34.0 -- February 2022
+
+### node changes
+
+- Separate the logic for shutdown via IPC and shutdown on reaching a specified
+  slot. (#3320, #3508)
+- Tests for certifying and withdrawing Plutus scripts. (#3318)
+- Improvements to the `tx-generator` internal testing infrastructure. (#3448)
+- Various documentation updates. (#2875, #2884, #2839, #2904, #3476, #3482,
+  #3486, #3500, #3502, #3542, #3553, #3573, #3603)
+- Integrate the new tracing system in `cardano-node`. (#3450, #3496, #3497,
+  #3498, #3570)
+- The stake credential history tool now additionally displays the protocol
+  version. (#3409)
+
+### network changes
+
+- Add a new mini-protocol to query the local mempool. (#3404)
+- Additional testing coverage. (#3517)
+- Stop the MUX in case of miniprotocol timeout. This can happen if a peer is
+  demoted to cold, and could result in lingering miniprotocols in an unknown
+  state if the peer is again promoted. (#3575, #3580)
+- Avoid ordering peers based upon peerid in block fetch. Ordering based on
+  peerid would often result in all nodes choosing the same second, third choice
+  peers etc. These are now based on a node-local random ordering. (#3535)
+- Fix a spurious assertion failure that could be seen with regards to demoted
+  hot peers. (#3588)
+
+### consensus changes
+
+- Various internal improvements. (#3557, #3560)
+
 ## 1.33.0 -- December 2021
 
 ### node changes
