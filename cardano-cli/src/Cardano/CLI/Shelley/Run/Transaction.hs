@@ -402,7 +402,7 @@ runTxBuildRaw (AnyCardanoEra era)
 
     txBody <-
       firstExceptT ShelleyTxCmdTxBodyError . hoistEither $
-        makeTransactionBody txBodyContent
+        createAndValidateTransactionBody txBodyContent
 
     let noWitTx = makeSignedTransaction [] txBody
     firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
