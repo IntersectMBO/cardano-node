@@ -20,7 +20,9 @@
 
 module Cardano.Benchmarking.Tracer
   ( initDefaultTracers
-  ) where
+  , initNullTracers
+  )
+where
 
 import           "contra-tracer" Control.Tracer (Tracer (..))
 import           GHC.Generics
@@ -48,6 +50,15 @@ generatorTracer namesFor tracerName tr = do
   pure $ withNamesAppended namesFor
           $ appendName tracerName
               tr''
+
+initNullTracers :: BenchTracers
+initNullTracers = BenchTracers
+    { btTxSubmit_    = Tracer ignore
+    , btConnect_     = Tracer ignore
+    , btSubmission2_ = Tracer ignore
+    , btN2N_         = Tracer ignore
+    }
+  where ignore _ = return ()
 
 initDefaultTracers :: IO BenchTracers
 initDefaultTracers = do

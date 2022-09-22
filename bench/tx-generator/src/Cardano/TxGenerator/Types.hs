@@ -6,7 +6,6 @@ module  Cardano.TxGenerator.Types
         where
 
 import           Cardano.Api
-import           Cardano.Prelude (Text)
 
 import           Cardano.TxGenerator.Fund (Fund)
 
@@ -69,17 +68,8 @@ data TxGenPlutusParams =
   | PlutusOff                           -- ^ Do not generate Plutus Txs
   deriving Show
 
-
-data TxGenError =
-    InsufficientFundsForRecipientTx !Lovelace !Lovelace
-  -- ^ The calculated expenditure (second value) was not available as a single
-  --   UTxO entry.  The first value is the largest single UTxO available.
-  | TxFileError !(FileError TextEnvelopeError)
-  | SplittingSubmissionError !Text
-  | SuppliedUtxoTooSmall !Int !Int
-  -- ^ The supplied UTxO size (second value) was less than the requested
-  --   number of transactions to send (first value).
-  | BadPayloadSize !Text
+newtype TxGenError
+  = TxFileError (FileError TextEnvelopeError)
   deriving Show
 
 {-

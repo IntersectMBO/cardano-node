@@ -245,8 +245,10 @@ submitInEra submitMode generator era = do
     Benchmark nodes threadName tpsRate txCount -> benchmarkTxStream txStream nodes threadName tpsRate txCount era
     LocalSocket -> submitAll (void . localSubmitTx . Utils.mkTxInModeCardano) txStream
     DumpToFile filePath -> liftIO $ Streaming.writeFile filePath $ Streaming.map showTx txStream
-    DiscardTX -> liftIO $ Streaming.effects txStream
+    DiscardTX -> liftIO $ Streaming.mapM_ forceTx txStream
  where
+  forceTx (Right _) = return ()
+  forceTx (Left err) = error err
   showTx (Left err) = error err
   showTx (Right tx) = '\n' : show tx
    -- todo: use Streaming.run
