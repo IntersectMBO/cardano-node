@@ -7,8 +7,8 @@ cardano-cli/README.md                                         @Jimbo4350 @newhog
 cabal.project                                                 @Jimbo4350 @newhoggy @LaurenceIO
 
 # General reviewers per PR
-#                        Duncan   Jordan     Erik   John      Jared
-*                        @dcoutts @Jimbo4350 @erikd @newhoggy @JaredCorduan
+#                        Duncan   Jordan     Erik   John      Jared         Robert
+*                        @dcoutts @Jimbo4350 @erikd @newhoggy @JaredCorduan @LudvikGalois
 
 # Specific reviewers for code pieces
 # NB - The last matching pattern takes precedence
