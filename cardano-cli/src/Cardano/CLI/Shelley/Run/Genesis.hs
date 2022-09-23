@@ -80,7 +80,6 @@ import qualified Cardano.Ledger.Shelley.PParams as Shelley
 import           Cardano.Ledger.Crypto (ADDRHASH, Crypto, StandardCrypto)
 import           Cardano.Ledger.Era ()
 
-import           Cardano.CLI.Helpers (textShow)
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key
 import           Cardano.CLI.Shelley.Orphans ()

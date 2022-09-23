@@ -81,8 +81,8 @@ import qualified Cardano.Ledger.Block as Ledger
 import qualified Cardano.Ledger.Era as Ledger
 
 import           Cardano.Api.Eras
-import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.Modes
 import           Cardano.Api.SerialiseRaw

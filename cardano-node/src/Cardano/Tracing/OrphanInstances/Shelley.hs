@@ -25,6 +25,7 @@ import qualified Data.Aeson.Types as Aeson
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 
+import           Cardano.Api (textShow)
 import qualified Cardano.Api as Api
 import           Cardano.Api.Orphans ()
 import qualified Cardano.Api.Shelley as Api
@@ -1216,9 +1217,6 @@ instance ToObject Praos.PraosEnvelopeError where
 --------------------------------------------------------------------------------
 -- Helper functions
 --------------------------------------------------------------------------------
-
-textShow :: Show a => a -> Text
-textShow = Text.pack . show
 
 showLastAppBlockNo :: WithOrigin (LastAppliedBlock crypto) -> Text
 showLastAppBlockNo wOblk =  case withOriginToMaybe wOblk of

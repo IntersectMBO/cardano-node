@@ -24,8 +24,8 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, le
 import qualified Codec.Binary.Bech32 as Bech32
 
 import qualified Cardano.Crypto.DSIGN as DSIGN
-import qualified Cardano.Crypto.Signing as Byron.Crypto
 import qualified Cardano.Crypto.Signing as Byron
+import qualified Cardano.Crypto.Signing as Byron.Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 import qualified Cardano.Crypto.Wallet as Crypto
 import qualified Cardano.Ledger.Keys as Shelley
@@ -36,7 +36,6 @@ import           Cardano.Api.Crypto.Ed25519Bip32 (xPrvFromBytes)
 import           Cardano.Api.Shelley
 
 import qualified Cardano.CLI.Byron.Key as Byron
-import           Cardano.CLI.Helpers (textShow)
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (InputDecodeError, readSigningKeyFileAnyOf)
 import           Cardano.CLI.Types (SigningKeyFile (..), VerificationKeyFile (..))

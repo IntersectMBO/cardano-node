@@ -211,7 +211,7 @@ module Cardano.Api.Shelley
     SerialisedPoolState(..),
     decodePoolState,
     UTxO(..),
-    AcquireFailure(..),
+    AcquiringFailure(..),
     SystemStart(..),
 
 

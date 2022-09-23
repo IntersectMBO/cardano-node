@@ -18,7 +18,7 @@ import           Cardano.Prelude hiding (option, show, trace, (%))
 import           Prelude (show)
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, left,
-                     right)
+                   right)
 import qualified Data.ByteString as SB
 import qualified Data.ByteString.UTF8 as UTF8
 import           Data.String (fromString)
@@ -28,7 +28,6 @@ import           Formatting (build, sformat, (%))
 import           Cardano.Api.Byron
 
 import qualified Cardano.Chain.Common as Common
-import           Cardano.CLI.Helpers (textShow)
 import           Cardano.CLI.Shelley.Commands (ByronKeyFormat (..))
 import           Cardano.CLI.Types
 import qualified Cardano.Crypto.Signing as Crypto
