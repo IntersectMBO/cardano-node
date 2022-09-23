@@ -85,7 +85,7 @@ mkGenesisTransaction :: forall era .
   -> [TxOut CtxTx era]
   -> Tx era
 mkGenesisTransaction key ttl fee txins txouts
-  = case makeTransactionBody txBodyContent of
+  = case createAndValidateTransactionBody txBodyContent of
     Right b -> signShelleyTransaction b [WitnessGenesisUTxOKey key]
     Left err -> error $ show err
  where

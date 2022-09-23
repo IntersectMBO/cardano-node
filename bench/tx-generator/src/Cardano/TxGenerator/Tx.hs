@@ -75,7 +75,7 @@ genTx :: forall era. IsShelleyBasedEra era =>
   -> TxMetadataInEra era
   -> TxGenerator era
 genTx protocolParameters (collateral, collFunds) fee metadata inFunds outputs
-  = case makeTransactionBody txBodyContent of
+  = case createAndValidateTransactionBody txBodyContent of
       Left err -> Left $ show err
       Right b -> Right ( signShelleyTransaction b $ map WitnessPaymentKey allKeys
                        , getTxId b
