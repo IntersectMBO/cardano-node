@@ -57,28 +57,43 @@ filterTrace :: (Monad m)
   => ((LoggingContext, a) -> Bool)
   -> Trace m a
   -> Trace m a
-filterTrace ff (Trace tr) = Trace $ T.squelchUnless
-    (\case
-      (_lc, Left _)     -> True
-      (lc, Right a)     -> ff (lc, a))
-      tr
+filterTrace ff (Trace tr) = Trace $ T.arrow $ T.emit $ mkTrace
+  where
+    mkTrace (lc, Right a) =
+      if ff (lc, a)
+        then T.traceWith tr (lc, Right a)
+        else pure ()
+    mkTrace (lc, Left l) =
+      T.traceWith tr (lc,  Left l)
+
+  -- Trace $ T.squelchUnless
+  --   (\case
+  --     (_lc, Left _)     -> True
+  --     (lc, Right a)     -> ff (lc, a))
+  --     tr
+
 
 --- | Keep the Just values and forget about the Nothings
 filterTraceMaybe :: Monad m
   => Trace m a
   -> Trace m (Maybe a)
-filterTraceMaybe (Trace tr) = Trace $
-    T.squelchUnless
-      (\case
-        (_lc, Left _ctrl)      -> True
-        (_lc, Right (Just _)) -> True
-        (_lc, Right Nothing)  -> False)
-      (T.contramap
-          (\case
-            ( lc, Right (Just a))    -> (lc, Right a)
-            (_lc, Right Nothing)     -> error "filterTraceMaybe: impossible"
-            ( lc, Left ctrl)         -> (lc, Left ctrl))
-          tr)
+filterTraceMaybe (Trace tr) = Trace $ T.arrow $ T.emit $ mkTrace
+  where
+    mkTrace (lc, Right (Just m)) = T.traceWith tr (lc, Right m)
+    mkTrace (_lc, Right Nothing)  = pure ()
+    mkTrace (lc, Left l)         = T.traceWith tr (lc, Left l)
+
+    -- T.squelchUnless
+    --   (\case
+    --     (_lc, Left _ctrl)      -> True
+    --     (_lc, Right (Just _)) -> True
+    --     (_lc, Right Nothing)  -> False)
+    --   (T.contramap
+    --       (\case
+    --         ( lc, Right (Just a))    -> (lc, Right a)
+    --         (_lc, Right Nothing)     -> error "filterTraceMaybe: impossible"
+    --         ( lc, Left ctrl)         -> (lc, Left ctrl))
+    --       tr)
 
 --- | Only processes messages further with a severity equal or greater as the
 --- given one

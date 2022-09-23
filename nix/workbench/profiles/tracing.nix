@@ -10,7 +10,7 @@
   ##
   TraceOptions  = {
     "" =
-      { severity = "Notice";
+      { severity = "Silence";
         backends = [
           "Stdout MachineFormat"
           "EKGBackend"
@@ -19,16 +19,5 @@
             "Forwarder"
           ]);
       };
-
-    ## These are benchmarking-specific config deviations from the default.
-    ##
-    "BlockFetch".severity = "Info";
-    "BlockFetch.Client.CompletedBlockFetch".maxFrequency = 0;
-    "ChainSync".severity = "Info";
-    "ChainSync.Client.DownloadedHeader".maxFrequency = 0;
-    "Forge.Loop.BlockContext".severity = "Info";
-    "Forge.Loop.LedgerState".severity = "Info";
-    "Forge.Loop.LedgerView".severity = "Info";
-    "Startup".severity = "Info";
   };
 }

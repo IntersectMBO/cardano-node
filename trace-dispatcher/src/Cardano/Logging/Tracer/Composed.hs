@@ -67,7 +67,8 @@ mkCardanoTracer trStdout trForward mbTrEkg tracerName namesFor severityFor priva
 
 -- | Adds the possibility to add special tracers via the hook function
 mkCardanoTracer' :: forall evt evt1.
-     LogFormatting evt1
+     (LogFormatting evt
+     ,LogFormatting evt1)
   => Trace IO FormattedMessage
   -> Trace IO FormattedMessage
   -> Maybe (Trace IO FormattedMessage)
@@ -79,17 +80,19 @@ mkCardanoTracer' :: forall evt evt1.
   -> IO (Trace IO evt)
 mkCardanoTracer' trStdout trForward mbTrEkg tracerName namesFor severityFor privacyFor
   hook = do
-    messageTrace   <- withBackendsFromConfig backendsAndFormat
-    messageTrace'  <- withLimitersFromConfig
+    messageTrace     <- withBackendsFromConfig backendsAndFormat
+    messageTrace'    <- withLimitersFromConfig
                           (NT.contramap Message messageTrace)
                           (NT.contramap Limit messageTrace)
-    messageTrace'' <- addContextAndFilter messageTrace'
+    messageTrace''   <- hook messageTrace'
+    messageTrace'''  <- addContextAndFilter messageTrace''
+    messageTrace'''' <- maybeSilent tracerName messageTrace'''
     let metricsTrace = case mbTrEkg of
                           Nothing -> Trace NT.nullTracer
                           Just ekgTrace -> metricsFormatter "Cardano" ekgTrace
-    let metricsTrace' = filterTrace (\(_,v) -> asMetrics v /= []) metricsTrace
-    metricsTrace'' <- hook metricsTrace'
-    maybeSilent tracerName (messageTrace''' <> metricsTrace'')
+    metricsTrace'    <- hook metricsTrace
+    let metricsTrace'' = filterTrace (\(_,v) -> Prelude.null (asMetrics v)) metricsTrace'
+    pure (messageTrace'''' <> metricsTrace'')
 
 
   where

@@ -12,7 +12,7 @@ defaultCardanoConfig :: TraceConfig
 defaultCardanoConfig = emptyTraceConfig {
   tcOptions = Map.fromList
     [([],
-         [ ConfSeverity (SeverityF (Just Notice))
+         [ ConfSeverity (SeverityF (Just Silence))
          , ConfDetail DNormal
          , ConfBackend  [Stdout MachineFormat
                         , EKGBackend

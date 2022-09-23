@@ -81,8 +81,8 @@ maybeSilent ns tr = do
     mkTrace _ref (lc, Left other) =
       T.traceWith (unpackTrace tr) (lc,  Left other)
 
+-- If the top tracer is silent and any subtracer is not silent, it is not
 isSilentTracer :: TraceConfig -> Namespace -> Bool
--- If the top tracer is silent and no subtracer is not silent, then switch it off
 isSilentTracer tc ns =
     if getSeverity tc ns == SeverityF Nothing
       then
@@ -91,7 +91,6 @@ isSilentTracer tc ns =
         in null blockers
       else False
   where
-      filterOpts (ConfSeverity (SeverityF Nothing)) = False
       filterOpts (ConfSeverity (SeverityF (Just _))) = True
       filterOpts _ = False
 
