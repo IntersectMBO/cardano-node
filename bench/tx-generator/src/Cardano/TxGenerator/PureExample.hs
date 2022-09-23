@@ -1,23 +1,29 @@
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
+
 module  Cardano.TxGenerator.PureExample
         (demo)
         where
 
-import           Control.Monad (foldM_)
+import           Control.Monad (foldM)
 import           Control.Monad.Trans.State.Strict
 import           Data.Either (fromRight)
+import           Data.List (foldl')
 import           Data.String (fromString)
 import           System.Exit (die)
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (ProtocolParameters)
+-- import           Cardano.Api.Shelley (ProtocolParameters)
 
 import           Data.Aeson (eitherDecodeFileStrict')
 
 import           Cardano.Benchmarking.Script.Core (parseSigningKey)
 
-import           Cardano.TxGenerator.Fund (Fund (..), FundInEra (..))
+import           Cardano.TxGenerator.FundQueue
 import           Cardano.TxGenerator.Tx (genTx, sourceToStoreTransaction)
-import           Cardano.TxGenerator.Types (TxGenError (..), TxGenerator)
+import           Cardano.TxGenerator.Types (TxEnvironment (..), TxGenError (..), TxGenerator)
 import           Cardano.TxGenerator.UTxO (makeToUTxOList, mkUTxOVariant)
 import           Cardano.TxGenerator.Utils (inputsToOutputsWithFee)
 
@@ -30,13 +36,24 @@ demo = getDataFileName "data/protocol-parameters.json" >>= demo'
 demo' :: FilePath -> IO ()
 demo' parametersFile = do
   protocolParameters <- either die pure =<< eitherDecodeFileStrict' parametersFile
-  foldM_ (worker $ generateTx protocolParameters) [genesisFund] [1..10]
+  let
+      demoEnv :: TxEnvironment BabbageEra
+      demoEnv = TxEnvironment { 
+          txEnvNetworkId = Mainnet
+        , txEnvProtocolParams = protocolParameters
+        , txEnvFee = TxFeeExplicit TxFeesExplicitInBabbageEra 100000
+        , txEnvMetadata = TxMetadataNone
+        }
+
+  run1 <- foldM (worker $ generateTx demoEnv) (emptyFundQueue `insertFund` genesisFund) [1..10]
+  run2 <- foldM (worker $ generateTxM demoEnv) (emptyFundQueue `insertFund` genesisFund) [1..10]
+  putStrLn $ "Are run results identical? " ++ show (toList run1 == toList run2)
   where
     worker ::
          Generator (Either TxGenError (Tx BabbageEra))
-      -> [Fund]
+      -> FundQueue
       -> Int
-      -> IO [Fund]
+      -> IO FundQueue
     worker pureGenerator generatorState counter = do
       putStrLn $ "running tx-generator. Iteration : " ++ show counter
       let (res, newState) = runState pureGenerator generatorState
@@ -72,12 +89,12 @@ genesisFund
       , _fundSigningKey = Just signingKey
       }
 
-type Generator = State [Fund]
+type Generator = State FundQueue
 
 generateTx ::
-     ProtocolParameters
+     TxEnvironment BabbageEra
   -> Generator (Either TxGenError (Tx BabbageEra))
-generateTx protocolParameters
+generateTx TxEnvironment{..}
   = sourceToStoreTransaction
         generator
         consumeInputFunds
@@ -85,24 +102,10 @@ generateTx protocolParameters
         (makeToUTxOList $ repeat computeUTxO)
         addNewOutputFunds
   where
-    -- In the simplest form of the tx-generator
-    -- fees, metadata etc.. are all hardcoded.
-
-    networkId :: NetworkId
-    networkId = Mainnet
-
-    -- hardcoded fees
-    fee :: Lovelace
-    fee = 100000
-
-    babbageFee :: TxFee BabbageEra
-    babbageFee = TxFeeExplicit TxFeesExplicitInBabbageEra fee
-
-    metadata :: TxMetadataInEra BabbageEra
-    metadata = TxMetadataNone
+    TxFeeExplicit _ fee = txEnvFee
 
     generator :: TxGenerator BabbageEra
-    generator = genTx protocolParameters collateralFunds babbageFee metadata
+    generator = genTx txEnvProtocolParams collateralFunds txEnvFee txEnvMetadata
       where
         -- collateralFunds are needed for Plutus transactions
         collateralFunds :: (TxInsCollateral BabbageEra, [Fund])
@@ -111,15 +114,55 @@ generateTx protocolParameters
 -- Create a transaction that uses all the available funds.
     consumeInputFunds :: Generator (Either TxGenError [Fund])
     consumeInputFunds = do
-      funds <- get
-      put []
+      funds <- toList <$> get
+      put emptyFundQueue
       return $ Right funds
 
     addNewOutputFunds :: [Fund] -> Generator ()
-    addNewOutputFunds = put
+    addNewOutputFunds = put . foldl' insertFund emptyFundQueue
 
     computeOutputValues :: [Lovelace] -> [Lovelace]
     computeOutputValues = inputsToOutputsWithFee fee numOfOutputs
       where numOfOutputs = 2
 
-    computeUTxO = mkUTxOVariant networkId signingKey
+    computeUTxO = mkUTxOVariant txEnvNetworkId signingKey
+
+
+generateTxM ::
+      TxEnvironment BabbageEra
+  ->  Generator (Either TxGenError (Tx BabbageEra))
+generateTxM txEnv
+  = do
+      inFunds <- get
+      case generateTxPure txEnv inFunds of
+        Right (tx, outFunds)  -> put outFunds >> pure (Right tx)
+        Left err              -> pure (Left err)
+
+generateTxPure ::
+     TxEnvironment BabbageEra
+  -> FundQueue
+  -> Either TxGenError (Tx BabbageEra, FundQueue)
+generateTxPure TxEnvironment{..} inQueue
+  = do
+      (tx, txId) <- generator inputs outputs
+      let outQueue = foldl' insertFund emptyFundQueue (toFunds txId)
+      pure (tx, outQueue)
+  where
+    inputs = toList inQueue
+    TxFeeExplicit _ fee = txEnvFee
+
+    generator :: TxGenerator BabbageEra
+    generator = genTx txEnvProtocolParams collateralFunds txEnvFee txEnvMetadata
+      where
+        -- collateralFunds are needed for Plutus transactions
+        collateralFunds :: (TxInsCollateral BabbageEra, [Fund])
+        collateralFunds = (TxInsCollateralNone, [])
+
+    outValues = computeOutputValues $ map getFundLovelace inputs
+    (outputs, toFunds) = makeToUTxOList (repeat computeUTxO) outValues
+
+    computeOutputValues :: [Lovelace] -> [Lovelace]
+    computeOutputValues = inputsToOutputsWithFee fee numOfOutputs
+      where numOfOutputs = 2
+
+    computeUTxO = mkUTxOVariant txEnvNetworkId signingKey

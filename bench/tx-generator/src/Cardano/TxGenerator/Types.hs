@@ -10,9 +10,9 @@ module  Cardano.TxGenerator.Types
 import           Cardano.Api
 
 import           Cardano.Api.Shelley (ProtocolParameters)
-import           Cardano.Ledger.Shelley.API (ShelleyGenesis)
-import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
-import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
+-- import           Cardano.Ledger.Shelley.API (ShelleyGenesis)
+-- import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
+-- import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 
 import           Cardano.TxGenerator.Fund (Fund)
 
@@ -55,12 +55,15 @@ defaultTxGenTxParams = TxGenTxParams
   , txParamTTL        = 1_000_000
   }
 
-data TxEnvironment = TxEnvironment
+data TxEnvironment era = TxEnvironment
   { txEnvNetworkId        :: !NetworkId
-  , txEnvGenesis          :: !(ShelleyGenesis StandardShelley)
-  , txEnvProtocolInfo     :: !SomeConsensusProtocol
+  -- , txEnvGenesis          :: !(ShelleyGenesis StandardShelley)
+  -- , txEnvProtocolInfo     :: !SomeConsensusProtocol
   , txEnvProtocolParams   :: !ProtocolParameters
+  , txEnvFee              :: TxFee era
+  , txEnvMetadata         :: TxMetadataInEra era
   }
+
 
 data TxGenConfig = TxGenConfig
   { confMinUtxoValue  :: !Lovelace  -- ^ Minimum value required per UTxO entry
