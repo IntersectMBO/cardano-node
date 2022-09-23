@@ -152,6 +152,21 @@ executable tx-generator
   build-depends:       base >=4.12 && <5
                      , tx-generator
 
+executable tx-generator-api
+  hs-source-dirs:      app
+  main-is:             tx-generator-api.hs
+  default-language:    Haskell2010
+  ghc-options:         -threaded
+                       -Wall
+                       -rtsopts
+                       "-with-rtsopts=-T"
+
+  build-depends:       base >=4.12 && <5
+                     , filepath
+                     , optparse-applicative-fork
+                     , cardano-cli
+                     , tx-generator
+
 test-suite tx-generator-test
   hs-source-dirs:       test
   main-is:              Main.hs

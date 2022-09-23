@@ -5,10 +5,10 @@ module Cardano.TxGenerator.FundQueue
       where
 
 import           Cardano.TxGenerator.Fund
-import           Cardano.TxGenerator.Internal.Fifo as Fifo
+import qualified Cardano.TxGenerator.Internal.Fifo as Fifo
 
 
-type FundQueue = Fifo Fund
+type FundQueue = Fifo.Fifo Fund
 
 
 emptyFundQueue :: FundQueue
@@ -25,3 +25,6 @@ removeFund = Fifo.remove
 
 removeFunds :: Int -> FundQueue -> Maybe (FundQueue, [Fund])
 removeFunds = Fifo.removeN
+
+removeAllFunds :: FundQueue -> (FundQueue, [Fund])
+removeAllFunds queue = (emptyFundQueue, toList queue)
