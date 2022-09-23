@@ -16,7 +16,7 @@ module Cardano.Api.Protocol.Types
   ) where
 
 import           Cardano.Prelude
-
+import           Cardano.Ledger.Core (Era)
 import           Ouroboros.Consensus.Cardano
 import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Cardano.ByronHFC (ByronBlockHFC)
@@ -54,7 +54,7 @@ instance IOLike m => Protocol m ByronBlockHFC where
   data ProtocolInfoArgs m ByronBlockHFC = ProtocolInfoArgsByron ProtocolParamsByron
   protocolInfo (ProtocolInfoArgsByron params) = inject $ protocolInfoByron params
 
-instance (CardanoHardForkConstraints StandardCrypto, IOLike m) => Protocol m (CardanoBlock StandardCrypto) where
+instance (CardanoHardForkConstraints StandardCrypto, IOLike m, Era StandardCrypto) => Protocol m (CardanoBlock StandardCrypto) where
   data ProtocolInfoArgs m (CardanoBlock StandardCrypto) =
          ProtocolInfoArgsCardano
            ProtocolParamsByron

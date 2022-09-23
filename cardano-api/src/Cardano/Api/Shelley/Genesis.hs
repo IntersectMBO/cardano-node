@@ -14,7 +14,7 @@ import           Data.Maybe (fromMaybe)
 import qualified Data.Time as Time
 
 import           Cardano.Ledger.BaseTypes as Ledger
-import           Cardano.Ledger.Shelley.PParams as Ledger (PParams' (..), emptyPParams)
+import           Cardano.Ledger.Shelley.PParams as Ledger (_d, _maxBHSize, _maxBBSize, _maxTxSize, _eMax, _minfeeA, _minfeeB, emptyPParams)
 import           Cardano.Slotting.Slot (EpochSize (..))
 
 import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesis (..), emptyGenesisStaking)

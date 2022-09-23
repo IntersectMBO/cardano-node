@@ -138,7 +138,6 @@ library
                       , ouroboros-network
                       , ouroboros-network-framework
                       , parsec
-                      , plutus-ledger-api
                       , prettyprinter
                       , prettyprinter-configurable
                       , random

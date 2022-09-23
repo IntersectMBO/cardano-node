@@ -109,7 +109,7 @@ instance HasTypeProxy TxMetadata where
 instance SerialiseAsCBOR TxMetadata where
     serialiseToCBOR =
           CBOR.serialize'
-        . (Shelley.Metadata :: Map Word64 Shelley.Metadatum -> Shelley.Metadata ())
+        . (Shelley.ShelleyTxAuxData :: Map Word64 Shelley.Metadatum -> Shelley.ShelleyTxAuxData ())
         -- The Shelley (Metadata era) is always polymorphic in era,
         -- so we pick the unit type.
         . toShelleyMetadata
@@ -118,9 +118,9 @@ instance SerialiseAsCBOR TxMetadata where
     deserialiseFromCBOR AsTxMetadata bs =
           TxMetadata
         . fromShelleyMetadata
-        . (\(Shelley.Metadata m) -> m)
+        . (\(Shelley.ShelleyTxAuxData m) -> m)
       <$> (CBOR.decodeAnnotator "TxMetadata" fromCBOR (LBS.fromStrict bs)
-           :: Either CBOR.DecoderError (Shelley.Metadata ()))
+           :: Either CBOR.DecoderError (Shelley.ShelleyTxAuxData ()))
         -- The Shelley (Metadata era) is always polymorphic in era,
         -- so we pick the unit type.
 
