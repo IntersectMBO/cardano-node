@@ -53,7 +53,7 @@ constructBalancedTx
   -> Either TxBodyErrorAutoBalance (Tx era)
 constructBalancedTx eInMode txbodcontent changeAddr mOverrideWits utxo pparams
                     eraHistory systemStart stakePools shelleyWitSigningKeys = do
-  BalancedTxBody txbody _txBalanceOutput _fee
+  BalancedTxBody _ txbody _txBalanceOutput _fee
     <- makeTransactionBodyAutoBalance
          eInMode systemStart eraHistory
          pparams stakePools utxo txbodcontent

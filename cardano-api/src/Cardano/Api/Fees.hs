@@ -886,6 +886,7 @@ handleExUnitsErrors ScriptInvalid failuresMap exUnitsMap
 
 data BalancedTxBody era
   = BalancedTxBody
+      (TxBodyContent BuildTx era)
       (TxBody era)
       (TxOut CtxTx era) -- ^ Transaction balance (change output)
       Lovelace    -- ^ Estimated transaction fee
@@ -1025,9 +1026,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     -- fit within the encoding size we picked above when calculating the fee.
     -- Yes this could be an over-estimate by a few bytes if the fee or change
     -- would fit within 2^16-1. That's a possible optimisation.
-    txbody3 <-
-      first TxBodyError $ -- TODO: impossible to fail now
-        makeTransactionBody txbodycontent1 {
+    let finalTxBodyContent = txbodycontent1 {
           txFee  = TxFeeExplicit explicitTxFees fee,
           txOuts = accountForNoChange
                      (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone)
@@ -1035,7 +1034,10 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
           txReturnCollateral = retColl,
           txTotalCollateral = reqCol
         }
-    return (BalancedTxBody txbody3 (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone) fee)
+    txbody3 <-
+      first TxBodyError $ -- TODO: impossible to fail now
+        makeTransactionBody finalTxBodyContent
+    return (BalancedTxBody finalTxBodyContent txbody3 (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone) fee)
  where
    -- Essentially we check for the existence of collateral inputs. If they exist we
    -- create a fictitious collateral return output. Why? Because we need to put dummy values
