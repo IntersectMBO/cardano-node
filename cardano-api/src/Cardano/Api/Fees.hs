@@ -1035,8 +1035,10 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
           txTotalCollateral = reqCol
         }
     txbody3 <-
-      first TxBodyError $ -- TODO: impossible to fail now
-        makeTransactionBody finalTxBodyContent
+      first TxBodyError $ -- TODO: impossible to fail now. We need to implement a function
+                          -- that simply creates a transaction body because we have already
+                          -- validated the transaction body earlier within makeTransactionBodyAutoBalance
+        createAndValidateTransactionBody finalTxBodyContent
     return (BalancedTxBody finalTxBodyContent txbody3 (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone) fee)
  where
    -- Essentially we check for the existence of collateral inputs. If they exist we
