@@ -55,7 +55,7 @@ mkWalletFundStore walletRef fund = modifyMVar_  walletRef
 
 walletSource :: WalletRef -> Int -> FundSource IO
 walletSource ref munch = modifyMVar ref $ \fifo -> return $ case removeFunds munch fifo of
-  Nothing -> (fifo, Left $ PlainError "WalletSource: out of funds")
+  Nothing -> (fifo, Left $ TxGenError "WalletSource: out of funds")
   Just (newFifo, funds) -> (newFifo, Right funds) 
 
 mangleWithChange :: Monad m => CreateAndStore m era -> CreateAndStore m era -> CreateAndStoreList m era PayWithChange
