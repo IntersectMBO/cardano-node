@@ -6,23 +6,25 @@
 module Cardano.Benchmarking.Script.Aeson
 where
 
-import           Prelude
-import           System.Exit
-import           Data.Functor.Identity
-import           Data.Text (Text)
-import           Data.Dependent.Sum
-import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS (lines)
+import qualified Data.ByteString.Lazy as BSL
+import           Data.Dependent.Sum
+import           Data.Functor.Identity
+import           Data.Text (Text)
+import           Prelude
+import           System.Exit
+
 import           Data.Aeson
 import           Data.Aeson.Encode.Pretty
 import qualified Data.Attoparsec.ByteString as Atto
+import qualified Data.Yaml as Yaml (encode)
 
-import qualified Ouroboros.Network.Magic as Ouroboros (NetworkMagic(..))
-import           Cardano.Api (ScriptData, ScriptDataJsonSchema(..), NetworkId(..)
-                              , scriptDataFromJson, scriptDataToJson)
+import           Cardano.Api (NetworkId (..), ScriptData, ScriptDataJsonSchema (..),
+                   scriptDataFromJson, scriptDataToJson)
 import           Cardano.Api.Shelley (ProtocolParameters)
-import           Cardano.CLI.Types (SigningKeyFile(..))
+import           Cardano.CLI.Types (SigningKeyFile (..))
+import qualified Ouroboros.Network.Magic as Ouroboros (NetworkMagic (..))
 
 import           Cardano.Benchmarking.Script.Setters
 import           Cardano.Benchmarking.Script.Store
@@ -43,6 +45,9 @@ prettyPrint = encodePretty' conf
     , "splitFundToList", "delay", "prepareTxList"
     , "runBenchmark", "asyncBenchmark", "waitBenchmark", "cancelBenchmark"
     , "reserved" ]
+
+prettyPrintYaml :: [Action] -> BSL.ByteString
+prettyPrintYaml = BSL.fromStrict . Yaml.encode
 
 jsonOptionsUnTaggedSum :: Options
 jsonOptionsUnTaggedSum = defaultOptions { sumEncoding = ObjectWithSingleField }

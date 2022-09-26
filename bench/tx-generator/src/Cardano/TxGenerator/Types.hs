@@ -1,6 +1,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -fno-warn-partial-fields #-}
 
 module  Cardano.TxGenerator.Types
@@ -89,14 +90,17 @@ data TxGenPlutusParams =
 
 
 data TxGenError where
-  ApiError    :: Error e => !e -> TxGenError
-  PlainError  :: !String -> TxGenError
+  ApiError        :: Cardano.Api.Error e => !e -> TxGenError
+  ProtocolError   :: Cardano.Api.Error e => !e -> TxGenError
+  TxGenError      :: !String -> TxGenError
 
-instance Show TxGenError where
-  show = \case
-    ApiError e    -> "cardano-api error: " ++ displayError e
-    PlainError s  -> s
+deriving instance Show TxGenError
 
+instance Error TxGenError where
+  displayError = \case
+    ApiError e        -> displayError e
+    ProtocolError e   -> displayError e
+    TxGenError _      -> ""
 
 {-
 Note [Tx additional size]

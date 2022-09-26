@@ -57,6 +57,7 @@ library
                        Cardano.TxGenerator.Genesis
                        Cardano.TxGenerator.PureExample
                        Cardano.TxGenerator.Setup.NixService
+                       Cardano.TxGenerator.Setup.NodeConfig
                        Cardano.TxGenerator.Types
                        Cardano.TxGenerator.Tx
                        Cardano.TxGenerator.Utils
@@ -122,6 +123,7 @@ library
                      , transformers
                      , transformers-except
                      , unordered-containers
+                     , yaml
 
   default-language:    Haskell2010
   default-extensions: OverloadedStrings
@@ -160,6 +162,7 @@ executable tx-generator-api
 
   build-depends:       base >=4.12 && <5
                      , aeson
+                     , bytestring
                      , filepath
                      , optparse-applicative-fork
                      , cardano-cli

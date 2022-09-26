@@ -3,6 +3,7 @@
 module Main (main) where
 
 import           Data.Aeson (FromJSON, eitherDecodeFileStrict')
+import qualified Data.ByteString.Lazy.Char8 as BSL (putStrLn)
 import           Options.Applicative as Opt
 import           System.Exit (die)
 import           System.FilePath ((</>))
@@ -11,6 +12,10 @@ import           Cardano.CLI.Types (SigningKeyFile (..))
 
 import           Cardano.TxGenerator.Setup.NixService
 import           Cardano.TxGenerator.Types
+
+import           Cardano.Benchmarking.Script.Aeson (prettyPrint, prettyPrintYaml)
+import           Cardano.Benchmarking.Script.Selftest (testScript)
+import           Cardano.Benchmarking.Script.Types (SubmitMode(..))
 
 
 data CommandLine = CommandLine {
@@ -29,6 +34,13 @@ main
 
     let txParams = txGenTxParams nixService
     print txParams
+
+    let script = testScript "/dev/zero" DiscardTX
+    putStrLn "--- JSON serialisation ----------------"
+    BSL.putStrLn $ prettyPrint script
+    putStrLn "--- YAML serialisation ----------------"
+    BSL.putStrLn $ prettyPrintYaml script
+
 
 decodeFileStrict' :: FromJSON a => FilePath -> IO a
 decodeFileStrict' f

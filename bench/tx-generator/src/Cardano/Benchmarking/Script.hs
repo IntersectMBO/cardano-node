@@ -19,7 +19,6 @@ import           Cardano.Benchmarking.Script.Action
 import           Cardano.Benchmarking.Script.Aeson (parseScriptFileAeson)
 import           Cardano.Benchmarking.Script.Core (setProtocolParameters, traceTxGeneratorVersion)
 import           Cardano.Benchmarking.Script.Env
-import           Cardano.Benchmarking.Script.NodeConfig (shutDownLogging)
 import           Cardano.Benchmarking.Script.Store
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Tracer (initDefaultTracers)
@@ -43,3 +42,8 @@ runScript script iom = runActionM execScript iom >>= \case
     traceTxGeneratorVersion
     setProtocolParameters QueryLocalNode
     forM_ script action
+
+shutDownLogging :: ActionM ()
+shutDownLogging = do
+  traceError "QRT Last Message. LoggingLayer going to shutdown. 73 . . . ."
+  liftIO $ threadDelay (200*1000)
