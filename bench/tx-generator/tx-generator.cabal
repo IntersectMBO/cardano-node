@@ -34,7 +34,6 @@ library
                        Cardano.Benchmarking.GeneratorTx.Submission
                        Cardano.Benchmarking.GeneratorTx.SubmissionClient
                        Cardano.Benchmarking.LogTypes                       
-                       Cardano.Benchmarking.NixOptions
                        Cardano.Benchmarking.OuroborosImports
                        Cardano.Benchmarking.Script
                        Cardano.Benchmarking.Script.Action
@@ -57,12 +56,14 @@ library
                        Cardano.TxGenerator.FundQueue
                        Cardano.TxGenerator.Genesis
                        Cardano.TxGenerator.PureExample
+                       Cardano.TxGenerator.Setup.NixService
                        Cardano.TxGenerator.Types
                        Cardano.TxGenerator.Tx
                        Cardano.TxGenerator.Utils
                        Cardano.TxGenerator.UTxO
 
   other-modules:       Cardano.TxGenerator.Internal.Fifo
+                       Cardano.TxGenerator.Internal.Orphans
                        Paths_tx_generator
 
   autogen-modules:     Paths_tx_generator
@@ -158,6 +159,7 @@ executable tx-generator-api
                        "-with-rtsopts=-T"
 
   build-depends:       base >=4.12 && <5
+                     , aeson
                      , filepath
                      , optparse-applicative-fork
                      , cardano-cli

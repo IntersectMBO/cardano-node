@@ -2,12 +2,14 @@
 
 module Main (main) where
 
+import           Data.Aeson (FromJSON, eitherDecodeFileStrict')
 import           Options.Applicative as Opt
+import           System.Exit (die)
 import           System.FilePath ((</>))
 
 import           Cardano.CLI.Types (SigningKeyFile (..))
 
-import           Cardano.Benchmarking.NixOptions
+import           Cardano.TxGenerator.Setup.NixService
 import           Cardano.TxGenerator.Types
 
 
@@ -22,11 +24,15 @@ main :: IO ()
 main
   = do
     CommandLine{..} <- parseCommandLine
-    nixService <- adjustFilePath (runPath </>) <$> parseNixServiceOptions nixServiceJson
+    nixService <- adjustFilePath (runPath </>) <$> decodeFileStrict' nixServiceJson
     print nixService
 
     let txParams = txGenTxParams nixService
     print txParams
+
+decodeFileStrict' :: FromJSON a => FilePath -> IO a
+decodeFileStrict' f
+  = eitherDecodeFileStrict' f >>= either die pure
 
 adjustFilePath :: (FilePath -> FilePath) -> NixServiceOptions -> NixServiceOptions
 adjustFilePath f opts
