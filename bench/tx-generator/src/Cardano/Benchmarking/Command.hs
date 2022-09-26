@@ -13,6 +13,7 @@ where
 import           Prelude
 import           System.Exit
 
+import           Data.Aeson (fromJSON)
 import           Data.ByteString.Lazy as BSL
 import           Data.Text.IO as T
 import           Options.Applicative as Opt
@@ -20,12 +21,13 @@ import           Options.Applicative as Opt
 import           Ouroboros.Network.NodeToClient (withIOManager)
 
 import           Cardano.Benchmarking.Compiler (compileOptions)
-import           Cardano.Benchmarking.NixOptions (NixServiceOptions, _nix_nodeConfigFile, _nix_cardanoTracerSocket,
+import           Cardano.TxGenerator.Setup.NixOptions (NixServiceOptions, getNodeConfigFile, _nix_cardanoTracerSocket,
                    parseNixServiceOptions, setNodeConfigFile)
 import           Cardano.Benchmarking.Script (parseScriptFileAeson, runScript)
-import           Cardano.Benchmarking.Script.Aeson (prettyPrint)
+import           Cardano.Benchmarking.Script.Aeson (parseJSONFile, prettyPrint)
 import           Cardano.Benchmarking.Script.Selftest (runSelftest)
 import           Cardano.Benchmarking.Version as Version
+import           Cardano.TxGenerator.Setup.NixService
 
 data Command
   = Json FilePath
@@ -44,13 +46,13 @@ runCommand = withIOManager $ \iocp -> do
       script <- parseScriptFileAeson file
       runScript script iocp >>= handleError
     JsonHL file nodeConfigOverwrite cardanoTracerOverwrite -> do
-      opts <- parseNixServiceOptions file
+      opts <- parseJSONFile fromJSON file
       finalOpts <- mangleTracerConfig cardanoTracerOverwrite <$> mangleNodeConfig nodeConfigOverwrite opts
       case compileOptions finalOpts of
         Right script -> runScript script iocp >>= handleError
         err -> handleError err
     Compile file -> do
-      o <- parseNixServiceOptions file
+      o <- parseJSONFile fromJSON file
       case compileOptions o of
         Right script -> BSL.putStr $ prettyPrint script
         err -> handleError err
@@ -63,7 +65,7 @@ runCommand = withIOManager $ \iocp -> do
     Left err -> die $ show err
 
   mangleNodeConfig :: Maybe FilePath -> NixServiceOptions -> IO NixServiceOptions
-  mangleNodeConfig fp opts = case (_nix_nodeConfigFile opts, fp) of
+  mangleNodeConfig fp opts = case (getNodeConfigFile opts, fp) of
     (_      , Just newFilePath) -> return $ setNodeConfigFile opts newFilePath
     (Just _ , Nothing) -> return opts
     (Nothing, Nothing) -> die "No node-configFile set"

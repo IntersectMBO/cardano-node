@@ -1,23 +1,24 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE StandaloneDeriving #-}
-module Cardano.Benchmarking.NixOptions
-where
+module Cardano.TxGenerator.Setup.NixService
+       ( NixServiceOptions(..)
+       , getNodeConfigFile
+       , setNodeConfigFile
+       )
+       where
 
 import           Data.Aeson
-import           Data.List.NonEmpty
-import           GHC.Generics
+import           Data.List.NonEmpty (NonEmpty)
+import           GHC.Generics (Generic)
 import           GHC.Natural
-import           Prelude
 
 import           Cardano.CLI.Types (SigningKeyFile (..))
 import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
 
 import           Cardano.Api (AnyCardanoEra, Lovelace)
-import           Cardano.Benchmarking.Script.Aeson (parseJSONFile)
+import           Cardano.TxGenerator.Internal.Orphans ()
 import           Cardano.TxGenerator.Types
 
-parseNixServiceOptions :: FilePath -> IO NixServiceOptions
-parseNixServiceOptions = parseJSONFile fromJSON
 
 data NixServiceOptions = NixServiceOptions {
     _nix_debugMode        :: Bool
@@ -44,26 +45,22 @@ data NixServiceOptions = NixServiceOptions {
   , _nix_localNodeSocketPath  :: String
   , _nix_targetNodes          :: NonEmpty NodeIPv4Address
   } deriving (Show, Eq)
+
 deriving instance Generic NixServiceOptions
 
-getNodeConfigFile :: NixServiceOptions -> FilePath
-getNodeConfigFile opts = case _nix_nodeConfigFile opts of
-  Nothing -> error "getNodeConfigFile: This should not happend: nodeConfigFile not set"
-  Just fp -> fp
+getNodeConfigFile :: NixServiceOptions -> Maybe FilePath
+getNodeConfigFile = _nix_nodeConfigFile
 
 setNodeConfigFile :: NixServiceOptions -> FilePath -> NixServiceOptions
 setNodeConfigFile opts filePath = opts {_nix_nodeConfigFile = Just filePath }
 
+-- dropping the '_nix_ prefix of above Haskell ADT field labels is assumed
+-- to match JSON attribute names as provided by the Nix service definition
 jsonOptions :: Options
 jsonOptions = defaultOptions { fieldLabelModifier = stripPrefix }
   where
     stripPrefix :: String -> String
-    stripPrefix ('_':'n':'i':'x':'_':baseName) = baseName
-    stripPrefix bad = error $ "bad fieldname: " ++ bad
-
-instance ToJSON NixServiceOptions where
-  toJSON     = genericToJSON jsonOptions
-  toEncoding = genericToEncoding jsonOptions
+    stripPrefix = drop 5
 
 instance FromJSON NixServiceOptions where
   parseJSON = genericParseJSON jsonOptions
