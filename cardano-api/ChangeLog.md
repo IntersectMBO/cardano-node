@@ -10,6 +10,8 @@
 
 - Expand `BalancedTxBody` to include `TxBodyContent` ([PR 4491](https://github.com/input-output-hk/cardano-node/pull/4491))
 
+- Change `calculateMinimumUTxO` to return `Lovelace` instead of a `Value` ([PR 4482](https://github.com/input-output-hk/cardano-node/pull/4482))
+
 ### Bugs
 
 - Allow reading text envelopes from pipes ([PR 4384](https://github.com/input-output-hk/cardano-node/pull/4384))

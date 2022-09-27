@@ -1156,11 +1156,11 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
    checkMinUTxOValue txout@(TxOut _ v _ _) pparams' = do
      minUTxO  <- first TxBodyErrorMinUTxOMissingPParams
                    $ calculateMinimumUTxO era txout pparams'
-     if txOutValueToLovelace v >= selectLovelace minUTxO
+     if txOutValueToLovelace v >= minUTxO
      then Right ()
      else Left $ TxBodyErrorMinUTxONotMet
                    (txOutInAnyEra txout)
-                   (selectLovelace minUTxO)
+                   minUTxO
 
 substituteExecutionUnits :: Map ScriptWitnessIndex ExecutionUnits
                          -> TxBodyContent BuildTx era
@@ -1317,30 +1317,30 @@ calculateMinimumUTxO
   :: ShelleyBasedEra era
   -> TxOut CtxTx era
   -> ProtocolParameters
-  -> Either MinimumUTxOError Value
+  -> Either MinimumUTxOError Lovelace
 calculateMinimumUTxO era txout@(TxOut _ v _ _) pparams' =
   case era of
-    ShelleyBasedEraShelley -> lovelaceToValue <$> getMinUTxOPreAlonzo pparams'
+    ShelleyBasedEraShelley -> getMinUTxOPreAlonzo pparams'
     ShelleyBasedEraAllegra -> calcMinUTxOAllegraMary
     ShelleyBasedEraMary -> calcMinUTxOAllegraMary
     ShelleyBasedEraAlonzo ->
       let lTxOut = toShelleyTxOutAny era txout
           babPParams = toAlonzoPParams pparams'
           minUTxO = Shelley.evaluateMinLovelaceOutput babPParams lTxOut
-          val = lovelaceToValue $ fromShelleyLovelace minUTxO
+          val = fromShelleyLovelace minUTxO
       in Right val
     ShelleyBasedEraBabbage ->
       let lTxOut = toShelleyTxOutAny era txout
           babPParams = toBabbagePParams pparams'
           minUTxO = Shelley.evaluateMinLovelaceOutput babPParams lTxOut
-          val = lovelaceToValue $ fromShelleyLovelace minUTxO
+          val = fromShelleyLovelace minUTxO
       in Right val
  where
-   calcMinUTxOAllegraMary :: Either MinimumUTxOError Value
+   calcMinUTxOAllegraMary :: Either MinimumUTxOError Lovelace
    calcMinUTxOAllegraMary = do
      let val = txOutValueToValue v
      minUTxO <- getMinUTxOPreAlonzo pparams'
-     Right . lovelaceToValue $ calcMinimumDeposit val minUTxO
+     Right $ calcMinimumDeposit val minUTxO
 
    getMinUTxOPreAlonzo
      :: ProtocolParameters -> Either MinimumUTxOError Lovelace
