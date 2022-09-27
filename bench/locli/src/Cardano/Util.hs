@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
 module Cardano.Util
   ( module Prelude
   , module Cardano.Util
@@ -38,6 +39,12 @@ import Cardano.Ledger.BaseTypes         (StrictMaybe (..), fromSMaybe)
 
 
 type SMaybe a = StrictMaybe a
+
+instance Alternative StrictMaybe where
+  empty = SNothing
+  (<|>) x y = case x of
+                SNothing -> y
+                _ -> x
 
 smaybe :: b -> (a -> b) -> StrictMaybe a -> b
 smaybe x _  SNothing = x

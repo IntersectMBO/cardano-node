@@ -110,7 +110,9 @@ deltifySlotStats gsis s@SlotStats{..} =
   , slBlkCtx    = diffUTCTime <$> slBlkCtx    <*> slStarted
   , slLgrState  = diffUTCTime <$> slLgrState  <*> slBlkCtx
   , slLgrView   = diffUTCTime <$> slLgrView   <*> slLgrState
-  , slLeading   = diffUTCTime <$> slLeading   <*> slLgrView
+  , slLeading   = (diffUTCTime <$> slLeading   <*> slLgrView)
+                  <|>
+                  (diffUTCTime <$> slLeading   <*> slStarted)
   , slForged    = diffUTCTime <$> slForged    <*> slLeading
   }
 
