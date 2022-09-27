@@ -28,7 +28,6 @@ library
                        Cardano.Benchmarking.Command
                        Cardano.Benchmarking.Compiler                       
                        Cardano.Benchmarking.GeneratorTx
-                       Cardano.Benchmarking.GeneratorTx.Genesis
                        Cardano.Benchmarking.GeneratorTx.NodeToNode
                        Cardano.Benchmarking.GeneratorTx.SizedMetadata
                        Cardano.Benchmarking.GeneratorTx.Submission
@@ -166,6 +165,7 @@ executable tx-generator-api
                      , filepath
                      , optparse-applicative-fork
                      , cardano-cli
+                     , cardano-node
                      , tx-generator
 
 test-suite tx-generator-test

@@ -1,12 +1,12 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Benchmarking.Script.Store
@@ -22,10 +22,11 @@ import           Cardano.Api as Cardano (Tx)
 import           Cardano.Api.Shelley as Cardano (ProtocolParameters)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 
+import           Cardano.Benchmarking.OuroborosImports as Cardano (LoggingLayer, PaymentKey,
+                   ShelleyGenesis, SigningKey, StandardShelley)
 import           Cardano.Benchmarking.Script.Setters as Setters
-import           Cardano.Benchmarking.OuroborosImports as Cardano
-                    ( LoggingLayer, ShelleyGenesis, StandardShelley
-                    , SigningKey, PaymentKey)
+
+import           Cardano.TxGenerator.Types (TxGenTxParams)
 
 import           Cardano.Benchmarking.GeneratorTx as Core (AsyncBenchmarkControl)
 import           Cardano.Benchmarking.LogTypes as Core (BenchTracers)
@@ -37,6 +38,7 @@ data Store v where
   Protocol     :: Store SomeConsensusProtocol
   BenchTracers :: Store Core.BenchTracers
   Genesis      :: Store (ShelleyGenesis StandardShelley)
+  TxParams     :: Store TxGenTxParams
   Named        :: Name x -> Store x
   ProtocolParameterMode :: Store ProtocolParameterMode
 

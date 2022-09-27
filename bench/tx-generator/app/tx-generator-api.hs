@@ -6,16 +6,15 @@ import           Data.Aeson (FromJSON, eitherDecodeFileStrict')
 import qualified Data.ByteString.Lazy.Char8 as BSL (putStrLn)
 import           Options.Applicative as Opt
 import           System.Exit (die)
-import           System.FilePath ((</>))
+import           System.FilePath (isRelative, (</>))
 
-import           Cardano.CLI.Types (SigningKeyFile (..))
+import           Cardano.Node.Types (AdjustFilePaths (..))
 
 import           Cardano.TxGenerator.Setup.NixService
-import           Cardano.TxGenerator.Types
 
 import           Cardano.Benchmarking.Script.Aeson (prettyPrint, prettyPrintYaml)
 import           Cardano.Benchmarking.Script.Selftest (testScript)
-import           Cardano.Benchmarking.Script.Types (SubmitMode(..))
+import           Cardano.Benchmarking.Script.Types (SubmitMode (..))
 
 
 data CommandLine = CommandLine {
@@ -29,11 +28,15 @@ main :: IO ()
 main
   = do
     CommandLine{..} <- parseCommandLine
-    nixService <- adjustFilePath (runPath </>) <$> decodeFileStrict' nixServiceJson
+    let pathModifier p = if isRelative p then runPath </> p else p
+
+    nixService <- adjustFilePaths pathModifier <$> decodeFileStrict' nixServiceJson
     print nixService
 
-    let txParams = txGenTxParams nixService
-    print txParams
+    let (a, b, c) = (txGenTxParams nixService, txGenConfig nixService, txGenPlutusParams nixService)
+    print a
+    print b
+    print c
 
     let script = testScript "/dev/zero" DiscardTX
     putStrLn "--- JSON serialisation ----------------"
@@ -46,12 +49,7 @@ decodeFileStrict' :: FromJSON a => FilePath -> IO a
 decodeFileStrict' f
   = eitherDecodeFileStrict' f >>= either die pure
 
-adjustFilePath :: (FilePath -> FilePath) -> NixServiceOptions -> NixServiceOptions
-adjustFilePath f opts
-  = opts {
-      _nix_nodeConfigFile = f <$> _nix_nodeConfigFile opts
-    , _nix_sigKey = SigningKeyFile . f . unSigningKeyFile $ _nix_sigKey opts
-    }
+
 
 parseCommandLine :: IO CommandLine
 parseCommandLine
@@ -80,14 +78,3 @@ parserCommandLine
         )
 
 
----- mapping of Nix service options to API types
-
-txGenTxParams :: NixServiceOptions -> TxGenTxParams
-txGenTxParams NixServiceOptions{..}
-  = TxGenTxParams {
-    txParamFee = _nix_tx_fee
-  , txParamAddTxSize = _nix_add_tx_size
-  , txParamInputs = _nix_inputs_per_tx
-  , txParamOutputs = _nix_outputs_per_tx
-  , txParamTTL = txParamTTL defaultTxGenTxParams
-  }
