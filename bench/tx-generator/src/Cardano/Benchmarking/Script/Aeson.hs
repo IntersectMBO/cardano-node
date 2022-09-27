@@ -1,8 +1,10 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 module Cardano.Benchmarking.Script.Aeson
 where
 
@@ -12,6 +14,7 @@ import qualified Data.ByteString.Lazy as BSL
 import           Data.Dependent.Sum
 import           Data.Functor.Identity
 import           Data.Text (Text)
+import           GHC.Generics (Generic)
 import           Prelude
 import           System.Exit
 
@@ -29,6 +32,7 @@ import qualified Ouroboros.Network.Magic as Ouroboros (NetworkMagic (..))
 import           Cardano.Benchmarking.Script.Setters
 import           Cardano.Benchmarking.Script.Store
 import           Cardano.Benchmarking.Script.Types
+import           Cardano.TxGenerator.Types
 
 testJSONRoundTrip :: [Action] -> Maybe String
 testJSONRoundTrip l = case fromJSON $ toJSON l of
@@ -51,6 +55,13 @@ prettyPrintYaml = BSL.fromStrict . Yaml.encode
 
 jsonOptionsUnTaggedSum :: Options
 jsonOptionsUnTaggedSum = defaultOptions { sumEncoding = ObjectWithSingleField }
+
+deriving instance Generic TxGenTxParams
+instance ToJSON TxGenTxParams where
+  toJSON     = genericToJSON jsonOptionsUnTaggedSum
+  toEncoding = genericToEncoding jsonOptionsUnTaggedSum
+instance FromJSON TxGenTxParams where
+  parseJSON = genericParseJSON jsonOptionsUnTaggedSum
 
 instance ToJSON ProtocolParametersSource where
   toJSON     = genericToJSON jsonOptionsUnTaggedSum

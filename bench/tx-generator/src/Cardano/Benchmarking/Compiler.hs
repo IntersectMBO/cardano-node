@@ -20,11 +20,10 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 
 import           Cardano.Api
-
-import           Cardano.Benchmarking.NixOptions
 import           Cardano.Benchmarking.Script.Setters
 import           Cardano.Benchmarking.Script.Store (KeyName, Name(..), WalletName)
 import           Cardano.Benchmarking.Script.Types
+import           Cardano.TxGenerator.Setup.NixService
 
 data CompileError where
   SomeCompilerError :: String -> CompileError
@@ -69,6 +68,7 @@ initConstants :: Compiler ()
 initConstants = do
   setN TLocalSocket          _nix_localNodeSocketPath
   setConst  TTTL             1000000
+  setN      TTxParams        txGenTxParams
   emit $ DefineSigningKey keyNameTxGenFunds keyTxGenFunds
   emit $ DefineSigningKey keyNameCollaterals keyCollaterals
   emit $ DefineSigningKey keyNameSplitPhase keySplitPhase

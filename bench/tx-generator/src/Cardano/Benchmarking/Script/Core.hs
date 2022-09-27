@@ -20,6 +20,7 @@ import           Control.Concurrent (threadDelay)
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except
+import           Control.Monad.Trans.Except.Extra
 import           "contra-tracer" Control.Tracer (nullTracer)
 import           Data.Ratio ((%))
 
@@ -44,7 +45,8 @@ import qualified Cardano.TxGenerator.Utils as Utils
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (readSigningKey, waitBenchmark,
                    walletBenchmark)
-import qualified Cardano.Benchmarking.GeneratorTx.Genesis as Genesis
+-- import qualified Cardano.Benchmarking.GeneratorTx.Genesis as Genesis
+import qualified Cardano.TxGenerator.Genesis as Genesis
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode (ConnectClient,
                    benchmarkConnectTxSubmit)
 import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
@@ -60,6 +62,7 @@ import           Cardano.Benchmarking.Wallet as Wallet
 
 import           Cardano.Benchmarking.Script.Aeson (readProtocolParametersFile)
 import           Cardano.Benchmarking.Script.Env hiding (Error(TxGenError))
+import qualified Cardano.Benchmarking.Script.Env as Env (Error(TxGenError))
 import           Cardano.Benchmarking.Script.Setters
 import           Cardano.Benchmarking.Script.Store as Store
 import           Cardano.Benchmarking.Script.Types
@@ -287,16 +290,15 @@ evalGenerator generator era = do
   networkId <- getUser TNetworkId
   protocolParameters <- getProtocolParameters
   case generator of
-    SecureGenesis fee wallet genesisKeyName destKeyName -> do
+    SecureGenesis fee wallet genesisKeyName destKeyName -> do -- TODO: where does fee come from? is it needed as a separate field?
       genesis  <- get Genesis
-      ttl      <- getUser TTTL
+      txParams <- getUser TTxParams
       destKey  <- getName destKeyName
       destWallet  <- getName wallet
       genesisKey  <- getName genesisKeyName
+      (tx, fund) <- firstExceptT Env.TxGenError $ hoistEither $
+        Genesis.genesisSecureInitialFund networkId genesis genesisKey destKey txParams {txParamFee = fee}
       let
-        outAddr = Utils.keyAddress @ era networkId destKey
-        (_inAddr, lovelace) = Genesis.genesisFundForKey @ era networkId genesis genesisKey
-        (tx, fund) = Genesis.genesisExpenditure networkId genesisKey outAddr lovelace fee ttl destKey
         gen = do
           walletRefInsertFund destWallet fund
           return $ Right tx

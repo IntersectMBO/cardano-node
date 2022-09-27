@@ -1,9 +1,13 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
 module Cardano.TxGenerator.Setup.NixService
        ( NixServiceOptions(..)
        , getNodeConfigFile
        , setNodeConfigFile
+       , txGenTxParams
+       , txGenConfig
+       , txGenPlutusParams
        )
        where
 
@@ -14,6 +18,7 @@ import           GHC.Natural
 
 import           Cardano.CLI.Types (SigningKeyFile (..))
 import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
+import           Cardano.Node.Types (AdjustFilePaths (..))
 
 import           Cardano.Api (AnyCardanoEra, Lovelace)
 import           Cardano.TxGenerator.Internal.Orphans ()
@@ -64,3 +69,45 @@ jsonOptions = defaultOptions { fieldLabelModifier = stripPrefix }
 
 instance FromJSON NixServiceOptions where
   parseJSON = genericParseJSON jsonOptions
+
+instance AdjustFilePaths NixServiceOptions where
+    adjustFilePaths f opts
+      = opts {
+          _nix_nodeConfigFile = f <$> _nix_nodeConfigFile opts
+        , _nix_sigKey = SigningKeyFile . f . unSigningKeyFile $ _nix_sigKey opts
+        }
+
+
+---- mapping of Nix service options to API types
+
+txGenTxParams :: NixServiceOptions -> TxGenTxParams
+txGenTxParams NixServiceOptions{..}
+  = TxGenTxParams {
+    txParamFee = _nix_tx_fee
+  , txParamAddTxSize = _nix_add_tx_size
+  , txParamTTL = txParamTTL defaultTxGenTxParams
+  }
+
+txGenConfig :: NixServiceOptions -> TxGenConfig
+txGenConfig NixServiceOptions{..}
+  = TxGenConfig
+  { confMinUtxoValue = _nix_min_utxo_value
+  , confTxsPerSecond = _nix_tps
+  , confInitCooldown = _nix_init_cooldown
+  , confTxsInputs = _nix_inputs_per_tx
+  , confTxsOutputs = _nix_outputs_per_tx
+  }
+
+txGenPlutusParams :: NixServiceOptions -> TxGenPlutusParams
+txGenPlutusParams NixServiceOptions{..}
+  | _nix_plutusAutoMode = PlutusAuto _nix_plutusLoopScript
+  | _nix_plutusMode = plutusOn
+  | otherwise = PlutusOff
+  where
+    plutusOn = PlutusOn {
+      plutusScript = _nix_plutusScript
+    , plutusData = _nix_plutusData
+    , plutusRedeemer = _nix_plutusRedeemer
+    , plutusExecMemory = _nix_executionMemory
+    , plutusExecSteps = _nix_executionSteps
+    }

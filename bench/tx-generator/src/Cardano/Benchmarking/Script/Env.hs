@@ -26,7 +26,6 @@ import           Control.Monad.Trans.RWS.Strict (RWST)
 import qualified Control.Monad.Trans.RWS.Strict as RWS
 import           "contra-tracer" Control.Tracer (traceWith)
 
--- import qualified Cardano.Node.Types (ConfigError)
 import qualified Cardano.Benchmarking.LogTypes as Tracer
 import           Ouroboros.Network.NodeToClient (IOManager)
 
