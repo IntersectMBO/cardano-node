@@ -127,6 +127,7 @@ library
                       , formatting
                       , iproute
                       , memory
+                      , microlens
                       , network
                       , nothunks
                       , optparse-applicative-fork
@@ -186,6 +187,7 @@ library gen
                       , cardano-prelude
                       , containers
                       , hedgehog
+                      , microlens
                       , plutus-core
                       , cardano-ledger-shelley
                       , text

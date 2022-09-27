@@ -128,8 +128,8 @@ import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Keys as Shelley.Spec
 import qualified Cardano.Ledger.Keys as SL
 import qualified Cardano.Ledger.PoolDistr as SL
-import qualified Cardano.Ledger.Shelley.API as ShelleyAPI
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley.Spec
+import           Cardano.Ledger.Shelley.Rules.NewEpoch ()
 import qualified Cardano.Protocol.TPraos.API as TPraos
 import           Cardano.Protocol.TPraos.BHeader (checkLeaderNatValue)
 import qualified Cardano.Protocol.TPraos.BHeader as TPraos
@@ -167,6 +167,8 @@ import qualified Ouroboros.Network.Block
 import qualified Ouroboros.Network.Protocol.ChainSync.Client as CS
 import qualified Ouroboros.Network.Protocol.ChainSync.ClientPipelined as CSP
 import           Ouroboros.Network.Protocol.ChainSync.PipelineDecision
+import qualified Cardano.Ledger.Shelley.API as ShelleyAPI
+import Cardano.Ledger.SafeHash (HashAnnotated)
 
 data InitialLedgerStateError
   = ILSEConfigFile Text
@@ -1320,6 +1322,7 @@ nextEpochEligibleLeadershipSlots
   => Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Spec.Credential 'Shelley.Spec.Staking (Cardano.Ledger.Era.Crypto (ShelleyLedgerEra era)))
   => FromCBOR (Consensus.ChainDepState (Api.ConsensusProtocol era))
   => Consensus.PraosProtocolSupportsNode (Api.ConsensusProtocol era)
+  => HashAnnotated (Core.TxBody (ShelleyLedgerEra era)) Core.EraIndependentTxBody (Ledger.Crypto (ShelleyLedgerEra era))
   => ShelleyBasedEra era
   -> ShelleyGenesis Shelley.StandardShelley
   -> SerialisedCurrentEpochState era
@@ -1502,6 +1505,7 @@ currentEpochEligibleLeadershipSlots :: forall era ledgerera. ()
   => Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Spec.Credential 'Shelley.Spec.Staking (Cardano.Ledger.Era.Crypto (ShelleyLedgerEra era)))
  -- => Ledger.Crypto ledgerera ~ Shelley.StandardCrypto
   => FromCBOR (Consensus.ChainDepState (Api.ConsensusProtocol era))
+  => HashAnnotated (Core.TxBody (ShelleyLedgerEra era)) Core.EraIndependentTxBody (Ledger.Crypto (ShelleyLedgerEra era))
   -- => Consensus.ChainDepState (ConsensusProtocol era) ~ Consensus.ChainDepState (ConsensusProtocol era)
   => ShelleyBasedEra era
   -> ShelleyGenesis Shelley.StandardShelley
