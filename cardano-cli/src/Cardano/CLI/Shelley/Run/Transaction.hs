@@ -499,33 +499,53 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
                             validatedTxUpProp
                             validatedMintValue
                             validatedTxScriptValidity
+
       eInMode <- case toEraInMode era CardanoMode of
                    Just result -> return result
                    Nothing ->
                      left (ShelleyTxCmdEraConsensusModeMismatchTxBalance outputOptions
                             (AnyConsensusMode CardanoMode) (AnyCardanoEra era))
 
-      let allTxInputs = inputsThatRequireWitnessing ++ allReferenceInputs ++ txinsc
+      SocketPath sockPath <- firstExceptT ShelleyTxCmdSocketEnvError
+                             $ newExceptT readEnvSocketPath
 
-      (utxo, pparams, eraHistory, systemStart, stakePools) <-
+      let allTxInputs = inputsThatRequireWitnessing ++ allReferenceInputs ++ txinsc
+          localNodeConnInfo = LocalNodeConnectInfo
+                                     { localConsensusModeParams = CardanoModeParams $ EpochSlots 21600
+                                     , localNodeNetworkId = networkId
+                                     , localNodeSocketPath = sockPath
+                                     }
+      AnyCardanoEra nodeEra
+        <- firstExceptT (ShelleyTxCmdQueryConvenienceError . AcqFailure)
+             . newExceptT $ determineEra cModeParams localNodeConnInfo
+
+      (nodeEraUTxO, pparams, eraHistory, systemStart, stakePools) <-
         firstExceptT ShelleyTxCmdQueryConvenienceError . newExceptT
-          $ queryStateForBalancedTx era networkId allTxInputs
+          $ queryStateForBalancedTx nodeEra networkId allTxInputs
 
       firstExceptT ShelleyTxCmdTxInsDoNotExist
-        . hoistEither $ txInsExistInUTxO allTxInputs utxo
+        . hoistEither $ txInsExistInUTxO allTxInputs nodeEraUTxO
       firstExceptT ShelleyTxCmdQueryNotScriptLocked
-        . hoistEither $ notScriptLockedTxIns txinsc utxo
+        . hoistEither $ notScriptLockedTxIns txinsc nodeEraUTxO
 
       let cAddr = case anyAddressInEra era changeAddr of
                     Just addr -> addr
                     Nothing -> error $ "runTxBuild: Byron address used: " <> show changeAddr
 
+      -- Why do we cast the era? The user can specify an era prior to the era that the node is currently in.
+      -- We cannot use the user specified era to construct a query against a node because it may differ
+      -- from the node's era and this will result in the 'QueryEraMismatch' failure.
+      txEraUtxo <- case first ShelleyTxCmdTxEraCastErr (eraCast era nodeEraUTxO) of
+                     Right txEraUtxo -> return txEraUtxo
+                     Left e -> left e
+
       (BalancedTxBody balancedTxBody _ fee) <-
         firstExceptT ShelleyTxCmdBalanceTxBody
           . hoistEither
           $ makeTransactionBodyAutoBalance eInMode systemStart eraHistory
-                                           pparams stakePools utxo txBodyContent
+                                           pparams stakePools txEraUtxo txBodyContent
                                            cAddr mOverrideWits
+
       putStrLn $ "Estimated transaction fee: " <> (show fee :: String)
 
       case outputOptions of
@@ -535,10 +555,10 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
               scriptExecUnitsMap <- firstExceptT ShelleyTxCmdTxExecUnitsErr $ hoistEither
                                       $ evaluateTransactionExecutionUnits
                                           eInMode systemStart eraHistory
-                                          pparams utxo balancedTxBody
+                                          pparams txEraUtxo balancedTxBody
               scriptCostOutput <- firstExceptT ShelleyTxCmdPlutusScriptCostErr $ hoistEither
                                     $ renderScriptCosts
-                                        utxo
+                                        txEraUtxo
                                         executionUnitPrices
                                         (collectTxBodyScriptWitnesses txBodyContent)
                                         scriptExecUnitsMap
