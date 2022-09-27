@@ -48,7 +48,7 @@ data FileError e = FileError   FilePath e
                      -- ^ Temporary path
                      Handle
                  | FileIOError FilePath IOException
-  deriving Show
+  deriving (Show, Eq)
 
 instance Error e => Error (FileError e) where
   displayError (FileErrorTempFile targetPath tempPath h)=

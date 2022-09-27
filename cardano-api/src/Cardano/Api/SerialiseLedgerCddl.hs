@@ -115,7 +115,7 @@ instance Error TextEnvelopeCddlError where
        <> List.intercalate ", " (map Text.unpack expTypes)
        <> " Actual: " <> Text.unpack actType
   displayError (TextEnvelopeCddlErrUnknownType unknownType) =
-    "Unknown TextEnvelopeCddl type:" <> Text.unpack unknownType
+    "Unknown TextEnvelopeCddl type: " <> Text.unpack unknownType
   displayError TextEnvelopeCddlErrByronKeyWitnessUnsupported =
     "TextEnvelopeCddl error: Byron key witnesses are currently unsupported."
 
@@ -132,7 +132,6 @@ serialiseTxLedgerCddl tx =
   genType tx' = case getTxWitnesses tx' of
                   [] -> "Unwitnessed " <> genTxType
                   _ -> "Witnessed " <> genTxType
-
   genTxType :: Text
   genTxType =
     case cardanoEra :: CardanoEra era of

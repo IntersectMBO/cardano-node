@@ -4,8 +4,8 @@ module Test.Golden.Shelley.TextEnvelope.Tx.Tx
   ( golden_shelleyTx
   ) where
 
-import           Cardano.Api (AsType (..), HasTextEnvelope (..))
 import           Cardano.Prelude
+
 import           Hedgehog (Property)
 import           Test.OptParse
 
@@ -20,29 +20,21 @@ import qualified Hedgehog.Extras.Test.Base as H
 golden_shelleyTx :: Property
 golden_shelleyTx = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   -- Reference keys
-  let referenceTx = "test/data/golden/shelley/tx/tx"
+  let referenceTx = "test/data/golden/alonzo/tx"
 
   -- Key filepaths
-  paymentVerKey <- noteTempFile tempDir "payment-verification-key-file"
-  paymentSignKey <- noteTempFile tempDir "payment-signing-key-file"
+  paymentSignKey <- noteInputFile "test/data/golden/shelley/transaction-sign/utxo.skey"
   transactionFile <- noteTempFile tempDir "tx-file"
   transactionBodyFile <- noteTempFile tempDir "tx-body-file"
-
-  -- Generate payment signing key to sign transaction
-  void $ execCardanoCLI
-    [ "address","key-gen"
-    , "--verification-key-file", paymentVerKey
-    , "--signing-key-file", paymentSignKey
-    ]
 
   -- Create transaction body
   void $ execCardanoCLI
     [ "transaction", "build-raw"
-    , "--shelley-era"
-    , "--tx-in", "91999ea21177b33ebe6b8690724a0c026d410a11ad7521caa350abdafa5394c3#0"
-    , "--tx-out", "addr1v9wmu83pzajplrtpsq6tsqdgwr98x888trpmah2u0ezznsge7del3+100000000"
-    , "--fee", "1000000"
-    , "--invalid-hereafter", "500000"
+    , "--alonzo-era"
+    , "--tx-in", "f62cd7bc15d8c6d2c8519fb8d13c57c0157ab6bab50af62bc63706feb966393d#0"
+    , "--tx-out", "addr_test1qpmxr8d8jcl25kyz2tz9a9sxv7jxglhddyf475045y8j3zxjcg9vquzkljyfn3rasfwwlkwu7hhm59gzxmsyxf3w9dps8832xh+1199989833223"
+    , "--tx-out", "addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4+10000000"
+    , "--fee", "166777"
     , "--out-file", transactionBodyFile
     ]
 
@@ -51,12 +43,10 @@ golden_shelleyTx = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
     [ "transaction", "sign"
     , "--tx-body-file", transactionBodyFile
     , "--signing-key-file", paymentSignKey
-    , "--mainnet"
+    , "--testnet-magic", "42"
     , "--out-file", transactionFile
     ]
 
-  let txType = textEnvelopeType (AsTx AsShelleyEra)
-
   -- Check the newly created files have not deviated from the
   -- golden files
-  checkTextEnvelopeFormat txType referenceTx transactionFile
+  checkTxCddlFormat referenceTx transactionFile

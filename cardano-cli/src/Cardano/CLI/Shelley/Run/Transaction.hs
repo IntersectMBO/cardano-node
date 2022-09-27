@@ -12,6 +12,7 @@ module Cardano.CLI.Shelley.Run.Transaction
   ( ShelleyTxCmdError(..)
   , renderShelleyTxCmdError
   , runTransactionCmd
+  , readCddlTx
   , readFileTx
   , readProtocolParametersSourceSpec
   , toTxOutInAnyEra
@@ -280,17 +281,17 @@ runTransactionCmd cmd =
     TxBuild era consensusModeParams nid mScriptValidity mOverrideWits txins readOnlyRefIns
             reqSigners txinsc mReturnColl mTotCollateral txouts changeAddr mValue mLowBound
             mUpperBound certs wdrls metadataSchema scriptFiles metadataFiles mpparams
-            mUpProp outputFormat output ->
+            mUpProp output ->
       runTxBuild era consensusModeParams nid mScriptValidity txins readOnlyRefIns txinsc
                  mReturnColl mTotCollateral txouts changeAddr mValue mLowBound
                  mUpperBound certs wdrls reqSigners metadataSchema scriptFiles
-                 metadataFiles mpparams mUpProp outputFormat mOverrideWits output
+                 metadataFiles mpparams mUpProp mOverrideWits output
     TxBuildRaw era mScriptValidity txins readOnlyRefIns txinsc mReturnColl mTotColl reqSigners
                txouts mValue mLowBound mUpperBound fee certs wdrls metadataSchema scriptFiles
-               metadataFiles mpparams mUpProp outputFormat out ->
+               metadataFiles mpparams mUpProp out ->
       runTxBuildRaw era mScriptValidity txins readOnlyRefIns txinsc mReturnColl mTotColl txouts
                     mLowBound mUpperBound fee mValue certs wdrls reqSigners metadataSchema
-                    scriptFiles metadataFiles mpparams mUpProp outputFormat out
+                    scriptFiles metadataFiles mpparams mUpProp out
     TxSign txinfile skfiles network txoutfile ->
       runTxSign txinfile skfiles network txoutfile
     TxSubmit anyConensusModeParams network txFp ->
@@ -346,7 +347,6 @@ runTxBuildRaw
   -> [MetadataFile]
   -> Maybe ProtocolParamsSourceSpec
   -> Maybe UpdateProposalFile
-  -> OutputSerialisation
   -> TxBodyFile
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuildRaw (AnyCardanoEra era)
@@ -358,7 +358,6 @@ runTxBuildRaw (AnyCardanoEra era)
               certFiles withdrawals reqSigners
               metadataSchema scriptFiles
               metadataFiles mpparams mUpdatePropFile
-              outputFormat
               (TxBodyFile fpath) = do
 
     allReferenceInputs
@@ -404,14 +403,10 @@ runTxBuildRaw (AnyCardanoEra era)
     txBody <-
       firstExceptT ShelleyTxCmdTxBodyError . hoistEither $
         makeTransactionBody txBodyContent
-    case outputFormat of
-      OutputCliSerialisation ->
-        firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
-          writeFileTextEnvelope fpath Nothing txBody
-      OutputLedgerCDDLSerialisation ->
-        let noWitTx = makeSignedTransaction [] txBody
-        in firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
-             writeTxFileTextEnvelopeCddl fpath noWitTx
+
+    let noWitTx = makeSignedTransaction [] txBody
+    firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
+      writeTxFileTextEnvelopeCddl fpath noWitTx
 
 runTxBuild
   :: AnyCardanoEra
@@ -449,14 +444,13 @@ runTxBuild
   -> [MetadataFile]
   -> Maybe ProtocolParamsSourceSpec
   -> Maybe UpdateProposalFile
-  -> OutputSerialisation
   -> Maybe Word
   -> TxBuildOutputOptions
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mScriptValidity
            inputsAndScriptFiles readOnlyRefIns txinsc mReturnCollateral mTotCollateral txouts (TxOutChangeAddress changeAddr) mValue mLowerBound mUpperBound
            certFiles withdrawals reqSigners metadataSchema scriptFiles metadataFiles mpparams
-           mUpdatePropFile outputFormat mOverrideWits outputOptions = do
+           mUpdatePropFile mOverrideWits outputOptions = do
   let consensusMode = consensusModeOnly cModeParams
       dummyFee = Just $ Lovelace 0
       inputsThatRequireWitnessing = [input | (input,_) <- inputsAndScriptFiles]
@@ -548,14 +542,9 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
 
             Nothing -> left ShelleyTxCmdPParamExecutionUnitsNotAvailable
         OutputTxBodyOnly (TxBodyFile fpath)  ->
-          case outputFormat of
-            OutputCliSerialisation ->
-              firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
-                writeFileTextEnvelope fpath Nothing balancedTxBody
-            OutputLedgerCDDLSerialisation ->
-              let noWitTx = makeSignedTransaction [] balancedTxBody
-              in firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
-                   writeTxFileTextEnvelopeCddl fpath noWitTx
+          let noWitTx = makeSignedTransaction [] balancedTxBody
+          in firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
+               writeTxFileTextEnvelopeCddl fpath noWitTx
 
     (CardanoMode, LegacyByronEra) -> left ShelleyTxCmdByronEra
 
@@ -1217,7 +1206,7 @@ runTxSign txOrTxBody witSigningData mnw (TxFile outTxFile) = do
           signedTx = makeSignedTransaction allKeyWits txbody
 
       firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
-        writeFileTextEnvelope outTxFile Nothing signedTx
+        writeTxFileTextEnvelopeCddl outTxFile signedTx
 
     (InputTxBodyFile (TxBodyFile txbodyFile)) -> do
       unwitnessed <- readFileTxBody txbodyFile
@@ -1770,9 +1759,28 @@ readFileWitness fp =
 -- (respectively needs additional witnesses or totally unwitnessed)
 -- while UnwitnessedCliFormattedTxBody is CLI formatted TxBody and
 -- needs to be key witnessed.
+
 data IncompleteTx
   = UnwitnessedCliFormattedTxBody (InAnyCardanoEra TxBody)
   | IncompleteCddlFormattedTx (InAnyCardanoEra Tx)
+
+
+readCddlTx :: FilePath -> IO (Either (FileError TextEnvelopeCddlError) CddlTx)
+readCddlTx = readFileTextEnvelopeCddlAnyOf teTypes
+ where
+    teTypes = [ FromCDDLTx "Witnessed Tx ByronEra" CddlTx
+              , FromCDDLTx "Witnessed Tx ShelleyEra" CddlTx
+              , FromCDDLTx "Witnessed Tx AllegraEra" CddlTx
+              , FromCDDLTx "Witnessed Tx MaryEra" CddlTx
+              , FromCDDLTx "Witnessed Tx AlonzoEra" CddlTx
+              , FromCDDLTx "Witnessed Tx BabbageEra" CddlTx
+              , FromCDDLTx "Unwitnessed Tx ByronEra" CddlTx
+              , FromCDDLTx "Unwitnessed Tx ShelleyEra" CddlTx
+              , FromCDDLTx "Unwitnessed Tx AllegraEra" CddlTx
+              , FromCDDLTx "Unwitnessed Tx MaryEra" CddlTx
+              , FromCDDLTx "Unwitnessed Tx AlonzoEra" CddlTx
+              , FromCDDLTx "Unwitnessed Tx BabbageEra" CddlTx
+              ]
 
 readFileTxBody :: FilePath -> ExceptT ShelleyTxCmdError IO IncompleteTx
 readFileTxBody fp =
@@ -1818,7 +1826,6 @@ readFileTx fp =
   handleLeftT
     (\e -> unCddlTx <$> acceptTxCDDLSerialisation e)
     (readFileInAnyCardanoEra AsTx fp)
-
 
 readFileInAnyCardanoEra
   :: ( HasTextEnvelope (thing ByronEra)

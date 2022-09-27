@@ -2,6 +2,8 @@
 
 ## vNext
 
+Default to the ledger's CDDL format for transaction body creation by removing flags `--cddl-format` and `--cli-format` from `build` and `build-raw` ([PR 4303](https://github.com/input-output-hk/cardano-node/pull/4303))
+
 ### Bugs
 
 - Allow reading signing keys from a pipe ([PR 4342](https://github.com/input-output-hk/cardano-node/pull/4342))
