@@ -694,7 +694,7 @@ module Cardano.Api (
     getIsCardanoEraConstraint,
 
     -- ** Misc
-    NotScriptLockedTxInsError(..),
+    ScriptLockedTxInsError(..),
     TxInsExistError(..),
     renderNotScriptLockedTxInsError,
     renderTxInsExistError,

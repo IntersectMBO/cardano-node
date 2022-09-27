@@ -5,7 +5,7 @@ module Cardano.Api.Convenience.Construction (
 
     -- * Misc
     TxInsExistError(..),
-    NotScriptLockedTxInsError(..),
+    ScriptLockedTxInsError(..),
     notScriptLockedTxIns,
     renderNotScriptLockedTxInsError,
     renderTxInsExistError,
@@ -84,19 +84,20 @@ txInsExistInUTxO ins (UTxO utxo)
       then return ()
       else Left . TxInsDoNotExist $ ins List.\\ occursInUtxo
 
-newtype NotScriptLockedTxInsError = NotScriptLockedTxIns [TxIn]
+newtype ScriptLockedTxInsError = ScriptLockedTxIns [TxIn]
 
-renderNotScriptLockedTxInsError :: NotScriptLockedTxInsError -> Text
-renderNotScriptLockedTxInsError (NotScriptLockedTxIns txins) =
-  "The followings tx inputs are not script locked: " <> textShow (map renderTxIn txins)
+renderNotScriptLockedTxInsError :: ScriptLockedTxInsError -> Text
+renderNotScriptLockedTxInsError (ScriptLockedTxIns txins) =
+  "The followings tx inputs were expected to be key witnessed but are actually script witnessed: " <>
+  textShow (map renderTxIn txins)
 
-notScriptLockedTxIns :: [TxIn] -> UTxO era -> Either NotScriptLockedTxInsError ()
+notScriptLockedTxIns :: [TxIn] -> UTxO era -> Either ScriptLockedTxInsError ()
 notScriptLockedTxIns collTxIns (UTxO utxo) = do
   let onlyCollateralUTxOs = Map.restrictKeys utxo $ Set.fromList collTxIns
       scriptLockedTxIns =
         filter (\(_, TxOut aInEra _ _ _) -> not $ isKeyAddress aInEra ) $ Map.assocs onlyCollateralUTxOs
   if null scriptLockedTxIns
   then return ()
-  else Left . NotScriptLockedTxIns $ map fst scriptLockedTxIns
+  else Left . ScriptLockedTxIns $ map fst scriptLockedTxIns
 
 
