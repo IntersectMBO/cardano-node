@@ -9,7 +9,8 @@ import           Control.Applicative (liftA2)
 import           Control.Monad
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.RWS.CPS
-
+import           Data.ByteString.Base16 as Base16
+import           Data.ByteString as BS (ByteString)
 import           Data.Dependent.Sum ( (==>) )
 import           Data.DList (DList)
 import qualified Data.DList as DL
@@ -17,9 +18,10 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 
 import           Cardano.Api
+
 import           Cardano.Benchmarking.NixOptions
 import           Cardano.Benchmarking.Script.Setters
-import           Cardano.Benchmarking.Script.Store (Name(..), WalletName)
+import           Cardano.Benchmarking.Script.Store (KeyName, Name(..), WalletName)
 import           Cardano.Benchmarking.Script.Types
 
 data CompileError where
@@ -53,12 +55,17 @@ compileToScript = do
   genesisWallet <- importGenesisFunds
   collateralWallet <- addCollaterals genesisWallet
   splitWallet <- splittingPhase genesisWallet
-  benchmarkingPhase splitWallet collateralWallet
+  void $ benchmarkingPhase splitWallet collateralWallet
 
 initConstants :: Compiler ()
 initConstants = do
   setN TLocalSocket          _nix_localNodeSocketPath
   setConst  TTTL             1000000
+  emit $ DefineSigningKey keyNameTxGenFunds keyTxGenFunds
+  emit $ DefineSigningKey keyNameCollaterals keyCollaterals
+  emit $ DefineSigningKey keyNameSplitPhase keySplitPhase
+  emit $ DefineSigningKey keyNameBenchmarkInputs keyBenchmarkInputs
+  emit $ DefineSigningKey keyNameBenchmarkDone keyBenchmarkDone
   where
     setConst :: Tag v -> v -> Compiler ()
     setConst key val = emit $ Set $ key ==> val 
@@ -72,8 +79,8 @@ importGenesisFunds = do
   wallet <- newWallet "genesis_wallet"
   era <- askNixOption _nix_era
   fee <- askNixOption _nix_tx_fee  
-  cmd1 (ReadSigningKey $ KeyName "pass-partout") _nix_sigKey
-  emit $ Submit era LocalSocket $ SecureGenesis fee wallet (KeyName "pass-partout") (KeyName "pass-partout")
+  cmd1 (ReadSigningKey keyNameGenesisInputFund) _nix_sigKey
+  emit $ Submit era LocalSocket $ SecureGenesis fee wallet keyNameGenesisInputFund keyNameTxGenFunds
   delay
   logMsg "Importing Genesis Fund. Done."
   return wallet
@@ -89,8 +96,8 @@ addCollaterals src = do
       collateralWallet <- newWallet "collateral_wallet"
       fee <- askNixOption _nix_tx_fee
       let generator = Split fee src
-                        (PayToAddr (KeyName "pass-partout") collateralWallet)
-                        (PayToAddr (KeyName "pass-partout") src)
+                        (PayToAddr keyNameCollaterals collateralWallet)
+                        (PayToAddr keyNameTxGenFunds src)
                         [ safeCollateral ]
       emit $ Submit era LocalSocket generator
       logMsg "Create collaterals. Done."
@@ -106,17 +113,18 @@ splittingPhase srcWallet = do
   finalDest <- newWallet "final_split_wallet"
   splitSteps <- splitSequenceWalletNames srcWallet finalDest $ unfoldSplitSequence tx_fee minValuePerInput (tx_count * inputs_per_tx)
   isPlutus <- isAnyPlutusMode
-  forM_ (init splitSteps) $ createChange False era
-  createChange isPlutus era $ last splitSteps
+  forM_ (init splitSteps) $ createChange False False era
+  createChange True isPlutus era $ last splitSteps
   return finalDest
  where
-  createChange :: Bool -> AnyCardanoEra -> (SrcWallet, DstWallet, Split) -> Compiler ()
-  createChange isPlutus era (src, dst, split) = do
+  createChange :: Bool -> Bool -> AnyCardanoEra -> (SrcWallet, DstWallet, Split) -> Compiler ()
+  createChange isLastStep isPlutus era (src, dst, split) = do
     logMsg $ Text.pack $ "Splitting step: " ++ show split
     tx_fee <- askNixOption _nix_tx_fee
-    payMode <- if isPlutus then plutusPayMode dst else return $ PayToAddr (KeyName "pass-partout") dst
+    let valuePayMode = PayToAddr (if isLastStep then keyNameSplitPhase else keyNameBenchmarkInputs) dst
+    payMode <- if isPlutus then plutusPayMode dst else return valuePayMode
     let generator = case split of
-          SplitWithChange lovelace count -> Split tx_fee src payMode (PayToAddr  (KeyName "pass-partout") src) $ replicate count lovelace
+          SplitWithChange lovelace count -> Split tx_fee src payMode (PayToAddr keyNameTxGenFunds src) $ replicate count lovelace
           FullSplits txCount -> Take txCount $ Cycle $ SplitN tx_fee src payMode maxOutputsPerTx
     emit $ Submit era LocalSocket generator
     delay
@@ -167,7 +175,7 @@ unfoldSplitSequence fee value outputs
      (x, 0) -> x
      (x, _rest) -> x+1
 
-benchmarkingPhase :: WalletName -> Maybe WalletName -> Compiler ()
+benchmarkingPhase :: WalletName -> Maybe WalletName -> Compiler WalletName
 benchmarkingPhase wallet collateralWallet = do
   debugMode <- askNixOption _nix_debugMode
   targetNodes <- askNixOption _nix_targetNodes
@@ -178,8 +186,9 @@ benchmarkingPhase wallet collateralWallet = do
   inputs <- askNixOption _nix_inputs_per_tx
   outputs <- askNixOption _nix_outputs_per_tx
   metadataSize <- askNixOption _nix_add_tx_size
+  doneWallet <- newWallet "done_wallet"
   let
-    payMode = PayToAddr (KeyName "pass-partout") wallet --todo: used different wallet here !
+    payMode = PayToAddr keyNameBenchmarkDone doneWallet
     submitMode = if debugMode
         then LocalSocket
         else Benchmark targetNodes (ThreadName "tx-submit-benchmark") tps txCount
@@ -187,6 +196,7 @@ benchmarkingPhase wallet collateralWallet = do
   emit $ Submit era submitMode generator
   unless debugMode $ do
     emit $ WaitBenchmark $ ThreadName "tx-submit-benchmark"
+  return doneWallet
 
 data Fees = Fees {
     _safeCollateral :: Lovelace
@@ -250,3 +260,72 @@ newWallet n = do
   name <- WalletName <$> newIdentifier n
   emit $ InitWallet name
   return name
+
+parseKey :: BS.ByteString -> TextEnvelope
+parseKey x = case Base16.decode x of
+  Left err -> error $ "parsing of key failed : " ++ show err
+  Right addr ->  TextEnvelope
+    { teType = TextEnvelopeType "PaymentSigningKeyShelley_ed25519"
+    , teDescription = "Payment Signing Key"
+    , teRawCBOR = addr
+    }
+
+
+keyNameGenesisInputFund :: KeyName
+keyNameGenesisInputFund = KeyName "GenesisInputFund"
+
+keyNameTxGenFunds :: KeyName
+keyNameTxGenFunds = KeyName "TxGenFunds"
+
+{-|
+The key that is used for the very first transaction, i.e. the secure Genesis transaction.
+addr_test1vzd3muund27y5nw83vymqj3a83pcuzkkejej6s75e5lfjcc85nc3p is the actual address (in Testnet 42).
+It is also used as change addresse in the first splitting-step.
+-}
+keyTxGenFunds :: TextEnvelope
+keyTxGenFunds = parseKey "5820617f846fc8b0e753bd51790de5f5a916de500175c6f5a0e27dde9da7879e1d35"
+
+keyNameSplitPhase :: KeyName
+keyNameSplitPhase = KeyName "SplitPhase"
+
+{-|
+UTxOs that are generated in intermediate splitting steps use:
+addr_test1vz45dtkyzk6s3245qw8hmaddaatcx8td3pvmntl8ty7q99c22eahm
+-}
+
+keySplitPhase :: TextEnvelope
+keySplitPhase = parseKey "5820cf0083c2a5d4c90ab255bc8e68f407d52eebd9408de60a0b9e4c468f9714f076"
+
+{-|
+UTxOs of the final splitting steps, i.e. the inputs of the benchmarking phase, use:
+addr_test1vzj7zv9msmdasvy5nc9jhnn2gqvrvu33v5rlg332zdfrkugklxkau
+(Plutus script addresses are ofc different.)
+-}
+keyNameBenchmarkInputs :: KeyName
+keyNameBenchmarkInputs = KeyName "BenchmarkInputs"
+
+keyBenchmarkInputs :: TextEnvelope
+keyBenchmarkInputs = parseKey "58205b7f272602661d4ad3d9a4081f25fdcdcdf64fdc4892107de50e50937b77ea42"
+
+keyNameBenchmarkDone :: KeyName
+keyNameBenchmarkDone = KeyName "BenchmarkingDone"
+
+{-|
+The output of the actual benchmarking transactions use:
+addr_test1vz4qz2ayucp7xvnthrx93uhha7e04gvxttpnuq4e6mx2n5gzfw23z
+Query the progress of the benchmarking phase:
+`cardano-node query utxo --testnet-magic 42 --address addr_test1vz4qz2ayucp7xvnthrx93uhha7e04gvxttpnuq4e6mx2n5gzfw23z`
+-}
+
+keyBenchmarkDone :: TextEnvelope
+keyBenchmarkDone = parseKey "582016ca4f13fa17557e56a7d0dd3397d747db8e1e22fdb5b9df638abdb680650d50"
+
+keyNameCollaterals :: KeyName
+keyNameCollaterals = KeyName "Collaterals"
+
+{-|
+Collateral inputs for Plutus transactions:
+addr_test1vpckd9muw3l4f8ne4uzumy28p0k84rvx48q46kssjkta5ng4v6sfs
+-}
+keyCollaterals :: TextEnvelope
+keyCollaterals = parseKey "58204babdb63537ccdac393ea23d042af3b7c3587d7dc88ed3b66c959f198ad358fa"
