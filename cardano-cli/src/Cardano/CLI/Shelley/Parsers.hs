@@ -2064,7 +2064,7 @@ pCardanoEra = asum
       <> Opt.help "Specify the Babbage era"
       )
     -- Default for now:
-  , pure (AnyCardanoEra AlonzoEra)
+  , pure (AnyCardanoEra BabbageEra)
   ]
 
 pTxIn :: BalanceTxExecUnits
