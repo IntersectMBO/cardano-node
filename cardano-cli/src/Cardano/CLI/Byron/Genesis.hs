@@ -12,7 +12,7 @@ module Cardano.CLI.Byron.Genesis
   )
 where
 
-import           Cardano.Prelude hiding (option, show, trace)
+import           Cardano.Prelude hiding (show, trace)
 import           Prelude (String)
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left, right)
@@ -23,6 +23,7 @@ import           Data.Time (UTCTime)
 import           Formatting.Buildable
 
 import           Cardano.Api (Key (..), NetworkId, textShow, writeSecrets)
+
 import           Cardano.Api.Byron (ByronKey, SerialiseAsRawBytes (..), SigningKey (..),
                    toByronRequiresNetworkMagic)
 import           System.Directory (createDirectory, doesPathExist)

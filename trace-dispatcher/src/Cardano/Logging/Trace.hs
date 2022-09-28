@@ -232,7 +232,7 @@ foldTraceM cata initial (Trace tr) = do
       \case
         (lc, Right v) -> do
           x' <- modifyMVar ref $ \x ->
-            let ! accu = cata x lc v
+            let !accu = cata x lc v
             in pure (accu,accu)
           T.traceWith tr (lc, Right (Folding x'))
         (lc, Left control) -> do
@@ -256,7 +256,7 @@ foldMTraceM cata initial (Trace tr) = do
       \case
         (lc, Right v) -> do
           x' <- modifyMVar ref $ \x -> do
-            ! accu <- cata x lc v
+            !accu <- cata x lc v
             pure $ join (,) accu
           T.traceWith tr (lc, Right (Folding x'))
         (lc, Left control) -> do
@@ -279,7 +279,7 @@ foldMCondTraceM cata initial flt (Trace tr) = do
       \case
         (lc, Right v) -> do
           x' <- modifyMVar ref $ \x -> do
-            ! accu <- cata x lc v
+            !accu <- cata x lc v
             pure $ join (,) accu
           when (flt v) $
             T.traceWith tr (lc, Right (Folding x'))

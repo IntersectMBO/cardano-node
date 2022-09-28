@@ -11,7 +11,7 @@ module Cardano.Node.Parsers
   , renderHelpDoc
   ) where
 
-import           Cardano.Prelude hiding (option)
+import           Cardano.Prelude
 import           Prelude (String)
 
 import           Data.Time.Clock (secondsToDiffTime)
@@ -141,7 +141,7 @@ parseTracerSocketMode =
 
 parseHostIPv4Addr :: Parser NodeHostIPv4Address
 parseHostIPv4Addr =
-    option (eitherReader parseNodeHostIPv4Address) (
+    Opt.option (eitherReader parseNodeHostIPv4Address) (
           long "host-addr"
        <> metavar "IPV4"
        <> help "An optional IPv4 address"
@@ -149,7 +149,7 @@ parseHostIPv4Addr =
 
 parseHostIPv6Addr :: Parser NodeHostIPv6Address
 parseHostIPv6Addr =
-    option (eitherReader parseNodeHostIPv6Address) (
+    Opt.option (eitherReader parseNodeHostIPv6Address) (
           long "host-ipv6-addr"
        <> metavar "IPV6"
        <> help "An optional IPv6 address"
@@ -175,7 +175,7 @@ parseNodeHostIPv6Address str =
 
 parsePort :: Parser PortNumber
 parsePort =
-    option ((fromIntegral :: Int -> PortNumber) <$> auto) (
+    Opt.option ((fromIntegral :: Int -> PortNumber) <$> auto) (
           long "port"
        <> metavar "PORT"
        <> help "The port number"
@@ -197,7 +197,7 @@ parseMempoolCapacityOverride = parseOverride <|> parseNoOverride
     parseOverride :: Parser MempoolCapacityBytesOverride
     parseOverride =
       MempoolCapacityBytesOverride . MempoolCapacityBytes <$>
-      option (auto @Word32)
+      Opt.option (auto @Word32)
         (  long "mempool-capacity-override"
         <> metavar "BYTES"
         <> help "The number of bytes"
@@ -227,7 +227,7 @@ parseValidateDB =
 
 parseShutdownIPC :: Parser Fd
 parseShutdownIPC =
-  option (Fd <$> auto) (
+  Opt.option (Fd <$> auto) (
            long "shutdown-ipc"
         <> metavar "FD"
         <> help "Shut down the process when this inherited FD reaches EOF"
@@ -309,7 +309,7 @@ parseVrfKeyFilePath =
 parseSnapshotInterval :: Parser SnapshotInterval
 parseSnapshotInterval = fmap (RequestedSnapshotInterval . secondsToDiffTime) parseDifftime
   where
-  parseDifftime = option auto
+  parseDifftime = Opt.option auto
     ( long "snapshot-interval"
         <> metavar "SNAPSHOTINTERVAL"
         <> help "Snapshot Interval (in second)"
