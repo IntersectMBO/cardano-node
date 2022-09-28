@@ -21,7 +21,7 @@ module Cardano.CLI.Byron.Parsers
   , parseUpdateVoteThd
   ) where
 
-import           Cardano.Prelude hiding (option)
+import           Cardano.Prelude
 import           Prelude (String)
 
 import           Control.Monad (fail)
@@ -114,7 +114,7 @@ pNodeCmdBackwardCompatible = Opt.subparser $ pNodeCmd <> Opt.internal
 
 parseCBORObject :: Parser CBORObject
 parseCBORObject = asum
-  [ CBORBlockByron <$> option auto
+  [ CBORBlockByron <$> Opt.option auto
       (  long "byron-block"
       <> help
           (   "The CBOR file is a byron era block."
@@ -263,7 +263,7 @@ parseTestnetBalanceOptions =
 
 parseTxIn :: Parser TxIn
 parseTxIn =
-  option
+  Opt.option
   (readerFromAttoParser parseTxInAtto)
   $ long "txin"
     <> metavar "(TXID,INDEX)"
@@ -287,7 +287,7 @@ parseTxIxAtto = toEnum <$> Atto.decimal
 
 parseTxOut :: Parser (TxOut CtxTx ByronEra)
 parseTxOut =
-  option
+  Opt.option
     ( (\(addr, lovelace) -> TxOut (pAddressInEra addr)
                                   (pLovelaceTxOut lovelace)
                                   TxOutDatumNone
@@ -434,7 +434,7 @@ parseByronVote =
 
 parseScriptVersion :: Parser Word16
 parseScriptVersion =
-  option auto
+  Opt.option auto
     ( long "script-version"
     <> metavar "WORD16"
     <> help "Proposed script version."
@@ -442,14 +442,14 @@ parseScriptVersion =
 
 parseSlotDuration :: Parser Natural
 parseSlotDuration =
-  option auto
+  Opt.option auto
     ( long "slot-duration"
     <> metavar "NATURAL"
     <> help "Proposed slot duration."
     )
 
 parseSystemTag :: Parser SystemTag
-parseSystemTag = option (eitherReader checkSysTag)
+parseSystemTag = Opt.option (eitherReader checkSysTag)
                    ( long "system-tag"
                    <> metavar "STRING"
                    <> help "Identify which system (linux, win64, etc) the update proposal is for."
@@ -472,7 +472,7 @@ parseInstallerHash =
 
 parseMaxBlockSize :: Parser Natural
 parseMaxBlockSize =
-  option auto
+  Opt.option auto
     ( long "max-block-size"
     <> metavar "NATURAL"
     <> help "Proposed max block size."
@@ -480,7 +480,7 @@ parseMaxBlockSize =
 
 parseMaxHeaderSize :: Parser Natural
 parseMaxHeaderSize =
-  option auto
+  Opt.option auto
     ( long "max-header-size"
     <> metavar "NATURAL"
     <> help "Proposed max block header size."
@@ -488,7 +488,7 @@ parseMaxHeaderSize =
 
 parseMaxTxSize :: Parser Natural
 parseMaxTxSize =
-  option auto
+  Opt.option auto
     ( long "max-tx-size"
     <> metavar "NATURAL"
     <> help "Proposed max transaction size."
@@ -496,7 +496,7 @@ parseMaxTxSize =
 
 parseMaxProposalSize :: Parser  Natural
 parseMaxProposalSize =
-  option auto
+  Opt.option auto
     ( long "max-proposal-size"
     <> metavar "NATURAL"
     <> help "Proposed max update proposal size."
@@ -531,7 +531,7 @@ parseUpdateProposalThd =
 parseUpdateProposalTTL :: Parser SlotNumber
 parseUpdateProposalTTL =
   SlotNumber
-    <$> option auto
+    <$> Opt.option auto
           ( long "time-to-live"
           <> metavar "WORD64"
           <> help "Proposed time for an update proposal to live."
@@ -550,7 +550,7 @@ parseSoftwareVersion =
   SoftwareVersion <$> parseApplicationName <*> parseNumSoftwareVersion
 
 parseApplicationName :: Parser ApplicationName
-parseApplicationName = option (eitherReader checkAppNameLength)
+parseApplicationName = Opt.option (eitherReader checkAppNameLength)
        (  long "application-name"
        <> metavar "STRING"
        <> help "The name of the application."
@@ -584,7 +584,7 @@ parseVoteBool = flag' True (long "vote-yes" <> help "Vote yes with respect to an
 parseUnlockStakeEpoch :: Parser EpochNumber
 parseUnlockStakeEpoch =
   EpochNumber
-    <$> option auto
+    <$> Opt.option auto
       ( long "unlock-stake-epoch"
       <> metavar "WORD64"
       <> help "Proposed epoch to unlock all stake."
@@ -592,14 +592,14 @@ parseUnlockStakeEpoch =
 
 
 parseWord :: Integral a => String -> String -> String -> Parser a
-parseWord optname desc metvar = option (fromInteger <$> auto)
+parseWord optname desc metvar = Opt.option (fromInteger <$> auto)
   $ long optname <> metavar metvar <> help desc
 
 
 
 parseAddress :: String -> String -> Parser (Address ByronAddr)
 parseAddress opt desc =
-  option (cliParseBase58Address <$> str)
+  Opt.option (cliParseBase58Address <$> str)
     $ long opt <> metavar "ADDR" <> help desc
 
 parseByronKeyFormat :: Parser ByronKeyFormat
@@ -641,7 +641,7 @@ parseFractionWithDefault
   -> Double
   -> Parser Rational
 parseFractionWithDefault optname desc w =
-  toRational <$> option readDouble
+  toRational <$> Opt.option readDouble
     ( long optname
     <> metavar "DOUBLE"
     <> help desc
@@ -700,7 +700,7 @@ parseTxFile opt =
 
 parseUTCTime :: String -> String -> Parser UTCTime
 parseUTCTime optname desc =
-  option (posixSecondsToUTCTime . fromInteger <$> auto)
+  Opt.option (posixSecondsToUTCTime . fromInteger <$> auto)
     $ long optname <> metavar "POSIXSECONDS" <> help desc
 
 cliParseBase58Address :: Text -> Address ByronAddr
@@ -711,13 +711,13 @@ cliParseBase58Address t =
 
 parseFraction :: String -> String -> Parser Rational
 parseFraction optname desc =
-  option (toRational <$> readDouble) $
+  Opt.option (toRational <$> readDouble) $
       long optname
    <> metavar "DOUBLE"
    <> help desc
 
 parseIntegral :: Integral a => String -> String -> Parser a
-parseIntegral optname desc = option (fromInteger <$> auto)
+parseIntegral optname desc = Opt.option (fromInteger <$> auto)
   $ long optname <> metavar "INT" <> help desc
 
 parseLovelace :: String -> String -> Parser Byron.Lovelace

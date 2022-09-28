@@ -17,6 +17,7 @@ tests =  testGroup "cardano-tx-generator"
     sizedMetadata
   ]
 
+sizedMetadata :: TestTree
 sizedMetadata = testGroup "properties of the CBOR encoding relevant for generating sized metadat"
   [ testCase "Shelley metadata map costs"          $ assertBool "metadata map costs" prop_mapCostsShelley
   , testCase "Shelley metadata ByteString costs"   $ assertBool "metadata ByteString costs" prop_bsCostsShelley
