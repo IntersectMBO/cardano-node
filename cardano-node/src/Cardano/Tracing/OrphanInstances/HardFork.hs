@@ -63,7 +63,7 @@ instance Condense (OneEraHash xs) where
 instance All (ToObject `Compose` Header) xs => ToObject (Header (HardForkBlock xs)) where
     toObject verb =
           hcollapse
-        . hcmap (Proxy @ (ToObject `Compose` Header)) (K . toObject verb)
+        . hcmap (Proxy @(ToObject `Compose` Header)) (K . toObject verb)
         . getOneEraHeader
         . getHardForkHeader
 
@@ -75,14 +75,14 @@ instance All (ToObject `Compose` Header) xs => ToObject (Header (HardForkBlock x
 instance All (Compose ToObject GenTx) xs => ToObject (GenTx (HardForkBlock xs)) where
     toObject verb =
           hcollapse
-        . hcmap (Proxy @ (ToObject `Compose` GenTx)) (K . toObject verb)
+        . hcmap (Proxy @(ToObject `Compose` GenTx)) (K . toObject verb)
         . getOneEraGenTx
         . getHardForkGenTx
 
 instance  All (Compose ToJSON WrapGenTxId) xs => ToJSON (TxId (GenTx (HardForkBlock xs))) where
     toJSON =
           hcollapse
-        . hcmap (Proxy @ (ToJSON `Compose` WrapGenTxId)) (K . toJSON)
+        . hcmap (Proxy @(ToJSON `Compose` WrapGenTxId)) (K . toJSON)
         . getOneEraGenTxId
         . getHardForkGenTxId
 
@@ -108,7 +108,7 @@ instance All (ToObject `Compose` WrapApplyTxErr) xs => ToObject (HardForkApplyTx
 instance All (ToObject `Compose` WrapApplyTxErr) xs => ToObject (OneEraApplyTxErr xs) where
     toObject verb =
         hcollapse
-      . hcmap (Proxy @ (ToObject `Compose` WrapApplyTxErr)) (K . toObject verb)
+      . hcmap (Proxy @(ToObject `Compose` WrapApplyTxErr)) (K . toObject verb)
       . getOneEraApplyTxErr
 
 instance ToObject (ApplyTxErr blk) => ToObject (WrapApplyTxErr blk) where
@@ -134,7 +134,7 @@ instance All (ToObject `Compose` WrapLedgerErr) xs => ToObject (HardForkLedgerEr
 instance All (ToObject `Compose` WrapLedgerErr) xs => ToObject (OneEraLedgerError xs) where
     toObject verb =
         hcollapse
-      . hcmap (Proxy @ (ToObject `Compose` WrapLedgerErr)) (K . toObject verb)
+      . hcmap (Proxy @(ToObject `Compose` WrapLedgerErr)) (K . toObject verb)
       . getOneEraLedgerError
 
 instance ToObject (LedgerError blk) => ToObject (WrapLedgerErr blk) where
@@ -184,7 +184,7 @@ instance ( All (ToObject `Compose` WrapLedgerWarning) xs
 instance All (ToObject `Compose` WrapLedgerWarning) xs => ToObject (OneEraLedgerWarning xs) where
     toObject verb =
         hcollapse
-      . hcmap (Proxy @ (ToObject `Compose` WrapLedgerWarning)) (K . toObject verb)
+      . hcmap (Proxy @(ToObject `Compose` WrapLedgerWarning)) (K . toObject verb)
       . getOneEraLedgerWarning
 
 instance ToObject (LedgerWarning blk) => ToObject (WrapLedgerWarning blk) where
@@ -237,7 +237,7 @@ instance ( All (ToObject `Compose` WrapLedgerUpdate) xs
 instance All (ToObject `Compose` WrapLedgerUpdate) xs => ToObject (OneEraLedgerUpdate xs) where
     toObject verb =
         hcollapse
-      . hcmap (Proxy @ (ToObject `Compose` WrapLedgerUpdate)) (K . toObject verb)
+      . hcmap (Proxy @(ToObject `Compose` WrapLedgerUpdate)) (K . toObject verb)
       . getOneEraLedgerUpdate
 
 instance ToObject (LedgerUpdate blk) => ToObject (WrapLedgerUpdate blk) where
@@ -263,7 +263,7 @@ instance All (ToObject `Compose` WrapEnvelopeErr) xs => ToObject (HardForkEnvelo
 instance All (ToObject `Compose` WrapEnvelopeErr) xs => ToObject (OneEraEnvelopeErr xs) where
     toObject verb =
         hcollapse
-      . hcmap (Proxy @ (ToObject `Compose` WrapEnvelopeErr)) (K . toObject verb)
+      . hcmap (Proxy @(ToObject `Compose` WrapEnvelopeErr)) (K . toObject verb)
       . getOneEraEnvelopeErr
 
 instance ToObject (OtherHeaderEnvelopeError blk) => ToObject (WrapEnvelopeErr blk) where
@@ -289,7 +289,7 @@ instance All (ToObject `Compose` WrapValidationErr) xs => ToObject (HardForkVali
 instance All (ToObject `Compose` WrapValidationErr) xs => ToObject (OneEraValidationErr xs) where
     toObject verb =
         hcollapse
-      . hcmap (Proxy @ (ToObject `Compose` WrapValidationErr)) (K . toObject verb)
+      . hcmap (Proxy @(ToObject `Compose` WrapValidationErr)) (K . toObject verb)
       . getOneEraValidationErr
 
 instance ToObject (ValidationErr (BlockProtocol blk)) => ToObject (WrapValidationErr blk) where
@@ -306,7 +306,7 @@ instance ToObject (ValidationErr (BlockProtocol blk)) => ToObject (WrapValidatio
 instance All (ToObject `Compose` WrapCannotForge) xs => ToObject (OneEraCannotForge xs) where
     toObject verb =
         hcollapse
-      . hcmap (Proxy @ (ToObject `Compose` WrapCannotForge))
+      . hcmap (Proxy @(ToObject `Compose` WrapCannotForge))
               (K . toObject verb)
       . getOneEraCannotForge
 
@@ -331,7 +331,7 @@ instance All (ToObject `Compose` WrapForgeStateInfo) xs => ToObject (OneEraForge
         forgeStateInfo' :: Object
         forgeStateInfo' =
               hcollapse
-            . hcmap (Proxy @ (ToObject `Compose` WrapForgeStateInfo))
+            . hcmap (Proxy @(ToObject `Compose` WrapForgeStateInfo))
                     (K . toObject verb)
             . getOneEraForgeStateInfo
             $ forgeStateInfo
@@ -357,7 +357,7 @@ instance All (ToObject `Compose` WrapForgeStateUpdateError) xs => ToObject (OneE
         forgeStateUpdateError' :: Object
         forgeStateUpdateError' =
               hcollapse
-            . hcmap (Proxy @ (ToObject `Compose` WrapForgeStateUpdateError))
+            . hcmap (Proxy @(ToObject `Compose` WrapForgeStateUpdateError))
                     (K . toObject verb)
             . getOneEraForgeStateUpdateError
             $ forgeStateUpdateError

@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 
-import           Cardano.Prelude hiding (option)
+import           Cardano.Prelude
 import qualified Data.Text as Text
 import           Prelude (String)
 

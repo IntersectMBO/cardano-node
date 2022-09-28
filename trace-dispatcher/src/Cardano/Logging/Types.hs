@@ -388,15 +388,15 @@ data TraceControl where
 newtype DocCollector = DocCollector (IORef (Map Int LogDoc))
 
 data LogDoc = LogDoc {
-    ldDoc        :: ! Text
-  , ldMetricsDoc :: ! (SMap.Map Text Text)
-  , ldNamespace  :: ! [Namespace]
-  , ldSeverity   :: ! [SeverityS]
-  , ldPrivacy    :: ! [Privacy]
-  , ldDetails    :: ! [DetailLevel]
-  , ldBackends   :: ! [BackendConfig]
-  , ldFiltered   :: ! [SeverityF]
-  , ldLimiter    :: ! [(Text, Double)]
+    ldDoc        :: !Text
+  , ldMetricsDoc :: !(SMap.Map Text Text)
+  , ldNamespace  :: ![Namespace]
+  , ldSeverity   :: ![SeverityS]
+  , ldPrivacy    :: ![Privacy]
+  , ldDetails    :: ![DetailLevel]
+  , ldBackends   :: ![BackendConfig]
+  , ldFiltered   :: ![SeverityF]
+  , ldLimiter    :: ![(Text, Double)]
 } deriving(Eq, Show)
 
 emptyLogDoc :: Text -> [(Text, Text)] -> LogDoc

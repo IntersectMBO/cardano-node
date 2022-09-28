@@ -56,7 +56,7 @@ convertJson st =
 renderTxSubmitStatus :: TxSubmitStatus -> Text
 renderTxSubmitStatus st =
   case st of
-    TxSubmitOk tx -> sformat ("Tx "% build %" submitted successfully") tx
+    TxSubmitOk tx -> sformat ("Tx " % build % " submitted successfully") tx
     TxSubmitDecodeHex -> "Provided data was hex encoded and this webapi expects raw binary"
     TxSubmitEmpty -> "Provided transaction has zero length"
     TxSubmitDecodeFail err -> sformat build err

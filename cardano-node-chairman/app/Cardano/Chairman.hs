@@ -11,7 +11,7 @@
 
 module Cardano.Chairman (chairmanTest) where
 
-import           Cardano.Prelude hiding (ByteString, STM, atomically, catch, option, show, throwIO)
+import           Cardano.Prelude hiding (ByteString, STM, atomically, catch, show, throwIO)
 import           Prelude (String, error, show)
 
 import           Control.Monad.Class.MonadAsync
