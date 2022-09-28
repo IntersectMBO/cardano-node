@@ -186,7 +186,7 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
   txToIdSize = (Mempool.txId &&& txInBlockSize) . toGenTx
 
   toGenTx :: tx -> GenTx CardanoBlock
-  toGenTx tx = case shelleyBasedEra @ era of
+  toGenTx tx = case shelleyBasedEra @era of
     ShelleyBasedEraShelley  -> toConsensusGenTx $ TxInMode tx ShelleyEraInCardanoMode
     ShelleyBasedEraAllegra  -> toConsensusGenTx $ TxInMode tx AllegraEraInCardanoMode
     ShelleyBasedEraMary     -> toConsensusGenTx $ TxInMode tx MaryEraInCardanoMode

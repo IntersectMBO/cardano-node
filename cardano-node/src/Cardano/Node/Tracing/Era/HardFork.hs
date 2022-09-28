@@ -55,7 +55,7 @@ import           Ouroboros.Consensus.Util.Condense (Condense (..))
 instance All (LogFormatting `Compose` Header) xs => LogFormatting (Header (HardForkBlock xs)) where
     forMachine dtal =
           hcollapse
-        . hcmap (Proxy @ (LogFormatting `Compose` Header)) (K . forMachine dtal)
+        . hcmap (Proxy @(LogFormatting `Compose` Header)) (K . forMachine dtal)
         . getOneEraHeader
         . getHardForkHeader
 
@@ -67,7 +67,7 @@ instance All (LogFormatting `Compose` Header) xs => LogFormatting (Header (HardF
 instance All (Compose LogFormatting GenTx) xs => LogFormatting (GenTx (HardForkBlock xs)) where
     forMachine dtal =
           hcollapse
-        . hcmap (Proxy @ (LogFormatting `Compose` GenTx)) (K . forMachine dtal)
+        . hcmap (Proxy @(LogFormatting `Compose` GenTx)) (K . forMachine dtal)
         . getOneEraGenTx
         . getHardForkGenTx
 
@@ -90,7 +90,7 @@ instance All (LogFormatting `Compose` WrapApplyTxErr) xs => LogFormatting (HardF
 instance All (LogFormatting `Compose` WrapApplyTxErr) xs => LogFormatting (OneEraApplyTxErr xs) where
     forMachine dtal =
         hcollapse
-      . hcmap (Proxy @ (LogFormatting `Compose` WrapApplyTxErr)) (K . forMachine dtal)
+      . hcmap (Proxy @(LogFormatting `Compose` WrapApplyTxErr)) (K . forMachine dtal)
       . getOneEraApplyTxErr
 
 instance LogFormatting (ApplyTxErr blk) => LogFormatting (WrapApplyTxErr blk) where
@@ -116,7 +116,7 @@ instance All (LogFormatting `Compose` WrapLedgerErr) xs => LogFormatting (HardFo
 instance All (LogFormatting `Compose` WrapLedgerErr) xs => LogFormatting (OneEraLedgerError xs) where
     forMachine dtal =
         hcollapse
-      . hcmap (Proxy @ (LogFormatting `Compose` WrapLedgerErr)) (K . forMachine dtal)
+      . hcmap (Proxy @(LogFormatting `Compose` WrapLedgerErr)) (K . forMachine dtal)
       . getOneEraLedgerError
 
 instance LogFormatting (LedgerError blk) => LogFormatting (WrapLedgerErr blk) where
@@ -166,7 +166,7 @@ instance ( All (LogFormatting `Compose` WrapLedgerWarning) xs
 instance All (LogFormatting `Compose` WrapLedgerWarning) xs => LogFormatting (OneEraLedgerWarning xs) where
     forMachine dtal =
         hcollapse
-      . hcmap (Proxy @ (LogFormatting `Compose` WrapLedgerWarning)) (K . forMachine dtal)
+      . hcmap (Proxy @(LogFormatting `Compose` WrapLedgerWarning)) (K . forMachine dtal)
       . getOneEraLedgerWarning
 
 instance LogFormatting (LedgerWarning blk) => LogFormatting (WrapLedgerWarning blk) where
@@ -219,7 +219,7 @@ instance ( All (LogFormatting `Compose` WrapLedgerUpdate) xs
 instance All (LogFormatting `Compose` WrapLedgerUpdate) xs => LogFormatting (OneEraLedgerUpdate xs) where
     forMachine dtal =
         hcollapse
-      . hcmap (Proxy @ (LogFormatting `Compose` WrapLedgerUpdate)) (K . forMachine dtal)
+      . hcmap (Proxy @(LogFormatting `Compose` WrapLedgerUpdate)) (K . forMachine dtal)
       . getOneEraLedgerUpdate
 
 instance LogFormatting (LedgerUpdate blk) => LogFormatting (WrapLedgerUpdate blk) where
@@ -245,7 +245,7 @@ instance All (LogFormatting `Compose` WrapEnvelopeErr) xs => LogFormatting (Hard
 instance All (LogFormatting `Compose` WrapEnvelopeErr) xs => LogFormatting (OneEraEnvelopeErr xs) where
     forMachine dtal =
         hcollapse
-      . hcmap (Proxy @ (LogFormatting `Compose` WrapEnvelopeErr)) (K . forMachine dtal)
+      . hcmap (Proxy @(LogFormatting `Compose` WrapEnvelopeErr)) (K . forMachine dtal)
       . getOneEraEnvelopeErr
 
 instance LogFormatting (OtherHeaderEnvelopeError blk) => LogFormatting (WrapEnvelopeErr blk) where
@@ -271,7 +271,7 @@ instance All (LogFormatting `Compose` WrapValidationErr) xs => LogFormatting (Ha
 instance All (LogFormatting `Compose` WrapValidationErr) xs => LogFormatting (OneEraValidationErr xs) where
     forMachine dtal =
         hcollapse
-      . hcmap (Proxy @ (LogFormatting `Compose` WrapValidationErr)) (K . forMachine dtal)
+      . hcmap (Proxy @(LogFormatting `Compose` WrapValidationErr)) (K . forMachine dtal)
       . getOneEraValidationErr
 
 instance LogFormatting (ValidationErr (BlockProtocol blk)) => LogFormatting (WrapValidationErr blk) where
@@ -288,7 +288,7 @@ instance LogFormatting (ValidationErr (BlockProtocol blk)) => LogFormatting (Wra
 instance All (LogFormatting `Compose` WrapCannotForge) xs => LogFormatting (OneEraCannotForge xs) where
     forMachine dtal =
         hcollapse
-      . hcmap (Proxy @ (LogFormatting `Compose` WrapCannotForge))
+      . hcmap (Proxy @(LogFormatting `Compose` WrapCannotForge))
               (K . forMachine dtal)
       . getOneEraCannotForge
 
@@ -313,7 +313,7 @@ instance All (LogFormatting `Compose` WrapForgeStateInfo) xs => LogFormatting (O
         forgeStateInfo' :: Object
         forgeStateInfo' =
               hcollapse
-            . hcmap (Proxy @ (LogFormatting `Compose` WrapForgeStateInfo))
+            . hcmap (Proxy @(LogFormatting `Compose` WrapForgeStateInfo))
                     (K . forMachine dtal)
             . getOneEraForgeStateInfo
             $ forgeStateInfo
@@ -339,7 +339,7 @@ instance All (LogFormatting `Compose` WrapForgeStateUpdateError) xs => LogFormat
         forgeStateUpdateError' :: Object
         forgeStateUpdateError' =
               hcollapse
-            . hcmap (Proxy @ (LogFormatting `Compose` WrapForgeStateUpdateError))
+            . hcmap (Proxy @(LogFormatting `Compose` WrapForgeStateUpdateError))
                     (K . forMachine dtal)
             . getOneEraForgeStateUpdateError
             $ forgeStateUpdateError

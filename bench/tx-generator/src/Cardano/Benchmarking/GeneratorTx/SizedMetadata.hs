@@ -57,7 +57,7 @@ assumeMapCosts _proxy = stepFunction [
     , ( 744 , 4)          -- 744 entries at 4 bytes.
     ]
   where
-    firstEntry = case shelleyBasedEra @ era of
+    firstEntry = case shelleyBasedEra @era of
       ShelleyBasedEraShelley -> 37
       ShelleyBasedEraAllegra -> 39
       ShelleyBasedEraMary    -> 39
@@ -128,11 +128,11 @@ dummyTxSizeInEra metadata = case makeTransactionBody dummyTx of
     }
 
 dummyTxSize :: forall era . IsShelleyBasedEra era => AsType era -> Maybe TxMetadata -> Int
-dummyTxSize _p m = (dummyTxSizeInEra @ era) $ metadataInEra m
+dummyTxSize _p m = (dummyTxSizeInEra @era) $ metadataInEra m
 
 metadataInEra :: forall era . IsShelleyBasedEra era => Maybe TxMetadata -> TxMetadataInEra era
 metadataInEra Nothing = TxMetadataNone
-metadataInEra (Just m) = case txMetadataSupportedInEra (cardanoEra @ era) of
+metadataInEra (Just m) = case txMetadataSupportedInEra (cardanoEra @era) of
   Nothing -> error "unreachable"
   Just e -> TxMetadataInEra e m
 
@@ -143,7 +143,7 @@ mkMetadata size
       then Left $ "Error : metadata must be 0 or at least " ++ show minSize ++ " bytes in this era."
       else Right $ metadataInEra $ Just metadata
  where
-  minSize = case shelleyBasedEra @ era of
+  minSize = case shelleyBasedEra @era of
     ShelleyBasedEraShelley -> 37
     ShelleyBasedEraAllegra -> 39
     ShelleyBasedEraMary    -> 39

@@ -103,7 +103,7 @@ genTx protocolParameters (collateral, collFunds) fee metadata inFunds outputs
     }
 
   upperBound :: TxValidityUpperBound era
-  upperBound = case shelleyBasedEra @ era of
+  upperBound = case shelleyBasedEra @era of
     ShelleyBasedEraShelley -> TxValidityUpperBound ValidityUpperBoundInShelleyEra $ SlotNo maxBound
     ShelleyBasedEraAllegra -> TxValidityNoUpperBound ValidityNoUpperBoundInAllegraEra
     ShelleyBasedEraMary    -> TxValidityNoUpperBound ValidityNoUpperBoundInMaryEra
