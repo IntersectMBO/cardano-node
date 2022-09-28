@@ -71,6 +71,7 @@ library
                      , async
                      , attoparsec
                      , base >=4.12 && <5
+                     , base16-bytestring
                      , bytestring
                      , cardano-api
                      , cardano-binary
