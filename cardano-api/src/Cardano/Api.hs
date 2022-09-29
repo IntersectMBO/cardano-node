@@ -490,6 +490,7 @@ module Cardano.Api (
     deserialiseTxLedgerCddl,
     serialiseWitnessLedgerCddl,
     deserialiseWitnessLedgerCddl,
+    TextEnvelopeCddl(..),
     TextEnvelopeCddlError(..),
 
     -- *** Reading one of several key types
