@@ -10,9 +10,8 @@ import           Control.Monad
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.RWS.CPS
-import           Data.ByteString.Base16 as Base16
 import           Data.ByteString as BS (ByteString)
-import           Data.Dependent.Sum ( (==>) )
+import           Data.ByteString.Base16 as Base16
 import           Data.DList (DList)
 import qualified Data.DList as DL
 import           Data.Dependent.Sum ((==>))
@@ -21,7 +20,7 @@ import qualified Data.Text as Text
 
 import           Cardano.Api
 import           Cardano.Benchmarking.Script.Setters
-import           Cardano.Benchmarking.Script.Store (KeyName, Name(..), WalletName)
+import           Cardano.Benchmarking.Script.Store (KeyName, Name (..), WalletName)
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.TxGenerator.Setup.NixService
 
@@ -86,7 +85,7 @@ importGenesisFunds = do
   logMsg "Importing Genesis Fund."
   wallet <- newWallet "genesis_wallet"
   era <- askNixOption _nix_era
-  fee <- askNixOption _nix_tx_fee  
+  fee <- askNixOption _nix_tx_fee
   cmd1 (ReadSigningKey keyNameGenesisInputFund) _nix_sigKey
   emit $ Submit era LocalSocket $ SecureGenesis fee wallet keyNameGenesisInputFund keyNameTxGenFunds
   delay
