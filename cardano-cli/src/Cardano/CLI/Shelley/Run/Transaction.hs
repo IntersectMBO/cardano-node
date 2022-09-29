@@ -115,7 +115,7 @@ data ShelleyTxCmdError
   | ShelleyTxCmdPParamExecutionUnitsNotAvailable
   | ShelleyTxCmdTxEraCastErr EraCastError
   | ShelleyTxCmdQueryConvenienceError !QueryConvenienceError
-  | ShelleyTxCmdQueryNotScriptLocked !NotScriptLockedTxInsError
+  | ShelleyTxCmdQueryNotScriptLocked !ScriptLockedTxInsError
 
 renderShelleyTxCmdError :: ShelleyTxCmdError -> Text
 renderShelleyTxCmdError err =
