@@ -9,7 +9,7 @@ import           Cardano.Api.Shelley (ReferenceScript (..), refScriptToShelleySc
 import           Cardano.Prelude
 import           Data.Type.Equality (TestEquality (testEquality))
 import           Gen.Cardano.Api.Typed (genTxBodyContent)
-import           Hedgehog (Property, annotateShow, failure, (===), MonadTest)
+import           Hedgehog (MonadTest, Property, annotateShow, failure, (===))
 import           Test.Cardano.Api.Typed.Orphans ()
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testPropertyNamed)
@@ -24,7 +24,7 @@ prop_roundtrip_txbodycontent_txouts =
   H.property $ do
     content <- H.forAll $ genTxBodyContent BabbageEra
     -- Create the ledger body & auxiliaries
-    body <- case makeTransactionBody content of
+    body <- case createAndValidateTransactionBody content of
       Left err -> annotateShow err >> failure
       Right body -> pure body
     annotateShow body

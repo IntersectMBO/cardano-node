@@ -934,7 +934,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     -- 3. update tx with fees
     -- 4. balance the transaction and update tx change output
     txbody0 <-
-      first TxBodyError $ makeTransactionBody txbodycontent
+      first TxBodyError $ createAndValidateTransactionBody txbodycontent
         { txOuts =
               TxOut changeaddr (lovelaceToTxOutValue 0) TxOutDatumNone ReferenceScriptNone
             : txOuts txbodycontent
@@ -974,7 +974,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
 
     let (dummyCollRet, dummyTotColl) = maybeDummyTotalCollAndCollReturnOutput txbodycontent changeaddr
     txbody1 <- first TxBodyError $ -- TODO: impossible to fail now
-               makeTransactionBody txbodycontent1 {
+               createAndValidateTransactionBody txbodycontent1 {
                  txFee  = TxFeeExplicit explicitTxFees $ Lovelace (2^(32 :: Integer) - 1),
                  txOuts = TxOut changeaddr
                                 (lovelaceToTxOutValue $ Lovelace (2^(64 :: Integer)) - 1)
@@ -998,7 +998,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     -- Here we do not want to start with any change output, since that's what
     -- we need to calculate.
     txbody2 <- first TxBodyError $ -- TODO: impossible to fail now
-               makeTransactionBody txbodycontent1 {
+               createAndValidateTransactionBody txbodycontent1 {
                  txFee = TxFeeExplicit explicitTxFees fee,
                  txReturnCollateral = retColl,
                  txTotalCollateral = reqCol
@@ -1027,7 +1027,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     -- would fit within 2^16-1. That's a possible optimisation.
     txbody3 <-
       first TxBodyError $ -- TODO: impossible to fail now
-        makeTransactionBody txbodycontent1 {
+        createAndValidateTransactionBody txbodycontent1 {
           txFee  = TxFeeExplicit explicitTxFees fee,
           txOuts = accountForNoChange
                      (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone)

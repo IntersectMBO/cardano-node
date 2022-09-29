@@ -155,7 +155,8 @@ module Cardano.Api (
 
     -- ** Transaction bodies
     TxBody(TxBody),
-    makeTransactionBody,
+    createAndValidateTransactionBody,
+    makeTransactionBody, -- TODO: Remove
     TxBodyContent(..),
     TxBodyError(..),
     TxBodyScriptData(..),

@@ -609,7 +609,7 @@ genTxFee era =
 
 genTxBody :: IsCardanoEra era => CardanoEra era -> Gen (TxBody era)
 genTxBody era = do
-  res <- makeTransactionBody <$> genTxBodyContent era
+  res <- Api.createAndValidateTransactionBody <$> genTxBodyContent era
   case res of
     Left err -> fail (displayError err)
     Right txBody -> pure txBody
