@@ -8,6 +8,128 @@ Default to the ledger's CDDL format for transaction body creation by removing fl
 
 - Allow reading signing keys from a pipe ([PR 4342](https://github.com/input-output-hk/cardano-node/pull/4342))
 
+## 1.35.3 -- August 2022
+
+- Update build and build-raw commands to accept simple reference minting scripts (#4087)
+- Fix query protocol-state (#4102)
+- Render reference script hashes when using `--calculate-plutus-script-cost` option (#4204)
+- Transaction build in any alonzo era when on babbage testnet (#4135)
+
+## 1.35.2 -- July 2022 (not released)
+
+None
+
+## 1.35.1 -- July 2022 (not released)
+
+None
+
+## 1.35.0 -- June 2022
+- Add Vasil hardfork to cardano-api and cardano-cli (#3765)
+- Reference script integration (#3953)
+- Wire up remaining Plutusv2 reference script types (#4034)
+- Add friendly printing of transactions (envelopes) with signatures (#3617)
+- cardano-cli transaction view: Add friendly certificate printing (#3377)
+- cardano-cli query kes-period-info: Always display metrics (#3683)
+- JSON format for leadership schedule (#3687)
+- Vasil cardano-cli update (#3810)
+- Prevent return collateral from including reference scripts and datums (#3850)
+- kes-period-info property test (#3718)
+- Extend deserialiseFromRawBytesHex to produce error description (#3304)
+- add genesis create-cardano command (#3832)
+- Propagate protocol in block type (#3818)
+- Fix kes period info command (#3945)
+- Create VRF signing key file with correct permissions (#1948)
+- Set local encoding to UTF-8 in cardano-cli (#4018)
+- Update example-reference-script-usage.sh to also use inline datums (#4006)
+- Wire up simple reference scripts in cardano-cli (#4014)
+- Add read-only-tx-in-reference option to cardano-cli #(4042)
+
+## 1.34.0 -- February 2022
+
+- Fix some spelling errors in the CLI help text.  (#3499)
+- Add a prettier rendering of update proposals. (#3208)
+- Add support for CBOR-encoded blobs in the `transaction build` and `transaction
+  build-raw` commands. (#3483)
+- Implement a `leadership-schedule` command. This can calculate a stake pool's
+  leadership schedule for the current and following epoch. It requires access to
+  the VRF signing key for that stake pool.
+
+  ```
+  > cardano-cli query leadership-schedule \
+     --testnet-magic 42 \
+     --genesis example/shelley/genesis.json \
+     --stake-pool-id  pool12t0y7agkqct89pf00eeytkvfjlquv76tjy27duannan9w63ckxv \
+     --vrf-signing-key-file example/node-pool1/shelley/vrf.skey
+     --current
+     SlotNo                          UTC Time
+     --------------------------------------------------------
+     4073                   2021-12-29 17:26:54.998001755 UTC
+     4126                   2021-12-29 17:27:00.298001755 UTC
+     4206                   2021-12-29 17:27:08.298001755 UTC
+     4256                   2021-12-29 17:27:13.298001755 UTC
+     4309                   2021-12-29 17:27:18.598001755 UTC
+     4376                   2021-12-29 17:27:25.298001755 UTC
+     4423                   2021-12-29 17:27:29.998001755 UTC
+     4433                   2021-12-29 17:27:30.998001755 UTC
+  ``` (#3464, #3494)
+- The CLI now supports outputting transaction bodies in ledger-compliant CDDL in
+  the `transaction build` and `transaction build-raw` commands. This is
+  specified by using the `--cddl-format` flag. (#3505)
+- Implement a `kes-period-info` command in the CLI. This checks that your
+  operational certificate is correct. It checks:
+  - The counters match what is in the node's protocol state
+  - The KES period in the operational certificate is correct (based on the
+    current slot).
+  ```
+  > cardano-cli query kes-period-info --testnet-magic 42  \
+    --op-cert-file example/node-pool1/shelley/node.cert
+  ✓ The operational certificate counter agrees with the node protocol state counter
+  ✓ Operational certificate's kes period is within the correct KES period interval
+  {
+      "qKesNodeStateOperationalCertificateNumber": 6,
+      "qKesCurrentKesPeriod": 404,
+      "qKesOnDiskOperationalCertificateNumber": 6,
+      "qKesRemainingSlotsInKesPeriod": 3760228,
+      "qKesMaxKESEvolutions": 62,
+      "qKesKesKeyExpiry": "2022-03-20T21:44:51Z",
+      "qKesEndKesInterval": 434,
+      "qKesStartKesInterval": 372,
+      "qKesSlotsPerKesPeriod": 129600
+  }
+  ``` (#3459, #3572, #3599)
+- The CLI now displays collateral inputs in a nicer fashion. (#3463)
+- The `transaction sign` command now allows for incremental signing by providing
+  an already signed transaction via `--tx-file`. This allows more easily adding
+  multiple signatures to a transaction. (#3549)
+- The `transaction build` command now supports an option
+  (`--calculate-plutus-script-cost`) to compute the cost for included scripts.
+  ```
+  cardano-cli transaction build \
+  --alonzo-era \
+  --cardano-mode \
+  --testnet-magic "$TESTNET_MAGIC" \
+  --change-address "$utxoaddr" \
+  --tx-in "$plutusutxotxin" \
+  --tx-in-collateral "$txinCollateral" \
+  --tx-out "$dummyaddress+10000000" \
+  --tx-in-script-file "$plutusscriptinuse" \
+  --tx-in-datum-file "$datumfilepath"  \
+  --protocol-params-file "$WORK/pparams.json" \
+  --tx-in-redeemer-file "$redeemerfilepath" \
+  --calculate-plutus-script-cost "$WORK/create-datum-output.scriptcost"
+  > cat $WORK/create-datum-output.scriptcost
+  [
+    {
+        "executionUnits": {
+            "memory": 1700,
+            "steps": 476468
+        },
+        "lovelaceCost": 133,
+        "scriptHash": "67f33146617a5e61936081db3b2117cbf59bd2123748f58ac9678656"
+    }
+  ]
+  ``` (#3589)
+
 ## 1.33.0 -- December 2021
 ## 1.32.1 -- November 2021
 
