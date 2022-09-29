@@ -2,10 +2,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 
 {-# OPTIONS_GHC -Wno-partial-fields  #-}
 
@@ -18,7 +16,8 @@ module Cardano.Logging.Types (
   , DocMsg(..)
   , LoggingContext(..)
   , emptyLoggingContext
-  , Namespace
+  , Namespace (..)
+  , MetaTrace(..)
   , DetailLevel(..)
   , Privacy(..)
   , SeverityS(..)
@@ -56,13 +55,19 @@ import           Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Map.Strict as SMap
 
-import           Data.Text (Text, pack, unpack)
+import           Data.Text (Text, pack, unpack, intercalate, singleton)
 import           Data.Text.Lazy (toStrict)
 import           Data.Time (UTCTime)
 import           GHC.Generics
 import           Network.HostName (HostName)
 
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
+
+-- | A unique identifier for every message, composed of text
+newtype Namespace a = Namespace {unNS :: [Text]}
+
+instance Show (Namespace a) where
+  show (Namespace ns) = unpack $ intercalate (singleton '.') ns
 
 -- | The Trace carries the underlying tracer Tracer from the contra-tracer package.
 --   It adds a 'LoggingContext' and maybe a 'TraceControl' to every message.
@@ -103,6 +108,14 @@ class LogFormatting a where
   asMetrics :: a -> [Metric]
   asMetrics _v = []
 
+class MetaTrace a where
+  namespaceFor  :: a -> Namespace a
+  severityFor   :: Namespace a -> SeverityS
+  privacyFor    :: Namespace a -> Privacy
+  documentFor   :: Namespace a -> Text
+  metricsDocFor :: Namespace a -> Maybe (Text,[Text])
+  allNamespaces :: [Namespace a]
+
 data Metric
   -- | An integer metric.
   -- Text is used to name the metric
@@ -127,13 +140,12 @@ emptyObject = HM.empty
 newtype Documented a = Documented {undoc :: [DocMsg a]}
   deriving Show
 
--- | A unique identifier for every message, composed of text
-type Namespace = [Text]
+
 
 -- | Document a message by giving a prototype, its most special name in the namespace
 -- and a comment in markdown format
 data DocMsg a = DocMsg {
-    dmNamespace :: Namespace
+    dmNamespace :: Namespace a
   , dmMetricsMD :: [(Text, Text)]
   , dmMarkdown  :: Text
 }
@@ -143,7 +155,7 @@ instance Show (DocMsg a) where
 
 -- | Context any log message carries
 data LoggingContext = LoggingContext {
-    lcNamespace :: Namespace
+    lcNamespace :: [Text]
   , lcSeverity  :: Maybe SeverityS
   , lcPrivacy   :: Maybe Privacy
   , lcDetails   :: Maybe DetailLevel
@@ -225,7 +237,7 @@ instance Show SeverityF where
 data TraceObject = TraceObject {
     toHuman     :: Maybe Text
   , toMachine   :: Maybe Text
-  , toNamespace :: Namespace
+  , toNamespace :: [Text]
   , toSeverity  :: SeverityS
   , toDetails   :: DetailLevel
   , toTimestamp :: UTCTime
@@ -352,7 +364,7 @@ instance AE.FromJSON ForwarderMode where
 
 data TraceConfig = TraceConfig {
      -- | Options specific to a certain namespace
-    tcOptions   :: Map.Map Namespace [ConfigOption]
+    tcOptions   :: Map.Map [Text] [ConfigOption]
      -- | Options for the forwarder
   , tcForwarder :: TraceOptionForwarder
     -- | Optional human-readable name of the node.
@@ -389,15 +401,15 @@ data TraceControl where
 newtype DocCollector = DocCollector (IORef (Map Int LogDoc))
 
 data LogDoc = LogDoc {
-    ldDoc        :: !Text
-  , ldMetricsDoc :: !(SMap.Map Text Text)
-  , ldNamespace  :: ![Namespace]
-  , ldSeverity   :: ![SeverityS]
-  , ldPrivacy    :: ![Privacy]
-  , ldDetails    :: ![DetailLevel]
-  , ldBackends   :: ![BackendConfig]
-  , ldFiltered   :: ![SeverityF]
-  , ldLimiter    :: ![(Text, Double)]
+    ldDoc        :: ! Text
+  , ldMetricsDoc :: ! (SMap.Map Text Text)
+  , ldNamespace  :: ! [[Text]]
+  , ldSeverity   :: ! [SeverityS]
+  , ldPrivacy    :: ! [Privacy]
+  , ldDetails    :: ! [DetailLevel]
+  , ldBackends   :: ! [BackendConfig]
+  , ldFiltered   :: ! [SeverityF]
+  , ldLimiter    :: ! [(Text, Double)]
 } deriving(Eq, Show)
 
 emptyLogDoc :: Text -> [(Text, Text)] -> LogDoc

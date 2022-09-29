@@ -132,19 +132,19 @@ appendName name (Trace tr) = Trace $
 -- | Appends a name to the context.
 -- E.g. appendName "specific" $ appendName "middle" $ appendName "general" tracer
 -- give the result: `general.middle.specific`.
-appendNames :: Monad m => [Text] -> Trace m a -> Trace m a
-appendNames names (Trace tr) = Trace $
+appendNames :: Monad m => Namespace a -> Trace m a -> Trace m a
+appendNames (Namespace names) (Trace tr) = Trace $
     T.contramap
       (\
         (lc, cont) -> (lc {lcNamespace = names ++ lcNamespace lc}, cont))
       tr
 
 -- | Sets names for the messages in this trace based on the selector function
-withNamesAppended :: Monad m => (a -> [Text]) -> Trace m a -> Trace m a
+withNamesAppended :: Monad m => (a -> Namespace a) -> Trace m a -> Trace m a
 withNamesAppended func (Trace tr) = Trace $
     T.contramap
       (\case
-        (lc, Right e) -> (lc {lcNamespace = func e ++ lcNamespace lc}, Right e)
+        (lc, Right e) -> (lc {lcNamespace = unNS (func e) ++ lcNamespace lc}, Right e)
         (lc, Left ctrl) -> (lc, Left ctrl))
       tr
 
@@ -157,13 +157,13 @@ setSeverity s (Trace tr) = Trace $ T.contramap
   tr
 
 -- | Sets severities for the messages in this trace based on the selector function
-withSeverity :: Monad m => (a -> SeverityS) -> Trace m a -> Trace m a
+withSeverity :: Monad m => (Namespace a -> SeverityS) -> Trace m a -> Trace m a
 withSeverity fs (Trace tr) = Trace $
     T.contramap
       (\case
         (lc, Right e) -> if isJust (lcSeverity lc)
                             then (lc, Right e)
-                            else (lc {lcSeverity = Just (fs e)}, Right e)
+                            else (lc {lcSeverity = Just (fs (Namespace (lcNamespace lc)))}, Right e)
         (lc, Left e) -> (lc, Left e))
       tr
 
@@ -200,13 +200,13 @@ setPrivacy p (Trace tr) = Trace $
     tr
 
 -- | Sets privacy for the messages in this trace based on the message
-withPrivacy :: Monad m => (a -> Privacy) -> Trace m a -> Trace m a
+withPrivacy :: Monad m => (Namespace a -> Privacy) -> Trace m a -> Trace m a
 withPrivacy fs (Trace tr) = Trace $
     T.contramap
       (\case
           (lc, Right e) -> if isJust (lcPrivacy lc)
                             then (lc, Right e)
-                            else (lc {lcPrivacy = Just (fs e)}, Right e)
+                            else (lc {lcPrivacy = Just (fs (Namespace (lcNamespace lc)))}, Right e)
           (lc, Left e)  ->  (lc, Left e))
       tr
 

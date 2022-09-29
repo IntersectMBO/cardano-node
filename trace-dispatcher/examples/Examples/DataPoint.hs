@@ -33,8 +33,8 @@ instance A.ToJSON BaseStats where
 instance Show DataPoint where
   show (DataPoint a) = toString $ A.encode a
 
-namesForBaseStats :: BaseStats -> Namespace
-namesForBaseStats _ = ["BaseStats"]
+namesForBaseStats :: BaseStats -> Namespace BaseStats
+namesForBaseStats _ = Namespace ["BaseStats"]
 
 emptyStats :: BaseStats
 emptyStats = BaseStats 0.0 100000000.0 (-100000000.0) 0 0.0

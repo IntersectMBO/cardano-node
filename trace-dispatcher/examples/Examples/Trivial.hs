@@ -47,7 +47,3 @@ test2 = do
     traceWith (appendName "Inner3" simpleTracerC3) message4
     traceWith (appendName "cont1" $ appendName "cont2" $ appendName "cont3" simpleTracerC2) message1
 
-loSeverity :: TraceForgeEvent LogBlock -> SeverityS
-loSeverity TraceStartLeadershipCheck {} = Warning
-loSeverity TraceSlotIsImmutable {}      = Error
-loSeverity TraceBlockFromFuture {}      = Error

@@ -41,7 +41,7 @@ dataPointTracer dataPointStore =
       -- TODO docIt DataPoint (lk, Just c, val)
     output LoggingContext {} _  = pure ()
 
-    nameSpaceToText :: Namespace -> Text
+    nameSpaceToText :: [Text] -> Text
     nameSpaceToText namespace = toStrict $ toLazyText $
       mconcat (intersperse (singleton '.')
         (map fromText namespace))

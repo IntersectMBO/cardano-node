@@ -46,10 +46,7 @@ runScriptSimple time oracle = do
                         stdoutTracer'
                         forwardTracer'
                         (Just ekgTracer')
-                        ["Test"]
-                        namesForMessage
-                        severityForMessage
-                        privacyForMessage
+                        (Namespace ["Test"])
     configureTracers conf docMessage [tr]
     let sortedMsgs = sort msgs
     let (msgsWithIds,_) = withMessageIds 0 sortedMsgs
@@ -90,10 +87,7 @@ runScriptMultithreaded time oracle = do
                           stdoutTracer'
                           forwardTracer'
                           (Just ekgTracer')
-                          ["Test"]
-                          namesForMessage
-                          severityForMessage
-                          privacyForMessage
+                          (Namespace ["Test"])
       configureTracers conf docMessage [tr]
       let sortedMsgs1 = sort msgs1
       let (msgsWithIds1,_) = withMessageIds 0 sortedMsgs1
@@ -160,10 +154,7 @@ runScriptMultithreadedWithReconfig time oracle = do
                           stdoutTracer'
                           forwardTracer'
                           (Just ekgTracer')
-                          ["Test"]
-                          namesForMessage
-                          severityForMessage
-                          privacyForMessage
+                          (Namespace ["Test"])
       configureTracers conf docMessage [tr]
       let sortedMsgs1 = sort msgs1
       let (msgsWithIds1,_) = withMessageIds 0 sortedMsgs1
@@ -228,10 +219,7 @@ runScriptMultithreadedWithConstantReconfig time oracle = do
                           stdoutTracer'
                           forwardTracer'
                           (Just ekgTracer')
-                          ["Test"]
-                          namesForMessage
-                          severityForMessage
-                          privacyForMessage
+                          (Namespace ["Test"])
       configureTracers conf1 docMessage [tr]
       let sortedMsgs1 = sort msgs1
       let (msgsWithIds1,_) = withMessageIds 0 sortedMsgs1

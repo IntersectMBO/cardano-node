@@ -31,7 +31,7 @@ import           Cardano.Logging.Types
 defaultConfig :: TraceConfig
 defaultConfig = emptyTraceConfig {
   tcOptions = Map.fromList
-    [([] :: Namespace,
+    [([] :: [Text],
          [ ConfSeverity (SeverityF (Just Info))
          , ConfDetail DNormal
          , ConfBackend [Stdout HumanFormatColoured]
@@ -68,13 +68,13 @@ mergeWithDefault fileConf defaultConf =
         else tcResourceFrequency defaultConf)
 
 mergeOptionsWithDefault ::
-     Map.Map Namespace [ConfigOption]
-  -> Map.Map Namespace [ConfigOption]
-  -> Map.Map Namespace [ConfigOption]
+     Map.Map [Text] [ConfigOption]
+  -> Map.Map [Text] [ConfigOption]
+  -> Map.Map [Text] [ConfigOption]
 mergeOptionsWithDefault fileOpts defaultOpts =
     foldr mergeOptsNs defaultOpts (Map.toList fileOpts)
   where
-    mergeOptsNs :: (Namespace,[ConfigOption]) -> Map.Map Namespace [ConfigOption] -> Map.Map Namespace [ConfigOption]
+    mergeOptsNs :: ([Text],[ConfigOption]) -> Map.Map [Text] [ConfigOption] -> Map.Map [Text] [ConfigOption]
     mergeOptsNs (ns,opts) into =
       case Map.lookup ns into of
         Nothing -> Map.insert ns opts into

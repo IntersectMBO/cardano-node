@@ -41,7 +41,7 @@ baseStatsDocumented :: Documented Double
 baseStatsDocumented = Documented
   [
     DocMsg
-      ["BaseStats"]
+      (Namespace ["BaseStats"])
       [ ("measure", "This is the value of a single measurment")
       , ("sum", "This is the sum of all measurments")
       ]

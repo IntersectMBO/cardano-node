@@ -65,17 +65,17 @@ documentTracers (Documented documented) tracers = do
     docTrace docIdx dc (Trace tr) =
       mapM_
         (\ (DocMsg {..}, idx) ->
-            T.traceWith tr (emptyLoggingContext {lcNamespace = dmNamespace},
+            T.traceWith tr (emptyLoggingContext {lcNamespace = unNS dmNamespace},
                             Left (Document idx dmMarkdown dmMetricsMD dc)))
         docIdx
 
 showT :: Show a => a -> Text
 showT = pack . show
 
-addDocumentedNamespace  :: Namespace -> Documented a -> Documented b
-addDocumentedNamespace  ns (Documented list) =
+addDocumentedNamespace  :: Namespace a -> Documented a -> Documented b
+addDocumentedNamespace  (Namespace ns) (Documented list) =
   Documented $ map
-    (\ dm@DocMsg {} -> dm {dmNamespace = ns ++ dmNamespace dm})
+    (\ dm@DocMsg {} -> dm {dmNamespace = Namespace (ns ++ unNS (dmNamespace dm))})
     list
 
 addDocs :: Documented a -> Documented a -> Documented a
@@ -177,7 +177,7 @@ docItDatapoint _backend (LoggingContext {..},
                         Nothing -> emptyLogDoc mdText []))
         docMap)
 
-generateTOC :: [Namespace] -> [Namespace] -> [Namespace] -> Builder
+generateTOC :: [[Text]] -> [[Text]] -> [[Text]] -> Builder
 generateTOC traces metrics datapoints =
        generateTOCTraces
     <> generateTOCMetrics
@@ -192,7 +192,7 @@ generateTOC traces metrics datapoints =
     generateTOCDatapoints =
       fromText "\n\n## [Datapoints](#datapoints)"
       <> mconcat (reverse (fst (foldl namespaceToToc ([], []) datapoints)))
-    namespaceToToc :: ([Builder], Namespace) -> Namespace -> ([Builder], Namespace)
+    namespaceToToc :: ([Builder], [Text]) -> [Text]-> ([Builder], [Text])
     namespaceToToc (builders, context) ns =
       let ref = namespaceRefBuilder ns
           ns' = if take 2 ns == ["Cardano", "Node"]
@@ -215,10 +215,10 @@ generateTOC traces metrics datapoints =
           in namespaceToTocWithContext (builders, context') ns'' ref
 
     namespaceToTocWithContext ::
-         ([Builder], Namespace)
-      -> Namespace
+         ([Builder], [Text])
+      -> [Text]
       -> Builder
-      -> ([Builder], Namespace)
+      -> ([Builder], [Text])
     namespaceToTocWithContext (builders, context) ns ref =
       case ns of
         [single] ->   ((fromText "\n"
@@ -239,7 +239,7 @@ generateTOC traces metrics datapoints =
               (builder : builders, context ++ [hdn]) tln ref
         [] -> error "inpossible"
 
-    splitToNS :: Namespace -> Namespace
+    splitToNS :: [Text] -> [Text]
     splitToNS [sym] = T.split (== '.') sym
 
 
@@ -254,7 +254,7 @@ generateTOC traces metrics datapoints =
     namespaceRefBuilder ns = mconcat (map (fromText . toLower ) ns)
 
 
-buildersToText :: [(Namespace, DocuResult)] -> TraceConfig -> IO Text
+buildersToText :: [([Text], DocuResult)] -> TraceConfig -> IO Text
 buildersToText builderList configuration = do
   time <- getZonedTime
   let traceBuilders = sortBy (\ (l,_) (r,_) -> compare l r)
@@ -295,7 +295,7 @@ buildersToText builderList configuration = do
 documentMarkdown ::
      Documented a
   -> [Trace IO a]
-  -> IO [(Namespace, DocuResult)]
+  -> IO [([Text], DocuResult)]
 documentMarkdown (Documented documented) tracers = do
     DocCollector docRef <- documentTracers (Documented documented) tracers
     items <- fmap Map.toList (liftIO (readIORef docRef))
@@ -326,7 +326,7 @@ documentMarkdown (Documented documented) tracers = do
 
     documentMetrics :: [LogDoc] -> [([Text], DocuResult)]
     documentMetrics logDocs =
-      let nameCommentNamespaceList = 
+      let nameCommentNamespaceList =
             concatMap (\ld -> zip (Map.toList (ldMetricsDoc ld)) (repeat (ldNamespace ld))) logDocs
           sortedNameCommentNamespaceList =
             sortBy (\a b -> compare ((fst . fst) a) ((fst . fst) b)) nameCommentNamespaceList
@@ -334,31 +334,31 @@ documentMarkdown (Documented documented) tracers = do
             groupBy (\a b -> (fst . fst) a == (fst . fst) b) sortedNameCommentNamespaceList
       in map documentMetrics' groupedNameCommentNamespaceList
 
-    documentMetrics' :: [((Text, Text), [Namespace])] -> ([Text], DocuResult)
+    documentMetrics' :: [((Text, Text), [[Text]])] -> ([Text], DocuResult)
     documentMetrics' ncns@(((name, comment), _) : _tail) =
-      ([name], DocuMetric 
+      ([name], DocuMetric
               $ mconcat $ intersperse(fromText "\n\n")
                     [ metricToBuilder (name,comment)
                     , namespacesMetricsBuilder (nub (concatMap snd ncns))
                     ])
 
-    namespacesBuilder :: [Namespace] -> Builder
+    namespacesBuilder :: [[Text]] -> Builder
     namespacesBuilder [ns] = namespaceBuilder ns
     namespacesBuilder []   = fromText "__Warning__: Namespace missing"
     namespacesBuilder nsl  =
       mconcat (intersperse (singleton '\n')(map namespaceBuilder nsl))
 
-    namespaceBuilder :: Namespace -> Builder
+    namespaceBuilder :: [Text] -> Builder
     namespaceBuilder ns = fromText "### " <>
       mconcat (intersperse (singleton '.') (map fromText ns))
 
-    namespacesMetricsBuilder :: [Namespace] -> Builder
+    namespacesMetricsBuilder :: [[Text]] -> Builder
     namespacesMetricsBuilder [ns] = fromText "Dispatched by: \n" <> namespaceMetricsBuilder ns
     namespacesMetricsBuilder []   = mempty
     namespacesMetricsBuilder nsl  = fromText "Dispatched by: \n" <>
       mconcat (intersperse (singleton '\n')(map namespaceMetricsBuilder nsl))
 
-    namespaceMetricsBuilder :: Namespace -> Builder
+    namespaceMetricsBuilder :: [Text] -> Builder
     namespaceMetricsBuilder ns = mconcat (intersperse (singleton '.') (map fromText ns))
 
 
@@ -415,7 +415,7 @@ documentMarkdown (Documented documented) tracers = do
                  l))
 
     -- metricsBuilder :: (Text, Text) -> [(Text, Builder)]
-    -- metricsBuilder (name, t) = (name, metricFormatToText t) 
+    -- metricsBuilder (name, t) = (name, metricFormatToText t)
 
     metricToBuilder :: (Text, Text) -> Builder
     metricToBuilder (name, text) =

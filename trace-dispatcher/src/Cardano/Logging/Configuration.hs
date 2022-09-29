@@ -52,17 +52,17 @@ configureTracers config (Documented documented) tracers = do
     configureAllTrace control (Trace tr) =
       mapM
         (\ DocMsg {..} -> T.traceWith tr (
-                              emptyLoggingContext {lcNamespace = dmNamespace}
+                              emptyLoggingContext {lcNamespace = unNS dmNamespace}
                             , Left control))
         documented
 
 -- | Switch off any message of a particular tracer based on the configuration.
 -- If the top tracer is silent and no subtracer is not silent, then switch it off
 maybeSilent :: forall m a. (MonadIO m) =>
-     Namespace
+     Namespace a
   -> Trace m a
   -> m (Trace m a)
-maybeSilent ns tr = do
+maybeSilent (Namespace ns) tr = do
     ref  <- liftIO (newIORef False)
     pure $ Trace $ T.arrow $ T.emit $ mkTrace ref
   where
@@ -82,9 +82,9 @@ maybeSilent ns tr = do
       T.traceWith (unpackTrace tr) (lc,  Left other)
 
 -- If the top tracer is silent and any subtracer is not silent, it is not
-isSilentTracer :: TraceConfig -> Namespace -> Bool
+isSilentTracer :: TraceConfig -> [Text] -> Bool
 isSilentTracer tc ns =
-    if getSeverity tc ns == SeverityF Nothing
+    if getSeverity tc  ns == SeverityF Nothing
       then
         let entries = filter (\(nsf,_opts) -> isPrefixOf ns nsf) $ Map.toList (tcOptions tc)
             blockers = filter (\(_nsf,opts) -> null (filter filterOpts opts)) entries
@@ -99,7 +99,7 @@ isSilentTracer tc ns =
 -- In this way construct a trace transformer with a config value
 withNamespaceConfig :: forall m a b c. (MonadIO m, Ord b) =>
      String
-  -> (TraceConfig -> Namespace -> m b)
+  -> (TraceConfig -> [Text] -> m b)
   -> (Maybe b -> Trace m c -> m (Trace m a))
   -> Trace m c
   -> m (Trace m a)
@@ -108,7 +108,7 @@ withNamespaceConfig name extract withConfig tr = do
     pure $ Trace $ T.arrow $ T.emit $ mkTrace ref
   where
     mkTrace ::
-         IORef (Either (Map.Map Namespace b, Maybe b) b)
+         IORef (Either (Map.Map [Text] b, Maybe b) b)
       -> (LoggingContext, Either TraceControl a)
       -> m ()
     mkTrace ref (lc, Right a) = do
@@ -276,7 +276,7 @@ withLimitersFromConfig tr trl = do
     getLimiter ::
          IORef (Map.Map Text (Limiter m a))
       -> TraceConfig
-      -> Namespace
+      -> [Text]
       -> m (Maybe (Limiter m a))
     getLimiter stateRef config ns =
       case getLimiterSpec config ns of
@@ -313,7 +313,7 @@ withLimitersFromConfig tr trl = do
 --------------------------------------------------------
 
 -- | If no severity can be found in the config, it is set to Warning
-getSeverity :: TraceConfig -> Namespace -> SeverityF
+getSeverity :: TraceConfig -> [Text] -> SeverityF
 getSeverity config ns =
     fromMaybe (SeverityF (Just Warning)) (getOption severitySelector config ns)
   where
@@ -321,11 +321,11 @@ getSeverity config ns =
     severitySelector (ConfSeverity s) = Just s
     severitySelector _              = Nothing
 
-getSeverity' :: Applicative m => TraceConfig -> Namespace -> m SeverityF
+getSeverity' :: Applicative m => TraceConfig -> [Text] -> m SeverityF
 getSeverity' config ns = pure $ getSeverity config ns
 
 -- | If no details can be found in the config, it is set to DNormal
-getDetails :: TraceConfig -> Namespace -> DetailLevel
+getDetails :: TraceConfig -> [Text] -> DetailLevel
 getDetails config ns =
     fromMaybe DNormal (getOption detailSelector config ns)
   where
@@ -333,12 +333,12 @@ getDetails config ns =
     detailSelector (ConfDetail d) = Just d
     detailSelector _            = Nothing
 
-getDetails' :: Applicative m => TraceConfig -> Namespace -> m DetailLevel
+getDetails' :: Applicative m => TraceConfig -> [Text] -> m DetailLevel
 getDetails' config ns = pure $ getDetails config ns
 
 -- | If no backends can be found in the config, it is set to
 -- [EKGBackend, Forwarder, Stdout HumanFormatColoured]
-getBackends :: TraceConfig -> Namespace -> [BackendConfig]
+getBackends :: TraceConfig -> [Text] -> [BackendConfig]
 getBackends config ns =
     fromMaybe [EKGBackend, Forwarder, Stdout HumanFormatColoured]
       (getOption backendSelector config ns)
@@ -347,11 +347,11 @@ getBackends config ns =
     backendSelector (ConfBackend s) = Just s
     backendSelector _             = Nothing
 
-getBackends' :: Applicative m => TraceConfig -> Namespace -> m [BackendConfig]
+getBackends' :: Applicative m => TraceConfig -> [Text] -> m [BackendConfig]
 getBackends' config ns = pure $ getBackends config ns
 
 -- | May return a limiter specification
-getLimiterSpec :: TraceConfig -> Namespace -> Maybe (Text, Double)
+getLimiterSpec :: TraceConfig -> [Text] -> Maybe (Text, Double)
 getLimiterSpec config ns = getOption limiterSelector config ns
   where
     limiterSelector :: ConfigOption -> Maybe (Text, Double)
@@ -359,7 +359,7 @@ getLimiterSpec config ns = getOption limiterSelector config ns
     limiterSelector _               = Nothing
 
 -- | Searches in the config to find an option
-getOption :: (ConfigOption -> Maybe a) -> TraceConfig -> Namespace -> Maybe a
+getOption :: (ConfigOption -> Maybe a) -> TraceConfig -> [Text] -> Maybe a
 getOption sel config [] =
   case Map.lookup [] (tcOptions config) of
     Nothing -> Nothing

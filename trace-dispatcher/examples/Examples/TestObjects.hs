@@ -148,13 +148,13 @@ instance LogFormatting (TraceForgeEvent LogBlock) where
 traceForgeEventDocu :: Documented (TraceForgeEvent LogBlock)
 traceForgeEventDocu = Documented
   [ DocMsg
-      ["TraceStartLeadershipCheck"]
+      (Namespace ["TraceStartLeadershipCheck"])
       []
       "Start of the leadership check\n\
         \\n\
         \We record the current slot number."
   , DocMsg
-      ["TraceSlotIsImmutable"]
+      (Namespace ["TraceSlotIsImmutable"])
       []
       "Leadership check failed: the tip of the ImmutableDB inhabits the\n\
         \current slot\n\
@@ -174,7 +174,7 @@ traceForgeEventDocu = Documented
         \\n\
         \See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>"
   , DocMsg
-    ["TraceBlockFromFuture"]
+    (Namespace ["TraceBlockFromFuture"])
     []
     "Leadership check failed: the current chain contains a block from a slot\n\
       \/after/ the current slot\n\
@@ -191,9 +191,9 @@ withSeverityTraceForgeEvent :: Monad m =>
      Trace m (TraceForgeEvent blk)
   -> Trace m (TraceForgeEvent blk)
 withSeverityTraceForgeEvent = withSeverity (\case
-    TraceStartLeadershipCheck {} -> Info
-    TraceSlotIsImmutable {}      -> Error
-    TraceBlockFromFuture {}      -> Error
+    Namespace ["TraceStartLeadershipCheck"] -> Info
+    Namespace ["TraceSlotIsImmutable"]      -> Error
+    Namespace ["TraceBlockFromFuture"]      -> Error
   )
 
 message1 :: TraceForgeEvent LogBlock
