@@ -219,6 +219,7 @@ module Cardano.Api (
     WithdrawalsSupportedInEra(..),
     CertificatesSupportedInEra(..),
     UpdateProposalSupportedInEra(..),
+    TxTotalAndReturnCollateralSupportedInEra(..),
 
     -- ** Feature availability functions
     collateralSupportedInEra,
