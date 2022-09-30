@@ -13,12 +13,14 @@ import           GHC.Natural
 import           Cardano.Api
 
 import           Cardano.Api.Shelley (ProtocolParameters)
--- import           Cardano.Ledger.Shelley.API (ShelleyGenesis)
+import qualified Cardano.Ledger.Shelley.API as Ledger (ShelleyGenesis)
+import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 -- import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
--- import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 
 import           Cardano.TxGenerator.Fund (Fund)
 
+-- convenience alias for use trhougout the API
+type ShelleyGenesis       = Ledger.ShelleyGenesis StandardShelley
 
 -- some type aliases to keep compatibility with code in Cardano.Benchmarking
 type NumberOfInputsPerTx  = Int
@@ -57,7 +59,7 @@ defaultTxGenTxParams = TxGenTxParams
 
 data TxEnvironment era = TxEnvironment
   { txEnvNetworkId        :: !NetworkId
-  -- , txEnvGenesis          :: !(ShelleyGenesis StandardShelley)
+  -- , txEnvGenesis          :: !ShelleyGenesis
   -- , txEnvProtocolInfo     :: !SomeConsensusProtocol
   , txEnvProtocolParams   :: !ProtocolParameters
   , txEnvFee              :: TxFee era

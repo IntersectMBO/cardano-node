@@ -55,6 +55,7 @@ library
                        Cardano.TxGenerator.FundQueue
                        Cardano.TxGenerator.Genesis
                        Cardano.TxGenerator.PureExample
+                       Cardano.TxGenerator.Script.Types
                        Cardano.TxGenerator.Setup.NixService
                        Cardano.TxGenerator.Setup.NodeConfig
                        Cardano.TxGenerator.Types
@@ -164,9 +165,13 @@ executable tx-generator-api
                      , bytestring
                      , filepath
                      , optparse-applicative-fork
+                     , cardano-api
                      , cardano-cli
                      , cardano-node
+                     , transformers
+                     , transformers-except
                      , tx-generator
+                     
 
 test-suite tx-generator-test
   hs-source-dirs:       test
