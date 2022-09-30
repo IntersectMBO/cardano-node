@@ -9,8 +9,10 @@
 module Cardano.TxGenerator.Genesis
   ( genesisInitialFunds
   , genesisInitialFundForKey
+  , genesisTxInput
   , genesisExpenditure
   , genesisSecureInitialFund
+  , genesisValidate
   )
 where
 
@@ -21,17 +23,21 @@ import qualified Data.ListMap as ListMap (toList)
 import           Cardano.Api
 import           Cardano.Api.Shelley (ReferenceScript (..), fromShelleyLovelace,
                    fromShelleyPaymentCredential, fromShelleyStakeReference)
-import           Cardano.Ledger.Shelley.API (Addr (..), ShelleyGenesis, sgInitialFunds)
-import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
+import           Cardano.Ledger.Shelley.API (Addr (..), sgInitialFunds)
+import           Ouroboros.Consensus.Shelley.Node (validateGenesis)
 
 import           Cardano.TxGenerator.Fund
 import           Cardano.TxGenerator.Types
 import           Cardano.TxGenerator.Utils
 
 
+genesisValidate ::  ShelleyGenesis -> Either String ()
+genesisValidate
+  = validateGenesis
+
 genesisSecureInitialFund :: forall era. IsShelleyBasedEra era =>
      NetworkId
-  -> ShelleyGenesis StandardShelley
+  -> ShelleyGenesis
   -> SigningKey PaymentKey
   -> SigningKey PaymentKey
   -> TxGenTxParams
@@ -39,13 +45,17 @@ genesisSecureInitialFund :: forall era. IsShelleyBasedEra era =>
 genesisSecureInitialFund networkId genesis srcKey destKey TxGenTxParams{txParamFee, txParamTTL}
   = case genesisInitialFundForKey @ era networkId genesis srcKey of
       Nothing             -> Left $ TxGenError "genesisSecureInitialFund: no fund found for given key in genesis"
-      Just (_, lovelace)  -> genesisExpenditure networkId srcKey destAddr lovelace txParamFee txParamTTL destKey
+      Just (_, lovelace)  ->
+        let
+          txOutValue :: TxOutValue era
+          txOutValue = mkTxOutValueAdaOnly $ lovelace - txParamFee
+        in genesisExpenditure networkId srcKey destAddr txOutValue txParamFee txParamTTL destKey
   where
     destAddr = keyAddress @ era networkId destKey
 
 genesisInitialFunds :: forall era. IsShelleyBasedEra era
   => NetworkId
-  -> ShelleyGenesis StandardShelley
+  -> ShelleyGenesis
   -> [(AddressInEra era, Lovelace)]
 genesisInitialFunds networkId g
  = [ ( shelleyAddressInEra $ makeShelleyAddress networkId (fromShelleyPaymentCredential pcr) (fromShelleyStakeReference stref)
@@ -56,7 +66,7 @@ genesisInitialFunds networkId g
 
 genesisInitialFundForKey :: forall era. IsShelleyBasedEra era
   => NetworkId
-  -> ShelleyGenesis StandardShelley
+  -> ShelleyGenesis
   -> SigningKey PaymentKey
   -> Maybe (AddressInEra era, Lovelace)
 genesisInitialFundForKey networkId genesis key
@@ -64,29 +74,32 @@ genesisInitialFundForKey networkId genesis key
  where
   isTxOutForKey = (keyAddress networkId key ==)
 
+genesisTxInput ::
+     NetworkId
+  -> SigningKey PaymentKey
+  -> TxIn
+genesisTxInput networkId
+ = genesisUTxOPseudoTxIn networkId
+    . verificationKeyHash
+    . getVerificationKey
+    . castKey
+
 genesisExpenditure ::
      IsShelleyBasedEra era
   => NetworkId
   -> SigningKey PaymentKey
   -> AddressInEra era
-  -> Lovelace
+  -> TxOutValue era
   -> Lovelace
   -> SlotNo
   -> SigningKey PaymentKey
   -> Either TxGenError (Tx era, Fund)
-genesisExpenditure networkId inputKey addr coin fee ttl outputKey
+genesisExpenditure networkId inputKey addr value fee ttl outputKey
   = second (\tx -> (tx, Fund $ InAnyCardanoEra cardanoEra $ fund tx)) eTx
  where
-  eTx = mkGenesisTransaction (castKey inputKey) ttl fee [ pseudoTxIn ] [ txout ]
-
-  value = mkTxOutValueAdaOnly $ coin - fee
-  txout = TxOut addr value TxOutDatumNone ReferenceScriptNone
-
-  pseudoTxIn = genesisUTxOPseudoTxIn networkId
-                 (verificationKeyHash $ getVerificationKey $ castKey inputKey)
-
-  castKey :: SigningKey PaymentKey -> SigningKey GenesisUTxOKey
-  castKey (PaymentSigningKey skey) = GenesisUTxOSigningKey skey
+  eTx         = mkGenesisTransaction (castKey inputKey) ttl fee [pseudoTxIn] [txout]
+  txout       = TxOut addr value TxOutDatumNone ReferenceScriptNone
+  pseudoTxIn  = genesisTxInput networkId inputKey
 
   fund tx = FundInEra {
     _fundTxIn = TxIn (getTxId $ getTxBody tx) (TxIx 0)
@@ -128,3 +141,6 @@ mkGenesisTransaction key ttl fee txins txouts
     , txReturnCollateral = TxReturnCollateralNone
     , txTotalCollateral = TxTotalCollateralNone
     }
+
+castKey :: SigningKey PaymentKey -> SigningKey GenesisUTxOKey
+castKey (PaymentSigningKey skey) = GenesisUTxOSigningKey skey
