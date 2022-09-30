@@ -439,7 +439,7 @@ The workbench services are available only inside the workbench shell.
 Using Cabal
 ----
 
-By default, all binaries originating in the ``cardano-node`` repository are available to ``cabal build`` and ``cabal run``, unless the workbench was entered using one of the pure ``*nix`` modes.  Note that in all cases, the dependencies for the workbench are supplied though Nix and have been built/tested on CI.
+By default, all binaries originating in the ``cardano-node`` repository are available to ``cabal build`` and ``cabal run``, unless the workbench was entered using one of the pure ``*nix`` modes.  Note that in all cases, the dependencies for the workbench are supplied through Nix and have been built/tested on CI.
 
 **Dependency localisation** -or- *Cabal&Nix for painless cross-repository work*
 ----
@@ -485,7 +485,7 @@ Without further ado (**NOTE**: *the order of steps is important!*):
                 ../ouroboros-network/ouroboros-consensus-shelley
                 ../ouroboros-network/ouroboros-consensus-cardano
 
-7. The two packages have now became **local** -- when you try ``cabal build exe:cardano-node`` now, you'll see that Cabal starts to build these dependencies you just localised.  Hacking time!
+7. The two packages have now become **local** -- when you try ``cabal build exe:cardano-node`` now, you'll see that Cabal starts to build these dependencies you just localised.  Hacking time!
 
 Hoogle
 ----
