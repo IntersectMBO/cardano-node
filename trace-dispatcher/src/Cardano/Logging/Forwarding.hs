@@ -59,7 +59,7 @@ initForwarding :: forall m. (MonadIO m)
   => IOManager
   -> TraceConfig
   -> NetworkMagic
-  -> EKG.Store
+  -> Maybe EKG.Store
   -> Maybe (FilePath, ForwarderMode)
   -> m (ForwardSink TraceObject, DataPointStore)
 initForwarding iomgr config magic ekgStore tracerSocketMode = liftIO $ do
@@ -117,7 +117,7 @@ launchForwarders
   -> EKGF.ForwarderConfiguration
   -> TF.ForwarderConfiguration TraceObject
   -> DPF.ForwarderConfiguration
-  -> EKG.Store
+  -> Maybe EKG.Store
   -> ForwardSink TraceObject
   -> DataPointStore
   -> Maybe (FilePath, ForwarderMode)
@@ -153,7 +153,7 @@ launchForwardersViaLocalSocket
   -> TF.ForwarderConfiguration TraceObject
   -> DPF.ForwarderConfiguration
   -> ForwardSink TraceObject
-  -> EKG.Store
+  -> Maybe EKG.Store
   -> DataPointStore
   -> FilePath
   -> ForwarderMode
@@ -175,7 +175,7 @@ doConnectToAcceptor
   -> TF.ForwarderConfiguration TraceObject
   -> DPF.ForwarderConfiguration
   -> ForwardSink TraceObject
-  -> EKG.Store
+  -> Maybe EKG.Store
   -> DataPointStore
   -> IO ()
 doConnectToAcceptor magic snocket address timeLimits
@@ -190,9 +190,9 @@ doConnectToAcceptor magic snocket address timeLimits
     (simpleSingletonVersions
        ForwardingV_1
        (ForwardingVersionData magic)
-       (forwarderApp [ (forwardEKGMetrics       ekgConfig ekgStore, 1)
-                     , (forwardTraceObjectsInit tfConfig  sink,     2)
-                     , (forwardDataPointsInit   dpfConfig dpStore,  3)
+       (forwarderApp [ (forwardEKGMetricsRun,                      1)
+                     , (forwardTraceObjectsInit tfConfig  sink,    2)
+                     , (forwardDataPointsInit   dpfConfig dpStore, 3)
                      ]
        )
     )
@@ -212,6 +212,11 @@ doConnectToAcceptor magic snocket address timeLimits
       | (prot, num) <- protocols
       ]
 
+  forwardEKGMetricsRun =
+    case ekgStore of
+      Just store -> forwardEKGMetrics ekgConfig store
+      Nothing -> forwardEKGMetricsDummy
+
 doListenToAcceptor
   :: Ord addr
   => NetworkMagic
@@ -222,7 +227,7 @@ doListenToAcceptor
   -> TF.ForwarderConfiguration TraceObject
   -> DPF.ForwarderConfiguration
   -> ForwardSink TraceObject
-  -> EKG.Store
+  -> Maybe EKG.Store
   -> DataPointStore
   -> IO ()
 doListenToAcceptor magic snocket address timeLimits
@@ -243,9 +248,9 @@ doListenToAcceptor magic snocket address timeLimits
                ForwardingV_1
                (ForwardingVersionData magic)
                (SomeResponderApplication $
-                 forwarderApp [ (forwardEKGMetricsResp   ekgConfig ekgStore, 1)
-                              , (forwardTraceObjectsResp tfConfig  sink,     2)
-                              , (forwardDataPointsResp   dpfConfig dpStore,  3)
+                 forwarderApp [ (forwardEKGMetricsRespRun,                  1)
+                              , (forwardTraceObjectsResp tfConfig  sink,    2)
+                              , (forwardDataPointsResp   dpfConfig dpStore, 3)
                               ]
                )
             )
@@ -265,3 +270,8 @@ doListenToAcceptor magic snocket address timeLimits
          }
       | (prot, num) <- protocols
       ]
+
+  forwardEKGMetricsRespRun =
+    case ekgStore of
+      Just store -> forwardEKGMetricsResp ekgConfig store
+      Nothing -> forwardEKGMetricsRespDummy

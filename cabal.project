@@ -314,8 +314,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ekg-forward
-  tag: 297cd9db5074339a2fb2e5ae7d0780debb670c63
-  --sha256: 1zcwry3y5rmd9lgxy89wsb3k4kpffqji35dc7ghzbz603y1gy24g
+  tag: 8a21e6c3fd9b306e07e0e0f39047032c97789b38
+  --sha256: 170vgf94g6fhc2p2cx58gqy9520gs39ddl7q4lkqyr8h33p9wrvq
 
 source-repository-package
   type: git
