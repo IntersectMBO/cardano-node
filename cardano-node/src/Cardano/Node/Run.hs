@@ -248,7 +248,6 @@ handleNodeWithTracers cmdPc nc p networkMagic runP = do
                 setNodeKernel nodeKernelData nk
                 traceWith (nodeStateTracer tracers) NodeKernelOnline)
             `finally` do
-              putStrLn ("MAIN THREAD FAILED" :: String)
               forM_ eLoggingLayer
                 shutdownLoggingLayer
 
