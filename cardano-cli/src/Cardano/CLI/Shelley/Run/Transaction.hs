@@ -1759,7 +1759,7 @@ acceptKeyWitnessCDDLSerialisation err =
     firstExceptT (ShelleyTxCmdTextEnvCddlError tEnvErr)
           $ newExceptT $ readFileTextEnvelopeCddlAnyOf teTypes fp
 
-  teTypes = [ FromCDDLWitness "TxWitness Shelley" CddlWitness
+  teTypes = [ FromCDDLWitness "TxWitness ShelleyEra" CddlWitness
             , FromCDDLWitness "TxWitness AllegraEra" CddlWitness
             , FromCDDLWitness "TxWitness MaryEra" CddlWitness
             , FromCDDLWitness "TxWitness AlonzoEra" CddlWitness
