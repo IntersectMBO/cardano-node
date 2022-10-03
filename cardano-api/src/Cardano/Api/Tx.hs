@@ -439,7 +439,7 @@ instance IsCardanoEra era => HasTextEnvelope (KeyWitness era) where
     textEnvelopeType _ =
       case cardanoEra :: CardanoEra era of
         ByronEra   -> "TxWitnessByron"
-        ShelleyEra -> "TxWitnessShelley"
+        ShelleyEra -> "TxWitness ShelleyEra"
         AllegraEra -> "TxWitness AllegraEra"
         MaryEra    -> "TxWitness MaryEra"
         AlonzoEra  -> "TxWitness AlonzoEra"
