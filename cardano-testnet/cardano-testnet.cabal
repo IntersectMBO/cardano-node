@@ -34,7 +34,6 @@ library
                       , cardano-api
                       , cardano-cli
                       , cardano-node
-                      , cardano-slotting
                       , containers
                       , directory
                       , exceptions
