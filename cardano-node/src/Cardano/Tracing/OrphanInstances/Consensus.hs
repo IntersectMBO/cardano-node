@@ -48,8 +48,8 @@ import           Ouroboros.Consensus.Mempool.API (MempoolSize (..), TraceEventMe
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent (..))
-import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
-                   (BlockingType (..), TraceChainSyncServerEvent (..))
+import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server (BlockingType (..),
+                   TraceChainSyncServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
 import           Ouroboros.Consensus.Node.Run (RunNode, estimateBlockSize)
@@ -297,7 +297,7 @@ instance ConvertRawHash blk
   trTransformer = trStructured
 
 
-instance ( ToObject (ApplyTxErr blk), Show (ApplyTxErr blk), ToObject (GenTx blk),
+instance ( ToObject (ApplyTxErr blk), ToObject (GenTx blk),
            ToJSON (GenTxId blk), LedgerSupportsMempool blk)
       => Transformable Text IO (TraceEventMempool blk) where
   trTransformer = trStructured
@@ -319,7 +319,6 @@ showT = pack . show
 instance ( tx ~ GenTx blk
          , HasTxId tx
          , RunNode blk
-         , Show (TxId tx)
          , ToObject (LedgerError blk)
          , ToObject (OtherHeaderEnvelopeError blk)
          , ToObject (ValidationErr (BlockProtocol blk))
@@ -1262,7 +1261,7 @@ instance ConvertRawHash blk
         ]
         <> [ "risingEdge" .= True | RisingEdge <- [enclosing] ]
 
-instance ( Show (ApplyTxErr blk), ToObject (ApplyTxErr blk), ToObject (GenTx blk),
+instance ( ToObject (ApplyTxErr blk), ToObject (GenTx blk),
            ToJSON (GenTxId blk), LedgerSupportsMempool blk
          ) => ToObject (TraceEventMempool blk) where
   toObject verb (TraceMempoolAddedTx tx _mpSzBefore mpSzAfter) =
@@ -1306,11 +1305,7 @@ instance HasTextFormatter () where
 instance Transformable Text IO () where
   trTransformer = trStructuredText
 
-instance ( tx ~ GenTx blk
-         , ConvertRawHash blk
-         , HasTxId tx
-         , RunNode blk
-         , Show (TxId tx)
+instance ( RunNode blk
          , ToObject (LedgerError blk)
          , ToObject (OtherHeaderEnvelopeError blk)
          , ToObject (ValidationErr (BlockProtocol blk))

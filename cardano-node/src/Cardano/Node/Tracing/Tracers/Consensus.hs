@@ -942,8 +942,7 @@ namesForMempool TraceMempoolRemoveTxs {}          = ["RemoveTxs"]
 namesForMempool TraceMempoolManuallyRemovedTxs {} = ["ManuallyRemovedTxs"]
 
 instance
-  ( Show (ApplyTxErr blk)
-  , LogFormatting (ApplyTxErr blk)
+  ( LogFormatting (ApplyTxErr blk)
   , LogFormatting (GenTx blk)
   , ToJSON (GenTxId blk)
   , LedgerSupportsMempool blk
