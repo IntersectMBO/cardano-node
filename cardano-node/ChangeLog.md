@@ -1,10 +1,16 @@
 # Changelog for cardano-node
 
-## vNext
+## 1.35.4 -- October 2022
 
 ### node changes
 
-None
+- Update plutus to version 1.0.0.1 to enable SECP at protocol version 8
+- Update cardano-crypto-class to version 2.0.0.0.2 to add SECP crypto primitives
+- Update block header advertised version in babbage to 8.0
+
+### plutus changes
+
+- enables SECP primitive for plutus smart contracts at protocol version 8 (intra-era hard fork)
 
 ### consensus changes
 
@@ -12,13 +18,7 @@ None
 
 ### network changes
 
-- New P2P topology file format. See [issue #4563][#4563] or the [config
-  files][understanding-config-files] documentation. The old P2P topology
-  format will be supported for next two major releases of the node (the last
-  supported major version will be `1.37`).
-
-[#4563]: https://github.com/input-output-hk/cardano-node/issues/4563
-[understanding-config-files]: https://github.com/input-output-hk/cardano-node/blob/master/doc/getting-started/understanding-config-files.md
+None
 
 ### ledger changes
 

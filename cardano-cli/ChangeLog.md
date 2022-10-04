@@ -2,14 +2,16 @@
 
 ## vNext
 
-### Features
-
-- Default to the ledger's CDDL format for transaction body creation by removing flags `--cddl-format` and `--cli-format` from `build` and `build-raw` ([PR 4303](https://github.com/input-output-hk/cardano-node/pull/4303))
-
-- Add `query tx-mempool` ([PR 4276](https://github.com/input-output-hk/cardano-node/pull/4276))
-
 ### Bugs
 
+## 1.35.4 -- October 2022
+
+- Improve memory efficiency of query ledger-state command ([PR4205](https://github.com/input-output-hk/cardano-node/pull/4205))
+- Update transaction build command to automatically calculate total and return collateral values([PR4198](https://github.com/input-output-hk/cardano-node/pull/4198))
+- Allow reading and writing text envelope files from pipes([PR4384](https://github.com/input-output-hk/cardano-node/pull/4384))
+- Update cardano transaction view command to render inline datums and reference inputs ([PR4089](https://github.com/input-output-hk/cardano-node/pull/4089))
+- Switch default era in cardano-cli from Alonzo to Babbage ([PR4485](https://github.com/input-output-hk/cardano-node/pull/4485))
+- Default to the ledger's CDDL format for transaction body creation by removing flags `--cddl-format` and `--cli-format` from `build` and `build-raw` ([PR 4303](https://github.com/input-output-hk/cardano-node/pull/4303))
 - Allow reading signing keys from a pipe ([PR 4342](https://github.com/input-output-hk/cardano-node/pull/4342))
 
 ## 1.35.3 -- August 2022
