@@ -42,8 +42,8 @@ import           Text.Show
 import           Cardano.Node.Queries (ConvertTxId)
 import           Cardano.Node.Tracing.Render (renderHeaderHash, renderTxIdForDetails)
 
-import           Ouroboros.Consensus.Block (ConvertRawHash, GetHeader, HasHeader, Header,
-                   StandardHash, getHeader)
+import           Ouroboros.Consensus.Block (ConvertRawHash, GetHeader, Header, StandardHash,
+                   getHeader)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, GenTxId, HasTxId, HasTxs,
                    LedgerSupportsMempool, extractTxs, txId)
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
@@ -189,8 +189,6 @@ namesForTBlockFetch (BlockFetch.TraceLabelPeer _ v) = namesTBlockFetch v
     namesTBlockFetch'' MsgClientDone {}   = ["ClientDone"]
 
 instance ( ConvertTxId blk
-         , ConvertRawHash blk
-         , HasHeader blk
          , GetHeader blk
          , HasTxId (GenTx blk)
          , SerialiseNodeToNodeConstraints blk
