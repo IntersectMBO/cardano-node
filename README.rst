@@ -574,3 +574,4 @@ The API documentation is published `here <https://input-output-hk.github.io/card
 The documentation is built with each push, but is only published from ``master`` branch.  In order to
 test if the documentation is working, build the documentation locally with ``./scripts/haddocs.sh`` and
 open ``haddocks/index.html`` in the browser.
+ 
