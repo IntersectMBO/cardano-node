@@ -1452,7 +1452,7 @@ docInboundGovernorRemote =
     addDocumentedNamespace  [] (docInboundGovernor False)
 
 docInboundGovernor :: Bool -> Documented (InboundGovernorTrace peerAddr)
-docInboundGovernor isLocal = Documented
+docInboundGovernor _isLocal = Documented
   [  DocMsg
       ["NewConnection"]
       []

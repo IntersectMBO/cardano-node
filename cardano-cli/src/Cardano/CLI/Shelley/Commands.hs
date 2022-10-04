@@ -51,8 +51,6 @@ import           Cardano.Api.Shelley
 
 import           Data.Text (Text)
 
-import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
-
 import           Cardano.CLI.Shelley.Key (PaymentVerifier, StakeVerifier, VerificationKeyOrFile,
                    VerificationKeyOrHashOrFile, VerificationKeyTextOrFile)
 import           Cardano.CLI.Types

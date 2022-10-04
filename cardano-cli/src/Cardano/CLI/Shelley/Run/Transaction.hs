@@ -53,10 +53,6 @@ import           Cardano.CLI.Shelley.Script
 import           Cardano.CLI.Types
 
 import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
-import qualified Ouroboros.Consensus.Protocol.TPraos as TPraos
-import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
-import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
 
 {- HLINT ignore "Use let" -}

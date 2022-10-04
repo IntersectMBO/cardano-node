@@ -91,12 +91,11 @@ import           Cardano.Ledger.Shelley.Scripts ()
 import           Cardano.Slotting.EpochInfo (EpochInfo (..), epochInfoSlotToUTCTime, hoistEpochInfo)
 
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime (..),
-                   SystemStart (..), toRelativeTime)
+                   toRelativeTime)
 import           Ouroboros.Consensus.Cardano.Block as Consensus (EraMismatch (..))
 -- import qualified Ouroboros.Consensus.Protocol.Praos as Praos
 import           Ouroboros.Consensus.Protocol.TPraos
 import           Ouroboros.Network.Block (Serialised (..))
-import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
@@ -613,7 +612,7 @@ runQueryPoolParams
   -> NetworkId
   -> Hash StakePoolKey
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryPoolState (AnyConsensusModeParams cModeParams) network poolIds = do
+runQueryPoolParams (AnyConsensusModeParams cModeParams) network poolid = do
   SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr
                            $ newExceptT readEnvSocketPath
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath

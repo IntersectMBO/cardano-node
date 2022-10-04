@@ -35,8 +35,8 @@ import           Options.Applicative hiding (help, str)
 import qualified Options.Applicative as Opt
 import qualified Options.Applicative.Help as H
 import           Prettyprinter (line, pretty)
-import           Text.Parsec ((<?>))
 import qualified Text.Parsec as Parsec
+import           Text.Parsec ((<?>))
 import qualified Text.Parsec.Error as Parsec
 import qualified Text.Parsec.Language as Parsec
 import qualified Text.Parsec.String as Parsec
@@ -44,17 +44,16 @@ import qualified Text.Parsec.Token as Parsec
 
 import qualified Cardano.Ledger.BaseTypes as Shelley
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
-import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
 
+import           Cardano.Chain.Common (BlockCount (BlockCount))
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (InputFormat (..), PaymentVerifier (..),
                    StakeVerifier (..), VerificationKeyOrFile (..), VerificationKeyOrHashOrFile (..),
                    VerificationKeyTextOrFile (..), deserialiseInput, renderInputDecodeError)
 import           Cardano.CLI.Types
-import           Cardano.Chain.Common (BlockCount (BlockCount))
 
 {- HLINT ignore "Use <$>" -}
 

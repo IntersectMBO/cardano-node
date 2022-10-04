@@ -15,7 +15,6 @@ import           Prelude
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
-import           Cardano.Slotting.Time (SystemStart (..))
 import           Data.Aeson
 import qualified Data.Aeson.Key as Aeson
 import qualified Data.List as List
