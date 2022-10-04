@@ -40,7 +40,6 @@ executable cardano-node-chairman
                         "-with-rtsopts=-T"
   build-depends:        cardano-api
                       , cardano-git-rev
-                      , cardano-ledger-byron
                       , cardano-node
                       , cardano-prelude
                       , containers

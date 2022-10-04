@@ -171,7 +171,6 @@ test-suite cardano-cli-test
 
   build-depends:        aeson
                       , bech32            >= 1.1.0
-                      , bytestring
                       , base16-bytestring
                       , cardano-api
                       , cardano-api:gen
