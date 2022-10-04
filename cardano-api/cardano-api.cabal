@@ -201,10 +201,8 @@ test-suite cardano-api-test
   type:                 exitcode-stdio-1.0
 
   build-depends:        aeson             >= 1.5.6.0
-                      , bytestring
                       , cardano-api
                       , cardano-api:gen
-                      , cardano-binary
                       , cardano-data
                       , cardano-crypto
                       , cardano-crypto-class
