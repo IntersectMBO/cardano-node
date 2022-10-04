@@ -129,7 +129,7 @@ in pkgs.commonLib.defServiceModule
           User = "cardano-node";
           Group = "cardano-node";
           Restart = "no";
-          RuntimeDirectory = localNodeConf.runtimeDir;
-          WorkingDirectory = localNodeConf.stateDir;
+          RuntimeDirectory = localNodeConf.runtimeDir 0;
+          WorkingDirectory = localNodeConf.stateDir 0;
         };
     })
