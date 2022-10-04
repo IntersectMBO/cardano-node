@@ -292,7 +292,7 @@ instance IsCardanoEra era => ToJSON (UTxO era) where
   toJSON (UTxO m) = toJSON m
   toEncoding (UTxO m) = toEncoding m
 
-instance (IsCardanoEra era, IsShelleyBasedEra era, FromJSON (TxOut CtxUTxO era))
+instance (IsShelleyBasedEra era, FromJSON (TxOut CtxUTxO era))
   => FromJSON (UTxO era) where
     parseJSON = withObject "UTxO" $ \hm -> do
       let l = HMS.toList $ KeyMap.toHashMapText hm
@@ -381,7 +381,6 @@ newtype CurrentEpochState era = CurrentEpochState (Shelley.EpochState (ShelleyLe
 
 decodeCurrentEpochState
   :: forall era. Ledger.Era (ShelleyLedgerEra era)
-  => Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Credential 'Shelley.Staking (Ledger.Crypto (ShelleyLedgerEra era)))
   => FromSharedCBOR (Core.TxOut (ShelleyLedgerEra era))
   => Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Credential 'Shelley.Staking (Ledger.Crypto (ShelleyLedgerEra era)))
   => FromCBOR (Core.PParams (ShelleyLedgerEra era))
