@@ -95,15 +95,22 @@ data TxGenPlutusParams =
 data TxGenError where
   ApiError        :: Cardano.Api.Error e => !e -> TxGenError
   ProtocolError   :: Cardano.Api.Error e => !e -> TxGenError
+  PlutusError     :: Show e => e -> TxGenError
   TxGenError      :: !String -> TxGenError
 
 deriving instance Show TxGenError
+
+instance Semigroup TxGenError where
+  TxGenError a <> TxGenError b  = TxGenError (a <> b)
+  TxGenError a <> b             = TxGenError (a <> show b)
+  a            <> TxGenError b  = TxGenError (show a <> b)
+  a            <> b             = TxGenError (show a <> show b)
 
 instance Error TxGenError where
   displayError = \case
     ApiError e        -> displayError e
     ProtocolError e   -> displayError e
-    TxGenError _      -> ""
+    _                 -> ""
 
 {-
 Note [Tx additional size]
