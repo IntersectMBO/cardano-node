@@ -23,6 +23,7 @@ import           Cardano.Benchmarking.Script.Setters
 import           Cardano.Benchmarking.Script.Store (KeyName, Name (..), WalletName)
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.TxGenerator.Setup.NixService
+import           Cardano.TxGenerator.Types (TxGenTxParams (..))
 
 data CompileError where
   SomeCompilerError :: String -> CompileError
@@ -67,7 +68,6 @@ initConstants :: Compiler ()
 initConstants = do
   setN TLocalSocket          _nix_localNodeSocketPath
   setConst  TTTL             1000000
-  setN      TTxParams        txGenTxParams
   emit $ DefineSigningKey keyNameTxGenFunds keyTxGenFunds
   emit $ DefineSigningKey keyNameCollaterals keyCollaterals
   emit $ DefineSigningKey keyNameSplitPhase keySplitPhase
@@ -85,9 +85,9 @@ importGenesisFunds = do
   logMsg "Importing Genesis Fund."
   wallet <- newWallet "genesis_wallet"
   era <- askNixOption _nix_era
-  fee <- askNixOption _nix_tx_fee
+  txParams <- askNixOption txGenTxParams
   cmd1 (ReadSigningKey keyNameGenesisInputFund) _nix_sigKey
-  emit $ Submit era LocalSocket $ SecureGenesis fee wallet keyNameGenesisInputFund keyNameTxGenFunds
+  emit $ Submit era LocalSocket txParams $ SecureGenesis wallet keyNameGenesisInputFund keyNameTxGenFunds
   delay
   logMsg "Importing Genesis Fund. Done."
   return wallet
@@ -95,18 +95,18 @@ importGenesisFunds = do
 addCollaterals :: SrcWallet -> Compiler (Maybe WalletName)
 addCollaterals src = do
   era <- askNixOption _nix_era
+  txParams <- askNixOption txGenTxParams
   isAnyPlutusMode >>= \case
     False -> return Nothing
     True -> do
       logMsg "Create collaterals."
       safeCollateral <- _safeCollateral <$> evilFeeMagic
       collateralWallet <- newWallet "collateral_wallet"
-      fee <- askNixOption _nix_tx_fee
-      let generator = Split fee src
+      let generator = Split src
                         (PayToAddr keyNameCollaterals collateralWallet)
                         (PayToAddr keyNameTxGenFunds src)
                         [ safeCollateral ]
-      emit $ Submit era LocalSocket generator
+      emit $ Submit era LocalSocket txParams generator
       logMsg "Create collaterals. Done."
       return $ Just collateralWallet
 
@@ -114,26 +114,26 @@ splittingPhase :: SrcWallet -> Compiler DstWallet
 splittingPhase srcWallet = do
   tx_count <- askNixOption _nix_tx_count
   inputs_per_tx <- askNixOption _nix_inputs_per_tx
-  tx_fee <- askNixOption _nix_tx_fee
   era <- askNixOption _nix_era
+  txParams <- askNixOption txGenTxParams
   minValuePerInput <- _minValuePerInput <$> evilFeeMagic
   finalDest <- newWallet "final_split_wallet"
-  splitSteps <- splitSequenceWalletNames srcWallet finalDest $ unfoldSplitSequence tx_fee minValuePerInput (tx_count * inputs_per_tx)
+  splitSteps <- splitSequenceWalletNames srcWallet finalDest $
+    unfoldSplitSequence (txParamFee txParams) minValuePerInput (tx_count * inputs_per_tx)
   isPlutus <- isAnyPlutusMode
-  forM_ (init splitSteps) $ createChange False False era
-  createChange True isPlutus era $ last splitSteps
+  forM_ (init splitSteps) $ createChange txParams False False era
+  createChange txParams True isPlutus era $ last splitSteps
   return finalDest
  where
-  createChange :: Bool -> Bool -> AnyCardanoEra -> (SrcWallet, DstWallet, Split) -> Compiler ()
-  createChange isLastStep isPlutus era (src, dst, split) = do
+  createChange :: TxGenTxParams -> Bool -> Bool -> AnyCardanoEra -> (SrcWallet, DstWallet, Split) -> Compiler ()
+  createChange txParams isLastStep isPlutus era (src, dst, split) = do
     logMsg $ Text.pack $ "Splitting step: " ++ show split
-    tx_fee <- askNixOption _nix_tx_fee
     let valuePayMode = PayToAddr (if isLastStep then keyNameSplitPhase else keyNameBenchmarkInputs) dst
     payMode <- if isPlutus then plutusPayMode dst else return valuePayMode
     let generator = case split of
-          SplitWithChange lovelace count -> Split tx_fee src payMode (PayToAddr keyNameTxGenFunds src) $ replicate count lovelace
-          FullSplits txCount -> Take txCount $ Cycle $ SplitN tx_fee src payMode maxOutputsPerTx
-    emit $ Submit era LocalSocket generator
+          SplitWithChange lovelace count -> Split src payMode (PayToAddr keyNameTxGenFunds src) $ replicate count lovelace
+          FullSplits txCount -> Take txCount $ Cycle $ SplitN src payMode maxOutputsPerTx
+    emit $ Submit era LocalSocket txParams generator
     delay
     logMsg "Splitting step: Done"
 
@@ -189,18 +189,17 @@ benchmarkingPhase wallet collateralWallet = do
   tps <- askNixOption _nix_tps
   era <- askNixOption _nix_era
   txCount <- askNixOption _nix_tx_count
-  fee <- askNixOption _nix_tx_fee
   inputs <- askNixOption _nix_inputs_per_tx
   outputs <- askNixOption _nix_outputs_per_tx
-  metadataSize <- askNixOption _nix_add_tx_size
+  txParams <- askNixOption txGenTxParams
   doneWallet <- newWallet "done_wallet"
   let
     payMode = PayToAddr keyNameBenchmarkDone doneWallet
     submitMode = if debugMode
         then LocalSocket
         else Benchmark targetNodes (ThreadName "tx-submit-benchmark") tps txCount
-    generator = Take txCount $ Cycle $ NtoM fee wallet payMode inputs outputs (Just metadataSize) collateralWallet
-  emit $ Submit era submitMode generator
+    generator = Take txCount $ Cycle $ NtoM wallet payMode inputs outputs (Just $ txParamAddTxSize txParams) collateralWallet
+  emit $ Submit era submitMode txParams generator
   unless debugMode $ do
     emit $ WaitBenchmark $ ThreadName "tx-submit-benchmark"
   return doneWallet

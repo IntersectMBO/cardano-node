@@ -21,7 +21,7 @@ action a = case a of
   DefineSigningKey name descr -> defineSigningKey name descr
   AddFund era wallet txIn lovelace keyName -> addFund era wallet txIn lovelace keyName
   Delay t -> delay t
-  Submit era submitMode generator -> submitAction era submitMode generator
+  Submit era submitMode txParams generator -> submitAction era submitMode generator txParams
   WaitBenchmark thread -> waitBenchmark thread
   CancelBenchmark thread -> cancelBenchmark thread
   WaitForEra era -> waitForEra era

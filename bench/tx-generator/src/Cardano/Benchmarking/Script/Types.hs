@@ -22,7 +22,7 @@ import           Cardano.Api (AnyCardanoEra, ExecutionUnits, Lovelace, ScriptDat
 import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
 import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
 
-import           Cardano.TxGenerator.Types (NumberOfInputsPerTx, NumberOfOutputsPerTx, NumberOfTxs, TPSRate)
+import           Cardano.TxGenerator.Types
 
 import           Cardano.Benchmarking.Script.Env
 import           Cardano.Benchmarking.Script.Store
@@ -37,7 +37,7 @@ data Action where
   DefineSigningKey   :: !KeyName -> !TextEnvelope -> Action
   AddFund            :: !AnyCardanoEra -> !WalletName -> !TxIn -> !Lovelace -> !KeyName -> Action
   WaitBenchmark      :: !ThreadName -> Action
-  Submit             :: !AnyCardanoEra -> !SubmitMode -> !Generator -> Action
+  Submit             :: !AnyCardanoEra -> !SubmitMode -> !TxGenTxParams -> !Generator -> Action
   CancelBenchmark    :: !ThreadName -> Action
   Reserved           :: [String] -> Action
   WaitForEra         :: !AnyCardanoEra -> Action
@@ -47,10 +47,10 @@ data Action where
 deriving instance Generic Action
 
 data Generator where
-  SecureGenesis :: !Lovelace -> !WalletName -> !KeyName -> !KeyName -> Generator -- 0 to N
-  Split :: !Lovelace -> !WalletName -> !PayMode -> !PayMode -> [ Lovelace ] -> Generator
-  SplitN :: !Lovelace -> !WalletName -> !PayMode -> !Int -> Generator            -- 1 to N
-  NtoM  :: !Lovelace -> !WalletName -> !PayMode -> !NumberOfInputsPerTx -> !NumberOfOutputsPerTx
+  SecureGenesis :: !WalletName -> !KeyName -> !KeyName -> Generator -- 0 to N
+  Split :: !WalletName -> !PayMode -> !PayMode -> [ Lovelace ] -> Generator
+  SplitN :: !WalletName -> !PayMode -> !Int -> Generator            -- 1 to N
+  NtoM  :: !WalletName -> !PayMode -> !NumberOfInputsPerTx -> !NumberOfOutputsPerTx
         -> !(Maybe Int) -> Maybe WalletName -> Generator
   Sequence :: [Generator] -> Generator
   Cycle :: !Generator -> Generator

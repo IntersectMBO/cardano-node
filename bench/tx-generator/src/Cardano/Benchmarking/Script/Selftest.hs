@@ -21,6 +21,8 @@ import           Cardano.Benchmarking.Script.Store
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Tracer (initNullTracers)
 
+import           Cardano.TxGenerator.Types
+
 import           Paths_tx_generator
 
 runSelftest :: IOManager -> Maybe FilePath -> IO (Either Script.Error ())
@@ -46,8 +48,8 @@ testScript protocolFile submitMode =
   , InitWallet genesisWallet
   , InitWallet splitWallet1
   , InitWallet splitWallet2
-  , InitWallet splitWallet3  
-  , InitWallet doneWallet  
+  , InitWallet splitWallet3
+  , InitWallet doneWallet
   , DefineSigningKey key
     (TextEnvelope { teType = TextEnvelopeType "GenesisUTxOSigningKey_ed25519"
                   , teDescription = fromString "Genesis Initial UTxO Signing Key"
@@ -64,19 +66,19 @@ testScript protocolFile submitMode =
   , createChange splitWallet3 splitWallet3 10 30
   , createChange splitWallet3 splitWallet3 300 30
 -}
-  
-  , Submit era submitMode $ Take 4000 $ Cycle
-      $ NtoM fee splitWallet3 (PayToAddr key doneWallet) 2 2 Nothing Nothing
+
+  , Submit era submitMode txParams $ Take 4000 $ Cycle
+      $ NtoM splitWallet3 (PayToAddr key doneWallet) 2 2 Nothing Nothing
   ]
-  where    
+  where
     era = AnyCardanoEra AllegraEra
-    fee = 1000000
+    txParams = defaultTxGenTxParams {txParamFee = 1000000}
     genesisWallet = WalletName "genesisWallet"
     splitWallet1 = WalletName "SplitWallet-1"
     splitWallet2 = WalletName "SplitWallet-2"
-    splitWallet3 = WalletName "SplitWallet-3"    
+    splitWallet3 = WalletName "SplitWallet-3"
     doneWallet = WalletName "doneWallet"
     key = KeyName "pass-partout"
     createChange :: WalletName -> WalletName -> Int -> Int -> Action
     createChange src dest txCount outputs
-      = Submit era submitMode $ Take txCount $ Cycle $ SplitN fee src (PayToAddr key dest) outputs
+      = Submit era submitMode txParams $ Take txCount $ Cycle $ SplitN src (PayToAddr key dest) outputs
