@@ -171,7 +171,7 @@ data MachPerf f
     , sLgrViewCDF           :: !(CDF f NominalDiffTime)
     , sLeadingCDF           :: !(CDF f NominalDiffTime)
     , sForgedCDF            :: !(CDF f NominalDiffTime)
-    , sBlocklessCDF         :: !(CDF f Word64)
+    , sBlockGapCDF          :: !(CDF f Word64)
     , sSpanLensCpuCDF       :: !(CDF f Int)
     , sSpanLensCpuEpochCDF  :: !(CDF f Int)
     , sSpanLensCpuRwdCDF    :: !(CDF f Int)
@@ -214,7 +214,7 @@ data SlotStats a
     , slChainDBSnap  :: !Word64
     , slRejectedTx   :: !Word64
     , slBlockNo      :: !BlockNo
-    , slBlockless    :: !Word64
+    , slBlockGap     :: !Word64
     , slStarted      :: !(SMaybe a)
     , slBlkCtx       :: !(SMaybe a)
     , slLgrState     :: !(SMaybe a)
@@ -361,23 +361,23 @@ adoptionCentilesBrief =
 instance RenderCDFs BlockProp p where
   rdFields =
     --  Width LeftPad
-    [ Field 6 0 "fStarted"      (f!!0) "Startd" (DDeltaT bpForgerStarts)        "Started forge loop iteration"
-    , Field 6 0 "fBlkCtx"       (f!!1) "BlkCtx" (DDeltaT bpForgerBlkCtx)        "Acquired block context"
-    , Field 6 0 "fLgrState"     (f!!2) "LgrSta" (DDeltaT bpForgerLgrState)      "Acquired ledger state"
-    , Field 6 0 "fLgrView"      (f!!3) "LgrVie" (DDeltaT bpForgerLgrView)       "Acquired ledger view"
-    , Field 6 0 "fLeading"      (f!!4) "Leadin" (DDeltaT bpForgerLeads)         "Leadership check duration"
-    , Field 6 0 "fForged"       (f!!5) "Forge"  (DDeltaT bpForgerForges)        "Leadership to forged"
-    , Field 6 0 "fAnnounced"    (f!!6) "Announ" (DDeltaT bpForgerAnnouncements) "Forged to announced"
-    , Field 6 0 "fSendStart"    (f!!7) "Sendin" (DDeltaT bpForgerSends)         "Announced to sending"
-    , Field 6 0 "fAdopted"      (f!!8) "Adopt"  (DDeltaT bpForgerAdoptions)     "Announced to self-adopted"
-    , Field 5 0 "pNoticed"      (p!!0) "Notic"  (DDeltaT bpPeerNotices)         "First peer notice"
-    , Field 5 0 "pRequested"    (p!!1) "Reque"  (DDeltaT bpPeerRequests)        "Notice to fetch request"
-    , Field 5 0 "pFetched"      (p!!2) "Fetch"  (DDeltaT bpPeerFetches)         "Fetch duration"
-    , Field 5 0 "pAnnounced"    (p!!3) "Annou"  (DDeltaT bpPeerAnnouncements)   "Fetched to announced"
-    , Field 5 0 "pSendStart"    (p!!4) "Send"   (DDeltaT bpPeerSends)           "Announced to sending"
-    , Field 5 0 "pAdopted"      (p!!5) "Adopt"  (DDeltaT bpPeerAdoptions)       "Announced to adopted"
+    [ Field 4 0 "fStarted"      (f!!0) "Loop" (DDeltaT bpForgerStarts)        "Started forge loop iteration"
+    , Field 4 0 "fBlkCtx"       (f!!1) "BkCt" (DDeltaT bpForgerBlkCtx)        "Acquired block context"
+    , Field 4 0 "fLgrState"     (f!!2) "LgSt" (DDeltaT bpForgerLgrState)      "Acquired ledger state"
+    , Field 4 0 "fLgrView"      (f!!3) "LgVi" (DDeltaT bpForgerLgrView)       "Acquired ledger view"
+    , Field 4 0 "fLeading"      (f!!4) "Lead" (DDeltaT bpForgerLeads)         "Leadership check duration"
+    , Field 4 0 "fForged"       (f!!5) "Forg" (DDeltaT bpForgerForges)        "Leadership to forged"
+    , Field 4 0 "fAnnounced"    (f!!6) "Anno" (DDeltaT bpForgerAnnouncements) "Forged to announced"
+    , Field 4 0 "fSendStart"    (f!!7) "Send" (DDeltaT bpForgerSends)         "Announced to sending"
+    , Field 4 0 "fAdopted"      (f!!8) "Adop" (DDeltaT bpForgerAdoptions)     "Announced to self-adopted"
+    , Field 4 0 "pNoticed"      (p!!0) "Noti" (DDeltaT bpPeerNotices)         "First peer notice"
+    , Field 4 0 "pRequested"    (p!!1) "Requ" (DDeltaT bpPeerRequests)        "Notice to fetch request"
+    , Field 4 0 "pFetched"      (p!!2) "Fetc" (DDeltaT bpPeerFetches)         "Fetch duration"
+    , Field 4 0 "pAnnounced"    (p!!3) "Anno" (DDeltaT bpPeerAnnouncements)   "Fetched to announced"
+    , Field 4 0 "pSendStart"    (p!!4) "Send" (DDeltaT bpPeerSends)           "Announced to sending"
+    , Field 4 0 "pAdopted"      (p!!5) "Adop" (DDeltaT bpPeerAdoptions)       "Announced to adopted"
     ] ++
-    [ Field 5 0 (renderAdoptionCentile ct)
+    [ Field 4 0 (renderAdoptionCentile ct)
                                 (r!!i)
                                        (T.take 4 $ T.pack $ printf "%.04f" centi)
             (DDeltaT ((\(centi', d) ->
@@ -392,9 +392,9 @@ instance RenderCDFs BlockProp p where
     [ Field 9 0 "sizes"         "Size"  "bytes" (DInt    bpSizes) ""
     ]
    where
-     f = nChunksEachOf 9    7 ",-------------------- Forger event Δt: --------------------."
-     p = nChunksEachOf 6    6 ",------- Peer event Δt: -------."
-     r = nChunksEachOf aLen 6 ",---- Slot-rel. Δt to adoption centile: ----."
+     f = nChunksEachOf 9    5 ",-------------------- Forger event Δt: --------------------."
+     p = nChunksEachOf 6    5 ",------- Peer event Δt: -------."
+     r = nChunksEachOf aLen 5 ",---- Slot-rel. Δt to adoption centile: ----."
      aLen = length adoptionCentiles
 
 instance RenderTimeline BlockEvents where
@@ -408,21 +408,21 @@ instance RenderTimeline BlockEvents where
     , Field 6 0 "blockSize"    "size"  "bytes"  (IInt    (bfBlockSize . beForge)) ""
     , Field 5 0 "blockGap"     "block" "gap"    (IDeltaT (bfBlockGap  . beForge)) ""
     , Field 3 0 "forks"         "for"  "-ks"    (IInt    (count bpeIsFork . beErrors)) ""
-    , Field 5 0 "fStarted"      (f!!0) "Start"  (IDeltaT (bfStarted   . beForge)) ""
-    , Field 5 0 "fBlkCtx"       (f!!1) "BlkCtx" (IText (maybe "?" show.bfBlkCtx  .beForge)) ""
-    , Field 5 0 "fLgrState"     (f!!2) "LgrSta" (IText (maybe "?" show.bfLgrState.beForge)) ""
-    , Field 5 0 "fLgrView"      (f!!3) "LgrVie" (IText (maybe "?" show.bfLgrView .beForge)) ""
-    , Field 5 0 "fLeading"      (f!!4) "Lead"   (IDeltaT (bfLeading   . beForge)) ""
-    , Field 5 0 "fForged"       (f!!5) "Forge"  (IDeltaT (bfForged    . beForge)) ""
-    , Field 5 0 "fAnnounced"    (f!!6) "Announ" (IDeltaT (bfAnnounced . beForge)) ""
-    , Field 5 0 "fSendStart"    (f!!7) "Sendin" (IDeltaT (bfSending   . beForge)) ""
-    , Field 5 0 "fAdopted"      (f!!8) "Adopt"  (IDeltaT (bfAdopted   . beForge)) ""
-    , Field 5 0 "noticedVal"    (p!!0) "Notic"  (IDeltaT (af  boNoticed   . valids)) ""
-    , Field 5 0 "requestedVal"  (p!!1) "Requd"  (IDeltaT (af  boRequested . valids)) ""
-    , Field 5 0 "fetchedVal"    (p!!2) "Fetch"  (IDeltaT (af  boFetched   . valids)) ""
-    , Field 5 0 "pAnnouncedVal" (p!!3) "Annou"  (IDeltaT (af' boAnnounced . valids)) ""
-    , Field 5 0 "pSendStartVal" (p!!4) "Send"   (IDeltaT (af' boSending   . valids)) ""
-    , Field 5 0 "pAdoptedVal"   (p!!5) "Adopt"  (IDeltaT (af' boAdopted   . valids)) ""
+    , Field 4 0 "fStarted"      (f!!0) "Start"  (IDeltaT (bfStarted   . beForge)) ""
+    , Field 4 0 "fBlkCtx"       (f!!1) "BlkCtx" (IText (maybe "?" show.bfBlkCtx  .beForge)) ""
+    , Field 4 0 "fLgrState"     (f!!2) "LgrSta" (IText (maybe "?" show.bfLgrState.beForge)) ""
+    , Field 4 0 "fLgrView"      (f!!3) "LgrVie" (IText (maybe "?" show.bfLgrView .beForge)) ""
+    , Field 4 0 "fLeading"      (f!!4) "Lead"   (IDeltaT (bfLeading   . beForge)) ""
+    , Field 4 0 "fForged"       (f!!5) "Forge"  (IDeltaT (bfForged    . beForge)) ""
+    , Field 4 0 "fAnnounced"    (f!!6) "Announ" (IDeltaT (bfAnnounced . beForge)) ""
+    , Field 4 0 "fSendStart"    (f!!7) "Sendin" (IDeltaT (bfSending   . beForge)) ""
+    , Field 4 0 "fAdopted"      (f!!8) "Adopt"  (IDeltaT (bfAdopted   . beForge)) ""
+    , Field 4 0 "noticedVal"    (p!!0) "Notic"  (IDeltaT (af  boNoticed   . valids)) ""
+    , Field 4 0 "requestedVal"  (p!!1) "Requd"  (IDeltaT (af  boRequested . valids)) ""
+    , Field 4 0 "fetchedVal"    (p!!2) "Fetch"  (IDeltaT (af  boFetched   . valids)) ""
+    , Field 4 0 "pAnnouncedVal" (p!!3) "Annou"  (IDeltaT (af' boAnnounced . valids)) ""
+    , Field 4 0 "pSendStartVal" (p!!4) "Send"   (IDeltaT (af' boSending   . valids)) ""
+    , Field 4 0 "pAdoptedVal"   (p!!5) "Adopt"  (IDeltaT (af' boAdopted   . valids)) ""
     , Field 4 0 "pPropag0.5"    (r!!0) "0.5"    (IDeltaT (percSpec 0.5  . bePropagation)) ""
     , Field 4 0 "pPropag0.8"    (r!!1) "0.8"    (IDeltaT (percSpec 0.8  . bePropagation)) ""
     , Field 4 0 "pPropag0.96"   (r!!2) "0.96"   (IDeltaT (percSpec 0.96 . bePropagation)) ""
@@ -441,8 +441,8 @@ instance RenderTimeline BlockEvents where
     ]
    where
      valids = filter isValidBlockObservation . beObservations
-     f = nChunksEachOf 9 6 "------------ Forger event Δt: ------------"
-     p = nChunksEachOf 6 6 "-- Peer event Δt averages: --"
+     f = nChunksEachOf 9 5 "--------- Forger event Δt: ---------"
+     p = nChunksEachOf 6 5 "-- Peer event Δt averages: --"
      r = nChunksEachOf 4 5 "Propagation Δt:"
      m = nChunksEachOf 6 4 "Missing"
      n = nChunksEachOf 2 4 "Negative"
@@ -507,13 +507,13 @@ instance RenderCDFs MachPerf p where
   rdFields =
     --  Width LeftPad
     [ Field 4 0 "missRatio"     "Miss"  "ratio" (DFloat             sMissCDF)       "Leadership checks miss ratio"
-    , Field 5 0 "checkΔ"        (d!!0)  "Start" (DDeltaT            sStartedCDF)  "Forge loop tardiness"
-    , Field 5 0 "blkCtΔ"        (d!!1)  "BlkCt" (DDeltaT            sBlkCtxCDF)  "Block context acquisition delay"
-    , Field 5 0 "lgrStΔ"        (d!!2)  "LgrSt" (DDeltaT            sLgrStateCDF)  "Ledger state acquisition delay"
-    , Field 5 0 "lgrViΔ"        (d!!3)  "LgrVi" (DDeltaT            sLgrViewCDF)  "Ledger view acquisition delay"
-    , Field 5 0 "leadΔ"         (d!!4)  "Lead"  (DDeltaT            sLeadingCDF)   "Leadership check duration"
-    , Field 5 0 "forgeΔ"        (d!!5)  "Forge" (DDeltaT            sForgedCDF)  "Leading to block forged"
-    , Field 4 0 "blockGap"      "Block" "gap"   (DWord64            sBlocklessCDF)  "Interblock gap"
+    , Field 4 0 "checkΔ"        (d!!0)  "Start" (DDeltaT            sStartedCDF)  "Forge loop tardiness"
+    , Field 4 0 "blkCtΔ"        (d!!1)  "BlkCt" (DDeltaT            sBlkCtxCDF)  "Block context acquisition delay"
+    , Field 4 0 "lgrStΔ"        (d!!2)  "LgrSt" (DDeltaT            sLgrStateCDF)  "Ledger state acquisition delay"
+    , Field 4 0 "lgrViΔ"        (d!!3)  "LgrVi" (DDeltaT            sLgrViewCDF)  "Ledger view acquisition delay"
+    , Field 4 0 "leadΔ"         (d!!4)  "Lead"  (DDeltaT            sLeadingCDF)   "Leadership check duration"
+    , Field 4 0 "forgeΔ"        (d!!5)  "Forge" (DDeltaT            sForgedCDF)  "Leading to block forged"
+    , Field 4 0 "blockGap"      "Block" "gap"   (DWord64            sBlockGapCDF)  "Interblock gap"
     , Field 5 0 "chainDensity"  "Dens"  "ity"   (DFloat             sDensityCDF)    "Chain density"
     , Field 3 0 "cpuProcess"    "CPU"   "%"     (DWord64 (rCentiCpu.sResourceCDFs)) "Process CPU usage pct"
     , Field 3 0 "cpuGC"         "GC"    "%"     (DWord64 (rCentiGC .sResourceCDFs)) "RTS GC CPU usage pct"
@@ -528,7 +528,7 @@ instance RenderCDFs MachPerf p where
     , Field 5 0 "cpuSpanLenEp"  (c!!1)  "Epoch" (DInt         sSpanLensCpuEpochCDF) "CPU spans at Ep boundary"
     ]
    where
-     d = nChunksEachOf  6 6 "------------- Δt -------------"
+     d = nChunksEachOf  6 5 "----------- Δt -----------"
      m = nChunksEachOf  3 6 "Memory usage, MB"
      c = nChunksEachOf  2 6 "CPU% spans"
 
@@ -543,7 +543,7 @@ instance RenderTimeline (SlotStats NominalDiffTime) where
     , Field 2 0 "epoch"        "ch "   "#"       (IWord64 (unEpochNo     .slEpoch)) ""
     , Field 3 0 "safetyInt"    "safe"  "int"     (IWord64 (unEpochSafeInt.slEpochSafeInt)) ""
     , Field 5 0 "block"        "block" "no."     (IWord64 (unBlockNo.slBlockNo)) ""
-    , Field 5 0 "blockGap"     "block" "gap"     (IWord64 slBlockless) ""
+    , Field 5 0 "blockGap"     "block" "gap"     (IWord64 slBlockGap) ""
     , Field 3 0 "forgeLoop"    "forg"  "loo"     (IWord64 slCountStarts) ""
     , Field 3 0 "blockCtx"     "blok"  "ctx"     (IWord64 slCountBlkCtx) ""
     , Field 3 0 "ledgerState"  "ledg"  "sta"     (IWord64 slCountLgrState) ""

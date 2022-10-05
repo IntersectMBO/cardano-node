@@ -68,11 +68,17 @@ renderFieldCentiles x cdfProj Field{..} =
 renderFieldCentilesWidth :: a p -> (forall v. Divisible v => CDF p v -> [[v]]) -> Field DSelect p a -> [[Text]]
 renderFieldCentilesWidth x cdfProj Field{..} =
   case fSelect of
-    DInt    (cdfProj . ($x) ->ds) -> ds <&> fmap (p.printf "%*d" fWidth)
-    DWord64 (cdfProj . ($x) ->ds) -> ds <&> fmap (p.printf "%*d" fWidth)
-    DFloat  (cdfProj . ($x) ->ds) -> ds <&> fmap (T.take fWidth . p.printf "%*F" fWidth)
-    DDeltaT (cdfProj . ($x) ->ds) -> ds <&> fmap (T.take fWidth . T.justifyRight fWidth ' '.T.dropWhileEnd (== 's').p.show)
- where p = T.pack
+    DInt    (cdfProj . ($x) ->ds) -> ds <&> fmap (T.pack.printf "%*d" fWidth)
+    DWord64 (cdfProj . ($x) ->ds) -> ds <&> fmap (T.pack.printf "%*d" fWidth)
+    DFloat  (cdfProj . ($x) ->ds) -> ds <&> fmap (renderFloatStr fWidth.printf "%*F" fWidth)
+    DDeltaT (cdfProj . ($x) ->ds) -> ds <&> fmap (renderFloatStr fWidth.dropWhileEnd (== 's').show)
+
+renderFloatStr :: Int -> String -> Text
+renderFloatStr w = T.justifyRight w ' '. T.take w . T.pack . stripLeadingZero
+ where
+   stripLeadingZero = \case
+     '0':xs@('.':_) -> xs
+     xs -> xs
 
 data DSelect p a
   = DInt    (a p -> CDF p Int)

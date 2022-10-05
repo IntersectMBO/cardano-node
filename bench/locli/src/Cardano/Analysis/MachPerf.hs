@@ -43,7 +43,7 @@ summariseMultiClusterPerf centiles mps@(headline:_) = do
   sLgrViewCDF           <- cdf2OfCDFs comb $ mps <&> sLgrViewCDF
   sLeadingCDF           <- cdf2OfCDFs comb $ mps <&> sLeadingCDF
   sForgedCDF            <- cdf2OfCDFs comb $ mps <&> sForgedCDF
-  sBlocklessCDF         <- cdf2OfCDFs comb $ mps <&> sBlocklessCDF
+  sBlockGapCDF          <- cdf2OfCDFs comb $ mps <&> sBlockGapCDF
   sSpanLensCpuCDF       <- cdf2OfCDFs comb $ mps <&> sSpanLensCpuCDF
   sSpanLensCpuEpochCDF  <- cdf2OfCDFs comb $ mps <&> sSpanLensCpuEpochCDF
   sSpanLensCpuRwdCDF    <- cdf2OfCDFs comb $ mps <&> sSpanLensCpuRwdCDF
@@ -74,7 +74,7 @@ summariseClusterPerf centiles mps@(headline:_) = do
   sLgrViewCDF           <- cdf2OfCDFs comb $ mps <&> sLgrViewCDF
   sLeadingCDF           <- cdf2OfCDFs comb $ mps <&> sLeadingCDF
   sForgedCDF            <- cdf2OfCDFs comb $ mps <&> sForgedCDF
-  sBlocklessCDF         <- cdf2OfCDFs comb $ mps <&> sBlocklessCDF
+  sBlockGapCDF          <- cdf2OfCDFs comb $ mps <&> sBlockGapCDF
   sSpanLensCpuCDF       <- cdf2OfCDFs comb $ mps <&> sSpanLensCpuCDF
   sSpanLensCpuEpochCDF  <- cdf2OfCDFs comb $ mps <&> sSpanLensCpuEpochCDF
   sSpanLensCpuRwdCDF    <- cdf2OfCDFs comb $ mps <&> sSpanLensCpuRwdCDF
@@ -110,7 +110,9 @@ deltifySlotStats gsis s@SlotStats{..} =
   , slBlkCtx    = diffUTCTime <$> slBlkCtx    <*> slStarted
   , slLgrState  = diffUTCTime <$> slLgrState  <*> slBlkCtx
   , slLgrView   = diffUTCTime <$> slLgrView   <*> slLgrState
-  , slLeading   = diffUTCTime <$> slLeading   <*> slLgrView
+  , slLeading   = (diffUTCTime <$> slLeading   <*> slLgrView)
+                  <|>
+                  (diffUTCTime <$> slLeading   <*> slStarted)
   , slForged    = diffUTCTime <$> slForged    <*> slLeading
   }
 
@@ -209,7 +211,7 @@ slotStatsMachPerf run (f, slots) =
   , sLgrViewCDF           = dist (slLgrView `mapSMaybe` slots)
   , sLeadingCDF           = dist (slLeading `mapSMaybe` slots)
   , sForgedCDF            = dist (filter (/= 0) $ slForged `mapSMaybe` slots)
-  , sBlocklessCDF         = dist (slBlockless <$> slots)
+  , sBlockGapCDF          = dist (slBlockGap <$> slots)
   , sSpanLensCpuCDF       = dist sssSpanLensCpu
   , sSpanLensCpuEpochCDF  = dist sssSpanLensCpuEpoch
   , sSpanLensCpuRwdCDF    = dist sssSpanLensCpuRwd
@@ -290,7 +292,7 @@ timelineFromLogObjects run@Run{genesis} (f, xs) =
      , aResTimestamp  = firstRelevantLogObjectTime
      , aMempoolTxs    = 0
      , aBlockNo       = 0
-     , aLastBlockSlot = 0
+     , aLastBlockSlot = 0                          -- Genesis counts : -)
      , aSlotStats     = [zeroSlotStats]
      , aRunScalars    = zeroRunScalars
      , aTxsCollectedAt= mempty
@@ -329,7 +331,7 @@ timelineFromLogObjects run@Run{genesis} (f, xs) =
      , slChainDBSnap = 0
      , slRejectedTx = 0
      , slBlockNo = 0
-     , slBlockless = 0
+     , slBlockGap = 0
      }
 
 timelineStep :: Run -> TimelineAccum -> LogObject -> TimelineAccum
@@ -441,14 +443,14 @@ timelineStep Run{genesis} a@TimelineAccum{aSlotStats=cur:_, ..} lo =
   --
   LogObject{loBody=LOBlockContext slot blockNo, loHost, loAt} ->
     (forNonFutureSlot a slot "BlockContext" loHost $
-      \sl@SlotStats{..} ->
-       sl { slCountBlkCtx = slCountBlkCtx + 1
+      \sl ->
+       sl { slCountBlkCtx = slCountBlkCtx sl + 1
           , slBlkCtx      = SJust loAt
+          , slBlockNo     = blockNo
+          , slBlockGap    = if blockNo /= aBlockNo then 0 else slBlockGap cur
           })
     { aBlockNo        = blockNo
-    , aLastBlockSlot  = if aBlockNo /= blockNo -- A new block
-                        then slSlot cur
-                        else aLastBlockSlot
+    , aLastBlockSlot  = a & lastBlockSlot blockNo
     }
   LogObject{loBody=LOLedgerState slot, loHost, loAt} ->
     forNonFutureSlot a slot "LedgerState" loHost $
@@ -485,6 +487,12 @@ timelineStep Run{genesis} a@TimelineAccum{aSlotStats=cur:_, ..} lo =
           }
   _ -> a
 timelineStep _ a _ = a
+
+lastBlockSlot :: BlockNo -> TimelineAccum -> SlotNo
+lastBlockSlot new TimelineAccum{aSlotStats=SlotStats{..}:_,..} =
+  if aBlockNo /= new -- A new block?
+  then slSlot
+  else aLastBlockSlot
 
 patchSlotGap :: Genesis -> SlotNo -> TimelineAccum -> TimelineAccum
 patchSlotGap genesis curSlot a@TimelineAccum{aSlotStats=last:_, ..} =
@@ -529,7 +537,7 @@ patchSlotGap genesis curSlot a@TimelineAccum{aSlotStats=last:_, ..} =
           , slChainDBSnap = 0
           , slRejectedTx  = 0
           , slBlockNo     = aBlockNo
-          , slBlockless   = unSlotNo $ slot - aLastBlockSlot
+          , slBlockGap    = unSlotNo $ slot - aLastBlockSlot
           , slResources   = maybeDiscard
                             <$> discardObsoleteValues
                             <*> extractResAccums aResAccums}
@@ -572,7 +580,7 @@ addTimelineSlot genesis slot time a@TimelineAccum{..} =
         , slChainDBSnap = 0
         , slRejectedTx  = 0
         , slBlockNo     = aBlockNo
-        , slBlockless   = unSlotNo $ slot - aLastBlockSlot
+        , slBlockGap    = unSlotNo $ slot - aLastBlockSlot
         , slResources   = maybeDiscard
                           <$> discardObsoleteValues
                           <*> extractResAccums aResAccums}
@@ -585,18 +593,18 @@ addTimelineSlot genesis slot time a@TimelineAccum{..} =
 
 data DerivedSlot
   = DerivedSlot
-  { dsSlot      :: SlotNo
-  , dsBlockless :: Word64
+  { dsSlot     :: SlotNo
+  , dsBlockGap :: Word64
   }
 
 derivedSlotsHeader :: String
 derivedSlotsHeader =
-  "Slot,Blockless span"
+  "Slot,BlockGap span"
 
 renderDerivedSlot :: DerivedSlot -> String
 renderDerivedSlot DerivedSlot{..} =
   mconcat
-  [ show (unSlotNo dsSlot), ",", show dsBlockless
+  [ show (unSlotNo dsSlot), ",", show dsBlockGap
   ]
 
 computeDerivedVectors :: [SlotStats a] -> ([DerivedSlot], [DerivedSlot])
@@ -608,24 +616,24 @@ computeDerivedVectors ss =
         SlotStats a
      -> (Word64, Word64, [DerivedSlot], [DerivedSlot])
      -> (Word64, Word64, [DerivedSlot], [DerivedSlot])
-   step SlotStats{..} (lastBlockless, spanBLSC, accD0, accD1) =
-     if lastBlockless < slBlockless
-     then ( slBlockless
-          , slBlockless
+   step SlotStats{..} (lastBlockGap, spanBLSC, accD0, accD1) =
+     if lastBlockGap < slBlockGap
+     then ( slBlockGap
+          , slBlockGap
           , DerivedSlot
             { dsSlot = slSlot
-            , dsBlockless = slBlockless
+            , dsBlockGap = slBlockGap
             }:accD0
           , DerivedSlot
             { dsSlot = slSlot
-            , dsBlockless = slBlockless
+            , dsBlockGap = slBlockGap
             }:accD1
           )
-     else ( slBlockless
+     else ( slBlockGap
           , spanBLSC
           , DerivedSlot
             { dsSlot = slSlot
-            , dsBlockless = spanBLSC
+            , dsBlockGap = spanBLSC
             }:accD0
           , accD1
           )

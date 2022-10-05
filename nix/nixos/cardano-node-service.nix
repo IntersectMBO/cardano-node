@@ -571,6 +571,11 @@ in {
           '';
       };
 
+      withCardanoTracer = mkOption {
+        type = types.bool;
+        default = false;
+      };
+
       extraArgs = mkOption {
         type = types.listOf types.str;
         default = [];
