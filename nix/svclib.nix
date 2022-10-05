@@ -1,6 +1,7 @@
 { pkgs }:
 with pkgs.lib;
 let
+  pkgsOuter = pkgs;
   inherit (pkgs) lib;
 
   id = x: x;
@@ -65,9 +66,17 @@ let
   ##  - script preamble shell snippet (default: _: "")
   ##  - systemd extra config (see defaults below)
   ##  - systemd extra service config (see defaults below)
-  defServiceModule = argClosure:
-    traceValSeqN 2
-    (defServiceModule__ (argClosure (pkgs.lib // serviceDeclarationLib)));
+  defServiceModule = argClosure: { pkgs, ... }@modArgs:
+    let args           = argClosure (pkgsOuter.lib // serviceDeclarationLib);
+        trcArgsDepth   = pkgsOuter.__trace_defServiceModule_argsDepth or (_: 0);
+        trcResultFn    = pkgsOuter.__trace_defServiceModule_resultFn or id;
+        trcResultDepth = pkgsOuter.__trace_defServiceModule_resultDepth or (_: 0);
+        mayTrc         = vf: f:
+          let v = vf args;
+          in if                    v == 0 then x: x
+             else traceValSeqNFn f v;
+    in mayTrc trcResultDepth trcResultFn
+       (defServiceModule__ (mayTrc trcArgsDepth id args) modArgs);
   defServiceModule__ =
     { ## WARNING: when changing this arglist,
       ## make sure to update 'unhandledArgs' below.
