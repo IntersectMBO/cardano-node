@@ -87,7 +87,7 @@ in pkgs.commonLib.defServiceModule
           Type = "exec";
           User = "cardano-node";
           Group = "cardano-node";
-          Restart = "yes";
+          Restart = "always";
           # RuntimeDirectory = localNodeConf.runtimeDir;
           # WorkingDirectory = localNodeConf.stateDir;
         };
