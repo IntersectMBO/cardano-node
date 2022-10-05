@@ -67,7 +67,6 @@ compileToScript = do
 initConstants :: Compiler ()
 initConstants = do
   setN TLocalSocket          _nix_localNodeSocketPath
-  setConst  TTTL             1000000
   emit $ DefineSigningKey keyNameTxGenFunds keyTxGenFunds
   emit $ DefineSigningKey keyNameCollaterals keyCollaterals
   emit $ DefineSigningKey keyNameSplitPhase keySplitPhase
