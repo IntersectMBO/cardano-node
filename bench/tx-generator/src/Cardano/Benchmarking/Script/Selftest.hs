@@ -43,7 +43,6 @@ printJSON = BSL.putStrLn $ prettyPrint $ testScript "/dev/zero" DiscardTX
 testScript :: FilePath -> SubmitMode -> [Action]
 testScript protocolFile submitMode =
   [ SetProtocolParameters (UseLocalProtocolFile protocolFile)
-  , Set (TTTL ==> SlotNo 1000000)
   , Set (TNetworkId ==> Testnet (NetworkMagic {unNetworkMagic = 42}))
   , InitWallet genesisWallet
   , InitWallet splitWallet1

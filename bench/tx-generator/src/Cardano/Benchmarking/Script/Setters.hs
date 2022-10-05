@@ -18,12 +18,11 @@ import           Data.Dependent.Sum (DSum(..) , (==>) )
 import           Data.GADT.Compare.TH (deriveGCompare, deriveGEq)
 import           Data.GADT.Show.TH (deriveGShow)
 
-import           Cardano.Api (SlotNo, NetworkId)
+import           Cardano.Api (NetworkId)
 
 
 -- Some boiler plate; ToDo may generate this.
 data Tag v where
-  TTTL                  :: Tag SlotNo           -- TODO: can we deprecate TTL here?
   TLocalSocket          :: Tag String
   TNetworkId            :: Tag NetworkId
 
@@ -36,19 +35,16 @@ deriving instance Show (Tag v)
 deriving instance Eq (Tag v)
 
 data Sum where
-  STTL                  :: !SlotNo               -> Sum
   SLocalSocket          :: !String               -> Sum
   SNetworkId            :: !NetworkId            -> Sum
   deriving (Eq, Show, Generic)
 
 taggedToSum :: Applicative f => DSum Tag f -> f Sum
 taggedToSum x = case x of
-  (TTTL                  :=> v) -> STTL                  <$> v
   (TLocalSocket          :=> v) -> SLocalSocket          <$> v
   (TNetworkId            :=> v) -> SNetworkId            <$> v
 
 sumToTagged :: Applicative f => Sum -> DSum Tag f
 sumToTagged x = case x of
-  STTL                  v -> TTTL                  ==> v
   SLocalSocket          v -> TLocalSocket          ==> v
   SNetworkId            v -> TNetworkId            ==> v
