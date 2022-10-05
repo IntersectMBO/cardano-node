@@ -454,7 +454,7 @@ txOutToJsonValue era (TxOut addr val dat refScript) =
        ReferenceScript _ s -> toJSON s
        ReferenceScriptNone -> Aeson.Null
 
-instance (IsShelleyBasedEra era, IsCardanoEra era)
+instance IsShelleyBasedEra era
   => FromJSON (TxOut CtxTx era) where
       parseJSON = withObject "TxOut" $ \o -> do
         case shelleyBasedEra :: ShelleyBasedEra era of
@@ -544,7 +544,7 @@ instance (IsShelleyBasedEra era, IsCardanoEra era)
                        <*> return ReferenceScriptNone
                (Just _dVal, Nothing) -> fail "Only datum JSON was found, this should not be possible."
 
-instance (IsShelleyBasedEra era, IsCardanoEra era)
+instance IsShelleyBasedEra era
   => FromJSON (TxOut CtxUTxO era) where
       parseJSON = withObject "TxOut" $ \o -> do
         case shelleyBasedEra :: ShelleyBasedEra era of
@@ -1667,6 +1667,8 @@ instance Eq (TxBody era) where
                                   && scriptValidityA == scriptValidityB
 
     (==) ByronTxBody{} (ShelleyTxBody era _ _ _ _ _) = case era of {}
+
+    (==) _ _ = error "TODO: Eq (TxBody era)"
 
 
 -- The GADT in the ShelleyTxBody case requires a custom instance

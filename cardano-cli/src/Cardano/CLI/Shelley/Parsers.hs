@@ -3,6 +3,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
 module Cardano.CLI.Shelley.Parsers
   ( -- * CLI command parser
     parseShelleyCommands

@@ -7,6 +7,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Node.Tracing.Tracers.ChainDB
   ( severityChainDB
@@ -55,6 +56,7 @@ import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Ouroboros.Network.AnchoredFragment as AF
 
 {-# ANN module ("HLint: ignore Redundant bracket" :: Text) #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 withAddedToCurrentChainEmptyLimited
   :: Trace IO (ChainDB.TraceEvent blk)
@@ -449,8 +451,7 @@ addedHdrsNewChain fro to_ =
      AF.toOldestFirst s2
    Nothing -> [] -- No sense to do validation here.
 
-instance ( HasHeader (Header blk)
-         , LedgerSupportsProtocol blk
+instance ( LedgerSupportsProtocol blk
          , ConvertRawHash (Header blk)
          , ConvertRawHash blk
          , LogFormatting (RealPoint blk))
