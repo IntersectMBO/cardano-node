@@ -51,18 +51,18 @@ mkTxFee :: forall era. IsCardanoEra era => Lovelace -> TxFee era
 mkTxFee f = either
   TxFeeImplicit
   (`TxFeeExplicit` f)
-  (txFeesExplicitInEra (cardanoEra @ era))
+  (txFeesExplicitInEra (cardanoEra @era))
 
 mkTxValidityUpperBound :: forall era. IsShelleyBasedEra era => SlotNo -> TxValidityUpperBound era
 mkTxValidityUpperBound =
-  TxValidityUpperBound (fromJust $ validityUpperBoundSupportedInEra (cardanoEra @ era))
+  TxValidityUpperBound (fromJust $ validityUpperBoundSupportedInEra (cardanoEra @era))
 
 mkTxOutValueAdaOnly :: forall era . IsShelleyBasedEra era => Lovelace -> TxOutValue era
 mkTxOutValueAdaOnly l = either 
   (`TxOutAdaOnly` l)
   (\p -> TxOutValue p $ lovelaceToValue l)
-  (multiAssetSupportedInEra (cardanoEra @ era))
+  (multiAssetSupportedInEra (cardanoEra @era))
 
 mkTxInModeCardano :: forall era . IsShelleyBasedEra era => Tx era -> TxInMode CardanoMode
 mkTxInModeCardano tx =
-  TxInMode tx (fromJust $ toEraInMode (cardanoEra @ era) CardanoMode)
+  TxInMode tx (fromJust $ toEraInMode (cardanoEra @era) CardanoMode)
