@@ -37,6 +37,7 @@ import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult
 
 import           Cardano.TxGenerator.Fund as Fund
 import qualified Cardano.TxGenerator.FundQueue as FundQueue
+import           Cardano.TxGenerator.Setup.Plutus as Plutus
 import           Cardano.TxGenerator.Tx
 import           Cardano.TxGenerator.Types
 import           Cardano.TxGenerator.UTxO
@@ -46,14 +47,13 @@ import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmark
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (readSigningKey, waitBenchmark,
                    walletBenchmark)
 -- import qualified Cardano.Benchmarking.GeneratorTx.Genesis as Genesis
-import qualified Cardano.TxGenerator.Genesis as Genesis
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode (ConnectClient,
                    benchmarkConnectTxSubmit)
 import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
+import qualified Cardano.TxGenerator.Genesis as Genesis
 
 import           Cardano.Benchmarking.OuroborosImports as Core (LocalSubmitTx, SigningKeyFile,
                    makeLocalConnectInfo, protocolToCodecConfig)
-import           Cardano.Benchmarking.PlutusExample as PlutusExample
 
 import           Cardano.Benchmarking.LogTypes as Core (TraceBenchTxSubmit (..), btConnect_, btN2N_,
                    btSubmission2_, btTxSubmit_)
@@ -61,8 +61,8 @@ import           Cardano.Benchmarking.Types as Core (SubmissionErrorPolicy (..))
 import           Cardano.Benchmarking.Wallet as Wallet
 
 import           Cardano.Benchmarking.Script.Aeson (readProtocolParametersFile)
-import           Cardano.Benchmarking.Script.Env hiding (Error(TxGenError))
-import qualified Cardano.Benchmarking.Script.Env as Env (Error(TxGenError))
+import           Cardano.Benchmarking.Script.Env hiding (Error (TxGenError))
+import qualified Cardano.Benchmarking.Script.Env as Env (Error (TxGenError))
 import           Cardano.Benchmarking.Script.Setters
 import           Cardano.Benchmarking.Script.Store as Store
 import           Cardano.Benchmarking.Script.Types
@@ -409,13 +409,13 @@ spendAutoScript protocolParameters script = do
   traceDebug $ "Plutus auto mode : Available budget per script run: " ++ show budget
 
   let
-    isInLimits :: Integer -> Either String Bool
-    isInLimits n = case preExecuteScript protocolParameters script (ScriptDataNumber 0) (toLoopArgument n) of
+    isInLimits :: Integer -> Either TxGenError Bool
+    isInLimits n = case preExecutePlutusScript protocolParameters script (ScriptDataNumber 0) (toLoopArgument n) of
       Left err -> Left err
       Right use -> Right $ (executionSteps use <= executionSteps budget) && (executionMemory use <= executionMemory budget)
     searchUpperBound = 100000 -- The highest loop count that is tried. (This is about 50 times the current mainnet limit.)
   redeemer <- case startSearch isInLimits 0 searchUpperBound of
-    Left err -> liftTxGenError $ TxGenError $ "cannot find fitting redeemer :" ++ err
+    Left err -> liftTxGenError $ (TxGenError $ "cannot find fitting redeemer: ") <> err
     Right n -> return $ toLoopArgument n
   return (ScriptDataNumber 0, redeemer)
   where
@@ -426,7 +426,7 @@ spendAutoScript protocolParameters script = do
       l <- f a
       h <- f b
       if l && not h then search f a b
-        else Left $ "Binary search: Bad initial bounds : " ++ show (a,l,b,h)
+        else Left $ TxGenError $ "Binary search: Bad initial bounds: " ++ show (a,l,b,h)
     search f a b
       = if a + 1 == b then Right a
            else do
@@ -439,7 +439,8 @@ makePlutusContext :: forall era. IsShelleyBasedEra era
   -> ActionM (Witness WitCtxTxIn era, Script PlutusScriptV1, ScriptData, Lovelace)
 makePlutusContext scriptSpec = do
   protocolParameters <- getProtocolParameters
-  script <- liftIO $ PlutusExample.readScript $ scriptSpecFile scriptSpec
+  script_ <- liftIO $ Plutus.readPlutusScript $ scriptSpecFile scriptSpec
+  script <- either liftTxGenError pure script_
 
   executionUnitPrices <- case protocolParamPrices protocolParameters of
     Just x -> return x
@@ -505,8 +506,8 @@ preExecuteScriptAction ::
   -> ScriptData
   -> ActionM ExecutionUnits
 preExecuteScriptAction protocolParameters script scriptData redeemer
-  = case preExecuteScript protocolParameters script scriptData redeemer of
-      Left err -> throwE $ WalletError ( "makePlutusContext preExecuteScript failed : " ++ show err )
+  = case Plutus.preExecutePlutusScript protocolParameters script scriptData redeemer of
+      Left err -> throwE $ WalletError ( "makePlutusContext preExecuteScript failed: " ++ show err )
       Right costs -> return costs
 
 traceTxGeneratorVersion :: ActionM ()

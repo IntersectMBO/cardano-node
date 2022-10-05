@@ -63,6 +63,7 @@ library
                        Cardano.TxGenerator.Script.Types
                        Cardano.TxGenerator.Setup.NixService
                        Cardano.TxGenerator.Setup.NodeConfig
+                       Cardano.TxGenerator.Setup.Plutus
                        Cardano.TxGenerator.Types
                        Cardano.TxGenerator.Tx
                        Cardano.TxGenerator.Utils
@@ -156,7 +157,8 @@ executable tx-generator
   build-depends:       base >=4.12 && <5
                      , tx-generator
 
-executable tx-generator-api
+executable tx-generator-apitest
+  scope:               private
   hs-source-dirs:      app
   main-is:             tx-generator-api.hs
   default-language:    Haskell2010
