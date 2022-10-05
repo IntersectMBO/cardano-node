@@ -26,8 +26,6 @@ import           Cardano.Benchmarking.OuroborosImports as Cardano (LoggingLayer,
                    ShelleyGenesis, SigningKey, StandardShelley)
 import           Cardano.Benchmarking.Script.Setters as Setters
 
-import           Cardano.TxGenerator.Types (TxGenTxParams)
-
 import           Cardano.Benchmarking.GeneratorTx as Core (AsyncBenchmarkControl)
 import           Cardano.Benchmarking.LogTypes as Core (BenchTracers)
 import           Cardano.Benchmarking.Wallet as Wallet
@@ -38,7 +36,6 @@ data Store v where
   Protocol     :: Store SomeConsensusProtocol
   BenchTracers :: Store Core.BenchTracers
   Genesis      :: Store (ShelleyGenesis StandardShelley)
-  TxParams     :: Store TxGenTxParams
   Named        :: Name x -> Store x
   ProtocolParameterMode :: Store ProtocolParameterMode
 

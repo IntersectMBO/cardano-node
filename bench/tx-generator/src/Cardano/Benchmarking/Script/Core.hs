@@ -237,12 +237,12 @@ toMetadata (Just payloadSize) = case mkMetadata payloadSize of
   Right m -> m
   Left err -> error err
 
-submitAction :: AnyCardanoEra -> SubmitMode -> Generator -> ActionM ()
-submitAction era submitMode generator = withEra era $ submitInEra submitMode generator
+submitAction :: AnyCardanoEra -> SubmitMode -> Generator -> TxGenTxParams -> ActionM ()
+submitAction era submitMode generator txParams = withEra era $ submitInEra submitMode generator txParams
 
-submitInEra :: forall era. IsShelleyBasedEra era => SubmitMode -> Generator -> AsType era -> ActionM ()
-submitInEra submitMode generator era = do
-  txStream <- evalGenerator generator era
+submitInEra :: forall era. IsShelleyBasedEra era => SubmitMode -> Generator -> TxGenTxParams -> AsType era -> ActionM ()
+submitInEra submitMode generator txParams era = do
+  txStream <- evalGenerator generator txParams era
   case submitMode of
     NodeToNode _ -> error "NodeToNode deprecated: ToDo: remove"
     Benchmark nodes threadName tpsRate txCount -> benchmarkTxStream txStream nodes threadName tpsRate txCount era
@@ -285,25 +285,24 @@ benchmarkTxStream txStream targetNodes (ThreadName threadName) tps txCount era =
     Left err -> liftTxGenError err
     Right ctl -> setName (ThreadName threadName) ctl
 
-evalGenerator :: forall era. IsShelleyBasedEra era => Generator -> AsType era -> ActionM (TxStream IO era)
-evalGenerator generator era = do
+evalGenerator :: forall era. IsShelleyBasedEra era => Generator -> TxGenTxParams -> AsType era -> ActionM (TxStream IO era)
+evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
   networkId <- getUser TNetworkId
   protocolParameters <- getProtocolParameters
   case generator of
-    SecureGenesis fee wallet genesisKeyName destKeyName -> do -- TODO: where does fee come from? is it needed as a separate field?
+    SecureGenesis wallet genesisKeyName destKeyName -> do
       genesis  <- get Genesis
-      txParams <- getUser TTxParams
       destKey  <- getName destKeyName
       destWallet  <- getName wallet
       genesisKey  <- getName genesisKeyName
       (tx, fund) <- firstExceptT Env.TxGenError $ hoistEither $
-        Genesis.genesisSecureInitialFund networkId genesis genesisKey destKey txParams {txParamFee = fee}
+        Genesis.genesisSecureInitialFund networkId genesis genesisKey destKey txParams
       let
         gen = do
           walletRefInsertFund destWallet fund
           return $ Right tx
       return $ Streaming.effect (Streaming.yield <$> gen)
-    Split fee walletName payMode payModeChange coins -> do
+    Split walletName payMode payModeChange coins -> do
       wallet <- getName walletName
       (toUTxO, addressOut) <- interpretPayMode payMode
       traceDebug $ "split output address : " ++ addressOut
@@ -312,21 +311,21 @@ evalGenerator generator era = do
       let
         fundSource = walletSource wallet 1
         inToOut = Utils.includeChange fee coins
-        txGenerator = genTx protocolParameters (TxInsCollateralNone, []) (Utils.mkTxFee fee) TxMetadataNone
+        txGenerator = genTx protocolParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
         sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut $ mangleWithChange toUTxOChange toUTxO
       return $ Streaming.effect (Streaming.yield <$> sourceToStore)
-    SplitN fee walletName payMode count -> do
+    SplitN walletName payMode count -> do
       wallet <- getName walletName
       (toUTxO, addressOut) <- interpretPayMode payMode
       traceDebug $ "SplitN output address : " ++ addressOut
       let
         fundSource = walletSource wallet 1
         inToOut = Utils.inputsToOutputsWithFee fee count
-        txGenerator = genTx protocolParameters (TxInsCollateralNone, []) (Utils.mkTxFee fee) TxMetadataNone
+        txGenerator = genTx protocolParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
         sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
       return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
-    NtoM fee walletName payMode inputs outputs metadataSize collateralWallet -> do
+    NtoM walletName payMode inputs outputs metadataSize collateralWallet -> do
       wallet <- getName walletName
       collaterals <- selectCollateralFunds collateralWallet
       (toUTxO, addressOut) <- interpretPayMode payMode
@@ -334,18 +333,20 @@ evalGenerator generator era = do
       let
         fundSource = walletSource wallet inputs
         inToOut = Utils.inputsToOutputsWithFee fee outputs
-        txGenerator = genTx protocolParameters collaterals (Utils.mkTxFee fee) (toMetadata metadataSize)
+        txGenerator = genTx protocolParameters collaterals feeInEra (toMetadata metadataSize)
         sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
       return $ Streaming.effect (Streaming.yield <$> sourceToStore)
     Sequence l -> do
-      gList <- forM l $ \g -> evalGenerator g era
+      gList <- forM l $ \g -> evalGenerator g txParams era
       return $ Streaming.for (Streaming.each gList) id
-    Cycle g -> Streaming.cycle <$> evalGenerator g era
-    Take count g -> Streaming.take count <$> evalGenerator g era
+    Cycle g -> Streaming.cycle <$> evalGenerator g txParams era
+    Take count g -> Streaming.take count <$> evalGenerator g txParams era
     RoundRobin l -> do
-      _gList <- forM l $ \g -> evalGenerator g era
+      _gList <- forM l $ \g -> evalGenerator g txParams era
       error "return $ foldr1 Streaming.interleaves gList"
     OneOf _l -> error "todo: implement Quickcheck style oneOf generator"
+  where
+    feeInEra = Utils.mkTxFee fee
 
 selectCollateralFunds :: forall era. IsShelleyBasedEra era
   => Maybe WalletName
