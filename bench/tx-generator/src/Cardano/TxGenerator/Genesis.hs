@@ -43,7 +43,7 @@ genesisSecureInitialFund :: forall era. IsShelleyBasedEra era =>
   -> TxGenTxParams
   -> Either TxGenError (Tx era, Fund)
 genesisSecureInitialFund networkId genesis srcKey destKey TxGenTxParams{txParamFee, txParamTTL}
-  = case genesisInitialFundForKey @ era networkId genesis srcKey of
+  = case genesisInitialFundForKey @era networkId genesis srcKey of
       Nothing             -> Left $ TxGenError "genesisSecureInitialFund: no fund found for given key in genesis"
       Just (_, lovelace)  ->
         let
@@ -51,7 +51,7 @@ genesisSecureInitialFund networkId genesis srcKey destKey TxGenTxParams{txParamF
           txOutValue = mkTxOutValueAdaOnly $ lovelace - txParamFee
         in genesisExpenditure networkId srcKey destAddr txOutValue txParamFee txParamTTL destKey
   where
-    destAddr = keyAddress @ era networkId destKey
+    destAddr = keyAddress @era networkId destKey
 
 genesisInitialFunds :: forall era. IsShelleyBasedEra era
   => NetworkId
