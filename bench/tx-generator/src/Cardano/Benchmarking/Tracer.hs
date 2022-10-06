@@ -7,6 +7,7 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -36,12 +37,15 @@ import qualified Data.Map as Map
 import           Data.Proxy
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import           Data.Time.Clock
 
+import           Trace.Forward.Utils.DataPoint
 import           Trace.Forward.Utils.TraceObject
 import           Ouroboros.Network.IOManager (IOManager)
 
 import           Cardano.Api
 import           Cardano.Logging
+import           Cardano.Node.Startup
 
 import           Cardano.Benchmarking.LogTypes
 import           Cardano.Benchmarking.Types
@@ -103,10 +107,10 @@ initTracers ::
   -> FilePath
   -> IO BenchTracers
 initTracers iomgr networkId tracerSocket = do
-  forwardingTracer :: Trace IO FormattedMessage <- do
-          (forwardSink :: ForwardSink TraceObject, _dpStore) <- initForwarding iomgr initialTraceConfig (toNetworkMagic networkId)
-                                                                  Nothing $ Just (tracerSocket, Initiator)
-          pure (forwardTracer forwardSink)
+  (forwardingTracer :: Trace IO FormattedMessage, dpTracer :: Trace IO DataPoint) <- do
+          (forwardSink :: ForwardSink TraceObject, dpStore) <- initForwarding iomgr initialTraceConfig (toNetworkMagic networkId)
+                                                                 Nothing $ Just (tracerSocket, Initiator)
+          pure (forwardTracer forwardSink, dataPointTracer dpStore)
   mbStdoutTracer <- fmap Just standardTracer
   let mbForwardingTracer = Just forwardingTracer
   benchTracer <-  generatorTracer singletonName "benchmark" mbStdoutTracer mbForwardingTracer
@@ -117,6 +121,10 @@ initTracers iomgr networkId tracerSocket = do
   configureTracers initialTraceConfig sendRecvConnectDocumented [connectTracer]
   submitTracer <- generatorTracer namesForSubmission2 "submit" mbStdoutTracer mbForwardingTracer
   configureTracers initialTraceConfig submission2Documented [submitTracer]
+  -- Now we need to provide "Nodeinfo" DataPoint, to forward generator's name
+  -- to the acceptor application (for example, 'cardano-tracer').
+  nodeInfoTracer <- mkDataPointTracer dpTracer (const ["NodeInfo"])
+  prepareGenInfo >>= traceWith nodeInfoTracer
 
   traceWith benchTracer $ TraceTxGeneratorVersion Version.txGeneratorVersion
 --  traceWith st $ show $ TraceTxGeneratorVersion Version.txGeneratorVersion
@@ -126,6 +134,18 @@ initTracers iomgr networkId tracerSocket = do
     , btSubmission2_ = Tracer (traceWith submitTracer)
     , btN2N_         = Tracer (traceWith n2nSubmitTracer)
     }
+ where
+  prepareGenInfo = do
+    now <- getCurrentTime
+    return $ NodeInfo
+      { niName            = "TxGenerator"
+      , niProtocol        = "N/A"
+      , niVersion         = _compilerVersion
+      , niCommit          = _gitRev
+      , niStartTime       = now
+      , niSystemStartTime = now
+      }
+  Version{_compilerVersion, _gitRev} = Version.txGeneratorVersion
 
 initialTraceConfig :: TraceConfig
 initialTraceConfig = TraceConfig {
