@@ -116,6 +116,7 @@ library
                      , text
                      , time
                      , trace-dispatcher
+                     , trace-forward
                      , transformers
                      , transformers-except
                      , unordered-containers

@@ -62,14 +62,20 @@ makeNodeConfig logConfig = liftToAction $ ExceptT $ do
     Left err -> return $ Left $ MkNodeConfigError err
     Right nc' -> return $ Right nc'
 
-startProtocol :: FilePath -> ActionM ()
-startProtocol filePath = do
-  nodeConfig <- makeNodeConfig filePath
+startProtocol :: FilePath -> Maybe FilePath -> ActionM ()
+startProtocol configFile tracerSocket = do
+  nodeConfig <- makeNodeConfig configFile
   protocol <- makeConsensusProtocol nodeConfig
   set Protocol protocol
   set Genesis $ Core.getGenesis protocol
-  set (User TNetworkId) $ protocolToNetworkId protocol
-  liftIO initDefaultTracers >>= set Store.BenchTracers
+  let networkId = protocolToNetworkId protocol
+  set (User TNetworkId) networkId
+  tracers <- case tracerSocket of
+    Nothing -> liftIO initDefaultTracers
+    Just socket -> do
+      iomgr <- askIOManager
+      liftIO $ initTracers iomgr networkId socket
+  set Store.BenchTracers tracers
 
 shutDownLogging :: ActionM ()
 shutDownLogging = do

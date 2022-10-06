@@ -26,7 +26,7 @@ let
                ShelleyGenesisFile ByronGenesisFile;
            };
     in
-        services-config.finaliseGeneratorService
+        services-config.finaliseGeneratorService profile.value
         {
           inherit (profile.value) era;
 

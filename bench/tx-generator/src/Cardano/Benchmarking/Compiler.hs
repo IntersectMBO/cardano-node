@@ -51,7 +51,7 @@ testCompiler o c = case runExcept $ runRWST c o 0 of
 compileToScript :: Compiler ()
 compileToScript = do
   initConstants
-  emit . StartProtocol =<< askNixOption getNodeConfigFile
+  StartProtocol <$> askNixOption getNodeConfigFile <*> askNixOption _nix_cardanoTracerSocket >>= emit
   genesisWallet <- importGenesisFunds
   collateralWallet <- addCollaterals genesisWallet
   splitWallet <- splittingPhase genesisWallet

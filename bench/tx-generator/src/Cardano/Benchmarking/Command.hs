@@ -20,7 +20,7 @@ import           Options.Applicative as Opt
 import           Ouroboros.Network.NodeToClient (withIOManager)
 
 import           Cardano.Benchmarking.Compiler (compileOptions)
-import           Cardano.Benchmarking.NixOptions (NixServiceOptions, _nix_nodeConfigFile,
+import           Cardano.Benchmarking.NixOptions (NixServiceOptions, _nix_nodeConfigFile, _nix_cardanoTracerSocket,
                    parseNixServiceOptions, setNodeConfigFile)
 import           Cardano.Benchmarking.Script (parseScriptFileAeson, runScript)
 import           Cardano.Benchmarking.Script.Aeson (prettyPrint)
@@ -29,7 +29,7 @@ import           Cardano.Benchmarking.Version as Version
 
 data Command
   = Json FilePath
-  | JsonHL FilePath (Maybe FilePath)
+  | JsonHL FilePath (Maybe FilePath) (Maybe FilePath)
   | Compile FilePath
   | Selftest FilePath
   | VersionCmd
@@ -43,9 +43,9 @@ runCommand = withIOManager $ \iocp -> do
     Json file -> do
       script <- parseScriptFileAeson file
       runScript script iocp >>= handleError
-    JsonHL file nodeConfigOverwrite -> do
+    JsonHL file nodeConfigOverwrite cardanoTracerOverwrite -> do
       opts <- parseNixServiceOptions file
-      finalOpts <- mangleNodeConfig opts nodeConfigOverwrite
+      finalOpts <- mangleTracerConfig cardanoTracerOverwrite <$> mangleNodeConfig nodeConfigOverwrite opts
       case compileOptions finalOpts of
         Right script -> runScript script iocp >>= handleError
         err -> handleError err
@@ -62,11 +62,15 @@ runCommand = withIOManager $ \iocp -> do
     Right _  -> exitSuccess
     Left err -> die $ show err
 
-  mangleNodeConfig :: NixServiceOptions -> Maybe FilePath -> IO NixServiceOptions
-  mangleNodeConfig opts fp = case (_nix_nodeConfigFile opts, fp) of
+  mangleNodeConfig :: Maybe FilePath -> NixServiceOptions -> IO NixServiceOptions
+  mangleNodeConfig fp opts = case (_nix_nodeConfigFile opts, fp) of
     (_      , Just newFilePath) -> return $ setNodeConfigFile opts newFilePath
     (Just _ , Nothing) -> return opts
     (Nothing, Nothing) -> die "No node-configFile set"
+
+  mangleTracerConfig ::  Maybe FilePath -> NixServiceOptions -> NixServiceOptions
+  mangleTracerConfig traceSocket opts
+    = opts { _nix_cardanoTracerSocket = traceSocket <> _nix_cardanoTracerSocket opts}
 
 commandParser :: Parser Command
 commandParser
@@ -89,6 +93,7 @@ commandParser
   jsonHLCmd :: Parser Command
   jsonHLCmd = JsonHL <$> filePath "benchmarking options"
                      <*> nodeConfigOpt
+                     <*> tracerConfigOpt
   compileCmd :: Parser Command
   compileCmd = Compile <$> filePath "benchmarking options"
 
@@ -101,6 +106,15 @@ commandParser
       <> metavar "FILENAME"
       <> value Nothing
       <> help "the node configfile"
+    )
+
+  tracerConfigOpt :: Parser (Maybe FilePath)
+  tracerConfigOpt = option (Just <$> str)
+    ( long "cardano-tracer"
+      <> short 'n'
+      <> metavar "SOCKET"
+      <> value Nothing
+      <> help "the cardano-tracer socket"
     )
 
   versionCmd :: Parser Command

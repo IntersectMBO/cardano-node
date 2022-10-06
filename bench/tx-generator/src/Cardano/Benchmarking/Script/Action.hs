@@ -16,7 +16,7 @@ action a = case a of
   Set (key :=> (Identity val)) -> set (User key) val
   InitWallet name -> initWallet name
   SetProtocolParameters p -> setProtocolParameters p
-  StartProtocol filePath -> startProtocol filePath
+  StartProtocol configFile cardanoTracerSocket -> startProtocol configFile cardanoTracerSocket
   ReadSigningKey name filePath -> readSigningKey name filePath
   DefineSigningKey name descr -> defineSigningKey name descr
   AddFund era wallet txIn lovelace keyName -> addFund era wallet txIn lovelace keyName
