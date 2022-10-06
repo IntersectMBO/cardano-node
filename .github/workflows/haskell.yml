@@ -49,9 +49,9 @@ jobs:
           libtool
           make
           git
+          mingw-w64-x86_64-pkg-config
           mingw-w64-x86_64-toolchain
           mingw-w64-x86_64-libsodium
-          mingw-w64-x86_64-cmake
           mingw-w64-x86_64-jq
 
     - name: "LINUX,MAC: Setup haskell"
