@@ -83,14 +83,12 @@ instance MetaTrace Message where
                   , Namespace ["Test","Message2"]
                   , Namespace ["Test","Message3"]]
 
-
 instance Arbitrary Message where
   arbitrary = oneof
     [ Message1 0 <$> arbitrary,
       Message2 0 <$> elements ["Hallo", "Goodbye", "Whatelse"],
       Message3 0 <$> arbitrary
     ]
-
 
 -- | Adds a time between 0 and 1.
 --   0 is the time of the test start, and 1 the test end
