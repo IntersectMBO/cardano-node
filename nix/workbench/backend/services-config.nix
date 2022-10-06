@@ -84,13 +84,15 @@ with lib;
         profile: nodeSpec: args: args;
 
       finaliseGeneratorService =
-        svc: recursiveUpdate svc
+        profile: svc: recursiveUpdate svc
           ({
             sigKey         = "./genesis/utxo-keys/utxo1.skey";
             runScriptFile  = "run-script.json";
             ## path to the config and socket of the locally running node.
             nodeConfigFile = "./node-0/config.json";
             localNodeSocketPath = "./node-0/node.socket";
+          } // optionalAttrs profile.node.tracer {
+            tracerSocketPath = "../tracer/tracer.socket";
           } // optionalAttrs useCabalRun {
             executable     = "cabal run exe:tx-generator --";
           });

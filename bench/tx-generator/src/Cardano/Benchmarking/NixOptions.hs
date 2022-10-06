@@ -39,6 +39,7 @@ data NixServiceOptions = NixServiceOptions {
   , _nix_executionMemory  :: Natural
   , _nix_executionSteps   :: Natural
   , _nix_nodeConfigFile       :: Maybe FilePath
+  , _nix_cardanoTracerSocket  :: Maybe FilePath
   , _nix_sigKey               :: SigningKeyFile
   , _nix_localNodeSocketPath  :: String
   , _nix_targetNodes          :: NonEmpty NodeIPv4Address
