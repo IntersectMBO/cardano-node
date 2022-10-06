@@ -70,7 +70,7 @@ runCommand = withIOManager $ \iocp -> do
 
   mangleTracerConfig ::  Maybe FilePath -> NixServiceOptions -> NixServiceOptions
   mangleTracerConfig traceSocket opts
-    = opts { _nix_cardanoTracerSocket = (traceSocket <> _nix_cardanoTracerSocket opts)}
+    = opts { _nix_cardanoTracerSocket = traceSocket <> _nix_cardanoTracerSocket opts}
 
 commandParser :: Parser Command
 commandParser
