@@ -33,6 +33,8 @@ common base
                        StandaloneDeriving
                        TupleSections
                        TypeApplications
+                       TypeFamilies
+                       TypeInType
                        ViewPatterns
 
   ghc-options:         -Wall
@@ -45,14 +47,19 @@ common base
 
   build-depends:       base
 
+  if os(windows)
+    buildable: False
+
 library
   import:              base
   hs-source-dirs:      src
 
   exposed-modules:     Data.Accum
                        Data.CDF
+                       Data.DataDomain
 
                        Cardano.Command
+                       Cardano.Report
                        Cardano.TopHandler
                        Cardano.Util
 
@@ -67,30 +74,35 @@ library
                        Cardano.Analysis.MachPerf
                        Cardano.Analysis.Version
 
+                       Cardano.Org
+                       Cardano.Render
+
                        Cardano.Unlog.LogObject
-                       Cardano.Unlog.Render
                        Cardano.Unlog.Resources
 
   other-modules:       Paths_locli
+  autogen-modules:     Paths_locli
 
   build-depends:       aeson
+                     , Histogram
                      , aeson-pretty
                      , async
                      , attoparsec
                      , attoparsec-iso8601
                      , bytestring
                      , cardano-git-rev
-                     , cardano-prelude
                      , cardano-ledger-core
-                     , iohk-monitoring
+                     , cardano-prelude
                      , cardano-slotting
                      , containers
                      , deepseq
                      , directory
-                     , filepath
+                     , extra
                      , file-embed
+                     , filepath
+                     , ghc
                      , gnuplot
-                     , Histogram
+                     , iohk-monitoring
                      , optparse-applicative-fork
                      , optparse-generic
                      , ouroboros-consensus
@@ -109,6 +121,7 @@ library
                      , trace-resources
                      , transformers
                      , transformers-except
+                     , unix
                      , unordered-containers
                      , utf8-string
                      , vector
@@ -148,3 +161,4 @@ test-suite test-locli
                       , text
 
   other-modules:        Test.Analysis.CDF
+                        Test.Unlog.Org

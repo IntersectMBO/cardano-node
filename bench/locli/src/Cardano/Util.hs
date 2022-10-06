@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
 module Cardano.Util
   ( module Prelude
   , module Cardano.Util
@@ -6,11 +7,12 @@ module Cardano.Util
   , module Control.Applicative
   , module Control.Concurrent.Async
   , module Control.Monad.Trans.Except.Extra
+  , module Ouroboros.Consensus.Util.Time
   , module Text.Printf
   )
 where
 
-import Prelude                          (String)
+import Prelude                          (String, error)
 import Cardano.Prelude
 
 import Control.Arrow                    ((&&&), (***))
@@ -30,9 +32,19 @@ import Text.Printf                      (printf)
 
 import System.FilePath                  qualified as F
 
+import Ouroboros.Consensus.Util.Time
+
 import Cardano.Analysis.Ground
 import Cardano.Ledger.BaseTypes         (StrictMaybe (..), fromSMaybe)
 
+
+type SMaybe a = StrictMaybe a
+
+instance Alternative StrictMaybe where
+  empty = SNothing
+  (<|>) x y = case x of
+                SNothing -> y
+                _ -> x
 
 smaybe :: b -> (a -> b) -> StrictMaybe a -> b
 smaybe x _  SNothing = x
@@ -71,8 +83,19 @@ mapAndUnzip f (x:xs)
     in
     (r1:rs1, r2:rs2)
 
+mapHead :: (a -> a) -> [a] -> [a]
+mapHead f (x:xs) = f x:xs
+mapHead _ [] = error "mapHead: partial"
+
 redistribute :: (a, (b, c)) -> ((a, b), (a, c))
 redistribute    (a, (b, c))  = ((a, b), (a, c))
+
+nChunksEachOf :: Int -> Int -> Text -> [Text]
+nChunksEachOf chunks each center =
+  T.chunksOf each (T.center (each * chunks) ' ' center)
+
+toDouble :: forall a. Real a => a -> Double
+toDouble = fromRational . toRational
 
 data F
   = R String
@@ -104,12 +127,12 @@ hostDeduction = \case
 replaceExtension :: FilePath -> String -> FilePath
 replaceExtension f new = F.dropExtension f <> "." <> new
 
-dumpObject :: ToJSON a => String -> a -> JsonOutputFile -> ExceptT Text IO ()
+dumpObject :: ToJSON a => String -> a -> JsonOutputFile a -> ExceptT Text IO ()
 dumpObject ident x (JsonOutputFile f) = liftIO $ do
   progress ident (Q f)
   withFile f WriteMode $ \hnd -> LBS.hPutStrLn hnd $ encode x
 
-dumpObjects :: ToJSON a => String -> [a] -> JsonOutputFile -> ExceptT Text IO ()
+dumpObjects :: ToJSON a => String -> [a] -> JsonOutputFile [a] -> ExceptT Text IO ()
 dumpObjects ident xs (JsonOutputFile f) = liftIO $ do
   progress ident (Q f)
   withFile f WriteMode $ \hnd -> do
