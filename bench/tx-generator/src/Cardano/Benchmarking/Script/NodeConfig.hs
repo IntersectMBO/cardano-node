@@ -24,8 +24,8 @@ liftToAction = firstExceptT TxGenError . newExceptT . liftIO
 
 startProtocol :: FilePath -> Maybe FilePath -> ActionM ()
 startProtocol configFile tracerSocket = do
-  nodeConfig <- makeNodeConfig configFile
-  protocol <- makeConsensusProtocol nodeConfig
+  nodeConfig <- liftToAction $ mkNodeConfig configFile
+  protocol <-  liftToAction $ mkConsensusProtocol nodeConfig
   set Protocol protocol
   set Genesis $ Core.getGenesis protocol
   let networkId = protocolToNetworkId protocol
@@ -36,8 +36,3 @@ startProtocol configFile tracerSocket = do
       iomgr <- askIOManager
       liftIO $ initTracers iomgr networkId socket
   set Store.BenchTracers tracers
-
-shutDownLogging :: ActionM ()
-shutDownLogging = do
-  traceError "QRT Last Message. LoggingLayer going to shutdown. 73 . . . ."
-  liftIO $ threadDelay (200*1000)
