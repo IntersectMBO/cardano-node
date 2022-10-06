@@ -21,13 +21,12 @@ import           Options.Applicative as Opt
 import           Ouroboros.Network.NodeToClient (withIOManager)
 
 import           Cardano.Benchmarking.Compiler (compileOptions)
-import           Cardano.TxGenerator.Setup.NixOptions (NixServiceOptions, getNodeConfigFile, _nix_cardanoTracerSocket,
-                   parseNixServiceOptions, setNodeConfigFile)
 import           Cardano.Benchmarking.Script (parseScriptFileAeson, runScript)
 import           Cardano.Benchmarking.Script.Aeson (parseJSONFile, prettyPrint)
 import           Cardano.Benchmarking.Script.Selftest (runSelftest)
 import           Cardano.Benchmarking.Version as Version
 import           Cardano.TxGenerator.Setup.NixService
+
 
 data Command
   = Json FilePath

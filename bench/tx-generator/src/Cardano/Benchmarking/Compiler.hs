@@ -30,7 +30,7 @@ data CompileError where
   deriving (Show)
 type Compiler a = RWST NixServiceOptions (DList Action) Int (Except CompileError) a
 
-throwCompileError :: CompileError -> Compiler ()
+throwCompileError :: CompileError -> Compiler a
 throwCompileError = lift . throwE
 
 maxOutputsPerTx :: Int
@@ -55,10 +55,11 @@ testCompiler o c = case runExcept $ runRWST c o 0 of
 compileToScript :: Compiler ()
 compileToScript = do
   initConstants
-  maybe
-    (throwCompileError $ SomeCompilerError "nodeConfigFile not set in Nix options")
-    emit
-    (StartProtocol <$> askNixOption getNodeConfigFile <*> askNixOption _nix_cardanoTracerSocket)
+  nc <- askNixOption getNodeConfigFile >>= maybe
+        (throwCompileError $ SomeCompilerError "nodeConfigFile not set in Nix options")
+        pure
+  tc <- askNixOption _nix_cardanoTracerSocket
+  emit $ StartProtocol nc tc
   genesisWallet <- importGenesisFunds
   collateralWallet <- addCollaterals genesisWallet
   splitWallet <- splittingPhase genesisWallet
