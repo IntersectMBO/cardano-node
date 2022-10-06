@@ -24,27 +24,23 @@ let serviceConfigToJSON =
         rotation = {
           rpFrequencySecs = 15;
           rpKeepFilesNum  = 10;
-          rpLogLimitBytes = 500000000;
+          rpLogLimitBytes = 1000000000;
           rpMaxAgeHours   = 24;
-        };
+        } // (cfg.rotation or {});
 
         hasRTView = {
           epHost    = "127.0.0.1";
           epPort    = 3300;
-        };
+        } // (cfg.RTView or {});
         hasEKG = [
-          { epHost    = "127.0.0.1";
-            epPort    = 3100; ## supervisord.portShiftPrometheus
-          }
-          { epHost    = "127.0.0.1";
-            epPort    = 3101; ## supervisord.portShiftPrometheus
-          }
+          { epHost  = "127.0.0.1"; epPort  = cfg.ekgPortBase;     }
+          { epHost  = "127.0.0.1"; epPort  = cfg.ekgPortBase + 1; }
         ];
         ekgRequestFreq = 1;
         hasPrometheus = {
           epHost    = "127.0.0.1";
           epPort    = 3200; ## supervisord.portShiftPrometheus
-        };
+        } // (cfg.prometheus or {});
       };
 in pkgs.commonLib.defServiceModule
   (lib: with lib;
@@ -66,6 +62,11 @@ in pkgs.commonLib.defServiceModule
         acceptingSocket = mayOpt str           "Socket path: as acceptor.";
         connectToSocket = mayOpt str           "Socket path: connect to.";
         logRoot         = opt    str null      "Log storage root directory.";
+        rotation        = opt    attrs {}      "Log rotation overrides: see cardano-tracer documentation.";
+        RTView          = opt    attrs {}      "RTView config overrides: see cardano-tracer documentation.";
+        ekgPortBase     = opt    int 3100      "EKG port base.";
+        ekgRequestFreq  = opt    int 1         "EKG request frequency";
+        prometheus      = opt    attrs {}      "Prometheus overrides: see cardano-tracer documentation.";
 
         ### Here be dragons, on the other hand..
         configFile      = mayOpt str
