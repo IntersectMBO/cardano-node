@@ -179,7 +179,7 @@ in {
 
       cardanoNodePackages = mkOption {
         type = types.attrs;
-        default = pkgs.cardanoNodePackages or (import ../. {}).cardanoNodePackages;
+        default = pkgs.cardanoNodePackages or (import ../. { inherit (pkgs) system; }).cardanoNodePackages;
         defaultText = "cardano-node packages";
         description = ''
           The cardano-node packages and library that should be used.
