@@ -1,12 +1,14 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -63,17 +65,16 @@ import           Ouroboros.Network.InboundGovernor (InboundGovernorTrace (..), R
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.InboundGovernor.State (InboundGovernorCounters (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
+import           Ouroboros.Network.ExitPolicy (ReconnectDelay (..))
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToClient (NodeToClientVersion, NodeToClientVersionData (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), NodeToNodeVersion,
                    NodeToNodeVersionData (..), RemoteAddress, TraceSendRecv (..), WithAddr (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
-import qualified Ouroboros.Network.PeerSelection.EstablishedPeers as EstablishedPeers
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
-                   PeerSelectionCounters (..), PeerSelectionState (..), PeerSelectionTargets (..),
+                   PeerSelectionCounters (..), PeerSelectionTargets (..),
                    TracePeerSelection (..))
-import qualified Ouroboros.Network.PeerSelection.KnownPeers as KnownPeers
 import           Ouroboros.Network.PeerSelection.LedgerPeers
 import           Ouroboros.Network.PeerSelection.LocalRootPeers (LocalRootPeers, toGroupSets, toMap)
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
@@ -1605,6 +1606,7 @@ instance Aeson.ToJSON AbstractState where
       Aeson.object [ "kind" .= String "TerminatedSt" ]
 
 
+{-
 peerSelectionTargetsToObject :: PeerSelectionTargets -> Value
 peerSelectionTargetsToObject
   PeerSelectionTargets { targetNumberOfRootPeers,
@@ -1617,21 +1619,9 @@ peerSelectionTargetsToObject
                , "established" .= targetNumberOfEstablishedPeers
                , "active" .= targetNumberOfActivePeers
                ]
+-}
 
 instance ToObject (DebugPeerSelection SockAddr) where
-  toObject verb (TraceGovernorState blockedAt wakeupAfter
-                   PeerSelectionState { targets, knownPeers, establishedPeers, activePeers })
-      | verb <= NormalVerbosity =
-    mconcat [ "kind" .= String "DebugPeerSelection"
-             , "blockedAt" .= String (pack $ show blockedAt)
-             , "wakeupAfter" .= String (pack $ show wakeupAfter)
-             , "targets" .= peerSelectionTargetsToObject targets
-             , "numberOfPeers" .=
-                 Object (mconcat [ "known" .= KnownPeers.size knownPeers
-                                  , "established" .= EstablishedPeers.size establishedPeers
-                                  , "active" .= Set.size activePeers
-                                  ])
-             ]
   toObject _ (TraceGovernorState blockedAt wakeupAfter ev) =
     mconcat [ "kind" .= String "DebugPeerSelection"
              , "blockedAt" .= String (pack $ show blockedAt)
@@ -1991,6 +1981,8 @@ instance ToJSON RemoteSt where
   toJSON = String . pack . show
 
 instance ToJSON addr => Aeson.ToJSONKey (ConnectionId addr) where
+
+deriving instance ToJSON ReconnectDelay
 
 instance ToObject NtN.RemoteAddress where
     toObject _verb (SockAddrInet port addr) =
