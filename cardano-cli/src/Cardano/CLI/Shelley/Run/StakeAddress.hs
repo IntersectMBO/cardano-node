@@ -20,7 +20,7 @@ import           Cardano.CLI.Shelley.Key (InputDecodeError, StakeVerifier (..),
                    VerificationKeyOrFile, VerificationKeyOrHashOrFile, readVerificationKeyOrFile,
                    readVerificationKeyOrHashOrFile)
 import           Cardano.CLI.Shelley.Parsers
-import           Cardano.CLI.Shelley.Script (ScriptDecodeError, readFileScriptInAnyLang)
+import           Cardano.CLI.Shelley.Run.Read
 import           Cardano.CLI.Types
 
 data ShelleyStakeAddressCmdError
