@@ -8,14 +8,30 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Benchmarking.Script.Types
-where
+module Cardano.Benchmarking.Script.Types (
+          Action(AddFund, CancelBenchmark, DefineSigningKey, Delay,
+                InitWallet, LogMsg, ReadSigningKey, Reserved, Set,
+                SetProtocolParameters, StartProtocol, Submit,
+                WaitBenchmark, WaitForEra)
+        , Generator(Cycle, NtoM, OneOf, RoundRobin, SecureGenesis,
+                Sequence, Split, SplitN, Take)
+        , PayMode(PayToAddr, PayToScript)
+        , ProtocolParametersSource(QueryLocalNode, UseLocalProtocolFile)
+        , ScriptBudget(AutoScript, CheckScriptBudget, StaticScriptBudget)
+        , ScriptSpec(ScriptSpec, scriptSpecFile, scriptSpecBudget)
+        , SubmitMode(Benchmark, DiscardTX, DumpToFile, LocalSocket,
+                NodeToNode)
+        , TargetNodes
+        , setConst
+) where
 
 import           GHC.Generics
 import           Prelude
 
+import           Data.Functor.Identity
 import           Data.List.NonEmpty
 import           Data.Text (Text)
+import           Data.Dependent.Sum(DSum(..), (==>))
 
 import           Cardano.Api (AnyCardanoEra, ExecutionUnits, Lovelace, ScriptData, ScriptRedeemer,
                    TextEnvelope, TxIn)
@@ -24,8 +40,10 @@ import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
 
 import           Cardano.TxGenerator.Types
 
-import           Cardano.Benchmarking.Script.Env(SetKeyVal)
+import           qualified Cardano.Benchmarking.Script.Setters as Setters
 import           Cardano.Benchmarking.Script.Store
+
+type SetKeyVal = DSum Setters.Tag Identity
 
 data Action where
   Set                :: !SetKeyVal -> Action
@@ -98,3 +116,7 @@ data ScriptSpec = ScriptSpec
   }
   deriving (Show, Eq)
 deriving instance Generic ScriptSpec
+
+setConst :: Setters.Tag v -> v -> Action
+setConst key val = Set $ key ==> val
+
