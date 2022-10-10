@@ -81,34 +81,11 @@ withEra era action = do
     AnyCardanoEra ShelleyEra -> action AsShelleyEra
     AnyCardanoEra ByronEra   -> error "byron not supported"
 
-setProtocolParameters :: ProtocolParametersSource -> ActionM ()
-setProtocolParameters s = case s of
-  QueryLocalNode -> do
-    set ProtocolParameterMode ProtocolParameterQuery
-  UseLocalProtocolFile file -> do
-    protocolParameters <- liftIO $ readProtocolParametersFile file
-    set ProtocolParameterMode $ ProtocolParameterLocal protocolParameters
-
 readSigningKey :: KeyName -> SigningKeyFile -> ActionM ()
 readSigningKey name filePath =
   liftIO ( runExceptT $ GeneratorTx.readSigningKey filePath) >>= \case
     Left err -> liftTxGenError err
     Right key -> setName name key
-
-parseSigningKey :: TextEnvelope -> Either TextEnvelopeError (SigningKey PaymentKey)
-parseSigningKey = deserialiseFromTextEnvelopeAnyOf types
-  where
-    types :: [FromSomeType HasTextEnvelope (SigningKey PaymentKey)]
-    types =
-      [ FromSomeType (AsSigningKey AsGenesisUTxOKey) castSigningKey
-      , FromSomeType (AsSigningKey AsPaymentKey) id
-      ]
-
-defineSigningKey :: KeyName -> TextEnvelope -> ActionM ()
-defineSigningKey name descr
-  = case parseSigningKey descr of
-    Right key -> setName name key
-    Left err -> liftTxGenError $ ApiError err
 
 addFund :: AnyCardanoEra -> WalletName -> TxIn -> Lovelace -> KeyName -> ActionM ()
 addFund era wallet txIn lovelace keyName = do
@@ -512,12 +489,3 @@ preExecuteScriptAction protocolParameters script scriptData redeemer
 
 traceTxGeneratorVersion :: ActionM ()
 traceTxGeneratorVersion = traceBenchTxSubmit TraceTxGeneratorVersion Version.txGeneratorVersion
-
-{-
-This is for dirty hacking and testing and quick-fixes.
-Its a function that can be called from the JSON scripts
-and for which the JSON encoding is "reserved".
--}
-reserved :: [String] -> ActionM ()
-reserved _ = do
-  throwE $ UserError "no dirty hack is implemented"

@@ -9,11 +9,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Benchmarking.Script.Types (
-          Action(AddFund, CancelBenchmark, DefineSigningKey, Delay,
-                InitWallet, LogMsg, ReadSigningKey, Reserved, Set,
-                SetProtocolParameters, StartProtocol, Submit,
-                WaitBenchmark, WaitForEra)
-        , Generator(Cycle, NtoM, OneOf, RoundRobin, SecureGenesis,
+        Generator(Cycle, NtoM, OneOf, RoundRobin, SecureGenesis,
                 Sequence, Split, SplitN, Take)
         , PayMode(PayToAddr, PayToScript)
         , ProtocolParametersSource(QueryLocalNode, UseLocalProtocolFile)
@@ -22,47 +18,20 @@ module Cardano.Benchmarking.Script.Types (
         , SubmitMode(Benchmark, DiscardTX, DumpToFile, LocalSocket,
                 NodeToNode)
         , TargetNodes
-        , setConst
 ) where
 
 import           GHC.Generics
 import           Prelude
 
-import           Data.Functor.Identity
 import           Data.List.NonEmpty
-import           Data.Text (Text)
-import           Data.Dependent.Sum(DSum(..), (==>))
 
-import           Cardano.Api (AnyCardanoEra, ExecutionUnits, Lovelace, ScriptData, ScriptRedeemer,
-                   TextEnvelope, TxIn)
-import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
+import           Cardano.Api (ExecutionUnits, Lovelace,
+                   ScriptData, ScriptRedeemer)
 import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
 
 import           Cardano.TxGenerator.Types
 
-import           qualified Cardano.Benchmarking.Script.Setters as Setters
 import           Cardano.Benchmarking.Script.Store
-
-type SetKeyVal = DSum Setters.Tag Identity
-
-data Action where
-  Set                :: !SetKeyVal -> Action
---  Declare            :: SetKeyVal   -> Action --declare (once): error if key was set before
-  InitWallet         :: !WalletName -> Action
-  StartProtocol      :: !FilePath -> !(Maybe FilePath) -> Action
-  Delay              :: !Double -> Action
-  ReadSigningKey     :: !KeyName -> !SigningKeyFile -> Action
-  DefineSigningKey   :: !KeyName -> !TextEnvelope -> Action
-  AddFund            :: !AnyCardanoEra -> !WalletName -> !TxIn -> !Lovelace -> !KeyName -> Action
-  WaitBenchmark      :: !ThreadName -> Action
-  Submit             :: !AnyCardanoEra -> !SubmitMode -> !TxGenTxParams -> !Generator -> Action
-  CancelBenchmark    :: !ThreadName -> Action
-  Reserved           :: [String] -> Action
-  WaitForEra         :: !AnyCardanoEra -> Action
-  SetProtocolParameters :: ProtocolParametersSource -> Action
-  LogMsg             :: !Text -> Action
-  deriving (Show, Eq)
-deriving instance Generic Action
 
 data Generator where
   SecureGenesis :: !WalletName -> !KeyName -> !KeyName -> Generator -- 0 to N
@@ -116,7 +85,3 @@ data ScriptSpec = ScriptSpec
   }
   deriving (Show, Eq)
 deriving instance Generic ScriptSpec
-
-setConst :: Setters.Tag v -> v -> Action
-setConst key val = Set $ key ==> val
-

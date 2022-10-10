@@ -29,6 +29,8 @@ import           Cardano.Api.Shelley (ProtocolParameters)
 import           Cardano.CLI.Types (SigningKeyFile (..))
 import qualified Ouroboros.Network.Magic as Ouroboros (NetworkMagic (..))
 
+import           Cardano.Benchmarking.GeneratorTx
+import           Cardano.Benchmarking.Script.Action(Action)
 import           Cardano.Benchmarking.Script.Setters
 import           Cardano.Benchmarking.Script.Store
 import           Cardano.Benchmarking.Script.Types
@@ -162,6 +164,14 @@ parseScriptFileAeson = parseJSONFile fromJSON
 
 readProtocolParametersFile :: FilePath -> IO ProtocolParameters
 readProtocolParametersFile = parseJSONFile fromJSON
+
+setProtocolParameters :: ProtocolParametersSource -> ActionM ()
+setProtocolParameters s = case s of
+  QueryLocalNode -> do
+    set ProtocolParameterMode ProtocolParameterQuery
+  UseLocalProtocolFile file -> do
+    protocolParameters <- liftIO $ readProtocolParametersFile file
+    set ProtocolParameterMode $ ProtocolParameterLocal protocolParameters
 
 instance ToJSON KeyName         where toJSON (KeyName a) = toJSON a
 instance ToJSON ThreadName      where toJSON (ThreadName a) = toJSON a
