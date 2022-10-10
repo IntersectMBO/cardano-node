@@ -13,7 +13,6 @@
 module Cardano.Benchmarking.Script.Env (
         ActionM
         , Error(..)
-        , SetKeyVal
         , runActionM
         , runActionMEnv
         , liftTxGenError
@@ -27,12 +26,12 @@ module Cardano.Benchmarking.Script.Env (
         , getName
         , setName
         , getUser
+        , setUser
 ) where
 
 import           Prelude
 import           Data.Functor.Identity
 import qualified Data.Text as Text
-import           Data.Dependent.Sum (DSum(..))
 import           Data.Dependent.Map (DMap)
 import qualified Data.Dependent.Map as DMap
 import           Control.Monad.IO.Class
@@ -62,8 +61,6 @@ runActionM = runActionMEnv emptyEnv
 runActionMEnv :: Env -> ActionM ret -> IOManager -> IO (Either Error ret, Env, ())
 runActionMEnv env action iom = RWS.runRWST (runExceptT action) iom env
 
-type SetKeyVal = DSum Setters.Tag Identity
-
 data Error where
   LookupError :: !(Store v)  -> Error
   TxGenError  :: !TxGenError -> Error
@@ -87,6 +84,9 @@ unSet key = lift $ RWS.modify $ (\e -> e { dmap = DMap.delete key (dmap e)})
 
 setName :: Name v -> v -> ActionM ()
 setName = set . Named
+
+setUser :: Tag v -> v -> ActionM ()
+setUser = set . User
 
 get :: Store v -> ActionM v
 get key = do
