@@ -38,11 +38,11 @@ import           Cardano.Logging.Types
 
 -- | Call this function at initialisation, and later for reconfiguration
 configureTracers :: forall a.
-     TraceConfig
-  -> Documented a
+     MetaTrace a
+  => TraceConfig
   -> [Trace IO a]
   -> IO ()
-configureTracers config (Documented documented) tracers = do
+configureTracers config tracers = do
     mapM_ (configureTrace Reset) tracers
     mapM_ (configureAllTrace (Config config)) tracers
     mapM_ (configureTrace Optimize) tracers
@@ -51,11 +51,10 @@ configureTracers config (Documented documented) tracers = do
       T.traceWith tr (emptyLoggingContext, Left control)
     configureAllTrace control (Trace tr) =
       mapM
-        (\ DocMsg {..} -> T.traceWith tr (
-                              emptyLoggingContext {lcNamespace = unNS dmNamespace}
+        (\ ns -> T.traceWith tr (
+                              emptyLoggingContext {lcNamespace = unNS ns}
                             , Left control))
-        documented
-
+        (allNamespaces :: [Namespace a])
 -- | Switch off any message of a particular tracer based on the configuration.
 -- If the top tracer is silent and no subtracer is not silent, then switch it off
 maybeSilent :: forall m a. (MonadIO m) =>
@@ -185,7 +184,7 @@ withNamespaceConfig name extract withConfig tr = do
         Left (_cmap, Just _v) ->
                       error $ "Trace not reset before reconfiguration (4)"
                                   ++ show (lcNamespace lc)
-    mkTrace ref (lc, Left dc@Document {}) = do
+    mkTrace ref (lc, Left dc@TCDocument {}) = do
       eitherConf <- liftIO $ readIORef ref
       case eitherConf of
         Right val -> do
@@ -214,7 +213,7 @@ filterSeverityFromConfig =
       (\ mbSev (Trace tr) ->
       pure $ Trace $ T.arrow $ T.emit $
         \case
-          (lc, Left c@Document {}) -> do
+          (lc, Left c@TCDocument {}) -> do
             addFiltered c mbSev
             T.traceWith
               (unpackTrace (filterTraceBySeverity mbSev (Trace tr)))
@@ -304,7 +303,7 @@ withLimitersFromConfig tr trl = do
         \ case
           (lc, Right v) ->
             T.traceWith trli (lc, Right v)
-          (lc, Left c@Document {}) -> do
+          (lc, Left c@TCDocument {}) -> do
             addLimiter c (n, d)
             T.traceWith tr' (lc, Left c)
           (lc, Left c) ->

@@ -22,7 +22,6 @@ import           Test.QuickCheck
 
 import           Cardano.Logging
 import           Cardano.Logging.Test.Config ()
-import           Cardano.Logging.Test.Messages
 import           Cardano.Logging.Test.Tracer
 import           Cardano.Logging.Test.Types
 
@@ -47,7 +46,7 @@ runScriptSimple time oracle = do
                         forwardTracer'
                         (Just ekgTracer')
                         (Namespace ["Test"])
-    configureTracers conf docMessage [tr]
+    configureTracers conf [tr]
     let sortedMsgs = sort msgs
     let (msgsWithIds,_) = withMessageIds 0 sortedMsgs
     let timedMessages = map (withTimeFactor time) msgsWithIds
@@ -88,7 +87,7 @@ runScriptMultithreaded time oracle = do
                           forwardTracer'
                           (Just ekgTracer')
                           (Namespace ["Test"])
-      configureTracers conf docMessage [tr]
+      configureTracers conf  [tr]
       let sortedMsgs1 = sort msgs1
       let (msgsWithIds1,_) = withMessageIds 0 sortedMsgs1
       let timedMessages1 = map (withTimeFactor time) msgsWithIds1
@@ -155,7 +154,7 @@ runScriptMultithreadedWithReconfig time oracle = do
                           forwardTracer'
                           (Just ekgTracer')
                           (Namespace ["Test"])
-      configureTracers conf docMessage [tr]
+      configureTracers conf  [tr]
       let sortedMsgs1 = sort msgs1
       let (msgsWithIds1,_) = withMessageIds 0 sortedMsgs1
       let timedMessages1 = map (withTimeFactor time) msgsWithIds1
@@ -220,7 +219,7 @@ runScriptMultithreadedWithConstantReconfig time oracle = do
                           forwardTracer'
                           (Just ekgTracer')
                           (Namespace ["Test"])
-      configureTracers conf1 docMessage [tr]
+      configureTracers conf1  [tr]
       let sortedMsgs1 = sort msgs1
       let (msgsWithIds1,_) = withMessageIds 0 sortedMsgs1
       let timedMessages1 = map (withTimeFactor time) msgsWithIds1
@@ -286,7 +285,7 @@ playReconfigure :: Double -> TraceConfig -> Trace IO Message -> IO ()
 playReconfigure time config tr = do
 
   threadDelay (round (time * 1000000))
-  configureTracers config docMessage [tr]
+  configureTracers config [tr]
 
 playReconfigureContinuously ::
      Double
@@ -305,10 +304,10 @@ playReconfigureContinuously time config1 config2 tr = do
         then pure ()
         else if alt == 0
               then do
-                 configureTracers config1 docMessage [tr]
+                 configureTracers config1 [tr]
                  go startTime 1
               else do
-                 configureTracers config2 docMessage [tr]
+                 configureTracers config2 [tr]
                  go startTime 0
 
 

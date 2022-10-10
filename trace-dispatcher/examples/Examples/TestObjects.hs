@@ -187,14 +187,14 @@ traceForgeEventDocu = Documented
       \See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>"
   ]
 
-withSeverityTraceForgeEvent :: Monad m =>
-     Trace m (TraceForgeEvent blk)
-  -> Trace m (TraceForgeEvent blk)
-withSeverityTraceForgeEvent = withSeverity (\case
-    Namespace ["TraceStartLeadershipCheck"] -> Info
-    Namespace ["TraceSlotIsImmutable"]      -> Error
-    Namespace ["TraceBlockFromFuture"]      -> Error
-  )
+withSeverityTraceForgeEvent :: Namespace (TraceForgeEvent LogBlock)-> SeverityS
+withSeverityTraceForgeEvent (Namespace ["TraceStartLeadershipCheck"]) = Info
+withSeverityTraceForgeEvent (Namespace ["TraceSlotIsImmutable"])      = Error
+withSeverityTraceForgeEvent (Namespace ["TraceBlockFromFuture"])      = Error
+withSeverityTraceForgeEvent (Namespace u)                           =
+  error ("withSeverityTraceForgeEvent unknown namespace" ++ show u)
+
+
 
 message1 :: TraceForgeEvent LogBlock
 message1 = TraceStartLeadershipCheck (SlotNo 1001)

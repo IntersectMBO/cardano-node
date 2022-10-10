@@ -36,7 +36,7 @@ dataPointTracer dataPointStore =
       liftIO $ writeToStore dataPointStore (nameSpaceToText lcNamespace) val
     output LoggingContext {} (Left Reset) = liftIO $ do
       pure ()
-    output _lk (Left _c@Document {}) = do
+    output _lk (Left _c@TCDocument {}) = do
       pure ()
       -- TODO docIt DataPoint (lk, Just c, val)
     output LoggingContext {} _  = pure ()

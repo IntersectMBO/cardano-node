@@ -148,21 +148,21 @@ mkMetricsTracer :: Maybe (Trace IO FormattedMessage) -> Trace IO FormattedMessag
 mkMetricsTracer = fromMaybe mempty
 
 documentTracer ::
-     TraceConfig
+     MetaTrace a
+  => TraceConfig
   -> Trace IO a
-  -> Documented a
   -> IO [([Text], DocuResult)]
-documentTracer trConfig trace trDoc = do
+documentTracer trConfig trace = do
     res <- catch
             (do
-              configureTracers trConfig trDoc [trace]
+              configureTracers trConfig [trace]
               pure True)
             (\(e :: SomeException) -> do
-              putStrLn $ "Configuration exception" <> show e <> show trDoc
+              putStrLn $ "Configuration exception" <> show e
               pure False)
     if res
-      then  catch (documentMarkdown trDoc [trace])
+      then  catch (documentMarkdown [trace])
               (\(e :: SomeException) -> do
-                putStrLn $ "Documentation exception" <> show e <> show trDoc
+                putStrLn $ "Documentation exception" <> show e
                 pure [])
       else pure []

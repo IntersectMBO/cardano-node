@@ -108,12 +108,12 @@ class LogFormatting a where
   asMetrics :: a -> [Metric]
   asMetrics _v = []
 
-class MetaTrace a where
+class MetaTrace  a where
   namespaceFor  :: a -> Namespace a
   severityFor   :: Namespace a -> SeverityS
   privacyFor    :: Namespace a -> Privacy
   documentFor   :: Namespace a -> Text
-  metricsDocFor :: Namespace a -> Maybe (Text,[Text])
+  metricsDocFor :: Namespace a -> [(Text,Text)]
   allNamespaces :: [Namespace a]
 
 data Metric
@@ -395,7 +395,7 @@ data TraceControl where
     Reset     :: TraceControl
     Config    :: TraceConfig -> TraceControl
     Optimize  :: TraceControl
-    Document  :: Int -> Text -> [(Text, Text)] -> DocCollector -> TraceControl
+    TCDocument  :: Int -> Text -> [(Text, Text)] -> DocCollector -> TraceControl
 
 
 newtype DocCollector = DocCollector (IORef (Map Int LogDoc))

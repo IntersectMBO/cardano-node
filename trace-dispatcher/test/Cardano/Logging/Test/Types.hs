@@ -6,6 +6,8 @@ module Cardano.Logging.Test.Types (
   , ScriptRes (..)
   , scriptLength
   , emptyScriptRes
+  , getMessageID
+  , setMessageID
   ) where
 
 import           Data.Aeson (Value (..), (.=))
@@ -21,6 +23,16 @@ data Message =
   | Message2 MessageID Text
   | Message3 MessageID Double
   deriving (Eq, Ord, Show)
+
+getMessageID :: Message -> MessageID
+getMessageID (Message1 mid _) = mid
+getMessageID (Message2 mid _) = mid
+getMessageID (Message3 mid _) = mid
+
+setMessageID :: Message -> MessageID -> Message
+setMessageID (Message1 _ v) mid = Message1 mid v
+setMessageID (Message2 _ v) mid = Message2 mid v
+setMessageID (Message3 _ v) mid = Message3 mid v
 
 instance LogFormatting Message where
   forMachine _dtal (Message1 mid i) =
@@ -57,9 +69,9 @@ instance LogFormatting Message where
   asMetrics _ = []
 
 instance MetaTrace Message where
-  namespaceFor  Message1 {} = Namespace ["Message1"]
-  namespaceFor  Message2 {} = Namespace ["Message2"]
-  namespaceFor  Message3 {} = Namespace ["Message3"]
+  namespaceFor  Message1 {} = Namespace ["Test", "Message1"]
+  namespaceFor  Message2 {} = Namespace ["Test", "Message2"]
+  namespaceFor  Message3 {} = Namespace ["Test", "Message3"]
 
   severityFor   (Namespace ["Test","Message1"]) = Debug
   severityFor   (Namespace ["Test","Message2"]) = Info
@@ -76,8 +88,8 @@ instance MetaTrace Message where
   documentFor   (Namespace ["Test","Message3"]) = "The third message."
   documentFor   ns = error ("Message>>documentFor: Missing namespace " ++ show ns)
 
-  metricsDocFor (Namespace ["Test","Message1"]) =  Just ("Metrics1", ["A number"])
-  metricsDocFor _                               =  Nothing
+  metricsDocFor (Namespace ["Test","Message1"]) =  [("Metrics1", "A number")]
+  metricsDocFor _                               =  []
 
   allNamespaces = [ Namespace ["Test","Message1"]
                   , Namespace ["Test","Message2"]

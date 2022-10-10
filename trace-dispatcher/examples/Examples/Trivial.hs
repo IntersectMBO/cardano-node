@@ -34,10 +34,9 @@ test2 = do
     stdoutTracer' <- standardTracer
     simpleTracer <- humanFormatter True (Just "cardano") stdoutTracer'
     configureTracers emptyTraceConfig traceForgeEventDocu [simpleTracer]
-    let simpleTracer1  = withSeverity loSeverity
-                            (filterTraceBySeverity
+    let simpleTracer1  = filterTraceBySeverity
                               (Just (SeverityF (Just Warning)))
-                              simpleTracer)
+                              (withSeverity withSeverityTraceForgeEvent simpleTracer)
     let simpleTracerC1 = appendName "Outer1" simpleTracer1
     let simpleTracerC2 = appendName "Inner1" simpleTracerC1
     let simpleTracerC3 = setPrivacy Confidential $ appendName "Inner2" simpleTracerC1
@@ -46,4 +45,3 @@ test2 = do
     traceWith simpleTracerC2 message3
     traceWith (appendName "Inner3" simpleTracerC3) message4
     traceWith (appendName "cont1" $ appendName "cont2" $ appendName "cont3" simpleTracerC2) message1
-

@@ -12,10 +12,10 @@ docTracers :: IO ()
 docTracers = do
   t <- standardTracer
   t1' <- humanFormatter True (Just "cardano") t
-  let t1 = withSeverityTraceForgeEvent
+  let t1 = withSeverity withSeverityTraceForgeEvent
                 (appendName "node" t1')
   t2' <- machineFormatter (Just "cardano") t
-  let t2 = withSeverityTraceForgeEvent
+  let t2 = withSeverity withSeverityTraceForgeEvent
                 (appendName "node" t2')
   bl <- documentMarkdown traceForgeEventDocu [t1, t2]
   res <- buildersToText bl emptyTraceConfig

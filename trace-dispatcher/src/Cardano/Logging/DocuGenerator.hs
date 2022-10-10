@@ -55,19 +55,20 @@ unpackDocu (DocuDatapoint b) = b
 
 -- | Calls the tracers in a documetation control mode,
 -- and returns a DocCollector, from which the documentation gets generated
-documentTracers :: Documented a -> [Trace IO a] -> IO DocCollector
-documentTracers (Documented documented) tracers = do
-    let docIdx = zip documented [0..]
+documentTracers :: forall a. MetaTrace a => [Trace IO a] -> IO DocCollector
+documentTracers tracers = do
+    let nss = allNamespaces :: [Namespace a]
+        nsIdx = zip nss [0..]
     coll <- fmap DocCollector (liftIO $ newIORef Map.empty)
-    mapM_ (docTrace docIdx coll) tracers
+    mapM_ (docTrace nsIdx coll) tracers
     pure coll
   where
-    docTrace docIdx dc (Trace tr) =
+    docTrace nsIdx dc (Trace tr) =
       mapM_
-        (\ (DocMsg {..}, idx) ->
-            T.traceWith tr (emptyLoggingContext {lcNamespace = unNS dmNamespace},
-                            Left (Document idx dmMarkdown dmMetricsMD dc)))
-        docIdx
+        (\ (ns, idx) ->
+            T.traceWith tr (emptyLoggingContext {lcNamespace = unNS ns},
+                            Left (TCDocument idx (documentFor ns) (metricsDocFor ns) dc)))
+        nsIdx
 
 showT :: Show a => a -> Text
 showT = pack . show
@@ -86,7 +87,7 @@ docTracer :: MonadIO m =>
   -> Trace m FormattedMessage
 docTracer backendConfig = Trace $ T.arrow $ T.emit output
   where
-    output p@(_, Left Document {}) =
+    output p@(_, Left TCDocument {}) =
       docIt backendConfig p
     output (_, _) = pure ()
 
@@ -95,12 +96,12 @@ docTracerDatapoint :: MonadIO m =>
   -> Trace m DataPoint
 docTracerDatapoint backendConfig = Trace $ T.arrow $ T.emit output
   where
-    output p@(_, Left Document {}) =
+    output p@(_, Left TCDocument {}) =
       docItDatapoint backendConfig p
     output (_, _) = pure ()
 
 addFiltered :: MonadIO m => TraceControl -> Maybe SeverityF -> m ()
-addFiltered (Document idx mdText mdMetrics (DocCollector docRef)) (Just sev) = do
+addFiltered (TCDocument idx mdText mdMetrics (DocCollector docRef)) (Just sev) = do
   liftIO $ modifyIORef docRef (\ docMap ->
       Map.insert
         idx
@@ -112,7 +113,7 @@ addFiltered (Document idx mdText mdMetrics (DocCollector docRef)) (Just sev) = d
 addFiltered _ _ = pure ()
 
 addLimiter :: MonadIO m => TraceControl -> (Text, Double) -> m ()
-addLimiter (Document idx mdText mdMetrics (DocCollector docRef)) (ln, lf) = do
+addLimiter (TCDocument idx mdText mdMetrics (DocCollector docRef)) (ln, lf) = do
   liftIO $ modifyIORef docRef (\ docMap ->
       Map.insert
         idx
@@ -128,7 +129,7 @@ docIt :: MonadIO m
   -> (LoggingContext, Either TraceControl a)
   -> m ()
 docIt EKGBackend (LoggingContext{},
-  Left (Document idx mdText mdMetrics (DocCollector docRef))) = do
+  Left (TCDocument idx mdText mdMetrics (DocCollector docRef))) = do
     liftIO $ modifyIORef docRef (\ docMap ->
         Map.insert
           idx
@@ -139,7 +140,7 @@ docIt EKGBackend (LoggingContext{},
                           Nothing -> seq mdText (seq mdMetrics (emptyLogDoc mdText mdMetrics))))
           docMap)
 docIt backend (LoggingContext {..},
-  Left (Document idx mdText mdMetrics (DocCollector docRef))) = do
+  Left (TCDocument idx mdText mdMetrics (DocCollector docRef))) = do
     liftIO $ modifyIORef docRef (\ docMap ->
         Map.insert
           idx
@@ -165,7 +166,7 @@ docItDatapoint :: MonadIO m =>
   -> (LoggingContext, Either TraceControl a)
   -> m ()
 docItDatapoint _backend (LoggingContext {..},
-  Left (Document idx mdText _mdMetrics (DocCollector docRef))) = do
+  Left (TCDocument idx mdText _mdMetrics (DocCollector docRef))) = do
   liftIO $ modifyIORef docRef (\ docMap ->
       Map.insert
         idx
@@ -292,12 +293,12 @@ buildersToText builderList configuration = do
       <> numbers
       <> ts)
 
-documentMarkdown ::
-     Documented a
-  -> [Trace IO a]
+documentMarkdown :: forall a.
+     MetaTrace a
+  => [Trace IO a]
   -> IO [([Text], DocuResult)]
-documentMarkdown (Documented documented) tracers = do
-    DocCollector docRef <- documentTracers (Documented documented) tracers
+documentMarkdown tracers = do
+    DocCollector docRef <- documentTracers tracers
     items <- fmap Map.toList (liftIO (readIORef docRef))
     let sortedItems = sortBy
                         (\ (_,l) (_,r) -> compare (ldNamespace l) (ldNamespace r))

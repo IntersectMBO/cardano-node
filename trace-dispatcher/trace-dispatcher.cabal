@@ -126,7 +126,6 @@ test-suite trace-dispatcher-test
                        Cardano.Logging.Test.Oracles
                        Cardano.Logging.Test.Config
                        Cardano.Logging.Test.Tracer
-                       Cardano.Logging.Test.Messages
                        Cardano.Logging.Test.Script
 
   default-language:    Haskell2010
