@@ -103,10 +103,6 @@ let
       pkgs.time
     ];
 
-    # Prevents cabal from choosing alternate plans, so that
-    # *all* dependencies are provided by Nix.
-    exactDeps = true;
-
     shellHook = ''
       echo "DevOps Tools" \
       | ${figlet}/bin/figlet -f banner -c \

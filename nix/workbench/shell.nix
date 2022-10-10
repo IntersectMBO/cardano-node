@@ -78,8 +78,6 @@ in project.shellFor {
 
   inherit withHoogle;
 
-  packages = ps: builtins.attrValues (haskellLib.selectProjectPackages ps);
-
   tools = {
     haskell-language-server = {
       version = "latest";
@@ -129,10 +127,6 @@ in project.shellFor {
     [
       cluster.workbench.workbench
     ];
-
-  # Prevents cabal from choosing alternate plans, so that
-  # *all* dependencies are provided by Nix.
-  exactDeps = true;
 
 } // { inherit shellHook;
      }

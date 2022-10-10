@@ -131,10 +131,8 @@ manifest_git_checkout_state_desc() {
 }
 
 manifest_cabal_project_dep_pin_hash() {
-    local project_file=$1/cabal.project
-    local dep=$2
-    grep "^[ ]*location: .*/${dep}\$" "${project_file}" -A1 \
-        | tail -n-1 | sed 's/^.* tag: //'
+    # FIXME
+    echo 0123456789ABCDEF0123456789ABCDEF01234567
 }
 
 manifest_local_repo_branch() {
