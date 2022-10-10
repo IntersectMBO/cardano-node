@@ -10,8 +10,24 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Benchmarking.Script.Env
-where
+module Cardano.Benchmarking.Script.Env (
+        ActionM
+        , Error(..)
+        , SetKeyVal
+        , runActionM
+        , runActionMEnv
+        , liftTxGenError
+        , askIOManager
+        , consumeName
+        , traceDebug
+        , traceError
+        , traceBenchTxSubmit
+        , get
+        , set
+        , getName
+        , setName
+        , getUser
+) where
 
 import           Prelude
 import           Data.Functor.Identity
@@ -33,10 +49,10 @@ import           Cardano.TxGenerator.Types (TxGenError(..))
 import           Cardano.Benchmarking.Script.Setters as Setters
 import           Cardano.Benchmarking.Script.Store
 
-type Env = DMap Store Identity
+data Env = Env { dmap :: DMap Store Identity }
 
 emptyEnv :: Env
-emptyEnv = DMap.empty
+emptyEnv = Env { dmap = DMap.empty }
 
 type ActionM a = ExceptT Error (RWST IOManager () Env IO) a
 
@@ -64,17 +80,17 @@ askIOManager :: ActionM IOManager
 askIOManager = lift RWS.ask
 
 set :: Store v -> v -> ActionM ()
-set key val = lift $ RWS.modify $ DMap.insert key (pure val)
+set key val = lift $ RWS.modify $ (\e -> e { dmap = DMap.insert key (pure val) (dmap e)})
 
 unSet :: Store v -> ActionM ()
-unSet key = lift $ RWS.modify $ DMap.delete key
+unSet key = lift $ RWS.modify $ (\e -> e { dmap = DMap.delete key (dmap e)})
 
 setName :: Name v -> v -> ActionM ()
 setName = set . Named
 
 get :: Store v -> ActionM v
 get key = do
-  lift (RWS.gets $ DMap.lookup key) >>= \case
+  lift (RWS.gets $ (\e -> DMap.lookup key $ dmap e)) >>= \case
     Just (Identity v) -> return v
     Nothing -> throwE $ LookupError key
 
