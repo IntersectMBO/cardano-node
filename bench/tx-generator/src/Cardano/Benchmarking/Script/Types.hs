@@ -24,7 +24,7 @@ import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
 
 import           Cardano.TxGenerator.Types
 
-import           Cardano.Benchmarking.Script.Env
+import           Cardano.Benchmarking.Script.Env(SetKeyVal)
 import           Cardano.Benchmarking.Script.Store
 
 data Action where
