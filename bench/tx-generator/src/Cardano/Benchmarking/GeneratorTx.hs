@@ -11,15 +11,14 @@
 module Cardano.Benchmarking.GeneratorTx
   ( AsyncBenchmarkControl
   , walletBenchmark
-  , readSigningKey
+  -- , readSigningKey
   , waitBenchmark
   ) where
 
 import           Cardano.Prelude
-import           Prelude (String, id)
+import           Prelude (String)
 
 import qualified Control.Concurrent.STM as STM
-import           Control.Monad.Trans.Except.Extra (newExceptT)
 import           "contra-tracer" Control.Tracer (Tracer, traceWith)
 import qualified Data.Time.Clock as Clock
 
@@ -28,7 +27,6 @@ import           Data.Text (pack)
 import           Network.Socket (AddrInfo (..), AddrInfoFlag (..), Family (..), SocketType (Stream),
                    addrFamily, addrFlags, addrSocketType, defaultHints, getAddrInfo)
 
-import           Cardano.CLI.Types (SigningKeyFile (..))
 import           Cardano.Node.Configuration.NodeAddress
 
 import           Cardano.Api hiding (txFee)
@@ -42,15 +40,6 @@ import           Cardano.Benchmarking.Types
 import           Cardano.Benchmarking.Wallet (TxStream)
 import           Cardano.TxGenerator.Types (NumberOfTxs, TPSRate, TxGenError (..))
 
-readSigningKey :: SigningKeyFile -> ExceptT TxGenError IO (SigningKey PaymentKey)
-readSigningKey =
-  withExceptT ApiError . newExceptT . readKey . unSigningKeyFile
- where
-  readKey :: FilePath -> IO (Either (FileError TextEnvelopeError) (SigningKey PaymentKey))
-  readKey f = flip readFileTextEnvelopeAnyOf f
-    [ FromSomeType (AsSigningKey AsGenesisUTxOKey) castSigningKey
-    , FromSomeType (AsSigningKey AsPaymentKey) id
-    ]
 
 type AsyncBenchmarkControl = (Async (), [Async ()], IO SubmissionSummary, IO ())
 

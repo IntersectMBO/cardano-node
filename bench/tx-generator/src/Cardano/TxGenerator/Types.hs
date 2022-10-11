@@ -95,7 +95,7 @@ data TxGenPlutusParams =
 data TxGenError where
   ApiError        :: Cardano.Api.Error e => !e -> TxGenError
   ProtocolError   :: Cardano.Api.Error e => !e -> TxGenError
-  PlutusError     :: Show e => e -> TxGenError
+  PlutusError     :: Show e => !e -> TxGenError
   TxGenError      :: !String -> TxGenError
 
 deriving instance Show TxGenError

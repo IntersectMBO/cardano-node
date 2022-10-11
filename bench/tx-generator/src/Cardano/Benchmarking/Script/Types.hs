@@ -7,6 +7,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Benchmarking.Script.Types
 where
@@ -14,11 +15,12 @@ where
 import           GHC.Generics
 import           Prelude
 
+import           Data.Function (on)
 import           Data.List.NonEmpty
 import           Data.Text (Text)
 
-import           Cardano.Api (AnyCardanoEra, ExecutionUnits, Lovelace, ScriptData, ScriptRedeemer,
-                   TextEnvelope, TxIn)
+import           Cardano.Api (AnyCardanoEra, ExecutionUnits, Lovelace, PaymentKey, ScriptData,
+                   ScriptRedeemer, SigningKey, TxIn, serialiseToTextEnvelope)
 import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
 import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
 
@@ -27,6 +29,10 @@ import           Cardano.TxGenerator.Types
 import           Cardano.Benchmarking.Script.Env
 import           Cardano.Benchmarking.Script.Store
 
+-- FIXME: temporary workaround instance until Action ADT is refactored
+instance Eq (SigningKey PaymentKey) where
+  (==) = (==) `on` serialiseToTextEnvelope Nothing
+
 data Action where
   Set                :: !SetKeyVal -> Action
 --  Declare            :: SetKeyVal   -> Action --declare (once): error if key was set before
@@ -34,7 +40,7 @@ data Action where
   StartProtocol      :: !FilePath -> !(Maybe FilePath) -> Action
   Delay              :: !Double -> Action
   ReadSigningKey     :: !KeyName -> !SigningKeyFile -> Action
-  DefineSigningKey   :: !KeyName -> !TextEnvelope -> Action
+  DefineSigningKey   :: !KeyName -> !(SigningKey PaymentKey) -> Action
   AddFund            :: !AnyCardanoEra -> !WalletName -> !TxIn -> !Lovelace -> !KeyName -> Action
   WaitBenchmark      :: !ThreadName -> Action
   Submit             :: !AnyCardanoEra -> !SubmitMode -> !TxGenTxParams -> !Generator -> Action

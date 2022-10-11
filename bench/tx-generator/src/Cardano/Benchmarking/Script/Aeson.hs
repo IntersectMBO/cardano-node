@@ -2,7 +2,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 module Cardano.Benchmarking.Script.Aeson
@@ -18,20 +17,18 @@ import           GHC.Generics (Generic)
 import           Prelude
 import           System.Exit
 
-import           Data.Aeson
+import           Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty
 import qualified Data.Attoparsec.ByteString as Atto
 import qualified Data.Yaml as Yaml (encode)
 
-import           Cardano.Api (NetworkId (..), ScriptData, ScriptDataJsonSchema (..),
-                   scriptDataFromJson, scriptDataToJson)
+import           Cardano.Api
 import           Cardano.Api.Shelley (ProtocolParameters)
-import           Cardano.CLI.Types (SigningKeyFile (..))
-import qualified Ouroboros.Network.Magic as Ouroboros (NetworkMagic (..))
 
 import           Cardano.Benchmarking.Script.Setters
 import           Cardano.Benchmarking.Script.Store
 import           Cardano.Benchmarking.Script.Types
+import           Cardano.TxGenerator.Internal.Orphans ()
 import           Cardano.TxGenerator.Types
 
 testJSONRoundTrip :: [Action] -> Maybe String
@@ -62,6 +59,16 @@ instance ToJSON TxGenTxParams where
   toEncoding = genericToEncoding jsonOptionsUnTaggedSum
 instance FromJSON TxGenTxParams where
   parseJSON = genericParseJSON jsonOptionsUnTaggedSum
+
+-- FIXME: workaround instances
+instance ToJSON (SigningKey PaymentKey) where
+  toJSON = toJSON . serialiseToTextEnvelope Nothing
+instance FromJSON (SigningKey PaymentKey) where
+  parseJSON o = do
+    te <- parseJSON o
+    case deserialiseFromTextEnvelope (AsSigningKey AsPaymentKey) te of
+      Right k   -> pure k
+      Left err  -> fail $ show err
 
 instance ToJSON ProtocolParametersSource where
   toJSON     = genericToJSON jsonOptionsUnTaggedSum
@@ -124,10 +131,10 @@ instance ToJSON Action where
 instance FromJSON Action where
   parseJSON = genericParseJSON jsonOptionsUnTaggedSum
 
-scanScriptFile :: FilePath -> IO Value
+scanScriptFile :: FilePath -> IO Aeson.Value
 scanScriptFile filePath = do
   input <- BS.readFile filePath
-  case Atto.parse Data.Aeson.json input of
+  case Atto.parse Aeson.json input of
     Atto.Fail rest _context msg -> die errorMsg
       where
         consumed = BS.take (BS.length input - BS.length rest) input
@@ -150,7 +157,7 @@ scanScriptFile filePath = do
 --          ]
     Atto.Done _ value -> return value
 
-parseJSONFile :: (Value -> Result x) -> FilePath -> IO x
+parseJSONFile :: (Aeson.Value -> Result x) -> FilePath -> IO x
 parseJSONFile parser filePath = do
   value <- scanScriptFile filePath
   case parser value of
@@ -166,23 +173,7 @@ readProtocolParametersFile = parseJSONFile fromJSON
 instance ToJSON KeyName         where toJSON (KeyName a) = toJSON a
 instance ToJSON ThreadName      where toJSON (ThreadName a) = toJSON a
 instance ToJSON WalletName      where toJSON (WalletName a) = toJSON a
-instance ToJSON SigningKeyFile  where toJSON (SigningKeyFile a) = toJSON a
 
 instance FromJSON KeyName         where parseJSON a = KeyName <$> parseJSON a
 instance FromJSON ThreadName      where parseJSON a = ThreadName <$> parseJSON a
 instance FromJSON WalletName      where parseJSON a = WalletName <$> parseJSON a
-instance FromJSON SigningKeyFile  where parseJSON a = SigningKeyFile <$> parseJSON a
-
-instance ToJSON NetworkId where
-  toJSON Mainnet = "Mainnet"
-  toJSON (Testnet (Ouroboros.NetworkMagic t)) = object ["Testnet" .= t]
-
-instance FromJSON NetworkId where
-  parseJSON j = case j of
-    (String "Mainnet") -> return Mainnet
-    (Object v) -> v .:? "Testnet" >>= \case
-      Nothing -> failed
-      Just w -> return $ Testnet $ Ouroboros.NetworkMagic w
-    _invalid -> failed
-    where
-      failed = fail $ "Parsing of NetworkId failed: " <> show j
