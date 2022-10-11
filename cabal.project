@@ -13,7 +13,7 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands 
 -- you need to run if you change them
 index-state: 2022-07-01T00:00:00Z
-index-state: cardano-haskell-packages 2022-08-31T08:36:45Z
+index-state: cardano-haskell-packages 2022-10-12T00:00:00Z
 
 packages:
     cardano-api
@@ -83,6 +83,23 @@ constraints:
   , HSOpenSSL >= 0.11.7.2
   , algebraic-graphs < 0.7
   , protolude < 0.3.1
+
+  -- CONSTRAINTS FOR UPSTREAM CARDANO PACKAGES
+  -- These should all be constraints in upstream packages, but are currently missing.
+  -- We should a) fix these upstream and b) revise the constraints  on the released
+  -- version in CHaP. Unfortunately revisions in CHaP don't work yet, revisit this
+  -- when we fix it.
+
+  -- cardano-crypto-wrapper: broken by cardano-prelude-0.1.0.1 which moves HeapWords out
+  , cardano-prelude < 0.1.0.1
+  -- cardano-ledger-byron: broken by cardano-binary-1.5.0.1 which includes some functions 
+  -- that used to be in cardano-prelude
+  , cardano-binary < 1.5.0.1
+  -- plutus: cardano-crypto-class-2.0.0.1 changes the signatures of some DSIGN functions for secp256k1
+  , cardano-crypto-class < 2.0.0.1
+  -- cardano-crypto-tests: we required cardano-crypto-class-2.0.0.0 above, which is broken with
+  -- newer cardano-crypto-tests
+  , cardano-crypto-tests < 2.0.0.1
 
 package snap-server
   flags: +openssl
