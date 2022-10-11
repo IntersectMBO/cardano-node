@@ -13,7 +13,7 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands 
 -- you need to run if you change them
 index-state: 2022-07-01T00:00:00Z
-index-state: cardano-haskell-packages 2022-08-31T08:36:45Z
+index-state: cardano-haskell-packages 2022-10-12T00:00:00Z
 
 packages:
     cardano-api
@@ -84,6 +84,23 @@ constraints:
   , algebraic-graphs < 0.7
   , protolude < 0.3.1
 
+  -- CONSTRAINTS FOR UPSTREAM CARDANO PACKAGES
+  -- These should all be constraints in upstream packages, but are currently missing.
+  -- We should a) fix these upstream and b) revise the constraints  on the released
+  -- version in CHaP. Unfortunately revisions in CHaP don't work yet, revisit this
+  -- when we fix it.
+
+  -- cardano-crypto-wrapper: broken by cardano-prelude-0.1.0.1 which moves HeapWords out
+  , cardano-prelude < 0.1.0.1
+  -- cardano-ledger-byron: broken by cardano-binary-1.5.0.1 which includes some functions 
+  -- that used to be in cardano-prelude
+  , cardano-binary < 1.5.0.1
+  -- plutus: cardano-crypto-class-2.0.0.1 changes the signatures of some DSIGN functions for secp256k1
+  , cardano-crypto-class < 2.0.0.1
+  -- cardano-crypto-tests: we required cardano-crypto-class-2.0.0.0 above, which is broken with
+  -- newer cardano-crypto-tests
+  , cardano-crypto-tests < 2.0.0.1
+
 package snap-server
   flags: +openssl
 
@@ -99,22 +116,6 @@ allow-newer:
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
-
--- TODO (mpj): remove this once https://github.com/input-output-hk/ekg-forward/pull/10
--- is merged and released to CHaP
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/ekg-forward
-  tag: 8a21e6c3fd9b306e07e0e0f39047032c97789b38
-  --sha256: 170vgf94g6fhc2p2cx58gqy9520gs39ddl7q4lkqyr8h33p9wrvq
-
--- Open PR upstream, maintainer unresponsive, hopefully short-lived fork.
--- TODO (mpj): release into CHaP as a patched version and delete
-source-repository-package
-  type: git
-  location: https://github.com/vshabanov/ekg-json
-  tag: 00ebe7211c981686e65730b7144fbf5350462608
-  --sha256: 1zvjm3pb38w0ijig5wk5mdkzcszpmlp5d4zxvks2jk1rkypi8gsm
 
 source-repository-package
   type: git
