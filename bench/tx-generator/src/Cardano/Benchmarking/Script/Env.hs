@@ -22,8 +22,6 @@ module Cardano.Benchmarking.Script.Env (
         , traceBenchTxSubmit
         , get
         , set
-        , getName
-        , setName
         , getNetworkId
         , setNetworkId
         , getSocketPath
@@ -81,17 +79,11 @@ askIOManager = lift RWS.ask
 set :: Store v -> v -> ActionM ()
 set key val = lift $ RWS.modify $ (\e -> e { dmap = DMap.insert key (pure val) (dmap e)})
 
-setName :: Name v -> v -> ActionM ()
-setName = set . Named
-
 get :: Store v -> ActionM v
 get key = do
   lift (RWS.gets $ (\e -> DMap.lookup key $ dmap e)) >>= \case
     Just (Identity v) -> return v
     Nothing -> throwE $ LookupError key
-
-getName :: Name v -> ActionM v
-getName = get . Named
 
 getNetworkId :: ActionM NetworkId
 getNetworkId = get SNetworkId

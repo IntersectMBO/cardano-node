@@ -36,17 +36,14 @@ data Store v where
   Protocol     :: Store SomeConsensusProtocol
   BenchTracers :: Store Core.BenchTracers
   Genesis      :: Store (ShelleyGenesis StandardShelley)
-  Named        :: Name x -> Store x
+  KeyName      :: !String -> Store (SigningKey PaymentKey)
+  ThreadName   :: !String -> Store AsyncBenchmarkControl
+  WalletName   :: !String -> Store WalletRef
   ProtocolParameterMode :: Store ProtocolParameterMode
 
-data Name x where
-  KeyName      :: !String -> Name (SigningKey PaymentKey)
-  ThreadName   :: !String -> Name AsyncBenchmarkControl
-  WalletName   :: !String -> Name WalletRef
-
-type KeyName      = Name (SigningKey PaymentKey)
-type ThreadName   = Name AsyncBenchmarkControl
-type WalletName   = Name WalletRef
+type KeyName      = Store (SigningKey PaymentKey)
+type ThreadName   = Store AsyncBenchmarkControl
+type WalletName   = Store WalletRef
 
 newtype TxList era = TxList [Tx era]
 
@@ -58,13 +55,6 @@ data ProtocolParameterMode where
 -- TH-Haskell is imperative: It breaks up Main into smaller binding groups!
 -- This means declarations below a splice are not visible above.
 -- The order of splices & declarations matters.
-
-deriveGEq ''Name
-deriveGCompare ''Name
-deriveGShow ''Name
-deriveArgDict ''Name
-deriving instance Show (Name x)
-deriving instance Eq (Name x)
 
 deriveGEq ''Store
 deriveGCompare ''Store

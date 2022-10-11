@@ -92,7 +92,7 @@ readSigningKey :: KeyName -> SigningKeyFile -> ActionM ()
 readSigningKey name filePath =
   liftIO ( runExceptT $ GeneratorTx.readSigningKey filePath) >>= \case
     Left err -> liftTxGenError err
-    Right key -> setName name key
+    Right key -> set name key
 
 parseSigningKey :: TextEnvelope -> Either TextEnvelopeError (SigningKey PaymentKey)
 parseSigningKey = deserialiseFromTextEnvelopeAnyOf types
@@ -106,12 +106,12 @@ parseSigningKey = deserialiseFromTextEnvelopeAnyOf types
 defineSigningKey :: KeyName -> TextEnvelope -> ActionM ()
 defineSigningKey name descr
   = case parseSigningKey descr of
-    Right key -> setName name key
+    Right key -> set name key
     Left err -> liftTxGenError $ ApiError err
 
 addFund :: AnyCardanoEra -> WalletName -> TxIn -> Lovelace -> KeyName -> ActionM ()
 addFund era wallet txIn lovelace keyName = do
-  fundKey  <- getName keyName
+  fundKey  <- get keyName
   let
     mkOutValue :: forall era. IsShelleyBasedEra era => AsType era -> ActionM (InAnyCardanoEra TxOutValue)
     mkOutValue = \_ -> return $ InAnyCardanoEra (cardanoEra @era) (lovelaceToTxOutValue lovelace)
@@ -120,7 +120,7 @@ addFund era wallet txIn lovelace keyName = do
 
 addFundToWallet :: WalletName -> TxIn -> InAnyCardanoEra TxOutValue -> SigningKey PaymentKey -> ActionM ()
 addFundToWallet wallet txIn outVal skey = do
-  walletRef <- getName wallet
+  walletRef <- get wallet
   liftIO (walletRefInsertFund walletRef (FundQueue.Fund $ mkFund outVal))
   where
     mkFund = Utils.liftAnyEra $ \value -> FundInEra {
@@ -156,11 +156,11 @@ getConnectClient = do
                        (protocolToCodecConfig protocol)
                        networkMagic
 waitBenchmark :: ThreadName -> ActionM ()
-waitBenchmark n = getName n >>= waitBenchmarkCore
+waitBenchmark n = get n >>= waitBenchmarkCore
 
 cancelBenchmark :: ThreadName -> ActionM ()
 cancelBenchmark n = do
-  ctl@(_, _ , _ , shutdownAction) <- getName n
+  ctl@(_, _ , _ , shutdownAction) <- get n
   liftIO shutdownAction
   waitBenchmarkCore ctl
 
@@ -282,7 +282,7 @@ benchmarkTxStream txStream targetNodes (ThreadName threadName) tps txCount era =
   ret <- liftIO $ runExceptT $ coreCall era
   case ret of
     Left err -> liftTxGenError err
-    Right ctl -> setName (ThreadName threadName) ctl
+    Right ctl -> set (ThreadName threadName) ctl
 
 evalGenerator :: forall era. IsShelleyBasedEra era => Generator -> TxGenTxParams -> AsType era -> ActionM (TxStream IO era)
 evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
@@ -291,9 +291,9 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
   case generator of
     SecureGenesis wallet genesisKeyName destKeyName -> do
       genesis  <- get Genesis
-      destKey  <- getName destKeyName
-      destWallet  <- getName wallet
-      genesisKey  <- getName genesisKeyName
+      destKey  <- get destKeyName
+      destWallet  <- get wallet
+      genesisKey  <- get genesisKeyName
       (tx, fund) <- firstExceptT Env.TxGenError $ hoistEither $
         Genesis.genesisSecureInitialFund networkId genesis genesisKey destKey txParams
       let
@@ -302,7 +302,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
           return $ Right tx
       return $ Streaming.effect (Streaming.yield <$> gen)
     Split walletName payMode payModeChange coins -> do
-      wallet <- getName walletName
+      wallet <- get walletName
       (toUTxO, addressOut) <- interpretPayMode payMode
       traceDebug $ "split output address : " ++ addressOut
       (toUTxOChange, addressChange) <- interpretPayMode payModeChange
@@ -314,7 +314,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
         sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut $ mangleWithChange toUTxOChange toUTxO
       return $ Streaming.effect (Streaming.yield <$> sourceToStore)
     SplitN walletName payMode count -> do
-      wallet <- getName walletName
+      wallet <- get walletName
       (toUTxO, addressOut) <- interpretPayMode payMode
       traceDebug $ "SplitN output address : " ++ addressOut
       let
@@ -325,7 +325,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
       return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
     NtoM walletName payMode inputs outputs metadataSize collateralWallet -> do
-      wallet <- getName walletName
+      wallet <- get walletName
       collaterals <- selectCollateralFunds collateralWallet
       (toUTxO, addressOut) <- interpretPayMode payMode
       traceDebug $ "NtoM output address : " ++ addressOut
@@ -352,7 +352,7 @@ selectCollateralFunds :: forall era. IsShelleyBasedEra era
   -> ActionM (TxInsCollateral era, [FundQueue.Fund])
 selectCollateralFunds Nothing = return (TxInsCollateralNone, [])
 selectCollateralFunds (Just walletName) = do
-  cw <- getName walletName
+  cw <- get walletName
   collateralFunds <- liftIO ( askWalletRef cw FundQueue.toList ) >>= \case
     [] -> throwE $ WalletError "selectCollateralFunds: emptylist"
     l -> return l
@@ -367,19 +367,19 @@ dumpToFileIO :: FilePath -> TxInMode CardanoMode -> IO ()
 dumpToFileIO filePath tx = appendFile filePath ('\n' : show tx)
 
 initWallet :: WalletName -> ActionM ()
-initWallet name = liftIO Wallet.initWallet >>= setName name
+initWallet name = liftIO Wallet.initWallet >>= set name
 
 interpretPayMode :: forall era. IsShelleyBasedEra era => PayMode -> ActionM (CreateAndStore IO era, String)
 interpretPayMode payMode = do
   networkId <- getNetworkId
   case payMode of
     PayToAddr keyName destWallet -> do
-      fundKey <- getName keyName
-      walletRef <- getName destWallet
+      fundKey <- get keyName
+      walletRef <- get destWallet
       return ( createAndStore (mkUTxOVariant networkId fundKey) (mkWalletFundStore walletRef)
              , Text.unpack $ serialiseAddress $ Utils.keyAddress @era networkId fundKey)
     PayToScript scriptSpec destWallet -> do
-      walletRef <- getName destWallet
+      walletRef <- get destWallet
       (witness, script, scriptData, _scriptFee) <- makePlutusContext scriptSpec
       return ( createAndStore (mkUTxOScript networkId (script, scriptData) witness) (mkWalletFundStore walletRef)
                , Text.unpack $ serialiseAddress $ makeShelleyAddress networkId (PaymentCredentialByScript $ hashScript script) NoStakeAddress )
