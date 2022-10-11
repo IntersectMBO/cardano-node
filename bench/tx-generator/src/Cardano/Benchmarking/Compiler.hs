@@ -14,7 +14,6 @@ import           Data.ByteString as BS (ByteString)
 import           Data.ByteString.Base16 as Base16
 import           Data.DList (DList)
 import qualified Data.DList as DL
-import           Data.Dependent.Sum ((==>))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 
@@ -74,11 +73,8 @@ initConstants = do
   emit $ DefineSigningKey keyNameBenchmarkInputs keyBenchmarkInputs
   emit $ DefineSigningKey keyNameBenchmarkDone keyBenchmarkDone
   where
-    setConst :: Tag v -> v -> Compiler ()
-    setConst key val = emit $ Set $ key ==> val
-
     setN :: Tag v -> (NixServiceOptions -> v) -> Compiler ()
-    setN key s = askNixOption s >>= setConst key
+    setN key s = askNixOption s >>= emit . setConst key
 
 importGenesisFunds :: Compiler WalletName
 importGenesisFunds = do

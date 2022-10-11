@@ -22,6 +22,7 @@ module Cardano.Benchmarking.Script.Types (
         , SubmitMode(Benchmark, DiscardTX, DumpToFile, LocalSocket,
                 NodeToNode)
         , TargetNodes
+        , setConst
 ) where
 
 import           GHC.Generics
@@ -30,7 +31,7 @@ import           Prelude
 import           Data.Functor.Identity
 import           Data.List.NonEmpty
 import           Data.Text (Text)
-import           Data.Dependent.Sum(DSum(..))
+import           Data.Dependent.Sum(DSum(..), (==>))
 
 import           Cardano.Api (AnyCardanoEra, ExecutionUnits, Lovelace, ScriptData, ScriptRedeemer,
                    TextEnvelope, TxIn)
@@ -44,6 +45,9 @@ import           Cardano.Benchmarking.Script.Store
 
 type SetKeyVal = DSum Setters.Tag Identity
 
+{-
+ - We want to hide Set from everything but module Action.
+ -}
 data Action where
   Set                :: !SetKeyVal -> Action
 --  Declare            :: SetKeyVal   -> Action --declare (once): error if key was set before
@@ -62,6 +66,10 @@ data Action where
   LogMsg             :: !Text -> Action
   deriving (Show, Eq)
 deriving instance Generic Action
+
+-- The accessor is needed to hide Set in Compiler initialisation.
+setConst :: Setters.Tag v -> v -> Action
+setConst key val = Set $ key ==> val
 
 data Generator where
   SecureGenesis :: !WalletName -> !KeyName -> !KeyName -> Generator -- 0 to N
