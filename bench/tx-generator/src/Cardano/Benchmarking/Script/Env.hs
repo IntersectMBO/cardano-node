@@ -88,14 +88,17 @@ askIOManager = lift RWS.ask
 set :: Store v -> v -> ActionM ()
 set key val = lift $ RWS.modify $ (\e -> e { dmap = DMap.insert key (pure val) (dmap e)})
 
+modifyEnv :: (Env -> Env) -> ActionM ()
+modifyEnv = lift . RWS.modify
+
 setProtoParamMode :: ProtocolParameterMode -> ActionM ()
-setProtoParamMode val = lift $ RWS.modify $ (\e -> e { protoParams = pure val })
+setProtoParamMode val = modifyEnv $ (\e -> e { protoParams = pure val })
 
 setBenchTracers :: Tracer.BenchTracers -> ActionM ()
-setBenchTracers val = lift $ RWS.modify $ (\e -> e { benchTracers = pure val })
+setBenchTracers val = modifyEnv $ (\e -> e { benchTracers = pure val })
 
 setEnvGenesis :: ShelleyGenesis StandardShelley -> ActionM ()
-setEnvGenesis val = lift $ RWS.modify $ (\e -> e { envGenesis = pure val })
+setEnvGenesis val = modifyEnv $ (\e -> e { envGenesis = pure val })
 
 get :: Store v -> ActionM v
 get key = do
@@ -103,23 +106,20 @@ get key = do
     Just (Identity v) -> return v
     Nothing -> throwE $ LookupError key
 
-getProtoParamMode :: ActionM ProtocolParameterMode
-getProtoParamMode = do
-  lift (RWS.gets $ (\e -> protoParams e)) >>= \case
+getEnvVal :: (Env -> Maybe t) -> String -> ActionM t
+getEnvVal acc s = do
+  lift (RWS.gets acc) >>= \case
     Just x -> return x
-    Nothing -> throwE $ UserError "Unset ProtocolParams"
+    Nothing -> throwE . UserError $ "Unset " ++ s
+
+getProtoParamMode :: ActionM ProtocolParameterMode
+getProtoParamMode = getEnvVal protoParams "ProtocolParameterMode"
 
 getBenchTracers :: ActionM Tracer.BenchTracers
-getBenchTracers = do
-  lift (RWS.gets $ (\e -> benchTracers e)) >>= \case
-    Just x -> return x
-    Nothing -> throwE $ UserError "Unset BenchTracers"
+getBenchTracers = getEnvVal benchTracers "BenchTracers"
 
 getEnvGenesis :: ActionM (ShelleyGenesis StandardShelley)
-getEnvGenesis = do
-  lift (RWS.gets $ (\e -> envGenesis e)) >>= \case
-    Just x -> return x
-    Nothing -> throwE $ UserError "Unset Genesis"
+getEnvGenesis = getEnvVal envGenesis "Genesis"
 
 traceBenchTxSubmit :: (forall txId. x -> Tracer.TraceBenchTxSubmit txId) -> x -> ActionM ()
 traceBenchTxSubmit tag msg = do
