@@ -145,7 +145,7 @@ waitBenchmarkCore ctl = do
 getConnectClient :: ActionM ConnectClient
 getConnectClient = do
   tracers  <- get BenchTracers
-  (Testnet networkMagic) <- getNetworkId
+  (Testnet networkMagic) <- get SNetworkId
   protocol <- get Protocol
   void $ return $(btSubmission2_ tracers)
   ioManager <- askIOManager
@@ -165,7 +165,7 @@ cancelBenchmark n = do
   waitBenchmarkCore ctl
 
 getLocalConnectInfo :: ActionM  (LocalNodeConnectInfo CardanoMode)
-getLocalConnectInfo = makeLocalConnectInfo <$> getNetworkId <*> getSocketPath
+getLocalConnectInfo = makeLocalConnectInfo <$> get SNetworkId <*> get SSocketPath
 
 queryEra :: ActionM AnyCardanoEra
 queryEra = do
@@ -286,7 +286,7 @@ benchmarkTxStream txStream targetNodes (ThreadName threadName) tps txCount era =
 
 evalGenerator :: forall era. IsShelleyBasedEra era => Generator -> TxGenTxParams -> AsType era -> ActionM (TxStream IO era)
 evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
-  networkId <- getNetworkId
+  networkId <- get SNetworkId
   protocolParameters <- getProtocolParameters
   case generator of
     SecureGenesis wallet genesisKeyName destKeyName -> do
@@ -371,7 +371,7 @@ initWallet name = liftIO Wallet.initWallet >>= set name
 
 interpretPayMode :: forall era. IsShelleyBasedEra era => PayMode -> ActionM (CreateAndStore IO era, String)
 interpretPayMode payMode = do
-  networkId <- getNetworkId
+  networkId <- get SNetworkId
   case payMode of
     PayToAddr keyName destWallet -> do
       fundKey <- get keyName

@@ -28,7 +28,7 @@ startProtocol configFile tracerSocket = do
   set Protocol protocol
   set Genesis $ Core.getGenesis protocol
   let networkId = protocolToNetworkId protocol
-  setNetworkId networkId
+  set SNetworkId networkId
   tracers <- case tracerSocket of
     Nothing -> liftIO initDefaultTracers
     Just socket -> do

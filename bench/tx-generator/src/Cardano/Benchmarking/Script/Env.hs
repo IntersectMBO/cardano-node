@@ -22,10 +22,6 @@ module Cardano.Benchmarking.Script.Env (
         , traceBenchTxSubmit
         , get
         , set
-        , getNetworkId
-        , setNetworkId
-        , getSocketPath
-        , setSocketPath
 ) where
 
 import           Prelude
@@ -43,8 +39,6 @@ import           "contra-tracer" Control.Tracer (traceWith)
 import qualified Cardano.Benchmarking.LogTypes as Tracer
 import           Ouroboros.Network.NodeToClient (IOManager)
 import           Cardano.Benchmarking.Script.Store
-
-import           Cardano.Api (NetworkId)
 
 import           Cardano.TxGenerator.Types (TxGenError(..))
 
@@ -84,18 +78,6 @@ get key = do
   lift (RWS.gets $ (\e -> DMap.lookup key $ dmap e)) >>= \case
     Just (Identity v) -> return v
     Nothing -> throwE $ LookupError key
-
-getNetworkId :: ActionM NetworkId
-getNetworkId = get SNetworkId
-
-setNetworkId :: NetworkId -> ActionM ()
-setNetworkId = set SNetworkId
-
-getSocketPath :: ActionM FilePath
-getSocketPath = get SSocketPath
-
-setSocketPath :: FilePath -> ActionM ()
-setSocketPath = set SSocketPath
 
 traceBenchTxSubmit :: (forall txId. x -> Tracer.TraceBenchTxSubmit txId) -> x -> ActionM ()
 traceBenchTxSubmit tag msg = do

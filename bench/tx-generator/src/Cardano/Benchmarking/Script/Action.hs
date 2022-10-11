@@ -8,12 +8,13 @@ import qualified Data.Text as Text (unpack)
 import           Cardano.Benchmarking.Script.Core
 import           Cardano.Benchmarking.Script.Env
 import           Cardano.Benchmarking.Script.NodeConfig (startProtocol)
+import           Cardano.Benchmarking.Script.Store
 import           Cardano.Benchmarking.Script.Types
 
 action :: Action -> ActionM ()
 action a = case a of
-  SetNetworkId val -> setNetworkId val
-  SetSocketPath val -> setSocketPath val
+  SetNetworkId val -> set SNetworkId val
+  SetSocketPath val -> set SSocketPath val
   InitWallet name -> initWallet name
   SetProtocolParameters p -> setProtocolParameters p
   StartProtocol configFile cardanoTracerSocket -> startProtocol configFile cardanoTracerSocket
