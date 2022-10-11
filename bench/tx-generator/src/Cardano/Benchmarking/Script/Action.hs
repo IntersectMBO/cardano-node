@@ -1,3 +1,5 @@
+{-# LANGUAGE GADTs #-}
+
 module Cardano.Benchmarking.Script.Action
 where
 
@@ -8,11 +10,13 @@ import qualified Data.Text as Text (unpack)
 import           Cardano.Benchmarking.Script.Core
 import           Cardano.Benchmarking.Script.Env
 import           Cardano.Benchmarking.Script.NodeConfig (startProtocol)
+import           Cardano.Benchmarking.Script.Setters
 import           Cardano.Benchmarking.Script.Types
 
 action :: Action -> ActionM ()
 action a = case a of
-  Set (key :=> (Identity val)) -> setUser key val
+  Set (TNetworkId :=> (Identity val)) -> setNetworkId val
+  Set (TLocalSocket :=> (Identity val)) -> setSocketPath val
   InitWallet name -> initWallet name
   SetProtocolParameters p -> setProtocolParameters p
   StartProtocol configFile cardanoTracerSocket -> startProtocol configFile cardanoTracerSocket

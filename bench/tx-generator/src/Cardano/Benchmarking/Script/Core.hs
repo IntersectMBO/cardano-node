@@ -63,7 +63,6 @@ import           Cardano.Benchmarking.Wallet as Wallet
 import           Cardano.Benchmarking.Script.Aeson (readProtocolParametersFile)
 import           Cardano.Benchmarking.Script.Env hiding (Error (TxGenError))
 import qualified Cardano.Benchmarking.Script.Env as Env (Error (TxGenError))
-import           Cardano.Benchmarking.Script.Setters
 import           Cardano.Benchmarking.Script.Store as Store
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Version as Version
@@ -146,7 +145,7 @@ waitBenchmarkCore ctl = do
 getConnectClient :: ActionM ConnectClient
 getConnectClient = do
   tracers  <- get BenchTracers
-  (Testnet networkMagic) <- getUser TNetworkId
+  (Testnet networkMagic) <- getNetworkId
   protocol <- get Protocol
   void $ return $(btSubmission2_ tracers)
   ioManager <- askIOManager
@@ -166,7 +165,7 @@ cancelBenchmark n = do
   waitBenchmarkCore ctl
 
 getLocalConnectInfo :: ActionM  (LocalNodeConnectInfo CardanoMode)
-getLocalConnectInfo = makeLocalConnectInfo <$> getUser TNetworkId <*> getUser TLocalSocket
+getLocalConnectInfo = makeLocalConnectInfo <$> getNetworkId <*> getSocketPath
 
 queryEra :: ActionM AnyCardanoEra
 queryEra = do
@@ -287,7 +286,7 @@ benchmarkTxStream txStream targetNodes (ThreadName threadName) tps txCount era =
 
 evalGenerator :: forall era. IsShelleyBasedEra era => Generator -> TxGenTxParams -> AsType era -> ActionM (TxStream IO era)
 evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
-  networkId <- getUser TNetworkId
+  networkId <- getNetworkId
   protocolParameters <- getProtocolParameters
   case generator of
     SecureGenesis wallet genesisKeyName destKeyName -> do
@@ -372,7 +371,7 @@ initWallet name = liftIO Wallet.initWallet >>= setName name
 
 interpretPayMode :: forall era. IsShelleyBasedEra era => PayMode -> ActionM (CreateAndStore IO era, String)
 interpretPayMode payMode = do
-  networkId <- getUser TNetworkId
+  networkId <- getNetworkId
   case payMode of
     PayToAddr keyName destWallet -> do
       fundKey <- getName keyName

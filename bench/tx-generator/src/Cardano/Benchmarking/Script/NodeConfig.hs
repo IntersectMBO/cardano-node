@@ -11,7 +11,6 @@ import           Control.Monad.Trans.Except.Extra
 
 import           Cardano.Benchmarking.OuroborosImports as Core (getGenesis, protocolToNetworkId)
 import           Cardano.Benchmarking.Script.Env
-import           Cardano.Benchmarking.Script.Setters
 import           Cardano.Benchmarking.Script.Store as Store
 import           Cardano.Benchmarking.Tracer
 
@@ -29,7 +28,7 @@ startProtocol configFile tracerSocket = do
   set Protocol protocol
   set Genesis $ Core.getGenesis protocol
   let networkId = protocolToNetworkId protocol
-  set (User TNetworkId) networkId
+  setNetworkId networkId
   tracers <- case tracerSocket of
     Nothing -> liftIO initDefaultTracers
     Just socket -> do

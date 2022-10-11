@@ -18,20 +18,20 @@ import           Data.Constraint.Extras.TH (deriveArgDict)
 import           Data.GADT.Compare.TH (deriveGCompare, deriveGEq)
 import           Data.GADT.Show.TH (deriveGShow)
 
-import           Cardano.Api as Cardano (Tx)
+import           Cardano.Api as Cardano (NetworkId, Tx)
 import           Cardano.Api.Shelley as Cardano (ProtocolParameters)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 
 import           Cardano.Benchmarking.OuroborosImports as Cardano (LoggingLayer, PaymentKey,
                    ShelleyGenesis, SigningKey, StandardShelley)
-import           Cardano.Benchmarking.Script.Setters as Setters
 
 import           Cardano.Benchmarking.GeneratorTx as Core (AsyncBenchmarkControl)
 import           Cardano.Benchmarking.LogTypes as Core (BenchTracers)
 import           Cardano.Benchmarking.Wallet as Wallet
 
 data Store v where
-  User         :: Setters.Tag x -> Store x
+  SNetworkId   :: Store NetworkId
+  SSocketPath  :: Store FilePath
   LoggingLayer :: Store (Maybe LoggingLayer)
   Protocol     :: Store SomeConsensusProtocol
   BenchTracers :: Store Core.BenchTracers

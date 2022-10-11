@@ -25,8 +25,10 @@ module Cardano.Benchmarking.Script.Env (
         , set
         , getName
         , setName
-        , getUser
-        , setUser
+        , getNetworkId
+        , setNetworkId
+        , getSocketPath
+        , setSocketPath
 ) where
 
 import           Prelude
@@ -43,10 +45,11 @@ import           "contra-tracer" Control.Tracer (traceWith)
 
 import qualified Cardano.Benchmarking.LogTypes as Tracer
 import           Ouroboros.Network.NodeToClient (IOManager)
+import           Cardano.Benchmarking.Script.Store
+
+import           Cardano.Api (NetworkId)
 
 import           Cardano.TxGenerator.Types (TxGenError(..))
-import           Cardano.Benchmarking.Script.Setters as Setters
-import           Cardano.Benchmarking.Script.Store
 
 data Env = Env { dmap :: DMap Store Identity }
 
@@ -85,9 +88,6 @@ unSet key = lift $ RWS.modify $ (\e -> e { dmap = DMap.delete key (dmap e)})
 setName :: Name v -> v -> ActionM ()
 setName = set . Named
 
-setUser :: Tag v -> v -> ActionM ()
-setUser = set . User
-
 get :: Store v -> ActionM v
 get key = do
   lift (RWS.gets $ (\e -> DMap.lookup key $ dmap e)) >>= \case
@@ -97,8 +97,17 @@ get key = do
 getName :: Name v -> ActionM v
 getName = get . Named
 
-getUser :: Tag v -> ActionM v
-getUser = get . User
+getNetworkId :: ActionM NetworkId
+getNetworkId = get SNetworkId
+
+setNetworkId :: NetworkId -> ActionM ()
+setNetworkId = set SNetworkId
+
+getSocketPath :: ActionM FilePath
+getSocketPath = get SSocketPath
+
+setSocketPath :: FilePath -> ActionM ()
+setSocketPath = set SSocketPath
 
 consumeName :: Name v -> ActionM v
 consumeName n = do
