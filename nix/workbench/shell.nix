@@ -78,6 +78,15 @@ in project.shellFor {
 
   inherit withHoogle;
 
+  # The workbench shell uses cabalWrapped, which removes the `source-repository-package` stanzas
+  # from `cabal.project`. The idea is to use prebuilt ones provided by haskell.nix. However,
+  # haskell.nix is clever enough to not include `source-repository-package`s in the shell
+  # package db, because it knows that cabal will rebuild them. So you just end up with nothing!
+  # We can work around this by overriding haskell.nix's selection of which packages the shell
+  # is prepared for, so that it *doesn't* include the `source-repository-package` ones
+  # (the default is *local* packages which includes them, we select *project* pacakges which doesn't)
+  packages = ps: builtins.attrValues (haskellLib.selectProjectPackages ps);
+
   tools = {
     haskell-language-server = {
       version = "latest";
