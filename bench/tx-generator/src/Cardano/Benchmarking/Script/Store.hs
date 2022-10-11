@@ -20,7 +20,6 @@ import           Data.GADT.Show.TH (deriveGShow)
 
 import           Cardano.Api as Cardano (NetworkId, Tx)
 import           Cardano.Api.Shelley as Cardano (ProtocolParameters)
-import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 
 import           Cardano.Benchmarking.OuroborosImports as Cardano (PaymentKey,
                    SigningKey)
@@ -31,7 +30,6 @@ import           Cardano.Benchmarking.Wallet as Wallet
 data Store v where
   SNetworkId   :: Store NetworkId
   SSocketPath  :: Store FilePath
-  Protocol     :: Store SomeConsensusProtocol
   KeyName      :: !String -> Store (SigningKey PaymentKey)
   ThreadName   :: !String -> Store AsyncBenchmarkControl
   WalletName   :: !String -> Store WalletRef

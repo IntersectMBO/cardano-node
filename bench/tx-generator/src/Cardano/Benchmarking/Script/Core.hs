@@ -146,7 +146,7 @@ getConnectClient :: ActionM ConnectClient
 getConnectClient = do
   tracers  <- getBenchTracers
   (Testnet networkMagic) <- get SNetworkId
-  protocol <- get Protocol
+  protocol <- getEnvProtocol
   void $ return $(btSubmission2_ tracers)
   ioManager <- askIOManager
   return $ benchmarkConnectTxSubmit

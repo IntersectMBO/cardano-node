@@ -25,7 +25,7 @@ startProtocol :: FilePath -> Maybe FilePath -> ActionM ()
 startProtocol configFile tracerSocket = do
   nodeConfig <- liftToAction $ mkNodeConfig configFile
   protocol <-  liftToAction $ mkConsensusProtocol nodeConfig
-  set Protocol protocol
+  setEnvProtocol protocol
   setEnvGenesis $ Core.getGenesis protocol
   let networkId = protocolToNetworkId protocol
   set SNetworkId networkId

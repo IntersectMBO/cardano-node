@@ -24,6 +24,8 @@ module Cardano.Benchmarking.Script.Env (
         , setBenchTracers
         , getEnvGenesis
         , setEnvGenesis
+        , getEnvProtocol
+        , setEnvProtocol
         , getProtoParamMode
         , setProtoParamMode
         , get
@@ -44,6 +46,7 @@ import           "contra-tracer" Control.Tracer (traceWith)
 
 import qualified Cardano.Benchmarking.LogTypes as Tracer
 import           Ouroboros.Network.NodeToClient (IOManager)
+import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 import           Cardano.Benchmarking.OuroborosImports(ShelleyGenesis, StandardShelley)
 import           Cardano.Benchmarking.Script.Store
 
@@ -53,6 +56,7 @@ data Env = Env { dmap :: DMap Store Identity
                , protoParams :: Maybe ProtocolParameterMode
                , benchTracers :: Maybe Tracer.BenchTracers
                , envGenesis :: Maybe (ShelleyGenesis StandardShelley)
+               , envProtocol :: Maybe SomeConsensusProtocol
                }
 
 emptyEnv :: Env
@@ -60,6 +64,7 @@ emptyEnv = Env { dmap = DMap.empty
                , protoParams = Nothing
                , benchTracers = Nothing
                , envGenesis = Nothing
+               , envProtocol = Nothing
                }
 
 type ActionM a = ExceptT Error (RWST IOManager () Env IO) a
@@ -100,6 +105,9 @@ setBenchTracers val = modifyEnv $ (\e -> e { benchTracers = pure val })
 setEnvGenesis :: ShelleyGenesis StandardShelley -> ActionM ()
 setEnvGenesis val = modifyEnv $ (\e -> e { envGenesis = pure val })
 
+setEnvProtocol :: SomeConsensusProtocol -> ActionM ()
+setEnvProtocol val = modifyEnv $ (\e -> e { envProtocol = pure val })
+
 get :: Store v -> ActionM v
 get key = do
   lift (RWS.gets $ (\e -> DMap.lookup key $ dmap e)) >>= \case
@@ -120,6 +128,9 @@ getBenchTracers = getEnvVal benchTracers "BenchTracers"
 
 getEnvGenesis :: ActionM (ShelleyGenesis StandardShelley)
 getEnvGenesis = getEnvVal envGenesis "Genesis"
+
+getEnvProtocol :: ActionM SomeConsensusProtocol
+getEnvProtocol = getEnvVal envProtocol "Protocol"
 
 traceBenchTxSubmit :: (forall txId. x -> Tracer.TraceBenchTxSubmit txId) -> x -> ActionM ()
 traceBenchTxSubmit tag msg = do
