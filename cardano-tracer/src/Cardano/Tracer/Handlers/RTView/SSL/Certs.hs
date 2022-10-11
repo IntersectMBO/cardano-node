@@ -12,11 +12,12 @@ import qualified Data.ByteString as BS
 import           Data.String.QQ
 import qualified System.Directory as D
 
+import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.System
 
-placeDefaultSSLFiles :: IO (FilePath, FilePath)
-placeDefaultSSLFiles = do
-  (pathToCertFile, pathToKeyFile) <- getPathsToSSLCerts
+placeDefaultSSLFiles :: TracerEnv -> IO (FilePath, FilePath)
+placeDefaultSSLFiles tracerEnv = do
+  (pathToCertFile, pathToKeyFile) <- getPathsToSSLCerts tracerEnv
   writeIfNeeded pathToCertFile defaultCert
   writeIfNeeded pathToKeyFile  defaultKey
   -- Set permissions like 'openssl' does.

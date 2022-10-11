@@ -35,7 +35,7 @@ propDataPoint rootDir localSock = do
   stopProtocols <- initProtocolsBrake
   dpRequestors <- initDataPointRequestors
   savedDPValues :: TVar DataPointValues <- newTVarIO []
-  withAsync (doRunCardanoTracer config stopProtocols dpRequestors) . const $ do
+  withAsync (doRunCardanoTracer config Nothing stopProtocols dpRequestors) . const $ do
     sleep 1.0
     withAsync (launchForwardersSimple Initiator localSock 1000 10000) . const $ do
       sleep 1.5

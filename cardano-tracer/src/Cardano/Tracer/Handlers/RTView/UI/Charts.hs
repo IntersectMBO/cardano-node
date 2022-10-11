@@ -95,11 +95,11 @@ addNodeDatasetsToCharts tracerEnv colors datasetIndices nodeId@(NodeId anId) = d
   -- If so - we have to take its color again, from the file.
   -- If not - we have to take the new color for it and save it for the future.
   colorForNode@(Color code) <-
-    liftIO (getSavedColorForNode nodeName) >>= \case
+    liftIO (getSavedColorForNode tracerEnv nodeName) >>= \case
       Just savedColor -> return savedColor
       Nothing -> do
         newColor <- getNewColor
-        liftIO $ saveColorForNode nodeName newColor
+        liftIO $ saveColorForNode tracerEnv nodeName newColor
         return newColor
   forM_ chartsIds $ \chartId ->
     case mIx of
@@ -194,8 +194,8 @@ replacePointsByAvgPoints points =
   -- Maximum number of points to calculate avg = 15 s.
   numberOfPointsToAverage = 15
 
-restoreChartsSettings :: UI ()
-restoreChartsSettings = readSavedChartsSettings >>= setCharts
+restoreChartsSettings :: TracerEnv -> UI ()
+restoreChartsSettings tracerEnv = readSavedChartsSettings tracerEnv >>= setCharts
  where
   setCharts settings =
     forM_ settings $ \(chartId, ChartSettings tr up) -> do
@@ -204,15 +204,15 @@ restoreChartsSettings = readSavedChartsSettings >>= setCharts
       Chart.setTimeRange chartId tr
       when (tr == 0) $ Chart.resetZoomChartJS chartId
 
-saveChartsSettings :: UI ()
-saveChartsSettings = do
+saveChartsSettings :: TracerEnv -> UI ()
+saveChartsSettings tracerEnv = do
   settings <-
     forM chartsIds $ \chartId -> do
       selectedTR <- getOptionValue $ show chartId <> show TimeRangeSelect
       selectedUP <- getOptionValue $ show chartId <> show UpdatePeriodSelect
       return (chartId, ChartSettings selectedTR selectedUP)
   liftIO . ignore $ do
-    pathToChartsConfig <- getPathToChartsConfig
+    pathToChartsConfig <- getPathToChartsConfig tracerEnv
     encodeFile pathToChartsConfig settings
  where
   getOptionValue selectId = do
@@ -222,9 +222,9 @@ saveChartsSettings = do
       Just (valueInS :: Int) -> return valueInS
       Nothing -> return 0
 
-readSavedChartsSettings :: UI ChartsSettings
-readSavedChartsSettings = liftIO $
-  try_ (decodeFileStrict' =<< getPathToChartsConfig) >>= \case
+readSavedChartsSettings :: TracerEnv -> UI ChartsSettings
+readSavedChartsSettings tracerEnv = liftIO $
+  try_ (decodeFileStrict' =<< getPathToChartsConfig tracerEnv) >>= \case
     Right (Just (settings :: ChartsSettings)) -> return settings
     _ -> return defaultSettings
  where
@@ -320,9 +320,12 @@ dataNameToChartId dataName =
     MempoolBytesData          -> MempoolBytesChart
     TxsInMempoolData          -> TxsInMempoolChart
 
-getSavedColorForNode :: NodeName -> IO (Maybe Color)
-getSavedColorForNode nodeName = do
-  colorsDir <- getPathToChartColorsDir
+getSavedColorForNode
+  :: TracerEnv
+  -> NodeName
+  -> IO (Maybe Color)
+getSavedColorForNode tracerEnv nodeName = do
+  colorsDir <- getPathToChartColorsDir tracerEnv
   colorFiles <- map (\cf -> colorsDir </> takeBaseName cf) <$> listFiles colorsDir
   case find (\cf -> unpack nodeName `isInfixOf` cf) colorFiles of
     Nothing -> return Nothing
@@ -341,7 +344,11 @@ getSavedColorForNode nodeName = do
     && all (\c -> isDigit c || c `elem` ['a' .. 'f'] )
            (tail $ lower code)
 
-saveColorForNode :: NodeName -> Color -> IO ()
-saveColorForNode nodeName (Color code) = do
-  colorsDir <- getPathToChartColorsDir
+saveColorForNode
+  :: TracerEnv
+  -> NodeName
+  -> Color
+  -> IO ()
+saveColorForNode tracerEnv nodeName (Color code) = do
+  colorsDir <- getPathToChartColorsDir tracerEnv
   ignore $ writeFile (colorsDir </> unpack nodeName) code

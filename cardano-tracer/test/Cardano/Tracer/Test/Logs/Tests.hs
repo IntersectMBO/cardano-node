@@ -36,7 +36,7 @@ propLogs :: LogFormat -> FilePath -> FilePath -> IO Property
 propLogs format rootDir localSock = do
   stopProtocols <- initProtocolsBrake
   dpRequestors <- initDataPointRequestors
-  withAsync (doRunCardanoTracer (config rootDir localSock) stopProtocols dpRequestors) . const $ do
+  withAsync (doRunCardanoTracer (config rootDir localSock) Nothing stopProtocols dpRequestors) . const $ do
     sleep 1.0
     withAsync (launchForwardersSimple Initiator localSock 1000 10000) . const $ do
       sleep 8.0 -- Wait till some rotation is done.
@@ -82,7 +82,7 @@ propMultiInit :: LogFormat -> FilePath -> FilePath -> FilePath -> IO Property
 propMultiInit format rootDir localSock1 localSock2 = do
   stopProtocols <- initProtocolsBrake
   dpRequestors <- initDataPointRequestors
-  withAsync (doRunCardanoTracer (config rootDir localSock1 localSock2) stopProtocols dpRequestors) . const $ do
+  withAsync (doRunCardanoTracer (config rootDir localSock1 localSock2) Nothing stopProtocols dpRequestors) . const $ do
     sleep 1.0
     withAsync (launchForwardersSimple Responder localSock1 1000 10000) . const $ do
       sleep 1.0
@@ -109,7 +109,7 @@ propMultiResp :: LogFormat -> FilePath -> FilePath -> IO Property
 propMultiResp format rootDir localSock = do
   stopProtocols <- initProtocolsBrake
   dpRequestors <- initDataPointRequestors
-  withAsync (doRunCardanoTracer (config rootDir localSock) stopProtocols dpRequestors) . const $ do
+  withAsync (doRunCardanoTracer (config rootDir localSock) Nothing stopProtocols dpRequestors) . const $ do
     sleep 1.0
     withAsync (launchForwardersSimple Initiator localSock 1000 10000) . const $ do
       sleep 1.0

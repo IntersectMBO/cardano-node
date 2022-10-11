@@ -458,7 +458,7 @@ mkPageBody tracerEnv networkConfig dsIxs = do
           -- but for this 'dataName' only!
           restoreAllHistoryOnChart tracerEnv dataName chartId dsIxs
           Chart.resetZoomChartJS chartId
-        saveChartsSettings
+        saveChartsSettings tracerEnv
 
     on UI.selectionChange selectUpdatePeriod . const $
       whenJustM (readMaybe <$> get value selectUpdatePeriod) $ \(periodInSec :: Int) -> do
@@ -466,7 +466,7 @@ mkPageBody tracerEnv networkConfig dsIxs = do
         unless (periodInSec == 0) $ do
           void $ return chartUpdateTimer # set UI.interval (periodInSec * 1000)
           UI.start chartUpdateTimer
-        saveChartsSettings
+        saveChartsSettings tracerEnv
 
     UI.div #. "rt-view-chart-container" #+
       [ UI.div #. "columns" #+
@@ -488,15 +488,15 @@ mkPageBody tracerEnv networkConfig dsIxs = do
       ]
 
 topNavigation :: TracerEnv -> UI Element
-topNavigation TracerEnv{teEventsQueues} = do
+topNavigation tracerEnv@TracerEnv{teEventsQueues} = do
   info <- mkAboutInfo
   infoIcon <- image "has-tooltip-multiline has-tooltip-bottom rt-view-info-icon mr-1" rtViewInfoSVG
                     ## "info-icon"
                     # set dataTooltip "RTView info"
   on UI.click infoIcon . const $ fadeInModal info
 
-  notificationsEvents   <- mkNotificationsEvents teEventsQueues
-  notificationsSettings <- mkNotificationsSettings
+  notificationsEvents   <- mkNotificationsEvents tracerEnv teEventsQueues
+  notificationsSettings <- mkNotificationsSettings tracerEnv
 
   notificationsEventsItem <- UI.anchor #. "navbar-item" #+
                                [ image "rt-view-notify-menu-icon" eventsSVG
@@ -509,7 +509,7 @@ topNavigation TracerEnv{teEventsQueues} = do
   on UI.click notificationsEventsItem . const $
     fadeInModal notificationsEvents
   on UI.click notificationsSettingsItem . const $ do
-    restoreEmailSettings
+    restoreEmailSettings tracerEnv
     fadeInModal notificationsSettings
 
   notificationsIcon <- image "rt-view-info-icon mr-2" rtViewNotifySVG
@@ -518,7 +518,7 @@ topNavigation TracerEnv{teEventsQueues} = do
   themeIcon <- image "has-tooltip-multiline has-tooltip-bottom rt-view-theme-icon" rtViewThemeToLightSVG
                      ## "theme-icon"
                      # set dataTooltip "Switch to light theme"
-  on UI.click themeIcon . const $ askWindow >>= switchTheme
+  on UI.click themeIcon . const $ switchTheme tracerEnv
 
   UI.div ## "top-bar" #. "navbar rt-view-top-bar" #+
     [ element info

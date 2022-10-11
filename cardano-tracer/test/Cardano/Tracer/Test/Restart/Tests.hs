@@ -34,7 +34,7 @@ propNetworkForwarder rootDir localSock = do
   dpRequestors <- initDataPointRequestors
   propNetwork' rootDir
     ( launchForwardersSimple Initiator localSock 1000 10000
-    , doRunCardanoTracer config brake dpRequestors
+    , doRunCardanoTracer config Nothing brake dpRequestors
     )
 
 propNetwork'
