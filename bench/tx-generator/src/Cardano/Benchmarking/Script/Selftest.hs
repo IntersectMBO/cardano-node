@@ -5,7 +5,6 @@ where
 import           Prelude
 
 import qualified Data.ByteString.Lazy.Char8 as BSL
-import           Data.Dependent.Sum ((==>))
 import           Data.String
 
 import           Control.Monad
@@ -16,7 +15,6 @@ import           Ouroboros.Network.NodeToClient (IOManager)
 import           Cardano.Benchmarking.Script.Action
 import           Cardano.Benchmarking.Script.Aeson (prettyPrint)
 import           Cardano.Benchmarking.Script.Env as Script
-import           Cardano.Benchmarking.Script.Setters
 import           Cardano.Benchmarking.Script.Store
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Tracer (initNullTracers)
@@ -43,7 +41,7 @@ printJSON = BSL.putStrLn $ prettyPrint $ testScript "/dev/zero" DiscardTX
 testScript :: FilePath -> SubmitMode -> [Action]
 testScript protocolFile submitMode =
   [ SetProtocolParameters (UseLocalProtocolFile protocolFile)
-  , Set (TNetworkId ==> Testnet (NetworkMagic {unNetworkMagic = 42}))
+  , SetNetworkId (Testnet (NetworkMagic {unNetworkMagic = 42}))
   , InitWallet genesisWallet
   , InitWallet splitWallet1
   , InitWallet splitWallet2

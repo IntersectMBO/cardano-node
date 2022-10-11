@@ -18,7 +18,6 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 
 import           Cardano.Api
-import           Cardano.Benchmarking.Script.Setters(Tag(..))
 import           Cardano.Benchmarking.Script.Store (KeyName, Name (..), WalletName)
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.TxGenerator.Setup.NixService
@@ -66,15 +65,13 @@ compileToScript = do
 
 initConstants :: Compiler ()
 initConstants = do
-  setN TLocalSocket          _nix_localNodeSocketPath
+  p <- askNixOption _nix_localNodeSocketPath
+  emit $ SetSocketPath p
   emit $ DefineSigningKey keyNameTxGenFunds keyTxGenFunds
   emit $ DefineSigningKey keyNameCollaterals keyCollaterals
   emit $ DefineSigningKey keyNameSplitPhase keySplitPhase
   emit $ DefineSigningKey keyNameBenchmarkInputs keyBenchmarkInputs
   emit $ DefineSigningKey keyNameBenchmarkDone keyBenchmarkDone
-  where
-    setN :: Tag v -> (NixServiceOptions -> v) -> Compiler ()
-    setN key s = askNixOption s >>= emit . setConst key
 
 importGenesisFunds :: Compiler WalletName
 importGenesisFunds = do

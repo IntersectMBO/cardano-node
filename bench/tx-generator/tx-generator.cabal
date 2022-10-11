@@ -41,7 +41,6 @@ library
                        Cardano.Benchmarking.Script.Env
                        Cardano.Benchmarking.Script.NodeConfig                       
                        Cardano.Benchmarking.Script.Selftest                       
-                       Cardano.Benchmarking.Script.Setters
                        Cardano.Benchmarking.Script.Store
                        Cardano.Benchmarking.Script.Types
                        Cardano.Benchmarking.TpsThrottle

@@ -11,8 +11,6 @@ where
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS (lines)
 import qualified Data.ByteString.Lazy as BSL
-import           Data.Dependent.Sum
-import           Data.Functor.Identity
 import           Data.Text (Text)
 import           GHC.Generics (Generic)
 import           Prelude
@@ -29,7 +27,6 @@ import           Cardano.Api.Shelley (ProtocolParameters)
 import           Cardano.CLI.Types (SigningKeyFile (..))
 import qualified Ouroboros.Network.Magic as Ouroboros (NetworkMagic (..))
 
-import           Cardano.Benchmarking.Script.Setters
 import           Cardano.Benchmarking.Script.Store
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.TxGenerator.Types
@@ -105,17 +102,6 @@ instance ToJSON ScriptSpec where
   toJSON     = genericToJSON jsonOptionsUnTaggedSum
   toEncoding = genericToEncoding jsonOptionsUnTaggedSum
 instance FromJSON ScriptSpec where
-  parseJSON = genericParseJSON jsonOptionsUnTaggedSum
-
-instance ToJSON (DSum Tag Identity) where
-  toJSON     = toJSON . taggedToSum
-instance FromJSON (DSum Tag Identity) where
-  parseJSON a = sumToTagged <$> parseJSON a
-
-instance ToJSON Sum where
-  toJSON     = genericToJSON jsonOptionsUnTaggedSum
-  toEncoding = genericToEncoding jsonOptionsUnTaggedSum
-instance FromJSON Sum where
   parseJSON = genericParseJSON jsonOptionsUnTaggedSum
 
 instance ToJSON Action where
