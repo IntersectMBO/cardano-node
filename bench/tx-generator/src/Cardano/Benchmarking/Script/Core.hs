@@ -83,10 +83,10 @@ withEra era action = do
 setProtocolParameters :: ProtocolParametersSource -> ActionM ()
 setProtocolParameters s = case s of
   QueryLocalNode -> do
-    set ProtocolParameterMode ProtocolParameterQuery
+    setProtoParamMode ProtocolParameterQuery
   UseLocalProtocolFile file -> do
     protocolParameters <- liftIO $ readProtocolParametersFile file
-    set ProtocolParameterMode $ ProtocolParameterLocal protocolParameters
+    setProtoParamMode $ ProtocolParameterLocal protocolParameters
 
 readSigningKey :: KeyName -> SigningKeyFile -> ActionM ()
 readSigningKey name filePath =
@@ -199,7 +199,7 @@ queryRemoteProtocolParameters = do
 
 getProtocolParameters :: ActionM ProtocolParameters
 getProtocolParameters = do
-  get ProtocolParameterMode  >>= \case
+  getProtoParamMode  >>= \case
     ProtocolParameterQuery -> queryRemoteProtocolParameters
     ProtocolParameterLocal parameters -> return parameters
 

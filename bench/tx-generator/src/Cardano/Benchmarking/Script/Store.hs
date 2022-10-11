@@ -38,7 +38,6 @@ data Store v where
   KeyName      :: !String -> Store (SigningKey PaymentKey)
   ThreadName   :: !String -> Store AsyncBenchmarkControl
   WalletName   :: !String -> Store WalletRef
-  ProtocolParameterMode :: Store ProtocolParameterMode
 
 type KeyName      = Store (SigningKey PaymentKey)
 type ThreadName   = Store AsyncBenchmarkControl
