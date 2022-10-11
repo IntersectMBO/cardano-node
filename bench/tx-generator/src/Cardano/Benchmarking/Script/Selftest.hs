@@ -4,11 +4,11 @@ where
 
 import           Prelude
 
+import           Control.Monad
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import           Data.Dependent.Sum ((==>))
+import           Data.Either (fromRight)
 import           Data.String
-
-import           Control.Monad
 
 import           Cardano.Api
 import           Ouroboros.Network.NodeToClient (IOManager)
@@ -21,6 +21,7 @@ import           Cardano.Benchmarking.Script.Store
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Tracer (initNullTracers)
 
+import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Types
 
 import           Paths_tx_generator
@@ -49,10 +50,7 @@ testScript protocolFile submitMode =
   , InitWallet splitWallet2
   , InitWallet splitWallet3
   , InitWallet doneWallet
-  , DefineSigningKey key
-    (TextEnvelope { teType = TextEnvelopeType "GenesisUTxOSigningKey_ed25519"
-                  , teDescription = fromString "Genesis Initial UTxO Signing Key"
-                 , teRawCBOR = "X \vl1~\182\201v(\152\250A\202\157h0\ETX\248h\153\171\SI/m\186\242D\228\NAK\182(&\162"})
+  , DefineSigningKey key skey
   , AddFund era genesisWallet
     (TxIn "900fc5da77a0747da53f7675cbb7d149d46779346dea2f879ab811ccc72a2162" (TxIx 0))
     (Lovelace 90000000000000) key
@@ -70,6 +68,13 @@ testScript protocolFile submitMode =
       $ NtoM splitWallet3 (PayToAddr key doneWallet) 2 2 Nothing Nothing
   ]
   where
+    skey = fromRight (error "could not parse hardcoded signing key") $
+      parseSigningKeyTE $
+        TextEnvelope {
+            teType = TextEnvelopeType "GenesisUTxOSigningKey_ed25519"
+          , teDescription = fromString "Genesis Initial UTxO Signing Key"
+          , teRawCBOR = "X \vl1~\182\201v(\152\250A\202\157h0\ETX\248h\153\171\SI/m\186\242D\228\NAK\182(&\162"
+          }
     era = AnyCardanoEra AllegraEra
     txParams = defaultTxGenTxParams {txParamFee = 1000000}
     genesisWallet = WalletName "genesisWallet"

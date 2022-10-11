@@ -20,9 +20,8 @@ import           Cardano.Node.Types (AdjustFilePaths (..), GenesisFile (..))
 import           Cardano.TxGenerator.Genesis
 import           Cardano.TxGenerator.Setup.NixService
 import           Cardano.TxGenerator.Setup.NodeConfig
+import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Types
-
-import           Cardano.Benchmarking.GeneratorTx (readSigningKey)
 
 import           Cardano.Benchmarking.Script.Aeson (prettyPrint, prettyPrintYaml)
 import           Cardano.Benchmarking.Script.Selftest (testScript)
@@ -66,7 +65,8 @@ main
       _ <- firstExceptT TxGenError $ hoistEither $
         genesisValidate genesis
 
-      sigKey <- readSigningKey $ _nix_sigKey nixService
+      sigKey :: SigningKey PaymentKey <-
+        hoistEither =<< handleIOExceptT (TxGenError . show) (readSigningKeyFile $ _nix_sigKey nixService)
 
       pure (nixService, nc, genesis, sigKey)
 
