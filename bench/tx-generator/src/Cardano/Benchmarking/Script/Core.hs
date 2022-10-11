@@ -138,13 +138,13 @@ delay t = liftIO $ threadDelay $ floor $ 1000000 * t
 
 waitBenchmarkCore :: AsyncBenchmarkControl ->  ActionM ()
 waitBenchmarkCore ctl = do
-  tracers  <- get BenchTracers
+  tracers  <- getBenchTracers
   _ <- liftIO $ runExceptT $ GeneratorTx.waitBenchmark (btTxSubmit_ tracers) ctl
   return ()
 
 getConnectClient :: ActionM ConnectClient
 getConnectClient = do
-  tracers  <- get BenchTracers
+  tracers  <- getBenchTracers
   (Testnet networkMagic) <- get SNetworkId
   protocol <- get Protocol
   void $ return $(btSubmission2_ tracers)
@@ -273,7 +273,7 @@ benchmarkTxStream :: forall era. IsShelleyBasedEra era
   -> AsType era
   -> ActionM ()
 benchmarkTxStream txStream targetNodes (ThreadName threadName) tps txCount era = do
-  tracers  <- get BenchTracers
+  tracers  <- getBenchTracers
   connectClient <- getConnectClient
   let
     coreCall :: AsType era -> ExceptT TxGenError IO AsyncBenchmarkControl

@@ -26,14 +26,12 @@ import           Cardano.Benchmarking.OuroborosImports as Cardano (PaymentKey,
                    ShelleyGenesis, SigningKey, StandardShelley)
 
 import           Cardano.Benchmarking.GeneratorTx as Core (AsyncBenchmarkControl)
-import           Cardano.Benchmarking.LogTypes as Core (BenchTracers)
 import           Cardano.Benchmarking.Wallet as Wallet
 
 data Store v where
   SNetworkId   :: Store NetworkId
   SSocketPath  :: Store FilePath
   Protocol     :: Store SomeConsensusProtocol
-  BenchTracers :: Store Core.BenchTracers
   Genesis      :: Store (ShelleyGenesis StandardShelley)
   KeyName      :: !String -> Store (SigningKey PaymentKey)
   ThreadName   :: !String -> Store AsyncBenchmarkControl

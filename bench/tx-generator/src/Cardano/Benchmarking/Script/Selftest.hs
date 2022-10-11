@@ -29,7 +29,7 @@ runSelftest iom outFile = do
   let
     submitMode = maybe DiscardTX DumpToFile outFile
     fullScript = do
-        set BenchTracers initNullTracers
+        setBenchTracers initNullTracers
         forM_ (testScript protocolFile submitMode) action
   runActionM fullScript iom >>= \case
     (Right a  , _ ,  ()) -> return $ Right a

@@ -20,6 +20,8 @@ module Cardano.Benchmarking.Script.Env (
         , traceDebug
         , traceError
         , traceBenchTxSubmit
+        , getBenchTracers
+        , setBenchTracers
         , getProtoParamMode
         , setProtoParamMode
         , get
@@ -46,10 +48,14 @@ import           Cardano.TxGenerator.Types (TxGenError(..))
 
 data Env = Env { dmap :: DMap Store Identity
                , protoParams :: Maybe ProtocolParameterMode
+               , benchTracers :: Maybe Tracer.BenchTracers
                }
 
 emptyEnv :: Env
-emptyEnv = Env { dmap = DMap.empty, protoParams = Nothing }
+emptyEnv = Env { dmap = DMap.empty
+               , protoParams = Nothing
+               , benchTracers = Nothing
+               }
 
 type ActionM a = ExceptT Error (RWST IOManager () Env IO) a
 
@@ -80,6 +86,9 @@ set key val = lift $ RWS.modify $ (\e -> e { dmap = DMap.insert key (pure val) (
 setProtoParamMode :: ProtocolParameterMode -> ActionM ()
 setProtoParamMode val = lift $ RWS.modify $ (\e -> e { protoParams = pure val })
 
+setBenchTracers :: Tracer.BenchTracers -> ActionM ()
+setBenchTracers val = lift $ RWS.modify $ (\e -> e { benchTracers = pure val })
+
 get :: Store v -> ActionM v
 get key = do
   lift (RWS.gets $ (\e -> DMap.lookup key $ dmap e)) >>= \case
@@ -92,9 +101,15 @@ getProtoParamMode = do
     Just x -> return x
     Nothing -> throwE $ UserError "Unset ProtocolParams"
 
+getBenchTracers :: ActionM Tracer.BenchTracers
+getBenchTracers = do
+  lift (RWS.gets $ (\e -> benchTracers e)) >>= \case
+    Just x -> return x
+    Nothing -> throwE $ UserError "Unset BenchTracers"
+
 traceBenchTxSubmit :: (forall txId. x -> Tracer.TraceBenchTxSubmit txId) -> x -> ActionM ()
 traceBenchTxSubmit tag msg = do
-  tracers  <- get BenchTracers
+  tracers  <- getBenchTracers
   liftIO $ traceWith (Tracer.btTxSubmit_ tracers) $ tag msg
 
 traceError :: String -> ActionM ()

@@ -34,4 +34,4 @@ startProtocol configFile tracerSocket = do
     Just socket -> do
       iomgr <- askIOManager
       liftIO $ initTracers iomgr networkId socket
-  set Store.BenchTracers tracers
+  setBenchTracers tracers
