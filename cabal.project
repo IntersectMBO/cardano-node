@@ -125,14 +125,6 @@ source-repository-package
   tag: 8a21e6c3fd9b306e07e0e0f39047032c97789b38
   --sha256: 170vgf94g6fhc2p2cx58gqy9520gs39ddl7q4lkqyr8h33p9wrvq
 
--- Open PR upstream, maintainer unresponsive, hopefully short-lived fork.
--- TODO (mpj): release into CHaP as a patched version and delete
-source-repository-package
-  type: git
-  location: https://github.com/vshabanov/ekg-json
-  tag: 00ebe7211c981686e65730b7144fbf5350462608
-  --sha256: 1zvjm3pb38w0ijig5wk5mdkzcszpmlp5d4zxvks2jk1rkypi8gsm
-
 source-repository-package
   type: git
   location: https://github.com/denisshevchenko/threepenny-gui
