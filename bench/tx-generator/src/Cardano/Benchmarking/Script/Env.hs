@@ -17,7 +17,6 @@ module Cardano.Benchmarking.Script.Env (
         , runActionMEnv
         , liftTxGenError
         , askIOManager
-        , consumeName
         , traceDebug
         , traceError
         , traceBenchTxSubmit
@@ -82,9 +81,6 @@ askIOManager = lift RWS.ask
 set :: Store v -> v -> ActionM ()
 set key val = lift $ RWS.modify $ (\e -> e { dmap = DMap.insert key (pure val) (dmap e)})
 
-unSet :: Store v -> ActionM ()
-unSet key = lift $ RWS.modify $ (\e -> e { dmap = DMap.delete key (dmap e)})
-
 setName :: Name v -> v -> ActionM ()
 setName = set . Named
 
@@ -108,12 +104,6 @@ getSocketPath = get SSocketPath
 
 setSocketPath :: FilePath -> ActionM ()
 setSocketPath = set SSocketPath
-
-consumeName :: Name v -> ActionM v
-consumeName n = do
-  v <- getName n
-  unSet $ Named n
-  return v
 
 traceBenchTxSubmit :: (forall txId. x -> Tracer.TraceBenchTxSubmit txId) -> x -> ActionM ()
 traceBenchTxSubmit tag msg = do
