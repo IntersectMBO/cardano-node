@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -20,6 +21,7 @@ import           Data.Text.Read (decimal)
 import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
 
+import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.Notifications.Settings
 import           Cardano.Tracer.Handlers.RTView.Notifications.Timer
 import           Cardano.Tracer.Handlers.RTView.Notifications.Types
@@ -28,9 +30,9 @@ import           Cardano.Tracer.Handlers.RTView.UI.Utils
 import           Cardano.Tracer.Handlers.RTView.UI.JS.Utils
 import           Cardano.Tracer.Handlers.RTView.Update.Utils
 
-restoreEmailSettings :: UI ()
-restoreEmailSettings = do
-  eSettings <- liftIO readSavedEmailSettings
+restoreEmailSettings :: TracerEnv -> UI ()
+restoreEmailSettings TracerEnv{teRTViewStateDir} = do
+  eSettings <- liftIO $ readSavedEmailSettings teRTViewStateDir
   setEmailSettings eSettings
   setStatusTestEmailButton
  where
@@ -49,9 +51,9 @@ restoreEmailSettings = do
     unless (null elValue || elValue == "-1") $
       findAndSet (set value elValue) window elId
 
-restoreEventsSettings :: UI ()
-restoreEventsSettings = do
-  eSettings <- liftIO readSavedEventsSettings
+restoreEventsSettings :: TracerEnv -> UI ()
+restoreEventsSettings TracerEnv{teRTViewStateDir} = do
+  eSettings <- liftIO $ readSavedEventsSettings teRTViewStateDir
   setEventsSettings eSettings
   setNotifyIconState
   setSwitchAllState eSettings
@@ -107,11 +109,13 @@ setNotifyIconState = do
   when noChecked  $ findAndSet (set html rtViewNoNotifySVG) window "notifications-icon"
   findAndSet (set UI.checked allChecked) window "switch-all"
 
-saveEmailSettings :: UI ()
-saveEmailSettings = (liftIO . saveEmailSettingsOnDisk) =<< getCurrentEmailSettings
+saveEmailSettings :: TracerEnv -> UI ()
+saveEmailSettings tracerEnv =
+  (liftIO . saveEmailSettingsOnDisk tracerEnv) =<< getCurrentEmailSettings
 
-saveEventsSettings :: UI ()
-saveEventsSettings = (liftIO . saveEventsSettingsOnDisk) =<< getCurrentEventsSettings
+saveEventsSettings :: TracerEnv -> UI ()
+saveEventsSettings tracerEnv =
+  (liftIO . saveEventsSettingsOnDisk tracerEnv) =<< getCurrentEventsSettings
 
 getCurrentEmailSettings :: UI EmailSettings
 getCurrentEmailSettings = do

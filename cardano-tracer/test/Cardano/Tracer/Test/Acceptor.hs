@@ -41,7 +41,7 @@ launchAcceptorsSimple mode localSock dpName = do
   savedTO <- initSavedTraceObjects
   currentLogLock <- newLock
   currentDPLock <- newLock
-  eventsQueues <- initEventsQueues connectedNodesNames dpRequestors currentDPLock
+  eventsQueues <- initEventsQueues Nothing connectedNodesNames dpRequestors currentDPLock
 
   chainHistory <- initBlockchainHistory
   resourcesHistory <- initResourcesHistory
@@ -65,6 +65,7 @@ launchAcceptorsSimple mode localSock dpName = do
           , teDPRequestors        = dpRequestors
           , teProtocolsBrake      = protocolsBrake
           , teRTViewPageOpened    = rtViewPageOpened
+          , teRTViewStateDir      = Nothing
           }
 
   void . sequenceConcurrently $

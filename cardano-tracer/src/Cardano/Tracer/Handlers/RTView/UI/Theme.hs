@@ -16,49 +16,45 @@ import qualified Data.Text.IO as TIO
 import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
 
+import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.System
 import           Cardano.Tracer.Handlers.RTView.UI.Charts
 import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
 
-restoreTheme, switchTheme :: UI.Window -> UI ()
-restoreTheme window = readSavedTheme >>= setThemeAndSave window
-switchTheme window  = readSavedTheme >>= setThemeAndSave window . switch
+restoreTheme, switchTheme :: TracerEnv -> UI ()
+restoreTheme tracerEnv = readSavedTheme tracerEnv >>= setThemeAndSave tracerEnv
+switchTheme tracerEnv  = readSavedTheme tracerEnv >>= setThemeAndSave tracerEnv . switch
  where
   switch s = if s == darkState then lightState else darkState
 
-isCurrentThemeDark :: UI Bool
-isCurrentThemeDark = (== darkState) <$> readSavedTheme
+isCurrentThemeDark :: TracerEnv -> UI Bool
+isCurrentThemeDark tracerEnv = (== darkState) <$> readSavedTheme tracerEnv
 
 setThemeAndSave
-  :: UI.Window
+  :: TracerEnv
   -> String
   -> UI ()
-setThemeAndSave window themeToSet = do
-  changeThemeIcon
-  changeBodyClass
-  changeCharts
-  saveTheme themeToSet
+setThemeAndSave tracerEnv themeToSet = do
+  window <- askWindow
+  let change elId what = findAndSet what window elId
+
+  change "theme-icon" $
+      set html        (if toBeLight then rtViewThemeToDarkSVG else rtViewThemeToLightSVG)
+    . set dataState   (if toBeLight then lightState else darkState)
+    . set dataTooltip ("Switch to " <> (if toBeLight then "dark" else "light") <> " theme")
+
+  getElementsByTagName window "body" >>= \case
+    [body] -> void $ element body # set UI.class_ (if toBeLight then lightState else darkState)
+    _ -> return ()
+
+  if toBeLight
+    then changeChartsToLightTheme
+    else changeChartsToDarkTheme
+
+  saveTheme tracerEnv themeToSet
  where
   toBeLight = themeToSet == lightState
-
-  changeThemeIcon = do
-    change "theme-icon" $
-        set html        (if toBeLight then rtViewThemeToDarkSVG else rtViewThemeToLightSVG)
-      . set dataState   (if toBeLight then lightState else darkState)
-      . set dataTooltip ("Switch to " <> (if toBeLight then "dark" else "light") <> " theme")
-
-  changeBodyClass =
-    getElementsByTagName window "body" >>= \case
-      [body] -> void $ element body # set UI.class_ (if toBeLight then lightState else darkState)
-      _ -> return ()
-
-  change elId what = findAndSet what window elId
-
-  changeCharts =
-    if toBeLight
-      then changeChartsToLightTheme
-      else changeChartsToDarkTheme
 
 lightState, darkState :: String
 lightState = "light"
@@ -66,13 +62,13 @@ darkState  = "dark"
 
 -- | Every time when the user changed the theme, it should be saved on the file
 --   for next sessions, both after web-page reload and 'cardano-tracer' restart.
-saveTheme :: String -> UI ()
-saveTheme state = liftIO . ignore $ do
-  pathToThemeConfig <- getPathToThemeConfig
+saveTheme :: TracerEnv -> String -> UI ()
+saveTheme tracerEnv state = liftIO . ignore $ do
+  pathToThemeConfig <- getPathToThemeConfig tracerEnv
   TIO.writeFile pathToThemeConfig $ T.pack state
 
-readSavedTheme :: UI String
-readSavedTheme = liftIO $
-  try_ (TIO.readFile =<< getPathToThemeConfig) >>= \case
+readSavedTheme :: TracerEnv -> UI String
+readSavedTheme tracerEnv = liftIO $
+  try_ (TIO.readFile =<< getPathToThemeConfig tracerEnv) >>= \case
     Right saved -> return $ T.unpack saved
     Left _      -> return darkState -- Use dark theme by default.

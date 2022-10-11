@@ -92,7 +92,7 @@ backupAllHistory :: TracerEnv -> IO ()
 backupAllHistory tracerEnv@TracerEnv{teConnectedNodes} = do
   connected <- S.toList <$> readTVarIO teConnectedNodes
   nodesIdsWithNames <- getNodesIdsWithNames tracerEnv connected
-  backupDir <- getPathToBackupDir
+  backupDir <- getPathToBackupDir tracerEnv
   (cHistory, rHistory, tHistory) <- atomically $ (,,)
     <$> readTVar chainHistory
     <*> readTVar resourcesHistory
@@ -126,7 +126,7 @@ backupSpecificHistory
   -> DataName
   -> IO ()
 backupSpecificHistory tracerEnv history connected dataName = do
-  backupDir <- getPathToBackupDir
+  backupDir <- getPathToBackupDir tracerEnv
   hist <- readTVarIO history
   forMM_ (getNodesIdsWithNames tracerEnv connected) $ \(nodeId, nodeName) -> do
     backupHistory backupDir hist nodeId nodeName $ Just dataName
@@ -178,7 +178,7 @@ getAllHistoryFromBackup
 getAllHistoryFromBackup tracerEnv@TracerEnv{teConnectedNodes} dataName = do
   connected <- S.toList <$> readTVarIO teConnectedNodes
   nodesIdsWithNames <- getNodesIdsWithNames tracerEnv connected
-  backupDir <- getPathToBackupDir
+  backupDir <- getPathToBackupDir tracerEnv
   forM nodesIdsWithNames $ \(nodeId, nodeName) -> do
     let nodeSubdir = backupDir </> T.unpack nodeName
     doesDirectoryExist nodeSubdir >>= \case
@@ -218,7 +218,7 @@ getLastHistoryFromBackups'
   -> [NodeId]
   -> IO [(NodeId, [(DataName, [HistoricalPoint])])]
 getLastHistoryFromBackups' tracerEnv nodeIds = do
-  backupDir <- getPathToBackupDir
+  backupDir <- getPathToBackupDir tracerEnv
   forMM (getNodesIdsWithNames tracerEnv nodeIds) $ \(nodeId, nodeName) -> do
     let nodeSubdir = backupDir </> T.unpack nodeName
     doesDirectoryExist nodeSubdir >>= \case

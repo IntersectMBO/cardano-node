@@ -45,7 +45,7 @@ runMonitoringServer
 runMonitoringServer tracerEnv (Endpoint listHost listPort, monitorEP) = do
   -- Pause to prevent collision between "Listening"-notifications from servers.
   sleep 0.2
-  (certFile, keyFile) <- placeDefaultSSLFiles
+  (certFile, keyFile) <- placeDefaultSSLFiles tracerEnv
   UI.startGUI (config certFile keyFile) $ \window -> do
     void $ return window # set UI.title "EKG Monitoring Nodes"
     void $ mkPageBody window tracerEnv monitorEP

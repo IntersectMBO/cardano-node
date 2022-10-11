@@ -23,14 +23,16 @@ import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
 
 makeAndSendNotification
-  :: ConnectedNodesNames
+  :: Maybe FilePath
+  -> ConnectedNodesNames
   -> DataPointRequestors
   -> Lock
   -> TVar UTCTime
   -> EventsQueue
   -> IO ()
-makeAndSendNotification connectedNodesNames dpRequestors currentDPLock lastTime eventsQueue = do
-  emailSettings <- readSavedEmailSettings
+makeAndSendNotification rtvSD connectedNodesNames dpRequestors
+                        currentDPLock lastTime eventsQueue = do
+  emailSettings <- readSavedEmailSettings rtvSD
   unless (incompleteEmailSettings emailSettings) $ do
     events <- atomically $ nub <$> flushTBQueue eventsQueue
     let (nodeIds, tss) = unzip $ nub [(nodeId, ts) | Event nodeId ts _ _ <- events]
