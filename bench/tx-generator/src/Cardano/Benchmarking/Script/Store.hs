@@ -23,7 +23,7 @@ import           Cardano.Api.Shelley as Cardano (ProtocolParameters)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 
 import           Cardano.Benchmarking.OuroborosImports as Cardano (PaymentKey,
-                   ShelleyGenesis, SigningKey, StandardShelley)
+                   SigningKey)
 
 import           Cardano.Benchmarking.GeneratorTx as Core (AsyncBenchmarkControl)
 import           Cardano.Benchmarking.Wallet as Wallet
@@ -32,7 +32,6 @@ data Store v where
   SNetworkId   :: Store NetworkId
   SSocketPath  :: Store FilePath
   Protocol     :: Store SomeConsensusProtocol
-  Genesis      :: Store (ShelleyGenesis StandardShelley)
   KeyName      :: !String -> Store (SigningKey PaymentKey)
   ThreadName   :: !String -> Store AsyncBenchmarkControl
   WalletName   :: !String -> Store WalletRef

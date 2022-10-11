@@ -22,6 +22,8 @@ module Cardano.Benchmarking.Script.Env (
         , traceBenchTxSubmit
         , getBenchTracers
         , setBenchTracers
+        , getEnvGenesis
+        , setEnvGenesis
         , getProtoParamMode
         , setProtoParamMode
         , get
@@ -42,6 +44,7 @@ import           "contra-tracer" Control.Tracer (traceWith)
 
 import qualified Cardano.Benchmarking.LogTypes as Tracer
 import           Ouroboros.Network.NodeToClient (IOManager)
+import           Cardano.Benchmarking.OuroborosImports(ShelleyGenesis, StandardShelley)
 import           Cardano.Benchmarking.Script.Store
 
 import           Cardano.TxGenerator.Types (TxGenError(..))
@@ -49,12 +52,14 @@ import           Cardano.TxGenerator.Types (TxGenError(..))
 data Env = Env { dmap :: DMap Store Identity
                , protoParams :: Maybe ProtocolParameterMode
                , benchTracers :: Maybe Tracer.BenchTracers
+               , envGenesis :: Maybe (ShelleyGenesis StandardShelley)
                }
 
 emptyEnv :: Env
 emptyEnv = Env { dmap = DMap.empty
                , protoParams = Nothing
                , benchTracers = Nothing
+               , envGenesis = Nothing
                }
 
 type ActionM a = ExceptT Error (RWST IOManager () Env IO) a
@@ -89,6 +94,9 @@ setProtoParamMode val = lift $ RWS.modify $ (\e -> e { protoParams = pure val })
 setBenchTracers :: Tracer.BenchTracers -> ActionM ()
 setBenchTracers val = lift $ RWS.modify $ (\e -> e { benchTracers = pure val })
 
+setEnvGenesis :: ShelleyGenesis StandardShelley -> ActionM ()
+setEnvGenesis val = lift $ RWS.modify $ (\e -> e { envGenesis = pure val })
+
 get :: Store v -> ActionM v
 get key = do
   lift (RWS.gets $ (\e -> DMap.lookup key $ dmap e)) >>= \case
@@ -106,6 +114,12 @@ getBenchTracers = do
   lift (RWS.gets $ (\e -> benchTracers e)) >>= \case
     Just x -> return x
     Nothing -> throwE $ UserError "Unset BenchTracers"
+
+getEnvGenesis :: ActionM (ShelleyGenesis StandardShelley)
+getEnvGenesis = do
+  lift (RWS.gets $ (\e -> envGenesis e)) >>= \case
+    Just x -> return x
+    Nothing -> throwE $ UserError "Unset Genesis"
 
 traceBenchTxSubmit :: (forall txId. x -> Tracer.TraceBenchTxSubmit txId) -> x -> ActionM ()
 traceBenchTxSubmit tag msg = do

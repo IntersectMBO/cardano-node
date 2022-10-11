@@ -290,7 +290,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
   protocolParameters <- getProtocolParameters
   case generator of
     SecureGenesis wallet genesisKeyName destKeyName -> do
-      genesis  <- get Genesis
+      genesis  <- getEnvGenesis
       destKey  <- get destKeyName
       destWallet  <- get wallet
       genesisKey  <- get genesisKeyName

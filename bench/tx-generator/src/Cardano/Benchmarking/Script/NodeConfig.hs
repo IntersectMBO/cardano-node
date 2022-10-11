@@ -26,7 +26,7 @@ startProtocol configFile tracerSocket = do
   nodeConfig <- liftToAction $ mkNodeConfig configFile
   protocol <-  liftToAction $ mkConsensusProtocol nodeConfig
   set Protocol protocol
-  set Genesis $ Core.getGenesis protocol
+  setEnvGenesis $ Core.getGenesis protocol
   let networkId = protocolToNetworkId protocol
   set SNetworkId networkId
   tracers <- case tracerSocket of
