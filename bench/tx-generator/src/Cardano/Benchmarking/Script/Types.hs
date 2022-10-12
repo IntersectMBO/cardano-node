@@ -42,9 +42,9 @@ data Action where
   InitWallet         :: !WalletName -> Action
   StartProtocol      :: !FilePath -> !(Maybe FilePath) -> Action
   Delay              :: !Double -> Action
-  ReadSigningKey     :: !KeyName -> !SigningKeyFile -> Action
-  DefineSigningKey   :: !KeyName -> !TextEnvelope -> Action
-  AddFund            :: !AnyCardanoEra -> !WalletName -> !TxIn -> !Lovelace -> !KeyName -> Action
+  ReadSigningKey     :: !String -> !SigningKeyFile -> Action
+  DefineSigningKey   :: !String -> !TextEnvelope -> Action
+  AddFund            :: !AnyCardanoEra -> !WalletName -> !TxIn -> !Lovelace -> !String -> Action
   WaitBenchmark      :: !ThreadName -> Action
   Submit             :: !AnyCardanoEra -> !SubmitMode -> !TxGenTxParams -> !Generator -> Action
   CancelBenchmark    :: !ThreadName -> Action
@@ -56,7 +56,7 @@ data Action where
 deriving instance Generic Action
 
 data Generator where
-  SecureGenesis :: !WalletName -> !KeyName -> !KeyName -> Generator -- 0 to N
+  SecureGenesis :: !WalletName -> !String -> !String -> Generator -- 0 to N
   Split :: !WalletName -> !PayMode -> !PayMode -> [ Lovelace ] -> Generator
   SplitN :: !WalletName -> !PayMode -> !Int -> Generator            -- 1 to N
   NtoM  :: !WalletName -> !PayMode -> !NumberOfInputsPerTx -> !NumberOfOutputsPerTx
@@ -87,7 +87,7 @@ data SubmitMode where
 deriving instance Generic SubmitMode
 
 data PayMode where
-  PayToAddr :: !KeyName -> !WalletName -> PayMode
+  PayToAddr :: !String -> !WalletName -> PayMode
   PayToScript :: !ScriptSpec -> !WalletName -> PayMode
   deriving (Show, Eq)
 deriving instance Generic PayMode

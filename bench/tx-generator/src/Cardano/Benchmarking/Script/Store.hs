@@ -28,7 +28,6 @@ import           Cardano.Benchmarking.GeneratorTx as Core (AsyncBenchmarkControl
 import           Cardano.Benchmarking.Wallet as Wallet
 
 data Store v where
-  KeyName      :: !String -> Store (SigningKey PaymentKey)
   ThreadName   :: !String -> Store AsyncBenchmarkControl
   WalletName   :: !String -> Store WalletRef
 

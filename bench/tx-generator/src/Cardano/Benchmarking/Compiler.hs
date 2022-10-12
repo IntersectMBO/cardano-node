@@ -270,11 +270,11 @@ parseKey x = case Base16.decode x of
     }
 
 
-keyNameGenesisInputFund :: KeyName
-keyNameGenesisInputFund = KeyName "GenesisInputFund"
+keyNameGenesisInputFund :: String
+keyNameGenesisInputFund = "GenesisInputFund"
 
-keyNameTxGenFunds :: KeyName
-keyNameTxGenFunds = KeyName "TxGenFunds"
+keyNameTxGenFunds :: String
+keyNameTxGenFunds = "TxGenFunds"
 
 {-|
 The key that is used for the very first transaction, i.e. the secure Genesis transaction.
@@ -284,8 +284,8 @@ It is also used as change addresse in the first splitting-step.
 keyTxGenFunds :: TextEnvelope
 keyTxGenFunds = parseKey "5820617f846fc8b0e753bd51790de5f5a916de500175c6f5a0e27dde9da7879e1d35"
 
-keyNameSplitPhase :: KeyName
-keyNameSplitPhase = KeyName "SplitPhase"
+keyNameSplitPhase :: String
+keyNameSplitPhase = "SplitPhase"
 
 {-|
 UTxOs that are generated in intermediate splitting steps use:
@@ -300,14 +300,14 @@ UTxOs of the final splitting steps, i.e. the inputs of the benchmarking phase, u
 addr_test1vzj7zv9msmdasvy5nc9jhnn2gqvrvu33v5rlg332zdfrkugklxkau
 (Plutus script addresses are ofc different.)
 -}
-keyNameBenchmarkInputs :: KeyName
-keyNameBenchmarkInputs = KeyName "BenchmarkInputs"
+keyNameBenchmarkInputs :: String
+keyNameBenchmarkInputs = "BenchmarkInputs"
 
 keyBenchmarkInputs :: TextEnvelope
 keyBenchmarkInputs = parseKey "58205b7f272602661d4ad3d9a4081f25fdcdcdf64fdc4892107de50e50937b77ea42"
 
-keyNameBenchmarkDone :: KeyName
-keyNameBenchmarkDone = KeyName "BenchmarkingDone"
+keyNameBenchmarkDone :: String
+keyNameBenchmarkDone = "BenchmarkingDone"
 
 {-|
 The output of the actual benchmarking transactions use:
@@ -319,8 +319,8 @@ Query the progress of the benchmarking phase:
 keyBenchmarkDone :: TextEnvelope
 keyBenchmarkDone = parseKey "582016ca4f13fa17557e56a7d0dd3397d747db8e1e22fdb5b9df638abdb680650d50"
 
-keyNameCollaterals :: KeyName
-keyNameCollaterals = KeyName "Collaterals"
+keyNameCollaterals :: String
+keyNameCollaterals = "Collaterals"
 
 {-|
 Collateral inputs for Plutus transactions:

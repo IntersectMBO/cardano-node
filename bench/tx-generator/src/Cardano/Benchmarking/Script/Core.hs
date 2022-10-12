@@ -88,11 +88,11 @@ setProtocolParameters s = case s of
     protocolParameters <- liftIO $ readProtocolParametersFile file
     setProtoParamMode $ ProtocolParameterLocal protocolParameters
 
-readSigningKey :: KeyName -> SigningKeyFile -> ActionM ()
+readSigningKey :: String -> SigningKeyFile -> ActionM ()
 readSigningKey name filePath =
   liftIO ( runExceptT $ GeneratorTx.readSigningKey filePath) >>= \case
     Left err -> liftTxGenError err
-    Right key -> set name key
+    Right key -> setEnvKeys name key
 
 parseSigningKey :: TextEnvelope -> Either TextEnvelopeError (SigningKey PaymentKey)
 parseSigningKey = deserialiseFromTextEnvelopeAnyOf types
@@ -103,15 +103,15 @@ parseSigningKey = deserialiseFromTextEnvelopeAnyOf types
       , FromSomeType (AsSigningKey AsPaymentKey) id
       ]
 
-defineSigningKey :: KeyName -> TextEnvelope -> ActionM ()
+defineSigningKey :: String -> TextEnvelope -> ActionM ()
 defineSigningKey name descr
   = case parseSigningKey descr of
-    Right key -> set name key
+    Right key -> setEnvKeys name key
     Left err -> liftTxGenError $ ApiError err
 
-addFund :: AnyCardanoEra -> WalletName -> TxIn -> Lovelace -> KeyName -> ActionM ()
+addFund :: AnyCardanoEra -> WalletName -> TxIn -> Lovelace -> String -> ActionM ()
 addFund era wallet txIn lovelace keyName = do
-  fundKey  <- get keyName
+  fundKey  <- getEnvKeys keyName
   let
     mkOutValue :: forall era. IsShelleyBasedEra era => AsType era -> ActionM (InAnyCardanoEra TxOutValue)
     mkOutValue = \_ -> return $ InAnyCardanoEra (cardanoEra @era) (lovelaceToTxOutValue lovelace)
@@ -291,9 +291,9 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
   case generator of
     SecureGenesis wallet genesisKeyName destKeyName -> do
       genesis  <- getEnvGenesis
-      destKey  <- get destKeyName
+      destKey  <- getEnvKeys destKeyName
       destWallet  <- get wallet
-      genesisKey  <- get genesisKeyName
+      genesisKey  <- getEnvKeys genesisKeyName
       (tx, fund) <- firstExceptT Env.TxGenError $ hoistEither $
         Genesis.genesisSecureInitialFund networkId genesis genesisKey destKey txParams
       let
@@ -374,7 +374,7 @@ interpretPayMode payMode = do
   networkId <- getEnvNetworkId
   case payMode of
     PayToAddr keyName destWallet -> do
-      fundKey <- get keyName
+      fundKey <- getEnvKeys keyName
       walletRef <- get destWallet
       return ( createAndStore (mkUTxOVariant networkId fundKey) (mkWalletFundStore walletRef)
              , Text.unpack $ serialiseAddress $ Utils.keyAddress @era networkId fundKey)

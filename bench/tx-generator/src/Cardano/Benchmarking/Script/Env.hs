@@ -24,6 +24,8 @@ module Cardano.Benchmarking.Script.Env (
         , setBenchTracers
         , getEnvGenesis
         , setEnvGenesis
+        , getEnvKeys
+        , setEnvKeys
         , getEnvNetworkId
         , setEnvNetworkId
         , getEnvProtocol
@@ -41,6 +43,8 @@ import           Data.Functor.Identity
 import qualified Data.Text as Text
 import           Data.Dependent.Map (DMap)
 import qualified Data.Dependent.Map as DMap
+import           Data.Map (Map)
+import qualified Data.Map as Map
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Except
@@ -51,7 +55,9 @@ import           "contra-tracer" Control.Tracer (traceWith)
 import qualified Cardano.Benchmarking.LogTypes as Tracer
 import           Ouroboros.Network.NodeToClient (IOManager)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
-import           Cardano.Benchmarking.OuroborosImports(NetworkId, ShelleyGenesis, StandardShelley)
+import           Cardano.Benchmarking.OuroborosImports(NetworkId,
+                         PaymentKey, ShelleyGenesis, SigningKey,
+                         StandardShelley)
 import           Cardano.Benchmarking.Script.Store
 
 import           Cardano.TxGenerator.Types (TxGenError(..))
@@ -61,6 +67,7 @@ data Env = Env { dmap :: DMap Store Identity
                , benchTracers :: Maybe Tracer.BenchTracers
                , envGenesis :: Maybe (ShelleyGenesis StandardShelley)
                , envProtocol :: Maybe SomeConsensusProtocol
+               , envKeys :: Map String (SigningKey PaymentKey)
                , envNetworkId :: Maybe NetworkId
                , envSocketPath :: Maybe FilePath
                }
@@ -70,6 +77,7 @@ emptyEnv = Env { dmap = DMap.empty
                , protoParams = Nothing
                , benchTracers = Nothing
                , envGenesis = Nothing
+               , envKeys = Map.empty
                , envProtocol = Nothing
                , envNetworkId = Nothing
                , envSocketPath = Nothing
@@ -113,6 +121,9 @@ setBenchTracers val = modifyEnv (\e -> e { benchTracers = pure val })
 setEnvGenesis :: ShelleyGenesis StandardShelley -> ActionM ()
 setEnvGenesis val = modifyEnv (\e -> e { envGenesis = pure val })
 
+setEnvKeys :: String -> SigningKey PaymentKey -> ActionM ()
+setEnvKeys key val = modifyEnv (\e -> e { envKeys = Map.insert key val (envKeys e) })
+
 setEnvProtocol :: SomeConsensusProtocol -> ActionM ()
 setEnvProtocol val = modifyEnv (\e -> e { envProtocol = pure val })
 
@@ -134,6 +145,13 @@ getEnvVal acc s = do
     Just x -> return x
     Nothing -> throwE . UserError $ "Unset " ++ s
 
+getEnvMap :: (Env -> Map String t) -> String -> ActionM t
+getEnvMap acc key = do
+  m <- lift $ RWS.gets acc
+  case Map.lookup key m of
+    Just x -> return x
+    Nothing -> throwE . UserError $ "Lookup of " ++ key ++ " failed"
+
 getProtoParamMode :: ActionM ProtocolParameterMode
 getProtoParamMode = getEnvVal protoParams "ProtocolParameterMode"
 
@@ -142,6 +160,9 @@ getBenchTracers = getEnvVal benchTracers "BenchTracers"
 
 getEnvGenesis :: ActionM (ShelleyGenesis StandardShelley)
 getEnvGenesis = getEnvVal envGenesis "Genesis"
+
+getEnvKeys :: String -> ActionM (SigningKey PaymentKey)
+getEnvKeys = getEnvMap envKeys
 
 getEnvNetworkId :: ActionM NetworkId
 getEnvNetworkId = getEnvVal envNetworkId "Genesis"

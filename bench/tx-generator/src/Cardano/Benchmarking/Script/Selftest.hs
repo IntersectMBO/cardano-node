@@ -75,7 +75,7 @@ testScript protocolFile submitMode =
     splitWallet2 = WalletName "SplitWallet-2"
     splitWallet3 = WalletName "SplitWallet-3"
     doneWallet = WalletName "doneWallet"
-    key = KeyName "pass-partout"
+    key = "pass-partout"
     createChange :: WalletName -> WalletName -> Int -> Int -> Action
     createChange src dest txCount outputs
       = Submit era submitMode txParams $ Take txCount $ Cycle $ SplitN src (PayToAddr key dest) outputs
