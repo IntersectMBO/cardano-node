@@ -30,6 +30,8 @@ module Cardano.Benchmarking.Script.Env (
         , setEnvProtocol
         , getProtoParamMode
         , setProtoParamMode
+        , getEnvSocketPath
+        , setEnvSocketPath
         , get
         , set
 ) where
@@ -60,6 +62,7 @@ data Env = Env { dmap :: DMap Store Identity
                , envGenesis :: Maybe (ShelleyGenesis StandardShelley)
                , envProtocol :: Maybe SomeConsensusProtocol
                , envNetworkId :: Maybe NetworkId
+               , envSocketPath :: Maybe FilePath
                }
 
 emptyEnv :: Env
@@ -69,6 +72,7 @@ emptyEnv = Env { dmap = DMap.empty
                , envGenesis = Nothing
                , envProtocol = Nothing
                , envNetworkId = Nothing
+               , envSocketPath = Nothing
                }
 
 type ActionM a = ExceptT Error (RWST IOManager () Env IO) a
@@ -115,6 +119,9 @@ setEnvProtocol val = modifyEnv (\e -> e { envProtocol = pure val })
 setEnvNetworkId :: NetworkId -> ActionM ()
 setEnvNetworkId val = modifyEnv (\e -> e { envNetworkId = pure val })
 
+setEnvSocketPath :: FilePath -> ActionM ()
+setEnvSocketPath val = modifyEnv (\e -> e { envSocketPath = pure val })
+
 get :: Store v -> ActionM v
 get key = do
   lift (RWS.gets $ DMap.lookup key . dmap) >>= \case
@@ -141,6 +148,9 @@ getEnvNetworkId = getEnvVal envNetworkId "Genesis"
 
 getEnvProtocol :: ActionM SomeConsensusProtocol
 getEnvProtocol = getEnvVal envProtocol "Protocol"
+
+getEnvSocketPath :: ActionM FilePath
+getEnvSocketPath = getEnvVal envSocketPath "SocketPath"
 
 traceBenchTxSubmit :: (forall txId. x -> Tracer.TraceBenchTxSubmit txId) -> x -> ActionM ()
 traceBenchTxSubmit tag msg = do

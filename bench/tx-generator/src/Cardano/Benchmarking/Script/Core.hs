@@ -165,7 +165,7 @@ cancelBenchmark n = do
   waitBenchmarkCore ctl
 
 getLocalConnectInfo :: ActionM  (LocalNodeConnectInfo CardanoMode)
-getLocalConnectInfo = makeLocalConnectInfo <$> getEnvNetworkId <*> get SSocketPath
+getLocalConnectInfo = makeLocalConnectInfo <$> getEnvNetworkId <*> getEnvSocketPath
 
 queryEra :: ActionM AnyCardanoEra
 queryEra = do
