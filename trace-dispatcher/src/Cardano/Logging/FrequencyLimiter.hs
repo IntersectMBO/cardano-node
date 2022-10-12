@@ -109,7 +109,7 @@ data FrequencyRec a = FrequencyRec {
 
 
 limitFrequency
-  :: forall a m . (MonadIO m, MonadUnliftIO m)
+  :: forall a m . MonadUnliftIO m
   => Double   -- messages per second
   -> Text     -- name of this limiter
   -> Trace m a -- the limited trace

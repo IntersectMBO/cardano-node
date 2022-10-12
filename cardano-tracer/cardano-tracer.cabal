@@ -123,7 +123,6 @@ library
                        , async-extras
                        , bimap
                        , blaze-html
-                       , blaze-markup
                        , bytestring
                        , cardano-git-rev
                        , cardano-node
@@ -274,7 +273,6 @@ test-suite cardano-tracer-test
                        , filepath
                        , ouroboros-network
                        , ouroboros-network-framework
-                       , QuickCheck
                        , stm
                        , tasty
                        , tasty-quickcheck

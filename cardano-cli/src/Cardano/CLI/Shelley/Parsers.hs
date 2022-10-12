@@ -14,7 +14,7 @@ module Cardano.CLI.Shelley.Parsers
   , parseTxIn
   ) where
 
-import           Cardano.Prelude hiding (All, Any, option)
+import           Cardano.Prelude hiding (All, Any)
 import           Prelude (String)
 
 import           Control.Monad.Fail (fail)
