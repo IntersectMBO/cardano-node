@@ -14,13 +14,10 @@ import           Control.Monad.Trans.RWS.CPS
 import           Data.ByteString as BS (ByteString)
 import           Data.DList (DList)
 import qualified Data.DList as DL
-import           Data.Dependent.Sum ((==>))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 
 import           Cardano.Api
-import           Cardano.Benchmarking.Script.Setters
-import           Cardano.Benchmarking.Script.Store (KeyName, Name (..), WalletName)
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.TxGenerator.Setup.NixService
 import           Cardano.TxGenerator.Setup.SigningKey
@@ -37,8 +34,8 @@ throwCompileError = lift . throwE
 maxOutputsPerTx :: Int
 maxOutputsPerTx = 30
 
-type SrcWallet = WalletName
-type DstWallet = WalletName
+type SrcWallet = String
+type DstWallet = String
 
 compileOptions :: NixServiceOptions -> Either CompileError [Action]
 compileOptions opts = runCompiler opts compileToScript
@@ -68,20 +65,15 @@ compileToScript = do
 
 initConstants :: Compiler ()
 initConstants = do
-  setN TLocalSocket          _nix_localNodeSocketPath
+  p <- askNixOption _nix_localNodeSocketPath
+  emit $ SetSocketPath p
   emit $ DefineSigningKey keyNameTxGenFunds keyTxGenFunds
   emit $ DefineSigningKey keyNameCollaterals keyCollaterals
   emit $ DefineSigningKey keyNameSplitPhase keySplitPhase
   emit $ DefineSigningKey keyNameBenchmarkInputs keyBenchmarkInputs
   emit $ DefineSigningKey keyNameBenchmarkDone keyBenchmarkDone
-  where
-    setConst :: Tag v -> v -> Compiler ()
-    setConst key val = emit $ Set $ key ==> val
 
-    setN :: Tag v -> (NixServiceOptions -> v) -> Compiler ()
-    setN key s = askNixOption s >>= setConst key
-
-importGenesisFunds :: Compiler WalletName
+importGenesisFunds :: Compiler String
 importGenesisFunds = do
   logMsg "Importing Genesis Fund."
   wallet <- newWallet "genesis_wallet"
@@ -93,7 +85,7 @@ importGenesisFunds = do
   logMsg "Importing Genesis Fund. Done."
   return wallet
 
-addCollaterals :: SrcWallet -> Compiler (Maybe WalletName)
+addCollaterals :: SrcWallet -> Compiler (Maybe String)
 addCollaterals src = do
   era <- askNixOption _nix_era
   txParams <- askNixOption txGenTxParams
@@ -183,7 +175,7 @@ unfoldSplitSequence fee value outputs
      (x, 0) -> x
      (x, _rest) -> x+1
 
-benchmarkingPhase :: WalletName -> Maybe WalletName -> Compiler WalletName
+benchmarkingPhase :: String -> Maybe String -> Compiler String
 benchmarkingPhase wallet collateralWallet = do
   debugMode <- askNixOption _nix_debugMode
   targetNodes <- askNixOption _nix_targetNodes
@@ -198,11 +190,11 @@ benchmarkingPhase wallet collateralWallet = do
     payMode = PayToAddr keyNameBenchmarkDone doneWallet
     submitMode = if debugMode
         then LocalSocket
-        else Benchmark targetNodes (ThreadName "tx-submit-benchmark") tps txCount
+        else Benchmark targetNodes "tx-submit-benchmark" tps txCount
     generator = Take txCount $ Cycle $ NtoM wallet payMode inputs outputs (Just $ txParamAddTxSize txParams) collateralWallet
   emit $ Submit era submitMode txParams generator
   unless debugMode $ do
-    emit $ WaitBenchmark $ ThreadName "tx-submit-benchmark"
+    emit $ WaitBenchmark "tx-submit-benchmark"
   return doneWallet
 
 data Fees = Fees {
@@ -262,9 +254,9 @@ newIdentifier prefix = do
   put $ succ n
   return $ prefix ++ "_" ++ show n
 
-newWallet :: String -> Compiler WalletName
+newWallet :: String -> Compiler String
 newWallet n = do
-  name <- WalletName <$> newIdentifier n
+  name <- newIdentifier n
   emit $ InitWallet name
   return name
 
@@ -273,11 +265,11 @@ parseKey :: BS.ByteString -> SigningKey PaymentKey
 parseKey k
   = let ~(Right k') = parseSigningKeyBase16 k in k'
 
-keyNameGenesisInputFund :: KeyName
-keyNameGenesisInputFund = KeyName "GenesisInputFund"
+keyNameGenesisInputFund :: String
+keyNameGenesisInputFund = "GenesisInputFund"
 
-keyNameTxGenFunds :: KeyName
-keyNameTxGenFunds = KeyName "TxGenFunds"
+keyNameTxGenFunds :: String
+keyNameTxGenFunds = "TxGenFunds"
 
 {-|
 The key that is used for the very first transaction, i.e. the secure Genesis transaction.
@@ -287,8 +279,8 @@ It is also used as change addresse in the first splitting-step.
 keyTxGenFunds :: SigningKey PaymentKey
 keyTxGenFunds = parseKey "5820617f846fc8b0e753bd51790de5f5a916de500175c6f5a0e27dde9da7879e1d35"
 
-keyNameSplitPhase :: KeyName
-keyNameSplitPhase = KeyName "SplitPhase"
+keyNameSplitPhase :: String
+keyNameSplitPhase = "SplitPhase"
 
 {-|
 UTxOs that are generated in intermediate splitting steps use:
@@ -303,14 +295,14 @@ UTxOs of the final splitting steps, i.e. the inputs of the benchmarking phase, u
 addr_test1vzj7zv9msmdasvy5nc9jhnn2gqvrvu33v5rlg332zdfrkugklxkau
 (Plutus script addresses are ofc different.)
 -}
-keyNameBenchmarkInputs :: KeyName
-keyNameBenchmarkInputs = KeyName "BenchmarkInputs"
+keyNameBenchmarkInputs :: String
+keyNameBenchmarkInputs = "BenchmarkInputs"
 
 keyBenchmarkInputs :: SigningKey PaymentKey
 keyBenchmarkInputs = parseKey "58205b7f272602661d4ad3d9a4081f25fdcdcdf64fdc4892107de50e50937b77ea42"
 
-keyNameBenchmarkDone :: KeyName
-keyNameBenchmarkDone = KeyName "BenchmarkingDone"
+keyNameBenchmarkDone :: String
+keyNameBenchmarkDone = "BenchmarkingDone"
 
 {-|
 The output of the actual benchmarking transactions use:
@@ -322,8 +314,8 @@ Query the progress of the benchmarking phase:
 keyBenchmarkDone :: SigningKey PaymentKey
 keyBenchmarkDone = parseKey "582016ca4f13fa17557e56a7d0dd3397d747db8e1e22fdb5b9df638abdb680650d50"
 
-keyNameCollaterals :: KeyName
-keyNameCollaterals = KeyName "Collaterals"
+keyNameCollaterals :: String
+keyNameCollaterals = "Collaterals"
 
 {-|
 Collateral inputs for Plutus transactions:

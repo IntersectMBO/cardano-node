@@ -1,19 +1,19 @@
+{-# LANGUAGE GADTs #-}
+
 module Cardano.Benchmarking.Script.Action
 where
 
-import           Data.Functor.Identity
-import           Data.Dependent.Sum (DSum(..))
 import qualified Data.Text as Text (unpack)
 
 import           Cardano.Benchmarking.Script.Core
 import           Cardano.Benchmarking.Script.Env
 import           Cardano.Benchmarking.Script.NodeConfig (startProtocol)
-import           Cardano.Benchmarking.Script.Store
 import           Cardano.Benchmarking.Script.Types
 
 action :: Action -> ActionM ()
 action a = case a of
-  Set (key :=> (Identity val)) -> set (User key) val
+  SetNetworkId val -> setEnvNetworkId val
+  SetSocketPath val -> setEnvSocketPath val
   InitWallet name -> initWallet name
   SetProtocolParameters p -> setProtocolParameters p
   StartProtocol configFile cardanoTracerSocket -> startProtocol configFile cardanoTracerSocket

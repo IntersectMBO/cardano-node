@@ -63,8 +63,6 @@ import           Cardano.Benchmarking.Wallet as Wallet
 import           Cardano.Benchmarking.Script.Aeson (readProtocolParametersFile)
 import           Cardano.Benchmarking.Script.Env hiding (Error (TxGenError))
 import qualified Cardano.Benchmarking.Script.Env as Env (Error (TxGenError))
-import           Cardano.Benchmarking.Script.Setters
-import           Cardano.Benchmarking.Script.Store as Store
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Version as Version
 
@@ -84,32 +82,32 @@ withEra era action = do
 setProtocolParameters :: ProtocolParametersSource -> ActionM ()
 setProtocolParameters s = case s of
   QueryLocalNode -> do
-    set ProtocolParameterMode ProtocolParameterQuery
+    setProtoParamMode ProtocolParameterQuery
   UseLocalProtocolFile file -> do
     protocolParameters <- liftIO $ readProtocolParametersFile file
-    set ProtocolParameterMode $ ProtocolParameterLocal protocolParameters
+    setProtoParamMode $ ProtocolParameterLocal protocolParameters
 
-readSigningKey :: KeyName -> SigningKeyFile -> ActionM ()
+readSigningKey :: String -> SigningKeyFile -> ActionM ()
 readSigningKey name filePath =
   liftIO (readSigningKeyFile filePath) >>= \case
     Left err -> liftTxGenError err
-    Right key -> setName name key
+    Right key -> setEnvKeys name key
 
-defineSigningKey :: KeyName -> SigningKey PaymentKey -> ActionM ()
-defineSigningKey = setName
+defineSigningKey :: String -> SigningKey PaymentKey -> ActionM ()
+defineSigningKey = setEnvKeys
 
-addFund :: AnyCardanoEra -> WalletName -> TxIn -> Lovelace -> KeyName -> ActionM ()
+addFund :: AnyCardanoEra -> String -> TxIn -> Lovelace -> String -> ActionM ()
 addFund era wallet txIn lovelace keyName = do
-  fundKey  <- getName keyName
+  fundKey  <- getEnvKeys keyName
   let
     mkOutValue :: forall era. IsShelleyBasedEra era => AsType era -> ActionM (InAnyCardanoEra TxOutValue)
     mkOutValue = \_ -> return $ InAnyCardanoEra (cardanoEra @era) (lovelaceToTxOutValue lovelace)
   outValue <- withEra era mkOutValue
   addFundToWallet wallet txIn outValue fundKey
 
-addFundToWallet :: WalletName -> TxIn -> InAnyCardanoEra TxOutValue -> SigningKey PaymentKey -> ActionM ()
+addFundToWallet :: String -> TxIn -> InAnyCardanoEra TxOutValue -> SigningKey PaymentKey -> ActionM ()
 addFundToWallet wallet txIn outVal skey = do
-  walletRef <- getName wallet
+  walletRef <- getEnvWallets wallet
   liftIO (walletRefInsertFund walletRef (FundQueue.Fund $ mkFund outVal))
   where
     mkFund = Utils.liftAnyEra $ \value -> FundInEra {
@@ -127,16 +125,16 @@ delay t = liftIO $ threadDelay $ floor $ 1000000 * t
 
 waitBenchmarkCore :: AsyncBenchmarkControl ->  ActionM ()
 waitBenchmarkCore ctl = do
-  tracers  <- get BenchTracers
+  tracers  <- getBenchTracers
   _ <- liftIO $ runExceptT $ GeneratorTx.waitBenchmark (btTxSubmit_ tracers) ctl
   return ()
 
 getConnectClient :: ActionM ConnectClient
 getConnectClient = do
-  tracers  <- get BenchTracers
-  (Testnet networkMagic) <- getUser TNetworkId
-  protocol <- get Protocol
-  void $ return $ btSubmission2_ tracers -- TODO this line looks strange
+  tracers  <- getBenchTracers
+  (Testnet networkMagic) <- getEnvNetworkId
+  protocol <- getEnvProtocol
+  void $ return $ btSubmission2_ tracers
   ioManager <- askIOManager
   return $ benchmarkConnectTxSubmit
                        ioManager
@@ -144,17 +142,17 @@ getConnectClient = do
                        nullTracer -- (btSubmission2_ tracers)
                        (protocolToCodecConfig protocol)
                        networkMagic
-waitBenchmark :: ThreadName -> ActionM ()
-waitBenchmark n = getName n >>= waitBenchmarkCore
+waitBenchmark :: String -> ActionM ()
+waitBenchmark n = getEnvThreads n >>= waitBenchmarkCore
 
-cancelBenchmark :: ThreadName -> ActionM ()
+cancelBenchmark :: String -> ActionM ()
 cancelBenchmark n = do
-  ctl@(_, _ , _ , shutdownAction) <- getName n
+  ctl@(_, _ , _ , shutdownAction) <- getEnvThreads n
   liftIO shutdownAction
   waitBenchmarkCore ctl
 
 getLocalConnectInfo :: ActionM  (LocalNodeConnectInfo CardanoMode)
-getLocalConnectInfo = makeLocalConnectInfo <$> getUser TNetworkId <*> getUser TLocalSocket
+getLocalConnectInfo = makeLocalConnectInfo <$> getEnvNetworkId <*> getEnvSocketPath
 
 queryEra :: ActionM AnyCardanoEra
 queryEra = do
@@ -188,7 +186,7 @@ queryRemoteProtocolParameters = do
 
 getProtocolParameters :: ActionM ProtocolParameters
 getProtocolParameters = do
-  get ProtocolParameterMode  >>= \case
+  getProtoParamMode  >>= \case
     ProtocolParameterQuery -> queryRemoteProtocolParameters
     ProtocolParameterLocal parameters -> return parameters
 
@@ -256,13 +254,13 @@ submitInEra submitMode generator txParams era = do
 benchmarkTxStream :: forall era. IsShelleyBasedEra era
   => TxStream IO era
   -> TargetNodes
-  -> ThreadName
+  -> String
   -> TPSRate
   -> NumberOfTxs
   -> AsType era
   -> ActionM ()
-benchmarkTxStream txStream targetNodes (ThreadName threadName) tps txCount era = do
-  tracers  <- get BenchTracers
+benchmarkTxStream txStream targetNodes threadName tps txCount era = do
+  tracers  <- getBenchTracers
   connectClient <- getConnectClient
   let
     coreCall :: AsType era -> ExceptT TxGenError IO AsyncBenchmarkControl
@@ -271,18 +269,18 @@ benchmarkTxStream txStream targetNodes (ThreadName threadName) tps txCount era =
   ret <- liftIO $ runExceptT $ coreCall era
   case ret of
     Left err -> liftTxGenError err
-    Right ctl -> setName (ThreadName threadName) ctl
+    Right ctl -> setEnvThreads threadName ctl
 
 evalGenerator :: forall era. IsShelleyBasedEra era => Generator -> TxGenTxParams -> AsType era -> ActionM (TxStream IO era)
 evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
-  networkId <- getUser TNetworkId
+  networkId <- getEnvNetworkId
   protocolParameters <- getProtocolParameters
   case generator of
     SecureGenesis wallet genesisKeyName destKeyName -> do
-      genesis  <- get Genesis
-      destKey  <- getName destKeyName
-      destWallet  <- getName wallet
-      genesisKey  <- getName genesisKeyName
+      genesis  <- getEnvGenesis
+      destKey  <- getEnvKeys destKeyName
+      destWallet  <- getEnvWallets wallet
+      genesisKey  <- getEnvKeys genesisKeyName
       (tx, fund) <- firstExceptT Env.TxGenError $ hoistEither $
         Genesis.genesisSecureInitialFund networkId genesis genesisKey destKey txParams
       let
@@ -291,7 +289,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
           return $ Right tx
       return $ Streaming.effect (Streaming.yield <$> gen)
     Split walletName payMode payModeChange coins -> do
-      wallet <- getName walletName
+      wallet <- getEnvWallets walletName
       (toUTxO, addressOut) <- interpretPayMode payMode
       traceDebug $ "split output address : " ++ addressOut
       (toUTxOChange, addressChange) <- interpretPayMode payModeChange
@@ -303,7 +301,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
         sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut $ mangleWithChange toUTxOChange toUTxO
       return $ Streaming.effect (Streaming.yield <$> sourceToStore)
     SplitN walletName payMode count -> do
-      wallet <- getName walletName
+      wallet <- getEnvWallets walletName
       (toUTxO, addressOut) <- interpretPayMode payMode
       traceDebug $ "SplitN output address : " ++ addressOut
       let
@@ -314,7 +312,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
       return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
     NtoM walletName payMode inputs outputs metadataSize collateralWallet -> do
-      wallet <- getName walletName
+      wallet <- getEnvWallets walletName
       collaterals <- selectCollateralFunds collateralWallet
       (toUTxO, addressOut) <- interpretPayMode payMode
       traceDebug $ "NtoM output address : " ++ addressOut
@@ -337,11 +335,11 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
     feeInEra = Utils.mkTxFee fee
 
 selectCollateralFunds :: forall era. IsShelleyBasedEra era
-  => Maybe WalletName
+  => Maybe String
   -> ActionM (TxInsCollateral era, [FundQueue.Fund])
 selectCollateralFunds Nothing = return (TxInsCollateralNone, [])
 selectCollateralFunds (Just walletName) = do
-  cw <- getName walletName
+  cw <- getEnvWallets walletName
   collateralFunds <- liftIO ( askWalletRef cw FundQueue.toList ) >>= \case
     [] -> throwE $ WalletError "selectCollateralFunds: emptylist"
     l -> return l
@@ -355,20 +353,20 @@ dumpToFile filePath tx = liftIO $ dumpToFileIO filePath tx
 dumpToFileIO :: FilePath -> TxInMode CardanoMode -> IO ()
 dumpToFileIO filePath tx = appendFile filePath ('\n' : show tx)
 
-initWallet :: WalletName -> ActionM ()
-initWallet name = liftIO Wallet.initWallet >>= setName name
+initWallet :: String -> ActionM ()
+initWallet name = liftIO Wallet.initWallet >>= setEnvWallets name
 
 interpretPayMode :: forall era. IsShelleyBasedEra era => PayMode -> ActionM (CreateAndStore IO era, String)
 interpretPayMode payMode = do
-  networkId <- getUser TNetworkId
+  networkId <- getEnvNetworkId
   case payMode of
     PayToAddr keyName destWallet -> do
-      fundKey <- getName keyName
-      walletRef <- getName destWallet
+      fundKey <- getEnvKeys keyName
+      walletRef <- getEnvWallets destWallet
       return ( createAndStore (mkUTxOVariant networkId fundKey) (mkWalletFundStore walletRef)
              , Text.unpack $ serialiseAddress $ Utils.keyAddress @era networkId fundKey)
     PayToScript scriptSpec destWallet -> do
-      walletRef <- getName destWallet
+      walletRef <- getEnvWallets destWallet
       (witness, script, scriptData, _scriptFee) <- makePlutusContext scriptSpec
       return ( createAndStore (mkUTxOScript networkId (script, scriptData) witness) (mkWalletFundStore walletRef)
                , Text.unpack $ serialiseAddress $ makeShelleyAddress networkId (PaymentCredentialByScript $ hashScript script) NoStakeAddress )

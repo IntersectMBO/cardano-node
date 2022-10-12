@@ -6,7 +6,7 @@ import           Prelude
 
 import           Control.Monad
 import qualified Data.ByteString.Lazy.Char8 as BSL
-import           Data.Dependent.Sum ((==>))
+
 import           Data.Either (fromRight)
 import           Data.String
 
@@ -16,8 +16,6 @@ import           Ouroboros.Network.NodeToClient (IOManager)
 import           Cardano.Benchmarking.Script.Action
 import           Cardano.Benchmarking.Script.Aeson (prettyPrint)
 import           Cardano.Benchmarking.Script.Env as Script
-import           Cardano.Benchmarking.Script.Setters
-import           Cardano.Benchmarking.Script.Store
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Tracer (initNullTracers)
 
@@ -32,7 +30,7 @@ runSelftest iom outFile = do
   let
     submitMode = maybe DiscardTX DumpToFile outFile
     fullScript = do
-        set BenchTracers initNullTracers
+        setBenchTracers initNullTracers
         forM_ (testScript protocolFile submitMode) action
   runActionM fullScript iom >>= \case
     (Right a  , _ ,  ()) -> return $ Right a
@@ -44,7 +42,7 @@ printJSON = BSL.putStrLn $ prettyPrint $ testScript "/dev/zero" DiscardTX
 testScript :: FilePath -> SubmitMode -> [Action]
 testScript protocolFile submitMode =
   [ SetProtocolParameters (UseLocalProtocolFile protocolFile)
-  , Set (TNetworkId ==> Testnet (NetworkMagic {unNetworkMagic = 42}))
+  , SetNetworkId (Testnet (NetworkMagic {unNetworkMagic = 42}))
   , InitWallet genesisWallet
   , InitWallet splitWallet1
   , InitWallet splitWallet2
@@ -77,12 +75,12 @@ testScript protocolFile submitMode =
           }
     era = AnyCardanoEra AllegraEra
     txParams = defaultTxGenTxParams {txParamFee = 1000000}
-    genesisWallet = WalletName "genesisWallet"
-    splitWallet1 = WalletName "SplitWallet-1"
-    splitWallet2 = WalletName "SplitWallet-2"
-    splitWallet3 = WalletName "SplitWallet-3"
-    doneWallet = WalletName "doneWallet"
-    key = KeyName "pass-partout"
-    createChange :: WalletName -> WalletName -> Int -> Int -> Action
+    genesisWallet = "genesisWallet"
+    splitWallet1 = "SplitWallet-1"
+    splitWallet2 = "SplitWallet-2"
+    splitWallet3 = "SplitWallet-3"
+    doneWallet = "doneWallet"
+    key = "pass-partout"
+    createChange :: String -> String -> Int -> Int -> Action
     createChange src dest txCount outputs
       = Submit era submitMode txParams $ Take txCount $ Cycle $ SplitN src (PayToAddr key dest) outputs

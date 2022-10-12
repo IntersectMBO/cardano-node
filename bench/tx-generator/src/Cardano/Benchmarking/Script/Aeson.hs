@@ -10,8 +10,6 @@ where
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS (lines)
 import qualified Data.ByteString.Lazy as BSL
-import           Data.Dependent.Sum
-import           Data.Functor.Identity
 import           Data.Text (Text)
 import           GHC.Generics (Generic)
 import           Prelude
@@ -25,8 +23,6 @@ import qualified Data.Yaml as Yaml (encode)
 import           Cardano.Api
 import           Cardano.Api.Shelley (ProtocolParameters)
 
-import           Cardano.Benchmarking.Script.Setters
-import           Cardano.Benchmarking.Script.Store
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.TxGenerator.Internal.Orphans ()
 import           Cardano.TxGenerator.Types
@@ -114,17 +110,6 @@ instance ToJSON ScriptSpec where
 instance FromJSON ScriptSpec where
   parseJSON = genericParseJSON jsonOptionsUnTaggedSum
 
-instance ToJSON (DSum Tag Identity) where
-  toJSON     = toJSON . taggedToSum
-instance FromJSON (DSum Tag Identity) where
-  parseJSON a = sumToTagged <$> parseJSON a
-
-instance ToJSON Sum where
-  toJSON     = genericToJSON jsonOptionsUnTaggedSum
-  toEncoding = genericToEncoding jsonOptionsUnTaggedSum
-instance FromJSON Sum where
-  parseJSON = genericParseJSON jsonOptionsUnTaggedSum
-
 instance ToJSON Action where
   toJSON     = genericToJSON jsonOptionsUnTaggedSum
   toEncoding = genericToEncoding jsonOptionsUnTaggedSum
@@ -169,11 +154,3 @@ parseScriptFileAeson = parseJSONFile fromJSON
 
 readProtocolParametersFile :: FilePath -> IO ProtocolParameters
 readProtocolParametersFile = parseJSONFile fromJSON
-
-instance ToJSON KeyName         where toJSON (KeyName a) = toJSON a
-instance ToJSON ThreadName      where toJSON (ThreadName a) = toJSON a
-instance ToJSON WalletName      where toJSON (WalletName a) = toJSON a
-
-instance FromJSON KeyName         where parseJSON a = KeyName <$> parseJSON a
-instance FromJSON ThreadName      where parseJSON a = ThreadName <$> parseJSON a
-instance FromJSON WalletName      where parseJSON a = WalletName <$> parseJSON a
