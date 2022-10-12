@@ -24,6 +24,8 @@ module Cardano.Benchmarking.Script.Env (
         , setBenchTracers
         , getEnvGenesis
         , setEnvGenesis
+        , getEnvNetworkId
+        , setEnvNetworkId
         , getEnvProtocol
         , setEnvProtocol
         , getProtoParamMode
@@ -47,7 +49,7 @@ import           "contra-tracer" Control.Tracer (traceWith)
 import qualified Cardano.Benchmarking.LogTypes as Tracer
 import           Ouroboros.Network.NodeToClient (IOManager)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
-import           Cardano.Benchmarking.OuroborosImports(ShelleyGenesis, StandardShelley)
+import           Cardano.Benchmarking.OuroborosImports(NetworkId, ShelleyGenesis, StandardShelley)
 import           Cardano.Benchmarking.Script.Store
 
 import           Cardano.TxGenerator.Types (TxGenError(..))
@@ -57,6 +59,7 @@ data Env = Env { dmap :: DMap Store Identity
                , benchTracers :: Maybe Tracer.BenchTracers
                , envGenesis :: Maybe (ShelleyGenesis StandardShelley)
                , envProtocol :: Maybe SomeConsensusProtocol
+               , envNetworkId :: Maybe NetworkId
                }
 
 emptyEnv :: Env
@@ -65,6 +68,7 @@ emptyEnv = Env { dmap = DMap.empty
                , benchTracers = Nothing
                , envGenesis = Nothing
                , envProtocol = Nothing
+               , envNetworkId = Nothing
                }
 
 type ActionM a = ExceptT Error (RWST IOManager () Env IO) a
@@ -108,6 +112,9 @@ setEnvGenesis val = modifyEnv (\e -> e { envGenesis = pure val })
 setEnvProtocol :: SomeConsensusProtocol -> ActionM ()
 setEnvProtocol val = modifyEnv (\e -> e { envProtocol = pure val })
 
+setEnvNetworkId :: NetworkId -> ActionM ()
+setEnvNetworkId val = modifyEnv (\e -> e { envNetworkId = pure val })
+
 get :: Store v -> ActionM v
 get key = do
   lift (RWS.gets $ DMap.lookup key . dmap) >>= \case
@@ -128,6 +135,9 @@ getBenchTracers = getEnvVal benchTracers "BenchTracers"
 
 getEnvGenesis :: ActionM (ShelleyGenesis StandardShelley)
 getEnvGenesis = getEnvVal envGenesis "Genesis"
+
+getEnvNetworkId :: ActionM NetworkId
+getEnvNetworkId = getEnvVal envNetworkId "Genesis"
 
 getEnvProtocol :: ActionM SomeConsensusProtocol
 getEnvProtocol = getEnvVal envProtocol "Protocol"

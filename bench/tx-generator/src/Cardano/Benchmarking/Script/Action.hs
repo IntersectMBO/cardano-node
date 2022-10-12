@@ -13,7 +13,7 @@ import           Cardano.Benchmarking.Script.Types
 
 action :: Action -> ActionM ()
 action a = case a of
-  SetNetworkId val -> set SNetworkId val
+  SetNetworkId val -> setEnvNetworkId val
   SetSocketPath val -> set SSocketPath val
   InitWallet name -> initWallet name
   SetProtocolParameters p -> setProtocolParameters p

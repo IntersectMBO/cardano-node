@@ -18,7 +18,7 @@ import           Data.Constraint.Extras.TH (deriveArgDict)
 import           Data.GADT.Compare.TH (deriveGCompare, deriveGEq)
 import           Data.GADT.Show.TH (deriveGShow)
 
-import           Cardano.Api as Cardano (NetworkId, Tx)
+import           Cardano.Api as Cardano (Tx)
 import           Cardano.Api.Shelley as Cardano (ProtocolParameters)
 
 import           Cardano.Benchmarking.OuroborosImports as Cardano (PaymentKey,
@@ -28,7 +28,6 @@ import           Cardano.Benchmarking.GeneratorTx as Core (AsyncBenchmarkControl
 import           Cardano.Benchmarking.Wallet as Wallet
 
 data Store v where
-  SNetworkId   :: Store NetworkId
   SSocketPath  :: Store FilePath
   KeyName      :: !String -> Store (SigningKey PaymentKey)
   ThreadName   :: !String -> Store AsyncBenchmarkControl
