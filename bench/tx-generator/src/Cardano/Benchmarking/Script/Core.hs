@@ -414,7 +414,7 @@ spendAutoScript protocolParameters script = do
       Right use -> Right $ (executionSteps use <= executionSteps budget) && (executionMemory use <= executionMemory budget)
     searchUpperBound = 100000 -- The highest loop count that is tried. (This is about 50 times the current mainnet limit.)
   redeemer <- case startSearch isInLimits 0 searchUpperBound of
-    Left err -> liftTxGenError $ (TxGenError "cannot find fitting redeemer: ") <> err
+    Left err -> liftTxGenError $ TxGenError "cannot find fitting redeemer: " <> err
     Right n -> return $ toLoopArgument n
   return (ScriptDataNumber 0, redeemer)
   where
