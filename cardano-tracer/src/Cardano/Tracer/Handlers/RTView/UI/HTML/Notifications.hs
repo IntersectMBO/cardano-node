@@ -13,6 +13,7 @@ import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
 import           Text.Read (readMaybe)
 
+import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.Notifications.Email
 import           Cardano.Tracer.Handlers.RTView.Notifications.Timer
 import           Cardano.Tracer.Handlers.RTView.Notifications.Types
@@ -21,8 +22,8 @@ import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
 import           Cardano.Tracer.Handlers.RTView.UI.Notifications
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
 
-mkNotificationsEvents :: EventsQueues -> UI Element
-mkNotificationsEvents eventsQueues = do
+mkNotificationsEvents :: TracerEnv -> EventsQueues -> UI Element
+mkNotificationsEvents tracerEnv eventsQueues = do
   closeIt <- UI.button #. "delete"
 
   (switchAll, switchAllW) <- mkSwitch "switch-all" "All events" ""
@@ -89,31 +90,31 @@ mkNotificationsEvents eventsQueues = do
 
   on UI.click closeIt . const $ do
     void $ element notifications #. "modal"
-    saveEventsSettings
+    saveEventsSettings tracerEnv
 
   on UI.checkedChange switchWarnings $ \state -> do
     setNotifyIconState
-    saveEventsSettings
+    saveEventsSettings tracerEnv
     liftIO $ updateNotificationsEvents eventsQueues EventWarnings state
   on UI.checkedChange switchErrors $ \state -> do
     setNotifyIconState
-    saveEventsSettings
+    saveEventsSettings tracerEnv
     liftIO $ updateNotificationsEvents eventsQueues EventErrors state
   on UI.checkedChange switchCriticals $ \state -> do
     setNotifyIconState
-    saveEventsSettings
+    saveEventsSettings tracerEnv
     liftIO $ updateNotificationsEvents eventsQueues EventCriticals state
   on UI.checkedChange switchAlerts $ \state -> do
     setNotifyIconState
-    saveEventsSettings
+    saveEventsSettings tracerEnv
     liftIO $ updateNotificationsEvents eventsQueues EventAlerts state
   on UI.checkedChange switchEmergencies $ \state -> do
     setNotifyIconState
-    saveEventsSettings
+    saveEventsSettings tracerEnv
     liftIO $ updateNotificationsEvents eventsQueues EventEmergencies state
   on UI.checkedChange switchNodeDiscon $ \state -> do
     setNotifyIconState
-    saveEventsSettings
+    saveEventsSettings tracerEnv
     liftIO $ updateNotificationsEvents eventsQueues EventNodeDisconnected state
 
   on UI.checkedChange switchAll $ \state -> do
@@ -125,7 +126,7 @@ mkNotificationsEvents eventsQueues = do
     void $ element switchNodeDiscon  # set UI.checked state
 
     setNotifyIconState
-    saveEventsSettings
+    saveEventsSettings tracerEnv
 
     liftIO $ do
       updateNotificationsEvents eventsQueues EventWarnings state
@@ -210,8 +211,8 @@ mkSwitch switchId switchName bulmaColorName = do
 
 -- | Settings for notifications (email, etc.).
 
-mkNotificationsSettings :: UI Element
-mkNotificationsSettings = do
+mkNotificationsSettings :: TracerEnv -> UI Element
+mkNotificationsSettings tracerEnv = do
   closeIt <- UI.button #. "delete"
   sendTestEmail <- UI.button ## "send-test-email"
                              #. "button is-primary"
@@ -317,7 +318,7 @@ mkNotificationsSettings = do
   on UI.click closeIt . const $ do
     void $ element notifications #. "modal"
     void $ element sendTestEmailStatus # set text ""
-    saveEmailSettings
+    saveEmailSettings tracerEnv
 
   on UI.click sendTestEmail . const $ do
     void $ element sendTestEmailStatus # set text ""

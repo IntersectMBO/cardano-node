@@ -43,7 +43,7 @@ runRTView tracerEnv =
     -- Pause to prevent collision between "Listening"-notifications from servers.
     sleep 0.3
     -- Get paths to default SSL files for config.
-    (certFile, keyFile) <- placeDefaultSSLFiles
+    (certFile, keyFile) <- placeDefaultSSLFiles tracerEnv
     -- Initialize displayed stuff outside of main page renderer,
     -- to be able to update corresponding elements after page reloading.
     displayedElements <- initDisplayedElements

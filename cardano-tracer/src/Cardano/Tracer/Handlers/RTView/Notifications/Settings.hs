@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -22,12 +23,13 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
 
+import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.Notifications.Types
 import           Cardano.Tracer.Handlers.RTView.System
 
-readSavedEmailSettings :: IO EmailSettings
-readSavedEmailSettings = do
-  (pathToEmailSettings, _) <- getPathsToNotificationsSettings
+readSavedEmailSettings :: Maybe FilePath -> IO EmailSettings
+readSavedEmailSettings rtvSD = do
+  (pathToEmailSettings, _) <- getPathsToNotificationsSettings rtvSD
   try_ (BS.readFile pathToEmailSettings) >>= \case
     Left _ -> return defaultSettings
     Right jsonSettings ->
@@ -72,9 +74,9 @@ incompleteEmailSettings emailSettings = T.null $ esSMTPHost emailSettings
 --   key :: BS.ByteString
 --   key = "n3+d6^jrodGe$1Ljwt;iBtsi_mxzp-47"
 
-readSavedEventsSettings :: IO EventsSettings
-readSavedEventsSettings = do
-  (_, pathToEventsSettings) <- getPathsToNotificationsSettings
+readSavedEventsSettings :: Maybe FilePath -> IO EventsSettings
+readSavedEventsSettings rtvSD = do
+  (_, pathToEventsSettings) <- getPathsToNotificationsSettings rtvSD
   try_ (BS.readFile pathToEventsSettings) >>= \case
     Left _ -> return defaultSettings
     Right jsonSettings ->
@@ -92,16 +94,16 @@ readSavedEventsSettings = do
     }
   defaultState = (False, 1800)
 
-saveEmailSettingsOnDisk :: EmailSettings -> IO ()
-saveEmailSettingsOnDisk settings = ignore $ do
-  (pathToEmailSettings, _) <- getPathsToNotificationsSettings
+saveEmailSettingsOnDisk :: TracerEnv -> EmailSettings -> IO ()
+saveEmailSettingsOnDisk TracerEnv{teRTViewStateDir} settings = ignore $ do
+  (pathToEmailSettings, _) <- getPathsToNotificationsSettings teRTViewStateDir
   LBS.writeFile pathToEmailSettings $ encode settings
   -- Encrypt JSON-content to avoid saving user's private data in "plain mode".
   -- case encryptJSON . LBS.toStrict . encode $ settings of
   --   Right encryptedJSON -> BS.writeFile pathToEmailSettings encryptedJSON
   --   Left _ -> return ()
 
-saveEventsSettingsOnDisk :: EventsSettings -> IO ()
-saveEventsSettingsOnDisk settings = ignore $ do
-  (_, pathToEventsSettings) <- getPathsToNotificationsSettings
+saveEventsSettingsOnDisk :: TracerEnv -> EventsSettings -> IO ()
+saveEventsSettingsOnDisk TracerEnv{teRTViewStateDir} settings = ignore $ do
+  (_, pathToEventsSettings) <- getPathsToNotificationsSettings teRTViewStateDir
   encodeFile pathToEventsSettings settings

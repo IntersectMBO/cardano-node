@@ -79,10 +79,10 @@ mkMainPage tracerEnv displayedElements nodesEraSettings reloadFlag
     UI.stop preloaderTimer
   UI.start preloaderTimer
 
-  restoreTheme window
-  restoreChartsSettings
-  restoreEmailSettings
-  restoreEventsSettings
+  restoreTheme tracerEnv
+  restoreChartsSettings tracerEnv
+  restoreEmailSettings tracerEnv
+  restoreEventsSettings tracerEnv
 
   uiNoNodesProgressTimer <- UI.timer # set UI.interval 1000
   on UI.tick uiNoNodesProgressTimer . const $ do

@@ -44,7 +44,7 @@ main = do
 
   currentLogLock <- newLock
   currentDPLock  <- newLock
-  eventsQueues   <- initEventsQueues connectedNodesNames dpRequestors currentDPLock
+  eventsQueues   <- initEventsQueues Nothing connectedNodesNames dpRequestors currentDPLock
 
   rtViewPageOpened <- newTVarIO False
 
@@ -64,6 +64,7 @@ main = do
           , teDPRequestors      = dpRequestors
           , teProtocolsBrake    = protocolsBrake
           , teRTViewPageOpened  = rtViewPageOpened
+          , teRTViewStateDir    = Nothing
           }
       te2 =
         TracerEnv
@@ -81,6 +82,7 @@ main = do
           , teDPRequestors      = dpRequestors
           , teProtocolsBrake    = protocolsBrake
           , teRTViewPageOpened  = rtViewPageOpened
+          , teRTViewStateDir    = Nothing
           }
 
   removePathForcibly root

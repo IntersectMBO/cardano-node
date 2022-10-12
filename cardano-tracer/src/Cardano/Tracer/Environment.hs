@@ -27,4 +27,5 @@ data TracerEnv = TracerEnv
   , teDPRequestors        :: !DataPointRequestors
   , teProtocolsBrake      :: !ProtocolsBrake
   , teRTViewPageOpened    :: !WebPageStatus
+  , teRTViewStateDir      :: !(Maybe FilePath)
   }
