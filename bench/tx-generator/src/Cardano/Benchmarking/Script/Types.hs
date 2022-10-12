@@ -7,6 +7,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Benchmarking.Script.Types (
           Action(..)
@@ -26,15 +27,22 @@ module Cardano.Benchmarking.Script.Types (
 import           GHC.Generics
 import           Prelude
 
+import           Data.Function (on)
 import           Data.List.NonEmpty
 import           Data.Text (Text)
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
+
 import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
 import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
 
 import           Cardano.TxGenerator.Types
+
+
+-- FIXME: temporary workaround instance until Action ADT is refactored
+instance Eq (SigningKey PaymentKey) where
+  (==) = (==) `on` serialiseToTextEnvelope Nothing
 
 data Action where
   SetNetworkId       :: !NetworkId -> Action
@@ -43,7 +51,7 @@ data Action where
   StartProtocol      :: !FilePath -> !(Maybe FilePath) -> Action
   Delay              :: !Double -> Action
   ReadSigningKey     :: !String -> !SigningKeyFile -> Action
-  DefineSigningKey   :: !String -> !TextEnvelope -> Action
+  DefineSigningKey   :: !String -> !(SigningKey PaymentKey) -> Action
   AddFund            :: !AnyCardanoEra -> !String -> !TxIn -> !Lovelace -> !String -> Action
   WaitBenchmark      :: !String -> Action
   Submit             :: !AnyCardanoEra -> !SubmitMode -> !TxGenTxParams -> !Generator -> Action

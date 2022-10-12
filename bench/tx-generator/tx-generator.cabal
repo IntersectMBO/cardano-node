@@ -56,13 +56,17 @@ library
                        Cardano.TxGenerator.Setup.NixService
                        Cardano.TxGenerator.Setup.NodeConfig
                        Cardano.TxGenerator.Setup.Plutus
+                       Cardano.TxGenerator.Setup.SigningKey
                        Cardano.TxGenerator.Types
                        Cardano.TxGenerator.Tx
                        Cardano.TxGenerator.Utils
                        Cardano.TxGenerator.UTxO
 
-  other-modules:       Cardano.TxGenerator.Internal.Fifo
                        Cardano.TxGenerator.Internal.Orphans
+
+
+  other-modules:       Cardano.TxGenerator.Internal.Fifo
+                       -- Cardano.TxGenerator.Internal.Orphans
                        Paths_tx_generator
 
   autogen-modules:     Paths_tx_generator

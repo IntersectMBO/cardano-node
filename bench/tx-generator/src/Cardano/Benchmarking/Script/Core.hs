@@ -44,13 +44,13 @@ import           Cardano.TxGenerator.UTxO
 import qualified Cardano.TxGenerator.Utils as Utils
 
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
-import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (readSigningKey, waitBenchmark,
-                   walletBenchmark)
+import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark, walletBenchmark)
 -- import qualified Cardano.Benchmarking.GeneratorTx.Genesis as Genesis
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode (ConnectClient,
                    benchmarkConnectTxSubmit)
 import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
 import qualified Cardano.TxGenerator.Genesis as Genesis
+import           Cardano.TxGenerator.Setup.SigningKey
 
 import           Cardano.Benchmarking.OuroborosImports as Core (LocalSubmitTx, SigningKeyFile,
                    makeLocalConnectInfo, protocolToCodecConfig)
@@ -89,24 +89,12 @@ setProtocolParameters s = case s of
 
 readSigningKey :: String -> SigningKeyFile -> ActionM ()
 readSigningKey name filePath =
-  liftIO ( runExceptT $ GeneratorTx.readSigningKey filePath) >>= \case
+  liftIO (readSigningKeyFile filePath) >>= \case
     Left err -> liftTxGenError err
     Right key -> setEnvKeys name key
 
-parseSigningKey :: TextEnvelope -> Either TextEnvelopeError (SigningKey PaymentKey)
-parseSigningKey = deserialiseFromTextEnvelopeAnyOf types
-  where
-    types :: [FromSomeType HasTextEnvelope (SigningKey PaymentKey)]
-    types =
-      [ FromSomeType (AsSigningKey AsGenesisUTxOKey) castSigningKey
-      , FromSomeType (AsSigningKey AsPaymentKey) id
-      ]
-
-defineSigningKey :: String -> TextEnvelope -> ActionM ()
-defineSigningKey name descr
-  = case parseSigningKey descr of
-    Right key -> setEnvKeys name key
-    Left err -> liftTxGenError $ ApiError err
+defineSigningKey :: String -> SigningKey PaymentKey -> ActionM ()
+defineSigningKey = setEnvKeys
 
 addFund :: AnyCardanoEra -> String -> TxIn -> Lovelace -> String -> ActionM ()
 addFund era wallet txIn lovelace keyName = do
@@ -402,7 +390,7 @@ spendAutoScript protocolParameters script = do
 
   let
     budget = ExecutionUnits
-                 (executionSteps perTxBudget `div`  2) -- TODO FIX
+                 (executionSteps perTxBudget `div`  2) -- TODO FIX - use _nix_inputs_per_tx
                  (executionMemory perTxBudget `div` 2)
   traceDebug $ "Plutus auto mode : Available budget per script run: " ++ show budget
 

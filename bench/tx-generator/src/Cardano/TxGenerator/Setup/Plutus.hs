@@ -38,16 +38,6 @@ readPlutusScript fp
     Right (ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV1) script) -> Right script
     Right (ScriptInAnyLang lang _) -> Left $ TxGenError $ "readPlutusScript: only PlutusScriptV1 currently supported, found: " ++ show lang
 
-{-
-TODO: where was that Hash used, or might be useful in the future?
-
-toScriptHash :: String -> Hash ScriptData
-toScriptHash str =
-  case deserialiseFromRawBytesHex (AsHash AsScriptData) (BSC.pack str) of
-    Right x -> x
-    Left e -> error $ "Invalid datum hash: " ++ displayError e
--}
-
 preExecutePlutusScript ::
      ProtocolParameters
   -> Script PlutusScriptV1

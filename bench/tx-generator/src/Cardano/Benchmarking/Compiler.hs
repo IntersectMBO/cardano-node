@@ -1,5 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
 module Cardano.Benchmarking.Compiler
 where
 
@@ -11,7 +12,6 @@ import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.RWS.CPS
 import           Data.ByteString as BS (ByteString)
-import           Data.ByteString.Base16 as Base16
 import           Data.DList (DList)
 import qualified Data.DList as DL
 import           Data.Text (Text)
@@ -20,6 +20,7 @@ import qualified Data.Text as Text
 import           Cardano.Api
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.TxGenerator.Setup.NixService
+import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Types (TxGenTxParams (..))
 
 data CompileError where
@@ -209,8 +210,8 @@ evilFeeMagic = do
   outputs_per_tx <- askNixOption _nix_outputs_per_tx
   (Quantity min_utxo_value)  <- lovelaceToQuantity <$> askNixOption _nix_min_utxo_value
   let
-    scriptFees = 5000000;
-    collateralPercentage = 200;
+    scriptFees = 5000000;           -- FIXME: should be taken from ProtocolParameters
+    collateralPercentage = 200;     -- FIXME: should be taken from ProtocolParameters
 
     totalFee = if plutusMode
                then tx_fee + scriptFees * fromIntegral inputs_per_tx
@@ -259,15 +260,10 @@ newWallet n = do
   emit $ InitWallet name
   return name
 
-parseKey :: BS.ByteString -> TextEnvelope
-parseKey x = case Base16.decode x of
-  Left err -> error $ "parsing of key failed : " ++ show err
-  Right addr ->  TextEnvelope
-    { teType = TextEnvelopeType "PaymentSigningKeyShelley_ed25519"
-    , teDescription = "Payment Signing Key"
-    , teRawCBOR = addr
-    }
-
+-- we assume the hardcoded base16 keys to successfully evaluate to a SigningKey PaymentKey
+parseKey :: BS.ByteString -> SigningKey PaymentKey
+parseKey k
+  = let ~(Right k') = parseSigningKeyBase16 k in k'
 
 keyNameGenesisInputFund :: String
 keyNameGenesisInputFund = "GenesisInputFund"
@@ -280,7 +276,7 @@ The key that is used for the very first transaction, i.e. the secure Genesis tra
 addr_test1vzd3muund27y5nw83vymqj3a83pcuzkkejej6s75e5lfjcc85nc3p is the actual address (in Testnet 42).
 It is also used as change addresse in the first splitting-step.
 -}
-keyTxGenFunds :: TextEnvelope
+keyTxGenFunds :: SigningKey PaymentKey
 keyTxGenFunds = parseKey "5820617f846fc8b0e753bd51790de5f5a916de500175c6f5a0e27dde9da7879e1d35"
 
 keyNameSplitPhase :: String
@@ -291,7 +287,7 @@ UTxOs that are generated in intermediate splitting steps use:
 addr_test1vz45dtkyzk6s3245qw8hmaddaatcx8td3pvmntl8ty7q99c22eahm
 -}
 
-keySplitPhase :: TextEnvelope
+keySplitPhase :: SigningKey PaymentKey
 keySplitPhase = parseKey "5820cf0083c2a5d4c90ab255bc8e68f407d52eebd9408de60a0b9e4c468f9714f076"
 
 {-|
@@ -302,7 +298,7 @@ addr_test1vzj7zv9msmdasvy5nc9jhnn2gqvrvu33v5rlg332zdfrkugklxkau
 keyNameBenchmarkInputs :: String
 keyNameBenchmarkInputs = "BenchmarkInputs"
 
-keyBenchmarkInputs :: TextEnvelope
+keyBenchmarkInputs :: SigningKey PaymentKey
 keyBenchmarkInputs = parseKey "58205b7f272602661d4ad3d9a4081f25fdcdcdf64fdc4892107de50e50937b77ea42"
 
 keyNameBenchmarkDone :: String
@@ -315,7 +311,7 @@ Query the progress of the benchmarking phase:
 `cardano-node query utxo --testnet-magic 42 --address addr_test1vz4qz2ayucp7xvnthrx93uhha7e04gvxttpnuq4e6mx2n5gzfw23z`
 -}
 
-keyBenchmarkDone :: TextEnvelope
+keyBenchmarkDone :: SigningKey PaymentKey
 keyBenchmarkDone = parseKey "582016ca4f13fa17557e56a7d0dd3397d747db8e1e22fdb5b9df638abdb680650d50"
 
 keyNameCollaterals :: String
@@ -325,5 +321,5 @@ keyNameCollaterals = "Collaterals"
 Collateral inputs for Plutus transactions:
 addr_test1vpckd9muw3l4f8ne4uzumy28p0k84rvx48q46kssjkta5ng4v6sfs
 -}
-keyCollaterals :: TextEnvelope
+keyCollaterals :: SigningKey PaymentKey
 keyCollaterals = parseKey "58204babdb63537ccdac393ea23d042af3b7c3587d7dc88ed3b66c959f198ad358fa"

@@ -18,9 +18,8 @@ import           Cardano.Api
 
 import           Data.Aeson (eitherDecodeFileStrict')
 
-import           Cardano.Benchmarking.Script.Core (parseSigningKey)
-
 import           Cardano.TxGenerator.FundQueue
+import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Tx (genTx, sourceToStoreTransaction)
 import           Cardano.TxGenerator.Types (TxEnvironment (..), TxGenError (..), TxGenerator)
 import           Cardano.TxGenerator.UTxO (makeToUTxOList, mkUTxOVariant)
@@ -37,7 +36,7 @@ demo' parametersFile = do
   protocolParameters <- either die pure =<< eitherDecodeFileStrict' parametersFile
   let
       demoEnv :: TxEnvironment BabbageEra
-      demoEnv = TxEnvironment { 
+      demoEnv = TxEnvironment {
           txEnvNetworkId = Mainnet
         , txEnvProtocolParams = protocolParameters
         , txEnvFee = TxFeeExplicit TxFeesExplicitInBabbageEra 100000
@@ -62,7 +61,7 @@ demo' parametersFile = do
       return newState
 
 signingKey :: SigningKey PaymentKey
-signingKey = fromRight (error "signingKey: parseError") $ parseSigningKey keyData
+signingKey = fromRight (error "signingKey: parseError") $ parseSigningKeyTE keyData
   where
     keyData = TextEnvelope { teType = TextEnvelopeType "GenesisUTxOSigningKey_ed25519"
               , teDescription = fromString "Genesis Initial UTxO Signing Key"
