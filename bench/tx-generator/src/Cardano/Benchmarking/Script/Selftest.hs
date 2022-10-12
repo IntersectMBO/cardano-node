@@ -15,7 +15,6 @@ import           Ouroboros.Network.NodeToClient (IOManager)
 import           Cardano.Benchmarking.Script.Action
 import           Cardano.Benchmarking.Script.Aeson (prettyPrint)
 import           Cardano.Benchmarking.Script.Env as Script
-import           Cardano.Benchmarking.Script.Store
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Tracer (initNullTracers)
 
@@ -70,12 +69,12 @@ testScript protocolFile submitMode =
   where
     era = AnyCardanoEra AllegraEra
     txParams = defaultTxGenTxParams {txParamFee = 1000000}
-    genesisWallet = WalletName "genesisWallet"
-    splitWallet1 = WalletName "SplitWallet-1"
-    splitWallet2 = WalletName "SplitWallet-2"
-    splitWallet3 = WalletName "SplitWallet-3"
-    doneWallet = WalletName "doneWallet"
+    genesisWallet = "genesisWallet"
+    splitWallet1 = "SplitWallet-1"
+    splitWallet2 = "SplitWallet-2"
+    splitWallet3 = "SplitWallet-3"
+    doneWallet = "doneWallet"
     key = "pass-partout"
-    createChange :: WalletName -> WalletName -> Int -> Int -> Action
+    createChange :: String -> String -> Int -> Int -> Action
     createChange src dest txCount outputs
       = Submit era submitMode txParams $ Take txCount $ Cycle $ SplitN src (PayToAddr key dest) outputs

@@ -36,15 +36,12 @@ module Cardano.Benchmarking.Script.Env (
         , setEnvSocketPath
         , getEnvThreads
         , setEnvThreads
-        , get
-        , set
+        , getEnvWallets
+        , setEnvWallets
 ) where
 
 import           Prelude
-import           Data.Functor.Identity
 import qualified Data.Text as Text
-import           Data.Dependent.Map (DMap)
-import qualified Data.Dependent.Map as DMap
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Control.Monad.IO.Class
@@ -58,27 +55,27 @@ import qualified Cardano.Benchmarking.LogTypes as Tracer
 import           Ouroboros.Network.NodeToClient (IOManager)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 import           Cardano.Benchmarking.GeneratorTx
+import           Cardano.Benchmarking.Wallet
 import           Cardano.Benchmarking.OuroborosImports(NetworkId,
                          PaymentKey, ShelleyGenesis, SigningKey,
                          StandardShelley)
-import           Cardano.Benchmarking.Script.Store
+import           Cardano.Benchmarking.Script.Types
 
 import           Cardano.TxGenerator.Types (TxGenError(..))
 
-data Env = Env { dmap :: DMap Store Identity
-               , protoParams :: Maybe ProtocolParameterMode
+data Env = Env { protoParams :: Maybe ProtocolParameterMode
                , benchTracers :: Maybe Tracer.BenchTracers
                , envGenesis :: Maybe (ShelleyGenesis StandardShelley)
                , envProtocol :: Maybe SomeConsensusProtocol
-               , envKeys :: Map String (SigningKey PaymentKey)
                , envNetworkId :: Maybe NetworkId
                , envSocketPath :: Maybe FilePath
+               , envKeys :: Map String (SigningKey PaymentKey)
                , envThreads :: Map String AsyncBenchmarkControl
+               , envWallets :: Map String WalletRef
                }
 
 emptyEnv :: Env
-emptyEnv = Env { dmap = DMap.empty
-               , protoParams = Nothing
+emptyEnv = Env { protoParams = Nothing
                , benchTracers = Nothing
                , envGenesis = Nothing
                , envKeys = Map.empty
@@ -86,6 +83,7 @@ emptyEnv = Env { dmap = DMap.empty
                , envNetworkId = Nothing
                , envSocketPath = Nothing
                , envThreads = Map.empty
+               , envWallets = Map.empty
                }
 
 type ActionM a = ExceptT Error (RWST IOManager () Env IO) a
@@ -97,7 +95,6 @@ runActionMEnv :: Env -> ActionM ret -> IOManager -> IO (Either Error ret, Env, (
 runActionMEnv env action iom = RWS.runRWST (runExceptT action) iom env
 
 data Error where
-  LookupError :: !(Store v)  -> Error
   TxGenError  :: !TxGenError -> Error
   UserError   :: !String     -> Error
   WalletError :: !String     -> Error
@@ -110,9 +107,6 @@ liftTxGenError = throwE . Cardano.Benchmarking.Script.Env.TxGenError
 
 askIOManager :: ActionM IOManager
 askIOManager = lift RWS.ask
-
-set :: Store v -> v -> ActionM ()
-set key val = lift $ RWS.modify (\e -> e { dmap = DMap.insert key (pure val) (dmap e)})
 
 modifyEnv :: (Env -> Env) -> ActionM ()
 modifyEnv = lift . RWS.modify
@@ -141,11 +135,8 @@ setEnvSocketPath val = modifyEnv (\e -> e { envSocketPath = pure val })
 setEnvThreads :: String -> AsyncBenchmarkControl -> ActionM ()
 setEnvThreads key val = modifyEnv (\e -> e { envThreads = Map.insert key val (envThreads e) })
 
-get :: Store v -> ActionM v
-get key = do
-  lift (RWS.gets $ DMap.lookup key . dmap) >>= \case
-    Just (Identity v) -> return v
-    Nothing -> throwE $ LookupError key
+setEnvWallets :: String -> WalletRef -> ActionM ()
+setEnvWallets key val = modifyEnv (\e -> e { envWallets = Map.insert key val (envWallets e) })
 
 getEnvVal :: (Env -> Maybe t) -> String -> ActionM t
 getEnvVal acc s = do
@@ -183,6 +174,9 @@ getEnvSocketPath = getEnvVal envSocketPath "SocketPath"
 
 getEnvThreads :: String -> ActionM AsyncBenchmarkControl
 getEnvThreads = getEnvMap envThreads
+
+getEnvWallets :: String -> ActionM WalletRef
+getEnvWallets = getEnvMap envWallets
 
 traceBenchTxSubmit :: (forall txId. x -> Tracer.TraceBenchTxSubmit txId) -> x -> ActionM ()
 traceBenchTxSubmit tag msg = do

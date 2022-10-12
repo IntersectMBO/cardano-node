@@ -18,7 +18,6 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 
 import           Cardano.Api
-import           Cardano.Benchmarking.Script.Store
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.TxGenerator.Setup.NixService
 import           Cardano.TxGenerator.Types (TxGenTxParams (..))
@@ -34,8 +33,8 @@ throwCompileError = lift . throwE
 maxOutputsPerTx :: Int
 maxOutputsPerTx = 30
 
-type SrcWallet = WalletName
-type DstWallet = WalletName
+type SrcWallet = String
+type DstWallet = String
 
 compileOptions :: NixServiceOptions -> Either CompileError [Action]
 compileOptions opts = runCompiler opts compileToScript
@@ -73,7 +72,7 @@ initConstants = do
   emit $ DefineSigningKey keyNameBenchmarkInputs keyBenchmarkInputs
   emit $ DefineSigningKey keyNameBenchmarkDone keyBenchmarkDone
 
-importGenesisFunds :: Compiler WalletName
+importGenesisFunds :: Compiler String
 importGenesisFunds = do
   logMsg "Importing Genesis Fund."
   wallet <- newWallet "genesis_wallet"
@@ -85,7 +84,7 @@ importGenesisFunds = do
   logMsg "Importing Genesis Fund. Done."
   return wallet
 
-addCollaterals :: SrcWallet -> Compiler (Maybe WalletName)
+addCollaterals :: SrcWallet -> Compiler (Maybe String)
 addCollaterals src = do
   era <- askNixOption _nix_era
   txParams <- askNixOption txGenTxParams
@@ -175,7 +174,7 @@ unfoldSplitSequence fee value outputs
      (x, 0) -> x
      (x, _rest) -> x+1
 
-benchmarkingPhase :: WalletName -> Maybe WalletName -> Compiler WalletName
+benchmarkingPhase :: String -> Maybe String -> Compiler String
 benchmarkingPhase wallet collateralWallet = do
   debugMode <- askNixOption _nix_debugMode
   targetNodes <- askNixOption _nix_targetNodes
@@ -254,9 +253,9 @@ newIdentifier prefix = do
   put $ succ n
   return $ prefix ++ "_" ++ show n
 
-newWallet :: String -> Compiler WalletName
+newWallet :: String -> Compiler String
 newWallet n = do
-  name <- WalletName <$> newIdentifier n
+  name <- newIdentifier n
   emit $ InitWallet name
   return name
 

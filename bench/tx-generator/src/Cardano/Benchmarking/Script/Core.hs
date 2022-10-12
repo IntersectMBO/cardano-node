@@ -63,7 +63,6 @@ import           Cardano.Benchmarking.Wallet as Wallet
 import           Cardano.Benchmarking.Script.Aeson (readProtocolParametersFile)
 import           Cardano.Benchmarking.Script.Env hiding (Error (TxGenError))
 import qualified Cardano.Benchmarking.Script.Env as Env (Error (TxGenError))
-import           Cardano.Benchmarking.Script.Store as Store
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Version as Version
 
@@ -109,7 +108,7 @@ defineSigningKey name descr
     Right key -> setEnvKeys name key
     Left err -> liftTxGenError $ ApiError err
 
-addFund :: AnyCardanoEra -> WalletName -> TxIn -> Lovelace -> String -> ActionM ()
+addFund :: AnyCardanoEra -> String -> TxIn -> Lovelace -> String -> ActionM ()
 addFund era wallet txIn lovelace keyName = do
   fundKey  <- getEnvKeys keyName
   let
@@ -118,9 +117,9 @@ addFund era wallet txIn lovelace keyName = do
   outValue <- withEra era mkOutValue
   addFundToWallet wallet txIn outValue fundKey
 
-addFundToWallet :: WalletName -> TxIn -> InAnyCardanoEra TxOutValue -> SigningKey PaymentKey -> ActionM ()
+addFundToWallet :: String -> TxIn -> InAnyCardanoEra TxOutValue -> SigningKey PaymentKey -> ActionM ()
 addFundToWallet wallet txIn outVal skey = do
-  walletRef <- get wallet
+  walletRef <- getEnvWallets wallet
   liftIO (walletRefInsertFund walletRef (FundQueue.Fund $ mkFund outVal))
   where
     mkFund = Utils.liftAnyEra $ \value -> FundInEra {
@@ -292,7 +291,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
     SecureGenesis wallet genesisKeyName destKeyName -> do
       genesis  <- getEnvGenesis
       destKey  <- getEnvKeys destKeyName
-      destWallet  <- get wallet
+      destWallet  <- getEnvWallets wallet
       genesisKey  <- getEnvKeys genesisKeyName
       (tx, fund) <- firstExceptT Env.TxGenError $ hoistEither $
         Genesis.genesisSecureInitialFund networkId genesis genesisKey destKey txParams
@@ -302,7 +301,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
           return $ Right tx
       return $ Streaming.effect (Streaming.yield <$> gen)
     Split walletName payMode payModeChange coins -> do
-      wallet <- get walletName
+      wallet <- getEnvWallets walletName
       (toUTxO, addressOut) <- interpretPayMode payMode
       traceDebug $ "split output address : " ++ addressOut
       (toUTxOChange, addressChange) <- interpretPayMode payModeChange
@@ -314,7 +313,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
         sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut $ mangleWithChange toUTxOChange toUTxO
       return $ Streaming.effect (Streaming.yield <$> sourceToStore)
     SplitN walletName payMode count -> do
-      wallet <- get walletName
+      wallet <- getEnvWallets walletName
       (toUTxO, addressOut) <- interpretPayMode payMode
       traceDebug $ "SplitN output address : " ++ addressOut
       let
@@ -325,7 +324,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
       return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
     NtoM walletName payMode inputs outputs metadataSize collateralWallet -> do
-      wallet <- get walletName
+      wallet <- getEnvWallets walletName
       collaterals <- selectCollateralFunds collateralWallet
       (toUTxO, addressOut) <- interpretPayMode payMode
       traceDebug $ "NtoM output address : " ++ addressOut
@@ -348,11 +347,11 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
     feeInEra = Utils.mkTxFee fee
 
 selectCollateralFunds :: forall era. IsShelleyBasedEra era
-  => Maybe WalletName
+  => Maybe String
   -> ActionM (TxInsCollateral era, [FundQueue.Fund])
 selectCollateralFunds Nothing = return (TxInsCollateralNone, [])
 selectCollateralFunds (Just walletName) = do
-  cw <- get walletName
+  cw <- getEnvWallets walletName
   collateralFunds <- liftIO ( askWalletRef cw FundQueue.toList ) >>= \case
     [] -> throwE $ WalletError "selectCollateralFunds: emptylist"
     l -> return l
@@ -366,8 +365,8 @@ dumpToFile filePath tx = liftIO $ dumpToFileIO filePath tx
 dumpToFileIO :: FilePath -> TxInMode CardanoMode -> IO ()
 dumpToFileIO filePath tx = appendFile filePath ('\n' : show tx)
 
-initWallet :: WalletName -> ActionM ()
-initWallet name = liftIO Wallet.initWallet >>= set name
+initWallet :: String -> ActionM ()
+initWallet name = liftIO Wallet.initWallet >>= setEnvWallets name
 
 interpretPayMode :: forall era. IsShelleyBasedEra era => PayMode -> ActionM (CreateAndStore IO era, String)
 interpretPayMode payMode = do
@@ -375,11 +374,11 @@ interpretPayMode payMode = do
   case payMode of
     PayToAddr keyName destWallet -> do
       fundKey <- getEnvKeys keyName
-      walletRef <- get destWallet
+      walletRef <- getEnvWallets destWallet
       return ( createAndStore (mkUTxOVariant networkId fundKey) (mkWalletFundStore walletRef)
              , Text.unpack $ serialiseAddress $ Utils.keyAddress @era networkId fundKey)
     PayToScript scriptSpec destWallet -> do
-      walletRef <- get destWallet
+      walletRef <- getEnvWallets destWallet
       (witness, script, scriptData, _scriptFee) <- makePlutusContext scriptSpec
       return ( createAndStore (mkUTxOScript networkId (script, scriptData) witness) (mkWalletFundStore walletRef)
                , Text.unpack $ serialiseAddress $ makeShelleyAddress networkId (PaymentCredentialByScript $ hashScript script) NoStakeAddress )

@@ -27,7 +27,6 @@ import           Cardano.Api.Shelley (ProtocolParameters)
 import           Cardano.CLI.Types (SigningKeyFile (..))
 import qualified Ouroboros.Network.Magic as Ouroboros (NetworkMagic (..))
 
-import           Cardano.Benchmarking.Script.Store
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.TxGenerator.Types
 
@@ -149,10 +148,8 @@ parseScriptFileAeson = parseJSONFile fromJSON
 readProtocolParametersFile :: FilePath -> IO ProtocolParameters
 readProtocolParametersFile = parseJSONFile fromJSON
 
-instance ToJSON WalletName      where toJSON (WalletName a) = toJSON a
 instance ToJSON SigningKeyFile  where toJSON (SigningKeyFile a) = toJSON a
 
-instance FromJSON WalletName      where parseJSON a = WalletName <$> parseJSON a
 instance FromJSON SigningKeyFile  where parseJSON a = SigningKeyFile <$> parseJSON a
 
 instance ToJSON NetworkId where
