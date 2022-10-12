@@ -91,26 +91,26 @@ askIOManager :: ActionM IOManager
 askIOManager = lift RWS.ask
 
 set :: Store v -> v -> ActionM ()
-set key val = lift $ RWS.modify $ (\e -> e { dmap = DMap.insert key (pure val) (dmap e)})
+set key val = lift $ RWS.modify (\e -> e { dmap = DMap.insert key (pure val) (dmap e)})
 
 modifyEnv :: (Env -> Env) -> ActionM ()
 modifyEnv = lift . RWS.modify
 
 setProtoParamMode :: ProtocolParameterMode -> ActionM ()
-setProtoParamMode val = modifyEnv $ (\e -> e { protoParams = pure val })
+setProtoParamMode val = modifyEnv (\e -> e { protoParams = pure val })
 
 setBenchTracers :: Tracer.BenchTracers -> ActionM ()
-setBenchTracers val = modifyEnv $ (\e -> e { benchTracers = pure val })
+setBenchTracers val = modifyEnv (\e -> e { benchTracers = pure val })
 
 setEnvGenesis :: ShelleyGenesis StandardShelley -> ActionM ()
-setEnvGenesis val = modifyEnv $ (\e -> e { envGenesis = pure val })
+setEnvGenesis val = modifyEnv (\e -> e { envGenesis = pure val })
 
 setEnvProtocol :: SomeConsensusProtocol -> ActionM ()
-setEnvProtocol val = modifyEnv $ (\e -> e { envProtocol = pure val })
+setEnvProtocol val = modifyEnv (\e -> e { envProtocol = pure val })
 
 get :: Store v -> ActionM v
 get key = do
-  lift (RWS.gets $ (\e -> DMap.lookup key $ dmap e)) >>= \case
+  lift (RWS.gets $ DMap.lookup key . dmap) >>= \case
     Just (Identity v) -> return v
     Nothing -> throwE $ LookupError key
 
