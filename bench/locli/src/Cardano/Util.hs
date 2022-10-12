@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 module Cardano.Util
   ( module Prelude
-  , module Cardano.Util
+  , module Data.Tuple.Extra
   , module Cardano.Ledger.BaseTypes
   , module Control.Arrow
   , module Control.Applicative
@@ -9,12 +9,14 @@ module Cardano.Util
   , module Control.Monad.Trans.Except.Extra
   , module Ouroboros.Consensus.Util.Time
   , module Text.Printf
+  , module Cardano.Util
   )
 where
 
 import Prelude                          (String, error)
 import Cardano.Prelude
 
+import Data.Tuple.Extra          hiding ((&&&), (***))
 import Control.Arrow                    ((&&&), (***))
 import Control.Applicative              ((<|>))
 import Control.Concurrent.Async         (forConcurrently, forConcurrently_, mapConcurrently, mapConcurrently_)
@@ -104,11 +106,11 @@ data F
   | forall a. ToJSON a => J a
 
 progress :: MonadIO m => String -> F -> m ()
-progress key = putStrLn . T.pack . \case
-  R x  -> printf "{ \"%s\":  %s }"    key x
-  Q x  -> printf "{ \"%s\": \"%s\" }" key x
-  L xs -> printf "{ \"%s\": \"%s\" }" key (Cardano.Prelude.intercalate "\", \"" xs)
-  J x  -> printf "{ \"%s\": %s }" key (LBS.unpack $ encode x)
+progress key = putStr . T.pack . \case
+  R x  -> printf "{ \"%s\":  %s }\n"    key x
+  Q x  -> printf "{ \"%s\": \"%s\" }\n" key x
+  L xs -> printf "{ \"%s\": \"%s\" }\n" key (Cardano.Prelude.intercalate "\", \"" xs)
+  J x  -> printf "{ \"%s\": %s }\n" key (LBS.unpack $ encode x)
 
 -- /path/to/logs-HOSTNAME.some.ext -> HOSTNAME
 hostFromLogfilename :: JsonLogfile -> Host
@@ -159,9 +161,8 @@ dumpAssociatedObjectStreams :: ToJSON a => String -> [(JsonLogfile, [a])] -> Exc
 dumpAssociatedObjectStreams ident xss = liftIO $
   flip mapConcurrently_ xss $
     \(JsonLogfile f, xs) -> do
-        progress ident (Q f)
-        withFile (replaceExtension f $ ident <> ".json") WriteMode $ \hnd -> do
-          forM_ xs $ LBS.hPutStrLn hnd . encode
+      withFile (replaceExtension f $ ident <> ".json") WriteMode $ \hnd -> do
+        forM_ xs $ LBS.hPutStrLn hnd . encode
 
 dumpText :: String -> [Text] -> TextOutputFile -> ExceptT Text IO ()
 dumpText ident xs (TextOutputFile f) = liftIO $ do
@@ -173,9 +174,8 @@ dumpAssociatedTextStreams :: String -> [(JsonLogfile, [Text])] -> ExceptT Text I
 dumpAssociatedTextStreams ident xss = liftIO $
   flip mapConcurrently_ xss $
     \(JsonLogfile f, xs) -> do
-        progress ident (Q f)
-        withFile (replaceExtension f $ ident <> ".txt") WriteMode $ \hnd -> do
-          forM_ xs $ hPutStrLn hnd
+      withFile (replaceExtension f $ ident <> ".txt") WriteMode $ \hnd -> do
+        forM_ xs $ hPutStrLn hnd
 
 spans :: forall a. (a -> Bool) -> [a] -> [Vector a]
 spans f = go []

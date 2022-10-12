@@ -10,7 +10,6 @@ import Data.Aeson.Text          (encodeToLazyText)
 import Data.List                (dropWhileEnd)
 import Data.Text                qualified as T
 import Data.Text.Lazy           qualified as LT
-import Data.Time.Clock          (NominalDiffTime)
 
 import Data.CDF
 
@@ -22,6 +21,10 @@ import Cardano.Util
 
 class RenderCDFs a p where
   rdFields :: [Field DSelect p a]
+
+filterFields :: RenderCDFs a p
+             => (Field DSelect p a -> Bool) -> [Field DSelect p a]
+filterFields f = filter f rdFields
 
 class RenderTimeline a where
   data RTComments a :: Type
@@ -149,7 +152,7 @@ mapRenderCDF :: forall p a. RenderCDFs a p
 mapRenderCDF fieldSelr centiSelr fSampleProps x =
   fields                                    -- list of fields
   <&> renderFieldCentiles x cdfSamplesProps -- for each field, list of per-sample lists of properties
-  & ([renderCentiles 6 centiles] :)
+  & (transpose [renderCentiles 6 centiles] :)
   & transpose                               -- for each sample, list of per-field lists of properties
   & fmap (fmap $ T.intercalate " ")
  where
@@ -236,7 +239,7 @@ renderAnalysisCDFs a@Anchor{..} fieldSelr _c2a centileSelr AsOrg x =
    cdfSamplesProps = fmap (pure . unliftCDFVal cdfIx . snd) . cdfSamples . restrictCDF
 
    fields :: [Field DSelect p a]
-   fields = filter fieldSelr rdFields
+   fields = filterFields fieldSelr
 
    restrictCDF :: forall c. CDF p c -> CDF p c
    restrictCDF = maybe id subsetCDF centileSelr
@@ -282,29 +285,31 @@ renderAnalysisCDFs a@Anchor{..} fieldSelr aspect _centileSelr AsReport x =
    aspectColHeadersAndProjections = \case
      OfOverallDataset ->
        (,)
-       ["average", "CoV", "min", "max", "stddev", "size"]
-       \c@CDF{..} ->
+       ["average", "CoV", "min", "max", "stddev", "range", "size"]
+       \c@CDF{cdfRange=(cdfMin, cdfMax), ..} ->
          let avg = cdfAverageVal c & toDouble in
          [ avg
          , cdfStddev / avg
-         , fromRational . toRational $ fst cdfRange
-         , fromRational . toRational $ snd cdfRange
+         , fromRational . toRational $ cdfMin
+         , fromRational . toRational $ cdfMax
          , cdfStddev
+         , fromRational . toRational $ cdfMax - cdfMin
          , fromIntegral cdfSize
          ]
      OfInterCDF ->
        (,)
-       ["average", "CoV", "min", "max", "stddev", "size"]
+       ["average", "CoV", "min", "max", "stddev", "range", "size"]
        (cdfArity
          (error "Cannot do inter-CDF statistics on plain CDFs")
-         (\CDF{cdfAverage} ->
-             let avg = cdfAverageVal cdfAverage & toDouble in
+         (\CDF{cdfAverage=cdfAvg@CDF{cdfRange=(minAvg, maxAvg),..}} ->
+             let avg = cdfAverageVal cdfAvg & toDouble in
              [ avg
-             , cdfStddev cdfAverage / avg
-             , toDouble . fst $ cdfRange cdfAverage
-             , toDouble . snd $ cdfRange cdfAverage
-             , cdfStddev cdfAverage
-             , fromIntegral $ cdfSize cdfAverage
+             , cdfStddev / avg
+             , toDouble minAvg
+             , toDouble maxAvg
+             , cdfStddev
+             , toDouble $ maxAvg - minAvg
+             , fromIntegral cdfSize
              ]))
 
 renderAnalysisCDFs a fieldSelr _c2a centiSelr AsPretty x =

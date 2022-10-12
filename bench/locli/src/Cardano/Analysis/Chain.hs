@@ -9,7 +9,6 @@ module Cardano.Analysis.Chain (module Cardano.Analysis.Chain) where
 import Cardano.Prelude hiding (head)
 
 import Data.Aeson
-import Data.Time.Clock (UTCTime, NominalDiffTime)
 import Data.Time.Clock qualified as Time
 
 import Cardano.Analysis.Context

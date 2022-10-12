@@ -25,12 +25,13 @@ newtype JsonFilterFile
   deriving (Show, Eq)
 
 newtype FilterName = FilterName { unFilterName :: Text }
+  deriving (Eq, FromJSON, Generic, NFData, Show, ToJSON)
 
 -- | Conditions for chain subsetting
 data ChainFilter
   = CBlock BlockCond
   | CSlot  SlotCond
-  deriving (FromJSON, Generic, NFData, Show, ToJSON)
+  deriving (Eq, FromJSON, Generic, NFData, Ord, Show, ToJSON)
 
 -- | Block classification -- primary for validity as subjects of analysis.
 data BlockCond
@@ -41,7 +42,8 @@ data BlockCond
   | BSizeGEq               Word64
   | BSizeLEq               Word64
   | BMinimumAdoptions      Word64 -- ^ At least this many adoptions
-  deriving (FromJSON, Generic, NFData, Show, ToJSON)
+  | BNonNegatives                 -- ^ Non-negative timings only
+  deriving (Eq, FromJSON, Generic, NFData, Ord, Show, ToJSON)
 
 data SlotCond
   = SlotGEq         SlotNo
@@ -53,7 +55,7 @@ data SlotCond
   | EpSlotGEq       EpochSlot
   | EpSlotLEq       EpochSlot
   | SlotHasLeaders
-  deriving (FromJSON, Generic, NFData, Show, ToJSON)
+  deriving (Eq, FromJSON, Generic, NFData, Ord, Show, ToJSON)
 
 cfIsSlotCond, cfIsBlockCond :: ChainFilter -> Bool
 cfIsSlotCond  = \case { CSlot{}  -> True; _ -> False; }

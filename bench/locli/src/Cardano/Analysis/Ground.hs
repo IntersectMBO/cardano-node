@@ -4,21 +4,25 @@
 module Cardano.Analysis.Ground
   ( module Cardano.Analysis.Ground
   , module Data.DataDomain
+  , module Data.Time.Clock
   , BlockNo (..), EpochNo (..), SlotNo (..)
   )
 where
 
 import Prelude                          (String, fail, show)
 import Cardano.Prelude                  hiding (head)
+import Unsafe.Coerce                    qualified as Unsafe
 
+import Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 import Data.Aeson
 import Data.Aeson.Types                 (toJSONKeyText)
 import Data.Attoparsec.Text             qualified as Atto
 import Data.Attoparsec.Time             qualified as Iso8601
+import Data.ByteString.Lazy.Char8       qualified as LBS
 import Data.Text                        qualified as T
 import Data.Text.Short                  qualified as SText
 import Data.Text.Short                  (ShortText, fromText, toText)
-import Data.Time.Clock                              (UTCTime, NominalDiffTime)
+import Data.Time.Clock                  (UTCTime, NominalDiffTime)
 import Options.Applicative
 import Options.Applicative              qualified as Opt
 import Quiet                            (Quiet (..))
@@ -49,6 +53,20 @@ instance ToJSONKey Hash where
   toJSONKey = toJSONKeyText (toText . unHash)
 instance FromJSONKey Hash where
   fromJSONKey = FromJSONKeyText (Hash . fromText)
+
+newtype Count a = Count { unCount :: Int }
+  deriving (Eq, Generic, Ord, Show)
+  deriving newtype (FromJSON, Num, ToJSON)
+  deriving anyclass NFData
+
+countOfList :: [a] -> Count a
+countOfList = Count . fromIntegral . length
+
+countOfLists :: [[a]] -> Count a
+countOfLists = Count . fromIntegral . sum . fmap length
+
+unsafeCoerceCount :: Count a -> Count b
+unsafeCoerceCount = Unsafe.unsafeCoerce
 
 newtype Host = Host { unHost :: ShortText }
   deriving (Eq, Generic, Ord)
@@ -123,6 +141,23 @@ newtype CsvOutputFile
 newtype OutputFile
   = OutputFile { unOutputFile :: FilePath }
   deriving (Show, Eq)
+
+---
+--- Readers
+---
+readJsonData :: FromJSON a => JsonInputFile a -> (Text -> b) -> ExceptT b IO a
+readJsonData f err =
+  unJsonInputFile f
+  & LBS.readFile
+  & fmap eitherDecode
+  & newExceptT
+  & firstExceptT (err . T.pack)
+
+readJsonDataIO :: FromJSON a => JsonInputFile a -> IO (Either String a)
+readJsonDataIO f =
+  unJsonInputFile f
+  & LBS.readFile
+  & fmap eitherDecode
 
 ---
 --- Parsers

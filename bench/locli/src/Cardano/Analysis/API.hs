@@ -16,7 +16,6 @@ import Cardano.Prelude          hiding (head)
 import Data.Aeson               (ToJSON(..), FromJSON(..))
 import Data.Text                qualified as T
 import Data.Text.Short          (toText)
-import Data.Time.Clock          (NominalDiffTime)
 import Options.Applicative      qualified as Opt
 import Text.Printf              (PrintfArg)
 
@@ -36,34 +35,49 @@ import Cardano.Util
 -- * API types
 --
 
+-- | Overall summary of all analyses.
+data Summary where
+  Summary ::
+    { sumWhen                :: !UTCTime
+    , sumLogStreams          :: !(Count [LogObject])
+    , sumLogObjects          :: !(Count LogObject)
+    , sumFilters             :: !([FilterName], [ChainFilter])
+    , sumChainRejectionStats :: ![(ChainFilter, Int)]
+    , sumBlocksRejected      :: !(Count BlockEvents)
+    , sumDomainSlots         :: !(DataDomain SlotNo)
+    , sumDomainBlocks        :: !(DataDomain BlockNo)
+    } -> Summary
+  deriving (Generic, FromJSON, ToJSON, Show)
+
 -- | Results of block propagation analysis.
 data BlockProp f
   = BlockProp
-    { bpVersion             :: !Cardano.Analysis.Version.Version
-    , bpDomainSlots         :: !(DataDomain SlotNo)
-    , bpDomainBlocks        :: !(DataDomain BlockNo)
-    , bpForgerStarts        :: !(CDF f NominalDiffTime)
-    , bpForgerBlkCtx        :: !(CDF f NominalDiffTime)
-    , bpForgerLgrState      :: !(CDF f NominalDiffTime)
-    , bpForgerLgrView       :: !(CDF f NominalDiffTime)
-    , bpForgerLeads         :: !(CDF f NominalDiffTime)
-    , bpForgerForges        :: !(CDF f NominalDiffTime)
-    , bpForgerAnnouncements :: !(CDF f NominalDiffTime)
-    , bpForgerAdoptions     :: !(CDF f NominalDiffTime)
-    , bpForgerSends         :: !(CDF f NominalDiffTime)
-    , bpPeerNotices         :: !(CDF f NominalDiffTime)
-    , bpPeerRequests        :: !(CDF f NominalDiffTime)
-    , bpPeerFetches         :: !(CDF f NominalDiffTime)
-    , bpPeerAnnouncements   :: !(CDF f NominalDiffTime)
-    , bpPeerAdoptions       :: !(CDF f NominalDiffTime)
-    , bpPeerSends           :: !(CDF f NominalDiffTime)
-    , bpPropagation         :: ![(Double, CDF f NominalDiffTime)]
-    , bpSizes               :: !(CDF f Int)
+    { bpVersion              :: !Cardano.Analysis.Version.Version
+    , bpDomainSlots          :: !(DataDomain SlotNo)
+    , bpDomainBlocks         :: !(DataDomain BlockNo)
+    , cdfForgerStarts        :: !(CDF f NominalDiffTime)
+    , cdfForgerBlkCtx        :: !(CDF f NominalDiffTime)
+    , cdfForgerLgrState      :: !(CDF f NominalDiffTime)
+    , cdfForgerLgrView       :: !(CDF f NominalDiffTime)
+    , cdfForgerLeads         :: !(CDF f NominalDiffTime)
+    , cdfForgerForges        :: !(CDF f NominalDiffTime)
+    , cdfForgerAnnouncements :: !(CDF f NominalDiffTime)
+    , cdfForgerAdoptions     :: !(CDF f NominalDiffTime)
+    , cdfForgerSends         :: !(CDF f NominalDiffTime)
+    , cdfPeerNotices         :: !(CDF f NominalDiffTime)
+    , cdfPeerRequests        :: !(CDF f NominalDiffTime)
+    , cdfPeerFetches         :: !(CDF f NominalDiffTime)
+    , cdfPeerAnnouncements   :: !(CDF f NominalDiffTime)
+    , cdfPeerAdoptions       :: !(CDF f NominalDiffTime)
+    , cdfPeerSends           :: !(CDF f NominalDiffTime)
+    , cdfForks               :: !(CDF f Int)
+    , cdfSizes               :: !(CDF f Int)
+    , bpPropagation          :: ![(Double, CDF f NominalDiffTime)]
     }
   deriving (Generic)
-deriving instance (Show     (f NominalDiffTime), Show     (f Int)) => Show     (BlockProp f)
-deriving instance (FromJSON (f NominalDiffTime), FromJSON (f Int)) => FromJSON (BlockProp f)
-deriving instance (ToJSON   (f NominalDiffTime), ToJSON   (f Int)) => ToJSON   (BlockProp f)
+deriving instance (Show     (f NominalDiffTime), Show     (f Int), Show     (f (Count BlockEvents))) => Show     (BlockProp f)
+deriving instance (FromJSON (f NominalDiffTime), FromJSON (f Int), FromJSON (f (Count BlockEvents))) => FromJSON (BlockProp f)
+deriving instance (ToJSON   (f NominalDiffTime), ToJSON   (f Int), ToJSON   (f (Count BlockEvents))) => ToJSON   (BlockProp f)
 
 type BlockPropOne   = BlockProp I
 type MultiBlockProp = BlockProp (CDF I)
@@ -78,13 +92,15 @@ data BlockEvents
   , beEpochNo       :: !EpochNo
   , beEpochSafeInt  :: !EpochSafeInt
   , beForge         :: !BlockForge
-  , beObservations  :: [BlockObservation]
+  , beObservations  :: ![BlockObservation]
+  , beForks         :: !(Count BlockEvents)
   , bePropagation   :: !(CDF I NominalDiffTime)
                        -- ^ CDF of slot-start-to-adoptions on cluster
-  , beOtherBlocks   :: [Hash]
-  , beErrors        :: [BPError]
-  , beNegAcceptance :: [ChainFilter] -- ^ List of negative acceptance conditions,
-                                     --   preventing block's consideration for analysis.
+  , beOtherBlocks   :: ![Hash]
+  , beErrors        :: ![BPError]
+  , beAcceptance    :: ![(ChainFilter, Bool)]
+                       -- ^ List of acceptance conditions,
+                       --   affecting block's consideration for analysis.
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
@@ -107,6 +123,20 @@ data BlockForge
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
+allBlockForgeTimes :: Monoid (f Text) =>
+  (Text -> NominalDiffTime -> f Text) -> BlockForge -> f Text
+allBlockForgeTimes f BlockForge{..}
+  =                f "bfBlockGap"  bfBlockGap
+  <>               f "bfStarted"   bfStarted
+  <> maybe mempty (f "bfBlkCtx")   bfBlkCtx
+  <> maybe mempty (f "bfLgrState") bfLgrState
+  <> maybe mempty (f "bfLgrView")  bfLgrView
+  <>               f "bfLeading"   bfLeading
+  <>               f "bfForged"    bfForged
+  <>               f "bfAnnounced" bfAnnounced
+  <>               f "bfSending"   bfSending
+  <>               f "bfAdopted"   bfAdopted
+
 data BlockObservation
   =  BlockObservation
   { boObserver   :: !Host
@@ -118,10 +148,20 @@ data BlockObservation
   , boSending    :: !(Maybe NominalDiffTime) -- ^ Since announcement
   , boAdopted    :: !(Maybe NominalDiffTime) -- ^ Since announcement
   , boChainDelta :: !Int                     -- ^ ChainDelta during adoption
-  , boErrorsCrit :: [BPError]
-  , boErrorsSoft :: [BPError]
+  , boErrorsCrit :: ![BPError]
+  , boErrorsSoft :: ![BPError]
   }
   deriving (Generic, FromJSON, ToJSON, Show)
+
+allBlockObservationTimes :: (Monoid (f Text)) =>
+  (Text -> NominalDiffTime -> f Text) -> BlockObservation -> f Text
+allBlockObservationTimes f BlockObservation{..}
+  =                f "boNoticed"    boNoticed
+  <>               f "boRequested"  boRequested
+  <>               f "boFetched"    boFetched
+  <> maybe mempty (f "boAnnounced") boAnnounced
+  <> maybe mempty (f "boSending"  ) boSending
+  <> maybe mempty (f "boAdopted"  ) boAdopted
 
 data BPError
   = BPError
@@ -158,24 +198,24 @@ data BPErrorKind
 -- | The top-level representation of the machine timeline analysis results.
 data MachPerf f
   = MachPerf
-    { sVersion              :: !Cardano.Analysis.Version.Version
-    , sDomainSlots          :: !(DataDomain SlotNo)
+    { mpVersion             :: !Cardano.Analysis.Version.Version
+    , mpDomainSlots         :: !(DataDomain SlotNo)
     -- distributions
-    , sMissCDF              :: !(CDF f Double)
-    , sLeadsCDF             :: !(CDF f Word64)
-    , sUtxoCDF              :: !(CDF f Word64)
-    , sDensityCDF           :: !(CDF f Double)
-    , sStartedCDF           :: !(CDF f NominalDiffTime)
-    , sBlkCtxCDF            :: !(CDF f NominalDiffTime)
-    , sLgrStateCDF          :: !(CDF f NominalDiffTime)
-    , sLgrViewCDF           :: !(CDF f NominalDiffTime)
-    , sLeadingCDF           :: !(CDF f NominalDiffTime)
-    , sForgedCDF            :: !(CDF f NominalDiffTime)
-    , sBlockGapCDF          :: !(CDF f Word64)
-    , sSpanLensCpuCDF       :: !(CDF f Int)
-    , sSpanLensCpuEpochCDF  :: !(CDF f Int)
-    , sSpanLensCpuRwdCDF    :: !(CDF f Int)
-    , sResourceCDFs         :: !(Resources (CDF f Word64))
+    , cdfMiss              :: !(CDF f Double)
+    , cdfLeads             :: !(CDF f Word64)
+    , cdfUtxo              :: !(CDF f Word64)
+    , cdfDensity           :: !(CDF f Double)
+    , cdfStarted           :: !(CDF f NominalDiffTime)
+    , cdfBlkCtx            :: !(CDF f NominalDiffTime)
+    , cdfLgrState          :: !(CDF f NominalDiffTime)
+    , cdfLgrView           :: !(CDF f NominalDiffTime)
+    , cdfLeading           :: !(CDF f NominalDiffTime)
+    , cdfForged            :: !(CDF f NominalDiffTime)
+    , cdfBlockGap          :: !(CDF f Word64)
+    , cdfSpanLensCpu       :: !(CDF f Int)
+    , cdfSpanLensCpuEpoch  :: !(CDF f Int)
+    , cdfSpanLensCpuRwd    :: !(CDF f Int)
+    , mpResourceCDFs       :: !(Resources (CDF f Word64))
     }
   deriving (Generic)
 
@@ -238,7 +278,7 @@ data SlotStats a
 --
 testBlockEvents :: Genesis -> BlockEvents -> ChainFilter -> Bool
 testBlockEvents g@Genesis{..}
-                BlockEvents{beForge=BlockForge{..}
+                BlockEvents{beForge=forge@BlockForge{..}
                            ,beObservations=seen
                            ,..} = \case
   CBlock flt -> case flt of
@@ -250,6 +290,11 @@ testBlockEvents g@Genesis{..}
     BSizeGEq x -> bfBlockSize >= fromIntegral x
     BSizeLEq x -> bfBlockSize <= fromIntegral x
     BMinimumAdoptions x -> count (isJust . boAdopted) seen >= fromIntegral x
+    BNonNegatives -> null $
+                 allBlockForgeTimes       noteFieldIfNeg forge <>
+      concatMap (allBlockObservationTimes noteFieldIfNeg) seen
+     where noteFieldIfNeg :: Text -> NominalDiffTime -> [Text]
+           noteFieldIfNeg f x = [ f | x >= 0 ]
   CSlot flt -> case flt of
     SlotGEq s -> beSlotNo >= s
     SlotLEq s -> beSlotNo <= s
@@ -260,10 +305,6 @@ testBlockEvents g@Genesis{..}
     EpochSafeIntLEq i -> beEpochSafeInt <= i
     EpSlotGEq s -> snd (g `unsafeParseSlot` beSlotNo) >= s
     EpSlotLEq s -> snd (g `unsafeParseSlot` beSlotNo) <= s
-
-isValidBlockEvent :: Genesis -> [ChainFilter] -> BlockEvents -> Bool
-isValidBlockEvent g criteria be =
-  all (testBlockEvents g be) criteria
 
 isValidBlockObservation :: BlockObservation -> Bool
 isValidBlockObservation BlockObservation{..} =
@@ -361,21 +402,22 @@ adoptionCentilesBrief =
 instance RenderCDFs BlockProp p where
   rdFields =
     --  Width LeftPad
-    [ Field 4 0 "fStarted"      (f!!0) "Loop" (DDeltaT bpForgerStarts)        "Started forge loop iteration"
-    , Field 4 0 "fBlkCtx"       (f!!1) "BkCt" (DDeltaT bpForgerBlkCtx)        "Acquired block context"
-    , Field 4 0 "fLgrState"     (f!!2) "LgSt" (DDeltaT bpForgerLgrState)      "Acquired ledger state"
-    , Field 4 0 "fLgrView"      (f!!3) "LgVi" (DDeltaT bpForgerLgrView)       "Acquired ledger view"
-    , Field 4 0 "fLeading"      (f!!4) "Lead" (DDeltaT bpForgerLeads)         "Leadership check duration"
-    , Field 4 0 "fForged"       (f!!5) "Forg" (DDeltaT bpForgerForges)        "Leadership to forged"
-    , Field 4 0 "fAnnounced"    (f!!6) "Anno" (DDeltaT bpForgerAnnouncements) "Forged to announced"
-    , Field 4 0 "fSendStart"    (f!!7) "Send" (DDeltaT bpForgerSends)         "Announced to sending"
-    , Field 4 0 "fAdopted"      (f!!8) "Adop" (DDeltaT bpForgerAdoptions)     "Announced to self-adopted"
-    , Field 4 0 "pNoticed"      (p!!0) "Noti" (DDeltaT bpPeerNotices)         "First peer notice"
-    , Field 4 0 "pRequested"    (p!!1) "Requ" (DDeltaT bpPeerRequests)        "Notice to fetch request"
-    , Field 4 0 "pFetched"      (p!!2) "Fetc" (DDeltaT bpPeerFetches)         "Fetch duration"
-    , Field 4 0 "pAnnounced"    (p!!3) "Anno" (DDeltaT bpPeerAnnouncements)   "Fetched to announced"
-    , Field 4 0 "pSendStart"    (p!!4) "Send" (DDeltaT bpPeerSends)           "Announced to sending"
-    , Field 4 0 "pAdopted"      (p!!5) "Adop" (DDeltaT bpPeerAdoptions)       "Announced to adopted"
+    [ Field 4 0 "fStarted"      (f!!0) "Loop" (DDeltaT cdfForgerStarts)        "Started forge loop iteration"
+    , Field 4 0 "fBlkCtx"       (f!!1) "BkCt" (DDeltaT cdfForgerBlkCtx)        "Acquired block context"
+    , Field 4 0 "fLgrState"     (f!!2) "LgSt" (DDeltaT cdfForgerLgrState)      "Acquired ledger state"
+    , Field 4 0 "fLgrView"      (f!!3) "LgVi" (DDeltaT cdfForgerLgrView)       "Acquired ledger view"
+    , Field 4 0 "fLeading"      (f!!4) "Lead" (DDeltaT cdfForgerLeads)         "Leadership check duration"
+    , Field 4 0 "fForged"       (f!!5) "Forg" (DDeltaT cdfForgerForges)        "Leadership to forged"
+    , Field 4 0 "fAnnounced"    (f!!6) "Anno" (DDeltaT cdfForgerAnnouncements) "Forged to announced"
+    , Field 4 0 "fSendStart"    (f!!7) "Send" (DDeltaT cdfForgerSends)         "Announced to sending"
+    , Field 4 0 "fAdopted"      (f!!8) "Adop" (DDeltaT cdfForgerAdoptions)     "Announced to self-adopted"
+    , Field 4 0 "pNoticed"      (p!!0) "Noti" (DDeltaT cdfPeerNotices)         "First peer notice"
+    , Field 4 0 "pRequested"    (p!!1) "Requ" (DDeltaT cdfPeerRequests)        "Notice to fetch request"
+    , Field 4 0 "pFetched"      (p!!2) "Fetc" (DDeltaT cdfPeerFetches)         "Fetch duration"
+    , Field 4 0 "pAnnounced"    (p!!3) "Anno" (DDeltaT cdfPeerAnnouncements)   "Fetched to announced"
+    , Field 4 0 "pSendStart"    (p!!4) "Send" (DDeltaT cdfPeerSends)           "Announced to sending"
+    , Field 4 0 "pAdopted"      (p!!5) "Adop" (DDeltaT cdfPeerAdoptions)       "Announced to adopted"
+    , Field 4 0 "forks"         "das" "forks" (DInt    cdfForks)               "Forks at this block height"
     ] ++
     [ Field 4 0 (renderAdoptionCentile ct)
                                 (r!!i)
@@ -389,7 +431,7 @@ instance RenderCDFs BlockProp p where
                       . flip atMay i . bpPropagation))
             (T.pack $ printf "%.2f adoption" centi)
     | (i, ct@(Centile centi)) <- zip [0::Int ..] adoptionCentiles ] ++
-    [ Field 9 0 "sizes"         "Size"  "bytes" (DInt    bpSizes) ""
+    [ Field 9 0 "sizes"         "Size"  "bytes" (DInt    cdfSizes) ""
     ]
    where
      f = nChunksEachOf 9    5 ",-------------------- Forger event Δt: --------------------."
@@ -427,7 +469,8 @@ instance RenderTimeline BlockEvents where
     , Field 4 0 "pPropag0.8"    (r!!1) "0.8"    (IDeltaT (percSpec 0.8  . bePropagation)) ""
     , Field 4 0 "pPropag0.96"   (r!!2) "0.96"   (IDeltaT (percSpec 0.96 . bePropagation)) ""
     , Field 4 0 "pPropag1.0"    (r!!3) "1.0"    (IDeltaT (snd . cdfRange . bePropagation)) ""
-    , Field 3 0 "valid"         "va-"  "lid"    (IText   (bool "-" "+" . (== 0) . length . beNegAcceptance)) ""
+    , Field 3 0 "valid"         "va-"  "lid"    (IText   (bool "-" "+" . (== 0) . length
+                                                          . filter (not . snd) . beAcceptance)) ""
     , Field 3 0 "valid.observ" "good"  "obsv"   (IInt    (length          . valids)) ""
     , Field 5 0 "errors"        "all"  "errs"   (IInt    (length . beErrors)) ""
     , Field 3 0 "missNotic"     (m!!0) "ntc"    (IInt    (count (bpeIsMissing Notice) . beErrors)) ""
@@ -476,7 +519,7 @@ instance RenderTimeline BlockEvents where
   rtCommentary BlockEvents{..} =
     \case
       BEErrors     -> ("           " <>) . show <$> beErrors
-      BEFilterOuts -> ("           " <>) . show <$> beNegAcceptance
+      BEFilterOuts -> ("           " <>) . show <$> filter (not . snd) beAcceptance
 
 --
 -- * Machine performance report subsetting
@@ -506,30 +549,36 @@ parsePerfSubset =
 instance RenderCDFs MachPerf p where
   rdFields =
     --  Width LeftPad
-    [ Field 4 0 "missRatio"     "Miss"  "ratio" (DFloat             sMissCDF)       "Leadership checks miss ratio"
-    , Field 4 0 "checkΔ"        (d!!0)  "Start" (DDeltaT            sStartedCDF)  "Forge loop tardiness"
-    , Field 4 0 "blkCtΔ"        (d!!1)  "BlkCt" (DDeltaT            sBlkCtxCDF)  "Block context acquisition delay"
-    , Field 4 0 "lgrStΔ"        (d!!2)  "LgrSt" (DDeltaT            sLgrStateCDF)  "Ledger state acquisition delay"
-    , Field 4 0 "lgrViΔ"        (d!!3)  "LgrVi" (DDeltaT            sLgrViewCDF)  "Ledger view acquisition delay"
-    , Field 4 0 "leadΔ"         (d!!4)  "Lead"  (DDeltaT            sLeadingCDF)   "Leadership check duration"
-    , Field 4 0 "forgeΔ"        (d!!5)  "Forge" (DDeltaT            sForgedCDF)  "Leading to block forged"
-    , Field 4 0 "blockGap"      "Block" "gap"   (DWord64            sBlockGapCDF)  "Interblock gap"
-    , Field 5 0 "chainDensity"  "Dens"  "ity"   (DFloat             sDensityCDF)    "Chain density"
-    , Field 3 0 "cpuProcess"    "CPU"   "%"     (DWord64 (rCentiCpu.sResourceCDFs)) "Process CPU usage pct"
-    , Field 3 0 "cpuGC"         "GC"    "%"     (DWord64 (rCentiGC .sResourceCDFs)) "RTS GC CPU usage pct"
-    , Field 3 0 "cpuMutator"    "MUT"   "%"     (DWord64 (rCentiMut.sResourceCDFs)) "RTS Mutator CPU usage pct"
-    , Field 3 0 "gcMajor"       "GC "   "Maj"   (DWord64 (rGcsMajor.sResourceCDFs)) "Major GCs Hz"
-    , Field 3 0 "gcMinor"       "flt "  "Min"   (DWord64 (rGcsMinor.sResourceCDFs)) "Minor GCs Hz"
-    , Field 5 0 "memRSS"        (m!!0)  "RSS"   (DWord64 (rRSS     .sResourceCDFs)) "Kernel RSS MB"
-    , Field 5 0 "rtsHeap"       (m!!1)  "Heap"  (DWord64 (rHeap    .sResourceCDFs)) "RTS heap size MB"
-    , Field 5 0 "rtsLiveBytes"  (m!!2)  "Live"  (DWord64 (rLive    .sResourceCDFs)) "RTS GC live bytes MB"
-    , Field 5 0 "rtsAllocation" "Alloc" "MB"    (DWord64 (rAlloc   .sResourceCDFs)) "RTS alloc rate MB sec"
-    , Field 5 0 "cpuSpanLenAll" (c!!0)  "All"   (DInt              sSpanLensCpuCDF) "CPU 85pct spans"
-    , Field 5 0 "cpuSpanLenEp"  (c!!1)  "Epoch" (DInt         sSpanLensCpuEpochCDF) "CPU spans at Ep boundary"
+    [ Field 4 0 "missRatio"     "Miss"  "ratio" (DFloat             cdfMiss)       "Leadership checks miss ratio"
+    , Field 4 0 "checkΔ"        (d!!0)  "Start" (DDeltaT            cdfStarted)     "Forge loop tardiness"
+    , Field 4 0 "blkCtΔ"        (d!!1)  "BlkCt" (DDeltaT            cdfBlkCtx)      "Block context acquisition delay"
+    , Field 4 0 "lgrStΔ"        (d!!2)  "LgrSt" (DDeltaT            cdfLgrState)    "Ledger cdftate acquisition delay"
+    , Field 4 0 "lgrViΔ"        (d!!3)  "LgrVi" (DDeltaT            cdfLgrView)     "Ledger view acquisition delay"
+    , Field 4 0 "leadΔ"         (d!!4)  "Lead"  (DDeltaT            cdfLeading)     "Leadership check duration"
+    , Field 4 0 "forgeΔ"        (d!!5)  "Forge" (DDeltaT            cdfForged)      "Leading to block forged"
+    , Field 4 0 "blockGap"      "Block" "gap"   (DWord64            cdfBlockGap)    "Interblock gap"
+    , Field 5 0 "NetRdKB"       (n!!0)  ""      (DWord64 (rNetRd   .mpResourceCDFs)) "kB sec"
+    , Field 5 0 "NetWrKB"       (n!!1)  ""      (DWord64 (rNetWr   .mpResourceCDFs)) "kB sec"
+    , Field 5 0 "FsRdKB"        (f!!0)  ""      (DWord64 (rFsRd    .mpResourceCDFs)) "kB sec"
+    , Field 5 0 "FsWrKB"        (f!!1)  ""      (DWord64 (rFsWr    .mpResourceCDFs)) "kB sec"
+    , Field 5 0 "chainDensity"  "Dens"  "ity"   (DFloat             cdfDensity)     "Chain density"
+    , Field 3 0 "cpuProcess"    "CPU"   "%"     (DWord64 (rCentiCpu.mpResourceCDFs)) "Process CPU usage pct"
+    , Field 3 0 "cpuGC"         "GC"    "%"     (DWord64 (rCentiGC .mpResourceCDFs)) "RTS GC CPU usage pct"
+    , Field 3 0 "cpuMutator"    "MUT"   "%"     (DWord64 (rCentiMut.mpResourceCDFs)) "RTS Mutator CPU usage pct"
+    , Field 3 0 "gcMajor"       "GC "   "Maj"   (DWord64 (rGcsMajor.mpResourceCDFs)) "Major GCs Hz"
+    , Field 3 0 "gcMinor"       "flt "  "Min"   (DWord64 (rGcsMinor.mpResourceCDFs)) "Minor GCs Hz"
+    , Field 5 0 "memRSS"        (m!!0)  "RSS"   (DWord64 (rRSS     .mpResourceCDFs)) "Kernel RSS MB"
+    , Field 5 0 "rtsHeap"       (m!!1)  "Heap"  (DWord64 (rHeap    .mpResourceCDFs)) "RTS heap size MB"
+    , Field 5 0 "rtsLiveBytes"  (m!!2)  "Live"  (DWord64 (rLive    .mpResourceCDFs)) "RTS GC live bytes MB"
+    , Field 5 0 "rtsAllocation" "Alloc" "MB"    (DWord64 (rAlloc   .mpResourceCDFs)) "RTS alloc rate MB sec"
+    , Field 5 0 "cpuSpanLenAll" (c!!0)  "All"   (DInt               cdfSpanLensCpu) "CPU 85pct spans"
+    , Field 5 0 "cpuSpanLenEp"  (c!!1)  "Epoch" (DInt          cdfSpanLensCpuEpoch) "CPU spans at Ep boundary"
     ]
    where
      d = nChunksEachOf  6 5 "----------- Δt -----------"
      m = nChunksEachOf  3 6 "Memory usage, MB"
+     n = nChunksEachOf  2 6 "NetIO, kB/s"
+     f = nChunksEachOf  2 6 "FSIO, kB/s"
      c = nChunksEachOf  2 6 "CPU% spans"
 
 instance RenderTimeline (SlotStats NominalDiffTime) where

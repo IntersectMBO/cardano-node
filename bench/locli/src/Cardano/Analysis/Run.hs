@@ -12,7 +12,6 @@ import Cardano.Prelude
 import Control.Monad (fail)
 import Data.Aeson qualified as Aeson
 import Data.Aeson (FromJSON(..), Object, ToJSON(..), withObject, (.:), (.:?))
-import Data.ByteString.Lazy.Char8 qualified as LBS
 import Data.Text qualified as T
 import Data.Time.Clock hiding (secondsToNominalDiffTime)
 import Data.Time.Clock.POSIX
@@ -27,17 +26,17 @@ import Cardano.Util
 data Anchor
   = Anchor
   { aRuns    :: [Text]
-  , aFilters :: [FilterName]
+  , aFilters :: ([FilterName], [ChainFilter])
   , aSlots   :: Maybe (DataDomain SlotNo)
   , aBlocks  :: Maybe (DataDomain BlockNo)
   , aVersion :: Cardano.Analysis.Version.Version
   , aWhen    :: UTCTime
   }
 
-runAnchor :: Run -> UTCTime -> [FilterName] -> Maybe (DataDomain SlotNo) -> Maybe (DataDomain BlockNo) -> Anchor
+runAnchor :: Run -> UTCTime -> ([FilterName], [ChainFilter]) -> Maybe (DataDomain SlotNo) -> Maybe (DataDomain BlockNo) -> Anchor
 runAnchor Run{..} = tagsAnchor [tag metadata]
 
-tagsAnchor :: [Text] -> UTCTime -> [FilterName] -> Maybe (DataDomain SlotNo) -> Maybe (DataDomain BlockNo) -> Anchor
+tagsAnchor :: [Text] -> UTCTime -> ([FilterName], [ChainFilter]) -> Maybe (DataDomain SlotNo) -> Maybe (DataDomain BlockNo) -> Anchor
 tagsAnchor aRuns aWhen aFilters aSlots aBlocks =
   Anchor { aVersion = getVersion, .. }
 
@@ -53,7 +52,7 @@ renderAnchorRuns Anchor{..} = mconcat
 
 renderAnchorFiltersAndDomains :: Anchor -> Text
 renderAnchorFiltersAndDomains a@Anchor{..} = mconcat
-  [ "filters: ", case aFilters of
+  [ "filters: ", case fst aFilters of
                    [] -> "unfiltered"
                    xs -> T.intercalate ", " (unFilterName <$> xs)
   , renderAnchorDomains a]
@@ -66,10 +65,10 @@ renderAnchorDomains Anchor{..} = mconcat $
  where renderDomain :: Text -> (a -> Text) -> DataDomain a -> Text
        renderDomain ty r DataDomain{..} = mconcat
          [ ", ", ty
-         , " range: raw(", r ddRawFirst,      "-", r ddRawLast , ")"
+         , " range: raw(", r ddRawFirst,      "-", r ddRawLast, ", ", show ddRawCount, " total)"
          ,   " filtered("
          , maybe "none" r ddFilteredFirst, "-"
-         , maybe "none" r ddFilteredLast , ")"
+         , maybe "none" r ddFilteredLast,  ", ", show ddFilteredCount, " total)"
          ]
 
 renderAnchorNoRuns :: Anchor -> Text
@@ -130,13 +129,9 @@ instance FromJSON RunPartial where
 
 readRun :: JsonInputFile Genesis -> JsonInputFile RunPartial -> ExceptT AnalysisCmdError IO Run
 readRun shelleyGenesis runmeta = do
-  runPartial <- firstExceptT (RunMetaParseError runmeta . T.pack)
-                       (newExceptT $
-                        Aeson.eitherDecode @RunPartial <$> LBS.readFile (unJsonInputFile runmeta))
+  runPartial <- readJsonData runmeta        (RunMetaParseError runmeta)
   progress "meta"    (Q $ unJsonInputFile runmeta)
-  run        <- firstExceptT (GenesisParseError shelleyGenesis . T.pack)
-                       (newExceptT $
-                        Aeson.eitherDecode @Genesis <$> LBS.readFile (unJsonInputFile shelleyGenesis))
+  run        <- readJsonData shelleyGenesis (GenesisParseError shelleyGenesis)
                 <&> completeRun runPartial
   progress "genesis" (Q $ unJsonInputFile shelleyGenesis)
   progress "run"     (J run)
