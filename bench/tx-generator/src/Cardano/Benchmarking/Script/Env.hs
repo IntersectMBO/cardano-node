@@ -34,6 +34,8 @@ module Cardano.Benchmarking.Script.Env (
         , setProtoParamMode
         , getEnvSocketPath
         , setEnvSocketPath
+        , getEnvThreads
+        , setEnvThreads
         , get
         , set
 ) where
@@ -55,6 +57,7 @@ import           "contra-tracer" Control.Tracer (traceWith)
 import qualified Cardano.Benchmarking.LogTypes as Tracer
 import           Ouroboros.Network.NodeToClient (IOManager)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
+import           Cardano.Benchmarking.GeneratorTx
 import           Cardano.Benchmarking.OuroborosImports(NetworkId,
                          PaymentKey, ShelleyGenesis, SigningKey,
                          StandardShelley)
@@ -70,6 +73,7 @@ data Env = Env { dmap :: DMap Store Identity
                , envKeys :: Map String (SigningKey PaymentKey)
                , envNetworkId :: Maybe NetworkId
                , envSocketPath :: Maybe FilePath
+               , envThreads :: Map String AsyncBenchmarkControl
                }
 
 emptyEnv :: Env
@@ -81,6 +85,7 @@ emptyEnv = Env { dmap = DMap.empty
                , envProtocol = Nothing
                , envNetworkId = Nothing
                , envSocketPath = Nothing
+               , envThreads = Map.empty
                }
 
 type ActionM a = ExceptT Error (RWST IOManager () Env IO) a
@@ -133,6 +138,9 @@ setEnvNetworkId val = modifyEnv (\e -> e { envNetworkId = pure val })
 setEnvSocketPath :: FilePath -> ActionM ()
 setEnvSocketPath val = modifyEnv (\e -> e { envSocketPath = pure val })
 
+setEnvThreads :: String -> AsyncBenchmarkControl -> ActionM ()
+setEnvThreads key val = modifyEnv (\e -> e { envThreads = Map.insert key val (envThreads e) })
+
 get :: Store v -> ActionM v
 get key = do
   lift (RWS.gets $ DMap.lookup key . dmap) >>= \case
@@ -172,6 +180,9 @@ getEnvProtocol = getEnvVal envProtocol "Protocol"
 
 getEnvSocketPath :: ActionM FilePath
 getEnvSocketPath = getEnvVal envSocketPath "SocketPath"
+
+getEnvThreads :: String -> ActionM AsyncBenchmarkControl
+getEnvThreads = getEnvMap envThreads
 
 traceBenchTxSubmit :: (forall txId. x -> Tracer.TraceBenchTxSubmit txId) -> x -> ActionM ()
 traceBenchTxSubmit tag msg = do

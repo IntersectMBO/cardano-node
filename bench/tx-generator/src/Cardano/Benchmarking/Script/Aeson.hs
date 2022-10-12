@@ -149,11 +149,9 @@ parseScriptFileAeson = parseJSONFile fromJSON
 readProtocolParametersFile :: FilePath -> IO ProtocolParameters
 readProtocolParametersFile = parseJSONFile fromJSON
 
-instance ToJSON ThreadName      where toJSON (ThreadName a) = toJSON a
 instance ToJSON WalletName      where toJSON (WalletName a) = toJSON a
 instance ToJSON SigningKeyFile  where toJSON (SigningKeyFile a) = toJSON a
 
-instance FromJSON ThreadName      where parseJSON a = ThreadName <$> parseJSON a
 instance FromJSON WalletName      where parseJSON a = WalletName <$> parseJSON a
 instance FromJSON SigningKeyFile  where parseJSON a = SigningKeyFile <$> parseJSON a
 

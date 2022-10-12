@@ -45,9 +45,9 @@ data Action where
   ReadSigningKey     :: !String -> !SigningKeyFile -> Action
   DefineSigningKey   :: !String -> !TextEnvelope -> Action
   AddFund            :: !AnyCardanoEra -> !WalletName -> !TxIn -> !Lovelace -> !String -> Action
-  WaitBenchmark      :: !ThreadName -> Action
+  WaitBenchmark      :: !String -> Action
   Submit             :: !AnyCardanoEra -> !SubmitMode -> !TxGenTxParams -> !Generator -> Action
-  CancelBenchmark    :: !ThreadName -> Action
+  CancelBenchmark    :: !String -> Action
   Reserved           :: [String] -> Action
   WaitForEra         :: !AnyCardanoEra -> Action
   SetProtocolParameters :: ProtocolParametersSource -> Action
@@ -79,7 +79,7 @@ type TargetNodes = NonEmpty NodeIPv4Address
 
 data SubmitMode where
   LocalSocket :: SubmitMode
-  Benchmark   :: !TargetNodes -> !ThreadName -> !TPSRate -> !NumberOfTxs -> SubmitMode
+  Benchmark   :: !TargetNodes -> !String -> !TPSRate -> !NumberOfTxs -> SubmitMode
   DumpToFile  :: !FilePath -> SubmitMode
   DiscardTX   :: SubmitMode
   NodeToNode  :: NonEmpty NodeIPv4Address -> SubmitMode --deprecated

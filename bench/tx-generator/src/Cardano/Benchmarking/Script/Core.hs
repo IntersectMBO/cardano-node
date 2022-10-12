@@ -155,12 +155,12 @@ getConnectClient = do
                        nullTracer -- (btSubmission2_ tracers)
                        (protocolToCodecConfig protocol)
                        networkMagic
-waitBenchmark :: ThreadName -> ActionM ()
-waitBenchmark n = get n >>= waitBenchmarkCore
+waitBenchmark :: String -> ActionM ()
+waitBenchmark n = getEnvThreads n >>= waitBenchmarkCore
 
-cancelBenchmark :: ThreadName -> ActionM ()
+cancelBenchmark :: String -> ActionM ()
 cancelBenchmark n = do
-  ctl@(_, _ , _ , shutdownAction) <- get n
+  ctl@(_, _ , _ , shutdownAction) <- getEnvThreads n
   liftIO shutdownAction
   waitBenchmarkCore ctl
 
@@ -267,12 +267,12 @@ submitInEra submitMode generator txParams era = do
 benchmarkTxStream :: forall era. IsShelleyBasedEra era
   => TxStream IO era
   -> TargetNodes
-  -> ThreadName
+  -> String
   -> TPSRate
   -> NumberOfTxs
   -> AsType era
   -> ActionM ()
-benchmarkTxStream txStream targetNodes (ThreadName threadName) tps txCount era = do
+benchmarkTxStream txStream targetNodes threadName tps txCount era = do
   tracers  <- getBenchTracers
   connectClient <- getConnectClient
   let
@@ -282,7 +282,7 @@ benchmarkTxStream txStream targetNodes (ThreadName threadName) tps txCount era =
   ret <- liftIO $ runExceptT $ coreCall era
   case ret of
     Left err -> liftTxGenError err
-    Right ctl -> set (ThreadName threadName) ctl
+    Right ctl -> setEnvThreads threadName ctl
 
 evalGenerator :: forall era. IsShelleyBasedEra era => Generator -> TxGenTxParams -> AsType era -> ActionM (TxStream IO era)
 evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do

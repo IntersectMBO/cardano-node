@@ -190,11 +190,11 @@ benchmarkingPhase wallet collateralWallet = do
     payMode = PayToAddr keyNameBenchmarkDone doneWallet
     submitMode = if debugMode
         then LocalSocket
-        else Benchmark targetNodes (ThreadName "tx-submit-benchmark") tps txCount
+        else Benchmark targetNodes "tx-submit-benchmark" tps txCount
     generator = Take txCount $ Cycle $ NtoM wallet payMode inputs outputs (Just $ txParamAddTxSize txParams) collateralWallet
   emit $ Submit era submitMode txParams generator
   unless debugMode $ do
-    emit $ WaitBenchmark $ ThreadName "tx-submit-benchmark"
+    emit $ WaitBenchmark "tx-submit-benchmark"
   return doneWallet
 
 data Fees = Fees {
