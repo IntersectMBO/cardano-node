@@ -275,7 +275,7 @@ timelineFromLogObjects _ (JsonLogfile f, []) =
   Left $ "timelineFromLogObjects:  zero logobjects from " <> pack f
 timelineFromLogObjects run@Run{genesis} (f, xs) =
   Right . (f,)
-  $ foldl' (timelineStep run)
+  $ foldl' (timelineStep run f)
            zeroTimelineAccum
            xs
   & (aRunScalars &&& reverse . aSlotStats)
@@ -334,8 +334,8 @@ timelineFromLogObjects run@Run{genesis} (f, xs) =
      , slBlockGap = 0
      }
 
-timelineStep :: Run -> TimelineAccum -> LogObject -> TimelineAccum
-timelineStep Run{genesis} a@TimelineAccum{aSlotStats=cur:_, ..} lo =
+timelineStep :: Run -> JsonLogfile -> TimelineAccum -> LogObject -> TimelineAccum
+timelineStep Run{genesis} f a@TimelineAccum{aSlotStats=cur:_, ..} lo =
   let continue :: SlotNo -> UTCTime -> TimelineAccum
       continue slot loAt =
         if slot < slSlot cur then a
@@ -360,6 +360,7 @@ timelineStep Run{genesis} a@TimelineAccum{aSlotStats=cur:_, ..} lo =
              [ desc, " for a future slot=", show slot
              , " cur=", show (slSlot cur)
              , " host=", unpack . toText $ unHost host
+             , " file=", unJsonLogfile f
              ]
         else forExistingSlot slot a x
   in if loAt lo < systemStart genesis then a else
@@ -486,7 +487,7 @@ timelineStep Run{genesis} a@TimelineAccum{aSlotStats=cur:_, ..} lo =
           , slForged      = SJust now
           }
   _ -> a
-timelineStep _ a _ = a
+timelineStep _ _ a _ = a
 
 lastBlockSlot :: BlockNo -> TimelineAccum -> SlotNo
 lastBlockSlot new TimelineAccum{aSlotStats=SlotStats{..}:_,..} =
