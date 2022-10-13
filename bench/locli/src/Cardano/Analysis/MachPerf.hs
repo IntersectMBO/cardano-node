@@ -273,13 +273,13 @@ timelineFromLogObjects :: Run -> (JsonLogfile, [LogObject])
                        -> Either Text (JsonLogfile, (RunScalars, [SlotStats UTCTime]))
 timelineFromLogObjects _ (JsonLogfile f, []) =
   Left $ "timelineFromLogObjects:  zero logobjects from " <> pack f
-timelineFromLogObjects run@Run{genesis} (f, xs) =
+timelineFromLogObjects run@Run{genesis} (f, xs') =
   Right . (f,)
-  $ foldl' (timelineStep run f)
-           zeroTimelineAccum
-           xs
+  $ foldl' (timelineStep run f) zeroTimelineAccum xs
   & (aRunScalars &&& reverse . aSlotStats)
  where
+   xs = filter ((/= "DecodeError") . loKind) xs'
+
    firstRelevantLogObjectTime :: UTCTime
    firstRelevantLogObjectTime = loAt (head xs) `max` systemStart genesis
    firstLogObjectHost :: Host
