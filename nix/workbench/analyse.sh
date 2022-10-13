@@ -305,7 +305,7 @@ case "$op" in
                           do echo --run-metafile    ${adir}/../meta.json \
                                   --shelley-genesis ${adir}/../genesis-shelley.json
                           done))
-        local run=$(for dir in ${dirs[*]}; do basename $dir; done | sort -r | head -n1 | cut -d. -f1-2)-multirun
+        local run=$(for dir in ${dirs[*]}; do basename $dir; done | sort -r | head -n1 | cut -d. -f1-2)_multirun
         local adir=$(run get-rundir)/$run
 
         mkdir -p "$adir"
