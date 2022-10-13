@@ -85,11 +85,19 @@ colorise_colors=(
     red green blue yellow white cyan
 )
 colorise() {
+    ## Disable tracing locally:
+    if test -n "echo $- | tr -cd x"
+    then set +x
+         local exit='set -x'
+    else local exit=
+    fi
+
     local i
     for ((i=0; $#!=0; i++))
     do echo -n "$(with_color ${colorise_colors[$((i % 6))]} $1) "
        shift
     done
+    eval $exit
 }
 
 newline() {

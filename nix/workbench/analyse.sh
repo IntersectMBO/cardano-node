@@ -50,10 +50,10 @@ local dump_logobjects= dump_machviews= dump_chain= dump_slots_raw= dump_slots=
 local multi_aspect='--inter-cdf' refresh=
 while test $# -gt 0
 do case "$1" in
-       --filters | -f )           sargs+=($1 $2); analysis_set_filters "unitary,$2"; shift;;
-       --filter-expr | -fex )     sargs+=($1 $2); filter_exprs+=($2); shift;;
-       --filter-block-expr | -fbex ) sargs+=($1 $2); filter_exprs+=('{ "tag":"CBlock" , "contents": '"$2"'}'); shift;;
-       --filter-slot-expr | -fsex )  sargs+=($1 $2); filter_exprs+=('{ "tag":"CSlot" , "contents": '"$2"'}'); shift;;
+       --filters | -f )           sargs+=($1 "$2"); analysis_set_filters "unitary,$2"; shift;;
+       --filter-expr | -fex )     sargs+=($1 "$2"); filter_exprs+=($2); shift;;
+       --filter-block-expr | -fbex ) sargs+=($1 "$2"); filter_exprs+=('{ "tag":"CBlock" , "contents": '"$2"'}'); shift;;
+       --filter-slot-expr | -fsex )  sargs+=($1 "$2"); filter_exprs+=('{ "tag":"CSlot" , "contents": '"$2"'}'); shift;;
        --no-filters | --unfiltered | -u )
                                   sargs+=($1);    analysis_set_filters ""; unfiltered='true';;
        --filter-reasons  | -fr )  sargs+=($1);    filter_reasons='true';;
@@ -66,7 +66,7 @@ do case "$1" in
        --multi-overall )          sargs+=($1);    multi_aspect='--overall';;
        --multi-inter-cdf )        sargs+=($1);    multi_aspect='--inter-cdf';;
        --refresh | -re | -r )     sargs+=($1);    refresh='true';;
-       --perf-omit-host )         sargs+=($1 $2); perf_omit_hosts+=($2); shift;;
+       --perf-omit-host )         sargs+=($1 "$2"); perf_omit_hosts+=($2); shift;;
        --trace )                  sargs+=($1);    set -x;;
        * ) break;; esac; shift; done
 
@@ -88,24 +88,24 @@ case "$op" in
     compare | cmp )
         local baseline=$1; shift
         progress "analysis" "$(white comparing) $(colorise $*) $(plain against baseline) $(white $baseline)"
-        analyse ${sargs[*]} multi-call "$baseline $*" 'compare'
+        analyse "${sargs[@]}" multi-call "$baseline $*" 'compare'
         ;;
 
     recompare | recmp )
         local baseline=$1; shift
         progress "analysis" "$(white regenerating comparison) of $(colorise $*) $(plain against baseline) $(white $baseline)"
-        analyse ${sargs[*]} multi-call "$baseline $*" 'update'
+        analyse "${sargs[@]}" multi-call "$baseline $*" 'update'
         ;;
 
     multi-run | multi )
         progress "analysis" "$(white multi-summary) on runs: $(colorise $*)"
 
-        analyse ${sargs[*]} full "$*"
-        analyse ${sargs[*]} multi-run-summary "$*"
+        analyse "${sargs[@]}" full "$*"
+        analyse "${sargs[@]}" multi-run-summary "$*"
         ;;
 
     multi-run-pattern | multi-pattern | multipat | mp )
-        analyse ${sargs[*]} multi-run $(run list-pattern $1)
+        analyse "${sargs[@]}" multi-run $(run list-pattern $1)
         ;;
 
     multi-run-summary | multi-summary | summary | sum )
@@ -127,7 +127,7 @@ case "$op" in
             multi-propagation-full
         )
         progress "analysis" "$(white multi-summary), calling script: $(colorise ${script[*]})"
-        analyse ${sargs[*]} multi-call "$*" ${script[*]}
+        analyse "${sargs[@]}" multi-call "$*" ${script[*]}
         ;;
 
     full | standard | std )
@@ -161,7 +161,7 @@ case "$op" in
             clusterperf-full
          )
         progress "analysis" "$(white full), calling script:  $(colorise ${script[*]})"
-        analyse ${sargs[*]} map "call ${script[*]}" "$@"
+        analyse "${sargs[@]}" map "call ${script[*]}" "$@"
         ;;
 
     performance | perf )
@@ -184,7 +184,7 @@ case "$op" in
             clusterperf-full
         )
         progress "analysis" "$(white performance), calling script:  $(colorise ${script[*]})"
-        analyse ${sargs[*]} map "call ${script[*]}" "$@"
+        analyse "${sargs[@]}" map "call ${script[*]}" "$@"
         ;;
 
     performance-single-host | perf-single )
@@ -203,7 +203,7 @@ case "$op" in
             render-machperf
         )
         progress "analysis" "$(with_color white performance), calling script:  $(colorise ${script[*]})"
-        analyse ${sargs[*]} map "call --host $host ${script[*]}" "$@"
+        analyse "${sargs[@]}" map "call --host $host ${script[*]}" "$@"
         ;;
 
     map )
@@ -219,17 +219,24 @@ case "$op" in
         ## This is magical and stupid, but oh well, it's the cost of abstraction:
         ##  1. We are passing all '--long-option VAL' pairs to the mapped preop
         ##  2. We are passing all '-opt-flag' flags to the mapped preop
-        for ((i=1; i<=${#op_split[*]}; i++))
-        do local arg=${op_split[$i]} argnext=${op_split[$((i+1))]}
+        local nops=${#op_split[*]}
+        for ((i=1; i<=$nops; i++))
+        do local arg=${op_split[$i]}
+           if test $i -lt $((nops - 1))
+           then argnext=${op_split[$((i+1))]}
+           else argnext=
+           fi
            case "$arg" in
-               --* ) op_args+=($arg $argnext); i=$((i+1));;
+               --* ) test $i -lt $nops || \
+                           fail "No value passed for option:  $arg"
+                     op_args+=($arg "$argnext"); i=$((i+1));;
                -*  ) op_args+=($arg);;
                * ) break;; esac; done
-        local args=${op_split[*]:$i}
-        progress "analyse" "mapping op $(with_color yellow $op ${op_args[*]}) $(with_color cyan $args) over runs:  $(with_color white ${runs[*]})"
+        local args=${op_split[@]:$i}
+        progress "analyse" "mapping op $(with_color yellow $op "${op_args[@]}") $(with_color cyan $args) over runs:  $(with_color white ${runs[*]})"
         for r in ${runs[*]}
-        do analyse ${sargs[*]} prepare $r
-           analyse ${sargs[*]} $op ${op_args[*]} $r ${args[*]}
+        do analyse "${sargs[@]}" prepare $r
+           analyse "${sargs[@]}" $op "${op_args[@]}" $r "${args[@]}"
         done
         ;;
 
@@ -261,36 +268,38 @@ case "$op" in
                                      ' "$dir"/profile.json --raw-output)
              analysis_set_filters "$filter_names"
              filter_exprs+=($(jq '(.analysis.filter_exprs // [])
-                                  | map(tojson)
-                                  | join(",")
-                                  ' "$dir"/profile.json --raw-output))
+                                   | map(tojson)
+                                   | join(",")
+                                   ' "$dir"/profile.json --raw-output))
         fi
-        progress "analysis" "filters exprs: $(yellow ${filter_exprs[*]})"
-        filters+=(${filter_exprs[*]/#/--filter-expr })
+        progress "analysis" "filters exprs: $(yellow "${filter_exprs[@]}")"
+        local filter_exprs_q=("${filter_exprs[@]@Q}")
+        filters+=("${filter_exprs_q[@]/#/--filter-expr }")
 
         local v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 va vb vc vd ve vf vg vh vi vj vk vl vm vn vo
-        v0=("$@")
-        v1=(${v0[*]/#logs/                 'unlog' --host-from-log-filename ${logfiles[*]/#/--log }})
-        v2=(${v1[*]/#context/              'meta-genesis' --run-metafile    "$dir"/meta.json
-                                                          --shelley-genesis "$dir"/genesis-shelley.json })
-        v5=(${v2[*]/#rebuild-chain/        'rebuild-chain'                  ${filters[*]}})
-        v6=(${v5[*]/#dump-chain/           'dump-chain'            --chain "$adir"/chain.json})
-        v7=(${v6[*]/#chain-timeline/       'timeline-chain'     --timeline "$adir"/chain.txt ${filter_reasons:+--filter-reasons} ${chain_errors:+--chain-errors}})
-        v8=(${v7[*]/#collect-slots/        'collect-slots'           ${minus_logfiles[*]/#/--ignore-log }})
-        v9=(${v8[*]/#filter-slots/         'filter-slots'                   ${filters[*]}})
-        va=(${v9[*]/#propagation-json/     'render-propagation'   --json "$adir"/blockprop.json     --full})
-        vb=(${va[*]/#propagation-org/      'render-propagation'    --org "$adir"/blockprop.org      --full})
-        vc=(${vb[*]/#propagation-forger/   'render-propagation' --report "$adir"/blockprop.forger.org --forger})
-        vd=(${vc[*]/#propagation-peers/    'render-propagation' --report "$adir"/blockprop.peers.org --peers })
-        ve=(${vd[*]/#propagation-endtoend/ 'render-propagation' --report "$adir"/blockprop.endtoend.org --end-to-end})
-        vf=(${ve[*]/#propagation-gnuplot/  'render-propagation' --gnuplot "$adir"/%s.cdf            --full})
-        vg=(${vf[*]/#propagation-full/     'render-propagation' --pretty "$adir"/blockprop-full.txt --full})
-        vh=(${vg[*]/#clusterperf-json/     'render-clusterperf'   --json "$adir"/clusterperf.json --full })
-        vi=(${vh[*]/#clusterperf-org/      'render-clusterperf'    --org "$adir"/clusterperf.org --full })
-        vj=(${vi[*]/#clusterperf-report/   'render-clusterperf' --report "$adir"/clusterperf.report.org --summary })
-        vk=(${vj[*]/#clusterperf-gnuplot/  'render-clusterperf' --gnuplot "$adir"/%s.cdf --full })
-        vl=(${vk[*]/#clusterperf-full/     'render-clusterperf' --pretty "$adir"/clusterperf-full.txt --full })
-        local ops_final=(${vl[*]})
+        v0=( $* )
+        v1=("${v0[@]/#logs/                 'unlog' --host-from-log-filename ${logfiles[*]/#/--log }  }")
+        v2=("${v1[@]/#context/              'meta-genesis' --run-metafile    \"$dir\"/meta.json
+                                                         --shelley-genesis \"$dir\"/genesis-shelley.json }")
+        v5=("${v2[@]/#rebuild-chain/        'rebuild-chain'                  \"${filters[@]}\"}")
+        v6=("${v5[@]/#dump-chain/           'dump-chain'            --chain \"$adir\"/chain.json}")
+        v7=("${v6[@]/#chain-timeline/       'timeline-chain'     --timeline \"$adir\"/chain.txt ${filter_reasons:+--filter-reasons} ${chain_errors:+--chain-errors}}")
+        v8=("${v7[@]/#collect-slots/        'collect-slots'           ${minus_logfiles[*]/#/--ignore-log }}")
+        v9=("${v8[@]/#filter-slots/         'filter-slots'                  \"${filters[@]}\"}")
+        va=("${v9[@]/#propagation-json/     'render-propagation'   --json \"$adir\"/blockprop.json     --full}")
+        vb=("${va[@]/#propagation-org/      'render-propagation'    --org \"$adir\"/blockprop.org      --full}")
+        vc=("${vb[@]/#propagation-forger/   'render-propagation' --report \"$adir\"/blockprop.forger.org --forger}")
+        vd=("${vc[@]/#propagation-peers/    'render-propagation' --report \"$adir\"/blockprop.peers.org --peers }")
+        ve=("${vd[@]/#propagation-endtoend/ 'render-propagation' --report \"$adir\"/blockprop.endtoend.org --end-to-end}")
+        vf=("${ve[@]/#propagation-gnuplot/  'render-propagation' --gnuplot \"$adir\"/%s.cdf            --full}")
+        vg=("${vf[@]/#propagation-full/     'render-propagation' --pretty \"$adir\"/blockprop-full.txt --full}")
+        vh=("${vg[@]/#clusterperf-json/     'render-clusterperf'   --json \"$adir\"/clusterperf.json --full }")
+        vi=("${vh[@]/#clusterperf-org/      'render-clusterperf'    --org \"$adir\"/clusterperf.org --full }")
+        vj=("${vi[@]/#clusterperf-report/   'render-clusterperf' --report \"$adir\"/clusterperf.report.org --summary }")
+        vk=("${vj[@]/#clusterperf-gnuplot/  'render-clusterperf' --gnuplot \"$adir\"/%s.cdf --full }")
+        vl=("${vk[@]/#clusterperf-full/     'render-clusterperf' --pretty \"$adir\"/clusterperf-full.txt --full }")
+        local ops_final=() vexp=
+        for v in "${vl[@]}"; do vexp=$(echo $v | xargs echo); eval ops_final+=($vexp); done
 
         progress "analysis | locli" "$(with_color reset ${locli_rts_args[@]}) $(colorise "${ops_final[@]}")"
         time locli "${locli_rts_args[@]}" "${ops_final[@]}"
