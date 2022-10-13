@@ -392,6 +392,19 @@ instance Eq (AddressInEra era) where
   (==) (AddressInEra ShelleyAddressInEra{} _)
        (AddressInEra ByronAddressInAnyEra _) = False
 
+instance Ord (AddressInEra era) where
+  compare (AddressInEra ByronAddressInAnyEra addr1)
+          (AddressInEra ByronAddressInAnyEra addr2) = compare addr1 addr2
+
+  compare (AddressInEra ShelleyAddressInEra{} addr1)
+          (AddressInEra ShelleyAddressInEra{} addr2) = compare addr1 addr2
+
+  compare (AddressInEra ByronAddressInAnyEra _)
+          (AddressInEra ShelleyAddressInEra{} _) = LT
+
+  compare (AddressInEra ShelleyAddressInEra{} _)
+          (AddressInEra ByronAddressInAnyEra _) = GT
+
 deriving instance Show (AddressInEra era)
 
 data AddressTypeInEra addrtype era where
