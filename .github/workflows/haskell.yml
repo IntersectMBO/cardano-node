@@ -131,6 +131,7 @@ jobs:
       if: runner.os == 'macOS'
       run: |
         brew install libsodium
+        brew install pkg-config
 
     - name: "MAC: Install build environment (for secp256k1)"
       if: runner.os == 'macOS'
