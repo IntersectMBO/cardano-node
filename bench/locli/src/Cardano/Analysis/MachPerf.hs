@@ -497,14 +497,21 @@ lastBlockSlot new TimelineAccum{aSlotStats=SlotStats{..}:_,..} =
 
 patchSlotGap :: Genesis -> SlotNo -> TimelineAccum -> TimelineAccum
 patchSlotGap genesis curSlot a@TimelineAccum{aSlotStats=last:_, ..} =
-  a & go (unSlotNo $ curSlot - gapStartSlot) gapStartSlot
+  a & if gapLen < 1000
+      then go gapLen gapStartSlot
+      else error $ mconcat
+           [ "patchSlotGap: gap too large: ", show gapLen, ", "
+           , "curSlot=", show curSlot, ", "
+           , "gapStartSlot=", show gapStartSlot, ", "
+           ]
  where
    gapStartSlot = slSlot last + 1
+   gapLen = unSlotNo $ curSlot - gapStartSlot
 
    go :: Word64 -> SlotNo -> TimelineAccum -> TimelineAccum
    go 0      _         acc = acc
-   go gapLen patchSlot acc =
-     go (gapLen - 1) (patchSlot + 1) (acc & addGapSlot patchSlot)
+   go remainingGap patchSlot acc =
+     go (remainingGap - 1) (patchSlot + 1) (acc & addGapSlot patchSlot)
 
    addGapSlot :: SlotNo -> TimelineAccum -> TimelineAccum
    addGapSlot slot acc =
