@@ -52,6 +52,7 @@ EOF
 }
 
 usage() {
+    set +x
     __usage "$@"
     exit 1
 }

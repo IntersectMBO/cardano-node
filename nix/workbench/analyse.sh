@@ -52,6 +52,8 @@ while test $# -gt 0
 do case "$1" in
        --filters | -f )           sargs+=($1 $2); analysis_set_filters "unitary,$2"; shift;;
        --filter-expr | -fex )     sargs+=($1 $2); filter_exprs+=($2); shift;;
+       --filter-block-expr | -fbex ) sargs+=($1 $2); filter_exprs+=('{ "tag":"CBlock" , "contents": '"$2"'}'); shift;;
+       --filter-slot-expr | -fsex )  sargs+=($1 $2); filter_exprs+=('{ "tag":"CSlot" , "contents": '"$2"'}'); shift;;
        --no-filters | --unfiltered | -u )
                                   sargs+=($1);    analysis_set_filters ""; unfiltered='true';;
        --filter-reasons  | -fr )  sargs+=($1);    filter_reasons='true';;
@@ -65,6 +67,7 @@ do case "$1" in
        --multi-inter-cdf )        sargs+=($1);    multi_aspect='--inter-cdf';;
        --refresh | -re | -r )     sargs+=($1);    refresh='true';;
        --perf-omit-host )         sargs+=($1 $2); perf_omit_hosts+=($2); shift;;
+       --trace )                  sargs+=($1);    set -x;;
        * ) break;; esac; shift; done
 
 if curl --connect-timeout 0.5 http://169.254.169.254/latest/meta-data >/dev/null 2>&1
@@ -381,7 +384,8 @@ case "$op" in
 
         wait;;
 
-    * ) usage_analyse;; esac
+    * ) progress "analyse" "unexpected 'analyse' subop:  $(red $op)"
+        usage_analyse;; esac
 }
 
 num_jobs="\j"
