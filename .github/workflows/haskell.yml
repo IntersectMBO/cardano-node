@@ -150,13 +150,13 @@ jobs:
 
     - name: "List all pkg-config packages"
       run: |
-        echo "=== Package list ==="
-        pkg-config --list-all
-
         if [ "${{ runner.os }}" == "macOS" ]; then
           echo "=== Not printing every package detail in MacOS"
           # due to the location of the installed libraries this fails on MacOS with stuff not related to us
         else
+          echo "=== Package list ==="
+          pkg-config --list-all
+
           echo "=== Package details ==="
           for x in $(pkg-config --list-all | cut -d ' ' -f 1); do
             echo "# $x"
