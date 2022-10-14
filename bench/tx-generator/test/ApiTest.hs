@@ -5,12 +5,16 @@
 
 module Main (main) where
 
+import           Control.Monad (when)
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
 import           Data.Aeson (FromJSON, eitherDecodeFileStrict')
 import qualified Data.ByteString.Lazy.Char8 as BSL (putStrLn)
 import           Options.Applicative as Opt
-import           System.Exit (die)
+import           Options.Applicative.Common as Opt (runParserInfo)
+
+import           System.Environment (getArgs)
+import           System.Exit (die, exitSuccess)
 import           System.FilePath (isRelative, (</>))
 
 import           Cardano.Api
@@ -38,16 +42,21 @@ data CommandLine = CommandLine {
 main :: IO ()
 main
   = do
+    args <- getArgs
+    when (null args) $ do
+        putStrLn "--> no command line arguments provided -- skipping test"
+        -- Manually create the helptext, since optparse-applicative emits an exitFailure.
+        -- At this stage, we simply want to skip this test if there's lack of test data
+        -- such as genesis / node config .json
+        let
+            msg = case Opt.execParserPure Opt.defaultPrefs infoCommandLine [] of
+                Opt.Failure f   -> fst $ Opt.renderFailure f "tx-generator-apitest"
+                _               -> ""
+        putStrLn msg
+        exitSuccess
+
     CommandLine{..} <- parseCommandLine
     let pathModifier p = if isRelative p then runPath </> p else p
-
-    {-
-    let script = testScript "/dev/zero" DiscardTX
-    putStrLn "--- JSON serialisation ----------------"
-    BSL.putStrLn $ prettyPrint script
-    putStrLn "--- YAML serialisation ----------------"
-    BSL.putStrLn $ prettyPrintYaml script
-    -}
 
     setup  <- runExceptT $ do
       nixService :: NixServiceOptions <-
@@ -71,8 +80,9 @@ main
       pure (nixService, nc, genesis, sigKey)
 
     case setup of
-      Right (_nixService, _nc, _genesis, _sigKey) ->
+      Right (_nixService, _nc, _genesis, _sigKey) -> do
         print $ checkFund _genesis _sigKey
+        exitSuccess
       err -> die (show err)
 
 checkFund ::
@@ -80,12 +90,6 @@ checkFund ::
   -> SigningKey PaymentKey
   -> Maybe (AddressInEra BabbageEra, Lovelace)
 checkFund = genesisInitialFundForKey Mainnet
-
-{-
-decodeFileStrict' :: FromJSON a => FilePath -> IO a
-decodeFileStrict' f
-  = eitherDecodeFileStrict' f >>= either die pure
--}
 
 readFileJson :: FromJSON a => FilePath -> ExceptT TxGenError IO a
 readFileJson f = handleIOExceptT (TxGenError . show) (eitherDecodeFileStrict' f) >>= firstExceptT TxGenError . hoistEither
@@ -96,6 +100,10 @@ parseCommandLine
   where
     p     = Opt.prefs Opt.showHelpOnEmpty
     opts  = Opt.info parserCommandLine mempty
+
+infoCommandLine :: ParserInfo CommandLine
+infoCommandLine
+  = Opt.info parserCommandLine Opt.fullDesc
 
 parserCommandLine :: Parser CommandLine
 parserCommandLine
@@ -115,5 +123,3 @@ parserCommandLine
             <> help "The Nix service definition JSON file"
             <> completer (bashCompleter "file")
         )
-
-
