@@ -67,7 +67,8 @@ import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
 newtype Namespace a = Namespace {unNS :: [Text]}
 
 instance Show (Namespace a) where
-  show (Namespace ns) = unpack $ intercalate (singleton '.') ns
+  show (Namespace []) =  "[]"
+  show (Namespace ns) =  unpack $ intercalate (singleton '.') ns
 
 -- | The Trace carries the underlying tracer Tracer from the contra-tracer package.
 --   It adds a 'LoggingContext' and maybe a 'TraceControl' to every message.

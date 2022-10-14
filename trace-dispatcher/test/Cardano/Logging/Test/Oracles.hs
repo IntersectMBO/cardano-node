@@ -24,8 +24,8 @@ oracleMessages conf ScriptRes {..} =
     oracleMessage :: ScriptedMessage -> Bool
     oracleMessage (ScriptedMessage _t msg) =
       let ns = namespaceFor msg
-          filterSeverity = getSeverity conf (unNS ns)
-          backends = getBackends conf (unNS ns)
+          filterSeverity = getSeverity conf ("Test" : unNS ns)
+          backends = getBackends conf ("Test" : unNS ns)
           inStdout = hasStdoutBackend backends
                       && fromEnum (severityFor ns) >= fromEnum filterSeverity
           isCorrectStdout = includedExactlyOnce msg srStdoutRes == inStdout
