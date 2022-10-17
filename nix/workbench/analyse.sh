@@ -47,7 +47,9 @@ EOF
 analyse() {
 local filters=() filter_exprs=() filter_reasons= chain_errors= aws= sargs=() unfiltered= perf_omit_hosts=()
 local dump_logobjects= dump_machviews= dump_chain= dump_slots_raw= dump_slots=
-local multi_aspect='--inter-cdf' refresh=
+local multi_aspect='--inter-cdf' refresh= rtsmode=
+
+progress "analyse" "args:  $(yellow $*)"
 while test $# -gt 0
 do case "$1" in
        --filters | -f )           sargs+=($1 "$2"); analysis_set_filters "unitary,$2"; shift;;
@@ -56,30 +58,37 @@ do case "$1" in
        --filter-slot-expr | -fsex )  sargs+=($1 "$2"); filter_exprs+=('{ "tag":"CSlot" , "contents": '"$2"'}'); shift;;
        --no-filters | --unfiltered | -u )
                                   sargs+=($1);    analysis_set_filters ""; unfiltered='true';;
-       --filter-reasons  | -fr )  sargs+=($1);    filter_reasons='true';;
-       --chain-errors    | -er )  sargs+=($1);    chain_errors='true';;
-       --dump-logobjects | -lo )  sargs+=($1);    dump_logobjects='true';;
-       --dump-machviews  | -mw )  sargs+=($1);    dump_machviews='true';;
-       --dump-chain      | -c )   sargs+=($1);    dump_chain='true';;
-       --dump-slots-raw  | -sr )  sargs+=($1);    dump_slots_raw='true';;
-       --dump-slots      | -s )   sargs+=($1);    dump_slots='true';;
-       --multi-overall )          sargs+=($1);    multi_aspect='--overall';;
-       --multi-inter-cdf )        sargs+=($1);    multi_aspect='--inter-cdf';;
-       --refresh | -re | -r )     sargs+=($1);    refresh='true';;
-       --perf-omit-host )         sargs+=($1 "$2"); perf_omit_hosts+=($2); shift;;
-       --trace )                  sargs+=($1);    set -x;;
+       --filter-reasons  | -fr )      sargs+=($1);    filter_reasons='true';;
+       --chain-errors    | -er )      sargs+=($1);    chain_errors='true';;
+       --dump-logobjects | -lo )      sargs+=($1);    dump_logobjects='true';;
+       --dump-machviews  | -mw )      sargs+=($1);    dump_machviews='true';;
+       --dump-chain      | -c )       sargs+=($1);    dump_chain='true';;
+       --dump-slots-raw  | -sr )      sargs+=($1);    dump_slots_raw='true';;
+       --dump-slots      | -s )       sargs+=($1);    dump_slots='true';;
+       --multi-overall )              sargs+=($1);    multi_aspect='--overall';;
+       --multi-inter-cdf )            sargs+=($1);    multi_aspect='--inter-cdf';;
+       --refresh | -re | -r )         sargs+=($1);    refresh='true';;
+       --rtsmode-aws | --aws )        sargs+=($1);    rtsmode='aws';;
+       --rtsmode-lomem | --lomem )    sargs+=($1);    rtsmode='lomem';;
+       --rtsmode-hipar )              sargs+=($1);    rtsmode='hipar';;
+       --perf-omit-host )             sargs+=($1 "$2"); perf_omit_hosts+=($2); shift;;
+       --trace )                      sargs+=($1);    set -x;;
        * ) break;; esac; shift; done
 
-if curl --connect-timeout 0.5 http://169.254.169.254/latest/meta-data >/dev/null 2>&1
-then aws='true'; fi
+if test -z "$rtsmode"
+then if curl --connect-timeout 0.5 http://169.254.169.254/latest/meta-data >/dev/null 2>&1
+     then rtsmode='aws'
+     else rtsmode='hipar'; fi; fi
 
-## Work around the odd parallelism bug killing performance on AWS:
-if test -n "$aws"
-then locli_rts_args=(+RTS -N1 -A128M -RTS)
-     echo "{ \"aws\": true }"
-else locli_rts_args=()
-     echo "{ \"aws\": false }"
-fi
+echo "{ \"rtsmode\": \"$rtsmode\" }"
+case "$rtsmode" in
+    aws )   ## Work around the odd parallelism bug killing performance on AWS:
+            locli_rts_args=(+RTS -N1 -A128M -RTS);;
+    lomem ) locli_rts_args=(+RTS -N3 -A8M -RTS);;
+    hipar ) locli_rts_args=();;
+    * )     fail "unknown rtsmode: $rtsmode";;
+esac
+
 
 local op=${1:-standard}; if test $# != 0; then shift; fi
 
@@ -126,7 +135,7 @@ case "$op" in
             multi-propagation-gnuplot
             multi-propagation-full
         )
-        progress "analysis" "$(white multi-summary), calling script: $(colorise ${script[*]})"
+        verbose "analysis" "$(white multi-summary), calling script: $(colorise ${script[*]})"
         analyse "${sargs[@]}" multi-call "$*" ${script[*]}
         ;;
 
@@ -160,7 +169,27 @@ case "$op" in
             clusterperf-report
             clusterperf-full
          )
-        progress "analysis" "$(white full), calling script:  $(colorise ${script[*]})"
+        verbose "analysis" "$(white full), calling script:  $(colorise ${script[*]})"
+        analyse "${sargs[@]}" map "call ${script[*]}" "$@"
+        ;;
+
+    block-propagation | blockprop | bp )
+        local script=(
+            logs               $(test -n "$dump_logobjects" && echo 'dump-logobjects')
+            context
+
+            build-mach-views   $(test -n "$dump_machviews"  && echo 'dump-mach-views')
+            rebuild-chain      $(test -n "$dump_chain"      && echo 'dump-chain')
+            chain-timeline
+
+            compute-propagation
+            propagation-json
+            propagation-org
+            propagation-{forger,peers,endtoend}
+            propagation-gnuplot
+            propagation-full
+         )
+        verbose "analysis" "$(white full), calling script:  $(colorise ${script[*]})"
         analyse "${sargs[@]}" map "call ${script[*]}" "$@"
         ;;
 
@@ -183,7 +212,7 @@ case "$op" in
             clusterperf-report
             clusterperf-full
         )
-        progress "analysis" "$(white performance), calling script:  $(colorise ${script[*]})"
+        verbose "analysis" "$(white performance), calling script:  $(colorise ${script[*]})"
         analyse "${sargs[@]}" map "call ${script[*]}" "$@"
         ;;
 
@@ -202,7 +231,7 @@ case "$op" in
             compute-machperf
             render-machperf
         )
-        progress "analysis" "$(with_color white performance), calling script:  $(colorise ${script[*]})"
+        verbose "analysis" "$(with_color white performance), calling script:  $(colorise ${script[*]})"
         analyse "${sargs[@]}" map "call --host $host ${script[*]}" "$@"
         ;;
 
@@ -301,7 +330,7 @@ case "$op" in
         local ops_final=() vexp=
         for v in "${vl[@]}"; do vexp=$(echo $v | xargs echo); eval ops_final+=($vexp); done
 
-        progress "analysis | locli" "$(with_color reset ${locli_rts_args[@]}) $(colorise "${ops_final[@]}")"
+        verbose "analysis | locli" "$(with_color reset ${locli_rts_args[@]}) $(colorise "${ops_final[@]}")"
         time locli "${locli_rts_args[@]}" "${ops_final[@]}"
         ;;
 
@@ -375,7 +404,7 @@ case "$op" in
         if test x$prefilter != xtrue
         then return; fi
 
-        progress "analyse" "filtering logs:  $(with_color black ${logdirs[@]})"
+        verbose "analyse" "filtering logs:  $(with_color black ${logdirs[@]})"
         local grep_params=(
             --binary-files=text
             --file="$keyfile"

@@ -86,7 +86,7 @@ colorise_colors=(
 )
 colorise() {
     ## Disable tracing locally:
-    if test -n "echo $- | tr -cd x"
+    if test -n "$(echo $- | tr -cd x)"
     then set +x
          local exit='set -x'
     else local exit=
@@ -138,6 +138,13 @@ yellow() {
 
 red() {
     with_color red $*
+}
+
+verbose() {
+    if test -n "${verbose:-}"
+    then local subsys=$1; shift
+         msg "$(with_color blue $subsys):  $*"
+    fi
 }
 
 progress() {
