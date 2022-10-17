@@ -8,6 +8,7 @@
 
 module Gen.Cardano.Api.Typed
   ( genAddressByron
+  , genAddressInEra
   , genAddressShelley
   , genCertificate
   , genCostModel
@@ -34,17 +35,48 @@ module Gen.Cardano.Api.Typed
   , genScriptInEra
   , genScriptHash
   , genScriptData
+  , genScriptValidity
 
   , genAssetName
+  , genAssetId
+  , genEpochNo
+  , genExecutionUnitPrices
+  , genExecutionUnits
+  , genHashScriptData
+  , genKESPeriod
+  , genNat
+  , genNetworkId
+  , genNetworkMagic
   , genOperationalCertificate
   , genOperationalCertificateIssueCounter
+  , genOperationalCertificateWithCounter
+  , genPaymentCredential
+  , genPolicyId
+  , genQuantity
+  , genRationalInt64
+  , genSeed
+  , genShelleyBootstrapWitness
+  , genShelleyHash
   , genShelleyWitness
+  , genShelleyWitnessSigningKey
+  , genSignedQuantity
   , genSigningKey
   , genSlotNo
   , genStakeAddress
+  , genStakeAddressReference
+  , genStakeCredential
+  , genTtl
   , genTx
+  , genTxAuxScripts
   , genTxBody
   , genTxBodyContent
+  , genTxCertificates
+  , genTxFee
+  , genTxIndex
+  , genTxInsCollateral
+  , genTxInsReference
+  , genTxMetadataInEra
+  , genTxMintValue
   , genLovelace
   , genValue
   , genValueDefault
@@ -56,8 +88,19 @@ module Gen.Cardano.Api.Typed
   , genTxOutDatumHashTxContext
   , genTxOutDatumHashUTxOContext
   , genTxOutValue
-  , genValueForTxOut
+  , genTxReturnCollateral
+  , genTxScriptValidity
+  , genTxTotalCollateral
+  , genTxUpdateProposal
+  , genTxValidityLowerBound
+  , genTxValidityRange
+  , genTxValidityUpperBound
+  , genTxWithdrawals
+  , genUnsignedQuantity
   , genValueForMinting
+  , genValueForTxOut
+  , genWitnesses
+  , genWitnessNetworkIdOrByronAddress
 
   , genRational
   ) where
