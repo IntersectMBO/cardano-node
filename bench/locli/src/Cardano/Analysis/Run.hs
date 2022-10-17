@@ -66,10 +66,10 @@ renderAnchorDomains Anchor{..} = mconcat $
  where renderDomain :: Text -> (a -> Text) -> DataDomain a -> Text
        renderDomain ty r DataDomain{..} = mconcat
          [ ", ", ty
-         , " range: raw(", r ddRawFirst,      "-", r ddRawLast , ")"
+         , " range: raw(", r ddRawFirst,      "-", r ddRawLast, ", ", show ddRawCount, " total)"
          ,   " filtered("
          , maybe "none" r ddFilteredFirst, "-"
-         , maybe "none" r ddFilteredLast , ")"
+         , maybe "none" r ddFilteredLast,  ", ", show ddFilteredCount, " total)"
          ]
 
 renderAnchorNoRuns :: Anchor -> Text

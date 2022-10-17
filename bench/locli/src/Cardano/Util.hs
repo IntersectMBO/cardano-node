@@ -104,11 +104,11 @@ data F
   | forall a. ToJSON a => J a
 
 progress :: MonadIO m => String -> F -> m ()
-progress key = putStrLn . T.pack . \case
-  R x  -> printf "{ \"%s\":  %s }"    key x
-  Q x  -> printf "{ \"%s\": \"%s\" }" key x
-  L xs -> printf "{ \"%s\": \"%s\" }" key (Cardano.Prelude.intercalate "\", \"" xs)
-  J x  -> printf "{ \"%s\": %s }" key (LBS.unpack $ encode x)
+progress key = putStr . T.pack . \case
+  R x  -> printf "{ \"%s\":  %s }\n"    key x
+  Q x  -> printf "{ \"%s\": \"%s\" }\n" key x
+  L xs -> printf "{ \"%s\": \"%s\" }\n" key (Cardano.Prelude.intercalate "\", \"" xs)
+  J x  -> printf "{ \"%s\": %s }\n" key (LBS.unpack $ encode x)
 
 -- /path/to/logs-HOSTNAME.some.ext -> HOSTNAME
 hostFromLogfilename :: JsonLogfile -> Host
@@ -156,12 +156,12 @@ readAssociatedObjects ident fs = firstExceptT T.pack . newExceptT . fmap sequenc
         pure (jf, x)
 
 dumpAssociatedObjectStreams :: ToJSON a => String -> [(JsonLogfile, [a])] -> ExceptT Text IO ()
-dumpAssociatedObjectStreams ident xss = liftIO $
+dumpAssociatedObjectStreams ident xss = liftIO $ do
   flip mapConcurrently_ xss $
     \(JsonLogfile f, xs) -> do
-        progress ident (Q f)
-        withFile (replaceExtension f $ ident <> ".json") WriteMode $ \hnd -> do
-          forM_ xs $ LBS.hPutStrLn hnd . encode
+      withFile (replaceExtension f $ ident <> ".json") WriteMode $ \hnd -> do
+        forM_ xs $ LBS.hPutStrLn hnd . encode
+  progress ident (Q $ printf "%d associated streams dumped" $ length xss)
 
 dumpText :: String -> [Text] -> TextOutputFile -> ExceptT Text IO ()
 dumpText ident xs (TextOutputFile f) = liftIO $ do
@@ -170,12 +170,12 @@ dumpText ident xs (TextOutputFile f) = liftIO $ do
     forM_ xs $ hPutStrLn hnd
 
 dumpAssociatedTextStreams :: String -> [(JsonLogfile, [Text])] -> ExceptT Text IO ()
-dumpAssociatedTextStreams ident xss = liftIO $
+dumpAssociatedTextStreams ident xss = liftIO $ do
   flip mapConcurrently_ xss $
     \(JsonLogfile f, xs) -> do
-        progress ident (Q f)
-        withFile (replaceExtension f $ ident <> ".txt") WriteMode $ \hnd -> do
-          forM_ xs $ hPutStrLn hnd
+      withFile (replaceExtension f $ ident <> ".txt") WriteMode $ \hnd -> do
+        forM_ xs $ hPutStrLn hnd
+  progress ident (Q $ printf "%d associated streams dumped" $ length xss)
 
 spans :: forall a. (a -> Bool) -> [a] -> [Vector a]
 spans f = go []
