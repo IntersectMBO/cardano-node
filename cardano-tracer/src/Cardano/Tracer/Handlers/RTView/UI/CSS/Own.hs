@@ -77,6 +77,10 @@ span[data-tooltip] {
   margin: 30px 0;
 }
 
+.table tbody tr:first-child td {
+  padding-top: 17px;
+}
+
 .rt-view-show-hide-chart-group {
   margin-top: 5px;
 }
@@ -91,6 +95,10 @@ span[data-tooltip] {
   max-width: 800px !important;
   margin-top: 50px;
   font-size: 97%;
+}
+
+.rt-view-logs-live-view-copies {
+  width: 40px;
 }
 
 .rt-view-chart-area {
@@ -109,6 +117,11 @@ span[data-tooltip] {
 
 .rt-view-peer-modal {
   width: 45%;
+}
+
+.rt-view-logs-live-view-modal {
+  width: 85%;
+  min-height: 65%;
 }
 
 .rt-view-errors-modal {
@@ -130,6 +143,10 @@ span[data-tooltip] {
     width: 60%;
   }
 
+  .rt-view-logs-live-view-modal {
+    width: 80%;
+  }
+
   .rt-view-errors-modal {
     width: 70%;
   }
@@ -142,6 +159,10 @@ span[data-tooltip] {
 @media only screen and (max-width: 1024px) {
   .rt-view-peer-modal {
     width: 70%;
+  }
+
+  .rt-view-logs-live-view-modal {
+    width: 85%;
   }
 
   .rt-view-errors-modal {
@@ -164,6 +185,10 @@ span[data-tooltip] {
     width: 80%;
   }
 
+  .rt-view-logs-live-view-modal {
+    width: 95%;
+  }
+
   .rt-view-errors-modal {
     width: 85%;
   }
@@ -180,8 +205,51 @@ span[data-tooltip] {
   max-width: 200px;
 }
 
-.rt-view-error-msg-input {
-  max-width: 380px;
+.rt-view-logs-live-view-tbody {
+  font-family: monospace;
+  font-size: 90%;
+}
+
+.rt-view-logs-live-view-msg-timestamp {
+  font-size: 90%;
+  padding-right: 15px;
+  color: #888;
+}
+
+.rt-view-logs-live-view-msg-node {
+  font-size: 90%;
+  padding-right: 15px;
+}
+
+.rt-view-logs-live-view-msg-severity {
+  font-weight: bold;
+  background-color: #2b2929;
+  margin-right: 15px;
+}
+
+.rt-view-logs-live-view-msg-namespace {
+  color: #bcbcbc;
+  padding-right: 15px;
+}
+
+.rt-view-logs-live-view-msg-body {
+  color: #fff;
+}
+
+.rt-view-logs-live-view-node {
+  width: 9%;
+}
+
+.rt-view-logs-live-view-timestamp {
+  width: 14%;
+}
+
+.rt-view-logs-live-view-severity {
+  width: 8%;
+}
+
+.rt-view-logs-live-view-namespace {
+  width: 14%;
 }
 
 .rt-view-errors-timestamp {
@@ -200,11 +268,11 @@ span[data-tooltip] {
   margin-top: 6px;
 }
 
-.rt-view-search-errors-icon {
+.rt-view-search-logs-icon {
   margin-top: 6px;
 }
 
-.rt-view-search-errors-icon svg {
+.rt-view-search-logs-icon svg {
   width: 18px;
   color: whitesmoke;
 }
@@ -494,6 +562,30 @@ span[data-tooltip] {
   border-bottom-right-radius: 6px;
 }
 
+.dark .rt-view-logs-live-view-title {
+  color: whitesmoke;
+}
+
+.dark .rt-view-logs-live-view-head {
+  color: whitesmoke;
+  background-color: #282841;
+  border-bottom: 1px solid #555;
+}
+
+.dark .rt-view-logs-live-view-body {
+  color: whitesmoke;
+  background-color: #131325;
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
+}
+
+.dark .rt-view-logs-live-view-foot {
+  color: whitesmoke;
+  background-color: #282841;
+  border-top: 1px solid #555;
+  display: block;
+}
+
 .dark .rt-view-errors-title {
   color: whitesmoke;
 }
@@ -591,6 +683,24 @@ span[data-tooltip] {
   border-bottom: 2px solid #888;
   vertical-align: middle;
 }
+
+.dark .rt-view-logs-live-view-table {
+  background-color: #131325;
+  color: whitesmoke;
+}
+
+.dark .rt-view-logs-live-view-table td {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  border-bottom: 0px solid #444;
+}
+
+.dark .rt-view-logs-live-view-table th {
+  color: whitesmoke;
+  border-bottom: 2px solid #888;
+  vertical-align: middle;
+}
+
 
 .dark .rt-view-errors-table {
   background-color: #131325;
@@ -923,6 +1033,30 @@ span[data-tooltip] {
   border-bottom-right-radius: 6px;
 }
 
+.light .rt-view-logs-live-view-title {
+  color: #444;
+}
+
+.light .rt-view-logs-live-view-head {
+  color: #555;
+  background-color: whitesmoke;
+  border-bottom: 1px solid #bebebe;
+}
+
+.light .rt-view-logs-live-view-body {
+  color: #555;
+  background-color: #eaeaea;
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
+}
+
+.light .rt-view-logs-live-view-foot {
+  color: #555;
+  background-color: whitesmoke;
+  border-top: 1px solid #bebebe;
+  display: block;
+}
+
 .light .rt-view-errors-title {
   color: #444;
 }
@@ -1016,6 +1150,23 @@ span[data-tooltip] {
 }
 
 .light .rt-view-peer-table th {
+  color: #444;
+  border-bottom: 2px solid #cfcfcf;
+  vertical-align: middle;
+}
+
+.light .rt-view-logs-live-view-table {
+  background-color: #eaeaea;
+  color: #444;
+}
+
+.light .rt-view-logs-live-view-table td {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  border-bottom: 0px solid #444;
+}
+
+.light .rt-view-logs-live-view-table th {
   color: #444;
   border-bottom: 2px solid #cfcfcf;
   vertical-align: middle;

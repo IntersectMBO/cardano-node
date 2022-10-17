@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -6,6 +7,7 @@
 module Cardano.Tracer.Handlers.RTView.Update.Nodes
   ( addColumnsForConnected
   , addDatasetsForConnected
+  , doAddLiveViewNodesForConnected
   , checkNoNodesState
   , updateNodesUI
   , updateNodesUptime
@@ -13,8 +15,8 @@ module Cardano.Tracer.Handlers.RTView.Update.Nodes
 
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar
-import           Control.Monad (forM_, unless, when)
-import           Control.Monad.Extra (whenJust)
+import           Control.Monad (forM_, unless, void, when)
+import           Control.Monad.Extra (whenJust, whenJustM, whenM)
 import           Data.List (find)
 import           Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as M
@@ -38,8 +40,6 @@ import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Metrics.Utils
 import           Cardano.Tracer.Handlers.RTView.State.Displayed
 import           Cardano.Tracer.Handlers.RTView.State.EraSettings
-import           Cardano.Tracer.Handlers.RTView.State.Errors
-import           Cardano.Tracer.Handlers.RTView.State.TraceObjects
 import           Cardano.Tracer.Handlers.RTView.UI.Charts
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Column
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.NoNodes
@@ -58,13 +58,11 @@ updateNodesUI
   -> NonEmpty LoggingParams
   -> Colors
   -> DatasetsIndices
-  -> Errors
-  -> UI.Timer
   -> UI.Timer
   -> UI ()
-updateNodesUI tracerEnv@TracerEnv{teConnectedNodes, teAcceptedMetrics, teSavedTO}
+updateNodesUI tracerEnv@TracerEnv{teConnectedNodes, teAcceptedMetrics}
               displayedElements nodesEraSettings loggingConfig colors
-              datasetIndices nodesErrors updateErrorsTimer noNodesProgressTimer = do
+              datasetIndices noNodesProgressTimer = do
   (connected, displayedEls) <- liftIO . atomically $ (,)
     <$> readTVar teConnectedNodes
     <*> readTVar displayedElements
@@ -74,12 +72,9 @@ updateNodesUI tracerEnv@TracerEnv{teConnectedNodes, teAcceptedMetrics, teSavedTO
     let disconnected   = displayed \\ connected -- In 'displayed' but not in 'connected'.
         newlyConnected = connected \\ displayed -- In 'connected' but not in 'displayed'.
     deleteColumnsForDisconnected connected disconnected
-    addColumnsForConnected
-      tracerEnv
-      newlyConnected
-      loggingConfig
-      nodesErrors
-      updateErrorsTimer
+    deleteLiveViewNodesForDisconnected tracerEnv disconnected
+    addColumnsForConnected tracerEnv newlyConnected loggingConfig
+    addLiveViewNodesForConnected tracerEnv newlyConnected
     checkNoNodesState connected noNodesProgressTimer
     askNSetNodeInfo tracerEnv newlyConnected displayedElements
     addDatasetsForConnected tracerEnv newlyConnected colors datasetIndices
@@ -87,8 +82,6 @@ updateNodesUI tracerEnv@TracerEnv{teConnectedNodes, teAcceptedMetrics, teSavedTO
     liftIO $
       updateDisplayedElements displayedElements connected
   setBlockReplayProgress connected teAcceptedMetrics
-  setChunkValidationProgress connected teSavedTO
-  setLedgerDBProgress connected teSavedTO
   setProducerMode connected teAcceptedMetrics
   setLeadershipStats connected displayedElements teAcceptedMetrics
   setEraEpochInfo connected displayedElements teAcceptedMetrics nodesEraSettings
@@ -97,19 +90,14 @@ addColumnsForConnected
   :: TracerEnv
   -> Set NodeId
   -> NonEmpty LoggingParams
-  -> Errors
-  -> UI.Timer
   -> UI ()
-addColumnsForConnected tracerEnv newlyConnected loggingConfig nodesErrors updateErrorsTimer = do
+addColumnsForConnected tracerEnv newlyConnected loggingConfig = do
   unless (S.null newlyConnected) $ do
     window <- askWindow
     findAndShow window "main-table-container"
+    findAndShow window "logs-live-view-button"
   forM_ newlyConnected $
-    addNodeColumn
-      tracerEnv
-      loggingConfig
-      nodesErrors
-      updateErrorsTimer
+    addNodeColumn tracerEnv loggingConfig
 
 addDatasetsForConnected
   :: TracerEnv
@@ -121,6 +109,7 @@ addDatasetsForConnected tracerEnv newlyConnected colors datasetIndices = do
   unless (S.null newlyConnected) $ do
     window <- askWindow
     findAndShow window "main-charts-container"
+    findAndShow window "logs-live-view-button"
   forM_ newlyConnected $
     addNodeDatasetsToCharts tracerEnv colors datasetIndices
 
@@ -134,6 +123,7 @@ deleteColumnsForDisconnected connected disconnected = do
   when (S.null connected) $ do
     findAndHide window "main-table-container"
     findAndHide window "main-charts-container"
+    findAndHide window "logs-live-view-button"
   -- Please note that we don't remove historical data from charts
   -- for disconnected node. Because the user may want to see the
   -- historical data even for the node that already disconnected.
@@ -145,8 +135,13 @@ checkNoNodesState
 checkNoNodesState connected noNodesProgressTimer = do
   window <- askWindow
   if S.null connected
-    then showNoNodes window noNodesProgressTimer
-    else hideNoNodes window noNodesProgressTimer
+    then do
+      showNoNodes window noNodesProgressTimer
+      whenM logsLiveViewIsOpened $ do
+        findAndSet (set UI.class_ "modal")  window "logs-live-view-modal-window"
+        findAndSet (set dataState "closed") window "logs-live-view-modal-window"
+    else
+      hideNoNodes window noNodesProgressTimer
 
 updateNodesUptime
   :: TracerEnv
@@ -182,6 +177,72 @@ updateNodesUptime tracerEnv displayedElements = do
               , (nodeUptimeSElId, T.pack secsNum  <> "s")
               ]
 
+addLiveViewNodesForConnected
+  :: TracerEnv
+  -> Set NodeId
+  -> UI ()
+addLiveViewNodesForConnected tracerEnv newlyConnected =
+  whenM logsLiveViewIsOpened $
+    doAddLiveViewNodesForConnected tracerEnv newlyConnected
+
+doAddLiveViewNodesForConnected
+  :: TracerEnv
+  -> Set NodeId
+  -> UI ()
+doAddLiveViewNodesForConnected tracerEnv connected = do
+  window <- askWindow
+  whenJustM (UI.getElementById window "logs-live-view-nodes-checkboxes") $ \el ->
+    forM_ connected $ \nodeId@(NodeId anId) -> do
+      nodeName  <- liftIO $ askNodeName tracerEnv nodeId
+      nodeColor <- liftIO $ getSavedColorForNode tracerEnv nodeName
+
+      let nodeNamePrepared = T.unpack $
+            if T.length nodeName > 13
+              then T.take 10 nodeName <> "..."
+              else nodeName
+          checkId = T.unpack anId <> "__node-live-view-checkbox"
+          checkLabelId = T.unpack anId <> "__node-live-view-checkbox-label"
+
+      void $ element el #+
+        [ UI.input ## checkId
+                   #. "is-checkradio is-medium rt-view-ncb"
+                   # set UI.type_ "checkbox"
+                   # set UI.name checkId
+                   # set UI.checked True
+        , case nodeColor of
+            Nothing ->
+              UI.label ## checkLabelId
+                       #. "rt-view-ncbl"
+                       # set UI.for checkId
+                       # set text nodeNamePrepared
+            Just (Color code) ->
+              UI.label ## checkLabelId
+                       #. "rt-view-ncbl"
+                       # set UI.for checkId
+                       # set style [("color", code)]
+                       # set text nodeNamePrepared
+        ]
+
+deleteLiveViewNodesForDisconnected
+  :: TracerEnv
+  -> Set NodeId
+  -> UI ()
+deleteLiveViewNodesForDisconnected _tracerEnv disconnected =
+  whenM logsLiveViewIsOpened $ do
+    window <- askWindow
+    forM_ disconnected $ \(NodeId anId) -> do
+      let checkId = anId <> "__node-live-view-checkbox"
+          checkLabelId = anId <> "__node-live-view-checkbox-label"
+      findAndDo window checkId delete'
+      findAndDo window checkLabelId delete'
+
+logsLiveViewIsOpened :: UI Bool
+logsLiveViewIsOpened = do
+  window <- askWindow
+  UI.getElementById window "logs-live-view-modal-window" >>= \case
+    Nothing -> return False
+    Just el -> (==) "opened" <$> get dataState el
+
 setBlockReplayProgress
   :: Set NodeId
   -> AcceptedMetrics
@@ -203,57 +264,6 @@ setBlockReplayProgress connected acceptedMetrics = do
         if "100" `T.isInfixOf` progressPctS
           then setTextAndClasses nodeBlockReplayElId "100&nbsp;%" "rt-view-percent-done"
           else setTextValue nodeBlockReplayElId $ progressPctS <> "&nbsp;%"
-
-setChunkValidationProgress
-  :: Set NodeId
-  -> SavedTraceObjects
-  -> UI ()
-setChunkValidationProgress connected savedTO = do
-  savedTraceObjects <- liftIO $ readTVarIO savedTO
-  forM_ connected $ \nodeId@(NodeId anId) ->
-    whenJust (M.lookup nodeId savedTraceObjects) $ \savedTOForNode -> do
-      let nodeChunkValidationElId = anId <> "__node-chunk-validation"
-      forM_ (M.toList savedTOForNode) $ \(namespace, (trObValue, _, _)) ->
-        case namespace of
-          "ChainDB.ImmutableDBEvent.ChunkValidation.ValidatedChunk" ->
-            -- In this case we don't need to check if the value differs from displayed one,
-            -- because this 'TraceObject' is forwarded only with new values, and after 100%
-            -- the node doesn't forward it anymore.
-            --
-            -- Example: "Validated chunk no. 2262 out of 2423. Progress: 93.36%"
-            case T.words trObValue of
-              [_, _, _, current, _, _, from, _, progressPct] ->
-                setTextValue nodeChunkValidationElId $
-                             T.init progressPct <> "&nbsp;%: no. " <> current <> " from " <> T.init from
-              _ -> return ()
-          "ChainDB.ImmutableDBEvent.ValidatedLastLocation" ->
-            setTextAndClasses nodeChunkValidationElId "100&nbsp;%" "rt-view-percent-done"
-          _ -> return ()
-
-setLedgerDBProgress
-  :: Set NodeId
-  -> SavedTraceObjects
-  -> UI ()
-setLedgerDBProgress connected savedTO = do
-  savedTraceObjects <- liftIO $ readTVarIO savedTO
-  forM_ connected $ \nodeId@(NodeId anId) ->
-    whenJust (M.lookup nodeId savedTraceObjects) $ \savedTOForNode -> do
-      let nodeLedgerDBUpdateElId = anId <> "__node-update-ledger-db"
-      forM_ (M.toList savedTOForNode) $ \(namespace, (trObValue, _, _)) ->
-        case namespace of
-          "ChainDB.InitChainSelEvent.UpdateLedgerDb" ->
-            -- In this case we don't need to check if the value differs from displayed one,
-            -- because this 'TraceObject' is forwarded only with new values, and after 100%
-            -- the node doesn't forward it anymore.
-            --
-            -- Example: "Pushing ledger state for block b1e6...fc5a at slot 54495204. Progress: 3.66%"
-            case T.words trObValue of
-              [_, _, _, _, _, _, _, _, _, _, progressPct] -> do
-                if "100" `T.isInfixOf` progressPct
-                  then setTextAndClasses nodeLedgerDBUpdateElId "100&nbsp;%" "rt-view-percent-done"
-                  else setTextValue nodeLedgerDBUpdateElId $ T.init progressPct <> "&nbsp;%"
-              _ -> return ()
-          _ -> return ()
 
 setProducerMode
   :: Set NodeId
