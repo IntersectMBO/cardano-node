@@ -15,6 +15,7 @@ import           Trace.Forward.Utils.TraceObject (ForwardSink, writeToSink)
 import           Cardano.Logging.DocuGenerator
 import           Cardano.Logging.Types
 
+
 ---------------------------------------------------------------------------
 
 forwardTracer :: forall m. (MonadIO m)
@@ -34,4 +35,6 @@ forwardTracer forwardSink =
     pure ()
   output _sink lk (Left c@Document {}) =
     docIt Forwarder (lk, Left c)
+  output _sink LoggingContext {} (Right _)  = pure ()
+   -- writeToSink sink lo
   output _sink LoggingContext {} _  = pure ()

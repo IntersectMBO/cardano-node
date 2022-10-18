@@ -1,4 +1,4 @@
-
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wno-unused-imports  #-}
 
 import           Test.Tasty
@@ -10,10 +10,10 @@ import           Cardano.Logging.Test.Script
 
 
 main :: IO ()
-main = defaultMain tests
+main = defaultMain localTests
 
-tests :: TestTree
-tests = localOption (QuickCheckTests 10) $ testGroup "trace-dispatcher"
+localTests :: TestTree
+localTests = localOption (QuickCheckTests 10) $ testGroup "trace-dispatcher"
     [ testProperty "single-threaded send tests" $
         runScriptSimple 1.0 oracleMessages
     , testProperty "multi-threaded send tests" $

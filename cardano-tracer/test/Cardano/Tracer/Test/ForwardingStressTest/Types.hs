@@ -1,4 +1,4 @@
-module Cardano.Logging.Test.Types (
+module Cardano.Tracer.Test.ForwardingStressTest.Types (
     MessageID
   , Message (..)
   , ScriptedMessage (..)

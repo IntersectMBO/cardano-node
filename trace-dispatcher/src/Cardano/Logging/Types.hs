@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -179,7 +180,7 @@ data SeverityS
     | Critical                -- ^ Severe situations
     | Alert                   -- ^ Take immediate action
     | Emergency               -- ^ System is unusable
-  deriving (Show, Eq, Ord, Bounded, Enum)
+  deriving (Show, Eq, Ord, Bounded, Enum, Read, AE.ToJSON)
 
 -- | Severity for a filter
 -- Nothing means don't show anything (Silence)

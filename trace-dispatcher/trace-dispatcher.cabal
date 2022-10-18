@@ -17,7 +17,7 @@ library
                       Cardano.Logging.Types
                       Cardano.Logging.Trace
                       Cardano.Logging.Configuration
-                      Cardano.Logging.ConfigurationParser                      
+                      Cardano.Logging.ConfigurationParser
                       Cardano.Logging.DocuGenerator
                       Cardano.Logging.Formatter
                       Cardano.Logging.Forwarding
@@ -128,15 +128,20 @@ test-suite trace-dispatcher-test
                        Cardano.Logging.Test.Tracer
                        Cardano.Logging.Test.Messages
                        Cardano.Logging.Test.Script
+
   default-language:    Haskell2010
   default-extensions:  OverloadedStrings
   build-depends:       base >=4.12 && <5
                       , aeson                         >= 2.1.0.0
                       , bytestring
+                      , cardano-prelude
                       , containers
                       , ekg
                       , ekg-core
+                      , generic-data
                       , hostname
+                      , optparse-applicative
+                      , ouroboros-network
                       , text
                       , stm
                       , tasty
@@ -149,6 +154,7 @@ test-suite trace-dispatcher-test
                       , unordered-containers
                       , yaml
                       , QuickCheck
+
 
   ghc-options:         -Wall
                        -Wcompat
