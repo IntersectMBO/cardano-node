@@ -15,7 +15,7 @@ let
 
       src = ./.;
 
-      buildInputs = with pkgs; [ makeWrapper ];
+      buildInputs = with pkgs; [ jq makeWrapper ];
 
       buildPhase = ''
         patchShebangs .
@@ -26,10 +26,8 @@ let
       '';
 
       installPhase = ''
-        mkdir -p                                     $out/bin
-        cp    -a wb chain-filters profiles *.sh *.jq $out/bin
-        mkdir -p                                     $out/bin/backend
-        cp    -a backend/*.sh                        $out/bin/backend
+        mkdir -p         $out/bin
+        cp -a wb chain-filters profiles *.sh *.jq $out/bin
       '';
 
       dontStrip = true;
@@ -74,7 +72,13 @@ let
 
   all-profiles =
     ## The backend is an attrset of AWS/supervisord-specific methods and parameters.
-    { backend }:
+    { backend
+
+    ## Environment arguments:
+    ##   - either affect semantics on all backends equally,
+    ##   - or have no semantic effect
+    , envArgs
+    }:
     rec {
       mkProfile =
         profileName:
@@ -82,8 +86,8 @@ let
           { inherit
               pkgs
               runWorkbenchJqOnly runJq workbench
+              backend
               profileName;
-            inherit (backend) services-config;
           };
 
       value = genAttrs profile-names mkProfile;
@@ -91,19 +95,30 @@ let
       JSON = pkgs.writeText "all-profiles.json" (__toJSON (mapAttrs (_: x: x.value) value));
     };
 
+  ## materialise-profile :: ProfileNix -> BackendProfile -> Profile
+  materialise-profile      = import ./profile.nix  { inherit pkgs lib; };
+  ## profile-topology :: ProfileNix -> Topology
+  profile-topology         = import ./topology.nix { inherit pkgs; };
+  ## profile-topology :: ProfileNix -> Topology -> Genesis
+  profile-topology-genesis = import ./genesis.nix  { inherit pkgs; };
+
   with-profile =
-    { backend, profileName }:
+    { backend, envArgs, profileName }:
     let
-      ps = all-profiles { inherit backend; };
+      ps = all-profiles { inherit backend envArgs; };
 
       profileNix = ps.value."${profileName}"
         or (throw "No such profile: ${profileName};  Known profiles: ${toString (__attrNames ps.value)}");
 
-      profile = import ./profile.nix   { inherit pkgs lib profileNix backend; };
+      profile = materialise-profile
+        { inherit profileNix workbench;
+          backendProfile =
+            backend.materialise-profile { inherit profileNix; };
+        };
 
-      topology = import ./topology.nix { inherit pkgs profileNix profile; };
+      topology = profile-topology { inherit profileNix profile; };
 
-      genesis = import ./genesis.nix   { inherit pkgs profile; };
+      genesis = profile-topology-genesis { inherit profileNix profile topology; };
     in {
       inherit
         profileNix profile

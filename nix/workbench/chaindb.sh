@@ -1,15 +1,16 @@
 usage_chaindb() {
      usage "chaindb" "Manage ChainDBs" <<EOF
-    $(helpcmd immutable-until-chunk OUTDIR FINAL-CHUNK-NO)
-                                 Produce a ChainDB derivative trimmed up to specified chunk#
-    $(helpcmd snapshot-at-slot OUTDIR FINAL-SLOT-NO)
-                                 Produce a ChainDB derivative with snapshot at given slot#
+  Shared args:
+    --source IMMUTABLEDB-SRCDIR  Use the specified chainDB as source for immutable chunks
+    --geneses JSON               Geneses: { byron: PATH, shelley: PATH, alonzo: PATH }
+    --mainnet                    Use the Cardano mainnet as source of chunks
+    --cachedir DIR               Where to store mainnet snapshot cache
 
-  $(red chaindb) $(blue options):
-    $(helpopt --source IMMUTABLEDB-SRCDIR)  Use the specified chainDB as source for immutable chunks
-    $(helpopt --geneses JSON)               Geneses: { byron: PATH, shelley: PATH, alonzo: PATH }
-    $(helpopt --mainnet)                    Use the Cardano mainnet as source of chunks
-    $(helpopt --cachedir DIR)               Where to store mainnet snapshot cache
+  Commands
+    immutable-until-chunk OUTDIR FINAL-CHUNK-NO
+                     Produce a ChainDB derivative trimmed up to specified chunk#
+    snapshot-at-slot OUTDIR FINAL-SLOT-NO
+                     Produce a ChainDB derivative with snapshot at given slot#
 EOF
 }
 
@@ -97,11 +98,10 @@ snapshot-at-slot )
     local out=${1:?$usage}; shift
     local slotno=${1:?$usage}; shift
 
-    local cmd=(
-        cardano-cli genesis hash
+    local args=(
         --genesis "$(jq .shelley -r <<<$geneses)"
     )
-    local shelleyGenesisHash=$("${cmd[@]}" 2>/dev/null)
+    local shelleyGenesisHash=$(cardano-cli genesis hash "${args[@]}" 2>/dev/null)
          test -n "$shelleyGenesisHash" ||
              fail "Invalid Shelley genesis: $(jq .shelley <<<$geneses)"
 
@@ -120,34 +120,21 @@ snapshot-at-slot )
     else progress "chaindb" "reapplying blocks.."
 
          ## Actually produce the snapshot:
-         mkdir                 $out/ledger/
-         local analyser_config=$out/ledger/$slotno.config
-         jq '{ AlonzoGenesisFile:             .alonzo
-             , ByronGenesisFile:              .byron
-             , ShelleyGenesisFile:            .shelley
-             , ShelleyGenesisHash:            "'$shelleyGenesisHash'"
-             , RequiresNetworkMagic:          "RequiresNoMagic"
-             # , Protocol:                      "Cardano"
-             # , ApplicationVersion:            1
-             # , "LastKnownBlockVersion-Major": 3
-             ##
-             , ApplicationName:               "cardano-sl"
-             }' <<<$geneses > $analyser_config
          local maybe_precedent=$(chaindb_mainnet_ledger_snapshots_before_slot $cachedir $slotno)
-         cmd=(db-analyser
-                --db              $out
+         args=( --configByron     "$(jq -r .byron   <<<$geneses)"
+                --configShelley   "$(jq -r .shelley <<<$geneses)"
+                --configAlonzo    "$(jq -r .alonzo  <<<$geneses)"
+                --nonce           "$shelleyGenesisHash"
                 --store-ledger    $slotno
-               cardano
-                --config          $analyser_config
               )
          if test -n "$maybe_precedent"
          then progress "chaindb" "found a precedent snapshot at slot $maybe_precedent, using as base.."
               local precedent_cache_entry=$cachedir/ledger/mainnet-ledger.$maybe_precedent
+              mkdir $out/ledger/
               cp $precedent_cache_entry $out/ledger/${maybe_precedent}_db-analyser
-              cmd+=(--only-immutable-db --analyse-from $maybe_precedent)
+              args+=(--only-immutable-db --analyse-from $maybe_precedent)
          fi
-         echo "${cmd[@]}" >&2
-         "${cmd[@]}"
+         db-analyser  --db $out cardano "${args[@]}"
 
          (cd $out/ledger;
           for x in *_db-analyser
@@ -167,8 +154,7 @@ snapshot-at-slot )
 
     local last_chunk=$(cd $out/immutable; ls | tail -n1 | cut -d. -f1)
 
-    args=( --null-input
-           --argjson snapshotSlot       $slotno
+    args=( --argjson snapshotSlot       $slotno
            --arg     finalChunkNo       $last_chunk
            --arg     shelleyGenesisHash $shelleyGenesisHash
          )
@@ -177,7 +163,7 @@ snapshot-at-slot )
         , shelleyGenesisHash:           $shelleyGenesisHash
       # , snapshottingConsensusNodeRev: $snapshottingConsensusNodeRev
         }
-       ' "${args[@]}" > $out/snapshot-info.json
+       ' --null-input "${args[@]}" > $out/snapshot-info.json
     ;;
 
 validate )
@@ -205,6 +191,6 @@ validate )
 chaindb_mainnet_ledger_snapshots_before_slot() {
     local cachedir=$1
     local slot=$2
-    ( mkdir -p $cachedir/ledger && cd $cachedir/ledger && ls -1 mainnet-ledger.* | cut -d. -f2; echo $slot
+    ( cd $cachedir/ledger && ls -1 mainnet-ledger.* | cut -d. -f2; echo $slot
     ) | sort -n | grep -wB1 $slot | grep -v $slot | head -n1 2>/dev/null
 }

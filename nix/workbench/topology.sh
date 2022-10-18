@@ -20,18 +20,18 @@ usage_topology() {
 
     Whenever an observer node is present, it is connected to all producers.
 
-  $(red topology) $(blue subops):
+    Subcommands:
 
-    $(helpcmd make PROFILE-JSON OUTDIR)
+    make PROFILE-JSON OUTDIR
                           Generate the full cluster topology, including:
                             - the Nixops/'cardano-ops' style topology
                             - the .dot and .pdf rendering
 
-    $(helpcmd density-map NODE-SPECS-JSON)
+    density-map PROFILE-JSON TOPO-DIR
                           Generate the profile-induced map of node names
                             to pool density: 0, 1 or N (for dense pools)
 
-    $(helpcmd projection-for ROLE N PROFILE TOPO-DIR BASE-PORT)
+    projection-for ROLE N PROFILE TOPO-DIR BASE-PORT
                           Given TOPO-DIR, containing the full cluster topology,
                             print topology for the N-th node, given its ROLE,
                             while assigning it a local port number BASE-PORT+N
@@ -39,7 +39,7 @@ EOF
 }
 
 topology() {
-local op=${1:---help)}; shift || true
+local op=${1:---help)}; shift
 
 case "${op}" in
     make )
@@ -93,13 +93,15 @@ case "${op}" in
         ;;
 
     density-map )
-        local usage="USAGE:  wb topology density-map NODE-SPECS-JSON"
-        local node_specs_json=${1:?$usage}
+        local usage="USAGE:  wb topology density-map PROFILE-JSON NODE-SPECS"
+        local profile_json=${1:?$usage}
+        local node_specs=${2:?$usage}
 
-        args=(--slurpfile node_specs "$node_specs_json"
+        args=(--slurpfile profile  "$profile_json"
+              --argjson   node_specs "$node_specs"
               --null-input --compact-output
              )
-        jq ' $node_specs[0]
+        jq ' $node_specs
            | map
              ({ key:   "\(.i)"
               , value: ((.pools) // 0)

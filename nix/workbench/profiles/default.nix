@@ -1,15 +1,26 @@
 { pkgs, cardanoLib
-, runCommand, runWorkbenchJqOnly, runJq, workbench
+, runCommand, runWorkbenchJqOnly, runJq, workbench, writeText
 
-## An attrset of specific methods and parameters.
-, services-config
+## The backend is an attrset of AWS/supervisord-specific methods and parameters.
+, backend
 
 , profileName
+, profileOverride ? {}
 }:
 
 let
-  JSON = runWorkbenchJqOnly "profile-${profileName}.json"
-                            "profile json ${profileName}";
+  baseJSON = runWorkbenchJqOnly "profile-${profileName}.json"
+    "profile json ${profileName}";
+  JSON =
+    if profileOverride == {}
+    then baseJSON
+    else
+      runJq "profile-${profileName}-overridden.json"
+      ''--slurpfile profile  ${baseJSON}
+        --slurpfile override ${writeText "profile-override.json" profileOverride}
+        --null-input
+      ''
+      "($profile[0] * $override[0])";
 
   value = __fromJSON (__readFile JSON);
 
@@ -20,32 +31,33 @@ let
       inherit JSON value;
 
       topology.files =
-        runCommand "topology-${profileName}" {}
-          "${workbench}/bin/wb topology make ${JSON} $out";
+        runCommand "topology-${profile.name}" {}
+          "${workbench}/bin/wb topology make ${profile.JSON} $out";
 
       node-specs  =
-        {
-          JSON = runWorkbenchJqOnly "node-specs-${profileName}.json"
-                                    "profile node-specs ${JSON}";
+        rec {
+          JSON = runWorkbenchJqOnly
+            "node-specs-${profile.name}.json"
+            "profile node-specs ${profile.JSON}";
 
-          value = __fromJSON (__readFile node-specs.JSON);
+          value = __fromJSON (__readFile JSON);
         };
 
       inherit (pkgs.callPackage
                ./node-services.nix
-               { inherit runJq services-config profile;
+               { inherit runJq backend profile;
                  baseNodeConfig = cardanoLib.environments.testnet.nodeConfig;
                })
         node-services;
 
       inherit (pkgs.callPackage
                ./generator-service.nix
-               { inherit runJq services-config profile;})
+               { inherit runJq backend profile; })
         generator-service;
 
       inherit (pkgs.callPackage
                ./tracer-service.nix
-               { inherit runJq services-config profile;})
+               { inherit runJq backend profile; })
         tracer-service;
     };
 

@@ -1,15 +1,15 @@
 usage_scenario() {
      usage "scenario" "Run scenario control" <<EOF
-    $(helpcmd idle DIR)              Isolated cluster, no workload, runs indefinitely
+    idle DIR              Idle, isolated cluster scenario, runs indefinitely
 
-    $(helpcmd fixed DIR)             Isolated cluster;
-                            Terminates at profile-implied conditions
+    fixed DIR             Isolated cluster;
+                            Terminates after profile-implied time elapses
 
-    $(helpcmd fixed-loaded DIR)      Isolated cluster under tx-generator workload;
+    fixed-loaded DIR      Isolated cluster under tx-generator workload;
                             Terminates after profile-implied transaction
-                            amount is submitted, or other condition satisfied
+                            amount is submitted
 
-    $(helpcmd chainsync DIR)         Chain syncing:
+    chainsync DIR         Chain syncing:
                             1. start the preset-defined chaindb-server node,
                                feeding it a generated chaindb
                             2. start the fetcher node, connected to the chaindb-server
@@ -18,16 +18,13 @@ EOF
 }
 
 scenario() {
-local op=${1:---help}; shift || true
-local usage="USAGE: wb scenario DIR [SCENARIO-OP] OP-ARGS.."
-local dir=${1:-}
+local op=${1:---help}; shift
+local usage="USAGE: wb scenario SCENARIO-OP OP-ARGS.."
+local dir=${1:?$usage}; shift
+local tag=$(jq '.meta.tag' -r $dir/meta.json)
 local p=$dir/profile.json
 
-if test -z "$dir"
-then op=--help
-else progress "run | scenario" "starting $(yellow $op)"
-fi
-
+progress "run | scenario" "starting $(yellow $op)"
 case "$op" in
     idle )
         backend start                "$dir"
@@ -143,7 +140,7 @@ scenario_setup_workload_termination() {
     progress "scenario" "until end:  workload $(yellow $till_workload), $(blue shutdown) $(yellow $till_shutdown), $(blue earliest) $(yellow $till_earliest)"
     progress "scenario" "shutdown tolerance:  $(yellow $termination_tolerance_s) s"
     # progress "scenario" "until end: workload $(yellow $(date --date=@$__scenario_watcher_end_time))"
-    progress "scenario" "force-termination in $(white $((till_earliest + termination_tolerance_s))) seconds.."
+    progress "scenario" "termination in $(white $((till_earliest + termination_tolerance_s))) seconds.."
     scenario_watcher &
     __scenario_watcher_pid=$!
 }

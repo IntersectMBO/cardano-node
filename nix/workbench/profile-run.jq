@@ -44,8 +44,6 @@ def profile_node_specs($env; $prof):
          , kind: "bft"
          , pools: 0
          , autostart: true
-         # Currently only then "observer" kind honors this property.
-         , shutdown_on_slot_synced: null
          }))
    as $bfts
 | ([range($n_bfts;
@@ -56,8 +54,6 @@ def profile_node_specs($env; $prof):
                    then 1
                    else $prof.composition.dense_pool_density end)
          , autostart: true
-         # Currently only then "observer" kind honors this property.
-         , shutdown_on_slot_synced: null
          }))
    as $pools
 | ([range($n_bfts + $n_pools;
@@ -67,8 +63,6 @@ def profile_node_specs($env; $prof):
          , kind: "proxy"
          , pools: 0
          , autostart: true
-         # Currently only then "observer" kind honors this property.
-         , shutdown_on_slot_synced: null
          }))
    as $proxies
 | ([range($n_bfts + $n_pools
@@ -80,8 +74,6 @@ def profile_node_specs($env; $prof):
          , kind: "chaindb-server"
          , pools: 0
          , autostart: true
-         # Currently only then "observer" kind honors this property.
-         , shutdown_on_slot_synced: null
          }))
    as $chaindbs
 | ([range($n_bfts + $n_pools
@@ -95,11 +87,6 @@ def profile_node_specs($env; $prof):
          , kind: "observer"
          , pools: 0
          , autostart: false
-         , shutdown_on_slot_synced:
-           (if $prof.node.shutdown_on_slot_synced != null
-            then $prof.node.shutdown_on_slot_synced.observer
-            else null
-            end)
          }))
    as $observers
 | ($bfts + $pools + $proxies + $chaindbs + $observers
@@ -111,7 +98,6 @@ def profile_node_specs($env; $prof):
             then $env.basePort + .i
             else $env.basePort
             end)
-         , shutdown_on_block_synced: $prof.node.shutdown_on_block_synced
          }))
 | map({ key: .name, value: .})
 | from_entries;
