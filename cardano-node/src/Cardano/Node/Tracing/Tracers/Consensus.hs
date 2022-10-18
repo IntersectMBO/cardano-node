@@ -60,6 +60,10 @@ module Cardano.Node.Tracing.Tracers.Consensus
   , namesForForge
   , docForge
 
+  , severityForge2
+  , namesForForge2
+  , docForge2
+
   , namesForBlockchainTime
   , severityBlockchainTime
   , docBlockchainTime
@@ -90,6 +94,7 @@ import           Cardano.Node.Tracing.Era.Shelley ()
 import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.Render
 import           Cardano.Node.Tracing.Tracers.StartLeadershipCheck
+import           Cardano.Node.Tracing.Tracers.ForgingThreadStats(ForgingStats)
 import           Cardano.Prelude hiding (All, Show, show)
 
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
@@ -1095,7 +1100,14 @@ namesForForge'' TraceForgedInvalidBlock {}     = ["ForgedInvalidBlock"]
 namesForForge'' TraceAdoptedBlock {}           = ["AdoptedBlock"]
 
 namesForForge'''' :: TraceStartLeadershipCheckPlus -> [Text]
-namesForForge'''' TraceStartLeadershipCheckPlus{} = ["StartLeadershipCheckPlus"]
+namesForForge'''' TraceStartLeadershipCheckPlus{} = ["StartLeadershipCheck"]
+
+namesForForge2 :: ForgingStats -> [Text]
+namesForForge2 _ = ["StartLeadershipCheck"]
+
+severityForge2 :: ForgingStats -> SeverityS
+severityForge2 _ = Info
+
 
 instance ( tx ~ GenTx blk
          , ConvertRawHash blk
@@ -1544,7 +1556,7 @@ docForge' = Documented [
       "We adopted the block we produced, we also trace the transactions\
       \  that were adopted."
   , DocMsg
-      ["StartLeadershipCheckPlus"]
+      ["StartLeadershipCheck"]
       [ ("Forge.AboutToLeadSlotLast", "")
       , ("Forge.UtxoSize", "")
       , ("Forge.DelegMapSize", "")
@@ -1553,6 +1565,10 @@ docForge' = Documented [
       \  that were adopted."
 
   ]
+
+docForge2 :: Documented ForgingStats
+docForge2 = addDocumentedNamespace [] docForge'
+
 
 instance ( tx ~ GenTx blk
          , ConvertRawHash blk

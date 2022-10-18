@@ -35,7 +35,8 @@ import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
 import           Cardano.Node.Tracing.Tracers.ChainDB
 import           Cardano.Node.Tracing.Tracers.Consensus
 import           Cardano.Node.Tracing.Tracers.Diffusion
-import           Cardano.Node.Tracing.Tracers.ForgingThreadStats (docForgeStats, forgeThreadStats)
+import           Cardano.Node.Tracing.Tracers.ForgingThreadStats (
+                   docForgeStats, forgeThreadStats)
 import           Cardano.Node.Tracing.Tracers.KESInfo
 import           Cardano.Node.Tracing.Tracers.NodeToClient
 import           Cardano.Node.Tracing.Tracers.NodeToNode
@@ -48,7 +49,6 @@ import           Cardano.Node.Tracing.Tracers.Startup
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints
-
 
 import           Ouroboros.Consensus.Block.Forging
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime)
@@ -424,22 +424,19 @@ docTracers configFileName outputFileName _ _ _ = do
                 mkCardanoTracer'
                 trBase trForward mbTrEKG
                 ["Forge", "Stats"]
-                namesForForge
-                severityForge
+                namesForForge2
+                severityForge2
                 allPublic
                 forgeThreadStats
 
     configureTracers trConfig docForge [forgeTr, forgeThreadStatsTr]
     forgeTrDoc <- documentTracer trConfig forgeTr
-      (docForge :: Documented
-        (Either (Consensus.TraceForgeEvent blk)
-                TraceStartLeadershipCheckPlus))
+      (docForge :: Documented (Either (Consensus.TraceForgeEvent blk)
+                               TraceStartLeadershipCheckPlus))
 
     forgeThreadStatsTrDoc <- documentTracer trConfig forgeThreadStatsTr
-      (docForgeStats :: Documented
-        (Either
-           (Consensus.TraceForgeEvent blk)
-           TraceStartLeadershipCheckPlus))
+      (docForgeStats :: Documented (Either (Consensus.TraceForgeEvent blk)
+                               TraceStartLeadershipCheckPlus))
 
     blockchainTimeTr   <- mkCardanoTracer
                 trBase trForward mbTrEKG
