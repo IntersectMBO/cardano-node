@@ -21,6 +21,10 @@ usage_analyse() {
 
     $(helpcmd call RUN-NAME OPS..)   Execute 'locli' "uops" on the specified run
 
+    $(helpcmd traces-frequencies LOGFILENAME)
+     $(blk trace-freq freq)          Classify trace messages by namespace frequency.
+                                       Output will be stored in a filename derived from argument.
+
   $(red analyse) $(blue options):
 
     $(helpopt --filters F,F,F..)  Comma-separated list of named chain filters:  see bench/chain-filters
@@ -422,6 +426,28 @@ case "$op" in
 
         wait;;
 
+    trace-frequencies | trace-freq | freq )
+        local new_only= sargs=()
+        while test $# -gt 0
+        do case "$1" in
+               --new-only ) sargs+=(--new-only);;
+               * ) break;; esac; shift; done
+        local usage="USAGE: wb analyse $op LOGFILE"
+
+        local logfile=${1:?usage}; shift
+
+        trace_frequencies "${sargs[@]}" "" "$logfile" > "${logfile}.freq"
+
+        local src=$(wc -l <"$logfile")
+        local res=$(cut -d' ' -f1 "${logfile}.freq" |
+                        xargs echo |
+                        sed 's/ /, /g; s/^/\[/; s/$/\]/' |
+                        jq add)
+        if test $src != $res
+        then local col=red; else local col=green; fi
+        progress    "trace-freq" "total in source: $(white           $src)"
+        progress_ne "trace-freq" "total counted:   $(with_color $col $res)";;
+
     * ) progress "analyse" "unexpected 'analyse' subop:  $(red $op)"
         usage_analyse;; esac
 }
@@ -449,45 +475,64 @@ analysis_set_filters() {
     filters+=(${filter_files[*]/#/--filter })
 }
 
-analysis_classify_traces() {
+classify_traces() {
+    jq --raw-output '(try .ns[0] // .ns) + ":" + (.data.kind //.data.val.kind)' 2>/dev/null | sort -u
+}
+
+trace_frequencies() {
+    local new_only=
+    while test $# -gt 0
+    do case "$1" in
+       --new-only ) new_only='true';;
+       * ) break;; esac; shift; done
+
+    local types="$1"; shift
+    local files=("$@")
+
+    if test -z "$types"
+    then types="$(cat "${files[@]}" | classify_traces)"
+    fi
+
+    for ty in $types
+    do local ns=$(cut -d: -f1 <<<$ty)
+       local kind=$(cut -d: -f2 <<<$ty)
+       if test -n "$new_only"
+       then echo $(grep -hFe '"ns":"'$ns'"' "${files[@]}"                               | wc -l) $ty
+       else echo $(grep -hFe '"ns":"'$ns'"' "${files[@]}" | grep -Fe '"kind":"'$kind'"' | wc -l) $ty
+       fi
+    done |
+        sort -nr
+}
+
+analysis_run_classify_traces() {
     local name=${1:-current}; if test $# != 0; then shift; fi
     local node=${1:-node-0}; if test $# != 0; then shift; fi
     local dir=$(run get "$name")
 
     progress "analysis" "enumerating namespace from logs of $(with_color yellow $node)"
-    grep -h '^{' $dir/$node/stdout* | jq --raw-output '(try .ns[0] // .ns) + ":" + (.data.kind // "")' 2>/dev/null | sort -u
+    grep -h '^{' $dir/$node/stdout* | classify_traces
     # grep -h '^{' $dir/$node/stdout* | jq --raw-output '.ns' 2>/dev/null | tr -d ']["' | sort -u
 }
 
 analysis_trace_frequencies() {
-    local same_types=
     while test $# -gt 0
     do case "$1" in
-       --same-types | --same | -s )  same_types='true';;
        * ) break;; esac; shift; done
 
     local name=${1:-current}; if test $# != 0; then shift; fi
     local dir=$(run get "$name")
     local types=()
 
-    if test -n "$same_types"
-    then types=($(analysis_classify_traces $name 'node-0'))
-         progress_ne "analysis" "message frequencies: "; fi
-
     for nodedir in $dir/node-*/
     do local node=$(basename $nodedir)
 
-       if test -z "$same_types"
-       then types=($(analysis_classify_traces $name $node))
-            progress "analysis" "message frequencies: $(with_color yellow $node)"; fi
+       progress "analysis" "message frequencies: $(with_color yellow $node)"
 
-       for type in ${types[*]}
-       do local ns=$(cut -d: -f1 <<<$type)
-          local kind=$(cut -d: -f2 <<<$type)
-          echo $(grep -h "\"$ns\".*\"$kind\"\|\"$kind\".*\"$ns\"" $nodedir/stdout* | wc -l) $type
-       done |
-           sort -nr > $nodedir/log-namespace-occurence-stats.txt
-       test -n "$same_types" && echo -n ' '$node >&2
+       types=($(analysis_classify_traces $name $node))
+       trace_frequencies    \
+           "${types[*]}"    \
+           $nodedir/stdout* \
+           > $nodedir/log-namespace-occurence-stats.txt
     done
     echo >&2
 }

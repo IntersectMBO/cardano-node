@@ -77,7 +77,7 @@ color() {
 with_color() {
     local color=$1; shift
     color $color
-    echo -ne "$*"
+    echo -ne "$@"
     color reset
 }
 
@@ -149,17 +149,17 @@ verbose() {
 
 progress() {
     local subsys=$1; shift
-    msg "$(with_color green $subsys):  $(with_color blue $*)"
+    msg "$(with_color green $subsys):  $(with_color blue "$@")"
 }
 
 progress_ne() {
     local subsys=$1; shift
-    msg_ne "$(with_color green $subsys):  $(with_color blue $*)"
+    msg_ne "$(with_color green $subsys):  $(with_color blue "$@")"
 }
 
 warn() {
     local subsys=$1; shift
-    msg "$(with_color green $subsys):  $(with_color yellow $*)"
+    msg "$(with_color green $subsys):  $(with_color yellow "$@")"
 }
 
 fail() {
