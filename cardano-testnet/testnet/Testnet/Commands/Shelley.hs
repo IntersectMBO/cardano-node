@@ -13,6 +13,7 @@ import           Data.Semigroup
 import           Options.Applicative
 import           System.IO (IO)
 import           Testnet.Run (runTestnet)
+import           Testnet
 import           Testnet.Shelley
 import           Text.Show
 
@@ -20,11 +21,11 @@ import qualified Options.Applicative as OA
 
 data ShelleyOptions = ShelleyOptions
   { maybeTestnetMagic :: Maybe Int
-  , testnetOptions :: TestnetOptions
+  , testnetOptions :: ShelleyTestnetOptions
   } deriving (Eq, Show)
 
-optsTestnet :: Parser TestnetOptions
-optsTestnet = TestnetOptions
+optsTestnet :: Parser ShelleyTestnetOptions
+optsTestnet = ShelleyTestnetOptions
   <$> OA.option auto
       (   OA.long "num-praos-nodes"
       <>  OA.help "Number of PRAOS nodes"
@@ -95,7 +96,7 @@ optsShelley = ShelleyOptions
 
 runShelleyOptions :: ShelleyOptions -> IO ()
 runShelleyOptions options = runTestnet (maybeTestnetMagic options) $
-  Testnet.Shelley.testnet (testnetOptions options)
+  Testnet.testnet (ShelleyOnlyTestnetOptions $ testnetOptions options)
 
 cmdShelley :: Mod CommandFields (IO ())
 cmdShelley = command "shelley"  $ flip info idm $ runShelleyOptions <$> optsShelley

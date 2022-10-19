@@ -82,4 +82,3 @@ queryTip (QueryTipOutput fp) testnetMag execConfig = do
   H.noteShowM $ H.jsonErrorFail $ fromJSON @QueryTipLocalStateOutput tipJSON
 
 newtype QueryTipOutput = QueryTipOutput { unQueryTipOutput :: FilePath}
-

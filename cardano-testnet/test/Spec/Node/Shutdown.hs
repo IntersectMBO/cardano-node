@@ -36,8 +36,6 @@ import qualified Test.Process as H
 import qualified Testnet.Conf as H
 
 {- HLINT ignore "Redundant <&>" -}
-{- HLINT ignore "Redundant return" -}
-{- HLINT ignore "Use let" -}
 
 hprop_shutdown :: Property
 hprop_shutdown = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do

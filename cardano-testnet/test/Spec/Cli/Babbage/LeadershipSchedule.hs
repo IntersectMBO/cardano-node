@@ -25,7 +25,6 @@ import           Hedgehog (Property)
 import           Prelude
 import           System.Environment (getEnvironment)
 import           System.FilePath ((</>))
-import           Testnet.Babbage (TestnetOptions (..), TestnetRuntime (..))
 
 import qualified Data.Aeson as J
 import qualified Data.Aeson.Types as J
@@ -44,6 +43,8 @@ import qualified Test.Base as H
 import qualified Test.Process as H
 import qualified Test.Runtime as TR
 import           Test.Runtime (LeadershipSlot (..))
+import           Testnet ( TestnetOptions (BabbageOnlyTestnetOptions), testnet)
+import           Testnet.Babbage (BabbageTestnetOptions (..))
 import qualified Testnet.Babbage as TC
 import qualified Testnet.Conf as H
 
@@ -58,21 +59,22 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
   work <- H.note $ tempAbsPath </> "work"
   H.createDirectoryIfMissing work
 
-  testnetOptions <- pure TC.defaultTestnetOptions
-    { nodeLoggingFormat = TR.NodeLoggingFormatAsJson
-    }
-  tr@TC.TestnetRuntime
+  let
+    testnetOptions = BabbageOnlyTestnetOptions $ TC.defaultTestnetOptions
+      { nodeLoggingFormat = TR.NodeLoggingFormatAsJson
+      }
+  tr@TR.TestnetRuntime
     { testnetMagic
     , poolNodes
     -- , wallets
     -- , delegators
-    } <- TC.testnet testnetOptions conf
+    } <- testnet testnetOptions conf
 
   poolNode1 <- H.headM poolNodes
 
   env <- H.evalIO getEnvironment
 
-  poolSprocket1 <- H.noteShow $ TR.poolNodeSprocket poolNode1
+  poolSprocket1 <- H.noteShow $ TR.nodeSprocket $ TR.poolRuntime poolNode1
 
   execConfig <- H.noteShow H.ExecConfig
     { H.execConfigEnv = Last $ Just $
@@ -106,10 +108,10 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
 
   stakePoolId <- filter ( /= '\n') <$> H.execCli
     [ "stake-pool", "id"
-    , "--cold-verification-key-file", TR.poolNodeKeysColdVkey $ TR.poolNodeKeys poolNode1
+    , "--cold-verification-key-file", TR.poolNodeKeysColdVkey $ TR.poolKeys poolNode1
     ]
 
-  let poolVrfSkey = TR.poolNodeKeysVrfSkey $ TR.poolNodeKeys poolNode1
+  let poolVrfSkey = TR.poolNodeKeysVrfSkey $ TR.poolKeys poolNode1
 
   id do
     scheduleFile <- H.noteTempFile tempAbsPath "schedule.log"

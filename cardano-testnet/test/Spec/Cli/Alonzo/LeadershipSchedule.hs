@@ -47,8 +47,8 @@ import qualified Test.Base as H
 import qualified Test.Process as H
 import qualified Test.Runtime as TR
 import           Test.Runtime (LeadershipSlot (..))
-import qualified Testnet.Cardano as TC
-import           Testnet.Cardano (TestnetOptions (..), TestnetRuntime (..))
+import           Testnet ( TestnetOptions (CardanoOnlyTestnetOptions), testnet)
+import           Testnet.Cardano as TC (CardanoTestnetOptions (..), defaultTestnetOptions)
 import qualified Testnet.Conf as H
 import           Testnet.Utils (waitUntilEpoch)
 
@@ -59,17 +59,17 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
   conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $
     H.mkConf (H.ProjectBase base) (H.YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
-
-  fastTestnetOptions <- pure TC.defaultTestnetOptions
-    { epochLength = 500
-    , slotLength = 0.01
-    , activeSlotsCoeff = 0.1
-    , nodeLoggingFormat = TR.NodeLoggingFormatAsJson
-    }
-  tr@TC.TestnetRuntime
+  let
+    fastTestnetOptions = CardanoOnlyTestnetOptions defaultTestnetOptions
+      { epochLength = 500
+      , slotLength = 0.01
+      , activeSlotsCoeff = 0.1
+      , nodeLoggingFormat = TR.NodeLoggingFormatAsJson
+      }
+  tr@TR.TestnetRuntime
     { testnetMagic
     , poolNodes
-    } <- TC.testnet fastTestnetOptions conf
+    } <- testnet fastTestnetOptions conf
 
   poolNode1 <- H.headM poolNodes
 
@@ -482,13 +482,13 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
 
   H.note_ "Done"
 
-  let poolVrfSkey = TR.poolNodeKeysVrfSkey $ TR.poolNodeKeys poolNode1
+  let poolVrfSkey = TR.poolNodeKeysVrfSkey $ TR.poolKeys poolNode1
   scheduleFile <- H.noteTempFile tempAbsPath "schedule.log"
 
   void $ H.execCli' execConfig
     [ "query", "leadership-schedule"
     , "--testnet-magic", show @Int testnetMagic
-    , "--genesis", TC.shelleyGenesisFile tr
+    , "--genesis", TR.shelleyGenesisFile tr
     , "--stake-pool-id", stakePoolId
     , "--vrf-signing-key-file", poolVrfSkey
     , "--out-file", scheduleFile
@@ -504,7 +504,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
   leadershipDeadline <- H.noteShowM $ DTC.addUTCTime 90 <$> H.noteShowIO DTC.getCurrentTime
 
   H.assertByDeadlineMCustom "Leader schedule is correct" leadershipDeadline $ do
-    leaderSlots <- H.getRelevantLeaderSlots (TR.poolNodeStdout poolNode1) (minimum expectedLeadershipSlotNumbers)
+    leaderSlots <- H.getRelevantLeaderSlots (TR.nodeStdout $ TR.poolRuntime poolNode1) (minimum expectedLeadershipSlotNumbers)
     maxSlotExpected <- H.noteShow $ maximum expectedLeadershipSlotNumbers
     maxActualSlot <- H.noteShow $ maximum leaderSlots
     return $ maxActualSlot >= maxSlotExpected
