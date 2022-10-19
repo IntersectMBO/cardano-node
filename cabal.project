@@ -110,7 +110,9 @@ package comonad
   flags: -test-doctests
 
 allow-newer:
-  *:aeson,
+  ekg:aeson,
+  ekg-json:aeson,
+  threepenny-gui:aeson,
   monoidal-containers:aeson,
   size-based:template-haskell,
   snap-server:attoparsec,
@@ -118,14 +120,6 @@ allow-newer:
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
-
--- TODO (mpj): remove this once https://github.com/input-output-hk/ekg-forward/pull/10
--- is merged and released to CHaP
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/ekg-forward
-  tag: 297cd9db5074339a2fb2e5ae7d0780debb670c63
-  --sha256: 1zcwry3y5rmd9lgxy89wsb3k4kpffqji35dc7ghzbz603y1gy24g
 
 source-repository-package
   type: git
