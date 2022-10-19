@@ -13,7 +13,7 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands 
 -- you need to run if you change them
 index-state: 2022-07-01T00:00:00Z
-index-state: cardano-haskell-packages 2022-10-12T00:00:00Z
+index-state: cardano-haskell-packages 2022-10-19T00:00:00Z
 
 packages:
     cardano-api
@@ -81,8 +81,6 @@ constraints:
     -- that dependency
   , network >= 3.1.1.0
   , HSOpenSSL >= 0.11.7.2
-  , algebraic-graphs < 0.7
-  , protolude < 0.3.1
 
   -- CONSTRAINTS FOR UPSTREAM CARDANO PACKAGES
   -- These should all be constraints in upstream packages, but are currently missing.
@@ -90,16 +88,23 @@ constraints:
   -- version in CHaP. Unfortunately revisions in CHaP don't work yet, revisit this
   -- when we fix it.
 
+  -- cardano-prelude: newer protolude changes some signatures in a breaking way, fixed
+  -- in newer cardano-prelude which we can't use yet
+  , protolude < 0.3.1
   -- cardano-crypto-wrapper: broken by cardano-prelude-0.1.0.1 which moves HeapWords out
   , cardano-prelude < 0.1.0.1
   -- cardano-ledger-byron: broken by cardano-binary-1.5.0.1 which includes some functions 
   -- that used to be in cardano-prelude
   , cardano-binary < 1.5.0.1
-  -- plutus: cardano-crypto-class-2.0.0.1 changes the signatures of some DSIGN functions for secp256k1
+  -- ledger: cardano-crypto-class-2.0.0.1 is missing some instances needed by the ledger
   , cardano-crypto-class < 2.0.0.1
   -- cardano-crypto-tests: we required cardano-crypto-class-2.0.0.0 above, which is broken with
   -- newer cardano-crypto-tests
   , cardano-crypto-tests < 2.0.0.1
+  -- plutus-core 1.0.0.1 has the fixed SECP primitives which relies on the newer cardano-crypto-class
+  , plutus-core < 1.0.0.1
+  -- plutus-core: needs a constraint here, fixed on plutus master but not in the released version
+  , algebraic-graphs < 0.7
 
 package snap-server
   flags: +openssl
@@ -123,3 +128,58 @@ source-repository-package
   tag: 4ec92ded05ccf59ba4a874be4b404ac1b6d666b6
   --sha256: 00fvvaf4ir4hskq4a6gggbh2wmdvy8j8kn6s4m1p1vlh8m8mq514
 
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-network
+  tag: c764553561bed8978d2c6753d1608dc65449617a
+  --sha256: 0hdh7xdrvxw943r6qr0xr4kwszindh5mnsn1lww6qdnxnmn7wcsc
+  subdir:
+    monoidal-synchronisation
+    network-mux
+    ouroboros-consensus
+    ouroboros-consensus-byron
+    ouroboros-consensus-cardano
+    ouroboros-consensus-protocol
+    ouroboros-consensus-shelley
+    ouroboros-network
+    ouroboros-network-framework
+    ouroboros-network-testing
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-ledger
+  tag: f49879a79098d9372d63baa13b94a941a56eda34
+  --sha256: 0i9x66yqkrvx2w79dy6lzlya82yxc8567rgjj828vc2d46d6nvx6
+  subdir:
+    eras/alonzo/impl
+    eras/alonzo/test-suite
+    eras/babbage/impl
+    eras/babbage/test-suite
+    eras/byron/chain/executable-spec
+    eras/byron/crypto
+    eras/byron/crypto/test
+    eras/byron/ledger/executable-spec
+    eras/byron/ledger/impl
+    eras/byron/ledger/impl/test
+    eras/shelley/impl
+    eras/shelley/test-suite
+    eras/shelley-ma/impl
+    eras/shelley-ma/test-suite
+    libs/cardano-ledger-core
+    libs/cardano-ledger-pretty
+    libs/cardano-protocol-tpraos
+    libs/cardano-data
+    libs/vector-map
+    libs/set-algebra
+    libs/small-steps
+    libs/small-steps-test
+    libs/non-integral
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-prelude
+  tag: 6ea36cf2247ac0bc33e08c327abec34dfd05bd99
+  --sha256: 0z2y3wzppc12bpn9bl48776ms3nszw8j58xfsdxf97nzjgrmd62g
+  subdir:
+    cardano-prelude
+    cardano-prelude-test
