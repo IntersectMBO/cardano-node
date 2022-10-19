@@ -66,46 +66,6 @@ haskell-nix.cabalProject' ({ pkgs
       setGitRev = ''${pkgs.buildPackages.haskellBuildUtils}/bin/set-git-rev "${gitrev}" $out/bin/*'';
     in
     [
-      # Allow reinstallation of Win32
-      ({ pkgs, ... }: lib.mkIf pkgs.stdenv.hostPlatform.isWindows {
-        nonReinstallablePkgs =
-          [
-            "rts"
-            "ghc-heap"
-            "ghc-prim"
-            "integer-gmp"
-            "integer-simple"
-            "base"
-            "deepseq"
-            "array"
-            "ghc-boot-th"
-            "pretty"
-            "template-haskell"
-            # ghcjs custom packages
-            "ghcjs-prim"
-            "ghcjs-th"
-            "ghc-boot"
-            "ghc"
-            "array"
-            "binary"
-            "bytestring"
-            "containers"
-            "filepath"
-            "ghc-boot"
-            "ghc-compact"
-            "ghc-prim"
-            # "ghci" "haskeline"
-            "hpc"
-            "mtl"
-            "parsec"
-            "text"
-            "transformers"
-            "xhtml"
-            # "stm" "terminfo"
-          ];
-        # When cross compfixesiling we don't have a `ghc` package
-        packages.plutus-tx-plugin.flags.use-ghc-stub = true;
-      })
       ({ pkgs, ... }: {
         packages.tx-generator.package.buildable = with pkgs.stdenv.hostPlatform; isUnix && !isMusl;
         packages.cardano-tracer.package.buildable = with pkgs.stdenv.hostPlatform; isUnix && !isMusl;
