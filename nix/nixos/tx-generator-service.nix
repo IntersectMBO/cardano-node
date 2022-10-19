@@ -96,6 +96,8 @@ in pkgs.commonLib.defServiceModule
 
         sigKey          = mayOpt str         "Key with funds";
 
+        tracerSocketPath =
+                          mayOpt str         "Socket path of cardano-tracer";
         localNodeSocketPath =
                            mayOpt str        "Local node socket path";
         localNodeConf   = mayOpt attrs       "Config of the local node";
@@ -119,7 +121,9 @@ in pkgs.commonLib.defServiceModule
       configExeArgsFn = cfg: [
           "json_highlevel"
           "${pkgs.writeText "tx-gen-config.json" (cfg.decideRunScript cfg)}"
-        ];
+      ] ++ optionals (cfg.tracerSocketPath != null) [
+          "--cardano-tracer" cfg.tracerSocketPath
+      ];
 
       configSystemdExtraConfig = _: {};
 
@@ -129,7 +133,7 @@ in pkgs.commonLib.defServiceModule
           User = "cardano-node";
           Group = "cardano-node";
           Restart = "no";
-          RuntimeDirectory = localNodeConf.runtimeDir;
-          WorkingDirectory = localNodeConf.stateDir;
+          RuntimeDirectory = localNodeConf.runtimeDir 0;
+          WorkingDirectory = localNodeConf.stateDir 0;
         };
     })
