@@ -40,8 +40,6 @@ library
                         Cardano.Api.ChainSync.Client
                         Cardano.Api.ChainSync.ClientPipelined
                         Cardano.Api.Crypto.Ed25519Bip32
-                        Cardano.Api.EraCast
-                        Cardano.Api.Protocol.Types
                         Cardano.Api.Shelley
                         -- TODO: Eliminate in the future when
                         -- we create wrapper types for the ledger types
@@ -58,6 +56,7 @@ library
                         Cardano.Api.Convenience.Construction
                         Cardano.Api.Convenience.Query
                         Cardano.Api.Environment
+                        Cardano.Api.EraCast
                         Cardano.Api.Eras
                         Cardano.Api.Error
                         Cardano.Api.Fees
@@ -77,7 +76,9 @@ library
                         Cardano.Api.Modes
                         Cardano.Api.NetworkId
                         Cardano.Api.OperationalCertificate
+                        Cardano.Api.Protocol.Types
                         Cardano.Api.ProtocolParameters
+                        Cardano.Api.Protocol.Types
                         Cardano.Api.Query
                         Cardano.Api.Script
                         Cardano.Api.ScriptData

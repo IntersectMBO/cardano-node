@@ -29,7 +29,6 @@ import           Ouroboros.Consensus.Node.ProtocolInfo
 
 
 import           Cardano.Api
-import qualified Cardano.Api.Protocol.Types as Protocol
 import           Cardano.Chairman (chairmanTest)
 
 data RunOpts = RunOpts

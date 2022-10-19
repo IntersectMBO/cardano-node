@@ -7,6 +7,7 @@
 
 module Cardano.Node.Startup where
 
+import qualified Cardano.Api as Api
 import           Prelude
 
 import           Data.Aeson (FromJSON, ToJSON)
@@ -44,7 +45,6 @@ import           Ouroboros.Network.PeerSelection.Types (PeerAdvertise)
 import           Ouroboros.Network.Subscription.Dns (DnsSubscriptionTarget (..))
 import           Ouroboros.Network.Subscription.Ip (IPSubscriptionTarget (..))
 
-import           Cardano.Api.Protocol.Types (BlockType (..), protocolInfo)
 import           Cardano.Logging
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
 import           Cardano.Node.Configuration.Socket
@@ -194,17 +194,17 @@ prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
     , niSystemStartTime = systemStartTime
     }
  where
-  cfg = pInfoConfig $ protocolInfo pForInfo
+  cfg = pInfoConfig $ Api.protocolInfo pForInfo
 
   systemStartTime :: UTCTime
   systemStartTime =
     case whichP of
-      ByronBlockType ->
+      Api.ByronBlockType ->
         getSystemStartByron
-      ShelleyBlockType ->
+      Api.ShelleyBlockType ->
         let DegenLedgerConfig cfgShelley = configLedger cfg
         in getSystemStartShelley cfgShelley
-      CardanoBlockType ->
+      Api.CardanoBlockType ->
         let CardanoLedgerConfig _ cfgShelley cfgAllegra cfgMary cfgAlonzo cfgBabbage = configLedger cfg
         in minimum [ getSystemStartByron
                    , getSystemStartShelley cfgShelley
