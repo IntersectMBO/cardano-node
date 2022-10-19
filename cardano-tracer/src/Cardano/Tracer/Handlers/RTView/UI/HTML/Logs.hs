@@ -7,6 +7,7 @@ module Cardano.Tracer.Handlers.RTView.UI.HTML.Logs
   ) where
 
 import           Control.Monad (void)
+import           Data.List.Extra (trim)
 import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
 
@@ -19,12 +20,14 @@ mkLogsLiveView :: TracerEnv -> UI Element
 mkLogsLiveView tracerEnv = do
   closeIt <- UI.button #. "delete"
 
-  _searchMessagesInput <-
+  searchMessagesInput <-
     UI.input #. "input rt-view-search-messages"
              # set UI.type_ "text"
              # set (UI.attr "placeholder") "Search log items"
-  _searchMessages <-
+
+  searchMessages <-
     UI.button #. "button is-info"
+              # set UI.enabled False
               #+ [image "rt-view-search-logs-icon" searchSVG]
 
   _whenToSearch <-
@@ -68,6 +71,18 @@ mkLogsLiveView tracerEnv = do
               ]
           ]
       ]
+
+  on UI.valueChange searchMessagesInput . const $ do
+    weHaveWhatToSearch <- not . null . trim <$> get value searchMessagesInput
+    void $ element searchMessages # set UI.enabled weHaveWhatToSearch
+
+  on paste searchMessagesInput . const $ do
+    weHaveWhatToSearch <- not . null . trim <$> get value searchMessagesInput
+    void $ element searchMessages # set UI.enabled weHaveWhatToSearch
+
+  on UI.click searchMessages . const $ do
+    _whatToSearch <- trim <$> get value searchMessagesInput
+    return ()
 
   fontSetter <-
     UI.input ## "logs-live-view-font-setter"
@@ -119,18 +134,17 @@ mkLogsLiveView tracerEnv = do
                            #+ []
                   ]
               ]
-          {-
           , UI.mkElement "footer" #. "modal-card-foot rt-view-logs-live-view-foot" #+
               [ UI.div #. "columns" #+
                   [ UI.div #. "column" #+
                       [ UI.div #. "field has-addons" #+
-                          [ UI.p #. "control" #+
-                              [ element whenToSearch
-                              ]
-                          , UI.p #. "control" #+
-                              [ element whereToSearch
-                              ]
-                          , UI.p #. "control" #+
+                          [ --UI.p #. "control" #+
+                            --  [ element whenToSearch
+                            --  ]
+                          --, UI.p #. "control" #+
+                          --    [ element whereToSearch
+                          --    ]
+                            UI.p #. "control" #+
                               [ element searchMessagesInput
                               ]
                           , UI.p #. "control" #+
@@ -143,7 +157,6 @@ mkLogsLiveView tracerEnv = do
                   --    ]
                   ]
               ]
-          -}
           ]
       ]
   on UI.click closeIt . const $ do
@@ -153,3 +166,4 @@ mkLogsLiveView tracerEnv = do
   return logsLiveViewTable
  where
   change = void . domEvent "change"
+  paste  = void . domEvent "paste"
