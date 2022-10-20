@@ -105,7 +105,6 @@ import           Cardano.CLI.Byron.Genesis as Byron
 import qualified Cardano.CLI.Byron.Key as Byron
 import qualified Cardano.Crypto.Signing as Byron
 
-import           Cardano.Api.SerialiseTextEnvelope (textEnvelopeToJSON)
 import           Cardano.Chain.Common (BlockCount (unBlockCount))
 import           Cardano.Chain.Delegation (delegateVK)
 import qualified Cardano.Chain.Delegation as Dlg

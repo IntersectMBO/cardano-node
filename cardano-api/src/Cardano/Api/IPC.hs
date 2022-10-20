@@ -84,7 +84,7 @@ import           Prelude
 
 import           Data.Void (Void)
 
-import           Data.Aeson (ToJSON, (.=), object, toJSON)
+import           Data.Aeson (ToJSON, object, toJSON, (.=))
 import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict as Map

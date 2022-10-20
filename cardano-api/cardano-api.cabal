@@ -35,6 +35,9 @@ library
 
   hs-source-dirs:       src
 
+  -- Do not expose any additional modules. The correct way
+  -- to expose new functionality is via Cardano.Api or
+  -- Cardano.Api.Shelley
   exposed-modules:      Cardano.Api
                         Cardano.Api.Byron
                         Cardano.Api.ChainSync.Client
@@ -45,7 +48,6 @@ library
                         -- we create wrapper types for the ledger types
                         -- in this module
                         Cardano.Api.Orphans
-                        Cardano.Api.SerialiseTextEnvelope
 
   other-modules:
                         -- Splitting up the big Typed module:
@@ -76,7 +78,6 @@ library
                         Cardano.Api.Modes
                         Cardano.Api.NetworkId
                         Cardano.Api.OperationalCertificate
-                        Cardano.Api.Protocol.Types
                         Cardano.Api.ProtocolParameters
                         Cardano.Api.Protocol.Types
                         Cardano.Api.Query
@@ -87,6 +88,7 @@ library
                         Cardano.Api.SerialiseJSON
                         Cardano.Api.SerialiseLedgerCddl
                         Cardano.Api.SerialiseRaw
+                        Cardano.Api.SerialiseTextEnvelope
                         Cardano.Api.SerialiseUsing
                         Cardano.Api.Shelley.Genesis
                         Cardano.Api.SpecialByron

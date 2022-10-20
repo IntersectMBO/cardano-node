@@ -7,6 +7,7 @@ module Cardano.Chairman.Commands.Run
   ( cmdRun
   ) where
 
+import qualified Cardano.Api as Api
 import           Cardano.Prelude
 
 import           Control.Monad.Class.MonadTime (DiffTime)
@@ -114,7 +115,7 @@ run RunOpts
 
   let (k , nId) = case p of
             SomeConsensusProtocol _ runP ->
-              let ProtocolInfo { pInfoConfig } = Protocol.protocolInfo runP
+              let ProtocolInfo { pInfoConfig } = Api.protocolInfo runP
               in ( Consensus.configSecurityParam pInfoConfig
                  , fromNetworkMagic . getNetworkMagic $ Consensus.configBlock pInfoConfig
                  )
