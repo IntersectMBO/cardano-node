@@ -5,6 +5,44 @@ usage_manifest() {
 EOF
 }
 
+# We need an explicit list of packages that we are interested
+# in, since packages from CHaP are indistinguishable from packages
+# from Hackage, and we don't want to get information about all of the
+# Hackage packages also!
+plutus_pkgs=(
+  plutus-core 
+  plutus-ledger-api
+)
+ledger_pkgs=(
+  cardano-ledger-byron 
+  cardano-ledger-shelley 
+  cardano-ledger-shelley-ma 
+  cardano-ledger-alonzo 
+  cardano-ledger-babbage 
+  cardano-ledger-conway
+  cardano-ledger-api
+  cardano-ledger-binary 
+  cardano-ledger-core 
+  cardano-ledger-pretty
+  cardano-protocol-tpraos
+  cardano-data
+  ledger-state
+  vector-map
+  small-steps
+  set-algebra
+  non-integral
+)
+ouroboros_pkgs=(
+  ouroboros-consensus-byron 
+  ouroboros-consensus-cardano 
+  ouroboros-consensus-protocol 
+  ouroboros-consensus-shelley 
+  ouroboros-consensus 
+  ouroboros-network-framework 
+  ouroboros-network
+)
+manifest_pkgs=("${plutus_pkgs[@]}" "${ledger_pkgs[@]}" "${ouroboros_pkgs[@]}")
+
 manifest() {
 local op=${1:-collect-from-checkout}; if test $# -ge 1; then shift; fi
 
@@ -15,43 +53,42 @@ case "${op}" in
         local node_rev=${1:-$(manifest_git_head_commit "$dir")}
         local real_dir=$(realpath "$dir")
 
-        local args=(
-            --slurp --raw-input
-            --arg dir               "$real_dir"
-            --arg node              "$node_rev"
-            --arg node_branch       $(manifest_local_repo_branch          "$dir")
-            --arg node_status       $(manifest_git_checkout_state_desc    "$dir")
-            --arg ouroboros_network $(manifest_cabal_project_dep_pin_hash "$dir" ouroboros-network)
-            --arg cardano_ledger    $(manifest_cabal_project_dep_pin_hash "$dir" cardano-ledger)
-            --arg plutus            $(manifest_cabal_project_dep_pin_hash "$dir" plutus)
-            --arg cardano_crypto    $(manifest_cabal_project_dep_pin_hash "$dir" cardano-crypto)
-            --arg cardano_base      $(manifest_cabal_project_dep_pin_hash "$dir" cardano-base)
-            --arg cardano_prelude   $(manifest_cabal_project_dep_pin_hash "$dir" cardano-prelude)
-        )
-        manifest_cabal_package_localisations "$dir" | jq '
-        { "cardano-node":        $node
-        , "cardano-node-branch": $node_branch
-        , "cardano-node-status": $node_status
-        , "cardano-node-package-localisations": (. | split("\n") | unique | map(select(. != "")))
-        , "ouroboros-network":   $ouroboros_network
-        , "cardano-ledger":      $cardano_ledger
-        , "plutus":              $plutus
-        , "cardano-crypto":      $cardano_crypto
-        , "cardano-base":        $cardano_base
-        , "cardano-prelude":     $cardano_prelude
-        } as $manifest
-        | ($manifest
-          | del(."cardano-node-status")
-          | del(."cardano-node-branch")
-          | del(."cardano-node-package-localisations")
-          | to_entries
-          | map(if .value | length | (. == 40) then . else
-                error ([ "While collecting software manifest from \"\($dir)\":  "
-                       , "wrong checkout hash for software component \(.key):  \(.value)"
-                       ] | add) end)
-          )
-        | $manifest
-        ' "${args[@]}"
+        # Get the plan summary
+        pushd "$real_dir" > /dev/null
+        # make sure there's a plan.json for cabal-plan-summary to read
+        cabal build all --dry-run >&2
+        popd > /dev/null
+
+        plan_summary=$($(dirname $0)/cabal-plan-summary.sh "$real_dir")
+
+        # Construct a filter that filters out entries that aren't in the list of pkgs,
+        # and then construct the list of pkgs as a json object to pass to jq
+        pkg_filter='select(.name | IN( $pkgs[] ))'
+        pkgs_json=$(jq --compact-output --null-input '$ARGS.positional' --args -- "${manifest_pkgs[@]}")
+
+        # Groups the info together so it's a map from packages to info.
+        #
+        # Note that this is only safe to do if we assume that:
+        # - A given package component only appears once in the plan (not sure this is guaranteed!)
+        # - The version is the same across all components of a package (not sure this is guaranteed either!)
+        # However, it makes the information much more readable, so we'll do it for now.
+        #
+        # We do this in a dumb way:
+        # - Rewrite '{ component: foo }' to '{ components: { foo: true } }' so jq will merge the components
+        # - Group by name
+        # - Merge each group (the components merge thanks to the rewrite above)
+        # - Turn the silly component object back into an array of its keys
+        grouper='map(.components = { (.component): true })
+          | map(del(.component))
+          | group_by(.name) 
+          | map(reduce .[] as $i ({}; . *= $i)) 
+          | map(.components = (.components | keys))'
+
+        # Run everything through the pkg_filter, then gather it back into a list
+        # to go through the grouper
+        combined_filter="[.[] | $pkg_filter] | $grouper"
+
+        echo "$plan_summary" | jq --argjson pkgs "$pkgs_json" "$combined_filter"
         ;;
 
     report )
@@ -128,11 +165,6 @@ manifest_git_checkout_state_desc() {
          fi
     else echo      -n "not-a-git-checkout"
     fi
-}
-
-manifest_cabal_project_dep_pin_hash() {
-    # FIXME
-    echo 0123456789ABCDEF0123456789ABCDEF01234567
 }
 
 manifest_local_repo_branch() {
