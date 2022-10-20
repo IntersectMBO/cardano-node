@@ -1,0 +1,10 @@
+|                           | {{ base.ver }}{% for run in runs %} |  {{ run.value.ver }} |     Δ |  Δ%{% endfor %} |
+|---------------------------+-----{% for run in runs %}-+------+------+-----{% endfor %}-|
+{% for i in table.rows %}
+|                           |     {% for run in runs %} |      |      |     {% endfor %} |
+{% endfor %}
+|---------------------------+-----{% for run in runs %}-+------+------+-----{% endfor %}-|
+#+TBLFM: $2=remote(file:$base/${{ table.src }},@@#$average);p3::$1=remote(file:$base/${{ table.src }},@@#$metric)
+{% for run in runs %}
+#+TBLFM: ${{ run.index * 3 }}=remote(file:$run{{ run.index }}/${{ table.src }},@@#$average);p3::${{ run.index * 3 + 1 }}=${{ run.index * 3 }}-$2;p3::${{ run.index * 3 + 2 }}=round(100*${{ run.index * 3 + 1 }}/$2)
+{% endfor %}

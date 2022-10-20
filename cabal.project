@@ -1,5 +1,19 @@
--- run `nix flake lock --update-input hackageNix` after updating index-state.
-index-state: 2022-02-18T00:00:00Z
+-- Custom repository for cardano haskell packages, see CONTRIBUTING for more
+repository cardano-haskell-packages
+  url: https://input-output-hk.github.io/cardano-haskell-packages
+  secure: True
+  root-keys:
+    3e0cce471cf09815f930210f7827266fd09045445d65923e6d0238a6cd15126f
+    443abb7fb497a134c343faf52f0b659bd7999bc06b7f63fa76dc99d631f9bea1
+    a86a1f6ce86c449c46666bda44268677abf29b5b2d2eb5ec7af903ec2f117a82
+    bcec67e8e99cabfa7764d75ad9b158d72bfacf70ca1d0ec8bc6b4406d1bf8413
+    c00aae8461a256275598500ea0e187588c35a5d5d7454fb57eac18d9edb86a56
+    d4a35cd3121aa00d18544bb0ac01c3e1691d618f462c46129271bccf39f7e8ee
+
+-- See CONTRIBUTING for information about these, including some Nix commands
+-- you need to run if you change them
+index-state: 2022-09-27T00:00:00Z
+index-state: cardano-haskell-packages 2022-10-17T00:00:00Z
 
 packages:
     cardano-api
@@ -54,287 +68,9 @@ package cryptonite
   -- generation is dubious. Set the flag so we use /dev/urandom by default.
   flags: -support_rdrand
 
--- ---------------------------------------------------------
--- Disable all tests by default
-
-tests: False
+tests: True
 
 test-show-details: direct
-
--- Then enable specific tests in this repo
-
-package cardano-api
-  tests: True
-
-package cardano-cli
-  tests: True
-
-package cardano-node
-  tests: True
-
-package cardano-node-chairman
-  tests: True
-
-package cardano-submit-api
-  tests: True
-
-package cardano-testnet
-  tests: True
-
-package trace-resources
-  tests: True
-
-package trace-dispatcher
-  tests: True
-
-package trace-forward
-  tests: True
-
-package cardano-tracer
-  tests: True
-
-package trace-resources
-  tests: True
-
-package locli
-  tests: True
-
--- The following is needed because Nix is doing something crazy.
-package byron-spec-ledger
-  tests: False
-
-package vector-map
-  ghc-options: -Werror
-
-package iohk-monitoring
-  tests: False
-
-package ouroboros-consensus-test
-  tests: False
-
-package ouroboros-consensus-cardano-test
-  tests: False
-
-package ouroboros-network
-  tests: False
-
-package ouroboros-network-framework
-  tests: False
-
-package plutus-tx
-  tests: False
-
-package prettyprinter-configurable
-  tests: False
-
-package small-steps
-  tests: False
-
-package small-steps-test
-  tests: False
-
-package tx-generator
-  tests: True
-
-package goblins
-  tests: False
-
-package io-classes
-  tests: False
-
-package cardano-ledger-alonzo-test
-  tests: False
-
--- ---------------------------------------------------------
-
--- The two following one-liners will cut off / restore the remainder of this file (for nix-shell users):
--- when using the "cabal" wrapper script provided by nix-shell.
--- --------------------------- 8< --------------------------
--- Please do not put any `source-repository-package` clause above this line.
-
--- Using a fork until our patches can be merged upstream
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/optparse-applicative
-  tag: 7497a29cb998721a9068d5725d49461f2bba0e7a
-  --sha256: 1gvsrg925vynwgqwplgjmp53vj953qyh3wbdf34pw21c8r47w35r
-
-source-repository-package
-  type: git
-  location: https://github.com/vshabanov/ekg-json
-  tag: 00ebe7211c981686e65730b7144fbf5350462608
-  --sha256: 1zvjm3pb38w0ijig5wk5mdkzcszpmlp5d4zxvks2jk1rkypi8gsm
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/hedgehog-extras
-  tag: 714ee03a5a786a05fc57ac5d2f1c2edce4660d85
-  --sha256: 1qa4mm36xynaf17990ijmzww0ij8hjrc0vw5nas6d0zx6q9hb978
-
-source-repository-package
-  type: git
-  location: https://github.com/haskell-works/hw-aeson
-  tag: 6dc309ff4260c71d9a18c220cbae8aa1dfe2a02e
-  --sha256: 08zxzkk1fy8xrvl46lhzmpyisizl0nzl1n00g417vc0l170wsr9j
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-base
-  tag: 0f3a867493059e650cda69e20a5cbf1ace289a57
-  --sha256: 0p0az3sbkhb7njji8xxdrfb0yx2gc8fmrh872ffm8sfip1w29gg1
-  subdir:
-    base-deriving-via
-    binary
-    binary/test
-    cardano-crypto-class
-    cardano-crypto-praos
-    cardano-crypto-tests
-    measures
-    orphans-deriving-via
-    slotting
-    strict-containers
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-crypto
-  tag: f73079303f663e028288f9f4a9e08bcca39a923e
-  --sha256: 1n87i15x54s0cjkh3nsxs4r1x016cdw1fypwmr68936n3xxsjn6q
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-ledger
-  tag: c7c63dabdb215ebdaed8b63274965966f2bf408f
-  --sha256: 1cn1z3dh5dy5yy42bwfd8rg25mg8qp3m55gyfsl563wgw4q1nd6d
-  subdir:
-    eras/alonzo/impl
-    eras/alonzo/test-suite
-    eras/babbage/impl
-    eras/babbage/test-suite
-    eras/byron/chain/executable-spec
-    eras/byron/crypto
-    eras/byron/crypto/test
-    eras/byron/ledger/executable-spec
-    eras/byron/ledger/impl
-    eras/byron/ledger/impl/test
-    eras/shelley/impl
-    eras/shelley/test-suite
-    eras/shelley-ma/impl
-    eras/shelley-ma/test-suite
-    libs/cardano-ledger-core
-    libs/cardano-ledger-pretty
-    libs/cardano-protocol-tpraos
-    libs/cardano-data
-    libs/vector-map
-    libs/set-algebra
-    libs/small-steps
-    libs/small-steps-test
-    libs/non-integral
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-prelude
-  tag: bb4ed71ba8e587f672d06edf9d2e376f4b055555
-  --sha256: 00h10l5mmiza9819p9v5q5749nb9pzgi20vpzpy1d34zmh6gf1cj
-  subdir:
-    cardano-prelude
-    cardano-prelude-test
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/goblins
-  tag: cde90a2b27f79187ca8310b6549331e59595e7ba
-  --sha256: 17c88rbva3iw82yg9srlxjv2ia5wjb9cyqw44hik565f5v9svnyg
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: 066f7002aac5a0efc20e49643fea45454f226caa
-  --sha256: 0s6x4in11k5ba7nl7la896g28sznf9185xlqg9c604jqz58vj9nj
-  subdir:
-    contra-tracer
-    iohk-monitoring
-    plugins/backend-aggregation
-    plugins/backend-ekg
-    plugins/backend-monitoring
-    plugins/backend-trace-forwarder
-    plugins/scribe-systemd
-    tracer-transformers
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/Win32-network
-  tag: 3825d3abf75f83f406c1f7161883c438dac7277d
-  --sha256: 19wahfv726fa3mqajpqdqhnl9ica3xmf68i254q45iyjcpj1psqx
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/ouroboros-network
-  tag: cb9eba406ceb2df338d8384b35c8addfe2067201
-  --sha256: 066llskxzjgcs13lwlvklb28azb9kd9b77j61x8fvrj1rlf5njfw
-  subdir:
-    monoidal-synchronisation
-    network-mux
-    ouroboros-consensus
-    ouroboros-consensus-byron
-    ouroboros-consensus-cardano
-    ouroboros-consensus-protocol
-    ouroboros-consensus-shelley
-    ouroboros-network
-    ouroboros-network-framework
-    ouroboros-network-testing
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/io-sim
-  tag: f4183f274d88d0ad15817c7052df3a6a8b40e6dc
-  --sha256: 0vb2pd9hl89v2y5hrhrsm69yx0jf98vppjmfncj2fraxr3p3lldw
-  subdir:
-    io-classes
-    io-sim
-    strict-stm
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/typed-protocols
-  tag: 181601bc3d9e9d21a671ce01e0b481348b3ca104
-  --sha256: 1lr97b2z7l0rpsmmz92rsv27qzd5vavz10cf7n25svya4kkiysp5
-  subdir:
-    typed-protocols
-    typed-protocols-cborg
-    typed-protocols-examples
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/plutus
-  tag: a56c96598b4b25c9e28215214d25189331087244
-  --sha256: 12d6bndmj0dxl6xlaqmf78326yp5hw093bmybmqfpdkvk4mgz03j
-  subdir:
-    plutus-core
-    plutus-ledger-api
-    plutus-tx
-    plutus-tx-plugin
-    prettyprinter-configurable
-    stubs/plutus-ghc-stub
-    word-array
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/ekg-forward
-  tag: 297cd9db5074339a2fb2e5ae7d0780debb670c63
-  --sha256: 1zcwry3y5rmd9lgxy89wsb3k4kpffqji35dc7ghzbz603y1gy24g
-
-source-repository-package
-  type: git
-  location: https://github.com/denisshevchenko/threepenny-gui
-  tag: 4ec92ded05ccf59ba4a874be4b404ac1b6d666b6
-  --sha256: 00fvvaf4ir4hskq4a6gggbh2wmdvy8j8kn6s4m1p1vlh8m8mq514
-
--- Drops an instance breaking our code. Should be released to Hackage eventually.
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/flat
-  tag: ee59880f47ab835dbd73bea0847dab7869fc20d8
-  --sha256: 1lrzknw765pz2j97nvv9ip3l1mcpf2zr4n56hwlz0rk7wq7ls4cm
 
 constraints:
     hedgehog >= 1.0
@@ -345,6 +81,27 @@ constraints:
     -- that dependency
   , network >= 3.1.1.0
   , HSOpenSSL >= 0.11.7.2
+  , algebraic-graphs < 0.7
+  , protolude < 0.3.1
+    -- TODO: these should be set in cabal files, but avoiding setting them in lower dependencies for initial CHaP release
+  , cardano-prelude == 0.1.0.0
+  , base-deriving-via == 0.1.0.0
+  , cardano-binary  == 1.5.0
+  , cardano-binary-test == 1.3.0
+  , cardano-crypto-class  == 2.0.0
+  , cardano-crypto-praos  == 2.0.0
+  , cardano-crypto-tests  == 2.0.0
+  , cardano-slotting  == 0.1.0.0
+  , measures == 0.1.0.0
+  , orphans-deriving-via == 0.1.0.0
+  , strict-containers == 0.1.0.0
+  , plutus-core == 1.0.0.0
+  , plutus-ledger-api == 1.0.0.0
+  , plutus-tx == 1.0.0.0
+  , plutus-tx-plugin == 1.0.0.0
+  , prettyprinter-configurable == 0.1.0.0
+  , plutus-ghc-stub == 8.6.5
+  , word-array == 0.1.0.0
 
 package snap-server
   flags: +openssl
@@ -353,6 +110,34 @@ package comonad
   flags: -test-doctests
 
 allow-newer:
-  *:aeson,
+  ekg:aeson,
+  ekg-json:aeson,
+  threepenny-gui:aeson,
   monoidal-containers:aeson,
-  size-based:template-haskell
+  size-based:template-haskell,
+  snap-server:attoparsec,
+
+-- IMPORTANT
+-- Do NOT add more source-repository-package stanzas here unless they are strictly
+-- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/moo
+  tag: 8c487714fbfdea66188fcb85053e7e292e0cc348
+  --sha256: 1mdj218hgh7s5a6b9k14vg9i06zxah0wa42ycdgh245izs8nfv0x
+
+-- Open PR upstream, maintainer unresponsive, hopefully short-lived fork.
+-- TODO (mpj): release into CHaP as a patched version and delete
+source-repository-package
+  type: git
+  location: https://github.com/vshabanov/ekg-json
+  tag: 00ebe7211c981686e65730b7144fbf5350462608
+  --sha256: 1zvjm3pb38w0ijig5wk5mdkzcszpmlp5d4zxvks2jk1rkypi8gsm
+
+source-repository-package
+  type: git
+  location: https://github.com/denisshevchenko/threepenny-gui
+  tag: 4ec92ded05ccf59ba4a874be4b404ac1b6d666b6
+  --sha256: 00fvvaf4ir4hskq4a6gggbh2wmdvy8j8kn6s4m1p1vlh8m8mq514
+

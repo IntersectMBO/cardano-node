@@ -1,0 +1,13 @@
+[ { "tag": "CSlot"
+  , "contents":
+    { "tag": "SlotLEq"
+    , "contents": 56000
+    }
+  }
+, { "tag":"CBlock"
+    , "contents":
+    { "tag": "BMinimumAdoptions"
+    , "contents": 50
+    }
+  }
+]
