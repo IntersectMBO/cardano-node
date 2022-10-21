@@ -142,6 +142,7 @@
               packages = lib.genAttrs [
                 "ouroboros-consensus"
                 "ouroboros-consensus-cardano"
+                "ouroboros-consensus-cardano-tools"
                 "ouroboros-consensus-byron"
                 "ouroboros-consensus-shelley"
                 "ouroboros-network"
@@ -182,6 +183,7 @@
           projectExes = flatten (haskellLib.collectComponents' "exes" projectPackages) // (with hsPkgsWithPassthru; {
             inherit (ouroboros-consensus-byron.components.exes) db-converter;
             inherit (ouroboros-consensus-cardano.components.exes) db-analyser;
+            inherit (ouroboros-consensus-cardano-tools.components.exes) db-synthesizer;
             inherit (bech32.components.exes) bech32;
           } // lib.optionalAttrs hostPlatform.isUnix {
             inherit (network-mux.components.exes) cardano-ping;
