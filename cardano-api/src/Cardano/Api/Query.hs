@@ -196,6 +196,14 @@ data QueryInEra era result where
 deriving instance Show (QueryInEra era result)
 
 
+fromConsensusKESConfig :: Consensus.KESConfig -> KESConfig
+fromConsensusKESConfig consensusKESConfig = KESConfig {
+    kcSlotsPerKESPeriod = Consensus.kcSlotsPerKESPeriod consensusKESConfig
+  , kcMaxKESEvolutions = Consensus.kcMaxKESEvolutions consensusKESConfig
+  , kcSystemStart = Consensus.kcSystemStart consensusKESConfig
+  }
+
+
 data KESConfig = KESConfig {
     -- | For Ouroboros Praos, the length of a KES period as a number of time
     -- slots. The KES keys get evolved once per KES period.
@@ -550,7 +558,8 @@ toConsensusQueryShelleyBased
 toConsensusQueryShelleyBased erainmode QueryEpoch =
     Some (consensusQueryInEraInMode erainmode Consensus.GetEpochNo)
 
-toConsensusQueryShelleyBased erainmode QueryKESConfig = undefined -- TODO
+toConsensusQueryShelleyBased erainmode QueryKESConfig =
+    Some (consensusQueryInEraInMode erainmode Consensus.GetKESConfig)
 
 toConsensusQueryShelleyBased erainmode QueryProtocolParameters =
     Some (consensusQueryInEraInMode erainmode Consensus.GetCurrentPParams)
@@ -765,7 +774,10 @@ fromConsensusQueryResultShelleyBased _ QueryEpoch q' epoch =
       Consensus.GetEpochNo -> epoch
       _                    -> fromConsensusQueryResultMismatch
 
-fromConsensusQueryResultShelleyBased _ QueryKESConfig q' epoch = undefined -- TODO
+fromConsensusQueryResultShelleyBased _ QueryKESConfig q' consensusKESConfig =
+  case q' of
+    Consensus.GetKESConfig -> fromConsensusKESConfig consensusKESConfig
+    _                      -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResultShelleyBased era QueryProtocolParameters q' r' =
     case q' of
