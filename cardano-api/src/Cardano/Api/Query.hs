@@ -19,6 +19,7 @@
 -- | Queries from local clients to the node.
 --
 module Cardano.Api.Query (
+    KESConfig (..),
 
     -- * Queries
     QueryInMode(..),
@@ -83,6 +84,7 @@ import           Data.SOP.Strict (SListI)
 import           Data.Text (Text)
 import           Data.Typeable
 import           Prelude
+import           Data.Time (UTCTime)
 
 import           Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
 
@@ -195,12 +197,35 @@ data QueryInEra era result where
 deriving instance Show (QueryInEra era result)
 
 
+data KESConfig = KESConfig {
+    -- | For Ouroboros Praos, the length of a KES period as a number of time
+    -- slots. The KES keys get evolved once per KES period.
+    --
+    kcSlotsPerKESPeriod :: Int
+
+    -- | The maximum number of times a KES key can be evolved before it is
+    -- no longer considered valid. This can be less than the maximum number
+    -- of times given the KES key size. For example the mainnet KES key size
+    -- would allow 64 evolutions, but the max KES evolutions param is 62.
+    --
+  , kcMaxKESEvolutions :: Int
+
+    -- | The reference time the system started. The time of slot zero.
+    -- The time epoch against which all Ouroboros time slots are measured.
+    --
+  , kcSystemStart :: UTCTime
+}
+
+
 data QueryInShelleyBasedEra era result where
   QueryEpoch
     :: QueryInShelleyBasedEra era EpochNo
 
   QueryGenesisParameters
     :: QueryInShelleyBasedEra era GenesisParameters
+
+  QueryKESConfig
+    :: QueryInShelleyBasedEra era KESConfig
 
   QueryProtocolParameters
     :: QueryInShelleyBasedEra era ProtocolParameters
