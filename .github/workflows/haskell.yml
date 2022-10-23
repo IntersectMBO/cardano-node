@@ -60,7 +60,7 @@ jobs:
       id: setup-haskell
       with:
         ghc-version: ${{ matrix.ghc }}
-        cabal-version: 3.6.2.0
+        cabal-version: 3.8.1.0
 
     - name: "WIN: Setup Haskell"
       id: win-setup-haskell
