@@ -1,5 +1,13 @@
 # Changelog for cardano-node
 
+## 1.35.4 -- October 2022
+
+### node changes
+
+- Update plutus to version 1.0.0.1 to enable SECP at protocol version 8
+- Update cardano-crypto-class to version 2.0.0.0.2 to add SECP crypto primitives
+- Update block header advertised version in babbage to 8.0
+
 ## 1.35.3 -- August 2022
 
 ### node changes
