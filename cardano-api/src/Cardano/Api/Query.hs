@@ -550,6 +550,8 @@ toConsensusQueryShelleyBased
 toConsensusQueryShelleyBased erainmode QueryEpoch =
     Some (consensusQueryInEraInMode erainmode Consensus.GetEpochNo)
 
+toConsensusQueryShelleyBased erainmode QueryKESConfig = undefined -- TODO
+
 toConsensusQueryShelleyBased erainmode QueryProtocolParameters =
     Some (consensusQueryInEraInMode erainmode Consensus.GetCurrentPParams)
 
@@ -762,6 +764,8 @@ fromConsensusQueryResultShelleyBased _ QueryEpoch q' epoch =
     case q' of
       Consensus.GetEpochNo -> epoch
       _                    -> fromConsensusQueryResultMismatch
+
+fromConsensusQueryResultShelleyBased _ QueryKESConfig q' epoch = undefined -- TODO
 
 fromConsensusQueryResultShelleyBased era QueryProtocolParameters q' r' =
     case q' of
