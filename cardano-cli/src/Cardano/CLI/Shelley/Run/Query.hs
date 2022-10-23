@@ -32,6 +32,8 @@ import           Cardano.Api
 import qualified Cardano.Api as Api
 import           Cardano.Api.Byron
 import           Cardano.Api.Orphans ()
+import           Cardano.Api.Query
+                   (KESConfig (kcMaxKESEvolutions, kcSlotsPerKESPeriod, kcSystemStart))
 import           Cardano.Api.Shelley
 
 import           Control.Monad.Trans.Except (except)
@@ -52,8 +54,8 @@ import qualified Data.Text.IO as T
 import qualified Data.Text.IO as Text
 import           Data.Text.Lazy.Builder (toLazyText)
 import           Data.Time.Clock
-import qualified Data.Vector as Vector
 import qualified Data.VMap as VMap
+import qualified Data.Vector as Vector
 import           Formatting.Buildable (build)
 import           Numeric (showEFloat)
 import qualified System.IO as IO
@@ -423,16 +425,16 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
 
       -- We check that the KES period specified in the operational certificate is correct
       -- based on the KES period defined in the genesis parameters and the current slot number
-      let genesisQinMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryGenesisParameters
+      let kesConfigQinMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryKESConfig
           eraHistoryQuery = QueryEraHistory CardanoModeIsMultiEra
-      gParams <- executeQuery era cModeParams localNodeConnInfo genesisQinMode
+      kesConfig <- executeQuery era cModeParams localNodeConnInfo kesConfigQinMode
 
       chainTip <- liftIO $ getLocalChainTip localNodeConnInfo
 
-      let curKesPeriod = currentKesPeriod chainTip gParams
+      let curKesPeriod = currentKesPeriod chainTip kesConfig
           oCertStartKesPeriod = opCertStartingKesPeriod opCert
-          oCertEndKesPeriod = opCertEndKesPeriod gParams opCert
-          opCertIntervalInformation = opCertIntervalInfo gParams chainTip curKesPeriod oCertStartKesPeriod oCertEndKesPeriod
+          oCertEndKesPeriod = opCertEndKesPeriod kesConfig opCert
+          opCertIntervalInformation = opCertIntervalInfo kesConfig chainTip curKesPeriod oCertStartKesPeriod oCertEndKesPeriod
 
       eraHistory <- firstExceptT ShelleyQueryCmdAcquireFailure . newExceptT $ queryNodeLocalState localNodeConnInfo Nothing eraHistoryQuery
 
@@ -452,7 +454,7 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
       liftIO . putStrLn $ renderOpCertIntervalInformation nodeOpCertFile opCertIntervalInformation
       liftIO . putStrLn $ renderOpCertNodeAndOnDiskCounterInformation nodeOpCertFile counterInformation
 
-      let qKesInfoOutput = createQueryKesPeriodInfoOutput opCertIntervalInformation counterInformation eInfo gParams
+      let qKesInfoOutput = createQueryKesPeriodInfoOutput opCertIntervalInformation counterInformation eInfo kesConfig
           kesPeriodInfoJSON = encodePretty qKesInfoOutput
 
       liftIO $ LBS.putStrLn kesPeriodInfoJSON
@@ -461,34 +463,34 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
           $ LBS.writeFile oFp kesPeriodInfoJSON)
     mode -> left . ShelleyQueryCmdUnsupportedMode $ AnyConsensusMode mode
  where
-   currentKesPeriod :: ChainTip -> GenesisParameters -> CurrentKesPeriod
+   currentKesPeriod :: ChainTip -> KESConfig -> CurrentKesPeriod
    currentKesPeriod ChainTipAtGenesis _ = CurrentKesPeriod 0
-   currentKesPeriod (ChainTip currSlot _ _) gParams =
-     let slotsPerKesPeriod = fromIntegral $ protocolParamSlotsPerKESPeriod gParams
+   currentKesPeriod (ChainTip currSlot _ _) kesConfig =
+     let slotsPerKesPeriod = fromIntegral $ kcSlotsPerKESPeriod kesConfig
      in CurrentKesPeriod $ unSlotNo currSlot `div` slotsPerKesPeriod
 
    opCertStartingKesPeriod :: OperationalCertificate -> OpCertStartingKesPeriod
    opCertStartingKesPeriod = OpCertStartingKesPeriod . fromIntegral . getKesPeriod
 
-   opCertEndKesPeriod :: GenesisParameters -> OperationalCertificate -> OpCertEndingKesPeriod
-   opCertEndKesPeriod gParams oCert =
+   opCertEndKesPeriod :: KESConfig -> OperationalCertificate -> OpCertEndingKesPeriod
+   opCertEndKesPeriod kesConfig oCert =
      let OpCertStartingKesPeriod start = opCertStartingKesPeriod oCert
-         maxKesEvo = fromIntegral $ protocolParamMaxKESEvolutions gParams
+         maxKesEvo = fromIntegral $ kcMaxKESEvolutions kesConfig
      in OpCertEndingKesPeriod $ start + maxKesEvo
 
    -- See OCERT rule in Shelley Spec: https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/shelleyLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec
    opCertIntervalInfo
-     :: GenesisParameters
+     :: KESConfig
      -> ChainTip
      -> CurrentKesPeriod
      -> OpCertStartingKesPeriod
      -> OpCertEndingKesPeriod
      -> OpCertIntervalInformation
-   opCertIntervalInfo gParams currSlot' c s e@(OpCertEndingKesPeriod oCertEnd) =
+   opCertIntervalInfo kesConfig currSlot' c s e@(OpCertEndingKesPeriod oCertEnd) =
        let cSlot = case currSlot' of
                        (ChainTip cSlotN _ _) -> unSlotNo cSlotN
                        ChainTipAtGenesis -> 0
-           slotsTillExp = SlotsTillKesKeyExpiry . SlotNo $ (oCertEnd * fromIntegral (protocolParamSlotsPerKESPeriod gParams)) - cSlot
+           slotsTillExp = SlotsTillKesKeyExpiry . SlotNo $ (oCertEnd * fromIntegral (kcSlotsPerKESPeriod kesConfig)) - cSlot
        in O.createOpCertIntervalInfo c s e (Just slotsTillExp)
 
    opCertNodeAndOnDiskCounters
@@ -502,14 +504,14 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
 
    opCertExpiryUtcTime
      :: EpochInfo (Either Text)
-     -> GenesisParameters
+     -> KESConfig
      -> OpCertEndingKesPeriod
      -> Maybe UTCTime
-   opCertExpiryUtcTime eInfo gParams (OpCertEndingKesPeriod oCertExpiryKesPeriod) =
+   opCertExpiryUtcTime eInfo kesConfig (OpCertEndingKesPeriod oCertExpiryKesPeriod) =
      let time = epochInfoSlotToUTCTime
                   eInfo
-                  (SystemStart $ protocolParamSystemStart gParams)
-                  (fromIntegral $ oCertExpiryKesPeriod * fromIntegral (protocolParamSlotsPerKESPeriod gParams))
+                  (SystemStart $ kcSystemStart kesConfig)
+                  (fromIntegral $ oCertExpiryKesPeriod * fromIntegral (kcSlotsPerKESPeriod kesConfig))
      in case time of
           Left _ -> Nothing
           Right t -> Just t
@@ -532,9 +534,9 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
      :: OpCertIntervalInformation
      -> OpCertNodeAndOnDiskCounterInformation
      -> EpochInfo (Either Text)
-     -> GenesisParameters
+     -> KESConfig
      -> O.QueryKesPeriodInfoOutput
-   createQueryKesPeriodInfoOutput oCertIntervalInfo oCertCounterInfo eInfo gParams  =
+   createQueryKesPeriodInfoOutput oCertIntervalInfo oCertCounterInfo eInfo kesConfig  =
      let (e, mStillExp) = case oCertIntervalInfo of
                             OpCertWithinInterval _ end _ sTillExp -> (end, Just sTillExp)
                             OpCertStartingKesPeriodIsInTheFuture _ end _ -> (end, Nothing)
@@ -549,11 +551,11 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
         { O.qKesOpCertIntervalInformation = oCertIntervalInfo
         , O.qKesInfoNodeStateOperationalCertNo = mNodeCounter
         , O.qKesInfoOnDiskOperationalCertNo = onDiskCounter
-        , O.qKesInfoMaxKesKeyEvolutions = fromIntegral $ protocolParamMaxKESEvolutions gParams
-        , O.qKesInfoSlotsPerKesPeriod = fromIntegral $ protocolParamSlotsPerKESPeriod gParams
+        , O.qKesInfoMaxKesKeyEvolutions = fromIntegral $ kcMaxKESEvolutions kesConfig
+        , O.qKesInfoSlotsPerKesPeriod = fromIntegral $ kcSlotsPerKESPeriod kesConfig
         , O.qKesInfoKesKeyExpiry =
             case mStillExp of
-              Just _ -> opCertExpiryUtcTime eInfo gParams e
+              Just _ -> opCertExpiryUtcTime eInfo kesConfig e
               Nothing -> Nothing
         }
 
