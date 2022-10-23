@@ -121,7 +121,6 @@ import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
-import           Cardano.Api.GenesisParameters
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
@@ -220,9 +219,6 @@ data KESConfig = KESConfig {
 data QueryInShelleyBasedEra era result where
   QueryEpoch
     :: QueryInShelleyBasedEra era EpochNo
-
-  QueryGenesisParameters
-    :: QueryInShelleyBasedEra era GenesisParameters
 
   QueryKESConfig
     :: QueryInShelleyBasedEra era KESConfig
@@ -554,9 +550,6 @@ toConsensusQueryShelleyBased
 toConsensusQueryShelleyBased erainmode QueryEpoch =
     Some (consensusQueryInEraInMode erainmode Consensus.GetEpochNo)
 
-toConsensusQueryShelleyBased erainmode QueryGenesisParameters =
-    Some (consensusQueryInEraInMode erainmode Consensus.GetGenesisConfig)
-
 toConsensusQueryShelleyBased erainmode QueryProtocolParameters =
     Some (consensusQueryInEraInMode erainmode Consensus.GetCurrentPParams)
 
@@ -769,12 +762,6 @@ fromConsensusQueryResultShelleyBased _ QueryEpoch q' epoch =
     case q' of
       Consensus.GetEpochNo -> epoch
       _                    -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResultShelleyBased _ QueryGenesisParameters q' r' =
-    case q' of
-      Consensus.GetGenesisConfig -> fromShelleyGenesis
-                                      (Consensus.getCompactGenesis r')
-      _                          -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResultShelleyBased era QueryProtocolParameters q' r' =
     case q' of
