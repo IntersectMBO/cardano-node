@@ -1463,7 +1463,7 @@ runTxCalculateMinRequiredUTxO (AnyCardanoEra era) protocolParamsSourceSpec txOut
         $ checkProtocolParameters sbe pp
       minValue <- firstExceptT ShelleyTxCmdMinimumUTxOErr
                     . hoistEither $ calculateMinimumUTxO sbe out pp
-      liftIO . IO.print $ selectLovelace minValue
+      liftIO . IO.print $ minValue
 
 runTxCreatePolicyId :: ScriptFile -> ExceptT ShelleyTxCmdError IO ()
 runTxCreatePolicyId (ScriptFile sFile) = do
