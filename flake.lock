@@ -3,14 +3,18 @@
     "CHaP": {
       "flake": false,
       "locked": {
-        "lastModified": 1666380176,
-        "narHash": "sha256-lH1kQsWkV2lGRJaSfrfxVEaq50rMGyBq6NIYG2CHsYA=",
-        "path": "/home/sam/work/iohk/cardano-haskell-packages/_repo",
-        "type": "path"
+        "lastModified": 1666576849,
+        "narHash": "sha256-FDFmN3TzQsUjNxGlKKTFpLOUOnvsQMNI4o3MahJw9zA=",
+        "owner": "input-output-hk",
+        "repo": "cardano-haskell-packages",
+        "rev": "97aab5bc3f59108d97a6bb0c4d07ae1b79b005ca",
+        "type": "github"
       },
       "original": {
-        "path": "/home/sam/work/iohk/cardano-haskell-packages/_repo",
-        "type": "path"
+        "owner": "input-output-hk",
+        "ref": "repo",
+        "repo": "cardano-haskell-packages",
+        "type": "github"
       }
     },
     "HTTP": {
