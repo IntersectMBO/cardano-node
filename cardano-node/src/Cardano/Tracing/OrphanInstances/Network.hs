@@ -75,7 +75,8 @@ import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (.
                    TracePeerSelection (..))
 import qualified Ouroboros.Network.PeerSelection.KnownPeers as KnownPeers
 import           Ouroboros.Network.PeerSelection.LedgerPeers
-import           Ouroboros.Network.PeerSelection.LocalRootPeers (LocalRootPeers, toGroupSets, toMap)
+import           Ouroboros.Network.PeerSelection.LocalRootPeers (LocalRootPeers)
+import qualified Ouroboros.Network.PeerSelection.LocalRootPeers as LocalRootPeers
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS (TraceLocalRootPeers (..),
                    TracePublicRootPeers (..))
@@ -1360,7 +1361,7 @@ instance Show exception => ToObject (TraceLocalRootPeers RemoteAddress exception
              ]
 
 instance ToJSON IP where
-  toJSON ip = Aeson.object ["ip" .= String (pack . show $ ip)]
+  toJSON ip = String (pack . show $ ip)
 
 instance ToObject TracePublicRootPeers where
   toObject _verb (TracePublicRootRelayAccessPoint relays) =
@@ -1385,12 +1386,11 @@ instance ToObject TracePublicRootPeers where
 instance ToJSON PeerStatus where
   toJSON = String . pack . show
 
-instance (Aeson.ToJSONKey peerAddr, ToJSON peerAddr, Show peerAddr)
+instance (Aeson.ToJSONKey peerAddr, ToJSON peerAddr, Ord peerAddr, Show peerAddr)
   => ToJSON (LocalRootPeers peerAddr) where
   toJSON lrp =
     Aeson.object [ "kind" .= String "LocalRootPeers"
-                 , "state" .= toJSON (toMap lrp)
-                 , "groups" .= Aeson.toJSONList (toGroupSets lrp)
+                 , "groups" .= Aeson.toJSONList (LocalRootPeers.toGroups lrp)
                  ]
 
 instance ToJSON PeerSelectionTargets where
@@ -1652,7 +1652,7 @@ instance ToObject (PeerSelectionActionsTrace SockAddr) where
              , "reason" .= show f
              ]
   toObject _verb (PeerMonitoringError connId s) =
-    mconcat [ "kind" .= String "PeerMonitoridngError"
+    mconcat [ "kind" .= String "PeerMonitoringError"
              , "connectionId" .= toJSON connId
              , "reason" .= show s
              ]
@@ -1741,15 +1741,13 @@ instance ToJSON NodeToClientVersion where
 
 instance ToJSON NodeToNodeVersionData where
   toJSON (NodeToNodeVersionData (NetworkMagic m) dm) =
-    Aeson.object [ "kind" .= String "NodeToNodeVersionData"
-                 , "networkMagic" .= toJSON m
+    Aeson.object [ "networkMagic" .= toJSON m
                  , "diffusionMode" .= show dm
                  ]
 
 instance ToJSON NodeToClientVersionData where
   toJSON (NodeToClientVersionData (NetworkMagic m)) =
-    Aeson.object [ "kind" .= String "NodeToClientVersionData"
-                 , "networkMagic" .= toJSON m
+    Aeson.object [ "networkMagic" .= toJSON m
                  ]
 
 instance (Show versionNumber, ToJSON versionNumber, ToJSON agreedOptions)

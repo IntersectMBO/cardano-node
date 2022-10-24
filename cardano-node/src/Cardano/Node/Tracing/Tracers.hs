@@ -139,7 +139,7 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
                 trBase trForward mbTrEKG
                 ["Startup"]
                 namesStartupInfo
-                (const Notice)
+                severityStartupTracer
                 allPublic
     configureTracers trConfig docStartupInfo [startupTr]
 

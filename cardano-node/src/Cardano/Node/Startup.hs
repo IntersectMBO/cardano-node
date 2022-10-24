@@ -113,6 +113,16 @@ data StartupTrace blk =
   | BIByron BasicInfoByron
   | BINetwork BasicInfoNetwork
 
+severityStartupTracer :: StartupTrace blk -> SeverityS
+severityStartupTracer (StartupSocketConfigError _) = Error
+severityStartupTracer NetworkConfigUpdate = Notice
+severityStartupTracer (NetworkConfigUpdateError _) = Error
+severityStartupTracer NetworkConfigUpdateUnsupported = Warning
+severityStartupTracer P2PWarning = Warning
+severityStartupTracer P2PWarningDevelopementNetworkProtocols = Warning
+severityStartupTracer WarningDevelopmentNetworkProtocols {} = Warning
+severityStartupTracer _ = Info
+
 data BasicInfoCommon = BasicInfoCommon {
     biConfigPath    :: FilePath
   , biNetworkMagic  :: NetworkMagic

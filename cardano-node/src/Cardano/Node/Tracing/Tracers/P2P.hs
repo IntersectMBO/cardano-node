@@ -691,7 +691,7 @@ instance LogFormatting (PeerSelectionActionsTrace SockAddr) where
              , "reason" .= show f
              ]
   forMachine _dtal (PeerMonitoringError connId s) =
-    mconcat [ "kind" .= String "PeerMonitoridngError"
+    mconcat [ "kind" .= String "PeerMonitoringError"
              , "connectionId" .= toJSON connId
              , "reason" .= show s
              ]
