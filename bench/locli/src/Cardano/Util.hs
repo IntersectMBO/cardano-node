@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 module Cardano.Util
   ( module Prelude
-  , module Cardano.Util
+  , module Data.Tuple.Extra
   , module Cardano.Ledger.BaseTypes
   , module Control.Arrow
   , module Control.Applicative
@@ -9,12 +9,14 @@ module Cardano.Util
   , module Control.Monad.Trans.Except.Extra
   , module Ouroboros.Consensus.Util.Time
   , module Text.Printf
+  , module Cardano.Util
   )
 where
 
 import Prelude                          (String, error)
 import Cardano.Prelude
 
+import Data.Tuple.Extra          hiding ((&&&), (***))
 import Control.Arrow                    ((&&&), (***))
 import Control.Applicative              ((<|>))
 import Control.Concurrent.Async         (forConcurrently, forConcurrently_, mapConcurrently, mapConcurrently_)

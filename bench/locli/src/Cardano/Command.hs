@@ -166,9 +166,11 @@ parseChainCommand =
            (optTextInputFile "template" "Template to use as base.")
        <*> optTextOutputFile "report"   "Report .org file to create."
        <*> some
-       ((,)
+       ((,,,)
         <$> optJsonInputFile "run-metafile"    "The meta.json file of a benchmark run"
         <*> optJsonInputFile "shelley-genesis" "Genesis file of the run"
+        <*> optJsonInputFile "perf"            "JSON cluster performance input file"
+        <*> optJsonInputFile "prop"            "JSON block propagation input file"
        ))
    ])
  where
@@ -264,7 +266,10 @@ data ChainCommand
   |  RenderMultiClusterPerf RenderFormat TextOutputFile PerfSubset CDF2Aspect
 
   |             Compare     InputDir (Maybe TextInputFile) TextOutputFile
-                            [(JsonInputFile RunPartial, JsonInputFile Genesis)]
+                            [( JsonInputFile RunPartial
+                             , JsonInputFile Genesis
+                             , JsonInputFile ClusterPerf
+                             , JsonInputFile BlockPropOne)]
 
   deriving Show
 
@@ -470,7 +475,7 @@ runChainCommand _ c@RenderPropagation{} = missingCommandData c
 
 runChainCommand s@State{}
   c@(ReadPropagations fs) = do
-  xs <- mapConcurrently (fmap (Aeson.eitherDecode @BlockPropOne) . LBS.readFile . unJsonInputFile) fs
+  xs <- mapConcurrently readJsonDataIO fs
     & fmap sequence
     & newExceptT
     & firstExceptT (CommandError c . show)
@@ -562,8 +567,12 @@ runChainCommand _ c@RenderMultiClusterPerf{} = missingCommandData c
   ["multi-run cluster preformance stats"]
 
 runChainCommand s c@(Compare ede mTmpl outf@(TextOutputFile outfp) runs) = do
-  xs :: [Run] <- forM runs $
-    \(mf,gf)-> readRun gf mf & firstExceptT (fromAnalysisError c)
+  xs :: [(ClusterPerf, BlockPropOne, Run)] <- forM runs $
+    \(mf,gf,cpf,bpf)->
+      (,,)
+      <$> readJsonData cpf (CommandError c)
+      <*> readJsonData bpf (CommandError c)
+      <*> (readRun gf mf & firstExceptT (fromAnalysisError c))
   (tmpl, orgReport) <- case xs of
     baseline:deltas@(_:_) -> liftIO $
       Cardano.Report.generate ede mTmpl baseline deltas

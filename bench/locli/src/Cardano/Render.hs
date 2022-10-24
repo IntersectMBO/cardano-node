@@ -23,6 +23,10 @@ import Cardano.Util
 class RenderCDFs a p where
   rdFields :: [Field DSelect p a]
 
+filterFields :: RenderCDFs a p
+             => (Field DSelect p a -> Bool) -> [Field DSelect p a]
+filterFields f = filter f rdFields
+
 class RenderTimeline a where
   data RTComments a :: Type
   rtFields     :: Run -> [Field ISelect I a]
@@ -236,7 +240,7 @@ renderAnalysisCDFs a@Anchor{..} fieldSelr _c2a centileSelr AsOrg x =
    cdfSamplesProps = fmap (pure . unliftCDFVal cdfIx . snd) . cdfSamples . restrictCDF
 
    fields :: [Field DSelect p a]
-   fields = filter fieldSelr rdFields
+   fields = filterFields fieldSelr
 
    restrictCDF :: forall c. CDF p c -> CDF p c
    restrictCDF = maybe id subsetCDF centileSelr

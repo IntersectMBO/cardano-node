@@ -24,7 +24,6 @@ import Data.Text qualified as LText
 import Data.Text.Short qualified as Text
 import Data.Text.Short (ShortText, fromText, toText)
 import Data.Time.Clock (NominalDiffTime, UTCTime)
-import Data.Tuple.Extra (fst3, snd3, thd3)
 import Data.Map qualified as Map
 import Data.Vector (Vector)
 import Data.Vector qualified as V

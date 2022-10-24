@@ -11,10 +11,12 @@ where
 import Prelude                          (String, fail, show)
 import Cardano.Prelude                  hiding (head)
 
+import Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 import Data.Aeson
 import Data.Aeson.Types                 (toJSONKeyText)
 import Data.Attoparsec.Text             qualified as Atto
 import Data.Attoparsec.Time             qualified as Iso8601
+import Data.ByteString.Lazy.Char8       qualified as LBS
 import Data.Text                        qualified as T
 import Data.Text.Short                  qualified as SText
 import Data.Text.Short                  (ShortText, fromText, toText)
@@ -123,6 +125,23 @@ newtype CsvOutputFile
 newtype OutputFile
   = OutputFile { unOutputFile :: FilePath }
   deriving (Show, Eq)
+
+---
+--- Readers
+---
+readJsonData :: FromJSON a => JsonInputFile a -> (Text -> b) -> ExceptT b IO a
+readJsonData f err =
+  unJsonInputFile f
+  & LBS.readFile
+  & fmap eitherDecode
+  & newExceptT
+  & firstExceptT (err . T.pack)
+
+readJsonDataIO :: FromJSON a => JsonInputFile a -> IO (Either String a)
+readJsonDataIO f =
+  unJsonInputFile f
+  & LBS.readFile
+  & fmap eitherDecode
 
 ---
 --- Parsers

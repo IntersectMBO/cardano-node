@@ -12,7 +12,6 @@ import Cardano.Prelude
 import Control.Monad (fail)
 import Data.Aeson qualified as Aeson
 import Data.Aeson (FromJSON(..), Object, ToJSON(..), withObject, (.:), (.:?))
-import Data.ByteString.Lazy.Char8 qualified as LBS
 import Data.Text qualified as T
 import Data.Time.Clock hiding (secondsToNominalDiffTime)
 import Data.Time.Clock.POSIX
@@ -130,13 +129,9 @@ instance FromJSON RunPartial where
 
 readRun :: JsonInputFile Genesis -> JsonInputFile RunPartial -> ExceptT AnalysisCmdError IO Run
 readRun shelleyGenesis runmeta = do
-  runPartial <- firstExceptT (RunMetaParseError runmeta . T.pack)
-                       (newExceptT $
-                        Aeson.eitherDecode @RunPartial <$> LBS.readFile (unJsonInputFile runmeta))
+  runPartial <- readJsonData runmeta        (RunMetaParseError runmeta)
   progress "meta"    (Q $ unJsonInputFile runmeta)
-  run        <- firstExceptT (GenesisParseError shelleyGenesis . T.pack)
-                       (newExceptT $
-                        Aeson.eitherDecode @Genesis <$> LBS.readFile (unJsonInputFile shelleyGenesis))
+  run        <- readJsonData shelleyGenesis (GenesisParseError shelleyGenesis)
                 <&> completeRun runPartial
   progress "genesis" (Q $ unJsonInputFile shelleyGenesis)
   progress "run"     (J run)

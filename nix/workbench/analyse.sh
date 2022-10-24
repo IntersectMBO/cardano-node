@@ -291,6 +291,9 @@ case "$op" in
             $(if test -z "$host"
               then ls "$adir"/logs-*.flt.json
               else ls "$adir"/logs-$host.flt.json; fi))
+        test ${#logfiles[*]} -gt 0 ||
+            fail "no files match $adir"'/logs-*.flt.json'
+
         local minus_logfiles=(
             $(for host in ${perf_omit_hosts[*]}
               do ls "$adir"/logs-$host.flt.json; done))
@@ -347,8 +350,10 @@ case "$op" in
         local props=( $(for adir in ${adirs[*]}; do echo --prop        ${adir}/blockprop.json;   done))
         local cperfs=($(for adir in ${adirs[*]}; do echo --clusterperf ${adir}/clusterperf.json; done))
         local compares=($(for adir in ${adirs[*]}
-                          do echo --run-metafile    ${adir}/../meta.json \
-                                  --shelley-genesis ${adir}/../genesis-shelley.json
+                          do echo --run-metafile    ${adir}/../meta.json            \
+                                  --shelley-genesis ${adir}/../genesis-shelley.json \
+                                  --perf            ${adir}/clusterperf.json        \
+                                  --prop            ${adir}/blockprop.json
                           done))
         local run=$(for dir in ${dirs[*]}; do basename $dir; done | sort -r | head -n1 | cut -d. -f1-2)_multirun
         local adir=$(run get-rundir)/$run
