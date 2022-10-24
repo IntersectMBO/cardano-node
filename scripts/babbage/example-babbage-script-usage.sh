@@ -21,7 +21,7 @@ ls -al "$CARDANO_NODE_SOCKET_PATH"
 plutusspendingscript="$BASE/scripts/plutus/scripts/v2/required-redeemer.plutus"
 plutusmintingscript="$BASE/scripts/plutus/scripts/v2/minting-script.plutus"
 plutusstakescript="scripts/plutus/scripts/v2/stake-script.plutus"
-mintpolicyid=$(cardano-cli transaction policyid --script-file $plutusmintingscript)
+mintpolicyid=$($CARDANO_CLI transaction policyid --script-file $plutusmintingscript)
 ## This datum hash is the hash of the untyped 42
 scriptdatumhash="9e1199a988ba72ffd6e9c269cadb3b53b5f360ff99f112d9b2ee30c4d74ad88b"
 datumfilepath="$BASE/scripts/plutus/data/42.datum"

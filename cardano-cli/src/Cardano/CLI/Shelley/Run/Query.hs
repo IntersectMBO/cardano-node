@@ -198,6 +198,8 @@ runQueryCmd cmd =
       runQueryKesPeriodInfo consensusModeParams network nodeOpCert mOutFile
     QueryPoolState' consensusModeParams network poolid ->
       runQueryPoolState consensusModeParams network poolid
+    QueryTxMempool consensusModeParams network op mOutFile ->
+      runQueryTxMempool consensusModeParams network op mOutFile
 
 runQueryProtocolParameters
   :: AnyConsensusModeParams
@@ -632,6 +634,36 @@ runQueryPoolState (AnyConsensusModeParams cModeParams) network poolIds = do
   let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryPoolState $ Just $ Set.fromList poolIds
   result <- executeQuery era cModeParams localNodeConnInfo qInMode
   obtainLedgerEraClassConstraints sbe writePoolState result
+
+-- | Query the local mempool state
+runQueryTxMempool
+  :: AnyConsensusModeParams
+  -> NetworkId
+  -> TxMempoolQuery
+  -> Maybe OutputFile
+  -> ExceptT ShelleyQueryCmdError IO ()
+runQueryTxMempool (AnyConsensusModeParams cModeParams) network query mOutFile = do
+  SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr
+                           $ newExceptT readEnvSocketPath
+  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
+
+  localQuery <- case query of
+      TxMempoolQueryTxExists tx -> do
+        anyE@(AnyCardanoEra era) <- firstExceptT ShelleyQueryCmdAcquireFailure
+                                      . newExceptT $ determineEra cModeParams localNodeConnInfo
+        let cMode = consensusModeOnly cModeParams
+        eInMode <- toEraInMode era cMode
+          & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
+        pure $ LocalTxMonitoringQueryTx $ TxIdInMode tx eInMode
+      TxMempoolQueryNextTx -> pure LocalTxMonitoringSendNextTx
+      TxMempoolQueryInfo -> pure LocalTxMonitoringMempoolInformation
+
+  result <- liftIO $ queryTxMonitoringLocal localNodeConnInfo localQuery
+  let renderedResult = encodePretty result
+  case mOutFile of
+    Nothing -> liftIO $ LBS.putStrLn renderedResult
+    Just (OutputFile oFp) -> handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError oFp)
+        $ LBS.writeFile oFp renderedResult
 
 
 -- | Obtain stake snapshot information for a pool, plus information about the total active stake.
