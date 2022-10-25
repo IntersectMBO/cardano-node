@@ -86,6 +86,8 @@ haskell-nix.cabalProject' ({ pkgs
         # Use the VRF fork of libsodium
         packages.cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [ [ pkgs.libsodium-vrf ] ];
         packages.cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ pkgs.libsodium-vrf pkgs.secp256k1 ] ];
+        # Set in the cabal.project file, but ghc-options doesn't propagate at the moment, sadly
+        packages.cardano-crypto-tests.components.library.ghcOptions = [ "-Wwarn" ];
       })
       ({ pkgs, options, ... }: {
         # make sure that libsodium DLLs are available for windows binaries,

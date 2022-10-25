@@ -68,6 +68,11 @@ package cryptonite
   -- generation is dubious. Set the flag so we use /dev/urandom by default.
   flags: -support_rdrand
 
+package cardano-crypto-tests
+  -- The package has -Werror set, which it shouldn't, leading to warnings
+  -- with some build configurations
+  ghc-options: -Wwarn
+
 tests: True
 
 test-show-details: direct
