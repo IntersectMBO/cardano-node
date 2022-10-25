@@ -406,7 +406,7 @@ severityDiffusionInit ND.ListeningServerSocket {}             = Info
 severityDiffusionInit ND.ServerSocketUp {}                    = Info
 severityDiffusionInit ND.UnsupportedLocalSystemdSocket {}     = Info
 severityDiffusionInit ND.UnsupportedReadySocketCase {}        = Info
-severityDiffusionInit ND.DiffusionErrored {}                  = Info
+severityDiffusionInit ND.DiffusionErrored {}                  = Alert
 
 namesForDiffusionInit  :: ND.InitializationTracer rard ladr -> [Text]
 namesForDiffusionInit  ND.RunServer {}                         =
