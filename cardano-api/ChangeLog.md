@@ -1,7 +1,18 @@
 # Changelog for cardano-api
 
-## 1.35.3 -- August 2022
+## vNext
 
+### Features
+
+
+## 1.35.4 -- October 2022
+
+- Expose `Key` interface via `Cardano.Api.Shelley` ([PR4048](https://github.com/input-output-hk/cardano-node/pull/4048))
+- Append, not prepend change output when balancing a transaction ([PR4343](https://github.com/input-output-hk/cardano-node/pull/4343))
+
+- Expose convenience functions `executeQueryCardanoMode`, `determineEra`, `constructBalancedTx` and `queryStateForBalancedTx` ([PR 4446](https://github.com/input-output-hk/cardano-node/pull/4446))
+
+## 1.35.3 -- August 2022
 - Fix leadership schedule for current on babbage (#4106)
 - Update build to allow all invalid scripts (again) (#4088)
 - Fix building of Alonzo transaction in Babbage era. (#4166)

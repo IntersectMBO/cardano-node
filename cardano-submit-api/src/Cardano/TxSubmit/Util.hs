@@ -2,18 +2,14 @@
 
 module Cardano.TxSubmit.Util
   ( logException
-  , textShow
   ) where
+
+import           Cardano.Api (textShow)
+import           Prelude
 
 import           Cardano.BM.Trace (Trace, logError)
 import           Control.Exception (SomeException, catch, throwIO)
-import           Data.Function (($), (.))
-import           Data.Semigroup (Semigroup ((<>)))
 import           Data.Text (Text)
-import           System.IO (IO)
-import           Text.Show (Show (..))
-
-import qualified Data.Text as T
 
 -- | ouroboros-network catches 'SomeException' and if a 'nullTracer' is passed into that
 -- code, the caught exception will not be logged. Therefore wrap all tx submission code that
@@ -27,5 +23,4 @@ logException tracer txt action = action `catch` logger
       logError tracer $ txt <> textShow e
       throwIO e
 
-textShow :: Show a => a -> Text
-textShow = T.pack . show
+

@@ -1,7 +1,11 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE StrictData #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing -Wno-orphans #-}
-module Cardano.Analysis.Run (module Cardano.Analysis.Run) where
+module Cardano.Analysis.Run
+  ( module Cardano.Analysis.Run
+  , module Cardano.Analysis.Version
+  )
+where
 
 import Cardano.Prelude
 
@@ -10,6 +14,8 @@ import Data.Aeson qualified as Aeson
 import Data.Aeson (FromJSON(..), Object, ToJSON(..), withObject, (.:), (.:?))
 import Data.ByteString.Lazy.Char8 qualified as LBS
 import Data.Text qualified as T
+import Data.Time.Clock hiding (secondsToNominalDiffTime)
+import Data.Time.Clock.POSIX
 
 import Cardano.Analysis.ChainFilter
 import Cardano.Analysis.Context
@@ -20,35 +26,70 @@ import Cardano.Util
 -- | Explain the poor human a little bit of what was going on:
 data Anchor
   = Anchor
-  { aRuns    :: ![Text]
-  , aFilters :: ![FilterName]
-  , aVersion :: !Version
+  { aRuns    :: [Text]
+  , aFilters :: [FilterName]
+  , aSlots   :: Maybe (DataDomain SlotNo)
+  , aBlocks  :: Maybe (DataDomain BlockNo)
+  , aVersion :: Cardano.Analysis.Version.Version
+  , aWhen    :: UTCTime
   }
 
-runAnchor :: Run -> [FilterName] -> Anchor
+runAnchor :: Run -> UTCTime -> [FilterName] -> Maybe (DataDomain SlotNo) -> Maybe (DataDomain BlockNo) -> Anchor
 runAnchor Run{..} = tagsAnchor [tag metadata]
 
-tagsAnchor :: [Text] -> [FilterName] -> Anchor
-tagsAnchor aRuns aFilters =
+tagsAnchor :: [Text] -> UTCTime -> [FilterName] -> Maybe (DataDomain SlotNo) -> Maybe (DataDomain BlockNo) -> Anchor
+tagsAnchor aRuns aWhen aFilters aSlots aBlocks =
   Anchor { aVersion = getVersion, .. }
 
 renderAnchor :: Anchor -> Text
-renderAnchor Anchor{..} = mconcat
-  [ "runs: ",    T.intercalate ", " aRuns, ", "
-  , "filters: ", case aFilters of
-                   [] -> "unfiltered"
-                   xs -> T.intercalate ", " (unFilterName <$> xs)
-  , ", "
-  , renderProgramAndVersion aVersion
+renderAnchor a = mconcat
+  [ "runs: ", renderAnchorRuns a, ", "
+  , renderAnchorNoRuns a
   ]
 
+renderAnchorRuns :: Anchor -> Text
+renderAnchorRuns Anchor{..} = mconcat
+  [ T.intercalate ", " aRuns ]
+
+renderAnchorFiltersAndDomains :: Anchor -> Text
+renderAnchorFiltersAndDomains a@Anchor{..} = mconcat
+  [ "filters: ", case aFilters of
+                   [] -> "unfiltered"
+                   xs -> T.intercalate ", " (unFilterName <$> xs)
+  , renderAnchorDomains a]
+
+renderAnchorDomains :: Anchor -> Text
+renderAnchorDomains Anchor{..} = mconcat $
+  maybe [] ((:[]) . renderDomain "slot"  (show . unSlotNo)) aSlots
+  <>
+  maybe [] ((:[]) . renderDomain "block" (show . unBlockNo)) aBlocks
+ where renderDomain :: Text -> (a -> Text) -> DataDomain a -> Text
+       renderDomain ty r DataDomain{..} = mconcat
+         [ ", ", ty
+         , " range: raw(", r ddRawFirst,      "-", r ddRawLast , ")"
+         ,   " filtered("
+         , maybe "none" r ddFilteredFirst, "-"
+         , maybe "none" r ddFilteredLast , ")"
+         ]
+
+renderAnchorNoRuns :: Anchor -> Text
+renderAnchorNoRuns a@Anchor{..} = mconcat
+  [ renderAnchorFiltersAndDomains a
+  , ", ", renderProgramAndVersion aVersion
+  , ", analysed at ", renderAnchorDate a
+  ]
+
+-- Rounds time to seconds.
+renderAnchorDate :: Anchor -> Text
+renderAnchorDate = show . posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral @Int . round . utcTimeToPOSIXSeconds . aWhen
+
 data AnalysisCmdError
-  = AnalysisCmdError                         !Text
+  = AnalysisCmdError                                   !Text
   | MissingRunContext
   | MissingLogfiles
-  | RunMetaParseError      !JsonRunMetafile  !Text
-  | GenesisParseError      !JsonGenesisFile  !Text
-  | ChainFiltersParseError !JsonFilterFile   !Text
+  | RunMetaParseError      !(JsonInputFile RunPartial) !Text
+  | GenesisParseError      !(JsonInputFile Genesis)    !Text
+  | ChainFiltersParseError !JsonFilterFile             !Text
   deriving Show
 
 data ARunWith a
@@ -74,6 +115,8 @@ instance FromJSON RunPartial where
     --
     tag       <- meta .: "tag"
     profile   <- meta .: "profile"
+    batch     <- meta .: "batch"
+    manifest  <- meta .: "manifest"
 
     eraGtor   <- generator       .:? "era"
     eraTop    <- profile_content .:? "era"
@@ -85,17 +128,17 @@ instance FromJSON RunPartial where
         genesis  = ()
     pure Run{..}
 
-readRun :: JsonGenesisFile -> JsonRunMetafile -> ExceptT AnalysisCmdError IO Run
+readRun :: JsonInputFile Genesis -> JsonInputFile RunPartial -> ExceptT AnalysisCmdError IO Run
 readRun shelleyGenesis runmeta = do
   runPartial <- firstExceptT (RunMetaParseError runmeta . T.pack)
                        (newExceptT $
-                        Aeson.eitherDecode @RunPartial <$> LBS.readFile (unJsonRunMetafile runmeta))
-  progress "meta"    (Q $ unJsonRunMetafile runmeta)
+                        Aeson.eitherDecode @RunPartial <$> LBS.readFile (unJsonInputFile runmeta))
+  progress "meta"    (Q $ unJsonInputFile runmeta)
   run        <- firstExceptT (GenesisParseError shelleyGenesis . T.pack)
                        (newExceptT $
-                        Aeson.eitherDecode @Genesis <$> LBS.readFile (unJsonGenesisFile shelleyGenesis))
+                        Aeson.eitherDecode @Genesis <$> LBS.readFile (unJsonInputFile shelleyGenesis))
                 <&> completeRun runPartial
-  progress "genesis" (Q $ unJsonGenesisFile shelleyGenesis)
+  progress "genesis" (Q $ unJsonInputFile shelleyGenesis)
   progress "run"     (J run)
   pure run
 

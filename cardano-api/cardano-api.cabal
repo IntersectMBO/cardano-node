@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-api
-version:                1.35.3
+version:                1.35.4
 description:            The cardano api
 author:                 IOHK
 maintainer:             operations@iohk.io
@@ -54,6 +54,10 @@ library
                         Cardano.Api.Address
                         Cardano.Api.Block
                         Cardano.Api.Certificate
+                        Cardano.Api.Convenience.Constraints
+                        Cardano.Api.Convenience.Construction
+                        Cardano.Api.Convenience.Query
+                        Cardano.Api.Environment
                         Cardano.Api.Eras
                         Cardano.Api.Error
                         Cardano.Api.Fees

@@ -27,7 +27,6 @@ import           Cardano.Crypto (ProtocolMagicId)
 import qualified Cardano.Crypto as Crypto
 
 import           Cardano.CLI.Byron.Key (ByronKeyFailure, renderByronKeyFailure)
-import           Cardano.CLI.Helpers (textShow)
 import           Cardano.CLI.Types (CertificateFile (..))
 
 data ByronDelegationError

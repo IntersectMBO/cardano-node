@@ -42,18 +42,12 @@ module Cardano.Api (
     AsType(..),
     -- * Cryptographic key interface
     -- $keys
-    Key,
-    VerificationKey,
+    Key(..),
     SigningKey(..),
-    getVerificationKey,
-    verificationKeyHash,
+    VerificationKey(..),
     castVerificationKey,
     castSigningKey,
-
-    -- ** Generating keys
     generateSigningKey,
-    deterministicSigningKey,
-    deterministicSigningKeySeedSize,
 
     -- ** Hashes
     -- | In Cardano most keys are identified by their hash, and hashes are
@@ -242,6 +236,7 @@ module Cardano.Api (
 
     -- ** Fee calculation
     transactionFee,
+    toLedgerEpochInfo,
     estimateTransactionFee,
     evaluateTransactionFee,
     estimateTransactionKeyWitnessCount,
@@ -583,11 +578,13 @@ module Cardano.Api (
     -- *** Local state query
     LocalStateQueryClient(..),
     QueryInMode(..),
+    SystemStart(..),
     QueryInEra(..),
     QueryInShelleyBasedEra(..),
     QueryUTxOFilter(..),
     UTxO(..),
     queryNodeLocalState,
+    executeQueryCardanoMode,
 
     -- *** Local tx monitoring
     LocalTxMonitorClient(..),
@@ -600,6 +597,7 @@ module Cardano.Api (
     getProgress,
 
     -- *** Common queries
+    determineEra,
     getLocalChainTip,
 
     -- * Node operation
@@ -657,6 +655,12 @@ module Cardano.Api (
     SlotsToEpochEnd(..),
     slotToEpoch,
 
+    -- * Node socket related
+    EnvSocketError(..),
+    SocketPath(..),
+    readEnvSocketPath,
+    renderEnvSocketError,
+
     NodeToClientVersion(..),
 
     -- ** Monadic queries
@@ -674,11 +678,37 @@ module Cardano.Api (
     -- ** Cast functions
     EraCast (..),
     EraCastError (..),
+
+    -- * Convenience functions
+
+    -- ** Transaction construction
+    constructBalancedTx,
+
+    -- ** Queries
+    QueryConvenienceError(..),
+    queryStateForBalancedTx,
+    renderQueryConvenienceError,
+
+    -- ** Constraint satisfaction functions
+    getIsCardanoEraConstraint,
+
+    -- ** Misc
+    ScriptLockedTxInsError(..),
+    TxInsExistError(..),
+    renderNotScriptLockedTxInsError,
+    renderTxInsExistError,
+    txInsExistInUTxO,
+    notScriptLockedTxIns,
+    textShow,
   ) where
 
 import           Cardano.Api.Address
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
+import           Cardano.Api.Convenience.Constraints
+import           Cardano.Api.Convenience.Construction
+import           Cardano.Api.Convenience.Query
+import           Cardano.Api.Environment
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
@@ -690,7 +720,6 @@ import           Cardano.Api.IPC
 import           Cardano.Api.IPC.Monad
 import           Cardano.Api.Key
 import           Cardano.Api.KeysByron
-import           Cardano.Api.KeysPraos
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.LedgerEvent
 import           Cardano.Api.LedgerState

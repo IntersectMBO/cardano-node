@@ -41,10 +41,14 @@ import           Cardano.Prelude
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString.Builder as Builder
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import           GHC.IO.Handle (hClose)
+import           GHC.IO.Handle.FD (openFileBlocking)
 
 import           Cardano.Api
 
@@ -237,6 +241,24 @@ deserialiseInputAnyOf bech32Types textEnvTypes inputBs =
 -- Cryptographic key deserialisation
 ------------------------------------------------------------------------------
 
+-- It's possible a user might be supplying keys via a pipe that may
+-- not yet have data by the time we want to read, so we need to make
+-- sure we support that.
+readFileBlocking :: FilePath -> IO ByteString
+readFileBlocking path = bracket
+  (openFileBlocking path ReadMode)
+  hClose
+  (\fp -> do
+    -- An arbitrary block size.
+    let blockSize = 4096
+    let go acc = do
+          next <- BS.hGet fp blockSize
+          if BS.null next
+          then pure acc
+          else go (acc <> Builder.byteString next)
+    contents <- go mempty
+    pure $ LBS.toStrict $ Builder.toLazyByteString contents)
+
 -- | Read a cryptographic key from a file.
 --
 -- The contents of the file can either be Bech32-encoded, hex-encoded, or in
@@ -248,7 +270,7 @@ readKeyFile
   -> IO (Either (FileError InputDecodeError) a)
 readKeyFile asType acceptedFormats path =
   runExceptT $ do
-    content <- handleIOExceptT (FileIOError path) $ BS.readFile path
+    content <- handleIOExceptT (FileIOError path) $ readFileBlocking path
     firstExceptT (FileError path) $ hoistEither $
       deserialiseInput asType acceptedFormats content
 
@@ -287,7 +309,7 @@ readKeyFileAnyOf
   -> IO (Either (FileError InputDecodeError) b)
 readKeyFileAnyOf bech32Types textEnvTypes path =
   runExceptT $ do
-    content <- handleIOExceptT (FileIOError path) $ BS.readFile path
+    content <- handleIOExceptT (FileIOError path) $ readFileBlocking path
     firstExceptT (FileError path) $ hoistEither $
       deserialiseInputAnyOf bech32Types textEnvTypes content
 

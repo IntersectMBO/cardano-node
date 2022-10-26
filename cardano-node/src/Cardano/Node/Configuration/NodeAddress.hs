@@ -1,11 +1,10 @@
-{-# LANGUAGE DeriveFunctor              #-}
-{-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
-{-# LANGUAGE ImportQualifiedPost        #-}
-{-# LANGUAGE MonoLocalBinds             #-}
-{-# LANGUAGE NamedFieldPuns             #-}
-{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE MonoLocalBinds #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Node.Configuration.NodeAddress
   ( -- * Node addresses
@@ -30,19 +29,19 @@ module Cardano.Node.Configuration.NodeAddress
   , SocketPath(..)
   ) where
 
-import Cardano.Prelude
-import Prelude (fail)
+import           Cardano.Api
+import           Cardano.Prelude
+import           Prelude (fail)
 
-import Data.Aeson (FromJSON (..), ToJSON (..), Value (..),
-                   (.:), (.=), withObject, object)
-import Data.IP (IP (..), IPv4, IPv6)
-import Data.IP qualified as IP
-import Data.Text qualified as Text
-import Data.Text.Encoding qualified as Text
-import Network.DNS qualified as DNS (Domain)
-import Network.Socket (PortNumber, SockAddr (..))
+import           Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, (.:), (.=))
+import           Data.IP (IP (..), IPv4, IPv6)
+import qualified Data.IP as IP
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
+import qualified Network.DNS as DNS (Domain)
+import           Network.Socket (PortNumber, SockAddr (..))
 
-import Ouroboros.Network.PeerSelection.RootPeersDNS (DomainAccessPoint (..))
+import           Ouroboros.Network.PeerSelection.RootPeersDNS (DomainAccessPoint (..))
 
 
 -- | IPv4 or IPv6 address with a port number.
@@ -159,10 +158,3 @@ newtype NodeHostDnsAddress
 nodeHostDnsAddressToDomain :: NodeHostDnsAddress -> DNS.Domain
 nodeHostDnsAddressToDomain = Text.encodeUtf8 . unNodeHostDnsAddress
 
-
--- | Socket path
---
-newtype SocketPath = SocketPath
-  { unSocketPath :: FilePath }
-  deriving stock (Eq, Ord)
-  deriving newtype (FromJSON, IsString, Show)

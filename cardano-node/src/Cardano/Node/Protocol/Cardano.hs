@@ -212,7 +212,8 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           -- version that this node will declare that it understands, when it
           -- is in the Babbage era. Since Babbage is currently the last known
           -- protocol version then this is also the Babbage protocol version.
-          Praos.babbageProtVer = ProtVer 7 0,
+          -- NB: This is Babbage with SECP
+          Praos.babbageProtVer = ProtVer 8 0,
           Praos.babbageMaxTxCapacityOverrides =
             TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
@@ -235,7 +236,8 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                -- Version 4 is Mary
                -- Version 5 is Alonzo
                -- Version 6 is Alonzo (intra era hardfork)
-               -- Version 7 is Babbage
+               -- Versions 7.x is Babbage
+               -- Version 8 is Babbage with SECP
                --
                -- But we also provide an override to allow for simpler test setups
                -- such as triggering at the 0 -> 1 transition .

@@ -48,7 +48,7 @@ runScriptSimple time oracle = do
                         stdoutTracer'
                         forwardTracer'
                         (Just ekgTracer')
-                        "Test"
+                        ["Test"]
                         namesForMessage
                         severityForMessage
                         privacyForMessage
@@ -92,7 +92,7 @@ runScriptMultithreaded time oracle = do
                           stdoutTracer'
                           forwardTracer'
                           (Just ekgTracer')
-                          "Test"
+                          ["Test"]
                           namesForMessage
                           severityForMessage
                           privacyForMessage
@@ -162,7 +162,7 @@ runScriptMultithreadedWithReconfig time oracle = do
                           stdoutTracer'
                           forwardTracer'
                           (Just ekgTracer')
-                          "Test"
+                          ["Test"]
                           namesForMessage
                           severityForMessage
                           privacyForMessage
@@ -230,7 +230,7 @@ runScriptMultithreadedWithConstantReconfig time oracle = do
                           stdoutTracer'
                           forwardTracer'
                           (Just ekgTracer')
-                          "Test"
+                          ["Test"]
                           namesForMessage
                           severityForMessage
                           privacyForMessage

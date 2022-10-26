@@ -10,7 +10,7 @@
 
 module Cardano.Unlog.LogObject (module Cardano.Unlog.LogObject) where
 
-import Prelude (error, head, id, show)
+import Prelude (head, id, show, unzip3)
 import Cardano.Prelude hiding (Text, head, show)
 
 import Control.Monad (fail)
@@ -24,6 +24,7 @@ import Data.Text qualified as LText
 import Data.Text.Short qualified as Text
 import Data.Text.Short (ShortText, fromText, toText)
 import Data.Time.Clock (NominalDiffTime, UTCTime)
+import Data.Tuple.Extra (fst3, snd3, thd3)
 import Data.Map qualified as Map
 import Data.Vector (Vector)
 import Data.Vector qualified as V
@@ -83,48 +84,143 @@ deriving instance NFData a => NFData (Resources a)
 --
 -- LogObject stream interpretation
 --
+type Threeple t = (t, t, t)
 
-type ACouple t = (t, t)
+interpreters :: Threeple (Map Text (Object -> Parser LOBody))
+interpreters = map3ple Map.fromList . unzip3 . fmap ent $
+  -- Every second:
+  [ (,,,) "Resources" "Resources" "" $
+    \v -> LOResources <$> parsePartialResourceStates (Object v)
 
-interpreters :: ACouple (Map Text (Object -> Parser LOBody))
-interpreters = (Map.fromList *** Map.fromList) . unzip . fmap ent $
-  [ (,,) "TraceStartLeadershipCheck" "Forge.StartLeadershipCheck" $
+  -- Leadership:
+  , (,,,) "TraceStartLeadershipCheck" "Forge.StartLeadershipCheck" "Forge.Loop.StartLeadershipCheck" $
     \v -> LOTraceStartLeadershipCheck
             <$> v .: "slot"
             <*> (v .:? "utxoSize"     <&> fromMaybe 0)
             <*> (v .:? "chainDensity" <&> fromMaybe 0)
 
-  , (,,) "TraceBlockContext" "Forge.BlockContext" $
+  , (,,,) "TraceBlockContext" "Forge.BlockContext" "Forge.Loop.BlockContext" $
     \v -> LOBlockContext
-            <$> v .: "tipBlockNo"
+            <$> v .: "current slot"
+            <*> v .: "tipBlockNo"
 
-  , (,,) "TraceNodeIsLeader" "Forge.NodeIsLeader" $
+  , (,,,) "TraceLedgerState" "Forge.LedgerState" "Forge.Loop.LedgerState" $
+    \v -> LOLedgerState
+            <$> v .: "slot"
+
+  , (,,,) "TraceLedgerView" "Forge.LedgerView" "Forge.Loop.LedgerView" $
+    \v -> LOLedgerView
+            <$> v .: "slot"
+
+  , (,,,) "TraceNodeIsLeader" "Forge.NodeIsLeader" "Forge.Loop.NodeIsLeader" $
     \v -> LOTraceLeadershipDecided
             <$> v .: "slot"
             <*> pure True
 
-  , (,,) "TraceNodeNotLeader" "Forge.NodeNotLeader" $
+  , (,,,) "TraceNodeNotLeader" "Forge.NodeNotLeader" "Forge.Loop.NodeNotLeader" $
     \v -> LOTraceLeadershipDecided
             <$> v .: "slot"
             <*> pure False
 
-  , (,,) "TraceMempoolAddedTx" "Mempool.AddedTx" $
-    \v -> do
-      x :: Object <- v .: "mempoolSize"
-      LOMempoolTxs <$> x .: "numTxs"
+  -- Forging:
+  , (,,,) "TraceForgedBlock" "Forge.ForgedBlock" "Forge.Loop.ForgedBlock" $
+    \v -> LOBlockForged
+            <$> v .: "slot"
+            <*> v .: "blockNo"
+            <*> v .: "block"
+            <*> v .: "blockPrev"
 
-  , (,,) "TraceMempoolRemoveTxs" "Mempool.RemoveTxs" $
-    \v -> do
-      x :: Object <- v .: "mempoolSize"
-      LOMempoolTxs <$> x .: "numTxs"
+  -- Receipt:
+  , (,,,) "ChainSyncClientEvent.TraceDownloadedHeader" "ChainSyncClient.ChainSyncClientEvent.DownloadedHeader" "ChainSync.Client.DownloadedHeader" $
+    \v -> LOChainSyncClientSeenHeader
+            <$> v .: "slot"
+            <*> v .: "blockNo"
+            <*> v .: "block"
 
-  , (,,) "TraceMempoolRejectedTx" "Mempool.RejectedTx" $
-    \_ -> pure LOMempoolRejectedTx
+  , (,,,) "SendFetchRequest" "BlockFetchClient.SendFetchRequest" "BlockFetch.Client.SendFetchRequest" $
+    \v -> LOBlockFetchClientRequested
+            <$> v .: "head"
+            <*> v .: "length"
 
-  , (,,) "TraceLedgerEvent.TookSnapshot" "LedgerEvent.TookSnapshot" $
+  , (,,,) "CompletedBlockFetch" "BlockFetchClient.CompletedBlockFetch" "BlockFetch.Client.CompletedBlockFetch" $
+    \v -> LOBlockFetchClientCompletedFetch
+            <$> v .: "block"
+
+  -- Forwarding:
+  , (,,,) "ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock" "ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.AddBlock" "" $
+    \v -> LOChainSyncServerSendHeader
+            <$> v .: "block"
+
+  , (,,,) "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.AddBlock" "ChainSyncServerHeader.ChainSyncServerEvent.ServerReadBlocked.AddBlock" "ChainSync.ServerHeader.Update" $
+    \v -> case ( KeyMap.lookup "risingEdge" v
+               , KeyMap.lookup "blockingRead" v
+               , KeyMap.lookup "rollBackTo" v) of
+            -- Skip the falling edge & non-blocking reads:
+            (Just (Bool False), _, _) -> pure $ LOAny v
+            (_, Just (Bool False), _) -> pure $ LOAny v
+            (_, _, Just _)            -> pure $ LOAny v
+            -- Should be either rising edge+rollforward, or legacy:
+            _ -> do
+              blockLegacy <- v .:? "block"
+              block       <- v .:? "addBlock"
+              pure $
+                LOChainSyncServerSendHeader
+                ((block <|> blockLegacy)
+                  & fromMaybe (error $ "Incompatible LOChainSyncServerSendHeader: " <> show v)
+                  & Text.take 64
+                  & Hash)
+
+  , (,,,) "TraceBlockFetchServerSendBlock" "BlockFetchServer.SendBlock" "BlockFetch.Server.SendBlock" $
+    \v -> LOBlockFetchServerSending
+            <$> v .: "block"
+
+  -- Adoption:
+  , (,,,) "TraceAddBlockEvent.AddedToCurrentChain" "ChainDB.AddBlockEvent.AddedToCurrentChain" "ChainDB.AddBlockEvent.AddedToCurrentChain" $
+    \v -> LOBlockAddedToCurrentChain
+            <$> ((v .: "newtip")     <&> hashFromPoint)
+            <*> pure Nothing
+            <*> (v .:? "chainLengthDelta"
+                -- Compat for node versions 1.27 and older:
+                 <&> fromMaybe 1)
+  -- TODO: we should clarify the distinction between the two cases (^ and v).
+  , (,,,) "TraceAdoptedBlock" "Forge.AdoptedBlock" "Forge.Loop.AdoptedBlock" $
+    \v -> LOBlockAddedToCurrentChain
+            <$> v .: "blockHash"
+            <*> ((v .: "blockSize") <&> Just)
+            <*> pure 1
+
+  -- Ledger snapshots:
+  , (,,,) "TraceLedgerEvent.TookSnapshot" "LedgerEvent.TookSnapshot" "ChainDB.LedgerEvent.TookSnapshot" $
     \_ -> pure LOLedgerTookSnapshot
 
-  , (,,) "TraceBenchTxSubSummary" "TraceBenchTxSubSummary" $
+  -- Tx receive path & mempool:
+  , (,,,) "TraceBenchTxSubServAck" "TraceBenchTxSubServAck" "TraceBenchTxSubServAck" $
+    \v -> LOTxsAcked <$> v .: "txIds"
+
+  , (,,,) "TraceTxSubmissionCollected" "TraceTxSubmissionCollected" "TraceTxSubmissionCollected" $
+    \v -> LOTxsCollected
+            <$> v .: "count"
+
+  , (,,,) "TraceTxSubmissionProcessed" "TraceTxSubmissionProcessed" "TraceTxSubmissionProcessed" $
+    \v -> LOTxsProcessed
+            <$> v .: "accepted"
+            <*> v .: "rejected"
+
+  , (,,,) "TraceMempoolAddedTx" "Mempool.AddedTx" "Mempool.AddedTx" $
+    \v -> do
+      x :: Object <- v .: "mempoolSize"
+      LOMempoolTxs <$> x .: "numTxs"
+
+  , (,,,) "TraceMempoolRemoveTxs" "Mempool.RemoveTxs" "Mempool.RemoveTxs" $
+    \v -> do
+      x :: Object <- v .: "mempoolSize"
+      LOMempoolTxs <$> x .: "numTxs"
+
+  , (,,,) "TraceMempoolRejectedTx" "Mempool.RejectedTx" "Mempool.RejectedTx" $
+    \_ -> pure LOMempoolRejectedTx
+
+  -- Generator:
+  , (,,,) "TraceBenchTxSubSummary" "TraceBenchTxSubSummary" "TraceBenchTxSubSummary" $
     \v -> do
        x :: Object <- v .: "summary"
        LOGeneratorSummary
@@ -133,122 +229,85 @@ interpreters = (Map.fromList *** Map.fromList) . unzip . fmap ent $
          <*> x .: "ssTxSent"
          <*> x .: "ssElapsed"
          <*> x .: "ssThreadwiseTps"
-
-  , (,,) "TraceBenchTxSubServAck" "TraceBenchTxSubServAck" $
-    \v -> LOTxsAcked <$> v .: "txIds"
-
-  , (,,) "Resources" "Resources" $
-    \v -> LOResources <$> parsePartialResourceStates (Object v)
-
-  , (,,) "TraceTxSubmissionCollected" "TraceTxSubmissionCollected" $
-    \v -> LOTxsCollected
-            <$> v .: "count"
-
-  , (,,) "TraceTxSubmissionProcessed" "TraceTxSubmissionProcessed" $
-    \v -> LOTxsProcessed
-            <$> v .: "accepted"
-            <*> v .: "rejected"
-
-  , (,,) "TraceForgedBlock" "Forge.ForgedBlock" $
-    \v -> LOBlockForged
-            <$> v .: "block"
-            <*> v .: "blockPrev"
-            <*> v .: "blockNo"
-            <*> v .: "slot"
-  , (,,) "TraceAddBlockEvent.AddedToCurrentChain" "ChainDB.AddBlockEvent.AddedToCurrentChain" $
-    \v -> LOBlockAddedToCurrentChain
-            <$> ((v .: "newtip")     <&> hashFromPoint)
-            <*> pure Nothing
-            <*> (v .:? "chainLengthDelta"
-                -- Compat for node versions 1.27 and older:
-                 <&> fromMaybe 1)
-  -- TODO: we should clarify the distinction between the two cases (^ and v).
-  , (,,) "TraceAdoptedBlock" "Forge.AdoptedBlock" $
-    \v -> LOBlockAddedToCurrentChain
-            <$> v .: "blockHash"
-            <*> ((v .: "blockSize") <&> Just)
-            <*> pure 1
-  , (,,) "ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock" "ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.AddBlock" $
-    \v -> LOChainSyncServerSendHeader
-            <$> v .: "block"
-            <*> v .: "blockNo"
-            <*> v .: "slot"
-  , (,,) "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.AddBlock" "ChainSyncServerHeader.ChainSyncServerEvent.ServerReadBlocked.AddBlock" $
-    \v -> LOChainSyncServerSendHeader
-            <$> v .: "block"
-            <*> v .: "blockNo"
-            <*> v .: "slot"
-  -- v, but not ^ -- how is that possible?
-  , (,,) "TraceBlockFetchServerSendBlock" "BlockFetchServer.SendBlock" $
-    \v -> LOBlockFetchServerSending
-            <$> v .: "block"
-  , (,,) "SendFetchRequest" "BlockFetchClient.SendFetchRequest" $
-    \v -> LOBlockFetchClientRequested
-            <$> v .: "head"
-            <*> v .: "length"
-  , (,,) "ChainSyncClientEvent.TraceDownloadedHeader" "ChainSyncClient.ChainSyncClientEvent.DownloadedHeader" $
-    \v -> LOChainSyncClientSeenHeader
-            <$> v .: "block"
-            <*> v .: "blockNo"
-            <*> v .: "slot"
-  , (,,) "CompletedBlockFetch" "BlockFetchClient.CompletedBlockFetch" $
-    \v -> LOBlockFetchClientCompletedFetch
-            <$> v .: "block"
   ]
  where
    hashFromPoint :: LText.Text -> Hash
    hashFromPoint = Hash . fromText . Prelude.head . LText.splitOn "@"
 
-   ent :: (a,b,c) -> ((a,c), (b,c))
-   ent (a,b,c) = ((a,c), (b,c))
+   ent :: (a,b,c,d) -> ((a,d), (b,d), (c, d))
+   ent (a,b,c,d) = ((a,d), (b,d), (c, d))
 
-logObjectStreamInterpreterKeysLegacy, logObjectStreamInterpreterKeys :: [Text]
-logObjectStreamInterpreterKeysLegacy = Map.keys (fst interpreters)
-logObjectStreamInterpreterKeys       = Map.keys (snd interpreters)
+   map3ple :: (a -> b) -> (a,a,a) -> (b,b,b)
+   map3ple f (x,y,z) = (f x, f y, f z)
+
+logObjectStreamInterpreterKeysLegacy, logObjectStreamInterpreterKeysOldOrg, logObjectStreamInterpreterKeys :: [Text]
+logObjectStreamInterpreterKeysLegacy = Map.keys (interpreters & fst3)
+logObjectStreamInterpreterKeysOldOrg = Map.keys (interpreters & snd3)
+logObjectStreamInterpreterKeys       = Map.keys (interpreters & thd3)
 
 data LOBody
-  = LOTraceStartLeadershipCheck !SlotNo !Word64 !Double
-  | LOTraceLeadershipDecided    !SlotNo !Bool
-  | LOResources !ResourceStats
-  | LOMempoolTxs !Word64
-  | LOMempoolRejectedTx
-  | LOLedgerTookSnapshot
-  | LOBlockContext !Word64
-  | LOGeneratorSummary !Bool !Word64 !NominalDiffTime (Vector Double)
-  | LOTxsAcked !(Vector Text)
-  | LOTxsCollected !Word64
-  | LOTxsProcessed !Word64 !Int
+  -- Every second:
+  = LOResources !ResourceStats
+  -- Leadership:
+  | LOTraceStartLeadershipCheck !SlotNo !Word64 !Double
+  | LOBlockContext
+    { loSlotNo           :: !SlotNo
+    , loBlockNo          :: !BlockNo
+    }
+  | LOLedgerState
+    { loSlotNo           :: !SlotNo
+    }
+  | LOLedgerView
+    { loSlotNo           :: !SlotNo
+    }
+  | LOTraceLeadershipDecided
+    { loSlotNo           :: !SlotNo
+    , loLeader           :: !Bool
+    }
+  -- Forging:
   | LOBlockForged
-    { loBlock            :: !Hash
+    { loSlotNo           :: !SlotNo
+    , loBlockNo          :: !BlockNo
+    , loBlock            :: !Hash
     , loPrev             :: !Hash
+    }
+  -- Receipt:
+  | LOChainSyncClientSeenHeader
+    { loSlotNo           :: !SlotNo
     , loBlockNo          :: !BlockNo
-    , loSlotNo           :: !SlotNo
-    }
-  | LOBlockAddedToCurrentChain
-    { loBlock            :: !Hash
-    , loSize             :: !(Maybe Int)
-    , loLength           :: !Int
-    }
-  | LOChainSyncServerSendHeader
-    { loBlock            :: !Hash
-    , loBlockNo          :: !BlockNo
-    , loSlotNo           :: !SlotNo
-    }
-  | LOBlockFetchServerSending
-    { loBlock            :: !Hash
+    , loBlock            :: !Hash
     }
   | LOBlockFetchClientRequested
     { loBlock            :: !Hash
     , loLength           :: !Int
     }
-  | LOChainSyncClientSeenHeader
-    { loBlock            :: !Hash
-    , loBlockNo          :: !BlockNo
-    , loSlotNo           :: !SlotNo
-    }
   | LOBlockFetchClientCompletedFetch
     { loBlock            :: !Hash
     }
+  -- Forwarding:
+  | LOChainSyncServerSendHeader
+    { loBlock            :: !Hash
+    }
+  | LOBlockFetchServerSending
+    { loBlock            :: !Hash
+    }
+  -- Adoption:
+  | LOBlockAddedToCurrentChain
+    { loBlock            :: !Hash
+    , loSize             :: !(Maybe Int)
+    , loLength           :: !Int
+    }
+  -- Ledger snapshots:
+  | LOLedgerTookSnapshot
+  -- Tx receive path & mempool:
+  | LOTxsAcked !(Vector Text)
+  | LOTxsCollected !Word64
+  | LOTxsProcessed !Word64 !Int
+  | LOMempoolTxs !Word64
+  | LOMempoolRejectedTx
+  -- Generator:
+  | LOGeneratorSummary !Bool !Word64 !NominalDiffTime (Vector Double)
+  -- Everything else:
   | LOAny !Object
   | LODecodeError !String
   deriving (Generic, Show)
@@ -273,8 +332,12 @@ instance FromJSON LogObject where
       <*> pure kind
       <*> v .: "host"
       <*> v .: "thread"
-      <*> case Map.lookup ns   (snd interpreters) <|>
-               Map.lookup kind (fst interpreters) of
+      <*> case Map.lookup  ns                                       (thd3 interpreters) <|>
+               Map.lookup  ns                                       (snd3 interpreters) <|>
+               Map.lookup (ns
+                           & Text.stripPrefix "Cardano.Node."
+                           & fromMaybe "")                          (snd3 interpreters) <|>
+               Map.lookup  kind                                     (fst3 interpreters) of
             Just interp -> interp unwrapped
             Nothing -> pure $ LOAny unwrapped
    where

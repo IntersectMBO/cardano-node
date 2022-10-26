@@ -47,5 +47,5 @@ golden_shelleyTransactionSigningKeyWitness = propertyOnce $ H.moduleWorkspace "t
     , "--out-file", witnessOutFile
     ]
 
-  H.assertFileOccurences 1 "TxWitnessShelley" witnessOutFile
+  H.assertFileOccurences 1 "TxWitness ShelleyEra" witnessOutFile
   H.assertEndsWithSingleNewline txBodyOutFile

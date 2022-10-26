@@ -58,7 +58,7 @@ stdoutTracers stdoutTracer = do
                         stdoutTracer
                         forwardTracer'
                         Nothing
-                        "Test"
+                        ["Test"]
                         namesForMessage
                         severityForMessage
                         privacyForMessage
@@ -73,7 +73,7 @@ filterTracers stdoutTracer = do
                         stdoutTracer
                         forwardTracer'
                         Nothing
-                        "Test"
+                        ["Test"]
                         namesForMessage
                         severityForMessage
                         privacyForMessage
@@ -90,7 +90,7 @@ inMemoryTracers = do
                         stdoutTracer'
                         forwardTracer'
                         Nothing
-                        "Test"
+                        ["Test"]
                         namesForMessage
                         severityForMessage
                         privacyForMessage
@@ -105,7 +105,7 @@ timeLimitedTracers stdoutTracer = do
                         stdoutTracer
                         forwardTracer'
                         Nothing
-                        "Test"
+                        ["Test"]
                         namesForMessage
                         severityForMessage
                         privacyForMessage
@@ -124,7 +124,7 @@ ekgTracers = do
                         stdoutTracer'
                         forwardTracer'
                         Nothing
-                        "Test"
+                        ["Test"]
                         namesForMessage
                         severityForMessage
                         privacyForMessage

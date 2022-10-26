@@ -12,6 +12,7 @@ module Cardano.Api.Shelley
 
     -- * Cryptographic key interface
     -- $keys
+    Key(..),
     VerificationKey(..),
     SigningKey(..),
 
@@ -206,6 +207,9 @@ module Cardano.Api.Shelley
     SerialisedCurrentEpochState(..),
     decodeCurrentEpochState,
     UTxO(..),
+    AcquiringFailure(..),
+    SystemStart(..),
+
 
     -- ** Various calculations
     LeadershipError(..),

@@ -51,8 +51,6 @@ import           Cardano.Api.Shelley
 
 import           Data.Text (Text)
 
-import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
-
 import           Cardano.CLI.Shelley.Key (PaymentVerifier, StakeVerifier, VerificationKeyOrFile,
                    VerificationKeyOrHashOrFile, VerificationKeyTextOrFile)
 import           Cardano.CLI.Types
@@ -192,7 +190,6 @@ data TransactionCmd
       [MetadataFile]
       (Maybe ProtocolParamsSourceSpec)
       (Maybe UpdateProposalFile)
-      OutputSerialisation
       TxBodyFile
 
     -- | Like 'TxBuildRaw' but without the fee, and with a change output.
@@ -235,7 +232,6 @@ data TransactionCmd
       [MetadataFile]
       (Maybe ProtocolParamsSourceSpec)
       (Maybe UpdateProposalFile)
-      OutputSerialisation
       TxBuildOutputOptions
   | TxSign InputTxBodyOrTxFile [WitnessSigningData] (Maybe NetworkId) TxFile
   | TxCreateWitness TxBodyFile WitnessSigningData (Maybe NetworkId) OutputFile

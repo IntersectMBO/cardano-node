@@ -12,6 +12,7 @@ module Cardano.Logging.Trace (
   , filterTraceBySeverity
   , withLoggingContext
   , appendName
+  , appendNames
   , withNamesAppended
   , setSeverity
   , withSeverity
@@ -111,6 +112,16 @@ appendName name (Trace tr) = Trace $
     T.contramap
       (\
         (lc, cont) -> (lc {lcNamespace = name : lcNamespace lc}, cont))
+      tr
+
+-- | Appends a name to the context.
+-- E.g. appendName "specific" $ appendName "middle" $ appendName "general" tracer
+-- give the result: `general.middle.specific`.
+appendNames :: Monad m => [Text] -> Trace m a -> Trace m a
+appendNames names (Trace tr) = Trace $
+    T.contramap
+      (\
+        (lc, cont) -> (lc {lcNamespace = names ++ lcNamespace lc}, cont))
       tr
 
 -- | Sets names for the messages in this trace based on the selector function

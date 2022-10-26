@@ -31,7 +31,7 @@ playScript = ioProperty $ do
                       stdoutTracer'
                       forwardTracer'
                       (Just ekgTracer')
-                      "Test"
+                      ["Test"]
                       (const ["ResourceStats"])
                       (const Info)
                       (const Public)

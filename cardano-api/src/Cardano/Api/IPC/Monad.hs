@@ -9,23 +9,26 @@ module Cardano.Api.IPC.Monad
   , determineEraExpr
   ) where
 
-import           Cardano.Api.Block
-import           Cardano.Api.Eras
-import           Cardano.Api.IPC
-import           Cardano.Api.Modes
-import           Cardano.Ledger.Shelley.Scripts ()
 import           Control.Applicative
 import           Control.Concurrent.STM
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Cont
+import           Data.Bifunctor (first)
 import           Data.Either
 import           Data.Function
 import           Data.Maybe
 import           System.IO
 
+import           Cardano.Ledger.Shelley.Scripts ()
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Net.Query
+
+import           Cardano.Api.Block
+import           Cardano.Api.Eras
+import           Cardano.Api.IPC
+import           Cardano.Api.Modes
+
 
 {- HLINT ignore "Use const" -}
 {- HLINT ignore "Use let" -}
@@ -50,7 +53,7 @@ executeLocalStateQueryExpr
   :: LocalNodeConnectInfo mode
   -> Maybe ChainPoint
   -> (NodeToClientVersion -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO a)
-  -> IO (Either AcquireFailure a)
+  -> IO (Either AcquiringFailure a)
 executeLocalStateQueryExpr connectInfo mpoint f = do
   tmvResultLocalState <- newEmptyTMVarIO
   let waitResult = readTMVar tmvResultLocalState
@@ -66,7 +69,7 @@ executeLocalStateQueryExpr connectInfo mpoint f = do
       }
     )
 
-  atomically waitResult
+  first toAcquiringFailure <$> atomically waitResult
 
 -- | Use 'queryExpr' in a do block to construct monadic local state queries.
 setupLocalStateQueryExpr ::

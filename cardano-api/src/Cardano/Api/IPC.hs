@@ -52,7 +52,7 @@ module Cardano.Api.IPC (
 
     -- *** Local state query
     LocalStateQueryClient(..),
-    AcquireFailure(..),
+    AcquiringFailure(..),
     QueryInMode(..),
     QueryInEra(..),
     QueryInShelleyBasedEra(..),
@@ -75,6 +75,7 @@ module Cardano.Api.IPC (
     --TODO: These should be exported via Cardano.Api.Mode
     ConsensusMode(..),
     consensusModeOnly,
+    toAcquiringFailure,
 
     NodeToClientVersion(..)
   ) where
@@ -83,6 +84,7 @@ import           Prelude
 
 import           Data.Void (Void)
 
+import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict as Map
 
@@ -567,11 +569,20 @@ mapLocalTxMonitoringClient convTxid convTx ltxmc =
 -- | Establish a connection to a node and execute a single query using the
 -- local state query protocol.
 --
+
+data AcquiringFailure = AFPointTooOld
+                      | AFPointNotOnChain
+                      deriving Show
+
+toAcquiringFailure :: Net.Query.AcquireFailure -> AcquiringFailure
+toAcquiringFailure AcquireFailurePointTooOld = AFPointTooOld
+toAcquiringFailure AcquireFailurePointNotOnChain = AFPointNotOnChain
+
 queryNodeLocalState :: forall mode result.
                        LocalNodeConnectInfo mode
                     -> Maybe ChainPoint
                     -> QueryInMode mode result
-                    -> IO (Either Net.Query.AcquireFailure result)
+                    -> IO (Either AcquiringFailure result)
 queryNodeLocalState connctInfo mpoint query = do
     resultVar <- newEmptyTMVarIO
     connectToLocalNode
@@ -582,7 +593,7 @@ queryNodeLocalState connctInfo mpoint query = do
         localTxSubmissionClient = Nothing,
         localTxMonitoringClient = Nothing
       }
-    atomically (takeTMVar resultVar)
+    first toAcquiringFailure <$> atomically (takeTMVar resultVar)
   where
     singleQuery
       :: Maybe ChainPoint

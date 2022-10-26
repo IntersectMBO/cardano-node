@@ -15,7 +15,6 @@ export UTXO_SKEY="${UTXO_SKEY:-example/stake-delegator-keys/payment1.skey}"
 export RESULT_FILE="${RESULT_FILE:-$WORK/result.out}"
 
 echo "Socket path: $CARDANO_NODE_SOCKET_PATH"
-echo "Socket path: $(pwd)"
 
 ls -al "$CARDANO_NODE_SOCKET_PATH"
 
@@ -112,7 +111,7 @@ $CARDANO_CLI query utxo --address $plutusspendingscriptaddr --testnet-magic "$TE
 plutuslockedutxotxin=$(jq -r 'keys[0]' $WORK/plutusutxo.json)
 lovelaceatplutusspendingscriptaddr=$(jq -r ".[\"$plutuslockedutxotxin\"].value.lovelace" $WORK/plutusutxo.json)
 
-#Get read only reference input
+# Get read only reference input
 $CARDANO_CLI query utxo --address "$readonlyaddress" --cardano-mode \
   --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/read-only-ref-input-utxo.json
 readonlyrefinput=$(jq -r 'keys[0]' $WORK/read-only-ref-input-utxo.json)
@@ -157,6 +156,11 @@ echo "$mintpolicyid"
 #  --tx-out "$utxoaddr+149988741087" \
 #  --fee "1000000" \
 #  --protocol-params-file "$WORK/pparams.json"
+#   --tx-out-return-collateral
+returncollateral=$(expr $suppliedCollateral - 529503)
+
+echo "Return collateral amount"
+echo "$returncollateral"
 
 $CARDANO_CLI transaction build \
   --babbage-era \

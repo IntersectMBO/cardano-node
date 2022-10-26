@@ -9,7 +9,6 @@ module Cardano.CLI.Helpers
   , pPrintCBOR
   , readCBOR
   , renderHelpersError
-  , textShow
   , validateCBOR
   , hushM
   ) where
@@ -24,16 +23,16 @@ import           Control.Monad.Trans.Except.Extra (handleIOExceptT, left)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as Text
-import           System.Console.ANSI
 import qualified System.Console.ANSI as ANSI
+import           System.Console.ANSI
 import qualified System.IO as IO
 
 import           Cardano.Binary (Decoder, fromCBOR)
-import           Cardano.CLI.Types
 import           Cardano.Chain.Block (fromCBORABlockOrBoundary)
 import qualified Cardano.Chain.Delegation as Delegation
-import qualified Cardano.Chain.UTxO as UTxO
 import qualified Cardano.Chain.Update as Update
+import qualified Cardano.Chain.UTxO as UTxO
+import           Cardano.CLI.Types
 
 import qualified System.Directory as IO
 
@@ -116,9 +115,6 @@ validateCBOR cborObject bs =
     CBORVoteByron -> do
       () <$ decodeCBOR bs (fromCBOR :: Decoder s Update.Vote)
       Right "Valid Byron vote."
-
-textShow :: Show a => a -> Text
-textShow = Text.pack . show
 
 -- | Convert an Either to a Maybe and execute the supplied handler
 -- in the Left case.

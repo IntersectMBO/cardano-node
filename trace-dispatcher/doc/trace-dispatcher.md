@@ -648,7 +648,7 @@ Because all these tracers are defined as part of the __dispatcher__ definition, 
 
 We provide a standard interface to construct a tracer to be used within cardano node.
 The tracer gets as arguments the backends: `trStdout`, `trForward` and `mbTrEkg`.
-The tracer gets as argument a `name`, which is appended to its namespace. The tracer gets as
+The tracer gets as argument a composed `name`, which is prepended to its namespace. The tracer gets as
 arguments `namesFor`, `severityFor` and `privacyFor` functions, to set the logging context accordingly. The returned tracer need to be configured with a configuration for the specification of filtering, detailLevel, frequencyLimiting and backends with a configuration before use.
 
 ```haskell
@@ -657,7 +657,7 @@ mkCardanoTracer :: forall evt.
   => Trace IO FormattedMessage
   -> Trace IO FormattedMessage
   -> Maybe (Trace IO FormattedMessage)
-  -> Text
+  -> [Text]
   -> (evt -> [Text])
   -> (evt -> SeverityS)
   -> (evt -> Privacy)
