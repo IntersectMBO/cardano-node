@@ -127,6 +127,8 @@ runSlotFilters ::
   -> [(JsonLogfile, [SlotStats a])]
   -> IO (DataDomain SlotNo, [(JsonLogfile, [SlotStats a])])
 runSlotFilters Run{genesis} flts slots = do
+  forM_ flts $
+    progress "filter" . Q . show
   filtered <- mapConcurrentlyPure (fmap $ filterSlotStats flts) slots
   let samplePre  =    slots !! 0 & snd
       samplePost = filtered !! 0 & snd

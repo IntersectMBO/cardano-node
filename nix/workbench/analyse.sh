@@ -308,20 +308,20 @@ case "$op" in
                                    | join(",")
                                    ' "$dir"/profile.json --raw-output))
         fi
-        progress "analysis" "filters exprs: $(yellow "${filter_exprs[@]}")"
         local filter_exprs_q=("${filter_exprs[@]@Q}")
-        filters+=("${filter_exprs_q[@]/#/--filter-expr }")
+        filters+=(${filter_exprs_q[@]/#/--filter-expr })
+        progress "analysis" "filters exprs: $(yellow "${filter_exprs[@]}")"
 
         local v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 va vb vc vd ve vf vg vh vi vj vk vl vm vn vo
         v0=( $* )
         v1=("${v0[@]/#logs/                 'unlog' --host-from-log-filename ${logfiles[*]/#/--log }  }")
         v2=("${v1[@]/#context/              'meta-genesis' --run-metafile    \"$dir\"/meta.json
                                                          --shelley-genesis \"$dir\"/genesis-shelley.json }")
-        v5=("${v2[@]/#rebuild-chain/        'rebuild-chain'                  \"${filters[@]}\"}")
+        v5=("${v2[@]/#rebuild-chain/        'rebuild-chain'                  ${filters[@]}}")
         v6=("${v5[@]/#dump-chain/           'dump-chain'            --chain \"$adir\"/chain.json}")
         v7=("${v6[@]/#chain-timeline/       'timeline-chain'     --timeline \"$adir\"/chain.txt ${filter_reasons:+--filter-reasons} ${chain_errors:+--chain-errors}}")
         v8=("${v7[@]/#collect-slots/        'collect-slots'           ${minus_logfiles[*]/#/--ignore-log }}")
-        v9=("${v8[@]/#filter-slots/         'filter-slots'                  \"${filters[@]}\"}")
+        v9=("${v8[@]/#filter-slots/         'filter-slots'                   ${filters[@]}}")
         va=("${v9[@]/#propagation-json/     'render-propagation'   --json \"$adir\"/blockprop.json     --full}")
         vb=("${va[@]/#propagation-org/      'render-propagation'    --org \"$adir\"/blockprop.org      --full}")
         vc=("${vb[@]/#propagation-forger/   'render-propagation' --report \"$adir\"/blockprop.forger.org --forger}")
@@ -335,7 +335,8 @@ case "$op" in
         vk=("${vj[@]/#clusterperf-gnuplot/  'render-clusterperf' --gnuplot \"$adir\"/%s.cdf --full }")
         vl=("${vk[@]/#clusterperf-full/     'render-clusterperf' --pretty \"$adir\"/clusterperf-full.txt --full }")
         local ops_final=() vexp=
-        for v in "${vl[@]}"; do vexp=$(echo $v | xargs echo); eval ops_final+=($vexp); done
+        for v in "${vl[@]}"
+        do eval ops_final+=($v); done
 
         verbose "analysis | locli" "$(with_color reset ${locli_rts_args[@]}) $(colorise "${ops_final[@]}")"
         time locli "${locli_rts_args[@]}" "${ops_final[@]}"

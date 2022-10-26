@@ -280,6 +280,8 @@ buildMachViews run = mapConcurrentlyPure (fst &&& blockEventMapsFromLogObjects r
 rebuildChain :: Run -> [ChainFilter] -> [FilterName] -> [(JsonLogfile, MachView)] -> IO (DataDomain SlotNo, DataDomain BlockNo, [BlockEvents])
 rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) = do
   progress "tip" $ Q $ show $ bfeBlock tipBlock
+  forM_ flts $
+    progress "filter" . Q . show
   pure (domSlot, domBlock, chain)
  where
    (blk0,  blkL)  = (head chain, last chain)
