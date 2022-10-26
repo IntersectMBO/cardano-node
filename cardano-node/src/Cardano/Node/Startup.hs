@@ -87,6 +87,10 @@ data StartupTrace blk =
   --
   | NetworkConfigUpdateError Text
 
+  -- | Legacy topology file format is used.
+  --
+  | NetworkConfigLegacy
+
   -- | Log peer-to-peer network configuration, either on startup or when its
   -- updated.
   --

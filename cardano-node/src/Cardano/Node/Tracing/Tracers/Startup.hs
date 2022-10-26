@@ -133,6 +133,7 @@ namesStartupInfo = \case
   NetworkConfigUpdateUnsupported            -> ["NetworkConfigUpdateUnsupported"]
   NetworkConfigUpdateError {}               -> ["NetworkConfigUpdateError"]
   NetworkConfig {}                          -> ["NetworkConfig"]
+  NetworkConfigLegacy {}                    -> ["NetworkConfigLegacy"]
   P2PWarning {}                             -> ["P2PWarning"]
   P2PWarningDevelopementNetworkProtocols {} -> ["P2PWarningDevelopementNetworkProtocols"]
   WarningDevelopmentNetworkProtocols {}     -> ["WarningDevelopmentNetworkProtocols"]
@@ -212,6 +213,10 @@ instance ( Show (BlockNodeToNodeVersion blk)
                , "publicRoots" .= toJSON publicRoots
                , "useLedgerAfter" .= UseLedger useLedgerAfter
                ]
+  forMachine _dtal NetworkConfigLegacy =
+      mconcat [ "kind" .= String "NetworkConfigLegacy"
+              , "message" .= String p2pNetworkConfigLegacyMessage
+              ]
   forMachine _dtal P2PWarning =
       mconcat [ "kind" .= String "P2PWarning"
                , "message" .= String p2pWarningMessage ]
@@ -319,6 +324,7 @@ ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerAfter) =
                             ++ show (unSlotNo slotNo)
       DontUseLedger         -> "Don't use ledger to get root peers."
   ]
+ppStartupInfoTrace NetworkConfigLegacy = p2pNetworkConfigLegacyMessage
 
 ppStartupInfoTrace P2PWarning = p2pWarningMessage
 
@@ -365,6 +371,14 @@ p2pWarningDevelopmentNetworkProtocolsMessage :: Text
 p2pWarningDevelopmentNetworkProtocolsMessage =
     "peer-to-peer requires TestEnableDevelopmentNetworkProtocols to be set to True"
 
+p2pNetworkConfigLegacyMessage :: Text
+p2pNetworkConfigLegacyMessage =
+    pack
+  $ intercalate "\n"
+  [ "You are using legacy p2p topology file format."
+  , "See https://github.com/input-output-hk/cardano-node/issues/4559"
+  , "Note that the legacy p2p format will be removed in `1.37` release."
+  ]
 
 docStartupInfo :: Documented (StartupTrace blk)
 docStartupInfo = Documented [
