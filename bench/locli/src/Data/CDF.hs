@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ImportQualifiedPost #-}
@@ -65,8 +66,8 @@ import Cardano.Util
 -- | Centile specifier: a fractional in range of [0; 1].
 newtype Centile =
   Centile { unCentile :: Double }
-  deriving (Eq, Generic, FromJSON, ToJSON, Show)
-  deriving anyclass NFData
+  deriving (Eq, Show)
+  deriving newtype (FromJSON, ToJSON, NFData)
 
 renderCentile :: Int -> Centile -> String
 renderCentile width = \case
