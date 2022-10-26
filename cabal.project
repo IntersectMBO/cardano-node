@@ -176,3 +176,30 @@ source-repository-package
   location: https://github.com/denisshevchenko/threepenny-gui
   tag: 4ec92ded05ccf59ba4a874be4b404ac1b6d666b6
   --sha256: 00fvvaf4ir4hskq4a6gggbh2wmdvy8j8kn6s4m1p1vlh8m8mq514
+
+-- TODO: remove once newer version of ouroboros-network is published to CHaP;
+-- PR input-output-hk/ekg-forward#11 needs to be merged
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ekg-forward
+  tag: 810da2b55228a0c8a63d590c098e4c16d5c483c8
+  --sha256: 1wq85zplln4c17vq076r36z9zr54pmyjc8vykmmbw7x2cn8fp3d6
+
+-- TODO: remove once newer version of ouroboros-network is published to CHaP;
+-- PR input-output-hk/ouroboros-network#4120 needs to be merged
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-network
+  tag: e39ce078556aafaa62deb0a5447e19beb89c5bfb
+  --sha256: 084yzrg1wxb24z8cn6gm1cz796wnmv37cyh22mv5dr5z0gkkgjm9
+  subdir:
+    monoidal-synchronisation
+    network-mux
+    ouroboros-consensus
+    ouroboros-consensus-byron
+    ouroboros-consensus-cardano
+    ouroboros-consensus-protocol
+    ouroboros-consensus-shelley
+    ouroboros-network
+    ouroboros-network-framework
+    ouroboros-network-testing

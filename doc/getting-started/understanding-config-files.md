@@ -45,33 +45,25 @@ A minimal version of this file looks like this:
 
 ```json
 {
-  "LocalRoots": {
-    "groups": [
-      {
-        "localRoots": {
-          "accessPoints": [
+  "localRoots": [
+      { "accessPoints": [
             {
               "address": "x.x.x.x",
               "port": 3001
             }
           ],
-          "advertise": false
-        },
+        "advertise": false,
         "valency": 1
       }
-    ]
-  },
-  "PublicRoots": [
-    {
-      "publicRoots" : {
-        "accessPoints": [
-          {
-            "address": "y.y.y.y",
-            "port": 3002
-          }
+  ],
+  "publicRoots": [
+    { "accessPoints": [
+        {
+          "address": "y.y.y.y",
+          "port": 3002
+        }
         ],
-        "advertise": false
-      }
+      "advertise": false
     }
   ],
   "useLedgerAfterSlot": 0

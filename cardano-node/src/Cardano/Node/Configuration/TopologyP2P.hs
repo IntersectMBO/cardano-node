@@ -1,5 +1,8 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PackageImports #-}
 
 module Cardano.Node.Configuration.TopologyP2P
   ( TopologyError(..)
@@ -30,11 +33,14 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Text as Text
 
+import "contra-tracer" Control.Tracer (Tracer, traceWith)
+
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Slotting.Slot (SlotNo (..))
 
 import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Types
+import           Cardano.Node.Startup (StartupTrace (..))
 import           Cardano.Node.Configuration.Topology (TopologyError (..))
 
 import           Ouroboros.Network.NodeToNode (PeerAdvertise (..))
@@ -132,17 +138,21 @@ data LocalRootPeersGroup = LocalRootPeersGroup
   , valency    :: Int
   } deriving (Eq, Show)
 
+-- | Does not use the 'FromJSON' instance of 'RootConfig', so that
+-- 'accessPoints', 'advertise' and 'valency' fields are attached to the same
+-- object.
 instance FromJSON LocalRootPeersGroup where
   parseJSON = withObject "LocalRootPeersGroup" $ \o ->
                 LocalRootPeersGroup
-                  <$> o .: "localRoots"
+                  <$> parseJSON (Object o)
                   <*> o .: "valency"
 
 instance ToJSON LocalRootPeersGroup where
   toJSON lrpg =
     object
-      [ "localRoots" .= localRoots lrpg
-      , "valency"    .= valency lrpg
+      [ "accessPoints" .= rootAccessPoints (localRoots lrpg)
+      , "advertise" .= rootAdvertise (localRoots lrpg)
+      , "valency" .= valency lrpg
       ]
 
 newtype LocalRootPeersGroups = LocalRootPeersGroups
@@ -150,59 +160,98 @@ newtype LocalRootPeersGroups = LocalRootPeersGroups
   } deriving (Eq, Show)
 
 instance FromJSON LocalRootPeersGroups where
-  parseJSON = withObject "LocalRootPeersGroups" $ \o ->
-                LocalRootPeersGroups
-                  <$> o .: "groups"
+  parseJSON = fmap LocalRootPeersGroups . parseJSONList
 
 instance ToJSON LocalRootPeersGroups where
-  toJSON lrpg =
-    object
-      [ "groups" .= groups lrpg
-      ]
+  toJSON = toJSON . groups
 
 newtype PublicRootPeers = PublicRootPeers
   { publicRoots :: RootConfig
   } deriving (Eq, Show)
 
 instance FromJSON PublicRootPeers where
-  parseJSON = withObject "PublicRootPeers" $ \o ->
-                PublicRootPeers
-                  <$> o .: "publicRoots"
+  parseJSON = fmap PublicRootPeers . parseJSON
 
 instance ToJSON PublicRootPeers where
-  toJSON prp =
-    object
-      [ "publicRoots" .= publicRoots prp
-      ]
+  toJSON = toJSON . publicRoots
 
 data NetworkTopology = RealNodeTopology !LocalRootPeersGroups ![PublicRootPeers] !UseLedger
   deriving (Eq, Show)
 
 instance FromJSON NetworkTopology where
   parseJSON = withObject "NetworkTopology" $ \o ->
-                RealNodeTopology <$> (o .: "LocalRoots"                                     )
-                                 <*> (o .: "PublicRoots"                                    )
+                RealNodeTopology <$> (o .: "localRoots"                                     )
+                                 <*> (o .: "publicRoots"                                    )
                                  <*> (o .:? "useLedgerAfterSlot" .!= UseLedger DontUseLedger)
 
 instance ToJSON NetworkTopology where
   toJSON top =
     case top of
-      RealNodeTopology lrpg prp ul -> object [ "LocalRoots"         .= lrpg
-                                             , "PublicRoots"        .= prp
+      RealNodeTopology lrpg prp ul -> object [ "localRoots"         .= lrpg
+                                             , "publicRoots"        .= prp
                                              , "useLedgerAfterSlot" .= ul
                                              ]
 
+--
+-- Legacy p2p topology file format
+--
+
+-- | A newtype wrapper which provides legacy 'FromJSON' instances.
+--
+newtype Legacy a = Legacy { getLegacy :: a }
+
+instance FromJSON (Legacy a) => FromJSON (Legacy [a]) where
+  parseJSON = fmap (Legacy . map getLegacy) . parseJSONList
+
+instance FromJSON (Legacy LocalRootPeersGroup) where
+  parseJSON = withObject "LocalRootPeersGroup" $ \o ->
+                fmap Legacy $ LocalRootPeersGroup
+                  <$> o .: "localRoots"
+                  <*> o .: "valency"
+
+instance FromJSON (Legacy LocalRootPeersGroups) where
+  parseJSON = withObject "LocalRootPeersGroups" $ \o ->
+                Legacy . LocalRootPeersGroups . getLegacy
+                  <$> o .: "groups"
+
+instance FromJSON (Legacy PublicRootPeers) where
+  parseJSON = withObject "PublicRootPeers" $ \o ->
+                Legacy . PublicRootPeers
+                  <$> o .: "publicRoots"
+
+instance FromJSON (Legacy NetworkTopology) where
+  parseJSON = fmap Legacy
+            . withObject "NetworkTopology" (\o ->
+                RealNodeTopology <$> fmap getLegacy (o .: "LocalRoots")
+                                 <*> fmap getLegacy (o .: "PublicRoots")
+                                 <*> (o .:? "useLedgerAfterSlot" .!= UseLedger DontUseLedger))
+
 -- | Read the `NetworkTopology` configuration from the specified file.
 --
-readTopologyFile :: NodeConfiguration -> IO (Either Text NetworkTopology)
-readTopologyFile nc = do
+readTopologyFile :: Tracer IO (StartupTrace blk)
+                 -> NodeConfiguration -> IO (Either Text NetworkTopology)
+readTopologyFile tr nc = do
   eBs <- Exception.try $ BS.readFile (unTopology $ ncTopologyFile nc)
 
   case eBs of
     Left e -> return . Left $ handler e
-    Right bs -> return . first handlerJSON . eitherDecode $ LBS.fromStrict bs
+    Right bs ->
+      let bs' = LBS.fromStrict bs in
+      first handlerJSON (eitherDecode bs')
+      `combine`
+      first handlerJSON (eitherDecode bs')
 
  where
+  combine :: Either Text NetworkTopology
+          -> Either Text (Legacy NetworkTopology)
+          -> IO (Either Text NetworkTopology)
+  combine a b = case (a, b) of
+    (Right {}, _)     -> return a
+    (_, Right {})     -> traceWith tr NetworkConfigLegacy
+                      >> return (getLegacy <$> b)
+    (Left _, Left _)  -> -- ignore parsing error of legacy format
+                         return a
+
   handler :: IOException -> Text
   handler e = Text.pack $ "Cardano.Node.Configuration.Topology.readTopologyFile: "
                         ++ displayException e
@@ -214,9 +263,10 @@ readTopologyFile nc = do
                     \make sure that you correctly setup EnableP2P \
                     \configuration flag. " <> Text.pack err
 
-readTopologyFileOrError :: NodeConfiguration -> IO NetworkTopology
-readTopologyFileOrError nc =
-      readTopologyFile nc
-  >>= either (\err -> panic $ "Cardano.Node.Run.handleSimpleNodeP2P.readTopologyFile: "
+readTopologyFileOrError :: Tracer IO (StartupTrace blk)
+                        -> NodeConfiguration -> IO NetworkTopology
+readTopologyFileOrError tr nc =
+      readTopologyFile tr nc
+  >>= either (\err -> panic $ "Cardano.Node.Configuration.TopologyP2P.readTopologyFile: "
                            <> err)
              pure
