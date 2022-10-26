@@ -33,20 +33,20 @@ import Cardano.Unlog.Resources
 summariseMultiClusterPerf :: [Centile] -> [ClusterPerf] -> Either CDFError MultiClusterPerf
 summariseMultiClusterPerf _ [] = error "Asked to summarise empty list of MachPerfOne"
 summariseMultiClusterPerf centiles mps@(headline:_) = do
-  sMissCDF              <- cdf2OfCDFs comb $ mps <&> sMissCDF
-  sLeadsCDF             <- cdf2OfCDFs comb $ mps <&> sLeadsCDF
-  sUtxoCDF              <- cdf2OfCDFs comb $ mps <&> sUtxoCDF
-  sDensityCDF           <- cdf2OfCDFs comb $ mps <&> sDensityCDF
-  sStartedCDF           <- cdf2OfCDFs comb $ mps <&> sStartedCDF
-  sBlkCtxCDF            <- cdf2OfCDFs comb $ mps <&> sBlkCtxCDF
-  sLgrStateCDF          <- cdf2OfCDFs comb $ mps <&> sLgrStateCDF
-  sLgrViewCDF           <- cdf2OfCDFs comb $ mps <&> sLgrViewCDF
-  sLeadingCDF           <- cdf2OfCDFs comb $ mps <&> sLeadingCDF
-  sForgedCDF            <- cdf2OfCDFs comb $ mps <&> sForgedCDF
-  sBlockGapCDF          <- cdf2OfCDFs comb $ mps <&> sBlockGapCDF
-  sSpanLensCpuCDF       <- cdf2OfCDFs comb $ mps <&> sSpanLensCpuCDF
-  sSpanLensCpuEpochCDF  <- cdf2OfCDFs comb $ mps <&> sSpanLensCpuEpochCDF
-  sSpanLensCpuRwdCDF    <- cdf2OfCDFs comb $ mps <&> sSpanLensCpuRwdCDF
+  cdfMiss              <- cdf2OfCDFs comb $ mps <&> cdfMiss
+  cdfLeads             <- cdf2OfCDFs comb $ mps <&> cdfLeads
+  cdfUtxo              <- cdf2OfCDFs comb $ mps <&> cdfUtxo
+  cdfDensity           <- cdf2OfCDFs comb $ mps <&> cdfDensity
+  cdfStarted           <- cdf2OfCDFs comb $ mps <&> cdfStarted
+  cdfBlkCtx            <- cdf2OfCDFs comb $ mps <&> cdfBlkCtx
+  cdfLgrState          <- cdf2OfCDFs comb $ mps <&> cdfLgrState
+  cdfLgrView           <- cdf2OfCDFs comb $ mps <&> cdfLgrView
+  cdfLeading           <- cdf2OfCDFs comb $ mps <&> cdfLeading
+  cdfForged            <- cdf2OfCDFs comb $ mps <&> cdfForged
+  cdfBlockGap          <- cdf2OfCDFs comb $ mps <&> cdfBlockGap
+  cdfSpanLensCpu       <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpu
+  cdfSpanLensCpuEpoch  <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpuEpoch
+  cdfSpanLensCpuRwd    <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpuRwd
   sResourceCDFs         <- sequence $ traverse identity (mps <&> sResourceCDFs) <&>
     \case
       [] -> Left CDFEmptyDataset
@@ -64,21 +64,21 @@ summariseMultiClusterPerf centiles mps@(headline:_) = do
 summariseClusterPerf :: [Centile] -> [MachPerfOne] -> Either CDFError ClusterPerf
 summariseClusterPerf _ [] = error "Asked to summarise empty list of MachPerfOne"
 summariseClusterPerf centiles mps@(headline:_) = do
-  sMissCDF              <- cdf2OfCDFs comb $ mps <&> sMissCDF
-  sLeadsCDF             <- cdf2OfCDFs comb $ mps <&> sLeadsCDF
-  sUtxoCDF              <- cdf2OfCDFs comb $ mps <&> sUtxoCDF
-  sDensityCDF           <- cdf2OfCDFs comb $ mps <&> sDensityCDF
-  sStartedCDF           <- cdf2OfCDFs comb $ mps <&> sStartedCDF
-  sBlkCtxCDF            <- cdf2OfCDFs comb $ mps <&> sBlkCtxCDF
-  sLgrStateCDF          <- cdf2OfCDFs comb $ mps <&> sLgrStateCDF
-  sLgrViewCDF           <- cdf2OfCDFs comb $ mps <&> sLgrViewCDF
-  sLeadingCDF           <- cdf2OfCDFs comb $ mps <&> sLeadingCDF
-  sForgedCDF            <- cdf2OfCDFs comb $ mps <&> sForgedCDF
-  sBlockGapCDF          <- cdf2OfCDFs comb $ mps <&> sBlockGapCDF
-  sSpanLensCpuCDF       <- cdf2OfCDFs comb $ mps <&> sSpanLensCpuCDF
-  sSpanLensCpuEpochCDF  <- cdf2OfCDFs comb $ mps <&> sSpanLensCpuEpochCDF
-  sSpanLensCpuRwdCDF    <- cdf2OfCDFs comb $ mps <&> sSpanLensCpuRwdCDF
-  sResourceCDFs         <- sequence $ traverse identity (mps <&> sResourceCDFs) <&>
+  cdfMiss              <- cdf2OfCDFs comb $ mps <&> cdfMiss
+  cdfLeads             <- cdf2OfCDFs comb $ mps <&> cdfLeads
+  cdfUtxo              <- cdf2OfCDFs comb $ mps <&> cdfUtxo
+  cdfDensity           <- cdf2OfCDFs comb $ mps <&> cdfDensity
+  cdfStarted           <- cdf2OfCDFs comb $ mps <&> cdfStarted
+  cdfBlkCtx            <- cdf2OfCDFs comb $ mps <&> cdfBlkCtx
+  cdfLgrState          <- cdf2OfCDFs comb $ mps <&> cdfLgrState
+  cdfLgrView           <- cdf2OfCDFs comb $ mps <&> cdfLgrView
+  cdfLeading           <- cdf2OfCDFs comb $ mps <&> cdfLeading
+  cdfForged            <- cdf2OfCDFs comb $ mps <&> cdfForged
+  cdfBlockGap          <- cdf2OfCDFs comb $ mps <&> cdfBlockGap
+  cdfSpanLensCpu       <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpu
+  cdfSpanLensCpuEpoch  <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpuEpoch
+  cdfSpanLensCpuRwd    <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpuRwd
+  sResourceCDFs        <- sequence $ traverse identity (mps <&> sResourceCDFs) <&>
     \case
       [] -> Left CDFEmptyDataset
       (xs :: [CDF I Word64]) -> cdf2OfCDFs comb xs :: Either CDFError (CDF (CDF I) Word64)
@@ -201,20 +201,20 @@ slotStatsMachPerf run (f, slots) =
   , sDomainSlots          = mkDataDomainInj (slSlot $ head slots) (slSlot $ last slots)
                                             (fromIntegral . unSlotNo)
   --
-  , sMissCDF              = dist sssMissRatios
-  , sLeadsCDF             = dist (slCountLeads <$> slots)
-  , sUtxoCDF              = dist (slUtxoSize <$> slots)
-  , sDensityCDF           = dist (slDensity <$> slots)
-  , sStartedCDF           = dist (slStarted `mapSMaybe` slots)
-  , sBlkCtxCDF            = dist (slBlkCtx `mapSMaybe` slots)
-  , sLgrStateCDF          = dist (slLgrState `mapSMaybe` slots)
-  , sLgrViewCDF           = dist (slLgrView `mapSMaybe` slots)
-  , sLeadingCDF           = dist (slLeading `mapSMaybe` slots)
-  , sForgedCDF            = dist (filter (/= 0) $ slForged `mapSMaybe` slots)
-  , sBlockGapCDF          = dist (slBlockGap <$> slots)
-  , sSpanLensCpuCDF       = dist sssSpanLensCpu
-  , sSpanLensCpuEpochCDF  = dist sssSpanLensCpuEpoch
-  , sSpanLensCpuRwdCDF    = dist sssSpanLensCpuRwd
+  , cdfMiss              = dist sssMissRatios
+  , cdfLeads             = dist (slCountLeads <$> slots)
+  , cdfUtxo              = dist (slUtxoSize <$> slots)
+  , cdfDensity           = dist (slDensity <$> slots)
+  , cdfStarted           = dist (slStarted `mapSMaybe` slots)
+  , cdfBlkCtx            = dist (slBlkCtx `mapSMaybe` slots)
+  , cdfLgrState          = dist (slLgrState `mapSMaybe` slots)
+  , cdfLgrView           = dist (slLgrView `mapSMaybe` slots)
+  , cdfLeading           = dist (slLeading `mapSMaybe` slots)
+  , cdfForged            = dist (filter (/= 0) $ slForged `mapSMaybe` slots)
+  , cdfBlockGap          = dist (slBlockGap <$> slots)
+  , cdfSpanLensCpu       = dist sssSpanLensCpu
+  , cdfSpanLensCpuEpoch  = dist sssSpanLensCpuEpoch
+  , cdfSpanLensCpuRwd    = dist sssSpanLensCpuRwd
   , sResourceCDFs         = computeResCDF stdCentiles resDistProjs slots
   }
  where

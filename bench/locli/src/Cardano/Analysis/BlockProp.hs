@@ -56,22 +56,22 @@ import Cardano.Util
 summariseMultiBlockProp :: [Centile] -> [BlockPropOne] -> Either CDFError MultiBlockProp
 summariseMultiBlockProp _ [] = error "Asked to summarise empty list of BlockPropOne"
 summariseMultiBlockProp centiles bs@(headline:_) = do
-  bpForgerStarts           <- cdf2OfCDFs comb $ bs <&> bpForgerStarts
-  bpForgerBlkCtx           <- cdf2OfCDFs comb $ bs <&> bpForgerBlkCtx
-  bpForgerLgrState         <- cdf2OfCDFs comb $ bs <&> bpForgerLgrState
-  bpForgerLgrView          <- cdf2OfCDFs comb $ bs <&> bpForgerLgrView
-  bpForgerLeads            <- cdf2OfCDFs comb $ bs <&> bpForgerLeads
-  bpForgerForges           <- cdf2OfCDFs comb $ bs <&> bpForgerForges
-  bpForgerAdoptions        <- cdf2OfCDFs comb $ bs <&> bpForgerAdoptions
-  bpForgerAnnouncements    <- cdf2OfCDFs comb $ bs <&> bpForgerAnnouncements
-  bpForgerSends            <- cdf2OfCDFs comb $ bs <&> bpForgerSends
-  bpPeerNotices            <- cdf2OfCDFs comb $ bs <&> bpPeerNotices
-  bpPeerRequests           <- cdf2OfCDFs comb $ bs <&> bpPeerRequests
-  bpPeerFetches            <- cdf2OfCDFs comb $ bs <&> bpPeerFetches
-  bpPeerAdoptions          <- cdf2OfCDFs comb $ bs <&> bpPeerAdoptions
-  bpPeerAnnouncements      <- cdf2OfCDFs comb $ bs <&> bpPeerAnnouncements
-  bpPeerSends              <- cdf2OfCDFs comb $ bs <&> bpPeerSends
-  bpSizes                  <- cdf2OfCDFs comb $ bs <&> bpSizes
+  cdfForgerStarts           <- cdf2OfCDFs comb $ bs <&> cdfForgerStarts
+  cdfForgerBlkCtx           <- cdf2OfCDFs comb $ bs <&> cdfForgerBlkCtx
+  cdfForgerLgrState         <- cdf2OfCDFs comb $ bs <&> cdfForgerLgrState
+  cdfForgerLgrView          <- cdf2OfCDFs comb $ bs <&> cdfForgerLgrView
+  cdfForgerLeads            <- cdf2OfCDFs comb $ bs <&> cdfForgerLeads
+  cdfForgerForges           <- cdf2OfCDFs comb $ bs <&> cdfForgerForges
+  cdfForgerAdoptions        <- cdf2OfCDFs comb $ bs <&> cdfForgerAdoptions
+  cdfForgerAnnouncements    <- cdf2OfCDFs comb $ bs <&> cdfForgerAnnouncements
+  cdfForgerSends            <- cdf2OfCDFs comb $ bs <&> cdfForgerSends
+  cdfPeerNotices            <- cdf2OfCDFs comb $ bs <&> cdfPeerNotices
+  cdfPeerRequests           <- cdf2OfCDFs comb $ bs <&> cdfPeerRequests
+  cdfPeerFetches            <- cdf2OfCDFs comb $ bs <&> cdfPeerFetches
+  cdfPeerAdoptions          <- cdf2OfCDFs comb $ bs <&> cdfPeerAdoptions
+  cdfPeerAnnouncements      <- cdf2OfCDFs comb $ bs <&> cdfPeerAnnouncements
+  cdfPeerSends              <- cdf2OfCDFs comb $ bs <&> cdfPeerSends
+  cdfSizes                  <- cdf2OfCDFs comb $ bs <&> cdfSizes
   bpPropagation            <- sequence $ transpose (bs <&> bpPropagation) <&>
     \case
       [] -> Left CDFEmptyDataset
@@ -463,28 +463,28 @@ blockProp :: Run -> [BlockEvents] -> DataDomain SlotNo -> DataDomain BlockNo -> 
 blockProp run@Run{genesis} fullChain domSlot domBlock = do
   progress "block-propagation" $ J (domSlot, domBlock)
   pure $ BlockProp
-    { bpDomainSlots         = domSlot
-    , bpDomainBlocks        = domBlock
-    , bpForgerStarts        = forgerEventsCDF   (Just . bfStarted   . beForge)
-    , bpForgerBlkCtx        = forgerEventsCDF           (bfBlkCtx   . beForge)
-    , bpForgerLgrState      = forgerEventsCDF           (bfLgrState . beForge)
-    , bpForgerLgrView       = forgerEventsCDF           (bfLgrView  . beForge)
-    , bpForgerLeads         = forgerEventsCDF   (Just . bfLeading   . beForge)
-    , bpForgerForges        = forgerEventsCDF   (Just . bfForged    . beForge)
-    , bpForgerAnnouncements = forgerEventsCDF   (Just . bfAnnounced . beForge)
-    , bpForgerSends         = forgerEventsCDF   (Just . bfSending   . beForge)
-    , bpForgerAdoptions     = forgerEventsCDF   (Just . bfAdopted   . beForge)
-    , bpPeerNotices         = observerEventsCDF (Just . boNoticed)   "noticed"
-    , bpPeerRequests        = observerEventsCDF (Just . boRequested) "requested"
-    , bpPeerFetches         = observerEventsCDF (Just . boFetched)   "fetched"
-    , bpPeerAnnouncements   = observerEventsCDF boAnnounced          "announced"
-    , bpPeerSends           = observerEventsCDF boSending            "sending"
-    , bpPeerAdoptions       = observerEventsCDF boAdopted            "adopted"
-    , bpPropagation         =
+    { bpDomainSlots          = domSlot
+    , bpDomainBlocks         = domBlock
+    , cdfForgerStarts        = forgerEventsCDF   (Just . bfStarted   . beForge)
+    , cdfForgerBlkCtx        = forgerEventsCDF           (bfBlkCtx   . beForge)
+    , cdfForgerLgrState      = forgerEventsCDF           (bfLgrState . beForge)
+    , cdfForgerLgrView       = forgerEventsCDF           (bfLgrView  . beForge)
+    , cdfForgerLeads         = forgerEventsCDF   (Just . bfLeading   . beForge)
+    , cdfForgerForges        = forgerEventsCDF   (Just . bfForged    . beForge)
+    , cdfForgerAnnouncements = forgerEventsCDF   (Just . bfAnnounced . beForge)
+    , cdfForgerSends         = forgerEventsCDF   (Just . bfSending   . beForge)
+    , cdfForgerAdoptions     = forgerEventsCDF   (Just . bfAdopted   . beForge)
+    , cdfPeerNotices         = observerEventsCDF (Just . boNoticed)   "noticed"
+    , cdfPeerRequests        = observerEventsCDF (Just . boRequested) "requested"
+    , cdfPeerFetches         = observerEventsCDF (Just . boFetched)   "fetched"
+    , cdfPeerAnnouncements   = observerEventsCDF boAnnounced          "announced"
+    , cdfPeerSends           = observerEventsCDF boSending            "sending"
+    , cdfPeerAdoptions       = observerEventsCDF boAdopted            "adopted"
+    , bpPropagation          =
       [ (p', forgerEventsCDF (Just . unI . projectCDF' "bePropagation" p . bePropagation))
       | p@(Centile p') <- adoptionCentiles <> [Centile 1.0] ]
-    , bpSizes               = forgerEventsCDF   (Just . bfBlockSize . beForge)
-    , bpVersion             = getVersion
+    , cdfSizes               = forgerEventsCDF   (Just . bfBlockSize . beForge)
+    , bpVersion              = getVersion
     }
  where
    analysisChain = filter (null . beNegAcceptance) fullChain
