@@ -7,6 +7,7 @@
 
 module Test.Cardano.Node.Gen
   ( genNetworkTopology
+  , genNetworkTopologyEncoding
   , genNodeHostIPv4Address
   , genNodeHostIPv6Address
   , genNodeHostIPAddress
@@ -15,6 +16,11 @@ module Test.Cardano.Node.Gen
   , genNodeIPv6Address
   , genNodeSetup
   ) where
+
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.KeyMap as Aeson.KeyMap
+import qualified Data.Vector as Vector
+import qualified Data.ByteString.Lazy as LBS
 
 import           Cardano.Prelude
 
@@ -45,6 +51,53 @@ genNetworkTopology =
                        <*> Gen.list (Range.linear 0 10) genPublicRootPeers
                        <*> genUseLedger
     ]
+
+-- | Generate valid encodings of p2p topology files
+--
+genNetworkTopologyEncoding :: Gen LBS.ByteString
+genNetworkTopologyEncoding = Aeson.encode <$> genNetworkTopologyValue
+
+-- | Generate a Aeson.Object which encodes a p2p topology.
+--
+genNetworkTopologyValue :: Gen Aeson.Object
+genNetworkTopologyValue = 
+    (\a b c -> Aeson.KeyMap.fromList
+                 [ ("localRoots", Aeson.Array . Vector.fromList $ a)
+                 , ("publicRoots", Aeson.Array . Vector.fromList $ b)
+                 , ("useLedgerAfter", Aeson.Number . fromIntegral $ c)
+                 ]
+    ) <$> Gen.list (Range.constantFrom 0 0 10) genLocalRootsValue
+      <*> Gen.list (Range.constantFrom 0 0 10) genPublicRootsValue
+      <*> Gen.int (Range.constantFrom 0 0 100)
+  where
+    genLocalRootsValue :: Gen Aeson.Value
+    genLocalRootsValue =
+      (\a b c -> Aeson.Object $ Aeson.KeyMap.fromList
+                   [ ("accessPoints", Aeson.Array . Vector.fromList $ a)
+                   , ("advertise", Aeson.Bool b)
+                   , ("valency", Aeson.Number (fromIntegral c))
+                   ]
+      ) <$> Gen.list (Range.constantFrom 0 0 10) genAccessPointValue
+        <*> Gen.bool
+        <*> Gen.int (Range.constantFrom 0 0 100)
+
+    genPublicRootsValue :: Gen Aeson.Value
+    genPublicRootsValue =
+      (\a b -> Aeson.Object $ Aeson.KeyMap.fromList 
+                 [ ("accessPoints", Aeson.Array . Vector.fromList $ a)
+                 , ("advertise", Aeson.Bool b)
+                 ]
+      ) <$> Gen.list (Range.constantFrom 0 0 10) genAccessPointValue
+        <*> Gen.bool
+
+    genAccessPointValue :: Gen Aeson.Value
+    genAccessPointValue =
+      (\a -> Aeson.Object $ Aeson.KeyMap.fromList
+                 [ ("address", Aeson.String (show $ naHostAddress a))
+                 , ("port", Aeson.Number (fromIntegral $ naPort a))
+                 ]
+      ) <$> genNodeIPAddress
+
 
 genNodeAddress' :: Gen addr -> Gen (NodeAddress' addr)
 genNodeAddress' genAddr =

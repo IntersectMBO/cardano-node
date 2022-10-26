@@ -217,6 +217,7 @@ test-suite cardano-node-test
   type:                 exitcode-stdio-1.0
 
   build-depends:        aeson             >= 1.5.6.0
+                      , bytestring
                       , cardano-api
                       , cardano-node
                       , cardano-prelude
@@ -228,6 +229,7 @@ test-suite cardano-node-test
                       , ouroboros-consensus
                       , ouroboros-network
                       , time
+                      , vector
 
   other-modules:        Test.Cardano.Node.FilePermissions
                         Test.Cardano.Node.Gen
