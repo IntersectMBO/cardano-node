@@ -163,7 +163,7 @@ instance FromJSON LocalRootPeersGroups where
   parseJSON = fmap LocalRootPeersGroups . parseJSONList
 
 instance ToJSON LocalRootPeersGroups where
-  toJSON = toJSON . groups
+  toJSON = toJSONList . groups
 
 newtype PublicRootPeers = PublicRootPeers
   { publicRoots :: RootConfig
