@@ -263,6 +263,25 @@ instance SerialiseAddress (Address ShelleyAddr) where
       either (const Nothing) Just $
       deserialiseFromBech32 (AsAddress AsShelleyAddr) t
 
+instance ToJSON (Address ShelleyAddr) where
+    toJSON = Aeson.String . serialiseAddress
+
+instance ToJSON (Address ByronAddr) where
+    toJSON = Aeson.String . serialiseAddress
+
+instance FromJSON (Address ByronAddr) where
+    parseJSON = Aeson.withText "Address" $ \txt ->
+      maybe
+        (fail "Cardano.Api.Address.FromJSON: Invalid Byron address.")
+        pure
+        (deserialiseAddress AsByronAddress txt)
+
+instance FromJSON (Address ShelleyAddr) where
+    parseJSON = Aeson.withText "Address" $ \txt ->
+      maybe
+        (fail "Cardano.Api.Address.FromJSON: Invalid Shelley address.")
+        pure
+        (deserialiseAddress AsShelleyAddress txt)
 
 makeByronAddress :: NetworkId
                  -> VerificationKey ByronKey
