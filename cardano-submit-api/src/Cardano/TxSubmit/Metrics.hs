@@ -7,7 +7,7 @@ module Cardano.TxSubmit.Metrics
   , registerMetricsServer
   ) where
 
-import           Control.Applicative (Applicative (pure), (<$>))
+import           Control.Applicative (Applicative (pure), (<$>), (<*>))
 import           Control.Concurrent.Async (Async, async)
 import           Control.Monad.Reader (MonadIO (liftIO), MonadReader (ask), ReaderT (runReaderT))
 import           Data.Function (($), (.))
@@ -19,8 +19,9 @@ import           System.Metrics.Prometheus.Concurrent.RegistryT (RegistryT (..),
 import           System.Metrics.Prometheus.Http.Scrape (serveMetricsT)
 import           System.Metrics.Prometheus.Metric.Gauge (Gauge)
 
-newtype TxSubmitMetrics = TxSubmitMetrics
+data TxSubmitMetrics = TxSubmitMetrics
   { tsmCount :: Gauge
+  , tsmFailCount :: Gauge
   }
 
 registerMetricsServer :: Int -> IO (TxSubmitMetrics, Async ())
@@ -32,4 +33,6 @@ registerMetricsServer metricsPort =
     pure (metrics, server)
 
 makeMetrics :: RegistryT IO TxSubmitMetrics
-makeMetrics = TxSubmitMetrics <$> registerGauge "tx_submit_count" mempty
+makeMetrics = TxSubmitMetrics
+  <$> registerGauge "tx_submit_count" mempty
+  <*> registerGauge "tx_submit_fail_count" mempty

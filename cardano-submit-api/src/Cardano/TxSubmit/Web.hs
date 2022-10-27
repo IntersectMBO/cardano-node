@@ -181,6 +181,7 @@ txSubmitPost trace metrics (AnyConsensusModeParams cModeParams) networkId (Socke
             liftIO $ logInfo trace $
               "txSubmitPost: failed to submit transaction: "
                 <> renderTxCmdError err
+            liftIO $ Gauge.inc (tsmFailCount metrics)
             errorResponse (TxSubmitFail err)
           Right txid -> do
             liftIO $ logInfo trace $
