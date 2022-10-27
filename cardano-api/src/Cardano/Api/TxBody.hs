@@ -48,6 +48,7 @@ module Cardano.Api.TxBody (
 
     -- * Transaction inputs
     TxIn(..),
+    TxIns,
     TxIx(..),
     genesisUTxOPseudoTxIn,
 

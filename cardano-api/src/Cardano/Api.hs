@@ -167,6 +167,7 @@ module Cardano.Api (
 
     -- ** Transaction inputs
     TxIn(TxIn),
+    TxIns,
     TxIx(TxIx),
     renderTxIn,
 
