@@ -63,6 +63,8 @@
     };
 
     cardano-mainnet-mirror.url = "github:input-output-hk/cardano-mainnet-mirror/nix";
+
+    nix2container.url = "github:nlewo/nix2container";
   };
 
   outputs =
@@ -79,6 +81,7 @@
     , node-measured
     , node-process
     , cardano-node-workbench
+    , nix2container
     , ...
     }@input:
     let
@@ -103,7 +106,7 @@
         iohkNix.overlays.cardano-lib
         iohkNix.overlays.utils
         (final: prev: {
-          inherit customConfig;
+          inherit customConfig nix2container;
           gitrev = final.customConfig.gitrev or self.rev or "0000000000000000000000000000000000000000";
           commonLib = lib
             // iohkNix.lib
