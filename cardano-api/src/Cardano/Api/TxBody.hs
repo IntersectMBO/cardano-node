@@ -1042,12 +1042,7 @@ extraKeyWitnessesSupportedInEra AlonzoEra  = Just ExtraKeyWitnessesInAlonzoEra
 extraKeyWitnessesSupportedInEra BabbageEra = Just ExtraKeyWitnessesInBabbageEra
 
 
--- | A representation of whether the era supports multi-asset transactions.
---
--- The Mary and subsequent eras support multi-asset transactions.
---
--- The negation of this is 'OnlyAdaSupportedInEra'.
---
+-- | A representation of whether the era supports script data in transactions.
 data ScriptDataSupportedInEra era where
 
      -- | Script data is supported in transactions in the 'Alonzo' era.
