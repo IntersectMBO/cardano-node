@@ -1,6 +1,6 @@
 { pkgs, lib, profileNix, backend }:
   with lib;
-    pkgs.runCommand "workbench-profile-output-${profileNix.name}-${backend.name}d"
+    pkgs.runCommand "workbench-profile-output-${profileNix.name}-${backend.name}"
       { buildInputs = [];
         profileConfigJsonPath = profileNix.JSON;
         nodeSpecsJsonPath = profileNix.node-specs.JSON;
@@ -39,7 +39,8 @@
       mkdir $out
       cp    $profileConfigJsonPath        $out/profile.json
       cp    $nodeSpecsJsonPath            $out/node-specs.json
-      cp    $backendConfigPath/*          $out
+      # TODO: Convert the profile in a whole derivation!
+      cp -r $backendConfigPath/*          $out
       cp    $nodeServicesPath             $out/node-services.json
       cp    $generatorServicePath         $out/generator-service.json
       cp    $tracerServicePath            $out/tracer-service.json

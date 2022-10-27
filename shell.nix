@@ -71,7 +71,7 @@ let
             withMainnet = false;
             useCabalRun = false;
           };
-        cluster = pkgs.supervisord-workbench-for-profile
+        cluster = pkgs.nomad-workbench-for-profile
           {
             inherit (devopsShellParams) profileName useCabalRun;
           };
