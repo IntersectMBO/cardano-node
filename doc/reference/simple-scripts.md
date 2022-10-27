@@ -599,8 +599,7 @@ above this means >= 1000.
 
 ```bash
 cardano-cli transaction build-raw \
-    --invalid-hereafter 1000 \
-    --invalid-before 1000\
+    --invalid-before 1000 \
     --fee 0 \
     --tx-in (txin of script address)
     --tx-out yourspecifiedtxout \
@@ -634,7 +633,6 @@ above this means <= 3000:
 
 ```bash
 cardano-cli transaction build-raw \
-    --invalid-hereafter 1000 \
     --invalid-hereafter 3000\
     --fee 0 \
     --tx-in (txin of script address)
