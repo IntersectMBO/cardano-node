@@ -266,6 +266,7 @@ module Cardano.Api (
     scriptValidityToTxScriptValidity,
     txScriptValiditySupportedInShelleyBasedEra,
     txScriptValiditySupportedInCardanoEra,
+    txScriptValidityToScriptValidity,
 
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
