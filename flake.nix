@@ -122,7 +122,8 @@
               cardano-mainnet-mirror
               node-snapshot node-measured node-process;
             customConfig = customConfig.membench;
-          })
+          }
+        )
         self.overlay
       ];
 
