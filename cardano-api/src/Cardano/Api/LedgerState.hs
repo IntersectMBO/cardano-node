@@ -21,6 +21,7 @@ module Cardano.Api.LedgerState
       , LedgerStateAllegra
       , LedgerStateMary
       , LedgerStateAlonzo
+      , LedgerStateBabbage
       )
   , initialLedgerState
   , applyBlock
@@ -275,7 +276,7 @@ pattern LedgerStateAlonzo
 pattern LedgerStateAlonzo st <- LedgerState  (Consensus.LedgerStateAlonzo st)
 
 pattern LedgerStateBabbage
-  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.AlonzoEra Shelley.StandardCrypto))
+  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.BabbageEra Shelley.StandardCrypto))
   -> LedgerState
 pattern LedgerStateBabbage st <- LedgerState  (Consensus.LedgerStateBabbage st)
 
