@@ -278,6 +278,8 @@ main = do
                        ("mary",    L.nesEL ls, Just (L.nesRu ls, getGoSnapshot ls, getBalances ls, getPV ls))
                      LedgerStateAlonzo    (Shelley.ShelleyLedgerState _ ls _) ->
                        ("alonzo",  L.nesEL ls, Just (L.nesRu ls, getGoSnapshot ls, getBalances ls, getPV ls))
+                     LedgerStateBabbage  (Shelley.ShelleyLedgerState _ ls _) ->
+                       ("babbage", L.nesEL ls, Just (L.nesRu ls, getGoSnapshot ls, getBalances ls, getPV ls))
 
              let txBodyComponents = map ( (\(TxBody txbc) -> txbc) . getTxBody ) transactions
 
