@@ -29,10 +29,12 @@ library
   import:               base, project-config
 
   build-depends:        aeson
+                      , ansi-terminal
                       , base16-bytestring
                       , bytestring
                       , cardano-api
                       , cardano-cli
+                      , cardano-git-rev
                       , cardano-node
                       , containers
                       , directory
@@ -42,11 +44,13 @@ library
                       , hedgehog-extras
                       , http-client
                       , http-types
+                      , optparse-applicative-fork
                       , ouroboros-network
                       , process
                       , random
                       , resourcet
                       , safe-exceptions
+                      , stm
                       , text
                       , time
                       , transformers
@@ -61,41 +65,33 @@ library
                         Testnet.Babbage
                         Testnet.Byron
                         Testnet.Cardano
-                        Testnet.Conf
-                        Testnet.List
-                        Testnet.Shelley
-                        Testnet.SubmitApi
-                        Testnet.Utils
-
-executable cardano-testnet
-  import:               base, project-config
-
-  hs-source-dirs:       testnet
-
-  main-is:              Main.hs
-
-  build-depends:        ansi-terminal
-                      , cardano-git-rev
-                      , cardano-testnet
-                      , directory
-                      , filepath
-                      , hedgehog
-                      , hedgehog-extras
-                      , optparse-applicative-fork
-                      , resourcet
-                      , stm
-                      , text
-
-  other-modules:        Paths_cardano_testnet
                         Testnet.Commands
                         Testnet.Commands.Babbage
                         Testnet.Commands.Byron
                         Testnet.Commands.Cardano
                         Testnet.Commands.Shelley
                         Testnet.Commands.Version
+                        Testnet.Conf
+                        Testnet.List
                         Testnet.Run
+                        Testnet.Shelley
+                        Testnet.SubmitApi
+                        Testnet.Utils
+
+  other-modules:        Paths_cardano_testnet
 
   autogen-modules:      Paths_cardano_testnet
+
+executable cardano-testnet
+  import:               base, project-config
+
+  hs-source-dirs:       app
+
+  main-is:              cardano-testnet.hs
+
+  build-depends:        cardano-testnet
+                      , optparse-applicative-fork
+                      , text
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
