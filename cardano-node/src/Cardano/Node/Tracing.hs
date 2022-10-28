@@ -23,10 +23,10 @@ import           Ouroboros.Network.NodeToNode (NodeToNodeVersion, RemoteAddress)
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup (NodeInfo, NodeStartupInfo, StartupTrace)
 
-import           Cardano.Logging.Resources
-import           Cardano.Node.Tracing.StateRep (NodeState)
-import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
-import           Cardano.Node.Tracing.Tracers.Peer (PeerT)
+import Cardano.Logging.Resources
+import Cardano.Node.Tracing.StateRep (NodeState)
+import Cardano.Node.Tracing.Tracers.Peer (PeerT)
+import Cardano.Node.Tracing.Tracers.ConsensusStartupException
 
 data Tracers peer localPeer blk p2p = Tracers
   { -- | Trace the ChainDB
