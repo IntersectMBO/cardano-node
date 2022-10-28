@@ -274,11 +274,17 @@ pattern LedgerStateAlonzo
   -> LedgerState
 pattern LedgerStateAlonzo st <- LedgerState  (Consensus.LedgerStateAlonzo st)
 
+pattern LedgerStateBabbage
+  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.AlonzoEra Shelley.StandardCrypto))
+  -> LedgerState
+pattern LedgerStateBabbage st <- LedgerState  (Consensus.LedgerStateBabbage st)
+
 {-# COMPLETE LedgerStateByron
            , LedgerStateShelley
            , LedgerStateAllegra
            , LedgerStateMary
-           , LedgerStateAlonzo #-}
+           , LedgerStateAlonzo
+           , LedgerStateBabbage #-}
 
 data FoldBlocksError
   = FoldBlocksInitialLedgerStateError InitialLedgerStateError
