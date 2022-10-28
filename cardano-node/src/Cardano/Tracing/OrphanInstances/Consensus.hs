@@ -32,6 +32,8 @@ import           Cardano.Tracing.Render (renderChainHash, renderChunkNo, renderH
                    renderPointForVerbosity, renderRealPoint, renderRealPointAsPhrase,
                    renderTipBlockNo, renderTipHash, renderWithOrigin)
 
+import           Cardano.Node.Tracing.Tracers.ConsensusStartupException (ConsensusStartupException (..))
+
 import           Ouroboros.Consensus.Block (BlockProtocol, BlockSupportsProtocol, CannotForge,
                    ConvertRawHash (..), ForgeStateUpdateError, Header, RealPoint, blockNo,
                    blockPoint, blockPrevHash, getHeader, headerPoint, pointHash, realPointHash,
@@ -84,6 +86,20 @@ import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
 
 {- HLINT ignore "Use const" -}
 {- HLINT ignore "Use record patterns" -}
+
+instance ToObject ConsensusStartupException where
+  toObject _ (ConsensusStartupException err) =
+    mconcat
+      [ "kind" .= String "ConsensusStartupException"
+      , "error" .= String (pack . show $ err)
+      ]
+
+instance HasPrivacyAnnotation ConsensusStartupException where
+instance HasSeverityAnnotation ConsensusStartupException where
+  getSeverityAnnotation _ = Critical
+instance Transformable Text IO ConsensusStartupException where
+  trTransformer = trStructured
+instance HasTextFormatter ConsensusStartupException where
 
 instance ConvertRawHash blk => ConvertRawHash (Header blk) where
   toShortRawHash _ h = toShortRawHash (Proxy @blk) h
@@ -202,7 +218,6 @@ instance HasSeverityAnnotation (LedgerEvent blk) where
 instance HasPrivacyAnnotation (TraceBlockFetchServerEvent blk)
 instance HasSeverityAnnotation (TraceBlockFetchServerEvent blk) where
   getSeverityAnnotation _ = Info
-
 
 instance (ToObject peer, ToObject (TraceChainSyncClientEvent blk))
     => Transformable Text IO (TraceLabelPeer peer (TraceChainSyncClientEvent blk)) where

@@ -155,6 +155,7 @@ doConnectToAcceptor TestSetup{..} snocket address timeLimits (ekgConfig, tfConfi
   withAsync (traceObjectsWriter sink) $ \_ -> do
     connectToNode
       snocket
+      mempty
       (codecHandshake forwardingVersionCodec)
       timeLimits
       (cborTermVersionDataCodec forwardingCodecCBORTerm)
@@ -209,6 +210,7 @@ doListenToAcceptor TestSetup{..}
     race_ (cleanNetworkMutableState networkState)
           $ withServerNode
               snocket
+              mempty
               nullNetworkServerTracers
               networkState
               (AcceptedConnectionsLimit maxBound maxBound 0)
