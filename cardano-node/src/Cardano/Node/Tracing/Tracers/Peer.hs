@@ -15,7 +15,7 @@ module Cardano.Node.Tracing.Tracers.Peer
 import           Cardano.Prelude hiding (atomically)
 import           Prelude (String)
 
-import qualified Control.Monad.Class.MonadSTM.Strict as STM
+import qualified Control.Concurrent.Class.MonadSTM.Strict as STM
 import           "contra-tracer" Control.Tracer
 
 import           Data.Aeson (ToJSON (..), Value (..), toJSON, (.=))

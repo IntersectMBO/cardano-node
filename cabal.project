@@ -114,7 +114,6 @@ constraints:
   , cardano-protocol-tpraos == 0.1.0.0
   , cardano-slotting == 0.1.0.0
   , contra-tracer == 0.1.0.0
-  , ekg-forward == 0.1.0
   , generic-monoid == 0.1.0.1
   , goblins == 0.2.0.0
   , iohk-monitoring ==0.1.11.0
@@ -125,17 +124,13 @@ constraints:
   , lobemo-scribe-systemd == 0.1.0.0
   , measures == 0.1.0.0
   , monoidal-synchronisation == 0.1.0.1
-  , network-mux == 0.1.0.1
   , non-integral == 0.1.0.0
   , orphans-deriving-via == 0.1.0.0
-  , ouroboros-consensus == 0.1.0.1
+  , ouroboros-consensus == 0.1.0.3
   , ouroboros-consensus-byron == 0.1.0.1
-  , ouroboros-consensus-cardano == 0.1.0.1
+  , ouroboros-consensus-cardano == 0.2.0.0
   , ouroboros-consensus-protocol == 0.1.0.1
   , ouroboros-consensus-shelley == 0.1.0.1
-  , ouroboros-network == 0.1.0.1
-  , ouroboros-network-framework == 0.1.0.1
-  , ouroboros-network-testing == 0.1.0.1
   , plutus-core == 1.0.0.1
   , plutus-ghc-stub == 8.6.5
   , plutus-ledger-api == 1.0.0.1
@@ -147,15 +142,13 @@ constraints:
   , small-steps-test == 0.1.0.0
   , strict-containers == 0.1.0.0
   , tracer-transformers == 0.1.0.1
-  , typed-protocols == 0.1.0.0
-  , typed-protocols-cborg == 0.1.0.0
   , vector-map == 0.1.0.0
   , Win32-network == 0.1.0.0
   , wl-pprint-annotated == 0.1.0.1
   , word-array == 0.1.0.0
-  , io-classes == 0.2.0.0
-  , typed-protocols == 0.1.0.0
-  , typed-protocols-examples == 0.1.0.0
+  , io-classes == 0.3.0.0
+  , typed-protocols == 0.1.0.1
+  , typed-protocols-examples == 0.1.0.1
 
 extra-packages:
     ouroboros-consensus-cardano-tools == 0.1.0.1

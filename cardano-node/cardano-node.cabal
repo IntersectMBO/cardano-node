@@ -94,6 +94,7 @@ library
                        Cardano.Node.Tracing.Tracers.BlockReplayProgress
                        Cardano.Node.Tracing.Tracers.ChainDB
                        Cardano.Node.Tracing.Tracers.Consensus
+                       Cardano.Node.Tracing.Tracers.ConsensusStartupException
                        Cardano.Node.Tracing.Tracers.Diffusion
                        Cardano.Node.Tracing.Tracers.KESInfo
                        Cardano.Node.Tracing.Tracers.StartLeadershipCheck
@@ -160,16 +161,16 @@ library
                       , lobemo-backend-monitoring
                       , lobemo-backend-trace-forwarder
                       , network
-                      , network-mux
+                      , network-mux ^>= 0.2
                       , nothunks
                       , optparse-applicative-fork
-                      , ouroboros-consensus
+                      , ouroboros-consensus ^>= 0.1.0.2
                       , ouroboros-consensus-byron
                       , ouroboros-consensus-cardano
                       , ouroboros-consensus-protocol
                       , ouroboros-consensus-shelley
-                      , ouroboros-network
-                      , ouroboros-network-framework
+                      , ouroboros-network  ^>= 0.2
+                      , ouroboros-network-framework ^>= 0.2
                       , psqueues
                       , safe-exceptions
                       , scientific

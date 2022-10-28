@@ -13,8 +13,8 @@ import           Cardano.Prelude (forever, liftIO)
 import           Prelude
 
 import           Codec.Serialise (DeserialiseFailure)
+import           Control.Concurrent.Class.MonadSTM.Strict (newTVarIO)
 import           Control.Monad.Class.MonadTimer (MonadTimer, threadDelay)
-import           Control.Monad.Class.MonadSTM.Strict (newTVarIO)
 import           Data.ByteString.Lazy (ByteString)
 import qualified Data.Map as Map
 import           Data.Proxy (Proxy (..))

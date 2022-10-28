@@ -98,6 +98,7 @@ doListenToForwarder snocket address netMagic timeLimits app = do
   race_ (cleanNetworkMutableState networkState)
         $ withServerNode
             snocket
+            mempty -- LocalSocket does not need to be configured
             nullNetworkServerTracers
             networkState
             (AcceptedConnectionsLimit maxBound maxBound 0)

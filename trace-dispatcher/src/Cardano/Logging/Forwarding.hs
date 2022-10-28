@@ -161,14 +161,15 @@ launchForwardersViaLocalSocket
 launchForwardersViaLocalSocket
   iomgr magic ekgConfig tfConfig dpfConfig sink ekgStore dpStore p mode =
   (case mode of
-     Initiator -> doConnectToAcceptor
-     Responder -> doListenToAcceptor)
-  magic (localSnocket iomgr) (localAddressFromPath p)
+     Initiator -> doConnectToAcceptor magic (localSnocket iomgr) mempty
+     Responder -> doListenToAcceptor magic (localSnocket iomgr) mempty)
+  (localAddressFromPath p)
   noTimeLimitsHandshake ekgConfig tfConfig dpfConfig sink ekgStore dpStore
 
 doConnectToAcceptor
   :: NetworkMagic
   -> Snocket IO fd addr
+  -> (fd -> IO ())
   -> addr
   -> ProtocolTimeLimits (Handshake ForwardingVersion Term)
   -> EKGF.ForwarderConfiguration
@@ -178,10 +179,11 @@ doConnectToAcceptor
   -> EKG.Store
   -> DataPointStore
   -> IO ()
-doConnectToAcceptor magic snocket address timeLimits
+doConnectToAcceptor magic snocket configureSocket address timeLimits
                     ekgConfig tfConfig dpfConfig sink ekgStore dpStore = do
   connectToNode
     snocket
+    configureSocket
     (codecHandshake forwardingVersionCodec)
     timeLimits
     (cborTermVersionDataCodec forwardingCodecCBORTerm)
@@ -216,6 +218,7 @@ doListenToAcceptor
   :: Ord addr
   => NetworkMagic
   -> Snocket IO fd addr
+  -> (fd -> addr -> IO ())
   -> addr
   -> ProtocolTimeLimits (Handshake ForwardingVersion Term)
   -> EKGF.ForwarderConfiguration
@@ -225,12 +228,13 @@ doListenToAcceptor
   -> EKG.Store
   -> DataPointStore
   -> IO ()
-doListenToAcceptor magic snocket address timeLimits
+doListenToAcceptor magic snocket configureSocket address timeLimits
                    ekgConfig tfConfig dpfConfig sink ekgStore dpStore = do
   networkState <- newNetworkMutableState
   race_ (cleanNetworkMutableState networkState)
         $ withServerNode
             snocket
+            configureSocket
             nullNetworkServerTracers
             networkState
             (AcceptedConnectionsLimit maxBound maxBound 0)

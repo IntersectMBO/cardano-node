@@ -67,6 +67,10 @@ module Cardano.Node.Tracing.Tracers.Consensus
   , severityKeepAliveClient
   , docKeepAliveClient
 
+  , namesConsensusStartupError
+  , severityConsensusStartupError
+  , docConsensusStartupError
+
   ) where
 
 
@@ -89,6 +93,7 @@ import           Cardano.Node.Tracing.Era.Shelley ()
 import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.Render
 import           Cardano.Node.Tracing.Tracers.StartLeadershipCheck
+import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
 import           Cardano.Prelude hiding (All, Show, show)
 
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
@@ -124,7 +129,6 @@ import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, e
 import           Ouroboros.Consensus.Node.Tracers
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import           Ouroboros.Consensus.Util.Enclose
-
 
 
 instance LogFormatting a => LogFormatting (TraceLabelCreds a) where
@@ -1681,6 +1685,20 @@ instance Show remotePeer => LogFormatting (TraceKeepAliveClient remotePeer) wher
 
 docKeepAliveClient :: Documented (TraceKeepAliveClient peer)
 docKeepAliveClient = Documented [
+    DocMsg
+      []
+      []
+      ""
+  ]
+
+namesConsensusStartupError :: ConsensusStartupException -> [Text]
+namesConsensusStartupError _ = []
+
+severityConsensusStartupError :: ConsensusStartupException -> SeverityS
+severityConsensusStartupError _ = Critical
+
+docConsensusStartupError :: Documented ConsensusStartupException
+docConsensusStartupError = Documented [
     DocMsg
       []
       []

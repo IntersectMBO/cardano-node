@@ -4,6 +4,7 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 module Cardano.Node.Tracing
   ( Tracers (..)
+  , ConsensusStartupException (..)
   ) where
 
 import Prelude (IO)
@@ -26,6 +27,7 @@ import Cardano.Node.Startup           (NodeInfo, StartupTrace)
 import Cardano.Logging.Resources
 import Cardano.Node.Tracing.StateRep (NodeState)
 import Cardano.Node.Tracing.Tracers.Peer (PeerT)
+import Cardano.Node.Tracing.Tracers.ConsensusStartupException
 
 data Tracers peer localPeer blk p2p = Tracers
   { -- | Trace the ChainDB

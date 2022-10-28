@@ -621,7 +621,7 @@ docTracers configFileName outputFileName _ _ _ = do
     configureTracers trConfig docDiffusionInit [dtDiffusionInitializationTr]
     dtDiffusionInitializationTrDoc <- documentTracer trConfig dtDiffusionInitializationTr
       (docDiffusionInit ::
-        Documented (Diffusion.InitializationTracer Socket.SockAddr LocalAddress))
+        Documented (Diffusion.DiffusionTracer Socket.SockAddr LocalAddress))
 
     dtLedgerPeersTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
@@ -673,7 +673,7 @@ docTracers configFileName outputFileName _ _ _ = do
       allPublic
     configureTracers trConfig docDebugPeerSelection [debugPeerSelectionTr]
     debugPeerSelectionTrDoc <- documentTracer trConfig debugPeerSelectionTr
-      (docDebugPeerSelection :: Documented (DebugPeerSelection Socket.SockAddr peer))
+      (docDebugPeerSelection :: Documented (DebugPeerSelection Socket.SockAddr))
 
     debugPeerSelectionResponderTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
@@ -683,7 +683,7 @@ docTracers configFileName outputFileName _ _ _ = do
       allPublic
     configureTracers trConfig docDebugPeerSelection [debugPeerSelectionResponderTr]
     debugPeerSelectionResponderTrDoc <- documentTracer trConfig debugPeerSelectionResponderTr
-      (docDebugPeerSelection :: Documented (DebugPeerSelection Socket.SockAddr peer))
+      (docDebugPeerSelection :: Documented (DebugPeerSelection Socket.SockAddr))
 
     peerSelectionCountersTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG

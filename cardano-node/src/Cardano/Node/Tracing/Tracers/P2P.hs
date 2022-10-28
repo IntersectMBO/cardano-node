@@ -258,6 +258,8 @@ namesForPeerSelection TraceDemoteLocalHotPeers {}   = ["DemoteLocalHotPeers"]
 namesForPeerSelection TraceDemoteHotFailed {}       = ["DemoteHotFailed"]
 namesForPeerSelection TraceDemoteHotDone {}         = ["DemoteHotDone"]
 namesForPeerSelection TraceDemoteAsynchronous {}    = ["DemoteAsynchronous"]
+namesForPeerSelection TraceDemoteLocalAsynchronous {}
+                                                    = ["DemoteAsynchronous"]
 namesForPeerSelection TraceGovernorWakeup {}        = ["GovernorWakeup"]
 namesForPeerSelection TraceChurnWait {}             = ["ChurnWait"]
 namesForPeerSelection TraceChurnMode {}             = ["ChurnMode"]
@@ -289,6 +291,7 @@ severityPeerSelection TraceDemoteLocalHotPeers   {} = Info
 severityPeerSelection TraceDemoteHotFailed       {} = Info
 severityPeerSelection TraceDemoteHotDone         {} = Info
 severityPeerSelection TraceDemoteAsynchronous    {} = Info
+severityPeerSelection TraceDemoteLocalAsynchronous {} = Warning
 severityPeerSelection TraceGovernorWakeup        {} = Info
 severityPeerSelection TraceChurnWait             {} = Info
 severityPeerSelection TraceChurnMode             {} = Info
@@ -441,6 +444,10 @@ instance LogFormatting (TracePeerSelection SockAddr) where
     mconcat [ "kind" .= String "DemoteAsynchronous"
              , "state" .= toJSON msp
              ]
+  forMachine _dtal (TraceDemoteLocalAsynchronous msp) =
+    mconcat [ "kind" .= String "DemoteLocalAsynchronous"
+             , "state" .= toJSON msp
+             ]
   forMachine _dtal TraceGovernorWakeup =
     mconcat [ "kind" .= String "GovernorWakeup"
              ]
@@ -591,13 +598,13 @@ peerSelectionTargetsToObject
 -- DebugPeerSelection Tracer
 --------------------------------------------------------------------------------
 
-namesForDebugPeerSelection :: DebugPeerSelection SockAddr peerConn -> [Text]
+namesForDebugPeerSelection :: DebugPeerSelection SockAddr -> [Text]
 namesForDebugPeerSelection _ = ["GovernorState"]
 
-severityDebugPeerSelection :: DebugPeerSelection SockAddr peerConn -> SeverityS
+severityDebugPeerSelection :: DebugPeerSelection SockAddr -> SeverityS
 severityDebugPeerSelection _ = Debug
 
-instance Show peerConn => LogFormatting (DebugPeerSelection SockAddr peerConn) where
+instance LogFormatting (DebugPeerSelection SockAddr) where
   forMachine DNormal (TraceGovernorState blockedAt wakeupAfter
                    PeerSelectionState { targets, knownPeers, establishedPeers, activePeers }) =
     mconcat [ "kind" .= String "DebugPeerSelection"
@@ -618,7 +625,7 @@ instance Show peerConn => LogFormatting (DebugPeerSelection SockAddr peerConn) w
              ]
   forHuman = pack . show
 
-docDebugPeerSelection :: Documented (DebugPeerSelection SockAddr peerConn)
+docDebugPeerSelection :: Documented (DebugPeerSelection SockAddr)
 docDebugPeerSelection = Documented
   [  DocMsg
       ["GovernorState"]

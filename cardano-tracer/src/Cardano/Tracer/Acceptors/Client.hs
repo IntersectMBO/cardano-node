@@ -94,6 +94,7 @@ doConnectToForwarder
 doConnectToForwarder snocket address netMagic timeLimits app =
   connectToNode
     snocket
+    mempty -- LocalSocket does not require to be configured
     (codecHandshake forwardingVersionCodec)
     timeLimits
     (cborTermVersionDataCodec forwardingCodecCBORTerm)
