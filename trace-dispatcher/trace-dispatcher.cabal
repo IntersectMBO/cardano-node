@@ -52,7 +52,7 @@ library
                       , contra-tracer
                       , ekg
                       , ekg-core
-                      , ekg-forward ^>= 0.2.0
+                      , ekg-forward == 0.3.0
                       , hostname
                       , network
                       , optparse-applicative-fork
