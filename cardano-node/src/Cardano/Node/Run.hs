@@ -22,7 +22,7 @@ import           Data.IP (toSockAddr)
 import           Prelude (String, error, id, show)
 
 import qualified Control.Concurrent.Async as Async
-import           Control.Monad.Class.MonadSTM.Strict
+import           Control.Concurrent.Class.MonadSTM.Strict
 import           Control.Monad.Trans.Except.Extra (left)
 import           "contra-tracer" Control.Tracer
 import qualified Data.Map.Strict as Map
@@ -610,6 +610,8 @@ mkP2PArguments NodeConfiguration {
       , P2P.daReadUseLedgerAfter
       , P2P.daProtocolIdleTimeout = ncProtocolIdleTimeout
       , P2P.daTimeWaitTimeout     = ncTimeWaitTimeout
+      , P2P.daDeadlineChurnInterval = 3300
+      , P2P.daBulkChurnInterval = 300
       }
   where
     daPeerSelectionTargets = PeerSelectionTargets {

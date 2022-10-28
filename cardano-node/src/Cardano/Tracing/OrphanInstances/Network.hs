@@ -59,6 +59,7 @@ import           Ouroboros.Network.ConnectionManager.Types (AbstractState (..),
 import qualified Ouroboros.Network.ConnectionManager.Types as ConnMgr
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.Driver.Limits (ProtocolLimitFailure (..))
+import           Ouroboros.Network.ExitPolicy (ReconnectDelay (..))
 import           Ouroboros.Network.InboundGovernor (InboundGovernorTrace (..), RemoteSt (..))
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.InboundGovernor.State (InboundGovernorCounters (..))
@@ -112,8 +113,11 @@ import qualified Ouroboros.Network.Diffusion as ND
 --
 -- NOTE: this list is sorted by the unqualified name of the outermost type.
 
-instance HasPrivacyAnnotation (ND.InitializationTracer ntnAddr ntcAddr)
-instance HasSeverityAnnotation (ND.InitializationTracer ntnAddr ntcAddr) where
+instance HasPrivacyAnnotation (ND.DiffusionTracer ntnAddr ntcAddr)
+instance HasSeverityAnnotation (ND.DiffusionTracer ntnAddr ntcAddr) where
+  getSeverityAnnotation ND.SystemdSocketConfiguration {} = Warning
+  getSeverityAnnotation ND.UnsupportedLocalSystemdSocket {} = Warning
+  getSeverityAnnotation ND.DiffusionErrored {} = Critical
   getSeverityAnnotation _ = Info
 
 instance HasPrivacyAnnotation (NtC.HandshakeTr LocalAddress NodeToClientVersion)
@@ -405,12 +409,13 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TraceDemoteHotFailed       {} -> Info
       TraceDemoteHotDone         {} -> Info
       TraceDemoteAsynchronous    {} -> Info
+      TraceDemoteLocalAsynchronous {} -> Warning
       TraceGovernorWakeup        {} -> Info
       TraceChurnWait             {} -> Info
       TraceChurnMode             {} -> Info
 
-instance HasPrivacyAnnotation (DebugPeerSelection addr conn)
-instance HasSeverityAnnotation (DebugPeerSelection addr conn) where
+instance HasPrivacyAnnotation (DebugPeerSelection addr)
+instance HasSeverityAnnotation (DebugPeerSelection addr) where
   getSeverityAnnotation _ = Debug
 
 instance HasPrivacyAnnotation (PeerSelectionActionsTrace SockAddr)
@@ -508,9 +513,9 @@ instance HasSeverityAnnotation (Server.RemoteTransitionTrace addr) where
 --
 -- NOTE: this list is sorted by the unqualified name of the outermost type.
 
-instance Transformable Text IO (ND.InitializationTracer RemoteAddress LocalAddress) where
+instance Transformable Text IO (ND.DiffusionTracer RemoteAddress LocalAddress) where
   trTransformer = trStructuredText
-instance HasTextFormatter (ND.InitializationTracer RemoteAddress LocalAddress) where
+instance HasTextFormatter (ND.DiffusionTracer RemoteAddress LocalAddress) where
   formatText a _ = pack (show a)
 
 instance Transformable Text IO (NtN.HandshakeTr RemoteAddress NodeToNodeVersion) where
@@ -665,10 +670,9 @@ instance Transformable Text IO (TracePeerSelection SockAddr) where
 instance HasTextFormatter (TracePeerSelection SockAddr) where
   formatText a _ = pack (show a)
 
-instance Show conn
-      => Transformable Text IO (DebugPeerSelection SockAddr conn) where
+instance Transformable Text IO (DebugPeerSelection SockAddr) where
   trTransformer = trStructuredText
-instance HasTextFormatter (DebugPeerSelection SockAddr conn) where
+instance HasTextFormatter (DebugPeerSelection SockAddr) where
   -- One can only change what is logged with respect to verbosity using json
   -- format.
   formatText _ obj = pack (show obj)
@@ -972,7 +976,7 @@ instance ToObject (FetchDecision [Point header]) where
              ]
 
 -- TODO: use 'ToJSON' constraints
-instance (Show ntnAddr, Show ntcAddr) => ToObject (ND.InitializationTracer ntnAddr ntcAddr) where
+instance (Show ntnAddr, Show ntcAddr) => ToObject (ND.DiffusionTracer ntnAddr ntcAddr) where
   toObject _verb (ND.RunServer sockAddr) = mconcat
     [ "kind" .= String "RunServer"
     , "socketAddress" .= String (pack (show sockAddr))
@@ -1036,6 +1040,10 @@ instance (Show ntnAddr, Show ntcAddr) => ToObject (ND.InitializationTracer ntnAd
   toObject _verb (ND.DiffusionErrored exception) = mconcat
     [ "kind" .= String "DiffusionErrored"
     , "path" .= String (pack (show exception))
+    ]
+  toObject _verb (ND.SystemdSocketConfiguration config) = mconcat
+    [ "kand" .= String "SystemdSocketConfiguration"
+    , "message" .= String (pack (show config))
     ]
 
 instance ToObject (NtC.HandshakeTr LocalAddress NodeToClientVersion) where
@@ -1409,6 +1417,9 @@ instance ToJSON PeerSelectionTargets where
                  , "targetActivePeers" .= nActivePeers
                  ]
 
+instance ToJSON ReconnectDelay where
+  toJSON = toJSON . reconnectDelay
+
 instance ToObject (TracePeerSelection SockAddr) where
   toObject _verb (TraceLocalRootPeersChanged lrp lrp') =
     mconcat [ "kind" .= String "LocalRootPeersChanged"
@@ -1557,6 +1568,10 @@ instance ToObject (TracePeerSelection SockAddr) where
     mconcat [ "kind" .= String "DemoteAsynchronous"
              , "state" .= toJSON msp
              ]
+  toObject _verb (TraceDemoteLocalAsynchronous msp) =
+    mconcat [ "kind" .= String "DemoteLocalAsynchronous"
+             , "state" .= toJSON msp
+             ]
   toObject _verb TraceGovernorWakeup =
     mconcat [ "kind" .= String "GovernorWakeup"
              ]
@@ -1620,7 +1635,7 @@ peerSelectionTargetsToObject
                , "active" .= targetNumberOfActivePeers
                ]
 
-instance Show peerConn => ToObject (DebugPeerSelection SockAddr peerConn) where
+instance ToObject (DebugPeerSelection SockAddr) where
   toObject verb (TraceGovernorState blockedAt wakeupAfter
                    PeerSelectionState { targets, knownPeers, establishedPeers, activePeers })
       | verb <= NormalVerbosity =

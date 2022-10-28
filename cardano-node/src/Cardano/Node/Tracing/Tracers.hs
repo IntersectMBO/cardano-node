@@ -365,6 +365,13 @@ mkConsensusTracers trBase trForward mbTrEKG _trDataPoint trConfig nodeKernel = d
                 severityKeepAliveClient
                 allPublic
     configureTracers trConfig docKeepAliveClient [keepAliveClientTr]
+    consensusStartupErrorTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Consensus", "Startup"]
+                namesConsensusStartupError
+                severityConsensusStartupError
+                allPublic
+    configureTracers trConfig docConsensusStartupError [consensusStartupErrorTr]
     pure $ Consensus.Tracers
       { Consensus.chainSyncClientTracer = Tracer $
           traceWith chainSyncClientTr
@@ -398,6 +405,8 @@ mkConsensusTracers trBase trForward mbTrEKG _trDataPoint trConfig nodeKernel = d
           traceWith blockchainTimeTr
       , Consensus.keepAliveClientTracer = Tracer $
           traceWith keepAliveClientTr
+      , Consensus.consensusStartupErrorTracer = Tracer $
+          traceWith consensusStartupErrorTr . ConsensusStartupException
       }
 
 mkNodeToClientTracers :: forall blk.
@@ -570,7 +579,7 @@ mkDiffusionTracers  trBase trForward mbTrEKG _trDataPoint trConfig = do
            traceWith dtLocalMuxTr
        , Diffusion.dtLocalHandshakeTracer          = Tracer $
            traceWith dtLocalHandshakeTr
-       , Diffusion.dtDiffusionInitializationTracer = Tracer $
+       , Diffusion.dtDiffusionTracer               = Tracer $
            traceWith dtDiffusionInitializationTr
        , Diffusion.dtLedgerPeersTracer             = Tracer $
            traceWith dtLedgerPeersTr

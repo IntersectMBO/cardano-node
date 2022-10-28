@@ -343,7 +343,7 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect enable
      , Diffusion.dtHandshakeTracer               = handshakeTracer
      , Diffusion.dtLocalMuxTracer                = localMuxTracer
      , Diffusion.dtLocalHandshakeTracer          = localHandshakeTracer
-     , Diffusion.dtDiffusionInitializationTracer = initializationTracer
+     , Diffusion.dtDiffusionTracer               = initializationTracer
      , Diffusion.dtLedgerPeersTracer             = ledgerPeersTracer
      }
    diffusionTracersExtra' enP2P =
@@ -453,6 +453,7 @@ mkTracers _ _ _ _ _ enableP2P =
       , Consensus.mempoolTracer = nullTracer
       , Consensus.forgeTracer = nullTracer
       , Consensus.blockchainTimeTracer = nullTracer
+      , Consensus.consensusStartupErrorTracer = nullTracer
       }
     , nodeToClientTracers = NodeToClient.Tracers
       { NodeToClient.tChainSyncTracer = nullTracer
@@ -707,6 +708,8 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
     , Consensus.blockchainTimeTracer = tracerOnOff' (traceBlockchainTime trSel) $
         Tracer $ \ev ->
           traceWith (toLogObject tr) (readableTraceBlockchainTimeEvent ev)
+    , Consensus.consensusStartupErrorTracer =
+        Tracer $ \err -> traceWith (toLogObject tr) (ConsensusStartupException err)
     }
  where
    mkForgeTracers :: IO ForgeTracers
@@ -1419,7 +1422,7 @@ tracePeerSelectionCountersMetrics (OnOff False) _                = nullTracer
 tracePeerSelectionCountersMetrics (OnOff True)  (Just ekgDirect) = pscTracer
   where
     pscTracer :: Tracer IO PeerSelectionCounters
-    pscTracer = Tracer $ \(PeerSelectionCounters cold warm hot) -> do
+    pscTracer = Tracer $ \(PeerSelectionCounters cold warm hot _) -> do
       sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.cold" cold
       sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.warm" warm
       sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.hot"  hot

@@ -146,6 +146,7 @@ doConnectToAcceptor snocket address timeLimits (ekgConfig, tfConfig, dpfConfig) 
   withAsync (traceObjectsWriter sink) $ \_ -> do
     connectToNode
       snocket
+      mempty
       (codecHandshake forwardingVersionCodec)
       timeLimits
       (cborTermVersionDataCodec forwardingCodecCBORTerm)
@@ -197,6 +198,7 @@ doListenToAcceptor snocket address timeLimits (ekgConfig, tfConfig, dpfConfig) =
     race_ (cleanNetworkMutableState networkState)
           $ withServerNode
               snocket
+              mempty
               nullNetworkServerTracers
               networkState
               (AcceptedConnectionsLimit maxBound maxBound 0)

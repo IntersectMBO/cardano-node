@@ -1,5 +1,25 @@
 # Changelog for cardano-node
 
+## 1.35.5 -- November 2022
+
+### node changes
+
+None
+
+### consensus changes
+
+None
+
+### network changes
+
+- Added 'DemoteLocalAsynchronous' warning trace.  It indicates that a remote
+  local root peer was demoted to cold (either due to connection error or
+  misbehaviour). (input-output-hk/ouroboros-network#4127)
+
+### ledger changes
+
+None
+
 ## 1.35.4 -- October 2022
 
 ### node changes
