@@ -624,6 +624,8 @@ mkP2PArguments NodeConfiguration {
       , P2P.daReadUseLedgerAfter
       , P2P.daProtocolIdleTimeout = ncProtocolIdleTimeout
       , P2P.daTimeWaitTimeout     = ncTimeWaitTimeout
+      , P2P.daDeadlineChurnInterval = 3300
+      , P2P.daBulkChurnInterval = 300
       }
   where
     daPeerSelectionTargets = PeerSelectionTargets {

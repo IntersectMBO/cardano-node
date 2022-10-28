@@ -1315,7 +1315,8 @@ instance Error LeadershipError where
 nextEpochEligibleLeadershipSlots
   :: forall era.
      ( HasField "_d" (Core.PParams (ShelleyLedgerEra era)) UnitInterval
-     , HashAnnotated (Core.TxBody (ShelleyLedgerEra era)) Core.EraIndependentTxBody (Ledger.Crypto (ShelleyLedgerEra era)))
+     , HashAnnotated (Core.TxBody (ShelleyLedgerEra era)) Core.EraIndependentTxBody (Ledger.Crypto (ShelleyLedgerEra era))
+     )
   => Ledger.Era (ShelleyLedgerEra era)
   => Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Spec.Credential 'Shelley.Spec.Staking (Cardano.Ledger.Era.Crypto (ShelleyLedgerEra era)))
   => FromCBOR (Consensus.ChainDepState (Api.ConsensusProtocol era))

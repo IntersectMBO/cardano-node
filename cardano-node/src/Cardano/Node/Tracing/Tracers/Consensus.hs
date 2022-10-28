@@ -42,6 +42,8 @@ import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.Render
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException ()
 import           Cardano.Node.Tracing.Tracers.StartLeadershipCheck
+import           Cardano.Node.Tracing.Tracers.ForgingThreadStats(ForgingStats)
+import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
 import           Cardano.Prelude hiding (All, Show, show)
 
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))

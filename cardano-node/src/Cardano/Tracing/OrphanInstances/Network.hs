@@ -419,8 +419,8 @@ instance HasPrivacyAnnotation (DebugPeerSelection addr)
 instance HasSeverityAnnotation (DebugPeerSelection addr) where
   getSeverityAnnotation _ = Debug
 
-instance HasPrivacyAnnotation (PeerSelectionActionsTrace SockAddr versionNumber)
-instance HasSeverityAnnotation (PeerSelectionActionsTrace SockAddr versionNumber) where
+instance HasPrivacyAnnotation (PeerSelectionActionsTrace SockAddr lAddr)
+instance HasSeverityAnnotation (PeerSelectionActionsTrace SockAddr lAddr) where
   getSeverityAnnotation ev =
    case ev of
      PeerStatusChanged {}       -> Info
@@ -677,9 +677,9 @@ instance HasTextFormatter (DebugPeerSelection SockAddr) where
   -- format.
   formatText _ obj = pack (show obj)
 
-instance Show versionNumber => Transformable Text IO (PeerSelectionActionsTrace SockAddr versionNumber) where
+instance Show lAddr => Transformable Text IO (PeerSelectionActionsTrace SockAddr lAddr) where
   trTransformer = trStructuredText
-instance Show versionNumber => HasTextFormatter (PeerSelectionActionsTrace SockAddr versionNumber) where
+instance Show lAddr => HasTextFormatter (PeerSelectionActionsTrace SockAddr lAddr) where
   formatText a _ = pack (show a)
 
 instance Transformable Text IO PeerSelectionCounters where
@@ -1042,7 +1042,7 @@ instance (Show ntnAddr, Show ntcAddr) => ToObject (ND.DiffusionTracer ntnAddr nt
     , "path" .= String (pack (show exception))
     ]
   toObject _verb (ND.SystemdSocketConfiguration config) = mconcat
-    [ "kind" .= String "SystemdSocketConfiguration"
+    [ "kand" .= String "SystemdSocketConfiguration"
     , "message" .= String (pack (show config))
     ]
 
@@ -1657,7 +1657,7 @@ instance ToObject (DebugPeerSelection SockAddr) where
 
 -- TODO: Write PeerStatusChangeType ToJSON at ouroboros-network
 -- For that an export is needed at ouroboros-network
-instance Show versionNumber => ToObject (PeerSelectionActionsTrace SockAddr versionNumber) where
+instance Show lAddr => ToObject (PeerSelectionActionsTrace SockAddr lAddr) where
   toObject _verb (PeerStatusChanged ps) =
     mconcat [ "kind" .= String "PeerStatusChanged"
              , "peerStatusChangeType" .= show ps
