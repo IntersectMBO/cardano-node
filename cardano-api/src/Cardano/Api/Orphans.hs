@@ -43,33 +43,32 @@ import           Cardano.Slotting.Slot (SlotNo (..))
 import           Cardano.Slotting.Time (SystemStart (..))
 import           Control.State.Transition (STS (State))
 
+import           Cardano.Api.Script
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Ledger.Alonzo.Data as Alonzo
 import qualified Cardano.Ledger.Babbage.PParams as Babbage
+import           Cardano.Ledger.Babbage.PParams (BabbagePParamsUpdate, BabbagePParams)
 import qualified Cardano.Ledger.Babbage.TxBody as Babbage
 import qualified Cardano.Ledger.Coin as Shelley
 import qualified Cardano.Ledger.Core as Core
+import           Cardano.Ledger.Core (EraTxOut)
 import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.PoolDistr as Ledger
 import qualified Cardano.Ledger.SafeHash as SafeHash
+import           Cardano.Ledger.Val (Val)
 import qualified Cardano.Ledger.Shelley.API as Shelley
 import qualified Cardano.Ledger.Mary.Value as Mary
+import           Cardano.Ledger.Mary.Value (MaryValue(..))
+import           Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
+import           Cardano.Ledger.Shelley.API (ShelleyTxOut(..))
 import qualified Cardano.Ledger.Shelley.EpochBoundary as ShelleyEpoch
 import qualified Cardano.Ledger.Shelley.LedgerState as ShelleyLedger
 import           Cardano.Ledger.Shelley.PParams (ShelleyPParamsUpdate)
 import qualified Cardano.Ledger.Shelley.Rewards as Shelley
 import qualified Cardano.Ledger.Shelley.RewardUpdate as Shelley
+import           Cardano.Ledger.Babbage.TxBody (BabbageTxOut(..))
 import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
-
-import           Cardano.Api.Script
-import Cardano.Ledger.Mary.Value (MaryValue(..))
-import Cardano.Ledger.Babbage.TxBody (BabbageTxOut(..))
-import Cardano.Ledger.Shelley.API (ShelleyTxOut(..))
-import Cardano.Ledger.Val (Val)
-import Cardano.Ledger.Core (EraTxOut)
-import Cardano.Ledger.Babbage.PParams (BabbagePParamsUpdate, BabbagePParams)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 
 -- Orphan instances involved in the JSON output of the API queries.
 -- We will remove/replace these as we provide more API wrapper types
@@ -214,7 +213,8 @@ instance ( ToJSON (Core.PParamsUpdate era)
 toPpupStatePairs ::
   ( Aeson.KeyValue a
   , ToJSON (Core.PParamsUpdate era)
-  , Core.Era era) => ShelleyLedger.PPUPState era -> [a]
+  , Core.Era era
+  ) => ShelleyLedger.PPUPState era -> [a]
 toPpupStatePairs ppUpState =
   let !proposals = Shelley.proposals ppUpState
       !futureProposals = Shelley.futureProposals ppUpState
