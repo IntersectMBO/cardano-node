@@ -19,6 +19,8 @@ import qualified Plutus.V1.Ledger.Api as Plutus
 import           Plutus.V1.Ledger.Contexts (ScriptContext (..), ScriptPurpose (..), TxInfo (..),
                    TxOutRef (..))
 
+import           Cardano.CLI.Shelley.Run.Read
+
 readScript :: FilePath -> IO (Script PlutusScriptV1)
 readScript fp = do
   res <- runExceptT $ readFileScriptInAnyLang fp
