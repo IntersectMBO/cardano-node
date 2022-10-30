@@ -38,13 +38,12 @@ import           Prelude
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
---TODO: following import needed for orphan Eq Script instance
-import           Cardano.Ledger.Shelley.Scripts ()
 
 import           Data.Bifunctor (first)
 import qualified Data.Map as Map
 import           Data.Maybe
 import qualified Data.Text as Text
+
 data ScriptLanguageValidationError
   = ScriptLanguageValidationError AnyScriptLanguage AnyCardanoEra
   deriving Show

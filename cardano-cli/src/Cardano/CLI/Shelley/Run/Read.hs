@@ -74,8 +74,6 @@ import           Cardano.Api.Shelley
 --TODO: do this nicely via the API too:
 import qualified Cardano.Binary as CBOR
 import           Data.Text (Text)
---TODO: following import needed for orphan Eq Script instance
-import           Cardano.Ledger.Shelley.Scripts ()
 
 import           Cardano.CLI.Shelley.Key
 import           Cardano.CLI.Shelley.Parsers
@@ -169,7 +167,7 @@ renderScriptWitnessError (ScriptWitnessErrorFile err) =
   Text.pack $ displayError err
 renderScriptWitnessError (ScriptWitnessErrorScriptLanguageNotSupportedInEra (AnyScriptLanguage lang) anyEra) =
   "The script language " <> Text.pack (show lang) <> " is not supported in the " <>
-  renderEra anyEra <> " era'."
+  renderEra anyEra <> " era."
 renderScriptWitnessError (ScriptWitnessErrorExpectedSimple file (AnyScriptLanguage lang)) =
   Text.pack $ file <> ": expected a script in the simple script language, " <>
   "but it is actually using " <> show lang <> ". Alternatively, to use " <>

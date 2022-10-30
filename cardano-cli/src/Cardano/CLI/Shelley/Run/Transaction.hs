@@ -38,9 +38,6 @@ import           Cardano.Api
 import           Cardano.Api.Byron hiding (SomeByronSigningKey (..))
 import           Cardano.Api.Shelley
 
---TODO: following import needed for orphan Eq Script instance
-import           Cardano.Ledger.Shelley.Scripts ()
-
 import           Cardano.CLI.Run.Friendly (friendlyTxBS, friendlyTxBodyBS)
 import           Cardano.CLI.Shelley.Output
 import           Cardano.CLI.Shelley.Parsers
