@@ -155,6 +155,7 @@ import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 
 import qualified Plutus.V1.Ledger.Examples as Plutus
 
+import           Cardano.Api.CBOR
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
@@ -794,13 +795,13 @@ instance Eq (ScriptWitness witctx era) where
 
     (==)  _ _ = False
 
-type ScriptRedeemer = ScriptData
+type ScriptRedeemer = HashableScriptData
 
 data ScriptDatum witctx where
-     ScriptDatumForTxIn    :: ScriptData -> ScriptDatum WitCtxTxIn
-     InlineScriptDatum     ::               ScriptDatum WitCtxTxIn
-     NoScriptDatumForMint  ::               ScriptDatum WitCtxMint
-     NoScriptDatumForStake ::               ScriptDatum WitCtxStake
+     ScriptDatumForTxIn    :: HashableScriptData -> ScriptDatum WitCtxTxIn
+     InlineScriptDatum     :: ScriptDatum WitCtxTxIn
+     NoScriptDatumForMint  :: ScriptDatum WitCtxMint
+     NoScriptDatumForStake :: ScriptDatum WitCtxStake
 
 deriving instance Eq   (ScriptDatum witctx)
 deriving instance Show (ScriptDatum witctx)

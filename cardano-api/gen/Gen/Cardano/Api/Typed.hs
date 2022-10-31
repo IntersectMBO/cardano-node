@@ -217,20 +217,22 @@ genPlutusScript _ =
     -- We make no attempt to create a valid script
     PlutusScriptSerialised . SBS.toShort <$> Gen.bytes (Range.linear 0 32)
 
-genScriptData :: Gen ScriptData
-genScriptData =
-    Gen.recursive
-      Gen.choice
-        [ ScriptDataNumber <$> genInteger
-        , ScriptDataBytes  <$> genByteString
-        ]
-        -- The Gen.recursive combinator calls these with the size halved
-        [ ScriptDataConstructor <$> genInteger
-                                <*> genScriptDataList
-        , ScriptDataList <$> genScriptDataList
-        , ScriptDataMap  <$> genScriptDataMap
-        ]
+genScriptData :: Gen HashableScriptData
+genScriptData = unsafeScriptDataToHashable <$> genScriptData'
   where
+    genScriptData' :: Gen ScriptData
+    genScriptData' =
+      Gen.recursive
+        Gen.choice
+          [ ScriptDataNumber <$> genInteger
+          , ScriptDataBytes  <$> genByteString
+          ]
+          -- The Gen.recursive combinator calls these with the size halved
+          [ ScriptDataConstructor <$> genInteger
+                                  <*> genScriptDataList
+          , ScriptDataList <$> genScriptDataList
+          , ScriptDataMap  <$> genScriptDataMap
+          ]
     genInteger :: Gen Integer
     genInteger = Gen.integral
                   (Range.linear
@@ -245,13 +247,13 @@ genScriptData =
     genScriptDataList :: Gen [ScriptData]
     genScriptDataList =
       Gen.sized $ \sz ->
-        Gen.list (Range.linear 0 (fromIntegral sz)) genScriptData
+        Gen.list (Range.linear 0 (fromIntegral sz)) genScriptData'
 
     genScriptDataMap  :: Gen [(ScriptData, ScriptData)]
     genScriptDataMap =
       Gen.sized $ \sz ->
         Gen.list (Range.linear 0 (fromIntegral sz)) $
-          (,) <$> genScriptData <*> genScriptData
+          (,) <$> genScriptData' <*> genScriptData'
 
 
 -- ----------------------------------------------------------------------------

@@ -7,6 +7,12 @@
 module Cardano.Api.ScriptData (
     -- * Script data
     ScriptData(..),
+    HashableScriptData,
+    unsafeScriptDataToHashable,
+
+    -- * Class for functions that accept both ScriptData and HashableScriptData
+    IsScriptData,
+    toScriptData,
 
     -- * Script data hashes
     hashScriptData,
@@ -32,6 +38,7 @@ module Cardano.Api.ScriptData (
 
     -- * Data family instances
     AsType(..),
+    asHashableScriptData,
     Hash(..),
   ) where
 
@@ -42,6 +49,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.ByteString.Short (ShortByteString)
 import qualified Data.Char as Char
 import           Data.Either.Combinators
 import qualified Data.List as List
@@ -66,9 +74,10 @@ import           Control.Applicative (Alternative (..))
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Ledger.Alonzo.Data as Alonzo
 import qualified Cardano.Ledger.SafeHash as Ledger
-import           Ouroboros.Consensus.Shelley.Eras (StandardAlonzo, StandardCrypto)
+import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import qualified Plutus.V1.Ledger.Api as Plutus
 
+import           Cardano.Api.CBOR (AsType(..), WithCBOR, getCBORShort, withCBORViaRoundtrip, withoutCBOR)
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.Hash
@@ -135,34 +144,67 @@ instance ToCBOR ScriptData where
 instance FromCBOR ScriptData where
   fromCBOR = fromPlutusData <$> decode @Plutus.Data
 
-hashScriptData :: ScriptData -> Hash ScriptData
-hashScriptData = ScriptDataHash
-               . Alonzo.hashData
-               . (toAlonzoData :: ScriptData -> Alonzo.Data StandardAlonzo)
+-- | If we want to send 'ScriptData' to a node, we need to keep the original
+-- binary representation with it so that the hash is correct.
+type HashableScriptData = WithCBOR ScriptData
 
+-- | The 'IsScriptData' class exists to make it easier to write functions which
+-- accept both 'ScriptData' and 'HashableScriptData' so the caller isn't burdended
+-- with doing the conversion themselves.
+class IsScriptData a where
+  toScriptData :: a -> ScriptData
+
+instance IsScriptData ScriptData where
+  toScriptData = id
+
+instance IsScriptData HashableScriptData where
+  toScriptData = withoutCBOR
+
+-- | A type proxy for use with 'deserialiseFromCBOR' for 'HashableScriptData'
+asHashableScriptData :: AsType HashableScriptData
+asHashableScriptData = AsWithCBOR AsScriptData
+
+-- | Convert 'ScriptData' to 'HashableScriptData'. The unsafe in the name is
+-- to make the user think twice before using this. It's necessary if the script
+-- data hasn't been provided in CBOR form either because the user provided it in
+-- another format like JSON, or because it's been generated programatically.
+-- This serialises the provided 'ScriptData' to CBOR and treats the result of
+-- that as the original representation.
+unsafeScriptDataToHashable :: ScriptData -> HashableScriptData
+unsafeScriptDataToHashable = withCBORViaRoundtrip
+
+hashScriptData :: HashableScriptData -> Hash ScriptData
+hashScriptData = ScriptDataHash . Ledger.castSafeHash . Ledger.hashAnnotated
+
+unsafeMakeBinaryData :: ShortByteString -> Alonzo.BinaryData era
+unsafeMakeBinaryData = either (error "unsafeMakeBinaryData: invalid") id . Alonzo.makeBinaryData
 
 -- ----------------------------------------------------------------------------
 -- Conversion functions
 --
 
-toAlonzoData :: ScriptData -> Alonzo.Data ledgerera
-toAlonzoData = Alonzo.Data . toPlutusData
+toAlonzoData :: HashableScriptData -> Alonzo.Data ledgerera
+toAlonzoData = Alonzo.binaryDataToData . unsafeMakeBinaryData . getCBORShort
 
-fromAlonzoData :: Alonzo.Data ledgerera -> ScriptData
-fromAlonzoData = fromPlutusData . Alonzo.getPlutusData
+fromAlonzoData :: Alonzo.Data ledgerera -> HashableScriptData
+fromAlonzoData d = case deserialiseFromCBOR asHashableScriptData $ Ledger.originalBytes d of
+    Left err -> error $ "fromAlonzoData: " ++ show err
+    Right x -> x
 
 
-toPlutusData :: ScriptData -> Plutus.Data
-toPlutusData (ScriptDataConstructor int xs)
-                                  = Plutus.Constr int
-                                      [ toPlutusData x | x <- xs ]
-toPlutusData (ScriptDataMap  kvs) = Plutus.Map
-                                      [ (toPlutusData k, toPlutusData v)
+toPlutusData :: IsScriptData a => a -> Plutus.Data
+toPlutusData = go . toScriptData
+  where
+    go (ScriptDataConstructor int xs)
+                            = Plutus.Constr int
+                                      [ go x | x <- xs ]
+    go (ScriptDataMap  kvs) = Plutus.Map
+                                      [ (go k, go v)
                                       | (k,v) <- kvs ]
-toPlutusData (ScriptDataList  xs) = Plutus.List
-                                      [ toPlutusData x | x <- xs ]
-toPlutusData (ScriptDataNumber n) = Plutus.I n
-toPlutusData (ScriptDataBytes bs) = Plutus.B bs
+    go (ScriptDataList  xs) = Plutus.List
+                                      [ go x | x <- xs ]
+    go (ScriptDataNumber n) = Plutus.I n
+    go (ScriptDataBytes bs) = Plutus.B bs
 
 
 fromPlutusData :: Plutus.Data -> ScriptData
@@ -185,9 +227,9 @@ fromPlutusData (Plutus.B    bs) = ScriptDataBytes bs
 -- | Validate script data. This is for use with existing constructed script
 -- data values, e.g. constructed manually or decoded from CBOR directly.
 --
-validateScriptData :: ScriptData -> Either ScriptDataRangeError ()
+validateScriptData :: IsScriptData a => a -> Either ScriptDataRangeError ()
 validateScriptData d =
-    case collect d of
+    case collect (toScriptData d) of
       []    -> Right ()
       err:_ -> Left err
   where
@@ -329,11 +371,11 @@ data ScriptDataJsonSchema =
 --
 scriptDataFromJson :: ScriptDataJsonSchema
                    -> Aeson.Value
-                   -> Either ScriptDataJsonError ScriptData
+                   -> Either ScriptDataJsonError HashableScriptData
 scriptDataFromJson schema v = do
     d <- first (ScriptDataJsonSchemaError v) (scriptDataFromJson' v)
     first (ScriptDataRangeError v) (validateScriptData d)
-    return d
+    return (unsafeScriptDataToHashable d)
   where
     scriptDataFromJson' =
       case schema of
@@ -348,8 +390,9 @@ scriptDataFromJson schema v = do
 -- This conversion is total but is not necessarily invertible.
 -- See 'ScriptDataJsonSchema' for the details.
 --
-scriptDataToJson :: ScriptDataJsonSchema
-                 -> ScriptData
+scriptDataToJson :: IsScriptData a
+                 => ScriptDataJsonSchema
+                 -> a
                  -> Aeson.Value
 scriptDataToJson schema =
     case schema of
@@ -361,8 +404,8 @@ scriptDataToJson schema =
 -- JSON conversion using the the "no schema" style
 --
 
-scriptDataToJsonNoSchema :: ScriptData -> Aeson.Value
-scriptDataToJsonNoSchema = conv
+scriptDataToJsonNoSchema :: IsScriptData a => a -> Aeson.Value
+scriptDataToJsonNoSchema = conv . toScriptData
   where
     conv :: ScriptData -> Aeson.Value
     conv (ScriptDataNumber n) = Aeson.Number (fromInteger n)
@@ -453,8 +496,8 @@ bytesPrefix = "0x"
 -- JSON conversion using the "detailed schema" style
 --
 
-scriptDataToJsonDetailedSchema :: ScriptData -> Aeson.Value
-scriptDataToJsonDetailedSchema = conv
+scriptDataToJsonDetailedSchema :: IsScriptData a => a -> Aeson.Value
+scriptDataToJsonDetailedSchema = conv . toScriptData
   where
     conv :: ScriptData -> Aeson.Value
     conv (ScriptDataNumber n) = singleFieldObject "int"
