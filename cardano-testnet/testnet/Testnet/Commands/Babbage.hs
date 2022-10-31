@@ -12,6 +12,7 @@ import           Data.Semigroup
 import           Options.Applicative
 import           System.IO (IO)
 import           Test.Runtime (readNodeLoggingFormat)
+import           Testnet
 import           Testnet.Babbage
 import           Testnet.Run (runTestnet)
 import           Text.Show
@@ -20,11 +21,11 @@ import qualified Options.Applicative as OA
 
 data BabbageOptions = BabbageOptions
   { maybeTestnetMagic :: Maybe Int
-  , testnetOptions :: TestnetOptions
+  , testnetOptions :: BabbageTestnetOptions
   } deriving (Eq, Show)
 
-optsTestnet :: Parser TestnetOptions
-optsTestnet = TestnetOptions
+optsTestnet :: Parser BabbageTestnetOptions
+optsTestnet = BabbageTestnetOptions
   <$> OA.option auto
       (   OA.long "num-spo-nodes"
       <>  OA.help "Number of SPO nodes"
@@ -74,7 +75,7 @@ optsBabbage = BabbageOptions
 
 runBabbageOptions :: BabbageOptions -> IO ()
 runBabbageOptions options = runTestnet (maybeTestnetMagic options) $
-  Testnet.Babbage.testnet (testnetOptions options)
+  Testnet.testnet (BabbageOnlyTestnetOptions $ testnetOptions options)
 
 cmdBabbage :: Mod CommandFields (IO ())
 cmdBabbage = command "babbage"  $ flip info idm $ runBabbageOptions <$> optsBabbage

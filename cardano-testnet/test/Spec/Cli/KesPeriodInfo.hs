@@ -40,9 +40,10 @@ import qualified System.Info as SYS
 import qualified Test.Base as H
 import qualified Test.Process as H
 import qualified Test.Runtime as TR
+import           Testnet (TestnetOptions( CardanoOnlyTestnetOptions ),  testnet)
 import qualified Testnet.Cardano as TC
-import           Testnet.Cardano (TestnetOptions (..), TestnetRuntime (..),
-                   defaultTestnetNodeOptions, defaultTestnetOptions, testnet)
+
+import           Testnet.Cardano (CardanoTestnetOptions(..), defaultTestnetNodeOptions, defaultTestnetOptions)
 import qualified Testnet.Conf as H
 import           Testnet.Conf (ProjectBase (..), YamlFilePath (..))
 import           Testnet.Utils (waitUntilEpoch)
@@ -60,7 +61,7 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
     <- H.noteShowM $ H.mkConf (ProjectBase base) (YamlFilePath configurationTemplate)
                               tempAbsBasePath' Nothing
 
-  let fastTestnetOptions = defaultTestnetOptions
+  let fastTestnetOptions = CardanoOnlyTestnetOptions $ defaultTestnetOptions
                              { bftNodeOptions = replicate 1 defaultTestnetNodeOptions
                              , epochLength = 500
                              , slotLength = 0.02

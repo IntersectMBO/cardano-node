@@ -3,6 +3,7 @@ module Test.Process
   , assertByDeadlineMCustom
   , bashPath
   , execCli
+  , execCli_
   , execCli'
   , execCreateScriptContext
   , execCreateScriptContext'
@@ -51,6 +52,13 @@ execCli
   => [String]
   -> m String
 execCli = GHC.withFrozenCallStack $ H.execFlex "cardano-cli" "CARDANO_CLI"
+
+-- | Run cardano-cli, discarding return value
+execCli_
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  => [String]
+  -> m ()
+execCli_ = void . execCli
 
 -- | Run cardano-cli, returning the stdout
 execCli'

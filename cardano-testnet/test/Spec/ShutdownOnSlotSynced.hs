@@ -28,9 +28,11 @@ import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
 import qualified Test.Base as H
-import           Testnet.Cardano (TestnetNode (..), TestnetNodeOptions (TestnetNodeOptions),
-                   TestnetOptions (..), TestnetRuntime (..), defaultTestnetNodeOptions,
-                   defaultTestnetOptions, testnet)
+import           Test.Runtime (NodeRuntime (..))
+import           Testnet (TestnetOptions( CardanoOnlyTestnetOptions),  testnet)
+import           Testnet.Cardano (TestnetNodeOptions (TestnetNodeOptions),
+                   CardanoTestnetOptions (..), TestnetRuntime (..), defaultTestnetNodeOptions,
+                   defaultTestnetOptions)
 import qualified Testnet.Cardano as TC
 import qualified Testnet.Conf as H
 
@@ -43,7 +45,7 @@ hprop_shutdownOnSlotSynced = H.integration . H.runFinallies . H.workspace "chair
     H.mkConf (H.ProjectBase base) (H.YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
   let maxSlot = 1500
       slotLen = 0.01
-  let fastTestnetOptions = defaultTestnetOptions
+  let fastTestnetOptions = CardanoOnlyTestnetOptions $ defaultTestnetOptions
         { epochLength = 300
         , slotLength = slotLen
         , bftNodeOptions =

@@ -1,41 +1,35 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Testnet.Shelley
-  ( TestnetOptions(..)
+  ( ShelleyTestnetOptions(..)
   , defaultTestnetOptions
-
-  , testnet
+  , shelleyTestnet
   , hprop_testnet
   , hprop_testnet_pause
   ) where
 
-import           Control.Monad (Monad(..), forever, forM_, void, (=<<), when)
+import           Prelude
+import           Control.Monad
 import           Control.Monad.IO.Class (MonadIO(liftIO))
 import           Control.Monad.Trans.Resource (MonadResource(liftResourceT), resourceForkIO)
 import           Data.Aeson (Value, ToJSON(toJSON))
 import           Data.ByteString.Lazy (ByteString)
-import           Data.Eq (Eq)
-import           Data.Function (($), (.), flip)
-import           Data.Functor (Functor(fmap), (<$>), (<&>))
-import           Data.Int (Int)
+import           Data.Functor
 import           Data.List ((\\))
-import           Data.Maybe (Maybe(Nothing, Just), fromJust)
-import           Data.Ord (Ord((<=)))
-import           Data.Semigroup (Semigroup((<>)))
-import           Data.String (String, fromString)
+import           Data.Maybe
+import           Data.String
 import           Data.Time.Clock (UTCTime)
-import           GHC.Float (Double)
-import           GHC.Real (fromIntegral)
 import           Hedgehog.Extras.Stock.Aeson (rewriteObject)
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket(..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter(..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint(..))
-import           Prelude (Bool(..), Integer, (-))
 import           System.FilePath.Posix ((</>))
-import           Text.Show (Show(show))
+import           Test.Process (execCli_)
+import           Test.Runtime hiding (allNodes)
 
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
@@ -58,17 +52,14 @@ import qualified Hedgehog.Extras.Test.Network as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
 import qualified System.Info as OS
-import qualified System.IO as IO
-import qualified System.Process as IO
 import qualified Test.Base as H
 import qualified Test.Process as H
 import qualified Testnet.Conf as H
 
-{- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Redundant <&>" -}
 {- HLINT ignore "Redundant flip" -}
 
-data TestnetOptions = TestnetOptions
+data ShelleyTestnetOptions = ShelleyTestnetOptions
   { numPraosNodes :: Int
   , numPoolNodes :: Int
   , activeSlotsCoeff :: Double
@@ -79,8 +70,8 @@ data TestnetOptions = TestnetOptions
   , enableP2P :: Bool
   } deriving (Eq, Show)
 
-defaultTestnetOptions :: TestnetOptions
-defaultTestnetOptions = TestnetOptions
+defaultTestnetOptions :: ShelleyTestnetOptions
+defaultTestnetOptions = ShelleyTestnetOptions
   { numPraosNodes = 2
   , numPoolNodes = 1
   , activeSlotsCoeff = 0.1
@@ -102,7 +93,7 @@ rewriteConfiguration _ s                     = s
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"
 
-rewriteGenesisSpec :: TestnetOptions -> UTCTime -> Value -> Value
+rewriteGenesisSpec :: ShelleyTestnetOptions -> UTCTime -> Value -> Value
 rewriteGenesisSpec testnetOptions startTime =
   rewriteObject
     $ HM.insert "activeSlotsCoeff" (J.toJSON @Double (activeSlotsCoeff testnetOptions))
@@ -159,8 +150,8 @@ mkTopologyConfig numPraosNodes allPorts port True = J.encode topologyP2P
         []
         (P2P.UseLedger DontUseLedger)
 
-testnet :: TestnetOptions -> H.Conf -> H.Integration [String]
-testnet testnetOptions H.Conf {..} = do
+shelleyTestnet :: ShelleyTestnetOptions -> H.Conf -> H.Integration TestnetRuntime
+shelleyTestnet testnetOptions H.Conf {..} = do
   void $ H.note OS.os
 
   let praosNodesN = show @Int <$> [1 .. numPraosNodes testnetOptions]
@@ -187,7 +178,7 @@ testnet testnetOptions H.Conf {..} = do
   liftIO $ IO.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
 
   -- Set up our template
-  void $ H.execCli
+  execCli_
     [ "genesis", "create"
     , "--testnet-magic", show @Int testnetMagic
     , "--genesis-dir", tempAbsPath
@@ -205,7 +196,7 @@ testnet testnetOptions H.Conf {..} = do
   H.assertIsJsonFile $ tempAbsPath </> "genesis.spec.json"
 
   -- Now generate for real
-  void $ H.execCli
+  execCli_
     [ "genesis", "create"
     , "--testnet-magic", show @Int testnetMagic
     , "--genesis-dir", tempAbsPath
@@ -219,14 +210,14 @@ testnet testnetOptions H.Conf {..} = do
   -- Make the pool operator cold keys
   -- This was done already for the BFT nodes as part of the genesis creation
   forM_ poolNodes $ \n -> do
-    void $ H.execCli
+    execCli_
       [ "node", "key-gen"
       , "--cold-verification-key-file", tempAbsPath </> n </> "operator.vkey"
       , "--cold-signing-key-file", tempAbsPath </> n </> "operator.skey"
       , "--operational-certificate-issue-counter-file", tempAbsPath </> n </> "operator.counter"
       ]
 
-    void $ H.execCli
+    execCli_
       [ "node", "key-gen-VRF"
       , "--verification-key-file", tempAbsPath </> n </> "vrf.vkey"
       , "--signing-key-file", tempAbsPath </> n </> "vrf.skey"
@@ -241,13 +232,13 @@ testnet testnetOptions H.Conf {..} = do
 
   --  Make hot keys and for all nodes
   forM_ allNodes $ \node -> do
-    void $ H.execCli
+    execCli_
       [ "node", "key-gen-KES"
       , "--verification-key-file", tempAbsPath </> node </> "kes.vkey"
       , "--signing-key-file", tempAbsPath </> node </> "kes.skey"
       ]
 
-    void $ H.execCli
+    execCli_
       [ "node", "issue-op-cert"
       , "--kes-period", "0"
       , "--kes-verification-key-file", tempAbsPath </> node </> "kes.vkey"
@@ -276,21 +267,21 @@ testnet testnetOptions H.Conf {..} = do
 
   forM_ addrs $ \addr -> do
     -- Payment address keys
-    void $ H.execCli
+    execCli_
       [ "address", "key-gen"
       , "--verification-key-file", tempAbsPath </> "addresses/" <> addr <> ".vkey"
       , "--signing-key-file", tempAbsPath </> "addresses/" <> addr <> ".skey"
       ]
 
     -- Stake address keys
-    void $ H.execCli
+    execCli_
       [ "stake-address", "key-gen"
       , "--verification-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.vkey"
       , "--signing-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.skey"
       ]
 
     -- Payment addresses
-    void $ H.execCli
+    execCli_
       [ "address", "build"
       , "--payment-verification-key-file", tempAbsPath </> "addresses/" <> addr <> ".vkey"
       , "--stake-verification-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.vkey"
@@ -299,7 +290,7 @@ testnet testnetOptions H.Conf {..} = do
       ]
 
     -- Stake addresses
-    void $ H.execCli
+    execCli_
       [ "stake-address", "build"
       , "--stake-verification-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.vkey"
       , "--testnet-magic", show @Int testnetMagic
@@ -307,7 +298,7 @@ testnet testnetOptions H.Conf {..} = do
       ]
 
     -- Stake addresses registration certs
-    void $ H.execCli
+    execCli_
       [ "stake-address", "registration-certificate"
       , "--stake-verification-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.vkey"
       , "--out-file", tempAbsPath </> "addresses/" <> addr <> "-stake.reg.cert"
@@ -315,7 +306,7 @@ testnet testnetOptions H.Conf {..} = do
 
   forM_ userPoolN $ \n -> do
     -- Stake address delegation certs
-    void $ H.execCli
+    execCli_
       [ "stake-address", "delegation-certificate"
       , "--stake-verification-key-file", tempAbsPath </> "addresses/user" <> n <> "-stake.vkey"
       , "--cold-verification-key-file", tempAbsPath </> "node-pool" <> n </> "operator.vkey"
@@ -331,7 +322,7 @@ testnet testnetOptions H.Conf {..} = do
 
   -- Next is to make the stake pool registration cert
   forM_ poolNodes $ \node -> do
-    void $ H.execCli
+    execCli_
       [ "stake-pool", "registration-certificate"
       , "--testnet-magic", show @Int testnetMagic
       , "--pool-pledge", "0"
@@ -365,7 +356,7 @@ testnet testnetOptions H.Conf {..} = do
 
     userNAddr <- H.readFile $ tempAbsPath </> "addresses/user" <> n <> ".addr"
 
-    void $ H.execCli
+    execCli_
       [ "transaction", "build-raw"
       , "--invalid-hereafter", "1000"
       , "--fee", "0"
@@ -384,7 +375,7 @@ testnet testnetOptions H.Conf {..} = do
     -- 3. the pool n owner key, due to the pool registration cert
     -- 3. the pool n operator key, due to the pool registration cert
 
-    void $ H.execCli
+    execCli_
       [ "transaction", "sign"
       , "--signing-key-file", tempAbsPath </> "utxo-keys/utxo" <> n <> ".skey"
       , "--signing-key-file", tempAbsPath </> "addresses/user" <> n <> "-stake.skey"
@@ -407,24 +398,8 @@ testnet testnetOptions H.Conf {..} = do
     <&> L.unlines . fmap (rewriteConfiguration (enableP2P testnetOptions)) . L.lines
     >>= H.writeFile (tempAbsPath </> "configuration.yaml")
 
-  forM_ allNodes $ \node -> do
-    dbDir <- H.noteShow $ tempAbsPath </> "db/" <> node
-    nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
-    nodeStderrFile <- H.noteTempFile logDir $ node <> ".stderr.log"
-    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)
-
-    H.createDirectoryIfMissing dbDir
-    H.createDirectoryIfMissing $ tempBaseAbsPath </> socketDir
-
-    hNodeStdout <- H.openFile nodeStdoutFile IO.WriteMode
-    hNodeStderr <- H.openFile nodeStderrFile IO.WriteMode
-
-    H.diff (L.length (IO.sprocketArgumentName sprocket)) (<=) IO.maxSprocketArgumentNameLength
-
-    portString <- H.readFile $ tempAbsPath </> node </> "port"
-
-    void $ H.createProcess =<<
-      ( H.procNode
+  allNodeRuntimes <- forM allNodes
+     $ \node -> startNode tempBaseAbsPath tempAbsPath logDir socketDir node
         [ "run"
         , "--config", tempAbsPath </> "configuration.yaml"
         , "--topology", tempAbsPath </> node </> "topology.json"
@@ -433,20 +408,7 @@ testnet testnetOptions H.Conf {..} = do
         , "--shelley-vrf-key", tempAbsPath </> node </> "vrf.skey"
         , "--shelley-operational-certificate" , tempAbsPath </> node </> "node.cert"
         , "--host-addr", ifaceAddress
-        , "--port", portString
-        , "--socket-path", IO.sprocketArgumentName sprocket
-        ] <&>
-        ( \cp -> cp
-          { IO.std_in = IO.CreatePipe
-          , IO.std_out = IO.UseHandle hNodeStdout
-          , IO.std_err = IO.UseHandle hNodeStderr
-          , IO.cwd = Just tempBaseAbsPath
-          }
-        )
-      )
-
-    when (OS.os `L.elem` ["darwin", "linux"]) $ do
-      H.onFailure . H.noteIO_ $ IO.readProcess "lsof" ["-iTCP:" <> portString, "-sTCP:LISTEN", "-n", "-P"] ""
+        ]
 
   now <- H.noteShowIO DTC.getCurrentTime
   deadline <- H.noteShow $ DTC.addUTCTime 90 now
@@ -463,7 +425,15 @@ testnet testnetOptions H.Conf {..} = do
 
   H.noteShowIO_ DTC.getCurrentTime
 
-  return allNodes
+  return TestnetRuntime
+    { configurationFile = alonzoSpecFile
+    , shelleyGenesisFile = tempAbsPath </> "genesis/shelley/genesis.json"
+    , testnetMagic
+    , poolNodes = [ ]
+    , wallets = [ ]
+    , bftNodes = allNodeRuntimes
+    , delegators = [ ]
+    }
 
 hprop_testnet :: H.Property
 hprop_testnet = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsPath' -> do
@@ -473,7 +443,7 @@ hprop_testnet = H.integration . H.runFinallies . H.workspace "chairman" $ \tempA
 
   void . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000
 
-  void $ testnet defaultTestnetOptions conf
+  void $ shelleyTestnet defaultTestnetOptions conf
 
   H.failure -- Intentional failure to force failure report
 

@@ -15,6 +15,7 @@ import           GHC.Enum
 import           Options.Applicative
 import           System.IO (IO)
 import           Test.Runtime (readNodeLoggingFormat)
+import           Testnet
 import           Testnet.Cardano
 import           Testnet.Run (runTestnet)
 import           Text.Read
@@ -25,11 +26,11 @@ import qualified Options.Applicative as OA
 
 data CardanoOptions = CardanoOptions
   { maybeTestnetMagic :: Maybe Int
-  , testnetOptions :: TestnetOptions
+  , testnetOptions :: CardanoTestnetOptions
   } deriving (Eq, Show)
 
-optsTestnet :: Parser TestnetOptions
-optsTestnet = TestnetOptions
+optsTestnet :: Parser CardanoTestnetOptions
+optsTestnet = CardanoTestnetOptions
   <$> OA.option
       ((`L.replicate` defaultTestnetNodeOptions) <$> auto)
       (   OA.long "num-bft-nodes"
@@ -101,7 +102,7 @@ optsCardano = CardanoOptions
 
 runCardanoOptions :: CardanoOptions -> IO ()
 runCardanoOptions options = runTestnet (maybeTestnetMagic options) $
-  Testnet.Cardano.testnet (testnetOptions options)
+  Testnet.testnet (CardanoOnlyTestnetOptions $ testnetOptions options)
 
 cmdCardano :: Mod CommandFields (IO ())
 cmdCardano = command "cardano"  $ flip info idm $ runCardanoOptions <$> optsCardano

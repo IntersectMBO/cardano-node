@@ -8,64 +8,43 @@
 {-# OPTIONS_GHC -Wno-unused-local-binds -Wno-unused-matches #-}
 
 module Testnet.Babbage
-  ( TestnetOptions(..)
+  ( BabbageTestnetOptions(..)
   , defaultTestnetOptions
   , TestnetNodeOptions(..)
   , defaultTestnetNodeOptions
 
   , TestnetRuntime (..)
-  , TestnetNode (..)
   , PaymentKeyPair(..)
 
-  , testnet
+  , babbageTestnet
   ) where
 
-import           Control.Applicative (Applicative (..))
-import           Control.Monad (Monad (..), fmap, forM, forM_, return, void, when, (=<<))
+import           Prelude
+import           Control.Monad
 import           Data.Aeson (encode, object, toJSON, (.=))
-import           Data.Bool (Bool (..))
-import           Data.Eq (Eq)
-import           Data.Function (flip, ($), (.))
-import           Data.Functor ((<$>), (<&>))
-import           Data.Int (Int)
-import           Data.Maybe (Maybe (..))
-import           Data.Ord (Ord ((<=)))
-import           Data.Semigroup (Semigroup ((<>)))
-import           Data.String (String)
-import           GHC.Float (Double)
-import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Hedgehog.Extras.Stock.Time (showUTCTimeSeconds)
 import           System.FilePath.Posix ((</>))
+
 import           Test.Runtime (Delegator (..), NodeLoggingFormat (..), PaymentKeyPair (..),
-                   PoolNode (PoolNode), PoolNodeKeys (..), StakingKeyPair (..), TestnetNode (..),
-                   TestnetRuntime (..))
-import           Text.Show (Show (show))
+                   PoolNode (PoolNode), PoolNodeKeys (..), StakingKeyPair (..),
+                   TestnetRuntime (..), startNode)
 
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
 import qualified Data.Time.Clock as DTC
-import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.Aeson as J
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Stock.OS as OS
-import qualified Hedgehog.Extras.Stock.String as S
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
-import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Info as OS
-import qualified System.IO as IO
-import qualified System.Process as IO
 import qualified Test.Assert as H
-import qualified Test.Process as H
 import qualified Testnet.Conf as H
 
-{- HLINT ignore "Reduce duplication" -}
-{- HLINT ignore "Redundant <&>" -}
-{- HLINT ignore "Redundant flip" -}
-{- HLINT ignore "Redundant id" -}
-{- HLINT ignore "Use let" -}
+import           Test.Process (execCli_)
 
-data TestnetOptions = TestnetOptions
+{- HLINT ignore "Redundant flip" -}
+
+data BabbageTestnetOptions = BabbageTestnetOptions
   { numSpoNodes :: Int
   , slotDuration :: Int
   , securityParam :: Int
@@ -73,8 +52,8 @@ data TestnetOptions = TestnetOptions
   , nodeLoggingFormat :: NodeLoggingFormat
   } deriving (Eq, Show)
 
-defaultTestnetOptions :: TestnetOptions
-defaultTestnetOptions = TestnetOptions
+defaultTestnetOptions :: BabbageTestnetOptions
+defaultTestnetOptions = BabbageTestnetOptions
   { numSpoNodes = 3
   , slotDuration = 1000
   , securityParam = 10
@@ -92,8 +71,8 @@ defaultTestnetNodeOptions = TestnetNodeOptions
 startTimeOffsetSeconds :: DTC.NominalDiffTime
 startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
 
-testnet :: TestnetOptions -> H.Conf -> H.Integration TestnetRuntime
-testnet testnetOptions H.Conf {..} = do
+babbageTestnet :: BabbageTestnetOptions -> H.Conf -> H.Integration TestnetRuntime
+babbageTestnet testnetOptions H.Conf {..} = do
   H.createDirectoryIfMissing (tempAbsPath </> "logs")
 
   H.lbsWriteFile (tempAbsPath </> "byron.genesis.spec.json") . encode $ object
@@ -124,7 +103,7 @@ testnet testnetOptions H.Conf {..} = do
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
 
-  void . H.execCli $
+  execCli_
     [ "byron", "genesis", "genesis"
     , "--protocol-magic", show @Int testnetMagic
     , "--start-time", showUTCTimeSeconds startTime
@@ -180,7 +159,7 @@ testnet testnetOptions H.Conf {..} = do
 
   let numPoolNodes = 3 :: Int
 
-  void . H.execCli $
+  execCli_
     [ "genesis", "create-staked"
     , "--genesis-dir", tempAbsPath
     , "--testnet-magic", show @Int testnetMagic
@@ -340,49 +319,19 @@ testnet testnetOptions H.Conf {..} = do
       ]
     ]
 
-  (poolSprockets, poolStdins, poolStdouts, poolStderrs, poolProcessHandles) <- fmap L.unzip5 . forM spoNodes $ \node -> do
-    dbDir <- H.noteShow $ tempAbsPath </> "db/" <> node
-    nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
-    nodeStderrFile <- H.noteTempFile logDir $ node <> ".stderr.log"
-    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)
-
-    H.createDirectoryIfMissing dbDir
-    H.createDirectoryIfMissing $ tempBaseAbsPath </> socketDir
-
-    hNodeStdout <- H.openFile nodeStdoutFile IO.WriteMode
-    hNodeStderr <- H.openFile nodeStderrFile IO.WriteMode
-
-    H.diff (L.length (IO.sprocketArgumentName sprocket)) (<=) IO.maxSprocketArgumentNameLength
-
-    portString <- fmap S.strip . H.readFile $ tempAbsPath </> node </> "port"
-
-    (Just stdIn, _, _, hProcess, _) <- H.createProcess =<<
-      ( H.procNode
+  poolNodes <- forM (L.zip spoNodes poolKeys) $ \(node,key) -> do
+    runtime <- startNode tempBaseAbsPath tempAbsPath logDir socketDir node
         [ "run"
         , "--config", tempAbsPath </> "configuration.yaml"
         , "--topology", tempAbsPath </> node </> "topology.json"
         , "--database-path", tempAbsPath </> node </> "db"
-        , "--socket-path", IO.sprocketArgumentName sprocket
         , "--shelley-kes-key", tempAbsPath </> node </> "kes.skey"
         , "--shelley-vrf-key", tempAbsPath </> node </> "vrf.skey"
         , "--byron-delegation-certificate", tempAbsPath </> node </> "byron-delegation.cert"
         , "--byron-signing-key", tempAbsPath </> node </> "byron-delegate.key"
         , "--shelley-operational-certificate", tempAbsPath </> node </> "opcert.cert"
-        , "--port",  portString
-        ] <&>
-        ( \cp -> cp
-          { IO.std_in = IO.CreatePipe
-          , IO.std_out = IO.UseHandle hNodeStdout
-          , IO.std_err = IO.UseHandle hNodeStderr
-          , IO.cwd = Just tempBaseAbsPath
-          }
-        )
-      )
-
-    when (OS.os `L.elem` ["darwin", "linux"]) $ do
-      H.onFailure . H.noteIO_ $ IO.readProcess "lsof" ["-iTCP:" <> portString, "-sTCP:LISTEN", "-n", "-P"] ""
-
-    return (sprocket, stdIn, nodeStdoutFile, nodeStderrFile, hProcess)
+        ]
+    return $ PoolNode runtime key
 
   now <- H.noteShowIO DTC.getCurrentTime
   deadline <- H.noteShow $ DTC.addUTCTime 90 now
@@ -401,14 +350,7 @@ testnet testnetOptions H.Conf {..} = do
     { configurationFile
     , shelleyGenesisFile = tempAbsPath </> "genesis/shelley/genesis.json"
     , testnetMagic
-    , poolNodes = L.zipWith7 PoolNode
-        spoNodes
-        poolSprockets
-        poolStdins
-        poolStdouts
-        poolStderrs
-        poolProcessHandles
-        poolKeys
+    , poolNodes
     , wallets = wallets
     , bftNodes = []
     , delegators = delegators
