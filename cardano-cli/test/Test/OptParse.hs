@@ -18,7 +18,7 @@ import qualified GHC.Stack as GHC
 
 import           Cardano.Api
 
-import           Cardano.CLI.Shelley.Run.Transaction
+import           Cardano.CLI.Shelley.Run.Read
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Process as H

@@ -20,6 +20,12 @@ module Cardano.CLI.Shelley.Run.Genesis
   , readAndDecodeShelleyGenesis
   , readAlonzoGenesis
   , runGenesisCmd
+
+  -- * Protocol Parameters
+  , ProtocolParamsError(..)
+  , renderProtocolParamsError
+  , readProtocolParameters
+  , readProtocolParametersSourceSpec
   ) where
 
 import           Cardano.Prelude hiding (unlines)
@@ -104,7 +110,7 @@ import           Cardano.Chain.Common (BlockCount (unBlockCount))
 import           Cardano.Chain.Delegation (delegateVK)
 import qualified Cardano.Chain.Delegation as Dlg
 import qualified Cardano.Chain.Genesis as Genesis
-import           Cardano.Chain.Update
+import           Cardano.Chain.Update hiding (ProtocolParameters)
 import           Cardano.Slotting.Slot (EpochSize (EpochSize))
 import           Data.Fixed (Fixed (MkFixed))
 import qualified Data.Yaml as Yaml
@@ -1314,3 +1320,36 @@ readAlonzoGenesis fpath = do
   lbs <- handleIOExceptT (ShelleyGenesisCmdGenesisFileError . FileIOError fpath) $ LBS.readFile fpath
   firstExceptT (ShelleyGenesisCmdAesonDecodeError fpath . Text.pack)
     . hoistEither $ Aeson.eitherDecode' lbs
+
+
+-- Protocol Parameters
+
+data ProtocolParamsError
+  = ProtocolParamsErrorFile (FileError ())
+  | ProtocolParamsErrorJSON !FilePath !Text
+  | ProtocolParamsErrorGenesis !ShelleyGenesisCmdError
+
+renderProtocolParamsError :: ProtocolParamsError -> Text
+renderProtocolParamsError (ProtocolParamsErrorFile fileErr) =
+  Text.pack $ displayError fileErr
+renderProtocolParamsError (ProtocolParamsErrorJSON fp jsonErr) =
+  "Error while decoding the protocol parameters at: " <> Text.pack fp <> " Error: " <> jsonErr
+renderProtocolParamsError (ProtocolParamsErrorGenesis err) =
+  Text.pack $ displayError  err
+
+readProtocolParametersSourceSpec :: ProtocolParamsSourceSpec
+                                 -> ExceptT ProtocolParamsError IO ProtocolParameters
+readProtocolParametersSourceSpec (ParamsFromGenesis (GenesisFile f)) =
+  fromShelleyPParams . sgProtocolParams
+    <$> firstExceptT ProtocolParamsErrorGenesis (readShelleyGenesisWithDefault f id)
+readProtocolParametersSourceSpec (ParamsFromFile f) = readProtocolParameters f
+
+--TODO: eliminate this and get only the necessary params, and get them in a more
+-- helpful way rather than requiring them as a local file.
+readProtocolParameters :: ProtocolParamsFile
+                       -> ExceptT ProtocolParamsError IO ProtocolParameters
+readProtocolParameters (ProtocolParamsFile fpath) = do
+  pparams <- handleIOExceptT (ProtocolParamsErrorFile . FileIOError fpath) $ LBS.readFile fpath
+  firstExceptT (ProtocolParamsErrorJSON fpath . Text.pack) . hoistEither $
+    Aeson.eitherDecode' pparams
+

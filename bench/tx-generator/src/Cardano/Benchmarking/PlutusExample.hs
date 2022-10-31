@@ -3,21 +3,23 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Cardano.Benchmarking.PlutusExample
 where
-import           Prelude
 import qualified Data.Map as Map
+import           Prelude
 
 import           Control.Monad.Trans.Except
 import qualified Data.ByteString.Char8 as BSC
 
-import           Cardano.CLI.Shelley.Script (readFileScriptInAnyLang)
 
 import           Cardano.Api
-import           Cardano.Api.Shelley ( ProtocolParameters(..), PlutusScript(..)
-                                     , fromAlonzoExUnits, protocolParamCostModels, toPlutusData)
+import           Cardano.Api.Shelley (PlutusScript (..), ProtocolParameters (..), fromAlonzoExUnits,
+                   protocolParamCostModels, toPlutusData)
 import           Cardano.Ledger.Alonzo.TxInfo (exBudgetToExUnits)
 
 import qualified Plutus.V1.Ledger.Api as Plutus
-import           Plutus.V1.Ledger.Contexts (ScriptContext(..), ScriptPurpose(..), TxInfo(..), TxOutRef(..))
+import           Plutus.V1.Ledger.Contexts (ScriptContext (..), ScriptPurpose (..), TxInfo (..),
+                   TxOutRef (..))
+
+import           Cardano.CLI.Shelley.Run.Read
 
 readScript :: FilePath -> IO (Script PlutusScriptV1)
 readScript fp = do
