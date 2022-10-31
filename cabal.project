@@ -153,6 +153,9 @@ constraints:
   , Win32-network == 0.1.0.0
   , wl-pprint-annotated == 0.1.0.1
   , word-array == 0.1.0.0
+  , io-classes == 0.2.0.0
+  , typed-protocols == 0.1.0.0
+  , typed-protocols-examples == 0.1.0.0
 
 extra-packages:
     ouroboros-consensus-cardano-tools == 0.1.0.1
@@ -174,20 +177,6 @@ allow-newer:
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/moo
-  tag: 8c487714fbfdea66188fcb85053e7e292e0cc348
-  --sha256: 1mdj218hgh7s5a6b9k14vg9i06zxah0wa42ycdgh245izs8nfv0x
-
--- Open PR upstream, maintainer unresponsive, hopefully short-lived fork.
--- TODO (mpj): release into CHaP as a patched version and delete
-source-repository-package
-  type: git
-  location: https://github.com/vshabanov/ekg-json
-  tag: 00ebe7211c981686e65730b7144fbf5350462608
-  --sha256: 1zvjm3pb38w0ijig5wk5mdkzcszpmlp5d4zxvks2jk1rkypi8gsm
 
 source-repository-package
   type: git
