@@ -53,6 +53,7 @@ library
                         -- Splitting up the big Typed module:
                         Cardano.Api.Address
                         Cardano.Api.Block
+                        Cardano.Api.CBOR
                         Cardano.Api.Certificate
                         Cardano.Api.Convenience.Constraints
                         Cardano.Api.Convenience.Construction
