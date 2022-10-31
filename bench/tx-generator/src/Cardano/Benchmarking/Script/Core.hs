@@ -381,7 +381,7 @@ spendAutoScript relies on a particular calling convention of the loop script.
 spendAutoScript ::
      ProtocolParameters
   -> Script PlutusScriptV1
-  -> ActionM (ScriptData, ScriptRedeemer)
+  -> ActionM (HashableScriptData, ScriptRedeemer)
 spendAutoScript protocolParameters script = do
   perTxBudget <- case protocolParamMaxTxExUnits protocolParameters of
     Nothing -> liftTxGenError $ TxGenError "Cannot determine protocolParamMaxTxExUnits"
@@ -396,18 +396,18 @@ spendAutoScript protocolParameters script = do
 
   let
     isInLimits :: Integer -> Either TxGenError Bool
-    isInLimits n = case preExecutePlutusScript protocolParameters script (ScriptDataNumber 0) (toLoopArgument n) of
+    isInLimits n = case preExecutePlutusScript protocolParameters script (unsafeScriptDataToHashable $ ScriptDataNumber 0) (toLoopArgument n) of
       Left err -> Left err
       Right use -> Right $ (executionSteps use <= executionSteps budget) && (executionMemory use <= executionMemory budget)
     searchUpperBound = 100000 -- The highest loop count that is tried. (This is about 50 times the current mainnet limit.)
   redeemer <- case startSearch isInLimits 0 searchUpperBound of
     Left err -> liftTxGenError $ TxGenError "cannot find fitting redeemer: " <> err
     Right n -> return $ toLoopArgument n
-  return (ScriptDataNumber 0, redeemer)
+  return (unsafeScriptDataToHashable (ScriptDataNumber 0), redeemer)
   where
     -- This is the hardcoded calling convention of the loop.plutus script.
     -- To loop n times one has to pass n + 1_000_000 as redeemer.
-    toLoopArgument n = ScriptDataNumber $ n + 1000000
+    toLoopArgument n = unsafeScriptDataToHashable $ ScriptDataNumber $ n + 1000000
     startSearch f a b = do
       l <- f a
       h <- f b
@@ -422,7 +422,7 @@ spendAutoScript protocolParameters script = do
 
 makePlutusContext :: forall era. IsShelleyBasedEra era
   => ScriptSpec
-  -> ActionM (Witness WitCtxTxIn era, Script PlutusScriptV1, ScriptData, Lovelace)
+  -> ActionM (Witness WitCtxTxIn era, Script PlutusScriptV1, HashableScriptData, Lovelace)
 makePlutusContext scriptSpec = do
   protocolParameters <- getProtocolParameters
   script_ <- liftIO $ Plutus.readPlutusScript $ scriptSpecFile scriptSpec
@@ -488,8 +488,8 @@ makePlutusContext scriptSpec = do
 preExecuteScriptAction ::
      ProtocolParameters
   -> Script PlutusScriptV1
-  -> ScriptData
-  -> ScriptData
+  -> HashableScriptData
+  -> HashableScriptData
   -> ActionM ExecutionUnits
 preExecuteScriptAction protocolParameters script scriptData redeemer
   = case Plutus.preExecutePlutusScript protocolParameters script scriptData redeemer of

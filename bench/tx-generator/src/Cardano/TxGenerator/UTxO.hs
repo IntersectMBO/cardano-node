@@ -49,7 +49,7 @@ mkUTxOVariant networkId key value
 mkUTxOScript :: forall era.
      IsShelleyBasedEra era
   => NetworkId
-  -> (Script PlutusScriptV1, ScriptData)
+  -> (Script PlutusScriptV1, HashableScriptData)
   -> Witness WitCtxTxIn era
   -> ToUTxO era
 mkUTxOScript networkId (script, txOutDatum) witness value

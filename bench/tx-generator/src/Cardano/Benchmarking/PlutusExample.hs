@@ -41,8 +41,8 @@ toScriptHash str =
 preExecuteScript ::
      ProtocolParameters
   -> Script PlutusScriptV1
-  -> ScriptData
-  -> ScriptData
+  -> HashableScriptData
+  -> HashableScriptData
   -> Either String ExecutionUnits
 preExecuteScript protocolParameters (PlutusScript _ (PlutusScriptSerialised script)) datum redeemer = do
   costModel <- case Map.lookup (AnyPlutusScriptVersion PlutusScriptV1) (protocolParamCostModels protocolParameters) of

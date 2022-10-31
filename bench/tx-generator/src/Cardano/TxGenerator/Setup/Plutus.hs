@@ -41,8 +41,8 @@ readPlutusScript fp
 preExecutePlutusScript ::
      ProtocolParameters
   -> Script PlutusScriptV1
-  -> ScriptData
-  -> ScriptData
+  -> HashableScriptData
+  -> HashableScriptData
   -> Either TxGenError ExecutionUnits
 preExecutePlutusScript protocolParameters (PlutusScript _ (PlutusScriptSerialised script)) datum redeemer
   = runExcept $ do

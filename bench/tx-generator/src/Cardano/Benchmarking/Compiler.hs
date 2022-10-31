@@ -40,7 +40,7 @@ type DstWallet = String
 compileOptions :: NixServiceOptions -> Either CompileError [Action]
 compileOptions opts = runCompiler opts compileToScript
 
-runCompiler ::NixServiceOptions -> Compiler () -> Either CompileError [Action]
+runCompiler :: NixServiceOptions -> Compiler () -> Either CompileError [Action]
 runCompiler o c = case runExcept $ runRWST c o 0 of
   Left err -> Left err
   Right ((), _ , l) -> Right $ DL.toList l
@@ -139,8 +139,8 @@ splittingPhase srcWallet = do
         executionUnits <- ExecutionUnits <$> askNixOption _nix_executionMemory <*> askNixOption _nix_executionSteps
         debugMode <- askNixOption _nix_debugMode
         budget <- (if debugMode then CheckScriptBudget else StaticScriptBudget)
-                    <$> (ScriptDataNumber <$> askNixOption _nix_plutusData)
-                    <*> (ScriptDataNumber <$> askNixOption _nix_plutusRedeemer)
+                    <$> (unsafeScriptDataToHashable . ScriptDataNumber <$> askNixOption _nix_plutusData)
+                    <*> (unsafeScriptDataToHashable . ScriptDataNumber <$> askNixOption _nix_plutusRedeemer)
                     <*> pure executionUnits
         ScriptSpec <$> askNixOption _nix_plutusScript <*> pure budget
     return $ PayToScript scriptSpec dst
