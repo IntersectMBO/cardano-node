@@ -431,3 +431,11 @@ Using the ``cardano-node`` Haskell packages
 
 If you want to use the ``cardano-node`` Haskell packages from another project, you should use `CHaP <https://github.com/input-output-hk/cardano-haskell-packages>`_ to get the packages defined in this repository.
 Please note that you may need to use any ``source-repository-package`` stanzas defined in ``cabal.project``, although we will endeavour to keep these to an absolute minimum.
+
+****
+Troubleshooting ``cardano-node`` issues
+****
+
+For some troubleshooting help with building or running ``cardano-node``, the wiki has a
+`troubleshooting page <https://github.com/input-output-hk/cardano-node/wiki/Troubleshooting>`_
+that documents some common gotchas.
