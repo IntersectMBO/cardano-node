@@ -132,7 +132,7 @@ import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.InMode
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
-import           Cardano.Api.Protocol.Types
+import           Cardano.Api.Protocol
 import           Cardano.Api.Query
 import           Cardano.Api.Tx (getTxBody)
 import           Cardano.Api.TxBody

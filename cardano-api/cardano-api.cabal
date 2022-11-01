@@ -79,7 +79,7 @@ library
                         Cardano.Api.NetworkId
                         Cardano.Api.OperationalCertificate
                         Cardano.Api.ProtocolParameters
-                        Cardano.Api.Protocol.Types
+                        Cardano.Api.Protocol
                         Cardano.Api.Query
                         Cardano.Api.Script
                         Cardano.Api.ScriptData
