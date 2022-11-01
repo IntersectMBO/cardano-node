@@ -97,8 +97,6 @@ library
                         Cardano.Api.TxBody
                         Cardano.Api.TxIn
                         Cardano.Api.TxMetadata
-                        Cardano.Api.TxSubmit.ErrorRender
-                        Cardano.Api.TxSubmit.Types
                         Cardano.Api.Utils
                         Cardano.Api.Value
                         Cardano.Api.ValueParser
