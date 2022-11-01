@@ -10,20 +10,19 @@ module Testnet.Utils
 import           Cardano.Api
 import           Prelude
 
+import           Cardano.CLI.Shelley.Output
 import           Control.Concurrent (threadDelay)
 import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Data.Aeson (fromJSON)
 import           GHC.Stack
+import           Hedgehog.Extras.Test.Process (ExecConfig)
+import           Hedgehog.Internal.Property (MonadTest)
 import           System.Directory (doesFileExist, removeFile)
-
-import           Cardano.CLI.Shelley.Output
 
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
-import           Hedgehog.Extras.Test.Process (ExecConfig)
-import           Hedgehog.Internal.Property (MonadTest)
 import qualified Test.Process as H
 
 

@@ -416,7 +416,7 @@ shelleyTestnet testnetOptions H.Conf {..} = do
   forM_ allNodes $ \node -> do
     sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)
     _spocketSystemNameFile <- H.noteShow $ IO.sprocketSystemName sprocket
-    H.assertByDeadlineM deadline $ H.doesSprocketExist sprocket
+    H.byDeadlineM 10 deadline $ H.assertM $ H.doesSprocketExist sprocket
 
   forM_ allNodes $ \node -> do
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
