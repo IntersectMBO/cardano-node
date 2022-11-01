@@ -8,45 +8,43 @@ module Spec.Cli.KesPeriodInfo
   ( hprop_kes_period_info
   ) where
 
-
-import           Prelude
-
 import           Cardano.Api
-import           Cardano.Api.Shelley
-
+import           Cardano.Api.Shelley (PoolId)
 import           Control.Monad (void)
-import qualified Data.Aeson as J
-import qualified Data.Map.Strict as Map
 import           Data.Monoid (Last (..))
 import           Data.Set (Set)
-import qualified Data.Set as Set
-import qualified Data.Text as T
 import           GHC.Stack (callStack)
-import qualified System.Directory as IO
+import           Hedgehog (Property, (===))
+import           Prelude
 import           System.Environment (getEnvironment)
 import           System.FilePath ((</>))
 
 import           Cardano.CLI.Shelley.Output
 import           Cardano.CLI.Shelley.Run.Query
 
-import           Hedgehog (Property, (===))
+import           Testnet.Cardano (CardanoTestnetOptions (..), TestnetRuntime (..),
+                   defaultTestnetNodeOptions, defaultTestnetOptions)
+import           Testnet.Utils (waitUntilEpoch)
+
+import qualified Data.Aeson as J
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
+import qualified Data.Text as T
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
+import qualified System.Directory as IO
 import qualified System.Info as SYS
 import qualified Test.Base as H
 import qualified Test.Process as H
 import qualified Test.Runtime as TR
-import           Testnet (TestnetOptions( CardanoOnlyTestnetOptions ),  testnet)
+import           Testnet (TestnetOptions (CardanoOnlyTestnetOptions), testnet)
 import qualified Testnet.Cardano as TC
 
-import           Testnet.Cardano (CardanoTestnetOptions(..), defaultTestnetNodeOptions, defaultTestnetOptions)
 import qualified Testnet.Conf as H
 import           Testnet.Conf (ProjectBase (..), YamlFilePath (..))
-import           Testnet.Utils (waitUntilEpoch)
 
 import           Testnet.Properties.Cli.KesPeriodInfo
 
@@ -108,7 +106,7 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
 
   utxo1Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-1.json"
   UTxO utxo1 <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(UTxO AlonzoEra) utxo1Json
-  txin <- H.noteShow $ head $ Map.keys utxo1
+  txin <- H.noteShow =<< H.headM (Map.keys utxo1)
 
   -- Staking keys
   utxoStakingVkey2 <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo2-stake.vkey"
@@ -189,27 +187,24 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
                , "--testnet-magic", show @Int testnetMagic
                ]
 
-  -- Things take long on non-linux machines
-  if H.isLinux
-  then H.threadDelay 5000000
-  else H.threadDelay 10000000
+  delegsAndRewards <- H.byDurationM 3 12 $ do
+    -- Check to see if pledge's stake address was registered
 
-  -- Check to see if pledge's stake address was registered
+    void $ H.execCli' execConfig
+      [ "query", "stake-address-info"
+      , "--address", poolownerstakeaddr
+      , "--testnet-magic", show @Int testnetMagic
+      , "--out-file", work </> "pledgeownerregistration.json"
+      ]
 
-  void $ H.execCli' execConfig
-    [ "query", "stake-address-info"
-    , "--address", poolownerstakeaddr
-    , "--testnet-magic", show @Int testnetMagic
-    , "--out-file", work </> "pledgeownerregistration.json"
-    ]
+    pledgerStakeInfo <- H.leftFailM . H.readJsonFile $ work </> "pledgeownerregistration.json"
+    delegsAndRewardsMap <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @DelegationsAndRewards pledgerStakeInfo
+    delegsAndRewards <- H.noteShow $ mergeDelegsAndRewards delegsAndRewardsMap
 
-  pledgerStakeInfo <- H.leftFailM . H.readJsonFile $ work </> "pledgeownerregistration.json"
-  delegsAndRewardsMap <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @DelegationsAndRewards pledgerStakeInfo
-  let delegsAndRewards = mergeDelegsAndRewards delegsAndRewardsMap
+    length delegsAndRewards === 1
+    return delegsAndRewards
 
-  length delegsAndRewards === 1
-
-  let (pledgerSAddr, _rewards, _poolId) = head delegsAndRewards
+  (pledgerSAddr, _rewards, _poolId) <- H.headM delegsAndRewards
 
   -- Pledger and owner are and can be the same
   T.unpack (serialiseAddress pledgerSAddr) === poolownerstakeaddr
@@ -228,7 +223,7 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
 
   utxoWithStaking1Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-addr-with-staking-1.json"
   UTxO utxoWithStaking1 <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(UTxO AlonzoEra) utxoWithStaking1Json
-  txinForStakeReg <- H.noteShow $ head $ Map.keys utxoWithStaking1
+  txinForStakeReg <- H.noteShow =<< H.headM (Map.keys utxoWithStaking1)
 
   void $ H.execCli [ "stake-address", "registration-certificate"
                    , "--stake-verification-key-file", utxoStakingVkey2
@@ -263,21 +258,21 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
     ]
 
   H.note_ $ "Check to see if " <> utxoStakingVkey2 <> " was registered..."
-  H.threadDelay 10000000
 
-  void $ H.execCli' execConfig
-    [ "query", "stake-address-info"
-    , "--address", utxostakingaddr
-    , "--testnet-magic", show @Int testnetMagic
-    , "--out-file", work </> "stake-address-info-utxo-staking-vkey-2.json"
-    ]
+  userSAddr <- H.byDurationM 3 12 $ do
+    void $ H.execCli' execConfig
+      [ "query", "stake-address-info"
+      , "--address", utxostakingaddr
+      , "--testnet-magic", show @Int testnetMagic
+      , "--out-file", work </> "stake-address-info-utxo-staking-vkey-2.json"
+      ]
 
-  userStakeAddrInfoJSON <- H.leftFailM . H.readJsonFile $ work </> "stake-address-info-utxo-staking-vkey-2.json"
-  delegsAndRewardsMapUser <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @DelegationsAndRewards userStakeAddrInfoJSON
-  let delegsAndRewardsUser = mergeDelegsAndRewards delegsAndRewardsMapUser
-      userStakeAddrInfo = filter (\(sAddr,_,_) -> utxostakingaddr == T.unpack (serialiseAddress sAddr)) delegsAndRewardsUser
-      (userSAddr, _rewards, _poolId) = head userStakeAddrInfo
-
+    userStakeAddrInfoJSON <- H.leftFailM . H.readJsonFile $ work </> "stake-address-info-utxo-staking-vkey-2.json"
+    delegsAndRewardsMapUser <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @DelegationsAndRewards userStakeAddrInfoJSON
+    delegsAndRewardsUser <- H.noteShow $ mergeDelegsAndRewards delegsAndRewardsMapUser
+    userStakeAddrInfo <- H.noteShow $ filter (\(sAddr,_,_) -> utxostakingaddr == T.unpack (serialiseAddress sAddr)) delegsAndRewardsUser
+    (userSAddr, _rewards, _poolId) <- H.headM userStakeAddrInfo
+    return userSAddr
 
   H.note_ $ "Check staking key: " <> show utxoStakingVkey2 <> " was registered"
   T.unpack (serialiseAddress userSAddr) === utxostakingaddr
@@ -296,7 +291,7 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
 
   utxo2Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-2.json"
   UTxO utxo2 <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(UTxO AlonzoEra) utxo2Json
-  txin2 <- H.noteShow $ head $ Map.keys utxo2
+  txin2 <- H.noteShow =<< H.headM (Map.keys utxo2)
 
   H.note_ "Create delegation certificate of pledger"
 
@@ -338,22 +333,19 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
     , "--testnet-magic", show @Int testnetMagic
     ]
 
-  if H.isLinux
-  then H.threadDelay 5000000
-  else H.threadDelay 20000000
+  H.byDurationM 3 12 $ do
+    void $ H.execCli' execConfig
+      [ "query", "stake-pools"
+      , "--testnet-magic", show @Int testnetMagic
+      , "--out-file", work </> "current-registered.pools.json"
+      ]
 
-  void $ H.execCli' execConfig
-    [ "query", "stake-pools"
-    , "--testnet-magic", show @Int testnetMagic
-    , "--out-file", work </> "current-registered.pools.json"
-    ]
+    currRegPools <- H.leftFailM . H.readJsonFile $ work </> "current-registered.pools.json"
+    poolIds <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(Set PoolId) currRegPools
+    poolId <- H.noteShow =<< H.headM (Set.toList poolIds)
 
-  currRegPools <- H.leftFailM . H.readJsonFile $ work </> "current-registered.pools.json"
-  poolIds <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(Set PoolId) currRegPools
-  poolId <- H.noteShow $ head $ Set.toList poolIds
-
-  H.note_ "Check stake pool was successfully registered"
-  T.unpack (serialiseToBech32 poolId) === stakePoolId
+    H.note_ "Check stake pool was successfully registered"
+    T.unpack (serialiseToBech32 poolId) === stakePoolId
 
   H.note_ "Check pledge was successfully delegated"
   void $ H.execCli' execConfig
@@ -365,9 +357,10 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
 
   pledgeStakeAddrInfoJSON <- H.leftFailM . H.readJsonFile $ work </> "pledge-stake-address-info.json"
   delegsAndRewardsMapPledge <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @DelegationsAndRewards pledgeStakeAddrInfoJSON
-  let delegsAndRewardsPledge = mergeDelegsAndRewards delegsAndRewardsMapPledge
-      pledgeStakeAddrInfo = filter (\(sAddr,_,_) -> poolownerstakeaddr == T.unpack (serialiseAddress sAddr)) delegsAndRewardsPledge
-      (pledgeSAddr, _rewards, pledgerDelegPoolId) = head pledgeStakeAddrInfo
+  delegsAndRewardsPledge <- H.noteShow $ mergeDelegsAndRewards delegsAndRewardsMapPledge
+  pledgeStakeAddrInfo <- H.noteShow $ filter (\(sAddr,_,_) -> poolownerstakeaddr == T.unpack (serialiseAddress sAddr)) delegsAndRewardsPledge
+
+  (pledgeSAddr, _rewards, pledgerDelegPoolId) <- H.headM pledgeStakeAddrInfo
 
   H.note_ "Check pledge has been delegated to pool"
   case pledgerDelegPoolId of
@@ -468,4 +461,3 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
   -- TODO: Linking to the node log file like this is fragile.
   spoLogFile <- H.note $ tempAbsPath </> "logs/node-pool1.stdout.log"
   prop_node_minted_block spoLogFile
-
