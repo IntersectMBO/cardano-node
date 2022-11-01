@@ -71,9 +71,9 @@ data TxFeeValidationError
 
 instance Error TxFeeValidationError where
   displayError (TxFeatureImplicitFeesE era) =
-    "Transaction _ fee not supported in " <> Text.unpack (renderEra era)
+    "Implicit transaction fee not supported in " <> Text.unpack (renderEra era)
   displayError (TxFeatureExplicitFeesE era) =
-    "Transaction _ fee not supported in " <> Text.unpack (renderEra era)
+    "Explicit transaction fee not supported in " <> Text.unpack (renderEra era)
 
 validateTxFee :: CardanoEra era
               -> Maybe Lovelace
@@ -154,7 +154,7 @@ newtype TxValidityUpperBoundValidationError
 
 instance Error TxValidityUpperBoundValidationError where
   displayError (TxValidityUpperBoundNotSupported era) =
-    "Transaction validity upper bound not supported in " <> Text.unpack (renderEra era)
+    "Transaction validity upper bound must be specified in " <> Text.unpack (renderEra era)
 
 validateTxValidityUpperBound
   :: CardanoEra era
