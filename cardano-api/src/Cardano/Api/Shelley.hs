@@ -235,6 +235,7 @@ import           Cardano.Api.Address
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
+import           Cardano.Api.Genesis
 import           Cardano.Api.InMode
 import           Cardano.Api.IPC
 import           Cardano.Api.KeysByron
@@ -247,7 +248,6 @@ import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
 import           Cardano.Api.Script
 import           Cardano.Api.ScriptData
-import           Cardano.Api.Shelley.Genesis
 import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody

@@ -90,7 +90,7 @@ library
                         Cardano.Api.SerialiseRaw
                         Cardano.Api.SerialiseTextEnvelope
                         Cardano.Api.SerialiseUsing
-                        Cardano.Api.Shelley.Genesis
+                        Cardano.Api.Genesis
                         Cardano.Api.SpecialByron
                         Cardano.Api.StakePoolMetadata
                         Cardano.Api.Tx
