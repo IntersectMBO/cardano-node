@@ -1,4 +1,4 @@
-module Testnet.Commands.Shelley
+module Parsers.Shelley
   ( ShelleyOptions(..)
   , cmdShelley
   , runShelleyOptions

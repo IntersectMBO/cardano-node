@@ -1,14 +1,14 @@
-module Testnet.Commands where
+module Parsers where
 
 import           Data.Function
 import           Data.Monoid
 import           Options.Applicative
 import           System.IO (IO)
-import           Testnet.Commands.Babbage
-import           Testnet.Commands.Byron
-import           Testnet.Commands.Cardano
-import           Testnet.Commands.Shelley
-import           Testnet.Commands.Version
+import           Parsers.Babbage
+import           Parsers.Byron
+import           Parsers.Cardano
+import           Parsers.Shelley
+import           Parsers.Version
 
 {- HLINT ignore "Monoid law, left identity" -}
 

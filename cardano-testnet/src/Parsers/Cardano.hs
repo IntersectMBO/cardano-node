@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeApplications #-}
 
-module Testnet.Commands.Cardano
+module Parsers.Cardano
   ( CardanoOptions(..)
   , cmdCardano
   , runCardanoOptions

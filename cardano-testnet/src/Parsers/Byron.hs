@@ -1,4 +1,4 @@
-module Testnet.Commands.Byron
+module Parsers.Byron
   ( ByronOptions(..)
   , cmdByron
   , runByronOptions

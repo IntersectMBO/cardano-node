@@ -1,4 +1,4 @@
-module Testnet.Commands.Babbage
+module Parsers.Babbage
   ( BabbageOptions(..)
   , cmdBabbage
   , runBabbageOptions
