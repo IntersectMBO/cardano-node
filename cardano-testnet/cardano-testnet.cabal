@@ -57,7 +57,13 @@ library
                       , unordered-containers
 
   hs-source-dirs:       src
-  exposed-modules:      Test.Assert
+  exposed-modules:      Parsers
+                        Parsers.Babbage
+                        Parsers.Byron
+                        Parsers.Cardano
+                        Parsers.Shelley
+                        Parsers.Version
+                        Test.Assert
                         Test.Base
                         Test.Process
                         Test.Runtime
@@ -65,14 +71,7 @@ library
                         Testnet.Babbage
                         Testnet.Byron
                         Testnet.Cardano
-                        Testnet.Commands
-                        Testnet.Commands.Babbage
-                        Testnet.Commands.Byron
-                        Testnet.Commands.Cardano
-                        Testnet.Commands.Shelley
-                        Testnet.Commands.Version
                         Testnet.Conf
-                        Testnet.List
                         Testnet.Run
                         Testnet.Shelley
                         Testnet.SubmitApi
@@ -91,7 +90,6 @@ executable cardano-testnet
 
   build-depends:        cardano-testnet
                       , optparse-applicative-fork
-                      , text
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 

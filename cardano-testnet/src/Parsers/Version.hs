@@ -1,4 +1,4 @@
-module Testnet.Commands.Version
+module Parsers.Version
   ( VersionOptions(..)
   , cmdVersion
   , runVersionOptions

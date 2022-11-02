@@ -5,7 +5,7 @@ import           Data.Function
 import           Data.Semigroup
 import           Options.Applicative
 import           System.IO (IO)
-import           Testnet.Commands
+import           Parsers
 
 main :: IO ()
 main = join $ customExecParser
