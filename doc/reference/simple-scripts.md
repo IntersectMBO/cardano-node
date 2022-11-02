@@ -169,7 +169,7 @@ With this in mind, we can understand the interpretation of the new expressions:
 + RequireTimeBefore: has a slot number X.
 
   This expression evaluates to `true` if (and only if) the upper bound of the
-  transaction validity interval is a slot number Y, and X <= Y.
+  transaction validity interval is a slot number Y, and Y < X.
 
   This condition guarantees that the actual slot number in which the transaction
   is included is (strictly) less than slot number X.
@@ -177,7 +177,7 @@ With this in mind, we can understand the interpretation of the new expressions:
 + RequireTimeAfter: has a slot number X.
 
   This expression evaluates to `true` if (and only if) the lower bound of the
-  transaction validity interval is a slot number Y, and Y <= X.
+  transaction validity interval is a slot number Y, and Y >= X.
 
   This condition guarantees that the actual slot number in which the transaction
   is included is greater than or equal to slot number X.
@@ -244,7 +244,7 @@ sub-expressions could be any script type, not just type "sig".
 
 ### Type "any"
 
-This corresponds to the "RequireAllOf" expression above. It specifies the type
+This corresponds to the "RequireAnyOf" expression above. It specifies the type
 "any" and a list of scripts as the sub-expressions.
 
 This example requires signatures from any of three keys, but remember that the
@@ -599,8 +599,7 @@ above this means >= 1000.
 
 ```bash
 cardano-cli transaction build-raw \
-    --invalid-hereafter 1000 \
-    --invalid-before 1000\
+    --invalid-before 1000 \
     --fee 0 \
     --tx-in (txin of script address)
     --tx-out yourspecifiedtxout \
@@ -634,7 +633,6 @@ above this means <= 3000:
 
 ```bash
 cardano-cli transaction build-raw \
-    --invalid-hereafter 1000 \
     --invalid-hereafter 3000\
     --fee 0 \
     --tx-in (txin of script address)

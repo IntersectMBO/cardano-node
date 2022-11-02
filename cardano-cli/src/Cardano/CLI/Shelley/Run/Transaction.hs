@@ -427,8 +427,8 @@ runTransactionCmd cmd =
 
     TxSign txinfile skfiles network txoutfile ->
       runTxSign txinfile skfiles network txoutfile
-    TxSubmit anyConensusModeParams network txFp ->
-      runTxSubmit anyConensusModeParams network txFp
+    TxSubmit anyConsensusModeParams network txFp ->
+      runTxSubmit anyConsensusModeParams network txFp
     TxCalculateMinFee txbody mnw pGenesisOrParamsFile nInputs nOutputs
                       nShelleyKeyWitnesses nByronKeyWitnesses ->
       runTxCalculateMinFee txbody mnw pGenesisOrParamsFile nInputs nOutputs
