@@ -30,7 +30,6 @@ library
 
   build-depends:        aeson
                       , ansi-terminal
-                      , base16-bytestring
                       , bytestring
                       , cardano-api
                       , cardano-cli
@@ -42,8 +41,6 @@ library
                       , filepath
                       , hedgehog
                       , hedgehog-extras
-                      , http-client
-                      , http-types
                       , optparse-applicative-fork
                       , ouroboros-network
                       , process
@@ -51,6 +48,9 @@ library
                       , resourcet
                       , safe-exceptions
                       , stm
+                      , tasty
+                      , tasty-expected-failure
+                      , tasty-hedgehog
                       , text
                       , time
                       , transformers
@@ -63,10 +63,11 @@ library
                         Parsers.Cardano
                         Parsers.Shelley
                         Parsers.Version
-                        Test.Assert
-                        Test.Base
-                        Test.Process
-                        Test.Runtime
+                        Util.Assert
+                        Util.Base
+                        Util.Ignore
+                        Util.Process
+                        Util.Runtime
                         Testnet
                         Testnet.Babbage
                         Testnet.Byron
@@ -74,7 +75,6 @@ library
                         Testnet.Conf
                         Testnet.Run
                         Testnet.Shelley
-                        Testnet.SubmitApi
                         Testnet.Utils
 
   other-modules:        Paths_cardano_testnet
@@ -100,33 +100,31 @@ test-suite cardano-testnet-tests
 
   main-is:              Main.hs
 
+  other-modules:        Test.Cli.Alonzo.LeadershipSchedule
+                        Test.Cli.Babbage.LeadershipSchedule
+                        Test.Cli.KesPeriodInfo
+                        Test.Misc
+                        Test.Node.Shutdown
+                        Test.ShutdownOnSlotSynced
+
   type:                 exitcode-stdio-1.0
 
-  build-depends:        cardano-testnet
-                      , aeson                         >= 2.1.0.0
+  build-depends:        aeson
                       , cardano-api
                       , cardano-cli
+                      , cardano-testnet
                       , containers
                       , directory
                       , filepath
-                      , hedgehog
+                      , hedgehog                      
                       , hedgehog-extras
                       , process
                       , tasty
-                      , tasty-expected-failure
-                      , tasty-hedgehog
                       , text
                       , time
 
-  other-modules:
-                        Spec.Cli.Alonzo.LeadershipSchedule
-                        Spec.Cli.Babbage.LeadershipSchedule
-                        Spec.Cli.KesPeriodInfo
-                        Spec.Node.Shutdown
-                        Spec.ShutdownOnSlotSynced
-                        Testnet.Properties.Cli.KesPeriodInfo
 
-                        Test.Util
+  other-modules:
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 

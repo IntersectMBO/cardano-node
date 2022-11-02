@@ -6,23 +6,17 @@ module Parsers.Cardano
   , runCardanoOptions
   ) where
 
-import           Data.Eq
-import           Data.Function
-import           Data.Int
-import           Data.Maybe
-import           Data.Semigroup
-import           GHC.Enum
+import           Prelude
+import qualified Data.List as L
 import           Options.Applicative
-import           System.IO (IO)
-import           Test.Runtime (readNodeLoggingFormat)
+import qualified Options.Applicative as OA
+import           Text.Read
+
+import           Util.Runtime (readNodeLoggingFormat)
 import           Testnet
 import           Testnet.Cardano
 import           Testnet.Run (runTestnet)
-import           Text.Read
-import           Text.Show
 
-import qualified Data.List as L
-import qualified Options.Applicative as OA
 
 data CardanoOptions = CardanoOptions
   { maybeTestnetMagic :: Maybe Int

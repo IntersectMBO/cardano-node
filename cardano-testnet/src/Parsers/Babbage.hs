@@ -4,20 +4,14 @@ module Parsers.Babbage
   , runBabbageOptions
   ) where
 
-import           Data.Eq
-import           Data.Function
-import           Data.Int
-import           Data.Maybe
-import           Data.Semigroup
+import           Prelude
 import           Options.Applicative
-import           System.IO (IO)
-import           Test.Runtime (readNodeLoggingFormat)
+import qualified Options.Applicative as OA
+
 import           Testnet
 import           Testnet.Babbage
 import           Testnet.Run (runTestnet)
-import           Text.Show
-
-import qualified Options.Applicative as OA
+import           Util.Runtime (readNodeLoggingFormat)
 
 data BabbageOptions = BabbageOptions
   { maybeTestnetMagic :: Maybe Int

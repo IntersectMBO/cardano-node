@@ -1,5 +1,5 @@
 
-module Test.Util
+module Util.Ignore
   ( ignoreOn
   , ignoreOnWindows
   , ignoreOnMac

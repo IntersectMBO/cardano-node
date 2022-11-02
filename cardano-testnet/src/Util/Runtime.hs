@@ -3,7 +3,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Test.Runtime
+module Util.Runtime
   ( LeadershipSlot(..)
   , NodeLoggingFormat(..)
   , PaymentKeyPair(..)
@@ -36,12 +36,13 @@ import qualified Hedgehog.Extras.Stock.String as S
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
-import qualified Test.Process as H
 
 import           System.FilePath.Posix ((</>))
 import qualified System.Info as OS
 import qualified System.IO as IO
 import qualified System.Process as IO
+
+import qualified Util.Process as H
 
 data NodeLoggingFormat = NodeLoggingFormatAsJson | NodeLoggingFormatAsText deriving (Eq, Show)
 

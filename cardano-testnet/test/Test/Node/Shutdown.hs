@@ -4,22 +4,18 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Spec.Node.Shutdown
+module Test.Node.Shutdown
   ( hprop_shutdown
   ) where
 
+import           Prelude
 import           Control.Monad
-import           Data.Function
 import           Data.Functor ((<&>))
-import           Data.Int
+import qualified Data.List as L
 import           Data.Maybe
-import           Data.Ord
-import           GHC.Num
 import           Hedgehog (Property, (===))
 import           System.FilePath ((</>))
-import           Text.Show (Show (..))
 
-import qualified Data.List as L
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
@@ -31,9 +27,9 @@ import qualified System.Directory as IO
 import qualified System.Exit as IO
 import qualified System.IO as IO
 import qualified System.Process as IO
-import qualified Test.Base as H
-import qualified Test.Process as H
 import qualified Testnet.Conf as H
+import qualified Util.Base as H
+import qualified Util.Process as H
 
 {- HLINT ignore "Redundant <&>" -}
 

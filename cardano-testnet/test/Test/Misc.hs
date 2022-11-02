@@ -1,4 +1,4 @@
-module Testnet.Properties.Cli.KesPeriodInfo where
+module Test.Misc where
 
 import           Prelude
 

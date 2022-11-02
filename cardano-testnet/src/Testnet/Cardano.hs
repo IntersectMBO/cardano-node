@@ -30,10 +30,6 @@ import           Hedgehog.Extras.Stock.Time (formatIso8601, showUTCTimeSeconds)
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           System.FilePath.Posix ((</>))
-import           Test.Runtime as TR (NodeLoggingFormat (..), PaymentKeyPair (..), PoolNode (PoolNode),
-                   PoolNodeKeys (..), TestnetRuntime (..), startNode)
-
-import           Test.Process (execCli_)
 
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
@@ -53,8 +49,12 @@ import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Network as H
 import qualified System.Directory as IO
 import qualified System.Info as OS
-import qualified Test.Assert as H
-import qualified Test.Process as H
+import qualified Util.Assert as H
+import qualified Util.Process as H
+import           Util.Process (execCli_)
+import           Util.Runtime as TR (NodeLoggingFormat (..), PaymentKeyPair (..), PoolNode (PoolNode),
+                   PoolNodeKeys (..), TestnetRuntime (..), startNode)
+
 import qualified Testnet.Conf as H
 
 {- HLINT ignore "Redundant flip" -}

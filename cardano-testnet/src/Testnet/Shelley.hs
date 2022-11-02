@@ -28,8 +28,6 @@ import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket(..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter(..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint(..))
 import           System.FilePath.Posix ((</>))
-import           Test.Process (execCli_)
-import           Test.Runtime hiding (allNodes)
 
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
@@ -52,9 +50,12 @@ import qualified Hedgehog.Extras.Test.Network as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
 import qualified System.Info as OS
-import qualified Test.Base as H
-import qualified Test.Process as H
 import qualified Testnet.Conf as H
+import qualified Util.Base as H
+import qualified Util.Process as H
+import           Util.Process (execCli_)
+import           Util.Runtime hiding (allNodes)
+
 
 {- HLINT ignore "Redundant <&>" -}
 {- HLINT ignore "Redundant flip" -}

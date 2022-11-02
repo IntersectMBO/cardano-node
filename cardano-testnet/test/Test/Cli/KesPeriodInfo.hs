@@ -4,7 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Spec.Cli.KesPeriodInfo
+module Test.Cli.KesPeriodInfo
   ( hprop_kes_period_info
   ) where
 
@@ -22,10 +22,6 @@ import           System.FilePath ((</>))
 import           Cardano.CLI.Shelley.Output
 import           Cardano.CLI.Shelley.Run.Query
 
-import           Testnet.Cardano (CardanoTestnetOptions (..), TestnetRuntime (..),
-                   defaultTestnetNodeOptions, defaultTestnetOptions)
-import           Testnet.Utils (waitUntilEpoch)
-
 import qualified Data.Aeson as J
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -37,16 +33,19 @@ import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
 import qualified System.Info as SYS
-import qualified Test.Base as H
-import qualified Test.Process as H
-import qualified Test.Runtime as TR
+
+import           Test.Misc
+import           Testnet.Cardano (CardanoTestnetOptions (..), TestnetRuntime (..),
+                   defaultTestnetNodeOptions, defaultTestnetOptions)
 import           Testnet (TestnetOptions (CardanoOnlyTestnetOptions), testnet)
 import qualified Testnet.Cardano as TC
-
 import qualified Testnet.Conf as H
 import           Testnet.Conf (ProjectBase (..), YamlFilePath (..))
+import           Testnet.Utils (waitUntilEpoch)
+import qualified Util.Base as H
+import qualified Util.Process as H
+import qualified Util.Runtime as TR
 
-import           Testnet.Properties.Cli.KesPeriodInfo
 
 hprop_kes_period_info :: Property
 hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
