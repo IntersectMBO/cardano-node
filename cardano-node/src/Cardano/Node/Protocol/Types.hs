@@ -11,13 +11,12 @@ module Cardano.Node.Protocol.Types
   , SomeConsensusProtocol(..)
   ) where
 
-import           Prelude
+import qualified Cardano.Api as Api
 import           Cardano.Prelude (Generic, NFData)
+import           Prelude
 
 import           Data.Aeson
 import           NoThunks.Class (NoThunks)
-
-import qualified Cardano.Api.Protocol.Types as Cardano
 
 import           Cardano.Node.Orphans ()
 import           Cardano.Node.Queries (HasKESInfo, HasKESMetricsData)
@@ -55,11 +54,11 @@ instance FromJSON Protocol where
 
 data SomeConsensusProtocol where
 
-     SomeConsensusProtocol :: forall blk. ( Cardano.Protocol IO blk
+     SomeConsensusProtocol :: forall blk. ( Api.Protocol IO blk
                                           , HasKESMetricsData blk
                                           , HasKESInfo blk
                                           , TraceConstraints blk
                                           )
-                           => Cardano.BlockType blk
-                           -> Cardano.ProtocolInfoArgs IO blk
+                           => Api.BlockType blk
+                           -> Api.ProtocolInfoArgs IO blk
                            -> SomeConsensusProtocol

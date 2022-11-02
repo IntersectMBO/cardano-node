@@ -472,6 +472,7 @@ module Cardano.Api (
     TextEnvelopeDescr,
     TextEnvelopeError(..),
     textEnvelopeRawCBOR,
+    textEnvelopeToJSON,
     serialiseToTextEnvelope,
     deserialiseFromTextEnvelope,
     readFileTextEnvelope,
@@ -563,6 +564,12 @@ module Cardano.Api (
     LocalChainSyncClient(..),
     CardanoMode,
     --  connectToRemoteNode,
+
+    -- ** Protocol related types
+    BlockType(..),
+    Protocol(..),
+    ProtocolInfoArgs(..),
+
 
     -- *** Chain sync protocol
     -- | To construct a @ChainSyncClient@ see @Cardano.Api.Client@ or
@@ -734,6 +741,7 @@ import           Cardano.Api.LedgerState
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.OperationalCertificate
+import           Cardano.Api.Protocol.Types
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query hiding (LedgerState (..))
 import           Cardano.Api.Script

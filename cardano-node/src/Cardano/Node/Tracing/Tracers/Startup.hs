@@ -13,6 +13,8 @@ module Cardano.Node.Tracing.Tracers.Startup
   , ppStartupInfoTrace
   ) where
 
+import           Cardano.Api (NetworkMagic (..), SlotNo (..))
+import qualified Cardano.Api as Api
 import           Prelude
 
 import           Data.Aeson (ToJSON (..), Value (..), (.=))
@@ -49,9 +51,6 @@ import           Ouroboros.Consensus.Shelley.Ledger.Ledger (shelleyLedgerGenesis
 
 import           Cardano.Logging
 
-import           Cardano.Api (NetworkMagic (..), SlotNo (..))
-import           Cardano.Api.Protocol.Types (BlockType (..), protocolInfo)
-
 import           Cardano.Git.Rev (gitRev)
 
 import           Cardano.Node.Configuration.POM (NodeConfiguration, ncProtocol)
@@ -68,7 +67,7 @@ getStartupInfo
   -> IO [StartupTrace blk]
 getStartupInfo nc (SomeConsensusProtocol whichP pForInfo) fp = do
   nodeStartTime <- getCurrentTime
-  let cfg = pInfoConfig $ protocolInfo pForInfo
+  let cfg = pInfoConfig $ Api.protocolInfo pForInfo
       basicInfoCommon = BICommon $ BasicInfoCommon {
                 biProtocol = pack . show $ ncProtocol nc
               , biVersion  = pack . showVersion $ version
@@ -79,13 +78,13 @@ getStartupInfo nc (SomeConsensusProtocol whichP pForInfo) fp = do
               }
       protocolDependentItems =
         case whichP of
-          ByronBlockType ->
+          Api.ByronBlockType ->
             let DegenLedgerConfig cfgByron = Consensus.configLedger cfg
             in [getGenesisValuesByron cfg cfgByron]
-          ShelleyBlockType ->
+          Api.ShelleyBlockType ->
             let DegenLedgerConfig cfgShelley = Consensus.configLedger cfg
             in [getGenesisValues "Shelley" cfgShelley]
-          CardanoBlockType ->
+          Api.CardanoBlockType ->
             let CardanoLedgerConfig cfgByron cfgShelley cfgAllegra
                                     cfgMary cfgAlonzo cfgBabbage = Consensus.configLedger cfg
             in getGenesisValuesByron cfg cfgByron

@@ -20,6 +20,7 @@ module Cardano.Node.Protocol.Shelley
   , validateGenesis
   ) where
 
+import qualified Cardano.Api as Api
 import           Cardano.Prelude
 import           Prelude (String, id)
 
@@ -44,9 +45,7 @@ import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParamsShe
 import           Cardano.Ledger.BaseTypes (ProtVer (..))
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley
 
-import qualified Cardano.Api as Api (FileError (..))
 import           Cardano.Api.Orphans ()
-import qualified Cardano.Api.Protocol.Types as Protocol
 import           Cardano.Api.Shelley hiding (FileError)
 
 import           Cardano.Node.Types
@@ -87,7 +86,7 @@ mkSomeConsensusProtocolShelley NodeShelleyProtocolConfiguration {
     leaderCredentials <- firstExceptT PraosLeaderCredentialsError $
                          readLeaderCredentials files
 
-    return $ SomeConsensusProtocol Protocol.ShelleyBlockType $ Protocol.ProtocolInfoArgsShelley
+    return $ SomeConsensusProtocol Api.ShelleyBlockType $ Api.ProtocolInfoArgsShelley
       Consensus.ProtocolParamsShelleyBased {
         shelleyBasedGenesis = genesis,
         shelleyBasedInitialNonce = genesisHashToPraosNonce genesisHash,

@@ -12,6 +12,8 @@
 
 - Change `calculateMinimumUTxO` to return `Lovelace` instead of a `Value` ([PR 4482](https://github.com/input-output-hk/cardano-node/pull/4482))
 
+- **Breaking change** - Reduce exposed modules in cardano-api ([PR4546](https://github.com/input-output-hk/cardano-node/pull/4546))
+
 ### Bugs
 
 - Allow reading text envelopes from pipes ([PR 4384](https://github.com/input-output-hk/cardano-node/pull/4384))

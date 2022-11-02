@@ -20,15 +20,14 @@ import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as Text
 
 import           Cardano.Api.Byron
-import qualified Cardano.Api.Protocol.Types as Protocol
 
 import qualified Cardano.Crypto.Hash as Crypto
 
 import qualified Cardano.Crypto.Hashing as Byron.Crypto
 
 import qualified Cardano.Chain.Genesis as Genesis
-import qualified Cardano.Chain.UTxO as UTxO
 import qualified Cardano.Chain.Update as Update
+import qualified Cardano.Chain.UTxO as UTxO
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
 
 import           Cardano.Node.Types
@@ -80,7 +79,7 @@ mkSomeConsensusProtocolByron NodeByronProtocolConfiguration {
 
     optionalLeaderCredentials <- readLeaderCredentials genesisConfig files
 
-    return $ SomeConsensusProtocol Protocol.ByronBlockType $ Protocol.ProtocolInfoArgsByron $ Consensus.ProtocolParamsByron {
+    return $ SomeConsensusProtocol ByronBlockType $ ProtocolInfoArgsByron $ Consensus.ProtocolParamsByron {
         byronGenesis = genesisConfig,
         byronPbftSignatureThreshold =
           PBftSignatureThreshold <$> npcByronPbftSignatureThresh,

@@ -18,6 +18,7 @@ module Cardano.Node.Run
   , checkVRFFilePermissions
   ) where
 
+import qualified Cardano.Api as Api
 import           Cardano.Prelude hiding (ByteString, STM, atomically, show, take, trace)
 import           Data.IP (toSockAddr)
 import           Prelude (String, id, show)
@@ -62,7 +63,7 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    defaultPartialNodeConfiguration, makeNodeConfiguration, parseNodeConfigurationFP)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.API
-import           Cardano.Node.Tracing.StateRep (NodeState(NodeKernelOnline))
+import           Cardano.Node.Tracing.StateRep (NodeState (NodeKernelOnline))
 import           Cardano.Node.Tracing.Tracers.Startup (getStartupInfo)
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
@@ -85,9 +86,6 @@ import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           Ouroboros.Network.Subscription (DnsSubscriptionTarget (..),
                    IPSubscriptionTarget (..))
-
-import           Cardano.Api
-import qualified Cardano.Api.Protocol.Types as Protocol
 
 import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
                    gatherConfiguredSockets, getSocketOrSocketInfoAddr)
@@ -137,13 +135,13 @@ runNode cmdPc = do
 
     p :: SomeConsensusProtocol <-
       case eitherSomeProtocol of
-        Left err -> putStrLn (displayError err) >> exitFailure
+        Left err -> putStrLn (Api.displayError err) >> exitFailure
         Right p  -> pure p
 
-    let networkMagic :: NetworkMagic =
+    let networkMagic :: Api.NetworkMagic =
           case p of
             SomeConsensusProtocol _ runP ->
-              let ProtocolInfo { pInfoConfig } = Protocol.protocolInfo runP
+              let ProtocolInfo { pInfoConfig } = Api.protocolInfo runP
               in getNetworkMagic $ Consensus.configBlock pInfoConfig
 
     case p of
@@ -172,19 +170,19 @@ installSigTermHandler = do
 
 handleNodeWithTracers
   :: ( TraceConstraints blk
-     , Protocol.Protocol IO blk
+     , Api.Protocol IO blk
      )
   => PartialNodeConfiguration
   -> NodeConfiguration
   -> SomeConsensusProtocol
-  -> NetworkMagic
-  -> Protocol.ProtocolInfoArgs IO blk
+  -> Api.NetworkMagic
+  -> Api.ProtocolInfoArgs IO blk
   -> IO ()
 handleNodeWithTracers cmdPc nc p networkMagic runP = do
   -- This IORef contains node kernel structure which holds node kernel.
   -- Used for ledger queries and peer connection status.
   nodeKernelData <- mkNodeKernelData
-  let ProtocolInfo { pInfoConfig = cfg } = Protocol.protocolInfo runP
+  let ProtocolInfo { pInfoConfig = cfg } = Api.protocolInfo runP
   case ncEnableP2P nc of
     SomeNetworkP2PMode p2pMode -> do
       let fp = maybe  "No file path found!"
@@ -311,9 +309,9 @@ handlePeersListSimple tr nodeKern = forever $ do
 handleSimpleNode
   :: forall blk p2p
   . ( RunNode blk
-    , Protocol.Protocol IO blk
+    , Api.Protocol IO blk
     )
-  => Protocol.ProtocolInfoArgs IO blk
+  => Api.ProtocolInfoArgs IO blk
   -> NetworkP2PMode p2p
   -> Tracers RemoteConnectionId LocalConnectionId blk p2p
   -> NodeConfiguration
@@ -332,7 +330,7 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
     traceWith (startupTracer tracers)
       StartupDBValidation
 
-  let pInfo = Protocol.protocolInfo runP
+  let pInfo = Api.protocolInfo runP
 
   (publicIPv4SocketOrAddr, publicIPv6SocketOrAddr, localSocketOrPath) <- do
     result <- runExceptT (gatherConfiguredSockets $ ncSocketConfig nc)
