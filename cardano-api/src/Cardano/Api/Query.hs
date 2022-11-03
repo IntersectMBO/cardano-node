@@ -241,10 +241,6 @@ data QueryInShelleyBasedEra era result where
   QueryCurrentEpochState
     :: QueryInShelleyBasedEra era (SerialisedCurrentEpochState era)
 
-  QueryPoolState
-    :: Maybe (Set PoolId)
-    -> QueryInShelleyBasedEra era (SerialisedPoolState era)
-
 deriving instance Show (QueryInShelleyBasedEra era result)
 
 
@@ -581,12 +577,6 @@ toConsensusQueryShelleyBased erainmode QueryProtocolState =
 toConsensusQueryShelleyBased erainmode QueryCurrentEpochState =
     Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR Consensus.DebugEpochState))
 
-toConsensusQueryShelleyBased erainmode (QueryPoolState poolIds) =
-    Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR (Consensus.GetPoolState (getPoolIds <$> poolIds))))
-  where
-    getPoolIds :: Set PoolId -> Set (Shelley.KeyHash Shelley.StakePool Consensus.StandardCrypto)
-    getPoolIds = Set.map (\(StakePoolKeyHash kh) -> kh)
-
 consensusQueryInEraInMode
   :: forall era mode erablock modeblock result result' xs.
      ConsensusBlockForEra era   ~ erablock
@@ -815,11 +805,6 @@ fromConsensusQueryResultShelleyBased _ QueryProtocolState q' r' =
 fromConsensusQueryResultShelleyBased _ QueryCurrentEpochState q' r' =
   case q' of
     Consensus.GetCBOR Consensus.DebugEpochState -> SerialisedCurrentEpochState r'
-    _                                           -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResultShelleyBased _ QueryPoolState{} q' r' =
-  case q' of
-    Consensus.GetCBOR Consensus.GetPoolState {} -> SerialisedPoolState r'
     _                                           -> fromConsensusQueryResultMismatch
 
 -- | This should /only/ happen if we messed up the mapping in 'toConsensusQuery'

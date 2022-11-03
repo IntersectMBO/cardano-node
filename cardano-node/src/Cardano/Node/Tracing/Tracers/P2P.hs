@@ -591,13 +591,13 @@ peerSelectionTargetsToObject
 -- DebugPeerSelection Tracer
 --------------------------------------------------------------------------------
 
-namesForDebugPeerSelection :: DebugPeerSelection SockAddr -> [Text]
+namesForDebugPeerSelection :: DebugPeerSelection SockAddr peerConn -> [Text]
 namesForDebugPeerSelection _ = ["GovernorState"]
 
-severityDebugPeerSelection :: DebugPeerSelection SockAddr -> SeverityS
+severityDebugPeerSelection :: DebugPeerSelection SockAddr peerConn -> SeverityS
 severityDebugPeerSelection _ = Debug
 
-instance LogFormatting (DebugPeerSelection SockAddr) where
+instance Show peerConn => LogFormatting (DebugPeerSelection SockAddr peerConn) where
   forMachine DNormal (TraceGovernorState blockedAt wakeupAfter
                    PeerSelectionState { targets, knownPeers, establishedPeers, activePeers }) =
     mconcat [ "kind" .= String "DebugPeerSelection"
@@ -618,7 +618,7 @@ instance LogFormatting (DebugPeerSelection SockAddr) where
              ]
   forHuman = pack . show
 
-docDebugPeerSelection :: Documented (DebugPeerSelection SockAddr)
+docDebugPeerSelection :: Documented (DebugPeerSelection SockAddr conn)
 docDebugPeerSelection = Documented
   [  DocMsg
       ["GovernorState"]
@@ -753,6 +753,7 @@ namesForConnectionManager TrConnectionManagerCounters {} = ["ConnectionManagerCo
 namesForConnectionManager TrState {} = ["State"]
 namesForConnectionManager ConnectionManager.TrUnexpectedlyFalseAssertion {} =
                             ["UnexpectedlyFalseAssertion"]
+namesForConnectionManager TrUnknownConnection {} = ["ERROR"];
 
 severityConnectionManager ::
   ConnectionManagerTrace addr
@@ -787,6 +788,7 @@ severityConnectionManager TrConnectionManagerCounters {}          = Info
 severityConnectionManager TrState {}                              = Info
 severityConnectionManager ConnectionManager.TrUnexpectedlyFalseAssertion {} =
                             Error
+severityConnectionManager _                                       = Error
 
 instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
           ToJSON addr, ToJSON versionNumber, ToJSON agreedOptions)
@@ -923,6 +925,8 @@ instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
           [ "kind" .= String "UnexpectedlyFalseAssertion"
           , "info" .= String (pack . show $ info)
           ]
+    forMachine _ _ = mconcat []
+    
     forHuman = pack . show
     asMetrics (TrConnectionManagerCounters ConnectionManagerCounters {..}) =
           [ IntM

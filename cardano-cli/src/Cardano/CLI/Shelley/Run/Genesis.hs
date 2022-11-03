@@ -41,7 +41,6 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Coerce (coerce)
 import qualified Data.List as List
 import qualified Data.List.Split as List
-import qualified Data.ListMap as ListMap
 import qualified Data.Map.Strict as Map
 
 import qualified Data.Sequence.Strict as Seq
@@ -114,8 +113,6 @@ import           Cardano.Slotting.Slot (EpochSize (EpochSize))
 import           Data.Fixed (Fixed (MkFixed))
 import qualified Data.Yaml as Yaml
 import           Text.JSON.Canonical (parseCanonicalJSON, renderCanonicalJSON)
-
-import           Data.ListMap (ListMap (..))
 
 import qualified Cardano.CLI.IO.Lazy as Lazy
 
@@ -1031,7 +1028,7 @@ updateTemplate (SystemStart start)
           { sgSystemStart = start
           , sgMaxLovelaceSupply = fromIntegral $ nonDelegCoin + delegCoin
           , sgGenDelegs = shelleyDelKeys
-          , sgInitialFunds = ListMap.fromList
+          , sgInitialFunds = Map.fromList
                               [ (toShelleyAddr addr, toShelleyLovelace v)
                               | (addr, v) <-
                                 distribute (nonDelegCoin - subtractForTreasury) utxoAddrsNonDeleg ++
@@ -1039,10 +1036,10 @@ updateTemplate (SystemStart start)
                                 mkStuffedUtxo stuffedUtxoAddrs ]
           , sgStaking =
             ShelleyGenesisStaking
-              { sgsPools = ListMap.fromList
+              { sgsPools = Map.fromList
                             [ (Ledger._poolId poolParams, poolParams)
                             | poolParams <- Map.elems poolSpecs ]
-              , sgsStake = ListMap.fromMap $ Ledger._poolId <$> poolSpecs
+              , sgsStake = Ledger._poolId <$> poolSpecs
               }
           , sgProtocolParams = pparamsFromTemplate
           }
@@ -1113,7 +1110,7 @@ updateCreateStakedOutputTemplate
           { sgSystemStart = start
           , sgMaxLovelaceSupply = fromIntegral $ nonDelegCoin + delegCoin
           , sgGenDelegs = shelleyDelKeys
-          , sgInitialFunds = ListMap.fromList
+          , sgInitialFunds = Map.fromList
                               [ (toShelleyAddr addr, toShelleyLovelace v)
                               | (addr, v) <-
                                 distribute (nonDelegCoin - subtractForTreasury) nUtxoAddrsNonDeleg  utxoAddrsNonDeleg
@@ -1124,8 +1121,8 @@ updateCreateStakedOutputTemplate
                                 ]
           , sgStaking =
             ShelleyGenesisStaking
-              { sgsPools = ListMap pools
-              , sgsStake = ListMap stake
+              { sgsPools = Map.fromList pools
+              , sgsStake = Map.fromList stake
               }
           , sgProtocolParams = pparamsFromTemplate
           }

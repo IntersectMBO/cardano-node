@@ -11,7 +11,6 @@ import           Cardano.Prelude
 
 import           Cardano.Api.Shelley (ShelleyGenesis (..))
 
-import           Data.ListMap (ListMap(ListMap))
 import qualified Data.Map.Strict as Map
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 
@@ -54,7 +53,7 @@ exampleShelleyGenesis =
                       [( genesisVerKeyHash
                        , GenDelegPair delegVerKeyHash delegVrfKeyHash)
                       ]
-    , sgInitialFunds = ListMap [(initialFundedAddress,initialFunds)]
+    , sgInitialFunds = Map.fromList [(initialFundedAddress,initialFunds)]
     , sgStaking = emptyGenesisStaking
     }
  where

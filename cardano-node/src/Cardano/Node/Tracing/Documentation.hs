@@ -687,7 +687,7 @@ docTracers configFileName outputFileName _ _ _ = do
       allPublic
     configureTracers trConfig docDebugPeerSelection [debugPeerSelectionTr]
     debugPeerSelectionTrDoc <- documentTracer trConfig debugPeerSelectionTr
-      (docDebugPeerSelection :: Documented (DebugPeerSelection Socket.SockAddr))
+      (docDebugPeerSelection :: Documented (DebugPeerSelection Socket.SockAddr peer))
 
     debugPeerSelectionResponderTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
@@ -697,7 +697,7 @@ docTracers configFileName outputFileName _ _ _ = do
       allPublic
     configureTracers trConfig docDebugPeerSelection [debugPeerSelectionResponderTr]
     debugPeerSelectionResponderTrDoc <- documentTracer trConfig debugPeerSelectionResponderTr
-      (docDebugPeerSelection :: Documented (DebugPeerSelection Socket.SockAddr))
+      (docDebugPeerSelection :: Documented (DebugPeerSelection Socket.SockAddr peer))
 
     peerSelectionCountersTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
