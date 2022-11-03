@@ -92,6 +92,8 @@ import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Keys as Shelley
 import qualified Cardano.Ledger.Keys.Bootstrap as Shelley
 import qualified Cardano.Ledger.SafeHash as Ledger
+import qualified Cardano.Ledger.Keys.Bootstrap as Shelley
+import qualified Cardano.Ledger.Shelley.Tx as Shelley
 
 import qualified Cardano.Ledger.Shelley.API as Ledger (ShelleyTx (..))
 import qualified Cardano.Ledger.Shelley.Tx as Shelley
@@ -114,6 +116,10 @@ import           Cardano.Api.NetworkId
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.TxBody
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx (AlonzoTx))
+import Cardano.Ledger.Alonzo.TxWitness (TxWitness(TxWitness))
+import qualified Cardano.Ledger.Shelley.API as Ledger (ShelleyTx (..))
+import Cardano.Ledger.Alonzo (AlonzoScript)
 
 -- ----------------------------------------------------------------------------
 -- Signed transactions
@@ -804,7 +810,8 @@ data ShelleyWitnessSigningKey =
 
 
 makeShelleyKeyWitness :: forall era
-                      .  IsShelleyBasedEra era
+                      .  ( IsShelleyBasedEra era
+                         )
                       => TxBody era
                       -> ShelleyWitnessSigningKey
                       -> KeyWitness era
@@ -932,7 +939,8 @@ signByronTransaction nw txbody sks =
     witnesses = map (makeByronKeyWitness nw txbody) sks
 
 -- signing keys is a set
-signShelleyTransaction :: IsShelleyBasedEra era
+signShelleyTransaction :: ( IsShelleyBasedEra era
+                          )
                        => TxBody era
                        -> [ShelleyWitnessSigningKey]
                        -> Tx era

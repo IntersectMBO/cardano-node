@@ -9,6 +9,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 -- | Fee calculation
 --
@@ -74,9 +75,7 @@ import qualified Cardano.Ledger.Shelley.API.Wallet as Ledger (evaluateTransactio
                    evaluateTransactionFee)
 import qualified Cardano.Ledger.Shelley.API.Wallet as Shelley
 import           Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
-import           Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
 
-import           Cardano.Ledger.Mary.Value (MaryValue)
 
 import qualified Cardano.Ledger.Alonzo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
@@ -106,6 +105,10 @@ import           Cardano.Api.Script
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
 import           Cardano.Api.Value
+import Lens.Micro ((^.))
+import Cardano.Ledger.Core (EraTx(sizeTxF))
+import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
+import Cardano.Ledger.Mary.Value (MaryValue)
 
 {- HLINT ignore "Redundant return" -}
 
@@ -653,15 +656,15 @@ evaluateTransactionBalance _ _ _ (ByronTxBody _) =
 
 evaluateTransactionBalance pparams poolids utxo
                            (ShelleyTxBody era txbody _ _ _ _) =
-    withLedgerConstraints
-      era
+    withLedgerConstraints 
+      era 
       (getShelleyEraTxBodyConstraint era evalAdaOnly)
       (getShelleyEraTxBodyConstraint era evalMultiAsset)
   where
-    getShelleyEraTxBodyConstraint
-      :: forall era' a.
+    getShelleyEraTxBodyConstraint 
+      :: forall era' a. 
          ShelleyBasedEra era'
-      -> (ShelleyEraTxBody (ShelleyLedgerEra era') => a)
+      -> (ShelleyEraTxBody (ShelleyLedgerEra era') => a) 
       -> a
     getShelleyEraTxBodyConstraint ShelleyBasedEraShelley x = x
     getShelleyEraTxBodyConstraint ShelleyBasedEraMary x = x

@@ -12,7 +12,7 @@ import           Data.Maybe (fromMaybe)
 import qualified Data.Time as Time
 
 import           Cardano.Ledger.BaseTypes as Ledger
-import           Cardano.Ledger.Shelley.PParams as Ledger (ShelleyPParamsHKD (..), emptyPParams)
+import           Cardano.Ledger.Shelley.PParams as Ledger (emptyPParams, ShelleyPParamsHKD (..))
 import           Cardano.Slotting.Slot (EpochSize (..))
 
 import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesis (..), emptyGenesisStaking)

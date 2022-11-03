@@ -99,7 +99,6 @@ import           Cardano.Protocol.TPraos.Rules.Prtcl
 import           Cardano.Protocol.TPraos.Rules.Tickn (TicknPredicateFailure)
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 
-
 {- HLINT ignore "Use :" -}
 
 --

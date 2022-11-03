@@ -147,19 +147,57 @@ source-repository-package
 
 -- And has the adjustments for the ledger refactor
 source-repository-package
-   type: git
-   location: https://github.com/input-output-hk/ouroboros-network
-   tag: 72863b0fc78abdc2b8e29f0dda96c06da3dd11d0
-   --sha256: 0qwvx04l9q3h7acb0a3b8iarqcn5bkqhwaplbga5pvryqp3lhn00
-   subdir:
-     monoidal-synchronisation
-     network-mux
-     ouroboros-consensus
-     ouroboros-consensus-byron
-     ouroboros-consensus-cardano
-     ouroboros-consensus-protocol
-     ouroboros-consensus-shelley
-     ouroboros-network
-     ouroboros-network-framework
-     ouroboros-network-testing
-     ouroboros-consensus-cardano-tools
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-network
+  tag: 9128bfcc044fc882decb0cf112545abf9bc2d615
+  --sha256: 0hdh7xdrvxw943r6qr0xr4kwszindh5mnsn1lww6qdnxnmn7wcsc
+  subdir:
+    monoidal-synchronisation
+    network-mux
+    ouroboros-consensus
+    ouroboros-consensus-byron
+    ouroboros-consensus-cardano
+    ouroboros-consensus-protocol
+    ouroboros-consensus-shelley
+    ouroboros-network
+    ouroboros-network-framework
+    ouroboros-network-testing
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-ledger
+  tag: 49613f11e034485c8377945c86c0465726c0860c
+  --sha256: 0i9x66yqkrvx2w79dy6lzlya82yxc8567rgjj828vc2d46d6nvx6
+  subdir:
+    eras/alonzo/impl
+    eras/alonzo/test-suite
+    eras/babbage/impl
+    eras/babbage/test-suite
+    eras/byron/chain/executable-spec
+    eras/byron/crypto
+    eras/byron/crypto/test
+    eras/byron/ledger/executable-spec
+    eras/byron/ledger/impl
+    eras/byron/ledger/impl/test
+    eras/shelley/impl
+    eras/shelley/test-suite
+    eras/shelley-ma/impl
+    eras/shelley-ma/test-suite
+    libs/cardano-ledger-core
+    libs/cardano-ledger-pretty
+    libs/cardano-protocol-tpraos
+    libs/cardano-data
+    libs/vector-map
+    libs/set-algebra
+    libs/small-steps
+    libs/small-steps-test
+    libs/non-integral
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-prelude
+  tag: 533aec85c1ca05c7d171da44b89341fb736ecfe5
+  --sha256: 0z2y3wzppc12bpn9bl48776ms3nszw8j58xfsdxf97nzjgrmd62g
+  subdir:
+    cardano-prelude
+    cardano-prelude-test
