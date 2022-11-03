@@ -40,8 +40,8 @@ import qualified Cardano.TxGenerator.FundQueue as FundQueue
 import           Cardano.TxGenerator.Setup.Plutus as Plutus
 import           Cardano.TxGenerator.Tx
 import           Cardano.TxGenerator.Types
-import           Cardano.TxGenerator.UTxO
 import qualified Cardano.TxGenerator.Utils as Utils
+import           Cardano.TxGenerator.UTxO
 
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark, walletBenchmark)
