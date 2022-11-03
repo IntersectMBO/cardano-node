@@ -130,6 +130,7 @@ import           Cardano.Api.Value
 import           Data.Word (Word64)
 
 import qualified Data.Aeson.KeyMap as KeyMap
+import Cardano.Ledger.SafeHash (HashAnnotated)
 
 -- ----------------------------------------------------------------------------
 -- Queries
@@ -326,6 +327,7 @@ instance
     , FromCBOR (Ledger.State (Core.EraRule "PPUP" (ShelleyLedgerEra era)))
     , Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Credential 'Shelley.Staking (Ledger.Crypto (ShelleyLedgerEra era)))
     , FromSharedCBOR (Core.TxOut (ShelleyLedgerEra era))
+    , HashAnnotated (Core.TxBody (ShelleyLedgerEra era)) Core.EraIndependentTxBody (Ledger.Crypto (ShelleyLedgerEra era))
     ) => FromCBOR (DebugLedgerState era) where
   fromCBOR = DebugLedgerState <$> (fromCBOR :: Decoder s (Shelley.NewEpochState (ShelleyLedgerEra era)))
 
@@ -334,7 +336,7 @@ instance ( IsShelleyBasedEra era
          , ShelleyLedgerEra era ~ ledgerera
          , Consensus.ShelleyBasedEra ledgerera
          , ToJSON (Core.PParams ledgerera)
-         , ToJSON (Core.PParamsDelta ledgerera)
+         , ToJSON (Core.PParamsUpdate ledgerera)
          , ToJSON (Core.TxOut ledgerera)
          , Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Credential 'Shelley.Staking (Ledger.Crypto (ShelleyLedgerEra era)))
          ) => ToJSON (DebugLedgerState era) where
@@ -345,7 +347,7 @@ toDebugLedgerStatePair ::
   ( ShelleyLedgerEra era ~ ledgerera
   , Consensus.ShelleyBasedEra ledgerera
   , ToJSON (Core.PParams ledgerera)
-  , ToJSON (Core.PParamsDelta ledgerera)
+  , ToJSON (Core.PParamsUpdate ledgerera)
   , ToJSON (Core.TxOut ledgerera)
   , Aeson.KeyValue a
   ) => DebugLedgerState era -> [a]
@@ -380,7 +382,9 @@ newtype SerialisedCurrentEpochState era
 newtype CurrentEpochState era = CurrentEpochState (Shelley.EpochState (ShelleyLedgerEra era))
 
 decodeCurrentEpochState
-  :: forall era. Ledger.Era (ShelleyLedgerEra era)
+  :: forall era. ( Ledger.Era (ShelleyLedgerEra era)
+                 , HashAnnotated (Core.TxBody (ShelleyLedgerEra era)) Core.EraIndependentTxBody (Ledger.Crypto (ShelleyLedgerEra era))
+                 )
   => FromSharedCBOR (Core.TxOut (ShelleyLedgerEra era))
   => Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Credential 'Shelley.Staking (Ledger.Crypto (ShelleyLedgerEra era)))
   => FromCBOR (Core.PParams (ShelleyLedgerEra era))

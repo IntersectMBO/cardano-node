@@ -134,11 +134,12 @@ library
                       , cardano-git-rev
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
+                      , cardano-ledger-core
+                      , cardano-ledger-byron
+                      , cardano-ledger-shelley
+                      , cardano-ledger-shelley-ma
                       , cardano-ledger-alonzo
                       , cardano-ledger-babbage
-                      , cardano-ledger-byron
-                      , cardano-ledger-core
-                      , cardano-ledger-shelley-ma
                       , cardano-prelude
                       , cardano-protocol-tpraos
                       , cardano-slotting
@@ -174,7 +175,6 @@ library
                       , safe-exceptions
                       , scientific
                       , strict-stm
-                      , cardano-ledger-shelley
                       , stm
                       , text
                       , time
