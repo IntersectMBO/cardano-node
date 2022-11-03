@@ -408,7 +408,7 @@ deserialiseScriptInAnyLang bs =
           Right script -> Right (toMinimumSimpleScriptVersion script)
 
       Right te ->
-        case deserialiseFromTextEnvelopeAnyOf textEnvTypes te of
+        case deserialiseFromTextEnvelopeAnyOfCBOR textEnvTypes te of
           Left  err    -> Left (ScriptDecodeTextEnvelopeError err)
           Right script -> Right script
 

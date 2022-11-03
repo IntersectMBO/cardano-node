@@ -16,8 +16,8 @@ import           Data.ByteString (ByteString)
 import           Data.Text (Text)
 
 import qualified Data.List as List
-import qualified Data.Set as Set
 import           Data.Set (Set)
+import qualified Data.Set as Set
 
 import           Control.Monad (guard)
 
@@ -29,7 +29,7 @@ import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.Utils
 
 
-class (HasTypeProxy a, SerialiseAsRawBytes a) => SerialiseAsBech32 a where
+class HasTypeProxy a => SerialiseAsBech32 a where
 
     -- | The human readable prefix to use when encoding this value to Bech32.
     --
@@ -40,7 +40,7 @@ class (HasTypeProxy a, SerialiseAsRawBytes a) => SerialiseAsBech32 a where
     bech32PrefixesPermitted :: AsType a -> [Text]
 
 
-serialiseToBech32 :: SerialiseAsBech32 a => a -> Text
+serialiseToBech32 :: (SerialiseAsBech32 a, SerialiseAsRawBytes a) => a -> Text
 serialiseToBech32 a =
     Bech32.encodeLenient
       humanReadablePart
@@ -54,8 +54,10 @@ serialiseToBech32 a =
                          ++ ", " ++ show err
 
 
-deserialiseFromBech32 :: SerialiseAsBech32 a
-                      => AsType a -> Text -> Either Bech32DecodeError a
+deserialiseFromBech32
+  :: SerialiseAsBech32 a
+  => SerialiseAsRawBytes a
+  => AsType a -> Text -> Either Bech32DecodeError a
 deserialiseFromBech32 asType bech32Str = do
     (prefix, dataPart) <- Bech32.decodeLenient bech32Str
                             ?!. Bech32DecodingError
@@ -80,7 +82,7 @@ deserialiseFromBech32 asType bech32Str = do
 
 deserialiseAnyOfFromBech32
   :: forall b.
-     [FromSomeType SerialiseAsBech32 b]
+     [FromSomeType SerialiseAsBech32 SerialiseAsRawBytes b]
   -> Text
   -> Either Bech32DecodeError b
 deserialiseAnyOfFromBech32 types bech32Str = do
@@ -107,7 +109,7 @@ deserialiseAnyOfFromBech32 types bech32Str = do
   where
     findForPrefix
       :: Text
-      -> Maybe (FromSomeType SerialiseAsBech32 b)
+      -> Maybe (FromSomeType SerialiseAsBech32 SerialiseAsRawBytes b)
     findForPrefix prefix =
       List.find
         (\(FromSomeType t _) -> prefix `elem` bech32PrefixesPermitted t)

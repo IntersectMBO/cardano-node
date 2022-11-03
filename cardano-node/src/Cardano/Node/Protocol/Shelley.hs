@@ -265,7 +265,7 @@ parseEnvelope ::
   -> ExceptT PraosLeaderCredentialsError IO a
 parseEnvelope as (te, loc) =
   firstExceptT (FileError . Api.FileError loc) . hoistEither $
-    deserialiseFromTextEnvelope as te
+    deserialiseFromTextEnvelopeCBOR as te
 
 
 ------------------------------------------------------------------------------

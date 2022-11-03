@@ -94,7 +94,7 @@ roundtrip_VerificationKey_envelope roletoken =
   H.property $ do
     vkey <- H.forAll (genVerificationKey roletoken)
     H.tripping vkey (serialiseToTextEnvelope Nothing)
-                    (deserialiseFromTextEnvelope (AsVerificationKey roletoken))
+                    (deserialiseFromTextEnvelopeCBOR (AsVerificationKey roletoken))
 
 roundtrip_SigningKey_envelope :: (Key keyrole,
                                   Eq (SigningKey keyrole),
@@ -104,7 +104,7 @@ roundtrip_SigningKey_envelope roletoken =
   H.property $ do
     vkey <- H.forAll (genSigningKey roletoken)
     H.tripping vkey (serialiseToTextEnvelope Nothing)
-                    (deserialiseFromTextEnvelope (AsSigningKey roletoken))
+                    (deserialiseFromTextEnvelopeCBOR (AsSigningKey roletoken))
 
 -- -----------------------------------------------------------------------------
 

@@ -504,7 +504,7 @@ instance ToJSON ScriptInAnyLang where
   toJSON (ScriptInAnyLang l s) =
     object [ "scriptLanguage" .= show l
            , "script" .= obtainScriptLangConstraint l
-                           (serialiseToTextEnvelope Nothing s)
+                           (serialiseToTextEnvelope serialiseToCBOR Nothing s)
            ]
       where
        obtainScriptLangConstraint
@@ -1487,9 +1487,9 @@ scriptInEraToRefScript sIne@(ScriptInEra _ s) =
 -- Helpers
 
 textEnvelopeToScript :: TextEnvelope -> Either TextEnvelopeError ScriptInAnyLang
-textEnvelopeToScript = deserialiseFromTextEnvelopeAnyOf textEnvTypes
+textEnvelopeToScript = deserialiseFromTextEnvelopeAnyOfCBOR textEnvTypes
  where
-  textEnvTypes :: [FromSomeType HasTextEnvelope ScriptInAnyLang]
+  textEnvTypes :: [FromSomeType HasTextEnvelope SerialiseAsCBOR ScriptInAnyLang]
   textEnvTypes =
     [ FromSomeType (AsScript AsSimpleScriptV1)
                    (ScriptInAnyLang (SimpleScriptLanguage SimpleScriptV1))
