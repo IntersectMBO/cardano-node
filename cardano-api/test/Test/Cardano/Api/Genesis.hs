@@ -27,7 +27,7 @@ import           Cardano.Ledger.BaseTypes (Network (..))
 import           Cardano.Ledger.Coin (Coin (..))
 import           Cardano.Ledger.Keys (GenDelegPair (..), Hash, KeyHash (..), KeyRole (..),
                    VerKeyVRF)
-import           Cardano.Ledger.Shelley.PParams (PParams' (..), emptyPParams)
+import           Cardano.Ledger.Shelley.PParams (emptyPParams, ShelleyPParamsHKD (..))
 
 import           Test.Cardano.Ledger.Shelley.Utils (unsafeBoundRational)
 

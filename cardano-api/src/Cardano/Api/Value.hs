@@ -77,8 +77,6 @@ import qualified Data.Text.Encoding as Text
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Ledger.Coin as Shelley
 import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.Mary.Value as Mary
-import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as Shelley
 
 import           Cardano.Api.Error (displayError)
 import           Cardano.Api.HasTypeProxy
@@ -87,6 +85,9 @@ import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.Utils (failEitherWith)
+import Cardano.Ledger.Mary.Value (MaryValue (..))
+import qualified Cardano.Ledger.Mary.Value as Mary
+import qualified Cardano.Ledger.ShelleyMA.Rules as Shelley
 
 -- ----------------------------------------------------------------------------
 -- Lovelace
@@ -263,9 +264,9 @@ valueToLovelace v =
       [(AdaAssetId, q)] -> Just (quantityToLovelace q)
       _                 -> Nothing
 
-toMaryValue :: Value -> Mary.Value StandardCrypto
+toMaryValue :: Value -> MaryValue StandardCrypto
 toMaryValue v =
-    Mary.Value lovelace other
+    MaryValue lovelace other
   where
     Quantity lovelace = selectAsset v AdaAssetId
       --TODO: write QC tests to show it's ok to use Map.fromAscListWith here
@@ -280,8 +281,8 @@ toMaryValue v =
     toMaryAssetName (AssetName n) = Mary.AssetName $ Short.toShort n
 
 
-fromMaryValue :: Mary.Value StandardCrypto -> Value
-fromMaryValue (Mary.Value lovelace other) =
+fromMaryValue :: MaryValue StandardCrypto -> Value
+fromMaryValue (MaryValue lovelace other) =
     Value $
       --TODO: write QC tests to show it's ok to use Map.fromAscList here
       Map.fromList $
