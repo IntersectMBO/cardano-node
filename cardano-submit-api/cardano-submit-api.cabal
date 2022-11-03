@@ -46,7 +46,7 @@ common yaml                         { build-depends: yaml                       
 
 common project-config
   default-language:     Haskell2010
-  
+
   ghc-options:          -Wall
                         -Wcompat
                         -Werror
@@ -58,11 +58,10 @@ common project-config
                         -Wno-safe
                         -Wno-unsafe
                         -Wunused-packages
-
-                        -XNoImplicitPrelude
-
                         -fwarn-incomplete-patterns
                         -fwarn-redundant-constraints
+
+  default-extensions:   NoImplicitPrelude
 
 library
   import:               base, project-config

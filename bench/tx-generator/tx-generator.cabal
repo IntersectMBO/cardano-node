@@ -51,7 +51,6 @@ library
                        Cardano.Benchmarking.Types
                        Cardano.Benchmarking.Version
                        Cardano.Benchmarking.Wallet
-                       Cardano.Benchmarking.PlutusExample
 
                        Cardano.TxGenerator.Fund
                        Cardano.TxGenerator.FundQueue
@@ -104,6 +103,7 @@ library
                      , generic-monoid
                      , ghc-prim
                      , io-classes ^>= 0.3
+                     , mtl
                      , network
                      , network-mux
                      , optparse-applicative-fork
@@ -176,7 +176,7 @@ test-suite tx-generator-apitest
                      , transformers
                      , transformers-except
                      , tx-generator
-                     
+
 test-suite tx-generator-test
   hs-source-dirs:       test
   main-is:              Main.hs
