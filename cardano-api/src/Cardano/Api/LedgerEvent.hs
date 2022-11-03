@@ -29,12 +29,14 @@ import           Cardano.Ledger.Era (Crypto)
 import qualified Cardano.Ledger.Keys as Ledger
 import           Cardano.Ledger.Shelley.API (InstantaneousRewards (InstantaneousRewards))
 import           Cardano.Ledger.Shelley.Rewards
+
 import           Cardano.Ledger.Shelley.Rules.Tick (ShelleyTickEvent (NewEpochEvent))
 import           Cardano.Ledger.Shelley.Rules.NewEpoch (ShelleyNewEpochEvent (..))
 import           Cardano.Ledger.Shelley.Rules.Epoch (ShelleyEpochEvent (..))
 import           Cardano.Ledger.Shelley.Rules.PoolReap (ShelleyPoolreapEvent (..))
 import           Cardano.Ledger.Shelley.Rules.Mir (ShelleyMirEvent (..))
 import           Cardano.Ledger.Shelley.Rules.Rupd (RupdEvent (..))
+
 import           Control.State.Transition (Event)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -48,6 +50,12 @@ import           Ouroboros.Consensus.Ledger.Basics (AuxLedgerEvent)
 import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock,
                    ShelleyLedgerEvent (ShelleyLedgerEventTICK))
 import           Ouroboros.Consensus.TypeFamilyWrappers
+import Cardano.Ledger.Shelley.Rules.Tick (ShelleyTickEvent (NewEpochEvent))
+import Cardano.Ledger.Shelley.Rules.NewEpoch (ShelleyNewEpochEvent (..))
+import Cardano.Ledger.Shelley.Rules.Epoch (ShelleyEpochEvent (..))
+import Cardano.Ledger.Shelley.Rules.PoolReap (ShelleyPoolreapEvent (..))
+import Cardano.Ledger.Shelley.Rules.Mir (ShelleyMirEvent (..))
+import Cardano.Ledger.Shelley.Rules.Rupd (RupdEvent (..))
 
 data LedgerEvent
   = -- | The given pool is being registered for the first time on chain.

@@ -102,6 +102,13 @@ import           Cardano.Protocol.TPraos.API (ChainTransitionError (ChainTransit
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod))
 import           Cardano.Protocol.TPraos.Rules.Prtcl
 
+import qualified Data.Aeson.Key as Aeson
+import Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure(..), AlonzoUtxowPredFailure (..), AlonzoUtxoPredFailure, AlonzoUtxosPredFailure)
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
+import qualified Cardano.Ledger.Babbage.Rules as Babbage
+import Cardano.Ledger.ShelleyMA.Rules (ShelleyMAUtxoPredFailure)
+import qualified Cardano.Ledger.ShelleyMA.Rules as MA
 
 {- HLINT ignore "Use :" -}
 

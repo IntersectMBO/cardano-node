@@ -218,6 +218,7 @@ import           Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..),
                    BabbageTxBody (BabbageTxBody), BabbageTxOut (BabbageTxOut))
 import qualified Cardano.Ledger.TxIn as Ledger
 import           Cardano.Ledger.Val (isZero)
+import qualified Cardano.Ledger.Shelley.PParams as Ledger
 
 import           Cardano.Ledger.Shelley.API (ShelleyTxOut (ShelleyTxOut))
 import qualified Cardano.Ledger.Shelley.API as Ledger hiding (TxBody, TxOut)
@@ -272,6 +273,19 @@ import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
 import           Cardano.Api.ValueParser
+import qualified Cardano.Ledger.Block as Ledger
+import           Cardano.Ledger.ShelleyMA.AuxiliaryData (MAAuxiliaryData(..))
+import           Cardano.Ledger.ShelleyMA.TxBody (MATxBody(..))
+import qualified Cardano.Ledger.Alonzo.Data as Alonzo
+import           Lens.Micro hiding (ix)
+import qualified Cardano.Ledger.Era as CC
+import           Cardano.Ledger.Core (EraAuxiliaryData)
+import           Cardano.Ledger.Mary.Value (MaryValue)
+import           Cardano.Ledger.Shelley.API (ShelleyTxOut(ShelleyTxOut))
+import           Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut(AlonzoTxOut), AlonzoTxBody (AlonzoTxBody))
+import           Cardano.Ledger.Babbage.TxBody (BabbageTxOut(BabbageTxOut), BabbageEraTxBody (..), BabbageTxBody (BabbageTxBody))
+import qualified Cardano.Ledger.Shelley.API as Ledger hiding (TxOut, TxBody)
+import           Cardano.Ledger.Alonzo.Data (AlonzoAuxiliaryData(AlonzoAuxiliaryData))
 
 -- | Indicates whether a script is expected to fail or pass validation.
 data ScriptValidity
@@ -2436,7 +2450,8 @@ fromLedgerTxInsCollateral era body =
       ShelleyBasedEraBabbage -> toList $ Babbage.collateral body
 
 fromLedgerTxInsReference
-  :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxInsReference ViewTx era
+  :: 
+    ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxInsReference ViewTx era
 fromLedgerTxInsReference era txBody =
   case refInsScriptsAndInlineDatsSupportedInEra $ shelleyBasedToCardanoEra era of
     Nothing -> TxInsReferenceNone
@@ -2580,7 +2595,9 @@ fromLedgerTxTotalCollateral era txbody =
   obtainTotalCollateralHasFieldConstraint TxTotalAndReturnCollateralInBabbageEra f = f
 
 fromLedgerTxReturnCollateral
-  :: ShelleyBasedEra era
+  :: ( 
+     )
+  => ShelleyBasedEra era
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> TxReturnCollateral CtxTx era
 fromLedgerTxReturnCollateral era txbody =
@@ -2594,7 +2611,8 @@ fromLedgerTxReturnCollateral era txbody =
  where
   obtainCollateralReturnHasFieldConstraint
     :: TxTotalAndReturnCollateralSupportedInEra era
-    -> (( Ledger.TxOut (ShelleyLedgerEra era) ~ BabbageTxOut (ShelleyLedgerEra era)
+    -> (
+      ( Ledger.TxOut (ShelleyLedgerEra era) ~ BabbageTxOut (ShelleyLedgerEra era)
       , CC.Crypto (ShelleyLedgerEra era) ~ StandardCrypto
       , BabbageEraTxBody (ShelleyLedgerEra era)
       ) => a)

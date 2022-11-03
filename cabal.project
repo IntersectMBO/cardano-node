@@ -188,22 +188,22 @@ source-repository-package
 
 -- And has the adjustments for the ledger refactor
 source-repository-package
-   type: git
-   location: https://github.com/input-output-hk/ouroboros-network
-   tag: 679c7da2079a5e9972a1c502b6a4d6af3eb76945
-   --sha256: 138mqd5cv0b13giwjvlz3pr6l1cwgpn38n0q3m11mrjwwmmxl0mw
-   subdir:
-     monoidal-synchronisation
-     network-mux
-     ouroboros-consensus
-     ouroboros-consensus-byron
-     ouroboros-consensus-cardano
-     ouroboros-consensus-protocol
-     ouroboros-consensus-shelley
-     ouroboros-network
-     ouroboros-network-framework
-     ouroboros-network-testing
-     ouroboros-consensus-cardano-tools
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-network
+  tag: 9128bfcc044fc882decb0cf112545abf9bc2d615
+  --sha256: 0hdh7xdrvxw943r6qr0xr4kwszindh5mnsn1lww6qdnxnmn7wcsc
+  subdir:
+    monoidal-synchronisation
+    network-mux
+    ouroboros-consensus
+    ouroboros-consensus-byron
+    ouroboros-consensus-cardano
+    ouroboros-consensus-protocol
+    ouroboros-consensus-shelley
+    ouroboros-network
+    ouroboros-network-framework
+    ouroboros-network-testing
+    ouroboros-consensus-cardano-tools
 
 -- Waiting for proper Windows ghc-9.2 release.
 source-repository-package

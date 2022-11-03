@@ -121,6 +121,10 @@ import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
+import           Cardano.Ledger.Alonzo.PParams (AlonzoPParamsUpdate, AlonzoPParamsHKD (..), AlonzoPParams)
+import           Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD(..), BabbagePParamsUpdate, BabbagePParams)
+import qualified Cardano.Ledger.Shelley.API as Ledger hiding (PParams)
+import qualified Cardano.Ledger.Core as Ledger
 
 
 -- | The values of the set of /updatable/ protocol parameters. At any

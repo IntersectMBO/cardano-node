@@ -79,7 +79,6 @@ import qualified Cardano.Ledger.Shelley.API.Wallet as Ledger (evaluateTransactio
                    evaluateTransactionFee)
 import qualified Cardano.Ledger.Shelley.API.Wallet as Shelley
 import           Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
-import           Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
 
 import qualified Cardano.Ledger.Alonzo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
@@ -109,6 +108,10 @@ import           Cardano.Api.Script
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
 import           Cardano.Api.Value
+import Lens.Micro ((^.))
+import Cardano.Ledger.Core (EraTx(sizeTxF))
+import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
+import Cardano.Ledger.Mary.Value (MaryValue)
 
 {- HLINT ignore "Redundant return" -}
 
