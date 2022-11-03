@@ -81,6 +81,9 @@ import qualified Cardano.Ledger.Era as Ledger
 import           Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import           Cardano.Ledger.SafeHash (HashAnnotated)
 import           Cardano.Ledger.Shelley.LedgerState (PState (_fPParams, _pParams, _retiring))
+import           Cardano.Ledger.Shelley.EpochBoundary
+import           Cardano.Ledger.Shelley.LedgerState (EpochState (esSnapshots),
+                   NewEpochState (nesEs), PState (_fPParams, _pParams, _retiring))
 import qualified Cardano.Ledger.Shelley.LedgerState as SL
 import qualified Cardano.Ledger.Shelley.PParams as Shelley
 import           Cardano.Ledger.Shelley.Scripts ()
@@ -99,6 +102,7 @@ import qualified Ouroboros.Consensus.Shelley.Ledger.Query as Consensus
 
 import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
+import Cardano.Ledger.SafeHash (HashAnnotated)
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Use const" -}
