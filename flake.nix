@@ -73,6 +73,8 @@
       url = "github:input-output-hk/tullia";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    nix2container.url = "github:nlewo/nix2container";
   };
 
   outputs =
@@ -90,6 +92,7 @@
     , node-process
     , cardano-node-workbench
     , tullia
+    , nix2container
     , ...
     }@input:
     let
@@ -114,7 +117,7 @@
         iohkNix.overlays.cardano-lib
         iohkNix.overlays.utils
         (final: prev: {
-          inherit customConfig;
+          inherit customConfig nix2container;
           gitrev = final.customConfig.gitrev or self.rev or "0000000000000000000000000000000000000000";
           commonLib = lib
             // iohkNix.lib
