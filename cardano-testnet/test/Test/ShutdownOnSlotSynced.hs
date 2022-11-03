@@ -2,39 +2,34 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Spec.ShutdownOnSlotSynced
+module Test.ShutdownOnSlotSynced
   ( hprop_shutdownOnSlotSynced
   ) where
 
+import           Prelude
 import           Control.Monad
-import           Data.Bool ((&&))
-import           Data.Either (Either (Right), isRight)
-import           Data.Function
-import           Data.Int
-import           Data.List (find, isInfixOf, lines, reverse, words, (++))
+import           Data.Either (isRight)
+import           Data.List (find, isInfixOf)
 import           Data.Maybe
-import           Data.Ord
 import           GHC.IO.Exception (ExitCode (ExitSuccess))
-import           GHC.Num
 import           GHC.Stack (callStack)
-import           Hedgehog (Property, assert, (===))
-import           Prelude (fromIntegral, round)
 import           System.FilePath ((</>))
-import           Text.Read (readMaybe)
-import           Text.Show (Show (..))
+import qualified System.Directory as IO
+import           Text.Read (readMaybe) 
 
+import           Hedgehog (Property, assert, (===))
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
-import qualified System.Directory as IO
-import qualified Test.Base as H
-import           Test.Runtime (NodeRuntime (..))
+
 import           Testnet (TestnetOptions( CardanoOnlyTestnetOptions),  testnet)
 import           Testnet.Cardano (TestnetNodeOptions (TestnetNodeOptions),
                    CardanoTestnetOptions (..), TestnetRuntime (..), defaultTestnetNodeOptions,
                    defaultTestnetOptions)
 import qualified Testnet.Cardano as TC
 import qualified Testnet.Conf as H
+import qualified Util.Base as H
+import           Util.Runtime (NodeRuntime (..))
 
 hprop_shutdownOnSlotSynced :: Property
 hprop_shutdownOnSlotSynced = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
@@ -68,8 +63,8 @@ hprop_shutdownOnSlotSynced = H.integration . H.runFinallies . H.workspace "chair
     H.cat (nodeStdout node)
     H.cat (nodeStderr node)
   mExitCodeRunning === Right ExitSuccess
-  log <- H.readFile (nodeStdout node)
-  slotTip <- case find (isInfixOf "Closed db with immutable tip") (reverse (lines log)) of
+  logs <- H.readFile (nodeStdout node)
+  slotTip <- case find (isInfixOf "Closed db with immutable tip") (reverse (lines logs)) of
     Nothing -> H.failMessage callStack "Could not find current tip in node's log."
     Just line -> case listToMaybe (reverse (words line)) of
       Nothing -> H.failMessage callStack "Impossible"

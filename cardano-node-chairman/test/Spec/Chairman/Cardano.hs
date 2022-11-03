@@ -17,10 +17,10 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
-import qualified Test.Base as H
-import qualified Test.Runtime as H
 import qualified Testnet.Cardano as H
 import qualified Testnet.Conf as H
+import qualified Util.Base as H
+import qualified Util.Runtime as H
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Redundant <&>" -}

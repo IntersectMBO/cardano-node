@@ -4,7 +4,7 @@
 
 {- HLINT ignore "Redundant return" -}
 
-module Test.Assert
+module Util.Assert
   ( readJsonLines
   , assertChainExtended
   , getRelevantLeaderSlots
@@ -30,7 +30,6 @@ import           Hedgehog (MonadTest)
 import           Hedgehog.Extras.Internal.Test.Integration (IntegrationState)
 import           System.FilePath (FilePath)
 import           System.IO (IO)
-import           Test.Runtime (NodeLoggingFormat (..))
 import           Text.Show (Show (..))
 
 import qualified Data.Aeson as Aeson
@@ -42,7 +41,8 @@ import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.File as IO
 import qualified Hedgehog.Extras.Test.Base as H
-import qualified Test.Process as H
+import qualified Util.Process as H
+import           Util.Runtime (NodeLoggingFormat (..))
 
 newlineBytes :: Word8
 newlineBytes = 10

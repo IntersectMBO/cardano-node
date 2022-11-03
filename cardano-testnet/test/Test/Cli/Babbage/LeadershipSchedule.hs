@@ -12,7 +12,7 @@
 {- HLINT ignore "Use head" -}
 {- HLINT ignore "Use let" -}
 
-module Spec.Cli.Babbage.LeadershipSchedule
+module Test.Cli.Babbage.LeadershipSchedule
   ( hprop_leadershipSchedule
   ) where
 
@@ -38,15 +38,15 @@ import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
 import qualified System.Info as SYS
-import qualified Test.Assert as H
-import qualified Test.Base as H
-import qualified Test.Process as H
-import qualified Test.Runtime as TR
-import           Test.Runtime (LeadershipSlot (..))
 import           Testnet ( TestnetOptions (BabbageOnlyTestnetOptions), testnet)
 import           Testnet.Babbage (BabbageTestnetOptions (..))
 import qualified Testnet.Babbage as TC
 import qualified Testnet.Conf as H
+import qualified Util.Assert as H
+import qualified Util.Base as H
+import qualified Util.Process as H
+import qualified Util.Runtime as TR
+import           Util.Runtime (LeadershipSlot (..))
 
 hprop_leadershipSchedule :: Property
 hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo" $ \tempAbsBasePath' -> do

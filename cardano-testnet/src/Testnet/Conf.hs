@@ -6,8 +6,6 @@ module Testnet.Conf
   , YamlFilePath(..)
   , Conf(..)
   , mkConf
-
-  , SubmitApiConfig(..)
   ) where
 
 import           Control.Monad
@@ -15,7 +13,6 @@ import           Data.Eq
 import           Data.Function
 import           Data.Int
 import           Data.Maybe
-import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           System.FilePath.Posix ((</>))
 import           System.IO (FilePath)
 import           Text.Show
@@ -52,13 +49,3 @@ mkConf (ProjectBase base) (YamlFilePath configurationTemplate) tempAbsPath maybe
   logDir <- H.noteTempFile tempAbsPath "logs"
 
   return $ Conf {..}
-
-data SubmitApiConfig = SubmitApiConfig
-  { tempBaseAbsPath :: FilePath
-  , base :: FilePath
-  , configFile :: FilePath
-  , sprocket  :: Sprocket
-  , testnetMagic :: Int
-  , stdoutFile :: FilePath
-  , stderrFile :: FilePath
-  } deriving (Eq, Show)

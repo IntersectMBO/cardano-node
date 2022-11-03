@@ -1,4 +1,4 @@
-module Test.Process
+module Util.Process
   ( assertByDeadlineIOCustom
   , assertByDeadlineMCustom
   , bashPath

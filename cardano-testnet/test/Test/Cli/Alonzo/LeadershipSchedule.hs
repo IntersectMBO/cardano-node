@@ -10,7 +10,7 @@
 {- HLINT ignore "Redundant return" -}
 {- HLINT ignore "Use let" -}
 
-module Spec.Cli.Alonzo.LeadershipSchedule
+module Test.Cli.Alonzo.LeadershipSchedule
   ( hprop_leadershipSchedule
   ) where
 
@@ -42,15 +42,15 @@ import qualified System.Directory as IO
 import           System.Environment (getEnvironment)
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
-import qualified Test.Assert as H
-import qualified Test.Base as H
-import qualified Test.Process as H
-import qualified Test.Runtime as TR
-import           Test.Runtime (LeadershipSlot (..))
 import           Testnet ( TestnetOptions (CardanoOnlyTestnetOptions), testnet)
 import           Testnet.Cardano as TC (CardanoTestnetOptions (..), defaultTestnetOptions)
 import qualified Testnet.Conf as H
 import           Testnet.Utils (waitUntilEpoch)
+import qualified Util.Assert as H
+import qualified Util.Base as H
+import qualified Util.Process as H
+import           Util.Runtime (LeadershipSlot (..))
+import qualified Util.Runtime as TR
 
 hprop_leadershipSchedule :: Property
 hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo" $ \tempAbsBasePath' -> do

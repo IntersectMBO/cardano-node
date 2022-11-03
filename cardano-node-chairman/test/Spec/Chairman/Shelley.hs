@@ -12,10 +12,10 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
-import qualified Test.Base as H
-import qualified Test.Runtime as H
 import qualified Testnet.Conf as H
 import qualified Testnet.Shelley as H
+import qualified Util.Base as H
+import qualified Util.Runtime as H
 
 hprop_chairman :: H.Property
 hprop_chairman = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsPath' -> do

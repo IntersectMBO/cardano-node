@@ -22,8 +22,8 @@ import qualified System.Console.ANSI as ANSI
 import qualified System.Directory as IO
 import qualified System.Exit as IO
 import qualified System.IO as IO
-import qualified Test.Base as H
 import qualified Testnet.Conf as H
+import qualified Util.Base as H
 
 testnetProperty :: Maybe Int -> (H.Conf -> H.Integration ()) -> H.Property
 testnetProperty maybeTestnetMagic tn = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsPath' -> do

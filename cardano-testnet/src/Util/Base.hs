@@ -1,4 +1,4 @@
-module Test.Base
+module Util.Base
   ( integration
   , isLinux
   ) where

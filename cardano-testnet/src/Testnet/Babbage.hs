@@ -25,10 +25,6 @@ import           Data.Aeson (encode, object, toJSON, (.=))
 import           Hedgehog.Extras.Stock.Time (showUTCTimeSeconds)
 import           System.FilePath.Posix ((</>))
 
-import           Test.Runtime (Delegator (..), NodeLoggingFormat (..), PaymentKeyPair (..),
-                   PoolNode (PoolNode), PoolNodeKeys (..), StakingKeyPair (..),
-                   TestnetRuntime (..), startNode)
-
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
 import qualified Data.Time.Clock as DTC
@@ -37,10 +33,15 @@ import qualified Hedgehog.Extras.Stock.OS as OS
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified System.Info as OS
-import qualified Test.Assert as H
+
+import qualified Util.Assert as H
+import           Util.Process (execCli_)
+import           Util.Runtime (Delegator (..), NodeLoggingFormat (..), PaymentKeyPair (..),
+                   PoolNode (PoolNode), PoolNodeKeys (..), StakingKeyPair (..),
+                   TestnetRuntime (..), startNode)
 import qualified Testnet.Conf as H
 
-import           Test.Process (execCli_)
+
 
 {- HLINT ignore "Redundant flip" -}
 
