@@ -8,7 +8,7 @@
 import           Cardano.Api
 import           Cardano.Api.Shelley
 import           Cardano.Ledger.Address (getRewardAcnt)
-import           Cardano.Ledger.Alonzo.PParams (PParams' (..))
+import           Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import qualified Cardano.Ledger.BaseTypes as L
 import           Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Core as LC

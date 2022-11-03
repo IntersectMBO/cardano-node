@@ -10,6 +10,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 -- | Fee calculation
 --
@@ -52,7 +53,6 @@ import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (catMaybes, fromMaybe, maybeToList)
 import           Data.Ratio
-import           Data.Sequence.Strict (StrictSeq (..))
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
@@ -73,20 +73,18 @@ import qualified Cardano.Ledger.Coin as Ledger
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Crypto as Ledger
 import qualified Cardano.Ledger.Era as Ledger.Era (Crypto)
-import qualified Cardano.Ledger.Hashes as Ledger
 import qualified Cardano.Ledger.Keys as Ledger
-import qualified Cardano.Ledger.Shelley.API as Ledger (CLI, DCert, TxIn, Wdrl)
+import qualified Cardano.Ledger.Shelley.API as Ledger (CLI)
 import qualified Cardano.Ledger.Shelley.API.Wallet as Ledger (evaluateTransactionBalance,
                    evaluateTransactionFee)
 
 import qualified Cardano.Ledger.Shelley.API.Wallet as Shelley
-import           Cardano.Ledger.Shelley.PParams (PParams' (..))
+import           Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 
-import qualified Cardano.Ledger.Mary.Value as Mary
 
 import qualified Cardano.Ledger.Alonzo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
-import           Cardano.Ledger.Alonzo.PParams (PParams' (..))
+import           Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tools as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
@@ -96,7 +94,7 @@ import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 import qualified Plutus.V1.Ledger.Api as Plutus
 
 import qualified Cardano.Ledger.Babbage as Babbage
-import           Cardano.Ledger.Babbage.PParams (PParams' (..))
+import           Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
 
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
 
@@ -112,6 +110,10 @@ import           Cardano.Api.Script
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
 import           Cardano.Api.Value
+import Lens.Micro ((^.))
+import Cardano.Ledger.Core (EraTx(sizeTxF))
+import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
+import Cardano.Ledger.Mary.Value (MaryValue)
 
 {- HLINT ignore "Redundant return" -}
 
@@ -135,16 +137,15 @@ transactionFee txFeeFixed txFeePerByte tx =
   let a = toInteger txFeePerByte
       b = toInteger txFeeFixed
   in case tx of
-       ShelleyTx _ tx' -> let x = obtainHasField shelleyBasedEra $ getField @"txsize" tx'
+       ShelleyTx _ tx' -> let x = obtainHasField shelleyBasedEra $ tx' ^. sizeTxF
                           in Lovelace (a * x + b)
        --TODO: This can be made to work for Byron txs too. Do that: fill in this case
        -- and remove the IsShelleyBasedEra constraint.
        ByronTx _ -> case shelleyBasedEra :: ShelleyBasedEra ByronEra of {}
  where
   obtainHasField
-    :: ShelleyLedgerEra era ~ ledgerera
-    => ShelleyBasedEra era
-    -> ( HasField "txsize" (Ledger.Tx (ShelleyLedgerEra era)) Integer
+    :: ShelleyBasedEra era
+    -> ( EraTx (ShelleyLedgerEra era)
         => a)
     -> a
   obtainHasField ShelleyBasedEraShelley f = f
@@ -538,6 +539,8 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
     evalAlonzo :: forall ledgerera.
                   ShelleyLedgerEra era ~ ledgerera
                => ledgerera ~ Alonzo.AlonzoEra Ledger.StandardCrypto
+               => HasField "_maxTxExUnits" (Ledger.PParams ledgerera) Alonzo.ExUnits
+               => HasField"_protocolVersion" (Ledger.PParams ledgerera) Ledger.ProtVer
                => LedgerEraConstraints ledgerera
                => ShelleyBasedEra era
                -> Ledger.Tx ledgerera
@@ -661,13 +664,28 @@ evaluateTransactionBalance _ _ _ (ByronTxBody _) =
 
 evaluateTransactionBalance pparams poolids utxo
                            (ShelleyTxBody era txbody _ _ _ _) =
-    withLedgerConstraints era evalAdaOnly evalMultiAsset
+    withLedgerConstraints 
+      era 
+      (getShelleyEraTxBodyConstraint era evalAdaOnly)
+      (getShelleyEraTxBodyConstraint era evalMultiAsset)
   where
+    getShelleyEraTxBodyConstraint 
+      :: forall era' a. 
+         ShelleyBasedEra era'
+      -> (ShelleyEraTxBody (ShelleyLedgerEra era') => a) 
+      -> a
+    getShelleyEraTxBodyConstraint ShelleyBasedEraShelley x = x
+    getShelleyEraTxBodyConstraint ShelleyBasedEraMary x = x
+    getShelleyEraTxBodyConstraint ShelleyBasedEraAllegra x = x
+    getShelleyEraTxBodyConstraint ShelleyBasedEraAlonzo x = x
+    getShelleyEraTxBodyConstraint ShelleyBasedEraBabbage x = x
+
     isNewPool :: Ledger.KeyHash Ledger.StakePool Ledger.StandardCrypto -> Bool
     isNewPool kh = StakePoolKeyHash kh `Set.notMember` poolids
 
     evalMultiAsset :: forall ledgerera.
                       ShelleyLedgerEra era ~ ledgerera
+                   => ShelleyEraTxBody ledgerera
                    => LedgerEraConstraints ledgerera
                    => LedgerMultiAssetConstraints ledgerera
                    => MultiAssetSupportedInEra era
@@ -682,6 +700,7 @@ evaluateTransactionBalance pparams poolids utxo
 
     evalAdaOnly :: forall ledgerera.
                    ShelleyLedgerEra era ~ ledgerera
+                => ShelleyEraTxBody ledgerera
                 => LedgerEraConstraints ledgerera
                 => LedgerAdaOnlyConstraints ledgerera
                 => OnlyAdaSupportedInEra era
@@ -726,8 +745,7 @@ type LedgerAdaOnlyConstraints ledgerera =
          Ledger.Value ledgerera ~ Ledger.Coin
 
 type LedgerMultiAssetConstraints ledgerera =
-       ( Ledger.Value ledgerera ~ Mary.Value Ledger.StandardCrypto
-       , HasField "mint" (Ledger.TxBody ledgerera) (Ledger.Value ledgerera)
+       ( Ledger.Value ledgerera ~ MaryValue Ledger.StandardCrypto
        )
 
 type LedgerPParamsConstraints ledgerera =
@@ -738,11 +756,7 @@ type LedgerPParamsConstraints ledgerera =
        )
 
 type LedgerTxBodyConstraints ledgerera =
-       ( HasField "certs" (Ledger.TxBody ledgerera)
-                          (StrictSeq (Ledger.DCert Ledger.StandardCrypto))
-       , HasField "inputs" (Ledger.TxBody ledgerera)
-                           (Set (Ledger.TxIn Ledger.StandardCrypto))
-       , HasField "wdrls" (Ledger.TxBody ledgerera) (Ledger.Wdrl Ledger.StandardCrypto)
+       ( Ledger.EraTx ledgerera
        )
 
 
