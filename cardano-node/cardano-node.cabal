@@ -95,6 +95,7 @@ library
                        Cardano.Node.Tracing.Tracers.BlockReplayProgress
                        Cardano.Node.Tracing.Tracers.ChainDB
                        Cardano.Node.Tracing.Tracers.Consensus
+                       Cardano.Node.Tracing.Tracers.ConsensusStartupException
                        Cardano.Node.Tracing.Tracers.Diffusion
                        Cardano.Node.Tracing.Tracers.KESInfo
                        Cardano.Node.Tracing.Tracers.StartLeadershipCheck
@@ -130,19 +131,20 @@ library
                       , base16-bytestring
                       , bytestring
                       , cardano-api
-                      , cardano-data
+                      , cardano-data ^>= 0.1
                       , cardano-git-rev
-                      , cardano-crypto-class
-                      , cardano-crypto-wrapper
-                      , cardano-ledger-alonzo
-                      , cardano-ledger-babbage
-                      , cardano-ledger-byron
-                      , cardano-ledger-core
-                      , cardano-ledger-shelley-ma
+                      , cardano-crypto-class ^>= 2.0
+                      , cardano-crypto-wrapper ^>= 1.4
+                      , cardano-ledger-core ^>= 0.1
+                      , cardano-ledger-byron ^>= 0.1
+                      , cardano-ledger-shelley ^>= 0.1
+                      , cardano-ledger-shelley-ma ^>= 0.1
+                      , cardano-ledger-alonzo ^>= 0.1
+                      , cardano-ledger-babbage ^>= 0.1
                       , cardano-prelude
-                      , cardano-protocol-tpraos
-                      , cardano-slotting
-                      , cborg >= 0.2.4 && < 0.3
+                      , cardano-protocol-tpraos ^>= 0.1
+                      , cardano-slotting ^>= 0.1
+                      , cborg ^>= 0.2.4
                       , contra-tracer
                       , containers
                       , directory
@@ -153,28 +155,27 @@ library
                       , generic-data
                       , hostname
                       , iproute
-                      , io-classes
+                      , io-classes ^>= 0.3
                       , iohk-monitoring
                       , lobemo-backend-aggregation
                       , lobemo-backend-ekg
                       , lobemo-backend-monitoring
                       , lobemo-backend-trace-forwarder
                       , network
-                      , network-mux
+                      , network-mux ^>= 0.2
                       , nothunks
                       , optparse-applicative-fork
-                      , ouroboros-consensus
+                      , ouroboros-consensus ^>= 0.1.0.2
                       , ouroboros-consensus-byron
                       , ouroboros-consensus-cardano
                       , ouroboros-consensus-protocol
                       , ouroboros-consensus-shelley
-                      , ouroboros-network
-                      , ouroboros-network-framework
+                      , ouroboros-network  ^>= 0.2
+                      , ouroboros-network-framework ^>= 0.2
                       , psqueues
                       , safe-exceptions
                       , scientific
                       , strict-stm
-                      , cardano-ledger-shelley
                       , stm
                       , text
                       , time
@@ -184,7 +185,7 @@ library
                       , trace-resources
                       , transformers
                       , transformers-except
-                      , typed-protocols
+                      , typed-protocols ^>= 0.1
                       , yaml
 
 executable cardano-node
@@ -219,7 +220,7 @@ test-suite cardano-node-test
                       , cardano-api
                       , cardano-node
                       , cardano-prelude
-                      , cardano-slotting
+                      , cardano-slotting ^>= 0.1
                       , directory
                       , hedgehog
                       , hedgehog-corpus

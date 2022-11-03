@@ -35,8 +35,7 @@ import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
 import           Cardano.Node.Tracing.Tracers.ChainDB
 import           Cardano.Node.Tracing.Tracers.Consensus
 import           Cardano.Node.Tracing.Tracers.Diffusion
-import           Cardano.Node.Tracing.Tracers.ForgingThreadStats (
-                   docForgeStats, forgeThreadStats)
+import           Cardano.Node.Tracing.Tracers.ForgingThreadStats (docForgeStats, forgeThreadStats)
 import           Cardano.Node.Tracing.Tracers.KESInfo
 import           Cardano.Node.Tracing.Tracers.NodeToClient
 import           Cardano.Node.Tracing.Tracers.NodeToNode
@@ -632,7 +631,7 @@ docTracers configFileName outputFileName _ _ _ = do
     configureTracers trConfig docDiffusionInit [dtDiffusionInitializationTr]
     dtDiffusionInitializationTrDoc <- documentTracer trConfig dtDiffusionInitializationTr
       (docDiffusionInit ::
-        Documented (Diffusion.InitializationTracer Socket.SockAddr LocalAddress))
+        Documented (Diffusion.DiffusionTracer Socket.SockAddr LocalAddress))
 
     dtLedgerPeersTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
@@ -715,7 +714,7 @@ docTracers configFileName outputFileName _ _ _ = do
     configureTracers trConfig docPeerSelectionActions [peerSelectionActionsTr]
     peerSelectionActionsTrDoc <- documentTracer trConfig peerSelectionActionsTr
       (docPeerSelectionActions ::
-        Documented (PeerSelectionActionsTrace Socket.SockAddr))
+        Documented (PeerSelectionActionsTrace Socket.SockAddr LocalAddress))
 
     connectionManagerTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG

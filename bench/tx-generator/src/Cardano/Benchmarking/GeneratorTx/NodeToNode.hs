@@ -14,8 +14,8 @@ import           Cardano.Prelude (forever, liftIO)
 import           Prelude
 
 import           Codec.Serialise (DeserialiseFailure)
+import           Control.Concurrent.Class.MonadSTM.Strict (newTVarIO)
 import           Control.Monad.Class.MonadTimer (MonadTimer, threadDelay)
-import           Control.Monad.Class.MonadSTM.Strict (newTVarIO)
 import           Data.ByteString.Lazy (ByteString)
 import qualified Data.Map as Map
 import           Data.Proxy (Proxy (..))
@@ -23,8 +23,8 @@ import           Network.Socket (AddrInfo (..))
 import           System.Random (newStdGen)
 
 import           "contra-tracer" Control.Tracer (Tracer, nullTracer)
-import           Ouroboros.Consensus.Byron.Ledger.Mempool (GenTx)
 import           Ouroboros.Consensus.Block.Abstract
+import           Ouroboros.Consensus.Byron.Ledger.Mempool (GenTx)
 import qualified Ouroboros.Consensus.Cardano as Consensus (CardanoBlock)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId)
 import           Ouroboros.Consensus.Network.NodeToNode (Codecs (..), defaultCodecs)
@@ -37,19 +37,18 @@ import           Ouroboros.Network.DeltaQ (defaultGSV)
 import           Ouroboros.Network.Driver (runPeerWithLimits)
 import           Ouroboros.Network.KeepAlive
 import           Ouroboros.Network.Magic
-import           Ouroboros.Network.Mux (MuxPeer (..), OuroborosApplication (..),
-                                        OuroborosBundle, RunMiniProtocol (..),
-                                        continueForever)
-import           Ouroboros.Network.NodeToClient (chainSyncPeerNull, IOManager)
+import           Ouroboros.Network.Mux (MuxPeer (..), OuroborosApplication (..), OuroborosBundle,
+                   RunMiniProtocol (..), continueForever)
+import           Ouroboros.Network.NodeToClient (IOManager, chainSyncPeerNull)
 import           Ouroboros.Network.NodeToNode (NetworkConnectTracers (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.Protocol.BlockFetch.Client (BlockFetchClient (..),
-                                                               blockFetchClientPeer)
+                   blockFetchClientPeer)
 import           Ouroboros.Network.Protocol.Handshake.Version (simpleSingletonVersions)
-import           Ouroboros.Network.Protocol.KeepAlive.Codec
 import           Ouroboros.Network.Protocol.KeepAlive.Client
+import           Ouroboros.Network.Protocol.KeepAlive.Codec
 import           Ouroboros.Network.Protocol.TxSubmission2.Client (TxSubmissionClient,
-                                                                  txSubmissionClientPeer)
+                   txSubmissionClientPeer)
 
 import           Ouroboros.Network.Snocket (socketSnocket)
 
