@@ -622,10 +622,10 @@ mkP2PArguments NodeConfiguration {
       , P2P.daReadLocalRootPeers
       , P2P.daReadPublicRootPeers
       , P2P.daReadUseLedgerAfter
-      , P2P.daProtocolIdleTimeout = ncProtocolIdleTimeout
-      , P2P.daTimeWaitTimeout     = ncTimeWaitTimeout
+      , P2P.daProtocolIdleTimeout   = ncProtocolIdleTimeout
+      , P2P.daTimeWaitTimeout       = ncTimeWaitTimeout
       , P2P.daDeadlineChurnInterval = 3300
-      , P2P.daBulkChurnInterval = 300
+      , P2P.daBulkChurnInterval     = 300
       }
   where
     daPeerSelectionTargets = PeerSelectionTargets {
