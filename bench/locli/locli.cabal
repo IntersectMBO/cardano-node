@@ -10,6 +10,10 @@ license-files:
   NOTICE
 build-type:            Simple
 
+common project-config
+  if os(windows)
+    buildable: False
+
 common base
   default-language:    Haskell2010
   default-extensions:  BangPatterns

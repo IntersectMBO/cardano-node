@@ -66,12 +66,11 @@ haskell-nix.cabalProject' ({ pkgs
       setGitRev = ''${pkgs.buildPackages.haskellBuildUtils}/bin/set-git-rev "${gitrev}" $out/bin/*'';
     in
     [
-      ({ pkgs, ... }: {
-        packages.tx-generator.package.buildable = with pkgs.stdenv.hostPlatform; isUnix && !isMusl;
-        packages.cardano-tracer.package.buildable = with pkgs.stdenv.hostPlatform; isUnix && !isMusl;
-        packages.cardano-node-chairman.components.tests.chairman-tests.buildable = lib.mkForce pkgs.stdenv.hostPlatform.isUnix;
-        packages.plutus-tx-plugin.components.library.platforms = with lib.platforms; [ linux darwin ];
-        packages.locli.package.buildable = with pkgs.stdenv.hostPlatform; isUnix && !isMusl;
+      ({ pkgs, ... }: with pkgs.stdenv.hostPlatform; {
+         packages.bench-data-publish.package.buildable = !isMusl;
+         packages.cardano-tracer.package.buildable     = !isMusl;
+         packages.tx-generator.package.buildable       = !isMusl;
+         packages.plutus-tx-plugin.components.library.platforms = with lib.platforms; [ linux darwin ];
       })
       ({ pkgs, ... }: {
         # Needed for the CLI tests.

@@ -12,6 +12,10 @@ cabal-version:         >= 1.10
 extra-source-files:    README.md
 data-files:            data/protocol-parameters.json
 
+common project-config
+  if os(windows)
+    buildable: False
+
 library
   hs-source-dirs:      src
   ghc-options:          -Wall

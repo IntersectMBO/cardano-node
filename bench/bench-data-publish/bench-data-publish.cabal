@@ -14,7 +14,7 @@ data-files:         db/bench-data-tables.sql
 
 executable bench-data-publish
     main-is:            Main.hs
-    
+
     other-modules:      Cardano.Benchmarking.Publish.DBConnection
                         Cardano.Benchmarking.Publish.DBQueries
                         Cardano.Benchmarking.Publish.DBSchema
@@ -23,6 +23,9 @@ executable bench-data-publish
                         Paths_bench_data_publish
 
     autogen-modules:    Paths_bench_data_publish
+
+    if os(windows)
+      buildable: False
 
     build-depends:        base
                         , aeson
