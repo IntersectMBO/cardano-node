@@ -69,6 +69,7 @@ jobs:
     - name: "WIN: Setup Haskell"
       id: win-setup-haskell
       if: runner.os == 'Windows'
+      shell: msys2 {0}
       run: |
         # see https://gitlab.haskell.org/haskell/ghcup-hs/-/blob/master/scripts/bootstrap/bootstrap-haskell
         curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | \
@@ -100,11 +101,13 @@ jobs:
         echo "::set-output name=cabal-store::$(cabal --help | tail -1 | tr -d ' ' | rev | cut -d '/' -f2- | rev)\\store"
 
     - name: Set cache version
+      shell: msys2 {0}
       run: echo "CACHE_VERSION=grFfw8r" >> $GITHUB_ENV
 
     - uses: actions/checkout@v2
 
     - name: Add build script path
+      shell: msys2 {0}
       run: |
         if [ "${{ runner.os }}" == "Windows" ]; then
           # MSYS2 doesn't inherit $GITHUB_PATH, so this workaround is needed
@@ -117,6 +120,7 @@ jobs:
 
     - name: "LINUX: Install build environment (apt-get)"
       if: runner.os == 'Linux'
+      shell: msys2 {0}
       run: |
         sudo apt-get update
         sudo apt-get -y install libsodium23 libsodium-dev
@@ -126,6 +130,7 @@ jobs:
 
     - name: "LINUX: Install build environment (for secp256k1)"
       if: runner.os == 'Linux'
+      shell: msys2 {0}
       run: |
         sudo apt-get -y install autoconf automake libtool
         echo "CI_SECP_FLAGS=--prefix=/usr" >> $GITHUB_ENV
@@ -133,14 +138,17 @@ jobs:
 
     - name: "MAC: Install build environment (brew)"
       if: runner.os == 'macOS'
+      shell: msys2 {0}
       run: |
         brew install libsodium
 
     - name: "MAC: Install build environment (for secp256k1)"
       if: runner.os == 'macOS'
+      shell: msys2 {0}
       run: brew install autoconf automake libtool
 
     - name: "Install secp256k1"
+      shell: msys2 {0}
       run: |
         git clone https://github.com/bitcoin-core/secp256k1.git
         ( cd secp256k1
@@ -153,6 +161,7 @@ jobs:
         )
 
     - name: "List all pkg-config packages"
+      shell: msys2 {0}
       run: |
         if [ "${{ runner.os }}" == "macOS" ]; then
           echo "=== Not printing every package detail in MacOS"
@@ -169,9 +178,11 @@ jobs:
         fi
 
     - name: Cabal update
+      shell: msys2 {0}
       run: retry 2 cabal update
 
     - name: Configure build
+      shell: msys2 {0}
       run: |
         if [ "${{github.event.inputs.tests}}" == "all" ]; then
           echo "Reconfigure cabal projects to run tests for all dependencies"
@@ -184,6 +195,7 @@ jobs:
         cat cabal.project.local
 
     - name: Record dependencies
+      shell: msys2 {0}
       id: record-deps
       run: |
         cabal build all --dry-run
@@ -210,9 +222,11 @@ jobs:
         restore-keys: cache-dist-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}
 
     - name: Build
+      shell: msys2 {0}
       run: cabal build cardano-node cardano-cli cardano-node-chairman cardano-submit-api
 
     - name: Run tests
+      shell: msys2 {0}
       run: |
         if [ "${{github.event.inputs.tests}}" == "all" ]; then
           TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 cabal test all;
@@ -228,6 +242,7 @@ jobs:
 
 
     - name: "Tar artifacts"
+      shell: msys2 {0}
       run: |
         mkdir -p artifacts
 
