@@ -91,6 +91,7 @@ let
       cardano-tracer
       locli
       tx-generator
+      bench-data-publish
       pkgs.graphviz
       python3Packages.supervisor
       python3Packages.ipython

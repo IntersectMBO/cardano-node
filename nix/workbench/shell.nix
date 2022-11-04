@@ -131,6 +131,7 @@ in project.shellFor {
       cardano-tracer
       locli
       tx-generator
+      bench-data-publish
     ]
   ++ lib.optionals (!workbenchDevMode)
     [

@@ -45,6 +45,7 @@ let
       cardano-topology
     ] ++ lib.optional (!pkgs.stdenv.hostPlatform.isDarwin) db-analyser ++ [
       locli
+      bench-data-publish
     ]);
 
   runWorkbench =
