@@ -771,7 +771,7 @@ pTransaction =
 
   pTransactionAssembleTxBodyWit :: Parser TransactionCmd
   pTransactionAssembleTxBodyWit = TxAssembleTxBodyWitness
-                                    <$> pTxBodyFile Input
+                                    <$> pInputTxOrTxBodyFile
                                     <*> some pWitnessFile
                                     <*> pOutputFile
 

@@ -1327,53 +1327,51 @@ runTxCreateWitness (TxBodyFile txbodyFile) witSignData mbNw (OutputFile oFile) =
         $ writeFileTextEnvelope oFile Nothing witness
 
 runTxSignWitness
-  :: TxBodyFile
+  :: InputTxBodyOrTxFile
   -> [WitnessFile]
   -> OutputFile
   -> ExceptT ShelleyTxCmdError IO ()
-runTxSignWitness (TxBodyFile txbodyFile) witnessFiles (OutputFile oFp) = do
-    unwitnessed <- firstExceptT ShelleyTxCmdCddlError . newExceptT
-                     $ readFileTxBody txbodyFile
-    case unwitnessed of
-      UnwitnessedCliFormattedTxBody (InAnyCardanoEra era txbody) -> do
-        witnesses <-
-          sequence
-            [ do InAnyCardanoEra era' witness <- firstExceptT ShelleyTxCmdCddlWitnessError . newExceptT
-                                                   $ readFileTxKeyWitness file
-                 case testEquality era era' of
-                   Nothing   -> left $ ShelleyTxCmdWitnessEraMismatch
-                                         (AnyCardanoEra era)
-                                         (AnyCardanoEra era')
-                                         witnessFile
-                   Just Refl -> return witness
-            | witnessFile@(WitnessFile file) <- witnessFiles
-            ]
+runTxSignWitness inputTx witnessFiles (OutputFile oFp) = do
+  (InAnyCardanoEra era (SignInputs txBody exisitingWitnesses outFormat)) <- readInputTx
+  additionalWitnesses <- readWitnesses era
+  let tx = makeSignedTransaction (exisitingWitnesses <> additionalWitnesses) txBody
+  writeOutput outFormat tx
+  where
+    rescue :: Functor m =>  m (Either x a) -> (x -> y) -> ExceptT y m a
+    rescue action except = firstExceptT except $ newExceptT action
 
-        let tx = makeSignedTransaction witnesses txbody
-        firstExceptT ShelleyTxCmdWriteFileError
-          . newExceptT
-          $ writeFileTextEnvelope oFp Nothing tx
+    readInputTx :: ExceptT ShelleyTxCmdError IO (InAnyCardanoEra SignInputs)
+    readInputTx =  case inputTx of
+      (InputTxFile (TxFile inputTxFile)) -> do
+        (InAnyCardanoEra era tx) <- readFileTx inputTxFile `rescue` ShelleyTxCmdCddlError
+        let (txbody, existingTxKeyWits) = getTxBodyAndWitnesses tx
+        return $ InAnyCardanoEra era $ SignInputs txbody existingTxKeyWits CddlOut
+      (InputTxBodyFile (TxBodyFile txbodyFile)) -> do
+        unwitnessed <- readFileTxBody txbodyFile `rescue` ShelleyTxCmdCddlError
+        case unwitnessed of
+          UnwitnessedCliFormattedTxBody (InAnyCardanoEra era txbody)
+            -> return $ InAnyCardanoEra era $ SignInputs txbody [] TextOut
+          IncompleteCddlFormattedTx (InAnyCardanoEra era anyTx)
+            -> return $ InAnyCardanoEra era $ SignInputs (getTxBody anyTx) (getTxWitnesses anyTx) CddlOut
 
-      IncompleteCddlFormattedTx (InAnyCardanoEra era anyTx) -> do
-        let txbody = getTxBody anyTx
+    readWitnesses :: IsCardanoEra era => CardanoEra era -> ExceptT ShelleyTxCmdError IO [KeyWitness era]
+    readWitnesses txEra =
+      forM witnessFiles $ \witnessFile@(WitnessFile file) -> do
+        InAnyCardanoEra witnessEra witness <- readFileTxKeyWitness file `rescue` ShelleyTxCmdCddlWitnessError
+        case testEquality txEra witnessEra of
+          Nothing -> left $ ShelleyTxCmdWitnessEraMismatch
+                              (AnyCardanoEra txEra)
+                              (AnyCardanoEra witnessEra)
+                              witnessFile
+          Just Refl -> return witness
 
-        witnesses <-
-          sequence
-            [ do InAnyCardanoEra era' witness <- firstExceptT ShelleyTxCmdCddlWitnessError . newExceptT
-                                                   $ readFileTxKeyWitness file
-                 case testEquality era era' of
-                   Nothing   -> left $ ShelleyTxCmdWitnessEraMismatch
-                                         (AnyCardanoEra era)
-                                         (AnyCardanoEra era')
-                                         witnessFile
-                   Just Refl -> return witness
-            | witnessFile@(WitnessFile file) <- witnessFiles ]
+    writeOutput :: IsCardanoEra era => OutFormat -> Tx era -> ExceptT ShelleyTxCmdError IO ()
+    writeOutput fmt tx = case fmt of
+      CddlOut -> writeTxFileTextEnvelopeCddl oFp tx `rescue` ShelleyTxCmdWriteFileError
+      TextOut -> writeFileTextEnvelope oFp Nothing tx `rescue` ShelleyTxCmdWriteFileError
 
-        let tx = makeSignedTransaction witnesses txbody
-
-        firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
-          writeTxFileTextEnvelopeCddl oFp tx
-
+data OutFormat = CddlOut | TextOut
+data SignInputs era = SignInputs (TxBody era) [KeyWitness era] OutFormat
 
 -- | Constrain the era to be Shelley based. Fail for the Byron era.
 --
