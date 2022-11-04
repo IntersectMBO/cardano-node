@@ -169,6 +169,7 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
     , "--tx-out", utxoaddrwithstaking <> "+" <> show @Int 5000000
     , "--witness-override", show @Int 3
     , "--certificate-file", work </> "pledger.regcert"
+    , "--cddl-format" -- TODO delete in the next release after 1.35.4
     , "--out-file", work </> "pledge-registration-cert.txbody"
     ]
 
