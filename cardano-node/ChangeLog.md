@@ -5,7 +5,7 @@
 ### node changes
 
 - Update plutus to version 1.0.0.1 to enable SECP at protocol version 8
-- Update cardano-crypto-class to version 2.0.0.0.2 to add SECP crypto primitives
+- Update cardano-crypto-class to version 2.0.0.0.1 to add SECP crypto primitives
 - Update block header advertised version in babbage to 8.0
 
 ### plutus changes
