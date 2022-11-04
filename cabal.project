@@ -29,6 +29,7 @@ packages:
     bench/cardano-topology
     bench/locli
     bench/tx-generator
+    bench/bench-data-publish
     trace-dispatcher
     trace-resources
     trace-forward
