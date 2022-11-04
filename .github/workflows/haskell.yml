@@ -178,7 +178,7 @@ jobs:
           sed -i 's|tests: False|tests: True|g' cabal.project
         fi
 
-        cp .github/workflows/cabal.project.local.ci cabal.project.local
+        cp ".github/workflows/cabal.project.local.ci.$(uname -s)" cabal.project.local
 
         echo "# cabal.project.local"
         cat cabal.project.local
