@@ -13,7 +13,7 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands 
 -- you need to run if you change them
 index-state: 2022-09-27T00:00:00Z
-index-state: cardano-haskell-packages 2022-10-25T20:00:00Z
+index-state: cardano-haskell-packages 2022-10-31T20:00:00Z
 
 packages:
     cardano-api
@@ -104,6 +104,9 @@ constraints:
   , plutus-ghc-stub == 8.6.5
   , word-array == 0.1.0.0
   , word-array == 0.1.0.0
+  , io-classes == 0.2.0.0
+  , typed-protocols == 0.1.0.0
+  , typed-protocols-examples == 0.1.0.0
 
 package snap-server
   flags: +openssl
