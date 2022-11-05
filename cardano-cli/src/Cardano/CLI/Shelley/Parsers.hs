@@ -718,6 +718,7 @@ pTransaction =
             <*> many pMetadataFile
             <*> optional pProtocolParamsSourceSpec
             <*> optional pUpdateProposalFile
+            <*  pOutputSerialisation -- TODO delete in the next release after 1.35.4
             <*> (OutputTxBodyOnly <$> pTxBodyFile Output <|> pCalculatePlutusScriptCost)
 
   pChangeAddress :: Parser TxOutChangeAddress
@@ -754,6 +755,7 @@ pTransaction =
                <*> many pMetadataFile
                <*> optional pProtocolParamsSourceSpec
                <*> optional pUpdateProposalFile
+               <*  pOutputSerialisation -- TODO delete in the next release after 1.35.4
                <*> pTxBodyFile Output
 
   pTransactionSign  :: Parser TransactionCmd
@@ -1753,6 +1755,15 @@ pOutputFormat =
                 \and \"bech32\" (default is \"bech32\")."
     <> Opt.value OutputFormatBech32
     )
+
+pOutputSerialisation :: Parser (Maybe ())
+pOutputSerialisation =
+  optional $
+    Opt.flag () ()
+      (  Opt.long "cddl-format"
+      <> Opt.help "Serialise in the ledger CDDL specified CBOR format."
+      <> Opt.hidden
+      )
 
 pMaybeOutputFile :: Parser (Maybe OutputFile)
 pMaybeOutputFile =
