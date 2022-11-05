@@ -1756,13 +1756,14 @@ pOutputFormat =
     <> Opt.value OutputFormatBech32
     )
 
-pOutputSerialisation :: Parser ()
+pOutputSerialisation :: Parser (Maybe ())
 pOutputSerialisation =
-  Opt.flag () ()
-    (  Opt.long "cddl-format"
-    <> Opt.help "Serialise in the ledger CDDL specified CBOR format."
-    <> Opt.hidden
-    )
+  optional $
+    Opt.flag () ()
+      (  Opt.long "cddl-format"
+      <> Opt.help "Serialise in the ledger CDDL specified CBOR format."
+      <> Opt.hidden
+      )
 
 pMaybeOutputFile :: Parser (Maybe OutputFile)
 pMaybeOutputFile =

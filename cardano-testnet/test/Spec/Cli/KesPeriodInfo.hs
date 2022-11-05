@@ -169,6 +169,22 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
     , "--tx-out", utxoaddrwithstaking <> "+" <> show @Int 5000000
     , "--witness-override", show @Int 3
     , "--certificate-file", work </> "pledger.regcert"
+    , "--out-file", work </> "pledge-registration-cert.txbody"
+    ]
+
+  -- TODO delete in the next release after 1.35.4
+  -- Create transaction body in the same manner as the previous command but ensure that the --cddl-format
+  -- option is accepted.  This transaction body file is unused in the test.
+  void $ H.execCli' execConfig
+    [ "transaction", "build"
+    , "--alonzo-era"
+    , "--testnet-magic", show @Int testnetMagic
+    , "--change-address",  utxoAddr
+    , "--tx-in", T.unpack $ renderTxIn txin
+    , "--tx-out", poolowneraddresswstakecred <> "+" <> show @Int 5000000
+    , "--tx-out", utxoaddrwithstaking <> "+" <> show @Int 5000000
+    , "--witness-override", show @Int 3
+    , "--certificate-file", work </> "pledger.regcert2"
     , "--cddl-format" -- TODO delete in the next release after 1.35.4
     , "--out-file", work </> "pledge-registration-cert.txbody"
     ]
