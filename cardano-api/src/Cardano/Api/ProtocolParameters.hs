@@ -88,14 +88,13 @@ import           Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Keys as Ledger
 
 import qualified Cardano.Ledger.Shelley.PParams as Ledger (ProposedPPUpdates (..), Update (..))
 -- Some of the things from Cardano.Ledger.Shelley.PParams are generic across all
 -- eras, and some are specific to the Shelley era (and other pre-Alonzo eras).
 -- So we import in twice under different names.
-import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams, PParams' (..), PParamsUpdate)
+import qualified Cardano.Ledger.Shelley.PParams as Shelley (ShelleyPParams, ShelleyPParamsHKD (..), ShelleyPParamsUpdate)
 
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
@@ -900,7 +899,7 @@ toLedgerProposedPPUpdates era =
 
 toLedgerPParamsDelta :: ShelleyBasedEra era
                      -> ProtocolParametersUpdate
-                     -> Ledger.PParamsDelta (ShelleyLedgerEra era)
+                     -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
 toLedgerPParamsDelta ShelleyBasedEraShelley = toShelleyPParamsUpdate
 toLedgerPParamsDelta ShelleyBasedEraAllegra = toShelleyPParamsUpdate
 toLedgerPParamsDelta ShelleyBasedEraMary    = toShelleyPParamsUpdate
@@ -911,7 +910,7 @@ toLedgerPParamsDelta ShelleyBasedEraBabbage = toBabbagePParamsUpdate
 --TODO: we should do validation somewhere, not just silently drop changes that
 -- are not valid. Specifically, see Ledger.boundRational below.
 toShelleyPParamsUpdate :: ProtocolParametersUpdate
-                       -> Shelley.PParamsUpdate ledgerera
+                       -> Shelley.ShelleyPParamsUpdate ledgerera
 toShelleyPParamsUpdate
     ProtocolParametersUpdate {
       protocolUpdateProtocolVersion
@@ -932,7 +931,7 @@ toShelleyPParamsUpdate
     , protocolUpdateMonetaryExpansion
     , protocolUpdateTreasuryCut
     } =
-    Shelley.PParams {
+    Shelley.ShelleyPParams {
       Shelley._minfeeA     = noInlineMaybeToStrictMaybe protocolUpdateTxFeePerByte
     , Shelley._minfeeB     = noInlineMaybeToStrictMaybe protocolUpdateTxFeeFixed
     , Shelley._maxBBSize   = noInlineMaybeToStrictMaybe protocolUpdateMaxBlockBodySize
@@ -964,7 +963,7 @@ toShelleyPParamsUpdate
 
 
 toAlonzoPParamsUpdate :: ProtocolParametersUpdate
-                      -> Alonzo.PParamsUpdate ledgerera
+                      -> Alonzo.AlonzoPParamsUpdate ledgerera
 toAlonzoPParamsUpdate
     ProtocolParametersUpdate {
       protocolUpdateProtocolVersion
@@ -992,7 +991,7 @@ toAlonzoPParamsUpdate
     , protocolUpdateCollateralPercent
     , protocolUpdateMaxCollateralInputs
     } =
-    Alonzo.PParams {
+    Alonzo.AlonzoPParams {
       Alonzo._minfeeA     = noInlineMaybeToStrictMaybe protocolUpdateTxFeePerByte
     , Alonzo._minfeeB     = noInlineMaybeToStrictMaybe protocolUpdateTxFeeFixed
     , Alonzo._maxBBSize   = noInlineMaybeToStrictMaybe protocolUpdateMaxBlockBodySize
@@ -1037,7 +1036,7 @@ toAlonzoPParamsUpdate
 
 -- Decentralization and extra entropy are deprecated in Babbage
 toBabbagePParamsUpdate :: ProtocolParametersUpdate
-                       -> Babbage.PParamsUpdate ledgerera
+                       -> Babbage.BabbagePParamsUpdate ledgerera
 toBabbagePParamsUpdate
     ProtocolParametersUpdate {
       protocolUpdateProtocolVersion
@@ -1063,7 +1062,7 @@ toBabbagePParamsUpdate
     , protocolUpdateMaxCollateralInputs
     , protocolUpdateUTxOCostPerByte
     } =
-    Babbage.PParams {
+    Babbage.BabbagePParams {
       Babbage._minfeeA     = noInlineMaybeToStrictMaybe protocolUpdateTxFeePerByte
     , Babbage._minfeeB     = noInlineMaybeToStrictMaybe protocolUpdateTxFeeFixed
     , Babbage._maxBBSize   = noInlineMaybeToStrictMaybe protocolUpdateMaxBlockBodySize
@@ -1129,7 +1128,7 @@ fromLedgerProposedPPUpdates era =
 
 
 fromLedgerPParamsDelta :: ShelleyBasedEra era
-                       -> Ledger.PParamsDelta (ShelleyLedgerEra era)
+                       -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
                        -> ProtocolParametersUpdate
 fromLedgerPParamsDelta ShelleyBasedEraShelley = fromShelleyPParamsUpdate
 fromLedgerPParamsDelta ShelleyBasedEraAllegra = fromShelleyPParamsUpdate
@@ -1138,10 +1137,10 @@ fromLedgerPParamsDelta ShelleyBasedEraAlonzo  = fromAlonzoPParamsUpdate
 fromLedgerPParamsDelta ShelleyBasedEraBabbage = fromBabbagePParamsUpdate
 
 
-fromShelleyPParamsUpdate :: Shelley.PParamsUpdate ledgerera
+fromShelleyPParamsUpdate :: Shelley.ShelleyPParamsUpdate ledgerera
                          -> ProtocolParametersUpdate
 fromShelleyPParamsUpdate
-    Shelley.PParams {
+    Shelley.ShelleyPParams {
       Shelley._minfeeA
     , Shelley._minfeeB
     , Shelley._maxBBSize
@@ -1199,10 +1198,10 @@ fromShelleyPParamsUpdate
     , protocolUpdateUTxOCostPerByte     = Nothing
     }
 
-fromAlonzoPParamsUpdate :: Alonzo.PParamsUpdate ledgerera
+fromAlonzoPParamsUpdate :: Alonzo.AlonzoPParamsUpdate ledgerera
                         -> ProtocolParametersUpdate
 fromAlonzoPParamsUpdate
-    Alonzo.PParams {
+    Alonzo.AlonzoPParams {
       Alonzo._minfeeA
     , Alonzo._minfeeB
     , Alonzo._maxBBSize
@@ -1272,10 +1271,10 @@ fromAlonzoPParamsUpdate
     }
 
 
-fromBabbagePParamsUpdate :: Babbage.PParamsUpdate ledgerera
+fromBabbagePParamsUpdate :: Babbage.BabbagePParamsUpdate ledgerera
                          -> ProtocolParametersUpdate
 fromBabbagePParamsUpdate
-    Babbage.PParams {
+    Babbage.BabbagePParams {
       Babbage._minfeeA
     , Babbage._minfeeB
     , Babbage._maxBBSize
@@ -1358,7 +1357,7 @@ toLedgerPParams ShelleyBasedEraMary    = toShelleyPParams
 toLedgerPParams ShelleyBasedEraAlonzo  = toAlonzoPParams
 toLedgerPParams ShelleyBasedEraBabbage = toBabbagePParams
 
-toShelleyPParams :: ProtocolParameters -> Shelley.PParams ledgerera
+toShelleyPParams :: ProtocolParameters -> Shelley.ShelleyPParams ledgerera
 toShelleyPParams ProtocolParameters {
                    protocolParamProtocolVersion,
                    protocolParamDecentralization,
@@ -1378,7 +1377,7 @@ toShelleyPParams ProtocolParameters {
                    protocolParamMonetaryExpansion,
                    protocolParamTreasuryCut
                  } =
-   Shelley.PParams
+   Shelley.ShelleyPParams
      { Shelley._protocolVersion
                              = let (maj, minor) = protocolParamProtocolVersion
                                 in Ledger.ProtVer maj minor
@@ -1419,7 +1418,7 @@ toShelleyPParams ProtocolParameters {
 toShelleyPParams ProtocolParameters { protocolParamMinUTxOValue = Nothing } =
   error "toShelleyPParams: must specify protocolParamMinUTxOValue"
 
-toAlonzoPParams :: ProtocolParameters -> Alonzo.PParams ledgerera
+toAlonzoPParams :: ProtocolParameters -> Alonzo.AlonzoPParams ledgerera
 toAlonzoPParams ProtocolParameters {
                    protocolParamProtocolVersion,
                    protocolParamDecentralization,
@@ -1451,7 +1450,7 @@ toAlonzoPParams ProtocolParameters {
           (error "toAlonzoPParams: must specify protocolParamUTxOCostPerWord or protocolParamUTxOCostPerByte") $
             protocolParamUTxOCostPerWord <|> ((* 8) <$> protocolParamUTxOCostPerByte)
     in
-    Alonzo.PParams {
+    Alonzo.AlonzoPParams {
       Alonzo._protocolVersion
                            = let (maj, minor) = protocolParamProtocolVersion
                               in Ledger.ProtVer maj minor
@@ -1519,7 +1518,7 @@ toAlonzoPParams ProtocolParameters { protocolParamMaxCollateralInputs = Nothing 
   error "toAlonzoPParams: must specify protocolParamMaxCollateralInputs"
 
 
-toBabbagePParams :: ProtocolParameters -> Babbage.PParams ledgerera
+toBabbagePParams :: ProtocolParameters -> Babbage.BabbagePParams ledgerera
 toBabbagePParams ProtocolParameters {
                    protocolParamProtocolVersion,
                    protocolParamMaxBlockHeaderSize,
@@ -1544,7 +1543,7 @@ toBabbagePParams ProtocolParameters {
                    protocolParamCollateralPercent   = Just collateralPercentage,
                    protocolParamMaxCollateralInputs = Just maxCollateralInputs
                  } =
-    Babbage.PParams {
+    Babbage.BabbagePParams {
       Babbage._protocolVersion
                            = let (maj, minor) = protocolParamProtocolVersion
                               in Ledger.ProtVer maj minor
@@ -1614,10 +1613,10 @@ fromLedgerPParams ShelleyBasedEraAlonzo  = fromAlonzoPParams
 fromLedgerPParams ShelleyBasedEraBabbage = fromBabbagePParams
 
 
-fromShelleyPParams :: Shelley.PParams ledgerera
+fromShelleyPParams :: Shelley.ShelleyPParams ledgerera
                    -> ProtocolParameters
 fromShelleyPParams
-    Shelley.PParams {
+    Shelley.ShelleyPParams {
       Shelley._minfeeA
     , Shelley._minfeeB
     , Shelley._maxBBSize
@@ -1667,9 +1666,9 @@ fromShelleyPParams
     }
 
 
-fromAlonzoPParams :: Alonzo.PParams ledgerera -> ProtocolParameters
+fromAlonzoPParams :: Alonzo.AlonzoPParams ledgerera -> ProtocolParameters
 fromAlonzoPParams
-    Alonzo.PParams {
+    Alonzo.AlonzoPParams {
       Alonzo._minfeeA
     , Alonzo._minfeeB
     , Alonzo._maxBBSize
@@ -1725,9 +1724,9 @@ fromAlonzoPParams
     , protocolParamUTxOCostPerByte     = Nothing    -- Only from babbage onwards
     }
 
-fromBabbagePParams :: Babbage.PParams ledgerera -> ProtocolParameters
+fromBabbagePParams :: Babbage.BabbagePParams ledgerera -> ProtocolParameters
 fromBabbagePParams
-    Babbage.PParams {
+    Babbage.BabbagePParams {
       Babbage._minfeeA
     , Babbage._minfeeB
     , Babbage._maxBBSize
