@@ -97,7 +97,7 @@ jobs:
 
         ghc --version
         cabal --version
-        echo "::set-output name=cabal-store::$(cabal --help | tail -1 | tr -d ' ' | rev | cut -d '/' -f2- | rev)\\store"
+        echo "cabal-store=$(cabal --help | tail -1 | tr -d ' ' | rev | cut -d '/' -f2- | rev)\\store" >> $GITHUB_OUTPUT
 
     - name: Set cache version
       run: echo "CACHE_VERSION=grFfw8r" >> $GITHUB_ENV
@@ -189,7 +189,7 @@ jobs:
         cabal build all --dry-run
         cat ${{ env.PLAN_JSON }} | jq -r '."install-plan"[].id' | sort | uniq > dependencies.txt
         date > date.txt
-        echo "::set-output name=weeknum::$(/bin/date -u "+%W")"
+        echo "weeknum=$(/bin/date -u "+%W")" >> $GITHUB_OUTPUT
 
     - name: Cache Cabal store
       uses: actions/cache@v2
@@ -274,7 +274,8 @@ jobs:
 
     - name: Create Release Tag
       id: create_release_tag
-      run: echo ::set-output name=TAG::${GITHUB_REF/refs\/tags\//}
+      run: ｜
+        echo "TAG=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_OUTPUT
 
     - name: Create Release
       id: create_release
