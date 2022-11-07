@@ -121,6 +121,7 @@ library
                       , cardano-ledger-byron
                       , cardano-ledger-core
                       , cardano-ledger-shelley-ma
+                      , cardano-ledger-shelley
                       , cardano-prelude
                       , cardano-protocol-tpraos
                       , cardano-slotting
@@ -134,6 +135,7 @@ library
                       , formatting
                       , iproute
                       , memory
+                      , microlens
                       , network
                       , nothunks
                       , optparse-applicative-fork
@@ -155,7 +157,7 @@ library
                       , cardano-ledger-shelley
                       , small-steps
                       , stm
-                      , strict-containers
+                      , cardano-strict-containers
                       , text
                       , time
                       , transformers
