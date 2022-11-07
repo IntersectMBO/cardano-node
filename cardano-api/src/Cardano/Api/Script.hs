@@ -129,7 +129,6 @@ import           Numeric.Natural (Natural)
 import           Data.Aeson (Value (..), object, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
-import qualified Data.Sequence.Strict as Seq
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vector
 
@@ -169,6 +168,7 @@ import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.TxIn
 import           Cardano.Api.Utils (failEitherWith)
+import qualified Data.Sequence.Strict as Seq
 
 -- ----------------------------------------------------------------------------
 -- Types for script language and version
