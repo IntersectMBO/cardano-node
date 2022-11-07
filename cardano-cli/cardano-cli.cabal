@@ -140,7 +140,7 @@ library
                       , cardano-ledger-shelley
                       , set-algebra
                       , split
-                      , strict-containers
+                      , cardano-strict-containers
                       , text
                       , time
                       , transformers

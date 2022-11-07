@@ -154,7 +154,7 @@ library
                       , cardano-ledger-shelley
                       , small-steps
                       , stm
-                      , strict-containers
+                      , cardano-strict-containers
                       , text
                       , time
                       , transformers
