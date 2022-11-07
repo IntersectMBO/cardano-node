@@ -92,27 +92,28 @@ constraints:
   , protolude >= 0.3.2
 
   -- TODO: these should be set in cabal files, but avoiding setting them in lower dependencies for initial CHaP release
-
-  -- Needed until ouroboros-network gets proper bounds
-  , byron-spec-chain == 0.1.1.1
-  , byron-spec-ledger == 0.1.1.1
-  , cardano-binary == 1.5.0
-  , cardano-ledger-alonzo == 0.1.1.1
-  , cardano-ledger-babbage == 0.1.1.1
-  , cardano-ledger-byron == 0.1.1.1
-  , cardano-ledger-byron-test == 1.4.1
-  , cardano-ledger-conway == 0.1.1.1
-  , cardano-ledger-core == 0.1.1.1
-  , cardano-ledger-pretty == 0.1.1.1
-  , cardano-ledger-shelley == 0.1.1.1
-  , cardano-ledger-shelley-ma == 0.1.1.1
-  , cardano-ledger-shelley-test == 0.1.1.1
-  , cardano-protocol-tpraos == 0.1.1.1
-  , hedgehog-extras >= 0.3.0.3
-
--- We'll need this once ouroboros has been pushed into CHaP
--- extra-packages:
---     ouroboros-consensus-cardano-tools == 0.1.0.0
+  , cardano-prelude == 0.1.0.1
+  , base-deriving-via == 0.1.0.0
+  , cardano-binary  == 1.5.0
+  , cardano-binary-test == 1.3.0
+  , cardano-crypto-class  == 2.0.0.1
+  , cardano-crypto-praos  == 2.0.0.0.1
+  , cardano-crypto-tests  == 2.0.0.0.1
+  , cardano-slotting  == 0.1.0.0
+  , measures == 0.1.0.0
+  , orphans-deriving-via == 0.1.0.0
+  , strict-containers == 0.1.0.0
+  , plutus-core == 1.0.0.1
+  , plutus-ledger-api == 1.0.0.1
+  , plutus-tx == 1.0.0.0
+  , plutus-tx-plugin == 1.0.0.0
+  , prettyprinter-configurable == 0.1.0.0
+  , plutus-ghc-stub == 8.6.5
+  , word-array == 0.1.0.0
+  , word-array == 0.1.0.0
+  , io-classes == 0.2.0.0
+  , typed-protocols == 0.1.0.0
+  , typed-protocols-examples == 0.1.0.0
 
 package snap-server
   flags: +openssl
@@ -145,59 +146,61 @@ source-repository-package
   tag: 4ec92ded05ccf59ba4a874be4b404ac1b6d666b6
   --sha256: 00fvvaf4ir4hskq4a6gggbh2wmdvy8j8kn6s4m1p1vlh8m8mq514
 
+-- This is https://github.com/input-output-hk/cardano-ledger/pull/3080
+-- which is release/1.1.x + heapword split compatibility.
+source-repository-package
+   type: git
+   location: https://github.com/input-output-hk/cardano-ledger
+   tag: cb29b038a5e8ae5a91f3e6fbc34b474c27cc1d87
+   --sha256: 0gxb9xghsacr0qaljhq3qzvmb2f1wwmly89prwqy4fdm9mvqiq95
+   subdir:
+     eras/alonzo/impl
+     eras/alonzo/test-suite
+     eras/babbage/impl
+     eras/babbage/test-suite
+     eras/byron/chain/executable-spec
+     eras/byron/crypto
+     eras/byron/crypto/test
+     eras/byron/ledger/executable-spec
+     eras/byron/ledger/impl
+     eras/byron/ledger/impl/test
+     eras/conway/impl
+     eras/shelley/impl
+     eras/shelley/test-suite
+     eras/shelley-ma/impl
+     eras/shelley-ma/test-suite
+     libs/cardano-ledger-core
+     libs/cardano-ledger-pretty
+     libs/cardano-protocol-tpraos
+     libs/cardano-data
+     libs/vector-map
+     libs/set-algebra
+     libs/small-steps
+     libs/small-steps-test
+     libs/non-integral
+
+-- 774f3e445e4cadf78d38a2b9d20b620d3b576835 is c764553561bed8978d2c6753d1608dc65449617a+44
+-- a38f898a3740925ccaa0617fa870ca7054a485a6 is 774f3e445e4cadf78d38a2b9d20b620d3b576835+1 (strict-containers -> cardano-strict-containers)
 -- And has the adjustments for the ledger refactor
 source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/ouroboros-network
-  tag: 9128bfcc044fc882decb0cf112545abf9bc2d615
-  --sha256: 0hdh7xdrvxw943r6qr0xr4kwszindh5mnsn1lww6qdnxnmn7wcsc
-  subdir:
-    monoidal-synchronisation
-    network-mux
-    ouroboros-consensus
-    ouroboros-consensus-byron
-    ouroboros-consensus-cardano
-    ouroboros-consensus-protocol
-    ouroboros-consensus-shelley
-    ouroboros-network
-    ouroboros-network-framework
-    ouroboros-network-testing
+   type: git
+   location: https://github.com/input-output-hk/ouroboros-network
+   tag: a38f898a3740925ccaa0617fa870ca7054a485a6
+   --sha256: 0hdh7xdrvxw943r6qr0xr4kwszindh5mnsn1lww6qdnxnmn7wcsc
+   subdir:
+     monoidal-synchronisation
+     network-mux
+     ouroboros-consensus
+     ouroboros-consensus-byron
+     ouroboros-consensus-cardano
+     ouroboros-consensus-protocol
+     ouroboros-consensus-shelley
+     ouroboros-network
+     ouroboros-network-framework
+     ouroboros-network-testing
 
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-ledger
-  tag: 49613f11e034485c8377945c86c0465726c0860c
-  --sha256: 0i9x66yqkrvx2w79dy6lzlya82yxc8567rgjj828vc2d46d6nvx6
-  subdir:
-    eras/alonzo/impl
-    eras/alonzo/test-suite
-    eras/babbage/impl
-    eras/babbage/test-suite
-    eras/byron/chain/executable-spec
-    eras/byron/crypto
-    eras/byron/crypto/test
-    eras/byron/ledger/executable-spec
-    eras/byron/ledger/impl
-    eras/byron/ledger/impl/test
-    eras/shelley/impl
-    eras/shelley/test-suite
-    eras/shelley-ma/impl
-    eras/shelley-ma/test-suite
-    libs/cardano-ledger-core
-    libs/cardano-ledger-pretty
-    libs/cardano-protocol-tpraos
-    libs/cardano-data
-    libs/vector-map
-    libs/set-algebra
-    libs/small-steps
-    libs/small-steps-test
-    libs/non-integral
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-prelude
-  tag: 533aec85c1ca05c7d171da44b89341fb736ecfe5
-  --sha256: 0z2y3wzppc12bpn9bl48776ms3nszw8j58xfsdxf97nzjgrmd62g
-  subdir:
-    cardano-prelude
-    cardano-prelude-test
+-- Notes:
+-- ledger 1.1.x + heapword split
+-- => protolude > 0.3.2
+--    => cardano-prelude > 1.0.0.0
+-- => cardano-crypto-class == 2.0.0.1
