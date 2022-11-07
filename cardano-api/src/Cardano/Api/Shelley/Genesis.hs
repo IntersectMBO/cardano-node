@@ -8,6 +8,7 @@ module Cardano.Api.Shelley.Genesis
 
 import           Prelude
 
+import qualified Data.ListMap as ListMap
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
 import qualified Data.Time as Time
@@ -65,7 +66,7 @@ shelleyGenesisDefaults =
       -- genesis keys and initial funds
     , sgGenDelegs             = Map.empty
     , sgStaking               = emptyGenesisStaking
-    , sgInitialFunds          = Map.empty
+    , sgInitialFunds          = ListMap.empty
     , sgMaxLovelaceSupply     = 0
     }
   where

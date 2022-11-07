@@ -85,7 +85,8 @@ import           Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import           Cardano.Ledger.Shelley.Constraints
 import           Cardano.Ledger.Shelley.EpochBoundary
 import           Cardano.Ledger.Shelley.LedgerState (EpochState (esSnapshots),
-                   NewEpochState (nesEs))
+                   NewEpochState (nesEs), PState (_fPParams, _pParams, _retiring))
+import qualified Cardano.Ledger.Shelley.LedgerState as SL
 import qualified Cardano.Ledger.Shelley.PParams as Shelley
 import           Cardano.Ledger.Shelley.Scripts ()
 import           Cardano.Slotting.EpochInfo (EpochInfo (..), epochInfoSlotToUTCTime, hoistEpochInfo)
@@ -179,7 +180,8 @@ runQueryCmd cmd =
       runQueryProtocolParameters consensusModeParams network mOutFile
     QueryTip consensusModeParams network mOutFile ->
       runQueryTip consensusModeParams network mOutFile
-    QueryStakePools' _ _ _ -> throwError $ ShelleyQueryCmdSlotToUtcError "currently missing"
+    QueryStakePools' consensusModeParams network mOutFile ->
+      runQueryStakePools consensusModeParams network mOutFile
     QueryStakeDistribution' consensusModeParams network mOutFile ->
       runQueryStakeDistribution consensusModeParams network mOutFile
     QueryStakeAddressInfo consensusModeParams addr network mOutFile ->
@@ -194,7 +196,8 @@ runQueryCmd cmd =
       runQueryUTxO consensusModeParams qFilter networkId mOutFile
     QueryKesPeriodInfo consensusModeParams network nodeOpCert mOutFile ->
       runQueryKesPeriodInfo consensusModeParams network nodeOpCert mOutFile
-    QueryPoolState' _ _ _ -> throwError $ ShelleyQueryCmdSlotToUtcError "currently missing"
+    QueryPoolState' consensusModeParams network poolid ->
+      runQueryPoolState consensusModeParams network poolid
     QueryTxMempool consensusModeParams network op mOutFile ->
       runQueryTxMempool consensusModeParams network op mOutFile
 
@@ -604,6 +607,34 @@ renderOpCertIntervalInformation opCertFile
     "  Operational certificate's starting KES period: " <> show start <> "\n" <>
     "  Operational certificate's expiry KES period: " <> show end
 
+-- | Query the current and future parameters for a stake pool, including the retirement date.
+-- Any of these may be empty (in which case a null will be displayed).
+--
+runQueryPoolState
+  :: AnyConsensusModeParams
+  -> NetworkId
+  -> [Hash StakePoolKey]
+  -> ExceptT ShelleyQueryCmdError IO ()
+runQueryPoolState (AnyConsensusModeParams cModeParams) network poolIds = do
+  SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr
+                           $ newExceptT readEnvSocketPath
+  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
+
+
+  anyE@(AnyCardanoEra era) <-
+    firstExceptT ShelleyQueryCmdAcquireFailure
+      . newExceptT $ determineEra cModeParams localNodeConnInfo
+
+  let cMode = consensusModeOnly cModeParams
+  sbe <- getSbe $ cardanoEraStyle era
+
+  eInMode <- toEraInMode era cMode
+    & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
+
+  let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryPoolState $ Just $ Set.fromList poolIds
+  result <- executeQuery era cModeParams localNodeConnInfo qInMode
+  obtainLedgerEraClassConstraints sbe writePoolState result
+
 -- | Query the local mempool state
 runQueryTxMempool
   :: AnyConsensusModeParams
@@ -863,6 +894,35 @@ getAllStake (SnapShot stake _ _) = activeStake
   where
     Coin activeStake = fold (fmap fromCompact (VMap.toMap (unStake stake)))
 
+-- | This function obtains the pool parameters, equivalent to the following jq query on the output of query ledger-state
+--   .nesEs.esLState._delegationState._pstate._pParams.<pool_id>
+writePoolState :: forall era ledgerera. ()
+  => ShelleyLedgerEra era ~ ledgerera
+  => Era.Crypto ledgerera ~ StandardCrypto
+  => Ledger.Era ledgerera
+  => SerialisedPoolState era
+  -> ExceptT ShelleyQueryCmdError IO ()
+writePoolState serialisedCurrentEpochState =
+  case decodePoolState serialisedCurrentEpochState of
+    Left err -> left (ShelleyQueryCmdPoolStateDecodeError err)
+
+    Right (PoolState poolState) -> do
+      let hks = Set.toList $ Set.fromList $ Map.keys (_pParams poolState) <> Map.keys (_fPParams poolState) <> Map.keys (_retiring poolState)
+
+      let poolStates :: Map (KeyHash 'StakePool StandardCrypto) (Params StandardCrypto)
+          poolStates = Map.fromList $ hks <&>
+            ( \hk ->
+              ( hk
+              , Params
+                { poolParameters        = Map.lookup hk (SL._pParams  poolState)
+                , futurePoolParameters  = Map.lookup hk (SL._fPParams poolState)
+                , retiringEpoch         = Map.lookup hk (SL._retiring poolState)
+                }
+              )
+            )
+
+      liftIO . LBS.putStrLn $ encodePretty poolStates
+
 writeProtocolState ::
   ( FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , ToJSON (Consensus.ChainDepState (ConsensusProtocol era))
@@ -976,6 +1036,50 @@ printUtxo shelleyBasedEra' txInOutTuple =
   printableValue :: TxOutValue era -> Text
   printableValue (TxOutValue _ val) = renderValue val
   printableValue (TxOutAdaOnly _ (Lovelace i)) = Text.pack $ show i
+
+runQueryStakePools
+  :: AnyConsensusModeParams
+  -> NetworkId
+  -> Maybe OutputFile
+  -> ExceptT ShelleyQueryCmdError IO ()
+runQueryStakePools (AnyConsensusModeParams cModeParams)
+                          network mOutFile = do
+  SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr
+                           $ newExceptT readEnvSocketPath
+
+  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
+
+  result <- ExceptT . fmap (join . first ShelleyQueryCmdAcquireFailure) $
+    executeLocalStateQueryExpr localNodeConnInfo Nothing $ \_ntcVersion -> runExceptT @ShelleyQueryCmdError $ do
+      anyE@(AnyCardanoEra era) <- case consensusModeOnly cModeParams of
+        ByronMode -> return $ AnyCardanoEra ByronEra
+        ShelleyMode -> return $ AnyCardanoEra ShelleyEra
+        CardanoMode -> lift . queryExpr $ QueryCurrentEra CardanoModeIsMultiEra
+
+      let cMode = consensusModeOnly cModeParams
+
+      case toEraInMode era cMode of
+        Just eInMode -> do
+          sbe <- getSbe $ cardanoEraStyle era
+
+          firstExceptT ShelleyQueryCmdEraMismatch . ExceptT $
+            queryExpr . QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryStakePools
+
+        Nothing -> left $ ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE
+
+  writeStakePools mOutFile result
+
+writeStakePools
+  :: Maybe OutputFile
+  -> Set PoolId
+  -> ExceptT ShelleyQueryCmdError IO ()
+writeStakePools (Just (OutputFile outFile)) stakePools =
+  handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError outFile) $
+    LBS.writeFile outFile (encodePretty stakePools)
+
+writeStakePools Nothing stakePools =
+  forM_ (Set.toList stakePools) $ \poolId ->
+    liftIO . putStrLn $ Text.unpack (serialiseToBech32 poolId)
 
 runQueryStakeDistribution
   :: AnyConsensusModeParams

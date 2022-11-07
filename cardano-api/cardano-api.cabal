@@ -206,7 +206,7 @@ test-suite cardano-api-test
   build-depends:        aeson             >= 1.5.6.0
                       , cardano-api
                       , cardano-api:gen
-                      -- , cardano-data
+                      , cardano-data
                       , cardano-crypto
                       , cardano-crypto-class
                       , cardano-crypto-test

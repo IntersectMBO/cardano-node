@@ -411,8 +411,8 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TraceChurnWait             {} -> Info
       TraceChurnMode             {} -> Info
 
-instance HasPrivacyAnnotation (DebugPeerSelection addr conn)
-instance HasSeverityAnnotation (DebugPeerSelection addr conn) where
+instance HasPrivacyAnnotation (DebugPeerSelection addr)
+instance HasSeverityAnnotation (DebugPeerSelection addr) where
   getSeverityAnnotation _ = Debug
 
 instance HasPrivacyAnnotation (PeerSelectionActionsTrace SockAddr)
@@ -460,7 +460,6 @@ instance HasSeverityAnnotation (ConnectionManagerTrace addr (ConnectionHandlerTr
       TrConnectionTimeWaitDone {}             -> Debug
       TrConnectionManagerCounters {}          -> Info
       TrState {}                              -> Info
-      TrUnknownConnection {}                  -> Error
       ConnMgr.TrUnexpectedlyFalseAssertion {} -> Error
 
 instance HasPrivacyAnnotation (ConnMgr.AbstractTransitionTrace addr)
@@ -667,10 +666,9 @@ instance Transformable Text IO (TracePeerSelection SockAddr) where
 instance HasTextFormatter (TracePeerSelection SockAddr) where
   formatText a _ = pack (show a)
 
-instance Show conn
-      => Transformable Text IO (DebugPeerSelection SockAddr conn) where
+instance Transformable Text IO (DebugPeerSelection SockAddr) where
   trTransformer = trStructuredText
-instance HasTextFormatter (DebugPeerSelection SockAddr conn) where
+instance HasTextFormatter (DebugPeerSelection SockAddr) where
   -- One can only change what is logged with respect to verbosity using json
   -- format.
   formatText _ obj = pack (show obj)
@@ -1621,7 +1619,7 @@ peerSelectionTargetsToObject
                , "active" .= targetNumberOfActivePeers
                ]
 
-instance Show peerConn => ToObject (DebugPeerSelection SockAddr peerConn) where
+instance ToObject (DebugPeerSelection SockAddr) where
   toObject verb (TraceGovernorState blockedAt wakeupAfter
                    PeerSelectionState { targets, knownPeers, establishedPeers, activePeers })
       | verb <= NormalVerbosity =
@@ -1911,7 +1909,6 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
                                            ])
                                        (Map.toList cmState)
           ]
-      TrUnknownConnection _ -> mconcat []
       ConnMgr.TrUnexpectedlyFalseAssertion info ->
         mconcat
           [ "kind" .= String "UnexpectedlyFalseAssertion"
