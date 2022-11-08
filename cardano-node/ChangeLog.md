@@ -1,4 +1,4 @@
-# Changelog for Cardano node
+# Changelog for cardano-node
 
 ## vNext
 
