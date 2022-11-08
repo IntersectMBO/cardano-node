@@ -10,6 +10,7 @@ import           Test.Tasty (TestTree)
 import qualified Spec.Cli.Alonzo.LeadershipSchedule
 import qualified Spec.Cli.Babbage.LeadershipSchedule
 import qualified Spec.Cli.KesPeriodInfo
+import qualified Spec.FoldBlocks
 import qualified Spec.Node.Shutdown
 import qualified Spec.ShutdownOnSlotSynced
 import qualified System.Environment as E
@@ -33,6 +34,7 @@ tests = pure $ T.testGroup "test/Spec.hs"
       -- TODO: Babbage temporarily ignored due to broken protocol-state query
     , H.disabled "kes-period-info" Spec.Cli.KesPeriodInfo.hprop_kes_period_info
     ]
+  , Spec.FoldBlocks.tests
   ]
 
 ingredients :: [T.Ingredient]

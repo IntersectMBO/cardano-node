@@ -112,6 +112,7 @@ test-suite cardano-testnet-tests
 
   build-depends:        cardano-testnet
                       , aeson
+                      , async
                       , cardano-api
                       , cardano-cli
                       , containers
@@ -125,11 +126,13 @@ test-suite cardano-testnet-tests
                       , tasty-hedgehog
                       , text
                       , time
+                      , transformers
 
   other-modules:
                         Spec.Cli.Alonzo.LeadershipSchedule
                         Spec.Cli.Babbage.LeadershipSchedule
                         Spec.Cli.KesPeriodInfo
+                        Spec.FoldBlocks
                         Spec.Node.Shutdown
                         Spec.ShutdownOnSlotSynced
                         Testnet.Properties.Cli.KesPeriodInfo
