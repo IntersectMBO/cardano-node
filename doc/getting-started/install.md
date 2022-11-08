@@ -115,6 +115,12 @@ export LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"
 export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
 ```
 
+For some distributions you will also need to configure the dynamic linker.  If
+the executable is linked with the right `libsodium.so` file (which you can
+check by running `ldd`), the running binary might still use the wrong library.
+You can check this by running `pldd`. If the `pldd` shows that the running executable 
+is using the wrong library, run `ldconfig`.
+
 ##### Using the ported `c` code
 
 In order to avoid having to install the custom version, `cardano-crypto-praos`
