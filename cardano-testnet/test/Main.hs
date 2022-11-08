@@ -16,6 +16,7 @@ import qualified Test.Cli.Babbage.LeadershipSchedule
 import qualified Test.Cli.KesPeriodInfo
 import qualified Test.Node.Shutdown
 import qualified Test.ShutdownOnSlotSynced
+import qualified Test.FoldBlocks
 import qualified Util.Ignore as H
 
 tests :: IO TestTree
@@ -35,6 +36,7 @@ tests = pure $ T.testGroup "test/Spec.hs"
       -- TODO: Babbage temporarily ignored due to broken protocol-state query
     , H.disabled "kes-period-info" Test.Cli.KesPeriodInfo.hprop_kes_period_info
     ]
+  , Test.FoldBlocks.tests
   ]
 
 ingredients :: [T.Ingredient]

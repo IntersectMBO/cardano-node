@@ -108,22 +108,26 @@ test-suite cardano-testnet-tests
                         Test.Misc
                         Test.Node.Shutdown
                         Test.ShutdownOnSlotSynced
+                        Test.FoldBlocks
 
   type:                 exitcode-stdio-1.0
 
   build-depends:        aeson
+                      , async
                       , cardano-api
                       , cardano-cli
                       , cardano-testnet
                       , containers
                       , directory
                       , filepath
-                      , hedgehog                      
+                      , hedgehog
                       , hedgehog-extras
                       , process
                       , tasty
+                      , tasty-hedgehog
                       , text
                       , time
+                      , transformers
 
 
   other-modules:
