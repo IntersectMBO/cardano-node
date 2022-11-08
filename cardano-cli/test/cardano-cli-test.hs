@@ -10,8 +10,11 @@ import qualified Test.Cli.Pioneers.Exercise1
 import qualified Test.Cli.Pioneers.Exercise2
 import qualified Test.Cli.Pioneers.Exercise3
 import qualified Test.Cli.Pioneers.Exercise4
+import qualified Test.Cli.Pipes
 import qualified Test.Cli.Shelley.Run.Query
 import qualified Test.Config.Mainnet
+
+import           Hedgehog.Extras.Stock.OS (isWin32)
 
 main :: IO ()
 main =
@@ -21,6 +24,7 @@ main =
     , Test.Cli.ITN.tests
     , Test.Cli.JSON.tests
     , Test.Cli.MultiAssetParsing.tests
+    , ignoreOnWindows Test.Cli.Pipes.tests
     , Test.Cli.Pioneers.Exercise1.tests
     , Test.Cli.Pioneers.Exercise2.tests
     , Test.Cli.Pioneers.Exercise3.tests
@@ -28,3 +32,9 @@ main =
     , Test.Cli.Shelley.Run.Query.tests
     , Test.Config.Mainnet.tests
     ]
+
+ignoreOnWindows :: IO Bool -> IO Bool
+ignoreOnWindows test =
+  if isWin32
+  then return True
+  else test
