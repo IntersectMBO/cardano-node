@@ -117,10 +117,9 @@ export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
 
 For some distributions you will also need to configure the dynamic linker.  If
 the executable is linked with the right `libsodium.so` file (which you can
-check with `ldd`) but the process isn't (it dies with unknown symbol exception
-or can check with `pldd`) added a file which points to installation target of
-`libsodium` (in standard configuration it is `/usr/local/lib`) under
-`/etc/ld.so.conf` and run `ldconfig`.
+check by running `ldd`), the running binary might still use the wrong library.
+You can check this by running `pldd`. If the `pldd` shows that the running executable 
+is using the wrong library, run `ldconfig`.
 
 ##### Using the ported `c` code
 
