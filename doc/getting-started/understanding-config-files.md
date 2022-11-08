@@ -102,6 +102,9 @@ signal to the `cardano-node` process, e.g. `pkill -HUP cardano-node`. After rece
 signal, `cardano-node` will re-read the file and restart all dns resolution. Please
 **note** that this only applies to the topology configuration file!
 
+One can disable ledger peers by setting the `useLedgerAfterSlot` to a negative
+value.
+
 #### The genesis.json file
 
 The genesis file is generated with the `cardano-cli` by reading a `genesis.spec.json` file, which is out of scope for this document.
