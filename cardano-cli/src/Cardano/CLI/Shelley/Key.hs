@@ -74,7 +74,9 @@ readFileBlocking path = bracket
 -- The contents of the file can either be Bech32-encoded, hex-encoded, or in
 -- the text envelope format.
 readKeyFile
-  :: AsType a
+  :: SerialiseAsCBOR a
+  => SerialiseAsRawBytes a
+  => AsType a
   -> NonEmpty (InputFormat a)
   -> FilePath
   -> IO (Either (FileError InputDecodeError) a)
@@ -89,6 +91,7 @@ readKeyFile asType acceptedFormats path =
 -- The contents of the file must be in the text envelope format.
 readKeyFileTextEnvelope
   :: HasTextEnvelope a
+  => SerialiseAsCBOR a
   => AsType a
   -> FilePath
   -> IO (Either (FileError InputDecodeError) a)
@@ -113,8 +116,8 @@ readKeyFileTextEnvelope asType fp =
 -- envelope format.
 readKeyFileAnyOf
   :: forall b.
-     [FromSomeType SerialiseAsBech32 b]
-  -> [FromSomeType HasTextEnvelope b]
+     [FromSomeType SerialiseAsBech32 SerialiseAsRawBytes b]
+  -> [FromSomeType HasTextEnvelope SerialiseAsCBOR b]
   -> FilePath
   -> IO (Either (FileError InputDecodeError) b)
 readKeyFileAnyOf bech32Types textEnvTypes path =
@@ -135,6 +138,8 @@ readSigningKeyFile
   :: forall keyrole.
      ( HasTextEnvelope (SigningKey keyrole)
      , SerialiseAsBech32 (SigningKey keyrole)
+     , SerialiseAsCBOR (SigningKey keyrole)
+     , SerialiseAsRawBytes (SigningKey keyrole)
      )
   => AsType keyrole
   -> SigningKeyFile
@@ -152,8 +157,8 @@ readSigningKeyFile asType (SigningKeyFile fp) =
 -- envelope format.
 readSigningKeyFileAnyOf
   :: forall b.
-     [FromSomeType SerialiseAsBech32 b]
-  -> [FromSomeType HasTextEnvelope b]
+     [FromSomeType SerialiseAsBech32 SerialiseAsRawBytes b]
+  -> [FromSomeType HasTextEnvelope SerialiseAsCBOR b]
   -> SigningKeyFile
   -> IO (Either (FileError InputDecodeError) b)
 readSigningKeyFileAnyOf bech32Types textEnvTypes (SigningKeyFile fp) =
@@ -186,6 +191,8 @@ deriving instance Eq (VerificationKey keyrole)
 readVerificationKeyOrFile
   :: ( HasTextEnvelope (VerificationKey keyrole)
      , SerialiseAsBech32 (VerificationKey keyrole)
+     , SerialiseAsCBOR (VerificationKey keyrole)
+     , SerialiseAsRawBytes (VerificationKey keyrole)
      )
   => AsType keyrole
   -> VerificationKeyOrFile keyrole
@@ -206,6 +213,7 @@ readVerificationKeyOrFile asType verKeyOrFile =
 -- formatted file.
 readVerificationKeyOrTextEnvFile
   :: HasTextEnvelope (VerificationKey keyrole)
+  => SerialiseAsCBOR (VerificationKey keyrole)
   => AsType keyrole
   -> VerificationKeyOrFile keyrole
   -> IO (Either (FileError InputDecodeError) (VerificationKey keyrole))
@@ -250,9 +258,12 @@ renderVerificationKeyTextOrFileError vkTextOrFileErr =
 -- If a filepath is provided, the file can either be formatted as Bech32, hex,
 -- or text envelope.
 readVerificationKeyTextOrFileAnyOf
-  :: VerificationKeyTextOrFile
-  -> IO (Either VerificationKeyTextOrFileError SomeAddressVerificationKey)
-readVerificationKeyTextOrFileAnyOf verKeyTextOrFile =
+  :: forall b.
+     [FromSomeType SerialiseAsBech32 SerialiseAsRawBytes b]
+  -> [FromSomeType HasTextEnvelope SerialiseAsCBOR b]
+  -> VerificationKeyTextOrFile
+  -> IO (Either VerificationKeyTextOrFileError b)
+readVerificationKeyTextOrFileAnyOf bech32Types textEnvTypes verKeyTextOrFile =
   case verKeyTextOrFile of
     VktofVerificationKeyText vkText ->
       pure $ first VerificationKeyTextError $
@@ -283,7 +294,10 @@ deriving instance (Eq (VerificationKeyOrFile keyrole), Eq (Hash keyrole))
 -- If a filepath is provided, the file can either be formatted as Bech32, hex,
 -- or text envelope.
 readVerificationKeyOrHashOrFile
-  :: (Key keyrole, SerialiseAsBech32 (VerificationKey keyrole))
+  :: ( Key keyrole
+     , SerialiseAsBech32 (VerificationKey keyrole)
+     , SerialiseAsCBOR (VerificationKey keyrole)
+     , SerialiseAsRawBytes (VerificationKey keyrole))
   => AsType keyrole
   -> VerificationKeyOrHashOrFile keyrole
   -> IO (Either (FileError InputDecodeError) (Hash keyrole))
@@ -301,6 +315,7 @@ readVerificationKeyOrHashOrFile asType verKeyOrHashOrFile =
 -- formatted file.
 readVerificationKeyOrHashOrTextEnvFile
   :: Key keyrole
+  => SerialiseAsCBOR (VerificationKey keyrole)
   => AsType keyrole
   -> VerificationKeyOrHashOrFile keyrole
   -> IO (Either (FileError InputDecodeError) (Hash keyrole))

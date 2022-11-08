@@ -82,13 +82,13 @@ runNodeKeyGenCold (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath)
     let vkey = getVerificationKey skey
     firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
-      $ writeFileTextEnvelope skeyPath (Just skeyDesc) skey
+      $ writeFileTextEnvelope skeyPath serialiseToCBOR (Just skeyDesc) skey
     firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
-      $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
+      $ writeFileTextEnvelope vkeyPath serialiseToCBOR (Just vkeyDesc) vkey
     firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
-      $ writeFileTextEnvelope ocertCtrPath (Just ocertCtrDesc)
+      $ writeFileTextEnvelope ocertCtrPath serialiseToCBOR (Just ocertCtrDesc)
       $ OperationalCertificateIssueCounter initialCounter vkey
   where
     skeyDesc, vkeyDesc, ocertCtrDesc :: TextEnvelopeDescr
@@ -109,10 +109,10 @@ runNodeKeyGenKES (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
     let vkey = getVerificationKey skey
     firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
-      $ writeFileTextEnvelope skeyPath (Just skeyDesc) skey
+      $ writeFileTextEnvelope skeyPath serialiseToCBOR (Just skeyDesc) skey
     firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
-      $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
+      $ writeFileTextEnvelope vkeyPath serialiseToCBOR (Just vkeyDesc) vkey
   where
     skeyDesc, vkeyDesc :: TextEnvelopeDescr
     skeyDesc = "KES Signing Key"
@@ -128,7 +128,7 @@ runNodeKeyGenVRF (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
       $ writeFileTextEnvelopeWithOwnerPermissions skeyPath (Just skeyDesc) skey
     firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
-      $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
+      $ writeFileTextEnvelope vkeyPath serialiseToCBOR (Just vkeyDesc) vkey
   where
     skeyDesc, vkeyDesc :: TextEnvelopeDescr
     skeyDesc = "VRF Signing Key"
@@ -163,7 +163,7 @@ runNodeNewCounter coldVerKeyOrFile counter
           OperationalCertificateIssueCounter (fromIntegral counter) vkey
 
     firstExceptT ShelleyNodeCmdWriteFileError . newExceptT $
-      writeFileTextEnvelope ocertCtrPath Nothing ocertIssueCounter
+      writeFileTextEnvelope ocertCtrPath serialiseToCBOR Nothing ocertIssueCounter
 
 
 runNodeIssueOpCert :: VerificationKeyOrFile KesKey
@@ -213,12 +213,13 @@ runNodeIssueOpCert kesVerKeyOrFile
       . newExceptT
       $ writeFileTextEnvelope
         ocertCtrPath
+        serialiseToCBOR
         (Just $ ocertCtrDesc $ getCounter nextOcertCtr)
         nextOcertCtr
 
     firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
-      $ writeFileTextEnvelope certFile Nothing ocert
+      $ writeFileTextEnvelope certFile serialiseToCBOR Nothing ocert
   where
     getCounter :: OperationalCertificateIssueCounter -> Word64
     getCounter (OperationalCertificateIssueCounter n _) = n
@@ -227,7 +228,7 @@ runNodeIssueOpCert kesVerKeyOrFile
     ocertCtrDesc n = "Next certificate issue number: " <> fromString (show n)
 
     textEnvPossibleBlockIssuers
-      :: [FromSomeType HasTextEnvelope
+      :: [FromSomeType HasTextEnvelope SerialiseAsCBOR
                        (Either (SigningKey StakePoolKey)
                                (SigningKey GenesisDelegateExtendedKey))]
     textEnvPossibleBlockIssuers =
@@ -237,7 +238,7 @@ runNodeIssueOpCert kesVerKeyOrFile
       ]
 
     bech32PossibleBlockIssuers
-      :: [FromSomeType SerialiseAsBech32
+      :: [FromSomeType SerialiseAsBech32 SerialiseAsRawBytes
                        (Either (SigningKey StakePoolKey)
                                (SigningKey GenesisDelegateExtendedKey))]
     bech32PossibleBlockIssuers =

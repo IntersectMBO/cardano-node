@@ -66,8 +66,8 @@ runStakeAddressKeyGenToFile (VerificationKeyFile vkFp) (SigningKeyFile skFp) = d
   let vkey = getVerificationKey skey
 
   firstExceptT ShelleyStakeAddressCmdWriteFileError $ do
-    newExceptT $ writeFileTextEnvelope skFp (Just skeyDesc) skey
-    newExceptT $ writeFileTextEnvelope vkFp (Just vkeyDesc) vkey
+    newExceptT $ writeFileTextEnvelope skFp serialiseToCBOR (Just skeyDesc) skey
+    newExceptT $ writeFileTextEnvelope vkFp serialiseToCBOR (Just vkeyDesc) vkey
 
 runStakeAddressKeyHash
   :: VerificationKeyOrFile StakeKey
@@ -141,7 +141,7 @@ runStakeCredentialRegistrationCert stakeVerifier (OutputFile oFp) =
     let deRegCert = makeStakeAddressRegistrationCertificate sCred
     firstExceptT ShelleyStakeAddressCmdWriteFileError
       . newExceptT
-      $ writeFileTextEnvelope oFp (Just regCertDesc) deRegCert
+      $ writeFileTextEnvelope oFp serialiseToCBOR (Just regCertDesc) deRegCert
 
   regCertDesc :: TextEnvelopeDescr
   regCertDesc = "Stake Address Registration Certificate"
@@ -182,7 +182,7 @@ runStakeCredentialDelegationCert stakeVerifier poolVKeyOrHashOrFile (OutputFile 
       let delegCert = makeStakeAddressDelegationCertificate sCred poolStakeVKeyHash
       firstExceptT ShelleyStakeAddressCmdWriteFileError
         . newExceptT
-        $ writeFileTextEnvelope outFp (Just delegCertDesc) delegCert
+        $ writeFileTextEnvelope outFp serialiseToCBOR (Just delegCertDesc) delegCert
 
     delegCertDesc :: TextEnvelopeDescr
     delegCertDesc = "Stake Address Delegation Certificate"
@@ -213,7 +213,7 @@ runStakeCredentialDeRegistrationCert stakeVerifier (OutputFile oFp) =
       let deRegCert = makeStakeAddressDeregistrationCertificate sCred
       firstExceptT ShelleyStakeAddressCmdWriteFileError
         . newExceptT
-        $ writeFileTextEnvelope oFp (Just deregCertDesc) deRegCert
+        $ writeFileTextEnvelope oFp serialiseToCBOR (Just deregCertDesc) deRegCert
 
     deregCertDesc :: TextEnvelopeDescr
     deregCertDesc = "Stake Address Deregistration Certificate"

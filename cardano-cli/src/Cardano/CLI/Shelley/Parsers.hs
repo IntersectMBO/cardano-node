@@ -1832,6 +1832,8 @@ pColdVerificationKeyFile =
 
 pVerificationKey
   :: forall keyrole. SerialiseAsBech32 (VerificationKey keyrole)
+  => SerialiseAsRawBytes (VerificationKey keyrole)
+  => SerialiseAsCBOR (VerificationKey keyrole)
   => AsType keyrole
   -> Parser (VerificationKey keyrole)
 pVerificationKey asType =
@@ -1844,6 +1846,8 @@ pVerificationKey asType =
 
 pVerificationKeyOrFile
   :: SerialiseAsBech32 (VerificationKey keyrole)
+  => SerialiseAsRawBytes (VerificationKey keyrole)
+  => SerialiseAsCBOR (VerificationKey keyrole)
   => AsType keyrole
   -> Parser (VerificationKeyOrFile keyrole)
 pVerificationKeyOrFile asType =
@@ -3250,6 +3254,8 @@ Parsec.TokenParser { Parsec.decimal = decimal } = Parsec.haskell
 -- | Read a Bech32 or hex-encoded verification key.
 readVerificationKey
   :: forall keyrole. SerialiseAsBech32 (VerificationKey keyrole)
+  => SerialiseAsRawBytes (VerificationKey keyrole)
+  => SerialiseAsCBOR (VerificationKey keyrole)
   => AsType keyrole
   -> Opt.ReadM (VerificationKey keyrole)
 readVerificationKey asType =

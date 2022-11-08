@@ -17,7 +17,8 @@ import qualified Data.ByteString.Char8 as BS
 import           Cardano.Api
 import           Cardano.Api.Shelley
 import           Cardano.CLI.Shelley.Commands
-import           Cardano.CLI.Shelley.Key (VerificationKeyOrFile, readVerificationKeyOrFile)
+import           Cardano.CLI.Shelley.Key (InputDecodeError, VerificationKeyOrFile,
+                   readVerificationKeyOrFile)
 import           Cardano.CLI.Types (OutputFormat (..))
 
 import qualified Cardano.Ledger.Slot as Shelley
@@ -136,7 +137,7 @@ runStakePoolRegistrationCert
 
     firstExceptT ShelleyPoolCmdWriteFileError
       . newExceptT
-      $ writeFileTextEnvelope outfp (Just registrationCertDesc) registrationCert
+      $ writeFileTextEnvelope outfp serialiseToCBOR (Just registrationCertDesc) registrationCert
   where
     registrationCertDesc :: TextEnvelopeDescr
     registrationCertDesc = "Stake Pool Registration Certificate"
@@ -157,7 +158,7 @@ runStakePoolRetirementCert stakePoolVerKeyOrFile retireEpoch (OutputFile outfp) 
 
     firstExceptT ShelleyPoolCmdWriteFileError
       . newExceptT
-      $ writeFileTextEnvelope outfp (Just retireCertDesc) retireCert
+      $ writeFileTextEnvelope outfp serialiseToCBOR (Just retireCertDesc) retireCert
   where
     retireCertDesc :: TextEnvelopeDescr
     retireCertDesc = "Stake Pool Retirement Certificate"

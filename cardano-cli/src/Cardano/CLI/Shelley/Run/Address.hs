@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -77,6 +78,8 @@ runAddressKeyGenToFile kt vkf skf = case kt of
 
 generateAndWriteKeyFiles
   :: Key keyrole
+  => SerialiseAsCBOR (VerificationKey keyrole)
+  => SerialiseAsCBOR (SigningKey keyrole)
   => AsType keyrole
   -> VerificationKeyFile
   -> SigningKeyFile
@@ -86,6 +89,8 @@ generateAndWriteKeyFiles asType vkf skf = do
 
 writePaymentKeyFiles
   :: Key keyrole
+  => SerialiseAsCBOR (VerificationKey keyrole)
+  => SerialiseAsCBOR (SigningKey keyrole)
   => VerificationKeyFile
   -> SigningKeyFile
   -> VerificationKey keyrole
@@ -93,8 +98,8 @@ writePaymentKeyFiles
   -> ExceptT ShelleyAddressCmdError IO ()
 writePaymentKeyFiles (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) vkey skey = do
   firstExceptT ShelleyAddressCmdWriteFileError $ do
-    newExceptT $ writeFileTextEnvelope skeyPath (Just skeyDesc) skey
-    newExceptT $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
+    newExceptT $ writeFileTextEnvelope skeyPath serialiseToCBOR (Just skeyDesc) skey
+    newExceptT $ writeFileTextEnvelope vkeyPath serialiseToCBOR (Just vkeyDesc) vkey
   where
     skeyDesc, vkeyDesc :: TextEnvelopeDescr
     skeyDesc = "Payment Signing Key"

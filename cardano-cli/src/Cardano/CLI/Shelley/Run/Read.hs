@@ -415,7 +415,7 @@ deserialiseScriptInAnyLang bs =
   where
     -- TODO: Think of a way to get type checker to warn when there is a missing
     -- script version.
-    textEnvTypes :: [FromSomeType HasTextEnvelope ScriptInAnyLang]
+    textEnvTypes :: [FromSomeType HasTextEnvelope SerialiseAsCBOR ScriptInAnyLang]
     textEnvTypes =
       [ FromSomeType (AsScript AsSimpleScriptV1)
                      (ScriptInAnyLang (SimpleScriptLanguage SimpleScriptV1))
@@ -724,6 +724,12 @@ readFileInAnyCardanoEra
      , HasTextEnvelope (thing MaryEra)
      , HasTextEnvelope (thing AlonzoEra)
      , HasTextEnvelope (thing BabbageEra)
+     , SerialiseAsCBOR (thing ByronEra)
+     , SerialiseAsCBOR (thing ShelleyEra)
+     , SerialiseAsCBOR (thing AllegraEra)
+     , SerialiseAsCBOR (thing MaryEra)
+     , SerialiseAsCBOR (thing AlonzoEra)
+     , SerialiseAsCBOR (thing BabbageEra)
      )
   => (forall era. AsType era -> AsType (thing era))
   -> FilePath
