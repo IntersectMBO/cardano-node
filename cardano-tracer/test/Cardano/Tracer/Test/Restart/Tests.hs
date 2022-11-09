@@ -1,4 +1,6 @@
+{-# OPTIONS_GHC -Wno-partial-fields -Wno-unused-local-binds -Wno-unused-binds -Wno-unused-matches -Wno-unused-imports #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Cardano.Tracer.Test.Restart.Tests
   ( tests
@@ -15,33 +17,41 @@ import           System.Directory (removePathForcibly)
 import           System.Directory.Extra (listDirectories)
 import           System.Time.Extra (sleep)
 
+import           Ouroboros.Network.Magic (NetworkMagic (..))
+
 import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Run
 import           Cardano.Tracer.Utils
 
 import           Cardano.Tracer.Test.Forwarder
+import           Cardano.Tracer.Test.TestSetup
 import           Cardano.Tracer.Test.Utils
 
-tests :: TestTree
-tests = localOption (QuickCheckTests 1) $ testGroup "Test.Restart"
-  [ testProperty "forwarder" $ propRunInLogsStructure propNetworkForwarder
+import Cardano.Logging (Trace (..))
+import qualified System.IO as Sys
+
+tests :: TestSetup Identity -> TestTree
+tests ts = localOption (QuickCheckTests 1) $ testGroup "Test.Restart"
+  [ testProperty "forwarder" $ propRunInLogsStructure ts (propNetworkForwarder ts)
   ]
 
-propNetworkForwarder :: FilePath -> FilePath -> IO Property
-propNetworkForwarder rootDir localSock = do
-  let config = mkConfig rootDir localSock
+propNetworkForwarder :: TestSetup Identity -> FilePath -> FilePath -> IO Property
+propNetworkForwarder ts rootDir localSock = do
+  let config = mkConfig ts rootDir localSock
   brake <- initProtocolsBrake
   dpRequestors <- initDataPointRequestors
-  propNetwork' rootDir
-    ( launchForwardersSimple Initiator localSock 1000 10000
-    , doRunCardanoTracer config Nothing brake dpRequestors
+  propNetwork' ts rootDir
+    ( launchForwardersSimple ts Initiator localSock 1000 10000
+    , doRunCardanoTracer config (Just $ rootDir <> "/../state") stderrShowTracer brake dpRequestors
     )
 
 propNetwork'
-  :: FilePath
+  :: TestSetup Identity
+  -> FilePath
   -> (IO (), IO ())
   -> IO Property
-propNetwork' rootDir (fstSide, sndSide) = do
+propNetwork' _ rootDir (fstSide, sndSide) = do
   f <- asyncBound fstSide
   sleep 1.0
   s <- asyncBound sndSide
@@ -49,8 +59,8 @@ propNetwork' rootDir (fstSide, sndSide) = do
   sleep 5.0
   -- Check if the root dir contains subdir, which is a proof that interaction
   -- between sides already occurred.
-  ifM (doesDirectoryEmpty rootDir)
-    (false "root dir is empty after the first start")
+  ifM (isDirectoryEmpty rootDir)
+    (false $ "root dir is empty after the first start: " <> rootDir)
     $ do
       -- Take current subdirs (it corresponds to the connection).
       subDirs <- listDirectories rootDir
@@ -73,18 +83,19 @@ propNetwork' rootDir (fstSide, sndSide) = do
         _ ->  return $ property True
 
 mkConfig
-  :: FilePath
+  :: TestSetup Identity
+  -> FilePath
   -> FilePath
   -> TracerConfig
-mkConfig root p = TracerConfig
-  { networkMagic   = 764824073
+mkConfig TestSetup{..} rootDir p = TracerConfig
+  { networkMagic   = fromIntegral . unNetworkMagic $ unI tsNetworkMagic
   , network        = AcceptAt $ LocalSocket p
   , loRequestNum   = Just 1
   , ekgRequestFreq = Just 1.0
   , hasEKG         = Nothing
   , hasPrometheus  = Nothing
   , hasRTView      = Nothing
-  , logging        = NE.fromList [LoggingParams root FileMode ForMachine]
+  , logging        = NE.fromList [LoggingParams rootDir FileMode ForMachine]
   , rotation       = Nothing
   , verbosity      = Just Minimum
   }

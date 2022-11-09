@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Cardano.Tracer.Test.Logs.Tests
   ( tests
@@ -18,34 +19,36 @@ import           System.Time.Extra
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Handlers.Logs.Utils (isItLog)
 import           Cardano.Tracer.Run (doRunCardanoTracer)
+import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Utils (applyBrake, initProtocolsBrake,
                    initDataPointRequestors)
 
 import           Cardano.Tracer.Test.Forwarder
+import           Cardano.Tracer.Test.TestSetup
 import           Cardano.Tracer.Test.Utils
 
-tests :: TestTree
-tests = localOption (QuickCheckTests 1) $ testGroup "Test.Logs"
-  [ testProperty ".log"  $ propRunInLogsStructure (propLogs ForHuman)
-  , testProperty ".json" $ propRunInLogsStructure (propLogs ForMachine)
-  , testProperty "multi, initiator" $ propRunInLogsStructure2 (propMultiInit ForMachine)
-  , testProperty "multi, responder" $ propRunInLogsStructure  (propMultiResp ForMachine)
+tests :: TestSetup Identity -> TestTree
+tests ts = localOption (QuickCheckTests 1) $ testGroup "Test.Logs"
+  [ testProperty ".log"  $ propRunInLogsStructure ts (propLogs ts ForHuman)
+  , testProperty ".json" $ propRunInLogsStructure ts (propLogs ts ForMachine)
+  , testProperty "multi, initiator" $ propRunInLogsStructure2 ts (propMultiInit ts ForMachine)
+  , testProperty "multi, responder" $ propRunInLogsStructure ts (propMultiResp ts ForMachine)
   ]
 
-propLogs :: LogFormat -> FilePath -> FilePath -> IO Property
-propLogs format rootDir localSock = do
+propLogs :: TestSetup Identity -> LogFormat -> FilePath -> FilePath -> IO Property
+propLogs ts@TestSetup{..} format rootDir localSock = do
   stopProtocols <- initProtocolsBrake
   dpRequestors <- initDataPointRequestors
-  withAsync (doRunCardanoTracer (config rootDir localSock) Nothing stopProtocols dpRequestors) . const $ do
+  withAsync (doRunCardanoTracer (config rootDir localSock) (Just $ rootDir <> "/../state") stderrShowTracer stopProtocols dpRequestors) . const $ do
     sleep 1.0
-    withAsync (launchForwardersSimple Initiator localSock 1000 10000) . const $ do
+    withAsync (launchForwardersSimple ts Initiator localSock 1000 10000) . const $ do
       sleep 8.0 -- Wait till some rotation is done.
       applyBrake stopProtocols
       sleep 0.5
 
   doesDirectoryExist rootDir >>= \case
     False -> false "root dir doesn't exist"
-    True ->
+    True -> do
       -- ... and contains one node's subdir...
       listDirectories rootDir >>= \case
         [] -> false "root dir is empty"
@@ -61,7 +64,7 @@ propLogs format rootDir localSock = do
                 _logs     -> return $ property True
  where
   config root p = TracerConfig
-    { networkMagic   = 764824073
+    { networkMagic   = unNetworkMagic $ unI tsNetworkMagic
     , network        = AcceptAt (LocalSocket p)
     , loRequestNum   = Just 1
     , ekgRequestFreq = Just 1.0
@@ -78,22 +81,22 @@ propLogs format rootDir localSock = do
     , verbosity      = Just Minimum
     }
 
-propMultiInit :: LogFormat -> FilePath -> FilePath -> FilePath -> IO Property
-propMultiInit format rootDir localSock1 localSock2 = do
+propMultiInit :: TestSetup Identity -> LogFormat -> FilePath -> FilePath -> FilePath -> IO Property
+propMultiInit ts@TestSetup{..} format rootDir localSock1 localSock2 = do
   stopProtocols <- initProtocolsBrake
   dpRequestors <- initDataPointRequestors
-  withAsync (doRunCardanoTracer (config rootDir localSock1 localSock2) Nothing stopProtocols dpRequestors) . const $ do
+  withAsync (doRunCardanoTracer (config rootDir localSock1 localSock2) (Just $ rootDir <> "/../state") stderrShowTracer stopProtocols dpRequestors) . const $ do
     sleep 1.0
-    withAsync (launchForwardersSimple Responder localSock1 1000 10000) . const $ do
+    withAsync (launchForwardersSimple ts Responder localSock1 1000 10000) . const $ do
       sleep 1.0
-      withAsync (launchForwardersSimple Responder localSock2 1000 10000) . const $ do
+      withAsync (launchForwardersSimple ts Responder localSock2 1000 10000) . const $ do
         sleep 5.0 -- Wait till some work is done.
         applyBrake stopProtocols
         sleep 0.5
   checkMultiResults rootDir
  where
   config root p1 p2 = TracerConfig
-    { networkMagic   = 764824073
+    { networkMagic   = unNetworkMagic $ unI tsNetworkMagic
     , network        = ConnectTo $ NE.fromList [LocalSocket p1, LocalSocket p2]
     , loRequestNum   = Just 1
     , ekgRequestFreq = Just 1.0
@@ -105,22 +108,22 @@ propMultiInit format rootDir localSock1 localSock2 = do
     , verbosity      = Just Minimum
     }
 
-propMultiResp :: LogFormat -> FilePath -> FilePath -> IO Property
-propMultiResp format rootDir localSock = do
+propMultiResp :: TestSetup Identity -> LogFormat -> FilePath -> FilePath -> IO Property
+propMultiResp ts@TestSetup{..} format rootDir localSock = do
   stopProtocols <- initProtocolsBrake
   dpRequestors <- initDataPointRequestors
-  withAsync (doRunCardanoTracer (config rootDir localSock) Nothing stopProtocols dpRequestors) . const $ do
+  withAsync (doRunCardanoTracer (config rootDir localSock) (Just $ rootDir <> "/../state") stderrShowTracer stopProtocols dpRequestors) . const $ do
     sleep 1.0
-    withAsync (launchForwardersSimple Initiator localSock 1000 10000) . const $ do
+    withAsync (launchForwardersSimple ts Initiator localSock 1000 10000) . const $ do
       sleep 1.0
-      withAsync (launchForwardersSimple Initiator localSock 1000 10000) . const $ do
+      withAsync (launchForwardersSimple ts Initiator localSock 1000 10000) . const $ do
         sleep 5.0 -- Wait till some work is done.
         applyBrake stopProtocols
         sleep 0.5
   checkMultiResults rootDir
  where
   config root p = TracerConfig
-    { networkMagic   = 764824073
+    { networkMagic   = unNetworkMagic $ unI tsNetworkMagic
     , network        = AcceptAt $ LocalSocket p
     , loRequestNum   = Just 1
     , ekgRequestFreq = Just 1.0

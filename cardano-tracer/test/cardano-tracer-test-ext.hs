@@ -50,11 +50,7 @@ main = do
     Sys.createDirectoryIfMissing True       (tracerRoot <> "/logs")
     Sys.setCurrentDirectory                  tracerRoot
 
-    sockInt <- Sys.canonicalizePath $ unI (tsSockInternal ts')
-    sockExt <- Sys.canonicalizePath $ unI (tsSockExternal ts')
     let ts = ts' { tsWorkDir      = Identity tracerRoot
-                 , tsSockInternal = Identity sockInt
-                 , tsSockExternal = Identity sockExt
                  }
     putStrLn $ "Test setup:  " <> show ts
 

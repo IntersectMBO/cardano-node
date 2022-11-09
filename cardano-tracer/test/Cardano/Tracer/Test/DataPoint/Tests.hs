@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Tracer.Test.DataPoint.Tests
@@ -19,25 +20,27 @@ import           Trace.Forward.Protocol.DataPoint.Type
 import           Trace.Forward.Utils.DataPoint (askForDataPoints)
 
 import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Run (doRunCardanoTracer)
 import           Cardano.Tracer.Utils (applyBrake, initProtocolsBrake, initDataPointRequestors)
 
 import           Cardano.Tracer.Test.Forwarder
+import           Cardano.Tracer.Test.TestSetup
 import           Cardano.Tracer.Test.Utils
 
-tests :: TestTree
-tests = localOption (QuickCheckTests 1) $ testGroup "Test.DataPoint"
-  [ testProperty "ask" $ propRunInLogsStructure propDataPoint
+tests :: TestSetup Identity -> TestTree
+tests ts = localOption (QuickCheckTests 1) $ testGroup "Test.DataPoint"
+  [ testProperty "ask" $ propRunInLogsStructure ts (propDataPoint ts)
   ]
 
-propDataPoint :: FilePath -> FilePath -> IO Property
-propDataPoint rootDir localSock = do
+propDataPoint :: TestSetup Identity -> FilePath -> FilePath -> IO Property
+propDataPoint ts@TestSetup{..} rootDir localSock = do
   stopProtocols <- initProtocolsBrake
   dpRequestors <- initDataPointRequestors
   savedDPValues :: TVar DataPointValues <- newTVarIO []
-  withAsync (doRunCardanoTracer config Nothing stopProtocols dpRequestors) . const $ do
+  withAsync (doRunCardanoTracer config (Just $ rootDir <> "/../state") stderrShowTracer stopProtocols dpRequestors) . const $ do
     sleep 1.0
-    withAsync (launchForwardersSimple Initiator localSock 1000 10000) . const $ do
+    withAsync (launchForwardersSimple ts Initiator localSock 1000 10000) . const $ do
       sleep 1.5
       -- We know that there is one single "node" only (and one single requestor too).
       -- requestors ((_, dpRequestor):_) <- M.toList <$> readTVarIO dpRequestors
@@ -77,7 +80,7 @@ propDataPoint rootDir localSock = do
     _ -> false "Not expected number of DataPoint values!"
  where
   config = TracerConfig
-    { networkMagic   = 764824073
+    { networkMagic   = unNetworkMagic $ unI tsNetworkMagic
     , network        = AcceptAt (LocalSocket localSock) -- ConnectTo $ NE.fromList [LocalSocket localSock]
     , loRequestNum   = Just 1
     , ekgRequestFreq = Just 1.0

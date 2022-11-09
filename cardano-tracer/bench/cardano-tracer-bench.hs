@@ -17,6 +17,7 @@ import           Cardano.Tracer.Utils
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Logs.TraceObjects
+import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
 
 main :: IO ()
@@ -48,6 +49,8 @@ main = do
 
   rtViewPageOpened <- newTVarIO False
 
+  tr <- mkTracerTracer $ SeverityF $ Just Warning
+
   let te1 =
         TracerEnv
           { teConfig            = c1
@@ -65,6 +68,7 @@ main = do
           , teProtocolsBrake    = protocolsBrake
           , teRTViewPageOpened  = rtViewPageOpened
           , teRTViewStateDir    = Nothing
+          , teTracer            = tr
           }
       te2 =
         TracerEnv
@@ -83,6 +87,7 @@ main = do
           , teProtocolsBrake    = protocolsBrake
           , teRTViewPageOpened  = rtViewPageOpened
           , teRTViewStateDir    = Nothing
+          , teTracer            = tr
           }
 
   removePathForcibly root
