@@ -241,7 +241,7 @@
 		1. [NodeNotLeader](#forgeloopnodenotleader)
 		1. [SlotIsImmutable](#forgeloopslotisimmutable)
 		1. [StartLeadershipCheck](#forgeloopstartleadershipcheck)
-		1. [StartLeadershipCheckPlus](#forgeloopstartleadershipcheckplus)
+		1. [StartLeadershipCheck](#forgeloopstartleadershipcheck)
 	1. [Stats](#forgestats)
 1. __Mempool__
 	1. [AddedTx](#mempooladdedtx)
@@ -868,6 +868,7 @@ Backends:
 			`Stdout MachineFormat`,
 			`Forwarder`
 Filtered  by config value: `Notice`
+Limiters: Limiter `BlockFetch.Client.CompletedBlockFetch` with frequency `2.0`
 
 ### BlockFetch.Client.CompletedFetchBatch
 
@@ -2547,6 +2548,7 @@ Backends:
 			`Stdout MachineFormat`,
 			`Forwarder`
 Filtered  by config value: `Info`
+Limiters: Limiter `ChainSync.Client.DownloadedHeader` with frequency `2.0`
 
 ### ChainSync.Client.Exception
 
@@ -3580,7 +3582,7 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Info`
 
-### Forge.Loop.StartLeadershipCheckPlus
+### Forge.Loop.StartLeadershipCheck
 
 
 > We adopted the block we produced, we also trace the transactions  that were adopted.
@@ -9177,7 +9179,6 @@ ChainSync.ServerHeader.Update
 
 Dispatched by: 
 Forge.Loop.StartLeadershipCheck
-Forge.Loop.StartLeadershipCheckPlus
 
 ### Forge.AdoptedOwnBlockSlotLast
 
@@ -9228,7 +9229,7 @@ Forge.Loop.ForgeStateUpdateError
 
 
 Dispatched by: 
-Forge.Loop.StartLeadershipCheckPlus
+Forge.Loop.StartLeadershipCheck
 
 ### Forge.ForgedInvalidSlotLast
 
@@ -9350,7 +9351,7 @@ Forge.Stats
 
 
 Dispatched by: 
-Forge.Loop.StartLeadershipCheckPlus
+Forge.Loop.StartLeadershipCheck
 
 ### Mempool.MempoolBytes
 
@@ -9640,7 +9641,7 @@ TxSubmission.TxInbound.Collected
 >  _suiSlotsPerKESPeriod_: KES period length, in slots.
 
 
-Configuration: TraceConfig {tcOptions = fromList [([],[ConfSeverity {severity = Notice},ConfDetail {detail = DNormal},ConfBackend {backends = [Stdout MachineFormat,EKGBackend,Forwarder]}]),(["BlockFetch","Decision"],[ConfSeverity {severity = Info}]),(["BlockFetchClient","CompletedBlockFetch"],[]),(["ChainDB"],[ConfSeverity {severity = Info}]),(["ChainDB","AddBlockEvent","AddBlockValidation","ValidCandidate"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB","AddBlockEvent","AddedBlockToQueue"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB","AddBlockEvent","AddedBlockToVolatileDB"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB","CopyToImmutableDBEvent","CopiedBlockToImmutableDB"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainSync","Client"],[ConfSeverity {severity = Info}]),(["DNSSubscription"],[ConfSeverity {severity = Info}]),(["DiffusionInit"],[ConfSeverity {severity = Info}]),(["ErrorPolicy"],[ConfSeverity {severity = Notice}]),(["Forge"],[ConfSeverity {severity = Info}]),(["IpSubscription"],[ConfSeverity {severity = Info}]),(["LocalErrorPolicy"],[ConfSeverity {severity = Info}]),(["Mempool"],[ConfSeverity {severity = Info}]),(["Net","ConnectionManager","Remote"],[ConfSeverity {severity = Info}]),(["Net","InboundGovernor","Remote"],[ConfSeverity {severity = Info}]),(["Net","Mux","Remote"],[ConfSeverity {severity = Info}]),(["Net","PeerSelection"],[ConfSeverity {severity = Info}]),(["Resources"],[ConfSeverity {severity = Info}])], tcForwarder = TraceOptionForwarder {tofConnQueueSize = 2000, tofDisconnQueueSize = 200000, tofVerbosity = Minimum}, tcNodeName = Nothing, tcPeerFrequency = Just 3000, tcResourceFrequency = Just 4000}
+Configuration: TraceConfig {tcOptions = fromList [([],[ConfSeverity {severity = Notice},ConfDetail {detail = DNormal},ConfBackend {backends = [Stdout MachineFormat,EKGBackend,Forwarder]}]),(["BlockFetch","Client","CompletedBlockFetch"],[ConfLimiter {maxFrequency = 2.0}]),(["BlockFetch","Decision"],[ConfSeverity {severity = Info}]),(["ChainDB"],[ConfSeverity {severity = Info}]),(["ChainDB","AddBlockEvent","AddBlockValidation","ValidCandidate"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB","AddBlockEvent","AddedBlockToQueue"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB","AddBlockEvent","AddedBlockToVolatileDB"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB","CopyToImmutableDBEvent","CopiedBlockToImmutableDB"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainSync","Client"],[ConfSeverity {severity = Info}]),(["ChainSync","Client","DownloadedHeader"],[ConfLimiter {maxFrequency = 2.0}]),(["DNSSubscription"],[ConfSeverity {severity = Info}]),(["DiffusionInit"],[ConfSeverity {severity = Info}]),(["ErrorPolicy"],[ConfSeverity {severity = Info}]),(["Forge"],[ConfSeverity {severity = Info}]),(["IpSubscription"],[ConfSeverity {severity = Info}]),(["LocalErrorPolicy"],[ConfSeverity {severity = Info}]),(["Mempool"],[ConfSeverity {severity = Info}]),(["Net","ConnectionManager","Remote"],[ConfSeverity {severity = Info}]),(["Net","InboundGovernor","Remote"],[ConfSeverity {severity = Info}]),(["Net","Mux","Remote"],[ConfSeverity {severity = Info}]),(["Net","PeerSelection"],[ConfSeverity {severity = Info}]),(["Resources"],[ConfSeverity {severity = Info}])], tcForwarder = TraceOptionForwarder {tofConnQueueSize = 2000, tofDisconnQueueSize = 200000, tofVerbosity = Minimum}, tcNodeName = Nothing, tcPeerFrequency = Just 3000, tcResourceFrequency = Just 4000}
 
 670 log messages.
-Generated at 2022-08-18 11:45:18.644048874 CEST.
+Generated at 2022-11-01 13:30:29.099431258 CET.
