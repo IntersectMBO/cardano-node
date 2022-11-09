@@ -291,6 +291,12 @@ def all_profile_variants:
     { scenario:                        "fixed-loaded"
     }) as $scenario_fixed_loaded
   |
+   ({ scenario:                        "idle"
+    }) as $scenario_idle
+  |
+   ({ scenario:                        "tracer-only"
+    }) as $scenario_tracer_only
+  |
   ##
   ### Definition vocabulary:  base variant
   ##
@@ -368,6 +374,14 @@ def all_profile_variants:
   , $old_tracing *
     { name: "oldtracing"
     , desc: "Default in legacy tracing mode"
+    }
+  , $scenario_idle *
+    { name: "idle"
+    , desc: "Idle scenario:  start nodes & detach from tty;  no cluster termination"
+    }
+  , $scenario_tracer_only *
+    { name: "tracer-only"
+    , desc: "Idle scenario:  start only the tracer & detach from tty;  no termination"
     }
 
   ## Fastest -- start-stop
