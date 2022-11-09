@@ -33,6 +33,8 @@ library
                       , bytestring
                       , cardano-api
                       , cardano-cli
+                      , cardano-crypto-class
+                      , cardano-ledger-byron
                       , cardano-node
                       , cardano-slotting
                       , containers
@@ -110,6 +112,7 @@ test-suite cardano-testnet-tests
 
   build-depends:        cardano-testnet
                       , aeson
+                      , async
                       , cardano-api
                       , cardano-cli
                       , containers
@@ -123,16 +126,16 @@ test-suite cardano-testnet-tests
                       , tasty-hedgehog
                       , text
                       , time
+                      , transformers
 
-  other-modules:
-                        Spec.Cli.Alonzo.LeadershipSchedule
+  other-modules:        Spec.Cli.Alonzo.LeadershipSchedule
                         Spec.Cli.Babbage.LeadershipSchedule
                         Spec.Cli.KesPeriodInfo
                         Spec.Node.Shutdown
                         Spec.ShutdownOnSlotSynced
-                        Testnet.Properties.Cli.KesPeriodInfo
-
+                        Test.FoldBlocks
                         Test.Util
+                        Testnet.Properties.Cli.KesPeriodInfo
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 

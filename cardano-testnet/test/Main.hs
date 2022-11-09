@@ -15,6 +15,8 @@ import qualified Spec.ShutdownOnSlotSynced
 import qualified System.Environment as E
 import qualified Test.Tasty as T
 import qualified Test.Tasty.Ingredients as T
+
+import qualified Test.FoldBlocks
 import qualified Test.Util as H
 
 tests :: IO TestTree
@@ -33,6 +35,7 @@ tests = pure $ T.testGroup "test/Spec.hs"
       -- TODO: Babbage temporarily ignored due to broken protocol-state query
     , H.disabled "kes-period-info" Spec.Cli.KesPeriodInfo.hprop_kes_period_info
     ]
+  , H.ignoreOnWindows "foldBlocks receives ledger state" Test.FoldBlocks.prop_foldBlocks
   ]
 
 ingredients :: [T.Ingredient]
