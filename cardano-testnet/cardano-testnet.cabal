@@ -33,6 +33,8 @@ library
                       , bytestring
                       , cardano-api
                       , cardano-cli
+                      , cardano-crypto-class
+                      , cardano-ledger-byron
                       , cardano-node
                       , cardano-slotting
                       , containers
