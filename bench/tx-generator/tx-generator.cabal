@@ -12,6 +12,10 @@ cabal-version:         >= 1.10
 extra-source-files:    README.md
 data-files:            data/protocol-parameters.json
 
+common project-config
+  if os(windows)
+    buildable: False
+
 library
   hs-source-dirs:      src
   ghc-options:          -Wall
@@ -26,14 +30,14 @@ library
 
   exposed-modules:
                        Cardano.Benchmarking.Command
-                       Cardano.Benchmarking.Compiler                       
+                       Cardano.Benchmarking.Compiler
                        Cardano.Benchmarking.GeneratorTx
                        Cardano.Benchmarking.GeneratorTx.Genesis
                        Cardano.Benchmarking.GeneratorTx.NodeToNode
                        Cardano.Benchmarking.GeneratorTx.SizedMetadata
                        Cardano.Benchmarking.GeneratorTx.Submission
                        Cardano.Benchmarking.GeneratorTx.SubmissionClient
-                       Cardano.Benchmarking.LogTypes                       
+                       Cardano.Benchmarking.LogTypes
                        Cardano.Benchmarking.NixOptions
                        Cardano.Benchmarking.OuroborosImports
                        Cardano.Benchmarking.Script
@@ -41,8 +45,8 @@ library
                        Cardano.Benchmarking.Script.Aeson
                        Cardano.Benchmarking.Script.Core
                        Cardano.Benchmarking.Script.Env
-                       Cardano.Benchmarking.Script.NodeConfig                       
-                       Cardano.Benchmarking.Script.Selftest                       
+                       Cardano.Benchmarking.Script.NodeConfig
+                       Cardano.Benchmarking.Script.Selftest
                        Cardano.Benchmarking.Script.Setters
                        Cardano.Benchmarking.Script.Store
                        Cardano.Benchmarking.Script.Types
@@ -52,7 +56,7 @@ library
                        Cardano.Benchmarking.Version
                        Cardano.Benchmarking.Wallet
                        Cardano.Benchmarking.PlutusExample
-                       
+
                        Cardano.TxGenerator.Fund
                        Cardano.TxGenerator.FundQueue
                        Cardano.TxGenerator.PureExample
