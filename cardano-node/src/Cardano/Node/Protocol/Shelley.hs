@@ -258,8 +258,9 @@ mkPraosLeaderCredentials
       shelleyLeaderCredentialsLabel = "Shelley"
     }
 
-parseEnvelope ::
-     HasTextEnvelope a
+parseEnvelope
+  :: HasTextEnvelope a
+  => SerialiseAsCBOR a
   => AsType a
   -> (TextEnvelope, String)
   -> ExceptT PraosLeaderCredentialsError IO a
