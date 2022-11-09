@@ -33,7 +33,9 @@ library
                       , bytestring
                       , cardano-api
                       , cardano-cli
+                      , cardano-crypto-class
                       , cardano-git-rev
+                      , cardano-ledger-byron
                       , cardano-node
                       , containers
                       , directory
