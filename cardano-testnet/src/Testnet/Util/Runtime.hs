@@ -3,7 +3,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Util.Runtime
+module Testnet.Util.Runtime
   ( LeadershipSlot(..)
   , NodeLoggingFormat(..)
   , PaymentKeyPair(..)
@@ -42,7 +42,7 @@ import qualified System.Info as OS
 import qualified System.IO as IO
 import qualified System.Process as IO
 
-import qualified Util.Process as H
+import qualified Testnet.Util.Process as H
 
 data NodeLoggingFormat = NodeLoggingFormatAsJson | NodeLoggingFormatAsText deriving (Eq, Show)
 

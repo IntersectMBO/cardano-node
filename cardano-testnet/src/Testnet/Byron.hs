@@ -53,7 +53,7 @@ import qualified System.Info as OS
 import qualified System.IO as IO
 import qualified System.Process as IO
 import qualified Testnet.Conf as H
-import qualified Util.Process as H
+import qualified Testnet.Util.Process as H
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Redundant <&>" -}

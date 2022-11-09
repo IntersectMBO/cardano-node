@@ -27,18 +27,18 @@ import qualified System.Directory as IO
 import qualified System.Exit as IO
 import qualified System.IO as IO
 import qualified System.Process as IO
-import qualified Testnet.Conf as H
-import qualified Util.Base as H
-import qualified Util.Process as H
+
+import           Cardano.Testnet
+import           Testnet.Util.Process (procNode)
 
 {- HLINT ignore "Redundant <&>" -}
 
 hprop_shutdown :: Property
-hprop_shutdown = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
+hprop_shutdown = integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
   base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
-  H.Conf { H.tempBaseAbsPath, H.tempAbsPath, H.logDir, H.socketDir } <- H.noteShowM $
-    H.mkConf (H.ProjectBase base) (H.YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
+  Conf { tempBaseAbsPath, tempAbsPath, logDir, socketDir } <- H.noteShowM $
+    mkConf (ProjectBase base) (YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
 
   [port] <- H.noteShowIO $ IO.allocateRandomPorts 1
 
@@ -58,7 +58,7 @@ hprop_shutdown = H.integration . H.runFinallies . H.workspace "chairman" $ \temp
 
   -- Run cardano-node with pipe as stdin.  Use 0 file descriptor as shutdown-ipc
   (mStdin, _mStdout, _mStderr, pHandle, _releaseKey) <- H.createProcess =<<
-    ( H.procNode
+    ( procNode
       [ "run"
       , "--config", base </> "configuration/cardano/mainnet-config.json"
       , "--topology", base </> "configuration/cardano/mainnet-topology.json"

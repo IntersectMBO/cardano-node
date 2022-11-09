@@ -1,5 +1,4 @@
-
-module Util.Ignore
+module Testnet.Util.Ignore
   ( ignoreOn
   , ignoreOnWindows
   , ignoreOnMac

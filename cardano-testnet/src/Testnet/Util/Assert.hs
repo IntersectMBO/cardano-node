@@ -4,7 +4,7 @@
 
 {- HLINT ignore "Redundant return" -}
 
-module Util.Assert
+module Testnet.Util.Assert
   ( readJsonLines
   , assertChainExtended
   , getRelevantLeaderSlots
@@ -41,8 +41,8 @@ import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.File as IO
 import qualified Hedgehog.Extras.Test.Base as H
-import qualified Util.Process as H
-import           Util.Runtime (NodeLoggingFormat (..))
+import qualified Testnet.Util.Process as H
+import           Testnet.Util.Runtime (NodeLoggingFormat (..))
 
 newlineBytes :: Word8
 newlineBytes = 10

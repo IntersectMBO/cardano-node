@@ -23,7 +23,7 @@ import           System.Directory (doesFileExist, removeFile)
 
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
-import qualified Util.Process as H
+import qualified Testnet.Util.Process as H
 
 
 -- | Submit the desired epoch to wait to.

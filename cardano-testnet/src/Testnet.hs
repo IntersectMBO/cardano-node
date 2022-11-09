@@ -1,5 +1,8 @@
 module Testnet
   ( TestnetOptions(..)
+  , babbageDefaultTestnetOptions
+  , cardanoDefaultTestnetOptions
+  , shelleyDefaultTestnetOptions
   , Testnet.testnet
   ) where
 
@@ -8,10 +11,10 @@ import           Text.Show (Show)
 
 import qualified Hedgehog.Extras.Test.Base as H
 
-import           Testnet.Babbage
-import           Testnet.Cardano
+import           Testnet.Babbage as Babbage
+import           Testnet.Cardano as Cardano
 import           Testnet.Conf
-import           Testnet.Shelley
+import           Testnet.Shelley as Shelley
 
 data TestnetOptions
   = ShelleyOnlyTestnetOptions ShelleyTestnetOptions
@@ -25,3 +28,11 @@ testnet options = case options of
   BabbageOnlyTestnetOptions o -> babbageTestnet o
   CardanoOnlyTestnetOptions o -> cardanoTestnet o
 
+babbageDefaultTestnetOptions :: BabbageTestnetOptions
+babbageDefaultTestnetOptions = Babbage.defaultTestnetOptions
+
+cardanoDefaultTestnetOptions :: CardanoTestnetOptions
+cardanoDefaultTestnetOptions = Cardano.defaultTestnetOptions
+
+shelleyDefaultTestnetOptions :: ShelleyTestnetOptions
+shelleyDefaultTestnetOptions = Shelley.defaultTestnetOptions

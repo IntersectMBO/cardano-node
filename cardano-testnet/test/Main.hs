@@ -17,7 +17,8 @@ import qualified Test.Cli.KesPeriodInfo
 import qualified Test.FoldBlocks
 import qualified Test.Node.Shutdown
 import qualified Test.ShutdownOnSlotSynced
-import qualified Util.Ignore as H
+
+import           Testnet.Util.Ignore as H
 
 tests :: IO TestTree
 tests = pure $ T.testGroup "test/Spec.hs"

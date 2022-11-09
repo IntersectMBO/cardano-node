@@ -19,11 +19,9 @@ import qualified Hedgehog.Extras.Test as HE
 import qualified Hedgehog.Extras.Test.Base as H
 
 import qualified Cardano.Api as C
-import qualified Testnet.Cardano as TN
-import qualified Testnet.Conf as TC (Conf (..), ProjectBase (ProjectBase),
-                   YamlFilePath (YamlFilePath), mkConf)
-import qualified Util.Base as U
-import qualified Util.Runtime as U
+import           Cardano.Testnet as TN
+import qualified Testnet.Util.Base as U
+import           Testnet.Util.Runtime
 
 
 newtype FoldBlocksException = FoldBlocksException C.FoldBlocksError
@@ -40,27 +38,27 @@ prop_foldBlocks = U.integration . H.runFinallies . H.workspace "chairman" $ \tem
 
   -- Start testnet
   base <- HE.noteM $ liftIO . IO.canonicalizePath =<< HE.getProjectBase
-  configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
+  configTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
   conf <- HE.noteShowM $
-    TC.mkConf (TC.ProjectBase base) (TC.YamlFilePath configurationTemplate)
+    TN.mkConf (TN.ProjectBase base) (TN.YamlFilePath configTemplate)
       (tempAbsBasePath' <> "/")
       Nothing
 
-  let options = TN.defaultTestnetOptions
+  let options = CardanoOnlyTestnetOptions $ cardanoDefaultTestnetOptions
         -- NB! The `activeSlotsCoeff` value is very important for
         -- chain extension for the two-node/one-pool testnet that
         -- `defaultTestnetOptions` define. The default 0.2 often fails
         -- to extend the chain in a reasonable time (< 90s, e.g as the
         -- deadline is defined in Testnet.Cardano).
-        { TN.activeSlotsCoeff = 0.9 }
-  runtime <- TN.cardanoTestnet options conf
+        { cardanoActiveSlotsCoeff = 0.9 }
+  runtime <- testnet options conf
 
   -- Get socketPath
   socketPathAbs <- do
-    socketPath' <- HE.sprocketArgumentName <$> HE.headM (U.nodeSprocket <$> TN.bftNodes runtime)
-    H.note =<< liftIO (IO.canonicalizePath $ TC.tempAbsPath conf </> socketPath')
+    socketPath' <- HE.sprocketArgumentName <$> HE.headM (nodeSprocket <$> bftNodes runtime)
+    H.note =<< liftIO (IO.canonicalizePath $ tempAbsPath conf </> socketPath')
 
-  configurationFile <- H.noteShow $ TC.tempAbsPath conf </> "configuration.yaml"
+  configFile <- H.noteShow $ tempAbsPath conf </> "configuration.yaml"
 
   -- Start foldBlocks in a separate thread
   lock <- liftIO IO.newEmptyMVar
@@ -72,7 +70,7 @@ prop_foldBlocks = U.integration . H.runFinallies . H.workspace "chairman" $ \tem
       -- that case we simply restart `foldBlocks` again.
       forever $ do
         let handler _env _ledgerState _ledgerEvents _blockInCardanoMode _ = IO.putMVar lock ()
-        e <- runExceptT (C.foldBlocks configurationFile socketPathAbs  C.QuickValidation () handler)
+        e <- runExceptT (C.foldBlocks configFile socketPathAbs  C.QuickValidation () handler)
         either (throw . FoldBlocksException) (\_ -> pure ()) e
     link a -- Throw async thread's exceptions in main thread
 
