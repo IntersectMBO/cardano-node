@@ -7,7 +7,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Api.Protocol.Types
+module Cardano.Api.Protocol
   ( BlockType(..)
   , Protocol(..)
   , ProtocolInfoArgs(..)

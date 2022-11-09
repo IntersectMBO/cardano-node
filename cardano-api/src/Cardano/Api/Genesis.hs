@@ -1,7 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Api.Shelley.Genesis
+module Cardano.Api.Genesis
   ( ShelleyGenesis(..)
   , shelleyGenesisDefaults
   ) where

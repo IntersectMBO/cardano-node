@@ -79,7 +79,7 @@ library
                         Cardano.Api.NetworkId
                         Cardano.Api.OperationalCertificate
                         Cardano.Api.ProtocolParameters
-                        Cardano.Api.Protocol.Types
+                        Cardano.Api.Protocol
                         Cardano.Api.Query
                         Cardano.Api.Script
                         Cardano.Api.ScriptData
@@ -90,15 +90,13 @@ library
                         Cardano.Api.SerialiseRaw
                         Cardano.Api.SerialiseTextEnvelope
                         Cardano.Api.SerialiseUsing
-                        Cardano.Api.Shelley.Genesis
+                        Cardano.Api.Genesis
                         Cardano.Api.SpecialByron
                         Cardano.Api.StakePoolMetadata
                         Cardano.Api.Tx
                         Cardano.Api.TxBody
                         Cardano.Api.TxIn
                         Cardano.Api.TxMetadata
-                        Cardano.Api.TxSubmit.ErrorRender
-                        Cardano.Api.TxSubmit.Types
                         Cardano.Api.Utils
                         Cardano.Api.Value
                         Cardano.Api.ValueParser
