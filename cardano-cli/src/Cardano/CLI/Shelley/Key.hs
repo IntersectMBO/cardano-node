@@ -3,7 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
-
+-- TODO: Left off here. Move InputFormat and everything else to cardano-api
 -- | Shelley CLI option data types and functions for cryptographic keys.
 module Cardano.CLI.Shelley.Key
   ( readKeyFile
