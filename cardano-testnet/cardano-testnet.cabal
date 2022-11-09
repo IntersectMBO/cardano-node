@@ -33,7 +33,9 @@ library
                       , bytestring
                       , cardano-api
                       , cardano-cli
+                      , cardano-crypto-class
                       , cardano-git-rev
+                      , cardano-ledger-byron
                       , cardano-node
                       , containers
                       , directory
@@ -103,6 +105,7 @@ test-suite cardano-testnet-tests
   other-modules:        Test.Cli.Alonzo.LeadershipSchedule
                         Test.Cli.Babbage.LeadershipSchedule
                         Test.Cli.KesPeriodInfo
+                        Test.FoldBlocks
                         Test.Misc
                         Test.Node.Shutdown
                         Test.ShutdownOnSlotSynced
@@ -110,18 +113,20 @@ test-suite cardano-testnet-tests
   type:                 exitcode-stdio-1.0
 
   build-depends:        aeson
+                      , async
                       , cardano-api
                       , cardano-cli
                       , cardano-testnet
                       , containers
                       , directory
                       , filepath
-                      , hedgehog                      
+                      , hedgehog
                       , hedgehog-extras
                       , process
                       , tasty
                       , text
                       , time
+                      , transformers
 
 
   other-modules:

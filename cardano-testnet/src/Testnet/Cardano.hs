@@ -17,13 +17,18 @@ module Testnet.Cardano
   , cardanoTestnet
   ) where
 
+import qualified Cardano.Crypto.Hash.Blake2b
+import qualified Cardano.Crypto.Hash.Class
 import           Control.Monad
-import           Control.Monad.IO.Class (liftIO)
+import           Control.Monad.IO.Class (MonadIO, liftIO)
+import           Control.Monad.Trans.Except
 import           Data.Aeson ((.=))
+import qualified Data.ByteString as BS
 import           Data.ByteString.Lazy (ByteString)
 import           Data.List ((\\))
 import           Data.Maybe
 import           Data.String
+import qualified Hedgehog as H
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Hedgehog.Extras.Stock.Time (formatIso8601, showUTCTimeSeconds)
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
@@ -31,6 +36,7 @@ import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPo
 import           Prelude
 import           System.FilePath.Posix ((</>))
 
+import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesisData)
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 import qualified Data.Aeson as J
@@ -706,6 +712,15 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   -- Generated a signed 'do it all' transaction:
   H.assertIO . IO.doesFileExist $ tempAbsPath </> "tx1.tx"
 
+  -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
+  byronGenesisHash <- getByronGenesisHash $ tempAbsPath </> "byron/genesis.json"
+  shelleyGenesisHash <- getShelleyGenesisHash $ tempAbsPath </> "shelley/genesis.json"
+  alonzoGenesisHash <- getShelleyGenesisHash $ tempAbsPath </> "shelley/genesis.alonzo.json"
+  H.rewriteYamlFile (tempAbsPath </> "configuration.yaml") . J.rewriteObject
+    $ HM.insert "ByronGenesisHash" byronGenesisHash
+    . HM.insert "ShelleyGenesisHash" shelleyGenesisHash
+    . HM.insert "AlonzoGenesisHash" alonzoGenesisHash
+
   --------------------------------
   -- Launch cluster of three nodes
 
@@ -761,3 +776,18 @@ cardanoTestnet testnetOptions H.Conf {..} = do
     , wallets
     , delegators = [] -- TODO this should be populated
     }
+
+-- * Generate hashes for genesis.json files
+
+getByronGenesisHash :: (H.MonadTest m, MonadIO m) => FilePath -> m J.Value
+getByronGenesisHash path = do
+  e <- runExceptT $ readGenesisData path
+  (_, genesisHash) <- H.leftFail e
+  let genesisHash' = J.toJSON $ unGenesisHash genesisHash
+  pure genesisHash'
+
+getShelleyGenesisHash :: (H.MonadTest m, MonadIO m) => FilePath -> m J.Value
+getShelleyGenesisHash path = do
+  content <- liftIO $ BS.readFile path
+  let genesisHash = Cardano.Crypto.Hash.Class.hashWith id content :: Cardano.Crypto.Hash.Class.Hash Cardano.Crypto.Hash.Blake2b.Blake2b_256 BS.ByteString
+  pure $ J.toJSON genesisHash
