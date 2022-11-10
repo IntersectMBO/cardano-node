@@ -1,8 +1,15 @@
-global_rundir_def=$PWD/run
+global_rundir_def=$(realpath ${WB_RUNDIR:-$PWD/run})
 
 usage_run() {
      usage "run" "Managing cluster runs" <<EOF
     $(helpcmd list)                 List cluster runs
+     $(blk ls)
+    $(helpcmd list-sets)            List cluster run sets
+     $(blk lss)
+    $(helpcmd set-add SETNAME RUN...)
+     $(blk sa)                   Add runs to the named run set
+    $(helpcmd run-or-set)           Resolve a run-or-set name to a list of runs
+     $(blk ros)
 
     $(helpcmd allocate BATCH-NAME PROFILE-NAME [ENV-CONFIG-OPTS..])
                           Allocate a cluster run with the specified:
@@ -13,9 +20,9 @@ usage_run() {
 
     $(helpcmd list-aws)             List AWS runs
      $(blk lsaws)
-    $(helpcmd allocate-from-aws RUN)
+    $(helpcmd fetch-aws RUN)
                           Fetch an AWS run
-     $(blk aws-get)
+     $(blk fetch)
     $(helpcmd analysis-from-aws RUN..)
      $(blk fetch-analysis fa)    Fetch analyses of AWS runs
     $(helpcmd analyse-aws RUN..)     Run analyses of AWS runs, remotely
@@ -54,9 +61,16 @@ else global_rundir=$global_rundir_def
      mkdir "$global_rundir"
 fi
 
+local sargs=()
+local remote='{ "env":  "bench"
+              , "depl": "bench-1"
+              }'
+run_aws_get_args=()
 while test $# -gt 0
 do case "$1" in
-       --rundir ) global_rundir=$2; shift;;
+       --remote )      sargs+=($1 $2); remote=$2; shift;;
+       --rundir )      sargs+=($1 $2); global_rundir=$2; shift;;
+       --clean | -c )  sargs+=($1);    run_aws_get_args+=($1);;
        * ) break;; esac; shift; done
 
 local op=${1:-list}; test $# -gt 0 && shift
@@ -66,12 +80,91 @@ case "$op" in
         echo $global_rundir;;
 
     list | ls )
-        test -d "$global_rundir" &&
-            (cd "$global_rundir"
-             find . -mindepth 2 -maxdepth 2 -type f -name 'meta.json' -exec dirname \{\} \; |
-                 grep -v 'current$\|deploy-logs$' |
-                 cut -c3- |
-                 sort || true);;
+        local usage="USAGE: wb run $op [--on-remote | -or | -r]"
+        local on_remote=
+        while test $# -gt 0
+        do case "$1" in
+               --on-remote | -or | -r ) on_remote='true';;
+               * ) msg "FATAL:  run-or-set, unknown flag '$1'"; usage_run;;
+           esac; shift; done
+
+        if test -z "$on_remote"
+        then (eval "$(run_ls_cmd "$global_rundir")")
+        else local r=${1:-$remote}
+             ssh $(jq <<<$r .env -r) -- \
+                 sh -c "'$(run_ls_cmd $(jq <<<$r .depl)/runs)'"
+        fi;;
+
+    list-remote | lsr )
+        run "${sargs[@]}" list --on-remote;;
+
+    list-sets | lss )
+        local usage="USAGE: wb run $op [--on-remote | -or | -r]"
+        local on_remote=
+        while test $# -gt 0
+        do case "$1" in
+               --on-remote | -or | -r ) on_remote='true';;
+               * ) msg "FATAL:  run-or-set, unknown flag '$1'"; usage_run;;
+           esac; shift; done
+
+        if test -z "$on_remote"
+        then (eval "$(run_ls_sets_cmd "$global_rundir")")
+        else local r=${1:-$remote}
+             ssh $(jq <<<$r .env -r) -- \
+                 sh -c "'$(run_ls_sets_cmd $(jq <<<$r .depl)/runs)'"
+        fi;;
+
+    list-sets-remote | lssr )
+        run "${sargs[@]}" list-sets --on-remote;;
+
+    set-add | sa )
+        local usage="USAGE: wb run $op NAME [RUN..]"
+        local name=${1:?$usage}; shift
+        mkdir -p "$global_rundir/.sets/$name" &&
+            (cd  "$global_rundir/.sets/$name"
+             for x in $*
+             do if ! run get $x
+                then fail "set-add $name:  constituent run missing: $(white $x)"
+                fi
+                ln -s ../../$x
+             done);;
+
+    run-or-set | ros )
+        local usage="USAGE: wb run $op [--query] [--on-remote | -or | -r] NAME"
+        local query= get_args=() on_remote=
+        while test $# -gt 0
+        do case "$1" in
+               --try | --query ) get_args+=($1); query='true';;
+               --on-remote | -or | -r ) on_remote='true';;
+               --* ) msg "FATAL:  run-or-set, unknown flag '$1'"; usage_run;;
+               * ) break;; esac; shift; done
+
+        local name=${1:?$usage}
+        local env=$( jq <<<$remote  .env -r)
+        local depl=$(jq <<<$remote .depl -r)
+        if   test -n "$on_remote"
+        then if test -n "$(ssh $env -- sh -c "'$(run_ls_sets_cmd $depl/runs)'" |
+                                       grep $name || true)"
+             then rsync -Wa --delete-after \
+                      $env:$depl/runs/.sets/$name ../cardano-node/run/.sets
+                  ssh $env -- \
+                      sh -c "'cd $depl/runs/.sets/$name && find . -type l | cut -d/ -f2'"
+             else ssh $env -- \
+                      sh -c "'if test -f $depl/runs/$name/meta.json;
+                              then echo $name;
+                              else echo \"$(red run-or-set on $env/$depl:)  missing run or set $(white $name)\"
+                              exit 1;
+                              fi'"
+             fi
+        elif test -n "$(run list-sets | grep $name || true)"
+        then (cd     "$global_rundir/.sets/$name"
+              find . -type l | cut -d/ -f2)
+        elif run get "${get_args[@]}" $name >/dev/null
+        then echo $name
+        elif test -n "$query"
+        then return 1
+        else fail "run-or-set:  missing run or set $(white $name)"
+        fi;;
 
     list-pattern | lsp )
         test -d "$global_rundir" &&
@@ -110,7 +203,7 @@ case "$op" in
                      mv "$logdir" "$dir"/$logs_less; done; fi
         else msg "fixing up a cardano-ops run in:  $dir"; fi
 
-        progress "run | aws-get" "adding manifest"
+        progress "run | fix-legacy-run-structure" "adding manifest"
         jq_fmutate "$dir"/meta.json '
            .meta.manifest = $manifest
            ' --argjson manifest "$(legacy_run_manifest $dir)"
@@ -120,15 +213,24 @@ case "$op" in
            ' "$dir"/meta.json > "$dir"/profile.json;;
 
     check )
-        local usage="USAGE: wb run $op RUN"
+        local usage="USAGE: wb run $op [--query] RUN"
+        local query=
+        while test $# -gt 0
+        do case "$1" in
+               --try | --query ) query='true';;
+               --* ) msg "FATAL:  run-or-set, unknown flag '$1'"; usage_run;;
+               * ) break;; esac; shift; done
+
         local run=${1:?$usage}
         local dir=$(run compute-path "$run")
 
-        if ! jq_check_json "$dir"/meta.json
+        if ! jq_check_json "$dir"/meta.json 2>/dev/null
         then if test $run = 'current'
              then local alt=$(run list | tail -n1)
                   progress 'run | check' "$(with_color white current) missing, resetting to $(with_color white $alt)"
                   run set-current $alt
+             elif test -n "$query"
+             then return 1
              else fatal "run $run (at $dir) missing a file:  meta.json"; fi; fi
 
         test -f "$dir"/profile.json -a -f "$dir"/genesis-shelley.json ||
@@ -162,10 +264,19 @@ case "$op" in
         fi;;
 
     get-path | get )
-        local usage="USAGE: wb run $op RUN"
+        local usage="USAGE: wb run $op [--query] RUN"
+        local check_args=()
+        while test $# -gt 0
+        do case "$1" in
+               --try | --query ) check_args+=($1);;
+               --* ) msg "FATAL:  run-or-set, unknown flag '$1'"; usage_run;;
+               * ) break;; esac; shift; done
+
         local run=${1:?$usage}
-        run check        "$run"
-        run compute-path "$run";;
+        if   run check "${check_args[@]}" "$run"
+        then run compute-path             "$run"
+        else return 1
+        fi;;
 
     show-meta | show | meta | s )
         local usage="USAGE: wb run $op RUN"
@@ -413,20 +524,7 @@ case "$op" in
 
         echo $dir;;
 
-    list-aws | lsaws )
-        local usage="USAGE: wb run $op [DEPLOYMENT=bench-1] [ENV=bench]"
-        local depl=${1:-bench-1}
-        local env=${2:-bench}
-
-        ssh $env -- \
-            sh -c "'cd $depl/runs &&
-                    find . -mindepth 2 -maxdepth 2 -type f -name 'meta.json' -exec dirname \{\} \; |
-                    grep -v current\$\\|deploy-logs\$ |
-                    cut -c3- |
-                    sort ||
-                    true'" 2>/dev/null;;
-
-    allocate-from-aws | aws-get )
+    fetch-run | fr )
         local usage="USAGE: wb run $op RUN [MACHINE] [DEPLOYMENT=bench-1] [ENV=bench]"
         local run=${1:?$usage}
         local mach=${2:-all-hosts}
@@ -444,28 +542,34 @@ case "$op" in
         )
         run_aws_get "${args[@]}";;
 
-    analysis-from-aws | aws-get-analysis | fetch-analysis | fa )
+    fetch-analysis | fa )
         local usage="USAGE: wb run $op RUN.."
-        local runs=($*) run
+        local runs=() run
+        for rs in $*
+        do runs+=($(run "${sargs[@]}" run-or-set --query --on-remote $rs || echo $rs))
+        done
+        if test $# = 0; then runs=(current); fi
+
         local env='bench'
         local depl='bench-1'
 
         progress "aws" "trying to fetch analyses:  $(white ${runs[*]})"
         for run in ${runs[*]}
         do if   test "$(ssh $env -- sh -c "'ls -ld $depl/runs/$run          | wc -l'")" = 0
-           then fail "aws-analysis:  run does not exist on AWS: $(white $run)"
+           then fail "fetch-analysis:  run does not exist on AWS: $(white $run)"
            elif test "$(ssh $env -- sh -c "'ls -ld $depl/runs/$run/analysis | wc -l'")" = 0
-           then fail "aws-analysis:  run has not been analysed on AWS: $(white $run)"
+           then fail "fetch-analysis:  run has not been analysed on AWS: $(white $run)"
            else local analysis_files=(
                    $(ssh $env -- \
-                     sh -c "'cd $depl/runs/$run && ls analysis/*.{json,cdf,org,txt} | grep -v flt.json | grep -v flt.logobjs.json | grep -v flt.perf-stats.json'" \
+                     sh -c "'cd $depl/runs/$run && ls analysis/*.{json,cdf,org,txt} | fgrep -v -e flt.json -e flt.logobjs.json -e flt.perf-stats.json'" \
                      2>/dev/null)
                 )
                 local args=(
+                   "${run_aws_get_args[@]}"
                    "$env"
                    "$depl"
                    "$run"
-                   'if test -f compressed/logs-$obj.tar.zst; then cat compressed/logs-$obj.tar.zst; else tar c $obj --zstd --ignore-failed-read; fi'
+                   'tar c ${files[*]} --zstd'
 
                    common-run-files
                    ${analysis_files[*]}
@@ -483,7 +587,7 @@ case "$op" in
         local env=${4:-bench}
 
         if   test "$(ssh $env -- sh -c "'ls -ld $depl/runs/$run          | wc -l'")" = 0
-        then fail "aws-analysis:  run does not exist on AWS: $(white $run)"
+        then fail "analyse-aws:  run does not exist on AWS: $(white $run)"
         else ssh $env -- sh -c "'export WB_RUNDIR=../$depl/runs && cd cardano-node && echo env: $(yellow $env), rundir: $(color blue)\$WB_RUNDIR$(color reset), workbench: $(color yellow)\$(git log -n1)$(color reset) && make analyse RUN=$run'"
         fi
         ;;
@@ -647,21 +751,34 @@ EOF
 
 run_aws_get() {
     local usage='USAGE: run_aws_get ENV DEPLOYMENT RUN REMOTE-TAR-CMD OBJ..'
+    local clean=
+    while test $# -gt 0
+    do case "$1" in
+           --clean | -c ) clean='true';;
+           -- ) shift; break;;
+           --* ) msg "FATAL:  unknown flag '$1'"; fail "$usage";;
+           * ) break;; esac; shift; done
+
     local env=${1:?$usage}; shift
     local depl=${1:?$usage}; shift
     local run=${1:?$usage}; shift
     local remote_tar_cmd=${1:?$usage}; shift
     local objects=($*)
 
-    progress "aws-get" "env $(yellow $env) depl $(yellow $depl) run $(white $run)"
-    progress "aws-get" "tar $(green $remote_tar_cmd) objects ${objects[*]}"
+    progress "run_aws_get" "env $(yellow $env) depl $(yellow $depl) run $(white $run)"
+    progress "run_aws_get" "tar $(green $remote_tar_cmd)"
 
     local meta=$(ssh $env -- sh -c "'jq . $depl/runs/$run/meta.json'")
     if ! jq . <<<$meta >/dev/null
-    then fail "allocate-from-aws:  malformed $(yellow meta.json) in $(white $run) on $(white $depl)@$(white env)"; fi
+    then fail "run_aws_get:  malformed $(yellow meta.json) in $(white $run) on $(white $depl)@$(white env)"; fi
 
     ## Minor validation passed, create & populate run with remote data:
     local dir=$global_rundir/$run
+    if test -z "$run" -o -z "$global_rundir"
+    then fail "run_aws_get: run=$run global_rundir=$global_rundir"
+    elif test -n "$clean"
+    then rm -rf "$dir"
+    fi
     mkdir -p "$dir"
     jq . <<<$meta > $dir/meta.json
 
@@ -678,26 +795,27 @@ run_aws_get() {
     local xs=(${xs2[*]})
 
     local count=${#xs[*]}
-    progress "run | aws-get $(white $run)" "objects to fetch:  $(white $count) total:  $(yellow ${xs[*]})"
+    progress "run | fetch $(white $run)" "objects to fetch:  $(white $count) total"
 
     local max_batch=9 base=0 batch
     while test $base -lt $count
     do local batch=(${xs[*]:$base:$max_batch})
-       progress_ne "run | aws-get $(white $run)" "fetching batch: "
-       local obj=
-       for obj in ${batch[*]}
-       do { ssh $env -- \
-                sh -c "'obj=${obj}; cd $depl/runs/$run && ${remote_tar_cmd}'" 2>/dev/null |
-                (cd $dir; tar x --zstd)
-            echo -ne " $(yellow $obj)" >&2
-          } &
-       done
-       wait
-       echo >&2
+       {
+           local lbatch=(${batch[*]})
+           ssh $env -- \
+               sh -c "'files=(${lbatch[*]}); cd $depl/runs/$run && ${remote_tar_cmd}'" |
+               (cd $dir
+                tar x --zstd ||
+                    progress "fetch error" "'files=(${lbatch[*]}); cd $depl/runs/$run && ${remote_tar_cmd}'"
+               )
+           progress "run | fetch $(white $run)" "batch done:  $(yellow ${batch[*]})"
+       } &
+       sleep 1
        base=$((base + max_batch))
     done
+    wait
 
-    progress "run | aws-get" "adding manifest"
+    progress "run | fetch" "adding manifest"
     jq_fmutate "$dir"/meta.json '.meta.manifest = $manifest
     ' --argjson manifest "$(legacy_run_manifest $dir)"
 }
@@ -737,4 +855,35 @@ legacy_run_manifest() {
   , "cardano-prelude"      : $Prelude
   }
   ' --null-input "${args[@]}"
+}
+
+expand_runspecs() {
+    local runs=() rs
+
+    if test $# = 0
+    then runs=(current)
+    else for rs in $*
+         do runs+=($(run run-or-set $rs))
+         done
+    fi
+    echo ${runs[*]}
+}
+
+run_ls_cmd() {
+    local rundir=$1
+
+    echo 'cd '$rundir' && \
+          find . -mindepth 2 -maxdepth 2 -type f -name meta.json -exec dirname \{\} \; |
+          grep -v "current\$\|deploy-logs\$" |
+          cut -c3- |
+          sort || true'
+}
+
+run_ls_sets_cmd() {
+    local rundir=$1
+
+    echo 'cd '$rundir'/.sets && \
+          find -L . -mindepth 3 -maxdepth 3 -type f -name meta.json -exec dirname \{\} \; |
+          cut -d/ -f2 |
+          sort -u || true'
 }
