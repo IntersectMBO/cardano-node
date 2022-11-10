@@ -140,8 +140,8 @@ library
                       , ouroboros-consensus-cardano
                       , ouroboros-consensus-protocol
                       , ouroboros-consensus-shelley
-                      , ouroboros-network
-                      , ouroboros-network-framework
+                      , ouroboros-network ^>= 0.2
+                      , ouroboros-network-framework ^>= 0.2
                       , parsec
                       , plutus-ledger-api
                       , prettyprinter
