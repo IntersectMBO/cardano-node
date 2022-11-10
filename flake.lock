@@ -10202,11 +10202,11 @@
     "plutus-apps_6": {
       "flake": false,
       "locked": {
-        "lastModified": 1654271253,
-        "narHash": "sha256-GQDPzyVtcbbESmckMvzoTEKa/UWWJH7djh1TWQjzFow=",
+        "lastModified": 1668055541,
+        "narHash": "sha256-c0XuranD91kZ7uR0gemZQOFDNRv3pFXunJC4j064mtc=",
         "owner": "input-output-hk",
         "repo": "plutus-apps",
-        "rev": "61de89d33340279b8452a0dbb52a87111db87e82",
+        "rev": "1651d36a0f6458e7d2326d57dbc1baa00034d70d",
         "type": "github"
       },
       "original": {
