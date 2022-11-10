@@ -10,4 +10,10 @@
     , "contents": 50
     }
   }
+, { "tag": "CBlock"
+  , "contents":
+    { "tag": "BUnitaryChainDelta"
+    , "contents": true
+    }
+  }
 ]
