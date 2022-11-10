@@ -33,7 +33,7 @@ import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Cardano.Node.Queries (LedgerQueries (..), NodeKernelData (..))
 import           Cardano.Slotting.Slot (fromWithOrigin)
 
-import           Cardano.Ledger.BaseTypes (StrictMaybe (..), fromSMaybe)
+import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
 
 
 type ForgeTracerType blk = Either (TraceForgeEvent blk)
@@ -64,16 +64,15 @@ forgeTracerTransform nodeKern (Trace tr) = pure $ Trace $ T.arrow $ T.emit $
                          <*> nkQueryLedger (ledgerDelegMapSize . ledgerState) nk
                          <*> nkQueryChain fragmentChainDensity nk)
                     nodeKern
-        fromSMaybe
-           (T.traceWith tr (lc, Right (Left slc)))
-           (query <&>
-             \(utxoSize, delegMapSize, chainDensity) ->
+        case query of
+          SNothing -> T.traceWith tr (lc, Right (Left slc))
+          SJust (utxoSize, delegMapSize, chainDensity) ->
                 let msg = TraceStartLeadershipCheckPlus
                             slotNo
                             utxoSize
                             delegMapSize
                             (fromRational chainDensity)
-                in T.traceWith tr (lc, Right (Right msg)))
+                in T.traceWith tr (lc, Right (Right msg))
       (lc, Right a) ->
           T.traceWith tr (lc, Right a)
       (lc, Left control) ->

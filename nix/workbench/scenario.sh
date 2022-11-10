@@ -34,6 +34,10 @@ case "$op" in
         backend start-nodes          "$dir"
         ;;
 
+    tracer-only )
+        backend start                "$dir"
+        ;;
+
     fixed )
         backend start                "$dir"
 

@@ -10,7 +10,6 @@ import           Cardano.Logging.Test.Tracer
 import           Cardano.Logging.Test.Types
 import           System.Remote.Monitoring (forkServer)
 
-import           Debug.Trace
 
 -- Can be run with:
 -- cabal bench trace-dispatcher-bench --benchmark-option='-o benchmark-trace.html'

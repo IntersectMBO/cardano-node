@@ -14,15 +14,16 @@ module Trace.Forward.Utils.TraceObject
 import           Control.Concurrent.STM (STM, atomically, retry)
 import           Control.Concurrent.STM.TBQueue
 import           Control.Concurrent.STM.TVar
-import           Control.Monad (unless)
+import           Control.Monad (unless, (<$!>))
 import           Control.Monad.Extra (whenM)
 import qualified Data.List.NonEmpty as NE
 import           Data.Word (Word16)
 import           System.IO
 
 import           Trace.Forward.Configuration.TraceObject
-import           Trace.Forward.Protocol.TraceObject.Type
 import qualified Trace.Forward.Protocol.TraceObject.Forwarder as Forwarder
+import           Trace.Forward.Protocol.TraceObject.Type
+
 
 data ForwardSink lo = ForwardSink
   { forwardQueue     :: !(TVar (TBQueue lo))
@@ -58,40 +59,57 @@ writeToSink
   -> lo
   -> IO ()
 writeToSink ForwardSink{forwardQueue, disconnectedSize, connectedSize, wasUsed} traceObject = do
-  q <- readTVarIO forwardQueue
-  atomically ((,) <$> isFullTBQueue q
-                  <*> isEmptyTBQueue q) >>= \case
-    (True, _)    -> maybeFlushQueueToStdout q
-    (_,    True) -> checkIfSinkWasUsed q
-    (_,    _)    -> return ()
-  atomically $ readTVar forwardQueue >>= flip writeTBQueue traceObject
+  condToFlush <- atomically $ do
+    q <- readTVar forwardQueue
+    ((,) <$> isFullTBQueue q
+         <*> isEmptyTBQueue q) >>= \case
+      (True, _)    -> do
+                          res <- maybeFlushQueueToStdout q
+                          q' <- readTVar forwardQueue
+                          writeTBQueue q' traceObject
+                          pure res
+      (_,    True) -> do
+                          maybeShrinkQueue q
+                          q' <- readTVar forwardQueue
+                          writeTBQueue q' traceObject
+                          pure Nothing
+      (_,    _)    -> do
+                          writeTBQueue q traceObject
+                          pure Nothing
+  case condToFlush of
+    Nothing -> pure ()
+    Just li -> do
+                  mapM_ print li
+                  hFlush stdout
  where
   -- The queue is full, but if it's a small queue, we can switch it
   -- to a big one and give a chance not to flush items to stdout yet.
   maybeFlushQueueToStdout q = do
-    qLen <- atomically $ lengthTBQueue q
+    qLen <- lengthTBQueue q
     if fromIntegral qLen == connectedSize
-      then atomically $ do
+      then do
         -- The small queue is full, so we have to switch to a big one and
         -- then flush collected items from the small queue and store them in
         -- a big one.
-        acceptedItems <- flushTBQueue q
+
+        acceptedItems <- -- trace ("growQueue disconnected" ++ show disconnectedSize) $
+                          flushTBQueue q
         switchQueue disconnectedSize
         bigQ <- readTVar forwardQueue
         mapM_ (writeTBQueue bigQ) acceptedItems
+        pure Nothing
       else do
         -- The big queue is full, we have to flush it to stdout.
-        atomically (flushTBQueue q) >>= mapM_ print
-        hFlush stdout
+        Just <$!> flushTBQueue q
 
-  checkIfSinkWasUsed q = atomically $
-    whenM (readTVar wasUsed) $ switchToAnotherQueue q
-
-  switchToAnotherQueue q = do
-    qLen <- lengthTBQueue q
-    if fromIntegral qLen == disconnectedSize
-      then switchQueue connectedSize
-      else switchQueue disconnectedSize
+  -- if the sink was used and it
+  maybeShrinkQueue q = do
+    whenM (readTVar wasUsed) $ do
+      qLen <- lengthTBQueue q
+      if fromIntegral qLen == disconnectedSize
+        then -- trace ("shrinkQueue connected " ++ show connectedSize) $
+              switchQueue connectedSize
+        else pure ()
 
   switchQueue size =
     newTBQueue (fromIntegral size) >>= modifyTVar' forwardQueue . const

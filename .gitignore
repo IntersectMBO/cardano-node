@@ -63,3 +63,5 @@ logs
 /example
 /.hlint.yaml
 /testnet
+
+.vscode/

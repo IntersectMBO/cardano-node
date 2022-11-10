@@ -111,6 +111,7 @@ library
                        Cardano.Tracer.CLI
                        Cardano.Tracer.Configuration
                        Cardano.Tracer.Environment
+                       Cardano.Tracer.MetaTrace
                        Cardano.Tracer.Run
                        Cardano.Tracer.Types
                        Cardano.Tracer.Utils
@@ -186,18 +187,27 @@ library demo-forwarder-lib
 
   hs-source-dirs:      test
 
+  other-modules:       Cardano.Tracer.Test.Utils
+
   exposed-modules:     Cardano.Tracer.Test.Forwarder
+                       Cardano.Tracer.Test.TestSetup
 
   build-depends:         aeson
                        , async
                        , bytestring
-                       , cborg
                        , cardano-tracer
+                       , cborg
                        , contra-tracer
+                       , directory
                        , ekg-core
                        , ekg-forward
+                       , extra
+                       , filepath
+                       , generic-data
+                       , optparse-applicative-fork
                        , ouroboros-network
                        , ouroboros-network-framework
+                       , tasty-quickcheck
                        , time
                        , trace-dispatcher
                        , trace-forward
@@ -214,11 +224,16 @@ executable demo-forwarder
   ghc-options:         -threaded
                        -rtsopts
                        -with-rtsopts=-T
+  if os(windows)
+    buildable:         False
 
 library demo-acceptor-lib
   import:              base, project-config
 
   hs-source-dirs:      test
+
+  other-modules:       Cardano.Tracer.Test.TestSetup
+                       Cardano.Tracer.Test.Utils
 
   exposed-modules:     Cardano.Tracer.Test.Acceptor
 
@@ -227,8 +242,13 @@ library demo-acceptor-lib
                        , cardano-tracer
                        , containers
                        , extra
+                       , filepath
+                       , generic-data
+                       , optparse-applicative-fork
+                       , ouroboros-network
                        , stm
                        , text
+                       , tasty-quickcheck
                        , trace-forward
 
 executable demo-acceptor
@@ -243,10 +263,13 @@ executable demo-acceptor
   ghc-options:         -threaded
                        -rtsopts
                        -with-rtsopts=-T
+  if os(windows)
+    buildable:         False
 
 test-suite cardano-tracer-test
   import:              base, project-config
   type:                exitcode-stdio-1.0
+  default-extensions:  OverloadedStrings
 
   hs-source-dirs:      test
 
@@ -256,8 +279,9 @@ test-suite cardano-tracer-test
                        Cardano.Tracer.Test.DataPoint.Tests
                        Cardano.Tracer.Test.Logs.Tests
                        Cardano.Tracer.Test.Restart.Tests
-                       Cardano.Tracer.Test.Queue.Tests
+                       Cardano.Tracer.Test.TestSetup
                        Cardano.Tracer.Test.Utils
+                       Cardano.Tracer.Test.Queue.Tests
 
   build-depends:         aeson
                        , async
@@ -271,8 +295,11 @@ test-suite cardano-tracer-test
                        , ekg-forward
                        , extra
                        , filepath
+                       , generic-data
+                       , optparse-applicative-fork
                        , ouroboros-network
                        , ouroboros-network-framework
+                       , QuickCheck
                        , stm
                        , tasty
                        , tasty-quickcheck
@@ -280,6 +307,62 @@ test-suite cardano-tracer-test
                        , time
                        , trace-dispatcher
                        , trace-forward
+                       , unix-compat
+
+  ghc-options:         -threaded
+                       -rtsopts
+                       -with-rtsopts=-N
+
+test-suite cardano-tracer-test-ext
+  import:              base, project-config
+  type:                exitcode-stdio-1.0
+  default-extensions:  OverloadedStrings
+
+  hs-source-dirs:      test
+
+  main-is:             cardano-tracer-test-ext.hs
+
+  other-modules:       Cardano.Tracer.Test.Forwarder
+                       Cardano.Tracer.Test.TestSetup
+                       Cardano.Tracer.Test.Utils
+                       Cardano.Tracer.Test.ForwardingStressTest.Script
+                       Cardano.Tracer.Test.ForwardingStressTest.Config
+                       Cardano.Tracer.Test.ForwardingStressTest.Messages
+                       Cardano.Tracer.Test.ForwardingStressTest.Types
+
+  build-tool-depends:   cardano-tracer:cardano-tracer
+
+  -- Sadly, this does not work on Windows (Path vs. PATH?):
+  -- *** Failed! Exception: 'cardano-tracer: spawnProcess: failed (Success)' (after 1 test):
+  if os(windows)
+    buildable:         False
+
+  build-depends:         aeson
+                       , async
+                       , bytestring
+                       , cardano-tracer
+                       , cborg
+                       , containers
+                       , contra-tracer
+                       , directory
+                       , ekg-core
+                       , ekg-forward
+                       , extra
+                       , filepath
+                       , generic-data
+                       , Glob
+                       , optparse-applicative-fork
+                       , ouroboros-network
+                       , ouroboros-network-framework
+                       , process
+                       , QuickCheck
+                       , tasty
+                       , tasty-quickcheck
+                       , text
+                       , time
+                       , trace-dispatcher
+                       , trace-forward
+                       , unix-compat
 
   ghc-options:         -threaded
                        -rtsopts

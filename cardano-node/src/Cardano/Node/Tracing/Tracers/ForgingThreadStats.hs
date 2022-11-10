@@ -69,10 +69,8 @@ instance LogFormatting ForgeThreadStats where
 emptyForgeThreadStats :: ForgeThreadStats
 emptyForgeThreadStats = ForgeThreadStats 0 0 0 0 0
 
-docForgeStats :: Documented
-  (Either
-      (Consensus.TraceForgeEvent blk)
-      TraceStartLeadershipCheckPlus)
+docForgeStats :: Documented (Either (Consensus.TraceForgeEvent blk)
+                               TraceStartLeadershipCheckPlus)
 docForgeStats = Documented [
     DocMsg
       []
@@ -85,7 +83,7 @@ docForgeStats = Documented [
       ,("Forge.SlotsMissed",
         "How many slots were missed in this node?")
       ,("Forge.LastSlot",
-        "")        
+        "")
       ]
       "nodeCannotForgeNum shows how many times this node could not forge.\
       \\nnodeIsLeaderNum shows how many times this node was leader.\
@@ -126,18 +124,22 @@ instance LogFormatting ForgingStats where
     , IntM "Forge.NodeIsLeaderNum"    (fromIntegral fsNodeIsLeaderNum)
     , IntM "Forge.BlocksForgedNum"    (fromIntegral fsBlocksForgedNum)
     , IntM "Forge.SlotsMissed"        (fromIntegral fsSlotsMissedNum)
-    ]   
+    ]
 
 emptyForgingStats :: ForgingStats
 emptyForgingStats = ForgingStats mempty 0 0 0 0
 
-forgeThreadStats :: Trace IO (Folding (ForgeTracerType blk) ForgingStats)
+forgeThreadStats :: Trace IO ForgingStats
   -> IO (Trace IO (ForgeTracerType blk))
-forgeThreadStats = foldMCondTraceM calculateThreadStats emptyForgingStats
-  (\case
-      Left Consensus.TraceStartLeadershipCheck{} -> True
-      Left _  -> False
-      Right _ -> True)
+forgeThreadStats tr =
+  let tr' = contramap unfold tr
+  in foldMCondTraceM calculateThreadStats emptyForgingStats
+      (\case
+          Left Consensus.TraceStartLeadershipCheck{} -> True
+          Left _ -> False
+          Right _  -> True
+          )
+      tr'
 
 calculateThreadStats :: MonadIO m
   => ForgingStats

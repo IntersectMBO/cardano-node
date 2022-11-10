@@ -23,7 +23,7 @@ import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
 import           Cardano.Node.Tracing.Tracers.ChainDB
 import           Cardano.Node.Tracing.Tracers.Consensus
 import           Cardano.Node.Tracing.Tracers.Diffusion
-import           Cardano.Node.Tracing.Tracers.ForgingThreadStats (forgeThreadStats)
+import           Cardano.Node.Tracing.Tracers.ForgingThreadStats (docForgeStats, forgeThreadStats)
 import           Cardano.Node.Tracing.Tracers.KESInfo
 import           Cardano.Node.Tracing.Tracers.NodeToClient
 import           Cardano.Node.Tracing.Tracers.NodeToNode
@@ -352,11 +352,12 @@ mkConsensusTracers trBase trForward mbTrEKG _trDataPoint trConfig nodeKernel = d
     forgeThreadStatsTr <- mkCardanoTracer'
                 trBase trForward mbTrEKG
                 ["Forge", "Stats"]
-                namesForForge
-                severityForge
+                namesForForge2
+                severityForge2
                 allPublic
                 forgeThreadStats
-    configureTracers trConfig docForge [forgeTr, forgeThreadStatsTr]
+    configureTracers trConfig docForge [forgeTr]
+    configureTracers trConfig docForgeStats [forgeThreadStatsTr]
     blockchainTimeTr   <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["BlockchainTime"]

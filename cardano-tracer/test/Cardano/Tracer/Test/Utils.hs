@@ -1,44 +1,50 @@
+{-# LANGUAGE RecordWildCards #-}
 module Cardano.Tracer.Test.Utils
-  ( doesDirectoryEmpty
-  , false
-  , propRunInLogsStructure
-  , propRunInLogsStructure2
+  ( module Cardano.Tracer.Test.Utils
+  , module Data.Functor.Identity
   ) where
 
+import           Data.Functor.Identity
+
 import           System.Directory.Extra (listDirectories)
-import           System.FilePath ((</>), (<.>), dropDrive, takeBaseName)
-import           System.IO.Extra (newTempDir, newTempFile)
+import           System.FilePath (dropDrive, dropExtension)
+import           System.IO.Extra (newTempDirWithin)
 import           System.Info.Extra (isMac, isWindows)
+
 import           Test.Tasty.QuickCheck
+import           Cardano.Tracer.Test.TestSetup
+
+unI :: Identity a -> a
+unI (Identity x) = x
 
 false :: String -> IO Property
 false msg = return . counterexample msg $ property False
 
 propRunInLogsStructure
-  :: (FilePath -> FilePath -> IO Property)
+  :: TestSetup Identity -> (FilePath -> FilePath -> IO Property)
   -> Property
-propRunInLogsStructure testAction = ioProperty $ do
-  (rootDir, _)   <- newTempDir
-  (localSock, _) <- newTempFile
-  testAction rootDir (prepareLocalSock localSock)
+propRunInLogsStructure TestSetup{..} testAction = ioProperty $ do
+  (rootDir, _) <- newTempDirWithin (unI tsWorkDir)
+  testAction rootDir
+    (prepareLocalSock $ unI tsSockInternal)
 
 propRunInLogsStructure2
-  :: (FilePath -> FilePath -> FilePath -> IO Property)
+  :: TestSetup Identity -> (FilePath -> FilePath -> FilePath -> IO Property)
   -> Property
-propRunInLogsStructure2 testAction = ioProperty $ do
-  (rootDir, _)    <- newTempDir
-  (localSock1, _) <- newTempFile
-  (localSock2, _) <- newTempFile
-  testAction rootDir (prepareLocalSock localSock1) (prepareLocalSock localSock2)
+propRunInLogsStructure2 TestSetup{..} testAction = ioProperty $ do
+  (rootDir, _) <- newTempDirWithin (unI tsWorkDir)
+  testAction rootDir
+    (prepareLocalSock . replaceExtension "1.sock" $ unI tsSockInternal)
+    (prepareLocalSock . replaceExtension "2.sock" $ unI tsSockInternal)
 
 prepareLocalSock :: FilePath -> FilePath
 prepareLocalSock localSock
-  | isWindows = pipeForWindows
-  | isMac     = sockForMac
+  | isWindows = "\\\\.\\pipe\\build\\" <> dropDrive localSock
+  | isMac     = replaceExtension "pipe" localSock
   | otherwise = localSock
- where
-  pipeForWindows = "\\\\.\\pipe\\" <> dropDrive localSock
-  sockForMac = "/tmp" </> takeBaseName localSock <.> "pipe"
 
-doesDirectoryEmpty :: FilePath -> IO Bool
-doesDirectoryEmpty = fmap null . listDirectories
+replaceExtension :: String -> FilePath -> FilePath
+replaceExtension new f = dropExtension f <> "." <> new
+
+isDirectoryEmpty :: FilePath -> IO Bool
+isDirectoryEmpty = fmap null . listDirectories

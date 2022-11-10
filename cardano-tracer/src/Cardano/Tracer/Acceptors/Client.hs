@@ -40,6 +40,7 @@ import           Cardano.Tracer.Acceptors.Utils (notifyAboutNodeDisconnected,
 import qualified Cardano.Tracer.Configuration as TC
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Logs.TraceObjects (traceObjectsHandler)
+import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Utils (connIdToNodeId)
 
 runAcceptorsClient
@@ -50,7 +51,8 @@ runAcceptorsClient
      , DPF.AcceptorConfiguration
      )
   -> IO ()
-runAcceptorsClient tracerEnv p (ekgConfig, tfConfig, dpfConfig) = withIOManager $ \iocp ->
+runAcceptorsClient tracerEnv p (ekgConfig, tfConfig, dpfConfig) = withIOManager $ \iocp -> do
+  traceWith (teTracer tracerEnv) $ TracerSockConnecting p
   doConnectToForwarder
     (localSnocket iocp)
     (localAddressFromPath p)

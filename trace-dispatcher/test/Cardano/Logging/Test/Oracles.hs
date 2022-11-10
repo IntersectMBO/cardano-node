@@ -14,8 +14,6 @@ import           Cardano.Logging
 import           Cardano.Logging.Test.Messages
 import           Cardano.Logging.Test.Types
 
-import Debug.Trace
-
 
 -- | Checks for every message that it appears or does not appear at the right
 -- backend. Tests filtering and routing to backends
@@ -41,7 +39,7 @@ oracleMessages conf ScriptRes {..} =
           res = isCorrectStdout && isCorrectForwarder && isCorrectEKG
       in case traceMessage isCorrectStdout isCorrectForwarder isCorrectEKG msg of
         Nothing -> res
-        Just str -> trace str res
+        Just str -> error (str ++ " " ++ show res)
     traceMessage :: Bool -> Bool -> Bool -> Message -> Maybe String
     traceMessage isCorrectStdout isCorrectForwarder isCorrectEKG msg
       | not isCorrectStdout
