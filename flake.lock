@@ -7681,11 +7681,11 @@
     "plutus-apps_4": {
       "flake": false,
       "locked": {
-        "lastModified": 1647347289,
-        "narHash": "sha256-dxKZ1Zvflyt6igYm39POV6X/0giKbfb4U7D1TvevQls=",
+        "lastModified": 1668055541,
+        "narHash": "sha256-c0XuranD91kZ7uR0gemZQOFDNRv3pFXunJC4j064mtc=",
         "owner": "input-output-hk",
         "repo": "plutus-apps",
-        "rev": "2a40552f4654d695f21783c86e8ae59243ce9dfa",
+        "rev": "1651d36a0f6458e7d2326d57dbc1baa00034d70d",
         "type": "github"
       },
       "original": {
