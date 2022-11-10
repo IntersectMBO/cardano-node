@@ -1,4 +1,4 @@
-#+CONSTANTS: perf=clusterperf.report.org forge=blockprop.forger.org peers=blockprop.peers.org end2end=blockprop.endtoend.org
+#+CONSTANTS:{% for sec in sections %} {{ sec.value.dataId }}={{ sec.value.orgFile }} {% endfor %}
 #+CONSTANTS: base=../{{ base.meta.tag }}/analysis
 {% for run in runs %}
 #+CONSTANTS: run{{ run.index }}=../{{ run.value.meta.tag }}/analysis
@@ -26,21 +26,12 @@ We compare ... relative to ={{ base.ver }}= /{{ base.meta.era | toTitle }}, unde
       - rev 1, {{ report.date }}:  initial release
 
 *** Analysis
-***** Resource Usage
+{% for sec in sections %}
+***** {{ sec.value.title }}
 
-{% include "table.ede" with table = { "rows":"1234567", "src":"perf" } %}
+{% include "table.ede" with table = sec.value %}
 
-***** Forging
-
-{% include "table.ede" with table = { "rows":"1234", "src":"forge" } %}
-
-***** Individual peer propagation
-
-{% include "table.ede" with table = { "rows":"1234", "src":"peers" } %}
-
-***** End-to-end propagation
-
-{% include "table.ede" with table = { "rows":"12345678", "src":"end2end" } %}
+{% endfor %}
 
 *** Observations
 ***** Resources
@@ -63,13 +54,13 @@ We compare ... relative to ={{ base.ver }}= /{{ base.meta.era | toTitle }}, unde
 
 * Appendix: charts
 
-{% include "chart.ede" with args = { "title": "Kernel-reported CPU usage", "ylabel": "CPU usage, %", "metric": "cpuProcess", "yrange": "1:200", "logscale": false } %}
-{% include "chart.ede" with args = { "title": "RTS memory allocation rate", "ylabel": "Memory allocation rate, MB/s", "metric": "rtsAllocation", "yrange": "0:5000", "logscale": false } %}
-{% include "chart.ede" with args = { "title": "Kernel reported memory usage", "ylabel": "RSS, MB", "metric": "memRSS", "logscale": false } %}
-{% include "chart.ede" with args = { "title": "RTS GC live bytes", "ylabel": "GC live bytes, MB", "metric": "rtsLiveBytes", "logscale": false } %}
-{% include "chart.ede" with args = { "title": "Single peer fetched-to-adopted time", "metric": "pAdopted" } %}
-{% include "chart.ede" with args = { "title": "First peer notice time", "metric": "pNoticed" } %}
-{% include "chart.ede" with args = { "title": "Block adoption, 50% of cluster", "metric": "prop0.50" } %}
-{% include "chart.ede" with args = { "title": "Block adoption, 80% of cluster", "metric": "prop0.80" } %}
-{% include "chart.ede" with args = { "title": "Block adoption, 90% of cluster", "metric": "prop0.90" } %}
-{% include "chart.ede" with args = { "title": "Block adoption, 96% of cluster", "metric": "prop0.96" } %}
+{%include "chart.ede" with args= { "title": "Kernel-reported CPU usage",           "metric": "cpuProcess",    "logscale": false, "yrange": "1:200", "ylabel": "CPU usage, %" }%}
+{%include "chart.ede" with args= { "title": "RTS memory allocation rate",          "metric": "rtsAllocation", "logscale": false, "yrange": "0:5000", "ylabel": "Memory allocation rate, MB/s" }%}
+{%include "chart.ede" with args= { "title": "Kernel reported memory usage",        "metric": "memRSS",        "logscale": false, "ylabel": "RSS, MB" }%}
+{%include "chart.ede" with args= { "title": "RTS GC live bytes",                   "metric": "rtsLiveBytes",  "logscale": false, "ylabel": "GC live bytes, MB" }%}
+{%include "chart.ede" with args= { "title": "Single peer fetched-to-adopted time", "metric": "pAdopted",      "logscale": true }%}
+{%include "chart.ede" with args= { "title": "First peer notice time",              "metric": "pNoticed",      "logscale": true }%}
+{%include "chart.ede" with args= { "title": "Block adoption, 50% of cluster",      "metric": "prop0.50",      "logscale": true }%}
+{%include "chart.ede" with args= { "title": "Block adoption, 80% of cluster",      "metric": "prop0.80",      "logscale": true }%}
+{%include "chart.ede" with args= { "title": "Block adoption, 90% of cluster",      "metric": "prop0.90",      "logscale": true }%}
+{%include "chart.ede" with args= { "title": "Block adoption, 96% of cluster",      "metric": "prop0.96",      "logscale": true }%}
