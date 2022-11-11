@@ -425,6 +425,17 @@ module Cardano.Api (
 
     -- * Serialisation
     -- | Support for serialising data in JSON, CBOR and text files.
+    InputFormat (..),
+    InputDecodeError (..),
+    deserialiseInput,
+    deserialiseInputAnyOf,
+    renderInputDecodeError,
+
+    SomeAddressVerificationKey(..),
+    deserialiseAnyVerificationKey,
+    deserialiseAnyVerificationKeyBech32,
+    deserialiseAnyVerificationKeyTextEnvelope,
+    renderSomeAddressVerificationKey,
 
     -- ** CBOR
     SerialiseAsCBOR,
@@ -727,6 +738,7 @@ import           Cardano.Api.Certificate
 import           Cardano.Api.Convenience.Constraints
 import           Cardano.Api.Convenience.Construction
 import           Cardano.Api.Convenience.Query
+import           Cardano.Api.DeserialiseAnyOf
 import           Cardano.Api.Environment
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras

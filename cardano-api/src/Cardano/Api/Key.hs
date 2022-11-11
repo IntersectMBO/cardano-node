@@ -11,7 +11,7 @@ module Cardano.Api.Key
   , AsType(AsVerificationKey, AsSigningKey)
   ) where
 
-import Prelude
+import           Prelude
 
 import           Data.Kind (Type)
 
