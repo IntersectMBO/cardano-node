@@ -10,15 +10,14 @@ import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
-                     newExceptT)
+                   newExceptT)
 
 import qualified Data.ByteString.Char8 as BS
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
 import           Cardano.CLI.Shelley.Commands
-import           Cardano.CLI.Shelley.Key (InputDecodeError, VerificationKeyOrFile,
-                     readVerificationKeyOrFile)
+import           Cardano.CLI.Shelley.Key (VerificationKeyOrFile, readVerificationKeyOrFile)
 import           Cardano.CLI.Types (OutputFormat (..))
 
 import qualified Cardano.Ledger.Slot as Shelley
