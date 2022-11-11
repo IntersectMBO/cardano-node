@@ -22,8 +22,8 @@ import           Cardano.Api
 import           Cardano.Api.Shelley
 
 import           Cardano.CLI.Shelley.Commands
-import           Cardano.CLI.Shelley.Key (InputDecodeError, VerificationKeyOrFile,
-                   readSigningKeyFileAnyOf, readVerificationKeyOrFile)
+import           Cardano.CLI.Shelley.Key (VerificationKeyOrFile, readSigningKeyFileAnyOf,
+                   readVerificationKeyOrFile)
 import           Cardano.CLI.Types (SigningKeyFile (..), VerificationKeyFile (..))
 
 {- HLINT ignore "Reduce duplication" -}

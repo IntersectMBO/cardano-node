@@ -50,9 +50,9 @@ import           Cardano.Api.Shelley
 
 import           Cardano.Chain.Common (BlockCount (BlockCount))
 import           Cardano.CLI.Shelley.Commands
-import           Cardano.CLI.Shelley.Key (InputFormat (..), PaymentVerifier (..),
-                   StakeVerifier (..), VerificationKeyOrFile (..), VerificationKeyOrHashOrFile (..),
-                   VerificationKeyTextOrFile (..), deserialiseInput, renderInputDecodeError)
+import           Cardano.CLI.Shelley.Key (PaymentVerifier (..), StakeVerifier (..),
+                   VerificationKeyOrFile (..), VerificationKeyOrHashOrFile (..),
+                   VerificationKeyTextOrFile (..))
 import           Cardano.CLI.Types
 
 {- HLINT ignore "Use <$>" -}

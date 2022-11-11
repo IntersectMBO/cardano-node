@@ -16,8 +16,8 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 import           Cardano.Api
 import           Cardano.Api.Shelley
 
-import           Cardano.CLI.Shelley.Key (InputDecodeError, StakeVerifier (..),
-                   VerificationKeyOrFile, VerificationKeyOrHashOrFile, readVerificationKeyOrFile,
+import           Cardano.CLI.Shelley.Key (StakeVerifier (..), VerificationKeyOrFile,
+                   VerificationKeyOrHashOrFile, readVerificationKeyOrFile,
                    readVerificationKeyOrHashOrFile)
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Shelley.Run.Read

@@ -165,7 +165,7 @@ instance Error ShelleyGenesisCmdError where
       ShelleyGenesisCmdTextEnvReadFileError fileErr -> displayError fileErr
       ShelleyGenesisCmdUnexpectedAddressVerificationKey (VerificationKeyFile file) expect got -> mconcat
         [ "Unexpected address verification key type in file ", file
-        , ", expected: ", Text.unpack expect, ", got: ", show got
+        , ", expected: ", Text.unpack expect, ", got: ", Text.unpack (renderSomeAddressVerificationKey got)
         ]
       ShelleyGenesisCmdTooFewPoolsForBulkCreds pools files perPool -> mconcat
         [ "Number of pools requested for generation (", show pools

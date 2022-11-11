@@ -8,27 +8,25 @@ module Cardano.CLI.Shelley.Run.Address
   , renderShelleyAddressCmdError
   , runAddressCmd
   , runAddressKeyGenToFile
-  , readAddressVerificationKeyTextOrFile
   , makeStakeAddressRef
   ) where
 
 import           Cardano.Prelude hiding (putStrLn)
 
 
+import           Control.Monad.Trans.Except.Extra (firstExceptT, left, newExceptT)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
-
-import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
 
 import           Cardano.CLI.Helpers
-import           Cardano.CLI.Shelley.Key (InputDecodeError, PaymentVerifier (..),
-                   StakeVerifier (..), VerificationKeyTextOrFile,
-                   VerificationKeyTextOrFileError (..), generateKeyPair, readVerificationKeyOrFile,
-                   readVerificationKeyTextOrFileAnyOf, renderVerificationKeyTextOrFileError)
+import           Cardano.CLI.Shelley.Key (PaymentVerifier (..), StakeVerifier (..),
+                   VerificationKeyTextOrFile, VerificationKeyTextOrFileError (..), generateKeyPair,
+                   readVerificationKeyOrFile, readVerificationKeyTextOrFileAnyOf,
+                   renderVerificationKeyTextOrFileError)
 import           Cardano.CLI.Shelley.Parsers (AddressCmd (..), AddressKeyType (..), OutputFile (..))
 import           Cardano.CLI.Shelley.Run.Address.Info (ShelleyAddressInfoError, runAddressInfo)
 import           Cardano.CLI.Shelley.Run.Read
@@ -40,6 +38,7 @@ data ShelleyAddressCmdError
   | ShelleyAddressCmdReadScriptFileError !(FileError ScriptDecodeError)
   | ShelleyAddressCmdVerificationKeyTextOrFileError !VerificationKeyTextOrFileError
   | ShelleyAddressCmdWriteFileError !(FileError ())
+  | ShelleyAddressCmdExpectedPaymentVerificationKey SomeAddressVerificationKey
   deriving Show
 
 renderShelleyAddressCmdError :: ShelleyAddressCmdError -> Text
@@ -54,6 +53,8 @@ renderShelleyAddressCmdError err =
     ShelleyAddressCmdReadScriptFileError fileErr ->
       Text.pack (displayError fileErr)
     ShelleyAddressCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyAddressCmdExpectedPaymentVerificationKey someAddress ->
+      "Expected payment verification key but got: " <> renderSomeAddressVerificationKey someAddress
 
 runAddressCmd :: AddressCmd -> ExceptT ShelleyAddressCmdError IO ()
 runAddressCmd cmd =
@@ -104,7 +105,7 @@ runAddressKeyHash :: VerificationKeyTextOrFile
                   -> ExceptT ShelleyAddressCmdError IO ()
 runAddressKeyHash vkeyTextOrFile mOutputFp = do
   vkey <- firstExceptT ShelleyAddressCmdVerificationKeyTextOrFileError $
-            readAddressVerificationKeyTextOrFile vkeyTextOrFile
+             newExceptT $ readVerificationKeyTextOrFileAnyOf vkeyTextOrFile
 
   let hexKeyHash = foldSomeAddressVerificationKey
                      (serialiseToRawBytesHex . verificationKeyHash) vkey
@@ -123,7 +124,7 @@ runAddressBuild paymentVerifier mbStakeVerifier nw mOutFp = do
   outText <- case paymentVerifier of
     PaymentVerifierKey payVkeyTextOrFile -> do
       payVKey <- firstExceptT ShelleyAddressCmdVerificationKeyTextOrFileError $
-        readAddressVerificationKeyTextOrFile payVkeyTextOrFile
+         newExceptT $ readVerificationKeyTextOrFileAnyOf payVkeyTextOrFile
 
       addr <- case payVKey of
         AByronVerificationKey vk ->
@@ -137,7 +138,8 @@ runAddressBuild paymentVerifier mbStakeVerifier nw mOutFp = do
 
         AGenesisUTxOVerificationKey vk ->
           AddressShelley <$> buildShelleyAddress (castVerificationKey vk) mbStakeVerifier nw
-
+        nonPaymentKey ->
+          left $ ShelleyAddressCmdExpectedPaymentVerificationKey nonPaymentKey
       return $ serialiseAddress (addr :: AddressAny)
 
     PaymentVerifierScriptFile (ScriptFile fp) -> do
@@ -186,14 +188,6 @@ buildShelleyAddress vkey mbStakeVerifier nw =
 -- Handling the variety of address key types
 --
 
--- TODO: if we could make unions like this an instance of the Key class then
--- it would simplify some of the code above
-data SomeAddressVerificationKey
-  = AByronVerificationKey           (VerificationKey ByronKey)
-  | APaymentVerificationKey         (VerificationKey PaymentKey)
-  | APaymentExtendedVerificationKey (VerificationKey PaymentExtendedKey)
-  | AGenesisUTxOVerificationKey     (VerificationKey GenesisUTxOKey)
-  deriving (Show)
 
 foldSomeAddressVerificationKey :: (forall keyrole. Key keyrole =>
                                    VerificationKey keyrole -> a)
@@ -202,31 +196,13 @@ foldSomeAddressVerificationKey f (AByronVerificationKey           vk) = f vk
 foldSomeAddressVerificationKey f (APaymentVerificationKey         vk) = f vk
 foldSomeAddressVerificationKey f (APaymentExtendedVerificationKey vk) = f vk
 foldSomeAddressVerificationKey f (AGenesisUTxOVerificationKey     vk) = f vk
+foldSomeAddressVerificationKey f (AKesVerificationKey             vk) = f vk
+foldSomeAddressVerificationKey f (AGenesisDelegateExtendedVerificationKey vk) = f vk
+foldSomeAddressVerificationKey f (AGenesisExtendedVerificationKey vk) = f vk
+foldSomeAddressVerificationKey f (AVrfVerificationKey             vk) = f vk
+foldSomeAddressVerificationKey f (AStakeVerificationKey           vk) = f vk
+foldSomeAddressVerificationKey f (AStakeExtendedVerificationKey   vk) = f vk
 
-readAddressVerificationKeyTextOrFile
-  :: VerificationKeyTextOrFile
-  -> ExceptT VerificationKeyTextOrFileError IO SomeAddressVerificationKey
-readAddressVerificationKeyTextOrFile vkTextOrFile =
-    newExceptT $
-      readVerificationKeyTextOrFileAnyOf bech32Types textEnvTypes vkTextOrFile
-  where
-    bech32Types =
-      [ FromSomeType (AsVerificationKey AsPaymentKey)
-                     APaymentVerificationKey
-      , FromSomeType (AsVerificationKey AsPaymentExtendedKey)
-                     APaymentExtendedVerificationKey
-      ]
-
-    textEnvTypes =
-      [ FromSomeType (AsVerificationKey AsByronKey)
-                     AByronVerificationKey
-      , FromSomeType (AsVerificationKey AsPaymentKey)
-                     APaymentVerificationKey
-      , FromSomeType (AsVerificationKey AsPaymentExtendedKey)
-                     APaymentExtendedVerificationKey
-      , FromSomeType (AsVerificationKey AsGenesisUTxOKey)
-                     AGenesisUTxOVerificationKey
-      ]
 
 --
 -- Multisig addresses
