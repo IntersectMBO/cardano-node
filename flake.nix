@@ -192,7 +192,7 @@
           inherit pinned-workbench;
           projectExes = flatten (haskellLib.collectComponents' "exes" projectPackages) // (with hsPkgsWithPassthru; {
             inherit (ouroboros-consensus-byron.components.exes) db-converter;
-            inherit (ouroboros-consensus-cardano.components.exes) db-analyser;
+            inherit (ouroboros-consensus-cardano-tools.components.exes) db-analyser;
             inherit (bech32.components.exes) bech32;
           } // lib.optionalAttrs hostPlatform.isUnix {
             inherit (network-mux.components.exes) cardano-ping;
