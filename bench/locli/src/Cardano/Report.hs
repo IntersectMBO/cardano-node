@@ -24,10 +24,10 @@ import Data.CDF
 
 import Cardano.Analysis.API
 import Cardano.Analysis.Context
+import Cardano.Analysis.Field
 import Cardano.Analysis.Ground
 import Cardano.Analysis.Run hiding (Version)
 import Cardano.Analysis.Run qualified as Run
-import Cardano.Render
 
 
 newtype Author   = Author   { unAuthor   :: Text } deriving newtype (FromJSON, ToJSON)
@@ -69,7 +69,7 @@ instance ToJSON Workload where
     WPlutus -> "Plutus"
 
 data Section where
-  STable :: RenderCDFs a p =>
+  STable :: CDFFields a p =>
     { sData          :: !(a p)
     , sFieldSelector :: !(Field DSelect p a -> Bool)
     , sDataId        :: !Text

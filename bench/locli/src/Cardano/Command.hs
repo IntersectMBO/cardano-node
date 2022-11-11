@@ -21,6 +21,7 @@ import Cardano.Analysis.API
 import Cardano.Analysis.BlockProp
 import Cardano.Analysis.ChainFilter
 import Cardano.Analysis.Context
+import Cardano.Analysis.Field
 import Cardano.Analysis.Ground
 import Cardano.Analysis.MachPerf
 import Cardano.Analysis.Run
@@ -59,7 +60,7 @@ data ChainCommand
   |         RebuildChain    [JsonFilterFile] [ChainFilter]
   |            DumpChain    (JsonOutputFile [BlockEvents]) (JsonOutputFile [BlockEvents])
   |            ReadChain    (JsonInputFile [BlockEvents])
-  |        TimelineChain    TextOutputFile [RTComments BlockEvents]
+  |        TimelineChain    TextOutputFile [TimelineComments BlockEvents]
 
   |         CollectSlots    [JsonLogfile]
   |            DumpSlotsRaw
@@ -152,7 +153,7 @@ parseChainCommand =
    , op "timeline-chain" "Render chain timeline"
      (TimelineChain
        <$> optTextOutputFile "timeline"      "Render a human-readable reconstructed chain view"
-       <*> many parseRTCommentsBP)
+       <*> many parseTimelineCommentsBP)
    ]) <|>
 
    subparser (mconcat [ commandGroup "Machine performance analysis:  slot stats"
@@ -263,8 +264,8 @@ parseChainCommand =
        <> Opt.help desc
        <> Opt.metavar "LOAnyType" )
 
-parseRTCommentsBP :: Parser (RTComments BlockEvents)
-parseRTCommentsBP =
+parseTimelineCommentsBP :: Parser (TimelineComments BlockEvents)
+parseTimelineCommentsBP =
   [ Opt.flag' BEErrors     (Opt.long "chain-errors"   <> Opt.help "Show per-block anomalies")
   , Opt.flag' BEFilterOuts (Opt.long "filter-reasons" <> Opt.help "Explain per-block filter-out reasons")
   ] & \case
