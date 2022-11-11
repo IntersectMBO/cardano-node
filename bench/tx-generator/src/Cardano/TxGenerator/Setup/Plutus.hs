@@ -15,7 +15,7 @@ import qualified Data.Map as Map
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
 
-import           Cardano.CLI.Shelley.Script (readFileScriptInAnyLang)
+import           Cardano.CLI.Shelley.Run.Read (readFileScriptInAnyLang)
 
 import           Cardano.Api
 import           Cardano.Api.Shelley (PlutusScript (..), ProtocolParameters (..), fromAlonzoExUnits,

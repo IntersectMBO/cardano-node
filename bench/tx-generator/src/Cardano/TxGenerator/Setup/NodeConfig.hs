@@ -14,7 +14,7 @@ import           Data.Monoid
 
 import           Ouroboros.Consensus.Cardano (ProtocolParamsShelleyBased (..))
 
-import           Cardano.Api.Protocol.Types (BlockType (..), ProtocolInfoArgs (..))
+import           Cardano.Api (BlockType (..), ProtocolInfoArgs (..))
 import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Handlers.Shutdown (ShutdownConfig (..))
 import           Cardano.Node.Protocol.Cardano
@@ -22,7 +22,6 @@ import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import           Cardano.Node.Types (ConfigYamlFilePath (..), GenesisFile,
                    NodeProtocolConfiguration (..), NodeShelleyProtocolConfiguration (..),
                    ProtocolFilepaths (..))
-
 import           Cardano.TxGenerator.Types
 
 
