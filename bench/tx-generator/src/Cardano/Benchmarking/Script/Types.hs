@@ -7,38 +7,55 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Cardano.Benchmarking.Script.Types
-where
+module Cardano.Benchmarking.Script.Types (
+          Action(..)
+        , Generator(Cycle, NtoM, OneOf, RoundRobin, SecureGenesis,
+                Sequence, Split, SplitN, Take)
+        , PayMode(PayToAddr, PayToScript)
+        , ProtocolParameterMode(..)
+        , ProtocolParametersSource(QueryLocalNode, UseLocalProtocolFile)
+        , ScriptBudget(AutoScript, CheckScriptBudget, StaticScriptBudget)
+        , ScriptSpec(ScriptSpec, scriptSpecFile, scriptSpecBudget)
+        , SubmitMode(Benchmark, DiscardTX, DumpToFile, LocalSocket,
+                NodeToNode)
+        , TargetNodes
+        , TxList(..)
+) where
 
 import           GHC.Generics
 import           Prelude
 
+import           Data.Function (on)
 import           Data.List.NonEmpty
 import           Data.Text (Text)
 
-import           Cardano.Api (AnyCardanoEra, ExecutionUnits, Lovelace, ScriptData, ScriptRedeemer,
-                   TextEnvelope, TxIn)
+import           Cardano.Api
+import           Cardano.Api.Shelley
+
 import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
 import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
 
-import           Cardano.TxGenerator.Types (NumberOfInputsPerTx, NumberOfOutputsPerTx, NumberOfTxs, TPSRate)
+import           Cardano.TxGenerator.Types
 
-import           Cardano.Benchmarking.Script.Env
-import           Cardano.Benchmarking.Script.Store
+
+-- FIXME: temporary workaround instance until Action ADT is refactored
+instance Eq (SigningKey PaymentKey) where
+  (==) = (==) `on` serialiseToTextEnvelope Nothing
 
 data Action where
-  Set                :: !SetKeyVal -> Action
---  Declare            :: SetKeyVal   -> Action --declare (once): error if key was set before
-  InitWallet         :: !WalletName -> Action
+  SetNetworkId       :: !NetworkId -> Action
+  SetSocketPath      :: !FilePath -> Action
+  InitWallet         :: !String -> Action
   StartProtocol      :: !FilePath -> !(Maybe FilePath) -> Action
   Delay              :: !Double -> Action
-  ReadSigningKey     :: !KeyName -> !SigningKeyFile -> Action
-  DefineSigningKey   :: !KeyName -> !TextEnvelope -> Action
-  AddFund            :: !AnyCardanoEra -> !WalletName -> !TxIn -> !Lovelace -> !KeyName -> Action
-  WaitBenchmark      :: !ThreadName -> Action
-  Submit             :: !AnyCardanoEra -> !SubmitMode -> !Generator -> Action
-  CancelBenchmark    :: !ThreadName -> Action
+  ReadSigningKey     :: !String -> !SigningKeyFile -> Action
+  DefineSigningKey   :: !String -> !(SigningKey PaymentKey) -> Action
+  AddFund            :: !AnyCardanoEra -> !String -> !TxIn -> !Lovelace -> !String -> Action
+  WaitBenchmark      :: !String -> Action
+  Submit             :: !AnyCardanoEra -> !SubmitMode -> !TxGenTxParams -> !Generator -> Action
+  CancelBenchmark    :: !String -> Action
   Reserved           :: [String] -> Action
   WaitForEra         :: !AnyCardanoEra -> Action
   SetProtocolParameters :: ProtocolParametersSource -> Action
@@ -47,17 +64,16 @@ data Action where
 deriving instance Generic Action
 
 data Generator where
-  SecureGenesis :: !Lovelace -> !WalletName -> !KeyName -> !KeyName -> Generator -- 0 to N
-  Split :: !Lovelace -> !WalletName -> !PayMode -> !PayMode -> [ Lovelace ] -> Generator
-  SplitN :: !Lovelace -> !WalletName -> !PayMode -> !Int -> Generator            -- 1 to N
-  NtoM  :: !Lovelace -> !WalletName -> !PayMode -> !NumberOfInputsPerTx -> !NumberOfOutputsPerTx
-        -> !(Maybe Int) -> Maybe WalletName -> Generator
+  SecureGenesis :: !String -> !String -> !String -> Generator -- 0 to N
+  Split :: !String -> !PayMode -> !PayMode -> [ Lovelace ] -> Generator
+  SplitN :: !String -> !PayMode -> !Int -> Generator            -- 1 to N
+  NtoM  :: !String -> !PayMode -> !NumberOfInputsPerTx -> !NumberOfOutputsPerTx
+        -> !(Maybe Int) -> Maybe String -> Generator
   Sequence :: [Generator] -> Generator
   Cycle :: !Generator -> Generator
   Take :: !Int -> !Generator -> Generator
   RoundRobin :: [Generator] -> Generator
   OneOf :: [(Generator, Double)] -> Generator
---  AddLogMessages :: Text -> Text -> Generator -> Generator
   deriving (Show, Eq)
 deriving instance Generic Generator
 
@@ -71,7 +87,7 @@ type TargetNodes = NonEmpty NodeIPv4Address
 
 data SubmitMode where
   LocalSocket :: SubmitMode
-  Benchmark   :: !TargetNodes -> !ThreadName -> !TPSRate -> !NumberOfTxs -> SubmitMode
+  Benchmark   :: !TargetNodes -> !String -> !TPSRate -> !NumberOfTxs -> SubmitMode
   DumpToFile  :: !FilePath -> SubmitMode
   DiscardTX   :: SubmitMode
   NodeToNode  :: NonEmpty NodeIPv4Address -> SubmitMode --deprecated
@@ -79,8 +95,8 @@ data SubmitMode where
 deriving instance Generic SubmitMode
 
 data PayMode where
-  PayToAddr :: !KeyName -> !WalletName -> PayMode
-  PayToScript :: !ScriptSpec -> !WalletName -> PayMode
+  PayToAddr :: !String -> !String -> PayMode
+  PayToScript :: !ScriptSpec -> !String -> PayMode
   deriving (Show, Eq)
 deriving instance Generic PayMode
 
@@ -98,3 +114,9 @@ data ScriptSpec = ScriptSpec
   }
   deriving (Show, Eq)
 deriving instance Generic ScriptSpec
+
+newtype TxList era = TxList [Tx era]
+
+data ProtocolParameterMode where
+  ProtocolParameterQuery :: ProtocolParameterMode
+  ProtocolParameterLocal :: ProtocolParameters -> ProtocolParameterMode

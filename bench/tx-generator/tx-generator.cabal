@@ -8,7 +8,7 @@ license-files:
   LICENSE
   NOTICE
 build-type:            Simple
-cabal-version:         >= 1.10
+cabal-version:         >= 2.0
 extra-source-files:    README.md
 data-files:            data/protocol-parameters.json
 
@@ -32,13 +32,11 @@ library
                        Cardano.Benchmarking.Command
                        Cardano.Benchmarking.Compiler
                        Cardano.Benchmarking.GeneratorTx
-                       Cardano.Benchmarking.GeneratorTx.Genesis
                        Cardano.Benchmarking.GeneratorTx.NodeToNode
                        Cardano.Benchmarking.GeneratorTx.SizedMetadata
                        Cardano.Benchmarking.GeneratorTx.Submission
                        Cardano.Benchmarking.GeneratorTx.SubmissionClient
                        Cardano.Benchmarking.LogTypes
-                       Cardano.Benchmarking.NixOptions
                        Cardano.Benchmarking.OuroborosImports
                        Cardano.Benchmarking.Script
                        Cardano.Benchmarking.Script.Action
@@ -47,8 +45,6 @@ library
                        Cardano.Benchmarking.Script.Env
                        Cardano.Benchmarking.Script.NodeConfig
                        Cardano.Benchmarking.Script.Selftest
-                       Cardano.Benchmarking.Script.Setters
-                       Cardano.Benchmarking.Script.Store
                        Cardano.Benchmarking.Script.Types
                        Cardano.Benchmarking.TpsThrottle
                        Cardano.Benchmarking.Tracer
@@ -59,13 +55,23 @@ library
 
                        Cardano.TxGenerator.Fund
                        Cardano.TxGenerator.FundQueue
+                       Cardano.TxGenerator.Genesis
                        Cardano.TxGenerator.PureExample
+                       Cardano.TxGenerator.Script.Types
+                       Cardano.TxGenerator.Setup.NixService
+                       Cardano.TxGenerator.Setup.NodeConfig
+                       Cardano.TxGenerator.Setup.Plutus
+                       Cardano.TxGenerator.Setup.SigningKey
                        Cardano.TxGenerator.Types
                        Cardano.TxGenerator.Tx
                        Cardano.TxGenerator.Utils
                        Cardano.TxGenerator.UTxO
 
+                       Cardano.TxGenerator.Internal.Orphans
+
+
   other-modules:       Cardano.TxGenerator.Internal.Fifo
+                       -- Cardano.TxGenerator.Internal.Orphans
                        Paths_tx_generator
 
   autogen-modules:     Paths_tx_generator
@@ -92,9 +98,6 @@ library
                      , cborg >= 0.2.2 && < 0.3
                      , containers
                      , constraints-extras
-                     , dependent-map
-                     , dependent-sum
-                     , dependent-sum-template
                      , dlist
                      , extra
                      , formatting
@@ -124,6 +127,7 @@ library
                      , transformers
                      , transformers-except
                      , unordered-containers
+                     , yaml
 
   default-language:    Haskell2010
   default-extensions: OverloadedStrings
@@ -151,6 +155,28 @@ executable tx-generator
   build-depends:       base >=4.12 && <5
                      , tx-generator
 
+test-suite tx-generator-apitest
+  hs-source-dirs:      test
+  main-is:             ApiTest.hs
+  type:                exitcode-stdio-1.0
+  default-language:    Haskell2010
+  ghc-options:         -threaded
+                       -Wall
+                       -rtsopts
+                       "-with-rtsopts=-T"
+
+  build-depends:       base >=4.12 && <5
+                     , aeson
+                     , bytestring
+                     , filepath
+                     , optparse-applicative-fork
+                     , cardano-api
+                     , cardano-cli
+                     , cardano-node
+                     , transformers
+                     , transformers-except
+                     , tx-generator
+                     
 test-suite tx-generator-test
   hs-source-dirs:       test
   main-is:              Main.hs
