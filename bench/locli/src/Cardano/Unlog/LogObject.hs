@@ -56,8 +56,8 @@ readLogObjectStream f okDErr anyOks =
     <&>
     (if okDErr then id else
         filter ((\case
-                    LODecodeError err -> error
-                      (printf "Decode error while parsing %s -- %s" f (show err))
+                    LODecodeError input err -> error
+                      (printf "Decode error while parsing %s:\n%s\non input:\n>>>  %s" f (Text.toString err) (Text.toString input))
                     _ -> True)
                . loBody)) .
     filter ((\case
@@ -67,13 +67,21 @@ readLogObjectStream f okDErr anyOks =
                     (printf "Unexpected LOAny while parsing %s -- %s: %s" f (show laty) (show obj))
                 _ -> True)
              . loBody) .
-    filter ((/= eofError) . loBody) .
-    fmap (either (LogObject zeroUTCTime "Cardano.Analysis.DecodeError" "DecodeError" "" (TId "0") . LODecodeError . Text.fromText . LText.pack)
-                 id
-          . AE.eitherDecode)
+    filter (not . isDecodeError "Error in $: not enough input" . loBody) .
+    fmap (\bs ->
+            AE.eitherDecode bs &
+            either
+            (LogObject zeroUTCTime "Cardano.Analysis.DecodeError" "DecodeError" "" (TId "0")
+             . LODecodeError (Text.fromByteString (LBS.toStrict bs)
+                               & fromMaybe "#<ERROR decoding input fromByteString>")
+              . Text.fromText
+              . LText.pack)
+            id)
     . LBS.split (fromIntegral $ fromEnum '\n')
  where
-   eofError = LODecodeError "Error in $: not enough input"
+   isDecodeError x = \case
+     LODecodeError _ x' -> x == x'
+     _ -> False
 
 data LogObject
   = LogObject
@@ -325,7 +333,10 @@ data LOBody
   | LOGeneratorSummary !Bool !Word64 !NominalDiffTime (Vector Double)
   -- Everything else:
   | LOAny !LOAnyType !Object
-  | LODecodeError !ShortText
+  | LODecodeError
+    { loRawText :: !ShortText
+    , loError   :: !ShortText
+    }
   deriving (Eq, Generic, Show)
   deriving anyclass NFData
 

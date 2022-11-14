@@ -16,9 +16,10 @@ import Data.List (last)
 import Data.Text qualified as T
 import Data.Text.Lazy qualified as LT
 import Data.Time.Clock
+import System.FilePath as FS
 import System.Posix.User
 
-import Text.EDE
+import Text.EDE hiding (Id)
 
 import Data.CDF
 
@@ -61,18 +62,20 @@ getReport rTarget mrev = do
 
 data Workload
   = WValue
-  | WPlutus
+  | WPlutusLoopCountdown
+  | WPlutusLoopSECP
 
 instance ToJSON Workload where
   toJSON = \case
-    WValue  -> "Value"
-    WPlutus -> "Plutus"
+    WValue               -> "value-only"
+    WPlutusLoopCountdown -> "Plutus countdown loop"
+    WPlutusLoopSECP      -> "Plutus SECP loop"
 
 data Section where
   STable :: CDFFields a p =>
     { sData          :: !(a p)
     , sFieldSelector :: !(Field DSelect p a -> Bool)
-    , sDataId        :: !Text
+    , sDataRef       :: !Text
     , sOrgTableSrc   :: !Text
     , sTitle         :: !Text
     } -> Section
@@ -107,7 +110,7 @@ instance ToJSON TmplRun where
   toJSON TmplRun{trManifest=Manifest{..},..} =
     object
       [ "meta"       .= trMeta
-      , "id"         .= trShortId
+      , "shortId"    .= trShortId
       , "workload"   .= trWorkload
       , "branch"     .= mNodeBranch
       , "ver"        .= mNodeApproxVer
@@ -124,18 +127,25 @@ instance ToJSON TmplRun where
       ]
 
 liftTmplRun :: Run -> TmplRun
-liftTmplRun Run{..} =
+liftTmplRun Run{generatorProfile=GeneratorProfile{..}, ..} =
   TmplRun
   { trMeta      = metadata
   , trShortId   = ShortId (batch metadata)
-  , trWorkload  = WValue
   , trManifest  = manifest metadata & unsafeShortenManifest 5
+  , trWorkload  =
+    case ( plutusMode       & fromMaybe False
+         , plutusLoopScript & fromMaybe "" & FS.takeFileName & FS.dropExtension ) of
+         (False, _)                       -> WValue
+         (True, "loop")                   -> WPlutusLoopCountdown
+         (True, "schnorr-secp256k1-loop") -> WPlutusLoopSECP
+         (_, scr) ->
+           error $ "Unknown Plutus script:  " <> scr
   }
 
 data TmplSection
   = TmplTable
     { tsTitle       :: !Text
-    , tsDataId      :: !Text
+    , tsDataRef     :: !Text
     , tsOrgTableSrc :: !Text
     , tsNRows       :: !Int
     }
@@ -143,7 +153,7 @@ data TmplSection
 instance ToJSON TmplSection where
   toJSON TmplTable{..} = object
     [ "title"     .= tsTitle
-    , "dataId"    .= tsDataId
+    , "dataRef"   .= tsDataRef
     , "orgFile"   .= tsOrgTableSrc
     -- Yes, strange as it is, this is the encoding to ease iteration in ED-E.
     , "rows"      .= T.replicate tsNRows "."
@@ -155,9 +165,11 @@ liftTmplSection =
     STable{..} ->
       TmplTable
       { tsTitle       = sTitle
-      , tsDataId      = sDataId
+      , tsDataRef     = sDataRef
       , tsOrgTableSrc = sOrgTableSrc
-      , tsNRows       = length $ filterFields sFieldSelector
+      , tsNRows       =
+        -- trace (printf "nrows: %d" $ length $ filterFields sFieldSelector :: String) $
+        length $ filterFields sFieldSelector
       }
 
 generate :: InputDir -> Maybe TextInputFile

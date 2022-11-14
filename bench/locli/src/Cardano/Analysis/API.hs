@@ -340,11 +340,11 @@ data PropSubset
 
 bpFieldSelectForger :: Field DSelect p a -> Bool
 bpFieldSelectForger Field{fId} = elem fId
-  [ "fStarted", "fLeading", "fForged", "fAnnounced", "fAdopted", "fSendStart" ]
+  [ "bfStarted", "bfLeading", "bfForged", "bfAnnounced", "fSending", "bfAdopted" ]
 
 bpFieldSelectPeers :: Field DSelect p a -> Bool
 bpFieldSelectPeers Field{fId} = elem fId
-  [ "pNoticed", "pRequested", "pFetched", "pAnnounced", "pAdopted", "pSendStart" ]
+  [ "boNoticed", "boRequested", "boFetched", "boAnnounced", "boSending", "boAdopted" ]
 
 bpFieldSelectEndToEnd :: Field DSelect p a -> Bool
 bpFieldSelectEndToEnd Field{fHead2} = elem fHead2 adoptionCentilesRendered
@@ -449,37 +449,37 @@ instance CDFFields BlockProp p where
 instance TimelineFields BlockEvents where
   timelineFields _ =
     --  Width LeftPad
-    [ Field 5 0 "block"        "block" "no."    (IWord64 (unBlockNo . beBlockNo)) ""
-    , Field 5 0 "abs.slot"     "abs."  "slot#"  (IWord64 (unSlotNo  . beSlotNo)) ""
-    , Field 6 0 "hash"         "block" "hash"   (IText   (shortHash . beBlock)) ""
-    , Field 6 0 "hashPrev"     "prev"  "hash"   (IText   (shortHash . beBlockPrev)) ""
-    , Field 7 0 "forger"       "forger" "host"  (IText   (toText . unHost . bfForger . beForge)) ""
-    , Field 6 0 "blockSize"    "size"  "bytes"  (IInt    (bfBlockSize . beForge)) ""
-    , Field 5 0 "blockGap"     "block" "gap"    (IDeltaT (bfBlockGap  . beForge)) ""
-    , Field 3 0 "forks"         "for"  "-ks"    (IInt    (count bpeIsFork . beErrors)) ""
-    , Field 4 0 "fStarted"      (f!!0) "Start"  (IDeltaT (bfStarted   . beForge)) ""
-    , Field 4 0 "fBlkCtx"       (f!!1) "BlkCtx" (IText (maybe "?" show.bfBlkCtx  .beForge)) ""
-    , Field 4 0 "fLgrState"     (f!!2) "LgrSta" (IText (maybe "?" show.bfLgrState.beForge)) ""
-    , Field 4 0 "fLgrView"      (f!!3) "LgrVie" (IText (maybe "?" show.bfLgrView .beForge)) ""
-    , Field 4 0 "fLeading"      (f!!4) "Lead"   (IDeltaT (bfLeading   . beForge)) ""
-    , Field 4 0 "fForged"       (f!!5) "Forge"  (IDeltaT (bfForged    . beForge)) ""
-    , Field 4 0 "fAnnounced"    (f!!6) "Announ" (IDeltaT (bfAnnounced . beForge)) ""
-    , Field 4 0 "fSendStart"    (f!!7) "Sendin" (IDeltaT (bfSending   . beForge)) ""
-    , Field 4 0 "fAdopted"      (f!!8) "Adopt"  (IDeltaT (bfAdopted   . beForge)) ""
-    , Field 4 0 "noticedVal"    (p!!0) "Notic"  (IDeltaT (af  boNoticed   . valids)) ""
-    , Field 4 0 "requestedVal"  (p!!1) "Requd"  (IDeltaT (af  boRequested . valids)) ""
-    , Field 4 0 "fetchedVal"    (p!!2) "Fetch"  (IDeltaT (af  boFetched   . valids)) ""
-    , Field 4 0 "pAnnouncedVal" (p!!3) "Annou"  (IDeltaT (af' boAnnounced . valids)) ""
-    , Field 4 0 "pSendStartVal" (p!!4) "Send"   (IDeltaT (af' boSending   . valids)) ""
-    , Field 4 0 "pAdoptedVal"   (p!!5) "Adopt"  (IDeltaT (af' boAdopted   . valids)) ""
-    , Field 4 0 "pPropag0.5"    (r!!0) "0.5"    (IDeltaT (percSpec 0.5  . bePropagation)) ""
-    , Field 4 0 "pPropag0.8"    (r!!1) "0.8"    (IDeltaT (percSpec 0.8  . bePropagation)) ""
-    , Field 4 0 "pPropag0.96"   (r!!2) "0.96"   (IDeltaT (percSpec 0.96 . bePropagation)) ""
-    , Field 4 0 "pPropag1.0"    (r!!3) "1.0"    (IDeltaT (snd . cdfRange . bePropagation)) ""
-    , Field 3 0 "valid"         "va-"  "lid"    (IText   (bool "-" "+" . (== 0) . length
+    [ Field 5 0 "beBlockNo"    "block" "no."    (IWord64 (unBlockNo . beBlockNo)) ""
+    , Field 5 0 "beSlotNo"     "abs."  "slot#"  (IWord64 (unSlotNo  . beSlotNo)) ""
+    , Field 6 0 "beBlock"      "block" "hash"   (IText   (shortHash . beBlock)) ""
+    , Field 6 0 "beBlockPrev"  "prev"  "hash"   (IText   (shortHash . beBlockPrev)) ""
+    , Field 7 0 "bfForger"     "forger" "host"  (IText   (toText . unHost . bfForger . beForge)) ""
+    , Field 6 0 "bfBlockSize"  "size"  "bytes"  (IInt    (bfBlockSize . beForge)) ""
+    , Field 5 0 "bfBlockGap"   "block" "gap"    (IDeltaT (bfBlockGap  . beForge)) ""
+    , Field 3 0 "bpeIsFork"    "for"  "-ks"    (IInt    (count bpeIsFork . beErrors)) ""
+    , Field 4 0 "bfStarted"     (f!!0) "Start"  (IDeltaT (bfStarted   . beForge)) ""
+    , Field 4 0 "bfBlkCtx"      (f!!1) "BlkCtx" (IText (maybe "?" show.bfBlkCtx  .beForge)) ""
+    , Field 4 0 "bfLgrState"    (f!!2) "LgrSta" (IText (maybe "?" show.bfLgrState.beForge)) ""
+    , Field 4 0 "bfLgrView"     (f!!3) "LgrVie" (IText (maybe "?" show.bfLgrView .beForge)) ""
+    , Field 4 0 "bfLeading"     (f!!4) "Lead"   (IDeltaT (bfLeading   . beForge)) ""
+    , Field 4 0 "bfForged"      (f!!5) "Forge"  (IDeltaT (bfForged    . beForge)) ""
+    , Field 4 0 "bfAnnounced"   (f!!6) "Announ" (IDeltaT (bfAnnounced . beForge)) ""
+    , Field 4 0 "bfSending"     (f!!7) "Sendin" (IDeltaT (bfSending   . beForge)) ""
+    , Field 4 0 "bfAdopted"     (f!!8) "Adopt"  (IDeltaT (bfAdopted   . beForge)) ""
+    , Field 4 0 "boNoticed"     (p!!0) "Notic"  (IDeltaT (af  boNoticed   . valids)) ""
+    , Field 4 0 "boRequested"   (p!!1) "Requd"  (IDeltaT (af  boRequested . valids)) ""
+    , Field 4 0 "boFetched"     (p!!2) "Fetch"  (IDeltaT (af  boFetched   . valids)) ""
+    , Field 4 0 "boAnnounced"   (p!!3) "Annou"  (IDeltaT (af' boAnnounced . valids)) ""
+    , Field 4 0 "boSending"     (p!!4) "Send"   (IDeltaT (af' boSending   . valids)) ""
+    , Field 4 0 "pAdopted"      (p!!5) "Adopt"  (IDeltaT (af' boAdopted   . valids)) ""
+    , Field 4 0 "bePropagation.5" (r!!0) "0.5"  (IDeltaT (percSpec 0.5  . bePropagation)) ""
+    , Field 4 0 "bePropagation.8" (r!!1) "0.8"  (IDeltaT (percSpec 0.8  . bePropagation)) ""
+    , Field 4 0 "bePropagation.96"(r!!2) "0.96" (IDeltaT (percSpec 0.96 . bePropagation)) ""
+    , Field 4 0 "bePropagation.1" (r!!3) "1.0"  (IDeltaT (snd . cdfRange . bePropagation)) ""
+    , Field 3 0 "beAcceptance"  "va-"  "lid"    (IText   (bool "-" "+" . (== 0) . length
                                                           . filter (not . snd) . beAcceptance)) ""
     , Field 3 0 "valid.observ" "good"  "obsv"   (IInt    (length          . valids)) ""
-    , Field 5 0 "errors"        "all"  "errs"   (IInt    (length . beErrors)) ""
+    , Field 5 0 "beErrors"      "all"  "errs"   (IInt    (length . beErrors)) ""
     , Field 3 0 "missNotic"     (m!!0) "ntc"    (IInt    (count (bpeIsMissing Notice) . beErrors)) ""
     , Field 3 0 "missReque"     (m!!1) "req"    (IInt    (count (bpeIsMissing Request) . beErrors)) ""
     , Field 3 0 "missFetch"     (m!!2) "fch"    (IInt    (count (bpeIsMissing Fetch) . beErrors)) ""
@@ -538,7 +538,7 @@ data PerfSubset
 
 mtFieldsReport :: Field DSelect p a -> Bool
 mtFieldsReport Field{fId} = elem fId
-  [ "cpuProcess", "cpuGC", "cpuMutator", "cpuSpanLenAll", "memRSS", "rtsHeap", "rtsLive", "rtsAllocation" ]
+  [ "rCentiCpu", "rCentiGC", "rCentiMut", "cdfSpanLensCpu", "rRSS", "rHeap", "rLive", "rAlloc" ]
 
 perfSubsetFn :: PerfSubset -> (Field DSelect p a -> Bool)
 perfSubsetFn = \case

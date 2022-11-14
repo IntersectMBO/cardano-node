@@ -18,13 +18,13 @@ usage_run() {
                           A unique name would be allocated for this run,
                             and a run alias $(green current) will be created for it.
 
-    $(helpcmd list-aws)             List AWS runs
-     $(blk lsaws)
-    $(helpcmd fetch-aws RUN)
+    $(helpcmd list-remote)          List AWS runs
+     $(blk lsaws lsr)
+    $(helpcmd fetch-run RUN)
                           Fetch an AWS run
-     $(blk fetch)
-    $(helpcmd analysis-from-aws RUN..)
-     $(blk fetch-analysis fa)    Fetch analyses of AWS runs
+     $(blk fetch fr)
+    $(helpcmd fetch-analysis RUN..)
+     $(blk fa)                   Fetch analyses of AWS runs
     $(helpcmd analyse-aws RUN..)     Run analyses of AWS runs, remotely
 
     $(helpcmd describe RUN)
@@ -95,7 +95,7 @@ case "$op" in
                  sh -c "'$(run_ls_cmd $(jq <<<$r .depl)/runs)'"
         fi;;
 
-    list-remote | lsr )
+    list-remote | lsaws | lsr )
         run "${sargs[@]}" list --on-remote;;
 
     list-sets | lss )
@@ -524,7 +524,7 @@ case "$op" in
 
         echo $dir;;
 
-    fetch-run | fr )
+    fetch-run | fetch | fr )
         local usage="USAGE: wb run $op RUN [MACHINE] [DEPLOYMENT=bench-1] [ENV=bench]"
         local run=${1:?$usage}
         local mach=${2:-all-hosts}

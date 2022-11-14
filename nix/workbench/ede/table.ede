@@ -4,7 +4,7 @@
 |                           |     {% for run in runs %} |      |      |     {% endfor %} |
 {% endfor %}
 |---------------------------+-----{% for run in runs %}-+------+------+-----{% endfor %}-|
-#+TBLFM: $2=remote(file:$base/${{ table.dataId }},@@#$average);p3::$1=remote(file:$base/${{ table.dataId }},@@#$metric)
+#+TBLFM: $2=remote(file:$base/${{ table.dataRef }},@@#$average);p3::$1=remote(file:$base/${{ table.dataRef }},@@#$metric)
 {% for run in runs %}
-#+TBLFM: ${{ run.index * 3 }}=remote(file:$run{{ run.index }}/${{ table.dataId }},@@#$average);p3::${{ run.index * 3 + 1 }}=${{ run.index * 3 }}-$2;p3::${{ run.index * 3 + 2 }}=round(100*${{ run.index * 3 + 1 }}/$2)
+#+TBLFM: ${{ run.index * 3 }}=remote(file:$run{{ run.index }}/${{ table.dataRef }},@@#$average);p3::${{ run.index * 3 + 1 }}=${{ run.index * 3 }}-$2;p3::${{ run.index * 3 + 2 }}=round(100*${{ run.index * 3 + 1 }}/$2)
 {% endfor %}

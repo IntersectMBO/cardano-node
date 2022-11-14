@@ -1,4 +1,4 @@
-#+CONSTANTS:{% for sec in sections %} {{ sec.value.dataId }}={{ sec.value.orgFile }} {% endfor %}
+#+CONSTANTS:{% for sec in sections %} {{ sec.value.dataRef }}={{ sec.value.orgFile }} {% endfor %}
 #+CONSTANTS: base=../{{ base.meta.tag }}/analysis
 {% for run in runs %}
 #+CONSTANTS: run{{ run.index }}=../{{ run.value.meta.tag }}/analysis
@@ -18,7 +18,7 @@
 
 *** Manifest
 
-We compare ... relative to ={{ base.ver }}= /{{ base.meta.era | toTitle }}, under {{ base.workload }} workload.
+We compare {% for run in runs %}{%if !run.first%}{%if !run.last%}, {%else%} and {%endif%}{%endif%}{{ run.value.ver }}/{{ run.value.meta.era | toTitle }}{% endfor %} relative to ={{ base.ver }}=/{{ base.meta.era | toTitle }}, under {{ base.workload }} workload.
 
 {% include "manifest.ede" %}
 
