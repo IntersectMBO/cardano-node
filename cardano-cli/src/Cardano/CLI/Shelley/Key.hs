@@ -258,12 +258,9 @@ renderVerificationKeyTextOrFileError vkTextOrFileErr =
 -- If a filepath is provided, the file can either be formatted as Bech32, hex,
 -- or text envelope.
 readVerificationKeyTextOrFileAnyOf
-  :: forall b.
-     [FromSomeType SerialiseAsBech32 SerialiseAsRawBytes b]
-  -> [FromSomeType HasTextEnvelope SerialiseAsCBOR b]
-  -> VerificationKeyTextOrFile
-  -> IO (Either VerificationKeyTextOrFileError b)
-readVerificationKeyTextOrFileAnyOf bech32Types textEnvTypes verKeyTextOrFile =
+  :: VerificationKeyTextOrFile
+  -> IO (Either VerificationKeyTextOrFileError SomeAddressVerificationKey)
+readVerificationKeyTextOrFileAnyOf verKeyTextOrFile =
   case verKeyTextOrFile of
     VktofVerificationKeyText vkText ->
       pure $ first VerificationKeyTextError $
