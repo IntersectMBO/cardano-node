@@ -11,6 +11,7 @@ NUM_PROC     = $(nproc --all)
 ERA     ?= bage
 
 PROFILE ?= default-${ERA}
+BACKEND ?= supervisor
 REV     ?= master
 ITER    ?=
 ARGS    ?=
@@ -49,7 +50,7 @@ ci-targets:  $(CI_TARGETS)
 ## Base targets:
 ##
 shell:                                           ## Nix shell, (workbench from /nix/store), vars: PROFILE, CMD, RUN
-	nix-shell -A 'workbench-shell' --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} ${ARGS} ${if ${CMD},--command "${CMD}"} ${if ${RUN},--run "${RUN}"}
+	nix-shell -A 'workbench-shell' --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} --argstr backendName ${BACKEND} ${ARGS} ${if ${CMD},--command "${CMD}"} ${if ${RUN},--run "${RUN}"}
 shell-dev shell-prof shell-nix: shell
 shell-nix: ARGS += --arg 'workbenchDevMode' false ## Nix shell, (workbench from Nix store), vars: PROFILE, CMD, RUN
 shell-prof: ARGS += --arg 'profiled' true        ## Nix shell, everything Haskell built profiled

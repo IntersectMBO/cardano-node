@@ -7,9 +7,8 @@
 ##
 , cardano-mainnet-mirror
 ##
-, profileName
+, workbenchRun
 , workbenchDevMode ? false
-, useCabalRun ? false
 ##
 , profiled ? false
 , withHoogle ? true
@@ -18,18 +17,15 @@
 
 with lib;
 
-let cluster = pkgs.supervisord-workbench-for-profile {
-      inherit profileName useCabalRun profiled;
-    };
+let
+    inherit (workbenchRun) profileName backend profile;
 
-    inherit (cluster) profile;
-
-    shellHook = { workbenchDevMode, useCabalRun, profiled, profileName, withMainnet }: ''
+    shellHook = { profileName, backend, workbenchDevMode, profiled, withMainnet }: ''
       while test $# -gt 0
       do shift; done       ## Flush argv[]
 
-      echo 'workbench shellHook:  workbenchDevMode=${toString workbenchDevMode} useCabalRun=${toString useCabalRun} profiled=${toString profiled} profileName=${profileName}'
-      export WB_BACKEND=supervisor
+      echo 'workbench shellHook:  profileName=${profileName} backendName=${backend.name} useCabalRun=${toString backend.useCabalRun} workbenchDevMode=${toString workbenchDevMode} profiled=${toString profiled} '
+      export WB_BACKEND=${backend.name}
       export WB_SHELL_PROFILE=${profileName}
       export WB_SHELL_PROFILE_DIR=${profile}
 
@@ -46,7 +42,7 @@ let cluster = pkgs.supervisord-workbench-for-profile {
         ''}
 
       ${optionalString
-        useCabalRun
+        backend.useCabalRun
         ''
       . nix/workbench/lib.sh
       . nix/workbench/lib-cabal.sh ${optionalString profiled "--profiled"}
@@ -74,7 +70,7 @@ let cluster = pkgs.supervisord-workbench-for-profile {
 in project.shellFor {
   name = "workbench-shell";
 
-  shellHook = shellHook { inherit workbenchDevMode useCabalRun profiled profileName withMainnet; };
+  shellHook = shellHook { inherit profileName backend workbenchDevMode profiled withMainnet; };
 
   inherit withHoogle;
 
@@ -97,19 +93,14 @@ in project.shellFor {
   # These programs will be available inside the nix-shell.
   nativeBuildInputs = with pkgs; with haskellPackages; with cardanoNodePackages; [
     cardano-ping
-    cabalWrapped
     db-analyser
-    ghcid
-    haskellBuildUtils
     pkgs.graphviz
     graphmod
-    cabal-plan
     weeder
     nixWrapped
     pkgconfig
     profiteur
     profiterole
-    python3Packages.supervisor
     ghc-prof-flamegraph
     sqlite-interactive
     tmux
@@ -118,24 +109,17 @@ in project.shellFor {
     pkgs.moreutils
     pkgs.pstree
     pkgs.time
-    cluster.interactive-start
-    cluster.interactive-stop
-    cluster.interactive-restart
+    workbenchRun.interactive-start
+    workbenchRun.interactive-stop
+    workbenchRun.interactive-restart
   ] ++ lib.optional haveGlibcLocales pkgs.glibcLocales
-  ## Workbench's main script is called directly in dev mode.
-  ++ lib.optionals (!useCabalRun)
-    [
-      cardano-cli
-      cardano-node
-      cardano-topology
-      cardano-tracer
-      locli
-      tx-generator
-    ]
+  ++ lib.optionals (!backend.useCabalRun) [cardano-topology cardano-cli locli]
+  ++ backend.extraShellPkgs
   ++ lib.optionals (!workbenchDevMode)
     [
-      cluster.workbench.workbench
-    ];
+      workbenchRun.workbench.workbench
+    ]
+    ;
 
 } // { inherit shellHook;
      }

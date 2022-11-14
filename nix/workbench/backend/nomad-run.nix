@@ -126,7 +126,6 @@ in
             mv       run/$run/*  .
             rmdir    run/$run    run
 
-
             cat > $out/nix-support/hydra-build-products <<EOF
             report workbench-log   $out wb-start.log
             report meta            $out meta.json
@@ -144,6 +143,7 @@ in
 in
 {
   inherit stateDir;
+  inherit profileName;
   inherit workbench nomad-workbench;
   inherit (nomad-workbench) backend;
   inherit profileNix profile topology genesis;

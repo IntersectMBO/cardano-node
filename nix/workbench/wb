@@ -101,7 +101,7 @@ start()
 {
     local batch_name=
     local profile_name= profile=
-    local backend=supervisor
+    local backend=${WB_BACKEND:-supervisor}
     local node_source=.
     local node_rev=
     local cabal_mode=
@@ -185,7 +185,7 @@ start()
             ${run_allocate_args[@]}
             --manifest "$manifest"
         )
-       run ${run_args[@]} 'allocate' $batch_name $profile_name "${args[@]}"
+       run ${run_args[@]} 'allocate' $batch_name $profile_name $backend "${args[@]}"
        local run=$(run current-tag)
 
        current_run_path=$(run current-path)

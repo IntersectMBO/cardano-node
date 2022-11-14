@@ -109,7 +109,6 @@ final: prev: with final; {
   nomad-workbench-for-profile =
     { batchName             ? customConfig.localCluster.batchName
     , profileName           ? customConfig.localCluster.profileName
-    # FIXME: Makes no sense for this backend!
     , useCabalRun           ? false
     , workbenchDevMode      ? false
     , profiled              ? false

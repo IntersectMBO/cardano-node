@@ -143,7 +143,9 @@ in
 in
 {
   inherit stateDir;
+  inherit profileName;
   inherit workbench supervisord-workbench;
+  inherit (supervisord-workbench) backend;
   inherit profileNix profile topology genesis;
   inherit interactive-start interactive-stop interactive-restart;
   inherit profile-run;

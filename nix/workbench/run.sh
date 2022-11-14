@@ -342,6 +342,7 @@ case "$op" in
         local usage="USAGE: wb run $op BATCH-NAME PROFILE-NAME [ENV-CONFIG-OPTS..] [-- BACKEND-ARGS-AND-ENV-CONFIG-OPTS..]"
         local batch=${1:?$usage}; shift
         local profile_name=${1:?$usage}; shift
+        local backend_name=${1:?$usage}; shift
 
         local profile= topology= genesis_cache_entry= manifest= preset= cabal_mode=
         while test $# -gt 0
@@ -393,7 +394,18 @@ case "$op" in
         profile describe-timing "$timing"
 
         ## 3. decide the tag:
-        local run=$(jq '.start_tag' -r <<<$timing)$(if test "$batch" != 'plain'; then echo -n .$batch; fi).$hash.$profile_name$(test -z "$cabal_mode" && echo '.nix')
+        if [ "$backend_name" == "supervisor" ];
+        then
+            local backend_identifier="sup"
+        else
+            if [ "$backend_name" == "nomad" ];
+            then
+                local backend_identifier="nom"
+            else
+                local backend_identifier="$backend_name"
+            fi
+        fi
+        local run=$(jq '.start_tag' -r <<<$timing)$(if test "$batch" != 'plain'; then echo -n .$batch; fi).$hash.$profile_name.$backend_identifier
         progress "run | tag" "allocated run identifier (tag):  $(with_color white $run)"
 
         ## 4. allocate directory:

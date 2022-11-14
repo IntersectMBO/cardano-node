@@ -19,6 +19,9 @@ let
     rec
     { name = "nomad";
 
+      # Unlike the supervisor backend `useCabalRun` is always false here.
+      useCabalRun = false;
+
       services-config = import ./services-config.nix {inherit lib workbench basePort stateDir; useCabalRun = false; inherit enableEKG;};
 
       extraShellPkgs = with pkgs; [
