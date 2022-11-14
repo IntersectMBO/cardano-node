@@ -321,6 +321,13 @@ import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
 
+-- TODO: Think about if these belong
+import           Cardano.Api.Address
+import           Cardano.Api.Key
+import           Cardano.Api.KeysByron
+import           Cardano.Api.KeysPraos
+import           Cardano.Api.KeysShelley
+
 ------------------------------------------------------------------------------
 -- Formatted/encoded input deserialisation
 ------------------------------------------------------------------------------
@@ -333,8 +340,11 @@ data InputFormat a where
   -- | Hex/Base16 encoding.
   InputFormatHex :: SerialiseAsRawBytes a => InputFormat a
 
+  -- TODO: Specify TextEnvelope CBOR hex
   -- | Text envelope format.
   InputFormatTextEnvelope :: HasTextEnvelope a => InputFormat a
+
+  -- TODO: Add constructor for TextEnvelope Bech32
 
 -- | Input decoding error.
 data InputDecodeError
@@ -504,3 +514,87 @@ deserialiseInputAnyOf bech32Types textEnvTypes inputBs =
 
         -- The input was valid Bech32, but some other error occurred.
         Left err -> DeserialiseInputError $ InputBech32DecodeError err
+
+data SomeAddressVerificationKey
+  = AByronVerificationKey           (VerificationKey ByronKey)
+  | APaymentVerificationKey         (VerificationKey PaymentKey)
+  | APaymentExtendedVerificationKey (VerificationKey PaymentExtendedKey)
+  | AGenesisUTxOVerificationKey     (VerificationKey GenesisUTxOKey)
+  | AKesVerificationKey             (VerificationKey KesKey)
+  | AVrfVerificationKey             (VerificationKey VrfKey)
+  | AStakeVerificationKey           (VerificationKey StakeKey)
+  | AStakeExtendedVerificationKey   (VerificationKey StakeExtendedKey)
+  deriving (Show)
+
+
+deserialiseAnyVerificationKey
+  :: ByteString -> Either InputDecodeError SomeAddressVerificationKey
+deserialiseAnyVerificationKey bs =
+  case deserialiseAnyVerificationKeyBech32 bs of
+    Right vk -> Right vk
+    Left _e ->
+      case deserialiseAnyVerificationKeyTextEnvelope bs of
+        Right vk -> Right vk
+        Left _e -> Left InputInvalidError
+
+deserialiseAnyVerificationKeyBech32
+  :: ByteString -> Either Bech32DecodeError SomeAddressVerificationKey
+deserialiseAnyVerificationKeyBech32 =
+  deserialiseAnyOfFromBech32 allBech32VerKey . Text.decodeUtf8
+ where
+  allBech32VerKey
+    :: [FromSomeType SerialiseAsBech32 SerialiseAsRawBytes SomeAddressVerificationKey]
+  allBech32VerKey =
+    [ FromSomeType (AsVerificationKey AsPaymentKey) APaymentVerificationKey
+    , FromSomeType (AsVerificationKey AsPaymentExtendedKey) APaymentExtendedVerificationKey
+    , FromSomeType (AsVerificationKey AsKesKey) AKesVerificationKey
+    , FromSomeType (AsVerificationKey AsVrfKey) AVrfVerificationKey
+    , FromSomeType (AsVerificationKey AsStakeKey) AStakeVerificationKey
+    , FromSomeType (AsVerificationKey AsStakeExtendedKey) AStakeExtendedVerificationKey
+    ]
+
+deserialiseAnyVerificationKeyTextEnvelope
+  :: ByteString -> Either TextEnvelopeError SomeAddressVerificationKey
+deserialiseAnyVerificationKeyTextEnvelope bs =
+  deserialiseFromTextEnvelopeAnyOfCBOR allTextEnvelopeCBOR
+     =<< first TextEnvelopeAesonDecodeError (Aeson.eitherDecodeStrict' bs)
+ where
+  -- Therefore we must collect errors or have a separate function
+  -- for textEnvelope Bech32 encoded things
+  _allTextEnvelopBech32 =
+    error "TODO: We want to also wrap the bech32 format in the TextEnvelope"
+  allTextEnvelopeCBOR
+    :: [FromSomeType HasTextEnvelope SerialiseAsCBOR SomeAddressVerificationKey]
+  allTextEnvelopeCBOR =
+    [ FromSomeType (AsVerificationKey AsByronKey) AByronVerificationKey
+    , FromSomeType (AsVerificationKey AsPaymentKey) APaymentVerificationKey
+    , FromSomeType (AsVerificationKey AsPaymentExtendedKey) APaymentExtendedVerificationKey
+    , FromSomeType (AsVerificationKey AsGenesisUTxOKey) AGenesisUTxOVerificationKey
+    ]
+
+{-
+deserialiseInputAnyVerificationKey :: ByteString -> Either InputDecodeError b
+deserialiseInputAnyVerificationKey = error ""
+ where
+    bech32Types
+      :: [FromSomeType SerialiseAsBech32 SerialiseAsRawBytes SomeAddressVerificationKey]
+    bech32Types =
+      [ FromSomeType (AsVerificationKey AsPaymentKey)
+                     APaymentVerificationKey
+      , FromSomeType (AsVerificationKey AsPaymentExtendedKey)
+                     APaymentExtendedVerificationKey
+      ]
+    textEnvTypes
+      :: [FromSomeType HasTextEnvelope SerialiseAsCBOR SomeAddressVerificationKey]
+    textEnvTypes =
+      [ FromSomeType (AsVerificationKey AsByronKey)
+                     AByronVerificationKey
+      , FromSomeType (AsVerificationKey AsPaymentKey)
+                     APaymentVerificationKey
+      , FromSomeType (AsVerificationKey AsPaymentExtendedKey)
+                     APaymentExtendedVerificationKey
+      , FromSomeType (AsVerificationKey AsGenesisUTxOKey)
+                     AGenesisUTxOVerificationKey
+      ]
+
+      -}
