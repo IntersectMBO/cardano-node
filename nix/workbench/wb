@@ -20,6 +20,7 @@ global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
 . "$global_basedir"/explain-mode.sh
 
 . "$global_basedir"/backend.sh
+. "$global_basedir"/backend/nomad.sh
 . "$global_basedir"/backend/supervisor.sh
 
 usage_main() {

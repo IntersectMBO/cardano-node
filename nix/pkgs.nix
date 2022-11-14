@@ -84,6 +84,9 @@ final: prev: with final; {
   supervisord-workbench-nix =
     { workbench ? pkgs.workbench, ... }@args: pkgs.callPackage ./workbench/backend/supervisor.nix args;
 
+  nomad-workbench =
+    { workbench ? pkgs.workbench, ... }@args: pkgs.callPackage ./workbench/backend/nomad.nix (args // { inherit nix2container; });
+
   all-profiles-json = (workbench.all-profiles{ inherit (supervisord-workbench-nix) backend; }).JSON;
 
   # An instance of the workbench, specialised to the supervisord backend and a profile,
@@ -101,6 +104,21 @@ final: prev: with final; {
     pkgs.callPackage ./workbench/backend/supervisor-run.nix
       {
         inherit batchName profileName supervisord-workbench cardano-node-rev;
+      };
+
+  nomad-workbench-for-profile =
+    { batchName             ? customConfig.localCluster.batchName
+    , profileName           ? customConfig.localCluster.profileName
+    # FIXME: Makes no sense for this backend!
+    , useCabalRun           ? false
+    , workbenchDevMode      ? false
+    , profiled              ? false
+    , nomad-workbench       ? pkgs.callPackage ./workbench/backend/nomad.nix { inherit nix2container; }
+    , cardano-node-rev      ? null
+    }:
+    pkgs.callPackage ./workbench/backend/nomad-run.nix
+      {
+        inherit batchName profileName nomad-workbench cardano-node-rev;
       };
 
   # Disable failing python uvloop tests
