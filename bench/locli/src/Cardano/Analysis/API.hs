@@ -109,10 +109,10 @@ data BlockProp f
     , bpPropagation          :: !(Map Text (CDF f NominalDiffTime))
     }
   deriving (Generic)
-deriving instance (Show     (f NominalDiffTime), Show     (f Int), Show     (f (Count BlockEvents))) => Show     (BlockProp f)
-deriving instance (FromJSON (f NominalDiffTime), FromJSON (f Int), FromJSON (f (Count BlockEvents))) => FromJSON (BlockProp f)
+deriving instance (Show     (f NominalDiffTime), Show     (f Int), Show     (f Double), Show     (f (Count BlockEvents))) => Show     (BlockProp f)
+deriving instance (FromJSON (f NominalDiffTime), FromJSON (f Int), FromJSON (f Double), FromJSON (f (Count BlockEvents))) => FromJSON (BlockProp f)
 
-instance (ToJSON (f NominalDiffTime), ToJSON (f Int), ToJSON (f (Count BlockEvents))) => ToJSON (BlockProp f) where
+instance (ToJSON (f NominalDiffTime), ToJSON (f Int), ToJSON (f Double), ToJSON (f (Count BlockEvents))) => ToJSON (BlockProp f) where
   toJSON x = AE.genericToJSON AE.defaultOptions x
              & \case
                  Object o -> Object $ processFieldOverlays x o
@@ -382,16 +382,16 @@ data PropSubset
   deriving Show
 
 bpFieldSelectEndToEnd :: Field DSelect p a -> Bool
-bpFieldSelectEndToEnd Field{fHead2} = elem fHead2 adoptionCentilesRendered
+bpFieldSelectEndToEnd Field{fId} = elem fId adoptionCentilesRendered
  where
    adoptionCentilesRendered :: [Text]
-   adoptionCentilesRendered = adoptionCentiles <&> T.drop 4 . renderAdoptionCentile
+   adoptionCentilesRendered = adoptionCentiles <&> renderAdoptionCentile
 
 bpFieldSelectEndToEndBrief :: Field DSelect p a -> Bool
-bpFieldSelectEndToEndBrief Field{fHead2} = elem fHead2 adoptionCentilesRendered
+bpFieldSelectEndToEndBrief Field{fId} = elem fId adoptionCentilesRendered
  where
    adoptionCentilesRendered :: [Text]
-   adoptionCentilesRendered = adoptionCentilesBrief <&> T.drop 4 . renderAdoptionCentile
+   adoptionCentilesRendered = adoptionCentilesBrief <&> renderAdoptionCentile
 
 propSubsetFn :: PropSubset -> (Field DSelect p a -> Bool)
 propSubsetFn = \case
@@ -424,7 +424,7 @@ parseCDF2Aspect =
 -- * Timeline rendering instances
 --
 renderAdoptionCentile :: Centile -> Text
-renderAdoptionCentile = T.pack . printf "%0.2f" . unCentile
+renderAdoptionCentile = T.pack . printf "cdf%0.2f" . unCentile
 
 adoptionCentiles :: [Centile]
 adoptionCentiles =
@@ -474,7 +474,7 @@ instance CDFFields BlockProp p where
       "Time until block sending was initiated (TraceBlockFetchServerSendBlock), since block forging completion."
     , Field 4 0 "cdfForgerAdoptions"   (f!!8) "Adop" (DDeltaT cdfForgerAdoptions)
       "Forged to self-adopted"
-      "Time it took to adopt the block (TraceAdoptedBlock), since block forging complettion."
+      "Time it took to adopt the block (TraceAdoptedBlock), since block forging completion."
     , Field 4 0 "cdfPeerNotices"       (p!!0) "Noti" (DDeltaT cdfPeerNotices)
       "First peer notice"
       "Time it took for the fastest peer to notice the block (ChainSyncClientEvent.TraceDownloadedHeader), since block's slot start."
@@ -494,10 +494,10 @@ instance CDFFields BlockProp p where
       "Announced to adopted"
       "Time until the peer adopts the block (TraceAddBlockEvent.AddedToCurrentChain), since it was fetched."
     , Field 4 0 "cdfForks"             "das" "forks" (DInt    cdfForks)
-      "Forks at this block height."
+      "Forks at this block height"
       "For a given block, number of abandoned blocks at its block height."
     ] ++
-    [ Field 4 0 ("cdf" <> renderAdoptionCentile ct)
+    [ Field 4 0 (renderAdoptionCentile ct)
                                        (r!!i)
                                        (T.take 4 $ T.pack $ printf "%.04f" centi)
             (DDeltaT $

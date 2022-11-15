@@ -362,12 +362,12 @@ case "$op" in
         vc=("${vb[@]/#propagation-forger/   'render-propagation' --report \"$adir\"/blockprop.forger.org --forger}")
         vd=("${vc[@]/#propagation-peers/    'render-propagation' --report \"$adir\"/blockprop.peers.org --peers }")
         ve=("${vd[@]/#propagation-endtoend/ 'render-propagation' --report \"$adir\"/blockprop.endtoend.org --end-to-end}")
-        vf=("${ve[@]/#propagation-gnuplot/  'render-propagation' --gnuplot \"$adir\"/%s.cdf            --full}")
+        vf=("${ve[@]/#propagation-gnuplot/  'render-propagation' --gnuplot \"$adir\"/cdf/%s.cdf            --full}")
         vg=("${vf[@]/#propagation-full/     'render-propagation' --pretty \"$adir\"/blockprop-full.txt --full}")
         vh=("${vg[@]/#clusterperf-json/     'render-clusterperf'   --json \"$adir\"/clusterperf.json --full }")
         vi=("${vh[@]/#clusterperf-org/      'render-clusterperf'    --org \"$adir\"/clusterperf.org --full }")
         vj=("${vi[@]/#clusterperf-report/   'render-clusterperf' --report \"$adir\"/clusterperf.report.org --summary }")
-        vk=("${vj[@]/#clusterperf-gnuplot/  'render-clusterperf' --gnuplot \"$adir\"/%s.cdf --full }")
+        vk=("${vj[@]/#clusterperf-gnuplot/  'render-clusterperf' --gnuplot \"$adir\"/cdf/%s.cdf --full }")
         vl=("${vk[@]/#clusterperf-full/     'render-clusterperf' --pretty \"$adir\"/clusterperf-full.txt --full }")
         vm=("${vl[@]/#read-clusterperfs/    'read-clusterperfs' --clusterperf \"$adir\"/clusterperf.json }")
         vn=("${vm[@]/#read-propagations/    'read-propagations'        --prop \"$adir\"/blockprop.json }")
@@ -407,7 +407,7 @@ case "$op" in
         local run=$(for dir in ${dirs[*]}; do basename $dir; done | sort -r | head -n1 | cut -d. -f1-2)_$suffix
         local adir=$(run get-rundir)/$run
 
-        mkdir -p "$adir"
+        mkdir -p "$adir/cdf"
         progress "analysis | multi-call" "output $(yellow $run), inputs: $(white ${runs[*]})"
 
         local v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 va vb vc vd ve vf vg vh vi vj vk vl vm vn vo
@@ -417,14 +417,14 @@ case "$op" in
         v3=(${v2[*]/#multi-clusterperf-json/ 'render-multi-clusterperf' --json $adir/'multi-clusterperf.json' --full $multi_aspect })
         v4=(${v3[*]/#multi-clusterperf-org/     'render-multi-clusterperf' --org $adir/'multi-clusterperf.org' --full $multi_aspect })
         v5=(${v4[*]/#multi-clusterperf-report/  'render-multi-clusterperf' --report $adir/'multi-clusterperf.report.org' --summary $multi_aspect })
-        v6=(${v5[*]/#multi-clusterperf-gnuplot/ 'render-multi-clusterperf' --gnuplot $adir/'%s.cdf' --full $multi_aspect })
+        v6=(${v5[*]/#multi-clusterperf-gnuplot/ 'render-multi-clusterperf' --gnuplot $adir/cdf/'%s.cdf' --full $multi_aspect })
         v7=(${v6[*]/#multi-clusterperf-full/    'render-multi-clusterperf' --pretty $adir/'multi-clusterperf-full.txt' --full $multi_aspect })
         v8=(${v7[*]/#multi-propagation-json/     'render-multi-propagation' --json $adir/'multi-blockprop.json' --full $multi_aspect })
         v9=(${v8[*]/#multi-propagation-org/      'render-multi-propagation' --org $adir/'multi-blockprop.org' --full $multi_aspect })
         va=(${v9[*]/#multi-propagation-forger/   'render-multi-propagation' --report $adir/'multi-blockprop-forger.org' --forger $multi_aspect })
         vb=(${va[*]/#multi-propagation-peers/    'render-multi-propagation' --report $adir/'multi-blockprop-peers.org' --peers $multi_aspect })
         vc=(${vb[*]/#multi-propagation-endtoend/ 'render-multi-propagation' --report $adir/'multi-blockprop-endtoend.org' --end-to-end $multi_aspect })
-        vd=(${vc[*]/#multi-propagation-gnuplot/  'render-multi-propagation' --gnuplot $adir/'%s.cdf' --full $multi_aspect })
+        vd=(${vc[*]/#multi-propagation-gnuplot/  'render-multi-propagation' --gnuplot $adir/cdf/'%s.cdf' --full $multi_aspect })
         ve=(${vd[*]/#multi-propagation-full/     'render-multi-propagation' --pretty $adir/'multi-blockprop-full.txt' --full $multi_aspect })
         vf=(${ve[*]/#compare/ 'compare' --ede nix/workbench/ede --report $adir/report-$run.org ${compares[*]} })
         vg=(${vf[*]/#update/  'compare' --ede nix/workbench/ede --report $adir/report-$run.org ${compares[*]} --template $adir/report-$run.ede })
@@ -446,7 +446,7 @@ case "$op" in
 
         progress "analyse" "preparing run for analysis:  $(with_color white $name)"
         local adir=$dir/analysis
-        mkdir -p "$adir"
+        mkdir -p "$adir/cdf"
 
         ## 0. ask locli what it cares about
         local keyfile="$adir"/substring-keys

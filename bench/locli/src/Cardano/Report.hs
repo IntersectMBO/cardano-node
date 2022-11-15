@@ -168,7 +168,6 @@ liftTmplSection =
       , tsDataRef     = sDataRef
       , tsOrgTableSrc = sOrgTableSrc
       , tsNRows       =
-        -- trace (printf "nrows: %d" $ length $ filterFields sFieldSelector :: String) $
         length $ filterFields sFieldSelector
       }
 

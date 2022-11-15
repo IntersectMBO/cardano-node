@@ -625,10 +625,10 @@ runChainCommand s@State{sMachPerf=Just machPerfs}
 runChainCommand _ c@ComputeClusterPerf{} = missingCommandData c
   ["machine performance stats"]
 
-runChainCommand s@State{sClusterPerf=Just [prop]}
+runChainCommand s@State{sClusterPerf=Just [perf]}
   c@(RenderClusterPerf mode f subset) = do
   progress "clusterperf" (Q $ printf "rendering cluster performance")
-  forM_ (renderAnalysisCDFs (sRunAnchor s) (perfSubsetFn subset) OfOverallDataset Nothing mode prop) $
+  forM_ (renderAnalysisCDFs (sRunAnchor s) (perfSubsetFn subset) OfOverallDataset Nothing mode perf) $
     \(name, body) ->
       dumpText (T.unpack name) body (modeFilename f name mode)
       & firstExceptT (CommandError c)

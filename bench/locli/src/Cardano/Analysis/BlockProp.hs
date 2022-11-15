@@ -492,7 +492,7 @@ blockProp run@Run{genesis} fullChain domSlot domBlock = do
     , cdfPeerSends           = observerEventsCDF boSending            "sending"
     , cdfPeerAdoptions       = observerEventsCDF boAdopted            "adopted"
     , bpPropagation          = Map.fromList
-      [ ( T.pack $ printf "%.2f" p'
+      [ ( T.pack $ printf "cdf%.2f" p'
         , forgerEventsCDF (Just . unI . projectCDF' "bePropagation" p . bePropagation))
       | p@(Centile p') <- adoptionCentiles <> [Centile 1.0] ]
     , cdfForks               = forgerEventsCDF   (Just . unCount . beForks)

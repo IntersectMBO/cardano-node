@@ -594,7 +594,7 @@ case "$op" in
            then fail "fetch-analysis:  run has not been analysed on AWS: $(white $run)"
            else local analysis_files=(
                    $(ssh $env -- \
-                     sh -c "'cd $depl/runs/$run && ls analysis/*.{json,cdf,org,txt} | fgrep -v -e flt.json -e flt.logobjs.json -e flt.perf-stats.json'" \
+                     sh -c "'cd $depl/runs/$run && ls analysis/{cdf/*.cdf,*.{json,org,txt}} | fgrep -v -e flt.json -e flt.logobjs.json -e flt.perf-stats.json'" \
                      2>/dev/null)
                 )
                 local args=(

@@ -156,18 +156,21 @@ weightedAverage xs =
 data CDF p a =
   CDF
   { cdfSize      :: Int
-  , cdfAverage   :: p a
+  , cdfAverage   :: p Double
   , cdfStddev    :: Double
   , cdfRange     :: (a, a)
   , cdfSamples   :: [(Centile, p a)]
   }
-  deriving (Eq, Functor, Generic, Show)
-  deriving anyclass NFData
+  deriving (Functor, Generic)
 
-instance (FromJSON (p a), FromJSON a) => FromJSON (CDF p a)
-instance (  ToJSON (p a),   ToJSON a) => ToJSON   (CDF p a)
+deriving instance (Eq     a, Eq     (p a), Eq     (p Double)) => Eq     (CDF p a)
+deriving instance (Show   a, Show   (p a), Show   (p Double)) => Show   (CDF p a)
+deriving instance (NFData a, NFData (p a), NFData (p Double)) => NFData (CDF p a)
 
-cdfAverageVal :: (KnownCDF p, Divisible a) => CDF p a -> Double
+instance (FromJSON (p a), FromJSON (p Double), FromJSON a) => FromJSON (CDF p a)
+instance (  ToJSON (p a),   ToJSON (p Double),   ToJSON a) => ToJSON   (CDF p a)
+
+cdfAverageVal :: (KnownCDF p) => CDF p a -> Double
 cdfAverageVal =
   cdfArity
     (toDouble . unI . cdfAverage)
@@ -248,11 +251,11 @@ type family CDFProj a where
   CDFProj (CDF (CDF I) a) = CDF I a
 -- indexCDF i d = snd $ cdfSamples (trace (printf "i=%d of %d" i (length $ cdfSamples d) :: String) d) !! i
 
-liftCDFVal :: forall a p. a -> CDFIx p -> p a
+liftCDFVal :: forall a p. Real a => a -> CDFIx p -> p a
 liftCDFVal x = \case
   CDFI -> I x
   CDF2 -> CDF { cdfSize    = 1
-              , cdfAverage = I x
+              , cdfAverage = I $ toDouble x
               , cdfStddev  = 0
               , cdfRange   = (x, x)
               , cdfSamples = []
@@ -328,8 +331,7 @@ stdCombine2 cs =
   }
 
 -- | Collapse basic CDFs.
-collapseCDFs :: forall a. Divisible a
-             => Combine I a -> [CDF I a] -> Either CDFError (CDF I a)
+collapseCDFs :: forall a. Combine I a -> [CDF I a] -> Either CDFError (CDF I a)
 collapseCDFs _ [] = Left CDFEmptyDataset
 collapseCDFs Combine{..} xs = do
   unless (all (head lengths ==) lengths) $
@@ -364,7 +366,7 @@ collapseCDFs Combine{..} xs = do
 -- | Polymorphic, but practically speaking, intended for either:
 --    1. given a ([I]     -> CDF I) function, and a list of (CDF I),       produce a CDF (CDF I), or
 --    2. given a ([CDF I] -> CDF I) function, and a list of (CDF (CDF I)), produce a CDF (CDF I)
-cdf2OfCDFs :: forall a p. (Divisible a, KnownCDF p)
+cdf2OfCDFs :: forall a p. (KnownCDF p)
            => Combine p a -> [CDF p a] -> Either CDFError (CDF (CDF I) a)
 cdf2OfCDFs _ [] = Left CDFEmptyDataset
 cdf2OfCDFs Combine{..} xs = do
@@ -385,8 +387,8 @@ cdf2OfCDFs Combine{..} xs = do
     }
  where
    nCDFs    = length xs
-   averages :: [a]
-   averages = xs <&> unI . cdfAverage . cdfArity identity cdfAverage
+   averages :: [Double]
+   averages = xs <&> unI . cdfArity cdfAverage (cdfAverage . cdfAverage)
 
    sizes    = xs <&> cdfSize
    samples  = xs <&> cdfSamples
