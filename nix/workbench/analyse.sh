@@ -451,9 +451,11 @@ case "$op" in
         ## 0. ask locli what it cares about
         local keyfile="$adir"/substring-keys
         local key_old=$(sha256sum "$keyfile" | cut -d' ' -f1)
-        case $(jq '.node.tracing_backend // "iohk-monitoring"' --raw-output $dir/profile.json) in
+        local tracing_backend=$(jq '.node.tracing_backend // "iohk-monitoring"' --raw-output $dir/profile.json)
+        case "$tracing_backend" in
              trace-dispatcher ) locli 'list-logobject-keys'        --keys        "$keyfile";;
              iohk-monitoring  ) locli 'list-logobject-keys-legacy' --keys-legacy "$keyfile";;
+             * ) fail "Unknown tracing backend:  $tracing_backend"
         esac
         local key_new=$(sha256sum "$keyfile" | cut -d' ' -f1)
 

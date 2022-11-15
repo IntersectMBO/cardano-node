@@ -52,15 +52,29 @@ We compare {% for run in runs %}{%if !run.first%}{%if !run.last%}, {%else%} and 
 
 @duncan, @Kevin Hammond, @Nigel Hemsley, @neil, @jared.corduan, @Damian, @nfrisby, @amesgen, @marcin, @Vitor Silva, @Javier Franco, @carlos.lopezdelara, @disasm, @michael.karg
 
-* Appendix: charts
+* Appendix A: charts
 
 {%include "chart.ede" with args= { "title": "Kernel-reported CPU usage",           "metric": "cpuProcess",    "logscale": false, "yrange": "1:200", "ylabel": "CPU usage, %" }%}
+{#
 {%include "chart.ede" with args= { "title": "RTS memory allocation rate",          "metric": "rtsAllocation", "logscale": false, "yrange": "0:5000", "ylabel": "Memory allocation rate, MB/s" }%}
 {%include "chart.ede" with args= { "title": "Kernel reported memory usage",        "metric": "memRSS",        "logscale": false, "ylabel": "RSS, MB" }%}
 {%include "chart.ede" with args= { "title": "RTS GC live bytes",                   "metric": "rtsLiveBytes",  "logscale": false, "ylabel": "GC live bytes, MB" }%}
 {%include "chart.ede" with args= { "title": "Single peer fetched-to-adopted time", "metric": "pAdopted",      "logscale": true }%}
 {%include "chart.ede" with args= { "title": "First peer notice time",              "metric": "pNoticed",      "logscale": true }%}
-{%include "chart.ede" with args= { "title": "Block adoption, 50% of cluster",      "metric": "prop0.50",      "logscale": true }%}
-{%include "chart.ede" with args= { "title": "Block adoption, 80% of cluster",      "metric": "prop0.80",      "logscale": true }%}
-{%include "chart.ede" with args= { "title": "Block adoption, 90% of cluster",      "metric": "prop0.90",      "logscale": true }%}
-{%include "chart.ede" with args= { "title": "Block adoption, 96% of cluster",      "metric": "prop0.96",      "logscale": true }%}
+{%include "chart.ede" with args= { "title": "Block adoption, 50% of cluster",      "metric": "0.50",          "logscale": true }%}
+{%include "chart.ede" with args= { "title": "Block adoption, 80% of cluster",      "metric": "0.80",          "logscale": true }%}
+{%include "chart.ede" with args= { "title": "Block adoption, 90% of cluster",      "metric": "0.90",          "logscale": true }%}
+{%include "chart.ede" with args= { "title": "Block adoption, 96% of cluster",      "metric": "0.96",          "logscale": true }%}
+#}
+
+* Appendix B: data dictionary
+
+*** Block propagation metrics
+{% for m in dictionary.dBlockProp %}
+    - {{ m.value.deShortDesc }} ({{ m.value.deField }}) :: {{ m.value.deDescription }}
+{% endfor %}
+
+*** Cluster performance metrics
+{% for m in dictionary.dClusterPerf %}
+    - {{ m.value.deShortDesc }} ({{ m.value.deField }}) :: {{ m.value.deDescription }}
+{% endfor %}

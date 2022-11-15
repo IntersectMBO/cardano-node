@@ -146,7 +146,7 @@ case "$op" in
         mkdir -p "$global_rundir/.sets/$name" &&
             (cd  "$global_rundir/.sets/$name"
              for x in $*
-             do if ! run get $x
+             do if ! run get $x >/dev/null
                 then fail "set-add $name:  constituent run missing: $(white $x)"
                 fi
                 ln -s ../../$x
@@ -238,6 +238,11 @@ case "$op" in
 
         jq ' .meta.profile_content
            | .analysis.filters += ["model"]
+           | .node.tracing_backend =
+               (if .node.withNewTracing
+                then "trace-dispatcher"
+                else "iohk-monitoring"
+                end)
            ' "$dir"/meta.json > "$dir"/profile.json;;
 
     check )
@@ -890,14 +895,14 @@ legacy_run_timing() {
     local stamp=$(jq -r '.meta.timestamp' $dir/meta.json)
 
     local args=(
-        --arg stamp $stamp
+        --argjson stamp $stamp
     )
     jq '
-    .meta.profile                                               as $prof
+    .meta.profile_content                                       as $prof
   | ($stamp + ($prof.generator.tx_count / $prof.generator.tps)) as $stamp_end
   |
   { future_offset:   "0 seconds"
-  , start:           $epoch
+  , start:           $stamp
   , shutdown_end:    $stamp_end
   , workload_end:    $stamp_end
   , earliest_end:    $stamp_end

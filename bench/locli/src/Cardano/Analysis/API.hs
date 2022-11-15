@@ -54,6 +54,35 @@ data Summary where
     } -> Summary
   deriving (Generic, FromJSON, ToJSON, Show)
 
+data DictEntry where
+  DictEntry ::
+    { deField       :: !Text
+    , deShortDesc   :: !Text
+    , deDescription :: !Text
+    } -> DictEntry
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+data Dictionary where
+  Dictionary ::
+    { dBlockProp   :: !(Map Text DictEntry)
+    , dClusterPerf :: !(Map Text DictEntry)
+    } -> Dictionary
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+dataDictionary :: Dictionary
+dataDictionary =
+  Dictionary
+  { dBlockProp   = cdfFields @BlockProp <&> extractEntry & M.fromList
+  , dClusterPerf = cdfFields @MachPerf  <&> extractEntry & M.fromList
+  }
+ where extractEntry :: Field DSelect p a -> (Text, DictEntry)
+       extractEntry Field{..} = (fId,) $
+         DictEntry
+         { deField       = fId
+         , deShortDesc   = fShortDesc
+         , deDescription = fDescription
+         }
+
 -- | Results of block propagation analysis.
 data BlockProp f
   = BlockProp
@@ -352,14 +381,6 @@ data PropSubset
   | PropEndToEndBrief
   deriving Show
 
-bpFieldSelectForger :: Field DSelect p a -> Bool
-bpFieldSelectForger Field{fId} = elem fId
-  [ "bfStarted", "bfLeading", "bfForged", "bfAnnounced", "fSending", "bfAdopted" ]
-
-bpFieldSelectPeers :: Field DSelect p a -> Bool
-bpFieldSelectPeers Field{fId} = elem fId
-  [ "boNoticed", "boRequested", "boFetched", "boAnnounced", "boSending", "boAdopted" ]
-
 bpFieldSelectEndToEnd :: Field DSelect p a -> Bool
 bpFieldSelectEndToEnd Field{fHead2} = elem fHead2 adoptionCentilesRendered
  where
@@ -414,60 +435,69 @@ adoptionCentilesBrief :: [Centile]
 adoptionCentilesBrief =
   [ Centile 0.5, Centile 0.9, Centile 0.96 ]
 
+
+bpFieldSelectForger :: Field DSelect p a -> Bool
+bpFieldSelectForger Field{fId} = elem fId
+  [ "cdfForgerStarts", "cdfForgerBlkCtx", "cdfForgerLgrState", "cdfForgerLgrView", "cdfForgerLeads", "cdfForgerForges", "cdfForgerAnnouncements", "cdfForgerSends", "cdfForgerAdoptions", "cdfForks" ]
+
+bpFieldSelectPeers :: Field DSelect p a -> Bool
+bpFieldSelectPeers Field{fId} = elem fId
+  [ "cdfPeerNotices", "cdfPeerRequests", "cdfPeerFetches", "cdfPeerAnnouncements", "cdfPeerSends", "cdfPeerAdoptions" ]
+
 instance CDFFields BlockProp p where
   cdfFields =
     --  Width LeftPad
     [ Field 4 0 "cdfForgerStarts"      (f!!0) "Loop" (DDeltaT cdfForgerStarts)
       "Started forge loop iteration"
-      ""
+      "Forge loop iteration delay (TraceStartLeadershipCheck), relative to slot start."
     , Field 4 0 "cdfForgerBlkCtx"      (f!!1) "BkCt" (DDeltaT cdfForgerBlkCtx)
       "Acquired block context"
-      ""
+      "Block context acquired (TraceBlockContext), relative to forge loop beginning."
     , Field 4 0 "cdfForgerLgrState"    (f!!2) "LgSt" (DDeltaT cdfForgerLgrState)
       "Acquired ledger state"
-      ""
+      "Ledger state acquired (TraceLedgerState), relative to block context acquisition."
     , Field 4 0 "cdfForgerLgrView"     (f!!3) "LgVi" (DDeltaT cdfForgerLgrView)
       "Acquired ledger view"
-      ""
+      "Ledger view acquired (TraceLedgerView), relative to ledger state acquisition"
     , Field 4 0 "cdfForgerLeads"       (f!!4) "Lead" (DDeltaT cdfForgerLeads)
       "Leadership check duration"
-      ""
+      "Leadership check duration (TraceNodeIsNotLeader, TraceNodeIsLeader), relative  to ledger view acquisition."
     , Field 4 0 "cdfForgerForges"      (f!!5) "Forg" (DDeltaT cdfForgerForges)
       "Leadership to forged"
-      ""
+      "Time spent forging the block (TraceForgedBlock), relative to positive leadership decision."
     , Field 4 0 "cdfForgerAnnouncements"
                                        (f!!6) "Anno" (DDeltaT cdfForgerAnnouncements)
       "Forged to announced"
-      ""
+      "Time until block was announced (ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock), since block forging completion."
     , Field 4 0 "cdfForgerSends"       (f!!7) "Send" (DDeltaT cdfForgerSends)
-      "Announced to sending"
-      ""
+      "Forged to sending"
+      "Time until block sending was initiated (TraceBlockFetchServerSendBlock), since block forging completion."
     , Field 4 0 "cdfForgerAdoptions"   (f!!8) "Adop" (DDeltaT cdfForgerAdoptions)
-      "Announced to self-adopted"
-      ""
+      "Forged to self-adopted"
+      "Time it took to adopt the block (TraceAdoptedBlock), since block forging complettion."
     , Field 4 0 "cdfPeerNotices"       (p!!0) "Noti" (DDeltaT cdfPeerNotices)
       "First peer notice"
-      ""
+      "Time it took for the fastest peer to notice the block (ChainSyncClientEvent.TraceDownloadedHeader), since block's slot start."
     , Field 4 0 "cdfPeerRequests"      (p!!1) "Requ" (DDeltaT cdfPeerRequests)
       "Notice to fetch request"
-      ""
+      "Time it took the peer to request the block body (BlockFetchClient.SendFetchRequest), after it have seen its header."
     , Field 4 0 "cdfPeerFetches"       (p!!2) "Fetc" (DDeltaT cdfPeerFetches)
       "Fetch duration"
-      ""
+      "Time it took the peer to complete fetching the block (BlockFetchClient.CompletedBlockFetch), after having requested it."
     , Field 4 0 "cdfPeerAnnouncements" (p!!3) "Anno" (DDeltaT cdfPeerAnnouncements)
       "Fetched to announced"
-      ""
+      "Time it took a peer to announce the block (ChainSyncServerEvent.TraceChainSyncServerUpdate), since it was fetched."
     , Field 4 0 "cdfPeerSends"         (p!!4) "Send" (DDeltaT cdfPeerSends)
       "Announced to sending"
-      ""
+      "Time until the peer started sending the block (BlockFetchServer.SendBlock), since it was fetched."
     , Field 4 0 "cdfPeerAdoptions"     (p!!5) "Adop" (DDeltaT cdfPeerAdoptions)
       "Announced to adopted"
-      ""
+      "Time until the peer adopts the block (TraceAddBlockEvent.AddedToCurrentChain), since it was fetched."
     , Field 4 0 "cdfForks"             "das" "forks" (DInt    cdfForks)
-      "Forks at this block height"
-      "Number of forks per block."
+      "Forks at this block height."
+      "For a given block, number of abandoned blocks at its block height."
     ] ++
-    [ Field 4 0 (renderAdoptionCentile ct)
+    [ Field 4 0 ("cdf" <> renderAdoptionCentile ct)
                                        (r!!i)
                                        (T.take 4 $ T.pack $ printf "%.04f" centi)
             (DDeltaT $
@@ -478,7 +508,7 @@ instance CDFFields BlockProp p where
               . M.toList
               . bpPropagation)
             (T.pack $ printf "%.2f adoption" centi)
-            (T.pack $ printf "Slot-relative block adoption time by %d%% of the cluster." (ceiling $ centi * 100 :: Int))
+            (T.pack $ printf "Time since slot start to block's adoption by %d%% of the cluster." (ceiling $ centi * 100 :: Int))
             -- (T.pack $ printf "Block adopted by %.2f fraction of the entire cluster." centi)
     | (i, ct@(Centile centi)) <- zip [0::Int ..] adoptionCentiles ] ++
     [ Field 9 0 "cdfSizes"             "Size"  "bytes" (DInt    cdfSizes)
@@ -491,7 +521,7 @@ instance CDFFields BlockProp p where
      r = nChunksEachOf aLen 5 ",---- Slot-rel. Δt to adoption centile: ----."
      aLen = length adoptionCentiles
      checkCentile i centi (centi', d) =
-       if T.unpack centi' == printf "%.2f" centi then d
+       if T.unpack centi' == printf "cdf%.2f" centi then d
        else error $ printf "Centile mismatch: [%d]: exp=%f act=%s"
             i centi (T.unpack centi')
   fieldJSONOverlay f kvs =
@@ -526,10 +556,10 @@ instance TimelineFields BlockEvents where
     , Field 4 0 "boAnnounced"   (p!!3) "Annou"  (IDeltaT (af' boAnnounced . valids)) "" ""
     , Field 4 0 "boSending"     (p!!4) "Send"   (IDeltaT (af' boSending   . valids)) "" ""
     , Field 4 0 "pAdopted"      (p!!5) "Adopt"  (IDeltaT (af' boAdopted   . valids)) "" ""
-    , Field 4 0 "bePropagation.5" (r!!0) "0.5"  (IDeltaT (percSpec 0.5  . bePropagation)) "" ""
-    , Field 4 0 "bePropagation.8" (r!!1) "0.8"  (IDeltaT (percSpec 0.8  . bePropagation)) "" ""
-    , Field 4 0 "bePropagation.96"(r!!2) "0.96" (IDeltaT (percSpec 0.96 . bePropagation)) "" ""
-    , Field 4 0 "bePropagation.1" (r!!3) "1.0"  (IDeltaT (snd . cdfRange . bePropagation)) "" ""
+    , Field 4 0 "0.50"          (r!!0) "0.5"  (IDeltaT (percSpec 0.5  . bePropagation)) "" ""
+    , Field 4 0 "0.80"          (r!!1) "0.8"  (IDeltaT (percSpec 0.8  . bePropagation)) "" ""
+    , Field 4 0 "0.96"          (r!!2) "0.96" (IDeltaT (percSpec 0.96 . bePropagation)) "" ""
+    , Field 4 0 "1.00"          (r!!3) "1.0"  (IDeltaT (snd . cdfRange . bePropagation)) "" ""
     , Field 3 0 "beAcceptance"  "va-"  "lid"    (IText   (bool "-" "+" . (== 0) . length
                                                           . filter (not . snd) . beAcceptance)) "" ""
     , Field 3 0 "valid.observ" "good"  "obsv"   (IInt    (length          . valids)) "" ""
@@ -590,10 +620,6 @@ data PerfSubset
   | PerfSummary
   deriving Show
 
-mtFieldsReport :: Field DSelect p a -> Bool
-mtFieldsReport Field{fId} = elem fId
-  [ "rCentiCpu", "rCentiGC", "rCentiMut", "cdfSpanLensCpu", "rRSS", "rHeap", "rLive", "rAlloc" ]
-
 perfSubsetFn :: PerfSubset -> (Field DSelect p a -> Bool)
 perfSubsetFn = \case
   PerfFull    -> const True
@@ -615,74 +641,74 @@ instance CDFFields MachPerf p where
       "For any given slot, how many leadership checks are absent.  Normally peaks at 1."
     , Field 4 0 "cdfStarted"    (d!!0)  "Start" (DDeltaT            cdfStarted)
       "Forge loop tardiness"
-      ""
+      "Forge loop iteration delay (TraceStartLeadershipCheck), relative to slot start."
     , Field 4 0 "cdfBlkCtx"     (d!!1)  "BlkCt" (DDeltaT            cdfBlkCtx)
       "Block context acquisition delay"
-      ""
+      "Block context acquired (TraceBlockContext), relative to forge loop beginning."
     , Field 4 0 "cdfLgrState"   (d!!2)  "LgrSt" (DDeltaT            cdfLgrState)
       "Ledger cdftate acquisition delay"
-      ""
+      "Ledger state acquired (TraceLedgerState), relative to block context acquisition."
     , Field 4 0 "cdfLgrView"    (d!!3)  "LgrVi" (DDeltaT            cdfLgrView)
       "Ledger view acquisition delay"
-      ""
+      "Ledger view acquired (TraceLedgerView), relative to ledger state acquisition"
     , Field 4 0 "cdfLeading"    (d!!4)  "Lead"  (DDeltaT            cdfLeading)
       "Leadership check duration"
-      ""
+      "Leadership check duration (TraceNodeIsNotLeader, TraceNodeIsLeader), relative  to ledger view acquisition."
     , Field 4 0 "cdfForged"     (d!!5)  "Forge" (DDeltaT            cdfForged)
       "Leading to block forged"
-      ""
+      "Time spent forging the block (TraceForgedBlock), relative to positive leadership decision."
     , Field 4 0 "cdfBlockGap"   "Block" "gap"   (DWord64            cdfBlockGap)
       "Interblock gap"
-      ""
+      "Time between blocks."
     , Field 5 0 "NetRd"         (n!!0)  ""      (DWord64 (rNetRd   .mpResourceCDFs))
       "kB sec"
-      ""
+      "Network reads, kB/sec."
     , Field 5 0 "NetWr"         (n!!1)  ""      (DWord64 (rNetWr   .mpResourceCDFs))
       "kB sec"
-      ""
+      "Network writes, kB/sec."
     , Field 5 0 "FsRd"          (f!!0)  ""      (DWord64 (rFsRd    .mpResourceCDFs))
       "kB sec"
-      ""
+      "Filesystem reads, kB/sec."
     , Field 5 0 "FsWr"          (f!!1)  ""      (DWord64 (rFsWr    .mpResourceCDFs))
       "kB sec"
-      ""
+      "Filesystem writes, kB/sec."
     , Field 5 0 "cdfDensity"    "Dens"  "ity"   (DFloat             cdfDensity)
       "Chain density"
-      ""
+      "Chain density, for the last 'k' slots."
     , Field 3 0 "CentiCpu"      "CPU"   "%"     (DWord64 (rCentiCpu.mpResourceCDFs))
       "Process CPU usage pct"
-      ""
+      "Kernel-reported CPU process usage, of a single core."
     , Field 3 0 "CentiGC"       "GC"    "%"     (DWord64 (rCentiGC .mpResourceCDFs))
       "RTS GC CPU usage pct"
-      ""
+      "RTS-reported GC CPU usage, of a single core."
     , Field 3 0 "CentiMut"      "MUT"   "%"     (DWord64 (rCentiMut.mpResourceCDFs))
       "RTS Mutator CPU usage pct"
-      ""
+      "RTS-reported mutator CPU usage, of a single core."
     , Field 3 0 "GcsMajor"      "GC "   "Maj"   (DWord64 (rGcsMajor.mpResourceCDFs))
       "Major GCs Hz"
-      ""
+      "Major GCs, Hz."
     , Field 3 0 "GcsMinor"      "flt "  "Min"   (DWord64 (rGcsMinor.mpResourceCDFs))
       "Minor GCs Hz"
-      ""
+      "Minor GCs, Hz."
     , Field 5 0 "RSS"           (m!!0)  "RSS"   (DWord64 (rRSS     .mpResourceCDFs))
       "Kernel RSS MB"
-      ""
+      "Kernel-reported RSS (Resident Set Size) of the process, MB."
     , Field 5 0 "Heap"          (m!!1)  "Heap"  (DWord64 (rHeap    .mpResourceCDFs))
       "RTS heap size MB"
-      ""
+      "RTS-reported heap size, MB."
     , Field 5 0 "Live"          (m!!2)  "Live"  (DWord64 (rLive    .mpResourceCDFs))
       "RTS GC live bytes MB"
-      ""
+      "RTS-reported GC live data size, MB."
     , Field 5 0 "Alloc"         "Alloc" "MB"    (DWord64 (rAlloc   .mpResourceCDFs))
       "RTS alloc rate MB sec"
-      ""
+      "RTS-reported allocation rate, MB/sec."
     , Field 5 0 "cdfSpanLensCpu"(c!!0)  "All"   (DInt               cdfSpanLensCpu)
       "CPU 85pct spans"
-      ""
+      "Length of over-85% CPU usage peaks."
     , Field 5 0 "cdfSpanLensCpuEpoch"
                                 (c!!1)  "Epoch" (DInt          cdfSpanLensCpuEpoch)
       "CPU spans at Ep boundary"
-      ""
+      "Length of over-85% CPU usage peaks, starting at epoch boundary."
     ]
    where
      d = nChunksEachOf  6 5 "----------- Δt -----------"
@@ -696,6 +722,10 @@ instance CDFFields MachPerf p where
     ]
    where overlay = tryOverlayFieldDescription f
          _dumpJSON _x = error $ "kvs:\n" <> (T.unpack . ST.toText . fromMaybe "" . ST.fromByteString . LBS.toStrict . AE.encode $ _x)
+
+mtFieldsReport :: Field DSelect p a -> Bool
+mtFieldsReport Field{fId} = elem fId
+  [ "CentiCpu", "CentiGC", "CentiMut", "cdfSpanLensCpu", "RSS", "Heap", "Live", "Alloc", "GcsMinor", "GcsMajor" ]
 
 instance TimelineFields (SlotStats NominalDiffTime) where
   data TimelineComments (SlotStats NominalDiffTime)

@@ -79,7 +79,7 @@ summariseMultiBlockProp centiles bs@(headline:_) = do
       [] -> Left CDFEmptyDataset
       xs@((d,_):ds) -> do
         unless (all (d ==) $ fmap fst ds) $
-          Left $ CDFIncoherentSamplingCentiles [Centile . read . T.unpack . fst <$> xs]
+          Left $ CDFIncoherentSamplingCentiles [Centile . read . T.unpack . T.drop 3 . fst <$> xs]
         (d,) <$> cdf2OfCDFs comb (snd <$> xs)
   pure $ BlockProp
     { bpVersion             = bpVersion headline

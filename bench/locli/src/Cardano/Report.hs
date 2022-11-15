@@ -193,8 +193,9 @@ generate (InputDir ede) mReport (cp, bp, base) rest = do
    fenv = HM.fromList
      []
    env rc b rs = fromPairs
-     [ "report"   .= rc
-     , "base"     .= b
-     , "runs"     .= rs
-     , "sections" .= (liftTmplSection <$> sections)
+     [ "report"     .= rc
+     , "base"       .= b
+     , "runs"       .= rs
+     , "sections"   .= (liftTmplSection <$> sections)
+     , "dictionary" .= dataDictionary
      ]
