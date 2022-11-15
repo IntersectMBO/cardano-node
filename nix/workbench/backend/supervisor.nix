@@ -55,6 +55,7 @@ let
                     pkgs lib stateDir
                     basePort
                     extraBackendConfig;
+                  inetHttpServerPort = "127.0.0.1:9001";
                 };
             }
             ''

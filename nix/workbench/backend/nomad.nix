@@ -44,6 +44,7 @@ let
                     pkgs lib stateDir
                     basePort
                     extraBackendConfig;
+                  unixHttpServerPort = "/tmp/supervisor.sock";
                 };
             nomadConf =
               import ./nomad-conf.nix

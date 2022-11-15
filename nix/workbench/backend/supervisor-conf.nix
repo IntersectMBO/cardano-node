@@ -3,6 +3,8 @@
 , stateDir
 , basePort
 , node-services
+, unixHttpServerPort ? null
+, inetHttpServerPort ? null
   ## Last-moment overrides:
 , extraBackendConfig
 }:
@@ -23,11 +25,21 @@ let
         strip_ansi = true;
       };
       supervisorctl = {};
-      inet_http_server = {
-        port = "127.0.0.1:9001";
-      };
       "rpcinterface:supervisor" = {
         "supervisor.rpcinterface_factory" = "supervisor.rpcinterface:make_main_rpcinterface";
+      };
+    }
+    //
+    lib.attrsets.optionalAttrs (unixHttpServerPort != null) {
+      unix_http_server = {
+        file = unixHttpServerPort;
+        chmod = "0777";
+      };
+    }
+    //
+    lib.attrsets.optionalAttrs (inetHttpServerPort != null) {
+      inet_http_server = {
+        port = inetHttpServerPort;
       };
     }
     //
