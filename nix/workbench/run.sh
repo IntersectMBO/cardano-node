@@ -26,6 +26,9 @@ usage_run() {
     $(helpcmd fetch-analysis RUN..)
      $(blk fa)                   Fetch analyses of AWS runs
     $(helpcmd analyse-aws RUN..)     Run analyses of AWS runs, remotely
+    $(helpcmd fix-legacy-run-structure RUN)
+     $(blk fix-legacy flrs)      Update legacy (AWS) meta.json to mostly match
+                            the workbench
 
     $(helpcmd describe RUN)
 
@@ -85,7 +88,7 @@ case "$op" in
         while test $# -gt 0
         do case "$1" in
                --on-remote | -or | -r ) on_remote='true';;
-               * ) msg "FATAL:  run-or-set, unknown flag '$1'"; usage_run;;
+               * ) msg "FATAL:  list, unknown flag '$1'"; usage_run;;
            esac; shift; done
 
         if test -z "$on_remote"
@@ -95,8 +98,28 @@ case "$op" in
                  sh -c "'$(run_ls_cmd $(jq <<<$r .depl)/runs)'"
         fi;;
 
-    list-remote | lsaws | lsr )
+    list-remote | lsaws | lsr ) ## Convenience alias for 'list'
         run "${sargs[@]}" list --on-remote;;
+
+    list-verbose | tab | lst )
+        local usage="USAGE: wb run $op [--on-remote | -or | -r] [--limit [N=10] | -n N]"
+        local on_remote= limit=10
+        while test $# -gt 0
+        do case "$1" in
+               --on-remote | -or | -r ) on_remote='true';;
+               --limit | -n )           limit=$2; shift;;
+               * ) msg "FATAL:  list-verbose, unknown flag '$1'"; usage_run;;
+           esac; shift; done
+
+        if test -z "$on_remote"
+        then (eval "$(run_ls_tabulated_cmd "$global_rundir" $limit)")
+        else local r=${1:-$remote}
+             ssh $(jq <<<$r .env -r) -- \
+                 sh -c "'$(run_ls_tabulated_cmd $(jq <<<$r .depl)/runs $limit)'"
+        fi;;
+
+    list-verbose-remote | lstaws | tabr | lsvr | lstr ) ## Convenience alias for 'list-verbose'
+        run "${sargs[@]}" list-verbose --on-remote;;
 
     list-sets | lss )
         local usage="USAGE: wb run $op [--on-remote | -or | -r]"
@@ -104,7 +127,7 @@ case "$op" in
         while test $# -gt 0
         do case "$1" in
                --on-remote | -or | -r ) on_remote='true';;
-               * ) msg "FATAL:  run-or-set, unknown flag '$1'"; usage_run;;
+               * ) msg "FATAL:  list-sets, unknown flag '$1'"; usage_run;;
            esac; shift; done
 
         if test -z "$on_remote"
@@ -114,7 +137,7 @@ case "$op" in
                  sh -c "'$(run_ls_sets_cmd $(jq <<<$r .depl)/runs)'"
         fi;;
 
-    list-sets-remote | lssr )
+    list-sets-remote | lssr ) ## Convenience alias for 'list-sets'
         run "${sargs[@]}" list-sets --on-remote;;
 
     set-add | sa )
@@ -180,7 +203,7 @@ case "$op" in
         else echo -n "$global_rundir/$1"
         fi;;
 
-    fix-legacy-run-structure | fix-legacy )
+    fix-legacy-run-structure | fix-legacy | flrs )
         local usage="USAGE: wb run $op RUN"
         local run=${1:?$usage}
         local dir=$(run compute-path "$run")
@@ -207,6 +230,11 @@ case "$op" in
         jq_fmutate "$dir"/meta.json '
            .meta.manifest = $manifest
            ' --argjson manifest "$(legacy_run_manifest $dir)"
+
+        progress "run | fix-legacy-run-structure" "adding timing"
+        jq_fmutate "$dir"/meta.json '
+           .meta.timing = $timing
+           ' --argjson timing "$(legacy_run_timing $dir)"
 
         jq ' .meta.profile_content
            | .analysis.filters += ["model"]
@@ -857,6 +885,32 @@ legacy_run_manifest() {
   ' --null-input "${args[@]}"
 }
 
+legacy_run_timing() {
+    local dir=$1
+    local stamp=$(jq -r '.meta.timestamp' $dir/meta.json)
+
+    local args=(
+        --arg stamp $stamp
+    )
+    jq '
+    .meta.profile                                               as $prof
+  | ($stamp + ($prof.generator.tx_count / $prof.generator.tps)) as $stamp_end
+  |
+  { future_offset:   "0 seconds"
+  , start:           $epoch
+  , shutdown_end:    $stamp_end
+  , workload_end:    $stamp_end
+  , earliest_end:    $stamp_end
+
+  , start_tag:       .meta.tag[:16]
+  , start_human:     ($stamp | todateiso8601)
+  , systemStart:     ($stamp | todateiso8601)
+  , shutdownTime:    ($stamp_end | todateiso8601)
+  , workloadEndTime: ($stamp_end | todateiso8601)
+  , earliestEndTime: ($stamp_end | todateiso8601)
+  }' $dir/meta.json "${args[@]}"
+}
+
 expand_runspecs() {
     local runs=() rs
 
@@ -877,6 +931,25 @@ run_ls_cmd() {
           grep -v "current\$\|deploy-logs\$" |
           cut -c3- |
           sort || true'
+}
+
+run_ls_tabulated_cmd() {
+    local rundir=$1 limit=$2
+
+    echo 'cd '$rundir' && \
+          find . -mindepth 2 -maxdepth 2 -type f -name meta.json -exec dirname \{\} \; |
+          grep -v "current\$\|deploy-logs\$" |
+          cut -c3- |
+          sort |
+          tail -n'$limit' |
+          while read lst_tag; test -n "$lst_tag";
+          do printf_args=(
+               $(jq ".meta | .manifest as \$manif |
+                      \"\\(.profile) \\(\$manif.\"cardano-node\" | .[:7]) \\(.batch) \\(\$manif.\"cardano-node-version\") \\(\$manif.\"cardano-node-branch\")\"
+                    " -r <$lst_tag/meta.json))
+              printf "%16s  %-75s %7s %-20s %-15s %10s\n" \
+                    $(echo $lst_tag |cut -c -16) ${printf_args[*]}
+          done || true'
 }
 
 run_ls_sets_cmd() {

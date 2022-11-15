@@ -483,7 +483,7 @@ case "$op" in
            if test -z "$logfiles"
            then msg "no logs in $d, skipping.."; fi
            local output="$adir"/logs-$(basename "$d").flt.json
-           grep ${grep_params[*]} $logfiles > "$output" &
+           grep ${grep_params[*]} $logfiles | grep '^{' > "$output" &
         done
 
         wait;;

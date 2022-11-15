@@ -14,8 +14,11 @@ import Util                     (count)
 import Cardano.Prelude          hiding (head)
 
 import Data.Aeson               (ToJSON(..), FromJSON(..))
+import Data.Aeson               qualified as AE
+import Data.ByteString.Lazy     qualified as LBS
+import Data.Map.Strict          qualified as M
 import Data.Text                qualified as T
-import Data.Text.Short          (toText)
+import Data.Text.Short          qualified as ST
 import Options.Applicative      qualified as Opt
 import Text.Printf              (PrintfArg)
 
@@ -27,6 +30,7 @@ import Cardano.Analysis.Context
 import Cardano.Analysis.Field
 import Cardano.Analysis.Ground
 import Cardano.Analysis.Version
+import Cardano.JSON
 import Cardano.Logging.Resources.Types
 import Cardano.Render
 import Cardano.Unlog.LogObject  hiding (Text)
@@ -73,12 +77,17 @@ data BlockProp f
     , cdfPeerSends           :: !(CDF f NominalDiffTime)
     , cdfForks               :: !(CDF f Int)
     , cdfSizes               :: !(CDF f Int)
-    , bpPropagation          :: ![(Double, CDF f NominalDiffTime)]
+    , bpPropagation          :: !(Map Text (CDF f NominalDiffTime))
     }
   deriving (Generic)
 deriving instance (Show     (f NominalDiffTime), Show     (f Int), Show     (f (Count BlockEvents))) => Show     (BlockProp f)
 deriving instance (FromJSON (f NominalDiffTime), FromJSON (f Int), FromJSON (f (Count BlockEvents))) => FromJSON (BlockProp f)
-deriving instance (ToJSON   (f NominalDiffTime), ToJSON   (f Int), ToJSON   (f (Count BlockEvents))) => ToJSON   (BlockProp f)
+
+instance (ToJSON (f NominalDiffTime), ToJSON (f Int), ToJSON (f (Count BlockEvents))) => ToJSON (BlockProp f) where
+  toJSON x = AE.genericToJSON AE.defaultOptions x
+             & \case
+                 Object o -> Object $ processFieldOverlays x o
+                 _ -> error "Heh, serialised BlockProp to a non-Object."
 
 type BlockPropOne   = BlockProp I
 type MultiBlockProp = BlockProp (CDF I)
@@ -237,7 +246,12 @@ deriving newtype instance ToJSON   a => ToJSON   (I a)
 deriving instance (FromJSON (a Double), FromJSON (a Int), FromJSON (a NominalDiffTime), FromJSON (a Word64)) => FromJSON (MachPerf a)
 deriving instance (NFData   (a Double), NFData   (a Int), NFData   (a NominalDiffTime), NFData   (a Word64)) => NFData   (MachPerf a)
 deriving instance (Show     (a Double), Show     (a Int),   Show   (a NominalDiffTime), Show     (a Word64)) => Show     (MachPerf a)
-deriving instance (ToJSON   (a Double), ToJSON   (a Int), ToJSON   (a NominalDiffTime), ToJSON   (a Word64)) => ToJSON   (MachPerf a)
+
+instance (ToJSON (a Double), ToJSON (a Int), ToJSON (a NominalDiffTime), ToJSON (a Word64)) => ToJSON (MachPerf a) where
+  toJSON x = AE.genericToJSON AE.defaultOptions x
+             & \case
+                 Object o -> Object $ processFieldOverlays x o
+                 _ -> error "Heh, serialised BlockProp to a non-Object."
 
 data SlotStats a
   = SlotStats
@@ -389,7 +403,7 @@ parseCDF2Aspect =
 -- * Timeline rendering instances
 --
 renderAdoptionCentile :: Centile -> Text
-renderAdoptionCentile = T.pack . printf "prop%0.2f" . unCentile
+renderAdoptionCentile = T.pack . printf "%0.2f" . unCentile
 
 adoptionCentiles :: [Centile]
 adoptionCentiles =
@@ -403,23 +417,55 @@ adoptionCentilesBrief =
 instance CDFFields BlockProp p where
   cdfFields =
     --  Width LeftPad
-    [ Field 4 0 "cdfForgerStarts"      (f!!0) "Loop" (DDeltaT cdfForgerStarts)        "Started forge loop iteration"
-    , Field 4 0 "cdfForgerBlkCtx"      (f!!1) "BkCt" (DDeltaT cdfForgerBlkCtx)        "Acquired block context"
-    , Field 4 0 "cdfForgerLgrState"    (f!!2) "LgSt" (DDeltaT cdfForgerLgrState)      "Acquired ledger state"
-    , Field 4 0 "cdfForgerLgrView"     (f!!3) "LgVi" (DDeltaT cdfForgerLgrView)       "Acquired ledger view"
-    , Field 4 0 "cdfForgerLeads"       (f!!4) "Lead" (DDeltaT cdfForgerLeads)         "Leadership check duration"
-    , Field 4 0 "cdfForgerForges"      (f!!5) "Forg" (DDeltaT cdfForgerForges)        "Leadership to forged"
-    , Field 4 0 "cdfForgerAnnouncementsfAnnounced"
-                                       (f!!6) "Anno" (DDeltaT cdfForgerAnnouncements) "Forged to announced"
-    , Field 4 0 "cdfForgerSends"       (f!!7) "Send" (DDeltaT cdfForgerSends)         "Announced to sending"
-    , Field 4 0 "cdfForgerAdoptions"   (f!!8) "Adop" (DDeltaT cdfForgerAdoptions)     "Announced to self-adopted"
-    , Field 4 0 "cdfPeerNotices"       (p!!0) "Noti" (DDeltaT cdfPeerNotices)         "First peer notice"
-    , Field 4 0 "cdfPeerRequests"      (p!!1) "Requ" (DDeltaT cdfPeerRequests)        "Notice to fetch request"
-    , Field 4 0 "cdfPeerFetches"       (p!!2) "Fetc" (DDeltaT cdfPeerFetches)         "Fetch duration"
-    , Field 4 0 "cdfPeerAnnouncements" (p!!3) "Anno" (DDeltaT cdfPeerAnnouncements)   "Fetched to announced"
-    , Field 4 0 "cdfPeerSends"         (p!!4) "Send" (DDeltaT cdfPeerSends)           "Announced to sending"
-    , Field 4 0 "cdfPeerAdoptions"     (p!!5) "Adop" (DDeltaT cdfPeerAdoptions)       "Announced to adopted"
-    , Field 4 0 "cdfForks"             "das" "forks" (DInt    cdfForks)               "Forks at this block height"
+    [ Field 4 0 "cdfForgerStarts"      (f!!0) "Loop" (DDeltaT cdfForgerStarts)
+      "Started forge loop iteration"
+      ""
+    , Field 4 0 "cdfForgerBlkCtx"      (f!!1) "BkCt" (DDeltaT cdfForgerBlkCtx)
+      "Acquired block context"
+      ""
+    , Field 4 0 "cdfForgerLgrState"    (f!!2) "LgSt" (DDeltaT cdfForgerLgrState)
+      "Acquired ledger state"
+      ""
+    , Field 4 0 "cdfForgerLgrView"     (f!!3) "LgVi" (DDeltaT cdfForgerLgrView)
+      "Acquired ledger view"
+      ""
+    , Field 4 0 "cdfForgerLeads"       (f!!4) "Lead" (DDeltaT cdfForgerLeads)
+      "Leadership check duration"
+      ""
+    , Field 4 0 "cdfForgerForges"      (f!!5) "Forg" (DDeltaT cdfForgerForges)
+      "Leadership to forged"
+      ""
+    , Field 4 0 "cdfForgerAnnouncements"
+                                       (f!!6) "Anno" (DDeltaT cdfForgerAnnouncements)
+      "Forged to announced"
+      ""
+    , Field 4 0 "cdfForgerSends"       (f!!7) "Send" (DDeltaT cdfForgerSends)
+      "Announced to sending"
+      ""
+    , Field 4 0 "cdfForgerAdoptions"   (f!!8) "Adop" (DDeltaT cdfForgerAdoptions)
+      "Announced to self-adopted"
+      ""
+    , Field 4 0 "cdfPeerNotices"       (p!!0) "Noti" (DDeltaT cdfPeerNotices)
+      "First peer notice"
+      ""
+    , Field 4 0 "cdfPeerRequests"      (p!!1) "Requ" (DDeltaT cdfPeerRequests)
+      "Notice to fetch request"
+      ""
+    , Field 4 0 "cdfPeerFetches"       (p!!2) "Fetc" (DDeltaT cdfPeerFetches)
+      "Fetch duration"
+      ""
+    , Field 4 0 "cdfPeerAnnouncements" (p!!3) "Anno" (DDeltaT cdfPeerAnnouncements)
+      "Fetched to announced"
+      ""
+    , Field 4 0 "cdfPeerSends"         (p!!4) "Send" (DDeltaT cdfPeerSends)
+      "Announced to sending"
+      ""
+    , Field 4 0 "cdfPeerAdoptions"     (p!!5) "Adop" (DDeltaT cdfPeerAdoptions)
+      "Announced to adopted"
+      ""
+    , Field 4 0 "cdfForks"             "das" "forks" (DInt    cdfForks)
+      "Forks at this block height"
+      "Number of forks per block."
     ] ++
     [ Field 4 0 (renderAdoptionCentile ct)
                                        (r!!i)
@@ -429,12 +475,15 @@ instance CDFFields BlockProp p where
               . fromMaybe (error $ printf "No centile %d/%f in bpPropagation."
                                           i centi)
               . flip atMay i
+              . M.toList
               . bpPropagation)
             (T.pack $ printf "%.2f adoption" centi)
+            (T.pack $ printf "Slot-relative block adoption time by %d%% of the cluster." (ceiling $ centi * 100 :: Int))
             -- (T.pack $ printf "Block adopted by %.2f fraction of the entire cluster." centi)
     | (i, ct@(Centile centi)) <- zip [0::Int ..] adoptionCentiles ] ++
-    [ Field 9 0 "sizes"         "Size"  "bytes" (DInt    cdfSizes)
+    [ Field 9 0 "cdfSizes"             "Size"  "bytes" (DInt    cdfSizes)
       "Block size"
+      "Block size, in bytes."
     ]
    where
      f = nChunksEachOf 9    5 ",-------------------- Forger event Δt: --------------------."
@@ -442,52 +491,57 @@ instance CDFFields BlockProp p where
      r = nChunksEachOf aLen 5 ",---- Slot-rel. Δt to adoption centile: ----."
      aLen = length adoptionCentiles
      checkCentile i centi (centi', d) =
-       if centi' == centi then d
-       else error $ printf "Centile mismatch: [%d]: exp=%f act=%f"
-            i centi centi'
+       if T.unpack centi' == printf "%.2f" centi then d
+       else error $ printf "Centile mismatch: [%d]: exp=%f act=%s"
+            i centi (T.unpack centi')
+  fieldJSONOverlay f kvs =
+    [ overlay kvs
+    , alterSubObject overlay "bpPropagation" kvs
+    ]
+   where overlay = tryOverlayFieldDescription f
 
 instance TimelineFields BlockEvents where
   timelineFields _ =
     --  Width LeftPad
-    [ Field 5 0 "beBlockNo"    "block" "no."    (IWord64 (unBlockNo . beBlockNo)) ""
-    , Field 5 0 "beSlotNo"     "abs."  "slot#"  (IWord64 (unSlotNo  . beSlotNo)) ""
-    , Field 6 0 "beBlock"      "block" "hash"   (IText   (shortHash . beBlock)) ""
-    , Field 6 0 "beBlockPrev"  "prev"  "hash"   (IText   (shortHash . beBlockPrev)) ""
-    , Field 7 0 "bfForger"     "forger" "host"  (IText   (toText . unHost . bfForger . beForge)) ""
-    , Field 6 0 "bfBlockSize"  "size"  "bytes"  (IInt    (bfBlockSize . beForge)) ""
-    , Field 5 0 "bfBlockGap"   "block" "gap"    (IDeltaT (bfBlockGap  . beForge)) ""
-    , Field 3 0 "bpeIsFork"    "for"  "-ks"    (IInt    (count bpeIsFork . beErrors)) ""
-    , Field 4 0 "bfStarted"     (f!!0) "Start"  (IDeltaT (bfStarted   . beForge)) ""
-    , Field 4 0 "bfBlkCtx"      (f!!1) "BlkCtx" (IText (maybe "?" show.bfBlkCtx  .beForge)) ""
-    , Field 4 0 "bfLgrState"    (f!!2) "LgrSta" (IText (maybe "?" show.bfLgrState.beForge)) ""
-    , Field 4 0 "bfLgrView"     (f!!3) "LgrVie" (IText (maybe "?" show.bfLgrView .beForge)) ""
-    , Field 4 0 "bfLeading"     (f!!4) "Lead"   (IDeltaT (bfLeading   . beForge)) ""
-    , Field 4 0 "bfForged"      (f!!5) "Forge"  (IDeltaT (bfForged    . beForge)) ""
-    , Field 4 0 "bfAnnounced"   (f!!6) "Announ" (IDeltaT (bfAnnounced . beForge)) ""
-    , Field 4 0 "bfSending"     (f!!7) "Sendin" (IDeltaT (bfSending   . beForge)) ""
-    , Field 4 0 "bfAdopted"     (f!!8) "Adopt"  (IDeltaT (bfAdopted   . beForge)) ""
-    , Field 4 0 "boNoticed"     (p!!0) "Notic"  (IDeltaT (af  boNoticed   . valids)) ""
-    , Field 4 0 "boRequested"   (p!!1) "Requd"  (IDeltaT (af  boRequested . valids)) ""
-    , Field 4 0 "boFetched"     (p!!2) "Fetch"  (IDeltaT (af  boFetched   . valids)) ""
-    , Field 4 0 "boAnnounced"   (p!!3) "Annou"  (IDeltaT (af' boAnnounced . valids)) ""
-    , Field 4 0 "boSending"     (p!!4) "Send"   (IDeltaT (af' boSending   . valids)) ""
-    , Field 4 0 "pAdopted"      (p!!5) "Adopt"  (IDeltaT (af' boAdopted   . valids)) ""
-    , Field 4 0 "bePropagation.5" (r!!0) "0.5"  (IDeltaT (percSpec 0.5  . bePropagation)) ""
-    , Field 4 0 "bePropagation.8" (r!!1) "0.8"  (IDeltaT (percSpec 0.8  . bePropagation)) ""
-    , Field 4 0 "bePropagation.96"(r!!2) "0.96" (IDeltaT (percSpec 0.96 . bePropagation)) ""
-    , Field 4 0 "bePropagation.1" (r!!3) "1.0"  (IDeltaT (snd . cdfRange . bePropagation)) ""
+    [ Field 5 0 "beBlockNo"    "block" "no."    (IWord64 (unBlockNo . beBlockNo)) "" ""
+    , Field 5 0 "beSlotNo"     "abs."  "slot#"  (IWord64 (unSlotNo  . beSlotNo)) "" ""
+    , Field 6 0 "beBlock"      "block" "hash"   (IText   (shortHash . beBlock)) "" ""
+    , Field 6 0 "beBlockPrev"  "prev"  "hash"   (IText   (shortHash . beBlockPrev)) "" ""
+    , Field 7 0 "bfForger"     "forger" "host"  (IText   (ST.toText . unHost . bfForger . beForge)) "" ""
+    , Field 6 0 "bfBlockSize"  "size"  "bytes"  (IInt    (bfBlockSize . beForge)) "" ""
+    , Field 5 0 "bfBlockGap"   "block" "gap"    (IDeltaT (bfBlockGap  . beForge)) "" ""
+    , Field 3 0 "bpeIsFork"    "for"  "-ks"    (IInt    (count bpeIsFork . beErrors)) "" ""
+    , Field 4 0 "bfStarted"     (f!!0) "Start"  (IDeltaT (bfStarted   . beForge)) "" ""
+    , Field 4 0 "bfBlkCtx"      (f!!1) "BlkCtx" (IText (maybe "?" show.bfBlkCtx  .beForge)) "" ""
+    , Field 4 0 "bfLgrState"    (f!!2) "LgrSta" (IText (maybe "?" show.bfLgrState.beForge)) "" ""
+    , Field 4 0 "bfLgrView"     (f!!3) "LgrVie" (IText (maybe "?" show.bfLgrView .beForge)) "" ""
+    , Field 4 0 "bfLeading"     (f!!4) "Lead"   (IDeltaT (bfLeading   . beForge)) "" ""
+    , Field 4 0 "bfForged"      (f!!5) "Forge"  (IDeltaT (bfForged    . beForge)) "" ""
+    , Field 4 0 "bfAnnounced"   (f!!6) "Announ" (IDeltaT (bfAnnounced . beForge)) "" ""
+    , Field 4 0 "bfSending"     (f!!7) "Sendin" (IDeltaT (bfSending   . beForge)) "" ""
+    , Field 4 0 "bfAdopted"     (f!!8) "Adopt"  (IDeltaT (bfAdopted   . beForge)) "" ""
+    , Field 4 0 "boNoticed"     (p!!0) "Notic"  (IDeltaT (af  boNoticed   . valids)) "" ""
+    , Field 4 0 "boRequested"   (p!!1) "Requd"  (IDeltaT (af  boRequested . valids)) "" ""
+    , Field 4 0 "boFetched"     (p!!2) "Fetch"  (IDeltaT (af  boFetched   . valids)) "" ""
+    , Field 4 0 "boAnnounced"   (p!!3) "Annou"  (IDeltaT (af' boAnnounced . valids)) "" ""
+    , Field 4 0 "boSending"     (p!!4) "Send"   (IDeltaT (af' boSending   . valids)) "" ""
+    , Field 4 0 "pAdopted"      (p!!5) "Adopt"  (IDeltaT (af' boAdopted   . valids)) "" ""
+    , Field 4 0 "bePropagation.5" (r!!0) "0.5"  (IDeltaT (percSpec 0.5  . bePropagation)) "" ""
+    , Field 4 0 "bePropagation.8" (r!!1) "0.8"  (IDeltaT (percSpec 0.8  . bePropagation)) "" ""
+    , Field 4 0 "bePropagation.96"(r!!2) "0.96" (IDeltaT (percSpec 0.96 . bePropagation)) "" ""
+    , Field 4 0 "bePropagation.1" (r!!3) "1.0"  (IDeltaT (snd . cdfRange . bePropagation)) "" ""
     , Field 3 0 "beAcceptance"  "va-"  "lid"    (IText   (bool "-" "+" . (== 0) . length
-                                                          . filter (not . snd) . beAcceptance)) ""
-    , Field 3 0 "valid.observ" "good"  "obsv"   (IInt    (length          . valids)) ""
-    , Field 5 0 "beErrors"      "all"  "errs"   (IInt    (length . beErrors)) ""
-    , Field 3 0 "missNotic"     (m!!0) "ntc"    (IInt    (count (bpeIsMissing Notice) . beErrors)) ""
-    , Field 3 0 "missReque"     (m!!1) "req"    (IInt    (count (bpeIsMissing Request) . beErrors)) ""
-    , Field 3 0 "missFetch"     (m!!2) "fch"    (IInt    (count (bpeIsMissing Fetch) . beErrors)) ""
-    , Field 3 0 "missAnnou"     (m!!3) "ann"    (IInt    (count (bpeIsMissing Announce) . beErrors)) ""
-    , Field 3 0 "missAdopt"     (m!!4) "ado"    (IInt    (count (bpeIsMissing Adopt) . beErrors)) ""
-    , Field 3 0 "missSend"      (m!!5) "snd"    (IInt    (count (bpeIsMissing Send) . beErrors)) ""
-    , Field 3 0 "negAnnou"      (n!!0) "ann"    (IInt    (count (bpeIsNegative Announce) . beErrors)) ""
-    , Field 3 0 "negSend"       (n!!1) "snd"    (IInt    (count (bpeIsNegative Send) . beErrors)) ""
+                                                          . filter (not . snd) . beAcceptance)) "" ""
+    , Field 3 0 "valid.observ" "good"  "obsv"   (IInt    (length          . valids)) "" ""
+    , Field 5 0 "beErrors"      "all"  "errs"   (IInt    (length . beErrors)) "" ""
+    , Field 3 0 "missNotic"     (m!!0) "ntc"    (IInt    (count (bpeIsMissing Notice) . beErrors)) "" ""
+    , Field 3 0 "missReque"     (m!!1) "req"    (IInt    (count (bpeIsMissing Request) . beErrors)) "" ""
+    , Field 3 0 "missFetch"     (m!!2) "fch"    (IInt    (count (bpeIsMissing Fetch) . beErrors)) "" ""
+    , Field 3 0 "missAnnou"     (m!!3) "ann"    (IInt    (count (bpeIsMissing Announce) . beErrors)) "" ""
+    , Field 3 0 "missAdopt"     (m!!4) "ado"    (IInt    (count (bpeIsMissing Adopt) . beErrors)) "" ""
+    , Field 3 0 "missSend"      (m!!5) "snd"    (IInt    (count (bpeIsMissing Send) . beErrors)) "" ""
+    , Field 3 0 "negAnnou"      (n!!0) "ann"    (IInt    (count (bpeIsNegative Announce) . beErrors)) "" ""
+    , Field 3 0 "negSend"       (n!!1) "snd"    (IInt    (count (bpeIsNegative Send) . beErrors)) "" ""
     ]
    where
      valids = filter isValidBlockObservation . beObservations
@@ -556,31 +610,79 @@ parsePerfSubset =
 instance CDFFields MachPerf p where
   cdfFields =
     --  Width LeftPad
-    [ Field 4 0 "cdfMiss"       "Miss"  "ratio" (DFloat             cdfMiss)       "Leadership checks miss ratio"
-    , Field 4 0 "cdfStarted"    (d!!0)  "Start" (DDeltaT            cdfStarted)     "Forge loop tardiness"
-    , Field 4 0 "cdfBlkCtx"     (d!!1)  "BlkCt" (DDeltaT            cdfBlkCtx)      "Block context acquisition delay"
-    , Field 4 0 "cdfLgrState"   (d!!2)  "LgrSt" (DDeltaT            cdfLgrState)    "Ledger cdftate acquisition delay"
-    , Field 4 0 "cdfLgrView"    (d!!3)  "LgrVi" (DDeltaT            cdfLgrView)     "Ledger view acquisition delay"
-    , Field 4 0 "cdfLeading"    (d!!4)  "Lead"  (DDeltaT            cdfLeading)     "Leadership check duration"
-    , Field 4 0 "cdfForged"     (d!!5)  "Forge" (DDeltaT            cdfForged)      "Leading to block forged"
-    , Field 4 0 "cdfBlockGap"   "Block" "gap"   (DWord64            cdfBlockGap)    "Interblock gap"
-    , Field 5 0 "rNetRd"        (n!!0)  ""      (DWord64 (rNetRd   .mpResourceCDFs)) "kB sec"
-    , Field 5 0 "rNetWr"        (n!!1)  ""      (DWord64 (rNetWr   .mpResourceCDFs)) "kB sec"
-    , Field 5 0 "rFsRd"         (f!!0)  ""      (DWord64 (rFsRd    .mpResourceCDFs)) "kB sec"
-    , Field 5 0 "rFsWr"         (f!!1)  ""      (DWord64 (rFsWr    .mpResourceCDFs)) "kB sec"
-    , Field 5 0 "cdfDensity"    "Dens"  "ity"   (DFloat             cdfDensity)     "Chain density"
-    , Field 3 0 "rCentiCpu"     "CPU"   "%"     (DWord64 (rCentiCpu.mpResourceCDFs)) "Process CPU usage pct"
-    , Field 3 0 "rCentiGC"      "GC"    "%"     (DWord64 (rCentiGC .mpResourceCDFs)) "RTS GC CPU usage pct"
-    , Field 3 0 "rCentiMut"     "MUT"   "%"     (DWord64 (rCentiMut.mpResourceCDFs)) "RTS Mutator CPU usage pct"
-    , Field 3 0 "rGcsMajor"     "GC "   "Maj"   (DWord64 (rGcsMajor.mpResourceCDFs)) "Major GCs Hz"
-    , Field 3 0 "rGcsMinor"     "flt "  "Min"   (DWord64 (rGcsMinor.mpResourceCDFs)) "Minor GCs Hz"
-    , Field 5 0 "rRSS"          (m!!0)  "RSS"   (DWord64 (rRSS     .mpResourceCDFs)) "Kernel RSS MB"
-    , Field 5 0 "rHeap"         (m!!1)  "Heap"  (DWord64 (rHeap    .mpResourceCDFs)) "RTS heap size MB"
-    , Field 5 0 "rLive"         (m!!2)  "Live"  (DWord64 (rLive    .mpResourceCDFs)) "RTS GC live bytes MB"
-    , Field 5 0 "rAlloc"        "Alloc" "MB"    (DWord64 (rAlloc   .mpResourceCDFs)) "RTS alloc rate MB sec"
-    , Field 5 0 "cdfSpanLensCpu"(c!!0)  "All"   (DInt               cdfSpanLensCpu) "CPU 85pct spans"
+    [ Field 4 0 "cdfMiss"       "Miss"  "ratio" (DFloat             cdfMiss)
+      "Leadership checks miss ratio"
+      "For any given slot, how many leadership checks are absent.  Normally peaks at 1."
+    , Field 4 0 "cdfStarted"    (d!!0)  "Start" (DDeltaT            cdfStarted)
+      "Forge loop tardiness"
+      ""
+    , Field 4 0 "cdfBlkCtx"     (d!!1)  "BlkCt" (DDeltaT            cdfBlkCtx)
+      "Block context acquisition delay"
+      ""
+    , Field 4 0 "cdfLgrState"   (d!!2)  "LgrSt" (DDeltaT            cdfLgrState)
+      "Ledger cdftate acquisition delay"
+      ""
+    , Field 4 0 "cdfLgrView"    (d!!3)  "LgrVi" (DDeltaT            cdfLgrView)
+      "Ledger view acquisition delay"
+      ""
+    , Field 4 0 "cdfLeading"    (d!!4)  "Lead"  (DDeltaT            cdfLeading)
+      "Leadership check duration"
+      ""
+    , Field 4 0 "cdfForged"     (d!!5)  "Forge" (DDeltaT            cdfForged)
+      "Leading to block forged"
+      ""
+    , Field 4 0 "cdfBlockGap"   "Block" "gap"   (DWord64            cdfBlockGap)
+      "Interblock gap"
+      ""
+    , Field 5 0 "NetRd"         (n!!0)  ""      (DWord64 (rNetRd   .mpResourceCDFs))
+      "kB sec"
+      ""
+    , Field 5 0 "NetWr"         (n!!1)  ""      (DWord64 (rNetWr   .mpResourceCDFs))
+      "kB sec"
+      ""
+    , Field 5 0 "FsRd"          (f!!0)  ""      (DWord64 (rFsRd    .mpResourceCDFs))
+      "kB sec"
+      ""
+    , Field 5 0 "FsWr"          (f!!1)  ""      (DWord64 (rFsWr    .mpResourceCDFs))
+      "kB sec"
+      ""
+    , Field 5 0 "cdfDensity"    "Dens"  "ity"   (DFloat             cdfDensity)
+      "Chain density"
+      ""
+    , Field 3 0 "CentiCpu"      "CPU"   "%"     (DWord64 (rCentiCpu.mpResourceCDFs))
+      "Process CPU usage pct"
+      ""
+    , Field 3 0 "CentiGC"       "GC"    "%"     (DWord64 (rCentiGC .mpResourceCDFs))
+      "RTS GC CPU usage pct"
+      ""
+    , Field 3 0 "CentiMut"      "MUT"   "%"     (DWord64 (rCentiMut.mpResourceCDFs))
+      "RTS Mutator CPU usage pct"
+      ""
+    , Field 3 0 "GcsMajor"      "GC "   "Maj"   (DWord64 (rGcsMajor.mpResourceCDFs))
+      "Major GCs Hz"
+      ""
+    , Field 3 0 "GcsMinor"      "flt "  "Min"   (DWord64 (rGcsMinor.mpResourceCDFs))
+      "Minor GCs Hz"
+      ""
+    , Field 5 0 "RSS"           (m!!0)  "RSS"   (DWord64 (rRSS     .mpResourceCDFs))
+      "Kernel RSS MB"
+      ""
+    , Field 5 0 "Heap"          (m!!1)  "Heap"  (DWord64 (rHeap    .mpResourceCDFs))
+      "RTS heap size MB"
+      ""
+    , Field 5 0 "Live"          (m!!2)  "Live"  (DWord64 (rLive    .mpResourceCDFs))
+      "RTS GC live bytes MB"
+      ""
+    , Field 5 0 "Alloc"         "Alloc" "MB"    (DWord64 (rAlloc   .mpResourceCDFs))
+      "RTS alloc rate MB sec"
+      ""
+    , Field 5 0 "cdfSpanLensCpu"(c!!0)  "All"   (DInt               cdfSpanLensCpu)
+      "CPU 85pct spans"
+      ""
     , Field 5 0 "cdfSpanLensCpuEpoch"
-                                (c!!1)  "Epoch" (DInt          cdfSpanLensCpuEpoch) "CPU spans at Ep boundary"
+                                (c!!1)  "Epoch" (DInt          cdfSpanLensCpuEpoch)
+      "CPU spans at Ep boundary"
+      ""
     ]
    where
      d = nChunksEachOf  6 5 "----------- Δt -----------"
@@ -588,6 +690,12 @@ instance CDFFields MachPerf p where
      n = nChunksEachOf  2 6 "NetIO, kB/s"
      f = nChunksEachOf  2 6 "FSIO, kB/s"
      c = nChunksEachOf  2 6 "CPU% spans"
+  fieldJSONOverlay f kvs =
+    [ overlay kvs
+    , alterSubObject overlay "mpResourceCDFs" kvs
+    ]
+   where overlay = tryOverlayFieldDescription f
+         _dumpJSON _x = error $ "kvs:\n" <> (T.unpack . ST.toText . fromMaybe "" . ST.fromByteString . LBS.toStrict . AE.encode $ _x)
 
 instance TimelineFields (SlotStats NominalDiffTime) where
   data TimelineComments (SlotStats NominalDiffTime)
@@ -595,53 +703,53 @@ instance TimelineFields (SlotStats NominalDiffTime) where
 
   timelineFields _ =
     --  Width LeftPad
-    [ Field 5 0 "abs.slot"     "abs."  "slot#"   (IWord64 (unSlotNo      .slSlot)) ""
-    , Field 4 0 "slot"         "  epo" "slot"    (IWord64 (unEpochSlot   .slEpochSlot)) ""
-    , Field 2 0 "epoch"        "ch "   "#"       (IWord64 (unEpochNo     .slEpoch)) ""
-    , Field 3 0 "safetyInt"    "safe"  "int"     (IWord64 (unEpochSafeInt.slEpochSafeInt)) ""
-    , Field 5 0 "block"        "block" "no."     (IWord64 (unBlockNo.slBlockNo)) ""
-    , Field 5 0 "blockGap"     "block" "gap"     (IWord64 slBlockGap) ""
-    , Field 3 0 "forgeLoop"    "forg"  "loo"     (IWord64 slCountStarts) ""
-    , Field 3 0 "blockCtx"     "blok"  "ctx"     (IWord64 slCountBlkCtx) ""
-    , Field 3 0 "ledgerState"  "ledg"  "sta"     (IWord64 slCountLgrState) ""
-    , Field 3 0 "ledgerView"   "ledg"  "viw"     (IWord64 slCountLgrView) ""
-    , Field 3 0 "leadShips"    "ship"  "win"     (IWord64 slCountLeads) ""
-    , Field 3 0 "forges"       "For"   "ge"      (IWord64 slCountForges) ""
-    , Field 4 0 "CDBSnap"      "CDB"   "snap"    (IWord64 slChainDBSnap) ""
-    , Field 3 0 "rejTxs"       "rej"   "txs"     (IWord64 slRejectedTx) ""
-    , Field 7 0 "startDelay"   "loop"  "start"   (IText (smaybe "" show.slStarted)) ""
-    , Field 5 0 "blkCtx"       "block" "ctx"     (IText (smaybe "" show.slBlkCtx)) ""
-    , Field 5 0 "lgrState"     "ledgr" "state"   (IText (smaybe "" show.slLgrState)) ""
-    , Field 5 0 "lgrView"      "ledgr" "view"    (IText (smaybe "" show.slLgrView)) ""
-    , Field 5 0 "leadChecked"  "ledsh" "chekd"   (IText (smaybe "" show.slLeading)) ""
-    , Field 5 0 "forge"        "forge" "done"    (IText (smaybe "" show.slForged)) ""
-    , Field 4 0 "mempoolTxSpan" (t 4!!0) "span"  (IText (smaybe "" show.slSpanTxsMem)) ""
-    , Field 4 0 "txsColl"     (t 4!!1) "cold"    (IWord64 slTxsCollected) ""
-    , Field 4 0 "txsAcc"      (t 4!!2) "accd"    (IWord64 slTxsAccepted) ""
-    , Field 4 0 "txsRej"      (t 4!!3) "rejd"    (IWord64 slTxsRejected) ""
-    , Field 5 1 "chDensity"    "chain" "dens."   (IFloat  slDensity) ""
-    , Field 3 0 "CPU%"        (c 3!!0) "all"     (IText (d 3.rCentiCpu.slResources)) ""
-    , Field 3 0 "GC%"         (c 3!!1) "GC"      (IText (d 3.fmap (min 999).rCentiGC.slResources)) ""
-    , Field 3 0 "MUT%"        (c 3!!2) "mut"     (IText (d 3.fmap (min 999).rCentiMut.slResources)) ""
-    , Field 3 0 "majFlt"      (g 3!!0) "maj"     (IText (d 3.rGcsMajor.slResources)) ""
-    , Field 3 0 "minFlt"      (g 3!!1) "min"     (IText (d 3.rGcsMinor.slResources)) ""
+    [ Field 5 0 "abs.slot"     "abs."  "slot#"   (IWord64 (unSlotNo      .slSlot)) "" ""
+    , Field 4 0 "slot"         "  epo" "slot"    (IWord64 (unEpochSlot   .slEpochSlot)) "" ""
+    , Field 2 0 "epoch"        "ch "   "#"       (IWord64 (unEpochNo     .slEpoch)) "" ""
+    , Field 3 0 "safetyInt"    "safe"  "int"     (IWord64 (unEpochSafeInt.slEpochSafeInt)) "" ""
+    , Field 5 0 "block"        "block" "no."     (IWord64 (unBlockNo.slBlockNo)) "" ""
+    , Field 5 0 "blockGap"     "block" "gap"     (IWord64 slBlockGap) "" ""
+    , Field 3 0 "forgeLoop"    "forg"  "loo"     (IWord64 slCountStarts) "" ""
+    , Field 3 0 "blockCtx"     "blok"  "ctx"     (IWord64 slCountBlkCtx) "" ""
+    , Field 3 0 "ledgerState"  "ledg"  "sta"     (IWord64 slCountLgrState) "" ""
+    , Field 3 0 "ledgerView"   "ledg"  "viw"     (IWord64 slCountLgrView) "" ""
+    , Field 3 0 "leadShips"    "ship"  "win"     (IWord64 slCountLeads) "" ""
+    , Field 3 0 "forges"       "For"   "ge"      (IWord64 slCountForges) "" ""
+    , Field 4 0 "CDBSnap"      "CDB"   "snap"    (IWord64 slChainDBSnap) "" ""
+    , Field 3 0 "rejTxs"       "rej"   "txs"     (IWord64 slRejectedTx) "" ""
+    , Field 7 0 "startDelay"   "loop"  "start"   (IText (smaybe "" show.slStarted)) "" ""
+    , Field 5 0 "blkCtx"       "block" "ctx"     (IText (smaybe "" show.slBlkCtx)) "" ""
+    , Field 5 0 "lgrState"     "ledgr" "state"   (IText (smaybe "" show.slLgrState)) "" ""
+    , Field 5 0 "lgrView"      "ledgr" "view"    (IText (smaybe "" show.slLgrView)) "" ""
+    , Field 5 0 "leadChecked"  "ledsh" "chekd"   (IText (smaybe "" show.slLeading)) "" ""
+    , Field 5 0 "forge"        "forge" "done"    (IText (smaybe "" show.slForged)) "" ""
+    , Field 4 0 "mempoolTxSpan" (t 4!!0) "span"  (IText (smaybe "" show.slSpanTxsMem)) "" ""
+    , Field 4 0 "txsColl"     (t 4!!1) "cold"    (IWord64 slTxsCollected) "" ""
+    , Field 4 0 "txsAcc"      (t 4!!2) "accd"    (IWord64 slTxsAccepted) "" ""
+    , Field 4 0 "txsRej"      (t 4!!3) "rejd"    (IWord64 slTxsRejected) "" ""
+    , Field 5 1 "chDensity"    "chain" "dens."   (IFloat  slDensity) "" ""
+    , Field 3 0 "CPU%"        (c 3!!0) "all"     (IText (d 3.rCentiCpu.slResources)) "" ""
+    , Field 3 0 "GC%"         (c 3!!1) "GC"      (IText (d 3.fmap (min 999).rCentiGC.slResources)) "" ""
+    , Field 3 0 "MUT%"        (c 3!!2) "mut"     (IText (d 3.fmap (min 999).rCentiMut.slResources)) "" ""
+    , Field 3 0 "majFlt"      (g 3!!0) "maj"     (IText (d 3.rGcsMajor.slResources)) "" ""
+    , Field 3 0 "minFlt"      (g 3!!1) "min"     (IText (d 3.rGcsMinor.slResources)) "" ""
     , Field 6 0 "productiv"   "Produc" "tivity"  (IText
       (\SlotStats{..}->
           f 4 $ calcProd <$> (min 6 . -- workaround for ghc-8.10.2
                               fromIntegral <$> rCentiMut slResources :: Maybe Double)
-          <*> (fromIntegral <$> rCentiCpu slResources))) ""
-    , Field 5 0 "rssMB"       (m 5!!0) "RSS"     (IText (d 5.rRSS  .slResources)) ""
-    , Field 5 0 "heapMB"      (m 5!!1) "Heap"    (IText (d 5.rHeap .slResources)) ""
-    , Field 5 0 "liveMB"      (m 5!!2) "Live"    (IText (d 5.rLive .slResources)) ""
-    , Field 5 0 "allocatedMB"  "Allocd" "MB"     (IText (d 5.rAlloc.slResources)) ""
+          <*> (fromIntegral <$> rCentiCpu slResources))) "" ""
+    , Field 5 0 "rssMB"       (m 5!!0) "RSS"     (IText (d 5.rRSS  .slResources)) "" ""
+    , Field 5 0 "heapMB"      (m 5!!1) "Heap"    (IText (d 5.rHeap .slResources)) "" ""
+    , Field 5 0 "liveMB"      (m 5!!2) "Live"    (IText (d 5.rLive .slResources)) "" ""
+    , Field 5 0 "allocatedMB"  "Allocd" "MB"     (IText (d 5.rAlloc.slResources)) "" ""
     , Field 6 0 "allocMut"     "Alloc/" "mutSec" (IText
       (\SlotStats{..}->
           d 5 $
           (ceiling :: Double -> Int)
           <$> ((/) <$> (fromIntegral . (100 *) <$> rAlloc slResources)
-                <*> (fromIntegral . max 1 . (1024 *) <$> rCentiMut slResources)))) ""
-    , Field 7 0 "mempoolTxs"   "Mempool" "txs"   (IWord64 slMempoolTxs) ""
-    , Field 9 0 "utxoEntries"  "UTxO"  "entries" (IWord64 slUtxoSize) ""
+                <*> (fromIntegral . max 1 . (1024 *) <$> rCentiMut slResources)))) "" ""
+    , Field 7 0 "mempoolTxs"   "Mempool" "txs"   (IWord64 slMempoolTxs) "" ""
+    , Field 9 0 "utxoEntries"  "UTxO"  "entries" (IWord64 slUtxoSize) "" ""
     -- , Field 10 0 "absSlotTime" "Absolute" "slot time" $ IText
     --   (\SlotStats{..}->
     --      T.pack $ " " `splitOn` show slStart !! 1)

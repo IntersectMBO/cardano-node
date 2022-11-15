@@ -12,7 +12,7 @@ module Cardano.Analysis.BlockProp
   , blockProp)
 where
 
-import Prelude                  (String, (!!), error, head, last, id, show, tail)
+import Prelude                  (String, (!!), error, head, last, id, show, tail, read)
 import Cardano.Prelude          hiding (head, show)
 
 import Control.Arrow            ((***), (&&&))
@@ -74,17 +74,18 @@ summariseMultiBlockProp centiles bs@(headline:_) = do
   cdfPeerSends              <- cdf2OfCDFs comb $ bs <&> cdfPeerSends
   cdfForks                  <- cdf2OfCDFs comb $ bs <&> cdfForks
   cdfSizes                  <- cdf2OfCDFs comb $ bs <&> cdfSizes
-  bpPropagation            <- sequence $ transpose (bs <&> bpPropagation) <&>
+  bpPropagation             <- sequence $ transpose (bs <&> Map.toList . bpPropagation) <&>
     \case
       [] -> Left CDFEmptyDataset
       xs@((d,_):ds) -> do
         unless (all (d ==) $ fmap fst ds) $
-          Left $ CDFIncoherentSamplingCentiles [Centile . fst <$> xs]
+          Left $ CDFIncoherentSamplingCentiles [Centile . read . T.unpack . fst <$> xs]
         (d,) <$> cdf2OfCDFs comb (snd <$> xs)
   pure $ BlockProp
     { bpVersion             = bpVersion headline
     , bpDomainSlots         = dataDomainsMergeOuter $ bs <&> bpDomainSlots
     , bpDomainBlocks        = dataDomainsMergeOuter $ bs <&> bpDomainBlocks
+    , bpPropagation         = Map.fromList bpPropagation
     , ..
     }
  where
@@ -490,8 +491,9 @@ blockProp run@Run{genesis} fullChain domSlot domBlock = do
     , cdfPeerAnnouncements   = observerEventsCDF boAnnounced          "announced"
     , cdfPeerSends           = observerEventsCDF boSending            "sending"
     , cdfPeerAdoptions       = observerEventsCDF boAdopted            "adopted"
-    , bpPropagation          =
-      [ (p', forgerEventsCDF (Just . unI . projectCDF' "bePropagation" p . bePropagation))
+    , bpPropagation          = Map.fromList
+      [ ( T.pack $ printf "%.2f" p'
+        , forgerEventsCDF (Just . unI . projectCDF' "bePropagation" p . bePropagation))
       | p@(Centile p') <- adoptionCentiles <> [Centile 1.0] ]
     , cdfForks               = forgerEventsCDF   (Just . unCount . beForks)
     , cdfSizes               = forgerEventsCDF   (Just . bfBlockSize . beForge)

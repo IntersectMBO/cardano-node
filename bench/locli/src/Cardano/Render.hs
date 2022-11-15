@@ -211,7 +211,7 @@ renderAnalysisCDFs a@Anchor{..} fieldSelr aspect _centileSelr AsReport x =
                         fields <&>
                         fmap (T.take 6 . T.pack . printf "%f")
                         . mapField x (snd hdrsProjs)
-    , tRowHeaders     = fields <&> fDesc
+    , tRowHeaders     = fields <&> fShortDesc
     , tSummaryHeaders = []
     , tSummaryValues  = []
     , tFormula = []

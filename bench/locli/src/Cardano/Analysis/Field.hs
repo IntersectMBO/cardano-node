@@ -2,12 +2,16 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Cardano.Analysis.Field (module Cardano.Analysis.Field) where
 
+import Prelude                         (error)
 import Cardano.Prelude          hiding (head, show)
 
 import Data.CDF
+import Data.String                     (fromString)
+import Data.Text                       (unpack)
 
 import Cardano.Analysis.Ground
 import Cardano.Analysis.Run
+import Cardano.JSON
 
 
 -- | Encapsulate all metadata about a metric (a projection) of
@@ -17,17 +21,19 @@ import Cardano.Analysis.Run
 --     - third parameter is the projectible indexed by arity
 data Field (s :: (Type -> Type) -> k -> Type) (p :: Type -> Type) (a :: k)
   = Field
-  { fWidth   :: Int
-  , fLeftPad :: Int
-  , fId      :: Text
-  , fHead1   :: Text
-  , fHead2   :: Text
-  , fSelect  :: s p a
-  , fDesc    :: Text
+  { fWidth       :: Int
+  , fLeftPad     :: Int
+  , fId          :: Text
+  , fHead1       :: Text
+  , fHead2       :: Text
+  , fSelect      :: s p a
+  , fShortDesc   :: Text
+  , fDescription :: Text
   }
 
 class CDFFields a p where
-  cdfFields :: [Field DSelect p a]
+  cdfFields        :: [Field DSelect p a]
+  fieldJSONOverlay :: Field DSelect p a -> Object -> [Maybe Object]
 
 class TimelineFields a where
   data TimelineComments a :: Type
@@ -61,9 +67,28 @@ mapField x cdfProj Field{..} =
     DFloat  (cdfProj . ($x) ->r) -> r
     DDeltaT (cdfProj . ($x) ->r) -> r
 
+tryOverlayFieldDescription :: Field DSelect p a -> Object -> Maybe Object
+tryOverlayFieldDescription Field{..} =
+  alterSubObject (Just . overlayJSON [ ("description", String fDescription)
+                                     , ("shortDesc",   String fShortDesc)
+                                     ])
+                 (fromString $ unpack fId)
+
+processFieldOverlays :: forall a p. CDFFields a p => a p -> Object -> Object
+processFieldOverlays _ o =
+  foldr' (\f -> handleMiss f . fieldJSONOverlay @a @p f) o cdfFields
+ where
+   handleMiss Field{..} =
+     fromMaybe (error $ "fieldJSONOverlay:  failed to handle field " <> unpack fId)
+     . getFirst
+     . mconcat
+     . fmap First
+
+
 mapSomeFieldCDF :: forall p c a. (forall b. Divisible b => CDF p b -> c) -> a p -> DSelect p a -> c
 mapSomeFieldCDF f a = \case
   DInt    s -> f (s a)
   DWord64 s -> f (s a)
   DFloat  s -> f (s a)
   DDeltaT s -> f (s a)
+
