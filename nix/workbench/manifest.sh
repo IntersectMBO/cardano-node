@@ -10,19 +10,19 @@ EOF
 # from Hackage, and we don't want to get information about all of the
 # Hackage packages also!
 plutus_pkgs=(
-  plutus-core 
+  plutus-core
   plutus-ledger-api
 )
 ledger_pkgs=(
-  cardano-ledger-byron 
-  cardano-ledger-shelley 
-  cardano-ledger-shelley-ma 
-  cardano-ledger-alonzo 
-  cardano-ledger-babbage 
+  cardano-ledger-byron
+  cardano-ledger-shelley
+  cardano-ledger-shelley-ma
+  cardano-ledger-alonzo
+  cardano-ledger-babbage
   cardano-ledger-conway
   cardano-ledger-api
-  cardano-ledger-binary 
-  cardano-ledger-core 
+  cardano-ledger-binary
+  cardano-ledger-core
   cardano-ledger-pretty
   cardano-protocol-tpraos
   cardano-data
@@ -33,12 +33,12 @@ ledger_pkgs=(
   non-integral
 )
 ouroboros_pkgs=(
-  ouroboros-consensus-byron 
-  ouroboros-consensus-cardano 
-  ouroboros-consensus-protocol 
-  ouroboros-consensus-shelley 
-  ouroboros-consensus 
-  ouroboros-network-framework 
+  ouroboros-consensus-byron
+  ouroboros-consensus-cardano
+  ouroboros-consensus-protocol
+  ouroboros-consensus-shelley
+  ouroboros-consensus
+  ouroboros-network-framework
   ouroboros-network
 )
 manifest_pkgs=("${plutus_pkgs[@]}" "${ledger_pkgs[@]}" "${ouroboros_pkgs[@]}")
@@ -53,13 +53,16 @@ case "${op}" in
         local node_rev=${1:-$(manifest_git_head_commit "$dir")}
         local real_dir=$(realpath "$dir")
 
+        local temp_builddir
+        temp_builddir=$(mktemp -d)
+
         # Get the plan summary
         pushd "$real_dir" > /dev/null
         # make sure there's a plan.json for cabal-plan-summary to read
-        cabal build all --dry-run >&2
+        cabal build all --dry-run --builddir="$temp_builddir" >&2
         popd > /dev/null
 
-        plan_summary=$($(dirname $0)/cabal-plan-summary.sh "$real_dir")
+        plan_summary=$($(dirname $0)/cabal-plan-summary.sh "$temp_builddir/dist-newstyle/cache/plan.json")
 
         # Construct a filter that filters out entries that aren't in the list of pkgs,
         # and then construct the list of pkgs as a json object to pass to jq
@@ -80,8 +83,8 @@ case "${op}" in
         # - Turn the silly component object back into an array of its keys
         grouper='map(.components = { (.component): true })
           | map(del(.component))
-          | group_by(.name) 
-          | map(reduce .[] as $i ({}; . *= $i)) 
+          | group_by(.name)
+          | map(reduce .[] as $i ({}; . *= $i))
           | map(.components = (.components | keys))'
 
         # Run everything through the pkg_filter, then gather it back into a list
