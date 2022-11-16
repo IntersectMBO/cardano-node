@@ -76,7 +76,7 @@ in
             nativeBuildInputs = with cardanoNodePackages; with pkgs; [
               bash
               bech32
-              cabal-install
+              cabalWrapped
               coreutils
               gnused
               jq

@@ -41,7 +41,7 @@ let
       jq
       moreutils
       procps
-      cabal-install
+      cabalWrapped
       cardano-cli
       cardano-topology
     ] ++ lib.optional (!pkgs.stdenv.hostPlatform.isDarwin) db-analyser
