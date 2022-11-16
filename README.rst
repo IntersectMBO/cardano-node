@@ -405,15 +405,19 @@ Byron vote submission:
 Native Tokens
 ****
 
-Native tokens is a new feature that enables the transacting of multi-assets on Cardano. Native tokens are now supported on mainnet and users can transact with ada, and an unlimited number of user-defined (custom) tokens natively.
+Native tokens is a new feature that enables the transacting of multi-assets on Cardano. Native tokens are now supported on mainnet and users can transact with ada, and an unlimited number of user-defined (custom) tokens natively. Note that users who do not need to create new assets (“token holders”) will be able to send and receive existing multi-asset tokens using a wallet such as Daedalus or Yoroi, and with no requirement to use any CLI commands.
 
-To help you get started we have compiled a handy list of resources:
+To help you get started, see:
 
-`Cardano Forum discussion <https://forum.cardano.org/c/developers/cardano-tokens/150>`_
+- `Cardano Forum discussion <https://forum.cardano.org/c/developers/cardano-tokens/150>`_
 
-`Documentation for native tokens <https://docs.cardano.org/native-tokens/learn>`_
+- `Ledger explanations: native tokens <https://cardano-ledger.readthedocs.io/en/latest/>`_. Covers explainers about assets, tokens, token bundles, minting policies, comparison to ERC20, and minimum ada value requirements.
 
-You can also read more about `native tokens and how they compare to ada and ERC20 <https://github.com/input-output-hk/cardano-ledger-specs/blob/master/doc/explanations/features.rst>`_. Browse native tokens created on the Cardano blockchain and see their transactions in an interactive dashboard that allows filtering and searching: nativetokens.da.iogservices.io.
+- `A tutorial on how to get started with native tokens <./doc/reference/native-tokens/02-getting-started.md>`_. Explains how to create new currencies and assets, submit and send transactions containing multi-asset tokens, send and receive token bundles, manage your addresses and values.
+
+- `Native tokens exercises <./doc/reference/native-tokens/03-exercises.md>`_
+
+To start, please ensure that you are familiar with setting up and operating the `Cardano node <https://github.com/input-output-hk/cardano-node>`_. Alternatively, see instructions on how to `start your node <https://github.com/input-output-hk/cardano-node/blob/master/doc/stake-pool-operations/2_start_your_nodes.md>`_ to submit the commands. You will not need to set up and start a full block producing node ('stake pool'), just a much simpler relay node. This node will need to connect to a Cardano network that is capable of processing native tokens (e.g., the native token pre-production environment (PPE), or the Cardano mainnet).
 
 ****
 API Documentation
