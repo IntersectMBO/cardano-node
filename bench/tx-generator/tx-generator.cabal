@@ -1,3 +1,5 @@
+cabal-version:         2.2
+
 name:                  tx-generator
 version:               2.4
 description:           The transaction generator for cardano node
@@ -8,7 +10,6 @@ license-files:
   LICENSE
   NOTICE
 build-type:            Simple
-cabal-version:         >= 2.0
 extra-source-files:    README.md
 data-files:            data/protocol-parameters.json
 
@@ -43,7 +44,6 @@ library
                        Cardano.Benchmarking.Script.Aeson
                        Cardano.Benchmarking.Script.Core
                        Cardano.Benchmarking.Script.Env
-                       Cardano.Benchmarking.Script.NodeConfig
                        Cardano.Benchmarking.Script.Selftest
                        Cardano.Benchmarking.Script.Types
                        Cardano.Benchmarking.TpsThrottle
@@ -51,7 +51,6 @@ library
                        Cardano.Benchmarking.Types
                        Cardano.Benchmarking.Version
                        Cardano.Benchmarking.Wallet
-                       Cardano.Benchmarking.PlutusExample
 
                        Cardano.TxGenerator.Fund
                        Cardano.TxGenerator.FundQueue

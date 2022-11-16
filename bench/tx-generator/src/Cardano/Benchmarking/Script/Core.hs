@@ -368,8 +368,10 @@ interpretPayMode payMode = do
     PayToScript scriptSpec destWallet -> do
       walletRef <- getEnvWallets destWallet
       (witness, script, scriptData, _scriptFee) <- makePlutusContext scriptSpec
-      return ( createAndStore (mkUTxOScript networkId (script, scriptData) witness) (mkWalletFundStore walletRef)
-               , Text.unpack $ serialiseAddress $ makeShelleyAddress networkId (PaymentCredentialByScript $ hashScript script) NoStakeAddress )
+      case script of
+        ScriptInAnyLang _ script' ->
+          return ( createAndStore (mkUTxOScript networkId (script, scriptData) witness) (mkWalletFundStore walletRef)
+                 , Text.unpack $ serialiseAddress $ makeShelleyAddress networkId (PaymentCredentialByScript $ hashScript script') NoStakeAddress )
 
 {-
 Use a binary search to find a loop counter that maxes out the available per transaction Plutus budget.
@@ -380,7 +382,7 @@ spendAutoScript relies on a particular calling convention of the loop script.
 
 spendAutoScript ::
      ProtocolParameters
-  -> Script PlutusScriptV1
+  -> ScriptInAnyLang
   -> ActionM (ScriptData, ScriptRedeemer)
 spendAutoScript protocolParameters script = do
   perTxBudget <- case protocolParamMaxTxExUnits protocolParameters of
@@ -422,7 +424,7 @@ spendAutoScript protocolParameters script = do
 
 makePlutusContext :: forall era. IsShelleyBasedEra era
   => ScriptSpec
-  -> ActionM (Witness WitCtxTxIn era, Script PlutusScriptV1, ScriptData, Lovelace)
+  -> ActionM (Witness WitCtxTxIn era, ScriptInAnyLang, ScriptData, Lovelace)
 makePlutusContext scriptSpec = do
   protocolParameters <- getProtocolParameters
   script_ <- liftIO $ Plutus.readPlutusScript $ scriptSpecFile scriptSpec
@@ -471,23 +473,26 @@ makePlutusContext scriptSpec = do
          p = executionUnitPrices
          times w c = fromIntegral w % 1 * c
 
-    PlutusScript PlutusScriptV1 script' = script
-    scriptWitness :: ScriptWitness WitCtxTxIn era
-    scriptWitness = case scriptLanguageSupportedInEra (cardanoEra @era) (PlutusScriptLanguage PlutusScriptV1) of
-      Nothing -> error $ "runPlutusBenchmark: Plutus V1 scriptlanguage not supported : in era" ++ show (cardanoEra @era)
-      Just scriptLang -> PlutusScriptWitness
-                          scriptLang
-                          PlutusScriptV1
-                          (PScript script')
-                          (ScriptDatumForTxIn scriptData)
-                          scriptRedeemer
-                          executionUnits
-
-  return (ScriptWitness ScriptWitnessForSpending scriptWitness, script, scriptData, scriptFee)
+  case script of
+    ScriptInAnyLang lang (PlutusScript version script') ->
+      let
+        scriptWitness :: ScriptWitness WitCtxTxIn era
+        scriptWitness = case scriptLanguageSupportedInEra (cardanoEra @era) lang of
+          Nothing -> error $ "runPlutusBenchmark: " ++ show version ++ " not supported in era: " ++ show (cardanoEra @era)
+          Just scriptLang -> PlutusScriptWitness
+                              scriptLang
+                              version
+                              (PScript script')               -- TODO: add capability for reference inputs from Babbage era onwards
+                              (ScriptDatumForTxIn scriptData)
+                              scriptRedeemer
+                              executionUnits
+      in return (ScriptWitness ScriptWitnessForSpending scriptWitness, script, scriptData, scriptFee)
+    _ ->
+      liftTxGenError $ TxGenError "runPlutusBenchmark: only Plutus scripts supported"
 
 preExecuteScriptAction ::
      ProtocolParameters
-  -> Script PlutusScriptV1
+  -> ScriptInAnyLang
   -> ScriptData
   -> ScriptData
   -> ActionM ExecutionUnits

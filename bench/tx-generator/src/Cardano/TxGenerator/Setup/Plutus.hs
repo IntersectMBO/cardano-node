@@ -29,30 +29,32 @@ import           Plutus.V1.Ledger.Contexts (ScriptContext (..), ScriptPurpose (.
 import           Cardano.TxGenerator.Types
 
 
-readPlutusScript :: FilePath -> IO (Either TxGenError (Script PlutusScriptV1))
+readPlutusScript :: FilePath -> IO (Either TxGenError ScriptInAnyLang)
 readPlutusScript fp
   = do
   res <- runExceptT $ readFileScriptInAnyLang fp
   return $ case res of
     Left err -> Left $ ApiError err
-    Right (ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV1) script) -> Right script
-    Right (ScriptInAnyLang lang _) -> Left $ TxGenError $ "readPlutusScript: only PlutusScriptV1 currently supported, found: " ++ show lang
+    Right script@(ScriptInAnyLang (PlutusScriptLanguage _) _) -> Right script
+    Right (ScriptInAnyLang lang _) -> Left $ TxGenError $ "readPlutusScript: only PlutusScript supported, found: " ++ show lang
+
 
 preExecutePlutusScript ::
      ProtocolParameters
-  -> Script PlutusScriptV1
+  -> ScriptInAnyLang
   -> ScriptData
   -> ScriptData
   -> Either TxGenError ExecutionUnits
-preExecutePlutusScript protocolParameters (PlutusScript _ (PlutusScriptSerialised script)) datum redeemer
+preExecutePlutusScript protocolParameters (ScriptInAnyLang _ (PlutusScript lang (PlutusScriptSerialised script))) datum redeemer
   = runExcept $ do
-    CostModel costModel <- hoistMaybe (TxGenError "preExecutePlutusScript: costModel unavailable") $
-      AnyPlutusScriptVersion PlutusScriptV1 `Map.lookup` protocolParamCostModels protocolParameters
+    CostModel costModel <-
+      let model = AnyPlutusScriptVersion lang
+      in hoistMaybe (TxGenError $ "preExecutePlutusScript: cost model unavailable for " ++ show model) $
+        model `Map.lookup` protocolParamCostModels protocolParameters
     evaluationContext <- firstExceptT PlutusError $
       Plutus.mkEvaluationContext costModel
 
     let
-      (majVer, minVer) = protocolParamProtocolVersion protocolParameters
       protocolVersion = Plutus.ProtocolVersion (fromIntegral majVer) (fromIntegral minVer)
 
     exBudget <- firstExceptT PlutusError $
@@ -67,6 +69,8 @@ preExecutePlutusScript protocolParameters (PlutusScript _ (PlutusScriptSerialise
       exBudgetToExUnits exBudget
     return $ fromAlonzoExUnits x
   where
+    (majVer, minVer) = protocolParamProtocolVersion protocolParameters
+
     dummyContext :: ScriptContext
     dummyContext = ScriptContext dummyTxInfo (Spending dummyOutRef)
 
@@ -85,3 +89,5 @@ preExecutePlutusScript protocolParameters (PlutusScript _ (PlutusScriptSerialise
       , txInfoData = []
       , txInfoId = Plutus.TxId ""
       }
+preExecutePlutusScript _ (ScriptInAnyLang lang _) _ _
+  = Left $ TxGenError $ "preExecutePlutusScript: only PlutusScript supported, found: " ++ show lang
