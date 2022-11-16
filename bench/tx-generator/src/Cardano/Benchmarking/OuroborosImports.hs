@@ -13,7 +13,7 @@ module Cardano.Benchmarking.OuroborosImports
   , SigningKeyFile
   , StandardShelley
   , NetworkId
-  , getGenesis
+  -- , getGenesis
   , makeLocalConnectInfo
   , protocolToTopLevelConfig
   , protocolToNetworkId
@@ -38,8 +38,8 @@ import           Cardano.Api.Shelley (CardanoMode)
 import           Cardano.CLI.Types (SigningKeyFile)
 
 import           Cardano.Api (BlockType (..), ConsensusModeParams (..), EpochSlots (..),
-                   LocalNodeConnectInfo (..), NetworkId (..), PaymentKey, ProtocolInfoArgs (..),
-                   SigningKey, TxInMode, TxValidationErrorInMode, protocolInfo, submitTxToNodeLocal)
+                   LocalNodeConnectInfo (..), NetworkId (..), PaymentKey, SigningKey, TxInMode,
+                   TxValidationErrorInMode, protocolInfo, submitTxToNodeLocal)
 import           Cardano.Ledger.Shelley.Genesis (ShelleyGenesis)
 
 type CardanoBlock = Consensus.CardanoBlock StandardCrypto
@@ -47,15 +47,6 @@ type CardanoBlock = Consensus.CardanoBlock StandardCrypto
 toProtocolInfo :: SomeConsensusProtocol -> ProtocolInfo IO CardanoBlock
 toProtocolInfo (SomeConsensusProtocol CardanoBlockType info) = protocolInfo info
 toProtocolInfo _ = error "toProtocolInfo unknown protocol"
-
-getGenesis :: SomeConsensusProtocol -> ShelleyGenesis StandardShelley
-getGenesis (SomeConsensusProtocol CardanoBlockType info) = shelleyBasedGenesis
- where
-  (ProtocolInfoArgsCardano
-   _
-   Consensus.ProtocolParamsShelleyBased{Consensus.shelleyBasedGenesis}
-    _ _ _ _ _ _ _ _ _ _) = info
-getGenesis (SomeConsensusProtocol _ _ ) = error "getGenesis (SomeConsensusProtocol _ _ ) unknown protocol"
 
 protocolToTopLevelConfig :: SomeConsensusProtocol -> TopLevelConfig CardanoBlock
 protocolToTopLevelConfig ptcl = pInfoConfig
