@@ -8,10 +8,10 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Benchmarking.Script.Core
 where
@@ -22,6 +22,7 @@ import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
 import           "contra-tracer" Control.Tracer (nullTracer)
+import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
 import           Data.Ratio ((%))
 
 import           Streaming
@@ -45,11 +46,11 @@ import qualified Cardano.TxGenerator.Utils as Utils
 
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark, walletBenchmark)
--- import qualified Cardano.Benchmarking.GeneratorTx.Genesis as Genesis
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode (ConnectClient,
                    benchmarkConnectTxSubmit)
 import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
 import qualified Cardano.TxGenerator.Genesis as Genesis
+import           Cardano.TxGenerator.PlutusContext
 import           Cardano.TxGenerator.Setup.SigningKey
 
 import           Cardano.Benchmarking.OuroborosImports as Core (LocalSubmitTx, SigningKeyFile,
@@ -60,7 +61,7 @@ import           Cardano.Benchmarking.LogTypes as Core (TraceBenchTxSubmit (..),
 import           Cardano.Benchmarking.Types as Core (SubmissionErrorPolicy (..))
 import           Cardano.Benchmarking.Wallet as Wallet
 
-import           Cardano.Benchmarking.Script.Aeson (readProtocolParametersFile)
+import           Cardano.Benchmarking.Script.Aeson (prettyPrintOrdered, readProtocolParametersFile)
 import           Cardano.Benchmarking.Script.Env hiding (Error (TxGenError))
 import qualified Cardano.Benchmarking.Script.Env as Env (Error (TxGenError))
 import           Cardano.Benchmarking.Script.Types
@@ -173,7 +174,11 @@ queryRemoteProtocolParameters = do
     callQuery query = do
       res <- liftIO $ queryNodeLocalState localNodeConnectInfo (Just $ chainTipToChainPoint chainTip) query
       case res of
-        Right (Right pp) -> return pp
+        Right (Right pp) -> do
+          let pparamsFile = "protocol-parameters-queried.json"
+          liftIO $ BSL.writeFile pparamsFile $ prettyPrintOrdered pp
+          traceDebug $ "queryRemoteProtocolParameters : query result saved in: " ++ pparamsFile
+          return pp
         Right (Left err) -> liftTxGenError $ TxGenError $ show err
         Left err -> liftTxGenError $ TxGenError $ show err
   case era of
@@ -368,65 +373,17 @@ interpretPayMode payMode = do
     PayToScript scriptSpec destWallet -> do
       walletRef <- getEnvWallets destWallet
       (witness, script, scriptData, _scriptFee) <- makePlutusContext scriptSpec
-      return ( createAndStore (mkUTxOScript networkId (script, scriptData) witness) (mkWalletFundStore walletRef)
-               , Text.unpack $ serialiseAddress $ makeShelleyAddress networkId (PaymentCredentialByScript $ hashScript script) NoStakeAddress )
-
-{-
-Use a binary search to find a loop counter that maxes out the available per transaction Plutus budget.
-It is intended to be used with the the loop script from cardano-node/plutus-examples/...
-loopScriptFile is the FilePath to the Plutus script that implements the delay loop. (for example in /nix/store/).
-spendAutoScript relies on a particular calling convention of the loop script.
--}
-
-spendAutoScript ::
-     ProtocolParameters
-  -> Script PlutusScriptV1
-  -> ActionM (ScriptData, ScriptRedeemer)
-spendAutoScript protocolParameters script = do
-  perTxBudget <- case protocolParamMaxTxExUnits protocolParameters of
-    Nothing -> liftTxGenError $ TxGenError "Cannot determine protocolParamMaxTxExUnits"
-    Just b -> return b
-  traceDebug $ "Plutus auto mode : Available budget per TX: " ++ show perTxBudget
-
-  let
-    budget = ExecutionUnits
-                 (executionSteps perTxBudget `div`  2) -- TODO FIX - use _nix_inputs_per_tx
-                 (executionMemory perTxBudget `div` 2)
-  traceDebug $ "Plutus auto mode : Available budget per script run: " ++ show budget
-
-  let
-    isInLimits :: Integer -> Either TxGenError Bool
-    isInLimits n = case preExecutePlutusScript protocolParameters script (ScriptDataNumber 0) (toLoopArgument n) of
-      Left err -> Left err
-      Right use -> Right $ (executionSteps use <= executionSteps budget) && (executionMemory use <= executionMemory budget)
-    searchUpperBound = 100000 -- The highest loop count that is tried. (This is about 50 times the current mainnet limit.)
-  redeemer <- case startSearch isInLimits 0 searchUpperBound of
-    Left err -> liftTxGenError $ TxGenError "cannot find fitting redeemer: " <> err
-    Right n -> return $ toLoopArgument n
-  return (ScriptDataNumber 0, redeemer)
-  where
-    -- This is the hardcoded calling convention of the loop.plutus script.
-    -- To loop n times one has to pass n + 1_000_000 as redeemer.
-    toLoopArgument n = ScriptDataNumber $ n + 1000000
-    startSearch f a b = do
-      l <- f a
-      h <- f b
-      if l && not h then search f a b
-        else Left $ TxGenError $ "Binary search: Bad initial bounds: " ++ show (a,l,b,h)
-    search f a b
-      = if a + 1 == b then Right a
-           else do
-             let m = (a + b) `div` 2
-             test <- f m
-             if test then search f m b else search f a m
+      case script of
+        ScriptInAnyLang _ script' ->
+          return ( createAndStore (mkUTxOScript networkId (script, scriptData) witness) (mkWalletFundStore walletRef)
+                 , Text.unpack $ serialiseAddress $ makeShelleyAddress networkId (PaymentCredentialByScript $ hashScript script') NoStakeAddress )
 
 makePlutusContext :: forall era. IsShelleyBasedEra era
   => ScriptSpec
-  -> ActionM (Witness WitCtxTxIn era, Script PlutusScriptV1, ScriptData, Lovelace)
+  -> ActionM (Witness WitCtxTxIn era, ScriptInAnyLang, ScriptData, Lovelace)
 makePlutusContext scriptSpec = do
   protocolParameters <- getProtocolParameters
-  script_ <- liftIO $ Plutus.readPlutusScript $ scriptSpecFile scriptSpec
-  script <- either liftTxGenError pure script_
+  script <- liftIOSafe $ Plutus.readPlutusScript $ scriptSpecFile scriptSpec
 
   executionUnitPrices <- case protocolParamPrices protocolParameters of
     Just x -> return x
@@ -438,20 +395,43 @@ makePlutusContext scriptSpec = do
   traceDebug $ "Plutus auto mode : Available budget per TX: " ++ show perTxBudget
 
   (scriptData, scriptRedeemer, executionUnits) <- case scriptSpecBudget scriptSpec of
-    StaticScriptBudget sdata redeemer units -> return (sdata, redeemer, units)
-    CheckScriptBudget sdata redeemer unitsWant -> do
-      unitsPreRun <- preExecuteScriptAction protocolParameters script sdata redeemer
-      if unitsWant == unitsPreRun
-         then return (sdata, redeemer, unitsWant )
-         else throwE $ WalletError $ concat [
+    StaticScriptBudget sDataFile redeemerFile units withCheck -> do
+      sData <- liftIOSafe $ readScriptData sDataFile
+      redeemer <-liftIOSafe $ readScriptData redeemerFile
+      when withCheck $ do
+        unitsPreRun <- preExecuteScriptAction protocolParameters script sData redeemer
+        unless (units == unitsPreRun) $
+          throwE $ WalletError $ concat [
               " Stated execution Units do not match result of pre execution. "
-            , " Stated value : ", show unitsWant
+            , " Stated value : ", show units
             , " PreExecution result : ", show unitsPreRun
             ]
-    AutoScript -> do
-      (sdata, redeemer) <- spendAutoScript protocolParameters script
-      preRun <- preExecuteScriptAction protocolParameters script sdata redeemer
-      return (sdata, redeemer, preRun)
+      return (sData, redeemer, units)
+
+    AutoScript redeemerFile budgetFraction -> do
+      redeemer <- liftIOSafe $ readScriptData redeemerFile
+      let
+        budget = ExecutionUnits
+                    (executionSteps perTxBudget  `div` fromIntegral budgetFraction)
+                    (executionMemory perTxBudget `div` fromIntegral budgetFraction)
+
+        -- reflects properties hard-coded into the loop scripts for benchmarking:
+        -- 1. script datum is not used
+        -- 2. the loop terminates at 1_000_000 when counting down
+        -- 3. the loop's initial value is the first numerical value in the redeemer argument structure
+        autoBudget = PlutusAutoBudget
+          { autoBudgetUnits = budget
+          , autoBudgetDatum = ScriptDataNumber 0
+          , autoBudgetRedeemer = scriptDataModifyNumber (const 1_000_000) redeemer
+          }
+      traceDebug $ "Plutus auto mode : Available budget per Tx input / script run: " ++ show budget
+                   ++ " -- fraction of protocolParamMaxTxExUnits budget: 1/" ++ show budgetFraction
+
+      case plutusAutoBudgetMaxOut protocolParameters script autoBudget of
+        Left err -> liftTxGenError err
+        Right PlutusAutoBudget{..} -> do
+          preRun <- preExecuteScriptAction protocolParameters script autoBudgetDatum autoBudgetRedeemer
+          return (autoBudgetDatum, autoBudgetRedeemer, preRun)
 
   let msg = mconcat [ "Plutus Benchmark :"
                     , " Script: ", scriptSpecFile scriptSpec
@@ -471,23 +451,26 @@ makePlutusContext scriptSpec = do
          p = executionUnitPrices
          times w c = fromIntegral w % 1 * c
 
-    PlutusScript PlutusScriptV1 script' = script
-    scriptWitness :: ScriptWitness WitCtxTxIn era
-    scriptWitness = case scriptLanguageSupportedInEra (cardanoEra @era) (PlutusScriptLanguage PlutusScriptV1) of
-      Nothing -> error $ "runPlutusBenchmark: Plutus V1 scriptlanguage not supported : in era" ++ show (cardanoEra @era)
-      Just scriptLang -> PlutusScriptWitness
-                          scriptLang
-                          PlutusScriptV1
-                          (PScript script')
-                          (ScriptDatumForTxIn scriptData)
-                          scriptRedeemer
-                          executionUnits
-
-  return (ScriptWitness ScriptWitnessForSpending scriptWitness, script, scriptData, scriptFee)
+  case script of
+    ScriptInAnyLang lang (PlutusScript version script') ->
+      let
+        scriptWitness :: ScriptWitness WitCtxTxIn era
+        scriptWitness = case scriptLanguageSupportedInEra (cardanoEra @era) lang of
+          Nothing -> error $ "runPlutusBenchmark: " ++ show version ++ " not supported in era: " ++ show (cardanoEra @era)
+          Just scriptLang -> PlutusScriptWitness
+                              scriptLang
+                              version
+                              (PScript script')               -- TODO: add capability for reference inputs from Babbage era onwards
+                              (ScriptDatumForTxIn scriptData)
+                              scriptRedeemer
+                              executionUnits
+      in return (ScriptWitness ScriptWitnessForSpending scriptWitness, script, scriptData, scriptFee)
+    _ ->
+      liftTxGenError $ TxGenError "runPlutusBenchmark: only Plutus scripts supported"
 
 preExecuteScriptAction ::
      ProtocolParameters
-  -> Script PlutusScriptV1
+  -> ScriptInAnyLang
   -> ScriptData
   -> ScriptData
   -> ActionM ExecutionUnits

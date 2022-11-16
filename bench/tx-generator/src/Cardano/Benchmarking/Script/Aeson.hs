@@ -32,6 +32,11 @@ testJSONRoundTrip l = case fromJSON $ toJSON l of
   Success r -> if l == r then Nothing else Just "compare: not equal"
   Error err -> Just err
 
+prettyPrintOrdered :: ToJSON a => a -> BSL.ByteString
+prettyPrintOrdered = encodePretty' conf
+  where
+    conf = defConfig {confCompare = compare}
+
 prettyPrint :: [Action] -> BSL.ByteString
 prettyPrint = encodePretty' conf
  where

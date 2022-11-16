@@ -10,7 +10,8 @@ module Cardano.TxGenerator.Setup.Plutus
        )
        where
 
-import qualified Data.Map.Strict as Map
+import qualified Data.Map as Map
+import           GHC.Natural (Natural)
 
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
@@ -22,66 +23,138 @@ import           Cardano.Api.Shelley (PlutusScript (..), ProtocolParameters (..)
                    protocolParamCostModels, toPlutusData)
 import           Cardano.Ledger.Alonzo.TxInfo (exBudgetToExUnits)
 
-import qualified Plutus.V1.Ledger.Api as Plutus
-import           Plutus.V1.Ledger.Contexts (ScriptContext (..), ScriptPurpose (..), TxInfo (..),
-                   TxOutRef (..))
+import qualified Plutus.V1.Ledger.Api as PlutusV1
+import qualified Plutus.V2.Ledger.Api as PlutusV2
+import qualified PlutusTx.AssocMap as PlutusMap (empty)
 
 import           Cardano.TxGenerator.Types
 
 
-readPlutusScript :: FilePath -> IO (Either TxGenError (Script PlutusScriptV1))
+readPlutusScript :: FilePath -> IO (Either TxGenError ScriptInAnyLang)
 readPlutusScript fp
-  = do
-  res <- runExceptT $ readFileScriptInAnyLang fp
-  return $ case res of
-    Left err -> Left $ ApiError err
-    Right (ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV1) script) -> Right script
-    Right (ScriptInAnyLang lang _) -> Left $ TxGenError $ "readPlutusScript: only PlutusScriptV1 currently supported, found: " ++ show lang
+  = runExceptT $ do
+    script <- firstExceptT ApiError $
+      readFileScriptInAnyLang fp
+    case script of
+      ScriptInAnyLang (PlutusScriptLanguage _) _ -> pure script
+      ScriptInAnyLang lang _ -> throwE $ TxGenError $ "readPlutusScript: only PlutusScript supported, found: " ++ show lang
 
 preExecutePlutusScript ::
      ProtocolParameters
+  -> ScriptInAnyLang
+  -> ScriptData
+  -> ScriptRedeemer
+  -> Either TxGenError ExecutionUnits
+preExecutePlutusScript protocolParameters script@(ScriptInAnyLang scriptLang _) datum redeemer
+  = runExcept $ do
+    costModel <- hoistMaybe (TxGenError $ "preExecutePlutusScript: cost model unavailable for: " ++ show scriptLang) $
+      case script of
+        ScriptInAnyLang _ (PlutusScript lang _) ->
+          AnyPlutusScriptVersion lang `Map.lookup` protocolParamCostModels protocolParameters
+        _ -> Nothing
+
+    case script of
+      ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV1) script' ->
+        preExecutePlutusV1 protocolVersion script' datum redeemer costModel
+      ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV2) script' ->
+        preExecutePlutusV2 protocolVersion script' datum redeemer costModel
+      _ ->
+        throwE $ TxGenError $ "preExecutePlutusScript: script not supported: " ++ show scriptLang
+  where
+    protocolVersion = protocolParamProtocolVersion protocolParameters
+
+preExecutePlutusV1 ::
+     (Natural, Natural)
   -> Script PlutusScriptV1
   -> ScriptData
-  -> ScriptData
-  -> Either TxGenError ExecutionUnits
-preExecutePlutusScript protocolParameters (PlutusScript _ (PlutusScriptSerialised script)) datum redeemer
-  = runExcept $ do
-    CostModel costModel <- hoistMaybe (TxGenError "preExecutePlutusScript: costModel unavailable") $
-      AnyPlutusScriptVersion PlutusScriptV1 `Map.lookup` protocolParamCostModels protocolParameters
+  -> ScriptRedeemer
+  -> CostModel
+  -> Except TxGenError ExecutionUnits
+preExecutePlutusV1 (majVer, minVer) (PlutusScript _ (PlutusScriptSerialised script)) datum redeemer (CostModel costModel)
+  = do
     evaluationContext <- firstExceptT PlutusError $
-      Plutus.mkEvaluationContext costModel
+      PlutusV1.mkEvaluationContext costModel
 
     let
-      (majVer, minVer) = protocolParamProtocolVersion protocolParameters
-      protocolVersion = Plutus.ProtocolVersion (fromIntegral majVer) (fromIntegral minVer)
+      protocolVersion = PlutusV1.ProtocolVersion (fromIntegral majVer) (fromIntegral minVer)
 
     exBudget <- firstExceptT PlutusError $
       hoistEither $
-        snd $ Plutus.evaluateScriptCounting protocolVersion Plutus.Verbose evaluationContext script
+        snd $ PlutusV1.evaluateScriptCounting protocolVersion PlutusV1.Verbose evaluationContext script
           [ toPlutusData datum
           , toPlutusData redeemer
-          , Plutus.toData dummyContext
+          , PlutusV1.toData dummyContext
           ]
 
-    x <- hoistMaybe (TxGenError "preExecutePlutusScript: could not convert to execution units") $
+    x <- hoistMaybe (TxGenError "preExecutePlutusV1: could not convert to execution units") $
       exBudgetToExUnits exBudget
     return $ fromAlonzoExUnits x
   where
-    dummyContext :: ScriptContext
-    dummyContext = ScriptContext dummyTxInfo (Spending dummyOutRef)
+    dummyContext :: PlutusV1.ScriptContext
+    dummyContext = PlutusV1.ScriptContext dummyTxInfo (PlutusV1.Spending dummyOutRef)
 
-    dummyOutRef :: TxOutRef
-    dummyOutRef = TxOutRef (Plutus.TxId "") 0
-    dummyTxInfo :: TxInfo
-    dummyTxInfo = TxInfo
-      { txInfoInputs = []
-      , txInfoOutputs = []
-      , txInfoFee = mempty
-      , txInfoMint = mempty
-      , txInfoDCert = []
-      , txInfoWdrl = []
-      , txInfoValidRange = Plutus.always
-      , txInfoSignatories = []
-      , txInfoData = []
-      , txInfoId = Plutus.TxId ""
+    dummyOutRef :: PlutusV1.TxOutRef
+    dummyOutRef = PlutusV1.TxOutRef (PlutusV1.TxId "") 0
+
+    dummyTxInfo :: PlutusV1.TxInfo
+    dummyTxInfo = PlutusV1.TxInfo
+      { PlutusV1.txInfoInputs = []
+      , PlutusV1.txInfoOutputs = []
+      , PlutusV1.txInfoFee = mempty
+      , PlutusV1.txInfoMint = mempty
+      , PlutusV1.txInfoDCert = []
+      , PlutusV1.txInfoWdrl = []
+      , PlutusV1.txInfoValidRange = PlutusV1.always
+      , PlutusV1.txInfoSignatories = []
+      , PlutusV1.txInfoData = []
+      , PlutusV1.txInfoId = PlutusV1.TxId ""
+      }
+
+preExecutePlutusV2 ::
+     (Natural, Natural)
+  -> Script PlutusScriptV2
+  -> ScriptData
+  -> ScriptRedeemer
+  -> CostModel
+  -> Except TxGenError ExecutionUnits
+preExecutePlutusV2 (majVer, minVer) (PlutusScript _ (PlutusScriptSerialised script)) datum redeemer (CostModel costModel)
+  = do
+    evaluationContext <- firstExceptT PlutusError $
+      PlutusV2.mkEvaluationContext costModel
+
+    let
+      protocolVersion = PlutusV2.ProtocolVersion (fromIntegral majVer) (fromIntegral minVer)
+
+    exBudget <- firstExceptT PlutusError $
+      hoistEither $
+        snd $ PlutusV2.evaluateScriptCounting protocolVersion PlutusV2.Verbose evaluationContext script
+          [ toPlutusData datum
+          , toPlutusData redeemer
+          , PlutusV2.toData dummyContext
+          ]
+
+    x <- hoistMaybe (TxGenError "preExecutePlutusV2: could not convert to execution units") $
+      exBudgetToExUnits exBudget
+    return $ fromAlonzoExUnits x
+  where
+    dummyContext :: PlutusV2.ScriptContext
+    dummyContext = PlutusV2.ScriptContext dummyTxInfo (PlutusV2.Spending dummyOutRef)
+
+    dummyOutRef :: PlutusV2.TxOutRef
+    dummyOutRef = PlutusV2.TxOutRef (PlutusV2.TxId "") 0
+
+    dummyTxInfo :: PlutusV2.TxInfo
+    dummyTxInfo = PlutusV2.TxInfo
+      { PlutusV2.txInfoInputs = []
+      , PlutusV2.txInfoReferenceInputs = []
+      , PlutusV2.txInfoOutputs = []
+      , PlutusV2.txInfoFee = mempty
+      , PlutusV2.txInfoMint = mempty
+      , PlutusV2.txInfoDCert = []
+      , PlutusV2.txInfoWdrl = PlutusMap.empty
+      , PlutusV2.txInfoValidRange = PlutusV2.always
+      , PlutusV2.txInfoSignatories = []
+      , PlutusV2.txInfoRedeemers = PlutusMap.empty
+      , PlutusV2.txInfoData = PlutusMap.empty
+      , PlutusV2.txInfoId = PlutusV2.TxId ""
       }
