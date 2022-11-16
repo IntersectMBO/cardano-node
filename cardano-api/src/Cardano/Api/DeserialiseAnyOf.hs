@@ -520,6 +520,9 @@ data SomeAddressVerificationKey
   | APaymentVerificationKey         (VerificationKey PaymentKey)
   | APaymentExtendedVerificationKey (VerificationKey PaymentExtendedKey)
   | AGenesisUTxOVerificationKey     (VerificationKey GenesisUTxOKey)
+  | AGenesisExtendedVerificationKey (VerificationKey GenesisExtendedKey)
+  | AGenesisDelegateExtendedVerificationKey
+                                    (VerificationKey GenesisDelegateExtendedKey)
   | AKesVerificationKey             (VerificationKey KesKey)
   | AVrfVerificationKey             (VerificationKey VrfKey)
   | AStakeVerificationKey           (VerificationKey StakeKey)
