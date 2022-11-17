@@ -143,7 +143,7 @@ library
                       , cardano-ledger-shelley ^>= 0.1
                       , set-algebra ^>= 0.1
                       , split
-                      , cardano-strict-containers
+                      , cardano-strict-containers ^>= 0.1
                       , text
                       , time
                       , transformers
