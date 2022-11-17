@@ -103,7 +103,7 @@ library
                      , formatting
                      , generic-monoid
                      , ghc-prim
-                     , io-classes
+                     , io-classes ^>= 0.3
                      , network
                      , network-mux
                      , optparse-applicative-fork
