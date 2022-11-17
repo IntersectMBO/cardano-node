@@ -645,6 +645,10 @@ instance HasTextEnvelope (SigningKey GenesisKey) where
         proxy :: Proxy (Shelley.DSIGN StandardCrypto)
         proxy = Proxy
 
+instance CastVerificationKeyRole GenesisKey PaymentKey where
+    castVerificationKey (GenesisVerificationKey (Shelley.VKey vk)) =
+      PaymentVerificationKey (Shelley.VKey vk)
+
 
 --
 -- Shelley genesis extended ed25519 keys

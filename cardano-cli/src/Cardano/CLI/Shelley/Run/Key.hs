@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -6,7 +7,6 @@ module Cardano.CLI.Shelley.Run.Key
   , SomeSigningKey(..)
   , renderShelleyKeyCmdError
   , runKeyCmd
-  , SomeExtendedVerificationKey(..)
 
     -- * Exports for testing
   , decodeBech32
@@ -37,7 +37,9 @@ import           Cardano.Api.Shelley
 
 import qualified Cardano.CLI.Byron.Key as Byron
 import           Cardano.CLI.Shelley.Commands
-import           Cardano.CLI.Shelley.Key (InputDecodeError, readSigningKeyFileAnyOf)
+import           Cardano.CLI.Shelley.Key (VerificationKeyTextOrFile (..),
+                   VerificationKeyTextOrFileError, readSigningKeyFileAnyOf,
+                   readVerificationKeyTextOrFileAnyOf, renderVerificationKeyTextOrFileError)
 import           Cardano.CLI.Types (SigningKeyFile (..), VerificationKeyFile (..))
 
 
@@ -55,6 +57,8 @@ data ShelleyKeyCmdError
   | ShelleyKeyCmdCardanoAddressSigningKeyFileError
       !(FileError CardanoAddressSigningKeyConversionError)
   | ShelleyKeyCmdNonLegacyKey !FilePath
+  | ShelleyKeyCmdExpectedExtendedVerificationKey SomeAddressVerificationKey
+  | ShelleyKeyCmdVerificationKeyReadError VerificationKeyTextOrFileError
   deriving Show
 
 renderShelleyKeyCmdError :: ShelleyKeyCmdError -> Text
@@ -72,6 +76,9 @@ renderShelleyKeyCmdError err =
       Text.pack (displayError fileErr)
     ShelleyKeyCmdNonLegacyKey fp -> "Signing key at: " <> Text.pack fp <> " is not a legacy Byron signing key and should \
                                     \ not need to be converted."
+    ShelleyKeyCmdVerificationKeyReadError e -> renderVerificationKeyTextOrFileError e
+    ShelleyKeyCmdExpectedExtendedVerificationKey someVerKey ->
+      "Expected an extended verification key but got: " <> renderSomeAddressVerificationKey someVerKey
 
 runKeyCmd :: KeyCmd -> ExceptT ShelleyKeyCmdError IO ()
 runKeyCmd cmd =
@@ -80,7 +87,7 @@ runKeyCmd cmd =
       runGetVerificationKey skf vkf
 
     KeyNonExtendedKey evkf vkf ->
-      runNonExtendedKey evkf vkf
+      runConvertToNonExtendedKey evkf vkf
 
     KeyConvertByronKey mPassword keytype skfOld skfNew ->
       runConvertByronKey mPassword keytype skfOld skfNew
@@ -200,55 +207,55 @@ readSigningKeyFile skFile =
       ]
 
 
-runNonExtendedKey :: VerificationKeyFile
-                  -> VerificationKeyFile
-                  -> ExceptT ShelleyKeyCmdError IO ()
-runNonExtendedKey evkf (VerificationKeyFile vkf) = do
-    evk <- firstExceptT ShelleyKeyCmdReadFileError $
-             readExtendedVerificationKeyFile evkf
-    withNonExtendedKey evk $ \vk ->
-      firstExceptT ShelleyKeyCmdWriteFileError . newExceptT $
-        writeFileTextEnvelope vkf Nothing vk
+runConvertToNonExtendedKey
+  :: VerificationKeyFile
+  -> VerificationKeyFile
+  -> ExceptT ShelleyKeyCmdError IO ()
+runConvertToNonExtendedKey evkf (VerificationKeyFile vkf) =
+  writeVerificationKey =<< readExtendedVerificationKeyFile evkf
+ where
+  -- TODO: Expose a function specifically for this purpose
+  -- and explain the extended verification keys can be converted
+  -- to their non-extended counterparts however this is NOT the case
+  -- for extended signing keys
 
-withNonExtendedKey :: SomeExtendedVerificationKey
-                   -> (forall keyrole. Key keyrole => VerificationKey keyrole -> a)
-                   -> a
-withNonExtendedKey (APaymentExtendedVerificationKey vk) f =
-    f (castVerificationKey vk :: VerificationKey PaymentKey)
+  writeVerificationKey
+    :: SomeAddressVerificationKey
+    -> ExceptT ShelleyKeyCmdError IO ()
+  writeVerificationKey ssk =
+    case ssk of
+      APaymentExtendedVerificationKey vk ->
+        writeToDisk vkf (castVerificationKey vk :: VerificationKey PaymentKey)
+      AStakeExtendedVerificationKey vk ->
+        writeToDisk vkf (castVerificationKey vk :: VerificationKey StakeKey)
+      AGenesisExtendedVerificationKey vk ->
+        writeToDisk vkf (castVerificationKey vk :: VerificationKey GenesisKey)
+      AGenesisDelegateExtendedVerificationKey vk ->
+        writeToDisk vkf (castVerificationKey vk :: VerificationKey GenesisDelegateKey)
+      nonExtendedKey -> left $ ShelleyKeyCmdExpectedExtendedVerificationKey nonExtendedKey
 
-withNonExtendedKey (AStakeExtendedVerificationKey vk) f =
-    f (castVerificationKey vk :: VerificationKey StakeKey)
 
-withNonExtendedKey (AGenesisExtendedVerificationKey vk) f =
-    f (castVerificationKey vk :: VerificationKey GenesisKey)
+  writeToDisk
+   :: Key keyrole
+   => FilePath -> VerificationKey keyrole -> ExceptT ShelleyKeyCmdError IO ()
+  writeToDisk vkf' vk = firstExceptT ShelleyKeyCmdWriteFileError . newExceptT
+                          $ writeFileTextEnvelope vkf' Nothing vk
 
-withNonExtendedKey (AGenesisDelegateExtendedVerificationKey vk) f =
-    f (castVerificationKey vk :: VerificationKey GenesisDelegateKey)
-
-
-data SomeExtendedVerificationKey
-  = APaymentExtendedVerificationKey (VerificationKey PaymentExtendedKey)
-  | AStakeExtendedVerificationKey   (VerificationKey StakeExtendedKey)
-  | AGenesisExtendedVerificationKey (VerificationKey GenesisExtendedKey)
-  | AGenesisDelegateExtendedVerificationKey
-                                    (VerificationKey GenesisDelegateExtendedKey)
 
 readExtendedVerificationKeyFile
   :: VerificationKeyFile
-  -> ExceptT (FileError TextEnvelopeError) IO SomeExtendedVerificationKey
-readExtendedVerificationKeyFile (VerificationKeyFile evkfile) =
-    newExceptT $ readFileTextEnvelopeAnyOf fileTypes evkfile
-  where
-    fileTypes =
-      [ FromSomeType (AsVerificationKey AsPaymentExtendedKey)
-                      APaymentExtendedVerificationKey
-      , FromSomeType (AsVerificationKey AsStakeExtendedKey)
-                      AStakeExtendedVerificationKey
-      , FromSomeType (AsVerificationKey AsGenesisExtendedKey)
-                      AGenesisExtendedVerificationKey
-      , FromSomeType (AsVerificationKey AsGenesisDelegateExtendedKey)
-                      AGenesisDelegateExtendedVerificationKey
-      ]
+  -> ExceptT ShelleyKeyCmdError IO SomeAddressVerificationKey
+readExtendedVerificationKeyFile evkfile = do
+  vKey <- firstExceptT ShelleyKeyCmdVerificationKeyReadError
+            . newExceptT $ readVerificationKeyTextOrFileAnyOf
+                         $ VktofVerificationKeyFile evkfile
+  case vKey of
+      k@APaymentExtendedVerificationKey{} -> return k
+      k@AStakeExtendedVerificationKey{} -> return k
+      k@AGenesisExtendedVerificationKey{} -> return k
+      k@AGenesisDelegateExtendedVerificationKey{} -> return k
+      nonExtendedKey ->
+        left $ ShelleyKeyCmdExpectedExtendedVerificationKey nonExtendedKey
 
 
 runConvertByronKey
