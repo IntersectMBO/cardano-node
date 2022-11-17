@@ -59,12 +59,12 @@ library
                        , containers
                        , contra-tracer
                        , extra
-                       , io-classes
+                       , io-classes >= 0.2
                        , ouroboros-network-framework
                        , serialise
                        , stm
                        , text
-                       , typed-protocols
+                       , typed-protocols >= 0.1
                        , typed-protocols-cborg
 
 test-suite test
@@ -90,7 +90,7 @@ test-suite test
   build-depends:         aeson
                        , bytestring
                        , contra-tracer
-                       , io-classes
+                       , io-classes >= 0.2
                        , io-sim
                        , ouroboros-network-framework
                        , trace-forward
@@ -98,7 +98,7 @@ test-suite test
                        , serialise
                        , tasty
                        , tasty-quickcheck
-                       , typed-protocols
+                       , typed-protocols >= 0.1
                        , text
 
   ghc-options:         -rtsopts

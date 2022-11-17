@@ -135,7 +135,7 @@ library
                        , directory
                        , ekg
                        , ekg-core
-                       , ekg-forward
+                       , ekg-forward >= 0.2
                        , extra
                        , filepath
                        , mime-mail
@@ -200,7 +200,7 @@ library demo-forwarder-lib
                        , contra-tracer
                        , directory
                        , ekg-core
-                       , ekg-forward
+                       , ekg-forward >= 0.2
                        , extra
                        , filepath
                        , generic-data
@@ -292,7 +292,7 @@ test-suite cardano-tracer-test
                        , contra-tracer
                        , directory
                        , ekg-core
-                       , ekg-forward
+                       , ekg-forward >= 0.2
                        , extra
                        , filepath
                        , generic-data
@@ -346,7 +346,7 @@ test-suite cardano-tracer-test-ext
                        , contra-tracer
                        , directory
                        , ekg-core
-                       , ekg-forward
+                       , ekg-forward >= 0.2
                        , extra
                        , filepath
                        , generic-data

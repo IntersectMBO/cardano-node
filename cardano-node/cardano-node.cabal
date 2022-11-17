@@ -131,19 +131,19 @@ library
                       , base16-bytestring
                       , bytestring
                       , cardano-api
-                      , cardano-data
+                      , cardano-data >= 0.1
                       , cardano-git-rev
-                      , cardano-crypto-class
-                      , cardano-crypto-wrapper
-                      , cardano-ledger-core
-                      , cardano-ledger-byron
-                      , cardano-ledger-shelley
-                      , cardano-ledger-shelley-ma
-                      , cardano-ledger-alonzo
-                      , cardano-ledger-babbage
+                      , cardano-crypto-class >= 2.0
+                      , cardano-crypto-wrapper >= 1.4
+                      , cardano-ledger-core >= 0.1
+                      , cardano-ledger-byron >= 0.1
+                      , cardano-ledger-shelley >= 0.1
+                      , cardano-ledger-shelley-ma >= 0.1
+                      , cardano-ledger-alonzo >= 0.1
+                      , cardano-ledger-babbage >= 0.1
                       , cardano-prelude
-                      , cardano-protocol-tpraos
-                      , cardano-slotting
+                      , cardano-protocol-tpraos >= 0.1
+                      , cardano-slotting >= 0.1
                       , cborg >= 0.2.4 && < 0.3
                       , contra-tracer
                       , containers
@@ -155,7 +155,7 @@ library
                       , generic-data
                       , hostname
                       , iproute
-                      , io-classes
+                      , io-classes >= 0.2
                       , iohk-monitoring
                       , lobemo-backend-aggregation
                       , lobemo-backend-ekg
@@ -185,7 +185,7 @@ library
                       , trace-resources
                       , transformers
                       , transformers-except
-                      , typed-protocols
+                      , typed-protocols >= 0.1
                       , yaml
 
 executable cardano-node
@@ -220,7 +220,7 @@ test-suite cardano-node-test
                       , cardano-api
                       , cardano-node
                       , cardano-prelude
-                      , cardano-slotting
+                      , cardano-slotting >= 0.1
                       , directory
                       , hedgehog
                       , hedgehog-corpus
