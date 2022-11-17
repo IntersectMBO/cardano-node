@@ -126,6 +126,7 @@ library
                      , unordered-containers
                      , utf8-string
                      , vector
+                     , cardano-strict-containers == 0.1.0.1
 
 executable locli
   import:              base
