@@ -161,7 +161,7 @@ library
                       , cardano-ledger-shelley ^>= 0.1
                       , small-steps ^>= 0.1
                       , stm
-                      , cardano-strict-containers
+                      , cardano-strict-containers ^>= 0.1
                       , text
                       , time
                       , transformers

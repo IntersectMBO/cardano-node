@@ -137,14 +137,14 @@ library
                       , cardano-api
                       , cardano-data ^>= 0.1
                       , cardano-git-rev
-                      , cardano-crypto-class
-                      , cardano-crypto-wrapper
-                      , cardano-ledger-core
-                      , cardano-ledger-byron
-                      , cardano-ledger-shelley
-                      , cardano-ledger-shelley-ma
-                      , cardano-ledger-alonzo
-                      , cardano-ledger-babbage
+                      , cardano-crypto-class ^>= 2.0
+                      , cardano-crypto-wrapper ^>= 1.4
+                      , cardano-ledger-core ^>= 0.1
+                      , cardano-ledger-byron ^>= 0.1
+                      , cardano-ledger-shelley ^>= 0.1
+                      , cardano-ledger-shelley-ma ^>= 0.1
+                      , cardano-ledger-alonzo ^>= 0.1
+                      , cardano-ledger-babbage ^>= 0.1
                       , cardano-prelude
                       , cardano-protocol-tpraos ^>= 0.1
                       , cardano-slotting ^>= 0.1
