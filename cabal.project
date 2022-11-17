@@ -105,7 +105,6 @@ constraints:
   , prettyprinter-configurable == 0.1.0.0
   , plutus-ghc-stub == 8.6.5
   , word-array == 0.1.0.0
-  , word-array == 0.1.0.0
 
 extra-packages:
     ouroboros-consensus-cardano-tools == 0.1.0.0
@@ -147,4 +146,3 @@ source-repository-package
   location: https://github.com/denisshevchenko/threepenny-gui
   tag: 4ec92ded05ccf59ba4a874be4b404ac1b6d666b6
   --sha256: 00fvvaf4ir4hskq4a6gggbh2wmdvy8j8kn6s4m1p1vlh8m8mq514
-
