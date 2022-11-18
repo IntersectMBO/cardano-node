@@ -22,11 +22,10 @@ import Control.Applicative              ((<|>))
 import Control.Concurrent.Async         (forConcurrently, forConcurrently_, mapConcurrently, mapConcurrently_)
 import Control.DeepSeq                  qualified as DS
 import Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
-import Data.Aeson                       (FromJSON, ToJSON, encode, eitherDecode)
+import Data.Aeson                       (ToJSON, encode)
 import Data.ByteString.Lazy.Char8       qualified as LBS
 import Data.List                        (span)
 import Data.Text                        qualified as T
-import Data.Text.Short                  (fromText)
 import Data.Vector                      (Vector)
 import Data.Vector                      qualified as Vec
 import GHC.Base                         (build)
@@ -36,7 +35,6 @@ import System.FilePath                  qualified as F
 
 import Ouroboros.Consensus.Util.Time
 
-import Cardano.Analysis.Ground
 import Cardano.Ledger.BaseTypes         (StrictMaybe (..), fromSMaybe)
 
 
@@ -51,6 +49,31 @@ instance Alternative StrictMaybe where
 smaybe :: b -> (a -> b) -> StrictMaybe a -> b
 smaybe x _  SNothing = x
 smaybe _ f (SJust x) = f x
+
+isSJust :: SMaybe a -> Bool
+isSJust = \case
+  SNothing -> False
+  SJust{}  -> True
+
+isSNothing :: SMaybe a -> Bool
+isSNothing = \case
+  SNothing -> True
+  SJust{}  -> False
+
+{-# INLINE strictMaybe #-}
+strictMaybe :: Maybe a -> SMaybe a
+strictMaybe = \case
+  Nothing -> SNothing
+  Just a  -> SJust a
+
+{-# INLINE lazySMaybe #-}
+lazySMaybe :: SMaybe a -> Maybe a
+lazySMaybe = \case
+  SNothing -> Nothing
+  SJust a  -> Just a
+
+catSMaybes :: [SMaybe a] -> [a]
+catSMaybes xs = [x | SJust x <- xs]
 
 mapSMaybe          :: (a -> StrictMaybe b) -> [a] -> [b]
 mapSMaybe _ []     = []
@@ -112,70 +135,11 @@ progress key = putStr . T.pack . \case
   L xs -> printf "{ \"%s\": \"%s\" }\n" key (Cardano.Prelude.intercalate "\", \"" xs)
   J x  -> printf "{ \"%s\": %s }\n" key (LBS.unpack $ encode x)
 
--- /path/to/logs-HOSTNAME.some.ext -> HOSTNAME
-hostFromLogfilename :: JsonLogfile -> Host
-hostFromLogfilename (JsonLogfile f) =
-  Host $ fromText . stripPrefixHard "logs-" . T.pack . F.dropExtensions . F.takeFileName $ f
- where
-   stripPrefixHard :: Text -> Text -> Text
-   stripPrefixHard p s = fromMaybe s $ T.stripPrefix p s
-
-hostDeduction :: HostDeduction -> (JsonLogfile -> Host)
-hostDeduction = \case
-  HostFromLogfilename -> hostFromLogfilename
-
 -- Dumping to files
 --
 replaceExtension :: FilePath -> String -> FilePath
 replaceExtension f new = F.dropExtension f <> "." <> new
 
-dumpObject :: ToJSON a => String -> a -> JsonOutputFile a -> ExceptT Text IO ()
-dumpObject ident x (JsonOutputFile f) = liftIO $ do
-  progress ident (Q f)
-  withFile f WriteMode $ \hnd -> LBS.hPutStrLn hnd $ encode x
-
-dumpObjects :: ToJSON a => String -> [a] -> JsonOutputFile [a] -> ExceptT Text IO ()
-dumpObjects ident xs (JsonOutputFile f) = liftIO $ do
-  progress ident (Q f)
-  withFile f WriteMode $ \hnd -> do
-    forM_ xs $ LBS.hPutStrLn hnd . encode
-
-dumpAssociatedObjects :: ToJSON a => String -> [(JsonLogfile, a)] -> ExceptT Text IO ()
-dumpAssociatedObjects ident xs = liftIO $
-  flip mapConcurrently_ xs $
-    \(JsonLogfile f, x) -> do
-        progress ident (Q f)
-        withFile (replaceExtension f $ ident <> ".json") WriteMode $ \hnd ->
-          LBS.hPutStrLn hnd $ encode x
-
-readAssociatedObjects :: forall a.
-  FromJSON a => String -> [JsonLogfile] -> ExceptT Text IO [(JsonLogfile, a)]
-readAssociatedObjects ident fs = firstExceptT T.pack . newExceptT . fmap sequence . fmap (fmap sequence) $
-  flip mapConcurrently fs $
-    \jf@(JsonLogfile f) -> do
-        x <- eitherDecode @a <$> LBS.readFile (replaceExtension f $ ident <> ".json")
-        progress ident (Q f)
-        pure (jf, x)
-
-dumpAssociatedObjectStreams :: ToJSON a => String -> [(JsonLogfile, [a])] -> ExceptT Text IO ()
-dumpAssociatedObjectStreams ident xss = liftIO $
-  flip mapConcurrently_ xss $
-    \(JsonLogfile f, xs) -> do
-      withFile (replaceExtension f $ ident <> ".json") WriteMode $ \hnd -> do
-        forM_ xs $ LBS.hPutStrLn hnd . encode
-
-dumpText :: String -> [Text] -> TextOutputFile -> ExceptT Text IO ()
-dumpText ident xs (TextOutputFile f) = liftIO $ do
-  progress ident (Q f)
-  withFile f WriteMode $ \hnd -> do
-    forM_ xs $ hPutStrLn hnd
-
-dumpAssociatedTextStreams :: String -> [(JsonLogfile, [Text])] -> ExceptT Text IO ()
-dumpAssociatedTextStreams ident xss = liftIO $
-  flip mapConcurrently_ xss $
-    \(JsonLogfile f, xs) -> do
-      withFile (replaceExtension f $ ident <> ".txt") WriteMode $ \hnd -> do
-        forM_ xs $ hPutStrLn hnd
 
 spans :: forall a. (a -> Bool) -> [a] -> [Vector a]
 spans f = go []

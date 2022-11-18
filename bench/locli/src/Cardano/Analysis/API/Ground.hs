@@ -1,19 +1,18 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-module Cardano.Analysis.Ground
-  ( module Cardano.Analysis.Ground
+module Cardano.Analysis.API.Ground
+  ( module Cardano.Analysis.API.Ground
   , module Data.DataDomain
   , module Data.Time.Clock
   , BlockNo (..), EpochNo (..), SlotNo (..)
   )
 where
 
-import Prelude                          (String, fail, show)
+import Prelude                          (fail, show)
 import Cardano.Prelude                  hiding (head)
 import Unsafe.Coerce                    qualified as Unsafe
 
-import Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 import Data.Aeson
 import Data.Aeson.Types                 (toJSONKeyText)
 import Data.Attoparsec.Text             qualified as Atto
@@ -26,11 +25,13 @@ import Data.Time.Clock                  (UTCTime, NominalDiffTime)
 import Options.Applicative
 import Options.Applicative              qualified as Opt
 import Quiet                            (Quiet (..))
+import System.FilePath                  qualified as F
 
 import Cardano.Slotting.Slot            (EpochNo(..), SlotNo(..))
 import Ouroboros.Network.Block          (BlockNo(..))
 
 import Data.DataDomain
+import Cardano.Util
 
 
 newtype TId = TId { unTId :: ShortText }
@@ -275,3 +276,62 @@ optWord optname desc def =
     <> metavar "INT"
     <> help desc
     <> value def
+-- /path/to/logs-HOSTNAME.some.ext -> HOSTNAME
+hostFromLogfilename :: JsonLogfile -> Host
+hostFromLogfilename (JsonLogfile f) =
+  Host $ fromText . stripPrefixHard "logs-" . T.pack . F.dropExtensions . F.takeFileName $ f
+ where
+   stripPrefixHard :: Text -> Text -> Text
+   stripPrefixHard p s = fromMaybe s $ T.stripPrefix p s
+
+hostDeduction :: HostDeduction -> (JsonLogfile -> Host)
+hostDeduction = \case
+  HostFromLogfilename -> hostFromLogfilename
+
+dumpObject :: ToJSON a => String -> a -> JsonOutputFile a -> ExceptT Text IO ()
+dumpObject ident x (JsonOutputFile f) = liftIO $ do
+  progress ident (Q f)
+  withFile f WriteMode $ \hnd -> LBS.hPutStrLn hnd $ encode x
+
+dumpObjects :: ToJSON a => String -> [a] -> JsonOutputFile [a] -> ExceptT Text IO ()
+dumpObjects ident xs (JsonOutputFile f) = liftIO $ do
+  progress ident (Q f)
+  withFile f WriteMode $ \hnd -> do
+    forM_ xs $ LBS.hPutStrLn hnd . encode
+
+dumpAssociatedObjects :: ToJSON a => String -> [(JsonLogfile, a)] -> ExceptT Text IO ()
+dumpAssociatedObjects ident xs = liftIO $
+  flip mapConcurrently_ xs $
+    \(JsonLogfile f, x) -> do
+        progress ident (Q f)
+        withFile (replaceExtension f $ ident <> ".json") WriteMode $ \hnd ->
+          LBS.hPutStrLn hnd $ encode x
+
+readAssociatedObjects :: forall a.
+  FromJSON a => String -> [JsonLogfile] -> ExceptT Text IO [(JsonLogfile, a)]
+readAssociatedObjects ident fs = firstExceptT T.pack . newExceptT . fmap sequence . fmap (fmap sequence) $
+  flip mapConcurrently fs $
+    \jf@(JsonLogfile f) -> do
+        x <- eitherDecode @a <$> LBS.readFile (replaceExtension f $ ident <> ".json")
+        progress ident (Q f)
+        pure (jf, x)
+
+dumpAssociatedObjectStreams :: ToJSON a => String -> [(JsonLogfile, [a])] -> ExceptT Text IO ()
+dumpAssociatedObjectStreams ident xss = liftIO $
+  flip mapConcurrently_ xss $
+    \(JsonLogfile f, xs) -> do
+      withFile (replaceExtension f $ ident <> ".json") WriteMode $ \hnd -> do
+        forM_ xs $ LBS.hPutStrLn hnd . encode
+
+dumpText :: String -> [Text] -> TextOutputFile -> ExceptT Text IO ()
+dumpText ident xs (TextOutputFile f) = liftIO $ do
+  progress ident (Q f)
+  withFile f WriteMode $ \hnd -> do
+    forM_ xs $ hPutStrLn hnd
+
+dumpAssociatedTextStreams :: String -> [(JsonLogfile, [Text])] -> ExceptT Text IO ()
+dumpAssociatedTextStreams ident xss = liftIO $
+  flip mapConcurrently_ xss $
+    \(JsonLogfile f, xs) -> do
+      withFile (replaceExtension f $ ident <> ".txt") WriteMode $ \hnd -> do
+        forM_ xs $ hPutStrLn hnd

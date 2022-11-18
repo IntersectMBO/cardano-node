@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE StrictData #-}
-module Cardano.Analysis.Context (module Cardano.Analysis.Context) where
+module Cardano.Analysis.API.Context (module Cardano.Analysis.API.Context) where
 
 import Cardano.Prelude
 

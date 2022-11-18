@@ -56,6 +56,10 @@ We compare {% for run in runs %}{%if !run.first%}{%if !run.last%}, {%else%} and 
 
 *** Cluster performance charts
 
+{% for m in dictionary.dClusterPerf %}
+{%include "chart.ede" with args= { "title": m.value.deDescription, "metric": m.value.deField, "logscale": m.value.deLogScale, "yrange": m.value.deRange, "ylabel": m.value.deShortDesc + " " + m.value.deUnit }%}
+    - {{ m.value.deShortDesc }} ({{ m.value.deField }}) :: {{ m.value.deDescription }}
+{#
 {%include "chart.ede" with args= { "title": "Kernel-reported CPU usage",           "metric": "CentiCpu",      "logscale": false, "yrange": "1:200", "ylabel": "CPU usage, %" }%}
 {%include "chart.ede" with args= { "title": "RTS memory allocation rate",          "metric": "Alloc", "logscale": false, "yrange": "0:5000", "ylabel": "Memory allocation rate, MB/s" }%}
 {%include "chart.ede" with args= { "title": "Kernel reported memory usage",        "metric": "RSS",        "logscale": false, "ylabel": "RSS, MB" }%}
@@ -66,6 +70,7 @@ We compare {% for run in runs %}{%if !run.first%}{%if !run.last%}, {%else%} and 
 {%include "chart.ede" with args= { "title": "Block adoption, 80% of cluster",      "metric": "cdf0.80",          "logscale": true }%}
 {%include "chart.ede" with args= { "title": "Block adoption, 90% of cluster",      "metric": "cdf0.90",          "logscale": true }%}
 {%include "chart.ede" with args= { "title": "Block adoption, 96% of cluster",      "metric": "cdf0.96",          "logscale": true }%}
+#}
 
 * Appendix B: data dictionary
 

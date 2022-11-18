@@ -19,15 +19,11 @@ import System.Posix.Files               qualified as IO
 
 import Cardano.Analysis.API
 import Cardano.Analysis.BlockProp
-import Cardano.Analysis.ChainFilter
-import Cardano.Analysis.Context
-import Cardano.Analysis.Field
-import Cardano.Analysis.Ground
 import Cardano.Analysis.MachPerf
-import Cardano.Analysis.Run
 import Cardano.Render
-import Cardano.Unlog.LogObject          hiding (Text)
 import Cardano.Report
+import Cardano.Unlog.LogObject          hiding (Text)
+import Cardano.Util
 import Data.CDF
 
 data CommandError
@@ -492,7 +488,8 @@ runChainCommand s@State{sRun=Just run, sObjLists=Just objs}
     fmap (mapAndUnzip redistribute) <$> collectSlotStats run nonIgnored
     & newExceptT
     & firstExceptT (CommandError c)
-  pure s { sScalars = Just scalars, sSlotsRaw = Just (fmap (fmap (deltifySlotStats (genesis run))) <$> slotsRaw) }
+  pure s { sScalars  = Just scalars
+         , sSlotsRaw = Just (fmap (fmap (deltifySlotStats (genesis run))) <$> slotsRaw) }
 runChainCommand _ c@CollectSlots{} = missingCommandData c
   ["run metadata & genesis", "lifted logobjects"]
 
@@ -705,7 +702,7 @@ runChainCommand s c@(Compare ede mTmpl outf@(TextOutputFile outfp) runs) = do
   dumpText "report" [orgReport] outf
     & firstExceptT (CommandError c)
 
-  let tmplPath = Cardano.Analysis.API.replaceExtension outfp "ede"
+  let tmplPath = Cardano.Util.replaceExtension outfp "ede"
   liftIO . unlessM (IO.fileExist tmplPath) $
     BS.writeFile tmplPath tmpl
 
@@ -718,7 +715,7 @@ missingCommandData c xs =
 _reportBanner :: [FilterName] -> FilePath -> Text
 _reportBanner fnames inputfp = mconcat
   [ "input: ", logfileRunIdentifier (pack inputfp), " "
-  , "locli: ", gitRev getVersion, " "
+  , "locli: ", gitRev getLocliVersion, " "
   , "filters: ", T.intercalate " " (unFilterName <$> fnames)
   ]
  where

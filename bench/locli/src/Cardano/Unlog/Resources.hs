@@ -8,18 +8,18 @@ module Cardano.Unlog.Resources
   , updateResAccums
   , extractResAccums
   , computeResCDF
-  , ResContinuity
-  , discardObsoleteValues
+  , zeroObsoleteValues
   -- * Re-exports
   , Resources(..)
   ) where
 
 import Cardano.Prelude
 
-import Data.Accum
-import Data.CDF
 import Data.Time.Clock (UTCTime)
 
+import Data.Accum
+import Data.CDF
+import Cardano.Util
 import Cardano.Logging.Resources.Types
 
 deriving instance Foldable Resources
@@ -59,34 +59,29 @@ extractResAccums = (aCurrent <$>)
 computeResCDF ::
   forall a
   .  [Centile]
-  -> Resources (a -> Maybe Word64)
+  -> (a -> SMaybe (Resources Word64))
   -> [a]
   -> Resources (CDF I Word64)
-computeResCDF centiles projs xs =
-  compDist <$> projs
- where
-   compDist :: (a -> Maybe Word64) -> CDF I Word64
-   compDist proj = cdf centiles
-     (catMaybes . toList $ proj <$> xs)
+computeResCDF centiles proj xs =
+  cdf centiles
+  <$> traverse identity (proj `mapSMaybe` xs)
 
-type ResContinuity a = Resources (a -> Maybe a)
-
-discardObsoleteValues :: ResContinuity a
-discardObsoleteValues =
+zeroObsoleteValues :: Num a => Resources (a -> a)
+zeroObsoleteValues =
   Resources
-  { rCentiCpu    = Just
-  , rCentiGC     = Just
-  , rCentiMut    = Just
-  , rGcsMajor    = const Nothing
-  , rGcsMinor    = const Nothing
-  , rRSS         = Just
-  , rHeap        = Just
-  , rLive        = Just
-  , rAlloc       = const Nothing
-  , rCentiBlkIO  = Just
-  , rNetRd       = const Nothing
-  , rNetWr       = const Nothing
-  , rFsRd        = const Nothing
-  , rFsWr        = const Nothing
-  , rThreads     = Just
+  { rCentiCpu    = identity
+  , rCentiGC     = identity
+  , rCentiMut    = identity
+  , rGcsMajor    = const 0
+  , rGcsMinor    = const 0
+  , rRSS         = identity
+  , rHeap        = identity
+  , rLive        = identity
+  , rAlloc       = const 0
+  , rCentiBlkIO  = identity
+  , rNetRd       = const 0
+  , rNetWr       = const 0
+  , rFsRd        = const 0
+  , rFsWr        = const 0
+  , rThreads     = identity
   }

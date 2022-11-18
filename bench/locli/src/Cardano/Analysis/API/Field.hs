@@ -1,18 +1,93 @@
 {-# LANGUAGE TypeInType #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-module Cardano.Analysis.Field (module Cardano.Analysis.Field) where
+module Cardano.Analysis.API.Field (module Cardano.Analysis.API.Field) where
 
-import Prelude                         (error)
 import Cardano.Prelude          hiding (head, show)
 
 import Data.CDF
 import Data.String                     (fromString)
 import Data.Text                       (unpack)
 
-import Cardano.Analysis.Ground
-import Cardano.Analysis.Run
 import Cardano.JSON
+import Cardano.Util
+import Cardano.Analysis.API.Ground
+import Cardano.Analysis.API.Run
 
+
+data Scale
+  = Lin
+  | Log
+  deriving (Eq, Show)
+
+data Range
+  = Free   -- No range restriction
+  | Z0 Int -- 1-based range
+  | Z1 Int -- 1-based range
+  deriving (Eq, Show)
+
+data Unit
+  = Sec  -- Second
+  | Hz   -- Hertz
+  | B    -- Byte
+  | KB   -- Kibibyte: 2^10
+  | MB   -- Mibibyte: 2^20
+  | KBs  -- Kibibyte/s
+  | MBs  -- Mibibyte/s
+  | Epo  -- Epoch
+  | Slo  -- Slots
+  | Blk  -- Blocks
+  | Hsh  -- Hash
+  | Hos  -- Host
+  | Sig  -- Sign: +/-
+  | Pct  -- Unspecified ratio, percents
+  | Ev   -- Events
+  | Ix   -- Unspecified index
+  | Len  -- Unspecified length
+  | Rto  -- Unspecified ratio
+  | Uni  -- Unspecified unit
+  deriving (Eq, Show)
+
+renderUnit :: Unit -> Text
+renderUnit = \case
+    Sec -> "sec"
+    Hz  -> "Hz"
+    B   -> "B"
+    KB  -> "KB"
+    MB  -> "MB"
+    KBs -> "KB/s"
+    MBs -> "MB/s"
+    Epo -> "epoch"
+    Slo -> "slots"
+    Blk -> "blocks"
+    Hsh -> "hash"
+    Hos -> "host"
+    Sig -> "+/-"
+    Pct -> "%"
+    Ev  -> ""
+    Ix  -> ""
+    Len -> ""
+    Rto -> ""
+    Uni -> ""
+
+data Width
+  = W0
+  | W1
+  | W2
+  | W3
+  | W4
+  | W5
+  | W6
+  | W7
+  | W8
+  | W9
+  | W10
+  | W11
+  | W12
+  deriving (Eq, Enum, Ord, Show)
+
+{-# INLINE width #-}
+width :: Width -> Int
+width = fromEnum
 
 -- | Encapsulate all metadata about a metric (a projection) of
 --   a certain projectible (a kind of analysis results):
@@ -21,11 +96,13 @@ import Cardano.JSON
 --     - third parameter is the projectible indexed by arity
 data Field (s :: (Type -> Type) -> k -> Type) (p :: Type -> Type) (a :: k)
   = Field
-  { fWidth       :: Int
-  , fLeftPad     :: Int
-  , fId          :: Text
+  { fId          :: Text
   , fHead1       :: Text
   , fHead2       :: Text
+  , fWidth       :: Width
+  , fUnit        :: Unit
+  , fScale       :: Scale
+  , fRange       :: Range
   , fSelect      :: s p a
   , fShortDesc   :: Text
   , fDescription :: Text
@@ -48,12 +125,13 @@ data DSelect p a
   | DDeltaT (a p -> CDF p NominalDiffTime)
 
 data ISelect p a
-  = IInt    (a -> Int)
-  | IWord64 (a -> Word64)
-  | IFloat  (a -> Double)
-  | IDeltaT (a -> NominalDiffTime)
-  | IText   (a -> Text)
-
+  = IInt     (a -> Int)
+  | IWord64  (a -> Word64)
+  | IWord64M (a -> SMaybe Word64)
+  | IFloat   (a -> Double)
+  | IDeltaT  (a -> NominalDiffTime)
+  | IDeltaTM (a -> SMaybe NominalDiffTime)
+  | IText    (a -> Text)
 
 filterFields :: CDFFields a p
              => (Field DSelect p a -> Bool) -> [Field DSelect p a]

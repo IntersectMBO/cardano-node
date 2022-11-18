@@ -22,13 +22,8 @@ import System.Posix.User
 import Text.EDE hiding (Id)
 
 import Data.CDF
-
+import Cardano.Util
 import Cardano.Analysis.API
-import Cardano.Analysis.Context
-import Cardano.Analysis.Field
-import Cardano.Analysis.Ground
-import Cardano.Analysis.Run hiding (Version)
-import Cardano.Analysis.Run qualified as Run
 
 
 newtype Author   = Author   { unAuthor   :: Text } deriving newtype (FromJSON, ToJSON)
@@ -40,7 +35,7 @@ data Report
     { rAuthor       :: !Author
     , rDate         :: !UTCTime
     , rRevision     :: !Revision
-    , rLocliVersion :: !Run.Version
+    , rLocliVersion :: !LocliVersion
     , rTarget       :: !Version
     }
 instance ToJSON Report where
@@ -57,7 +52,7 @@ getReport rTarget mrev = do
   rAuthor <- (getUserEntryForName =<< getLoginName) <&> Author . T.pack . userGecos
   rDate <- getCurrentTime
   let rRevision = fromMaybe (Revision 1) mrev
-      rLocliVersion = Run.getVersion
+      rLocliVersion = getLocliVersion
   pure Report{..}
 
 data Workload
@@ -196,5 +191,5 @@ generate (InputDir ede) mReport (cp, bp, base) rest = do
      , "base"       .= b
      , "runs"       .= rs
      , "sections"   .= (liftTmplSection <$> sections)
-     , "dictionary" .= dataDictionary
+     , "dictionary" .= metricDictionary
      ]

@@ -1,9 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE StrictData #-}
-
-{- HLINT ignore "Use head" -}
-
-module Cardano.Analysis.ChainFilter (module Cardano.Analysis.ChainFilter) where
+module Cardano.Analysis.API.ChainFilter (module Cardano.Analysis.API.ChainFilter) where
 
 import Cardano.Prelude hiding (head)
 
@@ -14,10 +11,8 @@ import Options.Applicative
 import Options.Applicative              qualified as Opt
 import System.FilePath.Posix                        (takeBaseName)
 
-import Cardano.Analysis.Ground
 import Cardano.Util
-
--- import Cardano.Analysis.Chain
+import Cardano.Analysis.API.Ground
 
 
 newtype JsonFilterFile

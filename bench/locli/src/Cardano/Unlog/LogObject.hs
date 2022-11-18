@@ -29,7 +29,7 @@ import Data.Vector qualified as V
 
 import Cardano.Logging.Resources.Types
 
-import Cardano.Analysis.Ground
+import Cardano.Analysis.API.Ground
 import Cardano.Util
 
 import Data.Accum (zeroUTCTime)
@@ -199,7 +199,7 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
   , (,,,) "TraceAddBlockEvent.AddedToCurrentChain" "ChainDB.AddBlockEvent.AddedToCurrentChain" "ChainDB.AddBlockEvent.AddedToCurrentChain" $
     \v -> LOBlockAddedToCurrentChain
             <$> ((v .: "newtip")     <&> hashFromPoint)
-            <*> pure Nothing
+            <*> pure SNothing
             <*> (v .:? "chainLengthDelta"
                 -- Compat for node versions 1.27 and older:
                  <&> fromMaybe 1)
@@ -207,7 +207,7 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
   , (,,,) "TraceAdoptedBlock" "Forge.AdoptedBlock" "Forge.Loop.AdoptedBlock" $
     \v -> LOBlockAddedToCurrentChain
             <$> v .: "blockHash"
-            <*> ((v .: "blockSize") <&> Just)
+            <*> ((v .: "blockSize") <&> SJust)
             <*> pure 1
 
   -- Ledger snapshots:
@@ -318,7 +318,7 @@ data LOBody
   -- Adoption:
   | LOBlockAddedToCurrentChain
     { loBlock            :: !Hash
-    , loSize             :: !(Maybe Int)
+    , loSize             :: !(SMaybe Int)
     , loLength           :: !Int
     }
   -- Ledger snapshots:
@@ -330,7 +330,7 @@ data LOBody
   | LOMempoolTxs !Word64
   | LOMempoolRejectedTx
   -- Generator:
-  | LOGeneratorSummary !Bool !Word64 !NominalDiffTime (Vector Double)
+  | LOGeneratorSummary !Bool !Word64 !NominalDiffTime ![Double]
   -- Everything else:
   | LOAny !LOAnyType !Object
   | LODecodeError

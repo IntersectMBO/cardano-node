@@ -2,23 +2,28 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Cardano.Render (module Cardano.Render) where
 
-import Prelude                  (head, id, show)
-import Cardano.Prelude          hiding (head, show)
+import Prelude                          (head, id, show)
+import Cardano.Prelude                  hiding (head, show)
 
-import Data.Aeson               (ToJSON)
-import Data.Aeson.Text          (encodeToLazyText)
-import Data.List                (dropWhileEnd)
-import Data.Text                qualified as T
-import Data.Text.Lazy           qualified as LT
+import Data.Aeson                       (ToJSON)
+import Data.Aeson.Text                  (encodeToLazyText)
+import Data.List                        (dropWhileEnd)
+import Data.Text                        qualified as T
+import Data.Text.Lazy                   qualified as LT
+import Options.Applicative              qualified as Opt
 
 import Data.CDF
 
-import Cardano.Analysis.Field
-import Cardano.Analysis.Ground
-import Cardano.Analysis.Run
 import Cardano.Org
 import Cardano.Util
+import Cardano.Analysis.API
 
+
+justifyHead, justifyData, justifyCentile, justifyProp :: Int -> Text -> Text
+justifyHead    w = T.center        w ' '
+justifyData    w = T.justifyLeft   w ' '
+justifyCentile w = T.justifyLeft   w ' '
+justifyProp    w = T.center        w ' '
 
 renderCentiles :: Int -> [Centile] -> [Text]
 renderCentiles wi = fmap (T.take wi . T.pack . printf "%f" . unCentile)
@@ -29,20 +34,21 @@ renderFieldCentiles x cdfProj Field{..} =
     DInt    (cdfProj . ($x) ->ds) -> ds <&> fmap (p.printf "%d")
     DWord64 (cdfProj . ($x) ->ds) -> ds <&> fmap (p.printf "%d")
     DFloat  (cdfProj . ($x) ->ds) -> ds <&> fmap (p.printf "%F")
-    DDeltaT (cdfProj . ($x) ->ds) -> ds <&> fmap (T.justifyRight fWidth ' '.T.dropWhileEnd (== 's').p.show)
+    DDeltaT (cdfProj . ($x) ->ds) -> ds <&> fmap (justifyData (width fWidth).T.dropWhileEnd (== 's').p.show)
  where p = T.pack
 
 renderFieldCentilesWidth :: a p -> (forall v. Divisible v => CDF p v -> [[v]]) -> Field DSelect p a -> [[Text]]
 renderFieldCentilesWidth x cdfProj Field{..} =
   case fSelect of
-    DInt    (cdfProj . ($x) ->ds) -> ds <&> fmap (T.pack.printf "%*d" fWidth)
-    DWord64 (cdfProj . ($x) ->ds) -> ds <&> fmap (T.pack.printf "%*d" fWidth)
-    DFloat  (cdfProj . ($x) ->ds) -> ds <&> fmap (renderFloatStr fWidth.printf "%*F" fWidth)
+    DInt    (cdfProj . ($x) ->ds) -> ds <&> fmap (T.center (width fWidth) ' '.T.pack.printf "%d")
+    DWord64 (cdfProj . ($x) ->ds) -> ds <&> fmap (T.center (width fWidth) ' '.T.pack.printf "%d")
+    DFloat  (cdfProj . ($x) ->ds) -> ds <&> fmap (renderFloatStr fWidth.printf "%*F" (width fWidth + 1))
     DDeltaT (cdfProj . ($x) ->ds) -> ds <&> fmap (renderFloatStr fWidth.dropWhileEnd (== 's').show)
 
-renderFloatStr :: Int -> String -> Text
-renderFloatStr w = T.justifyRight w ' '. T.take w . T.pack . stripLeadingZero
+renderFloatStr :: Width -> String -> Text
+renderFloatStr w = justifyData w'. T.take w' . T.pack . stripLeadingZero
  where
+   w' = width w
    stripLeadingZero = \case
      '0':xs@('.':_) -> xs
      xs -> xs
@@ -63,30 +69,36 @@ renderTimeline run flt comments xs =
    entry :: a -> Text
    entry v = renderLineDist $
      \Field{..} ->
+       let wi = width fWidth
+           showDt = T.pack.take wi.printf "%-*s" (width fWidth).dropWhileEnd (== 's').show
+           showW64 = T.pack . printf "%*d" wi
+       in
        case fSelect of
-         IInt    (($v)->x) -> T.pack $ printf "%*d" fWidth x
-         IWord64 (($v)->x) -> T.pack $ printf "%*d" fWidth x
-         IFloat  (($v)->x) -> T.pack $ take fWidth $ printf "%*F" (fWidth - 2) x
-         IDeltaT (($v)->x) -> T.pack $ take fWidth $ printf "%-*s" fWidth $ dropWhileEnd (== 's') $ show x
-         IText   (($v)->x) -> T.take fWidth . T.dropWhileEnd (== 's') $ x
+         IInt     (($v)->x) -> T.pack $ printf "%*d" wi x
+         IWord64M (($v)->x) -> smaybe "---" showW64 x
+         IWord64  (($v)->x) ->              showW64 x
+         IFloat   (($v)->x) -> T.pack $ take wi $ printf "%*F"  (width fWidth - 2) x
+         IDeltaTM (($v)->x) -> smaybe "---" showDt x
+         IDeltaT  (($v)->x) ->              showDt x
+         IText    (($v)->x) -> T.take wi . T.dropWhileEnd (== 's') $ x
 
    fields :: [Field ISelect I a]
    fields = filter flt $ timelineFields run
 
    head1, head2 :: Maybe Text
    head1 = if all ((== 0) . T.length . fHead1) fields then Nothing
-           else Just (renderLineHead1 (uncurry T.take . ((+1) . fWidth &&& fHead1)))
+           else Just (renderLineHead (uncurry T.take . ((+1).width.fWidth&&&fHead1)))
    head2 = if all ((== 0) . T.length . fHead2) fields then Nothing
-           else Just (renderLineHead2 (uncurry T.take . ((+1) . fWidth &&& fHead2)))
+           else Just (renderLineHead (uncurry T.take . ((+1).width.fWidth&&&fHead2)))
 
-   renderLineHead1 = mconcat . renderLine' (const 0) ((+ 1) . fWidth)
-   renderLineHead2 = mconcat . renderLine' fLeftPad  ((+ 1) . fWidth)
-   renderLineDist = T.intercalate " " . renderLine' fLeftPad fWidth
+   -- Different strategies: fields are forcefully separated,
+   --                       whereas heads can use the extra space
+   renderLineHead = mconcat . renderLine' justifyHead (toEnum.(+ 1).width.fWidth)
+   renderLineDist = T.intercalate " " . renderLine' justifyData fWidth
 
-   renderLine' ::
-     (Field ISelect I a -> Int) -> (Field ISelect I a -> Int) -> (Field ISelect I a -> Text) -> [Text]
-   renderLine' lpfn wfn rfn = renderField lpfn wfn rfn <$> fields
-   renderField lpfn wfn rfn f = T.replicate (lpfn f) " " <> T.center (wfn f) ' ' (rfn f)
+   renderLine' :: (Int -> Text -> Text) -> (Field ISelect I a -> Width) -> (Field ISelect I a -> Text) -> [Text]
+   renderLine' jfn wfn rfn = fields
+                             <&> \f -> jfn (width $ wfn f) (rfn f)
 
 mapRenderCDF :: forall p a. CDFFields a p
              => (Field DSelect p a -> Bool) -> Maybe [Centile]
@@ -132,6 +144,14 @@ data CDF2Aspect
   | OfInterCDF         -- ^ Inter-sample (i.e. inter-CDF) stats.
   deriving (Show, Bounded, Enum)
 
+parseCDF2Aspect :: Opt.Parser CDF2Aspect
+parseCDF2Aspect =
+  [ Opt.flag' OfOverallDataset  (Opt.long "overall"    <> Opt.help "Overall dataset statistical summary")
+  , Opt.flag' OfInterCDF        (Opt.long "inter-cdf"  <> Opt.help "Inter-sample (i.e. inter-CDF) stats")
+  ] & \case
+        (x:xs) -> foldl (<|>) x xs
+        [] -> error "Crazy world, begone. 1"
+
 modeFilename :: TextOutputFile -> Text -> RenderFormat -> TextOutputFile
 modeFilename orig@(TextOutputFile f) name = \case
   AsJSON    -> orig
@@ -171,7 +191,7 @@ renderAnalysisCDFs a@Anchor{..} fieldSelr _c2a centileSelr AsOrg x =
     , tRowHeaders     = percSpecs <&> T.take 6 . T.pack . printf "%.4f" . unCentile
     , tSummaryHeaders = ["avg", "samples"]
     , tSummaryValues  = [ fields <&>
-                          \f@Field{..} -> mapField x (T.take (fWidth + 1) . T.pack . printf "%f" . cdfAverageVal) f
+                          \f@Field{..} -> mapField x (T.take (width fWidth + 1) . T.pack . printf "%f" . cdfAverageVal) f
                         , fields <&>
                           \f@Field{}   -> mapField x (T.pack . printf "%d" . cdfSize) f
                         ] & transpose
@@ -265,18 +285,19 @@ renderAnalysisCDFs a fieldSelr _c2a centiSelr AsPretty x =
  where
    head1, head2 :: Maybe Text
    head1 = if all ((== 0) . T.length . fHead1) fields then Nothing
-           else Just (renderLineHead1 (uncurry T.take . ((+1) . fWidth &&& fHead1)))
+           else Just (renderLineHead1 (uncurry T.take . ((+1) . width . fWidth &&& fHead1)))
    head2 = if all ((== 0) . T.length . fHead2) fields then Nothing
-           else Just (renderLineHead2 (uncurry T.take . ((+1) . fWidth &&& fHead2)))
-   renderLineHead1 = mconcat . ("       ":) . renderLine' (const 0) ((+ 1) . fWidth)
-   renderLineHead2 = mconcat . (" %tile ":) . renderLine' fLeftPad  ((+ 1) . fWidth)
+           else Just (renderLineHead2 (uncurry T.take . ((+1) . width . fWidth &&& fHead2)))
+   renderLineHead1 = mconcat . ("      ":) . renderLine' justifyHead (toEnum . (+ 1) . width . fWidth)
+   renderLineHead2 = mconcat . (" %tile":) . renderLine' justifyHead (toEnum . (+ 1) . width . fWidth)
 
    pLines :: [Text]
    pLines = fields
             <&>
-            fmap (T.intercalate " ") .
+            -- fmap (T.intercalate " ") .
+            fmap T.concat .
             renderFieldCentilesWidth x cdfSamplesProps
-            & ((T.justifyLeft 6 ' ' <$> renderCentiles 6 centiles) :)
+            & ((justifyCentile 6 <$> renderCentiles 6 centiles) :)
             & transpose
             & fmap (T.intercalate " ")
 
@@ -296,32 +317,31 @@ renderAnalysisCDFs a fieldSelr _c2a centiSelr AsPretty x =
 
    sizeAvg :: [Text]
    sizeAvg = fmap (T.intercalate " ")
-     [ (T.center 6 ' ' "avg" :) $
-       (\f -> flip (renderField fLeftPad fWidth) f $ const $
+     [ (justifyCentile 6 "avg" :) $
+       (\f -> flip (renderField justifyData fWidth) f $ const $
                 mapSomeFieldCDF
                   (fit (fWidth f) .T.pack . printf "%F" . cdfAverageVal)  x (fSelect f))
        <$> fields
-     , (T.center 6 ' ' "size" :) $
-       (\f -> flip (renderField fLeftPad fWidth) f $ const $
+     , (justifyProp 6 "size" :) $
+       (\f -> flip (renderField justifyHead fWidth) f $ const $
                 mapSomeFieldCDF
                   (fit (fWidth f) . T.pack . show . cdfSize)    x (fSelect f))
        <$> fields
      ]
 
-   fit :: Int -> Text -> Text
-   fit w t = if T.length t > w &&
-                -- Drop all non-floats, and floats with significant digit overflowing:
-                maybe True (> w) (T.findIndex (== '.') t)
-             then "..."
-             else T.take w t
+   fit :: Width -> Text -> Text
+   fit (width -> w) t =
+     if T.length t > w &&
+        -- Drop all non-floats, and floats with significant digit overflowing:
+        maybe True (> w) (T.findIndex (== '.') t)
+     then "..."
+     else T.take w t
 
-   renderLine' ::
-     (Field DSelect p a -> Int) -> (Field DSelect p a -> Int) -> (Field DSelect p a -> Text) -> [Text]
-   renderLine' lefPad width rend = renderField lefPad width rend <$> fields
-   renderField :: forall f. (f -> Int) -> (f -> Int) -> (f -> Text) -> f -> Text
-   renderField _lefPad width rend f =
-     --T.replicate (lefPad f) " " <>
-     T.center (width f) ' ' (rend f)
+   renderLine' :: (Int -> Text -> Text) -> (Field DSelect p a -> Width) -> (Field DSelect p a -> Text) -> [Text]
+   renderLine' jfn wfn rfn  = renderField jfn wfn rfn <$> fields
+
+   renderField :: forall f. (Int -> Text -> Text) -> (f -> Width) -> (f -> Text) -> f -> Text
+   renderField jfn wfn rend f = jfn (width $ wfn f) (rend f)
 
    -- populationIndices :: [Int]
    -- populationIndices = [1..maxPopulationSize]

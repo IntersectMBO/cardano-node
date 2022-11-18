@@ -1,11 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE StrictData #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing -Wno-orphans #-}
-module Cardano.Analysis.Run
-  ( module Cardano.Analysis.Run
-  , module Cardano.Analysis.Version
-  )
-where
+module Cardano.Analysis.API.Run (module Cardano.Analysis.API.Run) where
 
 import Cardano.Prelude
 
@@ -16,11 +12,11 @@ import Data.Text qualified as T
 import Data.Time.Clock hiding (secondsToNominalDiffTime)
 import Data.Time.Clock.POSIX
 
-import Cardano.Analysis.ChainFilter
-import Cardano.Analysis.Context
-import Cardano.Analysis.Ground
-import Cardano.Analysis.Version
 import Cardano.Util
+import Cardano.Analysis.API.ChainFilter
+import Cardano.Analysis.API.Context
+import Cardano.Analysis.API.Ground
+import Cardano.Analysis.API.LocliVersion
 
 -- | Explain the poor human a little bit of what was going on:
 data Anchor
@@ -29,7 +25,7 @@ data Anchor
   , aFilters :: ([FilterName], [ChainFilter])
   , aSlots   :: Maybe (DataDomain SlotNo)
   , aBlocks  :: Maybe (DataDomain BlockNo)
-  , aVersion :: Cardano.Analysis.Version.Version
+  , aVersion :: Cardano.Analysis.API.LocliVersion.LocliVersion
   , aWhen    :: UTCTime
   }
 
@@ -38,7 +34,7 @@ runAnchor Run{..} = tagsAnchor [tag metadata]
 
 tagsAnchor :: [Text] -> UTCTime -> ([FilterName], [ChainFilter]) -> Maybe (DataDomain SlotNo) -> Maybe (DataDomain BlockNo) -> Anchor
 tagsAnchor aRuns aWhen aFilters aSlots aBlocks =
-  Anchor { aVersion = getVersion, .. }
+  Anchor { aVersion = getLocliVersion, .. }
 
 renderAnchor :: Anchor -> Text
 renderAnchor a = mconcat
