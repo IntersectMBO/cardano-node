@@ -62,7 +62,7 @@ case "${op}" in
         cabal build all --dry-run --builddir="$temp_builddir" >&2
         popd > /dev/null
 
-        plan_summary=$($(dirname $0)/cabal-plan-summary.sh "$temp_builddir/dist-newstyle/cache/plan.json")
+        plan_summary=$($(dirname $0)/cabal-plan-summary.sh "$temp_builddir/cache/plan.json")
 
         # Construct a filter that filters out entries that aren't in the list of pkgs,
         # and then construct the list of pkgs as a json object to pass to jq
