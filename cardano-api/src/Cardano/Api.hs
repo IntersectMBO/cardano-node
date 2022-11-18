@@ -598,9 +598,15 @@ module Cardano.Api (
     -- *** Local tx submission
     LocalTxSubmissionClient,
     TxInMode(..),
+    TxValidationError(..),
     TxValidationErrorInMode(..),
     runLocalTxSubmissionClient,
     submitTxToNodeLocal,
+
+    -- TODO: Probably move elsewhere
+    PlutusScriptFailure(..),
+    isPlutusFailureExecutionFailure,
+    eraInModeToEra,
 
     -- *** Local state query
     LocalStateQueryClient(..),

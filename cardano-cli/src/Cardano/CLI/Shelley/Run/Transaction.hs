@@ -30,6 +30,7 @@ import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 import           Data.Type.Equality (TestEquality (..))
 import qualified System.IO as IO
 
@@ -67,7 +68,7 @@ data ShelleyTxCmdError
       -- ^ Era
   | ShelleyTxCmdBootstrapWitnessError !ShelleyBootstrapWitnessError
   | ShelleyTxCmdSocketEnvError !EnvSocketError
-  | ShelleyTxCmdTxSubmitError !Text
+  | ShelleyTxCmdTxSubmitError !Text !(Maybe PlutusScriptFailure)
   | ShelleyTxCmdTxSubmitErrorEraMismatch !EraMismatch
   | ShelleyTxCmdTxFeatureMismatch !AnyCardanoEra !TxFeature
   | ShelleyTxCmdTxBodyError !TxBodyError
@@ -127,7 +128,12 @@ renderShelleyTxCmdError err =
       "Byron key witness was used as a required signer: " <> show fp
     ShelleyTxCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyTxCmdSocketEnvError envSockErr -> renderEnvSocketError envSockErr
-    ShelleyTxCmdTxSubmitError res -> "Error while submitting tx: " <> res
+    ShelleyTxCmdTxSubmitError res mPlutusFailure ->
+      case mPlutusFailure of
+        Just pFailure ->
+          Text.decodeUtf8 (prettyPrintJSON pFailure) <> "\n" <>
+          "Error while submitting tx: " <> res
+        Nothing ->  "Error while submitting tx: " <> res
     ShelleyTxCmdTxSubmitErrorEraMismatch EraMismatch{ledgerEraName, otherEraName} ->
       "The era of the node and the tx do not match. " <>
       "The node is running in the " <> ledgerEraName <>
@@ -1072,7 +1078,13 @@ runTxSubmit (AnyConsensusModeParams cModeParams) network txFile = do
       Net.Tx.SubmitSuccess -> liftIO $ putTextLn "Transaction successfully submitted."
       Net.Tx.SubmitFail reason ->
         case reason of
-          TxValidationErrorInMode err _eraInMode -> left . ShelleyTxCmdTxSubmitError . Text.pack $ show err
+          TxValidationErrorInMode err _ -> do
+            case err of
+              ByronTxValidationError{} ->
+                left $ ShelleyTxCmdTxSubmitError (Text.pack $ show err) Nothing
+              ShelleyTxValidationError sbe errs ->
+                let plutusScriptFailure = isPlutusFailureExecutionFailure sbe errs
+                in left $ ShelleyTxCmdTxSubmitError (Text.pack $ show err) plutusScriptFailure
           TxValidationEraMismatch mismatchErr -> left $ ShelleyTxCmdTxSubmitErrorEraMismatch mismatchErr
 
 -- ----------------------------------------------------------------------------
