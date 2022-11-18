@@ -209,9 +209,9 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdScriptWitnessError e -> renderScriptWitnessError e
     ShelleyTxCmdScriptDataError e -> renderScriptDataError e
     ShelleyTxCmdProtocolParamsError e -> renderProtocolParamsError e
-    ShelleyTxCmdCddlError _ -> error "TODO"
-    ShelleyTxCmdCddlWitnessError _ -> error "TODO"
-    ShelleyTxCmdRequiredSignerError _ -> error ""
+    ShelleyTxCmdCddlError e -> Text.pack $ displayError e
+    ShelleyTxCmdCddlWitnessError e -> Text.pack $ displayError e
+    ShelleyTxCmdRequiredSignerError e -> Text.pack $ displayError e
     -- Validation errors
     ShelleyTxCmdAuxScriptsValidationError e ->
       Text.pack $ displayError e
