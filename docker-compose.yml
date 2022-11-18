@@ -7,7 +7,7 @@ services:
       - NETWORK=${NETWORK:-mainnet}
       - CARDANO_NODE_SOCKET_PATH=${CARDANO_NODE_SOCKET_PATH:-/ipc/node.socket}
     volumes:
-      - node-db:/data/db
+      - ./node-db:/data/db
       - node-ipc:/ipc
     logging:
       driver: "json-file"
