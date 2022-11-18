@@ -211,7 +211,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           -- version that this node will declare that it understands, when it
           -- is in the Babbage era. Since Babbage is currently the last known
           -- protocol version then this is also the Babbage protocol version.
-          Praos.babbageProtVer = ProtVer 7 0,
+          Praos.babbageProtVer = ProtVer 8 0,
           Praos.babbageMaxTxCapacityOverrides =
             TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
