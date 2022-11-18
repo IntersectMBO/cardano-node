@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -33,10 +34,17 @@ module Cardano.CLI.Shelley.Run.Read
   -- * Tx
   , CddlError
   , CddlTx(..)
+  , CompleteOrIncompleteTx(..)
   , IncompleteTx(..)
+  , TxOrTxBody(..)
+  , TxFormat(..)
   , readFileTx
   , readFileTxBody
+  , readInputTxBodyOrTxFile
+  , renderCddlError
   , readCddlTx -- For testing purposes
+  , viewTxOrTxBody
+  , viewInputFormat
 
   -- * Tx witnesses
   , ReadWitnessSigningDataError(..)
@@ -62,6 +70,7 @@ import qualified Data.Aeson as Aeson
 import           Data.Bifunctor (first)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.Functor ((<&>))
 import qualified Data.List as List
 import qualified Data.Text as Text
 import           Data.Word
@@ -75,7 +84,7 @@ import qualified Cardano.Binary as CBOR
 import           Data.Text (Text)
 
 import           Cardano.CLI.Shelley.Key
-import           Cardano.CLI.Shelley.Parsers
+import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Types
 
 -- Metadata
@@ -458,16 +467,56 @@ readFileTx fp = do
 -- while UnwitnessedCliFormattedTxBody is CLI formatted TxBody and
 -- needs to be key witnessed.
 
-data IncompleteTx
-  = UnwitnessedCliFormattedTxBody (InAnyCardanoEra TxBody)
-  | IncompleteCddlFormattedTx (InAnyCardanoEra Tx)
+data IncompleteTx era
+  = UnwitnessedCliFormattedTxBody (TxBody era)
+  | IncompleteCddlFormattedTx (Tx era)
 
-readFileTxBody :: FilePath -> IO (Either CddlError IncompleteTx)
-readFileTxBody fp = do
-  eTxBody <- readFileInAnyCardanoEra AsTxBody fp
-  case eTxBody of
-    Left e -> fmap (IncompleteCddlFormattedTx . unCddlTx) <$> acceptTxCDDLSerialisation e
-    Right txBody -> return $ Right $ UnwitnessedCliFormattedTxBody txBody
+readFileTxBody :: FilePath -> IO (Either CddlError (InAnyCardanoEra IncompleteTx))
+readFileTxBody fp = readFileInAnyCardanoEra AsTxBody fp >>= \case
+  Right txBody -> heavyReturn UnwitnessedCliFormattedTxBody txBody
+  Left e -> do
+    acceptTxCDDLSerialisation e >>= \case
+      Right (CddlTx tx) -> heavyReturn IncompleteCddlFormattedTx tx
+      Left err -> return $ Left err
+  where
+    heavyReturn
+      :: (forall era. IsCardanoEra era => thing1 era -> thing2 era)
+      -> InAnyCardanoEra thing1
+      -> IO (Either CddlError (InAnyCardanoEra thing2))
+    heavyReturn a b  = return $ Right $ liftAnyCardanoEra a b
+
+data CompleteOrIncompleteTx era
+  = CompleteTx (Tx era)
+  | IncompleteTx (IncompleteTx era)
+
+readInputTxBodyOrTxFile :: InputTxBodyOrTxFile -> IO (Either CddlError (InAnyCardanoEra CompleteOrIncompleteTx))
+readInputTxBodyOrTxFile = \case
+  InputTxBodyFile (TxBodyFile fp) -> heavyLift IncompleteTx $ readFileTxBody fp
+  InputTxFile (TxFile fp) -> heavyLift CompleteTx $ readFileTx fp
+  where
+    heavyLift
+      :: (forall era. IsCardanoEra era => thing1 era -> thing2 era)
+      -> IO (Either CddlError (InAnyCardanoEra thing1))
+      -> IO (Either CddlError (InAnyCardanoEra thing2))
+    heavyLift a b  = b <&> fmap (liftAnyCardanoEra a)
+
+data TxOrTxBody era
+  = OnlyTx (Tx era)
+  | OnlyTxBody (TxBody era)
+
+viewTxOrTxBody :: CompleteOrIncompleteTx era -> TxOrTxBody era
+viewTxOrTxBody = \case
+  CompleteTx tx -> OnlyTx tx
+  IncompleteTx (UnwitnessedCliFormattedTxBody txBody) -> OnlyTxBody txBody
+  IncompleteTx (IncompleteCddlFormattedTx tx) -> OnlyTx tx
+
+data TxFormat = CddlFormat | TextFormat
+
+viewInputFormat :: CompleteOrIncompleteTx era -> TxFormat
+viewInputFormat = \case
+  CompleteTx _ -> CddlFormat
+  IncompleteTx (UnwitnessedCliFormattedTxBody _) -> TextFormat
+  IncompleteTx (IncompleteCddlFormattedTx _) -> CddlFormat
 
 data CddlError = CddlErrorTextEnv
                    !(FileError TextEnvelopeError)
@@ -481,6 +530,16 @@ instance Error CddlError where
     \CDDL serialisation format. TextEnvelope error: " <> displayError textEnvErr <> "\n" <>
     "TextEnvelopeCddl error: " <> displayError cddlErr
   displayError (CddlIOError e) = displayError e
+
+liftAnyCardanoEra :: (forall era. IsCardanoEra era => thing1 era -> thing2 era) -> InAnyCardanoEra thing1 -> InAnyCardanoEra thing2
+liftAnyCardanoEra f (InAnyCardanoEra era a) = InAnyCardanoEra era $ f a
+
+renderCddlError :: CddlError -> Text
+renderCddlError (CddlErrorTextEnv textEnvErr cddlErr) =
+  "Failed to decode neither the cli's serialisation format nor the ledger's \
+  \CDDL serialisation format. TextEnvelope error: " <> Text.pack (displayError textEnvErr) <> "\n" <>
+  "TextEnvelopeCddl error: " <> Text.pack (displayError cddlErr)
+renderCddlError (CddlIOError e) = Text.pack $ displayError e
 
 acceptTxCDDLSerialisation
   :: FileError TextEnvelopeError

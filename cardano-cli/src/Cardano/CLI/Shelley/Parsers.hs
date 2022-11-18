@@ -771,7 +771,7 @@ pTransaction =
 
   pTransactionAssembleTxBodyWit :: Parser TransactionCmd
   pTransactionAssembleTxBodyWit = TxAssembleTxBodyWitness
-                                    <$> pTxBodyFile Input
+                                    <$> pInputTxOrTxBodyFile
                                     <*> some pWitnessFile
                                     <*> pOutputFile
 
@@ -818,8 +818,25 @@ pTransaction =
   pTransactionId  :: Parser TransactionCmd
   pTransactionId = TxGetTxId <$> pInputTxOrTxBodyFile
 
-  pTransactionView :: Parser TransactionCmd
-  pTransactionView = TxView <$> pInputTxOrTxBodyFile
+  pTransactionView =
+    TxView
+      <$> pInputTxOrTxBodyFile
+      <*> pTxViewFormat
+      <*> pMaybeOutputFile
+
+  pTxViewFormat :: Parser TxViewFormat
+  pTxViewFormat =
+      Opt.flag' TxViewLegacyYAML
+        (  Opt.long "legacy-yaml"
+        <> Opt.help "Use leagay YAML format (default)."
+        )
+    <|>
+      Opt.flag' TxViewJSON
+        (  Opt.long "json"
+        <> Opt.help "Use JSON format."
+        )
+    <|>
+      pure TxViewLegacyYAML
 
 pNodeCmd :: Parser NodeCmd
 pNodeCmd =

@@ -43,6 +43,7 @@ module Cardano.CLI.Shelley.Commands
   , BlockId (..)
   , WitnessSigningData (..)
   , ColdVerificationKeyOrFile (..)
+  , TxViewFormat(..)
   ) where
 
 import           Prelude
@@ -235,7 +236,7 @@ data TransactionCmd
       TxBuildOutputOptions
   | TxSign InputTxBodyOrTxFile [WitnessSigningData] (Maybe NetworkId) TxFile
   | TxCreateWitness TxBodyFile WitnessSigningData (Maybe NetworkId) OutputFile
-  | TxAssembleTxBodyWitness TxBodyFile [WitnessFile] OutputFile
+  | TxAssembleTxBodyWitness InputTxBodyOrTxFile [WitnessFile] OutputFile
   | TxSubmit AnyConsensusModeParams NetworkId FilePath
   | TxMintedPolicyId ScriptFile
   | TxCalculateMinFee
@@ -253,7 +254,7 @@ data TransactionCmd
   | TxHashScriptData
       ScriptDataOrFile
   | TxGetTxId InputTxBodyOrTxFile
-  | TxView InputTxBodyOrTxFile
+  | TxView InputTxBodyOrTxFile TxViewFormat (Maybe OutputFile)
 
 data InputTxBodyOrTxFile = InputTxBodyFile TxBodyFile | InputTxFile TxFile
   deriving Show
@@ -542,6 +543,11 @@ data ByronKeyType
   = ByronPaymentKey  ByronKeyFormat
   | ByronGenesisKey  ByronKeyFormat
   | ByronDelegateKey ByronKeyFormat
+  deriving Show
+
+data TxViewFormat
+  = TxViewLegacyYAML
+  | TxViewJSON
   deriving Show
 
 data ByronKeyFormat = NonLegacyByronKeyFormat

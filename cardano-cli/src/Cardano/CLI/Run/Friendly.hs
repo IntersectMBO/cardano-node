@@ -8,7 +8,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | User-friendly pretty-printing for textual user interfaces (TUI)
-module Cardano.CLI.Run.Friendly (friendlyTxBS, friendlyTxBodyBS) where
+module Cardano.CLI.Run.Friendly
+  ( friendlyTx
+  , friendlyTxBS
+  , friendlyTxBody
+  , friendlyTxBodyBS
+  ) where
 
 import           Cardano.Prelude
 
