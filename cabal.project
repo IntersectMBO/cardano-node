@@ -10,7 +10,7 @@ repository cardano-haskell-packages
     c00aae8461a256275598500ea0e187588c35a5d5d7454fb57eac18d9edb86a56
     d4a35cd3121aa00d18544bb0ac01c3e1691d618f462c46129271bccf39f7e8ee
 
--- See CONTRIBUTING for information about these, including some Nix commands 
+-- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state: 2022-11-11T00:00:00Z
 index-state: cardano-haskell-packages 2022-11-12T20:00:00Z
@@ -121,8 +121,8 @@ source-repository-package
 source-repository-package
    type: git
    location: https://github.com/input-output-hk/ouroboros-network
-   tag: a6cc54677ad967af24da91e563c360407d41314e
-   --sha256: 0p3xcvqa4vr7aqxx2ds32qha9n28sliixamsp7jp5c9igd1x25h7
+   tag: 30a77924cf4ffb9c9642c03a7f6327439611c7b8
+   --sha256: 0hq6c9b86wyynz1aln9h1zmilhxksh5g6yasnjab6n5pzna8a5sv
    subdir:
      monoidal-synchronisation
      network-mux
@@ -134,5 +134,5 @@ source-repository-package
      ouroboros-network
      ouroboros-network-framework
      ouroboros-network-testing
-     ouroboros-consensus-cardano-tools     
+     ouroboros-consensus-cardano-tools
 
