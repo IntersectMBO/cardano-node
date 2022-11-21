@@ -14,28 +14,33 @@ the rule that describes when a Tullia task is to be invoked.
 Learn more: https://github.com/input-output-hk/cicero
 */
 
-self: system:
-
 let
   ciInputName = "GitHub event";
-  repo = "input-output-hk/cardano-node";
+  repository = "input-output-hk/cardano-node";
 in rec {
   tasks = let
-    common = {
-      config,
-      ...
-    }: {
+    mkTask = top: {config, lib, ...}: {
       preset = {
-        # needed on top-level task to set runtime options
         nix.enable = true;
 
-        github-ci = {
+        github.ci = {
           enable = config.actionRun.facts != {};
-          inherit repo;
-          sha = config.preset.github-ci.lib.getRevision ciInputName null;
-          clone.enable = false;
+          inherit repository;
+          remote = config.preset.github.lib.readRepository ciInputName null;
+          revision = config.preset.github.lib.readRevision ciInputName null;
         };
       };
+
+      command.text = config.preset.github.status.lib.reportBulk {
+        bulk.text = ''
+          echo '["x86_64-linux", "x86_64-darwin"]' | nix-systems -i \
+          | jq 'with_entries(.key |= {"x86_64-linux": "linux", "x86_64-darwin": "macos"}[.])'
+        '';
+        each.text = ''nix build -L .#${lib.escapeShellArg top}."$1".required'';
+        skippedDescription = lib.escapeShellArg "No nix builder available for this platform";
+      } + "\n" + ''
+        nix build -L .#${lib.escapeShellArg top}.cardano-deployment
+      '';
 
       # some hydra jobs run NixOS tests
       env.NIX_CONFIG = ''
@@ -45,37 +50,10 @@ in rec {
       memory = 1024 * 32;
       nomad.resources.cpu = 10000;
     };
-
-    # the attribute name in `hydraJobs` for the current system
-    os = {
-      x86_64-linux = "linux";
-      x86_64-darwin = "macos";
-    }.${system};
-
-    flakeUrl = {config, lib, ...}:
-      lib.escapeShellArg "github:${repo}/${config.preset.github-ci.lib.getRevision ciInputName null}";
-  in
-    {
-      "ci/push" = {lib, ...} @ args: {
-        imports = [common];
-
-        command.text = ''
-          nix build -L \
-            ${flakeUrl args}#hydraJobs.${lib.escapeShellArg os}.required \
-            ${flakeUrl args}#hydraJobs.cardano-deployment
-        '';
-      };
-
-      "ci/pr" = {lib, ...} @ args: {
-        imports = [common];
-
-        command.text = ''
-          nix build -L \
-            ${flakeUrl args}#hydraJobsPr.${lib.escapeShellArg os}.required \
-            ${flakeUrl args}#hydraJobsPr.cardano-deployment
-        '';
-      };
-    };
+  in {
+    "ci/push" = mkTask "hydraJobs";
+    "ci/pr" = mkTask "hydraJobsPr";
+  };
 
   actions = {
     "cardano-node/ci/push" = {
@@ -83,7 +61,8 @@ in rec {
       io = ''
         #lib.io.github_push
         #input: "${ciInputName}"
-        #repo: "${repo}"
+        #repo: "${repository}"
+        #branch: "master|staging|trying"
       '';
     };
 
@@ -92,8 +71,7 @@ in rec {
       io = ''
         #lib.io.github_pr
         #input: "${ciInputName}"
-        #repo: "${repo}"
-        #target_default: false
+        #repo: "${repository}"
       '';
     };
   };
