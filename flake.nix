@@ -69,10 +69,7 @@
 
     cardano-mainnet-mirror.url = "github:input-output-hk/cardano-mainnet-mirror/nix";
 
-    tullia = {
-      url = "github:input-output-hk/tullia";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    tullia.url = "github:input-output-hk/tullia";
 
     nix2container.url = "github:nlewo/nix2container";
   };
@@ -403,7 +400,7 @@
             };
           };
         } //
-        tullia.fromSimple system (import ./nix/tullia.nix self system)
+        tullia.fromSimple system (import ./nix/tullia.nix)
       );
 
       makeRequired = isPr: jobs: extra:
