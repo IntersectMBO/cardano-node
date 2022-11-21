@@ -160,32 +160,17 @@ jobs:
         CI_SECP_INSTALL_CMD: sudo
       run: bash .github/workflows/build-secp256k1.bash 
 
-    - name: "List all pkg-config packages"
-      run: |
-        if [ "${{ runner.os }}" == "macOS" ]; then
-          echo "=== Not printing every package detail in MacOS"
-          # due to the location of the installed libraries this fails on MacOS with stuff not related to us
-        else
-          echo "=== Package list ==="
-          pkg-config --list-all
-
-          echo "=== Package details ==="
-          for x in $(pkg-config --list-all | cut -d ' ' -f 1); do
-            echo "# $x"
-            pkg-config "$x" --cflags --libs
-          done
-        fi
-
     - name: Cabal update
       run: retry 2 cabal update
 
-    - name: Configure build
+    - name: Enable all tests
+      if: github.event.inputs.tests == "all"
       run: |
-        if [ "${{github.event.inputs.tests}}" == "all" ]; then
           echo "Reconfigure cabal projects to run tests for all dependencies"
           sed -i 's|tests: False|tests: True|g' cabal.project
-        fi
 
+    - name: Copy cabal.project.local.ci.HOST to cabal.project.local
+      run: |
         cp ".github/workflows/cabal.project.local.ci.$(uname -s)" cabal.project.local
 
         echo "# cabal.project.local"
