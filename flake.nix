@@ -193,8 +193,7 @@
           inherit pinned-workbench;
           projectExes = flatten (haskellLib.collectComponents' "exes" projectPackages) // (with hsPkgsWithPassthru; {
             inherit (ouroboros-consensus-byron.components.exes) db-converter;
-            inherit (ouroboros-consensus-cardano.components.exes) db-analyser;
-            inherit (ouroboros-consensus-cardano-tools.components.exes) db-synthesizer;
+            inherit (ouroboros-consensus-cardano-tools.components.exes) db-analyser db-synthesizer;
             inherit (bech32.components.exes) bech32;
           } // lib.optionalAttrs hostPlatform.isUnix {
             inherit (network-mux.components.exes) cardano-ping;
@@ -463,10 +462,7 @@
       overlay = final: prev: {
         cardanoNodeProject = flake.project.${final.system};
         cardanoNodePackages = mkCardanoNodePackages final.cardanoNodeProject;
-        inherit (final.cardanoNodePackages) cardano-node cardano-cli cardano-submit-api cardano-tracer bech32 locli plutus-example;
-
-        # TODO, fix this
-        #db-analyser = ouroboros-network-snapshot.haskellPackages.ouroboros-consensus-cardano.components.exes.db-analyser;
+        inherit (final.cardanoNodePackages) cardano-node cardano-cli cardano-submit-api cardano-tracer bech32 locli plutus-example db-analyser;
       };
       nixosModules = {
         cardano-node = { pkgs, lib, ... }: {
