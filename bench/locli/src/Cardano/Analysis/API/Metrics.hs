@@ -1,6 +1,5 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
-{-# LANGUAGE ParallelListComp #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {- HLINT ignore "Use head" -}
@@ -41,7 +40,7 @@ perfSubsetFn = \case
 instance CDFFields BlockProp p where
   cdfFields =
       fGrp ",------------- Forger event Δt: -------------."
-            W4 Sec Log Free
+            W4 Sec P3 Log Free
     [ fGrp' "cdfForgerStarts"        "Loop" (DDeltaT cdfForgerStarts)
       "Started forge loop iteration"
       "Forge loop iteration delay (TraceStartLeadershipCheck), relative to slot start"
@@ -77,11 +76,11 @@ instance CDFFields BlockProp p where
       "Forged to self-adopted"
       "Time it took to adopt the block (TraceAdoptedBlock), since block forging completion"
     ]
-   <> fBoth "cdfForks"    "fork" " #" W4 Uni Lin Free (DInt cdfForks)
+   <> fBoth "cdfForks"    "fork" " #" W4 Uni P0 Lin Free (DInt cdfForks)
       "Forks at this block height"
       "For a given block, number of abandoned blocks at its block height"
    <> fGrp ",------- Peer event Δt: -------."
-            W4 Sec Log Free
+            W4 Sec P3 Log Free
     [ fGrp' "cdfPeerNotices"         "Noti" (DDeltaT cdfPeerNotices)
       "First peer notice"
       "Time it took for the fastest peer to notice the block (ChainSyncClientEvent.TraceDownloadedHeader), since block's slot start"
@@ -108,7 +107,7 @@ instance CDFFields BlockProp p where
     ]
    <> [ Field (renderAdoptionCentile ct) (r!!i)
                                          (T.take 4 $ T.pack $ printf "%.04f" centi)
-                                        W4 Rto Log Free
+                                        W4 Rto P3 Log Free
         (DDeltaT $
           checkCentile i centi
           . fromMaybe (error $ printf "No centile %d/%f in bpPropagation."
@@ -121,7 +120,7 @@ instance CDFFields BlockProp p where
             -- (T.pack $ printf "Block adopted by %.2f fraction of the entire cluster." centi)
       | (i, ct@(Centile centi)) <- zip [0::Int ..] adoptionCentiles
       ]
-   <> fBoth "cdfSizes" "Size" "bytes"   W9 B Lin Free (DInt cdfSizes)
+   <> fBoth "cdfSizes" "Size" "bytes"   W9 B P0 Lin Free (DInt cdfSizes)
       "Block size"
       "Block size, in bytes."
    where r = nChunksEachOf (length adoptionCentiles) 5
@@ -139,16 +138,16 @@ instance CDFFields BlockProp p where
 
 instance TimelineFields BlockEvents where
   timelineFields _ =
-      fBoth' "beBlockNo"   "block" "no."   W5 Blk Lin Free (IWord64 (unBlockNo.beBlockNo))
-   <> fBoth' "beSlotNo"    "abs."  "slot#" W5 Slo Lin Free (IWord64 (unSlotNo .beSlotNo))
-   <> fBoth' "beBlock"     "block" "hash"  W6 Hsh Lin Free (IText   (shortHash.beBlock))
-   <> fBoth' "beBlockPrev" "prev"  "hash"  W6 Hsh Lin Free (IText   (shortHash.beBlockPrev))
-   <> fBoth' "bfForger"    "forger" "host" W7 Hos Lin Free (IText   (ST.toText.unHost.bfForger . beForge))
-   <> fBoth' "bfBlockSize" "size"  "bytes" W6 B   Lin Free (IInt    (bfBlockSize.beForge))
-   <> fBoth' "bfBlockGap"  "block" "gap"   W5 Len Lin Free (IDeltaT (bfBlockGap .beForge))
-   <> fBoth' "bpeIsFork"   "for"  "-ks"    W3 Blk Lin Free (IInt    (count bpeIsFork.beErrors))
+      fBoth' "beBlockNo"   "block" "no."   W5 Blk P0 Lin Free (IWord64 (unBlockNo.beBlockNo))
+   <> fBoth' "beSlotNo"    "abs."  "slot#" W5 Slo P0 Lin Free (IWord64 (unSlotNo .beSlotNo))
+   <> fBoth' "beBlock"     "block" "hash"  W6 Hsh P0 Lin Free (IText   (shortHash.beBlock))
+   <> fBoth' "beBlockPrev" "prev"  "hash"  W6 Hsh P0 Lin Free (IText   (shortHash.beBlockPrev))
+   <> fBoth' "bfForger"    "forger" "host" W7 Hos P0 Lin Free (IText   (ST.toText.unHost.bfForger . beForge))
+   <> fBoth' "bfBlockSize" "size"  "bytes" W6 B   P0 Lin Free (IInt    (bfBlockSize.beForge))
+   <> fBoth' "bfBlockGap"  "block" "gap"   W5 Len P0 Lin Free (IDeltaT (bfBlockGap .beForge))
+   <> fBoth' "bpeIsFork"   "for"  "-ks"    W3 Blk P0 Lin Free (IInt    (count bpeIsFork.beErrors))
    <> fGrp "--------- Forger event Δt: ---------"
-            W4 Sec Log Free
+            W4 Sec P3 Log Free
     [ fGrp' "bfStarted"     "Start"  (IDeltaT (bfStarted  .beForge)) "" ""
     , fGrp' "bfBlkCtx"      "BlkCtx" (IDeltaTM (bfBlkCtx  .beForge)) "" ""
     , fGrp' "bfLgrState"    "LgrSta" (IDeltaTM (bfLgrState.beForge)) "" ""
@@ -160,7 +159,7 @@ instance TimelineFields BlockEvents where
     , fGrp' "bfAdopted"     "Adopt"  (IDeltaT (bfAdopted  .beForge)) "" ""
     ]
    <> fGrp "-- Peer event Δt averages: --"
-            W4 Sec Log Free
+            W4 Sec P3 Log Free
     [ fGrp' "boNoticed"     "Notic"  (IDeltaT (af  boNoticed   . valids)) "" ""
     , fGrp' "boRequested"   "Requd"  (IDeltaT (af  boRequested . valids)) "" ""
     , fGrp' "boFetched"     "Fetch"  (IDeltaT (af  boFetched   . valids)) "" ""
@@ -169,19 +168,19 @@ instance TimelineFields BlockEvents where
     , fGrp' "pAdopted"      "Adopt"  (IDeltaT (af' boAdopted   . valids)) "" ""
     ]
    <> fGrp "Propagation Δt:"
-            W4 Sec Log Free
+            W4 Sec P3 Log Free
     [ fGrp' "0.50"          "0.5"  (IDeltaT (percSpec 0.50 . bePropagation)) "" ""
     , fGrp' "0.80"          "0.8"  (IDeltaT (percSpec 0.80 . bePropagation)) "" ""
     , fGrp' "0.96"          "0.96" (IDeltaT (percSpec 0.96 . bePropagation)) "" ""
     , fGrp' "1.00"          "1.0"  (IDeltaT (snd . cdfRange. bePropagation)) "" ""
     ]
-   <> fBoth' "beAcceptance" "va-" "lid" W3 Sig Lin Free (IText (bool "-" "+" . (== 0) . length
+   <> fBoth' "beAcceptance" "va-" "lid" W3 Sig P0 Lin Free (IText (bool "-" "+" . (== 0) . length
                                                           . filter (not . snd) . beAcceptance))
-   <> fBoth' "valids"     "good" "obsv" W3 Ev  Lin Free (IInt  (length.valids))
-   <> fBoth' "beErrors"   "all"  "errs" W5 Ev  Lin Free (IInt  (length.beErrors))
+   <> fBoth' "valids"     "good" "obsv" W3 Ev  P0 Lin Free (IInt  (length.valids))
+   <> fBoth' "beErrors"   "all"  "errs" W5 Ev  P0 Lin Free (IInt  (length.beErrors))
 
    <> fGrp "Missing"
-            W3 Ev Lin Free
+            W3 Ev P0 Lin Free
     [ fGrp' "missNotic"   "ntc" (IInt (count (bpeIsMissing Notice)  .beErrors)) "" ""
     , fGrp' "missReque"   "req" (IInt (count (bpeIsMissing Request) .beErrors)) "" ""
     , fGrp' "missFetch"   "fch" (IInt (count (bpeIsMissing Fetch)   .beErrors)) "" ""
@@ -190,7 +189,7 @@ instance TimelineFields BlockEvents where
     , fGrp' "missSend"    "snd" (IInt (count (bpeIsMissing Send)    .beErrors)) "" ""
     ]
    <> fGrp "Negative"
-            W3 Ev Lin Free
+            W3 Ev P0 Lin Free
     [ fGrp' "negAnnou"   "ann" (IInt (count (bpeIsNegative Announce).beErrors)) "" ""
     , fGrp' "negSend"    "snd" (IInt (count (bpeIsNegative Send)    .beErrors)) "" ""
     ]
@@ -234,11 +233,11 @@ mtFieldsReport Field{fId} = fId `elem`
 
 instance CDFFields MachPerf p where
   cdfFields =
-      fBoth "cdfStarts" "Loop" "starts" W4 Uni Lin (Z0 1)  (DWord64 cdfStarts)
+      fBoth "cdfStarts" "Loop" "starts" W4 Uni P0 Lin (Z0 1)  (DWord64 cdfStarts)
       "Forge loop starts"
       "For any given slot, how many forging loop starts were registered"
 
-   <> fGrp "----------- Δt -----------" W4 Sec Log Free
+   <> fGrp "----------- Δt -----------" W4 Sec P3 Log Free
     [ fGrp' "cdfStarted"     "Start"       (DDeltaT cdfStarted)
       "Forge loop tardiness"
       "Forge loop iteration start delay (TraceStartLeadershipCheck), relative to slot start"
@@ -263,11 +262,11 @@ instance CDFFields MachPerf p where
       "Leading to block forged"
       "Time spent forging the block (TraceForgedBlock), relative to positive leadership decision"
     ]
-   <> fBoth "cdfBlockGap" "Block" "gap" W4 Sec Lin Free    (DWord64 cdfBlockGap)
+   <> fBoth "cdfBlockGap" "Block" "gap" W4 Sec P2 Lin Free    (DWord64 cdfBlockGap)
       "Interblock gap"
       "Time between blocks"
 
-   <> fGrp  "NetIO, kB/s"               W5 KBs Lin Free
+   <> fGrp  "NetIO, kB/s"               W5 KBs P0 Lin Free
     [ fGrp' "NetRd"        "recv"          (DWord64 (rNetRd.mpResourceCDFs))
       "Network reads kB sec"
       "Network reads, kB/sec"
@@ -276,7 +275,7 @@ instance CDFFields MachPerf p where
       "Network writes kB sec"
       "Network writes, kB/sec"
     ]
-   <> fGrp  "FS IO, kB/s"               W5 KBs Lin Free
+   <> fGrp  "FS IO, kB/s"               W5 KBs P0 Lin Free
     [ fGrp' "FsRd"         "read"          (DWord64 (rFsRd.mpResourceCDFs))
       "Filesystem reads kB sec"
       "Number of bytes which this process really did cause to be fetched from the storage layer, per second"
@@ -285,7 +284,7 @@ instance CDFFields MachPerf p where
       "Filesystem writes kB sec"
       "Number of bytes which this process caused to be sent to the storage layer, modulo truncate(), per second"
     ]
-   <> fBoth "cdfDensity" "Dens" "ity"   W5 Rto Lin Free (DFloat cdfDensity)
+   <> fBoth "cdfDensity" "Dens" "ity"   W5 Rto P2 Lin Free (DFloat cdfDensity)
       "Chain density"
       "Chain density, for the last 'k' slots"
 
@@ -309,7 +308,7 @@ instance CDFFields MachPerf p where
       "Minor GCs"
       "Minor GC events"
 
-   <> fGrp  "Memory usage, MB"          W5 MB Lin Free
+   <> fGrp  "Memory usage, MB"          W5 MB P0 Lin Free
     [ fGrp' "RSS"                 "RSS"    (DWord64 (rRSS.mpResourceCDFs))
       "Kernel RSS MB"
       "Kernel-reported RSS (Resident Set Size) of the process, MB"
@@ -322,11 +321,11 @@ instance CDFFields MachPerf p where
       "RTS GC live bytes MB"
       "RTS-reported GC live data size, MB"
     ]
-   <> fBoth "Alloc"  "Alloc" "MB"       W5 MB Lin (Z0 5000) (DWord64 (rAlloc.mpResourceCDFs))
+   <> fBoth "Alloc"  "Alloc" "MB"       W5 MB P0 Lin (Z0 5000) (DWord64 (rAlloc.mpResourceCDFs))
       "RTS alloc rate MB sec"
       "RTS-reported allocation rate, MB/sec"
 
-   <> fGrp  "CPU% spans"                W5 Len Lin Free
+   <> fGrp  "CPU% spans"                W5 Len P0 Lin Free
     [ fGrp' "cdfSpanLensCpu"        "All" (DInt cdfSpanLensCpu)
       "CPU 85pct spans"
       "Length of over-85% CPU usage peaks"
@@ -353,11 +352,11 @@ instance TimelineFields (SlotStats NominalDiffTime) where
    <> fW64' "epochSlot"   "ep."  "slot" W4 Slo (IWord64 (unEpochSlot   .slEpochSlot))
    <> fW64' "epoch"       "ep."     "#" W2 Epo (IWord64 (unEpochNo     .slEpoch))
    <> fW64' "safetyInt"  "safe"   "int" W3 Ix  (IWord64 (unEpochSafeInt.slEpochSafeInt))
-   <> fGrp "block"                      W5 Blk Lin Free
+   <> fGrp "block"                      W5 Blk P0 Lin Free
     [ fGrp' "block"                 "no."      (IWord64 (unBlockNo.slBlockNo)) "" ""
     , fGrp' "blockGap"              "gap"      (IWord64 slBlockGap) "" ""
     ]
-   <> fGrp2                             W3 Ev  Lin Free
+   <> fGrp2                             W3 Ev  P0 Lin Free
     [ fGrp2' "forgeLoop"    "forg"  "loo"      (IWord64 slCountStarts) "" ""
     , fGrp2' "blockCtx"     "blok"  "ctx"      (IWord64 slCountBlkCtx) "" ""
     , fGrp2' "ledgerState"  "ledg"  "sta"      (IWord64 slCountLgrState) "" ""
@@ -367,7 +366,7 @@ instance TimelineFields (SlotStats NominalDiffTime) where
     , fGrp2' "CDBSnap"      "CDB"   "snap"     (IWord64 slChainDBSnap) "" ""
     , fGrp2' "rejTxs"       "rej"   "txs"      (IWord64 slRejectedTx) "" ""
     ]
-   <> fGrp2                             W5 Sec Log Free
+   <> fGrp2                             W5 Sec P3 Log Free
     [ fGrp2' "startDelay"   "loop"  "start"    (IDeltaTM slStarted) "" ""
     , fGrp2' "blkCtx"       "block" "ctx"      (IDeltaTM slBlkCtx) "" ""
     , fGrp2' "lgrState"     "ledgr" "state"    (IDeltaTM slLgrState) "" ""
@@ -376,29 +375,29 @@ instance TimelineFields (SlotStats NominalDiffTime) where
     , fGrp2' "forge"        "forge" "done"     (IDeltaTM slForged) "" ""
     ]
    <> fGrpF  "mempool tx"               W4
-    [ fGrpF' "SpanTxsMem"          "span" Sec Log Free (IDeltaTM slSpanTxsMem) "" ""
-    , fGrpF' "TxsCollected"        "cold" Uni Lin Free (IWord64 slTxsCollected) "" ""
-    , fGrpF' "TxsAccepted"         "accd" Uni Lin Free (IWord64 slTxsAccepted) "" ""
-    , fGrpF' "TxsRejected"         "rejd" Uni Lin Free (IWord64 slTxsRejected) "" ""
+    [ fGrpF' "SpanTxsMem"          "span" Sec P3 Log Free (IDeltaTM slSpanTxsMem) "" ""
+    , fGrpF' "TxsCollected"        "cold" Uni P0 Lin Free (IWord64 slTxsCollected) "" ""
+    , fGrpF' "TxsAccepted"         "accd" Uni P0 Lin Free (IWord64 slTxsAccepted) "" ""
+    , fGrpF' "TxsRejected"         "rejd" Uni P0 Lin Free (IWord64 slTxsRejected) "" ""
     ]
-   <> fBoth "chDensity"    "chain" "dens." W5 Rto Lin Free (IFloat  slDensity) "" ""
+   <> fBoth "chDensity"    "chain" "dens." W5 Rto P2 Lin Free (IFloat  slDensity) "" ""
 
-   <> fGrp  "%CPU"                      W4 Pct Lin (Z1 200)
+   <> fGrp  "%CPU"                      W4 Pct P1 Lin (Z1 200)
     [ fGrp' "CPU%"                 "all"  (IWord64M (fm rCentiCpu.slResources)) "" ""
     , fGrp' "GC%"                  "GC"   (IWord64M (fm rCentiGC .slResources)) "" ""
     , fGrp' "MUT%"                 "mut"  (IWord64M (fm rCentiMut.slResources)) "" ""
     ]
-   <> fGrp  "GCs"                       W4 Ev  Lin Free
+   <> fGrp  "GCs"                       W4 Ev  P0 Lin Free
     [ fGrp' "majFlt"               "maj"  (IWord64M (fm rGcsMajor.slResources)) "" ""
     , fGrp' "minFlt"               "min"  (IWord64M (fm rGcsMinor.slResources)) "" ""   ]
-   <> fGrp  "Memory use, MB"            W5 Pct Lin (Z1 200)
+   <> fGrp  "Memory use, MB"            W5 Pct P0 Lin (Z1 200)
     [ fGrp' "rssMB"                "RSS"  (IWord64M (fm rRSS  .slResources)) "" ""
     , fGrp' "heapMB"              "Heap"  (IWord64M (fm rHeap .slResources)) "" ""
     , fGrp' "liveMB"              "Live"  (IWord64M (fm rLive .slResources)) "" ""
     ]
-   <> fBoth "allocatedMB" "Allocd" "MB"  W6 MBs Lin Free (IWord64M (fm rAlloc.slResources)) "" ""
-   <> fBoth "mempoolTxs" "Mempool" "txs" W7 Uni Lin Free (IWord64 slMempoolTxs) "" ""
-   <> fBoth "utxoEntries" "UTxO" "entries" W9 Uni Lin Free (IWord64 slUtxoSize) "" ""
+   <> fBoth "allocatedMB" "Allocd" "MB"  W6 MBs P0 Lin Free (IWord64M (fm rAlloc.slResources)) "" ""
+   <> fBoth "mempoolTxs" "Mempool" "txs" W7 Uni P0 Lin Free (IWord64 slMempoolTxs) "" ""
+   <> fBoth "utxoSize"  "UTxO" "entries" W9 Uni P0 Lin Free (IWord64 slUtxoSize) "" ""
    where fm = fmap
 
 -- * Instances, depending on the metrics' instances:
@@ -419,43 +418,43 @@ deriving newtype instance ToJSON MultiClusterPerf
 
 -- * Field definition auxiliaries:
 --
-fBoth :: Text -> Text -> Text -> Width -> Unit -> Scale -> Range -> s p a -> Text -> Text -> [Field s p a]
-fBoth id h1 h2 wi u s r sel sd d = [Field id h1 h2 wi u s r sel sd d]
+fBoth :: Text -> Text -> Text -> Width -> Unit -> Precision -> Scale -> Range -> s p a -> Text -> Text -> [Field s p a]
+fBoth id h1 h2 wi u p s r sel sd d = [Field id h1 h2 wi u p s r sel sd d]
 
-fBoth' :: Text -> Text -> Text -> Width -> Unit -> Scale -> Range -> s p a -> [Field s p a]
-fBoth' id h1 h2 wi u s r sel = fBoth id h1 h2 wi u s r sel "" ""
+fBoth' :: Text -> Text -> Text -> Width -> Unit -> Precision -> Scale -> Range -> s p a -> [Field s p a]
+fBoth' id h1 h2 wi u p s r sel = fBoth id h1 h2 wi u p s r sel "" ""
 
 fW64 :: Text -> Text -> Text -> Width -> Unit -> s p a -> Text -> Text -> [Field s p a]
-fW64 id h1 h2 wi u = fBoth id h1 h2 wi u Lin Free
+fW64 id h1 h2 wi u = fBoth id h1 h2 wi u P0 Lin Free
 
 fW64' :: Text -> Text -> Text -> Width -> Unit -> s p a -> [Field s p a]
-fW64' id h1 h2 wi u sel = fBoth id h1 h2 wi u Lin Free sel "" ""
+fW64' id h1 h2 wi u sel = fBoth id h1 h2 wi u P0 Lin Free sel "" ""
 
-fGrp :: Text -> Width -> Unit -> Scale -> Range -> [Unit -> Scale -> Range -> Width -> Text -> [Field s p a]] -> [Field s p a]
-fGrp hTop w u s r fs = mconcat $
+fGrp :: Text -> Width -> Unit -> Precision -> Scale -> Range -> [Unit -> Precision -> Scale -> Range -> Width -> Text -> [Field s p a]] -> [Field s p a]
+fGrp hTop w u p s r fs = mconcat $
   zip fs (nChunksEachOf (length fs) (width w + 1) hTop)
-    <&> \(f, chunk) -> f u s r w chunk
+    <&> \(f, chunk) -> f u p s r w chunk
 
--- fUni :: Text -> Text         -> Width -> Unit -> Scale -> Range -> s p a -> Text -> Text -> [Field s p a]
--- fUni id h1 wi u s r sel sd d = [Field id h1 (renderUnit u) wi u s r sel sd d]
+-- fUni :: Text -> Text         -> Width -> Unit -> Precision -> Scale -> Range -> s p a -> Text -> Text -> [Field s p a]
+-- fUni id h1 wi u p s r sel sd d = [Field id h1 (renderUnit u) wi u p s r sel sd d]
 
-fGrp' :: Text -> Text -> s p a -> Text -> Text -> Unit -> Scale -> Range -> Width -> Text -> [Field s p a]
-fGrp' id h2 sel sd d u s r wi h1 = [Field id h1 h2 wi u s r sel sd d]
+fGrp' :: Text -> Text -> s p a -> Text -> Text -> Unit -> Precision -> Scale -> Range -> Width -> Text -> [Field s p a]
+fGrp' id h2 sel sd d u p s r wi h1 = [Field id h1 h2 wi u p s r sel sd d]
 
-fGrp2 :: Width -> Unit -> Scale -> Range -> [Unit -> Scale -> Range -> Width -> [Field s p a]] -> [Field s p a]
-fGrp2 w u s r fs = mconcat $
-  fs <&> \f -> f u s r w
+fGrp2 :: Width -> Unit -> Precision -> Scale -> Range -> [Unit -> Precision -> Scale -> Range -> Width -> [Field s p a]] -> [Field s p a]
+fGrp2 w u p s r fs = mconcat $
+  fs <&> \f -> f u p s r w
 
-fGrp2' :: Text -> Text -> Text -> s p a -> Text -> Text -> Unit -> Scale -> Range -> Width -> [Field s p a]
-fGrp2' id h1 h2 sel sd d u s r wi = [Field id h1 h2 wi u s r sel sd d]
+fGrp2' :: Text -> Text -> Text -> s p a -> Text -> Text -> Unit -> Precision -> Scale -> Range -> Width -> [Field s p a]
+fGrp2' id h1 h2 sel sd d u p s r wi = [Field id h1 h2 wi u p s r sel sd d]
 
 fGrpF :: Text -> Width -> [Width -> Text -> [Field s p a]] -> [Field s p a]
 fGrpF hTop w fs = mconcat $
   zip fs (nChunksEachOf (length fs) (width w) hTop)
     <&> \(f, chunk) -> f w chunk
 
-fGrpF' :: Text -> Text -> Unit -> Scale -> Range -> s p a -> Text -> Text -> Width -> Text -> [Field s p a]
-fGrpF' id h2 u s r sel sd d wi h1 = [Field id h1 h2 wi u s r sel sd d]
+fGrpF' :: Text -> Text -> Unit -> Precision -> Scale -> Range -> s p a -> Text -> Text -> Width -> Text -> [Field s p a]
+fGrpF' id h2 u p s r sel sd d wi h1 = [Field id h1 h2 wi u p s r sel sd d]
 
 fPct :: Text -> Text -> Range -> s p a -> Text -> Text -> [Field s p a]
-fPct id h1 r sel sd d = [Field id h1 (renderUnit Pct) W3 Pct Lin r sel sd d]
+fPct id h1 r sel sd d = [Field id h1 (renderUnit Pct) W3 Pct P0 Lin r sel sd d]

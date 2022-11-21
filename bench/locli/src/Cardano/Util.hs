@@ -1,6 +1,9 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+{- HLINT ignore "Use list literal pattern" -}
 module Cardano.Util
   ( module Prelude
+  , module Data.List.Split
   , module Data.Tuple.Extra
   , module Cardano.Ledger.BaseTypes
   , module Control.Arrow
@@ -25,6 +28,7 @@ import Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 import Data.Aeson                       (ToJSON, encode)
 import Data.ByteString.Lazy.Char8       qualified as LBS
 import Data.List                        (span)
+import Data.List.Split                  (chunksOf)
 import Data.Text                        qualified as T
 import Data.Vector                      (Vector)
 import Data.Vector                      qualified as Vec
@@ -112,6 +116,13 @@ mapHead :: (a -> a) -> [a] -> [a]
 mapHead f (x:xs) = f x:xs
 mapHead _ [] = error "mapHead: partial"
 
+mapLast :: (a -> a) -> [a] -> [a]
+mapLast _ [] = error "mapHead: partial"
+mapLast f xs' = reverse $ go [] xs'
+ where go acc = \case
+                   x:[] ->     f x:acc
+                   x:xs -> go (  x:acc) xs
+
 redistribute :: (a, (b, c)) -> ((a, b), (a, c))
 redistribute    (a, (b, c))  = ((a, b), (a, c))
 
@@ -151,3 +162,11 @@ spans f = go []
        ([], rest) -> go acc rest
        (ac, rest) ->
          go (Vec.fromList ac:acc) rest
+
+{-# INLINE norm2Tuple #-}
+norm2Tuple :: ((a, b), c) -> (a, (b, c))
+norm2Tuple ((a, b), c) = (a, (b, c))
+
+{-# INLINE showText #-}
+showText :: Show a => a -> Text
+showText = T.pack . show

@@ -189,6 +189,10 @@ case "$op" in
             clusterperf-org
             clusterperf-report
             clusterperf-full
+
+            compute-summary
+            summary-json
+            summary-report
          )
         verbose "analysis" "$(white full), calling script:  $(colorise ${script[*]})"
         analyse "${sargs[@]}" map "call ${script[*]}" "$@"
@@ -371,8 +375,10 @@ case "$op" in
         vl=("${vk[@]/#clusterperf-full/     'render-clusterperf' --pretty \"$adir\"/clusterperf-full.txt --full }")
         vm=("${vl[@]/#read-clusterperfs/    'read-clusterperfs' --clusterperf \"$adir\"/clusterperf.json }")
         vn=("${vm[@]/#read-propagations/    'read-propagations'        --prop \"$adir\"/blockprop.json }")
+        vo=("${vn[@]/#summary-json/         'render-summary'       --json \"$adir\"/summary.json}")
+        vp=("${vo[@]/#summary-report/       'render-summary'     --report \"$adir\"/summary.org}")
         local ops_final=()
-        for v in "${vn[@]}"
+        for v in "${vp[@]}"
         do eval ops_final+=($v); done
 
         call_locli "$rtsmode" "${ops_final[@]}"

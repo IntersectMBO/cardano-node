@@ -85,6 +85,13 @@ data Width
   | W12
   deriving (Eq, Enum, Ord, Show)
 
+data Precision
+  = P0
+  | P1
+  | P2
+  | P3
+  deriving (Eq, Enum, Ord, Show)
+
 {-# INLINE width #-}
 width :: Width -> Int
 width = fromEnum
@@ -101,6 +108,7 @@ data Field (s :: (Type -> Type) -> k -> Type) (p :: Type -> Type) (a :: k)
   , fHead2       :: Text
   , fWidth       :: Width
   , fUnit        :: Unit
+  , fPrecision   :: Precision
   , fScale       :: Scale
   , fRange       :: Range
   , fSelect      :: s p a
@@ -144,6 +152,14 @@ mapField x cdfProj Field{..} =
     DWord64 (cdfProj . ($x) ->r) -> r
     DFloat  (cdfProj . ($x) ->r) -> r
     DDeltaT (cdfProj . ($x) ->r) -> r
+
+mapFieldWithKey :: a p -> (forall v. Divisible v => Field DSelect p a -> CDF p v -> b) -> Field DSelect p a -> b
+mapFieldWithKey x cdfProj f@Field{..} =
+  case fSelect of
+    DInt    (cdfProj f . ($x) ->r) -> r
+    DWord64 (cdfProj f . ($x) ->r) -> r
+    DFloat  (cdfProj f . ($x) ->r) -> r
+    DDeltaT (cdfProj f . ($x) ->r) -> r
 
 tryOverlayFieldDescription :: Field DSelect p a -> Object -> Maybe Object
 tryOverlayFieldDescription Field{..} =

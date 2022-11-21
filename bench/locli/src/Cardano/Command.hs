@@ -6,7 +6,6 @@ import Cardano.Prelude                  hiding (State, head)
 import Data.Aeson                       qualified as Aeson
 import Data.ByteString                  qualified as BS
 import Data.ByteString.Lazy.Char8       qualified as LBS
-import Data.Map.Strict                  qualified as Map
 import Data.Text                        (pack)
 import Data.Text                        qualified as T
 import Data.Text.Short                  (toText)
@@ -20,6 +19,7 @@ import System.Posix.Files               qualified as IO
 import Cardano.Analysis.API
 import Cardano.Analysis.BlockProp
 import Cardano.Analysis.MachPerf
+import Cardano.Analysis.Summary
 import Cardano.Render
 import Cardano.Report
 import Cardano.Unlog.LogObject          hiding (Text)
@@ -325,8 +325,8 @@ data State
   , sSummaries        :: Maybe [Summary]
   }
 
-computeSummary :: State -> Summary
-computeSummary =
+callComputeSummary :: State -> Either Text Summary
+callComputeSummary =
   \case
     State{sRun           = Nothing} -> err "a run"
     State{sObjLists      = Nothing} -> err "logobjects"
@@ -342,24 +342,11 @@ computeSummary =
          , sChainRejecta = Just chainRejecta
          , sDomSlots     = Just sumDomainSlots
          , sDomBlocks    = Just sumDomainBlocks
-         , ..} ->
-      Summary
-      { sumWhen                = sWhen
-      , sumFilters             = sFilters
-      , sumLogStreams          = countOfList  objLists
-      , sumLogObjects          = countOfLists objLists
-      , sumBlocksRejected      = countOfList chainRejecta
-      , ..
-      }
-     where
-       sumChainRejectionStats =
-         chainRejecta
-         <&> fmap fst . filter (not . snd) . beAcceptance
-          &  concat
-          &  foldr' (\k m -> Map.insertWith (+) k 1 m) Map.empty
-          &  Map.toList
+         , ..} -> Right $
+      computeSummary sWhen objLists sFilters
+                     sumDomainSlots sumDomainBlocks chainRejecta
  where
-   err = error . ("Summary of a run requires " <>)
+   err = Left . ("Summary of a run requires " <>)
 
 sRunAnchor :: State -> Anchor
 sRunAnchor State{sRun = Just run, sFilters, sWhen, sDomSlots, sDomBlocks}
@@ -664,16 +651,19 @@ runChainCommand s@State{sMultiClusterPerf=Just (MultiClusterPerf perf)}
 runChainCommand _ c@RenderMultiClusterPerf{} = missingCommandData c
   ["multi-run cluster preformance stats"]
 
-runChainCommand s ComputeSummary = do
+runChainCommand s c@ComputeSummary = do
   progress "summary" (Q "summarising a run")
-  pure s { sSummaries = Just [computeSummary s] }
+  summary <- pure (callComputeSummary s)
+    & newExceptT
+    & firstExceptT (CommandError c . show)
+  pure s { sSummaries = Just [summary] }
 
-runChainCommand s@State{sSummaries = Just (_summary:_)} c@(RenderSummary fmt f) = do
+runChainCommand s@State{sSummaries = Just (summary:_)} c@(RenderSummary fmt f) = do
   progress "summary" (Q $ printf "rendering summary")
   dumpText "summary" body (modeFilename f "" fmt)
     & firstExceptT (CommandError c)
   pure s
- where body = [""] -- renderSummary summary
+ where body = renderSummary fmt (sRunAnchor s) summary
 runChainCommand _ c@RenderSummary{} = missingCommandData c
   ["run summary"]
 

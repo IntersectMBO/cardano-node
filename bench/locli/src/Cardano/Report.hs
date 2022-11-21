@@ -12,6 +12,7 @@ import Cardano.Prelude
 import Data.Aeson (FromJSON (..), ToJSON (..), object)
 import Data.ByteString qualified as BS
 import Data.HashMap.Lazy qualified as HM
+import Data.Map.Strict qualified as Map
 import Data.List (last)
 import Data.Text qualified as T
 import Data.Text.Lazy qualified as LT
@@ -93,6 +94,23 @@ defaultReportSections machPerf blockProp =
 --
 -- Representation of a run, structured for template generator's needs.
 --
+
+liftTmplRun :: Run -> TmplRun
+liftTmplRun Run{generatorProfile=GeneratorProfile{..}, ..} =
+  TmplRun
+  { trMeta      = metadata
+  , trShortId   = ShortId (batch metadata)
+  , trManifest  = manifest metadata & unsafeShortenManifest 5
+  , trWorkload  =
+    case ( plutusMode       & fromMaybe False
+         , plutusLoopScript & fromMaybe "" & FS.takeFileName & FS.dropExtension ) of
+         (False, _)                       -> WValue
+         (True, "loop")                   -> WPlutusLoopCountdown
+         (True, "schnorr-secp256k1-loop") -> WPlutusLoopSECP
+         (_, scr) ->
+           error $ "Unknown Plutus script:  " <> scr
+  }
+
 data TmplRun
   = TmplRun
     { trMeta         :: !Metadata
@@ -121,39 +139,6 @@ instance ToJSON TmplRun where
         ]
       ]
 
-liftTmplRun :: Run -> TmplRun
-liftTmplRun Run{generatorProfile=GeneratorProfile{..}, ..} =
-  TmplRun
-  { trMeta      = metadata
-  , trShortId   = ShortId (batch metadata)
-  , trManifest  = manifest metadata & unsafeShortenManifest 5
-  , trWorkload  =
-    case ( plutusMode       & fromMaybe False
-         , plutusLoopScript & fromMaybe "" & FS.takeFileName & FS.dropExtension ) of
-         (False, _)                       -> WValue
-         (True, "loop")                   -> WPlutusLoopCountdown
-         (True, "schnorr-secp256k1-loop") -> WPlutusLoopSECP
-         (_, scr) ->
-           error $ "Unknown Plutus script:  " <> scr
-  }
-
-data TmplSection
-  = TmplTable
-    { tsTitle       :: !Text
-    , tsDataRef     :: !Text
-    , tsOrgTableSrc :: !Text
-    , tsNRows       :: !Int
-    }
-
-instance ToJSON TmplSection where
-  toJSON TmplTable{..} = object
-    [ "title"     .= tsTitle
-    , "dataRef"   .= tsDataRef
-    , "orgFile"   .= tsOrgTableSrc
-    -- Yes, strange as it is, this is the encoding to ease iteration in ED-E.
-    , "rows"      .= T.replicate tsNRows "."
-    ]
-
 liftTmplSection :: Section -> TmplSection
 liftTmplSection =
   \case
@@ -162,9 +147,34 @@ liftTmplSection =
       { tsTitle       = sTitle
       , tsDataRef     = sDataRef
       , tsOrgTableSrc = sOrgTableSrc
-      , tsNRows       =
-        length $ filterFields sFieldSelector
+      , tsRowPrecs    = fs <&> fromEnum . fPrecision
+      , tsVars        = [ ("nSamples", "Sample count")
+                        ]
       }
+     where fs = filterFields sFieldSelector
+
+data TmplSection
+  = TmplTable
+    { tsTitle        :: !Text
+    , tsDataRef      :: !Text
+    , tsOrgTableSrc  :: !Text
+    , tsRowPrecs     :: ![Int]
+    , tsVars         :: ![(Text, Text)] -- map from Org constant name to description
+    }
+
+instance ToJSON TmplSection where
+  toJSON TmplTable{..} = object
+    [ "title"     .= tsTitle
+    , "dataRef"   .= tsDataRef
+    , "orgFile"   .= tsOrgTableSrc
+    -- Yes, strange as it is, this is the encoding to ease iteration in ED-E.
+    , "rowPrecs"  .= tsRowPrecs
+    , "vars"      .= Map.fromList (zip tsVars ([0..] <&> flip T.replicate ">" . (length tsVars -))
+                                   <&> \((k, name), angles) ->
+                                         (k, Map.fromList @Text
+                                             [("name", name),
+                                              ("angles", angles)]))
+    ]
 
 generate :: InputDir -> Maybe TextInputFile
          -> (ClusterPerf, BlockPropOne, Run) -> [(ClusterPerf, BlockPropOne, Run)]

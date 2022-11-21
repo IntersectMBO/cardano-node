@@ -53,6 +53,42 @@ renderFloatStr w = justifyData w'. T.take w' . T.pack . stripLeadingZero
      '0':xs@('.':_) -> xs
      xs -> xs
 
+renderSummary :: RenderFormat -> Anchor -> Summary -> [Text]
+renderSummary AsJSON _ x = (:[]) . LT.toStrict $ encodeToLazyText x
+renderSummary AsGnuplot _ _ = error "renderSummary:  output not supported:  gnuplot"
+renderSummary AsPretty  _ _ = error "renderSummary:  output not supported:  pretty"
+renderSummary _ a Summary{..} =
+  render $
+  Props
+  { oProps = [ ("TITLE",    renderAnchorRuns a )
+             , ("SUBTITLE", renderAnchorFiltersAndDomains a)
+             , ("DATE",     renderAnchorDate a)
+             , ("VERSION",  renderProgramAndVersion (aVersion a))
+             ]
+  , oConstants = []
+  , oBody = (:[]) $
+    Table
+    { tColHeaders     = ["Value"]
+    , tExtended       = False
+    , tApexHeader     = Just "Property"
+    , tColumns        = [kvs <&> snd]
+    , tRowHeaders     =  kvs <&> fst
+    , tSummaryHeaders = []
+    , tSummaryValues  = []
+    , tFormula = []
+    , tConstants = []
+    }
+  }
+ where
+   kvs = [ ("Date",              showText $ sumWhen)
+         , ("Machines",          showText $ sumLogStreams)
+         , ("Log objects",       showText $ sumLogObjects)
+         , ("Slots considered",  showText $ ddFilteredCount sumDomainSlots)
+         , ("Blocks considered", showText $ ddFilteredCount sumDomainBlocks)
+         , ("Blocks dropped",    showText $ sumBlocksRejected)
+         ]
+
+
 renderTimeline :: forall (a :: Type). TimelineFields a => Run -> (Field ISelect I a -> Bool) -> [TimelineComments a] -> [a] -> [Text]
 renderTimeline run flt comments xs =
   concatMap (uncurry fLine) $ zip xs [(0 :: Int)..]
@@ -136,7 +172,7 @@ data RenderFormat
   | AsOrg
   | AsReport
   | AsPretty
-  deriving (Show, Bounded, Enum)
+  deriving (Eq, Show, Bounded, Enum)
 
 -- | When rendering a CDF-of-CDFs _and_ subsetting the data, how to subset:
 data CDF2Aspect
@@ -196,6 +232,7 @@ renderAnalysisCDFs a@Anchor{..} fieldSelr _c2a centileSelr AsOrg x =
                           \f@Field{}   -> mapField x (T.pack . printf "%d" . cdfSize) f
                         ] & transpose
     , tFormula = []
+    , tConstants = []
     }
   }
  where
@@ -230,27 +267,29 @@ renderAnalysisCDFs a@Anchor{..} fieldSelr aspect _centileSelr AsReport x =
     , tColumns        = transpose $
                         fields <&>
                         fmap (T.take 6 . T.pack . printf "%f")
-                        . mapField x (snd hdrsProjs)
+                        . mapFieldWithKey x (snd hdrsProjs)
     , tRowHeaders     = fields <&> fShortDesc
     , tSummaryHeaders = []
     , tSummaryValues  = []
     , tFormula = []
+    , tConstants = [("nSamples",
+                     fields <&> mapField x (T.pack . show . cdfSize) & head)]
     }
   }
  where
    fields :: [Field DSelect p a]
    fields = filter fieldSelr cdfFields
 
-   hdrsProjs :: forall v. (Divisible v) => ([Text], CDF p v -> [Double])
+   hdrsProjs :: forall v. (Divisible v) => ([Text], Field DSelect p a -> CDF p v -> [Double])
    hdrsProjs = aspectColHeadersAndProjections aspect
 
    aspectColHeadersAndProjections :: forall v. (Divisible v)
-                                  => CDF2Aspect -> ([Text], CDF p v -> [Double])
+                                  => CDF2Aspect -> ([Text], Field DSelect p a -> CDF p v -> [Double])
    aspectColHeadersAndProjections = \case
      OfOverallDataset ->
        (,)
-       ["average", "CoV", "min", "max", "stddev", "range", "size"]
-       \c@CDF{cdfRange=(cdfMin, cdfMax), ..} ->
+       ["average", "CoV", "min", "max", "stddev", "range", "precision", "size"]
+       \Field{..} c@CDF{cdfRange=(cdfMin, cdfMax), ..} ->
          let avg = cdfAverageVal c & toDouble in
          [ avg
          , cdfStddev / avg
@@ -258,12 +297,14 @@ renderAnalysisCDFs a@Anchor{..} fieldSelr aspect _centileSelr AsReport x =
          , fromRational . toRational $ cdfMax
          , cdfStddev
          , fromRational . toRational $ cdfMax - cdfMin
+         , fromIntegral $ fromEnum fPrecision
          , fromIntegral cdfSize
          ]
      OfInterCDF ->
        (,)
-       ["average", "CoV", "min", "max", "stddev", "range", "size"]
-       (cdfArity
+       ["average", "CoV", "min", "max", "stddev", "range", "precision", "size"]
+       (\Field{..} ->
+        cdfArity
          (error "Cannot do inter-CDF statistics on plain CDFs")
          (\CDF{cdfAverage=cdfAvg@CDF{cdfRange=(minAvg, maxAvg),..}} ->
              let avg = cdfAverageVal cdfAvg & toDouble in
@@ -273,6 +314,7 @@ renderAnalysisCDFs a@Anchor{..} fieldSelr aspect _centileSelr AsReport x =
              , toDouble maxAvg
              , cdfStddev
              , toDouble $ maxAvg - minAvg
+             , fromIntegral $ fromEnum fPrecision
              , fromIntegral cdfSize
              ]))
 
