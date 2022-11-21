@@ -107,16 +107,13 @@ jobs:
 
     - uses: actions/checkout@v2
 
-    - name: Add build script path
-      run: |
-        if [ "${{ runner.os }}" == "Windows" ]; then
-          # MSYS2 doesn't inherit $GITHUB_PATH, so this workaround is needed
-          cat <(echo "export PATH=$PATH:$(pwd)/.github/bin") ~/.bashrc > ~/.bashrc.new
-          mv ~/.bashrc.new ~/.bashrc
-        else
-          # MacOS and Linux use $GITUB_PATH
-          echo "$(pwd)/.github/bin" >> $GITHUB_PATH
-        fi
+    - name: "[PowerShell] Add build script path"
+      if: runner.os == 'Windows'
+      run: Add-Content $env:GITHUB_PATH "$(pwd)/.github/bin"
+
+    - name: "[Bash] Add build script path"
+      if: runner.os != 'Windows'
+      run: echo "$(pwd)/.github/bin" >> $GITHUB_PATH
 
     - name: "LINUX: Install build environment (apt-get)"
       if: runner.os == 'Linux'
@@ -143,17 +140,25 @@ jobs:
       if: runner.os == 'macOS'
       run: brew install autoconf automake libtool
 
-    - name: "Install secp256k1"
-      run: |
-        git clone https://github.com/bitcoin-core/secp256k1.git
-        ( cd secp256k1
-          git reset --hard $SECP256K1_REF
-          ./autogen.sh
-          ./configure $CI_SECP_FLAGS --enable-module-schnorrsig --enable-experimental
-          make
-          make check
-          $CI_SECP_INSTALL_CMD make install
-        )
+    # TODO: this really should come from a pre-built location
+    - name: "WIN: Install secp256k1"
+      if: runner.os == 'Windows'
+      # Same env as tmate action
+      env:
+        MSYS2_PATH_TYPE: inherit
+        MSYSTEM: MINGW64
+        CHERE_INVOKING: 1
+        # install secp into /mingw64 prefix, which is where pkg-config will look
+        # by default.
+        CI_SECP_FLAGS: "--prefix=/mingw64"
+      run: C:\\msys64\\usr\\bin\\bash.exe .github/workflows/build-secp256k1.bash
+
+    - name: "LINUX: Install secp256k1"
+      if: runner.os != 'Windows'
+      env:
+        CI_SECP_FLAGS: "--prefix=/usr"
+        CI_SECP_INSTALL_CMD: sudo
+      run: bash .github/workflows/build-secp256k1.bash 
 
     - name: "List all pkg-config packages"
       run: |
