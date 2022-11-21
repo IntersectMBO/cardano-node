@@ -1104,7 +1104,7 @@ instance (HasHeader header, ConvertRawHash header)
     mconcat [ "kind" .= String "AddedFetchRequest" ]
   toObject _verb BlockFetch.AcknowledgedFetchRequest {} =
     mconcat [ "kind" .= String "AcknowledgedFetchRequest" ]
-  toObject _verb (BlockFetch.SendFetchRequest af) =
+  toObject _verb (BlockFetch.SendFetchRequest af _) =
     mconcat [ "kind" .= String "SendFetchRequest"
              , "head" .= String (renderChainHash
                                   (renderHeaderHash (Proxy @header))
