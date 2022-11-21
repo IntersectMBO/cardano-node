@@ -17,10 +17,6 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
 
-    defaults:
-      run:
-        shell: ${{ matrix.os == 'windows-latest' && 'msys2 {0}' || 'bash' }}
-
     strategy:
       fail-fast: false
       matrix:
@@ -39,68 +35,75 @@ jobs:
       PKG_CONFIG_PATH: ${{ matrix.os == 'macos-latest' && '/usr/local/opt/openssl@1.1/lib/pkgconfig' || '' }}
 
     steps:
-
-    - name: "WIN: Setup MSYS2 and libraries"
-      if: runner.os == 'Windows'
-      uses: msys2/setup-msys2@v2
-      with:
-        update: true
-        install: >-
-          base-devel
-          autoconf-wrapper
-          autoconf
-          automake
-          libtool
-          make
-          git
-          mingw-w64-x86_64-pkg-config
-          mingw-w64-x86_64-toolchain
-          mingw-w64-x86_64-libsodium
-          mingw-w64-x86_64-jq
-
-    - name: "LINUX,MAC: Setup haskell"
-      if: runner.os != 'Windows'
-      uses: haskell/actions/setup@v1
-      id: setup-haskell
-      with:
-        ghc-version: ${{ matrix.ghc }}
-        cabal-version: 3.8.1.0
-
-    - name: "WIN: Setup Haskell"
-      id: win-setup-haskell
+    - name: "WIN: Install System Dependencies via pacman (msys2)"
       if: runner.os == 'Windows'
       run: |
-        # see https://gitlab.haskell.org/haskell/ghcup-hs/-/blob/master/scripts/bootstrap/bootstrap-haskell
-        curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | \
-          BOOTSTRAP_HASKELL_NONINTERACTIVE=1 \
-          BOOTSTRAP_HASKELL_ADJUST_CABAL_CONFIG=1 \
-          BOOTSTRAP_HASKELL_ADJUST_BASHRC=1 \
-          BOOTSTRAP_HASKELL_GHC_VERSION="${{ matrix.ghc }}" \
-          BOOTSTRAP_HASKELL_CABAL_VERSION="3.6.2.0" \
-          sh
-
-        # MSYS2 doesn't inherit $GITHUB_PATH so this is needed
-        cat <(echo "source /c/ghcup/env") ~/.bashrc > ~/.bashrc.new
-        mv ~/.bashrc.new ~/.bashrc
-
-        source ~/.bashrc
-
-        # There is an issue with crt libraries, fixed by prepending the ghc
-        # mingw32 libraries directory to every other library directory.
-        echo "# Original cabal config extra-lib-dirs"
-        grep extra-lib-dirs /c/cabal/config
-
-        sed -i 's/C:\\msys64\\mingw64\\lib/C:\\ghcup\\ghc\\8.10.7\\mingw\\x86_64-w64-mingw32\\lib, C:\\msys64\\mingw64\\lib/g' /c/cabal/config
-
-        echo "# Modified cabal config extra-lib-dirs"
-        grep extra-lib-dirs /c/cabal/config
+        # ghcup should be installed on current GHA Windows runners. Let's use ghcup to run
+        # pacman, to install the necessary dependencies, ...
+        ghcup run -- pacman --noconfirm -S `
+           mingw-w64-x86_64-pkg-config `
+           mingw-w64-x86_64-libsodium `
+           base-devel `
+           autoconf-wrapper `
+           autoconf `
+           automake `
+           libtool `
+           make
+ 
+    # this seems to break something. It _must_ come after the pacman setup
+    # above. It appears as if PATHEXT is set _after_ ghcup install ghc/cabal, and
+    # as such we'd need pacman.exe instead.
+    - name: Setup Haskell
+      run: |        
+        # Use GHCUP to manage ghc/cabal
+        ghcup install ghc --set ${{ matrix.ghc }}
+        ghcup install cabal --set 3.6.2.0
 
         ghc --version
         cabal --version
-        echo "cabal-store=$(cabal --help | tail -1 | tr -d ' ' | rev | cut -d '/' -f2- | rev)\\store" >> $GITHUB_OUTPUT
 
-    - name: Set cache version
-      run: echo "CACHE_VERSION=grFfw8r" >> $GITHUB_ENV
+    - name: "WIN: fixup cabal config"
+      if: runner.os == 'Windows'
+      run: |
+        # make sure cabal knows about msys64, and mingw64 tools. Not clear why C:/cabal/config is empty
+        # and C:/cabal doesn't even exist.  The ghcup bootstrap file should have create it in the image:
+        # See https://github.com/haskell/ghcup-hs/blob/787edc17af4907dbc51c85e25c490edd8d68b80b/scripts/bootstrap/bootstrap-haskell#L591
+        # So we'll do it by hand here for now.
+        #
+        # We'll _not_ add extra-include-dirs, or extra-lib-dirs, and rely on what's shipped with GHC.
+        # https://github.com/msys2/MINGW-packages/issues/10837#issuecomment-1047105402
+        # https://gitlab.haskell.org/ghc/ghc/-/issues/21111
+        # if we _do_ want them, this would be the lines to add below
+        
+        $ghcMingwDir = Join-Path -Path $(ghc --print-libdir) `
+                                 -ChildPath ../mingw/x86_64-*-mingw32/lib/ `
+                                 -Resolve
+        
+        cabal user-config -a "extra-prog-path: C:/msys64/mingw64/bin, C:/msys64/usr/bin" `
+                          -a "extra-include-dirs: C:/msys64/mingw64/include" `
+                          -a ("extra-lib-dirs: {0}, C:/msys64/mingw64/lib" -f $ghcMingwDir) `
+                          -f init
+
+    - name: "OUTPUT Record cabal-store (Linux)"
+      id: lin-setup-haskell
+      shell: bash
+      if: runner.os != 'Windows'
+      run: |
+        echo "cabal-store=/home/runner/.cabal/store" >> $GITHUB_OUTPUT
+        
+    - name: "OUTPUT Record cabal-store (Windows)"
+      id: win-setup-haskell
+      shell: bash
+      if: runner.os == 'Windows'
+      run: |
+        echo "cabal-store=C:\\cabal\\store" >> $GITHUB_OUTPUT    
+
+    - name: "[OUTPUT] cache keys: version, weeknum"
+      id: cache-keys
+      shell: bash
+      run: |
+        echo "weeknum=$(/usr/bin/date -u "+%W")" >> $GITHUB_OUTPUT
+        echo "CACHE_VERSION=grFfw8r" >> $GITHUB_OUTPUT
 
     - uses: actions/checkout@v2
 
@@ -194,11 +197,11 @@ jobs:
     - name: Cache Cabal store
       uses: actions/cache@v2
       with:
-        path: ${{ runner.os == 'Windows' && steps.win-setup-haskell.outputs.cabal-store || steps.setup-haskell.outputs.cabal-store }}
-        key: cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}-${{ hashFiles('date.txt') }}
+        path: ${{ runner.os == 'Windows' && steps.win-setup-haskell.outputs.cabal-store || steps.lin-setup-haskell.outputs.cabal-store }}
+        key: cache-${{ steps.cache-keys.outputs.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}-${{ hashFiles('date.txt') }}
         restore-keys: |
-          cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
-          cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}
+          cache-${{ steps.cache-keys.outputs.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
+          cache-${{ steps.cache-keys.outputs.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}
 
     - uses: actions/cache@v2
       name: "Cache `dist-newstyle`"
@@ -206,11 +209,11 @@ jobs:
         path: |
           dist-newstyle
           !dist-newstyle/**/.git
-        key: cache-dist-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ steps.record-deps.outputs.weeknum }}
-        restore-keys: cache-dist-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}
+        key: cache-dist-${{ steps.cache-keys.outputs.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ steps.cache-keys.outputs.weeknum }}
+        restore-keys: cache-dist-${{ steps.cache-keys.outputs.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}
 
     - name: Build
-      run: cabal build cardano-node cardano-cli cardano-node-chairman cardano-submit-api
+      run: cabal build cardano-node cardano-cli cardano-node-chairman cardano-submit-api -j
 
     - name: Run tests
       run: |
