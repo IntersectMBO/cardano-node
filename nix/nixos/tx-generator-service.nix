@@ -5,7 +5,7 @@ let
                   plutusScript = cfg.plutusScript;
                   targetNodes = targetNodesList cfg.targetNodes;
                   era = capitalise cfg.era;
-                  plutusLoopScript = plutusScriptFile cfg "loop.plutus";
+                  plutusLoopScript = plutusScriptFile cfg "v2/schnorr-secp256k1-loop.plutus";
                   inherit
                   plutusMode
                   plutusData
