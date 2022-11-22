@@ -12,6 +12,7 @@ license-files:
 build-type:            Simple
 extra-source-files:    README.md
 data-files:            data/protocol-parameters.json
+                       data/protocol-parameters-v8.json
 
 common project-config
   if os(windows)
@@ -67,7 +68,6 @@ library
                        Cardano.TxGenerator.UTxO
 
                        Cardano.TxGenerator.Internal.Orphans
-
 
   other-modules:       Cardano.TxGenerator.Internal.Fifo
                        -- Cardano.TxGenerator.Internal.Orphans
@@ -176,6 +176,9 @@ test-suite tx-generator-apitest
                      , transformers
                      , transformers-except
                      , tx-generator
+
+  other-modules:     Paths_tx_generator
+
                      
 test-suite tx-generator-test
   hs-source-dirs:       test
