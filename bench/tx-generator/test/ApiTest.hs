@@ -24,12 +24,17 @@ import           Cardano.Node.Types (AdjustFilePaths (..), GenesisFile (..))
 import           Cardano.TxGenerator.Genesis
 import           Cardano.TxGenerator.Setup.NixService
 import           Cardano.TxGenerator.Setup.NodeConfig
+import           Cardano.TxGenerator.Setup.Plutus
 import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Types
 
 import           Cardano.Benchmarking.Script.Aeson (prettyPrint, prettyPrintYaml)
 import           Cardano.Benchmarking.Script.Selftest (testScript)
 import           Cardano.Benchmarking.Script.Types (SubmitMode (..))
+
+import           Cardano.Node.Protocol.Types
+
+import           Paths_tx_generator
 
 
 data CommandLine = CommandLine {
@@ -58,7 +63,7 @@ main
     CommandLine{..} <- parseCommandLine
     let pathModifier p = if isRelative p then runPath </> p else p
 
-    setup  <- runExceptT $ do
+    setup <- runExceptT $ do
       nixService :: NixServiceOptions <-
         adjustFilePaths pathModifier <$> readFileJson nixServiceJson
 
@@ -80,16 +85,38 @@ main
       pure (nixService, nc, genesis, sigKey)
 
     case setup of
-      Right (_nixService, _nc, _genesis, _sigKey) -> do
-        print $ checkFund _genesis _sigKey
+      Left err -> die (show err)
+      Right (nixService, _nc, genesis, sigKey) -> do
+        putStrLn $ "Did I manage to extract a genesis fund?\n--> " ++ show (checkFund genesis sigKey)
+        putStrLn "Can I pre-execute a plutus script?"
+        checkPlutus (_nix_plutusLoopScript nixService)
         exitSuccess
-      err -> die (show err)
 
 checkFund ::
      ShelleyGenesis
   -> SigningKey PaymentKey
   -> Maybe (AddressInEra BabbageEra, Lovelace)
 checkFund = genesisInitialFundForKey Mainnet
+
+checkPlutus ::
+     FilePath
+  -> IO ()
+checkPlutus ""
+  = putStrLn "--> No plutus script defined."
+checkPlutus scriptPath
+  = do
+    parametersFile <- getDataFileName "data/protocol-parameters-v8.json"
+    protocolParameters <- either die pure =<< eitherDecodeFileStrict' parametersFile
+    script <- either (die . show) pure =<< readPlutusScript scriptPath
+    putStrLn $ "--> Read plutus script: " ++ scriptPath
+
+    -- arbitrary redeemer for a loop script; should respect mainnet limits
+    -- NB assumes loop countdown to 1_000_000
+    case preExecutePlutusScript protocolParameters script (ScriptDataNumber 0) (ScriptDataNumber $ 1000000 + 1792) of
+      Left err -> putStrLn $ "--> execution failed: " ++ show err
+      Right units -> putStrLn $ "--> execution successful; got units: " ++ show units
+
+
 
 readFileJson :: FromJSON a => FilePath -> ExceptT TxGenError IO a
 readFileJson f = handleIOExceptT (TxGenError . show) (eitherDecodeFileStrict' f) >>= firstExceptT TxGenError . hoistEither
