@@ -1,0 +1,45 @@
+cabal-version:          2.2
+name:                   cardano-ping
+version:                0.2.0.0
+synopsis:               Cardano Ping
+license:                Apache-2.0
+license-files:          LICENSE
+                        NOTICE
+copyright:              2019 Input Output (Hong Kong) Ltd.
+author:                 Duncan Coutts, Marc Fontaine, Karl Knutsson, Marcin Szamotulski, Alexander Vieth, Neil Davies
+maintainer:             duncan@well-typed.com, marcin.szamotulski@iohk.io, marc.fontaine@iohk.io, karl.knutsson@iohk.io, alex@well-typed.com, neil.davies@pnsol.com
+category:               Network
+build-type:             Simple
+extra-source-files:     CHANGELOG.md
+
+common shared-config
+  default-language:     Haskell2010
+  ghc-options:          -threaded
+                        -Wall
+                        -fno-ignore-asserts
+                        -Wcompat
+                        -Wincomplete-uni-patterns
+                        -Wincomplete-record-updates
+                        -Wpartial-fields
+                        -Widentities
+                        -Wredundant-constraints
+
+executable cardano-ping
+  import:               shared-config
+  hs-source-dirs:       app
+  main-is:              Main.hs
+  build-depends:        base,
+                        aeson,
+                        network-mux,
+                        io-classes,
+                        strict-stm,
+                        contra-tracer,
+                        bytestring,
+                        cborg,
+                        network,
+                        tdigest,
+                        text
+  if os(windows)
+    buildable:          False
+  else
+    buildable:          True
