@@ -140,7 +140,7 @@ library
                       , ouroboros-consensus-cardano
                       , ouroboros-consensus-protocol
                       , ouroboros-consensus-shelley
-                      , ouroboros-network ^>= 0.2
+                      , ouroboros-network ^>= 0.3
                       , ouroboros-network-framework ^>= 0.2
                       , parsec
                       , plutus-ledger-api
