@@ -51,12 +51,10 @@ module Data.CDF
   , module Data.SOP.Strict
   ) where
 
-import Prelude ((!!), head, show)
+import Prelude ((!!), show)
 import Cardano.Prelude hiding (head, show)
 
-import Data.Aeson (FromJSON(..), ToJSON(..))
 import Data.SOP.Strict
-import Data.Time.Clock (NominalDiffTime)
 import Data.Vector qualified as Vec
 import Statistics.Sample qualified as Stat
 
@@ -158,7 +156,7 @@ data CDF p a =
   { cdfSize      :: Int
   , cdfAverage   :: p Double
   , cdfStddev    :: Double
-  , cdfRange     :: (a, a)
+  , cdfRange     :: Interval a
   , cdfSamples   :: [(Centile, p a)]
   }
   deriving (Functor, Generic)
@@ -207,7 +205,7 @@ zeroCDF =
   { cdfSize    = 0
   , cdfAverage = liftCDFVal 0 cdfIx
   , cdfStddev  = 0
-  , cdfRange   = (0, 0)
+  , cdfRange   = Interval 0 0
   , cdfSamples = mempty
   }
 
@@ -218,7 +216,7 @@ cdf centiles (sort -> sorted) =
   { cdfSize        = size
   , cdfAverage     = I . fromDouble $ Stat.mean doubleVec
   , cdfStddev      = Stat.stdDev doubleVec
-  , cdfRange       = (mini, maxi)
+  , cdfRange       = Interval mini maxi
   , cdfSamples =
     centiles <&>
       \spec ->
@@ -257,7 +255,7 @@ liftCDFVal x = \case
   CDF2 -> CDF { cdfSize    = 1
               , cdfAverage = I $ toDouble x
               , cdfStddev  = 0
-              , cdfRange   = (x, x)
+              , cdfRange   = point x
               , cdfSamples = []
               , .. }
 
@@ -267,12 +265,12 @@ unliftCDFVal CDF2 CDF{cdfAverage=I cdfAverage} = (1 :: a) `divide` (1 / toDouble
 
 unliftCDFValExtra :: forall a p. Divisible a => CDFIx p -> p a -> [a]
 unliftCDFValExtra CDFI (I x) = [x]
-unliftCDFValExtra i@CDF2 c@CDF{cdfRange=(mi, ma), ..} = [ mean
-                                                        , mi
-                                                        , ma
-                                                        , mean - stddev
-                                                        , mean + stddev
-                                                        ]
+unliftCDFValExtra i@CDF2 c@CDF{cdfRange=Interval mi ma, ..} = [ mean
+                                                              , mi
+                                                              , ma
+                                                              , mean - stddev
+                                                              , mean + stddev
+                                                              ]
  where mean   = unliftCDFVal i c
        stddev = (1 :: a) `divide` (1 / cdfStddev)
 
@@ -304,7 +302,7 @@ data Combine p a
   = Combine
     { cWeightedAverages :: !([(Int, Double)] -> Double)
     , cStddevs          :: !([Double] -> Double)
-    , cRanges           :: !([(a, a)] -> (a, a))
+    , cRanges           :: !([Interval a] -> Interval a)
     , cWeightedSamples  :: !([(Int, a)] -> a)
     , cCDF              :: !([p a] -> Either CDFError (CDF I a))
     }
@@ -313,14 +311,11 @@ stdCombine1 :: forall a. (Divisible a) => [Centile] -> Combine I a
 stdCombine1 cs =
   Combine
   { cWeightedAverages = weightedAverage
-  , cRanges           = outerRange
+  , cRanges           = unionIntv
   , cStddevs          = maximum          -- it's an approximation
   , cWeightedSamples  = weightedAverage
   , cCDF              = Right . cdf cs . fmap unI
   }
-  where
-    outerRange      xs = (,) (minimum $ fst <$> xs)
-                             (maximum $ snd <$> xs)
 
 stdCombine2 :: Divisible a => [Centile] -> Combine (CDF I) a
 stdCombine2 cs =

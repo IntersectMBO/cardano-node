@@ -4,10 +4,8 @@
 {-# OPTIONS_GHC -Wno-name-shadowing -Wno-orphans #-}
 module Cardano.Analysis.API.Types (module Cardano.Analysis.API.Types) where
 
-import Util                     (count)
 import Cardano.Prelude          hiding (head)
 
-import Data.Aeson               (ToJSON(..), FromJSON(..))
 import Data.Text                qualified as T
 import Options.Applicative      qualified as Opt
 
@@ -21,7 +19,6 @@ import Cardano.Util
 import Cardano.Analysis.API.Chain
 import Cardano.Analysis.API.ChainFilter
 import Cardano.Analysis.API.Context
-import Cardano.Analysis.API.Field
 import Cardano.Analysis.API.Ground
 import Cardano.Analysis.API.LocliVersion
 
@@ -30,26 +27,53 @@ import Cardano.Analysis.API.LocliVersion
 --
 
 -- | Overall summary of all analyses.
-data Summary where
+data Summary f where
   Summary ::
-    { sumWhen                :: !UTCTime
+    { sumAnalysisTime        :: !UTCTime
+    , sumMeta                :: !Metadata
+    , sumGenesis             :: !Genesis
+    , sumGenesisSpec         :: !GenesisSpec
+    , sumGenerator           :: !GeneratorProfile
     , sumLogStreams          :: !(Count [LogObject])
-    , sumLogObjects          :: !(Count LogObject)
+    , sumLogObjectsTotal     :: !(Count LogObject)
     , sumFilters             :: !([FilterName], [ChainFilter])
     , sumChainRejectionStats :: ![(ChainFilter, Int)]
     , sumBlocksRejected      :: !(Count BlockEvents)
+    , sumDomainTime          :: !(DataDomain UTCTime)
+    , sumStartSpread         :: !(DataDomain UTCTime)
+    , sumStopSpread          :: !(DataDomain UTCTime)
     , sumDomainSlots         :: !(DataDomain SlotNo)
     , sumDomainBlocks        :: !(DataDomain BlockNo)
-    } -> Summary
-  deriving (Generic, FromJSON, ToJSON, Show)
+    , cdfLogObjects          :: !(CDF f Int)
+    , cdfLogObjectsEmitted   :: !(CDF f Int)
+    } -> Summary f
+  deriving (Generic)
 
+type SummaryOne   = Summary I
+type MultiSummary = Summary (CDF I)
+
+deriving instance (FromJSON (f Int), FromJSON (f Double)) => FromJSON (Summary f)
+deriving instance (  ToJSON (f Int),   ToJSON (f Double)) =>   ToJSON (Summary f)
+deriving instance (    Show (f Int),     Show (f Double)) =>     Show (Summary f)
+
+data BlockStats
+  = BlockStats
+    { bsFiltered  :: Count ForgerEvents
+    , bsRejected  :: Count ForgerEvents
+    , bsUnchained :: Count ForgerEvents
+    }
+    deriving (Generic, FromJSON, ToJSON)
+
+bsTotal, bsChained :: BlockStats -> Count ForgerEvents
+bsTotal   BlockStats{..} = bsFiltered + bsRejected + bsUnchained
+bsChained BlockStats{..} = bsFiltered + bsRejected
 
 -- | Results of block propagation analysis.
 data BlockProp f
   = BlockProp
     { bpVersion              :: !Cardano.Analysis.API.LocliVersion.LocliVersion
-    , bpDomainSlots          :: !(DataDomain SlotNo)
-    , bpDomainBlocks         :: !(DataDomain BlockNo)
+    , bpDomainSlots          :: ![DataDomain SlotNo]
+    , bpDomainBlocks         :: ![DataDomain BlockNo]
     , cdfForgerStarts        :: !(CDF f NominalDiffTime)
     , cdfForgerBlkCtx        :: !(CDF f NominalDiffTime)
     , cdfForgerLgrState      :: !(CDF f NominalDiffTime)
@@ -65,16 +89,92 @@ data BlockProp f
     , cdfPeerAnnouncements   :: !(CDF f NominalDiffTime)
     , cdfPeerAdoptions       :: !(CDF f NominalDiffTime)
     , cdfPeerSends           :: !(CDF f NominalDiffTime)
-    , cdfForks               :: !(CDF f Int)
-    , cdfSizes               :: !(CDF f Int)
+    , cdfBlocksPerHost       :: !(CDF f Int)
+    , cdfBlocksFilteredRatio :: !(CDF f Double)
+    , cdfBlocksChainedRatio  :: !(CDF f Double)
+    , cdfBlockBattles        :: !(CDF f Int)
+    , cdfBlockSizes          :: !(CDF f Int)
     , bpPropagation          :: !(Map Text (CDF f NominalDiffTime))
     }
   deriving (Generic)
-deriving instance (Show     (f NominalDiffTime), Show     (f Int), Show     (f Double), Show     (f (Count BlockEvents))) => Show     (BlockProp f)
-deriving instance (FromJSON (f NominalDiffTime), FromJSON (f Int), FromJSON (f Double), FromJSON (f (Count BlockEvents))) => FromJSON (BlockProp f)
+deriving instance (Show     (f NominalDiffTime), Show     (f Int), Show     (f Double), Show     (f (Count BlockEvents)), Show     (f (DataDomain SlotNo)), Show     (f (DataDomain BlockNo))) => Show     (BlockProp f)
+deriving instance (FromJSON (f NominalDiffTime), FromJSON (f Int), FromJSON (f Double), FromJSON (f (Count BlockEvents)), FromJSON (f (DataDomain SlotNo)), FromJSON (f (DataDomain BlockNo))) => FromJSON (BlockProp f)
 
 type BlockPropOne   = BlockProp I
 type MultiBlockProp = BlockProp (CDF I)
+
+-- | The top-level representation of the machine timeline analysis results.
+data MachPerf f
+  = MachPerf
+    { mpVersion            :: !Cardano.Analysis.API.LocliVersion.LocliVersion
+    , mpDomainSlots        :: ![DataDomain SlotNo]
+    , cdfHostSlots         :: !(CDF f Word64)
+    -- distributions
+    , cdfStarts            :: !(CDF f Word64)
+    , cdfLeads             :: !(CDF f Word64)
+    , cdfUtxo              :: !(CDF f Word64)
+    , cdfDensity           :: !(CDF f Double)
+    , cdfStarted           :: !(CDF f NominalDiffTime)
+    , cdfBlkCtx            :: !(CDF f NominalDiffTime)
+    , cdfLgrState          :: !(CDF f NominalDiffTime)
+    , cdfLgrView           :: !(CDF f NominalDiffTime)
+    , cdfLeading           :: !(CDF f NominalDiffTime)
+    , cdfForged            :: !(CDF f NominalDiffTime)
+    , cdfBlockGap          :: !(CDF f Word64)
+    , cdfSpanLensCpu       :: !(CDF f Int)
+    , cdfSpanLensCpuEpoch  :: !(CDF f Int)
+    , cdfSpanLensCpuRwd    :: !(CDF f Int)
+    , mpResourceCDFs       :: !(Resources (CDF f Word64))
+    }
+  deriving (Generic)
+
+-- | One machine's performance
+type    MachPerfOne  = MachPerf I
+
+-- | Bunch'a machines performances
+type    ClusterPerf  = MachPerf (CDF I)
+
+-- | Bunch'a bunches'a machine performances.
+--   Same as above, since we collapse [CDF I] into CDF I -- just with more statistical confidence.
+newtype MultiClusterPerf
+  = MultiClusterPerf { unMultiClusterPerf :: ClusterPerf }
+  deriving newtype (FromJSON)
+
+-- * BlockProp
+--
+data Chain
+  = Chain
+  { cDomSlots   :: !(DataDomain SlotNo)
+  , cDomBlocks  :: !(DataDomain BlockNo)
+  , cRejecta    :: ![BlockEvents]
+  , cMainChain  :: ![BlockEvents]
+  , cBlockStats :: !(Map Host BlockStats)
+  }
+
+-- | Block's events, as seen by its forger.
+data ForgerEvents a
+  =  ForgerEvents
+  { bfeHost         :: !Host
+  , bfeBlock        :: !Hash
+  , bfeBlockPrev    :: !Hash
+  , bfeBlockNo      :: !BlockNo
+  , bfeSlotNo       :: !SlotNo
+  , bfeSlotStart    :: !SlotStart
+  , bfeEpochNo      :: !EpochNo
+  , bfeBlockSize    :: !(SMaybe Int)
+  , bfeStarted      :: !(SMaybe a)
+  , bfeBlkCtx       :: !(SMaybe a)
+  , bfeLgrState     :: !(SMaybe a)
+  , bfeLgrView      :: !(SMaybe a)
+  , bfeLeading      :: !(SMaybe a)
+  , bfeForged       :: !(SMaybe a)
+  , bfeAnnounced    :: !(SMaybe a)
+  , bfeSending      :: !(SMaybe a)
+  , bfeAdopted      :: !(SMaybe a)
+  , bfeChainDelta   :: !Int
+  , bfeErrs         :: [BPError]
+  }
+  deriving (Generic, NFData, FromJSON, ToJSON, Show)
 
 -- | All events related to a block.
 data BlockEvents
@@ -199,47 +299,13 @@ data RunScalars
   deriving stock Generic
   deriving anyclass NFData
 
--- | The top-level representation of the machine timeline analysis results.
-data MachPerf f
-  = MachPerf
-    { mpVersion             :: !Cardano.Analysis.API.LocliVersion.LocliVersion
-    , mpDomainSlots         :: !(DataDomain SlotNo)
-    -- distributions
-    , cdfStarts            :: !(CDF f Word64)
-    , cdfLeads             :: !(CDF f Word64)
-    , cdfUtxo              :: !(CDF f Word64)
-    , cdfDensity           :: !(CDF f Double)
-    , cdfStarted           :: !(CDF f NominalDiffTime)
-    , cdfBlkCtx            :: !(CDF f NominalDiffTime)
-    , cdfLgrState          :: !(CDF f NominalDiffTime)
-    , cdfLgrView           :: !(CDF f NominalDiffTime)
-    , cdfLeading           :: !(CDF f NominalDiffTime)
-    , cdfForged            :: !(CDF f NominalDiffTime)
-    , cdfBlockGap          :: !(CDF f Word64)
-    , cdfSpanLensCpu       :: !(CDF f Int)
-    , cdfSpanLensCpuEpoch  :: !(CDF f Int)
-    , cdfSpanLensCpuRwd    :: !(CDF f Int)
-    , mpResourceCDFs       :: !(Resources (CDF f Word64))
-    }
-  deriving (Generic)
-
--- | One machine's performance
-type    MachPerfOne  = MachPerf I
-
--- | Bunch'a machines performances
-type    ClusterPerf  = MachPerf (CDF I)
-
--- | Bunch'a bunches'a machine performances.
---   Same as above, since we collapse [CDF I] into CDF I -- just with more statistical confidence.
-newtype MultiClusterPerf
-  = MultiClusterPerf { unMultiClusterPerf :: ClusterPerf }
-  deriving newtype (FromJSON)
-
+-- * MachPerf / ClusterPef
+--
 deriving newtype instance FromJSON a => FromJSON (I a)
 deriving newtype instance ToJSON   a => ToJSON   (I a)
-deriving instance (FromJSON (a Double), FromJSON (a Int), FromJSON (a NominalDiffTime), FromJSON (a Word64)) => FromJSON (MachPerf a)
-deriving instance (NFData   (a Double), NFData   (a Int), NFData   (a NominalDiffTime), NFData   (a Word64)) => NFData   (MachPerf a)
-deriving instance (Show     (a Double), Show     (a Int),   Show   (a NominalDiffTime), Show     (a Word64)) => Show     (MachPerf a)
+deriving instance (FromJSON (a Double), FromJSON (a Int), FromJSON (a NominalDiffTime), FromJSON (a Word64), FromJSON (a (DataDomain SlotNo)), FromJSON (a (DataDomain UTCTime))) => FromJSON (MachPerf a)
+deriving instance (NFData   (a Double), NFData   (a Int), NFData   (a NominalDiffTime), NFData   (a Word64), NFData   (a (DataDomain SlotNo)), NFData   (a (DataDomain UTCTime))) => NFData   (MachPerf a)
+deriving instance (Show     (a Double), Show     (a Int),   Show   (a NominalDiffTime), Show     (a Word64), Show     (a (DataDomain SlotNo)), Show     (a (DataDomain UTCTime))) => Show     (MachPerf a)
 
 data SlotStats a
   = SlotStats
@@ -334,35 +400,17 @@ testSlotStats g SlotStats{..} = \case
 --
 data PropSubset
   = PropFull
+  | PropControl
   | PropForger
   | PropPeers
   | PropEndToEnd
   | PropEndToEndBrief
   deriving Show
 
-bpFieldSelectEndToEnd :: Field DSelect p a -> Bool
-bpFieldSelectEndToEnd Field{fId} = fId `elem` adoptionCentilesRendered
- where
-   adoptionCentilesRendered :: [Text]
-   adoptionCentilesRendered = adoptionCentiles <&> renderAdoptionCentile
-
-bpFieldSelectEndToEndBrief :: Field DSelect p a -> Bool
-bpFieldSelectEndToEndBrief Field{fId} = fId `elem` adoptionCentilesRendered
- where
-   adoptionCentilesRendered :: [Text]
-   adoptionCentilesRendered = adoptionCentilesBrief <&> renderAdoptionCentile
-
-propSubsetFn :: PropSubset -> (Field DSelect p a -> Bool)
-propSubsetFn = \case
-  PropFull          -> const True
-  PropForger        -> bpFieldSelectForger
-  PropPeers         -> bpFieldSelectPeers
-  PropEndToEnd      -> bpFieldSelectEndToEnd
-  PropEndToEndBrief -> bpFieldSelectEndToEndBrief
-
 parsePropSubset :: Opt.Parser PropSubset
 parsePropSubset =
   [ Opt.flag' PropFull          (Opt.long "full"       <> Opt.help "Complete propagation data")
+  , Opt.flag' PropControl       (Opt.long "control"    <> Opt.help "Only overall control data")
   , Opt.flag' PropForger        (Opt.long "forger"     <> Opt.help "Only forger propagation")
   , Opt.flag' PropPeers         (Opt.long "peers"      <> Opt.help "Only peer propagation")
   , Opt.flag' PropEndToEnd      (Opt.long "end-to-end" <> Opt.help "Only end-to-end propagation")
@@ -386,27 +434,18 @@ adoptionCentilesBrief :: [Centile]
 adoptionCentilesBrief =
   [ Centile 0.5, Centile 0.9, Centile 0.96 ]
 
-
-bpFieldSelectForger :: Field DSelect p a -> Bool
-bpFieldSelectForger Field{fId} = fId `elem`
-  [ "cdfForgerStarts", "cdfForgerBlkCtx", "cdfForgerLgrState", "cdfForgerLgrView", "cdfForgerLeads", "cdfForgerForges", "cdfForgerAnnouncements", "cdfForgerSends", "cdfForgerAdoptions", "cdfForks" ]
-
-bpFieldSelectPeers :: Field DSelect p a -> Bool
-bpFieldSelectPeers Field{fId} = fId `elem`
-  [ "cdfPeerNotices", "cdfPeerRequests", "cdfPeerFetches", "cdfPeerAnnouncements", "cdfPeerSends", "cdfPeerAdoptions" ]
-
 --
 -- * Machine performance report subsetting
 --
 data PerfSubset
   = PerfFull
-  | PerfSummary
+  | PerfReport
   deriving Show
 
 parsePerfSubset :: Opt.Parser PerfSubset
 parsePerfSubset =
-  [ Opt.flag' PerfFull     (Opt.long "full"    <> Opt.help "Complete performance data")
-  , Opt.flag' PerfSummary  (Opt.long "summary" <> Opt.help "Only report-relevant perf data")
+  [ Opt.flag' PerfFull   (Opt.long "full"   <> Opt.help "Complete performance data")
+  , Opt.flag' PerfReport (Opt.long "report" <> Opt.help "Only report-relevant perf data")
   ] & \case
         (x:xs) -> foldl (<|>) x xs
         [] -> error "Crazy world."

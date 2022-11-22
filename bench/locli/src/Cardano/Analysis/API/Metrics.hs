@@ -27,15 +27,182 @@ import Data.CDF
 
 import Cardano.JSON
 import Cardano.Util
+import Cardano.Analysis.API.Context
 import Cardano.Analysis.API.Field
 import Cardano.Analysis.API.Ground
 import Cardano.Analysis.API.Types
 
 
-perfSubsetFn :: PerfSubset -> (Field DSelect p a -> Bool)
-perfSubsetFn = \case
-  PerfFull    -> const True
-  PerfSummary -> mtFieldsReport
+sumFieldsReport :: [FieldName]
+sumFieldsReport =
+  [ "date.systemStart", "time.systemStart", "sumAnalysisTime"
+  , "batch"
+  , "cardano-node", "ouroboros-network" , "cardano-ledger", "plutus", "cardano-crypto", "cardano-base"
+  , "era"
+  , "delegators", "utxo"
+  , "add_tx_size", "inputs_per_tx", "outputs_per_tx" , "tps", "tx_count"
+  , "plutusScript"
+  , "sumLogStreams", "sumLogObjectsTotal"
+  , "sumFilters"
+  , "ddRawCount.sumDomainTime", "ddFilteredCount.sumDomainTime", "dataDomainFilterRatio.sumDomainTime"
+  , "ddRaw.sumStartSpread", "ddRaw.sumStopSpread"
+  , "ddFiltered.sumStartSpread", "ddFiltered.sumStopSpread"
+  , "sumDomainSlots", "sumDomainBlocks", "sumBlocksRejected" ]
+
+instance TimelineFields SummaryOne where
+  data TimelineComments SummaryOne
+    deriving Show
+
+  timelineFields =
+      fScalar "sumAnalysisTime"        W10 Dat (IText $ showText.roundUTCTimeDay.sumAnalysisTime)
+      "Analysis date"
+      "Date of analysis"
+
+   <> fScalar "date.systemStart"       W10 Dat (IDate $ systemStart.sumGenesis)
+      "Cluster system start date"
+      "Date of cluster genesis systemStart"
+
+   <> fScalar "time.systemStart"       W8  Tim (ITime $ systemStart.sumGenesis)
+      "Cluster system start date"
+      "Date of cluster genesis systemStart"
+
+   <> fScalar   "batch"                Wno Id  (IText $                   batch.sumMeta)
+      "Run batch"
+      ""
+
+   <> fScalar "cardano-node"           W5  Ver (IText $ unCommit.mNode.manifest.sumMeta)
+      "cardano-node version"
+      ""
+
+   <> fScalar "ouroboros-network"      W5  Ver (IText $ unCommit.mNetwork.manifest.sumMeta)
+      "ouroboros-network version"
+      ""
+
+   <> fScalar "cardano-ledger"         W5  Ver (IText $ unCommit.mLedger.manifest.sumMeta)
+      "cardano-ledger version"
+      ""
+
+   <> fScalar "plutus"                 W5  Ver (IText $ unCommit.mPlutus.manifest.sumMeta)
+      "plutus version"
+      ""
+
+   <> fScalar "cardano-crypto"         W5  Ver (IText $ unCommit.mCrypto.manifest.sumMeta)
+      "cardano-crypto version"
+      ""
+
+   <> fScalar "cardano-base"           W5  Ver (IText $ unCommit.mBase.manifest.sumMeta)
+      "cardano-base version"
+      ""
+
+   <> fScalar "era"                    Wno Era (IText $                     era.sumMeta)
+      "Era"
+      "Benchmark era"
+
+   <> fScalar "delegators"             Wno Cnt (IWord64 $     delegators.sumGenesisSpec)
+      "Delegation map size"
+      ""
+
+   <> fScalar "utxo"                   Wno Cnt (IWord64 $           utxo.sumGenesisSpec)
+      "Starting UTxO set size"
+      "Extra UTxO set size at the beginning of the benchmark"
+
+   <> fScalar "add_tx_size"            Wno B   (IWord64 $      add_tx_size.sumGenerator)
+      "Extra tx payload"
+      ""
+
+   <> fScalar "inputs_per_tx"          Wno Cnt (IWord64 $    inputs_per_tx.sumGenerator)
+      "Tx inputs"
+      ""
+
+   <> fScalar "outputs_per_tx"         Wno Cnt (IWord64 $   outputs_per_tx.sumGenerator)
+      "Tx Outputs"
+      ""
+
+   <> fScalar "tps"                    Wno Hz  (IFloat $               tps.sumGenerator)
+      "TPS"
+      "Offered load, transactions per second"
+
+   <> fScalar "tx_count"               Wno Cnt (IWord64 $         tx_count.sumGenerator)
+      "Transaction count"
+      "Number of transactions prepared for submission, but not necessarily submitted"
+
+   <> fScalar "plutusScript"           Wno Id  (IText  $ T.pack.fromMaybe "---".plutusLoopScript.sumGenerator)
+      "Plutus script"
+      "Name of th Plutus script used for smart contract workload generation, if any"
+
+   <> fScalar "sumLogStreams"          Wno Cnt (IInt   $          unCount.sumLogStreams)
+      "Machines"
+      "Number of machines under analysis"
+
+   <> fScalar "sumLogObjectsTotal"     Wno Cnt (IInt   $     unCount.sumLogObjectsTotal)
+      "Total log objects analysed"
+      ""
+
+   <> fScalar "sumFilters"             Wno Cnt (IInt   $          length.snd.sumFilters)
+      "Number of filters applied"
+      ""
+
+   <> fScalar "ddRawCount.sumDomainTime"      Wno Sec (IInt   $       ddRawCount.sumDomainTime)
+      "Run time, s"
+      ""
+
+   <> fScalar "ddFilteredCount.sumDomainTime" Wno Sec (IInt   $  ddFilteredCount.sumDomainTime)
+      "Analysed run duration, s"
+      ""
+
+   <> fScalar "dataDomainFilterRatio.sumDomainTime" W4 Rto (IFloat $ dataDomainFilterRatio.sumDomainTime)
+      "Run time efficiency"
+      ""
+
+   <> fScalar "ddRaw.sumStartSpread"      Wno Sec (IDeltaT$ intvDurationSec.ddRaw.sumStartSpread)
+      "Node start spread, s"
+      ""
+
+   <> fScalar "ddRaw.sumStopSpread"       Wno Sec (IDeltaT$ intvDurationSec.ddRaw.sumStopSpread)
+      "Node stop spread, s"
+      ""
+
+   <> fScalar "ddFiltered.sumStartSpread" Wno Sec (IDeltaT$ maybe 0 intvDurationSec.ddFiltered.sumStartSpread)
+      "Perf analysis start spread, s"
+      ""
+
+   <> fScalar "ddFiltered.sumStopSpread"  Wno Sec (IDeltaT$ maybe 0 intvDurationSec.ddFiltered.sumStopSpread)
+      "Perf analysis stop spread, s"
+      ""
+
+   <> fScalar "sumDomainSlots"         Wno Slo (IInt   $ ddFilteredCount.sumDomainSlots)
+      "Slots analysed"
+      ""
+
+   <> fScalar "sumDomainBlocks"        Wno Blk (IInt  $ ddFilteredCount.sumDomainBlocks)
+      "Blocks analysed"
+      ""
+
+   <> fScalar "sumBlocksRejected"      Wno Cnt (IInt  $     unCount . sumBlocksRejected)
+      "Blocks rejected"
+      ""
+  -- fieldJSONOverlay f = (:[]) . tryOverlayFieldDescription f
+
+propSubsetFn :: PropSubset -> (Field DSelect p a -> Bool)
+propSubsetFn = \case
+  PropFull          -> const True
+  PropControl       -> dFields bpFieldsControl
+  PropForger        -> dFields bpFieldsForger
+  PropPeers         -> dFields bpFieldsPeers
+  PropEndToEnd      -> dFields bpFieldsEndToEnd
+  PropEndToEndBrief -> dFields bpFieldsEndToEndBrief
+
+bpFieldsControl, bpFieldsForger, bpFieldsPeers, bpFieldsEndToEnd, bpFieldsEndToEndBrief :: [FieldName]
+bpFieldsControl =
+  [ "cdfBlocksPerHost", "cdfBlocksFilteredRatio", "cdfBlocksChainedRatio", "cdfBlockBattles", "cdfBlockSizes" ]
+bpFieldsForger =
+  [ "cdfForgerStarts", "cdfForgerBlkCtx", "cdfForgerLgrState", "cdfForgerLgrView", "cdfForgerLeads", "cdfForgerForges", "cdfForgerAnnouncements", "cdfForgerSends", "cdfForgerAdoptions" ]
+bpFieldsPeers =
+  [ "cdfPeerNotices", "cdfPeerRequests", "cdfPeerFetches", "cdfPeerAnnouncements", "cdfPeerSends", "cdfPeerAdoptions" ]
+bpFieldsEndToEnd =
+  adoptionCentiles      <&> FieldName . renderAdoptionCentile
+bpFieldsEndToEndBrief =
+  adoptionCentilesBrief <&> FieldName . renderAdoptionCentile
 
 instance CDFFields BlockProp p where
   cdfFields =
@@ -76,9 +243,6 @@ instance CDFFields BlockProp p where
       "Forged to self-adopted"
       "Time it took to adopt the block (TraceAdoptedBlock), since block forging completion"
     ]
-   <> fBoth "cdfForks"    "fork" " #" W4 Uni P0 Lin Free (DInt cdfForks)
-      "Forks at this block height"
-      "For a given block, number of abandoned blocks at its block height"
    <> fGrp ",------- Peer event Δt: -------."
             W4 Sec P3 Log Free
     [ fGrp' "cdfPeerNotices"         "Noti" (DDeltaT cdfPeerNotices)
@@ -120,9 +284,26 @@ instance CDFFields BlockProp p where
             -- (T.pack $ printf "Block adopted by %.2f fraction of the entire cluster." centi)
       | (i, ct@(Centile centi)) <- zip [0::Int ..] adoptionCentiles
       ]
-   <> fBoth "cdfSizes" "Size" "bytes"   W9 B P0 Lin Free (DInt cdfSizes)
+
+   <> fBoth "cdfBlocksPerHost" "Host" "blks" W4 Blk P0 Lin Free (DInt cdfBlocksPerHost)
+      "Blocks per host"
+      "For a given host, number of blocks made during the entire observation period"
+
+   <> fBoth "cdfBlocksFilteredRatio" "Filtr" "blks" W4 Rto P3 Lin R01 (DFloat cdfBlocksFilteredRatio)
+      "Filtered to chained block ratio"
+      "For a given host, ratio of blocks that passed filtering / all on chain"
+
+   <> fBoth "cdfBlocksChainedRatio" "Chain" "blks" W4 Rto P3 Lin R01 (DFloat cdfBlocksChainedRatio)
+      "Chained to forged block ratio"
+      "For a given host, ratio of blocks that made into chain / all forged"
+
+   <> fBoth "cdfBlockBattles" "Battl" " #" W4 Blk P0 Lin Free (DInt cdfBlockBattles)
+      "Height & slot battles"
+      "For a given block, number of all abandoned blocks at its block height.  Sum of height and slot battles"
+
+   <> fBoth "cdfBlockSizes" "Size" "bytes" W9 B   P0 Lin Free (DInt cdfBlockSizes)
       "Block size"
-      "Block size, in bytes."
+      "Block size, in bytes"
    where r = nChunksEachOf (length adoptionCentiles) 5
              ",-- Slot-rel. Δt to adoption centile: -."
          checkCentile i centi (centi', d) =
@@ -137,7 +318,7 @@ instance CDFFields BlockProp p where
    where overlay = tryOverlayFieldDescription f
 
 instance TimelineFields BlockEvents where
-  timelineFields _ =
+  timelineFields =
       fBoth' "beBlockNo"   "block" "no."   W5 Blk P0 Lin Free (IWord64 (unBlockNo.beBlockNo))
    <> fBoth' "beSlotNo"    "abs."  "slot#" W5 Slo P0 Lin Free (IWord64 (unSlotNo .beSlotNo))
    <> fBoth' "beBlock"     "block" "hash"  W6 Hsh P0 Lin Free (IText   (shortHash.beBlock))
@@ -172,7 +353,7 @@ instance TimelineFields BlockEvents where
     [ fGrp' "0.50"          "0.5"  (IDeltaT (percSpec 0.50 . bePropagation)) "" ""
     , fGrp' "0.80"          "0.8"  (IDeltaT (percSpec 0.80 . bePropagation)) "" ""
     , fGrp' "0.96"          "0.96" (IDeltaT (percSpec 0.96 . bePropagation)) "" ""
-    , fGrp' "1.00"          "1.0"  (IDeltaT (snd . cdfRange. bePropagation)) "" ""
+    , fGrp' "1.00"          "1.0"  (IDeltaT (high .cdfRange. bePropagation)) "" ""
     ]
    <> fBoth' "beAcceptance" "va-" "lid" W3 Sig P0 Lin Free (IText (bool "-" "+" . (== 0) . length
                                                           . filter (not . snd) . beAcceptance))
@@ -204,8 +385,6 @@ instance TimelineFields BlockEvents where
      avg :: [NominalDiffTime] -> NominalDiffTime
      avg [] = 0
      avg xs =  (/ fromInteger (fromIntegral $ length xs)) $ sum xs
-     count :: (a -> Bool) -> [a] -> Int
-     count f = length . filter f
 
      bpeIsFork :: BPError -> Bool
      bpeIsFork BPError{eDesc=BPEFork{}} = True
@@ -227,9 +406,14 @@ instance TimelineFields BlockEvents where
       BEErrors     -> ("           " <>) . show <$> beErrors
       BEFilterOuts -> ("           " <>) . show <$> filter (not . snd) beAcceptance
 
-mtFieldsReport :: Field DSelect p a -> Bool
-mtFieldsReport Field{fId} = fId `elem`
-  [ "CentiCpu", "CentiGC", "CentiMut", "cdfSpanLensCpu", "RSS", "Heap", "Live", "Alloc", "GcsMinor", "GcsMajor" ]
+perfSubsetFn :: PerfSubset -> (Field DSelect p a -> Bool)
+perfSubsetFn = \case
+  PerfFull   -> const True
+  PerfReport -> dFields mtFieldsReport
+
+mtFieldsReport :: [FieldName]
+mtFieldsReport =
+  [ "CentiCpu", "CentiGC", "CentiMut", "cdfSpanLensCpu", "RSS", "Heap", "Live", "Alloc", "GcsMinor", "GcsMajor", "NetRd", "NetWr", "FsRd", "FsWr", "cdfStarts" ]
 
 instance CDFFields MachPerf p where
   cdfFields =
@@ -263,43 +447,24 @@ instance CDFFields MachPerf p where
       "Time spent forging the block (TraceForgedBlock), relative to positive leadership decision"
     ]
    <> fBoth "cdfBlockGap" "Block" "gap" W4 Sec P2 Lin Free    (DWord64 cdfBlockGap)
-      "Interblock gap"
+      "Interblock gap, s"
       "Time between blocks"
 
-   <> fGrp  "NetIO, kB/s"               W5 KBs P0 Lin Free
-    [ fGrp' "NetRd"        "recv"          (DWord64 (rNetRd.mpResourceCDFs))
-      "Network reads kB sec"
-      "Network reads, kB/sec"
-
-    , fGrp' "NetWr"        "send"          (DWord64 (rNetWr.mpResourceCDFs))
-      "Network writes kB sec"
-      "Network writes, kB/sec"
-    ]
-   <> fGrp  "FS IO, kB/s"               W5 KBs P0 Lin Free
-    [ fGrp' "FsRd"         "read"          (DWord64 (rFsRd.mpResourceCDFs))
-      "Filesystem reads kB sec"
-      "Number of bytes which this process really did cause to be fetched from the storage layer, per second"
-
-    , fGrp' "FsWr"         "write"         (DWord64 (rFsWr.mpResourceCDFs))
-      "Filesystem writes kB sec"
-      "Number of bytes which this process caused to be sent to the storage layer, modulo truncate(), per second"
-    ]
    <> fBoth "cdfDensity" "Dens" "ity"   W5 Rto P2 Lin Free (DFloat cdfDensity)
       "Chain density"
       "Chain density, for the last 'k' slots"
 
    <> fPct  "CentiCpu"            "CPU" (Z1 200) (DWord64 (rCentiCpu.mpResourceCDFs))
-      "Process CPU usage pct"
+      "Process CPU usage, %"
       "Kernel-reported CPU process usage, of a single core"
 
    <> fPct  "CentiGC"              "GC" (Z1 200) (DWord64 (rCentiGC .mpResourceCDFs))
-      "RTS GC CPU usage pct"
+      "RTS GC CPU usage, %"
       "RTS-reported GC CPU usage, of a single core"
 
    <> fPct  "CentiMut"            "MUT" (Z1 200) (DWord64 (rCentiMut.mpResourceCDFs))
-      "RTS Mutator CPU usage pct"
+      "RTS Mutator CPU usage, %"
       "RTS-reported mutator CPU usage, of a single core"
-
    <> fW64 "GcsMajor"        "GC" "Maj" W3 Ev    (DWord64 (rGcsMajor.mpResourceCDFs))
       "Major GCs"
       "Major GC events"
@@ -310,24 +475,43 @@ instance CDFFields MachPerf p where
 
    <> fGrp  "Memory usage, MB"          W5 MB P0 Lin Free
     [ fGrp' "RSS"                 "RSS"    (DWord64 (rRSS.mpResourceCDFs))
-      "Kernel RSS MB"
+      "Kernel RSS, MB"
       "Kernel-reported RSS (Resident Set Size) of the process, MB"
 
     , fGrp' "Heap"               "Heap"    (DWord64 (rHeap.mpResourceCDFs))
-      "RTS heap size MB"
+      "RTS heap size, MB"
       "RTS-reported heap size, MB"
 
     , fGrp' "Live"               "Live"    (DWord64 (rLive.mpResourceCDFs))
-      "RTS GC live bytes MB"
+      "RTS GC live bytes, MB"
       "RTS-reported GC live data size, MB"
     ]
    <> fBoth "Alloc"  "Alloc" "MB"       W5 MB P0 Lin (Z0 5000) (DWord64 (rAlloc.mpResourceCDFs))
-      "RTS alloc rate MB sec"
+      "RTS alloc rate MB/s"
       "RTS-reported allocation rate, MB/sec"
+
+   <> fGrp  "NetIO, kB/s"               W5 KBs P0 Lin Free
+    [ fGrp' "NetRd"        "recv"          (DWord64 (rNetRd.mpResourceCDFs))
+      "Network reads kB/s"
+      "Network reads, kB/sec"
+
+    , fGrp' "NetWr"        "send"          (DWord64 (rNetWr.mpResourceCDFs))
+      "Network writes kB/s"
+      "Network writes, kB/sec"
+    ]
+   <> fGrp  "FS IO, kB/s"               W5 KBs P0 Lin Free
+    [ fGrp' "FsRd"         "read"          (DWord64 (rFsRd.mpResourceCDFs))
+      "Filesystem reads, kB/s"
+      "Number of bytes which this process really did cause to be fetched from the storage layer, per second"
+
+    , fGrp' "FsWr"         "write"         (DWord64 (rFsWr.mpResourceCDFs))
+      "Filesystem writes, kB/s"
+      "Number of bytes which this process caused to be sent to the storage layer, modulo truncate(), per second"
+    ]
 
    <> fGrp  "CPU% spans"                W5 Len P0 Lin Free
     [ fGrp' "cdfSpanLensCpu"        "All" (DInt cdfSpanLensCpu)
-      "CPU 85pct spans"
+      "CPU 85% spans"
       "Length of over-85% CPU usage peaks"
 
     , fGrp' "cdfSpanLensCpuEpoch" "Epoch" (DInt cdfSpanLensCpuEpoch)
@@ -346,7 +530,7 @@ instance TimelineFields (SlotStats NominalDiffTime) where
   data TimelineComments (SlotStats NominalDiffTime)
     deriving Show
 
-  timelineFields _ =
+  timelineFields =
 
       fW64' "slot"       "abs." "slot#" W5 Slo (IWord64 (unSlotNo      .slSlot))
    <> fW64' "epochSlot"   "ep."  "slot" W4 Slo (IWord64 (unEpochSlot   .slEpochSlot))
@@ -402,13 +586,13 @@ instance TimelineFields (SlotStats NominalDiffTime) where
 
 -- * Instances, depending on the metrics' instances:
 --
-instance (ToJSON (f NominalDiffTime), ToJSON (f Int), ToJSON (f Double), ToJSON (f (Count BlockEvents))) => ToJSON (BlockProp f) where
+instance (ToJSON (f NominalDiffTime), ToJSON (f Int), ToJSON (f Double), ToJSON (f (Count BlockEvents)), ToJSON (f (DataDomain SlotNo)), ToJSON (f (DataDomain BlockNo))) => ToJSON (BlockProp f) where
   toJSON x = AE.genericToJSON AE.defaultOptions x
              & \case
                  Object o -> Object $ processFieldOverlays x o
                  _ -> error "Heh, serialised BlockProp to a non-Object."
 
-instance (ToJSON (a Double), ToJSON (a Int), ToJSON (a NominalDiffTime), ToJSON (a Word64)) => ToJSON (MachPerf a) where
+instance (ToJSON (a Double), ToJSON (a Int), ToJSON (a NominalDiffTime), ToJSON (a (DataDomain UTCTime)), ToJSON (a Word64), ToJSON (a (DataDomain SlotNo)), ToJSON (a (DataDomain BlockNo))) => ToJSON (MachPerf a) where
   toJSON x = AE.genericToJSON AE.defaultOptions x
              & \case
                  Object o -> Object $ processFieldOverlays x o
@@ -418,6 +602,9 @@ deriving newtype instance ToJSON MultiClusterPerf
 
 -- * Field definition auxiliaries:
 --
+fScalar :: Text -> Width -> Unit -> s p a -> Text -> Text -> [Field s p a]
+fScalar id w u sel sd d = [Field id "" "" w u P0 Lin Free sel sd d]
+
 fBoth :: Text -> Text -> Text -> Width -> Unit -> Precision -> Scale -> Range -> s p a -> Text -> Text -> [Field s p a]
 fBoth id h1 h2 wi u p s r sel sd d = [Field id h1 h2 wi u p s r sel sd d]
 

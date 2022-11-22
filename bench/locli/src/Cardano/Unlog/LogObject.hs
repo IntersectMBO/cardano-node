@@ -14,7 +14,6 @@ import Prelude (head, id, show, unzip3)
 import Cardano.Prelude hiding (Text, head, show)
 
 import Control.Monad (fail)
-import Data.Aeson (FromJSON(..), ToJSON(..), Value(..), Object, (.:), (.:?))
 import Data.Aeson qualified as AE
 import Data.Aeson.KeyMap qualified as KeyMap
 import Data.Aeson.Types (Parser)

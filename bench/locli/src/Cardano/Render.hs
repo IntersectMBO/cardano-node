@@ -2,10 +2,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Cardano.Render (module Cardano.Render) where
 
-import Prelude                          (head, id, show)
+import Prelude                          (id, show)
 import Cardano.Prelude                  hiding (head, show)
 
-import Data.Aeson                       (ToJSON)
 import Data.Aeson.Text                  (encodeToLazyText)
 import Data.List                        (dropWhileEnd)
 import Data.Text                        qualified as T
@@ -19,6 +18,69 @@ import Cardano.Util
 import Cardano.Analysis.API
 
 
+-- | Explain the poor human a little bit of what was going on:
+data Anchor
+  = Anchor
+  { aRuns    :: [Text]
+  , aFilters :: ([FilterName], [ChainFilter])
+  , aSlots   :: Maybe (DataDomain SlotNo)
+  , aBlocks  :: Maybe (DataDomain BlockNo)
+  , aVersion :: LocliVersion
+  , aWhen    :: UTCTime
+  }
+
+runAnchor :: Run -> UTCTime -> ([FilterName], [ChainFilter]) -> Maybe (DataDomain SlotNo) -> Maybe (DataDomain BlockNo) -> Anchor
+runAnchor Run{..} = tagsAnchor [tag metadata]
+
+tagsAnchor :: [Text] -> UTCTime -> ([FilterName], [ChainFilter]) -> Maybe (DataDomain SlotNo) -> Maybe (DataDomain BlockNo) -> Anchor
+tagsAnchor aRuns aWhen aFilters aSlots aBlocks =
+  Anchor { aVersion = getLocliVersion, .. }
+
+renderAnchor :: Anchor -> Text
+renderAnchor a = mconcat
+  [ "runs: ", renderAnchorRuns a, ", "
+  , renderAnchorNoRuns a
+  ]
+
+renderAnchorRuns :: Anchor -> Text
+renderAnchorRuns Anchor{..} = mconcat
+  [ T.intercalate ", " aRuns ]
+
+renderAnchorFiltersAndDomains :: Anchor -> Text
+renderAnchorFiltersAndDomains a@Anchor{..} = mconcat
+  [ "filters: ", case fst aFilters of
+                   [] -> "unfiltered"
+                   xs -> T.intercalate ", " (unFilterName <$> xs)
+  , renderAnchorDomains a]
+
+renderAnchorDomains :: Anchor -> Text
+renderAnchorDomains Anchor{..} = mconcat $
+  maybe [] ((:[]) . renderDomain "slot"  (showText . unSlotNo)) aSlots
+  <>
+  maybe [] ((:[]) . renderDomain "block" (showText . unBlockNo)) aBlocks
+ where renderDomain :: Text -> (a -> Text) -> DataDomain a -> Text
+       renderDomain ty r DataDomain{..} = mconcat
+         [ ", ", ty
+         , " range: raw(", renderIntv r ddRaw, ", "
+         ,                 showText ddRawCount, " total)"
+         ,   " filtered(", maybe "none"
+                           (renderIntv r) ddFiltered, ", "
+         ,                 showText ddFilteredCount, " total), "
+         , "filtered ",   T.take 4 . showText $ ((/) @Double `on` fromIntegral)
+                                                 ddFilteredCount  ddRawCount
+         ]
+
+renderAnchorNoRuns :: Anchor -> Text
+renderAnchorNoRuns a@Anchor{..} = mconcat
+  [ renderAnchorFiltersAndDomains a
+  , ", ", renderProgramAndVersion aVersion
+  , ", analysed at ", renderAnchorDate a
+  ]
+
+-- Rounds time to seconds.
+renderAnchorDate :: Anchor -> Text
+renderAnchorDate = showText . posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral @Int . round . utcTimeToPOSIXSeconds . aWhen
+
 justifyHead, justifyData, justifyCentile, justifyProp :: Int -> Text -> Text
 justifyHead    w = T.center        w ' '
 justifyData    w = T.justifyLeft   w ' '
@@ -27,6 +89,24 @@ justifyProp    w = T.center        w ' '
 
 renderCentiles :: Int -> [Centile] -> [Text]
 renderCentiles wi = fmap (T.take wi . T.pack . printf "%f" . unCentile)
+
+renderScalar  :: a -> Field ISelect I a -> Text
+renderScalar v Field{..} =
+  let wi = width fWidth
+      packWi  = T.pack.take wi
+      showDt  = packWi.dropWhileEnd (== 's').show
+      showInt = T.pack.printf "%d"
+      showW64 = T.pack.printf "%d"
+  in case fSelect of
+    IInt     (($v)->x) ->                 showInt x
+    IWord64M (($v)->x) -> smaybe "---"    showW64 x
+    IWord64  (($v)->x) ->                 showW64 x
+    IFloat   (($v)->x) ->      packWi $ printf "%F" x
+    IDeltaTM (($v)->x) -> smaybe "---"     showDt x
+    IDeltaT  (($v)->x) ->                  showDt x
+    IDate    (($v)->x) -> packWi $ take 10 $ show x
+    ITime    (($v)->x) -> packWi $ take  8 $ drop 11 $ show x
+    IText    (($v)->x) -> T.take wi . T.dropWhileEnd (== 's') $ x
 
 renderFieldCentiles :: a p -> (forall v. Divisible v => CDF p v -> [[v]]) -> Field DSelect p a -> [[Text]]
 renderFieldCentiles x cdfProj Field{..} =
@@ -53,11 +133,12 @@ renderFloatStr w = justifyData w'. T.take w' . T.pack . stripLeadingZero
      '0':xs@('.':_) -> xs
      xs -> xs
 
-renderSummary :: RenderFormat -> Anchor -> Summary -> [Text]
-renderSummary AsJSON _ x = (:[]) . LT.toStrict $ encodeToLazyText x
-renderSummary AsGnuplot _ _ = error "renderSummary:  output not supported:  gnuplot"
-renderSummary AsPretty  _ _ = error "renderSummary:  output not supported:  pretty"
-renderSummary _ a Summary{..} =
+renderSummary :: forall f a. (a ~ Summary f, TimelineFields a, ToJSON a)
+  => RenderFormat -> Anchor -> (Field ISelect I a -> Bool) -> a -> [Text]
+renderSummary AsJSON    _ _ x = (:[]) . LT.toStrict $ encodeToLazyText x
+renderSummary AsGnuplot _ _ _ = error "renderSummary: output not supported:  gnuplot"
+renderSummary AsPretty  _ _ _ = error "renderSummary: output not supported:  pretty"
+renderSummary _ a fieldSelr summ =
   render $
   Props
   { oProps = [ ("TITLE",    renderAnchorRuns a )
@@ -69,10 +150,12 @@ renderSummary _ a Summary{..} =
   , oBody = (:[]) $
     Table
     { tColHeaders     = ["Value"]
-    , tExtended       = False
-    , tApexHeader     = Just "Property"
-    , tColumns        = [kvs <&> snd]
-    , tRowHeaders     =  kvs <&> fst
+    , tExtended       = True
+    , tApexHeader     = Just "Parameter"
+    , tColumns        = --transpose $
+                        [fields' <&> renderScalar summ]
+    -- , tColumns        = [kvs <&> snd]
+    , tRowHeaders     = fields' <&> fShortDesc
     , tSummaryHeaders = []
     , tSummaryValues  = []
     , tFormula = []
@@ -80,17 +163,11 @@ renderSummary _ a Summary{..} =
     }
   }
  where
-   kvs = [ ("Date",              showText $ sumWhen)
-         , ("Machines",          showText $ sumLogStreams)
-         , ("Log objects",       showText $ sumLogObjects)
-         , ("Slots considered",  showText $ ddFilteredCount sumDomainSlots)
-         , ("Blocks considered", showText $ ddFilteredCount sumDomainBlocks)
-         , ("Blocks dropped",    showText $ sumBlocksRejected)
-         ]
+   fields' :: [Field ISelect I a]
+   fields' = filter fieldSelr timelineFields
 
-
-renderTimeline :: forall (a :: Type). TimelineFields a => Run -> (Field ISelect I a -> Bool) -> [TimelineComments a] -> [a] -> [Text]
-renderTimeline run flt comments xs =
+renderTimeline :: forall (a :: Type). TimelineFields a => (Field ISelect I a -> Bool) -> [TimelineComments a] -> [a] -> [Text]
+renderTimeline flt comments xs =
   concatMap (uncurry fLine) $ zip xs [(0 :: Int)..]
  where
    fLine :: a -> Int -> [Text]
@@ -103,37 +180,25 @@ renderTimeline run flt comments xs =
          : concat (fmap (rtCommentary l) comments))
 
    entry :: a -> Text
-   entry v = renderLineDist $
-     \Field{..} ->
-       let wi = width fWidth
-           showDt = T.pack.take wi.printf "%-*s" (width fWidth).dropWhileEnd (== 's').show
-           showW64 = T.pack . printf "%*d" wi
-       in
-       case fSelect of
-         IInt     (($v)->x) -> T.pack $ printf "%*d" wi x
-         IWord64M (($v)->x) -> smaybe "---" showW64 x
-         IWord64  (($v)->x) ->              showW64 x
-         IFloat   (($v)->x) -> T.pack $ take wi $ printf "%*F"  (width fWidth - 2) x
-         IDeltaTM (($v)->x) -> smaybe "---" showDt x
-         IDeltaT  (($v)->x) ->              showDt x
-         IText    (($v)->x) -> T.take wi . T.dropWhileEnd (== 's') $ x
+   entry = renderLineDist . renderScalar
 
-   fields :: [Field ISelect I a]
-   fields = filter flt $ timelineFields run
+   fields' :: [Field ISelect I a]
+   fields' = filter flt timelineFields
 
    head1, head2 :: Maybe Text
-   head1 = if all ((== 0) . T.length . fHead1) fields then Nothing
+   head1 = if all ((== 0) . T.length . fHead1) fields' then Nothing
            else Just (renderLineHead (uncurry T.take . ((+1).width.fWidth&&&fHead1)))
-   head2 = if all ((== 0) . T.length . fHead2) fields then Nothing
+   head2 = if all ((== 0) . T.length . fHead2) fields' then Nothing
            else Just (renderLineHead (uncurry T.take . ((+1).width.fWidth&&&fHead2)))
 
    -- Different strategies: fields are forcefully separated,
    --                       whereas heads can use the extra space
    renderLineHead = mconcat . renderLine' justifyHead (toEnum.(+ 1).width.fWidth)
+   renderLineDist :: (Field ISelect I a -> Text) -> Text
    renderLineDist = T.intercalate " " . renderLine' justifyData fWidth
 
    renderLine' :: (Int -> Text -> Text) -> (Field ISelect I a -> Width) -> (Field ISelect I a -> Text) -> [Text]
-   renderLine' jfn wfn rfn = fields
+   renderLine' jfn wfn rfn = fields'
                              <&> \f -> jfn (width $ wfn f) (rfn f)
 
 mapRenderCDF :: forall p a. CDFFields a p
@@ -142,15 +207,15 @@ mapRenderCDF :: forall p a. CDFFields a p
              -> a p
              -> [[Text]]
 mapRenderCDF fieldSelr centiSelr fSampleProps x =
-  fields                                    -- list of fields
+  fields'                                   -- list of fields
   <&> renderFieldCentiles x cdfSamplesProps -- for each field, list of per-sample lists of properties
   & (transpose [renderCentiles 6 centiles] :)
   & transpose                               -- for each sample, list of per-field lists of properties
   & fmap (fmap $ T.intercalate " ")
  where
    -- Pick relevant fields:
-   fields :: [Field DSelect p a]
-   fields = filter fieldSelr cdfFields
+   fields' :: [Field DSelect p a]
+   fields' = filter fieldSelr cdfFields
 
    -- Pick relevant centiles:
    subsetCenti :: CDF p b -> CDF p b
@@ -220,15 +285,15 @@ renderAnalysisCDFs a@Anchor{..} fieldSelr _c2a centileSelr AsOrg x =
   , oConstants = []
   , oBody = (:[]) $
     Table
-    { tColHeaders     = fields <&> fId
+    { tColHeaders     = fields' <&> fId
     , tExtended       = True
     , tApexHeader     = Just "centile"
-    , tColumns        = fields <&> fmap (T.intercalate ":") . renderFieldCentilesWidth x cdfSamplesProps
+    , tColumns        = fields' <&> fmap (T.intercalate ":") . renderFieldCentilesWidth x cdfSamplesProps
     , tRowHeaders     = percSpecs <&> T.take 6 . T.pack . printf "%.4f" . unCentile
     , tSummaryHeaders = ["avg", "samples"]
-    , tSummaryValues  = [ fields <&>
+    , tSummaryValues  = [ fields' <&>
                           \f@Field{..} -> mapField x (T.take (width fWidth + 1) . T.pack . printf "%f" . cdfAverageVal) f
-                        , fields <&>
+                        , fields' <&>
                           \f@Field{}   -> mapField x (T.pack . printf "%d" . cdfSize) f
                         ] & transpose
     , tFormula = []
@@ -239,8 +304,8 @@ renderAnalysisCDFs a@Anchor{..} fieldSelr _c2a centileSelr AsOrg x =
    cdfSamplesProps :: Divisible c => CDF p c -> [[c]]
    cdfSamplesProps = fmap (pure . unliftCDFVal cdfIx . snd) . cdfSamples . restrictCDF
 
-   fields :: [Field DSelect p a]
-   fields = filterFields fieldSelr
+   fields' :: [Field DSelect p a]
+   fields' = filterFields fieldSelr
 
    restrictCDF :: forall c. CDF p c -> CDF p c
    restrictCDF = maybe id subsetCDF centileSelr
@@ -265,20 +330,20 @@ renderAnalysisCDFs a@Anchor{..} fieldSelr aspect _centileSelr AsReport x =
     , tExtended       = True
     , tApexHeader     = Just "metric"
     , tColumns        = transpose $
-                        fields <&>
+                        fields' <&>
                         fmap (T.take 6 . T.pack . printf "%f")
                         . mapFieldWithKey x (snd hdrsProjs)
-    , tRowHeaders     = fields <&> fShortDesc
+    , tRowHeaders     = fields' <&> fShortDesc
     , tSummaryHeaders = []
     , tSummaryValues  = []
     , tFormula = []
     , tConstants = [("nSamples",
-                     fields <&> mapField x (T.pack . show . cdfSize) & head)]
+                     fields' <&> mapField x (T.pack . show . cdfSize) & head)]
     }
   }
  where
-   fields :: [Field DSelect p a]
-   fields = filter fieldSelr cdfFields
+   fields' :: [Field DSelect p a]
+   fields' = filter fieldSelr cdfFields
 
    hdrsProjs :: forall v. (Divisible v) => ([Text], Field DSelect p a -> CDF p v -> [Double])
    hdrsProjs = aspectColHeadersAndProjections aspect
@@ -289,7 +354,7 @@ renderAnalysisCDFs a@Anchor{..} fieldSelr aspect _centileSelr AsReport x =
      OfOverallDataset ->
        (,)
        ["average", "CoV", "min", "max", "stddev", "range", "precision", "size"]
-       \Field{..} c@CDF{cdfRange=(cdfMin, cdfMax), ..} ->
+       \Field{..} c@CDF{cdfRange=Interval cdfMin cdfMax, ..} ->
          let avg = cdfAverageVal c & toDouble in
          [ avg
          , cdfStddev / avg
@@ -306,7 +371,7 @@ renderAnalysisCDFs a@Anchor{..} fieldSelr aspect _centileSelr AsReport x =
        (\Field{..} ->
         cdfArity
          (error "Cannot do inter-CDF statistics on plain CDFs")
-         (\CDF{cdfAverage=cdfAvg@CDF{cdfRange=(minAvg, maxAvg),..}} ->
+         (\CDF{cdfAverage=cdfAvg@CDF{cdfRange=Interval minAvg maxAvg,..}} ->
              let avg = cdfAverageVal cdfAvg & toDouble in
              [ avg
              , cdfStddev / avg
@@ -326,15 +391,15 @@ renderAnalysisCDFs a fieldSelr _c2a centiSelr AsPretty x =
   <> sizeAvg
  where
    head1, head2 :: Maybe Text
-   head1 = if all ((== 0) . T.length . fHead1) fields then Nothing
+   head1 = if all ((== 0) . T.length . fHead1) fields' then Nothing
            else Just (renderLineHead1 (uncurry T.take . ((+1) . width . fWidth &&& fHead1)))
-   head2 = if all ((== 0) . T.length . fHead2) fields then Nothing
+   head2 = if all ((== 0) . T.length . fHead2) fields' then Nothing
            else Just (renderLineHead2 (uncurry T.take . ((+1) . width . fWidth &&& fHead2)))
    renderLineHead1 = mconcat . ("      ":) . renderLine' justifyHead (toEnum . (+ 1) . width . fWidth)
    renderLineHead2 = mconcat . (" %tile":) . renderLine' justifyHead (toEnum . (+ 1) . width . fWidth)
 
    pLines :: [Text]
-   pLines = fields
+   pLines = fields'
             <&>
             -- fmap (T.intercalate " ") .
             fmap T.concat .
@@ -343,8 +408,8 @@ renderAnalysisCDFs a fieldSelr _c2a centiSelr AsPretty x =
             & transpose
             & fmap (T.intercalate " ")
 
-   fields :: [Field DSelect p a]
-   fields = filter fieldSelr cdfFields
+   fields' :: [Field DSelect p a]
+   fields' = filter fieldSelr cdfFields
 
    centiles :: [Centile]
    centiles = mapSomeFieldCDF
@@ -363,12 +428,12 @@ renderAnalysisCDFs a fieldSelr _c2a centiSelr AsPretty x =
        (\f -> flip (renderField justifyData fWidth) f $ const $
                 mapSomeFieldCDF
                   (fit (fWidth f) .T.pack . printf "%F" . cdfAverageVal)  x (fSelect f))
-       <$> fields
+       <$> fields'
      , (justifyProp 6 "size" :) $
        (\f -> flip (renderField justifyHead fWidth) f $ const $
                 mapSomeFieldCDF
                   (fit (fWidth f) . T.pack . show . cdfSize)    x (fSelect f))
-       <$> fields
+       <$> fields'
      ]
 
    fit :: Width -> Text -> Text
@@ -380,7 +445,7 @@ renderAnalysisCDFs a fieldSelr _c2a centiSelr AsPretty x =
      else T.take w t
 
    renderLine' :: (Int -> Text -> Text) -> (Field DSelect p a -> Width) -> (Field DSelect p a -> Text) -> [Text]
-   renderLine' jfn wfn rfn  = renderField jfn wfn rfn <$> fields
+   renderLine' jfn wfn rfn  = renderField jfn wfn rfn <$> fields'
 
    renderField :: forall f. (Int -> Text -> Text) -> (f -> Width) -> (f -> Text) -> f -> Text
    renderField jfn wfn rend f = jfn (width $ wfn f) (rend f)

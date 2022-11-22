@@ -129,7 +129,7 @@ case "$op" in
             compute-multi-propagation
             multi-propagation-json
             multi-propagation-org
-            multi-propagation-{forger,peers,endtoend}
+            multi-propagation-{control,forger,peers,endtoend}
             multi-propagation-gnuplot
             multi-propagation-full
         )
@@ -144,7 +144,7 @@ case "$op" in
             read-propagations
             propagation-json
             propagation-org
-            propagation-{forger,peers,endtoend}
+            propagation-{control,forger,peers,endtoend}
             propagation-gnuplot
             propagation-full
 
@@ -176,7 +176,7 @@ case "$op" in
             compute-propagation
             propagation-json
             propagation-org
-            propagation-{forger,peers,endtoend}
+            propagation-{control,forger,peers,endtoend}
             propagation-gnuplot
             propagation-full
 
@@ -211,7 +211,7 @@ case "$op" in
             compute-propagation
             propagation-json
             propagation-org
-            propagation-{forger,peers,endtoend}
+            propagation-{control,forger,peers,endtoend}
             propagation-gnuplot
             propagation-full
          )
@@ -220,6 +220,7 @@ case "$op" in
         ;;
 
     re-block-propagation | reblockprop | rebp )
+        fail "re-block-propagation is broken:  read-chain not implemented"
         local script=(
             read-chain
             chain-timeline
@@ -227,7 +228,7 @@ case "$op" in
             compute-propagation
             propagation-json
             propagation-org
-            propagation-{forger,peers,endtoend}
+            propagation-{control,forger,peers,endtoend}
             propagation-gnuplot
             propagation-full
          )
@@ -355,28 +356,29 @@ case "$op" in
         v1=("${v0[@]/#logs/                 'unlog' --host-from-log-filename ${analysis_allowed_loanys[*]/#/--ok-loany } ${logfiles[*]/#/--log }  }")
         v2=("${v1[@]/#context/              'meta-genesis' --run-metafile    \"$dir\"/meta.json
                                                          --shelley-genesis \"$dir\"/genesis-shelley.json }")
-        v4=("${v2[@]/#read-chain/           'read-chain'            --chain \"$adir\"/chain.json}")
-        v5=("${v4[@]/#rebuild-chain/        'rebuild-chain'                  ${filters[@]}}")
-        v6=("${v5[@]/#dump-chain/           'dump-chain'            --chain \"$adir\"/chain.json --chain-rejecta \"$adir\"/chain-rejecta.json}")
-        v7=("${v6[@]/#chain-timeline/       'timeline-chain'     --timeline \"$adir\"/chain.txt ${filter_reasons:+--filter-reasons} ${chain_errors:+--chain-errors}}")
-        v8=("${v7[@]/#collect-slots/        'collect-slots'           ${minus_logfiles[*]/#/--ignore-log }}")
-        v9=("${v8[@]/#filter-slots/         'filter-slots'                   ${filters[@]}}")
-        va=("${v9[@]/#propagation-json/     'render-propagation'   --json \"$adir\"/blockprop.json     --full}")
-        vb=("${va[@]/#propagation-org/      'render-propagation'    --org \"$adir\"/blockprop.org      --full}")
-        vc=("${vb[@]/#propagation-forger/   'render-propagation' --report \"$adir\"/blockprop.forger.org --forger}")
-        vd=("${vc[@]/#propagation-peers/    'render-propagation' --report \"$adir\"/blockprop.peers.org --peers }")
-        ve=("${vd[@]/#propagation-endtoend/ 'render-propagation' --report \"$adir\"/blockprop.endtoend.org --end-to-end}")
+        v3=("${v2[@]/#read-chain/           'read-chain'            --chain \"$adir\"/chain.json}")
+        v4=("${v3[@]/#rebuild-chain/        'rebuild-chain'                  ${filters[@]}}")
+        v5=("${v4[@]/#dump-chain/           'dump-chain'            --chain \"$adir\"/chain.json --chain-rejecta \"$adir\"/chain-rejecta.json}")
+        v6=("${v5[@]/#chain-timeline/       'timeline-chain'     --timeline \"$adir\"/chain.txt ${filter_reasons:+--filter-reasons} ${chain_errors:+--chain-errors}}")
+        v7=("${v6[@]/#collect-slots/        'collect-slots'           ${minus_logfiles[*]/#/--ignore-log }}")
+        v8=("${v7[@]/#filter-slots/         'filter-slots'                   ${filters[@]}}")
+        v9=("${v8[@]/#propagation-json/     'render-propagation'   --json \"$adir\"/blockprop.json     --full}")
+        va=("${v9[@]/#propagation-org/      'render-propagation'    --org \"$adir\"/blockprop.org      --full}")
+        vb=("${va[@]/#propagation-control/  'render-propagation' --org-report \"$adir\"/blockprop.control.org --control}")
+        vc=("${vb[@]/#propagation-forger/   'render-propagation' --org-report \"$adir\"/blockprop.forger.org --forger}")
+        vd=("${vc[@]/#propagation-peers/    'render-propagation' --org-report \"$adir\"/blockprop.peers.org --peers }")
+        ve=("${vd[@]/#propagation-endtoend/ 'render-propagation' --org-report \"$adir\"/blockprop.endtoend.org --end-to-end}")
         vf=("${ve[@]/#propagation-gnuplot/  'render-propagation' --gnuplot \"$adir\"/cdf/%s.cdf            --full}")
         vg=("${vf[@]/#propagation-full/     'render-propagation' --pretty \"$adir\"/blockprop-full.txt --full}")
         vh=("${vg[@]/#clusterperf-json/     'render-clusterperf'   --json \"$adir\"/clusterperf.json --full }")
         vi=("${vh[@]/#clusterperf-org/      'render-clusterperf'    --org \"$adir\"/clusterperf.org --full }")
-        vj=("${vi[@]/#clusterperf-report/   'render-clusterperf' --report \"$adir\"/clusterperf.report.org --summary }")
+        vj=("${vi[@]/#clusterperf-report/   'render-clusterperf' --org-report \"$adir\"/clusterperf.report.org --report }")
         vk=("${vj[@]/#clusterperf-gnuplot/  'render-clusterperf' --gnuplot \"$adir\"/cdf/%s.cdf --full }")
         vl=("${vk[@]/#clusterperf-full/     'render-clusterperf' --pretty \"$adir\"/clusterperf-full.txt --full }")
         vm=("${vl[@]/#read-clusterperfs/    'read-clusterperfs' --clusterperf \"$adir\"/clusterperf.json }")
         vn=("${vm[@]/#read-propagations/    'read-propagations'        --prop \"$adir\"/blockprop.json }")
         vo=("${vn[@]/#summary-json/         'render-summary'       --json \"$adir\"/summary.json}")
-        vp=("${vo[@]/#summary-report/       'render-summary'     --report \"$adir\"/summary.org}")
+        vp=("${vo[@]/#summary-report/       'render-summary'     --org-report \"$adir\"/summary.org}")
         local ops_final=()
         for v in "${vp[@]}"
         do eval ops_final+=($v); done
@@ -405,9 +407,8 @@ case "$op" in
         local props=( $(for adir in ${adirs[*]}; do echo --prop        ${adir}/blockprop.json;   done))
         local cperfs=($(for adir in ${adirs[*]}; do echo --clusterperf ${adir}/clusterperf.json; done))
         local compares=($(for adir in ${adirs[*]}
-                          do echo --run-metafile    ${adir}/../meta.json            \
-                                  --shelley-genesis ${adir}/../genesis-shelley.json \
-                                  --perf            ${adir}/clusterperf.json        \
+                          do echo --summary         ${adir}/summary.json     \
+                                  --perf            ${adir}/clusterperf.json \
                                   --prop            ${adir}/blockprop.json
                           done))
         local run=$(for dir in ${dirs[*]}; do basename $dir; done | sort -r | head -n1 | cut -d. -f1-2)_$suffix
@@ -420,18 +421,19 @@ case "$op" in
         v0=("$@")
         v1=(${v0[*]/#read-clusterperfs/ 'read-clusterperfs' ${cperfs[*]} })
         v2=(${v1[*]/#read-propagations/ 'read-propagations' ${props[*]}  })
-        v3=(${v2[*]/#multi-clusterperf-json/ 'render-multi-clusterperf' --json $adir/'multi-clusterperf.json' --full $multi_aspect })
-        v4=(${v3[*]/#multi-clusterperf-org/     'render-multi-clusterperf' --org $adir/'multi-clusterperf.org' --full $multi_aspect })
-        v5=(${v4[*]/#multi-clusterperf-report/  'render-multi-clusterperf' --report $adir/'multi-clusterperf.report.org' --summary $multi_aspect })
+        v3=(${v2[*]/#multi-clusterperf-json/ 'render-multi-clusterperf' --json $adir/'clusterperf.json' --full $multi_aspect })
+        v4=(${v3[*]/#multi-clusterperf-org/     'render-multi-clusterperf' --org $adir/'clusterperf.org' --full $multi_aspect })
+        v5=(${v4[*]/#multi-clusterperf-report/  'render-multi-clusterperf' --report $adir/'clusterperf.report.org' --report $multi_aspect })
         v6=(${v5[*]/#multi-clusterperf-gnuplot/ 'render-multi-clusterperf' --gnuplot $adir/cdf/'%s.cdf' --full $multi_aspect })
-        v7=(${v6[*]/#multi-clusterperf-full/    'render-multi-clusterperf' --pretty $adir/'multi-clusterperf-full.txt' --full $multi_aspect })
-        v8=(${v7[*]/#multi-propagation-json/     'render-multi-propagation' --json $adir/'multi-blockprop.json' --full $multi_aspect })
-        v9=(${v8[*]/#multi-propagation-org/      'render-multi-propagation' --org $adir/'multi-blockprop.org' --full $multi_aspect })
-        va=(${v9[*]/#multi-propagation-forger/   'render-multi-propagation' --report $adir/'multi-blockprop-forger.org' --forger $multi_aspect })
-        vb=(${va[*]/#multi-propagation-peers/    'render-multi-propagation' --report $adir/'multi-blockprop-peers.org' --peers $multi_aspect })
-        vc=(${vb[*]/#multi-propagation-endtoend/ 'render-multi-propagation' --report $adir/'multi-blockprop-endtoend.org' --end-to-end $multi_aspect })
+        v7=(${v6[*]/#multi-clusterperf-full/    'render-multi-clusterperf' --pretty $adir/'clusterperf-full.txt' --full $multi_aspect })
+        v8=(${v7[*]/#multi-propagation-json/     'render-multi-propagation' --json $adir/'blockprop.json' --full $multi_aspect })
+        v9=(${v8[*]/#multi-propagation-org/      'render-multi-propagation' --org $adir/'blockprop.org' --full $multi_aspect })
+        va=(${v9[*]/#multi-propagation-control/  'render-multi-propagation' --report $adir/'blockprop.forger.org' --forger $multi_aspect })
+        va=(${v9[*]/#multi-propagation-forger/   'render-multi-propagation' --report $adir/'blockprop.forger.org' --forger $multi_aspect })
+        vb=(${va[*]/#multi-propagation-peers/    'render-multi-propagation' --report $adir/'blockprop.peers.org' --peers $multi_aspect })
+        vc=(${vb[*]/#multi-propagation-endtoend/ 'render-multi-propagation' --report $adir/'blockprop.endtoend.org' --end-to-end $multi_aspect })
         vd=(${vc[*]/#multi-propagation-gnuplot/  'render-multi-propagation' --gnuplot $adir/cdf/'%s.cdf' --full $multi_aspect })
-        ve=(${vd[*]/#multi-propagation-full/     'render-multi-propagation' --pretty $adir/'multi-blockprop-full.txt' --full $multi_aspect })
+        ve=(${vd[*]/#multi-propagation-full/     'render-multi-propagation' --pretty $adir/'blockprop-full.txt' --full $multi_aspect })
         vf=(${ve[*]/#compare/ 'compare' --ede nix/workbench/ede --report $adir/report-$run.org ${compares[*]} })
         vg=(${vf[*]/#update/  'compare' --ede nix/workbench/ede --report $adir/report-$run.org ${compares[*]} --template $adir/report-$run.ede })
         local ops_final=(${vg[*]})

@@ -1,5 +1,6 @@
 module Cardano.Analysis.API
-  ( module Cardano.Analysis.API.Chain
+  ( module Data.CDF
+  , module Cardano.Analysis.API.Chain
   , module Cardano.Analysis.API.ChainFilter
   , module Cardano.Analysis.API.Context
   , module Cardano.Analysis.API.Dictionary
@@ -12,6 +13,7 @@ module Cardano.Analysis.API
   )
 where
 
+import Data.CDF
 import Cardano.Analysis.API.Chain
 import Cardano.Analysis.API.ChainFilter
 import Cardano.Analysis.API.Context

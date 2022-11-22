@@ -34,6 +34,12 @@ import Data.DataDomain
 import Cardano.Util
 
 
+newtype FieldName = FieldName { unFieldName :: Text }
+  deriving (Eq, Generic, Ord)
+  deriving newtype (FromJSON, IsString, ToJSON)
+  deriving anyclass NFData
+  deriving Show via Quiet FieldName
+
 newtype TId = TId { unTId :: ShortText }
   deriving (Eq, Generic, Ord)
   deriving newtype (FromJSON, ToJSON)
@@ -60,11 +66,17 @@ newtype Count a = Count { unCount :: Int }
   deriving newtype (FromJSON, Num, ToJSON)
   deriving anyclass NFData
 
-countOfList :: [a] -> Count a
-countOfList = Count . fromIntegral . length
+countList :: (a -> Bool) -> [a] -> Count a
+countList f = Count . fromIntegral . count f
 
-countOfLists :: [[a]] -> Count a
-countOfLists = Count . fromIntegral . sum . fmap length
+countLists :: (a -> Bool) -> [[a]] -> Count a
+countLists f = Count . fromIntegral . sum . fmap (count f)
+
+countListAll :: [a] -> Count a
+countListAll = Count . fromIntegral . length
+
+countListsAll :: [[a]] -> Count a
+countListsAll = Count . fromIntegral . sum . fmap length
 
 unsafeCoerceCount :: Count a -> Count b
 unsafeCoerceCount = Unsafe.unsafeCoerce

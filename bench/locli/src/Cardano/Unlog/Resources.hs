@@ -15,8 +15,6 @@ module Cardano.Unlog.Resources
 
 import Cardano.Prelude
 
-import Data.Time.Clock (UTCTime)
-
 import Data.Accum
 import Data.CDF
 import Cardano.Util

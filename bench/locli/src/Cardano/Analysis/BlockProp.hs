@@ -67,8 +67,11 @@ summariseMultiBlockProp centiles bs@(headline:_) = do
   cdfPeerAdoptions          <- cdf2OfCDFs comb $ bs <&> cdfPeerAdoptions
   cdfPeerAnnouncements      <- cdf2OfCDFs comb $ bs <&> cdfPeerAnnouncements
   cdfPeerSends              <- cdf2OfCDFs comb $ bs <&> cdfPeerSends
-  cdfForks                  <- cdf2OfCDFs comb $ bs <&> cdfForks
-  cdfSizes                  <- cdf2OfCDFs comb $ bs <&> cdfSizes
+  cdfBlockBattles           <- cdf2OfCDFs comb $ bs <&> cdfBlockBattles
+  cdfBlockSizes             <- cdf2OfCDFs comb $ bs <&> cdfBlockSizes
+  cdfBlocksPerHost          <- cdf2OfCDFs comb $ bs <&> cdfBlocksPerHost
+  cdfBlocksFilteredRatio    <- cdf2OfCDFs comb $ bs <&> cdfBlocksFilteredRatio
+  cdfBlocksChainedRatio     <- cdf2OfCDFs comb $ bs <&> cdfBlocksChainedRatio
   bpPropagation             <- sequence $ transpose (bs <&> Map.toList . bpPropagation) <&>
     \case
       [] -> Left CDFEmptyDataset
@@ -78,39 +81,14 @@ summariseMultiBlockProp centiles bs@(headline:_) = do
         (d,) <$> cdf2OfCDFs comb (snd <$> xs)
   pure $ BlockProp
     { bpVersion             = bpVersion headline
-    , bpDomainSlots         = dataDomainsMergeOuter $ bs <&> bpDomainSlots
-    , bpDomainBlocks        = dataDomainsMergeOuter $ bs <&> bpDomainBlocks
+    , bpDomainSlots         = concat          $ bs <&> bpDomainSlots
+    , bpDomainBlocks        = concat          $ bs <&> bpDomainBlocks
     , bpPropagation         = Map.fromList bpPropagation
     , ..
     }
  where
    comb :: forall a. Divisible a => Combine I a
    comb = stdCombine1 centiles
-
--- | Block's events, as seen by its forger.
-data ForgerEvents a
-  =  ForgerEvents
-  { bfeHost         :: !Host
-  , bfeBlock        :: !Hash
-  , bfeBlockPrev    :: !Hash
-  , bfeBlockNo      :: !BlockNo
-  , bfeSlotNo       :: !SlotNo
-  , bfeSlotStart    :: !SlotStart
-  , bfeEpochNo      :: !EpochNo
-  , bfeBlockSize    :: !(SMaybe Int)
-  , bfeStarted      :: !(SMaybe a)
-  , bfeBlkCtx       :: !(SMaybe a)
-  , bfeLgrState     :: !(SMaybe a)
-  , bfeLgrView      :: !(SMaybe a)
-  , bfeLeading      :: !(SMaybe a)
-  , bfeForged       :: !(SMaybe a)
-  , bfeAnnounced    :: !(SMaybe a)
-  , bfeSending      :: !(SMaybe a)
-  , bfeAdopted      :: !(SMaybe a)
-  , bfeChainDelta   :: !Int
-  , bfeErrs         :: [BPError]
-  }
-  deriving (Generic, NFData, FromJSON, ToJSON, Show)
 
 bfePrevBlock :: ForgerEvents a -> Maybe Hash
 bfePrevBlock x = case bfeBlockNo x of
@@ -175,6 +153,9 @@ mapMbe f o e = \case
   MFE x -> f x
   MOE x -> o x
   MBE x -> e x
+
+mbeForge :: MachBlockEvents a -> Maybe (ForgerEvents a)
+mbeForge = mapMbe Just (const Nothing) (const Nothing)
 
 partitionMbes :: [MachBlockEvents a] -> ([ForgerEvents a], [ObserverEvents a], [BPError])
 partitionMbes = go [] [] []
@@ -246,13 +227,14 @@ mbeBlockNo :: MachBlockEvents a -> BlockNo
 mbeBlockNo = mapMbe bfeBlockNo boeBlockNo (const (-1))
 
 -- | Machine's private view of all the blocks.
-type MachBlockMap a
+type MachHashBlockEvents a
   =  Map.Map Hash (MachBlockEvents a)
 
+-- An accumulator for: tip-block-events & the set of all blocks events
 data MachView
   = MachView
   { mvHost     :: !Host
-  , mvBlocks   :: !(MachBlockMap UTCTime)
+  , mvBlocks   :: !(MachHashBlockEvents UTCTime)
   , mvStarted  :: !(SMaybe UTCTime)
   , mvBlkCtx   :: !(SMaybe UTCTime)
   , mvLgrState :: !(SMaybe UTCTime)
@@ -260,6 +242,9 @@ data MachView
   , mvLeading  :: !(SMaybe UTCTime)
   }
   deriving (FromJSON, Generic, NFData, ToJSON)
+
+mvForges :: MachView -> [ForgerEvents UTCTime]
+mvForges = mapMaybe (mbeForge . snd) . Map.toList . mvBlocks
 
 machViewMaxBlock :: MachView -> MachBlockEvents UTCTime
 machViewMaxBlock MachView{..} =
@@ -278,37 +263,48 @@ buildMachViews run = mapConcurrentlyPure (fst &&& blockEventMapsFromLogObjects r
 blockEventsAcceptance :: Genesis -> [ChainFilter] -> BlockEvents -> [(ChainFilter, Bool)]
 blockEventsAcceptance genesis flts be = flts <&> (id &&& testBlockEvents genesis be)
 
-rebuildChain :: Run -> [ChainFilter] -> [FilterName] -> [(JsonLogfile, MachView)] -> IO (DataDomain SlotNo, DataDomain BlockNo, [BlockEvents], [BlockEvents])
-rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) = do
-  progress "tip" $ Q $ show $ bfeBlock tipBlock
-  forM_ flts $
-    progress "filter" . Q . show
-  pure (domSlot, domBlock, chainRejecta, chain)
+rebuildChain :: Run -> [ChainFilter] -> [FilterName] -> [(JsonLogfile, MachView)] -> Chain
+rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
+  Chain
+  { cDomSlots   = DataDomain
+                  (Interval (blk0  & beSlotNo)  (blkL  & beSlotNo))
+                  (mFltDoms <&> fst3)
+                  (beSlotNo blkL - beSlotNo blk0 & fromIntegral . unSlotNo)
+                  (mFltDoms <&> thd3 & fromMaybe 0)
+  , cDomBlocks  = DataDomain
+                  (Interval (blk0  & beBlockNo) (blkL  & beBlockNo))
+                  (mFltDoms <&> snd3)
+                  (length cMainChain)
+                  (length accepta)
+  , cBlockStats = Map.fromList $ machViews <&> (mvHost &&& mvBlockStats)
+  , ..
+  }
  where
-   (blk0,  blkL)  = (head chain, last chain)
-   mblkV =
-     liftA2 (,) (find (all snd . beAcceptance)          chain)
-                (find (all snd . beAcceptance) (reverse chain))
-   domSlot = DataDomain
-             (blk0  & beSlotNo)  (blkL  & beSlotNo)
-             (mblkV <&> beSlotNo . fst)
-             (mblkV <&> beSlotNo . snd)
-             (beSlotNo blkL - beSlotNo blk0 & fromIntegral . unSlotNo)
-             (mblkV &
-              maybe 0 (fromIntegral . unSlotNo . uncurry (on (flip (-)) beSlotNo)))
-   domBlock = DataDomain
-              (blk0  & beBlockNo) (blkL  & beBlockNo)
-              (mblkV <&> beBlockNo . fst)
-              (mblkV <&> beBlockNo . snd)
-              (length chain)
-              (length acceptableChain)
+   cMainChain = computeChainBlockGaps $
+                doRebuildChain (fmap deltifyEvents <$> eventMaps) tipHash
+   (accepta, cRejecta) = partition (all snd . beAcceptance) cMainChain
 
-   (acceptableChain, chainRejecta) = partition (all snd . beAcceptance) chain
+   blkSets :: (Set Hash, Set Hash)
+   blkSets@(acceptaBlocks, rejectaBlocks) =
+     both (Set.fromList . fmap beBlock) (accepta, cRejecta)
+   mvBlockStats :: MachView -> BlockStats
+   mvBlockStats (fmap bfeBlock . mvForges -> fs) = BlockStats {..}
+    where bsUnchained = (countListAll                         fs & unsafeCoerceCount)
+                       - bsFiltered - bsRejected
+          bsFiltered  = countList (`Set.member` acceptaBlocks) fs & unsafeCoerceCount
+          bsRejected  = countList (`Set.member` rejectaBlocks) fs & unsafeCoerceCount
 
-   chain = computeChainBlockGaps $
-           doRebuildChain (fmap deltifyEvents <$> eventMaps) tipHash
+   (blk0,  blkL)  = (head &&& last) cMainChain
+   mFltDoms :: Maybe (Interval SlotNo, Interval BlockNo, Int)
+   mFltDoms =
+     liftA2 (,) (find (all snd . beAcceptance)          cMainChain)
+                (find (all snd . beAcceptance) (reverse cMainChain))
+     <&> \firstLastBlk ->
+     (,,) (uncurry Interval $ both beSlotNo  firstLastBlk)
+          (uncurry Interval $ both beBlockNo firstLastBlk)
+          (fromIntegral . unSlotNo . uncurry (on (flip (-)) beSlotNo) $ firstLastBlk)
 
-   eventMaps      = mvBlocks <$> machViews
+   eventMaps      = machViews <&> mvBlocks
 
    finalBlockEv   = maximumBy ordBlockEv $ machViewMaxBlock <$> machViews
 
@@ -324,13 +320,13 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) = do
       step prevForge x@(beForgedAt -> at) =
         (at, x { beForge = (beForge x) { bfBlockGap = at `diffUTCTime` prevForge } })
 
-   rewindChain :: [MachBlockMap a] -> Int -> Hash -> Hash
+   rewindChain :: [MachHashBlockEvents a] -> Int -> Hash -> Hash
    rewindChain eventMaps count tip = go tip count
     where go tip = \case
             0 -> tip
             n -> go (bfeBlockPrev $ getBlockForge eventMaps tip) (n - 1)
 
-   getBlockForge :: [MachBlockMap a] -> Hash -> ForgerEvents a
+   getBlockForge :: [MachHashBlockEvents a] -> Hash -> ForgerEvents a
    getBlockForge xs h =
      mapMaybe (Map.lookup h) xs
      & find mbeForgP
@@ -344,23 +340,30 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) = do
    adoptionMap    :: [Map Hash UTCTime]
    adoptionMap    =  Map.mapMaybe (lazySMaybe . mbeAdopted) <$> eventMaps
 
-   heightMap      :: Map BlockNo (Set Hash)
-   heightMap      = foldr (\em acc ->
-                             Map.foldr
-                             (\mbe -> Map.alter
-                                      (maybe (Just $ Set.singleton (mbeBlock mbe))
-                                             (Just . Set.insert (mbeBlock mbe)))
-                                      (mbeBlockNo mbe))
-                             acc em)
-                    mempty eventMaps
+   heightHostMap      :: (Map BlockNo (Set Hash), Map Host (Set Hash))
+   heightHostMap@(heightMap, hostMap)
+     = foldr (\MachView{..} (accHeight, accHost) ->
+                 (,)
+                 (Map.foldr
+                   (\mbe -> Map.alter
+                            (maybe (Just $ Set.singleton (mbeBlock mbe))
+                                   (Just . Set.insert (mbeBlock mbe)))
+                            (mbeBlockNo mbe))
+                   accHeight mvBlocks)
+                 (Map.insert
+                   mvHost
+                   (Map.elems mvBlocks
+                    & Set.fromList . fmap bfeBlock . mapMaybe mbeForge)
+                   accHost))
+       (mempty, mempty) machViews
 
-   doRebuildChain :: [MachBlockMap NominalDiffTime] -> Hash -> [BlockEvents]
-   doRebuildChain machBlockMaps tip = go (Just tip) []
+   doRebuildChain :: [MachHashBlockEvents NominalDiffTime] -> Hash -> [BlockEvents]
+   doRebuildChain machBlockMaps chainTipHash = go (Just chainTipHash) []
     where go Nothing  acc = acc
-          go (Just h) acc =
-            case partitionMbes $ mapMaybe (Map.lookup h) machBlockMaps of
+          go (Just hash) acc =
+            case partitionMbes $ mapMaybe (Map.lookup hash) machBlockMaps of
               ([], _, ers) -> error $ mconcat
-                [ "No forger for hash ", show h
+                [ "No forger for hash ", show hash
                 , "\nErrors:\n"
                 ] ++ intercalate "\n" (show <$> ers)
               blkEvs@(forgerEv:_, oEvs, ers) ->
@@ -407,7 +410,7 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) = do
                            & handleMiss "Δt Adopted (forger)"
           , bfChainDelta = bfeChainDelta
           }
-        , beForks = unsafeCoerceCount $ countOfList otherBlocks
+        , beForks = unsafeCoerceCount $ countListAll otherBlocks
         , beObservations =
             catSMaybes $
             os <&> \ObserverEvents{..}->
@@ -467,11 +470,11 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) = do
        , " -- missing: ", slotDesc
        ]
 
-blockProp :: Run -> [BlockEvents] -> DataDomain SlotNo -> DataDomain BlockNo -> IO BlockPropOne
-blockProp run@Run{genesis} fullChain domSlot domBlock = do
+blockProp :: Run -> Chain -> IO BlockPropOne
+blockProp run@Run{genesis} Chain{..} = do
   pure $ BlockProp
-    { bpDomainSlots          = domSlot
-    , bpDomainBlocks         = domBlock
+    { bpDomainSlots          = [cDomSlots]
+    , bpDomainBlocks         = [cDomBlocks]
     , cdfForgerStarts        = forgerEventsCDF   (SJust . bfStarted   . beForge)
     , cdfForgerBlkCtx        = forgerEventsCDF           (bfBlkCtx    . beForge)
     , cdfForgerLgrState      = forgerEventsCDF           (bfLgrState  . beForge)
@@ -491,12 +494,25 @@ blockProp run@Run{genesis} fullChain domSlot domBlock = do
       [ ( T.pack $ printf "cdf%.2f" p'
         , forgerEventsCDF (SJust . unI . projectCDF' "bePropagation" p . bePropagation))
       | p@(Centile p') <- adoptionCentiles <> [Centile 1.0] ]
-    , cdfForks               = forgerEventsCDF   (SJust . unCount . beForks)
-    , cdfSizes               = forgerEventsCDF   (SJust . bfBlockSize . beForge)
+    , cdfBlockBattles        = forgerEventsCDF   (SJust . unCount . beForks)
+    , cdfBlockSizes          = forgerEventsCDF   (SJust . bfBlockSize . beForge)
     , bpVersion              = getLocliVersion
+    , cdfBlocksPerHost       = cdf stdCentiles (blockStats <&> unCount
+                                                . bsTotal)
+    , cdfBlocksFilteredRatio = cdf stdCentiles (blockStats <&>
+                                                uncurry ((/) `on`
+                                                         fromIntegral . unCount)
+                                                . (bsFiltered &&& bsChained))
+    , cdfBlocksChainedRatio  = cdf stdCentiles (blockStats <&>
+                                                uncurry ((/) `on`
+                                                         fromIntegral . unCount)
+                                                . (bsChained &&& bsTotal))
     }
  where
-   analysisChain = filter (all snd . beAcceptance) fullChain
+   blockStats = Map.elems cBlockStats
+
+   analysisChain :: [BlockEvents]
+   analysisChain       = filter (all snd . beAcceptance) cMainChain
 
    forgerEventsCDF   :: Divisible a => (BlockEvents -> SMaybe a) -> CDF I a
    forgerEventsCDF   = flip (witherToDistrib (cdf stdCentiles)) analysisChain

@@ -107,6 +107,7 @@ library
                      , extra
                      , file-embed
                      , filepath
+                     , fingertree
                      , ghc
                      , gnuplot
                      , iohk-monitoring

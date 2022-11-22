@@ -11,7 +11,6 @@ import Data.Text                       (unpack)
 import Cardano.JSON
 import Cardano.Util
 import Cardano.Analysis.API.Ground
-import Cardano.Analysis.API.Run
 
 
 data Scale
@@ -23,6 +22,7 @@ data Range
   = Free   -- No range restriction
   | Z0 Int -- 1-based range
   | Z1 Int -- 1-based range
+  | R01
   deriving (Eq, Show)
 
 data Unit
@@ -33,6 +33,7 @@ data Unit
   | MB   -- Mibibyte: 2^20
   | KBs  -- Kibibyte/s
   | MBs  -- Mibibyte/s
+  | Era  -- Era
   | Epo  -- Epoch
   | Slo  -- Slots
   | Blk  -- Blocks
@@ -41,10 +42,16 @@ data Unit
   | Sig  -- Sign: +/-
   | Pct  -- Unspecified ratio, percents
   | Ev   -- Events
+  | KEv  -- Events: 10^3
+  | Dat  -- Date
+  | Tim  -- Time
+  | Ver  -- Version
   | Ix   -- Unspecified index
   | Len  -- Unspecified length
+  | Cnt  -- Unspecified count
   | Rto  -- Unspecified ratio
   | Uni  -- Unspecified unit
+  | Id   -- Unspefified identifier
   deriving (Eq, Show)
 
 renderUnit :: Unit -> Text
@@ -56,6 +63,7 @@ renderUnit = \case
     MB  -> "MB"
     KBs -> "KB/s"
     MBs -> "MB/s"
+    Era -> "era"
     Epo -> "epoch"
     Slo -> "slots"
     Blk -> "blocks"
@@ -63,14 +71,20 @@ renderUnit = \case
     Hos -> "host"
     Sig -> "+/-"
     Pct -> "%"
-    Ev  -> ""
-    Ix  -> ""
-    Len -> ""
-    Rto -> ""
-    Uni -> ""
+    Ev  -> "#"
+    KEv -> "#"
+    Dat -> "on"
+    Tim -> "at"
+    Ver -> "v"
+    Ix  -> "[]"
+    Len -> "#"
+    Cnt -> "#"
+    Rto -> "/"
+    Uni -> "#"
+    Id  -> ""
 
 data Width
-  = W0
+  = Wno
   | W1
   | W2
   | W3
@@ -83,6 +97,15 @@ data Width
   | W10
   | W11
   | W12
+  | W13
+  | W14
+  | W15
+  | W16
+  | W17
+  | W18
+  | W19
+  | W20
+  | W21
   deriving (Eq, Enum, Ord, Show)
 
 data Precision
@@ -94,7 +117,8 @@ data Precision
 
 {-# INLINE width #-}
 width :: Width -> Int
-width = fromEnum
+width Wno = 80
+width x   = fromEnum x
 
 -- | Encapsulate all metadata about a metric (a projection) of
 --   a certain projectible (a kind of analysis results):
@@ -122,9 +146,13 @@ class CDFFields a p where
 
 class TimelineFields a where
   data TimelineComments a :: Type
-  timelineFields :: Run -> [Field ISelect I a]
+  timelineFields :: [Field ISelect I a]
   rtCommentary   :: a -> TimelineComments a -> [Text]
   rtCommentary _ _ = []
+
+data FSelect where
+  ISel :: TimelineFields a   => (Field ISelect I a -> Bool) -> FSelect
+  DSel :: CDFFields      a p => (Field DSelect p a -> Bool) -> FSelect
 
 data DSelect p a
   = DInt    (a p -> CDF p Int)
@@ -139,7 +167,15 @@ data ISelect p a
   | IFloat   (a -> Double)
   | IDeltaT  (a -> NominalDiffTime)
   | IDeltaTM (a -> SMaybe NominalDiffTime)
+  | IDate    (a -> UTCTime)
+  | ITime    (a -> UTCTime)
   | IText    (a -> Text)
+
+dFields :: [FieldName] -> Field DSelect p a -> Bool
+dFields fs Field{fId} = FieldName fId `elem` fs
+
+iFields :: [FieldName] -> Field ISelect I a -> Bool
+iFields fs Field{fId} = FieldName fId `elem` fs
 
 filterFields :: CDFFields a p
              => (Field DSelect p a -> Bool) -> [Field DSelect p a]

@@ -3,7 +3,6 @@
 {- HLINT ignore "Use head" -}
 module Cardano.Analysis.MachPerf (module Cardano.Analysis.MachPerf) where
 
-import Prelude (head, last)
 import Cardano.Prelude hiding (head)
 import Cardano.Prelude qualified as CP
 
@@ -14,7 +13,6 @@ import Data.Text.Short                  (toText)
 import Data.Vector (Vector)
 import Data.Vector qualified as Vec
 
-import Data.Time.Clock (diffUTCTime)
 import Data.Time.Clock qualified as Time
 
 import Data.CDF
@@ -491,8 +489,8 @@ slotStatsMachPerf _ (JsonLogfile f, []) =
 slotStatsMachPerf run (f, slots) =
   Right . (f,) $ MachPerf
   { mpVersion            = getLocliVersion
-  , mpDomainSlots        = mkDataDomainInj (slSlot $ head slots) (slSlot $ last slots)
-                                           (fromIntegral . unSlotNo)
+  , mpDomainSlots        = [domSlots]
+  , cdfHostSlots         = dist [fromIntegral $ ddFilteredCount domSlots]
   --
   , cdfStarts            = dist (slCountStarts <$> slots)
   , cdfLeads             = dist (slCountLeads <$> slots)
@@ -509,8 +507,13 @@ slotStatsMachPerf run (f, slots) =
   , cdfSpanLensCpuEpoch  = dist sssSpanLensCpuEpoch
   , cdfSpanLensCpuRwd    = dist sssSpanLensCpuRwd
   , mpResourceCDFs       = computeResCDF stdCentiles slResources slots
+  , ..
   }
  where
+   domSlots      = mkDataDomainInj sFirst sLast (fromIntegral . unSlotNo)
+
+   (,) sFirst sLast = (slSlot . head &&& slSlot . last) slots
+
    dist :: Divisible a => [a] -> CDF I a
    dist = cdf stdCentiles
 
@@ -518,9 +521,44 @@ slotStatsMachPerf run (f, slots) =
 
 -- * 5. Multi-machine & multi-run summaries:
 --
+summariseClusterPerf :: [Centile] -> [MachPerfOne] -> Either CDFError ClusterPerf
+summariseClusterPerf _ [] = error "Asked to summarise empty list of MachPerfOne"
+summariseClusterPerf centiles mps@(headline:_) = do
+  cdfHostSlots         <- cdf2OfCDFs comb $ mps <&> cdfHostSlots
+  cdfStarts            <- cdf2OfCDFs comb $ mps <&> cdfStarts
+  cdfLeads             <- cdf2OfCDFs comb $ mps <&> cdfLeads
+  cdfUtxo              <- cdf2OfCDFs comb $ mps <&> cdfUtxo
+  cdfDensity           <- cdf2OfCDFs comb $ mps <&> cdfDensity
+  cdfStarted           <- cdf2OfCDFs comb $ mps <&> cdfStarted
+  cdfBlkCtx            <- cdf2OfCDFs comb $ mps <&> cdfBlkCtx
+  cdfLgrState          <- cdf2OfCDFs comb $ mps <&> cdfLgrState
+  cdfLgrView           <- cdf2OfCDFs comb $ mps <&> cdfLgrView
+  cdfLeading           <- cdf2OfCDFs comb $ mps <&> cdfLeading
+  cdfForged            <- cdf2OfCDFs comb $ mps <&> cdfForged
+  cdfBlockGap          <- cdf2OfCDFs comb $ mps <&> cdfBlockGap
+  cdfSpanLensCpu       <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpu
+  cdfSpanLensCpuEpoch  <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpuEpoch
+  cdfSpanLensCpuRwd    <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpuRwd
+  mpResourceCDFs       <- sequence $ traverse identity (mps <&> mpResourceCDFs) <&>
+    \case
+      [] -> Left CDFEmptyDataset
+      (xs :: [CDF I Word64]) -> cdf2OfCDFs comb xs :: Either CDFError (CDF (CDF I) Word64)
+
+  pure MachPerf
+    { mpVersion     = mpVersion headline
+    , mpDomainSlots = domSlots
+    , ..
+    }
+ where
+   domSlots = concat $ mps <&> mpDomainSlots
+
+   comb :: forall a. Divisible a => Combine I a
+   comb = stdCombine1 centiles
+
 summariseMultiClusterPerf :: [Centile] -> [ClusterPerf] -> Either CDFError MultiClusterPerf
 summariseMultiClusterPerf _ [] = error "Asked to summarise empty list of MachPerfOne"
 summariseMultiClusterPerf centiles mps@(headline:_) = do
+  cdfHostSlots         <- cdf2OfCDFs comb $ mps <&> cdfHostSlots
   cdfStarts            <- cdf2OfCDFs comb $ mps <&> cdfStarts
   cdfLeads             <- cdf2OfCDFs comb $ mps <&> cdfLeads
   cdfUtxo              <- cdf2OfCDFs comb $ mps <&> cdfUtxo
@@ -542,40 +580,9 @@ summariseMultiClusterPerf centiles mps@(headline:_) = do
 
   pure . MultiClusterPerf $ MachPerf
     { mpVersion          = mpVersion headline
-    , mpDomainSlots      = dataDomainsMergeOuter $ mps <&> mpDomainSlots
+    , mpDomainSlots      = concat         $ mps <&> mpDomainSlots
     , ..
     }
  where
    comb :: forall a. Divisible a => Combine (CDF I) a
    comb = stdCombine2 centiles
-
-summariseClusterPerf :: [Centile] -> [MachPerfOne] -> Either CDFError ClusterPerf
-summariseClusterPerf _ [] = error "Asked to summarise empty list of MachPerfOne"
-summariseClusterPerf centiles mps@(headline:_) = do
-  cdfStarts            <- cdf2OfCDFs comb $ mps <&> cdfStarts
-  cdfLeads             <- cdf2OfCDFs comb $ mps <&> cdfLeads
-  cdfUtxo              <- cdf2OfCDFs comb $ mps <&> cdfUtxo
-  cdfDensity           <- cdf2OfCDFs comb $ mps <&> cdfDensity
-  cdfStarted           <- cdf2OfCDFs comb $ mps <&> cdfStarted
-  cdfBlkCtx            <- cdf2OfCDFs comb $ mps <&> cdfBlkCtx
-  cdfLgrState          <- cdf2OfCDFs comb $ mps <&> cdfLgrState
-  cdfLgrView           <- cdf2OfCDFs comb $ mps <&> cdfLgrView
-  cdfLeading           <- cdf2OfCDFs comb $ mps <&> cdfLeading
-  cdfForged            <- cdf2OfCDFs comb $ mps <&> cdfForged
-  cdfBlockGap          <- cdf2OfCDFs comb $ mps <&> cdfBlockGap
-  cdfSpanLensCpu       <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpu
-  cdfSpanLensCpuEpoch  <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpuEpoch
-  cdfSpanLensCpuRwd    <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpuRwd
-  mpResourceCDFs       <- sequence $ traverse identity (mps <&> mpResourceCDFs) <&>
-    \case
-      [] -> Left CDFEmptyDataset
-      (xs :: [CDF I Word64]) -> cdf2OfCDFs comb xs :: Either CDFError (CDF (CDF I) Word64)
-
-  pure MachPerf
-    { mpVersion          = mpVersion headline
-    , mpDomainSlots      = dataDomainsMergeOuter $ mps <&> mpDomainSlots
-    , ..
-    }
- where
-   comb :: forall a. Divisible a => Combine I a
-   comb = stdCombine1 centiles
