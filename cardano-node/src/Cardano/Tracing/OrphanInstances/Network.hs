@@ -1098,17 +1098,24 @@ instance ToObject SlotNo where
     mconcat [ "kind" .= String "SlotNo"
              , "slot" .= toJSON (unSlotNo slot) ]
 
+instance ToJSON PeerGSV where
+  toJSON PeerGSV { outboundGSV = GSV outboundG _ _
+                 , inboundGSV = GSV inboundG _ _
+                 } =
+    Aeson.object ["G" .= (realToFrac (outboundG + inboundG) :: Double)]
+
 instance (HasHeader header, ConvertRawHash header)
   => ToObject (TraceFetchClientState header) where
   toObject _verb BlockFetch.AddedFetchRequest {} =
     mconcat [ "kind" .= String "AddedFetchRequest" ]
   toObject _verb BlockFetch.AcknowledgedFetchRequest {} =
     mconcat [ "kind" .= String "AcknowledgedFetchRequest" ]
-  toObject _verb (BlockFetch.SendFetchRequest af) =
+  toObject _verb (BlockFetch.SendFetchRequest af gsv) =
     mconcat [ "kind" .= String "SendFetchRequest"
              , "head" .= String (renderChainHash
                                   (renderHeaderHash (Proxy @header))
                                   (AF.headHash af))
+             , "deltaq" .= toJSON gsv
              , "length" .= toJSON (fragmentLength af)]
    where
      -- NOTE: this ignores the Byron era with its EBB complication:

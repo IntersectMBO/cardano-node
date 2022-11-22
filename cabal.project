@@ -13,7 +13,7 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state: 2022-09-27T00:00:00Z
-index-state: cardano-haskell-packages 2022-11-10T12:59:24Z
+index-state: cardano-haskell-packages 2022-12-01T19:30:00Z
 
 packages:
     cardano-api
@@ -109,6 +109,26 @@ constraints:
   , io-classes == 0.3.0.0
   , typed-protocols == 0.1.0.1
   , typed-protocols-examples == 0.1.0.1
+  , cardano-ledger-alonzo == 0.1.0.0
+  , cardano-ledger-babbage == 0.1.0.0
+  , cardano-ledger-byron == 0.1.0.0
+  , cardano-ledger-byron-test == 1.3.0
+  , cardano-ledger-conway == 0.1.0.0
+  , cardano-ledger-core == 0.1.0.0
+  , cardano-ledger-pretty == 0.1.0.0
+  , cardano-ledger-shelley == 0.1.0.0
+  , cardano-ledger-shelley-ma == 0.1.0.0
+  , cardano-ledger-shelley-test == 0.1.0.0
+  , cardano-crypto-test == 1.3.0
+  , cardano-crypto-wrapper == 1.3.0
+  , byron-spec-chain == 0.1.0.0
+  , byron-spec-ledger == 0.1.0.0
+  , set-algebra == 0.1.0.0
+  , small-steps == 0.1.0.0
+  , small-steps-test == 0.1.0.0
+  , vector-map == 0.1.0.0
+  , cardano-data == 0.1.0.0
+
 
 extra-packages:
     ouroboros-consensus-cardano-tools == 0.1.0.1
