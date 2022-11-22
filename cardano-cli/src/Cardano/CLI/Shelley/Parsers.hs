@@ -828,12 +828,12 @@ pTransaction =
   pTxViewFormat =
       Opt.flag' TxViewLegacyYAML
         (  Opt.long "legacy-yaml"
-        <> Opt.help "Use leagay YAML format (default)."
+        <> Opt.help "Use legacy YAML format (default)."
         )
     <|>
       Opt.flag' TxViewJSON
-        (  Opt.long "json"
-        <> Opt.help "Use JSON format."
+        (  Opt.long "legacy-json"
+        <> Opt.help "Use legacy JSON format."
         )
     <|>
       pure TxViewLegacyYAML

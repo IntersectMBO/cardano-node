@@ -1201,7 +1201,7 @@ runTxView inputFile format outFile = do
       CompleteTx tx -> friendlyTxBS era tx
       IncompleteTx (UnwitnessedCliFormattedTxBody txBody) -> friendlyTxBodyBS era txBody
       -- In the IncompleteCddlFormattedTx case, the legacy format
-      -- takes the body of the tx  and converts the tx to a tx-body
+      -- takes the body of the tx and converts the tx to a tx-body
       -- and prints that using `friendlyTxBodyBS era body`.
       -- Any preexisting witnesses (that may be there ?!? ) are discarded !!
       -- Would make more sense:
@@ -1243,7 +1243,7 @@ runTxSignWitness
   -> OutputFile
   -> ExceptT ShelleyTxCmdError IO ()
 runTxSignWitness inputTx witnessFiles (OutputFile oFp) = do
-  (InAnyCardanoEra era input) <- readInputTxBodyOrTxFile inputTx `rescue` ShelleyTxCmdCddlError
+  InAnyCardanoEra era input <- readInputTxBodyOrTxFile inputTx `rescue` ShelleyTxCmdCddlError
   let (txBody, existingWitnesses) = case viewTxOrTxBody input of
          OnlyTx tx -> getTxBodyAndWitnesses tx
          OnlyTxBody b -> (b, [])

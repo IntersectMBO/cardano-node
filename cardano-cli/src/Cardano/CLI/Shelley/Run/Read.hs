@@ -41,7 +41,6 @@ module Cardano.CLI.Shelley.Run.Read
   , readFileTx
   , readFileTxBody
   , readInputTxBodyOrTxFile
-  , renderCddlError
   , readCddlTx -- For testing purposes
   , viewTxOrTxBody
   , viewInputFormat
@@ -533,13 +532,6 @@ instance Error CddlError where
 
 liftAnyCardanoEra :: (forall era. IsCardanoEra era => thing1 era -> thing2 era) -> InAnyCardanoEra thing1 -> InAnyCardanoEra thing2
 liftAnyCardanoEra f (InAnyCardanoEra era a) = InAnyCardanoEra era $ f a
-
-renderCddlError :: CddlError -> Text
-renderCddlError (CddlErrorTextEnv textEnvErr cddlErr) =
-  "Failed to decode neither the cli's serialisation format nor the ledger's \
-  \CDDL serialisation format. TextEnvelope error: " <> Text.pack (displayError textEnvErr) <> "\n" <>
-  "TextEnvelopeCddl error: " <> Text.pack (displayError cddlErr)
-renderCddlError (CddlIOError e) = Text.pack $ displayError e
 
 acceptTxCDDLSerialisation
   :: FileError TextEnvelopeError
