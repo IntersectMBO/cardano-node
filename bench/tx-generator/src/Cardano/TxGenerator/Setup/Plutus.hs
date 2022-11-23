@@ -125,17 +125,11 @@ preExecutePlutusV2 (majVer, minVer) (PlutusScript _ (PlutusScriptSerialised scri
     let
       protocolVersion = PlutusV2.ProtocolVersion (fromIntegral majVer) (fromIntegral minVer)
 
-    -- TODO this is a workaround for cardano-api providing 'toPlutusData' only for the PlutusV1 ledger
-    (pv2Datum, pv2Redeemer) <-
-      case (datum, redeemer) of
-        (ScriptDataNumber d, ScriptDataNumber r) -> pure (PlutusV2.I d, PlutusV2.I r)
-        _ -> throwE $ TxGenError "preExecutePlutusV2: currently only accepts script data of type number"
-
     exBudget <- firstExceptT PlutusError $
       hoistEither $
         snd $ PlutusV2.evaluateScriptCounting protocolVersion PlutusV2.Verbose evaluationContext script
-          [ pv2Datum
-          , pv2Redeemer
+          [ toPlutusData datum
+          , toPlutusData redeemer
           , PlutusV2.toData dummyContext
           ]
 
