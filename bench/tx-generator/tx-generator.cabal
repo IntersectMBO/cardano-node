@@ -13,6 +13,9 @@ build-type:            Simple
 extra-source-files:    README.md
 data-files:            data/protocol-parameters.json
                        data/protocol-parameters-v8.json
+                       data/loop.redeemer.json
+                       data/ecdsa-secp256k1-loop.redeemer.json
+                       data/schnorr-secp256k1-loop.redeemer.json
 
 common project-config
   if os(windows)
@@ -61,6 +64,7 @@ library
                        Cardano.TxGenerator.Setup.NixService
                        Cardano.TxGenerator.Setup.NodeConfig
                        Cardano.TxGenerator.Setup.Plutus
+                       Cardano.TxGenerator.PlutusContext
                        Cardano.TxGenerator.Setup.SigningKey
                        Cardano.TxGenerator.Types
                        Cardano.TxGenerator.Tx
@@ -99,6 +103,7 @@ library
                      , constraints-extras
                      , dlist
                      , extra
+                     , filepath
                      , formatting
                      , generic-monoid
                      , ghc-prim
