@@ -1,4 +1,3 @@
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -24,6 +23,7 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Types (AdjustFilePaths (..), GenesisFile (..))
 
 import           Cardano.TxGenerator.Genesis
+import           Cardano.TxGenerator.PlutusContext
 import           Cardano.TxGenerator.Setup.NixService
 import           Cardano.TxGenerator.Setup.NodeConfig
 import           Cardano.TxGenerator.Setup.Plutus
@@ -91,7 +91,7 @@ main
       Right (nixService, _nc, genesis, sigKey) -> do
         putStrLn $ "Did I manage to extract a genesis fund?\n--> " ++ show (checkFund genesis sigKey)
         putStrLn "Can I pre-execute a plutus script?"
-        checkPlutus (_nix_plutusLoopScript nixService)
+        checkPlutusLoop (_nix_plutusLoopScript nixService)
         exitSuccess
 
 checkFund ::
@@ -100,30 +100,23 @@ checkFund ::
   -> Maybe (AddressInEra BabbageEra, Lovelace)
 checkFund = genesisInitialFundForKey Mainnet
 
-checkPlutus ::
+checkPlutusLoop ::
      FilePath
   -> IO ()
-checkPlutus ""
+checkPlutusLoop ""
   = putStrLn "--> No plutus script defined."
-checkPlutus scriptPath
+checkPlutusLoop scriptPath
   = do
     parametersFile <- getDataFileName "data/protocol-parameters-v8.json"
     protocolParameters <- either die pure =<< eitherDecodeFileStrict' parametersFile
     script <- either (die . show) pure =<< readPlutusScript scriptPath
     putStrLn $ "--> Read plutus script: " ++ scriptPath
 
-    let
-      count = 1792        -- arbitrary counter for a loop script; should respect mainnet limits
-      _countOffset = ScriptDataNumber $ 1_000_000 + count    -- assumes loop countdown to 1_000_000
-      _countOffsetVerifying                                  -- parameter list(?): see PlutusExample.PlutusVersion2.SchnorrSecp256k1Loop.hs
-        = ScriptDataList
-          [ ScriptDataNumber count          -- n
-          , ScriptDataBytes "tbd"           -- vkey
-          , ScriptDataBytes "tbd"           -- msg
-          , ScriptDataBytes "tbd"           -- sig
-          ]
+    let count = 1792        -- arbitrary counter for a loop script; should respect mainnet limits
 
-    case preExecutePlutusScript protocolParameters script (ScriptDataNumber 0) _countOffsetVerifying of
+    redeemer <- scriptDataAddToNumber count <$> readRedeemer scriptPath
+
+    case preExecutePlutusScript protocolParameters script (ScriptDataNumber 0) redeemer of
       Left err -> putStrLn $ "--> execution failed: " ++ show err
       Right units -> putStrLn $ "--> execution successful; got units: " ++ show units
 
