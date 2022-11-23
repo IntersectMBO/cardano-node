@@ -1,3 +1,5 @@
+{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -110,12 +112,20 @@ checkPlutus scriptPath
     script <- either (die . show) pure =<< readPlutusScript scriptPath
     putStrLn $ "--> Read plutus script: " ++ scriptPath
 
-    -- arbitrary redeemer for a loop script; should respect mainnet limits
-    -- NB assumes loop countdown to 1_000_000
-    case preExecutePlutusScript protocolParameters script (ScriptDataNumber 0) (ScriptDataNumber $ 1000000 + 1792) of
+    let
+      count = 1792        -- arbitrary counter for a loop script; should respect mainnet limits
+      _countOffset = ScriptDataNumber $ 1_000_000 + count    -- assumes loop countdown to 1_000_000
+      _countOffsetVerifying                                  -- parameter list(?): see PlutusExample.PlutusVersion2.SchnorrSecp256k1Loop.hs
+        = ScriptDataList
+          [ ScriptDataNumber count          -- n
+          , ScriptDataBytes "tbd"           -- vkey
+          , ScriptDataBytes "tbd"           -- msg
+          , ScriptDataBytes "tbd"           -- sig
+          ]
+
+    case preExecutePlutusScript protocolParameters script (ScriptDataNumber 0) _countOffsetVerifying of
       Left err -> putStrLn $ "--> execution failed: " ++ show err
       Right units -> putStrLn $ "--> execution successful; got units: " ++ show units
-
 
 
 readFileJson :: FromJSON a => FilePath -> ExceptT TxGenError IO a
