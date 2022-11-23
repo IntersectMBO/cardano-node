@@ -406,7 +406,10 @@
 
       makeRequired = isPr: jobs: extra:
       let
-        nonRequiredPaths = map lib.hasPrefix ([ "macos." ] ++ lib.optional isPr "linux.native.membenches");
+        nonRequiredPaths = map lib.hasPrefix
+          ([ "macos." ] ++
+           [ "linux.windows.checks.cardano-tracer.cardano-tracer-test" ] ++
+           lib.optional isPr "linux.native.membenches");
       in with self.legacyPackages.${defaultSystem};
         releaseTools.aggregate {
           name = "github-required";
