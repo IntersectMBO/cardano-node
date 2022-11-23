@@ -198,9 +198,11 @@ def add_derived_params:
          , cluster_startup_overhead_s: $dataset_induced_startup_delay_conservative
          , filter_exprs:
            ($ana.filter_exprs +
-            [ { tag: "CBlock", contents: { tag: "BMinimumAdoptions"
+            (if $n_pools == 0 then []
+             else
+               [ { tag: "CBlock", contents: { tag: "BMinimumAdoptions"
                                          , contents: ($n_pools - 1) } }
-            ])
+               ] end))
          }
      })
    }

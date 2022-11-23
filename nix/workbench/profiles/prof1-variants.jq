@@ -192,6 +192,14 @@ def all_profile_variants:
     } as $chainsync_cluster
   |
   ##
+  ### Definition vocabulary:  filtering
+  ##
+    ({}
+     | .analysis.filters                = []
+     | .analysis.filter_exprs           = []
+    ) as $no_filtering
+  |
+  ##
   ### Definition vocabulary:  timescale
   ##
     { genesis:
@@ -219,22 +227,18 @@ def all_profile_variants:
   |
     ({}
      | .node.shutdown_on_block_synced   = 1
-     | .analysis.filters                = []
     ) as $for_1blk
   |
     ({}
      | .node.shutdown_on_block_synced   = 3
-     | .analysis.filters                = []
     ) as $for_3blk
   |
     ({}
      | .node.shutdown_on_block_synced   = 15
-     | .analysis.filters                = []
     ) as $for_15blk
   |
     ({}
      | .node.shutdown_on_block_synced   = 30
-     | .analysis.filters                = []
     ) as $for_30blk
   |
   ##
@@ -277,13 +281,12 @@ def all_profile_variants:
   ##
   ### Definition vocabulary:  scenario
   ##
-   ($mainnet_timescale * $chainsync_cluster *
+   ($mainnet_timescale * $chainsync_cluster * $no_filtering * $without_tracer *
     { desc: "Mainnet chain syncing benchmark"
     , scenario:                        "chainsync"
     , preset:                          "mainnet"
     , analysis:
       { type:                          "performance"
-      , filters:                        []
       }
     }) as $scenario_chainsync
   |
@@ -300,15 +303,15 @@ def all_profile_variants:
   ##
   ### Definition vocabulary:  base variant
   ##
-   ($scenario_fixed_loaded * $doublet * $dataset_empty * $for_1blk *
+   ($scenario_fixed_loaded * $doublet * $dataset_empty * $for_1blk * $no_filtering *
     { desc: "Stop as soon as we've seen a single block"
     }) as $startstop_base
   |
-   ($scenario_fixed_loaded * $doublet * $dataset_empty * $for_3blk *
+   ($scenario_fixed_loaded * $doublet * $dataset_empty * $for_3blk * $no_filtering *
     { desc: "Miniature dataset, CI-friendly duration, test scale"
     }) as $citest_base
   |
-   ($scenario_fixed_loaded * $doublet * $dataset_miniature * $for_15blk *
+   ($scenario_fixed_loaded * $doublet * $dataset_miniature * $for_15blk * $no_filtering *
     { desc: "Miniature dataset, CI-friendly duration, bench scale"
     }) as $cibench_base
   |
