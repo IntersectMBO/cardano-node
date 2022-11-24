@@ -114,7 +114,7 @@ checkPlutusLoop scriptPath
 
     let count = 1792        -- arbitrary counter for a loop script; should respect mainnet limits
 
-    redeemer <- scriptDataAddToNumber count <$> readRedeemer scriptPath
+    redeemer <- scriptDataModifyNumber (+ count) <$> readRedeemer scriptPath
 
     case preExecutePlutusScript protocolParameters script (ScriptDataNumber 0) redeemer of
       Left err -> putStrLn $ "--> execution failed: " ++ show err
