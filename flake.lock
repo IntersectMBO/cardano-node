@@ -10251,11 +10251,11 @@
     "plutus-apps_6": {
       "flake": false,
       "locked": {
-        "lastModified": 1669023021,
-        "narHash": "sha256-ltc6enCEY8kAtDrVjMLN1ps3+xrgd5Ph1oR2YfVaOug=",
+        "lastModified": 1669275597,
+        "narHash": "sha256-UyBjDvRb9/tY/CwUJhB5IFsbWjyHhDGftN0XUTccO9Q=",
         "owner": "input-output-hk",
         "repo": "plutus-apps",
-        "rev": "622594f6340243e33df4aa89fd9010d880b0897e",
+        "rev": "bb3409dc12414e7fbbd6a8d7c2d9f11fb8ff0502",
         "type": "github"
       },
       "original": {
