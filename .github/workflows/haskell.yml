@@ -32,7 +32,7 @@ jobs:
       SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
       # OpenSSL is installed in a non-standard location in MacOS. See
       # https://github.com/actions/virtual-environments/blob/main/images/macos/macos-11-Readme.md
-      PKG_CONFIG_PATH: ${{ (matrix.os == 'macos-latest' && '/usr/lib/pkgconfig:/usr/local/opt/openssl@1.1/lib/pkgconfig') || (matrix.os == 'ubuntu-latest' && '/usr/lib/pkgconfig') || '' }}
+      PKG_CONFIG_PATH: ${{ (matrix.os == 'macos-latest' && '/usr/lib/pkgconfig:/usr/local/opt/openssl@1.1/lib/pkgconfig') || (matrix.os == 'ubuntu-latest' && '/usr/lib/pkgconfig:/usr/local/lib/pkgconfig') || '' }}
       
       # we need the LD_LIBRARY_PATH env var here because we ended up installing libsecp256k1 into /usr/local,
       # pkg-config, *does* return the proper location, but the library does not appear to be properly referenced.
@@ -102,7 +102,7 @@ jobs:
       run: echo "cabal-store=C:\\cabal\\store" >> $GITHUB_OUTPUT   
 
     - name: Set cache version
-      run: echo "CACHE_VERSION=grFfw8r" >> $GITHUB_ENV
+      run: echo "CACHE_VERSION=grFfw7r" >> $GITHUB_ENV
 
     - uses: actions/checkout@v2
 
