@@ -29,13 +29,13 @@ readRedeemer scriptPath
   where
     redeemerFile = (<.> ".redeemer.json") $ dropExtension $ takeFileName scriptPath
 
--- adds a value to the first ScriptDataNumber encountered during traversal to the value provided
-scriptDataAddToNumber :: Integer -> ScriptData -> ScriptData
-scriptDataAddToNumber add
+-- modifies the first ScriptDataNumber encountered during traversal to the value provided
+scriptDataModifyNumber :: (Integer -> Integer) -> ScriptData -> ScriptData
+scriptDataModifyNumber f
   = go
   where
     go = \case
-      ScriptDataNumber i -> ScriptDataNumber (i + add)
+      ScriptDataNumber i -> ScriptDataNumber (f i)
       ScriptDataConstructor int list -> ScriptDataConstructor int (goList list)
       ScriptDataList list -> ScriptDataList (goList list)
       ScriptDataMap m ->
