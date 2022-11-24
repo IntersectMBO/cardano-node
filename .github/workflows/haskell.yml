@@ -17,10 +17,6 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
 
-    defaults:
-      run:
-        shell: ${{ matrix.os == 'windows-latest' && 'msys2 {0}' || 'bash' }}
-
     strategy:
       fail-fast: false
       matrix:
@@ -36,84 +32,88 @@ jobs:
       SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
       # OpenSSL is installed in a non-standard location in MacOS. See
       # https://github.com/actions/virtual-environments/blob/main/images/macos/macos-11-Readme.md
-      PKG_CONFIG_PATH: ${{ matrix.os == 'macos-latest' && '/usr/local/opt/openssl@1.1/lib/pkgconfig' || '' }}
+      PKG_CONFIG_PATH: ${{ (matrix.os == 'macos-latest' && '/usr/lib/pkgconfig:/usr/local/opt/openssl@1.1/lib/pkgconfig') || (matrix.os == 'ubuntu-latest' && '/usr/lib/pkgconfig') || '' }}
+      
+      # we need the LD_LIBRARY_PATH env var here because we ended up installing libsecp256k1 into /usr/local,
+      # pkg-config, *does* return the proper location, but the library does not appear to be properly referenced.
+      # FIXME: this is arguably a bug, and pkg-config should return the right values!
+      LD_LIBRARY_PATH: ${{ (matrix.os != 'windows-latest' && '/usr/local/lib') || '' }}
 
     steps:
-
-    - name: "WIN: Setup MSYS2 and libraries"
-      if: runner.os == 'Windows'
-      uses: msys2/setup-msys2@v2
-      with:
-        update: true
-        install: >-
-          base-devel
-          autoconf-wrapper
-          autoconf
-          automake
-          libtool
-          make
-          git
-          mingw-w64-x86_64-pkg-config
-          mingw-w64-x86_64-toolchain
-          mingw-w64-x86_64-libsodium
-          mingw-w64-x86_64-jq
-
-    - name: "LINUX,MAC: Setup haskell"
-      if: runner.os != 'Windows'
-      uses: haskell/actions/setup@v1
-      id: setup-haskell
-      with:
-        ghc-version: ${{ matrix.ghc }}
-        cabal-version: 3.8.1.0
-
-    - name: "WIN: Setup Haskell"
-      id: win-setup-haskell
+    - name: "WIN: Install System Dependencies via pacman (msys2)"
       if: runner.os == 'Windows'
       run: |
-        # see https://gitlab.haskell.org/haskell/ghcup-hs/-/blob/master/scripts/bootstrap/bootstrap-haskell
-        curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | \
-          BOOTSTRAP_HASKELL_NONINTERACTIVE=1 \
-          BOOTSTRAP_HASKELL_ADJUST_CABAL_CONFIG=1 \
-          BOOTSTRAP_HASKELL_ADJUST_BASHRC=1 \
-          BOOTSTRAP_HASKELL_GHC_VERSION="${{ matrix.ghc }}" \
-          BOOTSTRAP_HASKELL_CABAL_VERSION="3.6.2.0" \
-          sh
-
-        # MSYS2 doesn't inherit $GITHUB_PATH so this is needed
-        cat <(echo "source /c/ghcup/env") ~/.bashrc > ~/.bashrc.new
-        mv ~/.bashrc.new ~/.bashrc
-
-        source ~/.bashrc
-
-        # There is an issue with crt libraries, fixed by prepending the ghc
-        # mingw32 libraries directory to every other library directory.
-        echo "# Original cabal config extra-lib-dirs"
-        grep extra-lib-dirs /c/cabal/config
-
-        sed -i 's/C:\\msys64\\mingw64\\lib/C:\\ghcup\\ghc\\8.10.7\\mingw\\x86_64-w64-mingw32\\lib, C:\\msys64\\mingw64\\lib/g' /c/cabal/config
-
-        echo "# Modified cabal config extra-lib-dirs"
-        grep extra-lib-dirs /c/cabal/config
+         # ghcup should be installed on current GHA Windows runners. Let's use ghcup to run
+         # pacman, to install the necessary dependencies, ...
+         ghcup run -- pacman --noconfirm -S `
+            mingw-w64-x86_64-pkg-config `
+            mingw-w64-x86_64-libsodium `
+            mingw-w64-x86_64-openssl `
+            base-devel `
+            autoconf-wrapper `
+            autoconf `
+            automake `
+            libtool `
+            make
+  
+     # this seems to break something. It _must_ come after the pacman setup
+     # above. It appears as if PATHEXT is set _after_ ghcup install ghc/cabal, and
+     # as such we'd need pacman.exe instead.
+    - name: Setup Haskell
+      run: |        
+        # Use GHCUP to manage ghc/cabal
+        ghcup install ghc --set ${{ matrix.ghc }}
+        ghcup install cabal --set 3.6.2.0
 
         ghc --version
         cabal --version
-        echo "cabal-store=$(cabal --help | tail -1 | tr -d ' ' | rev | cut -d '/' -f2- | rev)\\store" >> $GITHUB_OUTPUT
+
+    - name: "WIN: fixup cabal config"
+      if: runner.os == 'Windows'        
+      run: |
+        # make sure cabal knows about msys64, and mingw64 tools. Not clear why C:/cabal/config is empty
+        # and C:/cabal doesn't even exist.  The ghcup bootstrap file should have create it in the image:
+        # See https://github.com/haskell/ghcup-hs/blob/787edc17af4907dbc51c85e25c490edd8d68b80b/scripts/bootstrap/bootstrap-haskell#L591
+        # So we'll do it by hand here for now.
+        #
+        # We'll _not_ add extra-include-dirs, or extra-lib-dirs, and rely on what's shipped with GHC.
+        # https://github.com/msys2/MINGW-packages/issues/10837#issuecomment-1047105402
+        # https://gitlab.haskell.org/ghc/ghc/-/issues/21111
+        # if we _do_ want them, this would be the lines to add below
+
+        $ghcMingwDir = Join-Path -Path $(ghc --print-libdir) `
+                                 -ChildPath ../mingw/x86_64-*-mingw32/lib/ `
+                                 -Resolve
+
+        cabal user-config -a "extra-prog-path: C:/msys64/mingw64/bin, C:/msys64/usr/bin" `
+                          -a "extra-include-dirs: C:/msys64/mingw64/include" `
+                          -a ("extra-lib-dirs: {0}, C:/msys64/mingw64/lib" -f $ghcMingwDir) `
+                          -f init
+
+    - name: "OUTPUT Record cabal-store (Linux)"
+      id: lin-setup-haskell
+      if: runner.os != 'Windows'
+      run: echo "cabal-store=/home/runner/.cabal/store" >> $GITHUB_OUTPUT
+
+    - name: "OUTPUT Record cabal-store (Windows)"
+      id: win-setup-haskell
+      if: runner.os == 'Windows'
+      shell: bash
+      run: echo "cabal-store=C:\\cabal\\store" >> $GITHUB_OUTPUT   
 
     - name: Set cache version
       run: echo "CACHE_VERSION=grFfw8r" >> $GITHUB_ENV
 
     - uses: actions/checkout@v2
 
-    - name: Add build script path
-      run: |
-        if [ "${{ runner.os }}" == "Windows" ]; then
-          # MSYS2 doesn't inherit $GITHUB_PATH, so this workaround is needed
-          cat <(echo "export PATH=$PATH:$(pwd)/.github/bin") ~/.bashrc > ~/.bashrc.new
-          mv ~/.bashrc.new ~/.bashrc
-        else
-          # MacOS and Linux use $GITUB_PATH
-          echo "$(pwd)/.github/bin" >> $GITHUB_PATH
-        fi
+    - name: "[PowerShell] Add build script path"
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: Add-Content $env:GITHUB_PATH "$(pwd)/.github/bin"
+
+    - name: "[Bash] Add build script path"
+      if: runner.os != 'Windows'
+      run: echo "$(pwd)/.github/bin" >> $GITHUB_PATH
 
     - name: "LINUX: Install build environment (apt-get)"
       if: runner.os == 'Linux'
@@ -126,10 +126,7 @@ jobs:
 
     - name: "LINUX: Install build environment (for secp256k1)"
       if: runner.os == 'Linux'
-      run: |
-        sudo apt-get -y install autoconf automake libtool
-        echo "CI_SECP_FLAGS=--prefix=/usr" >> $GITHUB_ENV
-        echo "CI_SECP_INSTALL_CMD=sudo" >> $GITHUB_ENV
+      run: sudo apt-get -y install autoconf automake libtool
 
     - name: "MAC: Install build environment (brew)"
       if: runner.os == 'macOS'
@@ -140,38 +137,32 @@ jobs:
       if: runner.os == 'macOS'
       run: brew install autoconf automake libtool
 
-    - name: "Install secp256k1"
-      run: |
-        git clone https://github.com/bitcoin-core/secp256k1.git
-        ( cd secp256k1
-          git reset --hard $SECP256K1_REF
-          ./autogen.sh
-          ./configure $CI_SECP_FLAGS --enable-module-schnorrsig --enable-experimental
-          make
-          make check
-          $CI_SECP_INSTALL_CMD make install
-        )
+    - name: "LINUX: Install secp256k1"
+      if: runner.os != 'Windows'
+      shell: bash
+      env:
+        CI_SECP_FLAGS: "--prefix=/usr/local"
+        CI_SECP_INSTALL_CMD: sudo
+      run: bash .github/workflows/build-secp256k1.bash
 
-    - name: "List all pkg-config packages"
-      run: |
-        if [ "${{ runner.os }}" == "macOS" ]; then
-          echo "=== Not printing every package detail in MacOS"
-          # due to the location of the installed libraries this fails on MacOS with stuff not related to us
-        else
-          echo "=== Package list ==="
-          pkg-config --list-all
-
-          echo "=== Package details ==="
-          for x in $(pkg-config --list-all | cut -d ' ' -f 1); do
-            echo "# $x"
-            pkg-config "$x" --cflags --libs
-          done
-        fi
+    # TODO: this really should come from a pre-built location
+    - name: "WIN: Install secp256k1"
+      if: runner.os == 'Windows'
+      # Same env as tmate action
+      env:
+        MSYS2_PATH_TYPE: inherit
+        MSYSTEM: MINGW64
+        CHERE_INVOKING: 1
+        # install secp into /mingw64 prefix, which is where pkg-config will look
+        # by default.
+        CI_SECP_FLAGS: "--prefix=/mingw64"
+      run: C:\\msys64\\usr\\bin\\bash.exe .github/workflows/build-secp256k1.bash
 
     - name: Cabal update
-      run: retry 2 cabal update
+      run: cabal update
 
     - name: Configure build
+      shell: bash
       run: |
         if [ "${{github.event.inputs.tests}}" == "all" ]; then
           echo "Reconfigure cabal projects to run tests for all dependencies"
@@ -187,14 +178,16 @@ jobs:
       id: record-deps
       run: |
         cabal build all --dry-run
-        cat ${{ env.PLAN_JSON }} | jq -r '."install-plan"[].id' | sort | uniq > dependencies.txt
-        date > date.txt
-        echo "weeknum=$(/bin/date -u "+%W")" >> $GITHUB_OUTPUT
+        cat dist-newstyle/cache/plan.json | jq -r '."install-plan"[].id' | sort | uniq > dependencies.txt
+
+    - name: "OUTPUT Record weeknum"
+      shell: bash
+      run: echo "weeknum=$(/usr/bin/date -u "+%W")" >> $GITHUB_OUTPUT
 
     - name: Cache Cabal store
       uses: actions/cache@v2
       with:
-        path: ${{ runner.os == 'Windows' && steps.win-setup-haskell.outputs.cabal-store || steps.setup-haskell.outputs.cabal-store }}
+        path: ${{ runner.os == 'Windows' && steps.win-setup-haskell.outputs.cabal-store || steps.lin-setup-haskell.outputs.cabal-store }}
         key: cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}-${{ hashFiles('date.txt') }}
         restore-keys: |
           cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
@@ -212,22 +205,32 @@ jobs:
     - name: Build
       run: cabal build cardano-node cardano-cli cardano-node-chairman cardano-submit-api
 
-    - name: Run tests
+    - name: Run tests (all)
+      if: github.event.inputs.tests == 'all'
+      env:
+        TMPDIR: ${{ runner.temp }}
+        TMP: ${{ runner.temp }}
+        KEEP_WORKSPACE: 1
       run: |
-        if [ "${{github.event.inputs.tests}}" == "all" ]; then
-          TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 cabal test all;
-        else
-          TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 cabal test \
-            cardano-testnet \
-            cardano-api \
-            cardano-node \
-            cardano-node-chairman \
-            cardano-cli \
-            cardano-submit-api
-        fi
+        # The tests call out to msys2 commands. We generally do not want to mix toolchains, so
+        # we are very deliberate about only adding msys64 to the path where absolutely necessary.
+        ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;{0}" -f $env:PATH)') || '' }}
+        cabal test all
 
+    - name: Run tests
+      if: github.event.inputs.tests != 'all'
+      env:
+        TMPDIR: ${{ runner.temp }}
+        TMP: ${{ runner.temp }}
+        KEEP_WORKSPACE: 1
+      run: |
+        # The tests call out to msys2 commands. We generally do not want to mix toolchains, so
+        # we are very deliberate about only adding msys64 to the path where absolutely necessary.
+        ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;{0}" -f $env:PATH)') || '' }}
+        cabal test cardano-testnet cardano-api cardano-node cardano-node-chairman cardano-cli cardano-submit-api
 
     - name: "Tar artifacts"
+      shell: bash
       run: |
         mkdir -p artifacts
 
@@ -252,6 +255,7 @@ jobs:
 
     - name: Delete socket files in chairman tests in preparation for uploading artifacts
       if: ${{ always() }}
+      shell: bash
       run: |
         if [ -d "${{ runner.temp }}/chairman" ]; then
           find "${{ runner.temp }}/chairman" -type s -exec rm -f {} \;
@@ -263,6 +267,21 @@ jobs:
       with:
         name: chairman-test-artifacts-${{ matrix.os }}-${{ matrix.n }}-${{ matrix.ghc }}
         path: ${{ runner.temp }}/chairman/
+
+    # Uncomment the following back in for debugging. Remember to launch a `pwsh` from
+    # the tmux session to debug `pwsh` issues. And be reminded that the `/msys2` and
+    # `/msys2/mingw64` paths are not in PATH by default for the workflow, but tmate
+    # will put them in.
+    # You may also want to run
+    #
+    #   $env:PATH=("C:\Program Files\PowerShell\7;{0}" -f $env:ORIGINAL_PATH)
+    #
+    # to restore the original path.  Do note that some test might need msys2
+    # and will silently fail if msys2 is not in path. See the "Run tests" step.
+    #
+    # - name: Setup tmate session
+    #   if: ${{ failure() }}
+    #   uses: mxschmitt/action-tmate@v3
 
   release:
     needs: [build]
