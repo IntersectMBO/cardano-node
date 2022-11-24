@@ -13,8 +13,9 @@ in
       inherit profileName workbenchDevMode;
     };
   }
+, system ? builtins.currentSystem
 }:
 with (import ./nix/flake-compat.nix customConfig);
-defaultNix // defaultNix.packages.${builtins.currentSystem} // {
-  private.project = defaultNix.legacyPackages.${builtins.currentSystem};
+defaultNix // defaultNix.packages.${system} // {
+  private.project = defaultNix.legacyPackages.${system};
 }
