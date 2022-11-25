@@ -67,13 +67,7 @@ import qualified Cardano.Ledger.Shelley.RewardUpdate as Shelley
 import           Cardano.Ledger.Babbage.TxBody (BabbageTxOut(..))
 import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
 
-import           Cardano.Api.Script
 import Cardano.Ledger.Mary.Value (MaryValue(..))
-import Cardano.Ledger.Babbage.TxBody (BabbageTxOut(..))
-import Cardano.Ledger.Shelley.API (ShelleyTxOut(..))
-import Cardano.Ledger.Val (Val)
-import Cardano.Ledger.Core (EraTxOut)
-import Cardano.Ledger.Babbage.PParams (BabbagePParamsUpdate, BabbagePParams)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 
 -- Orphan instances involved in the JSON output of the API queries.
