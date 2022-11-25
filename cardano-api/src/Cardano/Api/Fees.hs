@@ -110,8 +110,6 @@ import           Cardano.Api.Script
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
 import           Cardano.Api.Value
-import Lens.Micro ((^.))
-import Cardano.Ledger.Core (EraTx(sizeTxF))
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
 import Cardano.Ledger.Mary.Value (MaryValue)
 

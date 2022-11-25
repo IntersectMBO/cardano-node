@@ -501,7 +501,7 @@ instance ( Consensus.ShelleyBasedEra era
 
 instance ( Consensus.ShelleyBasedEra era
          , ToJSON (Core.Value era)
-         ) => ToJSON (ShelleyTxOut era) where
+         ) => ToJSON (Shelley.ShelleyTxOut era) where
   toJSON = object . toTxOutPair
   toEncoding = Aeson.pairs . mconcat . toTxOutPair
 
@@ -509,8 +509,8 @@ toTxOutPair ::
   ( Aeson.KeyValue a
   , ToJSON (Core.Value era)
   , EraTxOut era)
-  => ShelleyTxOut era -> [a]
-toTxOutPair (ShelleyTxOut !addr !amount) =
+  => Shelley.ShelleyTxOut era -> [a]
+toTxOutPair (Shelley.ShelleyTxOut !addr !amount) =
   [ "address" .= addr
   , "amount" .= amount
   ]
