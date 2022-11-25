@@ -10,8 +10,8 @@ usage_analyse() {
     $(helpcmd variance RUN-NAME..)
      $(blk var)                   Variance analyses on a set of runs
 
-    $(helpcmd full RUN-NAME..)
-     $(blk standard std)          Standard batch of analyses: block-propagation, and machine-timeline
+    $(helpcmd standard RUN-NAME..)
+     $(blk full std)              Standard batch of analyses: block-propagation, and machine-timeline
 
     $(helpcmd block-propagation RUN-NAME..)
      $(blk blockprop bp)          Full block propagation analysis
@@ -64,6 +64,8 @@ analysis_allowed_loanys=(
     'LARollback'
 )
 
+analyse_default_op='standard'
+
 analyse() {
 local filters=() filter_exprs=() filter_reasons= chain_errors= aws= sargs=() unfiltered= perf_omit_hosts=()
 local dump_logobjects= dump_machviews= dump_chain= dump_slots_raw= dump_slots=
@@ -96,7 +98,7 @@ do case "$1" in
        --trace )                   sargs+=($1);    set -x;;
        * ) break;; esac; shift; done
 
-local op=${1:-standard}; if test $# != 0; then shift; fi
+local op=${1:-$analyse_default_op}; if test $# != 0; then shift; fi
 
 case "$op" in
     # 'read-mach-views' "${logs[@]/#/--log }"
@@ -159,7 +161,7 @@ case "$op" in
         analyse "${sargs[@]}" map "call ${script[*]}" "$@"
         ;;
 
-    full | standard | std )
+    standard | full | std )
         local script=(
             logs               $(test -n "$dump_logobjects" && echo 'dump-logobjects')
             context
@@ -423,20 +425,20 @@ case "$op" in
         v2=(${v1[*]/#read-propagations/ 'read-propagations' ${props[*]}  })
         v3=(${v2[*]/#multi-clusterperf-json/ 'render-multi-clusterperf' --json $adir/'clusterperf.json' --full $multi_aspect })
         v4=(${v3[*]/#multi-clusterperf-org/     'render-multi-clusterperf' --org $adir/'clusterperf.org' --full $multi_aspect })
-        v5=(${v4[*]/#multi-clusterperf-report/  'render-multi-clusterperf' --report $adir/'clusterperf.report.org' --report $multi_aspect })
+        v5=(${v4[*]/#multi-clusterperf-report/  'render-multi-clusterperf' --org-report $adir/'clusterperf.report.org' --report $multi_aspect })
         v6=(${v5[*]/#multi-clusterperf-gnuplot/ 'render-multi-clusterperf' --gnuplot $adir/cdf/'%s.cdf' --full $multi_aspect })
         v7=(${v6[*]/#multi-clusterperf-full/    'render-multi-clusterperf' --pretty $adir/'clusterperf-full.txt' --full $multi_aspect })
         v8=(${v7[*]/#multi-propagation-json/     'render-multi-propagation' --json $adir/'blockprop.json' --full $multi_aspect })
         v9=(${v8[*]/#multi-propagation-org/      'render-multi-propagation' --org $adir/'blockprop.org' --full $multi_aspect })
-        va=(${v9[*]/#multi-propagation-control/  'render-multi-propagation' --report $adir/'blockprop.forger.org' --forger $multi_aspect })
-        va=(${v9[*]/#multi-propagation-forger/   'render-multi-propagation' --report $adir/'blockprop.forger.org' --forger $multi_aspect })
-        vb=(${va[*]/#multi-propagation-peers/    'render-multi-propagation' --report $adir/'blockprop.peers.org' --peers $multi_aspect })
-        vc=(${vb[*]/#multi-propagation-endtoend/ 'render-multi-propagation' --report $adir/'blockprop.endtoend.org' --end-to-end $multi_aspect })
-        vd=(${vc[*]/#multi-propagation-gnuplot/  'render-multi-propagation' --gnuplot $adir/cdf/'%s.cdf' --full $multi_aspect })
-        ve=(${vd[*]/#multi-propagation-full/     'render-multi-propagation' --pretty $adir/'blockprop-full.txt' --full $multi_aspect })
-        vf=(${ve[*]/#compare/ 'compare' --ede nix/workbench/ede --report $adir/report-$run.org ${compares[*]} })
-        vg=(${vf[*]/#update/  'compare' --ede nix/workbench/ede --report $adir/report-$run.org ${compares[*]} --template $adir/report-$run.ede })
-        local ops_final=(${vg[*]})
+        va=(${v9[*]/#multi-propagation-control/  'render-multi-propagation' --org-report $adir/'blockprop.control.org' --control $multi_aspect })
+        vb=(${va[*]/#multi-propagation-forger/   'render-multi-propagation' --org-report $adir/'blockprop.forger.org' --forger $multi_aspect })
+        vc=(${vb[*]/#multi-propagation-peers/    'render-multi-propagation' --org-report $adir/'blockprop.peers.org' --peers $multi_aspect })
+        vd=(${vc[*]/#multi-propagation-endtoend/ 'render-multi-propagation' --org-report $adir/'blockprop.endtoend.org' --end-to-end $multi_aspect })
+        ve=(${vd[*]/#multi-propagation-gnuplot/  'render-multi-propagation' --gnuplot $adir/cdf/'%s.cdf' --full $multi_aspect })
+        vf=(${ve[*]/#multi-propagation-full/     'render-multi-propagation' --pretty $adir/'blockprop-full.txt' --full $multi_aspect })
+        vg=(${vf[*]/#compare/ 'compare' --ede nix/workbench/ede --report $adir/report-$run.org ${compares[*]} })
+        vh=(${vg[*]/#update/  'compare' --ede nix/workbench/ede --report $adir/report-$run.org ${compares[*]} --template $adir/report-$run.ede })
+        local ops_final=(${vh[*]})
 
         call_locli "$rtsmode" "${ops_final[@]}"
 
