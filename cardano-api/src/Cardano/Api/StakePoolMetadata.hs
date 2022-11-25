@@ -42,7 +42,6 @@ import           Cardano.Ledger.Crypto (StandardCrypto)
 
 import qualified Cardano.Ledger.Keys as Shelley
 
-
 -- ----------------------------------------------------------------------------
 -- Stake pool metadata
 --
