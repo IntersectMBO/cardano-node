@@ -18,8 +18,7 @@ import qualified Data.Text.IO as Text
 import           Cardano.CLI.Byron.Commands (ByronCommand)
 import           Cardano.CLI.Byron.Run (ByronClientCmdError, renderByronClientCmdError,
                    runByronClientCommand)
-import           Cardano.CLI.Ping (PingCmdError (..), PingCmd (..), renderPingCmdError,
-                   runPingCmd)
+import           Cardano.CLI.Ping (PingCmd (..), PingCmdError (..), renderPingCmdError, runPingCmd)
 import           Cardano.CLI.Shelley.Commands (ShelleyCommand)
 import           Cardano.CLI.Shelley.Run (ShelleyClientCmdError, renderShelleyClientCmdError,
                    runShelleyClientCommand)
