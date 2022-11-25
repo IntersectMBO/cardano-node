@@ -21,12 +21,14 @@ import           Cardano.CLI.Shelley.Key (StakeVerifier (..), VerificationKeyOrF
                    readVerificationKeyOrHashOrFile)
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Shelley.Run.Read
+import           Cardano.CLI.Shelley.Util (getNetworkId, displayErrorText)
 import           Cardano.CLI.Types
 
 data ShelleyStakeAddressCmdError
   = ShelleyStakeAddressCmdReadKeyFileError !(FileError InputDecodeError)
   | ShelleyStakeAddressCmdReadScriptFileError !(FileError ScriptDecodeError)
   | ShelleyStakeAddressCmdWriteFileError !(FileError ())
+  | ShelleyStakeAddressCmdGetNetworkIdError !EnvNetworkIdError
   deriving Show
 
 renderShelleyStakeAddressCmdError :: ShelleyStakeAddressCmdError -> Text
@@ -35,6 +37,7 @@ renderShelleyStakeAddressCmdError err =
     ShelleyStakeAddressCmdReadKeyFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyStakeAddressCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyStakeAddressCmdReadScriptFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyStakeAddressCmdGetNetworkIdError e -> displayErrorText e
 
 runStakeAddressCmd :: StakeAddressCmd -> ExceptT ShelleyStakeAddressCmdError IO ()
 runStakeAddressCmd (StakeAddressKeyGen vk sk) = runStakeAddressKeyGenToFile vk sk
@@ -86,10 +89,11 @@ runStakeAddressKeyHash stakeVerKeyOrFile mOutputFp = do
 
 runStakeAddressBuild
   :: StakeVerifier
-  -> NetworkId
+  -> NetworkIdArg
   -> Maybe OutputFile
   -> ExceptT ShelleyStakeAddressCmdError IO ()
-runStakeAddressBuild stakeVerifier network mOutputFp =
+runStakeAddressBuild stakeVerifier networkArg mOutputFp = do
+  network <- getNetworkId networkArg {-else-} ShelleyStakeAddressCmdGetNetworkIdError
   case stakeVerifier of
     StakeVerifierScriptFile (ScriptFile sFile) -> do
       ScriptInAnyLang _ script <- firstExceptT ShelleyStakeAddressCmdReadScriptFileError

@@ -20,13 +20,13 @@ import qualified Data.Text.Encoding as Text
 
 {- HLINT ignore "Reduce duplication" -}
 
-newtype ByronQueryError = ByronQueryEnvVarSocketErr EnvSocketError
+newtype ByronQueryError = ByronQueryErr EnvSocketError
   deriving Show
 
 renderByronQueryError :: ByronQueryError -> Text
 renderByronQueryError err =
   case err of
-    ByronQueryEnvVarSocketErr sockEnvErr -> renderEnvSocketError sockEnvErr
+    ByronQueryErr sockEnvErr -> renderEnvSocketError sockEnvErr
 
 --------------------------------------------------------------------------------
 -- Query local node's chain tip
@@ -34,7 +34,7 @@ renderByronQueryError err =
 
 runGetLocalNodeTip :: NetworkId -> ExceptT ByronQueryError IO ()
 runGetLocalNodeTip networkId = do
-    SocketPath sockPath <- firstExceptT ByronQueryEnvVarSocketErr
+    SocketPath sockPath <- firstExceptT ByronQueryErr
                              $ newExceptT readEnvSocketPath
     let connctInfo =
           LocalNodeConnectInfo {

@@ -18,6 +18,7 @@ import           Cardano.Api
 import           Cardano.Api.Shelley
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (VerificationKeyOrFile, readVerificationKeyOrFile)
+import           Cardano.CLI.Shelley.Util (displayErrorText, getNetworkId)
 import           Cardano.CLI.Types (OutputFormat (..))
 
 import qualified Cardano.Ledger.Slot as Shelley
@@ -27,6 +28,7 @@ data ShelleyPoolCmdError
   | ShelleyPoolCmdReadKeyFileError !(FileError InputDecodeError)
   | ShelleyPoolCmdWriteFileError !(FileError ())
   | ShelleyPoolCmdMetadataValidationError !StakePoolMetadataValidationError
+  | ShelleyPoolCmdGetNetworkIdError !EnvNetworkIdError
   deriving Show
 
 renderShelleyPoolCmdError :: ShelleyPoolCmdError -> Text
@@ -37,7 +39,7 @@ renderShelleyPoolCmdError err =
     ShelleyPoolCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyPoolCmdMetadataValidationError validationErr ->
       "Error validating stake pool metadata: " <> Text.pack (displayError validationErr)
-
+    ShelleyPoolCmdGetNetworkIdError e -> displayErrorText e
 
 
 runPoolCmd :: PoolCmd -> ExceptT ShelleyPoolCmdError IO ()
@@ -75,7 +77,7 @@ runStakePoolRegistrationCert
   -- ^ Stake pool relays.
   -> Maybe StakePoolMetadataReference
   -- ^ Stake pool metadata.
-  -> NetworkId
+  -> NetworkIdArg
   -> OutputFile
   -> ExceptT ShelleyPoolCmdError IO ()
 runStakePoolRegistrationCert
@@ -88,8 +90,9 @@ runStakePoolRegistrationCert
   ownerStakeVerKeyOrFiles
   relays
   mbMetadata
-  network
+  networkArg
   (OutputFile outfp) = do
+    network <- getNetworkId networkArg {-else-} ShelleyPoolCmdGetNetworkIdError
     -- Pool verification key
     stakePoolVerKey <- firstExceptT ShelleyPoolCmdReadKeyFileError
       . newExceptT

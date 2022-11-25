@@ -45,6 +45,7 @@ import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Shelley.Run.Genesis
 import           Cardano.CLI.Shelley.Run.Read
 import           Cardano.CLI.Shelley.Run.Validate
+import           Cardano.CLI.Shelley.Util (displayErrorText, getNetworkId, getNetworkId')
 import           Cardano.CLI.Types
 
 import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
@@ -116,6 +117,7 @@ data ShelleyTxCmdError
   | ShelleyTxCmdTxCertificatesValidationError TxCertificatesValidationError
   | ShelleyTxCmdTxUpdateProposalValidationError TxUpdateProposalValidationError
   | ShelleyTxCmdScriptValidityValidationError TxScriptValidityValidationError
+  | ShelleyTxCmdGetNetworkIdError !EnvNetworkIdError
 
 renderShelleyTxCmdError :: ShelleyTxCmdError -> Text
 renderShelleyTxCmdError err =
@@ -238,6 +240,7 @@ renderShelleyTxCmdError err =
       Text.pack $ displayError e
     ShelleyTxCmdScriptValidityValidationError e ->
       Text.pack $ displayError e
+    ShelleyTxCmdGetNetworkIdError e -> displayErrorText e
 
 renderFeature :: TxFeature -> Text
 renderFeature TxFeatureShelleyAddresses     = "Shelley addresses"
@@ -267,10 +270,11 @@ renderFeature TxFeatureReturnCollateral     = "Return collateral"
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
   case cmd of
-    TxBuild era consensusModeParams nid mScriptValidity mOverrideWits txins readOnlyRefIns
+    TxBuild era consensusModeParams nidArg mScriptValidity mOverrideWits txins readOnlyRefIns
             reqSigners txinsc mReturnColl mTotCollateral txouts changeAddr mValue mLowBound
             mUpperBound certs wdrls metadataSchema scriptFiles metadataFiles mPparams
             mUpProp outputOptions -> do
+      nid <- getNetworkId nidArg ShelleyTxCmdGetNetworkIdError
       runTxBuildCmd era consensusModeParams nid mScriptValidity mOverrideWits txins readOnlyRefIns
             reqSigners txinsc mReturnColl mTotCollateral txouts changeAddr mValue mLowBound
             mUpperBound certs wdrls metadataSchema scriptFiles metadataFiles mPparams
@@ -283,8 +287,7 @@ runTransactionCmd cmd =
                metadataSchema scriptFiles metadataFiles mpparams mUpProp out
     TxSign txinfile skfiles network txoutfile ->
       runTxSign txinfile skfiles network txoutfile
-    TxSubmit anyConsensusModeParams network txFp ->
-      runTxSubmit anyConsensusModeParams network txFp
+    TxSubmit anyConsensusModeParams network txFp -> runTxSubmit anyConsensusModeParams network txFp
     TxCalculateMinFee txbody mnw pGenesisOrParamsFile nInputs nOutputs
                       nShelleyKeyWitnesses nByronKeyWitnesses ->
       runTxCalculateMinFee txbody mnw pGenesisOrParamsFile nInputs nOutputs
@@ -1050,7 +1053,7 @@ readValueScriptWitnesses era (v, sWitFiles) = do
 
 runTxSign :: InputTxBodyOrTxFile
           -> [WitnessSigningData]
-          -> Maybe NetworkId
+          -> SignForNetworkId
           -> TxFile
           -> ExceptT ShelleyTxCmdError IO ()
 runTxSign txOrTxBody witSigningData mnw (TxFile outTxFile) = do
@@ -1123,10 +1126,11 @@ runTxSign txOrTxBody witSigningData mnw (TxFile outTxFile) = do
 
 runTxSubmit
   :: AnyConsensusModeParams
-  -> NetworkId
+  -> NetworkIdArg
   -> FilePath
   -> ExceptT ShelleyTxCmdError IO ()
-runTxSubmit (AnyConsensusModeParams cModeParams) network txFile = do
+runTxSubmit (AnyConsensusModeParams cModeParams) networkArg txFile = do
+    network <- getNetworkId networkArg ShelleyTxCmdGetNetworkIdError
     SocketPath sockPath <- firstExceptT ShelleyTxCmdSocketEnvError
                              $ newExceptT readEnvSocketPath
 
@@ -1157,17 +1161,21 @@ runTxSubmit (AnyConsensusModeParams cModeParams) network txFile = do
 
 runTxCalculateMinFee
   :: TxBodyFile
-  -> Maybe NetworkId
+  -> NetworkIdOrMainnet
   -> ProtocolParamsSourceSpec
   -> TxInCount
   -> TxOutCount
   -> TxShelleyWitnessCount
   -> TxByronWitnessCount
   -> ExceptT ShelleyTxCmdError IO ()
-runTxCalculateMinFee (TxBodyFile txbodyFile) nw protocolParamsSourceSpec
+runTxCalculateMinFee (TxBodyFile txbodyFile) (NetworkIdOrMainnet networkArg) protocolParamsSourceSpec
                      (TxInCount nInputs) (TxOutCount nOutputs)
                      (TxShelleyWitnessCount nShelleyKeyWitnesses)
                      (TxByronWitnessCount nByronKeyWitnesses) = do
+    network <- liftIO (getNetworkId' networkArg) >>= \case
+      Right nid -> return nid
+      Left EnvVarNotSetError -> return Mainnet
+      Left e@ParsingEnvVarError{} -> throwE $ ShelleyTxCmdGetNetworkIdError e
 
     unwitnessed <- firstExceptT ShelleyTxCmdCddlError . newExceptT
                      $ readFileTxBody txbodyFile
@@ -1180,7 +1188,7 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw protocolParamsSourceSpec
         let txbody =  getTxBody unwitTx
         let tx = makeSignedTransaction [] txbody
             Lovelace fee = estimateTransactionFee
-                             (fromMaybe Mainnet nw)
+                             network
                              (protocolParamTxFeeFixed pparams)
                              (protocolParamTxFeePerByte pparams)
                              tx
@@ -1196,7 +1204,7 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw protocolParamsSourceSpec
 
         let tx = makeSignedTransaction [] txbody
             Lovelace fee = estimateTransactionFee
-                             (fromMaybe Mainnet nw)
+                             network
                              (protocolParamTxFeeFixed pparams)
                              (protocolParamTxFeePerByte pparams)
                              tx
@@ -1275,13 +1283,13 @@ renderShelleyBootstrapWitnessError MissingNetworkIdOrByronAddressError =
 -- Shelley era).
 mkShelleyBootstrapWitness
   :: IsShelleyBasedEra era
-  => Maybe NetworkId
+  => SignForNetworkId
   -> TxBody era
   -> ShelleyBootstrapWitnessSigningKeyData
   -> Either ShelleyBootstrapWitnessError (KeyWitness era)
-mkShelleyBootstrapWitness Nothing _ (ShelleyBootstrapWitnessSigningKeyData _ Nothing) =
+mkShelleyBootstrapWitness TakeNetworkIdFromKey _ (ShelleyBootstrapWitnessSigningKeyData _ Nothing) =
   Left MissingNetworkIdOrByronAddressError
-mkShelleyBootstrapWitness (Just nw) txBody (ShelleyBootstrapWitnessSigningKeyData skey Nothing) =
+mkShelleyBootstrapWitness (SignForNetworkId nw) txBody (ShelleyBootstrapWitnessSigningKeyData skey Nothing) =
   Right $ makeShelleyBootstrapWitness (WitnessNetworkId nw) txBody skey
 mkShelleyBootstrapWitness _ txBody (ShelleyBootstrapWitnessSigningKeyData skey (Just addr)) =
   Right $ makeShelleyBootstrapWitness (WitnessByronAddress addr) txBody skey
@@ -1290,7 +1298,7 @@ mkShelleyBootstrapWitness _ txBody (ShelleyBootstrapWitnessSigningKeyData skey (
 -- encountered.
 mkShelleyBootstrapWitnesses
   :: IsShelleyBasedEra era
-  => Maybe NetworkId
+  => SignForNetworkId
   -> TxBody era
   -> [ShelleyBootstrapWitnessSigningKeyData]
   -> Either ShelleyBootstrapWitnessError [KeyWitness era]
@@ -1353,7 +1361,7 @@ runTxView = \case
 runTxCreateWitness
   :: TxBodyFile
   -> WitnessSigningData
-  -> Maybe NetworkId
+  -> SignForNetworkId
   -> OutputFile
   -> ExceptT ShelleyTxCmdError IO ()
 runTxCreateWitness (TxBodyFile txbodyFile) witSignData mbNw (OutputFile oFile) = do
@@ -1461,5 +1469,3 @@ onlyInShelleyBasedEras notImplMsg (InAnyCardanoEra era x) =
     case cardanoEraStyle era of
       LegacyByronEra       -> left (ShelleyTxCmdNotImplemented notImplMsg)
       ShelleyBasedEra era' -> return (InAnyShelleyBasedEra era' x)
-
-

@@ -96,6 +96,7 @@ import           Cardano.CLI.Shelley.Run.Node (ShelleyNodeCmdError (..), renderS
 import           Cardano.CLI.Shelley.Run.Pool (ShelleyPoolCmdError (..), renderShelleyPoolCmdError)
 import           Cardano.CLI.Shelley.Run.StakeAddress (ShelleyStakeAddressCmdError (..),
                    renderShelleyStakeAddressCmdError, runStakeAddressKeyGenToFile)
+import           Cardano.CLI.Shelley.Util (getNetworkId)
 import           Cardano.CLI.Types
 
 import qualified Cardano.Chain.Common as Byron (KeyHash, mkKnownLovelace, rationalToLovelacePortion)
@@ -142,6 +143,7 @@ data ShelleyGenesisCmdError
   | ShelleyGenesisCmdStakeAddressCmdError !ShelleyStakeAddressCmdError
   | ShelleyGenesisCmdCostModelsError !FilePath
   | ShelleyGenesisCmdByronError !ByronGenesisError
+  | ShelleyGenesisCmdGetNetworkIdError !EnvNetworkIdError
   | ShelleyGenesisStakePoolRelayFileError !FilePath !IOException
   | ShelleyGenesisStakePoolRelayJsonDecodeError !FilePath !String
   deriving Show
@@ -184,6 +186,7 @@ instance Error ShelleyGenesisCmdError where
        " Error: " <>  Text.unpack e
       ShelleyGenesisCmdGenesisFileReadError e -> displayError e
       ShelleyGenesisCmdByronError e -> show e
+      ShelleyGenesisCmdGetNetworkIdError e -> displayError e
       ShelleyGenesisStakePoolRelayFileError fp e ->
         "Error occurred while reading the stake pool relay specification file: " <> fp <>
         " Error: " <> show e
@@ -200,7 +203,9 @@ runGenesisCmd (GenesisVerKey vk sk) = runGenesisVerKey vk sk
 runGenesisCmd (GenesisTxIn vk nw mOutFile) = runGenesisTxIn vk nw mOutFile
 runGenesisCmd (GenesisAddr vk nw mOutFile) = runGenesisAddr vk nw mOutFile
 runGenesisCmd (GenesisCreate gd gn un ms am nw) = runGenesisCreate gd gn un ms am nw
-runGenesisCmd (GenesisCreateCardano gd gn un ms am k slotLength sc nw bg sg ag mNodeCfg) = runGenesisCreateCardano gd gn un ms am k slotLength sc nw bg sg ag mNodeCfg
+runGenesisCmd (GenesisCreateCardano gd gn un ms am k slotLength sc networkArg bg sg ag mNodeCfg) = do
+  network <- getNetworkId networkArg ShelleyGenesisCmdGetNetworkIdError
+  runGenesisCreateCardano gd gn un ms am k slotLength sc network bg sg ag mNodeCfg
 runGenesisCmd (GenesisCreateStaked gd gn gp gl un ms am ds nw bf bp su relayJsonFp) =
   runGenesisCreateStaked gd gn gp gl un ms am ds nw bf bp su relayJsonFp
 runGenesisCmd (GenesisHashFile gf) = runGenesisHashFile gf
@@ -351,18 +356,20 @@ data SomeGenesisKey f
      | AGenesisUTxOKey     (f GenesisUTxOKey)
 
 
-runGenesisTxIn :: VerificationKeyFile -> NetworkId -> Maybe OutputFile
+runGenesisTxIn :: VerificationKeyFile -> NetworkIdArg -> Maybe OutputFile
                -> ExceptT ShelleyGenesisCmdError IO ()
-runGenesisTxIn (VerificationKeyFile vkeyPath) network mOutFile = do
+runGenesisTxIn (VerificationKeyFile vkeyPath) networkArg mOutFile = do
+    network <- getNetworkId networkArg ShelleyGenesisCmdGetNetworkIdError
     vkey <- firstExceptT ShelleyGenesisCmdTextEnvReadFileError . newExceptT $
             readFileTextEnvelope (AsVerificationKey AsGenesisUTxOKey) vkeyPath
     let txin = genesisUTxOPseudoTxIn network (verificationKeyHash vkey)
     liftIO $ writeOutput mOutFile (renderTxIn txin)
 
 
-runGenesisAddr :: VerificationKeyFile -> NetworkId -> Maybe OutputFile
+runGenesisAddr :: VerificationKeyFile -> NetworkIdArg -> Maybe OutputFile
                -> ExceptT ShelleyGenesisCmdError IO ()
-runGenesisAddr (VerificationKeyFile vkeyPath) network mOutFile = do
+runGenesisAddr (VerificationKeyFile vkeyPath) networkArg mOutFile = do
+    network <- getNetworkId networkArg ShelleyGenesisCmdGetNetworkIdError
     vkey <- firstExceptT ShelleyGenesisCmdTextEnvReadFileError . newExceptT $
             readFileTextEnvelope (AsVerificationKey AsGenesisUTxOKey) vkeyPath
     let vkh  = verificationKeyHash (castVerificationKey vkey)
@@ -384,18 +391,19 @@ runGenesisCreate :: GenesisDir
                  -> Word  -- ^ num utxo keys to make
                  -> Maybe SystemStart
                  -> Maybe Lovelace
-                 -> NetworkId
+                 -> NetworkIdArg
                  -> ExceptT ShelleyGenesisCmdError IO ()
 runGenesisCreate (GenesisDir rootdir)
                  genNumGenesisKeys genNumUTxOKeys
-                 mStart mAmount network = do
+                 mStart mAmount networkArg = do
+  network <- getNetworkId networkArg ShelleyGenesisCmdGetNetworkIdError
   liftIO $ do
     createDirectoryIfMissing False rootdir
     createDirectoryIfMissing False gendir
     createDirectoryIfMissing False deldir
     createDirectoryIfMissing False utxodir
 
-  template <- readShelleyGenesisWithDefault (rootdir </> "genesis.spec.json") adjustTemplate
+  template <- readShelleyGenesisWithDefault (rootdir </> "genesis.spec.json") $ adjustTemplate network
   alonzoGenesis <- readAlonzoGenesis (rootdir </> "genesis.alonzo.spec.json")
 
   forM_ [ 1 .. genNumGenesisKeys ] $ \index -> do
@@ -418,7 +426,7 @@ runGenesisCreate (GenesisDir rootdir)
   void $ writeFileGenesis (rootdir </> "genesis.alonzo.json") $ WritePretty alonzoGenesis
   --TODO: rationalise the naming convention on these genesis json files.
   where
-    adjustTemplate t = t { sgNetworkMagic = unNetworkMagic (toNetworkMagic network) }
+    adjustTemplate nw t = t { sgNetworkMagic = unNetworkMagic (toNetworkMagic nw) }
     gendir  = rootdir </> "genesis-keys"
     deldir  = rootdir </> "delegate-keys"
     utxodir = rootdir </> "utxo-keys"
@@ -655,7 +663,7 @@ runGenesisCreateStaked
   -> Maybe SystemStart
   -> Maybe Lovelace -- ^ supply going to non-delegators
   -> Lovelace       -- ^ supply going to delegators
-  -> NetworkId
+  -> NetworkIdArg
   -> Word           -- ^ bulk credential files to write
   -> Word           -- ^ pool credentials per bulk file
   -> Word           -- ^ num stuffed UTxO entries
@@ -663,9 +671,10 @@ runGenesisCreateStaked
   -> ExceptT ShelleyGenesisCmdError IO ()
 runGenesisCreateStaked (GenesisDir rootdir)
                  genNumGenesisKeys genNumUTxOKeys genNumPools genNumStDelegs
-                 mStart mNonDlgAmount stDlgAmount network
+                 mStart mNonDlgAmount stDlgAmount networkArg
                  numBulkPoolCredFiles bulkPoolsPerFile numStuffedUtxo
                  sPoolRelayFp = do
+  network <- getNetworkId networkArg ShelleyGenesisCmdGetNetworkIdError
   liftIO $ do
     createDirectoryIfMissing False rootdir
     createDirectoryIfMissing False gendir
@@ -674,7 +683,7 @@ runGenesisCreateStaked (GenesisDir rootdir)
     createDirectoryIfMissing False stdeldir
     createDirectoryIfMissing False utxodir
 
-  template <- readShelleyGenesisWithDefault (rootdir </> "genesis.spec.json") adjustTemplate
+  template <- readShelleyGenesisWithDefault (rootdir </> "genesis.spec.json") $ adjustTemplate network
   alonzoGenesis <- readAlonzoGenesis (rootdir </> "genesis.alonzo.spec.json")
 
   forM_ [ 1 .. genNumGenesisKeys ] $ \index -> do
@@ -758,7 +767,7 @@ runGenesisCreateStaked (GenesisDir rootdir)
     | numBulkPoolCredFiles * bulkPoolsPerFile > 0 ]
 
   where
-    adjustTemplate t = t { sgNetworkMagic = unNetworkMagic (toNetworkMagic network) }
+    adjustTemplate nw t = t { sgNetworkMagic = unNetworkMagic (toNetworkMagic nw) }
     mkDelegationMapEntry :: Delegation -> (Ledger.KeyHash Ledger.Staking StandardCrypto, Ledger.PoolParams StandardCrypto)
     mkDelegationMapEntry d = (dDelegStaking d, dPoolParams d)
 

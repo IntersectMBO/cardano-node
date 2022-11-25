@@ -18,6 +18,9 @@ module Cardano.CLI.Shelley.Commands
   , renderShelleyCommand
 
     -- * CLI flag types
+  , NetworkIdArg (..)
+  , SignForNetworkId(..)
+  , NetworkIdOrMainnet (..)
   , AddressKeyType (..)
   , ByronKeyType (..)
   , ByronKeyFormat (..)
@@ -95,7 +98,7 @@ data AddressCmd
   | AddressBuild
       PaymentVerifier
       (Maybe StakeVerifier)
-      NetworkId
+      NetworkIdArg
       (Maybe OutputFile)
   | AddressInfo Text (Maybe OutputFile)
   deriving Show
@@ -112,7 +115,7 @@ renderAddressCmd cmd =
 data StakeAddressCmd
   = StakeAddressKeyGen VerificationKeyFile SigningKeyFile
   | StakeAddressKeyHash (VerificationKeyOrFile StakeKey) (Maybe OutputFile)
-  | StakeAddressBuild StakeVerifier NetworkId (Maybe OutputFile)
+  | StakeAddressBuild StakeVerifier NetworkIdArg (Maybe OutputFile)
   | StakeRegistrationCert StakeVerifier OutputFile
   | StakeCredentialDelegationCert
       StakeVerifier
@@ -194,7 +197,7 @@ data TransactionCmd
   | TxBuild
       AnyCardanoEra
       AnyConsensusModeParams
-      NetworkId
+      NetworkIdArg
       (Maybe ScriptValidity) -- ^ Mark script as expected to pass or fail validation
       (Maybe Word)
       -- ^ Override the required number of tx witnesses
@@ -231,14 +234,21 @@ data TransactionCmd
       (Maybe ProtocolParamsSourceSpec)
       (Maybe UpdateProposalFile)
       TxBuildOutputOptions
-  | TxSign InputTxBodyOrTxFile [WitnessSigningData] (Maybe NetworkId) TxFile
-  | TxCreateWitness TxBodyFile WitnessSigningData (Maybe NetworkId) OutputFile
+  | TxSign InputTxBodyOrTxFile
+      [WitnessSigningData]
+      SignForNetworkId
+      TxFile
+  | TxCreateWitness
+      TxBodyFile
+      WitnessSigningData
+      SignForNetworkId
+      OutputFile
   | TxAssembleTxBodyWitness TxBodyFile [WitnessFile] OutputFile
-  | TxSubmit AnyConsensusModeParams NetworkId FilePath
+  | TxSubmit AnyConsensusModeParams NetworkIdArg FilePath
   | TxMintedPolicyId ScriptFile
   | TxCalculateMinFee
       TxBodyFile
-      (Maybe NetworkId)
+      NetworkIdOrMainnet
       ProtocolParamsSourceSpec
       TxInCount
       TxOutCount
@@ -324,7 +334,7 @@ data PoolCmd
       -- ^ Stake pool relays.
       (Maybe StakePoolMetadataReference)
       -- ^ Stake pool metadata.
-      NetworkId
+      NetworkIdArg
       OutputFile
   | PoolRetirementCert
       (VerificationKeyOrFile StakePoolKey)
@@ -347,33 +357,33 @@ renderPoolCmd cmd =
 data QueryCmd =
     QueryLeadershipSchedule
       AnyConsensusModeParams
-      NetworkId
+      NetworkIdArg
       GenesisFile
       (VerificationKeyOrHashOrFile StakePoolKey)
       SigningKeyFile
       EpochLeadershipSchedule
       (Maybe OutputFile)
-  | QueryProtocolParameters' AnyConsensusModeParams NetworkId (Maybe OutputFile)
-  | QueryTip AnyConsensusModeParams NetworkId (Maybe OutputFile)
-  | QueryStakePools' AnyConsensusModeParams NetworkId (Maybe OutputFile)
-  | QueryStakeDistribution' AnyConsensusModeParams NetworkId (Maybe OutputFile)
-  | QueryStakeAddressInfo AnyConsensusModeParams StakeAddress NetworkId (Maybe OutputFile)
-  | QueryUTxO' AnyConsensusModeParams QueryUTxOFilter NetworkId (Maybe OutputFile)
-  | QueryDebugLedgerState' AnyConsensusModeParams NetworkId (Maybe OutputFile)
-  | QueryProtocolState' AnyConsensusModeParams NetworkId (Maybe OutputFile)
+  | QueryProtocolParameters' AnyConsensusModeParams NetworkIdArg (Maybe OutputFile)
+  | QueryTip AnyConsensusModeParams NetworkIdArg (Maybe OutputFile)
+  | QueryStakePools' AnyConsensusModeParams NetworkIdArg (Maybe OutputFile)
+  | QueryStakeDistribution' AnyConsensusModeParams NetworkIdArg (Maybe OutputFile)
+  | QueryStakeAddressInfo AnyConsensusModeParams StakeAddress NetworkIdArg (Maybe OutputFile)
+  | QueryUTxO' AnyConsensusModeParams QueryUTxOFilter NetworkIdArg (Maybe OutputFile)
+  | QueryDebugLedgerState' AnyConsensusModeParams NetworkIdArg (Maybe OutputFile)
+  | QueryProtocolState' AnyConsensusModeParams NetworkIdArg (Maybe OutputFile)
   | QueryStakeSnapshot'
       AnyConsensusModeParams
-      NetworkId
+      NetworkIdArg
       (AllOrOnly [Hash StakePoolKey])
       (Maybe OutputFile)
   | QueryKesPeriodInfo
       AnyConsensusModeParams
-      NetworkId
+      NetworkIdArg
       FilePath
       -- ^ Node operational certificate
       (Maybe OutputFile)
-  | QueryPoolState' AnyConsensusModeParams NetworkId [Hash StakePoolKey]
-  | QueryTxMempool AnyConsensusModeParams NetworkId TxMempoolQuery (Maybe OutputFile)
+  | QueryPoolState' AnyConsensusModeParams NetworkIdArg [Hash StakePoolKey]
+  | QueryTxMempool AnyConsensusModeParams NetworkIdArg TxMempoolQuery (Maybe OutputFile)
   deriving Show
 
 renderQueryCmd :: QueryCmd -> Text
@@ -436,8 +446,8 @@ renderTextViewCmd :: TextViewCmd -> Text
 renderTextViewCmd (TextViewInfo _ _) = "text-view decode-cbor"
 
 data GenesisCmd
-  = GenesisCreate GenesisDir Word Word (Maybe SystemStart) (Maybe Lovelace) NetworkId
-  | GenesisCreateCardano GenesisDir Word Word (Maybe SystemStart) (Maybe Lovelace) BlockCount Word Rational NetworkId FilePath FilePath FilePath (Maybe FilePath)
+  = GenesisCreate GenesisDir Word Word (Maybe SystemStart) (Maybe Lovelace) NetworkIdArg
+  | GenesisCreateCardano GenesisDir Word Word (Maybe SystemStart) (Maybe Lovelace) BlockCount Word Rational NetworkIdArg FilePath FilePath FilePath (Maybe FilePath)
   | GenesisCreateStaked
       GenesisDir
       Word
@@ -447,7 +457,7 @@ data GenesisCmd
       (Maybe SystemStart)
       (Maybe Lovelace)
       Lovelace
-      NetworkId
+      NetworkIdArg
       Word
       Word
       Word
@@ -457,8 +467,8 @@ data GenesisCmd
   | GenesisKeyGenUTxO VerificationKeyFile SigningKeyFile
   | GenesisCmdKeyHash VerificationKeyFile
   | GenesisVerKey VerificationKeyFile SigningKeyFile
-  | GenesisTxIn VerificationKeyFile NetworkId (Maybe OutputFile)
-  | GenesisAddr VerificationKeyFile NetworkId (Maybe OutputFile)
+  | GenesisTxIn VerificationKeyFile NetworkIdArg (Maybe OutputFile)
+  | GenesisAddr VerificationKeyFile NetworkIdArg (Maybe OutputFile)
   | GenesisHashFile GenesisFile
   deriving Show
 
@@ -480,6 +490,24 @@ renderGenesisCmd cmd =
 --
 -- Shelley CLI flag/option data types
 --
+
+data NetworkIdArg
+  = NetworkIdFromCLI NetworkId
+  | NetworkIdFromEnv
+  deriving (Show,Eq)
+
+-- Commands with this argument
+-- behave different depending on whether a network-id option is given or not.
+--
+data SignForNetworkId
+  = SignForNetworkId !NetworkId
+  | TakeNetworkIdFromKey
+  deriving (Show,Eq)
+
+-- Commands with this argument default to mainnet, when no network Id is defined.
+
+newtype NetworkIdOrMainnet = NetworkIdOrMainnet {unNetworkIdOrMainnet :: NetworkIdArg} -- ^ If the lookup of NetworkId fails default to Mainnet
+  deriving (Show,Eq)
 
 newtype ProtocolParamsFile
   = ProtocolParamsFile FilePath

@@ -751,14 +751,14 @@ pTransaction =
   pTransactionSign  :: Parser TransactionCmd
   pTransactionSign = TxSign <$> pInputTxOrTxBodyFile
                             <*> many pWitnessSigningData
-                            <*> optional pNetworkId
+                            <*> pNetworkIdForSigning
                             <*> pTxFile Output
 
   pTransactionCreateWitness :: Parser TransactionCmd
   pTransactionCreateWitness = TxCreateWitness
                                 <$> pTxBodyFile Input
                                 <*> pWitnessSigningData
-                                <*> optional pNetworkId
+                                <*> pNetworkIdForSigning
                                 <*> pOutputFile
 
   pTransactionAssembleTxBodyWit :: Parser TransactionCmd
@@ -779,7 +779,7 @@ pTransaction =
   pTransactionCalculateMinFee =
     TxCalculateMinFee
       <$> pTxBodyFile Input
-      <*> optional pNetworkId
+      <*> pNetworkIdOrMainnet
       <*> pProtocolParamsSourceSpec
       <*> pTxInCount
       <*> pTxOutCount
@@ -2014,25 +2014,60 @@ pKesVerificationKeyFile =
         )
     )
 
-pNetworkId :: Parser NetworkId
+pNetworkId :: Parser NetworkIdArg
 pNetworkId =
-  pMainnet <|> fmap Testnet pTestnetMagic
+  (NetworkIdFromCLI <$> (pMainnet <|> pTestnetMagic))
+  <|> pNetworkFromEnv
+  <|> pure NetworkIdFromEnv
  where
-   pMainnet :: Parser NetworkId
-   pMainnet =
-    Opt.flag' Mainnet
-      (  Opt.long "mainnet"
-      <> Opt.help "Use the mainnet magic id."
+  pMainnet :: Parser NetworkId
+  pMainnet =
+   Opt.flag' Mainnet
+     (  Opt.long "mainnet"
+     <> Opt.help "Use the mainnet magic id."
+     )
+
+  pTestnetMagic :: Parser NetworkId
+  pTestnetMagic =
+    Testnet . NetworkMagic <$>
+      Opt.option Opt.auto
+        (  Opt.long "testnet-magic"
+        <> Opt.metavar "NATURAL"
+        <> Opt.help "Specify a testnet magic id."
+        )
+
+  pNetworkFromEnv :: Parser NetworkIdArg
+  pNetworkFromEnv =
+    Opt.flag' NetworkIdFromEnv
+      (  Opt.long "network-id-from-env"
+      <> Opt.help "Use the network id from the environment."
       )
 
-pTestnetMagic :: Parser NetworkMagic
-pTestnetMagic =
-  NetworkMagic <$>
-    Opt.option Opt.auto
-      (  Opt.long "testnet-magic"
-      <> Opt.metavar "NATURAL"
-      <> Opt.help "Specify a testnet magic id."
-      )
+pNetworkIdForSigning :: Parser SignForNetworkId
+pNetworkIdForSigning
+  = SignForNetworkId <$> (signIdMainnet <|> signIdTestnetMagic)
+  <|> pure TakeNetworkIdFromKey
+  where
+  -- TODO: better help messages,
+  -- maybe deprecate existing flags and define new ones
+  signIdMainnet :: Parser NetworkId
+  signIdMainnet =
+   Opt.flag' Mainnet
+     (  Opt.long "mainnet"
+     <> Opt.help "Use the mainnet magic id."
+     )
+
+  signIdTestnetMagic :: Parser NetworkId
+  signIdTestnetMagic =
+    Testnet . NetworkMagic <$>
+      Opt.option Opt.auto
+        (  Opt.long "testnet-magic"
+        <> Opt.metavar "NATURAL"
+        <> Opt.help "Specify a testnet magic id."
+        )
+
+pNetworkIdOrMainnet :: Parser NetworkIdOrMainnet
+pNetworkIdOrMainnet = NetworkIdOrMainnet <$> pNetworkId
 
 pTxSubmitFile :: Parser FilePath
 pTxSubmitFile =
