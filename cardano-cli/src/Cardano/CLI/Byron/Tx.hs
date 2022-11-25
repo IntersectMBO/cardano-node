@@ -54,7 +54,7 @@ data ByronTxError
   = TxDeserialisationFailed !FilePath !Binary.DecoderError
   | ByronTxSubmitError !Text
   | ByronTxSubmitErrorEraMismatch !EraMismatch
-  | EnvSocketError !EnvSocketError
+  | EnvSocketError !EnvLookupError
   deriving Show
 
 renderByronTxError :: ByronTxError -> Text

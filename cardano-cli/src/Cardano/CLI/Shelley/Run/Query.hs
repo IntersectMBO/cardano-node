@@ -68,6 +68,7 @@ import           Cardano.CLI.Shelley.Orphans ()
 import qualified Cardano.CLI.Shelley.Output as O
 import           Cardano.CLI.Shelley.Run.Genesis (ShelleyGenesisCmdError,
                    readAndDecodeShelleyGenesis)
+import           Cardano.CLI.Shelley.Util (NetworkIdError, displayErrorText, getNetworkId)
 import           Cardano.CLI.Types
 import           Cardano.Crypto.Hash (hashToBytesAsHex)
 import qualified Cardano.Crypto.Hash.Blake2b as Blake2b
@@ -109,7 +110,7 @@ import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQu
 {- HLINT ignore "Use let" -}
 
 data ShelleyQueryCmdError
-  = ShelleyQueryCmdEnvVarSocketErr !EnvSocketError
+  = ShelleyQueryCmdEnvVarSocketErr !EnvLookupError
   | ShelleyQueryCmdLocalStateQueryError !ShelleyQueryCmdLocalStateQueryError
   | ShelleyQueryCmdWriteFileError !(FileError ())
   | ShelleyQueryCmdHelpersError !HelpersError
@@ -133,7 +134,7 @@ data ShelleyQueryCmdError
       FilePath
       -- ^ Operational certificate of the unknown stake pool.
   | ShelleyQueryCmdPoolStateDecodeError DecoderError
-
+  | ShelleyQueryCmdGetNetworkIdError !NetworkIdError
   deriving Show
 
 renderShelleyQueryCmdError :: ShelleyQueryCmdError -> Text
@@ -170,35 +171,49 @@ renderShelleyQueryCmdError err =
                   "in the current epoch, you must wait until the following epoch for the registration to take place."
     ShelleyQueryCmdPoolStateDecodeError decoderError ->
       "Failed to decode PoolState.  Error: " <> Text.pack (show decoderError)
+    ShelleyQueryCmdGetNetworkIdError e -> displayErrorText e
 
 runQueryCmd :: QueryCmd -> ExceptT ShelleyQueryCmdError IO ()
 runQueryCmd cmd =
   case cmd of
-    QueryLeadershipSchedule consensusModeParams network shelleyGenFp poolid vrkSkeyFp whichSchedule outputAs ->
+    QueryLeadershipSchedule consensusModeParams networkArg shelleyGenFp poolid vrkSkeyFp whichSchedule outputAs -> do
+      network <- getNetworkId networkArg {-else-} ShelleyQueryCmdGetNetworkIdError
       runQueryLeadershipSchedule consensusModeParams network shelleyGenFp poolid vrkSkeyFp whichSchedule outputAs
-    QueryProtocolParameters' consensusModeParams network mOutFile ->
+    QueryProtocolParameters' consensusModeParams networkArg mOutFile -> do
+      network <- getNetworkId networkArg {-else-} ShelleyQueryCmdGetNetworkIdError      
       runQueryProtocolParameters consensusModeParams network mOutFile
-    QueryTip consensusModeParams network mOutFile ->
+    QueryTip consensusModeParams networkArg mOutFile -> do
+      network <- getNetworkId networkArg {-else-} ShelleyQueryCmdGetNetworkIdError      
       runQueryTip consensusModeParams network mOutFile
-    QueryStakePools' consensusModeParams network mOutFile ->
+    QueryStakePools' consensusModeParams networkArg mOutFile -> do
+      network <- getNetworkId networkArg {-else-} ShelleyQueryCmdGetNetworkIdError      
       runQueryStakePools consensusModeParams network mOutFile
-    QueryStakeDistribution' consensusModeParams network mOutFile ->
+    QueryStakeDistribution' consensusModeParams networkArg mOutFile -> do
+      network <- getNetworkId networkArg {-else-} ShelleyQueryCmdGetNetworkIdError      
       runQueryStakeDistribution consensusModeParams network mOutFile
-    QueryStakeAddressInfo consensusModeParams addr network mOutFile ->
+    QueryStakeAddressInfo consensusModeParams addr networkArg mOutFile -> do
+      network <- getNetworkId networkArg {-else-} ShelleyQueryCmdGetNetworkIdError      
       runQueryStakeAddressInfo consensusModeParams addr network mOutFile
-    QueryDebugLedgerState' consensusModeParams network mOutFile ->
+    QueryDebugLedgerState' consensusModeParams networkArg mOutFile -> do
+      network <- getNetworkId networkArg {-else-} ShelleyQueryCmdGetNetworkIdError      
       runQueryLedgerState consensusModeParams network mOutFile
-    QueryStakeSnapshot' consensusModeParams network poolid ->
+    QueryStakeSnapshot' consensusModeParams networkArg poolid -> do
+      network <- getNetworkId networkArg {-else-} ShelleyQueryCmdGetNetworkIdError      
       runQueryStakeSnapshot consensusModeParams network poolid
-    QueryProtocolState' consensusModeParams network mOutFile ->
+    QueryProtocolState' consensusModeParams networkArg mOutFile -> do
+      network <- getNetworkId networkArg {-else-} ShelleyQueryCmdGetNetworkIdError      
       runQueryProtocolState consensusModeParams network mOutFile
-    QueryUTxO' consensusModeParams qFilter networkId mOutFile ->
-      runQueryUTxO consensusModeParams qFilter networkId mOutFile
-    QueryKesPeriodInfo consensusModeParams network nodeOpCert mOutFile ->
+    QueryUTxO' consensusModeParams qFilter networkArg mOutFile -> do
+      network <- getNetworkId networkArg {-else-} ShelleyQueryCmdGetNetworkIdError      
+      runQueryUTxO consensusModeParams qFilter network mOutFile
+    QueryKesPeriodInfo consensusModeParams networkArg nodeOpCert mOutFile -> do
+      network <- getNetworkId networkArg {-else-} ShelleyQueryCmdGetNetworkIdError      
       runQueryKesPeriodInfo consensusModeParams network nodeOpCert mOutFile
-    QueryPoolState' consensusModeParams network poolid ->
+    QueryPoolState' consensusModeParams networkArg poolid -> do
+      network <- getNetworkId networkArg {-else-} ShelleyQueryCmdGetNetworkIdError      
       runQueryPoolState consensusModeParams network poolid
-    QueryTxMempool consensusModeParams network op mOutFile ->
+    QueryTxMempool consensusModeParams networkArg op mOutFile -> do
+      network <- getNetworkId networkArg {-else-} ShelleyQueryCmdGetNetworkIdError      
       runQueryTxMempool consensusModeParams network op mOutFile
 
 runQueryProtocolParameters

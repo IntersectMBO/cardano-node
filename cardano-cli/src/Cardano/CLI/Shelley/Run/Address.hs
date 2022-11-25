@@ -23,6 +23,7 @@ import           Cardano.Api
 import           Cardano.Api.Shelley
 
 import           Cardano.CLI.Helpers
+import           Cardano.CLI.Shelley.Commands (NetworkIdArg(..))
 import           Cardano.CLI.Shelley.Key (PaymentVerifier (..), StakeVerifier (..),
                    VerificationKeyTextOrFile, VerificationKeyTextOrFileError (..), generateKeyPair,
                    readVerificationKeyOrFile, readVerificationKeyTextOrFileAnyOf,
@@ -30,6 +31,7 @@ import           Cardano.CLI.Shelley.Key (PaymentVerifier (..), StakeVerifier (.
 import           Cardano.CLI.Shelley.Parsers (AddressCmd (..), AddressKeyType (..), OutputFile (..))
 import           Cardano.CLI.Shelley.Run.Address.Info (ShelleyAddressInfoError, runAddressInfo)
 import           Cardano.CLI.Shelley.Run.Read
+import           Cardano.CLI.Shelley.Util (NetworkIdError, getNetworkId, displayErrorText)
 import           Cardano.CLI.Types
 
 data ShelleyAddressCmdError
@@ -39,6 +41,7 @@ data ShelleyAddressCmdError
   | ShelleyAddressCmdVerificationKeyTextOrFileError !VerificationKeyTextOrFileError
   | ShelleyAddressCmdWriteFileError !(FileError ())
   | ShelleyAddressCmdExpectedPaymentVerificationKey SomeAddressVerificationKey
+  | ShelleyAddressCmdGetNetworkIdError !NetworkIdError
   deriving Show
 
 renderShelleyAddressCmdError :: ShelleyAddressCmdError -> Text
@@ -55,7 +58,8 @@ renderShelleyAddressCmdError err =
     ShelleyAddressCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyAddressCmdExpectedPaymentVerificationKey someAddress ->
       "Expected payment verification key but got: " <> renderSomeAddressVerificationKey someAddress
-
+    ShelleyAddressCmdGetNetworkIdError e -> displayErrorText e
+    
 runAddressCmd :: AddressCmd -> ExceptT ShelleyAddressCmdError IO ()
 runAddressCmd cmd =
   case cmd of
@@ -117,10 +121,11 @@ runAddressKeyHash vkeyTextOrFile mOutputFp = do
 
 runAddressBuild :: PaymentVerifier
                 -> Maybe StakeVerifier
-                -> NetworkId
+                -> NetworkIdArg
                 -> Maybe OutputFile
                 -> ExceptT ShelleyAddressCmdError IO ()
-runAddressBuild paymentVerifier mbStakeVerifier nw mOutFp = do
+runAddressBuild paymentVerifier mbStakeVerifier nwArg mOutFp = do
+  nw <- getNetworkId nwArg {-else-} ShelleyAddressCmdGetNetworkIdError
   outText <- case paymentVerifier of
     PaymentVerifierKey payVkeyTextOrFile -> do
       payVKey <- firstExceptT ShelleyAddressCmdVerificationKeyTextOrFileError $
@@ -210,10 +215,9 @@ foldSomeAddressVerificationKey f (AStakeExtendedVerificationKey   vk) = f vk
 
 runAddressBuildScript
   :: ScriptFile
-  -> NetworkId
+  -> NetworkIdArg
   -> Maybe OutputFile
   -> ExceptT ShelleyAddressCmdError IO ()
-runAddressBuildScript scriptFile networkId mOutputFile = do
+runAddressBuildScript scriptFile networkIdArg mOutputFile = do
   liftIO $ deprecationWarning "'address build'"
-  runAddressBuild (PaymentVerifierScriptFile scriptFile) Nothing networkId mOutputFile
-
+  runAddressBuild (PaymentVerifierScriptFile scriptFile) Nothing networkIdArg mOutputFile

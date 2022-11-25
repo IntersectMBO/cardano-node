@@ -684,12 +684,14 @@ module Cardano.Api (
     SlotsToEpochEnd(..),
     slotToEpoch,
 
-    -- * Node socket related
-    EnvSocketError(..),
+    -- * environment related
+    EnvSocketLookupError(..),
     SocketPath(..),
     readEnvSocketPath,
     renderEnvSocketError,
-
+    EnvNetworkIdError(..),
+    readEnvNetworkId,
+    
     NodeToClientVersion(..),
 
     -- ** Monadic queries

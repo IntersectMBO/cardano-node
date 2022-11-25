@@ -36,7 +36,7 @@ import           Cardano.Api.Utils
 
 data QueryConvenienceError
   = AcqFailure AcquiringFailure
-  | SockErr EnvSocketError
+  | SockErr EnvSocketLookupError
   | QueryEraMismatch EraMismatch
   | ByronEraNotSupported
   | EraConsensusModeMismatch !AnyConsensusMode !AnyCardanoEra
