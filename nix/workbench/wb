@@ -25,13 +25,10 @@ global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
 usage_main() {
     test $# -lt 1 ||
         msg "Unknown op: $1"
-    #
-    # $(red start)        ($(red s))      Start a run of profile chosen at 'nix-shell' entry
-    # $(red finish)       ($(red f))      Finish the current cluster run
      __usage "OP" "Top-level OPs" <<EOF
-    $(red profile)      ($(red p))      Cluster profile ops.  Default subop is $(yellow show)
-    $(red run)          ($(red r))      Managing cluster runs.  Default subop is $(yellow list)
-    $(red analyse)      ($(red a))      Analyse cluster runs.  Default subop is $(yellow full)
+    $(red profile)      ($(red p))      Cluster profile ops.  Default subop is $(yellow $profile_default_op)
+    $(red run)          ($(red r))      Managing cluster runs.  Default subop is $(yellow $run_default_op)
+    $(red analyse)      ($(red a))      Analyse cluster runs.  Default subop is $(yellow $analyse_default_op)
 
   $(blue Secondary top-level OPs):
 
@@ -41,9 +38,9 @@ usage_main() {
 
   $(white wb) $(blue options):
 
-    $(helpopt --trace / --debug)     set -x
-    $(helpopt --help)                This short help
-    $(helpopt --help-full)           Extended help
+    $(helpopt --trace / --debug)        Enable workbench tracing (for error reports) ('set -x')
+    $(helpopt --help)                   This short help
+    $(helpopt --help-full / --aliases)  Extended help (extra ops & subop aliases)
 EOF
 }
 
@@ -51,13 +48,44 @@ usage_extra() {
     cat >&2 <<EOF
   $(blue Extra top-level OPs):
 
+    $(red start $(green [FLAGS..]))       Start a run of profile chosen at 'nix-shell' entry
+    $(red finish)                Finish an active cluster run
     $(red scenario)     ($(red s))      Run scenario control
-    $(red call) $(green ARGS..)  ($(red c))      Call internal functions with arguments
+    $(red backend)      ($(red b))      Backend calls
+    $(red call) $(green ARGS..)       Call internal functions with arguments
 
-  $(blue Extra) $(white wb) $(blue options):
+  $(blue List of top-level) $(yellow subop) $(blue aliases, per) $(red op).  $(blue For detailed help:) $(red OP --help):
 
-    $(helpopt --cls)                 Clear screen, before acting further.
+  ..$(red profile):$(color yellow)
+          profile-names              names        lsp
+          profile-json                            pj
+          profile-describe           pdesc        pd
+          profile-node-specs         node-specs   specs
 
+  ..$(red run):$(color yellow)
+          list-runs                  runs         lsr
+          list-remote                remote       lsrr
+          list-verbose               verb         lsrv
+          list-verbose-remote        rverb        lsrv
+          list-sets                  sets         lss
+          list-sets-remote           rsets        lssr
+          set-add                    add          sa
+          run-or-set                              ros
+          list-pattern               lspat        lsrp
+          fix-legacy-run-structure   fix-legacy   flrs
+          fetch-run                  fetch        fr
+          fetch-analysis             fa
+
+  ..$(red analyse):$(color yellow)
+          compare                                 cmp
+          variance                                var
+          standard                   full         std
+          block-propagation          blockprop    bp
+          performance                             perf
+          performance-host           perf-host
+          trace-frequencies          trace-freq   freq
+          chain-rejecta-reasons      chain-rejecta   rejecta
+$(color white)
 EOF
 }
 
@@ -225,7 +253,7 @@ do case "$1" in
            set -x;;
        --help )
            usage_main; exit 1;;
-       --help-full | --help-all | --help-extra )
+       --help-full | --help-all | --help-extra | --help-aliases | --aliases )
            usage_main; usage_extra; exit 1;;
        * ) break;; esac; shift; done
 
@@ -241,20 +269,53 @@ main() {
         ## Public, secondary:
         profile      | profiles | prof | ps | p )
                                   profile             "$@";;
-        manifest     | m )        manifest            "$@";;
+        run          | runs | r ) run                 "$@";;
         analyse      | a )        analyse             "$@";;
 
         ## Public, internals-y:
         chaindb      | c )        chaindb             "$@";;
         genesis      | g )        genesis             "$@";;
+        manifest     | m )        manifest            "$@";;
         topology     | topo | t ) topology            "$@";;
-        run          | runs | r ) run                 "$@";;
+
+        ## 'profile' aliases:
+          profile-names            | names      | lsp           \
+        | profile-json                          | pj            \
+        | profile-describe         | pdesc      | pd            \
+        | profile-node-specs       | node-specs | specs         \
+          )                       profile $op         "$@";;
+
+        ## 'run' aliases:
+          list-runs                | runs       | lsr           \
+        | list-remote              | remote     | lsrr          \
+        | list-verbose             | verb       | lsrv          \
+        | list-verbose-remote      | rverb      | lsrv          \
+        | list-sets                | sets       | lss           \
+        | list-sets-remote         | rsets      | lssr          \
+        | set-add                  | add        | sa            \
+        | run-or-set                            | ros           \
+        | list-pattern             | lspat      | lsrp          \
+        | fix-legacy-run-structure | fix-legacy | flrs          \
+        | fetch-run                | fetch      | fr            \
+        | fetch-analysis           | fa                         \
+          )                       run $op             "$@";;
+
+        ## 'analyse' aliases:
+          compare                               | cmp           \
+        | variance                              | var           \
+        | standard                 | full       | std           \
+        | block-propagation        | blockprop  | bp            \
+        | performance                           | perf          \
+        | performance-host         | perf-host                  \
+        | trace-frequencies        | trace-freq | freq          \
+        | chain-rejecta-reasons    | chain-rejecta | rejecta    \
+          )                       analyse $op         "$@";;
 
         ## Internals:
         #
         scenario     | s )        scenario            "$@";;
-        backend )                 backend             "$@";;
-        call         | c )                            "$@";;
+        backend      | b )        backend             "$@";;
+        call )                                        "$@";;
         path )                    echo     $global_basedir;;
 
         ## Bail for help:

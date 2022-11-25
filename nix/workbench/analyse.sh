@@ -10,8 +10,8 @@ usage_analyse() {
     $(helpcmd variance RUN-NAME..)
      $(blk var)                   Variance analyses on a set of runs
 
-    $(helpcmd full RUN-NAME..)
-     $(blk standard std)          Standard batch of analyses: block-propagation, and machine-timeline
+    $(helpcmd standard RUN-NAME..)
+     $(blk full std)              Standard batch of analyses: block-propagation, and machine-timeline
 
     $(helpcmd block-propagation RUN-NAME..)
      $(blk blockprop bp)          Full block propagation analysis
@@ -64,6 +64,8 @@ analysis_allowed_loanys=(
     'LARollback'
 )
 
+analyse_default_op='standard'
+
 analyse() {
 local filters=() filter_exprs=() filter_reasons= chain_errors= aws= sargs=() unfiltered= perf_omit_hosts=()
 local dump_logobjects= dump_machviews= dump_chain= dump_slots_raw= dump_slots=
@@ -96,7 +98,7 @@ do case "$1" in
        --trace )                   sargs+=($1);    set -x;;
        * ) break;; esac; shift; done
 
-local op=${1:-standard}; if test $# != 0; then shift; fi
+local op=${1:-$analyse_default_op}; if test $# != 0; then shift; fi
 
 case "$op" in
     # 'read-mach-views' "${logs[@]/#/--log }"
@@ -159,7 +161,7 @@ case "$op" in
         analyse "${sargs[@]}" map "call ${script[*]}" "$@"
         ;;
 
-    full | standard | std )
+    standard | full | std )
         local script=(
             logs               $(test -n "$dump_logobjects" && echo 'dump-logobjects')
             context

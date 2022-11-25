@@ -2,14 +2,30 @@ global_rundir_def=$(realpath ${WB_RUNDIR:-$PWD/run})
 
 usage_run() {
      usage "run" "Managing cluster runs" <<EOF
-    $(helpcmd list)                 List cluster runs
-     $(blk ls)
-    $(helpcmd list-sets)            List cluster run sets
-     $(blk lss)
+    $(helpcmd list-runs)              List local runs
+     $(blk runs lsr)
+    $(helpcmd list-remote)            List AWS runs
+     $(blk remote lsrr)
+    $(helpcmd list-verbose)           List local runs, verbosely
+     $(blk verb lsrv)
+    $(helpcmd list-verbose-remote)    List AWS runs, verbosely
+     $(blk rverb lsrvr)
+    $(helpcmd list-sets)              List local run sets
+     $(blk sets lss)
+    $(helpcmd list-sets-remote)       List AWS cluster run sets
+     $(blk rsets lssr)
     $(helpcmd set-add SETNAME RUN...)
-     $(blk sa)                   Add runs to the named run set
-    $(helpcmd run-or-set)           Resolve a run-or-set name to a list of runs
+     $(blk add sa)                  Add runs to the named run set
+    $(helpcmd run-or-set)             Resolve a run-or-set name to a list of runs
      $(blk ros)
+    $(helpcmd list-pattern)           List local runs
+     $(blk lspat lsrp)
+
+    $(helpcmd describe RUN)
+
+    $(helpcmd fix-legacy-run-structure RUN)
+     $(blk flrs fix-legacy)      Update legacy (AWS) meta.json to mostly match
+                            the workbench
 
     $(helpcmd allocate BATCH-NAME PROFILE-NAME [ENV-CONFIG-OPTS..])
                           Allocate a cluster run with the specified:
@@ -18,19 +34,11 @@ usage_run() {
                           A unique name would be allocated for this run,
                             and a run alias $(green current) will be created for it.
 
-    $(helpcmd list-remote)          List AWS runs
-     $(blk lsaws lsr)
-    $(helpcmd fetch-run RUN)
-                          Fetch an AWS run
-     $(blk fetch fr)
+    $(helpcmd fetch-run RUN)        Fetch an AWS run
+     $(blk fr fetch)
     $(helpcmd fetch-analysis RUN..)
      $(blk fa)                   Fetch analyses of AWS runs
     $(helpcmd analyse-aws RUN..)     Run analyses of AWS runs, remotely
-    $(helpcmd fix-legacy-run-structure RUN)
-     $(blk fix-legacy flrs)      Update legacy (AWS) meta.json to mostly match
-                            the workbench
-
-    $(helpcmd describe RUN)
 
     $(helpcmd start [--scenario NAME] [--idle] [--analyse] RUN)
                           Start the named run.
@@ -52,6 +60,8 @@ usage_run() {
                             exists, and finally unconditionally to $(green $global_rundir_def)
 EOF
 }
+
+run_default_op='list-runs'
 
 run() {
 set -eu
@@ -76,13 +86,13 @@ do case "$1" in
        --clean | -c )  sargs+=($1);    run_aws_get_args+=($1);;
        * ) break;; esac; shift; done
 
-local op=${1:-list}; test $# -gt 0 && shift
+local op=${1:-$run_default_op}; test $# -gt 0 && shift
 
 case "$op" in
     get-rundir )
         echo $global_rundir;;
 
-    list | ls )
+    list-runs | runs | lsr )
         local usage="USAGE: wb run $op [--on-remote | -or | -r]"
         local on_remote=
         while test $# -gt 0
@@ -98,10 +108,10 @@ case "$op" in
                  sh -c "'$(run_ls_cmd $(jq <<<$r .depl)/runs)'"
         fi;;
 
-    list-remote | lsaws | lsr ) ## Convenience alias for 'list'
+    list-remote | remote | lsrr ) ## Convenience alias for 'list'
         run "${sargs[@]}" list --on-remote;;
 
-    list-verbose | tab | lst )
+    list-verbose | verb | lsrv )
         local usage="USAGE: wb run $op [--on-remote | -or | -r] [--limit [N=10] | -n N]"
         local on_remote= limit=10
         while test $# -gt 0
@@ -118,10 +128,10 @@ case "$op" in
                  sh -c "'$(run_ls_tabulated_cmd $(jq <<<$r .depl)/runs $limit)'"
         fi;;
 
-    list-verbose-remote | lstaws | tabr | lsvr | lstr ) ## Convenience alias for 'list-verbose'
+    list-verbose-remote | rverb | lsrvr ) ## Convenience alias for 'list-verbose'
         run "${sargs[@]}" list-verbose --on-remote;;
 
-    list-sets | lss )
+    list-sets | sets | lss )
         local usage="USAGE: wb run $op [--on-remote | -or | -r]"
         local on_remote=
         while test $# -gt 0
@@ -137,10 +147,10 @@ case "$op" in
                  sh -c "'$(run_ls_sets_cmd $(jq <<<$r .depl)/runs)'"
         fi;;
 
-    list-sets-remote | lssr ) ## Convenience alias for 'list-sets'
+    list-sets-remote | rsets | lssr ) ## Convenience alias for 'list-sets'
         run "${sargs[@]}" list-sets --on-remote;;
 
-    set-add | sa )
+    set-add | add | sa )
         local usage="USAGE: wb run $op NAME [RUN..]"
         local name=${1:?$usage}; shift
         mkdir -p "$global_rundir/.sets/$name" &&
@@ -189,7 +199,7 @@ case "$op" in
         else fail "run-or-set:  missing run or set $(white $name)"
         fi;;
 
-    list-pattern | lsp )
+    list-pattern | lspat | lsrp )
         test -d "$global_rundir" &&
             (cd "$global_rundir"
              ls $1/meta.json |
@@ -197,11 +207,23 @@ case "$op" in
                  cut -d/ -f1 |
                  sort || true);;
 
-    compute-path )
-        if test -f "$1/meta.json"
-        then echo -n "$1"
-        else echo -n "$global_rundir/$1"
-        fi;;
+    describe )
+        local usage="USAGE: wb run $op RUN"
+        local run=${1:?$usage}
+        local dir=$global_rundir/$run
+
+        if ! run check "$run"
+        then fatal "run fails sanity checks:  $run at $dir"; fi
+
+        cat <<EOF
+  - run dir:         $dir
+  - profile JSON:    $dir/profile.json
+  - node specs:      $dir/node-specs.json
+  - topology:        $dir/topology/topology.pdf
+  - node base port:  $(envjq 'basePort')
+EOF
+        backend describe-run "$dir"
+        ;;
 
     fix-legacy-run-structure | fix-legacy | flrs )
         local usage="USAGE: wb run $op RUN"
@@ -244,6 +266,12 @@ case "$op" in
                 else "iohk-monitoring"
                 end)
            ' "$dir"/meta.json > "$dir"/profile.json;;
+
+    compute-path )
+        if test -f "$1/meta.json"
+        then echo -n "$1"
+        else echo -n "$global_rundir/$1"
+        fi;;
 
     check )
         local usage="USAGE: wb run $op [--query] RUN"
@@ -680,24 +708,6 @@ case "$op" in
              | .staking      = {}
              ' "$genesis_orig"; fi;;
 
-    describe )
-        local usage="USAGE: wb run $op RUN"
-        local run=${1:?$usage}
-        local dir=$global_rundir/$run
-
-        if ! run check "$run"
-        then fatal "run fails sanity checks:  $run at $dir"; fi
-
-        cat <<EOF
-  - run dir:         $dir
-  - profile JSON:    $dir/profile.json
-  - node specs:      $dir/node-specs.json
-  - topology:        $dir/topology/topology.pdf
-  - node base port:  $(envjq 'basePort')
-EOF
-        backend describe-run "$dir"
-        ;;
-
     compat-meta-fixups | compat-f )
         local usage="USAGE: wb run $op RUN"
         local run=${1:?$usage}
@@ -960,7 +970,7 @@ run_ls_tabulated_cmd() {
 run_ls_sets_cmd() {
     local rundir=$1
 
-    echo 'cd '$rundir'/.sets && \
+    echo 'cd '$rundir'/.sets 2>/dev/null && \
           find -L . -mindepth 3 -maxdepth 3 -type f -name meta.json -exec dirname \{\} \; |
           cut -d/ -f2 |
           sort -u || true'
