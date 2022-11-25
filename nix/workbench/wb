@@ -108,7 +108,6 @@ start()
     local prebuild_done=
     local genesis_cache_entry_dir=
     local topology_dir=
-    local verbose=
     local manifest="{}"
     local iterations=1
     local no_retry_failed_runs=t

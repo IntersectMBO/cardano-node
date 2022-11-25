@@ -1,19 +1,15 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving#-}
-
 {-# OPTIONS_GHC -Wno-orphans #-}
-
 {- HLINT ignore "Use head" -}
-
-module Cardano.Analysis.Chain (module Cardano.Analysis.Chain) where
+module Cardano.Analysis.API.Chain (module Cardano.Analysis.API.Chain) where
 
 import Cardano.Prelude hiding (head)
 
 import Data.Aeson
-import Data.Time.Clock (UTCTime, NominalDiffTime)
 import Data.Time.Clock qualified as Time
 
-import Cardano.Analysis.Context
-import Cardano.Analysis.Ground
+import Cardano.Analysis.API.Context
+import Cardano.Analysis.API.Ground
 
 
 -- | A pretty obvious (and dangerously assumptious) interpretation of an absolute slot number.

@@ -19,6 +19,25 @@ jq_check_json() {
     jq '.' "$1" >/dev/null
 }
 
+json_compact_prettify()
+{
+    for f in "$@"
+    do if test -n "$(find $f -size +1M)";
+          ## Skip large files.
+       then continue; fi
+
+       jq_fmutate "$f" --raw-input --raw-output --slurp \
+           'gsub("\n      +";"")|gsub("\n    ]";"]")|gsub(",\"";",\n          \"")' &
+    done
+
+    wait
+}
+
+jscompact()
+{
+    json_compact_prettify "$@"
+}
+
 helptopcmd() {
     local topcmd=$1 cmd=$2; shift 2
     white $topcmd
@@ -52,6 +71,7 @@ EOF
 }
 
 usage() {
+    set +x
     __usage "$@"
     exit 1
 }
@@ -76,7 +96,7 @@ color() {
 with_color() {
     local color=$1; shift
     color $color
-    echo -ne "$*"
+    echo -ne "$@"
     color reset
 }
 
@@ -84,11 +104,19 @@ colorise_colors=(
     red green blue yellow white cyan
 )
 colorise() {
+    ## Disable tracing locally:
+    if test -n "$(echo $- | tr -cd x)"
+    then set +x
+         local exit='set -x'
+    else local exit=
+    fi
+
     local i
     for ((i=0; $#!=0; i++))
     do echo -n "$(with_color ${colorise_colors[$((i % 6))]} $1) "
        shift
     done
+    eval $exit
 }
 
 newline() {
@@ -131,19 +159,26 @@ red() {
     with_color red $*
 }
 
+verbose() {
+    if test -n "${verbose:-}"
+    then local subsys=$1; shift
+         msg "$(with_color blue $subsys):  $*"
+    fi
+}
+
 progress() {
     local subsys=$1; shift
-    msg "$(with_color green $subsys):  $(with_color blue $*)"
+    msg "$(with_color green $subsys):  $(with_color blue "$@")"
 }
 
 progress_ne() {
     local subsys=$1; shift
-    msg_ne "$(with_color green $subsys):  $(with_color blue $*)"
+    msg_ne "$(with_color green $subsys):  $(with_color blue "$@")"
 }
 
 warn() {
     local subsys=$1; shift
-    msg "$(with_color green $subsys):  $(with_color yellow $*)"
+    msg "$(with_color green $subsys):  $(with_color yellow "$@")"
 }
 
 fail() {

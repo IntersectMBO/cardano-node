@@ -1,7 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
-module Cardano.Analysis.Version
-  (Version (..), getVersion, renderProgramAndVersion)
-where
+module Cardano.Analysis.API.LocliVersion (module Cardano.Analysis.API.LocliVersion) where
 
 import Cardano.Prelude (NFData, mconcat)
 import Cardano.Git.Rev qualified (gitRev)
@@ -13,23 +11,23 @@ import Paths_locli (version)
 import Prelude (Show)
 
 
-data Version =
-  Version
+data LocliVersion =
+  LocliVersion
   { gitRev  :: Text
   , version :: Text
   }
   deriving (Generic, FromJSON, Show, ToJSON)
   deriving anyclass NFData
 
-getVersion :: Version
-getVersion =
-  Version
+getLocliVersion :: LocliVersion
+getLocliVersion =
+  LocliVersion
     Cardano.Git.Rev.gitRev
     (pack (showVersion Paths_locli.version))
 
-renderProgramAndVersion :: Version -> Text
+renderProgramAndVersion :: LocliVersion -> Text
 renderProgramAndVersion v = mconcat
   [ "locli "
-  , Cardano.Analysis.Version.version v
+  , Cardano.Analysis.API.LocliVersion.version v
   , " (", take 6 (gitRev v), ")"
   ]

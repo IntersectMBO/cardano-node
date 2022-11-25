@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ImportQualifiedPost #-}
@@ -50,12 +51,10 @@ module Data.CDF
   , module Data.SOP.Strict
   ) where
 
-import Prelude ((!!), head, show)
+import Prelude ((!!), show)
 import Cardano.Prelude hiding (head, show)
 
-import Data.Aeson (FromJSON(..), ToJSON(..))
 import Data.SOP.Strict
-import Data.Time.Clock (NominalDiffTime)
 import Data.Vector qualified as Vec
 import Statistics.Sample qualified as Stat
 
@@ -65,8 +64,8 @@ import Cardano.Util
 -- | Centile specifier: a fractional in range of [0; 1].
 newtype Centile =
   Centile { unCentile :: Double }
-  deriving (Eq, Generic, FromJSON, ToJSON, Show)
-  deriving anyclass NFData
+  deriving (Eq, Show)
+  deriving newtype (FromJSON, ToJSON, NFData)
 
 renderCentile :: Int -> Centile -> String
 renderCentile width = \case
@@ -155,18 +154,21 @@ weightedAverage xs =
 data CDF p a =
   CDF
   { cdfSize      :: Int
-  , cdfAverage   :: p a
+  , cdfAverage   :: p Double
   , cdfStddev    :: Double
-  , cdfRange     :: (a, a)
+  , cdfRange     :: Interval a
   , cdfSamples   :: [(Centile, p a)]
   }
-  deriving (Eq, Functor, Generic, Show)
-  deriving anyclass NFData
+  deriving (Functor, Generic)
 
-instance (FromJSON (p a), FromJSON a) => FromJSON (CDF p a)
-instance (  ToJSON (p a),   ToJSON a) => ToJSON   (CDF p a)
+deriving instance (Eq     a, Eq     (p a), Eq     (p Double)) => Eq     (CDF p a)
+deriving instance (Show   a, Show   (p a), Show   (p Double)) => Show   (CDF p a)
+deriving instance (NFData a, NFData (p a), NFData (p Double)) => NFData (CDF p a)
 
-cdfAverageVal :: (KnownCDF p, Divisible a) => CDF p a -> Double
+instance (FromJSON (p a), FromJSON (p Double), FromJSON a) => FromJSON (CDF p a)
+instance (  ToJSON (p a),   ToJSON (p Double),   ToJSON a) => ToJSON   (CDF p a)
+
+cdfAverageVal :: (KnownCDF p) => CDF p a -> Double
 cdfAverageVal =
   cdfArity
     (toDouble . unI . cdfAverage)
@@ -203,7 +205,7 @@ zeroCDF =
   { cdfSize    = 0
   , cdfAverage = liftCDFVal 0 cdfIx
   , cdfStddev  = 0
-  , cdfRange   = (0, 0)
+  , cdfRange   = Interval 0 0
   , cdfSamples = mempty
   }
 
@@ -214,7 +216,7 @@ cdf centiles (sort -> sorted) =
   { cdfSize        = size
   , cdfAverage     = I . fromDouble $ Stat.mean doubleVec
   , cdfStddev      = Stat.stdDev doubleVec
-  , cdfRange       = (mini, maxi)
+  , cdfRange       = Interval mini maxi
   , cdfSamples =
     centiles <&>
       \spec ->
@@ -247,13 +249,13 @@ type family CDFProj a where
   CDFProj (CDF (CDF I) a) = CDF I a
 -- indexCDF i d = snd $ cdfSamples (trace (printf "i=%d of %d" i (length $ cdfSamples d) :: String) d) !! i
 
-liftCDFVal :: forall a p. a -> CDFIx p -> p a
+liftCDFVal :: forall a p. Real a => a -> CDFIx p -> p a
 liftCDFVal x = \case
   CDFI -> I x
   CDF2 -> CDF { cdfSize    = 1
-              , cdfAverage = I x
+              , cdfAverage = I $ toDouble x
               , cdfStddev  = 0
-              , cdfRange   = (x, x)
+              , cdfRange   = point x
               , cdfSamples = []
               , .. }
 
@@ -263,12 +265,12 @@ unliftCDFVal CDF2 CDF{cdfAverage=I cdfAverage} = (1 :: a) `divide` (1 / toDouble
 
 unliftCDFValExtra :: forall a p. Divisible a => CDFIx p -> p a -> [a]
 unliftCDFValExtra CDFI (I x) = [x]
-unliftCDFValExtra i@CDF2 c@CDF{cdfRange=(mi, ma), ..} = [ mean
-                                                        , mi
-                                                        , ma
-                                                        , mean - stddev
-                                                        , mean + stddev
-                                                        ]
+unliftCDFValExtra i@CDF2 c@CDF{cdfRange=Interval mi ma, ..} = [ mean
+                                                              , mi
+                                                              , ma
+                                                              , mean - stddev
+                                                              , mean + stddev
+                                                              ]
  where mean   = unliftCDFVal i c
        stddev = (1 :: a) `divide` (1 / cdfStddev)
 
@@ -300,7 +302,7 @@ data Combine p a
   = Combine
     { cWeightedAverages :: !([(Int, Double)] -> Double)
     , cStddevs          :: !([Double] -> Double)
-    , cRanges           :: !([(a, a)] -> (a, a))
+    , cRanges           :: !([Interval a] -> Interval a)
     , cWeightedSamples  :: !([(Int, a)] -> a)
     , cCDF              :: !([p a] -> Either CDFError (CDF I a))
     }
@@ -309,14 +311,11 @@ stdCombine1 :: forall a. (Divisible a) => [Centile] -> Combine I a
 stdCombine1 cs =
   Combine
   { cWeightedAverages = weightedAverage
-  , cRanges           = outerRange
+  , cRanges           = unionIntv
   , cStddevs          = maximum          -- it's an approximation
   , cWeightedSamples  = weightedAverage
   , cCDF              = Right . cdf cs . fmap unI
   }
-  where
-    outerRange      xs = (,) (minimum $ fst <$> xs)
-                             (maximum $ snd <$> xs)
 
 stdCombine2 :: Divisible a => [Centile] -> Combine (CDF I) a
 stdCombine2 cs =
@@ -327,8 +326,7 @@ stdCombine2 cs =
   }
 
 -- | Collapse basic CDFs.
-collapseCDFs :: forall a. Divisible a
-             => Combine I a -> [CDF I a] -> Either CDFError (CDF I a)
+collapseCDFs :: forall a. Combine I a -> [CDF I a] -> Either CDFError (CDF I a)
 collapseCDFs _ [] = Left CDFEmptyDataset
 collapseCDFs Combine{..} xs = do
   unless (all (head lengths ==) lengths) $
@@ -363,7 +361,7 @@ collapseCDFs Combine{..} xs = do
 -- | Polymorphic, but practically speaking, intended for either:
 --    1. given a ([I]     -> CDF I) function, and a list of (CDF I),       produce a CDF (CDF I), or
 --    2. given a ([CDF I] -> CDF I) function, and a list of (CDF (CDF I)), produce a CDF (CDF I)
-cdf2OfCDFs :: forall a p. (Divisible a, KnownCDF p)
+cdf2OfCDFs :: forall a p. (KnownCDF p)
            => Combine p a -> [CDF p a] -> Either CDFError (CDF (CDF I) a)
 cdf2OfCDFs _ [] = Left CDFEmptyDataset
 cdf2OfCDFs Combine{..} xs = do
@@ -384,8 +382,8 @@ cdf2OfCDFs Combine{..} xs = do
     }
  where
    nCDFs    = length xs
-   averages :: [a]
-   averages = xs <&> unI . cdfAverage . cdfArity identity cdfAverage
+   averages :: [Double]
+   averages = xs <&> unI . cdfArity cdfAverage (cdfAverage . cdfAverage)
 
    sizes    = xs <&> cdfSize
    samples  = xs <&> cdfSamples

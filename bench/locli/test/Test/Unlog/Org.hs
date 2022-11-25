@@ -29,6 +29,7 @@ prop_Org_render_simple_table = property $ render
   , tSummaryHeaders = []
   , tSummaryValues = []
   , tFormula = []
+  , tConstants = []
   }
   ===
   [ "|-------+--------+------+------------|"
@@ -55,6 +56,7 @@ prop_Org_render_summarised_simple_table = property $ render
                      , ["1", "2"]
                      ]
   , tFormula = []
+  , tConstants = []
   }
   ===
   [ "|------------+---------+---------+------------|"
@@ -85,6 +87,7 @@ prop_Org_render_extended_table = property $ render
       , tSummaryHeaders = []
       , tSummaryValues = []
       , tFormula = []
+      , tConstants = []
       }
     ]
   }
@@ -119,6 +122,12 @@ prop_Org_render_extended_summarised_table = property $ render
                          , ["1", "2"]
                          ]
       , tFormula = []
+      , tConstants = [ ("count",    "0")
+                     , ("all",      "1")
+                     , ("the",      "2")
+                     , ("things",   "3")
+                     , ("properly", "4")
+                     ]
       }
     ]
   }
@@ -132,8 +141,13 @@ prop_Org_render_extended_summarised_table = property $ render
   , "| # |        two |       a |    11.0 |          a |"
   , "| # |      three |  ...... |         |      111.0 |"
   , "|---+------------+---------+---------+------------|"
-  , "|   | aaaveragee | 0000000 |         |          1 |"
-  , "|   |          q |         | 0000000 |          2 |"
+  , "| # | aaaveragee | 0000000 |         |          1 |"
+  , "| # |          q |         | 0000000 |          2 |"
+  , "|---+------------+---------+---------+------------|"
+  , "| _ |      count |     all |     the |     things |"
+  , "| # |          0 |       1 |       2 |          3 |"
+  , "| _ |   properly |         |         |            |"
+  , "| # |          4 |         |         |            |"
   ]
 
 tests :: IO Bool

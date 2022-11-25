@@ -63,17 +63,23 @@ library
                        Cardano.TopHandler
                        Cardano.Util
 
-                       Cardano.Analysis.Run
-
                        Cardano.Analysis.API
-                       Cardano.Analysis.BlockProp
-                       Cardano.Analysis.Chain
-                       Cardano.Analysis.ChainFilter
-                       Cardano.Analysis.Context
-                       Cardano.Analysis.Ground
-                       Cardano.Analysis.MachPerf
-                       Cardano.Analysis.Version
+                       Cardano.Analysis.API.Chain
+                       Cardano.Analysis.API.ChainFilter
+                       Cardano.Analysis.API.Context
+                       Cardano.Analysis.API.Dictionary
+                       Cardano.Analysis.API.Field
+                       Cardano.Analysis.API.Ground
+                       Cardano.Analysis.API.Metrics
+                       Cardano.Analysis.API.Run
+                       Cardano.Analysis.API.Types
+                       Cardano.Analysis.API.LocliVersion
 
+                       Cardano.Analysis.BlockProp
+                       Cardano.Analysis.MachPerf
+                       Cardano.Analysis.Summary
+
+                       Cardano.JSON
                        Cardano.Org
                        Cardano.Render
 
@@ -101,6 +107,7 @@ library
                      , extra
                      , file-embed
                      , filepath
+                     , fingertree
                      , ghc
                      , gnuplot
                      , iohk-monitoring

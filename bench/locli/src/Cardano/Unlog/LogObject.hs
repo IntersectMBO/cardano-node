@@ -14,7 +14,6 @@ import Prelude (head, id, show, unzip3)
 import Cardano.Prelude hiding (Text, head, show)
 
 import Control.Monad (fail)
-import Data.Aeson (FromJSON(..), ToJSON(..), Value(..), Object, (.:), (.:?))
 import Data.Aeson qualified as AE
 import Data.Aeson.KeyMap qualified as KeyMap
 import Data.Aeson.Types (Parser)
@@ -23,15 +22,13 @@ import Data.ByteString.Lazy qualified as LBS
 import Data.Text qualified as LText
 import Data.Text.Short qualified as Text
 import Data.Text.Short (ShortText, fromText, toText)
-import Data.Time.Clock (NominalDiffTime, UTCTime)
-import Data.Tuple.Extra (fst3, snd3, thd3)
 import Data.Map qualified as Map
 import Data.Vector (Vector)
 import Data.Vector qualified as V
 
 import Cardano.Logging.Resources.Types
 
-import Cardano.Analysis.Ground
+import Cardano.Analysis.API.Ground
 import Cardano.Util
 
 import Data.Accum (zeroUTCTime)
@@ -39,11 +36,11 @@ import Data.Accum (zeroUTCTime)
 
 type Text = ShortText
 
-runLiftLogObjects :: [JsonLogfile] -> Maybe HostDeduction
+runLiftLogObjects :: [JsonLogfile] -> Maybe HostDeduction -> Bool -> [LOAnyType]
                   -> ExceptT LText.Text IO [(JsonLogfile, [LogObject])]
-runLiftLogObjects fs (fmap hostDeduction -> mHostDed) = liftIO $
+runLiftLogObjects fs (fmap hostDeduction -> mHostDed) okDErr anyOks = liftIO $ do
   forConcurrently fs
-    (\f -> (f,) . fmap (setLOhost f mHostDed) <$> readLogObjectStream (unJsonLogfile f))
+    (\f -> (f,) . fmap (setLOhost f mHostDed) <$> readLogObjectStream (unJsonLogfile f) okDErr anyOks)
  where
    setLOhost :: JsonLogfile -> Maybe (JsonLogfile -> Host) -> LogObject -> LogObject
    setLOhost _   Nothing lo = lo
@@ -52,14 +49,38 @@ runLiftLogObjects fs (fmap hostDeduction -> mHostDed) = liftIO $
    -- joinT :: (IO a, IO b) -> IO (a, b)
    -- joinT (a, b) = (,) <$> a <*> b
 
-readLogObjectStream :: FilePath -> IO [LogObject]
-readLogObjectStream f =
+readLogObjectStream :: FilePath -> Bool -> [LOAnyType] -> IO [LogObject]
+readLogObjectStream f okDErr anyOks =
   LBS.readFile f
     <&>
-    fmap (either (LogObject zeroUTCTime "Cardano.Analysis.DecodeError" "DecodeError" "" (TId "0") . LODecodeError)
-                 id
-          . AE.eitherDecode)
+    (if okDErr then id else
+        filter ((\case
+                    LODecodeError input err -> error
+                      (printf "Decode error while parsing %s:\n%s\non input:\n>>>  %s" f (Text.toString err) (Text.toString input))
+                    _ -> True)
+               . loBody)) .
+    filter ((\case
+                LOAny laty obj ->
+                  if elem laty anyOks then True else
+                    error
+                    (printf "Unexpected LOAny while parsing %s -- %s: %s" f (show laty) (show obj))
+                _ -> True)
+             . loBody) .
+    filter (not . isDecodeError "Error in $: not enough input" . loBody) .
+    fmap (\bs ->
+            AE.eitherDecode bs &
+            either
+            (LogObject zeroUTCTime "Cardano.Analysis.DecodeError" "DecodeError" "" (TId "0")
+             . LODecodeError (Text.fromByteString (LBS.toStrict bs)
+                               & fromMaybe "#<ERROR decoding input fromByteString>")
+              . Text.fromText
+              . LText.pack)
+            id)
     . LBS.split (fromIntegral $ fromEnum '\n')
+ where
+   isDecodeError x = \case
+     LODecodeError _ x' -> x == x'
+     _ -> False
 
 data LogObject
   = LogObject
@@ -89,7 +110,7 @@ type Threeple t = (t, t, t)
 interpreters :: Threeple (Map Text (Object -> Parser LOBody))
 interpreters = map3ple Map.fromList . unzip3 . fmap ent $
   -- Every second:
-  [ (,,,) "Resources" "Resources" "" $
+  [ (,,,) "Resources" "Resources" "Resources" $
     \v -> LOResources <$> parsePartialResourceStates (Object v)
 
   -- Leadership:
@@ -147,18 +168,17 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
             <$> v .: "block"
 
   -- Forwarding:
-  , (,,,) "ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock" "ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.AddBlock" "" $
-    \v -> LOChainSyncServerSendHeader
-            <$> v .: "block"
+  , (,,,) "ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock" "unknown0" "unknown1" $
+    \v -> LOChainSyncServerSendHeader . fromMaybe (error $ "Incompatible LOChainSyncServerSendHeader: " <> show v)
+          <$>  v .:? "block"
 
-  , (,,,) "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.AddBlock" "ChainSyncServerHeader.ChainSyncServerEvent.ServerReadBlocked.AddBlock" "ChainSync.ServerHeader.Update" $
+  , (,,,) "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.AddBlock" "ChainSyncServerEvent.TraceChainSyncServerUpdate" "ChainSync.ServerHeader.Update" $
     \v -> case ( KeyMap.lookup "risingEdge" v
                , KeyMap.lookup "blockingRead" v
                , KeyMap.lookup "rollBackTo" v) of
-            -- Skip the falling edge & non-blocking reads:
-            (Just (Bool False), _, _) -> pure $ LOAny v
-            (_, Just (Bool False), _) -> pure $ LOAny v
-            (_, _, Just _)            -> pure $ LOAny v
+            (Just (Bool False), _, _) -> pure $ LOAny LAFallingEdge v
+            (_, Just (Bool False), _) -> pure $ LOAny LANonBlocking v
+            (_, _, Just _)            -> pure $ LOAny LARollback    v
             -- Should be either rising edge+rollforward, or legacy:
             _ -> do
               blockLegacy <- v .:? "block"
@@ -178,7 +198,7 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
   , (,,,) "TraceAddBlockEvent.AddedToCurrentChain" "ChainDB.AddBlockEvent.AddedToCurrentChain" "ChainDB.AddBlockEvent.AddedToCurrentChain" $
     \v -> LOBlockAddedToCurrentChain
             <$> ((v .: "newtip")     <&> hashFromPoint)
-            <*> pure Nothing
+            <*> pure SNothing
             <*> (v .:? "chainLengthDelta"
                 -- Compat for node versions 1.27 and older:
                  <&> fromMaybe 1)
@@ -186,7 +206,7 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
   , (,,,) "TraceAdoptedBlock" "Forge.AdoptedBlock" "Forge.Loop.AdoptedBlock" $
     \v -> LOBlockAddedToCurrentChain
             <$> v .: "blockHash"
-            <*> ((v .: "blockSize") <&> Just)
+            <*> ((v .: "blockSize") <&> SJust)
             <*> pure 1
 
   -- Ledger snapshots:
@@ -240,9 +260,12 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
    map3ple :: (a -> b) -> (a,a,a) -> (b,b,b)
    map3ple f (x,y,z) = (f x, f y, f z)
 
-logObjectStreamInterpreterKeysLegacy, logObjectStreamInterpreterKeysOldOrg, logObjectStreamInterpreterKeys :: [Text]
-logObjectStreamInterpreterKeysLegacy = Map.keys (interpreters & fst3)
-logObjectStreamInterpreterKeysOldOrg = Map.keys (interpreters & snd3)
+logObjectStreamInterpreterKeysLegacy, logObjectStreamInterpreterKeys :: [Text]
+logObjectStreamInterpreterKeysLegacy =
+  logObjectStreamInterpreterKeysLegacy1 <> logObjectStreamInterpreterKeysLegacy2
+ where
+   logObjectStreamInterpreterKeysLegacy1 = Map.keys (interpreters & fst3)
+   logObjectStreamInterpreterKeysLegacy2 = Map.keys (interpreters & snd3)
 logObjectStreamInterpreterKeys       = Map.keys (interpreters & thd3)
 
 data LOBody
@@ -294,7 +317,7 @@ data LOBody
   -- Adoption:
   | LOBlockAddedToCurrentChain
     { loBlock            :: !Hash
-    , loSize             :: !(Maybe Int)
+    , loSize             :: !(SMaybe Int)
     , loLength           :: !Int
     }
   -- Ledger snapshots:
@@ -306,12 +329,24 @@ data LOBody
   | LOMempoolTxs !Word64
   | LOMempoolRejectedTx
   -- Generator:
-  | LOGeneratorSummary !Bool !Word64 !NominalDiffTime (Vector Double)
+  | LOGeneratorSummary !Bool !Word64 !NominalDiffTime ![Double]
   -- Everything else:
-  | LOAny !Object
-  | LODecodeError !String
-  deriving (Generic, Show)
+  | LOAny !LOAnyType !Object
+  | LODecodeError
+    { loRawText :: !ShortText
+    , loError   :: !ShortText
+    }
+  deriving (Eq, Generic, Show)
   deriving anyclass NFData
+
+data LOAnyType
+  = LAFallingEdge
+  | LANonBlocking
+  | LARollback
+  | LANoInterpreter
+  deriving (Eq, Generic, NFData, Read, Show, ToJSON)
+
+deriving instance Eq ResourceStats
 
 instance ToJSON LOBody
 
@@ -332,14 +367,14 @@ instance FromJSON LogObject where
       <*> pure kind
       <*> v .: "host"
       <*> v .: "thread"
-      <*> case Map.lookup  ns                                       (thd3 interpreters) <|>
-               Map.lookup  ns                                       (snd3 interpreters) <|>
-               Map.lookup (ns
+      <*> case Map.lookup  ns                                       (thd3 interpreters)
+           <|> Map.lookup  ns                                       (snd3 interpreters)
+           <|> Map.lookup (kind
                            & Text.stripPrefix "Cardano.Node."
-                           & fromMaybe "")                          (snd3 interpreters) <|>
-               Map.lookup  kind                                     (fst3 interpreters) of
+                           & fromMaybe kind)                        (snd3 interpreters)
+           <|> Map.lookup  kind                                     (fst3 interpreters) of
             Just interp -> interp unwrapped
-            Nothing -> pure $ LOAny unwrapped
+            Nothing -> pure $ LOAny LANoInterpreter unwrapped
    where
      unwrap :: Text -> Text -> Object -> Parser (Object, Text)
      unwrap wrappedKeyPred unwrapKey v = do
@@ -359,16 +394,20 @@ extendObject k _ _ = error . Text.unpack $ "Summary key '" <> k <> "' does not s
 parsePartialResourceStates :: Value -> Parser (Resources Word64)
 parsePartialResourceStates =
   AE.withObject "NodeSetup" $
-    \o ->
-      Resources
-      <$> o .: "CentiCpu"
-      <*> o .: "CentiGC"
-      <*> o .: "CentiMut"
-      <*> o .: "GcsMajor"
-      <*> o .: "GcsMinor"
-      <*> o .: "Alloc"
-      <*> o .: "Live"
-      <*> (o .:? "Heap" <&> fromMaybe 0)
-      <*> o .: "RSS"
-      <*> o .: "CentiBlkIO"
-      <*> o .: "Threads"
+    \o -> do
+      rCentiCpu   <- o .:  "CentiCpu"
+      rCentiGC    <- o .:  "CentiGC"
+      rCentiMut   <- o .:  "CentiMut"
+      rGcsMajor   <- o .:  "GcsMajor"
+      rGcsMinor   <- o .:  "GcsMinor"
+      rAlloc      <- o .:  "Alloc"
+      rLive       <- o .:? "Heap"       <&> fromMaybe 0
+      rHeap       <- o .:  "Live"
+      rRSS        <- o .:  "RSS"
+      rCentiBlkIO <- o .:  "CentiBlkIO"
+      rNetRd      <- o .:? "NetRd"      <&> fromMaybe 0
+      rNetWr      <- o .:? "NetWr"      <&> fromMaybe 0
+      rFsRd       <- o .:? "FsRd"       <&> fromMaybe 0
+      rFsWr       <- o .:? "FsWr"       <&> fromMaybe 0
+      rThreads    <- o .:  "Threads"
+      pure Resources{..}

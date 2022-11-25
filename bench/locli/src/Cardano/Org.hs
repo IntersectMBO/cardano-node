@@ -5,6 +5,8 @@ module Cardano.Org (module Cardano.Org) where
 import Cardano.Prelude
 import Data.Text                qualified as T
 
+import Cardano.Util
+
 
 data Org
   = Props
@@ -21,6 +23,7 @@ data Org
     , tSummaryHeaders :: [Text]
     , tSummaryValues  :: [[Text]]
     , tFormula        :: [Text]
+    , tConstants      :: [(Text, Text)]
     }
   deriving (Show)
 
@@ -33,13 +36,18 @@ render Props{..} =
   <>
   (oBody <&> render & mconcat)
 
+render Table{tConstants = _:_, tExtended = False} =
+  error "Asked to render a non-extended Org table with an extended table feature:  named constants"
+
 render Table{..} =
-    tableHLine
-  : tableRow jusAllHeaders
-  : tableHLine
-  : fmap tableRow (transpose jusAllColumns)
+    renderTableHLine
+  : renderTableRow jusAllHeaders
+  : renderTableHLine
+  : fmap renderTableRow (transpose jusAllColumns)
   & flip (<>)
     jusAllSummaryLines
+  & flip (<>)
+    jusAllConstantLines
   & flip (<>)
     (bool [ "#+TBLFM:" <> (tFormula & T.intercalate "::") ] [] (null tFormula))
  where
@@ -57,21 +65,39 @@ render Table{..} =
    jusAllSummaryLines :: [Text]
    jusAllSummaryLines =
      if null tSummaryHeaders then [] else
-       tableHLine :
-       fmap tableRow (zipWith (:)
-                      (tSummaryHeaders <&> T.justifyRight rowHdrWidth ' ')
-                      (transpose (justifySourceColumns tSummaryValues))
-                       <&> consIfSpecial " ")
-
-   rowHdrWidth :: Int
-   rowHdrWidth = maximum $ length <$> (maybeToList tApexHeader
-                                       <> tRowHeaders
-                                       <> tSummaryHeaders)
+       renderTableHLine :
+       fmap renderTableRow (zipWith (:)
+                            (tSummaryHeaders <&> T.justifyRight rowHdrWidth ' ')
+                            (transpose (justifySourceColumns tSummaryValues))
+                             <&> consIfSpecial (bool " " "#" tExtended))
 
    justifySourceColumns :: [[Text]] -> [[Text]]
    justifySourceColumns = zipWith (\w-> fmap (T.justifyRight w ' ')) colWidths
 
-   colWidths :: [Int]
+   jusAllConstantLines :: [Text]
+   jusAllConstantLines =
+     if null tConstants then [] else
+       renderTableHLine :
+       fmap renderTableRow (zipWith (:)
+                             (cycle ["_", "#"])
+                             constRows)
+    where
+      constRows = (chunksOf nTotalColumns tConstants                                          -- we can fit so many definitions per row
+                   & mapLast (\row -> row <> replicate (nTotalColumns - length row) ("", "")) -- last row needs completion
+                   & fmap (`zip` allColWidths))                                               -- and we supply column widths for justification
+                  <&> transpose . fmap (\((name, value), w) ->                                -- each row -> row pair of justified [Name, Definition]
+                                          [ T.justifyRight w ' ' name
+                                          , T.justifyRight w ' ' value])
+                   & concat                                                                   -- merge into a single list of rows
+
+   rowHdrWidth, nTotalColumns :: Int
+   rowHdrWidth = maximum $ length <$> (maybeToList tApexHeader
+                                       <> tRowHeaders
+                                       <> tSummaryHeaders)
+   nTotalColumns = length allColWidths
+
+   colWidths, allColWidths :: [Int]
+   allColWidths = rowHdrWidth : colWidths
    colWidths = maximum . fmap length <$>
                (tColumns
                 & zipWith (:)  tColHeaders
@@ -79,15 +105,15 @@ render Table{..} =
                   else zipWith (<>) tSummaryValues)
 
    specialCol :: [Text]
-   specialCol = replicate (length tRowHeaders) "#"
+   specialCol = length tRowHeaders `replicate` "#"
 
    consIfSpecial :: a -> [a] -> [a]
    consIfSpecial x = bool  identity        (x:)  tExtended
 
-   tableRow :: [Text] -> Text
-   tableRow xs = "| " <> T.intercalate " | " xs <> " |"
-   tableHLine :: Text
-   tableHLine = ("|-" <>) . (<> "-|") . T.intercalate "-+-" . (flip T.replicate "-" <$>) $
-                rowHdrWidth
-                : colWidths
-                & consIfSpecial 1
+   renderTableRow :: [Text] -> Text
+   renderTableRow xs = "| " <> T.intercalate " | " xs <> " |"
+   renderTableHLine :: Text
+   renderTableHLine = ("|-" <>) . (<> "-|") . T.intercalate "-+-" . (flip T.replicate "-" <$>) $
+                      rowHdrWidth
+                      : colWidths
+                      & consIfSpecial 1

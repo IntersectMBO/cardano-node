@@ -1,7 +1,18 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveFunctor #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+{- HLINT ignore "Use list literal pattern" -}
 module Cardano.Util
   ( module Prelude
-  , module Cardano.Util
+  , module Util
+  , module Data.Aeson
+  , module Data.IntervalMap.FingerTree
+  , module Data.SOP.Strict
+  , module Data.List.Split
+  , module Data.Time.Clock
+  , module Data.Time.Clock.POSIX
+  , module Data.Tuple.Extra
   , module Cardano.Ledger.BaseTypes
   , module Control.Arrow
   , module Control.Applicative
@@ -9,22 +20,30 @@ module Cardano.Util
   , module Control.Monad.Trans.Except.Extra
   , module Ouroboros.Consensus.Util.Time
   , module Text.Printf
+  , module Cardano.Util
   )
 where
 
-import Prelude                          (String, error)
+import Prelude                          (String, error, head, last)
 import Cardano.Prelude
+import Util                      hiding (fst3, snd3, third3, uncurry3, firstM, secondM)
 
+import Data.Aeson                       (FromJSON (..), ToJSON (..), Object, Value (..), (.:), (.:?), withObject, object)
+import Data.Aeson                       qualified as AE
+import Data.Tuple.Extra          hiding ((&&&), (***))
 import Control.Arrow                    ((&&&), (***))
 import Control.Applicative              ((<|>))
 import Control.Concurrent.Async         (forConcurrently, forConcurrently_, mapConcurrently, mapConcurrently_)
 import Control.DeepSeq                  qualified as DS
 import Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
-import Data.Aeson                       (FromJSON, ToJSON, encode, eitherDecode)
 import Data.ByteString.Lazy.Char8       qualified as LBS
+import Data.IntervalMap.FingerTree      (Interval (..), low, high, point)
 import Data.List                        (span)
+import Data.List.Split                  (chunksOf)
 import Data.Text                        qualified as T
-import Data.Text.Short                  (fromText)
+import Data.SOP.Strict
+import Data.Time.Clock                  (NominalDiffTime, UTCTime (..), diffUTCTime)
+import Data.Time.Clock.POSIX
 import Data.Vector                      (Vector)
 import Data.Vector                      qualified as Vec
 import GHC.Base                         (build)
@@ -34,10 +53,32 @@ import System.FilePath                  qualified as F
 
 import Ouroboros.Consensus.Util.Time
 
-import Cardano.Analysis.Ground
 import Cardano.Ledger.BaseTypes         (StrictMaybe (..), fromSMaybe)
 
 
+-- * Data.IntervalMap.FingerTree.Interval
+--
+deriving instance FromJSON a => (FromJSON (Interval a))
+deriving instance                 Functor  Interval
+deriving instance   ToJSON a =>   (ToJSON (Interval a))
+deriving instance   NFData a =>   (NFData (Interval a))
+
+unionIntv, intersectIntv :: Ord a => [Interval a] -> Interval a
+unionIntv     xs = Interval (low lo) (high hi)
+  where lo = minimumBy (compare `on` low)  xs
+        hi = maximumBy (compare `on` high) xs
+intersectIntv xs = Interval (low lo) (high hi)
+  where lo = maximumBy (compare `on` low)  xs
+        hi = minimumBy (compare `on` high) xs
+
+renderIntv :: (a -> Text) -> Interval a -> Text
+renderIntv f (Interval lo hi) = f lo <> "-" <> f hi
+
+intvDurationSec :: Interval UTCTime -> NominalDiffTime
+intvDurationSec = uncurry diffUTCTime . (high &&& low)
+
+-- * SMaybe
+--
 type SMaybe a = StrictMaybe a
 
 instance Alternative StrictMaybe where
@@ -49,6 +90,31 @@ instance Alternative StrictMaybe where
 smaybe :: b -> (a -> b) -> StrictMaybe a -> b
 smaybe x _  SNothing = x
 smaybe _ f (SJust x) = f x
+
+isSJust :: SMaybe a -> Bool
+isSJust = \case
+  SNothing -> False
+  SJust{}  -> True
+
+isSNothing :: SMaybe a -> Bool
+isSNothing = \case
+  SNothing -> True
+  SJust{}  -> False
+
+{-# INLINE strictMaybe #-}
+strictMaybe :: Maybe a -> SMaybe a
+strictMaybe = \case
+  Nothing -> SNothing
+  Just a  -> SJust a
+
+{-# INLINE lazySMaybe #-}
+lazySMaybe :: SMaybe a -> Maybe a
+lazySMaybe = \case
+  SNothing -> Nothing
+  SJust a  -> Just a
+
+catSMaybes :: [SMaybe a] -> [a]
+catSMaybes xs = [x | SJust x <- xs]
 
 mapSMaybe          :: (a -> StrictMaybe b) -> [a] -> [b]
 mapSMaybe _ []     = []
@@ -75,17 +141,16 @@ mapConcurrentlyPure f =
   mapConcurrently
     (evaluate . DS.force . f)
 
-mapAndUnzip :: (a -> (b, c)) -> [a] -> ([b], [c])
-mapAndUnzip _ [] = ([], [])
-mapAndUnzip f (x:xs)
-  = let (r1,  r2)  = f x
-        (rs1, rs2) = mapAndUnzip f xs
-    in
-    (r1:rs1, r2:rs2)
-
 mapHead :: (a -> a) -> [a] -> [a]
 mapHead f (x:xs) = f x:xs
 mapHead _ [] = error "mapHead: partial"
+
+mapLast :: (a -> a) -> [a] -> [a]
+mapLast _ [] = error "mapHead: partial"
+mapLast f xs' = reverse $ go [] xs'
+ where go acc = \case
+                   x:[] ->     f x:acc
+                   x:xs -> go (  x:acc) xs
 
 redistribute :: (a, (b, c)) -> ((a, b), (a, c))
 redistribute    (a, (b, c))  = ((a, b), (a, c))
@@ -104,78 +169,17 @@ data F
   | forall a. ToJSON a => J a
 
 progress :: MonadIO m => String -> F -> m ()
-progress key = putStrLn . T.pack . \case
-  R x  -> printf "{ \"%s\":  %s }"    key x
-  Q x  -> printf "{ \"%s\": \"%s\" }" key x
-  L xs -> printf "{ \"%s\": \"%s\" }" key (Cardano.Prelude.intercalate "\", \"" xs)
-  J x  -> printf "{ \"%s\": %s }" key (LBS.unpack $ encode x)
-
--- /path/to/logs-HOSTNAME.some.ext -> HOSTNAME
-hostFromLogfilename :: JsonLogfile -> Host
-hostFromLogfilename (JsonLogfile f) =
-  Host $ fromText . stripPrefixHard "logs-" . T.pack . F.dropExtensions . F.takeFileName $ f
- where
-   stripPrefixHard :: Text -> Text -> Text
-   stripPrefixHard p s = fromMaybe s $ T.stripPrefix p s
-
-hostDeduction :: HostDeduction -> (JsonLogfile -> Host)
-hostDeduction = \case
-  HostFromLogfilename -> hostFromLogfilename
+progress key = putStr . T.pack . \case
+  R x  -> printf "{ \"%s\":  %s }\n"    key x
+  Q x  -> printf "{ \"%s\": \"%s\" }\n" key x
+  L xs -> printf "{ \"%s\": \"%s\" }\n" key (Cardano.Prelude.intercalate "\", \"" xs)
+  J x  -> printf "{ \"%s\": %s }\n" key (LBS.unpack $ AE.encode x)
 
 -- Dumping to files
 --
 replaceExtension :: FilePath -> String -> FilePath
 replaceExtension f new = F.dropExtension f <> "." <> new
 
-dumpObject :: ToJSON a => String -> a -> JsonOutputFile a -> ExceptT Text IO ()
-dumpObject ident x (JsonOutputFile f) = liftIO $ do
-  progress ident (Q f)
-  withFile f WriteMode $ \hnd -> LBS.hPutStrLn hnd $ encode x
-
-dumpObjects :: ToJSON a => String -> [a] -> JsonOutputFile [a] -> ExceptT Text IO ()
-dumpObjects ident xs (JsonOutputFile f) = liftIO $ do
-  progress ident (Q f)
-  withFile f WriteMode $ \hnd -> do
-    forM_ xs $ LBS.hPutStrLn hnd . encode
-
-dumpAssociatedObjects :: ToJSON a => String -> [(JsonLogfile, a)] -> ExceptT Text IO ()
-dumpAssociatedObjects ident xs = liftIO $
-  flip mapConcurrently_ xs $
-    \(JsonLogfile f, x) -> do
-        progress ident (Q f)
-        withFile (replaceExtension f $ ident <> ".json") WriteMode $ \hnd ->
-          LBS.hPutStrLn hnd $ encode x
-
-readAssociatedObjects :: forall a.
-  FromJSON a => String -> [JsonLogfile] -> ExceptT Text IO [(JsonLogfile, a)]
-readAssociatedObjects ident fs = firstExceptT T.pack . newExceptT . fmap sequence . fmap (fmap sequence) $
-  flip mapConcurrently fs $
-    \jf@(JsonLogfile f) -> do
-        x <- eitherDecode @a <$> LBS.readFile (replaceExtension f $ ident <> ".json")
-        progress ident (Q f)
-        pure (jf, x)
-
-dumpAssociatedObjectStreams :: ToJSON a => String -> [(JsonLogfile, [a])] -> ExceptT Text IO ()
-dumpAssociatedObjectStreams ident xss = liftIO $
-  flip mapConcurrently_ xss $
-    \(JsonLogfile f, xs) -> do
-        progress ident (Q f)
-        withFile (replaceExtension f $ ident <> ".json") WriteMode $ \hnd -> do
-          forM_ xs $ LBS.hPutStrLn hnd . encode
-
-dumpText :: String -> [Text] -> TextOutputFile -> ExceptT Text IO ()
-dumpText ident xs (TextOutputFile f) = liftIO $ do
-  progress ident (Q f)
-  withFile f WriteMode $ \hnd -> do
-    forM_ xs $ hPutStrLn hnd
-
-dumpAssociatedTextStreams :: String -> [(JsonLogfile, [Text])] -> ExceptT Text IO ()
-dumpAssociatedTextStreams ident xss = liftIO $
-  flip mapConcurrently_ xss $
-    \(JsonLogfile f, xs) -> do
-        progress ident (Q f)
-        withFile (replaceExtension f $ ident <> ".txt") WriteMode $ \hnd -> do
-          forM_ xs $ hPutStrLn hnd
 
 spans :: forall a. (a -> Bool) -> [a] -> [Vector a]
 spans f = go []
@@ -187,3 +191,23 @@ spans f = go []
        ([], rest) -> go acc rest
        (ac, rest) ->
          go (Vec.fromList ac:acc) rest
+
+{-# INLINE norm2Tuple #-}
+norm2Tuple :: ((a, b), c) -> (a, (b, c))
+norm2Tuple ((a, b), c) = (a, (b, c))
+
+{-# INLINE showText #-}
+showText :: Show a => a -> Text
+showText = T.pack . show
+
+roundUTCTimeSec, roundUTCTimeDay :: UTCTime -> UTCTime
+roundUTCTimeSec =
+  posixSecondsToUTCTime . fromIntegral @Integer . truncate . utcTimeToPOSIXSeconds
+roundUTCTimeDay (UTCTime day _) = UTCTime day 0
+
+utcTimeDeltaSec :: UTCTime -> UTCTime -> Int
+utcTimeDeltaSec x y = diffUTCTime x y & round
+
+foldEmpty :: r -> ([a] -> r) -> [a] -> r
+foldEmpty r _ [] = r
+foldEmpty _ f l = f l

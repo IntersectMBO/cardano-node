@@ -100,6 +100,10 @@ readResourceStatsInternal = getProcessID >>= \pid -> do
     , rHeap       = GhcStats.gcdetails_mem_in_use_bytes $ GhcStats.gc rts
     , rRSS        = _resident_size mem
     , rCentiBlkIO = 0
+    , rNetRd      = 0
+    , rNetWr      = 0
+    , rFsRd       = 0
+    , rFsWr       = 0
     , rThreads    = 0
     }
  where

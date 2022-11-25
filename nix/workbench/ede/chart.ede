@@ -14,9 +14,9 @@ set yrange [*:*]
 set ylabel "{{ args.ylabel }}"
 {% endif %}
 eval cdfI_{{ (runs | length) + 1 }}("{{ args.metric }}", "{{ args.title }}", \
-            "{{ base.ver }}/{{ base.meta.era | toTitle }}",   "{{ base.meta.tag }}", \
+            "{{ base.meta.tag }}/{{ base.meta.batch }}/{{ base.meta.era | toTitle }}",   "{{ base.meta.tag }}", \
 {% for run in runs %}
-            "{{ run.value.ver }}/{{ run.value.meta.era | toTitle }}", "{{ run.value.meta.tag }}"{% if !run.last %},{% endif %} \
+            "{{ run.value.meta.tag }}/{{ run.value.meta.batch }}/{{ run.value.meta.era | toTitle }}", "{{ run.value.meta.tag }}"{% if !run.last %},{% endif %} \
 {% endfor %}
             )
 #+end_src

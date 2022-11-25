@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE StrictData #-}
-module Cardano.Analysis.Context (module Cardano.Analysis.Context) where
+module Cardano.Analysis.API.Context (module Cardano.Analysis.API.Context) where
 
 import Cardano.Prelude
 
@@ -46,11 +46,13 @@ data PParams
 
 data GeneratorProfile
   = GeneratorProfile
-  { add_tx_size     :: Word64
-  , inputs_per_tx   :: Word64
-  , outputs_per_tx  :: Word64
-  , tps             :: Double
-  , tx_count        :: Word64
+  { add_tx_size      :: Word64
+  , inputs_per_tx    :: Word64
+  , outputs_per_tx   :: Word64
+  , tps              :: Double
+  , tx_count         :: Word64
+  , plutusMode       :: Maybe Bool
+  , plutusLoopScript :: Maybe FilePath
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
