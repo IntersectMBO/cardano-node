@@ -14,13 +14,33 @@ in
 ##
 , ...
 }:
-with lib;
 let
   backend =
     rec
     { name = "supervisor";
 
+      # Unlike the nomad backend `useCabalRun` is honored here.
+      inherit useCabalRun;
+
       services-config = import ./services-config.nix {inherit lib workbench basePort stateDir useCabalRun enableEKG;};
+
+      extraShellPkgs = with pkgs; [
+        python3Packages.supervisor
+      ]
+      ++ lib.optionals ( useCabalRun)
+        (with haskellPackages; [
+          cabalWrapped
+          ghcid
+          haskellBuildUtils
+          cabal-plan
+        ])
+      ## Workbench's main script is called directly in dev mode.
+      ++ lib.optionals (!useCabalRun)
+        (with cardanoNodePackages; [
+          cardano-node
+          cardano-tracer
+          tx-generator
+        ]);
 
       materialise-profile =
         { profileNix }:
@@ -35,6 +55,7 @@ let
                     pkgs lib stateDir
                     basePort
                     extraBackendConfig;
+                  inetHttpServerPort = "127.0.0.1:9001";
                 };
             }
             ''

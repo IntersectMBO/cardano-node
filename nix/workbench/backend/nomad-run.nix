@@ -4,7 +4,7 @@ let
 in
 { pkgs
 , cardanoNodePackages
-, supervisord-workbench
+, nomad-workbench
 ##
 , profileName           ? profileNameDefault
 , batchName             ? batchNameDefault
@@ -13,14 +13,14 @@ in
 , cardano-node-rev      ? "0000000000000000000000000000000000000000"
 }:
 let
-  inherit (supervisord-workbench) workbench backend cacheDir stateDir basePort;
+  inherit (nomad-workbench) workbench backend cacheDir stateDir basePort;
 
-  with-supervisord-profile =
+  with-nomad-profile =
     { envArgsOverride ? {} }: ## TODO: envArgsOverride is not used!
     workbench.with-profile
       { inherit backend profileName; };
 
-  inherit (with-supervisord-profile {}) profileNix profile topology genesis;
+  inherit (with-nomad-profile {}) profileNix profile topology genesis;
 in
   let
 
@@ -38,7 +38,7 @@ in
       set -euo pipefail
 
       export PATH=$PATH:${path}
-
+      unset WB_MODE_CABAL=
       wb start \
         --batch-name   ${batchName} \
         --profile-name ${profileName} \
@@ -70,11 +70,11 @@ in
       { trace ? false }:
       let
         inherit
-          (with-supervisord-profile
+          (with-nomad-profile
             { envArgsOverride = { cacheDir = "./cache"; stateDir = "./"; }; })
           profileNix profile topology genesis;
 
-        run = pkgs.runCommand "workbench-run-supervisord-${profileName}"
+        run = pkgs.runCommand "workbench-run-nomad-${profileName}"
           { requiredSystemFeatures = [ "benchmark" ];
             nativeBuildInputs = with cardanoNodePackages; with pkgs; [
               bash
@@ -85,7 +85,7 @@ in
               moreutils
               nixWrapped
               pstree
-              python3Packages.supervisor
+# TODO:       nomad
               workbench.workbench
               zstd
             ];
@@ -95,7 +95,7 @@ in
             cd          $out
             export HOME=$out
 
-            export WB_BACKEND=supervisor
+            export WB_BACKEND=nomad
             export CARDANO_NODE_SOCKET_PATH=$(wb backend get-node-socket-path ${stateDir} node-0)
 
             cmd=(
@@ -144,8 +144,8 @@ in
 {
   inherit stateDir;
   inherit profileName;
-  inherit workbench supervisord-workbench;
-  inherit (supervisord-workbench) backend;
+  inherit workbench nomad-workbench;
+  inherit (nomad-workbench) backend;
   inherit profileNix profile topology genesis;
   inherit interactive-start interactive-stop interactive-restart;
   inherit profile-run;
