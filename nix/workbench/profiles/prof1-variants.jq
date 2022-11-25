@@ -1,6 +1,3 @@
-## Profile variants are defined as a cartesian product of
-## variations of genesis/generator/node axes.
-
 def all_profile_variants:
                                          1024    as $Ki
   |                                      1000000 as $M
