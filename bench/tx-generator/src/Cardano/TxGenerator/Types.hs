@@ -85,12 +85,19 @@ data TxGenPlutusParams =
       , plutusExecMemory  :: !Natural   -- ^ Max. memory available for the Plutus script
       , plutusExecSteps   :: !Natural   -- ^ Max. execution steps available for the Plutus script
       }
-  | PlutusAuto                          -- ^ Generate Txs for a Plutus script, choosing settings to max out per Tx script budget
+  | PlutusAuto                          -- ^ Generate Txs for a Plutus loop script, choosing settings to max out per Tx script budget
       { plutusAutoScript  :: !FilePath  -- ^ Path to the Plutus script
       }
   | PlutusOff                           -- ^ Do not generate Plutus Txs
   deriving (Show, Eq)
 
+data PlutusAutoBudget
+  = PlutusAutoBudget                           -- ^ Specifies a budget and parameters for a PlutusAuto loop script
+    { autoBudgetUnits     :: !ExecutionUnits   -- ^ execution units available per Tx input / script run
+    , autoBudgetDatum     :: !ScriptData       -- ^ datum for the auto script
+    , autoBudgetRedeemer  :: !ScriptRedeemer   -- ^ valid redeemer for the auto script
+    }
+    deriving (Show, Eq)
 
 data TxGenError where
   ApiError        :: Cardano.Api.Error e => !e -> TxGenError

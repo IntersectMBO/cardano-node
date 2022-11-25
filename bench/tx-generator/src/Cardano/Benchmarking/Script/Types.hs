@@ -103,7 +103,7 @@ deriving instance Generic PayMode
 data ScriptBudget where
   StaticScriptBudget :: !ScriptData -> !ScriptRedeemer -> !ExecutionUnits -> ScriptBudget
   CheckScriptBudget  :: !ScriptData -> !ScriptRedeemer -> !ExecutionUnits -> ScriptBudget
-  AutoScript :: ScriptBudget --todo: add fraction of total available budget to use (==2 with 2 inputs !)
+  AutoScript :: !FilePath -> !Int -> ScriptBudget
   deriving (Show, Eq)
 deriving instance Generic ScriptBudget
 

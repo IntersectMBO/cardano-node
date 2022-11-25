@@ -103,7 +103,6 @@ library
                      , constraints-extras
                      , dlist
                      , extra
-                     , filepath
                      , formatting
                      , generic-monoid
                      , ghc-prim

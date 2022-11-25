@@ -134,7 +134,11 @@ splittingPhase srcWallet = do
   plutusPayMode dst = do
     autoMode <- isPlutusAutoMode
     scriptSpec <- if autoMode
-      then ScriptSpec <$> askNixOption _nix_plutusLoopScript <*> pure AutoScript
+      then askNixOption _nix_plutusRedeemerSerialized >>= \case
+        Nothing -> throwCompileError $ SomeCompilerError "Plutus loop autoscript requires a filepath to .json as plutusRedeemerSerialized"
+        Just redeemer -> do
+          autoScript <- AutoScript redeemer <$> askNixOption _nix_inputs_per_tx
+          ScriptSpec <$> askNixOption _nix_plutusLoopScript <*> pure autoScript
       else do
         executionUnits <- ExecutionUnits <$> askNixOption _nix_executionMemory <*> askNixOption _nix_executionSteps
         debugMode <- askNixOption _nix_debugMode

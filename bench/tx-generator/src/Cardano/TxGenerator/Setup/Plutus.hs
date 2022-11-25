@@ -43,7 +43,7 @@ preExecutePlutusScript ::
      ProtocolParameters
   -> ScriptInAnyLang
   -> ScriptData
-  -> ScriptData
+  -> ScriptRedeemer
   -> Either TxGenError ExecutionUnits
 preExecutePlutusScript protocolParameters script@(ScriptInAnyLang scriptLang _) datum redeemer
   = runExcept $ do
@@ -67,7 +67,7 @@ preExecutePlutusV1 ::
      (Natural, Natural)
   -> Script PlutusScriptV1
   -> ScriptData
-  -> ScriptData
+  -> ScriptRedeemer
   -> CostModel
   -> Except TxGenError ExecutionUnits
 preExecutePlutusV1 (majVer, minVer) (PlutusScript _ (PlutusScriptSerialised script)) datum redeemer (CostModel costModel)
@@ -114,7 +114,7 @@ preExecutePlutusV2 ::
      (Natural, Natural)
   -> Script PlutusScriptV2
   -> ScriptData
-  -> ScriptData
+  -> ScriptRedeemer
   -> CostModel
   -> Except TxGenError ExecutionUnits
 preExecutePlutusV2 (majVer, minVer) (PlutusScript _ (PlutusScriptSerialised script)) datum redeemer (CostModel costModel)

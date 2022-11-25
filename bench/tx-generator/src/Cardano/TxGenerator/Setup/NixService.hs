@@ -42,6 +42,7 @@ data NixServiceOptions = NixServiceOptions {
   , _nix_plutusScript     :: String
   , _nix_plutusData       :: Integer
   , _nix_plutusRedeemer   :: Integer
+  , _nix_plutusRedeemerSerialized :: Maybe FilePath     -- ^ a .json file conforming to Cadano.Api.ScriptData (ScriptDataJsonDetailedSchema)
   , _nix_executionMemory  :: Natural
   , _nix_executionSteps   :: Natural
   , _nix_nodeConfigFile       :: Maybe FilePath

@@ -8,10 +8,10 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Benchmarking.Script.Core
 where
@@ -50,6 +50,7 @@ import           Cardano.Benchmarking.GeneratorTx.NodeToNode (ConnectClient,
                    benchmarkConnectTxSubmit)
 import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
 import qualified Cardano.TxGenerator.Genesis as Genesis
+import           Cardano.TxGenerator.PlutusContext
 import           Cardano.TxGenerator.Setup.SigningKey
 
 import           Cardano.Benchmarking.OuroborosImports as Core (LocalSubmitTx, SigningKeyFile,
@@ -373,62 +374,13 @@ interpretPayMode payMode = do
           return ( createAndStore (mkUTxOScript networkId (script, scriptData) witness) (mkWalletFundStore walletRef)
                  , Text.unpack $ serialiseAddress $ makeShelleyAddress networkId (PaymentCredentialByScript $ hashScript script') NoStakeAddress )
 
-{-
-Use a binary search to find a loop counter that maxes out the available per transaction Plutus budget.
-It is intended to be used with the the loop script from cardano-node/plutus-examples/...
-loopScriptFile is the FilePath to the Plutus script that implements the delay loop. (for example in /nix/store/).
-spendAutoScript relies on a particular calling convention of the loop script.
--}
-
-spendAutoScript ::
-     ProtocolParameters
-  -> ScriptInAnyLang
-  -> ActionM (ScriptData, ScriptRedeemer)
-spendAutoScript protocolParameters script = do
-  perTxBudget <- case protocolParamMaxTxExUnits protocolParameters of
-    Nothing -> liftTxGenError $ TxGenError "Cannot determine protocolParamMaxTxExUnits"
-    Just b -> return b
-  traceDebug $ "Plutus auto mode : Available budget per TX: " ++ show perTxBudget
-
-  let
-    budget = ExecutionUnits
-                 (executionSteps perTxBudget `div`  2) -- TODO FIX - use _nix_inputs_per_tx
-                 (executionMemory perTxBudget `div` 2)
-  traceDebug $ "Plutus auto mode : Available budget per script run: " ++ show budget
-
-  let
-    isInLimits :: Integer -> Either TxGenError Bool
-    isInLimits n = case preExecutePlutusScript protocolParameters script (ScriptDataNumber 0) (toLoopArgument n) of
-      Left err -> Left err
-      Right use -> Right $ (executionSteps use <= executionSteps budget) && (executionMemory use <= executionMemory budget)
-    searchUpperBound = 100000 -- The highest loop count that is tried. (This is about 50 times the current mainnet limit.)
-  redeemer <- case startSearch isInLimits 0 searchUpperBound of
-    Left err -> liftTxGenError $ TxGenError "cannot find fitting redeemer: " <> err
-    Right n -> return $ toLoopArgument n
-  return (ScriptDataNumber 0, redeemer)
-  where
-    -- This is the hardcoded calling convention of the loop.plutus script.
-    -- To loop n times one has to pass n + 1_000_000 as redeemer.
-    toLoopArgument n = ScriptDataNumber $ n + 1000000
-    startSearch f a b = do
-      l <- f a
-      h <- f b
-      if l && not h then search f a b
-        else Left $ TxGenError $ "Binary search: Bad initial bounds: " ++ show (a,l,b,h)
-    search f a b
-      = if a + 1 == b then Right a
-           else do
-             let m = (a + b) `div` 2
-             test <- f m
-             if test then search f m b else search f a m
-
 makePlutusContext :: forall era. IsShelleyBasedEra era
   => ScriptSpec
   -> ActionM (Witness WitCtxTxIn era, ScriptInAnyLang, ScriptData, Lovelace)
 makePlutusContext scriptSpec = do
   protocolParameters <- getProtocolParameters
-  script_ <- liftIO $ Plutus.readPlutusScript $ scriptSpecFile scriptSpec
-  script <- either liftTxGenError pure script_
+  script <- either liftTxGenError pure =<<
+    liftIO (Plutus.readPlutusScript $ scriptSpecFile scriptSpec)
 
   executionUnitPrices <- case protocolParamPrices protocolParameters of
     Just x -> return x
@@ -444,16 +396,37 @@ makePlutusContext scriptSpec = do
     CheckScriptBudget sdata redeemer unitsWant -> do
       unitsPreRun <- preExecuteScriptAction protocolParameters script sdata redeemer
       if unitsWant == unitsPreRun
-         then return (sdata, redeemer, unitsWant )
+         then return (sdata, redeemer, unitsWant)
          else throwE $ WalletError $ concat [
               " Stated execution Units do not match result of pre execution. "
             , " Stated value : ", show unitsWant
             , " PreExecution result : ", show unitsPreRun
             ]
-    AutoScript -> do
-      (sdata, redeemer) <- spendAutoScript protocolParameters script
-      preRun <- preExecuteScriptAction protocolParameters script sdata redeemer
-      return (sdata, redeemer, preRun)
+    AutoScript redeemerFile budgetFraction -> do
+      redeemer <- either liftTxGenError pure =<<
+        liftIO (readRedeemer redeemerFile)
+      let
+        budget = ExecutionUnits
+                    (executionSteps perTxBudget  `div` fromIntegral budgetFraction)
+                    (executionMemory perTxBudget `div` fromIntegral budgetFraction)
+
+        -- reflects properties hard-coded into the loop scripts for benchmarking:
+        -- 1. script datum is not used
+        -- 2. the loop terminates at 1_000_000 when counting down
+        -- 3. the loop's initial value is the first numerical value in the redeemer argument structure
+        autoBudget = PlutusAutoBudget
+          { autoBudgetUnits = budget
+          , autoBudgetDatum = ScriptDataNumber 0
+          , autoBudgetRedeemer = scriptDataModifyNumber (const 1_000_000) redeemer
+          }
+      traceDebug $ "Plutus auto mode : Available budget per Tx input / script run: " ++ show budget
+                   ++ " -- fraction of protocolParamMaxTxExUnits budget: 1/" ++ show budgetFraction
+
+      case plutusAutoBudgetMaxOut protocolParameters script autoBudget of
+        Left err -> liftTxGenError err
+        Right PlutusAutoBudget{..} -> do
+          preRun <- preExecuteScriptAction protocolParameters script autoBudgetDatum autoBudgetRedeemer
+          return (autoBudgetDatum, autoBudgetRedeemer, preRun)
 
   let msg = mconcat [ "Plutus Benchmark :"
                     , " Script: ", scriptSpecFile scriptSpec

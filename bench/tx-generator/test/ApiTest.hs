@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -16,9 +18,10 @@ import           Options.Applicative.Common as Opt (runParserInfo)
 
 import           System.Environment (getArgs)
 import           System.Exit (die, exitSuccess)
-import           System.FilePath (isRelative, (</>))
+import           System.FilePath
 
 import           Cardano.Api
+import           Cardano.Api.Shelley (protocolParamMaxTxExUnits)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Types (AdjustFilePaths (..), GenesisFile (..))
 
@@ -89,8 +92,8 @@ main
     case setup of
       Left err -> die (show err)
       Right (nixService, _nc, genesis, sigKey) -> do
-        putStrLn $ "Did I manage to extract a genesis fund?\n--> " ++ show (checkFund genesis sigKey)
-        putStrLn "Can I pre-execute a plutus script?"
+        putStrLn $ "* Did I manage to extract a genesis fund?\n--> " ++ show (checkFund genesis sigKey)
+        putStrLn "* Can I pre-execute a plutus script?"
         checkPlutusLoop (_nix_plutusLoopScript nixService)
         exitSuccess
 
@@ -114,11 +117,31 @@ checkPlutusLoop scriptPath
 
     let count = 1792        -- arbitrary counter for a loop script; should respect mainnet limits
 
-    redeemer <- scriptDataModifyNumber (+ count) <$> readRedeemer scriptPath
+    redeemerFile <- getRedeemerFile
+    redeemer <- readRedeemer redeemerFile >>= \case
+      Left err -> die (show err)
+      Right redeemer -> do
+        putStrLn $ "--> read redeemer: " ++ redeemerFile
+        return $ scriptDataModifyNumber (+ count) redeemer
 
     case preExecutePlutusScript protocolParameters script (ScriptDataNumber 0) redeemer of
       Left err -> putStrLn $ "--> execution failed: " ++ show err
       Right units -> putStrLn $ "--> execution successful; got units: " ++ show units
+
+    putStrLn "* What does the redeemer look like when the loop counter is maxed out?"
+    let
+        ~(Just budget) = protocolParamMaxTxExUnits protocolParameters
+        autoBudget = PlutusAutoBudget
+          { autoBudgetUnits = budget
+          , autoBudgetDatum = ScriptDataNumber 0
+          , autoBudgetRedeemer = scriptDataModifyNumber (const 1_000_000) redeemer
+          }
+    putStrLn $ "--> " ++ show (plutusAutoBudgetMaxOut protocolParameters script autoBudget)
+
+  where
+    getRedeemerFile =
+      let redeemerPath = (<.> ".redeemer.json") $ dropExtension $ takeFileName scriptPath
+      in getDataFileName $ "data" </> redeemerPath
 
 
 readFileJson :: FromJSON a => FilePath -> ExceptT TxGenError IO a
