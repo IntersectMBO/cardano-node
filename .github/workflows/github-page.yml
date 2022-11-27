@@ -49,21 +49,13 @@ jobs:
         sudo apt-get -y remove --purge software-properties-common
         sudo apt-get -y autoremove
 
-    - name: Install secp256k1 (Linux)
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        sudo apt-get -y install autoconf automake libtool
-        mkdir secp256k1-sources
-        cd secp256k1-sources
-        git clone https://github.com/bitcoin-core/secp256k1.git
-        cd secp256k1
-        git reset --hard $SECP256K1_REF
-        ./autogen.sh
-        ./configure --prefix=/usr --enable-module-schnorrsig --enable-experimental
-        make
-        make check
-        sudo make install
-        cd ../..
+    - name: "LINUX: Install secp256k1"
+      if: runner.os != 'Windows'
+      shell: bash
+      env:
+        CI_SECP_FLAGS: "--prefix=/usr"
+        CI_SECP_INSTALL_CMD: sudo
+      run: bash .github/workflows/build-secp256k1.bash
 
     - name: Cabal update
       run: cabal update
@@ -75,8 +67,11 @@ jobs:
         cat cabal.project | sed 's|reorder-goals: True|reorder-goals: False|g' > cabal.project.tmp
         mv cabal.project.tmp cabal.project
 
-    - name: Use cabal.project.local.github-pages
-      run: cp .github/workflows/cabal.project.local.github-pages cabal.project.local
+    - name: combine github-pages, and machine local project files.
+      run: |
+        cat .github/workflows/cabal.project.local.github-pages \
+            ".github/workflows/cabal.project.local.ci.$(uname -s)" \
+            | tee cabal.project.local
 
     - name: Dry run
       run: |
