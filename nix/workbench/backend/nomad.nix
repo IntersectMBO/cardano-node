@@ -4,14 +4,12 @@ let
   stateDir              = "run/current";
 in
 { pkgs
-, lib, nix2container
+, lib
 , workbench
 ##
 , cacheDir              ? cacheDirDefault
 , extraBackendConfig    ? {}
 ## `useCabalRun` not used here like in `supervisor.nix`.
-, enableEKG             ? true
-##
 , ...
 }:
 let
@@ -22,7 +20,7 @@ let
       # Unlike the supervisor backend `useCabalRun` is always false here.
       useCabalRun = false;
 
-      services-config = import ./services-config.nix {inherit lib workbench basePort stateDir; useCabalRun = false; inherit enableEKG;};
+      services-config = import ./services-config.nix {inherit lib workbench basePort stateDir; useCabalRun = false;};
 
       extraShellPkgs = with pkgs; [
         # https://docs.podman.io/en/latest/markdown/podman.1.html#rootless-mode
@@ -52,7 +50,6 @@ let
                   inherit
                     (pkgs.cardanoNodePackages)
                     cardano-node cardano-tracer tx-generator;
-                  inherit nix2container;
                 };
           in pkgs.runCommand "workbench-backend-output-${profileNix.name}-${name}"
             (rec {

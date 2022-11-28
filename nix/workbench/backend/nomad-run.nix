@@ -1,10 +1,11 @@
 let
+  backendName        = "nomad";
   batchNameDefault   = "plain";
   profileNameDefault = "default-bage";
 in
 { pkgs
 , cardanoNodePackages
-, nomad-workbench
+, backendWorkbench
 ##
 , profileName           ? profileNameDefault
 , batchName             ? batchNameDefault
@@ -13,14 +14,14 @@ in
 , cardano-node-rev      ? "0000000000000000000000000000000000000000"
 }:
 let
-  inherit (nomad-workbench) workbench backend cacheDir stateDir basePort;
+  inherit (backendWorkbench) workbench backend cacheDir stateDir basePort;
 
-  with-nomad-profile =
+  with-backend-profile =
     { envArgsOverride ? {} }: ## TODO: envArgsOverride is not used!
     workbench.with-profile
       { inherit backend profileName; };
 
-  inherit (with-nomad-profile {}) profileNix profile topology genesis;
+  inherit (with-backend-profile {}) profileNix profile topology genesis;
 in
   let
 
@@ -70,11 +71,11 @@ in
       { trace ? false }:
       let
         inherit
-          (with-nomad-profile
+          (with-backend-profile
             { envArgsOverride = { cacheDir = "./cache"; stateDir = "./"; }; })
           profileNix profile topology genesis;
 
-        run = pkgs.runCommand "workbench-run-nomad-${profileName}"
+        run = pkgs.runCommand "workbench-run-${backendName}-${profileName}"
           { requiredSystemFeatures = [ "benchmark" ];
             nativeBuildInputs = with cardanoNodePackages; with pkgs; [
               bash
@@ -95,7 +96,7 @@ in
             cd          $out
             export HOME=$out
 
-            export WB_BACKEND=nomad
+            export WB_BACKEND=${backendName}
             export CARDANO_NODE_SOCKET_PATH=$(wb backend get-node-socket-path ${stateDir} node-0)
 
             cmd=(
@@ -144,8 +145,8 @@ in
 {
   inherit stateDir;
   inherit profileName;
-  inherit workbench nomad-workbench;
-  inherit (nomad-workbench) backend;
+  inherit workbench backendWorkbench;
+  inherit (backendWorkbench) backend;
   inherit profileNix profile topology genesis;
   inherit interactive-start interactive-stop interactive-restart;
   inherit profile-run;

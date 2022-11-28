@@ -79,45 +79,39 @@ final: prev: with final; {
   # A generic, parameteric version of the workbench development environment.
   workbench = pkgs.callPackage ./workbench {};
 
-  supervisord-workbench-cabal =
-    { workbench ? pkgs.workbench, ... }@args: pkgs.callPackage ./workbench/backend/supervisor.nix (args // { useCabalRun = true; });
-  supervisord-workbench-nix =
-    { workbench ? pkgs.workbench, ... }@args: pkgs.callPackage ./workbench/backend/supervisor.nix args;
+  all-profiles-json = (workbench.all-profiles
+    { inherit (workbench-instance { backendName = "supervisor";
+                                    profileName = "default-bage";
+                                  }) backend; }).JSON;
 
-  nomad-workbench =
-    { workbench ? pkgs.workbench, ... }@args: pkgs.callPackage ./workbench/backend/nomad.nix (args // { inherit nix2container; });
-
-  all-profiles-json = (workbench.all-profiles{ inherit (supervisord-workbench-nix) backend; }).JSON;
-
-  # An instance of the workbench, specialised to the supervisord backend and a profile,
-  # that can be used with nix-shell or lorri.
+  # A parametrisable workbench, that can be used with nix-shell or lorri.
   # See https://input-output-hk.github.io/haskell.nix/user-guide/development/
-  supervisord-workbench-for-profile =
-    { batchName             ? customConfig.localCluster.batchName
+  workbench-instance =
+    let backendRegistry =
+          {
+            supervisor = {
+              backend-workbench = ./workbench/backend/supervisor.nix;
+              workbench-runner  = ./workbench/backend/supervisor-run.nix;
+            };
+            nomad = {
+              backend-workbench = ./workbench/backend/nomad.nix;
+              workbench-runner  = ./workbench/backend/nomad-run.nix;
+            };
+          };
+    in
+    { backendName
     , profileName           ? customConfig.localCluster.profileName
+    , batchName             ? customConfig.localCluster.batchName
     , useCabalRun           ? false
     , workbenchDevMode      ? false
     , profiled              ? false
-    , supervisord-workbench ? pkgs.callPackage ./workbench/backend/supervisor.nix { inherit useCabalRun; }
+    , workbench             ? pkgs.workbench
+    , backendWorkbench      ? pkgs.callPackage (backendRegistry."${backendName}".backend-workbench) { inherit useCabalRun workbench; }
     , cardano-node-rev      ? null
     }:
-    pkgs.callPackage ./workbench/backend/supervisor-run.nix
+    pkgs.callPackage (backendRegistry."${backendName}".workbench-runner)
       {
-        inherit batchName profileName supervisord-workbench cardano-node-rev;
-      };
-
-  nomad-workbench-for-profile =
-    { batchName             ? customConfig.localCluster.batchName
-    , profileName           ? customConfig.localCluster.profileName
-    , useCabalRun           ? false
-    , workbenchDevMode      ? false
-    , profiled              ? false
-    , nomad-workbench       ? pkgs.callPackage ./workbench/backend/nomad.nix { inherit nix2container; }
-    , cardano-node-rev      ? null
-    }:
-    pkgs.callPackage ./workbench/backend/nomad-run.nix
-      {
-        inherit batchName profileName nomad-workbench cardano-node-rev;
+        inherit batchName profileName backendWorkbench cardano-node-rev;
       };
 
   # Disable failing python uvloop tests
