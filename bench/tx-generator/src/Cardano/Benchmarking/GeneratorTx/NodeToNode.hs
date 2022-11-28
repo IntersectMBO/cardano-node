@@ -17,7 +17,7 @@ import           Codec.Serialise (DeserialiseFailure)
 import           Control.Concurrent.Class.MonadSTM.Strict (newTVarIO)
 import           Control.Monad.Class.MonadTimer (MonadTimer, threadDelay)
 import           Data.ByteString.Lazy (ByteString)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import           Data.Proxy (Proxy (..))
 import           Network.Socket (AddrInfo (..))
 import           System.Random (newStdGen)

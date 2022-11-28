@@ -10,7 +10,7 @@ module Cardano.TxGenerator.Setup.Plutus
        )
        where
 
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra

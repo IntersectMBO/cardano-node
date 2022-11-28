@@ -10,28 +10,28 @@
 
 module Cardano.Unlog.LogObject (module Cardano.Unlog.LogObject) where
 
-import Prelude (head, id, show, unzip3)
-import Cardano.Prelude hiding (Text, head, show)
+import           Cardano.Prelude hiding (Text, head, show)
+import           Prelude (head, id, show, unzip3)
 
-import Control.Monad (fail)
-import Data.Aeson qualified as AE
-import Data.Aeson.KeyMap qualified as KeyMap
-import Data.Aeson.Types (Parser)
-import Data.Aeson.Key qualified as Aeson
-import Data.ByteString.Lazy qualified as LBS
-import Data.Text qualified as LText
-import Data.Text.Short qualified as Text
-import Data.Text.Short (ShortText, fromText, toText)
-import Data.Map qualified as Map
-import Data.Vector (Vector)
-import Data.Vector qualified as V
+import           Control.Monad (fail)
+import qualified Data.Aeson as AE
+import qualified Data.Aeson.Key as Aeson
+import qualified Data.Aeson.KeyMap as KeyMap
+import           Data.Aeson.Types (Parser)
+import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as LText
+import           Data.Text.Short (ShortText, fromText, toText)
+import qualified Data.Text.Short as Text
+import           Data.Vector (Vector)
+import qualified Data.Vector as V
 
-import Cardano.Logging.Resources.Types
+import           Cardano.Logging.Resources.Types
 
-import Cardano.Analysis.API.Ground
-import Cardano.Util
+import           Cardano.Analysis.API.Ground
+import           Cardano.Util
 
-import Data.Accum (zeroUTCTime)
+import           Data.Accum (zeroUTCTime)
 
 
 type Text = ShortText

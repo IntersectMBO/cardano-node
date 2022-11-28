@@ -32,16 +32,16 @@ import           GHC.Generics
 import           Data.Aeson as A
 import qualified Data.Aeson.KeyMap as KeyMap
 import           Data.Kind
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 
 import           Data.Proxy
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Time.Clock
 
+import           Ouroboros.Network.IOManager (IOManager)
 import           Trace.Forward.Utils.DataPoint
 import           Trace.Forward.Utils.TraceObject
-import           Ouroboros.Network.IOManager (IOManager)
 
 import           Cardano.Api
 import           Cardano.Logging

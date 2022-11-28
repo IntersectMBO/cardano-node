@@ -5,17 +5,17 @@ module Cardano.Tracer.Analyze.Process
   , extractNamespace
   ) where
 
-import           Cardano.Tracer.Analyze.Types     (FileDBM (..), LineNumber)
+import           Cardano.Tracer.Analyze.Types (FileDBM (..), LineNumber)
 
-import qualified Data.Aeson                       as AE
-import qualified Data.Aeson.KeyMap                as AE
+import qualified Data.Aeson as AE
+import qualified Data.Aeson.KeyMap as AE
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
-import qualified Data.ByteString.Char8            as BS
-import           Data.Either                      (partitionEithers)
-import           Data.Foldable                    (foldl')
-import qualified Data.Map                         as Map
-import qualified Data.Text                        as Txt
-import qualified Data.Vector                      as V
+import qualified Data.ByteString.Char8 as BS
+import           Data.Either (partitionEithers)
+import           Data.Foldable (foldl')
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as Txt
+import qualified Data.Vector as V
 
 parseAndPreprocess :: FilePath -> IO FileDBM
 parseAndPreprocess fp = do

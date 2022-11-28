@@ -8,7 +8,7 @@ import           Control.Monad (when)
 import qualified Data.Aeson as AE
 import           Data.ByteString.Lazy (toStrict)
 import           Data.List (nub, (\\))
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import           Data.Text (Text, drop, isPrefixOf, unpack)
 import           Data.Text.Encoding (decodeUtf8)
 
