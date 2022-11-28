@@ -118,7 +118,7 @@ def all_profile_variants:
         {
         }
       }
-    ) as $pparams_v5_to_v8
+    ) as $pparams_v7_to_v8
   |
   ##
   ### Definition vocabulary:  chain
