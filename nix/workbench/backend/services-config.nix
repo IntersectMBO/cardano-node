@@ -4,7 +4,6 @@
 , basePort              ? 30000
 , stateDir              ? "run/current"
 , useCabalRun           ? false
-, enableEKG             ? true
 }:
 with lib;
 {
@@ -68,16 +67,6 @@ with lib;
               ShelleyGenesisFile   = "./genesis/genesis-shelley.json";
               ByronGenesisFile     = "./genesis/byron/genesis.json";
             }
-            // optionalAttrs enableEKG
-            (let portShiftEkg        = 100;
-                 portShiftPrometheus = 200;
-            in {
-              hasEKG = port + portShiftEkg;
-              hasPrometheus = ["127.0.0.1" (port + portShiftPrometheus)];
-              setupBackends = [
-                "EKGViewBK"
-              ];
-            })
           );
 
       finaliseNodeArgs =

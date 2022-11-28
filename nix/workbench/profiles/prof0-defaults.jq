@@ -75,6 +75,7 @@ def era_defaults($era):
     , shutdown_on_slot_synced:        null
     , shutdown_on_block_synced:       null
     , tracing_backend:                "trace-dispatcher"  ## or "iohk-monitoring"
+    , ekg:                            false
     , tracer:                         true
     , verbatim:
       {

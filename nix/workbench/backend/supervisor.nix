@@ -10,7 +10,6 @@ in
 , cacheDir              ? cacheDirDefault
 , extraBackendConfig    ? {}
 , useCabalRun           ? false
-, enableEKG             ? true
 ##
 , ...
 }:
@@ -22,7 +21,7 @@ let
       # Unlike the nomad backend `useCabalRun` is honored here.
       inherit useCabalRun;
 
-      services-config = import ./services-config.nix {inherit lib workbench basePort stateDir useCabalRun enableEKG;};
+      services-config = import ./services-config.nix {inherit lib workbench basePort stateDir useCabalRun;};
 
       extraShellPkgs = with pkgs; [
         python3Packages.supervisor
