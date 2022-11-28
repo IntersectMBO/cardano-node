@@ -12,11 +12,10 @@ module Testnet.Shelley
   , hprop_testnet_pause
   ) where
 
-import           Prelude
 import           Control.Monad
-import           Control.Monad.IO.Class (MonadIO(liftIO))
-import           Control.Monad.Trans.Resource (MonadResource(liftResourceT), resourceForkIO)
-import           Data.Aeson (Value, ToJSON(toJSON))
+import           Control.Monad.IO.Class (MonadIO (liftIO))
+import           Control.Monad.Trans.Resource (MonadResource (liftResourceT), resourceForkIO)
+import           Data.Aeson (ToJSON (toJSON), Value)
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Functor
 import           Data.List ((\\))
@@ -24,9 +23,10 @@ import           Data.Maybe
 import           Data.String
 import           Data.Time.Clock (UTCTime)
 import           Hedgehog.Extras.Stock.Aeson (rewriteObject)
-import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket(..))
-import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter(..))
-import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint(..))
+import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
+import           Prelude
 import           System.FilePath.Posix ((</>))
 
 import qualified Cardano.Node.Configuration.Topology as NonP2P
@@ -35,7 +35,7 @@ import qualified Control.Concurrent as IO
 import qualified Data.Aeson as J
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
-import qualified Data.Map as M
+import qualified Data.Map.Strict as M
 import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.File as IO

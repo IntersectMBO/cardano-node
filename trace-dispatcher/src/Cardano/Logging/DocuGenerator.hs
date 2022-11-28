@@ -21,7 +21,7 @@ import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Tracer as T
 import           Data.IORef (modifyIORef, newIORef, readIORef)
 import           Data.List (groupBy, intersperse, nub, sortBy)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import           Data.Text (Text, pack, toLower)
 import qualified Data.Text as T
 import           Data.Text.Internal.Builder (toLazyText)
@@ -326,7 +326,7 @@ documentMarkdown (Documented documented) tracers = do
 
     documentMetrics :: [LogDoc] -> [([Text], DocuResult)]
     documentMetrics logDocs =
-      let nameCommentNamespaceList = 
+      let nameCommentNamespaceList =
             concatMap (\ld -> zip (Map.toList (ldMetricsDoc ld)) (repeat (ldNamespace ld))) logDocs
           sortedNameCommentNamespaceList =
             sortBy (\a b -> compare ((fst . fst) a) ((fst . fst) b)) nameCommentNamespaceList
@@ -336,7 +336,7 @@ documentMarkdown (Documented documented) tracers = do
 
     documentMetrics' :: [((Text, Text), [Namespace])] -> ([Text], DocuResult)
     documentMetrics' ncns@(((name, comment), _) : _tail) =
-      ([name], DocuMetric 
+      ([name], DocuMetric
               $ mconcat $ intersperse(fromText "\n\n")
                     [ metricToBuilder (name,comment)
                     , namespacesMetricsBuilder (nub (concatMap snd ncns))
@@ -415,7 +415,7 @@ documentMarkdown (Documented documented) tracers = do
                  l))
 
     -- metricsBuilder :: (Text, Text) -> [(Text, Builder)]
-    -- metricsBuilder (name, t) = (name, metricFormatToText t) 
+    -- metricsBuilder (name, t) = (name, metricFormatToText t)
 
     metricToBuilder :: (Text, Text) -> Builder
     metricToBuilder (name, text) =

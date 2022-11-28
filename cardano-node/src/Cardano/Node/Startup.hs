@@ -11,7 +11,7 @@ import qualified Cardano.Api as Api
 import           Prelude
 
 import           Data.Aeson (FromJSON, ToJSON)
-import           Data.Map (Map)
+import           Data.Map.Strict (Map)
 import           Data.Monoid (Last (..), getLast)
 import           Data.Text (Text, pack)
 import           Data.Time.Clock (NominalDiffTime, UTCTime)

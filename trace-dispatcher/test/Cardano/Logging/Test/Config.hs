@@ -7,7 +7,7 @@ module Cardano.Logging.Test.Config (
   , config4
   ) where
 
-import           Data.Map (fromList)
+import           Data.Map.Strict (fromList)
 import           Test.QuickCheck
 
 import           Cardano.Logging

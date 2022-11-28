@@ -2,8 +2,8 @@ module Cardano.Node.Tracing.DefaultTraceConfig
   ( defaultCardanoConfig
   ) where
 
+import qualified Data.Map.Strict as Map
 import           Prelude
-import qualified Data.Map as Map
 
 import           Cardano.Logging
 

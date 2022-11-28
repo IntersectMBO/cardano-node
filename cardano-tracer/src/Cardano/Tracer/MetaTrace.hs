@@ -21,18 +21,18 @@ module Cardano.Tracer.MetaTrace
   ) where
 
 import qualified "trace-dispatcher" Control.Tracer as T
-import Data.Aeson (ToJSON (..), (.=))
-import Data.Aeson qualified as AE
-import Data.Function
-import Data.Map qualified as Map
-import Data.Text (Text)
-import Data.Text qualified as T
-import GHC.Generics
+import           Data.Aeson (ToJSON (..), (.=))
+import qualified Data.Aeson as AE
+import           Data.Function
+import qualified Data.Map.Strict as Map
+import           Data.Text (Text)
+import qualified Data.Text as T
+import           GHC.Generics
 import qualified System.IO as Sys
 
-import Cardano.Logging
+import           Cardano.Logging
 
-import Cardano.Tracer.Configuration
+import           Cardano.Tracer.Configuration
 
 
 ctorTracerTrace :: TracerTrace -> Text

@@ -8,7 +8,7 @@ module Examples.Configuration (
 import           Control.Monad.IO.Class
 import qualified Data.Aeson as AE
 import qualified Data.Aeson.KeyMap as KeyMap
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
 
 import           Cardano.Logging

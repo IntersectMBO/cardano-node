@@ -18,7 +18,7 @@ import           Control.Monad (when)
 import           Data.Functor.Identity
 import           Data.IORef
 import           Data.List (sort)
-import           Data.Map (fromList)
+import           Data.Map.Strict (fromList)
 import           Data.Maybe
 import           System.FilePath.Glob
 

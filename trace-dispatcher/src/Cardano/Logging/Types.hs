@@ -52,8 +52,8 @@ import qualified Data.Aeson as AE
 import qualified Data.Aeson.Text as AE
 import qualified Data.HashMap.Strict as HM
 import           Data.IORef
-import           Data.Map (Map)
-import qualified Data.Map as Map
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import qualified Data.Map.Strict as SMap
 
 import           Data.Text (Text, pack, unpack)
