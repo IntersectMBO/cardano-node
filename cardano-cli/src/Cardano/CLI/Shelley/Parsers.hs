@@ -2072,7 +2072,7 @@ pCardanoEra = asum
       )
   , Opt.flag' (AnyCardanoEra MaryEra)
       (  Opt.long "mary-era"
-      <> Opt.help "Specify the Mary era (default)"
+      <> Opt.help "Specify the Mary era"
       )
   , Opt.flag' (AnyCardanoEra AlonzoEra)
       (  Opt.long "alonzo-era"
@@ -2080,7 +2080,7 @@ pCardanoEra = asum
       )
   , Opt.flag' (AnyCardanoEra BabbageEra)
       (  Opt.long "babbage-era"
-      <> Opt.help "Specify the Babbage era"
+      <> Opt.help "Specify the Babbage era (default)"
       )
     -- Default for now:
   , pure (AnyCardanoEra BabbageEra)
