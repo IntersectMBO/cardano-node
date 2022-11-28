@@ -201,11 +201,11 @@ data TransactionCmd
       (Maybe Word)
       -- ^ Override the required number of tx witnesses
       [(TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
-      -- ^ Read only reference inputs
-      [TxIn]
-      -- ^ Required signers
-      [RequiredSigner]
       -- ^ Transaction inputs with optional spending scripts
+      [TxIn]
+      -- ^ Read only reference inputs
+      [RequiredSigner]
+      -- ^ Required signers
       [TxIn]
       -- ^ Transaction inputs for collateral, only key witnesses, no scripts.
       (Maybe TxOutAnyEra)
