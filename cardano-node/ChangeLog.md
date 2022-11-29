@@ -1,5 +1,25 @@
 # Changelog for cardano-node
 
+## 1.36.0 -- November 2022
+
+### node changes
+
+ - Bumped cardano-ledger to 0.1
+ - Bumped plutus-core to 1.0
+ - Bumped ouroboros-network to commit 72863b0
+
+### consensus changes
+
+TODO
+
+### network changes
+
+TODO
+
+### ledger changes
+
+TODO
+
 ## 1.35.5 -- November 2022
 
 ### node changes
