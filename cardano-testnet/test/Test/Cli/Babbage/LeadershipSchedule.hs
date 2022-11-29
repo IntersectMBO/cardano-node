@@ -38,9 +38,9 @@ import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
 import qualified System.Info as SYS
-import           Testnet ( TestnetOptions (BabbageOnlyTestnetOptions), testnet)
-import           Testnet.Babbage (BabbageTestnetOptions (..))
+import           Testnet (TestnetOptions (BabbageOnlyTestnetOptions), testnet)
 import qualified Testnet.Babbage as TC
+import           Testnet.Babbage (BabbageTestnetOptions (..))
 import qualified Testnet.Conf as H
 import qualified Util.Assert as H
 import qualified Util.Base as H
@@ -86,9 +86,10 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
     , H.execConfigCwd = Last $ Just tempBaseAbsPath
     }
 
-  tipDeadline <- H.noteShowM $ DTC.addUTCTime 180 <$> H.noteShowIO DTC.getCurrentTime
+  tipDeadline <- H.noteShowM $ DTC.addUTCTime 210 <$> H.noteShowIO DTC.getCurrentTime
 
-  H.assertByDeadlineMCustom "stdout does not contain \"until genesis start time\"" tipDeadline $ do
+  -- stdout must contain \"until genesis start time\""
+  H.byDeadlineM 10 tipDeadline $ do
     H.threadDelay 5000000
     void $ H.execCli' execConfig
       [ "query", "tip"
@@ -104,7 +105,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
       Just currEpoch -> return currEpoch
 
     H.note_ $ "Current Epoch: " <> show currEpoch
-    return (currEpoch > 2)
+    H.assert $ currEpoch > 2
 
   stakePoolId <- filter ( /= '\n') <$> H.execCli
     [ "stake-pool", "id"
@@ -173,6 +174,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
     scheduleJson <- H.leftFailM $ H.readJsonFile scheduleFile
 
     expectedLeadershipSlotNumbers <- H.noteShowM $ fmap (fmap slotNumber) $ H.leftFail $ J.parseEither (J.parseJSON @[LeadershipSlot]) scheduleJson
+    maxSlotExpected <- H.noteShow $ maximum expectedLeadershipSlotNumbers
 
     H.assert $ not (L.null expectedLeadershipSlotNumbers)
 
@@ -180,7 +182,6 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
 
     H.assertByDeadlineMCustom "Retrieve actual slots" leadershipDeadline $ do
       leaderSlots <- H.getRelevantLeaderSlots (TR.poolNodeStdout poolNode1) (minimum expectedLeadershipSlotNumbers)
-      maxSlotExpected <- H.noteShow $ maximum expectedLeadershipSlotNumbers
       if L.null leaderSlots
         then return False
         else do

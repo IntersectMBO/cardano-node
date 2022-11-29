@@ -19,10 +19,10 @@ module Testnet.Babbage
   , babbageTestnet
   ) where
 
-import           Prelude
 import           Control.Monad
 import           Data.Aeson (encode, object, toJSON, (.=))
 import           Hedgehog.Extras.Stock.Time (showUTCTimeSeconds)
+import           Prelude
 import           System.FilePath.Posix ((</>))
 
 import qualified Data.HashMap.Lazy as HM
@@ -34,12 +34,12 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified System.Info as OS
 
+import qualified Testnet.Conf as H
 import qualified Util.Assert as H
 import           Util.Process (execCli_)
 import           Util.Runtime (Delegator (..), NodeLoggingFormat (..), PaymentKeyPair (..),
-                   PoolNode (PoolNode), PoolNodeKeys (..), StakingKeyPair (..),
-                   TestnetRuntime (..), startNode)
-import qualified Testnet.Conf as H
+                   PoolNode (PoolNode), PoolNodeKeys (..), StakingKeyPair (..), TestnetRuntime (..),
+                   startNode)
 
 
 
@@ -335,7 +335,7 @@ babbageTestnet testnetOptions H.Conf {..} = do
     return $ PoolNode runtime key
 
   now <- H.noteShowIO DTC.getCurrentTime
-  deadline <- H.noteShow $ DTC.addUTCTime 90 now
+  deadline <- H.noteShow $ DTC.addUTCTime 110 now
 
   forM_ spoNodes $ \node -> do
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"

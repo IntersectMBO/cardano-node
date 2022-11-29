@@ -132,6 +132,7 @@ assertByDeadlineIOCustom str deadline f = GHC.withFrozenCallStack $ do
   success <- liftIO f
   unless success $ do
     currentTime <- liftIO DTC.getCurrentTime
+    note_ $ "Current time: " <> show currentTime
     if currentTime < deadline
       then do
         liftIO $ IO.threadDelay 1000000
