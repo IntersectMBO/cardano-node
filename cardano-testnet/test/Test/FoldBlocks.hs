@@ -1,28 +1,29 @@
-{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Test.FoldBlocks where
 
-import Prelude
-import System.FilePath ((</>))
-import qualified System.Directory as IO
 import qualified Control.Concurrent as IO
-import           Control.Monad (forever)
-import           Control.Monad.Trans.Except (runExceptT)
-import           Control.Monad.IO.Class (liftIO)
-import qualified Data.Text as TS
 import           Control.Concurrent.Async (async, link)
 import           Control.Exception (Exception, throw)
+import           Control.Monad (forever)
+import           Control.Monad.IO.Class (liftIO)
+import           Control.Monad.Trans.Except (runExceptT)
+import qualified Data.Text as TS
+import           Prelude
+import qualified System.Directory as IO
+import           System.FilePath ((</>))
 
 import qualified Hedgehog as H
-import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test as HE
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as HE
-import Test.Tasty.Hedgehog (testPropertyNamed)
-import Test.Tasty (TestTree, testGroup)
+import qualified Hedgehog.Extras.Test as HE
+import qualified Hedgehog.Extras.Test.Base as H
+import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.Hedgehog (testPropertyNamed)
 
 import qualified Cardano.Api as C
 import qualified Testnet.Cardano as TN
-import qualified Testnet.Conf as TC (Conf (..), ProjectBase (ProjectBase), YamlFilePath (YamlFilePath), mkConf)
+import qualified Testnet.Conf as TC (Conf (..), ProjectBase (ProjectBase),
+                   YamlFilePath (YamlFilePath), mkConf)
 import qualified Util.Base as U
 import qualified Util.Runtime as U
 

@@ -14,9 +14,9 @@ import qualified Test.Tasty.Ingredients as T
 --import qualified Test.Cli.Alonzo.LeadershipSchedule
 import qualified Test.Cli.Babbage.LeadershipSchedule
 import qualified Test.Cli.KesPeriodInfo
+import qualified Test.FoldBlocks
 import qualified Test.Node.Shutdown
 import qualified Test.ShutdownOnSlotSynced
-import qualified Test.FoldBlocks
 import qualified Util.Ignore as H
 
 tests :: IO TestTree
