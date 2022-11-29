@@ -16,6 +16,7 @@ module Cardano.Benchmarking.Script.Env (
         , runActionM
         , runActionMEnv
         , liftTxGenError
+        , liftIOSafe
         , askIOManager
         , traceDebug
         , traceError
@@ -104,6 +105,8 @@ deriving instance Show Error
 liftTxGenError :: TxGenError -> ActionM a
 liftTxGenError = throwE . Cardano.Benchmarking.Script.Env.TxGenError
 
+liftIOSafe :: IO (Either TxGenError a) -> ActionM a
+liftIOSafe a = liftIO a >>= either liftTxGenError pure
 
 askIOManager :: ActionM IOManager
 askIOManager = lift RWS.ask

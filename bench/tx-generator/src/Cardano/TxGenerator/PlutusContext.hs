@@ -4,7 +4,7 @@
 
 module  Cardano.TxGenerator.PlutusContext
         ( plutusAutoBudgetMaxOut
-        , readRedeemer
+        , readScriptData
         , scriptDataModifyNumber
         )
         where
@@ -19,13 +19,15 @@ import           Cardano.TxGenerator.Setup.Plutus (preExecutePlutusScript)
 import           Cardano.TxGenerator.Types
 
 
--- | load a redeemer for the script
-readRedeemer :: FilePath -> IO (Either TxGenError ScriptRedeemer)
-readRedeemer redeemerPath
+-- | load serialized ScriptData, filling in an empty value if no .json file is given
+readScriptData :: FilePath -> IO (Either TxGenError ScriptData)
+readScriptData ""
+  = pure $ Right $ ScriptDataNumber 0             -- TODO: make sure this is an adequate empty value
+readScriptData jsonFilePath
   = runExceptT $ do
     sData :: Aeson.Value <-
       firstExceptT TxGenError . hoistEither =<<
-        handleIOExceptT (TxGenError . show) (eitherDecodeFileStrict' redeemerPath)
+        handleIOExceptT (TxGenError . show) (eitherDecodeFileStrict' jsonFilePath)
     firstExceptT ApiError . hoistEither $
        scriptDataFromJson ScriptDataJsonDetailedSchema sData
 

@@ -94,7 +94,7 @@ main
       Right (nixService, _nc, genesis, sigKey) -> do
         putStrLn $ "* Did I manage to extract a genesis fund?\n--> " ++ show (checkFund genesis sigKey)
         putStrLn "* Can I pre-execute a plutus script?"
-        checkPlutusLoop (_nix_plutusLoopScript nixService)
+        checkPlutusLoop (_nix_plutus nixService)
         exitSuccess
 
 checkFund ::
@@ -104,21 +104,19 @@ checkFund ::
 checkFund = genesisInitialFundForKey Mainnet
 
 checkPlutusLoop ::
-     FilePath
+     Maybe TxGenPlutusParams
   -> IO ()
-checkPlutusLoop ""
-  = putStrLn "--> No plutus script defined."
-checkPlutusLoop scriptPath
+checkPlutusLoop (Just PlutusOn{..})
   = do
     parametersFile <- getDataFileName "data/protocol-parameters-v8.json"
     protocolParameters <- either die pure =<< eitherDecodeFileStrict' parametersFile
-    script <- either (die . show) pure =<< readPlutusScript scriptPath
-    putStrLn $ "--> Read plutus script: " ++ scriptPath
+    script <- either (die . show) pure =<< readPlutusScript plutusScript
+    putStrLn $ "--> Read plutus script: " ++ plutusScript
 
     let count = 1792        -- arbitrary counter for a loop script; should respect mainnet limits
 
     redeemerFile <- getRedeemerFile
-    redeemer <- readRedeemer redeemerFile >>= \case
+    redeemer <- readScriptData redeemerFile >>= \case
       Left err -> die (show err)
       Right redeemer -> do
         putStrLn $ "--> read redeemer: " ++ redeemerFile
@@ -140,9 +138,10 @@ checkPlutusLoop scriptPath
 
   where
     getRedeemerFile =
-      let redeemerPath = (<.> ".redeemer.json") $ dropExtension $ takeFileName scriptPath
+      let redeemerPath = (<.> ".redeemer.json") $ dropExtension $ takeFileName plutusScript
       in getDataFileName $ "data" </> redeemerPath
-
+checkPlutusLoop _
+  = putStrLn "--> No plutus script defined."
 
 readFileJson :: FromJSON a => FilePath -> ExceptT TxGenError IO a
 readFileJson f = handleIOExceptT (TxGenError . show) (eitherDecodeFileStrict' f) >>= firstExceptT TxGenError . hoistEither

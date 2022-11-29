@@ -379,8 +379,7 @@ makePlutusContext :: forall era. IsShelleyBasedEra era
   -> ActionM (Witness WitCtxTxIn era, ScriptInAnyLang, ScriptData, Lovelace)
 makePlutusContext scriptSpec = do
   protocolParameters <- getProtocolParameters
-  script <- either liftTxGenError pure =<<
-    liftIO (Plutus.readPlutusScript $ scriptSpecFile scriptSpec)
+  script <- liftIOSafe $ Plutus.readPlutusScript $ scriptSpecFile scriptSpec
 
   executionUnitPrices <- case protocolParamPrices protocolParameters of
     Just x -> return x
@@ -392,19 +391,21 @@ makePlutusContext scriptSpec = do
   traceDebug $ "Plutus auto mode : Available budget per TX: " ++ show perTxBudget
 
   (scriptData, scriptRedeemer, executionUnits) <- case scriptSpecBudget scriptSpec of
-    StaticScriptBudget sdata redeemer units -> return (sdata, redeemer, units)
-    CheckScriptBudget sdata redeemer unitsWant -> do
-      unitsPreRun <- preExecuteScriptAction protocolParameters script sdata redeemer
-      if unitsWant == unitsPreRun
-         then return (sdata, redeemer, unitsWant)
-         else throwE $ WalletError $ concat [
+    StaticScriptBudget sDataFile redeemerFile units withCheck -> do
+      sData <- liftIOSafe $ readScriptData sDataFile
+      redeemer <-liftIOSafe $ readScriptData redeemerFile
+      when withCheck $ do
+        unitsPreRun <- preExecuteScriptAction protocolParameters script sData redeemer
+        unless (units == unitsPreRun) $
+          throwE $ WalletError $ concat [
               " Stated execution Units do not match result of pre execution. "
-            , " Stated value : ", show unitsWant
+            , " Stated value : ", show units
             , " PreExecution result : ", show unitsPreRun
             ]
+      return (sData, redeemer, units)
+
     AutoScript redeemerFile budgetFraction -> do
-      redeemer <- either liftTxGenError pure =<<
-        liftIO (readRedeemer redeemerFile)
+      redeemer <- liftIOSafe $ readScriptData redeemerFile
       let
         budget = ExecutionUnits
                     (executionSteps perTxBudget  `div` fromIntegral budgetFraction)

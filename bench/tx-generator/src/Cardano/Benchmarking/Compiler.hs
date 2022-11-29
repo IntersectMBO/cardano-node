@@ -1,12 +1,14 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RecordWildCards #-}
+
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
+
 module Cardano.Benchmarking.Compiler
 where
 
 import           Prelude
 
-import           Control.Applicative (liftA2)
 import           Control.Monad
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Except
@@ -14,6 +16,8 @@ import           Control.Monad.Trans.RWS.CPS
 import           Data.ByteString as BS (ByteString)
 import           Data.DList (DList)
 import qualified Data.DList as DL
+import           Data.Functor ((<&>))
+import           Data.Maybe
 import           Data.Text (Text)
 import qualified Data.Text as Text
 
@@ -21,7 +25,7 @@ import           Cardano.Api
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.TxGenerator.Setup.NixService
 import           Cardano.TxGenerator.Setup.SigningKey
-import           Cardano.TxGenerator.Types (TxGenTxParams (..))
+import           Cardano.TxGenerator.Types
 
 data CompileError where
   SomeCompilerError :: String -> CompileError
@@ -132,21 +136,24 @@ splittingPhase srcWallet = do
 
   plutusPayMode :: DstWallet -> Compiler PayMode
   plutusPayMode dst = do
-    autoMode <- isPlutusAutoMode
-    scriptSpec <- if autoMode
-      then askNixOption _nix_plutusRedeemerSerialized >>= \case
-        Nothing -> throwCompileError $ SomeCompilerError "Plutus loop autoscript requires a filepath to .json as plutusRedeemerSerialized"
+    ~(Just plutus@PlutusOn{..}) <- askNixOption _nix_plutus
+    scriptSpec <- if plutusType == LimitSaturationLoop
+      then case plutusRedeemer of
+        Nothing -> throwCompileError $ SomeCompilerError "Plutus loop autoscript requires a redeemer."
         Just redeemer -> do
           autoScript <- AutoScript redeemer <$> askNixOption _nix_inputs_per_tx
-          ScriptSpec <$> askNixOption _nix_plutusLoopScript <*> pure autoScript
-      else do
-        executionUnits <- ExecutionUnits <$> askNixOption _nix_executionMemory <*> askNixOption _nix_executionSteps
-        debugMode <- askNixOption _nix_debugMode
-        budget <- (if debugMode then CheckScriptBudget else StaticScriptBudget)
-                    <$> (ScriptDataNumber <$> askNixOption _nix_plutusData)
-                    <*> (ScriptDataNumber <$> askNixOption _nix_plutusRedeemer)
-                    <*> pure executionUnits
-        ScriptSpec <$> askNixOption _nix_plutusScript <*> pure budget
+          pure $ ScriptSpec plutusScript autoScript
+      else case hasStaticBudget plutus of
+        Nothing ->  throwCompileError $ SomeCompilerError "Plutus custom script requires a static budget."
+        Just executionUnits -> do
+          debugMode <- askNixOption _nix_debugMode
+          let
+            budget = StaticScriptBudget
+                     (fromMaybe "" plutusDatum)
+                     (fromMaybe "" plutusRedeemer)
+                      executionUnits
+                      debugMode
+          pure $ ScriptSpec plutusScript budget
     return $ PayToScript scriptSpec dst
 
 -- Generate src and dst wallet names for a splitSequence.
@@ -209,7 +216,7 @@ data Fees = Fees {
 evilFeeMagic :: Compiler Fees
 evilFeeMagic = do
   (Quantity tx_fee) <- lovelaceToQuantity <$> askNixOption _nix_tx_fee
-  plutusMode <- askNixOption _nix_plutusMode
+  plutusMode <- isPlutusType CustomScript
   inputs_per_tx <- askNixOption _nix_inputs_per_tx
   outputs_per_tx <- askNixOption _nix_outputs_per_tx
   (Quantity min_utxo_value)  <- lovelaceToQuantity <$> askNixOption _nix_min_utxo_value
@@ -243,14 +250,15 @@ askNixOption = asks
 delay :: Compiler ()
 delay = cmd1 Delay _nix_init_cooldown
 
-isPlutusMode :: Compiler Bool
-isPlutusMode = askNixOption _nix_plutusMode
-
-isPlutusAutoMode :: Compiler Bool
-isPlutusAutoMode = askNixOption _nix_plutusAutoMode
+isPlutusType :: TxGenPlutusType -> Compiler Bool
+isPlutusType t
+  = askNixOption _nix_plutus <&> \case
+      Just PlutusOn{plutusType = t'} -> t == t'
+      _ -> False
 
 isAnyPlutusMode :: Compiler Bool
-isAnyPlutusMode = liftA2 (||) isPlutusMode isPlutusAutoMode
+isAnyPlutusMode
+  = isJust <$> askNixOption _nix_plutus
 
 newIdentifier :: String -> Compiler String
 newIdentifier prefix = do

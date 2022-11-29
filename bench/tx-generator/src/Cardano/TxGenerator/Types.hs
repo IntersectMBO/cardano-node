@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
@@ -8,6 +10,7 @@ module  Cardano.TxGenerator.Types
         (module Cardano.TxGenerator.Types)
         where
 
+import           GHC.Generics (Generic)
 import           GHC.Natural
 
 import           Cardano.Api
@@ -77,19 +80,32 @@ data TxGenConfig = TxGenConfig
   deriving (Show, Eq)
 
 
-data TxGenPlutusParams =
-    PlutusOn                            -- ^ Generate Txs for a Plutus script with explicit settings
-      { plutusScript      :: !FilePath  -- ^ Path to the Plutus script
-      , plutusData        :: !Integer   -- ^ Data passed to the Plutus script (for now only an int)
-      , plutusRedeemer    :: !Integer   -- ^ Redeemer data passed to the Plutus script (for now only an int)
-      , plutusExecMemory  :: !Natural   -- ^ Max. memory available for the Plutus script
-      , plutusExecSteps   :: !Natural   -- ^ Max. execution steps available for the Plutus script
+data TxGenPlutusType
+  = LimitSaturationLoop                         -- ^ Generate Txs for a Plutus loop script, choosing settings to max out per Tx script budget
+  | CustomScript
+  deriving (Show, Eq, Enum, Generic, FromJSON, ToJSON)
+
+data TxGenPlutusParams
+  = PlutusOn                                    -- ^ Generate Plutus Txs for given script
+      { plutusType        :: !TxGenPlutusType
+      , plutusScript      :: !FilePath          -- ^ Path to the Plutus script
+      , plutusDatum       :: !(Maybe FilePath)  -- ^ Datum passed to the Plutus script (JSON file in ScriptData schema)
+      , plutusRedeemer    :: !(Maybe FilePath)  -- ^ Redeemer passed to the Plutus script (JSON file in ScriptData schema)
+      , plutusExecMemory  :: !(Maybe Natural)   -- ^ Max. memory for ExecutionUnits (overriding corresponding protocol parameter)
+      , plutusExecSteps   :: !(Maybe Natural)   -- ^ Max. steps for ExecutionUnits (overriding corresponding protocol parameter)
       }
-  | PlutusAuto                          -- ^ Generate Txs for a Plutus loop script, choosing settings to max out per Tx script budget
-      { plutusAutoScript  :: !FilePath  -- ^ Path to the Plutus script
-      }
-  | PlutusOff                           -- ^ Do not generate Plutus Txs
+  | PlutusOff                                   -- ^ Do not generate Plutus Txs
   deriving (Show, Eq)
+
+isPlutusMode :: TxGenPlutusParams -> Bool
+isPlutusMode
+  = (/= PlutusOff)
+
+hasStaticBudget :: TxGenPlutusParams -> Maybe ExecutionUnits
+hasStaticBudget
+  = \case
+    PlutusOn{plutusExecMemory = m, plutusExecSteps = s} -> ExecutionUnits <$> s <*> m
+    _ -> Nothing
 
 data PlutusAutoBudget
   = PlutusAutoBudget                           -- ^ Specifies a budget and parameters for a PlutusAuto loop script

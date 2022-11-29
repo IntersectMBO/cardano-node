@@ -16,7 +16,7 @@ module Cardano.Benchmarking.Script.Types (
         , PayMode(PayToAddr, PayToScript)
         , ProtocolParameterMode(..)
         , ProtocolParametersSource(QueryLocalNode, UseLocalProtocolFile)
-        , ScriptBudget(AutoScript, CheckScriptBudget, StaticScriptBudget)
+        , ScriptBudget(AutoScript, StaticScriptBudget)
         , ScriptSpec(ScriptSpec, scriptSpecFile, scriptSpecBudget)
         , SubmitMode(Benchmark, DiscardTX, DumpToFile, LocalSocket,
                 NodeToNode)
@@ -101,8 +101,7 @@ data PayMode where
 deriving instance Generic PayMode
 
 data ScriptBudget where
-  StaticScriptBudget :: !ScriptData -> !ScriptRedeemer -> !ExecutionUnits -> ScriptBudget
-  CheckScriptBudget  :: !ScriptData -> !ScriptRedeemer -> !ExecutionUnits -> ScriptBudget
+  StaticScriptBudget :: !FilePath -> !FilePath -> !ExecutionUnits -> !Bool -> ScriptBudget
   AutoScript :: !FilePath -> !Int -> ScriptBudget
   deriving (Show, Eq)
 deriving instance Generic ScriptBudget

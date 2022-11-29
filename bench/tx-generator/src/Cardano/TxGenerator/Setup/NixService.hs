@@ -1,6 +1,9 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
+
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Cardano.TxGenerator.Setup.NixService
        ( NixServiceOptions(..)
        , getNodeConfigFile
@@ -13,8 +16,8 @@ module Cardano.TxGenerator.Setup.NixService
 
 import           Data.Aeson
 import           Data.List.NonEmpty (NonEmpty)
+import           Data.Maybe (fromMaybe)
 import           GHC.Generics (Generic)
-import           GHC.Natural
 
 import           Cardano.CLI.Types (SigningKeyFile (..))
 import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
@@ -35,16 +38,8 @@ data NixServiceOptions = NixServiceOptions {
   , _nix_min_utxo_value   :: Lovelace
   , _nix_add_tx_size      :: TxAdditionalSize
   , _nix_init_cooldown    :: Double
-  , _nix_plutusAutoMode   :: Bool
-  , _nix_plutusLoopScript :: FilePath
   , _nix_era              :: AnyCardanoEra
-  , _nix_plutusMode       :: Bool
-  , _nix_plutusScript     :: String
-  , _nix_plutusData       :: Integer
-  , _nix_plutusRedeemer   :: Integer
-  , _nix_plutusRedeemerSerialized :: Maybe FilePath     -- ^ a .json file conforming to Cadano.Api.ScriptData (ScriptDataJsonDetailedSchema)
-  , _nix_executionMemory  :: Natural
-  , _nix_executionSteps   :: Natural
+  , _nix_plutus           :: Maybe TxGenPlutusParams
   , _nix_nodeConfigFile       :: Maybe FilePath
   , _nix_cardanoTracerSocket  :: Maybe FilePath
   , _nix_sigKey               :: SigningKeyFile
@@ -72,11 +67,24 @@ instance FromJSON NixServiceOptions where
   parseJSON = genericParseJSON jsonOptions
 
 instance AdjustFilePaths NixServiceOptions where
-    adjustFilePaths f opts
-      = opts {
-          _nix_nodeConfigFile = f <$> _nix_nodeConfigFile opts
-        , _nix_sigKey = SigningKeyFile . f . unSigningKeyFile $ _nix_sigKey opts
-        }
+  adjustFilePaths f opts
+    = opts {
+      _nix_nodeConfigFile = f <$> _nix_nodeConfigFile opts
+    , _nix_sigKey = SigningKeyFile . f . unSigningKeyFile $ _nix_sigKey opts
+    }
+
+
+-- | This deserialization is not a general one for that type, but custom-tailored
+--   to the service definition in: nix/nixos/tx-generator-service.nix
+instance FromJSON TxGenPlutusParams where
+  parseJSON = withObject "TxGenPlutusParams" $ \o ->
+    PlutusOn
+      <$> o .: "type"
+      <*> o .: "script"
+      <*> o .:? "datum"
+      <*> o .:? "redeemer"
+      <*> o .:? "limitExecutionMem"
+      <*> o .:? "limitExecutionSteps"
 
 
 ---- mapping of Nix service options to API types
@@ -91,8 +99,8 @@ txGenTxParams NixServiceOptions{..}
 
 txGenConfig :: NixServiceOptions -> TxGenConfig
 txGenConfig NixServiceOptions{..}
-  = TxGenConfig
-  { confMinUtxoValue = _nix_min_utxo_value
+  = TxGenConfig {
+    confMinUtxoValue = _nix_min_utxo_value
   , confTxsPerSecond = _nix_tps
   , confInitCooldown = _nix_init_cooldown
   , confTxsInputs = _nix_inputs_per_tx
@@ -100,15 +108,5 @@ txGenConfig NixServiceOptions{..}
   }
 
 txGenPlutusParams :: NixServiceOptions -> TxGenPlutusParams
-txGenPlutusParams NixServiceOptions{..}
-  | _nix_plutusAutoMode = PlutusAuto _nix_plutusLoopScript
-  | _nix_plutusMode = plutusOn
-  | otherwise = PlutusOff
-  where
-    plutusOn = PlutusOn {
-      plutusScript = _nix_plutusScript
-    , plutusData = _nix_plutusData
-    , plutusRedeemer = _nix_plutusRedeemer
-    , plutusExecMemory = _nix_executionMemory
-    , plutusExecSteps = _nix_executionSteps
-    }
+txGenPlutusParams
+  = fromMaybe PlutusOff . _nix_plutus
