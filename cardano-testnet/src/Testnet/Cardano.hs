@@ -17,10 +17,13 @@ module Testnet.Cardano
   , cardanoTestnet
   ) where
 
-import           Prelude
+import qualified Cardano.Crypto.Hash.Blake2b
+import qualified Cardano.Crypto.Hash.Class
 import           Control.Monad
-import           Control.Monad.IO.Class (liftIO, MonadIO)
+import           Control.Monad.IO.Class (MonadIO, liftIO)
+import           Control.Monad.Trans.Except
 import           Data.Aeson ((.=))
+import qualified Data.ByteString as BS
 import           Data.ByteString.Lazy (ByteString)
 import           Data.List ((\\))
 import           Data.Maybe
@@ -30,15 +33,12 @@ import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Hedgehog.Extras.Stock.Time (formatIso8601, showUTCTimeSeconds)
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
+import           Prelude
 import           System.FilePath.Posix ((</>))
-import           Control.Monad.Trans.Except
-import qualified Data.ByteString as BS
-import qualified Cardano.Crypto.Hash.Class
-import qualified Cardano.Crypto.Hash.Blake2b
 
+import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesisData)
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
-import           Cardano.Chain.Genesis (readGenesisData, GenesisHash(unGenesisHash))
 import qualified Data.Aeson as J
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
@@ -58,8 +58,8 @@ import qualified System.Info as OS
 import qualified Util.Assert as H
 import qualified Util.Process as H
 import           Util.Process (execCli_)
-import           Util.Runtime as TR (NodeLoggingFormat (..), PaymentKeyPair (..), PoolNode (PoolNode),
-                   PoolNodeKeys (..), TestnetRuntime (..), startNode)
+import           Util.Runtime as TR (NodeLoggingFormat (..), PaymentKeyPair (..),
+                   PoolNode (PoolNode), PoolNodeKeys (..), TestnetRuntime (..), startNode)
 
 import qualified Testnet.Conf as H
 
