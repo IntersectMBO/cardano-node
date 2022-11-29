@@ -56,6 +56,7 @@ usage_analyse() {
     $(helpopt --dump-slots)       Machperf:  dump filtered slots (JSON)
     $(helpopt --multi-overall)    Multirun:  Overall dataset statistical summary
     $(helpopt --multi-inter-cdf)  Multirun:  Inter-sample (i.e. inter-CDF) stats
+    $(helpopt --force-prepare)    Logs:  force re-prefiltering & manifest collection
 EOF
 }
 analysis_allowed_loanys=(
@@ -69,7 +70,7 @@ analyse_default_op='standard'
 analyse() {
 local filters=() filter_exprs=() filter_reasons= chain_errors= aws= sargs=() unfiltered= perf_omit_hosts=()
 local dump_logobjects= dump_machviews= dump_chain= dump_slots_raw= dump_slots=
-local multi_aspect='--inter-cdf' rtsmode=
+local multi_aspect='--inter-cdf' rtsmode= force_prepare=
 locli_args=()
 
 progress "analyse" "args:  $(yellow $*)"
@@ -95,6 +96,7 @@ do case "$1" in
        --rtsmode-lomem | --lomem ) sargs+=($1);    rtsmode='lomem';;
        --rtsmode-hipar )           sargs+=($1);    rtsmode='hipar';;
        --perf-omit-host )          sargs+=($1 "$2"); perf_omit_hosts+=($2); shift;;
+       --force-prepare | -fp )     sargs+=($1);    force_prepare='true';;
        --trace )                   sargs+=($1);    set -x;;
        * ) break;; esac; shift; done
 
@@ -263,7 +265,7 @@ case "$op" in
 
     performance-host | perf-host )
         local usage="USAGE: wb analyse $op HOST"
-        local host=${1:?usage}; shift
+        local host=${1:?$usage}; shift
 
         local script=(
             logs               'dump-logobjects'
@@ -284,7 +286,7 @@ case "$op" in
         local usage="USAGE: wb analyse $op OP [-opt-flag] [--long-option OPTVAL] RUNS.."
         ## Meaning: map OP over RUNS, optionally giving flags/options to OP
 
-        local preop=${1:?usage}; shift
+        local preop=${1:?$usage}; shift
         local runs=($(expand_runspecs $*))
 
         local op_split=($preop)
@@ -355,7 +357,7 @@ case "$op" in
 
         local v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 va vb vc vd ve vf vg vh vi vj vk vl vm vn vo
         v0=( $* )
-        v1=("${v0[@]/#logs/                 'unlog' --host-from-log-filename ${analysis_allowed_loanys[*]/#/--ok-loany } ${logfiles[*]/#/--log }  }")
+        v1=("${v0[@]/#logs/                 'unlog' --run-logs \"$adir\"/log-manifest.json ${analysis_allowed_loanys[*]/#/--ok-loany } }")
         v2=("${v1[@]/#context/              'meta-genesis' --run-metafile    \"$dir\"/meta.json
                                                          --shelley-genesis \"$dir\"/genesis-shelley.json }")
         v3=("${v2[@]/#read-chain/           'read-chain'            --chain \"$adir\"/chain.json}")
@@ -472,10 +474,15 @@ case "$op" in
         ## 1. unless already done, filter logs according to locli's requirements
         local logdirs=($(ls -d "$dir"/node-*/ 2>/dev/null))
         local logfiles=($(ls "$adir"/logs-node-*.flt.json 2>/dev/null))
+        local run_logs=$adir/log-manifest.json
         local prefilter=$(if   test -z "${logfiles[*]}"
                           then echo 'prefiltered-logs-not-yet-created'
                           elif test "$key_new" != "$key_old"
                           then echo 'prefiltering-keyset-changed'
+                          elif test ! -f "$run_logs"
+                          then echo 'missing '$run_logs
+                          elif test -n "$force_prepare"
+                          then echo '--force-prepare passed on CLI'
                           else echo 'false'
                           fi)
         echo "{ \"prefilter\": \"$prefilter\" }"
@@ -489,16 +496,46 @@ case "$op" in
             --fixed-strings
             --no-filename
         )
+
+        echo '{}' > $run_logs
         for d in "${logdirs[@]}"
         do throttle_shell_job_spawns
-           local logfiles="$(ls "$d"/stdout* 2>/dev/null | tac) $(ls "$d"/node-*.json 2>/dev/null)"
-           if test -z "$logfiles"
+           local logfiles=($(ls --reverse -t "$d"stdout* "$d"node-[0-9]*.json \
+                                2>/dev/null))
+           if test -z "${logfiles[*]}"
            then msg "no logs in $d, skipping.."; fi
-           local output="$adir"/logs-$(basename "$d").flt.json
-           grep ${grep_params[*]} $logfiles | grep '^{' > "$output" &
+           local mach=$(basename "$d")
+           local  out="$adir"/logs-$mach
+           grep ${grep_params[*]} ${logfiles[*]} | grep '^{'  > "$out".flt.json       &
+           trace_frequencies_json ${logfiles[*]}              > "$out".tracefreq.json &
+           { cat ${logfiles[*]} | sha256sum | cut -d' ' -f1 | xargs echo -n;} > "$out".sha256 &
+           jq_fmutate "$run_logs" '
+             .rlHostLogs["'"$mach"'"] =
+               { hlRawLogfiles:    ["'"$(echo ${logfiles[*]} | sed 's/ /", "/')"'"]
+               , hlRawLines:       '"$(cat ${logfiles[*]} | wc -l)"'
+               , hlRawSha256:      ""
+               , hlRawTraceFreqs:  {}
+               , hlLogs:           ["'"$adir/logs-$mach.flt.json"'", null]
+               , hlFilteredSha256: ""
+               }
+           | .rlFilterDate = (now | todate)
+           | .rlFilterKeys = ($keys | split("\n"))
+           ' --rawfile            keys $keyfile
         done
+        wait
 
-        wait;;
+        for mach in $(jq_tolist '.rlHostLogs | keys' $run_logs)
+        do jq_fmutate "$run_logs" '
+             .rlHostLogs[$mach].hlRawSha256      = $raw_sha256
+           | .rlHostLogs[$mach].hlRawTraceFreqs  = $freqs[0]
+           | .rlHostLogs[$mach].hlFilteredSha256 = $filtered_sha256
+           ' --sort-keys                                                         \
+             --arg                mach         $mach                             \
+             --rawfile      raw_sha256 "$adir"/logs-$mach.sha256                 \
+             --arg     filtered_sha256 $(sha256sum < $adir/logs-$mach.flt.json | \
+                                          cut -d' ' -f1 | xargs echo -n)         \
+             --slurpfile         freqs "$adir"/logs-$mach.tracefreq.json
+        done;;
 
     trace-frequencies | trace-freq | freq )
         local new_only= sargs=()
@@ -508,12 +545,13 @@ case "$op" in
                * ) break;; esac; shift; done
         local usage="USAGE: wb analyse $op LOGFILE"
 
-        local logfile=${1:?usage}; shift
+        local logfile=${1:?$usage}; shift
 
-        trace_frequencies "${sargs[@]}" "" "$logfile" > "${logfile}.freq"
+
+        trace_frequencies "$logfile" > "${logfile}.tracefreqs.json"
 
         local src=$(wc -l <"$logfile")
-        local res=$(cut -d' ' -f1 "${logfile}.freq" |
+        local res=$(cut -d' ' -f1 "${logfile}.trace-freqs" |
                         xargs echo |
                         sed 's/ /, /g; s/^/\[/; s/$/\]/' |
                         jq add)
@@ -589,66 +627,18 @@ analysis_set_filters() {
     filters+=(${filter_files[*]/#/--filter })
 }
 
-classify_traces() {
-    jq --raw-output '(try .ns[0] // .ns) + ":" + (.data.kind //.data.val.kind)' 2>/dev/null | sort -u
-}
-
-trace_frequencies() {
-    local new_only=
-    while test $# -gt 0
-    do case "$1" in
-       --new-only ) new_only='true';;
-       * ) break;; esac; shift; done
-
-    local types="$1"; shift
-    local files=("$@")
-
-    if test -z "$types"
-    then types="$(cat "${files[@]}" | classify_traces)"
-    fi
-
-    for ty in $types
-    do local ns=$(cut -d: -f1 <<<$ty)
-       local kind=$(cut -d: -f2 <<<$ty)
-       if test -n "$new_only"
-       then echo $(grep -hFe '"ns":"'$ns'"' "${files[@]}"                               | wc -l) $ty
-       else echo $(grep -hFe '"ns":"'$ns'"' "${files[@]}" | grep -Fe '"kind":"'$kind'"' | wc -l) $ty
-       fi
-    done |
-        sort -nr
-}
-
-analysis_run_classify_traces() {
-    local name=${1:-current}; if test $# != 0; then shift; fi
-    local node=${1:-node-0}; if test $# != 0; then shift; fi
-    local dir=$(run get "$name")
-
-    progress "analysis" "enumerating namespace from logs of $(with_color yellow $node)"
-    grep -h '^{' $dir/$node/stdout* | classify_traces
-    # grep -h '^{' $dir/$node/stdout* | jq --raw-output '.ns' 2>/dev/null | tr -d ']["' | sort -u
-}
-
-analysis_trace_frequencies() {
-    while test $# -gt 0
-    do case "$1" in
-       * ) break;; esac; shift; done
-
-    local name=${1:-current}; if test $# != 0; then shift; fi
-    local dir=$(run get "$name")
-    local types=()
-
-    for nodedir in $dir/node-*/
-    do local node=$(basename $nodedir)
-
-       progress "analysis" "message frequencies: $(with_color yellow $node)"
-
-       types=($(analysis_run_classify_traces $name $node))
-       trace_frequencies    \
-           "${types[*]}"    \
-           $nodedir/stdout* \
-           > $nodedir/log-namespace-occurence-stats.txt
-    done
-    echo >&2
+trace_frequencies_json() {
+    grep --no-filename '^{.*}$' "$@" |
+    jq 'reduce inputs as $line
+          ( {};
+            ( $line
+            | (try .ns[0] // .ns) + ":" + (.data.kind //.data.val.kind)
+            )              as $key
+          | (.[$key] // 0) as $acc
+          | . + { "\($key)": ($acc + 1) }
+          # | .[$key] += 1              ## This is somehow slower than set addition..
+          )
+       '
 }
 
 analysis_config_extract_legacy_tracing() {
