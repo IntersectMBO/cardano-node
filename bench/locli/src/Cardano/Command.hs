@@ -6,6 +6,7 @@ import Cardano.Prelude          hiding (State)
 import Data.Aeson                       qualified as Aeson
 import Data.ByteString                  qualified as BS
 import Data.ByteString.Lazy.Char8       qualified as LBS
+import Data.Map                         qualified as Map
 import Data.Text                        (pack)
 import Data.Text                        qualified as T
 import Data.Text.Short                  (toText)
@@ -45,7 +46,7 @@ data ChainCommand
 
   |        MetaGenesis      (JsonInputFile RunPartial) (JsonInputFile Genesis)
 
-  |        Unlog            [JsonLogfile] (Maybe HostDeduction) Bool [LOAnyType]
+  |        Unlog            (JsonInputFile (RunLogs ())) Bool [LOAnyType]
   |        DumpLogObjects
 
   |        BuildMachViews
@@ -107,11 +108,7 @@ parseChainCommand =
   subparser (mconcat [ commandGroup "Basic log objects"
    , op "unlog" "Read log files"
      (Unlog
-       <$> some
-           (optJsonLogfile    "log"             "JSON log stream")
-       <*> optional
-           (parseHostDeduction "host-from-log-filename"
-                                                "Derive hostname from log filename: logs-HOSTNAME.*")
+       <$> optJsonInputFile    "run-logs"       "Run log manifest (API/Types.hs:RunLogs)"
        <*> Opt.flag False True (Opt.long "lodecodeerror-ok"
                                     <> Opt.help "Allow non-EOF LODecodeError logobjects")
        <*> many
@@ -243,13 +240,6 @@ parseChainCommand =
      command c $ info (p <**> helper) $
        mconcat [ progDesc descr ]
 
-   parseHostDeduction :: String -> String -> Parser HostDeduction
-   parseHostDeduction name desc =
-     Opt.flag' HostFromLogfilename
-     (  Opt.long name
-     <> Opt.help desc
-     )
-
    optLOAnyType :: String -> String -> Parser LOAnyType
    optLOAnyType opt desc =
      Opt.option Opt.auto
@@ -291,7 +281,7 @@ data State
   , sFilters          :: ([FilterName], [ChainFilter])
   , sTags             :: [Text]
   , sRun              :: Maybe Run
-  , sObjLists         :: Maybe [(JsonLogfile, [LogObject])]
+  , sRunLogs          :: Maybe (RunLogs [LogObject])
   , sDomSlots         :: Maybe (DataDomain SlotNo)
     -- propagation
   , sMachViews        :: Maybe [(JsonLogfile, MachView)]
@@ -313,19 +303,18 @@ callComputeSummary :: State -> Either Text SummaryOne
 callComputeSummary =
   \case
     State{sRun           = Nothing} -> err "a run"
-    State{sObjLists      = Nothing} -> err "logobjects"
-    State{sObjLists      = Just []} -> err "logobjects"
+    State{sRunLogs       = Nothing} -> err "logobjects"
     State{sClusterPerf   = Nothing} -> err "cluster performance results"
     State{sBlockProp     = Nothing} -> err "block propagation results"
     State{sChain         = Nothing} -> err "chain"
-    State{ sObjLists     = Just (fmap snd -> objLists)
+    State{ sRunLogs      = Just runLogs
          , sClusterPerf  = Just [clusterPerf]
          , sBlockProp    = Just [blockProp']
          , sChain        = Just chain
          , sRun          = Just Run{..}
          , ..} -> Right $
       computeSummary sWhen metadata genesis genesisSpec generatorProfile
-                     (zip (Count <$> [0..]) objLists) sFilters
+                     runLogs sFilters
                      clusterPerf blockProp' chain
     _ -> err "Impossible to get here."
  where
@@ -367,13 +356,19 @@ runChainCommand s
   pure s { sRun = Just run }
 
 runChainCommand s
-  c@(Unlog logs mHostDed okDErr okAny) = do
-  progress "logs" (Q $ printf "parsing %d log files" $ length logs)
-  los <- runLiftLogObjects logs mHostDed okDErr okAny
-         & firstExceptT (CommandError c)
-  pure s { sObjLists = Just los }
+  c@(Unlog rlf okDErr okAny) = do
+  progress "logs" (Q $ printf "reading run log manifest %s" $ unJsonInputFile rlf)
+  runLogsBare <- Aeson.eitherDecode @(RunLogs ())
+                 <$> LBS.readFile (unJsonInputFile rlf)
+                 & newExceptT
+                 & firstExceptT (CommandError c . pack)
+  progress "logs" (Q $ printf "parsing logs for %d hosts" $
+                   Map.size $ rlHostLogs runLogsBare)
+  runLogs <- runLiftLogObjects runLogsBare okDErr okAny
+             & firstExceptT (CommandError c)
+  pure s { sRunLogs = Just runLogs }
 
-runChainCommand s@State{sObjLists=Just objs}
+runChainCommand s@State{sRunLogs=Just (rlLogs -> objs)}
   c@DumpLogObjects = do
   progress "logobjs" (Q $ printf "dumping %d logobject streams" $ length objs)
   dumpAssociatedObjectStreams "logobjs" objs & firstExceptT (CommandError c)
@@ -383,7 +378,7 @@ runChainCommand _ c@DumpLogObjects = missingCommandData c
 
 -- runChainCommand s c@(ReadMachViews _ _)    -- () -> [(JsonLogfile, MachView)]
 
-runChainCommand s@State{sRun=Just run, sObjLists=Just objs}
+runChainCommand s@State{sRun=Just run, sRunLogs=Just (rlLogs -> objs)}
   BuildMachViews = do
   progress "machviews" (Q $ printf "building %d machviews" $ length objs)
   mvs <- buildMachViews run objs & liftIO
@@ -455,7 +450,7 @@ runChainCommand s@State{sRun=Just _run, sChain=Just Chain{..}}
 runChainCommand _ c@TimelineChain{} = missingCommandData c
   ["run metadata & genesis", "chain"]
 
-runChainCommand s@State{sRun=Just run, sObjLists=Just objs}
+runChainCommand s@State{sRun=Just run, sRunLogs=Just (rlLogs -> objs)}
   c@(CollectSlots ignores) = do
   let nonIgnored = flip filter objs $ (`notElem` ignores) . fst
   forM_ ignores $

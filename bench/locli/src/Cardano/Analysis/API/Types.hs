@@ -34,7 +34,7 @@ data Summary f where
     , sumGenesis             :: !Genesis
     , sumGenesisSpec         :: !GenesisSpec
     , sumGenerator           :: !GeneratorProfile
-    , sumLogStreams          :: !(Count [LogObject])
+    , sumHosts               :: !(Count Host)
     , sumLogObjectsTotal     :: !(Count LogObject)
     , sumFilters             :: !([FilterName], [ChainFilter])
     , sumChainRejectionStats :: ![(ChainFilter, Int)]
@@ -44,17 +44,20 @@ data Summary f where
     , sumStopSpread          :: !(DataDomain UTCTime)
     , sumDomainSlots         :: !(DataDomain SlotNo)
     , sumDomainBlocks        :: !(DataDomain BlockNo)
-    , cdfLogObjects          :: !(CDF f Int)
+    , cdfLogLinesEmitted     :: !(CDF f Int)
     , cdfLogObjectsEmitted   :: !(CDF f Int)
+    , cdfLogObjects          :: !(CDF f Int)
+    , cdfRuntime             :: !(CDF f NominalDiffTime)
+    , cdfLogLineRate         :: !(CDF f Double)
     } -> Summary f
   deriving (Generic)
 
 type SummaryOne   = Summary I
 type MultiSummary = Summary (CDF I)
 
-deriving instance (FromJSON (f Int), FromJSON (f Double)) => FromJSON (Summary f)
-deriving instance (  ToJSON (f Int),   ToJSON (f Double)) =>   ToJSON (Summary f)
-deriving instance (    Show (f Int),     Show (f Double)) =>     Show (Summary f)
+deriving instance (FromJSON (f NominalDiffTime), FromJSON (f Int), FromJSON (f Double)) => FromJSON (Summary f)
+deriving instance (  ToJSON (f NominalDiffTime),   ToJSON (f Int),   ToJSON (f Double)) =>   ToJSON (Summary f)
+deriving instance (    Show (f NominalDiffTime),     Show (f Int),     Show (f Double)) =>     Show (Summary f)
 
 data BlockStats
   = BlockStats
