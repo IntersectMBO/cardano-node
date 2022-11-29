@@ -42,8 +42,10 @@ sumFieldsReport =
   , "delegators", "utxo"
   , "add_tx_size", "inputs_per_tx", "outputs_per_tx" , "tps", "tx_count"
   , "plutusScript"
-  , "sumLogStreams", "sumLogObjectsTotal"
+  , "sumHosts", "sumLogObjectsTotal"
   , "sumFilters"
+  , "cdfLogLinesEmitted", "cdfLogObjectsEmitted", "cdfLogObjects"
+  , "cdfRuntime", "cdfLogLineRate"
   , "ddRawCount.sumDomainTime", "ddFilteredCount.sumDomainTime", "dataDomainFilterRatio.sumDomainTime"
   , "ddRaw.sumStartSpread", "ddRaw.sumStopSpread"
   , "ddFiltered.sumStartSpread", "ddFiltered.sumStopSpread"
@@ -130,16 +132,36 @@ instance TimelineFields SummaryOne where
       "Plutus script"
       "Name of th Plutus script used for smart contract workload generation, if any"
 
-   <> fScalar "sumLogStreams"          Wno Cnt (IInt   $          unCount.sumLogStreams)
+   <> fScalar "sumHosts"               Wno Cnt (IInt   $   unCount.sumHosts)
       "Machines"
       "Number of machines under analysis"
 
-   <> fScalar "sumLogObjectsTotal"     Wno Cnt (IInt   $     unCount.sumLogObjectsTotal)
-      "Total log objects analysed"
+   <> fScalar "sumFilters"             Wno Cnt (IInt   $   length.snd.sumFilters)
+      "Number of filters applied"
       ""
 
-   <> fScalar "sumFilters"             Wno Cnt (IInt   $          length.snd.sumFilters)
-      "Number of filters applied"
+   <> fScalar "cdfLogLinesEmitted"     W6  Cnt (IFloat $ cdfAverageVal.cdfLogLinesEmitted)
+      "Log text lines emitted per host"
+      ""
+
+   <> fScalar "cdfLogObjectsEmitted"   W6  Cnt (IFloat $ cdfAverageVal.cdfLogObjectsEmitted)
+      "Log objects emitted per host"
+      ""
+
+   <> fScalar "cdfLogObjects"          W6  Cnt (IFloat $ cdfAverageVal.cdfLogObjects)
+      "Log objects analysed per host"
+      ""
+
+   <> fScalar "cdfRuntime"             W6  Sec (IFloat $ cdfAverageVal.cdfRuntime)
+      "Host run time, s"
+      ""
+
+   <> fScalar "cdfLogLineRate"         W6  Hz (IFloat $ cdfAverageVal.cdfLogLineRate)
+      "Host log line rate, Hz"
+      ""
+
+   <> fScalar "sumLogObjectsTotal"     Wno Cnt (IInt   $ unCount.sumLogObjectsTotal)
+      "Total log objects analysed"
       ""
 
    <> fScalar "ddRawCount.sumDomainTime"      Wno Sec (IInt   $       ddRawCount.sumDomainTime)

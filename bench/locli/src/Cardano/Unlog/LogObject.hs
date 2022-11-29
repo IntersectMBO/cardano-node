@@ -36,18 +36,48 @@ import Data.Accum (zeroUTCTime)
 
 type Text = ShortText
 
-runLiftLogObjects :: [JsonLogfile] -> Maybe HostDeduction -> Bool -> [LOAnyType]
-                  -> ExceptT LText.Text IO [(JsonLogfile, [LogObject])]
-runLiftLogObjects fs (fmap hostDeduction -> mHostDed) okDErr anyOks = liftIO $ do
-  forConcurrently fs
-    (\f -> (f,) . fmap (setLOhost f mHostDed) <$> readLogObjectStream (unJsonLogfile f) okDErr anyOks)
- where
-   setLOhost :: JsonLogfile -> Maybe (JsonLogfile -> Host) -> LogObject -> LogObject
-   setLOhost _   Nothing lo = lo
-   setLOhost lf (Just f) lo = lo { loHost = f lf }
+-- | Input data.
+data HostLogs a
+  = HostLogs
+    { hlRawLogfiles    :: [FilePath]
+    , hlRawLines       :: Int
+    , hlRawSha256      :: Hash
+    , hlRawTraceFreqs  :: Map Text Int
+    , hlLogs           :: (JsonLogfile, a)
+    , hlFilteredSha256 :: Hash
+    }
+  deriving (Generic, FromJSON, ToJSON)
 
-   -- joinT :: (IO a, IO b) -> IO (a, b)
-   -- joinT (a, b) = (,) <$> a <*> b
+hlRawLogObjects :: HostLogs a -> Int
+hlRawLogObjects = sum . Map.elems . hlRawTraceFreqs
+
+data RunLogs a
+  = RunLogs
+    { rlHostLogs   :: Map.Map Host (HostLogs a)
+    , rlFilterKeys :: [Text]
+    , rlFilterDate :: UTCTime
+    }
+  deriving (Generic, FromJSON, ToJSON)
+
+rlLogs :: RunLogs a -> [(JsonLogfile, a)]
+rlLogs = fmap hlLogs . Map.elems . rlHostLogs
+
+runLiftLogObjects :: RunLogs () -> Bool -> [LOAnyType]
+                  -> ExceptT LText.Text IO (RunLogs [LogObject])
+runLiftLogObjects rl@RunLogs{..} okDErr anyOks = liftIO $ do
+  forConcurrently (Map.toList rlHostLogs)
+    (uncurry readHostLogs)
+    <&> \kvs -> rl { rlHostLogs = Map.fromList kvs }
+ where
+   readHostLogs :: Host -> HostLogs () -> IO (Host, HostLogs [LogObject])
+   readHostLogs h hl@HostLogs{..} =
+     readLogObjectStream (unJsonLogfile $ fst hlLogs) okDErr anyOks
+     <&> (h,) . setLogs hl . fmap (setLOhost h)
+
+   setLogs :: HostLogs a -> b -> HostLogs b
+   setLogs hl x = hl { hlLogs = (fst $ hlLogs hl, x) }
+   setLOhost :: Host -> LogObject -> LogObject
+   setLOhost h lo = lo { loHost = h }
 
 readLogObjectStream :: FilePath -> Bool -> [LOAnyType] -> IO [LogObject]
 readLogObjectStream f okDErr anyOks =

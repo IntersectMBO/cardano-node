@@ -18,6 +18,7 @@ import Data.Aeson.Types                 (toJSONKeyText)
 import Data.Attoparsec.Text             qualified as Atto
 import Data.Attoparsec.Time             qualified as Iso8601
 import Data.ByteString.Lazy.Char8       qualified as LBS
+import Data.Map.Strict                  qualified as Map
 import Data.Text                        qualified as T
 import Data.Text.Short                  qualified as SText
 import Data.Text.Short                  (ShortText, fromText, toText)
@@ -56,6 +57,10 @@ shortHash = toText . SText.take 6 . unHash
 
 instance Show Hash where show = T.unpack . toText . unHash
 
+instance ToJSONKey Host where
+  toJSONKey = toJSONKeyText (toText . unHost)
+instance FromJSONKey Host where
+  fromJSONKey = FromJSONKeyText (Host . fromText)
 instance ToJSONKey Hash where
   toJSONKey = toJSONKeyText (toText . unHash)
 instance FromJSONKey Hash where
@@ -65,6 +70,9 @@ newtype Count a = Count { unCount :: Int }
   deriving (Eq, Generic, Ord, Show)
   deriving newtype (FromJSON, Num, ToJSON)
   deriving anyclass NFData
+
+countMap :: Map.Map a b -> Count a
+countMap = Count . Map.size
 
 countList :: (a -> Bool) -> [a] -> Count a
 countList f = Count . fromIntegral . count f
@@ -121,11 +129,12 @@ newtype InputDir
 newtype JsonLogfile
   = JsonLogfile { unJsonLogfile :: FilePath }
   deriving (Show, Eq)
-  deriving newtype (NFData)
+  deriving newtype (FromJSON, ToJSON, NFData)
 
 newtype JsonInputFile (a :: Type)
   = JsonInputFile { unJsonInputFile :: FilePath }
   deriving (Show, Eq)
+  deriving newtype (FromJSON, ToJSON)
 
 newtype JsonOutputFile (a :: Type)
   = JsonOutputFile { unJsonOutputFile :: FilePath }

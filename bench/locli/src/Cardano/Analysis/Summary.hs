@@ -7,6 +7,8 @@ import Cardano.Prelude
 
 import Data.Map.Strict                  qualified as Map
 
+import Cardano.Logging.Resources.Types
+
 import Cardano.Analysis.API
 import Cardano.Unlog.LogObject
 import Cardano.Util
@@ -18,7 +20,7 @@ computeSummary ::
   -> Genesis
   -> GenesisSpec
   -> GeneratorProfile
-  -> [(Count Cardano.Prelude.Text, [LogObject])]
+  -> RunLogs [LogObject]
   -> ([FilterName], [ChainFilter])
   -> ClusterPerf
   -> BlockPropOne
@@ -29,14 +31,14 @@ computeSummary sumAnalysisTime
                sumGenesis
                sumGenesisSpec
                sumGenerator
-               loCountsObjLists
+               rl@RunLogs{..}
                sumFilters
                MachPerf{..}
                BlockProp{..}
                Chain{..}
   =
   Summary
-  { sumLogStreams      = countListAll  objLists
+  { sumHosts           = countMap rlHostLogs
   , sumLogObjectsTotal = countListsAll objLists
   , sumBlocksRejected  = countListAll cRejecta
   , sumDomainTime      =
@@ -54,17 +56,30 @@ computeSummary sumAnalysisTime
   , sumDomainSlots     = Prelude.head mpDomainSlots
   , sumDomainBlocks    = Prelude.head bpDomainBlocks
   --
-  , cdfLogObjects        = cdf stdCentiles           (length <$> objLists)
-  , cdfLogObjectsEmitted = cdf stdCentiles (loCountsObjLists <&> unCount . fst)
+  , cdfLogObjects        = cdf stdCentiles (objLists <&> length)
+  , cdfLogObjectsEmitted = cdf stdCentiles logObjectsEmitted
+  , cdfLogLinesEmitted   = cdf stdCentiles textLinesEmitted
+  , cdfRuntime           = cdf stdCentiles runtimes
   , ..
   }
  where
-   objLists = loCountsObjLists <&> snd
+   cdfLogLineRate       = cdf stdCentiles lineRates
+
+   (,) logObjectsEmitted textLinesEmitted =
+     rlHostLogs
+     & Map.toList
+     & fmap ((hlRawLogObjects &&& hlRawLines) . snd)
+     & unzip
+   objLists = rlLogs rl <&> snd
 
    (,) minStartRaw maxStartRaw = (minimum &&& maximum) losFirsts
    (,) minStopRaw  maxStopRaw  = (minimum &&& maximum) losLasts
    losFirsts  = objLists <&> loAt . Prelude.head
    losLasts   = objLists <&> loAt . Prelude.last
+   runtimes :: [NominalDiffTime]
+   runtimes   = zipWith diffUTCTime losLasts losFirsts
+   lineRates  = zipWith (/) (textLinesEmitted <&> fromIntegral)
+                            (runtimes <&> fromIntegral @Int . truncate)
 
    (,) minStartFlt maxStartFlt = (timeOf *** timeOf) startMinMaxS
    (,) minStopFlt  maxStopFlt  = (timeOf *** timeOf) stopMinMaxS
