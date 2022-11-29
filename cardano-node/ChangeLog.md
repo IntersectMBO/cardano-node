@@ -4,7 +4,9 @@
 
 ### node changes
 
-TODO
+ - Bumped cardano-ledger to 0.1
+ - Bumped plutus-core to 1.0
+ - Bumped ouroboros-network to commit 72863b0
 
 ### consensus changes
 
