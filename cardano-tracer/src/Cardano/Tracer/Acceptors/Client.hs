@@ -89,7 +89,9 @@ doConnectToForwarder
 doConnectToForwarder snocket address netMagic timeLimits app =
   connectToNode
     snocket
-    mempty -- LocalSocket does not require to be configured
+    -- local sockets (e.g. unix sockets or named pipes on Windows), do
+    -- not need any configuration; we only need to configure node-to-node sockets.
+    mempty
     (codecHandshake forwardingVersionCodec)
     timeLimits
     (cborTermVersionDataCodec forwardingCodecCBORTerm)
