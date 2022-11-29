@@ -32,7 +32,8 @@ import           Cardano.Tracing.Render (renderChainHash, renderChunkNo, renderH
                    renderPointForVerbosity, renderRealPoint, renderRealPointAsPhrase,
                    renderTipBlockNo, renderTipHash, renderWithOrigin)
 
-import           Cardano.Node.Tracing.Tracers.ConsensusStartupException (ConsensusStartupException (..))
+import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
+                   (ConsensusStartupException (..))
 
 import           Ouroboros.Consensus.Block (BlockProtocol, BlockSupportsProtocol, CannotForge,
                    ConvertRawHash (..), ForgeStateUpdateError, Header, RealPoint, blockNo,

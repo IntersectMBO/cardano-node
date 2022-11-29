@@ -1,7 +1,7 @@
-{-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE PackageImports      #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Logging.Forwarding
@@ -14,8 +14,7 @@ import           Control.Concurrent.Async (async, race_, wait)
 import           Control.Monad (void)
 import           Control.Monad.IO.Class
 
-import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer,
-                     stdoutTracer)
+import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Void (Void)
 import           Data.Word (Word16)
@@ -24,22 +23,19 @@ import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
 import           Ouroboros.Network.ErrorPolicy (nullErrorPolicies)
 import           Ouroboros.Network.IOManager (IOManager)
 import           Ouroboros.Network.Magic (NetworkMagic)
-import           Ouroboros.Network.Mux (MiniProtocol (..),
-                     MiniProtocolLimits (..), MiniProtocolNum (..),
-                     MuxMode (..), OuroborosApplication (..),
-                     RunMiniProtocol (..), miniProtocolLimits, miniProtocolNum,
-                     miniProtocolRun)
-import           Ouroboros.Network.Protocol.Handshake.Codec
-                     (cborTermVersionDataCodec, codecHandshake, noTimeLimitsHandshake)
+import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
+                   MiniProtocolNum (..), MuxMode (..), OuroborosApplication (..),
+                   RunMiniProtocol (..), miniProtocolLimits, miniProtocolNum, miniProtocolRun)
+import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
+                   codecHandshake, noTimeLimitsHandshake)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
-import           Ouroboros.Network.Protocol.Handshake.Version
-                     (acceptableVersion, simpleSingletonVersions)
-import           Ouroboros.Network.Snocket (Snocket, localAddressFromPath,
-                     localSnocket)
+import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion,
+                   simpleSingletonVersions)
+import           Ouroboros.Network.Snocket (Snocket, localAddressFromPath, localSnocket)
 import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..),
-                     SomeResponderApplication (..), cleanNetworkMutableState,
-                     connectToNode, newNetworkMutableState, nullNetworkConnectTracers,
-                     nullNetworkServerTracers, withServerNode)
+                   SomeResponderApplication (..), cleanNetworkMutableState, connectToNode,
+                   newNetworkMutableState, nullNetworkConnectTracers, nullNetworkServerTracers,
+                   withServerNode)
 
 import qualified System.Metrics as EKG
 import qualified System.Metrics.Configuration as EKGF

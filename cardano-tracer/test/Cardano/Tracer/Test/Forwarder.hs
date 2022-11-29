@@ -17,15 +17,15 @@ import           Codec.CBOR.Term (Term)
 import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async
 import           Control.Monad (forever)
-import           "contra-tracer" Control.Tracer (nullTracer, contramap, stdoutTracer)
+import           "contra-tracer" Control.Tracer (contramap, nullTracer, stdoutTracer)
 import           Data.Aeson (FromJSON, ToJSON)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Time.Clock (getCurrentTime)
 import           Data.Void (Void)
 import           Data.Word (Word16)
 import           GHC.Generics
-import qualified System.Metrics as EKG
 import           System.Directory
+import qualified System.Metrics as EKG
 
 import           Cardano.Logging (DetailLevel (..), SeverityS (..), TraceObject (..))
 import           Cardano.Logging.Version (ForwardingVersion (..), ForwardingVersionData (..),
@@ -36,16 +36,16 @@ import           Ouroboros.Network.IOManager (IOManager, withIOManager)
 import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
                    MiniProtocolNum (..), MuxMode (..), OuroborosApplication (..),
                    RunMiniProtocol (..), miniProtocolLimits, miniProtocolNum, miniProtocolRun)
-import           Ouroboros.Network.Protocol.Handshake.Codec (codecHandshake,
-                   cborTermVersionDataCodec, noTimeLimitsHandshake)
+import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
+                   codecHandshake, noTimeLimitsHandshake)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion,
                    simpleSingletonVersions)
 import           Ouroboros.Network.Snocket (Snocket, localAddressFromPath, localSnocket)
 import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..),
-                   SomeResponderApplication (..), cleanNetworkMutableState,
-                   connectToNode, newNetworkMutableState, nullNetworkConnectTracers,
-                   nullNetworkServerTracers, withServerNode)
+                   SomeResponderApplication (..), cleanNetworkMutableState, connectToNode,
+                   newNetworkMutableState, nullNetworkConnectTracers, nullNetworkServerTracers,
+                   withServerNode)
 import qualified System.Metrics.Configuration as EKGF
 import           System.Metrics.Network.Forwarder
 

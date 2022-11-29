@@ -70,6 +70,11 @@ import           Cardano.Protocol.TPraos.Rules.Updn
 -- TODO: this should be exposed via Cardano.Api
 import           Cardano.Ledger.Shelley.API
 
+import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure (..), AlonzoUtxoPredFailure,
+                   AlonzoUtxosPredFailure, AlonzoUtxowPredFailure (..))
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
+import           Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
+import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import           Cardano.Ledger.Shelley.Rules.Bbody
 import           Cardano.Ledger.Shelley.Rules.Deleg
 import           Cardano.Ledger.Shelley.Rules.Delegs
@@ -89,16 +94,12 @@ import           Cardano.Ledger.Shelley.Rules.Tick
 import           Cardano.Ledger.Shelley.Rules.Upec
 import           Cardano.Ledger.Shelley.Rules.Utxo
 import           Cardano.Ledger.Shelley.Rules.Utxow
+import           Cardano.Ledger.ShelleyMA.Rules (ShelleyMAUtxoPredFailure)
+import qualified Cardano.Ledger.ShelleyMA.Rules as MA
 import           Cardano.Protocol.TPraos.API (ChainTransitionError (ChainTransitionError))
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod))
 import           Cardano.Protocol.TPraos.Rules.Prtcl
 import qualified Data.Aeson.Key as Aeson
-import Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure(..), AlonzoUtxowPredFailure (..), AlonzoUtxoPredFailure, AlonzoUtxosPredFailure)
-import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
-import qualified Cardano.Ledger.Babbage.Rules as Babbage
-import Cardano.Ledger.ShelleyMA.Rules (ShelleyMAUtxoPredFailure)
-import qualified Cardano.Ledger.ShelleyMA.Rules as MA
 
 
 {- HLINT ignore "Use :" -}

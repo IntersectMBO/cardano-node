@@ -1,33 +1,32 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PackageImports #-}
-{-# LANGUAGE ImportQualifiedPost #-}
 module Cardano.Node.Tracing
   ( Tracers (..)
   , ConsensusStartupException (..)
   ) where
 
-import Prelude (IO)
+import           Prelude (IO)
 
-import Codec.CBOR.Read (DeserialiseFailure)
-import "contra-tracer" Control.Tracer (Tracer)
+import           Codec.CBOR.Read (DeserialiseFailure)
+import           "contra-tracer" Control.Tracer (Tracer)
 
-import Ouroboros.Consensus.Network.NodeToClient qualified as NodeToClient
-import Ouroboros.Consensus.Network.NodeToNode   qualified as NodeToNode
-import Ouroboros.Consensus.Node.Tracers         qualified as Consensus
-import Ouroboros.Consensus.Storage.ChainDB      qualified as ChainDB
-import Ouroboros.Network.Diffusion              qualified as Diffusion
+import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
+import qualified Ouroboros.Consensus.Network.NodeToNode as NodeToNode
+import qualified Ouroboros.Consensus.Node.Tracers as Consensus
+import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
+import qualified Ouroboros.Network.Diffusion as Diffusion
 
-import Ouroboros.Network.NodeToNode   (NodeToNodeVersion, RemoteAddress)
-import Ouroboros.Network.NodeToClient (LocalAddress, NodeToClientVersion)
+import           Ouroboros.Network.NodeToClient (LocalAddress, NodeToClientVersion)
+import           Ouroboros.Network.NodeToNode (NodeToNodeVersion, RemoteAddress)
 
-import Cardano.Node.Handlers.Shutdown (ShutdownTrace)
-import Cardano.Node.Startup           (NodeInfo, NodeStartupInfo, StartupTrace)
+import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
+import           Cardano.Node.Startup (NodeInfo, NodeStartupInfo, StartupTrace)
 
-import Cardano.Logging.Resources
-import Cardano.Node.Tracing.StateRep (NodeState)
-import Cardano.Node.Tracing.Tracers.Peer (PeerT)
-import Cardano.Node.Tracing.Tracers.ConsensusStartupException
+import           Cardano.Logging.Resources
+import           Cardano.Node.Tracing.StateRep (NodeState)
+import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
+import           Cardano.Node.Tracing.Tracers.Peer (PeerT)
 
 data Tracers peer localPeer blk p2p = Tracers
   { -- | Trace the ChainDB

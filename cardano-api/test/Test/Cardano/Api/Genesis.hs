@@ -11,7 +11,7 @@ import           Cardano.Prelude
 
 import           Cardano.Api.Shelley (ShelleyGenesis (..))
 
-import           Data.ListMap (ListMap(ListMap))
+import           Data.ListMap (ListMap (ListMap))
 import qualified Data.Map.Strict as Map
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 
@@ -21,13 +21,13 @@ import           Ouroboros.Consensus.Shelley.Node (emptyGenesisStaking)
 import           Ouroboros.Consensus.Util.Time
 
 import           Cardano.Ledger.Address (Addr (..))
-import           Cardano.Ledger.Credential (Credential (..), PaymentCredential,
-                   StakeCredential, StakeReference (..))
 import           Cardano.Ledger.BaseTypes (Network (..))
 import           Cardano.Ledger.Coin (Coin (..))
+import           Cardano.Ledger.Credential (Credential (..), PaymentCredential, StakeCredential,
+                   StakeReference (..))
 import           Cardano.Ledger.Keys (GenDelegPair (..), Hash, KeyHash (..), KeyRole (..),
                    VerKeyVRF)
-import           Cardano.Ledger.Shelley.PParams (emptyPParams, ShelleyPParamsHKD (..))
+import           Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), emptyPParams)
 
 import           Test.Cardano.Ledger.Shelley.Utils (unsafeBoundRational)
 

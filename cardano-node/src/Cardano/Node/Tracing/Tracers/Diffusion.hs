@@ -46,8 +46,8 @@ import qualified Ouroboros.Network.Diffusion as ND
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 import qualified Ouroboros.Network.NodeToNode as NtN
-import           Ouroboros.Network.PeerSelection.LedgerPeers (NumberOfPeers (..),
-                   PoolStake (..), TraceLedgerPeers (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers (NumberOfPeers (..), PoolStake (..),
+                   TraceLedgerPeers (..))
 import           Ouroboros.Network.Protocol.BlockFetch.Type (Message (..))
 import qualified Ouroboros.Network.Protocol.Handshake.Type as HS
 import           Ouroboros.Network.Snocket (LocalAddress (..))

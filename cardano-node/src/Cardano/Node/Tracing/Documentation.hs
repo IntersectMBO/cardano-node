@@ -35,8 +35,7 @@ import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
 import           Cardano.Node.Tracing.Tracers.ChainDB
 import           Cardano.Node.Tracing.Tracers.Consensus
 import           Cardano.Node.Tracing.Tracers.Diffusion
-import           Cardano.Node.Tracing.Tracers.ForgingThreadStats (
-                   docForgeStats, forgeThreadStats)
+import           Cardano.Node.Tracing.Tracers.ForgingThreadStats (docForgeStats, forgeThreadStats)
 import           Cardano.Node.Tracing.Tracers.KESInfo
 import           Cardano.Node.Tracing.Tracers.NodeToClient
 import           Cardano.Node.Tracing.Tracers.NodeToNode

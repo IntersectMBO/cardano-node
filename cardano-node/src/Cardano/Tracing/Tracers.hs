@@ -79,8 +79,8 @@ import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import           Ouroboros.Consensus.Util.Enclose
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
-import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..),
-                   HasHeader (..), Point, StandardHash, blockNo, pointSlot, unBlockNo)
+import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), HasHeader (..), Point,
+                   StandardHash, blockNo, pointSlot, unBlockNo)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState (..),
                    TraceLabelPeer (..))
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))

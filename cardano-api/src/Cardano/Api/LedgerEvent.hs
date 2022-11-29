@@ -29,20 +29,20 @@ import           Cardano.Ledger.Era (Crypto)
 import qualified Cardano.Ledger.Keys as Ledger
 import           Cardano.Ledger.Shelley.API (InstantaneousRewards (InstantaneousRewards))
 import           Cardano.Ledger.Shelley.Rewards
-import           Cardano.Ledger.Shelley.Rules.Tick (ShelleyTickEvent (NewEpochEvent))
-import           Cardano.Ledger.Shelley.Rules.NewEpoch (ShelleyNewEpochEvent (..))
 import           Cardano.Ledger.Shelley.Rules.Epoch (ShelleyEpochEvent (..))
-import           Cardano.Ledger.Shelley.Rules.PoolReap (ShelleyPoolreapEvent (..))
 import           Cardano.Ledger.Shelley.Rules.Mir (ShelleyMirEvent (..))
+import           Cardano.Ledger.Shelley.Rules.NewEpoch (ShelleyNewEpochEvent (..))
+import           Cardano.Ledger.Shelley.Rules.PoolReap (ShelleyPoolreapEvent (..))
 import           Cardano.Ledger.Shelley.Rules.Rupd (RupdEvent (..))
+import           Cardano.Ledger.Shelley.Rules.Tick (ShelleyTickEvent (NewEpochEvent))
 import           Control.State.Transition (Event)
 import           Data.Function (($), (.))
 import           Data.Functor (fmap)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (Maybe (Just, Nothing))
-import           Data.SOP.Strict
 import           Data.Set (Set)
+import           Data.SOP.Strict
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import           Ouroboros.Consensus.Cardano.Block (HardForkBlock)
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (getOneEraLedgerEvent)

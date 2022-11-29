@@ -100,9 +100,9 @@ import qualified Ouroboros.Consensus.HardFork.History as Consensus
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
 
+import           Cardano.Ledger.SafeHash (HashAnnotated)
 import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
-import Cardano.Ledger.SafeHash (HashAnnotated)
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Use const" -}

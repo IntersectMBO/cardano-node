@@ -71,8 +71,8 @@ import           Cardano.Slotting.EpochInfo (EpochInfo, hoistEpochInfo)
 import qualified Cardano.Chain.Common as Byron
 
 import qualified Cardano.Ledger.Coin as Ledger
+import           Cardano.Ledger.Core (EraTx (sizeTxF))
 import qualified Cardano.Ledger.Core as Ledger
-import           Cardano.Ledger.Core (EraTx(sizeTxF))
 import qualified Cardano.Ledger.Crypto as Ledger
 import qualified Cardano.Ledger.Era as Ledger.Era (Crypto)
 import qualified Cardano.Ledger.Keys as Ledger
@@ -663,15 +663,15 @@ evaluateTransactionBalance _ _ _ (ByronTxBody _) =
 
 evaluateTransactionBalance pparams poolids utxo
                            (ShelleyTxBody era txbody _ _ _ _) =
-    withLedgerConstraints 
-      era 
+    withLedgerConstraints
+      era
       (getShelleyEraTxBodyConstraint era evalAdaOnly)
       (getShelleyEraTxBodyConstraint era evalMultiAsset)
   where
-    getShelleyEraTxBodyConstraint 
-      :: forall era' a. 
+    getShelleyEraTxBodyConstraint
+      :: forall era' a.
          ShelleyBasedEra era'
-      -> (ShelleyEraTxBody (ShelleyLedgerEra era') => a) 
+      -> (ShelleyEraTxBody (ShelleyLedgerEra era') => a)
       -> a
     getShelleyEraTxBodyConstraint ShelleyBasedEraShelley x = x
     getShelleyEraTxBodyConstraint ShelleyBasedEraMary x = x

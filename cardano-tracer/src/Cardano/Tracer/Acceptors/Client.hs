@@ -12,21 +12,21 @@ import           Data.Word (Word32)
 import           Cardano.Logging (TraceObject)
 import           Cardano.Logging.Version (ForwardingVersion (..), ForwardingVersionData (..),
                    forwardingCodecCBORTerm, forwardingVersionCodec)
-import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
-                   MiniProtocolNum (..), MuxMode (..), OuroborosApplication (..),
-                   RunMiniProtocol (..), miniProtocolLimits, miniProtocolNum, miniProtocolRun)
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
 import           Ouroboros.Network.IOManager (withIOManager)
 import           Ouroboros.Network.Magic (NetworkMagic (..))
-import           Ouroboros.Network.Snocket (LocalAddress, LocalSocket, Snocket,
-                   localAddressFromPath, localSnocket)
-import           Ouroboros.Network.Socket (ConnectionId (..), connectToNode,
-                   nullNetworkConnectTracers)
+import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
+                   MiniProtocolNum (..), MuxMode (..), OuroborosApplication (..),
+                   RunMiniProtocol (..), miniProtocolLimits, miniProtocolNum, miniProtocolRun)
 import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
                    codecHandshake, noTimeLimitsHandshake)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion,
                    simpleSingletonVersions)
+import           Ouroboros.Network.Snocket (LocalAddress, LocalSocket, Snocket,
+                   localAddressFromPath, localSnocket)
+import           Ouroboros.Network.Socket (ConnectionId (..), connectToNode,
+                   nullNetworkConnectTracers)
 import qualified System.Metrics.Configuration as EKGF
 import           System.Metrics.Network.Acceptor (acceptEKGMetricsInit)
 
