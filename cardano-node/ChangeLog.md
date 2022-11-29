@@ -1,5 +1,23 @@
 # Changelog for cardano-node
 
+## 1.36.0 -- November 2022
+
+### node changes
+
+TODO
+
+### consensus changes
+
+TODO
+
+### network changes
+
+TODO
+
+### ledger changes
+
+TODO
+
 ## 1.35.5 -- November 2022
 
 ### node changes
