@@ -1,5 +1,4 @@
 let
-  backendName        = "nomad";
   batchNameDefault   = "plain";
   profileNameDefault = "default-bage";
 in
@@ -15,6 +14,10 @@ in
 }:
 let
   inherit (backendWorkbench) workbench backend cacheDir stateDir basePort;
+
+  backendName = backendWorkbench.backend.name;
+
+  useCabalRun = backendWorkbench.backend.useCabalRun;
 
   with-backend-profile =
     { envArgsOverride ? {} }: ## TODO: envArgsOverride is not used!
@@ -39,14 +42,14 @@ in
       set -euo pipefail
 
       export PATH=$PATH:${path}
-      unset WB_MODE_CABAL=
+
       wb start \
         --batch-name   ${batchName} \
         --profile-name ${profileName} \
         --profile      ${profile} \
         --cache-dir    ${cacheDir} \
         --base-port    ${toString basePort} \
-        ''${WB_MODE_CABAL:+--cabal} \
+        ${pkgs.lib.optionalString useCabalRun ''--cabal \''}
         "$@"
     '';
 
@@ -86,10 +89,12 @@ in
               moreutils
               nixWrapped
               pstree
-# TODO:       nomad
               workbench.workbench
               zstd
-            ];
+            ]
+            ++
+            backendWorkbench.backend.extraShellPkgs
+            ;
           }
             ''
             mkdir -p    $out/{cache,nix-support}

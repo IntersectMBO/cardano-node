@@ -88,16 +88,10 @@ final: prev: with final; {
   # See https://input-output-hk.github.io/haskell.nix/user-guide/development/
   workbench-instance =
     let backendRegistry =
-          {
-            supervisor = {
-              backend-workbench = ./workbench/backend/supervisor.nix;
-              workbench-runner  = ./workbench/backend/supervisor-run.nix;
-            };
-            nomad = {
-              backend-workbench = ./workbench/backend/nomad.nix;
-              workbench-runner  = ./workbench/backend/nomad-run.nix;
-            };
-          };
+        {
+            supervisor = ./workbench/backend/supervisor.nix;
+            nomad = ./workbench/backend/nomad.nix;
+        };
     in
     { backendName
     , profileName           ? customConfig.localCluster.profileName
@@ -106,10 +100,11 @@ final: prev: with final; {
     , workbenchDevMode      ? false
     , profiled              ? false
     , workbench             ? pkgs.workbench
-    , backendWorkbench      ? pkgs.callPackage (backendRegistry."${backendName}".backend-workbench) { inherit useCabalRun workbench; }
+    , backendWorkbench      ? pkgs.callPackage (backendRegistry."${backendName}")
+        { inherit useCabalRun workbench; }
     , cardano-node-rev      ? null
     }:
-    pkgs.callPackage (backendRegistry."${backendName}".workbench-runner)
+    pkgs.callPackage ./workbench/backend/run.nix
       {
         inherit batchName profileName backendWorkbench cardano-node-rev;
       };
