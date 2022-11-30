@@ -1,10 +1,10 @@
-{ pkgs, lib, profileNix, backend }:
+{ pkgs, lib, stateDir, profileNix, backend }:
   with lib;
-    pkgs.runCommand "workbench-profile-output-${profileNix.name}-${backend.name}d"
+    pkgs.runCommand "workbench-profile-output-${profileNix.name}-${backend.name}"
       { buildInputs = [];
         profileConfigJsonPath = profileNix.JSON;
         nodeSpecsJsonPath = profileNix.node-specs.JSON;
-        backendConfigPath = backend.materialise-profile { inherit profileNix; };
+        backendConfigPath = backend.materialise-profile { inherit stateDir profileNix; };
         nodeServices =
           __toJSON
           (flip mapAttrs profileNix.node-services

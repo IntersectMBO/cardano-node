@@ -1,12 +1,9 @@
 { pkgs
 , lib
 , stateDir
-, basePort
 , node-services
 , unixHttpServerPort ? null
 , inetHttpServerPort ? null
-  ## Last-moment overrides:
-, extraBackendConfig
 }:
 
 with lib;
@@ -71,9 +68,7 @@ let
         stopasgroup    = true;
         killasgroup    = true;
       };
-    }
-    //
-    extraBackendConfig;
+    };
 
   ##
   ## nodeSvcSupervisorProgram :: NodeService -> SupervisorConfSection

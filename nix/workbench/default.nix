@@ -71,34 +71,28 @@ let
   profile-names =
     __fromJSON (__readFile profile-names-json);
 
-  all-profiles =
-    ## The backend is an attrset of AWS/supervisord-specific methods and parameters.
-    { backend }:
-    rec {
-      mkProfile =
-        profileName:
-        pkgs.callPackage ./profiles
-          { inherit
-              pkgs
-              runWorkbenchJqOnly runJq workbench
-              profileName;
-            inherit (backend) services-config;
-          };
-
-      value = genAttrs profile-names mkProfile;
-
-      JSON = pkgs.writeText "all-profiles.json" (__toJSON (mapAttrs (_: x: x.value) value));
-    };
-
   with-profile =
-    { backend, profileName }:
+    # `workbench` is the pinned workbench in case there is one.
+    { stateDir, profileName, backend, basePort, workbench }:
     let
-      ps = all-profiles { inherit backend; };
+      ps =
+        let
+          mkProfile =
+            profileName:
+            pkgs.callPackage ./profiles
+              { inherit pkgs lib;
+                inherit stateDir profileName;
+                # `useCabalRun`, final decision, from the backend!
+                inherit (backend) useCabalRun;
+                inherit basePort;
+                inherit workbench;
+              };
+        in genAttrs profile-names mkProfile;
 
-      profileNix = ps.value."${profileName}"
-        or (throw "No such profile: ${profileName};  Known profiles: ${toString (__attrNames ps.value)}");
+      profileNix = ps."${profileName}"
+        or (throw "No such profile: ${profileName};  Known profiles: ${toString (__attrNames ps)}");
 
-      profile = import ./profile.nix   { inherit pkgs lib profileNix backend; };
+      profile = import ./profile.nix   { inherit pkgs lib stateDir profileNix backend; };
 
       topology = import ./topology.nix { inherit pkgs profileNix profile; };
 
@@ -113,11 +107,13 @@ let
   run-analysis = import ./analyse.nix;
 
 in {
-  inherit runJq;
-
   inherit workbench' workbench runWorkbench runWorkbenchJqOnly;
 
-  inherit all-profiles profile-names profile-names-json with-profile;
+  inherit runJq;
+
+  inherit profile-names profile-names-json;
+
+  inherit with-profile;
 
   inherit run-analysis;
 }
