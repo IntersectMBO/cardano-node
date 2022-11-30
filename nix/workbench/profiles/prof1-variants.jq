@@ -1,3 +1,5 @@
+import "./presets/preview/protocol-parameters-v8" as $pparams_v8_preview;
+
 def all_profile_variants:
                                          1024    as $Ki
   |                                      1000000 as $M
@@ -110,15 +112,9 @@ def all_profile_variants:
   ### Definition vocabulary:  protocol parameters
   ##
     ({} |
-     .genesis.alonzo.costModels =
-      { PlutusV1:
-        {
-        }
-      , PlutusV2:
-        {
-        }
-      }
-    ) as $pparams_v7_to_v8
+     .genesis.alonzo = $current_plutus.genesis.alonzo +
+       ($pparams_v8_preview::pparams_v8_preview | .[0])
+    ) as $pparams_to_v8
   |
   ##
   ### Definition vocabulary:  chain
@@ -280,7 +276,7 @@ def all_profile_variants:
       }
     }) as $plutus_loop_counter
   |
-   ($pparams_v7_to_v8 *
+   ($pparams_to_v8 *
     { generator:
       { plutus:
           { type:                      "LimitSaturationLoop"
@@ -302,7 +298,7 @@ def all_profile_variants:
       }
     }) as $plutus_loop_secp_ecdsa
   |
-   ($pparams_v7_to_v8 *
+   ($pparams_to_v8 *
     { generator:
       { plutus:
           { type:                       "LimitSaturationLoop"
