@@ -1,30 +1,28 @@
-let
-  batchNameDefault   = "plain";
-  profileNameDefault = "default-bage";
-in
 { pkgs
+, lib
 , cardanoNodePackages
-, backendWorkbench
 ##
-, profileName           ? profileNameDefault
-, batchName             ? batchNameDefault
+, stateDir
+, batchName
+, profileName
+, backend
 ##
-, workbenchDevMode      ? false
 , cardano-node-rev      ? "0000000000000000000000000000000000000000"
+, workbench
+, workbenchDevMode      ? false
+##
+, cacheDir              ? "${__getEnv "HOME"}/.cache/cardano-workbench"
+, basePort              ? 30000
 }:
 let
-  inherit (backendWorkbench) workbench backend cacheDir stateDir basePort;
+  backendName = backend.name;
 
-  backendName = backendWorkbench.backend.name;
+  inherit (backend) useCabalRun;
 
-  useCabalRun = backendWorkbench.backend.useCabalRun;
+  with-backend-profile = workbench.with-profile
+    { inherit stateDir profileName backend basePort workbench; };
 
-  with-backend-profile =
-    { envArgsOverride ? {} }: ## TODO: envArgsOverride is not used!
-    workbench.with-profile
-      { inherit backend profileName; };
-
-  inherit (with-backend-profile {}) profileNix profile topology genesis;
+  inherit (with-backend-profile) profileNix profile topology genesis;
 in
   let
 
@@ -74,8 +72,7 @@ in
       { trace ? false }:
       let
         inherit
-          (with-backend-profile
-            { envArgsOverride = { cacheDir = "./cache"; stateDir = "./"; }; })
+          (with-backend-profile)
           profileNix profile topology genesis;
 
         run = pkgs.runCommand "workbench-run-${backendName}-${profileName}"
@@ -93,7 +90,7 @@ in
               zstd
             ]
             ++
-            backendWorkbench.backend.extraShellPkgs
+            backend.extraShellPkgs
             ;
           }
             ''
@@ -148,10 +145,8 @@ in
     };
 in
 {
-  inherit stateDir;
-  inherit profileName;
-  inherit workbench backendWorkbench;
-  inherit (backendWorkbench) backend;
+  inherit stateDir batchName profileName backend;
+  inherit workbench;
   inherit profileNix profile topology genesis;
   inherit interactive-start interactive-stop interactive-restart;
   inherit profile-run;

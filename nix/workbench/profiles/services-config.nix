@@ -1,9 +1,10 @@
 { lib
 , workbench
 ##
-, basePort              ? 30000
-, stateDir              ? "run/current"
-, useCabalRun           ? false
+, stateDir
+, useCabalRun
+##
+, basePort
 }:
 with lib;
 {
@@ -68,9 +69,6 @@ with lib;
               ByronGenesisFile     = "./genesis/byron/genesis.json";
             }
           );
-
-      finaliseNodeArgs =
-        profile: nodeSpec: args: args;
 
       finaliseGeneratorService =
         profile: svc: recursiveUpdate svc

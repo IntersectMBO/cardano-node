@@ -7,7 +7,7 @@
 ##
 , cardano-mainnet-mirror
 ##
-, workbenchRun
+, workbenchRunner
 , workbenchDevMode ? false
 ##
 , profiled ? false
@@ -18,9 +18,9 @@
 with lib;
 
 let
-    inherit (workbenchRun) profileName backend profile;
+    inherit (workbenchRunner) profileName backend profile;
 
-    shellHook = { profileName, backend, workbenchDevMode, profiled, withMainnet }: ''
+    shellHook = { profileName, backend, profiled, workbenchDevMode, withMainnet }: ''
       while test $# -gt 0
       do shift; done       ## Flush argv[]
 
@@ -70,7 +70,7 @@ let
 in project.shellFor {
   name = "workbench-shell";
 
-  shellHook = shellHook { inherit profileName backend workbenchDevMode profiled withMainnet; };
+  shellHook = shellHook { inherit profileName backend profiled workbenchDevMode withMainnet; };
 
   inherit withHoogle;
 
@@ -109,15 +109,15 @@ in project.shellFor {
     pkgs.moreutils
     pkgs.pstree
     pkgs.time
-    workbenchRun.interactive-start
-    workbenchRun.interactive-stop
-    workbenchRun.interactive-restart
+    workbenchRunner.interactive-start
+    workbenchRunner.interactive-stop
+    workbenchRunner.interactive-restart
   ] ++ lib.optional haveGlibcLocales pkgs.glibcLocales
   ++ lib.optionals (!backend.useCabalRun) [cardano-topology cardano-cli locli]
   ++ backend.extraShellPkgs
   ++ lib.optionals (!workbenchDevMode)
     [
-      workbenchRun.workbench.workbench
+      workbenchRunner.workbench.workbench
     ]
     ;
 

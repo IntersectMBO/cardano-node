@@ -278,7 +278,7 @@
             benchmarks = collectComponents' "benchmarks" projectPackages;
           });
 
-          inherit (pkgs) workbench all-profiles-json workbench-instance;
+          inherit (pkgs) workbench all-profiles-json workbench-runner;
 
           packages =
             exes
@@ -292,7 +292,7 @@
 
               ## This is a very light profile, no caching&pinning needed.
               workbench-ci-test =
-                (pkgs.workbench-instance
+                (pkgs.workbench-runner
                   {
                     profileName = "ci-test-bage";
                     backendName = "supervisor";

@@ -1,13 +1,23 @@
-{ pkgs, cardanoLib
-, runCommand, runWorkbenchJqOnly, runJq, workbench
-
-## An attrset of specific methods and parameters.
-, services-config
-
+{ pkgs, lib, cardanoLib
+, runCommand
+, workbench
+, stateDir
 , profileName
+, useCabalRun
+, basePort
 }:
 
 let
+  inherit (workbench) runWorkbenchJqOnly runJq;
+
+  services-config = import ./services-config.nix
+    {
+      inherit lib workbench;
+      inherit stateDir;
+      inherit useCabalRun;
+      inherit basePort;
+    };
+
   JSON = runWorkbenchJqOnly "profile-${profileName}.json"
                             "profile json ${profileName}";
 
@@ -21,7 +31,7 @@ let
 
       topology.files =
         runCommand "topology-${profileName}" {}
-          "${workbench}/bin/wb topology make ${JSON} $out";
+          "${workbench.workbench}/bin/wb topology make ${JSON} $out";
 
       node-specs  =
         {
