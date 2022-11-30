@@ -358,6 +358,24 @@ instance Ord ChainPoint where
   compare _ ChainPointAtGenesis = GT
   compare (ChainPoint sn _) (ChainPoint sn' _) = compare sn sn'
 
+instance ToJSON ChainPoint where
+  toJSON = \case
+    ChainPointAtGenesis -> object ["tag" .= String "ChainPointAtGenesis"]
+    ChainPoint slot blockHash ->
+      object
+        [ "tag" .= String "ChainPoint"
+        , "slot" .= toJSON slot
+        , "blockHash" .= toJSON blockHash
+        ]
+
+instance FromJSON ChainPoint where
+  parseJSON = withObject "ChainPoint" $ \o -> do
+    tag <- o .: "tag"
+    case tag :: Text of
+      "ChainPointAtGenesis" -> pure ChainPointAtGenesis
+      "ChainPoint" -> ChainPoint <$> o .: "slot" <*> o .: "blockHash"
+      _ -> fail "Expected tag to be ChainPointAtGenesis | ChainPoint"
+
 toConsensusPointInMode :: ConsensusMode mode
                        -> ChainPoint
                        -> Consensus.Point (ConsensusBlockForMode mode)
