@@ -341,6 +341,11 @@ data ChainPoint = ChainPointAtGenesis
                 | ChainPoint !SlotNo !(Hash BlockHeader)
   deriving (Eq, Show)
 
+instance Ord ChainPoint where
+  compare ChainPointAtGenesis ChainPointAtGenesis = EQ
+  compare ChainPointAtGenesis _ = LT
+  compare _ ChainPointAtGenesis = GT
+  compare (ChainPoint sn _) (ChainPoint sn' _) = compare sn sn'
 
 toConsensusPointInMode :: ConsensusMode mode
                        -> ChainPoint
