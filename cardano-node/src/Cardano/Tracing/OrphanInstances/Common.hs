@@ -83,7 +83,7 @@ instance FromJSON TracingVerbosity where
                             <> "Encountered: " <> show invalid
 
 instance FromJSON PortNumber where
-  parseJSON (Number portNum) = case readMaybe . show @Integer $ coefficient portNum of
+  parseJSON (Number portNum) = case readMaybe . show @Integer @Text $ coefficient portNum of
     Just port -> pure port
     Nothing -> fail $ show portNum <> " is not a valid port number."
   parseJSON invalid  = fail $ "Parsing of port number failed due to type mismatch. "
