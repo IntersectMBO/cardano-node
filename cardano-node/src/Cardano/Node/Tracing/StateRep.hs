@@ -86,7 +86,8 @@ data StartupState
   | NetworkConfigUpdate
   | NetworkConfigUpdateError Text
   | P2PWarning
-  | WarningDevelopmentNetworkProtocols [NPV.NodeToNodeVersion] [NPV.NodeToClientVersion]
+  | WarningDevelopmentNodeToNodeVersions [NPV.NodeToNodeVersion]
+  | WarningDevelopmentNodeToClientVersions [NPV.NodeToClientVersion]
   deriving (Generic, FromJSON, ToJSON)
 
 -- | The representation of the current state of node.
@@ -221,6 +222,10 @@ traceNodeStateStartup tr ev =
       traceWith tr $ NodeStartup $ NetworkConfigUpdateError e
     Startup.P2PWarning ->
       traceWith tr $ NodeStartup P2PWarning
+    Startup.WarningDevelopmentNetworkProtocols ntnVersions ntcVersions -> do
+      traceWith tr $ NodeStartup (WarningDevelopmentNodeToNodeVersions ntnVersions)
+      traceWith tr $ NodeStartup (WarningDevelopmentNodeToClientVersions ntcVersions)
+    -- TODO: why other constructors are not traced?
     _ -> return ()
 
 traceNodeStateShutdown
