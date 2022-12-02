@@ -108,9 +108,15 @@ data StartupTrace blk =
   --
   | P2PWarningDevelopementNetworkProtocols
 
-  -- | Warn when 'TestEnableDevelopmentNetworkProtocols' is set.
+  -- | Warn when 'TestEnableDevelopmentNetworkProtocols' is set and affects
+  -- node-to-node protocol.
   --
-  | WarningDevelopmentNetworkProtocols [NodeToNodeVersion] [NodeToClientVersion]
+  | WarningDevelopmentNodeToNodeVersions [NodeToNodeVersion]
+
+  -- | Warn when 'TestEnableDevelopmentNetworkProtocols' is set and affects
+  -- node-to-client protocol.
+  --
+  | WarningDevelopmentNodeToClientVersions [NodeToClientVersion]
 
   | BICommon BasicInfoCommon
   | BIShelley BasicInfoShelleyBased
