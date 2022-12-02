@@ -1,6 +1,5 @@
 status = [
-  "buildkite/cardano-node",
-  "ci/hydra-build:required",
+  "ci/push",
 ]
 timeout_sec = 7200
 required_approvals = 1
