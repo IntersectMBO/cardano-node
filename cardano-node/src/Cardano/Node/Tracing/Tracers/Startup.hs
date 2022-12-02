@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -16,6 +17,7 @@ module Cardano.Node.Tracing.Tracers.Startup
 import           Prelude
 
 import           Data.Aeson (ToJSON (..), Value (..), (.=))
+import qualified Data.Aeson as Aeson
 import           Data.List (intercalate)
 import qualified Data.Map as Map
 import           Data.Text (Text, pack)
@@ -141,6 +143,24 @@ namesStartupInfo = \case
   BIByron {}                                -> ["Byron"]
   BINetwork {}                              -> ["Network"]
 
+
+data VersionTuple a b = VersionTuple a b
+
+-- TODO: provide JSON instance for `BlockNodeToClientVersion`
+instance Show blkVersion => ToJSON (VersionTuple NodeToClientVersion blkVersion) where
+    toJSON (VersionTuple nodeToClientVersion blockVersion) =
+      Aeson.object [ "nodeToClientVersion" .= toJSON nodeToClientVersion
+                   , "blockVersion" .= String (pack . show $ blockVersion)
+                   ]
+
+-- TODO: provide JSON instance for `BlockNodeToNodeVersion`
+instance Show blkVersion => ToJSON (VersionTuple NodeToNodeVersion blkVersion) where
+    toJSON (VersionTuple nodeToClientVersion blockVersion) =
+      Aeson.object [ "nodeToNodeVersion" .= toJSON nodeToClientVersion
+                   , "blockVersion" .= String (pack . show $ blockVersion)
+                   ]
+
+
 instance ( Show (BlockNodeToNodeVersion blk)
          , Show (BlockNodeToClientVersion blk)
          )
@@ -162,9 +182,9 @@ instance ( Show (BlockNodeToNodeVersion blk)
         case dtal of
           DMaximum ->
             [ "nodeToNodeVersions" .=
-                toJSON (map show . Map.assocs $ supportedNodeToNodeVersions)
+                toJSON (map (uncurry VersionTuple) . Map.assocs $ supportedNodeToNodeVersions)
             , "nodeToClientVersions" .=
-                toJSON (map show . Map.assocs $ supportedNodeToClientVersions)
+                toJSON (map (uncurry VersionTuple) . Map.assocs $ supportedNodeToClientVersions)
             ]
           _ ->
             [ "maxNodeToNodeVersion" .=

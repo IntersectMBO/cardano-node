@@ -18,8 +18,9 @@ module Cardano.Tracing.OrphanInstances.Network () where
 import           Cardano.Prelude hiding (group, show)
 import           Prelude (String, id, show)
 
+import           Control.Monad (fail)
 import           Control.Monad.Class.MonadTime (DiffTime, Time (..))
-import           Data.Aeson (Value (..))
+import           Data.Aeson (Value (..), FromJSON (..))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (listValue)
 import qualified Data.IP as IP
@@ -65,9 +66,9 @@ import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.InboundGovernor.State (InboundGovernorCounters (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import           Ouroboros.Network.Magic (NetworkMagic (..))
-import           Ouroboros.Network.NodeToClient (NodeToClientVersion, NodeToClientVersionData (..))
+import           Ouroboros.Network.NodeToClient (NodeToClientVersion (..), NodeToClientVersionData (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
-import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), NodeToNodeVersion,
+import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), NodeToNodeVersion (..),
                    NodeToNodeVersionData (..), RemoteAddress, TraceSendRecv (..), WithAddr (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
 import qualified Ouroboros.Network.PeerSelection.EstablishedPeers as EstablishedPeers
@@ -1758,10 +1759,34 @@ instance Show vNumber => ToJSON (HandshakeException vNumber) where
                  ]
 
 instance ToJSON NodeToNodeVersion where
-  toJSON x = String (pack $ show x)
+  toJSON NodeToNodeV_7  = Number 7
+  toJSON NodeToNodeV_8  = Number 8
+  toJSON NodeToNodeV_9  = Number 9
+  toJSON NodeToNodeV_10 = Number 10
+
+instance FromJSON NodeToNodeVersion where
+  parseJSON (Number 7) = return NodeToNodeV_7
+  parseJSON (Number 8) = return NodeToNodeV_8
+  parseJSON (Number 9) = return NodeToNodeV_9
+  parseJSON (Number 10) = return NodeToNodeV_10
+  parseJSON (Number x) = fail ("unsupported version " ++ show x)
+  parseJSON _          = fail "error parsing NodeToNodeVersion"
 
 instance ToJSON NodeToClientVersion where
-  toJSON x = String (pack $ show x)
+  toJSON NodeToClientV_9  = Number 9
+  toJSON NodeToClientV_10 = Number 10
+  toJSON NodeToClientV_11 = Number 11
+  toJSON NodeToClientV_12 = Number 12
+  toJSON NodeToClientV_13 = Number 13
+
+instance FromJSON NodeToClientVersion where
+  parseJSON (Number 9) = return NodeToClientV_9
+  parseJSON (Number 10) = return NodeToClientV_10
+  parseJSON (Number 11) = return NodeToClientV_11
+  parseJSON (Number 12) = return NodeToClientV_12
+  parseJSON (Number 13) = return NodeToClientV_13
+  parseJSON (Number x) = fail ("unsupported version " ++ show x)
+  parseJSON _          = fail "error parsing NodeToClientVersion"
 
 instance ToJSON NodeToNodeVersionData where
   toJSON (NodeToNodeVersionData (NetworkMagic m) dm) =
