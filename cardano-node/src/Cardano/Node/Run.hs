@@ -514,10 +514,15 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
             (_, Nothing)         -> Map.keys
                                   $ supportedNodeToClientVersions (Proxy @blk)
     when (  ncTestEnableDevelopmentNetworkProtocols nc
-         && (not (null developmentNtnVersions) || not (null developmentNtcVersions)) )
+         && not (null developmentNtnVersions))
        $ traceWith (startupTracer tracers)
-                   (WarningDevelopmentNetworkProtocols
-                     developmentNtnVersions
+                   (WarningDevelopmentNodeToNodeVersions
+                     developmentNtnVersions)
+
+    when (  ncTestEnableDevelopmentNetworkProtocols nc
+         && not (null developmentNtcVersions))
+       $ traceWith (startupTracer tracers)
+                   (WarningDevelopmentNodeToClientVersions
                      developmentNtcVersions)
 
 #ifdef UNIX

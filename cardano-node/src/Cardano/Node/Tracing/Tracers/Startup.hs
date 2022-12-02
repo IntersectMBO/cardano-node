@@ -202,11 +202,15 @@ instance ( Show (BlockNodeToNodeVersion blk)
   forMachine _dtal P2PWarningDevelopementNetworkProtocols =
       mconcat [ "kind" .= String "P2PWarningDevelopementNetworkProtocols"
                , "message" .= String p2pWarningDevelopmentNetworkProtocolsMessage ]
-  forMachine _ver (WarningDevelopmentNetworkProtocols ntnVersions ntcVersions) =
-      mconcat [ "kind" .= String "WarningDevelopmentNetworkProtocols"
+  forMachine _ver (WarningDevelopmentNodeToNodeVersions ntnVersions) =
+      mconcat [ "kind" .= String "WarningDevelopmentNodeToNodeVersions"
                , "message" .= String "enabled development network protocols"
-               , "nodeToNodeDevelopmentVersions" .= String (showT ntnVersions)
-               , "nodeToClientDevelopmentVersions" .= String (showT ntcVersions)
+               , "versions" .= String (showT ntnVersions)
+               ]
+  forMachine _ver (WarningDevelopmentNodeToClientVersions ntcVersions) =
+      mconcat [ "kind" .= String "WarningDevelopmentNodeToClientVersions"
+               , "message" .= String "enabled development network protocols"
+               , "versions" .= String (showT ntcVersions)
                ]
   forMachine _dtal (BINetwork BasicInfoNetwork {..}) =
       mconcat [ "kind" .= String "BasicInfoNetwork"
@@ -266,8 +270,10 @@ instance MetaTrace  (StartupTrace blk) where
     Namespace [] ["P2PWarning"]
   namespaceFor P2PWarningDevelopementNetworkProtocols {}  =
     Namespace [] ["P2PWarningDevelopementNetworkProtocols"]
-  namespaceFor WarningDevelopmentNetworkProtocols {}  =
-    Namespace [] ["WarningDevelopmentNetworkProtocols"]
+  namespaceFor WarningDevelopmentNodeToNodeVersions {}  =
+    Namespace [] ["WarningDevelopmentNodeToNodeVersions"]
+  namespaceFor WarningDevelopmentNodeToClientVersions {}  =
+    Namespace [] ["WarningDevelopmentNodeToClientVersions"]
   namespaceFor BICommon {}  =
     Namespace [] ["Common"]
   namespaceFor BIShelley {}  =
@@ -283,7 +289,8 @@ instance MetaTrace  (StartupTrace blk) where
   severityFor (Namespace _ ["NetworkConfigUpdateUnsupported"]) _ = Just Warning
   severityFor (Namespace _ ["P2PWarning"]) _ = Just Warning
   severityFor (Namespace _ ["P2PWarningDevelopementNetworkProtocols"]) _ = Just Warning
-  severityFor (Namespace _ ["WarningDevelopmentNetworkProtocols"]) _ = Just Warning
+  severityFor (Namespace _ ["WarningDevelopmentNodeToNodeVersions"]) _ = Just Warning
+  severityFor (Namespace _ ["WarningDevelopmentNodeToClientVersions"]) _ = Just Warning
   severityFor _ _ = Just Info
 
   documentFor (Namespace [] ["Info"]) = Just
@@ -312,7 +319,9 @@ instance MetaTrace  (StartupTrace blk) where
     ""
   documentFor (Namespace [] ["P2PWarningDevelopementNetworkProtocols"]) = Just
     ""
-  documentFor (Namespace [] ["WarningDevelopmentNetworkProtocols"]) = Just
+  documentFor (Namespace [] ["WarningDevelopmentNodeToNodeVersions"]) = Just
+    ""
+  documentFor (Namespace [] ["WarningDevelopmentNodeToClientVersions"]) = Just
     ""
   documentFor (Namespace [] ["Common"]) = Just $ mconcat
     [ "_biConfigPath_: is the path to the config in use. "
@@ -359,7 +368,8 @@ instance MetaTrace  (StartupTrace blk) where
     , Namespace [] ["NetworkConfigLegacy"]
     , Namespace [] ["P2PWarning"]
     , Namespace [] ["P2PWarningDevelopementNetworkProtocols"]
-    , Namespace [] ["WarningDevelopmentNetworkProtocols"]
+    , Namespace [] ["WarningDevelopmentNodeToNodeVersions"]
+    , Namespace [] ["WarningDevelopmentNodeToClientVersions"]
     , Namespace [] ["Common"]
     , Namespace [] ["ShelleyBased"]
     , Namespace [] ["Byron"]
@@ -444,10 +454,12 @@ ppStartupInfoTrace P2PWarning = p2pWarningMessage
 ppStartupInfoTrace P2PWarningDevelopementNetworkProtocols =
     p2pWarningDevelopmentNetworkProtocolsMessage
 
-ppStartupInfoTrace (WarningDevelopmentNetworkProtocols ntnVersions ntcVersions) =
-     "enabled development network protocols: "
+ppStartupInfoTrace (WarningDevelopmentNodeToNodeVersions ntnVersions) =
+     "enabled development node-to-node versions: "
   <> showT ntnVersions
-  <> " "
+
+ppStartupInfoTrace (WarningDevelopmentNodeToClientVersions ntcVersions) =
+     "enabled development node-to-client versions: "
   <> showT ntcVersions
 
 ppStartupInfoTrace (BINetwork BasicInfoNetwork {..}) =
