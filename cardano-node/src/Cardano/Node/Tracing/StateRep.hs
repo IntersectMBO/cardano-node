@@ -80,12 +80,6 @@ data AddedToCurrentChain
   = AddedToCurrentChain !EpochNo !SlotNo !SyncPercentage
   deriving (Generic, FromJSON, ToJSON)
 
-deriving instance Generic NPV.NodeToClientVersion
-deriving instance Generic NPV.NodeToNodeVersion
-
-instance FromJSON NPV.NodeToClientVersion
-instance FromJSON NPV.NodeToNodeVersion
-
 data StartupState
   = StartupSocketConfigError Text
   | StartupDBValidation
