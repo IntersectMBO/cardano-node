@@ -936,9 +936,8 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     -- 4. balance the transaction and update tx change output
     txbody0 <-
       first TxBodyError $ createAndValidateTransactionBody txbodycontent
-        { txOuts =
-              TxOut changeaddr (lovelaceToTxOutValue 0) TxOutDatumNone ReferenceScriptNone
-            : txOuts txbodycontent
+        { txOuts = txOuts txbodycontent ++ 
+                   [TxOut changeaddr (lovelaceToTxOutValue 0) TxOutDatumNone ReferenceScriptNone]
             --TODO: think about the size of the change output
             -- 1,2,4 or 8 bytes?
         }
