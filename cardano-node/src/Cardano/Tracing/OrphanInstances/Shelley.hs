@@ -19,7 +19,7 @@ module Cardano.Tracing.OrphanInstances.Shelley () where
 
 import           Cardano.Prelude
 
-import           Data.Aeson (Value (..), object)
+import           Data.Aeson (Value (..))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.Set as Set
@@ -56,7 +56,6 @@ import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo
 import           Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
-import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import qualified Cardano.Ledger.AuxiliaryData as Core
 import qualified Cardano.Ledger.Babbage.Rules.Utxo as Babbage
 import qualified Cardano.Ledger.Babbage.Rules.Utxow as Babbage
@@ -349,17 +348,7 @@ renderMissingRedeemers scripts = Aeson.object $ map renderTuple  scripts
  where
   renderTuple :: (Alonzo.ScriptPurpose StandardCrypto, ScriptHash StandardCrypto) -> Aeson.Pair
   renderTuple (scriptPurpose, sHash) =
-    Aeson.fromText (renderScriptHash sHash) .= renderScriptPurpose scriptPurpose
-
-renderScriptPurpose :: Alonzo.ScriptPurpose StandardCrypto -> Aeson.Value
-renderScriptPurpose (Alonzo.Minting pid) =
-  Aeson.object [ "minting" .= toJSON pid]
-renderScriptPurpose (Alonzo.Spending txin) =
-  Aeson.object [ "spending" .= Api.fromShelleyTxIn txin]
-renderScriptPurpose (Alonzo.Rewarding rwdAcct) =
-  Aeson.object [ "rewarding" .= Aeson.String (Api.serialiseAddress $ Api.fromShelleyStakeAddr rwdAcct)]
-renderScriptPurpose (Alonzo.Certifying cert) =
-  Aeson.object [ "certifying" .= toJSON (Api.textEnvelopeDefaultDescr $ Api.fromShelleyCertificate cert)]
+    Aeson.fromText (renderScriptHash sHash) .= Api.renderScriptPurpose scriptPurpose
 
 instance ( ShelleyBasedEra era
          , ToObject (PredicateFailure (UTXO era))
@@ -990,82 +979,6 @@ instance ( ToJSON (Alonzo.CollectError (Ledger.Crypto era))
              ]
   toObject verb (Alonzo.UpdateFailure pFailure) =
     toObject verb pFailure
-
-deriving newtype instance ToJSON Alonzo.IsValid
-
-instance ToJSON (Alonzo.CollectError StandardCrypto) where
-  toJSON cError =
-    case cError of
-      Alonzo.NoRedeemer sPurpose ->
-        object
-          [ "kind" .= String "CollectError"
-          , "error" .= String "NoRedeemer"
-          , "scriptpurpose" .= renderScriptPurpose sPurpose
-          ]
-      Alonzo.NoWitness sHash ->
-        object
-          [ "kind" .= String "CollectError"
-          , "error" .= String "NoWitness"
-          , "scripthash" .= toJSON sHash
-          ]
-      Alonzo.NoCostModel lang ->
-        object
-          [ "kind" .= String "CollectError"
-          , "error" .= String "NoCostModel"
-          , "language" .= toJSON lang
-          ]
-      Alonzo.BadTranslation err ->
-        object
-          [ "kind" .= String "PlutusTranslationError"
-          , "error" .= case err of
-              Alonzo.ByronTxOutInContext txOutSource ->
-                String $
-                  "Cannot construct a Plutus ScriptContext from this transaction "
-                    <> "due to a Byron UTxO being created or spent: "
-                    <> show txOutSource
-              Alonzo.TranslationLogicMissingInput txin ->
-                String $ "Transaction input does not exist in the UTxO: " <> show txin
-              Alonzo.RdmrPtrPointsToNothing ptr ->
-                object
-                  [ "kind" .= String "RedeemerPointerPointsToNothing"
-                  , "ptr" .= (Api.renderScriptWitnessIndex . Api.fromAlonzoRdmrPtr) ptr
-                  ]
-              Alonzo.LanguageNotSupported lang ->
-                String $ "Language not supported: " <> show lang
-              Alonzo.InlineDatumsNotSupported txOutSource ->
-                String $ "Inline datums not supported, output source: " <> show txOutSource
-              Alonzo.ReferenceScriptsNotSupported txOutSource ->
-                String $ "Reference scripts not supported, output source: " <> show txOutSource
-              Alonzo.ReferenceInputsNotSupported txins ->
-                String $ "Reference inputs not supported: " <> show txins
-              Alonzo.TimeTranslationPastHorizon msg ->
-                String $ "Time translation requested past the horizon: " <> show msg
-          ]
-
-instance ToJSON Alonzo.TagMismatchDescription where
-  toJSON tmd = case tmd of
-    Alonzo.PassedUnexpectedly ->
-      object
-        [ "kind" .= String "TagMismatchDescription"
-        , "error" .= String "PassedUnexpectedly"
-        ]
-    Alonzo.FailedUnexpectedly forReasons ->
-      object
-        [ "kind" .= String "TagMismatchDescription"
-        , "error" .= String "FailedUnexpectedly"
-        , "reconstruction" .= forReasons
-        ]
-
-instance ToJSON Alonzo.FailureDescription where
-  toJSON f = case f of
-    Alonzo.PlutusFailure t _bs ->
-      object
-        [ "kind" .= String "FailureDescription"
-        , "error" .= String "PlutusFailure"
-        , "description" .= t
-        -- , "reconstructionDetail" .= bs
-        ]
-
 instance ( Ledger.Era era
          , Show (PredicateFailure (Ledger.EraRule "LEDGERS" era))
          ) => ToObject (AlonzoBbodyPredFail era) where

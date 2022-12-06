@@ -33,11 +33,17 @@ module Cardano.Api.Certificate (
     fromShelleyPoolParams,
 
     -- * Data family instances
-    AsType(..)
+    AsType(..),
+
+    -- * Misc
+    renderScriptPurpose
+
   ) where
 
 import           Prelude
 
+import           Data.Aeson
+import qualified Data.Aeson as Aeson
 import           Data.ByteString (ByteString)
 import qualified Data.Foldable as Foldable
 import qualified Data.Map.Strict as Map
@@ -55,6 +61,7 @@ import           Cardano.Slotting.Slot (EpochNo (..))
 
 import           Cardano.Ledger.Crypto (StandardCrypto)
 
+import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import           Cardano.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
 import qualified Cardano.Ledger.BaseTypes as Shelley
 import qualified Cardano.Ledger.Coin as Shelley (toDeltaCoin)
@@ -62,14 +69,16 @@ import           Cardano.Ledger.Shelley.TxBody (MIRPot (..))
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 
 import           Cardano.Api.Address
-import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysPraos
 import           Cardano.Api.KeysShelley
+import           Cardano.Api.Orphans ()
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.StakePoolMetadata
+import           Cardano.Api.TxIn
 import           Cardano.Api.Value
 
 
@@ -460,3 +469,13 @@ fromShelleyPoolParams
     fromShelleyDnsName :: Shelley.DnsName -> ByteString
     fromShelleyDnsName = Text.encodeUtf8
                        . Shelley.dnsToText
+
+renderScriptPurpose :: Alonzo.ScriptPurpose StandardCrypto -> Aeson.Value
+renderScriptPurpose (Alonzo.Minting pid) =
+  Aeson.object [ "minting" .= toJSON pid]
+renderScriptPurpose (Alonzo.Spending txin) =
+  Aeson.object [ "spending" .= fromShelleyTxIn txin]
+renderScriptPurpose (Alonzo.Rewarding rwdAcct) =
+  Aeson.object [ "rewarding" .= Aeson.String (serialiseAddress $ fromShelleyStakeAddr rwdAcct)]
+renderScriptPurpose (Alonzo.Certifying cert) =
+  Aeson.object [ "certifying" .= toJSON (textEnvelopeDefaultDescr $ fromShelleyCertificate cert)]

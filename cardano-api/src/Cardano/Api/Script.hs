@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -9,6 +10,8 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 {- HLINT ignore "Avoid lambda using `infix`" -}
 {- HLINT ignore "Use section" -}
@@ -108,6 +111,10 @@ module Cardano.Api.Script (
     -- * Data family instances
     AsType(..),
     Hash(..),
+
+    -- * Plutus script failure
+    PlutusScriptFailure(..),
+    isPlutusFailureExecutionFailure,
   ) where
 
 import           Prelude
@@ -128,7 +135,14 @@ import           Numeric.Natural (Natural)
 import           Data.Aeson (Value (..), object, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
+import qualified Data.ByteString.Base16 as B16
+import qualified Data.ByteString.Short as Short
+import qualified Data.ByteString.UTF8 as UTF8
+import           Data.Functor.Contravariant
+import qualified Data.List.NonEmpty as NE
+import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as Seq
+import qualified Data.Set as Set
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vector
 
@@ -141,19 +155,44 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 
 import           Cardano.Slotting.Slot (SlotNo)
 
+import qualified Cardano.Ledger.Alonzo.Language as Alonzo
+import qualified Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo
+import           Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBbodyPredFail (..))
+import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo
+import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo
+import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
+import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
+import qualified Cardano.Ledger.Babbage as Babbage
+import qualified Cardano.Ledger.Babbage.Rules.Utxo as Babbage
+import qualified Cardano.Ledger.Babbage.Rules.Utxow as Babbage
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Era as Ledger
-
 import qualified Cardano.Ledger.Keys as Shelley
+import qualified Cardano.Ledger.Rules.ValidationMode as Ledger
+import qualified Cardano.Ledger.Shelley.API as Ledger
+import qualified Cardano.Ledger.Shelley.API.Mempool as LedgerMempool
+import qualified Cardano.Ledger.Shelley.Rules.Ledger as SL
 import qualified Cardano.Ledger.Shelley.Scripts as Shelley
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as Timelock
-import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
-
-import qualified Cardano.Ledger.Alonzo.Language as Alonzo
-import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
-
+import qualified Control.State.Transition.Extended as SmallSteps
+import qualified Plutus.V1.Ledger.Api as PV1
 import qualified Plutus.V1.Ledger.Examples as Plutus
+import qualified Plutus.V2.Ledger.Api as PV2
+import qualified PlutusTx.AssocMap as AssocMap
+
+import qualified Ouroboros.Consensus.Cardano.Block as Consensus
+import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Consensus
+import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
+import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
+
+import qualified Cardano.Crypto.Hash as Hash
+
+import qualified PlutusCore.Data as Plutus
+import qualified PlutusCore.Evaluation.Machine.ExBudget as Cek
+import qualified PlutusCore.Pretty as Plutus
+import qualified UntypedPlutusCore.Core.Type
 
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
@@ -161,6 +200,7 @@ import           Cardano.Api.Error
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.KeysShelley
+import           Cardano.Api.Modes
 import           Cardano.Api.ScriptData
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
@@ -1500,3 +1540,499 @@ textEnvelopeToScript = deserialiseFromTextEnvelopeAnyOf textEnvTypes
     , FromSomeType (AsScript AsPlutusScriptV2)
                    (ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV2))
     ]
+
+
+
+  -- Instances below are needed for ToJSON TagMismatchDescription, which
+  -- is used to render plutus script failures.
+
+
+instance ToJSON Alonzo.TagMismatchDescription where
+  toJSON = \case
+    Alonzo.PassedUnexpectedly -> object
+      [ "kind"  .= String "TagMismatchDescription"
+      , "error" .= String "PassedUnexpectedly"
+      ]
+    Alonzo.FailedUnexpectedly forReasons -> object
+      [ "kind"            .= String "TagMismatchDescription"
+      , "error"           .= String "FailedUnexpectedly"
+      , "reconstruction"  .= NE.toList forReasons
+      ]
+
+
+instance ToJSON Alonzo.PlutusDebugInfo where
+  toJSON = \case
+    Alonzo.DebugSuccess budget -> object
+      [ "kind"    .= String "DebugSuccess"
+      , "budget"  .= do budget :: Cek.ExBudget
+      ]
+    Alonzo.DebugCannotDecode msg -> object
+      [ "kind"    .= String "DebugCannotDecode"
+      , "message" .= do msg :: String
+      ]
+    Alonzo.DebugInfo texts e d -> object
+      [ "kind"  .= String "DebugInfo"
+      , "texts" .= do texts :: [Text]
+      , "error" .= do e     :: Alonzo.PlutusError
+      , "debug" .= do d     :: Alonzo.PlutusDebug
+      ]
+    Alonzo.DebugBadHex msg -> object
+      [ "kind"    .= String "DebugBadHex"
+      , "message" .= do msg :: String
+      ]
+
+instance ToJSON Alonzo.PlutusError where
+  toJSON = \case
+    Alonzo.PlutusErrorV1 evaluationError -> toJSON (evaluationError :: PV1.EvaluationError)
+    Alonzo.PlutusErrorV2 evaluationError -> toJSON (evaluationError :: PV2.EvaluationError)
+
+scriptHashOf :: Alonzo.Language -> Short.ShortByteString -> Text
+scriptHashOf lang sbs = Text.pack $ Hash.hashToStringAsHex h
+  where Ledger.ScriptHash h = case lang of
+          Alonzo.PlutusV1 -> Ledger.hashScript @Consensus.StandardAlonzo (Alonzo.PlutusScript lang sbs)
+          Alonzo.PlutusV2 -> error "not implemented"
+
+txInfoPV1toJson :: PV1.TxInfo -> Value
+txInfoPV1toJson txInfo = Aeson.object
+  [ "inputs" .= PV1.txInfoInputs txInfo
+  , "outputs" .= PV1.txInfoOutputs txInfo
+  , "fee" .= PV1.txInfoFee txInfo
+  , "mint" .= PV1.txInfoMint txInfo
+  , "certificates" .= PV1.txInfoDCert txInfo
+  , "withdrawals" .= PV1.txInfoWdrl txInfo
+  , "validityRange" .= PV1.txInfoValidRange  txInfo
+  , "signatories" .= PV1.txInfoSignatories txInfo
+  , "data" .= PV1.txInfoData txInfo
+  , "txid" .= PV1.txInfoId txInfo
+  ]
+
+txInfoPV2toJson :: PV2.TxInfo -> Value
+txInfoPV2toJson txInfo = Aeson.object
+  [ "inputs" .= PV2.txInfoInputs txInfo
+  , "outputs" .= PV2.txInfoOutputs txInfo
+  , "fee" .= PV2.txInfoFee txInfo
+  , "mint" .= PV2.txInfoMint txInfo
+  , "certificates" .= PV2.txInfoDCert txInfo
+  , "withdrawals" .= PV2.txInfoWdrl txInfo
+  , "validityRange" .= PV2.txInfoValidRange txInfo
+  , "signatories" .= PV2.txInfoSignatories txInfo
+  , "data" .= PV2.txInfoData txInfo
+  , "txid" .= PV2.txInfoId txInfo
+  ]
+
+instance ToJSONKey PV2.DatumHash where
+  toJSONKey = Aeson.toJSONKeyText Plutus.display
+
+instance ToJSON Plutus.Data where
+  toJSON = \case
+    Plutus.Constr t as -> object
+      [ "Constr" .= do toJSON (t :: Integer):fmap toJSON (as :: [Plutus.Data]) :: [Value]
+      ]
+    Plutus.Map es -> object
+      [ "Map" .= do fmap dataEntryToJson es :: [Value]
+      ]
+    Plutus.List es  -> toJSON (es :: [Plutus.Data])
+    Plutus.I n      -> toJSON (n :: Integer)
+    Plutus.B bs     -> toJSON (Text.decodeLatin1 (B16.encode bs) :: Text)
+
+dataEntryToJson :: (Plutus.Data, Plutus.Data) -> Value
+dataEntryToJson (k, v) = toJSON [toJSON k, toJSON v]
+
+instance ToJSON PV1.Datum where
+  toJSON v = toJSON (PV1.builtinDataToData (PV1.getDatum v) :: Plutus.Data)
+
+-- DatumHash is the same for PV1 and PV2
+instance ToJSON PV1.DatumHash where
+  toJSON v = toJSON $ show v
+
+instance ToJSON PV1.DCert where
+  toJSON = \case
+    PV1.DCertDelegRegKey stakingCredential -> object
+      [ "DCertDelegRegKey" .= do stakingCredential :: PV1.StakingCredential
+      ]
+    PV1.DCertDelegDeRegKey stakingCredential -> object
+      [ "DCertDelegDeRegKey" .= do stakingCredential :: PV1.StakingCredential
+      ]
+    PV1.DCertDelegDelegate delegator delagatee -> object
+      [ "DCertDelegDelegate" .= object
+        [ "delegator" .= do delegator :: PV1.StakingCredential
+        , "delegatee" .= do delagatee :: PV1.PubKeyHash
+        ]
+      ]
+    PV1.DCertPoolRegister poolId poolVfr -> object
+      [ "DCertPoolRegister" .= object
+        [ "poolId"  .= do poolId  :: PV1.PubKeyHash
+        , "poolVfr" .= do poolVfr :: PV1.PubKeyHash
+        ]
+      ]
+    PV1.DCertPoolRetire pkh n -> object
+      [ "DCertPoolRetire" .= object
+        [ "stakePoolId"   .= do pkh :: PV1.PubKeyHash
+        , "epochRetiring" .= do n   :: Integer
+        ]
+      ]
+    PV1.DCertGenesis -> String "DCertGenesis"
+    PV1.DCertMir -> String "DCertMir"
+
+instance ToJSON (PV1.Interval PV1.POSIXTime) where
+  toJSON (PV1.Interval lo hi) = toJSON $
+    lowerBoundToJsonArray lo <>
+    upperBoundToJsonArray hi
+    where
+      lowerBoundToJsonArray :: PV1.LowerBound PV1.POSIXTime -> [Value]
+      lowerBoundToJsonArray = \case
+        PV1.LowerBound PV1.PosInf     _     -> ["(", "+∞"                 ]
+        PV1.LowerBound PV1.NegInf     _     -> ["(", "-∞"                 ]
+        PV1.LowerBound (PV1.Finite a) True  -> ["[", toJSON (PV1.toData a)]
+        PV1.LowerBound (PV1.Finite a) False -> ["(", toJSON (PV1.toData a)]
+
+      upperBoundToJsonArray :: PV1.UpperBound PV1.POSIXTime -> [Value]
+      upperBoundToJsonArray = \case
+        PV1.UpperBound PV1.PosInf     _     -> ["+∞"                 , ")"]
+        PV1.UpperBound PV1.NegInf     _     -> ["-∞"                 , ")"]
+        PV1.UpperBound (PV1.Finite a) True  -> [toJSON (PV1.toData a), "]"]
+        PV1.UpperBound (PV1.Finite a) False -> [toJSON (PV1.toData a), ")"]
+
+instance ToJSON PV1.PubKeyHash where
+  toJSON v = toJSON $ show v
+
+instance ToJSON PV1.StakingCredential where
+  toJSON = \case
+    PV1.StakingHash credential -> object
+      [ "StakingHash" .= do credential :: PV1.Credential
+      ]
+    PV1.StakingPtr a b c -> toJSON ([a, b, c] :: [Integer])
+
+
+instance ToJSONKey PV1.StakingCredential where
+  toJSONKey = Aeson.toJSONKeyText renderStakingCredential
+    where
+      renderStakingCredential :: PV1.StakingCredential -> Text
+      renderStakingCredential (PV1.StakingHash cred) =
+        case cred of
+          PV1.PubKeyCredential h -> Plutus.display h
+          PV1.ScriptCredential h -> Plutus.display h
+      renderStakingCredential (PV1.StakingPtr a b c) =
+        Plutus.display a <> Plutus.display b <> Plutus.display c
+
+instance ToJSON PV1.Credential where
+  toJSON = \case
+    PV1.PubKeyCredential pubKeyHash -> object
+      [ "PubKeyCredential" .= do pubKeyHash :: PV1.PubKeyHash
+      ]
+    PV1.ScriptCredential validatorHash -> object
+      [ "ScriptCredential" .= do validatorHash :: PV1.ValidatorHash
+      ]
+
+instance ToJSON PV1.ValidatorHash where
+  toJSON h = toJSON $ show h
+
+instance ToJSON PV1.TxId where
+  toJSON v = toJSON $ show v
+
+instance ToJSON PV1.TxInInfo where
+  toJSON v = object
+    [ "outRef"    .= toJSON (PV1.txInInfoOutRef   v :: PV1.TxOutRef)
+    , "resolved"  .= toJSON (PV1.txInInfoResolved v :: PV1.TxOut)
+    ]
+
+instance ToJSON PV2.TxInInfo where
+  toJSON v = object
+    [ "outRef"    .= toJSON (PV2.txInInfoOutRef   v :: PV2.TxOutRef)
+    , "resolved"  .= toJSON (PV2.txInInfoResolved v :: PV2.TxOut)
+    ]
+
+
+instance ToJSON PV1.TxOut where
+  toJSON v = object
+    [ "address"   .= do PV1.txOutAddress   v :: PV1.Address
+    , "value"     .= do PV1.txOutValue     v :: PV1.Value
+    , "datumHash" .= do PV1.txOutDatumHash v :: Maybe PV1.DatumHash
+    ]
+
+instance ToJSON PV2.TxOut where
+  toJSON v = object
+    [ "address"   .= PV2.txOutAddress v
+    --, "value"     .= error "PV2.txOutValue     v :: PV2.Value"
+    --, "datumHash" .= error "PV2.txOutDatum v :: PV2.OutputDatum"
+    ]
+
+instance ToJSON PV1.Address where
+  toJSON v = object
+    [ "credential"        .= do PV1.addressCredential        v :: PV1.Credential
+    , "stakingCredential" .= do PV1.addressStakingCredential v :: Maybe PV1.StakingCredential
+    ]
+
+instance ToJSON PV1.Value where
+  toJSON (PV1.Value m) = toJSON (m :: AssocMap.Map PV1.CurrencySymbol (AssocMap.Map PV1.TokenName Integer))
+
+instance ToJSON PV1.TokenName where
+  toJSON v = toJSON $ show v
+
+instance ToJSONKey PV1.TokenName where
+  toJSONKey = contramap (builtinByteStringToBase16Text . PV1.unTokenName) Aeson.toJSONKey -- toJSONKeyText $ show @PV1.TokenName @Text
+
+builtinByteStringToBase16Text :: PV1.BuiltinByteString -> Text
+builtinByteStringToBase16Text bs = Text.filter (/= '"') (Text.pack (show bs)) -- TODO is there a better way to encode as Text
+
+instance ToJSONKey PV1.CurrencySymbol where
+  toJSONKey = Aeson.toJSONKeyText (Text.pack . show)
+
+instance (ToJSONKey k, Ord k, ToJSON a) => ToJSON (AssocMap.Map k a) where
+  toJSON = toJSON . Map.fromList . AssocMap.toList
+
+instance ToJSON PV1.TxOutRef where
+  toJSON (PV1.TxOutRef txid idx) = toJSON
+    [ toJSON (txid  :: PV1.TxId)
+    , toJSON (idx   :: Integer)
+    ]
+instance ToJSON PV1.CurrencySymbol where
+  toJSON (PV1.CurrencySymbol bs) = toJSON $ show bs
+
+scriptPurposeToJson :: PV1.ScriptPurpose -> Value
+scriptPurposeToJson = \case
+  PV1.Minting currencySymbol -> Aeson.object
+    [ "kind"  .= String "Minting"
+    , "value" .= (currencySymbol :: PV1.CurrencySymbol)
+    ]
+  PV1.Spending outRef -> Aeson.object
+    [ "kind"  .= String "Spending"
+    , "value" .= toJSON outRef
+    ]
+  PV1.Rewarding stakingCredential -> Aeson.object
+    [ "kind"  .= String "Rewarding"
+    , "value" .= (stakingCredential :: PV1.StakingCredential)
+    ]
+  PV1.Certifying dCert -> Aeson.object
+    [ "kind"  .= String "Certifying"
+    , "value" .= do dCert :: PV1.DCert
+    ]
+
+
+
+plutusV1ScriptContextToJson :: Plutus.Data -> Aeson.Value
+plutusV1ScriptContextToJson info = case PV1.fromData info of
+  Nothing -> String "no-info"
+  Just PV1.ScriptContext { PV1.scriptContextTxInfo, PV1.scriptContextPurpose} -> object
+    [ "txInfo"  .= txInfoPV1toJson scriptContextTxInfo
+    , "purpose" .= scriptPurposeToJson scriptContextPurpose
+    ]
+
+toPlutusScriptV2Context :: Plutus.Data -> Aeson.Value
+toPlutusScriptV2Context info = case PV2.fromData info of
+  Nothing -> String "no-info"
+  Just PV2.ScriptContext { PV2.scriptContextTxInfo, PV2.scriptContextPurpose} -> object
+    [ "txInfo"  .= txInfoPV2toJson scriptContextTxInfo
+    , "purpose" .= scriptPurposeToJson scriptContextPurpose
+    ]
+
+plutusScriptContextToJsonV1 :: [Plutus.Data] -> Aeson.Value
+plutusScriptContextToJsonV1 [dat, redeemer, info] = Aeson.object
+  [ "data"      .= dat
+  , "redeemer"  .= redeemer
+  , "info"      .= plutusV1ScriptContextToJson info
+  ]
+plutusScriptContextToJsonV1 [dat, info] = Aeson.object
+  [ "data"      .= dat
+  , "info"      .= plutusV1ScriptContextToJson info
+  ]
+plutusScriptContextToJsonV1 _ = Aeson.Null
+
+plutusScriptContextToJsonV2 :: [Plutus.Data] -> Aeson.Value
+plutusScriptContextToJsonV2 [dat, redeemer, info] = Aeson.object
+  [ "data"      .= dat
+  , "redeemer"  .= redeemer
+  , "info"      .= toPlutusScriptV2Context info
+  ]
+plutusScriptContextToJsonV2 [dat, info] = Aeson.object
+  [ "data"      .= dat
+  , "info"      .= toPlutusScriptV2Context info
+  ]
+plutusScriptContextToJsonV2 _ = Aeson.Null
+
+
+instance ToJSON Alonzo.PlutusDebug where
+  toJSON = \case
+    Alonzo.PlutusDebugV1 _costModel exUnits sbs ds protVer -> object
+      [ "exUnits"     .= exUnits
+      , "scriptshortbs" .= Text.decodeLatin1 (B16.encode (Short.fromShort sbs))
+      , "scriptHash"  .= scriptHashOf Alonzo.PlutusV1 sbs
+      , "scriptContext" .= plutusScriptContextToJsonV1 ds
+      , "protVer"     .= protVer
+      ]
+    Alonzo.PlutusDebugV2 _costModel exUnits sbs ds protVer -> object
+      [ "exUnits"     .= exUnits
+      , "scriptshortbs" .= Text.decodeLatin1 (B16.encode (Short.fromShort sbs))
+      , "scriptHash"  .= scriptHashOf Alonzo.PlutusV2 sbs
+      , "scriptContext" .= plutusScriptContextToJsonV2 ds
+      , "protVer"     .= protVer
+      ]
+
+instance ToJSON PV1.EvaluationError where
+  toJSON = \case
+    PV1.CekError e -> object
+      [ "kind"    .= String "CekError"
+      , "error"   .= String (Plutus.displayPlcDebug e)
+      ]
+    PV1.DeBruijnError e -> object
+      [ "kind"    .= String "DeBruijnError"
+      , "error"   .= show e
+      ]
+    PV1.CodecError e -> object
+      [ "kind"    .= String "CodecError"
+      , "error"   .= show e
+      ]
+    PV1.IncompatibleVersionError actual -> object
+      [ "kind"    .= String "IncompatibleVersionError"
+      , "actual"  .= show (actual :: UntypedPlutusCore.Core.Type.Version ())
+      ]
+    PV1.CostModelParameterMismatch -> object
+      [ "kind"    .= String "CostModelParameterMismatch"
+      ]
+
+instance ToJSON (Alonzo.UtxosPredicateFailure (Babbage.BabbageEra StandardCrypto)) where
+  toJSON (Alonzo.ValidationTagMismatch isValidating reason) = object
+    [ "kind"          .= String "ValidationTagMismatch"
+    , "isvalidating"  .= isValidating
+    , "reason"        .= toJSON reason
+    ]
+  toJSON (Alonzo.CollectErrors errors) = object
+    [ "kind"    .= String "CollectErrors"
+    , "errors"  .= show errors
+    ]
+  toJSON (Alonzo.UpdateFailure pFailure) =
+   String $ Text.pack
+     $ show (Ledger.inject pFailure :: SmallSteps.PredicateFailure (Ledger.EraRule "UTXOS" (Babbage.BabbageEra StandardCrypto)))
+
+
+instance ToJSON Alonzo.IsValid where
+  toJSON (Alonzo.IsValid bool) = object ["isValid" .= bool]
+
+instance ToJSON (Alonzo.CollectError StandardCrypto) where
+  toJSON = \case
+    Alonzo.NoRedeemer sPurpose -> object
+      [ "kind"          .= String "CollectError"
+      , "error"         .= String "NoRedeemer"
+      , "scriptpurpose" .= show sPurpose
+      ]
+    Alonzo.NoWitness sHash -> object
+      [ "kind" .= String "CollectError"
+      , "error" .= String "NoWitness"
+      , "scripthash" .= toJSON sHash
+      ]
+    Alonzo.NoCostModel lang -> object
+      [ "kind" .= String "CollectError"
+      , "error" .= String "NoCostModel"
+      , "language" .= toJSON lang
+      ]
+    Alonzo.BadTranslation err -> object
+      [ "kind" .= String "PlutusTranslationError"
+      , "error" .= case err of
+          Alonzo.ByronTxOutInContext txOutSource ->
+            object
+              [ "kind" .= String "ByronTxOutInContext"
+              , "txOutSource" .= txOutSource
+              , "error" .=  String
+                                ("Cannot construct a Plutus ScriptContext from this transaction "
+                                   <> "due to a Byron UTxO being created or spent: "
+                                   <> Text.pack (show txOutSource)
+                                )
+              ]
+          Alonzo.TranslationLogicMissingInput txin ->
+            object
+              [ "kind" .= String "TranslationLogicMissingInput"
+              , "txin" .= fromShelleyTxIn txin
+              , "error" .= String ("Transaction input does not exist in the UTxO: " <> Text.pack (show txin))
+              ]
+          Alonzo.RdmrPtrPointsToNothing ptr ->
+            object
+              [ "kind" .= String "RedeemerPointerPointsToNothing"
+              , "ptr" .=  show ptr
+              ]
+          Alonzo.LanguageNotSupported lang ->
+            object
+              [ "kind" .= String "LanguageNotSupported"
+              , "lang" .= toJSON lang
+              ]
+          Alonzo.InlineDatumsNotSupported txOutSource ->
+            object
+              [ "kind" .= String "InlineDatumsNotSupported"
+              , "txOutSource" .= toJSON txOutSource
+              ]
+          Alonzo.ReferenceScriptsNotSupported txOutSource ->
+            object
+              [ "kind" .= String "ReferenceScriptsNotSupported"
+              , "txOutSource" .= toJSON txOutSource
+              ]
+          Alonzo.ReferenceInputsNotSupported txins ->
+            object
+              [ "kind" .= String "ReferenceInputsNotSupported"
+              , "txins" .= toJSON (map fromShelleyTxIn $ Set.toList  txins)
+              ]
+          Alonzo.TimeTranslationPastHorizon msg ->
+            object
+              [ "kind" .= String "TimeTranslationPastHorizon"
+              , "msg" .= toJSON msg
+              ]
+      ]
+
+instance ToJSON (Alonzo.TxOutSource StandardCrypto) where
+  toJSON = \case
+    Alonzo.TxOutFromInput txin ->
+      object
+        [ "kind" .= String "TxOutFromInput"
+        , "msg" .= fromShelleyTxIn txin
+        ]
+    Alonzo.TxOutFromOutput txix ->
+      object
+        [ "kind" .= String "TxOutFromOutput"
+        , "msg" .= show txix
+        ]
+
+instance ToJSON Alonzo.FailureDescription where
+  toJSON (Alonzo.PlutusFailure _t bs) = object
+    [ "kind"                 .= String "FailureDescription"
+    , "error"                .= String "PlutusFailure"
+    , "reconstructionDetail" .= Alonzo.debugPlutus (UTF8.toString bs)
+    -- , "description"           .= t
+    ]
+
+instance Ledger.Era era => ToJSON (AlonzoBbodyPredFail era) where
+  toJSON err = object
+    [ "kind"  .= String "AlonzoBbodyPredFail"
+    , "error" .= err
+    ]
+
+data PlutusScriptFailure = PlutusScriptFailure Alonzo.IsValid Alonzo.TagMismatchDescription
+
+instance ToJSON PlutusScriptFailure where
+  toJSON (PlutusScriptFailure isValid tagMismatch) =
+    case toJSON isValid of
+      Aeson.Object isValidObj ->
+        case toJSON tagMismatch of
+          Aeson.Object tagMismatchObj ->
+            Aeson.Object $ isValidObj <> tagMismatchObj
+          _ -> error "ToJSON PlutusScriptFailure: TagMismatchDescription should be rendered as an Object"
+      _ -> error "ToJSON PlutusScriptFailure: IsValid should be rendered as an Object"
+
+
+isPlutusFailureExecutionFailure
+  :: ShelleyBasedEra era
+  -> Consensus.ApplyTxErr (Consensus.ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era))
+  -> Maybe PlutusScriptFailure
+isPlutusFailureExecutionFailure ShelleyBasedEraBabbage (LedgerMempool.ApplyTxError (e : rest)) =
+  case e of
+    SL.UtxowFailure f ->
+      case f of
+        Babbage.UtxoFailure alonzoFail ->
+          case alonzoFail of
+            Babbage.FromAlonzoUtxoFail scriptFailure ->
+              case scriptFailure of
+                Alonzo.UtxosFailure (Alonzo.ValidationTagMismatch isValid tagMismatch) ->
+                  Just $ PlutusScriptFailure isValid tagMismatch
+                _ -> isPlutusFailureExecutionFailure ShelleyBasedEraBabbage (LedgerMempool.ApplyTxError rest)
+            _ -> isPlutusFailureExecutionFailure ShelleyBasedEraBabbage (LedgerMempool.ApplyTxError rest)
+        _ -> isPlutusFailureExecutionFailure ShelleyBasedEraBabbage (LedgerMempool.ApplyTxError rest)
+    SL.DelegsFailure{} -> isPlutusFailureExecutionFailure ShelleyBasedEraBabbage (LedgerMempool.ApplyTxError rest)
+isPlutusFailureExecutionFailure _ (LedgerMempool.ApplyTxError _) = Nothing
+
