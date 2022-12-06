@@ -84,6 +84,7 @@ mkCardanoTracer' trStdout trForward mbTrEkg tracerName namesFor severityFor priv
                           (NT.contramap Message messageTrace)
                           (NT.contramap Limit messageTrace)
     messageTrace'' <- addContextAndFilter messageTrace'
+    messageTrace''' <- hook messageTrace''
     let metricsTrace = case mbTrEkg of
                           Nothing -> Trace NT.nullTracer
                           Just ekgTrace -> metricsFormatter "Cardano" ekgTrace
