@@ -116,6 +116,10 @@ library
                        Cardano.Tracer.Types
                        Cardano.Tracer.Utils
 
+                       Generics.SOP.Mapping
+                       Generics.SOP.Some
+                       Generics.SOP.Traversal
+
   other-modules:       Paths_cardano_tracer
 
   build-depends:         aeson
@@ -138,6 +142,7 @@ library
                        , ekg-forward
                        , extra
                        , filepath
+                       , generics-sop
                        , mime-mail
                        , optparse-applicative
                        , ouroboros-network
@@ -147,6 +152,7 @@ library
                        , snap-blaze
                        , snap-core
                        , snap-server
+                       , sop-core
                        , stm
                        , string-qq
                        , text
