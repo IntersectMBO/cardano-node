@@ -30,6 +30,7 @@ library
                         -Wwarn=deprecations
 
   exposed-modules:
+<<<<<<< HEAD
                         Cardano.Benchmarking.Command
                         Cardano.Benchmarking.Compiler
                         Cardano.Benchmarking.GeneratorTx
@@ -53,6 +54,30 @@ library
                         Cardano.Benchmarking.Version
                         Cardano.Benchmarking.Wallet
                         Cardano.Benchmarking.PlutusExample
+=======
+                       Cardano.Benchmarking.Command
+                       Cardano.Benchmarking.Compiler
+                       Cardano.Benchmarking.GeneratorTx
+                       Cardano.Benchmarking.GeneratorTx.NodeToNode
+                       Cardano.Benchmarking.GeneratorTx.SizedMetadata
+                       Cardano.Benchmarking.GeneratorTx.Submission
+                       Cardano.Benchmarking.GeneratorTx.SubmissionClient
+                       Cardano.Benchmarking.LogTypes
+                       Cardano.Benchmarking.OuroborosImports
+                       Cardano.Benchmarking.Script
+                       Cardano.Benchmarking.Script.Action
+                       Cardano.Benchmarking.Script.Aeson
+                       Cardano.Benchmarking.Script.Core
+                       Cardano.Benchmarking.Script.Env
+                       Cardano.Benchmarking.Script.NodeConfig
+                       Cardano.Benchmarking.Script.Selftest
+                       Cardano.Benchmarking.Script.Types
+                       Cardano.Benchmarking.TpsThrottle
+                       Cardano.Benchmarking.Tracer
+                       Cardano.Benchmarking.Types
+                       Cardano.Benchmarking.Version
+                       Cardano.Benchmarking.Wallet
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
 
                         Cardano.TxGenerator.Fund
                         Cardano.TxGenerator.FundQueue
@@ -77,6 +102,7 @@ library
 
   autogen-modules:      Paths_tx_generator
 
+<<<<<<< HEAD
   build-depends:        aeson
                       , aeson-pretty
                       , async
@@ -129,6 +155,61 @@ library
                       , transformers-except
                       , unordered-containers
                       , yaml
+=======
+  build-depends:       aeson
+                     , aeson-pretty
+                     , async
+                     , attoparsec
+                     , base >=4.12 && <5
+                     , base16-bytestring
+                     , bytestring
+                     , cardano-api
+                     , cardano-binary
+                     , cardano-cli
+                     , cardano-crypto-class
+                     , cardano-crypto-wrapper
+                     , cardano-data
+                     , cardano-git-rev
+                     , cardano-ledger-alonzo
+                     , cardano-ledger-byron
+                     , cardano-node
+                     , cardano-prelude
+                     , contra-tracer
+                     , cborg >= 0.2.2 && < 0.3
+                     , containers
+                     , constraints-extras
+                     , dlist
+                     , extra
+                     , formatting
+                     , generic-monoid
+                     , ghc-prim
+                     , io-classes ^>= 0.3
+                     , mtl
+                     , network
+                     , network-mux
+                     , optparse-applicative-fork
+                     , ouroboros-consensus
+                     , ouroboros-consensus-byron
+                     , ouroboros-consensus-cardano
+                     , ouroboros-consensus-shelley
+                     , ouroboros-network
+                     , ouroboros-network-framework
+                     , plutus-ledger-api
+                     , random
+                     , serialise
+                     , streaming
+                     , strict-stm
+                     , cardano-ledger-shelley
+                     , stm
+                     , text
+                     , time
+                     , trace-dispatcher
+                     , trace-forward
+                     , transformers
+                     , transformers-except
+                     , unordered-containers
+                     , yaml
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
 
   default-language:     Haskell2010
   default-extensions:   OverloadedStrings
@@ -166,6 +247,7 @@ test-suite tx-generator-apitest
                         -rtsopts
                         "-with-rtsopts=-T"
 
+<<<<<<< HEAD
   build-depends:        base >=4.12 && <5
                       , aeson
                       , bytestring
@@ -178,6 +260,20 @@ test-suite tx-generator-apitest
                       , transformers-except
                       , tx-generator
                      
+=======
+  build-depends:       base >=4.12 && <5
+                     , aeson
+                     , bytestring
+                     , filepath
+                     , optparse-applicative-fork
+                     , cardano-api
+                     , cardano-cli
+                     , cardano-node
+                     , transformers
+                     , transformers-except
+                     , tx-generator
+
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
 test-suite tx-generator-test
   hs-source-dirs:       test
   main-is:              Main.hs

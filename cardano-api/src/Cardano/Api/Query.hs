@@ -140,7 +140,6 @@ import           Data.Word (Word64)
 
 import           Cardano.Ledger.SafeHash (HashAnnotated)
 import qualified Data.Aeson.KeyMap as KeyMap
-import Cardano.Ledger.SafeHash (HashAnnotated)
 
 -- ----------------------------------------------------------------------------
 -- Queries

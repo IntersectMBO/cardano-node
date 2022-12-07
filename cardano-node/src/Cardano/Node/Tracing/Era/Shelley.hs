@@ -100,12 +100,6 @@ import           Cardano.Protocol.TPraos.Rules.Prtcl
 import           Cardano.Protocol.TPraos.Rules.Tickn (TicknPredicateFailure)
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 import qualified Data.Aeson.Key as Aeson
-import           Cardano.Ledger.Alonzo.Rules (AlonzoUtxowPredFailure(..), AlonzoUtxosPredFailure, AlonzoBbodyPredFailure, AlonzoUtxoPredFailure)
-import           Cardano.Ledger.ShelleyMA.Rules (ShelleyMAUtxoPredFailure)
-import qualified Cardano.Ledger.ShelleyMA.Rules as MA
-import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
-import           Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
-import qualified Cardano.Ledger.Babbage.Rules as Babbage
 
 {- HLINT ignore "Use :" -}
 
