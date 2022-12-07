@@ -2479,7 +2479,11 @@
           "haskellNix",
           "nixpkgs-2105"
         ],
+<<<<<<< HEAD
         "utils": "utils_23"
+=======
+        "utils": "utils_22"
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
       },
       "locked": {
         "lastModified": 1644954571,
@@ -2709,7 +2713,11 @@
       "inputs": {
         "cardano-node-workbench": "cardano-node-workbench_8",
         "customConfig": "customConfig_7",
+<<<<<<< HEAD
         "flake-compat": "flake-compat_11",
+=======
+        "flake-compat": "flake-compat_9",
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
         "haskellNix": "haskellNix_7",
         "hostNixpkgs": [
           "node-measured",
@@ -2729,7 +2737,11 @@
           "nixpkgs-2105"
         ],
         "plutus-apps": "plutus-apps_4",
+<<<<<<< HEAD
         "utils": "utils_6"
+=======
+        "utils": "utils_5"
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
       },
       "locked": {
         "lastModified": 1647983004,
@@ -4116,11 +4128,19 @@
     "flake-compat_8": {
       "flake": false,
       "locked": {
+<<<<<<< HEAD
         "lastModified": 1650374568,
         "narHash": "sha256-Z+s0J8/r907g149rllvwhb4pKi8Wam5ij0st8PwAh+E=",
         "owner": "edolstra",
         "repo": "flake-compat",
         "rev": "b4a34015c698c7793d592d66adbab377907a2be8",
+=======
+        "lastModified": 1647532380,
+        "narHash": "sha256-wswAxyO8AJTH7d5oU8VK82yBCpqwA+p6kLgpb1f1PAY=",
+        "owner": "input-output-hk",
+        "repo": "flake-compat",
+        "rev": "7da118186435255a30b5ffeabba9629c344c0bec",
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
         "type": "github"
       },
       "original": {
@@ -4163,11 +4183,19 @@
     },
     "flake-utils_10": {
       "locked": {
+<<<<<<< HEAD
         "lastModified": 1659877975,
         "narHash": "sha256-zllb8aq3YO3h8B/U0/J1WBgAL8EX5yWf5pMj3G0NAmc=",
         "owner": "numtide",
         "repo": "flake-utils",
         "rev": "c0e246b9b83f637f4681389ecabcb2681b4f3af0",
+=======
+        "lastModified": 1644229661,
+        "narHash": "sha256-1YdnJAsNy69bpcjuoKdOYQX0YxZBiCYZo4Twxerqv7k=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "3cecb5b042f7f209c56ffd8371b2711a290ec797",
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
         "type": "github"
       },
       "original": {
@@ -4451,10 +4479,13 @@
       "locked": {
         "lastModified": 1623875721,
         "narHash": "sha256-A8BU7bjS5GirpAUv4QA+QnJ4CceLHkcXdRp4xITDB0s=",
+<<<<<<< HEAD
 =======
         "lastModified": 1653893745,
         "narHash": "sha256-0jntwV3Z8//YwuOjzhV2sgJJPt+HY6KhU7VZUL0fKZQ=",
 >>>>>>> eee61b98b (Update cabal.project)
+=======
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
         "owner": "numtide",
         "repo": "flake-utils",
         "rev": "f7e004a55b120c02ecb6219596820fcd32ca8772",
@@ -4466,6 +4497,39 @@
         "type": "github"
       }
     },
+<<<<<<< HEAD
+=======
+    "flake-utils_29": {
+      "locked": {
+        "lastModified": 1623875721,
+        "narHash": "sha256-A8BU7bjS5GirpAUv4QA+QnJ4CceLHkcXdRp4xITDB0s=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "f7e004a55b120c02ecb6219596820fcd32ca8772",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
+    "flake-utils_27": {
+      "locked": {
+        "lastModified": 1623875721,
+        "narHash": "sha256-A8BU7bjS5GirpAUv4QA+QnJ4CceLHkcXdRp4xITDB0s=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "f7e004a55b120c02ecb6219596820fcd32ca8772",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
     "flake-utils_28": {
       "locked": {
         "lastModified": 1623875721,
@@ -4727,7 +4791,7 @@
         "narHash": "sha256-1YdnJAsNy69bpcjuoKdOYQX0YxZBiCYZo4Twxerqv7k=",
         "owner": "numtide",
         "repo": "flake-utils",
-        "rev": "3cecb5b042f7f209c56ffd8371b2711a290ec797",
+        "rev": "1ed9fb1935d260de5fe1c2f7ee0ebaae17ed2fa1",
         "type": "github"
       },
       "original": {
@@ -6196,11 +6260,19 @@
         "cabal-34": "cabal-34_17",
         "cabal-36": "cabal-36_15",
         "cardano-shell": "cardano-shell_17",
+<<<<<<< HEAD
         "flake-utils": "flake-utils_25",
         "ghc-8.6.5-iohk": "ghc-8.6.5-iohk_17",
         "hackage": "hackage_14",
         "hpc-coveralls": "hpc-coveralls_17",
         "nix-tools": "nix-tools_15",
+=======
+        "flake-utils": "flake-utils_20",
+        "ghc-8.6.5-iohk": "ghc-8.6.5-iohk_17",
+        "hackage": "hackage_14",
+        "hpc-coveralls": "hpc-coveralls_17",
+        "nix-tools": "nix-tools_16",
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
         "nixpkgs": [
           "node-measured",
           "node-measured",
@@ -6405,6 +6477,86 @@
         "type": "github"
       }
     },
+    "haskellNix_2": {
+      "inputs": {
+        "HTTP": "HTTP_2",
+        "cabal-32": "cabal-32_2",
+        "cabal-34": "cabal-34_2",
+        "cabal-36": "cabal-36_2",
+        "cardano-shell": "cardano-shell_2",
+        "flake-compat": "flake-compat_3",
+        "flake-utils": "flake-utils_2",
+        "ghc-8.6.5-iohk": "ghc-8.6.5-iohk_2",
+        "hackage": [
+          "hackageNix"
+        ],
+        "hpc-coveralls": "hpc-coveralls_2",
+        "hydra": "hydra",
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "nixpkgs-2003": "nixpkgs-2003_2",
+        "nixpkgs-2105": "nixpkgs-2105_2",
+        "nixpkgs-2111": "nixpkgs-2111_2",
+        "nixpkgs-2205": "nixpkgs-2205",
+        "nixpkgs-unstable": "nixpkgs-unstable_2",
+        "old-ghc-nix": "old-ghc-nix_2",
+        "stackage": "stackage_2",
+        "tullia": "tullia"
+      },
+      "locked": {
+        "lastModified": 1668398236,
+        "narHash": "sha256-5rY9/27hJGiZLIKS+Ua6uWQ6nNNyTVKpmbmMSIhdOhw=",
+        "owner": "input-output-hk",
+        "repo": "haskell.nix",
+        "rev": "507cded15052759c8cbda17aa254c5e6af929557",
+        "type": "github"
+      },
+      "original": {
+        "owner": "input-output-hk",
+        "repo": "haskell.nix",
+        "type": "github"
+      }
+    },
+    "haskellNix_20": {
+      "inputs": {
+        "HTTP": "HTTP_20",
+        "cabal-32": "cabal-32_20",
+        "cabal-34": "cabal-34_20",
+        "cabal-36": "cabal-36_17",
+        "cardano-shell": "cardano-shell_20",
+        "flake-utils": "flake-utils_23",
+        "ghc-8.6.5-iohk": "ghc-8.6.5-iohk_20",
+        "hackage": "hackage_17",
+        "hpc-coveralls": "hpc-coveralls_20",
+        "nix-tools": "nix-tools_19",
+        "nixpkgs": [
+          "node-measured",
+          "node-measured",
+          "node-snapshot",
+          "nixpkgs"
+        ],
+        "nixpkgs-2003": "nixpkgs-2003_20",
+        "nixpkgs-2105": "nixpkgs-2105_20",
+        "nixpkgs-2111": "nixpkgs-2111_20",
+        "nixpkgs-unstable": "nixpkgs-unstable_20",
+        "old-ghc-nix": "old-ghc-nix_20",
+        "stackage": "stackage_20"
+      },
+      "locked": {
+        "lastModified": 1643073543,
+        "narHash": "sha256-g2l/KDWzMRTFRugNVcx3CPZeyA5BNcH9/zDiqFpprB4=",
+        "owner": "input-output-hk",
+        "repo": "haskell.nix",
+        "rev": "14f740c7c8f535581c30b1697018e389680e24cb",
+        "type": "github"
+      },
+      "original": {
+        "owner": "input-output-hk",
+        "repo": "haskell.nix",
+        "type": "github"
+      }
+    },
     "haskellNix_21": {
       "inputs": {
         "HTTP": "HTTP_21",
@@ -6500,11 +6652,19 @@
         "cabal-34": "cabal-34_23",
         "cabal-36": "cabal-36_19",
         "cardano-shell": "cardano-shell_23",
+<<<<<<< HEAD
         "flake-utils": "flake-utils_31",
         "ghc-8.6.5-iohk": "ghc-8.6.5-iohk_23",
         "hackage": "hackage_20",
         "hpc-coveralls": "hpc-coveralls_23",
         "nix-tools": "nix-tools_21",
+=======
+        "flake-utils": "flake-utils_26",
+        "ghc-8.6.5-iohk": "ghc-8.6.5-iohk_23",
+        "hackage": "hackage_20",
+        "hpc-coveralls": "hpc-coveralls_23",
+        "nix-tools": "nix-tools_22",
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
         "nixpkgs": [
           "node-measured",
           "node-snapshot",
@@ -6586,6 +6746,7 @@
         "cabal-32": "cabal-32_25",
         "cabal-34": "cabal-34_25",
         "cardano-shell": "cardano-shell_25",
+<<<<<<< HEAD
         "flake-utils": "flake-utils_33",
         "ghc-8.6.5-iohk": "ghc-8.6.5-iohk_25",
         "hackage": "hackage_22",
@@ -6706,10 +6867,135 @@
         "hpc-coveralls": "hpc-coveralls_28",
         "nix-tools": "nix-tools_26",
         "nixpkgs": [
+=======
+        "flake-utils": "flake-utils_28",
+        "ghc-8.6.5-iohk": "ghc-8.6.5-iohk_25",
+        "hackage": "hackage_22",
+        "hpc-coveralls": "hpc-coveralls_25",
+        "nix-tools": "nix-tools_24",
+        "nixpkgs": [
+          "node-measured",
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
           "node-snapshot",
           "plutus-example",
           "nixpkgs"
         ],
+<<<<<<< HEAD
+=======
+        "nixpkgs-2003": "nixpkgs-2003_25",
+        "nixpkgs-2105": "nixpkgs-2105_25",
+        "nixpkgs-2111": "nixpkgs-2111_25",
+        "nixpkgs-unstable": "nixpkgs-unstable_25",
+        "old-ghc-nix": "old-ghc-nix_25",
+        "stackage": "stackage_25"
+      },
+      "locked": {
+        "lastModified": 1639098904,
+        "narHash": "sha256-7VrCNEaKGLm4pTOS11dt1dRL2033oqrNCfal0uONsqA=",
+        "owner": "input-output-hk",
+        "repo": "haskell.nix",
+        "rev": "b18c6ce0867fee77f12ecf41dc6c67f7a59d9826",
+        "type": "github"
+      },
+      "original": {
+        "owner": "input-output-hk",
+        "repo": "haskell.nix",
+        "type": "github"
+      }
+    },
+    "haskellNix_26": {
+      "inputs": {
+        "HTTP": "HTTP_26",
+        "cabal-32": "cabal-32_26",
+        "cabal-34": "cabal-34_26",
+        "cabal-36": "cabal-36_21",
+        "cardano-shell": "cardano-shell_26",
+        "flake-utils": "flake-utils_32",
+        "ghc-8.6.5-iohk": "ghc-8.6.5-iohk_26",
+        "hackage": "hackage_23",
+        "hpc-coveralls": "hpc-coveralls_26",
+        "nix-tools": "nix-tools_25",
+        "nixpkgs": [
+          "node-snapshot",
+          "nixpkgs"
+        ],
+        "nixpkgs-2003": "nixpkgs-2003_26",
+        "nixpkgs-2105": "nixpkgs-2105_26",
+        "nixpkgs-2111": "nixpkgs-2111_26",
+        "nixpkgs-unstable": "nixpkgs-unstable_26",
+        "old-ghc-nix": "old-ghc-nix_26",
+        "stackage": "stackage_26"
+      },
+      "locked": {
+        "lastModified": 1643073543,
+        "narHash": "sha256-g2l/KDWzMRTFRugNVcx3CPZeyA5BNcH9/zDiqFpprB4=",
+        "owner": "input-output-hk",
+        "repo": "haskell.nix",
+        "rev": "14f740c7c8f535581c30b1697018e389680e24cb",
+        "type": "github"
+      },
+      "original": {
+        "owner": "input-output-hk",
+        "repo": "haskell.nix",
+        "type": "github"
+      }
+    },
+    "haskellNix_27": {
+      "inputs": {
+        "HTTP": "HTTP_27",
+        "cabal-32": "cabal-32_27",
+        "cabal-34": "cabal-34_27",
+        "cabal-36": "cabal-36_22",
+        "cardano-shell": "cardano-shell_27",
+        "flake-utils": "flake-utils_33",
+        "ghc-8.6.5-iohk": "ghc-8.6.5-iohk_27",
+        "hackage": "hackage_24",
+        "hpc-coveralls": "hpc-coveralls_27",
+        "nix-tools": "nix-tools_26",
+        "nixpkgs": [
+          "node-snapshot",
+          "membench",
+          "cardano-node-snapshot",
+          "nixpkgs"
+        ],
+        "nixpkgs-2003": "nixpkgs-2003_27",
+        "nixpkgs-2105": "nixpkgs-2105_27",
+        "nixpkgs-2111": "nixpkgs-2111_27",
+        "nixpkgs-unstable": "nixpkgs-unstable_27",
+        "old-ghc-nix": "old-ghc-nix_27",
+        "stackage": "stackage_27"
+      },
+      "locked": {
+        "lastModified": 1643073543,
+        "narHash": "sha256-g2l/KDWzMRTFRugNVcx3CPZeyA5BNcH9/zDiqFpprB4=",
+        "owner": "input-output-hk",
+        "repo": "haskell.nix",
+        "rev": "14f740c7c8f535581c30b1697018e389680e24cb",
+        "type": "github"
+      },
+      "original": {
+        "owner": "input-output-hk",
+        "repo": "haskell.nix",
+        "type": "github"
+      }
+    },
+    "haskellNix_28": {
+      "inputs": {
+        "HTTP": "HTTP_28",
+        "cabal-32": "cabal-32_28",
+        "cabal-34": "cabal-34_28",
+        "cardano-shell": "cardano-shell_28",
+        "flake-utils": "flake-utils_34",
+        "ghc-8.6.5-iohk": "ghc-8.6.5-iohk_28",
+        "hackage": "hackage_25",
+        "hpc-coveralls": "hpc-coveralls_28",
+        "nix-tools": "nix-tools_27",
+        "nixpkgs": [
+          "node-snapshot",
+          "plutus-example",
+          "nixpkgs"
+        ],
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
         "nixpkgs-2003": "nixpkgs-2003_28",
         "nixpkgs-2105": "nixpkgs-2105_28",
         "nixpkgs-2111": "nixpkgs-2111_28",
@@ -6803,11 +7089,19 @@
         "tullia": "tullia_2"
       },
       "locked": {
+<<<<<<< HEAD
         "lastModified": 1668151131,
         "narHash": "sha256-zVr+PuM2g7/2JPzEkts0xIGnkimLH9QSuI66IduMKPI=",
         "owner": "input-output-hk",
         "repo": "haskell.nix",
         "rev": "cfb4563df856057807c3b7b879104701f2740070",
+=======
+        "lastModified": 1656898207,
+        "narHash": "sha256-hshNfCnrmhIvM4T+O0/JRZymsHmq9YiIJ4bpzNVTD98=",
+        "owner": "input-output-hk",
+        "repo": "haskell.nix",
+        "rev": "21230476adfef5fa77fb19fbda396f22006a02bc",
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
         "type": "github"
       },
       "original": {
@@ -7875,6 +8169,7 @@
           "node-measured",
           "node-measured",
           "node-measured",
+<<<<<<< HEAD
           "node-snapshot",
           "plutus-example",
           "nixpkgs"
@@ -7942,6 +8237,125 @@
         "nixpkgs": [
           "node-measured",
           "node-measured",
+=======
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
+          "node-snapshot",
+          "plutus-example",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1633964277,
+        "narHash": "sha256-7G/BK514WiMRr90EswNBthe8SmH9tjPaTBba/RW/VA8=",
+        "owner": "input-output-hk",
+        "repo": "iohk-nix",
+        "rev": "1e51437aac8a0e49663cb21e781f34163c81ebfb",
+        "type": "github"
+      },
+      "original": {
+        "owner": "input-output-hk",
+        "repo": "iohk-nix",
+        "type": "github"
+      }
+    },
+    "iohkNix_22": {
+      "inputs": {
+        "nixpkgs": [
+          "node-measured",
+          "node-measured",
+          "node-snapshot",
+          "plutus-example",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1633964277,
+        "narHash": "sha256-7G/BK514WiMRr90EswNBthe8SmH9tjPaTBba/RW/VA8=",
+        "owner": "input-output-hk",
+        "repo": "iohk-nix",
+        "rev": "1e51437aac8a0e49663cb21e781f34163c81ebfb",
+        "type": "github"
+      },
+      "original": {
+        "owner": "input-output-hk",
+        "repo": "iohk-nix",
+        "type": "github"
+      }
+    },
+    "iohkNix_23": {
+      "inputs": {
+        "nixpkgs": [
+          "node-measured",
+          "node-snapshot",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1631778944,
+        "narHash": "sha256-N5eCcUYtZ5kUOl/JJGjx6ZzhA3uIn1itDRTiRV+3jLw=",
+        "owner": "input-output-hk",
+        "repo": "iohk-nix",
+        "rev": "db2c75a09c696271194bb3ef25ec8e9839b594b7",
+        "type": "github"
+      },
+      "original": {
+        "owner": "input-output-hk",
+        "repo": "iohk-nix",
+        "type": "github"
+      }
+    },
+    "iohkNix_24": {
+      "inputs": {
+        "nixpkgs": [
+          "node-measured",
+          "node-snapshot",
+          "membench",
+          "cardano-node-snapshot",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1631778944,
+        "narHash": "sha256-N5eCcUYtZ5kUOl/JJGjx6ZzhA3uIn1itDRTiRV+3jLw=",
+        "owner": "input-output-hk",
+        "repo": "iohk-nix",
+        "rev": "db2c75a09c696271194bb3ef25ec8e9839b594b7",
+        "type": "github"
+      },
+      "original": {
+        "owner": "input-output-hk",
+        "repo": "iohk-nix",
+        "type": "github"
+      }
+    },
+    "iohkNix_25": {
+      "inputs": {
+        "nixpkgs": [
+          "node-measured",
+          "node-measured",
+          "node-snapshot",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1631778944,
+        "narHash": "sha256-N5eCcUYtZ5kUOl/JJGjx6ZzhA3uIn1itDRTiRV+3jLw=",
+        "owner": "input-output-hk",
+        "repo": "iohk-nix",
+        "rev": "db2c75a09c696271194bb3ef25ec8e9839b594b7",
+        "type": "github"
+      },
+      "original": {
+        "owner": "input-output-hk",
+        "repo": "iohk-nix",
+        "type": "github"
+      }
+    },
+    "iohkNix_21": {
+      "inputs": {
+        "nixpkgs": [
+          "node-measured",
+          "node-measured",
           "node-snapshot",
           "membench",
           "cardano-node-snapshot",
@@ -7973,11 +8387,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1633964277,
-        "narHash": "sha256-7G/BK514WiMRr90EswNBthe8SmH9tjPaTBba/RW/VA8=",
+        "lastModified": 1667394105,
+        "narHash": "sha256-YhS7zGd6jK/QM/+wWyj0zUBZmE3HOXAL/kpJptGYIWg=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "1e51437aac8a0e49663cb21e781f34163c81ebfb",
+        "rev": "7fc7625a9ab2ba137bc70ddbc89a13d3fdb78c8b",
         "type": "github"
       },
       "original": {
@@ -8266,6 +8680,7 @@
           "nixpkgs"
         ]
       },
+<<<<<<< HEAD
       "locked": {
         "lastModified": 1645693195,
         "narHash": "sha256-UDemE2MFEi/L8Xmwi1/FuKU9ka3QqDye6k7rVW6ryeE=",
@@ -8289,6 +8704,15 @@
         "revCount": 7,
         "type": "git",
         "url": "https://gitlab.haskell.org/ghc/iserv-proxy.git"
+=======
+      "locked": {
+        "lastModified": 1645693195,
+        "narHash": "sha256-UDemE2MFEi/L8Xmwi1/FuKU9ka3QqDye6k7rVW6ryeE=",
+        "owner": "input-output-hk",
+        "repo": "iohk-nix",
+        "rev": "29c9a3b6704b5c0df3bb4a3e65240749883c50a0",
+        "type": "github"
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
       },
       "original": {
         "rev": "6e95df7be6dd29680f983db07a057fc2f34f81f6",
@@ -9111,6 +9535,33 @@
       }
     },
     "n2c": {
+<<<<<<< HEAD
+=======
+      "inputs": {
+        "flake-utils": "flake-utils_5",
+        "nixpkgs": [
+          "haskellNix",
+          "tullia",
+          "std",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1665039323,
+        "narHash": "sha256-SAh3ZjFGsaCI8FRzXQyp56qcGdAqgKEfJWPCQ0Sr7tQ=",
+        "owner": "nlewo",
+        "repo": "nix2container",
+        "rev": "b008fe329ffb59b67bf9e7b08ede6ee792f2741a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nlewo",
+        "repo": "nix2container",
+        "type": "github"
+      }
+    },
+    "n2c_2": {
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
       "inputs": {
         "flake-utils": "flake-utils_5",
         "nixpkgs": [
@@ -9726,11 +10177,11 @@
     "nix-tools_6": {
       "flake": false,
       "locked": {
-        "lastModified": 1636018067,
-        "narHash": "sha256-ng306fkuwr6V/malWtt3979iAC4yMVDDH2ViwYB6sQE=",
+        "lastModified": 1644395812,
+        "narHash": "sha256-BVFk/BEsTLq5MMZvdy3ZYHKfaS3dHrsKh4+tb5t5b58=",
         "owner": "input-output-hk",
         "repo": "nix-tools",
-        "rev": "ed5bd7215292deba55d6ab7a4e8c21f8b1564dda",
+        "rev": "d847c63b99bbec78bf83be2a61dc9f09b8a9ccc1",
         "type": "github"
       },
       "original": {
@@ -10028,7 +10479,11 @@
     "nix_5": {
       "inputs": {
         "lowdown-src": "lowdown-src_5",
+<<<<<<< HEAD
         "nixpkgs": "nixpkgs_17",
+=======
+        "nixpkgs": "nixpkgs_12",
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
         "nixpkgs-regression": "nixpkgs-regression_5"
       },
       "locked": {
@@ -12162,6 +12617,7 @@
     },
     "nixpkgs_12": {
       "locked": {
+<<<<<<< HEAD
         "lastModified": 1654807842,
         "narHash": "sha256-ADymZpr6LuTEBXcy6RtFHcUZdjKTBRTMYwu19WOx17E=",
         "owner": "NixOS",
@@ -12173,6 +12629,19 @@
         "owner": "NixOS",
         "repo": "nixpkgs",
         "type": "github"
+=======
+        "lastModified": 1632864508,
+        "narHash": "sha256-d127FIvGR41XbVRDPVvozUPQ/uRHbHwvfyKHwEt5xFM=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "82891b5e2c2359d7e58d08849e4c89511ab94234",
+        "type": "github"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "ref": "nixos-21.05-small",
+        "type": "indirect"
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
       }
     },
     "nixpkgs_13": {
@@ -12505,6 +12974,7 @@
         "type": "github"
       }
     },
+<<<<<<< HEAD
     "nixpkgs_33": {
       "locked": {
         "lastModified": 1642336556,
@@ -12534,6 +13004,8 @@
       }
     },
     "nixpkgs_35": {
+=======
+    "nixpkgs_28": {
       "locked": {
         "lastModified": 1653581809,
         "narHash": "sha256-Uvka0V5MTGbeOfWte25+tfRL3moECDh1VwokWSZUdoY=",
@@ -12549,7 +13021,7 @@
         "type": "github"
       }
     },
-    "nixpkgs_36": {
+    "nixpkgs_29": {
       "locked": {
         "lastModified": 1654807842,
         "narHash": "sha256-ADymZpr6LuTEBXcy6RtFHcUZdjKTBRTMYwu19WOx17E=",
@@ -12564,7 +13036,63 @@
         "type": "github"
       }
     },
+    "nixpkgs_3": {
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
+      "locked": {
+        "lastModified": 1653581809,
+        "narHash": "sha256-Uvka0V5MTGbeOfWte25+tfRL3moECDh1VwokWSZUdoY=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "83658b28fe638a170a19b8933aa008b30640fbd1",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+<<<<<<< HEAD
+    "nixpkgs_36": {
+=======
+    "nixpkgs_30": {
+      "locked": {
+        "lastModified": 1653581809,
+        "narHash": "sha256-Uvka0V5MTGbeOfWte25+tfRL3moECDh1VwokWSZUdoY=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "83658b28fe638a170a19b8933aa008b30640fbd1",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_31": {
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
+      "locked": {
+        "lastModified": 1654807842,
+        "narHash": "sha256-ADymZpr6LuTEBXcy6RtFHcUZdjKTBRTMYwu19WOx17E=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "fc909087cc3386955f21b4665731dbdaceefb1d8",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+<<<<<<< HEAD
     "nixpkgs_37": {
+=======
+    "nixpkgs_32": {
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
       "locked": {
         "lastModified": 1665087388,
         "narHash": "sha256-FZFPuW9NWHJteATOf79rZfwfRn5fE0wi9kRzvGfDHPA=",
@@ -12696,6 +13224,7 @@
         "node-process": "node-process_3",
         "node-snapshot": "node-snapshot_3",
         "plutus-apps": "plutus-apps_7",
+<<<<<<< HEAD
         "tullia": "tullia_3",
         "utils": "utils_27"
       },
@@ -12705,6 +13234,17 @@
         "owner": "input-output-hk",
         "repo": "cardano-node",
         "rev": "cd0c2f81928461ae2253fe2f78d093b104ab50bd",
+=======
+        "tullia": "tullia_2",
+        "utils": "utils_26"
+      },
+      "locked": {
+        "lastModified": 1668096959,
+        "narHash": "sha256-EeECjnAMB39NtWKe3KVzKL+qO+6ION/84hY6B+9qwj4=",
+        "owner": "input-output-hk",
+        "repo": "cardano-node",
+        "rev": "57161f73017b235ad0e95a7fac5445356886a4af",
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
         "type": "github"
       },
       "original": {
@@ -12718,7 +13258,11 @@
         "cardano-mainnet-mirror": "cardano-mainnet-mirror_3",
         "cardano-node-workbench": "cardano-node-workbench_5",
         "customConfig": "customConfig_6",
+<<<<<<< HEAD
         "flake-compat": "flake-compat_10",
+=======
+        "flake-compat": "flake-compat_8",
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
         "hackageNix": "hackageNix_3",
         "haskellNix": "haskellNix_6",
         "hostNixpkgs": [
@@ -12910,11 +13454,19 @@
     "node-process_4": {
       "flake": false,
       "locked": {
+<<<<<<< HEAD
         "lastModified": 1672206839,
         "narHash": "sha256-6q6JzrsMkaHDz9hD25k+P+gA1YmI6DfuCqt1ZV1oTCs=",
         "owner": "input-output-hk",
         "repo": "cardano-node",
         "rev": "cd0c2f81928461ae2253fe2f78d093b104ab50bd",
+=======
+        "lastModified": 1668096959,
+        "narHash": "sha256-EeECjnAMB39NtWKe3KVzKL+qO+6ION/84hY6B+9qwj4=",
+        "owner": "input-output-hk",
+        "repo": "cardano-node",
+        "rev": "57161f73017b235ad0e95a7fac5445356886a4af",
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
         "type": "github"
       },
       "original": {
@@ -13860,11 +14412,19 @@
     "plutus-apps_8": {
       "flake": false,
       "locked": {
+<<<<<<< HEAD
         "lastModified": 1671559396,
         "narHash": "sha256-yfBF1CGJPiGmpCJJwoQVtHwlIhO1QiaoaJVbtBaphMk=",
         "owner": "input-output-hk",
         "repo": "plutus-apps",
         "rev": "20ac87dc4d0bd969840168bd84c063f3a6f78887",
+=======
+        "lastModified": 1668430965,
+        "narHash": "sha256-TH1J75pdxlWKxnZaHFmU0OOih1PNqHmOpIeuUCxd/5w=",
+        "owner": "input-output-hk",
+        "repo": "plutus-apps",
+        "rev": "11fd9119515b50ed6e61cac22030a7ccb2c6652a",
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
         "type": "github"
       },
       "original": {
@@ -14046,7 +14606,11 @@
           "haskellNix",
           "nixpkgs-2105"
         ],
+<<<<<<< HEAD
         "utils": "utils_24"
+=======
+        "utils": "utils_23"
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
       },
       "locked": {
         "lastModified": 1640022647,
@@ -14473,11 +15037,19 @@
     "stackage_4": {
       "flake": false,
       "locked": {
+<<<<<<< HEAD
         "lastModified": 1668149152,
         "narHash": "sha256-wyZeNL3gYEWaeNvr59fFr8OfHxub1OCWO0F+4bmHujA=",
         "owner": "input-output-hk",
         "repo": "stackage.nix",
         "rev": "475c7be36c03470a1749266265431121df9eea3f",
+=======
+        "lastModified": 1656898145,
+        "narHash": "sha256-EMgMzdANg6r5gEUkMtv5ujDo2/Kx7JJXoXiDKjDVoLw=",
+        "owner": "input-output-hk",
+        "repo": "stackage.nix",
+        "rev": "835a5f2d2a1acafb77add430fc8c2dd47282ef32",
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
         "type": "github"
       },
       "original": {
@@ -14799,6 +15371,7 @@
         "type": "github"
       }
     },
+<<<<<<< HEAD
     "tullia_4": {
       "inputs": {
         "nix-nomad": "nix-nomad_4",
@@ -14814,6 +15387,23 @@
         "owner": "input-output-hk",
         "repo": "tullia",
         "rev": "0580310f0074b50abfad2db25d676fcf7ee57df7",
+=======
+    "tullia_3": {
+      "inputs": {
+        "nix-nomad": "nix-nomad_3",
+        "nix2container": "nix2container_3",
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "std": "std_3"
+      },
+      "locked": {
+        "lastModified": 1668192292,
+        "narHash": "sha256-gbuMuwE6L5i1NyxwnG3p9umma2n348HnU3se6jxRzBI=",
+        "owner": "input-output-hk",
+        "repo": "tullia",
+        "rev": "a5762e42be6eea7df8f8ac4f7de63ba73fceab68",
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
         "type": "github"
       },
       "original": {
@@ -14854,11 +15444,11 @@
     },
     "utils_11": {
       "locked": {
-        "lastModified": 1623875721,
-        "narHash": "sha256-A8BU7bjS5GirpAUv4QA+QnJ4CceLHkcXdRp4xITDB0s=",
+        "lastModified": 1638122382,
+        "narHash": "sha256-sQzZzAbvKEqN9s0bzWuYmRaA03v40gaJ4+iL1LXjaeI=",
         "owner": "numtide",
         "repo": "flake-utils",
-        "rev": "f7e004a55b120c02ecb6219596820fcd32ca8772",
+        "rev": "74f7e4319258e287b0f9cb95426c9853b282730b",
         "type": "github"
       },
       "original": {
@@ -14914,11 +15504,11 @@
     },
     "utils_15": {
       "locked": {
-        "lastModified": 1623875721,
-        "narHash": "sha256-A8BU7bjS5GirpAUv4QA+QnJ4CceLHkcXdRp4xITDB0s=",
+        "lastModified": 1638122382,
+        "narHash": "sha256-sQzZzAbvKEqN9s0bzWuYmRaA03v40gaJ4+iL1LXjaeI=",
         "owner": "numtide",
         "repo": "flake-utils",
-        "rev": "f7e004a55b120c02ecb6219596820fcd32ca8772",
+        "rev": "74f7e4319258e287b0f9cb95426c9853b282730b",
         "type": "github"
       },
       "original": {
@@ -14974,11 +15564,11 @@
     },
     "utils_19": {
       "locked": {
-        "lastModified": 1623875721,
-        "narHash": "sha256-A8BU7bjS5GirpAUv4QA+QnJ4CceLHkcXdRp4xITDB0s=",
+        "lastModified": 1638122382,
+        "narHash": "sha256-sQzZzAbvKEqN9s0bzWuYmRaA03v40gaJ4+iL1LXjaeI=",
         "owner": "numtide",
         "repo": "flake-utils",
-        "rev": "f7e004a55b120c02ecb6219596820fcd32ca8772",
+        "rev": "74f7e4319258e287b0f9cb95426c9853b282730b",
         "type": "github"
       },
       "original": {
@@ -15259,11 +15849,11 @@
     },
     "utils_7": {
       "locked": {
-        "lastModified": 1623875721,
-        "narHash": "sha256-A8BU7bjS5GirpAUv4QA+QnJ4CceLHkcXdRp4xITDB0s=",
+        "lastModified": 1638122382,
+        "narHash": "sha256-sQzZzAbvKEqN9s0bzWuYmRaA03v40gaJ4+iL1LXjaeI=",
         "owner": "numtide",
         "repo": "flake-utils",
-        "rev": "f7e004a55b120c02ecb6219596820fcd32ca8772",
+        "rev": "74f7e4319258e287b0f9cb95426c9853b282730b",
         "type": "github"
       },
       "original": {
