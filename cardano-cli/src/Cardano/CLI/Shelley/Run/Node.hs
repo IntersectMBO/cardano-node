@@ -22,8 +22,7 @@ import           Cardano.Api
 import           Cardano.Api.Shelley
 
 import           Cardano.CLI.Shelley.Commands
-import           Cardano.CLI.Shelley.Key (VerificationKeyOrFile, readSigningKeyFileAnyOf,
-                   readVerificationKeyOrFile)
+import           Cardano.CLI.Shelley.Key (VerificationKeyOrFile, readVerificationKeyOrFile)
 import           Cardano.CLI.Types (SigningKeyFile (..), VerificationKeyFile (..))
 
 {- HLINT ignore "Reduce duplication" -}
@@ -178,7 +177,7 @@ runNodeIssueOpCert :: VerificationKeyOrFile KesKey
                    -> OutputFile
                    -> ExceptT ShelleyNodeCmdError IO ()
 runNodeIssueOpCert kesVerKeyOrFile
-                   stakePoolSKeyFile
+                   (SigningKeyFile stakePoolSKeyFile)
                    (OpCertCounterFile ocertCtrPath)
                    kesPeriod
                    (OutputFile certFile) = do
@@ -193,7 +192,7 @@ runNodeIssueOpCert kesVerKeyOrFile
 
     signKey <- firstExceptT ShelleyNodeCmdReadKeyFileError
       . newExceptT
-      $ readSigningKeyFileAnyOf
+      $ readKeyFileAnyOf
           bech32PossibleBlockIssuers
           textEnvPossibleBlockIssuers
           stakePoolSKeyFile
