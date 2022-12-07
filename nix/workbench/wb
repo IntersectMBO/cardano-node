@@ -84,7 +84,7 @@ usage_extra() {
           block-propagation          blockprop    bp
           performance                             perf
           performance-host           perf-host
-          trace-frequencies          trace-freq   freq
+          trace-frequencies          trace-freq   freq tf
           chain-rejecta-reasons      chain-rejecta   rejecta
 $(color white)
 EOF
@@ -308,7 +308,7 @@ main() {
         | block-propagation        | blockprop  | bp            \
         | performance                           | perf          \
         | performance-host         | perf-host                  \
-        | trace-frequencies        | trace-freq | freq          \
+        | trace-frequencies        | trace-freq | freq | tf     \
         | chain-rejecta-reasons    | chain-rejecta | rejecta    \
           )                       analyse $op         "$@";;
 

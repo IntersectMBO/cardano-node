@@ -323,10 +323,9 @@ dumpObjects ident xs (JsonOutputFile f) = liftIO $ do
 dumpAssociatedObjects :: ToJSON a => String -> [(JsonLogfile, a)] -> ExceptT Text IO ()
 dumpAssociatedObjects ident xs = liftIO $
   flip mapConcurrently_ xs $
-    \(JsonLogfile f, x) -> do
-        progress ident (Q f)
-        withFile (replaceExtension f $ ident <> ".json") WriteMode $ \hnd ->
-          LBS.hPutStrLn hnd $ encode x
+    \(JsonLogfile f, x) ->
+      withFile (replaceExtension f $ ident <> ".json") WriteMode $ \hnd ->
+        LBS.hPutStrLn hnd $ encode x
 
 readAssociatedObjects :: forall a.
   FromJSON a => String -> [JsonLogfile] -> ExceptT Text IO [(JsonLogfile, a)]

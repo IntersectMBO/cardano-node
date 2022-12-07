@@ -395,7 +395,7 @@ case "$op" in
                                              -e 'chain-rejecta.json'    \
                                              -e 'chain.json'
               ))
-        progress "analyse" "prettifying JSON data:  ${analysis_jsons[*]}"
+        progress "analyse" "prettifying JSON data:  ${#analysis_jsons[*]} files"
         time json_compact_prettify "${analysis_jsons[@]}"
         progress "output" "run:  $(white $run)  subdir:  $(yellow analysis)"
         ;;
@@ -537,7 +537,7 @@ case "$op" in
              --slurpfile         freqs "$adir"/logs-$mach.tracefreq.json
         done;;
 
-    trace-frequencies | trace-freq | freq )
+    trace-frequencies | trace-freq | freq | tf )
         local new_only= sargs=()
         while test $# -gt 0
         do case "$1" in
@@ -548,7 +548,7 @@ case "$op" in
         local logfile=${1:?$usage}; shift
 
 
-        trace_frequencies "$logfile" > "${logfile}.tracefreqs.json"
+        trace_frequencies_json "$logfile" > "${logfile}.tracefreqs.json"
 
         local src=$(wc -l <"$logfile")
         local res=$(cut -d' ' -f1 "${logfile}.trace-freqs" |
@@ -632,7 +632,10 @@ trace_frequencies_json() {
     jq 'reduce inputs as $line
           ( {};
             ( $line
-            | (try .ns[0] // .ns) + ":" + (.data.kind //.data.val.kind)
+            | (try .ns[0] // .ns)
+              + ":"
+              + (if .data | type != "object" then .data | type
+                else (.data.kind //.data.val.kind) end)
             )              as $key
           | (.[$key] // 0) as $acc
           | . + { "\($key)": ($acc + 1) }

@@ -93,11 +93,11 @@ case "$op" in
         echo $global_rundir;;
 
     list-runs | runs | lsr )
-        local usage="USAGE: wb run $op [--on-remote | -or | -r]"
+        local usage="USAGE: wb run $op [--remote | -r]"
         local on_remote=
         while test $# -gt 0
         do case "$1" in
-               --on-remote | -or | -r ) on_remote='true';;
+               --remote | -r ) on_remote='true';;
                * ) msg "FATAL:  list, unknown flag '$1'"; usage_run;;
            esac; shift; done
 
@@ -109,14 +109,14 @@ case "$op" in
         fi;;
 
     list-remote | remote | lsrr ) ## Convenience alias for 'list'
-        run "${sargs[@]}" list --on-remote;;
+        run list-runs --remote;;
 
     list-verbose | verb | lsrv )
-        local usage="USAGE: wb run $op [--on-remote | -or | -r] [--limit [N=10] | -n N]"
+        local usage="USAGE: wb run $op [--remote | -r] [--limit [N=10] | -n N]"
         local on_remote= limit=10
         while test $# -gt 0
         do case "$1" in
-               --on-remote | -or | -r ) on_remote='true';;
+               --remote | -r ) on_remote='true';;
                --limit | -n )           limit=$2; shift;;
                * ) msg "FATAL:  list-verbose, unknown flag '$1'"; usage_run;;
            esac; shift; done
@@ -129,14 +129,14 @@ case "$op" in
         fi;;
 
     list-verbose-remote | rverb | lsrvr ) ## Convenience alias for 'list-verbose'
-        run "${sargs[@]}" list-verbose --on-remote;;
+        run list-verbose --remote;;
 
     list-sets | sets | lss )
-        local usage="USAGE: wb run $op [--on-remote | -or | -r]"
+        local usage="USAGE: wb run $op [--remote | -r]"
         local on_remote=
         while test $# -gt 0
         do case "$1" in
-               --on-remote | -or | -r ) on_remote='true';;
+               --remote | -r ) on_remote='true';;
                * ) msg "FATAL:  list-sets, unknown flag '$1'"; usage_run;;
            esac; shift; done
 
@@ -148,7 +148,7 @@ case "$op" in
         fi;;
 
     list-sets-remote | rsets | lssr ) ## Convenience alias for 'list-sets'
-        run "${sargs[@]}" list-sets --on-remote;;
+        run list-sets --remote;;
 
     set-add | add | sa )
         local usage="USAGE: wb run $op NAME [RUN..]"
@@ -163,12 +163,12 @@ case "$op" in
              done);;
 
     run-or-set | ros )
-        local usage="USAGE: wb run $op [--query] [--on-remote | -or | -r] NAME"
+        local usage="USAGE: wb run $op [--query] [--remote | -r] NAME"
         local query= get_args=() on_remote=
         while test $# -gt 0
         do case "$1" in
                --try | --query ) get_args+=($1); query='true';;
-               --on-remote | -or | -r ) on_remote='true';;
+               --remote | -r ) on_remote='true';;
                --* ) msg "FATAL:  run-or-set, unknown flag '$1'"; usage_run;;
                * ) break;; esac; shift; done
 
@@ -619,7 +619,7 @@ EOF
         local usage="USAGE: wb run $op RUN.."
         local runs=() run
         for rs in $*
-        do runs+=($(run "${sargs[@]}" run-or-set --query --on-remote $rs || echo $rs))
+        do runs+=($(run "${sargs[@]}" run-or-set --query --remote $rs || echo $rs))
         done
         if test $# = 0; then runs=(current); fi
 
