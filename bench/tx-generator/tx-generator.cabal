@@ -57,6 +57,11 @@ library
                         Cardano.Benchmarking.Types
                         Cardano.Benchmarking.Version
                         Cardano.Benchmarking.Wallet
+<<<<<<< HEAD
+=======
+                        Cardano.Benchmarking.PlutusExample
+
+>>>>>>> 88570cea4 (Updated ledger and ouroboros-network dependencies)
                         Cardano.TxGenerator.Fund
                         Cardano.TxGenerator.FundQueue
                         Cardano.TxGenerator.Genesis
@@ -173,6 +178,11 @@ test-suite tx-generator-apitest
                         -Wall
                         -rtsopts
                         "-with-rtsopts=-T"
+<<<<<<< HEAD
+=======
+
+<<<<<<< HEAD
+>>>>>>> 88570cea4 (Updated ledger and ouroboros-network dependencies)
   build-depends:        base >=4.12 && <5
                       , aeson
                       , bytestring
@@ -186,9 +196,20 @@ test-suite tx-generator-apitest
                       , transformers
                       , transformers-except
                       , tx-generator
+<<<<<<< HEAD
   other-modules:        Paths_tx_generator
   autogen-modules:      Paths_tx_generator
 
+=======
+<<<<<<< HEAD
+
+  other-modules:        Paths_tx_generator
+  autogen-modules:      Paths_tx_generator
+
+=======
+
+=======
+>>>>>>> 88570cea4 (Updated ledger and ouroboros-network dependencies)
   build-depends:       base >=4.12 && <5
                      , aeson
                      , bytestring
@@ -201,6 +222,11 @@ test-suite tx-generator-apitest
                      , transformers-except
                      , tx-generator
 
+<<<<<<< HEAD
+=======
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
+>>>>>>> 99b603779 (Updated ledger and ouroboros-network dependencies)
+>>>>>>> 88570cea4 (Updated ledger and ouroboros-network dependencies)
 test-suite tx-generator-test
   hs-source-dirs:       test
   main-is:              Main.hs

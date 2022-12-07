@@ -163,17 +163,15 @@ package comonad
   flags: -test-doctests
 
 allow-newer:
-    ekg:*
-  , ekg-json:aeson
-  , monoidal-containers:aeson
-  , size-based:template-haskell
-  , snap-server:attoparsec
-  , tree-diff:hashable
-  , Unique:hashable
-  , ouroboros-network:hashable
-  , hedgehog-extras:base
-  , libsystemd-journal:base
-  , katip:Win32
+  ekg:aeson,
+  ekg-json:aeson,
+  threepenny-gui:aeson,
+  monoidal-containers:aeson,
+  size-based:template-haskell,
+  snap-server:attoparsec,
+  tree-diff:hashable,
+  Unique:hashable,
+  ouroboros-network:hashable,
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
