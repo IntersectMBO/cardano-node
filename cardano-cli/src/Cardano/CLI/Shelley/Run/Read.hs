@@ -36,6 +36,7 @@ module Cardano.CLI.Shelley.Run.Read
   , IncompleteTx(..)
   , readFileTx
   , readFileTxBody
+  , renderCddlError
   , readCddlTx -- For testing purposes
 
   -- * Tx witnesses
@@ -472,14 +473,13 @@ data CddlError = CddlErrorTextEnv
                    !(FileError TextEnvelopeError)
                    !(FileError TextEnvelopeCddlError)
                | CddlIOError (FileError TextEnvelopeError)
-               deriving Show
 
-instance Error CddlError where
-  displayError (CddlErrorTextEnv textEnvErr cddlErr) =
-    "Failed to decode neither the cli's serialisation format nor the ledger's \
-    \CDDL serialisation format. TextEnvelope error: " <> displayError textEnvErr <> "\n" <>
-    "TextEnvelopeCddl error: " <> displayError cddlErr
-  displayError (CddlIOError e) = displayError e
+renderCddlError :: CddlError -> Text
+renderCddlError (CddlErrorTextEnv textEnvErr cddlErr) =
+  "Failed to decode neither the cli's serialisation format nor the ledger's \
+  \CDDL serialisation format. TextEnvelope error: " <> Text.pack (displayError textEnvErr) <> "\n" <>
+  "TextEnvelopeCddl error: " <> Text.pack (displayError cddlErr)
+renderCddlError (CddlIOError e) = Text.pack $ displayError e
 
 acceptTxCDDLSerialisation
   :: FileError TextEnvelopeError
@@ -529,15 +529,6 @@ data CddlWitnessError
       (FileError TextEnvelopeError)
       (FileError TextEnvelopeCddlError)
   | CddlWitnessIOError (FileError TextEnvelopeError)
-  deriving Show
-
-instance Error CddlWitnessError where
-  displayError (CddlWitnessErrorTextEnv teErr cddlErr) =
-    "Failed to decode neither the cli's serialisation format nor the ledger's \
-    \CDDL serialisation format. TextEnvelope error: " <> displayError teErr <> "\n" <>
-    "TextEnvelopeCddl error: " <> displayError cddlErr
-  displayError (CddlWitnessIOError fileE) = displayError fileE
-
 
 -- TODO: This is a stop gap to avoid modifying the TextEnvelope
 -- related functions. We intend to remove this after fully deprecating
@@ -695,13 +686,6 @@ readWitnessSigningData (KeyWitnessSigningData (SigningKeyFile skFile) mbByronAdd
 data RequiredSignerError
   = RequiredSignerErrorFile (FileError InputDecodeError)
   | RequiredSignerErrorByronKey SigningKeyFile
-  deriving Show
-
-instance Error RequiredSignerError where
-  displayError (RequiredSignerErrorFile e) =
-    displayError e
-  displayError (RequiredSignerErrorByronKey (SigningKeyFile byronSkeyfile)) =
-    "Byron witnesses cannot be used for required signers: " <> byronSkeyfile
 
 readRequiredSigner :: RequiredSigner -> IO (Either RequiredSignerError (Hash PaymentKey))
 readRequiredSigner (RequiredSignerHash h) = return $ Right h

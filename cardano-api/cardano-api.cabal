@@ -151,9 +151,9 @@ library
                       , ouroboros-network
                       , ouroboros-network-framework
                       , parsec
-                      , plutus-ledger-api ^>= 1.0
+                      , plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.1
                       , prettyprinter
-                      , prettyprinter-configurable ^>= 0.1
+                      , prettyprinter-configurable ^>= 1.1
                       , random
                       , scientific
                       , serialise
@@ -194,12 +194,12 @@ library gen
                       , cardano-crypto-class ^>= 2.0
                       , cardano-crypto-test ^>= 1.4
                       , cardano-ledger-alonzo ^>= 0.1
+                      , cardano-ledger-alonzo-test
                       , cardano-ledger-byron-test ^>= 1.4
                       , cardano-ledger-core ^>= 0.1
                       , cardano-prelude
                       , containers
                       , hedgehog
-                      , plutus-core ^>= 1.0
                       , cardano-ledger-shelley ^>= 0.1
                       , text
 

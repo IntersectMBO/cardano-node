@@ -65,7 +65,7 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Ledger.Alonzo.Data as Alonzo
 import qualified Cardano.Ledger.SafeHash as Ledger
 import           Ouroboros.Consensus.Shelley.Eras (StandardAlonzo, StandardCrypto)
-import qualified Plutus.V1.Ledger.Api as Plutus
+import qualified PlutusLedgerApi.V1 as Plutus
 
 import           Cardano.Api.Eras
 import           Cardano.Api.Error

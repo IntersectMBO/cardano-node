@@ -150,7 +150,7 @@ import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 
-import qualified Plutus.V1.Ledger.Examples as Plutus
+import qualified PlutusLedgerApi.Test.Examples as Plutus
 
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras

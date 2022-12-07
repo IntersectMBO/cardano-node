@@ -135,7 +135,7 @@ import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
 import qualified Cardano.Ledger.Shelley.TxBody as Ledger (EraIndependentTxBody)
-import qualified PlutusCore as Plutus
+import qualified Test.Cardano.Ledger.Alonzo.PlutusScripts as Plutus
 
 import           Hedgehog (Gen, Range)
 import qualified Hedgehog.Gen as Gen
@@ -858,14 +858,13 @@ genUpdateProposal =
     <*> genEpochNo
 
 genCostModel :: Gen CostModel
-genCostModel = case Plutus.defaultCostModelParams of
-  Nothing -> panic "Plutus defaultCostModelParams is broken."
-  Just dcm -> do
-      eCostModel <- Alonzo.mkCostModel <$> genPlutusLanguage
-                                       <*> mapM (const $ Gen.integral (Range.linear 0 5000)) dcm
-      case eCostModel of
-        Left err -> panic $ Text.pack $ "genCostModel: " <> show err
-        Right cModel -> return . CostModel $ Alonzo.getCostModelParams cModel
+genCostModel = do
+  let costModelParams = Alonzo.getCostModelParams Plutus.testingCostModelV1
+  eCostModel <- Alonzo.mkCostModel <$> genPlutusLanguage
+                                   <*> mapM (const $ Gen.integral (Range.linear 0 5000)) costModelParams
+  case eCostModel of
+    Left err -> panic $ Text.pack $ "genCostModel: " <> show err
+    Right cModel -> return . CostModel $ Alonzo.getCostModelParams cModel
 
 genPlutusLanguage :: Gen Language
 genPlutusLanguage = Gen.element [PlutusV1, PlutusV2]

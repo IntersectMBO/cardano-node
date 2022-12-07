@@ -81,12 +81,6 @@ intvDurationSec = uncurry diffUTCTime . (high &&& low)
 --
 type SMaybe a = StrictMaybe a
 
-instance Alternative StrictMaybe where
-  empty = SNothing
-  (<|>) x y = case x of
-                SNothing -> y
-                _ -> x
-
 smaybe :: b -> (a -> b) -> StrictMaybe a -> b
 smaybe x _  SNothing = x
 smaybe _ f (SJust x) = f x

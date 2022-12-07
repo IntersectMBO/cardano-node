@@ -19,9 +19,13 @@ extra-source-files:     CHANGELOG.md
 
 common project-config
   default-language:     Haskell2010
+<<<<<<< HEAD
   build-depends:        base >= 4.14 && < 4.15
   default-extensions:   NoImplicitPrelude
   
+=======
+
+>>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
   ghc-options:          -Wall
                         -Wcompat
                         -Wincomplete-record-updates
@@ -34,6 +38,8 @@ common project-config
                         -Wunused-packages
                         -fwarn-incomplete-patterns
                         -fwarn-redundant-constraints
+
+  default-extensions:   NoImplicitPrelude
 
 library
   import:               project-config
