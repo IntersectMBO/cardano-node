@@ -40,7 +40,7 @@ import           Cardano.Api
 import           Cardano.Api.Shelley
 
 import           Data.Bifunctor (first)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import qualified Data.Text as Text
 

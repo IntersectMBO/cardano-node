@@ -17,7 +17,6 @@ module Testnet.Cardano
   , cardanoTestnet
   ) where
 
-import           Prelude
 import           Control.Monad
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Aeson ((.=))
@@ -29,6 +28,7 @@ import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Hedgehog.Extras.Stock.Time (formatIso8601, showUTCTimeSeconds)
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
+import           Prelude
 import           System.FilePath.Posix ((</>))
 
 import qualified Cardano.Node.Configuration.Topology as NonP2P
@@ -36,7 +36,7 @@ import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 import qualified Data.Aeson as J
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
-import qualified Data.Map as M
+import qualified Data.Map.Strict as M
 import qualified Data.Time.Clock as DTC
 import qualified Hedgehog.Extras.Stock.Aeson as J
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
@@ -52,8 +52,8 @@ import qualified System.Info as OS
 import qualified Util.Assert as H
 import qualified Util.Process as H
 import           Util.Process (execCli_)
-import           Util.Runtime as TR (NodeLoggingFormat (..), PaymentKeyPair (..), PoolNode (PoolNode),
-                   PoolNodeKeys (..), TestnetRuntime (..), startNode)
+import           Util.Runtime as TR (NodeLoggingFormat (..), PaymentKeyPair (..),
+                   PoolNode (PoolNode), PoolNodeKeys (..), TestnetRuntime (..), startNode)
 
 import qualified Testnet.Conf as H
 

@@ -19,7 +19,7 @@ import           Prelude
 
 import           Data.Aeson (ToJSON (..), Value (..), (.=))
 import           Data.List (intercalate)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import           Data.Text (Text, pack)
 import           Data.Time (getCurrentTime)
 import           Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)

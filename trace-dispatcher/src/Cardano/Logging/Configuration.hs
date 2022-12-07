@@ -23,7 +23,7 @@ import           Control.Monad.IO.Unlift (MonadUnliftIO)
 import qualified Control.Tracer as T
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import           Data.List (maximumBy, nub)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe, mapMaybe)
 import           Data.Text (Text, intercalate, unpack)
 

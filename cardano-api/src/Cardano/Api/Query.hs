@@ -73,8 +73,8 @@ import           Data.Aeson.Types (Parser)
 import           Data.Bifunctor (bimap, first)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as HMS
-import           Data.Map (Map)
-import qualified Data.Map as Map
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
 import           Data.Set (Set)
 import qualified Data.Set as Set

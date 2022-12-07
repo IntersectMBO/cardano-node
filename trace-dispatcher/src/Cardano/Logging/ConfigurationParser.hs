@@ -19,8 +19,8 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import           Data.Functor
 import           Data.List (foldl')
+import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe, isJust)
-import qualified Data.Map as Map
 import           Data.Text (Text, split)
 import           Data.Yaml
 import           GHC.Generics

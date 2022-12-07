@@ -36,7 +36,7 @@ import           Codec.CBOR.Read (DeserialiseFailure)
 import           Data.Aeson (ToJSON (..), Value (..))
 import           Data.IntPSQ (IntPSQ)
 import qualified Data.IntPSQ as Pq
-import qualified Data.Map.Strict as SMap
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           Data.Time (NominalDiffTime, UTCTime)
 import qualified System.Metrics.Counter as Counter
@@ -580,38 +580,38 @@ traceI tr meta msg i = traceNamedObject tr (meta, LogValue msg (PureI (fromInteg
 sendEKGDirectCounter :: EKGDirect -> Text -> IO ()
 sendEKGDirectCounter ekgDirect name = do
   modifyMVar_ (ekgCounters ekgDirect) $ \registeredMap -> do
-    case SMap.lookup name registeredMap of
+    case Map.lookup name registeredMap of
       Just counter -> do
         Counter.inc counter
         pure registeredMap
       Nothing -> do
         counter <- EKG.getCounter name (ekgServer ekgDirect)
         Counter.inc counter
-        pure $ SMap.insert name counter registeredMap
+        pure $ Map.insert name counter registeredMap
 
 sendEKGDirectInt :: Integral a => EKGDirect -> Text -> a -> IO ()
 sendEKGDirectInt ekgDirect name val = do
   modifyMVar_ (ekgGauges ekgDirect) $ \registeredMap -> do
-    case SMap.lookup name registeredMap of
+    case Map.lookup name registeredMap of
       Just gauge -> do
         Gauge.set gauge (fromIntegral val)
         pure registeredMap
       Nothing -> do
         gauge <- EKG.getGauge name (ekgServer ekgDirect)
         Gauge.set gauge (fromIntegral val)
-        pure $ SMap.insert name gauge registeredMap
+        pure $ Map.insert name gauge registeredMap
 
 sendEKGDirectDouble :: EKGDirect -> Text -> Double -> IO ()
 sendEKGDirectDouble ekgDirect name val = do
   modifyMVar_ (ekgLabels ekgDirect) $ \registeredMap -> do
-    case SMap.lookup name registeredMap of
+    case Map.lookup name registeredMap of
       Just label -> do
         Label.set label (Text.pack (show val))
         pure registeredMap
       Nothing -> do
         label <- EKG.getLabel name (ekgServer ekgDirect)
         Label.set label (Text.pack (show val))
-        pure $ SMap.insert name label registeredMap
+        pure $ Map.insert name label registeredMap
 
 --------------------------------------------------------------------------------
 -- Consensus Tracers

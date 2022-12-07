@@ -32,7 +32,7 @@ import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad.Trans.Except.Extra (catchIOExceptT)
 import           "contra-tracer" Control.Tracer
 import           Data.List (nub)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import           Data.Text (pack)
 import           Data.Time.Clock (UTCTime, getCurrentTime)
 import           Data.Version (showVersion)
