@@ -64,9 +64,9 @@ import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 import           Cardano.Api.Address
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
-import           Cardano.Api.KeysByron
-import           Cardano.Api.KeysPraos
-import           Cardano.Api.KeysShelley
+import           Cardano.Api.Keys.Byron
+import           Cardano.Api.Keys.Praos
+import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.StakePoolMetadata

@@ -159,7 +159,7 @@ import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.KeysShelley
+import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.ScriptData
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON

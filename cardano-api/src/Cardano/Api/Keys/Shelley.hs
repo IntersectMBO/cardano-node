@@ -14,7 +14,7 @@
 
 -- | Shelley key types and their 'Key' class instances
 --
-module Cardano.Api.KeysShelley (
+module Cardano.Api.Keys.Shelley (
 
     -- * Key types
     PaymentKey,
@@ -56,7 +56,7 @@ import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Api.Error
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.Key
+import           Cardano.Api.Keys.Class
 import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON

@@ -238,9 +238,9 @@ import           Cardano.Api.Eras
 import           Cardano.Api.Genesis
 import           Cardano.Api.InMode
 import           Cardano.Api.IPC
-import           Cardano.Api.KeysByron
-import           Cardano.Api.KeysPraos
-import           Cardano.Api.KeysShelley
+import           Cardano.Api.Keys.Byron
+import           Cardano.Api.Keys.Praos
+import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.LedgerState
 import           Cardano.Api.NetworkId
 import           Cardano.Api.OperationalCertificate

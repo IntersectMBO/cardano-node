@@ -10,7 +10,7 @@
 
 -- | Byron key types and their 'Key' class instances
 --
-module Cardano.Api.KeysByron (
+module Cardano.Api.Keys.Byron (
 
     -- * Key types
     ByronKey,
@@ -54,8 +54,8 @@ import qualified Cardano.Crypto.Wallet as Wallet
 
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
-import           Cardano.Api.Key
-import           Cardano.Api.KeysShelley
+import           Cardano.Api.Keys.Class
+import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope

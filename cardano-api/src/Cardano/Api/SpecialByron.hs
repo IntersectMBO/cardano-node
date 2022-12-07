@@ -24,7 +24,7 @@ import           Data.Word
 import           Numeric.Natural
 
 import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.KeysByron
+import           Cardano.Api.Keys.Byron
 import           Cardano.Api.NetworkId (NetworkId, toByronProtocolMagicId)
 import           Cardano.Api.SerialiseRaw
 

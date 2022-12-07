@@ -89,7 +89,7 @@ module Cardano.Api.Byron
 import           Cardano.Api
 import           Cardano.Api.Address
 import           Cardano.Api.IPC
-import           Cardano.Api.KeysByron
+import           Cardano.Api.Keys.Byron
 import           Cardano.Api.NetworkId
 import           Cardano.Api.SpecialByron
 import           Cardano.Api.Tx

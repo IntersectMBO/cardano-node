@@ -19,7 +19,7 @@ where
 import           Cardano.Api.Address (StakeCredential, fromShelleyStakeCredential)
 import           Cardano.Api.Block (EpochNo)
 import           Cardano.Api.Certificate (Certificate)
-import           Cardano.Api.KeysShelley (Hash (StakePoolKeyHash), StakePoolKey)
+import           Cardano.Api.Keys.Shelley (Hash (StakePoolKeyHash), StakePoolKey)
 import           Cardano.Api.Value (Lovelace, fromShelleyDeltaLovelace, fromShelleyLovelace)
 import qualified Cardano.Ledger.Coin as Ledger
 import qualified Cardano.Ledger.Core as Ledger.Core

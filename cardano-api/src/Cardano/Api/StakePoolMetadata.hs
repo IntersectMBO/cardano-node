@@ -32,9 +32,9 @@ import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.Key
-import           Cardano.Api.KeysByron
-import           Cardano.Api.KeysPraos
+import           Cardano.Api.Keys.Class
+import           Cardano.Api.Keys.Byron
+import           Cardano.Api.Keys.Praos
 import           Cardano.Api.Script
 import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
