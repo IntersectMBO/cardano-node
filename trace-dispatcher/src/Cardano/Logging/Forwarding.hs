@@ -1,7 +1,7 @@
-{-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE PackageImports      #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Logging.Forwarding
@@ -14,8 +14,7 @@ import           Control.Concurrent.Async (async, race_, wait)
 import           Control.Monad (void)
 import           Control.Monad.IO.Class
 
-import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer,
-                     stdoutTracer)
+import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Void (Void)
 import           Data.Word (Word16)
@@ -24,22 +23,19 @@ import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
 import           Ouroboros.Network.ErrorPolicy (nullErrorPolicies)
 import           Ouroboros.Network.IOManager (IOManager)
 import           Ouroboros.Network.Magic (NetworkMagic)
-import           Ouroboros.Network.Mux (MiniProtocol (..),
-                     MiniProtocolLimits (..), MiniProtocolNum (..),
-                     MuxMode (..), OuroborosApplication (..),
-                     RunMiniProtocol (..), miniProtocolLimits, miniProtocolNum,
-                     miniProtocolRun)
-import           Ouroboros.Network.Protocol.Handshake.Codec
-                     (cborTermVersionDataCodec, codecHandshake, noTimeLimitsHandshake)
+import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
+                   MiniProtocolNum (..), MuxMode (..), OuroborosApplication (..),
+                   RunMiniProtocol (..), miniProtocolLimits, miniProtocolNum, miniProtocolRun)
+import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
+                   codecHandshake, noTimeLimitsHandshake)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
-import           Ouroboros.Network.Protocol.Handshake.Version
-                     (acceptableVersion, simpleSingletonVersions)
-import           Ouroboros.Network.Snocket (Snocket, localAddressFromPath,
-                     localSnocket)
+import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion,
+                   simpleSingletonVersions)
+import           Ouroboros.Network.Snocket (Snocket, localAddressFromPath, localSnocket)
 import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..),
-                     SomeResponderApplication (..), cleanNetworkMutableState,
-                     connectToNode, newNetworkMutableState, nullNetworkConnectTracers,
-                     nullNetworkServerTracers, withServerNode)
+                   SomeResponderApplication (..), cleanNetworkMutableState, connectToNode,
+                   newNetworkMutableState, nullNetworkConnectTracers, nullNetworkServerTracers,
+                   withServerNode)
 
 import qualified System.Metrics as EKG
 import qualified System.Metrics.Configuration as EKGF
@@ -161,14 +157,15 @@ launchForwardersViaLocalSocket
 launchForwardersViaLocalSocket
   iomgr magic ekgConfig tfConfig dpfConfig sink ekgStore dpStore p mode =
   (case mode of
-     Initiator -> doConnectToAcceptor
-     Responder -> doListenToAcceptor)
-  magic (localSnocket iomgr) (localAddressFromPath p)
+     Initiator -> doConnectToAcceptor magic (localSnocket iomgr) mempty
+     Responder -> doListenToAcceptor magic (localSnocket iomgr) mempty)
+  (localAddressFromPath p)
   noTimeLimitsHandshake ekgConfig tfConfig dpfConfig sink ekgStore dpStore
 
 doConnectToAcceptor
   :: NetworkMagic
   -> Snocket IO fd addr
+  -> (fd -> IO ())
   -> addr
   -> ProtocolTimeLimits (Handshake ForwardingVersion Term)
   -> EKGF.ForwarderConfiguration
@@ -178,10 +175,11 @@ doConnectToAcceptor
   -> Maybe EKG.Store
   -> DataPointStore
   -> IO ()
-doConnectToAcceptor magic snocket address timeLimits
+doConnectToAcceptor magic snocket configureSocket address timeLimits
                     ekgConfig tfConfig dpfConfig sink ekgStore dpStore = do
   connectToNode
     snocket
+    configureSocket
     (codecHandshake forwardingVersionCodec)
     timeLimits
     (cborTermVersionDataCodec forwardingCodecCBORTerm)
@@ -221,6 +219,7 @@ doListenToAcceptor
   :: Ord addr
   => NetworkMagic
   -> Snocket IO fd addr
+  -> (fd -> addr -> IO ())
   -> addr
   -> ProtocolTimeLimits (Handshake ForwardingVersion Term)
   -> EKGF.ForwarderConfiguration
@@ -230,12 +229,13 @@ doListenToAcceptor
   -> Maybe EKG.Store
   -> DataPointStore
   -> IO ()
-doListenToAcceptor magic snocket address timeLimits
+doListenToAcceptor magic snocket configureSocket address timeLimits
                    ekgConfig tfConfig dpfConfig sink ekgStore dpStore = do
   networkState <- newNetworkMutableState
   race_ (cleanNetworkMutableState networkState)
         $ withServerNode
             snocket
+            configureSocket
             nullNetworkServerTracers
             networkState
             (AcceptedConnectionsLimit maxBound maxBound 0)

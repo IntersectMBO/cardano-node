@@ -258,6 +258,8 @@ namesForPeerSelection TraceDemoteLocalHotPeers {}   = ["DemoteLocalHotPeers"]
 namesForPeerSelection TraceDemoteHotFailed {}       = ["DemoteHotFailed"]
 namesForPeerSelection TraceDemoteHotDone {}         = ["DemoteHotDone"]
 namesForPeerSelection TraceDemoteAsynchronous {}    = ["DemoteAsynchronous"]
+namesForPeerSelection TraceDemoteLocalAsynchronous {}
+                                                    = ["DemoteAsynchronous"]
 namesForPeerSelection TraceGovernorWakeup {}        = ["GovernorWakeup"]
 namesForPeerSelection TraceChurnWait {}             = ["ChurnWait"]
 namesForPeerSelection TraceChurnMode {}             = ["ChurnMode"]
@@ -289,6 +291,7 @@ severityPeerSelection TraceDemoteLocalHotPeers   {} = Info
 severityPeerSelection TraceDemoteHotFailed       {} = Info
 severityPeerSelection TraceDemoteHotDone         {} = Info
 severityPeerSelection TraceDemoteAsynchronous    {} = Info
+severityPeerSelection TraceDemoteLocalAsynchronous {} = Warning
 severityPeerSelection TraceGovernorWakeup        {} = Info
 severityPeerSelection TraceChurnWait             {} = Info
 severityPeerSelection TraceChurnMode             {} = Info
@@ -439,6 +442,10 @@ instance LogFormatting (TracePeerSelection SockAddr) where
              ]
   forMachine _dtal (TraceDemoteAsynchronous msp) =
     mconcat [ "kind" .= String "DemoteAsynchronous"
+             , "state" .= toJSON msp
+             ]
+  forMachine _dtal (TraceDemoteLocalAsynchronous msp) =
+    mconcat [ "kind" .= String "DemoteLocalAsynchronous"
              , "state" .= toJSON msp
              ]
   forMachine _dtal TraceGovernorWakeup =
@@ -666,13 +673,13 @@ docPeerSelectionCounters = Documented
 -- PeerSelectionActions Tracer
 --------------------------------------------------------------------------------
 
-namesForPeerSelectionActions :: PeerSelectionActionsTrace ntnAddr -> [Text]
+namesForPeerSelectionActions :: PeerSelectionActionsTrace ntnAddr lAddr -> [Text]
 namesForPeerSelectionActions PeerStatusChanged   {}     = ["StatusChanged"]
 namesForPeerSelectionActions PeerStatusChangeFailure {} = ["StatusChangeFailure"]
 namesForPeerSelectionActions PeerMonitoringError {}     = ["MonitoringError"]
 namesForPeerSelectionActions PeerMonitoringResult {}    = ["MonitoringResult"]
 
-severityPeerSelectionActions :: PeerSelectionActionsTrace ntnAddr -> SeverityS
+severityPeerSelectionActions :: PeerSelectionActionsTrace ntnAddr lAddr -> SeverityS
 severityPeerSelectionActions PeerStatusChanged {}       = Info
 severityPeerSelectionActions PeerStatusChangeFailure {} = Error
 severityPeerSelectionActions PeerMonitoringError {}     = Error
@@ -680,7 +687,7 @@ severityPeerSelectionActions PeerMonitoringResult {}    = Debug
 
 -- TODO: Write PeerStatusChangeType ToJSON at ouroboros-network
 -- For that an export is needed at ouroboros-network
-instance LogFormatting (PeerSelectionActionsTrace SockAddr) where
+instance Show lAddr => LogFormatting (PeerSelectionActionsTrace SockAddr lAddr) where
   forMachine _dtal (PeerStatusChanged ps) =
     mconcat [ "kind" .= String "PeerStatusChanged"
              , "peerStatusChangeType" .= show ps
@@ -702,11 +709,11 @@ instance LogFormatting (PeerSelectionActionsTrace SockAddr) where
              ]
   forHuman = pack . show
 
-docPeerSelectionActions :: Documented (PeerSelectionActionsTrace ntnAddr)
+docPeerSelectionActions :: Documented (PeerSelectionActionsTrace ntnAddr lAddr)
 docPeerSelectionActions =
     addDocumentedNamespace  []  docPeerSelectionActions'
 
-docPeerSelectionActions' :: Documented (PeerSelectionActionsTrace ntnAddr)
+docPeerSelectionActions' :: Documented (PeerSelectionActionsTrace ntnAddr lAddr)
 docPeerSelectionActions' = Documented
   [  DocMsg
       ["StatusChanged"]
@@ -768,8 +775,8 @@ severityConnectionManager (TrConnectionHandler _ ev')             =
           TrHandshakeSuccess {}     -> Info
           TrHandshakeClientError {} -> Notice
           TrHandshakeServerError {} -> Info
-          TrError _ _ ShutdownNode  -> Critical
-          TrError _ _ ShutdownPeer  -> Info
+          TrConnectionHandlerError _ _ ShutdownNode  -> Critical
+          TrConnectionHandlerError _ _ ShutdownPeer  -> Info
 
 severityConnectionManager TrShutdown                              = Info
 severityConnectionManager TrConnectionExists {}                   = Info
@@ -961,7 +968,7 @@ instance (Show versionNumber, ToJSON versionNumber, ToJSON agreedOptions)
       [ "kind" .= String "HandshakeServerError"
       , "reason" .= toJSON err
       ]
-  forMachine _dtal (TrError e err cerr) =
+  forMachine _dtal (TrConnectionHandlerError e err cerr) =
     mconcat
       [ "kind" .= String "Error"
       , "context" .= show e

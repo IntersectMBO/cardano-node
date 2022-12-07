@@ -129,6 +129,7 @@ import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Keys as Shelley.Spec
 import qualified Cardano.Ledger.Keys as SL
 import qualified Cardano.Ledger.PoolDistr as SL
+import           Cardano.Ledger.SafeHash (HashAnnotated)
 import qualified Cardano.Ledger.Shelley.API as ShelleyAPI
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley.Spec
 import qualified Cardano.Protocol.TPraos.API as TPraos
@@ -1313,7 +1314,9 @@ instance Error LeadershipError where
 
 nextEpochEligibleLeadershipSlots
   :: forall era.
-     HasField "_d" (Core.PParams (ShelleyLedgerEra era)) UnitInterval
+     ( HasField "_d" (Core.PParams (ShelleyLedgerEra era)) UnitInterval
+     , HashAnnotated (Core.TxBody (ShelleyLedgerEra era)) Core.EraIndependentTxBody (Ledger.Crypto (ShelleyLedgerEra era))
+     )
   => Ledger.Era (ShelleyLedgerEra era)
   => Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Spec.Credential 'Shelley.Spec.Staking (Cardano.Ledger.Era.Crypto (ShelleyLedgerEra era)))
   => FromCBOR (Consensus.ChainDepState (Api.ConsensusProtocol era))
@@ -1482,6 +1485,10 @@ obtainDecodeEpochStateConstraints
       , FromCBOR (State (Core.EraRule "PPUP" ledgerera))
       , FromCBOR (Core.Value ledgerera)
       , FromSharedCBOR (Core.TxOut ledgerera)
+      , HashAnnotated
+          (Core.TxBody ledgerera)
+          Core.EraIndependentTxBody
+          (Ledger.Crypto (ShelleyLedgerEra era))
       ) => a) -> a
 obtainDecodeEpochStateConstraints ShelleyBasedEraShelley f = f
 obtainDecodeEpochStateConstraints ShelleyBasedEraAllegra f = f

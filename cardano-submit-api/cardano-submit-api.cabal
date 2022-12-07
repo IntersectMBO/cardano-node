@@ -66,13 +66,13 @@ common project-config
 
 library
   import:               base, project-config
-                      , aeson
+  build-depends:      , aeson
                       , async
                       , bytestring
                       , cardano-api
                       , cardano-binary
-                      , cardano-crypto-class
-                      , cardano-ledger-byron
+                      , cardano-crypto-class ^>= 2.0
+                      , cardano-ledger-byron ^>= 0.1
                       , formatting
                       , http-media
                       , iohk-monitoring

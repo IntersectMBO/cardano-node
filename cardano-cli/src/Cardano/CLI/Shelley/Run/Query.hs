@@ -82,7 +82,7 @@ import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Era as Era
 import qualified Cardano.Ledger.Era as Ledger
 import           Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
-import           Cardano.Ledger.Shelley.Constraints
+import           Cardano.Ledger.SafeHash (HashAnnotated)
 import           Cardano.Ledger.Shelley.EpochBoundary
 import           Cardano.Ledger.Shelley.LedgerState (EpochState (esSnapshots),
                    NewEpochState (nesEs), PState (_fPParams, _pParams, _retiring))
@@ -1397,10 +1397,10 @@ toEpochInfo (EraHistory _ interpreter) =
 obtainLedgerEraClassConstraints
   :: ShelleyLedgerEra era ~ ledgerera
   => Api.ShelleyBasedEra era
-  -> (( UsesValue ledgerera
-      , ToJSON (DebugLedgerState era)
+  -> (( ToJSON (DebugLedgerState era)
       , FromCBOR (DebugLedgerState era)
       , Era.Crypto ledgerera ~ StandardCrypto
+      , Ledger.Era (ShelleyLedgerEra era)
       ) => a) -> a
 obtainLedgerEraClassConstraints ShelleyBasedEraShelley f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraAllegra f = f
@@ -1420,7 +1420,11 @@ eligibleLeaderSlotsConstaints
       , HasField "_d" (Core.PParams (ShelleyLedgerEra era)) UnitInterval
       , Crypto.Signable (Crypto.VRF (Ledger.Crypto ledgerera)) Seed
       , Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Ledger.Credential 'Staking StandardCrypto)
-      ,  Crypto.ADDRHASH (Consensus.PraosProtocolSupportsNodeCrypto (ConsensusProtocol era)) ~ Blake2b.Blake2b_224
+      , Crypto.ADDRHASH (Consensus.PraosProtocolSupportsNodeCrypto (ConsensusProtocol era)) ~ Blake2b.Blake2b_224
+      , HashAnnotated
+          (Core.TxBody (ShelleyLedgerEra era))
+          Core.EraIndependentTxBody
+          StandardCrypto
       ) => a
      )
   -> a
