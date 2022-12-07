@@ -70,9 +70,10 @@ library
                         Cardano.Api.IPC.Monad
                         Cardano.Api.InMode
                         Cardano.Api.Json
-                        Cardano.Api.Keys.Class
                         Cardano.Api.Keys.Byron
+                        Cardano.Api.Keys.Class
                         Cardano.Api.Keys.Praos
+                        Cardano.Api.Keys.Read
                         Cardano.Api.Keys.Shelley
                         Cardano.Api.LedgerEvent
                         Cardano.Api.LedgerState

@@ -512,9 +512,16 @@ module Cardano.Api (
     TextEnvelopeCddlError(..),
 
     -- *** Reading one of several key types
+    readKeyFile,
+    readKeyFileTextEnvelope,
+    readKeyFileAnyOf,
+
+    -- *** Read one of several types
     FromSomeType(..),
     deserialiseFromTextEnvelopeAnyOf,
     readFileTextEnvelopeAnyOf,
+
+
 
     -- * Errors
     Error(..),
@@ -750,8 +757,9 @@ import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.InMode
 import           Cardano.Api.IPC
 import           Cardano.Api.IPC.Monad
-import           Cardano.Api.Keys.Class
 import           Cardano.Api.Keys.Byron
+import           Cardano.Api.Keys.Class
+import           Cardano.Api.Keys.Read
 import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.LedgerEvent
 import           Cardano.Api.LedgerState
