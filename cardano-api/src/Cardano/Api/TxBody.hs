@@ -1670,6 +1670,7 @@ instance Eq (TxBody era) where
                                   && scriptValidityA == scriptValidityB
 
     (==) ByronTxBody{} (ShelleyTxBody era _ _ _ _ _) = case era of {}
+    (==) (ShelleyTxBody era _ _ _ _ _) ByronTxBody{} = case era of {}
 
 
 -- The GADT in the ShelleyTxBody case requires a custom instance
