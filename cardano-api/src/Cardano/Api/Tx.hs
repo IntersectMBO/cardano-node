@@ -154,6 +154,7 @@ instance Eq (Tx era) where
         ShelleyBasedEraBabbage -> txA == txB
 
     (==) ByronTx{} (ShelleyTx era _) = case era of {}
+    (==) (ShelleyTx era _) ByronTx{} = case era of {}
 
 -- The GADT in the ShelleyTx case requires a custom instance
 instance Show (Tx era) where
