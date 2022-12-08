@@ -132,8 +132,6 @@ pAddressCmd =
          (Opt.info pAddressKeyHash $ Opt.progDesc "Print the hash of an address key.")
      , subParser "build"
          (Opt.info pAddressBuild $ Opt.progDesc "Build a Shelley payment address, with optional delegation to a stake address.")
-     , subParser "build-script"
-         (Opt.info pAddressBuildScript $ Opt.progDesc "Build a Shelley script address. (deprecated; use 'build' instead with '--payment-script-file')")
      , subParser "info"
          (Opt.info pAddressInfo $ Opt.progDesc "Print information about an address.")
      ]
@@ -153,12 +151,6 @@ pAddressCmd =
     pAddressBuild = AddressBuild
       <$> pPaymentVerifier
       <*> Opt.optional pStakeVerifier
-      <*> pNetworkId
-      <*> pMaybeOutputFile
-
-    pAddressBuildScript :: Parser AddressCmd
-    pAddressBuildScript = AddressBuildMultiSig
-      <$> pScript
       <*> pNetworkId
       <*> pMaybeOutputFile
 

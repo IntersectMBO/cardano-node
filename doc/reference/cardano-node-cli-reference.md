@@ -21,7 +21,6 @@ The `address` command contains the following subcommands:
 * `key-gen`: creates a single address key pair
 * `key-hash`: prints the hash of an address to stdout
 * `build`: builds a payment address, with optional delegation to a stake address
-* `build-script`: builds a token locking script
 * `info`: prints details about the address
 
 *cardano-cli stake-address*

@@ -97,7 +97,6 @@ data AddressCmd
       (Maybe StakeVerifier)
       NetworkId
       (Maybe OutputFile)
-  | AddressBuildMultiSig ScriptFile NetworkId (Maybe OutputFile)
   | AddressInfo Text (Maybe OutputFile)
   deriving Show
 
@@ -108,7 +107,6 @@ renderAddressCmd cmd =
     AddressKeyGen {} -> "address key-gen"
     AddressKeyHash {} -> "address key-hash"
     AddressBuild {} -> "address build"
-    AddressBuildMultiSig {} -> "address build-script"
     AddressInfo {} -> "address info"
 
 data StakeAddressCmd

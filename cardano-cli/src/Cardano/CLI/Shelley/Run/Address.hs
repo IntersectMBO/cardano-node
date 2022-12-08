@@ -22,7 +22,6 @@ import qualified Data.Text.IO as Text
 import           Cardano.Api
 import           Cardano.Api.Shelley
 
-import           Cardano.CLI.Helpers
 import           Cardano.CLI.Shelley.Key (PaymentVerifier (..), StakeVerifier (..),
                    VerificationKeyTextOrFile, VerificationKeyTextOrFileError (..), generateKeyPair,
                    readVerificationKeyOrFile, readVerificationKeyTextOrFileAnyOf,
@@ -62,7 +61,6 @@ runAddressCmd cmd =
     AddressKeyGen kt vkf skf -> runAddressKeyGenToFile kt vkf skf
     AddressKeyHash vkf mOFp -> runAddressKeyHash vkf mOFp
     AddressBuild paymentVerifier mbStakeVerifier nw mOutFp -> runAddressBuild paymentVerifier mbStakeVerifier nw mOutFp
-    AddressBuildMultiSig sFp nId mOutFp -> runAddressBuildScript sFp nId mOutFp
     AddressInfo txt mOFp -> firstExceptT ShelleyAddressCmdAddressInfoError $ runAddressInfo txt mOFp
 
 runAddressKeyGenToFile
@@ -202,18 +200,3 @@ foldSomeAddressVerificationKey f (AGenesisExtendedVerificationKey vk) = f vk
 foldSomeAddressVerificationKey f (AVrfVerificationKey             vk) = f vk
 foldSomeAddressVerificationKey f (AStakeVerificationKey           vk) = f vk
 foldSomeAddressVerificationKey f (AStakeExtendedVerificationKey   vk) = f vk
-
-
---
--- Multisig addresses
---
-
-runAddressBuildScript
-  :: ScriptFile
-  -> NetworkId
-  -> Maybe OutputFile
-  -> ExceptT ShelleyAddressCmdError IO ()
-runAddressBuildScript scriptFile networkId mOutputFile = do
-  liftIO $ deprecationWarning "'address build'"
-  runAddressBuild (PaymentVerifierScriptFile scriptFile) Nothing networkId mOutputFile
-
