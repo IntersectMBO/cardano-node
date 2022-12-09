@@ -68,6 +68,10 @@ def era_defaults($era):
     , tx_fee:                         1000000
     , epochs:                         3
     , tps:                            12
+    , plutus:
+      { type:   null
+      , script: null
+      }
     }
 
   , node:

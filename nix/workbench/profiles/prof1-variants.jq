@@ -85,6 +85,10 @@ def all_profile_variants:
        { utxo:                              (0.5 * $M)
        , delegators:                        (0.1 * $M)
        }
+     , generator:
+       { tps:                               1
+       , tx_count:                          10
+       }
      }) as $dataset_miniature
   |
     ($current_block_size *
@@ -101,6 +105,30 @@ def all_profile_variants:
       { tps:                                (1 * $M / (360 * 20))
       }
     } as $dataset_dish
+  |
+  ##
+  ### Definition vocabulary:  protocol parameters
+  ##
+    ({}|
+      { genesis:
+        { alonzo:
+          { costModels:
+            { PlutusV1:                     $costmodels_v8_preview[0].PlutusScriptV1
+            , PlutusV2:                     $costmodels_v8_preview[0].PlutusScriptV2
+            }
+          , maxBlockExUnits:
+            { exUnitsMem:                   $pparams_v8[0].maxBlockExecutionUnits.memory
+            , exUnitsSteps:                 $pparams_v8[0].maxBlockExecutionUnits.steps
+            }
+          }
+        , shelley:
+          { protocolParams:
+            { protocolVersion:              $pparams_v8[0].protocolVersion
+            }
+          }
+        }
+      }
+    ) as $pparams_to_v8
   |
   ##
   ### Definition vocabulary:  chain
@@ -246,13 +274,65 @@ def all_profile_variants:
     , generator:
       { inputs_per_tx:                  1
       , outputs_per_tx:                 1
-      , plutusMode:                     true
-      , plutusAutoMode:                 true
       }
     , analysis:
       { filters:                        ["size-small"]
       }
-    }) as $plutus
+    }) as $plutus_base
+  |
+   ({ generator:
+      { plutus:
+          { type:                       "LimitSaturationLoop"
+          , script:                     "v1/loop.plutus"
+          , redeemer:
+            { "int": 1000000 }
+          }
+      }
+    }) as $plutus_loop_counter
+  |
+   ($pparams_to_v8 *
+    { generator:
+      { plutus:
+          { type:                      "LimitSaturationLoop"
+          , script:                    "v2/ecdsa-secp256k1-loop.plutus"
+          , redeemer:
+            { constructor: 0
+            , fields:
+              [ ## Termination (but, de-facto arbitrary).
+                { int:   1000000 }
+              , ## Signer's verification key.
+                { bytes: "0392d7b94bc6a11c335a043ee1ff326b6eacee6230d3685861cd62bce350a172e0" }
+              , ## Message to check signature of.
+                { bytes: "16e0bf1f85594a11e75030981c0b670370b3ad83a43f49ae58a2fd6f6513cde9" }
+              , ## Signature.
+                { bytes: "5fb12954b28be6456feb080cfb8467b6f5677f62eb9ad231de7a575f4b6857512754fb5ef7e0e60e270832e7bb0e2f0dc271012fa9c46c02504aa0e798be6295" }
+              ]
+            }
+          }
+      }
+    }) as $plutus_loop_secp_ecdsa
+  |
+   ($pparams_to_v8 *
+    { generator:
+      { plutus:
+          { type:                       "LimitSaturationLoop"
+          , script:                     "v2/schnorr-secp256k1-loop.plutus"
+          , redeemer:
+            { constructor: 0
+            , fields:
+              [ ## Termination (but, de-facto arbitrary).
+                { int:   1000000 }
+              , ## Signer's verification key.
+                { bytes: "599de3e582e2a3779208a210dfeae8f330b9af00a47a7fb22e9bb8ef596f301b" }
+              , ## Message to check signature of.
+                { bytes: "30303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030" }
+              , ## Signature.
+                { bytes: "5a56da88e6fd8419181dec4d3dd6997bab953d2fc71ab65e23cfc9e7e3d1a310613454a60f6703819a39fdac2a410a094442afd1fc083354443e8d8bb4461a9b" }
+              ]
+            }
+          }
+      }
+    }) as $plutus_loop_secp_schnorr
   |
   ##
   ### Definition vocabulary:  node config variants
@@ -367,9 +447,17 @@ def all_profile_variants:
   , { name: "default"
     , desc: "Default, as per nix/workbench/profiles/defaults.jq"
     }
-  , $plutus *
+  , $plutus_base * $plutus_loop_counter *
     { name: "plutus"
-    , desc: "Default with Plutus workload"
+    , desc: "Default with Plutus workload: CPU/memory limit saturation counter loop"
+    }
+  , $plutus_base * $plutus_loop_secp_ecdsa *
+    { name: "plutus-secp-ecdsa"
+    , desc: "Default with Plutus workload: CPU/memory limit saturation ECDSA SECP256k1 loop"
+    }
+  , $plutus_base * $plutus_loop_secp_schnorr *
+    { name: "plutus-secp-schnorr"
+    , desc: "Default with Plutus workload: CPU/memory limit saturation Schnorr SECP256k1 loop"
     }
   , $old_tracing *
     { name: "oldtracing"
@@ -391,7 +479,7 @@ def all_profile_variants:
   , $startstop_base * $p2p *
     { name: "startstop-p2p"
     }
-  , $startstop_base * $plutus *
+  , $startstop_base * $plutus_base * $plutus_loop_counter *
     { name: "startstop-plutus"
     }
   , $startstop_base * $without_tracer *
@@ -408,7 +496,7 @@ def all_profile_variants:
   , $citest_base * $p2p *
     { name: "ci-test-p2p"
     }
-  , $citest_base * $plutus *
+  , $citest_base * $plutus_base * $plutus_loop_counter *
     { name: "ci-test-plutus"
     }
   , $citest_base * $without_tracer *
@@ -422,8 +510,14 @@ def all_profile_variants:
   , $cibench_base * $p2p *
     { name: "ci-bench-p2p"
     }
-  , $cibench_base * $plutus *
+  , $cibench_base * $plutus_base * $plutus_loop_counter *
     { name: "ci-bench-plutus"
+    }
+  , $cibench_base * $plutus_base * $plutus_loop_secp_ecdsa *
+    { name: "ci-bench-plutus-secp-ecdsa"
+    }
+  , $cibench_base * $plutus_base * $plutus_loop_secp_schnorr *
+    { name: "ci-bench-plutus-secp-schnorr"
     }
   , $cibench_base * $without_tracer *
     { name: "ci-bench-notracer"
@@ -444,10 +538,10 @@ def all_profile_variants:
       { utxo:                               (10 * $M)
       }
     }
-  , $dish_base * $plutus *
+  , $dish_base * $plutus_base * $plutus_loop_counter *
     { name: "dish-plutus"
     }
-  , $dish_base * $plutus *
+  , $dish_base * $plutus_base * $plutus_loop_counter *
     { name: "dish-10M-plutus"
     , genesis:
       { utxo:                               (10 * $M)
@@ -461,7 +555,7 @@ def all_profile_variants:
   , $cibench_base * $tenner * $p2p *
     { name: "10-p2p"
     }
-  , $cibench_base * $tenner * $plutus *
+  , $cibench_base * $tenner * $plutus_base * $plutus_loop_counter *
     { name: "10-plutus"
     }
   , $cibench_base * $tenner * $without_tracer *
@@ -472,13 +566,13 @@ def all_profile_variants:
   , $forge_stress_base *
     { name: "forge-stress"
     }
-  , $forge_stress_base * $plutus *
+  , $forge_stress_base * $plutus_base * $plutus_loop_counter *
     { name: "forge-stress-p2p"
     }
-  , $forge_stress_base * $plutus *
+  , $forge_stress_base * $plutus_base * $plutus_loop_counter *
     { name: "forge-stress-plutus"
     }
-  , $forge_stress_base * $plutus * $singleton *
+  , $forge_stress_base * $plutus_base * $plutus_loop_counter * $singleton *
     { name: "forge-stress-plutus-singleton"
     }
   , $forge_stress_base * $without_tracer *
@@ -488,7 +582,7 @@ def all_profile_variants:
   , $forge_stress_pre_base *
     { name: "forge-stress-pre"
     }
-  , $forge_stress_pre_base * $plutus *
+  , $forge_stress_pre_base * $plutus_base * $plutus_loop_counter *
     { name: "forge-stress-pre-plutus"
     }
   , $forge_stress_pre_base * $without_tracer *

@@ -187,6 +187,8 @@ with_era_profiles() {
 
     jq  -L "$global_basedir/profiles" -L "$global_basedir" \
         --argjson eras "$(to_jsonlist ${global_profile_eras[*]})" \
+        --slurpfile costmodels_v8_preview "$global_basedir/profiles/protocol-versions/costmodels-v8-preview.json" \
+        --slurpfile pparams_v8 "$global_basedir/profiles/protocol-versions/pparams-v8.json" \
         --null-input '
        include "profiles";
 
