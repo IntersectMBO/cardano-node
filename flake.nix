@@ -278,13 +278,9 @@
             benchmarks = collectComponents' "benchmarks" projectPackages;
           });
 
-          inherit (pkgs) workbench all-profiles-json supervisord-workbench-nix supervisord-workbench-for-profile;
+          inherit (pkgs) workbench all-profiles-json workbench-runner;
 
           packages =
-            let
-              supervisord-workbench =
-                pkgs.callPackage supervisord-workbench-nix { workbench = pinned-workbench; };
-            in
             exes
             # Linux only packages:
             // optionalAttrs (system == "x86_64-linux") rec {
@@ -296,10 +292,12 @@
 
               ## This is a very light profile, no caching&pinning needed.
               workbench-ci-test =
-                (pkgs.supervisord-workbench-for-profile
+                (pkgs.workbench-runner
                   {
-                    # inherit supervisord-workbench; ## Not required, as long as it's fast.
                     profileName = "ci-test-bage";
+                    backendName = "supervisor";
+                    ## Not required, as long as it's fast.
+                    # workbench = pinned-workbench;
                     cardano-node-rev =
                       if __hasAttr "rev" self
                       then self.rev

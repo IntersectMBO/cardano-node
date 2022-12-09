@@ -2,7 +2,6 @@
 # Cardano packages/executables.
 , cardano-node, cardano-tracer, tx-generator
 # OCI Image builder.
-, nix2container
 }:
 
 let
@@ -10,7 +9,7 @@ let
   # Why `nix2container` instead of the built-in `dockerTools` ?:
   # - https://lewo.abesis.fr/posts/nix-build-container-image/
   # - https://discourse.nixos.org/t/nix2container-another-dockertools-buildimage-implementation-based-on-skopeo/21688
-  n2c = nix2container.outputs.packages.x86_64-linux.nix2container;
+  n2c = pkgs.nix2container.outputs.packages.x86_64-linux.nix2container;
 
   clusterImage = n2c.buildImage {
     name = "registry.workbench.iog.io/cluster";

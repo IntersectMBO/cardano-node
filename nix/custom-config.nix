@@ -7,7 +7,6 @@ self: {
     profileName = "default-bage";
     backendName = "supervisor";
     basePort    = 30000;
-    enableEKG        = true;
     workbenchDevMode = true;
     extraBackendConfig = {};
   };

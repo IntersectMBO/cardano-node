@@ -5,8 +5,8 @@ in
 { withHoogle ? defaultCustomConfig.withHoogle
 , profileName ? defaultCustomConfig.localCluster.profileName
 , backendName ? defaultCustomConfig.localCluster.backendName
-, workbenchDevMode ? defaultCustomConfig.localCluster.workbenchDevMode
 , useCabalRun ? true
+, workbenchDevMode ? defaultCustomConfig.localCluster.workbenchDevMode
 , customConfig ? {
     inherit withHoogle;
     localCluster =  {
@@ -57,34 +57,29 @@ let
   haveGlibcLocales = pkgs.glibcLocales != null && stdenv.hostPlatform.libc == "glibc";
 
   workbench-shell =
-    let
-      workbenchRun =
-        if backendName == "nomad"
-          then pkgs.nomad-workbench-for-profile
-            { inherit profileName useCabalRun profiled; }
-          # Supervidor by default.
-          else pkgs.supervisord-workbench-for-profile
-            { inherit profileName useCabalRun profiled; }
-      ;
-    in with customConfig.localCluster;
+    with customConfig.localCluster;
       import ./nix/workbench/shell.nix
         { inherit pkgs lib haskellLib project;
           inherit setLocale haveGlibcLocales commandHelp;
           inherit cardano-mainnet-mirror;
-          inherit workbenchRun workbenchDevMode;
+          inherit workbenchDevMode;
           inherit profiled withHoogle;
+          workbenchRunner =
+            pkgs.workbench-runner
+              { inherit profileName backendName useCabalRun profiled; };
         };
 
   devops =
     let profileName = "devops-bage";
-        workbenchRun = pkgs.supervisord-workbench-for-profile
+        workbenchRunner = pkgs.workbench-runner
           {
             inherit profileName;
+            backendName = "supervisor";
             useCabalRun = false;
           };
         devopsShellParams =
           { inherit profileName;
-            backend = workbenchRun.backend;
+            inherit (workbenchRunner) backend;
             inherit workbenchDevMode profiled;
             withMainnet = false;
           };
@@ -93,7 +88,7 @@ let
             { inherit pkgs lib haskellLib project;
               inherit setLocale haveGlibcLocales commandHelp;
               inherit cardano-mainnet-mirror;
-              inherit workbenchRun workbenchDevMode;
+              inherit workbenchRunner workbenchDevMode;
               inherit profiled withHoogle;
             };
     in project.shellFor {
@@ -115,11 +110,11 @@ let
       pkgs.graphviz
       python3Packages.supervisor
       python3Packages.ipython
-      workbenchRun.interactive-start
-      workbenchRun.interactive-stop
-      workbenchRun.interactive-restart
+      workbenchRunner.interactive-start
+      workbenchRunner.interactive-stop
+      workbenchRunner.interactive-restart
       cardanolib-py
-      workbenchRun.workbench.workbench
+      workbenchRunner.workbench.workbench
       pstree
       pkgs.time
     ];
@@ -132,7 +127,7 @@ let
       ${devopsShell.shellHook devopsShellParams}
 
       # Socket path default to first node launched by "start-cluster":
-      export CARDANO_NODE_SOCKET_PATH=$(wb backend get-node-socket-path ${workbenchRun.stateDir} 'node-0')
+      export CARDANO_NODE_SOCKET_PATH=$(wb backend get-node-socket-path ${workbenchRunner.stateDir} 'node-0')
 
       ${setLocale}
 

@@ -1,26 +1,28 @@
-let
-  batchNameDefault   = "plain";
-  profileNameDefault = "default-bage";
-in
 { pkgs
+, lib
 , cardanoNodePackages
-, nomad-workbench
 ##
-, profileName           ? profileNameDefault
-, batchName             ? batchNameDefault
+, stateDir
+, batchName
+, profileName
+, backend
 ##
-, workbenchDevMode      ? false
 , cardano-node-rev      ? "0000000000000000000000000000000000000000"
+, workbench
+, workbenchDevMode      ? false
+##
+, cacheDir              ? "${__getEnv "HOME"}/.cache/cardano-workbench"
+, basePort              ? 30000
 }:
 let
-  inherit (nomad-workbench) workbench backend cacheDir stateDir basePort;
+  backendName = backend.name;
 
-  with-nomad-profile =
-    { envArgsOverride ? {} }: ## TODO: envArgsOverride is not used!
-    workbench.with-profile
-      { inherit backend profileName; };
+  inherit (backend) useCabalRun;
 
-  inherit (with-nomad-profile {}) profileNix profile topology genesis;
+  with-backend-profile = workbench.with-profile
+    { inherit stateDir profileName backend basePort workbench; };
+
+  inherit (with-backend-profile) profileNix profile topology genesis;
 in
   let
 
@@ -38,14 +40,14 @@ in
       set -euo pipefail
 
       export PATH=$PATH:${path}
-      unset WB_MODE_CABAL=
+
       wb start \
         --batch-name   ${batchName} \
         --profile-name ${profileName} \
         --profile      ${profile} \
         --cache-dir    ${cacheDir} \
         --base-port    ${toString basePort} \
-        ''${WB_MODE_CABAL:+--cabal} \
+        ${pkgs.lib.optionalString useCabalRun ''--cabal \''}
         "$@"
     '';
 
@@ -70,11 +72,10 @@ in
       { trace ? false }:
       let
         inherit
-          (with-nomad-profile
-            { envArgsOverride = { cacheDir = "./cache"; stateDir = "./"; }; })
+          (with-backend-profile)
           profileNix profile topology genesis;
 
-        run = pkgs.runCommand "workbench-run-nomad-${profileName}"
+        run = pkgs.runCommand "workbench-run-${backendName}-${profileName}"
           { requiredSystemFeatures = [ "benchmark" ];
             nativeBuildInputs = with cardanoNodePackages; with pkgs; [
               bash
@@ -85,17 +86,19 @@ in
               moreutils
               nixWrapped
               pstree
-# TODO:       nomad
               workbench.workbench
               zstd
-            ];
+            ]
+            ++
+            backend.extraShellPkgs
+            ;
           }
             ''
             mkdir -p    $out/{cache,nix-support}
             cd          $out
             export HOME=$out
 
-            export WB_BACKEND=nomad
+            export WB_BACKEND=${backendName}
             export CARDANO_NODE_SOCKET_PATH=$(wb backend get-node-socket-path ${stateDir} node-0)
 
             cmd=(
@@ -142,10 +145,8 @@ in
     };
 in
 {
-  inherit stateDir;
-  inherit profileName;
-  inherit workbench nomad-workbench;
-  inherit (nomad-workbench) backend;
+  inherit stateDir batchName profileName backend;
+  inherit workbench;
   inherit profileNix profile topology genesis;
   inherit interactive-start interactive-stop interactive-restart;
   inherit profile-run;

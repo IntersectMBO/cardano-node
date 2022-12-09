@@ -22,9 +22,11 @@ module Data.CDF
   , nEquicentiles
   , Divisible (..)
   , weightedAverage
+  , averageDouble
   , CDFError (..)
   , CDF(..)
   , cdf
+  , cdfRatioCDF
   , cdfAverageVal
   , centilesCDF
   , filterCDF
@@ -45,6 +47,7 @@ module Data.CDF
   , stdCombine1
   , stdCombine2
   , CDF2
+  , collapseCDF
   , collapseCDFs
   , cdf2OfCDFs
   --
@@ -148,6 +151,9 @@ weightedAverage xs =
   (`divide` (fromIntegral . sum $ fst <$> xs)) . sum $
   xs <&> \(size, avg) -> fromIntegral size * avg
 
+averageDouble :: Divisible a => [a] -> Double
+averageDouble xs = toDouble (sum xs) / fromIntegral (length xs)
+
 --
 -- * Parametric CDF (cumulative distribution function)
 --
@@ -160,6 +166,20 @@ data CDF p a =
   , cdfSamples   :: [(Centile, p a)]
   }
   deriving (Functor, Generic)
+
+cdfRatioCDF :: forall a. Fractional a => CDF I a -> CDF I a -> CDF I a
+cdfRatioCDF x y =
+  CDF
+  { cdfSize    = cdfSize x
+  , cdfAverage = I $ ((/) `on` unI . cdfAverage) x y
+  , cdfStddev  = cdfStddev x * cdfStddev y
+  , cdfRange   = Interval (((/) `on` low . cdfRange) x y) (((/) `on` high . cdfRange) x y)
+  , cdfSamples =  (zipWith divCentile `on` cdfSamples) x y
+  }
+  where divCentile :: (Centile, I a) -> (Centile, I a) -> (Centile, I a)
+        divCentile (cx, I x') (cy, I y') =
+          if cx == cy then (cx, I $ x' / y')
+          else error "Centile incoherency: %s vs %s" (show cx) (show cy)
 
 deriving instance (Eq     a, Eq     (p a), Eq     (p Double)) => Eq     (CDF p a)
 deriving instance (Show   a, Show   (p a), Show   (p Double)) => Show   (CDF p a)
@@ -323,6 +343,24 @@ stdCombine2 cs =
   Combine
   { cCDF = collapseCDFs c
   , ..
+  }
+
+collapseCDF :: ([a] -> b) -> CDF (CDF I) a -> CDF I b
+collapseCDF avg c =
+  CDF
+  { cdfSize    = cdfSize c
+  , cdfAverage = I $ cdfAverageVal c
+  , cdfRange   = cdfRange c
+                 & low &&& high
+                 & both (avg . (:[]))
+                 & uncurry Interval
+  , cdfStddev  = cdfStddev c
+  , cdfSamples = zip (cdfSamples c <&> fst)
+                     (cdfSamples c <&>
+                      I
+                      . avg               -- :: a
+                      . fmap  (unI . snd) -- :: [(Int, a)]
+                      . cdfSamples . snd) -- :: [(Centile a)]
   }
 
 -- | Collapse basic CDFs.
