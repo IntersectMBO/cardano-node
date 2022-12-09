@@ -184,18 +184,18 @@ filterFields f = filter f cdfFields
 mapField :: a p -> (forall v. Divisible v => CDF p v -> b) -> Field DSelect p a -> b
 mapField x cdfProj Field{..} =
   case fSelect of
-    DInt    (cdfProj . ($x) ->r) -> r
-    DWord64 (cdfProj . ($x) ->r) -> r
-    DFloat  (cdfProj . ($x) ->r) -> r
-    DDeltaT (cdfProj . ($x) ->r) -> r
+    DInt    (cdfProj . ($ x) ->r) -> r
+    DWord64 (cdfProj . ($ x) ->r) -> r
+    DFloat  (cdfProj . ($ x) ->r) -> r
+    DDeltaT (cdfProj . ($ x) ->r) -> r
 
 mapFieldWithKey :: a p -> (forall v. Divisible v => Field DSelect p a -> CDF p v -> b) -> Field DSelect p a -> b
 mapFieldWithKey x cdfProj f@Field{..} =
   case fSelect of
-    DInt    (cdfProj f . ($x) ->r) -> r
-    DWord64 (cdfProj f . ($x) ->r) -> r
-    DFloat  (cdfProj f . ($x) ->r) -> r
-    DDeltaT (cdfProj f . ($x) ->r) -> r
+    DInt    (cdfProj f . ($ x) ->r) -> r
+    DWord64 (cdfProj f . ($ x) ->r) -> r
+    DFloat  (cdfProj f . ($ x) ->r) -> r
+    DDeltaT (cdfProj f . ($ x) ->r) -> r
 
 tryOverlayFieldDescription :: Field DSelect p a -> Object -> Maybe Object
 tryOverlayFieldDescription Field{..} =

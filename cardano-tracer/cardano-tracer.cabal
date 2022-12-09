@@ -282,7 +282,6 @@ test-suite cardano-tracer-test
                         Cardano.Tracer.Test.TestSetup
                         Cardano.Tracer.Test.Utils
                         Cardano.Tracer.Test.Queue.Tests
-
   build-depends:        aeson
                       , async
                       , bytestring

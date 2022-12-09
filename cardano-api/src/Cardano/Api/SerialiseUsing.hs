@@ -17,7 +17,7 @@ import qualified Data.ByteString.Char8 as BSC
 import           Data.String (IsString (..))
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import           Data.Typeable (Typeable, tyConName, typeRep, typeRepTyCon)
+import           Data.Typeable (tyConName, typeRep, typeRepTyCon)
 
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
@@ -35,10 +35,10 @@ import           Cardano.Api.SerialiseRaw
 --
 newtype UsingRawBytes a = UsingRawBytes a
 
-instance (SerialiseAsRawBytes a, Typeable a) => ToCBOR (UsingRawBytes a) where
+instance SerialiseAsRawBytes a => ToCBOR (UsingRawBytes a) where
     toCBOR (UsingRawBytes x) = toCBOR (serialiseToRawBytes x)
 
-instance (SerialiseAsRawBytes a, Typeable a) => FromCBOR (UsingRawBytes a) where
+instance SerialiseAsRawBytes a => FromCBOR (UsingRawBytes a) where
     fromCBOR = do
       bs <- fromCBOR
       case eitherDeserialiseFromRawBytes ttoken bs of
@@ -68,7 +68,7 @@ instance SerialiseAsRawBytes a => IsString (UsingRawBytesHex a) where
 instance SerialiseAsRawBytes a => ToJSON (UsingRawBytesHex a) where
     toJSON (UsingRawBytesHex x) = toJSON (serialiseToRawBytesHexText x)
 
-instance (SerialiseAsRawBytes a, Typeable a) => FromJSON (UsingRawBytesHex a) where
+instance SerialiseAsRawBytes a => FromJSON (UsingRawBytesHex a) where
   parseJSON =
     Aeson.withText tname $
       either fail pure . deserialiseFromRawBytesBase16 . Text.encodeUtf8
@@ -79,8 +79,7 @@ instance SerialiseAsRawBytes a => ToJSONKey (UsingRawBytesHex a) where
   toJSONKey =
     Aeson.toJSONKeyText $ \(UsingRawBytesHex x) -> serialiseToRawBytesHexText x
 
-instance
-  (SerialiseAsRawBytes a, Typeable a) => FromJSONKey (UsingRawBytesHex a) where
+instance SerialiseAsRawBytes a => FromJSONKey (UsingRawBytesHex a) where
 
   fromJSONKey =
     Aeson.FromJSONKeyTextParser $
@@ -123,7 +122,7 @@ instance SerialiseAsBech32 a => IsString (UsingBech32 a) where
 instance SerialiseAsBech32 a => ToJSON (UsingBech32 a) where
     toJSON (UsingBech32 x) = toJSON (serialiseToBech32 x)
 
-instance (SerialiseAsBech32 a, Typeable a) => FromJSON (UsingBech32 a) where
+instance SerialiseAsBech32 a => FromJSON (UsingBech32 a) where
     parseJSON =
       Aeson.withText tname $ \str ->
         case deserialiseFromBech32 ttoken str of
@@ -134,4 +133,4 @@ instance (SerialiseAsBech32 a, Typeable a) => FromJSON (UsingBech32 a) where
         tname  = (tyConName . typeRepTyCon . typeRep) (Proxy :: Proxy a)
 
 instance SerialiseAsBech32 a => ToJSONKey (UsingBech32 a)
-instance (SerialiseAsBech32 a, Typeable a) => FromJSONKey (UsingBech32 a)
+instance SerialiseAsBech32 a => FromJSONKey (UsingBech32 a)
