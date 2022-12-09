@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -26,7 +27,15 @@ where
 
 import Prelude                          (String, error, head, last)
 import Cardano.Prelude
-import Util                      hiding (fst3, snd3, third3, uncurry3, firstM, secondM)
+
+#if __GLASGOW_HASKELL__ < 902
+-- This is a GHC module ...
+import Util
+#else
+-- that moved for the ghc-9.2 release.
+import GHC.Utils.Misc                   as Util
+#endif
+                                 hiding (fst3, snd3, third3, uncurry3, firstM, secondM)
 
 import Data.Aeson                       (FromJSON (..), ToJSON (..), Object, Value (..), (.:), (.:?), withObject, object)
 import Data.Aeson                       qualified as AE

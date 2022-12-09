@@ -286,7 +286,6 @@ test-suite cardano-tracer-test
                         Cardano.Tracer.Test.TestSetup
                         Cardano.Tracer.Test.Utils
                         Cardano.Tracer.Test.Queue.Tests
-
   build-depends:        aeson
                       , async
                       , bytestring
@@ -303,7 +302,6 @@ test-suite cardano-tracer-test
                       , optparse-applicative-fork
                       , ouroboros-network
                       , ouroboros-network-framework
-                      , QuickCheck
                       , stm
                       , tasty
                       , tasty-quickcheck

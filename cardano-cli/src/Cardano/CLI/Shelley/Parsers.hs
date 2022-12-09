@@ -29,7 +29,7 @@ import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Time.Clock (UTCTime)
-import           Data.Time.Format (defaultTimeLocale, iso8601DateFormat, parseTimeOrError)
+import           Data.Time.Format (defaultTimeLocale, parseTimeOrError)
 import           Network.Socket (PortNumber)
 import           Options.Applicative hiding (help, str)
 import qualified Options.Applicative as Opt
@@ -1338,7 +1338,7 @@ pGenesisCmd =
 
     convertTime :: String -> UTCTime
     convertTime =
-      parseTimeOrError False defaultTimeLocale (iso8601DateFormat $ Just "%H:%M:%SZ")
+      parseTimeOrError False defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ"
 
     pInitialSupplyNonDelegated :: Parser (Maybe Lovelace)
     pInitialSupplyNonDelegated =

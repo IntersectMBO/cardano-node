@@ -163,15 +163,17 @@ package comonad
   flags: -test-doctests
 
 allow-newer:
-  ekg:aeson,
-  ekg-json:aeson,
-  threepenny-gui:aeson,
-  monoidal-containers:aeson,
-  size-based:template-haskell,
-  snap-server:attoparsec,
-  tree-diff:hashable,
-  Unique:hashable,
-  ouroboros-network:hashable,
+    ekg:*
+  , ekg-json:aeson
+  , monoidal-containers:aeson
+  , size-based:template-haskell
+  , snap-server:attoparsec
+  , tree-diff:hashable
+  , Unique:hashable
+  , ouroboros-network:hashable
+  , hedgehog-extras:base
+  , libsystemd-journal:base
+  , katip:Win32
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
@@ -183,12 +185,6 @@ source-repository-package
    location: https://github.com/input-output-hk/hedgehog-extras
    tag: 9ea1845ca2036e7a1ae9fcebe393526540c5c233
    --sha256: 1436dwmz9v6ky9kzgnr4flzlzjxwh2zjkds9fnayc1ddang6wwb6
-
-source-repository-package
-  type: git
-  location: https://github.com/denisshevchenko/threepenny-gui
-  tag: 4ec92ded05ccf59ba4a874be4b404ac1b6d666b6
-  --sha256: 00fvvaf4ir4hskq4a6gggbh2wmdvy8j8kn6s4m1p1vlh8m8mq514
 
 -- And has the adjustments for the ledger refactor
 source-repository-package
@@ -209,3 +205,9 @@ source-repository-package
      ouroboros-network-testing
      ouroboros-consensus-cardano-tools
 
+-- Waiting for proper Windows ghc-9.2 release.
+source-repository-package
+   type: git
+   location: https://github.com/input-output-hk/snap-core
+   tag: b87b2ffa52bf58867a7239ebe74f61b1a2c762d2
+   --sha256: 0ndm57z5zpxd5n8s47kh8k1jfqf3b78qv7gkgrx9wwaajs9bf196

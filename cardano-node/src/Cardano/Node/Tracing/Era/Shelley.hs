@@ -848,11 +848,9 @@ instance LogFormatting (ShelleyUpecPredFailure era) where
 --------------------------------------------------------------------------------
 -- Alonzo related
 --------------------------------------------------------------------------------
-instance ( Ledger.Era era
-         , ShelleyBasedEra era
+instance ( ShelleyBasedEra era
          , ToJSON (Ledger.Value era)
          , ToJSON (Ledger.TxOut era)
-         , Show (Ledger.Value era)
          , LogFormatting (PredicateFailure (Ledger.EraRule "UTXOS" era))
          ) => LogFormatting (AlonzoUtxoPredFailure era) where
   forMachine _dtal (Alonzo.BadInputsUTxO badInputs) =

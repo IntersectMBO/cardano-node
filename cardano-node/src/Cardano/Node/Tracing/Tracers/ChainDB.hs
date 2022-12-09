@@ -77,7 +77,6 @@ instance (  LogFormatting (Header blk)
           , LogFormatting (RealPoint blk)
           , ConvertRawHash blk
           , ConvertRawHash (Header blk)
-          , HasHeader (Header blk)
           , LedgerSupportsProtocol blk
           , InspectLedger blk
           ) => LogFormatting (ChainDB.TraceEvent blk) where
@@ -374,7 +373,6 @@ instance ( LogFormatting (Header blk)
          , LogFormatting (RealPoint blk)
          , ConvertRawHash blk
          , ConvertRawHash (Header blk)
-         , HasHeader (Header blk)
          , LedgerSupportsProtocol blk
          , InspectLedger blk
          ) => LogFormatting (ChainDB.TraceAddBlockEvent blk) where
@@ -758,7 +756,6 @@ addedHdrsNewChain fro to_ =
      AF.toOldestFirst s2
    Nothing -> [] -- No sense to do validation here.
 
-
 --------------------------------------------------------------------------------
 -- ChainDB TraceFollowerEvent
 --------------------------------------------------------------------------------
@@ -985,8 +982,7 @@ instance MetaTrace (ChainDB.TraceInitChainSelEvent blk) where
 -- ChainDB TraceValidationEvent
 --------------------------------------------------------------------------------
 
-instance ( HasHeader (Header blk)
-         , LedgerSupportsProtocol blk
+instance ( LedgerSupportsProtocol blk
          , ConvertRawHash (Header blk)
          , ConvertRawHash blk
          , LogFormatting (RealPoint blk))

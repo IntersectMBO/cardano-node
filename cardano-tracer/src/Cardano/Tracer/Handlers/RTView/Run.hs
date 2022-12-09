@@ -69,11 +69,16 @@ runRTView tracerEnv =
   TracerConfig{network, logging, hasRTView} = teConfig tracerEnv
 
   -- RTView's web page is available via 'https://' url only.
-  config h p cert key = UI.defaultConfig
-    { UI.jsSSLBind = Just . encodeUtf8 . T.pack $ h
-    , UI.jsSSLPort = Just . fromIntegral $ p
-    , UI.jsSSLCert = Just cert
-    , UI.jsSSLKey  = Just key
-    , UI.jsLog     = const $ return () -- To hide 'threepenny-gui' internal messages.
-    , UI.jsWindowReloadOnDisconnect = False
-    }
+  config h p cert key =
+    UI.defaultConfig
+      { UI.jsLog     = const $ return () -- To hide 'threepenny-gui' internal messages.
+      , UI.jsWindowReloadOnDisconnect = False
+      , UI.jsUseSSL =
+          Just $ UI.ConfigSSL
+            { UI.jsSSLBind = encodeUtf8 $ T.pack h
+            , UI.jsSSLPort = fromIntegral p
+            , UI.jsSSLCert = cert
+            , UI.jsSSLKey  = key
+            , UI.jsSSLChainCert = False
+            }
+      }

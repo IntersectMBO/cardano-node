@@ -1,4 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -70,11 +71,15 @@ import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Crypto as Ledger
 import qualified Cardano.Ledger.Era as Ledger.Era (Crypto)
 import qualified Cardano.Ledger.Keys as Ledger
+
+import           Cardano.Ledger.Mary.Value (MaryValue)
+
 import qualified Cardano.Ledger.Shelley.API as Ledger (CLI)
 import qualified Cardano.Ledger.Shelley.API.Wallet as Ledger (evaluateTransactionBalance,
                    evaluateTransactionFee)
 import qualified Cardano.Ledger.Shelley.API.Wallet as Shelley
 import           Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
+import           Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
 
 import qualified Cardano.Ledger.Alonzo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
@@ -85,12 +90,12 @@ import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 
-import qualified PlutusLedgerApi.V1 as Plutus
-
 import qualified Cardano.Ledger.Babbage as Babbage
 import           Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
 
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
+
+import qualified PlutusLedgerApi.V1 as Plutus
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
@@ -423,17 +428,17 @@ instance Error ScriptExecutionError where
    ++ "perhaps with the values in the cost model."
 
   displayError (ScriptErrorNotPlutusWitnessedTxIn scriptWitness scriptHash) =
-      renderScriptWitnessIndex scriptWitness <> " is not a Plutus script \
-      \witnessed tx input and cannot be spent using a Plutus script witness."
+      renderScriptWitnessIndex scriptWitness <> " is not a Plutus script "
+      <> "witnessed tx input and cannot be spent using a Plutus script witness."
       <> "The script hash is " <> show scriptHash <> "."
 
   displayError (ScriptErrorRedeemerPointsToUnknownScriptHash scriptWitness) =
-      renderScriptWitnessIndex scriptWitness <> " points to a script hash \
-      \that is not known."
+      renderScriptWitnessIndex scriptWitness <> " points to a script hash "
+      <> "that is not known."
 
   displayError (ScriptErrorMissingScript rdmrPtr resolveable) =
-     "The redeemer pointer: " <> show rdmrPtr <> " points to a Plutus \
-     \script that does not exist.\n" <>
+     "The redeemer pointer: " <> show rdmrPtr <> " points to a Plutus "
+     <> "script that does not exist.\n" <>
      "The pointers that can be resolved are: " <> show resolveable
 
   displayError (ScriptErrorMissingCostModel language) =
@@ -845,8 +850,8 @@ instance Error TxBodyErrorAutoBalance where
    ++ "Balance: " ++ show balance ++ "\n"
    ++ "Offending output (change output): " ++ Text.unpack (prettyRenderTxOut changeOutput) ++ "\n"
    ++ "Minimum UTxO threshold: " ++ show minUTxO ++ "\n"
-   ++ "The usual solution is to provide more inputs, or inputs with more ada to \
-      \meet the minimum UTxO threshold"
+   ++ "The usual solution is to provide more inputs, or inputs with more ada to "
+   ++ "meet the minimum UTxO threshold"
 
   displayError TxBodyErrorByronEraNotSupported =
       "The Byron era is not yet supported by makeTransactionBodyAutoBalance"
@@ -867,8 +872,8 @@ instance Error TxBodyErrorAutoBalance where
   displayError (TxBodyErrorMinUTxOMissingPParams err) = displayError err
 
   displayError (TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap sIndex eUnitsMap) =
-    "ScriptWitnessIndex (redeemer pointer): " <> show sIndex <> " is missing from the execution \
-    \units (redeemer pointer) map: " <> show eUnitsMap
+    "ScriptWitnessIndex (redeemer pointer): " <> show sIndex <> " is missing from the execution "
+    ++ "units (redeemer pointer) map: " <> show eUnitsMap
 
 handleExUnitsErrors ::
      ScriptValidity -- ^ Mark script as expected to pass or fail validation
@@ -1102,8 +1107,11 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
                 returnCollateral = fromShelleyLovelace . Ledger.rationalToCoinViaFloor $ amt % 100
 
             case (txReturnCollateral, txTotalCollateral) of
+#if __GLASGOW_HASKELL__ < 902
+-- For ghc-9.2, this pattern match is redundant, but ghc-8.10 will complain if its missing.
               (rc@TxReturnCollateral{}, tc@TxTotalCollateral{}) ->
                 (rc, tc)
+#endif
               (rc@TxReturnCollateral{}, TxTotalCollateralNone) ->
                 (rc, TxTotalCollateralNone)
               (TxReturnCollateralNone, tc@TxTotalCollateral{}) ->
