@@ -36,8 +36,7 @@ library
                         -Wredundant-constraints
                         -Wwarn=deprecations
 
-  exposed-modules:
-                        Cardano.Benchmarking.Command
+  exposed-modules:      Cardano.Benchmarking.Command
                         Cardano.Benchmarking.Compiler
                         Cardano.Benchmarking.GeneratorTx
                         Cardano.Benchmarking.GeneratorTx.NodeToNode
@@ -59,7 +58,6 @@ library
                         Cardano.Benchmarking.Version
                         Cardano.Benchmarking.Wallet
                         Cardano.Benchmarking.PlutusExample
-
                         Cardano.TxGenerator.Fund
                         Cardano.TxGenerator.FundQueue
                         Cardano.TxGenerator.Genesis
@@ -83,11 +81,11 @@ library
 
   autogen-modules:      Paths_tx_generator
 
-  build-depends:        aeson
+  build-depends:        base >=4.12 && <5
+                      , aeson
                       , aeson-pretty
                       , async
                       , attoparsec
-                      , base >=4.12 && <5
                       , base16-bytestring
                       , bytestring
                       , cardano-api
@@ -111,6 +109,7 @@ library
                       , generic-monoid
                       , ghc-prim
                       , io-classes ^>= 0.3
+                      , mtl
                       , network
                       , network-mux
                       , optparse-applicative-fork
@@ -175,8 +174,6 @@ test-suite tx-generator-apitest
                         -Wall
                         -rtsopts
                         "-with-rtsopts=-T"
-
-<<<<<<< HEAD
   build-depends:        base >=4.12 && <5
                       , aeson
                       , bytestring
@@ -190,14 +187,9 @@ test-suite tx-generator-apitest
                       , transformers
                       , transformers-except
                       , tx-generator
-<<<<<<< HEAD
-
   other-modules:        Paths_tx_generator
   autogen-modules:      Paths_tx_generator
 
-=======
-
-=======
   build-depends:       base >=4.12 && <5
                      , aeson
                      , bytestring
@@ -210,8 +202,6 @@ test-suite tx-generator-apitest
                      , transformers-except
                      , tx-generator
 
->>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
->>>>>>> 99b603779 (Updated ledger and ouroboros-network dependencies)
 test-suite tx-generator-test
   hs-source-dirs:       test
   main-is:              Main.hs

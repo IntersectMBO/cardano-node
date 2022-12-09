@@ -50,13 +50,18 @@ runMonitoringServer tracerEnv (Endpoint listHost listPort, monitorEP) = do
     void $ return window # set UI.title "EKG Monitoring Nodes"
     void $ mkPageBody window tracerEnv monitorEP
  where
-  config cert key = UI.defaultConfig
-    { UI.jsSSLBind = Just . encodeUtf8 . T.pack $ listHost
-    , UI.jsSSLPort = Just . fromIntegral $ listPort
-    , UI.jsSSLCert = Just cert
-    , UI.jsSSLKey  = Just key
-    , UI.jsLog     = const $ return ()
-    }
+  config cert key =
+    UI.defaultConfig
+      { UI.jsLog    = const $ return ()
+      , UI.jsUseSSL =
+          Just $ UI.ConfigSSL
+            { UI.jsSSLBind = encodeUtf8 $ T.pack listHost
+            , UI.jsSSLPort = fromIntegral listPort
+            , UI.jsSSLCert = cert
+            , UI.jsSSLKey  = key
+            , UI.jsSSLChainCert = False
+            }
+      }
 
 -- | We have to keep an id of the node as well as thread id of currently launched EKG server.
 type CurrentEKGServer = TMVar (NodeId, ThreadId)
