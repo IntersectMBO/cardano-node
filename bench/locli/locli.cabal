@@ -92,7 +92,6 @@ library
 
   other-modules:        Paths_locli
   autogen-modules:      Paths_locli
-
   build-depends:        aeson
                       , Histogram
                       , aeson-pretty
