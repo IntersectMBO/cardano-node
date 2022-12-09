@@ -18,7 +18,7 @@ extra-source-files:     CHANGELOG.md
 
 common project-config
   default-language:     Haskell2010
-  build-depends:        base >= 4.14 && < 4.15
+  build-depends:        base >= 4.14 && < 4.17
 
 executable scan-blocks
   import:               project-config
