@@ -130,6 +130,7 @@ library
                       , cryptonite
                       , deepseq
                       , directory
+                      , either
                       , filepath
                       , formatting
                       , iproute

@@ -86,13 +86,13 @@ readByronSigningKey bKeyFormat (SigningKeyFile fp) = do
   sK <- handleIOExceptT (ReadSigningKeyFailure fp . T.pack . displayException) $ SB.readFile fp
   case bKeyFormat of
     LegacyByronKeyFormat ->
-      case deserialiseFromRawBytes (AsSigningKey AsByronKeyLegacy) sK of
-        Just legKey -> right $ AByronSigningKeyLegacy legKey
-        Nothing -> left $ LegacySigningKeyDeserialisationFailed fp
+      case eitherDeserialiseFromRawBytes (AsSigningKey AsByronKeyLegacy) sK of
+        Right legKey -> right $ AByronSigningKeyLegacy legKey
+        Left _ -> left $ LegacySigningKeyDeserialisationFailed fp
     NonLegacyByronKeyFormat ->
-      case deserialiseFromRawBytes (AsSigningKey AsByronKey) sK of
-        Just nonLegSKey -> right $ AByronSigningKey nonLegSKey
-        Nothing -> left $ SigningKeyDeserialisationFailed fp
+      case eitherDeserialiseFromRawBytes (AsSigningKey AsByronKey) sK of
+        Right nonLegSKey -> right $ AByronSigningKey nonLegSKey
+        Left _ -> left $ SigningKeyDeserialisationFailed fp
 
 -- | Read verification key from a file.  Throw an error if the file can't be read
 -- or the key fails to deserialise.

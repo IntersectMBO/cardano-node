@@ -115,6 +115,7 @@ import           Prelude
 import qualified Data.ByteString.Lazy as LBS
 import           Data.ByteString.Short (ShortByteString)
 import qualified Data.ByteString.Short as SBS
+import           Data.Either.Combinators (maybeToRight)
 import           Data.Foldable (toList)
 import           Data.Scientific (toBoundedInteger)
 import           Data.String (IsString)
@@ -936,8 +937,9 @@ instance SerialiseAsRawBytes ScriptHash where
     serialiseToRawBytes (ScriptHash (Shelley.ScriptHash h)) =
       Crypto.hashToBytes h
 
-    deserialiseFromRawBytes AsScriptHash bs =
-      ScriptHash . Shelley.ScriptHash <$> Crypto.hashFromBytes bs
+    eitherDeserialiseFromRawBytes AsScriptHash bs =
+      maybeToRight (SerialiseAsRawBytesError "Enable to deserialise ScriptHash") $
+        ScriptHash . Shelley.ScriptHash <$> Crypto.hashFromBytes bs
 
 
 hashScript :: Script lang -> ScriptHash
@@ -1076,9 +1078,9 @@ instance HasTypeProxy lang => HasTypeProxy (PlutusScript lang) where
 instance (HasTypeProxy lang, Typeable lang) => SerialiseAsRawBytes (PlutusScript lang) where
     serialiseToRawBytes (PlutusScriptSerialised sbs) = SBS.fromShort sbs
 
-    deserialiseFromRawBytes (AsPlutusScript _) bs =
+    eitherDeserialiseFromRawBytes (AsPlutusScript _) bs =
       -- TODO alonzo: validate the script syntax and fail decoding if invalid
-      Just (PlutusScriptSerialised (SBS.toShort bs))
+      Right (PlutusScriptSerialised (SBS.toShort bs))
 
 instance (IsPlutusScriptLanguage lang, Typeable lang) =>
          HasTextEnvelope (PlutusScript lang) where

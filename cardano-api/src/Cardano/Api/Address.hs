@@ -81,8 +81,10 @@ import           Prelude
 import           Control.Applicative ((<|>))
 import           Data.Aeson (FromJSON (..), ToJSON (..), withText, (.=))
 import qualified Data.Aeson as Aeson
+import           Data.Bifunctor (first)
 import qualified Data.ByteString.Base58 as Base58
 import           Data.Char (isAsciiLower, isAsciiUpper, isDigit)
+import           Data.Either.Combinators (rightToMaybe)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -221,22 +223,22 @@ instance SerialiseAsRawBytes (Address ByronAddr) where
       . Shelley.BootstrapAddress
       $ addr
 
-    deserialiseFromRawBytes (AsAddress AsByronAddr) bs =
+    eitherDeserialiseFromRawBytes (AsAddress AsByronAddr) bs =
         case Shelley.deserialiseAddr bs :: Maybe (Shelley.Addr StandardCrypto) of
-          Nothing             -> Nothing
-          Just Shelley.Addr{} -> Nothing
+          Nothing             -> Left (SerialiseAsRawBytesError "Unable to deserialise Address ByronAddr")
+          Just Shelley.Addr{} -> Left (SerialiseAsRawBytesError "Unable to deserialise Address ByronAddr")
           Just (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) ->
-            Just (ByronAddress addr)
+            Right (ByronAddress addr)
 
 instance SerialiseAsRawBytes (Address ShelleyAddr) where
     serialiseToRawBytes (ShelleyAddress nw pc scr) =
         Shelley.serialiseAddr (Shelley.Addr nw pc scr)
 
-    deserialiseFromRawBytes (AsAddress AsShelleyAddr) bs =
+    eitherDeserialiseFromRawBytes (AsAddress AsShelleyAddr) bs =
         case Shelley.deserialiseAddr bs of
-          Nothing                       -> Nothing
-          Just Shelley.AddrBootstrap{}  -> Nothing
-          Just (Shelley.Addr nw pc scr) -> Just (ShelleyAddress nw pc scr)
+          Nothing                       -> Left (SerialiseAsRawBytesError "Unable to deserialise bootstrap Address ShelleyAddr")
+          Just Shelley.AddrBootstrap{}  -> Left (SerialiseAsRawBytesError "Unable to deserialise bootstrap Address ShelleyAddr")
+          Just (Shelley.Addr nw pc scr) -> Right (ShelleyAddress nw pc scr)
 
 instance SerialiseAsBech32 (Address ShelleyAddr) where
     bech32PrefixFor (ShelleyAddress Shelley.Mainnet _ _) = "addr"
@@ -254,7 +256,7 @@ instance SerialiseAddress (Address ByronAddr) where
 
     deserialiseAddress (AsAddress AsByronAddr) txt = do
       bs <- Base58.decodeBase58 Base58.bitcoinAlphabet (Text.encodeUtf8 txt)
-      deserialiseFromRawBytes (AsAddress AsByronAddr) bs
+      rightToMaybe (eitherDeserialiseFromRawBytes (AsAddress AsByronAddr) bs)
 
 instance SerialiseAddress (Address ShelleyAddr) where
     serialiseAddress addr@ShelleyAddress{} =
@@ -327,14 +329,14 @@ instance SerialiseAsRawBytes AddressAny where
     serialiseToRawBytes (AddressByron   addr) = serialiseToRawBytes addr
     serialiseToRawBytes (AddressShelley addr) = serialiseToRawBytes addr
 
-    deserialiseFromRawBytes AsAddressAny bs =
+    eitherDeserialiseFromRawBytes AsAddressAny bs =
       case Shelley.deserialiseAddr bs of
-        Nothing -> Nothing
+        Nothing -> Left (SerialiseAsRawBytesError "Unable to deserialise AddressAny")
         Just (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) ->
-          Just (AddressByron (ByronAddress addr))
+          Right (AddressByron (ByronAddress addr))
 
         Just (Shelley.Addr nw pc scr) ->
-          Just (AddressShelley (ShelleyAddress nw pc scr))
+          Right (AddressShelley (ShelleyAddress nw pc scr))
 
 instance SerialiseAddress AddressAny where
     serialiseAddress (AddressByron   addr) = serialiseAddress addr
@@ -453,8 +455,9 @@ instance (IsCardanoEra era, Typeable era) => SerialiseAsRawBytes (AddressInEra e
     serialiseToRawBytes (AddressInEra ShelleyAddressInEra{} addr) =
       serialiseToRawBytes addr
 
-    deserialiseFromRawBytes _ bs =
-      anyAddressInEra cardanoEra =<< deserialiseFromRawBytes AsAddressAny bs
+    eitherDeserialiseFromRawBytes _ bs =
+      first (const (SerialiseAsRawBytesError "Unable to deserialise AddressInEra era")) $
+        anyAddressInEra cardanoEra =<< first unSerialiseAsRawBytesError (eitherDeserialiseFromRawBytes AsAddressAny bs)
 
 instance IsCardanoEra era => SerialiseAddress (AddressInEra era) where
     serialiseAddress (AddressInEra ByronAddressInAnyEra addr) =
@@ -464,7 +467,7 @@ instance IsCardanoEra era => SerialiseAddress (AddressInEra era) where
       serialiseAddress addr
 
     deserialiseAddress _ t =
-      anyAddressInEra cardanoEra =<< deserialiseAddress AsAddressAny t
+      rightToMaybe . anyAddressInEra cardanoEra =<< deserialiseAddress AsAddressAny t
 
 instance EraCast (AddressTypeInEra addrtype) where
   eraCast toEra' v = case v of
@@ -491,14 +494,14 @@ anyAddressInShelleyBasedEra (AddressShelley addr) = shelleyAddressInEra addr
 
 anyAddressInEra :: CardanoEra era
                 -> AddressAny
-                -> Maybe (AddressInEra era)
+                -> Either String (AddressInEra era)
 anyAddressInEra _ (AddressByron addr) =
-    Just (AddressInEra ByronAddressInAnyEra addr)
+    Right (AddressInEra ByronAddressInAnyEra addr)
 
 anyAddressInEra era (AddressShelley addr) =
     case cardanoEraStyle era of
-      LegacyByronEra       -> Nothing
-      ShelleyBasedEra era' -> Just (AddressInEra (ShelleyAddressInEra era') addr)
+      LegacyByronEra       -> Left "Expected Byron based era address"
+      ShelleyBasedEra era' -> Right (AddressInEra (ShelleyAddressInEra era') addr)
 
 toAddressAny :: Address addr -> AddressAny
 toAddressAny a@ShelleyAddress{} = AddressShelley a
@@ -571,10 +574,10 @@ instance SerialiseAsRawBytes StakeAddress where
     serialiseToRawBytes (StakeAddress nw sc) =
         Shelley.serialiseRewardAcnt (Shelley.RewardAcnt nw sc)
 
-    deserialiseFromRawBytes AsStakeAddress bs =
+    eitherDeserialiseFromRawBytes AsStakeAddress bs =
         case Shelley.deserialiseRewardAcnt bs of
-          Nothing -> Nothing
-          Just (Shelley.RewardAcnt nw sc) -> Just (StakeAddress nw sc)
+          Nothing -> Left (SerialiseAsRawBytesError "Unable to deserialise StakeAddress")
+          Just (Shelley.RewardAcnt nw sc) -> Right (StakeAddress nw sc)
 
 
 instance SerialiseAsBech32 StakeAddress where

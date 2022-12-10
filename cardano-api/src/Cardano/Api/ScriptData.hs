@@ -43,6 +43,7 @@ import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Char as Char
+import           Data.Either.Combinators
 import qualified Data.List as List
 import           Data.Maybe (fromMaybe)
 import qualified Data.Scientific as Scientific
@@ -70,9 +71,11 @@ import qualified Plutus.V1.Ledger.Api as Plutus
 
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
-import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
+
+import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Shelley
+
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
@@ -117,8 +120,9 @@ instance SerialiseAsRawBytes (Hash ScriptData) where
     serialiseToRawBytes (ScriptDataHash dh) =
       Crypto.hashToBytes (Ledger.extractHash dh)
 
-    deserialiseFromRawBytes (AsHash AsScriptData) bs =
-      ScriptDataHash . Ledger.unsafeMakeSafeHash <$> Crypto.hashFromBytes bs
+    eitherDeserialiseFromRawBytes (AsHash AsScriptData) bs =
+      maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash ScriptData") $
+        ScriptDataHash . Ledger.unsafeMakeSafeHash <$> Crypto.hashFromBytes bs
 
 instance SerialiseAsCBOR ScriptData where
     serialiseToCBOR = CBOR.serialize'

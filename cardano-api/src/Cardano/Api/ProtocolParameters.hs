@@ -71,6 +71,7 @@ import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.!
                    (.=))
 import           Data.Bifunctor (bimap, first)
 import           Data.ByteString (ByteString)
+import           Data.Either.Combinators (maybeToRight)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe, isJust)
@@ -688,8 +689,9 @@ instance SerialiseAsRawBytes PraosNonce where
     serialiseToRawBytes (PraosNonce h) =
       Crypto.hashToBytes h
 
-    deserialiseFromRawBytes AsPraosNonce bs =
-      PraosNonce <$> Crypto.hashFromBytes bs
+    eitherDeserialiseFromRawBytes AsPraosNonce bs =
+      maybeToRight (SerialiseAsRawBytesError "Unable to deserialise PraosNonce") $
+        PraosNonce <$> Crypto.hashFromBytes bs
 
 
 makePraosNonce :: ByteString -> PraosNonce
