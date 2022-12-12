@@ -54,7 +54,7 @@ mkCardanoTracer :: forall evt.
   => Trace IO FormattedMessage
   -> Trace IO FormattedMessage
   -> Maybe (Trace IO FormattedMessage)
-  -> Namespace evt
+  -> NamespaceOuter evt
   -> IO (Trace IO evt)
 mkCardanoTracer trStdout trForward mbTrEkg tracerName =
     mkCardanoTracer' trStdout trForward mbTrEkg tracerName noHook
@@ -70,14 +70,7 @@ mkCardanoTracer' :: forall evt evt1.
   => Trace IO FormattedMessage
   -> Trace IO FormattedMessage
   -> Maybe (Trace IO FormattedMessage)
-<<<<<<< refs/remotes/origin/master
-  -> [Text]
-  -> (evt1 -> [Text])
-  -> (evt1 -> SeverityS)
-  -> (evt1 -> Privacy)
-=======
-  -> Namespace evt
->>>>>>> Namespace with phantom type
+  -> NamespaceOuter evt
   -> (Trace IO evt1 -> IO (Trace IO evt))
   -> IO (Trace IO evt)
 mkCardanoTracer' trStdout trForward mbTrEkg tracerName
@@ -93,20 +86,20 @@ mkCardanoTracer' trStdout trForward mbTrEkg tracerName
                           Nothing -> Trace NT.nullTracer
                           Just ekgTrace -> metricsFormatter "Cardano" ekgTrace
     metricsTrace'    <- hook metricsTrace
-    let metricsTrace'' = filterTrace (\(_,v) -> Prelude.null (asMetrics v)) metricsTrace'
+    let metricsTrace'' = filterTrace (\(_,v) -> not (Prelude.null (asMetrics v))) metricsTrace'
     pure (messageTrace'''' <> metricsTrace'')
 
 
   where
-    addContextAndFilter :: Trace IO evt1 -> IO (Trace IO evt1)
+    addContextAndFilter :: Trace IO evt -> IO (Trace IO evt)
     addContextAndFilter tr = do
       tr'  <- withDetailsFromConfig tr
       tr'' <- filterSeverityFromConfig tr'
-      pure  $ withNamesAppended namespaceFor
-              $ appendNames tracerName
+      pure $  withNamesAppended namespaceFor
                $ withSeverity severityFor
                  $ withPrivacy privacyFor
-                   tr''
+                   $ appendNames tracerName
+                     tr''
 
     backendsAndFormat ::
          Maybe [BackendConfig]
@@ -138,7 +131,7 @@ mkCardanoTracer' trStdout trForward mbTrEkg tracerName
 -- A simple dataPointTracer which supports building a namespace.
 mkDataPointTracer :: forall dp. ToJSON dp
   => Trace IO DataPoint
-  -> (dp -> Namespace dp)
+  -> (dp -> NamespaceInner dp)
   -> IO (Trace IO dp)
 mkDataPointTracer trDataPoint namesFor = do
     let tr = NT.contramap DataPoint trDataPoint

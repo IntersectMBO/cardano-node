@@ -34,7 +34,7 @@ import           Cardano.Logging.FrequencyLimiter (LimitingMessage (..), limitFr
 import           Cardano.Logging.Trace (filterTraceBySeverity, setDetails)
 import           Cardano.Logging.Types
 
-
+-- import           Debug.Trace
 
 -- | Call this function at initialisation, and later for reconfiguration
 configureTracers :: forall a.
@@ -50,18 +50,21 @@ configureTracers config tracers = do
     configureTrace control (Trace tr) =
       T.traceWith tr (emptyLoggingContext, Left control)
     configureAllTrace control (Trace tr) =
-      mapM
-        (\ ns -> T.traceWith tr (
-                              emptyLoggingContext {lcNamespace = unNS ns}
-                            , Left control))
-        (allNamespaces :: [Namespace a])
+      mapM  (\ ns ->
+              T.traceWith
+                tr
+                (emptyLoggingContext
+                  { lcNamespace = unNSInner ns}
+                  , Left control))
+            (allNamespaces :: [NamespaceInner a])
+
 -- | Switch off any message of a particular tracer based on the configuration.
 -- If the top tracer is silent and no subtracer is not silent, then switch it off
 maybeSilent :: forall m a. (MonadIO m) =>
-     Namespace a
+     NamespaceOuter a
   -> Trace m a
   -> m (Trace m a)
-maybeSilent (Namespace ns) tr = do
+maybeSilent n@(NamespaceOuter _ns) tr = do
     ref  <- liftIO (newIORef False)
     pure $ Trace $ T.arrow $ T.emit $ mkTrace ref
   where
@@ -71,7 +74,7 @@ maybeSilent (Namespace ns) tr = do
         then pure ()
         else T.traceWith (unpackTrace tr) (lc, Right a)
     mkTrace ref (lc, Left (Config c)) = do
-      let val = isSilentTracer c ns
+      let val = isSilentTracer c n
       liftIO $ writeIORef ref val
       T.traceWith (unpackTrace tr) (lc,  Left (Config c))
     mkTrace ref (lc, Left Reset) = do
@@ -81,24 +84,26 @@ maybeSilent (Namespace ns) tr = do
       T.traceWith (unpackTrace tr) (lc,  Left other)
 
 -- If the top tracer is silent and any subtracer is not silent, it is not
-isSilentTracer :: TraceConfig -> [Text] -> Bool
-isSilentTracer tc ns =
-    if getSeverity tc  ns == SeverityF Nothing
-      then
-        let entries = filter (\(nsf,_opts) -> isPrefixOf ns nsf) $ Map.toList (tcOptions tc)
-            blockers = filter (\(_nsf,opts) -> null (filter filterOpts opts)) entries
-        in null blockers
-      else False
+isSilentTracer :: TraceConfig -> NamespaceOuter a -> Bool
+isSilentTracer tc n@(NamespaceOuter ns) =
+    (getSeverity tc n == SeverityF Nothing)
+      &&
+        (let  entries  = filter (\ (nsf, _opts) -> ns `isPrefixOf` nsf)
+                              $ Map.toList (tcOptions tc)
+              blockers = filter (\ (_nsf, opts) -> not (any filterOpts opts)) entries
+         in null blockers)
   where
       filterOpts (ConfSeverity (SeverityF (Just _))) = True
       filterOpts _ = False
 
+
+
 -- | Take a selector function called 'extract'.
 -- Take a function from trace to trace with this config dependent value.
 -- In this way construct a trace transformer with a config value
-withNamespaceConfig :: forall m a b c. (MonadIO m, Ord b) =>
+withNamespaceConfig :: forall m a b c. (MonadIO m, Ord b{--, Show b--}) =>
      String
-  -> (TraceConfig -> [Text] -> m b)
+  -> (TraceConfig -> NamespaceOuter a -> m b)
   -> (Maybe b -> Trace m c -> m (Trace m a))
   -> Trace m c
   -> m (Trace m a)
@@ -133,7 +138,7 @@ withNamespaceConfig name extract withConfig tr = do
       T.traceWith (unpackTrace tt) (lc, Left Reset)
 
     mkTrace ref (lc, Left (Config c)) = do
-      !val <- extract c (lcNamespace lc)
+      !val <- extract c (NamespaceOuter (lcNamespace lc))
       eitherConf <- liftIO $ readIORef ref
       case eitherConf of
         Left (cmap, Nothing) ->
@@ -141,13 +146,15 @@ withNamespaceConfig name extract withConfig tr = do
             Nothing -> do
               liftIO
                   $ writeIORef ref
-                  $ Left (Map.insert (lcNamespace lc) val cmap, Nothing)
+                               (Left (Map.insert (lcNamespace lc) val cmap, Nothing))
               Trace tt <- withConfig (Just val) tr
+              -- trace ("config dict " ++ show( Map.insert (lcNamespace lc) val cmap)) $
               T.traceWith tt (lc, Left (Config c))
             Just v  -> do
               if v == val
                 then do
                   Trace tt <- withConfig (Just val) tr
+                  -- trace "config val"
                   T.traceWith tt (lc, Left (Config c))
                 else error $ "Inconsistent trace configuration with context "
                                   ++ show (lcNamespace lc)
@@ -161,10 +168,12 @@ withNamespaceConfig name extract withConfig tr = do
       case eitherConf of
         Left (cmap, Nothing) ->
           case nub (Map.elems cmap) of
-            []     -> pure ()
+            []     -> -- trace ("optimize no value " ++ show lc) $
+                      pure ()
             [val]  -> do
                         liftIO $ writeIORef ref $ Right val
                         Trace tt <- withConfig (Just val) tr
+                        -- trace ("optimize one value " ++ show lc ++ " val " ++ show val) $
                         T.traceWith tt (lc, Left Optimize)
             _      -> let decidingDict =
                             foldl
@@ -178,6 +187,7 @@ withNamespaceConfig name extract withConfig tr = do
                       in do
                         liftIO $ writeIORef ref (Left (newmap, Just mostCommon))
                         Trace tt <- withConfig Nothing tr
+                        -- trace ("optimize dict " ++ show lc ++ " dict " ++ show newmap ++ "common" ++ show mostCommon) $
                         T.traceWith tt (lc, Left Optimize)
         Right _val -> error $ "Trace not reset before reconfiguration (3)"
                             ++ show (lcNamespace lc)
@@ -275,10 +285,10 @@ withLimitersFromConfig tr trl = do
     getLimiter ::
          IORef (Map.Map Text (Limiter m a))
       -> TraceConfig
-      -> [Text]
+      -> NamespaceOuter a
       -> m (Maybe (Limiter m a))
-    getLimiter stateRef config ns =
-      case getLimiterSpec config ns of
+    getLimiter stateRef config n@(NamespaceOuter _ns) =
+      case getLimiterSpec config n of
         Nothing -> pure Nothing
         Just (name, frequency) -> do
           state <- liftIO $ readIORef stateRef
@@ -312,33 +322,33 @@ withLimitersFromConfig tr trl = do
 --------------------------------------------------------
 
 -- | If no severity can be found in the config, it is set to Warning
-getSeverity :: TraceConfig -> [Text] -> SeverityF
-getSeverity config ns =
+getSeverity :: TraceConfig -> NamespaceOuter a -> SeverityF
+getSeverity config (NamespaceOuter ns) =
     fromMaybe (SeverityF (Just Warning)) (getOption severitySelector config ns)
   where
     severitySelector :: ConfigOption -> Maybe SeverityF
     severitySelector (ConfSeverity s) = Just s
     severitySelector _              = Nothing
 
-getSeverity' :: Applicative m => TraceConfig -> [Text] -> m SeverityF
-getSeverity' config ns = pure $ getSeverity config ns
+getSeverity' :: Applicative m => TraceConfig -> NamespaceOuter a -> m SeverityF
+getSeverity' config n@(NamespaceOuter _ns) = pure $ getSeverity config n
 
 -- | If no details can be found in the config, it is set to DNormal
-getDetails :: TraceConfig -> [Text] -> DetailLevel
-getDetails config ns =
+getDetails :: TraceConfig -> NamespaceOuter a -> DetailLevel
+getDetails config (NamespaceOuter ns) =
     fromMaybe DNormal (getOption detailSelector config ns)
   where
     detailSelector :: ConfigOption -> Maybe DetailLevel
     detailSelector (ConfDetail d) = Just d
     detailSelector _            = Nothing
 
-getDetails' :: Applicative m => TraceConfig -> [Text] -> m DetailLevel
-getDetails' config ns = pure $ getDetails config ns
+getDetails' :: Applicative m => TraceConfig -> NamespaceOuter a -> m DetailLevel
+getDetails' config n@(NamespaceOuter _ns) = pure $ getDetails config n
 
 -- | If no backends can be found in the config, it is set to
 -- [EKGBackend, Forwarder, Stdout HumanFormatColoured]
-getBackends :: TraceConfig -> [Text] -> [BackendConfig]
-getBackends config ns =
+getBackends :: TraceConfig -> NamespaceOuter a -> [BackendConfig]
+getBackends config (NamespaceOuter ns) =
     fromMaybe [EKGBackend, Forwarder, Stdout HumanFormatColoured]
       (getOption backendSelector config ns)
   where
@@ -346,12 +356,12 @@ getBackends config ns =
     backendSelector (ConfBackend s) = Just s
     backendSelector _             = Nothing
 
-getBackends' :: Applicative m => TraceConfig -> [Text] -> m [BackendConfig]
-getBackends' config ns = pure $ getBackends config ns
+getBackends' :: Applicative m => TraceConfig -> NamespaceOuter a -> m [BackendConfig]
+getBackends' config n@(NamespaceOuter _ns) = pure $ getBackends config n
 
 -- | May return a limiter specification
-getLimiterSpec :: TraceConfig -> [Text] -> Maybe (Text, Double)
-getLimiterSpec config ns = getOption limiterSelector config ns
+getLimiterSpec :: TraceConfig -> NamespaceOuter a -> Maybe (Text, Double)
+getLimiterSpec config (NamespaceOuter ns) = getOption limiterSelector config ns
   where
     limiterSelector :: ConfigOption -> Maybe (Text, Double)
     limiterSelector (ConfLimiter f) = Just (intercalate "." ns, f)

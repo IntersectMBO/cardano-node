@@ -18,8 +18,8 @@ localTests = localOption (QuickCheckTests 10) $ testGroup "trace-dispatcher"
         runScriptSimple 1.0 oracleMessages
     , testProperty "multi-threaded send tests" $
         runScriptMultithreaded 1.0 oracleMessages
-    -- , testProperty "multi-threaded send tests with reconfiguration" $
-    --     runScriptMultithreadedWithReconfig 1.0 oracleMessages
+    --  , testProperty "multi-threaded send tests with reconfiguration" $
+    --      runScriptMultithreadedWithReconfig 1.0 oracleMessages
     , testProperty "reconfiguration stress test" $
         runScriptMultithreadedWithConstantReconfig 1.0 (\ _ _ -> property True)
     ]

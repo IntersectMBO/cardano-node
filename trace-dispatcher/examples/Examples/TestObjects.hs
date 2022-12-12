@@ -10,11 +10,10 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Examples.TestObjects (
-    traceForgeEventDocu
-  , TraceForgeEvent(..)
+
+    TraceForgeEvent(..)
   , LogBlock(..)
   , SlotNo(..)
-  , withSeverityTraceForgeEvent
   , message1
   , message2
   , message3
@@ -101,6 +100,52 @@ data TraceForgeEvent blk
   | TraceBlockFromFuture SlotNo SlotNo
   deriving (Eq, Show, Generic)
 
+instance MetaTrace (TraceForgeEvent blk) where
+  namespaceFor TraceStartLeadershipCheck {} = NamespaceInner ["StartLeadershipCheck"]
+  namespaceFor TraceSlotIsImmutable {} = NamespaceInner ["SlotIsImmutable"]
+  namespaceFor TraceBlockFromFuture {} = NamespaceInner ["BlockFromFuture"]
+  severityFor (NamespaceInner ["StartLeadershipCheck"]) = Info
+  severityFor (NamespaceInner ["SlotIsImmutable"]) = Error
+  severityFor (NamespaceInner ["BlockFromFuture"]) = Error
+  severityFor (NamespaceInner other) = error ("TestObject>>severityFor: Unknown namespace" ++ show other)
+  privacyFor  (NamespaceInner _) = Public
+  documentFor (NamespaceInner ["StartLeadershipCheck"]) =
+    "Start of the leadership check\n\
+    \\n\
+    \We record the current slot number."
+  documentFor (NamespaceInner ["SlotIsImmutable"]) =
+      "Leadership check failed: the tip of the ImmutableDB inhabits the\n\
+    \current slot\n\
+    \\n\
+    \This might happen in two cases.\n\
+    \\n\
+    \1. the clock moved backwards, on restart we ignored everything from the\n\
+    \   VolatileDB since it's all in the future, and now the tip of the\n\
+    \   ImmutableDB points to a block produced in the same slot we're trying\n\
+    \   to produce a block in\n\
+    \\n\
+    \2. k = 0 and we already adopted a block from another leader of the same\n\
+    \   slot.\n\
+    \\n\
+    \We record both the current slot number as well as the tip of the\n\
+    \ImmutableDB.\n\
+    \\n\
+    \See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>"
+  documentFor (NamespaceInner ["BlockFromFuture"]) =
+      "Leadership check failed: the current chain contains a block from a slot\n\
+    \/after/ the current slot\n\
+    \\n\
+    \This can only happen if the system is under heavy load.\n\
+    \\n\
+    \We record both the current slot number as well as the slot number of the\n\
+    \block at the tip of the chain.\n\
+    \\n\
+    \See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>"
+  metricsDocFor (NamespaceInner _) = []
+  allNamespaces = [ NamespaceInner ["StartLeadershipCheck"]
+                  , NamespaceInner ["SlotIsImmutable"]
+                  , NamespaceInner ["BlockFromFuture"]]
+
 instance LogFormatting (TraceForgeEvent LogBlock) where
   forHuman (TraceStartLeadershipCheck slotNo) = pack $
     printf
@@ -144,55 +189,6 @@ instance LogFormatting (TraceForgeEvent LogBlock) where
     [IntM "cardano.node.slotIsImmutable" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceBlockFromFuture slot _slotNo) =
     [IntM "cardano.node.blockFromFuture" (fromIntegral $ unSlotNo slot)]
-
-traceForgeEventDocu :: Documented (TraceForgeEvent LogBlock)
-traceForgeEventDocu = Documented
-  [ DocMsg
-      (Namespace ["TraceStartLeadershipCheck"])
-      []
-      "Start of the leadership check\n\
-        \\n\
-        \We record the current slot number."
-  , DocMsg
-      (Namespace ["TraceSlotIsImmutable"])
-      []
-      "Leadership check failed: the tip of the ImmutableDB inhabits the\n\
-        \current slot\n\
-        \\n\
-        \This might happen in two cases.\n\
-        \\n\
-        \1. the clock moved backwards, on restart we ignored everything from the\n\
-        \   VolatileDB since it's all in the future, and now the tip of the\n\
-        \   ImmutableDB points to a block produced in the same slot we're trying\n\
-        \   to produce a block in\n\
-        \\n\
-        \2. k = 0 and we already adopted a block from another leader of the same\n\
-        \   slot.\n\
-        \\n\
-        \We record both the current slot number as well as the tip of the\n\
-        \ImmutableDB.\n\
-        \\n\
-        \See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>"
-  , DocMsg
-    (Namespace ["TraceBlockFromFuture"])
-    []
-    "Leadership check failed: the current chain contains a block from a slot\n\
-      \/after/ the current slot\n\
-      \\n\
-      \This can only happen if the system is under heavy load.\n\
-      \\n\
-      \We record both the current slot number as well as the slot number of the\n\
-      \block at the tip of the chain.\n\
-      \\n\
-      \See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>"
-  ]
-
-withSeverityTraceForgeEvent :: Namespace (TraceForgeEvent LogBlock)-> SeverityS
-withSeverityTraceForgeEvent (Namespace ["TraceStartLeadershipCheck"]) = Info
-withSeverityTraceForgeEvent (Namespace ["TraceSlotIsImmutable"])      = Error
-withSeverityTraceForgeEvent (Namespace ["TraceBlockFromFuture"])      = Error
-withSeverityTraceForgeEvent (Namespace u)                           =
-  error ("withSeverityTraceForgeEvent unknown namespace" ++ show u)
 
 
 

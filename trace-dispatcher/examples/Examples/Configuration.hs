@@ -2,7 +2,6 @@
 
 module Examples.Configuration (
     testConfig
-  , testMessageDocumented
 ) where
 
 import           Control.Monad.IO.Class
@@ -24,10 +23,13 @@ instance LogFormatting TestMessage where
            , "text" AE..= AE.String text
            ]
 
-testMessageDocumented :: Documented TestMessage
-testMessageDocumented = Documented
-  [ DocMsg (Namespace ["TestMessage"]) [] "just a text"
-  ]
+instance MetaTrace TestMessage where
+  namespaceFor (TestMessage _text) = NamespaceInner ["TestMessage"]
+  severityFor (NamespaceInner ["TestMessage"]) = Info
+  privacyFor  (NamespaceInner ["TestMessage"]) = Public
+  documentFor (NamespaceInner ["TestMessage"]) = "Just a test"
+  metricsDocFor (NamespaceInner ["TestMessage"]) = []
+  allNamespaces = [NamespaceInner ["TestMessage"]]
 
 tracers :: MonadIO m => m (Trace m TestMessage, Trace m TestMessage, Trace m TestMessage)
 tracers  = do
@@ -80,7 +82,7 @@ testConfig' ::
   -> Trace IO TestMessage
   -> IO ()
 testConfig' tc t1 t2 t3 = do
-    configureTracers tc testMessageDocumented [t1, t2, t3]
+    configureTracers tc [t1, t2, t3]
     traceWith (setSeverity Critical t1) (TestMessage "Now setting config")
     traceWith
       (setSeverity Error t1)

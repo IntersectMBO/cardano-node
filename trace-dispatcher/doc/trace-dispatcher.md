@@ -270,7 +270,7 @@ filterTrace :: (Monad m) =>
   -> Trace m a
 
 data LoggingContext = LoggingContext {
-    lcNamespace   :: Namespace
+    lcNamespace   :: NamespaceOuter
   , lcSeverity    :: Maybe Severity
   , lcPrivacy     :: Maybe Privacy
   , lcDetails     :: Maybe DetailLevel
@@ -515,7 +515,7 @@ data BackendConfig =
 
 data TraceConfig = TraceConfig {
      -- | Options specific to a certain namespace
-    tcOptions            :: Map.Map Namespace [ConfigOption]
+    tcOptions            :: Map.Map NamespaceOuter [ConfigOption]
      -- | Options for trace-forwarder
   , ...
 }
@@ -580,7 +580,7 @@ TODO: Add consistency check between configuration and documentation.
 newtype Documented a = Documented {undoc :: [DocMsg a]}
 
 data DocMsg a = DocMsg {
-    dmNamespace :: Namespace
+    dmNamespace :: NamespaceOuter
   , dmMetricsMD :: [(Text, Text)]
   , dmMarkdown  :: Text
 }

@@ -57,7 +57,7 @@ unpackDocu (DocuDatapoint b) = b
 -- and returns a DocCollector, from which the documentation gets generated
 documentTracers :: forall a. MetaTrace a => [Trace IO a] -> IO DocCollector
 documentTracers tracers = do
-    let nss = allNamespaces :: [Namespace a]
+    let nss = allNamespaces :: [NamespaceInner a]
         nsIdx = zip nss [0..]
     coll <- fmap DocCollector (liftIO $ newIORef Map.empty)
     mapM_ (docTrace nsIdx coll) tracers
@@ -66,17 +66,17 @@ documentTracers tracers = do
     docTrace nsIdx dc (Trace tr) =
       mapM_
         (\ (ns, idx) ->
-            T.traceWith tr (emptyLoggingContext {lcNamespace = unNS ns},
+            T.traceWith tr (emptyLoggingContext {lcNamespace = unNSInner ns},
                             Left (TCDocument idx (documentFor ns) (metricsDocFor ns) dc)))
         nsIdx
 
 showT :: Show a => a -> Text
 showT = pack . show
 
-addDocumentedNamespace  :: Namespace a -> Documented a -> Documented b
-addDocumentedNamespace  (Namespace ns) (Documented list) =
+addDocumentedNamespace  :: NamespaceOuter a -> Documented a -> Documented b
+addDocumentedNamespace  (NamespaceOuter ns) (Documented list) =
   Documented $ map
-    (\ dm@DocMsg {} -> dm {dmNamespace = Namespace (ns ++ unNS (dmNamespace dm))})
+    (\ dm@DocMsg {} -> dm {dmNamespace = NamespaceOuter (ns ++ unNSOuter (dmNamespace dm))})
     list
 
 addDocs :: Documented a -> Documented a -> Documented a
@@ -304,7 +304,7 @@ documentMarkdown tracers = do
                         (\ (_,l) (_,r) -> compare (ldNamespace l) (ldNamespace r))
                         items
     let messageDocs = map (\(i, ld) -> case ldNamespace ld of
-                                []     -> (["No Namespace"], documentItem (i, ld))
+                                []     -> (["No NamespaceOuter"], documentItem (i, ld))
                                 (hn:_) -> (hn, documentItem (i, ld))) sortedItems
         metricsItems = map snd $ filter (not . Map.null . ldMetricsDoc . snd) sortedItems
         metricsDocs = documentMetrics metricsItems
@@ -345,7 +345,7 @@ documentMarkdown tracers = do
 
     namespacesBuilder :: [[Text]] -> Builder
     namespacesBuilder [ns] = namespaceBuilder ns
-    namespacesBuilder []   = fromText "__Warning__: Namespace missing"
+    namespacesBuilder []   = fromText "__Warning__: NamespaceOuter missing"
     namespacesBuilder nsl  =
       mconcat (intersperse (singleton '\n')(map namespaceBuilder nsl))
 

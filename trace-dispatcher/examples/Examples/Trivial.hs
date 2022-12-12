@@ -15,7 +15,7 @@ test1 :: IO ()
 test1 = do
     stdoutTracer' <- standardTracer
     simpleTracer <- machineFormatter (Just "cardano") stdoutTracer'
-    configureTracers emptyTraceConfig traceForgeEventDocu [simpleTracer]
+    configureTracers emptyTraceConfig [simpleTracer]
     let simpleTracer1 = filterTraceBySeverity
                           (Just (SeverityF (Just Warning)))
                           simpleTracer
@@ -33,10 +33,10 @@ test2 :: IO ()
 test2 = do
     stdoutTracer' <- standardTracer
     simpleTracer <- humanFormatter True (Just "cardano") stdoutTracer'
-    configureTracers emptyTraceConfig traceForgeEventDocu [simpleTracer]
+    configureTracers emptyTraceConfig [simpleTracer]
     let simpleTracer1  = filterTraceBySeverity
                               (Just (SeverityF (Just Warning)))
-                              (withSeverity withSeverityTraceForgeEvent simpleTracer)
+                              (withSeverity severityFor simpleTracer)
     let simpleTracerC1 = appendName "Outer1" simpleTracer1
     let simpleTracerC2 = appendName "Inner1" simpleTracerC1
     let simpleTracerC3 = setPrivacy Confidential $ appendName "Inner2" simpleTracerC1

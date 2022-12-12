@@ -18,7 +18,6 @@ import           GHC.Generics (Generic)
 import           Cardano.Logging
 
 
-
 data BaseStats = BaseStats {
     bsMeasure :: Double,
     bsMin     :: Double,
@@ -33,8 +32,8 @@ instance A.ToJSON BaseStats where
 instance Show DataPoint where
   show (DataPoint a) = toString $ A.encode a
 
-namesForBaseStats :: BaseStats -> Namespace BaseStats
-namesForBaseStats _ = Namespace ["BaseStats"]
+namesForBaseStats :: BaseStats -> NamespaceInner BaseStats
+namesForBaseStats _ = NamespaceInner ["BaseStats"]
 
 emptyStats :: BaseStats
 emptyStats = BaseStats 0.0 100000000.0 (-100000000.0) 0 0.0

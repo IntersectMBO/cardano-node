@@ -16,7 +16,10 @@ module Cardano.Logging.Types (
   , DocMsg(..)
   , LoggingContext(..)
   , emptyLoggingContext
-  , Namespace (..)
+  , NamespaceOuter (..)
+  , NamespaceInner (..)
+  , withTracerName
+  , withoutTracerName
   , MetaTrace(..)
   , DetailLevel(..)
   , Privacy(..)
@@ -64,11 +67,28 @@ import           Network.HostName (HostName)
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
 
 -- | A unique identifier for every message, composed of text
-newtype Namespace a = Namespace {unNS :: [Text]}
+newtype NamespaceOuter a = NamespaceOuter {unNSOuter :: [Text]}
 
-instance Show (Namespace a) where
-  show (Namespace []) =  "[]"
-  show (Namespace ns) =  unpack $ intercalate (singleton '.') ns
+instance Show (NamespaceOuter a) where
+  show (NamespaceOuter []) =  "[]"
+  show (NamespaceOuter ns) =  unpack $ intercalate (singleton '.') ns
+
+-- A namespace can as well appear with the tracer name (e.g. "ChainDB.OpenEvent.OpenedDB"),
+-- in this moment it is a NamespaceInner
+newtype NamespaceInner a = NamespaceInner {unNSInner :: [Text]}
+
+instance Show (NamespaceInner a) where
+  show (NamespaceInner []) =  "[]"
+  show (NamespaceInner ns) =  unpack $ intercalate (singleton '*') ns
+
+withTracerName :: NamespaceOuter a -> NamespaceInner a -> NamespaceOuter a
+withTracerName (NamespaceOuter l) (NamespaceInner r) = NamespaceOuter (l ++ r)
+
+-- | Attention, just removes te first element of the namepsace
+withoutTracerName :: NamespaceOuter a -> NamespaceInner a
+withoutTracerName (NamespaceOuter (_hd : tl)) = NamespaceInner tl
+withoutTracerName (NamespaceOuter []) = error "Types>>withoutTracerName: incorret with tracer namespace"
+
 
 -- | The Trace carries the underlying tracer Tracer from the contra-tracer package.
 --   It adds a 'LoggingContext' and maybe a 'TraceControl' to every message.
@@ -109,13 +129,13 @@ class LogFormatting a where
   asMetrics :: a -> [Metric]
   asMetrics _v = []
 
-class MetaTrace  a where
-  namespaceFor  :: a -> Namespace a
-  severityFor   :: Namespace a -> SeverityS
-  privacyFor    :: Namespace a -> Privacy
-  documentFor   :: Namespace a -> Text
-  metricsDocFor :: Namespace a -> [(Text,Text)]
-  allNamespaces :: [Namespace a]
+class MetaTrace a where
+  namespaceFor  :: a -> NamespaceInner a
+  severityFor   :: NamespaceInner a -> SeverityS
+  privacyFor    :: NamespaceInner a -> Privacy
+  documentFor   :: NamespaceInner a -> Text
+  metricsDocFor :: NamespaceInner a -> [(Text,Text)]
+  allNamespaces :: [NamespaceInner a]
 
 data Metric
   -- | An integer metric.
@@ -146,7 +166,7 @@ newtype Documented a = Documented {undoc :: [DocMsg a]}
 -- | Document a message by giving a prototype, its most special name in the namespace
 -- and a comment in markdown format
 data DocMsg a = DocMsg {
-    dmNamespace :: Namespace a
+    dmNamespace :: NamespaceOuter a
   , dmMetricsMD :: [(Text, Text)]
   , dmMarkdown  :: Text
 }

@@ -3,7 +3,6 @@ import           Data.IORef
 
 import           Cardano.Logging
 import           Cardano.Logging.Test.Config
-import           Cardano.Logging.Test.Messages
 import           Cardano.Logging.Test.Oracles
 import           Cardano.Logging.Test.Script
 import           Cardano.Logging.Test.Tracer

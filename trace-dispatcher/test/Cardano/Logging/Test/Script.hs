@@ -45,7 +45,7 @@ runScriptSimple time oracle = do
                         stdoutTracer'
                         forwardTracer'
                         (Just ekgTracer')
-                        (Namespace ["Test"])
+                        (NamespaceOuter ["Test"])
     configureTracers conf [tr]
     let sortedMsgs = sort msgs
     let (msgsWithIds,_) = withMessageIds 0 sortedMsgs
@@ -86,7 +86,7 @@ runScriptMultithreaded time oracle = do
                           stdoutTracer'
                           forwardTracer'
                           (Just ekgTracer')
-                          (Namespace ["Test"])
+                          (NamespaceOuter ["Test"])
       configureTracers conf [tr]
       let sortedMsgs1 = sort msgs1
       let (msgsWithIds1,_) = withMessageIds 0 sortedMsgs1
@@ -153,8 +153,8 @@ runScriptMultithreadedWithReconfig time oracle = do
                           stdoutTracer'
                           forwardTracer'
                           (Just ekgTracer')
-                          (Namespace ["Test"])
-      configureTracers conf  [tr]
+                          (NamespaceOuter ["Test"])
+      configureTracers conf [tr]
       let sortedMsgs1 = sort msgs1
       let (msgsWithIds1,_) = withMessageIds 0 sortedMsgs1
       let timedMessages1 = map (withTimeFactor time) msgsWithIds1
@@ -218,8 +218,8 @@ runScriptMultithreadedWithConstantReconfig time oracle = do
                           stdoutTracer'
                           forwardTracer'
                           (Just ekgTracer')
-                          (Namespace ["Test"])
-      configureTracers conf1  [tr]
+                          (NamespaceOuter ["Test"])
+      configureTracers conf1 [tr]
       let sortedMsgs1 = sort msgs1
       let (msgsWithIds1,_) = withMessageIds 0 sortedMsgs1
       let timedMessages1 = map (withTimeFactor time) msgsWithIds1

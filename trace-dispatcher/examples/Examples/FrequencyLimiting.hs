@@ -25,7 +25,7 @@ testLimiting = do
             (appendName "tracer2"  (contramap Message tf1))
                (appendName "limiter2" (contramap Limit tf1))
   let t = tf2 <> tf3
-  configureTracers emptyTraceConfig traceForgeEventDocu [t]
+  configureTracers emptyTraceConfig [t]
 
   repeated t 1000 10000 -- 100 messages per second
   repeated t 20 1000000 -- 1  message per second

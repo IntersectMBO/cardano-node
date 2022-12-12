@@ -37,16 +37,15 @@ instance LogFormatting BaseStats where
     [ DoubleM "measure" bsMeasure
     , DoubleM "sum" bsSum]
 
-baseStatsDocumented :: Documented Double
-baseStatsDocumented = Documented
-  [
-    DocMsg
-      (Namespace ["BaseStats"])
-      [ ("measure", "This is the value of a single measurment")
-      , ("sum", "This is the sum of all measurments")
-      ]
-      "Basic statistics"
-  ]
+instance MetaTrace BaseStats where
+  namespaceFor BaseStats{} = NamespaceInner ["BaseStats"]
+  severityFor (NamespaceInner ["BaseStats"]) = Info
+  privacyFor  (NamespaceInner ["BaseStats"]) = Public
+  documentFor (NamespaceInner ["BaseStats"]) = "Basic statistics"
+  metricsDocFor (NamespaceInner ["BaseStats"]) =
+    [ ("measure", "This is the value of a single measurment")
+    , ("sum", "This is the sum of all measurments")]
+  allNamespaces = [NamespaceInner ["BaseStats"]]
 
 emptyStats :: BaseStats
 emptyStats = BaseStats 0.0 100000000.0 (-100000000.0) 0 0.0
@@ -63,10 +62,11 @@ calculate BaseStats{..} _ val =
 testAggregation :: IO ()
 testAggregation = do
     simpleTracer <- standardTracer
-    formTracer <- fmap (appendName "BaseTrace")
-                      (humanFormatter True (Just "cardano") simpleTracer)
-    tracer <- foldTraceM calculate emptyStats formTracer
-    configureTracers emptyTraceConfig baseStatsDocumented [tracer]
+    formTracer <- humanFormatter True (Just "cardano") simpleTracer
+    tracer <- foldTraceM calculate emptyStats (contramap unfold formTracer)
+
+    configureTracers emptyTraceConfig [formTracer]
+
     traceWith tracer 1.0
     traceWith tracer 2.0
     traceWith tracer 0.5

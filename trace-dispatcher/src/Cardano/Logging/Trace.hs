@@ -79,9 +79,9 @@ filterTraceMaybe :: Monad m
   -> Trace m (Maybe a)
 filterTraceMaybe (Trace tr) = Trace $ T.arrow $ T.emit $ mkTrace
   where
-    mkTrace (lc, Right (Just m)) = T.traceWith tr (lc, Right m)
+    mkTrace (lc, Right (Just m))  = T.traceWith tr (lc, Right m)
     mkTrace (_lc, Right Nothing)  = pure ()
-    mkTrace (lc, Left l)         = T.traceWith tr (lc, Left l)
+    mkTrace (lc, Left l)          = T.traceWith tr (lc, Left l)
 
     -- T.squelchUnless
     --   (\case
@@ -129,22 +129,20 @@ appendName name (Trace tr) = Trace $
         (lc, cont) -> (lc {lcNamespace = name : lcNamespace lc}, cont))
       tr
 
--- | Appends a name to the context.
--- E.g. appendName "specific" $ appendName "middle" $ appendName "general" tracer
--- give the result: `general.middle.specific`.
-appendNames :: Monad m => Namespace a -> Trace m a -> Trace m a
-appendNames (Namespace names) (Trace tr) = Trace $
+-- | Appends all names to the context.
+appendNames :: Monad m => NamespaceOuter a -> Trace m a -> Trace m a
+appendNames (NamespaceOuter names) (Trace tr) = Trace $
     T.contramap
       (\
         (lc, cont) -> (lc {lcNamespace = names ++ lcNamespace lc}, cont))
       tr
 
 -- | Sets names for the messages in this trace based on the selector function
-withNamesAppended :: Monad m => (a -> Namespace a) -> Trace m a -> Trace m a
+withNamesAppended :: Monad m => (a -> NamespaceInner a) -> Trace m a -> Trace m a
 withNamesAppended func (Trace tr) = Trace $
     T.contramap
       (\case
-        (lc, Right e) -> (lc {lcNamespace = unNS (func e) ++ lcNamespace lc}, Right e)
+        (lc, Right e) -> (lc {lcNamespace = unNSInner (func e) ++ lcNamespace lc}, Right e)
         (lc, Left ctrl) -> (lc, Left ctrl))
       tr
 
@@ -157,13 +155,13 @@ setSeverity s (Trace tr) = Trace $ T.contramap
   tr
 
 -- | Sets severities for the messages in this trace based on the selector function
-withSeverity :: Monad m => (Namespace a -> SeverityS) -> Trace m a -> Trace m a
+withSeverity :: Monad m => (NamespaceInner a -> SeverityS) -> Trace m a -> Trace m a
 withSeverity fs (Trace tr) = Trace $
     T.contramap
       (\case
         (lc, Right e) -> if isJust (lcSeverity lc)
                             then (lc, Right e)
-                            else (lc {lcSeverity = Just (fs (Namespace (lcNamespace lc)))}, Right e)
+                            else (lc {lcSeverity = Just (fs (NamespaceInner (lcNamespace lc)))}, Right e)
         (lc, Left e) -> (lc, Left e))
       tr
 
@@ -200,13 +198,13 @@ setPrivacy p (Trace tr) = Trace $
     tr
 
 -- | Sets privacy for the messages in this trace based on the message
-withPrivacy :: Monad m => (Namespace a -> Privacy) -> Trace m a -> Trace m a
+withPrivacy :: Monad m => (NamespaceInner a -> Privacy) -> Trace m a -> Trace m a
 withPrivacy fs (Trace tr) = Trace $
     T.contramap
       (\case
           (lc, Right e) -> if isJust (lcPrivacy lc)
                             then (lc, Right e)
-                            else (lc {lcPrivacy = Just (fs (Namespace (lcNamespace lc)))}, Right e)
+                            else (lc {lcPrivacy = Just (fs (NamespaceInner (lcNamespace lc)))}, Right e)
           (lc, Left e)  ->  (lc, Left e))
       tr
 
