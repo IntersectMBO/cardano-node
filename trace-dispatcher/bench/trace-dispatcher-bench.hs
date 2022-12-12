@@ -56,11 +56,8 @@ stdoutTracers stdoutTracer = do
                         stdoutTracer
                         forwardTracer'
                         Nothing
-                        ["Test"]
-                        namesForMessage
-                        severityForMessage
-                        privacyForMessage
-    configureTracers config1 docMessage [tr]
+                         (NamespaceOuter ["Test"])
+    configureTracers config1 [tr]
     pure tr
 
 filterTracers :: Trace IO FormattedMessage -> IO (Trace IO Message)
@@ -71,11 +68,8 @@ filterTracers stdoutTracer = do
                         stdoutTracer
                         forwardTracer'
                         Nothing
-                        ["Test"]
-                        namesForMessage
-                        severityForMessage
-                        privacyForMessage
-    configureTracers config2 docMessage [tr]
+                         (NamespaceOuter ["Test"])
+    configureTracers config2 [tr]
     pure tr
 
 inMemoryTracers :: IO (Trace IO Message)
@@ -88,11 +82,8 @@ inMemoryTracers = do
                         stdoutTracer'
                         forwardTracer'
                         Nothing
-                        ["Test"]
-                        namesForMessage
-                        severityForMessage
-                        privacyForMessage
-    configureTracers config1 docMessage [tr]
+                         (NamespaceOuter ["Test"])
+    configureTracers config1 [tr]
     pure tr
 
 timeLimitedTracers :: Trace IO FormattedMessage -> IO (Trace IO Message)
@@ -103,11 +94,8 @@ timeLimitedTracers stdoutTracer = do
                         stdoutTracer
                         forwardTracer'
                         Nothing
-                        ["Test"]
-                        namesForMessage
-                        severityForMessage
-                        privacyForMessage
-    configureTracers config3 docMessage [tr]
+                        (NamespaceOuter ["Test"])
+    configureTracers config3 [tr]
     pure tr
 
 ekgTracers :: IO (Trace IO Message)
@@ -122,11 +110,8 @@ ekgTracers = do
                         stdoutTracer'
                         forwardTracer'
                         Nothing
-                        ["Test"]
-                        namesForMessage
-                        severityForMessage
-                        privacyForMessage
-    configureTracers config4 docMessage [tr]
+                         (NamespaceOuter ["Test"])
+    configureTracers config4 [tr]
     pure tr
 
 timesRepeat :: Int -> IO () -> IO ()
