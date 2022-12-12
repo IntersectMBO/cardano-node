@@ -4,7 +4,7 @@
 , ...
 }:
 let
-  #name = builtins.trace (builtins.attrNames pkgs) "nomad";
+
   name = "nomad";
 
   # Unlike the supervisor backend `useCabalRun` is always false here.
@@ -67,27 +67,36 @@ let
   materialise-profile =
     { stateDir, profileNix }:
       let
+        unixHttpServerPort = "/tmp/supervisor.sock";
         supervisorConfPath =
           import ./supervisor-conf.nix
             { inherit (profileNix) node-services;
               inherit pkgs lib stateDir;
-              unixHttpServerPort = "/tmp/supervisor.sock";
+              inherit unixHttpServerPort;
             };
-        nomadConf =
-          import ./nomad-conf.nix
+        ociImages =
+          import ./oci-images.nix
             { inherit pkgs;
               inherit
                 (pkgs.cardanoNodePackages)
                 cardano-node cardano-tracer tx-generator;
             };
+        nomadJobJSONPath =
+          import ./nomad-job.nix
+            { inherit pkgs lib stateDir;
+              inherit profileNix;
+              inherit (ociImages) clusterImage;
+              inherit unixHttpServerPort;
+            };
       in pkgs.runCommand "workbench-backend-output-${profileNix.name}-${name}"
         (rec {
           inherit supervisorConfPath;
           # All In One
-          clusterImage = nomadConf.clusterImage;
+          clusterImage = ociImages.clusterImage;
           clusterImageCopyToPodman = clusterImage.copyToPodman;
           clusterImageName = clusterImage.imageName;
           clusterImageTag = clusterImage.imageTag;
+          inherit nomadJobJSONPath;
         })
         ''
         mkdir $out
@@ -98,6 +107,8 @@ let
         echo $clusterImageName                       > $out/clusterImageName
         echo $clusterImageTag                        > $out/clusterImageTag
         ln -s $clusterImageCopyToPodman/bin/copy-to-podman $out/clusterImageCopyToPodman
+
+        ln -s $nomadJobJSONPath                        $out/nomad-job.json
         '';
 in
 {

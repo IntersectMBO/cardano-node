@@ -12,7 +12,7 @@ let
   n2c = pkgs.nix2container.outputs.packages.x86_64-linux.nix2container;
 
   clusterImage = n2c.buildImage {
-    name = "registry.workbench.iog.io/cluster";
+    name = "registry.ci.iog.io/workbench-cluster-aio-image";
     # Adds `/etc/protocols` and ``/etc/services` to the root directory.
     # FIXME: Inside the container still can't resolve `localhost` but can
     # resolve WAN domains using public DNS servers.
