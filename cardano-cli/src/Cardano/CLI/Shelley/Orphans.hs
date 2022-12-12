@@ -15,11 +15,11 @@
 module Cardano.CLI.Shelley.Orphans () where
 
 import           Cardano.Api.Orphans ()
-import           Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
+import qualified Cardano.Ledger.AuxiliaryData as Ledger
 import qualified Cardano.Ledger.Credential as Ledger
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import qualified Cardano.Ledger.Mary.Value as Ledger.Mary
-import           Cardano.Ledger.PoolDistr (PoolDistr (..))
+import qualified Cardano.Ledger.PoolDistr as Ledger
 import qualified Cardano.Ledger.Shelley.EpochBoundary as Ledger
 import qualified Cardano.Ledger.Shelley.PoolRank as Ledger
 import           Cardano.Ledger.TxIn (TxId (..))
@@ -78,9 +78,9 @@ deriving newtype instance CC.Crypto crypto => ToJSON (TxId crypto)
 deriving newtype instance CC.Crypto crypto => ToJSON (ShelleyHash crypto)
 deriving newtype instance CC.Crypto crypto => ToJSON (HashHeader crypto)
 
-deriving newtype instance ToJSON (AuxiliaryDataHash StandardCrypto)
+deriving newtype instance ToJSON (Ledger.AuxiliaryDataHash StandardCrypto)
 deriving newtype instance ToJSON Ledger.LogWeight
-deriving newtype instance ToJSON (PoolDistr StandardCrypto)
+deriving newtype instance ToJSON (Ledger.PoolDistr StandardCrypto)
 
 deriving newtype instance ToJSON (Ledger.Stake StandardCrypto)
 
