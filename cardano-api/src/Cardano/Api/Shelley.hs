@@ -207,12 +207,19 @@ module Cardano.Api.Shelley
     CurrentEpochState(..),
     SerialisedCurrentEpochState(..),
     decodeCurrentEpochState,
+
     PoolState(..),
     SerialisedPoolState(..),
     decodePoolState,
+
     PoolDistribution(..),
     SerialisedPoolDistribution(..),
     decodePoolDistribution,
+
+    StakeSnapshot(..),
+    SerialisedStakeSnapshots(..),
+    decodeStakeSnapshot,
+
     UTxO(..),
     AcquiringFailure(..),
     SystemStart(..),

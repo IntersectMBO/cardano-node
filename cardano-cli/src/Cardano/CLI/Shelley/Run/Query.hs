@@ -53,7 +53,6 @@ import qualified Data.Text.IO as Text
 import           Data.Text.Lazy.Builder (toLazyText)
 import           Data.Time.Clock
 import qualified Data.Vector as Vector
-import qualified Data.VMap as VMap
 import           Formatting.Buildable (build)
 import           Numeric (showEFloat)
 import qualified System.IO as IO
@@ -74,8 +73,6 @@ import qualified Cardano.Crypto.Hash.Blake2b as Blake2b
 import qualified Cardano.Crypto.VRF as Crypto
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
 import           Cardano.Ledger.BaseTypes (Seed, UnitInterval)
-import           Cardano.Ledger.Coin
-import           Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Credential as Ledger
 import qualified Cardano.Ledger.Crypto as Crypto
@@ -83,9 +80,7 @@ import qualified Cardano.Ledger.Era as Era
 import qualified Cardano.Ledger.Era as Ledger
 import           Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import           Cardano.Ledger.SafeHash (HashAnnotated)
-import           Cardano.Ledger.Shelley.EpochBoundary
-import           Cardano.Ledger.Shelley.LedgerState (EpochState (esSnapshots),
-                   NewEpochState (nesEs), PState (_fPParams, _pParams, _retiring))
+import           Cardano.Ledger.Shelley.LedgerState (PState (_fPParams, _pParams, _retiring))
 import qualified Cardano.Ledger.Shelley.LedgerState as SL
 import qualified Cardano.Ledger.Shelley.PParams as Shelley
 import           Cardano.Ledger.Shelley.Scripts ()
@@ -133,6 +128,7 @@ data ShelleyQueryCmdError
       FilePath
       -- ^ Operational certificate of the unknown stake pool.
   | ShelleyQueryCmdPoolStateDecodeError DecoderError
+  | ShelleyQueryCmdStakeSnapshotDecodeError DecoderError
 
   deriving Show
 
@@ -170,6 +166,8 @@ renderShelleyQueryCmdError err =
                   "in the current epoch, you must wait until the following epoch for the registration to take place."
     ShelleyQueryCmdPoolStateDecodeError decoderError ->
       "Failed to decode PoolState.  Error: " <> Text.pack (show decoderError)
+    ShelleyQueryCmdStakeSnapshotDecodeError decoderError ->
+      "Failed to decode StakeSnapshot.  Error: " <> Text.pack (show decoderError)
 
 runQueryCmd :: QueryCmd -> ExceptT ShelleyQueryCmdError IO ()
 runQueryCmd cmd =
@@ -674,9 +672,8 @@ runQueryStakeSnapshot
   -> NetworkId
   -> Hash StakePoolKey
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryStakeSnapshot (AnyConsensusModeParams cModeParams) network poolid = do
-  SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr
-                           $ newExceptT readEnvSocketPath
+runQueryStakeSnapshot (AnyConsensusModeParams cModeParams) network poolId = do
+  SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr $ newExceptT readEnvSocketPath
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
   anyE@(AnyCardanoEra era) <-
@@ -689,9 +686,9 @@ runQueryStakeSnapshot (AnyConsensusModeParams cModeParams) network poolid = do
   eInMode <- toEraInMode era cMode
     & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
 
-  let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryDebugLedgerState
+  let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryStakeSnapshot poolId
   result <- executeQuery era cModeParams localNodeConnInfo qInMode
-  obtainLedgerEraClassConstraints sbe (writeStakeSnapshot poolid) result
+  obtainLedgerEraClassConstraints sbe writeStakeSnapshot result
 
 
 runQueryLedgerState
@@ -855,44 +852,15 @@ writeLedgerState mOutFile qState@(SerialisedDebugLedgerState serLedgerState) =
 writeStakeSnapshot :: forall era ledgerera. ()
   => ShelleyLedgerEra era ~ ledgerera
   => Era.Crypto ledgerera ~ StandardCrypto
-  => FromCBOR (DebugLedgerState era)
-  => PoolId
-  -> SerialisedDebugLedgerState era
+  => SerialisedStakeSnapshots era
   -> ExceptT ShelleyQueryCmdError IO ()
-writeStakeSnapshot (StakePoolKeyHash hk) qState =
-  case decodeDebugLedgerState qState of
-    -- In the event of decode failure print the CBOR instead
-    Left bs -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
+writeStakeSnapshot qState =
+  case decodeStakeSnapshot qState of
+    Left err -> left (ShelleyQueryCmdStakeSnapshotDecodeError err)
 
-    Right ledgerState -> do
-      -- Ledger State
-      let (DebugLedgerState snapshot) = ledgerState
-
-      -- The three stake snapshots, obtained from the ledger state
-      let (SnapShots markS setS goS _) = esSnapshots $ nesEs snapshot
-
+    Right (StakeSnapshot snapshot) -> do
       -- Calculate the three pool and active stake values for the given pool
-      liftIO . LBS.putStrLn $ encodePretty $ Stakes
-        { markPool = getPoolStake hk markS
-        , setPool = getPoolStake hk setS
-        , goPool = getPoolStake hk goS
-        , markTotal = getAllStake markS
-        , setTotal = getAllStake setS
-        , goTotal = getAllStake goS
-        }
-
--- | Sum all the stake that is held by the pool
-getPoolStake :: KeyHash Cardano.Ledger.Keys.StakePool crypto -> SnapShot crypto -> Integer
-getPoolStake hash ss = pStake
-  where
-    Coin pStake = fold (Map.map fromCompact $ VMap.toMap s)
-    Stake s = poolStake hash (_delegations ss) (_stake ss)
-
--- | Sum the active stake from a snapshot
-getAllStake :: SnapShot crypto -> Integer
-getAllStake (SnapShot stake _ _) = activeStake
-  where
-    Coin activeStake = fold (fmap fromCompact (VMap.toMap (unStake stake)))
+      liftIO . LBS.putStrLn $ encodePretty snapshot
 
 -- | This function obtains the pool parameters, equivalent to the following jq query on the output of query ledger-state
 --   .nesEs.esLState._delegationState._pstate._pParams.<pool_id>

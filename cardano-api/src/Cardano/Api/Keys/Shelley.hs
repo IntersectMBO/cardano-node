@@ -1218,7 +1218,7 @@ instance SerialiseAsBech32 (SigningKey StakePoolKey) where
     bech32PrefixesPermitted _ = ["pool_sk"]
 
 newtype instance Hash StakePoolKey =
-    StakePoolKeyHash (Shelley.KeyHash Shelley.StakePool StandardCrypto)
+    StakePoolKeyHash { unStakePoolKeyHash :: Shelley.KeyHash Shelley.StakePool StandardCrypto }
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash StakePoolKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash StakePoolKey)
