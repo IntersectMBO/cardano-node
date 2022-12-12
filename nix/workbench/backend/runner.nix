@@ -47,7 +47,7 @@ in
         --profile      ${profile} \
         --cache-dir    ${cacheDir} \
         --base-port    ${toString basePort} \
-        ${pkgs.lib.optionalString useCabalRun ''--cabal \''}
+        ${pkgs.lib.optionalString useCabalRun ''--cabal''} \
         "$@"
     '';
 
