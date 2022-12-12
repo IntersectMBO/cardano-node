@@ -6,6 +6,17 @@ The ``cardano-node`` development is primarily based on the Nix infrastructure (h
 
 On how to set up Nix for ``cardano-node`` development, please see `Building Cardano Node with nix <https://github.com/input-output-hk/cardano-node/tree/master/doc/getting-started/building-the-node-using-nix.md>`_.
 
+
+Roles and Responsibilities
+====
+
+We maintain a [CODEOWNERS file][CODEOWNERS] which provides information who
+should review a contributing PR.  Note that you might need to get approvals
+from all code owners (even though GitHub doesn't give a way to enforce it).
+
+[CODEOWNERS]: https://github.com/input-output-hk/cardano-node/blob/master//CODEOWNERS
+
+
 Supplementary tooling
 ====
 
