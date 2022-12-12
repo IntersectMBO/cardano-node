@@ -361,7 +361,7 @@ data QueryCmd =
   | QueryUTxO' AnyConsensusModeParams QueryUTxOFilter NetworkId (Maybe OutputFile)
   | QueryDebugLedgerState' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryProtocolState' AnyConsensusModeParams NetworkId (Maybe OutputFile)
-  | QueryStakeSnapshot' AnyConsensusModeParams NetworkId (Hash StakePoolKey)
+  | QueryStakeSnapshot' AnyConsensusModeParams NetworkId [Hash StakePoolKey]
   | QueryKesPeriodInfo
       AnyConsensusModeParams
       NetworkId
