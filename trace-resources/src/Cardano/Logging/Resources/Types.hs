@@ -84,7 +84,7 @@ jsonEncodingOptions = defaultOptions
 docResourceStats :: Documented ResourceStats
 docResourceStats = Documented [
       DocMsg
-        []
+        (NamespaceOuter [])
         [("Resources.Stat.Cputicks", "Kernel-reported CPU ticks (1/100th of a second), since process start")
         ,("Resources.Mem.Resident", "Kernel-reported RSS (resident set size)")
         ,("Resources.RTS.GcLiveBytes", "RTS-reported live bytes")
