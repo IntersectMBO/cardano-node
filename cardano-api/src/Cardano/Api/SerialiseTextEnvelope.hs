@@ -168,10 +168,10 @@ instance Error TextEnvelopeError where
 --
 -- For example, one might check that the type is \"TxSignedShelley\".
 --
-expectTextEnvelopeOfType :: TextEnvelopeType -> TextEnvelope -> Either TextEnvelopeError ()
-expectTextEnvelopeOfType expectedType TextEnvelope { teType = actualType } =
-    unless (expectedType == actualType) $
-      Left (TextEnvelopeTypeError [expectedType] actualType)
+expectTextEnvelopeOfType :: [TextEnvelopeType] -> TextEnvelope -> Either TextEnvelopeError ()
+expectTextEnvelopeOfType expectedTypes TextEnvelope { teType = actualType } =
+    unless (any (== actualType) expectedTypes ) $
+      Left (TextEnvelopeTypeError expectedTypes actualType)
 
 
 -- ----------------------------------------------------------------------------
@@ -179,7 +179,7 @@ expectTextEnvelopeOfType expectedType TextEnvelope { teType = actualType } =
 --
 
 class SerialiseAsCBOR a => HasTextEnvelope a where
-    textEnvelopeType :: AsType a -> TextEnvelopeType
+    textEnvelopeType :: AsType a -> [TextEnvelopeType]
 
     textEnvelopeDefaultDescr :: a -> TextEnvelopeDescr
     textEnvelopeDefaultDescr _ = ""
@@ -189,11 +189,15 @@ serialiseToTextEnvelope :: forall a. HasTextEnvelope a
                         => Maybe TextEnvelopeDescr -> a -> TextEnvelope
 serialiseToTextEnvelope mbDescr a =
     TextEnvelope {
-      teType    = textEnvelopeType ttoken
+      teType    = teType $ textEnvelopeType ttoken
     , teDescription   = fromMaybe (textEnvelopeDefaultDescr a) mbDescr
     , teRawCBOR = serialiseToCBOR a
     }
   where
+    teType :: [TextEnvelopeType] -> TextEnvelopeType
+    teType [] = ""
+    teType (x : _) = x
+
     ttoken :: AsType a
     ttoken = proxyToAsType Proxy
 
@@ -221,10 +225,12 @@ deserialiseFromTextEnvelopeAnyOf types te =
           f <$> deserialiseFromCBOR ttoken (teRawCBOR te)
   where
     actualType    = teType te
-    expectedTypes = [ textEnvelopeType ttoken
-                    | FromSomeType ttoken _f <- types ]
+    expectedTypes = [ teType
+                    | FromSomeType ttoken _f <- types
+                    , teType <- textEnvelopeType ttoken
+                    ]
 
-    matching (FromSomeType ttoken _f) = actualType == textEnvelopeType ttoken
+    matching (FromSomeType ttoken _f) = any (== actualType) $ textEnvelopeType ttoken
 
 writeFileWithOwnerPermissions
   :: FilePath
@@ -333,13 +339,13 @@ readTextEnvelopeFromFile path =
 
 
 readTextEnvelopeOfTypeFromFile
-  :: TextEnvelopeType
+  :: [TextEnvelopeType]
   -> FilePath
   -> IO (Either (FileError TextEnvelopeError) TextEnvelope)
-readTextEnvelopeOfTypeFromFile expectedType path =
+readTextEnvelopeOfTypeFromFile expectedTypes path =
   runExceptT $ do
     te <- ExceptT (readTextEnvelopeFromFile path)
     firstExceptT (FileError path) $ hoistEither $
-      expectTextEnvelopeOfType expectedType te
+      expectTextEnvelopeOfType expectedTypes te
     return te
 
