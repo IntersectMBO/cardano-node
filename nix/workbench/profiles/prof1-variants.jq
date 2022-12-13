@@ -1,3 +1,5 @@
+include "protocol-versions";
+
 def all_profile_variants:
                                          1024    as $Ki
   |                                      1000000 as $M
@@ -113,17 +115,17 @@ def all_profile_variants:
       { genesis:
         { alonzo:
           { costModels:
-            { PlutusV1:                     $costmodels_v8_preview[0].PlutusScriptV1
-            , PlutusV2:                     $costmodels_v8_preview[0].PlutusScriptV2
+            { PlutusV1:                pv.v8.costModels.PlutusScriptV1
+            , PlutusV2:                pv.v8.costModels.PlutusScriptV2
             }
           , maxBlockExUnits:
-            { exUnitsMem:                   $pparams_v8[0].maxBlockExecutionUnits.memory
-            , exUnitsSteps:                 $pparams_v8[0].maxBlockExecutionUnits.steps
+            { exUnitsMem:              pv.v8.pParams.maxBlockExecutionUnits.memory
+            , exUnitsSteps:            pv.v8.pParams.maxBlockExecutionUnits.steps
             }
           }
         , shelley:
           { protocolParams:
-            { protocolVersion:              $pparams_v8[0].protocolVersion
+            { protocolVersion:         pv.v8.pParams.protocolVersion
             }
           }
         }

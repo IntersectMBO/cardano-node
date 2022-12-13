@@ -185,10 +185,10 @@ with_era_profiles() {
     local usage="USAGE: wb profile with-profiles JQEXP"
     local jqexp=${1:?$usage}; shift
 
-    jq  -L "$global_basedir/profiles" -L "$global_basedir" \
-        --argjson eras "$(to_jsonlist ${global_profile_eras[*]})" \
-        --slurpfile costmodels_v8_preview "$global_basedir/profiles/protocol-versions/costmodels-v8-preview.json" \
-        --slurpfile pparams_v8 "$global_basedir/profiles/protocol-versions/pparams-v8.json" \
+    jq  -L "$global_basedir"                                            \
+        -L "$global_basedir"/profiles                                   \
+        -L "$global_basedir"/profiles/protocol-versions                 \
+        --argjson eras "$(to_jsonlist ${global_profile_eras[*]})"       \
         --null-input '
        include "profiles";
 

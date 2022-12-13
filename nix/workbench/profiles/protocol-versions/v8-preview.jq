@@ -1,3 +1,46 @@
+def pParams:
+{
+  "collateralPercentage": 150,
+  "costModels": {},
+  "decentralization": null,
+  "executionUnitPrices": {
+    "priceMemory": 0.0577,
+    "priceSteps": 7.21e-05
+  },
+  "extraPraosEntropy": null,
+  "maxBlockBodySize": 90112,
+  "maxBlockExecutionUnits": {
+    "memory": 62000000,
+    "steps": 40000000000
+  },
+  "maxBlockHeaderSize": 1100,
+  "maxCollateralInputs": 3,
+  "maxTxExecutionUnits": {
+    "memory": 14000000,
+    "steps": 10000000000
+  },
+  "maxTxSize": 16384,
+  "maxValueSize": 5000,
+  "minPoolCost": 340000000,
+  "minUTxOValue": null,
+  "monetaryExpansion": 0.003,
+  "poolPledgeInfluence": 0.3,
+  "poolRetireMaxEpoch": 18,
+  "protocolVersion": {
+    "major": 8,
+    "minor": 0
+  },
+  "stakeAddressDeposit": 2000000,
+  "stakePoolDeposit": 500000000,
+  "stakePoolTargetNum": 150,
+  "treasuryCut": 0.2,
+  "txFeeFixed": 155381,
+  "txFeePerByte": 44,
+  "utxoCostPerByte": 4310,
+  "utxoCostPerWord": null
+};
+
+def costModels:
 {
   "PlutusScriptV1": {
     "addInteger-cpu-arguments-intercept": 205665,
@@ -344,4 +387,4 @@
     "verifySchnorrSecp256k1Signature-cpu-arguments-slope": 32947,
     "verifySchnorrSecp256k1Signature-memory-arguments": 10
   }
-}
+};
