@@ -4,100 +4,119 @@ on:
   push:
   workflow_dispatch:
     inputs:
-      reason:
-        description: 'Reason'
-        required: false
-        default: manual
       tests:
         description: 'Tests'
         required: false
-        default: some
+        default: 'some'
+        options:
+        - some
+        - all
   create:
 
 jobs:
   build:
     runs-on: ${{ matrix.os }}
 
-    defaults:
-      run:
-        shell: bash
-
     strategy:
       fail-fast: false
       matrix:
+        # Add more elements to this list to run multiple instances of the build in CI.  Increasing the
+        # number instances is a good way to trigger flaky build failures
+        n: [1]
+
         ghc: ["8.10.7"]
         os: [ubuntu-latest, macos-latest, windows-latest]
 
     env:
       # current ref from: 27.02.2022
       SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
+      # OpenSSL is installed in a non-standard location in MacOS. See
+      # https://github.com/actions/virtual-environments/blob/main/images/macos/macos-11-Readme.md
+      PKG_CONFIG_PATH: ${{ (matrix.os == 'macos-latest' && '/usr/lib/pkgconfig:/usr/local/opt/openssl@1.1/lib/pkgconfig') || (matrix.os == 'ubuntu-latest' && '/usr/lib/pkgconfig:/usr/local/lib/pkgconfig') || '' }}
+
+      # we need the LD_LIBRARY_PATH env var here because we ended up installing libsecp256k1 into /usr/local,
+      # pkg-config, *does* return the proper location, but the library does not appear to be properly referenced.
+      # FIXME: this is arguably a bug, and pkg-config should return the right values!
+      LD_LIBRARY_PATH: ${{ (matrix.os != 'windows-latest' && '/usr/local/lib') || '' }}
 
     steps:
-
-    - name: Get path to bash
-      # This is necessary to invoke bash from Haskell in Windows, for example in tests.
-      # We invoke bash from Haskell in order to test bash scripts in CI to ensure they
-      # don't break.
-      if: matrix.os == 'windows-latest'
+    - name: "WIN: Install System Dependencies via pacman (msys2)"
+      if: runner.os == 'Windows'
       run: |
-        echo "BASH_PATH=$(cd $(dirname $(which bash)); pwd -W)/bash.exe" >> $GITHUB_ENV
+         # ghcup should be installed on current GHA Windows runners. Let's use ghcup to run
+         # pacman, to install the necessary dependencies, ...
+         ghcup run -- pacman --noconfirm -S `
+            mingw-w64-x86_64-pkg-config `
+            mingw-w64-x86_64-libsodium `
+            mingw-w64-x86_64-openssl `
+            base-devel `
+            autoconf-wrapper `
+            autoconf `
+            automake `
+            libtool `
+            make
 
-    - uses: haskell/actions/setup@v1
-      id: setup-haskell
-      with:
-        ghc-version: ${{ matrix.ghc }}
-        cabal-version: 3.6.2.0
-
-    - name: Set cache version
-      run: echo "CACHE_VERSION=grFfw8r" >> $GITHUB_ENV
-
-    - uses: actions/checkout@v2
-
-    - name: Add build script path
-      run: echo "$(pwd)/.github/bin" >> $GITHUB_PATH
-
-    - name: Install pkgconfiglite
-      if: matrix.os == 'windows-latest'
-      run: retry 2 choco install -y pkgconfiglite
-
-    - name: Install libsodium (Windows)
-      if: matrix.os == 'windows-latest'
+     # this seems to break something. It _must_ come after the pacman setup
+     # above. It appears as if PATHEXT is set _after_ ghcup install ghc/cabal, and
+     # as such we'd need pacman.exe instead.
+    - name: Setup Haskell
       run: |
-        curl -Ls \
-          --connect-timeout 5 \
-          --max-time 10 \
-          --retry 5 \
-          --retry-delay 0 \
-          --retry-max-time 40 \
-          https://download.libsodium.org/libsodium/releases/libsodium-1.0.18-mingw.tar.gz -o libsodium-1.0.18-mingw.tar.gz
-        tar zxvf libsodium-1.0.18-mingw.tar.gz
+        # Use GHCUP to manage ghc/cabal
+        ghcup install ghc --set ${{ matrix.ghc }}
+        ghcup install cabal --set 3.6.2.0
 
-        sed -i "s|/d/a/1/s/|D:/a/cardano-node/cardano-node/|g" libsodium-win64/lib/pkgconfig/libsodium.pc
-
-        export PKG_CONFIG_PATH="$PKG_CONFIG_PATH;$(readlink -f libsodium-win64/lib/pkgconfig | sed 's|^/d|D:|g' | tr / '\\')"
-        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
-
-        export LIBSODIUM_PATH="$(readlink -f libsodium-win64/bin | sed 's|^/d|D:|g' | tr / '\\')"
-        echo "LIBSODIUM_PATH=$LIBSODIUM_PATH"
-        echo "$LIBSODIUM_PATH" >> $GITHUB_PATH
-
-        echo "# pkg-config libsodium"
-        pkg-config libsodium --cflags --libs
-
-    - name: Install libsodium (MacOS)
-      if: matrix.os == 'macos-latest'
-      run: brew install libsodium
-
-    - name: Setup Github Scripts
-      run: echo "$(pwd)/.github/bin" >> $GITHUB_PATH
-
-    - name: Haskell versions
-      run: |
         ghc --version
         cabal --version
 
-    - name: Install build environment
-      if: matrix.os == 'ubuntu-latest'
+    - name: "WIN: fixup cabal config"
+      if: runner.os == 'Windows'
+      run: |
+        # make sure cabal knows about msys64, and mingw64 tools. Not clear why C:/cabal/config is empty
+        # and C:/cabal doesn't even exist.  The ghcup bootstrap file should have create it in the image:
+        # See https://github.com/haskell/ghcup-hs/blob/787edc17af4907dbc51c85e25c490edd8d68b80b/scripts/bootstrap/bootstrap-haskell#L591
+        # So we'll do it by hand here for now.
+        #
+        # We'll _not_ add extra-include-dirs, or extra-lib-dirs, and rely on what's shipped with GHC.
+        # https://github.com/msys2/MINGW-packages/issues/10837#issuecomment-1047105402
+        # https://gitlab.haskell.org/ghc/ghc/-/issues/21111
+        # if we _do_ want them, this would be the lines to add below
+
+        $ghcMingwDir = Join-Path -Path $(ghc --print-libdir) `
+                                 -ChildPath ../mingw/x86_64-*-mingw32/lib/ `
+                                 -Resolve
+
+        cabal user-config -a "extra-prog-path: C:/msys64/mingw64/bin, C:/msys64/usr/bin" `
+                          -a "extra-include-dirs: C:/msys64/mingw64/include" `
+                          -a ("extra-lib-dirs: {0}, C:/msys64/mingw64/lib" -f $ghcMingwDir) `
+                          -f init
+
+    - name: "OUTPUT Record cabal-store (Linux)"
+      id: lin-setup-haskell
+      if: runner.os != 'Windows'
+      run: echo "cabal-store=/home/runner/.cabal/store" >> $GITHUB_OUTPUT
+
+    - name: "OUTPUT Record cabal-store (Windows)"
+      id: win-setup-haskell
+      if: runner.os == 'Windows'
+      shell: bash
+      run: echo "cabal-store=C:\\cabal\\store" >> $GITHUB_OUTPUT
+
+    - name: Set cache version
+      run: echo "CACHE_VERSION=grFfw7r" >> $GITHUB_ENV
+
+    - uses: actions/checkout@v2
+
+    - name: "[PowerShell] Add build script path"
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: Add-Content $env:GITHUB_PATH "$(pwd)/.github/bin"
+
+    - name: "[Bash] Add build script path"
+      if: runner.os != 'Windows'
+      run: echo "$(pwd)/.github/bin" >> $GITHUB_PATH
+
+    - name: "LINUX: Install build environment (apt-get)"
+      if: runner.os == 'Linux'
       run: |
         sudo apt-get update
         sudo apt-get -y install libsodium23 libsodium-dev
@@ -105,195 +124,113 @@ jobs:
         sudo apt-get -y remove --purge software-properties-common
         sudo apt-get -y autoremove
 
-    - name: Install secp256k1 (Linux)
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        sudo apt-get -y install autoconf automake libtool
-        mkdir secp256k1-sources
-        cd secp256k1-sources
-        git clone https://github.com/bitcoin-core/secp256k1.git
-        cd secp256k1
-        git reset --hard $SECP256K1_REF
-        ./autogen.sh
-        ./configure --prefix=/usr --enable-module-schnorrsig --enable-experimental
-        make
-        make check
-        sudo make install
-        cd ../..
+    - name: "LINUX: Install build environment (for secp256k1)"
+      if: runner.os == 'Linux'
+      run: sudo apt-get -y install autoconf automake libtool
 
-    - name: Install secp256k1 (MacOS)
-      if: matrix.os == 'macos-latest'
+    - name: "MAC: Install build environment (brew)"
+      if: runner.os == 'macOS'
       run: |
-        brew install autoconf automake libtool
-        mkdir secp256k1-sources
-        cd secp256k1-sources
-        git clone https://github.com/bitcoin-core/secp256k1.git
-        cd secp256k1
-        git reset --hard $SECP256K1_REF
-        ./autogen.sh
-        ./configure --enable-module-schnorrsig --enable-experimental
-        make
-        make check
-        make install
+        brew install libsodium
 
-    - name: Install secp256k1 (Windows)
-      if: matrix.os == 'windows-latest'
+    - name: "MAC: Install build environment (for secp256k1)"
+      if: runner.os == 'macOS'
+      run: brew install autoconf automake libtool
+
+    - name: "LINUX: Install secp256k1"
+      if: runner.os != 'Windows'
+      shell: bash
       env:
-        RUNNER_TEMP: ${{ runner.temp }}
-      run: |
-        echo "RUNNER_TEMP=$RUNNER_TEMP"
-        cd "$RUNNER_TEMP"
-        RUNNER_TEMP_FWD="$(echo "$RUNNER_TEMP" | sed 's|\\|/|g')"
-        curl -Ls \
-          --connect-timeout 5 \
-          --max-time 10 \
-          --retry 5 \
-          --retry-delay 0 \
-          --retry-max-time 40 \
-          https://hydra.iohk.io/job/Cardano/haskell-nix/windows-secp256k1/latest/download/1 -o secp256k1.zip
-        mkdir secp256k1
-        cd secp256k1
-        unzip ../secp256k1.zip
-        cd ..
-        export PKG_CONFIG_PATH="$PKG_CONFIG_PATH;$(readlink -f secp256k1/lib/pkgconfig | sed 's|^/d|D:|g' | tr / '\\')"
-        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
-        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
-        export SECP256K1_PATH="$(readlink -f secp256k1/bin | sed 's|^/d|D:|g' | tr / '\\')"
-        echo "SECP256K1_PATH=$SECP256K1_PATH"
-        echo "$SECP256K1_PATH" >> $GITHUB_PATH
+        CI_SECP_FLAGS: "--prefix=/usr/local"
+        CI_SECP_INSTALL_CMD: sudo
+      run: bash .github/workflows/build-secp256k1.bash
 
-    - name: Install vcpkg (Windows)
-      if: matrix.os == 'windows-latest'
+    # TODO: this really should come from a pre-built location
+    - name: "WIN: Install secp256k1"
+      if: runner.os == 'Windows'
+      # Same env as tmate action
       env:
-        RUNNER_TEMP: ${{ runner.temp }}
-      run: |
-        mkdir -p "$RUNNER_TEMP/bin"
-        mkdir -p "$RUNNER_TEMP/lib"
-
-        cd "$RUNNER_TEMP/lib"
-        git clone https://github.com/Microsoft/vcpkg.git
-        vcpkg/bootstrap-vcpkg.bat
-        echo "PWD: $(pwd)"
-        
-        cd "$RUNNER_TEMP/bin"
-        ln -s ../lib/vcpkg/vcpkg.exe vcpkg
-        echo "PWD: $(pwd)"
-
-        export VCPKG_ROOT="$RUNNER_TEMP/lib/vcpkg"
-        echo "VCPKG_ROOT=$VCPKG_ROOT" >> $GITHUB_ENV
-
-        echo "$RUNNER_TEMP/bin" >> $GITHUB_PATH
-
-        echo "# View pc files"
-        cd "$RUNNER_TEMP"
-        for x in $(find . -name '*.pc'); do
-          echo "# $x"
-          cat "$x"
-        done
-
-    - name: Install openssl (Windows)
-      if: matrix.os == 'windows-latest'
-      run: |
-        vcpkg --triplet x64-mingw-dynamic install openssl
-        export PKG_CONFIG_PATH="$PKG_CONFIG_PATH;$(readlink -f "$RUNNER_TEMP/lib/vcpkg/packages/openssl_x64-mingw-dynamic/lib/pkgconfig" | sed 's|^/c|D:|g' | tr / '\\')"
-        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
-        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
-
-        # Not sure why this the pc file points to a lib64 instead of lib where the files are.
-        (cd "$RUNNER_TEMP/lib/vcpkg/packages/openssl_x64-mingw-dynamic"; ln -s lib lib64)
-
-        export OPENSSL_PATH="$RUNNER_TEMP/lib/vcpkg/packages/openssl_x64-mingw-dynamic/bin"
-        echo "OPENSSL_PATH=$OPENSSL_PATH"
-        echo "$OPENSSL_PATH" >> $GITHUB_PATH
-
-        echo "# pkg-config openssl"
-        pkg-config openssl --cflags --libs
-
-    - name: Path
-      run:  echo "$PATH"
-
-    - name: Find asn1.h file
-      if: matrix.os == 'windows-latest'
-      env:
-        RUNNER_TEMP: ${{ runner.temp }}
-      run: |
-        cd "$RUNNER_TEMP/lib"
-
-        echo "Finding asn1.h file"
-        find . -name 'asn1.h'
-
-        echo "Finding *.a files"
-        find . -name '*.a'
-
-        echo "Finding *.dll files"
-        find . -name '*.dll'
-
-    - name: List all pkg-config packages
-      if: matrix.os == 'windows-latest'
-      run: |
-        echo "=== Package list ==="
-        pkg-config --list-all
-        
-        echo "=== Package details ==="
-        for x in $(pkg-config --list-all | cut -d ' ' -f 1); do
-          echo "# $x"
-          pkg-config "$x" --cflags --libs
-        done
+        MSYS2_PATH_TYPE: inherit
+        MSYSTEM: MINGW64
+        CHERE_INVOKING: 1
+        # install secp into /mingw64 prefix, which is where pkg-config will look
+        # by default.
+        CI_SECP_FLAGS: "--prefix=/mingw64"
+      run: C:\\msys64\\usr\\bin\\bash.exe .github/workflows/build-secp256k1.bash
 
     - name: Cabal update
-      run: retry 2 cabal update
+      run: cabal update
 
     - name: Configure build
+      shell: bash
       run: |
         if [ "${{github.event.inputs.tests}}" == "all" ]; then
           echo "Reconfigure cabal projects to run tests for all dependencies"
-          cat cabal.project | sed 's|tests: False|tests: True|g' > cabal.project.new
-          mv cabal.project.new cabal.project
+          sed -i 's|tests: False|tests: True|g' cabal.project
         fi
 
-        cp .github/workflows/cabal.project.local.$RUNNER_OS cabal.project.local
+        cp ".github/workflows/cabal.project.local.ci.$(uname -s)" cabal.project.local
 
         echo "# cabal.project.local"
         cat cabal.project.local
 
     - name: Record dependencies
+      id: record-deps
       run: |
         cabal build all --dry-run
-        cat ${{ env.PLAN_JSON }} | jq -r '."install-plan"[].id' | sort | uniq > dependencies.txt
-        date > date.txt
+        cat dist-newstyle/cache/plan.json | jq -r '."install-plan"[].id' | sort | uniq > dependencies.txt
 
-    - uses: actions/cache@v2
-      name: Cache cabal store
+    - name: "OUTPUT Record weeknum"
+      shell: bash
+      run: echo "weeknum=$(/usr/bin/date -u "+%W")" >> $GITHUB_OUTPUT
+
+    - name: Cache Cabal store
+      uses: actions/cache@v2
       with:
-        path: ${{ steps.setup-haskell.outputs.cabal-store }}
+        path: ${{ runner.os == 'Windows' && steps.win-setup-haskell.outputs.cabal-store || steps.lin-setup-haskell.outputs.cabal-store }}
         key: cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}-${{ hashFiles('date.txt') }}
         restore-keys: |
-          cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}-${{ hashFiles('date.txt') }}
           cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
           cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}
+
+    - uses: actions/cache@v2
+      name: "Cache `dist-newstyle`"
+      with:
+        path: |
+          dist-newstyle
+          !dist-newstyle/**/.git
+        key: cache-dist-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ steps.record-deps.outputs.weeknum }}
+        restore-keys: cache-dist-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}
 
     - name: Build
       run: cabal build cardano-node cardano-cli cardano-node-chairman cardano-submit-api
 
+    - name: Run tests (all)
+      if: github.event.inputs.tests == 'all'
+      env:
+        TMPDIR: ${{ runner.temp }}
+        TMP: ${{ runner.temp }}
+        KEEP_WORKSPACE: 1
+      run: |
+        # The tests call out to msys2 commands. We generally do not want to mix toolchains, so
+        # we are very deliberate about only adding msys64 to the path where absolutely necessary.
+        ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;{0}" -f $env:PATH)') || '' }}
+        cabal test all
+
     - name: Run tests
+      if: github.event.inputs.tests != 'all'
+      env:
+        TMPDIR: ${{ runner.temp }}
+        TMP: ${{ runner.temp }}
+        KEEP_WORKSPACE: 1
       run: |
-        if [ "${{github.event.inputs.tests}}" == "all" ]; then
-          TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 cabal test all
-        fi
+        # The tests call out to msys2 commands. We generally do not want to mix toolchains, so
+        # we are very deliberate about only adding msys64 to the path where absolutely necessary.
+        ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;{0}" -f $env:PATH)') || '' }}
+        cabal test cardano-testnet cardano-api cardano-node cardano-node-chairman cardano-cli cardano-submit-api
 
-    - name: "Run tests"
-      run: |
-        if [ "${{github.event.inputs.tests}}" != "all" ]; then
-          TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 cabal test \
-            cardano-testnet \
-            cardano-api \
-            cardano-node \
-            cardano-node-chairman \
-            cardano-cli \
-            cardano-submit-api
-        fi
-
-    - name: Build & Test
+    - name: "Tar artifacts"
+      shell: bash
       run: |
         mkdir -p artifacts
 
@@ -316,8 +253,9 @@ jobs:
         name: artifacts-${{ matrix.os }}
         path: ./artifacts
 
-    - name: Delete socket files in preparation for upload artifacts
+    - name: Delete socket files in chairman tests in preparation for uploading artifacts
       if: ${{ always() }}
+      shell: bash
       run: |
         if [ -d "${{ runner.temp }}/chairman" ]; then
           find "${{ runner.temp }}/chairman" -type s -exec rm -f {} \;
@@ -327,8 +265,23 @@ jobs:
       if: ${{ always() }}
       continue-on-error: true
       with:
-        name: chairman-test-artifacts-${{ matrix.os }}-${{ matrix.ghc }}
+        name: chairman-test-artifacts-${{ matrix.os }}-${{ matrix.n }}-${{ matrix.ghc }}
         path: ${{ runner.temp }}/chairman/
+
+    # Uncomment the following back in for debugging. Remember to launch a `pwsh` from
+    # the tmux session to debug `pwsh` issues. And be reminded that the `/msys2` and
+    # `/msys2/mingw64` paths are not in PATH by default for the workflow, but tmate
+    # will put them in.
+    # You may also want to run
+    #
+    #   $env:PATH=("C:\Program Files\PowerShell\7;{0}" -f $env:ORIGINAL_PATH)
+    #
+    # to restore the original path.  Do note that some test might need msys2
+    # and will silently fail if msys2 is not in path. See the "Run tests" step.
+    #
+    # - name: Setup tmate session
+    #   if: ${{ failure() }}
+    #   uses: mxschmitt/action-tmate@v3
 
   release:
     needs: [build]
@@ -340,7 +293,8 @@ jobs:
 
     - name: Create Release Tag
       id: create_release_tag
-      run: echo ::set-output name=TAG::${GITHUB_REF/refs\/tags\//}
+      run: ｜
+        echo "TAG=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_OUTPUT
 
     - name: Create Release
       id: create_release
@@ -353,17 +307,12 @@ jobs:
         draft: true
         prerelease: false
 
-    - name: Download Artifact (linux)
+    - name: Download Artifact
       uses: actions/download-artifact@v1
       with:
         name: artifacts-ubuntu-latest
 
-    - name: Download Artifact (macOS)
-      uses: actions/download-artifact@v1
-      with:
-        name: artifacts-macOS-latest
-
-    - name: Upload Release Asset (cardano-submit-api, linux)
+    - name: Upload Release Asset
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -371,14 +320,4 @@ jobs:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: ./artifacts-ubuntu-latest/cardano-submit-api.tar.gz
         asset_name: cardano-submit-api_${{ steps.create_release_tag.outputs.TAG }}-linux.tar.gz
-        asset_content_type: application/gzip
-
-    - name: Upload Release Asset (cardano-submit-api, macOS)
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./artifacts-macOS-latest/cardano-submit-api.tar.gz
-        asset_name: cardano-submit-api_${{ steps.create_release_tag.outputs.TAG }}-macOS.tar.gz
         asset_content_type: application/gzip
