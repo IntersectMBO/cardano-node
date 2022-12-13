@@ -12,9 +12,75 @@ import Cardano.Prelude
 import Data.Map.Strict                  qualified as Map
 
 import Cardano.Analysis.API
-import Cardano.Unlog.LogObject
+import Cardano.Unlog.LogObject               hiding (Text)
 import Cardano.Util
 
+
+data SummaryError
+  = SEEmptyDataset
+  | SEIncoherentRunProfiles [Text]
+  | SEIncoherentRunEras     [Text]
+  | SEIncoherentRunVersions [Manifest]
+  | SEIncoherentRunFilters  [([FilterName], [ChainFilter])]
+  | SECDFError              CDFError
+  deriving Show
+
+summariseMultiSummary ::
+     UTCTime
+  -> [Centile]
+  -> [SummaryOne]
+  -> Either SummaryError MultiSummary
+summariseMultiSummary _ _ [] = error "Asked to summarise empty list of Summary"
+summariseMultiSummary sumAnalysisTime centiles xs@(headline:_) = do
+  sumHosts               <- pure $ cdf centiles $ xs <&> unI . sumHosts
+  sumLogObjectsTotal     <- pure $ cdf centiles $ xs <&> unI . sumLogObjectsTotal
+  sumChainRejectionStats <- pure $ xs <&> unI . sumChainRejectionStats
+                                   & traverse identity
+                                   & fmap (traverse identity)
+                                   & fmap (fmap $ cdf centiles)
+  sumBlocksRejected      <- pure $ cdf centiles $ xs <&> unI . sumBlocksRejected
+  sumDomainTime          <- pure $ xs <&> sumDomainTime
+                                   & traverseDataDomain (cdf centiles . fmap unI)
+  sumStartSpread         <- pure $ xs <&> sumStartSpread
+                                   & traverseDataDomain (cdf centiles . fmap unI)
+  sumStopSpread          <- pure $ xs <&> sumStopSpread
+                                   & traverseDataDomain (cdf centiles . fmap unI)
+  sumDomainSlots         <- pure $ xs <&> sumDomainSlots
+                                   & traverseDataDomain (cdf centiles . fmap unI)
+  sumDomainBlocks        <- pure $ xs <&> sumDomainBlocks
+                                   & traverseDataDomain (cdf centiles . fmap unI)
+
+  sumMeta                <- summariseMetadata $ xs <&> sumMeta
+  sumFilters             <- allEqOrElse (xs <&> sumFilters) SEIncoherentRunFilters
+
+  cdfLogLinesEmitted     <- sumCDF2 $ xs <&> cdfLogLinesEmitted
+  cdfLogObjectsEmitted   <- sumCDF2 $ xs <&> cdfLogObjectsEmitted
+  cdfLogObjects          <- sumCDF2 $ xs <&> cdfLogObjects
+  cdfRuntime             <- sumCDF2 $ xs <&> cdfRuntime
+  cdfLogLineRate         <- sumCDF2 $ xs <&> cdfLogLineRate
+  pure $ Summary
+    { ..
+    }
+ where
+   summariseMetadata :: [Metadata] -> Either SummaryError Metadata
+   summariseMetadata [] = Left SEEmptyDataset
+   summariseMetadata xs@(headline:_) = do
+     profile  <- allEqOrElse (xs <&> profile)  SEIncoherentRunProfiles
+     era      <- allEqOrElse (xs <&> era)      SEIncoherentRunEras
+     manifest <- allEqOrElse (xs <&> manifest) SEIncoherentRunVersions
+     pure Metadata { tag = "", batch = batch headline, .. }
+
+   allEqOrElse :: [a] -> ([a] -> SummaryError) -> Either SummaryError a
+   allEqOrElse [] _ = Left SEEmptyDataset
+   allEqOrElse xss@(headline:xs) err =
+     all (== headline) xs
+     & bool (Left $ err xss) (Right headline)
+
+   sumCDF2 :: [CDF I a] -> Either SummaryError (CDF (CDF I) a)
+   sumCDF2 xs = cdf2OfCDFs (stdCombine1 centiles) xs & bimap SECDFError identity
+
+   -- comb :: forall a. Divisible a => Combine I a
+   -- comb = stdCombine1 centiles
 
 computeSummary ::
      UTCTime
@@ -40,12 +106,12 @@ computeSummary sumAnalysisTime
                Chain{..}
   =
   Summary
-  { sumHosts           = countMap rlHostLogs
-  , sumLogObjectsTotal = countListsAll objLists
-  , sumBlocksRejected  = countListAll cRejecta
+  { sumHosts           = I $ countMap rlHostLogs
+  , sumLogObjectsTotal = I $ countListsAll objLists
+  , sumBlocksRejected  = I $ countListAll cRejecta
   , sumDomainTime      =
       DataDomain (Interval minStartRaw maxStopRaw)  (Just $ Interval minStartFlt maxStopFlt)
-                 (maxStopRaw  `utcTimeDeltaSec` minStartRaw)
+                 (unI maxStopRaw  `utcTimeDeltaSec` unI minStartRaw)
                  (maxStopFlt  `utcTimeDeltaSec` minStartFlt)
   , sumStartSpread     =
       DataDomain (Interval minStartRaw maxStartRaw) (Just $ Interval minStartFlt maxStartFlt)

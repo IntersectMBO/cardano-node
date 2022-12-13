@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-name-shadowing -Wno-orphans #-}
 module Cardano.Analysis.API.Types (module Cardano.Analysis.API.Types) where
@@ -34,16 +35,16 @@ data Summary f where
     , sumGenesis             :: !Genesis
     , sumGenesisSpec         :: !GenesisSpec
     , sumGenerator           :: !GeneratorProfile
-    , sumHosts               :: !(Count Host)
-    , sumLogObjectsTotal     :: !(Count LogObject)
+    , sumHosts               :: !(f (Count Host))
+    , sumLogObjectsTotal     :: !(f (Count LogObject))
     , sumFilters             :: !([FilterName], [ChainFilter])
-    , sumChainRejectionStats :: ![(ChainFilter, Int)]
-    , sumBlocksRejected      :: !(Count BlockEvents)
-    , sumDomainTime          :: !(DataDomain UTCTime)
-    , sumStartSpread         :: !(DataDomain UTCTime)
-    , sumStopSpread          :: !(DataDomain UTCTime)
-    , sumDomainSlots         :: !(DataDomain SlotNo)
-    , sumDomainBlocks        :: !(DataDomain BlockNo)
+    , sumChainRejectionStats :: ![(ChainFilter, f Int)]
+    , sumBlocksRejected      :: !(f (Count BlockEvents))
+    , sumDomainTime          :: !(DataDomain f UTCTime)
+    , sumStartSpread         :: !(DataDomain f UTCTime)
+    , sumStopSpread          :: !(DataDomain f UTCTime)
+    , sumDomainSlots         :: !(DataDomain f SlotNo)
+    , sumDomainBlocks        :: !(DataDomain f BlockNo)
     , cdfLogLinesEmitted     :: !(CDF f Int)
     , cdfLogObjectsEmitted   :: !(CDF f Int)
     , cdfLogObjects          :: !(CDF f Int)
@@ -55,9 +56,10 @@ data Summary f where
 type SummaryOne   = Summary I
 type MultiSummary = Summary (CDF I)
 
-deriving instance (FromJSON (f NominalDiffTime), FromJSON (f Int), FromJSON (f Double)) => FromJSON (Summary f)
-deriving instance (  ToJSON (f NominalDiffTime),   ToJSON (f Int),   ToJSON (f Double)) =>   ToJSON (Summary f)
-deriving instance (    Show (f NominalDiffTime),     Show (f Int),     Show (f Double)) =>     Show (Summary f)
+deriving instance (forall a. FromJSON a => FromJSON (f a)) => FromJSON (Summary f)
+deriving instance (forall a.   ToJSON a =>   ToJSON (f a)) =>   ToJSON (Summary f)
+deriving instance (forall a.   NFData a =>   NFData (f a)) =>   NFData (Summary f)
+deriving instance (forall a.     Show a =>     Show (f a)) =>     Show (Summary f)
 
 data BlockStats
   = BlockStats
@@ -75,8 +77,8 @@ bsChained BlockStats{..} = bsFiltered + bsRejected
 data BlockProp f
   = BlockProp
     { bpVersion              :: !Cardano.Analysis.API.LocliVersion.LocliVersion
-    , bpDomainSlots          :: ![DataDomain SlotNo]
-    , bpDomainBlocks         :: ![DataDomain BlockNo]
+    , bpDomainSlots          :: ![DataDomain f SlotNo]
+    , bpDomainBlocks         :: ![DataDomain f BlockNo]
     , cdfForgerStarts        :: !(CDF f NominalDiffTime)
     , cdfForgerBlkCtx        :: !(CDF f NominalDiffTime)
     , cdfForgerLgrState      :: !(CDF f NominalDiffTime)
@@ -100,8 +102,9 @@ data BlockProp f
     , bpPropagation          :: !(Map Text (CDF f NominalDiffTime))
     }
   deriving (Generic)
-deriving instance (Show     (f NominalDiffTime), Show     (f Int), Show     (f Double), Show     (f (Count BlockEvents)), Show     (f (DataDomain SlotNo)), Show     (f (DataDomain BlockNo))) => Show     (BlockProp f)
-deriving instance (FromJSON (f NominalDiffTime), FromJSON (f Int), FromJSON (f Double), FromJSON (f (Count BlockEvents)), FromJSON (f (DataDomain SlotNo)), FromJSON (f (DataDomain BlockNo))) => FromJSON (BlockProp f)
+deriving instance (forall b. FromJSON (f b)) => FromJSON (BlockProp f)
+deriving instance (forall b.   ToJSON (f b)) =>   ToJSON (BlockProp f)
+deriving instance (forall b.     Show (f b)) =>     Show (BlockProp f)
 
 type BlockPropOne   = BlockProp I
 type MultiBlockProp = BlockProp (CDF I)
@@ -110,7 +113,7 @@ type MultiBlockProp = BlockProp (CDF I)
 data MachPerf f
   = MachPerf
     { mpVersion            :: !Cardano.Analysis.API.LocliVersion.LocliVersion
-    , mpDomainSlots        :: ![DataDomain SlotNo]
+    , mpDomainSlots        :: ![DataDomain f SlotNo]
     , cdfHostSlots         :: !(CDF f Word64)
     -- distributions
     , cdfStarts            :: !(CDF f Word64)
@@ -147,8 +150,8 @@ newtype MultiClusterPerf
 --
 data Chain
   = Chain
-  { cDomSlots   :: !(DataDomain SlotNo)
-  , cDomBlocks  :: !(DataDomain BlockNo)
+  { cDomSlots   :: !(DataDomain I SlotNo)
+  , cDomBlocks  :: !(DataDomain I BlockNo)
   , cRejecta    :: ![BlockEvents]
   , cMainChain  :: ![BlockEvents]
   , cBlockStats :: !(Map Host BlockStats)
@@ -306,9 +309,10 @@ data RunScalars
 --
 deriving newtype instance FromJSON a => FromJSON (I a)
 deriving newtype instance ToJSON   a => ToJSON   (I a)
-deriving instance (FromJSON (a Double), FromJSON (a Int), FromJSON (a NominalDiffTime), FromJSON (a Word64), FromJSON (a (DataDomain SlotNo)), FromJSON (a (DataDomain UTCTime))) => FromJSON (MachPerf a)
-deriving instance (NFData   (a Double), NFData   (a Int), NFData   (a NominalDiffTime), NFData   (a Word64), NFData   (a (DataDomain SlotNo)), NFData   (a (DataDomain UTCTime))) => NFData   (MachPerf a)
-deriving instance (Show     (a Double), Show     (a Int),   Show   (a NominalDiffTime), Show     (a Word64), Show     (a (DataDomain SlotNo)), Show     (a (DataDomain UTCTime))) => Show     (MachPerf a)
+deriving instance (forall a. FromJSON a => FromJSON (f a)) => FromJSON (MachPerf f)
+deriving instance (forall a.   ToJSON a =>   ToJSON (f a)) =>   ToJSON (MachPerf f)
+deriving instance (forall a.   NFData a =>   NFData (f a)) =>   NFData (MachPerf f)
+deriving instance (forall a.     Show a =>     Show (f a)) =>     Show (MachPerf f)
 
 data SlotStats a
   = SlotStats

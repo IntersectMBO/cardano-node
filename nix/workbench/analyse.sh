@@ -136,6 +136,11 @@ case "$op" in
             multi-propagation-{control,forger,peers,endtoend}
             multi-propagation-gnuplot
             multi-propagation-full
+
+            read-summaries
+            compute-multi-summary
+            multi-summary-json
+            multi-summary-report
         )
         verbose "analysis" "$(white variance), calling script: $(colorise ${script[*]})"
         analyse "${sargs[@]}" multi-call 'variance' "$*" ${script[*]}
@@ -158,6 +163,10 @@ case "$op" in
             clusterperf-org
             clusterperf-report
             clusterperf-full
+
+            read-summaries
+            summary-json
+            summary-report
          )
         verbose "analysis" "$(white full), calling script:  $(colorise ${script[*]})"
         analyse "${sargs[@]}" map "call ${script[*]}" "$@"
@@ -381,10 +390,11 @@ case "$op" in
         vl=("${vk[@]/#clusterperf-full/     'render-clusterperf' --pretty \"$adir\"/clusterperf-full.txt --full }")
         vm=("${vl[@]/#read-clusterperfs/    'read-clusterperfs' --clusterperf \"$adir\"/clusterperf.json }")
         vn=("${vm[@]/#read-propagations/    'read-propagations'        --prop \"$adir\"/blockprop.json }")
-        vo=("${vn[@]/#summary-json/         'render-summary'       --json \"$adir\"/summary.json}")
-        vp=("${vo[@]/#summary-report/       'render-summary'     --org-report \"$adir\"/summary.org}")
+        vo=("${vn[@]/#read-summaries/       'read-summaries'        --summary \"$adir\"/summary.json }")
+        vp=("${vo[@]/#summary-json/         'render-summary'       --json \"$adir\"/summary.json}")
+        vq=("${vp[@]/#summary-report/       'render-summary'     --org-report \"$adir\"/summary.org}")
         local ops_final=()
-        for v in "${vp[@]}"
+        for v in "${vq[@]}"
         do eval ops_final+=($v); done
 
         call_locli "$rtsmode" "${ops_final[@]}"
@@ -440,7 +450,9 @@ case "$op" in
         vf=(${ve[*]/#multi-propagation-full/     'render-multi-propagation' --pretty $adir/'blockprop-full.txt' --full $multi_aspect })
         vg=(${vf[*]/#compare/ 'compare' --ede nix/workbench/ede --report $adir/report-$run.org ${compares[*]} })
         vh=(${vg[*]/#update/  'compare' --ede nix/workbench/ede --report $adir/report-$run.org ${compares[*]} --template $adir/report-$run.ede })
-        local ops_final=(${vh[*]})
+        vi=(${vh[*]/#multi-summary-json/            'render-multi-summary' --json $adir/'summary.json' --full $multi_aspect })
+        vj=(${vi[*]/#multi-summary-report/          'render-multi-summary' --org-report $adir/'summary.report.org' --report $multi_aspect })
+        local ops_final=(${vj[*]})
 
         call_locli "$rtsmode" "${ops_final[@]}"
 

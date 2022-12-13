@@ -82,6 +82,8 @@ data ChainCommand
   |      ComputeSummary
   |       RenderSummary     RenderFormat TextOutputFile
   |         ReadSummaries   [JsonInputFile SummaryOne]
+  | ComputeMultiSummary
+  |  RenderMultiSummary     RenderFormat TextOutputFile
 
   |             Compare     InputDir (Maybe TextInputFile) TextOutputFile
                             [( JsonInputFile SummaryOne
@@ -218,6 +220,11 @@ parseChainCommand =
      (ReadSummaries
        <$> some
        (optJsonInputFile     "summary"          "JSON block propagation input file"))
+
+   , op "compute-multi-summary" "Compute a multi-run summary"
+     (ComputeMultiSummary & pure)
+   , op "render-multi-summary" "Write out multi-run summary results"
+     (writerOpts RenderMultiSummary "Render")
    ]) <|>
 
    subparser (mconcat [ commandGroup "Run comparison"
@@ -297,6 +304,7 @@ data State
   , sMultiClusterPerf :: Maybe MultiClusterPerf
     --
   , sSummaries        :: Maybe [SummaryOne]
+  , sMultiSummary     :: Maybe MultiSummary
   }
 
 callComputeSummary :: State -> Either Text SummaryOne
@@ -543,10 +551,10 @@ runChainCommand s@State{}
   pure s { sBlockProp = Just xs
          , sTags = pack . takeBaseName . takeDirectory . takeDirectory . unJsonInputFile <$> fs }
 
-runChainCommand s@State{sBlockProp=Just props}
+runChainCommand s@State{sBlockProp=Just xs}
   c@ComputeMultiPropagation = do
-  progress "block-propagations" (Q $ printf "computing %d block propagations" $ length props)
-  xs <- pure (summariseMultiBlockProp (nEquicentiles $ max 7 (length props)) props)
+  progress "block-propagations" (Q $ printf "computing %d block propagations" $ length xs)
+  xs <- pure (summariseMultiBlockProp (nEquicentiles $ max 7 (length xs)) xs)
     & newExceptT
     & firstExceptT (CommandError c . show)
   pure s { sMultiBlockProp = Just xs }
@@ -661,6 +669,16 @@ runChainCommand s@State{}
     & firstExceptT (CommandError c . show)
   pure s { sSummaries = Just xs }
 
+runChainCommand s@State{sSummaries=Just xs}
+  c@ComputeMultiSummary = do
+  progress "block-propagations" (Q $ printf "computing %d block propagations" $ length xs)
+  r <- pure (summariseMultiSummary (nEquicentiles $ max 7 (length xs)) xs)
+    & newExceptT
+    & firstExceptT (CommandError c . show)
+  pure s { sMultiSummary = Just r }
+runChainCommand _ c@ComputeMultiPropagation{} = missingCommandData c
+  ["block propagation"]
+
 runChainCommand s c@(Compare ede mTmpl outf@(TextOutputFile outfp) runs) = do
   progress "report" (Q $ printf "rendering report for %d runs" $ length runs)
   xs :: [(SummaryOne, ClusterPerf, BlockPropOne)] <- forM runs $
@@ -719,7 +737,7 @@ runCommand (ChainCommand cs) = do
            Nothing Nothing Nothing Nothing
            Nothing Nothing Nothing Nothing
            Nothing Nothing Nothing Nothing
-           Nothing Nothing
+           Nothing Nothing Nothing
 
 opts :: ParserInfo Command
 opts =

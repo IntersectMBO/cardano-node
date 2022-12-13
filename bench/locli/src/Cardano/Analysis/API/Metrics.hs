@@ -132,7 +132,7 @@ instance TimelineFields SummaryOne where
       "Plutus script"
       "Name of th Plutus script used for smart contract workload generation, if any"
 
-   <> fScalar "sumHosts"               Wno Cnt (IInt   $   unCount.sumHosts)
+   <> fScalar "sumHosts"               Wno Cnt (IInt   $   unCount.unI.sumHosts)
       "Machines"
       "Number of machines under analysis"
 
@@ -160,15 +160,15 @@ instance TimelineFields SummaryOne where
       "Host log line rate, Hz"
       ""
 
-   <> fScalar "sumLogObjectsTotal"     Wno Cnt (IInt   $ unCount.sumLogObjectsTotal)
+   <> fScalar "sumLogObjectsTotal"     Wno Cnt (IInt   $ unCount.unI.sumLogObjectsTotal)
       "Total log objects analysed"
       ""
 
-   <> fScalar "ddRawCount.sumDomainTime"      Wno Sec (IInt   $       ddRawCount.sumDomainTime)
+   <> fScalar "ddRawCount.sumDomainTime"      Wno Sec (IInt $ unI.ddRawCount.sumDomainTime)
       "Run time, s"
       ""
 
-   <> fScalar "ddFilteredCount.sumDomainTime" Wno Sec (IInt   $  ddFilteredCount.sumDomainTime)
+   <> fScalar "ddFilteredCount.sumDomainTime" Wno Sec (IInt $ unI.ddFilteredCount.sumDomainTime)
       "Analysed run duration, s"
       ""
 
@@ -176,31 +176,31 @@ instance TimelineFields SummaryOne where
       "Run time efficiency"
       ""
 
-   <> fScalar "ddRaw.sumStartSpread"      Wno Sec (IDeltaT$ intvDurationSec.ddRaw.sumStartSpread)
+   <> fScalar "ddRaw.sumStartSpread"      Wno Sec (IDeltaT$ intvDurationSec.fmap unI.ddRaw.sumStartSpread)
       "Node start spread, s"
       ""
 
-   <> fScalar "ddRaw.sumStopSpread"       Wno Sec (IDeltaT$ intvDurationSec.ddRaw.sumStopSpread)
+   <> fScalar "ddRaw.sumStopSpread"       Wno Sec (IDeltaT$ intvDurationSec.fmap unI.ddRaw.sumStopSpread)
       "Node stop spread, s"
       ""
 
-   <> fScalar "ddFiltered.sumStartSpread" Wno Sec (IDeltaT$ maybe 0 intvDurationSec.ddFiltered.sumStartSpread)
+   <> fScalar "ddFiltered.sumStartSpread" Wno Sec (IDeltaT$ maybe 0 intvDurationSec.fmap (fmap unI).ddFiltered.sumStartSpread)
       "Perf analysis start spread, s"
       ""
 
-   <> fScalar "ddFiltered.sumStopSpread"  Wno Sec (IDeltaT$ maybe 0 intvDurationSec.ddFiltered.sumStopSpread)
+   <> fScalar "ddFiltered.sumStopSpread"  Wno Sec (IDeltaT$ maybe 0 intvDurationSec.fmap (fmap unI).ddFiltered.sumStopSpread)
       "Perf analysis stop spread, s"
       ""
 
-   <> fScalar "sumDomainSlots"         Wno Slo (IInt   $ ddFilteredCount.sumDomainSlots)
+   <> fScalar "sumDomainSlots"         Wno Slo (IInt   $ unI.ddFilteredCount.sumDomainSlots)
       "Slots analysed"
       ""
 
-   <> fScalar "sumDomainBlocks"        Wno Blk (IInt  $ ddFilteredCount.sumDomainBlocks)
+   <> fScalar "sumDomainBlocks"        Wno Blk (IInt  $ unI.ddFilteredCount.sumDomainBlocks)
       "Blocks analysed"
       ""
 
-   <> fScalar "sumBlocksRejected"      Wno Cnt (IInt  $     unCount . sumBlocksRejected)
+   <> fScalar "sumBlocksRejected"      Wno Cnt (IInt  $ unCount.unI.sumBlocksRejected)
       "Blocks rejected"
       ""
   -- fieldJSONOverlay f = (:[]) . tryOverlayFieldDescription f
@@ -608,17 +608,17 @@ instance TimelineFields (SlotStats NominalDiffTime) where
 
 -- * Instances, depending on the metrics' instances:
 --
-instance (ToJSON (f NominalDiffTime), ToJSON (f Int), ToJSON (f Double), ToJSON (f (Count BlockEvents)), ToJSON (f (DataDomain SlotNo)), ToJSON (f (DataDomain BlockNo))) => ToJSON (BlockProp f) where
-  toJSON x = AE.genericToJSON AE.defaultOptions x
-             & \case
-                 Object o -> Object $ processFieldOverlays x o
-                 _ -> error "Heh, serialised BlockProp to a non-Object."
+-- instance (ToJSON (f NominalDiffTime), ToJSON (f Int), ToJSON (f Double), ToJSON (f (Count BlockEvents)), ToJSON (f (DataDomain f SlotNo)), ToJSON (f (DataDomain BlockNo))) => ToJSON (BlockProp f) where
+--   toJSON x = AE.genericToJSON AE.defaultOptions x
+--              & \case
+--                  Object o -> Object $ processFieldOverlays x o
+--                  _ -> error "Heh, serialised BlockProp to a non-Object."
 
-instance (ToJSON (a Double), ToJSON (a Int), ToJSON (a NominalDiffTime), ToJSON (a (DataDomain UTCTime)), ToJSON (a Word64), ToJSON (a (DataDomain SlotNo)), ToJSON (a (DataDomain BlockNo))) => ToJSON (MachPerf a) where
-  toJSON x = AE.genericToJSON AE.defaultOptions x
-             & \case
-                 Object o -> Object $ processFieldOverlays x o
-                 _ -> error "Heh, serialised BlockProp to a non-Object."
+-- instance (ToJSON (a Double), ToJSON (a Int), ToJSON (a NominalDiffTime), ToJSON (a (DataDomain UTCTime)), ToJSON (a Word64), ToJSON (a (DataDomain SlotNo)), ToJSON (a (DataDomain BlockNo))) => ToJSON (MachPerf a) where
+--   toJSON x = AE.genericToJSON AE.defaultOptions x
+--              & \case
+--                  Object o -> Object $ processFieldOverlays x o
+--                  _ -> error "Heh, serialised BlockProp to a non-Object."
 
 deriving newtype instance ToJSON MultiClusterPerf
 
