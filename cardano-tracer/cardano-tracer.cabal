@@ -13,10 +13,9 @@ build-type:            Simple
 extra-doc-files:       README.md
                        CHANGELOG.md
 
-common base            { build-depends: base >= 4.14 && < 4.15 }
-
 common project-config
   default-language:    Haskell2010
+  build-depends:       base >= 4.14 && < 4.15
 
   ghc-options:         -Wall
                        -Wcompat
@@ -29,7 +28,7 @@ common project-config
                        -Wunused-packages
 
 library
-  import:              base, project-config
+  import:              project-config
   hs-source-dirs:      src
 
   exposed-modules:     Cardano.Tracer.Acceptors.Client
@@ -168,7 +167,7 @@ library
     build-depends:     unix
 
 executable cardano-tracer
-  import:              base, project-config
+  import:              project-config
 
   hs-source-dirs:      app
 
@@ -184,7 +183,7 @@ executable cardano-tracer
                        -with-rtsopts=-T
 
 library demo-forwarder-lib
-  import:              base, project-config
+  import:              project-config
 
   hs-source-dirs:      test
 
@@ -214,7 +213,7 @@ library demo-forwarder-lib
                        , trace-forward
 
 executable demo-forwarder
-  import:              base, project-config
+  import:              project-config
 
   hs-source-dirs:      demo/ssh
 
@@ -229,7 +228,7 @@ executable demo-forwarder
     buildable:         False
 
 library demo-acceptor-lib
-  import:              base, project-config
+  import:              project-config
 
   hs-source-dirs:      test
 
@@ -253,7 +252,7 @@ library demo-acceptor-lib
                        , trace-forward
 
 executable demo-acceptor
-  import:              base, project-config
+  import:              project-config
 
   hs-source-dirs:      demo
 
@@ -268,7 +267,7 @@ executable demo-acceptor
     buildable:         False
 
 test-suite cardano-tracer-test
-  import:              base, project-config
+  import:              project-config
   type:                exitcode-stdio-1.0
   default-extensions:  OverloadedStrings
 
@@ -315,7 +314,7 @@ test-suite cardano-tracer-test
                        -with-rtsopts=-N
 
 test-suite cardano-tracer-test-ext
-  import:              base, project-config
+  import:              project-config
   type:                exitcode-stdio-1.0
   default-extensions:  OverloadedStrings
 
@@ -370,7 +369,7 @@ test-suite cardano-tracer-test-ext
                        -with-rtsopts=-N
 
 benchmark cardano-tracer-bench
-  import:              base, project-config
+  import:              project-config
   type:                exitcode-stdio-1.0
 
   hs-source-dirs:      bench

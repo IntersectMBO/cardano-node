@@ -14,10 +14,10 @@ build-type:          Simple
 extra-doc-files:     README.md
                      CHANGELOG.md
 
-common base            { build-depends: base >= 4.14 && < 4.15 }
-
 common project-config
   default-language:    Haskell2010
+  build-depends:       base >= 4.14 && < 4.15
+
 
   ghc-options:         -Wall
                        -Wcompat
@@ -30,7 +30,7 @@ common project-config
                        -Wunused-packages
 
 library
-  import:              base, project-config
+  import:              project-config
   hs-source-dirs:      src
 
   exposed-modules:     Trace.Forward.Protocol.DataPoint.Acceptor
@@ -69,7 +69,7 @@ library
                        , typed-protocols-cborg
 
 test-suite test
-  import:              base, project-config
+  import:              project-config
   type:                exitcode-stdio-1.0
   main-is:             Main.hs
   hs-source-dirs:      test

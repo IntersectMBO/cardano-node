@@ -10,9 +10,8 @@ license-files:         LICENSE
                        NOTICE
 build-type:            Simple
 
-common base                         { build-depends: base                             >= 4.14       && < 4.15     }
-
 common project-config
+  build-depends:        base >= 4.14 && < 4.15
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
   ghc-options:          -Wall
@@ -24,7 +23,7 @@ common project-config
                         -Wredundant-constraints
 
 executable cardano-topology
-  import:               base, project-config
+  import:               project-config
   hs-source-dirs:       .
   main-is:              cardano-topology.hs
   ghc-options:          -threaded

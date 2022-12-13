@@ -10,15 +10,13 @@ license-files:          LICENSE
                         NOTICE
 build-type:             Simple
 
-common base                         { build-depends: base                             >= 4.14       && < 4.15     }
 
-  if os(windows)
-    buildable: False
 
 
 common project-config
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
+  build-depends:        base >= 4.14 && < 4.15
 
   ghc-options:          -Wall
                         -Wcompat
@@ -28,9 +26,11 @@ common project-config
                         -Wpartial-fields
                         -Wredundant-constraints
                         -Wunused-packages
+  if os(windows)
+    buildable: False
 
 executable cardano-node-chairman
-  import:               base, project-config
+  import:               project-config
 
   hs-source-dirs:       app
   main-is:              cardano-node-chairman.hs
@@ -57,7 +57,7 @@ executable cardano-node-chairman
                       , time
 
 test-suite chairman-tests
-  import:               base, project-config
+  import:               project-config
 
   hs-source-dirs:       test
 

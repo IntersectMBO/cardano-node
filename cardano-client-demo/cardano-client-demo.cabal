@@ -16,20 +16,19 @@ license-files:
   NOTICE
 extra-source-files:  CHANGELOG.md
 
-common base                         { build-depends: base                             >= 4.14       && < 4.15     }
-
 common project-config
   default-language:     Haskell2010
+  build-depends:        base >= 4.14 && < 4.15
 
 executable scan-blocks
-  import:               base, project-config
+  import:               project-config
   main-is:              ScanBlocks.hs
   build-depends:        cardano-api
                       , filepath
                       , time
 
 executable scan-blocks-pipelined
-  import:               base, project-config
+  import:               project-config
   main-is:              ScanBlocksPipelined.hs
   build-depends:        cardano-api
                       , cardano-ledger-byron ^>= 0.1
@@ -38,7 +37,7 @@ executable scan-blocks-pipelined
                       , time
 
 executable chain-sync-client-with-ledger-state
-  import:               base, project-config
+  import:               project-config
   main-is:              ChainSyncClientWithLedgerState.hs
   build-depends:        cardano-api
                       , cardano-ledger-byron ^>= 0.1
@@ -53,7 +52,7 @@ executable chain-sync-client-with-ledger-state
                       , transformers
 
 executable ledger-state
-  import:              base, project-config
+  import:              project-config
   main-is:             LedgerState.hs
   build-depends:       aeson,
                        base16-bytestring,
@@ -86,7 +85,7 @@ executable ledger-state
                        typed-protocols,
 
 executable stake-credential-history
-  import:               base, project-config
+  import:              project-config
   main-is:             StakeCredentialHistory.hs
   ghc-options:        -Wall
                       -Wcompat

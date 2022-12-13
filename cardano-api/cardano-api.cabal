@@ -11,12 +11,11 @@ license-files:          LICENSE
 build-type:             Simple
 extra-source-files:     README.md, ChangeLog.md
 
-common base                         { build-depends: base                             >= 4.14       && < 4.15     }
-
 common project-config
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
                         OverloadedStrings
+  build-depends:        base >= 4.14 && < 4.15
 
   ghc-options:          -Wall
                         -Wcompat
@@ -31,7 +30,7 @@ common maybe-unix
      build-depends:    unix
 
 library
-  import:               base, project-config, maybe-unix
+  import:               project-config, maybe-unix
 
   hs-source-dirs:       src
 
@@ -169,7 +168,7 @@ library
                       , yaml
 
 library gen
-  import:               base, project-config
+  import:               project-config
 
   visibility:           public
 
@@ -200,7 +199,7 @@ library gen
                       , text
 
 test-suite cardano-api-test
-  import:               base, project-config
+  import:               project-config
   hs-source-dirs:       test
   main-is:              cardano-api-test.hs
   type:                 exitcode-stdio-1.0

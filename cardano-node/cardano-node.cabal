@@ -20,13 +20,12 @@ flag systemd
   default:        True
   manual:         False
 
-common base                         { build-depends: base                             >= 4.14       && < 4.15     }
-
 common project-config
   default-language:     Haskell2010
 
   default-extensions:   NoImplicitPrelude
                         OverloadedStrings
+  build-depends:        base >= 4.14 && < 4.15
 
   ghc-options:          -Wall
                         -Wcompat
@@ -46,7 +45,7 @@ common maybe-unix
     build-depends:      unix
 
 library
-  import:               base, project-config
+  import:               project-config
                       , maybe-unix
                       , maybe-Win32
   if flag(unexpected_thunks)
@@ -189,7 +188,7 @@ library
                       , yaml
 
 executable cardano-node
-  import:               base, project-config
+  import:               project-config
   hs-source-dirs:       app
   main-is:              cardano-node.hs
   ghc-options:          -threaded
@@ -209,7 +208,7 @@ executable cardano-node
                       , text
 
 test-suite cardano-node-test
-  import:               base, project-config
+  import:               project-config
                       , maybe-unix
   hs-source-dirs:       test
   main-is:              cardano-node-test.hs

@@ -11,7 +11,7 @@ license-files:
   NOTICE
 build-type:            Simple
 
-common base
+common project-config
   default-language:    Haskell2010
   default-extensions:  BangPatterns
                        BlockArguments
@@ -52,7 +52,7 @@ common base
     buildable: False
 
 library
-  import:              base
+  import:              project-config
   hs-source-dirs:      src
 
   exposed-modules:     Data.Accum
@@ -137,7 +137,7 @@ library
                      , cardano-strict-containers == 0.1.0.1
 
 executable locli
-  import:              base
+  import:              project-config
 
   hs-source-dirs:      app
   main-is:             locli.hs
@@ -156,7 +156,7 @@ executable locli
                      , transformers-except
 
 test-suite test-locli
-  import:               base
+  import:               project-config
 
   hs-source-dirs:       test
   main-is:              test-locli.hs
