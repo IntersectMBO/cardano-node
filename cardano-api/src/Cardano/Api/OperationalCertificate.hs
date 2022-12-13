@@ -85,10 +85,10 @@ instance HasTypeProxy OperationalCertificateIssueCounter where
     proxyToAsType _ = AsOperationalCertificateIssueCounter
 
 instance HasTextEnvelope OperationalCertificate where
-    textEnvelopeType _ = "NodeOperationalCertificate"
+    textEnvelopeType _ = ["NodeOperationalCertificate"]
 
 instance HasTextEnvelope OperationalCertificateIssueCounter where
-    textEnvelopeType _ = "NodeOperationalCertificateIssueCounter"
+    textEnvelopeType _ = ["NodeOperationalCertificateIssueCounter"]
 
 data OperationalCertIssueError =
        -- | The stake pool verification key expected for the

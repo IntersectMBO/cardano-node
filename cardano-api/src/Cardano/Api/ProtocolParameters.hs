@@ -849,7 +849,7 @@ instance HasTypeProxy UpdateProposal where
     proxyToAsType _ = AsUpdateProposal
 
 instance HasTextEnvelope UpdateProposal where
-    textEnvelopeType _ = "UpdateProposalShelley"
+    textEnvelopeType _ = ["UpdateProposalShelley"]
 
 instance ToCBOR UpdateProposal where
     toCBOR (UpdateProposal ppup epochno) =

@@ -158,15 +158,15 @@ instance SerialiseAsRawBytes (Hash PaymentKey) where
         (PaymentKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs)
 
 instance HasTextEnvelope (VerificationKey PaymentKey) where
-    textEnvelopeType _ = "PaymentVerificationKeyShelley_"
-                      <> fromString (Crypto.algorithmNameDSIGN proxy)
+    textEnvelopeType _ = ["PaymentVerificationKeyShelley_"
+                      <> fromString (Crypto.algorithmNameDSIGN proxy)]
       where
         proxy :: Proxy (Shelley.DSIGN StandardCrypto)
         proxy = Proxy
 
 instance HasTextEnvelope (SigningKey PaymentKey) where
-    textEnvelopeType _ = "PaymentSigningKeyShelley_"
-                      <> fromString (Crypto.algorithmNameDSIGN proxy)
+    textEnvelopeType _ = ["PaymentSigningKeyShelley_"
+                      <> fromString (Crypto.algorithmNameDSIGN proxy)]
       where
         proxy :: Proxy (Shelley.DSIGN StandardCrypto)
         proxy = Proxy
@@ -303,10 +303,10 @@ instance SerialiseAsRawBytes (Hash PaymentExtendedKey) where
         PaymentExtendedKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey PaymentExtendedKey) where
-    textEnvelopeType _ = "PaymentExtendedVerificationKeyShelley_ed25519_bip32"
+    textEnvelopeType _ = ["PaymentExtendedVerificationKeyShelley_ed25519_bip32"]
 
 instance HasTextEnvelope (SigningKey PaymentExtendedKey) where
-    textEnvelopeType _ = "PaymentExtendedSigningKeyShelley_ed25519_bip32"
+    textEnvelopeType _ = ["PaymentExtendedSigningKeyShelley_ed25519_bip32"]
 
 instance CastVerificationKeyRole PaymentExtendedKey PaymentKey where
     castVerificationKey (PaymentExtendedVerificationKey vk) =
@@ -409,15 +409,15 @@ instance SerialiseAsRawBytes (Hash StakeKey) where
         StakeKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey StakeKey) where
-    textEnvelopeType _ = "StakeVerificationKeyShelley_"
-                      <> fromString (Crypto.algorithmNameDSIGN proxy)
+    textEnvelopeType _ = ["StakeVerificationKeyShelley_"
+                      <> fromString (Crypto.algorithmNameDSIGN proxy)]
       where
         proxy :: Proxy (Shelley.DSIGN StandardCrypto)
         proxy = Proxy
 
 instance HasTextEnvelope (SigningKey StakeKey) where
-    textEnvelopeType _ = "StakeSigningKeyShelley_"
-                      <> fromString (Crypto.algorithmNameDSIGN proxy)
+    textEnvelopeType _ = ["StakeSigningKeyShelley_"
+                      <> fromString (Crypto.algorithmNameDSIGN proxy)]
       where
         proxy :: Proxy (Shelley.DSIGN StandardCrypto)
         proxy = Proxy
@@ -552,10 +552,10 @@ instance SerialiseAsRawBytes (Hash StakeExtendedKey) where
         StakeExtendedKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey StakeExtendedKey) where
-    textEnvelopeType _ = "StakeExtendedVerificationKeyShelley_ed25519_bip32"
+    textEnvelopeType _ = ["StakeExtendedVerificationKeyShelley_ed25519_bip32"]
 
 instance HasTextEnvelope (SigningKey StakeExtendedKey) where
-    textEnvelopeType _ = "StakeExtendedSigningKeyShelley_ed25519_bip32"
+    textEnvelopeType _ = ["StakeExtendedSigningKeyShelley_ed25519_bip32"]
 
 instance CastVerificationKeyRole StakeExtendedKey StakeKey where
     castVerificationKey (StakeExtendedVerificationKey vk) =
@@ -649,15 +649,15 @@ instance SerialiseAsRawBytes (Hash GenesisKey) where
         GenesisKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey GenesisKey) where
-    textEnvelopeType _ = "GenesisVerificationKey_"
-                      <> fromString (Crypto.algorithmNameDSIGN proxy)
+    textEnvelopeType _ = ["GenesisVerificationKey_"
+                      <> fromString (Crypto.algorithmNameDSIGN proxy)]
       where
         proxy :: Proxy (Shelley.DSIGN StandardCrypto)
         proxy = Proxy
 
 instance HasTextEnvelope (SigningKey GenesisKey) where
-    textEnvelopeType _ = "GenesisSigningKey_"
-                      <> fromString (Crypto.algorithmNameDSIGN proxy)
+    textEnvelopeType _ = ["GenesisSigningKey_"
+                      <> fromString (Crypto.algorithmNameDSIGN proxy)]
       where
         proxy :: Proxy (Shelley.DSIGN StandardCrypto)
         proxy = Proxy
@@ -785,10 +785,10 @@ instance SerialiseAsRawBytes (Hash GenesisExtendedKey) where
         GenesisExtendedKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey GenesisExtendedKey) where
-    textEnvelopeType _ = "GenesisExtendedVerificationKey_ed25519_bip32"
+    textEnvelopeType _ = ["GenesisExtendedVerificationKey_ed25519_bip32"]
 
 instance HasTextEnvelope (SigningKey GenesisExtendedKey) where
-    textEnvelopeType _ = "GenesisExtendedSigningKey_ed25519_bip32"
+    textEnvelopeType _ = ["GenesisExtendedSigningKey_ed25519_bip32"]
 
 instance CastVerificationKeyRole GenesisExtendedKey GenesisKey where
     castVerificationKey (GenesisExtendedVerificationKey vk) =
@@ -883,15 +883,15 @@ instance SerialiseAsRawBytes (Hash GenesisDelegateKey) where
         GenesisDelegateKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey GenesisDelegateKey) where
-    textEnvelopeType _ = "GenesisDelegateVerificationKey_"
-                      <> fromString (Crypto.algorithmNameDSIGN proxy)
+    textEnvelopeType _ = ["GenesisDelegateVerificationKey_"
+                      <> fromString (Crypto.algorithmNameDSIGN proxy)]
       where
         proxy :: Proxy (Shelley.DSIGN StandardCrypto)
         proxy = Proxy
 
 instance HasTextEnvelope (SigningKey GenesisDelegateKey) where
-    textEnvelopeType _ = "GenesisDelegateSigningKey_"
-                      <> fromString (Crypto.algorithmNameDSIGN proxy)
+    textEnvelopeType _ = ["GenesisDelegateSigningKey_"
+                      <> fromString (Crypto.algorithmNameDSIGN proxy)]
       where
         proxy :: Proxy (Shelley.DSIGN StandardCrypto)
         proxy = Proxy
@@ -1023,10 +1023,10 @@ instance SerialiseAsRawBytes (Hash GenesisDelegateExtendedKey) where
         GenesisDelegateExtendedKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey GenesisDelegateExtendedKey) where
-    textEnvelopeType _ = "GenesisDelegateExtendedVerificationKey_ed25519_bip32"
+    textEnvelopeType _ = ["GenesisDelegateExtendedVerificationKey_ed25519_bip32"]
 
 instance HasTextEnvelope (SigningKey GenesisDelegateExtendedKey) where
-    textEnvelopeType _ = "GenesisDelegateExtendedSigningKey_ed25519_bip32"
+    textEnvelopeType _ = ["GenesisDelegateExtendedSigningKey_ed25519_bip32"]
 
 instance CastVerificationKeyRole GenesisDelegateExtendedKey GenesisDelegateKey where
     castVerificationKey (GenesisDelegateExtendedVerificationKey vk) =
@@ -1120,15 +1120,15 @@ instance SerialiseAsRawBytes (Hash GenesisUTxOKey) where
         GenesisUTxOKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey GenesisUTxOKey) where
-    textEnvelopeType _ = "GenesisUTxOVerificationKey_"
-                      <> fromString (Crypto.algorithmNameDSIGN proxy)
+    textEnvelopeType _ = ["GenesisUTxOVerificationKey_"
+                      <> fromString (Crypto.algorithmNameDSIGN proxy)]
       where
         proxy :: Proxy (Shelley.DSIGN StandardCrypto)
         proxy = Proxy
 
 instance HasTextEnvelope (SigningKey GenesisUTxOKey) where
-    textEnvelopeType _ = "GenesisUTxOSigningKey_"
-                      <> fromString (Crypto.algorithmNameDSIGN proxy)
+    textEnvelopeType _ = ["GenesisUTxOSigningKey_"
+                      <> fromString (Crypto.algorithmNameDSIGN proxy)]
       where
         proxy :: Proxy (Shelley.DSIGN StandardCrypto)
         proxy = Proxy
@@ -1250,15 +1250,15 @@ instance FromJSON (Hash StakePoolKey) where
       Right h -> pure h
 
 instance HasTextEnvelope (VerificationKey StakePoolKey) where
-    textEnvelopeType _ = "StakePoolVerificationKey_"
-                      <> fromString (Crypto.algorithmNameDSIGN proxy)
+    textEnvelopeType _ = ["StakePoolVerificationKey_"
+                      <> fromString (Crypto.algorithmNameDSIGN proxy)]
       where
         proxy :: Proxy (Shelley.DSIGN StandardCrypto)
         proxy = Proxy
 
 instance HasTextEnvelope (SigningKey StakePoolKey) where
-    textEnvelopeType _ = "StakePoolSigningKey_"
-                      <> fromString (Crypto.algorithmNameDSIGN proxy)
+    textEnvelopeType _ = ["StakePoolSigningKey_"
+                      <> fromString (Crypto.algorithmNameDSIGN proxy)]
       where
         proxy :: Proxy (Shelley.DSIGN StandardCrypto)
         proxy = Proxy

@@ -467,10 +467,10 @@ instance IsScriptLanguage lang => SerialiseAsCBOR (Script lang) where
 instance IsScriptLanguage lang => HasTextEnvelope (Script lang) where
     textEnvelopeType _ =
       case scriptLanguage :: ScriptLanguage lang of
-        SimpleScriptLanguage SimpleScriptV1 -> "SimpleScriptV1"
-        SimpleScriptLanguage SimpleScriptV2 -> "SimpleScriptV2"
-        PlutusScriptLanguage PlutusScriptV1 -> "PlutusScriptV1"
-        PlutusScriptLanguage PlutusScriptV2 -> "PlutusScriptV2"
+        SimpleScriptLanguage SimpleScriptV1 -> ["SimpleScriptV1"]
+        SimpleScriptLanguage SimpleScriptV2 -> ["SimpleScriptV2"]
+        PlutusScriptLanguage PlutusScriptV1 -> ["PlutusScriptV1"]
+        PlutusScriptLanguage PlutusScriptV2 -> ["PlutusScriptV2"]
 
 
 -- ----------------------------------------------------------------------------
@@ -1084,8 +1084,8 @@ instance (IsPlutusScriptLanguage lang, Typeable lang) =>
          HasTextEnvelope (PlutusScript lang) where
     textEnvelopeType _ =
       case plutusScriptVersion :: PlutusScriptVersion lang of
-        PlutusScriptV1 -> "PlutusScriptV1"
-        PlutusScriptV2 -> "PlutusScriptV2"
+        PlutusScriptV1 -> ["PlutusScriptV1"]
+        PlutusScriptV2 -> ["PlutusScriptV2"]
 
 
 -- | An example Plutus script that always succeeds, irrespective of inputs.

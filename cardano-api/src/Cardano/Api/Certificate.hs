@@ -106,7 +106,7 @@ instance FromCBOR Certificate where
     fromCBOR = fromShelleyCertificate <$> fromCBOR
 
 instance HasTextEnvelope Certificate where
-    textEnvelopeType _ = "CertificateShelley"
+    textEnvelopeType _ = ["CertificateShelley"]
     textEnvelopeDefaultDescr cert = case cert of
       StakeAddressRegistrationCertificate{}   -> "Stake address registration"
       StakeAddressDeregistrationCertificate{} -> "Stake address de-registration"

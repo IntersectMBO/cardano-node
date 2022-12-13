@@ -135,15 +135,15 @@ instance SerialiseAsRawBytes (Hash KesKey) where
         KesKeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey KesKey) where
-    textEnvelopeType _ = "KesVerificationKey_"
-                      <> fromString (Crypto.algorithmNameKES proxy)
+    textEnvelopeType _ = ["KesVerificationKey_"
+                      <> fromString (Crypto.algorithmNameKES proxy)]
       where
         proxy :: Proxy (Shelley.KES StandardCrypto)
         proxy = Proxy
 
 instance HasTextEnvelope (SigningKey KesKey) where
-    textEnvelopeType _ = "KesSigningKey_"
-                      <> fromString (Crypto.algorithmNameKES proxy)
+    textEnvelopeType _ = ["KesSigningKey_"
+                      <> fromString (Crypto.algorithmNameKES proxy)]
       where
         proxy :: Proxy (Shelley.KES StandardCrypto)
         proxy = Proxy
@@ -241,13 +241,13 @@ instance SerialiseAsRawBytes (Hash VrfKey) where
         VrfKeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey VrfKey) where
-    textEnvelopeType _ = "VrfVerificationKey_" <> fromString (Crypto.algorithmNameVRF proxy)
+    textEnvelopeType _ = ["VrfVerificationKey_" <> fromString (Crypto.algorithmNameVRF proxy)]
       where
         proxy :: Proxy (Shelley.VRF StandardCrypto)
         proxy = Proxy
 
 instance HasTextEnvelope (SigningKey VrfKey) where
-    textEnvelopeType _ = "VrfSigningKey_" <> fromString (Crypto.algorithmNameVRF proxy)
+    textEnvelopeType _ = ["VrfSigningKey_" <> fromString (Crypto.algorithmNameVRF proxy)]
       where
         proxy :: Proxy (Shelley.VRF StandardCrypto)
         proxy = Proxy
