@@ -8,6 +8,7 @@ description:         This is intended to demonstrate how to write simple
                      using the cardano-api.
 license:             Apache-2.0
 license-file:        LICENSE
+                     NOTICE
 author:              IOHK
 maintainer:          operations@iohk.io
 license-files:

@@ -5,6 +5,9 @@ version:              0.1.0.0
 synopsis:             Package for tracing resources for linux, mac and windows
 author:               Juergen Nicklisch-Franken
 maintainer:           operations@iohk.io
+license:              Apache-2.0
+license-file:         LICENSE
+                      NOTICE
 copyright:            2021 IOHK
 extra-source-files:   CHANGELOG.md
                       README.md

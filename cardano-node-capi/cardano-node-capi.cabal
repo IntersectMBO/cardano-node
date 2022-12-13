@@ -5,6 +5,8 @@ version:            0.1.0.0
 description:        ffi c library around the full node
 author:             IOHK
 maintainer:         operations@iohk.io
+license-files:      LICENSE
+                    NOTICE
 
 extra-source-files: CHANGELOG.md
 
