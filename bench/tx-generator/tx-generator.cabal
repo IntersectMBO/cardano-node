@@ -56,6 +56,8 @@ library
                         Cardano.Benchmarking.Version
                         Cardano.Benchmarking.Wallet
 
+                        Cardano.Benchmarking.Plutus.BenchCustomCall
+
                         Cardano.TxGenerator.Fund
                         Cardano.TxGenerator.FundQueue
                         Cardano.TxGenerator.Genesis
@@ -118,6 +120,7 @@ library
                       , ouroboros-network-framework
                       , plutus-ledger-api
                       , plutus-tx
+                      , plutus-tx-plugin
                       , random
                       , serialise
                       , streaming
@@ -177,6 +180,7 @@ test-suite tx-generator-apitest
                       , cardano-api
                       , cardano-cli
                       , cardano-node
+                      , plutus-tx
                       , transformers
                       , transformers-except
                       , tx-generator

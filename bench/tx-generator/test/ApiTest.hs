@@ -11,7 +11,7 @@ module Main (main) where
 import           Control.Monad (when)
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
-import           Data.Aeson (FromJSON, eitherDecodeFileStrict')
+import           Data.Aeson (FromJSON, eitherDecodeFileStrict', encode)
 import qualified Data.ByteString.Lazy.Char8 as BSL (putStrLn)
 import           Options.Applicative as Opt
 import           Options.Applicative.Common as Opt (runParserInfo)
@@ -21,7 +21,7 @@ import           System.Exit (die, exitSuccess)
 import           System.FilePath
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (protocolParamMaxTxExUnits)
+import           Cardano.Api.Shelley (ProtocolParameters, fromPlutusData, protocolParamMaxTxExUnits)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Types (AdjustFilePaths (..), GenesisFile (..))
 
@@ -37,7 +37,11 @@ import           Cardano.Benchmarking.Script.Aeson (prettyPrint, prettyPrintYaml
 import           Cardano.Benchmarking.Script.Selftest (testScript)
 import           Cardano.Benchmarking.Script.Types (SubmitMode (..))
 
+import           Cardano.Benchmarking.Plutus.BenchCustomCall
+
 import           Cardano.Node.Protocol.Types
+
+import qualified PlutusTx
 
 import           Paths_tx_generator
 
@@ -64,6 +68,10 @@ main
                 _               -> ""
         putStrLn msg
         exitSuccess
+
+    let
+
+
 
     CommandLine{..} <- parseCommandLine
     let pathModifier p = if isRelative p then runPath </> p else p
@@ -94,7 +102,11 @@ main
       Right (nixService, _nc, genesis, sigKey) -> do
         putStrLn $ "* Did I manage to extract a genesis fund?\n--> " ++ show (checkFund genesis sigKey)
         putStrLn "* Can I pre-execute a plutus script?"
-        checkPlutusLoop (_nix_plutus nixService)
+        let plutus = _nix_plutus nixService
+        case plutusType <$> plutus of
+          Just LimitSaturationLoop  -> checkPlutusLoop plutus
+          Just BenchCustomCall      -> checkPlutusBuiltin
+          _                         -> pure ()
         exitSuccess
 
 checkFund ::
@@ -103,15 +115,40 @@ checkFund ::
   -> Maybe (AddressInEra BabbageEra, Lovelace)
 checkFund = genesisInitialFundForKey Mainnet
 
+checkPlutusBuiltin ::
+     IO ()
+checkPlutusBuiltin
+  = do
+    let apiData = toApiData bData
+    putStrLn "* serialisation of built-in Plutus script:"
+    BSL.putStrLn $ textEnvelopeToJSON Nothing customCallScript
+    putStrLn "* custom script data in Cardano API format:"
+    BSL.putStrLn $ encode $ scriptDataToJson ScriptDataJsonDetailedSchema apiData
+
+    protocolParameters <- readProtocolParametersOrDie
+    case preExecutePlutusScript protocolParameters script apiData apiData of
+      Left err -> putStrLn $ "--> execution failed: " ++ show err
+      Right units -> putStrLn $ "--> execution successful; got units: " ++ show units
+  where
+    -- the built-in script expects a list of BenchCustomData both as datum and as redeemer
+    bData :: [BenchCustomData]
+    bData  = [BenchNone, BenchInt 42, BenchConcat "test123ABC" ["test", "123", "ABC"]]
+    -- bData' = [BenchNone, BenchInt 42, BenchConcat "test123ABC" ["test", "123", "ABCD"]]
+
+    toApiData :: [BenchCustomData] -> ScriptData
+    toApiData = fromPlutusData . PlutusTx.toData
+
+    script :: ScriptInAnyLang
+    script = toScriptInAnyLang $ PlutusScript PlutusScriptV2 customCallScript
+
 checkPlutusLoop ::
      Maybe TxGenPlutusParams
   -> IO ()
 checkPlutusLoop (Just PlutusOn{..})
   = do
-    parametersFile <- getDataFileName "data/protocol-parameters-v8.json"
-    protocolParameters <- either die pure =<< eitherDecodeFileStrict' parametersFile
     script <- either (die . show) pure =<< readPlutusScript plutusScript
     putStrLn $ "--> Read plutus script: " ++ plutusScript
+    protocolParameters <- readProtocolParametersOrDie
 
     let count = 1792        -- arbitrary counter for a loop script; should respect mainnet limits
 
@@ -143,8 +180,24 @@ checkPlutusLoop (Just PlutusOn{..})
 checkPlutusLoop _
   = putStrLn "--> No plutus script defined."
 
+
+--
+-- helpers
+--
+
 readFileJson :: FromJSON a => FilePath -> ExceptT TxGenError IO a
 readFileJson f = handleIOExceptT (TxGenError . show) (eitherDecodeFileStrict' f) >>= firstExceptT TxGenError . hoistEither
+
+readProtocolParametersOrDie :: IO ProtocolParameters
+readProtocolParametersOrDie
+  = do
+    parametersFile <- getDataFileName "data/protocol-parameters-v8.json"
+    either die pure =<< eitherDecodeFileStrict' parametersFile
+
+
+--
+-- command line parsing
+--
 
 parseCommandLine :: IO CommandLine
 parseCommandLine
