@@ -24,20 +24,20 @@ instance LogFormatting TestMessage where
            ]
 
 instance MetaTrace TestMessage where
-  namespaceFor (TestMessage _text) = NamespaceInner ["TestMessage"]
-  severityFor (NamespaceInner ["TestMessage"]) = Info
-  privacyFor  (NamespaceInner ["TestMessage"]) = Public
-  documentFor (NamespaceInner ["TestMessage"]) = "Just a test"
-  metricsDocFor (NamespaceInner ["TestMessage"]) = []
-  allNamespaces = [NamespaceInner ["TestMessage"]]
+  namespaceFor (TestMessage _text) = Namespace [] ["TestMessage"]
+  severityFor (Namespace _ ["TestMessage"]) = Info
+  privacyFor  (Namespace _ ["TestMessage"]) = Public
+  documentFor (Namespace _ ["TestMessage"]) = "Just a test"
+  metricsDocFor (Namespace _ ["TestMessage"]) = []
+  allNamespaces = [Namespace [] ["TestMessage"]]
 
 tracers :: MonadIO m => m (Trace m TestMessage, Trace m TestMessage, Trace m TestMessage)
 tracers  = do
   t <-  standardTracer
   t0 <- humanFormatter True (Just "cardano") t
-  t1 <- appendName "TestMessage" . appendName "tracer1" <$> filterSeverityFromConfig t0
-  t2 <- appendName "TestMessage" . appendName "tracer2" <$> filterSeverityFromConfig t0
-  t3 <- appendName "TestMessage" . appendName "tracer3" <$> filterSeverityFromConfig t0
+  t1 <- withInnerNames . appendOuterName "tracer1" <$> filterSeverityFromConfig t0
+  t2 <- withInnerNames . appendOuterName "tracer2" <$> filterSeverityFromConfig t0
+  t3 <- withInnerNames . appendOuterName "tracer3" <$> filterSeverityFromConfig t0
   pure (t1, t2, t3)
 
 config1 :: TraceConfig

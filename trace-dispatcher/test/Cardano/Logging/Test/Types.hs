@@ -69,31 +69,31 @@ instance LogFormatting Message where
   asMetrics _ = []
 
 instance MetaTrace Message where
-  namespaceFor  Message1 {} = NamespaceInner ["Message1"]
-  namespaceFor  Message2 {} = NamespaceInner ["Message2"]
-  namespaceFor  Message3 {} = NamespaceInner ["Message3"]
+  namespaceFor  Message1 {} = Namespace [] ["Message1"]
+  namespaceFor  Message2 {} = Namespace [] ["Message2"]
+  namespaceFor  Message3 {} = Namespace [] ["Message3"]
 
-  severityFor   (NamespaceInner ["Message1"]) = Debug
-  severityFor   (NamespaceInner ["Message2"]) = Info
-  severityFor   (NamespaceInner ["Message3"]) = Error
+  severityFor   (Namespace _ ["Message1"]) = Debug
+  severityFor   (Namespace _ ["Message2"]) = Info
+  severityFor   (Namespace _ ["Message3"]) = Error
   severityFor   ns = error ("Message>>severityFor: Missing namespace " ++ show ns)
 
-  privacyFor    (NamespaceInner ["Message1"]) = Public
-  privacyFor    (NamespaceInner ["Message2"]) = Confidential
-  privacyFor    (NamespaceInner ["Message3"]) = Public
+  privacyFor    (Namespace _ ["Message1"]) = Public
+  privacyFor    (Namespace _ ["Message2"]) = Confidential
+  privacyFor    (Namespace _ ["Message3"]) = Public
   privacyFor   ns = error ("Message>>privacyFor: Missing namespace " ++ show ns)
 
-  documentFor   (NamespaceInner ["Message1"]) = "The first message."
-  documentFor   (NamespaceInner ["Message2"]) = "The second message."
-  documentFor   (NamespaceInner ["Message3"]) = "The third message."
+  documentFor   (Namespace _ ["Message1"]) = "The first message."
+  documentFor   (Namespace _ ["Message2"]) = "The second message."
+  documentFor   (Namespace _ ["Message3"]) = "The third message."
   documentFor   ns = error ("Message>>documentFor: Missing namespace " ++ show ns)
 
-  metricsDocFor (NamespaceInner ["Test","Message1"]) =  [("Metrics1", "A number")]
+  metricsDocFor (Namespace _ ["Test","Message1"]) =  [("Metrics1", "A number")]
   metricsDocFor _                               =  []
 
-  allNamespaces = [ NamespaceInner ["Message1"]
-                  , NamespaceInner ["Message2"]
-                  , NamespaceInner ["Message3"]]
+  allNamespaces = [ Namespace [] ["Message1"]
+                  , Namespace [] ["Message2"]
+                  , Namespace [] ["Message3"]]
 
 instance Arbitrary Message where
   arbitrary = oneof

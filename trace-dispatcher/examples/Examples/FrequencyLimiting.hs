@@ -19,11 +19,11 @@ testLimiting = do
   t1 <- standardTracer
   tf1 <- humanFormatter True (Just "cardano") t1
   tf2 <- limitFrequency 5 "5 messages per second"
-            (appendName "tracer1" (contramap Message tf1))
-               (appendName "limiter1" (contramap Limit tf1))
+            (appendOuterName "tracer1" (contramap Message tf1))
+               (appendOuterName "limiter1" (contramap Limit tf1))
   tf3 <- limitFrequency 15 "15 messages per second"
-            (appendName "tracer2"  (contramap Message tf1))
-               (appendName "limiter2" (contramap Limit tf1))
+            (appendOuterName "tracer2"  (contramap Message tf1))
+               (appendOuterName "limiter2" (contramap Limit tf1))
   let t = tf2 <> tf3
   configureTracers emptyTraceConfig [t]
 

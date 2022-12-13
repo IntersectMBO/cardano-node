@@ -141,7 +141,7 @@ data ConfigRepresentation = ConfigRepresentation {
   , traceOptionPeerFrequency     :: Maybe Int
   , traceOptionResourceFrequency :: Maybe Int
   }
-  deriving (Eq, Ord, Show,Generic)
+  deriving (Eq, Ord, Show, Generic)
 
 type OptionsRepresentation = Map.Map Text ConfigOptionRep
 

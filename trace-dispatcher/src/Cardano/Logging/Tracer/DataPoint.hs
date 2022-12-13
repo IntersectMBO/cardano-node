@@ -33,7 +33,7 @@ dataPointTracer dataPointStore =
       -> Either TraceControl DataPoint
       -> m ()
     output LoggingContext {..} (Right val) =
-      liftIO $ writeToStore dataPointStore (nameSpaceToText lcNamespace) val
+      liftIO $ writeToStore dataPointStore (nameSpaceToText (lcNSOuter ++ lcNSInner)) val
     output LoggingContext {} (Left Reset) = liftIO $ do
       pure ()
     output _lk (Left _c@TCDocument {}) = do

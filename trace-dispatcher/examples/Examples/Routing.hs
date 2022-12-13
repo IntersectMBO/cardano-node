@@ -26,8 +26,8 @@ testRouting :: IO ()
 testRouting = do
     t <- standardTracer
     tf <- machineFormatter (Just "cardano") t
-    let t1 = appendName "tracer1" tf
-    let t2 = appendName "tracer2" tf
+    let t1 = appendOuterName "tracer1" tf
+    let t2 = appendOuterName "tracer2" tf
     configureTracers emptyTraceConfig [t1, t2]
     r1 <- routingTracer1 t1 t2
     r2 <- routingTracer2 t1 t2

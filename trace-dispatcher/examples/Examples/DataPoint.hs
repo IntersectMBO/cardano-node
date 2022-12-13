@@ -26,14 +26,21 @@ data BaseStats = BaseStats {
     bsSum     :: Double
     } deriving (Eq, Ord, Show, Generic)
 
+instance MetaTrace BaseStats where
+  namespaceFor BaseStats{} = Namespace [] ["BaseStats"]
+  severityFor (Namespace _ ["BaseStats"]) = Info
+  privacyFor  (Namespace _ ["BaseStats"]) = Public
+  documentFor (Namespace _ ["BaseStats"]) = "Basic statistics"
+  metricsDocFor (Namespace _ ["BaseStats"]) =
+    [ ("measure", "This is the value of a single measurment")
+    , ("sum", "This is the sum of all measurments")]
+  allNamespaces = [Namespace [] ["BaseStats"]]
+
 instance A.ToJSON BaseStats where
   toEncoding = A.genericToEncoding A.defaultOptions
 
 instance Show DataPoint where
   show (DataPoint a) = toString $ A.encode a
-
-namesForBaseStats :: BaseStats -> NamespaceInner BaseStats
-namesForBaseStats _ = NamespaceInner ["BaseStats"]
 
 emptyStats :: BaseStats
 emptyStats = BaseStats 0.0 100000000.0 (-100000000.0) 0 0.0
@@ -42,9 +49,7 @@ testDataPoint :: IO ()
 testDataPoint = do
     dpMap <- newTVarIO M.empty
     let rawDataPointTracer = dataPointTracer dpMap
-    dpTracer <- mkDataPointTracer
-                          rawDataPointTracer
-                          namesForBaseStats
+    dpTracer <- mkDataPointTracer rawDataPointTracer
     traceWith dpTracer emptyStats
     dps <- readTVarIO dpMap
     print dps

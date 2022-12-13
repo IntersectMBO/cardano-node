@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
@@ -16,10 +17,14 @@ module Cardano.Logging.Types (
   , DocMsg(..)
   , LoggingContext(..)
   , emptyLoggingContext
-  , NamespaceOuter (..)
-  , NamespaceInner (..)
-  , withTracerName
-  , withoutTracerName
+  , Namespace(..)
+  , mkNamespace
+  , mkInnerNamespace
+  , nsReplaceOuter
+  , nsReplaceInner
+  , nsGetOuter
+  , nsGetInner
+  , nsGetComplete
   , MetaTrace(..)
   , DetailLevel(..)
   , Privacy(..)
@@ -46,7 +51,7 @@ module Cardano.Logging.Types (
   , PreFormatted(..)
 ) where
 
--- import           Control.Tracer
+
 import           Codec.Serialise (Serialise (..))
 import qualified Control.Tracer as T
 import           Data.Aeson ((.=))
@@ -58,7 +63,8 @@ import           Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Map.Strict as SMap
 
-import           Data.Text (Text, pack, unpack, intercalate, singleton)
+
+import           Data.Text (Text, intercalate, pack, singleton, unpack)
 import           Data.Text.Lazy (toStrict)
 import           Data.Time (UTCTime)
 import           GHC.Generics
@@ -66,29 +72,42 @@ import           Network.HostName (HostName)
 
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
 
+
 -- | A unique identifier for every message, composed of text
-newtype NamespaceOuter a = NamespaceOuter {unNSOuter :: [Text]}
-
-instance Show (NamespaceOuter a) where
-  show (NamespaceOuter []) =  "[]"
-  show (NamespaceOuter ns) =  unpack $ intercalate (singleton '.') ns
-
 -- A namespace can as well appear with the tracer name (e.g. "ChainDB.OpenEvent.OpenedDB"),
--- in this moment it is a NamespaceInner
-newtype NamespaceInner a = NamespaceInner {unNSInner :: [Text]}
+-- or more prefixes, in this moment it is a NamespaceOuter is used
+data Namespace a = Namespace {
+    nsOuter :: [Text]
+  , nsInner :: [Text]}
+  deriving Eq
 
-instance Show (NamespaceInner a) where
-  show (NamespaceInner []) =  "[]"
-  show (NamespaceInner ns) =  unpack $ intercalate (singleton '*') ns
+instance Show (Namespace a) where
+  show (Namespace [] nsInner) =
+    unpack $ intercalate (singleton '.') nsInner
+  show (Namespace nsOuter nsInner) =
+    unpack $ intercalate (singleton '.') (nsOuter ++ nsInner)
 
-withTracerName :: NamespaceOuter a -> NamespaceInner a -> NamespaceOuter a
-withTracerName (NamespaceOuter l) (NamespaceInner r) = NamespaceOuter (l ++ r)
+mkNamespace :: [Text] -> [Text] -> Namespace a
+mkNamespace = Namespace
 
--- | Attention, just removes te first element of the namepsace
-withoutTracerName :: NamespaceOuter a -> NamespaceInner a
-withoutTracerName (NamespaceOuter (_hd : tl)) = NamespaceInner tl
-withoutTracerName (NamespaceOuter []) = error "Types>>withoutTracerName: incorret with tracer namespace"
+mkInnerNamespace :: [Text] -> Namespace a
+mkInnerNamespace = Namespace []
 
+nsReplaceOuter :: Namespace a -> [Text] -> Namespace a
+nsReplaceOuter (Namespace _ i) tl =  Namespace tl i
+
+nsReplaceInner :: Namespace a -> [Text] -> Namespace a
+nsReplaceInner (Namespace o _) =  Namespace o
+
+nsGetInner :: Namespace a -> [Text]
+nsGetInner = nsInner
+
+nsGetOuter :: Namespace a -> [Text]
+nsGetOuter = nsOuter
+
+nsGetComplete :: Namespace a -> [Text]
+nsGetComplete (Namespace [] i) = i
+nsGetComplete (Namespace o i)  = o ++ i
 
 -- | The Trace carries the underlying tracer Tracer from the contra-tracer package.
 --   It adds a 'LoggingContext' and maybe a 'TraceControl' to every message.
@@ -130,12 +149,15 @@ class LogFormatting a where
   asMetrics _v = []
 
 class MetaTrace a where
-  namespaceFor  :: a -> NamespaceInner a
-  severityFor   :: NamespaceInner a -> SeverityS
-  privacyFor    :: NamespaceInner a -> Privacy
-  documentFor   :: NamespaceInner a -> Text
-  metricsDocFor :: NamespaceInner a -> [(Text,Text)]
-  allNamespaces :: [NamespaceInner a]
+  namespaceFor  :: a -> Namespace a
+  severityFor   :: Namespace a -> SeverityS
+  privacyFor    :: Namespace a -> Privacy
+  privacyFor _  =  Public
+  documentFor   :: Namespace a -> Text
+  detailsFor    :: Namespace a -> DetailLevel
+  detailsFor _  =  DNormal
+  metricsDocFor :: Namespace a -> [(Text,Text)]
+  allNamespaces :: [Namespace a]
 
 data Metric
   -- | An integer metric.
@@ -161,12 +183,13 @@ emptyObject = HM.empty
 newtype Documented a = Documented {undoc :: [DocMsg a]}
   deriving Show
 
-
+instance Semigroup (Documented a) where
+  (<>) (Documented l) (Documented r) = Documented (l ++ r)
 
 -- | Document a message by giving a prototype, its most special name in the namespace
 -- and a comment in markdown format
 data DocMsg a = DocMsg {
-    dmNamespace :: NamespaceOuter a
+    dmNamespace :: Namespace a
   , dmMetricsMD :: [(Text, Text)]
   , dmMarkdown  :: Text
 }
@@ -176,14 +199,15 @@ instance Show (DocMsg a) where
 
 -- | Context any log message carries
 data LoggingContext = LoggingContext {
-    lcNamespace :: [Text]
+    lcNSInner   :: [Text]
+  , lcNSOuter   :: [Text]
   , lcSeverity  :: Maybe SeverityS
   , lcPrivacy   :: Maybe Privacy
   , lcDetails   :: Maybe DetailLevel
-  } deriving (Eq, Show)
+  }
 
 emptyLoggingContext :: LoggingContext
-emptyLoggingContext = LoggingContext [] Nothing Nothing Nothing
+emptyLoggingContext = LoggingContext [] [] Nothing Nothing Nothing
 
 -- | Formerly known as verbosity
 data DetailLevel =
@@ -191,7 +215,7 @@ data DetailLevel =
     | DNormal
     | DDetailed
     | DMaximum
-  deriving (Show, Eq, Ord, Bounded, Enum, Generic)
+  deriving (Show, Eq, Ord, Bounded, Enum, Generic, Serialise)
 
 instance AE.ToJSON DetailLevel where
     toEncoding = AE.genericToEncoding AE.defaultOptions
@@ -201,7 +225,7 @@ instance AE.FromJSON DetailLevel
 data Privacy =
       Confidential              -- ^ confidential information - handle with care
     | Public                    -- ^ can be public.
-      deriving (Show, Eq, Ord, Bounded, Enum)
+      deriving (Show, Eq, Ord, Bounded, Enum, Generic, Serialise)
 
 -- | Severity of a message
 data SeverityS
@@ -213,7 +237,7 @@ data SeverityS
     | Critical                -- ^ Severe situations
     | Alert                   -- ^ Take immediate action
     | Emergency               -- ^ System is unusable
-  deriving (Show, Eq, Ord, Bounded, Enum, Read, AE.ToJSON)
+  deriving (Show, Eq, Ord, Bounded, Enum, Read, AE.ToJSON, Generic, Serialise)
 
 -- | Severity for a filter
 -- Nothing means don't show anything (Silence)
@@ -422,15 +446,15 @@ data TraceControl where
 newtype DocCollector = DocCollector (IORef (Map Int LogDoc))
 
 data LogDoc = LogDoc {
-    ldDoc        :: ! Text
-  , ldMetricsDoc :: ! (SMap.Map Text Text)
-  , ldNamespace  :: ! [[Text]]
-  , ldSeverity   :: ! [SeverityS]
-  , ldPrivacy    :: ! [Privacy]
-  , ldDetails    :: ! [DetailLevel]
-  , ldBackends   :: ! [BackendConfig]
-  , ldFiltered   :: ! [SeverityF]
-  , ldLimiter    :: ! [(Text, Double)]
+    ldDoc        :: !Text
+  , ldMetricsDoc :: !(SMap.Map Text Text)
+  , ldNamespace  :: ![[Text]]
+  , ldSeverity   :: ![SeverityS]
+  , ldPrivacy    :: ![Privacy]
+  , ldDetails    :: ![DetailLevel]
+  , ldBackends   :: ![BackendConfig]
+  , ldFiltered   :: ![SeverityF]
+  , ldLimiter    :: ![(Text, Double)]
 } deriving(Eq, Show)
 
 emptyLogDoc :: Text -> [(Text, Text)] -> LogDoc
@@ -484,14 +508,9 @@ instance LogFormatting Integer where
 ---------------------------------------------------------------------------
 -- Instances for 'TraceObject' to forward it using 'trace-forward' library.
 
-deriving instance Generic Privacy
-deriving instance Generic SeverityS
 deriving instance Generic LoggingContext
 deriving instance Generic TraceObject
 
-instance Serialise DetailLevel
-instance Serialise Privacy
-instance Serialise SeverityS
 instance Serialise LoggingContext
 instance Serialise TraceObject
 

@@ -101,19 +101,19 @@ data TraceForgeEvent blk
   deriving (Eq, Show, Generic)
 
 instance MetaTrace (TraceForgeEvent blk) where
-  namespaceFor TraceStartLeadershipCheck {} = NamespaceInner ["StartLeadershipCheck"]
-  namespaceFor TraceSlotIsImmutable {} = NamespaceInner ["SlotIsImmutable"]
-  namespaceFor TraceBlockFromFuture {} = NamespaceInner ["BlockFromFuture"]
-  severityFor (NamespaceInner ["StartLeadershipCheck"]) = Info
-  severityFor (NamespaceInner ["SlotIsImmutable"]) = Error
-  severityFor (NamespaceInner ["BlockFromFuture"]) = Error
-  severityFor (NamespaceInner other) = error ("TestObject>>severityFor: Unknown namespace" ++ show other)
-  privacyFor  (NamespaceInner _) = Public
-  documentFor (NamespaceInner ["StartLeadershipCheck"]) =
+  namespaceFor TraceStartLeadershipCheck {} = Namespace [] ["StartLeadershipCheck"]
+  namespaceFor TraceSlotIsImmutable {} = Namespace [] ["SlotIsImmutable"]
+  namespaceFor TraceBlockFromFuture {} = Namespace  [] ["BlockFromFuture"]
+  severityFor (Namespace _ ["StartLeadershipCheck"]) = Info
+  severityFor (Namespace _ ["SlotIsImmutable"]) = Error
+  severityFor (Namespace _ ["BlockFromFuture"]) = Error
+  severityFor (Namespace _ other) = error ("TestObject>>severityFor: Unknown namespace" ++ show other)
+  privacyFor  (Namespace _ _) = Public
+  documentFor (Namespace _ ["StartLeadershipCheck"]) =
     "Start of the leadership check\n\
     \\n\
     \We record the current slot number."
-  documentFor (NamespaceInner ["SlotIsImmutable"]) =
+  documentFor (Namespace _ ["SlotIsImmutable"]) =
       "Leadership check failed: the tip of the ImmutableDB inhabits the\n\
     \current slot\n\
     \\n\
@@ -131,7 +131,7 @@ instance MetaTrace (TraceForgeEvent blk) where
     \ImmutableDB.\n\
     \\n\
     \See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>"
-  documentFor (NamespaceInner ["BlockFromFuture"]) =
+  documentFor (Namespace _ ["BlockFromFuture"]) =
       "Leadership check failed: the current chain contains a block from a slot\n\
     \/after/ the current slot\n\
     \\n\
@@ -141,10 +141,10 @@ instance MetaTrace (TraceForgeEvent blk) where
     \block at the tip of the chain.\n\
     \\n\
     \See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>"
-  metricsDocFor (NamespaceInner _) = []
-  allNamespaces = [ NamespaceInner ["StartLeadershipCheck"]
-                  , NamespaceInner ["SlotIsImmutable"]
-                  , NamespaceInner ["BlockFromFuture"]]
+  metricsDocFor (Namespace _ _) = []
+  allNamespaces = [ Namespace [] ["StartLeadershipCheck"]
+                  , Namespace [] ["SlotIsImmutable"]
+                  , Namespace [] ["BlockFromFuture"]]
 
 instance LogFormatting (TraceForgeEvent LogBlock) where
   forHuman (TraceStartLeadershipCheck slotNo) = pack $

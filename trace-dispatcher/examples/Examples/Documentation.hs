@@ -15,12 +15,18 @@ import           Examples.TestObjects
 docTracers :: IO ()
 docTracers = do
   t <- standardTracer
-  t1' <- humanFormatter True (Just "cardano") t
-  let t1 :: Trace IO (TraceForgeEvent LogBlock) = withSeverity severityFor
-                (appendName "node" t1')
-  t2' <- machineFormatter (Just "cardano") t
-  let t2  :: Trace IO (TraceForgeEvent LogBlock) = withSeverity severityFor
-                (appendName "node" t2')
-  bl <- documentMarkdown [t1, t2]
-  res <- buildersToText bl emptyTraceConfig
+  t1' <- humanFormatter True Nothing t
+  let t1 :: Trace IO (TraceForgeEvent LogBlock) =
+            withSeverity
+              $ withPrivacy
+                $ withDetails
+                  $ appendOuterName "node" t1'
+  t2' <- machineFormatter Nothing t
+  let t2  :: Trace IO (TraceForgeEvent LogBlock) =
+            withSeverity
+              $ withPrivacy
+                $ withDetails
+                   $ appendOuterName "node" t2'
+  bl <- documentTracer [t1, t2]
+  res <- docuResultsToText bl emptyTraceConfig
   T.writeFile "/tmp/Testdocu.md" res

@@ -23,13 +23,13 @@ instance LogFormatting Measure where
     [ DoubleM "measure" (fromIntegral count)]
 
 instance MetaTrace Measure where
-  namespaceFor (Measure _count) = NamespaceInner ["Count"]
-  severityFor (NamespaceInner ["Count"]) = Info
-  privacyFor  (NamespaceInner ["Count"]) = Public
-  documentFor (NamespaceInner ["Count"]) = "A counter"
-  metricsDocFor (NamespaceInner ["Count"]) =
+  namespaceFor (Measure _count) = Namespace [] ["Count"]
+  severityFor (Namespace [] ["Count"]) = Info
+  privacyFor  (Namespace [] ["Count"]) = Public
+  documentFor (Namespace [] ["Count"]) = "A counter"
+  metricsDocFor (Namespace [] ["Count"]) =
     [("count", "an integer")]
-  allNamespaces = [NamespaceInner ["Count"]]
+  allNamespaces = [Namespace [] ["Count"]]
 
 
 testEKG :: IO ()
@@ -38,7 +38,7 @@ testEKG = do
     tracer <- ekgTracer (Right server)
     let formattedTracer = metricsFormatter "cardano" tracer
     configureTracers emptyTraceConfig [formattedTracer]
-    loop (appendName "ekg1" formattedTracer) 1
+    loop (appendOuterName "ekg1" formattedTracer) 1
   where
     loop :: Trace IO Measure -> Int -> IO ()
     loop tr count = do

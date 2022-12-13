@@ -710,14 +710,14 @@ Configuring a __trace-out__ to output human-readable text (and therefore to use 
 
 ## Documentation generation
 
-To generate the documentation, first call `documentMarkdown` with the `Documented` type and all the tracers that are called. Do this for all message types you need, and then call `buildersToText` with the appended lists.
+To generate the documentation, first call `documentTracer` with the `Documented` type and all the tracers that are called. Do this for all message types you need, and then call `docuResultsToText` with the appended lists.
 
 ```haskell
-  b1 <- documentMarkdown traceForgeEventDocu [t1, t2]
-  b2 <- documentMarkdown .. ..
+  b1 <- documentTracer traceForgeEventDocu [t1, t2]
+  b2 <- documentTracer .. ..
   ..
-  bn <- documentMarkdown .. ..
-  writeFile "Docu.md" (buildersToText (b1 ++ b2 ++ ... ++ bn))
+  bn <- documentTracer .. ..
+  writeFile "Docu.md" (docuResultsToText (b1 ++ b2 ++ ... ++ bn))
 ```
 
 The generated documentation for a simple message my look like this:

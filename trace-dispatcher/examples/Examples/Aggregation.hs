@@ -38,14 +38,14 @@ instance LogFormatting BaseStats where
     , DoubleM "sum" bsSum]
 
 instance MetaTrace BaseStats where
-  namespaceFor BaseStats{} = NamespaceInner ["BaseStats"]
-  severityFor (NamespaceInner ["BaseStats"]) = Info
-  privacyFor  (NamespaceInner ["BaseStats"]) = Public
-  documentFor (NamespaceInner ["BaseStats"]) = "Basic statistics"
-  metricsDocFor (NamespaceInner ["BaseStats"]) =
+  namespaceFor BaseStats{} = Namespace [] ["BaseStats"]
+  severityFor (Namespace _ ["BaseStats"]) = Info
+  privacyFor  (Namespace _ ["BaseStats"]) = Public
+  documentFor (Namespace _ ["BaseStats"]) = "Basic statistics"
+  metricsDocFor (Namespace _ ["BaseStats"]) =
     [ ("measure", "This is the value of a single measurment")
     , ("sum", "This is the sum of all measurments")]
-  allNamespaces = [NamespaceInner ["BaseStats"]]
+  allNamespaces = [Namespace [] ["BaseStats"]]
 
 emptyStats :: BaseStats
 emptyStats = BaseStats 0.0 100000000.0 (-100000000.0) 0 0.0
