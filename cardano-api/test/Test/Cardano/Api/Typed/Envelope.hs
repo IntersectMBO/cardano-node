@@ -6,6 +6,9 @@ module Test.Cardano.Api.Typed.Envelope
 
 import           Cardano.Api
 
+import           Data.String (fromString)
+import qualified Data.Text as Text
+import           Gen.Cardano.Api.Typed
 import           Hedgehog (Property)
 import           Test.Cardano.Api.Typed.Orphans ()
 import           Test.Gen.Cardano.Api.Typed
@@ -86,6 +89,23 @@ prop_roundtrip_VrfSigningKey_envelope :: Property
 prop_roundtrip_VrfSigningKey_envelope =
   roundtrip_SigningKey_envelope AsVrfKey
 
+roundtrip_TxBody_envelope :: IsCardanoEra era => CardanoEra era -> Property
+roundtrip_TxBody_envelope era = H.property $ do
+  txBody <- H.forAll $ genTxBody era
+  H.tripping txBody (serialiseToTextEnvelope Nothing)
+                    (deserialiseFromTextEnvelope
+                      (AsTxBody $ proxyToAsType (Proxy :: Proxy era))
+                    )
+
+allTxBodyEnvelopeRoundtrips :: [TestTree]
+allTxBodyEnvelopeRoundtrips =
+  [ testPropertyNamed
+      ("roundtrip " <> (fromString . Text.unpack $ renderEra aEra) <> " TxBody envelope")
+      ("roundtrip " <> (fromString . Text.unpack $ renderEra aEra) <> " TxBody envelope")
+      (roundtrip_TxBody_envelope era)
+  | aEra@(AnyCardanoEra era) <- [minBound..(AnyCardanoEra BabbageEra)]
+  ]
+
 -- -----------------------------------------------------------------------------
 
 roundtrip_VerificationKey_envelope :: Key keyrole
@@ -109,7 +129,7 @@ roundtrip_SigningKey_envelope roletoken =
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
-tests = testGroup "Test.Cardano.Api.Typed.Envelope"
+tests = testGroup "Test.Cardano.Api.Typed.Envelope" $
   [ testPropertyNamed "roundtrip ByronVerificationKey envelope"           "roundtrip ByronVerificationKey envelope"           prop_roundtrip_ByronVerificationKey_envelope
   , testPropertyNamed "roundtrip ByronSigningKey envelope"                "roundtrip ByronSigningKey envelope"                prop_roundtrip_ByronSigningKey_envelope
   , testPropertyNamed "roundtrip PaymentVerificationKey envelope"         "roundtrip PaymentVerificationKey envelope"         prop_roundtrip_PaymentVerificationKey_envelope
@@ -126,4 +146,6 @@ tests = testGroup "Test.Cardano.Api.Typed.Envelope"
   , testPropertyNamed "roundtrip KesSigningKey envelope"                  "roundtrip KesSigningKey envelope"                  prop_roundtrip_KesSigningKey_envelope
   , testPropertyNamed "roundtrip VrfVerificationKey envelope"             "roundtrip VrfVerificationKey envelope"             prop_roundtrip_VrfVerificationKey_envelope
   , testPropertyNamed "roundtrip VrfSigningKey envelope"                  "roundtrip VrfSigningKey envelope"                  prop_roundtrip_VrfSigningKey_envelope
-  ]
+  ] ++
+  allTxBodyEnvelopeRoundtrips
+

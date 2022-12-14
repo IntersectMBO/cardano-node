@@ -10,7 +10,9 @@ import           Cardano.Api
 
 import           Data.Proxy (Proxy (..))
 import           Data.String (IsString (..))
-import           Hedgehog (Property, forAll, property, success, tripping)
+import           Gen.Cardano.Api.Typed
+import           Gen.Hedgehog.Roundtrip.CBOR (roundtrip_CBOR)
+import           Hedgehog (Property)
 import           Test.Cardano.Api.Typed.Orphans ()
 import           Test.Gen.Cardano.Api.Typed
 import           Test.Hedgehog.Roundtrip.CBOR (roundtrip_CBOR, roundtrip_CDDL_Tx)
@@ -22,13 +24,6 @@ import           Test.Tasty.Hedgehog (testPropertyNamed)
 -- TODO: Need to add PaymentExtendedKey roundtrip tests however
 -- we can't derive an Eq instance for Crypto.HD.XPrv
 
-test_roundtrip_txbody_CBOR :: [TestTree]
-test_roundtrip_txbody_CBOR =
-  [ testPropertyNamed (show era) (fromString (show era)) $
-    roundtrip_CDDL_Tx era (makeSignedTransaction [] <$> genTxBody era)
-  | AnyCardanoEra era <- [minBound..(AnyCardanoEra BabbageEra)]
-  ]
-
 test_roundtrip_tx_CBOR :: [TestTree]
 test_roundtrip_tx_CBOR =
   [ testPropertyNamed (show era) (fromString (show era)) $ roundtrip_CBOR (proxyToAsType Proxy) (genTx era)
@@ -39,21 +34,11 @@ prop_roundtrip_witness_byron_CBOR :: Property
 prop_roundtrip_witness_byron_CBOR =
   roundtrip_CBOR (AsKeyWitness AsByronEra) genByronKeyWitness
 
-prop_roundtrip_witness_shelley_CBOR :: Property
-prop_roundtrip_witness_shelley_CBOR =
-  roundtrip_CBOR (AsKeyWitness AsShelleyEra) (genShelleyWitness ShelleyEra)
-
-prop_roundtrip_witness_allegra_CBOR :: Property
-prop_roundtrip_witness_allegra_CBOR =
-  roundtrip_CBOR (AsKeyWitness AsAllegraEra) (genShelleyWitness AllegraEra)
-
-prop_roundtrip_witness_mary_CBOR :: Property
-prop_roundtrip_witness_mary_CBOR =
-  roundtrip_CBOR (AsKeyWitness AsMaryEra) (genShelleyWitness MaryEra)
-
-prop_roundtrip_witness_alonzo_CBOR :: Property
-prop_roundtrip_witness_alonzo_CBOR =
-  roundtrip_CBOR (AsKeyWitness AsAlonzoEra) (genShelleyWitness AlonzoEra)
+-- KeyWitness serialization does not change with from the Shelley era onways
+-- so we just default to the latest era.
+prop_roundtrip_witness_CBOR :: Property
+prop_roundtrip_witness_CBOR =
+  roundtrip_CBOR (AsKeyWitness AsBabbage) (genShelleyWitness BabbageEra)
 
 prop_roundtrip_operational_certificate_CBOR :: Property
 prop_roundtrip_operational_certificate_CBOR =
@@ -151,48 +136,12 @@ prop_roundtrip_UpdateProposal_CBOR :: Property
 prop_roundtrip_UpdateProposal_CBOR =
   roundtrip_CBOR AsUpdateProposal genUpdateProposal
 
-
-test_roundtrip_Tx_Cddl :: [TestTree]
-test_roundtrip_Tx_Cddl =
-  [ testPropertyNamed (show era) (fromString (show era)) $ roundtrip_Tx_Cddl anyEra
-  | anyEra@(AnyCardanoEra era) <- [minBound..(AnyCardanoEra AlonzoEra)] --TODO: Babbage era
-  ]
-
-test_roundtrip_TxWitness_Cddl :: [TestTree]
-test_roundtrip_TxWitness_Cddl =
-  [ testPropertyNamed (show era) (fromString (show era)) $ roundtrip_TxWitness_Cddl era
-  | AnyCardanoEra era <- [minBound..(AnyCardanoEra AlonzoEra)] --TODO: Babbage era
-  , AnyCardanoEra era /= AnyCardanoEra ByronEra
-  ]
-
-roundtrip_TxWitness_Cddl :: CardanoEra era -> Property
-roundtrip_TxWitness_Cddl era =
-  property $
-    case cardanoEraStyle era of
-      LegacyByronEra -> success
-      ShelleyBasedEra sbe -> do
-        keyWit <- forAll $ genShelleyKeyWitness era
-        tripping keyWit
-          (serialiseWitnessLedgerCddl sbe)
-          (deserialiseWitnessLedgerCddl sbe)
-
-roundtrip_Tx_Cddl :: AnyCardanoEra -> Property
-roundtrip_Tx_Cddl (AnyCardanoEra era) =
-  property $ do
-   tx <- forAll $ genTx era
-   tripping tx
-     serialiseTxLedgerCddl
-     (deserialiseTxLedgerCddl era)
-
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
 tests = testGroup "Test.Cardano.Api.Typed.CBOR"
   [ testPropertyNamed "roundtrip witness byron CBOR"                         "roundtrip witness byron CBOR"                         prop_roundtrip_witness_byron_CBOR
-  , testPropertyNamed "roundtrip witness shelley CBOR"                       "roundtrip witness shelley CBOR"                       prop_roundtrip_witness_shelley_CBOR
-  , testPropertyNamed "roundtrip witness allegra CBOR"                       "roundtrip witness allegra CBOR"                       prop_roundtrip_witness_allegra_CBOR
-  , testPropertyNamed "roundtrip witness mary CBOR"                          "roundtrip witness mary CBOR"                          prop_roundtrip_witness_mary_CBOR
-  , testPropertyNamed "roundtrip witness alonzo CBOR"                        "roundtrip witness alonzo CBOR"                        prop_roundtrip_witness_alonzo_CBOR
+  , testPropertyNamed "roundtrip witness CBOR"                               "roundtrip witness CBOR"                               prop_roundtrip_witness_CBOR
   , testPropertyNamed "roundtrip operational certificate CBOR"               "roundtrip operational certificate CBOR"               prop_roundtrip_operational_certificate_CBOR
   , testPropertyNamed "roundtrip operational certificate issue counter CBOR" "roundtrip operational certificate issue counter CBOR" prop_roundtrip_operational_certificate_issue_counter_CBOR
   , testPropertyNamed "roundtrip verification key byron CBOR"                "roundtrip verification key byron CBOR"                prop_roundtrip_verification_key_byron_CBOR
@@ -216,8 +165,5 @@ tests = testGroup "Test.Cardano.Api.Typed.CBOR"
   , testPropertyNamed "roundtrip script PlutusScriptV1 CBOR"                 "roundtrip script PlutusScriptV1 CBOR"                 prop_roundtrip_script_PlutusScriptV1_CBOR
   , testPropertyNamed "roundtrip script PlutusScriptV2 CBOR"                 "roundtrip script PlutusScriptV2 CBOR"                 prop_roundtrip_script_PlutusScriptV2_CBOR
   , testPropertyNamed "roundtrip UpdateProposal CBOR"                        "roundtrip UpdateProposal CBOR"                        prop_roundtrip_UpdateProposal_CBOR
-  , testGroup "roundtrip txbody CBOR"     test_roundtrip_txbody_CBOR
   , testGroup "roundtrip tx CBOR"         test_roundtrip_tx_CBOR
-  , testGroup "roundtrip Tx Cddl"         test_roundtrip_Tx_Cddl
-  , testGroup "roundtrip TxWitness Cddl"  test_roundtrip_TxWitness_Cddl
   ]
