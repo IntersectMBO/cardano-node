@@ -58,6 +58,9 @@ import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import           Ouroboros.Consensus.Shelley.Eras as Consensus (StandardAllegra, StandardAlonzo,
                    StandardBabbage, StandardMary, StandardShelley)
 
+import           Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
+
+import           Cardano.Api.IPC.NtcVersionOf (NtcVersionOf (..))
 
 -- | A type used as a tag to distinguish the Byron era.
 data ByronEra
@@ -214,6 +217,9 @@ data AnyCardanoEra where
      AnyCardanoEra :: IsCardanoEra era  -- Provide class constraint
                    => CardanoEra era    -- and explicit value.
                    -> AnyCardanoEra
+
+instance NtcVersionOf AnyCardanoEra where
+  ntcVersionOf (AnyCardanoEra _) = NodeToClientV_9
 
 deriving instance Show AnyCardanoEra
 

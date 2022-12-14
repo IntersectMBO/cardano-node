@@ -22,17 +22,21 @@ module Cardano.Api.Utils
   , runParsecParser
   , textShow
   , writeSecrets
+  , wrapExceptT
+  , pluckyHoistEither
   ) where
 
 import           Prelude
 
 import           Control.Exception (bracket)
 import           Control.Monad (forM_)
+import           Control.Monad.Trans.Except (ExceptT)
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as Builder
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Maybe.Strict
+import           Data.Either.Plucky (ProjectError, catchOneT, throwT)
+import           Data.Maybe.Strict (StrictMaybe(..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           GHC.IO.Handle.FD (openFileBlocking)
@@ -134,3 +138,13 @@ renderEra (AnyCardanoEra MaryEra)    = "Mary"
 renderEra (AnyCardanoEra AlonzoEra)  = "Alonzo"
 renderEra (AnyCardanoEra BabbageEra) = "Babbage"
 
+wrapExceptT :: (Monad m, ProjectError e2' e2)
+  => (e1 -> e2)
+  -> ExceptT (Either e1 e2') m a2
+  -> ExceptT e2' m a2
+wrapExceptT wrap f = catchOneT f (throwT . wrap)
+
+pluckyHoistEither :: (Monad m, ProjectError e' e) => Either e a -> ExceptT e' m a
+pluckyHoistEither result = case result of
+  Right a -> return a
+  Left e -> throwT e

@@ -77,7 +77,13 @@ module Cardano.Api.IPC (
     consensusModeOnly,
     toAcquiringFailure,
 
-    NodeToClientVersion(..)
+    NodeToClientVersion(..),
+
+    MinNodeToClientVersion,
+
+    -- ** Error types
+    AcquireFailure(..),
+    UnsupportedNtcVersionError(..),
   ) where
 
 import           Prelude
@@ -85,14 +91,16 @@ import           Prelude
 import           Data.Void (Void)
 
 import           Data.Aeson (ToJSON, object, toJSON, (.=))
-import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict as Map
 
 import           Control.Concurrent.STM (TMVar, atomically, newEmptyTMVarIO, putTMVar, takeTMVar,
                    tryPutTMVar)
 import           Control.Monad (void)
+import           Control.Monad.IO.Class
+import           Control.Monad.Trans.Except
 import           Control.Tracer (nullTracer)
+import           Data.Either.Plucky
 
 import           Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
 import qualified Ouroboros.Network.Block as Net
@@ -106,7 +114,6 @@ import           Ouroboros.Network.Protocol.ChainSync.ClientPipelined as Net.Syn
 import           Ouroboros.Network.Protocol.LocalStateQuery.Client (LocalStateQueryClient (..))
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
-import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Net.Query
 import           Ouroboros.Network.Protocol.LocalTxMonitor.Client (LocalTxMonitorClient (..),
                    localTxMonitorClientPeer)
 import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Client as CTxMon
@@ -130,6 +137,7 @@ import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Consensus
 import           Cardano.Api.Block
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.InMode
+import           Cardano.Api.IPC.NtcVersionOf
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.Protocol
@@ -576,18 +584,19 @@ data AcquiringFailure = AFPointTooOld
                       | AFPointNotOnChain
                       deriving Show
 
-toAcquiringFailure :: Net.Query.AcquireFailure -> AcquiringFailure
+toAcquiringFailure :: AcquireFailure -> AcquiringFailure
 toAcquiringFailure AcquireFailurePointTooOld = AFPointTooOld
 toAcquiringFailure AcquireFailurePointNotOnChain = AFPointNotOnChain
 
-queryNodeLocalState :: forall mode result.
-                       LocalNodeConnectInfo mode
+queryNodeLocalState :: forall e mode result. ()
+                    => ProjectError e AcquireFailure
+                    => LocalNodeConnectInfo mode
                     -> Maybe ChainPoint
                     -> QueryInMode mode result
-                    -> IO (Either AcquiringFailure result)
+                    -> ExceptT e IO result
 queryNodeLocalState connctInfo mpoint query = do
-    resultVar <- newEmptyTMVarIO
-    connectToLocalNode
+    resultVar <- liftIO $ newEmptyTMVarIO
+    liftIO $ connectToLocalNode
       connctInfo
       LocalNodeClientProtocols {
         localChainSyncClient    = NoLocalChainSyncClient,
@@ -595,29 +604,29 @@ queryNodeLocalState connctInfo mpoint query = do
         localTxSubmissionClient = Nothing,
         localTxMonitoringClient = Nothing
       }
-    first toAcquiringFailure <$> atomically (takeTMVar resultVar)
+    result <- liftIO . atomically $ takeTMVar resultVar
+    case result of
+      Right a -> return a
+      Left e -> throwT e
   where
     singleQuery
       :: Maybe ChainPoint
-      -> TMVar (Either Net.Query.AcquireFailure result)
+      -> TMVar (Either AcquireFailure result)
       -> Net.Query.LocalStateQueryClient (BlockInMode mode) ChainPoint
                                          (QueryInMode mode) IO ()
     singleQuery mPointVar' resultVar' =
-      LocalStateQueryClient $ do
-      pure $
-        Net.Query.SendMsgAcquire mPointVar' $
-        Net.Query.ClientStAcquiring
-          { Net.Query.recvMsgAcquired =
-              pure $ Net.Query.SendMsgQuery query $
-                Net.Query.ClientStQuerying
+      LocalStateQueryClient . pure $ do
+        Net.Query.SendMsgAcquire mPointVar' $ Net.Query.ClientStAcquiring
+          { Net.Query.recvMsgAcquired = do
+              pure $ Net.Query.SendMsgQuery query $ Net.Query.ClientStQuerying
                   { Net.Query.recvMsgResult = \result -> do
-                    atomically $ putTMVar resultVar' (Right result)
+                    atomically $ putTMVar resultVar' $ Right result
 
                     pure $ Net.Query.SendMsgRelease $
                       pure $ Net.Query.SendMsgDone ()
                   }
-          , Net.Query.recvMsgFailure = \failure -> do
-              atomically $ putTMVar resultVar' (Left failure)
+          , Net.Query.recvMsgFailure = \acquireFailure -> do
+              atomically $ putTMVar resultVar' $ Left acquireFailure
               pure $ Net.Query.SendMsgDone ()
           }
 

@@ -365,9 +365,7 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
             localNodeSocketPath      = socketPath
           }
 
-  lift $ connectToLocalNode
-    connectInfo
-    (protocols stateIORef errorIORef env ledgerState)
+  lift $ connectToLocalNode connectInfo (protocols stateIORef errorIORef env ledgerState)
 
   lift (readIORef errorIORef) >>= \case
     Just err -> throwE (FoldBlocksApplyBlockError err)

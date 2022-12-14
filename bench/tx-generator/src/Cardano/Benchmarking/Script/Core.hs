@@ -161,10 +161,14 @@ queryEra :: ActionM AnyCardanoEra
 queryEra = do
   localNodeConnectInfo <- getLocalConnectInfo
   chainTip  <- liftIO $ getLocalChainTip localNodeConnectInfo
-  ret <- liftIO $ queryNodeLocalState localNodeConnectInfo (Just $ chainTipToChainPoint chainTip) $ QueryCurrentEra CardanoModeIsMultiEra
+  ret <- liftIO $ runExceptT
+    $ wrapExceptT (show @AcquireFailure)
+    $ wrapExceptT (show @UnsupportedNtcVersionError)
+    $ executeLocalStateQueryExpr localNodeConnectInfo (Just $ chainTipToChainPoint chainTip)
+    $ \_ -> queryExpr $ QueryCurrentEra CardanoModeIsMultiEra
   case ret of
     Right era -> return era
-    Left err -> liftTxGenError $ TxGenError $ show err
+    Left err -> liftTxGenError $ TxGenError err
 
 queryRemoteProtocolParameters :: ActionM ProtocolParameters
 queryRemoteProtocolParameters = do
@@ -172,9 +176,13 @@ queryRemoteProtocolParameters = do
   chainTip  <- liftIO $ getLocalChainTip localNodeConnectInfo
   era <- queryEra
   let
-    callQuery :: forall a. Show a => QueryInMode CardanoMode (Either a ProtocolParameters) -> ActionM ProtocolParameters
+    callQuery :: Show a => QueryInMode CardanoMode (Either a ProtocolParameters) -> ActionM ProtocolParameters
     callQuery query = do
-      res <- liftIO $ queryNodeLocalState localNodeConnectInfo (Just $ chainTipToChainPoint chainTip) query
+      res <- liftIO $ runExceptT
+        $ wrapExceptT (show @AcquireFailure)
+        $ wrapExceptT (show @UnsupportedNtcVersionError)
+        $ executeLocalStateQueryExpr localNodeConnectInfo (Just $ chainTipToChainPoint chainTip)
+        $ \_ -> queryExpr query
       case res of
         Right (Right pp) -> do
           let pparamsFile = "protocol-parameters-queried.json"
@@ -182,7 +190,7 @@ queryRemoteProtocolParameters = do
           traceDebug $ "queryRemoteProtocolParameters : query result saved in: " ++ pparamsFile
           return pp
         Right (Left err) -> liftTxGenError $ TxGenError $ show err
-        Left err -> liftTxGenError $ TxGenError $ show err
+        Left err -> liftTxGenError $ TxGenError err
   case era of
     AnyCardanoEra ByronEra   -> liftTxGenError $ TxGenError "queryRemoteProtocolParameters Byron not supported"
     AnyCardanoEra ShelleyEra -> callQuery $ QueryInEra ShelleyEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraShelley QueryProtocolParameters

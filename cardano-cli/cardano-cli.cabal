@@ -138,6 +138,7 @@ library
                       , ouroboros-consensus-shelley
                       , ouroboros-network
                       , parsec
+                      , plucky
                       , prettyprinter
                       , random
                       , cardano-ledger-shelley ^>= 0.1
