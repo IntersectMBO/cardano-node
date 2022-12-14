@@ -504,22 +504,6 @@ module Cardano.Api (
     readTextEnvelopeFromFile,
     readTextEnvelopeOfTypeFromFile,
 
-    -- ** Text envelope CDDL
-    -- | Support for serialising values in the ledger's CDDL format.
-    -- Note, this will be deprecated in the future in favour of a
-    -- single API.
-    FromSomeTypeCDDL(..),
-    readFileTextEnvelopeCddlAnyOf,
-    writeTxFileTextEnvelopeCddl,
-    writeTxWitnessFileTextEnvelopeCddl,
-    serialiseTxLedgerCddl,
-    deserialiseTxLedgerCddl,
-    serialiseWitnessLedgerCddl,
-    deserialiseWitnessLedgerCddl,
-    TextEnvelopeCddl(..), -- TODO: Deprecate this when we stop supporting the cli's
-                          -- intermediate txbody format.
-    TextEnvelopeCddlError(..),
-
     -- *** Reading one of several key types
     readKeyFile,
     readKeyFileTextEnvelope,
@@ -787,7 +771,6 @@ import           Cardano.Api.ScriptData
 import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
-import           Cardano.Api.SerialiseLedgerCddl
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.StakePoolMetadata
