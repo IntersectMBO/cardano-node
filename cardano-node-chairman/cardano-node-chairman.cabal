@@ -79,7 +79,6 @@ test-suite chairman-tests
                       , unliftio
 
   other-modules:        Spec.Chairman.Chairman
-                        Spec.Chairman.Byron
                         Spec.Chairman.Cardano
                         Spec.Chairman.Shelley
                         Spec.Network
