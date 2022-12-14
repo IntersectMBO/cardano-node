@@ -1,6 +1,5 @@
 module Test.OptParse
-  ( checkTxCddlFormat
-  , checkTextEnvelopeFormat
+  ( checkTextEnvelopeFormat
   , equivalence
   , execCardanoCLI
   , propertyOnce
@@ -40,15 +39,15 @@ execCardanoCLI = GHC.withFrozenCallStack $ H.execFlex "cardano-cli" "CARDANO_CLI
 -- | Checks that the 'tvType' and 'tvDescription' are equivalent between two files.
 checkTextEnvelopeFormat
   :: (MonadTest m, MonadIO m, HasCallStack)
-  => TextEnvelopeType
+  => [TextEnvelopeType]
   -> FilePath
   -> FilePath
   -> m ()
-checkTextEnvelopeFormat tve reference created = do
-  eRefTextEnvelope <- liftIO $ readTextEnvelopeOfTypeFromFile tve reference
+checkTextEnvelopeFormat tvTypes reference created = do
+  eRefTextEnvelope <- liftIO $ readTextEnvelopeOfTypeFromFile tvTypes reference
   refTextEnvelope <- handleTextEnvelope eRefTextEnvelope
 
-  eCreatedTextEnvelope <- liftIO $ readTextEnvelopeOfTypeFromFile tve created
+  eCreatedTextEnvelope <- liftIO $ readTextEnvelopeOfTypeFromFile tvTypes created
   createdTextEnvelope <- handleTextEnvelope eCreatedTextEnvelope
 
   typeTitleEquivalence refTextEnvelope createdTextEnvelope
@@ -62,19 +61,11 @@ checkTextEnvelopeFormat tve reference created = do
    typeTitleEquivalence :: MonadTest m => TextEnvelope -> TextEnvelope -> m ()
    typeTitleEquivalence (TextEnvelope refType refTitle _)
                         (TextEnvelope createdType createdTitle _) = do
-     equivalence refType createdType
+     if any (== refType) tvTypes &&
+        any (== createdType) tvTypes
+     then return ()
+     else equivalence refType createdType
      equivalence refTitle createdTitle
-
-checkTxCddlFormat
-  :: (MonadTest m, MonadIO m, HasCallStack)
-  => FilePath -- ^ Reference/golden file
-  -> FilePath -- ^ Newly created file
-  -> m ()
-checkTxCddlFormat reference created = do
-  r <- liftIO $ readCddlTx reference
-  c <- liftIO $ readCddlTx created
-  r H.=== c
-
 
 --------------------------------------------------------------------------------
 -- Helpers, Error rendering & Clean up

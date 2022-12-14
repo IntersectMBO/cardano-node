@@ -166,7 +166,6 @@ import qualified Data.Aeson.Types as Aeson
 import           Data.Bifunctor (first)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BSC
-import qualified Data.ByteString.Lazy as LBS
 import           Data.Foldable (for_, toList)
 import           Data.Function (on)
 import           Data.List (intercalate, sortBy)
@@ -190,11 +189,9 @@ import qualified Text.Parsec as Parsec
 import           Text.Parsec ((<?>))
 import qualified Text.Parsec.String as Parsec
 
-import           Cardano.Binary (Annotated (..), reAnnotate, recoverBytes)
-import qualified Cardano.Binary as CBOR
+import           Cardano.Binary (Annotated (..), reAnnotate)
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import qualified Cardano.Ledger.Serialization as CBOR (Sized, decodeNullMaybe, encodeNullMaybe,
-                   mkSized, sizedValue)
+import qualified Cardano.Ledger.Serialization as CBOR (Sized, mkSized, sizedValue)
 import           Cardano.Slotting.Slot (SlotNo (..))
 
 import qualified Cardano.Chain.Common as Byron
@@ -266,7 +263,6 @@ import           Cardano.Api.ScriptData
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
-import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.TxIn
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
@@ -1770,213 +1766,6 @@ pattern AsShelleyTxBody = AsTxBody AsShelleyEra
 pattern AsMaryTxBody :: AsType (TxBody MaryEra)
 pattern AsMaryTxBody = AsTxBody AsMaryEra
 {-# COMPLETE AsMaryTxBody #-}
-
-instance IsCardanoEra era => SerialiseAsCBOR (TxBody era) where
-
-    serialiseToCBOR (ByronTxBody txbody) =
-      recoverBytes txbody
-
-    serialiseToCBOR (ShelleyTxBody era txbody txscripts redeemers txmetadata scriptValidity) =
-      case era of
-        -- Use the same serialisation impl, but at different types:
-        ShelleyBasedEraShelley -> serialiseShelleyBasedTxBody
-                                    era txbody txscripts redeemers txmetadata scriptValidity
-        ShelleyBasedEraAllegra -> serialiseShelleyBasedTxBody
-                                    era txbody txscripts redeemers txmetadata scriptValidity
-        ShelleyBasedEraMary    -> serialiseShelleyBasedTxBody
-                                    era txbody txscripts redeemers txmetadata scriptValidity
-        ShelleyBasedEraAlonzo  -> serialiseShelleyBasedTxBody
-                                    era txbody txscripts redeemers txmetadata scriptValidity
-
-        ShelleyBasedEraBabbage -> serialiseShelleyBasedTxBody
-                                    era txbody txscripts redeemers txmetadata scriptValidity
-    deserialiseFromCBOR _ bs =
-      case cardanoEra :: CardanoEra era of
-        ByronEra ->
-          ByronTxBody <$>
-            CBOR.decodeFullAnnotatedBytes
-              "Byron TxBody"
-              CBOR.fromCBORAnnotated
-              (LBS.fromStrict bs)
-
-        -- Use the same derialisation impl, but at different types:
-        ShelleyEra -> deserialiseShelleyBasedTxBody ShelleyBasedEraShelley bs
-        AllegraEra -> deserialiseShelleyBasedTxBody ShelleyBasedEraAllegra bs
-        MaryEra    -> deserialiseShelleyBasedTxBody ShelleyBasedEraMary    bs
-        AlonzoEra  -> deserialiseShelleyBasedTxBody ShelleyBasedEraAlonzo  bs
-        BabbageEra -> deserialiseShelleyBasedTxBody ShelleyBasedEraBabbage bs
-
--- | The serialisation format for the different Shelley-based eras are not the
--- same, but they can be handled generally with one overloaded implementation.
-serialiseShelleyBasedTxBody
-  :: forall era ledgerera.
-     ShelleyLedgerEra era ~ ledgerera
-  => ToCBOR (Ledger.TxBody ledgerera)
-  => ToCBOR (Ledger.Script ledgerera)
-  => ToCBOR (Alonzo.TxDats ledgerera)
-  => ToCBOR (Alonzo.Redeemers ledgerera)
-  => ToCBOR (Ledger.AuxiliaryData ledgerera)
-  => ShelleyBasedEra era
-  -> Ledger.TxBody ledgerera
-  -> [Ledger.Script ledgerera]
-  -> TxBodyScriptData era
-  -> Maybe (Ledger.AuxiliaryData ledgerera)
-  -> TxScriptValidity era -- ^ Mark script as expected to pass or fail validation
-  -> ByteString
-serialiseShelleyBasedTxBody era txbody txscripts
-                            TxBodyNoScriptData txmetadata scriptValidity =
-    -- Backwards compat for pre-Alonzo era tx body files
-    case era of
-      ShelleyBasedEraShelley -> preAlonzo
-      ShelleyBasedEraAllegra -> preAlonzo
-      ShelleyBasedEraMary -> preAlonzo
-      ShelleyBasedEraAlonzo ->
-        CBOR.serializeEncoding'
-          $ CBOR.encodeListLen 4
-         <> CBOR.toCBOR txbody
-         <> CBOR.toCBOR txscripts
-         <> CBOR.toCBOR (txScriptValidityToScriptValidity scriptValidity)
-         <> CBOR.encodeNullMaybe CBOR.toCBOR txmetadata
-      ShelleyBasedEraBabbage ->
-        CBOR.serializeEncoding'
-          $ CBOR.encodeListLen 4
-         <> CBOR.toCBOR txbody
-         <> CBOR.toCBOR txscripts
-         <> CBOR.toCBOR (txScriptValidityToScriptValidity scriptValidity)
-         <> CBOR.encodeNullMaybe CBOR.toCBOR txmetadata
- where
-   preAlonzo = CBOR.serializeEncoding'
-                 $ CBOR.encodeListLen 3
-                <> CBOR.toCBOR txbody
-                <> CBOR.toCBOR txscripts
-                <> CBOR.encodeNullMaybe CBOR.toCBOR txmetadata
-
-serialiseShelleyBasedTxBody _era txbody txscripts
-                            (TxBodyScriptData _ datums redeemers)
-                            txmetadata txBodycriptValidity =
-    CBOR.serializeEncoding' $
-        CBOR.encodeListLen 6
-     <> CBOR.toCBOR txbody
-     <> CBOR.toCBOR txscripts
-     <> CBOR.toCBOR datums
-     <> CBOR.toCBOR redeemers
-     <> CBOR.toCBOR (txScriptValidityToScriptValidity txBodycriptValidity)
-     <> CBOR.encodeNullMaybe CBOR.toCBOR txmetadata
-
-deserialiseShelleyBasedTxBody
-  :: forall era ledgerera.
-     ShelleyLedgerEra era ~ ledgerera
-  => FromCBOR (CBOR.Annotator (Ledger.TxBody ledgerera))
-  => FromCBOR (CBOR.Annotator (Ledger.Script ledgerera))
-  => FromCBOR (CBOR.Annotator (Alonzo.TxDats ledgerera))
-  => FromCBOR (CBOR.Annotator (Alonzo.Redeemers ledgerera))
-  => FromCBOR (CBOR.Annotator (Ledger.AuxiliaryData ledgerera))
-  => ShelleyBasedEra era
-  -> ByteString
-  -> Either CBOR.DecoderError (TxBody era)
-deserialiseShelleyBasedTxBody era bs =
-    CBOR.decodeAnnotator
-      "Shelley TxBody"
-      decodeAnnotatedTuple
-      (LBS.fromStrict bs)
-  where
-    decodeAnnotatedTuple :: CBOR.Decoder s (CBOR.Annotator (TxBody era))
-    decodeAnnotatedTuple = do
-      len <- CBOR.decodeListLen
-
-      case len of
-        -- Backwards compat for pre-Alonzo era tx body files
-        2 -> do
-          txbody     <- fromCBOR
-          txmetadata <- CBOR.decodeNullMaybe fromCBOR
-          return $ CBOR.Annotator $ \fbs ->
-            ShelleyTxBody era
-              (flip CBOR.runAnnotator fbs txbody)
-              [] -- scripts
-              (flip CBOR.runAnnotator fbs (return TxBodyNoScriptData))
-              (fmap (flip CBOR.runAnnotator fbs) txmetadata)
-              (flip CBOR.runAnnotator fbs (return TxScriptValidityNone))
-        3 -> do
-          txbody     <- fromCBOR
-          txscripts  <- fromCBOR
-          txmetadata <- CBOR.decodeNullMaybe fromCBOR
-          return $ CBOR.Annotator $ \fbs ->
-            ShelleyTxBody era
-              (flip CBOR.runAnnotator fbs txbody)
-              (map (flip CBOR.runAnnotator fbs) txscripts)
-              (flip CBOR.runAnnotator fbs (return TxBodyNoScriptData))
-              (fmap (flip CBOR.runAnnotator fbs) txmetadata)
-              (flip CBOR.runAnnotator fbs (return TxScriptValidityNone))
-        4 -> do
-          sValiditySupported <-
-            case txScriptValiditySupportedInShelleyBasedEra era of
-              Nothing -> fail $ mconcat
-                [ "deserialiseShelleyBasedTxBody: Expected an era that supports the "
-                , "script validity flag but got: "
-                , show era
-                ]
-              Just supported -> return supported
-
-          txbody     <- fromCBOR
-          txscripts  <- fromCBOR
-          scriptValidity <- fromCBOR
-          txmetadata <- CBOR.decodeNullMaybe fromCBOR
-          return $ CBOR.Annotator $ \fbs ->
-            ShelleyTxBody era
-              (flip CBOR.runAnnotator fbs txbody)
-              (map (flip CBOR.runAnnotator fbs) txscripts)
-              (flip CBOR.runAnnotator fbs (return TxBodyNoScriptData))
-              (fmap (flip CBOR.runAnnotator fbs) txmetadata)
-              (flip CBOR.runAnnotator fbs (return $ TxScriptValidity sValiditySupported scriptValidity))
-        6 -> do
-          sDataSupported <-
-            case scriptDataSupportedInEra (shelleyBasedToCardanoEra era) of
-              Nothing -> fail $ mconcat
-                [ "deserialiseShelleyBasedTxBody: Expected an era that supports script"
-                , " data but got: "
-                , show era
-                ]
-              Just supported -> return supported
-
-          sValiditySupported <-
-            case txScriptValiditySupportedInShelleyBasedEra era of
-              Nothing -> fail $ mconcat
-                [ "deserialiseShelleyBasedTxBody: Expected an era that supports the "
-                , "script validity flag but got: "
-                , show era
-                ]
-              Just supported -> return supported
-
-          txbody    <- fromCBOR
-          txscripts <- fromCBOR
-          datums    <- fromCBOR
-          redeemers <- fromCBOR
-          scriptValidity <- fromCBOR
-          txmetadata <- CBOR.decodeNullMaybe fromCBOR
-
-          let txscriptdata = CBOR.Annotator $ \fbs ->
-                               TxBodyScriptData sDataSupported
-                                 (flip CBOR.runAnnotator fbs datums)
-                                 (flip CBOR.runAnnotator fbs redeemers)
-
-          return $ CBOR.Annotator $ \fbs ->
-            ShelleyTxBody era
-              (flip CBOR.runAnnotator fbs txbody)
-              (map (flip CBOR.runAnnotator fbs) txscripts)
-              (flip CBOR.runAnnotator fbs txscriptdata)
-              (fmap (flip CBOR.runAnnotator fbs) txmetadata)
-              (flip CBOR.runAnnotator fbs (return $ TxScriptValidity sValiditySupported scriptValidity))
-        _ -> fail $ "expected tx body tuple of size 2, 3, 4 or 6, got " <> show len
-
-instance IsCardanoEra era => HasTextEnvelope (TxBody era) where
-    textEnvelopeType _ =
-      case cardanoEra :: CardanoEra era of
-        ByronEra   -> "TxUnsignedByron"
-        ShelleyEra -> "TxUnsignedShelley"
-        AllegraEra -> "TxBodyAllegra"
-        MaryEra    -> "TxBodyMary"
-        AlonzoEra  -> "TxBodyAlonzo"
-        BabbageEra -> "TxBodyBabbage"
 
 -- | Calculate the transaction identifier for a 'TxBody'.
 --

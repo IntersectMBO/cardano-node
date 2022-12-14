@@ -45,6 +45,9 @@ module Cardano.Api.Tx (
     -- * Data family instances
     AsType(AsTx, AsByronTx, AsShelleyTx, AsMaryTx, AsAllegraTx, AsAlonzoTx,
            AsKeyWitness, AsByronWitness, AsShelleyWitness),
+
+    -- * Serialisation
+    deserialiseShelleyBasedTx,
   ) where
 
 import           Data.Maybe
@@ -262,13 +265,20 @@ deserialiseShelleyBasedTx mkTx bs =
 instance IsCardanoEra era => HasTextEnvelope (Tx era) where
     textEnvelopeType _ =
       case cardanoEra :: CardanoEra era of
-        ByronEra   -> "TxSignedByron"
-        ShelleyEra -> "TxSignedShelley"
-        AllegraEra -> "Tx AllegraEra"
-        MaryEra    -> "Tx MaryEra"
-        AlonzoEra  -> "Tx AlonzoEra"
-        BabbageEra -> "Tx BabbageEra"
+        ByronEra ->
+          ["TxSignedByron", "Witnessed Tx ByronEra", "Unwitnessed Tx ByronEra"]
+        ShelleyEra ->
+          ["TxSignedShelley", "Witnessed Tx ShelleyEra", "Unwitnessed Tx ShelleyEra"]
+        AllegraEra ->
+          ["Tx AllegraEra", "Witnessed Tx AllegraEra", "Unwitnessed Tx AllegraEra"]
+        MaryEra ->
+          ["Tx MaryEra", "Witnessed Tx MaryEra", "Unwitnessed Tx MaryEra"]
+        AlonzoEra ->
+          ["Tx AlonzoEra", "Witnessed Tx AlonzoEra", "Unwitnessed Tx AlonzoEra"]
+        BabbageEra ->
+          ["Tx BabbageEra", "Witnessed Tx BabbageEra", "Unwitnessed Tx BabbageEra"]
 
+    textEnvelopeDefaultDescr _ = "Ledger Cddl Format"
 
 data KeyWitness era where
 
@@ -390,61 +400,45 @@ instance IsCardanoEra era => SerialiseAsCBOR (KeyWitness era) where
     serialiseToCBOR (ByronKeyWitness wit) = CBOR.serialize' wit
 
     serialiseToCBOR (ShelleyKeyWitness _era wit) =
-      CBOR.serializeEncoding' $
-      encodeShelleyBasedKeyWitness wit
+      CBOR.serialize' wit
 
     serialiseToCBOR (ShelleyBootstrapWitness _era wit) =
-      CBOR.serializeEncoding' $
-      encodeShelleyBasedBootstrapWitness wit
+      CBOR.serialize' wit
 
     deserialiseFromCBOR _ bs =
       case cardanoEra :: CardanoEra era of
-        ByronEra ->
-          ByronKeyWitness <$> CBOR.decodeFull' bs
+        ByronEra -> ByronKeyWitness <$> CBOR.decodeFull' bs
+        ShelleyEra -> decodeKeyOrBootstrapWitness ShelleyBasedEraShelley bs
+        AllegraEra -> decodeKeyOrBootstrapWitness ShelleyBasedEraAllegra bs
+        MaryEra -> decodeKeyOrBootstrapWitness ShelleyBasedEraMary bs
+        AlonzoEra -> decodeKeyOrBootstrapWitness ShelleyBasedEraAlonzo bs
+        BabbageEra -> decodeKeyOrBootstrapWitness ShelleyBasedEraBabbage bs
 
-        -- Use the same derialisation impl, but at different types:
-        ShelleyEra -> decodeShelleyBasedWitness ShelleyBasedEraShelley bs
-        AllegraEra -> decodeShelleyBasedWitness ShelleyBasedEraAllegra bs
-        MaryEra    -> decodeShelleyBasedWitness ShelleyBasedEraMary    bs
-        AlonzoEra  -> decodeShelleyBasedWitness ShelleyBasedEraAlonzo  bs
-        BabbageEra -> decodeShelleyBasedWitness ShelleyBasedEraBabbage bs
-
-
-encodeShelleyBasedKeyWitness :: ToCBOR w => w -> CBOR.Encoding
-encodeShelleyBasedKeyWitness wit =
-    CBOR.encodeListLen 2 <> CBOR.encodeWord 0 <> toCBOR wit
-
-encodeShelleyBasedBootstrapWitness :: ToCBOR w => w -> CBOR.Encoding
-encodeShelleyBasedBootstrapWitness wit =
-    CBOR.encodeListLen 2 <> CBOR.encodeWord 1 <> toCBOR wit
-
-decodeShelleyBasedWitness :: forall era.
-                             ShelleyBasedEra era
-                          -> ByteString
-                          -> Either CBOR.DecoderError (KeyWitness era)
-decodeShelleyBasedWitness era =
-    CBOR.decodeAnnotator "Shelley Witness" decode . LBS.fromStrict
-  where
-    decode :: CBOR.Decoder s (CBOR.Annotator (KeyWitness era))
-    decode =  do
-      CBOR.decodeListLenOf 2
-      t <- CBOR.decodeWord
-      case t of
-        0 -> fmap (fmap (ShelleyKeyWitness era)) fromCBOR
-        1 -> fmap (fmap (ShelleyBootstrapWitness era)) fromCBOR
-        _ -> fail . formatToString build $ CBOR.DecoderErrorUnknownTag
-                                "Shelley Witness" (fromIntegral t)
+decodeKeyOrBootstrapWitness
+  :: ShelleyBasedEra era -> ByteString ->  Either CBOR.DecoderError (KeyWitness era)
+decodeKeyOrBootstrapWitness era bs =
+  case CBOR.decodeAnnotator "KeyWitness" fromCBOR (LBS.fromStrict bs) of
+    Right keyWit -> return $ ShelleyKeyWitness era keyWit
+    Left{} ->
+      ShelleyBootstrapWitness era
+        <$> CBOR.decodeAnnotator "BootstrapWitness" fromCBOR (LBS.fromStrict bs)
 
 
 instance IsCardanoEra era => HasTextEnvelope (KeyWitness era) where
     textEnvelopeType _ =
       case cardanoEra :: CardanoEra era of
-        ByronEra   -> "TxWitnessByron"
-        ShelleyEra -> "TxWitness ShelleyEra"
-        AllegraEra -> "TxWitness AllegraEra"
-        MaryEra    -> "TxWitness MaryEra"
-        AlonzoEra  -> "TxWitness AlonzoEra"
-        BabbageEra -> "TxWitness BabbageEra"
+        ByronEra   -> ["TxWitnessByron"]
+        ShelleyEra -> ["TxWitness ShelleyEra"]
+        AllegraEra -> ["TxWitness AllegraEra"]
+        MaryEra    -> ["TxWitness MaryEra"]
+        AlonzoEra  -> ["TxWitness AlonzoEra"]
+        BabbageEra -> ["TxWitness BabbageEra"]
+
+    textEnvelopeDefaultDescr ByronKeyWitness{} = ""
+    textEnvelopeDefaultDescr ShelleyBootstrapWitness{} =
+      "Key BootstrapWitness ShelleyEra"
+    textEnvelopeDefaultDescr ShelleyKeyWitness{} =
+      "Key Witness ShelleyEra"
 
 pattern Tx :: TxBody era -> [KeyWitness era] -> Tx era
 pattern Tx txbody ws <- (getTxBodyAndWitnesses -> (txbody, ws))

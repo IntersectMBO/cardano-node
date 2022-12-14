@@ -776,6 +776,7 @@ import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
+import           Cardano.Api.TxBodyInstances ()
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 import           Cardano.Api.Value

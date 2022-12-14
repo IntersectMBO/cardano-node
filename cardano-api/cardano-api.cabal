@@ -99,6 +99,7 @@ library
                         Cardano.Api.StakePoolMetadata
                         Cardano.Api.Tx
                         Cardano.Api.TxBody
+                        Cardano.Api.TxBodyInstances
                         Cardano.Api.TxIn
                         Cardano.Api.TxMetadata
                         Cardano.Api.Utils
@@ -230,6 +231,7 @@ test-suite cardano-api-test
                       , tasty
                       , tasty-hedgehog
                       , tasty-quickcheck
+                      , text
                       , time
 
   other-modules:        Test.Cardano.Api.Crypto
