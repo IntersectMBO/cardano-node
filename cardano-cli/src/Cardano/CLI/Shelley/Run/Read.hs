@@ -31,13 +31,8 @@ module Cardano.CLI.Shelley.Run.Read
   , renderScriptDataError
 
   -- * Tx
-  , CddlError
-  , CddlTx(..)
-  , IncompleteTx(..)
   , readFileTx
   , readFileTxBody
-  , renderCddlError
-  , readCddlTx -- For testing purposes
 
   -- * Tx witnesses
   , ReadWitnessSigningDataError(..)
@@ -45,7 +40,6 @@ module Cardano.CLI.Shelley.Run.Read
   , SomeWitness(..)
   , ByronOrShelleyWitness(..)
   , ShelleyBootstrapWitnessSigningKeyData(..)
-  , CddlWitnessError(..)
   , readFileTxKeyWitness
   , readWitnessSigningData
 
@@ -445,122 +439,17 @@ deserialiseScriptInAnyLang bs =
 
 -- Tx & TxBody
 
-newtype CddlTx = CddlTx {unCddlTx :: InAnyCardanoEra Tx} deriving (Show, Eq)
+readFileTx :: FilePath -> IO (Either (FileError TextEnvelopeError) (InAnyCardanoEra Tx))
+readFileTx = readFileInAnyCardanoEra AsTx
 
-readFileTx :: FilePath -> IO (Either CddlError (InAnyCardanoEra Tx))
-readFileTx fp = do
-  eAnyTx <- readFileInAnyCardanoEra AsTx fp
-  case eAnyTx of
-    Left e -> fmap unCddlTx <$> acceptTxCDDLSerialisation e
-    Right tx -> return $ Right tx
-
--- IncompleteCddlFormattedTx is an CDDL formatted tx or partial tx
--- (respectively needs additional witnesses or totally unwitnessed)
--- while UnwitnessedCliFormattedTxBody is CLI formatted TxBody and
--- needs to be key witnessed.
-
-data IncompleteTx
-  = UnwitnessedCliFormattedTxBody (InAnyCardanoEra TxBody)
-  | IncompleteCddlFormattedTx (InAnyCardanoEra Tx)
-
-readFileTxBody :: FilePath -> IO (Either CddlError IncompleteTx)
-readFileTxBody fp = do
-  eTxBody <- readFileInAnyCardanoEra AsTxBody fp
-  case eTxBody of
-    Left e -> fmap (IncompleteCddlFormattedTx . unCddlTx) <$> acceptTxCDDLSerialisation e
-    Right txBody -> return $ Right $ UnwitnessedCliFormattedTxBody txBody
-
-data CddlError = CddlErrorTextEnv
-                   !(FileError TextEnvelopeError)
-                   !(FileError TextEnvelopeCddlError)
-               | CddlIOError (FileError TextEnvelopeError)
-
-renderCddlError :: CddlError -> Text
-renderCddlError (CddlErrorTextEnv textEnvErr cddlErr) = mconcat
-  [ "Failed to decode neither the cli's serialisation format nor the ledger's "
-  , "CDDL serialisation format. TextEnvelope error: " <> Text.pack (displayError textEnvErr) <> "\n"
-  , "TextEnvelopeCddl error: " <> Text.pack (displayError cddlErr)
-  ]
-renderCddlError (CddlIOError e) = Text.pack $ displayError e
-
-acceptTxCDDLSerialisation
-  :: FileError TextEnvelopeError
-  -> IO (Either CddlError CddlTx)
-acceptTxCDDLSerialisation err =
-  case err of
-   e@(FileError fp (TextEnvelopeDecodeError _)) ->
-      first (CddlErrorTextEnv e) <$> readCddlTx fp
-   e@(FileError fp (TextEnvelopeAesonDecodeError _)) ->
-      first (CddlErrorTextEnv e) <$> readCddlTx fp
-   e@(FileError fp (TextEnvelopeTypeError _ _)) ->
-      first (CddlErrorTextEnv e) <$> readCddlTx fp
-   e@FileErrorTempFile{} -> return . Left $ CddlIOError e
-   e@FileIOError{} -> return . Left $ CddlIOError e
-
-readCddlTx :: FilePath -> IO (Either (FileError TextEnvelopeCddlError) CddlTx)
-readCddlTx = readFileTextEnvelopeCddlAnyOf teTypes
- where
-    teTypes = [ FromCDDLTx "Witnessed Tx ByronEra" CddlTx
-              , FromCDDLTx "Witnessed Tx ShelleyEra" CddlTx
-              , FromCDDLTx "Witnessed Tx AllegraEra" CddlTx
-              , FromCDDLTx "Witnessed Tx MaryEra" CddlTx
-              , FromCDDLTx "Witnessed Tx AlonzoEra" CddlTx
-              , FromCDDLTx "Witnessed Tx BabbageEra" CddlTx
-              , FromCDDLTx "Unwitnessed Tx ByronEra" CddlTx
-              , FromCDDLTx "Unwitnessed Tx ShelleyEra" CddlTx
-              , FromCDDLTx "Unwitnessed Tx AllegraEra" CddlTx
-              , FromCDDLTx "Unwitnessed Tx MaryEra" CddlTx
-              , FromCDDLTx "Unwitnessed Tx AlonzoEra" CddlTx
-              , FromCDDLTx "Unwitnessed Tx BabbageEra" CddlTx
-              ]
+readFileTxBody :: FilePath -> IO (Either (FileError TextEnvelopeError) (InAnyCardanoEra TxBody))
+readFileTxBody = readFileInAnyCardanoEra AsTxBody
 
 -- Tx witnesses
 
-newtype CddlWitness = CddlWitness { unCddlWitness :: InAnyCardanoEra KeyWitness}
-
-readFileTxKeyWitness :: FilePath
-                -> IO (Either CddlWitnessError (InAnyCardanoEra KeyWitness))
-readFileTxKeyWitness fp = do
-  eWitness <- readFileInAnyCardanoEra AsKeyWitness fp
-  case eWitness of
-    Left e -> fmap unCddlWitness <$> acceptKeyWitnessCDDLSerialisation e
-    Right keyWit -> return $ Right keyWit
-
-data CddlWitnessError
-  = CddlWitnessErrorTextEnv
-      (FileError TextEnvelopeError)
-      (FileError TextEnvelopeCddlError)
-  | CddlWitnessIOError (FileError TextEnvelopeError)
-
--- TODO: This is a stop gap to avoid modifying the TextEnvelope
--- related functions. We intend to remove this after fully deprecating
--- the cli's serialisation format
-acceptKeyWitnessCDDLSerialisation
-  :: FileError TextEnvelopeError
-  -> IO (Either CddlWitnessError CddlWitness)
-acceptKeyWitnessCDDLSerialisation err =
-  case err of
-    e@(FileError fp (TextEnvelopeDecodeError _)) ->
-      first (CddlWitnessErrorTextEnv e) <$> readCddlWitness fp
-    e@(FileError fp (TextEnvelopeAesonDecodeError _)) ->
-      first (CddlWitnessErrorTextEnv e) <$> readCddlWitness fp
-    e@(FileError fp (TextEnvelopeTypeError _ _)) ->
-      first (CddlWitnessErrorTextEnv e) <$> readCddlWitness fp
-    e@FileErrorTempFile{} -> return . Left $ CddlWitnessIOError e
-    e@FileIOError{} -> return . Left $ CddlWitnessIOError e
-
-readCddlWitness
-  :: FilePath
-  -> IO (Either (FileError TextEnvelopeCddlError) CddlWitness)
-readCddlWitness fp = do
-  readFileTextEnvelopeCddlAnyOf teTypes fp
- where
-  teTypes = [ FromCDDLWitness "TxWitness ShelleyEra" CddlWitness
-            , FromCDDLWitness "TxWitness AllegraEra" CddlWitness
-            , FromCDDLWitness "TxWitness MaryEra" CddlWitness
-            , FromCDDLWitness "TxWitness AlonzoEra" CddlWitness
-            , FromCDDLWitness "TxWitness BabbageEra" CddlWitness
-            ]
+readFileTxKeyWitness
+  :: FilePath -> IO (Either (FileError TextEnvelopeError) (InAnyCardanoEra KeyWitness))
+readFileTxKeyWitness = readFileInAnyCardanoEra AsKeyWitness
 
 -- Witness handling
 
