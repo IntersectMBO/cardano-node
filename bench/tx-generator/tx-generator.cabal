@@ -57,6 +57,7 @@ library
                         Cardano.Benchmarking.Wallet
 
                         Cardano.Benchmarking.Plutus.BenchCustomCall
+                        Cardano.Benchmarking.Plutus.PlutusInclude
 
                         Cardano.TxGenerator.Fund
                         Cardano.TxGenerator.FundQueue

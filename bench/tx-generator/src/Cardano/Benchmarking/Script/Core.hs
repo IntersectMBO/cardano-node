@@ -23,6 +23,7 @@ import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
 import           "contra-tracer" Control.Tracer (nullTracer)
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
+import           Data.List (isSuffixOf)
 import           Data.Ratio ((%))
 
 import           Streaming
@@ -61,6 +62,7 @@ import           Cardano.Benchmarking.LogTypes as Core (TraceBenchTxSubmit (..),
 import           Cardano.Benchmarking.Types as Core (SubmissionErrorPolicy (..))
 import           Cardano.Benchmarking.Wallet as Wallet
 
+import           Cardano.Benchmarking.Plutus.PlutusInclude
 import           Cardano.Benchmarking.Script.Aeson (prettyPrintOrdered, readProtocolParametersFile)
 import           Cardano.Benchmarking.Script.Env hiding (Error (TxGenError))
 import qualified Cardano.Benchmarking.Script.Env as Env (Error (TxGenError))
@@ -381,9 +383,14 @@ interpretPayMode payMode = do
 makePlutusContext :: forall era. IsShelleyBasedEra era
   => ScriptSpec
   -> ActionM (Witness WitCtxTxIn era, ScriptInAnyLang, ScriptData, Lovelace)
-makePlutusContext scriptSpec = do
+makePlutusContext ScriptSpec{..} = do
   protocolParameters <- getProtocolParameters
-  script <- liftIOSafe $ Plutus.readPlutusScript $ scriptSpecFile scriptSpec
+  script <- if ".hs" `isSuffixOf` scriptSpecFile
+    then maybe
+          (liftTxGenError $ TxGenError $ "Plutus script not included: " ++ scriptSpecFile)
+          return
+          (includePlutusScript scriptSpecFile)
+    else liftIOSafe $ Plutus.readPlutusScript scriptSpecFile
 
   executionUnitPrices <- case protocolParamPrices protocolParameters of
     Just x -> return x
@@ -394,7 +401,7 @@ makePlutusContext scriptSpec = do
     Just b -> return b
   traceDebug $ "Plutus auto mode : Available budget per TX: " ++ show perTxBudget
 
-  (scriptData, scriptRedeemer, executionUnits) <- case scriptSpecBudget scriptSpec of
+  (scriptData, scriptRedeemer, executionUnits) <- case scriptSpecBudget of
     StaticScriptBudget sDataFile redeemerFile units withCheck -> do
       sData <- liftIOSafe $ readScriptData sDataFile
       redeemer <-liftIOSafe $ readScriptData redeemerFile
@@ -434,7 +441,7 @@ makePlutusContext scriptSpec = do
           return (autoBudgetDatum, autoBudgetRedeemer, preRun)
 
   let msg = mconcat [ "Plutus Benchmark :"
-                    , " Script: ", scriptSpecFile scriptSpec
+                    , " Script: ", scriptSpecFile
                     , ", Datum: ", show scriptData
                     , ", Redeemer: ", show scriptRedeemer
                     , ", StatedBudget: ", show executionUnits

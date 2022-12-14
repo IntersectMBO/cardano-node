@@ -8,7 +8,7 @@
 
 module Main (main) where
 
-import           Control.Monad (when)
+import           Control.Monad
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
 import           Data.Aeson (FromJSON, eitherDecodeFileStrict', encode)
@@ -38,6 +38,7 @@ import           Cardano.Benchmarking.Script.Selftest (testScript)
 import           Cardano.Benchmarking.Script.Types (SubmitMode (..))
 
 import           Cardano.Benchmarking.Plutus.BenchCustomCall
+import           Cardano.Benchmarking.Plutus.PlutusInclude
 
 import           Cardano.Node.Protocol.Types
 
@@ -119,27 +120,30 @@ checkPlutusBuiltin ::
      IO ()
 checkPlutusBuiltin
   = do
-    let apiData = toApiData bData
+    let
+      ~(Just script) = includePlutusScript "BenchCustomCall.hs"
     putStrLn "* serialisation of built-in Plutus script:"
     BSL.putStrLn $ textEnvelopeToJSON Nothing customCallScript
-    putStrLn "* custom script data in Cardano API format:"
-    BSL.putStrLn $ encode $ scriptDataToJson ScriptDataJsonDetailedSchema apiData
 
     protocolParameters <- readProtocolParametersOrDie
-    case preExecutePlutusScript protocolParameters script apiData apiData of
-      Left err -> putStrLn $ "--> execution failed: " ++ show err
-      Right units -> putStrLn $ "--> execution successful; got units: " ++ show units
+    forM_ bArgs $ \bArg -> do
+      let apiData = toApiData bArg
+      putStrLn $ "* executing with mode: " ++ show (fst bArg)
+      putStrLn "* custom script data in Cardano API format:"
+      BSL.putStrLn $ encode $ scriptDataToJson ScriptDataJsonDetailedSchema apiData
+      case preExecutePlutusScript protocolParameters script apiData apiData of
+        Left err -> putStrLn $ "--> execution failed: " ++ show err
+        Right units -> putStrLn $ "--> execution successful; got budget: " ++ show units
   where
-    -- the built-in script expects a list of BenchCustomData both as datum and as redeemer
     bData :: [BenchCustomData]
-    bData  = [BenchNone, BenchInt 42, BenchConcat "test123ABC" ["test", "123", "ABC"]]
-    -- bData' = [BenchNone, BenchInt 42, BenchConcat "test123ABC" ["test", "123", "ABCD"]]
+    bData = [BenchNone, BenchInt 42, BenchConcat "test123ABC" ["test", "123", "ABC"]]
+    -- bData = replicate 300 BenchNone
 
-    toApiData :: [BenchCustomData] -> ScriptData
+    bArgs :: [BenchCustomArg]
+    bArgs = zip [EvalSpine, EvalValues, EvalAndValidate] (repeat bData)
+
+    toApiData :: BenchCustomArg -> ScriptData
     toApiData = fromPlutusData . PlutusTx.toData
-
-    script :: ScriptInAnyLang
-    script = toScriptInAnyLang $ PlutusScript PlutusScriptV2 customCallScript
 
 checkPlutusLoop ::
      Maybe TxGenPlutusParams
@@ -161,7 +165,7 @@ checkPlutusLoop (Just PlutusOn{..})
 
     case preExecutePlutusScript protocolParameters script (ScriptDataNumber 0) redeemer of
       Left err -> putStrLn $ "--> execution failed: " ++ show err
-      Right units -> putStrLn $ "--> execution successful; got units: " ++ show units
+      Right units -> putStrLn $ "--> execution successful; got budget: " ++ show units
 
     putStrLn "* What does the redeemer look like when the loop counter is maxed out?"
     let

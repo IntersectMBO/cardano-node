@@ -6,7 +6,9 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Benchmarking.Plutus.BenchCustomCall
-    ( BenchCustomData(..) 
+    ( BenchCustomArg
+    , BenchCommand(..)
+    , BenchCustomData(..)
     , customCallScript
     , customCallScriptShortBs
     ) where
@@ -18,9 +20,17 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
 import qualified Plutus.V2.Ledger.Api as PlutusV2
 import qualified PlutusTx
-import           PlutusTx.Prelude as P hiding (Semigroup (..), unless, (.))
-import           Prelude ((.))
+import           PlutusTx.Prelude as Plutus hiding (Semigroup (..), (.))
+import           Prelude as Haskell (Show, (.))
 
+
+type BenchCustomArg = (BenchCommand, [BenchCustomData])
+
+data BenchCommand
+    = EvalSpine
+    | EvalValues
+    | EvalAndValidate
+    deriving Haskell.Show
 
 data BenchCustomData
     = BenchNone
@@ -29,7 +39,7 @@ data BenchCustomData
     | BenchSum Integer [Integer]
     | BenchConcat BuiltinByteString [BuiltinByteString]
 
-instance P.Eq BenchCustomData where
+instance Plutus.Eq BenchCustomData where
   BenchNone         == BenchNone          = True
   BenchInt i        == BenchInt i'        = i == i'
   BenchSum i is     == BenchSum i' is'    = i == i' && is == is'
@@ -38,18 +48,25 @@ instance P.Eq BenchCustomData where
   _                 == _                  = False
 
 PlutusTx.unstableMakeIsData ''BenchCustomData
+PlutusTx.unstableMakeIsData ''BenchCommand
 
 
 {-# INLINEABLE mkValidator #-}
 mkValidator :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkValidator datum redeemer _txContext =
-  if all validateValue redeemerArg && redeemerArg == datumArg
-  then ()
-  else error ()
+mkValidator datum_ redeemer_ _txContext =
+  let
+    result = case cmd of
+      EvalSpine       -> length redeemerArg == length datumArg
+      EvalValues      -> redeemerArg == datumArg
+      EvalAndValidate -> all validateValue redeemerArg && redeemerArg == datumArg
+  in if result then () else error ()
   where
-    datumArg, redeemerArg :: [BenchCustomData]
-    datumArg    = PlutusV2.unsafeFromBuiltinData datum
-    redeemerArg = PlutusV2.unsafeFromBuiltinData redeemer
+    datum, redeemer :: BenchCustomArg
+    datum     = PlutusV2.unsafeFromBuiltinData datum_
+    redeemer  = PlutusV2.unsafeFromBuiltinData redeemer_
+
+    datumArg            = snd datum
+    (cmd, redeemerArg)  = redeemer
 
     validateValue :: BenchCustomData -> Bool
     validateValue (BenchSum i is)     = i == sum is
