@@ -65,7 +65,7 @@ signingKey = fromRight (error "signingKey: parseError") $ parseSigningKeyTE keyD
   where
     keyData = TextEnvelope { teType = TextEnvelopeType "GenesisUTxOSigningKey_ed25519"
               , teDescription = fromString "Genesis Initial UTxO Signing Key"
-              , teRawCBOR = "X \vl1~\182\201v(\152\250A\202\157h0\ETX\248h\153\171\SI/m\186\242D\228\NAK\182(&\162"}
+              , teRaw = "X \vl1~\182\201v(\152\250A\202\157h0\ETX\248h\153\171\SI/m\186\242D\228\NAK\182(&\162"}
 
 genesisTxIn :: TxIn
 genesisValue :: TxOutValue BabbageEra

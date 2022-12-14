@@ -3,6 +3,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
@@ -215,10 +216,10 @@ runGenesisKeyGenGenesis (VerificationKeyFile vkeyPath)
     let vkey = getVerificationKey skey
     firstExceptT ShelleyGenesisCmdGenesisFileError
       . newExceptT
-      $ writeFileTextEnvelope skeyPath (Just skeyDesc) skey
+      $ writeFileTextEnvelope skeyPath serialiseToCBOR (Just skeyDesc) skey
     firstExceptT ShelleyGenesisCmdGenesisFileError
       . newExceptT
-      $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
+      $ writeFileTextEnvelope vkeyPath serialiseToCBOR (Just vkeyDesc) vkey
   where
     skeyDesc, vkeyDesc :: TextEnvelopeDescr
     skeyDesc = "Genesis Signing Key"
@@ -236,13 +237,13 @@ runGenesisKeyGenDelegate (VerificationKeyFile vkeyPath)
     let vkey = getVerificationKey skey
     firstExceptT ShelleyGenesisCmdGenesisFileError
       . newExceptT
-      $ writeFileTextEnvelope skeyPath (Just skeyDesc) skey
+      $ writeFileTextEnvelope skeyPath serialiseToCBOR (Just skeyDesc) skey
     firstExceptT ShelleyGenesisCmdGenesisFileError
       . newExceptT
-      $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
+      $ writeFileTextEnvelope vkeyPath serialiseToCBOR (Just vkeyDesc) vkey
     firstExceptT ShelleyGenesisCmdGenesisFileError
       . newExceptT
-      $ writeFileTextEnvelope ocertCtrPath (Just certCtrDesc)
+      $ writeFileTextEnvelope ocertCtrPath serialiseToCBOR (Just certCtrDesc)
       $ OperationalCertificateIssueCounter
           initialCounter
           (castVerificationKey vkey)  -- Cast to a 'StakePoolKey'
@@ -265,10 +266,10 @@ runGenesisKeyGenDelegateVRF (VerificationKeyFile vkeyPath)
     let vkey = getVerificationKey skey
     firstExceptT ShelleyGenesisCmdGenesisFileError
       . newExceptT
-      $ writeFileTextEnvelope skeyPath (Just skeyDesc) skey
+      $ writeFileTextEnvelope skeyPath serialiseToCBOR (Just skeyDesc) skey
     firstExceptT ShelleyGenesisCmdGenesisFileError
       . newExceptT
-      $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
+      $ writeFileTextEnvelope vkeyPath serialiseToCBOR (Just vkeyDesc) vkey
   where
     skeyDesc, vkeyDesc :: TextEnvelopeDescr
     skeyDesc = "VRF Signing Key"
@@ -283,10 +284,10 @@ runGenesisKeyGenUTxO (VerificationKeyFile vkeyPath)
     let vkey = getVerificationKey skey
     firstExceptT ShelleyGenesisCmdGenesisFileError
       . newExceptT
-      $ writeFileTextEnvelope skeyPath (Just skeyDesc) skey
+      $ writeFileTextEnvelope skeyPath serialiseToCBOR (Just skeyDesc) skey
     firstExceptT ShelleyGenesisCmdGenesisFileError
       . newExceptT
-      $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
+      $ writeFileTextEnvelope vkeyPath serialiseToCBOR (Just vkeyDesc) vkey
   where
     skeyDesc, vkeyDesc :: TextEnvelopeDescr
     skeyDesc = "Genesis Initial UTxO Signing Key"
@@ -339,9 +340,12 @@ runGenesisVerKey (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
 
     firstExceptT ShelleyGenesisCmdGenesisFileError . newExceptT . liftIO $
       case vkey of
-        AGenesisKey         vk -> writeFileTextEnvelope vkeyPath Nothing vk
-        AGenesisDelegateKey vk -> writeFileTextEnvelope vkeyPath Nothing vk
-        AGenesisUTxOKey     vk -> writeFileTextEnvelope vkeyPath Nothing vk
+        AGenesisKey         vk ->
+          writeFileTextEnvelope vkeyPath serialiseToCBOR Nothing vk
+        AGenesisDelegateKey vk ->
+          writeFileTextEnvelope vkeyPath serialiseToCBOR Nothing vk
+        AGenesisUTxOKey     vk ->
+          writeFileTextEnvelope vkeyPath serialiseToCBOR Nothing vk
 
 data SomeGenesisKey f
      = AGenesisKey         (f GenesisKey)
@@ -422,20 +426,20 @@ runGenesisCreate (GenesisDir rootdir)
     utxodir = rootdir </> "utxo-keys"
 
 
-toSKeyJSON :: Key a => SigningKey a -> ByteString
-toSKeyJSON = LBS.toStrict . textEnvelopeToJSON Nothing
+toSKeyJSON :: (Key a, SerialiseAsCBOR (SigningKey a)) => SigningKey a -> ByteString
+toSKeyJSON = LBS.toStrict . textEnvelopeToJSON serialiseToCBOR Nothing
 
-toVkeyJSON :: Key a => SigningKey a -> ByteString
-toVkeyJSON = LBS.toStrict . textEnvelopeToJSON Nothing . getVerificationKey
+toVkeyJSON :: (Key a, SerialiseAsCBOR (VerificationKey a)) => SigningKey a -> ByteString
+toVkeyJSON = LBS.toStrict . textEnvelopeToJSON serialiseToCBOR Nothing . getVerificationKey
 
-toVkeyJSON' :: Key a => VerificationKey a -> ByteString
-toVkeyJSON' = LBS.toStrict . textEnvelopeToJSON Nothing
+toVkeyJSON' :: (Key a, SerialiseAsCBOR (VerificationKey a)) => VerificationKey a -> ByteString
+toVkeyJSON' = LBS.toStrict . textEnvelopeToJSON serialiseToCBOR Nothing
 
 toOpCert :: (OperationalCertificate, OperationalCertificateIssueCounter) -> ByteString
-toOpCert = LBS.toStrict . textEnvelopeToJSON Nothing . fst
+toOpCert = LBS.toStrict . textEnvelopeToJSON serialiseToCBOR Nothing . fst
 
 toCounter :: (OperationalCertificate, OperationalCertificateIssueCounter) -> ByteString
-toCounter = LBS.toStrict . textEnvelopeToJSON Nothing . snd
+toCounter = LBS.toStrict . textEnvelopeToJSON serialiseToCBOR Nothing . snd
 
 generateShelleyNodeSecrets :: [SigningKey GenesisDelegateExtendedKey] -> [VerificationKey GenesisKey]
     -> IO (Map (Hash GenesisKey)

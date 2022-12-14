@@ -111,10 +111,34 @@ runGetVerificationKey :: SigningKeyFile
 runGetVerificationKey skf (VerificationKeyFile vkf) = do
     ssk <- firstExceptT ShelleyKeyCmdReadKeyFileError $
              readSigningKeyFile skf
-    withSomeSigningKey ssk $ \sk ->
-      let vk = getVerificationKey sk in
-      firstExceptT ShelleyKeyCmdWriteFileError . newExceptT $
-        writeFileTextEnvelope vkf Nothing vk
+    firstExceptT ShelleyKeyCmdWriteFileError . newExceptT
+      $ writeVerificationKey ssk
+ where
+  writeVerificationKey
+    :: SomeSigningKey
+    -> IO (Either (FileError ()) ())
+  writeVerificationKey ssk =
+    case ssk of
+      AByronSigningKey sk -> writeToDisk vkf sk
+      APaymentSigningKey sk -> writeToDisk vkf sk
+      APaymentExtendedSigningKey sk -> writeToDisk vkf sk
+      AStakeSigningKey sk -> writeToDisk vkf sk
+      AStakeExtendedSigningKey sk -> writeToDisk vkf sk
+      AStakePoolSigningKey sk -> writeToDisk vkf sk
+      AGenesisSigningKey  sk -> writeToDisk vkf sk
+      AGenesisExtendedSigningKey sk -> writeToDisk vkf sk
+      AGenesisDelegateSigningKey sk -> writeToDisk vkf sk
+      AGenesisDelegateExtendedSigningKey sk -> writeToDisk vkf sk
+      AGenesisUTxOSigningKey sk -> writeToDisk vkf sk
+      AVrfSigningKey sk -> writeToDisk vkf sk
+      AKesSigningKey sk -> writeToDisk vkf sk
+
+  writeToDisk
+    :: (Key keyrole, SerialiseAsCBOR (VerificationKey keyrole))
+    => FilePath -> SigningKey keyrole -> IO (Either (FileError ()) ())
+  writeToDisk vkf' s =
+    let vk = getVerificationKey s
+    in writeFileTextEnvelope vkf' serialiseToCBOR Nothing vk
 
 
 data SomeSigningKey
@@ -133,25 +157,6 @@ data SomeSigningKey
   | AVrfSigningKey             (SigningKey VrfKey)
   | AKesSigningKey             (SigningKey KesKey)
 
-withSomeSigningKey :: SomeSigningKey
-                   -> (forall keyrole. Key keyrole => SigningKey keyrole -> a)
-                   -> a
-withSomeSigningKey ssk f =
-    case ssk of
-      AByronSigningKey           sk -> f sk
-      APaymentSigningKey         sk -> f sk
-      APaymentExtendedSigningKey sk -> f sk
-      AStakeSigningKey           sk -> f sk
-      AStakeExtendedSigningKey   sk -> f sk
-      AStakePoolSigningKey       sk -> f sk
-      AGenesisSigningKey         sk -> f sk
-      AGenesisExtendedSigningKey sk -> f sk
-      AGenesisDelegateSigningKey sk -> f sk
-      AGenesisDelegateExtendedSigningKey
-                                 sk -> f sk
-      AGenesisUTxOSigningKey     sk -> f sk
-      AVrfSigningKey             sk -> f sk
-      AKesSigningKey             sk -> f sk
 
 readSigningKeyFile
   :: SigningKeyFile
@@ -329,6 +334,7 @@ legacyVerificationKeysNotSupported =
 convertByronSigningKey
   :: forall keyrole.
      Key keyrole
+  => SerialiseAsCBOR (SigningKey keyrole)
   => Maybe Text          -- ^ Password (if applicable)
   -> ByronKeyFormat
   -> (Byron.SigningKey -> SigningKey keyrole)
@@ -358,11 +364,12 @@ convertByronSigningKey mPwd byronFormat convert
         sk' = convert unprotectedSk
 
     firstExceptT ShelleyKeyCmdWriteFileError . newExceptT $
-      writeFileTextEnvelope skeyPathNew Nothing sk'
+      writeFileTextEnvelope skeyPathNew serialiseToCBOR Nothing sk'
 
 convertByronVerificationKey
   :: forall keyrole.
      Key keyrole
+  => SerialiseAsCBOR (VerificationKey keyrole)
   => (Byron.VerificationKey -> VerificationKey keyrole)
   -> VerificationKeyFile -- ^ Input file: old format
   -> OutputFile          -- ^ Output file: new format
@@ -378,7 +385,7 @@ convertByronVerificationKey convert
         vk' = convert vk
 
     firstExceptT ShelleyKeyCmdWriteFileError . newExceptT $
-      writeFileTextEnvelope vkeyPathNew Nothing vk'
+      writeFileTextEnvelope vkeyPathNew serialiseToCBOR Nothing vk'
 
 
 runConvertByronGenesisVerificationKey
@@ -398,7 +405,7 @@ runConvertByronGenesisVerificationKey (VerificationKeyBase64 b64ByronVKey)
         vk' = convert vk
 
     firstExceptT ShelleyKeyCmdWriteFileError . newExceptT $
-      writeFileTextEnvelope vkeyPathNew Nothing vk'
+      writeFileTextEnvelope vkeyPathNew serialiseToCBOR Nothing vk'
   where
     convert :: Byron.VerificationKey -> VerificationKey GenesisKey
     convert (Byron.VerificationKey xvk) =
@@ -420,7 +427,7 @@ runConvertITNStakeKey (AVerificationKeyFile (VerificationKeyFile vk)) (OutputFil
     . first ShelleyKeyCmdItnKeyConvError
     $ convertITNVerificationKey bech32publicKey
   firstExceptT ShelleyKeyCmdWriteFileError . newExceptT $
-    writeFileTextEnvelope outFile Nothing vkey
+    writeFileTextEnvelope outFile serialiseToCBOR Nothing vkey
 
 runConvertITNStakeKey (ASigningKeyFile (SigningKeyFile sk)) (OutputFile outFile) = do
   bech32privateKey <- firstExceptT ShelleyKeyCmdItnKeyConvError . newExceptT $
@@ -429,7 +436,7 @@ runConvertITNStakeKey (ASigningKeyFile (SigningKeyFile sk)) (OutputFile outFile)
     . first ShelleyKeyCmdItnKeyConvError
     $ convertITNSigningKey bech32privateKey
   firstExceptT ShelleyKeyCmdWriteFileError . newExceptT $
-    writeFileTextEnvelope outFile Nothing skey
+    writeFileTextEnvelope outFile serialiseToCBOR Nothing skey
 
 runConvertITNExtendedToStakeKey :: SomeKeyFile -> OutputFile -> ExceptT ShelleyKeyCmdError IO ()
 runConvertITNExtendedToStakeKey (AVerificationKeyFile _) _ = left ShelleyKeyCmdWrongKeyTypeError
@@ -438,7 +445,7 @@ runConvertITNExtendedToStakeKey (ASigningKeyFile (SigningKeyFile sk)) (OutputFil
   skey <- hoistEither . first ShelleyKeyCmdItnKeyConvError
             $ convertITNExtendedSigningKey bech32privateKey
   firstExceptT ShelleyKeyCmdWriteFileError . newExceptT
-    $ writeFileTextEnvelope outFile Nothing skey
+    $ writeFileTextEnvelope outFile serialiseToCBOR Nothing skey
 
 runConvertITNBip32ToStakeKey :: SomeKeyFile -> OutputFile -> ExceptT ShelleyKeyCmdError IO ()
 runConvertITNBip32ToStakeKey (AVerificationKeyFile _) _ = left ShelleyKeyCmdWrongKeyTypeError
@@ -447,7 +454,7 @@ runConvertITNBip32ToStakeKey (ASigningKeyFile (SigningKeyFile sk)) (OutputFile o
   skey <- hoistEither . first ShelleyKeyCmdItnKeyConvError
             $ convertITNBIP32SigningKey bech32privateKey
   firstExceptT ShelleyKeyCmdWriteFileError . newExceptT
-    $ writeFileTextEnvelope outFile Nothing skey
+    $ writeFileTextEnvelope outFile serialiseToCBOR Nothing skey
 
 -- | An error that can occur while converting an Incentivized Testnet (ITN)
 -- key.
@@ -643,8 +650,8 @@ writeSomeCardanoAddressSigningKeyFile
 writeSomeCardanoAddressSigningKeyFile outFile skey =
   case skey of
     ACardanoAddrShelleyPaymentSigningKey sk ->
-      writeFileTextEnvelope outFile Nothing sk
+      writeFileTextEnvelope outFile serialiseToCBOR Nothing sk
     ACardanoAddrShelleyStakeSigningKey sk ->
-      writeFileTextEnvelope outFile Nothing sk
+      writeFileTextEnvelope outFile serialiseToCBOR Nothing sk
     ACardanoAddrByronSigningKey sk ->
-      writeFileTextEnvelope outFile Nothing sk
+      writeFileTextEnvelope outFile serialiseToCBOR Nothing sk

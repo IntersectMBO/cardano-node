@@ -258,14 +258,15 @@ mkPraosLeaderCredentials
       shelleyLeaderCredentialsLabel = "Shelley"
     }
 
-parseEnvelope ::
-     HasTextEnvelope a
+parseEnvelope
+  :: HasTextEnvelope a
+  => SerialiseAsCBOR a
   => AsType a
   -> (TextEnvelope, String)
   -> ExceptT PraosLeaderCredentialsError IO a
 parseEnvelope as (te, loc) =
   firstExceptT (FileError . Api.FileError loc) . hoistEither $
-    deserialiseFromTextEnvelope as te
+    deserialiseFromTextEnvelopeCBOR as te
 
 
 ------------------------------------------------------------------------------

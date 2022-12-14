@@ -20,7 +20,7 @@ module Cardano.Api.SerialiseTextEnvelope
   , textEnvelopeRawCBOR
   , TextEnvelopeError(..)
   , serialiseToTextEnvelope
-  , deserialiseFromTextEnvelope
+  , deserialiseFromTextEnvelopeCBOR
   , readFileTextEnvelope
   , writeFileTextEnvelope
   , writeFileTextEnvelopeWithOwnerPermissions
@@ -30,7 +30,7 @@ module Cardano.Api.SerialiseTextEnvelope
 
     -- * Reading one of several key types
   , FromSomeType(..)
-  , deserialiseFromTextEnvelopeAnyOf
+  , deserialiseFromTextEnvelopeAnyOfCBOR
   , readFileTextEnvelopeAnyOf
 
     -- * Data family instances
@@ -68,10 +68,10 @@ import           Cardano.Api.Utils (readFileBlocking)
 #ifdef UNIX
 import           Control.Exception (IOException, bracket, bracketOnError, try)
 import           System.Directory ()
-import           System.Posix.Files (ownerModes, setFdOwnerAndGroup)
-import           System.Posix.IO (OpenMode (..), closeFd, openFd, fdToHandle, defaultFileFlags)
-import           System.Posix.User (getRealUserID)
 import           System.IO (hClose)
+import           System.Posix.Files (ownerModes, setFdOwnerAndGroup)
+import           System.Posix.IO (OpenMode (..), closeFd, defaultFileFlags, fdToHandle, openFd)
+import           System.Posix.User (getRealUserID)
 #else
 import           Control.Exception (bracketOnError)
 import           System.Directory (removeFile, renameFile)
@@ -105,7 +105,7 @@ newtype TextEnvelopeDescr = TextEnvelopeDescr String
 data TextEnvelope = TextEnvelope
   { teType        :: !TextEnvelopeType
   , teDescription :: !TextEnvelopeDescr
-  , teRawCBOR     :: !ByteString
+  , teRaw         :: !ByteString
   } deriving (Eq, Show)
 
 instance HasTypeProxy TextEnvelope where
@@ -113,10 +113,10 @@ instance HasTypeProxy TextEnvelope where
     proxyToAsType _ = AsTextEnvelope
 
 instance ToJSON TextEnvelope where
-  toJSON TextEnvelope {teType, teDescription, teRawCBOR} =
+  toJSON TextEnvelope {teType, teDescription, teRaw} =
     object [ "type"        .= teType
            , "description" .= teDescription
-           , "cborHex"     .= Text.decodeUtf8 (Base16.encode teRawCBOR)
+           , "cborHex"     .= Text.decodeUtf8 (Base16.encode teRaw)
            ]
 
 instance FromJSON TextEnvelope where
@@ -136,7 +136,7 @@ textEnvelopeJSONKeyOrder = keyOrder ["type", "description", "cborHex"]
 
 
 textEnvelopeRawCBOR :: TextEnvelope -> ByteString
-textEnvelopeRawCBOR = teRawCBOR
+textEnvelopeRawCBOR = teRaw
 
 
 -- | The errors that the pure 'TextEnvelope' parsing\/decoding functions can return.
@@ -180,7 +180,7 @@ expectTextEnvelopeOfType expectedType TextEnvelope { teType = actualType } =
 -- Serialisation in text envelope format
 --
 
-class SerialiseAsCBOR a => HasTextEnvelope a where
+class HasTextEnvelope a where
     textEnvelopeType :: AsType a -> TextEnvelopeType
 
     textEnvelopeDefaultDescr :: a -> TextEnvelopeDescr
@@ -188,39 +188,43 @@ class SerialiseAsCBOR a => HasTextEnvelope a where
 
 
 serialiseToTextEnvelope :: forall a. HasTextEnvelope a
-                        => Maybe TextEnvelopeDescr -> a -> TextEnvelope
-serialiseToTextEnvelope mbDescr a =
+                        => HasTypeProxy a
+                        => (a -> ByteString) -> Maybe TextEnvelopeDescr -> a -> TextEnvelope
+serialiseToTextEnvelope ser mbDescr a =
     TextEnvelope {
       teType    = textEnvelopeType ttoken
     , teDescription   = fromMaybe (textEnvelopeDefaultDescr a) mbDescr
-    , teRawCBOR = serialiseToCBOR a
+    , teRaw = ser a
     }
   where
     ttoken :: AsType a
     ttoken = proxyToAsType Proxy
 
 
-deserialiseFromTextEnvelope :: HasTextEnvelope a
-                            => AsType a
-                            -> TextEnvelope
-                            -> Either TextEnvelopeError a
-deserialiseFromTextEnvelope ttoken te = do
+deserialiseFromTextEnvelopeCBOR
+  :: HasTextEnvelope a
+  => SerialiseAsCBOR a
+  => AsType a
+  -> TextEnvelope
+  -> Either TextEnvelopeError a
+deserialiseFromTextEnvelopeCBOR ttoken te = do
     expectTextEnvelopeOfType (textEnvelopeType ttoken) te
     first TextEnvelopeDecodeError $
-      deserialiseFromCBOR ttoken (teRawCBOR te) --TODO: You have switched from CBOR to JSON
+      deserialiseFromCBOR ttoken (teRaw te) --TODO: You have switched from CBOR to JSON
 
 
-deserialiseFromTextEnvelopeAnyOf :: [FromSomeType HasTextEnvelope b]
-                                 -> TextEnvelope
-                                 -> Either TextEnvelopeError b
-deserialiseFromTextEnvelopeAnyOf types te =
+deserialiseFromTextEnvelopeAnyOfCBOR
+  :: [FromSomeType HasTextEnvelope SerialiseAsCBOR b]
+  -> TextEnvelope
+  -> Either TextEnvelopeError b
+deserialiseFromTextEnvelopeAnyOfCBOR types te =
     case List.find matching types of
       Nothing ->
         Left (TextEnvelopeTypeError expectedTypes actualType)
 
       Just (FromSomeType ttoken f) ->
         first TextEnvelopeDecodeError $
-          f <$> deserialiseFromCBOR ttoken (teRawCBOR te)
+          f <$> deserialiseFromCBOR ttoken (teRaw te)
   where
     actualType    = teType te
     expectedTypes = [ textEnvelopeType ttoken
@@ -274,19 +278,22 @@ writeFileWithOwnerPermissions targetPath a =
 #endif
 
 writeFileTextEnvelope :: HasTextEnvelope a
+                      => HasTypeProxy a
                       => FilePath
+                      -> (a -> ByteString)
                       -> Maybe TextEnvelopeDescr
                       -> a
                       -> IO (Either (FileError ()) ())
-writeFileTextEnvelope path mbDescr a =
+writeFileTextEnvelope path ser mbDescr a =
     runExceptT $ do
       handleIOExceptT (FileIOError path) $ LBS.writeFile path content
   where
-    content = textEnvelopeToJSON mbDescr a
+    content = textEnvelopeToJSON ser mbDescr a
 
 
 writeFileTextEnvelopeWithOwnerPermissions
   :: HasTextEnvelope a
+  => HasTypeProxy a
   => FilePath
   -> Maybe TextEnvelopeDescr
   -> a
@@ -294,14 +301,17 @@ writeFileTextEnvelopeWithOwnerPermissions
 writeFileTextEnvelopeWithOwnerPermissions targetPath mbDescr a =
   writeFileWithOwnerPermissions targetPath content
  where
-  content = textEnvelopeToJSON mbDescr a
+  content = textEnvelopeToJSON (error "serialiseToCBOR") mbDescr a
 
-
-textEnvelopeToJSON :: HasTextEnvelope a =>  Maybe TextEnvelopeDescr -> a -> LBS.ByteString
-textEnvelopeToJSON mbDescr a  =
-  encodePretty' textEnvelopeJSONConfig (serialiseToTextEnvelope mbDescr a) <> "\n"
+textEnvelopeToJSON
+  :: HasTypeProxy a
+  => HasTextEnvelope a
+  => (a -> ByteString) -> Maybe TextEnvelopeDescr -> a -> LBS.ByteString
+textEnvelopeToJSON ser mbDescr a  =
+  encodePretty' textEnvelopeJSONConfig (serialiseToTextEnvelope ser mbDescr a) <> "\n"
 
 readFileTextEnvelope :: HasTextEnvelope a
+                     => SerialiseAsCBOR a
                      => AsType a
                      -> FilePath
                      -> IO (Either (FileError TextEnvelopeError) a)
@@ -310,10 +320,10 @@ readFileTextEnvelope ttoken path =
       content <- handleIOExceptT (FileIOError path) $ readFileBlocking path
       firstExceptT (FileError path) $ hoistEither $ do
         te <- first TextEnvelopeAesonDecodeError $ Aeson.eitherDecodeStrict' content
-        deserialiseFromTextEnvelope ttoken te
+        deserialiseFromTextEnvelopeCBOR ttoken te
 
 
-readFileTextEnvelopeAnyOf :: [FromSomeType HasTextEnvelope b]
+readFileTextEnvelopeAnyOf :: [FromSomeType HasTextEnvelope SerialiseAsCBOR b]
                           -> FilePath
                           -> IO (Either (FileError TextEnvelopeError) b)
 readFileTextEnvelopeAnyOf types path =
@@ -321,7 +331,7 @@ readFileTextEnvelopeAnyOf types path =
       content <- handleIOExceptT (FileIOError path) $ readFileBlocking path
       firstExceptT (FileError path) $ hoistEither $ do
         te <- first TextEnvelopeAesonDecodeError $ Aeson.eitherDecodeStrict' content
-        deserialiseFromTextEnvelopeAnyOf types te
+        deserialiseFromTextEnvelopeAnyOfCBOR types te
 
 
 readTextEnvelopeFromFile :: FilePath

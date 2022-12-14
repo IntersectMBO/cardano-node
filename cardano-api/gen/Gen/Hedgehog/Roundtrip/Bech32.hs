@@ -9,7 +9,7 @@ import           Hedgehog (Gen, Property)
 import qualified Hedgehog as H
 
 roundtrip_Bech32
-  :: (SerialiseAsBech32 a, Eq a, Show a)
+  :: (SerialiseAsBech32 a, SerialiseAsRawBytes a, Eq a, Show a)
   => AsType a -> Gen a -> Property
 roundtrip_Bech32 typeProxy gen =
   H.property $ do
