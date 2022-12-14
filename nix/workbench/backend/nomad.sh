@@ -61,6 +61,9 @@ case "$op" in
         # The container need to know where `supervisord` config file is located
         # so it can be started. This is passed as an environment variable.
         setenvjqstr 'container_supervisord_conf' "/tmp/cluster/run/current/supervisor/supervisord.conf"
+        # The logging level at which supervisor should write to the activity
+        # log. Valid levels are trace, debug, info, warn, error and critical.
+        setenvjqstr 'container_supervisord_loglevel' "info"
         ;;
 
     # Man pages for Podman configuration files:
@@ -638,11 +641,12 @@ nomad_create_task_stanza() {
     local file=$1
     local name=$2
     local podman_volumes=$3
-    local oci_image_name=$(            envjqr 'oci_image_name')
-    local oci_image_tag=$(             envjqr 'oci_image_tag')
-    local container_workdir=$(         envjqr 'container_workdir')
-    local container_supervisor_nix=$(  envjqr 'container_supervisor_nix')
-    local container_supervisord_conf=$(envjqr 'container_supervisord_conf')
+    local oci_image_name=$(                envjqr 'oci_image_name')
+    local oci_image_tag=$(                 envjqr 'oci_image_tag')
+    local container_workdir=$(             envjqr 'container_workdir')
+    local container_supervisor_nix=$(      envjqr 'container_supervisor_nix')
+    local container_supervisord_conf=$(    envjqr 'container_supervisord_conf')
+    local container_supervisord_loglevel=$(envjqr 'container_supervisord_loglevel')
     cat > "$file" <<- EOF
 # The task stanza creates an individual unit of work, such as a
 # Docker container, web application, or batch processing.
@@ -668,6 +672,7 @@ task "$name" {
   env = {
     SUPERVISOR_NIX = "${container_supervisor_nix}"
     SUPERVISORD_CONFIG = "${container_supervisord_conf}"
+    SUPERVISORD_LOGLEVEL = "${container_supervisord_loglevel}"
   }
   # Avoid: podman WARN[0066] StopSignal SIGTERM failed to stop container
   # cluster-XX in 5 seconds, resorting to SIGKILL

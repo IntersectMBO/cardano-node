@@ -64,8 +64,14 @@ let
                 "${pkgs.coreutils}"/bin/ln -s "${pkgs.python3Packages.supervisor}" "$SUPERVISOR_NIX"
               fi
 
+              # The SUPERVISORD_LOGLEVEL defaults to "info"
+              # The logging level at which supervisor should write to the
+              # activity log. Valid levels are trace, debug, info, warn, error
+              # and critical.
+              LOGLEVEL="''${SUPERVISORD_LOGLEVEL:-info}"
+
               # Start `supervisord` on the foreground.
-              "${pkgs.python3Packages.supervisor}"/bin/supervisord --nodaemon --configuration "$SUPERVISORD_CONFIG"
+              "${pkgs.python3Packages.supervisor}"/bin/supervisord --nodaemon --configuration "$SUPERVISORD_CONFIG" --loglevel="$LOGLEVEL"
             '';
           };
         in
