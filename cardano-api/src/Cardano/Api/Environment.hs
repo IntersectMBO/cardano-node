@@ -14,17 +14,22 @@ module Cardano.Api.Environment
 
 import           Prelude
 
-import           Control.Monad
 import           Data.Aeson
 import           Data.Text (Text)
 import qualified Data.Text as Text
-import           Text.ParserCombinators.ReadP
-
+import           Data.Word
 import           System.Environment (lookupEnv)
+import qualified Text.Parsec as Parsec
+import           Text.Parsec ((<|>))
+import qualified Text.Parsec.Language as Parsec
+import qualified Text.Parsec.String as Parsec
+import qualified Text.Parsec.Token as Parsec
+
+import qualified Ouroboros.Network.Magic as Consensus
 
 import           Cardano.Api.Error
 import           Cardano.Api.NetworkId
-import           Cardano.Api.Utils (textShow)
+import           Cardano.Api.Utils (formatParsecError, textShow)
 
 newtype SocketPath
   = SocketPath { unSocketPath :: FilePath }
@@ -58,30 +63,36 @@ networkIdEnvName = "CARDANO_NODE_NETWORK_ID"
 readEnvNetworkId :: IO (Either EnvNetworkIdError NetworkId)
 readEnvNetworkId
   = lookupEnv networkIdEnvName >>= return . \case
-    Nothing -> Left EnvVarNotSetError
-    Just val -> case parseNetworkId val of
-      Right nid -> Right nid
-      Left err -> Left $ ParsingEnvVarError err
+      Nothing -> Left EnvVarNotSetError
+      Just val ->
+        case Parsec.parse ((parseMainnet <|> parseNetworkId) <* Parsec.eof) "" val of
+          Right nid -> Right nid
+          Left err -> Left $ ParsingEnvVarError err
 
 data EnvNetworkIdError
   = EnvVarNotSetError
-  | ParsingEnvVarError String
+  | ParsingEnvVarError Parsec.ParseError
   deriving Show
 
 instance Error EnvNetworkIdError where
   displayError = \case
-    EnvVarNotSetError -> "Error while looking up environment variable: "<> networkIdEnvName
-    ParsingEnvVarError msg -> "Error while parsing " <> networkIdEnvName <> ": " <> msg
+    EnvVarNotSetError -> "Error while looking up environment variable: " <> networkIdEnvName
+    ParsingEnvVarError msg -> formatParsecError msg
 
-parseNetworkId :: String -> Either String NetworkId
-parseNetworkId env = case readP_to_S parser env of
-  [(res, "")] -> Right $ res
-  _other -> Left $ "Bad network ID : " <>  env
+parseMainnet :: Parsec.Parser NetworkId
+parseMainnet = Parsec.string "mainnet" >> return Mainnet
+
+decimal :: Parsec.Parser Integer
+Parsec.TokenParser { Parsec.decimal = decimal } = Parsec.haskell
+
+parseNetworkId :: Parsec.Parser NetworkId
+parseNetworkId = do
+  i <- decimal
+  if i > toInteger (maxBound :: Word32)
+  then fail $ "NetworkMagic " <> show i <> " exceeds the Word32 upper bound"
+  else return $ mainnetOrTestnet $ fromIntegral i
  where
-  parser = choice [ mainnet, testnet]
-  mainnet = string "mainnet" >> eof >> return Mainnet
-  testnet = do
-    void $ string "testnet-"
-    w32 <- readS_to_P reads
-    eof
-    return $ Testnet $ NetworkMagic w32
+  mainnetOrTestnet :: Word32 -> NetworkId
+  mainnetOrTestnet i
+    | Consensus.unNetworkMagic mainnetNetworkMagic == i = fromNetworkMagic mainnetNetworkMagic
+    | otherwise = Testnet $ Consensus.NetworkMagic i
