@@ -209,6 +209,7 @@ doAddLiveViewNodesForConnected tracerEnv connected = do
                    # set UI.type_ "checkbox"
                    # set UI.name checkId
                    # set UI.checked True
+                   # set dataState (T.unpack nodeName)
         , case nodeColor of
             Nothing ->
               UI.label ## checkLabelId
