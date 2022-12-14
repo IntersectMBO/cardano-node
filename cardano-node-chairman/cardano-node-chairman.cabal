@@ -80,7 +80,6 @@ test-suite chairman-tests
 
   other-modules:        Spec.Chairman.Chairman
                         Spec.Chairman.Cardano
-                        Spec.Chairman.Shelley
                         Spec.Network
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
