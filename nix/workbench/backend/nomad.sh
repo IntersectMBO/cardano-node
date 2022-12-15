@@ -110,9 +110,13 @@ case "$op" in
         local oci_image_tag=$(          envjqr 'oci_image_tag')
         local oci_image_skopeo_script=$(envjqr 'oci_image_skopeo_script')
         msg "Creating OCI image ..."
+        # TODO: for further research.
+        # STORAGE_DRIVER=overlay "$oci_image_skopeo_script"
+        # If podman 4.2.1 and nomad v1.3.5 this fix is not needed anymore
         # Forced the `overlay` storage driver or podman won't see the image.
         # https://docs.podman.io/en/latest/markdown/podman.1.html#note-unsupported-file-systems-in-rootless-mode
-        STORAGE_DRIVER=overlay "$oci_image_skopeo_script"
+        # Error was: workbench:  FATAL: OCI image registry.workbench.iog.io/cluster:2l7wi7sh1zyp2mnl24m13ibnh2wsjvwg cannot be found by podman
+        "$oci_image_skopeo_script"
         # Check that `podman` can see the "cluster" OCI image.
         if ! podman image exists "${oci_image_name}:${oci_image_tag}"
         then
@@ -467,7 +471,7 @@ nomad_create_folders_and_config() {
     ln -s "$(which nomad-driver-podman)" "$dir/nomad/data/plugins/nomad-driver-podman"
     # Config:
     # - `nomad` configuration docs:
-    # - - https://www.nomadproject.io/docs/configuration
+    # - - https://developer.hashicorp.com/nomad/docs/configuration
     # - Generic `nomad` plugins / task drivers configuration docs:
     # - - https://www.nomadproject.io/plugins/drivers
     # - - https://www.nomadproject.io/docs/configuration/plugin
@@ -652,21 +656,38 @@ nomad_create_task_stanza() {
 # Docker container, web application, or batch processing.
 task "$name" {
   driver = "podman"
+  # https://github.com/hashicorp/nomad-driver-podman#task-configuration
   config {
+    # The image to run. Accepted transports are docker (default if missing),
+    # oci-archive and docker-archive. Images reference as short-names will be
+    # treated according to user-configured preferences.
     image = "${oci_image_name}:${oci_image_tag}"
+    # Always pull the latest image on container start.
     force_pull = false
-    # TODO/FIXME: Don't know how to make podman log to nomad
-    # instead of journald.
-    # No argument or block type is named \"logging\"
-    #logging = {
-    #  driver = "nomad"
-    #}
+    # Podman redirects its combined stdout/stderr logstream directly to a Nomad
+    # fifo. Benefits of this mode are: zero overhead, don't have to worry about
+    # log rotation at system or Podman level. Downside: you cannot easily ship
+    # the logstream to a log aggregator plus stdout/stderr is multiplexed into a
+    # single stream.
+    logging = {
+      # The other option is: "journald"
+      driver = "nomad"
+    }
+    # The hostname to assign to the container. When launching more than one of a
+    # task (using count) with this option set, every container the task starts
+    # will have the same hostname.
     hostname = "$name"
     network_mode = "host"
+    # A list of /container_path strings for tmpfs mount points. See podman run
+    # --tmpfs options for details.
     tmpfs = [
       "/tmp"
     ]
+    # A list of host_path:container_path:options strings to bind host paths to
+    # container paths. Named volumes are not supported.
     volumes = ${podman_volumes}
+    # The working directory for the container. Defaults to the default set in
+    # the image.
     working_dir = "${container_workdir}"
   }
   env = {
