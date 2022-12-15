@@ -37,8 +37,8 @@ import           Cardano.Benchmarking.Script.Aeson (prettyPrint, prettyPrintYaml
 import           Cardano.Benchmarking.Script.Selftest (testScript)
 import           Cardano.Benchmarking.Script.Types (SubmitMode (..))
 
-import           Cardano.Benchmarking.Plutus.BenchCustomCall
-import           Cardano.Benchmarking.Plutus.PlutusInclude
+import           Cardano.Benchmarking.PlutusScripts
+import           Cardano.Benchmarking.PlutusScripts.CustomCallTypes
 
 import           Cardano.Node.Protocol.Types
 
@@ -69,10 +69,6 @@ main
                 _               -> ""
         putStrLn msg
         exitSuccess
-
-    let
-
-
 
     CommandLine{..} <- parseCommandLine
     let pathModifier p = if isRelative p then runPath </> p else p
@@ -121,11 +117,9 @@ checkPlutusBuiltin ::
 checkPlutusBuiltin
   = do
     let
-      ~(Just script) = includePlutusScript "BenchCustomCallV2.hs"
-    putStrLn "* serialisation of built-in Plutus script V1:"
-    BSL.putStrLn $ textEnvelopeToJSON Nothing customCallScriptV1
-    putStrLn "* serialisation of built-in Plutus script V2:"
-    BSL.putStrLn $ textEnvelopeToJSON Nothing customCallScriptV2
+      ~(Just script) = findPlutusScript "CustomCall.hs"
+    putStrLn "* serialisation of built-in Plutus script:"
+    BSL.putStrLn $ encodePlutusScript script
 
     protocolParameters <- readProtocolParametersOrDie
     forM_ bArgs $ \bArg -> do
@@ -137,14 +131,14 @@ checkPlutusBuiltin
         Left err -> putStrLn $ "--> execution failed: " ++ show err
         Right units -> putStrLn $ "--> execution successful; got budget: " ++ show units
   where
-    bData :: [BenchCustomData]
-    bData = [BenchNone, BenchInt 42, BenchConcat "test123ABC" ["test", "123", "ABC"]]
-    -- bData = replicate 300 BenchNone
+    bData :: [CustomCallData]
+    bData = [CCNone, CCInteger 42, CCConcat "test123ABC" ["test", "123", "ABC"]]
+    -- bData = replicate 300 CCNone
 
-    bArgs :: [BenchCustomArg]
+    bArgs :: [CustomCallArg]
     bArgs = zip [EvalSpine, EvalValues, EvalAndValidate] (repeat bData)
 
-    toApiData :: BenchCustomArg -> ScriptData
+    toApiData :: CustomCallArg -> ScriptData
     toApiData = fromPlutusData . PlutusTx.toData
 
 checkPlutusLoop ::

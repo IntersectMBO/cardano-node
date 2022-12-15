@@ -20,6 +20,10 @@ flag defer-plugin-errors
   default:     False
   manual:      True
 
+common project-config
+  if os(windows)
+    buildable: False
+
 common common-definitions
   build-depends:      base ^>=4.14
   default-language:   Haskell2010
@@ -33,45 +37,33 @@ common common-definitions
   ghc-options:
     -Wall -Wcompat -Wincomplete-record-updates
     -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
-    -Wunused-packages -fobject-code -fno-ignore-interface-pragmas
-    -fno-omit-interface-pragmas
+    -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
 
   if flag(defer-plugin-errors)
     ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
-
-common maybe-Win32
 
 library
   import:          common-definitions
   hs-source-dirs:  src
 
-  if os(windows)
-    build-depends: Win32
-
   if flag(unexpected_thunks)
     cpp-options: -DUNEXPECTED_THUNKS
 
   exposed-modules:
+    Cardano.Benchmarking.PlutusScripts
+    Cardano.Benchmarking.PlutusScripts.CustomCallTypes
+  
+  other-modules:
+    Cardano.Benchmarking.PlutusScripts.CustomCall
+    Cardano.Benchmarking.PlutusScripts.EcdsaSecp256k1Loop
     Cardano.Benchmarking.PlutusScripts.Loop
-
-  --------------------
-  -- Local components
-  --------------------
-  -- build-depends:   plutus-script-utils >=1.0.0
-
+    Cardano.Benchmarking.PlutusScripts.SchnorrSecp256k1Loop
+  
   --------------------------
-  -- Other IOG dependencies
+  -- IOG dependencies
   --------------------------
   build-depends:
     , cardano-api             >=1.35
-    --, cardano-cli             >=1.35
-    --, cardano-ledger-alonzo
-    --, cardano-ledger-babbage
-    --, cardano-ledger-core
-    --, cardano-ledger-shelley
-    --, cardano-slotting
-    --, ouroboros-consensus
-    --, ouroboros-network
     , plutus-ledger-api       >=1.0.0
     , plutus-tx               >=1.0.0
     , plutus-tx-plugin        >=1.0.0
@@ -80,11 +72,6 @@ library
   -- Non-IOG dependencies
   ------------------------
   build-depends:
-    --, aeson
-    --, bytestring
-    --, containers
-    --, serialise
-    --, strict-containers
-    --, text
-    --, transformers
-    --, transformers-except
+    , bytestring
+    , serialise
+    , template-haskell

@@ -1,28 +1,28 @@
-{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE TypeApplications  #-}
-{-# LANGUAGE TypeFamilies      #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Benchmarking.PlutusScripts.Loop
   ( scriptName
   , scriptSerialized
   ) where
 
-import Language.Haskell.TH
-import Language.Haskell.TH.Syntax
-import Prelude hiding (pred, ($), (&&), (<), (==))
+import           Language.Haskell.TH
+import           Language.Haskell.TH.Syntax
+import           Prelude hiding (pred, ($), (&&), (<), (==))
 
-import Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV1)
+import           Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV1)
 
-import Codec.Serialise
-import Data.ByteString.Lazy qualified as LBS
-import Data.ByteString.Short qualified as SBS
+import           Codec.Serialise
+import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString.Short as SBS
 
-import Plutus.V1.Ledger.Scripts qualified as Plutus
-import PlutusTx
-import PlutusTx.Builtins (unsafeDataAsI)
-import PlutusTx.Prelude hiding (Semigroup (..), unless, (.))
+import qualified Plutus.V1.Ledger.Scripts as Plutus
+import           PlutusTx
+import           PlutusTx.Builtins (unsafeDataAsI)
+import           PlutusTx.Prelude hiding (Semigroup (..), unless, (.), (<$>))
 
 
 scriptName :: String

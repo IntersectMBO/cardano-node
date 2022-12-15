@@ -42,8 +42,8 @@ import qualified Cardano.TxGenerator.FundQueue as FundQueue
 import           Cardano.TxGenerator.Setup.Plutus as Plutus
 import           Cardano.TxGenerator.Tx
 import           Cardano.TxGenerator.Types
-import           Cardano.TxGenerator.UTxO
 import qualified Cardano.TxGenerator.Utils as Utils
+import           Cardano.TxGenerator.UTxO
 
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark, walletBenchmark)
@@ -56,6 +56,7 @@ import           Cardano.TxGenerator.Setup.SigningKey
 
 import           Cardano.Benchmarking.OuroborosImports as Core (LocalSubmitTx, SigningKeyFile,
                    makeLocalConnectInfo, protocolToCodecConfig)
+import           Cardano.Benchmarking.PlutusScripts (findPlutusScript)
 
 import           Cardano.Benchmarking.LogTypes as Core (TraceBenchTxSubmit (..), btConnect_, btN2N_,
                    btSubmission2_, btTxSubmit_)
@@ -388,7 +389,7 @@ makePlutusContext ScriptSpec{..} = do
     then maybe
           (liftTxGenError $ TxGenError $ "Plutus script not included: " ++ scriptSpecFile)
           return
-          (pure Nothing) -- (includePlutusScript scriptSpecFile)
+          (findPlutusScript scriptSpecFile)
     else liftIOSafe $ Plutus.readPlutusScript scriptSpecFile
 
   executionUnitPrices <- case protocolParamPrices protocolParameters of
