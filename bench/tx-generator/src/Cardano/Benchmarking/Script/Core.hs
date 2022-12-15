@@ -62,7 +62,6 @@ import           Cardano.Benchmarking.LogTypes as Core (TraceBenchTxSubmit (..),
 import           Cardano.Benchmarking.Types as Core (SubmissionErrorPolicy (..))
 import           Cardano.Benchmarking.Wallet as Wallet
 
-import           Cardano.Benchmarking.Plutus.PlutusInclude
 import           Cardano.Benchmarking.Script.Aeson (prettyPrintOrdered, readProtocolParametersFile)
 import           Cardano.Benchmarking.Script.Env hiding (Error (TxGenError))
 import qualified Cardano.Benchmarking.Script.Env as Env (Error (TxGenError))
@@ -389,7 +388,7 @@ makePlutusContext ScriptSpec{..} = do
     then maybe
           (liftTxGenError $ TxGenError $ "Plutus script not included: " ++ scriptSpecFile)
           return
-          (includePlutusScript scriptSpecFile)
+          (pure Nothing) -- (includePlutusScript scriptSpecFile)
     else liftIOSafe $ Plutus.readPlutusScript scriptSpecFile
 
   executionUnitPrices <- case protocolParamPrices protocolParameters of

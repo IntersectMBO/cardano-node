@@ -9,15 +9,16 @@ module Cardano.Benchmarking.Plutus.BenchCustomCall
     ( BenchCustomArg
     , BenchCommand(..)
     , BenchCustomData(..)
-    , customCallScript
-    , customCallScriptShortBs
+    , customCallScriptV1
+    , customCallScriptV2
     ) where
 
-import           Cardano.Api (PlutusScript, PlutusScriptV2)
+import           Cardano.Api (PlutusScript, PlutusScriptV1, PlutusScriptV2)
 import           Cardano.Api.Shelley (PlutusScript (..))
 import           Codec.Serialise (serialise)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
+import qualified Plutus.V1.Ledger.Api as PlutusV1
 import qualified Plutus.V2.Ledger.Api as PlutusV2
 import qualified PlutusTx
 import           PlutusTx.Prelude as Plutus hiding (Semigroup (..), (.))
@@ -52,8 +53,8 @@ PlutusTx.unstableMakeIsData ''BenchCommand
 
 
 {-# INLINEABLE mkValidator #-}
-mkValidator :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkValidator datum_ redeemer_ _txContext =
+mkValidator :: (BuiltinData -> BenchCustomArg) -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkValidator unwrap datum_ redeemer_ _txContext =
   let
     result = case cmd of
       EvalSpine       -> length redeemerArg == length datumArg
@@ -62,8 +63,8 @@ mkValidator datum_ redeemer_ _txContext =
   in if result then () else error ()
   where
     datum, redeemer :: BenchCustomArg
-    datum     = PlutusV2.unsafeFromBuiltinData datum_
-    redeemer  = PlutusV2.unsafeFromBuiltinData redeemer_
+    datum     = unwrap datum_
+    redeemer  = unwrap redeemer_
 
     datumArg            = snd datum
     (cmd, redeemerArg)  = redeemer
@@ -73,14 +74,34 @@ mkValidator datum_ redeemer_ _txContext =
     validateValue (BenchConcat s ss)  = s == mconcat ss
     validateValue _                   = True
 
-validator :: PlutusV2.Validator
-validator = PlutusV2.mkValidatorScript $$(PlutusTx.compile [|| mkValidator ||])
+{-# INLINEABLE mkValidatorV1 #-}
+mkValidatorV1 :: BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkValidatorV1 = mkValidator PlutusV1.unsafeFromBuiltinData
 
-script :: PlutusV2.Script
-script = PlutusV2.unValidatorScript validator
+{-# INLINEABLE mkValidatorV2 #-}
+mkValidatorV2 :: BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkValidatorV2 = mkValidator PlutusV2.unsafeFromBuiltinData
 
-customCallScriptShortBs :: SBS.ShortByteString
-customCallScriptShortBs = SBS.toShort . LBS.toStrict $ serialise script
+validatorV1 :: PlutusV1.Validator
+validatorV1 = PlutusV1.mkValidatorScript $$(PlutusTx.compile [|| mkValidatorV1 ||])
 
-customCallScript :: PlutusScript PlutusScriptV2
-customCallScript = PlutusScriptSerialised customCallScriptShortBs
+validatorV2 :: PlutusV2.Validator
+validatorV2 = PlutusV2.mkValidatorScript $$(PlutusTx.compile [|| mkValidatorV2 ||])
+
+scriptV1 :: PlutusV1.Script
+scriptV1 = PlutusV1.unValidatorScript validatorV1
+
+scriptV1SBS :: SBS.ShortByteString
+scriptV1SBS = SBS.toShort . LBS.toStrict $ serialise scriptV1
+
+customCallScriptV1 :: PlutusScript PlutusScriptV1
+customCallScriptV1 = PlutusScriptSerialised scriptV1SBS
+
+scriptV2 :: PlutusV2.Script
+scriptV2 = PlutusV2.unValidatorScript validatorV2
+
+scriptV2SBS :: SBS.ShortByteString
+scriptV2SBS = SBS.toShort . LBS.toStrict $ serialise scriptV2
+
+customCallScriptV2 :: PlutusScript PlutusScriptV2
+customCallScriptV2 = PlutusScriptSerialised scriptV2SBS

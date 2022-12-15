@@ -28,6 +28,7 @@ packages:
     cardano-tracer
     bench/cardano-topology
     bench/locli
+    bench/plutus-scripts-bench
     bench/tx-generator
     trace-dispatcher
     trace-resources

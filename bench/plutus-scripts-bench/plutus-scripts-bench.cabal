@@ -1,0 +1,90 @@
+cabal-version:      3.0
+name:               plutus-scripts-bench
+version:            1.0.0.0
+description:
+  Plutus scripts used for benchmarking.
+
+author:             IOHK
+maintainer:         operations@iohk.io
+license:            Apache-2.0
+build-type:         Simple
+
+flag unexpected_thunks
+  description: Turn on unexpected thunks checks
+  default:     False
+
+flag defer-plugin-errors
+  description:
+    Defer errors from the plugin, useful for things like Haddock that can't handle it.
+
+  default:     False
+  manual:      True
+
+common common-definitions
+  build-depends:      base ^>=4.14
+  default-language:   Haskell2010
+  default-extensions:
+    NoImplicitPrelude
+    ImportQualifiedPost
+    OverloadedStrings
+
+  -- See Plutus Tx readme for why we need the following flags:
+  -- -fobject-code -fno-ignore-interface-pragmas and -fno-omit-interface-pragmas
+  ghc-options:
+    -Wall -Wcompat -Wincomplete-record-updates
+    -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
+    -Wunused-packages -fobject-code -fno-ignore-interface-pragmas
+    -fno-omit-interface-pragmas
+
+  if flag(defer-plugin-errors)
+    ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
+
+common maybe-Win32
+
+library
+  import:          common-definitions
+  hs-source-dirs:  src
+
+  if os(windows)
+    build-depends: Win32
+
+  if flag(unexpected_thunks)
+    cpp-options: -DUNEXPECTED_THUNKS
+
+  exposed-modules:
+    Cardano.Benchmarking.PlutusScripts.Loop
+
+  --------------------
+  -- Local components
+  --------------------
+  -- build-depends:   plutus-script-utils >=1.0.0
+
+  --------------------------
+  -- Other IOG dependencies
+  --------------------------
+  build-depends:
+    , cardano-api             >=1.35
+    --, cardano-cli             >=1.35
+    --, cardano-ledger-alonzo
+    --, cardano-ledger-babbage
+    --, cardano-ledger-core
+    --, cardano-ledger-shelley
+    --, cardano-slotting
+    --, ouroboros-consensus
+    --, ouroboros-network
+    , plutus-ledger-api       >=1.0.0
+    , plutus-tx               >=1.0.0
+    , plutus-tx-plugin        >=1.0.0
+
+  ------------------------
+  -- Non-IOG dependencies
+  ------------------------
+  build-depends:
+    --, aeson
+    --, bytestring
+    --, containers
+    --, serialise
+    --, strict-containers
+    --, text
+    --, transformers
+    --, transformers-except

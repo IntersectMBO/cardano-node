@@ -121,9 +121,11 @@ checkPlutusBuiltin ::
 checkPlutusBuiltin
   = do
     let
-      ~(Just script) = includePlutusScript "BenchCustomCall.hs"
-    putStrLn "* serialisation of built-in Plutus script:"
-    BSL.putStrLn $ textEnvelopeToJSON Nothing customCallScript
+      ~(Just script) = includePlutusScript "BenchCustomCallV2.hs"
+    putStrLn "* serialisation of built-in Plutus script V1:"
+    BSL.putStrLn $ textEnvelopeToJSON Nothing customCallScriptV1
+    putStrLn "* serialisation of built-in Plutus script V2:"
+    BSL.putStrLn $ textEnvelopeToJSON Nothing customCallScriptV2
 
     protocolParameters <- readProtocolParametersOrDie
     forM_ bArgs $ \bArg -> do
