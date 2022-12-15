@@ -86,7 +86,7 @@ case "$op" in
         local name=${1:?$usage}
 
         profile json $name |
-        jq 'include "prof2-derived";
+        jq 'include "prof3-derived";
 
            profile_pretty_describe(.)
            ' --raw-output -L "$global_basedir/profiles" -L "$global_basedir";;
@@ -187,7 +187,7 @@ with_era_profiles() {
 
     jq  -L "$global_basedir"                                            \
         -L "$global_basedir"/profiles                                   \
-        -L "$global_basedir"/profiles/protocol-versions                 \
+        -L "$global_basedir"/profiles/pparams                           \
         --argjson eras "$(to_jsonlist ${global_profile_eras[*]})"       \
         --null-input '
        include "profiles";

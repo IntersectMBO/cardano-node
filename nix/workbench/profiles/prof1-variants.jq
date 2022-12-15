@@ -1,62 +1,12 @@
-include "protocol-versions";
+import "epoch-timeline" as timeline;
 
 def all_profile_variants:
                                          1024    as $Ki
   |                                      1000000 as $M
   ####################################################################################################
   ##
-  ### Historic record
-  ##
-  | { genesis:
-      { utxo:                               (4 * $M)
-      , delegators:                         (1 * $M)
-      }
-    } as $dataset_oct2021
-  |
-    ({} |
-     .genesis.max_block_size              = (72 * $Ki)
-    ) as $blocksize_dec2021
-  |
-    { genesis:
-      ({} |
-       .max_block_size                    = (72 * $Ki) |       ## ???
-       .alonzo.maxTxExUnits.exUnitsMem    = (12.5 * $M) )      ## RMT-54  CR.059
-    } as $params_jan2022
-  |
-    { genesis:
-      ({}|
-       .max_block_size                    = (80 * $Ki) |       ## RMT-56  CAD-3891  CR.061
-       .alonzo.maxTxExUnits.exUnitsMem    = (14 * $M) |        ## RMT-56
-       .alonzo.maxBlockExUnits.exUnitsMem = (56 * $M))         ## CAD-3945
-    } as $params_feb2022
-  |
-    { genesis:
-      { utxo:                               (6 * $M)
-      , delegators:                         (1.3 * $M)
-      }
-    } as $dataset_mar2022
-  |
-    { genesis:
-      { max_block_size:                     (88 * $Ki) }       ## CAD-4153  CR.068
-    } as $blocksize_may2022
-  |
-    { genesis:
-      { utxo:                               (8 * $M)
-      , delegators:                         (1.3 * $M)
-      }
-    } as $dataset_jun2022
-  |
-    { genesis:
-      ({}|
-       .alonzo.maxBlockExUnits.exUnitsMem = (62 * $M))         ## CAD-3991  CR.064
-    } as $plutus_next
-  |
-  ####################################################################################################
-  ##
   ### Definition vocabulary:  dataset size
   ##
-    $dataset_jun2022
-      as $current_dataset
   | ({}|
      .generator.tps                   = 15
     ) as $current_tps_saturation_value
@@ -65,25 +15,13 @@ def all_profile_variants:
      .generator.tps                   = 0.2
     ) as $current_tps_saturation_plutus
   |
-    ({}|
-     .genesis.max_block_size = $params_feb2022.genesis.max_block_size
-    ) as $current_block_size
-  |
-    ({}|
-     .genesis.alonzo = $params_feb2022.genesis.alonzo
-    ) as $current_plutus
-  |
-    ($current_block_size *
-     $current_plutus *
-     { genesis:
+    ({ genesis:
        { utxo:                              0
        , delegators:                        0
        }
      }) as $dataset_empty
   |
-    ($current_block_size *
-     $current_plutus *
-     { genesis:
+    ({ genesis:
        { utxo:                              (0.5 * $M)
        , delegators:                        (0.1 * $M)
        }
@@ -93,44 +31,19 @@ def all_profile_variants:
        }
      }) as $dataset_miniature
   |
-    ($current_block_size *
-     $current_plutus *
-     $current_dataset
-    ) as $dataset_status_quo
-  |
     { genesis:
       { utxo:                               (30 * $M)
       , delegators:                         0
-      , max_block_size:                     (1 * $M)
+      , shelley:
+        { protocolParams:
+          { maxBlockBodySize:               (1 * $M)
+          }
+        }
       }
     , generator:
       { tps:                                (1 * $M / (360 * 20))
       }
     } as $dataset_dish
-  |
-  ##
-  ### Definition vocabulary:  protocol parameters
-  ##
-    ({}|
-      { genesis:
-        { alonzo:
-          { costModels:
-            { PlutusV1:                pv.v8.costModels.PlutusScriptV1
-            , PlutusV2:                pv.v8.costModels.PlutusScriptV2
-            }
-          , maxBlockExUnits:
-            { exUnitsMem:              pv.v8.pParams.maxBlockExecutionUnits.memory
-            , exUnitsSteps:            pv.v8.pParams.maxBlockExecutionUnits.steps
-            }
-          }
-        , shelley:
-          { protocolParams:
-            { protocolVersion:         pv.v8.pParams.protocolVersion
-            }
-          }
-        }
-      }
-    ) as $pparams_to_v8
   |
   ##
   ### Definition vocabulary:  chain
@@ -152,8 +65,7 @@ def all_profile_variants:
       }
     } as $chaindb_early_byron
   |
-   ($dataset_oct2021 *
-    { chaindb:
+   ({ chaindb:
       { mainnet_chunks:
         { chaindb_server:               1800
         , observer:                     1799
@@ -292,8 +204,7 @@ def all_profile_variants:
       }
     }) as $plutus_loop_counter
   |
-   ($pparams_to_v8 *
-    { generator:
+   ({ generator:
       { plutus:
           { type:                      "LimitSaturationLoop"
           , script:                    "v2/ecdsa-secp256k1-loop.plutus"
@@ -312,10 +223,12 @@ def all_profile_variants:
             }
           }
       }
-    }) as $plutus_loop_secp_ecdsa
+    }
+    | .genesis.pparamsEpoch    = timeline::lastKnownEpoch
+    | .genesis.pparamsOverlays = ["v8-preview"]
+    ) as $plutus_loop_secp_ecdsa
   |
-   ($pparams_to_v8 *
-    { generator:
+   ({ generator:
       { plutus:
           { type:                       "LimitSaturationLoop"
           , script:                     "v2/schnorr-secp256k1-loop.plutus"
@@ -334,7 +247,10 @@ def all_profile_variants:
             }
           }
       }
-    }) as $plutus_loop_secp_schnorr
+    }
+    | .genesis.pparamsEpoch    = timeline::lastKnownEpoch
+    | .genesis.pparamsOverlays = ["v8-preview"]
+    ) as $plutus_loop_secp_schnorr
   |
   ##
   ### Definition vocabulary:  node config variants
@@ -394,14 +310,14 @@ def all_profile_variants:
     { desc: "Miniature dataset, CI-friendly duration, bench scale"
     }) as $cibench_base
   |
-   ($scenario_fixed_loaded * $doublet * $dataset_oct2021 *
+   ($scenario_fixed_loaded * $doublet *
     { node:
       { shutdown_on_slot_synced:        2400
       }
     , desc: "Oct 2021 dataset size, honest four epochs."
     }) as $forge_stress_pre_base
   |
-   ($scenario_fixed_loaded * $doublet * $dataset_status_quo *
+   ($scenario_fixed_loaded * $doublet *
     { node:
       { shutdown_on_slot_synced:        2400
       }
@@ -423,25 +339,18 @@ def all_profile_variants:
   ### First, auto-named profiles:
   ###
   ## Short slots:
-  [ $dataset_status_quo *
-    ({}|
+  [ ({}|
      .genesis.slot_duration           = 0.2 )
 
   ## Dense pool:
-  , $dataset_status_quo *
-    ({}|
+  , ({}|
      .genesis.dense_pool_density      = 10 )
 
   ## Sub-saturation TPS:
-  , ($dataset_status_quo | .generator.tps     = 5 )
-  , ($dataset_status_quo | .generator.tps     = 10 )
-
-  ## Block size:
-  , ($dataset_status_quo | .genesis.max_block_size =  128000 | .generator.tps = 16 )
-  , ($dataset_status_quo | .genesis.max_block_size =  256000 | .generator.tps = 32 )
-  , ($dataset_status_quo | .genesis.max_block_size =  512000 | .generator.tps = 64 )
-  , ($dataset_status_quo | .genesis.max_block_size = 1024000 | .generator.tps = 128 )
-  , ($dataset_status_quo | .genesis.max_block_size = 2048000 | .generator.tps = 256 )
+  , ({}|
+     .generator.tps     = 5 )
+  , ({}|
+     .generator.tps     = 10 )
 
   ### Next, semantically-named profiles:
   ###

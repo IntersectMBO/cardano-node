@@ -32,7 +32,6 @@ def era_defaults($era):
     , per_pool_balance:               1000000000000000
     , funds_balance:                  10000000000000
     , utxo:                           0
-    , decentralisation_param:         0
 
     ## Blockchain time & block density
     , active_slots_coeff:             0.05
@@ -40,24 +39,9 @@ def era_defaults($era):
     , parameter_k:                    3
     , slot_duration:                  1
 
-    ## Block size & contents
-    , max_block_size:                 80000
-    , max_tx_size:                    16384
-
-    ## Verbatim overlay, for all era-specific genesis slices:
-    , shelley:
-      { protocolParams:
-        { poolDeposit:                500000000
-        , keyDeposit:                 400000
-        , rho:                        0.0022
-        , tau:                        0.05
-        , a0:                         0.3
-        , minFeeA:                    0
-        , minFeeB:                    0
-        , decentralisationParam:      0
-        , nOpt:                       50
-        }
-      }
+    ## Protocol parameters
+    , pparamsEpoch:                   300   # See: pparams/epoch-timeline.jq
+    , pparamsOverlays:                []
     }
 
   , generator:
@@ -97,32 +81,4 @@ def era_defaults($era):
     , filters:                        ["unitary"]
     }
   }
-
-, shelley:
-  { analysis:
-    { maximum_missed_slots:           0
-    }
-  }
-
-, allegra:
-  {
-  }
-
-, mary:
-  {
-  }
-
-, alonzo:
-  ({} |
-    .genesis.shelley.protocolParams.protocolVersion =
-      { major: 5
-      , minor: 0
-      })
-
-, babbage:
-  ({} |
-    .genesis.shelley.protocolParams.protocolVersion =
-      { major: 5
-      , minor: 0
-      })
-} | (.common * .[$era]);
+} | (.common * (.[$era] // {}));

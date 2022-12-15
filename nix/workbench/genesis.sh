@@ -156,7 +156,7 @@ case "$op" in
         jq ' $prof[0] as $p
            | . * ($p.genesis.shelley // {})
            | . * ($p.genesis.alonzo // {})
-           ' --slurpfile prof       "$profile_json"  \
+           ' --slurpfile prof "$profile_json"  \
            "$global_basedir"/profiles/presets/mainnet/genesis/genesis.alonzo.json \
            >   "$dir"/genesis.alonzo.spec.json
 
@@ -211,7 +211,8 @@ case "$op" in
                 $(jq '.cli_args.createFinalBulk | join(" ")' "$profile_json" --raw-output)
                )
         time cardano-cli genesis create-staked "${params[@]}"
-        mv "$dir"/genesis.json "$dir"/genesis-shelley.json
+        jq      . "$dir"/genesis.json > "$dir"/genesis-shelley.json &&
+            rm -f "$dir"/genesis.json
         mv "$dir"/genesis.spec.json "$dir"/genesis-shelley.spec.json
 
         msg "genesis:  removing delegator keys.."
