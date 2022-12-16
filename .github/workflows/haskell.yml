@@ -184,6 +184,27 @@ jobs:
       shell: bash
       run: echo "weeknum=$(/usr/bin/date -u "+%W")" >> $GITHUB_OUTPUT
 
+    - name: Cabal cache over S3
+      uses: action-works/cabal-cache-s3@v1
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      with:
+        region: us-west-2
+        dist-dir: dist-newstyle
+        store-path: ${{ steps.setup-haskell.outputs.cabal-store }}
+        threads: 16
+        archive-uri: ${{ secrets.BINARY_CACHE_URI }}
+        skip: "${{ secrets.BINARY_CACHE_URI == '' }}"
+
+    - name: Cabal cache over HTTPS
+      uses: action-works/cabal-cache-s3@v1
+      with:
+        dist-dir: dist-newstyle
+        store-path: ${{ steps.setup-haskell.outputs.cabal-store }}
+        threads: 16
+        archive-uri: https://cache.haskellworks.io/archive
+
     - name: Cache Cabal store
       uses: actions/cache@v2
       with:
