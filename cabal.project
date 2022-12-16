@@ -12,9 +12,8 @@ repository cardano-haskell-packages
 
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
-index-state: 2022-12-11T00:00:00Z
--- index-state: cardano-haskell-packages 2022-12-14T00:40:15Z
-index-state: cardano-haskell-packages 2022-12-03T17:19:15Z
+index-state: 2022-12-13T02:43:53Z
+index-state: cardano-haskell-packages 2022-12-14T00:40:15Z
 
 packages:
     cardano-api
@@ -171,6 +170,7 @@ allow-newer:
   , ouroboros-network:hashable
   , hedgehog-extras:base
   , libsystemd-journal:base
+  , katip:Win32
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
@@ -182,14 +182,6 @@ source-repository-package
    location: https://github.com/input-output-hk/hedgehog-extras
    tag: 9ea1845ca2036e7a1ae9fcebe393526540c5c233
    --sha256: 1436dwmz9v6ky9kzgnr4flzlzjxwh2zjkds9fnayc1ddang6wwb6
-
--- This is an IOG custom version with some hacks to force it to only provide HTTPS
--- connections. In talks with upstream on how to fix this.
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/threepenny-gui
-  tag: 15e501ae2d02799e5c7227f3007779d1cf53a71c
-  --sha256: 0j7bjdpqbja2n02k7n7k5m3vwjdj6a8a70g1ra6zxdr4fih5f8nm
 
 -- And has the adjustments for the ledger refactor
 source-repository-package
@@ -210,12 +202,9 @@ source-repository-package
      ouroboros-network-testing
      ouroboros-consensus-cardano-tools
 
+-- Waiting for proper Windows ghc-9.2 release.
 source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: ffa32d6a0411b5ddb73eb79245a6ee907b57414d
-  --sha256: 1kj5c8r3g904h64vnsz2xs5128wpr3azry1gbpj9vnzcvvj00zw3
-  subdir:
-    contra-tracer
-    iohk-monitoring
-    tracer-transformers
+   type: git
+   location: https://github.com/input-output-hk/snap-core
+   tag: b87b2ffa52bf58867a7239ebe74f61b1a2c762d2
+   --sha256: 0ndm57z5zpxd5n8s47kh8k1jfqf3b78qv7gkgrx9wwaajs9bf196
