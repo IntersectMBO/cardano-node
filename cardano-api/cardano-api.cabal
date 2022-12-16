@@ -76,6 +76,7 @@ library
                         Cardano.Api.KeysShelley
                         Cardano.Api.LedgerEvent
                         Cardano.Api.LedgerState
+                        Cardano.Api.LedgerState.Extended
                         Cardano.Api.Modes
                         Cardano.Api.NetworkId
                         Cardano.Api.OperationalCertificate

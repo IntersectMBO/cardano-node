@@ -10,27 +10,19 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Api.LedgerState
+module Cardano.Api.LedgerState.Extended
   ( -- * Initialization / Accumulation
-    Env(..)
-  , envSecurityParam
-  , LedgerState
-      ( ..
-      , LedgerStateByron
-      , LedgerStateShelley
-      , LedgerStateAllegra
-      , LedgerStateMary
-      , LedgerStateAlonzo
-      )
-  , initialLedgerState
+    ExtLedgerCfg(..)
+  , extLedgerCfgSecurityParam
+  , ExtLedgerState(..)
+  , initialExtLedgerState
   , applyBlock
   , ValidationMode(..)
-  , applyBlockWithEvents
 
     -- * Traversing the block chain
   , foldBlocks
-  , chainSyncClientWithLedgerState
-  , chainSyncClientPipelinedWithLedgerState
+  , chainSyncClientWithExtLedgerState
+  , chainSyncClientPipelinedWithExtLedgerState
 
    -- * Errors
   , LedgerStateError(..)
@@ -41,74 +33,45 @@ module Cardano.Api.LedgerState
   , renderFoldBlocksError
   , renderGenesisConfigError
   , renderInitialLedgerStateError
-
-  -- * Leadership schedule
-  , LeadershipError(..)
-  , constructGlobals
-  , currentEpochEligibleLeadershipSlots
-  , nextEpochEligibleLeadershipSlots
   )
   where
 
 import           Prelude
 
 import           Control.Exception
-import           Control.Monad (when)
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, left)
-import           Control.State.Transition
 import           Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Data.Aeson.Types.Internal
-import           Data.Bifunctor
 import           Data.ByteArray (ByteArrayAccess)
 import qualified Data.ByteArray
 import           Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
-import qualified Data.ByteString.Lazy as LB
 import           Data.ByteString.Short as BSS
 import           Data.Foldable
 import           Data.IORef
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import           Data.Maybe (mapMaybe)
-import           Data.Proxy (Proxy (Proxy))
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
-import           Data.Set (Set)
-import qualified Data.Set as Set
-import           Data.Sharing (FromSharedCBOR, Interns, Share)
 import           Data.SOP.Strict (NP (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import qualified Data.Text.Lazy as LT
-import           Data.Text.Lazy.Builder (toLazyText)
 import           Data.Word
 import qualified Data.Yaml as Yaml
-import           Formatting.Buildable (build)
-import           GHC.Records (HasField (..))
 import           Network.TypedProtocol.Pipelined (Nat (..))
 import           System.FilePath
 
 import           Cardano.Api.Block
-import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
-import           Cardano.Api.Error
+import           Cardano.Api.LedgerState (renderInitialLedgerStateError, renderLedgerStateError, renderFoldBlocksError, renderGenesisConfigError, LedgerStateError(ApplyBlockHashMismatch, ExtApplyBlockError, InvalidRollback), InitialLedgerStateError(ILSEConfigFile, ILSEGenesisFile, ILSELedgerConsensusConfig), FoldBlocksError(FoldBlocksInitialLedgerStateError, FoldBlocksApplyBlockError), GenesisConfigError(NEError, NEByronConfig, NEShelleyConfig, NEAlonzoConfig, NECardanoConfig), ValidationMode(QuickValidation, FullValidation))
 import           Cardano.Api.IPC (ConsensusModeParams (..),
                    LocalChainSyncClient (LocalChainSyncClientPipelined),
                    LocalNodeClientProtocols (..), LocalNodeClientProtocolsInMode,
                    LocalNodeConnectInfo (..), connectToLocalNode)
-import           Cardano.Api.KeysPraos
-import           Cardano.Api.LedgerEvent (LedgerEvent, toLedgerEvent)
 import           Cardano.Api.Modes (CardanoMode, EpochSlots (..))
-import qualified Cardano.Api.Modes as Api
 import           Cardano.Api.NetworkId (NetworkId (..), NetworkMagic (NetworkMagic))
-import           Cardano.Api.ProtocolParameters
-import           Cardano.Api.Query (CurrentEpochState (..), ProtocolState,
-                   SerialisedCurrentEpochState (..), decodeCurrentEpochState, decodeProtocolState)
 import           Cardano.Api.Utils (textShow)
-import           Cardano.Binary (DecoderError, FromCBOR)
 import qualified Cardano.Chain.Genesis
 import qualified Cardano.Chain.Update
 import           Cardano.Crypto (ProtocolMagicId (unProtocolMagicId), RequiresNetworkMagic (..))
@@ -116,31 +79,14 @@ import qualified Cardano.Crypto.Hash.Blake2b
 import qualified Cardano.Crypto.Hash.Class
 import qualified Cardano.Crypto.Hashing
 import qualified Cardano.Crypto.ProtocolMagic
-import qualified Cardano.Crypto.VRF as Crypto
-import qualified Cardano.Crypto.VRF.Class as VRF
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
-import           Cardano.Ledger.BaseTypes (Globals (..), Nonce, UnitInterval, (⭒))
 import qualified Cardano.Ledger.BaseTypes as Shelley.Spec
-import qualified Cardano.Ledger.BHeaderView as Ledger
-import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Credential as Shelley.Spec
-import qualified Cardano.Ledger.Era
-import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Keys as Shelley.Spec
-import qualified Cardano.Ledger.Keys as SL
-import qualified Cardano.Ledger.PoolDistr as SL
-import           Cardano.Ledger.SafeHash (HashAnnotated)
-import qualified Cardano.Ledger.Shelley.API as ShelleyAPI
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley.Spec
-import qualified Cardano.Protocol.TPraos.API as TPraos
-import           Cardano.Protocol.TPraos.BHeader (checkLeaderNatValue)
-import qualified Cardano.Protocol.TPraos.BHeader as TPraos
-import           Cardano.Slotting.EpochInfo (EpochInfo)
-import qualified Cardano.Slotting.EpochInfo.API as Slot
 import           Cardano.Slotting.Slot (WithOrigin (At, Origin))
 import qualified Cardano.Slotting.Slot as Slot
 import qualified Ouroboros.Consensus.Block.Abstract as Consensus
-import qualified Ouroboros.Consensus.Byron.Ledger.Block as Byron
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import qualified Ouroboros.Consensus.Cardano.CanHardFork as Consensus
@@ -149,103 +95,48 @@ import qualified Ouroboros.Consensus.Config as Consensus
 import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
 import qualified Ouroboros.Consensus.HardFork.Combinator.AcrossEras as HFC
 import qualified Ouroboros.Consensus.HardFork.Combinator.Basics as HFC
-import qualified Ouroboros.Consensus.Ledger.Abstract as Ledger
-import           Ouroboros.Consensus.Ledger.Basics (LedgerResult (lrEvents), lrResult)
-import qualified Ouroboros.Consensus.Ledger.Extended as Ledger
+import qualified Ouroboros.Consensus.Ledger.Abstract as Consensus
+import           Ouroboros.Consensus.Ledger.Basics (lrResult)
+import qualified Ouroboros.Consensus.Ledger.Extended as Consensus
 import qualified Ouroboros.Consensus.Mempool.TxLimits as TxLimits
 import qualified Ouroboros.Consensus.Node.ProtocolInfo as Consensus
-import           Ouroboros.Consensus.Protocol.Abstract (ChainDepState, ConsensusProtocol (..))
-import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
-import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
-import           Ouroboros.Consensus.Protocol.Praos.VRF (mkInputVRF, vrfLeaderValue)
-import qualified Ouroboros.Consensus.Protocol.TPraos as TPraos
 import qualified Ouroboros.Consensus.Shelley.Eras as Shelley
-import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Shelley
-import qualified Ouroboros.Consensus.Shelley.Ledger.Ledger as Shelley
-import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesis (..))
 import qualified Ouroboros.Consensus.Shelley.Node.Praos as Consensus
-import           Ouroboros.Consensus.TypeFamilyWrappers (WrapLedgerEvent (WrapLedgerEvent))
 import qualified Ouroboros.Network.Block
 import qualified Ouroboros.Network.Protocol.ChainSync.Client as CS
 import qualified Ouroboros.Network.Protocol.ChainSync.ClientPipelined as CSP
 import           Ouroboros.Network.Protocol.ChainSync.PipelineDecision
 
-data InitialLedgerStateError
-  = ILSEConfigFile Text
-  -- ^ Failed to read or parse the network config file.
-  | ILSEGenesisFile GenesisConfigError
-  -- ^ Failed to read or parse a genesis file linked from the network config file.
-  | ILSELedgerConsensusConfig GenesisConfigError
-  -- ^ Failed to derive the Ledger or Consensus config.
-
-renderInitialLedgerStateError :: InitialLedgerStateError -> Text
-renderInitialLedgerStateError ilse = case ilse of
-  ILSEConfigFile err ->
-    "Failed to read or parse the network config file: " <> err
-  ILSEGenesisFile err ->
-    "Failed to read or parse a genesis file linked from the network config file: "
-    <> renderGenesisConfigError err
-  ILSELedgerConsensusConfig err ->
-    "Failed to derive the Ledger or Consensus config: "
-    <> renderGenesisConfigError err
-
-data LedgerStateError
-  = ApplyBlockHashMismatch Text
-  -- ^ When using QuickValidation, the block hash did not match the expected
-  -- block hash after applying a new block to the current ledger state.
-  | ApplyBlockError (Consensus.HardForkLedgerError (Consensus.CardanoEras Consensus.StandardCrypto))
-  -- ^ When using FullValidation, an error occurred when applying a new block
-  -- to the current ledger state.
-  | ExtApplyBlockError (Ledger.ExtValidationError (Consensus.HardForkBlock (Consensus.CardanoEras Consensus.StandardCrypto)))
-  -- ^ When using FullValidation, an error occurred when applying a new block
-  -- to the current extended ledger state.
-  | InvalidRollback
-  -- ^ Encountered a rollback larger than the security parameter.
-      SlotNo     -- ^ Oldest known slot number that we can roll back to.
-      ChainPoint -- ^ Rollback was attempted to this point.
-  deriving (Show)
-
-renderLedgerStateError :: LedgerStateError -> Text
-renderLedgerStateError = \case
-  ApplyBlockHashMismatch err -> "Applying a block did not result in the expected block hash: " <> err
-  ApplyBlockError hardForkLedgerError -> "Applying a block resulted in an error: " <> textShow hardForkLedgerError
-  ExtApplyBlockError hardForkLedgerError -> "Applying a block resulted in an error: " <> textShow hardForkLedgerError
-  InvalidRollback oldestSupported rollbackPoint ->
-      "Encountered a rollback larger than the security parameter. Attempted to roll back to "
-      <> textShow rollbackPoint
-      <> ", but oldest supported slot is "
-      <> textShow oldestSupported
-
 -- | Get the environment and initial ledger state.
-initialLedgerState
+initialExtLedgerState
   :: FilePath
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
-  ->  ExceptT InitialLedgerStateError IO (Env, LedgerState)
+  ->  ExceptT InitialLedgerStateError IO (ExtLedgerCfg, ExtLedgerState)
   -- ^ The environment and initial ledger state
-initialLedgerState networkConfigFile = do
+initialExtLedgerState networkConfigFile = do
   -- TODO Once support for querying the ledger config is added to the node, we
   -- can remove the networkConfigFile argument and much of the code in this
   -- module.
   config <- withExceptT ILSEConfigFile
                   (readNetworkConfig (NetworkConfigFile networkConfigFile))
   genesisConfig <- withExceptT ILSEGenesisFile (readCardanoGenesisConfig config)
-  env <- withExceptT ILSELedgerConsensusConfig (except (genesisConfigToEnv genesisConfig))
-  let ledgerState = initLedgerStateVar genesisConfig
-  return (env, ledgerState)
+  conf <- withExceptT ILSELedgerConsensusConfig (except (genesisConfigToExtLedgerCfg genesisConfig))
+  let ledgerState = initExtLedgerStateVar genesisConfig
+  return (conf, ledgerState)
 
 -- | Apply a single block to the current ledger state.
 applyBlock
-  :: Env
-  -- ^ The environment returned by @initialLedgerState@
-  -> LedgerState
+  :: ExtLedgerCfg
+  -- ^ The environment returned by @initialExtLedgerState@
+  -> ExtLedgerState
   -- ^ The current ledger state
   -> ValidationMode
   -> Block era
   -- ^ Some block to apply
-  -> Either LedgerStateError (LedgerState, [LedgerEvent])
+  -> Either LedgerStateError ExtLedgerState
   -- ^ The new ledger state (or an error).
-applyBlock env oldState validationMode block
-  = applyBlock' env oldState validationMode $ case block of
+applyBlock conf oldState validationMode block
+  = applyBlock' conf oldState validationMode $ case block of
       ByronBlock byronBlock -> Consensus.BlockByron byronBlock
       ShelleyBlock blockEra shelleyBlock -> case blockEra of
         ShelleyBasedEraShelley -> Consensus.BlockShelley shelleyBlock
@@ -253,46 +144,6 @@ applyBlock env oldState validationMode block
         ShelleyBasedEraMary    -> Consensus.BlockMary shelleyBlock
         ShelleyBasedEraAlonzo  -> Consensus.BlockAlonzo shelleyBlock
         ShelleyBasedEraBabbage -> Consensus.BlockBabbage shelleyBlock
-
-pattern LedgerStateByron
-  :: Ledger.LedgerState Byron.ByronBlock
-  -> LedgerState
-pattern LedgerStateByron st <- LedgerState (Consensus.LedgerStateByron st)
-
-pattern LedgerStateShelley
-  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.ShelleyEra Shelley.StandardCrypto))
-  -> LedgerState
-pattern LedgerStateShelley st <- LedgerState  (Consensus.LedgerStateShelley st)
-
-pattern LedgerStateAllegra
-  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.AllegraEra Shelley.StandardCrypto))
-  -> LedgerState
-pattern LedgerStateAllegra st <- LedgerState  (Consensus.LedgerStateAllegra st)
-
-pattern LedgerStateMary
-  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.MaryEra Shelley.StandardCrypto))
-  -> LedgerState
-pattern LedgerStateMary st <- LedgerState  (Consensus.LedgerStateMary st)
-
-pattern LedgerStateAlonzo
-  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.AlonzoEra Shelley.StandardCrypto))
-  -> LedgerState
-pattern LedgerStateAlonzo st <- LedgerState  (Consensus.LedgerStateAlonzo st)
-
-{-# COMPLETE LedgerStateByron
-           , LedgerStateShelley
-           , LedgerStateAllegra
-           , LedgerStateMary
-           , LedgerStateAlonzo #-}
-
-data FoldBlocksError
-  = FoldBlocksInitialLedgerStateError InitialLedgerStateError
-  | FoldBlocksApplyBlockError LedgerStateError
-
-renderFoldBlocksError :: FoldBlocksError -> Text
-renderFoldBlocksError fbe = case fbe of
-  FoldBlocksInitialLedgerStateError err -> renderInitialLedgerStateError err
-  FoldBlocksApplyBlockError err -> "Failed when applying a block: " <> renderLedgerStateError err
 
 -- | Monadic fold over all blocks and ledger states. Stopping @k@ blocks before
 -- the node's tip where @k@ is the security parameter.
@@ -305,7 +156,7 @@ foldBlocks
   -> ValidationMode
   -> a
   -- ^ The initial accumulator state.
-  -> (Env -> LedgerState -> [LedgerEvent] -> BlockInMode CardanoMode -> a -> IO a)
+  -> (ExtLedgerCfg -> ExtLedgerState -> BlockInMode CardanoMode -> a -> IO a)
   -- ^ Accumulator function Takes:
   --
   --  * Environment (this is a constant over the whole fold).
@@ -331,8 +182,8 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
   --  * Non-pipelined: 1h  0m  19s
   --  * Pipelined:        46m  23s
 
-  (env, ledgerState) <- withExceptT FoldBlocksInitialLedgerStateError
-                            (initialLedgerState nodeConfigFilePath)
+  (extLedgerCfg, extLedgerState) <-
+      withExceptT FoldBlocksInitialLedgerStateError (initialExtLedgerState nodeConfigFilePath)
 
   -- Place to store the accumulated state
   -- This is a bit ugly, but easy.
@@ -345,7 +196,9 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
         = (\(Consensus.WrapPartialLedgerConfig (Consensus.ByronPartialLedgerConfig bc _) :* _) -> bc)
         . HFC.getPerEraLedgerConfig
         . HFC.hardForkLedgerConfigPerEra
-        $ envLedgerConfig env
+        $ Consensus.topLevelConfigLedger
+        $ Consensus.getExtLedgerCfg
+        $ getExtLedgerCfg extLedgerCfg
 
       networkMagic
         = NetworkMagic
@@ -357,7 +210,7 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
         RequiresNoMagic -> Mainnet
         RequiresMagic -> Testnet networkMagic
 
-      cardanoModeParams = CardanoModeParams . EpochSlots $ 10 * envSecurityParam env
+      cardanoModeParams = CardanoModeParams . EpochSlots $ 10 * extLedgerCfgSecurityParam extLedgerCfg
 
   -- Connect to the node.
   let connectInfo :: LocalNodeConnectInfo CardanoMode
@@ -370,17 +223,17 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
 
   lift $ connectToLocalNode
     connectInfo
-    (protocols stateIORef errorIORef env ledgerState)
+    (protocols stateIORef errorIORef extLedgerCfg extLedgerState)
 
   lift (readIORef errorIORef) >>= \case
     Just err -> throwE (FoldBlocksApplyBlockError err)
     Nothing -> lift $ readIORef stateIORef
   where
 
-    protocols :: IORef a -> IORef (Maybe LedgerStateError) -> Env -> LedgerState -> LocalNodeClientProtocolsInMode CardanoMode
-    protocols stateIORef errorIORef env ledgerState =
+    protocols :: IORef a -> IORef (Maybe LedgerStateError) -> ExtLedgerCfg -> ExtLedgerState -> LocalNodeClientProtocolsInMode CardanoMode
+    protocols stateIORef errorIORef extLedgerCfg extLedgerState =
         LocalNodeClientProtocols {
-          localChainSyncClient    = LocalChainSyncClientPipelined (chainSyncClient 50 stateIORef errorIORef env ledgerState),
+          localChainSyncClient    = LocalChainSyncClientPipelined (chainSyncClient 50 stateIORef errorIORef extLedgerCfg extLedgerState),
           localTxSubmissionClient = Nothing,
           localStateQueryClient   = Nothing,
           localTxMonitoringClient = Nothing
@@ -393,73 +246,72 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
                     -> IORef (Maybe LedgerStateError)
                     -- ^ Resulting error if any. Written to once on protocol
                     -- completion.
-                    -> Env
-                    -> LedgerState
+                    -> ExtLedgerCfg
+                    -> ExtLedgerState
                     -> CSP.ChainSyncClientPipelined
                         (BlockInMode CardanoMode)
                         ChainPoint
                         ChainTip
                         IO ()
                     -- ^ Client returns maybe an error.
-    chainSyncClient pipelineSize stateIORef errorIORef env ledgerState0
-      = CSP.ChainSyncClientPipelined $ pure $ clientIdle_RequestMoreN Origin Origin Zero initialLedgerStateHistory
+    chainSyncClient pipelineSize stateIORef errorIORef extLedgerCfg extLedgerState0
+      = CSP.ChainSyncClientPipelined $ pure $ clientIdle_RequestMoreN Origin Origin Zero initialExtLedgerStateHistory
       where
-          initialLedgerStateHistory = Seq.singleton (0, (ledgerState0, []), Origin)
+          initialExtLedgerStateHistory = Seq.singleton (0, extLedgerState0, Origin)
 
           clientIdle_RequestMoreN
             :: WithOrigin BlockNo
             -> WithOrigin BlockNo
             -> Nat n -- Number of requests inflight.
-            -> LedgerStateHistory
+            -> ExtLedgerStateHistory
             -> CSP.ClientPipelinedStIdle n (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
-          clientIdle_RequestMoreN clientTip serverTip n knownLedgerStates
+          clientIdle_RequestMoreN clientTip serverTip n knownExtLedgerStates
             = case pipelineDecisionMax pipelineSize n clientTip serverTip  of
                 Collect -> case n of
-                  Succ predN -> CSP.CollectResponse Nothing (clientNextN predN knownLedgerStates)
-                _ -> CSP.SendMsgRequestNextPipelined (clientIdle_RequestMoreN clientTip serverTip (Succ n) knownLedgerStates)
+                  Succ predN -> CSP.CollectResponse Nothing (clientNextN predN knownExtLedgerStates)
+                _ -> CSP.SendMsgRequestNextPipelined (clientIdle_RequestMoreN clientTip serverTip (Succ n) knownExtLedgerStates)
 
           clientNextN
             :: Nat n -- Number of requests inflight.
-            -> LedgerStateHistory
+            -> ExtLedgerStateHistory
             -> CSP.ClientStNext n (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
-          clientNextN n knownLedgerStates =
+          clientNextN n knownExtLedgerStates =
             CSP.ClientStNext {
                 CSP.recvMsgRollForward = \blockInMode@(BlockInMode block@(Block (BlockHeader slotNo _ currBlockNo) _) _era) serverChainTip -> do
-                  let newLedgerStateE = applyBlock
-                        env
+                  let newExtLedgerStateE = applyBlock
+                        extLedgerCfg
                         (maybe
                           (error "Impossible! Missing Ledger state")
-                          (\(_,(ledgerState, _),_) -> ledgerState)
-                          (Seq.lookup 0 knownLedgerStates)
+                          (\(_, extLedgerState, _) -> extLedgerState)
+                          (Seq.lookup 0 knownExtLedgerStates)
                         )
                         validationMode
                         block
-                  case newLedgerStateE of
+                  case newExtLedgerStateE of
                     Left err -> clientIdle_DoneN n (Just err)
-                    Right newLedgerState -> do
-                      let (knownLedgerStates', committedStates) = pushLedgerState env knownLedgerStates slotNo newLedgerState blockInMode
+                    Right newExtLedgerState -> do
+                      let (knownExtLedgerStates', committedStates) = pushExtLedgerState extLedgerCfg knownExtLedgerStates slotNo newExtLedgerState blockInMode
                           newClientTip = At currBlockNo
                           newServerTip = fromChainTip serverChainTip
-                      forM_ committedStates $ \(_, (ledgerState, ledgerEvents), currBlockMay) -> case currBlockMay of
+                      forM_ committedStates $ \(_, extLedgerState, currBlockMay) -> case currBlockMay of
                           Origin -> return ()
                           At currBlock -> do
                             newState <- accumulate
-                              env
-                              ledgerState
-                              ledgerEvents
+                              extLedgerCfg
+                              extLedgerState
                               currBlock
                               =<< readIORef stateIORef
                             writeIORef stateIORef newState
                       if newClientTip == newServerTip
                         then  clientIdle_DoneN n Nothing
-                        else return (clientIdle_RequestMoreN newClientTip newServerTip n knownLedgerStates')
+                        else return (clientIdle_RequestMoreN newClientTip newServerTip n knownExtLedgerStates')
               , CSP.recvMsgRollBackward = \chainPoint serverChainTip -> do
                   let newClientTip = Origin -- We don't actually keep track of blocks so we temporarily "forget" the tip.
                       newServerTip = fromChainTip serverChainTip
-                      truncatedKnownLedgerStates = case chainPoint of
-                          ChainPointAtGenesis -> initialLedgerStateHistory
-                          ChainPoint slotNo _ -> rollBackLedgerStateHist knownLedgerStates slotNo
-                  return (clientIdle_RequestMoreN newClientTip newServerTip n truncatedKnownLedgerStates)
+                      truncatedKnownExtLedgerStates = case chainPoint of
+                          ChainPointAtGenesis -> initialExtLedgerStateHistory
+                          ChainPoint slotNo _ -> rollBackExtLedgerStateHist knownExtLedgerStates slotNo
+                  return (clientIdle_RequestMoreN newClientTip newServerTip n truncatedKnownExtLedgerStates)
               }
 
           clientIdle_DoneN
@@ -488,37 +340,37 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
             ChainTip _ _ bno -> At bno
 
 -- | Wrap a 'ChainSyncClient' with logic that tracks the ledger state.
-chainSyncClientWithLedgerState
+chainSyncClientWithExtLedgerState
   :: forall m a.
      Monad m
-  => Env
-  -> LedgerState
+  => ExtLedgerCfg
+  -> ExtLedgerState
   -- ^ Initial ledger state
   -> ValidationMode
-  -> CS.ChainSyncClient (BlockInMode CardanoMode, Either LedgerStateError (LedgerState, [LedgerEvent]))
+  -> CS.ChainSyncClient (BlockInMode CardanoMode, Either LedgerStateError ExtLedgerState)
                         ChainPoint
                         ChainTip
                         m
                         a
   -- ^ A client to wrap. The block is annotated with a 'Either LedgerStateError
-  -- LedgerState'. This is either an error from validating a block or
-  -- the current 'LedgerState' from applying the current block. If we
+  -- ExtLedgerState'. This is either an error from validating a block or
+  -- the current 'ExtLedgerState' from applying the current block. If we
   -- trust the node, then we generally expect blocks to validate. Also note that
   -- after a block fails to validate we may still roll back to a validated
-  -- block, in which case the valid 'LedgerState' will be passed here again.
+  -- block, in which case the valid 'ExtLedgerState' will be passed here again.
   -> CS.ChainSyncClient (BlockInMode CardanoMode)
                         ChainPoint
                         ChainTip
                         m
                         a
   -- ^ A client that acts just like the wrapped client but doesn't require the
-  -- 'LedgerState' annotation on the block type.
-chainSyncClientWithLedgerState env ledgerState0 validationMode (CS.ChainSyncClient clientTop)
-  = CS.ChainSyncClient (goClientStIdle (Right initialLedgerStateHistory) <$> clientTop)
+  -- 'ExtLedgerState' annotation on the block type.
+chainSyncClientWithExtLedgerState extLedgerCfg ledgerState0 validationMode (CS.ChainSyncClient clientTop)
+  = CS.ChainSyncClient (goClientStIdle (Right initialExtLedgerStateHistory) <$> clientTop)
   where
     goClientStIdle
-      :: Either LedgerStateError (History (Either LedgerStateError LedgerStateEvents))
-      -> CS.ClientStIdle (BlockInMode CardanoMode, Either LedgerStateError (LedgerState, [LedgerEvent])) ChainPoint ChainTip m a
+      :: Either LedgerStateError (History (Either LedgerStateError ExtLedgerState))
+      -> CS.ClientStIdle (BlockInMode CardanoMode, Either LedgerStateError ExtLedgerState) ChainPoint ChainTip m a
       -> CS.ClientStIdle (BlockInMode CardanoMode                                                      ) ChainPoint ChainTip m a
     goClientStIdle history client = case client of
       CS.SendMsgRequestNext a b -> CS.SendMsgRequestNext (goClientStNext history a) (goClientStNext history <$> b)
@@ -528,8 +380,8 @@ chainSyncClientWithLedgerState env ledgerState0 validationMode (CS.ChainSyncClie
     -- This is where the magic happens. We intercept the blocks and rollbacks
     -- and use it to maintain the correct ledger state.
     goClientStNext
-      :: Either LedgerStateError (History (Either LedgerStateError LedgerStateEvents))
-      -> CS.ClientStNext (BlockInMode CardanoMode, Either LedgerStateError (LedgerState, [LedgerEvent])) ChainPoint ChainTip m a
+      :: Either LedgerStateError (History (Either LedgerStateError ExtLedgerState))
+      -> CS.ClientStNext (BlockInMode CardanoMode, Either LedgerStateError ExtLedgerState) ChainPoint ChainTip m a
       -> CS.ClientStNext (BlockInMode CardanoMode                                                      ) ChainPoint ChainTip m a
     goClientStNext (Left err) (CS.ClientStNext recvMsgRollForward recvMsgRollBackward) = CS.ClientStNext
       (\blkInMode tip -> CS.ChainSyncClient $
@@ -541,17 +393,17 @@ chainSyncClientWithLedgerState env ledgerState0 validationMode (CS.ChainSyncClie
       )
     goClientStNext (Right history) (CS.ClientStNext recvMsgRollForward recvMsgRollBackward) = CS.ClientStNext
       (\blkInMode@(BlockInMode blk@(Block (BlockHeader slotNo _ _) _) _) tip -> CS.ChainSyncClient $ let
-          newLedgerStateE = case Seq.lookup 0 history of
+          newExtLedgerStateE = case Seq.lookup 0 history of
             Nothing -> error "Impossible! History should always be non-empty"
             Just (_, Left err, _) -> Left err
-            Just (_, Right (oldLedgerState, _), _) -> applyBlock
-                  env
-                  oldLedgerState
+            Just (_, Right oldExtLedgerState, _) -> applyBlock
+                  extLedgerCfg
+                  oldExtLedgerState
                   validationMode
                   blk
-          (history', _) = pushLedgerState env history slotNo newLedgerStateE blkInMode
+          (history', _) = pushExtLedgerState extLedgerCfg history slotNo newExtLedgerStateE blkInMode
           in goClientStIdle (Right history') <$> CS.runChainSyncClient
-                (recvMsgRollForward (blkInMode, newLedgerStateE) tip)
+                (recvMsgRollForward (blkInMode, newExtLedgerStateE) tip)
       )
       (\point tip -> let
           oldestSlot = case history of
@@ -561,31 +413,31 @@ chainSyncClientWithLedgerState env ledgerState0 validationMode (CS.ChainSyncClie
                               then Left (InvalidRollback oldestSlot point)
                               else Right h)
                   $ case point of
-                        ChainPointAtGenesis -> initialLedgerStateHistory
-                        ChainPoint slotNo _ -> rollBackLedgerStateHist history slotNo
+                        ChainPointAtGenesis -> initialExtLedgerStateHistory
+                        ChainPoint slotNo _ -> rollBackExtLedgerStateHist history slotNo
         in CS.ChainSyncClient $ goClientStIdle history' <$> CS.runChainSyncClient (recvMsgRollBackward point tip)
       )
 
     goClientStIntersect
-      :: Either LedgerStateError (History (Either LedgerStateError LedgerStateEvents))
-      -> CS.ClientStIntersect (BlockInMode CardanoMode, Either LedgerStateError (LedgerState, [LedgerEvent])) ChainPoint ChainTip m a
+      :: Either LedgerStateError (History (Either LedgerStateError ExtLedgerState))
+      -> CS.ClientStIntersect (BlockInMode CardanoMode, Either LedgerStateError ExtLedgerState) ChainPoint ChainTip m a
       -> CS.ClientStIntersect (BlockInMode CardanoMode                                                      ) ChainPoint ChainTip m a
     goClientStIntersect history (CS.ClientStIntersect recvMsgIntersectFound recvMsgIntersectNotFound) = CS.ClientStIntersect
       (\point tip -> CS.ChainSyncClient (goClientStIdle history <$> CS.runChainSyncClient (recvMsgIntersectFound point tip)))
       (\tip -> CS.ChainSyncClient (goClientStIdle history <$> CS.runChainSyncClient (recvMsgIntersectNotFound tip)))
 
-    initialLedgerStateHistory :: History (Either LedgerStateError LedgerStateEvents)
-    initialLedgerStateHistory = Seq.singleton (0, Right (ledgerState0, []), Origin)
+    initialExtLedgerStateHistory :: History (Either LedgerStateError ExtLedgerState)
+    initialExtLedgerStateHistory = Seq.singleton (0, Right ledgerState0, Origin)
 
--- | See 'chainSyncClientWithLedgerState'.
-chainSyncClientPipelinedWithLedgerState
+-- | See 'chainSyncClientWithExtLedgerState'.
+chainSyncClientPipelinedWithExtLedgerState
   :: forall m a.
      Monad m
-  => Env
-  -> LedgerState
+  => ExtLedgerCfg
+  -> ExtLedgerState
   -> ValidationMode
   -> CSP.ChainSyncClientPipelined
-                        (BlockInMode CardanoMode, Either LedgerStateError (LedgerState, [LedgerEvent]))
+                        (BlockInMode CardanoMode, Either LedgerStateError ExtLedgerState)
                         ChainPoint
                         ChainTip
                         m
@@ -596,13 +448,13 @@ chainSyncClientPipelinedWithLedgerState
                         ChainTip
                         m
                         a
-chainSyncClientPipelinedWithLedgerState env ledgerState0 validationMode (CSP.ChainSyncClientPipelined clientTop)
-  = CSP.ChainSyncClientPipelined (goClientPipelinedStIdle (Right initialLedgerStateHistory) Zero <$> clientTop)
+chainSyncClientPipelinedWithExtLedgerState extLedgerCfg ledgerState0 validationMode (CSP.ChainSyncClientPipelined clientTop)
+  = CSP.ChainSyncClientPipelined (goClientPipelinedStIdle (Right initialExtLedgerStateHistory) Zero <$> clientTop)
   where
     goClientPipelinedStIdle
-      :: Either LedgerStateError (History (Either LedgerStateError LedgerStateEvents))
+      :: Either LedgerStateError (History (Either LedgerStateError ExtLedgerState))
       -> Nat n
-      -> CSP.ClientPipelinedStIdle n (BlockInMode CardanoMode, Either LedgerStateError (LedgerState, [LedgerEvent])) ChainPoint ChainTip m a
+      -> CSP.ClientPipelinedStIdle n (BlockInMode CardanoMode, Either LedgerStateError ExtLedgerState) ChainPoint ChainTip m a
       -> CSP.ClientPipelinedStIdle n (BlockInMode CardanoMode                                                      ) ChainPoint ChainTip m a
     goClientPipelinedStIdle history n client = case client of
       CSP.SendMsgRequestNext a b -> CSP.SendMsgRequestNext (goClientStNext history n a) (goClientStNext history n <$> b)
@@ -615,9 +467,9 @@ chainSyncClientPipelinedWithLedgerState env ledgerState0 validationMode (CSP.Cha
     -- This is where the magic happens. We intercept the blocks and rollbacks
     -- and use it to maintain the correct ledger state.
     goClientStNext
-      :: Either LedgerStateError (History (Either LedgerStateError LedgerStateEvents))
+      :: Either LedgerStateError (History (Either LedgerStateError ExtLedgerState))
       -> Nat n
-      -> CSP.ClientStNext n (BlockInMode CardanoMode, Either LedgerStateError (LedgerState, [LedgerEvent])) ChainPoint ChainTip m a
+      -> CSP.ClientStNext n (BlockInMode CardanoMode, Either LedgerStateError ExtLedgerState) ChainPoint ChainTip m a
       -> CSP.ClientStNext n (BlockInMode CardanoMode                                                      ) ChainPoint ChainTip m a
     goClientStNext (Left err) n (CSP.ClientStNext recvMsgRollForward recvMsgRollBackward) = CSP.ClientStNext
       (\blkInMode tip ->
@@ -629,17 +481,17 @@ chainSyncClientPipelinedWithLedgerState env ledgerState0 validationMode (CSP.Cha
       )
     goClientStNext (Right history) n (CSP.ClientStNext recvMsgRollForward recvMsgRollBackward) = CSP.ClientStNext
       (\blkInMode@(BlockInMode blk@(Block (BlockHeader slotNo _ _) _) _) tip -> let
-          newLedgerStateE = case Seq.lookup 0 history of
+          newExtLedgerStateE = case Seq.lookup 0 history of
             Nothing -> error "Impossible! History should always be non-empty"
             Just (_, Left err, _) -> Left err
-            Just (_, Right (oldLedgerState, _), _) -> applyBlock
-                  env
-                  oldLedgerState
+            Just (_, Right oldExtLedgerState, _) -> applyBlock
+                  extLedgerCfg
+                  oldExtLedgerState
                   validationMode
                   blk
-          (history', _) = pushLedgerState env history slotNo newLedgerStateE blkInMode
+          (history', _) = pushExtLedgerState extLedgerCfg history slotNo newExtLedgerStateE blkInMode
         in goClientPipelinedStIdle (Right history') n <$> recvMsgRollForward
-              (blkInMode, newLedgerStateE) tip
+              (blkInMode, newExtLedgerStateE) tip
       )
       (\point tip -> let
           oldestSlot = case history of
@@ -649,24 +501,24 @@ chainSyncClientPipelinedWithLedgerState env ledgerState0 validationMode (CSP.Cha
                               then Left (InvalidRollback oldestSlot point)
                               else Right h)
                   $ case point of
-                        ChainPointAtGenesis -> initialLedgerStateHistory
-                        ChainPoint slotNo _ -> rollBackLedgerStateHist history slotNo
+                        ChainPointAtGenesis -> initialExtLedgerStateHistory
+                        ChainPoint slotNo _ -> rollBackExtLedgerStateHist history slotNo
         in goClientPipelinedStIdle history' n <$> recvMsgRollBackward point tip
       )
 
     goClientPipelinedStIntersect
-      :: Either LedgerStateError (History (Either LedgerStateError LedgerStateEvents))
+      :: Either LedgerStateError (History (Either LedgerStateError ExtLedgerState))
       -> Nat n
-      -> CSP.ClientPipelinedStIntersect (BlockInMode CardanoMode, Either LedgerStateError (LedgerState, [LedgerEvent])) ChainPoint ChainTip m a
+      -> CSP.ClientPipelinedStIntersect (BlockInMode CardanoMode, Either LedgerStateError ExtLedgerState) ChainPoint ChainTip m a
       -> CSP.ClientPipelinedStIntersect (BlockInMode CardanoMode                                                      ) ChainPoint ChainTip m a
     goClientPipelinedStIntersect history _ (CSP.ClientPipelinedStIntersect recvMsgIntersectFound recvMsgIntersectNotFound) = CSP.ClientPipelinedStIntersect
       (\point tip -> goClientPipelinedStIdle history Zero <$> recvMsgIntersectFound point tip)
       (\tip -> goClientPipelinedStIdle history Zero <$> recvMsgIntersectNotFound tip)
 
-    initialLedgerStateHistory :: History (Either LedgerStateError LedgerStateEvents)
-    initialLedgerStateHistory = Seq.singleton (0, Right (ledgerState0, []), Origin)
+    initialExtLedgerStateHistory :: History (Either LedgerStateError ExtLedgerState)
+    initialExtLedgerStateHistory = Seq.singleton (0, Right ledgerState0, Origin)
 
-{- HLINT ignore chainSyncClientPipelinedWithLedgerState "Use fmap" -}
+{- HLINT ignore chainSyncClientPipelinedWithExtLedgerState "Use fmap" -}
 
 -- | A history of k (security parameter) recent ledger states. The head is the
 -- most recent item. Elements are:
@@ -675,12 +527,12 @@ chainSyncClientPipelinedWithLedgerState env ledgerState0 validationMode (CSP.Cha
 -- * The ledger state and events after applying the new block
 -- * The new block
 --
-type LedgerStateHistory = History LedgerStateEvents
+type ExtLedgerStateHistory = History ExtLedgerState
 type History a = Seq (SlotNo, a, WithOrigin (BlockInMode CardanoMode))
 
 -- | Add a new ledger state to the history
-pushLedgerState
-  :: Env                -- ^ Environment used to get the security param, k.
+pushExtLedgerState
+  :: ExtLedgerCfg       -- ^ Environment used to get the security param, k.
   -> History a          -- ^ History of k items.
   -> SlotNo             -- ^ Slot number of the new item.
   -> a                  -- ^ New item to add to the history
@@ -692,22 +544,22 @@ pushLedgerState
   --   , Any existing items that are now past the security parameter
   --      and hence can no longer be rolled back.
   --   )
-pushLedgerState env hist ix st block
+pushExtLedgerState cfg hist ix st block
   = Seq.splitAt
-      (fromIntegral $ envSecurityParam env + 1)
+      (fromIntegral $ extLedgerCfgSecurityParam cfg + 1)
       ((ix, st, At block) Seq.:<| hist)
 
-rollBackLedgerStateHist :: History a -> SlotNo -> History a
-rollBackLedgerStateHist hist maxInc = Seq.dropWhileL ((> maxInc) . (\(x,_,_) -> x)) hist
+rollBackExtLedgerStateHist :: History a -> SlotNo -> History a
+rollBackExtLedgerStateHist hist maxInc = Seq.dropWhileL ((> maxInc) . (\(x,_,_) -> x)) hist
 
 --------------------------------------------------------------------------------
 -- Everything below was copied/adapted from db-sync                           --
 --------------------------------------------------------------------------------
 
-genesisConfigToEnv
+genesisConfigToExtLedgerCfg
   :: GenesisConfig
-  -> Either GenesisConfigError Env
-genesisConfigToEnv
+  -> Either GenesisConfigError ExtLedgerCfg
+genesisConfigToExtLedgerCfg
   -- enp
   genCfg =
     case genCfg of
@@ -728,10 +580,7 @@ genesisConfigToEnv
             let
               topLevelConfig = Consensus.pInfoConfig (mkProtocolInfoCardano genCfg)
             in
-            Right $ Env
-                  { envLedgerConfig = Consensus.topLevelConfigLedger topLevelConfig
-                  , envProtocolConfig = Consensus.topLevelConfigProtocol topLevelConfig
-                  }
+              Right $ ExtLedgerCfg $ Consensus.ExtLedgerCfg topLevelConfig
 
 readNetworkConfig :: NetworkConfigFile -> ExceptT Text IO NodeConfig
 readNetworkConfig (NetworkConfigFile ncf) = do
@@ -856,37 +705,18 @@ readByteString fp cfgType = ExceptT $
     return $ Left $ mconcat
       [ "Cannot read the ", cfgType, " configuration file at : ", Text.pack fp ]
 
-initLedgerStateVar :: GenesisConfig -> LedgerState
-initLedgerStateVar genesisConfig = LedgerState
-  { clsState = Ledger.ledgerState $ Consensus.pInfoInitLedger protocolInfo
+initExtLedgerStateVar :: GenesisConfig -> ExtLedgerState
+initExtLedgerStateVar genesisConfig = ExtLedgerState
+  { clsState = Consensus.pInfoInitLedger protocolInfo
   }
   where
     protocolInfo = mkProtocolInfoCardano genesisConfig
 
-newtype LedgerState = LedgerState
-  { clsState :: Ledger.LedgerState
+newtype ExtLedgerState = ExtLedgerState
+  { clsState :: Consensus.ExtLedgerState
                   (HFC.HardForkBlock
                     (Consensus.CardanoEras Consensus.StandardCrypto))
   }
-
-type LedgerStateEvents = (LedgerState, [LedgerEvent])
-
-toLedgerStateEvents ::
-  LedgerResult
-    ( Shelley.LedgerState
-        (HFC.HardForkBlock (Consensus.CardanoEras Shelley.StandardCrypto))
-    )
-    ( Shelley.LedgerState
-        (HFC.HardForkBlock (Consensus.CardanoEras Shelley.StandardCrypto))
-    ) ->
-  LedgerStateEvents
-toLedgerStateEvents lr = (ledgerState, ledgerEvents)
-  where
-    ledgerState = LedgerState (lrResult lr)
-    ledgerEvents = mapMaybe (toLedgerEvent
-      . WrapLedgerEvent @(HFC.HardForkBlock (Consensus.CardanoEras Shelley.StandardCrypto)))
-      $ lrEvents lr
-
 
 -- Usually only one constructor, but may have two when we are preparing for a HFC event.
 data GenesisConfig
@@ -917,8 +747,8 @@ newtype GenesisHashAlonzo = GenesisHashAlonzo
   { unGenesisHashAlonzo :: Cardano.Crypto.Hash.Class.Hash Cardano.Crypto.Hash.Blake2b.Blake2b_256 ByteString
   } deriving newtype (Eq, Show)
 
-newtype LedgerStateDir = LedgerStateDir
-  {  unLedgerStateDir :: FilePath
+newtype ExtLedgerStateDir = ExtLedgerStateDir
+  {  unExtLedgerStateDir :: FilePath
   } deriving Show
 
 newtype NetworkName = NetworkName
@@ -998,47 +828,6 @@ readCardanoGenesisConfig enc =
     <$> readByronGenesisConfig enc
     <*> readShelleyGenesisConfig enc
     <*> readAlonzoGenesisConfig enc
-
-data GenesisConfigError
-  = NEError !Text
-  | NEByronConfig !FilePath !Cardano.Chain.Genesis.ConfigurationError
-  | NEShelleyConfig !FilePath !Text
-  | NEAlonzoConfig !FilePath !Text
-  | NECardanoConfig !Text
-
-renderGenesisConfigError :: GenesisConfigError -> Text
-renderGenesisConfigError ne =
-  case ne of
-    NEError t -> "Error: " <> t
-    NEByronConfig fp ce ->
-      mconcat
-        [ "Failed reading Byron genesis file ", textShow fp, ": ", textShow ce
-        ]
-    NEShelleyConfig fp txt ->
-      mconcat
-        [ "Failed reading Shelley genesis file ", textShow fp, ": ", txt
-        ]
-    NEAlonzoConfig fp txt ->
-      mconcat
-        [ "Failed reading Alonzo genesis file ", textShow fp, ": ", txt
-        ]
-    NECardanoConfig err ->
-      mconcat
-        [ "With Cardano protocol, Byron/Shelley config mismatch:\n"
-        , "   ", err
-        ]
-
-data LookupFail
-  = DbLookupBlockHash !ByteString
-  | DbLookupBlockId !Word64
-  | DbLookupMessage !Text
-  | DbLookupTxHash !ByteString
-  | DbLookupTxOutPair !ByteString !Word16
-  | DbLookupEpochNo !Word64
-  | DbLookupSlotNo !Word64
-  | DbMetaEmpty
-  | DbMetaMultipleRows
-  deriving (Eq, Show)
 
 readByronGenesisConfig
         :: NodeConfig
@@ -1165,410 +954,77 @@ newtype StakeCred
   = StakeCred { _unStakeCred :: Shelley.Spec.Credential 'Shelley.Spec.Staking Consensus.StandardCrypto }
   deriving (Eq, Ord)
 
-data Env = Env
-  { envLedgerConfig :: HFC.HardForkLedgerConfig (Consensus.CardanoEras Shelley.StandardCrypto)
-  , envProtocolConfig :: TPraos.ConsensusConfig (HFC.HardForkProtocol (Consensus.CardanoEras Shelley.StandardCrypto))
-  }
+newtype ExtLedgerCfg = ExtLedgerCfg
+    { getExtLedgerCfg :: Consensus.ExtLedgerCfg (HFC.HardForkBlock (Consensus.CardanoEras Consensus.StandardCrypto))
+    }
 
-envSecurityParam :: Env -> Word64
-envSecurityParam env = k
+extLedgerCfgSecurityParam :: ExtLedgerCfg -> Word64
+extLedgerCfgSecurityParam (ExtLedgerCfg extLedgerCfg) = k
   where
     Consensus.SecurityParam k
       = HFC.hardForkConsensusConfigK
-      $ envProtocolConfig env
-
--- | How to do validation when applying a block to a ledger state.
-data ValidationMode
-  -- | Do all validation implied by the ledger layer's 'applyBlock`.
-  = FullValidation
-  -- | Only check that the previous hash from the block matches the head hash of
-  -- the ledger state.
-  | QuickValidation
+      $ Consensus.topLevelConfigProtocol
+      $ Consensus.getExtLedgerCfg extLedgerCfg
 
 -- The function 'tickThenReapply' does zero validation, so add minimal
--- validation ('blockPrevHash' matches the tip hash of the 'LedgerState'). This
+-- validation ('blockPrevHash' matches the tip hash of the 'ExtLedgerState'). This
 -- was originally for debugging but the check is cheap enough to keep.
 applyBlock'
-  :: Env
-  -> LedgerState
+  :: ExtLedgerCfg
+  -> ExtLedgerState
   -> ValidationMode
-  ->  HFC.HardForkBlock
-            (Consensus.CardanoEras Consensus.StandardCrypto)
-  -> Either LedgerStateError LedgerStateEvents
-applyBlock' env oldState validationMode block = do
-  let config = envLedgerConfig env
-      stateOld = clsState oldState
+  -> HFC.HardForkBlock (Consensus.CardanoEras Consensus.StandardCrypto)
+  -> Either LedgerStateError ExtLedgerState
+applyBlock' (ExtLedgerCfg config) oldState validationMode block = do
+  let stateOld = clsState oldState
   case validationMode of
     FullValidation -> tickThenApply config block stateOld
     QuickValidation -> tickThenReapplyCheckHash config block stateOld
 
-applyBlockWithEvents
-  :: Env
-  -> LedgerState
-  -> Bool
-  -- ^ True to validate
-  ->  HFC.HardForkBlock
-            (Consensus.CardanoEras Consensus.StandardCrypto)
-  -> Either LedgerStateError LedgerStateEvents
-applyBlockWithEvents env oldState enableValidation block = do
-  let config = envLedgerConfig env
-      stateOld = clsState oldState
-  if enableValidation
-    then tickThenApply config block stateOld
-    else tickThenReapplyCheckHash config block stateOld
-
 -- Like 'Consensus.tickThenReapply' but also checks that the previous hash from
 -- the block matches the head hash of the ledger state.
 tickThenReapplyCheckHash
-    :: HFC.HardForkLedgerConfig
-        (Consensus.CardanoEras Shelley.StandardCrypto)
+    :: Consensus.ExtLedgerCfg (HFC.HardForkBlock
+            (Consensus.CardanoEras Shelley.StandardCrypto))
     -> Consensus.CardanoBlock Consensus.StandardCrypto
-    -> Shelley.LedgerState
+    -> Consensus.ExtLedgerState
         (HFC.HardForkBlock
             (Consensus.CardanoEras Shelley.StandardCrypto))
-    -> Either LedgerStateError LedgerStateEvents
+    -> Either LedgerStateError ExtLedgerState
 tickThenReapplyCheckHash cfg block lsb =
-  if Consensus.blockPrevHash block == Ledger.ledgerTipHash lsb
-    then Right . toLedgerStateEvents
-          $ Ledger.tickThenReapplyLedgerResult cfg block lsb
-    else Left $ ApplyBlockHashMismatch $ mconcat
+  if Consensus.blockPrevHash block == Consensus.ledgerTipHash (Consensus.ledgerState lsb)
+    then Right . ExtLedgerState . lrResult
+          $ Consensus.tickThenReapplyLedgerResult cfg block lsb
+    else Left $ ApplyBlockHashMismatch
+              $ mconcat
                   [ "Ledger state hash mismatch. Ledger head is slot "
-                  , textShow
-                      $ Slot.unSlotNo
-                      $ Slot.fromWithOrigin
-                          (Slot.SlotNo 0)
-                          (Ledger.ledgerTipSlot lsb)
-                  , " hash "
-                  , renderByteArray
-                      $ unChainHash
-                      $ Ledger.ledgerTipHash lsb
+                  , textShow (Slot.unSlotNo $ Slot.fromWithOrigin (Slot.SlotNo 0) (Consensus.ledgerTipSlot $ Consensus.ledgerState lsb))
+                  , " hash ", renderByteArray (unChainHash (Consensus.ledgerTipHash $ Consensus.ledgerState lsb))
                   , " but block previous hash is "
                   , renderByteArray (unChainHash $ Consensus.blockPrevHash block)
                   , " and block current hash is "
-                  , renderByteArray
-                      $ BSS.fromShort
-                      $ HFC.getOneEraHash
-                      $ Ouroboros.Network.Block.blockHash block
-                  , "."
+                  , renderByteArray (BSS.fromShort . HFC.getOneEraHash $ Ouroboros.Network.Block.blockHash block), "."
                   ]
+ where
+    renderByteArray :: ByteArrayAccess bin => bin -> Text
+    renderByteArray = Text.decodeUtf8 . Base16.encode . Data.ByteArray.convert
+
+    unChainHash :: Ouroboros.Network.Block.ChainHash (Consensus.CardanoBlock era) -> ByteString
+    unChainHash ch =
+      case ch of
+        Ouroboros.Network.Block.GenesisHash -> "genesis"
+        Ouroboros.Network.Block.BlockHash bh -> BSS.fromShort (HFC.getOneEraHash bh)
 
 -- Like 'Consensus.tickThenReapply' but also checks that the previous hash from
 -- the block matches the head hash of the ledger state.
 tickThenApply
-    :: HFC.HardForkLedgerConfig
-        (Consensus.CardanoEras Shelley.StandardCrypto)
+    :: Consensus.LedgerCfg (Consensus.ExtLedgerState (HFC.HardForkBlock (Consensus.CardanoEras Consensus.StandardCrypto)))
     -> Consensus.CardanoBlock Consensus.StandardCrypto
-    -> Shelley.LedgerState
+    -> Consensus.ExtLedgerState
         (HFC.HardForkBlock
             (Consensus.CardanoEras Shelley.StandardCrypto))
-    -> Either LedgerStateError LedgerStateEvents
-tickThenApply cfg block lsb
-  = either (Left . ApplyBlockError) (Right . toLedgerStateEvents)
-  $ runExcept
-  $ Ledger.tickThenApplyLedgerResult cfg block lsb
-
-renderByteArray :: ByteArrayAccess bin => bin -> Text
-renderByteArray =
-  Text.decodeUtf8 . Base16.encode . Data.ByteArray.convert
-
-unChainHash :: Ouroboros.Network.Block.ChainHash (Consensus.CardanoBlock era) -> ByteString
-unChainHash ch =
-  case ch of
-    Ouroboros.Network.Block.GenesisHash -> "genesis"
-    Ouroboros.Network.Block.BlockHash bh -> BSS.fromShort (HFC.getOneEraHash bh)
-
-data LeadershipError = LeaderErrDecodeLedgerStateFailure
-                     | LeaderErrDecodeProtocolStateFailure (LB.ByteString, DecoderError)
-                     | LeaderErrDecodeProtocolEpochStateFailure DecoderError
-                     | LeaderErrGenesisSlot
-                     | LeaderErrStakePoolHasNoStake PoolId
-                     | LeaderErrStakeDistribUnstable
-                         SlotNo
-                         -- ^ Current slot
-                         SlotNo
-                         -- ^ Stable after
-                         SlotNo
-                         -- ^ Stability window size
-                         SlotNo
-                         -- ^ Predicted last slot of the epoch
-                     | LeaderErrSlotRangeCalculationFailure Text
-                     | LeaderErrCandidateNonceStillEvolving
-                     deriving Show
-
-instance Error LeadershipError where
-  displayError LeaderErrDecodeLedgerStateFailure =
-    "Failed to successfully decode ledger state"
-  displayError (LeaderErrDecodeProtocolStateFailure (_, decErr)) =
-    "Failed to successfully decode protocol state: " <> Text.unpack (LT.toStrict . toLazyText $ build decErr)
-  displayError LeaderErrGenesisSlot =
-    "Leadership schedule currently cannot be calculated from genesis"
-  displayError (LeaderErrStakePoolHasNoStake poolId) =
-    "The stake pool: " <> show poolId <> " has no stake"
-  displayError (LeaderErrDecodeProtocolEpochStateFailure decoderError) =
-    "Failed to successfully decode the current epoch state: " <> show decoderError
-  displayError (LeaderErrStakeDistribUnstable curSlot stableAfterSlot stabWindow predictedLastSlot) =
-    "The current stake distribution is currently unstable and therefore we cannot predict " <>
-    "the following epoch's leadership schedule. Please wait until : " <> show stableAfterSlot <>
-    " before running the leadership-schedule command again. \nCurrent slot: " <> show curSlot <>
-    " \nStability window: " <> show stabWindow <>
-    " \nCalculated last slot of current epoch: " <> show predictedLastSlot
-  displayError (LeaderErrSlotRangeCalculationFailure e) =
-    "Error while calculating the slot range: " <> Text.unpack e
-  displayError LeaderErrCandidateNonceStillEvolving = "Candidate nonce is still evolving"
-
-nextEpochEligibleLeadershipSlots
-  :: forall era.
-     ( HasField "_d" (Core.PParams (ShelleyLedgerEra era)) UnitInterval
-     , HashAnnotated (Core.TxBody (ShelleyLedgerEra era)) Core.EraIndependentTxBody (Ledger.Crypto (ShelleyLedgerEra era))
-     )
-  => Ledger.Era (ShelleyLedgerEra era)
-  => Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Spec.Credential 'Shelley.Spec.Staking (Cardano.Ledger.Era.Crypto (ShelleyLedgerEra era)))
-  => FromCBOR (Consensus.ChainDepState (Api.ConsensusProtocol era))
-  => Consensus.PraosProtocolSupportsNode (Api.ConsensusProtocol era)
-  => ShelleyBasedEra era
-  -> ShelleyGenesis Shelley.StandardShelley
-  -> SerialisedCurrentEpochState era
-  -- ^ We need the mark stake distribution in order to predict
-  --   the following epoch's leadership schedule
-  -> ProtocolState era
-  -> PoolId
-  -- ^ Potential slot leading stake pool
-  -> SigningKey VrfKey
-  -- ^ VRF signing key of the stake pool
-  -> ProtocolParameters
-  -> EpochInfo (Either Text)
-  -> (ChainTip, EpochNo)
-  -> Either LeadershipError (Set SlotNo)
-nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (VrfSigningKey vrfSkey) pParams eInfo (cTip, currentEpoch) = do
-  (_, currentEpochLastSlot) <- first LeaderErrSlotRangeCalculationFailure
-                                 $ Slot.epochInfoRange eInfo currentEpoch
-
-  (firstSlotOfEpoch, lastSlotofEpoch) <- first LeaderErrSlotRangeCalculationFailure
-                  $ Slot.epochInfoRange eInfo (currentEpoch + 1)
-
-
-  -- First we check if we are within 3k/f slots of the end of the current epoch.
-  -- Why? Because the stake distribution is stable at this point.
-  -- k is the security parameter
-  -- f is the active slot coefficient
-  let stabilityWindowR :: Rational
-      stabilityWindowR = fromIntegral (3 * sgSecurityParam sGen) / Shelley.Spec.unboundRational (sgActiveSlotsCoeff sGen)
-      stabilityWindowSlots :: SlotNo
-      stabilityWindowSlots = fromIntegral @Word64 $ floor $ fromRational @Double stabilityWindowR
-      stableStakeDistribSlot = currentEpochLastSlot - stabilityWindowSlots
-
-
-  case cTip of
-    ChainTipAtGenesis -> Left LeaderErrGenesisSlot
-    ChainTip tip _ _ ->
-      if tip > stableStakeDistribSlot
-      then return ()
-      else Left $ LeaderErrStakeDistribUnstable tip stableStakeDistribSlot stabilityWindowSlots currentEpochLastSlot
-
-  chainDepState <- first LeaderErrDecodeProtocolStateFailure
-                     $ decodeProtocolState ptclState
-
-  -- We need the candidate nonce, the previous epoch's last block header hash
-  -- and the extra entropy from the protocol parameters. We then need to combine them
-  -- with the (⭒) operator.
-  let Consensus.PraosNonces { Consensus.candidateNonce, Consensus.evolvingNonce } =
-        Consensus.getPraosNonces (Proxy @(Api.ConsensusProtocol era)) chainDepState
-
-  -- Let's do a nonce check. The candidate nonce and the evolving nonce should not be equal.
-  when (evolvingNonce == candidateNonce)
-   $ Left LeaderErrCandidateNonceStillEvolving
-
-  -- Get the previous epoch's last block header hash nonce
-  let previousLabNonce = Consensus.previousLabNonce (Consensus.getPraosNonces (Proxy @(Api.ConsensusProtocol era)) chainDepState)
-      extraEntropy = toLedgerNonce $ protocolParamExtraPraosEntropy pParams
-      nextEpochsNonce = candidateNonce ⭒ previousLabNonce ⭒ extraEntropy
-
-  -- Then we get the "mark" snapshot. This snapshot will be used for the next
-  -- epoch's leadership schedule.
-  CurrentEpochState cEstate <- first LeaderErrDecodeProtocolEpochStateFailure
-                                 $ obtainDecodeEpochStateConstraints sbe
-                                 $ decodeCurrentEpochState serCurrEpochState
-
-  let markSnapshotPoolDistr :: Map (SL.KeyHash 'SL.StakePool Shelley.StandardCrypto) (SL.IndividualPoolStake Shelley.StandardCrypto)
-      markSnapshotPoolDistr = ShelleyAPI.unPoolDistr . ShelleyAPI.calculatePoolDistr . ShelleyAPI._pstakeMark
-                                $ obtainIsStandardCrypto sbe $ ShelleyAPI.esSnapshots cEstate
-
-  let slotRangeOfInterest = Set.filter
-        (not . Ledger.isOverlaySlot firstSlotOfEpoch (getField @"_d" (toLedgerPParams sbe pParams)))
-        $ Set.fromList [firstSlotOfEpoch .. lastSlotofEpoch]
-
-  case sbe of
-    ShelleyBasedEraShelley  -> isLeadingSlotsTPraos slotRangeOfInterest poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
-    ShelleyBasedEraAllegra  -> isLeadingSlotsTPraos slotRangeOfInterest poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
-    ShelleyBasedEraMary     -> isLeadingSlotsTPraos slotRangeOfInterest poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
-    ShelleyBasedEraAlonzo   -> isLeadingSlotsTPraos slotRangeOfInterest poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
-    ShelleyBasedEraBabbage  -> isLeadingSlotsPraos  slotRangeOfInterest poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
-
- where
-  globals = constructGlobals sGen eInfo pParams
-
-  f :: Shelley.Spec.ActiveSlotCoeff
-  f = activeSlotCoeff globals
-
-
---getFromCbor
---  :: ShelleyBasedEra era
---  -> (( FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
---      , FromCBOR (ChainDepStateProtocol era)
---      ) => a)
---  -> a
---getFromCbor ShelleyBasedEraShelley f = f
---getFromCbor ShelleyBasedEraAllegra f = f
---getFromCbor ShelleyBasedEraMary f = f
---getFromCbor ShelleyBasedEraAlonzo f = f
---getFromCbor ShelleyBasedEraBabbage f = f
-
--- | Return slots a given stake pool operator is leading.
--- See Leader Value Calculation in the Shelley ledger specification.
--- We need the certified natural value from the VRF, active slot coefficient
--- and the stake proportion of the stake pool.
-isLeadingSlotsTPraos :: forall v. ()
-  => Crypto.Signable v Shelley.Spec.Seed
-  => Crypto.VRFAlgorithm v
-  => Crypto.ContextVRF v ~ ()
-  => Set SlotNo
-  -> PoolId
-  -> Map (SL.KeyHash 'SL.StakePool Shelley.StandardCrypto) (SL.IndividualPoolStake Shelley.StandardCrypto)
-  -> Consensus.Nonce
-  -> Crypto.SignKeyVRF v
-  -> Shelley.Spec.ActiveSlotCoeff
-  -> Either LeadershipError (Set SlotNo)
-isLeadingSlotsTPraos slotRangeOfInterest poolid snapshotPoolDistr eNonce vrfSkey activeSlotCoeff' = do
-  let StakePoolKeyHash poolHash = poolid
-
-  let certifiedVrf s = Crypto.evalCertified () (TPraos.mkSeed TPraos.seedL s eNonce) vrfSkey
-
-  stakePoolStake <- maybe (Left $ LeaderErrStakePoolHasNoStake poolid) Right $
-    ShelleyAPI.individualPoolStake <$> Map.lookup poolHash snapshotPoolDistr
-
-  let isLeader s = TPraos.checkLeaderValue (Crypto.certifiedOutput (certifiedVrf s)) stakePoolStake activeSlotCoeff'
-
-  return $ Set.filter isLeader slotRangeOfInterest
-
-isLeadingSlotsPraos :: ()
-  => Set SlotNo
-  -> PoolId
-  -> Map (SL.KeyHash 'SL.StakePool Shelley.StandardCrypto) (SL.IndividualPoolStake Shelley.StandardCrypto)
-  -> Consensus.Nonce
-  -> SL.SignKeyVRF Shelley.StandardCrypto
-  -> Shelley.Spec.ActiveSlotCoeff
-  -> Either LeadershipError (Set SlotNo)
-isLeadingSlotsPraos slotRangeOfInterest poolid snapshotPoolDistr eNonce vrfSkey activeSlotCoeff' = do
-  let StakePoolKeyHash poolHash = poolid
-
-  stakePoolStake <- maybe (Left $ LeaderErrStakePoolHasNoStake poolid) Right $
-    ShelleyAPI.individualPoolStake <$> Map.lookup poolHash snapshotPoolDistr
-
-  let isLeader slotNo = checkLeaderNatValue certifiedNatValue stakePoolStake activeSlotCoeff'
-        where rho = VRF.evalCertified () (mkInputVRF slotNo eNonce) vrfSkey
-              certifiedNatValue = vrfLeaderValue (Proxy @Shelley.StandardCrypto) rho
-
-  Right $ Set.filter isLeader slotRangeOfInterest
-
-obtainIsStandardCrypto
-  :: ShelleyLedgerEra era ~ ledgerera
-  => ShelleyBasedEra era
-  -> (Cardano.Ledger.Era.Crypto ledgerera ~ Shelley.StandardCrypto => a)
-  -> a
-obtainIsStandardCrypto ShelleyBasedEraShelley f = f
-obtainIsStandardCrypto ShelleyBasedEraAllegra f = f
-obtainIsStandardCrypto ShelleyBasedEraMary    f = f
-obtainIsStandardCrypto ShelleyBasedEraAlonzo  f = f
-obtainIsStandardCrypto ShelleyBasedEraBabbage f = f
-
-
-obtainDecodeEpochStateConstraints
-  :: ShelleyLedgerEra era ~ ledgerera
-  => ShelleyBasedEra era
-  -> (( FromCBOR (Core.PParams ledgerera)
-      , FromCBOR (State (Core.EraRule "PPUP" ledgerera))
-      , FromCBOR (Core.Value ledgerera)
-      , FromSharedCBOR (Core.TxOut ledgerera)
-      , HashAnnotated
-          (Core.TxBody ledgerera)
-          Core.EraIndependentTxBody
-          (Ledger.Crypto (ShelleyLedgerEra era))
-      ) => a) -> a
-obtainDecodeEpochStateConstraints ShelleyBasedEraShelley f = f
-obtainDecodeEpochStateConstraints ShelleyBasedEraAllegra f = f
-obtainDecodeEpochStateConstraints ShelleyBasedEraMary    f = f
-obtainDecodeEpochStateConstraints ShelleyBasedEraAlonzo  f = f
-obtainDecodeEpochStateConstraints ShelleyBasedEraBabbage f = f
-
--- | Return the slots at which a particular stake pool operator is
--- expected to mint a block.
-currentEpochEligibleLeadershipSlots :: forall era ledgerera. ()
-  => ShelleyLedgerEra era ~ ledgerera
-  => Ledger.Era ledgerera
-  => Consensus.PraosProtocolSupportsNode (Api.ConsensusProtocol era)
-  => HasField "_d" (Core.PParams ledgerera) UnitInterval
-  -- => Crypto.Signable (Crypto.VRF (Ledger.Crypto ledgerera)) Shelley.Spec.Seed
-  => Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Spec.Credential 'Shelley.Spec.Staking (Cardano.Ledger.Era.Crypto (ShelleyLedgerEra era)))
- -- => Ledger.Crypto ledgerera ~ Shelley.StandardCrypto
-  => FromCBOR (Consensus.ChainDepState (Api.ConsensusProtocol era))
-  -- => Consensus.ChainDepState (ConsensusProtocol era) ~ Consensus.ChainDepState (ConsensusProtocol era)
-  => ShelleyBasedEra era
-  -> ShelleyGenesis Shelley.StandardShelley
-  -> EpochInfo (Either Text)
-  -> ProtocolParameters
-  -> ProtocolState era
-  -> PoolId
-  -> SigningKey VrfKey
-  -> SerialisedCurrentEpochState era
-  -> EpochNo -- ^ Current EpochInfo
-  -> Either LeadershipError (Set SlotNo)
-currentEpochEligibleLeadershipSlots sbe sGen eInfo pParams ptclState poolid (VrfSigningKey vrkSkey) serCurrEpochState currentEpoch = do
-
-  chainDepState :: ChainDepState (Api.ConsensusProtocol era) <-
-    first LeaderErrDecodeProtocolStateFailure $ decodeProtocolState ptclState
-
-  -- We use the current epoch's nonce for the current leadership schedule
-  -- calculation because the TICKN transition updates the epoch nonce
-  -- at the start of the epoch.
-  let epochNonce :: Nonce = Consensus.epochNonce (Consensus.getPraosNonces (Proxy @(Api.ConsensusProtocol era)) chainDepState)
-
-  (firstSlotOfEpoch, lastSlotofEpoch) :: (SlotNo, SlotNo) <- first LeaderErrSlotRangeCalculationFailure
-    $ Slot.epochInfoRange eInfo currentEpoch
-
-  CurrentEpochState (cEstate :: ShelleyAPI.EpochState (ShelleyLedgerEra era)) <-
-    first LeaderErrDecodeProtocolEpochStateFailure
-      $ obtainDecodeEpochStateConstraints sbe
-      $ decodeCurrentEpochState serCurrEpochState
-
-  -- We need the "set" stake distribution (distribution of the previous epoch)
-  -- in order to calculate the leadership schedule of the current epoch.
-  let setSnapshotPoolDistr :: Map (SL.KeyHash 'SL.StakePool Shelley.StandardCrypto) (SL.IndividualPoolStake Shelley.StandardCrypto)
-      setSnapshotPoolDistr = ShelleyAPI.unPoolDistr . ShelleyAPI.calculatePoolDistr
-                                . ShelleyAPI._pstakeSet . obtainIsStandardCrypto sbe
-                                $ ShelleyAPI.esSnapshots cEstate
-
-  let slotRangeOfInterest = Set.filter
-        (not . Ledger.isOverlaySlot firstSlotOfEpoch (getField @"_d" (toLedgerPParams sbe pParams)))
-        $ Set.fromList [firstSlotOfEpoch .. lastSlotofEpoch]
-
-  case sbe of
-    ShelleyBasedEraShelley -> isLeadingSlotsTPraos slotRangeOfInterest poolid setSnapshotPoolDistr epochNonce vrkSkey f
-    ShelleyBasedEraAllegra -> isLeadingSlotsTPraos slotRangeOfInterest poolid setSnapshotPoolDistr epochNonce vrkSkey f
-    ShelleyBasedEraMary -> isLeadingSlotsTPraos slotRangeOfInterest poolid setSnapshotPoolDistr epochNonce vrkSkey f
-    ShelleyBasedEraAlonzo -> isLeadingSlotsTPraos slotRangeOfInterest poolid setSnapshotPoolDistr epochNonce vrkSkey f
-    ShelleyBasedEraBabbage -> isLeadingSlotsPraos slotRangeOfInterest poolid setSnapshotPoolDistr epochNonce vrkSkey f
-
- where
-  globals = constructGlobals sGen eInfo pParams
-
-  f :: Shelley.Spec.ActiveSlotCoeff
-  f = activeSlotCoeff globals
-
-constructGlobals
-  :: ShelleyGenesis Shelley.StandardShelley
-  -> EpochInfo (Either Text)
-  -> ProtocolParameters
-  -> Globals
-constructGlobals sGen eInfo pParams =
-  let majorPParamsVer = fst $ protocolParamProtocolVersion pParams
-  in Shelley.Spec.mkShelleyGlobals sGen eInfo majorPParamsVer
+    -> Either LedgerStateError ExtLedgerState
+tickThenApply cfg block lsb =
+    either (Left . ExtApplyBlockError) (Right . ExtLedgerState . lrResult)
+        $ runExcept
+        $ Consensus.tickThenApplyLedgerResult cfg block lsb
