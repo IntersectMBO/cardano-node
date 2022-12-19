@@ -14,6 +14,7 @@ import qualified Test.Tasty.Ingredients as T
 --import qualified Test.Cli.Alonzo.LeadershipSchedule
 import qualified Test.Cli.Babbage.LeadershipSchedule
 import qualified Test.Cli.KesPeriodInfo
+import qualified Test.FoldBlocks
 import qualified Test.Node.Shutdown
 import qualified Test.ShutdownOnSlotSynced
 import qualified Util.Ignore as H
@@ -35,6 +36,7 @@ tests = pure $ T.testGroup "test/Spec.hs"
       -- TODO: Babbage temporarily ignored due to broken protocol-state query
     , H.disabled "kes-period-info" Test.Cli.KesPeriodInfo.hprop_kes_period_info
     ]
+  , H.ignoreOnWindows "foldBlocks receives ledger state" Test.FoldBlocks.prop_foldBlocks
   ]
 
 ingredients :: [T.Ingredient]
