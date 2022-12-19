@@ -42,10 +42,10 @@ import           Cardano.Api.SerialiseTextEnvelope
 
 -- TODO: Think about if these belong
 import           Cardano.Api.Address
-import           Cardano.Api.Key
-import           Cardano.Api.KeysByron
-import           Cardano.Api.KeysPraos
-import           Cardano.Api.KeysShelley
+import           Cardano.Api.Keys.Class
+import           Cardano.Api.Keys.Byron
+import           Cardano.Api.Keys.Praos
+import           Cardano.Api.Keys.Shelley
 
 ------------------------------------------------------------------------------
 -- Formatted/encoded input deserialisation

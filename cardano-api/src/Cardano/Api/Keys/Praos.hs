@@ -9,7 +9,7 @@
 
 -- | Praos consensus key types and their 'Key' class instances
 --
-module Cardano.Api.KeysPraos (
+module Cardano.Api.Keys.Praos (
 
     -- * Key types
     KesKey,
@@ -36,7 +36,7 @@ import           Cardano.Ledger.Crypto (StandardCrypto)
 
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
-import           Cardano.Api.Key
+import           Cardano.Api.Keys.Class
 import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw

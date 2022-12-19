@@ -2,7 +2,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Api.Key
+module Cardano.Api.Keys.Class
   ( Key(..)
   , generateSigningKey
   , generateInsecureSigningKey

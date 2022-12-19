@@ -120,7 +120,7 @@ import           Cardano.Api.Certificate
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.GenesisParameters
-import           Cardano.Api.KeysShelley
+import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.Orphans ()

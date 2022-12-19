@@ -74,7 +74,6 @@ import           Cardano.Api.Shelley
 import qualified Cardano.Binary as CBOR
 import           Data.Text (Text)
 
-import           Cardano.CLI.Shelley.Key
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Types
 
@@ -640,9 +639,9 @@ renderReadWitnessSigningDataError err =
 readWitnessSigningData
   :: WitnessSigningData
   -> IO (Either ReadWitnessSigningDataError SomeWitness)
-readWitnessSigningData (KeyWitnessSigningData skFile mbByronAddr) = do
+readWitnessSigningData (KeyWitnessSigningData (SigningKeyFile skFile) mbByronAddr) = do
     eRes <- first ReadWitnessSigningDataSigningKeyDecodeError
-             <$> readSigningKeyFileAnyOf bech32FileTypes textEnvFileTypes skFile
+             <$> readKeyFileAnyOf bech32FileTypes textEnvFileTypes skFile
     return $ do
       res <- eRes
       case (res, mbByronAddr) of
@@ -706,8 +705,8 @@ instance Error RequiredSignerError where
 
 readRequiredSigner :: RequiredSigner -> IO (Either RequiredSignerError (Hash PaymentKey))
 readRequiredSigner (RequiredSignerHash h) = return $ Right h
-readRequiredSigner (RequiredSignerSkeyFile skFile) = do
-  eKeyWit <- first RequiredSignerErrorFile <$> readSigningKeyFileAnyOf bech32FileTypes textEnvFileTypes skFile
+readRequiredSigner (RequiredSignerSkeyFile skFile@(SigningKeyFile skFp)) = do
+  eKeyWit <- first RequiredSignerErrorFile <$> readKeyFileAnyOf bech32FileTypes textEnvFileTypes skFp
   return $ do
     keyWit <- eKeyWit
     case categoriseSomeWitness keyWit of

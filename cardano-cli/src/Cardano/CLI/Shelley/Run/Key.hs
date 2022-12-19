@@ -38,8 +38,8 @@ import           Cardano.Api.Shelley
 import qualified Cardano.CLI.Byron.Key as Byron
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (VerificationKeyTextOrFile (..),
-                   VerificationKeyTextOrFileError, readSigningKeyFileAnyOf,
-                   readVerificationKeyTextOrFileAnyOf, renderVerificationKeyTextOrFileError)
+                   VerificationKeyTextOrFileError, readVerificationKeyTextOrFileAnyOf,
+                   renderVerificationKeyTextOrFileError)
 import           Cardano.CLI.Types (SigningKeyFile (..), VerificationKeyFile (..))
 
 
@@ -156,9 +156,9 @@ withSomeSigningKey ssk f =
 readSigningKeyFile
   :: SigningKeyFile
   -> ExceptT (FileError InputDecodeError) IO SomeSigningKey
-readSigningKeyFile skFile =
+readSigningKeyFile (SigningKeyFile skFile) =
     newExceptT $
-      readSigningKeyFileAnyOf bech32FileTypes textEnvFileTypes skFile
+      readKeyFileAnyOf bech32FileTypes textEnvFileTypes skFile
   where
     textEnvFileTypes =
       [ FromSomeType (AsSigningKey AsByronKey)

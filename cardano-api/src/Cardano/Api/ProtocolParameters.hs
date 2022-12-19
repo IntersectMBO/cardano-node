@@ -112,8 +112,8 @@ import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.KeysByron
-import           Cardano.Api.KeysShelley
+import           Cardano.Api.Keys.Byron
+import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.Script
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
