@@ -415,8 +415,8 @@ as described above. For this example, we will describe the process using an
 A script address is required in order to use a script. Construct this as follows:
 
 ```
-cardano-cli address build-script
-  --script-file allMultiSigScript
+cardano-cli address
+  --payment-script-file allMultiSigScript
   --testnet-magic 42
   --out-file script.addr
 ```
