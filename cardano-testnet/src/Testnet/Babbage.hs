@@ -236,7 +236,12 @@ babbageTestnet testnetOptions H.Conf {..} = do
     . HM.insert "minFeeB"                (toJSON @Int 155381)
     . HM.insert "minUTxOValue"           (toJSON @Int 1000000)
     . HM.insert "decentralisationParam"  (toJSON @Double 0.7)
-    . HM.insert "major"                  (toJSON @Int 7)
+    . flip HM.adjust "protocolParams"
+      ( J.rewriteObject
+        ( flip HM.adjust "protocolVersion"
+          ( J.rewriteObject ( HM.insert "major" (toJSON @Int 8)))
+        )
+      )
     . HM.insert "rho"                    (toJSON @Double 0.1)
     . HM.insert "tau"                    (toJSON @Double 0.1)
     . HM.insert "updateQuorum"           (toJSON @Int 2)
