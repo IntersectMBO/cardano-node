@@ -388,16 +388,31 @@ case "$op" in
     stop-cluster )
         local usage="USAGE: wb nomad $op RUN-DIR"
         local dir=${1:?$usage}; shift
+        local nomad_alloc_id=$(envjqr 'nomad_alloc_id')
+        local nomad_job_name=$(envjqr 'nomad_job_name')
 
-        backend_nomad nomad-alloc-exec-supervisorctl "$dir" generator stop all
-        backend_nomad nomad-alloc-exec-supervisorctl "$dir" tracer stop all
+        msg "Stopping generator ..."
+        backend_nomad nomad-alloc-exec-supervisorctl "$dir" generator stop all || true
+        msg "Stopping tracer ..."
+        if jqtest ".node.tracer" "$dir"/profile.json
+        then
+          backend_nomad nomad-alloc-exec-supervisorctl "$dir" tracer stop all || true
+        fi
         for node in $(jq_tolist 'keys' "$dir"/node-specs.json)
         do
-            backend_nomad nomad-alloc-exec-supervisorctl "$dir" "$node" stop all
+            msg "Stopping $node ..."
+            backend_nomad nomad-alloc-exec-supervisorctl "$dir" "$node" stop all || true
         done
 
-        nomad job stop -global -no-shutdown-delay -purge -yes cluster
+        msg "Stopping nomad job ..."
+        # FIXME:
+        # ERRO[0087] Unable to get cgroup path of container: cannot get cgroup path unless container b2f4fea15a4a56591231fae10e3c3e55fd485b2c0dfb231c073e2a3c9efa0e42 is running: container is stopped
+        # {"@level":"debug","@message":"Could not get container stats, unknown error","@module":"podman.podmanHandle","@timestamp":"2022-12-14T14:34:03.264133Z","driver":"podman","error":"\u0026json.SyntaxError{msg:\"unexpected end of JSON input\", Offset:0}","timestamp":"2022-12-14T14:34:03.264Z"}
+        # {"@level":"debug","@message":"Could not get container stats, unknown error","@module":"podman.podmanHandle","@timestamp":"2022-12-14T14:34:16.320494Z","driver":"podman","error":"\u0026url.Error{Op:\"Get\", URL:\"http://u/v1.0.0/libpod/containers/a55f689be4d2898225c76fa12716cfa0c0dedd54a1919e82d44523a35b8d07a4/stats?stream=false\", Err:(*net.OpError)(0xc000ba5220)}","timestamp":"2022-12-14T14:34:16.320Z"}
+        nomad job stop -global -no-shutdown-delay -purge -yes -verbose cluster >> "$dir/nomad/stdout" 2>> "$dir/nomad/stderr"
+
         local nomad_pid=$(envjqr 'nomad_pid')
+        msg "Killing nomad agent (PID $nomad_pid)..."
         kill -SIGINT "$nomad_pid"
         ;;
 

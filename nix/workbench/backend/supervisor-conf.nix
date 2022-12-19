@@ -49,6 +49,8 @@ let
         command        = "sh start.sh";
         stdout_logfile = "${stateDir}/generator/stdout";
         stderr_logfile = "${stateDir}/generator/stderr";
+        stopasgroup    = false;
+        killasgroup    = false;
         autostart      = false;
         autorestart    = false;
         startretries   = 1;
@@ -62,11 +64,12 @@ let
         command        = "sh start.sh";
         stdout_logfile = "${stateDir}/tracer/stdout";
         stderr_logfile = "${stateDir}/tracer/stderr";
+        stopasgroup    = true;
+        killasgroup    = true;
         autostart      = false;
         autorestart    = false;
         startretries   = 1;
-        stopasgroup    = true;
-        killasgroup    = true;
+        startsecs      = 1;
       };
     };
 
@@ -81,9 +84,12 @@ let
       command        = "sh start.sh";
       stdout_logfile = "${service.value.stateDir 0}/stdout";
       stderr_logfile = "${service.value.stateDir 0}/stderr";
+      stopasgroup    = false;
+      killasgroup    = false;
       autostart      = false;
       autorestart    = false;
       startretries   = 1;
+      startsecs      = 1;
     };
 
 in
