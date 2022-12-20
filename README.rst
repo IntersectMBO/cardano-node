@@ -437,6 +437,13 @@ If you want to use the ``cardano-node`` Haskell packages from another project, y
 Please note that you may need to use any ``source-repository-package`` stanzas defined in ``cabal.project``, although we will endeavour to keep these to an absolute minimum.
 
 ****
+Style guide
+****
+
+The `style guide <https://github.com/input-output-hk/cardano-node/wiki/Style-guide>` for can be found
+on the `cardano-node repository's wiki <https://github.com/input-output-hk/cardano-node/wiki>`.
+
+****
 Troubleshooting ``cardano-node`` issues
 ****
 
