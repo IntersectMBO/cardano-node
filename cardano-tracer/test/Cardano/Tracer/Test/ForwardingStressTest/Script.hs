@@ -31,9 +31,6 @@ import           Cardano.Tracer.Test.ForwardingStressTest.Types
 import           Cardano.Tracer.Test.TestSetup
 import           Cardano.Tracer.Test.Utils
 
-
-import           Debug.Trace
-
 -- | configuration for testing
 simpleTestConfig :: TraceConfig
 simpleTestConfig = emptyTraceConfig {

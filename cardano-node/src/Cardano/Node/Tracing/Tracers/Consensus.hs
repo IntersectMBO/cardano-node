@@ -11,76 +11,19 @@
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
 module Cardano.Node.Tracing.Tracers.Consensus
-  ( severityChainSyncClientEvent
-  , namesForChainSyncClientEvent
-  , docChainSyncClientEvent
-
-  , severityChainSyncServerEvent
-  , namesForChainSyncServerEvent
-  , docChainSyncServerEventHeader
-  , docChainSyncServerEventBlock
-
-  , severityBlockFetchDecision
-  , namesForBlockFetchDecision
-  , docBlockFetchDecision
-
-  , severityBlockFetchClient
-  , namesForBlockFetchClient
-  , docBlockFetchClient
-
-  , ClientMetrics(..)
-  , initialClientMetrics
-  , calculateBlockFetchClientMetrics
-  , docBlockFetchClientMetrics
-
-  , severityBlockFetchServer
-  , namesForBlockFetchServer
-  , docBlockFetchServer
-
-  , severityTxInbound
-  , namesForTxInbound
-  , docTxInbound
-
-  , severityTxOutbound
-  , namesForTxOutbound
-  , docTxOutbound
-
-  , severityLocalTxSubmissionServer
-  , namesForLocalTxSubmissionServer
-  , docLocalTxSubmissionServer
-
-  , severityMempool
-  , namesForMempool
-  , docMempool
-
-  , TraceStartLeadershipCheckPlus (..)
+  (
+    TraceStartLeadershipCheckPlus (..)
   , ForgeTracerType
   , forgeTracerTransform
-  , severityForge
-  , namesForForge
-  , docForge
-
-  , severityForge2
-  , namesForForge2
-  , docForge2
-
-  , namesForBlockchainTime
-  , severityBlockchainTime
-  , docBlockchainTime
-
-  , namesForKeepAliveClient
-  , severityKeepAliveClient
-  , docKeepAliveClient
-
-  , namesConsensusStartupError
-  , severityConsensusStartupError
-  , docConsensusStartupError
-
+  , initialClientMetrics
+  , calculateBlockFetchClientMetrics
+  , ClientMetrics
   ) where
 
 
 import           Control.Monad.Class.MonadTime (Time (..))
 import           Data.Aeson (ToJSON, Value (Number, String), toJSON, (.=))
+import qualified Data.Aeson as Aeson
 import           Data.IntPSQ (IntPSQ)
 import qualified Data.IntPSQ as Pq
 import           Data.SOP.Strict
@@ -97,8 +40,7 @@ import           Cardano.Node.Tracing.Era.Byron ()
 import           Cardano.Node.Tracing.Era.Shelley ()
 import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.Render
-import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
-import           Cardano.Node.Tracing.Tracers.ForgingThreadStats (ForgingStats)
+import           Cardano.Node.Tracing.Tracers.ConsensusStartupException ()
 import           Cardano.Node.Tracing.Tracers.StartLeadershipCheck
 import           Cardano.Prelude hiding (All, Show, show)
 
@@ -110,12 +52,13 @@ import           Ouroboros.Network.Block hiding (blockPrevHash)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
+import           Ouroboros.Network.ConnectionId (ConnectionId (..))
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import           Ouroboros.Network.TxSubmission.Inbound hiding (txId)
 import           Ouroboros.Network.TxSubmission.Outbound
 
-import qualified Data.Aeson as Aeson
+
 import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
@@ -137,15 +80,67 @@ import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import           Ouroboros.Consensus.Util.Enclose
 
 
+instance Show adr => LogFormatting (ConnectionId adr) where
+  forMachine _dtal (ConnectionId local' remote) =
+    mconcat [ "connectionId" .= String ((Text.pack . show) local'
+                                          <> " "
+                                          <> (Text.pack . show) remote)
+    ]
+--------------------------------------------------------------------------------
+--   TraceLabelCreds peer a
+--------------------------------------------------------------------------------
+
 instance LogFormatting a => LogFormatting (TraceLabelCreds a) where
   forMachine dtal (TraceLabelCreds creds a)  =
-    mconcat [ "credentials" .= toJSON creds
-             , "val"         .= forMachine dtal a
-            ]
--- TODO Trace label creds as well
-  forHuman (TraceLabelCreds _t a)         = forHuman a
-  asMetrics (TraceLabelCreds _t a)        = asMetrics a
+    mconcat $ ("credentials" .= toJSON creds) : [forMachine dtal a]
 
+  forHuman (TraceLabelCreds creds a)         =
+    "With label " <> (Text.pack . show) creds <> ", " <> forHuman a
+  asMetrics (TraceLabelCreds _creds a)        =
+    asMetrics a
+
+instance MetaTrace a => MetaTrace (TraceLabelCreds a) where
+  namespaceFor (TraceLabelCreds _label obj) = (nsCast . namespaceFor) obj
+  severityFor ns Nothing = severityFor (nsCast ns :: Namespace a) Nothing
+  severityFor ns (Just (TraceLabelCreds _label obj)) =
+    severityFor (nsCast ns :: Namespace a) (Just obj)
+  privacyFor ns Nothing = privacyFor (nsCast ns :: Namespace a) Nothing
+  privacyFor ns (Just (TraceLabelCreds _label obj)) =
+    privacyFor (nsCast ns :: Namespace a) (Just obj)
+  detailsFor ns Nothing = detailsFor (nsCast ns :: Namespace a) Nothing
+  detailsFor ns (Just (TraceLabelCreds _label obj)) =
+    detailsFor (nsCast ns :: Namespace a) (Just obj)
+  documentFor ns = documentFor (nsCast ns :: Namespace a)
+  metricsDocFor ns = metricsDocFor (nsCast ns :: Namespace a)
+  allNamespaces = map nsCast (allNamespaces :: [Namespace a])
+
+
+--------------------------------------------------------------------------------
+--   TraceLabelPeer peer a
+--------------------------------------------------------------------------------
+
+instance (LogFormatting peer, Show peer, LogFormatting a)
+  => LogFormatting (TraceLabelPeer peer a) where
+  forMachine dtal (TraceLabelPeer peerid a) =
+    mconcat [ "peer" .= forMachine dtal peerid ] <> forMachine dtal a
+  forHuman (TraceLabelPeer peerid a) = "Peer is " <> showT peerid
+                                        <> ". " <> forHuman a
+  asMetrics (TraceLabelPeer _peerid a) = asMetrics a
+
+instance MetaTrace a => MetaTrace (TraceLabelPeer label a) where
+  namespaceFor (TraceLabelPeer _label obj) = (nsCast . namespaceFor) obj
+  severityFor ns Nothing = severityFor (nsCast ns :: Namespace a) Nothing
+  severityFor ns (Just (TraceLabelPeer _label obj)) =
+    severityFor (nsCast ns) (Just obj)
+  privacyFor ns Nothing = privacyFor (nsCast ns :: Namespace a) Nothing
+  privacyFor ns (Just (TraceLabelPeer _label obj)) =
+    privacyFor (nsCast ns) (Just obj)
+  detailsFor ns Nothing = detailsFor (nsCast ns :: Namespace a) Nothing
+  detailsFor ns (Just (TraceLabelPeer _label obj)) =
+    detailsFor (nsCast ns) (Just obj)
+  documentFor ns = documentFor (nsCast ns :: Namespace a)
+  metricsDocFor ns = metricsDocFor (nsCast ns :: Namespace a)
+  allNamespaces = map nsCast (allNamespaces :: [Namespace a])
 
 instance (LogFormatting (LedgerUpdate blk), LogFormatting (LedgerWarning blk))
       =>  LogFormatting (LedgerEvent blk) where
@@ -153,50 +148,10 @@ instance (LogFormatting (LedgerUpdate blk), LogFormatting (LedgerWarning blk))
     LedgerUpdate  update  -> forMachine dtal update
     LedgerWarning warning -> forMachine dtal warning
 
-tipToObject :: forall blk. ConvertRawHash blk => Tip blk -> Aeson.Object
-tipToObject = \case
-  TipGenesis -> mconcat
-    [ "slot"    .= toJSON (0 :: Int)
-    , "block"   .= String "genesis"
-    , "blockNo" .= toJSON ((-1) :: Int)
-    ]
-  Tip slot hash blockno -> mconcat
-    [ "slot"    .= slot
-    , "block"   .= String (renderHeaderHash (Proxy @blk) hash)
-    , "blockNo" .= blockno
-    ]
 
 --------------------------------------------------------------------------------
 -- ChainSyncClient Tracer
 --------------------------------------------------------------------------------
-
-severityChainSyncClientEvent ::
-  BlockFetch.TraceLabelPeer peer (TraceChainSyncClientEvent blk) -> SeverityS
-severityChainSyncClientEvent (BlockFetch.TraceLabelPeer _ e) =
-    severityChainSyncClientEvent' e
-
-namesForChainSyncClientEvent ::
-  BlockFetch.TraceLabelPeer peer (TraceChainSyncClientEvent blk) -> [Text]
-namesForChainSyncClientEvent (BlockFetch.TraceLabelPeer _ e) = namesForChainSyncClientEvent' e
-
-severityChainSyncClientEvent' :: TraceChainSyncClientEvent blk -> SeverityS
-severityChainSyncClientEvent' TraceDownloadedHeader {}  = Info
-severityChainSyncClientEvent' TraceFoundIntersection {} = Info
-severityChainSyncClientEvent' TraceRolledBack {}        = Notice
-severityChainSyncClientEvent' TraceException {}         = Warning
-severityChainSyncClientEvent' TraceTermination {}       = Notice
-
-namesForChainSyncClientEvent' :: TraceChainSyncClientEvent blk -> [Text]
-namesForChainSyncClientEvent' TraceDownloadedHeader {} =
-      ["DownloadedHeader"]
-namesForChainSyncClientEvent' TraceFoundIntersection {} =
-      ["FoundIntersection"]
-namesForChainSyncClientEvent' TraceRolledBack {} =
-      ["RolledBack"]
-namesForChainSyncClientEvent' TraceException {} =
-      ["Exception"]
-namesForChainSyncClientEvent' TraceTermination {} =
-      ["Termination"]
 
 instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
       => LogFormatting (TraceChainSyncClientEvent blk) where
@@ -231,47 +186,59 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
       mconcat [ "kind" .= String "Termination"
                , "reason" .= String (Text.pack $ show reason) ]
 
+tipToObject :: forall blk. ConvertRawHash blk => Tip blk -> Aeson.Object
+tipToObject = \case
+  TipGenesis -> mconcat
+    [ "slot"    .= toJSON (0 :: Int)
+    , "block"   .= String "genesis"
+    , "blockNo" .= toJSON ((-1) :: Int)
+    ]
+  Tip slot hash blockno -> mconcat
+    [ "slot"    .= slot
+    , "block"   .= String (renderHeaderHash (Proxy @blk) hash)
+    , "blockNo" .= blockno
+    ]
 
-docChainSyncClientEvent ::
-  Documented (BlockFetch.TraceLabelPeer peer (TraceChainSyncClientEvent blk))
-docChainSyncClientEvent = Documented [
-    DocMsg
-      ["DownloadedHeader"]
-      []
-      "While following a candidate chain, we rolled forward by downloading a\
-      \ header."
-  , DocMsg
-      ["RolledBack"]
-      []
-      "While following a candidate chain, we rolled back to the given point."
-  , DocMsg
-      ["FoundIntersection"]
-      []
-      "We found an intersection between our chain fragment and the\
-      \ candidate's chain."
-  , DocMsg
-      ["Exception"]
-      []
-      "An exception was thrown by the Chain Sync Client."
-  , DocMsg
-      ["Termination"]
-      []
-      "The client has terminated."
-  ]
+instance MetaTrace (TraceChainSyncClientEvent blk) where
+  namespaceFor TraceDownloadedHeader {} = Namespace [] ["DownloadedHeader"]
+  namespaceFor TraceRolledBack {} = Namespace [] ["RolledBack"]
+  namespaceFor TraceException {} = Namespace [] ["Exception"]
+  namespaceFor TraceFoundIntersection {} = Namespace [] ["FoundIntersection"]
+  namespaceFor TraceTermination {} = Namespace [] ["Termination"]
+
+  severityFor (Namespace _ ["DownloadedHeader"]) _ = Just Info
+  severityFor (Namespace _ ["RolledBack"]) _ = Just Notice
+  severityFor (Namespace _ ["Exception"]) _ = Just Warning
+  severityFor (Namespace _ ["FoundIntersection"]) _ = Just Info
+  severityFor (Namespace _ ["Termination"]) _ = Just Notice
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace _ ["DownloadedHeader"]) = Just
+    "While following a candidate chain, we rolled forward by downloading a\
+    \ header."
+  documentFor (Namespace _ ["RolledBack"]) = Just
+    "While following a candidate chain, we rolled back to the given point."
+  documentFor (Namespace _ ["Exception"]) = Just
+    "An exception was thrown by the Chain Sync Client."
+  documentFor (Namespace _ ["FoundIntersection"]) = Just
+    "We found an intersection between our chain fragment and the\
+    \ candidate's chain."
+  documentFor (Namespace _ ["Termination"]) = Just
+    "The client has terminated."
+  documentFor _ = Nothing
+
+  allNamespaces =
+    [
+      Namespace [] ["DownloadedHeader"]
+    , Namespace [] ["RolledBack"]
+    , Namespace [] ["Exception"]
+    , Namespace [] ["FoundIntersection"]
+    , Namespace [] ["Termination"]
+    ]
 
 --------------------------------------------------------------------------------
 -- ChainSyncServer Tracer
 --------------------------------------------------------------------------------
-
-severityChainSyncServerEvent :: TraceChainSyncServerEvent blk -> SeverityS
-severityChainSyncServerEvent (TraceChainSyncServerUpdate _tip _upd _blocking enclosing) =
-    case enclosing of
-      RisingEdge  -> Info
-      FallingEdge -> Debug
-
-namesForChainSyncServerEvent :: TraceChainSyncServerEvent blk -> [Text]
-namesForChainSyncServerEvent (TraceChainSyncServerUpdate _tip _update _blocking _enclosing) =
-      ["Update"]
 
 instance ConvertRawHash blk
       => LogFormatting (TraceChainSyncServerEvent blk) where
@@ -290,107 +257,31 @@ instance ConvertRawHash blk
       [CounterM "ChainSync.HeadersServed.Falling" Nothing]
   asMetrics _ = []
 
+instance MetaTrace (TraceChainSyncServerEvent blk) where
+  namespaceFor TraceChainSyncServerUpdate {} = Namespace [] ["Update"]
 
+  severityFor (Namespace _ ["Update"])
+              (Just (TraceChainSyncServerUpdate _tip _upd _blocking enclosing)) =
+                case enclosing of
+                  RisingEdge  -> Just Info
+                  FallingEdge -> Just Debug
+  severityFor (Namespace _ ["Update"]) Nothing = Just Info
+  severityFor _ _ = Nothing
 
--- | Metrics documented here, but implemented specially
-docChainSyncServerEventHeader :: Documented (TraceChainSyncServerEvent blk)
-docChainSyncServerEventHeader = Documented [
-    DocMsg
-      ["Update"]
-      [("ChainSync.HeadersServed", "A counter triggered on any header event")
-      ,("ChainSync.HeadersServed.Falling", "A counter triggered only on header event with falling edge")]
-      "A server read has occurred, either for an add block or a rollback"
-  ]
+  metricsDocFor (Namespace _ ["Update"]) =
+    [ ("ChainSync.HeadersServed", "A counter triggered on any header event")
+    , ("ChainSync.HeadersServed.Falling",
+        "A counter triggered only on header event with falling edge")]
+  metricsDocFor _ = []
 
-docChainSyncServerEventBlock :: Documented (TraceChainSyncServerEvent blk)
-docChainSyncServerEventBlock =
-    addDocumentedNamespace
-      []
-      docChainSyncServerEventBlock'
+  documentFor (Namespace _ ["Update"]) = Just
+    "A server read has occurred, either for an add block or a rollback"
+  documentFor _ = Nothing
 
-docChainSyncServerEventBlock' :: Documented (TraceChainSyncServerEvent blk)
-docChainSyncServerEventBlock' = Documented [
-    DocMsg
-      ["Update"]
-      []
-      "A server read has occurred, either for an add block or a rollback"
-  ]
+  allNamespaces = [Namespace [] ["Update"]]
 
 --------------------------------------------------------------------------------
--- BlockFetchDecision Tracer
---------------------------------------------------------------------------------
-
-severityBlockFetchDecision ::
-     [BlockFetch.TraceLabelPeer peer (FetchDecision [Point header])]
-  -> SeverityS
-severityBlockFetchDecision []  = Info
-severityBlockFetchDecision l   = maximum $
-  map (\(BlockFetch.TraceLabelPeer _ a) -> fetchDecisionSeverity a) l
-    where
-      fetchDecisionSeverity :: FetchDecision a -> SeverityS
-      fetchDecisionSeverity fd =
-        case fd of
-          Left FetchDeclineChainNotPlausible     -> Debug
-          Left FetchDeclineChainNoIntersection   -> Notice
-          Left FetchDeclineAlreadyFetched        -> Debug
-          Left FetchDeclineInFlightThisPeer      -> Debug
-          Left FetchDeclineInFlightOtherPeer     -> Debug
-          Left FetchDeclinePeerShutdown          -> Info
-          Left FetchDeclinePeerSlow              -> Info
-          Left FetchDeclineReqsInFlightLimit {}  -> Info
-          Left FetchDeclineBytesInFlightLimit {} -> Info
-          Left FetchDeclinePeerBusy {}           -> Info
-          Left FetchDeclineConcurrencyLimit {}   -> Info
-          Right _                                -> Info
-
-namesForBlockFetchDecision ::
-     [BlockFetch.TraceLabelPeer peer (FetchDecision [Point header])]
-  -> [Text]
-namesForBlockFetchDecision _ = []
-
-instance (LogFormatting peer, Show peer) =>
-    LogFormatting [TraceLabelPeer peer (FetchDecision [Point header])] where
-  forMachine DMinimal _ = mempty
-  forMachine _ []       = mconcat
-    [ "kind"  .= String "EmptyPeersFetch"]
-  forMachine _ xs       = mconcat
-    [ "kind"  .= String "PeersFetch"
-    , "peers" .= toJSON
-      (foldl' (\acc x -> forMachine DDetailed x : acc) [] xs) ]
-
-  asMetrics peers = [IntM "BlockFetch.ConnectedPeers" (fromIntegral (length peers))]
-
-instance (LogFormatting peer, Show peer, LogFormatting a)
-  => LogFormatting (TraceLabelPeer peer a) where
-  forMachine dtal (TraceLabelPeer peerid a) =
-    mconcat [ "peer" .= forMachine dtal peerid ] <> forMachine dtal a
-  forHuman (TraceLabelPeer peerid a) = "Peer is " <> showT peerid
-                                        <> ". " <> forHuman a
-  asMetrics (TraceLabelPeer _peerid a) = asMetrics a
-
-instance LogFormatting (FetchDecision [Point header]) where
-  forMachine _dtal (Left decline) =
-    mconcat [ "kind" .= String "FetchDecision declined"
-             , "declined" .= String (showT decline)
-             ]
-  forMachine _dtal (Right results) =
-    mconcat [ "kind" .= String "FetchDecision results"
-             , "length" .= String (showT $ length results)
-             ]
-
-docBlockFetchDecision ::
-  Documented [BlockFetch.TraceLabelPeer remotePeer (FetchDecision [Point (Header blk)])]
-docBlockFetchDecision = Documented [
-    DocMsg
-      []
-      [("BlockFetch.ConnectedPeers", "Number of connected peers")]
-      "Throughout the decision making process we accumulate reasons to decline\
-      \ to fetch any blocks. This message carries the intermediate and final\
-      \ results."
-  ]
-
---------------------------------------------------------------------------------
--- BlockFetchClient Tracer
+-- BlockFetchClient Metrics
 --------------------------------------------------------------------------------
 
 data CdfCounter = CdfCounter {
@@ -519,174 +410,201 @@ calculateBlockFetchClientMetrics cm@ClientMetrics {..} _lc
 
 calculateBlockFetchClientMetrics cm _lc _ = pure cm
 
-docBlockFetchClientMetrics :: Documented (BlockFetch.TraceLabelPeer peer (BlockFetch.TraceFetchClientState header))
-docBlockFetchClientMetrics = Documented [
-    DocMsg
-      ["ClientMetrics"]
-      [ ("Blockfetch.Client.Blockdelay", "")
-      , ("Blockfetch.Client.Blocksize", "")
-      , ("Blockfetch.Client.Blockdelay.cdfOne", "")
-      , ("Blockfetch.Client.Blockdelay.cdfThree", "")
-      , ("Blockfetch.Client.Blockdelay.cdfFive", "")
-      ]
-      ""
-    ]
+--------------------------------------------------------------------------------
+-- BlockFetchDecision Tracer
+--------------------------------------------------------------------------------
 
-severityBlockFetchClient ::
-     BlockFetch.TraceLabelPeer peer (BlockFetch.TraceFetchClientState header)
-  -> SeverityS
-severityBlockFetchClient (BlockFetch.TraceLabelPeer _p bf) = severityBlockFetchClient' bf
+instance (LogFormatting peer, Show peer) =>
+    LogFormatting [TraceLabelPeer peer (FetchDecision [Point header])] where
+  forMachine DMinimal _ = mempty
+  forMachine _ []       = mconcat
+    [ "kind"  .= String "EmptyPeersFetch"]
+  forMachine _ xs       = mconcat
+    [ "kind"  .= String "PeersFetch"
+    , "peers" .= toJSON
+      (foldl' (\acc x -> forMachine DDetailed x : acc) [] xs) ]
 
-severityBlockFetchClient' ::
-     BlockFetch.TraceFetchClientState header
-  -> SeverityS
-severityBlockFetchClient' BlockFetch.AddedFetchRequest {}        = Info
-severityBlockFetchClient' BlockFetch.AcknowledgedFetchRequest {} = Info
-severityBlockFetchClient' BlockFetch.SendFetchRequest {}         = Info
-severityBlockFetchClient' BlockFetch.StartedFetchBatch {}        = Info
-severityBlockFetchClient' BlockFetch.CompletedBlockFetch {}      = Info
-severityBlockFetchClient' BlockFetch.CompletedFetchBatch {}      = Info
-severityBlockFetchClient' BlockFetch.RejectedFetchBatch {}       = Info
-severityBlockFetchClient' BlockFetch.ClientTerminating {}        = Notice
+  asMetrics peers = [IntM "BlockFetch.ConnectedPeers" (fromIntegral (length peers))]
 
-namesForBlockFetchClient ::
-    BlockFetch.TraceLabelPeer peer (BlockFetch.TraceFetchClientState header)
-  -> [Text]
-namesForBlockFetchClient (BlockFetch.TraceLabelPeer _p bf) = namesForBlockFetchClient' bf
+instance MetaTrace [TraceLabelPeer peer (FetchDecision [Point header])] where
+  namespaceFor (a : _tl) = (nsCast . namespaceFor) a
+  namespaceFor [] = Namespace [] ["EmptyPeersFetch"]
 
-namesForBlockFetchClient' ::
-    BlockFetch.TraceFetchClientState header
-  -> [Text]
-namesForBlockFetchClient' BlockFetch.AddedFetchRequest {} =
-  ["AddedFetchRequest"]
-namesForBlockFetchClient' BlockFetch.AcknowledgedFetchRequest {}  =
-  ["AcknowledgedFetchRequest"]
-namesForBlockFetchClient' BlockFetch.SendFetchRequest {} =
-  ["SendFetchRequest"]
-namesForBlockFetchClient' BlockFetch.StartedFetchBatch {} =
-  ["StartedFetchBatch"]
-namesForBlockFetchClient' BlockFetch.CompletedFetchBatch {} =
-  ["CompletedFetchBatch"]
-namesForBlockFetchClient' BlockFetch.CompletedBlockFetch  {} =
-  ["CompletedBlockFetch"]
-namesForBlockFetchClient' BlockFetch.RejectedFetchBatch  {} =
-  ["RejectedFetchBatch"]
-namesForBlockFetchClient' BlockFetch.ClientTerminating {} =
-  ["ClientTerminating"]
+  severityFor (Namespace [] ["EmptyPeersFetch"]) _ = Just Debug
+  severityFor ns Nothing =
+    severityFor (nsCast ns :: Namespace (FetchDecision [Point header])) Nothing
+  severityFor ns (Just []) =
+    severityFor (nsCast ns :: Namespace (FetchDecision [Point header])) Nothing
+  severityFor ns (Just ((TraceLabelPeer _ a) : _tl)) =
+    severityFor (nsCast ns) (Just a)
 
+  privacyFor (Namespace _ ["EmptyPeersFetch"]) _ = Just Public
+  privacyFor ns Nothing =
+    privacyFor (nsCast ns :: Namespace (FetchDecision [Point header])) Nothing
+  privacyFor ns (Just []) =
+    privacyFor (nsCast ns :: Namespace (FetchDecision [Point header])) Nothing
+  privacyFor ns (Just ((TraceLabelPeer _ a) : _tl)) =
+    privacyFor (nsCast ns) (Just a)
+
+  detailsFor (Namespace _ ["EmptyPeersFetch"]) _ = Just DNormal
+  detailsFor ns Nothing =
+    detailsFor (nsCast ns :: Namespace (FetchDecision [Point header])) Nothing
+  detailsFor ns (Just []) =
+    detailsFor (nsCast ns :: Namespace (FetchDecision [Point header])) Nothing
+  detailsFor ns (Just ((TraceLabelPeer _ a) : _tl)) =
+    detailsFor (nsCast ns) (Just a)
+  documentFor ns = documentFor (nsCast ns :: Namespace (FetchDecision [Point header]))
+  metricsDocFor ns = metricsDocFor (nsCast ns :: Namespace (FetchDecision [Point header]))
+  allNamespaces = Namespace [] ["EmptyPeersFetch"]
+    : map nsCast (allNamespaces :: [Namespace (FetchDecision [Point header])])
+
+instance LogFormatting (FetchDecision [Point header]) where
+  forMachine _dtal (Left decline) =
+    mconcat [ "kind" .= String "FetchDecision declined"
+             , "declined" .= String (showT decline)
+             ]
+  forMachine _dtal (Right results) =
+    mconcat [ "kind" .= String "FetchDecision results"
+             , "length" .= String (showT $ length results)
+             ]
+
+instance MetaTrace (FetchDecision [Point header]) where
+    namespaceFor (Left _) = Namespace [] ["Decline"]
+    namespaceFor (Right _) = Namespace [] ["Accept"]
+
+    severityFor (Namespace _ ["Decline"]) _ = Just Info
+    severityFor (Namespace _ ["Accept"])  _ = Just Info
+    severityFor _ _ = Nothing
+
+    metricsDocFor (Namespace _ ["Decline"]) =
+      [("Blockfetch.ConnectedPeers", "Number of connected peers")]
+    metricsDocFor (Namespace _ ["Accept"]) =
+      [("Blockfetch.ConnectedPeers", "Number of connected peers")]
+    metricsDocFor _ = []
+
+    documentFor _ =  Just
+      "Throughout the decision making process we accumulate reasons to decline\
+      \ to fetch any blocks. This message carries the intermediate and final\
+      \ results."
+    allNamespaces =
+      [ Namespace [] ["Decline"]
+      , Namespace [] ["Accept"]]
+
+
+--------------------------------------------------------------------------------
+-- BlockFetchClientState Tracer
+--------------------------------------------------------------------------------
 
 instance (HasHeader header, ConvertRawHash header) =>
   LogFormatting (BlockFetch.TraceFetchClientState header) where
-  forMachine _dtal BlockFetch.AddedFetchRequest {} =
-    mconcat [ "kind" .= String "AddedFetchRequest" ]
-  forMachine _dtal BlockFetch.AcknowledgedFetchRequest {} =
-    mconcat [ "kind" .= String "AcknowledgedFetchRequest" ]
-  forMachine _dtal (BlockFetch.SendFetchRequest af _) =
-    mconcat [ "kind" .= String "SendFetchRequest"
-            , "head" .= String (renderChainHash
-                                 (renderHeaderHash (Proxy @header))
-                                 (AF.headHash af))
-            , "length" .= toJSON (fragmentLength af)]
-   where
-     -- NOTE: this ignores the Byron era with its EBB complication:
-     -- the length would be underestimated by 1, if the AF is anchored
-     -- at the epoch boundary.
-     fragmentLength :: AF.AnchoredFragment header -> Int
-     fragmentLength f = fromIntegral . unBlockNo $
-        case (f, f) of
-          (AS.Empty{}, AS.Empty{}) -> 0
-          (firstHdr AS.:< _, _ AS.:> lastHdr) ->
-            blockNo lastHdr - blockNo firstHdr + 1
-  forMachine _dtal (BlockFetch.CompletedBlockFetch pt _ _ _ delay blockSize) =
-    mconcat [ "kind"  .= String "CompletedBlockFetch"
-            , "delay" .= (realToFrac delay :: Double)
-            , "size"  .= blockSize
-            , "block" .= String
-              (case pt of
-                 GenesisPoint -> "Genesis"
-                 BlockPoint _ h -> renderHeaderHash (Proxy @header) h)
-            ]
-  forMachine _dtal BlockFetch.CompletedFetchBatch {} =
-    mconcat [ "kind" .= String "CompletedFetchBatch" ]
-  forMachine _dtal BlockFetch.StartedFetchBatch {} =
-    mconcat [ "kind" .= String "StartedFetchBatch" ]
-  forMachine _dtal BlockFetch.RejectedFetchBatch {} =
-    mconcat [ "kind" .= String "RejectedFetchBatch" ]
-  forMachine _dtal (BlockFetch.ClientTerminating outstanding) =
-    mconcat [ "kind" .= String "ClientTerminating"
-            , "outstanding" .= outstanding
-            ]
+    forMachine _dtal BlockFetch.AddedFetchRequest {} =
+      mconcat [ "kind" .= String "AddedFetchRequest" ]
+    forMachine _dtal BlockFetch.AcknowledgedFetchRequest {} =
+      mconcat [ "kind" .= String "AcknowledgedFetchRequest" ]
+    forMachine _dtal (BlockFetch.SendFetchRequest af _) =
+      mconcat [ "kind" .= String "SendFetchRequest"
+              , "head" .= String (renderChainHash
+                                  (renderHeaderHash (Proxy @header))
+                                  (AF.headHash af))
+              , "length" .= toJSON (fragmentLength af)]
+        where
+          -- NOTE: this ignores the Byron era with its EBB complication:
+          -- the length would be underestimated by 1, if the AF is anchored
+          -- at the epoch boundary.
+          fragmentLength :: AF.AnchoredFragment header -> Int
+          fragmentLength f = fromIntegral . unBlockNo $
+              case (f, f) of
+                (AS.Empty{}, AS.Empty{}) -> 0
+                (firstHdr AS.:< _, _ AS.:> lastHdr) ->
+                  blockNo lastHdr - blockNo firstHdr + 1
+    forMachine _dtal (BlockFetch.CompletedBlockFetch pt _ _ _ delay blockSize) =
+      mconcat [ "kind"  .= String "CompletedBlockFetch"
+              , "delay" .= (realToFrac delay :: Double)
+              , "size"  .= blockSize
+              , "block" .= String
+                (case pt of
+                  GenesisPoint -> "Genesis"
+                  BlockPoint _ h -> renderHeaderHash (Proxy @header) h)
+              ]
+    forMachine _dtal BlockFetch.CompletedFetchBatch {} =
+      mconcat [ "kind" .= String "CompletedFetchBatch" ]
+    forMachine _dtal BlockFetch.StartedFetchBatch {} =
+      mconcat [ "kind" .= String "StartedFetchBatch" ]
+    forMachine _dtal BlockFetch.RejectedFetchBatch {} =
+      mconcat [ "kind" .= String "RejectedFetchBatch" ]
+    forMachine _dtal (BlockFetch.ClientTerminating outstanding) =
+      mconcat [ "kind" .= String "ClientTerminating"
+              , "outstanding" .= outstanding
+              ]
 
+instance MetaTrace (BlockFetch.TraceFetchClientState header) where
+    namespaceFor BlockFetch.AddedFetchRequest {} =
+      Namespace [] ["AddedFetchRequest"]
+    namespaceFor BlockFetch.AcknowledgedFetchRequest {} =
+      Namespace [] ["AcknowledgedFetchRequest"]
+    namespaceFor BlockFetch.SendFetchRequest {} =
+      Namespace [] ["SendFetchRequest"]
+    namespaceFor BlockFetch.StartedFetchBatch {} =
+      Namespace [] ["StartedFetchBatch"]
+    namespaceFor BlockFetch.CompletedFetchBatch {} =
+      Namespace [] ["CompletedFetchBatch"]
+    namespaceFor BlockFetch.CompletedBlockFetch {} =
+      Namespace [] ["CompletedBlockFetch"]
+    namespaceFor BlockFetch.RejectedFetchBatch {} =
+      Namespace [] ["RejectedFetchBatch"]
+    namespaceFor BlockFetch.ClientTerminating {} =
+      Namespace [] ["ClientTerminating"]
 
-docBlockFetchClient ::
-  Documented (BlockFetch.TraceLabelPeer remotePeer (BlockFetch.TraceFetchClientState (Header blk)))
-docBlockFetchClient = addDocumentedNamespace [] docBlockFetchClient'
+    severityFor (Namespace _ ["AddedFetchRequest"]) _ = Just Info
+    severityFor (Namespace _ ["AcknowledgedFetchRequest"]) _ = Just Info
+    severityFor (Namespace _ ["SendFetchRequest"]) _ = Just Info
+    severityFor (Namespace _ ["StartedFetchBatch"]) _ = Just Info
+    severityFor (Namespace _ ["CompletedFetchBatch"]) _ = Just Info
+    severityFor (Namespace _ ["CompletedBlockFetch"]) _ = Just Info
+    severityFor (Namespace _ ["RejectedFetchBatch"]) _ = Just Info
+    severityFor (Namespace _ ["ClientTerminating"]) _ = Just Notice
+    severityFor _ _ = Nothing
 
-docBlockFetchClient' ::
-  Documented (BlockFetch.TraceLabelPeer remotePeer (BlockFetch.TraceFetchClientState (Header blk)))
-docBlockFetchClient' = Documented [
-    DocMsg
-      ["AddedFetchRequest"]
-      []
+    documentFor (Namespace _ ["AddedFetchRequest"]) = Just
       "The block fetch decision thread has added a new fetch instruction\
-      \ consisting of one or more individual request ranges."
-  ,
-    DocMsg
-      ["AcknowledgedFetchRequest"]
-      []
+        \ consisting of one or more individual request ranges."
+    documentFor (Namespace _ ["AcknowledgedFetchRequest"]) = Just
       "Mark the point when the fetch client picks up the request added\
-      \ by the block fetch decision thread. Note that this event can happen\
-      \ fewer times than the 'AddedFetchRequest' due to fetch request merging."
-  ,
-    DocMsg
-      ["SendFetchRequest"]
-      []
+            \ by the block fetch decision thread. Note that this event can happen\
+            \ fewer times than the 'AddedFetchRequest' due to fetch request merging."
+    documentFor (Namespace _ ["SendFetchRequest"]) = Just
       "Mark the point when fetch request for a fragment is actually sent\
        \ over the wire."
-  ,
-    DocMsg
-      ["StartedFetchBatch"]
-      []
+    documentFor (Namespace _ ["StartedFetchBatch"]) = Just
       "Mark the start of receiving a streaming batch of blocks. This will\
       \ be followed by one or more 'CompletedBlockFetch' and a final\
       \ 'CompletedFetchBatch'"
-  ,
-    DocMsg
-      ["CompletedFetchBatch"]
-      []
-      "Mark the successful end of receiving a streaming batch of blocks"
-  ,
-    DocMsg
-      ["CompletedBlockFetch"]
-      []
+    documentFor (Namespace _ ["CompletedFetchBatch"]) = Just
       "Mark the successful end of receiving a streaming batch of blocks."
-  ,
-    DocMsg
-      ["RejectedFetchBatch"]
-      []
+    documentFor (Namespace _ ["CompletedBlockFetch"]) = Just
+      ""
+    documentFor (Namespace _ ["RejectedFetchBatch"]) = Just
       "If the other peer rejects our request then we have this event\
-      \ instead of 'StartedFetchBatch' and 'CompletedFetchBatch'."
-  ,
-    DocMsg
-      ["ClientTerminating"]
-      []
+       \ instead of 'StartedFetchBatch' and 'CompletedFetchBatch'."
+    documentFor (Namespace _ ["ClientTerminating"]) = Just
       "The client is terminating.  Log the number of outstanding\
-      \ requests."
-  ]
+       \ requests."
+    documentFor _ = Nothing
+
+    allNamespaces = [
+         Namespace [] ["AddedFetchRequest"]
+       , Namespace [] ["AcknowledgedFetchRequest"]
+       , Namespace [] ["SendFetchRequest"]
+       , Namespace [] ["StartedFetchBatch"]
+       , Namespace [] ["CompletedFetchBatch"]
+       , Namespace [] ["CompletedBlockFetch"]
+       , Namespace [] ["RejectedFetchBatch"]
+       , Namespace [] ["ClientTerminating"]
+      ]
 
 --------------------------------------------------------------------------------
--- BlockFetchServer Tracer
+-- BlockFetchServerEvent
 --------------------------------------------------------------------------------
-
-severityBlockFetchServer ::
-     TraceBlockFetchServerEvent blk
-  -> SeverityS
-severityBlockFetchServer _ = Info
-
-namesForBlockFetchServer ::
-     TraceBlockFetchServerEvent blk
-  -> [Text]
-namesForBlockFetchServer TraceBlockFetchServerSendBlock {} = ["SendBlock"]
 
 instance ConvertRawHash blk => LogFormatting (TraceBlockFetchServerEvent blk) where
   forMachine _dtal (TraceBlockFetchServerSendBlock blk) =
@@ -695,62 +613,30 @@ instance ConvertRawHash blk => LogFormatting (TraceBlockFetchServerEvent blk) wh
                                     @blk
                                     (renderHeaderHash (Proxy @blk))
                                     $ pointHash blk)]
--- TODO JNF
   asMetrics (TraceBlockFetchServerSendBlock _p) =
     [CounterM "BlockFetch.BlocksServed" Nothing]
 
+instance MetaTrace (TraceBlockFetchServerEvent blk) where
+    namespaceFor TraceBlockFetchServerSendBlock {} =
+      Namespace [] ["SendBlock"]
 
-docBlockFetchServer ::
-  Documented (TraceBlockFetchServerEvent blk)
-docBlockFetchServer = addDocumentedNamespace [] docBlockFetchServer'
+    severityFor (Namespace [] ["SendBlock"]) _ = Just
+      Info
+    severityFor _ _ = Nothing
 
+    metricsDocFor (Namespace [] ["SendBlock"]) =
+      [("Blockfetch.BlocksServed", "")]
+    metricsDocFor _ = []
 
-docBlockFetchServer' ::
-  Documented (TraceBlockFetchServerEvent blk)
-docBlockFetchServer' = Documented [
-    DocMsg
-      ["SendBlock"]
-      [("BlockFetch.BlocksServed", "")]
+    documentFor (Namespace [] ["SendBlock"]) = Just
       "The server sent a block to the peer."
-  ]
+    documentFor _ = Nothing
 
+    allNamespaces = [Namespace [] ["SendBlock"]]
 
 --------------------------------------------------------------------------------
 -- TxInbound Tracer
 --------------------------------------------------------------------------------
-
-severityTxInbound ::
-    BlockFetch.TraceLabelPeer peer (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk))
-  -> SeverityS
-severityTxInbound (BlockFetch.TraceLabelPeer _p ti) = severityTxInbound' ti
-
-severityTxInbound' ::
-    TraceTxSubmissionInbound (GenTxId blk) (GenTx blk)
-  -> SeverityS
-severityTxInbound' TraceTxSubmissionCollected {}         = Debug
-severityTxInbound' TraceTxSubmissionProcessed {}         = Debug
-severityTxInbound' TraceTxInboundTerminated              = Notice
-severityTxInbound' TraceTxInboundCannotRequestMoreTxs {} = Debug
-severityTxInbound' TraceTxInboundCanRequestMoreTxs {}    = Debug
-
-namesForTxInbound ::
-    BlockFetch.TraceLabelPeer peer (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk))
-  -> [Text]
-namesForTxInbound (BlockFetch.TraceLabelPeer _p ti) = namesForTxInbound' ti
-
-namesForTxInbound' ::
-    TraceTxSubmissionInbound (GenTxId blk) (GenTx blk)
-  -> [Text]
-namesForTxInbound' (TraceTxSubmissionCollected _) =
-    ["Collected"]
-namesForTxInbound' (TraceTxSubmissionProcessed _) =
-    ["Processed"]
-namesForTxInbound' TraceTxInboundTerminated   =
-    ["Terminated"]
-namesForTxInbound' TraceTxInboundCanRequestMoreTxs {} =
-    ["CanRequestMoreTxs"]
-namesForTxInbound' TraceTxInboundCannotRequestMoreTxs {} =
-    ["CannotRequestMoreTxs"]
 
 instance LogFormatting (TraceTxSubmissionInbound txid tx) where
   forMachine _dtal (TraceTxSubmissionCollected count) =
@@ -789,71 +675,55 @@ instance LogFormatting (TraceTxSubmissionInbound txid tx) where
     ]
   asMetrics _ = []
 
-docTxInbound ::
-  Documented (BlockFetch.TraceLabelPeer remotePeer
-    (TraceTxSubmissionInbound txid tx))
-docTxInbound = addDocumentedNamespace [] docTxInbound'
+instance MetaTrace (TraceTxSubmissionInbound txid tx) where
+    namespaceFor TraceTxSubmissionCollected {} = Namespace [] ["Collected"]
+    namespaceFor TraceTxSubmissionProcessed {} = Namespace [] ["Processed"]
+    namespaceFor TraceTxInboundTerminated {} = Namespace [] ["Terminated"]
+    namespaceFor TraceTxInboundCanRequestMoreTxs {} = Namespace [] ["CanRequestMoreTxs"]
+    namespaceFor TraceTxInboundCannotRequestMoreTxs {} = Namespace [] ["CannotRequestMoreTxs"]
 
-docTxInbound' ::
-  Documented (BlockFetch.TraceLabelPeer remotePeer
-    (TraceTxSubmissionInbound txid tx))
-docTxInbound' = Documented [
-    DocMsg
-    ["Collected"]
-    [ ("TxSubmission.Submitted", "")]
-    "Number of transactions just about to be inserted."
-  ,
-    DocMsg
-    ["Processed"]
-    [ ("TxSubmission.Accepted", "")
-    , ("TxSubmission.Rejected", "")
-    ]
-    "Just processed transaction pass/fail breakdown."
-  ,
-    DocMsg
-    ["Terminated"]
-    []
-    "Server received 'MsgDone'."
-  ,
-    DocMsg
-    ["CanRequestMoreTxs"]
-    []
-    "There are no replies in flight, but we do know some more txs we\
-    \ can ask for, so lets ask for them and more txids."
-  ,
-    DocMsg
-    ["CannotRequestMoreTxs"]
-    []
-    "There's no replies in flight, and we have no more txs we can\
-    \ ask for so the only remaining thing to do is to ask for more\
-    \ txids. Since this is the only thing to do now, we make this a\
-    \ blocking call."
-  ]
+    severityFor (Namespace _ ["Collected"]) _ = Just Debug
+    severityFor (Namespace _ ["Processed"]) _ = Just Debug
+    severityFor (Namespace _ ["Terminated"]) _ = Just Notice
+    severityFor (Namespace _ ["CanRequestMoreTxs"]) _ = Just Debug
+    severityFor (Namespace _ ["CannotRequestMoreTxs"]) _ = Just Debug
+    severityFor _ _ = Nothing
 
+    metricsDocFor (Namespace _ ["Collected"]) =
+      [ ("TxSubmission.Submitted", "")]
+    metricsDocFor (Namespace _ ["Processed"]) =
+      [ ("TxSubmission.Accepted", "")
+      , ("TxSubmission.Rejected", "")
+      ]
+    metricsDocFor _ = []
+
+    documentFor (Namespace _ ["Collected"]) = Just
+      "Number of transactions just about to be inserted."
+    documentFor (Namespace _ ["Processed"]) = Just
+      "Just processed transaction pass/fail breakdown."
+    documentFor (Namespace _ ["Terminated"]) = Just
+      "Server received 'MsgDone'."
+    documentFor (Namespace _ ["CanRequestMoreTxs"]) = Just
+      "There are no replies in flight, but we do know some more txs we\
+      \ can ask for, so lets ask for them and more txids."
+    documentFor (Namespace _ ["CannotRequestMoreTxs"]) = Just
+      "There's no replies in flight, and we have no more txs we can\
+      \ ask for so the only remaining thing to do is to ask for more\
+      \ txids. Since this is the only thing to do now, we make this a\
+      \ blocking call."
+    documentFor _ = Nothing
+
+    allNamespaces = [
+          Namespace [] ["Collected"]
+        , Namespace [] ["Processed"]
+        , Namespace [] ["Terminated"]
+        , Namespace [] ["CanRequestMoreTxs"]
+        , Namespace [] ["CannotRequestMoreTxs"]
+        ]
 
 --------------------------------------------------------------------------------
 -- TxOutbound Tracer
 --------------------------------------------------------------------------------
-
-severityTxOutbound ::
-    BlockFetch.TraceLabelPeer peer (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk))
-  -> SeverityS
-severityTxOutbound (BlockFetch.TraceLabelPeer _p _ti) = Info
-
-namesForTxOutbound ::
-    BlockFetch.TraceLabelPeer peer (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk))
-  -> [Text]
-namesForTxOutbound (BlockFetch.TraceLabelPeer _p ti) = namesForTxOutbound' ti
-
-namesForTxOutbound' ::
-    TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk)
-  -> [Text]
-namesForTxOutbound' TraceTxSubmissionOutboundRecvMsgRequestTxs {} =
-    ["TxSubmissionOutboundRecvMsgRequest"]
-namesForTxOutbound' TraceTxSubmissionOutboundSendMsgReplyTxs {} =
-    ["TxSubmissionOutboundSendMsgReply"]
-namesForTxOutbound' TraceControlMessage {} =
-    ["ControlMessage"]
 
 instance (Show txid, Show tx)
       => LogFormatting (TraceTxSubmissionOutbound txid tx) where
@@ -880,75 +750,66 @@ instance (Show txid, Show tx)
       [ "kind" .= String "TraceControlMessage"
       ]
 
-docTxOutbound :: forall remotePeer txid tx.
-  Documented (BlockFetch.TraceLabelPeer remotePeer
-    (TraceTxSubmissionOutbound txid tx))
-docTxOutbound =  addDocumentedNamespace [] docTxOutbound'
+instance MetaTrace (TraceTxSubmissionOutbound txid tx) where
+    namespaceFor TraceTxSubmissionOutboundRecvMsgRequestTxs {} =
+      Namespace [] ["RecvMsgRequest"]
+    namespaceFor TraceTxSubmissionOutboundSendMsgReplyTxs {} =
+      Namespace [] ["SendMsgReply"]
+    namespaceFor TraceControlMessage {} =
+      Namespace [] ["ControlMessage"]
 
-docTxOutbound' :: forall remotePeer txid tx.
-  Documented (BlockFetch.TraceLabelPeer remotePeer
-    (TraceTxSubmissionOutbound txid tx))
-docTxOutbound' = Documented [
-    DocMsg
-    ["RecvMsgRequest"]
-    []
-    "The IDs of the transactions requested."
-  ,
-    DocMsg
-    ["SendMsgReply"]
-    []
-    "The transactions to be sent in the response."
-  ,
-    DocMsg
-    ["ControlMessage"]
-    []
-    ""
-  ]
+    severityFor (Namespace _ ["RecvMsgRequest"]) _ =
+      Just Info
+    severityFor (Namespace _ ["SendMsgReply"]) _ =
+      Just Info
+    severityFor (Namespace _ ["ControlMessage"]) _ =
+      Just Info
+    severityFor _ _ = Nothing
+
+    documentFor (Namespace _ ["RecvMsgRequest"]) = Just
+      "The IDs of the transactions requested."
+    documentFor (Namespace _ ["SendMsgReply"]) = Just
+      "The transactions to be sent in the response."
+    documentFor (Namespace _ ["ControlMessage"]) = Just
+      ""
+    documentFor _ = Nothing
+
+    allNamespaces =
+      [ Namespace [] ["RecvMsgRequest"]
+      , Namespace [] ["SendMsgReply"]
+      , Namespace [] ["ControlMessage"]
+      ]
+
 
 --------------------------------------------------------------------------------
 -- TxSubmissionServer Tracer
 --------------------------------------------------------------------------------
 
-severityLocalTxSubmissionServer ::
-     TraceLocalTxSubmissionServerEvent blk
-  -> SeverityS
-severityLocalTxSubmissionServer _ = Info
-
-namesForLocalTxSubmissionServer ::
-  TraceLocalTxSubmissionServerEvent blk
-  -> [Text]
-namesForLocalTxSubmissionServer TraceReceivedTx {} = ["ReceivedTx"]
-
 instance LogFormatting (TraceLocalTxSubmissionServerEvent blk) where
   forMachine _dtal (TraceReceivedTx _gtx) =
     mconcat [ "kind" .= String "ReceivedTx" ]
 
-docLocalTxSubmissionServer :: Documented (TraceLocalTxSubmissionServerEvent blk)
-docLocalTxSubmissionServer =
-    addDocumentedNamespace [] docLocalTxSubmissionServer'
 
-docLocalTxSubmissionServer' :: Documented (TraceLocalTxSubmissionServerEvent blk)
-docLocalTxSubmissionServer' = Documented [
-    DocMsg
-    ["ReceivedTx"]
-    []
-    "A transaction was received."
-  ]
+instance MetaTrace (TraceLocalTxSubmissionServerEvent blk) where
+
+    namespaceFor TraceReceivedTx {} =
+      Namespace [] ["ReceivedTx"]
+
+    severityFor (Namespace _ ["ReceivedTx"]) _ =
+      Just Info
+    severityFor _ _ = Nothing
+
+    documentFor (Namespace _ ["ReceivedTx"]) = Just
+      "A transaction was received."
+    documentFor _ = Nothing
+
+    allNamespaces =
+      [ Namespace [] ["ReceivedTx"]
+      ]
 
 --------------------------------------------------------------------------------
 -- Mempool Tracer
 --------------------------------------------------------------------------------
-
-severityMempool ::
-     TraceEventMempool blk
-  -> SeverityS
-severityMempool _ = Info
-
-namesForMempool :: TraceEventMempool blk -> [Text]
-namesForMempool TraceMempoolAddedTx {}            = ["AddedTx"]
-namesForMempool TraceMempoolRejectedTx {}         = ["RejectedTx"]
-namesForMempool TraceMempoolRemoveTxs {}          = ["RemoveTxs"]
-namesForMempool TraceMempoolManuallyRemovedTxs {} = ["ManuallyRemovedTxs"]
 
 instance
   ( LogFormatting (ApplyTxErr blk)
@@ -1012,106 +873,155 @@ instance LogFormatting MempoolSize where
       , "bytes" .= msNumBytes
       ]
 
-docMempool :: forall blk. Documented (TraceEventMempool blk)
-docMempool = addDocumentedNamespace [] docMempool'
 
-docMempool' :: forall blk. Documented (TraceEventMempool blk)
-docMempool' = Documented [
-    DocMsg
-      ["AddedTx"]
+instance MetaTrace (TraceEventMempool blk) where
+    namespaceFor TraceMempoolAddedTx {} = Namespace [] ["AddedTx"]
+    namespaceFor TraceMempoolRejectedTx {} = Namespace [] ["RejectedTx"]
+    namespaceFor TraceMempoolRemoveTxs {} = Namespace [] ["RemoveTxs"]
+    namespaceFor TraceMempoolManuallyRemovedTxs {} = Namespace [] ["ManuallyRemovedTxs"]
+
+    severityFor (Namespace _ ["AddedTx"]) _ = Just Info
+    severityFor (Namespace _ ["RejectedTx"]) _ = Just Info
+    severityFor (Namespace _ ["RemoveTxs"]) _ = Just Info
+    severityFor (Namespace _ ["ManuallyRemovedTxs"]) _ = Just Info
+    severityFor _ _ = Nothing
+
+    metricsDocFor (Namespace _ ["AddedTx"]) =
       [ ("Mempool.TxsInMempool","Transactions in mempool")
       , ("Mempool.MempoolBytes", "Byte size of the mempool")
       ]
-      "New, valid transaction that was added to the Mempool."
-  , DocMsg
-      ["RejectedTx"]
+    metricsDocFor (Namespace _ ["RejectedTx"]) =
       [ ("Mempool.TxsInMempool","Transactions in mempool")
       , ("Mempool.MempoolBytes", "Byte size of the mempool")
       ]
-      "New, invalid transaction thas was rejected and thus not added to\
-      \ the Mempool."
-  , DocMsg
-      ["RemoveTxs"]
+    metricsDocFor (Namespace _ ["RemoveTxs"]) =
       [ ("Mempool.TxsInMempool","Transactions in mempool")
       , ("Mempool.MempoolBytes", "Byte size of the mempool")
       ]
-      "Previously valid transactions that are no longer valid because of\
-      \ changes in the ledger state. These transactions have been removed\
-      \ from the Mempool."
-  , DocMsg
-      ["ManuallyRemovedTxs"]
+    metricsDocFor (Namespace _ ["ManuallyRemovedTxs"]) =
       [ ("Mempool.TxsInMempool","Transactions in mempool")
       , ("Mempool.MempoolBytes", "Byte size of the mempool")
       , ("Mempool.TxsProcessedNum", "")
       ]
-      "Transactions that have been manually removed from the Mempool."
-  ]
+    metricsDocFor _ = []
 
+    documentFor (Namespace _ ["AddedTx"]) = Just
+      "New, valid transaction that was added to the Mempool."
+    documentFor (Namespace _ ["RejectedTx"]) = Just
+      "New, invalid transaction thas was rejected and thus not added to\
+       \ the Mempool."
+    documentFor (Namespace _ ["RemoveTxs"]) = Just
+      "Previously valid transactions that are no longer valid because of\
+      \ changes in the ledger state. These transactions have been removed\
+      \ from the Mempool."
+    documentFor (Namespace _ ["ManuallyRemovedTxs"]) = Just
+      "Transactions that have been manually removed from the Mempool."
+    documentFor _ = Nothing
+
+    allNamespaces =
+      [ Namespace [] ["AddedTx"]
+      , Namespace [] ["RejectedTx"]
+      , Namespace [] ["RemoveTxs"]
+      , Namespace [] ["ManuallyRemovedTxs"]
+      ]
+
+--------------------------------------------------------------------------------
+-- ForgeTracerType
+--------------------------------------------------------------------------------
+
+instance ( tx ~ GenTx blk
+         , ConvertRawHash blk
+         , GetHeader blk
+         , HasHeader blk
+         , HasKESInfo blk
+         , LedgerSupportsProtocol blk
+         , LedgerSupportsMempool blk
+         , SerialiseNodeToNodeConstraints blk
+         , HasTxId (GenTx blk)
+         , Show (ForgeStateUpdateError blk)
+         , Show (CannotForge blk)
+         , LogFormatting (InvalidBlockReason blk)
+         , LogFormatting (CannotForge blk)
+         , LogFormatting (ForgeStateUpdateError blk))
+         => LogFormatting (ForgeTracerType blk) where
+  forMachine dtal (Left i)  = forMachine dtal i
+  forMachine dtal (Right i) = forMachine dtal i
+  forHuman (Left i)  = forHuman i
+  forHuman (Right i) = forHuman i
+  asMetrics (Left i)  = asMetrics i
+  asMetrics (Right i) = asMetrics i
+
+instance MetaTrace  (ForgeTracerType blk) where
+  namespaceFor (Left ev) =
+    nsCast (namespaceFor ev)
+  namespaceFor (Right _ev) =
+    Namespace [] ["StartLeadershipCheckPlus"]
+
+  severityFor (Namespace _ ["StartLeadershipCheckPlus"]) _ = Just
+    Info
+  severityFor ns (Just (Left ev')) =
+    severityFor (nsCast ns) (Just ev')
+  severityFor ns Nothing =
+    severityFor (nsCast ns :: Namespace (TraceForgeEvent blk)) Nothing
+  severityFor _ _ = Nothing
+
+  detailsFor (Namespace _ ["StartLeadershipCheckPlus"]) _ = Just
+    DNormal
+  detailsFor ns (Just (Left ev')) =
+    detailsFor (nsCast ns) (Just ev')
+  detailsFor ns Nothing =
+    detailsFor (nsCast ns :: Namespace (TraceForgeEvent blk)) Nothing
+  detailsFor _ _ = Nothing
+
+  privacyFor (Namespace _ ["StartLeadershipCheckPlus"]) _ = Just
+    Public
+  privacyFor ns (Just (Left ev')) =
+    privacyFor (nsCast ns) (Just ev')
+  privacyFor ns Nothing =
+    privacyFor (nsCast ns :: Namespace (TraceForgeEvent blk)) Nothing
+  privacyFor _ _ = Nothing
+
+  metricsDocFor (Namespace _ ["StartLeadershipCheckPlus"]) =
+      [ ("Forge.UtxoSize", "")
+      , ("Forge.DelegMapSize", "")
+      ]
+  metricsDocFor ns =
+    metricsDocFor (nsCast ns :: Namespace (TraceForgeEvent blk))
+
+  documentFor (Namespace _ ["StartLeadershipCheckPlus"]) = Just
+    "We adopted the block we produced, we also trace the transactions\
+    \  that were adopted."
+  documentFor ns =
+    documentFor (nsCast ns :: Namespace (TraceForgeEvent blk))
+
+  allNamespaces =
+    Namespace [] ["StartLeadershipCheckPlus"]
+    : map nsCast (allNamespaces :: [Namespace (TraceForgeEvent blk)])
+
+--------------------------------------------------------------------------------
+-- TraceStartLeadershipCheck
+--------------------------------------------------------------------------------
+
+instance LogFormatting TraceStartLeadershipCheckPlus where
+  forMachine _dtal TraceStartLeadershipCheckPlus {..} =
+        mconcat [ "kind" .= String "TraceStartLeadershipCheck"
+                , "slot" .= toJSON (unSlotNo tsSlotNo)
+                , "utxoSize" .= Number (fromIntegral tsUtxoSize)
+                , "delegMapSize" .= Number (fromIntegral tsUtxoSize)
+                , "chainDensity" .= Number (fromRational (toRational tsChainDensity))
+                ]
+  forHuman TraceStartLeadershipCheckPlus {..} =
+      "Checking for leadership in slot " <> showT (unSlotNo tsSlotNo)
+      <> " utxoSize " <> showT tsUtxoSize
+      <> " delegMapSize " <> showT tsDelegMapSize
+      <> " chainDensity " <> showT tsChainDensity
+  asMetrics TraceStartLeadershipCheckPlus {..} =
+    [IntM "Forge.UtxoSize" (fromIntegral tsUtxoSize),
+     IntM "Forge.DelegMapSize" (fromIntegral tsDelegMapSize)]
 
 --------------------------------------------------------------------------------
 -- ForgeEvent Tracer
 --------------------------------------------------------------------------------
-
-severityForge :: ForgeTracerType blk -> SeverityS
-severityForge (Left t)  = severityForge'' t
-severityForge (Right t) = severityForge'''' t
-
-severityForge'' :: TraceForgeEvent blk -> SeverityS
-severityForge'' TraceStartLeadershipCheck {}    = Info
-severityForge'' TraceSlotIsImmutable {}         = Error
-severityForge'' TraceBlockFromFuture {}         = Error
-severityForge'' TraceBlockContext {}            = Debug
-severityForge'' TraceNoLedgerState {}           = Error
-severityForge'' TraceLedgerState {}             = Debug
-severityForge'' TraceNoLedgerView {}            = Error
-severityForge'' TraceLedgerView {}              = Debug
-severityForge'' TraceForgeStateUpdateError {}   = Error
-severityForge'' TraceNodeCannotForge {}         = Error
-severityForge'' TraceNodeNotLeader {}           = Info
-severityForge'' TraceNodeIsLeader {}            = Info
-severityForge'' TraceForgeTickedLedgerState {}  = Debug
-severityForge'' TraceForgingMempoolSnapshot {}  = Debug
-severityForge'' TraceForgedBlock {}             = Info
-severityForge'' TraceDidntAdoptBlock {}         = Error
-severityForge'' TraceForgedInvalidBlock {}      = Error
-severityForge'' TraceAdoptedBlock {}            = Info
-
-severityForge'''' :: TraceStartLeadershipCheckPlus -> SeverityS
-severityForge'''' _ = Info
-
-namesForForge :: ForgeTracerType blk -> [Text]
-namesForForge (Left t)  = namesForForge'' t
-namesForForge (Right t) = namesForForge'''' t
-
-namesForForge'' :: TraceForgeEvent blk -> [Text]
-namesForForge'' TraceStartLeadershipCheck {}   = ["StartLeadershipCheck"]
-namesForForge'' TraceSlotIsImmutable {}        = ["SlotIsImmutable"]
-namesForForge'' TraceBlockFromFuture {}        = ["BlockFromFuture"]
-namesForForge'' TraceBlockContext {}           = ["BlockContext"]
-namesForForge'' TraceNoLedgerState {}          = ["NoLedgerState"]
-namesForForge'' TraceLedgerState {}            = ["LedgerState"]
-namesForForge'' TraceNoLedgerView {}           = ["NoLedgerView"]
-namesForForge'' TraceLedgerView {}             = ["LedgerView"]
-namesForForge'' TraceForgeStateUpdateError {}  = ["ForgeStateUpdateError"]
-namesForForge'' TraceNodeCannotForge {}        = ["NodeCannotForge"]
-namesForForge'' TraceNodeNotLeader {}          = ["NodeNotLeader"]
-namesForForge'' TraceNodeIsLeader {}           = ["NodeIsLeader"]
-namesForForge'' TraceForgeTickedLedgerState {} = ["ForgeTickedLedgerState"]
-namesForForge'' TraceForgingMempoolSnapshot {} = ["ForgingMempoolSnapshot"]
-namesForForge'' TraceForgedBlock {}            = ["ForgedBlock"]
-namesForForge'' TraceDidntAdoptBlock {}        = ["DidntAdoptBlock"]
-namesForForge'' TraceForgedInvalidBlock {}     = ["ForgedInvalidBlock"]
-namesForForge'' TraceAdoptedBlock {}           = ["AdoptedBlock"]
-
-namesForForge'''' :: TraceStartLeadershipCheckPlus -> [Text]
-namesForForge'''' TraceStartLeadershipCheckPlus{} = ["StartLeadershipCheck"]
-
-namesForForge2 :: ForgingStats -> [Text]
-namesForForge2 _ = ["StartLeadershipCheck"]
-
-severityForge2 :: ForgingStats -> SeverityS
-severityForge2 _ = Info
-
 
 instance ( tx ~ GenTx blk
          , ConvertRawHash blk
@@ -1254,8 +1164,6 @@ instance ( tx ~ GenTx blk
       , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
       ]
 
-
-
   forHuman (TraceStartLeadershipCheck slotNo) =
       "Checking for leadership in slot " <> showT (unSlotNo slotNo)
   forHuman (TraceSlotIsImmutable slotNo immutableTipPoint immutableTipBlkNo) =
@@ -1380,58 +1288,126 @@ instance ( tx ~ GenTx blk
   asMetrics (TraceAdoptedBlock slot _ _) =
     [IntM "Forge.AdoptedOwnBlockSlotLast" (fromIntegral $ unSlotNo slot)]
 
-instance LogFormatting TraceStartLeadershipCheckPlus where
-  forMachine _dtal TraceStartLeadershipCheckPlus {..} =
-        mconcat [ "kind" .= String "TraceStartLeadershipCheck"
-                , "slot" .= toJSON (unSlotNo tsSlotNo)
-                , "utxoSize" .= Number (fromIntegral tsUtxoSize)
-                , "delegMapSize" .= Number (fromIntegral tsUtxoSize)
-                , "chainDensity" .= Number (fromRational (toRational tsChainDensity))
-                ]
-  forHuman TraceStartLeadershipCheckPlus {..} =
-      "Checking for leadership in slot " <> showT (unSlotNo tsSlotNo)
-      <> " utxoSize " <> showT tsUtxoSize
-      <> " delegMapSize " <> showT tsDelegMapSize
-      <> " chainDensity " <> showT tsChainDensity
-  asMetrics TraceStartLeadershipCheckPlus {..} =
-    [IntM "Forge.UtxoSize" (fromIntegral tsUtxoSize),
-     IntM "Forge.DelegMapSize" (fromIntegral tsDelegMapSize)]
+instance MetaTrace (TraceForgeEvent blk) where
+  namespaceFor TraceStartLeadershipCheck {} =
+    Namespace [] ["StartLeadershipCheck"]
+  namespaceFor TraceSlotIsImmutable {} =
+    Namespace [] ["SlotIsImmutable"]
+  namespaceFor TraceBlockFromFuture {} =
+    Namespace [] ["BlockFromFuture"]
+  namespaceFor TraceBlockContext {} =
+    Namespace [] ["BlockContext"]
+  namespaceFor TraceNoLedgerState {} =
+    Namespace [] ["NoLedgerState"]
+  namespaceFor TraceLedgerState {} =
+    Namespace [] ["LedgerState"]
+  namespaceFor TraceNoLedgerView {} =
+    Namespace [] ["NoLedgerView"]
+  namespaceFor TraceLedgerView {} =
+    Namespace [] ["LedgerView"]
+  namespaceFor TraceForgeStateUpdateError {} =
+    Namespace [] ["ForgeStateUpdateError"]
+  namespaceFor TraceNodeCannotForge {} =
+    Namespace [] ["NodeCannotForge"]
+  namespaceFor TraceNodeNotLeader {} =
+    Namespace [] ["NodeNotLeader"]
+  namespaceFor TraceNodeIsLeader {} =
+    Namespace [] ["NodeIsLeader"]
+  namespaceFor TraceForgeTickedLedgerState {} =
+    Namespace [] ["ForgeTickedLedgerState"]
+  namespaceFor TraceForgingMempoolSnapshot {} =
+    Namespace [] ["ForgingMempoolSnapshot"]
+  namespaceFor TraceForgedBlock {} =
+    Namespace [] ["ForgedBlock"]
+  namespaceFor TraceDidntAdoptBlock {} =
+    Namespace [] ["DidntAdoptBlock"]
+  namespaceFor TraceForgedInvalidBlock {} =
+    Namespace [] ["ForgedInvalidBlock"]
+  namespaceFor TraceAdoptedBlock {} =
+    Namespace [] ["AdoptedBlock"]
 
-docForge :: Documented (Either (TraceForgeEvent blk)
-                               TraceStartLeadershipCheckPlus)
-docForge = addDocumentedNamespace [] docForge'
+  severityFor (Namespace _ ["StartLeadershipCheck"]) _ = Just Info
+  severityFor (Namespace _ ["SlotIsImmutable"]) _ = Just Error
+  severityFor (Namespace _ ["BlockFromFuture"]) _ = Just Error
+  severityFor (Namespace _ ["BlockContext"]) _ = Just Debug
+  severityFor (Namespace _ ["NoLedgerState"]) _ = Just Error
+  severityFor (Namespace _ ["LedgerState"]) _ = Just Debug
+  severityFor (Namespace _ ["NoLedgerView"]) _ = Just Error
+  severityFor (Namespace _ ["LedgerView"]) _ = Just Debug
+  severityFor (Namespace _ ["ForgeStateUpdateError"]) _ = Just Error
+  severityFor (Namespace _ ["NodeCannotForge"]) _ = Just Error
+  severityFor (Namespace _ ["NodeNotLeader"]) _ = Just Info
+  severityFor (Namespace _ ["NodeIsLeader"]) _ = Just Info
+  severityFor (Namespace _ ["ForgeTickedLedgerState"]) _ = Just Debug
+  severityFor (Namespace _ ["ForgingMempoolSnapshot"]) _ = Just Debug
+  severityFor (Namespace _ ["ForgedBlock"]) _ = Just Info
+  severityFor (Namespace _ ["DidntAdoptBlock"]) _ = Just Error
+  severityFor (Namespace _ ["ForgedInvalidBlock"]) _ = Just Error
+  severityFor (Namespace _ ["AdoptedBlock"]) _ = Just Info
+  severityFor _ _ = Nothing
 
-docForge' :: Documented (Either (TraceForgeEvent blk)
-                               TraceStartLeadershipCheckPlus)
-docForge' = Documented [
-    DocMsg
-      ["StartLeadershipCheck"]
-      [("Forge.AboutToLeadSlotLast", "")]
-      "Start of the leadership check."
-  , DocMsg
-      ["SlotIsImmutable"]
-      [("Forge.SlotIsImmutable", "")]
-      "Leadership check failed: the tip of the ImmutableDB inhabits the\
-      \  current slot\
-      \ \
-      \  This might happen in two cases.\
-      \ \
-      \   1. the clock moved backwards, on restart we ignored everything from the\
-      \      VolatileDB since it's all in the future, and now the tip of the\
-      \      ImmutableDB points to a block produced in the same slot we're trying\
-      \      to produce a block in\
-      \ \
-      \   2. k = 0 and we already adopted a block from another leader of the same\
-      \      slot.\
-      \ \
-      \  We record both the current slot number as well as the tip of the\
-      \  ImmutableDB.\
-      \ \
-      \ See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>"
-  , DocMsg
-      ["BlockFromFuture"]
-      [("Forge.BlockFromFuture", "")]
-      "Leadership check failed: the current chain contains a block from a slot\
+  metricsDocFor (Namespace _ ["StartLeadershipCheck"]) =
+    [("Forge.AboutToLeadSlotLast", "")]
+  metricsDocFor (Namespace _ ["SlotIsImmutable"]) =
+    [("Forge.SlotIsImmutable", "")]
+  metricsDocFor (Namespace _ ["BlockFromFuture"]) =
+    [("Forge.BlockFromFuture", "")]
+  metricsDocFor (Namespace _ ["BlockContext"]) =
+    [("Forge.BlockContext", "")]
+  metricsDocFor (Namespace _ ["NoLedgerState"]) =
+    [("Forge.CouldNotForgeSlotLast", "")]
+  metricsDocFor (Namespace _ ["LedgerState"]) =
+    [("Forge.LedgerState", "")]
+  metricsDocFor (Namespace _ ["NoLedgerView"]) =
+    [("Forge.CouldNotForgeSlotLast", "")]
+  metricsDocFor (Namespace _ ["LedgerView"]) =
+    [("Forge.LedgerView", "")]
+  metricsDocFor (Namespace _ ["ForgeStateUpdateError"]) =
+    [ ("Forge.OperationalCertificateStartKESPeriod", "")
+    , ("Forge.OperationalCertificateExpiryKESPeriod", "")
+    , ("Forge.CurrentKESPeriod", "")
+    , ("Forge.RemainingKESPeriods", "")
+    ]
+  metricsDocFor (Namespace _ ["NodeCannotForge"]) =
+    [("Forge.NodeCannotForge", "")]
+  metricsDocFor (Namespace _ ["NodeNotLeader"]) =
+    [("Forge.NodeNotLeader", "")]
+  metricsDocFor (Namespace _ ["NodeIsLeader"]) =
+    [("Forge.NodeIsLeader", "")]
+  metricsDocFor (Namespace _ ["ForgeTickedLedgerState"]) = []
+  metricsDocFor (Namespace _ ["ForgingMempoolSnapshot"]) = []
+  metricsDocFor (Namespace _ ["ForgedBlock"]) =
+    [("Forge.ForgedSlotLast", "")]
+  metricsDocFor (Namespace _ ["DidntAdoptBlock"]) =
+    [("Forge.NotAdoptedSlotLast", "")]
+  metricsDocFor (Namespace _ ["ForgedInvalidBlock"]) =
+    [("Forge.ForgedInvalidSlotLast", "")]
+  metricsDocFor (Namespace _ ["AdoptedBlock"]) =
+    [("Forge.AdoptedOwnBlockSlotLast", "")]
+  metricsDocFor _ = []
+
+  documentFor (Namespace _ ["StartLeadershipCheck"]) = Just
+    "Start of the leadership check."
+  documentFor (Namespace _ ["SlotIsImmutable"]) = Just
+    "Leadership check failed: the tip of the ImmutableDB inhabits the\
+        \  current slot\
+        \ \
+        \  This might happen in two cases.\
+        \ \
+        \   1. the clock moved backwards, on restart we ignored everything from the\
+        \      VolatileDB since it's all in the future, and now the tip of the\
+        \      ImmutableDB points to a block produced in the same slot we're trying\
+        \      to produce a block in\
+        \ \
+        \   2. k = 0 and we already adopted a block from another leader of the same\
+        \      slot.\
+        \ \
+        \  We record both the current slot number as well as the tip of the\
+        \  ImmutableDB.\
+        \ \
+        \ See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>"
+  documentFor (Namespace _ ["BlockFromFuture"]) = Just
+    "Leadership check failed: the current chain contains a block from a slot\
       \  /after/ the current slot\
       \ \
       \  This can only happen if the system is under heavy load.\
@@ -1440,10 +1416,8 @@ docForge' = Documented [
       \  block at the tip of the chain.\
       \ \
       \  See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>"
-  , DocMsg
-      ["BlockContext"]
-      [("Forge.BlockContext", "")]
-      "We found out to which block we are going to connect the block we are about\
+  documentFor (Namespace _ ["BlockContext"]) = Just
+    "We found out to which block we are going to connect the block we are about\
       \  to forge.\
       \ \
       \  We record the current slot number, the block number of the block to\
@@ -1451,10 +1425,8 @@ docForge' = Documented [
       \ \
       \  Note that block number of the block we will try to forge is one more than\
       \  the recorded block number."
-  , DocMsg
-      ["NoLedgerState"]
-      [("Forge.CouldNotForgeSlotLast", "")]
-      "Leadership check failed: we were unable to get the ledger state for the\
+  documentFor (Namespace _ ["NoLedgerState"]) = Just
+    "Leadership check failed: we were unable to get the ledger state for the\
       \  point of the block we want to connect to\
       \ \
       \  This can happen if after choosing which block to connect to the node\
@@ -1465,69 +1437,51 @@ docForge' = Documented [
       \  We record both the current slot number as well as the point of the block\
       \  we attempt to connect the new block to (that we requested the ledger\
       \  state for)."
-  , DocMsg
-      ["LedgerState"]
-      [("Forge.LedgerState", "")]
-      "We obtained a ledger state for the point of the block we want to\
+  documentFor (Namespace _ ["LedgerState"]) = Just
+     "We obtained a ledger state for the point of the block we want to\
       \  connect to\
       \ \
       \  We record both the current slot number as well as the point of the block\
       \  we attempt to connect the new block to (that we requested the ledger\
       \  state for)."
-  , DocMsg
-      ["NoLedgerView"]
-      [("Forge.CouldNotForgeSlotLast", "")]
-      "Leadership check failed: we were unable to get the ledger view for the\
+  documentFor (Namespace _ ["NoLedgerView"]) = Just
+    "Leadership check failed: we were unable to get the ledger view for the\
       \  current slot number\
       \ \
       \  This will only happen if there are many missing blocks between the tip of\
       \  our chain and the current slot.\
       \ \
       \  We record also the failure returned by 'forecastFor'."
-  , DocMsg
-      ["LedgerView"]
-      [("Forge.LedgerView", "")]
-      "We obtained a ledger view for the current slot number\
+  documentFor (Namespace _ ["LedgerView"]) = Just
+    "We obtained a ledger view for the current slot number\
       \ \
       \  We record the current slot number."
-  , DocMsg
-      ["ForgeStateUpdateError"]
-      [ ("Forge.OperationalCertificateStartKESPeriod", "")
-      , ("Forge.OperationalCertificateExpiryKESPeriod", "")
-      , ("Forge.CurrentKESPeriod", "")
-      , ("Forge.RemainingKESPeriods", "")
-      ]
-      "Updating the forge state failed.\
+  documentFor (Namespace _ ["ForgeStateUpdateError"]) =  Just
+    "Updating the forge state failed.\
       \ \
       \  For example, the KES key could not be evolved anymore.\
       \ \
       \  We record the error returned by 'updateForgeState'."
-  , DocMsg
-      ["NodeCannotForge"]
-      [("Forge.NodeCannotForge", "")]
-      "We did the leadership check and concluded that we should lead and forge\
+  documentFor (Namespace _ ["NodeCannotForge"]) =  Just
+   "We did the leadership check and concluded that we should lead and forge\
       \  a block, but cannot.\
       \ \
       \  This should only happen rarely and should be logged with warning severity.\
       \ \
       \  Records why we cannot forge a block."
-  , DocMsg
-      ["NodeNotLeader"]
-      [("Forge.NodeNotLeader", "")]
-      "We did the leadership check and concluded we are not the leader\
+  documentFor (Namespace _ ["NodeNotLeader"]) =  Just
+    "We did the leadership check and concluded we are not the leader\
       \ \
       \  We record the current slot number"
-  , DocMsg
-      ["NodeIsLeader"]
-      [("Forge.NodeIsLeader", "")]
-      "We did the leadership check and concluded we /are/ the leader\
+  documentFor (Namespace _ ["NodeIsLeader"]) =  Just
+    "We did the leadership check and concluded we /are/ the leader\
       \\n\
       \  The node will soon forge; it is about to read its transactions from the\
       \  Mempool. This will be followed by ForgedBlock."
-  , DocMsg
-      ["ForgedBlock"]
-      [("Forge.ForgedSlotLast", "")]
-      "We forged a block.\
+  documentFor (Namespace _ ["ForgeTickedLedgerState"]) = Just ""
+  documentFor (Namespace _ ["ForgingMempoolSnapshot"]) = Just ""
+  documentFor (Namespace _ ["ForgedBlock"]) = Just
+    "We forged a block.\
       \\n\
       \  We record the current slot number, the point of the predecessor, the block\
       \  itself, and the total size of the mempool snapshot at the time we produced\
@@ -1540,75 +1494,45 @@ docForge' = Documented [
       \\n\
       \  * DidntAdoptBlock (rarely)\
       \\n\
-      \  * ForgedInvalidBlock (hopefully never -- this would indicate a bug)"
-  , DocMsg
-      ["DidntAdoptBlock"]
-      [("Forge.NotAdoptedSlotLast", "")]
-      "We did not adopt the block we produced, but the block was valid. We\
+      \  * ForgedInvalidBlock (hopefully never, this would indicate a bug)"
+  documentFor (Namespace _ ["DidntAdoptBlock"]) = Just
+    "We did not adopt the block we produced, but the block was valid. We\
       \  must have adopted a block that another leader of the same slot produced\
       \  before we got the chance of adopting our own block. This is very rare,\
       \  this warrants a warning."
-  , DocMsg
-      ["ForgedInvalidBlock"]
-      [("Forge.ForgedInvalidSlotLast", "")]
-      "We forged a block that is invalid according to the ledger in the\
+  documentFor (Namespace _ ["ForgedInvalidBlock"]) = Just
+    "We forged a block that is invalid according to the ledger in the\
       \  ChainDB. This means there is an inconsistency between the mempool\
       \  validation and the ledger validation. This is a serious error!"
-  , DocMsg
-      ["AdoptedBlock"]
-      [("Forge.AdoptedOwnBlockSlotLast", "")]
-      "We adopted the block we produced, we also trace the transactions\
-      \  that were adopted."
-  , DocMsg
-      ["StartLeadershipCheck"]
-      [ ("Forge.AboutToLeadSlotLast", "")
-      , ("Forge.UtxoSize", "")
-      , ("Forge.DelegMapSize", "")
-      ]
-      "We adopted the block we produced, we also trace the transactions\
-      \  that were adopted."
+  documentFor (Namespace _ ["AdoptedBlock"]) = Just
+    "We adopted the block we produced, we also trace the transactions\
+       \  that were adopted."
+  documentFor _ = Nothing
 
-  ]
-
-docForge2 :: Documented ForgingStats
-docForge2 = addDocumentedNamespace [] docForge'
-
-
-instance ( tx ~ GenTx blk
-         , ConvertRawHash blk
-         , GetHeader blk
-         , HasHeader blk
-         , HasKESInfo blk
-         , LedgerSupportsProtocol blk
-         , LedgerSupportsMempool blk
-         , SerialiseNodeToNodeConstraints blk
-         , HasTxId (GenTx blk)
-         , Show (ForgeStateUpdateError blk)
-         , Show (CannotForge blk)
-         , LogFormatting (InvalidBlockReason blk)
-         , LogFormatting (CannotForge blk)
-         , LogFormatting (ForgeStateUpdateError blk))
-         => LogFormatting (ForgeTracerType blk) where
-  forMachine dtal (Left i)  = forMachine dtal i
-  forMachine dtal (Right i) = forMachine dtal i
-  forHuman (Left i)  = forHuman i
-  forHuman (Right i) = forHuman i
-  asMetrics (Left i)  = asMetrics i
-  asMetrics (Right i) = asMetrics i
+  allNamespaces =
+    [ Namespace [] ["StartLeadershipCheck"]
+    , Namespace [] ["SlotIsImmutable"]
+    , Namespace [] ["BlockFromFuture"]
+    , Namespace [] ["BlockContext"]
+    , Namespace [] ["NoLedgerState"]
+    , Namespace [] ["LedgerState"]
+    , Namespace [] ["NoLedgerView"]
+    , Namespace [] ["LedgerView"]
+    , Namespace [] ["ForgeStateUpdateError"]
+    , Namespace [] ["NodeCannotForge"]
+    , Namespace [] ["NodeNotLeader"]
+    , Namespace [] ["NodeIsLeader"]
+    , Namespace [] ["ForgeTickedLedgerState"]
+    , Namespace [] ["ForgingMempoolSnapshot"]
+    , Namespace [] ["ForgedBlock"]
+    , Namespace [] ["DidntAdoptBlock"]
+    , Namespace [] ["ForgedInvalidBlock"]
+    , Namespace [] ["AdoptedBlock"]
+    ]
 
 --------------------------------------------------------------------------------
 -- BlockchainTimeEvent Tracer
 --------------------------------------------------------------------------------
-
-namesForBlockchainTime :: TraceBlockchainTimeEvent t -> [Text]
-namesForBlockchainTime TraceStartTimeInTheFuture {} = ["StartTimeInTheFuture"]
-namesForBlockchainTime TraceCurrentSlotUnknown {}   = ["CurrentSlotUnknown"]
-namesForBlockchainTime TraceSystemClockMovedBack {} = ["SystemClockMovedBack"]
-
-severityBlockchainTime :: TraceBlockchainTimeEvent t -> SeverityS
-severityBlockchainTime TraceStartTimeInTheFuture {} = Warning
-severityBlockchainTime TraceCurrentSlotUnknown {}   = Warning
-severityBlockchainTime TraceSystemClockMovedBack {} = Warning
 
 instance Show t => LogFormatting (TraceBlockchainTimeEvent t) where
     forMachine _dtal (TraceStartTimeInTheFuture (SystemStart start) toWait) =
@@ -1640,22 +1564,22 @@ instance Show t => LogFormatting (TraceBlockchainTimeEvent t) where
       <> ". New 'current' time: "
       <> (Text.pack . show) newTime
 
-docBlockchainTime :: Documented (TraceBlockchainTimeEvent t)
-docBlockchainTime =
-    addDocumentedNamespace [] docBlockchainTime'
+instance MetaTrace (TraceBlockchainTimeEvent t) where
+  namespaceFor TraceStartTimeInTheFuture {} = Namespace [] ["StartTimeInTheFuture"]
+  namespaceFor TraceCurrentSlotUnknown {} = Namespace [] ["CurrentSlotUnknown"]
+  namespaceFor TraceSystemClockMovedBack {} = Namespace [] ["SystemClockMovedBack"]
 
-docBlockchainTime' :: Documented (TraceBlockchainTimeEvent t)
-docBlockchainTime' = Documented [
-    DocMsg
-      ["StartTimeInTheFuture"]
-      []
-      "The start time of the blockchain time is in the future\
+  severityFor (Namespace _ ["StartTimeInTheFuture"]) _ = Just Warning
+  severityFor (Namespace _ ["CurrentSlotUnknown"]) _ = Just Warning
+  severityFor (Namespace _ ["SystemClockMovedBack"]) _ = Just Warning
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace _ ["StartTimeInTheFuture"]) = Just
+    "The start time of the blockchain time is in the future\
       \\n\
       \ We have to block (for 'NominalDiffTime') until that time comes."
-  , DocMsg
-      ["CurrentSlotUnknown"]
-      []
-      "Current slot is not yet known\
+  documentFor (Namespace _ ["CurrentSlotUnknown"]) = Just
+    "Current slot is not yet known\
       \\n\
       \ This happens when the tip of our current chain is so far in the past that\
       \ we cannot translate the current wallclock to a slot number, typically\
@@ -1668,10 +1592,8 @@ docBlockchainTime' = Documented [
       \ bounds between which we /can/ do conversions. The distance between the\
       \ current time and the upper bound should rapidly decrease with consecutive\
       \ 'CurrentSlotUnknown' messages during syncing."
-  , DocMsg
-      ["SystemClockMovedBack"]
-      []
-      "The system clock moved back an acceptable time span, e.g., because of\
+  documentFor (Namespace _ ["SystemClockMovedBack"]) = Just
+    "The system clock moved back an acceptable time span, e.g., because of\
       \ an NTP sync.\
       \\n\
       \ The system clock moved back such that the new current slot would be\
@@ -1682,17 +1604,18 @@ docBlockchainTime' = Documented [
       \\n\
       \ When the system clock moved back more than the configured limit, we shut\
       \ down with a fatal exception."
-  ]
+  documentFor _ = Nothing
+
+  allNamespaces =
+    [
+      Namespace [] ["StartTimeInTheFuture"]
+    , Namespace [] ["CurrentSlotUnknown"]
+    , Namespace [] ["SystemClockMovedBack"]
+    ]
 
 --------------------------------------------------------------------------------
 -- KeepAliveClient Tracer
 --------------------------------------------------------------------------------
-
-namesForKeepAliveClient :: TraceKeepAliveClient peer -> [Text]
-namesForKeepAliveClient _ = []
-
-severityKeepAliveClient :: TraceKeepAliveClient peer -> SeverityS
-severityKeepAliveClient _ = Info
 
 instance Show remotePeer => LogFormatting (TraceKeepAliveClient remotePeer) where
     forMachine _dtal (AddSample peer rtt pgsv) =
@@ -1713,24 +1636,17 @@ instance Show remotePeer => LogFormatting (TraceKeepAliveClient remotePeer) wher
 
     forHuman = showT
 
-docKeepAliveClient :: Documented (TraceKeepAliveClient peer)
-docKeepAliveClient = Documented [
-    DocMsg
-      []
-      []
-      ""
-  ]
+instance MetaTrace (TraceKeepAliveClient remotePeer) where
+  namespaceFor AddSample {} = Namespace [] ["KeepAliveClient"]
 
-namesConsensusStartupError :: ConsensusStartupException -> [Text]
-namesConsensusStartupError _ = []
+  severityFor (Namespace _ ["KeepAliveClient"]) Nothing = Just Info
+  severityFor _ _ = Nothing
 
-severityConsensusStartupError :: ConsensusStartupException -> SeverityS
-severityConsensusStartupError _ = Critical
+  documentFor (Namespace _ ["KeepAliveClient"]) = Just
+    "A server read has occurred, either for an add block or a rollback"
+  documentFor _ = Just ""
 
-docConsensusStartupError :: Documented ConsensusStartupException
-docConsensusStartupError = Documented [
-    DocMsg
-      []
-      []
-      ""
-  ]
+  allNamespaces = [Namespace [] ["KeepAliveClient"]]
+
+
+

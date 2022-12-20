@@ -4,10 +4,9 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Cardano.Node.Tracing.Tracers.ForgingThreadStats
-  ( ForgingStats (..)
-  , ForgeThreadStats (..)
-  , forgeThreadStats
-  , docForgeStats
+    ( ForgingStats (..)
+    , ForgeThreadStats (..)
+    , forgeThreadStats
   ) where
 
 import           Cardano.Logging
@@ -15,8 +14,7 @@ import           Cardano.Prelude hiding (All, concat, (:.:))
 import           Data.Aeson (Value (..), (.=))
 import qualified Data.Map.Strict as Map
 
-import           Cardano.Node.Tracing.Tracers.StartLeadershipCheck (ForgeTracerType,
-                   TraceStartLeadershipCheckPlus)
+import           Cardano.Node.Tracing.Tracers.StartLeadershipCheck (ForgeTracerType)
 import           Cardano.Slotting.Slot (SlotNo (..))
 import           Ouroboros.Consensus.Node.Tracers
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
@@ -69,27 +67,6 @@ instance LogFormatting ForgeThreadStats where
 emptyForgeThreadStats :: ForgeThreadStats
 emptyForgeThreadStats = ForgeThreadStats 0 0 0 0 0
 
-docForgeStats :: Documented (Either (Consensus.TraceForgeEvent blk)
-                               TraceStartLeadershipCheckPlus)
-docForgeStats = Documented [
-    DocMsg
-      []
-      [("Forge.NodeCannotForgeNum",
-        "How many times this node could not forge?")
-      ,("Forge.NodeIsLeaderNum",
-        "How many times this node was leader?")
-      ,("Forge.BlocksForgedNum",
-        "How many blocks did forge in this node?")
-      ,("Forge.SlotsMissed",
-        "How many slots were missed in this node?")
-      ,("Forge.LastSlot",
-        "")
-      ]
-      "nodeCannotForgeNum shows how many times this node could not forge.\
-      \\nnodeIsLeaderNum shows how many times this node was leader.\
-      \\nblocksForgedNum shows how many blocks did forge in this node.\
-      \\nslotsMissed shows how many slots were missed in this node."
-  ]
 
 --------------------------------------------------------------------------------
 -- ForgingStats Tracer
@@ -125,6 +102,33 @@ instance LogFormatting ForgingStats where
     , IntM "Forge.BlocksForgedNum"    (fromIntegral fsBlocksForgedNum)
     , IntM "Forge.SlotsMissed"        (fromIntegral fsSlotsMissedNum)
     ]
+
+instance MetaTrace ForgingStats where
+    namespaceFor ForgingStats {} = Namespace [] ["ForgingStats"]
+
+    severityFor _ _ = Just Info
+
+    documentFor _ = Just
+      "nodeCannotForgeNum shows how many times this node could not forge.\
+      \\nnodeIsLeaderNum shows how many times this node was leader.\
+      \\nblocksForgedNum shows how many blocks did forge in this node.\
+      \\nslotsMissed shows how many slots were missed in this node."
+
+    metricsDocFor _ =
+      [("Forge.NodeCannotForgeNum",
+        "How many times this node could not forge?")
+      ,("Forge.NodeIsLeaderNum",
+        "How many times this node was leader?")
+      ,("Forge.BlocksForgedNum",
+        "How many blocks did forge in this node?")
+      ,("Forge.SlotsMissed",
+        "How many slots were missed in this node?")
+      ,("Forge.LastSlot",
+        "")
+      ]
+
+    allNamespaces = [Namespace [] ["ForgingStats"]]
+
 
 emptyForgingStats :: ForgingStats
 emptyForgingStats = ForgingStats mempty 0 0 0 0

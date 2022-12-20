@@ -25,3 +25,15 @@ instance LogFormatting ConsensusStartupException where
             , "error" .= String (Text.pack . show $ err)
             ]
   forHuman = Text.pack . show
+
+instance MetaTrace ConsensusStartupException where
+  namespaceFor ConsensusStartupException {} = Namespace [] ["ConsensusStartupException"]
+
+  severityFor (Namespace _ ["ConsensusStartupException"]) Nothing = Just Error
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace _ ["ConsensusStartupException"]) = Just
+    ""
+  documentFor _ = Just ""
+
+  allNamespaces = [Namespace [] ["ConsensusStartupException"]]

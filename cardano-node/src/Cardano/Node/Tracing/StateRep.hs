@@ -8,7 +8,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Node.Tracing.StateRep
-  ( AddedToCurrentChain (..)
+  ( AddedToCurrentChain(..)
   , InitChainSelection (..)
   , NodeState (..)
   , OpeningDbs (..)
@@ -17,9 +17,6 @@ module Cardano.Node.Tracing.StateRep
   , traceNodeStateChainDB
   , traceNodeStateStartup
   , traceNodeStateShutdown
-  , namesNodeState
-  , severityNodeState
-  , docNodeState
   ) where
 
 import           Cardano.Logging
@@ -105,53 +102,87 @@ data NodeState
 instance LogFormatting NodeState where
   forMachine _ = \case
     NodeOpeningDbs x -> mconcat
-      [ "kind" .= String "NodeOpeningDbs",         "openingDb" .= toJSON x]
+      ["openingDb" .= toJSON x]
     NodeReplays x -> mconcat
-      [ "kind" .= String "NodeReplays",            "replays"   .= toJSON x]
+      ["replays"   .= toJSON x]
     NodeInitChainSelection x -> mconcat
-      [ "kind" .= String "NodeInitChainSelection", "chainSel"  .= toJSON x]
+      ["chainSel"  .= toJSON x]
+    NodeKernelOnline -> mconcat
+      []
     NodeAddBlock x -> mconcat
-      [ "kind" .= String "NodeAddBlock",           "addBlock"  .= toJSON x]
+      ["addBlock"  .= toJSON x]
     NodeStartup x -> mconcat
-      [ "kind" .= String "NodeStartup",            "startup"   .= toJSON x]
+      ["startup"   .= toJSON x]
     NodeShutdown x -> mconcat
-      [ "kind" .= String "NodeShutdown",           "shutdown"  .= toJSON x]
+      ["shutdown"  .= toJSON x]
     _ -> mempty
 
-docNodeState :: Documented NodeState
-docNodeState = addDocumentedNamespace  [] $
-  Documented
-  [ DocMsg ["NodeTracingOnlineConfiguring"] [] "Tracing system came online, system configuring now"
-  , DocMsg ["NodeOpeningDbs"]               [] "ChainDB components being opened"
-  , DocMsg ["NodeReplays"]                  [] "Replaying chain"
-  , DocMsg ["NodeInitChainSelection"]       [] "Performing initial chain selection"
-  , DocMsg ["NodeKernelOnline"]             [] "Node kernel online"
-  , DocMsg ["NodeAddBlock"]                 [] "Applying block"
-  , DocMsg ["NodeStartup"]                  [] "Node startup"
-  , DocMsg ["NodeShutdown"]                 [] "Node shutting down"
-  ]
+instance MetaTrace NodeState where
+  namespaceFor NodeTracingOnlineConfiguring {}  =
+    Namespace [] ["NodeTracingOnlineConfiguring"]
+  namespaceFor NodeOpeningDbs {}  =
+    Namespace [] ["OpeningDbs"]
+  namespaceFor NodeReplays {}  =
+    Namespace [] ["NodeReplays"]
+  namespaceFor NodeInitChainSelection {}  =
+    Namespace [] ["NodeInitChainSelection"]
+  namespaceFor NodeKernelOnline {}  =
+    Namespace [] ["NodeKernelOnline"]
+  namespaceFor NodeAddBlock {}  =
+    Namespace [] ["NodeAddBlock"]
+  namespaceFor NodeStartup {}  =
+    Namespace [] ["NodeStartup"]
+  namespaceFor NodeShutdown {}  =
+    Namespace [] ["NodeShutdown"]
 
-namesNodeState :: NodeState -> [Text]
-namesNodeState = \case
-  NodeTracingOnlineConfiguring -> ["TracingOnlineConfiguring"]
-  NodeOpeningDbs _x -> ["OpeningDbs"] -- : namesOpeninDbs x
-  NodeReplays _x -> ["Replays"] -- : namesReplays x
-  NodeInitChainSelection _x -> ["InitChainSelection"] -- : namesInitChainSelection -- Worth it?
-  NodeKernelOnline -> ["NodeKernelOnline"]
-  NodeAddBlock _x -> ["AddBlock"] -- : namesAddBlock x
-  NodeStartup _x -> ["Startup"] -- : namesForStartup x -- Worth it?
-  NodeShutdown _x -> ["Shutdown"] -- : namesShutdown x
+  severityFor  (Namespace _ ["NodeTracingOnlineConfiguring"]) _ =
+    Just Info
+  severityFor  (Namespace _ ["OpeningDbs"]) _ =
+    Just Info
+  severityFor  (Namespace _ ["NodeReplays"]) _ =
+    Just Notice
+  severityFor  (Namespace _ ["NodeInitChainSelection"]) _ =
+    Just Notice
+  severityFor  (Namespace _ ["NodeKernelOnline"]) _ =
+    Just Info
+  severityFor  (Namespace _ ["NodeAddBlock"]) _ =
+    Just Notice
+  severityFor  (Namespace _ ["NodeStartup"]) _ =
+    Just Info
+  severityFor  (Namespace _ ["NodeShutdown"]) _ =
+    Just Warning
+  severityFor _ns _ =
+    Nothing
 
-severityNodeState :: NodeState -> SeverityS
-severityNodeState = \case
-  NodeTracingOnlineConfiguring -> Info
-  NodeOpeningDbs _x -> Info
-  NodeReplays _x -> Notice
-  NodeInitChainSelection _x -> Notice
-  NodeKernelOnline -> Info
-  NodeAddBlock _x -> Notice
-  NodeStartup _x -> Info
-  NodeShutdown _x -> Warning
+  documentFor  (Namespace _ ["NodeTracingOnlineConfiguring"]) = Just
+    "Tracing system came online, system configuring now"
+  documentFor  (Namespace _ ["OpeningDbs"]) = Just
+    "ChainDB components being opened"
+  documentFor  (Namespace _ ["NodeReplays"]) = Just
+    "Replaying chain"
+  documentFor  (Namespace _ ["NodeInitChainSelection"]) = Just
+    "Performing initial chain selection"
+  documentFor  (Namespace _ ["NodeKernelOnline"]) = Just
+    ""
+  documentFor  (Namespace _ ["NodeAddBlock"]) = Just
+   "Applying block"
+  documentFor  (Namespace _ ["NodeStartup"]) = Just
+    "Node startup"
+  documentFor  (Namespace _ ["NodeShutdown"]) = Just
+    "Node shutting down"
+  documentFor _ns = Nothing
+
+  allNamespaces = [
+          Namespace [] ["NodeTracingOnlineConfiguring"]
+        , Namespace [] ["OpeningDbs"]
+        , Namespace [] ["NodeReplays"]
+        , Namespace [] ["NodeInitChainSelection"]
+        , Namespace [] ["NodeKernelOnline"]
+        , Namespace [] ["NodeAddBlock"]
+        , Namespace [] ["NodeStartup"]
+        , Namespace [] ["NodeShutdown"]
+        ]
+
 
 traceNodeStateChainDB
   :: SomeConsensusProtocol

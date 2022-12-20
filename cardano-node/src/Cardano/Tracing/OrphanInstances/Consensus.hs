@@ -780,7 +780,6 @@ instance ( ConvertRawHash blk
       , "point" .= toObject verb point
       ]
 
-
 instance (Show (PBFT.PBftVerKeyHash c))
       => ToObject (PBFT.PBftValidationErr c) where
   toObject _verb (PBFT.PBftInvalidSignature text) =

@@ -25,7 +25,7 @@ import           Cardano.Node.Startup (NodeInfo, NodeStartupInfo, StartupTrace)
 
 import           Cardano.Logging.Resources
 import           Cardano.Node.Tracing.StateRep (NodeState)
-import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
+import           Cardano.Node.Tracing.Tracers.ConsensusStartupException(ConsensusStartupException(..))
 import           Cardano.Node.Tracing.Tracers.Peer (PeerT)
 
 data Tracers peer localPeer blk p2p = Tracers

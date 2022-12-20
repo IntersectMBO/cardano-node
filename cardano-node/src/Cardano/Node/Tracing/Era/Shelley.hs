@@ -18,8 +18,8 @@ module Cardano.Node.Tracing.Era.Shelley () where
 import           Data.Aeson (ToJSON (..), Value (..), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
+import qualified Data.Aeson.Key as Aeson
 import qualified Data.Set as Set
-import qualified Data.Text as Text
 
 import           Cardano.Api (textShow)
 import qualified Cardano.Api as Api
@@ -36,7 +36,6 @@ import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
-import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Ouroboros.Consensus.Protocol.Praos as Praos
 import           Ouroboros.Consensus.Protocol.TPraos (TPraosCannotForge (..))
 import           Ouroboros.Consensus.Shelley.Ledger hiding (TxId)
@@ -99,7 +98,7 @@ import           Cardano.Protocol.TPraos.Rules.Prtcl
                    PrtlSeqFailure (WrongBlockNoPrtclSeq, WrongBlockSequencePrtclSeq, WrongSlotIntervalPrtclSeq))
 import           Cardano.Protocol.TPraos.Rules.Tickn (TicknPredicateFailure)
 import           Cardano.Tracing.OrphanInstances.Shelley ()
-import qualified Data.Aeson.Key as Aeson
+
 
 {- HLINT ignore "Use :" -}
 
@@ -148,87 +147,6 @@ instance Core.Crypto era => LogFormatting (TPraosCannotForge era) where
       ]
 
 
-instance LogFormatting HotKey.KESInfo where
-  forMachine _dtal forgeStateInfo =
-    let maxKesEvos = endKesPeriod - startKesPeriod
-        oCertExpiryKesPeriod = startKesPeriod + maxKesEvos
-        kesPeriodsUntilExpiry = max 0 (oCertExpiryKesPeriod - currKesPeriod)
-    in
-      if kesPeriodsUntilExpiry > 7
-        then mconcat
-              [ "kind" .= String "KESInfo"
-              , "startPeriod" .= startKesPeriod
-              , "endPeriod" .= currKesPeriod
-              , "evolution" .= endKesPeriod
-              ]
-        else mconcat
-              [ "kind" .= String "ExpiryLogMessage"
-              , "keyExpiresIn" .= kesPeriodsUntilExpiry
-              , "startPeriod" .= startKesPeriod
-              , "endPeriod" .= currKesPeriod
-              , "evolution" .= endKesPeriod
-              ]
-    where
-    HotKey.KESInfo
-      { kesStartPeriod = KESPeriod startKesPeriod
-      , kesEvolution = currKesPeriod
-      , kesEndPeriod = KESPeriod endKesPeriod
-      } = forgeStateInfo
-
-  forHuman forgeStateInfo =
-    let maxKesEvos = endKesPeriod - startKesPeriod
-        oCertExpiryKesPeriod = startKesPeriod + maxKesEvos
-        kesPeriodsUntilExpiry = max 0 (oCertExpiryKesPeriod - currKesPeriod)
-    in if kesPeriodsUntilExpiry > 7
-      then "KES info startPeriod  " <> show startKesPeriod
-            <> " currPeriod " <> show currKesPeriod
-            <> " endPeriod " <> show endKesPeriod
-             <> (Text.pack . show) kesPeriodsUntilExpiry
-             <> " KES periods."
-      else "Operational key will expire in "
-             <> (Text.pack . show) kesPeriodsUntilExpiry
-             <> " KES periods."
-    where
-    HotKey.KESInfo
-      { kesStartPeriod = KESPeriod startKesPeriod
-      , kesEvolution = currKesPeriod
-      , kesEndPeriod = KESPeriod endKesPeriod
-      } = forgeStateInfo
-
-  asMetrics forgeStateInfo =
-      let maxKesEvos = endKesPeriod - startKesPeriod
-          oCertExpiryKesPeriod = startKesPeriod + maxKesEvos
-      in  [
-            IntM "operationalCertificateStartKESPeriod"
-              (fromIntegral startKesPeriod)
-          , IntM "operationalCertificateExpiryKESPeriod"
-              (fromIntegral (startKesPeriod + maxKesEvos))
-          , IntM "currentKESPeriod"
-              (fromIntegral currKesPeriod)
-          , IntM "remainingKESPeriods"
-              (fromIntegral (max 0 (oCertExpiryKesPeriod - currKesPeriod)))
-          ]
-    where
-    HotKey.KESInfo
-      { kesStartPeriod = KESPeriod startKesPeriod
-      , kesEvolution = currKesPeriod
-      , kesEndPeriod = KESPeriod endKesPeriod
-      } = forgeStateInfo
-
-
-instance LogFormatting HotKey.KESEvolutionError where
-  forMachine dtal (HotKey.KESCouldNotEvolve kesInfo targetPeriod) =
-    mconcat
-      [ "kind" .= String "KESCouldNotEvolve"
-      , "kesInfo" .= forMachine dtal kesInfo
-      , "targetPeriod" .= targetPeriod
-      ]
-  forMachine dtal (HotKey.KESKeyAlreadyPoisoned kesInfo targetPeriod) =
-    mconcat
-      [ "kind" .= String "KESKeyAlreadyPoisoned"
-      , "kesInfo" .= forMachine dtal kesInfo
-      , "targetPeriod" .= targetPeriod
-      ]
 
 instance ( ShelleyBasedEra era
          , LogFormatting (PredicateFailure (ShelleyUTXO era))

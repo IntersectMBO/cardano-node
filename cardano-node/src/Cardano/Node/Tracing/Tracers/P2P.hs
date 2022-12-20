@@ -9,60 +9,15 @@
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
 module Cardano.Node.Tracing.Tracers.P2P
-  (
-    namesForLocalRootPeers
-  , severityLocalRootPeers
-  , docLocalRootPeers
-
-  , namesForPublicRootPeers
-  , severityPublicRootPeers
-  , docPublicRootPeers
-
-  , namesForPeerSelection
-  , severityPeerSelection
-  , docPeerSelection
-
-  , namesForDebugPeerSelection
-  , severityDebugPeerSelection
-  , docDebugPeerSelection
-
-  , namesForPeerSelectionCounters
-  , severityPeerSelectionCounters
-  , docPeerSelectionCounters
-
-  , namesForPeerSelectionActions
-  , severityPeerSelectionActions
-  , docPeerSelectionActions
-
-  , namesForConnectionManager
-  , severityConnectionManager
-  , docConnectionManager
-
-  , namesForConnectionManagerTransition
-  , severityConnectionManagerTransition
-  , docConnectionManagerTransition
-
-  , namesForServer
-  , severityServer
-  , docServer
-
-  , namesForInboundGovernor
-  , severityInboundGovernor
-  , docInboundGovernorLocal
-  , docInboundGovernorRemote
-
-  , namesForInboundGovernorTransition
-  , severityInboundGovernorTransition
-  , docInboundGovernorTransition
-
-  ) where
+  () where
 
 import           Cardano.Logging
 import           Cardano.Prelude hiding (group, show)
-import           Data.Aeson (ToJSON, ToJSONKey, Value (..), object, toJSON, toJSONList, (.=))
+import           Data.Aeson (ToJSON, ToJSONKey, Value (..), Object, object, toJSON, toJSONList, (.=))
 import           Data.Aeson.Types (listValue)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import           Data.List (last)
 import           Data.Text (pack)
 import           Network.Socket (SockAddr (..))
 import           Prelude (show)
@@ -81,6 +36,7 @@ import qualified Ouroboros.Network.ConnectionManager.Types as ConnectionManager
 import           Ouroboros.Network.InboundGovernor (InboundGovernorTrace (..))
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.InboundGovernor.State (InboundGovernorCounters (..))
+import qualified Ouroboros.Network.NodeToNode as NtN
 import qualified Ouroboros.Network.PeerSelection.EstablishedPeers as EstablishedPeers
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
                    PeerSelectionCounters (..), PeerSelectionState (..), PeerSelectionTargets (..),
@@ -95,20 +51,11 @@ import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
 import           Ouroboros.Network.Server2 (ServerTrace (..))
 import           Ouroboros.Network.Snocket (LocalAddress (..))
 
+
+
 --------------------------------------------------------------------------------
 -- LocalRootPeers Tracer
 --------------------------------------------------------------------------------
-
-namesForLocalRootPeers :: TraceLocalRootPeers ntnAddr resolverError -> [Text]
-namesForLocalRootPeers TraceLocalRootDomains {} = ["LocalRootDomains"]
-namesForLocalRootPeers TraceLocalRootWaiting {} = ["LocalRootWaiting"]
-namesForLocalRootPeers TraceLocalRootResult {}  = ["LocalRootResult"]
-namesForLocalRootPeers TraceLocalRootGroups {}  = ["LocalRootGroups"]
-namesForLocalRootPeers TraceLocalRootFailure {} = ["LocalRootFailure"]
-namesForLocalRootPeers TraceLocalRootError {}   = ["LocalRootError"]
-
-severityLocalRootPeers :: TraceLocalRootPeers ntnAddr resolverError -> SeverityS
-severityLocalRootPeers _ = Info
 
 instance (ToJSONKey ntnAddr, ToJSONKey RelayAccessPoint, Show ntnAddr, Show exception) =>
     LogFormatting (TraceLocalRootPeers ntnAddr exception) where
@@ -142,49 +89,48 @@ instance (ToJSONKey ntnAddr, ToJSONKey RelayAccessPoint, Show ntnAddr, Show exce
              ]
   forHuman = pack . show
 
-docLocalRootPeers :: Documented (TraceLocalRootPeers ntnAddr resolverError)
-docLocalRootPeers =  addDocumentedNamespace  [] docLocalRootPeers'
+instance MetaTrace (TraceLocalRootPeers ntnAddr exception) where
+  namespaceFor TraceLocalRootDomains {} = Namespace [] ["LocalRootDomains"]
+  namespaceFor TraceLocalRootWaiting {} = Namespace [] ["LocalRootWaiting"]
+  namespaceFor TraceLocalRootResult {} = Namespace [] ["LocalRootResult"]
+  namespaceFor TraceLocalRootGroups {} = Namespace [] ["LocalRootGroups"]
+  namespaceFor TraceLocalRootFailure {} = Namespace [] ["LocalRootFailure"]
+  namespaceFor TraceLocalRootError {} = Namespace [] ["LocalRootError"]
 
-docLocalRootPeers' :: Documented (TraceLocalRootPeers ntnAddr resolverError)
-docLocalRootPeers' = Documented [
-    DocMsg
-      ["LocalRootDomains"]
-      []
-      ""
-  , DocMsg
-      ["LocalRootWaiting"]
-      []
-      ""
-  , DocMsg
-      ["LocalRootResult"]
-      []
-      ""
-  , DocMsg
-      ["LocalRootGroups"]
-      []
-      ""
-  , DocMsg
-      ["LocalRootFailure"]
-      []
-      ""
-  , DocMsg
-      ["LocalRootError"]
-      []
-      ""
-  ]
+  severityFor (Namespace [] ["LocalRootDomains"]) _ = Just Info
+  severityFor (Namespace [] ["LocalRootWaiting"]) _ = Just Info
+  severityFor (Namespace [] ["LocalRootResult"]) _ = Just Info
+  severityFor (Namespace [] ["LocalRootGroups"]) _ = Just Info
+  severityFor (Namespace [] ["LocalRootFailure"]) _ = Just Info
+  severityFor (Namespace [] ["LocalRootError"]) _ = Just Info
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace [] ["LocalRootDomains"]) = Just
+    ""
+  documentFor (Namespace [] ["LocalRootWaiting"]) = Just
+    ""
+  documentFor (Namespace [] ["LocalRootResult"]) = Just
+    ""
+  documentFor (Namespace [] ["LocalRootGroups"]) = Just
+    ""
+  documentFor (Namespace [] ["LocalRootFailure"]) = Just
+    ""
+  documentFor (Namespace [] ["LocalRootError"]) = Just
+    ""
+  documentFor _ = Nothing
+
+  allNamespaces =
+    [ Namespace [] ["LocalRootDomains"]
+    , Namespace [] ["LocalRootWaiting"]
+    , Namespace [] ["LocalRootResult"]
+    , Namespace [] ["LocalRootGroups"]
+    , Namespace [] ["LocalRootFailure"]
+    , Namespace [] ["LocalRootError"]
+    ]
 
 --------------------------------------------------------------------------------
 -- PublicRootPeers Tracer
 --------------------------------------------------------------------------------
-
-namesForPublicRootPeers :: TracePublicRootPeers -> [Text]
-namesForPublicRootPeers TracePublicRootRelayAccessPoint {} = ["PublicRootRelayAccessPoint"]
-namesForPublicRootPeers TracePublicRootDomains {} = ["PublicRootDomains"]
-namesForPublicRootPeers TracePublicRootResult {}  = ["PublicRootResult"]
-namesForPublicRootPeers TracePublicRootFailure {}  = ["PublicRootFailure"]
-
-severityPublicRootPeers :: TracePublicRootPeers -> SeverityS
-severityPublicRootPeers _ = Info
 
 instance LogFormatting TracePublicRootPeers where
   forMachine _dtal (TracePublicRootRelayAccessPoint relays) =
@@ -207,94 +153,38 @@ instance LogFormatting TracePublicRootPeers where
              ]
   forHuman = pack . show
 
+instance MetaTrace TracePublicRootPeers where
+  namespaceFor TracePublicRootRelayAccessPoint {} = Namespace [] ["PublicRootRelayAccessPoint"]
+  namespaceFor TracePublicRootDomains {} = Namespace [] ["PublicRootDomains"]
+  namespaceFor TracePublicRootResult {} = Namespace [] ["PublicRootResult"]
+  namespaceFor TracePublicRootFailure {} = Namespace [] ["PublicRootFailure"]
 
-docPublicRootPeers :: Documented TracePublicRootPeers
-docPublicRootPeers = Documented [
-    DocMsg
-      ["PublicRootRelayAccessPoint"]
-      []
-      ""
-  , DocMsg
-      ["PublicRootDomains"]
-      []
-      ""
-  , DocMsg
-      ["PublicRootResult"]
-      []
-      ""
-  , DocMsg
-      ["PublicRootFailure"]
-      []
-      ""
-  ]
+  severityFor (Namespace [] ["PublicRootRelayAccessPoint"]) _ = Just Info
+  severityFor (Namespace [] ["PublicRootDomains"]) _ = Just Info
+  severityFor (Namespace [] ["PublicRootResult"]) _ = Just Info
+  severityFor (Namespace [] ["PublicRootFailure"]) _ = Just Info
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace [] ["PublicRootRelayAccessPoint"]) = Just
+    ""
+  documentFor (Namespace [] ["PublicRootDomains"]) = Just
+    ""
+  documentFor (Namespace [] ["PublicRootResult"]) = Just
+    ""
+  documentFor (Namespace [] ["PublicRootFailure"]) = Just
+    ""
+  documentFor _ = Nothing
+
+  allNamespaces = [
+      Namespace [] ["PublicRootRelayAccessPoint"]
+    , Namespace [] ["PublicRootDomains"]
+    , Namespace [] ["PublicRootResult"]
+    , Namespace [] ["PublicRootFailure"]
+    ]
 
 --------------------------------------------------------------------------------
 -- PeerSelection Tracer
 --------------------------------------------------------------------------------
-
-namesForPeerSelection :: TracePeerSelection peeraddr -> [Text]
-namesForPeerSelection TraceLocalRootPeersChanged {} = ["LocalRootPeersChanged"]
-namesForPeerSelection TraceTargetsChanged {}        = ["TargetsChanged"]
-namesForPeerSelection TracePublicRootsRequest {}    = ["PublicRootsRequest"]
-namesForPeerSelection TracePublicRootsResults {}    = ["PublicRootsResults"]
-namesForPeerSelection TracePublicRootsFailure {}    = ["PublicRootsFailure"]
-namesForPeerSelection TraceGossipRequests {}        = ["GossipRequests"]
-namesForPeerSelection TraceGossipResults {}         = ["GossipResults"]
-namesForPeerSelection TraceForgetColdPeers {}       = ["ForgetColdPeers"]
-namesForPeerSelection TracePromoteColdPeers {}      = ["PromoteColdPeers"]
-namesForPeerSelection TracePromoteColdLocalPeers {} = ["PromoteColdLocalPeers"]
-namesForPeerSelection TracePromoteColdFailed {}     = ["PromoteColdFailed"]
-namesForPeerSelection TracePromoteColdDone {}       = ["PromoteColdDone"]
-namesForPeerSelection TracePromoteWarmPeers {}      = ["PromoteWarmPeers"]
-namesForPeerSelection TracePromoteWarmLocalPeers {} = ["PromoteWarmLocalPeers"]
-namesForPeerSelection TracePromoteWarmFailed {}     = ["PromoteWarmFailed"]
-namesForPeerSelection TracePromoteWarmDone {}       = ["PromoteWarmDone"]
-namesForPeerSelection TracePromoteWarmAborted {}    = ["PromoteWarmAborted"]
-namesForPeerSelection TraceDemoteWarmPeers {}       = ["DemoteWarmPeers"]
-namesForPeerSelection TraceDemoteWarmFailed {}      = ["DemoteWarmFailed"]
-namesForPeerSelection TraceDemoteWarmDone {}        = ["DemoteWarmDone"]
-namesForPeerSelection TraceDemoteHotPeers {}        = ["DemoteHotPeers"]
-namesForPeerSelection TraceDemoteLocalHotPeers {}   = ["DemoteLocalHotPeers"]
-namesForPeerSelection TraceDemoteHotFailed {}       = ["DemoteHotFailed"]
-namesForPeerSelection TraceDemoteHotDone {}         = ["DemoteHotDone"]
-namesForPeerSelection TraceDemoteAsynchronous {}    = ["DemoteAsynchronous"]
-namesForPeerSelection TraceDemoteLocalAsynchronous {}
-                                                    = ["DemoteAsynchronous"]
-namesForPeerSelection TraceGovernorWakeup {}        = ["GovernorWakeup"]
-namesForPeerSelection TraceChurnWait {}             = ["ChurnWait"]
-namesForPeerSelection TraceChurnMode {}             = ["ChurnMode"]
-
-
-severityPeerSelection :: TracePeerSelection peeraddr -> SeverityS
-severityPeerSelection TraceLocalRootPeersChanged {} = Notice
-severityPeerSelection TraceTargetsChanged        {} = Notice
-severityPeerSelection TracePublicRootsRequest    {} = Info
-severityPeerSelection TracePublicRootsResults    {} = Info
-severityPeerSelection TracePublicRootsFailure    {} = Error
-severityPeerSelection TraceGossipRequests        {} = Debug
-severityPeerSelection TraceGossipResults         {} = Debug
-severityPeerSelection TraceForgetColdPeers       {} = Info
-severityPeerSelection TracePromoteColdPeers      {} = Info
-severityPeerSelection TracePromoteColdLocalPeers {} = Info
-severityPeerSelection TracePromoteColdFailed     {} = Info
-severityPeerSelection TracePromoteColdDone       {} = Info
-severityPeerSelection TracePromoteWarmPeers      {} = Info
-severityPeerSelection TracePromoteWarmLocalPeers {} = Info
-severityPeerSelection TracePromoteWarmFailed     {} = Info
-severityPeerSelection TracePromoteWarmDone       {} = Info
-severityPeerSelection TracePromoteWarmAborted    {} = Info
-severityPeerSelection TraceDemoteWarmPeers       {} = Info
-severityPeerSelection TraceDemoteWarmFailed      {} = Info
-severityPeerSelection TraceDemoteWarmDone        {} = Info
-severityPeerSelection TraceDemoteHotPeers        {} = Info
-severityPeerSelection TraceDemoteLocalHotPeers   {} = Info
-severityPeerSelection TraceDemoteHotFailed       {} = Info
-severityPeerSelection TraceDemoteHotDone         {} = Info
-severityPeerSelection TraceDemoteAsynchronous    {} = Info
-severityPeerSelection TraceDemoteLocalAsynchronous {} = Warning
-severityPeerSelection TraceGovernorWakeup        {} = Info
-severityPeerSelection TraceChurnWait             {} = Info
-severityPeerSelection TraceChurnMode             {} = Info
 
 instance LogFormatting (TracePeerSelection SockAddr) where
   forMachine _dtal (TraceLocalRootPeersChanged lrp lrp') =
@@ -460,149 +350,182 @@ instance LogFormatting (TracePeerSelection SockAddr) where
              , "event" .= show c ]
   forHuman = pack . show
 
-docPeerSelection ::  Documented (TracePeerSelection SockAddr)
-docPeerSelection =  addDocumentedNamespace  [] docPeerSelection'
+instance MetaTrace (TracePeerSelection SockAddr) where
+    namespaceFor TraceLocalRootPeersChanged {} =
+      Namespace [] ["LocalRootPeersChanged"]
+    namespaceFor TraceTargetsChanged {}        =
+      Namespace [] ["TargetsChanged"]
+    namespaceFor TracePublicRootsRequest {}    =
+      Namespace [] ["PublicRootsRequest"]
+    namespaceFor TracePublicRootsResults {}    =
+      Namespace [] ["PublicRootsResults"]
+    namespaceFor TracePublicRootsFailure {}    =
+      Namespace [] ["PublicRootsFailure"]
+    namespaceFor TraceGossipRequests {}        =
+      Namespace [] ["GossipRequests"]
+    namespaceFor TraceGossipResults {}         =
+      Namespace [] ["GossipResults"]
+    namespaceFor TraceForgetColdPeers {}       =
+      Namespace [] ["ForgetColdPeers"]
+    namespaceFor TracePromoteColdPeers {}      =
+      Namespace [] ["PromoteColdPeers"]
+    namespaceFor TracePromoteColdLocalPeers {} =
+      Namespace [] ["PromoteColdLocalPeers"]
+    namespaceFor TracePromoteColdFailed {}     =
+      Namespace [] ["PromoteColdFailed"]
+    namespaceFor TracePromoteColdDone {}       =
+      Namespace [] ["PromoteColdDone"]
+    namespaceFor TracePromoteWarmPeers {}      =
+      Namespace [] ["PromoteWarmPeers"]
+    namespaceFor TracePromoteWarmLocalPeers {} =
+      Namespace [] ["PromoteWarmLocalPeers"]
+    namespaceFor TracePromoteWarmFailed {}     =
+      Namespace [] ["PromoteWarmFailed"]
+    namespaceFor TracePromoteWarmDone {}       =
+      Namespace [] ["PromoteWarmDone"]
+    namespaceFor TracePromoteWarmAborted {}    =
+      Namespace [] ["PromoteWarmAborted"]
+    namespaceFor TraceDemoteWarmPeers {}       =
+      Namespace [] ["DemoteWarmPeers"]
+    namespaceFor TraceDemoteWarmFailed {}      =
+      Namespace [] ["DemoteWarmFailed"]
+    namespaceFor TraceDemoteWarmDone {}        =
+      Namespace [] ["DemoteWarmDone"]
+    namespaceFor TraceDemoteHotPeers {}        =
+      Namespace [] ["DemoteHotPeers"]
+    namespaceFor TraceDemoteLocalHotPeers {}   =
+      Namespace [] ["DemoteLocalHotPeers"]
+    namespaceFor TraceDemoteHotFailed {}       =
+      Namespace [] ["DemoteHotFailed"]
+    namespaceFor TraceDemoteHotDone {}         =
+      Namespace [] ["DemoteHotDone"]
+    namespaceFor TraceDemoteAsynchronous {}    =
+      Namespace [] ["DemoteAsynchronous"]
+    namespaceFor TraceDemoteLocalAsynchronous {} =
+      Namespace [] ["DemoteLocalAsynchronous"]
+    namespaceFor TraceGovernorWakeup {}        =
+      Namespace [] ["GovernorWakeup"]
+    namespaceFor TraceChurnWait {}             =
+      Namespace [] ["ChurnWait"]
+    namespaceFor TraceChurnMode {}             =
+      Namespace [] ["ChurnMode"]
 
-docPeerSelection' :: Documented (TracePeerSelection SockAddr)
-docPeerSelection' = Documented [
-    DocMsg
-      ["LocalRootPeersChanged"]
-      []
-      ""
-  , DocMsg
-      ["TargetsChanged"]
-      []
-      ""
-  , DocMsg
-      ["PublicRootsRequest"]
-      []
-      ""
-  , DocMsg
-      ["PublicRootsResults"]
-      []
-      ""
-  , DocMsg
-      ["PublicRootsFailure"]
-      []
-      ""
-  , DocMsg
-      ["GossipRequests"]
-      []
+    severityFor (Namespace [] ["LocalRootPeersChanged"]) _ = Just Notice
+    severityFor (Namespace [] ["TargetsChanged"]) _ = Just Notice
+    severityFor (Namespace [] ["PublicRootsRequest"]) _ = Just Info
+    severityFor (Namespace [] ["PublicRootsResults"]) _ = Just Info
+    severityFor (Namespace [] ["PublicRootsFailure"]) _ = Just Error
+    severityFor (Namespace [] ["GossipRequests"]) _ = Just Debug
+    severityFor (Namespace [] ["GossipResults"]) _ = Just Debug
+    severityFor (Namespace [] ["ForgetColdPeers"]) _ = Just Info
+    severityFor (Namespace [] ["PromoteColdPeers"]) _ = Just Info
+    severityFor (Namespace [] ["PromoteColdLocalPeers"]) _ = Just Info
+    severityFor (Namespace [] ["PromoteColdFailed"]) _ = Just Info
+    severityFor (Namespace [] ["PromoteColdDone"]) _ = Just Info
+    severityFor (Namespace [] ["PromoteWarmPeers"]) _ = Just Info
+    severityFor (Namespace [] ["PromoteWarmLocalPeers"]) _ = Just Info
+    severityFor (Namespace [] ["PromoteWarmFailed"]) _ = Just Info
+    severityFor (Namespace [] ["PromoteWarmDone"]) _ = Just Info
+    severityFor (Namespace [] ["PromoteWarmAborted"]) _ = Just Info
+    severityFor (Namespace [] ["DemoteWarmPeers"]) _ = Just Info
+    severityFor (Namespace [] ["DemoteWarmFailed"]) _ = Just Info
+    severityFor (Namespace [] ["DemoteWarmDone"]) _ = Just Info
+    severityFor (Namespace [] ["DemoteHotPeers"]) _ = Just Info
+    severityFor (Namespace [] ["DemoteLocalHotPeers"]) _ = Just Info
+    severityFor (Namespace [] ["DemoteHotFailed"]) _ = Just Info
+    severityFor (Namespace [] ["DemoteHotDone"]) _ = Just Info
+    severityFor (Namespace [] ["DemoteAsynchronous"]) _ = Just Info
+    severityFor (Namespace [] ["DemoteLocalAsynchronous"]) _ = Just Warning
+    severityFor (Namespace [] ["GovernorWakeup"]) _ = Just Info
+    severityFor (Namespace [] ["ChurnWait"]) _ = Just Info
+    severityFor (Namespace [] ["ChurnMode"]) _ = Just Info
+    severityFor _ _ = Nothing
+
+    documentFor (Namespace [] ["LocalRootPeersChanged"]) = Just  ""
+    documentFor (Namespace [] ["TargetsChanged"]) = Just  ""
+    documentFor (Namespace [] ["PublicRootsRequest"]) = Just  ""
+    documentFor (Namespace [] ["PublicRootsResults"]) = Just  ""
+    documentFor (Namespace [] ["PublicRootsFailure"]) = Just  ""
+    documentFor (Namespace [] ["GossipRequests"]) = Just
       "target known peers, actual known peers, peers available for gossip,\
       \ peers selected for gossip"
-  , DocMsg
-      ["GossipResults"]
-      []
-      ""
-  , DocMsg
-      ["ForgetColdPeers"]
-      []
+    documentFor (Namespace [] ["GossipResults"]) = Just  ""
+    documentFor (Namespace [] ["ForgetColdPeers"]) = Just
       "target known peers, actual known peers, selected peers"
-  , DocMsg
-      ["PromoteColdPeers"]
-      []
+    documentFor (Namespace [] ["PromoteColdPeers"]) = Just
       "target established, actual established, selected peers"
-  , DocMsg
-      ["PromoteColdLocalPeers"]
-      []
+    documentFor (Namespace [] ["PromoteColdLocalPeers"]) = Just
       "target local established, actual local established, selected peers"
-  , DocMsg
-      ["PromoteColdFailed"]
-      []
+    documentFor (Namespace [] ["PromoteColdFailed"]) = Just
       "target established, actual established, peer, delay until next\
       \ promotion, reason"
-  , DocMsg
-      ["PromoteColdDone"]
-      []
+    documentFor (Namespace [] ["PromoteColdDone"]) = Just
       "target active, actual active, selected peers"
-  , DocMsg
-      ["PromoteWarmPeers"]
-      []
+    documentFor (Namespace [] ["PromoteWarmPeers"]) = Just
       "target active, actual active, selected peers"
-  , DocMsg
-      ["PromoteWarmLocalPeers"]
-      []
+    documentFor (Namespace [] ["PromoteWarmLocalPeers"]) = Just
       "local per-group (target active, actual active), selected peers"
-  , DocMsg
-      ["PromoteWarmFailed"]
-      []
+    documentFor (Namespace [] ["PromoteWarmFailed"]) = Just
       "target active, actual active, peer, reason"
-  , DocMsg
-      ["PromoteWarmDone"]
-      []
+    documentFor (Namespace [] ["PromoteWarmDone"]) = Just
       "target active, actual active, peer"
-  , DocMsg
-      ["PromoteWarmAborted"]
-      []
-      ""
-  , DocMsg
-      ["DemoteWarmPeers"]
-      []
+    documentFor (Namespace [] ["PromoteWarmAborted"]) = Just ""
+    documentFor (Namespace [] ["DemoteWarmPeers"]) = Just
       "target established, actual established, selected peers"
-  , DocMsg
-      ["DemoteWarmFailed"]
-      []
+    documentFor (Namespace [] ["DemoteWarmFailed"]) = Just
       "target established, actual established, peer, reason"
-  , DocMsg
-      ["DemoteWarmDone"]
-      []
+    documentFor (Namespace [] ["DemoteWarmDone"]) = Just
       "target established, actual established, peer"
-  , DocMsg
-      ["DemoteHotPeers"]
-      []
+    documentFor (Namespace [] ["DemoteHotPeers"]) = Just
       "target active, actual active, selected peers"
-  , DocMsg
-      ["DemoteLocalHotPeers"]
-      []
+    documentFor (Namespace [] ["DemoteLocalHotPeers"]) = Just
       "local per-group (target active, actual active), selected peers"
-  , DocMsg
-      ["DemoteHotFailed"]
-      []
+    documentFor (Namespace [] ["DemoteHotFailed"]) = Just
       "target active, actual active, peer, reason"
-  , DocMsg
-      ["DemoteHotDone"]
-      []
+    documentFor (Namespace [] ["DemoteHotDone"]) = Just
       "target active, actual active, peer"
-  , DocMsg
-      ["DemoteAsynchronous"]
-      []
-      ""
-  , DocMsg
-      ["GovernorWakeup"]
-      []
-      ""
-  , DocMsg
-      ["ChurnWait"]
-      []
-      ""
-  , DocMsg
-      ["ChurnMode"]
-      []
-      ""
-  ]
+    documentFor (Namespace [] ["DemoteAsynchronous"]) = Just  ""
+    documentFor (Namespace [] ["DemoteLocalAsynchronous"]) = Just  ""
+    documentFor (Namespace [] ["GovernorWakeup"]) = Just  ""
+    documentFor (Namespace [] ["ChurnWait"]) = Just  ""
+    documentFor (Namespace [] ["ChurnMode"]) = Just  ""
+    documentFor _ = Nothing
 
-peerSelectionTargetsToObject :: PeerSelectionTargets -> Value
-peerSelectionTargetsToObject
-  PeerSelectionTargets { targetNumberOfRootPeers,
-                         targetNumberOfKnownPeers,
-                         targetNumberOfEstablishedPeers,
-                         targetNumberOfActivePeers } =
-    Object $
-      mconcat [ "roots" .= targetNumberOfRootPeers
-               , "knownPeers" .= targetNumberOfKnownPeers
-               , "established" .= targetNumberOfEstablishedPeers
-               , "active" .= targetNumberOfActivePeers
-               ]
+    allNamespaces = [
+        Namespace [] ["LocalRootPeersChanged"]
+      , Namespace [] ["TargetsChanged"]
+      , Namespace [] ["PublicRootsRequest"]
+      , Namespace [] ["PublicRootsResults"]
+      , Namespace [] ["PublicRootsFailure"]
+      , Namespace [] ["GossipRequests"]
+      , Namespace [] ["GossipResults"]
+      , Namespace [] ["ForgetColdPeers"]
+      , Namespace [] ["PromoteColdPeers"]
+      , Namespace [] ["PromoteColdLocalPeers"]
+      , Namespace [] ["PromoteColdFailed"]
+      , Namespace [] ["PromoteColdDone"]
+      , Namespace [] ["PromoteWarmPeers"]
+      , Namespace [] ["PromoteWarmLocalPeers"]
+      , Namespace [] ["PromoteWarmFailed"]
+      , Namespace [] ["PromoteWarmDone"]
+      , Namespace [] ["PromoteWarmAborted"]
+      , Namespace [] ["DemoteWarmPeers"]
+      , Namespace [] ["DemoteWarmFailed"]
+      , Namespace [] ["DemoteWarmDone"]
+      , Namespace [] ["DemoteHotPeers"]
+      , Namespace [] ["DemoteLocalHotPeers"]
+      , Namespace [] ["DemoteHotFailed"]
+      , Namespace [] ["DemoteHotDone"]
+      , Namespace [] ["DemoteAsynchronous"]
+      , Namespace [] ["DemoteLocalAsynchronous"]
+      , Namespace [] ["GovernorWakeup"]
+      , Namespace [] ["ChurnWait"]
+      , Namespace [] ["ChurnMode"]
+      ]
 
 --------------------------------------------------------------------------------
 -- DebugPeerSelection Tracer
 --------------------------------------------------------------------------------
-
-namesForDebugPeerSelection :: DebugPeerSelection SockAddr -> [Text]
-namesForDebugPeerSelection _ = ["GovernorState"]
-
-severityDebugPeerSelection :: DebugPeerSelection SockAddr -> SeverityS
-severityDebugPeerSelection _ = Debug
 
 instance LogFormatting (DebugPeerSelection SockAddr) where
   forMachine DNormal (TraceGovernorState blockedAt wakeupAfter
@@ -625,19 +548,36 @@ instance LogFormatting (DebugPeerSelection SockAddr) where
              ]
   forHuman = pack . show
 
-docDebugPeerSelection :: Documented (DebugPeerSelection SockAddr)
-docDebugPeerSelection = Documented
-  [  DocMsg
-      ["GovernorState"]
-      []
-      ""
-  ]
+peerSelectionTargetsToObject :: PeerSelectionTargets -> Value
+peerSelectionTargetsToObject
+  PeerSelectionTargets { targetNumberOfRootPeers,
+                         targetNumberOfKnownPeers,
+                         targetNumberOfEstablishedPeers,
+                         targetNumberOfActivePeers } =
+    Object $
+      mconcat [ "roots" .= targetNumberOfRootPeers
+               , "knownPeers" .= targetNumberOfKnownPeers
+               , "established" .= targetNumberOfEstablishedPeers
+               , "active" .= targetNumberOfActivePeers
+               ]
 
-namesForPeerSelectionCounters :: PeerSelectionCounters -> [Text]
-namesForPeerSelectionCounters _ = []
+instance MetaTrace (DebugPeerSelection SockAddr) where
+    namespaceFor TraceGovernorState {} = Namespace [] ["GovernorState"]
 
-severityPeerSelectionCounters :: PeerSelectionCounters -> SeverityS
-severityPeerSelectionCounters _ = Info
+    severityFor (Namespace _ ["GovernorState"]) _ = Just Debug
+    severityFor _ _ = Nothing
+
+    documentFor (Namespace _ ["GovernorState"]) = Just ""
+    documentFor _ = Nothing
+
+    allNamespaces = [
+      Namespace [] ["GovernorState"]
+      ]
+
+
+--------------------------------------------------------------------------------
+-- PeerSelectionCounters
+--------------------------------------------------------------------------------
 
 instance LogFormatting PeerSelectionCounters where
   forMachine _dtal ev =
@@ -659,31 +599,30 @@ instance LogFormatting PeerSelectionCounters where
         (fromIntegral hotPeers)
       ]
 
-docPeerSelectionCounters :: Documented PeerSelectionCounters
-docPeerSelectionCounters = Documented
-  [  DocMsg
-      []
-      [ ("Net.PeerSelection.Cold", "Number of cold peers")
+instance MetaTrace PeerSelectionCounters where
+    namespaceFor PeerSelectionCounters {} = Namespace [] ["Counters"]
+
+    severityFor (Namespace _ ["Counters"]) _ = Just Info
+    severityFor _ _ = Nothing
+
+    documentFor (Namespace _ ["Counters"]) = Just
+      "Counters for cold, warm and hot peers"
+    documentFor _ = Nothing
+
+    metricsDocFor (Namespace _ ["Counters"]) =
+     [ ("Net.PeerSelection.Cold", "Number of cold peers")
       , ("Net.PeerSelection.Warm", "Number of warm peers")
       , ("Net.PeerSelection.Hot", "Number of hot peers") ]
-      "Counters for cold, warm and hot peers"
-  ]
+    metricsDocFor _ = []
+
+    allNamespaces =[
+      Namespace [] ["Counters"]
+      ]
+
 
 --------------------------------------------------------------------------------
 -- PeerSelectionActions Tracer
 --------------------------------------------------------------------------------
-
-namesForPeerSelectionActions :: PeerSelectionActionsTrace ntnAddr lAddr -> [Text]
-namesForPeerSelectionActions PeerStatusChanged   {}     = ["StatusChanged"]
-namesForPeerSelectionActions PeerStatusChangeFailure {} = ["StatusChangeFailure"]
-namesForPeerSelectionActions PeerMonitoringError {}     = ["MonitoringError"]
-namesForPeerSelectionActions PeerMonitoringResult {}    = ["MonitoringResult"]
-
-severityPeerSelectionActions :: PeerSelectionActionsTrace ntnAddr lAddr -> SeverityS
-severityPeerSelectionActions PeerStatusChanged {}       = Info
-severityPeerSelectionActions PeerStatusChangeFailure {} = Error
-severityPeerSelectionActions PeerMonitoringError {}     = Error
-severityPeerSelectionActions PeerMonitoringResult {}    = Debug
 
 -- TODO: Write PeerStatusChangeType ToJSON at ouroboros-network
 -- For that an export is needed at ouroboros-network
@@ -709,91 +648,38 @@ instance Show lAddr => LogFormatting (PeerSelectionActionsTrace SockAddr lAddr) 
              ]
   forHuman = pack . show
 
-docPeerSelectionActions :: Documented (PeerSelectionActionsTrace ntnAddr lAddr)
-docPeerSelectionActions =
-    addDocumentedNamespace  []  docPeerSelectionActions'
+instance MetaTrace (PeerSelectionActionsTrace SockAddr lAddr) where
+    namespaceFor PeerStatusChanged {} = Namespace [] ["StatusChanged"]
+    namespaceFor PeerStatusChangeFailure {} = Namespace [] ["StatusChangeFailure"]
+    namespaceFor PeerMonitoringError {} = Namespace [] ["MonitoringError"]
+    namespaceFor PeerMonitoringResult {} = Namespace [] ["MonitoringResult"]
 
-docPeerSelectionActions' :: Documented (PeerSelectionActionsTrace ntnAddr lAddr)
-docPeerSelectionActions' = Documented
-  [  DocMsg
-      ["StatusChanged"]
-      []
+    severityFor (Namespace _ ["StatusChanged"]) _ = Just Info
+    severityFor (Namespace _ ["StatusChangeFailure"]) _ = Just Error
+    severityFor (Namespace _ ["MonitoringError"]) _ = Just Error
+    severityFor (Namespace _ ["MonitoringResult"]) _ = Just Debug
+    severityFor _ _ = Nothing
+
+    documentFor (Namespace _ ["StatusChanged"]) = Just
       ""
-  ,  DocMsg
-      ["StatusChangeFailure"]
-      []
+    documentFor (Namespace _ ["StatusChangeFailure"]) = Just
       ""
-  ,  DocMsg
-      ["MonitoringError"]
-      []
+    documentFor (Namespace _ ["MonitoringError"]) = Just
       ""
-  ,  DocMsg
-      ["MonitoringResult"]
-      []
+    documentFor (Namespace _ ["MonitoringResult"]) = Just
       ""
-  ]
+    documentFor _ = Nothing
+
+    allNamespaces = [
+        Namespace [] ["StatusChanged"]
+      , Namespace [] ["StatusChangeFailure"]
+      , Namespace [] ["MonitoringError"]
+      , Namespace [] ["MonitoringResult"]
+      ]
 
 --------------------------------------------------------------------------------
 -- Connection Manager Tracer
 --------------------------------------------------------------------------------
-
-namesForConnectionManager :: ConnectionManagerTrace ntnAddr cht -> [Text]
-namesForConnectionManager TrIncludeConnection {}  = ["IncludeConnection"]
-namesForConnectionManager TrUnregisterConnection {} = ["UnregisterConnection"]
-namesForConnectionManager TrConnect {}  = ["Connect"]
-namesForConnectionManager TrConnectError {} = ["ConnectError"]
-namesForConnectionManager TrTerminatingConnection {} = ["TerminatingConnection"]
-namesForConnectionManager TrTerminatedConnection {} = ["TerminatedConnection"]
-namesForConnectionManager TrConnectionHandler {} = ["ConnectionHandler"]
-namesForConnectionManager TrShutdown {} = ["Shutdown"]
-namesForConnectionManager TrConnectionExists {} = ["ConnectionExists"]
-namesForConnectionManager TrForbiddenConnection {} = ["ForbiddenConnection"]
-namesForConnectionManager TrImpossibleConnection {} = ["ImpossibleConnection"]
-namesForConnectionManager TrConnectionFailure {} = ["ConnectionFailure"]
-namesForConnectionManager TrConnectionNotFound {} = ["ConnectionNotFound"]
-namesForConnectionManager TrForbiddenOperation {} = ["ForbiddenOperation"]
-namesForConnectionManager TrPruneConnections {}  = ["PruneConnections"]
-namesForConnectionManager TrConnectionCleanup {} = ["ConnectionCleanup"]
-namesForConnectionManager TrConnectionTimeWait {} = ["ConnectionTimeWait"]
-namesForConnectionManager TrConnectionTimeWaitDone {} = ["ConnectionTimeWaitDone"]
-namesForConnectionManager TrConnectionManagerCounters {} = ["ConnectionManagerCounters"]
-namesForConnectionManager TrState {} = ["State"]
-namesForConnectionManager ConnectionManager.TrUnexpectedlyFalseAssertion {} =
-                            ["UnexpectedlyFalseAssertion"]
-
-severityConnectionManager ::
-  ConnectionManagerTrace addr
-    (ConnectionHandlerTrace versionNumber agreedOptions) -> SeverityS
-severityConnectionManager TrIncludeConnection {}                  = Debug
-severityConnectionManager TrUnregisterConnection {}               = Debug
-severityConnectionManager TrConnect {}                            = Debug
-severityConnectionManager TrConnectError {}                       = Info
-severityConnectionManager TrTerminatingConnection {}              = Debug
-severityConnectionManager TrTerminatedConnection {}               = Debug
-severityConnectionManager (TrConnectionHandler _ ev')             =
-        case ev' of
-          TrHandshakeSuccess {}     -> Info
-          TrHandshakeClientError {} -> Notice
-          TrHandshakeServerError {} -> Info
-          TrConnectionHandlerError _ _ ShutdownNode  -> Critical
-          TrConnectionHandlerError _ _ ShutdownPeer  -> Info
-
-severityConnectionManager TrShutdown                              = Info
-severityConnectionManager TrConnectionExists {}                   = Info
-severityConnectionManager TrForbiddenConnection {}                = Info
-severityConnectionManager TrImpossibleConnection {}               = Info
-severityConnectionManager TrConnectionFailure {}                  = Info
-severityConnectionManager TrConnectionNotFound {}                 = Debug
-severityConnectionManager TrForbiddenOperation {}                 = Info
-
-severityConnectionManager TrPruneConnections {}                   = Notice
-severityConnectionManager TrConnectionCleanup {}                  = Debug
-severityConnectionManager TrConnectionTimeWait {}                 = Debug
-severityConnectionManager TrConnectionTimeWaitDone {}             = Debug
-severityConnectionManager TrConnectionManagerCounters {}          = Info
-severityConnectionManager TrState {}                              = Info
-severityConnectionManager ConnectionManager.TrUnexpectedlyFalseAssertion {} =
-                            Error
 
 instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
           ToJSON addr, ToJSON versionNumber, ToJSON agreedOptions)
@@ -952,148 +838,145 @@ instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
 
 instance (Show versionNumber, ToJSON versionNumber, ToJSON agreedOptions)
   => LogFormatting (ConnectionHandlerTrace versionNumber agreedOptions) where
-  forMachine _dtal (TrHandshakeSuccess versionNumber agreedOptions) =
-    mconcat
-      [ "kind" .= String "HandshakeSuccess"
-      , "versionNumber" .= toJSON versionNumber
-      , "agreedOptions" .= toJSON agreedOptions
-      ]
-  forMachine _dtal (TrHandshakeClientError err) =
-    mconcat
-      [ "kind" .= String "HandshakeClientError"
-      , "reason" .= toJSON err
-      ]
-  forMachine _dtal (TrHandshakeServerError err) =
-    mconcat
-      [ "kind" .= String "HandshakeServerError"
-      , "reason" .= toJSON err
-      ]
-  forMachine _dtal (TrConnectionHandlerError e err cerr) =
-    mconcat
-      [ "kind" .= String "Error"
-      , "context" .= show e
-      , "reason" .= show err
-      , "command" .= show cerr
-      ]
+    forMachine _dtal (TrHandshakeSuccess versionNumber agreedOptions) =
+      mconcat
+        [ "kind" .= String "HandshakeSuccess"
+        , "versionNumber" .= toJSON versionNumber
+        , "agreedOptions" .= toJSON agreedOptions
+        ]
+    forMachine _dtal (TrHandshakeClientError err) =
+      mconcat
+        [ "kind" .= String "HandshakeClientError"
+        , "reason" .= toJSON err
+        ]
+    forMachine _dtal (TrHandshakeServerError err) =
+      mconcat
+        [ "kind" .= String "HandshakeServerError"
+        , "reason" .= toJSON err
+        ]
+    forMachine _dtal (TrConnectionHandlerError e err cerr) =
+      mconcat
+        [ "kind" .= String "Error"
+        , "context" .= show e
+        , "reason" .= show err
+        , "command" .= show cerr
+        ]
 
-docConnectionManager :: Documented
-  (ConnectionManagerTrace
-    ntnAddr
-    (ConnectionHandlerTrace
-      ntnVersion
-      ntnVersionData))
-docConnectionManager = addDocumentedNamespace  [] docConnectionManager'
+instance MetaTrace (ConnectionManagerTrace addr
+                      (ConnectionHandlerTrace versionNumber agreedOptions)) where
+    namespaceFor TrIncludeConnection {}  = Namespace [] ["IncludeConnection"]
+    namespaceFor TrUnregisterConnection {}  = Namespace [] ["UnregisterConnection"]
+    namespaceFor TrConnect {}  = Namespace [] ["Connect"]
+    namespaceFor TrConnectError {}  = Namespace [] ["ConnectError"]
+    namespaceFor TrTerminatingConnection {}  = Namespace [] ["TerminatingConnection"]
+    namespaceFor TrTerminatedConnection {}  = Namespace [] ["TerminatedConnection"]
+    namespaceFor TrConnectionHandler {}  = Namespace [] ["ConnectionHandler"]
+    namespaceFor TrShutdown {}  = Namespace [] ["Shutdown"]
+    namespaceFor TrConnectionExists {}  = Namespace [] ["ConnectionExists"]
+    namespaceFor TrForbiddenConnection {}  = Namespace [] ["ForbiddenConnection"]
+    namespaceFor TrImpossibleConnection {}  = Namespace [] ["ImpossibleConnection"]
+    namespaceFor TrConnectionFailure {}  = Namespace [] ["ConnectionFailure"]
+    namespaceFor TrConnectionNotFound {}  = Namespace [] ["ConnectionNotFound"]
+    namespaceFor TrForbiddenOperation {}  = Namespace [] ["ForbiddenOperation"]
+    namespaceFor TrPruneConnections {}  = Namespace [] ["PruneConnections"]
+    namespaceFor TrConnectionCleanup {}  = Namespace [] ["ConnectionCleanup"]
+    namespaceFor TrConnectionTimeWait {}  = Namespace [] ["ConnectionTimeWait"]
+    namespaceFor TrConnectionTimeWaitDone {}  = Namespace [] ["ConnectionTimeWaitDone"]
+    namespaceFor TrConnectionManagerCounters {}  = Namespace [] ["ConnectionManagerCounters"]
+    namespaceFor TrState {}  = Namespace [] ["State"]
+    namespaceFor ConnectionManager.TrUnexpectedlyFalseAssertion {}  =
+      Namespace [] ["UnexpectedlyFalseAssertion"]
 
-docConnectionManager' :: Documented
-  (ConnectionManagerTrace
-    ntnAddr
-    (ConnectionHandlerTrace
-      ntnVersion
-      ntnVersionData))
-docConnectionManager' = Documented
-  [  DocMsg
-      ["IncludeConnection"]
-      []
-      ""
-  ,  DocMsg
-      ["UnregisterConnection"]
-      []
-      ""
-  ,  DocMsg
-      ["Connect"]
-      []
-      ""
-  ,  DocMsg
-      ["ConnectError"]
-      []
-      ""
-  ,  DocMsg
-      ["TerminatingConnection"]
-      []
-      ""
-  ,  DocMsg
-      ["TerminatedConnection"]
-      []
-      ""
-  ,  DocMsg
-      ["ConnectionHandler"]
-      []
-      ""
-  ,  DocMsg
-      ["Shutdown"]
-      []
-      ""
-  ,  DocMsg
-     ["ConnectionExists"]
-      []
-      ""
-  ,  DocMsg
-      ["ForbiddenConnection"]
-      []
-      ""
-  ,  DocMsg
-      ["ImpossibleConnection"]
-      []
-      ""
-  ,  DocMsg
-      ["ConnectionFailure"]
-      []
-      ""
-  ,  DocMsg
-      ["ConnectionNotFound"]
-      []
-      ""
-  ,  DocMsg
-      ["ForbiddenOperation"]
-      []
-      ""
-  ,  DocMsg
-      ["PruneConnections"]
-      []
-      ""
-  ,  DocMsg
-      ["ConnectionCleanup"]
-      []
-      ""
-  ,  DocMsg
-      ["ConnectionTimeWait"]
-      []
-      ""
-  ,  DocMsg
-      ["ConnectionTimeWaitDone"]
-      []
-      ""
-  ,  DocMsg
-      ["ConnectionManagerCounters"]
+    severityFor (Namespace _  ["IncludeConnection"]) _ = Just Debug
+    severityFor (Namespace _  ["UnregisterConnection"]) _ = Just Debug
+    severityFor (Namespace _  ["Connect"]) _ = Just Debug
+    severityFor (Namespace _  ["ConnectError"]) _ = Just Info
+    severityFor (Namespace _  ["TerminatingConnection"]) _ = Just Debug
+    severityFor (Namespace _  ["TerminatedConnection"]) _ = Just Debug
+    severityFor (Namespace _  ["ConnectionHandler"])
+      (Just (TrConnectionHandler _ ev')) = Just $
+        case ev' of
+          TrHandshakeSuccess {}     -> Info
+          TrHandshakeClientError {} -> Notice
+          TrHandshakeServerError {} -> Info
+          TrConnectionHandlerError _ _ ShutdownNode  -> Critical
+          TrConnectionHandlerError _ _ ShutdownPeer  -> Info
+    severityFor (Namespace _  ["ConnectionHandler"]) _ = Just Info
+    severityFor (Namespace _  ["Shutdown"]) _ = Just Info
+    severityFor (Namespace _  ["ConnectionExists"]) _ = Just Info
+    severityFor (Namespace _  ["ForbiddenConnection"]) _ = Just Info
+    severityFor (Namespace _  ["ImpossibleConnection"]) _ = Just Info
+    severityFor (Namespace _  ["ConnectionFailure"]) _ = Just Info
+    severityFor (Namespace _  ["ConnectionNotFound"]) _ = Just Debug
+    severityFor (Namespace _  ["ForbiddenOperation"]) _ = Just Info
+    severityFor (Namespace _  ["PruneConnections"]) _ = Just Notice
+    severityFor (Namespace _  ["ConnectionCleanup"]) _ = Just Debug
+    severityFor (Namespace _  ["ConnectionTimeWait"]) _ = Just Debug
+    severityFor (Namespace _  ["ConnectionTimeWaitDone"]) _ = Just Info
+    severityFor (Namespace _  ["ConnectionManagerCounters"]) _ = Just Info
+    severityFor (Namespace _  ["State"]) _ = Just Info
+    severityFor (Namespace _  ["UnexpectedlyFalseAssertion"]) _ = Just Error
+    severityFor _ _ = Nothing
+
+    documentFor (Namespace _  ["IncludeConnection"]) = Just ""
+    documentFor (Namespace _  ["UnregisterConnection"]) = Just ""
+    documentFor (Namespace _  ["Connect"]) = Just ""
+    documentFor (Namespace _  ["ConnectError"]) = Just ""
+    documentFor (Namespace _  ["TerminatingConnection"]) = Just ""
+    documentFor (Namespace _  ["TerminatedConnection"]) = Just ""
+    documentFor (Namespace _  ["ConnectionHandler"]) = Just ""
+    documentFor (Namespace _  ["Shutdown"]) = Just ""
+    documentFor (Namespace _  ["ConnectionExists"]) = Just ""
+    documentFor (Namespace _  ["ForbiddenConnection"]) = Just ""
+    documentFor (Namespace _  ["ImpossibleConnection"]) = Just ""
+    documentFor (Namespace _  ["ConnectionFailure"]) = Just ""
+    documentFor (Namespace _  ["ConnectionNotFound"]) = Just ""
+    documentFor (Namespace _  ["ForbiddenOperation"]) = Just ""
+    documentFor (Namespace _  ["PruneConnections"]) = Just ""
+    documentFor (Namespace _  ["ConnectionCleanup"]) = Just ""
+    documentFor (Namespace _  ["ConnectionTimeWait"]) = Just ""
+    documentFor (Namespace _  ["ConnectionTimeWaitDone"]) = Just ""
+    documentFor (Namespace _  ["ConnectionManagerCounters"]) = Just ""
+    documentFor (Namespace _  ["State"]) = Just ""
+    documentFor (Namespace _  ["UnexpectedlyFalseAssertion"]) = Just ""
+    documentFor _ = Nothing
+
+    metricsDocFor (Namespace _  ["ConnectionManagerCounters"]) =
       [("Net.ConnectionManager.FullDuplexConns","")
       ,("Net.ConnectionManager.DuplexConns","")
       ,("Net.ConnectionManager.UnidirectionalConns","")
       ,("Net.ConnectionManager.InboundConns","")
       ,("Net.ConnectionManager.OutboundConns","")
       ]
-      ""
-  ,  DocMsg
-      ["State"]
-      []
-      ""
-  ,  DocMsg
-      ["UnexpectedlyFalseAssertion"]
-      []
-      ""
-  ]
+    metricsDocFor _ = []
+
+    allNamespaces = [
+        Namespace [] ["IncludeConnection"]
+      , Namespace [] ["UnregisterConnection"]
+      , Namespace [] ["Connect"]
+      , Namespace [] ["ConnectError"]
+      , Namespace [] ["TerminatingConnection"]
+      , Namespace [] ["TerminatedConnection"]
+      , Namespace [] ["ConnectionHandler"]
+      , Namespace [] ["Shutdown"]
+      , Namespace [] ["ConnectionExists"]
+      , Namespace [] ["ForbiddenConnection"]
+      , Namespace [] ["ImpossibleConnection"]
+      , Namespace [] ["ConnectionFailure"]
+      , Namespace [] ["ConnectionNotFound"]
+      , Namespace [] ["ForbiddenOperation"]
+      , Namespace [] ["PruneConnections"]
+      , Namespace [] ["ConnectionCleanup"]
+      , Namespace [] ["ConnectionTimeWait"]
+      , Namespace [] ["ConnectionTimeWaitDone"]
+      , Namespace [] ["ConnectionManagerCounters"]
+      , Namespace [] ["State"]
+      , Namespace [] ["UnexpectedlyFalseAssertion"]
+      ]
 
 --------------------------------------------------------------------------------
 -- Connection Manager Transition Tracer
 --------------------------------------------------------------------------------
-
-namesForConnectionManagerTransition
-    :: ConnectionManager.AbstractTransitionTrace peerAddr -> [Text]
-namesForConnectionManagerTransition ConnectionManager.TransitionTrace {} =
-    []
-
-severityConnectionManagerTransition
-  :: ConnectionManager.AbstractTransitionTrace peerAddr -> SeverityS
-severityConnectionManagerTransition _ = Debug
 
 instance (Show peerAddr, ToJSON peerAddr)
       => LogFormatting (ConnectionManager.AbstractTransitionTrace peerAddr) where
@@ -1107,34 +990,21 @@ instance (Show peerAddr, ToJSON peerAddr)
     forHuman = pack . show
     asMetrics _ = []
 
-docConnectionManagerTransition
-    :: Documented (ConnectionManager.AbstractTransitionTrace peerAddr)
-docConnectionManagerTransition = Documented
-  [ DocMsg
-      ["ConnectionManagerTransition"]
-      []
-      ""
-  ]
+instance MetaTrace (ConnectionManager.AbstractTransitionTrace peerAddr) where
+    namespaceFor ConnectionManager.TransitionTrace {} =
+      Namespace [] ["Transition"]
+
+    severityFor (Namespace _  ["Transition"]) _ = Just Debug
+    severityFor _ _ = Nothing
+
+    documentFor (Namespace _  ["Transition"]) = Just ""
+    documentFor _ = Nothing
+
+    allNamespaces = [Namespace [] ["Transition"]]
 
 --------------------------------------------------------------------------------
 -- Server Tracer
 --------------------------------------------------------------------------------
-
-namesForServer :: ServerTrace ntnAddr -> [Text]
-namesForServer TrAcceptConnection {}  = ["AcceptConnection"]
-namesForServer TrAcceptError {}       = ["AcceptError"]
-namesForServer TrAcceptPolicyTrace {} = ["AcceptPolicy"]
-namesForServer TrServerStarted {}     = ["Started"]
-namesForServer TrServerStopped {}     = ["Stopped"]
-namesForServer TrServerError {}       = ["Error"]
-
-severityServer ::  ServerTrace ntnAddr -> SeverityS
-severityServer TrAcceptConnection {}  = Debug
-severityServer TrAcceptError {}       = Error
-severityServer TrAcceptPolicyTrace {} = Notice
-severityServer TrServerStarted {}     = Notice
-severityServer TrServerStopped {}     = Notice
-severityServer TrServerError {}       = Critical
 
 instance (Show addr, LogFormatting addr, ToJSON addr)
       => LogFormatting (ServerTrace addr) where
@@ -1163,267 +1033,45 @@ instance (Show addr, LogFormatting addr, ToJSON addr)
              ]
   forHuman = pack . show
 
+instance MetaTrace (ServerTrace addr) where
+    namespaceFor TrAcceptConnection {} = Namespace [] ["AcceptConnection"]
+    namespaceFor TrAcceptError {} = Namespace [] ["AcceptError"]
+    namespaceFor TrAcceptPolicyTrace {} = Namespace [] ["AcceptPolicy"]
+    namespaceFor TrServerStarted {} = Namespace [] ["Started"]
+    namespaceFor TrServerStopped {} = Namespace [] ["Stopped"]
+    namespaceFor TrServerError {} = Namespace [] ["Error"]
 
-docServer :: Documented (ServerTrace ntnAddr)
-docServer = addDocumentedNamespace  [] docServer'
+    severityFor (Namespace _ ["AcceptConnection"]) _ = Just Debug
+    severityFor (Namespace _ ["AcceptError"]) _ = Just Error
+    severityFor (Namespace _ ["AcceptPolicy"]) _ = Just Notice
+    severityFor (Namespace _ ["Started"]) _ = Just Notice
+    severityFor (Namespace _ ["Stopped"]) _ = Just Notice
+    severityFor (Namespace _ ["Error"]) _ = Just Critical
+    severityFor _ _ = Nothing
 
-docServer' :: Documented (ServerTrace ntnAddr)
-docServer' = Documented
-  [  DocMsg
-      ["AcceptConnection"]
-      []
-      ""
-  ,  DocMsg
-      ["AcceptError"]
-      []
-      ""
-  ,  DocMsg
-      ["AcceptPolicy"]
-      []
-      ""
-  ,  DocMsg
-      ["Started"]
-      []
-      ""
-  ,  DocMsg
-      ["Stopped"]
-      []
-      ""
-  ,  DocMsg
-      ["Error"]
-      []
-      ""
-  ]
+    documentFor (Namespace _ ["AcceptConnection"]) = Just ""
+    documentFor (Namespace _ ["AcceptError"]) = Just ""
+    documentFor (Namespace _ ["AcceptPolicy"]) = Just ""
+    documentFor (Namespace _ ["Started"]) = Just ""
+    documentFor (Namespace _ ["Stopped"]) = Just ""
+    documentFor (Namespace _ ["Error"]) = Just ""
+    documentFor _ = Nothing
+
+    allNamespaces = [
+        Namespace [] ["AcceptConnection"]
+      , Namespace [] ["AcceptError"]
+      , Namespace [] ["AcceptPolicy"]
+      , Namespace [] ["Started"]
+      , Namespace [] ["Stopped"]
+      , Namespace [] ["Error"]
+      ]
 
 --------------------------------------------------------------------------------
 -- InboundGovernor Tracer
 --------------------------------------------------------------------------------
 
-namesForInboundGovernor :: InboundGovernorTrace peerAddr -> [Text]
-namesForInboundGovernor TrNewConnection {}         = ["NewConnection"]
-namesForInboundGovernor TrResponderRestarted {}    = ["ResponderRestarted"]
-namesForInboundGovernor TrResponderStartFailure {} = ["ResponderStartFailure"]
-namesForInboundGovernor TrResponderErrored {}      = ["ResponderErrored"]
-namesForInboundGovernor TrResponderStarted {}      = ["ResponderStarted"]
-namesForInboundGovernor TrResponderTerminated {}   = ["ResponderTerminated"]
-namesForInboundGovernor TrPromotedToWarmRemote {}  = ["PromotedToWarmRemote"]
-namesForInboundGovernor TrPromotedToHotRemote {}   = ["PromotedToHotRemote"]
-namesForInboundGovernor TrDemotedToColdRemote {}   = ["DemotedToColdRemote"]
-namesForInboundGovernor TrDemotedToWarmRemote {}   = ["DemotedToWarmRemote"]
-namesForInboundGovernor TrWaitIdleRemote {}        = ["WaitIdleRemote"]
-namesForInboundGovernor TrMuxCleanExit {}          = ["MuxCleanExit"]
-namesForInboundGovernor TrMuxErrored {}            = ["MuxErrored"]
-namesForInboundGovernor TrInboundGovernorCounters {} = ["InboundGovernorCounters"]
-namesForInboundGovernor TrRemoteState {}           = ["RemoteState"]
-namesForInboundGovernor InboundGovernor.TrUnexpectedlyFalseAssertion {} =
-                            ["UnexpectedlyFalseAssertion"]
-namesForInboundGovernor InboundGovernor.TrInboundGovernorError {} =
-                            ["InboundGovernorError"]
-
-severityInboundGovernor :: InboundGovernorTrace peerAddr -> SeverityS
-severityInboundGovernor TrNewConnection {}                              = Debug
-severityInboundGovernor TrResponderRestarted {}                         = Debug
-severityInboundGovernor TrResponderStartFailure {}                      = Error
-severityInboundGovernor TrResponderErrored {}                           = Info
-severityInboundGovernor TrResponderStarted {}                           = Debug
-severityInboundGovernor TrResponderTerminated {}                        = Debug
-severityInboundGovernor TrPromotedToWarmRemote {}                       = Info
-severityInboundGovernor TrPromotedToHotRemote {}                        = Info
-severityInboundGovernor TrDemotedToColdRemote {}                        = Info
-severityInboundGovernor TrDemotedToWarmRemote {}                        = Info
-severityInboundGovernor TrWaitIdleRemote {}                             = Debug
-severityInboundGovernor TrMuxCleanExit {}                               = Debug
-severityInboundGovernor TrMuxErrored {}                                 = Info
-severityInboundGovernor TrInboundGovernorCounters {}                    = Info
-severityInboundGovernor TrRemoteState {}                                = Debug
-severityInboundGovernor InboundGovernor.TrUnexpectedlyFalseAssertion {} = Error
-severityInboundGovernor InboundGovernor.TrInboundGovernorError {}       = Error
-
-instance LogFormatting (InboundGovernorTrace LocalAddress) where
-  forMachine _dtal (TrNewConnection p connId)            =
-    mconcat [ "kind" .= String "NewConnection"
-             , "provenance" .= show p
-             , "connectionId" .= toJSON connId
-             ]
-  forMachine _dtal (TrResponderRestarted connId m)       =
-    mconcat [ "kind" .= String "ResponderStarted"
-             , "connectionId" .= toJSON connId
-             , "miniProtocolNum" .= toJSON m
-             ]
-  forMachine _dtal (TrResponderStartFailure connId m s)  =
-    mconcat [ "kind" .= String "ResponderStartFailure"
-             , "connectionId" .= toJSON connId
-             , "miniProtocolNum" .= toJSON m
-             , "reason" .= show s
-             ]
-  forMachine _dtal (TrResponderErrored connId m s)       =
-    mconcat [ "kind" .= String "ResponderErrored"
-             , "connectionId" .= toJSON connId
-             , "miniProtocolNum" .= toJSON m
-             , "reason" .= show s
-             ]
-  forMachine _dtal (TrResponderStarted connId m)         =
-    mconcat [ "kind" .= String "ResponderStarted"
-             , "connectionId" .= toJSON connId
-             , "miniProtocolNum" .= toJSON m
-             ]
-  forMachine _dtal (TrResponderTerminated connId m)      =
-    mconcat [ "kind" .= String "ResponderTerminated"
-             , "connectionId" .= toJSON connId
-             , "miniProtocolNum" .= toJSON m
-             ]
-  forMachine _dtal (TrPromotedToWarmRemote connId opRes) =
-    mconcat [ "kind" .= String "PromotedToWarmRemote"
-             , "connectionId" .= toJSON connId
-             , "result" .= toJSON opRes
-             ]
-  forMachine _dtal (TrPromotedToHotRemote connId)        =
-    mconcat [ "kind" .= String "PromotedToHotRemote"
-             , "connectionId" .= toJSON connId
-             ]
-  forMachine _dtal (TrDemotedToColdRemote connId od)     =
-    mconcat [ "kind" .= String "DemotedToColdRemote"
-             , "connectionId" .= toJSON connId
-             , "result" .= show od
-             ]
-  forMachine _dtal (TrDemotedToWarmRemote connId)     =
-    mconcat [ "kind" .= String "DemotedToWarmRemote"
-             , "connectionId" .= toJSON connId
-             ]
-  forMachine _dtal (TrWaitIdleRemote connId opRes) =
-    mconcat [ "kind" .= String "WaitIdleRemote"
-             , "connectionId" .= toJSON connId
-             , "result" .= toJSON opRes
-             ]
-  forMachine _dtal (TrMuxCleanExit connId)               =
-    mconcat [ "kind" .= String "MuxCleanExit"
-             , "connectionId" .= toJSON connId
-             ]
-  forMachine _dtal (TrMuxErrored connId s)               =
-    mconcat [ "kind" .= String "MuxErrored"
-             , "connectionId" .= toJSON connId
-             , "reason" .= show s
-             ]
-  forMachine _dtal (TrInboundGovernorCounters counters) =
-    mconcat [ "kind" .= String "InboundGovernorCounters"
-             , "idlePeers" .= idlePeersRemote counters
-             , "coldPeers" .= coldPeersRemote counters
-             , "warmPeers" .= warmPeersRemote counters
-             , "hotPeers" .= hotPeersRemote counters
-             ]
-  forMachine _dtal (TrRemoteState st) =
-    mconcat [ "kind" .= String "RemoteState"
-             , "remoteSt" .= toJSON st
-             ]
-  forMachine _dtal (InboundGovernor.TrUnexpectedlyFalseAssertion info) =
-    mconcat [ "kind" .= String "UnexpectedlyFalseAssertion"
-             , "remoteSt" .= String (pack . show $ info)
-             ]
-  forMachine _dtal (InboundGovernor.TrInboundGovernorError err) =
-    mconcat [ "kind" .= String "InboundGovernorError"
-             , "remoteSt" .= String (pack . show $ err)
-             ]
-  forHuman = pack . show
-  asMetrics (TrInboundGovernorCounters InboundGovernorCounters {..}) =
-            [ IntM
-                "Net.LocalInboundGovernor.Idle"
-                (fromIntegral idlePeersRemote)
-            , IntM
-                "Net.LocalInboundGovernor.Cold"
-                (fromIntegral coldPeersRemote)
-            , IntM
-                "Net.LocalInboundGovernor.Warm"
-                (fromIntegral warmPeersRemote)
-            , IntM
-                "Net.LocalInboundGovernor.Hot"
-                (fromIntegral hotPeersRemote)
-              ]
-  asMetrics _ = []
-
 instance LogFormatting (InboundGovernorTrace SockAddr) where
-  forMachine _dtal (TrNewConnection p connId)            =
-    mconcat [ "kind" .= String "NewConnection"
-             , "provenance" .= show p
-             , "connectionId" .= toJSON connId
-             ]
-  forMachine _dtal (TrResponderRestarted connId m)       =
-    mconcat [ "kind" .= String "ResponderStarted"
-             , "connectionId" .= toJSON connId
-             , "miniProtocolNum" .= toJSON m
-             ]
-  forMachine _dtal (TrResponderStartFailure connId m s)  =
-    mconcat [ "kind" .= String "ResponderStartFailure"
-             , "connectionId" .= toJSON connId
-             , "miniProtocolNum" .= toJSON m
-             , "reason" .= show s
-             ]
-  forMachine _dtal (TrResponderErrored connId m s)       =
-    mconcat [ "kind" .= String "ResponderErrored"
-             , "connectionId" .= toJSON connId
-             , "miniProtocolNum" .= toJSON m
-             , "reason" .= show s
-             ]
-  forMachine _dtal (TrResponderStarted connId m)         =
-    mconcat [ "kind" .= String "ResponderStarted"
-             , "connectionId" .= toJSON connId
-             , "miniProtocolNum" .= toJSON m
-             ]
-  forMachine _dtal (TrResponderTerminated connId m)      =
-    mconcat [ "kind" .= String "ResponderTerminated"
-             , "connectionId" .= toJSON connId
-             , "miniProtocolNum" .= toJSON m
-             ]
-  forMachine _dtal (TrPromotedToWarmRemote connId opRes) =
-    mconcat [ "kind" .= String "PromotedToWarmRemote"
-             , "connectionId" .= toJSON connId
-             , "result" .= toJSON opRes
-             ]
-  forMachine _dtal (TrPromotedToHotRemote connId)        =
-    mconcat [ "kind" .= String "PromotedToHotRemote"
-             , "connectionId" .= toJSON connId
-             ]
-  forMachine _dtal (TrDemotedToColdRemote connId od)     =
-    mconcat [ "kind" .= String "DemotedToColdRemote"
-             , "connectionId" .= toJSON connId
-             , "result" .= show od
-             ]
-  forMachine _dtal (TrDemotedToWarmRemote connId)     =
-    mconcat [ "kind" .= String "DemotedToWarmRemote"
-             , "connectionId" .= toJSON connId
-             ]
-  forMachine _dtal (TrWaitIdleRemote connId opRes) =
-    mconcat [ "kind" .= String "WaitIdleRemote"
-             , "connectionId" .= toJSON connId
-             , "result" .= toJSON opRes
-             ]
-  forMachine _dtal (TrMuxCleanExit connId)               =
-    mconcat [ "kind" .= String "MuxCleanExit"
-             , "connectionId" .= toJSON connId
-             ]
-  forMachine _dtal (TrMuxErrored connId s)               =
-    mconcat [ "kind" .= String "MuxErrored"
-             , "connectionId" .= toJSON connId
-             , "reason" .= show s
-             ]
-  forMachine _dtal (TrInboundGovernorCounters counters) =
-    mconcat [ "kind" .= String "InboundGovernorCounters"
-             , "idlePeers" .= idlePeersRemote counters
-             , "coldPeers" .= coldPeersRemote counters
-             , "warmPeers" .= warmPeersRemote counters
-             , "hotPeers" .= hotPeersRemote counters
-             ]
-  forMachine _dtal (TrRemoteState st) =
-    mconcat [ "kind" .= String "RemoteState"
-             , "remoteSt" .= toJSON st
-             ]
-  forMachine _dtal (InboundGovernor.TrUnexpectedlyFalseAssertion info) =
-    mconcat [ "kind" .= String "UnexpectedlyFalseAssertion"
-             , "remoteSt" .= String (pack . show $ info)
-             ]
-  forMachine _dtal (InboundGovernor.TrInboundGovernorError err) =
-    mconcat [ "kind" .= String "InboundGovernorError"
-             , "remoteSt" .= String (pack . show $ err)
-             ]
+  forMachine = forMachineGov
   forHuman = pack . show
   asMetrics (TrInboundGovernorCounters InboundGovernorCounters {..}) =
             [ IntM
@@ -1441,75 +1089,182 @@ instance LogFormatting (InboundGovernorTrace SockAddr) where
               ]
   asMetrics _ = []
 
-docInboundGovernorLocal ::
-   Documented (InboundGovernorTrace LocalAddress)
-docInboundGovernorLocal =
-    addDocumentedNamespace  [] (docInboundGovernor True)
+instance LogFormatting (InboundGovernorTrace LocalAddress) where
+  forMachine = forMachineGov
+  forHuman = pack . show
+  asMetrics (TrInboundGovernorCounters InboundGovernorCounters {..}) =
+            [ IntM
+                "Net.LocalInboundGovernor.Idle"
+                (fromIntegral idlePeersRemote)
+            , IntM
+                "Net.LocalInboundGovernor.Cold"
+                (fromIntegral coldPeersRemote)
+            , IntM
+                "Net.LocalInboundGovernor.Warm"
+                (fromIntegral warmPeersRemote)
+            , IntM
+                "Net.LocalInboundGovernor.Hot"
+                (fromIntegral hotPeersRemote)
+              ]
+  asMetrics _ = []
 
-docInboundGovernorRemote ::
-   Documented (InboundGovernorTrace SockAddr)
-docInboundGovernorRemote =
-    addDocumentedNamespace  [] (docInboundGovernor False)
 
-docInboundGovernor :: Bool -> Documented (InboundGovernorTrace peerAddr)
-docInboundGovernor isLocal = Documented
-  [  DocMsg
-      ["NewConnection"]
-      []
-      ""
-  ,  DocMsg
-      ["ResponderRestarted"]
-      []
-      ""
-  ,  DocMsg
-      ["ResponderStartFailure"]
-      []
-      ""
-  ,  DocMsg
-      ["ResponderErrored"]
-      []
-      ""
-  ,  DocMsg
-      ["ResponderStarted"]
-      []
-      ""
-  ,  DocMsg
-      ["ResponderTerminated"]
-      []
-      ""
-  ,  DocMsg
-      ["PromotedToWarmRemote"]
-      []
-      ""
-  ,  DocMsg
-      ["PromotedToHotRemote"]
-      []
-      ""
-  ,  DocMsg
-      ["DemotedToColdRemote"]
-      []
+forMachineGov :: (ToJSON adr, Show adr) => DetailLevel -> InboundGovernorTrace adr -> Object
+forMachineGov _dtal (TrNewConnection p connId)            =
+  mconcat [ "kind" .= String "NewConnection"
+            , "provenance" .= show p
+            , "connectionId" .= toJSON connId
+            ]
+forMachineGov _dtal (TrResponderRestarted connId m)       =
+  mconcat [ "kind" .= String "ResponderStarted"
+            , "connectionId" .= toJSON connId
+            , "miniProtocolNum" .= toJSON m
+            ]
+forMachineGov _dtal (TrResponderStartFailure connId m s)  =
+  mconcat [ "kind" .= String "ResponderStartFailure"
+            , "connectionId" .= toJSON connId
+            , "miniProtocolNum" .= toJSON m
+            , "reason" .= show s
+            ]
+forMachineGov _dtal (TrResponderErrored connId m s)       =
+  mconcat [ "kind" .= String "ResponderErrored"
+            , "connectionId" .= toJSON connId
+            , "miniProtocolNum" .= toJSON m
+            , "reason" .= show s
+            ]
+forMachineGov _dtal (TrResponderStarted connId m)         =
+  mconcat [ "kind" .= String "ResponderStarted"
+            , "connectionId" .= toJSON connId
+            , "miniProtocolNum" .= toJSON m
+            ]
+forMachineGov _dtal (TrResponderTerminated connId m)      =
+  mconcat [ "kind" .= String "ResponderTerminated"
+            , "connectionId" .= toJSON connId
+            , "miniProtocolNum" .= toJSON m
+            ]
+forMachineGov _dtal (TrPromotedToWarmRemote connId opRes) =
+  mconcat [ "kind" .= String "PromotedToWarmRemote"
+            , "connectionId" .= toJSON connId
+            , "result" .= toJSON opRes
+            ]
+forMachineGov _dtal (TrPromotedToHotRemote connId)        =
+  mconcat [ "kind" .= String "PromotedToHotRemote"
+            , "connectionId" .= toJSON connId
+            ]
+forMachineGov _dtal (TrDemotedToColdRemote connId od)     =
+  mconcat [ "kind" .= String "DemotedToColdRemote"
+            , "connectionId" .= toJSON connId
+            , "result" .= show od
+            ]
+forMachineGov _dtal (TrDemotedToWarmRemote connId)     =
+  mconcat [ "kind" .= String "DemotedToWarmRemote"
+            , "connectionId" .= toJSON connId
+            ]
+forMachineGov _dtal (TrWaitIdleRemote connId opRes) =
+  mconcat [ "kind" .= String "WaitIdleRemote"
+            , "connectionId" .= toJSON connId
+            , "result" .= toJSON opRes
+            ]
+forMachineGov _dtal (TrMuxCleanExit connId)               =
+  mconcat [ "kind" .= String "MuxCleanExit"
+            , "connectionId" .= toJSON connId
+            ]
+forMachineGov _dtal (TrMuxErrored connId s)               =
+  mconcat [ "kind" .= String "MuxErrored"
+            , "connectionId" .= toJSON connId
+            , "reason" .= show s
+            ]
+forMachineGov _dtal (TrInboundGovernorCounters counters) =
+  mconcat [ "kind" .= String "InboundGovernorCounters"
+            , "idlePeers" .= idlePeersRemote counters
+            , "coldPeers" .= coldPeersRemote counters
+            , "warmPeers" .= warmPeersRemote counters
+            , "hotPeers" .= hotPeersRemote counters
+            ]
+forMachineGov _dtal (TrRemoteState st) =
+  mconcat [ "kind" .= String "RemoteState"
+            , "remoteSt" .= toJSON st
+            ]
+forMachineGov _dtal (InboundGovernor.TrUnexpectedlyFalseAssertion info) =
+  mconcat [ "kind" .= String "UnexpectedlyFalseAssertion"
+            , "remoteSt" .= String (pack . show $ info)
+            ]
+forMachineGov _dtal (InboundGovernor.TrInboundGovernorError err) =
+  mconcat [ "kind" .= String "InboundGovernorError"
+            , "remoteSt" .= String (pack . show $ err)
+            ]
+
+instance MetaTrace (InboundGovernorTrace addr) where
+    namespaceFor TrNewConnection {}         = Namespace [] ["NewConnection"]
+    namespaceFor TrResponderRestarted {}    = Namespace [] ["ResponderRestarted"]
+    namespaceFor TrResponderStartFailure {} = Namespace [] ["ResponderStartFailure"]
+    namespaceFor TrResponderErrored {}      = Namespace [] ["ResponderErrored"]
+    namespaceFor TrResponderStarted {}      = Namespace [] ["ResponderStarted"]
+    namespaceFor TrResponderTerminated {}   = Namespace [] ["ResponderTerminated"]
+    namespaceFor TrPromotedToWarmRemote {}  = Namespace [] ["PromotedToWarmRemote"]
+    namespaceFor TrPromotedToHotRemote {}   = Namespace [] ["PromotedToHotRemote"]
+    namespaceFor TrDemotedToColdRemote {}   = Namespace [] ["DemotedToColdRemote"]
+    namespaceFor TrDemotedToWarmRemote {}   = Namespace [] ["DemotedToWarmRemote"]
+    namespaceFor TrWaitIdleRemote {}        = Namespace [] ["WaitIdleRemote"]
+    namespaceFor TrMuxCleanExit {}          = Namespace [] ["MuxCleanExit"]
+    namespaceFor TrMuxErrored {}            = Namespace [] ["MuxErrored"]
+    namespaceFor TrInboundGovernorCounters {} = Namespace [] ["InboundGovernorCounters"]
+    namespaceFor TrRemoteState {}            = Namespace [] ["RemoteState"]
+    namespaceFor InboundGovernor.TrUnexpectedlyFalseAssertion {} =
+                                Namespace [] ["UnexpectedlyFalseAssertion"]
+    namespaceFor InboundGovernor.TrInboundGovernorError {} =
+                                Namespace [] ["InboundGovernorError"]
+
+    severityFor (Namespace _ ["NewConnection"]) _ = Just Debug
+    severityFor (Namespace _ ["ResponderRestarted"]) _ = Just Debug
+    severityFor (Namespace _ ["ResponderStartFailure"]) _ = Just Error
+    severityFor (Namespace _ ["ResponderErrored"]) _ = Just Info
+    severityFor (Namespace _ ["ResponderStarted"]) _ = Just Debug
+    severityFor (Namespace _ ["ResponderTerminated"]) _ = Just Debug
+    severityFor (Namespace _ ["PromotedToWarmRemote"]) _ = Just Info
+    severityFor (Namespace _ ["PromotedToHotRemote"]) _ = Just Info
+    severityFor (Namespace _ ["DemotedToColdRemote"]) _ = Just Info
+    severityFor (Namespace _ ["DemotedToWarmRemote"]) _ = Just Info
+    severityFor (Namespace _ ["WaitIdleRemote"]) _ = Just Debug
+    severityFor (Namespace _ ["MuxCleanExit"]) _ = Just Debug
+    severityFor (Namespace _ ["MuxErrored"]) _ = Just Info
+    severityFor (Namespace _ ["InboundGovernorCounters"]) _ = Just Info
+    severityFor (Namespace _ ["RemoteState"]) _ = Just Debug
+    severityFor (Namespace _ ["UnexpectedlyFalseAssertion"]) _ = Just Error
+    severityFor (Namespace _ ["InboundGovernorError"]) _ = Just Error
+    severityFor _ _ = Nothing
+
+    documentFor (Namespace _ ["NewConnection"]) = Just ""
+    documentFor (Namespace _ ["ResponderRestarted"]) = Just ""
+    documentFor (Namespace _ ["ResponderStartFailure"]) = Just ""
+    documentFor (Namespace _ ["ResponderErrored"]) = Just ""
+    documentFor (Namespace _ ["ResponderStarted"]) = Just ""
+    documentFor (Namespace _ ["ResponderTerminated"]) = Just ""
+    documentFor (Namespace _ ["PromotedToWarmRemote"]) = Just ""
+    documentFor (Namespace _ ["PromotedToHotRemote"]) = Just ""
+    documentFor (Namespace _ ["DemotedToColdRemote"]) = Just
       "All mini-protocols terminated.  The boolean is true if this connection\
       \ was not used by p2p-governor, and thus the connection will be terminated."
-  ,  DocMsg
-      ["DemotedToWarmRemote"]
-      []
+    documentFor (Namespace _ ["DemotedToWarmRemote"]) = Just
       "All mini-protocols terminated.  The boolean is true if this connection\
       \ was not used by p2p-governor, and thus the connection will be terminated."
-  ,  DocMsg
-      ["WaitIdleRemote"]
-      []
-      ""
-  ,  DocMsg
-      ["MuxCleanExit"]
-      []
-      ""
-  ,  DocMsg
-      ["MuxErrored"]
-      []
-      ""
-  ,  DocMsg
-      ["InboundGovernorCounters"]
-      (if isLocal
+    documentFor (Namespace _ ["WaitIdleRemote"]) = Just ""
+    documentFor (Namespace _ ["MuxCleanExit"]) = Just ""
+    documentFor (Namespace _ ["MuxErrored"]) = Just ""
+    documentFor (Namespace _ ["InboundGovernorCounters"]) = Just ""
+    documentFor (Namespace _ ["RemoteState"]) = Just ""
+    documentFor (Namespace _ ["UnexpectedlyFalseAssertion"]) = Just ""
+    documentFor (Namespace _ ["InboundGovernorError"]) = Just ""
+    documentFor _ = Nothing
+
+    metricsDocFor (Namespace [] ["InboundGovernorCounters"]) =
+          [("Net.InboundGovernor.Idle","")
+          ,("Net.InboundGovernor.Cold","")
+          ,("Net.InboundGovernor.Warm","")
+          ,("Net.InboundGovernor.Hot","")
+          ]
+    metricsDocFor (Namespace ons ["InboundGovernorCounters"]) =
+      if last ons == "Local"
         then
           [("Net.LocalInboundGovernor.Idle","")
           ,("Net.LocalInboundGovernor.Cold","")
@@ -1521,33 +1276,33 @@ docInboundGovernor isLocal = Documented
           ,("Net.InboundGovernor.Cold","")
           ,("Net.InboundGovernor.Warm","")
           ,("Net.InboundGovernor.Hot","")
-          ])
-      ""
-  ,  DocMsg
-      ["RemoteState"]
-      []
-      ""
-  ,  DocMsg
-      ["UnexpectedlyFalseAssertion"]
-      []
-      ""
-  ,  DocMsg
-      ["InboundGovernorError"]
-      []
-      ""
-  ]
+          ]
+    metricsDocFor _ = []
+
+    allNamespaces = [
+        Namespace [] ["NewConnection"]
+      , Namespace [] ["ResponderRestarted"]
+      , Namespace [] ["ResponderStartFailure"]
+      , Namespace [] ["ResponderErrored"]
+      , Namespace [] ["ResponderStarted"]
+      , Namespace [] ["ResponderTerminated"]
+      , Namespace [] ["PromotedToWarmRemote"]
+      , Namespace [] ["PromotedToHotRemote"]
+      , Namespace [] ["DemotedToColdRemote"]
+      , Namespace [] ["DemotedToWarmRemote"]
+      , Namespace [] ["WaitIdleRemote"]
+      , Namespace [] ["MuxCleanExit"]
+      , Namespace [] ["MuxErrored"]
+      , Namespace [] ["InboundGovernorCounters"]
+      , Namespace [] ["RemoteState"]
+      , Namespace [] ["UnexpectedlyFalseAssertion"]
+      , Namespace [] ["InboundGovernorError"]
+      ]
 
 --------------------------------------------------------------------------------
 -- InboundGovernor Transition Tracer
 --------------------------------------------------------------------------------
 
-namesForInboundGovernorTransition
-  :: InboundGovernor.RemoteTransitionTrace peerAddr -> [Text]
-namesForInboundGovernorTransition _ = []
-
-severityInboundGovernorTransition
-  :: InboundGovernor.RemoteTransitionTrace peerAddr -> SeverityS
-severityInboundGovernorTransition _ = Debug
 
 instance (Show peerAddr, ToJSON peerAddr)
       => LogFormatting (InboundGovernor.RemoteTransitionTrace peerAddr) where
@@ -1561,11 +1316,63 @@ instance (Show peerAddr, ToJSON peerAddr)
     forHuman = pack . show
     asMetrics _ = []
 
-docInboundGovernorTransition
-  :: Documented (InboundGovernor.RemoteTransitionTrace peerAddr)
-docInboundGovernorTransition = Documented
-  [ DocMsg
-      ["InboundGovernorTransition"]
-      []
+instance MetaTrace (InboundGovernor.RemoteTransitionTrace peerAddr) where
+    namespaceFor InboundGovernor.TransitionTrace {} = Namespace [] ["Transition"]
+
+    severityFor  (Namespace [] ["Transition"]) _ = Just Debug
+    severityFor _ _ = Nothing
+
+    documentFor  (Namespace [] ["Transition"]) = Just ""
+    documentFor _ = Nothing
+
+    allNamespaces = [Namespace [] ["Transition"]]
+
+
+--------------------------------------------------------------------------------
+-- AcceptPolicy Tracer
+--------------------------------------------------------------------------------
+
+instance LogFormatting NtN.AcceptConnectionsPolicyTrace where
+    forMachine _dtal (NtN.ServerTraceAcceptConnectionRateLimiting delay numOfConnections) =
+      mconcat [ "kind" .= String "ServerTraceAcceptConnectionRateLimiting"
+               , "delay" .= show delay
+               , "numberOfConnection" .= show numOfConnections
+               ]
+    forMachine _dtal (NtN.ServerTraceAcceptConnectionHardLimit softLimit) =
+      mconcat [ "kind" .= String "ServerTraceAcceptConnectionHardLimit"
+               , "softLimit" .= show softLimit
+               ]
+    forMachine _dtal (NtN.ServerTraceAcceptConnectionResume numOfConnections) =
+      mconcat [ "kind" .= String "ServerTraceAcceptConnectionResume"
+               , "numberOfConnection" .= show numOfConnections
+               ]
+    forHuman   = showT
+
+instance MetaTrace NtN.AcceptConnectionsPolicyTrace where
+    namespaceFor NtN.ServerTraceAcceptConnectionRateLimiting {} =
+      Namespace [] ["ConnectionRateLimiting"]
+    namespaceFor NtN.ServerTraceAcceptConnectionHardLimit {} =
+      Namespace [] ["ConnectionHardLimit"]
+    namespaceFor NtN.ServerTraceAcceptConnectionResume {} =
+      Namespace [] ["ConnectionLimitResume"]
+
+    severityFor (Namespace _ ["ConnectionRateLimiting"]) _ = Just Info
+    severityFor (Namespace _ ["ConnectionHardLimit"]) _ = Just Warning
+    severityFor (Namespace _ ["ConnectionLimitResume"]) _ = Just Info
+    severityFor _ _ = Nothing
+
+    documentFor (Namespace _ ["ConnectionRateLimiting"]) = Just
+      "Rate limiting accepting connections,\
+        \ delaying next accept for given time, currently serving n connections."
+    documentFor (Namespace _ ["ConnectionHardLimit"]) = Just
+      "Hard rate limit reached,\
+        \ waiting until the number of connections drops below n."
+    documentFor (Namespace _ ["ConnectionLimitResume"]) = Just
       ""
-  ]
+    documentFor _ = Nothing
+
+    allNamespaces = [
+        Namespace [] ["ConnectionRateLimiting"]
+      , Namespace [] ["ConnectionHardLimit"]
+      , Namespace [] ["ConnectionLimitResume"]
+      ]

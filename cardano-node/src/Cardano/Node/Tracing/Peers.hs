@@ -24,6 +24,19 @@ deriving instance Generic NodePeers
 instance ToJSON NodePeers
 instance FromJSON NodePeers
 
+instance MetaTrace NodePeers where
+  namespaceFor NodePeers {}  =
+    Namespace [] ["NodePeers"]
+  severityFor  (Namespace _ ["NodePeers"]) _ =
+    Just Info
+  severityFor _ns _ =
+    Nothing
+  documentFor  (Namespace _ ["NodePeers"]) =
+    Just ""
+  documentFor _ns =
+    Nothing
+  allNamespaces = [ Namespace [] ["NodePeers"]]
+
 traceNodePeers
   :: Trace IO NodePeers
   -> [PeerT blk]
