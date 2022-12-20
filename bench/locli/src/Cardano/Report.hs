@@ -48,7 +48,7 @@ instance ToJSON ReportMeta where
 
 getReport :: Version -> Maybe Revision -> IO ReportMeta
 getReport rmTarget mrev = do
-  rmAuthor <- (getUserEntryForName =<< getLoginName) <&> Author . T.pack . userGecos
+  rmAuthor <- (getUserEntryForID =<< getRealUserID) <&> Author . T.pack . takeWhile (/= ',') . userGecos
   rmDate <- getCurrentTime
   let rmRevision = fromMaybe (Revision 1) mrev
       rmLocliVersion = getLocliVersion
