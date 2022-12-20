@@ -19,6 +19,7 @@ import           Data.Aeson.Types (listValue)
 import           Data.List (last)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import           Data.List (last)
 import           Data.Text (pack)
 import           Network.Socket (SockAddr (..))
 import           Prelude (show)

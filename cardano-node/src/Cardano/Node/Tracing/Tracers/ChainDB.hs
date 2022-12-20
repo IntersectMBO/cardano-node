@@ -49,7 +49,7 @@ import           Ouroboros.Consensus.Util.Enclose
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
 
-{-# ANN module ("HLint: ignore Redundant bracket" :: Text) #-}
+-- {-# ANN module ("HLint: ignore Redundant bracket" :: Text) #-}
 
 -- TODO implement differently so that it uses configuration
 withAddedToCurrentChainEmptyLimited

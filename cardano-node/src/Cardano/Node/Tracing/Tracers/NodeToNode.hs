@@ -8,7 +8,7 @@
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Node.Tracing.Tracers.NodeToNode 
+module Cardano.Node.Tracing.Tracers.NodeToNode
    (
    ) where
 
