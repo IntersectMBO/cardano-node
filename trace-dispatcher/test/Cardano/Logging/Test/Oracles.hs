@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards     #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Logging.Test.Oracles (
@@ -6,13 +6,15 @@ module Cardano.Logging.Test.Oracles (
   , occurrences
   ) where
 
+import           Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import           Test.QuickCheck
 import           Text.Read (readMaybe)
 
 import           Cardano.Logging
-import           Cardano.Logging.Test.Messages
 import           Cardano.Logging.Test.Types
+
+-- import           Debug.Trace
 
 
 -- | Checks for every message that it appears or does not appear at the right
@@ -24,14 +26,15 @@ oracleMessages conf ScriptRes {..} =
   where
     oracleMessage :: ScriptedMessage -> Bool
     oracleMessage (ScriptedMessage _t msg) =
-      let filterSeverity = getSeverity conf ("Test" : namesForMessage msg)
-          backends = getBackends conf ("Test" : namesForMessage msg)
+      let ns = namespaceFor msg
+          filterSeverity = getSeverity conf (nsReplacePrefix ns ["Test"])
+          backends = getBackends conf (nsReplacePrefix ns ["Test"])
           inStdout = hasStdoutBackend backends
-                      && fromEnum (severityForMessage msg) >= fromEnum filterSeverity
+                      && fromEnum (fromMaybe Error (severityFor ns Nothing)) >= fromEnum filterSeverity
           isCorrectStdout = includedExactlyOnce msg srStdoutRes == inStdout
           inForwarder = elem Forwarder backends
-                      && fromEnum (severityForMessage msg) >= fromEnum filterSeverity
-                      && privacyForMessage msg == Public
+                          && fromEnum (fromMaybe Error (severityFor ns Nothing)) >= fromEnum filterSeverity{-  -}
+                          && privacyFor ns Nothing == Just Public
           isCorrectForwarder = includedExactlyOnce msg srForwardRes == inForwarder
           inEKG = elem EKGBackend backends
                       && not (null (asMetrics msg))

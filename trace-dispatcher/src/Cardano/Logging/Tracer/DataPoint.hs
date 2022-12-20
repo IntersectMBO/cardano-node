@@ -33,15 +33,15 @@ dataPointTracer dataPointStore =
       -> Either TraceControl DataPoint
       -> m ()
     output LoggingContext {..} (Right val) =
-      liftIO $ writeToStore dataPointStore (nameSpaceToText lcNamespace) val
+      liftIO $ writeToStore dataPointStore (nameSpaceToText (lcNSPrefix ++ lcNSInner)) val
     output LoggingContext {} (Left Reset) = liftIO $ do
       pure ()
-    output _lk (Left _c@Document {}) = do
+    output _lk (Left _c@TCDocument {}) = do
       pure ()
       -- TODO docIt DataPoint (lk, Just c, val)
     output LoggingContext {} _  = pure ()
 
-    nameSpaceToText :: Namespace -> Text
+    nameSpaceToText :: [Text] -> Text
     nameSpaceToText namespace = toStrict $ toLazyText $
       mconcat (intersperse (singleton '.')
         (map fromText namespace))

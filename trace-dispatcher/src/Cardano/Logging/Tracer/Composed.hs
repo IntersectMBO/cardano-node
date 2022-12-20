@@ -1,12 +1,14 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Logging.Tracer.Composed (
-    mkCardanoTracer
+    MessageOrLimit(..)
+
+  , mkCardanoTracer
   , mkCardanoTracer'
   , mkDataPointTracer
   , mkMetricsTracer
-  , MessageOrLimit(..)
-  , documentTracer
+
+  , documentCardanoTracer
   ) where
 
 import           Control.Exception (SomeException, catch)
@@ -49,59 +51,63 @@ instance (LogFormatting m) => LogFormatting (MessageOrLimit m) where
 -- The returned tracer need to be configured for the specification of
 -- filtering, detailLevel, frequencyLimiting and backends' with formatting before use.
 mkCardanoTracer :: forall evt.
-     LogFormatting evt
+     ( LogFormatting evt
+     , MetaTrace evt)
   => Trace IO FormattedMessage
   -> Trace IO FormattedMessage
   -> Maybe (Trace IO FormattedMessage)
   -> [Text]
-  -> (evt -> [Text])
-  -> (evt -> SeverityS)
-  -> (evt -> Privacy)
   -> IO (Trace IO evt)
-mkCardanoTracer trStdout trForward mbTrEkg tracerName namesFor severityFor privacyFor =
-    mkCardanoTracer' trStdout trForward mbTrEkg tracerName namesFor severityFor
-        privacyFor noHook
+mkCardanoTracer trStdout trForward mbTrEkg tracerPrefix =
+    mkCardanoTracer' trStdout trForward mbTrEkg tracerPrefix noHook
   where
     noHook :: Trace IO evt -> IO (Trace IO evt)
     noHook = pure
 
 -- | Adds the possibility to add special tracers via the hook function
 mkCardanoTracer' :: forall evt evt1.
-     LogFormatting evt1
+     ( LogFormatting evt
+     , LogFormatting evt1
+     , MetaTrace evt)
   => Trace IO FormattedMessage
   -> Trace IO FormattedMessage
   -> Maybe (Trace IO FormattedMessage)
   -> [Text]
-  -> (evt1 -> [Text])
-  -> (evt1 -> SeverityS)
-  -> (evt1 -> Privacy)
   -> (Trace IO evt1 -> IO (Trace IO evt))
   -> IO (Trace IO evt)
-mkCardanoTracer' trStdout trForward mbTrEkg tracerName namesFor severityFor privacyFor
+mkCardanoTracer' trStdout trForward mbTrEkg tracerPrefix
   hook = do
-    messageTrace   <- withBackendsFromConfig backendsAndFormat
-    messageTrace'  <- withLimitersFromConfig
+    messageTrace     <- withBackendsFromConfig backendsAndFormat
+    messageTrace'    <- withLimitersFromConfig
                           (NT.contramap Message messageTrace)
                           (NT.contramap Limit messageTrace)
-    messageTrace'' <- addContextAndFilter messageTrace'
+    messageTrace''   <- hook messageTrace'
+    messageTrace'''  <- addContextAndFilter messageTrace''
+    messageTrace'''' <- maybeSilent isSilentTracer tracerPrefix messageTrace'''
+
     let metricsTrace = case mbTrEkg of
                           Nothing -> Trace NT.nullTracer
                           Just ekgTrace -> metricsFormatter "Cardano" ekgTrace
-    let metricsTrace' = filterTrace (\(_,v) -> asMetrics v /= []) metricsTrace
-    let hookedTrace = messageTrace'' <> metricsTrace'
-    hook hookedTrace
+    metricsTrace'    <- hook metricsTrace
+    let metricsTrace'' = filterTrace
+                            (\(_,v) -> not (Prelude.null (asMetrics v)))
+                            metricsTrace'
+    metricsTrace'''  <- maybeSilent hasNoMetrics tracerPrefix metricsTrace''
+
+    pure (messageTrace'''' <> metricsTrace''')
 
 
   where
-    addContextAndFilter :: Trace IO evt1 -> IO (Trace IO evt1)
+    addContextAndFilter :: Trace IO evt -> IO (Trace IO evt)
     addContextAndFilter tr = do
       tr'  <- withDetailsFromConfig tr
       tr'' <- filterSeverityFromConfig tr'
-      pure  $ withNamesAppended namesFor
-              $ appendNames tracerName
-               $ withSeverity severityFor
-                 $ withPrivacy privacyFor
-                   tr''
+      pure $ withInnerNames
+             $ appendPrefixNames tracerPrefix
+               $ withSeverity
+                 $ withPrivacy
+                    $ withDetails
+                        tr''
 
     backendsAndFormat ::
          Maybe [BackendConfig]
@@ -131,33 +137,32 @@ mkCardanoTracer' trStdout trForward mbTrEkg tracerName namesFor severityFor priv
           Just tr -> pure $ preFormatted backends' tr
 
 -- A simple dataPointTracer which supports building a namespace.
-mkDataPointTracer :: forall dp. ToJSON dp
+mkDataPointTracer :: forall dp. (ToJSON dp, MetaTrace dp)
   => Trace IO DataPoint
-  -> (dp -> [Text])
   -> IO (Trace IO dp)
-mkDataPointTracer trDataPoint namesFor = do
+mkDataPointTracer trDataPoint = do
     let tr = NT.contramap DataPoint trDataPoint
-    pure $ withNamesAppended namesFor tr
+    pure $ withInnerNames tr
 
 mkMetricsTracer :: Maybe (Trace IO FormattedMessage) -> Trace IO FormattedMessage
 mkMetricsTracer = fromMaybe mempty
 
-documentTracer ::
-     TraceConfig
+documentCardanoTracer ::
+     MetaTrace a
+  => TraceConfig
   -> Trace IO a
-  -> Documented a
-  -> IO [(Namespace, DocuResult)]
-documentTracer trConfig trace trDoc = do
+  -> IO [([Text], DocuResult)]
+documentCardanoTracer trConfig trace = do
     res <- catch
             (do
-              configureTracers trConfig trDoc [trace]
+              configureTracers trConfig [trace]
               pure True)
             (\(e :: SomeException) -> do
-              putStrLn $ "Configuration exception" <> show e <> show trDoc
+              putStrLn $ "Configuration exception" <> show e
               pure False)
     if res
-      then  catch (documentMarkdown trDoc [trace])
+      then  catch (documentTracer trace)
               (\(e :: SomeException) -> do
-                putStrLn $ "Documentation exception" <> show e <> show trDoc
+                putStrLn $ "Documentation exception" <> show e
                 pure [])
       else pure []

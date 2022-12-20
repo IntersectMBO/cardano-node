@@ -5,15 +5,16 @@
 
 
 module Cardano.Logging.Trace (
-    traceNamed
-  , traceWith
+    traceWith
   , filterTrace
   , filterTraceMaybe
   , filterTraceBySeverity
   , withLoggingContext
-  , appendName
-  , appendNames
-  , withNamesAppended
+  , appendPrefixName
+  , appendPrefixNames
+  , appendInnerName
+  , appendInnerNames
+  , withInnerNames
   , setSeverity
   , withSeverity
   , privately
@@ -28,6 +29,16 @@ module Cardano.Logging.Trace (
   , foldMTraceM
   , foldMCondTraceM
   , routingTrace
+
+  , mkNamespace
+  , mkInnerNamespace
+  , nsReplacePrefix
+  , nsReplaceInner
+  , nsCast
+  , nsPrependInner
+  , nsGetPrefix
+  , nsGetInner
+  , nsGetComplete
 )
 
 where
@@ -46,10 +57,10 @@ traceWith :: Monad m => Trace m a -> a -> m ()
 traceWith (Trace tr) a =
     T.traceWith tr (emptyLoggingContext, Right a)
 
--- | Convenience function for tracing a message with a name
---   As the simple name suggest, this should be the standard function
-traceNamed :: Monad m => Trace m a -> Text -> a -> m ()
-traceNamed tr n = traceWith (appendName n tr)
+-- -- | Convenience function for tracing a message with a name
+-- --   As the simple name suggest, this should be the standard function
+-- traceNamed :: Monad m => Trace m a -> Text -> a -> m ()
+-- traceNamed tr n = traceWith (appendName n tr)
 
 --- | Don't process further if the result of the selector function
 ---   is False.
@@ -57,28 +68,43 @@ filterTrace :: (Monad m)
   => ((LoggingContext, a) -> Bool)
   -> Trace m a
   -> Trace m a
-filterTrace ff (Trace tr) = Trace $ T.squelchUnless
-    (\case
-      (_lc, Left _)     -> True
-      (lc, Right a)     -> ff (lc, a))
-      tr
+filterTrace ff (Trace tr) = Trace $ T.arrow $ T.emit $ mkTrace
+  where
+    mkTrace (lc, Right a) =
+      if ff (lc, a)
+        then T.traceWith tr (lc, Right a)
+        else pure ()
+    mkTrace (lc, Left l) =
+      T.traceWith tr (lc,  Left l)
+
+  -- Trace $ T.squelchUnless
+  --   (\case
+  --     (_lc, Left _)     -> True
+  --     (lc, Right a)     -> ff (lc, a))
+  --     tr
+
 
 --- | Keep the Just values and forget about the Nothings
 filterTraceMaybe :: Monad m
   => Trace m a
   -> Trace m (Maybe a)
-filterTraceMaybe (Trace tr) = Trace $
-    T.squelchUnless
-      (\case
-        (_lc, Left _ctrl)      -> True
-        (_lc, Right (Just _)) -> True
-        (_lc, Right Nothing)  -> False)
-      (T.contramap
-          (\case
-            ( lc, Right (Just a))    -> (lc, Right a)
-            (_lc, Right Nothing)     -> error "filterTraceMaybe: impossible"
-            ( lc, Left ctrl)         -> (lc, Left ctrl))
-          tr)
+filterTraceMaybe (Trace tr) = Trace $ T.arrow $ T.emit $ mkTrace
+  where
+    mkTrace (lc, Right (Just m))  = T.traceWith tr (lc, Right m)
+    mkTrace (_lc, Right Nothing)  = pure ()
+    mkTrace (lc, Left l)          = T.traceWith tr (lc, Left l)
+
+    -- T.squelchUnless
+    --   (\case
+    --     (_lc, Left _ctrl)      -> True
+    --     (_lc, Right (Just _)) -> True
+    --     (_lc, Right Nothing)  -> False)
+    --   (T.contramap
+    --       (\case
+    --         ( lc, Right (Just a))    -> (lc, Right a)
+    --         (_lc, Right Nothing)     -> error "filterTraceMaybe: impossible"
+    --         ( lc, Left ctrl)         -> (lc, Left ctrl))
+    --       tr)
 
 --- | Only processes messages further with a severity equal or greater as the
 --- given one
@@ -89,10 +115,10 @@ filterTraceBySeverity :: Monad m
 filterTraceBySeverity (Just minSeverity) =
     filterTrace
       (\(lc, _) -> case lcSeverity lc of
-        Just s  -> case minSeverity of
-                      SeverityF (Just fs) -> s >= fs
-                      SeverityF Nothing   -> False
-        Nothing -> True)
+                      Just s  -> case minSeverity of
+                                    SeverityF (Just fs) -> s >= fs
+                                    SeverityF Nothing   -> False
+                      Nothing -> True)
 
 filterTraceBySeverity Nothing = id
 
@@ -107,30 +133,43 @@ withLoggingContext lc (Trace tr) = Trace $
 -- | Appends a name to the context.
 -- E.g. appendName "specific" $ appendName "middle" $ appendName "general" tracer
 -- give the result: `general.middle.specific`.
-appendName :: Monad m => Text -> Trace m a -> Trace m a
-appendName name (Trace tr) = Trace $
+appendPrefixName :: Monad m => Text -> Trace m a -> Trace m a
+appendPrefixName name (Trace tr) = Trace $
     T.contramap
       (\
-        (lc, cont) -> (lc {lcNamespace = name : lcNamespace lc}, cont))
+        (lc, cont) -> (lc {lcNSPrefix = name : lcNSPrefix lc}, cont))
       tr
 
--- | Appends a name to the context.
--- E.g. appendName "specific" $ appendName "middle" $ appendName "general" tracer
--- give the result: `general.middle.specific`.
-appendNames :: Monad m => [Text] -> Trace m a -> Trace m a
-appendNames names (Trace tr) = Trace $
+appendInnerName :: Monad m => Text -> Trace m a -> Trace m a
+appendInnerName name (Trace tr) = Trace $
     T.contramap
       (\
-        (lc, cont) -> (lc {lcNamespace = names ++ lcNamespace lc}, cont))
+        (lc, cont) -> (lc {lcNSInner = name : lcNSInner lc}, cont))
+      tr
+
+-- | Appends all names to the context.
+appendPrefixNames :: Monad m => [Text] -> Trace m a -> Trace m a
+appendPrefixNames names (Trace tr) = Trace $
+    T.contramap
+      (\
+        (lc, cont) -> (lc {lcNSPrefix = names ++ lcNSPrefix lc}, cont))
+      tr
+
+-- | Appends all names to the context.
+appendInnerNames :: Monad m => [Text] -> Trace m a -> Trace m a
+appendInnerNames names (Trace tr) = Trace $
+    T.contramap
+      (\
+        (lc, cont) -> (lc {lcNSInner = names ++ lcNSInner lc}, cont))
       tr
 
 -- | Sets names for the messages in this trace based on the selector function
-withNamesAppended :: Monad m => (a -> [Text]) -> Trace m a -> Trace m a
-withNamesAppended func (Trace tr) = Trace $
+withInnerNames :: forall m a. (Monad m, MetaTrace a) => Trace m a -> Trace m a
+withInnerNames (Trace tr) = Trace $
     T.contramap
       (\case
-        (lc, Right e) -> (lc {lcNamespace = func e ++ lcNamespace lc}, Right e)
-        (lc, Left ctrl) -> (lc, Left ctrl))
+        (lc, Right a) -> (lc {lcNSInner = nsGetInner (namespaceFor a)}, Right a)
+        (lc, Left c)  -> (lc, Left c))
       tr
 
 -- | Sets severity for the messages in this trace
@@ -142,15 +181,27 @@ setSeverity s (Trace tr) = Trace $ T.contramap
   tr
 
 -- | Sets severities for the messages in this trace based on the selector function
-withSeverity :: Monad m => (a -> SeverityS) -> Trace m a -> Trace m a
-withSeverity fs (Trace tr) = Trace $
+-- TODO YUP -- trace exception
+withSeverity :: forall m a. (Monad m, MetaTrace a) => Trace m a -> Trace m a
+withSeverity (Trace tr) = Trace $
     T.contramap
       (\case
-        (lc, Right e) -> if isJust (lcSeverity lc)
-                            then (lc, Right e)
-                            else (lc {lcSeverity = Just (fs e)}, Right e)
+        (lc, Right e) -> process lc (Right e)
+        (lc, Left c@(Config _)) -> process lc (Left c)
+        (lc, Left d@(TCDocument _ _)) -> process lc (Left d)
         (lc, Left e) -> (lc, Left e))
       tr
+  where
+    process lc cont@(Right v) =
+      if isJust (lcSeverity lc)
+        then (lc,cont)
+        else (lc {lcSeverity = severityFor (Namespace [] (lcNSInner lc)
+                                              :: Namespace a) (Just v)} , cont)
+    process lc cont@(Left _) =
+      if isJust (lcSeverity lc)
+        then (lc,cont)
+        else (lc {lcSeverity = severityFor (Namespace [] (lcNSInner lc)
+                                              :: Namespace a) Nothing}, cont)
 
 --- | Only processes messages further with a privacy greater then the given one
 filterTraceByPrivacy :: (Monad m) =>
@@ -185,15 +236,27 @@ setPrivacy p (Trace tr) = Trace $
     tr
 
 -- | Sets privacy for the messages in this trace based on the message
-withPrivacy :: Monad m => (a -> Privacy) -> Trace m a -> Trace m a
-withPrivacy fs (Trace tr) = Trace $
+-- TODO YUP handle exception
+withPrivacy :: forall m a. (Monad m, MetaTrace a) => Trace m a -> Trace m a
+withPrivacy (Trace tr) = Trace $
     T.contramap
       (\case
-          (lc, Right e) -> if isJust (lcPrivacy lc)
-                            then (lc, Right e)
-                            else (lc {lcPrivacy = Just (fs e)}, Right e)
-          (lc, Left e)  ->  (lc, Left e))
+        (lc, Right e) -> process lc (Right e)
+        (lc, Left c@(Config _)) -> process lc (Left c)
+        (lc, Left d@(TCDocument _ _)) -> process lc (Left d)
+        (lc, Left e) -> (lc, Left e))
       tr
+  where
+    process lc cont@(Right v) =
+      if isJust (lcPrivacy lc)
+        then (lc,cont)
+        else (lc {lcPrivacy = privacyFor (Namespace [] (lcNSInner lc)
+                                              :: Namespace a) (Just v)} , cont)
+    process lc cont@(Left _) =
+      if isJust (lcPrivacy lc)
+        then (lc,cont)
+        else (lc {lcPrivacy = privacyFor (Namespace [] (lcNSInner lc)
+                                              :: Namespace a) Nothing}, cont)
 
 -- | Sets detail level for the messages in this trace
 setDetails :: Monad m => DetailLevel -> Trace m a -> Trace m a
@@ -205,15 +268,30 @@ setDetails p (Trace tr) = Trace $
       tr
 
 -- | Sets detail level for the messages in this trace based on the message
-withDetails :: Monad m => (a -> DetailLevel) -> Trace m a -> Trace m a
-withDetails fs (Trace tr) = Trace $
+-- TODO Yup handle exception
+withDetails :: forall m a. (Monad m, MetaTrace a) => Trace m a -> Trace m a
+withDetails (Trace tr) = Trace $
   T.contramap
-    (\case
-      (lc, Right e) -> if isJust (lcDetails lc)
-                          then (lc, Right e)
-                          else (lc {lcDetails = Just (fs e)}, Right e)
-      (lc, Left e)  ->  (lc, Left e))
-    tr
+      (\case
+        (lc, Right e) -> process lc (Right e)
+        (lc, Left c@(Config _)) -> process lc (Left c)
+        (lc, Left d@(TCDocument _ _)) -> process lc (Left d)
+        (lc, Left e) -> (lc, Left e))
+      tr
+  where
+    process lc cont@(Right v) =
+      if isJust (lcDetails lc)
+        then (lc,cont)
+        else (lc {lcDetails = detailsFor (Namespace [] (lcNSInner lc)
+                                              :: Namespace a) (Just v)} , cont)
+    process lc cont@(Left _) =
+      if isJust (lcDetails lc)
+        then (lc,cont)
+        else (lc {lcDetails = detailsFor (Namespace [] (lcNSInner lc)
+                                              :: Namespace a) Nothing}, cont)
+
+
+
 
 -- | Folds the cata function with acc over a.
 -- Uses an MVar to store the state
@@ -301,3 +379,31 @@ routingTrace rf rc = pure $ Trace $ T.arrow $ T.emit $
           T.traceWith (unpackTrace nt) (lc, Right a)
       (lc, Left control) ->
           T.traceWith (unpackTrace rc) (lc, Left control)
+
+mkNamespace :: [Text] -> [Text] -> Namespace a
+mkNamespace = Namespace
+
+mkInnerNamespace :: [Text] -> Namespace a
+mkInnerNamespace = Namespace []
+
+nsReplacePrefix :: Namespace a -> [Text] -> Namespace a
+nsReplacePrefix (Namespace _ i) tl =  Namespace tl i
+
+nsReplaceInner :: Namespace a -> [Text] -> Namespace a
+nsReplaceInner (Namespace o _) =  Namespace o
+
+nsPrependInner :: Text -> Namespace a -> Namespace b
+nsPrependInner t (Namespace o i) =  Namespace o (t : i)
+
+nsCast :: Namespace a -> Namespace b
+nsCast (Namespace o i) =  Namespace o i
+
+nsGetInner :: Namespace a -> [Text]
+nsGetInner = nsInner
+
+nsGetPrefix :: Namespace a -> [Text]
+nsGetPrefix = nsPrefix
+
+nsGetComplete :: Namespace a -> [Text]
+nsGetComplete (Namespace [] i) = i
+nsGetComplete (Namespace o i)  = o ++ i

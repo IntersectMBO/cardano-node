@@ -56,7 +56,7 @@ standardTracer = do
         Nothing -> when (isNothing $ stRunning st) $
                       startStdoutThread stateRef
         Just _  -> pure ()
-    output _ lk c@(Left Document {}) =
+    output _ lk c@(Left TCDocument {}) =
        docIt
         (Stdout MachineFormat) -- TODO Find out the right format
         (lk, c)

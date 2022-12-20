@@ -128,16 +128,14 @@ executable trace-dispatcher-examples
                         -Wno-incomplete-patterns
 
 test-suite trace-dispatcher-test
-  import:               project-config
-  type:                 exitcode-stdio-1.0
-  hs-source-dirs:       test
-  main-is:              trace-dispatcher-test.hs
-  other-modules:        Cardano.Logging.Test.Types
-                        Cardano.Logging.Test.Oracles
-                        Cardano.Logging.Test.Config
-                        Cardano.Logging.Test.Tracer
-                        Cardano.Logging.Test.Messages
-                        Cardano.Logging.Test.Script
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             trace-dispatcher-test.hs
+  other-modules:       Cardano.Logging.Test.Types
+                       Cardano.Logging.Test.Oracles
+                       Cardano.Logging.Test.Config
+                       Cardano.Logging.Test.Tracer
+                       Cardano.Logging.Test.Script
 
   default-extensions:   OverloadedStrings
   build-depends:        base >=4.12 && <5

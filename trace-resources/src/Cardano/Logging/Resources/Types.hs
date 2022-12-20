@@ -7,7 +7,6 @@
 module Cardano.Logging.Resources.Types
     ( Resources(..)
     , ResourceStats
-    , docResourceStats
     ) where
 
 
@@ -81,26 +80,6 @@ jsonEncodingOptions = defaultOptions
     }
   }
 
-docResourceStats :: Documented ResourceStats
-docResourceStats = Documented [
-      DocMsg
-        []
-        [("Resources.Stat.Cputicks", "Kernel-reported CPU ticks (1/100th of a second), since process start")
-        ,("Resources.Mem.Resident", "Kernel-reported RSS (resident set size)")
-        ,("Resources.RTS.GcLiveBytes", "RTS-reported live bytes")
-        ,("Resources.RTS.GcMajorNum", "Major GCs")
-        ,("Resources.RTS.GcMinorNum", "Minor GCs")
-        ,("Resources.RTS.Gcticks", "RTS-reported CPU ticks spent on GC")
-        ,("Resources.RTS.Mutticks", "RTS-reported CPU ticks spent on mutator")
-        ,("Resources.State.NetRd", "IP packet bytes read")
-        ,("Resources.State.NetWr", "IP packet bytes written")
-        ,("Resources.State.FsRd", "FS bytes read")
-        ,("Resources.State.FsWr", "FS bytes written")
-        ,("Resources.RTS.Threads","RTS green thread count")
-        ]
-        ""
-    ]
-
 instance LogFormatting ResourceStats where
     forHuman Resources{..} = "Resources:"
                   <>  " Cpu Ticks "            <> (pack . show) rCentiCpu
@@ -155,3 +134,33 @@ instance LogFormatting ResourceStats where
       , IntM "Resources.State.FsWr"       (fromIntegral $ rFsWr rs)
       , IntM "Resources.RTS.Stat.Threads" (fromIntegral $ rThreads rs)
       ]
+
+instance MetaTrace ResourceStats where
+  namespaceFor Resources {}  =
+    Namespace [] ["Resources"]
+  severityFor  (Namespace _ ["Resources"]) _ =
+    Info
+  severityFor ns _ =
+    error ("ResourceStats>>severityFor: Unknown namespace " ++ show ns)
+  documentFor  (Namespace _ ["NodeInfo"]) =
+    ""
+  documentFor ns =
+     error ("ResourceStats>>documentFor: Unknown namespace " ++ show ns)
+  metricsDocFor  (Namespace _ ["Resources"]) =
+    [("Resources.Stat.Cputicks", "Kernel-reported CPU ticks (1/100th of a second), since process start")
+    ,("Resources.Mem.Resident", "Kernel-reported RSS (resident set size)")
+    ,("Resources.RTS.GcLiveBytes", "RTS-reported live bytes")
+    ,("Resources.RTS.GcMajorNum", "Major GCs")
+    ,("Resources.RTS.GcMinorNum", "Minor GCs")
+    ,("Resources.RTS.Gcticks", "RTS-reported CPU ticks spent on GC")
+    ,("Resources.RTS.Mutticks", "RTS-reported CPU ticks spent on mutator")
+    ,("Resources.State.NetRd", "IP packet bytes read")
+    ,("Resources.State.NetWr", "IP packet bytes written")
+    ,("Resources.State.FsRd", "FS bytes read")
+    ,("Resources.State.FsWr", "FS bytes written")
+    ,("Resources.RTS.Threads","RTS green thread count")
+    ]
+  metricsDocFor ns =
+     error ("ResourceStats>>metricsDocFor: Unknown namespace " ++ show ns)
+  allNamespaces = [ Namespace [] ["Resources"]]
+

@@ -16,8 +16,8 @@ main :: IO ()
 main = do
     putStrLn "test1"
     test1
-    putStrLn "test2"
-    test2
+    -- putStrLn "test2"
+    -- test2
     putStrLn "testAggregation"
     testAggregation
     putStrLn "testRouting"

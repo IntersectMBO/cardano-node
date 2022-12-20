@@ -26,9 +26,9 @@ testRouting :: IO ()
 testRouting = do
     t <- standardTracer
     tf <- machineFormatter (Just "cardano") t
-    let t1 = appendName "tracer1" tf
-    let t2 = appendName "tracer2" tf
-    configureTracers emptyTraceConfig traceForgeEventDocu [t1, t2]
+    let t1 = appendPrefixName "tracer1" tf
+    let t2 = appendPrefixName "tracer2" tf
+    configureTracers emptyTraceConfig [t1, t2]
     r1 <- routingTracer1 t1 t2
     r2 <- routingTracer2 t1 t2
     traceWith r1 message1
