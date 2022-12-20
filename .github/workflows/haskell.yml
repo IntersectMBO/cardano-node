@@ -40,6 +40,12 @@ jobs:
       LD_LIBRARY_PATH: ${{ (matrix.os != 'windows-latest' && '/usr/local/lib') || '' }}
 
     steps:
+    - name: Setup tmate session
+      if: ${{ failure() }}
+      uses: mxschmitt/action-tmate@v3
+      with:
+        limit-access-to-actor: true
+
     - name: "WIN: Install System Dependencies via pacman (msys2)"
       if: runner.os == 'Windows'
       run: |
