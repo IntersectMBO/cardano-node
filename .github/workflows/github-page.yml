@@ -21,27 +21,33 @@ jobs:
       SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
 
     steps:
-    - uses: actions/checkout@v1
+     # this seems to break something. It _must_ come after the pacman setup
+     # above. It appears as if PATHEXT is set _after_ ghcup install ghc/cabal, and
+     # as such we'd need pacman.exe instead.
+    - name: Setup Haskell
+      run: |
+        # Use GHCUP to manage ghc/cabal
+        ghcup install ghc --set ${{ matrix.ghc }}
+        ghcup install cabal --set 3.8.1.0
 
-    - name: Set cache version
-      run: echo "CACHE_VERSION=UN37rUo" >> $GITHUB_ENV
+        ghc --version
+        cabal --version
+
+    - name: "Setup cabal-store"
+      id: cabal-store
+      shell: bash
+      run: |
+        cabal help user-config
+        cabal_config_file="$(cabal help user-config | grep -A 1 'You can edit the cabal configuration file to set defaults' | tail -n 1 | xargs)"
+
+        echo "cabal-store=$(dirname "$cabal_config_file")/store" | tee -a "$GITHUB_OUTPUT"
+
+    - uses: actions/checkout@v2
 
     - name: Add build script path
       run: echo "$(pwd)/.github/bin" >> $GITHUB_PATH
 
-    - uses: haskell/actions/setup@v1
-      id: setup-haskell
-      with:
-        ghc-version: ${{ matrix.ghc }}
-        cabal-version: 3.6.2.0
-
-    - name: Haskell versions
-      run: |
-        ghc --version
-        cabal --version
-
     - name: Install build environment
-      if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
         sudo apt-get -y install libsodium23 libsodium-dev
@@ -49,8 +55,7 @@ jobs:
         sudo apt-get -y remove --purge software-properties-common
         sudo apt-get -y autoremove
 
-    - name: "LINUX: Install secp256k1"
-      if: runner.os != 'Windows'
+    - name: "Install secp256k1"
       shell: bash
       env:
         CI_SECP_FLAGS: "--prefix=/usr"
@@ -59,13 +64,6 @@ jobs:
 
     - name: Cabal update
       run: cabal update
-
-    - name: Disable reorder goals on MacOS and Linux
-      # Avoid reorder goals for platforms that don't need it because re-order goals can take up to 10 minutes
-      if: matrix.os == 'macos-latest' || matrix.os == 'ubuntu-latest'
-      run: |
-        cat cabal.project | sed 's|reorder-goals: True|reorder-goals: False|g' > cabal.project.tmp
-        mv cabal.project.tmp cabal.project
 
     - name: combine github-pages, and machine local project files.
       run: |
@@ -79,18 +77,28 @@ jobs:
         mkdir ./haddocks
         DRY_RUN=1 ./scripts/haddocs.sh ./haddocks true
 
-    - name: Record dependencies
-      run: |
-        cat ${{ env.PLAN_JSON }} | jq -r '."install-plan"[].id' | sort | uniq > dependencies.txt
-
-    - uses: actions/cache@v2
-      name: Cache cabal store
+    - name: Cabal cache over S3
+      uses: action-works/cabal-cache-s3@v1
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       with:
-        path: ${{ steps.setup-haskell.outputs.cabal-store }}
-        key: cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
-        restore-keys: |
-          cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
-          cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-
+        region: us-west-2
+        dist-dir: dist-newstyle
+        store-path: ${{ steps.cabal-store.outputs.cabal-store }}
+        threads: 16
+        archive-uri: ${{ secrets.BINARY_CACHE_URI }}
+        skip: "${{ secrets.BINARY_CACHE_URI == '' }}"
+
+    - name: Cabal cache over HTTPS
+      uses: action-works/cabal-cache-s3@v1
+      with:
+        dist-dir: dist-newstyle
+        store-path: ${{ steps.cabal-store.outputs.cabal-store }}
+        threads: 16
+        archive-uri: https://iohk.cache.haskellworks.io
+        skip: "${{ secrets.BINARY_CACHE_URI != '' }}"
+        enable-save: false
 
     - name: Install dependencies
       run: cabal build all
