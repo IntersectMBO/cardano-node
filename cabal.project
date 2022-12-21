@@ -13,7 +13,7 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state: 2022-11-11T00:00:00Z
-index-state: cardano-haskell-packages 2022-11-12T20:00:00Z
+index-state: cardano-haskell-packages 2022-12-14T00:40:15Z
 
 packages:
     cardano-api
@@ -87,7 +87,21 @@ constraints:
   -- TODO: these should be set in cabal files, but avoiding setting them in lower dependencies for initial CHaP release
 
   -- Needed until ouroboros-network gets proper bounds
-  , cardano-binary  == 1.5.0
+  , byron-spec-chain == 0.1.1.1
+  , byron-spec-ledger == 0.1.1.1
+  , cardano-binary == 1.5.0
+  , cardano-ledger-alonzo == 0.1.1.1
+  , cardano-ledger-babbage == 0.1.1.1
+  , cardano-ledger-byron == 0.1.1.1
+  , cardano-ledger-byron-test == 1.4.1
+  , cardano-ledger-conway == 0.1.1.1
+  , cardano-ledger-core == 0.1.1.1
+  , cardano-ledger-pretty == 0.1.1.1
+  , cardano-ledger-shelley == 0.1.1.1
+  , cardano-ledger-shelley-ma == 0.1.1.1
+  , cardano-ledger-shelley-test == 0.1.1.1
+  , cardano-protocol-tpraos == 0.1.1.1
+  , hedgehog-extras >= 0.3
 
 -- We'll need this once ouroboros has been pushed into CHaP
 -- extra-packages:
@@ -135,4 +149,3 @@ source-repository-package
      ouroboros-network-framework
      ouroboros-network-testing
      ouroboros-consensus-cardano-tools
-
