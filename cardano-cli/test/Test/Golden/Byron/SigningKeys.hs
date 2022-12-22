@@ -72,9 +72,9 @@ prop_print_nonLegacy_signing_key_address = propertyOnce $ do
 prop_generate_and_read_nonlegacy_signingkeys :: Property
 prop_generate_and_read_nonlegacy_signingkeys = property $ do
   byronSkey <- liftIO $ generateSigningKey AsByronKey
-  case deserialiseFromRawBytes (AsSigningKey AsByronKey) (serialiseToRawBytes byronSkey ) of
-    Nothing -> failWith Nothing "Failed to deserialise non-legacy Byron signing key."
-    Just _ -> success
+  case eitherDeserialiseFromRawBytes (AsSigningKey AsByronKey) (serialiseToRawBytes byronSkey) of
+    Left _ -> failWith Nothing "Failed to deserialise non-legacy Byron signing key. "
+    Right _ -> success
 
 prop_migrate_legacy_to_nonlegacy_signingkeys :: Property
 prop_migrate_legacy_to_nonlegacy_signingkeys =

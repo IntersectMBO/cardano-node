@@ -6,6 +6,7 @@
 module Cardano.Api.SerialiseRaw
   ( RawBytesHexError(..)
   , SerialiseAsRawBytes(..)
+  , SerialiseAsRawBytesError(..)
   , serialiseToRawBytesHex
   , deserialiseFromRawBytesHex
   , serialiseToRawBytesHexText
@@ -21,11 +22,20 @@ import qualified Data.Text.Encoding as Text
 import           Cardano.Api.Error (Error, displayError)
 import           Cardano.Api.HasTypeProxy
 
+newtype SerialiseAsRawBytesError = SerialiseAsRawBytesError
+  -- TODO We can do better than use String to carry the error message
+  { unSerialiseAsRawBytesError :: String
+  }
+  deriving (Eq, Show)
+
 class (HasTypeProxy a, Typeable a) => SerialiseAsRawBytes a where
 
   serialiseToRawBytes :: a -> ByteString
 
   deserialiseFromRawBytes :: AsType a -> ByteString -> Maybe a
+  deserialiseFromRawBytes asType bs = rightToMaybe $ eitherDeserialiseFromRawBytes asType bs
+
+  eitherDeserialiseFromRawBytes :: AsType a -> ByteString -> Either SerialiseAsRawBytesError a
 
 serialiseToRawBytesHex :: SerialiseAsRawBytes a => a -> ByteString
 serialiseToRawBytesHex = Base16.encode . serialiseToRawBytes
@@ -39,8 +49,9 @@ data RawBytesHexError
       ByteString -- ^ original input
       String -- ^ error message
   | RawBytesHexErrorRawBytesDecodeFail
-      ByteString -- ^ original input
-      TypeRep    -- ^ expected type
+      ByteString                -- ^ original input
+      TypeRep                   -- ^ expected type
+      SerialiseAsRawBytesError  -- ^ error message
   deriving (Show)
 
 instance Error RawBytesHexError where
@@ -48,8 +59,8 @@ instance Error RawBytesHexError where
     RawBytesHexErrorBase16DecodeFail input message ->
       "Expected Base16-encoded bytestring, but got " ++ pretty input ++ "; "
       ++ message
-    RawBytesHexErrorRawBytesDecodeFail input asType ->
-      "Failed to deserialise " ++ pretty input ++ " as " ++ show asType
+    RawBytesHexErrorRawBytesDecodeFail input asType (SerialiseAsRawBytesError e) ->
+      "Failed to deserialise " ++ pretty input ++ " as " ++ show asType ++ ". " ++ e
     where
       pretty bs = case Text.decodeUtf8' bs of
         Right t -> Text.unpack t
@@ -60,5 +71,6 @@ deserialiseFromRawBytesHex
   => AsType a -> ByteString -> Either RawBytesHexError a
 deserialiseFromRawBytesHex proxy hex = do
   raw <- first (RawBytesHexErrorBase16DecodeFail hex) $ Base16.decode hex
-  maybe (Left $ RawBytesHexErrorRawBytesDecodeFail hex $ typeRep proxy) Right $
-    deserialiseFromRawBytes proxy raw
+  case eitherDeserialiseFromRawBytes proxy raw of
+    Left e -> Left $ RawBytesHexErrorRawBytesDecodeFail hex (typeRep proxy) e
+    Right a -> Right a

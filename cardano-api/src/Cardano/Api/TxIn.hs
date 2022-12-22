@@ -46,8 +46,8 @@ import qualified Data.ByteString.Char8 as BSC
 import           Data.String
 import           Data.Text (Text)
 import qualified Data.Text as Text
-import           Text.Parsec ((<?>))
 import qualified Text.Parsec as Parsec
+import           Text.Parsec ((<?>))
 import qualified Text.Parsec.Language as Parsec
 import qualified Text.Parsec.String as Parsec
 import qualified Text.Parsec.Token as Parsec
@@ -92,7 +92,9 @@ instance HasTypeProxy TxId where
 
 instance SerialiseAsRawBytes TxId where
     serialiseToRawBytes (TxId h) = Crypto.hashToBytes h
-    deserialiseFromRawBytes AsTxId bs = TxId <$> Crypto.hashFromBytes bs
+    eitherDeserialiseFromRawBytes AsTxId bs = case Crypto.hashFromBytes bs of
+      Just a -> Right (TxId a)
+      Nothing -> Left $ SerialiseAsRawBytesError "Unable to deserialise TxId"
 
 toByronTxId :: TxId -> Byron.TxId
 toByronTxId (TxId h) =

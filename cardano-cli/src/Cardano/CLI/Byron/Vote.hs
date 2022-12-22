@@ -18,7 +18,7 @@ import qualified Data.Text as Text
 
 import qualified Cardano.Binary as Binary
 import           Cardano.CLI.Byron.UpdateProposal (ByronUpdateProposalError,
-                     readByronUpdateProposal)
+                   readByronUpdateProposal)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import           Ouroboros.Consensus.Util.Condense (condense)
 
@@ -83,5 +83,5 @@ submitByronVote network voteFp = do
 readByronVote :: FilePath -> ExceptT ByronVoteError IO ByronVote
 readByronVote fp = do
   voteBs <- liftIO $ BS.readFile fp
-  let mVote = deserialiseFromRawBytes AsByronVote voteBs
-  hoistEither $ maybe (Left $ ByronVoteDecodingError fp) Right mVote
+  let voteResult = eitherDeserialiseFromRawBytes AsByronVote voteBs
+  hoistEither $ first (const (ByronVoteDecodingError fp)) voteResult

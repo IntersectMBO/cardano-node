@@ -19,6 +19,7 @@ import           Prelude
 import           Data.Bifunctor (first)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
+import           Data.Either.Combinators (maybeToRight)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 
@@ -79,8 +80,9 @@ instance HasTypeProxy StakePoolMetadata where
 instance SerialiseAsRawBytes (Hash StakePoolMetadata) where
     serialiseToRawBytes (StakePoolMetadataHash h) = Crypto.hashToBytes h
 
-    deserialiseFromRawBytes (AsHash AsStakePoolMetadata) bs =
-      StakePoolMetadataHash <$> Crypto.hashFromBytes bs
+    eitherDeserialiseFromRawBytes (AsHash AsStakePoolMetadata) bs =
+      maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash StakePoolMetadata") $
+        StakePoolMetadataHash <$> Crypto.hashFromBytes bs
 
 --TODO: instance ToJSON StakePoolMetadata where
 

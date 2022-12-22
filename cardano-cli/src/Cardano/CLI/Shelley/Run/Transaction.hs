@@ -726,8 +726,8 @@ runTxBuild era (AnyConsensusModeParams cModeParams) networkId mScriptValidity
         . hoistEither $ notScriptLockedTxIns txinsc nodeEraUTxO
 
       let cAddr = case anyAddressInEra era changeAddr of
-                    Just addr -> addr
-                    Nothing -> error $ "runTxBuild: Byron address used: " <> show changeAddr
+                    Right addr -> addr
+                    Left _ -> error $ "runTxBuild: Byron address used: " <> show changeAddr
 
       -- Why do we cast the era? The user can specify an era prior to the era that the node is currently in.
       -- We cannot use the user specified era to construct a query against a node because it may differ
