@@ -59,18 +59,20 @@ FUNDS_PER_BYRON_ADDRESS=$((${FUNDS_PER_GENESIS_ADDRESS} - 1000000))
 NETWORK_MAGIC=42
 SECURITY_PARAM=10
 
-UNAME=$(uname -s) DATE=
+UNAME="$(uname -s)"
+DATE=
+SED=
 case $UNAME in
-  Darwin )      DATE="gdate";;
-  Linux )       DATE="date";;
+  Darwin )      DATE="gdate"
+                SED="gsed"
+                ;;
+  Linux )       DATE="date"
+                SED="sed"
+                ;;
   MINGW64_NT* ) UNAME="Windows_NT"
-                DATE="date";;
-esac
-
-UNAME=$(uname -s) SED=
-case $UNAME in
-  Darwin )      SED="gsed";;
-  Linux )       SED="sed";;
+                DATE="date"
+                SED="sed"
+                ;;
 esac
 
 sprocket() {

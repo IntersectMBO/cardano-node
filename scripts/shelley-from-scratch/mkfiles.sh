@@ -3,6 +3,22 @@
 set -e
 #set -x
 
+UNAME="$(uname -s)"
+DATE=
+SED=
+case $UNAME in
+  Darwin )      DATE="gdate"
+                SED="gsed"
+                ;;
+  Linux )       DATE="date"
+                SED="sed"
+                ;;
+  MINGW64_NT* ) UNAME="Windows_NT"
+                DATE="date"
+                SED="sed"
+                ;;
+esac
+
 ROOT=example
 
 BFT_NODES="node-bft1 node-bft2"
@@ -20,7 +36,7 @@ fi
 
 # copy and tweak the configuration
 cp configuration/defaults/byron-mainnet/configuration.yaml ${ROOT}/
-sed -i ${ROOT}/configuration.yaml \
+"$SED" -i ${ROOT}/configuration.yaml \
     -e 's/Protocol: RealPBFT/Protocol: TPraos/' \
     -e 's/minSeverity: Info/minSeverity: Debug/'
 
@@ -34,7 +50,8 @@ SUPPLY=1000000000
 # We're going to use really quick epochs (300 seconds), by using short slots 0.2s
 # and K=10, but we'll keep long KES periods so we don't have to bother
 # cycling KES keys
-sed -i ${ROOT}/genesis.spec.json \
+"$SED" \
+    -i ${ROOT}/genesis.spec.json \
     -e 's/"slotLength": 1/"slotLength": 0.2/' \
     -e 's/"activeSlotsCoeff": 5.0e-2/"activeSlotsCoeff": 0.1/' \
     -e 's/"securityParam": 2160/"securityParam": 10/' \

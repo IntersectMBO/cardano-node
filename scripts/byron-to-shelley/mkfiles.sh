@@ -59,10 +59,20 @@ FUNDS_PER_BYRON_ADDRESS=$((${FUNDS_PER_GENESIS_ADDRESS} * 9 / 10))
 NETWORK_MAGIC=42
 SECURITY_PARAM=10
 
-OS=$(uname -s) DATE=
-case $OS in
-  Darwin )       DATE="gdate";;
-  * )            DATE="date";;
+UNAME="$(uname -s)"
+DATE=
+SED=
+case $UNAME in
+  Darwin )      DATE="gdate"
+                SED="gsed"
+                ;;
+  Linux )       DATE="date"
+                SED="sed"
+                ;;
+  MINGW64_NT* ) UNAME="Windows_NT"
+                DATE="date"
+                SED="sed"
+                ;;
 esac
 
 START_TIME="$(${DATE} -d "now + 30 seconds" +%s)"

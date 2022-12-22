@@ -6,10 +6,20 @@ set -e
 set -u
 set -o pipefail
 
-UNAME=$(uname -s) SED=
+UNAME="$(uname -s)"
+DATE=
+SED=
 case $UNAME in
-  Darwin )      SED="gsed";;
-  Linux )       SED="sed";;
+  Darwin )      DATE="gdate"
+                SED="gsed"
+                ;;
+  Linux )       DATE="date"
+                SED="sed"
+                ;;
+  MINGW64_NT* ) UNAME="Windows_NT"
+                DATE="date"
+                SED="sed"
+                ;;
 esac
 
 sprocket() {
@@ -22,14 +32,6 @@ sprocket() {
     echo "$1"
   fi
 }
-
-UNAME=$(uname -s) DATE=
-case $UNAME in
-  Darwin )      DATE="gdate";;
-  Linux )       DATE="date";;
-  MINGW64_NT* ) UNAME="Windows_NT"
-                DATE="date";;
-esac
 
 CARDANO_CLI="${CARDANO_CLI:-cardano-cli}"
 NETWORK_MAGIC=42
