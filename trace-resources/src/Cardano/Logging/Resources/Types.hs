@@ -136,16 +136,12 @@ instance LogFormatting ResourceStats where
       ]
 
 instance MetaTrace ResourceStats where
-  namespaceFor Resources {}  =
+  namespaceFor Resources {} =
     Namespace [] ["Resources"]
-  severityFor  (Namespace _ ["Resources"]) _ =
-    Info
-  severityFor ns _ =
-    error ("ResourceStats>>severityFor: Unknown namespace " ++ show ns)
-  documentFor  (Namespace _ ["NodeInfo"]) =
-    ""
-  documentFor ns =
-     error ("ResourceStats>>documentFor: Unknown namespace " ++ show ns)
+  severityFor  (Namespace _ ["Resources"]) _ = Just Info
+  severityFor _ns _ = Nothing
+  documentFor  (Namespace _ ["Resources"]) = Just ""
+  documentFor _ns = Nothing
   metricsDocFor  (Namespace _ ["Resources"]) =
     [("Resources.Stat.Cputicks", "Kernel-reported CPU ticks (1/100th of a second), since process start")
     ,("Resources.Mem.Resident", "Kernel-reported RSS (resident set size)")
@@ -160,7 +156,6 @@ instance MetaTrace ResourceStats where
     ,("Resources.State.FsWr", "FS bytes written")
     ,("Resources.RTS.Threads","RTS green thread count")
     ]
-  metricsDocFor ns =
-     error ("ResourceStats>>metricsDocFor: Unknown namespace " ++ show ns)
+  metricsDocFor _ns = []
   allNamespaces = [ Namespace [] ["Resources"]]
 
