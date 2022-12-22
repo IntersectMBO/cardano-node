@@ -105,8 +105,9 @@ import           Cardano.Api.Modes (CardanoMode, EpochSlots (..))
 import qualified Cardano.Api.Modes as Api
 import           Cardano.Api.NetworkId (NetworkId (..), NetworkMagic (NetworkMagic))
 import           Cardano.Api.ProtocolParameters
-import           Cardano.Api.Query (CurrentEpochState (..), ProtocolState,
-                   SerialisedCurrentEpochState (..), decodeCurrentEpochState, decodeProtocolState)
+import           Cardano.Api.Query (CurrentEpochState (..), PoolDistribution (unPoolDistr), ProtocolState,
+                   SerialisedCurrentEpochState (..), SerialisedPoolDistribution,
+                   decodeCurrentEpochState, decodePoolDistribution, decodeProtocolState)
 import           Cardano.Api.Utils (textShow)
 import           Cardano.Binary (DecoderError, FromCBOR)
 import qualified Cardano.Chain.Genesis
@@ -1385,9 +1386,10 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
                                  $ obtainDecodeEpochStateConstraints sbe
                                  $ decodeCurrentEpochState serCurrEpochState
 
-  let markSnapshotPoolDistr :: Map (SL.KeyHash 'SL.StakePool Shelley.StandardCrypto) (SL.IndividualPoolStake Shelley.StandardCrypto)
-      markSnapshotPoolDistr = ShelleyAPI.unPoolDistr . ShelleyAPI.calculatePoolDistr . ShelleyAPI._pstakeMark
-                                $ obtainIsStandardCrypto sbe $ ShelleyAPI.esSnapshots cEstate
+  let snapshot :: ShelleyAPI.SnapShot Shelley.StandardCrypto
+      snapshot = ShelleyAPI._pstakeMark $ obtainIsStandardCrypto sbe $ ShelleyAPI.esSnapshots cEstate
+      markSnapshotPoolDistr :: Map (SL.KeyHash 'SL.StakePool Shelley.StandardCrypto) (SL.IndividualPoolStake Shelley.StandardCrypto)
+      markSnapshotPoolDistr = ShelleyAPI.unPoolDistr . ShelleyAPI.calculatePoolDistr $ snapshot
 
   let slotRangeOfInterest = Set.filter
         (not . Ledger.isOverlaySlot firstSlotOfEpoch (getField @"_d" (toLedgerPParams sbe pParams)))
@@ -1515,10 +1517,10 @@ currentEpochEligibleLeadershipSlots :: forall era ledgerera. ()
   -> ProtocolState era
   -> PoolId
   -> SigningKey VrfKey
-  -> SerialisedCurrentEpochState era
+  -> SerialisedPoolDistribution era
   -> EpochNo -- ^ Current EpochInfo
   -> Either LeadershipError (Set SlotNo)
-currentEpochEligibleLeadershipSlots sbe sGen eInfo pParams ptclState poolid (VrfSigningKey vrkSkey) serCurrEpochState currentEpoch = do
+currentEpochEligibleLeadershipSlots sbe sGen eInfo pParams ptclState poolid (VrfSigningKey vrkSkey) serPoolDistr currentEpoch = do
 
   chainDepState :: ChainDepState (Api.ConsensusProtocol era) <-
     first LeaderErrDecodeProtocolStateFailure $ decodeProtocolState ptclState
@@ -1531,17 +1533,10 @@ currentEpochEligibleLeadershipSlots sbe sGen eInfo pParams ptclState poolid (Vrf
   (firstSlotOfEpoch, lastSlotofEpoch) :: (SlotNo, SlotNo) <- first LeaderErrSlotRangeCalculationFailure
     $ Slot.epochInfoRange eInfo currentEpoch
 
-  CurrentEpochState (cEstate :: ShelleyAPI.EpochState (ShelleyLedgerEra era)) <-
-    first LeaderErrDecodeProtocolEpochStateFailure
+  setSnapshotPoolDistr <-
+    first LeaderErrDecodeProtocolEpochStateFailure . fmap (SL.unPoolDistr . unPoolDistr)
       $ obtainDecodeEpochStateConstraints sbe
-      $ decodeCurrentEpochState serCurrEpochState
-
-  -- We need the "set" stake distribution (distribution of the previous epoch)
-  -- in order to calculate the leadership schedule of the current epoch.
-  let setSnapshotPoolDistr :: Map (SL.KeyHash 'SL.StakePool Shelley.StandardCrypto) (SL.IndividualPoolStake Shelley.StandardCrypto)
-      setSnapshotPoolDistr = ShelleyAPI.unPoolDistr . ShelleyAPI.calculatePoolDistr
-                                . ShelleyAPI._pstakeSet . obtainIsStandardCrypto sbe
-                                $ ShelleyAPI.esSnapshots cEstate
+      $ decodePoolDistribution serPoolDistr
 
   let slotRangeOfInterest = Set.filter
         (not . Ledger.isOverlaySlot firstSlotOfEpoch (getField @"_d" (toLedgerPParams sbe pParams)))
