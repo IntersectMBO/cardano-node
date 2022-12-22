@@ -25,7 +25,6 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Util.Process as H
 
-
 -- | Submit the desired epoch to wait to.
 waitUntilEpoch
   :: (MonadCatch m, MonadIO m, MonadTest m)
@@ -41,6 +40,7 @@ waitUntilEpoch fp testnetMagic execConfig desiredEpoch = do
   exists <- liftIO $ doesFileExist fp
   when exists $ liftIO $ removeFile fp
 
+
   void $ H.execCli' execConfig
     [ "query",  "tip"
     , "--testnet-magic", show @Int testnetMagic
@@ -50,7 +50,7 @@ waitUntilEpoch fp testnetMagic execConfig desiredEpoch = do
   tipJSON <- H.leftFailM $ H.readJsonFile fp
   tip <- H.noteShowM $ H.jsonErrorFail $ fromJSON @QueryTipLocalStateOutput tipJSON
   case mEpoch tip of
-    Nothing ->
+    Nothing -> do
       H.failMessage
         callStack "waitUntilEpoch: cardano-cli query tip returned Nothing for EpochNo"
     Just currEpoch ->

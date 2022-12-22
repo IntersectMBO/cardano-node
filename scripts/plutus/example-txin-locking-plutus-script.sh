@@ -143,9 +143,9 @@ $CARDANO_CLI transaction sign \
   --out-file $WORK/alonzo.tx
 
 # SUBMIT $WORK/alonzo.tx
-echo "Submit the tx with plutus script and wait 5 seconds..."
+echo "Submit the tx with plutus script and wait 10 seconds..."
 $CARDANO_CLI transaction submit --tx-file $WORK/alonzo.tx --testnet-magic "$TESTNET_MAGIC"
-sleep 5
+sleep 10
 echo ""
 echo "Querying UTxO at $dummyaddress. If there is ADA at the address the Plutus script successfully executed!"
 echo ""
