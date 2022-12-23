@@ -121,6 +121,7 @@ import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
+import           Cardano.Api.Memo
 
 -- | The values of the set of /updatable/ protocol parameters. At any
 -- particular point on the chain there is a current set of parameters in use.
@@ -294,7 +295,7 @@ data ProtocolParameters =
        protocolParamUTxOCostPerByte :: Maybe Lovelace
 
     }
-  deriving (Eq, Generic, Show)
+  deriving (Eq, Generic, Show, Ord)
 
 instance FromJSON ProtocolParameters where
   parseJSON =
@@ -716,7 +717,7 @@ data ExecutionUnitPrices =
        priceExecutionSteps  :: Rational,
        priceExecutionMemory :: Rational
      }
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 instance ToCBOR ExecutionUnitPrices where
   toCBOR ExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
@@ -770,7 +771,7 @@ fromAlonzoPrices Alonzo.Prices{Alonzo.prSteps, Alonzo.prMem} =
 --
 
 newtype CostModel = CostModel (Map Text Integer)
-  deriving (Eq, Show)
+  deriving (Eq, Show, Ord)
   deriving newtype (ToJSON, FromJSON)
   deriving newtype (ToCBOR, FromCBOR)
 
@@ -1356,7 +1357,12 @@ toLedgerPParams ShelleyBasedEraShelley = toShelleyPParams
 toLedgerPParams ShelleyBasedEraAllegra = toShelleyPParams
 toLedgerPParams ShelleyBasedEraMary    = toShelleyPParams
 toLedgerPParams ShelleyBasedEraAlonzo  = toAlonzoPParams
-toLedgerPParams ShelleyBasedEraBabbage = toBabbagePParams
+toLedgerPParams ShelleyBasedEraBabbage = toBabbagePParamsMemo
+
+
+
+toBabbagePParamsMemo :: ProtocolParameters -> Babbage.PParams ledgerera
+toBabbagePParamsMemo = memoise toBabbagePParams
 
 toShelleyPParams :: ProtocolParameters -> Shelley.PParams ledgerera
 toShelleyPParams ProtocolParameters {
