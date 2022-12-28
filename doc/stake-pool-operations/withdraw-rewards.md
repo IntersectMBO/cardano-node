@@ -1,8 +1,10 @@
 ## Withdrawing rewards
 
 
+**$$
 ### Check the balance of the rewards address:
 
+$$**
     cardano-cli query stake-address-info \
     --mainnet \
     --address $(cat stake.addr)
