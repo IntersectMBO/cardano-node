@@ -17,8 +17,23 @@ jobs:
         os: [ubuntu-latest]
 
     env:
+      # Modify this value to "invalidate" the cabal cache.
+      CABAL_CACHE_VERSION: "2022-12-28"
+
+      # Modify this value to "invalidate" the secp cache.
+      SECP_CACHE_VERSION: "2022-12-23"
+
       # current ref from: 27.02.2022
       SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
+
+      # OpenSSL is installed in a non-standard location in MacOS. See
+      # https://github.com/actions/virtual-environments/blob/main/images/macos/macos-11-Readme.md
+      PKG_CONFIG_PATH: ${{ (matrix.os == 'macos-latest' && '/usr/lib/pkgconfig:/usr/local/opt/openssl@1.1/lib/pkgconfig') || (matrix.os == 'ubuntu-latest' && '/usr/lib/pkgconfig:/usr/local/lib/pkgconfig') || '' }}
+
+      # we need the LD_LIBRARY_PATH env var here because we ended up installing libsecp256k1 into /usr/local,
+      # pkg-config, *does* return the proper location, but the library does not appear to be properly referenced.
+      # FIXME: this is arguably a bug, and pkg-config should return the right values!
+      LD_LIBRARY_PATH: ${{ (matrix.os != 'windows-latest' && '/usr/local/lib') || '' }}
 
     steps:
      # this seems to break something. It _must_ come after the pacman setup
@@ -55,10 +70,17 @@ jobs:
         sudo apt-get -y remove --purge software-properties-common
         sudo apt-get -y autoremove
 
+    - uses: actions/cache@v3
+      name: "Cache secp256k1"
+      with:
+        path: secp256k1
+        key: cache-secp256k1-${{ runner.os }}-${{ env.SECP_CACHE_VERSION }}
+        restore-keys: cache-secp256k1-${{ runner.os }}-${{ env.SECP_CACHE_VERSION }}
+
     - name: "Install secp256k1"
       shell: bash
       env:
-        CI_SECP_FLAGS: "--prefix=/usr"
+        CI_SECP_FLAGS: "--prefix=/usr/local"
         CI_SECP_INSTALL_CMD: sudo
       run: bash .github/workflows/build-secp256k1.bash
 
@@ -87,7 +109,7 @@ jobs:
         dist-dir: dist-newstyle
         store-path: ${{ steps.cabal-store.outputs.cabal-store }}
         threads: 16
-        archive-uri: ${{ secrets.BINARY_CACHE_URI }}
+        archive-uri: ${{ secrets.BINARY_CACHE_URI }}/${{ env.CABAL_CACHE_VERSION }}
         skip: "${{ secrets.BINARY_CACHE_URI == '' }}"
 
     - name: Cabal cache over HTTPS
@@ -96,7 +118,7 @@ jobs:
         dist-dir: dist-newstyle
         store-path: ${{ steps.cabal-store.outputs.cabal-store }}
         threads: 16
-        archive-uri: https://iohk.cache.haskellworks.io
+        archive-uri: https://iohk.cache.haskellworks.io/${{ env.CABAL_CACHE_VERSION }}
         skip: "${{ secrets.BINARY_CACHE_URI != '' }}"
         enable-save: false
 
