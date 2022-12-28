@@ -48,7 +48,12 @@ in rec {
       '';
 
       memory = 1024 * 32;
-      nomad.resources.cpu = 10000;
+
+      nomad = {
+        resources.cpu = 10000;
+
+        driver = "exec";
+      };
     };
   in {
     "ci/push" = mkTask "hydraJobs";
