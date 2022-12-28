@@ -30,6 +30,11 @@ jobs:
       # https://github.com/actions/virtual-environments/blob/main/images/macos/macos-11-Readme.md
       PKG_CONFIG_PATH: ${{ (matrix.os == 'macos-latest' && '/usr/lib/pkgconfig:/usr/local/opt/openssl@1.1/lib/pkgconfig') || (matrix.os == 'ubuntu-latest' && '/usr/lib/pkgconfig:/usr/local/lib/pkgconfig') || '' }}
 
+      # we need the LD_LIBRARY_PATH env var here because we ended up installing libsecp256k1 into /usr/local,
+      # pkg-config, *does* return the proper location, but the library does not appear to be properly referenced.
+      # FIXME: this is arguably a bug, and pkg-config should return the right values!
+      LD_LIBRARY_PATH: ${{ (matrix.os != 'windows-latest' && '/usr/local/lib') || '' }}
+
     steps:
      # this seems to break something. It _must_ come after the pacman setup
      # above. It appears as if PATHEXT is set _after_ ghcup install ghc/cabal, and

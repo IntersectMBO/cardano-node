@@ -46,6 +46,8 @@ jobs:
       # FIXME: this is arguably a bug, and pkg-config should return the right values!
       LD_LIBRARY_PATH: ${{ (matrix.os != 'windows-latest' && '/usr/local/lib') || '' }}
 
+      CACHE_VERSION: "2022-12-28"
+
     steps:
     - name: "WIN: Install System Dependencies via pacman (msys2)"
       if: runner.os == 'Windows'
