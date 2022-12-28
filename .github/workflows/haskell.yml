@@ -42,6 +42,8 @@ jobs:
       # FIXME: this is arguably a bug, and pkg-config should return the right values!
       LD_LIBRARY_PATH: ${{ (matrix.os != 'windows-latest' && '/usr/local/lib') || '' }}
 
+      CACHE_VERSION: "2022-12-28"
+
     steps:
     - name: "WIN: Install System Dependencies via pacman (msys2)"
       if: runner.os == 'Windows'
@@ -224,7 +226,7 @@ jobs:
         dist-dir: dist-newstyle
         store-path: ${{ steps.cabal-store.outputs.cabal-store }}
         threads: 16
-        archive-uri: ${{ secrets.BINARY_CACHE_URI }}
+        archive-uri: ${{ secrets.BINARY_CACHE_URI }}/${{ env.CACHE_VERSION }}
         skip: "${{ secrets.BINARY_CACHE_URI == '' }}"
 
     # It's important to ensure that people who fork this repository can not only successfully build in
@@ -242,7 +244,7 @@ jobs:
         dist-dir: dist-newstyle
         store-path: ${{ steps.cabal-store.outputs.cabal-store }}
         threads: 16
-        archive-uri: https://iohk.cache.haskellworks.io
+        archive-uri: https://iohk.cache.haskellworks.io/${{ env.CACHE_VERSION }}
         skip: "${{ secrets.BINARY_CACHE_URI != '' }}"
         enable-save: false
 
