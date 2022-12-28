@@ -88,14 +88,14 @@ instance MetaTrace Message where
   documentFor   (Namespace _ ["Message3"]) = Just "The third message."
   documentFor   _ns = Nothing
 
-  metricsDocFor (Namespace _ ["Message1"]) = Just
+  metricsDocFor (Namespace _ ["Message1"]) =
     [ ("Metrics1", "A number")
     , ("Metrics2", "A number")
     , ("Metrics3", "A number")
     , ("Metrics4", "A number")
     , ("Metrics5", "A number")
     ]
-  metricsDocFor _ =  Just []
+  metricsDocFor _ =  []
 
   allNamespaces = [ Namespace [] ["Message1"]
                   , Namespace [] ["Message2"]

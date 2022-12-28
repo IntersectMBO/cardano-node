@@ -28,7 +28,7 @@ instance MetaTrace TestMessage where
   severityFor (Namespace _ ["TestMessage"]) _ = Just Info
   privacyFor  (Namespace _ ["TestMessage"]) _ = Just Public
   documentFor (Namespace _ ["TestMessage"]) = Just "Just a test"
-  metricsDocFor (Namespace _ ["TestMessage"]) = Just []
+  metricsDocFor (Namespace _ ["TestMessage"]) = []
   allNamespaces = [Namespace [] ["TestMessage"]]
 
 tracers :: MonadIO m => m (Trace m TestMessage, Trace m TestMessage, Trace m TestMessage)

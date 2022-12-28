@@ -50,12 +50,12 @@ import           Ouroboros.Consensus.Util.Enclose
 import qualified Ouroboros.Network.AnchoredFragment as AF
 
 -- {-# ANN module ("HLint: ignore Redundant bracket" :: Text) #-}
-
+-- TODO implement differently so that it uses configuration
 withAddedToCurrentChainEmptyLimited
   :: Trace IO (ChainDB.TraceEvent blk)
   -> IO (Trace IO (ChainDB.TraceEvent blk))
 withAddedToCurrentChainEmptyLimited tr = do
-  ltr <- limitFrequency 1.25 "AddedToCurrentChainLimiter" tr mempty
+  ltr <- limitFrequency 1.25 "AddedToCurrentChainLimiter" mempty tr
   routingTrace (selecting ltr) tr
  where
     selecting

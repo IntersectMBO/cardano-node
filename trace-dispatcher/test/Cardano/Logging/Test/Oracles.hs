@@ -14,8 +14,6 @@ import           Text.Read (readMaybe)
 import           Cardano.Logging
 import           Cardano.Logging.Test.Types
 
--- import           Debug.Trace
-
 
 -- | Checks for every message that it appears or does not appear at the right
 -- backend. Tests filtering and routing to backends

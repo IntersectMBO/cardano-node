@@ -16,17 +16,15 @@ repeated t n d = do
 
 testLimiting :: IO ()
 testLimiting = do
-  t1 <- standardTracer
-  tf1 <- humanFormatter True (Just "cardano") t1
-  tf2 <- limitFrequency 5 "5 messages per second"
-            (appendPrefixName "tracer1" (contramap Message tf1))
-               (appendPrefixName "limiter1" (contramap Limit tf1))
-  tf3 <- limitFrequency 15 "15 messages per second"
-            (appendPrefixName "tracer2"  (contramap Message tf1))
-               (appendPrefixName "limiter2" (contramap Limit tf1))
-  let t = tf2 <> tf3
-  configureTracers emptyTraceConfig [t]
+  t <- standardTracer
+  tf <- humanFormatter True (Just "cardano") t
+  tflimit <- humanFormatter True (Just "limiter") t
+  tf2 <- limitFrequency 5 "5 messages per second" tflimit tf
+  tf3 <- limitFrequency 15 "15 messages per second" tflimit tf
+  configureTracers emptyTraceConfig [tflimit]
+  configureTracers emptyTraceConfig [tf2, tf3]
+  let tr = tf2 <> tf3
 
-  repeated t 1000 10000 -- 100 messages per second
-  repeated t 20 1000000 -- 1  message per second
-  repeated t 300 100000 -- 10  message per second
+  repeated tr 1000 10000 -- 100 messages per second
+  repeated tr 20 1000000 -- 1  message per second
+  repeated tr 300 100000 -- 10  message per second

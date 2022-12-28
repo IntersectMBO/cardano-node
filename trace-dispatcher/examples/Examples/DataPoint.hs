@@ -31,7 +31,7 @@ instance MetaTrace BaseStats where
   severityFor (Namespace _ ["BaseStats"]) _ = Just Info
   privacyFor  (Namespace _ ["BaseStats"]) _ = Just Public
   documentFor (Namespace _ ["BaseStats"]) = Just "Basic statistics"
-  metricsDocFor (Namespace _ ["BaseStats"]) = Just
+  metricsDocFor (Namespace _ ["BaseStats"]) =
     [ ("measure", "This is the value of a single measurment")
     , ("sum", "This is the sum of all measurments")]
   allNamespaces = [Namespace [] ["BaseStats"]]

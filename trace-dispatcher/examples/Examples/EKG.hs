@@ -27,7 +27,7 @@ instance MetaTrace Measure where
   severityFor (Namespace [] ["Count"]) _ = Just Info
   privacyFor  (Namespace [] ["Count"]) _ = Just Public
   documentFor (Namespace [] ["Count"])  = Just "A counter"
-  metricsDocFor (Namespace [] ["Count"]) = Just
+  metricsDocFor (Namespace [] ["Count"]) =
     [("count", "an integer")]
   allNamespaces = [Namespace [] ["Count"]]
 

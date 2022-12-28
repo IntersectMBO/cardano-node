@@ -32,9 +32,10 @@ import           Data.Text (Text, intercalate, unpack)
 import qualified Control.Tracer as T
 
 import           Cardano.Logging.DocuGenerator (addFiltered, addLimiter)
-import           Cardano.Logging.FrequencyLimiter (LimitingMessage (..), limitFrequency)
+import           Cardano.Logging.FrequencyLimiter (limitFrequency)
 import           Cardano.Logging.Trace
 import           Cardano.Logging.Types
+import           Cardano.Logging.TraceDispatcherMessage
 
 
 -- | Call this function at initialisation, and later for reconfiguration
@@ -93,7 +94,7 @@ isSilentTracer :: forall a. MetaTrace a => TraceConfig -> Namespace a -> Bool
 isSilentTracer tc (Namespace prefixNS _) =
     let allNS = allNamespaces :: [Namespace a]
     in all (\ (Namespace _ innerNS) ->
-                    isFiltered (Namespace prefixNS innerNS :: Namespace a))
+              isFiltered (Namespace prefixNS innerNS :: Namespace a))
            allNS
   where
     isFiltered :: Namespace a -> Bool
@@ -153,7 +154,7 @@ withNamespaceConfig name extract withConfig tr = do
       T.traceWith (unpackTrace tt) (lc, Left Reset)
 
     mkTrace ref (lc, Left (Config c)) = do
-      !val <- extract c (mkNamespace (lcNSPrefix lc) (lcNSInner lc))
+      !val <- extract c (Namespace (lcNSPrefix lc) (lcNSInner lc))
       eitherConf <- liftIO $ readIORef ref
       let nst = lcNSPrefix lc ++ lcNSInner lc
       case eitherConf of
@@ -287,11 +288,11 @@ instance Show (Limiter m a) where
 
 
 -- | Routing and formatting of a trace from the config
-withLimitersFromConfig :: forall a m .(MonadUnliftIO m) =>
-     Trace m a
-  -> Trace m LimitingMessage
+withLimitersFromConfig :: forall a m . (MonadUnliftIO m)
+  => Trace m TraceDispatcherMessage
+  -> Trace m a
   -> m (Trace m a)
-withLimitersFromConfig tr trl = do
+withLimitersFromConfig tri tr = do
     ref <- liftIO $ newIORef Map.empty
     withNamespaceConfig
       "limiters"
@@ -313,7 +314,7 @@ withLimitersFromConfig tr trl = do
           case Map.lookup name state of
             Just limiter -> pure $ Just limiter
             Nothing -> do
-              limiterTrace <- limitFrequency frequency name tr trl
+              limiterTrace <- limitFrequency frequency name tri tr
               let limiter = Limiter name frequency limiterTrace
               liftIO $ writeIORef stateRef (Map.insert name limiter state)
               pure $ Just limiter
@@ -324,8 +325,6 @@ withLimitersFromConfig tr trl = do
       -> m (Trace m a)
     withLimiter Nothing tr' = pure tr'
     withLimiter (Just Nothing) tr' = pure tr'
-
-
     withLimiter (Just (Just (Limiter n d (Trace trli)))) (Trace tr') =
       pure $ Trace $ T.arrow $ T.emit $
         \ case

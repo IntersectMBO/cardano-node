@@ -18,6 +18,13 @@ module Cardano.Logging.Types (
   , LoggingContext(..)
   , emptyLoggingContext
   , Namespace(..)
+  , nsReplacePrefix
+  , nsReplaceInner
+  , nsCast
+  , nsPrependInner
+  , nsGetPrefix
+  , nsGetInner
+  , nsGetComplete
   , MetaTrace(..)
   , DetailLevel(..)
   , Privacy(..)
@@ -102,6 +109,28 @@ instance Show (Namespace a) where
   show (Namespace nsPrefix nsInner) =
     unpack $ intercalate (singleton '.') (nsPrefix ++ nsInner)
 
+nsReplacePrefix :: Namespace a -> [Text] -> Namespace a
+nsReplacePrefix (Namespace _ i) tl =  Namespace tl i
+
+nsReplaceInner :: Namespace a -> [Text] -> Namespace a
+nsReplaceInner (Namespace o _) =  Namespace o
+
+nsPrependInner :: Text -> Namespace a -> Namespace b
+nsPrependInner t (Namespace o i) =  Namespace o (t : i)
+
+nsCast :: Namespace a -> Namespace b
+nsCast (Namespace o i) =  Namespace o i
+
+nsGetInner :: Namespace a -> [Text]
+nsGetInner = nsInner
+
+nsGetPrefix :: Namespace a -> [Text]
+nsGetPrefix = nsPrefix
+
+nsGetComplete :: Namespace a -> [Text]
+nsGetComplete (Namespace [] i) = i
+nsGetComplete (Namespace o i)  = o ++ i
+
 
 -- | Every message needs this to define how to represent itself
 class LogFormatting a where
@@ -131,8 +160,8 @@ class MetaTrace a where
   detailsFor _  _ =  Just DNormal
 
   documentFor   :: Namespace a -> Maybe Text
-  metricsDocFor :: Namespace a -> Maybe [(Text,Text)]
-  metricsDocFor _ = Just []
+  metricsDocFor :: Namespace a -> [(Text,Text)]
+  metricsDocFor _ = []
   allNamespaces :: [Namespace a]
 
 data Metric
