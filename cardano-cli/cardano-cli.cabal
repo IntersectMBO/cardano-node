@@ -173,6 +173,7 @@ test-suite cardano-cli-test
   build-depends:        aeson
                       , bech32            >= 1.1.0
                       , base16-bytestring
+                      , bytestring
                       , cardano-api
                       , cardano-api:gen
                       , cardano-cli
@@ -192,6 +193,7 @@ test-suite cardano-cli-test
                       , yaml
 
   other-modules:        Test.Config.Mainnet
+                        Test.Cli.TxBuildRaw
                         Test.Cli.CliIntermediateFormat
                         Test.Cli.FilePermissions
                         Test.Cli.ITN
@@ -201,8 +203,6 @@ test-suite cardano-cli-test
                         Test.Cli.Pioneers.Exercise2
                         Test.Cli.Pioneers.Exercise3
                         Test.Cli.Pioneers.Exercise4
-                        Test.Cli.Pioneers.Exercise5
-                        Test.Cli.Pioneers.Exercise6
                         Test.Cli.Shelley.Run.Query
                         Test.OptParse
 

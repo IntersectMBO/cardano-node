@@ -13,12 +13,14 @@ import qualified Test.Cli.Pioneers.Exercise3
 import qualified Test.Cli.Pioneers.Exercise4
 import qualified Test.Cli.Shelley.Run.Query
 import qualified Test.Config.Mainnet
+import qualified Test.Cli.TxBuildRaw
 
 main :: IO ()
 main =
   defaultMain
     [ Test.Cli.CliIntermediateFormat.tests
     , Test.Cli.FilePermissions.tests
+    , Test.Cli.TxBuildRaw.tests
     , Test.Cli.ITN.tests
     , Test.Cli.JSON.tests
     , Test.Cli.MultiAssetParsing.tests
