@@ -61,10 +61,17 @@ jobs:
         sudo apt-get -y remove --purge software-properties-common
         sudo apt-get -y autoremove
 
+    - uses: actions/cache@v3
+      name: "Cache secp256k1"
+      with:
+        path: secp256k1
+        key: cache-secp256k1-${{ runner.os }}-${{ env.SECP_CACHE_VERSION }}
+        restore-keys: cache-secp256k1-${{ runner.os }}-${{ env.SECP_CACHE_VERSION }}
+
     - name: "Install secp256k1"
       shell: bash
       env:
-        CI_SECP_FLAGS: "--prefix=/usr"
+        CI_SECP_FLAGS: "--prefix=/usr/local"
         CI_SECP_INSTALL_CMD: sudo
       run: bash .github/workflows/build-secp256k1.bash
 
