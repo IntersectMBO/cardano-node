@@ -12,7 +12,7 @@ repository cardano-haskell-packages
 
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
-index-state: 2022-11-11T00:00:00Z
+index-state: 2022-12-11T00:00:00Z
 index-state: cardano-haskell-packages 2022-11-12T20:00:00Z
 
 packages:

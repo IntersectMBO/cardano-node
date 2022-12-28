@@ -4118,11 +4118,11 @@
     "hackageNix": {
       "flake": false,
       "locked": {
-        "lastModified": 1668148097,
-        "narHash": "sha256-AEq57KGTpvuueDcC1R9kBecQ6JFkI6lBXgS5qNBDorM=",
+        "lastModified": 1671582237,
+        "narHash": "sha256-ojekKUHR6agvvOkPYUtLntMIGAM1J7PzDuVYw62BynU=",
         "owner": "input-output-hk",
         "repo": "hackage.nix",
-        "rev": "0801f3ab96ab5cfaf3e016e87e68be5ed00e7a70",
+        "rev": "9f63ca5175fcaf366e611658e8b31f4646c6d387",
         "type": "github"
       },
       "original": {
