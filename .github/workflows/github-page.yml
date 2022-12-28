@@ -17,6 +17,12 @@ jobs:
         os: [ubuntu-latest]
 
     env:
+      # Modify this value to "invalidate" the cabal cache.
+      CABAL_CACHE_VERSION: "2022-12-28"
+
+      # Modify this value to "invalidate" the secp cache.
+      SECP_CACHE_VERSION: "2022-12-23"
+
       # current ref from: 27.02.2022
       SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
 
@@ -87,7 +93,7 @@ jobs:
         dist-dir: dist-newstyle
         store-path: ${{ steps.cabal-store.outputs.cabal-store }}
         threads: 16
-        archive-uri: ${{ secrets.BINARY_CACHE_URI }}
+        archive-uri: ${{ secrets.BINARY_CACHE_URI }}/${{ env.CABAL_CACHE_VERSION }}
         skip: "${{ secrets.BINARY_CACHE_URI == '' }}"
 
     - name: Cabal cache over HTTPS
@@ -96,7 +102,7 @@ jobs:
         dist-dir: dist-newstyle
         store-path: ${{ steps.cabal-store.outputs.cabal-store }}
         threads: 16
-        archive-uri: https://iohk.cache.haskellworks.io
+        archive-uri: https://iohk.cache.haskellworks.io/${{ env.CABAL_CACHE_VERSION }}
         skip: "${{ secrets.BINARY_CACHE_URI != '' }}"
         enable-save: false
 
