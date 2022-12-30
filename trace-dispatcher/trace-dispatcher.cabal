@@ -14,7 +14,11 @@ extra-source-files:     CHANGELOG.md
                         README.md
                         doc/trace-dispatcher.md
 
+common project-config
+  default-language:     Haskell2010
+
 library
+  import:               project-config
   hs-source-dirs:       src
   exposed-modules:      Cardano.Logging
                         Cardano.Logging.Types
@@ -35,7 +39,6 @@ library
                         Control.Tracer.Arrow
                         Control.Tracer
 
-  default-language:     Haskell2010
   default-extensions:   OverloadedStrings
   build-depends:        base >=4.12 && <5
                       , aeson                         >= 2.1.0.0
@@ -80,6 +83,7 @@ library
 
 
 executable trace-dispatcher-examples
+  import:               project-config
   main-is:              Main.hs
   other-modules:        Examples.TestObjects
                         Examples.Aggregation
@@ -91,7 +95,6 @@ executable trace-dispatcher-examples
                         Examples.FrequencyLimiting
                         Examples.Documentation
   hs-source-dirs:       examples
-  default-language:     Haskell2010
   default-extensions:   OverloadedStrings
   build-depends:        base >=4.12 && <5
                       , aeson                         >= 2.1.0.0
@@ -122,6 +125,7 @@ executable trace-dispatcher-examples
                         -Wno-incomplete-patterns
 
 test-suite trace-dispatcher-test
+  import:               project-config
   type:                 exitcode-stdio-1.0
   hs-source-dirs:       test
   main-is:              trace-dispatcher-test.hs
@@ -132,7 +136,6 @@ test-suite trace-dispatcher-test
                         Cardano.Logging.Test.Messages
                         Cardano.Logging.Test.Script
 
-  default-language:     Haskell2010
   default-extensions:   OverloadedStrings
   build-depends:        base >=4.12 && <5
                       , aeson                         >= 2.1.0.0
@@ -170,10 +173,10 @@ test-suite trace-dispatcher-test
                         -Wno-incomplete-patterns
 
 benchmark trace-dispatcher-bench
+  import:               project-config
   type:                 exitcode-stdio-1.0
   hs-source-dirs:       bench, test
   main-is:              trace-dispatcher-bench.hs
-  default-language:     Haskell2010
   default-extensions:   OverloadedStrings
   other-modules:        Cardano.Logging.Test.Types
                         Cardano.Logging.Test.Oracles
