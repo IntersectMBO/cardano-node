@@ -1,161 +1,162 @@
-cabal-version: 2.4
+cabal-version: 3.0
 
-name:                  locli
-version:               1.29
-description:           Cardano log analysis CLI.
-author:                IOHK
-maintainer:            operations@iohk.io
-license:               Apache-2.0
-license-files:
-  NOTICE
-build-type:            Simple
+name:                   locli
+version:                1.29
+description:            Cardano log analysis CLI.
+copyright:              2023 Input Output (Hong Kong) Ltd.
+author:                 IOHK
+maintainer:             operations@iohk.io
+license:                Apache-2.0
+license-files:          LICENSE
+                        NOTICE
+build-type:             Simple
 
-common base
-  default-language:    Haskell2010
-  default-extensions:  BangPatterns
-                       BlockArguments
-                       DeriveGeneric
-                       DerivingStrategies
-                       DerivingVia
-                       FlexibleContexts
-                       FlexibleInstances
-                       GADTs
-                       ImportQualifiedPost
-                       LambdaCase
-                       MultiParamTypeClasses
-                       NamedFieldPuns
-                       NoImplicitPrelude
-                       OverloadedStrings
-                       PartialTypeSignatures
-                       RankNTypes
-                       RecordWildCards
-                       ScopedTypeVariables
-                       StandaloneDeriving
-                       TupleSections
-                       TypeApplications
-                       TypeFamilies
-                       TypeInType
-                       ViewPatterns
+common project-config
+  default-language:     Haskell2010
+  default-extensions:   BangPatterns
+                        BlockArguments
+                        DeriveGeneric
+                        DerivingStrategies
+                        DerivingVia
+                        FlexibleContexts
+                        FlexibleInstances
+                        GADTs
+                        ImportQualifiedPost
+                        LambdaCase
+                        MultiParamTypeClasses
+                        NamedFieldPuns
+                        NoImplicitPrelude
+                        OverloadedStrings
+                        PartialTypeSignatures
+                        RankNTypes
+                        RecordWildCards
+                        ScopedTypeVariables
+                        StandaloneDeriving
+                        TupleSections
+                        TypeApplications
+                        TypeFamilies
+                        TypeInType
+                        ViewPatterns
 
-  ghc-options:         -Wall
-                       -Wincomplete-record-updates
-                       -Wincomplete-uni-patterns
-                       -Wredundant-constraints
-                       -Wpartial-fields
-                       -Wcompat
-                       -Wno-all-missed-specialisations
+  ghc-options:          -Wall
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wredundant-constraints
+                        -Wpartial-fields
+                        -Wcompat
+                        -Wno-all-missed-specialisations
 
-  build-depends:       base
+  build-depends:        base
 
   if os(windows)
     buildable: False
 
 library
-  import:              base
-  hs-source-dirs:      src
+  import:               project-config
+  hs-source-dirs:       src
 
-  exposed-modules:     Data.Accum
-                       Data.CDF
-                       Data.DataDomain
+  exposed-modules:      Data.Accum
+                        Data.CDF
+                        Data.DataDomain
 
-                       Cardano.Command
-                       Cardano.Report
-                       Cardano.TopHandler
-                       Cardano.Util
+                        Cardano.Command
+                        Cardano.Report
+                        Cardano.TopHandler
+                        Cardano.Util
 
-                       Cardano.Analysis.API
-                       Cardano.Analysis.API.Chain
-                       Cardano.Analysis.API.ChainFilter
-                       Cardano.Analysis.API.Context
-                       Cardano.Analysis.API.Dictionary
-                       Cardano.Analysis.API.Field
-                       Cardano.Analysis.API.Ground
-                       Cardano.Analysis.API.Metrics
-                       Cardano.Analysis.API.Run
-                       Cardano.Analysis.API.Types
-                       Cardano.Analysis.API.LocliVersion
+                        Cardano.Analysis.API
+                        Cardano.Analysis.API.Chain
+                        Cardano.Analysis.API.ChainFilter
+                        Cardano.Analysis.API.Context
+                        Cardano.Analysis.API.Dictionary
+                        Cardano.Analysis.API.Field
+                        Cardano.Analysis.API.Ground
+                        Cardano.Analysis.API.Metrics
+                        Cardano.Analysis.API.Run
+                        Cardano.Analysis.API.Types
+                        Cardano.Analysis.API.LocliVersion
 
-                       Cardano.Analysis.BlockProp
-                       Cardano.Analysis.MachPerf
-                       Cardano.Analysis.Summary
+                        Cardano.Analysis.BlockProp
+                        Cardano.Analysis.MachPerf
+                        Cardano.Analysis.Summary
 
-                       Cardano.JSON
-                       Cardano.Org
-                       Cardano.Render
+                        Cardano.JSON
+                        Cardano.Org
+                        Cardano.Render
 
-                       Cardano.Unlog.LogObject
-                       Cardano.Unlog.Resources
+                        Cardano.Unlog.LogObject
+                        Cardano.Unlog.Resources
 
-  other-modules:       Paths_locli
-  autogen-modules:     Paths_locli
+  other-modules:        Paths_locli
+  autogen-modules:      Paths_locli
 
-  build-depends:       aeson
-                     , Histogram
-                     , aeson-pretty
-                     , async
-                     , attoparsec
-                     , attoparsec-iso8601
-                     , bytestring
-                     , cardano-git-rev
-                     , cardano-ledger-core
-                     , cardano-prelude
-                     , cardano-slotting
-                     , containers
-                     , deepseq
-                     , directory
-                     , ede
-                     , extra
-                     , file-embed
-                     , filepath
-                     , fingertree
-                     , ghc
-                     , gnuplot
-                     , iohk-monitoring
-                     , optparse-applicative-fork
-                     , optparse-generic
-                     , ouroboros-consensus
-                     -- for Data.SOP.Strict:
-                     , ouroboros-network
-                     , process
-                     , quiet
-                     , scientific
-                     , split
-                     , statistics
-                     , system-filepath
-                     , template-haskell
-                     , text
-                     , text-short
-                     , time
-                     , trace-resources
-                     , transformers
-                     , transformers-except
-                     , unix
-                     , unordered-containers
-                     , utf8-string
-                     , vector
-                     , cardano-strict-containers == 0.1.0.1
+  build-depends:        aeson
+                      , Histogram
+                      , aeson-pretty
+                      , async
+                      , attoparsec
+                      , attoparsec-iso8601
+                      , bytestring
+                      , cardano-git-rev
+                      , cardano-ledger-core
+                      , cardano-prelude
+                      , cardano-slotting
+                      , containers
+                      , deepseq
+                      , directory
+                      , ede
+                      , extra
+                      , file-embed
+                      , filepath
+                      , fingertree
+                      , ghc
+                      , gnuplot
+                      , iohk-monitoring
+                      , optparse-applicative-fork
+                      , optparse-generic
+                      , ouroboros-consensus
+                      -- for Data.SOP.Strict:
+                      , ouroboros-network
+                      , process
+                      , quiet
+                      , scientific
+                      , split
+                      , statistics
+                      , system-filepath
+                      , template-haskell
+                      , text
+                      , text-short
+                      , time
+                      , trace-resources
+                      , transformers
+                      , transformers-except
+                      , unix
+                      , unordered-containers
+                      , utf8-string
+                      , vector
+                      , cardano-strict-containers == 0.1.0.1
 
 executable locli
-  import:              base
+  import:               project-config
 
-  hs-source-dirs:      app
-  main-is:             locli.hs
-  ghc-options:         -threaded
-                       -Wall
-                       -rtsopts
-                       "-with-rtsopts=-T -N7 -A2m -qb -H64m"
+  hs-source-dirs:       app
+  main-is:              locli.hs
+  ghc-options:          -threaded
+                        -Wall
+                        -rtsopts
+                        "-with-rtsopts=-T -N7 -A2m -qb -H64m"
 
-  build-depends:       aeson
-                     , cardano-prelude
-                     , locli
-                     , optparse-applicative-fork
-                     , text
-                     , text-short
-                     , transformers
-                     , transformers-except
+  build-depends:        aeson
+                      , cardano-prelude
+                      , locli
+                      , optparse-applicative-fork
+                      , text
+                      , text-short
+                      , transformers
+                      , transformers-except
 
 test-suite test-locli
-  import:               base
+  import:               project-config
 
   hs-source-dirs:       test
   main-is:              test-locli.hs

@@ -1,18 +1,18 @@
 cabal-version: 3.0
 
-name:                  cardano-topology
-version:               1.36.0
-description:           A cardano topology generator
-author:                IOHK
-maintainer:            operations@iohk.io
-license:               Apache-2.0
-license-files:         LICENSE
-                       NOTICE
-build-type:            Simple
-
-common base                         { build-depends: base                             >= 4.14       && < 4.15     }
+name:                   cardano-topology
+version:                1.36.0
+description:            A cardano topology generator
+copyright:              2023 Input Output (Hong Kong) Ltd.
+author:                 IOHK
+maintainer:             operations@iohk.io
+license:                Apache-2.0
+license-files:          LICENSE
+                        NOTICE
+build-type:             Simple
 
 common project-config
+  build-depends:        base >= 4.14 && < 4.15
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
   ghc-options:          -Wall
@@ -24,7 +24,7 @@ common project-config
                         -Wredundant-constraints
 
 executable cardano-topology
-  import:               base, project-config
+  import:               project-config
   hs-source-dirs:       .
   main-is:              cardano-topology.hs
   ghc-options:          -threaded

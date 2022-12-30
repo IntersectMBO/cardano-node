@@ -2,6 +2,7 @@ cabal-version: 3.0
 
 name:                   cardano-git-rev
 version:                0.1.0.0
+copyright:              2023 Input Output (Hong Kong) Ltd.
 author:                 IOHK
 maintainer:             operations@iohk.io
 license:                Apache-2.0
@@ -11,15 +12,14 @@ build-type:             Simple
 extra-source-files:     README.md
 
 flag systemd
-  description: Enable systemd support
-  default:     True
-  manual:      False
-
-common base                         { build-depends: base                             >= 4.14       && < 4.15     }
+  description:          Enable systemd support
+  default:              True
+  manual:               False
 
 common project-config
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
+  build-depends: base   >= 4.14 && < 4.15
 
   ghc-options:          -Wall
                         -Wcompat
@@ -30,7 +30,7 @@ common project-config
                         -Wunused-packages
 
 library
-  import:               base, project-config
+  import:               project-config
 
   hs-source-dirs:       src
 

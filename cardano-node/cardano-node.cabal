@@ -3,6 +3,7 @@ cabal-version: 3.0
 name:                   cardano-node
 version:                1.36.0
 description:            The cardano full node
+copyright:              2023 Input Output (Hong Kong) Ltd.
 author:                 IOHK
 maintainer:             operations@iohk.io
 license:                Apache-2.0
@@ -12,21 +13,20 @@ build-type:             Simple
 extra-source-files:     ChangeLog.md
 
 Flag unexpected_thunks
-  Description:    Turn on unexpected thunks checks
-  Default:        False
+  Description:          Turn on unexpected thunks checks
+  Default:              False
 
 flag systemd
-  description:    Enable systemd support
-  default:        True
-  manual:         False
-
-common base                         { build-depends: base                             >= 4.14       && < 4.15     }
+  description:          Enable systemd support
+  default:              True
+  manual:               False
 
 common project-config
   default-language:     Haskell2010
 
   default-extensions:   NoImplicitPrelude
                         OverloadedStrings
+  build-depends:        base >= 4.14 && < 4.15
 
   ghc-options:          -Wall
                         -Wcompat
@@ -46,85 +46,85 @@ common maybe-unix
     build-depends:      unix
 
 library
-  import:               base, project-config
+  import:               project-config
                       , maybe-unix
                       , maybe-Win32
   if flag(unexpected_thunks)
-    cpp-options: -DUNEXPECTED_THUNKS
+    cpp-options:        -DUNEXPECTED_THUNKS
 
   if os(linux) && flag(systemd)
-    cpp-options: -DSYSTEMD
-    build-depends:     lobemo-scribe-systemd
-                     , systemd
+    cpp-options:        -DSYSTEMD
+    build-depends:      lobemo-scribe-systemd
+                      , systemd
 
-  hs-source-dirs:      src
+  hs-source-dirs:       src
 
-  exposed-modules:     Cardano.Node.Configuration.Logging
-                       Cardano.Node.Configuration.NodeAddress
-                       Cardano.Node.Configuration.POM
-                       Cardano.Node.Configuration.Socket
-                       Cardano.Node.Configuration.Topology
-                       Cardano.Node.Configuration.TopologyP2P
-                       Cardano.Node.Handlers.Shutdown
-                       Cardano.Node.Handlers.TopLevel
-                       Cardano.Node.Orphans
-                       Cardano.Node.Protocol
-                       Cardano.Node.Protocol.Alonzo
-                       Cardano.Node.Protocol.Byron
-                       Cardano.Node.Protocol.Cardano
-                       Cardano.Node.Protocol.Shelley
-                       Cardano.Node.Protocol.Types
-                       Cardano.Node.Parsers
-                       Cardano.Node.Queries
-                       Cardano.Node.Run
-                       Cardano.Node.STM
-                       Cardano.Node.Startup
-                       Cardano.Node.TraceConstraints
-                       Cardano.Node.Tracing
-                       Cardano.Node.Types
-                       Cardano.Node.Tracing.API
-                       Cardano.Node.Tracing.Compat
-                       Cardano.Node.Tracing.DefaultTraceConfig
-                       Cardano.Node.Tracing.Documentation
-                       Cardano.Node.Tracing.Era.Byron
-                       Cardano.Node.Tracing.Era.HardFork
-                       Cardano.Node.Tracing.Era.Shelley
-                       Cardano.Node.Tracing.Peers
-                       Cardano.Node.Tracing.StateRep
-                       Cardano.Node.Tracing.Tracers
-                       Cardano.Node.Tracing.Tracers.BlockReplayProgress
-                       Cardano.Node.Tracing.Tracers.ChainDB
-                       Cardano.Node.Tracing.Tracers.Consensus
-                       Cardano.Node.Tracing.Tracers.ConsensusStartupException
-                       Cardano.Node.Tracing.Tracers.Diffusion
-                       Cardano.Node.Tracing.Tracers.KESInfo
-                       Cardano.Node.Tracing.Tracers.StartLeadershipCheck
-                       Cardano.Node.Tracing.Tracers.ForgingThreadStats
-                       Cardano.Node.Tracing.Tracers.Resources
-                       Cardano.Node.Tracing.Tracers.Peer
-                       Cardano.Node.Tracing.Tracers.Startup
-                       Cardano.Node.Tracing.Tracers.Shutdown
-                       Cardano.Node.Tracing.Tracers.P2P
-                       Cardano.Node.Tracing.Tracers.NonP2P
-                       Cardano.Node.Tracing.Tracers.NodeToClient
-                       Cardano.Node.Tracing.Tracers.NodeToNode
-                       Cardano.Node.Tracing.Formatting
-                       Cardano.Node.Tracing.Render
-                       Cardano.Tracing.Config
-                       Cardano.Tracing.Metrics
-                       Cardano.Tracing.Peer
-                       Cardano.Tracing.Render
-                       Cardano.Tracing.Startup
-                       Cardano.Tracing.Shutdown
-                       Cardano.Tracing.Tracers
-                       Cardano.Tracing.OrphanInstances.Byron
-                       Cardano.Tracing.OrphanInstances.Common
-                       Cardano.Tracing.OrphanInstances.Consensus
-                       Cardano.Tracing.OrphanInstances.HardFork
-                       Cardano.Tracing.OrphanInstances.Network
-                       Cardano.Tracing.OrphanInstances.Shelley
+  exposed-modules:      Cardano.Node.Configuration.Logging
+                        Cardano.Node.Configuration.NodeAddress
+                        Cardano.Node.Configuration.POM
+                        Cardano.Node.Configuration.Socket
+                        Cardano.Node.Configuration.Topology
+                        Cardano.Node.Configuration.TopologyP2P
+                        Cardano.Node.Handlers.Shutdown
+                        Cardano.Node.Handlers.TopLevel
+                        Cardano.Node.Orphans
+                        Cardano.Node.Protocol
+                        Cardano.Node.Protocol.Alonzo
+                        Cardano.Node.Protocol.Byron
+                        Cardano.Node.Protocol.Cardano
+                        Cardano.Node.Protocol.Shelley
+                        Cardano.Node.Protocol.Types
+                        Cardano.Node.Parsers
+                        Cardano.Node.Queries
+                        Cardano.Node.Run
+                        Cardano.Node.STM
+                        Cardano.Node.Startup
+                        Cardano.Node.TraceConstraints
+                        Cardano.Node.Tracing
+                        Cardano.Node.Types
+                        Cardano.Node.Tracing.API
+                        Cardano.Node.Tracing.Compat
+                        Cardano.Node.Tracing.DefaultTraceConfig
+                        Cardano.Node.Tracing.Documentation
+                        Cardano.Node.Tracing.Era.Byron
+                        Cardano.Node.Tracing.Era.HardFork
+                        Cardano.Node.Tracing.Era.Shelley
+                        Cardano.Node.Tracing.Peers
+                        Cardano.Node.Tracing.StateRep
+                        Cardano.Node.Tracing.Tracers
+                        Cardano.Node.Tracing.Tracers.BlockReplayProgress
+                        Cardano.Node.Tracing.Tracers.ChainDB
+                        Cardano.Node.Tracing.Tracers.Consensus
+                        Cardano.Node.Tracing.Tracers.ConsensusStartupException
+                        Cardano.Node.Tracing.Tracers.Diffusion
+                        Cardano.Node.Tracing.Tracers.KESInfo
+                        Cardano.Node.Tracing.Tracers.StartLeadershipCheck
+                        Cardano.Node.Tracing.Tracers.ForgingThreadStats
+                        Cardano.Node.Tracing.Tracers.Resources
+                        Cardano.Node.Tracing.Tracers.Peer
+                        Cardano.Node.Tracing.Tracers.Startup
+                        Cardano.Node.Tracing.Tracers.Shutdown
+                        Cardano.Node.Tracing.Tracers.P2P
+                        Cardano.Node.Tracing.Tracers.NonP2P
+                        Cardano.Node.Tracing.Tracers.NodeToClient
+                        Cardano.Node.Tracing.Tracers.NodeToNode
+                        Cardano.Node.Tracing.Formatting
+                        Cardano.Node.Tracing.Render
+                        Cardano.Tracing.Config
+                        Cardano.Tracing.Metrics
+                        Cardano.Tracing.Peer
+                        Cardano.Tracing.Render
+                        Cardano.Tracing.Startup
+                        Cardano.Tracing.Shutdown
+                        Cardano.Tracing.Tracers
+                        Cardano.Tracing.OrphanInstances.Byron
+                        Cardano.Tracing.OrphanInstances.Common
+                        Cardano.Tracing.OrphanInstances.Consensus
+                        Cardano.Tracing.OrphanInstances.HardFork
+                        Cardano.Tracing.OrphanInstances.Network
+                        Cardano.Tracing.OrphanInstances.Shelley
 
-  other-modules:       Paths_cardano_node
+  other-modules:        Paths_cardano_node
 
   build-depends:        aeson             >= 1.5.6.0
                       , async
@@ -189,7 +189,7 @@ library
                       , yaml
 
 executable cardano-node
-  import:               base, project-config
+  import:               project-config
   hs-source-dirs:       app
   main-is:              cardano-node.hs
   ghc-options:          -threaded
@@ -209,7 +209,7 @@ executable cardano-node
                       , text
 
 test-suite cardano-node-test
-  import:               base, project-config
+  import:               project-config
                       , maybe-unix
   hs-source-dirs:       test
   main-is:              cardano-node-test.hs

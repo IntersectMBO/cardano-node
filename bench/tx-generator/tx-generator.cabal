@@ -1,23 +1,24 @@
-name:                  tx-generator
-version:               2.4
-description:           The transaction generator for cardano node
-author:                IOHK
-maintainer:            operations@iohk.io
-license:               Apache-2.0
-license-files:
-  LICENSE
-  NOTICE
-build-type:            Simple
-cabal-version:         >= 2.0
-extra-source-files:    README.md
-data-files:            data/protocol-parameters.json
+cabal-version: 3.0
+
+name:                   tx-generator
+version:                2.4
+description:            The transaction generator for cardano node
+copyright:              2023 Input Output (Hong Kong) Ltd.
+author:                 IOHK
+maintainer:             operations@iohk.io
+license:                Apache-2.0
+license-files:          LICENSE
+                        NOTICE
+build-type:             Simple
+extra-source-files:     README.md
+data-files:             data/protocol-parameters.json
 
 common project-config
   if os(windows)
     buildable: False
 
 library
-  hs-source-dirs:      src
+  hs-source-dirs:       src
   ghc-options:          -Wall
                         -Wcompat
                         -Wincomplete-record-updates
@@ -29,153 +30,153 @@ library
                         -Wwarn=deprecations
 
   exposed-modules:
-                       Cardano.Benchmarking.Command
-                       Cardano.Benchmarking.Compiler
-                       Cardano.Benchmarking.GeneratorTx
-                       Cardano.Benchmarking.GeneratorTx.NodeToNode
-                       Cardano.Benchmarking.GeneratorTx.SizedMetadata
-                       Cardano.Benchmarking.GeneratorTx.Submission
-                       Cardano.Benchmarking.GeneratorTx.SubmissionClient
-                       Cardano.Benchmarking.LogTypes
-                       Cardano.Benchmarking.OuroborosImports
-                       Cardano.Benchmarking.Script
-                       Cardano.Benchmarking.Script.Action
-                       Cardano.Benchmarking.Script.Aeson
-                       Cardano.Benchmarking.Script.Core
-                       Cardano.Benchmarking.Script.Env
-                       Cardano.Benchmarking.Script.NodeConfig
-                       Cardano.Benchmarking.Script.Selftest
-                       Cardano.Benchmarking.Script.Types
-                       Cardano.Benchmarking.TpsThrottle
-                       Cardano.Benchmarking.Tracer
-                       Cardano.Benchmarking.Types
-                       Cardano.Benchmarking.Version
-                       Cardano.Benchmarking.Wallet
-                       Cardano.Benchmarking.PlutusExample
+                        Cardano.Benchmarking.Command
+                        Cardano.Benchmarking.Compiler
+                        Cardano.Benchmarking.GeneratorTx
+                        Cardano.Benchmarking.GeneratorTx.NodeToNode
+                        Cardano.Benchmarking.GeneratorTx.SizedMetadata
+                        Cardano.Benchmarking.GeneratorTx.Submission
+                        Cardano.Benchmarking.GeneratorTx.SubmissionClient
+                        Cardano.Benchmarking.LogTypes
+                        Cardano.Benchmarking.OuroborosImports
+                        Cardano.Benchmarking.Script
+                        Cardano.Benchmarking.Script.Action
+                        Cardano.Benchmarking.Script.Aeson
+                        Cardano.Benchmarking.Script.Core
+                        Cardano.Benchmarking.Script.Env
+                        Cardano.Benchmarking.Script.NodeConfig
+                        Cardano.Benchmarking.Script.Selftest
+                        Cardano.Benchmarking.Script.Types
+                        Cardano.Benchmarking.TpsThrottle
+                        Cardano.Benchmarking.Tracer
+                        Cardano.Benchmarking.Types
+                        Cardano.Benchmarking.Version
+                        Cardano.Benchmarking.Wallet
+                        Cardano.Benchmarking.PlutusExample
 
-                       Cardano.TxGenerator.Fund
-                       Cardano.TxGenerator.FundQueue
-                       Cardano.TxGenerator.Genesis
-                       Cardano.TxGenerator.PureExample
-                       Cardano.TxGenerator.Script.Types
-                       Cardano.TxGenerator.Setup.NixService
-                       Cardano.TxGenerator.Setup.NodeConfig
-                       Cardano.TxGenerator.Setup.Plutus
-                       Cardano.TxGenerator.Setup.SigningKey
-                       Cardano.TxGenerator.Types
-                       Cardano.TxGenerator.Tx
-                       Cardano.TxGenerator.Utils
-                       Cardano.TxGenerator.UTxO
+                        Cardano.TxGenerator.Fund
+                        Cardano.TxGenerator.FundQueue
+                        Cardano.TxGenerator.Genesis
+                        Cardano.TxGenerator.PureExample
+                        Cardano.TxGenerator.Script.Types
+                        Cardano.TxGenerator.Setup.NixService
+                        Cardano.TxGenerator.Setup.NodeConfig
+                        Cardano.TxGenerator.Setup.Plutus
+                        Cardano.TxGenerator.Setup.SigningKey
+                        Cardano.TxGenerator.Types
+                        Cardano.TxGenerator.Tx
+                        Cardano.TxGenerator.Utils
+                        Cardano.TxGenerator.UTxO
 
-                       Cardano.TxGenerator.Internal.Orphans
+                        Cardano.TxGenerator.Internal.Orphans
 
 
-  other-modules:       Cardano.TxGenerator.Internal.Fifo
-                       -- Cardano.TxGenerator.Internal.Orphans
-                       Paths_tx_generator
+  other-modules:        Cardano.TxGenerator.Internal.Fifo
+                        -- Cardano.TxGenerator.Internal.Orphans
+                        Paths_tx_generator
 
-  autogen-modules:     Paths_tx_generator
+  autogen-modules:      Paths_tx_generator
 
-  build-depends:       aeson
-                     , aeson-pretty
-                     , async
-                     , attoparsec
-                     , base >=4.12 && <5
-                     , base16-bytestring
-                     , bytestring
-                     , cardano-api
-                     , cardano-binary
-                     , cardano-cli
-                     , cardano-crypto-class
-                     , cardano-crypto-wrapper
-                     , cardano-data
-                     , cardano-git-rev
-                     , cardano-ledger-alonzo
-                     , cardano-ledger-byron
-                     , cardano-node
-                     , cardano-prelude
-                     , contra-tracer
-                     , cborg >= 0.2.2 && < 0.3
-                     , containers
-                     , constraints-extras
-                     , dlist
-                     , extra
-                     , formatting
-                     , generic-monoid
-                     , ghc-prim
-                     , io-classes ^>= 0.3
-                     , network
-                     , network-mux
-                     , optparse-applicative-fork
-                     , ouroboros-consensus
-                     , ouroboros-consensus-byron
-                     , ouroboros-consensus-cardano
-                     , ouroboros-consensus-shelley
-                     , ouroboros-network
-                     , ouroboros-network-framework
-                     , plutus-ledger-api
-                     , random
-                     , serialise
-                     , streaming
-                     , strict-stm
-                     , cardano-ledger-shelley
-                     , stm
-                     , text
-                     , time
-                     , trace-dispatcher
-                     , trace-forward
-                     , transformers
-                     , transformers-except
-                     , unordered-containers
-                     , yaml
+  build-depends:        aeson
+                      , aeson-pretty
+                      , async
+                      , attoparsec
+                      , base >=4.12 && <5
+                      , base16-bytestring
+                      , bytestring
+                      , cardano-api
+                      , cardano-binary
+                      , cardano-cli
+                      , cardano-crypto-class
+                      , cardano-crypto-wrapper
+                      , cardano-data
+                      , cardano-git-rev
+                      , cardano-ledger-alonzo
+                      , cardano-ledger-byron
+                      , cardano-node
+                      , cardano-prelude
+                      , contra-tracer
+                      , cborg >= 0.2.2 && < 0.3
+                      , containers
+                      , constraints-extras
+                      , dlist
+                      , extra
+                      , formatting
+                      , generic-monoid
+                      , ghc-prim
+                      , io-classes ^>= 0.3
+                      , network
+                      , network-mux
+                      , optparse-applicative-fork
+                      , ouroboros-consensus
+                      , ouroboros-consensus-byron
+                      , ouroboros-consensus-cardano
+                      , ouroboros-consensus-shelley
+                      , ouroboros-network
+                      , ouroboros-network-framework
+                      , plutus-ledger-api
+                      , random
+                      , serialise
+                      , streaming
+                      , strict-stm
+                      , cardano-ledger-shelley
+                      , stm
+                      , text
+                      , time
+                      , trace-dispatcher
+                      , trace-forward
+                      , transformers
+                      , transformers-except
+                      , unordered-containers
+                      , yaml
 
-  default-language:    Haskell2010
-  default-extensions: OverloadedStrings
+  default-language:     Haskell2010
+  default-extensions:   OverloadedStrings
 
-  ghc-options:         -Wall
-                       -fno-warn-safe
-                       -fno-warn-unsafe
-                       -fno-warn-missing-import-lists
-                       -Wno-unticked-promoted-constructors
-                       -Wincomplete-record-updates
-                       -Wincomplete-uni-patterns
-                       -Wredundant-constraints
-                       -Wpartial-fields
-                       -Wcompat
+  ghc-options:          -Wall
+                        -fno-warn-safe
+                        -fno-warn-unsafe
+                        -fno-warn-missing-import-lists
+                        -Wno-unticked-promoted-constructors
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wredundant-constraints
+                        -Wpartial-fields
+                        -Wcompat
 
 executable tx-generator
-  hs-source-dirs:      app
-  main-is:             tx-generator.hs
-  default-language:    Haskell2010
-  ghc-options:         -threaded
-                       -Wall
-                       -rtsopts
-                       "-with-rtsopts=-T"
+  hs-source-dirs:       app
+  main-is:              tx-generator.hs
+  default-language:     Haskell2010
+  ghc-options:          -threaded
+                        -Wall
+                        -rtsopts
+                        "-with-rtsopts=-T"
 
-  build-depends:       base >=4.12 && <5
-                     , tx-generator
+  build-depends:        base >=4.12 && <5
+                      , tx-generator
 
 test-suite tx-generator-apitest
-  hs-source-dirs:      test
-  main-is:             ApiTest.hs
-  type:                exitcode-stdio-1.0
-  default-language:    Haskell2010
-  ghc-options:         -threaded
-                       -Wall
-                       -rtsopts
-                       "-with-rtsopts=-T"
+  hs-source-dirs:       test
+  main-is:              ApiTest.hs
+  type:                 exitcode-stdio-1.0
+  default-language:     Haskell2010
+  ghc-options:          -threaded
+                        -Wall
+                        -rtsopts
+                        "-with-rtsopts=-T"
 
-  build-depends:       base >=4.12 && <5
-                     , aeson
-                     , bytestring
-                     , filepath
-                     , optparse-applicative-fork
-                     , cardano-api
-                     , cardano-cli
-                     , cardano-node
-                     , transformers
-                     , transformers-except
-                     , tx-generator
+  build-depends:        base >=4.12 && <5
+                      , aeson
+                      , bytestring
+                      , filepath
+                      , optparse-applicative-fork
+                      , cardano-api
+                      , cardano-cli
+                      , cardano-node
+                      , transformers
+                      , transformers-except
+                      , tx-generator
                      
 test-suite tx-generator-test
   hs-source-dirs:       test

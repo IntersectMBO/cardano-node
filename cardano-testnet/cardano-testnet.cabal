@@ -3,6 +3,7 @@ cabal-version: 3.0
 name:                   cardano-testnet
 version:                1.36.0
 description:            The cardano full node
+copyright:              2023 Input Output (Hong Kong) Ltd.
 author:                 IOHK
 maintainer:             operations@iohk.io
 license:                Apache-2.0
@@ -10,11 +11,10 @@ license-files:          LICENSE
                         NOTICE
 build-type:             Simple
 
-common base                         { build-depends: base                             >= 4.14       && < 4.15     }
-
 common project-config
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
+  build-depends:        base >= 4.14 && < 4.15
 
   ghc-options:          -Wall
                         -Wcompat
@@ -26,7 +26,7 @@ common project-config
                         -Wunused-packages
 
 library
-  import:               base, project-config
+  import:               project-config
 
   build-depends:        aeson
                       , ansi-terminal
@@ -84,7 +84,7 @@ library
   autogen-modules:      Paths_cardano_testnet
 
 executable cardano-testnet
-  import:               base, project-config
+  import:               project-config
 
   hs-source-dirs:       app
 
@@ -96,7 +96,7 @@ executable cardano-testnet
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
 test-suite cardano-testnet-tests
-  import:               base, project-config
+  import:               project-config
 
   hs-source-dirs:       test
 
