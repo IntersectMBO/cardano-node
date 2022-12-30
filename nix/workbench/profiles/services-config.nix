@@ -53,9 +53,9 @@ with lib;
             executable = "cardano-node";
             # executable     = ''time -f "${time_fmtstr}" -o kernel-resource-summary.json cabal run exe:cardano-node ''${WB_FLAGS_RTS} -- +RTS -sghc-rts-report.txt -RTS'';
           } // optionalAttrs isProducer {
-            operationalCertificate = "./genesis/node-keys/node${toString i}.opcert";
-            kesKey         = "./genesis/node-keys/node-kes${toString i}.skey";
-            vrfKey         = "./genesis/node-keys/node-vrf${toString i}.skey";
+            operationalCertificate = "../genesis/node-keys/node${toString i}.opcert";
+            kesKey         = "../genesis/node-keys/node-kes${toString i}.skey";
+            vrfKey         = "../genesis/node-keys/node-vrf${toString i}.skey";
           } // optionalAttrs profile.node.tracer {
             tracerSocketPathConnect = "../tracer/tracer.socket";
           });
@@ -64,20 +64,20 @@ with lib;
         { port, ... }: cfg: recursiveUpdate cfg
           (
             {
-              AlonzoGenesisFile    = "./genesis/genesis.alonzo.json";
-              ShelleyGenesisFile   = "./genesis/genesis-shelley.json";
-              ByronGenesisFile     = "./genesis/byron/genesis.json";
+              AlonzoGenesisFile    = "../genesis/genesis.alonzo.json";
+              ShelleyGenesisFile   = "../genesis/genesis-shelley.json";
+              ByronGenesisFile     = "../genesis/byron/genesis.json";
             }
           );
 
       finaliseGeneratorService =
         profile: svc: recursiveUpdate svc
           ({
-            sigKey         = "./genesis/utxo-keys/utxo1.skey";
+            sigKey         = "../genesis/utxo-keys/utxo1.skey";
             runScriptFile  = "run-script.json";
             ## path to the config and socket of the locally running node.
-            nodeConfigFile = "./node-0/config.json";
-            localNodeSocketPath = "./node-0/node.socket";
+            nodeConfigFile = "../node-0/config.json";
+            localNodeSocketPath = "../node-0/node.socket";
           } // optionalAttrs profile.node.tracer {
             tracerSocketPath = "../tracer/tracer.socket";
           } // optionalAttrs useCabalRun {
@@ -87,9 +87,9 @@ with lib;
       finaliseGeneratorConfig =
         cfg: recursiveUpdate cfg
           ({
-            AlonzoGenesisFile    = "./genesis/genesis.alonzo.json";
-            ShelleyGenesisFile   = "./genesis/genesis-shelley.json";
-            ByronGenesisFile     = "./genesis/byron/genesis.json";
+            AlonzoGenesisFile    = "../genesis/genesis.alonzo.json";
+            ShelleyGenesisFile   = "../genesis/genesis-shelley.json";
+            ByronGenesisFile     = "../genesis/byron/genesis.json";
           } // optionalAttrs useCabalRun {
             executable           = "tx-generator";
           });

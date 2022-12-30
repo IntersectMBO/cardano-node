@@ -12,7 +12,7 @@
               with svc;
               { inherit name;
                 service-config = serviceConfig.JSON;
-                start          = startupScript;
+                start          = startupScript.JSON;
                 config         = nodeConfig.JSON;
                 topology       = topology.JSON;
               }));
@@ -21,7 +21,7 @@
           __toJSON
           { name           = "generator";
             service-config = serviceConfig.JSON;
-            start          = startupScript;
+            start          = startupScript.JSON;
             run-script     = runScript.JSON;
           };
         tracerService =
@@ -31,7 +31,7 @@
             tracer-config        = tracer-config.JSON;
             nixos-service-config = nixos-service-config.JSON;
             config               = config.JSON;
-            start                = startupScript;
+            start                = startupScript.JSON;
           };
         passAsFile = [ "nodeServices" "generatorService" "tracerService" ];
       }

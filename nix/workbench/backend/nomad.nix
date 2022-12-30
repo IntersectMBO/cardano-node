@@ -64,51 +64,39 @@ let
         # fuse-overlayfs
       ]);
 
+  # Backend-specific Nix bits:
   materialise-profile =
     { stateDir, profileNix }:
       let
-        unixHttpServerPort = "/tmp/supervisor.sock";
-        supervisorConfPath =
-          import ./supervisor-conf.nix
-            { inherit (profileNix) node-services;
-              inherit pkgs lib stateDir;
-              inherit unixHttpServerPort;
-            };
         ociImages =
           import ./oci-images.nix
-            { inherit pkgs;
+            { inherit pkgs lib;
               inherit
                 (pkgs.cardanoNodePackages)
                 cardano-node cardano-tracer tx-generator;
             };
-        nomadJobJSONPath =
+        supervisorConf =
+          import ./supervisor-conf.nix
+            { inherit (profileNix) node-services;
+              inherit pkgs lib stateDir;
+              unixHttpServerPort = "/tmp/supervisor.sock";
+            };
+        nomadJobJSON =
           import ./nomad-job.nix
             { inherit pkgs lib stateDir;
               inherit profileNix;
-              inherit (ociImages) clusterImage;
-              inherit unixHttpServerPort;
+              inherit ociImages;
+              inherit supervisorConf;
             };
       in pkgs.runCommand "workbench-backend-output-${profileNix.name}-${name}"
-        (rec {
-          inherit supervisorConfPath;
-          # All In One
-          clusterImage = ociImages.clusterImage;
-          clusterImageCopyToPodman = clusterImage.copyToPodman;
-          clusterImageName = clusterImage.imageName;
-          clusterImageTag = clusterImage.imageTag;
-          inherit nomadJobJSONPath;
+        ({
+          ociImagesJSON = ociImages.JSON;
+          inherit nomadJobJSON;
         })
         ''
         mkdir $out
-
-        ln -s $supervisorConfPath                      $out/supervisor.conf
-
-        ln -s $clusterImage                            $out/clusterImage
-        echo $clusterImageName                       > $out/clusterImageName
-        echo $clusterImageTag                        > $out/clusterImageTag
-        ln -s $clusterImageCopyToPodman/bin/copy-to-podman $out/clusterImageCopyToPodman
-
-        ln -s $nomadJobJSONPath                        $out/nomad-job.json
+        ln -s $ociImagesJSON                           $out/oci-images.json
+        ln -s $nomadJobJSON                            $out/nomad-job.json
         '';
 in
 {

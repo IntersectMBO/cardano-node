@@ -92,6 +92,7 @@ let
       startsecs      = 1;
     };
 
-in
-  pkgs.writeText "supervisor.conf"
-    (generators.toINI {} supervisorConf)
+in {
+  value = supervisorConf;
+  INI = pkgs.writeText "supervisor.conf" (generators.toINI {} supervisorConf);
+}

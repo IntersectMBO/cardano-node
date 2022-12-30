@@ -269,13 +269,14 @@ let
         value = __fromJSON (__readFile JSON);
       };
 
-      startupScript =
-        pkgs.writeScript "startup-${name}.sh"
-          ''
+      startupScript = rec {
+        JSON = pkgs.writeScript "startup-${name}.sh" value;
+        value = ''
           #!${pkgs.stdenv.shell}
 
           ${service.script}
           '';
+      };
     };
 
   ##

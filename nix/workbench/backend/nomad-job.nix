@@ -7,18 +7,55 @@
 , lib
 , stateDir
 , profileNix
-, clusterImage
-, unixHttpServerPort
+, ociImages
+# Needs unix_http_server.file
+, supervisorConf
 }:
 
 let
 
-  # Container defaults: See ./oci-images.nix
-  container_workdir = "/tmp/cluster";
-  container_supervisor_nix = "${container_workdir}/${stateDir}/supervisor/nix-store";
-  container_supervisord_url = "unix://${unixHttpServerPort}";
-  container_supervisord_conf = "${container_workdir}/${stateDir}/supervisor/supervisord.conf";
+  # Container defaults:
+  ## Stored on the job's "meta" stanza and intended to be overrided with `jq`.
+  ## See ./oci-images.nix for further details.
+  #
+  # The template stanza can only generate files inside /local (NOMAD_TASK_DIR)
+  ## - https://developer.hashicorp.com/nomad/docs/job-specification/template#template-destinations
+  ## - https://developer.hashicorp.com/nomad/docs/runtime/environment#task-directories
+  ## - https://developer.hashicorp.com/nomad/docs/concepts/filesystem
+  container_workdir = "/local";
+  # Usually "/local/run/current"
+  container_statedir = "${container_workdir}/${stateDir}";
+  # A link to the supervisord nix-installed inside the OCI image.
+  container_supervisor_nix = "${container_statedir}/supervisor/nix-store";
+  # The URL to the listening inet or socket of the supervisord server:
+  # The problem is that if we use "127.0.0.1:9001" as parameter (without the
+  # "http" part) the container returns:
+  # error: <class 'ValueError'>, Unknown protocol for serverurl 127.0.0.1:9001: file: /nix/store/izqhlj5i1x9ldyn43d02kcy4mafmj3ci-python3.9-supervisor-4.2.4/lib/python3.9/site-packages/supervisor/xmlrpc.py line: 508
+  # Without using the `--serverurl` parameter at all (using INI config file's
+  # [inet_http_server] port stanza) also without "http://":
+  # error: <class 'socket.gaierror'>, [Errno -2] Name or service not known: file: /nix/store/hb1lzaisgx2m9n29hqhh6yp6hasplq1v-python3-3.9.10/lib/python3.9/socket.py line: 954
+  # If I add the "http" part to the INI file, when starting `supervisord` inside
+  # the container I get (from journald):
+  # Nov 02 11:44:36 hostname cluster-18f3852f-e067-6394-8159-66a7b8da2ecc[1088457]: Error: Cannot open an HTTP server: socket.error reported -2
+  # Nov 02 11:44:36 hostname cluster-18f3852f-e067-6394-8159-66a7b8da2ecc[1088457]: For help, use /nix/store/izqhlj5i1x9ldyn43d02kcy4mafmj3ci-python3.9-supervisor-4.2.4/bin/supervisord -h
+  container_supervisord_url = "unix://${supervisorConf.value.unix_http_server.file}";
+  # Location of the supervisord config file inside the container.
+  # This file can be mounted as a volume or created as a template.
+  container_supervisord_conf = "${container_statedir}/supervisor/supervisord.conf";
   container_supervisord_loglevel = "info";
+
+  # About the "template" stanza:
+  # The templates documentations show "left_delimiter" and "right_delimiter"
+  # options which default to "{{" and "}}" repectively. See:
+  # https://developer.hashicorp.com/nomad/docs/job-specification/template#left_delimiter
+  # But those don't work to escape text to avoid HCL expressions interpolation.
+  # We are using what says here:
+  # "In both quoted and heredoc string expressions, Nomad supports template
+  # sequences that begin with ${ and %{. These are described in more detail in
+  # the following section. To include these sequences literally without
+  # beginning a template sequence, double the leading character: $${ or %%{."
+  # https://developer.hashicorp.com/nomad/docs/job-specification/hcl2/expressions#string-literals
+  escapeTemplate = str: builtins.replaceStrings ["\${" "%{"] ["\$\${" "%%{"] str;
 
   # About the JSON Job Specification and its odd assumptions:
   #
@@ -29,12 +66,11 @@ let
   # HCL format that is heavily specified in the docs. Nice!
   #
   # But note that it starts saying "Nomad HCL is parsed in the command line and
-  # sent to Nomad in JSON format via the HTTP API." and here are the API docs
-  # with "JSON Job Specification" in its title:
+  # sent to Nomad in JSON format via the HTTP API." and here there are the API
+  # docs that have "JSON Job Specification" in its title:
   # https://developer.hashicorp.com/nomad/api-docs/json-jobs
   # well, this is the format that `nomad job run` expects if you use the `-json`
-  # argument. If you don't provide the `-json` argument it expects HCL or its
-  # JSON representation: https://github.com/hashicorp/hcl/blob/main/json/spec.md
+  # argument.
   #
   # I finally found this in the HCL overview page:
   # https://developer.hashicorp.com/nomad/docs/job-specification/hcl2
@@ -43,6 +79,9 @@ let
   # by the HCL parser is not the same as the API's JSON format. The HCL parser's
   # JSON format is unspecified, so the API format is preferred. You can use the
   # API format with the -json command line flag."
+  #
+  # So, if you don't provide the `-json` argument it expects HCL or its JSON
+  # representation: https://github.com/hashicorp/hcl/blob/main/json/spec.md
   #
   # We are using what HashiCorp calls an unespecified format but it the same
   # format the SRE team is using.
@@ -157,6 +196,8 @@ let
       # This makes it easier to change them using `jq` inside the workbench!
       meta = {
         # Only top level "KEY=STRING" are allowed!
+        WORKING_DIRECTORY = container_workdir;
+        STATE_DIRECTORY = container_statedir;
         SUPERVISOR_NIX = container_supervisor_nix;
         SUPERVISORD_URL = container_supervisord_url;
         SUPERVISORD_CONFIG = container_supervisord_conf;
@@ -189,7 +230,7 @@ let
       # container, web application, or batch processing.
       # https://developer.hashicorp.com/nomad/docs/job-specification/task
       task = let
-        valueF = (name: nodeSpecs: volumes: taskDefaults // {
+        valueF = (name: volumes: (taskDefaults // {
 
           driver = "podman";
 
@@ -202,36 +243,117 @@ let
           # Specifies environment variables that will be passed to the running
           # process.
           # `null` because we are using a "template" (see below).
-          env = {
-            #SUPERVISOR_NIX = container_supervisor_nix;
-            #SUPERVISORD_URL = container_supervisord_url;
-            #SUPERVISORD_CONFIG = container_supervisord_conf;
-            #SUPERVISORD_LOGLEVEL = container_supervisord_loglevel;
-          };
+          env = {};
 
           # Specifies the set of templates to render for the task. Templates can
           # be used to inject both static and dynamic configuration with data
           # populated from environment variables, Consul and Vault.
-          template = {
-            # podman container input environment variables.
-            env = true;
-            # File name to create inside the allocation directory.
-            destination = "envars";
-            # See runtime for available variables:
-            # https://developer.hashicorp.com/nomad/docs/runtime/environment
-            data = ''
-              SUPERVISOR_NIX="{{ env "NOMAD_META_SUPERVISOR_NIX" }}"
-              SUPERVISORD_URL="{{ env "NOMAD_META_SUPERVISORD_URL" }}"
-              SUPERVISORD_CONFIG="{{ env "NOMAD_META_SUPERVISORD_CONFIG" }}"
-              SUPERVISORD_LOGLEVEL="{{ env "NOMAD_META_SUPERVISORD_LOGLEVEL" }}"
-            '';
-            # Specifies the behavior Nomad should take if the rendered template
-            # changes. Nomad will always write the new contents of the template
-            # to the specified destination. The following possible values
-            # describe Nomad's action after writing the template to disk.
-            change_mode = "noop";
-            error_on_missing_key = true;
-          };
+          template = [
+            # Envars
+            {
+              # podman container input environment variables.
+              env = true;
+              # File name to create inside the allocation directory.
+              # Created in NOMAD_DATA_DIR/alloc/ALLOC_ID/TASK_NAME/envars
+              destination = "envars";
+              # See runtime for available variables:
+              # https://developer.hashicorp.com/nomad/docs/runtime/environment
+              data = ''
+                SUPERVISOR_NIX="{{ env "NOMAD_META_SUPERVISOR_NIX" }}"
+                SUPERVISORD_URL="{{ env "NOMAD_META_SUPERVISORD_URL" }}"
+                SUPERVISORD_CONFIG="{{ env "NOMAD_META_SUPERVISORD_CONFIG" }}"
+                SUPERVISORD_LOGLEVEL="{{ env "NOMAD_META_SUPERVISORD_LOGLEVEL" }}"
+              '';
+              # Specifies the behavior Nomad should take if the rendered
+              # template changes. Nomad will always write the new contents of
+              # the template to the specified destination. The following
+              # possible values describe Nomad's action after writing the
+              # template to disk.
+              change_mode = "noop";
+              error_on_missing_key = true;
+            }
+            # supervisord configuration file.
+            {
+              env = false;
+              destination = "${container_supervisord_conf}";
+              data = escapeTemplate (__readFile
+                supervisorConf.INI);
+              change_mode = "noop";
+              error_on_missing_key = true;
+            }
+            # Generator start.sh script.
+            {
+              env = false;
+              destination = "${container_statedir}/generator/start.sh";
+              data = escapeTemplate
+                profileNix.generator-service.startupScript.value;
+              change_mode = "noop";
+              error_on_missing_key = true;
+            }
+            # Generator configuration file.
+            {
+              env = false;
+              destination = "${container_statedir}/generator/run-script.json";
+              data = escapeTemplate (__readFile
+                profileNix.generator-service.runScript.JSON.outPath);
+              change_mode = "noop";
+              error_on_missing_key = true;
+            }
+/* TODO: Tracer still needs to use volumes because tracer.socket is shared.
+            # Tracer start.sh script.
+            {
+              env = false;
+              destination = "${container_statedir}/tracer/start.sh";
+              data = escapeTemplate
+                profileNix.tracer-service.startupScript.value;
+              change_mode = "noop";
+              error_on_missing_key = true;
+            }
+            # Tracer configuration file.
+            {
+              env = false;
+              destination = "${container_statedir}/tracer/config.json";
+              data = escapeTemplate (lib.generators.toJSON {}
+                profileNix.tracer-service.config.value);
+              change_mode = "noop";
+              error_on_missing_key = true;
+            }
+*/
+          ]
+          ++
+          (lib.lists.flatten (lib.mapAttrsToList
+            (_: nodeSpec: [
+              # Node start.sh script.
+              {
+                env = false;
+                destination = "${container_statedir}/${nodeSpec.name}/start.sh";
+                data = escapeTemplate
+                    profileNix.node-services."${nodeSpec.name}".startupScript.value;
+                change_mode = "noop";
+                error_on_missing_key = true;
+              }
+              # Node configuration file.
+              {
+                env = false;
+                destination = "${container_statedir}/${nodeSpec.name}/config.json";
+                data = escapeTemplate (lib.generators.toJSON {}
+                  profileNix.node-services."${nodeSpec.name}".nodeConfig.value);
+                change_mode = "noop";
+                error_on_missing_key = true;
+              }
+              # Node topology file.
+              {
+                env = false;
+                destination = "${container_statedir}/${nodeSpec.name}/topology.json";
+                data = escapeTemplate (lib.generators.toJSON {}
+                  profileNix.node-services."${nodeSpec.name}".topology.value);
+                change_mode = "noop";
+                error_on_missing_key = true;
+              }
+            ])
+            profileNix.node-specs.value
+          ))
+          ;
 
           # Specifies where a group volume should be mounted.
           volume_mount = null; #TODO
@@ -267,7 +389,7 @@ let
             # missing), oci-archive and docker-archive. Images reference as
             # short-names will be treated according to user-configured
             # preferences.
-            image = "${clusterImage.imageName}:${clusterImage.imageTag}";
+            image = "${ociImages.value.clusterNode.imageName}:${ociImages.value.clusterNode.imageTag}";
 
             # Always pull the latest image on container start.
             force_pull = false;
@@ -314,19 +436,16 @@ let
           # overrides any vault block set at the group or job level.
           vault = null;
 
-        });
+        }));
       in lib.listToAttrs (
-        [
-          {name = "generator"; value = valueF "generator" null [ stateDir ];}
-        ]
-        ++ lib.optionals profileNix.value.node.tracer [
-          {name = "tracer";    value = valueF "tracer"    null [ stateDir ];}
+        lib.optionals profileNix.value.node.tracer [
+          {name = "tracer";    value = valueF "tracer"    [];}
         ]
         ++
         (lib.mapAttrsToList
-          (_: nodeSpecs: {
-            name = nodeSpecs.name;
-            value = valueF nodeSpecs.name nodeSpecs [];
+          (_: nodeSpec: {
+            name = nodeSpec.name;
+            value = valueF nodeSpec.name [];
           })
           (profileNix.node-specs.value)
         )
@@ -522,5 +641,5 @@ let
     # user = null;
   };
 
-in pkgs.writeText "nomad-job.json"
+in pkgs.writeText "workbench-cluster-nomad-job.json"
   (lib.generators.toJSON {} clusterJob)

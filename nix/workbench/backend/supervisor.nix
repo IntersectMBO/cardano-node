@@ -28,19 +28,16 @@ let
       tx-generator
     ]);
 
+  # Backend-specific Nix bits:
   materialise-profile =
     { stateDir, profileNix }:
-      pkgs.runCommand "workbench-backend-output-${profileNix.name}-${name}"
-        {
-          ## Backend-specific Nix bits:
-          ## mkBackendConf :: Profile -> SupervisorConf/DockerConf
-          supervisorConfPath =
-            import ./supervisor-conf.nix
-            { inherit (profileNix) node-services;
-              inherit pkgs lib stateDir;
-              inetHttpServerPort = "127.0.0.1:9001";
-            };
-        }
+      let supervisorConf = import ./supervisor-conf.nix
+        { inherit (profileNix) node-services;
+          inherit pkgs lib stateDir;
+          inetHttpServerPort = "127.0.0.1:9001";
+        };
+      in pkgs.runCommand "workbench-backend-output-${profileNix.name}-${name}"
+        {supervisorConfPath = supervisorConf.INI;}
         ''
         mkdir $out
         cp    $supervisorConfPath           $out/supervisor.conf

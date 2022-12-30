@@ -117,20 +117,23 @@ let
       };
 
       runScript = {
-        value = service.runScript;
+        # TODO / FIXME
+        # the string '...' is not allowed to refer to a store path (such as '')
+        # value = service.decideRunScript service;
         JSON  = runJq "generator-run-script.json"
                   ''--null-input
                     --argjson x '${service.decideRunScript service}'
                   '' "$x";
       };
 
-      startupScript =
-        pkgs.writeScript "startup-generator.sh"
-          ''
+      startupScript = rec {
+        JSON = pkgs.writeScript "startup-generator.sh" value;
+        value = ''
           #!${pkgs.stdenv.shell}
 
           ${service.script}
           '';
+      };
     })
     profile.node-specs.value;
 in

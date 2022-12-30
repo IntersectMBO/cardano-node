@@ -39,19 +39,28 @@ case "$op" in
                --* ) msg "FATAL:  unknown flag '$1'"; usage_supervisor;;
                * ) break;; esac; shift; done
 
+        local svcs=$dir/profile/node-services.json
+        for node in $(jq_tolist 'keys' "$dir"/node-specs.json)
+        do local node_dir="$dir"/$node
+           mkdir -p                                          "$node_dir"
+           jq      '."'"$node"'"' "$dir"/node-specs.json   > "$node_dir"/node-spec.json
+           cp $(jq '."'"$node"'"."config"'         -r $svcs) "$node_dir"/config.json
+           cp $(jq '."'"$node"'"."service-config"' -r $svcs) "$node_dir"/service-config.json
+           cp $(jq '."'"$node"'"."start"'          -r $svcs) "$node_dir"/start.sh
+           cp $(jq '."'"$node"'"."topology"'       -r $svcs) "$node_dir"/topology.json
+        done
+
+        local gtor=$dir/profile/generator-service.json
+        gen_dir="$dir"/generator
+        mkdir -p                              "$gen_dir"
+        cp $(jq '."run-script"'     -r $gtor) "$gen_dir"/run-script.json
+        cp $(jq '."service-config"' -r $gtor) "$gen_dir"/service-config.json
+        cp $(jq '."start"'          -r $gtor) "$gen_dir"/start.sh
+
         local supervisor_conf=$(envjqr 'supervisor_conf')
 
         mkdir -p               "$dir"/supervisor
         cp -f $supervisor_conf "$dir"/supervisor/supervisord.conf
-
-        # Node's config.json expects a genesis folder inside its same directory.
-        # Same for generator with genesis and also with the node.socket paths.
-        for node in $(jq_tolist 'keys' "$dir"/node-specs.json)
-        do local node_dir="$dir"/$node
-          ln -s "$dir"/genesis "$node_dir"/genesis
-          ln -s "$dir"/$node "$dir"/generator/$node
-        done
-        ln -s "$dir"/genesis "$dir"/generator/genesis
         ;;
 
     describe-run )

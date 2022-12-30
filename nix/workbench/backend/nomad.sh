@@ -34,48 +34,44 @@ case "$op" in
         # https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
         # ${XDG_STATE_HOME:-$HOME/.local/state}
 
-        # The one provided by the profile, the one used may suffer changes (jq).
-        setenvjqstr 'nomad_job_file' "$profile_dir"/nomad-job.json
-        # Get the job name from the job's JSON description.
-        setenvjqstr 'nomad_job_name' $(jq -r '.["job"] | keys[0]' "$profile_dir"/nomad-job.json)
-        # Look up `supervisord` config file produced by Nix (run profile).
-        setenvjqstr 'supervisord_conf' "$profile_dir"/supervisor.conf
-        # The `--serverurl` argument is needed in every call to `nomad exec`.
-        # The problem is that if we use "127.0.0.1:9001" as parameter (without
-        # the "http" part) the container returns:
-        # error: <class 'ValueError'>, Unknown protocol for serverurl 127.0.0.1:9001: file: /nix/store/izqhlj5i1x9ldyn43d02kcy4mafmj3ci-python3.9-supervisor-4.2.4/lib/python3.9/site-packages/supervisor/xmlrpc.py line: 508
-        # Without using the `--serverurl` parameter at all (using INI config
-        # file's [inet_http_server] port stanza) also without "http://":
-        # error: <class 'socket.gaierror'>, [Errno -2] Name or service not known: file: /nix/store/hb1lzaisgx2m9n29hqhh6yp6hasplq1v-python3-3.9.10/lib/python3.9/socket.py line: 954
-        # If I add the "http" part to the INI file, when starting `supervisord`
-        # inside the container I get (from journald):
-        # Nov 02 11:44:36 hostname cluster-18f3852f-e067-6394-8159-66a7b8da2ecc[1088457]: Error: Cannot open an HTTP server: socket.error reported -2
-        # Nov 02 11:44:36 hostname cluster-18f3852f-e067-6394-8159-66a7b8da2ecc[1088457]: For help, use /nix/store/izqhlj5i1x9ldyn43d02kcy4mafmj3ci-python3.9-supervisor-4.2.4/bin/supervisord -h
-        setenvjqstr 'supervisord_url' "unix:///tmp/supervisor.sock"
-        # Look up `cluster` OCI image's name and tag (also Nix profile).
-        setenvjqstr 'oci_image_name' ${WB_OCI_IMAGE_NAME:-$(cat "$profile_dir/clusterImageName")}
-        setenvjqstr 'oci_image_tag'  ${WB_OCI_IMAGE_TAG:-$(cat  "$profile_dir/clusterImageTag")}
-        # Script that creates the OCI image from nix2container layered output.
-        setenvjqstr 'oci_image_skopeo_script' "$profile_dir/clusterImageCopyToPodman"
+        # The output files of the profiles Nix derivation:
+        ## The one provided by the profile, the one used may suffer changes (jq).
+        local profile_nomad_job_file="$profile_dir"/nomad-job.json
+        setenvjqstr 'profile_nomad_job_file' "$profile_nomad_job_file"
+        ## Look up `cluster` OCI image's name and tag (also Nix profile).
+        setenvjqstr 'oci_image_name' ${WB_OCI_IMAGE_NAME:-$(jq -r '. ["clusterNode"]["imageName"]' "$profile_dir"/oci-images.json)}
+        setenvjqstr 'oci_image_tag'  ${WB_OCI_IMAGE_TAG:-$(jq -r '. ["clusterNode"]["imageTag"]' "$profile_dir"/oci-images.json)}
+        ## Script that creates the OCI image from nix2container layered output.
+        setenvjqstr 'oci_image_skopeo_script' $(jq -r '. ["clusterNode"]["copyToPodman"]' "$profile_dir"/oci-images.json)
+
+        # Socket of the process that connects nomad-driver-podman with podman.
         # Can't reside inside $dir, can't use a path longer than 108 characters!
         # See: https://man7.org/linux/man-pages/man7/unix.7.html
         # char        sun_path[108];            /* Pathname */
         setenvjqstr 'podman_socket_path' "/run/user/$UID/workbench-podman.sock"
-        # Set cluster's podman container defaults.
-        # The workbench is expecting an specific hierarchy of folders and files.
-        setenvjqstr 'container_workdir' "/tmp/cluster/"
-        setenvjqstr 'container_mountpoint' "/tmp/cluster/run/current"
-        # The `supervisord` binary is installed inside the container but not
-        # added to $PATH (resides in /nix/store), so a desired location is
-        # passed to the container as an environment variable to create a symlink
-        # to it.
-        setenvjqstr 'container_supervisor_nix' "/tmp/cluster/run/current/supervisor/nix-store"
-        # The container need to know where `supervisord` config file is located
-        # so it can be started. This is passed as an environment variable.
-        setenvjqstr 'container_supervisord_conf' "/tmp/cluster/run/current/supervisor/supervisord.conf"
-        # The logging level at which supervisor should write to the activity
-        # log. Valid levels are trace, debug, info, warn, error and critical.
-        setenvjqstr 'container_supervisord_loglevel' "info"
+
+        # Fetch all the default values that are inside the meta stanza:
+        ## Get the job and group name from the job's JSON description.
+        local nomad_job_name=$(jq -r '. ["job"] | keys[0]' "$profile_nomad_job_file")
+        setenvjqstr 'nomad_job_name' "$nomad_job_name"
+        local nomad_job_group_name=$(jq -r ". [\"job\"][\"$nomad_job_name\"][\"group\"] | keys[0]" "$profile_nomad_job_file")
+        setenvjqstr 'nomad_job_group_name' "$nomad_job_group_name"
+        ## The workbench is expecting an specific hierarchy of folders and files.
+        setenvjqstr 'container_workdir' $(jq -r ". [\"job\"][\"$nomad_job_name\"][\"group\"][\"$nomad_job_group_name\"][\"meta\"][\"WORKING_DIRECTORY\"]" "$profile_nomad_job_file")
+        setenvjqstr 'container_mountpoint' $(jq -r ". [\"job\"][\"$nomad_job_name\"][\"group\"][\"$nomad_job_group_name\"][\"meta\"][\"STATE_DIRECTORY\"]" "$profile_nomad_job_file")
+        ## The `supervisord` binary is installed inside the container but not
+        ## added to $PATH (resides in /nix/store), so a desired location is
+        ## passed to the container as an environment variable to create a symlink
+        ## to it.
+        setenvjqstr 'container_supervisor_nix' $(jq -r ". [\"job\"][\"$nomad_job_name\"][\"group\"][\"$nomad_job_group_name\"][\"meta\"][\"SUPERVISOR_NIX\"]" "$profile_nomad_job_file")
+        ## The `--serverurl` argument is needed in every call to `nomad exec`.
+        setenvjqstr 'container_supervisord_url' $(jq -r ". [\"job\"][\"$nomad_job_name\"][\"group\"][\"$nomad_job_group_name\"][\"meta\"][\"SUPERVISORD_URL\"]" "$profile_nomad_job_file")
+        ## The container needs to know where the `supervisord` config file is
+        ## located so it can be started. This is passed as an environment var.
+        setenvjqstr 'container_supervisord_conf' $(jq -r ". [\"job\"][\"$nomad_job_name\"][\"group\"][\"$nomad_job_group_name\"][\"meta\"][\"SUPERVISORD_CONFIG\"]" "$profile_nomad_job_file")
+        ## The logging level at which supervisor should write to the activity
+        ## log. Valid levels are trace, debug, info, warn, error and critical.
+        setenvjqstr 'container_supervisord_loglevel' $(jq -r ". [\"job\"][\"$nomad_job_name\"][\"group\"][\"$nomad_job_group_name\"][\"meta\"][\"SUPERVISORD_LOGLEVEL\"]" "$profile_nomad_job_file")
         ;;
 
     # Man pages for Podman configuration files:
@@ -108,29 +104,6 @@ case "$op" in
           cp -r "$dir"/genesis/utxo-keys.bak/* "$dir"/genesis/utxo-keys/
         fi
 
-        # Populate the files needed by each `supervisord` server that will run
-        # for every podman container / nomad task (generator, tracer and nodes).
-        # All these folder are going to be mounted on run/current/supervisor to
-        # keep the supervisor.conf compatible with the supervisor backend.
-        # Previously tried sharing the same folder for every supervisor but
-        # difficult to debug race conditions happened (best guess is PID files).
-        mkdir -p     "$dir"/generator/supervisor
-        mkdir -p     "$dir"/tracer/supervisor
-        for node in $(jq_tolist 'keys' "$dir"/node-specs.json)
-        do
-            mkdir -p "$dir"/"$node"/supervisor
-        done
-        local supervisord_conf=$(envjqr 'supervisord_conf')
-        # These files have to be copied, not linked, because folder are going to
-        # be mounted inside the container and the linked file may not be
-        # accesible or may have a different path.
-        cp     "$supervisord_conf" "$dir"/generator/supervisor/supervisord.conf
-        cp     "$supervisord_conf" "$dir"/tracer/supervisor/supervisord.conf
-        for node in $(jq_tolist 'keys' "$dir"/node-specs.json)
-        do
-            cp "$supervisord_conf" "$dir"/"$node"/supervisor/supervisord.conf
-        done
-
         # Create the "cluster" OCI image.
         local oci_image_name=$(         envjqr 'oci_image_name')
         local oci_image_tag=$(          envjqr 'oci_image_tag')
@@ -162,34 +135,37 @@ case "$op" in
         local usage="USAGE: wb nomad $op RUN-DIR"
         local dir=${1:?$usage}
 
-        echo "  - Nomad job: $(realpath $dir)/nomad/job-cluster.hcl"
+        echo "  - Nomad job: $(realpath $dir)/nomad/nomad-job.json"
         ;;
 
     # Nomad-specific
     service-start )
         local usage="USAGE: wb nomad $op RUN-DIR NODE-NAME"
         local dir=${1:?$usage}; shift
+        local task=${1:?$usage}; shift
         local service=${1:?$usage}; shift
 
-        backend_nomad nomad-alloc-exec-supervisorctl "$dir" "$service" start "$service"
+        backend_nomad nomad-alloc-exec-supervisorctl "$dir" "$task" start "$service"
         ;;
 
     # Nomad-specific
     service-stop )
         local usage="USAGE: wb nomad $op RUN-DIR NODE-NAME"
         local dir=${1:?$usage}; shift
+        local task=${1:?$usage}; shift
         local service=${1:?$usage}; shift
 
-        backend_nomad nomad-alloc-exec-supervisorctl "$dir" "$service" stop "$service"
+        backend_nomad nomad-alloc-exec-supervisorctl "$dir" "$task" stop "$service"
         ;;
 
     # Nomad-specific
     is-service-running )
         local usage="USAGE: wb nomad $op RUN-DIR DOCKER-SERVICE"
         local dir=${1:?$usage}; shift
+        local task=${1:?$usage}; shift
         local service=${1:?$usage}; shift
 
-        backend_nomad nomad-alloc-exec-supervisorctl "$dir" "$service" status "$service" > /dev/null && true
+        backend_nomad nomad-alloc-exec-supervisorctl "$dir" "$task" status "$service" > /dev/null && true
         ;;
 
     # Nomad-specific
@@ -200,10 +176,10 @@ case "$op" in
         local action=${1:?$usage}; shift
 
         local nomad_alloc_id=$(envjqr 'nomad_alloc_id')
-        local supervisord_url=$(envjqr 'supervisord_url')
         local container_supervisor_nix=$(envjqr 'container_supervisor_nix')
+        local container_supervisord_url=$(envjqr 'container_supervisord_url')
         local container_supervisord_conf=$(envjqr 'container_supervisord_conf')
-        nomad alloc exec --task "$task" "$nomad_alloc_id" "$container_supervisor_nix"/bin/supervisorctl --serverurl "$supervisord_url" --configuration "$container_supervisord_conf" "$action" $@
+        nomad alloc exec --task "$task" "$nomad_alloc_id" "$container_supervisor_nix"/bin/supervisorctl --serverurl "$container_supervisord_url" --configuration "$container_supervisord_conf" "$action" $@
         ;;
 
     start-node )
@@ -211,7 +187,7 @@ case "$op" in
         local dir=${1:?$usage}; shift
         local node=${1:?$usage}; shift
 
-        backend_nomad service-start "$dir" $node
+        backend_nomad service-start "$dir" $node $node
         # Always wait for the node to be ready.
         backend_nomad wait-node "$dir" $node
         ;;
@@ -221,7 +197,7 @@ case "$op" in
         local dir=${1:?$usage}; shift
         local node=${1:?$usage}; shift
 
-        backend_nomad service-stop "$dir" $node
+        backend_nomad service-stop "$dir" $node $node
         ;;
 
     wait-node )
@@ -333,22 +309,39 @@ case "$op" in
         # errors, are indicated by exit code 1.
         nomad job run -verbose "$dir/nomad/nomad-job.json" || true
         # Assuming that `nomad` placement is enough wait.
-        local nomad_alloc_id=$(nomad job allocs -json cluster | jq -r '.[0].ID')
+        local nomad_job_name=$(envjqr 'nomad_job_name')
+        local nomad_alloc_id=$(nomad job allocs -json "$nomad_job_name" | jq -r '.[0].ID')
         setenvjqstr 'nomad_alloc_id' "$nomad_alloc_id"
         msg "Nomad job allocation ID is: $nomad_alloc_id"
-        # Show `--status` of `supervisorctl` inside the container.
-        local supervisord_url=$(envjqr 'supervisord_url')
-        local container_supervisor_nix=$(  envjqr 'container_supervisor_nix')
-        local container_supervisord_conf=$(envjqr 'container_supervisord_conf')
-        msg "Supervisor status inside container ..."
-        # Print the command used for debugging purposes.
-        msg "'nomad alloc exec --task node-0 \"$nomad_alloc_id\" \"$container_supervisor_nix\"/bin/supervisorctl --serverurl \"$supervisord_url\" --configuration \"$container_supervisord_conf\" status'"
-        # Execute the actual command.
-        nomad alloc exec --task node-0 "$nomad_alloc_id" "$container_supervisor_nix"/bin/supervisorctl --serverurl "$supervisord_url" --configuration "$container_supervisord_conf" status || true
 
         if jqtest ".node.tracer" "$dir"/profile.json
         then
-          backend_nomad service-start "$dir" tracer
+          ln -s "$dir/nomad/data/alloc/$nomad_alloc_id/tracer/local/run/current/tracer" "$dir/tracer"
+          ln -s "$dir/nomad/data/alloc/$nomad_alloc_id/tracer/local/run/current/supervisor/supervisord.log" "$dir/tracer/supervisord.log"
+        fi
+        # Generator runs inside task/supervisord "node-0"
+        ln -s "$dir/nomad/data/alloc/$nomad_alloc_id/node-0/local/run/current/generator" "$dir/generator"
+        local nodes=($(jq_tolist keys "$dir"/node-specs.json))
+        for node in ${nodes[*]}
+        do
+          msg "ln -s \"$dir/nomad/data/alloc/$nomad_alloc_id/$node/local/run/current/$node\" \"$dir/$node\""
+          ln -s "$dir/nomad/data/alloc/$nomad_alloc_id/$node/local/run/current/$node" "$dir/$node"
+          ln -s "$dir/nomad/data/alloc/$nomad_alloc_id/$node/local/run/current/supervisor/supervisord.log" "$dir/$node/supervisord.log"
+        done
+
+        # Show `--status` of `supervisorctl` inside the container.
+        local container_supervisor_nix=$(  envjqr 'container_supervisor_nix')
+        local container_supervisord_url=$( envjqr 'container_supervisord_url')
+        local container_supervisord_conf=$(envjqr 'container_supervisord_conf')
+        msg "Supervisor status inside container ..."
+        # Print the command used for debugging purposes.
+        msg "'nomad alloc exec --task node-0 \"$nomad_alloc_id\" \"$container_supervisor_nix\"/bin/supervisorctl --serverurl \"$container_supervisord_url\" --configuration \"$container_supervisord_conf\" status'"
+        # Execute the actual command.
+        nomad alloc exec --task node-0 "$nomad_alloc_id" "$container_supervisor_nix"/bin/supervisorctl --serverurl "$container_supervisord_url" --configuration "$container_supervisord_conf" status || true
+
+        if jqtest ".node.tracer" "$dir"/profile.json
+        then
+          backend_nomad service-start "$dir" tracer tracer
           # Wait for tracer socket
           # If tracer fails here, the rest of the cluster is brought up without
           # any problems.
@@ -387,7 +380,8 @@ case "$op" in
                --* ) msg "FATAL:  unknown flag '$1'"; usage_docker;;
                * ) break;; esac; shift; done
 
-        backend_nomad service-start "$dir" generator
+        msg "Starting generator inside node-0 container ..."
+        backend_nomad service-start "$dir" node-0 generator
         ;;
 
     wait-node-stopped )
@@ -397,7 +391,7 @@ case "$op" in
 
         progress_ne "docker" "waiting until $node stops:  ....."
         local i=0
-        while backend_nomad is-service-running "$dir" "$node"
+        while backend_nomad is-service-running "$dir" "$node" "$node"
         do
           echo -ne "\b\b\b\b\b"; printf "%5d" $i >&2; i=$((i+1))
           sleep 1
@@ -415,7 +409,7 @@ case "$op" in
 
         for ((pool_ix=0; pool_ix < $pools; pool_ix++))
         do
-          while backend_nomad is-service-running "$dir" "node-${pool_ix}" && test -f $dir/flag/cluster-termination
+          while backend_nomad is-service-running "$dir" "node-${pool_ix}" "node-${pool_ix}" && test -f $dir/flag/cluster-termination
           do
             echo -ne "\b\b\b\b\b\b"; printf "%6d" $((i + 1)); i=$((i+1))
             sleep 1
@@ -435,17 +429,17 @@ case "$op" in
         local nomad_alloc_id=$(envjqr 'nomad_alloc_id')
         local nomad_job_name=$(envjqr 'nomad_job_name')
 
-        msg "Stopping generator inside its container ..."
-        backend_nomad nomad-alloc-exec-supervisorctl "$dir" generator stop all || true
-        msg "Stopping tracer inside its container ..."
+        msg "Stopping generator inside node-0 container ..."
+        backend_nomad nomad-alloc-exec-supervisorctl "$dir" node-0 stop generator || true
         if jqtest ".node.tracer" "$dir"/profile.json
         then
-          backend_nomad nomad-alloc-exec-supervisorctl "$dir" tracer stop all || true
+          msg "Stopping tracer inside its container ..."
+          backend_nomad nomad-alloc-exec-supervisorctl "$dir" tracer stop tracer || true
         fi
         for node in $(jq_tolist 'keys' "$dir"/node-specs.json)
         do
             msg "Stopping $node inside its container ..."
-            backend_nomad nomad-alloc-exec-supervisorctl "$dir" "$node" stop all || true
+            backend_nomad nomad-alloc-exec-supervisorctl "$dir" "$node" stop "$node" || true
         done
 
         msg "Stopping nomad job ..."
@@ -828,8 +822,10 @@ EOF
 # [https://github.com/hashicorp/nomad/issues/6758#issuecomment-794116722]
 nomad_create_job_file() {
     local dir=$1
-    local nomad_job_file=$(envjqr 'nomad_job_file')
-    cp $nomad_job_file $dir/nomad/nomad-job.json
+    local profile_nomad_job_file=$(envjqr 'profile_nomad_job_file')
+    local nomad_job_name=$(envjqr 'nomad_job_name')
+    local nomad_job_group_name=$(envjqr 'nomad_job_group_name')
+    cp $profile_nomad_job_file $dir/nomad/nomad-job.json
     chmod +w $dir/nomad/nomad-job.json
     # If CARDANO_MAINNET_MIRROR is present generate a list of needed volumes.
     if test -n "$CARDANO_MAINNET_MIRROR"
@@ -860,72 +856,34 @@ nomad_create_job_file() {
       # the workbench's "supervisor" backend.
       local jq_filter="
         [
-            \"${dir}/${node}/supervisor:${container_mountpoint}/supervisor:rw\"
-          , \"${dir}/tracer:${container_mountpoint}/tracer:rw\"
-          , \"${dir}/${node}:${container_mountpoint}/${node}:rw,exec\"
+            \"${dir}/tracer:${container_mountpoint}/tracer:rw\"
         ]
         +
         [
-          \"${dir}/genesis:${container_mountpoint}/${node}/genesis:ro\"
+            \"${dir}/genesis:${container_mountpoint}/genesis:ro\"
+          , \"${dir}/genesis/utxo-keys:${container_mountpoint}/genesis/utxo-keys:ro\"
         ]
-        +
-        [
-          \"${dir}/generator:${container_mountpoint}/generator:ro\"
-        ]
-        +
-        ( . | keys | map(select(. != \"${node}\")) | map(\"${dir}/\" + . + \":${container_mountpoint}/\" + . + \":ro\") )
         +
         \$mainnet_mirror_volumes
       "
       local podman_volumes=$(jq "$jq_filter" --argjson mainnet_mirror_volumes "$mainnet_mirror_volumes" "$dir"/profile/node-specs.json)
-      jq ".job[\"workbench-cluster-job\"][\"group\"][\"workbench-cluster-job-group\"][\"task\"][\"$node\"][\"config\"][\"volumes\"] = \$podman_volumes" --argjson podman_volumes "$podman_volumes" $dir/nomad/nomad-job.json | sponge $dir/nomad/nomad-job.json
+      jq ".job[\"$nomad_job_name\"][\"group\"][\"$nomad_job_group_name\"][\"task\"][\"$node\"][\"config\"][\"volumes\"] = \$podman_volumes" --argjson podman_volumes "$podman_volumes" $dir/nomad/nomad-job.json | sponge $dir/nomad/nomad-job.json
     done
     # Tracer
-    local task_stanza_name_t="tracer"
-    # Tracer only needs access to itself.
-    # *1 And remapping its own supervisor to the cluster/upper directory.
-    # *2 And read only access to eveything else so supervisor.conf doesn't
-    # complain about missing files/folders and can be shared unchanged with
-    # the workbench's "supervisor" backend.
-    local jq_filter_t="
-      [
-          \"${dir}/tracer/supervisor:${container_mountpoint}/supervisor:rw\"
-        , \"${dir}/tracer:${container_mountpoint}/tracer:rw\"
-      ]
-      +
-      [
-         \"${dir}/generator:${container_mountpoint}/generator:ro\"
-      ]
-      +
-      ( . | keys | map(\"${dir}/\" + . + \":${container_mountpoint}/\" + . + \":ro\") )
-    "
-    local podman_volumes_t=$(jq "$jq_filter_t" "$dir"/profile/node-specs.json)
-    jq ".job[\"workbench-cluster-job\"][\"group\"][\"workbench-cluster-job-group\"][\"task\"][\"tracer\"][\"config\"][\"volumes\"] = \$podman_volumes_t" --argjson podman_volumes_t "$podman_volumes_t" $dir/nomad/nomad-job.json | sponge $dir/nomad/nomad-job.json
-    # Generator
-    local task_stanza_name_g="generator"
-    # Generator needs access to itself, "./genesis", "./genesis/utxo-keys", every node inside its folder (with the genesis of every node).
-    # *1 And remapping its own supervisor to the cluster/upper directory.
-    # *2 And read only access to eveything else so supervisor.conf doesn't
-    # complain about missing files/folders and can be shared unchanged with
-    # the workbench's "supervisor" backend.
-    local jq_filter_g="
-      [
-          \"${dir}/generator/supervisor:${container_mountpoint}/supervisor:rw\"
-        , \"${dir}/tracer:${container_mountpoint}/tracer:rw\"
-        , \"${dir}/generator:${container_mountpoint}/generator:rw\"
-      ]
-      +
-      [
-          \"${dir}/genesis:${container_mountpoint}/generator/genesis:ro\"
-        , \"${dir}/genesis/utxo-keys:${container_mountpoint}/generator/genesis/utxo-keys:ro\"
-      ]
-      +
-      ( . | keys | map( \"${dir}/\" + . + \":${container_mountpoint}/generator/\" + . + \":ro\" ) )
-      +
-      ( . | keys | map( \"${dir}/genesis:${container_mountpoint}/generator/\" + . + \"/genesis:ro\" ) )
-      +
-      ( . | keys | map(\"${dir}/\" + . + \":${container_mountpoint}/\" + . + \":ro\") )
-    "
-    local podman_volumes_g=$(jq "$jq_filter_g" "$dir"/profile/node-specs.json)
-    jq ".job[\"workbench-cluster-job\"][\"group\"][\"workbench-cluster-job-group\"][\"task\"][\"generator\"][\"config\"][\"volumes\"] = \$podman_volumes_g" --argjson podman_volumes_g "$podman_volumes_g" $dir/nomad/nomad-job.json | sponge $dir/nomad/nomad-job.json
+    if jqtest ".node.tracer" "$dir"/profile.json
+    then
+      local task_stanza_name_t="tracer"
+      # Tracer only needs access to itself.
+      # *1 And remapping its own supervisor to the cluster/upper directory.
+      # *2 And read only access to eveything else so supervisor.conf doesn't
+      # complain about missing files/folders and can be shared unchanged with
+      # the workbench's "supervisor" backend.
+      local jq_filter_t="
+        [
+          \"${dir}/tracer:${container_mountpoint}/tracer:rw\"
+        ]
+      "
+      local podman_volumes_t=$(jq "$jq_filter_t" "$dir"/profile/node-specs.json)
+      jq ".job[\"$nomad_job_name\"][\"group\"][\"$nomad_job_group_name\"][\"task\"][\"tracer\"][\"config\"][\"volumes\"] = \$podman_volumes_t" --argjson podman_volumes_t "$podman_volumes_t" $dir/nomad/nomad-job.json | sponge $dir/nomad/nomad-job.json
+    fi
 }
