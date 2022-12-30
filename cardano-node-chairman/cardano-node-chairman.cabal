@@ -24,8 +24,6 @@ common project-config
                         -Wpartial-fields
                         -Wredundant-constraints
                         -Wunused-packages
-  if os(windows)
-    buildable: False
 
 executable cardano-node-chairman
   import:               project-config
