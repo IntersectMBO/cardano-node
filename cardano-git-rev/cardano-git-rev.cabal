@@ -2,6 +2,7 @@ cabal-version: 3.0
 
 name:                   cardano-git-rev
 version:                0.1.0.0
+copyright:              2023 Input Output (Hong Kong) Ltd.
 author:                 IOHK
 maintainer:             operations@iohk.io
 license:                Apache-2.0

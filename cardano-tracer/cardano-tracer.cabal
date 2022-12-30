@@ -6,7 +6,7 @@ description:           See README for more info
 license:               Apache-2.0
 license-file:          LICENSE
                        NOTICE
-copyright:             2022 Input Output (Hong Kong) Ltd.
+copyright:             2023 Input Output (Hong Kong) Ltd.
 author:                IOHK
 maintainer:            operations@iohk.io
 build-type:            Simple

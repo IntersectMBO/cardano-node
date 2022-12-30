@@ -1,12 +1,12 @@
 name:                  tx-generator
 version:               2.4
 description:           The transaction generator for cardano node
+copyright:             2023 Input Output (Hong Kong) Ltd.
 author:                IOHK
 maintainer:            operations@iohk.io
 license:               Apache-2.0
-license-files:
-  LICENSE
-  NOTICE
+license-files:         LICENSE
+                       NOTICE
 build-type:            Simple
 cabal-version:         >= 2.0
 extra-source-files:    README.md

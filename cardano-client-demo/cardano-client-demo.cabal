@@ -9,6 +9,7 @@ description:         This is intended to demonstrate how to write simple
 license:             Apache-2.0
 license-file:        LICENSE
                      NOTICE
+copyright:           2023 Input Output (Hong Kong) Ltd.
 author:              IOHK
 maintainer:          operations@iohk.io
 license-files:

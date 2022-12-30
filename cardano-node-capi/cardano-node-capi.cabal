@@ -3,6 +3,7 @@ cabal-version: 3.0
 name:               cardano-node-capi
 version:            0.1.0.0
 description:        ffi c library around the full node
+copyright:          2023 Input Output (Hong Kong) Ltd.
 author:             IOHK
 maintainer:         operations@iohk.io
 license-files:      LICENSE

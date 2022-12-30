@@ -7,7 +7,7 @@ description:         The library providing typed protocols for forwarding differ
 license:             Apache-2.0
 license-file:        LICENSE
                      NOTICE
-copyright:           2021 Input Output (Hong Kong) Ltd.
+copyright:           2023 Input Output (Hong Kong) Ltd.
 author:              IOHK
 maintainer:          operations@iohk.io
 build-type:          Simple
