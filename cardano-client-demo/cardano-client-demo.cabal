@@ -1,21 +1,20 @@
 cabal-version: 3.0
 
-name:                cardano-client-demo
-version:             0.1.0.0
-synopsis:            A simple demo cardano-node client application
-description:         This is intended to demonstrate how to write simple
-                     applications that interact with the cardano-node,
-                     using the cardano-api.
-license:             Apache-2.0
-license-file:        LICENSE
-                     NOTICE
-copyright:           2023 Input Output (Hong Kong) Ltd.
-author:              IOHK
-maintainer:          operations@iohk.io
-license-files:
-  LICENSE
-  NOTICE
-extra-source-files:  CHANGELOG.md
+name:                   cardano-client-demo
+version:                0.1.0.0
+synopsis:               A simple demo cardano-node client application
+description:            This is intended to demonstrate how to write simple
+                        applications that interact with the cardano-node,
+                        using the cardano-api.
+license:                Apache-2.0
+license-file:           LICENSE
+                        NOTICE
+copyright:              2023 Input Output (Hong Kong) Ltd.
+author:                 IOHK
+maintainer:             operations@iohk.io
+license-files:          LICENSE
+                        NOTICE
+extra-source-files:     CHANGELOG.md
 
 common project-config
   default-language:     Haskell2010
@@ -53,61 +52,61 @@ executable chain-sync-client-with-ledger-state
                       , transformers
 
 executable ledger-state
-  import:              project-config
-  main-is:             LedgerState.hs
-  build-depends:       aeson,
-                       base16-bytestring,
-                       bytestring,
-                       containers,
-                       filepath,
-                       memory,
-                       mtl,
-                       text,
-                       time,
-                       transformers,
-                       transformers-except,
-                       yaml,
+  import:               project-config
+  main-is:              LedgerState.hs
+  build-depends:        aeson,
+                        base16-bytestring,
+                        bytestring,
+                        containers,
+                        filepath,
+                        memory,
+                        mtl,
+                        text,
+                        time,
+                        transformers,
+                        transformers-except,
+                        yaml,
 
-                       cryptonite,
-                       cardano-api,
-                       cardano-binary,
-                       cardano-crypto-class,
-                       cardano-crypto-wrapper,
-                       cardano-ledger-byron,
-                       cardano-node,
-                       cardano-slotting,
-                       iohk-monitoring,
-                       ouroboros-network,
-                       ouroboros-consensus,
-                       ouroboros-consensus-cardano,
-                       ouroboros-consensus-byron,
-                       ouroboros-consensus-shelley,
-                       cardano-ledger-shelley,
-                       typed-protocols,
+                        cryptonite,
+                        cardano-api,
+                        cardano-binary,
+                        cardano-crypto-class,
+                        cardano-crypto-wrapper,
+                        cardano-ledger-byron,
+                        cardano-node,
+                        cardano-slotting,
+                        iohk-monitoring,
+                        ouroboros-network,
+                        ouroboros-consensus,
+                        ouroboros-consensus-cardano,
+                        ouroboros-consensus-byron,
+                        ouroboros-consensus-shelley,
+                        cardano-ledger-shelley,
+                        typed-protocols,
 
 executable stake-credential-history
-  import:              project-config
-  main-is:             StakeCredentialHistory.hs
-  ghc-options:        -Wall
-                      -Wcompat
-                      -Wincomplete-record-updates
-                      -Wincomplete-uni-patterns
-                      -Wpartial-fields
-                      -Wredundant-constraints
-                      -Wunused-packages
-  build-depends:       base16-bytestring,
-                       binary,
-                       bech32,
-                       bytestring,
-                       cardano-ledger-alonzo,
-                       cardano-api,
-                       cardano-data,
-                       cardano-ledger-core,
-                       cardano-ledger-shelley,
-                       vector-map,
-                       cardano-slotting,
-                       containers,
-                       optparse-applicative,
-                       ouroboros-consensus-shelley,
-                       text,
-                       transformers,
+  import:               project-config
+  main-is:              StakeCredentialHistory.hs
+  ghc-options:          -Wall
+                        -Wcompat
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wpartial-fields
+                        -Wredundant-constraints
+                        -Wunused-packages
+  build-depends:        base16-bytestring,
+                        binary,
+                        bech32,
+                        bytestring,
+                        cardano-ledger-alonzo,
+                        cardano-api,
+                        cardano-data,
+                        cardano-ledger-core,
+                        cardano-ledger-shelley,
+                        vector-map,
+                        cardano-slotting,
+                        containers,
+                        optparse-applicative,
+                        ouroboros-consensus-shelley,
+                        text,
+                        transformers,

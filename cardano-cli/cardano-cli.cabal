@@ -13,8 +13,8 @@ build-type:             Simple
 extra-source-files:     README.md
 
 Flag unexpected_thunks
-  Description:   Turn on unexpected thunks checks
-  Default:       False
+  Description:          Turn on unexpected thunks checks
+  Default:              False
 
 common project-config
   default-language:     Haskell2010
@@ -33,18 +33,18 @@ common project-config
 
 common maybe-unix
   if !os(windows)
-     build-depends:    unix
+     build-depends:     unix
 
 common maybe-Win32
   if os(windows)
-     build-depends:    Win32
+     build-depends:     Win32
 
 library
   import:               project-config
                       , maybe-Win32
 
   if flag(unexpected_thunks)
-    cpp-options: -DUNEXPECTED_THUNKS
+    cpp-options:        -DUNEXPECTED_THUNKS
 
   hs-source-dirs:       src
 
