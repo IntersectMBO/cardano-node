@@ -28,16 +28,25 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
 
     env:
+      # Modify this value to "invalidate" the cabal cache.
+      CABAL_CACHE_VERSION: "2022-12-28"
+
+      # Modify this value to "invalidate" the secp cache.
+      SECP_CACHE_VERSION: "2022-12-23"
+
       # current ref from: 27.02.2022
       SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
+
       # OpenSSL is installed in a non-standard location in MacOS. See
       # https://github.com/actions/virtual-environments/blob/main/images/macos/macos-11-Readme.md
       PKG_CONFIG_PATH: ${{ (matrix.os == 'macos-latest' && '/usr/lib/pkgconfig:/usr/local/opt/openssl@1.1/lib/pkgconfig') || (matrix.os == 'ubuntu-latest' && '/usr/lib/pkgconfig:/usr/local/lib/pkgconfig') || '' }}
-
+      
       # we need the LD_LIBRARY_PATH env var here because we ended up installing libsecp256k1 into /usr/local,
       # pkg-config, *does* return the proper location, but the library does not appear to be properly referenced.
       # FIXME: this is arguably a bug, and pkg-config should return the right values!
       LD_LIBRARY_PATH: ${{ (matrix.os != 'windows-latest' && '/usr/local/lib') || '' }}
+
+      CACHE_VERSION: "2022-12-28"
 
     steps:
     - name: "WIN: Install System Dependencies via pacman (msys2)"
@@ -63,13 +72,13 @@ jobs:
       run: |
         # Use GHCUP to manage ghc/cabal
         ghcup install ghc --set ${{ matrix.ghc }}
-        ghcup install cabal --set 3.6.2.0
+        ghcup install cabal --set 3.8.1.0
 
         ghc --version
         cabal --version
 
     - name: "WIN: fixup cabal config"
-      if: runner.os == 'Windows'
+      if: runner.os == 'Windows'        
       run: |
         # make sure cabal knows about msys64, and mingw64 tools. Not clear why C:/cabal/config is empty
         # and C:/cabal doesn't even exist.  The ghcup bootstrap file should have create it in the image:
@@ -90,19 +99,28 @@ jobs:
                           -a ("extra-lib-dirs: {0}, C:/msys64/mingw64/lib" -f $ghcMingwDir) `
                           -f init
 
-    - name: "OUTPUT Record cabal-store (Linux)"
-      id: lin-setup-haskell
-      if: runner.os != 'Windows'
-      run: echo "cabal-store=/home/runner/.cabal/store" >> $GITHUB_OUTPUT
-
-    - name: "OUTPUT Record cabal-store (Windows)"
-      id: win-setup-haskell
-      if: runner.os == 'Windows'
+    # Unify the computation of the cabal store directory to a single step. This makes referencing the cabal
+    # store in later steps easier.
+    #
+    # We know on cabal store is located in the following locations by OS:
+    #
+    #   Linux: /home/runner/.cabal/store
+    #   MacOS: /Users/runner/.cabal/store
+    #   Windows: C:\cabal\store
+    #
+    # However, we compute these as best be can from information cabal provides in case this changes in the future.
+    - name: "Setup cabal-store"
+      id: cabal-store
       shell: bash
-      run: echo "cabal-store=C:\\cabal\\store" >> $GITHUB_OUTPUT
+      run: |
+        cabal help user-config
+        cabal_config_file="$(cabal help user-config | grep -A 1 'You can edit the cabal configuration file to set defaults' | tail -n 1 | xargs)"
 
-    - name: Set cache version
-      run: echo "CACHE_VERSION=grFfw7r" >> $GITHUB_ENV
+        if [[ '${{ runner.os }}' != 'Windows' ]]; then
+          echo "cabal-store=$(dirname "$cabal_config_file")/store" | tee -a "$GITHUB_OUTPUT"
+        else
+          echo "cabal-store=C:\\cabal\\store" | tee -a "$GITHUB_OUTPUT"
+        fi
 
     - uses: actions/checkout@v2
 
@@ -136,6 +154,13 @@ jobs:
     - name: "MAC: Install build environment (for secp256k1)"
       if: runner.os == 'macOS'
       run: brew install autoconf automake libtool
+
+    - uses: actions/cache@v3
+      name: "Cache secp256k1"
+      with:
+        path: secp256k1
+        key: cache-secp256k1-${{ runner.os }}-${{ env.SECP_CACHE_VERSION }}
+        restore-keys: cache-secp256k1-${{ runner.os }}-${{ env.SECP_CACHE_VERSION }}
 
     - name: "LINUX: Install secp256k1"
       if: runner.os != 'Windows'
@@ -174,36 +199,65 @@ jobs:
         echo "# cabal.project.local"
         cat cabal.project.local
 
-    - name: Record dependencies
-      id: record-deps
+    - name: List all pkg-config packages
       run: |
+        # The tests call out to msys2 commands. We generally do not want to mix toolchains, so
+        # we are very deliberate about only adding msys64 to the path where absolutely necessary.
+        ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;{0}" -f $env:PATH)') || '' }}
+        pkg-config --list-all
+
+    - name: Build dry run
+      run: |
+        # The tests call out to msys2 commands. We generally do not want to mix toolchains, so
+        # we are very deliberate about only adding msys64 to the path where absolutely necessary.
+        ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;{0}" -f $env:PATH)') || '' }}
         cabal build all --dry-run
-        cat dist-newstyle/cache/plan.json | jq -r '."install-plan"[].id' | sort | uniq > dependencies.txt
 
-    - name: "OUTPUT Record weeknum"
-      shell: bash
-      run: echo "weeknum=$(/usr/bin/date -u "+%W")" >> $GITHUB_OUTPUT
-
-    - name: Cache Cabal store
-      uses: actions/cache@v2
+    # For users who fork cardano-node and want to define a writable cache, then can set up their own
+    # S3 bucket then define in their forked repository settings the following secrets:
+    #
+    #   AWS_ACCESS_KEY_ID
+    #   AWS_SECRET_ACCESS_KEY
+    #   BINARY_CACHE_URI
+    #   BINARY_CACHE_REGION
+    - name: Cabal cache over S3
+      uses: action-works/cabal-cache-s3@v1
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       with:
-        path: ${{ runner.os == 'Windows' && steps.win-setup-haskell.outputs.cabal-store || steps.lin-setup-haskell.outputs.cabal-store }}
-        key: cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}-${{ hashFiles('date.txt') }}
-        restore-keys: |
-          cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
-          cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}
+        region: ${{ secrets.BINARY_CACHE_REGION }}
+        dist-dir: dist-newstyle
+        store-path: ${{ steps.cabal-store.outputs.cabal-store }}
+        threads: 16
+        archive-uri: ${{ secrets.BINARY_CACHE_URI }}/${{ env.CABAL_CACHE_VERSION }}
+        skip: "${{ secrets.BINARY_CACHE_URI == '' }}"
 
-    - uses: actions/cache@v2
-      name: "Cache `dist-newstyle`"
+    # It's important to ensure that people who fork this repository can not only successfully build in
+    # CI by default, but also have meaning cabal store caching.
+    #
+    # Because syncing with S3 requires credentials, we cannot rely on S3 for this. For this reason a
+    # https fallback is used. The https server mirrors the content of the S3 bucket. The https cabal
+    # store archive is read-only for security reasons.
+    #
+    # Users who fork this repository who want to have a writable cabal store archive are encouraged
+    # to set up their own S3 bucket.
+    - name: Cabal cache over HTTPS
+      uses: action-works/cabal-cache-s3@v1
       with:
-        path: |
-          dist-newstyle
-          !dist-newstyle/**/.git
-        key: cache-dist-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ steps.record-deps.outputs.weeknum }}
-        restore-keys: cache-dist-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}
+        dist-dir: dist-newstyle
+        store-path: ${{ steps.cabal-store.outputs.cabal-store }}
+        threads: 16
+        archive-uri: https://iohk.cache.haskellworks.io/${{ env.CABAL_CACHE_VERSION }}
+        skip: "${{ secrets.BINARY_CACHE_URI != '' }}"
+        enable-save: false
 
     - name: Build
-      run: cabal build cardano-node cardano-cli cardano-node-chairman cardano-submit-api
+      run: |
+        # The tests call out to msys2 commands. We generally do not want to mix toolchains, so
+        # we are very deliberate about only adding msys64 to the path where absolutely necessary.
+        ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;{0}" -f $env:PATH)') || '' }}
+        cabal build cardano-node cardano-cli cardano-node-chairman cardano-submit-api
 
     - name: Run tests (all)
       if: github.event.inputs.tests == 'all'
@@ -282,6 +336,8 @@ jobs:
     # - name: Setup tmate session
     #   if: ${{ failure() }}
     #   uses: mxschmitt/action-tmate@v3
+    #   with:
+    #     limit-access-to-actor: true
 
   release:
     needs: [build]
