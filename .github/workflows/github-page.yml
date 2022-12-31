@@ -109,7 +109,7 @@ jobs:
         dist-dir: dist-newstyle
         store-path: ${{ steps.cabal-store.outputs.cabal-store }}
         threads: 16
-        archive-uri: ${{ secrets.BINARY_CACHE_URI }}/${{ env.CABAL_CACHE_VERSION }}
+        archive-uri: ${{ secrets.BINARY_CACHE_URI }}/${{ env.CABAL_CACHE_VERSION }}/${{ runner.os }}
         skip: "${{ secrets.BINARY_CACHE_URI == '' }}"
 
     - name: Cabal cache over HTTPS
@@ -118,7 +118,7 @@ jobs:
         dist-dir: dist-newstyle
         store-path: ${{ steps.cabal-store.outputs.cabal-store }}
         threads: 16
-        archive-uri: https://iohk.cache.haskellworks.io/${{ env.CABAL_CACHE_VERSION }}
+        archive-uri: https://iohk.cache.haskellworks.io/${{ env.CABAL_CACHE_VERSION }}/${{ runner.os }}
         skip: "${{ secrets.BINARY_CACHE_URI != '' }}"
         enable-save: false
 

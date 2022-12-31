@@ -118,7 +118,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
 
     leadershipScheduleDeadline <- H.noteShowM $ DTC.addUTCTime 180 <$> H.noteShowIO DTC.getCurrentTime
 
-    H.byDeadlineM 5 leadershipScheduleDeadline $ do
+    H.byDeadlineM 5 leadershipScheduleDeadline "Failed to query for leadership schedule" $ do
       void $ H.execCli' execConfig
         [ "query", "leadership-schedule"
         , "--testnet-magic", show @Int testnetMagic
@@ -159,7 +159,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
 
     leadershipScheduleDeadline <- H.noteShowM $ DTC.addUTCTime 180 <$> H.noteShowIO DTC.getCurrentTime
 
-    H.byDeadlineM 5 leadershipScheduleDeadline $ do
+    H.byDeadlineM 5 leadershipScheduleDeadline "Failed to query for leadership schedule" $ do
       void $ H.execCli' execConfig
         [ "query", "leadership-schedule"
         , "--testnet-magic", show @Int testnetMagic

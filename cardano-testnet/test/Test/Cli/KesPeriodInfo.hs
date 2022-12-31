@@ -186,7 +186,7 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
                , "--testnet-magic", show @Int testnetMagic
                ]
 
-  delegsAndRewards <- H.byDurationM 3 12 $ do
+  delegsAndRewards <- H.byDurationM 3 12 "Pledge's stake address was not registered" $ do
     -- Check to see if pledge's stake address was registered
 
     void $ H.execCli' execConfig
@@ -258,7 +258,7 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
 
   H.note_ $ "Check to see if " <> utxoStakingVkey2 <> " was registered..."
 
-  userSAddr <- H.byDurationM 3 12 $ do
+  userSAddr <- H.byDurationM 3 12 "Failed to query stake address info" $ do
     void $ H.execCli' execConfig
       [ "query", "stake-address-info"
       , "--address", utxostakingaddr
@@ -332,7 +332,7 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
     , "--testnet-magic", show @Int testnetMagic
     ]
 
-  H.byDurationM 3 12 $ do
+  H.byDurationM 3 12 "Stake pool was not registered" $ do
     void $ H.execCli' execConfig
       [ "query", "stake-pools"
       , "--testnet-magic", show @Int testnetMagic
