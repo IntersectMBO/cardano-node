@@ -380,9 +380,12 @@ runTxBuildCmd
 
   txOuts <- mapM (toTxOutInAnyEra cEra) txouts
 
+  -- the same collateral input can be used for several plutus scripts
+  let filteredTxinsc = Set.toList $ Set.fromList txinsc
+
   -- We need to construct the txBodycontent outside of runTxBuild
   BalancedTxBody txBodycontent balancedTxBody _ _
-    <- runTxBuild cEra consensusModeParams nid mScriptValidity inputsAndMaybeScriptWits readOnlyRefIns txinsc
+    <- runTxBuild cEra consensusModeParams nid mScriptValidity inputsAndMaybeScriptWits readOnlyRefIns filteredTxinsc
                   mReturnCollateral mTotCollateral txOuts changeAddr valuesWithScriptWits mLowBound
                   mUpperBound certsAndMaybeScriptWits withdrawalsAndMaybeScriptWits
                   requiredSigners txAuxScripts txMetadata mpparams mProp mOverrideWits outputOptions
@@ -395,7 +398,7 @@ runTxBuildCmd
                              readOnlyRefIns
 
   let inputsThatRequireWitnessing = [input | (input,_) <- inputsAndMaybeScriptWits]
-      allTxInputs = inputsThatRequireWitnessing ++ allReferenceInputs ++ txinsc
+      allTxInputs = inputsThatRequireWitnessing ++ allReferenceInputs ++ filteredTxinsc
 
   -- TODO: Calculating the script cost should live as a different command.
   -- Why? Because then we can simply read a txbody and figure out
@@ -500,7 +503,10 @@ runTxBuildRawCmd
                          Nothing -> return Nothing
   txOuts <- mapM (toTxOutInAnyEra cEra) txouts
 
-  txBody <- hoistEither $ runTxBuildRaw cEra mScriptValidity inputsAndMaybeScriptWits readOnlyRefIns txinsc
+    -- the same collateral input can be used for several plutus scripts
+  let filteredTxinsc = Set.toList $ Set.fromList txinsc
+
+  txBody <- hoistEither $ runTxBuildRaw cEra mScriptValidity inputsAndMaybeScriptWits readOnlyRefIns filteredTxinsc
                           mReturnCollateral mTotColl txOuts mLowBound mUpperBound fee valuesWithScriptWits
                           certsAndMaybeScriptWits withdrawalsAndMaybeScriptWits requiredSigners txAuxScripts
                           txMetadata pparams mProp
