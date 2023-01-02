@@ -25,6 +25,7 @@ jobs:
         n: [1]
 
         ghc: ["8.10.7"]
+        cabal: ["3.8.1.0"]
         os: [ubuntu-latest, macos-latest, windows-latest]
 
     env:
@@ -37,88 +38,23 @@ jobs:
       # current ref from: 27.02.2022
       SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
 
-      # OpenSSL is installed in a non-standard location in MacOS. See
-      # https://github.com/actions/virtual-environments/blob/main/images/macos/macos-11-Readme.md
-      PKG_CONFIG_PATH: ${{ (matrix.os == 'macos-latest' && '/usr/lib/pkgconfig:/usr/local/opt/openssl@1.1/lib/pkgconfig') || (matrix.os == 'ubuntu-latest' && '/usr/lib/pkgconfig:/usr/local/lib/pkgconfig') || '' }}
-      
-      # we need the LD_LIBRARY_PATH env var here because we ended up installing libsecp256k1 into /usr/local,
-      # pkg-config, *does* return the proper location, but the library does not appear to be properly referenced.
-      # FIXME: this is arguably a bug, and pkg-config should return the right values!
-      LD_LIBRARY_PATH: ${{ (matrix.os != 'windows-latest' && '/usr/local/lib') || '' }}
-
     steps:
-    - name: "WIN: Install System Dependencies via pacman (msys2)"
-      if: runner.os == 'Windows'
-      run: |
-         # ghcup should be installed on current GHA Windows runners. Let's use ghcup to run
-         # pacman, to install the necessary dependencies, ...
-         ghcup run -- pacman --noconfirm -S `
-            mingw-w64-x86_64-pkg-config `
-            mingw-w64-x86_64-libsodium `
-            mingw-w64-x86_64-openssl `
-            base-devel `
-            autoconf-wrapper `
-            autoconf `
-            automake `
-            libtool `
-            make
-
-     # this seems to break something. It _must_ come after the pacman setup
-     # above. It appears as if PATHEXT is set _after_ ghcup install ghc/cabal, and
-     # as such we'd need pacman.exe instead.
-    - name: Setup Haskell
-      run: |
-        # Use GHCUP to manage ghc/cabal
-        ghcup install ghc --set ${{ matrix.ghc }}
-        ghcup install cabal --set 3.8.1.0
-
-        ghc --version
-        cabal --version
-
-    - name: "WIN: fixup cabal config"
-      if: runner.os == 'Windows'        
-      run: |
-        # make sure cabal knows about msys64, and mingw64 tools. Not clear why C:/cabal/config is empty
-        # and C:/cabal doesn't even exist.  The ghcup bootstrap file should have create it in the image:
-        # See https://github.com/haskell/ghcup-hs/blob/787edc17af4907dbc51c85e25c490edd8d68b80b/scripts/bootstrap/bootstrap-haskell#L591
-        # So we'll do it by hand here for now.
-        #
-        # We'll _not_ add extra-include-dirs, or extra-lib-dirs, and rely on what's shipped with GHC.
-        # https://github.com/msys2/MINGW-packages/issues/10837#issuecomment-1047105402
-        # https://gitlab.haskell.org/ghc/ghc/-/issues/21111
-        # if we _do_ want them, this would be the lines to add below
-
-        $ghcMingwDir = Join-Path -Path $(ghc --print-libdir) `
-                                 -ChildPath ../mingw/x86_64-*-mingw32/lib/ `
-                                 -Resolve
-
-        cabal user-config -a "extra-prog-path: C:/msys64/mingw64/bin, C:/msys64/usr/bin" `
-                          -a "extra-include-dirs: C:/msys64/mingw64/include" `
-                          -a ("extra-lib-dirs: {0}, C:/msys64/mingw64/lib" -f $ghcMingwDir) `
-                          -f init
-
-    # Unify the computation of the cabal store directory to a single step. This makes referencing the cabal
-    # store in later steps easier.
-    #
-    # We know on cabal store is located in the following locations by OS:
-    #
-    #   Linux: /home/runner/.cabal/store
-    #   MacOS: /Users/runner/.cabal/store
-    #   Windows: C:\cabal\store
-    #
-    # However, we compute these as best be can from information cabal provides in case this changes in the future.
-    - name: "Setup cabal-store"
-      id: cabal-store
-      shell: bash
-      run: |
-        cabal help user-config
-        cabal_config_file="$(cabal help user-config | grep -A 1 'You can edit the cabal configuration file to set defaults' | tail -n 1 | xargs)"
-
-        if [[ '${{ runner.os }}' != 'Windows' ]]; then
-          echo "cabal-store=$(dirname "$cabal_config_file")/store" | tee -a "$GITHUB_OUTPUT"
-        else
-          echo "cabal-store=C:\\cabal\\store" | tee -a "$GITHUB_OUTPUT"
-        fi
+    - name: Install Haskell
+      uses: input-output-hk/setup-haskell@v1
+      id: setup-haskell
+      with:
+        ghc-version: ${{ matrix.ghc }}
+        cabal-version: ${{ matrix.cabal }}
+        pacman-packages: >
+          mingw-w64-x86_64-pkg-config
+          mingw-w64-x86_64-libsodium
+          mingw-w64-x86_64-openssl
+          base-devel
+          autoconf-wrapper
+          autoconf
+          automake
+          libtool
+          make
 
     - uses: actions/checkout@v2
 
@@ -197,7 +133,7 @@ jobs:
       with:
         region: ${{ secrets.BINARY_CACHE_REGION }}
         dist-dir: dist-newstyle
-        store-path: ${{ steps.cabal-store.outputs.cabal-store }}
+        store-path: ${{ steps.setup-haskell.outputs.cabal-store }}
         threads: 16
         archive-uri: ${{ secrets.BINARY_CACHE_URI }}/${{ env.CABAL_CACHE_VERSION }}/${{ runner.os }}
         skip: "${{ secrets.BINARY_CACHE_URI == '' }}"
@@ -215,7 +151,7 @@ jobs:
       uses: action-works/cabal-cache-s3@v1
       with:
         dist-dir: dist-newstyle
-        store-path: ${{ steps.cabal-store.outputs.cabal-store }}
+        store-path: ${{ steps.setup-haskell.outputs.cabal-store }}
         threads: 16
         archive-uri: https://iohk.cache.haskellworks.io/${{ env.CABAL_CACHE_VERSION }}/${{ runner.os }}
         skip: "${{ secrets.BINARY_CACHE_URI != '' }}"
