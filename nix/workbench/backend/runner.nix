@@ -111,7 +111,7 @@ in
               --genesis-cache-entry ${genesis}
               --batch-name          smoke-test
               --base-port           ${toString basePort}
-              --node-source         ${cardanoNodePackages.cardano-node.src.origSrc}
+              --node-source         ${pkgs.cardanoNodeProject.args.src.origSrc}
               --node-rev            ${cardano-node-rev}
               --cache-dir           ./cache
             )

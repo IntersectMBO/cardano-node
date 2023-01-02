@@ -99,7 +99,6 @@
       inherit (utils.lib) eachSystem mkApp flattenTree;
       inherit (iohkNix.lib) prefixNamesWith;
       removeRecurse = lib.filterAttrsRecursive (n: _: n != "recurseForDerivations");
-      flatten = attrs: lib.foldl' (acc: a: if (lib.isAttrs a) then acc // (removeAttrs a [ "recurseForDerivations" ]) else acc) { } (lib.attrValues attrs);
 
       supportedSystems = import ./nix/supported-systems.nix;
       defaultSystem = head supportedSystems;
@@ -134,64 +133,14 @@
         self.overlay
       ];
 
-      projectPackagesExes = import ./nix/project-packages-exes.nix;
-
-      mkPackages = project:
+      collectExes = project:
         let
           inherit (project.pkgs.stdenv) hostPlatform;
-          inherit (project.pkgs.haskell-nix) haskellLib;
-          profiledProject = project.appendModule {
-            modules = [{
-              enableLibraryProfiling = true;
-              packages.cardano-node.components.exes.cardano-node.enableProfiling = true;
-              packages.tx-generator.components.exes.tx-generator.enableProfiling = true;
-              packages.locli.components.exes.locli.enableProfiling = true;
-            }];
-          };
-          assertedProject = project.appendModule {
-            modules = [{
-              packages = lib.genAttrs [
-                "ouroboros-consensus"
-                "ouroboros-consensus-cardano"
-                "ouroboros-consensus-cardano-tools"
-                "ouroboros-consensus-byron"
-                "ouroboros-consensus-shelley"
-                "ouroboros-network"
-                "network-mux"
-              ]
-                (name: { flags.asserts = true; });
-            }];
-          };
-          eventloggedProject = project.appendModule
-            {
-              modules = [{
-                packages = lib.genAttrs [ "cardano-node" ]
-                  (name: { configureFlags = [ "--ghc-option=-eventlog" ]; });
-              }];
-            };
           inherit ((import plutus-apps {
             inherit (project.pkgs) system;
           }).plutus-apps.haskell.packages.plutus-example.components.exes) plutus-example;
-          pinned-workbench =
-            cardano-node-workbench.workbench.${project.pkgs.system};
-          hsPkgsWithPassthru = lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))
-            (path: value:
-              if (lib.isAttrs value) then
-                lib.recursiveUpdate value
-                  {
-                    passthru = {
-                      profiled = lib.getAttrFromPath path profiledProject.hsPkgs;
-                      asserted = lib.getAttrFromPath path assertedProject.hsPkgs;
-                      eventlogged = lib.getAttrFromPath path eventloggedProject.hsPkgs;
-                    };
-                  } else value)
-            project.hsPkgs;
-          projectPackages = lib.mapAttrs (n: _: hsPkgsWithPassthru.${n}) projectPackagesExes;
-        in
-        {
-          inherit projectPackages profiledProject assertedProject eventloggedProject;
-          inherit pinned-workbench;
-          projectExes = flatten (haskellLib.collectComponents' "exes" projectPackages) // (with hsPkgsWithPassthru; {
+
+        in project.exes // (with project.hsPkgs; {
             inherit (ouroboros-consensus-byron.components.exes) db-converter;
             inherit (ouroboros-consensus-cardano-tools.components.exes) db-analyser db-synthesizer;
             inherit (bech32.components.exes) bech32;
@@ -199,9 +148,8 @@
             inherit (network-mux.components.exes) cardano-ping;
             inherit plutus-example;
           });
-        };
 
-      mkCardanoNodePackages = project: (mkPackages project).projectExes // {
+      mkCardanoNodePackages = project: (collectExes project) // {
         inherit (project.pkgs) cardanoLib;
       };
 
@@ -218,17 +166,12 @@
 
           project = (import ./nix/haskell.nix {
             inherit (pkgs) haskell-nix gitrev;
-            inherit projectPackagesExes;
             inputMap = {
               "https://input-output-hk.github.io/cardano-haskell-packages" = CHaP;
             };
-          }).appendModule customConfig.haskellNix // {
-            profiled = profiledProject;
-            asserted = assertedProject;
-            eventlogged = eventloggedProject;
-          };
+          }).appendModule customConfig.haskellNix;
 
-          inherit (mkPackages project) projectPackages projectExes profiledProject assertedProject eventloggedProject pinned-workbench;
+          pinned-workbench = cardano-node-workbench.workbench.${system};
 
           shell = import ./shell.nix { inherit pkgs customConfig cardano-mainnet-mirror; };
           devShells = {
@@ -244,7 +187,7 @@
             inherit pkgs;
           };
 
-          checks = flattenTree (collectChecks' projectPackages) //
+          checks = flattenTree project.checks //
             # Linux only checks:
             (optionalAttrs hostPlatform.isLinux (
               prefixNamesWith "nixosTests/" (mapAttrs (_: v: v.${system} or v) nixosTests)
@@ -256,7 +199,7 @@
             };
           });
 
-          exes = projectExes // {
+          exes = (collectExes project) // {
             inherit (pkgs) cabalProjectRegenerate checkCabalProject;
             "dockerImages/push" = import ./.buildkite/docker-build-push.nix {
               hostPkgs = import hostNixpkgs { inherit system; };
@@ -270,9 +213,9 @@
             '';
           } // flattenTree (pkgs.scripts // {
             # `tests` are the test suites which have been built.
-            tests = collectComponents' "tests" projectPackages;
+            inherit (project) tests;
             # `benchmarks` (only built, not run).
-            benchmarks = collectComponents' "benchmarks" projectPackages;
+            inherit (project) benchmarks;
           });
 
           inherit (pkgs) workbench all-profiles-json workbench-runner;
@@ -348,7 +291,7 @@
                 musl =
                   let
                     muslProject = project.projectCross.musl64;
-                    inherit (mkPackages muslProject) projectPackages projectExes;
+                    projectExes = collectExes muslProject;
                   in
                   projectExes // {
                     cardano-node-linux = import ./nix/binary-release.nix {
@@ -362,13 +305,11 @@
                 windows =
                   let
                     windowsProject = project.projectCross.mingwW64;
-                    inherit (mkPackages windowsProject) projectPackages projectExes;
+                    projectExes = collectExes windowsProject;
                   in
                   projectExes
                     // (removeRecurse {
-                    checks = collectChecks' projectPackages;
-                    tests = collectComponents' "tests" projectPackages;
-                    benchmarks = collectComponents' "benchmarks" projectPackages;
+                    inherit (windowsProject) checks tests benchmarks;
                     cardano-node-win64 = import ./nix/binary-release.nix {
                       inherit pkgs;
                       inherit (exes.cardano-node.identifier) version;
@@ -388,7 +329,7 @@
                 inherit pkgs;
                 inherit (exes.cardano-node.identifier) version;
                 platform = "macos";
-                exes = lib.collect lib.isDerivation projectExes;
+                exes = lib.collect lib.isDerivation (collectExes project);
               };
               shells = removeAttrs devShells [ "profiled" ] // {
                 default = devShell;
