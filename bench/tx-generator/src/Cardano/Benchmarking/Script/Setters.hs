@@ -1,25 +1,25 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE ConstraintKinds #-}
 
 module Cardano.Benchmarking.Script.Setters
 where
 
-import           Prelude
-import           GHC.Generics
 import           Data.Constraint.Extras.TH (deriveArgDict)
-import           Data.Dependent.Sum (DSum(..) , (==>) )
+import           Data.Dependent.Sum (DSum (..), (==>))
 import           Data.GADT.Compare.TH (deriveGCompare, deriveGEq)
 import           Data.GADT.Show.TH (deriveGShow)
+import           GHC.Generics
+import           Prelude
 
-import           Cardano.Api (SlotNo, Lovelace, NetworkId)
+import           Cardano.Api (Lovelace, NetworkId, SlotNo)
 
 import           Cardano.Benchmarking.Types
 
