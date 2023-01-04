@@ -16,7 +16,9 @@ jobs:
     - name: Install Nix
       uses: cachix/install-nix-action@v16
       with:
+        github_access_token: ${{ secrets.GITHUB_TOKEN }}
         extra_nix_config: |
+          access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
           experimental-features = nix-command flakes
           allow-import-from-derivation = true
           substituters = https://cache.nixos.org https://cache.iog.io
