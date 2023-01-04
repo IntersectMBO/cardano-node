@@ -42,15 +42,15 @@ import qualified System.Directory as IO
 import           System.Environment (getEnvironment)
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
-import           Testnet ( TestnetOptions (CardanoOnlyTestnetOptions), testnet)
+import           Testnet (TestnetOptions (CardanoOnlyTestnetOptions), testnet)
 import           Testnet.Cardano as TC (CardanoTestnetOptions (..), defaultTestnetOptions)
 import qualified Testnet.Conf as H
 import           Testnet.Utils (waitUntilEpoch)
 import qualified Util.Assert as H
 import qualified Util.Base as H
 import qualified Util.Process as H
-import           Util.Runtime (LeadershipSlot (..))
 import qualified Util.Runtime as TR
+import           Util.Runtime (LeadershipSlot (..))
 
 hprop_leadershipSchedule :: Property
 hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo" $ \tempAbsBasePath' -> do
@@ -454,8 +454,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
   now <- H.noteShowIO DTC.getCurrentTime
   deadline <- H.noteShow $ DTC.addUTCTime 90 now
 
-  H.assertByDeadlineMCustom "stdout does not contain \"until genesis start time\"" deadline $ do
-    H.threadDelay 1000000
+  H.byDeadlineM 10 deadline "Wait for the two epochs" $ do
     void $ H.execCli' execConfig
       [ "query", "tip"
       , "--testnet-magic", show @Int testnetMagic
@@ -470,7 +469,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
       Just currEpoch3 -> return currEpoch3
 
     H.note_ $ "Current Epoch: " <> show currEpoch3
-    return (currEpoch3 > currEpoch2 + 1)
+    H.assert $ currEpoch3 > currEpoch2 + 1
 
   ledgerStateJson <- H.execCli' execConfig
     [ "query", "ledger-state"
@@ -499,15 +498,16 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
 
   expectedLeadershipSlotNumbers <- H.noteShowM $ fmap (fmap slotNumber) $ H.leftFail $ J.parseEither (J.parseJSON @[LeadershipSlot]) scheduleJson
 
+  maxSlotExpected <- H.noteShow $ maximum expectedLeadershipSlotNumbers
+
   H.assert $ not (L.null expectedLeadershipSlotNumbers)
 
   leadershipDeadline <- H.noteShowM $ DTC.addUTCTime 90 <$> H.noteShowIO DTC.getCurrentTime
 
-  H.assertByDeadlineMCustom "Leader schedule is correct" leadershipDeadline $ do
+  H.byDeadlineM 10 leadershipDeadline "Wait for a leadership at least as new as the highest one we expect" $ do
     leaderSlots <- H.getRelevantLeaderSlots (TR.nodeStdout $ TR.poolRuntime poolNode1) (minimum expectedLeadershipSlotNumbers)
-    maxSlotExpected <- H.noteShow $ maximum expectedLeadershipSlotNumbers
     maxActualSlot <- H.noteShow $ maximum leaderSlots
-    return $ maxActualSlot >= maxSlotExpected
+    H.assert $ maxActualSlot >= maxSlotExpected
 
   leaderSlots <- H.getRelevantLeaderSlots (TR.poolNodeStdout poolNode1) (minimum expectedLeadershipSlotNumbers)
 

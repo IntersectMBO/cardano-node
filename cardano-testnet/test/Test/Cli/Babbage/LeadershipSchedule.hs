@@ -33,7 +33,6 @@ import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
@@ -88,9 +87,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
 
   tipDeadline <- H.noteShowM $ DTC.addUTCTime 210 <$> H.noteShowIO DTC.getCurrentTime
 
-  -- stdout must contain \"until genesis start time\""
-  H.byDeadlineM 10 tipDeadline $ do
-    H.threadDelay 5000000
+  H.byDeadlineM 10 tipDeadline "Wait for two epochs" $ do
     void $ H.execCli' execConfig
       [ "query", "tip"
       , "--testnet-magic", show @Int testnetMagic
@@ -134,18 +131,20 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
 
     expectedLeadershipSlotNumbers <- H.noteShowM $ fmap (fmap slotNumber) $ H.leftFail $ J.parseEither (J.parseJSON @[LeadershipSlot]) scheduleJson
 
+    maxSlotExpected <- H.noteShow $ maximum expectedLeadershipSlotNumbers
+
     H.assert $ not (L.null expectedLeadershipSlotNumbers)
 
     leadershipDeadline <- H.noteShowM $ DTC.addUTCTime 90 <$> H.noteShowIO DTC.getCurrentTime
 
-    H.assertByDeadlineMCustom "Retrieve actual slots" leadershipDeadline $ do
+    -- Retrieve actual slots
+    H.byDeadlineM 10 leadershipDeadline "Wait for a leadership at least as new as the highest one we expect" $ do
       leaderSlots <- H.getRelevantLeaderSlots (TR.poolNodeStdout poolNode1) (minimum expectedLeadershipSlotNumbers)
-      maxSlotExpected <- H.noteShow $ maximum expectedLeadershipSlotNumbers
       if L.null leaderSlots
-        then return False
+        then H.failure
         else do
           maxActualSlot <- H.noteShow $ maximum leaderSlots
-          return $ maxActualSlot >= maxSlotExpected
+          H.assert $ maxActualSlot >= maxSlotExpected
 
     leaderSlots <- H.getRelevantLeaderSlots (TR.poolNodeStdout poolNode1) (minimum expectedLeadershipSlotNumbers)
 
@@ -180,13 +179,13 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
 
     leadershipDeadline <- H.noteShowM $ DTC.addUTCTime 90 <$> H.noteShowIO DTC.getCurrentTime
 
-    H.assertByDeadlineMCustom "Retrieve actual slots" leadershipDeadline $ do
+    H.byDeadlineM 10 leadershipDeadline "Wait for a leadership at least as new as the highest one we expect" $ do
       leaderSlots <- H.getRelevantLeaderSlots (TR.poolNodeStdout poolNode1) (minimum expectedLeadershipSlotNumbers)
       if L.null leaderSlots
-        then return False
+        then H.failure
         else do
           maxActualSlot <- H.noteShow $ maximum leaderSlots
-          return $ maxActualSlot >= maxSlotExpected
+          H.assert $ maxActualSlot >= maxSlotExpected
 
     leaderSlots <- H.getRelevantLeaderSlots (TR.poolNodeStdout poolNode1) (minimum expectedLeadershipSlotNumbers)
 

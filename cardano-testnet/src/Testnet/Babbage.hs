@@ -335,7 +335,7 @@ babbageTestnet testnetOptions H.Conf {..} = do
     return $ PoolNode runtime key
 
   now <- H.noteShowIO DTC.getCurrentTime
-  deadline <- H.noteShow $ DTC.addUTCTime 110 now
+  deadline <- H.noteShow $ DTC.addUTCTime 90 now
 
   forM_ spoNodes $ \node -> do
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
