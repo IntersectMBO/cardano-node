@@ -1,12 +1,13 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Benchmarking.Script.Store
@@ -22,10 +23,9 @@ import           Cardano.Api as Cardano (Tx)
 import           Cardano.Api.Shelley as Cardano (ProtocolParameters)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 
+import           Cardano.Benchmarking.OuroborosImports as Cardano (LoggingLayer, PaymentKey,
+                   ShelleyGenesis, SigningKey, StandardShelley)
 import           Cardano.Benchmarking.Script.Setters as Setters
-import           Cardano.Benchmarking.OuroborosImports as Cardano
-                    ( LoggingLayer, ShelleyGenesis, StandardShelley
-                    , SigningKey, PaymentKey)
 
 import           Cardano.Benchmarking.GeneratorTx as Core (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx.Tx as Core (Fund)
