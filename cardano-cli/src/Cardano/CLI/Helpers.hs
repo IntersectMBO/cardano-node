@@ -3,6 +3,7 @@
 
 module Cardano.CLI.Helpers
   ( HelpersError(..)
+  , printWarning
   , deprecationWarning
   , ensureNewFile
   , ensureNewFileLBS
@@ -60,12 +61,18 @@ decodeCBOR
 decodeCBOR bs decoder =
   first CBORDecodingError $ deserialiseFromBytes decoder bs
 
-deprecationWarning :: String -> IO ()
-deprecationWarning cmd = do
+printWarning :: String -> IO ()
+printWarning warning = do
   ANSI.hSetSGR IO.stderr [SetColor Foreground Vivid Yellow]
-  IO.hPutStrLn IO.stderr $ "WARNING: This CLI command is deprecated.  Please use "
-                         <> cmd <> " command instead."
+  IO.hPutStrLn IO.stderr $ "WARNING: " <> warning
   ANSI.hSetSGR IO.stderr [Reset]
+    -- We need to flush, or otherwise what's on stdout may have the wrong colour
+    -- since it's likely sharing a console with stderr
+  IO.hFlush IO.stderr
+
+deprecationWarning :: String -> IO ()
+deprecationWarning cmd = printWarning $
+  "This CLI command is deprecated.  Please use " <> cmd <> " command instead."
 
 -- | Checks if a path exists and throws and error if it does.
 ensureNewFile :: (FilePath -> a -> IO ()) -> FilePath -> a -> ExceptT HelpersError IO ()

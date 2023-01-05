@@ -38,6 +38,7 @@ import           Cardano.Api
 import           Cardano.Api.Byron hiding (SomeByronSigningKey (..))
 import           Cardano.Api.Shelley
 
+import           Cardano.CLI.Helpers (printWarning)
 import           Cardano.CLI.Run.Friendly (friendlyTxBS, friendlyTxBodyBS)
 import           Cardano.CLI.Shelley.Output
 import           Cardano.CLI.Shelley.Parsers
@@ -648,6 +649,10 @@ runTxBuild era (AnyConsensusModeParams cModeParams) networkId mScriptValidity
            (TxOutChangeAddress changeAddr) valuesWithScriptWits mLowerBound mUpperBound
            certsAndMaybeScriptWits withdrawals reqSigners txAuxScripts txMetadata mpparams
            mUpdatePropF mOverrideWits outputOptions = do
+
+  liftIO $ forM_ mpparams $ \_ ->
+    printWarning "'--protocol-params-file' for 'transaction build' is deprecated"
+
   let consensusMode = consensusModeOnly cModeParams
       dummyFee = Just $ Lovelace 0
       inputsThatRequireWitnessing = [input | (input,_) <- inputsAndMaybeScriptWits]
@@ -669,7 +674,6 @@ runTxBuild era (AnyConsensusModeParams cModeParams) networkId mScriptValidity
   validatedBounds <- (,) <$> hoistEither (first ShelleyTxCmdTxValidityLowerBoundValidationError $ validateTxValidityLowerBound era mLowerBound)
                          <*> hoistEither (first ShelleyTxCmdTxValidityUpperBoundValidationError $ validateTxValidityUpperBound era mUpperBound)
   validatedReqSigners <- hoistEither (first ShelleyTxCmdRequiredSignersValidationError $ validateRequiredSigners era reqSigners)
-  validatedPParams <- hoistEither (first ShelleyTxCmdProtocolParametersValidationError $ validateProtocolParameters era mpparams)
   validatedTxWtdrwls <- hoistEither (first ShelleyTxCmdTxWithdrawalsValidationError $ validateTxWithdrawals era withdrawals)
   validatedTxCerts <- hoistEither (first ShelleyTxCmdTxCertificatesValidationError $ validateTxCertificates era certsAndMaybeScriptWits)
   validatedTxUpProp <- hoistEither (first ShelleyTxCmdTxUpdateProposalValidationError $ validateTxUpdateProposal era mUpdatePropF)
@@ -678,25 +682,6 @@ runTxBuild era (AnyConsensusModeParams cModeParams) networkId mScriptValidity
 
   case (consensusMode, cardanoEraStyle era) of
     (CardanoMode, ShelleyBasedEra _sbe) -> do
-      let txBodyContent = TxBodyContent
-                            (validateTxIns inputsAndMaybeScriptWits)
-                            validatedCollateralTxIns
-                            validatedRefInputs
-                            txouts
-                            validatedTotCollateral
-                            validatedRetCol
-                            dFee
-                            validatedBounds
-                            txMetadata
-                            txAuxScripts
-                            validatedReqSigners
-                            validatedPParams
-                            validatedTxWtdrwls
-                            validatedTxCerts
-                            validatedTxUpProp
-                            validatedMintValue
-                            validatedTxScriptValidity
-
       eInMode <- case toEraInMode era CardanoMode of
                    Just result -> return result
                    Nothing ->
@@ -720,6 +705,28 @@ runTxBuild era (AnyConsensusModeParams cModeParams) networkId mScriptValidity
         firstExceptT ShelleyTxCmdQueryConvenienceError . newExceptT
           $ queryStateForBalancedTx nodeEra networkId allTxInputs
 
+      validatedPParams <- hoistEither $ first ShelleyTxCmdProtocolParametersValidationError
+                                      $ validateProtocolParameters era (Just pparams)
+
+      let txBodyContent = TxBodyContent
+                          (validateTxIns inputsAndMaybeScriptWits)
+                          validatedCollateralTxIns
+                          validatedRefInputs
+                          txouts
+                          validatedTotCollateral
+                          validatedRetCol
+                          dFee
+                          validatedBounds
+                          txMetadata
+                          txAuxScripts
+                          validatedReqSigners
+                          validatedPParams
+                          validatedTxWtdrwls
+                          validatedTxCerts
+                          validatedTxUpProp
+                          validatedMintValue
+                          validatedTxScriptValidity
+
       firstExceptT ShelleyTxCmdTxInsDoNotExist
         . hoistEither $ txInsExistInUTxO allTxInputs nodeEraUTxO
       firstExceptT ShelleyTxCmdQueryNotScriptLocked
@@ -735,6 +742,7 @@ runTxBuild era (AnyConsensusModeParams cModeParams) networkId mScriptValidity
       txEraUtxo <- case first ShelleyTxCmdTxEraCastErr (eraCast era nodeEraUTxO) of
                      Right txEraUtxo -> return txEraUtxo
                      Left e -> left e
+
 
       balancedTxBody@(BalancedTxBody _ _ _ fee) <-
         firstExceptT ShelleyTxCmdBalanceTxBody
