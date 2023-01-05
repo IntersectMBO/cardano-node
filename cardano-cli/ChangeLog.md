@@ -10,6 +10,7 @@
 
 - Add `query tx-mempool` ([PR 4276](https://github.com/input-output-hk/cardano-node/pull/4276))
 
+- Allow assembling transactions with no witnesses ([PR 4408](https://github.com/input-output-hk/cardano-node/pull/4408))
 
 ### Bugs
 
