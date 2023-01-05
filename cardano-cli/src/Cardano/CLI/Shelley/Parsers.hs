@@ -750,7 +750,7 @@ pTransaction =
 
   pTransactionSign  :: Parser TransactionCmd
   pTransactionSign = TxSign <$> pInputTxOrTxBodyFile
-                            <*> pSomeWitnessSigningData
+                            <*> many pWitnessSigningData
                             <*> optional pNetworkId
                             <*> pTxFile Output
 
@@ -764,7 +764,7 @@ pTransaction =
   pTransactionAssembleTxBodyWit :: Parser TransactionCmd
   pTransactionAssembleTxBodyWit = TxAssembleTxBodyWitness
                                     <$> pTxBodyFile Input
-                                    <*> some pWitnessFile
+                                    <*> many pWitnessFile
                                     <*> pOutputFile
 
   pTransactionSubmit :: Parser TransactionCmd
@@ -1665,9 +1665,8 @@ pWhichLeadershipSchedule = pCurrent <|> pNext
        <> Opt.help "Get the leadership schedule for the following epoch."
        )
 
-pSomeWitnessSigningData :: Parser [WitnessSigningData]
-pSomeWitnessSigningData =
-  some $
+pWitnessSigningData :: Parser WitnessSigningData
+pWitnessSigningData =
       KeyWitnessSigningData
         <$>
           ( SigningKeyFile <$>
@@ -1690,21 +1689,6 @@ pSigningKeyFile fdir =
       <> Opt.help (show fdir ++ " filepath of the signing key.")
       <> Opt.completer (Opt.bashCompleter "file")
       )
-
-pWitnessSigningData :: Parser WitnessSigningData
-pWitnessSigningData =
-    KeyWitnessSigningData
-      <$>
-        ( SigningKeyFile <$>
-            Opt.strOption
-              (  Opt.long "signing-key-file"
-              <> Opt.metavar "FILE"
-              <> Opt.help "Filepath of the signing key to be used in witness construction."
-              <> Opt.completer (Opt.bashCompleter "file")
-              )
-        )
-      <*>
-        optional pByronAddress
 
 pKesPeriod :: Parser KESPeriod
 pKesPeriod =
