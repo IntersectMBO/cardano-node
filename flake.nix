@@ -226,9 +226,6 @@
             // optionalAttrs (system == "x86_64-linux") rec {
               "dockerImage/node" = pkgs.dockerImage;
               "dockerImage/submit-api" = pkgs.submitApiDockerImage;
-              ## TODO: drop external membench, once we bump 'node-snapshot'
-              # snapshot = membench.outputs.packages.x86_64-linux.snapshot;
-              # membenches = pkgs.membench-node-this-5.batch-report;
 
               ## This is a very light profile, no caching&pinning needed.
               workbench-ci-test =
@@ -251,80 +248,58 @@
 
           apps = lib.mapAttrs (n: p: { type = "app"; program = p.exePath or (if (p.executable or false) then "${p}" else "${p}/bin/${p.name or n}"); }) exes;
 
-        in
-        {
-
-          inherit environments packages checks apps project;
-
-          legacyPackages = pkgs;
-
-          # Built by `nix build .`
-          defaultPackage = packages.cardano-node;
-
-          # Run by `nix run .`
-          defaultApp = apps.cardano-node;
-
-          # This is used by `nix develop .` to open a devShell
-          inherit devShell devShells;
-
-          # The parametrisable workbench.
-          inherit workbench;
-
-          systemHydraJobs = optionalAttrs (system == "x86_64-linux")
-            {
-              linux = {
-                native = packages // {
-                  shells = devShells // {
-                    default = devShell;
-                  };
-                  internal = {
-                    roots.project = project.roots;
-                    plan-nix.project = project.plan-nix;
-                  };
-                  profiled = lib.genAttrs [ "cardano-node" "tx-generator" "locli" ] (n:
-                    packages.${n}.passthru.profiled
-                  );
-                  asserted = lib.genAttrs [ "cardano-node" ] (n:
-                    packages.${n}.passthru.asserted
-                  );
-                };
-                musl =
-                  let
-                    muslProject = project.projectCross.musl64;
-                    projectExes = collectExes muslProject;
-                  in
-                  projectExes // {
-                    cardano-node-linux = import ./nix/binary-release.nix {
-                      inherit pkgs;
-                      inherit (exes.cardano-node.identifier) version;
-                      platform = "linux";
-                      exes = lib.collect lib.isDerivation projectExes;
-                    };
-                    internal.roots.project = muslProject.roots;
-                  };
-                windows =
-                  let
-                    windowsProject = project.projectCross.mingwW64;
-                    projectExes = collectExes windowsProject;
-                  in
-                  projectExes
-                    // (removeRecurse {
-                    inherit (windowsProject) checks tests benchmarks;
-                    cardano-node-win64 = import ./nix/binary-release.nix {
-                      inherit pkgs;
-                      inherit (exes.cardano-node.identifier) version;
-                      platform = "win64";
-                      exes = lib.collect lib.isDerivation projectExes;
-                    };
-                    internal.roots.project = windowsProject.roots;
-                  });
+          ciJobs = let ciJobs = {
+            cardano-deployment = pkgs.cardanoLib.mkConfigHtml { inherit (pkgs.cardanoLib.environments) mainnet testnet; };
+          } // optionalAttrs (system == "x86_64-linux") {
+            native = packages // {
+              shells = devShells // {
+                default = devShell;
               };
-            } // optionalAttrs (system == "x86_64-darwin") {
-            macos = lib.filterAttrs
-              (n: _:
-                # only build docker images once on linux:
-                !(lib.hasPrefix "dockerImage" n))
-              packages // {
+              internal = {
+                roots.project = project.roots;
+                plan-nix.project = project.plan-nix;
+              };
+              profiled = lib.genAttrs [ "cardano-node" "tx-generator" "locli" ] (n:
+                packages.${n}.passthru.profiled
+              );
+              asserted = lib.genAttrs [ "cardano-node" ] (n:
+                packages.${n}.passthru.asserted
+              );
+            };
+            musl =
+              let
+                muslProject = project.projectCross.musl64;
+                projectExes = collectExes muslProject;
+              in
+              projectExes // {
+                cardano-node-linux = import ./nix/binary-release.nix {
+                  inherit pkgs;
+                  inherit (exes.cardano-node.identifier) version;
+                  platform = "linux";
+                  exes = lib.collect lib.isDerivation projectExes;
+                };
+                internal.roots.project = muslProject.roots;
+              };
+            windows =
+              let
+                windowsProject = project.projectCross.mingwW64;
+                projectExes = collectExes windowsProject;
+              in
+              projectExes
+                // (removeRecurse {
+                inherit (windowsProject) checks tests benchmarks;
+                cardano-node-win64 = import ./nix/binary-release.nix {
+                  inherit pkgs;
+                  inherit (exes.cardano-node.identifier) version;
+                  platform = "win64";
+                  exes = lib.collect lib.isDerivation projectExes;
+                };
+                internal.roots.project = windowsProject.roots;
+              });
+          } // optionalAttrs (system == "x86_64-darwin") {
+            native = lib.filterAttrs (n: _:
+              # only build docker images once on linux:
+              !(lib.hasPrefix "dockerImage" n)) packages // {
               cardano-node-macos = import ./nix/binary-release.nix {
                 inherit pkgs;
                 inherit (exes.cardano-node.identifier) version;
@@ -340,66 +315,68 @@
               };
             };
           };
+          defaultNonRequiredPaths = [ "windows.checks.cardano-tracer.cardano-tracer-test" ] ++
+            lib.optionals (system == "x86_64-darwin") [
+              #FIXME:  ExceptionInLinkedThread (ThreadId 253) pokeSockAddr: path is too long
+              "native.checks/cardano-testnet/cardano-testnet-tests"
+            ];
+          in pkgs.callPackages iohkNix.utils.ciJobsAggregates {
+            inherit ciJobs;
+            nonRequiredPaths = map lib.hasPrefix defaultNonRequiredPaths;
+          } // {
+            pr = pkgs.callPackages iohkNix.utils.ciJobsAggregates {
+              inherit ciJobs;
+              nonRequiredPaths = map lib.hasPrefix (defaultNonRequiredPaths ++ [
+                "native.membenches"
+              ]);
+            };
+          } // ciJobs;
+
+        in
+        {
+
+          inherit environments packages checks apps project ciJobs;
+
+          legacyPackages = pkgs // {
+            # allows access to hydraJobs with specifying <arch>:
+            hydraJobs = ciJobs;
+          };
+
+          # Built by `nix build .`
+          defaultPackage = packages.cardano-node;
+
+          # Run by `nix run .`
+          defaultApp = apps.cardano-node;
+
+          # This is used by `nix develop .` to open a devShell
+          inherit devShell devShells;
+
+          # The parametrisable workbench.
+          inherit workbench;
+
         } //
         tullia.fromSimple system (import ./nix/tullia.nix)
       );
 
-      makeRequired = isPr: jobs: extra:
-      let
-        nonRequiredPaths = map lib.hasPrefix
-          ([ "macos." ] ++
-           [ "linux.windows.checks.cardano-tracer.cardano-tracer-test" ] ++
-           lib.optional isPr "linux.native.membenches");
-      in with self.legacyPackages.${defaultSystem};
-        releaseTools.aggregate {
-          name = "github-required";
-          meta.description = "All jobs required to pass CI";
-          constituents = lib.collect lib.isDerivation
-            (lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))
-              (path: value:
-                let stringPath = lib.concatStringsSep "." path; in if lib.isAttrs value && (lib.any (p: p stringPath) nonRequiredPaths) then { } else value)
-              jobs) ++ extra;
-        };
-
-      makeOsRequired = isPr: jobs: {
-        linux = jobs.linux // {
-          required = makeRequired isPr jobs.linux [];
-        };
-        macos = jobs.macos // {
-          required = makeRequired isPr jobs.macos [];
-        };
+      hydraJobs = flake.ciJobs // {
+        # TODO: remove nex 3 lines once tullia config reference architecture directly:
+        inherit (flake.ciJobs.${defaultSystem}) cardano-deployment;
+        linux.required = flake.ciJobs.x86_64-linux.required or {};
+        macos.required = flake.ciJobs.x86_64-darwin.required or {};
+      };
+      # TODO: also hydraJobsPr remove once tullia config reference hydraJobs.<arch>.pr:
+      hydraJobsPr = {
+        inherit (flake.ciJobs.${defaultSystem}) cardano-deployment;
+        linux.required = flake.ciJobs.x86_64-linux.pr.required or {};
+        macos.required = flake.ciJobs.x86_64-darwin.pr.required or {};
       };
 
-      hydraJobs =
-        let
-          jobs = lib.foldl' lib.mergeAttrs { } (lib.attrValues flake.systemHydraJobs);
-        in
-        jobs // (with self.legacyPackages.${defaultSystem}; rec {
-          cardano-deployment = cardanoLib.mkConfigHtml { inherit (cardanoLib.environments) mainnet testnet; };
-          build-version = writeText "version.json" (builtins.toJSON {
-            inherit (self) lastModified lastModifiedDate narHash outPath shortRev rev;
-          });
-          required = makeRequired false jobs [ cardano-deployment build-version ];
-        }) // makeOsRequired false jobs;
-
-      hydraJobsPr =
-        let
-          nonPrJobs = map lib.hasPrefix [
-            "linux.native.membenches"
-          ];
-
-          jobs = lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))
-            (path: value:
-              let stringPath = lib.concatStringsSep "." path; in if lib.isAttrs value && (lib.any (p: p stringPath) nonPrJobs) then { } else value)
-            hydraJobs;
-        in
-        jobs // {
-          required = makeRequired true jobs [ hydraJobs.cardano-deployment hydraJobs.build-version ];
-        } // makeOsRequired true jobs;
-    in
-    builtins.removeAttrs flake [ "systemHydraJobs" ] // {
+    in removeAttrs flake ["ciJobs"] // {
 
       inherit hydraJobs hydraJobsPr;
+
+      # allows precise paths (avoid fallbacks) with nix build/eval:
+      outputs = self;
 
       overlay = final: prev: {
         cardanoNodeProject = flake.project.${final.system};

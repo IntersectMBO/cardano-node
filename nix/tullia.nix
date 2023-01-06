@@ -54,7 +54,11 @@ in rec {
         resources.cpu = 10000;
 
         driver = "exec";
+              ${flakeUrl args}#ciJobs.${lib.escapeShellArg "x86_64-linux"}.cardano-deployment''
+            }
       };
+              ${flakeUrl args}#ciJobs.${lib.escapeShellArg "x86_64-linux"}.cardano-deployment''
+            }
     };
   in {
     "ci/push" = mkTask "hydraJobs";
