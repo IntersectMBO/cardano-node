@@ -185,27 +185,23 @@ genLovelace = Lovelace <$> Gen.integral (Range.linear 0 5000)
 --
 
 genScript :: ScriptLanguage lang -> Gen (Script lang)
-genScript (SimpleScriptLanguage lang) =
-    SimpleScript lang <$> genSimpleScript lang
+genScript SimpleScriptLanguage =
+    SimpleScript <$> genSimpleScript
 genScript (PlutusScriptLanguage lang) =
     PlutusScript lang <$> genPlutusScript lang
 
-genSimpleScript :: SimpleScriptVersion lang -> Gen (SimpleScript lang)
-genSimpleScript lang =
+genSimpleScript :: Gen SimpleScript
+genSimpleScript =
     genTerm
   where
     genTerm = Gen.recursive Gen.choice nonRecursive recursive
 
     -- Non-recursive generators
     nonRecursive =
-         (RequireSignature . verificationKeyHash <$>
-             genVerificationKey AsPaymentKey)
-
-      : [ RequireTimeBefore supported <$> genSlotNo
-        | supported <- maybeToList (timeLocksSupported lang) ]
-
-     ++ [ RequireTimeAfter supported <$> genSlotNo
-        | supported <- maybeToList (timeLocksSupported lang) ]
+      [ RequireSignature . verificationKeyHash <$> genVerificationKey AsPaymentKey
+      , RequireTimeBefore <$> genSlotNo
+      , RequireTimeAfter <$> genSlotNo
+      ]
 
     -- Recursive generators
     recursive =

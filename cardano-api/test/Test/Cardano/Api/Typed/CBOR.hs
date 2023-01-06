@@ -129,13 +129,13 @@ prop_roundtrip_signing_key_kes_CBOR =
 
 prop_roundtrip_script_SimpleScriptV1_CBOR :: Property
 prop_roundtrip_script_SimpleScriptV1_CBOR =
-  roundtrip_CBOR (AsScript AsSimpleScriptV1)
-                 (genScript (SimpleScriptLanguage SimpleScriptV1))
+  roundtrip_CBOR (AsScript AsSimpleScript)
+                 (genScript SimpleScriptLanguage)
 
 prop_roundtrip_script_SimpleScriptV2_CBOR :: Property
 prop_roundtrip_script_SimpleScriptV2_CBOR =
-  roundtrip_CBOR (AsScript AsSimpleScriptV2)
-                 (genScript (SimpleScriptLanguage SimpleScriptV2))
+  roundtrip_CBOR (AsScript AsSimpleScript)
+                 (genScript SimpleScriptLanguage)
 
 prop_roundtrip_script_PlutusScriptV1_CBOR :: Property
 prop_roundtrip_script_PlutusScriptV1_CBOR =
