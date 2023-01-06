@@ -89,12 +89,13 @@ import           Cardano.Slotting.EpochInfo (EpochInfo (..), epochInfoSlotToUTCT
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime (..),
                    toRelativeTime)
 import           Ouroboros.Consensus.Cardano.Block as Consensus (EraMismatch (..))
-import           Ouroboros.Consensus.Protocol.TPraos
+import           Ouroboros.Consensus.Protocol.TPraos ( StandardCrypto )
 import           Ouroboros.Network.Block (Serialised (..))
 
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
+import qualified Ouroboros.Consensus.Shelley.Ledger.Query as Consensus
 
 import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
@@ -860,7 +861,19 @@ writeStakeSnapshot qState =
 
     Right (StakeSnapshot snapshot) -> do
       -- Calculate the three pool and active stake values for the given pool
-      liftIO . LBS.putStrLn $ encodePretty snapshot
+      liftIO . LBS.putStrLn $ encodePretty $ Aeson.object $
+        [ "activeStakeMark" .= Consensus.ssMarkTotal snapshot
+        , "activeStakeSet"  .= Consensus.ssSetTotal snapshot
+        , "activeStakeGo"   .= Consensus.ssGoTotal snapshot
+        ] <> poolFields snapshot
+  where poolFields :: Consensus.StakeSnapshots (Ledger.Crypto (ShelleyLedgerEra era)) -> [Aeson.Pair]
+        poolFields snapshot = case Map.elems (Consensus.ssStakeSnapshots snapshot) of
+          [pool] -> 
+            [ "poolStakeMark"   .= Consensus.ssMarkPool pool
+            , "poolStakeSet"    .= Consensus.ssSetPool pool
+            , "poolStakeGo"     .= Consensus.ssGoPool pool
+            ]
+          _ -> []
 
 -- | This function obtains the pool parameters, equivalent to the following jq query on the output of query ledger-state
 --   .nesEs.esLState._delegationState._pstate._pParams.<pool_id>
