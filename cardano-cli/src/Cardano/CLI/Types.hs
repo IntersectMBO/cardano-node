@@ -36,7 +36,6 @@ module Cardano.CLI.Types
   , TxMempoolQuery (..)
   , UpdateProposalFile (..)
   , VerificationKeyFile (..)
-  , Stakes (..)
   , Params (..)
   , RequiredSigner (..)
   ) where
@@ -181,43 +180,6 @@ data OutputFormat
   = OutputFormatHex
   | OutputFormatBech32
   deriving (Eq, Show)
-
-
--- | This data structure is used to allow nicely formatted output within the query stake-snapshot command.
---
--- "markPool", "setPool", "goPool" are the three ledger state stake snapshots (from most recent to least recent)
--- go is the snapshot that is used for the current epoch, set will be used in the next epoch,
--- mark for the epoch after that.  "markTotal", "setTotal", "goTotal" record the total active stake for each snapshot.
---
--- This information can be used by community tools to calculate upcoming leader schedules.
-data Stakes =  Stakes
-  { markPool :: Integer
-  , setPool :: Integer
-  , goPool :: Integer
-  , markTotal :: Integer
-  , setTotal :: Integer
-  , goTotal :: Integer
-  } deriving Show
-
--- | Pretty printing for stake information
-instance ToJSON Stakes where
-  toJSON (Stakes m s g mt st gt) = object
-    [ "poolStakeMark" .= m
-    , "poolStakeSet" .= s
-    , "poolStakeGo" .= g
-    , "activeStakeMark" .= mt
-    , "activeStakeSet" .= st
-    , "activeStakeGo" .= gt
-    ]
-
-  toEncoding  (Stakes m s g mt st gt) = pairs $ mconcat
-    [ "poolStakeMark" .= m
-    , "poolStakeSet" .= s
-    , "poolStakeGo" .= g
-    , "activeStakeMark" .= mt
-    , "activeStakeSet" .= st
-    , "activeStakeGo" .= gt
-    ]
 
 -- | This data structure is used to allow nicely formatted output in the query pool-params command.
 -- params are the current pool parameter settings, futureparams are new parameters, retiringEpoch is the

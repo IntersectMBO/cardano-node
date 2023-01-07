@@ -52,6 +52,10 @@ module Cardano.Api.Query (
     PoolDistribution(..),
     decodePoolDistribution,
 
+    SerialisedStakeSnapshots(..),
+    StakeSnapshot(..),
+    decodeStakeSnapshot,
+
     EraHistory(..),
     SystemStart(..),
 
@@ -255,6 +259,10 @@ data QueryInShelleyBasedEra era result where
     :: Maybe (Set PoolId)
     -> QueryInShelleyBasedEra era (SerialisedPoolDistribution era)
 
+  QueryStakeSnapshot
+    :: PoolId
+    -> QueryInShelleyBasedEra era (SerialisedStakeSnapshots era)
+
 deriving instance Show (QueryInShelleyBasedEra era result)
 
 
@@ -429,6 +437,18 @@ decodePoolDistribution
   -> Either DecoderError (PoolDistribution era)
 decodePoolDistribution (SerialisedPoolDistribution (Serialised ls)) = PoolDistribution <$> decodeFull ls
 
+newtype SerialisedStakeSnapshots era
+  = SerialisedStakeSnapshots (Serialised (Consensus.StakeSnapshots (Ledger.Crypto (ShelleyLedgerEra era))))
+
+newtype StakeSnapshot era = StakeSnapshot (Consensus.StakeSnapshots (Ledger.Crypto (ShelleyLedgerEra era)))
+
+decodeStakeSnapshot
+  :: forall era. ()
+  => FromCBOR (Consensus.StakeSnapshots (Ledger.Crypto (ShelleyLedgerEra era)))
+  => SerialisedStakeSnapshots era
+  -> Either DecoderError (StakeSnapshot era)
+decodeStakeSnapshot (SerialisedStakeSnapshots (Serialised ls)) = StakeSnapshot <$> decodeFull ls
+
 toShelleyAddrSet :: CardanoEra era
                  -> Set AddressAny
                  -> Set (Shelley.Addr Consensus.StandardCrypto)
@@ -597,7 +617,7 @@ toConsensusQueryShelleyBased erainmode (QueryStakePoolParameters poolids) =
     Some (consensusQueryInEraInMode erainmode (Consensus.GetStakePoolParams poolids'))
   where
     poolids' :: Set (Shelley.KeyHash Shelley.StakePool Consensus.StandardCrypto)
-    poolids' = Set.map (\(StakePoolKeyHash kh) -> kh) poolids
+    poolids' = Set.map unStakePoolKeyHash poolids
 
 toConsensusQueryShelleyBased erainmode QueryDebugLedgerState =
     Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR Consensus.DebugNewEpochState))
@@ -609,10 +629,10 @@ toConsensusQueryShelleyBased erainmode QueryCurrentEpochState =
     Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR Consensus.DebugEpochState))
 
 toConsensusQueryShelleyBased erainmode (QueryPoolState poolIds) =
-    Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR (Consensus.GetPoolState (getPoolIds <$> poolIds))))
-  where
-    getPoolIds :: Set PoolId -> Set (Shelley.KeyHash Shelley.StakePool Consensus.StandardCrypto)
-    getPoolIds = Set.map (\(StakePoolKeyHash kh) -> kh)
+    Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR (Consensus.GetPoolState (Set.map unStakePoolKeyHash <$> poolIds))))
+
+toConsensusQueryShelleyBased erainmode (QueryStakeSnapshot poolId) =
+    Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR (Consensus.GetStakeSnapshots (Just (Set.singleton (unStakePoolKeyHash poolId))))))
 
 toConsensusQueryShelleyBased erainmode (QueryPoolDistribution poolIds) =
     Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR (Consensus.GetPoolDistr (getPoolIds <$> poolIds))))
@@ -859,6 +879,11 @@ fromConsensusQueryResultShelleyBased _ QueryPoolDistribution{} q' r' =
   case q' of
     Consensus.GetCBOR Consensus.GetPoolDistr {} -> SerialisedPoolDistribution r'
     _                                           -> fromConsensusQueryResultMismatch
+
+fromConsensusQueryResultShelleyBased _ QueryStakeSnapshot{} q' r' =
+  case q' of
+    Consensus.GetCBOR Consensus.GetStakeSnapshots {} -> SerialisedStakeSnapshots r'
+    _                                                -> fromConsensusQueryResultMismatch
 
 -- | This should /only/ happen if we messed up the mapping in 'toConsensusQuery'
 -- and 'fromConsensusQueryResult' so they are inconsistent with each other.
