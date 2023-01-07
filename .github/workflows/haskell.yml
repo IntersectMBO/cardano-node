@@ -162,7 +162,7 @@ jobs:
         # The tests call out to msys2 commands. We generally do not want to mix toolchains, so
         # we are very deliberate about only adding msys64 to the path where absolutely necessary.
         ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;{0}" -f $env:PATH)') || '' }}
-        cabal build cardano-node cardano-cli cardano-node-chairman cardano-submit-api
+        cabal build cardano-node cardano-cli cardano-node-chairman cardano-submit-api -j1
 
     - name: Build remaining components
       run: |
@@ -181,7 +181,7 @@ jobs:
         # The tests call out to msys2 commands. We generally do not want to mix toolchains, so
         # we are very deliberate about only adding msys64 to the path where absolutely necessary.
         ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;{0}" -f $env:PATH)') || '' }}
-        cabal test all
+        cabal test all -j1
 
     - name: Run tests
       if: github.event.inputs.tests != 'all'
