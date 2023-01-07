@@ -6,7 +6,7 @@ synopsis:               A cardano topology generator
 description:            A cardano topology generator.
 category:               Cardano,
                         Test,
-copyright:              2023 Input Output (Hong Kong) Ltd.
+copyright:              2021-2023 Input Output (Hong Kong) Ltd.
 author:                 IOHK
 maintainer:             operations@iohk.io
 license:                Apache-2.0

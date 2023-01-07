@@ -8,7 +8,7 @@ description:            This is intended to demonstrate how to write simple
                         using the cardano-api.
 category:               Cardano,
                         Demo,
-copyright:              2023 Input Output (Hong Kong) Ltd.
+copyright:              2021-2023 Input Output (Hong Kong) Ltd.
 author:                 IOHK
 maintainer:             operations@iohk.io
 license:                Apache-2.0

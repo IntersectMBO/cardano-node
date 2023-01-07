@@ -7,7 +7,7 @@ description:            The library providing typed protocols for forwarding dif
                         information from the cardano node to an external application.
 category:               Cardano,
                         Trace,
-copyright:              2023 Input Output (Hong Kong) Ltd.
+copyright:              2021-2023 Input Output (Hong Kong) Ltd.
 author:                 IOHK
 maintainer:             operations@iohk.io
 license:                Apache-2.0

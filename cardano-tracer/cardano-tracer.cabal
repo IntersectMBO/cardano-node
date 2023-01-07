@@ -6,7 +6,7 @@ synopsis:               A service for logging and monitoring over Cardano nodes
 description:            A service for logging and monitoring over Cardano nodes.
 category:               Cardano,
                         Trace,
-copyright:              2023 Input Output (Hong Kong) Ltd.
+copyright:              2022-2023 Input Output (Hong Kong) Ltd.
 author:                 IOHK
 maintainer:             operations@iohk.io
 license:                Apache-2.0

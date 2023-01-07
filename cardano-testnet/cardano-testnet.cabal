@@ -4,7 +4,7 @@ name:                   cardano-testnet
 version:                1.36.0
 synopsis:               The cardano full node
 description:            The cardano full node.
-copyright:              2023 Input Output (Hong Kong) Ltd.
+copyright:              2021-2023 Input Output (Hong Kong) Ltd.
 author:                 IOHK
 maintainer:             operations@iohk.io
 category:               Cardano,

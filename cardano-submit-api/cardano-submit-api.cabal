@@ -9,7 +9,7 @@ bug-reports:            https://github.com/input-output-hk/cardano-node/issues
 license:                Apache-2.0
 license-files:          LICENSE
                         NOTICE
-copyright:              2023 Input Output (Hong Kong) Ltd.
+copyright:              2019-2023 Input Output (Hong Kong) Ltd.
 author:                 IOHK Engineering Team
 maintainer:             operations@iohk.io
 category:               Cardano,

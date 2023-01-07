@@ -6,7 +6,7 @@ synopsis:               Package for tracing resources for linux, mac and windows
 description:            Package for tracing resources for linux, mac and windows.
 category:               Cardano,
                         Trace,
-copyright:              2023 Input Output (Hong Kong) Ltd.
+copyright:              2021-2023 Input Output (Hong Kong) Ltd.
 author:                 Juergen Nicklisch-Franken
 maintainer:             operations@iohk.io
 license:                Apache-2.0

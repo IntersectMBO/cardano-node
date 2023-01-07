@@ -6,7 +6,7 @@ synopsis:               A transaction workload generator for Cardano clusters
 description:            A transaction workload generator for Cardano clusters.
 category:               Cardano,
                         Test,
-copyright:              2023 Input Output (Hong Kong) Ltd.
+copyright:              2019-2023 Input Output (Hong Kong) Ltd.
 author:                 IOHK
 maintainer:             operations@iohk.io
 license:                Apache-2.0

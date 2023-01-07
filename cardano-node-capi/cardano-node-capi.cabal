@@ -6,7 +6,7 @@ synopsis:               FFI C library for Cardano
 description:            ffi c library around the full node.
 category:               Cardano,
                         FFI,
-copyright:              2023 Input Output (Hong Kong) Ltd.
+copyright:              2021-2023 Input Output (Hong Kong) Ltd.
 author:                 IOHK
 maintainer:             operations@iohk.io
 license:                Apache-2.0

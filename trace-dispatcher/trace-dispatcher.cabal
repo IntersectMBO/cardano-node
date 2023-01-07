@@ -7,7 +7,7 @@ description:            Package for development of simple and efficient tracers
                         based on the arrow based contra-tracer package
 category:               Cardano,
                         Trace,
-copyright:              2023 Input Output (Hong Kong) Ltd.
+copyright:              2020-2023 Input Output (Hong Kong) Ltd.
 author:                 Juergen Nicklisch-Franken
 maintainer:             operations@iohk.io
 license:                Apache-2.0
