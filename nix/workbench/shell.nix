@@ -84,10 +84,6 @@ in project.shellFor {
   packages = ps: builtins.attrValues (haskellLib.selectProjectPackages ps);
 
   tools = {
-    haskell-language-server = {
-      version = "latest";
-      inherit (project) index-state;
-    };
   };
 
   # These programs will be available inside the nix-shell.
