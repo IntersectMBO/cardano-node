@@ -1,6 +1,8 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
 #if !defined(mingw32_HOST_OS)
 #define UNIX
 #endif
@@ -9,15 +11,26 @@ module Test.Cardano.Node.FilePermissions
   ( tests
   ) where
 
-import           Cardano.Prelude
-
 import           System.Directory (removeFile)
 
 import           Cardano.Api
 import           Cardano.Node.Run (checkVRFFilePermissions)
+import           Control.Exception (bracket)
+import           Control.Monad (Monad(..))
+import           Control.Monad.Except(MonadIO(liftIO), runExceptT )
+import           Data.Bool (Bool, not)
+import           Data.Either (Either(..))
+import           Data.Eq ((==))
+import           Data.Foldable (foldl', length)
+import           Data.Function (($), (.), const)
+import           Data.Maybe (Maybe(..))
+import           Data.Semigroup (Semigroup(..))
+import qualified Data.List as L
 import           Hedgehog (Property, PropertyT, property, success)
 import qualified Hedgehog
 import           Hedgehog.Internal.Property (Group (..), failWith)
+import           System.IO (FilePath, IO)
+import           Text.Show (Show(..))
 
 #ifdef UNIX
 import           Cardano.Node.Types (VRFPrivateKeyFilePermissionError (..))
@@ -29,6 +42,7 @@ import           System.Posix.Types (FileMode)
 import           Hedgehog (Gen, classify, forAll)
 import qualified Hedgehog.Gen as Gen
 #endif
+
 
 {- HLINT ignore "Use fewer imports" -}
 
@@ -123,13 +137,13 @@ createPermissions = foldl' unionFileModes (ownerReadMode `unionFileModes` ownerW
 genGroupPermissions :: Gen [FileMode]
 genGroupPermissions =
   let gPermissions = [groupReadMode, groupWriteMode, groupExecuteMode]
-  in do subSeq <- Gen.filter (not . null) $ Gen.subsequence gPermissions
+  in do subSeq <- Gen.filter (not . L.null) $ Gen.subsequence gPermissions
         Gen.frequency [(3, return gPermissions), (12, return subSeq)]
 
 genOtherPermissions :: Gen [FileMode]
 genOtherPermissions =
   let oPermissions = [otherReadMode, otherWriteMode, otherExecuteMode]
-  in do subSeq <- Gen.filter (not . null) $ Gen.subsequence oPermissions
+  in do subSeq <- Gen.filter (not . L.null) $ Gen.subsequence oPermissions
         Gen.frequency [(3, return oPermissions), (12, return subSeq)]
 #endif
 

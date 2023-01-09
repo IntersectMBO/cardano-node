@@ -38,13 +38,8 @@ common maybe-unix
   if !os(windows)
      build-depends:     unix
 
-common maybe-Win32
-  if os(windows)
-     build-depends:     Win32
-
 library
   import:               project-config
-                      , maybe-Win32
 
   if flag(unexpected_thunks)
     cpp-options:        -DUNEXPECTED_THUNKS
