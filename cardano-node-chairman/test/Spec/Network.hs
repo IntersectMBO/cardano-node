@@ -33,7 +33,7 @@ import qualified System.Random as IO
 import qualified UnliftIO.Exception as IO
 
 hprop_isPortOpen_False :: Property
-hprop_isPortOpen_False = H.propertyOnce . H.workspace "temp/network" $ \_ -> do
+hprop_isPortOpen_False = H.propertyOnce . H.workspace "temp-network" $ \_ -> do
   -- Check multiple random ports and assert that one is closed.
   -- Multiple random ports are checked because there is a remote possibility a random
   -- port is actually open by another program
@@ -42,7 +42,7 @@ hprop_isPortOpen_False = H.propertyOnce . H.workspace "temp/network" $ \_ -> do
   H.assert (False `L.elem` results)
 
 hprop_isPortOpen_True :: Property
-hprop_isPortOpen_True = H.propertyOnce . H.workspace "temp/network" $ \_ -> do
+hprop_isPortOpen_True = H.propertyOnce . H.workspace "temp-network" $ \_ -> do
   -- Check first random port from multiple possible ports to be successfully bound is open
   -- Multiple random ports are checked because there is a remote possibility a random
   -- port is actually open by another program

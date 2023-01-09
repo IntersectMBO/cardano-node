@@ -101,7 +101,7 @@ constraints:
   , cardano-ledger-shelley-ma == 0.1.1.1
   , cardano-ledger-shelley-test == 0.1.1.1
   , cardano-protocol-tpraos == 0.1.1.1
-  , hedgehog-extras >= 0.3
+  , hedgehog-extras >= 0.3.0.3
 
 -- We'll need this once ouroboros has been pushed into CHaP
 -- extra-packages:
@@ -124,6 +124,13 @@ allow-newer:
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+-- And has the adjustments for the ledger refactor
+source-repository-package
+   type: git
+   location: https://github.com/input-output-hk/hedgehog-extras
+   tag: 9ea1845ca2036e7a1ae9fcebe393526540c5c233
+   --sha256: 0qwvx04l9q3h7acb0a3b8iarqcn5bkqhwaplbga5pvryqp3lhn00
 
 source-repository-package
   type: git
