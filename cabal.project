@@ -101,7 +101,7 @@ constraints:
   , cardano-ledger-shelley-ma == 0.1.1.1
   , cardano-ledger-shelley-test == 0.1.1.1
   , cardano-protocol-tpraos == 0.1.1.1
-  , hedgehog-extras >= 0.3
+  , hedgehog-extras >= 0.3.0.3
 
 -- We'll need this once ouroboros has been pushed into CHaP
 -- extra-packages:
