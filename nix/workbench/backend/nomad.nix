@@ -77,7 +77,7 @@ let
             };
         supervisorConf =
           import ./supervisor-conf.nix
-            { inherit (profileNix) node-services;
+            { inherit profileNix;
               inherit pkgs lib stateDir;
               unixHttpServerPort = "/tmp/supervisor.sock";
             };

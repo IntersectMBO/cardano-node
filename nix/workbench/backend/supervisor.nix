@@ -32,7 +32,7 @@ let
   materialise-profile =
     { stateDir, profileNix }:
       let supervisorConf = import ./supervisor-conf.nix
-        { inherit (profileNix) node-services;
+        { inherit profileNix;
           inherit pkgs lib stateDir;
           inetHttpServerPort = "127.0.0.1:9001";
         };

@@ -1,7 +1,7 @@
 { pkgs
 , lib
 , stateDir
-, node-services
+, profileNix
 , unixHttpServerPort ? null
 , inetHttpServerPort ? null
 }:
@@ -41,7 +41,7 @@ let
     }
     //
     listToAttrs
-      (mapAttrsToList (_: nodeSvcSupervisorProgram) node-services)
+      (mapAttrsToList (_: nodeSvcSupervisorProgram) (profileNix.node-services))
     //
     {
       "program:generator" = {
@@ -58,7 +58,7 @@ let
       };
     }
     //
-    {
+    lib.attrsets.optionalAttrs (profileNix.value.node.tracer) {
       "program:tracer" = {
         directory      = "${stateDir}/tracer";
         command        = "sh start.sh";
