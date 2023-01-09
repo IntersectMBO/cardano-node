@@ -26,7 +26,6 @@ common project-config
 
   default-extensions:   NoImplicitPrelude
                         OverloadedStrings
-  build-depends:        base >= 4.14 && < 4.17
 
   ghc-options:          -Wall
                         -Wcompat
@@ -125,8 +124,8 @@ library
                         Cardano.Tracing.OrphanInstances.Shelley
 
   other-modules:        Paths_cardano_node
-
-  build-depends:        aeson             >= 1.5.6.0
+  build-depends:        base >= 4.14 && < 4.17
+                      , aeson >= 1.5.6.0
                       , async
                       , base16-bytestring
                       , bytestring
@@ -202,7 +201,8 @@ executable cardano-node
 
   other-modules:        Paths_cardano_node
 
-  build-depends:        cardano-git-rev
+  build-depends:        base >= 4.14 && < 4.17
+                      , cardano-git-rev
                       , cardano-node
                       , cardano-prelude
                       , optparse-applicative-fork
@@ -215,7 +215,8 @@ test-suite cardano-node-test
   main-is:              cardano-node-test.hs
   type:                 exitcode-stdio-1.0
 
-  build-depends:        aeson             >= 1.5.6.0
+  build-depends:        base >= 4.14 && < 4.17
+                      , aeson >= 1.5.6.0
                       , bytestring
                       , cardano-api
                       , cardano-node
@@ -227,6 +228,7 @@ test-suite cardano-node-test
                       , iproute
                       , ouroboros-consensus
                       , ouroboros-network
+                      , mtl
                       , time
                       , vector
 

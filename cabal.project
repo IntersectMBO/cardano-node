@@ -177,7 +177,7 @@ source-repository-package
    type: git
    location: https://github.com/input-output-hk/hedgehog-extras
    tag: 9ea1845ca2036e7a1ae9fcebe393526540c5c233
-   --sha256: 0qwvx04l9q3h7acb0a3b8iarqcn5bkqhwaplbga5pvryqp3lhn00
+   --sha256: 1436dwmz9v6ky9kzgnr4flzlzjxwh2zjkds9fnayc1ddang6wwb6
 
 -- And has the adjustments for the ledger refactor
 source-repository-package
