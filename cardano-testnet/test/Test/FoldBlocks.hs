@@ -25,7 +25,6 @@ import qualified Testnet.Cardano as TN
 import qualified Testnet.Conf as TC (Conf (..), ProjectBase (ProjectBase),
                    YamlFilePath (YamlFilePath), mkConf)
 
-
 newtype FoldBlocksException = FoldBlocksException C.FoldBlocksError
 instance Exception FoldBlocksException
 instance Show FoldBlocksException where
