@@ -1153,7 +1153,6 @@ instance ToJSON SimpleScript where
 instance FromJSON SimpleScript where
   parseJSON = parseSimpleScript
 
--- TODO: Left off here. You need to comb through cardano-api's property tests concerning simple scripts
 parseSimpleScript :: Value -> Aeson.Parser SimpleScript
 parseSimpleScript v = parseScriptSig v <|>
                       parseScriptBefore v <|>

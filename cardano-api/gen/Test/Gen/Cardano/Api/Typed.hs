@@ -125,7 +125,6 @@ import qualified Data.ByteString.Short as SBS
 import           Data.Coerce
 import           Data.Int (Int64)
 import           Data.Map.Strict (Map)
-import           Data.Maybe (maybeToList)
 import           Data.Ratio (Ratio, (%))
 import           Data.String
 import           Data.Word (Word64)

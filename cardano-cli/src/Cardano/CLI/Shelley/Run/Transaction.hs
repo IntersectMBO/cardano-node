@@ -883,8 +883,8 @@ getAllReferenceInputs txins mintWitnesses certFiles withdrawals readOnlyRefIns =
     case sWit of
       PlutusScriptWitness _ _ (PReferenceScript refIn _) _ _ _ -> Just refIn
       PlutusScriptWitness _ _ PScript{} _ _ _ -> Nothing
-      SimpleScriptWitness _ _ (SReferenceScript refIn _)  -> Just refIn
-      SimpleScriptWitness _ _ SScript{}  -> Nothing
+      SimpleScriptWitness _ (SReferenceScript refIn _)  -> Just refIn
+      SimpleScriptWitness _ SScript{}  -> Nothing
 
 toAddressInAnyEra
   :: CardanoEra era
@@ -1037,9 +1037,9 @@ createTxMintValue era (val, scriptWitnesses) =
       witnessesExtra = Set.elems (witnessesProvided Set.\\ witnessesNeeded)
 
 scriptWitnessPolicyId :: ScriptWitness witctx era -> Maybe PolicyId
-scriptWitnessPolicyId (SimpleScriptWitness _ version (SScript script)) =
-   Just . scriptPolicyId $ SimpleScript version script
-scriptWitnessPolicyId (SimpleScriptWitness _ _ (SReferenceScript _ mPid)) =
+scriptWitnessPolicyId (SimpleScriptWitness _ (SScript script)) =
+   Just . scriptPolicyId $ SimpleScript script
+scriptWitnessPolicyId (SimpleScriptWitness _ (SReferenceScript _ mPid)) =
    PolicyId <$> mPid
 scriptWitnessPolicyId (PlutusScriptWitness _ version (PScript script) _ _ _) =
    Just . scriptPolicyId $ PlutusScript version script
