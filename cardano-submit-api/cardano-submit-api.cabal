@@ -24,7 +24,6 @@ common project-config
   
   ghc-options:          -Wall
                         -Wcompat
-                        -Werror
                         -Wincomplete-record-updates
                         -Wincomplete-uni-patterns
                         -Wno-all-missed-specialisations
