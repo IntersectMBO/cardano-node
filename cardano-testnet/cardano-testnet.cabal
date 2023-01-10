@@ -6,6 +6,8 @@ description:            The cardano full node
 copyright:              2023 Input Output (Hong Kong) Ltd.
 author:                 IOHK
 maintainer:             operations@iohk.io
+category:               Cardano,
+                        Test,
 license:                Apache-2.0
 license-files:          LICENSE
                         NOTICE

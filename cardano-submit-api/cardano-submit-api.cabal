@@ -12,7 +12,8 @@ license-files:          LICENSE
 copyright:              2023 Input Output (Hong Kong) Ltd.
 author:                 IOHK Engineering Team
 maintainer:             operations@iohk.io
-category:               Language
+category:               Cardano,
+                        Web,
 build-type:             Simple
 extra-source-files:     CHANGELOG.md
 

@@ -4,6 +4,8 @@ name:                   cardano-tracer
 version:                0.1.0
 synopsis:               A service for logging and monitoring over Cardano nodes.
 description:            See README for more info
+category:               Cardano,
+                        Trace,
 copyright:              2023 Input Output (Hong Kong) Ltd.
 author:                 IOHK
 maintainer:             operations@iohk.io

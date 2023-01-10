@@ -1,13 +1,13 @@
-cabal-version:      3.0
-name:               plutus-scripts-bench
-version:            1.0.0.0
-description:
-  Plutus scripts used for benchmarking.
-
-author:             IOHK
-maintainer:         operations@iohk.io
-license:            Apache-2.0
-build-type:         Simple
+cabal-version:          3.0
+name:                   plutus-scripts-bench
+version:                1.0.0.0
+description:            Plutus scripts used for benchmarking.
+category:               Cardano,
+                        Benchmarking,
+author:                 IOHK
+maintainer:             operations@iohk.io
+license:                Apache-2.0
+build-type:             Simple
 
 flag unexpected_thunks
   description: Turn on unexpected thunks checks
