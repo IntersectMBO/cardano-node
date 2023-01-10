@@ -26,7 +26,7 @@ local op=${1:-$(usage_genesis)}; shift
 
 case "$op" in
     prepare-cache-entry )
-        local usage="USAGE:  wb genesis $op [--force] PROFILE-JSON CACHEDIR NODE-SPECS OUTDIR"
+        local usage="USAGE:  wb genesis $op [--force] PROFILE-JSON NODE-SPECS OUTDIR CACHEDIR"
 
         local regenesis_causes=()
         while test $# -gt 0
@@ -34,18 +34,20 @@ case "$op" in
                --force ) regenesis_causes+=('has--force');;
                * ) break;; esac; shift; done
 
-        local profile_json=${1:?$usage}
-        local cachedir=${2:?$usage}
-        local node_specs=${3:?$usage}
-        local outdir=${4:?$usage}
+        local profile_json=${1:-$WB_SHELL_PROFILE_DIR/profile.json}
+        local node_specs=${2:-$WB_SHELL_PROFILE_DIR/node-specs.json}
+        local cacheDir=${3:-$(envjqr 'cacheDir')}
+
+        mkdir -p "$cacheDir" && test -w "$cacheDir" ||
+                fatal "profile | allocate failed to create writable cache directory:  $cacheDir"
 
         local cache_key_input=$(genesis profile-cache-key-input "$profile_json")
         if test -z "$cache_key_input"
         then fatal "no valid profile JSON in $profile_json"
         fi
         local cache_key=$(genesis profile-cache-key "$profile_json")
-        local cache_path=$cachedir/$cache_key
-        if test "$(realpath $cachedir)" = "$(realpath $cache_path)"
+        local cache_path=$cacheDir/genesis/$cache_key
+        if test "$(realpath $cacheDir/genesis)" = "$(realpath $cache_path)"
         then fatal "no valid genesis cache key associated with profile in $profile_json"
         fi
 
@@ -71,12 +73,9 @@ case "$op" in
              else genesis actually-genesis "$profile_json" "$node_specs" "$cache_path" "$cache_key_input" "$cache_key"
              fi
         fi
-
-        ## Install the cache entry:
-        rm -f $outdir ## Must be a symlink for this to succeed
-        ln -s "$(realpath "$cache_path")" "$outdir"
         echo >&2
-        ;;
+
+        realpath "$cache_path";;
 
     cache-test )
         local usage="USAGE:  wb genesis $op GENESIS-CACHE-DIR"
@@ -142,11 +141,11 @@ case "$op" in
 
     actually-genesis )
         local usage="USAGE:  wb genesis $op PROFILE-JSON NODE-SPECS DIR"
-        local profile_json=${1:?$usage}
-        local node_specs=${2:?$usage}
-        local dir=${3:?$usage}
-        local cache_key_input=$4
-        local cache_key=$5
+        local profile_json=${1:-$WB_SHELL_PROFILE_DIR/profile.json}
+        local node_specs=${2:-$WB_SHELL_PROFILE_DIR/node-specs.json}
+        local dir=${3:-$(mktemp -d)}
+        local cache_key_input=${4:-$(genesis profile-cache-key-input $WB_SHELL_PROFILE_DIR/profile.json)}
+        local cache_key=${5:-$(genesis profile-cache-key $WB_SHELL_PROFILE_DIR/profile.json)}
 
         progress "genesis" "new one:  $(yellow profile) $(blue $profile_json) $(yellow node_specs) $(blue $node_specs) $(yellow dir) $(blue $dir) $(yellow cache_key) $(blue $cache_key) $(yellow cache_key_input) $(blue $cache_key_input)"
 

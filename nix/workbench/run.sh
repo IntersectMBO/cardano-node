@@ -372,7 +372,7 @@ EOF
         local profile_name=${1:?$usage}; shift
         local backend_name=${1:?$usage}; shift
 
-        local profile= topology= genesis_cache_entry= manifest= preset= cabal_mode=
+        local profile= topology= genesis_cache_entry= manifest= cabal_mode=
         while test $# -gt 0
         do case "$1" in
                --manifest )            manifest=$2; shift;;
@@ -384,36 +384,13 @@ EOF
                --* ) msg "FATAL:  unknown flag '$1'"; usage_run;;
                * ) break;; esac; shift; done
 
-        local node_specs="$profile"/node-specs.json
-
-        if profile has-preset "$profile"/profile.json
-        then preset=$(profile json "$profile"/profile.json | jq '.preset' -r)
-             progress "run" "allocating from preset '$preset'"
-        else progress "run" "allocating a new one"
-        fi
-
-        local hash=$(jq '."cardano-node" | .[:5]' -r <<<$manifest)
-
-        ## 1. compute cluster composition
-
-        ## 2. genesis cache entry population
+        ## 1. genesis cache entry
         progress "run | genesis" "cache entry:  $(if test -n "$genesis_cache_entry"; then echo pre-supplied; else echo preparing a new one..; fi)"
-        if test  -z "$genesis_cache_entry"
-        then local genesis_tmpdir=$(mktemp --directory)
-             local cacheDir=$(envjqr 'cacheDir')
-             mkdir -p "$cacheDir" && test -w "$cacheDir" ||
-                     fatal "profile | allocate failed to create writable cache directory:  $cacheDir"
-             local genesis_args=(
-                 ## Positionals:
-                 "$profile"/profile.json
-                 "$cacheDir"/genesis
-                 "$node_specs"
-                 "$genesis_tmpdir"/genesis
-             )
-             genesis prepare-cache-entry "${genesis_args[@]}"
-             genesis_cache_entry=$(realpath "$genesis_tmpdir"/genesis)
-             rm -f "$genesis_tmpdir"/genesis
-             rmdir "$genesis_tmpdir"
+        if test -z "$genesis_cache_entry"
+        then genesis_cache_entry=$(
+                 genesis prepare-cache-entry \
+                     "$profile"/profile.json \
+                  "$profile"/node-specs.json)
         fi
 
         ## 2. allocate time
@@ -422,18 +399,8 @@ EOF
         profile describe-timing "$timing"
 
         ## 3. decide the tag:
-        if [ "$backend_name" == "supervisor" ];
-        then
-            local backend_identifier="sup"
-        else
-            if [ "$backend_name" == "nomad" ];
-            then
-                local backend_identifier="nom"
-            else
-                local backend_identifier="$backend_name"
-            fi
-        fi
-        local run=$(jq '.start_tag' -r <<<$timing)$(if test "$batch" != 'plain'; then echo -n .$batch; fi).$hash.$profile_name.$backend_identifier
+        local hash=$(jq '."cardano-node" | .[:5]' -r <<<$manifest)
+        local run=$(jq '.start_tag' -r <<<$timing)$(if test "$batch" != 'plain'; then echo -n .$batch; fi).$hash.$profile_name.${backend_name::3}
         progress "run | tag" "allocated run identifier (tag):  $(with_color white $run)"
 
         ## 4. allocate directory:
