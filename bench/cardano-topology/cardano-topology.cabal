@@ -2,7 +2,8 @@ cabal-version: 3.0
 
 name:                   cardano-topology
 version:                1.36.0
-description:            A cardano topology generator
+synopsis:               A cardano topology generator
+description:            A cardano topology generator.
 category:               Cardano,
                         Test,
 copyright:              2023 Input Output (Hong Kong) Ltd.

@@ -3,7 +3,7 @@ cabal-version: 3.0
 name:                   trace-analyzer
 version:                0.1.0
 synopsis:               See README for more info
-description:            See README for more info
+description:            See README for more info.
 category:               Cardano,
                         Trace,
 copyright:              2023 Input Output (Hong Kong) Ltd.

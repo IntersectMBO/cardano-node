@@ -2,6 +2,7 @@ cabal-version: 3.0
 
 name:                   locli
 version:                1.29
+synopsis:               Cardano log analysis CLI
 description:            Cardano log analysis CLI.
 category:               Cardano,
                         Logging,
