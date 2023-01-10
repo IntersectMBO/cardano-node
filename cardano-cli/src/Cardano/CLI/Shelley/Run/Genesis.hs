@@ -754,7 +754,7 @@ runGenesisCreateStaked (GenesisDir rootdir)
   writeFileGenesis (rootdir </> "genesis.alonzo.json") alonzoGenesis
   --TODO: rationalise the naming convention on these genesis json files.
 
-  liftIO $ Text.putStrLn $ mconcat $
+  liftIO $ Text.hPutStrLn stderr $ mconcat $
     [ "generated genesis with: "
     , textShow genNumGenesisKeys, " genesis keys, "
     , textShow genNumUTxOKeys, " non-delegating UTxO keys, "
@@ -1141,10 +1141,9 @@ updateCreateStakedOutputTemplate
     delegCoin = fromIntegral amountDeleg
 
     distribute :: Integer -> Int -> [AddressInEra ShelleyEra] -> [(AddressInEra ShelleyEra, Lovelace)]
-    distribute funds nAddrs addrs = zip addrs (fmap Lovelace (coinPerAddr + rest:repeat coinPerAddr))
-      where coinPerAddr :: Integer
-            coinPerAddr = funds `div` fromIntegral nAddrs
-            rest = coinPerAddr * fromIntegral nAddrs
+    distribute funds nAddrs addrs = zip addrs (fmap Lovelace (coinPerAddr + remainder:repeat coinPerAddr))
+      where coinPerAddr, remainder :: Integer
+            (,) coinPerAddr remainder = funds `divMod` fromIntegral nAddrs
 
     mkStuffedUtxo :: [AddressInEra ShelleyEra] -> [(AddressInEra ShelleyEra, Lovelace)]
     mkStuffedUtxo xs = (, Lovelace minUtxoVal) <$> xs
