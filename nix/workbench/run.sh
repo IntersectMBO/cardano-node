@@ -576,8 +576,6 @@ EOF
                   , dense_pool_density: 1
                   , epoch_length:       $gsis.epochLength
                   , parameter_k:        $gsis.securityParam
-                  , max_block_size:     $gsis.protocolParams.maxBlockBodySize
-                  , max_tx_size:        $gsis.protocolParams.maxTxSize
                   , n_pools:            1
                   , slot_duration:      $gsis.slotLength
                   , utxo:               4000000

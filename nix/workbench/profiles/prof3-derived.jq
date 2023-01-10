@@ -15,12 +15,13 @@ def may_attr($attr; $dict; $defdict; $scale; $suf):
   then [($dict[$attr] | . / $scale | tostring) + $suf] else [] end;
 
 def profile_name($p):
-  era_defaults($p.era).genesis     as     $genesis_defaults
-| era_defaults($p.era).generator   as   $generator_defaults
-| era_defaults($p.era).composition as $composition_defaults
-| era_defaults($p.era).node        as        $node_defaults
-| $p.node.shutdown_on_block_synced as       $shutdown_block
-| $p.node.shutdown_on_slot_synced  as       $shutdown_slots
+  era_defaults($p.era).genesis      as     $genesis_defaults
+| era_defaults($p.era).generator    as   $generator_defaults
+| era_defaults($p.era).composition  as $composition_defaults
+| era_defaults($p.era).node         as        $node_defaults
+| $p.node.shutdown_on_block_synced  as       $shutdown_block
+| $p.node.shutdown_on_slot_synced   as       $shutdown_slots
+| $p.genesis.shelley.protocolParams as              $pparams
   ## Genesis
 | [ "k\($p.composition.n_pools)" ]
   + if $p.composition.n_dense_hosts > 0
@@ -30,11 +31,12 @@ def profile_name($p):
   + if $shutdown_slots | type == "number"
     then [($shutdown_slots | tostring) + "slots"]
     else [ ($p.generator.epochs                  | tostring) + "ep"
-         , ($p.generator.tx_count | . / 1000 | ceil | tostring) + "kTx" ]
-    end
-  + [ ($p.genesis.utxo           | . / 1000 | tostring) + "kU"
-    , ($p.genesis.delegators     | . / 1000 | tostring) + "kD"
-    , ($p.genesis.max_block_size | . / 1000 | tostring) + "kbs"
+         , ($p.generator.tx_count | . / 1000 | ceil | tostring) + "kTx" ] end
+  + if $p.genesis.utxo               < 1000 then [] else
+    [ ($p.genesis.utxo           | . / 1000 | tostring) + "kU" ] end
+  + if $p.genesis.delegators         < 1000 then [] else
+    [ ($p.genesis.delegators     | . / 1000 | tostring) + "kD" ] end
+  + [ ($pparams.maxBlockBodySize | . / 1024 | floor | tostring) + "kbs"
     ]
   + may_attr("tps";
              $p.generator; $generator_defaults; 1; "tps")
@@ -82,6 +84,7 @@ def add_derived_params:
 | .analysis                                  as $ana
 | .era                                       as $era
 | .node                                      as $node
+| .genesis.shelley.protocolParams            as $pparams
 
 ## Absolute durations:
 | ($gsis.epoch_length * $gsis.slot_duration)       as $epoch_duration
@@ -118,7 +121,7 @@ def add_derived_params:
 
 | ($generator_tx_count * $gtor.inputs_per_tx)
                                              as $utxo_generated
-| (($gsis.max_block_size / default_value_tx_size_estimate) | floor)
+| (($pparams.maxBlockBodySize / default_value_tx_size_estimate) | floor)
                                              as $default_value_tx_per_block_estimate
 ## Note how derivations come in phases, too:
 ##
@@ -179,10 +182,7 @@ def add_derived_params:
            , securityParam:              $gsis.parameter_k
            , slotLength:                 $gsis.slot_duration
            , protocolParams:
-              { maxTxSize:                  $gsis.max_tx_size
-              , decentralisationParam:      $gsis.decentralisation_param
-              , maxBlockBodySize:           $gsis.max_block_size
-              , nOpt:                       $compo.n_pools
+              { nOpt:                       $compo.n_pools
               }
             } * ($gsis.shelley // {}))
          # , alonzo: supposed to already be filled

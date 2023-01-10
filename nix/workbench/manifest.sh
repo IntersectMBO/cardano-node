@@ -146,10 +146,10 @@ manifest_local_repo_branch() {
 
 manifest_cabal_package_localisations() {
     local dir=$1
-    if ! git -C "$dir" diff --exit-code --quiet -- cabal.project || \
-       ! git -C "$dir" diff --exit-code --quiet -- cabal.project --staged
+    if ! git -C "$dir" diff --exit-code --quiet          -- cabal.project || \
+       ! git -C "$dir" diff --exit-code --quiet --staged -- cabal.project
     then
-        git -C "$dir" diff --exit-code -- cabal.project
-        git -C "$dir" diff --exit-code -- cabal.project --staged
+        git -C "$dir" diff --exit-code          -- cabal.project
+        git -C "$dir" diff --exit --staged-code -- cabal.project
     fi | grep -F '+    ../' | cut -d/ -f2-3
 }

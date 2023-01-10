@@ -12,7 +12,6 @@ import           Cardano.Api.Shelley (ReferenceScript (..))
 import           Cardano.TxGenerator.Fund (Fund (..), FundInEra (..))
 import           Cardano.TxGenerator.Utils (keyAddress)
 
-
 type ToUTxO era = Lovelace -> (TxOut CtxTx era, TxIx -> TxId -> Fund)
 type ToUTxOList era split = split -> ([TxOut CtxTx era], TxId -> [Fund])
 
@@ -49,7 +48,7 @@ mkUTxOVariant networkId key value
 mkUTxOScript :: forall era.
      IsShelleyBasedEra era
   => NetworkId
-  -> (Script PlutusScriptV1, ScriptData)
+  -> (ScriptInAnyLang, ScriptData)
   -> Witness WitCtxTxIn era
   -> ToUTxO era
 mkUTxOScript networkId (script, txOutDatum) witness value
@@ -57,13 +56,17 @@ mkUTxOScript networkId (script, txOutDatum) witness value
     , mkNewFund value
     )
  where
-  plutusScriptAddr = makeShelleyAddressInEra
+  plutusScriptAddr = case script of
+    ScriptInAnyLang lang script' ->
+      case scriptLanguageSupportedInEra (cardanoEra @era) lang of
+        Nothing -> error "mkUtxOScript: scriptLanguageSupportedInEra==Nothing"
+        Just{} -> makeShelleyAddressInEra
                        networkId
-                       (PaymentCredentialByScript $ hashScript script)
+                       (PaymentCredentialByScript $ hashScript script')
                        NoStakeAddress
 
   mkTxOut v = case scriptDataSupportedInEra (cardanoEra @era) of
-    Nothing -> error " mkUtxOScript scriptDataSupportedInEra==Nothing"
+    Nothing -> error "mkUtxOScript: scriptDataSupportedInEra==Nothing"
     Just tag -> TxOut
                   plutusScriptAddr
                   (lovelaceToTxOutValue v)

@@ -2,29 +2,30 @@ pkgs:
 let
   cleanNixServiceOptions = cfg: with cfg;
     {
-                  plutusScript = cfg.plutusScript;
-                  targetNodes = targetNodesList cfg.targetNodes;
-                  era = capitalise cfg.era;
-                  plutusLoopScript = plutusScriptFile cfg "loop.plutus";
-                  inherit
-                  plutusMode
-                  plutusData
-                  plutusRedeemer
-                  plutusAutoMode
-                  executionMemory
-                  executionSteps
-                  debugMode
-                  tx_count
-                  add_tx_size
-                  inputs_per_tx
-                  outputs_per_tx
-                  tx_fee
-                  tps
-                  init_cooldown
-                  sigKey
-                  min_utxo_value
-                  nodeConfigFile
-                  localNodeSocketPath;
+      plutus = if (cfg.plutus.type or null) == null then null else
+        {
+          inherit (cfg.plutus) type;
+          script = "${pkgs.plutus-scripts}/generated-plutus-scripts/${cfg.plutus.script}";
+          redeemer = pkgs.writeText "plutus-redeemer.json" (__toJSON cfg.plutus.redeemer);
+          datum    = if cfg.plutus.datum == null then null else
+                     pkgs.writeText "plutus-datum.json"    (__toJSON cfg.plutus.datum);
+          inherit (cfg.plutus) limitExecutionMem limitExecutionSteps;
+        };
+      targetNodes = targetNodesList cfg.targetNodes;
+      era = capitalise cfg.era;
+      inherit
+        add_tx_size
+        debugMode
+        init_cooldown
+        inputs_per_tx
+        localNodeSocketPath
+        min_utxo_value
+        nodeConfigFile
+        outputs_per_tx
+        sigKey
+        tps
+        tx_count
+        tx_fee;
      };
   defaultGeneratorScriptFn = cleanNixServiceOptions;
   ## The standard decision procedure for the run script:
@@ -40,8 +41,6 @@ let
 
   capitalise = x: (pkgs.lib.toUpper (__substring 0 1 x)) + __substring 1 99999 x;
 
-  plutusScript = cfg: plutusScriptFile cfg cfg.plutusScript;
-  plutusScriptFile = cfg: filename: "${pkgs.plutus-scripts}/generated-plutus-scripts/${filename}";
   targetNodesList = targets: __attrValues (__mapAttrs
                                        (name: { ip, port }: { addr = ip; port = port; })
                                        targets);
@@ -65,13 +64,14 @@ in pkgs.commonLib.defServiceModule
 
         ## TODO: the defaults should be externalised to a file.
         ##
-        plutusMode      = opt bool false     "Whether to benchmark Plutus scripts.";
-        plutusScript    = opt str  "sum.plutus" "Path to the Plutus script.";
-        plutusData      = opt int          3 "Data passed to the Plutus script (for now only an int).";
-        plutusRedeemer  = opt int          6 "Redeemer data passed to the Plutus script (for now only an int).";
-        plutusAutoMode  = opt bool false     "Choose all Plutus settings to max out per Tx script budget.";
-        executionMemory = opt int    1000000 "Max memory available for the Plutus script.";
-        executionSteps  = opt int  700000000 "Max execution steps available for the Plutus script.";
+        plutus = {
+          type                = mayOpt str   "Plutus script type.";
+          script              = mayOpt str   "Name of the Plutus script from plutus-apps, prefixed with either of v1/v2.";
+          limitExecutionMem   = mayOpt int   "Limit for saturation tuning: mem;  null means per-Tx limit from ProtocolParameters.";
+          limitExecutionSteps = mayOpt int   "Limit for saturation tuning: steps;  null means per-Tx limit from ProtocolParameters.";
+          datum               = mayOpt attrs "Plutus script datum.";
+          redeemer            = mayOpt attrs "Plutus script redeemer.";
+        };
 
         debugMode       = opt bool false     "Set debug mode: Redirect benchmarking txs to localhost.";
 

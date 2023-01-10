@@ -13617,11 +13617,11 @@
     "plutus-apps_7": {
       "flake": false,
       "locked": {
-        "lastModified": 1668055541,
-        "narHash": "sha256-c0XuranD91kZ7uR0gemZQOFDNRv3pFXunJC4j064mtc=",
+        "lastModified": 1673344090,
+        "narHash": "sha256-c4Y7aDYLj/A5E0Jv58BjgYJ/lx5gyvcIowaWj5Famb0=",
         "owner": "input-output-hk",
         "repo": "plutus-apps",
-        "rev": "1651d36a0f6458e7d2326d57dbc1baa00034d70d",
+        "rev": "a2f81e5df19078baaa2cb38d2efeb67e1c3e8d07",
         "type": "github"
       },
       "original": {
