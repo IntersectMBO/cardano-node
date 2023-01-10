@@ -10,6 +10,7 @@
 , ociImages
 # Needs unix_http_server.file
 , supervisorConf
+, oneTracerPerNode ? false
 }:
 
 let
@@ -202,6 +203,7 @@ let
         SUPERVISORD_URL = container_supervisord_url;
         SUPERVISORD_CONFIG = container_supervisord_conf;
         SUPERVISORD_LOGLEVEL = container_supervisord_loglevel;
+        ONE_TRACER_PER_NODE = oneTracerPerNode;
       };
 
       # TODO:
@@ -272,7 +274,8 @@ let
               change_mode = "noop";
               error_on_missing_key = true;
             }
-            # supervisord configuration file.
+            # supervisord
+            ## supervisord configuration file.
             {
               env = false;
               destination = "${container_supervisord_conf}";
@@ -281,7 +284,8 @@ let
               change_mode = "noop";
               error_on_missing_key = true;
             }
-            # Generator start.sh script.
+            # Generator
+            ## Generator start.sh script.
             {
               env = false;
               destination = "${container_statedir}/generator/start.sh";
@@ -290,7 +294,7 @@ let
               change_mode = "noop";
               error_on_missing_key = true;
             }
-            # Generator configuration file.
+            ## Generator configuration file.
             {
               env = false;
               destination = "${container_statedir}/generator/run-script.json";
@@ -299,8 +303,14 @@ let
               change_mode = "noop";
               error_on_missing_key = true;
             }
-/* TODO: Tracer still needs to use volumes because tracer.socket is shared.
-            # Tracer start.sh script.
+          ]
+          ++
+          # Tracer
+          ## If using oneTracerPerNode no "tracer volumes" need to be mounted
+          ## (because of no socket sharing between tasks), and tracer files are
+          ## created using templates.
+          (lib.optionals (profileNix.value.node.tracer && oneTracerPerNode) [
+            ## Tracer start.sh script.
             {
               env = false;
               destination = "${container_statedir}/tracer/start.sh";
@@ -309,21 +319,28 @@ let
               change_mode = "noop";
               error_on_missing_key = true;
             }
-            # Tracer configuration file.
+            ## Tracer configuration file.
             {
               env = false;
               destination = "${container_statedir}/tracer/config.json";
               data = escapeTemplate (lib.generators.toJSON {}
-                profileNix.tracer-service.config.value);
+                # TODO / FIXME: Ugly!
+                # When running locally every tracer has a 127.0.0.1 address
+                # and EKG and prometheus ports clash!
+                (builtins.removeAttrs
+                  profileNix.tracer-service.config.value
+                  [ "hasEKG" "hasPrometheus" "hasRTView" ]
+                )
+              );
               change_mode = "noop";
               error_on_missing_key = true;
             }
-*/
-          ]
+          ])
           ++
+          # Nodes
           (lib.lists.flatten (lib.mapAttrsToList
             (_: nodeSpec: [
-              # Node start.sh script.
+              ## Node start.sh script.
               {
                 env = false;
                 destination = "${container_statedir}/${nodeSpec.name}/start.sh";
@@ -332,7 +349,7 @@ let
                 change_mode = "noop";
                 error_on_missing_key = true;
               }
-              # Node configuration file.
+              ## Node configuration file.
               {
                 env = false;
                 destination = "${container_statedir}/${nodeSpec.name}/config.json";
@@ -341,7 +358,7 @@ let
                 change_mode = "noop";
                 error_on_missing_key = true;
               }
-              # Node topology file.
+              ## Node topology file.
               {
                 env = false;
                 destination = "${container_statedir}/${nodeSpec.name}/topology.json";
@@ -438,7 +455,9 @@ let
 
         }));
       in lib.listToAttrs (
-        lib.optionals profileNix.value.node.tracer [
+        # If not oneTracerPerNode, an individual tracer task is needed (instead
+        # of running a tracer alongside a node with supervisor)
+        lib.optionals (profileNix.value.node.tracer && !oneTracerPerNode) [
           {name = "tracer";    value = valueF "tracer"    [];}
         ]
         ++

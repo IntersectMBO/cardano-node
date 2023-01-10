@@ -72,6 +72,8 @@ case "$op" in
         ## The logging level at which supervisor should write to the activity
         ## log. Valid levels are trace, debug, info, warn, error and critical.
         setenvjqstr 'container_supervisord_loglevel' $(jq -r ". [\"job\"][\"$nomad_job_name\"][\"group\"][\"$nomad_job_group_name\"][\"meta\"][\"SUPERVISORD_LOGLEVEL\"]" "$profile_nomad_job_file")
+        ## One tracer for all or one tracer per node?
+        setenvjq    'one_tracer_per_node' $(jq ". [\"job\"][\"$nomad_job_name\"][\"group\"][\"$nomad_job_group_name\"][\"meta\"][\"ONE_TRACER_PER_NODE\"]" "$profile_nomad_job_file")
         ;;
 
     # Man pages for Podman configuration files:
@@ -103,6 +105,24 @@ case "$op" in
           mkdir -p "$dir"/genesis/utxo-keys
           cp -r "$dir"/genesis/utxo-keys.bak/* "$dir"/genesis/utxo-keys/
         fi
+
+        local trac_dir="$dir"/tracer
+        mkdir -p "$trac_dir"
+        # When only one shared tracer is used, the tracer directory is the only
+        # task/service that is still mounted as a volume for the nomad backend.
+        # Generator and nodes folders contents are defined in the nomad job file
+        # and are created inside the container when started.
+        # * "genesis" and "CARDANO_MAINNET_MIRROR" are the exceptions!
+        local one_tracer_per_node=$(envjq 'one_tracer_per_node')
+        if ! test "$one_tracer_per_node" = "true"
+        then
+          local trac=$dir/profile/tracer-service.json
+          cp $(jq '."tracer-config"'        -r $trac) "$trac_dir"/tracer-config.json
+          cp $(jq '."nixos-service-config"' -r $trac) "$trac_dir"/nixos-service-config.json
+          cp $(jq '."config"'               -r $trac) "$trac_dir"/config.json
+          cp $(jq '."start"'                -r $trac) "$trac_dir"/start.sh
+        fi
+        # Else a symlink to every tracer folder will be created inside trac_dir.
 
         # Create the "cluster" OCI image.
         local oci_image_name=$(         envjqr 'oci_image_name')
@@ -145,6 +165,7 @@ case "$op" in
         local task=${1:?$usage}; shift
         local service=${1:?$usage}; shift
 
+        msg "Starting supervisord service \"$service\" inside nomad task/container \"$task\" ..."
         backend_nomad nomad-alloc-exec-supervisorctl "$dir" "$task" start "$service"
         ;;
 
@@ -155,6 +176,7 @@ case "$op" in
         local task=${1:?$usage}; shift
         local service=${1:?$usage}; shift
 
+        msg "Stopping supervisord service \"$service\" inside nomad task/container \"$task\" ..."
         backend_nomad nomad-alloc-exec-supervisorctl "$dir" "$task" stop "$service"
         ;;
 
@@ -249,6 +271,7 @@ case "$op" in
     start )
         local usage="USAGE: wb nomad $op RUN-DIR"
         local dir=${1:?$usage}; shift
+        local one_tracer_per_node=$(envjq 'one_tracer_per_node')
 
         msg "Preparing podman API service for nomad driver \`nomad-driver-podman\` ..."
         nomad_start_podman_service "$dir"
@@ -314,20 +337,24 @@ case "$op" in
         setenvjqstr 'nomad_alloc_id' "$nomad_alloc_id"
         msg "Nomad job allocation ID is: $nomad_alloc_id"
 
-        if jqtest ".node.tracer" "$dir"/profile.json
-        then
-          ln -s "$dir/nomad/data/alloc/$nomad_alloc_id/tracer/local/run/current/tracer" "$dir/tracer"
-          ln -s "$dir/nomad/data/alloc/$nomad_alloc_id/tracer/local/run/current/supervisor/supervisord.log" "$dir/tracer/supervisord.log"
-        fi
-        # Generator runs inside task/supervisord "node-0"
-        ln -s "$dir/nomad/data/alloc/$nomad_alloc_id/node-0/local/run/current/generator" "$dir/generator"
+        # A supervisord server is run for every Nomad task/container.
+        # A symlink to every supervisor folder will be created inside this folder.
+        mkdir -p "$dir"/supervisor
+        # For every node ...
         local nodes=($(jq_tolist keys "$dir"/node-specs.json))
         for node in ${nodes[*]}
         do
-          msg "ln -s \"$dir/nomad/data/alloc/$nomad_alloc_id/$node/local/run/current/$node\" \"$dir/$node\""
           ln -s "$dir/nomad/data/alloc/$nomad_alloc_id/$node/local/run/current/$node" "$dir/$node"
-          ln -s "$dir/nomad/data/alloc/$nomad_alloc_id/$node/local/run/current/supervisor/supervisord.log" "$dir/$node/supervisord.log"
+          ln -s "$dir/nomad/data/alloc/$nomad_alloc_id/$node/local/run/current/supervisor" "$dir/supervisor/$node"
+          # Tracer(s).
+          if jqtest ".node.tracer" "$dir"/profile.json && test "$one_tracer_per_node" = "true"
+          then
+            # A symlink to every tracer folder.
+            ln -s "$dir/nomad/data/alloc/$nomad_alloc_id/$node/local/run/current/tracer" "$dir/tracer/$node"
+          fi
         done
+        # Generator runs inside task/supervisord "node-0"
+        ln -s "$dir/nomad/data/alloc/$nomad_alloc_id/node-0/local/run/current/generator" "$dir/generator"
 
         # Show `--status` of `supervisorctl` inside the container.
         local container_supervisor_nix=$(  envjqr 'container_supervisor_nix')
@@ -339,27 +366,60 @@ case "$op" in
         # Execute the actual command.
         nomad alloc exec --task node-0 "$nomad_alloc_id" "$container_supervisor_nix"/bin/supervisorctl --serverurl "$container_supervisord_url" --configuration "$container_supervisord_conf" status || true
 
+        # Start tracer(s).
         if jqtest ".node.tracer" "$dir"/profile.json
         then
-          backend_nomad service-start "$dir" tracer tracer
-          # Wait for tracer socket
-          # If tracer fails here, the rest of the cluster is brought up without
-          # any problems.
-          local socket=$(jq -r '.network.contents' "$dir/tracer/config.json")
-          local patience=$(jq '.analysis.cluster_startup_overhead_s | ceil' "$dir/profile.json") i=0
-          echo -n "workbench:  nomad:  waiting ${patience}s for socket of tracer: " >&2
-          while test ! -S "$dir/tracer/$socket"
-          do printf "%3d" $i; sleep 1
-             i=$((i+1))
-             if test $i -ge $patience
-             then echo
-                  progress "nomad" "$(red FATAL):  workbench:  nomad:  patience ran out for $(white tracer) after ${patience}s, socket $socket"
+          local patience=$(jq '.analysis.cluster_startup_overhead_s | ceil' "$dir/profile.json")
+          if test "$one_tracer_per_node" = "true"
+          then
+            local nodes=($(jq_tolist keys "$dir"/node-specs.json))
+            for node in ${nodes[*]}
+            do
+              if ! backend_nomad service-start "$dir" "$node" tracer
+              then
+                fatal "check logs in $dir/tracer/$node/stderr"
+              fi
+              # Wait for tracer socket
+              local socket_path_relative=$(jq -r '.network.contents' "$dir/tracer/$node/config.json")
+              local socket_path_absolute="$dir/tracer/$node/$socket_path_relative"
+              echo -n "workbench:  nomad:  waiting ${patience}s for socket of $node's tracer: " >&2
+              local i=0
+              while test ! -S "$socket_path_absolute"
+              do printf "%3d" $i; sleep 1
+                i=$((i+1))
+                if test $i -ge $patience
+                then echo
+                  progress "nomad" "$(red FATAL):  workbench:  nomad:  patience ran out for $(white tracer) after ${patience}s, socket $socket_path_absolute"
                   backend_nomad stop-cluster "$dir"
-                  fatal "$node startup did not succeed:  check logs in $(dirname $socket)/stdout & stderr"
-             fi
-             echo -ne "\b\b\b"
-          done >&2
-          echo " tracer up (${i}s)" >&2
+                  fatal "$node's tracer startup did not succeed:  check logs in $dir/tracer/$node/[stdout & stderr]"
+                fi
+                echo -ne "\b\b\b"
+              done >&2
+              echo " $node's tracer up (${i}s)" >&2
+            done
+          else
+            if ! backend_nomad service-start "$dir" tracer tracer
+            then
+              fatal "check logs in $dir/tracer/stderr"
+            fi
+            # Wait for tracer socket
+            local socket_path_relative=$(jq -r '.network.contents' "$dir/tracer/config.json")
+            local socket_path_absolute="$dir/tracer/$socket_path_relative"
+            echo -n "workbench:  nomad:  waiting ${patience}s for socket of tracer: " >&2
+            local i=0
+            while test ! -S "$socket_path_absolute"
+            do printf "%3d" $i; sleep 1
+              i=$((i+1))
+              if test $i -ge $patience
+              then echo
+                progress "nomad" "$(red FATAL):  workbench:  nomad:  patience ran out for $(white tracer) after ${patience}s, socket $socket_path_absolute"
+                backend_nomad stop-cluster "$dir"
+                fatal "tracer startup did not succeed:  check logs in $dir/tracer/[stdout & stderr]"
+              fi
+              echo -ne "\b\b\b"
+            done >&2
+            echo " tracer up (${i}s)" >&2
+          fi
         fi
         ;;
 
@@ -380,7 +440,6 @@ case "$op" in
                --* ) msg "FATAL:  unknown flag '$1'"; usage_docker;;
                * ) break;; esac; shift; done
 
-        msg "Starting generator inside node-0 container ..."
         backend_nomad service-start "$dir" node-0 generator
         ;;
 
@@ -429,17 +488,27 @@ case "$op" in
         local nomad_alloc_id=$(envjqr 'nomad_alloc_id')
         local nomad_job_name=$(envjqr 'nomad_job_name')
 
-        msg "Stopping generator inside node-0 container ..."
-        backend_nomad nomad-alloc-exec-supervisorctl "$dir" node-0 stop generator || true
+        # Stop generator.
+        backend_nomad service-stop "$dir" node-0 generator || true
+        # Stop tracer(s).
+        local one_tracer_per_node=$(envjq 'one_tracer_per_node')
         if jqtest ".node.tracer" "$dir"/profile.json
         then
-          msg "Stopping tracer inside its container ..."
-          backend_nomad nomad-alloc-exec-supervisorctl "$dir" tracer stop tracer || true
+          if test "$one_tracer_per_node" = "true"
+          then
+            local nodes=($(jq_tolist keys "$dir"/node-specs.json))
+            for node in ${nodes[*]}
+            do
+              backend_nomad service-stop "$dir" "$node" tracer || true
+            done
+          else
+            backend_nomad service-stop "$dir" tracer tracer || true
+          fi
         fi
+        # Stop nodes.
         for node in $(jq_tolist 'keys' "$dir"/node-specs.json)
         do
-            msg "Stopping $node inside its container ..."
-            backend_nomad nomad-alloc-exec-supervisorctl "$dir" "$node" stop "$node" || true
+          backend_nomad service-stop "$dir" "$node" "$node" || true
         done
 
         msg "Stopping nomad job ..."
@@ -823,8 +892,9 @@ EOF
 nomad_create_job_file() {
     local dir=$1
     local profile_nomad_job_file=$(envjqr 'profile_nomad_job_file')
-    local nomad_job_name=$(envjqr 'nomad_job_name')
-    local nomad_job_group_name=$(envjqr 'nomad_job_group_name')
+    local nomad_job_name=$(envjqr         'nomad_job_name')
+    local nomad_job_group_name=$(envjqr   'nomad_job_group_name')
+    local one_tracer_per_node=$(envjq     'one_tracer_per_node')
     cp $profile_nomad_job_file $dir/nomad/nomad-job.json
     chmod +w $dir/nomad/nomad-job.json
     # If CARDANO_MAINNET_MIRROR is present generate a list of needed volumes.
@@ -849,35 +919,32 @@ nomad_create_job_file() {
     for node in $(jq_tolist 'keys' "$dir"/node-specs.json)
     do
       local task_stanza_name="$node"
-      # Every node needs access to itself, "../tracer/" and "./genesis/"
-      # *1 And remapping its own supervisor to the cluster/upper directory.
-      # *2 And read only access to eveything else so supervisor.conf doesn't
-      # complain about missing files/folders and can be shared unchanged with
-      # the workbench's "supervisor" backend.
+      # Every node needs access to "./genesis/" and tracer when only 1 is used.
       local jq_filter="
-        [
-            \"${dir}/tracer:${container_mountpoint}/tracer:rw\"
-        ]
-        +
         [
             \"${dir}/genesis:${container_mountpoint}/genesis:ro\"
           , \"${dir}/genesis/utxo-keys:${container_mountpoint}/genesis/utxo-keys:ro\"
         ]
         +
+        (
+          if \$one_tracer_per_node == true
+          then
+            [ ]
+          else
+            [ \"${dir}/tracer:${container_mountpoint}/tracer:rw\" ]
+          end
+        )
+        +
         \$mainnet_mirror_volumes
       "
-      local podman_volumes=$(jq "$jq_filter" --argjson mainnet_mirror_volumes "$mainnet_mirror_volumes" "$dir"/profile/node-specs.json)
+      local podman_volumes=$(jq "$jq_filter" --argjson one_tracer_per_node "$one_tracer_per_node" --argjson mainnet_mirror_volumes "$mainnet_mirror_volumes" "$dir"/profile/node-specs.json)
       jq ".job[\"$nomad_job_name\"][\"group\"][\"$nomad_job_group_name\"][\"task\"][\"$node\"][\"config\"][\"volumes\"] = \$podman_volumes" --argjson podman_volumes "$podman_volumes" $dir/nomad/nomad-job.json | sponge $dir/nomad/nomad-job.json
     done
     # Tracer
-    if jqtest ".node.tracer" "$dir"/profile.json
+    if jqtest ".node.tracer" "$dir"/profile.json && ! test "$one_tracer_per_node" = "true"
     then
       local task_stanza_name_t="tracer"
-      # Tracer only needs access to itself.
-      # *1 And remapping its own supervisor to the cluster/upper directory.
-      # *2 And read only access to eveything else so supervisor.conf doesn't
-      # complain about missing files/folders and can be shared unchanged with
-      # the workbench's "supervisor" backend.
+      # Tracer only needs access to itself (its shared folder).
       local jq_filter_t="
         [
           \"${dir}/tracer:${container_mountpoint}/tracer:rw\"

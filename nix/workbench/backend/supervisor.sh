@@ -57,6 +57,14 @@ case "$op" in
         cp $(jq '."service-config"' -r $gtor) "$gen_dir"/service-config.json
         cp $(jq '."start"'          -r $gtor) "$gen_dir"/start.sh
 
+        local trac=$dir/profile/tracer-service.json
+        trac_dir="$dir"/tracer
+        mkdir -p                                    "$trac_dir"
+        cp $(jq '."tracer-config"'        -r $trac) "$trac_dir"/tracer-config.json
+        cp $(jq '."nixos-service-config"' -r $trac) "$trac_dir"/nixos-service-config.json
+        cp $(jq '."config"'               -r $trac) "$trac_dir"/config.json
+        cp $(jq '."start"'                -r $trac) "$trac_dir"/start.sh
+
         local supervisor_conf=$(envjqr 'supervisor_conf')
 
         mkdir -p               "$dir"/supervisor

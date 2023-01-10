@@ -87,6 +87,8 @@ let
               inherit profileNix;
               inherit ociImages;
               inherit supervisorConf;
+              # Actually always "false", may evolve to a "cloud" flag!
+              oneTracerPerNode = false;
             };
       in pkgs.runCommand "workbench-backend-output-${profileNix.name}-${name}"
         ({

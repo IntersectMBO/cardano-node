@@ -500,17 +500,6 @@ EOF
         cp "$dir"/genesis/genesis.alonzo.json  "$dir"/genesis.alonzo.json
         echo >&2
 
-        # Tracer directory is only task/service that is still mounted as a
-        # volumes for the nomad backend. Generator and nodes folders are
-        # created inside the container.
-        local trac=$dir/profile/tracer-service.json
-        trac_dir="$dir"/tracer
-        mkdir -p                              "$trac_dir"
-        cp $(jq '."tracer-config"'        -r $trac) "$trac_dir"/tracer-config.json
-        cp $(jq '."nixos-service-config"' -r $trac) "$trac_dir"/nixos-service-config.json
-        cp $(jq '."config"'               -r $trac) "$trac_dir"/config.json
-        cp $(jq '."start"'                -r $trac) "$trac_dir"/start.sh
-
         backend allocate-run "$dir"
 
         progress "run" "allocated $(with_color white $run) @ $dir"
