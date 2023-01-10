@@ -29,7 +29,7 @@ tests = pure $ T.testGroup "test/Spec.hs"
     --   [ H.ignoreOnMacAndWindows "leadership-schedule" Test.Cli.Alonzo.LeadershipSchedule.hprop_leadershipSchedule
     --   ]
     , T.testGroup "Babbage"
-      [ H.ignoreOnMacAndWindows "leadership-schedule" Test.Cli.Babbage.LeadershipSchedule.hprop_leadershipSchedule
+      [ H.ignoreOnWindows "leadership-schedule" Test.Cli.Babbage.LeadershipSchedule.hprop_leadershipSchedule
       ]
       -- Ignored on Windows due to <stdout>: commitBuffer: invalid argument (invalid character)
       -- as a result of the kes-period-info output to stdout.
