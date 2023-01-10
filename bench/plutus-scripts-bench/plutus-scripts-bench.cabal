@@ -8,6 +8,8 @@ category:               Cardano,
 author:                 IOHK
 maintainer:             operations@iohk.io
 license:                Apache-2.0
+license-files:          LICENSE
+                        NOTICE
 build-type:             Simple
 
 flag unexpected_thunks

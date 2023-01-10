@@ -9,9 +9,9 @@ category:               Cardano,
 copyright:              2023 Input Output (Hong Kong) Ltd.
 author:                 IOHK
 maintainer:             operations@iohk.io
+license:                Apache-2.0
 license-files:          LICENSE
                         NOTICE
-
 extra-source-files:     CHANGELOG.md
 
 common project-config
