@@ -120,6 +120,7 @@ library
                         Cardano.Tracer.Utils
 
   other-modules:        Paths_cardano_tracer
+  autogen-modules:      Paths_cardano_tracer
 
   build-depends:        aeson
                       , async
@@ -176,6 +177,7 @@ executable cardano-tracer
   main-is:              cardano-tracer.hs
 
   other-modules:        Paths_cardano_tracer
+  autogen-modules:      Paths_cardano_tracer
 
   build-depends:        cardano-tracer
                       , optparse-applicative

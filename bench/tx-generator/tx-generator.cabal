@@ -190,6 +190,7 @@ test-suite tx-generator-apitest
                       , tx-generator
 
   other-modules:        Paths_tx_generator
+  autogen-modules:      Paths_tx_generator
 
 test-suite tx-generator-test
   hs-source-dirs:       test

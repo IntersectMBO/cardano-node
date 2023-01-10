@@ -52,7 +52,8 @@ executable trace-analyzer
                         -with-rtsopts=-T
 
   other-modules:        Paths_trace_analyzer
-                      , Cardano.Tracer.Analyze.CLI
+  autogen-modules:      Paths_trace_analyzer
+  other-modules:        Cardano.Tracer.Analyze.CLI
                       , Cardano.Tracer.Analyze.Process
                       , Cardano.Tracer.Analyze.Types
                       , Cardano.Tracer.Analyze.Report

@@ -95,6 +95,7 @@ library
                         Cardano.CLI.TopHandler
 
   other-modules:        Paths_cardano_cli
+  autogen-modules:      Paths_cardano_cli
 
   build-depends:        aeson             >= 1.5.6.0
                       , aeson-pretty      >= 0.8.5

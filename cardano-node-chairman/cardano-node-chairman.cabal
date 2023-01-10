@@ -37,7 +37,8 @@ executable cardano-node-chairman
                         Cardano.Chairman.Commands
                         Cardano.Chairman.Commands.Version
                         Cardano.Chairman.Commands.Run
-                        Paths_cardano_node_chairman
+  other-modules:        Paths_cardano_node_chairman
+  autogen-modules:      Paths_cardano_node_chairman
   ghc-options:          -threaded
                         -rtsopts
                         "-with-rtsopts=-T"
