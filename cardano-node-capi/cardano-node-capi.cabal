@@ -20,7 +20,7 @@ common project-config
 library
   import:               project-config
   exposed-modules:      Node
-  build-depends:        base
+  build-depends:        base                          >= 4.14     && < 4.17
                       , aeson                         >= 2.1.0.0
                       , bytestring
                       , cardano-node
