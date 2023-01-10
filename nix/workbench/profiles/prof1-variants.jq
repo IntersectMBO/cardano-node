@@ -7,29 +7,49 @@ def all_profile_variants:
   ##
   ### Definition vocabulary:  dataset size
   ##
-  | ({}|
-     .generator.tps                   = 15
-    ) as $current_tps_saturation_value
   |
-    ({}|
-     .generator.tps                   = 0.2
-    ) as $current_tps_saturation_plutus
+    { genesis:
+      { utxo:                               (10 * $M)
+      , delegators:                         (1.3 * $M)
+      }
+    } as $dataset_jan2023
   |
-    ({ genesis:
-       { utxo:                              0
-       , delegators:                        0
-       }
-     }) as $dataset_empty
+    $dataset_jan2023
+      as $dataset_current
   |
-    ({ genesis:
-       { utxo:                              (0.5 * $M)
-       , delegators:                        (0.1 * $M)
-       }
-     , generator:
-       { tps:                               1
-       , tx_count:                          10
-       }
-     }) as $dataset_miniature
+    { genesis:
+      { utxo:                               (8 * $M)
+      , delegators:                         (1.2 * $M)
+      }
+    } as $dataset_jun2022
+  |
+    { genesis:
+      { utxo:                               (6 * $M)
+      , delegators:                         (1.3 * $M)
+      }
+    } as $dataset_mar2022
+  |
+    { genesis:
+      { utxo:                               (4 * $M)
+      , delegators:                         (1 * $M)
+      }
+    } as $dataset_oct2021
+  |
+    { genesis:
+      { utxo:                              0
+      , delegators:                        0
+      }
+    } as $dataset_empty
+  |
+    { genesis:
+      { utxo:                              (0.5 * $M)
+      , delegators:                        (0.1 * $M)
+      }
+    , generator:
+      { tps:                               1
+      , tx_count:                          10
+      }
+    } as $dataset_miniature
   |
     { genesis:
       { utxo:                               (30 * $M)
@@ -179,10 +199,17 @@ def all_profile_variants:
     ({}
      | .node.shutdown_on_block_synced   = 30
     ) as $for_30blk
-  |
   ##
   ### Definition vocabulary:  workload
   ##
+  | ({}|
+     .generator.tps                   = 15
+    ) as $current_tps_saturation_value
+  |
+    ({}|
+     .generator.tps                   = 0.2
+    ) as $current_tps_saturation_plutus
+  |
    ($current_tps_saturation_plutus *
     { extra_desc: "with Plutus workload"
     , generator:
@@ -310,14 +337,14 @@ def all_profile_variants:
     { desc: "Miniature dataset, CI-friendly duration, bench scale"
     }) as $cibench_base
   |
-   ($scenario_fixed_loaded * $doublet *
+   ($scenario_fixed_loaded * $triplet * $dataset_oct2021 *
     { node:
       { shutdown_on_slot_synced:        2400
       }
     , desc: "Oct 2021 dataset size, honest four epochs."
     }) as $forge_stress_pre_base
   |
-   ($scenario_fixed_loaded * $doublet *
+   ($scenario_fixed_loaded * $triplet * $dataset_current *
     { node:
       { shutdown_on_slot_synced:        2400
       }
@@ -339,18 +366,23 @@ def all_profile_variants:
   ### First, auto-named profiles:
   ###
   ## Short slots:
-  [ ({}|
+  [ $dataset_current * $triplet *
+    ({}|
      .genesis.slot_duration           = 0.2 )
 
   ## Dense pool:
-  , ({}|
+  , $dataset_current * $triplet *
+    ({}|
      .genesis.dense_pool_density      = 10 )
 
   ## Sub-saturation TPS:
-  , ({}|
-     .generator.tps     = 5 )
-  , ({}|
-     .generator.tps     = 10 )
+  , $dataset_current * $triplet *
+    ({}|
+     .generator.tps = 5 )
+
+  , $dataset_current * $triplet *
+    ({}|
+     .generator.tps = 10 )
 
   ### Next, semantically-named profiles:
   ###
