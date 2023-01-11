@@ -397,9 +397,8 @@
         }
       );
 
-      makeRequired = isPr: extra:
+      makeRequired = isPr: jobs: extra:
       let
-        jobs = lib.foldl' lib.mergeAttrs { } (lib.attrValues flake.systemHydraJobs);
         nonRequiredPaths = map lib.hasPrefix ([ "macos." ] ++ lib.optional isPr "linux.native.membenches");
       in with self.legacyPackages.${defaultSystem};
         releaseTools.aggregate {
@@ -412,6 +411,14 @@
               jobs) ++ extra;
         };
 
+      makeOsRequired = isPr: jobs: {
+        linux = jobs.linux // {
+          required = makeRequired isPr jobs.linux [];
+        };
+        macos = jobs.macos // {
+          required = makeRequired isPr jobs.macos [];
+        };
+      };
 
       hydraJobs =
         let
@@ -422,8 +429,8 @@
           build-version = writeText "version.json" (builtins.toJSON {
             inherit (self) lastModified lastModifiedDate narHash outPath shortRev rev;
           });
-          required = makeRequired false [ cardano-deployment build-version ];
-        });
+          required = makeRequired false jobs [ cardano-deployment build-version ];
+        }) // makeOsRequired false jobs;
 
       hydraJobsPr =
         let
@@ -432,14 +439,15 @@
             "linux.native.workbench-ci-analysis"
             "linux.native.workbench-ci-test"
           ];
-        in
-        (lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))
-          (path: value:
-            let stringPath = lib.concatStringsSep "." path; in if lib.isAttrs value && (lib.any (p: p stringPath) nonPrJobs) then { } else value)
-          hydraJobs) // {
-            required = makeRequired true [ hydraJobs.cardano-deployment hydraJobs.build-version ];
-          };
 
+          jobs = lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))
+            (path: value:
+              let stringPath = lib.concatStringsSep "." path; in if lib.isAttrs value && (lib.any (p: p stringPath) nonPrJobs) then { } else value)
+            hydraJobs;
+        in
+        jobs // {
+          required = makeRequired true jobs [ hydraJobs.cardano-deployment hydraJobs.build-version ];
+        } // makeOsRequired true jobs;
     in
     builtins.removeAttrs flake [ "systemHydraJobs" ] // {
 
