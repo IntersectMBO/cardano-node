@@ -17,8 +17,8 @@ Cardano has come through different development **eras** (see [CIP-59](https://gi
 | Shelley | <p>Decentralization of block production<br>Rewards</p>                                              | TPraos *                          |               2.0               | Shelley                        |
 | Allegra | Token locking                                                                                       | TPraos                           |               3.0               | Allegra                        |
 | Mary    | Native assets                                                                                       | TPraos                           |               4.0               | Mary                           |
-| Alonzo  | Smart contracts with Plutus                                                                         | TPraos                           |        <p>5.0<br>6.0</p>        | Alonzo                         |
-| Babbage | <p>PlutusV2<br>Reference inputs<br>Inline datums<br>Reference scripts<br>Removal of d parameter</p> | Praos                            |               7.0               | Vasil                          |
+| Alonzo  | Smart contracts with Plutus                                                                         | TPraos                           |        <p>5.0<br>6.0</p>        | <p>Alonzo<br>Alonzo intra era HF</p>                         |
+| Babbage | <p>PlutusV2<br>Reference inputs<br>Inline datums<br>Reference scripts<br>Removal of d parameter<br>secp256k1 primitive support</p> | Praos                            |          <p>7.0<br>8.0</p>               | <p>Vasil<br>SECP intra era HF                          |
 
 \* TPraos: Transitional Praos
 
