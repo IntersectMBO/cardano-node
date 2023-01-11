@@ -686,7 +686,9 @@ runQueryStakeSnapshot (AnyConsensusModeParams cModeParams) network mPoolIds = do
   eInMode <- toEraInMode era cMode
     & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
 
-  let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryStakeSnapshot $ Just $ Set.fromList mPoolIds
+  let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryStakeSnapshot $ case mPoolIds of
+        [] -> Nothing
+        _  -> Just $ Set.fromList mPoolIds
   result <- executeQuery era cModeParams localNodeConnInfo qInMode
   obtainLedgerEraClassConstraints sbe writeStakeSnapshots result
 

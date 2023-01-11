@@ -703,9 +703,11 @@ stakeSnapshotsToPair Consensus.StakeSnapshots
     , Consensus.ssGoTotal
     } =
     [ "pools" .= ssStakeSnapshots
-    , "activeStakeMark" .= ssMarkTotal
-    , "activeStakeSet" .= ssSetTotal
-    , "activeStakeGo" .= ssGoTotal
+    , "total" .= object
+      [ "stakeMark" .= ssMarkTotal
+      , "stakeSet" .= ssSetTotal
+      , "stakeGo" .= ssGoTotal
+      ]
     ]
 
 instance ToJSON (Consensus.StakeSnapshot crypto) where
@@ -718,7 +720,7 @@ stakeSnapshotToPair Consensus.StakeSnapshot
     , Consensus.ssSetPool
     , Consensus.ssGoPool
     } =
-    [ "poolStakeMark" .= ssMarkPool
-    , "poolStakeSet" .= ssSetPool
-    , "poolStakeGo" .= ssGoPool
+    [ "stakeMark" .= ssMarkPool
+    , "stakeSet" .= ssSetPool
+    , "stakeGo" .= ssGoPool
     ]
