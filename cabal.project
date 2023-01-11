@@ -16,7 +16,7 @@ index-state: 2023-01-20T05:50:56Z
 
 index-state:
   , hackage.haskell.org 2023-01-20T05:50:56Z
-  , cardano-haskell-packages 2022-12-14T00:40:15Z
+  , cardano-haskell-packages 2023-02-02T11:07:38Z
 
 packages:
     cardano-api
@@ -187,28 +187,17 @@ source-repository-package
    tag: 9ea1845ca2036e7a1ae9fcebe393526540c5c233
    --sha256: 1436dwmz9v6ky9kzgnr4flzlzjxwh2zjkds9fnayc1ddang6wwb6
 
--- And has the adjustments for the ledger refactor
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/ouroboros-network
-  tag: 679c7da2079a5e9972a1c502b6a4d6af3eb76945
-  --sha256: 138mqd5cv0b13giwjvlz3pr6l1cwgpn38n0q3m11mrjwwmmxl0mw
-  subdir:
-    monoidal-synchronisation
-    network-mux
-    ouroboros-consensus
-    ouroboros-consensus-byron
-    ouroboros-consensus-cardano
-    ouroboros-consensus-protocol
-    ouroboros-consensus-shelley
-    ouroboros-network
-    ouroboros-network-framework
-    ouroboros-network-testing
-    ouroboros-consensus-cardano-tools
-
 -- Waiting for proper Windows ghc-9.2 release.
 source-repository-package
    type: git
    location: https://github.com/input-output-hk/snap-core
    tag: b87b2ffa52bf58867a7239ebe74f61b1a2c762d2
    --sha256: 0ndm57z5zpxd5n8s47kh8k1jfqf3b78qv7gkgrx9wwaajs9bf196
+
+-- TODO: remove once `ouroboros-consensus-diffusion` is published to CHaP
+-- TODO: we also need new `ouroboros-cosnensus`
+source-repository-package
+    type:git
+    location: https://github.com/input-output-hk/ouroboros-network
+    tag: ff2d04567b6c19b3a52207809ebd5dcf65528fae
+    subdir: ouroboros-consensus-diffusion

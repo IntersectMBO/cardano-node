@@ -47,14 +47,14 @@ instance ( ConvertTxId blk
     mconcat [ "kind" .= String "MsgBlock"
              , "agency" .= String (pack $ show stok)
              , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
-             , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+             , "blockSize" .= toJSON (getSizeInBytes (estimateBlockSize (getHeader blk)))
              ]
 
   forMachine dtal (AnyMessageAndAgency stok (MsgBlock blk)) =
     mconcat [ "kind" .= String "MsgBlock"
              , "agency" .= String (pack $ show stok)
              , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
-             , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+             , "blockSize" .= toJSON (getSizeInBytes (estimateBlockSize (getHeader blk)))
              , "txIds" .= toJSON (presentTx <$> extractTxs blk)
              ]
       where

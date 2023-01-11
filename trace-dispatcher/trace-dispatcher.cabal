@@ -57,6 +57,7 @@ library
                       , network
                       , optparse-applicative-fork
                       , ouroboros-network
+                      , ouroboros-network-api
                       , ouroboros-network-framework
                       , serialise
                       , stm

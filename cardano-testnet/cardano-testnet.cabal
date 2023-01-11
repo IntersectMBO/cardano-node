@@ -48,6 +48,7 @@ library
                       , hedgehog-extras
                       , optparse-applicative-fork
                       , ouroboros-network
+                      , ouroboros-network-api
                       , process
                       , random
                       , resourcet

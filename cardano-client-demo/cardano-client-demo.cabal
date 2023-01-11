@@ -77,6 +77,7 @@ executable ledger-state
                         cardano-slotting,
                         iohk-monitoring,
                         ouroboros-network,
+                        ouroboros-network-protocols,
                         ouroboros-consensus,
                         ouroboros-consensus-cardano,
                         ouroboros-consensus-byron,

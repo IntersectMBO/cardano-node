@@ -33,12 +33,13 @@ import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 
 import           Ouroboros.Network.Channel (Channel (..))
+import           Ouroboros.Network.ControlMessage (continueForever)
 import           Ouroboros.Network.DeltaQ (defaultGSV)
 import           Ouroboros.Network.Driver (runPeerWithLimits)
 import           Ouroboros.Network.KeepAlive
 import           Ouroboros.Network.Magic
 import           Ouroboros.Network.Mux (MuxPeer (..), OuroborosApplication (..), OuroborosBundle,
-                   RunMiniProtocol (..), continueForever)
+                   RunMiniProtocol (..))
 import           Ouroboros.Network.NodeToClient (IOManager, chainSyncPeerNull)
 import           Ouroboros.Network.NodeToNode (NetworkConnectTracers (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
