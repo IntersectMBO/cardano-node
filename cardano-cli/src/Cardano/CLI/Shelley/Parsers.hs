@@ -12,6 +12,7 @@ module Cardano.CLI.Shelley.Parsers
 
     -- * Field parser and renderers
   , parseTxIn
+  , pCardanoEra
   ) where
 
 import           Cardano.Prelude hiding (All, Any)
@@ -684,7 +685,7 @@ pTransaction =
 
   pTransactionBuild :: Parser TransactionCmd
   pTransactionBuild =
-    TxBuild <$> pCardanoEra
+    TxBuild <$> pCardanoEra "Specify the"
             <*> pConsensusModeParams
             <*> pNetworkId
             <*> optional pScriptValidity
@@ -723,7 +724,7 @@ pTransaction =
 
   pTransactionBuildRaw :: Parser TransactionCmd
   pTransactionBuildRaw =
-    TxBuildRaw <$> pCardanoEra
+    TxBuildRaw <$> pCardanoEra "Specify the"
                <*> optional pScriptValidity
                <*> some (pTxIn ManualBalance)
                <*> many pReadOnlyReferenceTxIn
@@ -788,7 +789,7 @@ pTransaction =
 
   pTransactionCalculateMinReqUTxO :: Parser TransactionCmd
   pTransactionCalculateMinReqUTxO = TxCalculateMinRequiredUTxO
-    <$> pCardanoEra
+    <$> pCardanoEra "Specify the"
     <*> pProtocolParamsSourceSpec
     <*> pTxOut
 
@@ -2032,31 +2033,31 @@ pTxSubmitFile =
     <> Opt.completer (Opt.bashCompleter "file")
     )
 
-pCardanoEra :: Parser AnyCardanoEra
-pCardanoEra = asum
+pCardanoEra :: String -> Parser AnyCardanoEra
+pCardanoEra h = asum
   [ Opt.flag' (AnyCardanoEra ByronEra)
       (  Opt.long "byron-era"
-      <> Opt.help "Specify the Byron era"
+      <> Opt.help (h ++ " Byron era")
       )
   , Opt.flag' (AnyCardanoEra ShelleyEra)
       (  Opt.long "shelley-era"
-      <> Opt.help "Specify the Shelley era"
+      <> Opt.help (h ++ " Shelley era")
       )
   , Opt.flag' (AnyCardanoEra AllegraEra)
       (  Opt.long "allegra-era"
-      <> Opt.help "Specify the Allegra era"
+      <> Opt.help (h ++ " Allegra era")
       )
   , Opt.flag' (AnyCardanoEra MaryEra)
       (  Opt.long "mary-era"
-      <> Opt.help "Specify the Mary era"
+      <> Opt.help (h ++ " Mary era")
       )
   , Opt.flag' (AnyCardanoEra AlonzoEra)
       (  Opt.long "alonzo-era"
-      <> Opt.help "Specify the Alonzo era"
+      <> Opt.help (h ++ " Alonzo era")
       )
   , Opt.flag' (AnyCardanoEra BabbageEra)
       (  Opt.long "babbage-era"
-      <> Opt.help "Specify the Babbage era (default)"
+      <> Opt.help (h ++ " Babbage era (default)")
       )
     -- Default for now:
   , pure (AnyCardanoEra BabbageEra)

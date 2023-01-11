@@ -1,22 +1,19 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Parsers.Cardano
   ( CardanoOptions(..)
   , cmdCardano
   , runCardanoOptions
   ) where
 
-import           Prelude
 import qualified Data.List as L
 import           Options.Applicative
 import qualified Options.Applicative as OA
-import           Text.Read
+import           Prelude
 
-import           Testnet.Util.Runtime (readNodeLoggingFormat)
+import           Cardano.CLI.Shelley.Parsers
 import           Testnet
 import           Testnet.Cardano
 import           Testnet.Run (runTestnet)
-
+import           Testnet.Util.Runtime (readNodeLoggingFormat)
 
 data CardanoOptions = CardanoOptions
   { maybeTestnetMagic :: Maybe Int
@@ -40,13 +37,7 @@ optsTestnet = CardanoTestnetOptions
       <>  OA.showDefault
       <>  OA.value (cardanoNumPoolNodes defaultTestnetOptions)
       )
-  <*> OA.option (OA.eitherReader readEither)
-      (   OA.long "era"
-      <>  OA.help ("Era to upgrade to.  " <> show @[Era] [minBound .. maxBound])
-      <>  OA.metavar "ERA"
-      <>  OA.showDefault
-      <>  OA.value (cardanoEra defaultTestnetOptions)
-      )
+  <*> pCardanoEra "Start cluster in the"
   <*> OA.option auto
       (   OA.long "epoch-length"
       <>  OA.help "Epoch length"

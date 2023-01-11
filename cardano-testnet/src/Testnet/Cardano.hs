@@ -1,3 +1,4 @@
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -10,13 +11,13 @@ module Testnet.Cardano
   , TestnetNodeOptions(..)
   , cardanoDefaultTestnetNodeOptions
 
-  , Era(..)
   , TestnetRuntime (..)
   , PaymentKeyPair(..)
 
   , cardanoTestnet
   ) where
 
+import           Cardano.Api hiding (cardanoEra)
 import qualified Cardano.Crypto.Hash.Blake2b
 import qualified Cardano.Crypto.Hash.Class
 import           Control.Monad
@@ -72,14 +73,12 @@ data ForkPoint
   | AtEpoch Int
   deriving (Show, Eq, Read)
 
-data Era = Byron | Shelley | Allegra | Mary | Alonzo deriving (Eq, Enum, Bounded, Read, Show)
-
 data CardanoTestnetOptions = CardanoTestnetOptions
   { -- | List of node options. Each option will result in a single node being
     -- created.
     cardanoBftNodeOptions :: [TestnetNodeOptions]
   , cardanoNumPoolNodes :: Int
-  , cardanoEra :: Era
+  , cardanoEra :: AnyCardanoEra
   , cardanoEpochLength :: Int
   , cardanoSlotLength :: Double
   , cardanoActiveSlotsCoeff :: Double
@@ -91,7 +90,7 @@ defaultTestnetOptions :: CardanoTestnetOptions
 defaultTestnetOptions = CardanoTestnetOptions
   { cardanoBftNodeOptions = L.replicate 2 cardanoDefaultTestnetNodeOptions
   , cardanoNumPoolNodes = 1
-  , cardanoEra = Alonzo
+  , cardanoEra = maxBound
   , cardanoEpochLength = 1500
   , cardanoSlotLength = 0.2
   , cardanoActiveSlotsCoeff = 0.2
@@ -181,35 +180,43 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   H.createDirectoryIfMissing logDir
 
   H.readFile configurationTemplate >>= H.writeFile configurationFile
-
+  AnyCardanoEra era <- return $ cardanoEra testnetOptions
   forkOptions <- pure $ id
     . HM.insert "EnableLogMetrics" (J.toJSON False)
     . HM.insert "EnableLogging" (J.toJSON True)
-    . case cardanoEra testnetOptions of
-        Byron -> id
+    . case era of
+        ByronEra -> id
           . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 1)
 
-        Shelley -> id
+        ShelleyEra -> id
           . HM.insert "TestShelleyHardForkAtEpoch" (J.toJSON @Int 0)
           . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 2)
 
-        Allegra -> id
+        AllegraEra -> id
           . HM.insert "TestShelleyHardForkAtEpoch" (J.toJSON @Int 0)
           . HM.insert "TestAllegraHardForkAtEpoch" (J.toJSON @Int 0)
           . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 3)
 
-        Mary -> id
+        MaryEra -> id
           . HM.insert "TestShelleyHardForkAtEpoch" (J.toJSON @Int 0)
           . HM.insert "TestAllegraHardForkAtEpoch" (J.toJSON @Int 0)
           . HM.insert "TestMaryHardForkAtEpoch" (J.toJSON @Int 0)
           . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 4)
 
-        Alonzo -> id
+        AlonzoEra -> id
           . HM.insert "TestShelleyHardForkAtEpoch" (J.toJSON @Int 0)
           . HM.insert "TestAllegraHardForkAtEpoch" (J.toJSON @Int 0)
           . HM.insert "TestMaryHardForkAtEpoch" (J.toJSON @Int 0)
           . HM.insert "TestAlonzoHardForkAtEpoch" (J.toJSON @Int 0)
           . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 6)
+
+        BabbageEra -> id
+          . HM.insert "TestShelleyHardForkAtEpoch" (J.toJSON @Int 0)
+          . HM.insert "TestAllegraHardForkAtEpoch" (J.toJSON @Int 0)
+          . HM.insert "TestMaryHardForkAtEpoch" (J.toJSON @Int 0)
+          . HM.insert "TestAlonzoHardForkAtEpoch" (J.toJSON @Int 0)
+          . HM.insert "TestBabbageHardForkAtEpoch" (J.toJSON @Int 0)
+
 
   -- We're going to use really quick epochs (300 seconds), by using short slots 0.2s
   -- and K=10, but we'll keep long KES periods so we don't have to bother
