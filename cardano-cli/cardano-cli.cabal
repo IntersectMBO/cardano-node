@@ -137,6 +137,8 @@ library
                       , ouroboros-consensus-protocol
                       , ouroboros-consensus-shelley
                       , ouroboros-network
+                      , ouroboros-network-api
+                      , ouroboros-network-protocols
                       , parsec
                       , prettyprinter
                       , random

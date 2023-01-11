@@ -63,6 +63,7 @@ library
                       , contra-tracer
                       , extra
                       , io-classes ^>= 0.3
+                      , ouroboros-network-api
                       , ouroboros-network-framework
                       , serialise
                       , stm
@@ -95,6 +96,7 @@ test-suite test
                       , contra-tracer
                       , io-classes ^>= 0.3
                       , io-sim
+                      , ouroboros-network-api
                       , ouroboros-network-framework
                       , trace-forward
                       , QuickCheck

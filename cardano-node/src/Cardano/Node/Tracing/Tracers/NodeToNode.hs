@@ -56,6 +56,7 @@ import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch (..), Me
 import           Ouroboros.Network.Protocol.ChainSync.Type as ChainSync
 import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as STX
 import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as TXS
+import Ouroboros.Network.SizeInBytes (SizeInBytes(..))
 
 --------------------------------------------------------------------------------
 -- ChainSync Tracer
@@ -200,14 +201,14 @@ instance ( ConvertTxId blk
     mconcat [ "kind" .= String "MsgBlock"
              , "agency" .= String (pack $ show stok)
              , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
-             , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+             , "blockSize" .= toJSON (getSizeInBytes (estimateBlockSize (getHeader blk)))
              ]
 
   forMachine dtal (AnyMessageAndAgency stok (MsgBlock blk)) =
     mconcat [ "kind" .= String "MsgBlock"
              , "agency" .= String (pack $ show stok)
              , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
-             , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+             , "blockSize" .= toJSON (getSizeInBytes (estimateBlockSize (getHeader blk)))
              , "txIds" .= toJSON (presentTx <$> extractTxs blk)
              ]
       where

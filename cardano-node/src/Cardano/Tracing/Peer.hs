@@ -37,6 +37,7 @@ import           Ouroboros.Network.BlockFetch.ClientState (PeerFetchInFlight (..
                    PeerFetchStatus (..), readFetchClientState)
 
 import           Cardano.Node.Queries
+import Ouroboros.Network.SizeInBytes (SizeInBytes(..))
 
 data Peer blk =
   Peer
@@ -63,7 +64,7 @@ ppInFlight f = printf
  (ppMaxSlotNo $ peerFetchMaxSlotNo f)
  (peerFetchReqsInFlight f)
  (Set.size $ peerFetchBlocksInFlight f)
- (peerFetchBytesInFlight f)
+ (getSizeInBytes (peerFetchBytesInFlight f))
 
 ppMaxSlotNo :: Net.MaxSlotNo -> String
 ppMaxSlotNo Net.NoMaxSlotNo = "???"

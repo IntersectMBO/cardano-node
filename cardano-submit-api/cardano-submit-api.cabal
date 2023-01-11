@@ -52,6 +52,7 @@ library
                       , optparse-applicative-fork
                       , ouroboros-consensus-cardano
                       , ouroboros-network
+                      , ouroboros-network-protocols
                       , prometheus
                       , protolude
                       , servant

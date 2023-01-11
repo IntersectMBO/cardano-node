@@ -37,6 +37,7 @@ import           Ouroboros.Network.BlockFetch.ClientState (PeerFetchInFlight (..
 
 import           Cardano.Logging hiding (traceWith)
 import           Cardano.Node.Queries
+import Ouroboros.Network.SizeInBytes (SizeInBytes(..))
 
 startPeerTracer
   :: Tracer IO [PeerT blk]
@@ -73,7 +74,7 @@ ppInFlight f = printf
  (ppMaxSlotNo $ peerFetchMaxSlotNo f)
  (peerFetchReqsInFlight f)
  (Set.size $ peerFetchBlocksInFlight f)
- (peerFetchBytesInFlight f)
+ (getSizeInBytes (peerFetchBytesInFlight f))
 
 ppMaxSlotNo :: Net.MaxSlotNo -> String
 ppMaxSlotNo Net.NoMaxSlotNo   = "???"
