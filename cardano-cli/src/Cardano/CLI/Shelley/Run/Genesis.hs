@@ -3,6 +3,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
@@ -114,6 +115,7 @@ import           Cardano.Slotting.Slot (EpochSize (EpochSize))
 import           Data.Fixed (Fixed (MkFixed))
 import qualified Data.Yaml as Yaml
 import           Text.JSON.Canonical (parseCanonicalJSON, renderCanonicalJSON)
+import qualified Text.JSON.Canonical (ToJSON)
 
 import           Data.ListMap (ListMap (..))
 
@@ -412,8 +414,8 @@ runGenesisCreate (GenesisDir rootdir)
           -- Shelley genesis parameters
           start genDlgs mAmount utxoAddrs mempty (Lovelace 0) [] [] template
 
-  writeFileGenesis (rootdir </> "genesis.json")        shelleyGenesis
-  writeFileGenesis (rootdir </> "genesis.alonzo.json") alonzoGenesis
+  void $ writeFileGenesis (rootdir </> "genesis.json")        $ WritePretty shelleyGenesis
+  void $ writeFileGenesis (rootdir </> "genesis.alonzo.json") $ WritePretty alonzoGenesis
   --TODO: rationalise the naming convention on these genesis json files.
   where
     adjustTemplate t = t { sgNetworkMagic = unNetworkMagic (toNetworkMagic network) }
@@ -501,7 +503,7 @@ runGenesisCreateCardano :: GenesisDir
                  -> Maybe FilePath
                  -> ExceptT ShelleyGenesisCmdError IO ()
 runGenesisCreateCardano (GenesisDir rootdir)
-                 genNumGenesisKeys _genNumUTxOKeys
+                 genNumGenesisKeys genNumUTxOKeys
                  mStart mAmount mSecurity slotLength mSlotCoeff
                  network byronGenesisT shelleyGenesisT alonzoGenesisT mNodeCfg = do
   start <- maybe (SystemStart <$> getCurrentTimePlus30) pure mStart
@@ -577,9 +579,9 @@ runGenesisCreateCardano (GenesisDir rootdir)
     writeSecrets deldir "shelley" "opcert.json" toOpCert opCerts
     writeSecrets deldir "shelley" "counter.json" toCounter opCerts
 
-    LBS.writeFile (rootdir </> "byron-genesis.json") (canonicalEncodePretty byronGenesis)
-  writeFileGenesis (rootdir </> "shelley-genesis.json") shelleyGenesis
-  writeFileGenesis (rootdir </> "alonzo-genesis.json") alonzoGenesis
+  byronGenesisHash <- writeFileGenesis (rootdir </> "byron-genesis.json") $ WriteCanonical byronGenesis
+  shelleyGenesisHash <- writeFileGenesis (rootdir </> "shelley-genesis.json") $ WritePretty shelleyGenesis
+  alonzoGenesisHash <- writeFileGenesis (rootdir </> "alonzo-genesis.json") $ WritePretty alonzoGenesis
 
   liftIO $ do
     case mNodeCfg of
@@ -587,29 +589,12 @@ runGenesisCreateCardano (GenesisDir rootdir)
       Just nodeCfg -> do
         nodeConfig <- Yaml.decodeFileThrow nodeCfg
         let
-          hashShelleyGenesis :: ToJSON genesis => genesis -> Text
-          hashShelleyGenesis genesis = Crypto.hashToTextAsHex gh
-            where
-              content :: ByteString
-              content = LBS.toStrict $ encodePretty genesis
-              gh :: Crypto.Hash Crypto.Blake2b_256 ByteString
-              gh = Crypto.hashWith id content
-          hashByronGenesis :: Genesis.GenesisData -> Text
-          hashByronGenesis genesis = Crypto.hashToTextAsHex genesisHash
-            where
-              genesisHash :: Crypto.Hash Crypto.Blake2b_256 ByteString
-              genesisHash = Crypto.hashWith id
-                  . LBS.toStrict
-                  . renderCanonicalJSON
-                  . either (error "error parsing json that was just encoded!?") identity
-                  . parseCanonicalJSON
-                  . canonicalEncodePretty $ genesis
-          -- TODO, NodeConfig needs a ToJSON instance
+          setHash field hash = Aeson.insert field $ String $ Crypto.hashToTextAsHex hash
           updateConfig :: Yaml.Value -> Yaml.Value
           updateConfig (Object obj) = Object
-              $ (Aeson.insert "ByronGenesisHash" . String . hashByronGenesis) byronGenesis
-              $ (Aeson.insert "ShelleyGenesisHash" . String . hashShelleyGenesis) shelleyGenesis
-              $ (Aeson.insert "AlonzoGenesisHash"  . String . hashShelleyGenesis) alonzoGenesis
+              $ setHash "ByronGenesisHash" byronGenesisHash
+              $ setHash "ShelleyGenesisHash" shelleyGenesisHash
+              $ setHash "AlonzoGenesisHash" alonzoGenesisHash
               obj
           updateConfig x = x
           newConfig :: Yaml.Value
@@ -636,7 +621,7 @@ runGenesisCreateCardano (GenesisDir rootdir)
                       (toByronRequiresNetworkMagic network)
     byronBalance = TestnetBalanceOptions
         { tboRichmen = genNumGenesisKeys
-        , tboPoors = 1
+        , tboPoors = genNumUTxOKeys
         , tboTotalBalance = fromMaybe zeroLovelace $ toByronLovelace (fromMaybe 0 mAmount)
         , tboRichmenShare = 0
         }
@@ -751,7 +736,7 @@ runGenesisCreateStaked (GenesisDir rootdir)
 
   liftIO $ LBS.writeFile (rootdir </> "genesis.json") $ Aeson.encode shelleyGenesis
 
-  writeFileGenesis (rootdir </> "genesis.alonzo.json") alonzoGenesis
+  void $ writeFileGenesis (rootdir </> "genesis.alonzo.json") $ WritePretty alonzoGenesis
   --TODO: rationalise the naming convention on these genesis json files.
 
   liftIO $ Text.hPutStrLn stderr $ mconcat $
@@ -1159,13 +1144,25 @@ updateCreateStakedOutputTemplate
     unLovelace (Lovelace coin) = fromIntegral coin
 
 writeFileGenesis
-  :: ToJSON genesis
-  => FilePath
-  -> genesis
-  -> ExceptT ShelleyGenesisCmdError IO ()
-writeFileGenesis fpath genesis =
+  :: FilePath
+  -> WriteFileGenesis
+  -> ExceptT ShelleyGenesisCmdError IO (Crypto.Hash Crypto.Blake2b_256 ByteString)
+writeFileGenesis fpath genesis = do
   handleIOExceptT (ShelleyGenesisCmdGenesisFileError . FileIOError fpath) $
-    LBS.writeFile fpath (Aeson.encode genesis)
+    BS.writeFile fpath content
+  return $ Crypto.hashWith id content
+  where
+    content = case genesis of
+       WritePretty a -> LBS.toStrict $ encodePretty a
+       WriteCanonical a -> LBS.toStrict
+          . renderCanonicalJSON
+          . either (error "error parsing json that was just encoded!?") identity
+          . parseCanonicalJSON
+          . canonicalEncodePretty $ a
+
+data WriteFileGenesis where
+  WriteCanonical :: Text.JSON.Canonical.ToJSON Identity genesis => genesis -> WriteFileGenesis
+  WritePretty :: ToJSON genesis => genesis -> WriteFileGenesis
 
 -- ----------------------------------------------------------------------------
 
