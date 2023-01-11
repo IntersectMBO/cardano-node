@@ -1,6 +1,8 @@
 # our packages overlay
 final: prev: with final; {
 
+  last-index-state = lib.last (builtins.attrNames (import haskell-nix.indexStateHashesPath));
+
   inherit (cardanoNodeProject.args) compiler-nix-name;
 
   # The is used by nix/regenerate.sh to pre-compute package list to avoid double evaluation.
@@ -9,10 +11,7 @@ final: prev: with final; {
       cardanoNodeProject.hsPkgs))
     (name: lib.attrNames cardanoNodeProject.pkg-set.options.packages.value.${name}.components.exes);
 
-  cabal = haskell-nix.tool compiler-nix-name "cabal" {
-    version = "latest";
-    inherit (cardanoNodeProject) index-state;
-  };
+  cabal = haskell-nix.cabal-install.${compiler-nix-name};
 
   hlint = haskell-nix.tool compiler-nix-name "hlint" {
     version = "3.2.7";
@@ -24,9 +23,12 @@ final: prev: with final; {
     inherit (cardanoNodeProject) index-state;
   };
 
-  haskell-language-server = haskell-nix.tool compiler-nix-name "haskell-language-server" {
-    version = "latest";
-    inherit (cardanoNodeProject) index-state;
+  haskell-language-server = haskell-nix.tool "ghc8107" "haskell-language-server" {
+    # latest ghcide does not compile on ghc 8.10.7
+    version = {ghc8107 = "1.8.0.0";}.${compiler-nix-name} or "latest";
+    # always use last index to be safe for "latest" version.
+    # (and be explicit about it to avoid warning)
+    index-state = {ghc8107 = "2022-12-11T00:00:00Z";}.${compiler-nix-name} or last-index-state;
   };
 
   haskellBuildUtils = prev.haskellBuildUtils.override {
