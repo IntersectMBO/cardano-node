@@ -606,6 +606,7 @@ module Cardano.Api (
     LocalTxSubmissionClient,
     TxInMode(..),
     TxValidationErrorInMode(..),
+    SubmitResult(..),
     runLocalTxSubmissionClient,
     submitTxToNodeLocal,
 
