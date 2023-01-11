@@ -114,6 +114,7 @@
         iohkNix.overlays.utils
         (final: prev: {
           inherit customConfig nix2container;
+          inherit (tullia.packages.${final.system}) tullia nix-systems;
           gitrev = final.customConfig.gitrev or self.rev or "0000000000000000000000000000000000000000";
           commonLib = lib
             // iohkNix.lib

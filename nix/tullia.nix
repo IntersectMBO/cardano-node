@@ -19,7 +19,10 @@ let
   repository = "input-output-hk/cardano-node";
 in rec {
   tasks = let
-    mkTask = top: {config, lib, ...}: {
+    common = {
+      config,
+      ...
+    }: {
       preset = {
         nix.enable = true;
 
@@ -31,16 +34,26 @@ in rec {
         };
       };
 
+      nomad.driver = "exec";
+    };
+
+
+    mkBulkJobsTask = jobsAttrs: {
+      config,
+      lib,
+      ...
+    }: {
+      imports = [common];
+
       command.text = config.preset.github.status.lib.reportBulk {
         bulk.text = ''
-          echo '["x86_64-linux", "x86_64-darwin"]' | nix-systems -i \
-          | jq 'with_entries(.key |= {"x86_64-linux": "linux", "x86_64-darwin": "macos"}[.])'
+          nix eval .#outputs.hydraJobs --apply __attrNames --json |
+          nix-systems -i |
+          jq 'with_entries(select(.value))' # filter out systems that we cannot build for
         '';
-        each.text = ''nix build -L .#${lib.escapeShellArg top}."$1".required'';
-        skippedDescription = lib.escapeShellArg "No nix builder available for this platform";
-      } + "\n" + ''
-        nix build -L .#${lib.escapeShellArg top}.cardano-deployment
-      '';
+        each.text = ''nix build -L .#hydraJobs."$1"."${jobsAttrs}"'';
+        skippedDescription = lib.escapeShellArg "No nix builder available for this system";
+      };
 
       env.NIX_CONFIG = ''
         # `kvm` for NixOS tests
@@ -49,21 +62,33 @@ in rec {
       '';
 
       memory = 1024 * 32;
-
-      nomad = {
-        resources.cpu = 10000;
-
-        driver = "exec";
-              ${flakeUrl args}#ciJobs.${lib.escapeShellArg "x86_64-linux"}.cardano-deployment''
-            }
-      };
-              ${flakeUrl args}#ciJobs.${lib.escapeShellArg "x86_64-linux"}.cardano-deployment''
-            }
+      nomad.resources.cpu = 10000;
     };
-  in {
-    "ci/push" = mkTask "hydraJobs";
-    "ci/pr" = mkTask "hydraJobsPr";
-  };
+  in
+    {
+      "ci/pr/required" = mkBulkJobsTask "pr.required";
+      "ci/pr/nonrequired" = mkBulkJobsTask "pr.nonrequired";
+      "ci/push/required" = mkBulkJobsTask "required";
+
+      "ci/cardano-deployment" = {lib, ...} @ args: {
+        imports = [common];
+        command.text = ''
+          nix build -L .#hydraJobs.cardano-deployment
+        '';
+        memory = 1024 * 16;
+        nomad.resources.cpu = 10000;
+      };
+
+      "ci/push" = {lib, ...} @ args: {
+        imports = [common];
+        after = ["ci/push/required" "ci/cardano-deployment"];
+      };
+
+      "ci/pr" = {lib, ...} @ args: {
+        imports = [common];
+        after = ["ci/pr/required" "ci/pr/nonrequired" "ci/cardano-deployment"];
+      };
+    };
 
   actions = {
     "cardano-node/ci/push" = {
