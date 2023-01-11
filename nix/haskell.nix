@@ -130,6 +130,7 @@ let
           # split data output for ekg to reduce closure size
           packages.ekg.components.library.enableSeparateDataOutput = true;
           # cardano-cli-test depends on cardano-cli
+          # TODO: do not depend on the whole `src` just to access a few files.
           packages.cardano-cli.preCheck = "
           export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}
           export CARDANO_NODE_SRC=${src}
@@ -142,6 +143,7 @@ let
               config.hsPkgs.cardano-node-chairman.components.exes.cardano-node-chairman
             ];
           # cardano-node-chairman depends on cardano-node and cardano-cli
+          # TODO: do not depend on the whole `src` just to access a few files.
           packages.cardano-node-chairman.preCheck = "
           export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}
           export CARDANO_NODE=${config.hsPkgs.cardano-node.components.exes.cardano-node}/bin/cardano-node${pkgs.stdenv.hostPlatform.extensions.executable}
@@ -149,6 +151,7 @@ let
           export CARDANO_NODE_SRC=${src}
         ";
           # cardano-testnet needs access to the git repository source
+          # TODO: do not depend on the whole `src` just to access a few files.
           packages.cardano-testnet.preCheck = "
           export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}
           export CARDANO_NODE=${config.hsPkgs.cardano-node.components.exes.cardano-node}/bin/cardano-node${pkgs.stdenv.hostPlatform.extensions.executable}
@@ -207,9 +210,7 @@ in project.appendOverlays (with haskellLib.projectOverlays; [
     profiled = final.appendModule {
       modules = [{
         enableLibraryProfiling = true;
-        packages.cardano-node.components.exes.cardano-node.enableProfiling = true;
-        packages.tx-generator.components.exes.tx-generator.enableProfiling = true;
-        packages.locli.components.exes.locli.enableProfiling = true;
+        enableProfiling = true;
       }];
     };
     asserted = final.appendModule {
