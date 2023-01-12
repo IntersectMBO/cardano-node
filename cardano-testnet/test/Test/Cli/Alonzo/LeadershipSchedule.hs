@@ -14,11 +14,6 @@ module Test.Cli.Alonzo.LeadershipSchedule
   ( hprop_leadershipSchedule
   ) where
 
-import           Cardano.Api (AlonzoEra, SerialiseAddress (serialiseAddress), UTxO (UTxO))
-import qualified Cardano.Api as Api
-import           Cardano.Api.Shelley (PoolId)
-import           Cardano.CLI.Shelley.Output (QueryTipLocalStateOutput (mEpoch))
-import           Cardano.CLI.Shelley.Run.Query (DelegationsAndRewards, mergeDelegsAndRewards)
 import           Control.Monad (void)
 import qualified Data.Aeson.Types as J
 import           Data.List ((\\))
@@ -30,6 +25,7 @@ import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Data.Time.Clock as DTC
 import           GHC.Stack (callStack)
+
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
@@ -42,31 +38,34 @@ import qualified System.Directory as IO
 import           System.Environment (getEnvironment)
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
-import           Testnet (TestnetOptions (CardanoOnlyTestnetOptions), testnet)
-import           Testnet.Cardano as TC (CardanoTestnetOptions (..), defaultTestnetOptions)
-import qualified Testnet.Conf as H
-import           Testnet.Utils (waitUntilEpoch)
-import qualified Util.Assert as H
-import qualified Util.Base as H
-import qualified Util.Process as H
-import qualified Util.Runtime as TR
-import           Util.Runtime (LeadershipSlot (..))
+
+import           Cardano.Api (AlonzoEra, SerialiseAddress (serialiseAddress), UTxO (UTxO))
+import qualified Cardano.Api as Api
+import           Cardano.Api.Shelley (PoolId)
+import           Cardano.CLI.Shelley.Output (QueryTipLocalStateOutput (mEpoch))
+import           Cardano.CLI.Shelley.Run.Query (DelegationsAndRewards, mergeDelegsAndRewards)
+
+import           Cardano.Testnet
+import           Testnet.Util.Assert
+import           Testnet.Util.Base
+import           Testnet.Util.Process
+import           Testnet.Util.Runtime
 
 hprop_leadershipSchedule :: Property
-hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo" $ \tempAbsBasePath' -> do
+hprop_leadershipSchedule = integration . H.runFinallies . H.workspace "alonzo" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
   base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
-  conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $
-    H.mkConf (H.ProjectBase base) (H.YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
+  conf@Conf { tempBaseAbsPath, tempAbsPath } <- H.noteShowM $
+    mkConf (ProjectBase base) (YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
   let
-    fastTestnetOptions = CardanoOnlyTestnetOptions defaultTestnetOptions
-      { epochLength = 500
-      , slotLength = 0.01
-      , activeSlotsCoeff = 0.1
-      , nodeLoggingFormat = TR.NodeLoggingFormatAsJson
+    fastTestnetOptions = CardanoOnlyTestnetOptions cardanoDefaultTestnetOptions
+      { cardanoEpochLength = 500
+      , cardanoSlotLength = 0.01
+      , cardanoActiveSlotsCoeff = 0.1
+      , cardanoNodeLoggingFormat = NodeLoggingFormatAsJson
       }
-  tr@TR.TestnetRuntime
+  tr@TestnetRuntime
     { testnetMagic
     , poolNodes
     } <- testnet fastTestnetOptions conf
@@ -77,7 +76,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
 
   execConfig <- H.noteShow H.ExecConfig
     { H.execConfigEnv = Last $ Just $
-      [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName $ head $ TR.bftSprockets tr)
+      [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName $ head $ bftSprockets tr)
       ]
       -- The environment must be passed onto child process on Windows in order to
       -- successfully start that process.
@@ -95,13 +94,13 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
   utxoVKeyFile2 <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo2.vkey"
   utxoSKeyFile2 <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo2.skey"
 
-  utxoAddr <- H.execCli
+  utxoAddr <- execCli
     [ "address", "build"
     , "--testnet-magic", show @Int testnetMagic
     , "--payment-verification-key-file", utxoVKeyFile
     ]
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "query", "utxo"
     , "--address", utxoAddr
     , "--cardano-mode"
@@ -119,14 +118,14 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
   utxoStakingVkey2 <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo2-stake.vkey"
   utxoStakingSkey2 <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo2-stake.skey"
 
-  utxoaddrwithstaking <- H.execCli
+  utxoaddrwithstaking <- execCli
     [ "address", "build"
     , "--payment-verification-key-file", utxoVKeyFile2
     , "--stake-verification-key-file", utxoStakingVkey2
     , "--testnet-magic", show @Int testnetMagic
     ]
 
-  utxostakingaddr <- filter (/= '\n') <$> H.execCli
+  utxostakingaddr <- filter (/= '\n') <$> execCli
     [ "stake-address", "build"
     , "--stake-verification-key-file", utxoStakingVkey2
     , "--testnet-magic", show @Int testnetMagic
@@ -136,13 +135,13 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
   H.createDirectoryIfMissing $ tempAbsPath </> "addresses"
   poolownerstakekey <- H.note $ tempAbsPath </> "addresses/pool-owner1-stake.vkey"
   poolownerverkey <- H.note $ tempAbsPath </> "addresses/pool-owner1.vkey"
-  poolownerstakeaddr <- filter (/= '\n') <$> H.execCli
+  poolownerstakeaddr <- filter (/= '\n') <$> execCli
     [ "stake-address", "build"
     , "--stake-verification-key-file", poolownerstakekey
     , "--testnet-magic", show @Int testnetMagic
     ]
 
-  poolowneraddresswstakecred <- H.execCli
+  poolowneraddresswstakecred <- execCli
     [ "address", "build"
     , "--payment-verification-key-file", poolownerverkey
     , "--stake-verification-key-file", poolownerstakekey
@@ -152,7 +151,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
   poolcoldVkey <- H.note $ tempAbsPath </> "node-pool1/shelley/operator.vkey"
   poolcoldSkey <- H.note $ tempAbsPath </> "node-pool1/shelley/operator.skey"
 
-  stakePoolId <- filter ( /= '\n') <$> H.execCli
+  stakePoolId <- filter ( /= '\n') <$> execCli
     [ "stake-pool", "id"
     , "--cold-verification-key-file", poolcoldVkey
     ]
@@ -160,13 +159,13 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
   -- REGISTER PLEDGER POOL
 
   -- Create pledger registration certificate
-  void $ H.execCli
+  void $ execCli
     [ "stake-address", "registration-certificate"
     , "--stake-verification-key-file", poolownerstakekey
     , "--out-file", work </> "pledger.regcert"
     ]
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "transaction", "build"
     , "--alonzo-era"
     , "--testnet-magic", show @Int testnetMagic
@@ -179,7 +178,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
     , "--out-file", work </> "pledge-registration-cert.txbody"
     ]
 
-  void $ H.execCli
+  void $ execCli
     [ "transaction", "sign"
     , "--tx-body-file", work </> "pledge-registration-cert.txbody"
     , "--testnet-magic", show @Int testnetMagic
@@ -189,20 +188,20 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
 
   H.note_ "Submitting pool owner/pledge stake registration cert and funding stake pool owner address..."
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "transaction", "submit"
     , "--tx-file", work </> "pledge-registration-cert.tx"
     , "--testnet-magic", show @Int testnetMagic
     ]
 
   -- Things take long on non-linux machines
-  if H.isLinux
-  then H.threadDelay 5000000
-  else H.threadDelay 10000000
+  if isLinux
+    then H.threadDelay 5000000
+    else H.threadDelay 10000000
 
   -- Check to see if pledge's stake address was registered
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "query", "stake-address-info"
     , "--address", poolownerstakeaddr
     , "--testnet-magic", show @Int testnetMagic
@@ -222,7 +221,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
 
   H.note_ $ "Register staking key: " <> show utxoStakingVkey2
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "query", "utxo"
     , "--address", utxoaddrwithstaking
     , "--cardano-mode"
@@ -236,13 +235,13 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
   UTxO utxoWithStaking1 <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(UTxO AlonzoEra) utxoWithStaking1Json
   txinForStakeReg <- H.noteShow $ head $ Map.keys utxoWithStaking1
 
-  void $ H.execCli
+  void $ execCli
     [ "stake-address", "registration-certificate"
     , "--stake-verification-key-file", utxoStakingVkey2
     , "--out-file", work </> "stakekey.regcert"
     ]
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "transaction", "build"
     , "--alonzo-era"
     , "--testnet-magic", show @Int testnetMagic
@@ -254,7 +253,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
     , "--out-file", work </> "key-registration-cert.txbody"
     ]
 
-  void $ H.execCli
+  void $ execCli
     [ "transaction", "sign"
     , "--tx-body-file", work </> "key-registration-cert.txbody"
     , "--testnet-magic", show @Int testnetMagic
@@ -263,7 +262,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
     , "--out-file", work </> "key-registration-cert.tx"
     ]
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "transaction", "submit"
     , "--tx-file", work </> "key-registration-cert.tx"
     , "--testnet-magic", show @Int testnetMagic
@@ -272,7 +271,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
   H.note_ $ "Check to see if " <> utxoStakingVkey2 <> " was registered..."
   H.threadDelay 10000000
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "query", "stake-address-info"
     , "--address", utxostakingaddr
     , "--testnet-magic", show @Int testnetMagic
@@ -291,7 +290,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
 
   H.note_  "Get updated UTxO"
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "query", "utxo"
     , "--address", utxoAddr
     , "--cardano-mode"
@@ -307,7 +306,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
 
   H.note_ "Create delegation certificate of pledger"
 
-  void $ H.execCli
+  void $ execCli
     [ "stake-address", "delegation-certificate"
     , "--stake-verification-key-file", poolownerstakekey
     , "--cold-verification-key-file", poolcoldVkey
@@ -316,7 +315,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
 
   H.note_ "Register stake pool and delegate pledger to stake pool in a single tx"
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "transaction", "build"
     , "--alonzo-era"
     , "--testnet-magic", show @Int testnetMagic
@@ -329,7 +328,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
     , "--out-file", work </> "register-stake-pool.txbody"
     ]
 
-  void $ H.execCli
+  void $ execCli
     [ "transaction", "sign"
     , "--tx-body-file", work </> "register-stake-pool.txbody"
     , "--testnet-magic", show @Int testnetMagic
@@ -339,17 +338,17 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
     , "--out-file", work </> "register-stake-pool.tx"
     ]
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "transaction", "submit"
     , "--tx-file", work </> "register-stake-pool.tx"
     , "--testnet-magic", show @Int testnetMagic
     ]
 
-  if H.isLinux
-  then H.threadDelay 5000000
-  else H.threadDelay 20000000
+  if isLinux
+    then H.threadDelay 5000000
+    else H.threadDelay 20000000
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "query", "stake-pools"
     , "--testnet-magic", show @Int testnetMagic
     , "--out-file", work </> "current-registered.pools.json"
@@ -363,7 +362,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
   T.unpack (Api.serialiseToBech32 poolId) === stakePoolId
 
   H.note_ "Check pledge was successfully delegated"
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "query", "stake-address-info"
     , "--address", poolownerstakeaddr
     , "--testnet-magic", show @Int testnetMagic
@@ -384,7 +383,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
 
   H.note_ "Get updated UTxO"
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "query", "utxo"
     , "--address", utxoAddr
     , "--cardano-mode"
@@ -396,7 +395,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
 
   H.note_ "Get updated UTxO"
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "query", "utxo"
     , "--address", utxoAddr
     , "--cardano-mode"
@@ -411,7 +410,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
 
   H.note_ "Wait for rewards to be paid out. This will be current epoch + 4"
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "query", "tip"
     , "--testnet-magic", show @Int testnetMagic
     , "--out-file", work </> "current-tip.json"
@@ -436,7 +435,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
   H.note_ "Check we have reached 4 epochs ahead"
   waitedEpoch === rewardsEpoch
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "query", "tip"
     , "--testnet-magic", show @Int testnetMagic
     , "--out-file", work </> "current-tip-2.json"
@@ -455,7 +454,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
   deadline <- H.noteShow $ DTC.addUTCTime 90 now
 
   H.byDeadlineM 10 deadline "Wait for the two epochs" $ do
-    void $ H.execCli' execConfig
+    void $ execCli' execConfig
       [ "query", "tip"
       , "--testnet-magic", show @Int testnetMagic
       , "--out-file", work </> "current-tip-3.json"
@@ -471,7 +470,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
     H.note_ $ "Current Epoch: " <> show currEpoch3
     H.assert $ currEpoch3 > currEpoch2 + 1
 
-  ledgerStateJson <- H.execCli' execConfig
+  ledgerStateJson <- execCli' execConfig
     [ "query", "ledger-state"
     , "--cardano-mode"
     , "--testnet-magic", show @Int testnetMagic
@@ -481,13 +480,13 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
 
   H.note_ "Done"
 
-  let poolVrfSkey = TR.poolNodeKeysVrfSkey $ TR.poolKeys poolNode1
+  let poolVrfSkey = poolNodeKeysVrfSkey $ poolKeys poolNode1
   scheduleFile <- H.noteTempFile tempAbsPath "schedule.log"
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "query", "leadership-schedule"
     , "--testnet-magic", show @Int testnetMagic
-    , "--genesis", TR.shelleyGenesisFile tr
+    , "--genesis", shelleyGenesisFile tr
     , "--stake-pool-id", stakePoolId
     , "--vrf-signing-key-file", poolVrfSkey
     , "--out-file", scheduleFile
@@ -507,7 +506,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
   -- We need enough time to pass such that the expected leadership slots generated by the
   -- leadership-schedule command have actually occurred.
   leaderSlots <- H.byDeadlineM 10 leadershipDeadline "Wait for chain to surpass all expected leadership slots" $ do
-    someLeaderSlots <- H.getRelevantLeaderSlots (TR.nodeStdout $ TR.poolRuntime poolNode1) (minimum expectedLeadershipSlotNumbers)
+    someLeaderSlots <- getRelevantLeaderSlots (nodeStdout $ poolRuntime poolNode1) (minimum expectedLeadershipSlotNumbers)
     maxActualSlot <- H.noteShow $ maximum someLeaderSlots
     H.assert $ maxActualSlot >= maxSlotExpected
     pure someLeaderSlots

@@ -1,4 +1,4 @@
-module Util.Base
+module Testnet.Util.Base
   ( integration
   , isLinux
   ) where

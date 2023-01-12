@@ -22,36 +22,30 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 
-import           Testnet (TestnetOptions( CardanoOnlyTestnetOptions),  testnet)
-import           Testnet.Cardano (TestnetNodeOptions (TestnetNodeOptions),
-                   CardanoTestnetOptions (..), TestnetRuntime (..), defaultTestnetNodeOptions,
-                   defaultTestnetOptions)
-import qualified Testnet.Cardano as TC
-import qualified Testnet.Conf as H
-import qualified Util.Base as H
-import           Util.Runtime (NodeRuntime (..))
+import           Cardano.Testnet
+import           Testnet.Util.Runtime (TestnetRuntime(..))
 
 hprop_shutdownOnSlotSynced :: Property
-hprop_shutdownOnSlotSynced = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
+hprop_shutdownOnSlotSynced = integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
   -- Start a local test net
-  base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
-  configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
+  baseDir <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
+  configTemplate <- H.noteShow $ baseDir </> "configuration/defaults/byron-mainnet/configuration.yaml"
   conf <- H.noteShowM $
-    H.mkConf (H.ProjectBase base) (H.YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
+    mkConf (ProjectBase baseDir) (YamlFilePath configTemplate) tempAbsBasePath' Nothing
   let maxSlot = 1500
       slotLen = 0.01
-  let fastTestnetOptions = CardanoOnlyTestnetOptions $ defaultTestnetOptions
-        { epochLength = 300
-        , slotLength = slotLen
-        , bftNodeOptions =
+  let fastTestnetOptions = CardanoOnlyTestnetOptions $ cardanoDefaultTestnetOptions
+        { cardanoEpochLength = 300
+        , cardanoSlotLength = slotLen
+        , cardanoBftNodeOptions =
           [ TestnetNodeOptions
-              { TC.extraNodeCliArgs = ["--shutdown-on-slot-synced", show maxSlot]
+              { extraNodeCliArgs = ["--shutdown-on-slot-synced", show maxSlot]
               }
-          , defaultTestnetNodeOptions
-          , defaultTestnetNodeOptions
+          , cardanoDefaultTestnetNodeOptions
+          , cardanoDefaultTestnetNodeOptions
           ]
         }
-  TC.TestnetRuntime { bftNodes = node:_ } <- testnet fastTestnetOptions conf
+  TestnetRuntime { bftNodes = node:_ } <- testnet fastTestnetOptions conf
 
   -- Wait for the node to exit
   let timeout :: Int

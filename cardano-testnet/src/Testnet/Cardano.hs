@@ -8,7 +8,7 @@ module Testnet.Cardano
   , CardanoTestnetOptions(..)
   , defaultTestnetOptions
   , TestnetNodeOptions(..)
-  , defaultTestnetNodeOptions
+  , cardanoDefaultTestnetNodeOptions
 
   , Era(..)
   , TestnetRuntime (..)
@@ -55,10 +55,10 @@ import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Network as H
 import qualified System.Directory as IO
 import qualified System.Info as OS
-import qualified Util.Assert as H
-import qualified Util.Process as H
-import           Util.Process (execCli_)
-import           Util.Runtime as TR (NodeLoggingFormat (..), PaymentKeyPair (..),
+import qualified Testnet.Util.Assert as H
+import qualified Testnet.Util.Process as H
+import           Testnet.Util.Process (execCli_)
+import           Testnet.Util.Runtime as TR (NodeLoggingFormat (..), PaymentKeyPair (..),
                    PoolNode (PoolNode), PoolNodeKeys (..), TestnetRuntime (..), startNode)
 
 import qualified Testnet.Conf as H
@@ -77,26 +77,26 @@ data Era = Byron | Shelley | Allegra | Mary | Alonzo deriving (Eq, Enum, Bounded
 data CardanoTestnetOptions = CardanoTestnetOptions
   { -- | List of node options. Each option will result in a single node being
     -- created.
-    bftNodeOptions :: [TestnetNodeOptions]
-  , numPoolNodes :: Int
-  , era :: Era
-  , epochLength :: Int
-  , slotLength :: Double
-  , activeSlotsCoeff :: Double
-  , enableP2P :: Bool
-  , nodeLoggingFormat :: NodeLoggingFormat
+    cardanoBftNodeOptions :: [TestnetNodeOptions]
+  , cardanoNumPoolNodes :: Int
+  , cardanoEra :: Era
+  , cardanoEpochLength :: Int
+  , cardanoSlotLength :: Double
+  , cardanoActiveSlotsCoeff :: Double
+  , cardanoEnableP2P :: Bool
+  , cardanoNodeLoggingFormat :: NodeLoggingFormat
   } deriving (Eq, Show)
 
 defaultTestnetOptions :: CardanoTestnetOptions
 defaultTestnetOptions = CardanoTestnetOptions
-  { bftNodeOptions = L.replicate 2 defaultTestnetNodeOptions
-  , numPoolNodes = 1
-  , era = Alonzo
-  , epochLength = 1500
-  , slotLength = 0.2
-  , activeSlotsCoeff = 0.2
-  , enableP2P = False
-  , nodeLoggingFormat = NodeLoggingFormatAsText
+  { cardanoBftNodeOptions = L.replicate 2 cardanoDefaultTestnetNodeOptions
+  , cardanoNumPoolNodes = 1
+  , cardanoEra = Alonzo
+  , cardanoEpochLength = 1500
+  , cardanoSlotLength = 0.2
+  , cardanoActiveSlotsCoeff = 0.2
+  , cardanoEnableP2P = False
+  , cardanoNodeLoggingFormat = NodeLoggingFormatAsText
   }
 
 newtype TestnetNodeOptions = TestnetNodeOptions
@@ -105,8 +105,8 @@ newtype TestnetNodeOptions = TestnetNodeOptions
     extraNodeCliArgs :: [String]
   } deriving (Eq, Show)
 
-defaultTestnetNodeOptions :: TestnetNodeOptions
-defaultTestnetNodeOptions = TestnetNodeOptions
+cardanoDefaultTestnetNodeOptions :: TestnetNodeOptions
+cardanoDefaultTestnetNodeOptions = TestnetNodeOptions
   { extraNodeCliArgs = []
   }
 
@@ -161,9 +161,9 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
   configurationFile <- H.noteShow $ tempAbsPath </> "configuration.yaml"
-  let numBftNodes = L.length (bftNodeOptions testnetOptions)
+  let numBftNodes = L.length (cardanoBftNodeOptions testnetOptions)
       bftNodesN = [1 .. numBftNodes]
-      poolNodesN = [1 .. numPoolNodes testnetOptions]
+      poolNodesN = [1 .. cardanoNumPoolNodes testnetOptions]
       bftNodeNames = ("node-bft" <>) . show @Int <$> bftNodesN
       poolNodeNames = ("node-pool" <>) . show @Int <$> poolNodesN
       allNodeNames = bftNodeNames <> poolNodeNames
@@ -185,7 +185,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   forkOptions <- pure $ id
     . HM.insert "EnableLogMetrics" (J.toJSON False)
     . HM.insert "EnableLogging" (J.toJSON True)
-    . case era testnetOptions of
+    . case cardanoEra testnetOptions of
         Byron -> id
           . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 1)
 
@@ -227,13 +227,13 @@ cardanoTestnet testnetOptions H.Conf {..} = do
     . HM.insert "TraceBlockchainTime" (J.toJSON True)
     . HM.delete "GenesisFile"
     . HM.insert "TestEnableDevelopmentHardForkEras" (J.toJSON @Bool True)
-    . HM.insert "EnableP2P" (J.toJSON @Bool (enableP2P testnetOptions))
+    . HM.insert "EnableP2P" (J.toJSON @Bool (cardanoEnableP2P testnetOptions))
     . flip HM.alter "setupScribes"
         ( fmap
           . J.rewriteArrayElements
             . J.rewriteObject
               . HM.insert "scFormat"
-                $ case nodeLoggingFormat testnetOptions of
+                $ case cardanoNodeLoggingFormat testnetOptions of
                   NodeLoggingFormatAsJson -> "ScJson"
                   NodeLoggingFormatAsText -> "ScText")
     . forkOptions
@@ -247,7 +247,8 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   forM_ allNodeNames $ \node -> do
     let port = fromJust $ M.lookup node nodeToPort
     H.lbsWriteFile (tempAbsPath </> node </> "topology.json") $
-      mkTopologyConfig (numBftNodes + numPoolNodes testnetOptions) allPorts port (enableP2P testnetOptions)
+      mkTopologyConfig (numBftNodes + cardanoNumPoolNodes testnetOptions)
+                       allPorts port (cardanoEnableP2P testnetOptions)
 
     H.writeFile (tempAbsPath </> node </> "port") (show port)
 
@@ -412,10 +413,10 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   -- and K=10, but we'll keep long KES periods so we don't have to bother
   -- cycling KES keys
   H.rewriteJsonFile (tempAbsPath </> "shelley/genesis.spec.json") . J.rewriteObject
-    $ HM.insert "activeSlotsCoeff" (J.toJSON @Double (activeSlotsCoeff testnetOptions))
+    $ HM.insert "activeSlotsCoeff" (J.toJSON @Double (cardanoActiveSlotsCoeff testnetOptions))
     . HM.insert "securityParam" (J.toJSON @Int 10)
-    . HM.insert "epochLength" (J.toJSON @Int (epochLength testnetOptions))
-    . HM.insert "slotLength" (J.toJSON @Double (slotLength testnetOptions))
+    . HM.insert "epochLength" (J.toJSON @Int (cardanoEpochLength testnetOptions))
+    . HM.insert "slotLength" (J.toJSON @Double (cardanoSlotLength testnetOptions))
     . HM.insert "maxLovelaceSupply" (J.toJSON @Int maxShelleySupply)
     . flip HM.adjust "protocolParams"
       ( J.rewriteObject ( HM.insert "decentralisationParam" (J.toJSON @Double 0.7)
@@ -431,7 +432,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
     , "--genesis-dir", tempAbsPath </> "shelley"
     , "--gen-genesis-keys", show @Int numBftNodes
     , "--start-time", formatIso8601 startTime
-    , "--gen-utxo-keys", show @Int (numPoolNodes testnetOptions)
+    , "--gen-utxo-keys", show @Int (cardanoNumPoolNodes testnetOptions)
     ]
 
   -- Generated genesis keys and genesis files
@@ -724,7 +725,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   --------------------------------
   -- Launch cluster of three nodes
 
-  let bftNodeNameAndOpts = L.zip bftNodeNames (bftNodeOptions testnetOptions)
+  let bftNodeNameAndOpts = L.zip bftNodeNames (cardanoBftNodeOptions testnetOptions)
   bftNodes <- forM bftNodeNameAndOpts $ \(node, nodeOpts) -> do
     startNode tempBaseAbsPath tempAbsPath logDir socketDir node
       ([ "run"
@@ -763,7 +764,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
 
   forM_ allNodeNames $ \node -> do
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
-    H.assertChainExtended deadline (nodeLoggingFormat testnetOptions) nodeStdoutFile
+    H.assertChainExtended deadline (cardanoNodeLoggingFormat testnetOptions) nodeStdoutFile
 
   H.noteShowIO_ DTC.getCurrentTime
 

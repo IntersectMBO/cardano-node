@@ -12,7 +12,7 @@ import           Options.Applicative
 import qualified Options.Applicative as OA
 import           Text.Read
 
-import           Util.Runtime (readNodeLoggingFormat)
+import           Testnet.Util.Runtime (readNodeLoggingFormat)
 import           Testnet
 import           Testnet.Cardano
 import           Testnet.Run (runTestnet)
@@ -26,61 +26,61 @@ data CardanoOptions = CardanoOptions
 optsTestnet :: Parser CardanoTestnetOptions
 optsTestnet = CardanoTestnetOptions
   <$> OA.option
-      ((`L.replicate` defaultTestnetNodeOptions) <$> auto)
+      ((`L.replicate` cardanoDefaultTestnetNodeOptions) <$> auto)
       (   OA.long "num-bft-nodes"
       <>  OA.help "Number of BFT nodes"
       <>  OA.metavar "COUNT"
       <>  OA.showDefault
-      <>  OA.value (bftNodeOptions defaultTestnetOptions)
+      <>  OA.value (cardanoBftNodeOptions defaultTestnetOptions)
       )
   <*> OA.option auto
       (   OA.long "num-pool-nodes"
       <>  OA.help "Number of pool nodes"
       <>  OA.metavar "COUNT"
       <>  OA.showDefault
-      <>  OA.value (numPoolNodes defaultTestnetOptions)
+      <>  OA.value (cardanoNumPoolNodes defaultTestnetOptions)
       )
   <*> OA.option (OA.eitherReader readEither)
       (   OA.long "era"
       <>  OA.help ("Era to upgrade to.  " <> show @[Era] [minBound .. maxBound])
       <>  OA.metavar "ERA"
       <>  OA.showDefault
-      <>  OA.value (era defaultTestnetOptions)
+      <>  OA.value (cardanoEra defaultTestnetOptions)
       )
   <*> OA.option auto
       (   OA.long "epoch-length"
       <>  OA.help "Epoch length"
       <>  OA.metavar "MILLISECONDS"
       <>  OA.showDefault
-      <>  OA.value (epochLength defaultTestnetOptions)
+      <>  OA.value (cardanoEpochLength defaultTestnetOptions)
       )
   <*> OA.option auto
       (   OA.long "slot-length"
       <>  OA.help "Slot length"
       <>  OA.metavar "SECONDS"
       <>  OA.showDefault
-      <>  OA.value (slotLength defaultTestnetOptions)
+      <>  OA.value (cardanoSlotLength defaultTestnetOptions)
       )
   <*> OA.option auto
       (   OA.long "active-slots-coeff"
       <>  OA.help "Active slots co-efficient"
       <>  OA.metavar "DOUBLE"
       <>  OA.showDefault
-      <>  OA.value (activeSlotsCoeff defaultTestnetOptions)
+      <>  OA.value (cardanoActiveSlotsCoeff defaultTestnetOptions)
       )
   <*> OA.option auto
       (   OA.long "enable-p2p"
       <>  OA.help "Enable P2P"
       <>  OA.metavar "BOOL"
       <>  OA.showDefault
-      <>  OA.value (enableP2P defaultTestnetOptions)
+      <>  OA.value (cardanoEnableP2P defaultTestnetOptions)
       )
   <*> OA.option (OA.eitherReader readNodeLoggingFormat)
       (   OA.long "nodeLoggingFormat"
       <>  OA.help "Node logging format (json|text)"
       <>  OA.metavar "LOGGING_FORMAT"
       <>  OA.showDefault
-      <>  OA.value (nodeLoggingFormat defaultTestnetOptions)
+      <>  OA.value (cardanoNodeLoggingFormat defaultTestnetOptions)
       )
 
 optsCardano :: Parser CardanoOptions

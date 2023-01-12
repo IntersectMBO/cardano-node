@@ -10,9 +10,6 @@
 module Testnet.Babbage
   ( BabbageTestnetOptions(..)
   , defaultTestnetOptions
-  , TestnetNodeOptions(..)
-  , defaultTestnetNodeOptions
-
   , TestnetRuntime (..)
   , PaymentKeyPair(..)
 
@@ -34,38 +31,32 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified System.Info as OS
 
+import qualified Testnet.Util.Assert as H
+import           Testnet.Util.Process (execCli_)
+import           Testnet.Util.Runtime (Delegator (..), NodeLoggingFormat (..), PaymentKeyPair (..),
+                   PoolNode (PoolNode), PoolNodeKeys (..), StakingKeyPair (..),
+                   TestnetRuntime (..), startNode)
 import qualified Testnet.Conf as H
-import qualified Util.Assert as H
-import           Util.Process (execCli_)
-import           Util.Runtime (Delegator (..), NodeLoggingFormat (..), PaymentKeyPair (..),
-                   PoolNode (PoolNode), PoolNodeKeys (..), StakingKeyPair (..), TestnetRuntime (..),
-                   startNode)
-
 
 
 {- HLINT ignore "Redundant flip" -}
 
 data BabbageTestnetOptions = BabbageTestnetOptions
-  { numSpoNodes :: Int
-  , slotDuration :: Int
-  , securityParam :: Int
-  , totalBalance :: Int
-  , nodeLoggingFormat :: NodeLoggingFormat
+  { babbageNumSpoNodes :: Int
+  , babbageSlotDuration :: Int
+  , babbageSecurityParam :: Int
+  , babbageTotalBalance :: Int
+  , babbageNodeLoggingFormat :: NodeLoggingFormat
   } deriving (Eq, Show)
 
 defaultTestnetOptions :: BabbageTestnetOptions
 defaultTestnetOptions = BabbageTestnetOptions
-  { numSpoNodes = 3
-  , slotDuration = 1000
-  , securityParam = 10
-  , totalBalance = 10020000000
-  , nodeLoggingFormat = NodeLoggingFormatAsJson
+  { babbageNumSpoNodes = 3
+  , babbageSlotDuration = 1000
+  , babbageSecurityParam = 10
+  , babbageTotalBalance = 10020000000
+  , babbageNodeLoggingFormat = NodeLoggingFormatAsJson
   }
-
-data TestnetNodeOptions = TestnetNodeOptions deriving (Eq, Show)
-
-defaultTestnetNodeOptions :: TestnetNodeOptions
-defaultTestnetNodeOptions = TestnetNodeOptions
 
 -- | For an unknown reason, CLI commands are a lot slower on Windows than on Linux and
 -- MacOS.  We need to allow a lot more time to set up a testnet.
@@ -84,7 +75,7 @@ babbageTestnet testnetOptions H.Conf {..} = do
     , "maxProposalSize"   .= ("700" :: String)
     , "mpcThd"            .= ("20000000000000" :: String)
     , "scriptVersion"     .= (0 :: Int)
-    , "slotDuration"      .= show @Int (slotDuration testnetOptions)
+    , "slotDuration"      .= show @Int (babbageSlotDuration testnetOptions)
     , "unlockStakeEpoch"  .= ("18446744073709551615" :: String)
     , "updateImplicit"    .= ("10000" :: String)
     , "updateProposalThd" .= ("100000000000000" :: String)
@@ -108,10 +99,10 @@ babbageTestnet testnetOptions H.Conf {..} = do
     [ "byron", "genesis", "genesis"
     , "--protocol-magic", show @Int testnetMagic
     , "--start-time", showUTCTimeSeconds startTime
-    , "--k", show @Int (securityParam testnetOptions)
+    , "--k", show @Int (babbageSecurityParam testnetOptions)
     , "--n-poor-addresses", "0"
-    , "--n-delegate-addresses", show @Int (numSpoNodes testnetOptions)
-    , "--total-balance", show @Int (totalBalance testnetOptions)
+    , "--n-delegate-addresses", show @Int (babbageNumSpoNodes testnetOptions)
+    , "--total-balance", show @Int (babbageTotalBalance testnetOptions)
     , "--delegate-share", "1"
     , "--avvm-entry-count", "0"
     , "--avvm-entry-balance", "0"
@@ -154,7 +145,7 @@ babbageTestnet testnetOptions H.Conf {..} = do
           . J.rewriteArrayElements
             . J.rewriteObject
               . HM.insert "scFormat"
-                $ case nodeLoggingFormat testnetOptions of
+                $ case babbageNodeLoggingFormat testnetOptions of
                     NodeLoggingFormatAsJson -> "ScJson"
                     NodeLoggingFormatAsText -> "ScText")
 
@@ -199,7 +190,7 @@ babbageTestnet testnetOptions H.Conf {..} = do
         }
       }
 
-  let spoNodes :: [String] = ("node-spo" <>) . show <$> [1 .. numSpoNodes testnetOptions]
+  let spoNodes :: [String] = ("node-spo" <>) . show <$> [1 .. babbageNumSpoNodes testnetOptions]
 
   -- Create the node directories
 
@@ -229,7 +220,7 @@ babbageTestnet testnetOptions H.Conf {..} = do
   H.rewriteJsonFile (tempAbsPath </> "genesis/shelley/genesis.json") $ J.rewriteObject
     ( HM.insert "slotLength"             (toJSON @Double 0.1)
     . HM.insert "activeSlotsCoeff"       (toJSON @Double 0.1)
-    . HM.insert "securityParam"          (toJSON @Int 10)
+    . HM.insert "securityParam"          (toJSON @Int 10)     -- TODO: USE config parameter
     . HM.insert "epochLength"            (toJSON @Int 500)
     . HM.insert "maxLovelaceSupply"      (toJSON @Int 1000000000000)
     . HM.insert "minFeeA"                (toJSON @Int 44)
@@ -339,7 +330,7 @@ babbageTestnet testnetOptions H.Conf {..} = do
 
   forM_ spoNodes $ \node -> do
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
-    H.assertChainExtended deadline (nodeLoggingFormat testnetOptions) nodeStdoutFile
+    H.assertChainExtended deadline (babbageNodeLoggingFormat testnetOptions) nodeStdoutFile
 
   H.noteShowIO_ DTC.getCurrentTime
 

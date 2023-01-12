@@ -35,37 +35,29 @@ import qualified System.Directory as IO
 import qualified System.Info as SYS
 
 import           Test.Misc
-import           Testnet.Cardano (CardanoTestnetOptions (..), TestnetRuntime (..),
-                   defaultTestnetNodeOptions, defaultTestnetOptions)
-import           Testnet (TestnetOptions (CardanoOnlyTestnetOptions), testnet)
-import qualified Testnet.Cardano as TC
-import qualified Testnet.Conf as H
-import           Testnet.Conf (ProjectBase (..), YamlFilePath (..))
-import           Testnet.Utils (waitUntilEpoch)
-import qualified Util.Base as H
-import qualified Util.Process as H
-import qualified Util.Runtime as TR
-
+import           Cardano.Testnet
+import           Testnet.Util.Process
+import           Testnet.Util.Runtime
 
 hprop_kes_period_info :: Property
-hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
+hprop_kes_period_info = integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
   base <- H.note =<< H.evalIO . IO.canonicalizePath =<< H.getProjectBase
   configurationTemplate
     <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
 
-  conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath }
-    <- H.noteShowM $ H.mkConf (ProjectBase base) (YamlFilePath configurationTemplate)
+  conf@Conf { tempBaseAbsPath, tempAbsPath }
+    <- H.noteShowM $ mkConf (ProjectBase base) (YamlFilePath configurationTemplate)
                               tempAbsBasePath' Nothing
 
-  let fastTestnetOptions = CardanoOnlyTestnetOptions $ defaultTestnetOptions
-                             { bftNodeOptions = replicate 1 defaultTestnetNodeOptions
-                             , epochLength = 500
-                             , slotLength = 0.02
-                             , activeSlotsCoeff = 0.1
+  let fastTestnetOptions = CardanoOnlyTestnetOptions $ cardanoDefaultTestnetOptions
+                             { cardanoBftNodeOptions = replicate 1 cardanoDefaultTestnetNodeOptions
+                             , cardanoEpochLength = 500
+                             , cardanoSlotLength = 0.02
+                             , cardanoActiveSlotsCoeff = 0.1
                              }
-  runTime@TC.TestnetRuntime { testnetMagic } <- testnet fastTestnetOptions conf
-  let sprockets = TR.bftSprockets runTime
+  runTime@TestnetRuntime { testnetMagic } <- testnet fastTestnetOptions conf
+  let sprockets = bftSprockets runTime
   env <- H.evalIO getEnvironment
 
   execConfig <- H.noteShow H.ExecConfig
@@ -87,13 +79,13 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
   utxoVKeyFile2 <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo2.vkey"
   utxoSKeyFile2 <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo2.skey"
 
-  utxoAddr <- H.execCli
+  utxoAddr <- execCli
                 [ "address", "build"
                 , "--testnet-magic", show @Int testnetMagic
                 , "--payment-verification-key-file", utxoVKeyFile
                 ]
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
       [ "query", "utxo"
       , "--address", utxoAddr
       , "--cardano-mode"
@@ -111,14 +103,14 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
   utxoStakingVkey2 <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo2-stake.vkey"
   utxoStakingSkey2 <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo2-stake.skey"
 
-  utxoaddrwithstaking <- H.execCli [ "address", "build"
+  utxoaddrwithstaking <- execCli [ "address", "build"
                                    , "--payment-verification-key-file", utxoVKeyFile2
                                    , "--stake-verification-key-file", utxoStakingVkey2
                                    , "--testnet-magic", show @Int testnetMagic
                                    ]
 
   utxostakingaddr <- filter (/= '\n')
-                       <$> H.execCli
+                       <$> execCli
                              [ "stake-address", "build"
                              , "--stake-verification-key-file", utxoStakingVkey2
                              , "--testnet-magic", show @Int testnetMagic
@@ -129,13 +121,13 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
   poolownerstakekey <- H.note $ tempAbsPath </> "addresses/pool-owner1-stake.vkey"
   poolownerverkey <- H.note $ tempAbsPath </> "addresses/pool-owner1.vkey"
   poolownerstakeaddr <- filter (/= '\n')
-                          <$> H.execCli
+                          <$> execCli
                                 [ "stake-address", "build"
                                 , "--stake-verification-key-file", poolownerstakekey
                                 , "--testnet-magic", show @Int testnetMagic
                                 ]
 
-  poolowneraddresswstakecred <- H.execCli [ "address", "build"
+  poolowneraddresswstakecred <- execCli [ "address", "build"
                                           , "--payment-verification-key-file", poolownerverkey
                                           , "--stake-verification-key-file",  poolownerstakekey
                                           , "--testnet-magic", show @Int testnetMagic
@@ -144,20 +136,20 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
   poolcoldSkey <- H.note $ tempAbsPath </> "node-pool1/shelley/operator.skey"
 
   stakePoolId <- filter ( /= '\n') <$>
-                   H.execCli [ "stake-pool", "id"
+                   execCli [ "stake-pool", "id"
                              , "--cold-verification-key-file", poolcoldVkey
                              ]
 
   -- REGISTER PLEDGER POOL
 
   -- Create pledger registration certificate
-  void $ H.execCli
+  void $ execCli
             [ "stake-address", "registration-certificate"
             , "--stake-verification-key-file", poolownerstakekey
             , "--out-file", work </> "pledger.regcert"
             ]
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "transaction", "build"
     , "--alonzo-era"
     , "--testnet-magic", show @Int testnetMagic
@@ -170,7 +162,7 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
     , "--out-file", work </> "pledge-registration-cert.txbody"
     ]
 
-  void $ H.execCli
+  void $ execCli
     [ "transaction", "sign"
     , "--tx-body-file", work </> "pledge-registration-cert.txbody"
     , "--testnet-magic", show @Int testnetMagic
@@ -180,7 +172,7 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
 
   H.note_ "Submitting pool owner/pledge stake registration cert and funding stake pool owner address..."
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
                [ "transaction", "submit"
                , "--tx-file", work </> "pledge-registration-cert.tx"
                , "--testnet-magic", show @Int testnetMagic
@@ -189,7 +181,7 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
   delegsAndRewards <- H.byDurationM 3 12 "Pledge's stake address was not registered" $ do
     -- Check to see if pledge's stake address was registered
 
-    void $ H.execCli' execConfig
+    void $ execCli' execConfig
       [ "query", "stake-address-info"
       , "--address", poolownerstakeaddr
       , "--testnet-magic", show @Int testnetMagic
@@ -210,7 +202,7 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
 
   H.note_ $ "Register staking key: " <> show utxoStakingVkey2
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
       [ "query", "utxo"
       , "--address", utxoaddrwithstaking
       , "--cardano-mode"
@@ -224,12 +216,12 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
   UTxO utxoWithStaking1 <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(UTxO AlonzoEra) utxoWithStaking1Json
   txinForStakeReg <- H.noteShow =<< H.headM (Map.keys utxoWithStaking1)
 
-  void $ H.execCli [ "stake-address", "registration-certificate"
+  void $ execCli [ "stake-address", "registration-certificate"
                    , "--stake-verification-key-file", utxoStakingVkey2
                    , "--out-file", work </> "stakekey.regcert"
                    ]
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "transaction", "build"
     , "--alonzo-era"
     , "--testnet-magic", show @Int testnetMagic
@@ -241,7 +233,7 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
     , "--out-file", work </> "key-registration-cert.txbody"
     ]
 
-  void $ H.execCli [ "transaction", "sign"
+  void $ execCli [ "transaction", "sign"
                    , "--tx-body-file", work </> "key-registration-cert.txbody"
                    , "--testnet-magic", show @Int testnetMagic
                    , "--signing-key-file", utxoStakingSkey2
@@ -250,7 +242,7 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
                    ]
 
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "transaction", "submit"
     , "--tx-file", work </> "key-registration-cert.tx"
     , "--testnet-magic", show @Int testnetMagic
@@ -259,7 +251,7 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
   H.note_ $ "Check to see if " <> utxoStakingVkey2 <> " was registered..."
 
   userSAddr <- H.byDurationM 3 12 "Failed to query stake address info" $ do
-    void $ H.execCli' execConfig
+    void $ execCli' execConfig
       [ "query", "stake-address-info"
       , "--address", utxostakingaddr
       , "--testnet-magic", show @Int testnetMagic
@@ -278,7 +270,7 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
 
   H.note_  "Get updated UTxO"
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
       [ "query", "utxo"
       , "--address", utxoAddr
       , "--cardano-mode"
@@ -294,7 +286,7 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
 
   H.note_ "Create delegation certificate of pledger"
 
-  void $ H.execCli
+  void $ execCli
     [ "stake-address", "delegation-certificate"
     , "--stake-verification-key-file", poolownerstakekey
     , "--cold-verification-key-file", poolcoldVkey
@@ -303,7 +295,7 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
 
   H.note_ "Register stake pool and delegate pledger to stake pool in a single tx"
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "transaction", "build"
     , "--alonzo-era"
     , "--testnet-magic", show @Int testnetMagic
@@ -316,7 +308,7 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
     , "--out-file", work </> "register-stake-pool.txbody"
     ]
 
-  void $ H.execCli
+  void $ execCli
     [ "transaction", "sign"
     , "--tx-body-file", work </> "register-stake-pool.txbody"
     , "--testnet-magic", show @Int testnetMagic
@@ -326,14 +318,14 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
     , "--out-file", work </> "register-stake-pool.tx"
     ]
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "transaction", "submit"
     , "--tx-file", work </> "register-stake-pool.tx"
     , "--testnet-magic", show @Int testnetMagic
     ]
 
   H.byDurationM 3 12 "Stake pool was not registered" $ do
-    void $ H.execCli' execConfig
+    void $ execCli' execConfig
       [ "query", "stake-pools"
       , "--testnet-magic", show @Int testnetMagic
       , "--out-file", work </> "current-registered.pools.json"
@@ -347,7 +339,7 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
     T.unpack (serialiseToBech32 poolId) === stakePoolId
 
   H.note_ "Check pledge was successfully delegated"
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
       [ "query", "stake-address-info"
       , "--address", poolownerstakeaddr
       , "--testnet-magic", show @Int testnetMagic
@@ -372,7 +364,7 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
   -- TODO: Linking directly to the node certificate is fragile
   nodeOperationalCertFp <- H.note $ tempAbsPath </> "node-pool1/shelley/node.cert"
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "query", "kes-period-info"
     , "--testnet-magic", show @Int testnetMagic
     , "--op-cert-file", nodeOperationalCertFp
@@ -390,7 +382,7 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
 
   H.note_ "Get updated UTxO"
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
       [ "query", "utxo"
       , "--address", utxoAddr
       , "--cardano-mode"
@@ -408,7 +400,7 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
   H.note_ "Wait for the node to mint blocks. This will be in the following epoch so lets wait\
           \ until the END of the following epoch."
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "query",  "tip"
     , "--testnet-magic", show @Int testnetMagic
     , "--out-file", work </> "current-tip.json"
@@ -437,7 +429,7 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
                    " Current epoch: " <> show currentEpoch
 
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "query",  "tip"
     , "--testnet-magic", show @Int testnetMagic
     , "--out-file", work </> "current-tip-2.json"

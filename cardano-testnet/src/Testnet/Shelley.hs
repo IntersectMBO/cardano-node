@@ -51,36 +51,36 @@ import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
 import qualified System.Info as OS
 import qualified Testnet.Conf as H
-import qualified Util.Base as H
-import qualified Util.Process as H
-import           Util.Process (execCli_)
-import           Util.Runtime hiding (allNodes)
+import qualified Testnet.Util.Base as H
+import qualified Testnet.Util.Process as H
+import           Testnet.Util.Process (execCli_)
+import           Testnet.Util.Runtime hiding (allNodes)
 
 
 {- HLINT ignore "Redundant <&>" -}
 {- HLINT ignore "Redundant flip" -}
 
 data ShelleyTestnetOptions = ShelleyTestnetOptions
-  { numPraosNodes :: Int
-  , numPoolNodes :: Int
-  , activeSlotsCoeff :: Double
-  , securityParam :: Int
-  , epochLength :: Int
-  , slotLength :: Double
-  , maxLovelaceSupply :: Integer
-  , enableP2P :: Bool
+  { shelleyNumPraosNodes :: Int
+  , shelleyNumPoolNodes :: Int
+  , shelleyActiveSlotsCoeff :: Double
+  , shelleySecurityParam :: Int
+  , shelleyEpochLength :: Int
+  , shelleySlotLength :: Double
+  , shelleyMaxLovelaceSupply :: Integer
+  , shelleyEnableP2P :: Bool
   } deriving (Eq, Show)
 
 defaultTestnetOptions :: ShelleyTestnetOptions
 defaultTestnetOptions = ShelleyTestnetOptions
-  { numPraosNodes = 2
-  , numPoolNodes = 1
-  , activeSlotsCoeff = 0.1
-  , securityParam = 10
-  , epochLength = 1000
-  , slotLength = 0.2
-  , maxLovelaceSupply = 1000000000
-  , enableP2P = False
+  { shelleyNumPraosNodes = 2
+  , shelleyNumPoolNodes = 1
+  , shelleyActiveSlotsCoeff = 0.1
+  , shelleySecurityParam = 10
+  , shelleyEpochLength = 1000
+  , shelleySlotLength = 0.2
+  , shelleyMaxLovelaceSupply = 1000000000
+  , shelleyEnableP2P = False
   }
 
 -- TODO: We need to refactor this to directly check the parsed configuration
@@ -97,11 +97,11 @@ ifaceAddress = "127.0.0.1"
 rewriteGenesisSpec :: ShelleyTestnetOptions -> UTCTime -> Value -> Value
 rewriteGenesisSpec testnetOptions startTime =
   rewriteObject
-    $ HM.insert "activeSlotsCoeff" (J.toJSON @Double (activeSlotsCoeff testnetOptions))
-    . HM.insert "securityParam" (J.toJSON @Int (securityParam testnetOptions))
-    . HM.insert "epochLength" (J.toJSON @Int (epochLength testnetOptions))
-    . HM.insert "slotLength" (J.toJSON @Double (slotLength testnetOptions))
-    . HM.insert "maxLovelaceSupply" (J.toJSON @Integer (maxLovelaceSupply testnetOptions))
+    $ HM.insert "activeSlotsCoeff" (J.toJSON @Double (shelleyActiveSlotsCoeff testnetOptions))
+    . HM.insert "securityParam" (J.toJSON @Int (shelleySecurityParam testnetOptions))
+    . HM.insert "epochLength" (J.toJSON @Int (shelleyEpochLength testnetOptions))
+    . HM.insert "slotLength" (J.toJSON @Double (shelleySlotLength testnetOptions))
+    . HM.insert "maxLovelaceSupply" (J.toJSON @Integer (shelleyMaxLovelaceSupply testnetOptions))
     . HM.insert "systemStart" (J.toJSON @String (DTC.formatIso8601 startTime))
     . flip HM.adjust "protocolParams"
       ( rewriteObject (HM.insert "decentralisationParam" (toJSON @Double 0.7))
@@ -155,9 +155,9 @@ shelleyTestnet :: ShelleyTestnetOptions -> H.Conf -> H.Integration TestnetRuntim
 shelleyTestnet testnetOptions H.Conf {..} = do
   void $ H.note OS.os
 
-  let praosNodesN = show @Int <$> [1 .. numPraosNodes testnetOptions]
+  let praosNodesN = show @Int <$> [1 .. shelleyNumPraosNodes testnetOptions]
   let praosNodes = ("node-praos" <>) <$> praosNodesN
-  let poolNodesN = show @Int <$> [1 .. numPoolNodes testnetOptions]
+  let poolNodesN = show @Int <$> [1 .. shelleyNumPoolNodes testnetOptions]
   let poolNodes = ("node-pool" <>) <$> poolNodesN
   let allNodes = praosNodes <> poolNodes :: [String]
   let numPraosNodes = L.length allNodes :: Int
@@ -202,7 +202,7 @@ shelleyTestnet testnetOptions H.Conf {..} = do
     , "--testnet-magic", show @Int testnetMagic
     , "--genesis-dir", tempAbsPath
     , "--gen-genesis-keys", show numPraosNodes
-    , "--gen-utxo-keys", show @Int (numPoolNodes testnetOptions)
+    , "--gen-utxo-keys", show @Int (shelleyNumPoolNodes testnetOptions)
     , "--start-time", DTC.formatIso8601 startTime
     ]
 
@@ -252,7 +252,7 @@ shelleyTestnet testnetOptions H.Conf {..} = do
   forM_ allNodes $ \node -> do
     let port = fromJust $ M.lookup node nodeToPort
     H.lbsWriteFile (tempAbsPath </> node </> "topology.json") $
-      mkTopologyConfig numPraosNodes allPorts port (enableP2P testnetOptions)
+      mkTopologyConfig numPraosNodes allPorts port (shelleyEnableP2P testnetOptions)
 
     H.writeFile (tempAbsPath </> node </> "port") (show port)
 
@@ -362,7 +362,7 @@ shelleyTestnet testnetOptions H.Conf {..} = do
       , "--invalid-hereafter", "1000"
       , "--fee", "0"
       , "--tx-in", genesisTxinResult
-      , "--tx-out", userNAddr <> "+" <> show @Integer (maxLovelaceSupply testnetOptions)
+      , "--tx-out", userNAddr <> "+" <> show @Integer (shelleyMaxLovelaceSupply testnetOptions)
       , "--certificate-file", tempAbsPath </> "addresses/pool-owner" <> n <> "-stake.reg.cert"
       , "--certificate-file", tempAbsPath </> "node-pool" <> n <> "/registration.cert"
       , "--certificate-file", tempAbsPath </> "addresses/user" <> n <> "-stake.reg.cert"
@@ -396,7 +396,7 @@ shelleyTestnet testnetOptions H.Conf {..} = do
   H.createDirectoryIfMissing logDir
 
   H.readFile (base </> "configuration/chairman/shelley-only/configuration.yaml")
-    <&> L.unlines . fmap (rewriteConfiguration (enableP2P testnetOptions)) . L.lines
+    <&> L.unlines . fmap (rewriteConfiguration (shelleyEnableP2P testnetOptions)) . L.lines
     >>= H.writeFile (tempAbsPath </> "configuration.yaml")
 
   allNodeRuntimes <- forM allNodes
