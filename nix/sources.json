@@ -1,0 +1,50 @@
+{
+    "nixops-aws": {
+        "branch": "ipv6",
+        "description": "Nixops AWS Backend Plugin",
+        "homepage": null,
+        "owner": "input-output-hk",
+        "repo": "nixops-aws",
+        "rev": "db46f40c486912b1d58aff6c018b2f5f67eccd74",
+        "sha256": "sha256-L4jQdLqahE6Zk2Zk/zybGzpt33NNcFIH1IlfDJifCKA",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/nixops-aws/archive/db46f40c486912b1d58aff6c018b2f5f67eccd74.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "nixops-core": {
+        "branch": "nixops-core-pr-int",
+        "description": "NixOps, the NixOS-based cloud deployment tool",
+        "homepage": "http://nixos.org/",
+        "owner": "input-output-hk",
+        "repo": "nixops",
+        "rev": "1088e9bb4c7a39865f36d458f14cee78c96d776c",
+        "sha256": "sha256:0cm651zprpyy1hraziv9s7f2vagw0pf23x5fa4407cklq44pnflh",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/nixops/archive/1088e9bb4c7a39865f36d458f14cee78c96d776c.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "nixops-libvirtd": {
+        "branch": "fix-for-latest-nix",
+        "description": "NixOps libvirtd backend plugin [maintainer=@AmineChikhaoui]",
+        "homepage": "",
+        "owner": "input-output-hk",
+        "repo": "nixops-libvirtd",
+        "rev": "d087008e838c6aebb0850ef1f4c9ffca28011a11",
+        "sha256": "sha256-SElOuhvQKyuw61VasC7ltEVUQo1x6C0IaiV9D0KMO34",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/nixops-libvirtd/archive/d087008e838c6aebb0850ef1f4c9ffca28011a11.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "nixpkgs-nixops": {
+        "branch": "nixos-21.11",
+        "description": "Nix Packages collection",
+        "homepage": null,
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "b3d86c56c786ad9530f1400adbd4dfac3c42877b",
+        "sha256": "09nslcjdgwwb6j9alxrsnq1wvhifq1nmzl2w02l305j0wsmgdial",
+        "type": "tarball",
+        "url": "https://github.com/NixOS/nixpkgs/archive/b3d86c56c786ad9530f1400adbd4dfac3c42877b.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    }
+}
