@@ -64,7 +64,7 @@ package trace-resources
 package cardano-tracer
   ghc-options: -Werror
 
-package submit-api
+package cardano-submit-api
   ghc-options: -Werror
 
 package cryptonite
