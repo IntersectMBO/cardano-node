@@ -5,6 +5,7 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Praos consensus key types and their 'Key' class instances
@@ -20,10 +21,14 @@ module Cardano.Api.Keys.Praos (
     Hash(..),
     VerificationKey(..),
     SigningKey(..),
+
+    -- * Signing
+    signArbitraryBytesKes,
   ) where
 
 import           Prelude
 
+import           Data.ByteString (ByteString)
 import           Data.Either.Combinators (maybeToRight)
 import           Data.String (IsString (..))
 
@@ -36,8 +41,8 @@ import qualified Cardano.Ledger.Crypto as Shelley (KES, VRF)
 import qualified Cardano.Ledger.Keys as Shelley
 
 import           Cardano.Api.Hash
-import           Cardano.Api.Keys.Class
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Keys.Class
 import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
@@ -145,6 +150,13 @@ instance HasTextEnvelope (SigningKey KesKey) where
         proxy :: Proxy (Shelley.KES StandardCrypto)
         proxy = Proxy
 
+signArbitraryBytesKes
+  :: SigningKey KesKey
+  -> Crypto.Period -- ^ Desired Kes period
+  -> ByteString    -- ^ Message to sign
+  -> Crypto.SignedKES (Shelley.KES StandardCrypto) ByteString
+signArbitraryBytesKes (KesSigningKey kesKey) period message =
+  Crypto.signedKES @(Shelley.KES StandardCrypto) () period message kesKey
 
 --
 -- VRF keys
