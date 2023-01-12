@@ -2,7 +2,10 @@ cabal-version: 3.0
 
 name:                   locli
 version:                1.29
+synopsis:               Cardano log analysis CLI
 description:            Cardano log analysis CLI.
+category:               Cardano,
+                        Logging,
 copyright:              2023 Input Output (Hong Kong) Ltd.
 author:                 IOHK
 maintainer:             operations@iohk.io
@@ -46,7 +49,7 @@ common project-config
                         -Wcompat
                         -Wno-all-missed-specialisations
 
-  build-depends:        base
+  build-depends:        base >= 4.14 && < 4.17,
 
   if os(windows)
     buildable: False

@@ -6,6 +6,8 @@ synopsis:               A simple demo cardano-node client application
 description:            This is intended to demonstrate how to write simple
                         applications that interact with the cardano-node,
                         using the cardano-api.
+category:               Cardano,
+                        Demo,
 copyright:              2023 Input Output (Hong Kong) Ltd.
 author:                 IOHK
 maintainer:             operations@iohk.io

@@ -3,7 +3,7 @@ cabal-version: 3.0
 name:                   cardano-submit-api
 version:                3.1.2
 synopsis:               A web server that allows transactions to be POSTed to the cardano chain
-description:
+description:            A web server that allows transactions to be POSTed to the cardano chain.
 homepage:               https://github.com/input-output-hk/cardano-node
 bug-reports:            https://github.com/input-output-hk/cardano-node/issues
 license:                Apache-2.0
@@ -12,17 +12,18 @@ license-files:          LICENSE
 copyright:              2023 Input Output (Hong Kong) Ltd.
 author:                 IOHK Engineering Team
 maintainer:             operations@iohk.io
-category:               Language
+category:               Cardano,
+                        Web,
 build-type:             Simple
 extra-source-files:     CHANGELOG.md
 
 common project-config
   default-language:     Haskell2010
   build-depends:        base >= 4.14 && < 4.15
+  default-extensions:   NoImplicitPrelude
   
   ghc-options:          -Wall
                         -Wcompat
-                        -Werror
                         -Wincomplete-record-updates
                         -Wincomplete-uni-patterns
                         -Wno-all-missed-specialisations
@@ -31,9 +32,6 @@ common project-config
                         -Wno-safe
                         -Wno-unsafe
                         -Wunused-packages
-
-                        -XNoImplicitPrelude
-
                         -fwarn-incomplete-patterns
                         -fwarn-redundant-constraints
 

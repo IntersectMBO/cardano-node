@@ -2,7 +2,10 @@ cabal-version: 3.0
 
 name:                   cardano-node-chairman
 version:                1.36.0
-description:            The cardano full node
+synopsis:               The cardano full node
+description:            The cardano full node.
+category:               Cardano,
+                        Test,
 copyright:              2023 Input Output (Hong Kong) Ltd.
 author:                 IOHK
 maintainer:             operations@iohk.io
@@ -34,7 +37,8 @@ executable cardano-node-chairman
                         Cardano.Chairman.Commands
                         Cardano.Chairman.Commands.Version
                         Cardano.Chairman.Commands.Run
-                        Paths_cardano_node_chairman
+  other-modules:        Paths_cardano_node_chairman
+  autogen-modules:      Paths_cardano_node_chairman
   ghc-options:          -threaded
                         -rtsopts
                         "-with-rtsopts=-T"

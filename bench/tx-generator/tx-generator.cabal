@@ -2,7 +2,10 @@ cabal-version: 3.0
 
 name:                   tx-generator
 version:                2.5
-description:            A transaction workload generator for Cardano clusters
+synopsis:               A transaction workload generator for Cardano clusters
+description:            A transaction workload generator for Cardano clusters.
+category:               Cardano,
+                        Test,
 copyright:              2023 Input Output (Hong Kong) Ltd.
 author:                 IOHK
 maintainer:             operations@iohk.io
@@ -187,6 +190,7 @@ test-suite tx-generator-apitest
                       , tx-generator
 
   other-modules:        Paths_tx_generator
+  autogen-modules:      Paths_tx_generator
 
 test-suite tx-generator-test
   hs-source-dirs:       test

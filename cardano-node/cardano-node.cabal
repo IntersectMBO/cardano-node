@@ -2,7 +2,10 @@ cabal-version: 3.0
 
 name:                   cardano-node
 version:                1.36.0
-description:            The cardano full node
+synopsis:               The cardano full node
+description:            The cardano full node.
+category:               Cardano,
+                        Validator,
 copyright:              2023 Input Output (Hong Kong) Ltd.
 author:                 IOHK
 maintainer:             operations@iohk.io
@@ -125,6 +128,7 @@ library
                         Cardano.Tracing.OrphanInstances.Shelley
 
   other-modules:        Paths_cardano_node
+  autogen-modules:      Paths_cardano_node
 
   build-depends:        aeson             >= 1.5.6.0
                       , async
@@ -201,6 +205,7 @@ executable cardano-node
     ghc-options:        "-with-rtsopts=-T -I0 -A16m -N2 --disable-delayed-os-memory-return"
 
   other-modules:        Paths_cardano_node
+  autogen-modules:      Paths_cardano_node
 
   build-depends:        cardano-git-rev
                       , cardano-node

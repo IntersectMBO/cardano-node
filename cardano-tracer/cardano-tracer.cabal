@@ -2,8 +2,10 @@ cabal-version: 3.0
 
 name:                   cardano-tracer
 version:                0.1.0
-synopsis:               A service for logging and monitoring over Cardano nodes.
-description:            See README for more info
+synopsis:               A service for logging and monitoring over Cardano nodes
+description:            A service for logging and monitoring over Cardano nodes.
+category:               Cardano,
+                        Trace,
 copyright:              2023 Input Output (Hong Kong) Ltd.
 author:                 IOHK
 maintainer:             operations@iohk.io
@@ -118,6 +120,7 @@ library
                         Cardano.Tracer.Utils
 
   other-modules:        Paths_cardano_tracer
+  autogen-modules:      Paths_cardano_tracer
 
   build-depends:        aeson
                       , async
@@ -174,6 +177,7 @@ executable cardano-tracer
   main-is:              cardano-tracer.hs
 
   other-modules:        Paths_cardano_tracer
+  autogen-modules:      Paths_cardano_tracer
 
   build-depends:        cardano-tracer
                       , optparse-applicative

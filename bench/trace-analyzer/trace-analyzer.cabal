@@ -3,7 +3,9 @@ cabal-version: 3.0
 name:                   trace-analyzer
 version:                0.1.0
 synopsis:               See README for more info
-description:            See README for more info
+description:            See README for more info.
+category:               Cardano,
+                        Trace,
 copyright:              2023 Input Output (Hong Kong) Ltd.
 author:                 IOHK
 maintainer:             operations@iohk.io
@@ -50,7 +52,8 @@ executable trace-analyzer
                         -with-rtsopts=-T
 
   other-modules:        Paths_trace_analyzer
-                      , Cardano.Tracer.Analyze.CLI
+  autogen-modules:      Paths_trace_analyzer
+  other-modules:        Cardano.Tracer.Analyze.CLI
                       , Cardano.Tracer.Analyze.Process
                       , Cardano.Tracer.Analyze.Types
                       , Cardano.Tracer.Analyze.Report
