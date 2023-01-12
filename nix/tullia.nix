@@ -59,6 +59,8 @@ in rec {
         # `kvm` for NixOS tests
         # `benchmark` for benchmarks
         extra-system-features = kvm benchmark
+        # bigger timeouts (900 by default on cicero) needed for some derivations (especially on darwin)
+        max-silent-time = 1800
       '';
 
       memory = 1024 * 32;
