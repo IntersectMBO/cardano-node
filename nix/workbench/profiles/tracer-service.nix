@@ -99,13 +99,14 @@ let
                   '' "$x";
       };
 
-      startupScript =
-        pkgs.writeScript "startup-tracer.sh"
-          ''
+      startupScript = rec {
+        JSON = pkgs.writeScript "startup-tracer.sh" value;
+        value = ''
           #!${pkgs.stdenv.shell}
 
           ${nixosServiceConfig.script}
           '';
+      };
     })
     profile.node-specs.value;
 in

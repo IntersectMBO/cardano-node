@@ -1,4 +1,5 @@
 { pkgs
+, lib
 # Cardano packages/executables.
 , cardano-node, cardano-tracer, tx-generator
 # OCI Image builder.
@@ -11,8 +12,8 @@ let
   # - https://discourse.nixos.org/t/nix2container-another-dockertools-buildimage-implementation-based-on-skopeo/21688
   n2c = pkgs.nix2container.outputs.packages.x86_64-linux.nix2container;
 
-  clusterImage = n2c.buildImage {
-    name = "registry.workbench.iog.io/cluster";
+  clusterNode = n2c.buildImage {
+    name = "registry.ci.iog.io/workbench-cluster-node";
     # Adds `/etc/protocols` and ``/etc/services` to the root directory.
     # FIXME: Inside the container still can't resolve `localhost` but can
     # resolve WAN domains using public DNS servers.
@@ -64,8 +65,14 @@ let
                 "${pkgs.coreutils}"/bin/ln -s "${pkgs.python3Packages.supervisor}" "$SUPERVISOR_NIX"
               fi
 
+              # The SUPERVISORD_LOGLEVEL defaults to "info"
+              # The logging level at which supervisor should write to the
+              # activity log. Valid levels are trace, debug, info, warn, error
+              # and critical.
+              LOGLEVEL="''${SUPERVISORD_LOGLEVEL:-info}"
+
               # Start `supervisord` on the foreground.
-              "${pkgs.python3Packages.supervisor}"/bin/supervisord --nodaemon --configuration "$SUPERVISORD_CONFIG"
+              "${pkgs.python3Packages.supervisor}"/bin/supervisord --nodaemon --configuration "$SUPERVISORD_CONFIG" --loglevel="$LOGLEVEL"
             '';
           };
         in
@@ -73,8 +80,14 @@ let
     };
   };
 
-in {
-
-  inherit clusterImage;
-
-}
+in (rec {
+  value = {
+    clusterNode = {
+      imageName = clusterNode.imageName;
+      imageTag = clusterNode.imageTag;
+      copyToPodman = "${clusterNode.copyToPodman}/bin/copy-to-podman";
+    };
+  };
+  JSON = pkgs.writeText "oci-images.json"
+    (lib.generators.toJSON {} value);
+})

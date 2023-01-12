@@ -1,7 +1,7 @@
 { pkgs
 , lib
 , stateDir
-, node-services
+, profileNix
 , unixHttpServerPort ? null
 , inetHttpServerPort ? null
 }:
@@ -41,7 +41,7 @@ let
     }
     //
     listToAttrs
-      (mapAttrsToList (_: nodeSvcSupervisorProgram) node-services)
+      (mapAttrsToList (_: nodeSvcSupervisorProgram) (profileNix.node-services))
     //
     {
       "program:generator" = {
@@ -49,6 +49,8 @@ let
         command        = "sh start.sh";
         stdout_logfile = "${stateDir}/generator/stdout";
         stderr_logfile = "${stateDir}/generator/stderr";
+        stopasgroup    = false;
+        killasgroup    = false;
         autostart      = false;
         autorestart    = false;
         startretries   = 1;
@@ -56,17 +58,18 @@ let
       };
     }
     //
-    {
+    lib.attrsets.optionalAttrs (profileNix.value.node.tracer) {
       "program:tracer" = {
         directory      = "${stateDir}/tracer";
         command        = "sh start.sh";
         stdout_logfile = "${stateDir}/tracer/stdout";
         stderr_logfile = "${stateDir}/tracer/stderr";
+        stopasgroup    = true;
+        killasgroup    = true;
         autostart      = false;
         autorestart    = false;
         startretries   = 1;
-        stopasgroup    = true;
-        killasgroup    = true;
+        startsecs      = 1;
       };
     };
 
@@ -81,11 +84,15 @@ let
       command        = "sh start.sh";
       stdout_logfile = "${service.value.stateDir 0}/stdout";
       stderr_logfile = "${service.value.stateDir 0}/stderr";
+      stopasgroup    = false;
+      killasgroup    = false;
       autostart      = false;
       autorestart    = false;
       startretries   = 1;
+      startsecs      = 1;
     };
 
-in
-  pkgs.writeText "supervisor.conf"
-    (generators.toINI {} supervisorConf)
+in {
+  value = supervisorConf;
+  INI = pkgs.writeText "supervisor.conf" (generators.toINI {} supervisorConf);
+}

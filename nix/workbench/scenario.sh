@@ -65,6 +65,13 @@ case "$op" in
         ;;
 
     chainsync )
+        # When using the nomad backend `chaindb` must be called after
+        # `backend start` because the node-#, generator and tracer directories
+        # may be created after the nomad job has started (are symlinks to the
+        # containers directories).
+        backend start "$dir"
+
+        # `chaindb` observer:
         local observer=(
             mainnet-chunks-with-snapshot-at-slot
             "$dir"/node-1/run/current/node-1/db-testnet
@@ -73,7 +80,7 @@ case "$op" in
         )
         progress "scenario" "preparing ChainDB for the $(green "observer (fetcher)")"
         chaindb "${observer[@]}"
-
+        # `chaindb` server:
         local chaindb_server=(
             mainnet-chunks-with-snapshot-at-slot
             "$dir"/node-0/run/current/node-0/db-testnet
@@ -83,8 +90,7 @@ case "$op" in
         progress "scenario" "preparing ChainDB for the $(green server node)"
         chaindb "${chaindb_server[@]}"
 
-        backend start "$dir"
-
+        # Nodes must be started AFTER the `chaindb` part!
         progress "scenario" "starting the $(yellow ChainDB server node)"
         backend start-node        "$dir" 'node-0'
 

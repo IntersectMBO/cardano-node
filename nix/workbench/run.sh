@@ -500,32 +500,6 @@ EOF
         cp "$dir"/genesis/genesis.alonzo.json  "$dir"/genesis.alonzo.json
         echo >&2
 
-        local svcs=$profile/node-services.json
-        for node in $(jq_tolist 'keys' "$dir"/node-specs.json)
-        do local node_dir="$dir"/$node
-           mkdir -p                                          "$node_dir"
-           jq      '."'"$node"'"' "$dir"/node-specs.json   > "$node_dir"/node-spec.json
-           cp $(jq '."'"$node"'"."config"'         -r $svcs) "$node_dir"/config.json
-           cp $(jq '."'"$node"'"."service-config"' -r $svcs) "$node_dir"/service-config.json
-           cp $(jq '."'"$node"'"."start"'          -r $svcs) "$node_dir"/start.sh
-           cp $(jq '."'"$node"'"."topology"'       -r $svcs) "$node_dir"/topology.json
-        done
-
-        local gtor=$profile/generator-service.json
-        gen_dir="$dir"/generator
-        mkdir -p                              "$gen_dir"
-        cp $(jq '."run-script"'     -r $gtor) "$gen_dir"/run-script.json
-        cp $(jq '."service-config"' -r $gtor) "$gen_dir"/service-config.json
-        cp $(jq '."start"'          -r $gtor) "$gen_dir"/start.sh
-
-        local trac=$profile/tracer-service.json
-        trac_dir="$dir"/tracer
-        mkdir -p                              "$trac_dir"
-        cp $(jq '."tracer-config"'        -r $trac) "$trac_dir"/tracer-config.json
-        cp $(jq '."nixos-service-config"' -r $trac) "$trac_dir"/nixos-service-config.json
-        cp $(jq '."config"'               -r $trac) "$trac_dir"/config.json
-        cp $(jq '."start"'                -r $trac) "$trac_dir"/start.sh
-
         backend allocate-run "$dir"
 
         progress "run" "allocated $(with_color white $run) @ $dir"
