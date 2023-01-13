@@ -17,6 +17,7 @@ import qualified Test.Tasty as T
 import qualified Test.Tasty.Ingredients as T
 import qualified Test.Util as H
 
+
 tests :: IO TestTree
 tests = pure $ T.testGroup "test/Spec.hs"
   [ T.testGroup "Spec"
