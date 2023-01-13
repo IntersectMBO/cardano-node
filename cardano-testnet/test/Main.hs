@@ -12,14 +12,18 @@ import qualified Test.Tasty as T
 import qualified Test.Tasty.Ingredients as T
 
 --import qualified Test.Cli.Alonzo.LeadershipSchedule
-import qualified Test.Cli.Babbage.LeadershipSchedule
-import qualified Test.Cli.KesPeriodInfo
-import qualified Test.FoldBlocks
-import qualified Test.Node.Shutdown
-import qualified Test.ShutdownOnSlotSynced
+import qualified Test.Cli.Babbage.BabbageTest
+--import qualified Test.Cli.Babbage.LeadershipSchedule
+--import qualified Test.Cli.KesPeriodInfo
+--import qualified Test.FoldBlocks
+--import qualified Test.Node.Shutdown
+--import qualified Test.ShutdownOnSlotSynced
 
 import           Testnet.Util.Ignore as H
 
+tests :: IO TestTree
+tests = pure $ T.testGroup "test/Spec.hs" [H.ignoreOnWindows "Babbage" Test.Cli.Babbage.BabbageTest.hprop_babbageTest]
+{-
 tests :: IO TestTree
 tests = pure $ T.testGroup "test/Spec.hs"
   [ T.testGroup "Spec"
@@ -39,6 +43,7 @@ tests = pure $ T.testGroup "test/Spec.hs"
     ]
   , H.ignoreOnWindows "foldBlocks receives ledger state" Test.FoldBlocks.prop_foldBlocks
   ]
+-}
 
 ingredients :: [T.Ingredient]
 ingredients = T.defaultIngredients

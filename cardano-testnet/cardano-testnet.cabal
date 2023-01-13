@@ -108,6 +108,7 @@ test-suite cardano-testnet-tests
 
   other-modules:        Test.Cli.Alonzo.LeadershipSchedule
                         Test.Cli.Babbage.LeadershipSchedule
+                        Test.Cli.Babbage.BabbageTest
                         Test.Cli.KesPeriodInfo
                         Test.FoldBlocks
                         Test.Misc

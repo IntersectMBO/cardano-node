@@ -1,5 +1,4 @@
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE RecordWildCards #-}
 
 module Testnet.Conf
   ( ProjectBase(..)
@@ -41,11 +40,20 @@ data Conf = Conf
   } deriving (Eq, Show)
 
 mkConf :: ProjectBase -> YamlFilePath -> FilePath -> Maybe Int -> H.Integration Conf
-mkConf (ProjectBase base) (YamlFilePath configurationTemplate) tempAbsPath maybeMagic = do
-  testnetMagic <- H.noteShowIO $ maybe (IO.randomRIO (1000, 2000)) return maybeMagic
-  tempBaseAbsPath <- H.noteShow $ FP.takeDirectory tempAbsPath
-  tempRelPath <- H.noteShow $ FP.makeRelative tempBaseAbsPath tempAbsPath
-  socketDir <- H.noteShow $ tempRelPath </> "socket"
-  logDir <- H.noteTempFile tempAbsPath "logs"
+mkConf (ProjectBase base') (YamlFilePath configurationTemplate') tempAbsPath' maybeMagic = do
+  testnetMagic' <- H.noteShowIO $ maybe (IO.randomRIO (1000, 2000)) return maybeMagic
+  tempBaseAbsPath' <- H.noteShow $ FP.takeDirectory tempAbsPath'
+  tempRelPath' <- H.noteShow $ FP.makeRelative tempBaseAbsPath' tempAbsPath'
+  socketDir' <- H.noteShow $ tempRelPath' </> "socket"
+  logDir' <- H.noteTempFile tempAbsPath' "logs"
 
-  return $ Conf {..}
+  return $ Conf
+            { tempAbsPath = tempAbsPath'
+            , tempRelPath = tempRelPath'
+            , tempBaseAbsPath = tempBaseAbsPath'
+            , logDir = logDir'
+            , base = base'
+            , socketDir = socketDir'
+            , configurationTemplate = configurationTemplate'
+            , testnetMagic = testnetMagic'
+            }
