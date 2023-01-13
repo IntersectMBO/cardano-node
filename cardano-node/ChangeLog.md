@@ -20,7 +20,7 @@ TODO
 
 TODO
 
-## 1.35.5 -- November 2022
+## 1.35.5 -- January 2023
 
 ### node changes
 
@@ -31,6 +31,10 @@ None
 None
 
 ### network changes
+
+- 'EnableP2P' configuration option does not require
+  'TestEnableDevelopmentNetworkProtocols' any more.  We support running at most
+  one p2p relay, if an SPO is running at least two relays.
 
 - Added 'DemoteLocalAsynchronous' warning trace.  It indicates that a remote
   local root peer was demoted to cold (either due to connection error or
