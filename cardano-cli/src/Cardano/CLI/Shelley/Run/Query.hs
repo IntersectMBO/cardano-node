@@ -186,8 +186,8 @@ runQueryCmd cmd =
       runQueryStakeAddressInfo consensusModeParams addr network mOutFile
     QueryDebugLedgerState' consensusModeParams network mOutFile ->
       runQueryLedgerState consensusModeParams network mOutFile
-    QueryStakeSnapshot' consensusModeParams network allOrOnlyPoolIds ->
-      runQueryStakeSnapshot consensusModeParams network allOrOnlyPoolIds
+    QueryStakeSnapshot' consensusModeParams network allOrOnlyPoolIds mOutFile ->
+      runQueryStakeSnapshot consensusModeParams network allOrOnlyPoolIds mOutFile
     QueryProtocolState' consensusModeParams network mOutFile ->
       runQueryProtocolState consensusModeParams network mOutFile
     QueryUTxO' consensusModeParams qFilter networkId mOutFile ->
@@ -671,8 +671,9 @@ runQueryStakeSnapshot
   :: AnyConsensusModeParams
   -> NetworkId
   -> AllOrOnly [Hash StakePoolKey]
+  -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryStakeSnapshot (AnyConsensusModeParams cModeParams) network allOrOnlyPoolIds = do
+runQueryStakeSnapshot (AnyConsensusModeParams cModeParams) network allOrOnlyPoolIds mOutFile = do
   SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr $ newExceptT readEnvSocketPath
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
@@ -691,7 +692,7 @@ runQueryStakeSnapshot (AnyConsensusModeParams cModeParams) network allOrOnlyPool
         Only poolIds -> Just $ Set.fromList poolIds
 
   result <- executeQuery era cModeParams localNodeConnInfo qInMode
-  obtainLedgerEraClassConstraints sbe writeStakeSnapshots result
+  obtainLedgerEraClassConstraints sbe (writeStakeSnapshots mOutFile) result
 
 
 runQueryLedgerState
@@ -855,15 +856,16 @@ writeLedgerState mOutFile qState@(SerialisedDebugLedgerState serLedgerState) =
 writeStakeSnapshots :: forall era ledgerera. ()
   => ShelleyLedgerEra era ~ ledgerera
   => Era.Crypto ledgerera ~ StandardCrypto
-  => SerialisedStakeSnapshots era
+  => Maybe OutputFile
+  -> SerialisedStakeSnapshots era
   -> ExceptT ShelleyQueryCmdError IO ()
-writeStakeSnapshots qState =
+writeStakeSnapshots mOutFile qState =
   case decodeStakeSnapshot qState of
     Left err -> left (ShelleyQueryCmdStakeSnapshotDecodeError err)
 
     Right (StakeSnapshot snapshot) -> do
       -- Calculate the three pool and active stake values for the given pool
-      liftIO . LBS.putStrLn $ encodePretty snapshot
+      liftIO . (maybe LBS.putStrLn (LBS.writeFile . unOutputFile) mOutFile) $ encodePretty snapshot
 
 -- | This function obtains the pool parameters, equivalent to the following jq query on the output of query ledger-state
 --   .nesEs.esLState._delegationState._pstate._pParams.<pool_id>

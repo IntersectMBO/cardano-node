@@ -1005,6 +1005,7 @@ pQueryCmd =
       <$> pConsensusModeParams
       <*> pNetworkId
       <*> pAllStakePoolsOrOnly
+      <*> pMaybeOutputFile
 
     pQueryPoolState :: Parser QueryCmd
     pQueryPoolState = QueryPoolState'
