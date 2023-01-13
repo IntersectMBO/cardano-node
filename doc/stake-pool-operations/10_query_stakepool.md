@@ -25,7 +25,7 @@ $ cardano-cli query stake-snapshot \
 }
 ```
 
-Each snapshot is taken at the end of a different era.  The `go` snapshot is the current one and
+Stake snapshots are taken at the end of each epoch.  The `go` snapshot is the current one and
 was taken two epochs earlier, `set` was taken one epoch ago, and `mark` was taken immediately
 before the start of the current epoch.
 
