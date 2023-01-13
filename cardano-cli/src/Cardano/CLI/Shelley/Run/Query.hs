@@ -25,7 +25,7 @@ module Cardano.CLI.Shelley.Run.Query
   , executeQuery
   ) where
 
-import           Cardano.Prelude
+import           Cardano.Prelude hiding (All)
 import           Prelude (String, id)
 
 import           Cardano.Api
@@ -186,8 +186,8 @@ runQueryCmd cmd =
       runQueryStakeAddressInfo consensusModeParams addr network mOutFile
     QueryDebugLedgerState' consensusModeParams network mOutFile ->
       runQueryLedgerState consensusModeParams network mOutFile
-    QueryStakeSnapshot' consensusModeParams network mPoolIds ->
-      runQueryStakeSnapshot consensusModeParams network mPoolIds
+    QueryStakeSnapshot' consensusModeParams network allOrOnlyPoolIds ->
+      runQueryStakeSnapshot consensusModeParams network allOrOnlyPoolIds
     QueryProtocolState' consensusModeParams network mOutFile ->
       runQueryProtocolState consensusModeParams network mOutFile
     QueryUTxO' consensusModeParams qFilter networkId mOutFile ->
@@ -670,9 +670,9 @@ runQueryTxMempool (AnyConsensusModeParams cModeParams) network query mOutFile = 
 runQueryStakeSnapshot
   :: AnyConsensusModeParams
   -> NetworkId
-  -> [Hash StakePoolKey]
+  -> AllOrOnly [Hash StakePoolKey]
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryStakeSnapshot (AnyConsensusModeParams cModeParams) network mPoolIds = do
+runQueryStakeSnapshot (AnyConsensusModeParams cModeParams) network allOrOnlyPoolIds = do
   SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr $ newExceptT readEnvSocketPath
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
@@ -686,9 +686,10 @@ runQueryStakeSnapshot (AnyConsensusModeParams cModeParams) network mPoolIds = do
   eInMode <- toEraInMode era cMode
     & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
 
-  let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryStakeSnapshot $ case mPoolIds of
-        [] -> Nothing
-        _  -> Just $ Set.fromList mPoolIds
+  let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryStakeSnapshot $ case allOrOnlyPoolIds of
+        All -> Nothing
+        Only poolIds -> Just $ Set.fromList poolIds
+
   result <- executeQuery era cModeParams localNodeConnInfo qInMode
   obtainLedgerEraClassConstraints sbe writeStakeSnapshots result
 

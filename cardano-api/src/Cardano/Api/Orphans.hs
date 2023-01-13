@@ -689,8 +689,6 @@ instance Crypto.Crypto crypto => ToJSON (VMap VB VP (Shelley.Credential 'Shelley
   toJSON = toJSON . fmap fromCompact . VMap.toMap
   toEncoding = toEncoding . fmap fromCompact . VMap.toMap
 
------
-
 instance Crypto.Crypto crypto => ToJSON (Consensus.StakeSnapshots crypto) where
   toJSON = object . stakeSnapshotsToPair
   toEncoding = pairs . mconcat . stakeSnapshotsToPair
