@@ -1,0 +1,24 @@
+#+TITLE: Node state datapoints
+
+* Node
+
+  Cardano.Node.StateRep
+
+* Consensus
+  https://github.com/input-output-hk/ouroboros-network/blob/master/ouroboros-consensus/docs/initialization-steps-and-the-related-tracer.org
+
+  Consensus init:
+    + open the Chain DB
+      + open ImmutableDb
+      + open VolatileDB
+      + open LedgerDB
+    + setup the NodeKernel
+    + initialize the network layer
+
+  - Ouroboros.Consensus.Node.run
+    - Ouroboros.Consensus.Node.runWith
+
+  - TraceValidationEvent blk
+    - UpdateLedgerDbTraceEvent
+      - UpdateLedgerDbTraceEvent blk
+        - StartedPushingBlockToTheLedgerDb

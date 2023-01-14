@@ -1,9 +1,0 @@
-{
-  "Producers": [
-    {
-      "addr": "relays.alonzo-blue.dev.cardano.org",
-      "port": 3001,
-      "valency": 2
-    }
-  ]
-}

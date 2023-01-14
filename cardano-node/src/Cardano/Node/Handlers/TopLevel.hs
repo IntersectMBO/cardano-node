@@ -48,6 +48,7 @@ import           Prelude
 
 import           Control.Exception
 
+import           Control.Monad.Class.MonadAsync (ExceptionInLinkedThread (..))
 import           System.Environment
 import           System.Exit
 import           System.IO
@@ -74,9 +75,16 @@ toplevelExceptionHandler prog = do
       ]
   where
     -- Let async exceptions rise to the top for the default GHC top-handler.
-    -- This includes things like CTRL-C.
+    -- This includes things like CTRL-C. If a linked thread throws ExitSuccess,
+    -- then we rethrow ExitSuccess. This happens for example when using the
+    -- `--shutdown-on-slot-synced` option.
     rethrowAsyncExceptions :: SomeAsyncException -> IO a
-    rethrowAsyncExceptions = throwIO
+    rethrowAsyncExceptions full@(SomeAsyncException e) = do
+      case fromException (toException e) of
+        Just (ExceptionInLinkedThread _ eInner)
+          | Just ExitSuccess <- fromException eInner
+          -> throwIO ExitSuccess
+        _ -> throwIO full
 
     -- We don't want to print ExitCode, and it should be handled by the default
     -- top handler because that sets the actual OS process exit code.

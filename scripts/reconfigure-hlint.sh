@@ -7,11 +7,17 @@
 #
 # To use, simply run the script from the project's top-level directory.
 
+UNAME=$(uname -s) SED=
+case $UNAME in
+  Darwin )      SED="gsed";;
+  Linux )       SED="sed";;
+esac
+
 extract_rules() {
   for x in $(find . -type f -name '*.hs' | grep -v dist); do
     module="$(grep '^module' $x | cut -d ' ' -f 2 | head -n 1)"
     grep '{- HLINT ignore "' $x | cut -d '"' -f 2 | \
-    sed "s|^|$module,|g"
+    $SED "s|^|$module,|g"
   done
 }
 
@@ -29,6 +35,6 @@ gen_rules() {
   echo "# This file is generated from .hlint.template.yaml by scripts/reconfigure-hlint.sh"
   echo ""
   cat .hlint.template.yaml \
-    | sed '/^# BEGIN-GENERATED/,/^# END-GENERATED/{/^# BEGIN-GENERATED/!{/^# END-GENERATED/!d}}' \
-    | gsed -e "/^# BEGIN-GENERATED/ r "<(gen_rules)
+    | $SED '/^# BEGIN-GENERATED/,/^# END-GENERATED/{/^# BEGIN-GENERATED/!{/^# END-GENERATED/!d}}' \
+    | $SED -e "/^# BEGIN-GENERATED/ r "<(gen_rules)
 ) > ".hlint.yaml"

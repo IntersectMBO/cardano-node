@@ -1,0 +1,19 @@
+[ { "tag": "CSlot"
+  , "contents":
+    { "tag": "SlotLEq"
+    , "contents": 56000
+    }
+  }
+, { "tag":"CBlock"
+    , "contents":
+    { "tag": "BMinimumAdoptions"
+    , "contents": 50
+    }
+  }
+, { "tag": "CBlock"
+  , "contents":
+    { "tag": "BUnitaryChainDelta"
+    , "contents": true
+    }
+  }
+]

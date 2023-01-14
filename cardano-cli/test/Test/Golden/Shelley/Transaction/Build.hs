@@ -11,6 +11,8 @@ module Test.Golden.Shelley.Transaction.Build
 import           Cardano.Prelude
 import           Prelude (String)
 
+import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Char8 as BSC
 import           Hedgehog (Property)
 import           Test.OptParse
 
@@ -32,13 +34,14 @@ golden_shelleyTransactionBuild =
 
     void $ execCardanoCLI
       [ "transaction","build-raw"
+      , "--mary-era"
       , "--tx-in", txIn
       , "--tx-out", txOut
       , "--fee", "12"
       , "--tx-body-file", txBodyOutFile
       ]
 
-    H.assertFileOccurences 1 "TxBodyMary" txBodyOutFile
+    H.assertFileOccurences 1 "Tx MaryEra" txBodyOutFile
 
     H.assertEndsWithSingleNewline txBodyOutFile
 
@@ -53,6 +56,7 @@ golden_shelleyTransactionBuild_CertificateScriptWitnessed =
 
     void $ execCardanoCLI
       [ "transaction","build-raw"
+      , "--mary-era"
       , "--tx-in", txIn
       , "--tx-out", txOut
       , "--certificate-file", deregcert, "--certificate-script-file", scriptWit
@@ -60,7 +64,7 @@ golden_shelleyTransactionBuild_CertificateScriptWitnessed =
       , "--tx-body-file", txBodyOutFile
       ]
 
-    H.assertFileOccurences 1 "TxBodyMary" txBodyOutFile
+    H.assertFileOccurences 1 "Tx MaryEra" txBodyOutFile
 
     H.assertEndsWithSingleNewline txBodyOutFile
 
@@ -76,20 +80,23 @@ golden_shelleyTransactionBuild_Minting =
                , scriptWit
                ]
 
-    let dummyMA = filter (/= '\n') $ "50 " ++ polid ++ ".ethereum"
+    let dummyMA =
+          filter (/= '\n') $
+          "50 " ++ polid ++ "." ++ BSC.unpack (Base16.encode "ethereum")
 
     txBodyOutFile <- noteTempFile tempDir "tx-body-out"
 
     void $ execCardanoCLI
       [ "transaction","build-raw"
+      , "--mary-era"
       , "--tx-in", txIn
-      , "--tx-out", txOut ++ "+" ++ dummyMA, "--minting-script-file", scriptWit
+      , "--tx-out", txOut ++ "+" ++ dummyMA, "--mint-script-file", scriptWit
       , "--mint", dummyMA
       , "--fee", "12"
       , "--tx-body-file", txBodyOutFile
       ]
 
-    H.assertFileOccurences 1 "TxBodyMary" txBodyOutFile
+    H.assertFileOccurences 1 "Tx MaryEra" txBodyOutFile
 
     H.assertEndsWithSingleNewline txBodyOutFile
 
@@ -105,6 +112,7 @@ golden_shelleyTransactionBuild_WithdrawalScriptWitnessed =
 
     void $ execCardanoCLI
       [ "transaction","build-raw"
+      , "--mary-era"
       , "--tx-in", txIn
       , "--tx-out", txOut
       , "--withdrawal", withdrawal, "--withdrawal-script-file", scriptWit
@@ -112,7 +120,7 @@ golden_shelleyTransactionBuild_WithdrawalScriptWitnessed =
       , "--tx-body-file", txBodyOutFile
       ]
 
-    H.assertFileOccurences 1 "TxBodyMary" txBodyOutFile
+    H.assertFileOccurences 1 "Tx MaryEra" txBodyOutFile
 
     H.assertEndsWithSingleNewline txBodyOutFile
 
@@ -125,14 +133,13 @@ golden_shelleyTransactionBuild_TxInScriptWitnessed =
 
     void $ execCardanoCLI
       [ "transaction","build-raw"
+      , "--mary-era"
       , "--tx-in", txIn, "--txin-script-file", scriptWit
       , "--tx-out", txOut
       , "--fee", "12"
       , "--tx-body-file", txBodyOutFile
       ]
 
-    H.assertFileOccurences 1 "TxBodyMary" txBodyOutFile
+    H.assertFileOccurences 1 "Tx MaryEra" txBodyOutFile
 
     H.assertEndsWithSingleNewline txBodyOutFile
-
-

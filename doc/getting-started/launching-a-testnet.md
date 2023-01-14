@@ -33,7 +33,7 @@ Commands:
 Then create the testnet.  For example:
 
 ```bash
-$ cabal run cardano-testnet cardano --era shelley
+$ cabal run cardano-testnet shelley
   ✗ <interactive> failed at testnet/Testnet/Run.hs:34:3
     after 1 test.
 

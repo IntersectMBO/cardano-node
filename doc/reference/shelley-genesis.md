@@ -37,7 +37,7 @@ Era based commands
   stake-pool               Stake pool commands
   query                    Node query commands. Will query the local node whose
                            Unix domain socket is obtained from the
-                           CARDANO_NODE_SOCKET_PATH enviromnent variable.
+                           CARDANO_NODE_SOCKET_PATH environment variable.
   genesis                  Genesis block commands
   governance               Governance commands
   text-view                Commands for dealing with Shelley TextView files.
@@ -1424,7 +1424,7 @@ Usage: cardano-cli transaction build-raw [--byron-era | --shelley-era |
                                          [--txin-script-file FILE])
                                          [--tx-out TX-OUT]
                                          [--mint VALUE
-                                           (--minting-script-file FILE)]
+                                           (--mint-script-file FILE)]
                                          [--invalid-before SLOT]
                                          [--invalid-hereafter SLOT]
                                          [--fee LOVELACE]
@@ -1445,15 +1445,16 @@ Available options:
   --byron-era              Specify the Byron era
   --shelley-era            Specify the Shelley era
   --allegra-era            Specify the Allegra era
-  --mary-era               Specify the Mary era (default)
+  --mary-era               Specify the Mary era
+  --alonzo-era             Specify the Alonzo era (default)
   --tx-in TX-IN            TxId#TxIx
   --txin-script-file FILE  Filepath of the spending script witness
   --tx-out TX-OUT          The transaction output as Address+Lovelace where
                            Address is the Bech32-encoded address followed by the
                            amount in Lovelace.
   --mint VALUE             Mint multi-asset value(s) with the multi-asset cli
-                           syntax. You must specifiy a script witness.
-  --minting-script-file FILE
+                           syntax. You must specify a script witness.
+  --mint-script-file FILE
                            Filepath of the multi-asset witness script.
   --invalid-before SLOT    Time that transaction is valid from (in slots).
   --invalid-hereafter SLOT Time that transaction is valid until (in slots).
@@ -1576,7 +1577,7 @@ Usage: cardano-cli transaction submit [--shelley-mode | --byron-mode
                                       (--mainnet | --testnet-magic NATURAL)
                                       --tx-file FILE
   Submit a transaction to the local node whose Unix domain socket is obtained
-  from the CARDANO_NODE_SOCKET_PATH enviromnent variable.
+  from the CARDANO_NODE_SOCKET_PATH environment variable.
 
 Available options:
   --shelley-mode           For talking to a node running in Shelley-only mode.

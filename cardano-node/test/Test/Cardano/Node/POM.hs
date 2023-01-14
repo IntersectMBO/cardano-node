@@ -10,15 +10,20 @@ import           Cardano.Prelude
 import           Data.Time.Clock (secondsToDiffTime)
 
 import           Cardano.Node.Configuration.POM
+import           Cardano.Node.Configuration.Socket
+import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
-import           Cardano.Tracing.Config (TraceOptions (..))
-import           Ouroboros.Network.Block (MaxSlotNo (..), SlotNo (..))
-import           Ouroboros.Network.NodeToNode (DiffusionMode (InitiatorAndResponderDiffusionMode))
+import           Cardano.Tracing.Config (PartialTraceOptions (..), defaultPartialTraceConfiguration,
+                   partialTraceSelectionToEither)
+import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
+import           Ouroboros.Network.Block (SlotNo (..))
+import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
+                   DiffusionMode (InitiatorAndResponderDiffusionMode))
 
 import           Hedgehog (Property, discover, withTests, (===))
 import qualified Hedgehog
-import           Hedgehog.Internal.Property (failWith)
+import           Hedgehog.Internal.Property (evalEither, failWith)
 
 
 -- This is a simple test to check that the POM technique is working as intended.
@@ -33,6 +38,7 @@ prop_sanityCheck_POM =
                              <> testPartialYamlConfig
                              <> testPartialCliConfig
         nc = makeNodeConfiguration combinedPartials
+    expectedConfig <- evalEither eExpectedConfig
     case nc of
       Left err -> failWith Nothing $ "Partial Options Monoid sanity check failure: " <> err
       Right config -> config === expectedConfig
@@ -46,7 +52,8 @@ testPartialYamlConfig =
                         . NodeProtocolConfigurationShelley
                         $ NodeShelleyProtocolConfiguration
                             (GenesisFile "dummmy-genesis-file") Nothing
-    , pncSocketPath = Last Nothing
+    , pncSocketConfig = Last . Just $ SocketConfig (Last Nothing) mempty mempty mempty
+    , pncShutdownConfig = Last Nothing
     , pncDiffusionMode = Last Nothing
     , pncSnapshotInterval = mempty
     , pncTestEnableDevelopmentNetworkProtocols = Last Nothing
@@ -54,17 +61,22 @@ testPartialYamlConfig =
     , pncMaxConcurrencyDeadline = Last Nothing
     , pncLoggingSwitch = Last $ Just True
     , pncLogMetrics = Last $ Just True
-    , pncTraceConfig = Last $ Just TracingOff
-    , pncNodeIPv4Addr = mempty
-    , pncNodeIPv6Addr = mempty
-    , pncNodePortNumber = mempty
+    , pncTraceConfig = Last (Just $ PartialTracingOnLegacy defaultPartialTraceConfiguration)
+    , pncTraceForwardSocket = Last Nothing
     , pncConfigFile = mempty
     , pncTopologyFile = mempty
     , pncDatabaseFile = mempty
     , pncProtocolFiles = mempty
     , pncValidateDB = mempty
-    , pncShutdownIPC = mempty
-    , pncShutdownOnSlotSynced = mempty
+    , pncMaybeMempoolCapacityOverride = mempty
+    , pncProtocolIdleTimeout = mempty
+    , pncTimeWaitTimeout = mempty
+    , pncAcceptedConnectionsLimit = mempty
+    , pncTargetNumberOfRootPeers = mempty
+    , pncTargetNumberOfKnownPeers = mempty
+    , pncTargetNumberOfEstablishedPeers = mempty
+    , pncTargetNumberOfActivePeers = mempty
+    , pncEnableP2P = Last (Just DisabledP2PMode)
     }
 
 -- | Example partial configuration theoretically created
@@ -72,46 +84,50 @@ testPartialYamlConfig =
 testPartialCliConfig :: PartialNodeConfiguration
 testPartialCliConfig =
   PartialNodeConfiguration
-    { pncNodeIPv4Addr = mempty
-    , pncNodeIPv6Addr = mempty
-    , pncNodePortNumber = mempty
+    { pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty mempty
+    , pncShutdownConfig = Last . Just $ ShutdownConfig Nothing (Just . ASlot $ SlotNo 42)
     , pncConfigFile   = mempty
     , pncTopologyFile = mempty
     , pncDatabaseFile = mempty
-    , pncSocketPath   = mempty
     , pncDiffusionMode = mempty
     , pncSnapshotInterval = Last . Just . RequestedSnapshotInterval $ secondsToDiffTime 100
     , pncTestEnableDevelopmentNetworkProtocols = Last $ Just True
     , pncProtocolFiles = Last . Just $ ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing
     , pncValidateDB = Last $ Just True
-    , pncShutdownIPC = Last $ Just Nothing
-    , pncShutdownOnSlotSynced = Last . Just . MaxSlotNo $ SlotNo 42
     , pncProtocolConfig = mempty
     , pncMaxConcurrencyBulkSync = mempty
     , pncMaxConcurrencyDeadline = mempty
     , pncLoggingSwitch = mempty
     , pncLogMetrics = mempty
-    , pncTraceConfig = mempty
+    , pncTraceConfig = Last (Just $ PartialTracingOnLegacy defaultPartialTraceConfiguration)
+    , pncTraceForwardSocket = mempty
+    , pncMaybeMempoolCapacityOverride = mempty
+    , pncProtocolIdleTimeout = mempty
+    , pncTimeWaitTimeout = mempty
+    , pncAcceptedConnectionsLimit = mempty
+    , pncTargetNumberOfRootPeers = mempty
+    , pncTargetNumberOfKnownPeers = mempty
+    , pncTargetNumberOfEstablishedPeers = mempty
+    , pncTargetNumberOfActivePeers = mempty
+    , pncEnableP2P = Last (Just DisabledP2PMode)
     }
 
 -- | Expected final NodeConfiguration
-expectedConfig :: NodeConfiguration
-expectedConfig =
-  NodeConfiguration
-    { ncNodeIPv4Addr = Nothing
-    , ncNodeIPv6Addr = Nothing
-    , ncNodePortNumber = Nothing
+eExpectedConfig :: Either Text NodeConfiguration
+eExpectedConfig = do
+  traceOptions <- partialTraceSelectionToEither
+                    (return $ PartialTracingOnLegacy defaultPartialTraceConfiguration)
+  return $ NodeConfiguration
+    { ncSocketConfig = SocketConfig mempty mempty mempty mempty
+    , ncShutdownConfig = ShutdownConfig Nothing (Just . ASlot $ SlotNo 42)
     , ncConfigFile = ConfigYamlFilePath "configuration/cardano/mainnet-config.json"
     , ncTopologyFile = TopologyFile "configuration/cardano/mainnet-topology.json"
     , ncDatabaseFile = DbFile "mainnet/db/"
     , ncProtocolFiles = ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing
     , ncValidateDB = True
-    , ncShutdownIPC = Nothing
-    , ncShutdownOnSlotSynced = MaxSlotNo $ SlotNo 42
     , ncProtocolConfig = NodeProtocolConfigurationShelley
                            $ NodeShelleyProtocolConfiguration
                              (GenesisFile "dummmy-genesis-file") Nothing
-    , ncSocketPath = Nothing
     , ncDiffusionMode = InitiatorAndResponderDiffusionMode
     , ncSnapshotInterval = RequestedSnapshotInterval $ secondsToDiffTime 100
     , ncTestEnableDevelopmentNetworkProtocols = True
@@ -119,7 +135,22 @@ expectedConfig =
     , ncMaxConcurrencyDeadline = Nothing
     , ncLoggingSwitch = True
     , ncLogMetrics = True
-    , ncTraceConfig = TracingOff
+    , ncTraceConfig = traceOptions
+    , ncTraceForwardSocket = Nothing
+    , ncMaybeMempoolCapacityOverride = Nothing
+    , ncProtocolIdleTimeout = 5
+    , ncTimeWaitTimeout = 60
+    , ncAcceptedConnectionsLimit =
+        AcceptedConnectionsLimit
+          { acceptedConnectionsHardLimit = 512
+          , acceptedConnectionsSoftLimit = 384
+          , acceptedConnectionsDelay     = 5
+          }
+    , ncTargetNumberOfRootPeers = 100
+    , ncTargetNumberOfKnownPeers = 100
+    , ncTargetNumberOfEstablishedPeers = 50
+    , ncTargetNumberOfActivePeers = 20
+    , ncEnableP2P = SomeNetworkP2PMode Consensus.DisabledP2PMode
     }
 
 -- -----------------------------------------------------------------------------

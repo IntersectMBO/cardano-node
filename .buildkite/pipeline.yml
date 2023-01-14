@@ -1,6 +1,6 @@
 steps:
   - label: 'check-cabal-project'
-    command: 'nix-build ./nix -A iohkNix.checkCabalProject -o check-cabal-project.sh && ./check-cabal-project.sh'
+    command: 'nix run .#checkCabalProject'
     agents:
       system: x86_64-linux
 

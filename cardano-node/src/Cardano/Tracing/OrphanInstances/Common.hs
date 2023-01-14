@@ -5,6 +5,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -58,8 +59,7 @@ import           Cardano.BM.Stats
 import           Cardano.BM.Tracing (HasPrivacyAnnotation (..), HasSeverityAnnotation (..),
                    Severity (..), ToObject (..), Tracer (..), TracingVerbosity (..),
                    Transformable (..))
-import qualified Cardano.Chain.Update as Update
-import           Cardano.Slotting.Block (BlockNo (..))
+import           Cardano.Node.Handlers.Shutdown ()
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronHash (..))
 import           Ouroboros.Consensus.HardFork.Combinator (OneEraHash (..))
 import           Ouroboros.Network.Block (HeaderHash, Tip (..))
@@ -83,17 +83,11 @@ instance FromJSON TracingVerbosity where
                             <> "Encountered: " <> show invalid
 
 instance FromJSON PortNumber where
-  parseJSON (Number portNum) = case readMaybe . show $ coefficient portNum of
+  parseJSON (Number portNum) = case readMaybe . show @Integer @Text $ coefficient portNum of
     Just port -> pure port
     Nothing -> fail $ show portNum <> " is not a valid port number."
   parseJSON invalid  = fail $ "Parsing of port number failed due to type mismatch. "
                             <> "Encountered: " <> show invalid
-
-instance FromJSON Update.ApplicationName where
-  parseJSON (String x) = pure $ Update.ApplicationName x
-  parseJSON invalid  =
-    fail $ "Parsing of application name failed due to type mismatch. "
-    <> "Encountered: " <> show invalid
 
 instance ToJSON (HeaderHash blk) => ToJSON (Tip blk) where
   toJSON TipGenesis = object [ "genesis" .= True ]
@@ -109,7 +103,6 @@ instance ToJSON (OneEraHash xs) where
     toJSON . Text.decodeLatin1 . B16.encode . SBS.fromShort $ bs
 
 deriving newtype instance ToJSON ByronHash
-deriving newtype instance ToJSON BlockNo
 
 instance HasPrivacyAnnotation  ResourceStats
 instance HasSeverityAnnotation ResourceStats where
@@ -122,4 +115,3 @@ instance ToObject ResourceStats where
     case toJSON stats of
       Object x -> x
       _ -> mempty
-

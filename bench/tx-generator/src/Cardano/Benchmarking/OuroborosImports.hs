@@ -13,7 +13,7 @@ module Cardano.Benchmarking.OuroborosImports
   , SigningKeyFile
   , StandardShelley
   , NetworkId
-  , getGenesis
+  -- , getGenesis
   , makeLocalConnectInfo
   , protocolToTopLevelConfig
   , protocolToNetworkId
@@ -26,41 +26,27 @@ import           Prelude
 import           Ouroboros.Consensus.Block.Abstract
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Config (TopLevelConfig, configBlock, configCodec)
-import           Ouroboros.Consensus.Config.SupportsNode
-                 (ConfigSupportsNode(..), getNetworkMagic)
-import           Ouroboros.Consensus.Node (ProtocolInfo(..))
-import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
-import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
+import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..), getNetworkMagic)
+import           Ouroboros.Consensus.Node (ProtocolInfo (..))
+import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto, StandardShelley)
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 
 import           Cardano.Node.Configuration.Logging (LoggingLayer)
-import           Cardano.Node.Protocol.Types ( SomeConsensusProtocol(..))
+import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 
 import           Cardano.Api.Shelley (CardanoMode)
 import           Cardano.CLI.Types (SigningKeyFile)
 
-import           Cardano.Api (NetworkId(..), LocalNodeConnectInfo(..), ConsensusModeParams(..), EpochSlots(..)
-                             , TxInMode, TxValidationErrorInMode
-                             , SigningKey, PaymentKey
-                             , submitTxToNodeLocal)
-import           Cardano.Api.Protocol.Types (BlockType(..), ProtocolInfoArgs(..), protocolInfo)
-
-import           Shelley.Spec.Ledger.Genesis (ShelleyGenesis)
+import           Cardano.Api (BlockType (..), ConsensusModeParams (..), EpochSlots (..),
+                   LocalNodeConnectInfo (..), NetworkId (..), PaymentKey, SigningKey, TxInMode,
+                   TxValidationErrorInMode, protocolInfo, submitTxToNodeLocal)
+import           Cardano.Ledger.Shelley.Genesis (ShelleyGenesis)
 
 type CardanoBlock = Consensus.CardanoBlock StandardCrypto
 
 toProtocolInfo :: SomeConsensusProtocol -> ProtocolInfo IO CardanoBlock
 toProtocolInfo (SomeConsensusProtocol CardanoBlockType info) = protocolInfo info
-toProtocolInfo _ = error "toProtocolInfo unkown protocol"
-
-getGenesis :: SomeConsensusProtocol -> ShelleyGenesis StandardShelley
-getGenesis (SomeConsensusProtocol CardanoBlockType info) = shelleyBasedGenesis
- where
-  (ProtocolInfoArgsCardano
-   _
-   Consensus.ProtocolParamsShelleyBased{Consensus.shelleyBasedGenesis}
-    _ _ _ _ _ _ _ _) = info
-getGenesis (SomeConsensusProtocol _ _ ) = error "getGenesis (SomeConsensusProtocol _ _ ) unknown protocol"
+toProtocolInfo _ = error "toProtocolInfo unknown protocol"
 
 protocolToTopLevelConfig :: SomeConsensusProtocol -> TopLevelConfig CardanoBlock
 protocolToTopLevelConfig ptcl = pInfoConfig

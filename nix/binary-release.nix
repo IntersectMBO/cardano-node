@@ -7,19 +7,18 @@
 ############################################################################
 
 { pkgs
-, project
+, version
 , exes
 , platform
 }:
 
 let
   lib = pkgs.lib;
-  name = "cardano-node-${project.version}-${platform}";
+  name = "cardano-node-${version}-${platform}";
 
 in pkgs.runCommand name {
     buildInputs = with pkgs.buildPackages; [
       zip
-      haskellBuildUtils.package
     ];
   } ''
   mkdir -p $out release

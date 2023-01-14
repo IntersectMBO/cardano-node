@@ -11,13 +11,13 @@ module Cardano.TxSubmit.CLI.Parsers
   ) where
 
 import           Cardano.Api (AnyConsensusModeParams (..), ConsensusModeParams (..),
-                   EpochSlots (..), NetworkId (..), NetworkMagic (..))
-import           Cardano.TxSubmit.CLI.Types (ConfigFile (..), SocketPath (..),
-                   TxSubmitNodeParams (..))
+                   EpochSlots (..), NetworkId (..), NetworkMagic (..), SocketPath (..))
+import           Cardano.TxSubmit.CLI.Types (ConfigFile (..), TxSubmitNodeParams (..))
 import           Cardano.TxSubmit.Rest.Parsers (pWebserverConfig)
 import           Control.Applicative (Alternative (..), Applicative (..), (<**>))
 import           Data.Function ((.))
 import           Data.Functor (Functor (fmap), (<$>))
+import           Data.Int
 import           Data.Semigroup (Semigroup ((<>)))
 import           Data.Word (Word64)
 import           Options.Applicative (Parser, ParserInfo)
@@ -37,6 +37,7 @@ pTxSubmitNodeParams = TxSubmitNodeParams
   <*> pNetworkId
   <*> pSocketPath
   <*> pWebserverConfig 8090
+  <*> pMetricsPort 8081
 
 pConfigFile :: Parser ConfigFile
 pConfigFile = ConfigFile <$> Opt.strOption
@@ -121,4 +122,12 @@ pSocketPath = SocketPath <$> Opt.strOption
   <>  Opt.help "Path to a cardano-node socket"
   <>  Opt.completer (Opt.bashCompleter "file")
   <>  Opt.metavar "FILEPATH"
+  )
+
+pMetricsPort :: Int -> Parser Int
+pMetricsPort defaultValue = Opt.option Opt.auto
+  (   Opt.long "metrics-port"
+  <>  Opt.help "Metrics port"
+  <>  Opt.metavar "PORT"
+  <>  Opt.value defaultValue
   )

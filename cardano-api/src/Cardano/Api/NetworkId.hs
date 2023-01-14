@@ -4,6 +4,7 @@ module Cardano.Api.NetworkId (
     -- * Network types
     NetworkId(..),
     NetworkMagic(..),
+    fromNetworkMagic,
     toNetworkMagic,
     mainnetNetworkMagic,
 
@@ -19,11 +20,11 @@ import           Prelude
 
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 
-import qualified Cardano.Crypto.ProtocolMagic as Byron
-                   (ProtocolMagicId(..), RequiresNetworkMagic(..))
-import qualified Cardano.Chain.Common as Byron (NetworkMagic(..))
+import qualified Cardano.Chain.Common as Byron (NetworkMagic (..))
 import qualified Cardano.Chain.Genesis as Byron (mainnetProtocolMagicId)
-import qualified Cardano.Ledger.BaseTypes as Shelley (Network(..))
+import qualified Cardano.Crypto.ProtocolMagic as Byron (ProtocolMagicId (..),
+                   RequiresNetworkMagic (..))
+import qualified Cardano.Ledger.BaseTypes as Shelley (Network (..))
 
 
 -- ----------------------------------------------------------------------------
@@ -33,6 +34,12 @@ import qualified Cardano.Ledger.BaseTypes as Shelley (Network(..))
 data NetworkId = Mainnet
                | Testnet !NetworkMagic
   deriving (Eq, Show)
+
+fromNetworkMagic :: NetworkMagic -> NetworkId
+fromNetworkMagic nm =
+  if nm == mainnetNetworkMagic
+  then Mainnet
+  else Testnet nm
 
 toNetworkMagic :: NetworkId -> NetworkMagic
 toNetworkMagic (Testnet nm) = nm

@@ -45,10 +45,12 @@ LastKnownBlockVersion-Alt: 0
 ApplicationName: cardano-sl
 ApplicationVersion: 1
 
+##### Enable P2P Mode #####
+EnableP2P: False
 
 ##### Logging configuration #####
 
-# Enble or disable logging overall
+# Enable or disable logging overall
 TurnOnLogging: True
 
 # Enable the collection of various OS metrics such as memory and CPU use.
@@ -87,7 +89,7 @@ defaultBackends:
 #   - "127.0.0.1"
 #   - 12789
 
-# To enable the 'TraceForwarder' backend, uncomment the following setting. Log
+# To enable the legacy 'TraceForwarder' backend, uncomment the following setting. Log
 # items are then forwarded based on an entry in 'mapBackends' to a separate
 # process running a 'TraceAcceptor'.
 # Example using UNIX pipes:
@@ -114,7 +116,7 @@ defaultBackends:
 #   JournalSK for systemd's journal system
 #   DevNullSK ignores all output
 # The scribe output format can be ScText or ScJson. Log rotation settings can
-# be specified in the defaults below or overidden on a per-scribe basis here.
+# be specified in the defaults below or overridden on a per-scribe basis here.
 setupScribes:
   - scKind: FileSK
     scName: "logs/mainnet.log"

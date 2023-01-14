@@ -17,13 +17,15 @@ module Cardano.CLI.Byron.Tx
     --TODO: remove when they are exported from the ledger
   , fromCborTxAux
   , toCborTxAux
+
+  , ScriptValidity(..)
   )
 where
 
-import           Cardano.Prelude hiding (option, trace, (%))
+import           Cardano.Prelude hiding (trace, (%))
 import           Prelude (error)
 
-import           Control.Monad.Trans.Except.Extra (firstExceptT, left)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, left, newExceptT)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as Map
@@ -42,9 +44,7 @@ import qualified Cardano.Crypto.Signing as Crypto
 
 import           Cardano.Api.Byron
 import           Cardano.CLI.Byron.Key (byronWitnessToVerKey)
-import           Cardano.CLI.Environment
-import           Cardano.CLI.Helpers (textShow)
-import           Cardano.CLI.Types (SocketPath (..))
+import           Cardano.CLI.Types (TxFile (..))
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock, GenTx (..))
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
@@ -69,11 +69,6 @@ renderByronTxError err =
       "Transaction deserialisation failed at " <> textShow txFp <> " Error: " <> textShow decErr
     EnvSocketError envSockErr -> renderEnvSocketError envSockErr
 
-
-newtype TxFile =
-  TxFile FilePath
-  deriving (Eq, Ord, Show, IsString)
-
 newtype NewTxFile =
   NewTxFile FilePath
   deriving (Eq, Ord, Show, IsString)
@@ -83,7 +78,7 @@ newtype NewTxFile =
 --   its full structure.
 prettyAddress :: Address ByronAddr -> Text
 prettyAddress (ByronAddress addr) = sformat
-  (Common.addressF %"\n"%Common.addressDetailedF)
+  (Common.addressF % "\n" % Common.addressDetailedF)
   addr addr
 
 readByronTx :: TxFile -> ExceptT ByronTxError IO (UTxO.ATxAux ByteString)
@@ -144,7 +139,7 @@ txSpendGenesisUTxOByronPBFT
   -> NetworkId
   -> SomeByronSigningKey
   -> Address ByronAddr
-  -> [TxOut ByronEra]
+  -> [TxOut CtxTx ByronEra]
   -> Tx ByronEra
 txSpendGenesisUTxOByronPBFT gc nId sk (ByronAddress bAddr) outs = do
     let txBodyCont =
@@ -153,22 +148,25 @@ txSpendGenesisUTxOByronPBFT gc nId sk (ByronAddress bAddr) outs = do
               , BuildTxWith (KeyWitness KeyWitnessForSpending))
             ]
             TxInsCollateralNone
+            TxInsReferenceNone
             outs
+            TxTotalCollateralNone
+            TxReturnCollateralNone
             (TxFeeImplicit TxFeesImplicitInByronEra)
             ( TxValidityNoLowerBound
             , TxValidityNoUpperBound ValidityNoUpperBoundInByronEra
             )
             TxMetadataNone
             TxAuxScriptsNone
-            (BuildTxWith TxExtraScriptDataNone)
             TxExtraKeyWitnessesNone
             (BuildTxWith Nothing)
             TxWithdrawalsNone
             TxCertificatesNone
             TxUpdateProposalNone
             TxMintNone
-    case makeTransactionBody txBodyCont of
-      Left err -> error $ "Error occured while creating a Byron genesis based UTxO transaction: " <> show err
+            TxScriptValidityNone
+    case createAndValidateTransactionBody txBodyCont of
+      Left err -> error $ "Error occurred while creating a Byron genesis based UTxO transaction: " <> show err
       Right txBody -> let bWit = fromByronWitness sk nId txBody
                       in makeSignedTransaction [bWit] txBody
   where
@@ -183,7 +181,7 @@ txSpendUTxOByronPBFT
   :: NetworkId
   -> SomeByronSigningKey
   -> [TxIn]
-  -> [TxOut ByronEra]
+  -> [TxOut CtxTx ByronEra]
   -> Tx ByronEra
 txSpendUTxOByronPBFT nId sk txIns outs = do
   let txBodyCont = TxBodyContent
@@ -192,22 +190,25 @@ txSpendUTxOByronPBFT nId sk txIns outs = do
                        ) | txIn <- txIns
                      ]
                      TxInsCollateralNone
+                     TxInsReferenceNone
                      outs
+                     TxTotalCollateralNone
+                     TxReturnCollateralNone
                      (TxFeeImplicit TxFeesImplicitInByronEra)
                      ( TxValidityNoLowerBound
                      , TxValidityNoUpperBound ValidityNoUpperBoundInByronEra
                      )
                      TxMetadataNone
                      TxAuxScriptsNone
-                     (BuildTxWith TxExtraScriptDataNone)
                      TxExtraKeyWitnessesNone
                      (BuildTxWith Nothing)
                      TxWithdrawalsNone
                      TxCertificatesNone
                      TxUpdateProposalNone
                      TxMintNone
-  case makeTransactionBody txBodyCont of
-    Left err -> error $ "Error occured while creating a Byron genesis based UTxO transaction: " <> show err
+                     TxScriptValidityNone
+  case createAndValidateTransactionBody txBodyCont of
+    Left err -> error $ "Error occurred while creating a Byron genesis based UTxO transaction: " <> show err
     Right txBody -> let bWit = fromByronWitness sk nId txBody
                     in makeSignedTransaction [bWit] txBody
 
@@ -223,7 +224,7 @@ nodeSubmitTx
   -> GenTx ByronBlock
   -> ExceptT ByronTxError IO ()
 nodeSubmitTx network gentx = do
-    SocketPath socketPath <- firstExceptT EnvSocketError readEnvSocketPath
+    SocketPath socketPath <- firstExceptT EnvSocketError $ newExceptT readEnvSocketPath
     let connctInfo =
           LocalNodeConnectInfo {
             localNodeSocketPath = socketPath,

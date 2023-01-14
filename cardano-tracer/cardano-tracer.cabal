@@ -1,0 +1,394 @@
+cabal-version: 3.0
+
+name:                   cardano-tracer
+version:                0.1.0
+synopsis:               A service for logging and monitoring over Cardano nodes
+description:            A service for logging and monitoring over Cardano nodes.
+category:               Cardano,
+                        Trace,
+copyright:              2023 Input Output (Hong Kong) Ltd.
+author:                 IOHK
+maintainer:             operations@iohk.io
+license:                Apache-2.0
+license-files:          LICENSE
+                        NOTICE
+build-type:             Simple
+extra-doc-files:        README.md
+                        CHANGELOG.md
+
+common project-config
+  default-language:     Haskell2010
+  build-depends:        base >= 4.14 && < 4.15
+
+  ghc-options:          -Wall
+                        -Wcompat
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wno-unticked-promoted-constructors
+                        -Wno-orphans
+                        -Wpartial-fields
+                        -Wredundant-constraints
+                        -Wunused-packages
+
+library
+  import:               project-config
+  hs-source-dirs:       src
+
+  exposed-modules:      Cardano.Tracer.Acceptors.Client
+                        Cardano.Tracer.Acceptors.Run
+                        Cardano.Tracer.Acceptors.Server
+                        Cardano.Tracer.Acceptors.Utils
+
+                        Cardano.Tracer.Handlers.Logs.File
+                        Cardano.Tracer.Handlers.Logs.Journal
+                        Cardano.Tracer.Handlers.Logs.Rotator
+                        Cardano.Tracer.Handlers.Logs.TraceObjects
+                        Cardano.Tracer.Handlers.Logs.Utils
+
+                        Cardano.Tracer.Handlers.Metrics.Monitoring
+                        Cardano.Tracer.Handlers.Metrics.Prometheus
+                        Cardano.Tracer.Handlers.Metrics.Servers
+                        Cardano.Tracer.Handlers.Metrics.Utils
+
+                        Cardano.Tracer.Handlers.RTView.Notifications.Check
+                        Cardano.Tracer.Handlers.RTView.Notifications.Email
+                        Cardano.Tracer.Handlers.RTView.Notifications.Send
+                        Cardano.Tracer.Handlers.RTView.Notifications.Settings
+                        Cardano.Tracer.Handlers.RTView.Notifications.Timer
+                        Cardano.Tracer.Handlers.RTView.Notifications.Types
+                        Cardano.Tracer.Handlers.RTView.Notifications.Utils
+
+                        Cardano.Tracer.Handlers.RTView.Run
+
+                        Cardano.Tracer.Handlers.RTView.SSL.Certs
+
+                        Cardano.Tracer.Handlers.RTView.State.Displayed
+                        Cardano.Tracer.Handlers.RTView.State.EraSettings
+                        Cardano.Tracer.Handlers.RTView.State.Historical
+                        Cardano.Tracer.Handlers.RTView.State.Last
+                        Cardano.Tracer.Handlers.RTView.State.Peers
+                        Cardano.Tracer.Handlers.RTView.State.TraceObjects
+
+                        Cardano.Tracer.Handlers.RTView.System
+
+                        Cardano.Tracer.Handlers.RTView.UI.CSS.Bulma
+                        Cardano.Tracer.Handlers.RTView.UI.CSS.Own
+                        Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Column
+                        Cardano.Tracer.Handlers.RTView.UI.HTML.Node.EKG
+                        Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Peers
+                        Cardano.Tracer.Handlers.RTView.UI.HTML.About
+                        Cardano.Tracer.Handlers.RTView.UI.HTML.Body
+                        Cardano.Tracer.Handlers.RTView.UI.HTML.Logs
+                        Cardano.Tracer.Handlers.RTView.UI.HTML.Main
+                        Cardano.Tracer.Handlers.RTView.UI.HTML.NoNodes
+                        Cardano.Tracer.Handlers.RTView.UI.HTML.Notifications
+                        Cardano.Tracer.Handlers.RTView.UI.JS.ChartJS
+                        Cardano.Tracer.Handlers.RTView.UI.JS.Charts
+                        Cardano.Tracer.Handlers.RTView.UI.JS.Utils
+                        Cardano.Tracer.Handlers.RTView.UI.Img.Icons
+                        Cardano.Tracer.Handlers.RTView.UI.Charts
+                        Cardano.Tracer.Handlers.RTView.UI.Logs
+                        Cardano.Tracer.Handlers.RTView.UI.Notifications
+                        Cardano.Tracer.Handlers.RTView.UI.Theme
+                        Cardano.Tracer.Handlers.RTView.UI.Types
+                        Cardano.Tracer.Handlers.RTView.UI.Utils
+
+                        Cardano.Tracer.Handlers.RTView.Update.Chain
+                        Cardano.Tracer.Handlers.RTView.Update.EKG
+                        Cardano.Tracer.Handlers.RTView.Update.EraSettings
+                        Cardano.Tracer.Handlers.RTView.Update.Historical
+                        Cardano.Tracer.Handlers.RTView.Update.KES
+                        Cardano.Tracer.Handlers.RTView.Update.Leadership
+                        Cardano.Tracer.Handlers.RTView.Update.Logs
+                        Cardano.Tracer.Handlers.RTView.Update.NodeInfo
+                        Cardano.Tracer.Handlers.RTView.Update.NodeState
+                        Cardano.Tracer.Handlers.RTView.Update.Nodes
+                        Cardano.Tracer.Handlers.RTView.Update.Peers
+                        Cardano.Tracer.Handlers.RTView.Update.Reload
+                        Cardano.Tracer.Handlers.RTView.Update.Resources
+                        Cardano.Tracer.Handlers.RTView.Update.Transactions
+                        Cardano.Tracer.Handlers.RTView.Update.Utils
+
+                        Cardano.Tracer.Handlers.RTView.Utils
+
+                        Cardano.Tracer.CLI
+                        Cardano.Tracer.Configuration
+                        Cardano.Tracer.Environment
+                        Cardano.Tracer.MetaTrace
+                        Cardano.Tracer.Run
+                        Cardano.Tracer.Types
+                        Cardano.Tracer.Utils
+
+  other-modules:        Paths_cardano_tracer
+  autogen-modules:      Paths_cardano_tracer
+
+  build-depends:        aeson
+                      , async
+                      , async-extras
+                      , bimap
+                      , blaze-html
+                      , bytestring
+                      , cardano-git-rev
+                      , cardano-node
+                      , cassava
+                      , cborg
+                      , containers
+                      , contra-tracer
+                      , cryptonite
+                      , directory
+                      , ekg
+                      , ekg-core
+                      , ekg-forward ^>= 0.3
+                      , extra
+                      , filepath
+                      , mime-mail
+                      , optparse-applicative
+                      , ouroboros-network
+                      , ouroboros-network-framework
+                      , signal
+                      , smtp-mail == 0.3.0.0
+                      , snap-blaze
+                      , snap-core
+                      , snap-server
+                      , stm
+                      , string-qq
+                      , text
+                      , threepenny-gui
+                      , time
+                      , trace-dispatcher
+                      , trace-forward
+                      , unordered-containers
+                      , vector
+                      , yaml
+
+  if os(linux)
+    build-depends:      libsystemd-journal
+
+  if os(windows)
+    build-depends:      Win32
+  else
+    build-depends:      unix
+
+executable cardano-tracer
+  import:               project-config
+
+  hs-source-dirs:       app
+
+  main-is:              cardano-tracer.hs
+
+  other-modules:        Paths_cardano_tracer
+  autogen-modules:      Paths_cardano_tracer
+
+  build-depends:        cardano-tracer
+                      , optparse-applicative
+
+  ghc-options:          -threaded
+                        -rtsopts
+                        -with-rtsopts=-T
+
+library demo-forwarder-lib
+  import:               project-config
+
+  hs-source-dirs:       test
+
+  other-modules:        Cardano.Tracer.Test.Utils
+
+  exposed-modules:      Cardano.Tracer.Test.Forwarder
+                        Cardano.Tracer.Test.TestSetup
+
+  build-depends:        aeson
+                      , async
+                      , bytestring
+                      , cardano-tracer
+                      , cborg
+                      , contra-tracer
+                      , directory
+                      , ekg-core
+                      , ekg-forward ^>= 0.3
+                      , extra
+                      , filepath
+                      , generic-data
+                      , optparse-applicative-fork
+                      , ouroboros-network
+                      , ouroboros-network-framework
+                      , tasty-quickcheck
+                      , time
+                      , trace-dispatcher
+                      , trace-forward
+
+executable demo-forwarder
+  import:               project-config
+
+  hs-source-dirs:       demo/ssh
+
+  main-is:              forwarder.hs
+
+  build-depends:        demo-forwarder-lib
+
+  ghc-options:          -threaded
+                        -rtsopts
+                        -with-rtsopts=-T
+  if os(windows)
+    buildable:          False
+
+library demo-acceptor-lib
+  import:               project-config
+
+  hs-source-dirs:       test
+
+  other-modules:        Cardano.Tracer.Test.TestSetup
+                        Cardano.Tracer.Test.Utils
+
+  exposed-modules:      Cardano.Tracer.Test.Acceptor
+
+  build-depends:        async-extras
+                      , bytestring
+                      , cardano-tracer
+                      , containers
+                      , extra
+                      , filepath
+                      , generic-data
+                      , optparse-applicative-fork
+                      , ouroboros-network
+                      , stm
+                      , text
+                      , tasty-quickcheck
+                      , trace-forward
+
+executable demo-acceptor
+  import:               project-config
+
+  hs-source-dirs:       demo
+
+  main-is:              acceptor.hs
+
+  build-depends:        demo-acceptor-lib
+
+  ghc-options:          -threaded
+                        -rtsopts
+                        -with-rtsopts=-T
+  if os(windows)
+    buildable:          False
+
+test-suite cardano-tracer-test
+  import:               project-config
+  type:                 exitcode-stdio-1.0
+  default-extensions:   OverloadedStrings
+
+  hs-source-dirs:       test
+
+  main-is:              cardano-tracer-test.hs
+
+  other-modules:        Cardano.Tracer.Test.Forwarder
+                        Cardano.Tracer.Test.DataPoint.Tests
+                        Cardano.Tracer.Test.Logs.Tests
+                        Cardano.Tracer.Test.Restart.Tests
+                        Cardano.Tracer.Test.TestSetup
+                        Cardano.Tracer.Test.Utils
+                        Cardano.Tracer.Test.Queue.Tests
+
+  build-depends:        aeson
+                      , async
+                      , bytestring
+                      , cardano-tracer
+                      , cborg
+                      , containers
+                      , contra-tracer
+                      , directory
+                      , ekg-core
+                      , ekg-forward ^>= 0.3
+                      , extra
+                      , filepath
+                      , generic-data
+                      , optparse-applicative-fork
+                      , ouroboros-network
+                      , ouroboros-network-framework
+                      , QuickCheck
+                      , stm
+                      , tasty
+                      , tasty-quickcheck
+                      , text
+                      , time
+                      , trace-dispatcher
+                      , trace-forward
+                      , unix-compat
+
+  ghc-options:          -threaded
+                        -rtsopts
+                        -with-rtsopts=-N
+
+test-suite cardano-tracer-test-ext
+  import:               project-config
+  type:                 exitcode-stdio-1.0
+  default-extensions:   OverloadedStrings
+
+  hs-source-dirs:       test
+
+  main-is:              cardano-tracer-test-ext.hs
+
+  other-modules:        Cardano.Tracer.Test.Forwarder
+                        Cardano.Tracer.Test.TestSetup
+                        Cardano.Tracer.Test.Utils
+                        Cardano.Tracer.Test.ForwardingStressTest.Script
+                        Cardano.Tracer.Test.ForwardingStressTest.Config
+                        Cardano.Tracer.Test.ForwardingStressTest.Messages
+                        Cardano.Tracer.Test.ForwardingStressTest.Types
+
+  build-tool-depends:   cardano-tracer:cardano-tracer
+
+  -- Sadly, this does not work on Windows (Path vs. PATH?):
+  -- *** Failed! Exception: 'cardano-tracer: spawnProcess: failed (Success)' (after 1 test):
+  if os(windows)
+    buildable:          False
+
+  build-depends:        aeson
+                      , async
+                      , bytestring
+                      , cardano-tracer
+                      , cborg
+                      , containers
+                      , contra-tracer
+                      , directory
+                      , ekg-core
+                      , ekg-forward ^>= 0.3
+                      , extra
+                      , filepath
+                      , generic-data
+                      , Glob
+                      , optparse-applicative-fork
+                      , ouroboros-network
+                      , ouroboros-network-framework
+                      , process
+                      , QuickCheck
+                      , tasty
+                      , tasty-quickcheck
+                      , text
+                      , time
+                      , trace-dispatcher
+                      , trace-forward
+                      , unix-compat
+
+  ghc-options:          -threaded
+                        -rtsopts
+                        -with-rtsopts=-N
+
+benchmark cardano-tracer-bench
+  import:               project-config
+  type:                 exitcode-stdio-1.0
+
+  hs-source-dirs:       bench
+
+  main-is:              cardano-tracer-bench.hs
+
+  build-depends:        cardano-tracer
+                      , criterion
+                      , directory
+                      , extra
+                      , filepath
+                      , stm
+                      , time
+                      , trace-dispatcher
+
+  ghc-options:          -threaded
+                        -rtsopts
+                        -with-rtsopts=-N

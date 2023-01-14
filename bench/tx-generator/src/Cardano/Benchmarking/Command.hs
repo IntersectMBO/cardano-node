@@ -13,18 +13,27 @@ where
 import           Prelude
 import           System.Exit
 
+import           Data.Aeson (fromJSON)
+import           Data.ByteString.Lazy as BSL
+import           Data.Text.IO as T
 import           Options.Applicative as Opt
 
 import           Ouroboros.Network.NodeToClient (withIOManager)
 
-import           Cardano.Benchmarking.CliArgsScript
-                   (GeneratorCmd, parseGeneratorCmd, runPlainOldCliScript, runEraTransitionTest)
-import           Cardano.Benchmarking.Script (runScript, parseScriptFile)
+import           Cardano.Benchmarking.Compiler (compileOptions)
+import           Cardano.Benchmarking.Script (parseScriptFileAeson, runScript)
+import           Cardano.Benchmarking.Script.Aeson (parseJSONFile, prettyPrint)
+import           Cardano.Benchmarking.Script.Selftest (runSelftest)
+import           Cardano.Benchmarking.Version as Version
+import           Cardano.TxGenerator.Setup.NixService
+
 
 data Command
-  = CliArguments !GeneratorCmd
-  | EraTransition !GeneratorCmd
-  | Json !FilePath
+  = Json FilePath
+  | JsonHL FilePath (Maybe FilePath) (Maybe FilePath)
+  | Compile FilePath
+  | Selftest FilePath
+  | VersionCmd
 
 runCommand :: IO ()
 runCommand = withIOManager $ \iocp -> do
@@ -32,45 +41,85 @@ runCommand = withIOManager $ \iocp -> do
            (prefs showHelpOnEmpty)
            (info commandParser mempty)
   case cmd of
-    CliArguments   args -> runPlainOldCliScript iocp args >>= handleError
-    EraTransition args -> runEraTransitionTest iocp args >>= handleError
-    Json file     -> do
-      script <- parseScriptFile file
+    Json file -> do
+      script <- parseScriptFileAeson file
       runScript script iocp >>= handleError
- where
+    JsonHL file nodeConfigOverwrite cardanoTracerOverwrite -> do
+      opts <- parseJSONFile fromJSON file
+      finalOpts <- mangleTracerConfig cardanoTracerOverwrite <$> mangleNodeConfig nodeConfigOverwrite opts
+      case compileOptions finalOpts of
+        Right script -> runScript script iocp >>= handleError
+        err -> handleError err
+    Compile file -> do
+      o <- parseJSONFile fromJSON file
+      case compileOptions o of
+        Right script -> BSL.putStr $ prettyPrint script
+        err -> handleError err
+    Selftest outFile -> runSelftest iocp (Just outFile) >>= handleError
+    VersionCmd -> runVersionCommand
+  where
   handleError :: Show a => Either a b -> IO ()
   handleError = \case
     Right _  -> exitSuccess
     Left err -> die $ show err
 
+  mangleNodeConfig :: Maybe FilePath -> NixServiceOptions -> IO NixServiceOptions
+  mangleNodeConfig fp opts = case (getNodeConfigFile opts, fp) of
+    (_      , Just newFilePath) -> return $ setNodeConfigFile opts newFilePath
+    (Just _ , Nothing) -> return opts
+    (Nothing, Nothing) -> die "No node-configFile set"
+
+  mangleTracerConfig ::  Maybe FilePath -> NixServiceOptions -> NixServiceOptions
+  mangleTracerConfig traceSocket opts
+    = opts { _nix_cardanoTracerSocket = traceSocket <> _nix_cardanoTracerSocket opts}
+
 commandParser :: Parser Command
 commandParser
-  = subparser
-    (  cliArgumentsCmd
-    <> eraTransitionCmd
-    <> jsonCmd
-    )
+  = subparser (
+       cmdParser "json" jsonCmd "Run a generic benchmarking script."
+    <> cmdParser "json_highlevel" jsonHLCmd "Run the tx-generator using a flat config."
+    <> cmdParser "compile" compileCmd "Compile flat-options to benchmarking script."
+    <> cmdParser "selftest" selfTestCmd "Run a build-in selftest."
+    <> cmdParser "version" versionCmd "Show the tx-generator version"
+       )
  where
-  cliArgumentsCmd = command "cliArguments"
-    (CliArguments <$> info parseGeneratorCmd
-      (  progDesc "tx-generator with CLI arguments"
-      <> fullDesc
-      <> header "tx-generator - load Cardano clusters with parametrised transaction flow (CLI version)"
-      )
+  cmdParser cmd parser description = command cmd $ info parser $ progDesc description
+
+  filePath :: String -> Parser String
+  filePath helpMsg = strArgument (metavar "FILEPATH" <> help helpMsg)
+
+  jsonCmd :: Parser Command
+  jsonCmd = Json <$> filePath "low-level benchmarking script"
+
+  jsonHLCmd :: Parser Command
+  jsonHLCmd = JsonHL <$> filePath "benchmarking options"
+                     <*> nodeConfigOpt
+                     <*> tracerConfigOpt
+  compileCmd :: Parser Command
+  compileCmd = Compile <$> filePath "benchmarking options"
+
+  selfTestCmd = Selftest <$> filePath "output file"
+
+  nodeConfigOpt :: Parser (Maybe FilePath)
+  nodeConfigOpt = option (Just <$> str)
+    ( long "nodeConfig"
+      <> short 'n'
+      <> metavar "FILENAME"
+      <> value Nothing
+      <> help "the node configfile"
     )
 
-  eraTransitionCmd = command "eraTransition"
-    (EraTransition <$> info parseGeneratorCmd
-      (  progDesc "tx-generator demo era transition"
-      <> fullDesc
-      <> header "tx-generator - load Cardano clusters with parametrised transaction flow (era transition)"
-      )
+  tracerConfigOpt :: Parser (Maybe FilePath)
+  tracerConfigOpt = option (Just <$> str)
+    ( long "cardano-tracer"
+      <> short 'n'
+      <> metavar "SOCKET"
+      <> value Nothing
+      <> help "the cardano-tracer socket"
     )
 
-  jsonCmd = command "json"
-    (Json <$> info (strArgument (metavar "FILEPATH"))
-      (  progDesc "tx-generator run JsonScript"
-      <> fullDesc
-      <> header "tx-generator - run a generic benchmarking script"
-      )
-    )
+  versionCmd :: Parser Command
+  versionCmd = pure VersionCmd
+
+runVersionCommand :: IO ()
+runVersionCommand = T.putStrLn $ multilineVersionMsg txGeneratorVersion

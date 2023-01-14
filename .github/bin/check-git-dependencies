@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+
+set -e
+
+RED='\033[0;31m'
+YELLOW='\033[0;33m'
+NC='\033[0m' # No Color
+
+mkdir -p tmp
+
+rm -rf tmp/dep-repo-result
+
+branches () {
+  git rev-parse --abbrev-ref HEAD
+  git branch -r | grep 'origin/.*\<release\>' || true
+  git tag | grep '\<v[0-9]\+\>' || true
+}
+
+commits () {
+  for x in $(cat $1); do
+    git checkout $x
+    git log --pretty=format:"%H"
+  done
+}
+
+grep '\(^source-repository-package\|^ *location:\|^ *tag:\)' cabal.project | sed 's|^source-repository-package|-|g' | \
+  yq eval -P -j \
+  > tmp/repositories.json
+
+for row in $(cat tmp/repositories.json | jq -r '.[] | @base64'); do
+  json="$(echo "${row}" | base64 --decode | jq -r ${1})"
+  location="$(echo "$json" | jq -r .location)"
+  tag="$(echo "$json" | jq -r .tag)"
+
+  if fgrep <<<$location -f .github/master-check-exceptions.list > /dev/null
+  then echo "${YELLOW}check-git-dependencies:  skipping location from master check:  ${RED}$location${NC}"; continue; fi
+
+  rm -f tmp/tmp-dep-repo-result
+  rm -rf tmp/dep-repo
+  echo "$location"
+
+  git clone "$location" tmp/dep-repo
+  base="$(pwd)"
+  ( cd tmp/dep-repo
+
+    branches > branches.txt
+
+    commits branches.txt | grep "$tag" || (
+      printf "Commit $tag from $location is not on the main branch or any release branches\n" >> "$base/tmp/dep-repo-result"
+      printf "Branches searched:"
+      cat branches.txt | sed 's|^|  |g'
+    )
+  )
+
+  rm -rf tmp/dep-repo
+done
+
+if [ -f tmp/dep-repo-result ]; then
+  printf "${RED}Commits not on the main branch or any release branches detected in dependencies${NC}\n"
+  printf "${YELLOW}"
+  cat tmp/dep-repo-result
+  printf "${NC}"
+  exit 1
+fi

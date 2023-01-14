@@ -2,22 +2,29 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+
+{- HLINT ignore "Avoid lambda using `infix`" -}
+{- HLINT ignore "Use section" -}
 
 module Cardano.Api.Script (
     -- * Languages
     SimpleScriptV1,
     SimpleScriptV2,
     PlutusScriptV1,
+    PlutusScriptV2,
     ScriptLanguage(..),
     SimpleScriptVersion(..),
     PlutusScriptVersion(..),
     AnyScriptLanguage(..),
     AnyPlutusScriptVersion(..),
+    IsPlutusScriptLanguage(..),
     IsScriptLanguage(..),
     IsSimpleScriptLanguage(..),
 
@@ -32,6 +39,12 @@ module Cardano.Api.Script (
     ScriptInEra(..),
     toScriptInEra,
     eraOfScriptInEra,
+
+    -- * Reference scripts
+    ReferenceScript(..),
+    ReferenceTxInsScriptsInlineDatumsSupportedInEra(..),
+    refInsScriptsAndInlineDatsSupportedInEra,
+    refScriptToShelleyScript,
 
     -- * Use of a script in an era as a witness
     WitCtxTxIn, WitCtxMint, WitCtxStake,
@@ -55,9 +68,11 @@ module Cardano.Api.Script (
     TimeLocksSupported(..),
     timeLocksSupported,
     adjustSimpleScriptVersion,
+    SimpleScriptOrReferenceInput(..),
 
     -- * The Plutus script language
     PlutusScript(..),
+    PlutusScriptOrReferenceInput(..),
     examplePlutusScriptAlwaysSucceeds,
     examplePlutusScriptAlwaysFails,
 
@@ -88,6 +103,7 @@ module Cardano.Api.Script (
     fromAlonzoData,
     toAlonzoLanguage,
     fromAlonzoLanguage,
+    fromShelleyScriptToReferenceScript,
 
     -- * Data family instances
     AsType(..),
@@ -96,10 +112,10 @@ module Cardano.Api.Script (
 
 import           Prelude
 
-import           Data.Word (Word64)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.ByteString.Short (ShortByteString)
 import qualified Data.ByteString.Short as SBS
+import           Data.Either.Combinators (maybeToRight)
 import           Data.Foldable (toList)
 import           Data.Scientific (toBoundedInteger)
 import           Data.String (IsString)
@@ -113,7 +129,6 @@ import           Numeric.Natural (Natural)
 import           Data.Aeson (Value (..), object, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
-import qualified Data.Aeson.Encoding as Aeson
 import qualified Data.Sequence.Strict as Seq
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vector
@@ -127,32 +142,33 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 
 import           Cardano.Slotting.Slot (SlotNo)
 
+import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Ledger
-import qualified Cardano.Ledger.Era  as Ledger
 
+import qualified Cardano.Ledger.Keys as Shelley
+import qualified Cardano.Ledger.Shelley.Scripts as Shelley
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as Timelock
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
-import qualified Cardano.Ledger.Keys as Shelley
-import qualified Shelley.Spec.Ledger.Scripts as Shelley
 
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 
 import qualified Plutus.V1.Ledger.Examples as Plutus
 
+import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
-import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Error
 import           Cardano.Api.Hash
-import           Cardano.Api.KeysShelley
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.ScriptData
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.SerialiseUsing
-
-{- HLINT ignore "Use section" -}
-
+import           Cardano.Api.TxIn
+import           Cardano.Api.Utils (failEitherWith)
 
 -- ----------------------------------------------------------------------------
 -- Types for script language and version
@@ -183,6 +199,7 @@ data SimpleScriptV2
 -- languages, not just multiple versions of a single language.
 --
 data PlutusScriptV1
+data PlutusScriptV2
 
 instance HasTypeProxy SimpleScriptV1 where
     data AsType SimpleScriptV1 = AsSimpleScriptV1
@@ -196,6 +213,9 @@ instance HasTypeProxy PlutusScriptV1 where
     data AsType PlutusScriptV1 = AsPlutusScriptV1
     proxyToAsType _ = AsPlutusScriptV1
 
+instance HasTypeProxy PlutusScriptV2 where
+    data AsType PlutusScriptV2 = AsPlutusScriptV2
+    proxyToAsType _ = AsPlutusScriptV2
 
 -- ----------------------------------------------------------------------------
 -- Value level representation for script languages
@@ -235,12 +255,15 @@ instance TestEquality SimpleScriptVersion where
 
 data PlutusScriptVersion lang where
     PlutusScriptV1 :: PlutusScriptVersion PlutusScriptV1
+    PlutusScriptV2 :: PlutusScriptVersion PlutusScriptV2
 
 deriving instance (Eq   (PlutusScriptVersion lang))
 deriving instance (Show (PlutusScriptVersion lang))
 
 instance TestEquality PlutusScriptVersion where
     testEquality PlutusScriptV1 PlutusScriptV1 = Just Refl
+    testEquality PlutusScriptV2 PlutusScriptV2 = Just Refl
+    testEquality _ _ = Nothing
 
 
 data AnyScriptLanguage where
@@ -258,15 +281,17 @@ instance Enum AnyScriptLanguage where
     toEnum 0 = AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV1)
     toEnum 1 = AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV2)
     toEnum 2 = AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV1)
-    toEnum _ = error "AnyScriptLanguage.toEnum: bad argument"
+    toEnum 3 = AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV2)
+    toEnum err = error $ "AnyScriptLanguage.toEnum: bad argument: " <> show err
 
     fromEnum (AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV1)) = 0
     fromEnum (AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV2)) = 1
     fromEnum (AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV1)) = 2
+    fromEnum (AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV2)) = 3
 
 instance Bounded AnyScriptLanguage where
     minBound = AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV1)
-    maxBound = AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV1)
+    maxBound = AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV2)
 
 
 data AnyPlutusScriptVersion where
@@ -283,13 +308,15 @@ instance Ord AnyPlutusScriptVersion where
 
 instance Enum AnyPlutusScriptVersion where
     toEnum 0 = AnyPlutusScriptVersion PlutusScriptV1
-    toEnum _ = error "AnyPlutusScriptVersion.toEnum: bad argument"
+    toEnum 1 = AnyPlutusScriptVersion PlutusScriptV2
+    toEnum err = error $ "AnyPlutusScriptVersion.toEnum: bad argument: " <> show err
 
     fromEnum (AnyPlutusScriptVersion PlutusScriptV1) = 0
+    fromEnum (AnyPlutusScriptVersion PlutusScriptV2) = 1
 
 instance Bounded AnyPlutusScriptVersion where
     minBound = AnyPlutusScriptVersion PlutusScriptV1
-    maxBound = AnyPlutusScriptVersion PlutusScriptV1
+    maxBound = AnyPlutusScriptVersion PlutusScriptV2
 
 instance ToCBOR AnyPlutusScriptVersion where
     toCBOR = toCBOR . fromEnum
@@ -305,12 +332,15 @@ instance FromCBOR AnyPlutusScriptVersion where
 instance ToJSON AnyPlutusScriptVersion where
     toJSON (AnyPlutusScriptVersion PlutusScriptV1) =
       Aeson.String "PlutusScriptV1"
+    toJSON (AnyPlutusScriptVersion PlutusScriptV2) =
+      Aeson.String "PlutusScriptV2"
 
 parsePlutusScriptVersion :: Text -> Aeson.Parser AnyPlutusScriptVersion
 parsePlutusScriptVersion t =
   case t of
     "PlutusScriptV1" -> return (AnyPlutusScriptVersion PlutusScriptV1)
-    _                -> fail "Expected PlutusScriptV1"
+    "PlutusScriptV2" -> return (AnyPlutusScriptVersion PlutusScriptV2)
+    _                -> fail "Expected PlutusScriptV1 or PlutusScriptV2"
 
 instance FromJSON AnyPlutusScriptVersion where
     parseJSON = Aeson.withText "PlutusScriptVersion" parsePlutusScriptVersion
@@ -319,17 +349,19 @@ instance Aeson.FromJSONKey AnyPlutusScriptVersion where
     fromJSONKey = Aeson.FromJSONKeyTextParser parsePlutusScriptVersion
 
 instance Aeson.ToJSONKey AnyPlutusScriptVersion where
-    toJSONKey = Aeson.ToJSONKeyText toText toAesonEncoding
+    toJSONKey = Aeson.toJSONKeyText toText
       where
         toText :: AnyPlutusScriptVersion -> Text
         toText (AnyPlutusScriptVersion PlutusScriptV1) = "PlutusScriptV1"
-        toAesonEncoding = Aeson.text . toText
+        toText (AnyPlutusScriptVersion PlutusScriptV2) = "PlutusScriptV2"
 
 toAlonzoLanguage :: AnyPlutusScriptVersion -> Alonzo.Language
 toAlonzoLanguage (AnyPlutusScriptVersion PlutusScriptV1) = Alonzo.PlutusV1
+toAlonzoLanguage (AnyPlutusScriptVersion PlutusScriptV2) = Alonzo.PlutusV2
 
 fromAlonzoLanguage :: Alonzo.Language -> AnyPlutusScriptVersion
 fromAlonzoLanguage Alonzo.PlutusV1 = AnyPlutusScriptVersion PlutusScriptV1
+fromAlonzoLanguage Alonzo.PlutusV2 = AnyPlutusScriptVersion PlutusScriptV2
 
 
 class HasTypeProxy lang => IsScriptLanguage lang where
@@ -343,6 +375,9 @@ instance IsScriptLanguage SimpleScriptV2 where
 
 instance IsScriptLanguage PlutusScriptV1 where
     scriptLanguage = PlutusScriptLanguage PlutusScriptV1
+
+instance IsScriptLanguage PlutusScriptV2 where
+    scriptLanguage = PlutusScriptLanguage PlutusScriptV2
 
 
 class IsScriptLanguage lang => IsSimpleScriptLanguage lang where
@@ -361,6 +396,8 @@ class IsScriptLanguage lang => IsPlutusScriptLanguage lang where
 instance IsPlutusScriptLanguage PlutusScriptV1 where
     plutusScriptVersion = PlutusScriptV1
 
+instance IsPlutusScriptLanguage PlutusScriptV2 where
+    plutusScriptVersion = PlutusScriptV2
 
 -- ----------------------------------------------------------------------------
 -- Script type: covering all script languages
@@ -404,6 +441,9 @@ instance IsScriptLanguage lang => SerialiseAsCBOR (Script lang) where
     serialiseToCBOR (PlutusScript PlutusScriptV1 s) =
       CBOR.serialize' s
 
+    serialiseToCBOR (PlutusScript PlutusScriptV2 s) =
+      CBOR.serialize' s
+
     deserialiseFromCBOR _ bs =
       case scriptLanguage :: ScriptLanguage lang of
         SimpleScriptLanguage SimpleScriptV1 ->
@@ -422,6 +462,9 @@ instance IsScriptLanguage lang => SerialiseAsCBOR (Script lang) where
               PlutusScript PlutusScriptV1
           <$> CBOR.decodeFull' bs
 
+        PlutusScriptLanguage PlutusScriptV2 ->
+              PlutusScript PlutusScriptV2
+          <$> CBOR.decodeFull' bs
 
 instance IsScriptLanguage lang => HasTextEnvelope (Script lang) where
     textEnvelopeType _ =
@@ -429,6 +472,7 @@ instance IsScriptLanguage lang => HasTextEnvelope (Script lang) where
         SimpleScriptLanguage SimpleScriptV1 -> "SimpleScriptV1"
         SimpleScriptLanguage SimpleScriptV2 -> "SimpleScriptV2"
         PlutusScriptLanguage PlutusScriptV1 -> "PlutusScriptV1"
+        PlutusScriptLanguage PlutusScriptV2 -> "PlutusScriptV2"
 
 
 -- ----------------------------------------------------------------------------
@@ -456,6 +500,28 @@ instance Eq ScriptInAnyLang where
         Nothing   -> False
         Just Refl -> script == script'
 
+instance ToJSON ScriptInAnyLang where
+  toJSON (ScriptInAnyLang l s) =
+    object [ "scriptLanguage" .= show l
+           , "script" .= obtainScriptLangConstraint l
+                           (serialiseToTextEnvelope Nothing s)
+           ]
+      where
+       obtainScriptLangConstraint
+         :: ScriptLanguage lang
+         -> (IsScriptLanguage lang => a)
+         -> a
+       obtainScriptLangConstraint (SimpleScriptLanguage SimpleScriptV1) f = f
+       obtainScriptLangConstraint (SimpleScriptLanguage SimpleScriptV2) f = f
+       obtainScriptLangConstraint (PlutusScriptLanguage PlutusScriptV1) f = f
+       obtainScriptLangConstraint (PlutusScriptLanguage PlutusScriptV2) f = f
+
+instance FromJSON ScriptInAnyLang where
+  parseJSON = Aeson.withObject "ScriptInAnyLang" $ \o -> do
+    textEnvelopeScript <- o .: "script"
+    case textEnvelopeToScript textEnvelopeScript of
+      Left textEnvErr -> fail $ displayError textEnvErr
+      Right (ScriptInAnyLang l s) -> pure $ ScriptInAnyLang l s
 
 -- | Convert a script in a specific statically-known language to a
 -- 'ScriptInAnyLang'.
@@ -501,15 +567,26 @@ data ScriptLanguageInEra lang era where
      SimpleScriptV1InAllegra :: ScriptLanguageInEra SimpleScriptV1 AllegraEra
      SimpleScriptV1InMary    :: ScriptLanguageInEra SimpleScriptV1 MaryEra
      SimpleScriptV1InAlonzo  :: ScriptLanguageInEra SimpleScriptV1 AlonzoEra
+     SimpleScriptV1InBabbage :: ScriptLanguageInEra SimpleScriptV1 BabbageEra
 
      SimpleScriptV2InAllegra :: ScriptLanguageInEra SimpleScriptV2 AllegraEra
      SimpleScriptV2InMary    :: ScriptLanguageInEra SimpleScriptV2 MaryEra
      SimpleScriptV2InAlonzo  :: ScriptLanguageInEra SimpleScriptV2 AlonzoEra
+     SimpleScriptV2InBabbage :: ScriptLanguageInEra SimpleScriptV2 BabbageEra
 
      PlutusScriptV1InAlonzo  :: ScriptLanguageInEra PlutusScriptV1 AlonzoEra
+     PlutusScriptV1InBabbage :: ScriptLanguageInEra PlutusScriptV1 BabbageEra
+
+     PlutusScriptV2InBabbage :: ScriptLanguageInEra PlutusScriptV2 BabbageEra
+
+
 
 deriving instance Eq   (ScriptLanguageInEra lang era)
 deriving instance Show (ScriptLanguageInEra lang era)
+
+instance ToJSON (ScriptLanguageInEra lang era) where
+  toJSON sLangInEra = Aeson.String . Text.pack $ show sLangInEra
+
 
 instance HasTypeProxy era => HasTypeProxy (ScriptInEra era) where
     data AsType (ScriptInEra era) = AsScriptInEra (AsType era)
@@ -548,6 +625,18 @@ scriptLanguageSupportedInEra era lang =
       (AlonzoEra, PlutusScriptLanguage PlutusScriptV1) ->
         Just PlutusScriptV1InAlonzo
 
+      (BabbageEra, SimpleScriptLanguage SimpleScriptV1) ->
+        Just SimpleScriptV1InBabbage
+
+      (BabbageEra, SimpleScriptLanguage SimpleScriptV2) ->
+        Just SimpleScriptV2InBabbage
+
+      (BabbageEra, PlutusScriptLanguage PlutusScriptV1) ->
+        Just PlutusScriptV1InBabbage
+
+      (BabbageEra, PlutusScriptLanguage PlutusScriptV2) ->
+        Just PlutusScriptV2InBabbage
+
       _ -> Nothing
 
 languageOfScriptLanguageInEra :: ScriptLanguageInEra lang era
@@ -558,12 +647,16 @@ languageOfScriptLanguageInEra langInEra =
       SimpleScriptV1InAllegra -> SimpleScriptLanguage SimpleScriptV1
       SimpleScriptV1InMary    -> SimpleScriptLanguage SimpleScriptV1
       SimpleScriptV1InAlonzo  -> SimpleScriptLanguage SimpleScriptV1
+      SimpleScriptV1InBabbage -> SimpleScriptLanguage SimpleScriptV1
 
       SimpleScriptV2InAllegra -> SimpleScriptLanguage SimpleScriptV2
       SimpleScriptV2InMary    -> SimpleScriptLanguage SimpleScriptV2
       SimpleScriptV2InAlonzo  -> SimpleScriptLanguage SimpleScriptV2
+      SimpleScriptV2InBabbage -> SimpleScriptLanguage SimpleScriptV2
 
       PlutusScriptV1InAlonzo  -> PlutusScriptLanguage PlutusScriptV1
+      PlutusScriptV1InBabbage -> PlutusScriptLanguage PlutusScriptV1
+      PlutusScriptV2InBabbage -> PlutusScriptLanguage PlutusScriptV2
 
 eraOfScriptLanguageInEra :: ScriptLanguageInEra lang era
                          -> ShelleyBasedEra era
@@ -582,6 +675,11 @@ eraOfScriptLanguageInEra langInEra =
 
       PlutusScriptV1InAlonzo  -> ShelleyBasedEraAlonzo
 
+      SimpleScriptV1InBabbage  -> ShelleyBasedEraBabbage
+      SimpleScriptV2InBabbage  -> ShelleyBasedEraBabbage
+
+      PlutusScriptV1InBabbage -> ShelleyBasedEraBabbage
+      PlutusScriptV2InBabbage -> ShelleyBasedEraBabbage
 
 -- | Given a target era and a script in some language, check if the language is
 -- supported in that era, and if so return a 'ScriptInEra'.
@@ -593,7 +691,6 @@ toScriptInEra era (ScriptInAnyLang lang s) = do
 
 eraOfScriptInEra :: ScriptInEra era -> ShelleyBasedEra era
 eraOfScriptInEra (ScriptInEra langInEra _) = eraOfScriptLanguageInEra langInEra
-
 
 -- ----------------------------------------------------------------------------
 -- Scripts used in a transaction (in an era) to witness authorised use
@@ -628,6 +725,20 @@ data WitCtx witctx where
      WitCtxMint  :: WitCtx WitCtxMint
      WitCtxStake :: WitCtx WitCtxStake
 
+-- | Scripts can now exist in the UTxO at a transaction output. We can
+-- reference these scripts via specification of a reference transaction input
+-- in order to witness spending inputs, withdrawals, certificates
+-- or to mint tokens. This datatype encapsulates this concept.
+data PlutusScriptOrReferenceInput lang
+  = PScript (PlutusScript lang)
+  | PReferenceScript TxIn (Maybe ScriptHash)
+  deriving (Eq, Show)
+
+
+data SimpleScriptOrReferenceInput lang
+  = SScript (SimpleScript lang)
+  | SReferenceScript TxIn (Maybe ScriptHash)
+  deriving (Eq, Show)
 
 -- | A /use/ of a script within a transaction body to witness that something is
 -- being used in an authorised manner. That can be
@@ -646,12 +757,12 @@ data ScriptWitness witctx era where
 
      SimpleScriptWitness :: ScriptLanguageInEra lang era
                          -> SimpleScriptVersion lang
-                         -> SimpleScript        lang
+                         -> SimpleScriptOrReferenceInput lang
                          -> ScriptWitness witctx era
 
      PlutusScriptWitness :: ScriptLanguageInEra  lang era
                          -> PlutusScriptVersion  lang
-                         -> PlutusScript         lang
+                         -> PlutusScriptOrReferenceInput lang
                          -> ScriptDatum witctx
                          -> ScriptRedeemer
                          -> ExecutionUnits
@@ -687,20 +798,27 @@ type ScriptRedeemer = ScriptData
 
 data ScriptDatum witctx where
      ScriptDatumForTxIn    :: ScriptData -> ScriptDatum WitCtxTxIn
+     InlineScriptDatum     ::               ScriptDatum WitCtxTxIn
      NoScriptDatumForMint  ::               ScriptDatum WitCtxMint
      NoScriptDatumForStake ::               ScriptDatum WitCtxStake
 
 deriving instance Eq   (ScriptDatum witctx)
 deriving instance Show (ScriptDatum witctx)
 
+-- We cannot always extract a script from a script witness due to reference scripts.
+-- Reference scripts exist in the UTxO, so without access to the UTxO we cannot
+-- retrieve the script.
+scriptWitnessScript :: ScriptWitness witctx era -> Maybe (ScriptInEra era)
+scriptWitnessScript (SimpleScriptWitness langInEra version (SScript script)) =
+    Just $ ScriptInEra langInEra (SimpleScript version script)
 
-scriptWitnessScript :: ScriptWitness witctx era -> ScriptInEra era
-scriptWitnessScript (SimpleScriptWitness langInEra version script) =
-    ScriptInEra langInEra (SimpleScript version script)
+scriptWitnessScript (PlutusScriptWitness langInEra version (PScript script) _ _ _) =
+    Just $ ScriptInEra langInEra (PlutusScript version script)
 
-scriptWitnessScript (PlutusScriptWitness langInEra version script _ _ _) =
-    ScriptInEra langInEra (PlutusScript version script)
-
+scriptWitnessScript (SimpleScriptWitness _ _ (SReferenceScript _ _)) =
+    Nothing
+scriptWitnessScript (PlutusScriptWitness _ _ (PReferenceScript _ _) _ _ _) =
+    Nothing
 
 -- ----------------------------------------------------------------------------
 -- The kind of witness to use, key (signature) or script
@@ -749,11 +867,11 @@ deriving instance Show (ScriptWitnessInCtx witctx)
 data ExecutionUnits =
      ExecutionUnits {
         -- | This corresponds roughly to the time to execute a script.
-        executionSteps  :: Word64,
+        executionSteps  :: Natural,
 
         -- | This corresponds roughly to the peak memory used during script
         -- execution.
-        executionMemory :: Word64
+        executionMemory :: Natural
      }
   deriving (Eq, Show)
 
@@ -819,8 +937,9 @@ instance SerialiseAsRawBytes ScriptHash where
     serialiseToRawBytes (ScriptHash (Shelley.ScriptHash h)) =
       Crypto.hashToBytes h
 
-    deserialiseFromRawBytes AsScriptHash bs =
-      ScriptHash . Shelley.ScriptHash <$> Crypto.hashFromBytes bs
+    eitherDeserialiseFromRawBytes AsScriptHash bs =
+      maybeToRight (SerialiseAsRawBytesError "Enable to deserialise ScriptHash") $
+        ScriptHash . Shelley.ScriptHash <$> Crypto.hashFromBytes bs
 
 
 hashScript :: Script lang -> ScriptHash
@@ -846,7 +965,12 @@ hashScript (PlutusScript PlutusScriptV1 (PlutusScriptSerialised script)) =
     -- hash that. Later ledger eras have to be compatible anyway.
     ScriptHash
   . Ledger.hashScript @(ShelleyLedgerEra AlonzoEra)
-  $ Alonzo.PlutusScript script
+  $ Alonzo.PlutusScript Alonzo.PlutusV1 script
+
+hashScript (PlutusScript PlutusScriptV2 (PlutusScriptSerialised script)) =
+    ScriptHash
+  . Ledger.hashScript @(ShelleyLedgerEra BabbageEra)
+  $ Alonzo.PlutusScript Alonzo.PlutusV2 script
 
 toShelleyScriptHash :: ScriptHash -> Shelley.ScriptHash StandardCrypto
 toShelleyScriptHash (ScriptHash h) =  h
@@ -856,7 +980,7 @@ fromShelleyScriptHash = ScriptHash
 
 
 -- ----------------------------------------------------------------------------
--- The simple native script language
+-- The simple script language
 --
 
 data SimpleScript lang where
@@ -951,18 +1075,19 @@ instance HasTypeProxy lang => HasTypeProxy (PlutusScript lang) where
     data AsType (PlutusScript lang) = AsPlutusScript (AsType lang)
     proxyToAsType _ = AsPlutusScript (proxyToAsType (Proxy :: Proxy lang))
 
-instance HasTypeProxy lang => SerialiseAsRawBytes (PlutusScript lang) where
+instance (HasTypeProxy lang, Typeable lang) => SerialiseAsRawBytes (PlutusScript lang) where
     serialiseToRawBytes (PlutusScriptSerialised sbs) = SBS.fromShort sbs
 
-    deserialiseFromRawBytes (AsPlutusScript _) bs =
+    eitherDeserialiseFromRawBytes (AsPlutusScript _) bs =
       -- TODO alonzo: validate the script syntax and fail decoding if invalid
-      Just (PlutusScriptSerialised (SBS.toShort bs))
+      Right (PlutusScriptSerialised (SBS.toShort bs))
 
 instance (IsPlutusScriptLanguage lang, Typeable lang) =>
          HasTextEnvelope (PlutusScript lang) where
     textEnvelopeType _ =
       case plutusScriptVersion :: PlutusScriptVersion lang of
         PlutusScriptV1 -> "PlutusScriptV1"
+        PlutusScriptV2 -> "PlutusScriptV2"
 
 
 -- | An example Plutus script that always succeeds, irrespective of inputs.
@@ -1019,17 +1144,25 @@ toShelleyScript (ScriptInEra langInEra (SimpleScript SimpleScriptV1 script)) =
       SimpleScriptV1InAllegra -> toAllegraTimelock script
       SimpleScriptV1InMary    -> toAllegraTimelock script
       SimpleScriptV1InAlonzo  -> Alonzo.TimelockScript (toAllegraTimelock script)
+      SimpleScriptV1InBabbage -> Alonzo.TimelockScript (toAllegraTimelock script)
 
 toShelleyScript (ScriptInEra langInEra (SimpleScript SimpleScriptV2 script)) =
     case langInEra of
       SimpleScriptV2InAllegra -> toAllegraTimelock script
       SimpleScriptV2InMary    -> toAllegraTimelock script
       SimpleScriptV2InAlonzo  -> Alonzo.TimelockScript (toAllegraTimelock script)
+      SimpleScriptV2InBabbage -> Alonzo.TimelockScript (toAllegraTimelock script)
 
 toShelleyScript (ScriptInEra langInEra (PlutusScript PlutusScriptV1
                                          (PlutusScriptSerialised script))) =
     case langInEra of
-      PlutusScriptV1InAlonzo  -> Alonzo.PlutusScript script
+      PlutusScriptV1InAlonzo  -> Alonzo.PlutusScript Alonzo.PlutusV1 script
+      PlutusScriptV1InBabbage -> Alonzo.PlutusScript Alonzo.PlutusV1 script
+
+toShelleyScript (ScriptInEra langInEra (PlutusScript PlutusScriptV2
+                                         (PlutusScriptSerialised script))) =
+    case langInEra of
+      PlutusScriptV2InBabbage -> Alonzo.PlutusScript Alonzo.PlutusV2 script
 
 fromShelleyBasedScript  :: ShelleyBasedEra era
                         -> Ledger.Script (ShelleyLedgerEra era)
@@ -1054,10 +1187,27 @@ fromShelleyBasedScript era script =
           ScriptInEra SimpleScriptV2InAlonzo $
           SimpleScript SimpleScriptV2 $
           fromAllegraTimelock TimeLocksInSimpleScriptV2 s
-        Alonzo.PlutusScript s ->
+        Alonzo.PlutusScript Alonzo.PlutusV1 s ->
           ScriptInEra PlutusScriptV1InAlonzo $
           PlutusScript PlutusScriptV1 $
           PlutusScriptSerialised s
+        Alonzo.PlutusScript Alonzo.PlutusV2 _ ->
+          error "fromShelleyBasedScript: PlutusV2 not supported in Alonzo era"
+    ShelleyBasedEraBabbage ->
+      case script of
+        Alonzo.TimelockScript s ->
+          ScriptInEra SimpleScriptV2InBabbage $
+          SimpleScript SimpleScriptV2 $
+          fromAllegraTimelock TimeLocksInSimpleScriptV2 s
+        Alonzo.PlutusScript Alonzo.PlutusV1 s ->
+          ScriptInEra PlutusScriptV1InBabbage $
+          PlutusScript PlutusScriptV1 $
+          PlutusScriptSerialised s
+        Alonzo.PlutusScript Alonzo.PlutusV2 s ->
+          ScriptInEra PlutusScriptV2InBabbage $
+          PlutusScript PlutusScriptV2 $
+          PlutusScriptSerialised s
+
 
 
 -- | Conversion for the 'Shelley.MultiSig' language used by the Shelley era.
@@ -1250,7 +1400,104 @@ parseScriptAfter lang =
         _       -> fail "\"after\" script value not found"
 
 parsePaymentKeyHash :: Text -> Aeson.Parser (Hash PaymentKey)
-parsePaymentKeyHash txt =
-    case deserialiseFromRawBytesHex (AsHash AsPaymentKey) (Text.encodeUtf8 txt) of
-      Just payKeyHash -> return payKeyHash
-      Nothing -> fail $ "Error deserialising payment key hash: " <> Text.unpack txt
+parsePaymentKeyHash =
+  failEitherWith
+    (\e -> "Error deserialising payment key hash: " ++ displayError e)
+  . deserialiseFromRawBytesHex (AsHash AsPaymentKey)
+  . Text.encodeUtf8
+
+
+-- ----------------------------------------------------------------------------
+-- Reference scripts
+--
+
+-- | A reference scripts is a script that can exist at a transaction output. This greatly
+-- reduces the size of transactions that use scripts as the script no longer
+-- has to be added to the transaction, they can now be referenced via a transaction output.
+
+data ReferenceScript era where
+     ReferenceScript :: ReferenceTxInsScriptsInlineDatumsSupportedInEra era
+                     -> ScriptInAnyLang
+                     -> ReferenceScript era
+
+     ReferenceScriptNone :: ReferenceScript era
+
+deriving instance Eq (ReferenceScript era)
+deriving instance Show (ReferenceScript era)
+deriving instance Typeable (ReferenceScript era)
+
+instance IsCardanoEra era => ToJSON (ReferenceScript era) where
+  toJSON (ReferenceScript _ s) = object ["referenceScript" .= s]
+  toJSON ReferenceScriptNone = Aeson.Null
+
+instance IsCardanoEra era => FromJSON (ReferenceScript era) where
+  parseJSON = Aeson.withObject "ReferenceScript" $ \o ->
+    case refInsScriptsAndInlineDatsSupportedInEra (cardanoEra :: CardanoEra era) of
+      Nothing -> pure ReferenceScriptNone
+      Just refSupInEra ->
+        ReferenceScript refSupInEra <$> o .: "referenceScript"
+
+instance EraCast ReferenceScript where
+  eraCast toEra = \case
+    ReferenceScriptNone -> pure ReferenceScriptNone
+    v@(ReferenceScript (_ :: ReferenceTxInsScriptsInlineDatumsSupportedInEra fromEra) scriptInAnyLang) ->
+      case refInsScriptsAndInlineDatsSupportedInEra toEra of
+        Nothing -> Left $ EraCastError v (cardanoEra @fromEra) toEra
+        Just supportedInEra -> Right $ ReferenceScript supportedInEra scriptInAnyLang
+
+data ReferenceTxInsScriptsInlineDatumsSupportedInEra era where
+    ReferenceTxInsScriptsInlineDatumsInBabbageEra :: ReferenceTxInsScriptsInlineDatumsSupportedInEra BabbageEra
+
+deriving instance Eq (ReferenceTxInsScriptsInlineDatumsSupportedInEra era)
+deriving instance Show (ReferenceTxInsScriptsInlineDatumsSupportedInEra era)
+
+refInsScriptsAndInlineDatsSupportedInEra
+  :: CardanoEra era -> Maybe (ReferenceTxInsScriptsInlineDatumsSupportedInEra era)
+refInsScriptsAndInlineDatsSupportedInEra ByronEra   = Nothing
+refInsScriptsAndInlineDatsSupportedInEra ShelleyEra = Nothing
+refInsScriptsAndInlineDatsSupportedInEra AllegraEra = Nothing
+refInsScriptsAndInlineDatsSupportedInEra MaryEra    = Nothing
+refInsScriptsAndInlineDatsSupportedInEra AlonzoEra  = Nothing
+refInsScriptsAndInlineDatsSupportedInEra BabbageEra = Just ReferenceTxInsScriptsInlineDatumsInBabbageEra
+
+refScriptToShelleyScript
+  :: CardanoEra era
+  -> ReferenceScript era
+  -> StrictMaybe (Ledger.Script (ShelleyLedgerEra era))
+refScriptToShelleyScript era (ReferenceScript _ s) =
+  case toScriptInEra era s of
+    Just sInEra -> SJust $ toShelleyScript sInEra
+    Nothing -> SNothing
+refScriptToShelleyScript _ ReferenceScriptNone = SNothing
+
+fromShelleyScriptToReferenceScript
+  :: ShelleyBasedEra era -> Ledger.Script (ShelleyLedgerEra era) -> ReferenceScript era
+fromShelleyScriptToReferenceScript sbe script =
+   scriptInEraToRefScript $ fromShelleyBasedScript sbe script
+
+scriptInEraToRefScript :: ScriptInEra era -> ReferenceScript era
+scriptInEraToRefScript sIne@(ScriptInEra _ s) =
+  case refInsScriptsAndInlineDatsSupportedInEra era of
+    Nothing -> ReferenceScriptNone
+    Just supp ->
+      -- Any script can be a reference script
+      ReferenceScript supp $ toScriptInAnyLang s
+ where
+  era = shelleyBasedToCardanoEra $ eraOfScriptInEra sIne
+
+-- Helpers
+
+textEnvelopeToScript :: TextEnvelope -> Either TextEnvelopeError ScriptInAnyLang
+textEnvelopeToScript = deserialiseFromTextEnvelopeAnyOf textEnvTypes
+ where
+  textEnvTypes :: [FromSomeType HasTextEnvelope ScriptInAnyLang]
+  textEnvTypes =
+    [ FromSomeType (AsScript AsSimpleScriptV1)
+                   (ScriptInAnyLang (SimpleScriptLanguage SimpleScriptV1))
+    , FromSomeType (AsScript AsSimpleScriptV2)
+                   (ScriptInAnyLang (SimpleScriptLanguage SimpleScriptV2))
+    , FromSomeType (AsScript AsPlutusScriptV1)
+                   (ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV1))
+    , FromSomeType (AsScript AsPlutusScriptV2)
+                   (ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV2))
+    ]

@@ -1,11 +1,14 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -16,63 +19,75 @@ module Cardano.Api.Orphans () where
 
 import           Prelude
 
+import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.=))
+import qualified Data.Aeson as Aeson
+import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
+import           Data.BiMap (BiMap (..), Bimap)
 import qualified Data.ByteString.Base16 as B16
-import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString.Short as Short
+import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import qualified Data.Map.Strict as Map
-import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.=), (.!=), (.:), (.:?))
-import qualified Data.Aeson as Aeson
-import           Data.Aeson.Types (FromJSONKey (..), ToJSONKey (..), toJSONKeyText)
-import qualified Data.Aeson.Types as Aeson
-import           Data.Scientific (Scientific)
+import           Data.UMap (Trip (Triple), UMap (UnifiedMap))
+import           Data.VMap (VB, VMap, VP)
+import qualified Data.VMap as VMap
 
-import           Control.Applicative
-import           Control.Iterate.SetAlgebra (BiMap (..), Bimap)
-
-import           Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import           Cardano.Slotting.Slot (SlotNo (..))
-
-import qualified Cardano.Crypto.Hash.Class as Crypto
-import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
-import qualified Cardano.Ledger.Alonzo.Language as Alonzo
-import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
-import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
-import qualified Cardano.Ledger.Alonzo as Alonzo
-import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
-import qualified Cardano.Ledger.Coin as Shelley
-import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Core as Ledger
-import qualified Cardano.Ledger.Crypto as Crypto
+import qualified Cardano.Ledger.Babbage as Babbage
+import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import qualified Cardano.Ledger.BaseTypes as Ledger
+import           Cardano.Ledger.Compactible (Compactible (fromCompact))
 import qualified Cardano.Ledger.Era as Ledger
+import qualified Cardano.Ledger.Shelley.PoolRank as Shelley
+import           Cardano.Ledger.UnifiedMap (UnifiedMap)
+import           Cardano.Slotting.Slot (SlotNo (..))
+import           Cardano.Slotting.Time (SystemStart (..))
+import           Control.State.Transition (STS (State))
+
+import           Cardano.Api.Script
+import qualified Cardano.Binary as CBOR
+import qualified Cardano.Crypto.Hash.Class as Crypto
+import qualified Cardano.Ledger.Alonzo.Data as Alonzo
+import           Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
+import           Cardano.Ledger.Babbage.PParams (BabbagePParams, BabbagePParamsUpdate)
+import qualified Cardano.Ledger.Babbage.PParams as Babbage
+import           Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
+import qualified Cardano.Ledger.Babbage.TxBody as Babbage
+import qualified Cardano.Ledger.Coin as Shelley
+import           Cardano.Ledger.Core (EraTxOut)
+import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as Crypto
+import           Cardano.Ledger.Mary.Value (MaryValue (..))
 import qualified Cardano.Ledger.Mary.Value as Mary
+import qualified Cardano.Ledger.PoolDistr as Ledger
 import qualified Cardano.Ledger.SafeHash as SafeHash
-import qualified Cardano.Ledger.Shelley.Constraints as Shelley
+import           Cardano.Ledger.Shelley.API (ShelleyTxOut (..))
+import qualified Cardano.Ledger.Shelley.API as Shelley
+import qualified Cardano.Ledger.Shelley.EpochBoundary as ShelleyEpoch
+import qualified Cardano.Ledger.Shelley.LedgerState as ShelleyLedger
+import           Cardano.Ledger.Shelley.PParams (ShelleyPParamsUpdate)
+import qualified Cardano.Ledger.Shelley.Rewards as Shelley
+import qualified Cardano.Ledger.Shelley.RewardUpdate as Shelley
+import           Cardano.Ledger.Val (Val)
 import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
-import qualified Shelley.Spec.Ledger.API as Shelley
-import qualified Shelley.Spec.Ledger.Delegation.Certificates as Shelley
-import qualified Shelley.Spec.Ledger.EpochBoundary as ShelleyEpoch
-import qualified Shelley.Spec.Ledger.LedgerState as ShelleyLedger
-import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
-import qualified Shelley.Spec.Ledger.Rewards as Shelley
-import qualified Shelley.Spec.Ledger.RewardUpdate as Shelley
 
 -- Orphan instances involved in the JSON output of the API queries.
 -- We will remove/replace these as we provide more API wrapper types
 
-instance ToJSON (Mary.Value era) where
-  toJSON (Mary.Value l ps) =
-    object
-      [ "lovelace" .= toJSON l
-      , "policies" .= toJSON ps
-      ]
+instance ToJSON (MaryValue era) where
+  toJSON = object . toMaryValuePairs
+  toEncoding = Aeson.pairs . mconcat . toMaryValuePairs
+
+toMaryValuePairs :: Aeson.KeyValue a => MaryValue crypto -> [a]
+toMaryValuePairs (MaryValue !l !ps) =
+  [ "lovelace" .= l
+  , "policies" .= ps
+  ]
 
 instance ToJSONKey Mary.AssetName where
   toJSONKey = toJSONKeyText render
     where
-      render = Text.decodeLatin1 . B16.encode . Mary.assetName
+      render = Text.decodeLatin1 . B16.encode . Short.fromShort . Mary.assetName
 
 instance ToJSON (Mary.PolicyID era) where
   toJSON (Mary.PolicyID (Shelley.ScriptHash h)) = Aeson.String (hashToText h)
@@ -83,57 +98,138 @@ instance ToJSONKey (Mary.PolicyID era) where
       render (Mary.PolicyID (Shelley.ScriptHash h)) = hashToText h
 
 instance ToJSON Mary.AssetName where
-  toJSON = Aeson.String . Text.decodeLatin1 . B16.encode . Mary.assetName
+  toJSON = Aeson.String . Text.decodeLatin1 . B16.encode . Short.fromShort . Mary.assetName
 
 instance ToJSON Shelley.AccountState where
-  toJSON (Shelley.AccountState tr rs) = object [ "treasury" .= tr
-                                               , "reserves" .= rs
-                                               ]
+  toJSON = object . toAccountStatePairs
+  toEncoding = Aeson.pairs . mconcat . toAccountStatePairs
 
-instance ( Consensus.ShelleyBasedEra era
+toAccountStatePairs :: Aeson.KeyValue a => ShelleyLedger.AccountState -> [a]
+toAccountStatePairs (Shelley.AccountState !tr !rs) =
+  [ "treasury" .= tr
+  , "reserves" .= rs
+  ]
+
+instance forall era.
+         ( Consensus.ShelleyBasedEra era
          , ToJSON (Core.TxOut era)
          , ToJSON (Core.PParams era)
-         , ToJSON (Core.PParamsDelta era)
+         , ToJSON (Core.PParamsUpdate era)
          ) => ToJSON (Shelley.EpochState era) where
-  toJSON eState = object [ "esAccountState" .= Shelley.esAccountState eState
-                         , "esSnapshots" .= Shelley.esSnapshots eState
-                         , "esLState" .= Shelley.esLState eState
-                         , "esPrevPp" .= Shelley.esPrevPp eState
-                         , "esPp" .= Shelley.esPp eState
-                         , "esNonMyopic" .= Shelley.esNonMyopic eState
-                         ]
+  toJSON = object . toEpochStatePairs
+  toEncoding = Aeson.pairs . mconcat . toEpochStatePairs
+
+toEpochStatePairs ::
+  ( Consensus.ShelleyBasedEra era
+  , ToJSON (Core.TxOut era)
+  , ToJSON (Core.PParamsUpdate era)
+  , ToJSON (Core.PParams era)
+  , Aeson.KeyValue a
+  )
+  => ShelleyLedger.EpochState era
+  -> [a]
+toEpochStatePairs eState =
+  let !esAccountState = Shelley.esAccountState eState
+      !esSnapshots = Shelley.esSnapshots eState
+      !esLState = Shelley.esLState eState
+      !esPrevPp = Shelley.esPrevPp eState
+      !esPp = Shelley.esPp eState
+      !esNonMyopic = Shelley.esNonMyopic eState
+  in  [ "esAccountState" .= esAccountState
+      , "esSnapshots" .= esSnapshots
+      , "esLState" .= esLState
+      , "esPrevPp" .= esPrevPp
+      , "esPp" .= esPp
+      , "esNonMyopic" .= esNonMyopic
+      ]
+
 
 instance ( Consensus.ShelleyBasedEra era
          , ToJSON (Core.TxOut era)
-         , ToJSON (Core.PParamsDelta era)
+         , ToJSON (Core.PParamsUpdate era)
          ) => ToJSON (Shelley.LedgerState era) where
-  toJSON lState = object [ "utxoState" .= Shelley._utxoState lState
-                         , "delegationState" .= Shelley._delegationState lState
-                         ]
+  toJSON = object . toLedgerStatePairs
+  toEncoding = Aeson.pairs . mconcat . toLedgerStatePairs
+
+toLedgerStatePairs ::
+  ( Consensus.ShelleyBasedEra era
+  , ToJSON (Core.TxOut era)
+  , ToJSON (Core.PParamsUpdate era)
+  , Aeson.KeyValue a
+  ) => ShelleyLedger.LedgerState era -> [a]
+toLedgerStatePairs lState =
+  let !lsUTxOState = Shelley.lsUTxOState lState
+      !lsDPState = Shelley.lsDPState lState
+  in  [ "utxoState" .= lsUTxOState
+      , "delegationState" .= lsDPState
+      ]
+
+instance Crypto.Crypto crypto => ToJSON (ShelleyLedger.IncrementalStake crypto) where
+  toJSON = object . toIncrementalStakePairs
+  toEncoding = Aeson.pairs . mconcat . toIncrementalStakePairs
+
+toIncrementalStakePairs ::
+  ( Aeson.KeyValue a
+  , Crypto.Crypto crypto
+  ) => ShelleyLedger.IncrementalStake crypto -> [a]
+toIncrementalStakePairs iStake =
+  let !credentials = Map.toList (ShelleyLedger.credMap iStake)
+      !pointers = Map.toList (ShelleyLedger.ptrMap iStake)
+  in  [ "credentials" .= credentials
+      , "pointers" .= pointers
+      ]
 
 instance ( Consensus.ShelleyBasedEra era
          , ToJSON (Core.TxOut era)
-         , ToJSON (Core.PParamsDelta era)
+         , ToJSON (Core.PParamsUpdate era)
          ) => ToJSON (Shelley.UTxOState era) where
-  toJSON utxoState = object [ "utxo" .= Shelley._utxo utxoState
-                            , "deposited" .= Shelley._deposited utxoState
-                            , "fees" .= Shelley._fees utxoState
-                            , "ppups" .= Shelley._ppups utxoState
-                            ]
+  toJSON = object . toUtxoStatePairs
+  toEncoding = Aeson.pairs . mconcat . toUtxoStatePairs
 
-instance ( ToJSON (Core.PParamsDelta era)
-         , Shelley.UsesPParams era
+toUtxoStatePairs ::
+  ( Aeson.KeyValue a
+  , Consensus.ShelleyBasedEra era
+  , ToJSON (Core.TxOut era)
+  , ToJSON (State (Core.EraRule "PPUP" era))
+  ) => ShelleyLedger.UTxOState era -> [a]
+toUtxoStatePairs utxoState =
+  let !utxo = Shelley._utxo utxoState
+      !deposited = Shelley._deposited utxoState
+      !fees = Shelley._fees utxoState
+      !ppups = Shelley._ppups utxoState
+      !stakeDistro = Shelley._stakeDistro utxoState
+  in  [ "utxo" .= utxo
+      , "deposited" .= deposited
+      , "fees" .= fees
+      , "ppups" .= ppups
+      , "stake" .= stakeDistro
+      ]
+
+instance ( ToJSON (Core.PParamsUpdate era)
+         , Core.Era era
          ) => ToJSON (Shelley.PPUPState era) where
-  toJSON ppUpState = object [ "proposals" .= Shelley.proposals ppUpState
-                            , "futureProposals" .= Shelley.futureProposals ppUpState
-                            ]
+  toJSON = object . toPpupStatePairs
+  toEncoding = Aeson.pairs . mconcat . toPpupStatePairs
 
-instance ( ToJSON (Core.PParamsDelta era)
-         , Shelley.UsesPParams era
+toPpupStatePairs ::
+  ( Aeson.KeyValue a
+  , ToJSON (Core.PParamsUpdate era)
+  , Core.Era era
+  ) => ShelleyLedger.PPUPState era -> [a]
+toPpupStatePairs ppUpState =
+  let !proposals = Shelley.proposals ppUpState
+      !futureProposals = Shelley.futureProposals ppUpState
+  in  [ "proposals" .= proposals
+      , "futureProposals" .= futureProposals
+      ]
+
+instance ( ToJSON (Core.PParamsUpdate era)
+         , Core.Era era
          ) => ToJSON (Shelley.ProposedPPUpdates era) where
   toJSON (Shelley.ProposedPPUpdates ppUpdates) = toJSON $ Map.toList ppUpdates
+  toEncoding (Shelley.ProposedPPUpdates ppUpdates) = toEncoding $ Map.toList ppUpdates
 
-instance ToJSON (PParamsUpdate era) where
+instance ToJSON (ShelleyPParamsUpdate era) where
   toJSON pp =
     Aeson.object $
         [ "minFeeA"               .= x | x <- mbfield (Shelley._minfeeA pp) ]
@@ -145,8 +241,7 @@ instance ToJSON (PParamsUpdate era) where
      ++ [ "poolDeposit"           .= x | x <- mbfield (Shelley._poolDeposit pp) ]
      ++ [ "eMax"                  .= x | x <- mbfield (Shelley._eMax pp) ]
      ++ [ "nOpt"                  .= x | x <- mbfield (Shelley._nOpt pp) ]
-     ++ [ "a0" .= (fromRational x :: Scientific)
-                                       | x <- mbfield (Shelley._a0 pp) ]
+     ++ [ "a0"                    .= x | x <- mbfield (Shelley._a0 pp) ]
      ++ [ "rho"                   .= x | x <- mbfield (Shelley._rho pp) ]
      ++ [ "tau"                   .= x | x <- mbfield (Shelley._tau pp) ]
      ++ [ "decentralisationParam" .= x | x <- mbfield (Shelley._d pp) ]
@@ -154,25 +249,175 @@ instance ToJSON (PParamsUpdate era) where
      ++ [ "protocolVersion"       .= x | x <- mbfield (Shelley._protocolVersion pp) ]
      ++ [ "minUTxOValue"          .= x | x <- mbfield (Shelley._minUTxOValue pp) ]
      ++ [ "minPoolCost"           .= x | x <- mbfield (Shelley._minPoolCost pp) ]
-    where
-      mbfield SNothing  = []
-      mbfield (SJust x) = [x]
+
+instance ToJSON (BabbagePParamsUpdate era) where
+  toJSON pp =
+    Aeson.object $
+        [ "minFeeA"               .= x | x <- mbfield (Babbage._minfeeA pp) ]
+     ++ [ "minFeeB"               .= x | x <- mbfield (Babbage._minfeeB pp) ]
+     ++ [ "maxBlockBodySize"      .= x | x <- mbfield (Babbage._maxBBSize pp) ]
+     ++ [ "maxTxSize"             .= x | x <- mbfield (Babbage._maxTxSize pp) ]
+     ++ [ "maxBlockHeaderSize"    .= x | x <- mbfield (Babbage._maxBHSize pp) ]
+     ++ [ "keyDeposit"            .= x | x <- mbfield (Babbage._keyDeposit pp) ]
+     ++ [ "poolDeposit"           .= x | x <- mbfield (Babbage._poolDeposit pp) ]
+     ++ [ "eMax"                  .= x | x <- mbfield (Babbage._eMax pp) ]
+     ++ [ "nOpt"                  .= x | x <- mbfield (Babbage._nOpt pp) ]
+     ++ [ "a0"                    .= x | x <- mbfield (Babbage._a0 pp) ]
+     ++ [ "rho"                   .= x | x <- mbfield (Babbage._rho pp) ]
+     ++ [ "tau"                   .= x | x <- mbfield (Babbage._tau pp) ]
+     ++ [ "protocolVersion"       .= x | x <- mbfield (Babbage._protocolVersion pp) ]
+     ++ [ "minPoolCost"           .= x | x <- mbfield (Babbage._minPoolCost pp) ]
+     ++ [ "coinsPerUTxOByte"      .= x | x <- mbfield (Babbage._coinsPerUTxOByte pp) ]
+     ++ [ "costmdls"              .= x | x <- mbfield (Babbage._costmdls pp) ]
+     ++ [ "prices"                .= x | x <- mbfield (Babbage._prices pp) ]
+     ++ [ "maxTxExUnits"          .= x | x <- mbfield (Babbage._maxTxExUnits pp) ]
+     ++ [ "maxBlockExUnits"       .= x | x <- mbfield (Babbage._maxBlockExUnits pp) ]
+     ++ [ "maxValSize"            .= x | x <- mbfield (Babbage._maxValSize pp) ]
+     ++ [ "collateralPercentage"  .= x | x <- mbfield (Babbage._collateralPercentage pp) ]
+     ++ [ "maxCollateralInputs"   .= x | x <- mbfield (Babbage._maxCollateralInputs pp) ]
+
+instance ToJSON (BabbagePParams (Babbage.BabbageEra Consensus.StandardCrypto)) where
+  toJSON pp =
+    Aeson.object
+      [ "minFeeA" .= Babbage._minfeeA pp
+      , "minFeeB" .= Babbage._minfeeB pp
+      , "maxBlockBodySize" .= Babbage._maxBBSize pp
+      , "maxTxSize" .= Babbage._maxTxSize pp
+      , "maxBlockHeaderSize" .= Babbage._maxBHSize pp
+      , "keyDeposit" .= Babbage._keyDeposit pp
+      , "poolDeposit" .= Babbage._poolDeposit pp
+      , "eMax" .= Babbage._eMax pp
+      , "nOpt" .= Babbage._nOpt pp
+      , "a0" .= Babbage._a0 pp
+      , "rho" .= Babbage._rho pp
+      , "tau" .= Babbage._tau pp
+      , "protocolVersion" .= Babbage._protocolVersion pp
+      , "minPoolCost" .= Babbage._minPoolCost pp
+      , "coinsPerUTxOByte" .= Babbage._coinsPerUTxOByte pp
+      , "costmdls" .= Babbage._costmdls pp
+      , "prices" .= Babbage._prices pp
+      , "maxTxExUnits" .= Babbage._maxTxExUnits pp
+      , "maxBlockExUnits" .= Babbage._maxBlockExUnits pp
+      , "maxValSize" .= Babbage._maxValSize pp
+      , "collateralPercentage" .= Babbage._collateralPercentage pp
+      , "maxCollateralInputs" .= Babbage._maxCollateralInputs pp
+      ]
+
+mbfield :: StrictMaybe a -> [a]
+mbfield SNothing  = []
+mbfield (SJust x) = [x]
+
+instance ( Ledger.Era era
+         , ToJSON (Core.Value era)
+         , ToJSON (Babbage.Datum era)
+         , ToJSON (Core.Script era)
+         , Ledger.Crypto era ~ Consensus.StandardCrypto
+         , Val (Core.Value era)
+         ) => ToJSON (BabbageTxOut era) where
+  toJSON = object . toBabbageTxOutPairs
+  toEncoding = Aeson.pairs . mconcat . toBabbageTxOutPairs
+
+toBabbageTxOutPairs ::
+  ( Aeson.KeyValue a
+  , Ledger.Era era
+  , ToJSON (Core.Value era)
+  , ToJSON (Core.Script era)
+  , Ledger.Crypto era ~ Consensus.StandardCrypto
+  , Val (Core.Value era)
+  ) => BabbageTxOut era -> [a]
+toBabbageTxOutPairs (BabbageTxOut !addr !val !dat !mRefScript) =
+  [ "address" .= addr
+  , "value" .= val
+  , "datum" .= dat
+  , "referenceScript" .= mRefScript
+  ]
+
+instance ( Ledger.Era era
+         , Ledger.Crypto era ~ Consensus.StandardCrypto
+         ) => ToJSON (Babbage.Datum era) where
+  toJSON d =
+    case Alonzo.datumDataHash d of
+      SNothing -> Aeson.Null
+      SJust dH -> toJSON $ ScriptDataHash dH
+  toEncoding d =
+    case Alonzo.datumDataHash d of
+      SNothing -> toEncoding Aeson.Null
+      SJust dH -> toEncoding $ ScriptDataHash dH
+
+
+
+instance ToJSON (AlonzoScript (Babbage.BabbageEra Consensus.StandardCrypto)) where
+  toJSON = Aeson.String . Text.decodeUtf8 . B16.encode . CBOR.serialize'
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.DPState crypto) where
-  toJSON dpState = object [ "dstate" .= Shelley._dstate dpState
-                          , "pstate" .= Shelley._pstate dpState
-                          ]
+  toJSON = object . toDpStatePairs
+  toEncoding = Aeson.pairs . mconcat . toDpStatePairs
+
+toDpStatePairs ::
+  ( Aeson.KeyValue a
+  , Crypto.Crypto crypto
+  ) => ShelleyLedger.DPState crypto -> [a]
+toDpStatePairs dpState =
+  let !dstate = Shelley.dpsDState dpState
+      !pstate = Shelley.dpsPState dpState
+  in  [ "dstate" .= dstate
+      , "pstate" .= pstate
+      ]
+
+instance (ToJSON coin, ToJSON ptr, ToJSON pool) => ToJSON (Trip coin ptr pool) where
+  toJSON = object . toTripPair
+  toEncoding = Aeson.pairs . mconcat . toTripPair
+
+toTripPair ::
+  ( Aeson.KeyValue a
+  , ToJSON coin
+  , ToJSON ptr
+  , ToJSON pool
+  ) => Trip coin ptr pool -> [a]
+toTripPair (Triple !coin !ptr !pool) =
+  [ "coin" .= coin
+  , "ptr" .= ptr
+  , "pool" .= pool
+  ]
+
+instance Crypto.Crypto crypto => ToJSON (UnifiedMap crypto) where
+  toJSON = object . toUnifiedMapPair
+  toEncoding = Aeson.pairs . mconcat . toUnifiedMapPair
+
+toUnifiedMapPair ::
+  ( Aeson.KeyValue a
+  , ToJSON coin
+  , ToJSON ptr
+  , ToJSON pool
+  , ToJSON cred
+  , ToJSONKey cred
+  , ToJSONKey ptr
+  ) => UMap coin cred pool ptr -> [a]
+toUnifiedMapPair (UnifiedMap !m1 !m2) =
+  [ "credentials" .= m1
+  , "pointers" .= m2
+  ]
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.DState crypto) where
-  toJSON dState = object [ "rewards" .= Shelley._rewards dState
-                         , "delegations" .= ShelleyLedger._delegations dState
-                         , "ptrs" .= Shelley._ptrs dState
-                         , "fGenDelegs" .= Map.toList (Shelley._fGenDelegs dState)
-                         , "genDelegs" .= Shelley._genDelegs dState
-                         , "irwd" .= Shelley._irwd dState
-                         ]
+  toJSON = object . toDStatePair
+  toEncoding = Aeson.pairs . mconcat . toDStatePair
 
-instance ToJSON (ShelleyLedger.FutureGenDeleg crypto) where
+toDStatePair ::
+  ( Aeson.KeyValue a
+  , Crypto.Crypto crypto
+  ) => ShelleyLedger.DState crypto -> [a]
+toDStatePair dState =
+  let !unifiedRewards = Shelley._unified dState
+      !fGenDelegs = Map.toList (Shelley._fGenDelegs dState)
+      !genDelegs = Shelley._genDelegs dState
+      !irwd = Shelley._irwd dState
+  in  [ "unifiedRewards" .= unifiedRewards
+      , "fGenDelegs" .= fGenDelegs
+      , "genDelegs" .= genDelegs
+      , "irwd" .= irwd
+      ]
+
+instance Crypto.Crypto crypto => ToJSON (ShelleyLedger.FutureGenDeleg crypto) where
   toJSON fGenDeleg =
     object [ "fGenDelegSlot" .= ShelleyLedger.fGenDelegSlot fGenDeleg
            , "fGenDelegGenKeyHash" .= ShelleyLedger.fGenDelegGenKeyHash fGenDeleg
@@ -180,52 +425,105 @@ instance ToJSON (ShelleyLedger.FutureGenDeleg crypto) where
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.GenDelegs crypto) where
   toJSON (Shelley.GenDelegs delegs) = toJSON delegs
+  toEncoding (Shelley.GenDelegs delegs) = toEncoding delegs
 
-instance ToJSON (Shelley.InstantaneousRewards crypto) where
-  toJSON iRwds = object [ "iRReserves" .= Shelley.iRReserves iRwds
-                        , "iRTreasury" .= Shelley.iRTreasury iRwds
-                        ]
+instance Crypto.Crypto crypto => ToJSON (Shelley.InstantaneousRewards crypto) where
+  toJSON = object . toInstantaneousRewardsPair
+  toEncoding = Aeson.pairs . mconcat . toInstantaneousRewardsPair
 
-instance ToJSON (Bimap Shelley.Ptr (Shelley.Credential Shelley.Staking crypto)) where
-  toJSON (MkBiMap ptsStakeM stakePtrSetM) =
-    object [ "stakedCreds" .= Map.toList ptsStakeM
-           , "credPtrR" .= toJSON stakePtrSetM
-           ]
+toInstantaneousRewardsPair ::
+  ( Aeson.KeyValue a
+  , Crypto.Crypto crypto
+  ) => ShelleyLedger.InstantaneousRewards crypto -> [a]
+toInstantaneousRewardsPair iRwds =
+  let !iRReserves = Shelley.iRReserves iRwds
+      !iRTreasury = Shelley.iRTreasury iRwds
+  in  [ "iRReserves" .= iRReserves
+      , "iRTreasury" .= iRTreasury
+      ]
+
+instance
+  Crypto.Crypto crypto =>
+  ToJSON (Bimap Shelley.Ptr (Shelley.Credential Shelley.Staking crypto))
+  where
+  toJSON = object . toPtrCredentialStakingPair
+  toEncoding = Aeson.pairs . mconcat . toPtrCredentialStakingPair
+
+toPtrCredentialStakingPair ::
+  ( Aeson.KeyValue a
+  , Crypto.Crypto crypto
+  ) => Bimap Shelley.Ptr (Shelley.Credential Shelley.Staking crypto) -> [a]
+toPtrCredentialStakingPair (MkBiMap ptsStakeM stakePtrSetM) =
+  let !stakedCreds = Map.toList ptsStakeM
+      !credPtrR = stakePtrSetM
+  in  [ "stakedCreds" .= stakedCreds
+      , "credPtrR" .= credPtrR
+      ]
+
+deriving newtype instance ToJSON Shelley.CertIx
+deriving newtype instance ToJSON Shelley.TxIx
+
 instance ToJSON Shelley.Ptr where
-  toJSON (Shelley.Ptr slotNo txIndex certIndex) =
-    object [ "slot" .= unSlotNo slotNo
-           , "txIndex" .= txIndex
-           , "certIndex" .= certIndex
-           ]
+  toJSON = object . toPtrPair
+  toEncoding = Aeson.pairs . mconcat . toPtrPair
+
+instance ToJSONKey Shelley.Ptr
+
+toPtrPair :: Aeson.KeyValue a => Shelley.Ptr -> [a]
+toPtrPair (Shelley.Ptr !slotNo !txIndex !certIndex) =
+  [ "slot" .= unSlotNo slotNo
+  , "txIndex" .= txIndex
+  , "certIndex" .= certIndex
+  ]
 
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.PState crypto) where
-  toJSON pState = object [ "pParams pState" .= Shelley._pParams pState
-                         , "fPParams pState" .= Shelley._fPParams pState
-                         , "retiring pState" .= Shelley._retiring pState
-                         ]
+  toJSON = object . toPStatePair
+  toEncoding = Aeson.pairs . mconcat . toPStatePair
+
+toPStatePair ::
+  ( Aeson.KeyValue a
+  , Crypto.Crypto crypto
+  ) => ShelleyLedger.PState crypto -> [a]
+toPStatePair pState =
+  let !pParams = Shelley._pParams pState
+      !fPParams = Shelley._fPParams pState
+      !retiring = Shelley._retiring pState
+  in  [ "pParams pState" .= pParams
+      , "fPParams pState" .= fPParams
+      , "retiring pState" .= retiring
+      ]
 
 instance ( Consensus.ShelleyBasedEra era
          , ToJSON (Core.TxOut era)
          ) => ToJSON (Shelley.UTxO era) where
   toJSON (Shelley.UTxO utxo) = toJSON utxo
+  toEncoding (Shelley.UTxO utxo) = toEncoding utxo
 
 instance ( Consensus.ShelleyBasedEra era
          , ToJSON (Core.Value era)
-         ) => ToJSON (Shelley.TxOut era) where
-  toJSON (Shelley.TxOut addr amount) =
-    object
-      [ "address" .= addr
-      , "amount" .= amount
-      ]
+         ) => ToJSON (ShelleyTxOut era) where
+  toJSON = object . toTxOutPair
+  toEncoding = Aeson.pairs . mconcat . toTxOutPair
+
+toTxOutPair ::
+  ( Aeson.KeyValue a
+  , ToJSON (Core.Value era)
+  , EraTxOut era)
+  => ShelleyTxOut era -> [a]
+toTxOutPair (ShelleyTxOut !addr !amount) =
+  [ "address" .= addr
+  , "amount" .= amount
+  ]
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.TxIn crypto) where
   toJSON = toJSON . txInToText
+  toEncoding = toEncoding . txInToText
 
 instance Crypto.Crypto crypto => ToJSONKey (Shelley.TxIn crypto) where
   toJSONKey = toJSONKeyText txInToText
 
-txInToText :: Crypto.Crypto crypto => Shelley.TxIn crypto -> Text
+txInToText :: Shelley.TxIn crypto -> Text
 txInToText (Shelley.TxIn (Shelley.TxId txidHash) ix) =
   hashToText (SafeHash.extractHash txidHash)
     <> Text.pack "#"
@@ -235,223 +533,157 @@ hashToText :: Crypto.Hash crypto a -> Text
 hashToText = Text.decodeLatin1 . Crypto.hashToBytesAsHex
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.NonMyopic crypto) where
-  toJSON nonMy = object [ "likelihoodsNM" .= Shelley.likelihoodsNM nonMy
-                        , "rewardPotNM" .= Shelley.rewardPotNM nonMy
-                        ]
+  toJSON = object . toNonMyopicPair
+  toEncoding = Aeson.pairs . mconcat . toNonMyopicPair
+
+toNonMyopicPair ::
+  ( Aeson.KeyValue a
+  , Crypto.Crypto crypto
+  ) => Shelley.NonMyopic crypto -> [a]
+toNonMyopicPair nonMy =
+  let !likelihoodsNM = Shelley.likelihoodsNM nonMy
+      !rewardPotNM = Shelley.rewardPotNM nonMy
+  in  [ "likelihoodsNM" .= likelihoodsNM
+      , "rewardPotNM" .= rewardPotNM
+      ]
 
 instance ToJSON Shelley.Likelihood where
   toJSON (Shelley.Likelihood llhd) =
     toJSON $ fmap (\(Shelley.LogWeight f) -> exp $ realToFrac f :: Double) llhd
+  toEncoding (Shelley.Likelihood llhd) =
+    toEncoding $ fmap (\(Shelley.LogWeight f) -> exp $ realToFrac f :: Double) llhd
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.SnapShots crypto) where
-  toJSON ss = object [ "pstakeMark" .= Shelley._pstakeMark ss
-                     , "pstakeSet" .= Shelley._pstakeSet ss
-                     , "pstakeGo" .= Shelley._pstakeGo ss
-                     , "feeSS" .= Shelley._feeSS ss
-                     ]
+  toJSON = object . toSnapShotsPair
+  toEncoding = Aeson.pairs . mconcat . toSnapShotsPair
+
+toSnapShotsPair ::
+  ( Aeson.KeyValue a
+  , Crypto.Crypto crypto
+  ) => ShelleyEpoch.SnapShots crypto -> [a]
+toSnapShotsPair ss =
+  let !pstakeMark = Shelley._pstakeMark ss
+      !pstakeSet = Shelley._pstakeSet ss
+      !pstakeGo = Shelley._pstakeGo ss
+      !feeSS = Shelley._feeSS ss
+  in  [ "pstakeMark" .= pstakeMark
+      , "pstakeSet" .= pstakeSet
+      , "pstakeGo" .= pstakeGo
+      , "feeSS" .= feeSS
+      ]
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.SnapShot crypto) where
-  toJSON ss = object [ "stake" .= Shelley._stake ss
-                     , "delegations" .= ShelleyEpoch._delegations ss
-                     , "poolParams" .= Shelley._poolParams ss
-                     ]
+  toJSON = object . toSnapShotPair
+  toEncoding = Aeson.pairs . mconcat . toSnapShotPair
 
-instance ToJSON (Shelley.Stake crypto) where
+toSnapShotPair ::
+  ( Aeson.KeyValue a
+  , Crypto.Crypto crypto
+  ) => ShelleyEpoch.SnapShot crypto -> [a]
+toSnapShotPair ss =
+  let !stake = Shelley._stake ss
+      !delegations = ShelleyEpoch._delegations ss
+      !poolParams = Shelley._poolParams ss
+  in  [ "stake" .= stake
+      , "delegations" .= delegations
+      , "poolParams" .= poolParams
+      ]
+
+instance Crypto.Crypto crypto => ToJSON (Shelley.Stake crypto) where
   toJSON (Shelley.Stake s) = toJSON s
+  toEncoding (Shelley.Stake s) = toEncoding s
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.RewardUpdate crypto) where
-  toJSON rUpdate = object [ "deltaT" .= Shelley.deltaT rUpdate
-                          , "deltaR" .= Shelley.deltaR rUpdate
-                          , "rs" .= Shelley.rs rUpdate
-                          , "deltaF" .= Shelley.deltaF rUpdate
-                          , "nonMyopic" .= Shelley.nonMyopic rUpdate
-                          ]
+  toJSON = object . toRewardUpdatePair
+  toEncoding = Aeson.pairs . mconcat . toRewardUpdatePair
+
+toRewardUpdatePair ::
+  ( Aeson.KeyValue a
+  , Crypto.Crypto crypto
+  ) => Shelley.RewardUpdate crypto -> [a]
+toRewardUpdatePair rUpdate =
+  let !deltaT = Shelley.deltaT rUpdate
+      !deltaR = Shelley.deltaR rUpdate
+      !rs = Shelley.rs rUpdate
+      !deltaF = Shelley.deltaF rUpdate
+      !nonMyopic = Shelley.nonMyopic rUpdate
+  in  [ "deltaT" .= deltaT
+      , "deltaR" .= deltaR
+      , "rs" .= rs
+      , "deltaF" .= deltaF
+      , "nonMyopic" .= nonMyopic
+      ]
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.PulsingRewUpdate crypto) where
-  toJSON (Shelley.Pulsing _ _) = Aeson.Null
-  toJSON (Shelley.Complete ru) = toJSON ru
+  toJSON  = \case
+    Shelley.Pulsing _ _ -> Aeson.Null
+    Shelley.Complete ru -> toJSON ru
+  toEncoding  = \case
+    Shelley.Pulsing _ _ -> toEncoding Aeson.Null
+    Shelley.Complete ru -> toEncoding ru
 
 instance ToJSON Shelley.DeltaCoin where
   toJSON (Shelley.DeltaCoin i) = toJSON i
+  toEncoding (Shelley.DeltaCoin i) = toEncoding i
 
-instance Crypto.Crypto crypto => ToJSON (Shelley.PoolDistr crypto) where
-  toJSON (Shelley.PoolDistr m) = toJSON m
+instance Crypto.Crypto crypto => ToJSON (Ledger.PoolDistr crypto) where
+  toJSON (Ledger.PoolDistr m) = toJSON m
+  toEncoding (Ledger.PoolDistr m) = toEncoding m
 
-instance ToJSON (Shelley.IndividualPoolStake crypto) where
-  toJSON indivPoolStake =
-    object [ "individualPoolStake" .= Shelley.individualPoolStake indivPoolStake
-           , "individualPoolStakeVrf" .= Shelley.individualPoolStakeVrf indivPoolStake
-           ]
+instance Crypto.Crypto crypto => ToJSON (Ledger.IndividualPoolStake crypto) where
+  toJSON = object . toIndividualPoolStakePair
+  toEncoding = Aeson.pairs . mconcat . toIndividualPoolStakePair
 
-instance ToJSON (Shelley.Reward crypto) where
-  toJSON reward =
-     object [ "rewardType" .= Shelley.rewardType reward
-            , "rewardPool" .= Shelley.rewardPool reward
-            , "rewardAmount" .= Shelley.rewardAmount reward
-            ]
+toIndividualPoolStakePair ::
+  ( Aeson.KeyValue a
+  , Crypto.HashAlgorithm (Crypto.HASH crypto)
+  ) => Ledger.IndividualPoolStake crypto -> [a]
+toIndividualPoolStakePair indivPoolStake =
+  let !individualPoolStake = Ledger.individualPoolStake indivPoolStake
+      !individualPoolStakeVrf = Ledger.individualPoolStakeVrf indivPoolStake
+  in  [ "individualPoolStake" .= individualPoolStake
+      , "individualPoolStakeVrf" .= individualPoolStakeVrf
+      ]
+
+instance Crypto.Crypto crypto => ToJSON (Shelley.Reward crypto) where
+  toJSON = object . toRewardPair
+  toEncoding = Aeson.pairs . mconcat . toRewardPair
+
+toRewardPair ::
+  ( Aeson.KeyValue a
+  , Crypto.Crypto crypto
+  ) => Shelley.Reward crypto -> [a]
+toRewardPair reward =
+  let !rewardType = Shelley.rewardType reward
+      !rewardPool = Shelley.rewardPool reward
+      !rewardAmount = Shelley.rewardAmount reward
+  in  [ "rewardType" .= rewardType
+      , "rewardPool" .= rewardPool
+      , "rewardAmount" .= rewardAmount
+      ]
 
 instance ToJSON Shelley.RewardType where
   toJSON Shelley.MemberReward = "MemberReward"
   toJSON Shelley.LeaderReward = "LeaderReward"
 
-instance ToJSON (SafeHash.SafeHash c a) where
+instance Crypto.Crypto c => ToJSON (SafeHash.SafeHash c a) where
   toJSON = toJSON . SafeHash.extractHash
+  toEncoding = toEncoding . SafeHash.extractHash
 
 -----
 
-instance ToJSON Alonzo.ExUnits
-deriving instance FromJSON Alonzo.ExUnits
+deriving newtype instance ToJSON SystemStart
+deriving newtype instance FromJSON SystemStart
 
-deriving instance ToJSON Alonzo.Prices
-deriving instance FromJSON Alonzo.Prices
 
-deriving newtype instance FromJSON Alonzo.CostModel
-deriving newtype instance ToJSON Alonzo.CostModel
+instance Crypto.Crypto crypto => ToJSON (VMap VB VB (Shelley.Credential 'Shelley.Staking crypto) (Shelley.KeyHash 'Shelley.StakePool crypto)) where
+  toJSON = toJSON . VMap.toMap
+  toEncoding = toEncoding . VMap.toMap
 
-instance FromJSON Alonzo.Language where
-  parseJSON v = case v of
-    Aeson.String "PlutusV1" -> return Alonzo.PlutusV1
-    wrong -> fail $ "Error decoding Language. Expected a JSON string but got: " <> show wrong
-instance ToJSON Alonzo.Language where
-  toJSON Alonzo.PlutusV1 = Aeson.String "PlutusV1"
+instance Crypto.Crypto crypto => ToJSON (VMap VB VB (Shelley.KeyHash    'Shelley.StakePool crypto) (Shelley.PoolParams crypto)) where
+  toJSON = toJSON . VMap.toMap
+  toEncoding = toEncoding . VMap.toMap
 
-instance ToJSONKey Alonzo.Language where
-  toJSONKey = toJSONKeyText (Text.decodeLatin1 . LBS.toStrict . Aeson.encode)
-
-instance FromJSONKey Alonzo.Language where
-  fromJSONKey = Aeson.FromJSONKeyTextParser parseLang
-   where
-     parseLang :: Text -> Aeson.Parser Alonzo.Language
-     parseLang lang =
-       case Aeson.eitherDecode $ LBS.fromStrict $ Text.encodeUtf8 lang of
-         Left err -> fail (show err)
-         Right lang' -> return lang'
-
--- We defer parsing of the cost model so that we can
--- read it as a filepath. This is to reduce further pollution
--- of the genesis file.
-instance FromJSON Alonzo.AlonzoGenesis where
-  parseJSON = Aeson.withObject "Alonzo Genesis" $ \o -> do
-    coinsPerUTxOWord     <- o .:  "lovelacePerUTxOWord"
-                        <|> o .:  "adaPerUTxOWord" --TODO: deprecate
-    cModels              <- o .:? "costModels"
-    prices               <- o .:  "executionPrices"
-    maxTxExUnits         <- o .:  "maxTxExUnits"
-    maxBlockExUnits      <- o .:  "maxBlockExUnits"
-    maxValSize           <- o .:  "maxValueSize"
-    collateralPercentage <- o .:  "collateralPercentage"
-    maxCollateralInputs  <- o .:  "maxCollateralInputs"
-    case cModels of
-      Nothing -> case Alonzo.defaultCostModel of
-        Just m -> return Alonzo.AlonzoGenesis
-          { Alonzo.coinsPerUTxOWord
-          , Alonzo.costmdls = Map.singleton Alonzo.PlutusV1 m
-          , Alonzo.prices
-          , Alonzo.maxTxExUnits
-          , Alonzo.maxBlockExUnits
-          , Alonzo.maxValSize
-          , Alonzo.collateralPercentage
-          , Alonzo.maxCollateralInputs
-          }
-        Nothing -> fail "Failed to extract the cost model params from defaultCostModel"
-      Just costmdls -> return Alonzo.AlonzoGenesis
-        { Alonzo.coinsPerUTxOWord
-        , Alonzo.costmdls
-        , Alonzo.prices
-        , Alonzo.maxTxExUnits
-        , Alonzo.maxBlockExUnits
-        , Alonzo.maxValSize
-        , Alonzo.collateralPercentage
-        , Alonzo.maxCollateralInputs
-        }
-
--- We don't render the cost model so that we can
--- render it later in 'AlonzoGenWrapper' as a filepath
--- and keep the cost model (which is chunky) as a separate file.
-instance ToJSON Alonzo.AlonzoGenesis where
-  toJSON v = object
-      [ "lovelacePerUTxOWord" .= Alonzo.coinsPerUTxOWord v
-      , "costModels" .= Alonzo.costmdls v
-      , "executionPrices" .= Alonzo.prices v
-      , "maxTxExUnits" .= Alonzo.maxTxExUnits v
-      , "maxBlockExUnits" .= Alonzo.maxBlockExUnits v
-      , "maxValueSize" .= Alonzo.maxValSize v
-      , "collateralPercentage" .= Alonzo.collateralPercentage v
-      , "maxCollateralInputs" .= Alonzo.maxCollateralInputs v
-      ]
-
-instance ToJSON (Alonzo.PParams era) where
-  toJSON pp =
-    Aeson.object
-      [ "minFeeA" .= Alonzo._minfeeA pp
-      , "minFeeB" .= Alonzo._minfeeB pp
-      , "maxBlockBodySize" .= Alonzo._maxBBSize pp
-      , "maxTxSize" .= Alonzo._maxTxSize pp
-      , "maxBlockHeaderSize" .= Alonzo._maxBHSize pp
-      , "keyDeposit" .= Alonzo._keyDeposit pp
-      , "poolDeposit" .= Alonzo._poolDeposit pp
-      , "eMax" .= Alonzo._eMax pp
-      , "nOpt" .= Alonzo._nOpt pp
-      , "a0" .= (fromRational (Alonzo._a0 pp) :: Scientific)
-      , "rho" .= Alonzo._rho pp
-      , "tau" .= Alonzo._tau pp
-      , "decentralisationParam" .= Alonzo._d pp
-      , "extraEntropy" .= Alonzo._extraEntropy pp
-      , "protocolVersion" .= Alonzo._protocolVersion pp
-      , "minPoolCost" .= Alonzo._minPoolCost pp
-      , "lovelacePerUTxOWord" .= Alonzo._coinsPerUTxOWord pp
-      , "costmdls" .= Alonzo._costmdls pp
-      , "prices" .= Alonzo._prices pp
-      , "maxTxExUnits" .= Alonzo._maxTxExUnits pp
-      , "maxBlockExUnits" .= Alonzo._maxBlockExUnits pp
-      , "maxValSize" .= Alonzo._maxValSize pp
-      , "collateralPercentage" .= Alonzo._collateralPercentage pp
-      , "maxCollateralInputs " .= Alonzo._maxCollateralInputs pp
-      ]
-
-instance FromJSON (Alonzo.PParams era) where
-  parseJSON =
-    Aeson.withObject "PParams" $ \obj ->
-      Alonzo.PParams
-        <$> obj .: "minFeeA"
-        <*> obj .: "minFeeB"
-        <*> obj .: "maxBlockBodySize"
-        <*> obj .: "maxTxSize"
-        <*> obj .: "maxBlockHeaderSize"
-        <*> obj .: "keyDeposit"
-        <*> obj .: "poolDeposit"
-        <*> obj .: "eMax"
-        <*> obj .: "nOpt"
-        <*> ( (toRational :: Scientific -> Rational)
-                <$> obj .: "a0"
-            )
-        <*> obj .: "rho"
-        <*> obj .: "tau"
-        <*> obj .: "decentralisationParam"
-        <*> obj .: "extraEntropy"
-        <*> obj .: "protocolVersion"
-        <*> obj .: "minPoolCost" .!= mempty
-        <*> obj .: "lovelacePerUTxOWord"
-        <*> obj .: "costmdls"
-        <*> obj .: "prices"
-        <*> obj .: "maxTxExUnits"
-        <*> obj .: "maxBlockExUnits"
-        <*> obj .: "maxValSize"
-        <*> obj .: "collateralPercentage"
-        <*> obj .: "maxCollateralInputs"
-
-deriving instance ToJSON (Alonzo.PParamsUpdate (Alonzo.AlonzoEra StandardCrypto))
-
-instance (Ledger.Era era, Show (Ledger.Value era), ToJSON (Ledger.Value era))
-    => ToJSON (Alonzo.TxOut era) where
-  toJSON (Alonzo.TxOut addr v dataHash) =
-    object [ "address" .= toJSON addr
-           , "value" .= toJSON v
-           , "datahash" .= case strictMaybeToMaybe dataHash of
-                             Nothing -> Aeson.Null
-                             Just dHash ->
-                               Aeson.String . Crypto.hashToTextAsHex
-                                 $ SafeHash.extractHash dHash
-           ]
-
-deriving instance Show Alonzo.AlonzoGenesis
+instance Crypto.Crypto crypto => ToJSON (VMap VB VP (Shelley.Credential 'Shelley.Staking   crypto) (Shelley.CompactForm Shelley.Coin)) where
+  toJSON = toJSON . fmap fromCompact . VMap.toMap
+  toEncoding = toEncoding . fmap fromCompact . VMap.toMap

@@ -2,7 +2,7 @@
 name: Feature request
 about: Submit a feature request
 title: "[FR] - "
-labels: enhancement
+labels: "type: enhancement"
 assignees: ''
 
 ---
@@ -14,6 +14,7 @@ assignees: ''
 **Area**
 *Token Locking*    Related to Token Locking (Allegra).
 *Native Tokens*    Related to Native Tokens (Mary).
+*Plutus*    Related to Plutus Scripts (Alonzo).
 *Other*   Any other topic (Delegation, Ranking, ...).
 
 **Describe the feature you'd like**

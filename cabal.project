@@ -1,16 +1,38 @@
-index-state: 2021-04-30T00:00:00Z
+-- Custom repository for cardano haskell packages, see CONTRIBUTING for more
+repository cardano-haskell-packages
+  url: https://input-output-hk.github.io/cardano-haskell-packages
+  secure: True
+  root-keys:
+    3e0cce471cf09815f930210f7827266fd09045445d65923e6d0238a6cd15126f
+    443abb7fb497a134c343faf52f0b659bd7999bc06b7f63fa76dc99d631f9bea1
+    a86a1f6ce86c449c46666bda44268677abf29b5b2d2eb5ec7af903ec2f117a82
+    bcec67e8e99cabfa7764d75ad9b158d72bfacf70ca1d0ec8bc6b4406d1bf8413
+    c00aae8461a256275598500ea0e187588c35a5d5d7454fb57eac18d9edb86a56
+    d4a35cd3121aa00d18544bb0ac01c3e1691d618f462c46129271bccf39f7e8ee
+
+-- See CONTRIBUTING for information about these, including some Nix commands
+-- you need to run if you change them
+index-state: 2022-12-11T00:00:00Z
+index-state: cardano-haskell-packages 2022-12-14T00:40:15Z
 
 packages:
     cardano-api
     cardano-cli
     cardano-client-demo
-    cardano-config
+    cardano-git-rev
     cardano-node
+    cardano-node-capi
     cardano-node-chairman
     cardano-submit-api
     cardano-testnet
-    nix/workbench/cardano-topology
+    cardano-tracer
+    bench/cardano-topology
+    bench/locli
+    bench/plutus-scripts-bench
     bench/tx-generator
+    trace-dispatcher
+    trace-resources
+    trace-forward
 
 package cardano-api
   ghc-options: -Werror
@@ -18,7 +40,7 @@ package cardano-api
 package cardano-cli
   ghc-options: -Werror
 
-package cardano-config
+package cardano-git-rev
   ghc-options: -Werror
 
 package cardano-node
@@ -27,7 +49,22 @@ package cardano-node
 package cardano-node-chairman
   ghc-options: -Werror
 
+package cardano-testnet
+  ghc-options: -Werror
+
 package tx-generator
+  ghc-options: -Werror
+
+package trace-dispatcher
+  ghc-options: -Werror
+
+package trace-resources
+  ghc-options: -Werror
+
+package cardano-tracer
+  ghc-options: -Werror
+
+package submit-api
   ghc-options: -Werror
 
 package cryptonite
@@ -35,197 +72,9 @@ package cryptonite
   -- generation is dubious. Set the flag so we use /dev/urandom by default.
   flags: -support_rdrand
 
--- ---------------------------------------------------------
--- Disable all tests by default
-
-tests: False
+tests: True
 
 test-show-details: direct
-
--- Then enable specific tests in this repo
-
-package cardano-api
-  tests: True
-
-package cardano-cli
-  tests: True
-
-package cardano-node
-  tests: True
-
-package cardano-node-chairman
-  tests: True
-
--- The following is needed because Nix is doing something crazy.
-package byron-spec-ledger
-  tests: False
-
-package iohk-monitoring
-  tests: False
-
-package ouroboros-consensus-test
-  tests: False
-
-package ouroboros-consensus-cardano-test
-  tests: False
-
-package ouroboros-network
-  tests: False
-
-package ouroboros-network-framework
-  tests: False
-
-package plutus-tx
-  tests: False
-
-package prettyprinter-configurable
-  tests: False
-
-package small-steps
-  tests: False
-
-package small-steps-test
-  tests: False
-
-package goblins
-  tests: False
-
-package io-sim-classes
-  tests: False
-
-package cardano-ledger-alonzo-test
-  tests: False
-
--- ---------------------------------------------------------
-
--- The two following one-liners will cut off / restore the remainder of this file (for nix-shell users):
--- when using the "cabal" wrapper script provided by nix-shell.
--- --------------------------- 8< --------------------------
--- Please do not put any `source-repository-package` clause above this line.
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/hedgehog-extras
-  tag: ccb5648ad3c93744f67e244706a7a3e36dcfbab0
-  --sha256: 0p9jgpj9cjkg184y1rswz90sw0nq13rld80fa5s59xcyvsa31p7y
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-base
-  tag: 27f93e64a7d6aa78bfcd1072f0f5c088c79c99fe
-  --sha256: 0pblaq2jxcacd0iwm36l18kndzgbyb2587d7370ixqc5fv67qb39
-  subdir:
-    binary
-    binary/test
-    cardano-crypto-class
-    cardano-crypto-praos
-    cardano-crypto-tests
-    slotting
-    strict-containers
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-crypto
-  tag: 07397f0e50da97eaa0575d93bee7ac4b2b2576ec
-  --sha256: 06sdx5ndn2g722jhpicmg96vsrys89fl81k8290b3lr6b1b0w4m3
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: 60a47ae42b7d465160a310d5d7f125f73d19c705
-  --sha256: 1gvl7a5h8rrspnwa1vk42fy1ns94y8llfsxahxz0ykdap7w6kwmm
-  subdir:
-    alonzo/impl
-    byron/chain/executable-spec
-    byron/crypto
-    byron/crypto/test
-    byron/ledger/executable-spec
-    byron/ledger/impl
-    byron/ledger/impl/test
-    cardano-ledger-core
-    semantics/executable-spec
-    semantics/small-steps-test
-    shelley/chain-and-ledger/dependencies/non-integer
-    shelley/chain-and-ledger/executable-spec
-    shelley/chain-and-ledger/shelley-spec-ledger-test
-    shelley-ma/impl
-    shelley-ma/shelley-ma-test
---TODO: disabled until it drops its dep on plutus-tx-plugin
---  alonzo/test
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-prelude
-  tag: fd773f7a58412131512b9f694ab95653ac430852
-  --sha256: 02jddik1yw0222wd6q0vv10f7y8rdgrlqaiy83ph002f9kjx7mh6
-  subdir:
-    cardano-prelude
-    cardano-prelude-test
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/goblins
-  tag: cde90a2b27f79187ca8310b6549331e59595e7ba
-  --sha256: 17c88rbva3iw82yg9srlxjv2ia5wjb9cyqw44hik565f5v9svnyg
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: 46f994e216a1f8b36fe4669b47b2a7011b0e153c
-  --sha256: 1il8fx3misp3650ryj368b3x95ksz01zz3x0z9k00807j93d0ka0
-  subdir:
-    contra-tracer
-    iohk-monitoring
-    plugins/backend-aggregation
-    plugins/backend-ekg
-    plugins/backend-monitoring
-    plugins/backend-trace-forwarder
-    plugins/scribe-systemd
-    tracer-transformers
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/Win32-network
-  tag: 5b3d08c454f425da5cf045fe7865950d7c806691
-  --sha256: 0npyihbaqlih9abdbaj451lm1h0kl5braczy8vn41s3ivbbnvpcw
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/ouroboros-network
-  tag: 8a0ff387541a612b787a6e6b6f02baa9ac8d4c71
-  --sha256: 1k1cc5sqq9h6jrr5psi4vzs1ay3wafj42gpfv8b67cpnxfivj4m6
-  subdir:
-    io-sim
-    io-sim-classes
-    monoidal-synchronisation
-    network-mux
-    ouroboros-consensus
-    ouroboros-consensus-byron
-    ouroboros-consensus-cardano
-    ouroboros-consensus-shelley
-    ouroboros-network
-    ouroboros-network-framework
-    ouroboros-network-testing
-    typed-protocols
-    typed-protocols-examples
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/plutus
-  tag: c89e13e66c5bef628a1f7ea3a3732951be8be8ba
-  --sha256: 0hdck39i4yv656phxjy5ppqgzrq7x3q4b5rf8vj7hrzcs0aggl8r
-  subdir:
-    plutus-core
-    plutus-ledger-api
-    plutus-tx
-    prettyprinter-configurable
-
--- Drops an instance breaking our code. Should be released to Hackage eventually.
-source-repository-package
-  type: git
-  location: https://github.com/Quid2/flat.git
-  tag: 95e5d7488451e43062ca84d5376b3adcc465f1cd
-  --sha256: 06l31x3y93rjpryvlxnpsyq2zyxvb0z6lik6yq2fvh36i5zwvwa3
 
 constraints:
     hedgehog >= 1.0
@@ -235,13 +84,79 @@ constraints:
     -- systemd-2.3.0 requires at least network 3.1.1.0 but it doesn't declare
     -- that dependency
   , network >= 3.1.1.0
+  , HsOpenSSL == 0.11.7.2
+  , algebraic-graphs < 0.7
+  , protolude >= 0.3.2
+
+  -- TODO: these should be set in cabal files, but avoiding setting them in lower dependencies for initial CHaP release
+
+  -- Needed until ouroboros-network gets proper bounds
+  , byron-spec-chain == 0.1.1.1
+  , byron-spec-ledger == 0.1.1.1
+  , cardano-binary == 1.5.0
+  , cardano-ledger-alonzo == 0.1.1.1
+  , cardano-ledger-babbage == 0.1.1.1
+  , cardano-ledger-byron == 0.1.1.1
+  , cardano-ledger-byron-test == 1.4.1
+  , cardano-ledger-conway == 0.1.1.1
+  , cardano-ledger-core == 0.1.1.1
+  , cardano-ledger-pretty == 0.1.1.1
+  , cardano-ledger-shelley == 0.1.1.1
+  , cardano-ledger-shelley-ma == 0.1.1.1
+  , cardano-ledger-shelley-test == 0.1.1.1
+  , cardano-protocol-tpraos == 0.1.1.1
+  , hedgehog-extras >= 0.3.0.3
+
+-- We'll need this once ouroboros has been pushed into CHaP
+-- extra-packages:
+--     ouroboros-consensus-cardano-tools == 0.1.0.0
+
+package snap-server
+  flags: +openssl
 
 package comonad
   flags: -test-doctests
 
-package cardano-ledger-alonzo-test
-  tests: False
-
 allow-newer:
+  ekg:aeson,
+  ekg-json:aeson,
+  threepenny-gui:aeson,
   monoidal-containers:aeson,
-  size-based:template-haskell
+  size-based:template-haskell,
+  snap-server:attoparsec,
+
+-- IMPORTANT
+-- Do NOT add more source-repository-package stanzas here unless they are strictly
+-- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+-- And has the adjustments for the ledger refactor
+source-repository-package
+   type: git
+   location: https://github.com/input-output-hk/hedgehog-extras
+   tag: 9ea1845ca2036e7a1ae9fcebe393526540c5c233
+   --sha256: 1436dwmz9v6ky9kzgnr4flzlzjxwh2zjkds9fnayc1ddang6wwb6
+
+source-repository-package
+  type: git
+  location: https://github.com/denisshevchenko/threepenny-gui
+  tag: 4ec92ded05ccf59ba4a874be4b404ac1b6d666b6
+  --sha256: 00fvvaf4ir4hskq4a6gggbh2wmdvy8j8kn6s4m1p1vlh8m8mq514
+
+-- And has the adjustments for the ledger refactor
+source-repository-package
+   type: git
+   location: https://github.com/input-output-hk/ouroboros-network
+   tag: 72863b0fc78abdc2b8e29f0dda96c06da3dd11d0
+   --sha256: 0qwvx04l9q3h7acb0a3b8iarqcn5bkqhwaplbga5pvryqp3lhn00
+   subdir:
+     monoidal-synchronisation
+     network-mux
+     ouroboros-consensus
+     ouroboros-consensus-byron
+     ouroboros-consensus-cardano
+     ouroboros-consensus-protocol
+     ouroboros-consensus-shelley
+     ouroboros-network
+     ouroboros-network-framework
+     ouroboros-network-testing
+     ouroboros-consensus-cardano-tools

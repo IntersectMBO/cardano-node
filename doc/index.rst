@@ -41,6 +41,7 @@ cardano-node
    stake-pool-operations/start_your_nodes
    stake-pool-operations/withdraw-rewards
    stake-pool-operations/retire_stakepool
+   stake-pool-operations/leadership_schedule
 
 .. toctree::
    :maxdepth: 3

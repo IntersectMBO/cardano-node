@@ -1,10 +1,14 @@
 cabal-version: 3.0
 
 name:                   cardano-cli
-version:                1.27.0
+version:                1.36.0
+synopsis:               The Cardano command-line interface
 description:            The Cardano command-line interface.
+copyright:              2023 Input Output (Hong Kong) Ltd.
 author:                 IOHK
 maintainer:             operations@iohk.io
+category:               Cardano,
+                        CLI,
 license:                Apache-2.0
 license-files:          LICENSE
                         NOTICE
@@ -12,17 +16,15 @@ build-type:             Simple
 extra-source-files:     README.md
 
 Flag unexpected_thunks
-  Description:   Turn on unexpected thunks checks
-  Default:       False
-
-common base
-  build-depends: base >= 4.14 && < 4.15
+  Description:          Turn on unexpected thunks checks
+  Default:              False
 
 common project-config
   default-language:     Haskell2010
 
   default-extensions:   NoImplicitPrelude
                         OverloadedStrings
+  build-depends:        base >= 4.14 && < 4.15
 
   ghc-options:          -Wall
                         -Wcompat
@@ -34,29 +36,27 @@ common project-config
 
 common maybe-unix
   if !os(windows)
-     build-depends:    unix
+     build-depends:     unix
 
 common maybe-Win32
   if os(windows)
-     build-depends:    Win32
+     build-depends:     Win32
 
 library
-  import:               base, project-config
-                      , maybe-unix
+  import:               project-config
                       , maybe-Win32
 
   if flag(unexpected_thunks)
-    cpp-options: -DUNEXPECTED_THUNKS
+    cpp-options:        -DUNEXPECTED_THUNKS
 
   hs-source-dirs:       src
 
   exposed-modules:      Cardano.CLI.Helpers
                         Cardano.CLI.Parsers
+                        Cardano.CLI.Render
                         Cardano.CLI.Run
                         Cardano.CLI.Run.Friendly
                         Cardano.CLI.Types
-
-                        Cardano.CLI.Environment
 
                         Cardano.CLI.Byron.Commands
                         Cardano.CLI.Byron.Parsers
@@ -70,9 +70,12 @@ library
                         Cardano.CLI.Byron.UpdateProposal
                         Cardano.CLI.Byron.Vote
 
+                        Cardano.CLI.IO.Lazy
+
                         Cardano.CLI.Shelley.Commands
                         Cardano.CLI.Shelley.Key
                         Cardano.CLI.Shelley.Orphans
+                        Cardano.CLI.Shelley.Output
                         Cardano.CLI.Shelley.Parsers
                         Cardano.CLI.Shelley.Run
                         Cardano.CLI.Shelley.Run.Address
@@ -86,14 +89,13 @@ library
                         Cardano.CLI.Shelley.Run.StakeAddress
                         Cardano.CLI.Shelley.Run.TextView
                         Cardano.CLI.Shelley.Run.Transaction
-                        Cardano.CLI.Shelley.Script
-
-                        Cardano.CLI.Mary.RenderValue
-                        Cardano.CLI.Mary.ValueParser
+                        Cardano.CLI.Shelley.Run.Read
+                        Cardano.CLI.Shelley.Run.Validate
 
                         Cardano.CLI.TopHandler
 
   other-modules:        Paths_cardano_cli
+  autogen-modules:      Paths_cardano_cli
 
   build-depends:        aeson             >= 1.5.6.0
                       , aeson-pretty      >= 0.8.5
@@ -103,18 +105,22 @@ library
                       , binary
                       , bytestring
                       , base16-bytestring >= 1.0
+                      , canonical-json
                       , cardano-api
                       , cardano-binary
-                      , cardano-config
+                      , cardano-git-rev
                       , cardano-crypto
-                      , cardano-crypto-class
-                      , cardano-crypto-wrapper
-                      , cardano-ledger-alonzo
-                      , cardano-ledger-byron
-                      , cardano-ledger-core
-                      , cardano-ledger-shelley-ma
+                      , cardano-crypto-class ^>= 2.0
+                      , cardano-crypto-wrapper ^>= 1.4
+                      , cardano-data ^>= 0.1
+                      , cardano-ledger-alonzo ^>= 0.1
+                      , cardano-ledger-byron ^>= 0.1
+                      , cardano-ledger-core ^>= 0.1
+                      , cardano-ledger-shelley-ma ^>= 0.1
                       , cardano-prelude
-                      , cardano-slotting
+                      , cardano-protocol-tpraos ^>= 0.1
+                      , cardano-slotting ^>= 0.1
+                      , vector-map ^>= 0.1
                       , contra-tracer
                       , cborg >= 0.2.4 && < 0.3
                       , containers
@@ -124,65 +130,75 @@ library
                       , formatting
                       , iproute
                       , network
-                      , optparse-applicative
+                      , optparse-applicative-fork
                       , ouroboros-consensus
                       , ouroboros-consensus-byron
                       , ouroboros-consensus-cardano
+                      , ouroboros-consensus-protocol
                       , ouroboros-consensus-shelley
                       , ouroboros-network
                       , parsec
-                      , plutus-ledger-api
-                      , shelley-spec-ledger
-                      , small-steps
+                      , prettyprinter
+                      , random
+                      , cardano-ledger-shelley ^>= 0.1
+                      , set-algebra ^>= 0.1
                       , split
-                      , stm
-                      , strict-containers
+                      , cardano-strict-containers ^>= 0.1
                       , text
                       , time
                       , transformers
                       , transformers-except
+                      , unliftio-core
                       , utf8-string
-                      , unordered-containers
                       , vector
                       , yaml
 
 executable cardano-cli
-  import:               base, project-config
+  import:               project-config
                       , maybe-unix
   hs-source-dirs:       app
   main-is:              cardano-cli.hs
   ghc-options:          -threaded -rtsopts "-with-rtsopts=-T"
 
   build-depends:        cardano-cli
-                      , cardano-crypto-class
+                      , cardano-crypto-class ^>= 2.0
                       , cardano-prelude
-                      , optparse-applicative
+                      , optparse-applicative-fork
                       , transformers-except
 
 test-suite cardano-cli-test
-  import:               base, project-config
+  import:               project-config
 
   hs-source-dirs:       test
   main-is:              cardano-cli-test.hs
   type:                 exitcode-stdio-1.0
 
-  build-depends:        bech32            >= 1.1.0
-                      , bytestring
+  build-depends:        aeson
+                      , bech32            >= 1.1.0
                       , base16-bytestring
                       , cardano-api
                       , cardano-api:gen
                       , cardano-cli
                       , cardano-node
                       , cardano-prelude
-                      , cardano-slotting
+                      , cardano-slotting ^>= 0.1
+                      , containers
+                      , directory
                       , exceptions
+                      , filepath
                       , hedgehog
                       , hedgehog-extras
                       , parsec
                       , text
+                      , time
+                      , transformers
+                      , yaml
 
-  other-modules:        Test.Cli.FilePermissions
+  other-modules:        Test.Config.Mainnet
+                        Test.Cli.CliIntermediateFormat
+                        Test.Cli.FilePermissions
                         Test.Cli.ITN
+                        Test.Cli.JSON
                         Test.Cli.MultiAssetParsing
                         Test.Cli.Pioneers.Exercise1
                         Test.Cli.Pioneers.Exercise2
@@ -196,24 +212,26 @@ test-suite cardano-cli-test
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
 test-suite cardano-cli-golden
-  import:               base, project-config
+  import:               project-config
 
   hs-source-dirs:       test
   main-is:              cardano-cli-golden.hs
   type:                 exitcode-stdio-1.0
 
   build-depends:        aeson             >= 1.5.6.0
+                      , base16-bytestring
                       , bytestring
                       , cardano-api
                       , cardano-cli
-                      , cardano-crypto-wrapper
-                      , cardano-ledger-byron
+                      , cardano-crypto-wrapper ^>= 1.4
+                      , cardano-ledger-byron ^>= 0.1
                       , cardano-prelude
                       , cborg
                       , containers
                       , Diff
                       , directory
                       , exceptions
+                      , filepath
                       , hedgehog
                       , hedgehog-extras
                       , text

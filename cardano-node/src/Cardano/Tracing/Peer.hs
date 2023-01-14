@@ -13,32 +13,30 @@ module Cardano.Tracing.Peer
 import           Cardano.Prelude hiding (atomically)
 import           Prelude (String)
 
-import qualified Control.Monad.Class.MonadSTM.Strict as STM
-
+import qualified Control.Concurrent.Class.MonadSTM.Strict as STM
 import           Data.Aeson (ToJSON (..), Value (..), toJSON, (.=))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import           NoThunks.Class (AllowThunk (..), NoThunks)
 import           Text.Printf (printf)
-import           NoThunks.Class (NoThunks, AllowThunk (..))
 
 import           Cardano.BM.Data.LogItem (LOContent (..))
-import           Cardano.BM.Data.Tracer (emptyObject, mkObject)
 import           Cardano.BM.Trace (traceNamedObject)
 import           Cardano.BM.Tracing
 
 import           Ouroboros.Consensus.Block (Header)
-import           Ouroboros.Consensus.Node (remoteAddress)
 import           Ouroboros.Consensus.Util.Orphans ()
+import           Ouroboros.Network.ConnectionId (remoteAddress)
 
 import qualified Ouroboros.Network.AnchoredFragment as Net
 import           Ouroboros.Network.Block (unSlotNo)
 import qualified Ouroboros.Network.Block as Net
 import qualified Ouroboros.Network.BlockFetch.ClientRegistry as Net
 import           Ouroboros.Network.BlockFetch.ClientState (PeerFetchInFlight (..),
-                     PeerFetchStatus (..), readFetchClientState)
+                   PeerFetchStatus (..), readFetchClientState)
 
-import           Cardano.Tracing.Kernel
+import           Cardano.Node.Queries
 
 data Peer blk =
   Peer
@@ -57,7 +55,7 @@ ppPeer (Peer cid _af status inflight) =
   Text.pack $ printf "%-15s %-8s %s" (ppCid cid) (ppStatus status) (ppInFlight inflight)
 
 ppCid :: RemoteConnectionId -> String
-ppCid = takeWhile (/= ':') . show . remoteAddress
+ppCid = show . remoteAddress
 
 ppInFlight :: PeerFetchInFlight header -> String
 ppInFlight f = printf
@@ -122,9 +120,9 @@ tracePeers tr peers = do
 -- | Instances for converting [Peer blk] to Object.
 
 instance ToObject [Peer blk] where
-  toObject MinimalVerbosity _ = emptyObject
-  toObject _ [] = emptyObject
-  toObject verb xs = mkObject
+  toObject MinimalVerbosity _ = mempty
+  toObject _ [] = mempty
+  toObject verb xs = mconcat
     [ "kind"  .= String "NodeKernelPeers"
     , "peers" .= toJSON
       (foldl' (\acc x -> toObject verb x : acc) [] xs)
@@ -132,10 +130,10 @@ instance ToObject [Peer blk] where
 
 instance ToObject (Peer blk) where
   toObject _verb (Peer cid _af status inflight) =
-    mkObject [ "peerAddress"   .= String (Text.pack . show . remoteAddress $ cid)
-             , "peerStatus"    .= String (Text.pack . ppStatus $ status)
-             , "peerSlotNo"    .= String (Text.pack . ppMaxSlotNo . peerFetchMaxSlotNo $ inflight)
-             , "peerReqsInF"   .= String (show . peerFetchReqsInFlight $ inflight)
-             , "peerBlocksInF" .= String (show . Set.size . peerFetchBlocksInFlight $ inflight)
-             , "peerBytesInF"  .= String (show . peerFetchBytesInFlight $ inflight)
-             ]
+    mconcat [ "peerAddress"   .= String (Text.pack . show . remoteAddress $ cid)
+            , "peerStatus"    .= String (Text.pack . ppStatus $ status)
+            , "peerSlotNo"    .= String (Text.pack . ppMaxSlotNo . peerFetchMaxSlotNo $ inflight)
+            , "peerReqsInF"   .= String (show . peerFetchReqsInFlight $ inflight)
+            , "peerBlocksInF" .= String (show . Set.size . peerFetchBlocksInFlight $ inflight)
+            , "peerBytesInF"  .= String (show . peerFetchBytesInFlight $ inflight)
+            ]

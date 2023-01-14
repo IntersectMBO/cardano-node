@@ -5,6 +5,7 @@ module Test.Cardano.Node.Json
   ) where
 
 import           Cardano.Prelude
+import           Cardano.Node.Configuration.TopologyP2P (NetworkTopology)
 
 import           Data.Aeson (decode, encode, fromJSON, toJSON)
 
@@ -54,6 +55,16 @@ prop_roundtrip_NetworkTopology_JSON =
     ntop <- Hedgehog.forAll genNetworkTopology
     Hedgehog.tripping ntop toJSON fromJSON
     Hedgehog.tripping ntop encode decode
+
+-- | Verify that we can parse valid encoding of p2p topology files.
+--
+prop_decode_NetworkTopology_JSON :: Property
+prop_decode_NetworkTopology_JSON =
+  Hedgehog.property $ do
+    enc <- Hedgehog.forAll genNetworkTopologyEncoding
+    let tp :: Maybe NetworkTopology
+        tp = decode enc
+    Hedgehog.assert $ isJust tp
 
 
 -- -----------------------------------------------------------------------------

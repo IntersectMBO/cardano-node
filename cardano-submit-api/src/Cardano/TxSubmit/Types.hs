@@ -15,9 +15,8 @@ module Cardano.TxSubmit.Types
   , renderTxCmdError
   ) where
 
-import           Cardano.Api (AnyCardanoEra, AnyConsensusMode (..), Error (..), TxId)
+import           Cardano.Api (AnyCardanoEra, AnyConsensusMode (..), Error (..), TxId, textShow)
 import           Cardano.Binary (DecoderError)
-import           Cardano.TxSubmit.Util (textShow)
 import           Data.Aeson (ToJSON (..), Value (..))
 import           Data.ByteString.Char8 (ByteString)
 import           Data.Either (Either (Right))

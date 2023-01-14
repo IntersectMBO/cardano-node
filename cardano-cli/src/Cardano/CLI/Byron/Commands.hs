@@ -14,9 +14,8 @@ import           Cardano.Prelude
 import           Cardano.Chain.Update (InstallerHash (..), ProtocolVersion (..),
                      SoftwareVersion (..), SystemTag (..))
 
-import           Cardano.Api (NetworkId, TxIn)
-import           Cardano.Api.Byron (Address (..), ByronAddr, ByronEra,
-                     ByronProtocolParametersUpdate (..), TxOut)
+import           Cardano.Api       hiding (GenesisParameters)
+import           Cardano.Api.Byron hiding (GenesisParameters)
 
 import           Cardano.CLI.Byron.Genesis
 import           Cardano.CLI.Byron.Key
@@ -82,7 +81,7 @@ data ByronCommand =
         -- ^ Signing key of genesis UTxO owner.
         (Address ByronAddr)
         -- ^ Genesis UTxO address.
-        [TxOut ByronEra]
+        [TxOut CtxTx ByronEra]
         -- ^ Tx output.
   | SpendUTxO
         NetworkId
@@ -93,7 +92,7 @@ data ByronCommand =
         -- ^ Signing key of Tx underwriter.
         [TxIn]
         -- ^ Inputs available for spending to the Tx underwriter's key.
-        [TxOut ByronEra]
+        [TxOut CtxTx ByronEra]
         -- ^ Genesis UTxO output Address.
 
   | GetTxId TxFile

@@ -11,6 +11,7 @@ import           Cardano.Prelude
 
 import           Cardano.Api.Shelley (ShelleyGenesis (..))
 
+import           Data.ListMap (ListMap (ListMap))
 import qualified Data.Map.Strict as Map
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 
@@ -20,13 +21,15 @@ import           Ouroboros.Consensus.Shelley.Node (emptyGenesisStaking)
 import           Ouroboros.Consensus.Util.Time
 
 import           Cardano.Ledger.Address (Addr (..))
-import           Cardano.Ledger.Credential (Credential (..), PaymentCredential,
-                   StakeCredential, StakeReference (..))
-import           Cardano.Ledger.BaseTypes (Network (..), truncateUnitInterval)
+import           Cardano.Ledger.BaseTypes (Network (..))
 import           Cardano.Ledger.Coin (Coin (..))
+import           Cardano.Ledger.Credential (Credential (..), PaymentCredential, StakeCredential,
+                   StakeReference (..))
 import           Cardano.Ledger.Keys (GenDelegPair (..), Hash, KeyHash (..), KeyRole (..),
                    VerKeyVRF)
-import           Shelley.Spec.Ledger.PParams (PParams' (..), emptyPParams)
+import           Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), emptyPParams)
+
+import           Test.Cardano.Ledger.Shelley.Utils (unsafeBoundRational)
 
 exampleShelleyGenesis :: ShelleyGenesis StandardShelley
 exampleShelleyGenesis =
@@ -34,7 +37,7 @@ exampleShelleyGenesis =
     { sgSystemStart = posixSecondsToUTCTime $ realToFrac (1234566789 :: Integer)
     , sgNetworkMagic = 4036000900
     , sgNetworkId = Testnet
-    , sgActiveSlotsCoeff = 6.259
+    , sgActiveSlotsCoeff = unsafeBoundRational 0.259
     , sgSecurityParam = 120842
     , sgEpochLength = EpochSize 1215
     , sgSlotsPerKESPeriod = 8541
@@ -43,7 +46,7 @@ exampleShelleyGenesis =
     , sgUpdateQuorum = 16991
     , sgMaxLovelaceSupply = 71
     , sgProtocolParams = emptyPParams
-        { _d = truncateUnitInterval (fromRational 1.9e-2)
+        { _d  = unsafeBoundRational 1.9e-2
         , _maxBBSize = 239857
         , _maxBHSize = 217569
         }
@@ -51,7 +54,7 @@ exampleShelleyGenesis =
                       [( genesisVerKeyHash
                        , GenDelegPair delegVerKeyHash delegVrfKeyHash)
                       ]
-    , sgInitialFunds = Map.fromList [(initialFundedAddress,initialFunds)]
+    , sgInitialFunds = ListMap [(initialFundedAddress,initialFunds)]
     , sgStaking = emptyGenesisStaking
     }
  where

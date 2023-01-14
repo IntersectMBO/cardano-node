@@ -57,7 +57,8 @@ main = do
       LocalNodeClientProtocols {
         localChainSyncClient    = LocalChainSyncClientPipelined (chainSyncClient 50),
         localTxSubmissionClient = Nothing,
-        localStateQueryClient   = Nothing
+        localStateQueryClient   = Nothing,
+        localTxMonitoringClient = Nothing
       }
 
 

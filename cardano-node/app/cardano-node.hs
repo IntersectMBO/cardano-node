@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 
-import           Cardano.Prelude hiding (option)
+import           Cardano.Prelude
 import qualified Data.Text as Text
 import           Prelude (String)
 
@@ -10,7 +10,7 @@ import           Options.Applicative
 import qualified Options.Applicative as Opt
 import           Options.Applicative.Help ((<$$>))
 
-import           Cardano.Config.Git.Rev (gitRev)
+import           Cardano.Git.Rev (gitRev)
 import           Data.Version (showVersion)
 import           Paths_cardano_node (version)
 import           System.Info (arch, compilerName, compilerVersion, os)
@@ -20,6 +20,8 @@ import           Cardano.Node.Handlers.TopLevel
 import           Cardano.Node.Parsers (nodeCLIParser, parserHelpHeader, parserHelpOptions,
                    renderHelpDoc)
 import           Cardano.Node.Run (runNode)
+import           Cardano.Node.Tracing.Documentation (TraceDocumentationCmd (..),
+                   parseTraceDocumentationCmd, runTraceDocumentationCmd)
 
 main :: IO ()
 main = toplevelExceptionHandler $ do
@@ -27,7 +29,8 @@ main = toplevelExceptionHandler $ do
     cmd <- Opt.customExecParser p opts
 
     case cmd of
-      RunCmd args -> runRunCommand args
+      RunCmd args -> runNode args
+      TraceDocumentation tdc -> runTraceDocumentationCmd tdc
       VersionCmd  -> runVersionCommand
 
     where
@@ -35,8 +38,10 @@ main = toplevelExceptionHandler $ do
 
       opts :: Opt.ParserInfo Command
       opts =
-        Opt.info (fmap RunCmd nodeCLIParser <|> parseVersionCmd
-                    <**> helperBrief "help" "Show this help text" nodeCliHelpMain)
+        Opt.info (fmap RunCmd nodeCLIParser
+                  <|> fmap TraceDocumentation parseTraceDocumentationCmd
+                  <|> parseVersionCmd
+                  <**> helperBrief "help" "Show this help text" nodeCliHelpMain)
 
           ( Opt.fullDesc <>
             Opt.progDesc "Start node of the Cardano blockchain."
@@ -55,6 +60,7 @@ main = toplevelExceptionHandler $ do
 
 
 data Command = RunCmd PartialNodeConfiguration
+             | TraceDocumentation TraceDocumentationCmd
              | VersionCmd
 
 -- Yes! A --version flag or version command. Either guess is right!
@@ -88,9 +94,6 @@ runVersionCommand =
   where
     renderVersion = Text.pack . showVersion
 
-
-runRunCommand :: PartialNodeConfiguration -> IO ()
-runRunCommand pnc = liftIO $ runNode pnc
 
 command' :: String -> String -> Parser a -> Mod CommandFields a
 command' c descr p =

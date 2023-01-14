@@ -1,17 +1,20 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 module Cardano.CLI.Parsers
   ( opts
   , pref
   ) where
 
 import           Cardano.Prelude
-import           Prelude (String)
-
-import           Options.Applicative
-import qualified Options.Applicative as Opt
-
 import           Cardano.CLI.Byron.Parsers (backwardsCompatibilityCommands, parseByronCommands)
+import           Cardano.CLI.Render (customRenderHelp)
 import           Cardano.CLI.Run (ClientCommand (..))
 import           Cardano.CLI.Shelley.Parsers (parseShelleyCommands)
+import           Options.Applicative
+import           Prelude (String)
+
+import qualified Options.Applicative as Opt
 
 command' :: String -> String -> Parser a -> Mod CommandFields a
 command' c descr p =
@@ -29,7 +32,10 @@ opts =
     )
 
 pref :: ParserPrefs
-pref = Opt.prefs showHelpOnEmpty
+pref = Opt.prefs $ mempty
+  <> showHelpOnEmpty
+  <> helpHangUsageOverflow 10
+  <> helpRenderHelp customRenderHelp
 
 parseClientCommand :: Parser ClientCommand
 parseClientCommand =
@@ -41,7 +47,7 @@ parseClientCommand =
     , parseByron
     , parseDeprecatedShelleySubcommand
     , backwardsCompatibilityCommands
-    , parseDisplayVersion
+    , parseDisplayVersion opts
     ]
 
 parseByron :: Parser ClientCommand
@@ -78,12 +84,16 @@ parseDeprecatedShelleySubcommand =
     ]
 
 -- Yes! A --version flag or version command. Either guess is right!
-parseDisplayVersion :: Parser ClientCommand
-parseDisplayVersion =
+parseDisplayVersion :: ParserInfo a -> Parser ClientCommand
+parseDisplayVersion allParserInfo =
       subparser
         (mconcat
          [ commandGroup "Miscellaneous commands"
          , metavar "Miscellaneous commands"
+         , command'
+           "help"
+           "Show all help"
+           (pure (Help pref allParserInfo))
          , command'
            "version"
            "Show the cardano-cli version"

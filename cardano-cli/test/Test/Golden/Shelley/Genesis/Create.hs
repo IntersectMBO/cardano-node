@@ -11,11 +11,12 @@ import           Prelude (String)
 import           Test.OptParse as OP
 
 import qualified Data.Aeson as J
+import qualified Data.Aeson.Key as J
+import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.Aeson.Types as J
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.Set as S
-import qualified Data.Text as T
 import qualified Data.Time.Clock as DT
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.Time as H
@@ -35,7 +36,7 @@ parseSystemStart :: J.Value -> J.Parser String
 parseSystemStart = J.withObject "Object" $ \o -> o J..: "systemStart"
 
 parseHashMap :: J.Value -> J.Parser (HM.HashMap String J.Value)
-parseHashMap (J.Object hm) = pure $ HM.fromList $ fmap (first T.unpack) (HM.toList hm)
+parseHashMap (J.Object hm) = pure $ HM.fromList $ fmap (first J.toString) (KeyMap.toList hm)
 parseHashMap v = J.typeMismatch "Object" v
 
 parseDelegateCount :: J.Value -> J.Parser Int
@@ -65,9 +66,13 @@ golden_shelleyGenesisCreate :: Property
 golden_shelleyGenesisCreate = propertyOnce $ do
   H.moduleWorkspace "tmp" $ \tempDir -> do
     sourceGenesisSpecFile <- noteInputFile "test/data/golden/shelley/genesis/genesis.spec.json"
+    sourceAlonzoGenesisSpecFile <- noteInputFile "test/data/golden/alonzo/genesis.alonzo.spec.json"
+
     genesisSpecFile <- noteTempFile tempDir "genesis.spec.json"
+    alonzoSpecFile <- noteTempFile tempDir "genesis.alonzo.spec.json"
 
     liftIO $ IO.copyFile sourceGenesisSpecFile genesisSpecFile
+    liftIO $ IO.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
 
     let genesisFile = tempDir <> "/genesis.json"
 
@@ -104,7 +109,9 @@ golden_shelleyGenesisCreate = propertyOnce $ do
     actualStartTime === fmtStartTime
     actualDelegateCount === delegateCount
     actualDelegateCount === utxoCount
-    actualTotalSupply === supply -- Check that the sum of the initial fund amounts matches the total supply
+    actualTotalSupply === supply - 1000000  -- Check that the sum of the initial fund amounts matches the total supply
+                                            -- We don't use the entire supply so there is ada in the treasury. This is
+                                            -- required for stake pool rewards.
 
     -- Check uniqueness and count of hash keys
     S.size (S.fromList actualHashKeys) === length actualHashKeys -- This isn't strictly necessary because we use aeson which guarantees uniqueness of keys
@@ -147,6 +154,12 @@ golden_shelleyGenesisCreate = propertyOnce $ do
     (delegateCount, fmtDelegateCount) <- fmap (OP.withSnd show) $ forAll $ G.int (R.linear 4 19)
     (utxoCount, fmtUtxoCount) <- fmap (OP.withSnd show) $ forAll $ G.int (R.linear 4 19)
 
+    sourceAlonzoGenesisSpecFile <- noteInputFile "test/data/golden/alonzo/genesis.alonzo.spec.json"
+
+    alonzoSpecFile <- noteTempFile tempDir "genesis.alonzo.spec.json"
+
+    liftIO $ IO.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
+
     -- Create the genesis json file and required keys
     void $ execCardanoCLI
         [ "genesis","create"
@@ -174,8 +187,9 @@ golden_shelleyGenesisCreate = propertyOnce $ do
     actualStartTime === fmtStartTime
     actualDelegateCount === delegateCount
     actualDelegateCount === utxoCount
-    actualTotalSupply === supply -- Check that the sum of the initial fund amounts matches the total supply
-
+    actualTotalSupply === supply - 1000000  -- Check that the sum of the initial fund amounts matches the total supply
+                                            -- We don't use the entire supply so there is ada in the treasury. This is
+                                            -- required for stake pool rewards.
     -- Check uniqueness and count of hash keys
     S.size (S.fromList actualHashKeys) === length actualHashKeys -- This isn't strictly necessary because we use aeson which guarantees uniqueness of keys
     S.size (S.fromList actualHashKeys) === delegateCount

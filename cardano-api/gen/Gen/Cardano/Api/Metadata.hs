@@ -6,12 +6,13 @@ module Gen.Cardano.Api.Metadata
   , genJsonForTxMetadata
   ) where
 
-import           Cardano.Prelude
 import           Cardano.Api
+import           Cardano.Prelude
 import           Data.Aeson (ToJSON (..))
 import           Hedgehog (Gen)
 
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Key as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.Map.Strict as Map
@@ -30,7 +31,7 @@ genJsonForTxMetadata mapping =
     Gen.sized $ \sz ->
       Aeson.object <$>
       Gen.list (Range.linear 0 (fromIntegral sz))
-               ((,) <$> (Text.pack . show <$> Gen.word64 Range.constantBounded)
+               ((,) <$> (Aeson.fromString . show <$> Gen.word64 Range.constantBounded)
                     <*> genJsonForTxMetadataValue mapping)
 
 genJsonForTxMetadataValue :: TxMetadataJsonSchema -> Gen Aeson.Value
@@ -76,10 +77,13 @@ genJsonForTxMetadataValue TxMetadataJsonNoSchema = genJsonValue
     genJsonList = Gen.sized $ \sz ->
                     Gen.list (Range.linear 0 (fromIntegral sz)) genJsonValue
 
-    genJsonMap :: Gen [(Text, Aeson.Value)]
+    genJsonKey :: Gen Aeson.Key
+    genJsonKey = fmap Aeson.fromText genJsonText
+
+    genJsonMap :: Gen [(Aeson.Key, Aeson.Value)]
     genJsonMap = Gen.sized $ \sz ->
                    Gen.list (Range.linear 0 (fromIntegral sz)) $
-                     (,) <$> genJsonText <*> genJsonValue
+                     (,) <$> genJsonKey <*> genJsonValue
 
 
 genJsonForTxMetadataValue TxMetadataJsonDetailedSchema = genJsonValue

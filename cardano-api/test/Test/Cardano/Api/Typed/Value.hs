@@ -1,21 +1,17 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Test.Cardano.Api.Typed.Value
   ( tests
   ) where
 
-import           Cardano.Api.Shelley
-import           Data.Aeson
+import           Cardano.Api (ValueNestedBundle(..), ValueNestedRep (..), valueFromNestedRep, valueToNestedRep)
+import           Data.Aeson (eitherDecode, encode)
 import           Data.List (groupBy, sort)
-import           Gen.Cardano.Api.Typed
-import           Gen.Tasty.Hedgehog.Group (fromGroup)
-import           Hedgehog (Property, discover, forAll, property, tripping, (===))
+import           Gen.Cardano.Api.Typed (genAssetName, genValueDefault, genValueNestedRep)
+import           Hedgehog (Property, forAll, property, tripping, (===))
 import           Prelude
-import           Test.Tasty (TestTree)
+import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.Hedgehog (testPropertyNamed)
 
 import qualified Data.Map.Strict as Map
-
-{- HLINT ignore "Use map once" -}
 
 prop_roundtrip_Value_JSON :: Property
 prop_roundtrip_Value_JSON =
@@ -38,8 +34,7 @@ canonicalise :: ValueNestedRep -> ValueNestedRep
 canonicalise =
     ValueNestedRep
   . filter (not . isZeroOrEmpty)
-  . map filterZeros
-  . map (foldl1 mergeBundle)
+  . map (filterZeros . foldl1 mergeBundle)
   . groupBy samePolicyId
   . sort
   . (\(ValueNestedRep bundles) -> bundles)
@@ -68,7 +63,27 @@ canonicalise =
     isZeroOrEmpty (ValueNestedBundleAda q) = q == 0
     isZeroOrEmpty (ValueNestedBundle _ as) = Map.null as
 
+
+prop_roundtrip_AssetName_JSON :: Property
+prop_roundtrip_AssetName_JSON =
+  property $ do
+    v <- forAll genAssetName
+    tripping v encode eitherDecode
+
+prop_roundtrip_AssetName_JSONKey :: Property
+prop_roundtrip_AssetName_JSONKey =
+  property $ do
+    v <- forAll genAssetName
+    tripping (Map.singleton v ()) encode eitherDecode
+
+
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
-tests = fromGroup $$discover
+tests = testGroup "Test.Cardano.Api.Typed.Value"
+  [ testPropertyNamed "roundtrip Value JSON"              "roundtrip Value JSON"              prop_roundtrip_Value_JSON
+  , testPropertyNamed "roundtrip Value flatten unflatten" "roundtrip Value flatten unflatten" prop_roundtrip_Value_flatten_unflatten
+  , testPropertyNamed "roundtrip Value unflatten flatten" "roundtrip Value unflatten flatten" prop_roundtrip_Value_unflatten_flatten
+  , testPropertyNamed "roundtrip AssetName JSON"          "roundtrip AssetName JSON"          prop_roundtrip_AssetName_JSON
+  , testPropertyNamed "roundtrip AssetName JSONKey"       "roundtrip AssetName JSONKey"       prop_roundtrip_AssetName_JSONKey
+  ]

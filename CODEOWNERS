@@ -1,14 +1,13 @@
 # Technical writers
-doc                                                           @fsancheziohk @nahern @olgahryniuk
-README.*                                                      @fsancheziohk @nahern @olgahryniuk
-cardano-cli/README.md                                         @fsancheziohk @nahern @olgahryniuk
+README.*                                                      @Jimbo4350 @newhoggy @olgahryniuk
+cardano-cli/README.md                                         @Jimbo4350 @newhoggy @olgahryniuk
 
 # Release manager added for notification on dependency updates
-cabal.project                                                 @LaurenceIO
+cabal.project                                                 @Jimbo4350 @newhoggy @LaurenceIO
 
 # General reviewers per PR
-#                       David          Duncan   Jordan     Erik   John
-*                       @DavidEichmann @dcoutts @Jimbo4350 @erikd @newhoggy
+#                        Duncan   Jordan     Erik   John      Jared         Robert        Carlos
+*                        @dcoutts @Jimbo4350 @erikd @newhoggy @JaredCorduan @LudvikGalois @CarlosLopezDeLara
 
 # Specific reviewers for code pieces
 # NB - The last matching pattern takes precedence
@@ -16,24 +15,28 @@ cabal.project                                                 @LaurenceIO
 
 
 # /doc folder and README.* needs to be owned by @docs-access
-doc                                                           @docs-access
-README.*                                                      @docs-access
+doc/                                                          @input-output-hk/docs-access
 
-bench/tx-generator                                            @deepfire @MarcFontaine
-bench                                                         @deepfire @denisshevchenko @jutaro @MarcFontaine
-nix/workbench                                                 @deepfire @denisshevchenko @jutaro @MarcFontaine
-nix/supervisord-cluster                                       @deepfire @denisshevchenko @jutaro @MarcFontaine
-Makefile                                                      @deepfire
+README.*                                                      @input-output-hk/docs-access
 
-.buildkite                                                    @devops
-.github                                                       @devops
-ci                                                            @devops
-configuration                                                 @devops
-nix                                                           @devops
-*.nix                                                         @devops
-flake.lock                                                    @devops
-bors.toml                                                     @devops
-cardano-node/src/Cardano/Tracing/OrphanInstances/Network.hs   @devops @coot @karknu
-cardano-node/src/Cardano/Node/Configuration/Logging.hs        @devops
-cardano-node/src/Cardano/Node/Configuration/Socket.hs         @devops
-cardano-node/src/Cardano/Node/Run.hs                          @devops
+bench/                                                        @deepfire @jutaro @mgmeier @fmaste @cleverca22
+cardano-tracer/                                               @deepfire
+nix/workbench/                                                @deepfire @jutaro @mgmeier @fmaste
+trace-dispatcher/                                             @deepfire @jutaro @mgmeier
+trace-forward/                                                @deepfire @jutaro @mgmeier
+trace-resources/                                              @deepfire @jutaro @mgmeier
+Makefile                                                      @deepfire @mgmeier @fmaste
+*.mk                                                          @deepfire @mgmeier @fmaste
+
+nix/                                                          @input-output-hk/devops @deepfire @mgmeier @fmaste
+*.nix                                                         @input-output-hk/devops @deepfire @mgmeier @fmaste
+flake.lock                                                    @input-output-hk/devops @deepfire @mgmeier @fmaste
+
+.buildkite                                                    @Jimbo4350 @newhoggy @input-output-hk/devops
+.github                                                       @Jimbo4350 @newhoggy @input-output-hk/devops
+ci/                                                           @Jimbo4350 @newhoggy @input-output-hk/devops
+configuration/                                                @Jimbo4350 @newhoggy @input-output-hk/devops
+bors.toml                                                     @Jimbo4350 @newhoggy @input-output-hk/devops
+docker-compose.yml                                            @Jimbo4350 @newhoggy @input-output-hk/devops
+cardano-node/src/Cardano/Node/Tracing/                        @Jimbo4350 @newhoggy @deepfire @jutaro @coot
+cardano-node/src/Cardano/Tracing/OrphanInstances/             @Jimbo4350 @newhoggy @input-output-hk/devops @coot

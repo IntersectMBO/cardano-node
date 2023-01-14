@@ -14,11 +14,11 @@ module Cardano.CLI.Byron.Key
   )
 where
 
-import           Cardano.Prelude hiding (option, show, trace, (%))
+import           Cardano.Prelude hiding (show, trace, (%))
 import           Prelude (show)
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, left,
-                     right)
+                   right)
 import qualified Data.ByteString as SB
 import qualified Data.ByteString.UTF8 as UTF8
 import           Data.String (fromString)
@@ -28,7 +28,6 @@ import           Formatting (build, sformat, (%))
 import           Cardano.Api.Byron
 
 import qualified Cardano.Chain.Common as Common
-import           Cardano.CLI.Helpers (textShow)
 import           Cardano.CLI.Shelley.Commands (ByronKeyFormat (..))
 import           Cardano.CLI.Types
 import qualified Cardano.Crypto.Signing as Crypto
@@ -71,9 +70,9 @@ newtype NewVerificationKeyFile =
 --   its hash and formatted view.
 prettyPublicKey :: VerificationKey ByronKey-> Text
 prettyPublicKey (ByronVerificationKey vk) =
-  sformat (  "    public key hash: "% build %
-           "\npublic key (base64): "% Crypto.fullVerificationKeyF %
-           "\n   public key (hex): "% Crypto.fullVerificationKeyHexF)
+  sformat (  "    public key hash: " % build %
+           "\npublic key (base64): " % Crypto.fullVerificationKeyF %
+           "\n   public key (hex): " % Crypto.fullVerificationKeyHexF)
     (Common.addressHash vk) vk vk
 
 byronWitnessToVerKey :: SomeByronSigningKey -> VerificationKey ByronKey
@@ -87,13 +86,13 @@ readByronSigningKey bKeyFormat (SigningKeyFile fp) = do
   sK <- handleIOExceptT (ReadSigningKeyFailure fp . T.pack . displayException) $ SB.readFile fp
   case bKeyFormat of
     LegacyByronKeyFormat ->
-      case deserialiseFromRawBytes (AsSigningKey AsByronKeyLegacy) sK of
-        Just legKey -> right $ AByronSigningKeyLegacy legKey
-        Nothing -> left $ LegacySigningKeyDeserialisationFailed fp
+      case eitherDeserialiseFromRawBytes (AsSigningKey AsByronKeyLegacy) sK of
+        Right legKey -> right $ AByronSigningKeyLegacy legKey
+        Left _ -> left $ LegacySigningKeyDeserialisationFailed fp
     NonLegacyByronKeyFormat ->
-      case deserialiseFromRawBytes (AsSigningKey AsByronKey) sK of
-        Just nonLegSKey -> right $ AByronSigningKey nonLegSKey
-        Nothing -> left $ SigningKeyDeserialisationFailed fp
+      case eitherDeserialiseFromRawBytes (AsSigningKey AsByronKey) sK of
+        Right nonLegSKey -> right $ AByronSigningKey nonLegSKey
+        Left _ -> left $ SigningKeyDeserialisationFailed fp
 
 -- | Read verification key from a file.  Throw an error if the file can't be read
 -- or the key fails to deserialise.

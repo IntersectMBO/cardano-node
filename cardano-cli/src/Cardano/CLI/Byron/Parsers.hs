@@ -21,7 +21,7 @@ module Cardano.CLI.Byron.Parsers
   , parseUpdateVoteThd
   ) where
 
-import           Cardano.Prelude hiding (option)
+import           Cardano.Prelude
 import           Prelude (String)
 
 import           Control.Monad (fail)
@@ -54,10 +54,11 @@ import           Cardano.Chain.Update (ApplicationName (..), InstallerHash (..),
                    ProtocolVersion (..), SoftforkRule (..), SoftwareVersion (..), SystemTag (..),
                    checkApplicationName, checkSystemTag)
 
-import           Cardano.Api hiding (UpdateProposal, GenesisParameters)
-import           Cardano.Api.Byron (Address (..), ByronProtocolParametersUpdate (..), Lovelace (..),
+import           Cardano.Api hiding (GenesisParameters, UpdateProposal)
+import           Cardano.Api.Byron (Address (..), ByronProtocolParametersUpdate (..),
                    toByronLovelace)
 
+import           Cardano.Api.Shelley (ReferenceScript (ReferenceScriptNone))
 import           Cardano.CLI.Byron.Commands
 import           Cardano.CLI.Byron.Genesis
 import           Cardano.CLI.Byron.Key
@@ -113,7 +114,7 @@ pNodeCmdBackwardCompatible = Opt.subparser $ pNodeCmd <> Opt.internal
 
 parseCBORObject :: Parser CBORObject
 parseCBORObject = asum
-  [ CBORBlockByron <$> option auto
+  [ CBORBlockByron <$> Opt.option auto
       (  long "byron-block"
       <> help
           (   "The CBOR file is a byron era block."
@@ -262,7 +263,7 @@ parseTestnetBalanceOptions =
 
 parseTxIn :: Parser TxIn
 parseTxIn =
-  option
+  Opt.option
   (readerFromAttoParser parseTxInAtto)
   $ long "txin"
     <> metavar "(TXID,INDEX)"
@@ -278,18 +279,19 @@ parseTxIdAtto :: Atto.Parser TxId
 parseTxIdAtto = (<?> "Transaction ID (hexadecimal)") $ do
   bstr <- Atto.takeWhile1 Char.isHexDigit
   case deserialiseFromRawBytesHex AsTxId bstr of
-    Just addr -> return addr
-    Nothing -> fail $ "Incorrect transaction id format:: " ++ show bstr
+    Right addr -> return addr
+    Left e -> fail $ "Incorrect transaction id format: " ++ displayError e
 
 parseTxIxAtto :: Atto.Parser TxIx
 parseTxIxAtto = toEnum <$> Atto.decimal
 
-parseTxOut :: Parser (TxOut ByronEra)
+parseTxOut :: Parser (TxOut CtxTx ByronEra)
 parseTxOut =
-  option
+  Opt.option
     ( (\(addr, lovelace) -> TxOut (pAddressInEra addr)
                                   (pLovelaceTxOut lovelace)
-                                  TxOutDatumHashNone)
+                                  TxOutDatumNone
+                                  ReferenceScriptNone)
       <$> auto
     )
     $ long "txout"
@@ -432,7 +434,7 @@ parseByronVote =
 
 parseScriptVersion :: Parser Word16
 parseScriptVersion =
-  option auto
+  Opt.option auto
     ( long "script-version"
     <> metavar "WORD16"
     <> help "Proposed script version."
@@ -440,14 +442,14 @@ parseScriptVersion =
 
 parseSlotDuration :: Parser Natural
 parseSlotDuration =
-  option auto
+  Opt.option auto
     ( long "slot-duration"
     <> metavar "NATURAL"
     <> help "Proposed slot duration."
     )
 
 parseSystemTag :: Parser SystemTag
-parseSystemTag = option (eitherReader checkSysTag)
+parseSystemTag = Opt.option (eitherReader checkSysTag)
                    ( long "system-tag"
                    <> metavar "STRING"
                    <> help "Identify which system (linux, win64, etc) the update proposal is for."
@@ -470,7 +472,7 @@ parseInstallerHash =
 
 parseMaxBlockSize :: Parser Natural
 parseMaxBlockSize =
-  option auto
+  Opt.option auto
     ( long "max-block-size"
     <> metavar "NATURAL"
     <> help "Proposed max block size."
@@ -478,7 +480,7 @@ parseMaxBlockSize =
 
 parseMaxHeaderSize :: Parser Natural
 parseMaxHeaderSize =
-  option auto
+  Opt.option auto
     ( long "max-header-size"
     <> metavar "NATURAL"
     <> help "Proposed max block header size."
@@ -486,7 +488,7 @@ parseMaxHeaderSize =
 
 parseMaxTxSize :: Parser Natural
 parseMaxTxSize =
-  option auto
+  Opt.option auto
     ( long "max-tx-size"
     <> metavar "NATURAL"
     <> help "Proposed max transaction size."
@@ -494,7 +496,7 @@ parseMaxTxSize =
 
 parseMaxProposalSize :: Parser  Natural
 parseMaxProposalSize =
-  option auto
+  Opt.option auto
     ( long "max-proposal-size"
     <> metavar "NATURAL"
     <> help "Proposed max update proposal size."
@@ -507,9 +509,9 @@ parseMpcThd =
 
 parseProtocolVersion :: Parser ProtocolVersion
 parseProtocolVersion =
-  ProtocolVersion <$> (parseWord "protocol-version-major" "Protocol verson major." "WORD16" :: Parser Word16)
-                  <*> (parseWord "protocol-version-minor" "Protocol verson minor." "WORD16" :: Parser Word16)
-                  <*> (parseWord "protocol-version-alt" "Protocol verson alt." "WORD8" :: Parser Word8)
+  ProtocolVersion <$> (parseWord "protocol-version-major" "Protocol version major." "WORD16" :: Parser Word16)
+                  <*> (parseWord "protocol-version-minor" "Protocol version minor." "WORD16" :: Parser Word16)
+                  <*> (parseWord "protocol-version-alt" "Protocol version alt." "WORD8" :: Parser Word8)
 
 parseHeavyDelThd :: Parser Byron.LovelacePortion
 parseHeavyDelThd =
@@ -529,7 +531,7 @@ parseUpdateProposalThd =
 parseUpdateProposalTTL :: Parser SlotNumber
 parseUpdateProposalTTL =
   SlotNumber
-    <$> option auto
+    <$> Opt.option auto
           ( long "time-to-live"
           <> metavar "WORD64"
           <> help "Proposed time for an update proposal to live."
@@ -548,7 +550,7 @@ parseSoftwareVersion =
   SoftwareVersion <$> parseApplicationName <*> parseNumSoftwareVersion
 
 parseApplicationName :: Parser ApplicationName
-parseApplicationName = option (eitherReader checkAppNameLength)
+parseApplicationName = Opt.option (eitherReader checkAppNameLength)
        (  long "application-name"
        <> metavar "STRING"
        <> help "The name of the application."
@@ -582,7 +584,7 @@ parseVoteBool = flag' True (long "vote-yes" <> help "Vote yes with respect to an
 parseUnlockStakeEpoch :: Parser EpochNumber
 parseUnlockStakeEpoch =
   EpochNumber
-    <$> option auto
+    <$> Opt.option auto
       ( long "unlock-stake-epoch"
       <> metavar "WORD64"
       <> help "Proposed epoch to unlock all stake."
@@ -590,14 +592,14 @@ parseUnlockStakeEpoch =
 
 
 parseWord :: Integral a => String -> String -> String -> Parser a
-parseWord optname desc metvar = option (fromInteger <$> auto)
+parseWord optname desc metvar = Opt.option (fromInteger <$> auto)
   $ long optname <> metavar metvar <> help desc
 
 
 
 parseAddress :: String -> String -> Parser (Address ByronAddr)
 parseAddress opt desc =
-  option (cliParseBase58Address <$> str)
+  Opt.option (cliParseBase58Address <$> str)
     $ long opt <> metavar "ADDR" <> help desc
 
 parseByronKeyFormat :: Parser ByronKeyFormat
@@ -639,7 +641,7 @@ parseFractionWithDefault
   -> Double
   -> Parser Rational
 parseFractionWithDefault optname desc w =
-  toRational <$> option readDouble
+  toRational <$> Opt.option readDouble
     ( long optname
     <> metavar "DOUBLE"
     <> help desc
@@ -698,7 +700,7 @@ parseTxFile opt =
 
 parseUTCTime :: String -> String -> Parser UTCTime
 parseUTCTime optname desc =
-  option (posixSecondsToUTCTime . fromInteger <$> auto)
+  Opt.option (posixSecondsToUTCTime . fromInteger <$> auto)
     $ long optname <> metavar "POSIXSECONDS" <> help desc
 
 cliParseBase58Address :: Text -> Address ByronAddr
@@ -709,13 +711,13 @@ cliParseBase58Address t =
 
 parseFraction :: String -> String -> Parser Rational
 parseFraction optname desc =
-  option (toRational <$> readDouble) $
+  Opt.option (toRational <$> readDouble) $
       long optname
    <> metavar "DOUBLE"
    <> help desc
 
 parseIntegral :: Integral a => String -> String -> Parser a
-parseIntegral optname desc = option (fromInteger <$> auto)
+parseIntegral optname desc = Opt.option (fromInteger <$> auto)
   $ long optname <> metavar "INT" <> help desc
 
 parseLovelace :: String -> String -> Parser Byron.Lovelace
@@ -741,15 +743,6 @@ readDouble = do
   when (f < 0) $ readerError "fraction must be >= 0"
   when (f > 1) $ readerError "fraction must be <= 1"
   return f
-
-parseFilePath :: String -> String -> Parser FilePath
-parseFilePath optname desc =
-  strOption
-    ( long optname
-    <> metavar "FILEPATH"
-    <> help desc
-    <> completer (bashCompleter "file")
-    )
 
 parseSigningKeyFile :: String -> String -> Parser SigningKeyFile
 parseSigningKeyFile opt desc = SigningKeyFile <$> parseFilePath opt desc

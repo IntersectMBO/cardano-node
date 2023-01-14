@@ -1,0 +1,72 @@
+UseTraceDispatcher: True
+
+TraceOptions:
+  "":
+    severity: Notice
+    detail: DNormal
+    backends:
+      - Stdout MachineFormat
+      - EKGBackend
+      - Forwarder
+
+# More interesing tracers
+
+  ChainDB:
+    severity: Info
+
+  AcceptPolicy:
+    severity: Info
+
+  DNSResolver:
+    severity: Info
+
+  DNSSubscription:
+    severity: Info
+
+  DiffusionInit:
+    severity: Info
+
+  ErrorPolicy:
+    severity: Info
+
+  Forge:
+    severity: Info
+
+  IpSubscription:
+    severity: Info
+
+  LocalErrorPolicy:
+    severity: Info
+
+  Mempool:
+    severity: Info
+
+  Resources:
+    severity: Info
+
+#---------------------------
+# Frequency limited tracer
+  ChainDB.AddBlockEvent.AddedBlockToQueue:
+    maxFrequency: 2.0
+
+  ChainDB.AddBlockEvent.AddedBlockToVolatileDB:
+    maxFrequency: 2.0
+
+  ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB:
+    maxFrequency: 2.0
+
+  ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate:
+    maxFrequency: 2.0
+
+  BlockFetchClient.CompletedBlockFetch:
+    maxFrequency: 2.0
+
+# Options for the trace forwarder
+TraceOptionForwarder:
+    address:
+      filePath: /tmp/forwarder.sock
+    mode: Initiator
+
+TraceOptionPeerFrequency: 2000
+
+TraceOptionResourceFrequency: 5000

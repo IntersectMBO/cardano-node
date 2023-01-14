@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Cardano.Node.Protocol.Byron
@@ -12,32 +14,35 @@ module Cardano.Node.Protocol.Byron
 
 
 import           Cardano.Prelude
-import           Control.Monad.Trans.Except.Extra (bimapExceptT, firstExceptT, hoistEither,
-                   hoistMaybe, left)
+import           Control.Monad.Trans.Except.Extra (bimapExceptT, firstExceptT, hoistEither, left)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as Text
 
 import           Cardano.Api.Byron
-import qualified Cardano.Api.Protocol.Types as Protocol
 
 import qualified Cardano.Crypto.Hash as Crypto
 
 import qualified Cardano.Crypto.Hashing as Byron.Crypto
 
 import qualified Cardano.Chain.Genesis as Genesis
-import qualified Cardano.Chain.UTxO as UTxO
 import qualified Cardano.Chain.Update as Update
+import qualified Cardano.Chain.UTxO as UTxO
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
 
+import           Cardano.Node.Types
 import           Ouroboros.Consensus.Cardano
 import qualified Ouroboros.Consensus.Cardano as Consensus
-
-import           Cardano.Node.Types
+import qualified Ouroboros.Consensus.Mempool.TxLimits as TxLimits
 
 import           Cardano.Node.Protocol.Types
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
+
+import           Cardano.Node.Tracing.Era.Byron ()
+import           Cardano.Node.Tracing.Era.HardFork ()
+import           Cardano.Node.Tracing.Tracers.ChainDB ()
+
 
 
 ------------------------------------------------------------------------------
@@ -73,7 +78,7 @@ mkSomeConsensusProtocolByron NodeByronProtocolConfiguration {
 
     optionalLeaderCredentials <- readLeaderCredentials genesisConfig files
 
-    return $ SomeConsensusProtocol Protocol.ByronBlockType $ Protocol.ProtocolInfoArgsByron $ Consensus.ProtocolParamsByron {
+    return $ SomeConsensusProtocol ByronBlockType $ ProtocolInfoArgsByron $ Consensus.ProtocolParamsByron {
         byronGenesis = genesisConfig,
         byronPbftSignatureThreshold =
           PBftSignatureThreshold <$> npcByronPbftSignatureThresh,
@@ -87,7 +92,9 @@ mkSomeConsensusProtocolByron NodeByronProtocolConfiguration {
             npcByronApplicationName
             npcByronApplicationVersion,
         byronLeaderCredentials =
-          optionalLeaderCredentials
+          optionalLeaderCredentials,
+        byronMaxTxCapacityOverrides =
+          TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
 
 readGenesis :: GenesisFile
@@ -149,8 +156,9 @@ readLeaderCredentials genesisConfig
 
          signingKeyFileBytes <- liftIO $ LB.readFile signingKeyFile
          delegCertFileBytes <- liftIO $ LB.readFile delegCertFile
-         ByronSigningKey signingKey <- hoistMaybe (SigningKeyDeserialiseFailure signingKeyFile)
-                         $ deserialiseFromRawBytes (AsSigningKey AsByronKey) $ LB.toStrict signingKeyFileBytes
+         ByronSigningKey signingKey <- firstExceptT (const (SigningKeyDeserialiseFailure signingKeyFile))
+                         . hoistEither
+                         $ eitherDeserialiseFromRawBytes (AsSigningKey AsByronKey) $ LB.toStrict signingKeyFileBytes
          delegCert  <- firstExceptT (CanonicalDecodeFailure delegCertFile)
                          . hoistEither
                          $ canonicalDecodePretty delegCertFileBytes

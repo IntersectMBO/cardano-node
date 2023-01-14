@@ -20,23 +20,24 @@ module Cardano.Tracing.OrphanInstances.HardFork () where
 import           Cardano.Prelude hiding (All)
 
 import           Data.Aeson
+import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Short as SBS
 import           Data.SOP.Strict
 
-import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Consensus ()
 
 import           Cardano.Slotting.Slot (EpochSize (..))
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateInfo,
-                     ForgeStateUpdateError)
+                   ForgeStateUpdateError)
 import           Ouroboros.Consensus.BlockchainTime (getSlotLength)
 import           Ouroboros.Consensus.Cardano.Condense ()
 import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..),
-                     OneEraCannotForge (..), OneEraEnvelopeErr (..), OneEraForgeStateInfo (..),
-                     OneEraForgeStateUpdateError (..), OneEraLedgerError (..),
-                     OneEraLedgerUpdate (..), OneEraLedgerWarning (..), OneEraValidationErr (..),
-                     mkEraMismatch)
+                   OneEraCannotForge (..), OneEraEnvelopeErr (..), OneEraForgeStateInfo (..),
+                   OneEraForgeStateUpdateError (..), OneEraLedgerError (..),
+                   OneEraLedgerUpdate (..), OneEraLedgerWarning (..), OneEraValidationErr (..),
+                   mkEraMismatch)
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 import           Ouroboros.Consensus.HardFork.History.EraParams (EraParams (..), SafeZone)
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
@@ -53,7 +54,7 @@ import           Ouroboros.Consensus.Util.Condense (Condense (..))
 --
 
 instance Condense (OneEraHash xs) where
-    condense = condense . Crypto.UnsafeHash . getOneEraHash
+    condense = condense . Base16.encode . SBS.fromShort . getOneEraHash
 
 --
 -- instances for Header HardForkBlock
@@ -62,7 +63,7 @@ instance Condense (OneEraHash xs) where
 instance All (ToObject `Compose` Header) xs => ToObject (Header (HardForkBlock xs)) where
     toObject verb =
           hcollapse
-        . hcmap (Proxy @ (ToObject `Compose` Header)) (K . toObject verb)
+        . hcmap (Proxy @(ToObject `Compose` Header)) (K . toObject verb)
         . getOneEraHeader
         . getHardForkHeader
 
@@ -74,14 +75,14 @@ instance All (ToObject `Compose` Header) xs => ToObject (Header (HardForkBlock x
 instance All (Compose ToObject GenTx) xs => ToObject (GenTx (HardForkBlock xs)) where
     toObject verb =
           hcollapse
-        . hcmap (Proxy @ (ToObject `Compose` GenTx)) (K . toObject verb)
+        . hcmap (Proxy @(ToObject `Compose` GenTx)) (K . toObject verb)
         . getOneEraGenTx
         . getHardForkGenTx
 
 instance  All (Compose ToJSON WrapGenTxId) xs => ToJSON (TxId (GenTx (HardForkBlock xs))) where
     toJSON =
           hcollapse
-        . hcmap (Proxy @ (ToJSON `Compose` WrapGenTxId)) (K . toJSON)
+        . hcmap (Proxy @(ToJSON `Compose` WrapGenTxId)) (K . toJSON)
         . getOneEraGenTxId
         . getHardForkGenTxId
 
@@ -96,7 +97,7 @@ instance ToJSON (TxId (GenTx blk)) => ToJSON (WrapGenTxId blk) where
 instance All (ToObject `Compose` WrapApplyTxErr) xs => ToObject (HardForkApplyTxErr xs) where
     toObject verb (HardForkApplyTxErrFromEra err) = toObject verb err
     toObject _verb (HardForkApplyTxErrWrongEra mismatch) =
-      mkObject
+      mconcat
         [ "kind"       .= String "HardForkApplyTxErrWrongEra"
         , "currentEra" .= ledgerEraName
         , "txEra"      .= otherEraName
@@ -107,7 +108,7 @@ instance All (ToObject `Compose` WrapApplyTxErr) xs => ToObject (HardForkApplyTx
 instance All (ToObject `Compose` WrapApplyTxErr) xs => ToObject (OneEraApplyTxErr xs) where
     toObject verb =
         hcollapse
-      . hcmap (Proxy @ (ToObject `Compose` WrapApplyTxErr)) (K . toObject verb)
+      . hcmap (Proxy @(ToObject `Compose` WrapApplyTxErr)) (K . toObject verb)
       . getOneEraApplyTxErr
 
 instance ToObject (ApplyTxErr blk) => ToObject (WrapApplyTxErr blk) where
@@ -122,7 +123,7 @@ instance All (ToObject `Compose` WrapLedgerErr) xs => ToObject (HardForkLedgerEr
     toObject verb (HardForkLedgerErrorFromEra err) = toObject verb err
 
     toObject _verb (HardForkLedgerErrorWrongEra mismatch) =
-      mkObject
+      mconcat
         [ "kind"       .= String "HardForkLedgerErrorWrongEra"
         , "currentEra" .= ledgerEraName
         , "blockEra"   .= otherEraName
@@ -133,7 +134,7 @@ instance All (ToObject `Compose` WrapLedgerErr) xs => ToObject (HardForkLedgerEr
 instance All (ToObject `Compose` WrapLedgerErr) xs => ToObject (OneEraLedgerError xs) where
     toObject verb =
         hcollapse
-      . hcmap (Proxy @ (ToObject `Compose` WrapLedgerErr)) (K . toObject verb)
+      . hcmap (Proxy @(ToObject `Compose` WrapLedgerErr)) (K . toObject verb)
       . getOneEraLedgerError
 
 instance ToObject (LedgerError blk) => ToObject (WrapLedgerErr blk) where
@@ -151,7 +152,7 @@ instance ( All (ToObject `Compose` WrapLedgerWarning) xs
       HardForkWarningInEra err -> toObject verb err
 
       HardForkWarningTransitionMismatch toEra eraParams epoch ->
-        mkObject
+        mconcat
           [ "kind"            .= String "HardForkWarningTransitionMismatch"
           , "toEra"           .= condense toEra
           , "eraParams"       .= toObject verb eraParams
@@ -159,20 +160,20 @@ instance ( All (ToObject `Compose` WrapLedgerWarning) xs
           ]
 
       HardForkWarningTransitionInFinalEra fromEra epoch ->
-        mkObject
+        mconcat
           [ "kind"            .= String "HardForkWarningTransitionInFinalEra"
           , "fromEra"         .= condense fromEra
           , "transitionEpoch" .= epoch
           ]
 
       HardForkWarningTransitionUnconfirmed toEra ->
-        mkObject
+        mconcat
           [ "kind"  .= String "HardForkWarningTransitionUnconfirmed"
           , "toEra" .= condense toEra
           ]
 
       HardForkWarningTransitionReconfirmed fromEra toEra prevEpoch newEpoch ->
-        mkObject
+        mconcat
           [ "kind"                .= String "HardForkWarningTransitionReconfirmed"
           , "fromEra"             .= condense fromEra
           , "toEra"               .= condense toEra
@@ -183,7 +184,7 @@ instance ( All (ToObject `Compose` WrapLedgerWarning) xs
 instance All (ToObject `Compose` WrapLedgerWarning) xs => ToObject (OneEraLedgerWarning xs) where
     toObject verb =
         hcollapse
-      . hcmap (Proxy @ (ToObject `Compose` WrapLedgerWarning)) (K . toObject verb)
+      . hcmap (Proxy @(ToObject `Compose` WrapLedgerWarning)) (K . toObject verb)
       . getOneEraLedgerWarning
 
 instance ToObject (LedgerWarning blk) => ToObject (WrapLedgerWarning blk) where
@@ -191,7 +192,7 @@ instance ToObject (LedgerWarning blk) => ToObject (WrapLedgerWarning blk) where
 
 instance ToObject EraParams where
     toObject _verb EraParams{ eraEpochSize, eraSlotLength, eraSafeZone} =
-      mkObject
+      mconcat
         [ "epochSize"  .= unEpochSize eraEpochSize
         , "slotLength" .= getSlotLength eraSlotLength
         , "safeZone"   .= eraSafeZone
@@ -211,7 +212,7 @@ instance ( All (ToObject `Compose` WrapLedgerUpdate) xs
       HardForkUpdateInEra err -> toObject verb err
 
       HardForkUpdateTransitionConfirmed fromEra toEra epoch ->
-        mkObject
+        mconcat
           [ "kind"            .= String "HardForkUpdateTransitionConfirmed"
           , "fromEra"         .= condense fromEra
           , "toEra"           .= condense toEra
@@ -219,7 +220,7 @@ instance ( All (ToObject `Compose` WrapLedgerUpdate) xs
           ]
 
       HardForkUpdateTransitionDone fromEra toEra epoch ->
-        mkObject
+        mconcat
           [ "kind"            .= String "HardForkUpdateTransitionDone"
           , "fromEra"         .= condense fromEra
           , "toEra"           .= condense toEra
@@ -227,7 +228,7 @@ instance ( All (ToObject `Compose` WrapLedgerUpdate) xs
           ]
 
       HardForkUpdateTransitionRolledBack fromEra toEra ->
-        mkObject
+        mconcat
           [ "kind"    .= String "HardForkUpdateTransitionRolledBack"
           , "fromEra" .= condense fromEra
           , "toEra"   .= condense toEra
@@ -236,7 +237,7 @@ instance ( All (ToObject `Compose` WrapLedgerUpdate) xs
 instance All (ToObject `Compose` WrapLedgerUpdate) xs => ToObject (OneEraLedgerUpdate xs) where
     toObject verb =
         hcollapse
-      . hcmap (Proxy @ (ToObject `Compose` WrapLedgerUpdate)) (K . toObject verb)
+      . hcmap (Proxy @(ToObject `Compose` WrapLedgerUpdate)) (K . toObject verb)
       . getOneEraLedgerUpdate
 
 instance ToObject (LedgerUpdate blk) => ToObject (WrapLedgerUpdate blk) where
@@ -251,7 +252,7 @@ instance All (ToObject `Compose` WrapEnvelopeErr) xs => ToObject (HardForkEnvelo
     toObject verb (HardForkEnvelopeErrFromEra err) = toObject verb err
 
     toObject _verb (HardForkEnvelopeErrWrongEra mismatch) =
-      mkObject
+      mconcat
         [ "kind"       .= String "HardForkEnvelopeErrWrongEra"
         , "currentEra" .= ledgerEraName
         , "blockEra"   .= otherEraName
@@ -262,7 +263,7 @@ instance All (ToObject `Compose` WrapEnvelopeErr) xs => ToObject (HardForkEnvelo
 instance All (ToObject `Compose` WrapEnvelopeErr) xs => ToObject (OneEraEnvelopeErr xs) where
     toObject verb =
         hcollapse
-      . hcmap (Proxy @ (ToObject `Compose` WrapEnvelopeErr)) (K . toObject verb)
+      . hcmap (Proxy @(ToObject `Compose` WrapEnvelopeErr)) (K . toObject verb)
       . getOneEraEnvelopeErr
 
 instance ToObject (OtherHeaderEnvelopeError blk) => ToObject (WrapEnvelopeErr blk) where
@@ -277,7 +278,7 @@ instance All (ToObject `Compose` WrapValidationErr) xs => ToObject (HardForkVali
     toObject verb (HardForkValidationErrFromEra err) = toObject verb err
 
     toObject _verb (HardForkValidationErrWrongEra mismatch) =
-      mkObject
+      mconcat
         [ "kind"       .= String "HardForkValidationErrWrongEra"
         , "currentEra" .= ledgerEraName
         , "blockEra"   .= otherEraName
@@ -288,7 +289,7 @@ instance All (ToObject `Compose` WrapValidationErr) xs => ToObject (HardForkVali
 instance All (ToObject `Compose` WrapValidationErr) xs => ToObject (OneEraValidationErr xs) where
     toObject verb =
         hcollapse
-      . hcmap (Proxy @ (ToObject `Compose` WrapValidationErr)) (K . toObject verb)
+      . hcmap (Proxy @(ToObject `Compose` WrapValidationErr)) (K . toObject verb)
       . getOneEraValidationErr
 
 instance ToObject (ValidationErr (BlockProtocol blk)) => ToObject (WrapValidationErr blk) where
@@ -305,7 +306,7 @@ instance ToObject (ValidationErr (BlockProtocol blk)) => ToObject (WrapValidatio
 instance All (ToObject `Compose` WrapCannotForge) xs => ToObject (OneEraCannotForge xs) where
     toObject verb =
         hcollapse
-      . hcmap (Proxy @ (ToObject `Compose` WrapCannotForge))
+      . hcmap (Proxy @(ToObject `Compose` WrapCannotForge))
               (K . toObject verb)
       . getOneEraCannotForge
 
@@ -322,7 +323,7 @@ instance ToObject (CannotForge blk) => ToObject (WrapCannotForge blk) where
 
 instance All (ToObject `Compose` WrapForgeStateInfo) xs => ToObject (OneEraForgeStateInfo xs) where
     toObject verb forgeStateInfo =
-        mkObject
+        mconcat
           [ "kind" .= String "HardForkForgeStateInfo"
           , "forgeStateInfo" .= toJSON forgeStateInfo'
           ]
@@ -330,7 +331,7 @@ instance All (ToObject `Compose` WrapForgeStateInfo) xs => ToObject (OneEraForge
         forgeStateInfo' :: Object
         forgeStateInfo' =
               hcollapse
-            . hcmap (Proxy @ (ToObject `Compose` WrapForgeStateInfo))
+            . hcmap (Proxy @(ToObject `Compose` WrapForgeStateInfo))
                     (K . toObject verb)
             . getOneEraForgeStateInfo
             $ forgeStateInfo
@@ -348,7 +349,7 @@ instance ToObject (ForgeStateInfo blk) => ToObject (WrapForgeStateInfo blk) wher
 
 instance All (ToObject `Compose` WrapForgeStateUpdateError) xs => ToObject (OneEraForgeStateUpdateError xs) where
     toObject verb forgeStateUpdateError =
-        mkObject
+        mconcat
           [ "kind" .= String "HardForkForgeStateUpdateError"
           , "forgeStateUpdateError" .= toJSON forgeStateUpdateError'
           ]
@@ -356,7 +357,7 @@ instance All (ToObject `Compose` WrapForgeStateUpdateError) xs => ToObject (OneE
         forgeStateUpdateError' :: Object
         forgeStateUpdateError' =
               hcollapse
-            . hcmap (Proxy @ (ToObject `Compose` WrapForgeStateUpdateError))
+            . hcmap (Proxy @(ToObject `Compose` WrapForgeStateUpdateError))
                     (K . toObject verb)
             . getOneEraForgeStateUpdateError
             $ forgeStateUpdateError

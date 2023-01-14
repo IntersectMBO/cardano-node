@@ -87,7 +87,7 @@ defaultBackends:
 #   - "127.0.0.1"
 #   - 12789
 
-# To enable the 'TraceForwarder' backend, uncomment the following setting. Log
+# To enable the legacy 'TraceForwarder' backend, uncomment the following setting. Log
 # items are then forwarded based on an entry in 'mapBackends' to a separate
 # process running a 'TraceAcceptor'.
 # Example using UNIX pipes:
@@ -114,7 +114,7 @@ defaultBackends:
 #   JournalSK for systemd's journal system
 #   DevNullSK ignores all output
 # The scribe output format can be ScText or ScJson. Log rotation settings can
-# be specified in the defaults below or overidden on a per-scribe basis here.
+# be specified in the defaults below or overridden on a per-scribe basis here.
 setupScribes:
   - scKind: FileSK
     scName: "logs/mainnet.log"
@@ -199,6 +199,34 @@ TraceHandshake: False
 
 # Trace IP Subscription messages.
 TraceIpSubscription: True
+
+# Trace local root peers
+TraceLocalRootPeers: True
+
+# Trace public root peers
+TracePublicRootPeers: True 
+
+# Trace peer selection
+TracePeerSelection: True
+
+# Debug peer selection
+TraceDebugPeerSelection: False
+
+# Trace peer selection actions (demotion / promotion between cold / warm and
+# hot peers).
+TracePeerSelectionActions: True
+
+# Trace connection manager
+TraceConnectionManager: True
+
+# Trace server
+TraceServer: True
+
+# Trace local connection manager
+TraceLocalConnectionManager: False
+
+# Trace local server
+TraceLocalServer: False
 
 # Trace local ChainSync protocol messages.
 TraceLocalChainSyncProtocol: False

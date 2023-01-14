@@ -2,7 +2,7 @@
 name: Bug report
 about: Report a bug to help us improve
 title: "[BUG] - "
-labels: bug
+labels: "type: bug"
 assignees: ''
 
 ---
@@ -14,6 +14,7 @@ assignees: ''
 **Area**
 *Token Locking*    Related to Token Locking (Allegra).
 *Native Tokens*    Related to Native Tokens (Mary).
+*Plutus*    Related to Plutus Scripts (Alonzo).
 *Other*   Any other topic (Delegation, Ranking, ...).
 
 **Summary**

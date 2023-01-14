@@ -32,7 +32,7 @@ paths:
         - lang: "Shell"
           label: "cURL"
           source: |
-            # Assuming `data` is a serialized transaction on the file-system.
+            # Assuming `data` is a raw binary serialized transaction on the file-system.
             curl -X POST \
                 --header "Content-Type: application/cbor" \
                 --data-binary @data http://localhost:8101/api/submit/tx

@@ -14,7 +14,7 @@ elif [[ $1 == "cli" ]]; then
 
 else
 
-  echo "Nothing to do! Perhaps try [run|cli]"
+  echo "Nothing to do! Perhaps try [run|cli], or set NETWORK environment variable."
   exit 1
 
 fi

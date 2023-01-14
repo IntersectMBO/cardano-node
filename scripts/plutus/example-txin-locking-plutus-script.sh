@@ -1,76 +1,101 @@
 #!/usr/bin/env bash
 
-# Unoffiical bash strict mode.
+# Unofficial bash strict mode.
 # See: http://redsymbol.net/articles/unofficial-bash-strict-mode/
 set -e
 set -o pipefail
 
 export WORK="${WORK:-example/work}"
-export CARDANO_NODE_SOCKET_PATH="${CARDANO_NODE_SOCKET_PATH:-example/node-bft1/node.sock}"
+export BASE="${BASE:-.}"
+export CARDANO_CLI="${CARDANO_CLI:-cardano-cli}"
+export CARDANO_NODE_SOCKET_PATH="${CARDANO_NODE_SOCKET_PATH:-example/main.sock}"
 export TESTNET_MAGIC="${TESTNET_MAGIC:-42}"
-export UTXO_VKEY="${UTXO_VKEY:-example/shelley/utxo-keys/utxo1.vkey}"
-export UTXO_SKEY="${UTXO_SKEY:-example/shelley/utxo-keys/utxo1.skey}"
+export UTXO_VKEY="${UTXO_VKEY:-example/utxo-keys/utxo1.vkey}"
+export UTXO_SKEY="${UTXO_SKEY:-example/utxo-keys/utxo1.skey}"
+export RESULT_FILE="${RESULT_FILE:-$WORK/result.out}"
+
+echo "Socket path: $CARDANO_NODE_SOCKET_PATH"
+
+ls -al "$CARDANO_NODE_SOCKET_PATH"
+
+export ERA="$($CARDANO_CLI query tip --testnet-magic $TESTNET_MAGIC | jq -r .era)"
+
+case $ERA in
+  Alonzo)
+    export ERA_FLAG="--alonzo-era"
+    export PV=v1 # Plutus Script Version
+    ;;
+  Babbage)
+    export ERA_FLAG="--babbage-era"
+    export PV=v2 # Plutus Script Version
+    ;;
+  *)
+    echo "Unsupported: $ERA"
+    exit 1
+    ;;
+esac
 
 if [ "$1" == "guessinggame" ]; then
  # NB: This plutus script uses a "typed" redeemer and "typed" datum.
- plutusscriptinuse=scripts/plutus/scripts/typed-guessing-game-redeemer-42-datum-42.plutus
+ plutusscriptinuse="$BASE/scripts/plutus/scripts/$PV/custom-guess-42-datum-42.plutus"
  # This datum hash is the hash of the typed 42
- scriptdatumhash="e68306b4087110b0191f5b70638b9c6fc1c3eb335275e40d110779d71aa86083"
- plutusrequiredspace=700000000
- plutusrequiredtime=700000000
- #50000000000
- datumfilepath=scripts/plutus/data/typed-42.datum
- redeemerfilepath=scripts/plutus/data/typed-42.redeemer
+ scriptdatumhash="fcaa61fb85676101d9e3398a484674e71c45c3fd41b492682f3b0054f4cf3273"
+ datumfilepath="$BASE/scripts/plutus/data/typed-42.datum"
+ redeemerfilepath="$BASE/scripts/plutus/data/typed-42.redeemer"
  echo "Guessing game Plutus script in use. The datum and redeemer must be equal to 42."
  echo "Script at: $plutusscriptinuse"
 
 elif [ "$1" == "" ]; then
- plutusscriptinuse=scripts/plutus/scripts/untyped-always-succeeds-txin.plutus
+ plutusscriptinuse="$BASE/scripts/plutus/scripts/$PV/always-succeeds-spending.plutus"
  # This datum hash is the hash of the untyped 42
  scriptdatumhash="9e1199a988ba72ffd6e9c269cadb3b53b5f360ff99f112d9b2ee30c4d74ad88b"
- plutusrequiredspace=70000000
- plutusrequiredtime=70000000
- datumfilepath=scripts/plutus/data/42.datum
- redeemerfilepath=scripts/plutus/data/42.redeemer
+ datumfilepath="$BASE/scripts/plutus/data/42.datum"
+ redeemerfilepath="$BASE/scripts/plutus/data/42.redeemer"
  echo "Always succeeds Plutus script in use. Any datum and redeemer combination will succeed."
  echo "Script at: $plutusscriptinuse"
 fi
 
 
-# Step 1: Create a tx ouput with a datum hash at the script address. In order for a tx ouput to be locked
+# Step 1: Create a tx output with a datum hash at the script address. In order for a tx output to be locked
 # by a plutus script, it must have a datahash. We also need collateral tx inputs so we split the utxo
-# in order to accomodate this.
+# in order to accommodate this.
 
 
-plutusscriptaddr=$(cardano-cli address build --payment-script-file $plutusscriptinuse  --testnet-magic "$TESTNET_MAGIC")
+plutusscriptaddr=$($CARDANO_CLI address build --payment-script-file "$plutusscriptinuse"  --testnet-magic "$TESTNET_MAGIC")
 
-mkdir -p $WORK
+mkdir -p "$WORK"
 
-utxoaddr=$(cardano-cli address build --testnet-magic "$TESTNET_MAGIC" --payment-verification-key-file $UTXO_VKEY)
+utxoaddr=$($CARDANO_CLI address build --testnet-magic "$TESTNET_MAGIC" --payment-verification-key-file "$UTXO_VKEY")
 
-cardano-cli query utxo --address $utxoaddr --cardano-mode --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/utxo.json
+$CARDANO_CLI query utxo --address "$utxoaddr" --cardano-mode --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/utxo-1.json
+cat $WORK/utxo-1.json
 
-txin=$(jq -r 'keys[]' $WORK/utxo.json)
-lovelaceattxin=$(jq -r ".[\"$txin\"].value.lovelace" $WORK/utxo.json)
-lovelaceattxindiv2=$(expr $lovelaceattxin / 2)
+txin=$(jq -r 'keys[0]' $WORK/utxo-1.json)
+lovelaceattxin=$(jq -r ".[\"$txin\"].value.lovelace" $WORK/utxo-1.json)
+lovelaceattxindiv3=$(expr $lovelaceattxin / 3)
 
-cardano-cli transaction build-raw \
-  --alonzo-era \
-  --fee 0 \
-  --tx-in $txin \
-  --tx-out "$plutusscriptaddr+$lovelaceattxindiv2" \
+$CARDANO_CLI query protocol-parameters --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/pparams.json
+
+$CARDANO_CLI transaction build \
+  $ERA_FLAG \
+  --cardano-mode \
+  --testnet-magic "$TESTNET_MAGIC" \
+  --change-address "$utxoaddr" \
+  --tx-in "$txin" \
+  --tx-out "$plutusscriptaddr+$lovelaceattxindiv3" \
   --tx-out-datum-hash "$scriptdatumhash" \
-  --tx-out "$utxoaddr+$lovelaceattxindiv2" \
-  --out-file $WORK/create-datum-output.body
+  --tx-out "$utxoaddr+$lovelaceattxindiv3" \
+  --protocol-params-file "$WORK/pparams.json" \
+  --out-file "$WORK/create-datum-output.body"
 
-cardano-cli transaction sign \
+$CARDANO_CLI transaction sign \
   --tx-body-file $WORK/create-datum-output.body \
   --testnet-magic "$TESTNET_MAGIC" \
   --signing-key-file $UTXO_SKEY \
   --out-file $WORK/create-datum-output.tx
 
 # SUBMIT
-cardano-cli transaction submit --tx-file $WORK/create-datum-output.tx --testnet-magic "$TESTNET_MAGIC"
+$CARDANO_CLI transaction submit --tx-file $WORK/create-datum-output.tx --testnet-magic "$TESTNET_MAGIC"
 echo "Pausing for 5 seconds..."
 sleep 5
 
@@ -78,35 +103,40 @@ sleep 5
 # After "locking" the tx output at the script address, we can now can attempt to spend
 # the "locked" tx output below.
 
-cardano-cli query utxo --address $plutusscriptaddr --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/plutusutxo.json
+$CARDANO_CLI query utxo --address $plutusscriptaddr --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/plutusutxo.json
+
 plutusutxotxin=$(jq -r 'keys[]' $WORK/plutusutxo.json)
 
-cardano-cli query utxo --address $utxoaddr --cardano-mode --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/utxo.json
-txinCollateral=$(jq -r 'keys[]' $WORK/utxo.json)
+$CARDANO_CLI query utxo --address $utxoaddr --cardano-mode --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/utxo-2.json
+cat $WORK/utxo-2.json
+txinCollateral=$(jq -r 'keys[0]' $WORK/utxo-2.json)
 
-cardano-cli query protocol-parameters --testnet-magic "$TESTNET_MAGIC" --out-file example/pparams.json
 
 dummyaddress=addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4
 
 lovelaceatplutusscriptaddr=$(jq -r ".[\"$plutusutxotxin\"].value.lovelace" $WORK/plutusutxo.json)
 
-txfee=$(expr $plutusrequiredtime + $plutusrequiredtime)
-spendable=$(expr $lovelaceatplutusscriptaddr - $plutusrequiredtime - $plutusrequiredtime)
+echo "Plutus txin"
+echo "$plutusutxotxin"
 
-cardano-cli transaction build-raw \
-  --alonzo-era \
-  --fee "$txfee" \
-  --tx-in $plutusutxotxin \
-  --tx-in-collateral $txinCollateral \
-  --tx-out "$dummyaddress+$spendable" \
-  --tx-in-script-file $plutusscriptinuse \
+echo "Collateral"
+echo "$txinCollateral"
+
+$CARDANO_CLI transaction build \
+  $ERA_FLAG \
+  --cardano-mode \
+  --testnet-magic "$TESTNET_MAGIC" \
+  --change-address "$utxoaddr" \
+  --tx-in "$plutusutxotxin" \
+  --tx-in-collateral "$txinCollateral" \
+  --tx-out "$dummyaddress+10000000" \
+  --tx-in-script-file "$plutusscriptinuse" \
   --tx-in-datum-file "$datumfilepath"  \
-  --protocol-params-file example/pparams.json\
+  --protocol-params-file "$WORK/pparams.json" \
   --tx-in-redeemer-file "$redeemerfilepath" \
-  --tx-in-execution-units "($plutusrequiredtime, $plutusrequiredspace)" \
   --out-file $WORK/test-alonzo.body
 
-cardano-cli transaction sign \
+$CARDANO_CLI transaction sign \
   --tx-body-file $WORK/test-alonzo.body \
   --testnet-magic "$TESTNET_MAGIC" \
   --signing-key-file "${UTXO_SKEY}" \
@@ -114,10 +144,10 @@ cardano-cli transaction sign \
 
 # SUBMIT $WORK/alonzo.tx
 echo "Submit the tx with plutus script and wait 5 seconds..."
-cardano-cli transaction submit --tx-file $WORK/alonzo.tx --testnet-magic "$TESTNET_MAGIC"
+$CARDANO_CLI transaction submit --tx-file $WORK/alonzo.tx --testnet-magic "$TESTNET_MAGIC"
 sleep 5
 echo ""
 echo "Querying UTxO at $dummyaddress. If there is ADA at the address the Plutus script successfully executed!"
 echo ""
-cardano-cli query utxo --address "$dummyaddress"  --testnet-magic "$TESTNET_MAGIC"
-
+$CARDANO_CLI query utxo --address "$dummyaddress"  --testnet-magic "$TESTNET_MAGIC" \
+  | tee "$RESULT_FILE"

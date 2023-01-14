@@ -11,22 +11,27 @@ module Cardano.Node.Protocol.Types
   , SomeConsensusProtocol(..)
   ) where
 
-import           Cardano.Prelude
+import qualified Cardano.Api as Api
+import           Cardano.Prelude (Generic, NFData)
+import           Prelude
 
-import           Control.Monad.Fail (fail)
 import           Data.Aeson
 import           NoThunks.Class (NoThunks)
 
-import qualified Cardano.Api.Protocol.Types as Cardano
-
 import           Cardano.Node.Orphans ()
-import           Cardano.Tracing.Constraints (TraceConstraints)
-import           Cardano.Tracing.Metrics (HasKESInfo, HasKESMetricsData)
+import           Cardano.Node.Queries (HasKESInfo, HasKESMetricsData)
+import           Cardano.Node.TraceConstraints (TraceConstraints)
+
 
 data Protocol = ByronProtocol
               | ShelleyProtocol
               | CardanoProtocol
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Generic)
+
+instance Show Protocol where
+  show ByronProtocol = "Byron"
+  show ShelleyProtocol = "Shelley"
+  show CardanoProtocol = "Byron; Shelley"
 
 deriving instance NFData Protocol
 deriving instance NoThunks Protocol
@@ -47,15 +52,13 @@ instance FromJSON Protocol where
       _ -> fail $ "Parsing of Protocol failed. "
                 <> show str <> " is not a valid protocol"
 
-
-
 data SomeConsensusProtocol where
 
-     SomeConsensusProtocol :: forall blk. ( Cardano.Protocol IO blk
+     SomeConsensusProtocol :: forall blk. ( Api.Protocol IO blk
                                           , HasKESMetricsData blk
                                           , HasKESInfo blk
                                           , TraceConstraints blk
                                           )
-                           => Cardano.BlockType blk
-                           -> Cardano.ProtocolInfoArgs IO blk
+                           => Api.BlockType blk
+                           -> Api.ProtocolInfoArgs IO blk
                            -> SomeConsensusProtocol

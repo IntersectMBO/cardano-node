@@ -3,16 +3,19 @@
 
 module Cardano.CLI.Helpers
   ( HelpersError(..)
+  , printWarning
+  , deprecationWarning
   , ensureNewFile
   , ensureNewFileLBS
   , pPrintCBOR
   , readCBOR
   , renderHelpersError
-  , textShow
   , validateCBOR
+  , hushM
   ) where
 
 import           Cardano.Prelude
+import           Prelude (String)
 
 import           Codec.CBOR.Pretty (prettyHexEnc)
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
@@ -21,7 +24,9 @@ import           Control.Monad.Trans.Except.Extra (handleIOExceptT, left)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as Text
-import           System.Directory (doesPathExist)
+import qualified System.Console.ANSI as ANSI
+import           System.Console.ANSI
+import qualified System.IO as IO
 
 import           Cardano.Binary (Decoder, fromCBOR)
 import           Cardano.Chain.Block (fromCBORABlockOrBoundary)
@@ -30,6 +35,7 @@ import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.UTxO as UTxO
 import           Cardano.CLI.Types
 
+import qualified System.Directory as IO
 
 data HelpersError
   = CBORPrettyPrintError !DeserialiseFailure
@@ -55,10 +61,23 @@ decodeCBOR
 decodeCBOR bs decoder =
   first CBORDecodingError $ deserialiseFromBytes decoder bs
 
+printWarning :: String -> IO ()
+printWarning warning = do
+  ANSI.hSetSGR IO.stderr [SetColor Foreground Vivid Yellow]
+  IO.hPutStrLn IO.stderr $ "WARNING: " <> warning
+  ANSI.hSetSGR IO.stderr [Reset]
+    -- We need to flush, or otherwise what's on stdout may have the wrong colour
+    -- since it's likely sharing a console with stderr
+  IO.hFlush IO.stderr
+
+deprecationWarning :: String -> IO ()
+deprecationWarning cmd = printWarning $
+  "This CLI command is deprecated.  Please use " <> cmd <> " command instead."
+
 -- | Checks if a path exists and throws and error if it does.
 ensureNewFile :: (FilePath -> a -> IO ()) -> FilePath -> a -> ExceptT HelpersError IO ()
 ensureNewFile writer outFile blob = do
-  exists <- liftIO $ doesPathExist outFile
+  exists <- liftIO $ IO.doesPathExist outFile
   when exists $
     left $ OutputMustNotAlreadyExist outFile
   liftIO $ writer outFile blob
@@ -104,6 +123,9 @@ validateCBOR cborObject bs =
       () <$ decodeCBOR bs (fromCBOR :: Decoder s Update.Vote)
       Right "Valid Byron vote."
 
-
-textShow :: Show a => a -> Text
-textShow = Text.pack . show
+-- | Convert an Either to a Maybe and execute the supplied handler
+-- in the Left case.
+hushM :: forall e m a. Monad m => Either e a -> (e -> m ()) -> m (Maybe a)
+hushM r f = case r of
+  Right a -> return (Just a)
+  Left e -> f e >> return Nothing

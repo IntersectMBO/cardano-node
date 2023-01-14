@@ -12,6 +12,7 @@ module Cardano.Api.Shelley
 
     -- * Cryptographic key interface
     -- $keys
+    Key(..),
     VerificationKey(..),
     SigningKey(..),
 
@@ -23,6 +24,8 @@ module Cardano.Api.Shelley
     Address(ShelleyAddress),
     toShelleyAddr,
     fromShelleyAddr,
+    fromShelleyAddrIsSbe,
+    fromShelleyAddrToAny,
     toShelleyStakeCredential,
     fromShelleyStakeCredential,
     NetworkId(Mainnet, Testnet),
@@ -43,6 +46,7 @@ module Cardano.Api.Shelley
     TxId(TxId),
     toShelleyTxId,
     fromShelleyTxId,
+    getTxIdShelley,
     TxIn(TxIn),
     toShelleyTxIn,
     fromShelleyTxIn,
@@ -77,10 +81,19 @@ module Cardano.Api.Shelley
       , WitnessGenesisDelegateKey
       , WitnessGenesisDelegateExtendedKey
       ),
-    ShelleySigningKey,
+    ShelleySigningKey(..),
     getShelleyKeyWitnessVerificationKey,
+    getTxBodyAndWitnesses,
     makeShelleySignature,
     toShelleySigningKey,
+
+    -- * Blocks
+    fromConsensusBlock,
+    toConsensusBlock,
+    fromConsensusTip,
+    fromConsensusPointInMode,
+    toConsensusPointInMode,
+    toConsensusPointHF,
 
     -- * Transaction metadata
     -- | Embedding additional structured data within transactions.
@@ -91,6 +104,8 @@ module Cardano.Api.Shelley
 
     -- * Protocol parameters
     ProtocolParameters(..),
+    checkProtocolParameters,
+    ProtocolParametersError(..),
 
     -- * Scripts
     toShelleyScript,
@@ -101,6 +116,8 @@ module Cardano.Api.Shelley
     toShelleyScriptHash,
     fromShelleyScriptHash,
     PlutusScript(..),
+    PlutusScriptOrReferenceInput(..),
+    SimpleScriptOrReferenceInput(..),
     toPlutusData,
     fromPlutusData,
     toAlonzoData,
@@ -109,6 +126,17 @@ module Cardano.Api.Shelley
     fromAlonzoPrices,
     toAlonzoExUnits,
     fromAlonzoExUnits,
+    toAlonzoRdmrPtr,
+    fromAlonzoRdmrPtr,
+    scriptDataFromJsonDetailedSchema,
+    scriptDataToJsonDetailedSchema,
+    calculateExecutionUnitsLovelace,
+
+    -- * Reference Scripts
+    ReferenceScript(..),
+    ReferenceTxInsScriptsInlineDatumsSupportedInEra(..),
+    refInsScriptsAndInlineDatsSupportedInEra,
+    refScriptToShelleyScript,
 
     -- * Certificates
     Certificate (..),
@@ -117,7 +145,7 @@ module Cardano.Api.Shelley
 
     -- ** Operational certificates
     OperationalCertificate(OperationalCertificate),
-    OperationalCertificateIssueCounter(OperationalCertificateIssueCounter),
+    OperationalCertificateIssueCounter(..),
     OperationalCertIssueError(..),
 
     -- * Stake Pool
@@ -161,7 +189,8 @@ module Cardano.Api.Shelley
     LocalNodeConnectInfo(LocalNodeConnectInfo),
     ShelleyMode,
     ConsensusMode
-      ( ShelleyMode
+      ( ByronMode
+      , ShelleyMode
       ),
     LocalNodeClientProtocols(LocalNodeClientProtocols),
 
@@ -171,11 +200,40 @@ module Cardano.Api.Shelley
 
     -- ** Local State Query
     DebugLedgerState(..),
+    decodeDebugLedgerState,
     ProtocolState(..),
+    decodeProtocolState,
     SerialisedDebugLedgerState(..),
+    CurrentEpochState(..),
+    SerialisedCurrentEpochState(..),
+    decodeCurrentEpochState,
+
+    PoolState(..),
+    SerialisedPoolState(..),
+    decodePoolState,
+
+    PoolDistribution(..),
+    SerialisedPoolDistribution(..),
+    decodePoolDistribution,
+
+    StakeSnapshot(..),
+    SerialisedStakeSnapshots(..),
+    decodeStakeSnapshot,
+
     UTxO(..),
+    AcquiringFailure(..),
+    SystemStart(..),
+
+
+    -- ** Various calculations
+    LeadershipError(..),
+    currentEpochEligibleLeadershipSlots,
+    nextEpochEligibleLeadershipSlots,
 
     -- ** Conversions
+    shelleyPayAddrToPlutusPubKHash,
+    toConsensusGenTx,
+    fromAlonzoCostModels,
     --TODO: arrange not to export these
     toShelleyNetwork,
     fromShelleyPParams,
@@ -184,17 +242,22 @@ module Cardano.Api.Shelley
 
 import           Cardano.Api
 import           Cardano.Api.Address
+import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
+import           Cardano.Api.Genesis
+import           Cardano.Api.InMode
 import           Cardano.Api.IPC
-import           Cardano.Api.KeysPraos
-import           Cardano.Api.KeysShelley
+import           Cardano.Api.Keys.Byron
+import           Cardano.Api.Keys.Praos
+import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.LedgerState
 import           Cardano.Api.NetworkId
 import           Cardano.Api.OperationalCertificate
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
 import           Cardano.Api.Script
-import           Cardano.Api.Shelley.Genesis
+import           Cardano.Api.ScriptData
 import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody

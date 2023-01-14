@@ -12,7 +12,7 @@ module Cardano.CLI.Byron.Delegation
   )
 where
 
-import           Cardano.Prelude hiding (option, show, trace)
+import           Cardano.Prelude hiding (show, trace)
 
 import           Control.Monad.Trans.Except.Extra (left)
 import qualified Data.ByteString.Lazy as LB
@@ -27,7 +27,6 @@ import           Cardano.Crypto (ProtocolMagicId)
 import qualified Cardano.Crypto as Crypto
 
 import           Cardano.CLI.Byron.Key (ByronKeyFailure, renderByronKeyFailure)
-import           Cardano.CLI.Helpers (textShow)
 import           Cardano.CLI.Types (CertificateFile (..))
 
 data ByronDelegationError

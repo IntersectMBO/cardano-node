@@ -73,7 +73,7 @@ run_quiet()
            --build-extra )    bld_extra=$2; shift;;
            * ) break;; esac; shift; done
         case ${mode} in
-                nix )               bld_extra="--no-build-output --quiet ${bld_extra}";;
+                nix )               bld_extra="--quiet ${bld_extra}";;
                 cabal )             bld_extra="-v0 ${bld_extra}";;
                 stack | stack-nix ) bld_extra="--silent ${bld_extra}";; esac;
 
@@ -91,7 +91,7 @@ actually_run()
         local profmode=
         local rtsopts=
         local stats=t
-        local tag=
+        local run=
         while test -n "$1"
         do # ARGS=("$@"); dprint "handling: ${ARGS[@]@Q}"
            case "$1" in
@@ -99,14 +99,14 @@ actually_run()
            --profile )           profile=$2; shift;;
            --profile-suffix )    user_suffix=.$2; shift;;
            --no-stats )          stats=;;
-           --tag ) case $2 in
-                           git-head | HEAD ) tag="$(git symbolic-ref HEAD | sed 's,.*/,,g')";;
-                           * )               tag=$2;; esac; shift;;
+           --run ) case $2 in
+                           git-head | HEAD ) run="$(git symbolic-ref HEAD | sed 's,.*/,,g')";;
+                           * )               run=$2;; esac; shift;;
            * ) break;; esac; shift; done
         dprint "actually_run binary extra args:  $*"
 
         rtsopts="+RTS";
-        profile_prefix="${profile_root}/$(generate_mnemonic "${tag}")${user_suffix}"
+        profile_prefix="${profile_root}/$(generate_mnemonic "${run}")${user_suffix}"
         case "${profile}" in
            time )            vprint "profiling:  time"
                              profmode='-P';  profile_suffix="prof";;

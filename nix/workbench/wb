@@ -3,99 +3,323 @@
 
 set -euo pipefail
 
+export LANG=C.UTF-8
+
 global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
-global_mode='unknown'
 
 . "$global_basedir"/lib.sh
 . "$global_basedir"/env.sh
 . "$global_basedir"/profile.sh
+. "$global_basedir"/chaindb.sh
 . "$global_basedir"/genesis.sh
 . "$global_basedir"/topology.sh
+. "$global_basedir"/manifest.sh
 . "$global_basedir"/run.sh
+. "$global_basedir"/scenario.sh
+. "$global_basedir"/analyse.sh
 . "$global_basedir"/explain-mode.sh
 
 . "$global_basedir"/backend.sh
+. "$global_basedir"/backend/nomad.sh
+. "$global_basedir"/backend/supervisor.sh
 
 usage_main() {
     test $# -lt 1 ||
         msg "Unknown op: $1"
-     __usage "OP" "Main OPs" <<EOF
-    env          (e)      Environment configuration
-    genesis      (g)      Genesis
-    topology     (t)      Topology generation
-    profile      (p)      Cluster profile ops.  Default op is 'list'
-    cluster      (c)      Cluster state ops
-    run          (r)      Managing cluster runs.  Default op is 'list'
+     __usage "OP" "Top-level OPs" <<EOF
+    $(red profile)      ($(red p))      Cluster profile ops.  Default subop is $(yellow $profile_default_op)
+    $(red run)          ($(red r))      Managing cluster runs.  Default subop is $(yellow $run_default_op)
+    $(red analyse)      ($(red a))      Analyse cluster runs.  Default subop is $(yellow $analyse_default_op)
 
-    explain-mode (x)      Explain current mode
+  $(blue Secondary top-level OPs):
 
-  Options:
+    $(red chaindb)      ($(red c))      ChainDB
+    $(red genesis)      ($(red g))      Genesis
+    $(red topology)     ($(red t))      Topology generation
 
-    --trace / --debug     set -x
-    --help                This short help
-    --help-full           Extended help
+  $(white wb) $(blue options):
+
+    $(helpopt --trace / --debug)        Enable workbench tracing (for error reports) ('set -x')
+    $(helpopt --help)                   This short help
+    $(helpopt --help-full / --aliases)  Extended help (extra ops & subop aliases)
 EOF
 }
 
 usage_extra() {
     cat >&2 <<EOF
-  Other OPs:
+  $(blue Extra top-level OPs):
 
-    call ARGS..           Call internal functions with arguments
-    mode                  Report mode set by --set-mode
+    $(red start $(green [FLAGS..]))       Start a run of profile chosen at 'nix-shell' entry
+    $(red finish)                Finish an active cluster run
+    $(red scenario)     ($(red s))      Run scenario control
+    $(red backend)      ($(red b))      Backend calls
+    $(red call) $(green ARGS..)       Call internal functions with arguments
 
-  Extra options:
+  $(blue List of top-level) $(yellow subop) $(blue aliases, per) $(red op).  $(blue For detailed help:) $(red OP --help):
 
-    --cls                 Clear screen, before acting further.
-    --set-mode MODE       Set mode.  Only has effect on 'mode' OP
+  ..$(red profile):$(color yellow)
+          profile-names              names        lsp
+          profile-json                            pj
+          profile-describe           pdesc        pd
+          profile-node-specs         node-specs   specs
 
+  ..$(red run):$(color yellow)
+          list-runs                  runs         lsr
+          list-remote                remote       lsrr
+          list-verbose               verb         lsrv
+          list-verbose-remote        rverb        lsrv
+          list-sets                  sets         lss
+          list-sets-remote           rsets        lssr
+          set-add                    add          sa
+          run-or-set                              ros
+          list-pattern               lspat        lsrp
+          fix-legacy-run-structure   fix-legacy   flrs
+          fetch-run                  fetch        fr
+          fetch-analysis             fa
+
+  ..$(red analyse):$(color yellow)
+          compare                                 cmp
+          variance                                var
+          standard                   full         std
+          block-propagation          blockprop    bp
+          performance                             perf
+          performance-host           perf-host
+          trace-frequencies          trace-freq   freq tf
+          chain-rejecta-reasons      chain-rejecta   rejecta
+$(color white)
 EOF
 }
 
+usage_start()
+{
+    cat <<EOF
+$(red USAGE:)
+   $(helpcmd start [FLAGS..])
+
+   $(blue Flags):
+
+      $(helpopt --batch-name NAME)               Override the batch name (default: $(green ${batchName:-default}))
+
+      $(helpopt --profile-name NAME)             Select profile by name (default: $(green default))
+      $(helpopt --iterations \| --times \| --iter \| -n ITERATIONS)
+                                      Run this many iterations of the profile.
+
+      $(helpopt --profile DIR)                   Select profile by complete spec stored in DIR.
+
+      $(helpopt --idle)                          Use the $(blue idle) scenario.
+      $(helpopt --scenario \| -s SCENARIO)        Use the specified scenario.
+                                        See: $(helptopcmd wb scenario --help)
+
+      $(helpopt --no-analysis)                   Do not run analysis at the run's end.
+      $(helpopt --analysis-can-fail)             Do not fail on failed analysis.
+      $(helpopt --filters F,F,F,F)               Comma-separated list of filters, instead
+                                        of profile-specified defaults.
+
+      $(helpopt --supervisor \| --backend-supervisor)
+                                      Use the $(blue supervisor) backend.
+
+      $(helpopt --trace \| --debug)               Trace the start-cluster script
+      $(helpopt --trace-wb \| --trace-workbench)  Trace the workbench script
+      $(helpopt --verbose)                       Print more of what's going
+      $(helpopt --help)                          This help message
+EOF
+}
+
+start()
+{
+    local batch_name=
+    local profile_name= profile=
+    local backend=${WB_BACKEND:-supervisor}
+    local node_source=.
+    local node_rev=
+    local cabal_mode=
+    local skip_prebuild=
+    local prebuild_done=
+    local genesis_cache_entry_dir=
+    local topology_dir=
+    local manifest="{}"
+    local iterations=1
+    local no_retry_failed_runs=t
+    local no_analysis=
+    local analysis_can_fail=
+
+    local run_args=()
+    local run_allocate_args=()
+    local run_start_args=()
+    local analyse_args=(--dump-logobjects --dump-machviews)
+    while test $# -gt 0
+    do case "$1" in
+        --batch-name )                   batch_name=$2;   shift;;
+        --profile-name )                 profile_name=$2; shift;;
+        --iterations | --times | --iter | -n ) iterations=$2; no_retry_failed_runs=; shift;;
+        --cache-dir )                    setenvjqstr 'cacheDir' $2; shift;;
+        --base-port )                    setenvjq    'basePort' $2; shift;;
+
+        --profile )                      run_allocate_args+=($1 $2); profile=$2; shift;;
+        --genesis-cache-entry )          run_allocate_args+=($1 $2); shift;;
+        --topology )                     run_allocate_args+=($1 $2); shift;;
+
+        --idle )                         run_start_args+=($1);;
+        --scenario | -s )                run_start_args+=($1 $2); shift;;
+
+        --no-analysis )                  no_analysis=true;;
+        --analysis-can-fail | -af )      analysis_can_fail=t;;
+        --filters )                      analyse_args+=($1 $2); shift;;
+
+        --node-source )                  node_source=$2; shift;;
+        --node-rev )                     node_rev=$2; shift;;
+        --cabal-mode | --cabal )         run_allocate_args+=($1); cabal_mode=t;;
+        --skip-prebuild | -sp )          skip_prebuild=t;;
+        --supervisor | --backend-supervisor )
+                                         backend=supervisor;;
+
+        --verbose | -v )                 export verbose=t;;
+        --trace | --debug )              set -x;;
+        --trace-wb | --trace-workbench ) export WB_EXTRA_FLAGS=--trace;;
+        --help )                         usage_start
+                                         exit 1;;
+        * ) fatal "while parsing remaining 'wb start' args:  $*";;
+       esac; shift; done
+
+    if test -n "$cabal_mode"
+    then . $(dirname "$0")/lib-cabal.sh
+    fi
+
+    backend assert-is $backend
+    backend assert-stopped
+    backend setenv-defaults "$profile"
+
+    profile_name=${profile_name:-$(jq '.name' -r $profile/profile.json)}
+    analysis_type=$(jq '.analysis.type' -r $profile/profile.json)
+
+    local top_i
+    for ((top_i=0; top_i<$iterations; top_i++))
+    do newline
+       progress "manifest" "component versions:"
+       local manifest=$(manifest collect-from-checkout "$node_source" $node_rev)
+       manifest report "$manifest"
+
+       if test -z "$cabal_mode" -o -n "$prebuild_done"
+       then true
+       elif test -n "$skip_prebuild"
+       then progress "workbench | cabal" "skipping Cabal prebuilding due to $(yellow --skip-prebuild)"
+       else workbench-prebuild-executables
+            prebuild_done=t
+       fi
+
+       progress "top-level" "profile $(with_color 'yellow' $profile_name), iteration $(with_color 'white' $((top_i+1))) of $(with_color 'yellow' $iterations)"
+
+       local args=(
+            ${run_allocate_args[@]}
+            --manifest "$manifest"
+        )
+       run ${run_args[@]} 'allocate' $batch_name $profile_name $backend "${args[@]}"
+       local run=$(run current-tag)
+
+       current_run_path=$(run current-path)
+       mkdir -p "$current_run_path"
+
+       run ${run_args[@]} 'start'    ${run_start_args[@]} $run
+
+       if test -n "$no_analysis" -o $analysis_type = null; then continue; fi
+
+       progress "top-level | analysis" "analysis type $(with_color yellow $analysis_type) on $(with_color white $run)"
+       analyse ${analyse_args[@]} $analysis_type $run &&
+           progress "run | analysis" "done" ||
+           if test -n "$analysis_can_fail" -a -z "$no_retry_failed_runs"
+           then progress "run | analysis" "log processing failed, but --analysis-can-fail prevents failure:  $(with_color red $run)"
+                iterations=$((iterations + 1))
+           else fail "analysis failed:  $run"
+                false; fi
+    done
+}
+
+finish()
+{
+    while test $# -gt 0
+    do case "$1" in
+        --trace | --debug )              set -x;;
+        --trace-wb | --trace-workbench ) export WB_EXTRA_FLAGS=--trace;;
+        * ) break;; esac; shift; done
+
+    run stop $(run current-tag)
+}
+
+pass_flags=()
 while test $# -gt 0
 do case "$1" in
        --cls )
            echo -en "\ec">&2;;
        --trace | --debug )
            set -x;;
-       --set-mode )
-           global_mode=$2; shift;;
        --help )
            usage_main; exit 1;;
-       --help-full | --help-all | --help-extra )
+       --help-full | --help-all | --help-extra | --help-aliases | --aliases )
            usage_main; usage_extra; exit 1;;
        * ) break;; esac; shift; done
 
 main() {
-    local op=${1:?$(usage_main)}; shift
+    local op=${1:?$(usage_main)}; shift || true
 
     case "$op" in
-        ## Public:
+        ## Public, primary:
         #
-        env | e )
-            env "$@";;
-        genesis | g )
-            genesis "$@";;
-        topology | topo | t )
-            topology "$@";;
-        profile | profiles | prof | ps | p )
-            profile "$@";;
-        cluster | c )
-            cluster "$@";;
-        run | runs | r )
-            run "$@";;
+        start            )        start               "$@";;
+        finish           )        finish              "$@";;
 
-        explain-mode | x )
-            explain-mode $global_mode;;
+        ## Public, secondary:
+        profile      | profiles | prof | ps | p )
+                                  profile             "$@";;
+        run          | runs | r ) run                 "$@";;
+        analyse      | a )        analyse             "$@";;
+
+        ## Public, internals-y:
+        chaindb      | c )        chaindb             "$@";;
+        genesis      | g )        genesis             "$@";;
+        manifest     | m )        manifest            "$@";;
+        topology     | topo | t ) topology            "$@";;
+
+        ## 'profile' aliases:
+          profile-names            | names      | lsp           \
+        | profile-json                          | pj            \
+        | profile-describe         | pdesc      | pd            \
+        | profile-node-specs       | node-specs | specs         \
+          )                       profile $op         "$@";;
+
+        ## 'run' aliases:
+          list-runs                | runs       | lsr           \
+        | list-remote              | remote     | lsrr          \
+        | list-verbose             | verb       | lsrv          \
+        | list-verbose-remote      | rverb      | lsrv          \
+        | list-sets                | sets       | lss           \
+        | list-sets-remote         | rsets      | lssr          \
+        | set-add                  | add        | sa            \
+        | run-or-set                            | ros           \
+        | list-pattern             | lspat      | lsrp          \
+        | fix-legacy-run-structure | fix-legacy | flrs          \
+        | fetch-run                | fetch      | fr            \
+        | fetch-analysis           | fa                         \
+          )                       run $op             "$@";;
+
+        ## 'analyse' aliases:
+          compare                               | cmp           \
+        | variance                              | var           \
+        | standard                 | full       | std           \
+        | block-propagation        | blockprop  | bp            \
+        | performance                           | perf          \
+        | performance-host         | perf-host                  \
+        | trace-frequencies        | trace-freq | freq | tf     \
+        | chain-rejecta-reasons    | chain-rejecta | rejecta    \
+          )                       analyse $op         "$@";;
 
         ## Internals:
         #
-        backend )
-            backend "$@";;
-        call )
-            "$@";;
-        mode )
-            echo -n      $global_mode;;
+        scenario     | s )        scenario            "$@";;
+        backend      | b )        backend             "$@";;
+        call )                                        "$@";;
+        path )                    echo     $global_basedir;;
+
+        ## Bail for help:
         * ) usage_main "$op"; exit 1;; esac
 }
 

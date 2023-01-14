@@ -1,19 +1,17 @@
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Api.Ledger
   ( tests
   ) where
 
-import           Cardano.Prelude
 import           Cardano.Ledger.Address (deserialiseAddr, serialiseAddr)
-import           Gen.Tasty.Hedgehog.Group (fromGroup)
-import           Hedgehog (Property, discover)
+import           Cardano.Prelude (($))
+import           Hedgehog (Property)
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
-import           Test.Cardano.Api.Genesis
-import           Test.Shelley.Spec.Ledger.Serialisation.Generators.Genesis (genAddress)
-import           Test.Tasty (TestTree)
+import           Test.Cardano.Api.Genesis (exampleShelleyGenesis)
+import           Test.Cardano.Ledger.Shelley.Serialisation.Generators.Genesis (genAddress)
+import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.Hedgehog (testPropertyNamed)
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Aeson as H
@@ -33,4 +31,7 @@ prop_roundtrip_Address_CBOR = H.property $ do
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
-tests = fromGroup $$discover
+tests = testGroup "Test.Cardano.Api.Ledger"
+  [ testPropertyNamed "golden ShelleyGenesis"  "golden ShelleyGenesis"  prop_golden_ShelleyGenesis
+  , testPropertyNamed "roundtrip Address CBOR" "roundtrip Address CBOR" prop_roundtrip_Address_CBOR
+  ]

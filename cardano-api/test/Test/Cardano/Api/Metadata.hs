@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
+
 module Test.Cardano.Api.Metadata
   ( tests
   , genTxMetadata
@@ -9,9 +9,9 @@ module Test.Cardano.Api.Metadata
 import           Cardano.Api
 import           Cardano.Prelude
 import           Gen.Cardano.Api.Metadata
-import           Gen.Tasty.Hedgehog.Group (fromGroup)
-import           Hedgehog (Property, discover, property, (===))
-import           Test.Tasty (TestTree)
+import           Hedgehog (Property, property, (===))
+import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.Hedgehog (testPropertyNamed)
 
 import qualified Data.Aeson as Aeson
 import qualified Data.Map.Strict as Map
@@ -121,4 +121,16 @@ prop_metadata_roundtrip_via_schema_json = Hedgehog.property $ do
 --
 
 tests :: TestTree
-tests = fromGroup $$discover
+tests = testGroup "Test.Cardano.Api.Metadata"
+  [ testPropertyNamed "golden 1"                             "golden 1"                             prop_golden_1
+  , testPropertyNamed "golden 2"                             "golden 2"                             prop_golden_2
+  , testPropertyNamed "golden 3"                             "golden 3"                             prop_golden_3
+  , testPropertyNamed "golden 4"                             "golden 4"                             prop_golden_4
+  , testPropertyNamed "golden 5"                             "golden 5"                             prop_golden_5
+  , testPropertyNamed "golden 6"                             "golden 6"                             prop_golden_6
+  , testPropertyNamed "golden 7"                             "golden 7"                             prop_golden_7
+  , testPropertyNamed "golden 8"                             "golden 8"                             prop_golden_8
+  , testPropertyNamed "noschema json roundtrip via metadata" "noschema json roundtrip via metadata" prop_noschema_json_roundtrip_via_metadata
+  , testPropertyNamed "schema json roundtrip via metadata"   "schema json roundtrip via metadata"   prop_schema_json_roundtrip_via_metadata
+  , testPropertyNamed "metadata roundtrip via schema json"   "metadata roundtrip via schema json"   prop_metadata_roundtrip_via_schema_json
+  ]

@@ -1,66 +1,57 @@
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Benchmarking.Script.Action
-where
+       ( action
+       , liftToAction
+       )
+       where
 
-import           Prelude
-import           GHC.Generics
-import           Data.Functor.Identity
-import           Data.Dependent.Sum (DSum(..))
+import qualified Data.Text as Text (unpack)
 
-import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
-import           Cardano.Api (AnyCardanoEra, Lovelace)
+import           Control.Monad.IO.Class
+import           Control.Monad.Trans.Except.Extra
 
-import           Cardano.Benchmarking.Script.Env
-import           Cardano.Benchmarking.Script.Store
+import           Cardano.Benchmarking.OuroborosImports as Core (protocolToNetworkId)
 import           Cardano.Benchmarking.Script.Core
-import           Cardano.Benchmarking.Types (TPSRate, NumberOfTxs)
+import           Cardano.Benchmarking.Script.Env
+import           Cardano.Benchmarking.Script.Types
+import           Cardano.Benchmarking.Tracer
+import           Cardano.TxGenerator.Setup.NodeConfig
+import           Cardano.TxGenerator.Types (TxGenError)
 
-data Action where
-  Set                :: !SetKeyVal -> Action
---  Declare            :: SetKeyVal   -> Action --declare (once): error if key was set before
-  StartProtocol      :: !FilePath -> Action
-  Delay              :: !Double -> Action
-  ReadSigningKey     :: !KeyName -> !SigningKeyFile -> Action
-  SecureGenesisFund  :: !FundName -> !KeyName -> !KeyName -> Action
-  SplitFund          :: [FundName] -> !KeyName -> !FundName -> Action
-  SplitFundToList    :: !FundListName -> !KeyName -> !FundName -> Action
-  PrepareTxList      :: !TxListName -> !KeyName -> !FundListName -> Action
-  AsyncBenchmark     :: !ThreadName -> !TxListName -> !TPSRate -> Action
-  ImportGenesisFund  :: !KeyName -> !KeyName -> Action
-  CreateChange       :: !Lovelace -> !Int -> Action
-  RunBenchmark       :: !ThreadName -> !NumberOfTxs -> !TPSRate -> Action
-  WaitBenchmark      :: !ThreadName -> Action
-  CancelBenchmark    :: !ThreadName -> Action
-  Reserved           :: [String] -> Action
-  WaitForEra         :: !AnyCardanoEra -> Action
-  deriving (Show, Eq)
-
-deriving instance Generic Action
 
 action :: Action -> ActionM ()
 action a = case a of
-  Set (key :=> (Identity val)) -> set (User key) val
-  StartProtocol filePath -> startProtocol filePath
+  SetNetworkId val -> setEnvNetworkId val
+  SetSocketPath val -> setEnvSocketPath val
+  InitWallet name -> initWallet name
+  SetProtocolParameters p -> setProtocolParameters p
+  StartProtocol configFile cardanoTracerSocket -> startProtocol configFile cardanoTracerSocket
   ReadSigningKey name filePath -> readSigningKey name filePath
-  SecureGenesisFund fundName fundKey genesisKey -> secureGenesisFund fundName fundKey genesisKey
-  SplitFund newFunds newKey sourceFund -> splitFund  newFunds newKey sourceFund
-  SplitFundToList fundList destKey sourceFund -> splitFundToList fundList destKey sourceFund
+  DefineSigningKey name descr -> defineSigningKey name descr
+  AddFund era wallet txIn lovelace keyName -> addFund era wallet txIn lovelace keyName
   Delay t -> delay t
-  PrepareTxList name key fund -> prepareTxList name key fund
-  AsyncBenchmark thread txs tps -> asyncBenchmark thread txs tps
-  ImportGenesisFund genesisKey fundKey -> importGenesisFund genesisKey fundKey
-  CreateChange value count -> createChange value count
-  RunBenchmark thread count tps -> runBenchmark thread count tps
+  Submit era submitMode txParams generator -> submitAction era submitMode generator txParams
   WaitBenchmark thread -> waitBenchmark thread
   CancelBenchmark thread -> cancelBenchmark thread
   WaitForEra era -> waitForEra era
+  LogMsg txt -> traceDebug $ Text.unpack txt
   Reserved options -> reserved options
+
+liftToAction :: IO (Either TxGenError a) -> ActionM a
+liftToAction = firstExceptT TxGenError . newExceptT . liftIO
+
+startProtocol :: FilePath -> Maybe FilePath -> ActionM ()
+startProtocol configFile tracerSocket = do
+  nodeConfig <- liftToAction $ mkNodeConfig configFile
+  protocol <-  liftToAction $ mkConsensusProtocol nodeConfig
+  setEnvProtocol protocol
+  setEnvGenesis $ getGenesis protocol
+  let networkId = protocolToNetworkId protocol
+  setEnvNetworkId networkId
+  tracers <- case tracerSocket of
+    Nothing -> liftIO initDefaultTracers
+    Just socket -> do
+      iomgr <- askIOManager
+      liftIO $ initTracers iomgr networkId socket
+  setBenchTracers tracers

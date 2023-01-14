@@ -1,6 +1,8 @@
 .stack-work/
 .ghc.environment.*
+.nix-shell-cabal.project
 /cabal.project.diff
+/cabal.project.freeze
 /cabal.project.local
 /cabal.project.old
 configuration/defaults/simpleview/genesis/
@@ -12,6 +14,7 @@ dist/
 \.#*
 *.swp
 .dir-locals.el
+.Rhistory
 result*
 /launch-*
 stack.yaml.lock
@@ -61,3 +64,4 @@ logs
 /.hlint.yaml
 /testnet
 
+.vscode/

@@ -1,5 +1,3 @@
-{-# LANGUAGE NamedFieldPuns #-}
-
 module Cardano.Node.Protocol
   ( mkConsensusProtocol
   , SomeConsensusProtocol(..)
@@ -12,7 +10,6 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT)
 
 import           Cardano.Api
 
-import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Types
 
 import           Cardano.Node.Orphans ()
@@ -27,18 +24,19 @@ import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 --
 
 mkConsensusProtocol
-  :: NodeConfiguration
+  :: NodeProtocolConfiguration
+  -> Maybe ProtocolFilepaths
   -> ExceptT ProtocolInstantiationError IO SomeConsensusProtocol
-mkConsensusProtocol NodeConfiguration{ncProtocolConfig, ncProtocolFiles} =
+mkConsensusProtocol ncProtocolConfig mProtocolFiles =
     case ncProtocolConfig of
 
       NodeProtocolConfigurationByron config ->
         firstExceptT ByronProtocolInstantiationError $
-          mkSomeConsensusProtocolByron config (Just ncProtocolFiles)
+          mkSomeConsensusProtocolByron config mProtocolFiles
 
       NodeProtocolConfigurationShelley config ->
         firstExceptT ShelleyProtocolInstantiationError $
-          mkSomeConsensusProtocolShelley config (Just ncProtocolFiles)
+          mkSomeConsensusProtocolShelley config mProtocolFiles
 
       NodeProtocolConfigurationCardano byronConfig
                                        shelleyConfig
@@ -50,7 +48,7 @@ mkConsensusProtocol NodeConfiguration{ncProtocolConfig, ncProtocolFiles} =
             shelleyConfig
             alonzoConfig
             hardForkConfig
-            (Just ncProtocolFiles)
+            mProtocolFiles
 
 ------------------------------------------------------------------------------
 -- Errors

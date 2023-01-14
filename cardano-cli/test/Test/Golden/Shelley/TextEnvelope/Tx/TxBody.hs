@@ -4,8 +4,8 @@ module Test.Golden.Shelley.TextEnvelope.Tx.TxBody
   ( golden_shelleyTxBody
   ) where
 
-import           Cardano.Api (AsType (..), HasTextEnvelope (..))
 import           Cardano.Prelude
+
 import           Hedgehog (Property)
 import           Test.OptParse
 
@@ -26,6 +26,7 @@ golden_shelleyTxBody = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   -- Create transaction body
   void $ execCardanoCLI
     [ "transaction", "build-raw"
+    , "--mary-era"
     , "--tx-in", "91999ea21177b33ebe6b8690724a0c026d410a11ad7521caa350abdafa5394c3#0"
     , "--tx-out", "addr1v9wmu83pzajplrtpsq6tsqdgwr98x888trpmah2u0ezznsge7del3+100000000"
     , "--fee", "1000000"
@@ -33,8 +34,7 @@ golden_shelleyTxBody = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
     , "--out-file", transactionBodyFile
     ]
 
-  let txBodyType = textEnvelopeType AsMaryTxBody
 
   -- Check the newly created files have not deviated from the
   -- golden files
-  checkTextEnvelopeFormat txBodyType referenceTxBody transactionBodyFile
+  checkTxCddlFormat referenceTxBody transactionBodyFile

@@ -15,19 +15,19 @@ import           Control.Tracer (stdoutTracer, traceWith)
 import qualified Data.ByteString as BS
 
 import           Cardano.Chain.Update (InstallerHash (..), ProtocolVersion (..),
-                     SoftwareVersion (..), SystemTag (..))
+                   SoftwareVersion (..), SystemTag (..))
 
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import           Ouroboros.Consensus.Util.Condense (condense)
 
-import           Cardano.Api (NetworkId, SerialiseAsRawBytes (..))
+import           Cardano.Api (NetworkId, SerialiseAsRawBytes (..), textShow)
 import           Cardano.Api.Byron (AsType (AsByronUpdateProposal), ByronProtocolParametersUpdate,
-                     ByronUpdateProposal, makeByronUpdateProposal, toByronLedgerUpdateProposal)
+                   ByronUpdateProposal, makeByronUpdateProposal, toByronLedgerUpdateProposal)
 
 import           Cardano.CLI.Byron.Genesis (ByronGenesisError)
 import           Cardano.CLI.Byron.Key (ByronKeyFailure, readByronSigningKey)
 import           Cardano.CLI.Byron.Tx (ByronTxError, nodeSubmitTx)
-import           Cardano.CLI.Helpers (HelpersError, ensureNewFileLBS, renderHelpersError, textShow)
+import           Cardano.CLI.Helpers (HelpersError, ensureNewFileLBS, renderHelpersError)
 import           Cardano.CLI.Shelley.Commands (ByronKeyFormat (..))
 import           Cardano.CLI.Types
 
@@ -77,8 +77,8 @@ readByronUpdateProposal :: FilePath -> ExceptT ByronUpdateProposalError IO Byron
 readByronUpdateProposal fp = do
   proposalBs <- handleIOExceptT (ByronReadUpdateProposalFileFailure fp . toS . displayException)
                   $ BS.readFile fp
-  let mProposal = deserialiseFromRawBytes AsByronUpdateProposal proposalBs
-  hoistEither $ maybe (Left $ UpdateProposalDecodingError fp) Right mProposal
+  let proposalResult = eitherDeserialiseFromRawBytes AsByronUpdateProposal proposalBs
+  hoistEither $ first (const (UpdateProposalDecodingError fp)) proposalResult
 
 submitByronUpdateProposal
   :: NetworkId

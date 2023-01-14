@@ -45,11 +45,11 @@ The update parameters section might look like this:
 
 Tracers tell the node what information you are interested in when logging. For example, switches that you can turn ON or OFF according to the type and quantity of information that you are interested in. This provides fairly coarse-grained control, but it is relatively efficient at filtering out unwanted trace output.
 
-You can learn more information about tracing [here](https://github.com/input-output-hk/cardano-tutorials/blob/master/node-setup/understanding-config-files.md#3-tracing).
+You can learn more information about tracing [here](https://github.com/input-output-hk/cardano-tutorials/blob/master/node-setup/012_understanding-config-files.md#3-tracing).
 
 *Logging control*
 
-It is possible to have more fine-grained control over filtering of trace output, and to match and route trace output to particular backends. This is less efficient than the coarse trace filters, but offers [precise control options](https://github.com/input-output-hk/cardano-tutorials/blob/master/node-setup/understanding-config-files.md#4-fine-grained-logging-control).
+It is possible to have more fine-grained control over filtering of trace output, and to match and route trace output to particular backends. This is less efficient than the coarse trace filters, but offers [precise control options](https://github.com/input-output-hk/cardano-tutorials/blob/master/node-setup/012_understanding-config-files.md#4-fine-grained-logging-control).
 
 **Topology.json**
 
@@ -69,7 +69,7 @@ A simple topology file might look like this:
 ```
 **Genesis.json**
 
-The [genesis file](https://github.com/input-output-hk/cardano-tutorials/blob/master/node-setup/understanding-config-files.md#the-genesisjson-file) is generated with the cardano-cli by reading a genesis.spec.json file.
+The [genesis file](https://github.com/input-output-hk/cardano-tutorials/blob/master/node-setup/012_understanding-config-files.md#the-genesisjson-file) is generated with the cardano-cli by reading a genesis.spec.json file.
 
 The genesis file is very important, as it sets four key parameters:
 
@@ -78,5 +78,4 @@ The genesis file is very important, as it sets four key parameters:
 * `MaxLovelaceSupply`: the total amount of lovelaces in the blockchain.
 * `startTime`: the time of slot zero.
 
-For details on using the command line interface, stopping and starting the node, and ensuring the node is connected to the Cardano network, please refer to the [README file](https://github.com/input-output-hk/cardano-node/blob/master/README.md).
-
+For details on using the command line interface, stopping and starting the node, and ensuring the node is connected to the Cardano network, please refer to the [README file](https://github.com/input-output-hk/cardano-node/blob/master/README.rst).

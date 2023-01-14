@@ -32,7 +32,7 @@ Era based commands
   stake-pool               Stake pool commands
   query                    Node query commands. Will query the local node whose
                            Unix domain socket is obtained from the
-                           CARDANO_NODE_SOCKET_PATH enviromnent variable.
+                           CARDANO_NODE_SOCKET_PATH environment variable.
   genesis                  Genesis block commands
   governance               Governance commands
   text-view                Commands for dealing with Shelley TextView files.
@@ -70,7 +70,7 @@ Available commands:
 
 ### Cabal
 
-Use [Cabal - Version 3.4.0.0](https://www.haskell.org/cabal/) to build and/or install this project:
+Use [Cabal - Version 3.6.2.0](https://www.haskell.org/cabal/) to build and/or install this project:
 
 ```
 $ cd cardano-cli

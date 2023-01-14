@@ -4,6 +4,7 @@ module Testnet.Commands.Byron
   , runByronOptions
   ) where
 
+import           Data.Bool
 import           Data.Eq
 import           Data.Function
 import           Data.Int
@@ -70,6 +71,7 @@ optsTestnet = TestnetOptions
       <>  OA.showDefault
       <>  OA.value (totalBalance defaultTestnetOptions)
       )
+  <*> pure False
 
 runByronOptions :: ByronOptions -> IO ()
 runByronOptions opts = runTestnet (maybeTestnetMagic opts) (Testnet.Byron.testnet (testnetOptions opts))

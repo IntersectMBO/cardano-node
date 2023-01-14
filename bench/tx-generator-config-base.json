@@ -1,0 +1,77 @@
+{
+  "LastKnownBlockVersion-Alt": 0,
+  "LastKnownBlockVersion-Major": 0,
+  "LastKnownBlockVersion-Minor": 2,
+  "Protocol": "Cardano",
+  "RequiresNetworkMagic": "RequiresMagic",
+
+  "TurnOnLogging": true,
+  "TurnOnLogMetrics": false,
+  "setupBackends": [
+    "KatipBK"
+  ],
+  "setupScribes": [
+    {
+      "scFormat": "ScJson",
+      "scKind": "FileSK",
+      "scName": "logs/generator.json",
+      "scRotation": {
+        "rpLogLimitBytes": 300000000,
+        "rpMaxAgeHours":   24,
+        "rpKeepFilesNum":  20
+      }
+    },
+    {
+      "scFormat": "ScJson",
+      "scKind": "StdoutSK",
+      "scName": "stdout"
+    }
+  ],
+  "defaultBackends": [
+    "KatipBK"
+  ],
+  "defaultScribes": [
+    [
+      "FileSK",
+      "logs/generator.json"
+    ],
+    [
+      "StdoutSK",
+      "stdout"
+    ]
+  ],
+
+  "minSeverity": "Debug",
+  "TracingVerbosity": "MaximalVerbosity",
+
+  "TraceBlockFetchClient": true,
+  "TraceBlockFetchDecisions": false,
+  "TraceBlockFetchProtocol": false,
+  "TraceBlockFetchProtocolSerialised": false,
+  "TraceBlockFetchServer": false,
+  "TraceChainDb": false,
+  "TraceChainSyncBlockServer": false,
+  "TraceChainSyncClient": false,
+  "TraceChainSyncHeaderServer": false,
+  "TraceChainSyncProtocol": false,
+  "TraceDNSResolver": false,
+  "TraceDNSSubscription": false,
+  "TraceErrorPolicy": false,
+  "TraceForge": false,
+  "TraceIpSubscription": false,
+  "TraceLocalChainSyncProtocol": false,
+  "TraceLocalErrorPolicy": false,
+  "TraceLocalTxSubmissionProtocol": false,
+  "TraceLocalTxSubmissionServer": false,
+  "TraceMempool": false,
+  "TraceMux": false,
+  "TraceTxInbound": false,
+  "TraceTxOutbound": false,
+  "TraceTxSubmissionProtocol": false,
+  "TracingVerbosity": "NormalVerbosity",
+
+  "options": {
+    "mapBackends": {},
+    "mapSubtrace": {}
+  }
+}

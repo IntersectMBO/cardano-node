@@ -17,6 +17,7 @@ module Cardano.Api (
     AllegraEra,
     MaryEra,
     AlonzoEra,
+    BabbageEra,
     CardanoEra(..),
     IsCardanoEra(..),
     AnyCardanoEra(..),
@@ -29,6 +30,7 @@ module Cardano.Api (
     InAnyShelleyBasedEra(..),
     CardanoEraStyle(..),
     cardanoEraStyle,
+    shelleyBasedToCardanoEra,
 
     -- ** Deprecated
     Byron,
@@ -40,18 +42,13 @@ module Cardano.Api (
     AsType(..),
     -- * Cryptographic key interface
     -- $keys
-    Key,
-    VerificationKey,
+    Key(..),
     SigningKey(..),
-    getVerificationKey,
-    verificationKeyHash,
+    VerificationKey(..),
     castVerificationKey,
     castSigningKey,
-
-    -- ** Generating keys
     generateSigningKey,
-    deterministicSigningKey,
-    deterministicSigningKeySeedSize,
+    generateInsecureSigningKey,
 
     -- ** Hashes
     -- | In Cardano most keys are identified by their hash, and hashes are
@@ -80,9 +77,12 @@ module Cardano.Api (
 
     -- ** Addresses in any era
     AddressAny(..),
+    lexPlausibleAddressString,
+    parseAddressAny,
 
     -- ** Addresses in specific eras
     AddressInEra(..),
+    isKeyAddress,
     AddressTypeInEra(..),
     byronAddressInEra,
     shelleyAddressInEra,
@@ -102,7 +102,7 @@ module Cardano.Api (
 
     -- * Currency values
     -- ** Ada \/ Lovelace
-    Lovelace,
+    Lovelace(..),
 
     -- ** Multi-asset values
     Quantity(..),
@@ -111,6 +111,8 @@ module Cardano.Api (
     AssetName(..),
     AssetId(..),
     Value,
+    parseValue,
+    policyId,
     selectAsset,
     valueFromList,
     valueToList,
@@ -120,6 +122,8 @@ module Cardano.Api (
     ValueNestedBundle(..),
     valueToNestedRep,
     valueFromNestedRep,
+    renderValue,
+    renderValuePretty,
 
     -- ** Ada \/ Lovelace within multi-asset values
     quantityToLovelace,
@@ -133,6 +137,7 @@ module Cardano.Api (
     -- ** Blocks in the context of an era
     Block(Block),
     BlockHeader(..),
+    getBlockHeader,
 
     -- ** Points on the chain
     ChainPoint(..),
@@ -150,9 +155,11 @@ module Cardano.Api (
 
     -- ** Transaction bodies
     TxBody(TxBody),
-    makeTransactionBody,
+    createAndValidateTransactionBody,
+    makeTransactionBody, -- TODO: Remove
     TxBodyContent(..),
     TxBodyError(..),
+    TxBodyScriptData(..),
 
     -- ** Transaction Ids
     TxId(..),
@@ -160,16 +167,25 @@ module Cardano.Api (
 
     -- ** Transaction inputs
     TxIn(TxIn),
+    TxIns,
     TxIx(TxIx),
+    renderTxIn,
 
     -- ** Transaction outputs
+    CtxTx, CtxUTxO,
     TxOut(TxOut),
     TxOutValue(..),
-    serialiseAddressForTxOut,
-    TxOutDatumHash(..),
+    txOutValueToLovelace,
+    txOutValueToValue,
+    lovelaceToTxOutValue,
+    TxOutDatum(..),
+    parseHash,
 
     -- ** Other transaction body types
     TxInsCollateral(..),
+    TxInsReference(..),
+    TxTotalCollateral(..),
+    TxReturnCollateral(..),
     TxFee(..),
     TxValidityLowerBound(..),
     TxValidityUpperBound(..),
@@ -177,7 +193,6 @@ module Cardano.Api (
     EpochSlots(..),
     TxMetadataInEra(..),
     TxAuxScripts(..),
-    TxExtraScriptData(..),
     TxExtraKeyWitnesses(..),
     TxWithdrawals(..),
     TxCertificates(..),
@@ -205,6 +220,7 @@ module Cardano.Api (
     WithdrawalsSupportedInEra(..),
     CertificatesSupportedInEra(..),
     UpdateProposalSupportedInEra(..),
+    TxTotalAndReturnCollateralSupportedInEra(..),
 
     -- ** Feature availability functions
     collateralSupportedInEra,
@@ -220,6 +236,38 @@ module Cardano.Api (
     certificatesSupportedInEra,
     updateProposalSupportedInEra,
     scriptDataSupportedInEra,
+    totalAndReturnCollateralSupportedInEra,
+
+    -- ** Fee calculation
+    transactionFee,
+    toLedgerEpochInfo,
+    estimateTransactionFee,
+    evaluateTransactionFee,
+    estimateTransactionKeyWitnessCount,
+
+    -- ** Minimum required UTxO calculation
+    calculateMinimumUTxO,
+    MinimumUTxOError,
+
+    -- ** Script execution units
+    evaluateTransactionExecutionUnits,
+    ScriptExecutionError(..),
+    TransactionValidityError(..),
+
+    -- ** Transaction balance
+    evaluateTransactionBalance,
+
+    -- ** Building transactions with automated fees and balancing
+    makeTransactionBodyAutoBalance,
+    BalancedTxBody(..),
+    TxBodyErrorAutoBalance(..),
+    TxScriptValidity(..),
+    ScriptValidity(..),
+    TxScriptValiditySupportedInEra(..),
+    scriptValidityToTxScriptValidity,
+    txScriptValiditySupportedInShelleyBasedEra,
+    txScriptValiditySupportedInCardanoEra,
+    txScriptValidityToScriptValidity,
 
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
@@ -239,10 +287,6 @@ module Cardano.Api (
     makeShelleyKeyWitness,
     makeShelleyBootstrapWitness,
 
-    -- * Fee calculation
-    transactionFee,
-    estimateTransactionFee,
-
     -- * Transaction metadata
     -- | Embedding additional structured data within transactions.
     TxMetadata(..),
@@ -255,7 +299,7 @@ module Cardano.Api (
     validateTxMetadata,
     TxMetadataRangeError (..),
 
-    -- ** Converstion to\/from JSON
+    -- ** Conversion to\/from JSON
     TxMetadataJsonSchema (..),
     metadataFromJson,
     metadataToJson,
@@ -264,7 +308,7 @@ module Cardano.Api (
     TxMetadataJsonSchemaError (..),
 
     -- * Certificates
-    Certificate,
+    Certificate(..),
 
     -- ** Registering stake address and delegating
     -- | Certificates that are embedded in transactions for registering and
@@ -295,11 +339,13 @@ module Cardano.Api (
     SimpleScriptV1,
     SimpleScriptV2,
     PlutusScriptV1,
+    PlutusScriptV2,
     ScriptLanguage(..),
     SimpleScriptVersion(..),
     PlutusScriptVersion(..),
     AnyScriptLanguage(..),
     AnyPlutusScriptVersion(..),
+    IsPlutusScriptLanguage(..),
     IsScriptLanguage(..),
     IsSimpleScriptLanguage(..),
 
@@ -315,7 +361,7 @@ module Cardano.Api (
     toScriptInEra,
     eraOfScriptInEra,
 
-    -- * Use of a script in an era as a witness
+    -- ** Use of a script in an era as a witness
     WitCtxTxIn, WitCtxMint, WitCtxStake,
     WitCtx(..),
     ScriptWitness(..),
@@ -326,7 +372,14 @@ module Cardano.Api (
     ScriptRedeemer,
     scriptWitnessScript,
 
-    -- *** Languages supported in each era
+    -- ** Inspecting 'ScriptWitness'es
+    AnyScriptWitness(..),
+    ScriptWitnessIndex(..),
+    renderScriptWitnessIndex,
+    collectTxBodyScriptWitnesses,
+    mapTxScriptWitnesses,
+
+    -- ** Languages supported in each era
     ScriptLanguageInEra(..),
     scriptLanguageSupportedInEra,
     languageOfScriptLanguageInEra,
@@ -344,7 +397,7 @@ module Cardano.Api (
     examplePlutusScriptAlwaysSucceeds,
     examplePlutusScriptAlwaysFails,
 
-    -- * Script data
+    -- ** Script data
     ScriptData(..),
     hashScriptData,
 
@@ -359,7 +412,7 @@ module Cardano.Api (
     ScriptDataJsonError (..),
     ScriptDataJsonSchemaError (..),
 
-    -- * Script execution units
+    -- ** Script execution units
     ExecutionUnits(..),
     ExecutionUnitPrices(..),
     CostModel(..),
@@ -372,6 +425,17 @@ module Cardano.Api (
 
     -- * Serialisation
     -- | Support for serialising data in JSON, CBOR and text files.
+    InputFormat (..),
+    InputDecodeError (..),
+    deserialiseInput,
+    deserialiseInputAnyOf,
+    renderInputDecodeError,
+
+    SomeAddressVerificationKey(..),
+    deserialiseAnyVerificationKey,
+    deserialiseAnyVerificationKeyBech32,
+    deserialiseAnyVerificationKeyTextEnvelope,
+    renderSomeAddressVerificationKey,
 
     -- ** CBOR
     SerialiseAsCBOR,
@@ -407,10 +471,11 @@ module Cardano.Api (
     -- | Some types have a natural raw binary format.
     SerialiseAsRawBytes,
     serialiseToRawBytes,
-    deserialiseFromRawBytes,
+    eitherDeserialiseFromRawBytes,
     serialiseToRawBytesHex,
     deserialiseFromRawBytesHex,
     serialiseToRawBytesHexText,
+    RawBytesHexError(..),
 
     -- ** Text envelope
     -- | Support for a envelope file format with text headers and a hex-encoded
@@ -421,6 +486,7 @@ module Cardano.Api (
     TextEnvelopeDescr,
     TextEnvelopeError(..),
     textEnvelopeRawCBOR,
+    textEnvelopeToJSON,
     serialiseToTextEnvelope,
     deserialiseFromTextEnvelope,
     readFileTextEnvelope,
@@ -428,10 +494,34 @@ module Cardano.Api (
     writeFileTextEnvelopeWithOwnerPermissions,
     readTextEnvelopeFromFile,
     readTextEnvelopeOfTypeFromFile,
+
+    -- ** Text envelope CDDL
+    -- | Support for serialising values in the ledger's CDDL format.
+    -- Note, this will be deprecated in the future in favour of a
+    -- single API.
+    FromSomeTypeCDDL(..),
+    readFileTextEnvelopeCddlAnyOf,
+    writeTxFileTextEnvelopeCddl,
+    writeTxWitnessFileTextEnvelopeCddl,
+    serialiseTxLedgerCddl,
+    deserialiseTxLedgerCddl,
+    serialiseWitnessLedgerCddl,
+    deserialiseWitnessLedgerCddl,
+    TextEnvelopeCddl(..), -- TODO: Deprecate this when we stop supporting the cli's
+                          -- intermediate txbody format.
+    TextEnvelopeCddlError(..),
+
     -- *** Reading one of several key types
+    readKeyFile,
+    readKeyFileTextEnvelope,
+    readKeyFileAnyOf,
+
+    -- *** Read one of several types
     FromSomeType(..),
     deserialiseFromTextEnvelopeAnyOf,
     readFileTextEnvelopeAnyOf,
+
+
 
     -- * Errors
     Error(..),
@@ -451,20 +541,32 @@ module Cardano.Api (
     LedgerState(..),
     initialLedgerState,
     applyBlock,
+    ValidationMode(..),
+
+    -- *** Ledger Events
+    LedgerEvent(..),
+    MIRDistributionDetails(..),
+    PoolReapDetails(..),
+    toLedgerEvent,
 
     -- *** Traversing the block chain
     foldBlocks,
+    chainSyncClientWithLedgerState,
+    chainSyncClientPipelinedWithLedgerState,
 
     -- *** Errors
+    LedgerStateError(..),
     FoldBlocksError(..),
     GenesisConfigError(..),
     InitialLedgerStateError(..),
+    renderLedgerStateError,
     renderFoldBlocksError,
     renderGenesisConfigError,
     renderInitialLedgerStateError,
 
     -- ** Low level protocol interaction with a Cardano node
     connectToLocalNode,
+    connectToLocalNodeWithVersion,
     LocalNodeConnectInfo(..),
     AnyConsensusMode(..),
     renderMode,
@@ -473,12 +575,24 @@ module Cardano.Api (
     ConsensusModeIsMultiEra(..),
     AnyConsensusModeParams(..),
     ConsensusModeParams(..),
+    ConsensusProtocol,
+    ChainDepStateProtocol,
+    ConsensusBlockForMode,
+    ConsensusBlockForEra,
     EraInMode(..),
     toEraInMode,
     LocalNodeClientProtocols(..),
+    LocalNodeClientParams(..),
+    mkLocalNodeClientParams,
     LocalChainSyncClient(..),
     CardanoMode,
---  connectToRemoteNode,
+    --  connectToRemoteNode,
+
+    -- ** Protocol related types
+    BlockType(..),
+    Protocol(..),
+    ProtocolInfoArgs(..),
+
 
     -- *** Chain sync protocol
     -- | To construct a @ChainSyncClient@ see @Cardano.Api.Client@ or
@@ -492,22 +606,35 @@ module Cardano.Api (
     LocalTxSubmissionClient,
     TxInMode(..),
     TxValidationErrorInMode(..),
+    SubmitResult(..),
     runLocalTxSubmissionClient,
     submitTxToNodeLocal,
 
     -- *** Local state query
     LocalStateQueryClient(..),
     QueryInMode(..),
+    SystemStart(..),
     QueryInEra(..),
     QueryInShelleyBasedEra(..),
     QueryUTxOFilter(..),
     UTxO(..),
     queryNodeLocalState,
+    executeQueryCardanoMode,
+
+    -- *** Local tx monitoring
+    LocalTxMonitorClient(..),
+    LocalTxMonitoringQuery(..),
+    LocalTxMonitoringResult(..),
+    MempoolSizeAndCapacity(..),
+    queryTxMonitoringLocal,
+
+    TxIdInMode(..),
 
     EraHistory(..),
     getProgress,
 
     -- *** Common queries
+    determineEra,
     getLocalChainTip,
 
     -- * Node operation
@@ -517,6 +644,9 @@ module Cardano.Api (
     OperationalCertificate,
     OperationalCertificateIssueCounter,
     OperationalCertIssueError,
+    getHotKey,
+    getKesPeriod,
+    getOpCertCount,
     issueOperationalCertificate,
 
     -- * Genesis file
@@ -528,7 +658,7 @@ module Cardano.Api (
     GenesisUTxOKey,
     genesisUTxOPseudoTxIn,
 
-    -- ** Genesis paramaters
+    -- ** Genesis parameters
     GenesisParameters(..),
 
     -- * Special transactions
@@ -548,47 +678,110 @@ module Cardano.Api (
     NetworkMagic(..),
 
     -- ** Conversions
+    toLedgerPParams,
+    fromLedgerPParams,
+    toCtxUTxOTxOut,
     --TODO: arrange not to export these
+    fromNetworkMagic,
     toNetworkMagic,
-    --TODO: Remove after updating cardano-node-chairman with new IPC
-    SomeNodeClientProtocol(..),
+    fromLedgerTxOuts,
+    toLedgerUTxO,
+    runParsecParser,
 
     SlotsInEpoch(..),
     SlotsToEpochEnd(..),
     slotToEpoch,
+
+    -- * Node socket related
+    EnvSocketError(..),
+    SocketPath(..),
+    readEnvSocketPath,
+    renderEnvSocketError,
+
+    NodeToClientVersion(..),
+
+    -- ** Monadic queries
+    LocalStateQueryExpr,
+    executeLocalStateQueryExpr,
+    queryExpr,
+    determineEraExpr,
+
+    chainPointToSlotNo,
+    chainPointToHeaderHash,
+    makeChainTip,
+    parseFilePath,
+    writeSecrets,
+
+    -- ** Cast functions
+    EraCast (..),
+    EraCastError (..),
+
+    -- * Convenience functions
+
+    -- ** Transaction construction
+    constructBalancedTx,
+
+    -- ** Queries
+    QueryConvenienceError(..),
+    queryStateForBalancedTx,
+    renderQueryConvenienceError,
+
+    -- ** Constraint satisfaction functions
+    getIsCardanoEraConstraint,
+
+    -- ** Misc
+    ScriptLockedTxInsError(..),
+    TxInsExistError(..),
+    renderEra,
+    renderNotScriptLockedTxInsError,
+    renderTxInsExistError,
+    txInsExistInUTxO,
+    notScriptLockedTxIns,
+    textShow,
   ) where
 
 import           Cardano.Api.Address
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
+import           Cardano.Api.Convenience.Constraints
+import           Cardano.Api.Convenience.Construction
+import           Cardano.Api.Convenience.Query
+import           Cardano.Api.DeserialiseAnyOf
+import           Cardano.Api.Environment
+import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.Fees
 import           Cardano.Api.GenesisParameters
-import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.InMode
 import           Cardano.Api.IPC
-import           Cardano.Api.Key
-import           Cardano.Api.KeysByron
-import           Cardano.Api.KeysPraos
-import           Cardano.Api.KeysShelley
+import           Cardano.Api.IPC.Monad
+import           Cardano.Api.Keys.Byron
+import           Cardano.Api.Keys.Class
+import           Cardano.Api.Keys.Read
+import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.LedgerEvent
 import           Cardano.Api.LedgerState
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.OperationalCertificate
+import           Cardano.Api.Protocol
 import           Cardano.Api.ProtocolParameters
-import           Cardano.Api.Query hiding (LedgerState(..))
+import           Cardano.Api.Query hiding (LedgerState (..))
 import           Cardano.Api.Script
 import           Cardano.Api.ScriptData
 import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
+import           Cardano.Api.SerialiseLedgerCddl
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
 import           Cardano.Api.TxMetadata
+import           Cardano.Api.Utils
 import           Cardano.Api.Value
---TODO: Remove after updating cardano-node-chairman with new IPC
-import           Cardano.Api.Protocol.Types
+import           Cardano.Api.ValueParser

@@ -1,0 +1,38 @@
+{
+  "networkMagic": 764824073,
+  "network": {
+    "tag": "ConnectTo",
+    "contents": [
+      "/run/user/1000/cardano-tracer-demo-1.sock",
+      "/run/user/1000/cardano-tracer-demo-2.sock",
+      "/run/user/1000/cardano-tracer-demo-3.sock"
+    ]
+  },
+  "hasEKG": [
+    {
+      "epHost": "127.0.0.1",
+      "epPort": 3100
+    },
+    {
+      "epHost": "127.0.0.1",
+      "epPort": 3101
+    }
+  ],
+  "hasPrometheus": {
+    "epHost": "127.0.0.1",
+    "epPort": 3000
+  },
+  "logging": [
+    {
+      "logRoot": "/run/user/1000/cardano-tracer-demo-logs",
+      "logMode": "FileMode",
+      "logFormat": "ForMachine"
+    }
+  ],
+  "rotation": {
+    "rpFrequencySecs": 15,
+    "rpKeepFilesNum": 5,
+    "rpLogLimitBytes": 5000,
+    "rpMaxAgeHours": 1
+  }
+}

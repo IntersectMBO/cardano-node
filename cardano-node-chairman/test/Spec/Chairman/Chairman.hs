@@ -31,8 +31,8 @@ import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Environment as IO
 import qualified System.IO as IO
 import qualified System.Process as IO
-import qualified Test.Process as H
-import qualified Testnet.Conf as H
+
+import qualified Cardano.Testnet as H
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Redundant <&>" -}
@@ -60,8 +60,6 @@ chairmanOver timeoutSeconds requiredProgress H.Conf {..} allNodes = do
       ( H.procChairman
         ( [ "--timeout", show @Int timeoutSeconds
           , "--config", tempAbsPath </> "configuration.yaml"
-          , "--security-parameter", "2160"
-          , "--testnet-magic", show @Int testnetMagic
           , "--require-progress", show @Int requiredProgress
           ]
         <> (sprockets >>= (\sprocket -> ["--socket-path", IO.sprocketArgumentName sprocket]))
@@ -74,8 +72,7 @@ chairmanOver timeoutSeconds requiredProgress H.Conf {..} allNodes = do
           }
         )
       )
-
-    chairmanResult <- H.waitSecondsForProcess (timeoutSeconds + 10) hProcess
+    chairmanResult <- H.waitSecondsForProcess (timeoutSeconds + 60) hProcess
 
     case chairmanResult of
       Right ExitSuccess -> return ()

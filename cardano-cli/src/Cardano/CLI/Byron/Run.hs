@@ -21,7 +21,7 @@ import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
 import           Cardano.Api hiding (UpdateProposal, GenesisParameters)
-import           Cardano.Api.Byron (SomeByronSigningKey (..), Tx (..), VerificationKey (..))
+import           Cardano.Api.Byron (SomeByronSigningKey (..), Tx (..))
 
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
@@ -197,7 +197,7 @@ runSpendGenesisUTxO
   -> NewTxFile
   -> SigningKeyFile
   -> Address ByronAddr
-  -> [TxOut ByronEra]
+  -> [TxOut CtxTx ByronEra]
   -> ExceptT ByronClientCmdError IO ()
 runSpendGenesisUTxO genesisFile nw bKeyFormat (NewTxFile ctTx) ctKey genRichAddr outs = do
     genesis <- firstExceptT ByronCmdGenesisError $ readGenesis genesisFile nw
@@ -212,7 +212,7 @@ runSpendUTxO
   -> NewTxFile
   -> SigningKeyFile
   -> [TxIn]
-  -> [TxOut ByronEra]
+  -> [TxOut CtxTx ByronEra]
   -> ExceptT ByronClientCmdError IO ()
 runSpendUTxO nw bKeyFormat (NewTxFile ctTx) ctKey ins outs = do
     sk <- firstExceptT ByronCmdKeyFailure $ readByronSigningKey bKeyFormat ctKey

@@ -18,7 +18,6 @@ with pkgs;
           port = 3001;
           edgeNodes = [ "127.0.0.1" ];
         };
-        cardanoNodePkgs = pkgs;
         nodeConfig = config.services.cardano-node.environments.${config.services.cardano-node.environment}.nodeConfig // {
           hasPrometheus = [ config.services.cardano-node.hostAddr 12798 ];
           # Use Journald output:
@@ -40,8 +39,7 @@ with pkgs;
         enable = true;
         port = 8101;
         network = "mainnet";
-        socketPath = config.services.cardano-node.socketPath;
-        cardanoNodePkgs = pkgs;
+        socketPath = config.services.cardano-node.socketPath 0;
       };
       systemd.services.cardano-submit-api.serviceConfig.SupplementaryGroups = "cardano-node";
     };
@@ -55,7 +53,7 @@ with pkgs;
     machine.wait_for_open_port(3001)
     machine.succeed("systemctl status cardano-node")
     machine.succeed(
-        "${cardano-ping}/bin/cardano-ping -h 127.0.0.1 -c 1 -q --json | ${jq}/bin/jq -c"
+        "${cardanoNodePackages.cardano-ping}/bin/cardano-ping -h 127.0.0.1 -c 1 -q --json | ${jq}/bin/jq -c"
     )
     machine.wait_for_open_port(8101)
     machine.succeed("systemctl status cardano-submit-api")

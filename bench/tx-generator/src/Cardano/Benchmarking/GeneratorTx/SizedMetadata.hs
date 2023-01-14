@@ -1,18 +1,20 @@
 {- HLINT ignore "Use camelCase" -}
 {- HLINT ignore "Use uncurry" -}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 module Cardano.Benchmarking.GeneratorTx.SizedMetadata
 where
 
 import           Prelude
 
+import           Cardano.Api
+import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as Map
 import           Data.Word (Word64)
-import qualified Data.ByteString as BS
-import           Cardano.Benchmarking.GeneratorTx.Tx
-import           Cardano.Api
+
+import           Cardano.TxGenerator.Utils
+
 
 maxMapSize :: Int
 maxMapSize = 1000
@@ -26,21 +28,25 @@ assume_cbor_properties
     && prop_mapCostsAllegra
     && prop_mapCostsMary
     && prop_mapCostsAlonzo
+    && prop_mapCostsBabbage
     && prop_bsCostsShelley
     && prop_bsCostsAllegra
     && prop_bsCostsMary
     && prop_bsCostsAlonzo
+    && prop_bsCostsBabbage
 
 -- The cost of map entries in metadata follows a step function.
--- This assums the map indecies are [0..n].
+-- This assumes the map indices are [0..n].
 prop_mapCostsShelley :: Bool
 prop_mapCostsAllegra :: Bool
 prop_mapCostsMary    :: Bool
 prop_mapCostsAlonzo  :: Bool
-prop_mapCostsShelley = measureMapCosts AsShelleyEra == assumeMapCosts AsShelleyEra
-prop_mapCostsAllegra = measureMapCosts AsAllegraEra == assumeMapCosts AsAllegraEra
-prop_mapCostsMary    = measureMapCosts AsMaryEra    == assumeMapCosts AsMaryEra
-prop_mapCostsAlonzo  = measureMapCosts AsAlonzoEra  == assumeMapCosts AsAlonzoEra
+prop_mapCostsBabbage :: Bool
+prop_mapCostsShelley = measureMapCosts AsShelleyEra   == assumeMapCosts AsShelleyEra
+prop_mapCostsAllegra = measureMapCosts AsAllegraEra   == assumeMapCosts AsAllegraEra
+prop_mapCostsMary    = measureMapCosts AsMaryEra      == assumeMapCosts AsMaryEra
+prop_mapCostsAlonzo  = measureMapCosts AsAlonzoEra    == assumeMapCosts AsAlonzoEra
+prop_mapCostsBabbage = measureMapCosts AsBabbageEra   == assumeMapCosts AsBabbageEra
 
 assumeMapCosts :: forall era . IsShelleyBasedEra era => AsType era -> [Int]
 assumeMapCosts _proxy = stepFunction [
@@ -51,12 +57,12 @@ assumeMapCosts _proxy = stepFunction [
     , ( 744 , 4)          -- 744 entries at 4 bytes.
     ]
   where
-    firstEntry = case shelleyBasedEra @ era of
+    firstEntry = case shelleyBasedEra @era of
       ShelleyBasedEraShelley -> 37
       ShelleyBasedEraAllegra -> 39
       ShelleyBasedEraMary    -> 39
- -- Unconfirmed ! update when alonzo is runnable.
-      ShelleyBasedEraAlonzo  -> error "39"
+      ShelleyBasedEraAlonzo  -> 42
+      ShelleyBasedEraBabbage -> 42
 
 -- Bytestring costs are not LINEAR !!
 -- Costs are piecewise linear for payload sizes [0..23] and [24..64].
@@ -64,11 +70,12 @@ prop_bsCostsShelley  :: Bool
 prop_bsCostsAllegra :: Bool
 prop_bsCostsMary    :: Bool
 prop_bsCostsAlonzo  :: Bool
-prop_bsCostsShelley  = measureBSCosts AsShelleyEra == [37..60] ++ [62..102]
+prop_bsCostsBabbage   :: Bool
+prop_bsCostsShelley = measureBSCosts AsShelleyEra == [37..60] ++ [62..102]
 prop_bsCostsAllegra = measureBSCosts AsAllegraEra == [39..62] ++ [64..104]
 prop_bsCostsMary    = measureBSCosts AsMaryEra    == [39..62] ++ [64..104]
- -- Unconfirmed ! update when alonzo is runnable.
-prop_bsCostsAlonzo  = measureBSCosts AsAlonzoEra  == error "[39..62] ++ [64..104]"
+prop_bsCostsAlonzo  = measureBSCosts AsAlonzoEra  == [42..65] ++ [67..107]
+prop_bsCostsBabbage = measureBSCosts AsBabbageEra == [42..65] ++ [67..107]
 
 stepFunction :: [(Int, Int)] -> [Int]
 stepFunction f = scanl1 (+) steps
@@ -94,7 +101,7 @@ metadataSize :: forall era . IsShelleyBasedEra era => AsType era -> Maybe TxMeta
 metadataSize p m = dummyTxSize p m - dummyTxSize p Nothing
 
 dummyTxSizeInEra :: forall era . IsShelleyBasedEra era => TxMetadataInEra era -> Int
-dummyTxSizeInEra metadata = case makeTransactionBody dummyTx of
+dummyTxSizeInEra metadata = case createAndValidateTransactionBody dummyTx of
   Right b -> BS.length $ serialiseToCBOR b
   Left err -> error $ "metaDataSize " ++ show err
  where
@@ -103,30 +110,31 @@ dummyTxSizeInEra metadata = case makeTransactionBody dummyTx of
       txIns = [( TxIn "dbaff4e270cfb55612d9e2ac4658a27c79da4a5271c6f90853042d1403733810" (TxIx 0)
                , BuildTxWith $ KeyWitness KeyWitnessForSpending )]
     , txInsCollateral = TxInsCollateralNone
+    , txInsReference = TxInsReferenceNone
     , txOuts = []
-    , txFee = mkFee 0
-    , txValidityRange = (TxValidityNoLowerBound, mkValidityUpperBound 0)
+    , txFee = mkTxFee 0
+    , txValidityRange = (TxValidityNoLowerBound, mkTxValidityUpperBound 0)
     , txMetadata = metadata
     , txAuxScripts = TxAuxScriptsNone
-    , txExtraScriptData = BuildTxWith TxExtraScriptDataNone
     , txExtraKeyWits = TxExtraKeyWitnessesNone
     , txProtocolParams = BuildTxWith Nothing
     , txWithdrawals = TxWithdrawalsNone
     , txCertificates = TxCertificatesNone
     , txUpdateProposal = TxUpdateProposalNone
     , txMintValue = TxMintNone
+    , txScriptValidity = TxScriptValidityNone
+    , txReturnCollateral = TxReturnCollateralNone
+    , txTotalCollateral = TxTotalCollateralNone
     }
 
 dummyTxSize :: forall era . IsShelleyBasedEra era => AsType era -> Maybe TxMetadata -> Int
-dummyTxSize _p m = (dummyTxSizeInEra @ era) $ metadataInEra m
+dummyTxSize _p m = (dummyTxSizeInEra @era) $ metadataInEra m
 
 metadataInEra :: forall era . IsShelleyBasedEra era => Maybe TxMetadata -> TxMetadataInEra era
 metadataInEra Nothing = TxMetadataNone
-metadataInEra (Just m) = case shelleyBasedEra @ era of
-  ShelleyBasedEraShelley -> TxMetadataInEra TxMetadataInShelleyEra m
-  ShelleyBasedEraAllegra -> TxMetadataInEra TxMetadataInAllegraEra m
-  ShelleyBasedEraMary    -> TxMetadataInEra TxMetadataInMaryEra m
-  ShelleyBasedEraAlonzo  -> TxMetadataInEra TxMetadataInAlonzoEra m
+metadataInEra (Just m) = case txMetadataSupportedInEra (cardanoEra @era) of
+  Nothing -> error "unreachable"
+  Just e -> TxMetadataInEra e m
 
 mkMetadata :: forall era . IsShelleyBasedEra era => Int -> Either String (TxMetadataInEra era)
 mkMetadata 0 = Right $ metadataInEra Nothing
@@ -135,11 +143,12 @@ mkMetadata size
       then Left $ "Error : metadata must be 0 or at least " ++ show minSize ++ " bytes in this era."
       else Right $ metadataInEra $ Just metadata
  where
-  minSize = case shelleyBasedEra @ era of
+  minSize = case shelleyBasedEra @era of
     ShelleyBasedEraShelley -> 37
     ShelleyBasedEraAllegra -> 39
     ShelleyBasedEraMary    -> 39
-    ShelleyBasedEraAlonzo  -> error "39"
+    ShelleyBasedEraAlonzo  -> 39 -- TODO: check minSize for Alonzo
+    ShelleyBasedEraBabbage -> 39 -- TODO: check minSize for Babbage
   nettoSize = size - minSize
 
   -- At 24 the CBOR representation changes.

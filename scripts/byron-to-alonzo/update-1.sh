@@ -5,7 +5,7 @@ set -e
 
 # This script will
 # - move funds out of the Byron genesis address, so that we can use them later in Shelley
-# - iniate the transition to protocol version 1 (Byron, OBFT)
+# - initiate the transition to protocol version 1 (Byron, OBFT)
 
 ROOT=example
 

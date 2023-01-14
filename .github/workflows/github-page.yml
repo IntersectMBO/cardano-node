@@ -13,31 +13,34 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ghc: ["8.10.4"]
+        ghc: ["8.10.7"]
+        cabal: ["3.8.1.0"]
         os: [ubuntu-latest]
 
-    steps:
-    - uses: actions/checkout@v1
+    env:
+      # Modify this value to "invalidate" the cabal cache.
+      CABAL_CACHE_VERSION: "2022-12-30"
 
-    - name: Set cache version
-      run: echo "CACHE_VERSION=UN37rUo" >> $GITHUB_ENV
+      # Modify this value to "invalidate" the secp cache.
+      SECP_CACHE_VERSION: "2022-12-30"
+
+      # current ref from: 27.02.2022
+      SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
+
+    steps:
+    - name: Install Haskell
+      uses: input-output-hk/setup-haskell@v1
+      id: setup-haskell
+      with:
+        ghc-version: ${{ matrix.ghc }}
+        cabal-version: ${{ matrix.cabal }}
+
+    - uses: actions/checkout@v2
 
     - name: Add build script path
       run: echo "$(pwd)/.github/bin" >> $GITHUB_PATH
 
-    - uses: haskell/actions/setup@v1
-      id: setup-haskell
-      with:
-        ghc-version: ${{ matrix.ghc }}
-        cabal-version: 3.4.0.0
-
-    - name: Haskell versions
-      run: |
-        ghc --version
-        cabal --version
-
     - name: Install build environment
-      if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
         sudo apt-get -y install libsodium23 libsodium-dev
@@ -45,40 +48,52 @@ jobs:
         sudo apt-get -y remove --purge software-properties-common
         sudo apt-get -y autoremove
 
+    - name: Install secp256k1
+      uses: input-output-hk/setup-secp256k1@v1
+      with:
+        git-ref: ${{ env.SECP256K1_REF }}
+        cache-version: ${{ env.SECP_CACHE_VERSION }}
+
     - name: Cabal update
       run: cabal update
 
-    - name: Disable reorder goals on MacOS and Linux
-      # Avoid reorder goals for platforms that don't need it because re-order goals can take up to 10 minutes
-      if: matrix.os == 'macos-latest' || matrix.os == 'ubuntu-latest'
+    - name: combine github-pages, and machine local project files.
       run: |
-        cat cabal.project | sed 's|reorder-goals: True|reorder-goals: False|g' > cabal.project.tmp
-        mv cabal.project.tmp cabal.project
-
-    - name: Use cabal.project.local.github-pages
-      run: cp .github/workflows/cabal.project.local.github-pages cabal.project.local
+        cat .github/workflows/cabal.project.local.github-pages \
+            ".github/workflows/cabal.project.local.ci.$(uname -s)" \
+            | tee cabal.project.local
 
     - name: Dry run
       run: |
-        cabal build all --dependencies-only --dry-run
+        cabal build all --dry-run
         mkdir ./haddocks
         DRY_RUN=1 ./scripts/haddocs.sh ./haddocks true
 
-    - name: Record dependencies
-      run: |
-        cat ${{ env.PLAN_JSON }} | jq -r '."install-plan"[].id' | sort | uniq > dependencies.txt
-
-    - uses: actions/cache@v2
-      name: Cache cabal store
+    - name: Cabal cache over S3
+      uses: action-works/cabal-cache-s3@v1
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       with:
-        path: ${{ steps.setup-haskell.outputs.cabal-store }}
-        key: cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
-        restore-keys: |
-          cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
-          cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-
+        region: us-west-2
+        dist-dir: dist-newstyle
+        store-path: ${{ steps.cabal-store.outputs.cabal-store }}
+        threads: 16
+        archive-uri: ${{ secrets.BINARY_CACHE_URI }}/${{ env.CABAL_CACHE_VERSION }}/${{ runner.os }}
+        skip: "${{ secrets.BINARY_CACHE_URI == '' }}"
+
+    - name: Cabal cache over HTTPS
+      uses: action-works/cabal-cache-s3@v1
+      with:
+        dist-dir: dist-newstyle
+        store-path: ${{ steps.cabal-store.outputs.cabal-store }}
+        threads: 16
+        archive-uri: https://iohk.cache.haskellworks.io/${{ env.CABAL_CACHE_VERSION }}/${{ runner.os }}
+        skip: "${{ secrets.BINARY_CACHE_URI != '' }}"
+        enable-save: false
 
     - name: Install dependencies
-      run: cabal build all --only-dependencies
+      run: cabal build all
 
     - name: Build Haddock documentation 🔧
       run: ./scripts/haddocs.sh ./haddocks true
@@ -97,15 +112,8 @@ jobs:
 
     - name: Deploy documentation to gh-pages 🚀
       if: github.ref == 'refs/heads/master'
-      run: |
-        git fetch origin gh-pages:gh-pages
-        git config --local user.email "operations@iohk.io"
-        git config --local user.name  "Input Output HK"
-        git add .
-        git stash
-        git checkout gh-pages
-        cp -r ./haddocks/* ./
-        rm -rf haddocks
-        git add -A
-        git commit -m "Deployed haddocks" || true
-        git push https://${{ github.actor }}:${{ github.token }}@github.com/${{ github.repository }}.git HEAD:gh-pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN || github.token }}
+        publish_dir: haddocks
+        force_orphan: true

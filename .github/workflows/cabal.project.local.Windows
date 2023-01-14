@@ -1,8 +1,0 @@
-package cardano-crypto-praos
-  flags: -external-libsodium-vrf
-
-write-ghc-environment-files: always
-
-ignore-project: False
-
-reorder-goals: True

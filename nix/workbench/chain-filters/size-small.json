@@ -1,0 +1,13 @@
+[ { "tag": "CBlock"
+  , "contents":
+    { "tag": "BFullnessGEq"
+    , "contents": 0.03
+    }
+  }
+, { "tag": "CBlock"
+  , "contents":
+    { "tag": "BFullnessLEq"
+    , "contents": 0.1
+    }
+  }
+]

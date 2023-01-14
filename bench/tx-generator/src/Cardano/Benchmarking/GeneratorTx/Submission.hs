@@ -19,32 +19,26 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Benchmarking.GeneratorTx.Submission
-  ( SubmissionParams(..)
+  ( StreamState (..)
+  , SubmissionParams(..)
   , SubmissionThreadReport
-  , TxSendQueue
   , TxSource
   , ReportRef
-  , legacyTxSource
-  , walletTxSource
   , mkSubmissionSummary
   , submitThreadReport
   , submitSubmissionThreadStats
-  , simpleTxFeeder
-  , tpsLimitedTxFeeder
-  , tpsLimitedTxFeederShutdown
+  , txStreamSource
   ) where
 
-import           Prelude (String, error)
 import           Cardano.Prelude hiding (ByteString, atomically, retry, state, threadDelay)
+import           Prelude (String, error)
 
-import           Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.STM as STM
-import           Control.Concurrent.STM.TBQueue (TBQueue)
+
+import qualified Streaming.Prelude as Streaming
 
 import           Data.Time.Clock (NominalDiffTime, UTCTime)
 import qualified Data.Time.Clock as Clock
-
-import           Control.Tracer (Tracer, traceWith)
 
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.Common ()
@@ -52,11 +46,13 @@ import           Cardano.Tracing.OrphanInstances.Consensus ()
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 
-import           Ouroboros.Network.Protocol.TxSubmission.Type (TokBlockingStyle (..))
+import           Ouroboros.Network.Protocol.TxSubmission2.Type (TokBlockingStyle (..))
 
 import           Cardano.Api
+import           Cardano.TxGenerator.Types (TPSRate, TxGenError)
 
-import           Cardano.Benchmarking.Tracer
+import           Cardano.Benchmarking.LogTypes
+import           Cardano.Benchmarking.TpsThrottle
 import           Cardano.Benchmarking.Types
 
 import           Cardano.Benchmarking.GeneratorTx.SubmissionClient
@@ -73,8 +69,6 @@ data SubmissionParams
       }
 
 type ReportRef = STM.TMVar (Either String SubmissionThreadReport)
-type TxSendQueue era = TBQueue (Maybe (Tx era))
-
 
 data SubmissionThreadReport
   = SubmissionThreadReport
@@ -101,10 +95,6 @@ submitSubmissionThreadStats reportRef strStats = do
   submitThreadReport reportRef (Right report)
   return ()
 
-{-------------------------------------------------------------------------------
-  Results
--------------------------------------------------------------------------------}
-
 mkSubmissionSummary ::
      String
   -> UTCTime
@@ -125,7 +115,7 @@ mkSubmissionSummary ssThreadName startTime reportsRefs
  where
   txDiffTimeTPS :: Int -> NominalDiffTime -> TPSRate
   txDiffTimeTPS n delta =
-    TPSRate $ realToFrac $ fromIntegral n / delta
+    realToFrac $ fromIntegral n / delta
 
   threadReportTps :: SubmissionThreadReport -> TPSRate
   threadReportTps
@@ -133,148 +123,44 @@ mkSubmissionSummary ssThreadName startTime reportsRefs
       { strStats=SubmissionThreadStats{stsAcked=Ack ack}, strEndOfProtocol } =
         txDiffTimeTPS ack (Clock.diffUTCTime strEndOfProtocol startTime)
 
-{-------------------------------------------------------------------------------
-  Submission queue:  feeding and consumption
--------------------------------------------------------------------------------}
-simpleTxFeeder :: forall m era .
-     MonadIO m
-  => Tracer m (TraceBenchTxSubmit TxId)
-  -> Natural
-  -> TxSendQueue era
-  -> [Tx era]
-  -> m ()
-simpleTxFeeder tracer threads txSendQueue txs = do
-  forM_ (zip txs [0..]) feedTx
-  -- Issue the termination notifications.
-  replicateM_ (fromIntegral threads) $
-    liftIO $ STM.atomically $ STM.writeTBQueue txSendQueue Nothing
- where
-  feedTx :: (Tx era, Int) -> m ()
-  feedTx (tx, ix) = do
-    liftIO $ STM.atomically $ STM.writeTBQueue txSendQueue (Just tx)
-    traceWith tracer $ TraceBenchTxSubServFed [getTxId $ getTxBody tx] ix
-
-tpsLimitedTxFeederShutdown ::
-     Natural
-  -> TxSendQueue era
-  -> IO ()
-tpsLimitedTxFeederShutdown threads txSendQueue
-   = STM.atomically $
-       replicateM_ (fromIntegral threads)
-          $ STM.writeTBQueue txSendQueue Nothing
-
-tpsLimitedTxFeeder :: forall m era .
-     MonadIO m
-  => Tracer m (TraceBenchTxSubmit TxId)
-  -> Natural
-  -> TxSendQueue era
-  -> TPSRate
-  -> [Tx era] -> m ()
-tpsLimitedTxFeeder tracer threads txSendQueue (TPSRate rate) txs = do
-  -- It would be nice to catch an AsyncException here and do a clean shutdown.
-  -- However this would require extra machineries because we are in MonadIO m not in IO ().
-  -- TODO: Move everything to IO () and avoid problems from over-polymorphism.
-  now <- liftIO Clock.getCurrentTime
-  foldM_ feedTx (now, 0) (zip txs [0..])
-  liftIO $ tpsLimitedTxFeederShutdown threads txSendQueue
- where
-
-  feedTx :: (UTCTime, NominalDiffTime)
-         -> (Tx era, Int)
-         -> m (UTCTime, NominalDiffTime)
-  feedTx (lastPreDelay, lastDelay) (tx, ix) = do
-    liftIO . STM.atomically $ STM.writeTBQueue txSendQueue (Just tx)
-    traceWith tracer $ TraceBenchTxSubServFed [getTxId $ getTxBody tx] ix
-    now <- liftIO Clock.getCurrentTime
-    let targetDelay = realToFrac $ 1.0 / rate
-        loopCost = (now `Clock.diffUTCTime` lastPreDelay) - lastDelay
-        delay = targetDelay - loopCost
-    liftIO . threadDelay . ceiling $ (realToFrac delay * 1000000.0 :: Double)
-    pure (now, delay)
-
--- This is used in the two phase/ non wallet based tx-generator.
-legacyTxSource :: forall era. TxSendQueue era -> TxSource era
-legacyTxSource txSendQueue = Active worker
+txStreamSource :: forall era. MVar (StreamState (TxStream IO era)) -> TpsThrottle -> TxSource era
+txStreamSource streamRef tpsThrottle = Active worker
  where
   worker :: forall m blocking . MonadIO m => TokBlockingStyle blocking -> Req -> m (TxSource era, [Tx era])
   worker blocking req = do
-    (done, txList) <- case blocking of
-       TokBlocking -> consumeTxsBlocking req
-       TokNonBlocking -> consumeTxsNonBlocking req
-    if done
-       then return (Exhausted, txList)
-       else return (Active worker, txList)
+    (done, txCount) <- case blocking of
+       TokBlocking -> liftIO $ consumeTxsBlocking tpsThrottle req
+       TokNonBlocking -> liftIO $ consumeTxsNonBlocking tpsThrottle req
+    txList <- liftIO $ unFold txCount
+    case done of
+      Stop -> return (Exhausted, txList)
+      Next -> return (Active worker, txList)
 
-  consumeTxsBlocking ::
-       MonadIO m
-    => Req -> m (Bool, [Tx era])
-  consumeTxsBlocking req
-    = liftIO . STM.atomically $ go req []
+  unFold :: Int -> IO [Tx era]
+  unFold 0 = return []
+  unFold n = nextOnMVar streamRef >>= \case
+    -- Node2node clients buffer a number x of TXs internally (x is determined by the node.)
+    -- Therefore it is possible that the submission client requests TXs from an empty TxStream.
+    -- In other words, it is not an error to request more TXs than there are in the TxStream.
+    StreamEmpty -> return []
+    StreamError err -> error $ show err
+    StreamActive tx -> do
+      l <- unFold $ pred n
+      return $ tx:l
+
+  nextOnMVar :: MVar (StreamState (TxStream IO era)) -> IO (StreamState (Tx era))
+  nextOnMVar v = modifyMVar v $ \case
+    StreamEmpty -> return (StreamEmpty, StreamEmpty)
+    StreamError err -> return (StreamError err, StreamError err)
+    StreamActive s -> update <$> Streaming.next s
    where
-    go :: Req -> [Tx era] -> STM (Bool, [Tx era])
-    go 0 acc = pure (False, acc)
-    go n acc = STM.readTBQueue txSendQueue >>=
-      \case
-        Nothing -> pure (True, acc)
-        Just tx -> go (n - 1) (tx:acc)
+    update :: Either () (Either TxGenError (Tx era), TxStream IO era) -> (StreamState (TxStream IO era), StreamState (Tx era))
+    update x = case x of
+      Left () -> (StreamEmpty, StreamEmpty)
+      Right (Right tx, t) -> (StreamActive t, StreamActive tx)
+      Right (Left err, _) -> (StreamError err, StreamError err)
 
-  consumeTxsNonBlocking ::
-       MonadIO m
-    => Req -> m (Bool, [Tx era])
-  consumeTxsNonBlocking req
-    = liftIO . STM.atomically $
-        if req==0 then pure (False, [])
-          else do
-            STM.tryReadTBQueue txSendQueue >>= \case
-              Nothing -> pure (False, [])
-              Just Nothing -> pure (True, [])
-              Just (Just tx) -> pure (False, [tx])
-
-walletTxSource :: forall era. WalletScript era -> TxSendQueue era -> TxSource era
-walletTxSource walletScript txSendQueue = Active $ worker walletScript
- where
-  worker :: forall m blocking . MonadIO m => WalletScript era -> TokBlockingStyle blocking -> Req -> m (TxSource era, [Tx era])
-  worker script blocking req = do
-    (done, dummyList :: [Tx era]) <- case blocking of
-       TokBlocking -> consumeTxsBlocking req
-       TokNonBlocking -> consumeTxsNonBlocking req
-    (txList, newScript) <- liftIO $ unFold script $ length dummyList
-    if done
-       then return (Exhausted, txList)
-       else return (Active $ worker newScript, txList)
-
-  consumeTxsBlocking ::
-       MonadIO m
-    => Req -> m (Bool, [Tx era])
-  consumeTxsBlocking req
-    = liftIO . STM.atomically $ go req []
-   where
-    go :: Req -> [Tx era] -> STM (Bool, [Tx era])
-    go 0 acc = pure (False, acc)
-    go n acc = STM.readTBQueue txSendQueue >>=
-      \case
-        Nothing -> pure (True, acc)
-        Just tx -> go (n - 1) (tx:acc)
-
-  consumeTxsNonBlocking ::
-       MonadIO m
-    => Req -> m (Bool, [Tx era])
-  consumeTxsNonBlocking req
-    = liftIO . STM.atomically $
-        if req==0 then pure (False, [])
-          else do
-            STM.tryReadTBQueue txSendQueue >>= \case
-              Nothing -> pure (False, [])
-              Just Nothing -> pure (True, [])
-              Just (Just tx) -> pure (False, [tx])
-
-  unFold :: WalletScript era -> Int -> IO ([Tx era], WalletScript era)
-  unFold script 0 = return ([], script)
-  unFold script n = do
-    next <- runWalletScript script
-    case next of
-      Done -> error "unexpected WalletScript Done" --return ([], script)
-      NextTx s tx -> do
-        (l, out) <- unFold s $ pred n
-        return (tx:l, out)
-      Error err -> error err
+data StreamState x
+  = StreamEmpty
+  | StreamError TxGenError
+  | StreamActive x

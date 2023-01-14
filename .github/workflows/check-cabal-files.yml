@@ -1,0 +1,21 @@
+name: Check cabal files
+
+on:
+  push:
+  create:
+
+jobs:
+  check-cabal-files:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Install Haskell
+      uses: input-output-hk/setup-haskell@v1
+      id: setup-haskell
+      with:
+        cabal-version: "3.8.1.0"
+
+    - uses: actions/checkout@v3
+
+    - name: Cabal check
+      run: ./scripts/ci/check-cabal-files.sh

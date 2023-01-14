@@ -1,28 +1,45 @@
 usage_topology() {
      usage "topology" "Topology generation" <<EOF
-    make PROFILE-JSON OUTDIR
+    The workbench generates topologies with the following properties:
+      - all node names are of the form "node-N", where N is a 0-based natural
+      - the BFT producer, is always present and is node-0;  inactived by d=0
+      - a non-dense, regular pool producer is always present, and is always node-1
+      - further nodes are dense pools (so potentially configurable to densities >1)
+      - there is an optional observer as the last node
+
+    For the producer section of the topology:
+      - the topology is distributed across M regions,
+          and is an M-circle toroidal mesh, one circle per distinct region
+      - each node has two connections (upstreams) to immediate in-circle neighbors,
+          and also two connections to nodes 1/3 circle length away,
+          clockwise and counter-clockwise
+      - each node has an additional connection to a neighbor in another circle
+      - as the total topology node count decreases, the topology gracefully degrades
+          to simpler fully-connected graphs, such as two mutually connected nodes,
+          and then to a single lone node
+
+    Whenever an observer node is present, it is connected to all producers.
+
+  $(red topology) $(blue subops):
+
+    $(helpcmd make PROFILE-JSON OUTDIR)
                           Generate the full cluster topology, including:
                             - the Nixops/'cardano-ops' style topology
                             - the .dot and .pdf rendering
 
-    topology density-map PROFILE-JSON TOPO-DIR
+    $(helpcmd density-map NODE-SPECS-JSON)
                           Generate the profile-induced map of node names
                             to pool density: 0, 1 or N (for dense pools)
 
-    for-local-node N TOPO-DIR BASE-PORT
+    $(helpcmd projection-for ROLE N PROFILE TOPO-DIR BASE-PORT)
                           Given TOPO-DIR, containing the full cluster topology,
-                            print topology for the N-th node,
+                            print topology for the N-th node, given its ROLE,
                             while assigning it a local port number BASE-PORT+N
-
-    for-local-observer PROFILE TOPO-DIR BASE-PORT
-                          Given the profile and the full cluster topology,
-                            print topology for the observer node,
-                            while assigning it a local port number BASE-PORT+NODE-COUNT
 EOF
 }
 
 topology() {
-local op=${1:---help)}; shift
+local op=${1:---help)}; shift || true
 
 case "${op}" in
     make )
@@ -37,8 +54,9 @@ case "${op}" in
         mkdir -p                 "$outdir"
         args=( --topology-output "$outdir"/topology-nixops.json
                --dot-output      "$outdir"/topology.dot
+               $(jq '.composition.topology
+                    ' --raw-output "$profile_json")
                --size             $n_hosts
-
                $(jq '.composition.locations
                     | map("--loc " + .)
                     | join(" ")
@@ -75,76 +93,61 @@ case "${op}" in
         ;;
 
     density-map )
-        local usage="USAGE:  wb topology density-map PROFILE-JSON TOPO-DIR"
-        local profile_json=${1:?$usage}
-        local topo_dir=${2:?$usage}
+        local usage="USAGE:  wb topology density-map NODE-SPECS-JSON"
+        local node_specs_json=${1:?$usage}
 
-        args=(--slurpfile profile  "$profile_json"
-              --slurpfile topology "$topo_dir"/topology-nixops.json
-              --null-input
+        args=(--slurpfile node_specs "$node_specs_json"
+              --null-input --compact-output
              )
-        jq ' $topology[0] as $topo
-           | $topo.coreNodes
+        jq ' $node_specs[0]
            | map
-             ({ key:   "\(.nodeId)"
+             ({ key:   "\(.i)"
               , value: ((.pools) // 0)
               })
            | from_entries
            ' "${args[@]}";;
 
-    for-local-node )
-        local usage="USAGE:  wb topology for-local-node N TOPO-DIR BASE-PORT"
-        local i=${1:?$usage}
-        local topo_dir=${2:?$usage}
-        local basePort=${3:?$usage}
+    projection-for )
+        local usage="USAGE:  wb topology $op ROLE N PROFILE TOPO-DIR BASE-PORT"
+        local role=${1:?$usage}
+        local i=${2:?$usage}
+        local profile=${3:?$usage}
+        local topo_dir=${4:?$usage}
+        local basePort=${5:?$usage}
 
-        args=(--slurpfile topology "$topo_dir"/topology-nixops.json
-              --argjson   basePort $basePort
-              --argjson   i         $i
-              --null-input
-             )
-        jq 'def loopback_node_topology_from_nixops_topology($topo; $i):
-              $topo.coreNodes[$i].producers                      as $producers
-            | ($producers | map(ltrimstr("node-") | fromjson))   as $prod_indices
-            | { Producers:
-                ( $prod_indices
-                | map
-                  ({ addr:    "127.0.0.1"
-                   , port:    ($basePort + .)
-                   , valency: 1
-                   }
-                  ))
-              };
+        local prof=$(profile json $profile)
+
+        case "$role" in
+        local-bft | local-pool )
+            args=(-L$global_basedir
+                  --slurpfile topology "$topo_dir"/topology-nixops.json
+                  --argjson   basePort $basePort
+                  --argjson   i        $i
+                  --null-input
+                 )
+            jq 'include "topology";
 
             loopback_node_topology_from_nixops_topology($topology[0]; $i)
-           ' "${args[@]}";;
-
-    for-local-observer )
-        local usage="USAGE:  wb topology for-local-observer PROFILE TOPO-DIR BASE-PORT"
-        local profile=${1:?$usage}
-        local topo_dir=${2:?$usage}
-        local basePort=${3:?$usage}
-
-        local prof=$(profile get $profile)
-
-        args=(--slurpfile topology "$topo_dir"/topology-nixops.json
-              --argjson   basePort $basePort
-              --null-input
-             )
-        jq 'def loopback_observer_topology_from_nixops_topology($topo):
-              [range(0; $topo.coreNodes | length)] as $prod_indices
-            | { Producers:
-                ( $prod_indices
-                | map
-                  ({ addr:    "127.0.0.1"
-                   , port:    ($basePort + .)
-                   , valency: 1
-                   }
-                  ))
-              };
-
-            loopback_observer_topology_from_nixops_topology($topology[0])
             ' "${args[@]}";;
+        local-proxy )
+            local   name=$(jq '.name'   <<<$prof --raw-output)
+            local preset=$(jq '.preset' <<<$prof --raw-output)
+            local topo_proxy=$(profile preset-get-file "$preset" 'proxy topology' 'topology-proxy.json')
+
+            jq . "$topo_proxy";;
+        local-chaindb-server )
+            ## ChainDB servers are just that:
+            jq --null-input "{ Producers: [] }";;
+        local-observer )
+            args=(-L$global_basedir
+                  --argjson   basePort     $basePort
+                 )
+            jq 'include "topology";
+
+            composition_observer_topology_loopback(.composition; $basePort)
+            ' "${args[@]}" <<<$prof;;
+        * ) fail "unhandled role for topology node '$i': '$role'";;
+        esac;;
 
     * ) usage_topology;; esac
 }

@@ -17,18 +17,17 @@ run_nix_executable() {
 
 fill_nix_executable_cache_entry() {
         local pkg="$1" name="$2" extra="$3"
-        local nixattr='haskellPackages.'${pkg}'.components.exes.'${name}
+        local nixattr='cardanoNodeProject.hsPkgs.'${pkg}'.components.exes.'${name}
         vprint "filling the Nix executable cache for \"$pkg:$name\".."
         NIX_BUILD=(
-                nix-build
-                "${__COMMON_SRCROOT}/default.nix"
-                --no-out-link
+                nix build
                 ${extra}
+                "${__COMMON_SRCROOT}"\#"${nixattr}"
                 ${defaultnix_args}
-                -A "${nixattr}"
+                "--json"
         )
         dprint "${NIX_BUILD[*]}"
-        local out=$("${NIX_BUILD[@]}")
+        local out=$("${NIX_BUILD[@]}" | jq '.[].outputs.out')
         if test -z "${out}"
         then fprint "failed to build ${nixattr}, rerun with --verbose"
              local __QUOTED="${NIX_BUILD[*]@Q}"

@@ -1,59 +1,63 @@
-{ pkgs
-, runCommand, runWorkbenchJqOnly, runJq, workbench, writeText
-
-## The backend is an attrset of AWS/supervisord-specific methods and parameters.
-, backend
-
-## Environmental settings:
-##   - either affect semantics on all backends equally,
-##   - or have no semantic effect
-, environment
-
+{ pkgs, lib, cardanoLib
+, runCommand
+, workbench
+##
+, stateDir
 , profileName
-, profileOverride ? {}
+, useCabalRun
+, basePort
 }:
 
 let
-  baseJSON = runWorkbenchJqOnly "profile-${profileName}.json"
-                          "profile get ${profileName}";
-  JSON =
-    if profileOverride == {}
-    then baseJSON
-    else
-      runJq "profile-${profileName}-overridden.json"
-      ''--slurpfile profile  ${baseJSON}
-        --slurpfile override ${writeText "profile-override.json" profileOverride}
-        --null-input
-      ''
-      "($profile[0] * $override[0])";
+  inherit (workbench) runWorkbenchJqOnly runJq;
+
+  services-config = import ./services-config.nix
+    {
+      inherit lib workbench;
+      inherit stateDir;
+      inherit useCabalRun;
+      inherit basePort;
+    };
+
+  JSON = runWorkbenchJqOnly "profile-${profileName}.json"
+                            "profile json ${profileName}";
 
   value = __fromJSON (__readFile JSON);
 
   profile =
-    {
+    rec {
       name = profileName;
-
-      inherit environment;
 
       inherit JSON value;
 
       topology.files =
-        runCommand "topology-${profile.name}" {}
-          "${workbench}/bin/wb topology make ${profile.JSON} $out";
+        runCommand "topology-${profileName}" {}
+          "${workbench.workbench}/bin/wb topology make ${JSON} $out";
 
       node-specs  =
-        rec {
-          JSON = runWorkbenchJqOnly
-            "node-specs-${profile.name}.json"
-            "profile node-specs ${profile.JSON} ${environment.JSON}";
+        {
+          JSON = runWorkbenchJqOnly "node-specs-${profileName}.json"
+                                    "profile node-specs ${JSON}";
 
-          value = __fromJSON (__readFile JSON);
+          value = __fromJSON (__readFile node-specs.JSON);
         };
 
-     inherit (pkgs.callPackage
+      inherit (pkgs.callPackage
                ./node-services.nix
-               { inherit runJq backend environment profile; })
+               { inherit runJq services-config profile;
+                 baseNodeConfig = cardanoLib.environments.testnet.nodeConfig;
+               })
         node-services;
+
+      inherit (pkgs.callPackage
+               ./generator-service.nix
+               { inherit runJq services-config profile;})
+        generator-service;
+
+      inherit (pkgs.callPackage
+               ./tracer-service.nix
+               { inherit runJq services-config profile;})
+        tracer-service;
     };
 
 in profile

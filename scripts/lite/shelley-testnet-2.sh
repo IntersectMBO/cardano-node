@@ -45,7 +45,7 @@ sed -i ${ROOT}/genesis.spec.json \
     -e 's/"securityParam": 2160/"securityParam": 10/' \
     -e 's/"epochLength": 432000/"epochLength": 1500/' \
     -e 's/"maxLovelaceSupply": 0/"maxLovelaceSupply": 1000000000/' \
-    -e 's/"decentralisationParam": 1/"decentralisationParam": 0.7/'
+    -e 's/"decentralisationParam": 1.0/"decentralisationParam": 0.7/'
 
 # Now generate for real:
 
@@ -236,7 +236,7 @@ for N in ${USER_POOL_N}; do
 done
 
 echo "Generated payment address keys, stake address keys,"
-echo "stake address regitration certs, and stake address delegatation certs"
+echo "stake address registration certs, and stake address delegation certs"
 echo
 ls -1 addresses/
 echo "====================================================================="
@@ -283,7 +283,7 @@ $cardano_cli transaction build-raw \
 
 # So we'll need to sign this with a bunch of keys:
 # 1. the initial utxo spending key, for the funds
-# 2. the user1 stake address key, due to the delegatation cert
+# 2. the user1 stake address key, due to the delegation cert
 # 3. the pool1 owner key, due to the pool registration cert
 # 3. the pool1 operator key, due to the pool registration cert
 

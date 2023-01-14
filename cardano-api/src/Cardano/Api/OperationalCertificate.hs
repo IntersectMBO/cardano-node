@@ -9,6 +9,9 @@ module Cardano.Api.OperationalCertificate (
     OperationalCertificateIssueCounter(..),
     Shelley.KESPeriod(..),
     OperationalCertIssueError(..),
+    getHotKey,
+    getKesPeriod,
+    getOpCertCount,
     issueOperationalCertificate,
 
     -- * Data family instances
@@ -27,16 +30,16 @@ import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.Key
-import           Cardano.Api.KeysByron
-import           Cardano.Api.KeysPraos
-import           Cardano.Api.KeysShelley
+import           Cardano.Api.Keys.Class
+import           Cardano.Api.Keys.Byron
+import           Cardano.Api.Keys.Praos
+import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.Tx
 
-import qualified Shelley.Spec.Ledger.OCert as Shelley
+import qualified Cardano.Protocol.TPraos.OCert as Shelley
 
 -- ----------------------------------------------------------------------------
 -- Operational certificates
@@ -51,8 +54,9 @@ data OperationalCertificate =
 
 data OperationalCertificateIssueCounter =
      OperationalCertificateIssueCounter
-       !Word64
-       !(VerificationKey StakePoolKey) -- For consistency checking
+       { opCertIssueCount :: !Word64
+       , opCertIssueColdKey :: !(VerificationKey StakePoolKey) -- For consistency checking
+       }
   deriving (Eq, Show)
   deriving anyclass SerialiseAsCBOR
 
@@ -153,3 +157,11 @@ issueOperationalCertificate (KesVerificationKey kesVKey)
                   Right (GenesisDelegateExtendedSigningKey delegSKey) ->
                     ShelleyExtendedSigningKey delegSKey
 
+getHotKey :: OperationalCertificate -> VerificationKey KesKey
+getHotKey (OperationalCertificate cert _) = KesVerificationKey $ Shelley.ocertVkHot cert
+
+getKesPeriod :: OperationalCertificate -> Word
+getKesPeriod (OperationalCertificate cert _) = Shelley.unKESPeriod $ Shelley.ocertKESPeriod cert
+
+getOpCertCount :: OperationalCertificate -> Word64
+getOpCertCount (OperationalCertificate cert _) = Shelley.ocertN cert

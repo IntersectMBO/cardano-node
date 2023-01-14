@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -25,12 +26,17 @@ module Cardano.Api.Modes (
     AnyEraInMode(..),
     toEraInMode,
 
-    -- * Connection paramaters for each mode
+    -- * The protocols supported in each era
+    ConsensusProtocol,
+    ChainDepStateProtocol,
+
+    -- * Connection parameters for each mode
     ConsensusModeParams(..),
     AnyConsensusModeParams(..),
     Byron.EpochSlots(..),
 
     -- * Conversions to and from types in the consensus library
+    ConsensusCryptoForBlock,
     ConsensusBlockForMode,
     ConsensusBlockForEra,
     toConsensusEraIndex,
@@ -42,6 +48,8 @@ import           Prelude
 import           Cardano.Api.Eras
 import           Cardano.Ledger.Crypto (StandardCrypto)
 
+import           Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value)
+import           Data.Aeson.Types (Parser, prependFailure, typeMismatch)
 import           Data.SOP.Strict (K (K), NS (S, Z))
 import           Data.Text (Text)
 
@@ -50,13 +58,10 @@ import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import qualified Ouroboros.Consensus.Cardano.ByronHFC as Consensus (ByronBlockHFC)
 import           Ouroboros.Consensus.HardFork.Combinator as Consensus (EraIndex (..), eraIndexSucc,
                    eraIndexZero)
-import           Ouroboros.Consensus.Shelley.Eras
-                   (StandardShelley,
-                    StandardAllegra,
-                    StandardMary,
-                    StandardAlonzo)
-import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
-import qualified Ouroboros.Consensus.Shelley.ShelleyHFC as Consensus (ShelleyBlockHFC)
+import qualified Ouroboros.Consensus.Protocol.Praos as Consensus
+import qualified Ouroboros.Consensus.Protocol.TPraos as Consensus
+import qualified Ouroboros.Consensus.Shelley.HFEras as Consensus
+import qualified Ouroboros.Consensus.Shelley.ShelleyHFC as Consensus
 
 import qualified Cardano.Chain.Slotting as Byron (EpochSlots (..))
 
@@ -119,8 +124,8 @@ renderMode (AnyConsensusMode ShelleyMode) = "ShelleyMode"
 renderMode (AnyConsensusMode CardanoMode) = "CardanoMode"
 
 -- | The subset of consensus modes that consist of multiple eras. Some features
--- are not supported in single-era modes (for exact compatibility with not
--- using the hard fork combinatior at all).
+-- are not supported in single-era modes (for exact compatibility without
+-- using the hard fork combination at all).
 --
 data ConsensusModeIsMultiEra mode where
      CardanoModeIsMultiEra :: ConsensusModeIsMultiEra CardanoMode
@@ -135,8 +140,8 @@ toEraInMode ShelleyEra CardanoMode = Just ShelleyEraInCardanoMode
 toEraInMode AllegraEra CardanoMode = Just AllegraEraInCardanoMode
 toEraInMode MaryEra    CardanoMode = Just MaryEraInCardanoMode
 toEraInMode AlonzoEra  CardanoMode = Just AlonzoEraInCardanoMode
+toEraInMode BabbageEra CardanoMode = Just BabbageEraInCardanoMode
 toEraInMode _ _                    = Nothing
-
 
 -- | A representation of which 'CardanoEra's are included in each
 -- 'ConsensusMode'.
@@ -151,9 +156,82 @@ data EraInMode era mode where
      AllegraEraInCardanoMode :: EraInMode AllegraEra CardanoMode
      MaryEraInCardanoMode    :: EraInMode MaryEra    CardanoMode
      AlonzoEraInCardanoMode  :: EraInMode AlonzoEra  CardanoMode
+     BabbageEraInCardanoMode :: EraInMode BabbageEra  CardanoMode
 
 deriving instance Show (EraInMode era mode)
 
+deriving instance Eq (EraInMode era mode)
+
+instance FromJSON (EraInMode ByronEra ByronMode) where
+  parseJSON "ByronEraInByronMode" = pure ByronEraInByronMode
+  parseJSON invalid =
+      invalidJSONFailure "ByronEraInByronMode"
+                         "parsing 'EraInMode ByronEra ByronMode' failed, "
+                         invalid
+
+instance FromJSON (EraInMode ShelleyEra ShelleyMode) where
+  parseJSON "ShelleyEraInShelleyMode" = pure ShelleyEraInShelleyMode
+  parseJSON invalid =
+      invalidJSONFailure "ShelleyEraInShelleyMode"
+                         "parsing 'EraInMode ShelleyEra ShelleyMode' failed, "
+                         invalid
+
+instance FromJSON (EraInMode ByronEra CardanoMode) where
+  parseJSON "ByronEraInCardanoMode" = pure ByronEraInCardanoMode
+  parseJSON invalid =
+      invalidJSONFailure "ByronEraInCardanoMode"
+                         "parsing 'EraInMode ByronEra CardanoMode' failed, "
+                         invalid
+
+instance FromJSON (EraInMode ShelleyEra CardanoMode) where
+  parseJSON "ShelleyEraInCardanoMode" = pure ShelleyEraInCardanoMode
+  parseJSON invalid =
+      invalidJSONFailure "ShelleyEraInCardanoMode"
+                         "parsing 'EraInMode ShelleyEra CardanoMode' failed, "
+                         invalid
+
+instance FromJSON (EraInMode AllegraEra CardanoMode) where
+  parseJSON "AllegraEraInCardanoMode" = pure AllegraEraInCardanoMode
+  parseJSON invalid =
+      invalidJSONFailure "AllegraEraInCardanoMode"
+                         "parsing 'EraInMode AllegraEra CardanoMode' failed, "
+                         invalid
+
+instance FromJSON (EraInMode MaryEra CardanoMode) where
+  parseJSON "MaryEraInCardanoMode" = pure MaryEraInCardanoMode
+  parseJSON invalid =
+      invalidJSONFailure "MaryEraInCardanoMode"
+                         "parsing 'EraInMode MaryEra CardanoMode' failed, "
+                         invalid
+
+instance FromJSON (EraInMode AlonzoEra CardanoMode) where
+  parseJSON "AlonzoEraInCardanoMode" = pure AlonzoEraInCardanoMode
+  parseJSON invalid =
+      invalidJSONFailure "AlonzoEraInCardanoMode"
+                         "parsing 'EraInMode AlonzoEra CardanoMode' failed, "
+                         invalid
+
+instance FromJSON (EraInMode BabbageEra CardanoMode) where
+  parseJSON "BabbageEraInCardanoMode" = pure BabbageEraInCardanoMode
+  parseJSON invalid =
+      invalidJSONFailure "BabbageEraInCardanoMode"
+                         "parsing 'EraInMode Babbage CardanoMode' failed, "
+                         invalid
+
+invalidJSONFailure :: String -> String -> Value -> Parser a
+invalidJSONFailure expectedType errorMsg invalidValue =
+    prependFailure errorMsg
+                   (typeMismatch expectedType invalidValue)
+
+instance ToJSON (EraInMode era mode) where
+  toJSON ByronEraInByronMode = "ByronEraInByronMode"
+  toJSON ShelleyEraInShelleyMode  = "ShelleyEraInShelleyMode"
+  toJSON ByronEraInCardanoMode  = "ByronEraInCardanoMode"
+  toJSON ShelleyEraInCardanoMode = "ShelleyEraInCardanoMode"
+  toJSON AllegraEraInCardanoMode = "AllegraEraInCardanoMode"
+  toJSON MaryEraInCardanoMode = "MaryEraInCardanoMode"
+  toJSON AlonzoEraInCardanoMode = "AlonzoEraInCardanoMode"
+  toJSON BabbageEraInCardanoMode = "BabbageEraInCardanoMode"
 
 eraInModeToEra :: EraInMode era mode -> CardanoEra era
 eraInModeToEra ByronEraInByronMode     = ByronEra
@@ -163,6 +241,7 @@ eraInModeToEra ShelleyEraInCardanoMode = ShelleyEra
 eraInModeToEra AllegraEraInCardanoMode = AllegraEra
 eraInModeToEra MaryEraInCardanoMode    = MaryEra
 eraInModeToEra AlonzoEraInCardanoMode  = AlonzoEra
+eraInModeToEra BabbageEraInCardanoMode = BabbageEra
 
 
 data AnyEraInMode mode where
@@ -181,6 +260,7 @@ anyEraInModeToAnyEra (AnyEraInMode erainmode) =
     AllegraEraInCardanoMode -> AnyCardanoEra AllegraEra
     MaryEraInCardanoMode    -> AnyCardanoEra MaryEra
     AlonzoEraInCardanoMode  -> AnyCardanoEra AlonzoEra
+    BabbageEraInCardanoMode -> AnyCardanoEra BabbageEra
 
 
 -- | The consensus-mode-specific parameters needed to connect to a local node
@@ -219,17 +299,36 @@ deriving instance Show (ConsensusModeParams mode)
 --
 type family ConsensusBlockForMode mode where
   ConsensusBlockForMode ByronMode   = Consensus.ByronBlockHFC
-  ConsensusBlockForMode ShelleyMode = Consensus.ShelleyBlockHFC StandardShelley
+  ConsensusBlockForMode ShelleyMode = Consensus.ShelleyBlockHFC (Consensus.TPraos StandardCrypto) Consensus.StandardShelley
   ConsensusBlockForMode CardanoMode = Consensus.CardanoBlock StandardCrypto
 
 type family ConsensusBlockForEra era where
   ConsensusBlockForEra ByronEra   = Consensus.ByronBlock
-  ConsensusBlockForEra ShelleyEra = Consensus.ShelleyBlock StandardShelley
-  ConsensusBlockForEra AllegraEra = Consensus.ShelleyBlock StandardAllegra
-  ConsensusBlockForEra MaryEra    = Consensus.ShelleyBlock StandardMary
-  ConsensusBlockForEra AlonzoEra  = Consensus.ShelleyBlock StandardAlonzo
+  ConsensusBlockForEra ShelleyEra = Consensus.StandardShelleyBlock
+  ConsensusBlockForEra AllegraEra = Consensus.StandardAllegraBlock
+  ConsensusBlockForEra MaryEra    = Consensus.StandardMaryBlock
+  ConsensusBlockForEra AlonzoEra  = Consensus.StandardAlonzoBlock
+  ConsensusBlockForEra BabbageEra = Consensus.StandardBabbageBlock
+
+type family ConsensusCryptoForBlock block where
+  ConsensusCryptoForBlock Consensus.ByronBlockHFC = StandardCrypto
+  ConsensusCryptoForBlock (Consensus.ShelleyBlockHFC (Consensus.TPraos StandardCrypto) Consensus.StandardShelley) = Consensus.StandardShelley
+  ConsensusCryptoForBlock (Consensus.CardanoBlock StandardCrypto) = StandardCrypto
+
+type family ConsensusProtocol era where
+  ConsensusProtocol ShelleyEra = Consensus.TPraos StandardCrypto
+  ConsensusProtocol AllegraEra = Consensus.TPraos StandardCrypto
+  ConsensusProtocol MaryEra = Consensus.TPraos StandardCrypto
+  ConsensusProtocol AlonzoEra = Consensus.TPraos StandardCrypto
+  ConsensusProtocol BabbageEra = Consensus.Praos StandardCrypto
 
 
+type family ChainDepStateProtocol era where
+  ChainDepStateProtocol ShelleyEra = Consensus.TPraosState StandardCrypto
+  ChainDepStateProtocol AllegraEra = Consensus.TPraosState StandardCrypto
+  ChainDepStateProtocol MaryEra = Consensus.TPraosState StandardCrypto
+  ChainDepStateProtocol AlonzoEra = Consensus.TPraosState StandardCrypto
+  ChainDepStateProtocol BabbageEra = Consensus.PraosState StandardCrypto
 
 eraIndex0 :: Consensus.EraIndex (x0 : xs)
 eraIndex0 = Consensus.eraIndexZero
@@ -246,6 +345,9 @@ eraIndex3 = eraIndexSucc eraIndex2
 eraIndex4 :: Consensus.EraIndex (x4 : x3 : x2 : x1 : x0 : xs)
 eraIndex4 = eraIndexSucc eraIndex3
 
+eraIndex5 :: Consensus.EraIndex (x5 : x4 : x3 : x2 : x1 : x0 : xs)
+eraIndex5 = eraIndexSucc eraIndex4
+
 toConsensusEraIndex :: ConsensusBlockForMode mode ~ Consensus.HardForkBlock xs
                     => EraInMode era mode
                     -> Consensus.EraIndex xs
@@ -257,6 +359,7 @@ toConsensusEraIndex ShelleyEraInCardanoMode = eraIndex1
 toConsensusEraIndex AllegraEraInCardanoMode = eraIndex2
 toConsensusEraIndex MaryEraInCardanoMode    = eraIndex3
 toConsensusEraIndex AlonzoEraInCardanoMode  = eraIndex4
+toConsensusEraIndex BabbageEraInCardanoMode = eraIndex5
 
 
 fromConsensusEraIndex :: ConsensusBlockForMode mode ~ Consensus.HardForkBlock xs
@@ -270,11 +373,10 @@ fromConsensusEraIndex ByronMode = fromByronEraIndex
                       -> AnyEraInMode ByronMode
     fromByronEraIndex (Consensus.EraIndex (Z (K ()))) =
       AnyEraInMode ByronEraInByronMode
-
 fromConsensusEraIndex ShelleyMode = fromShelleyEraIndex
   where
     fromShelleyEraIndex :: Consensus.EraIndex
-                             '[Consensus.ShelleyBlock StandardShelley]
+                             '[Consensus.StandardShelleyBlock]
                         -> AnyEraInMode ShelleyMode
     fromShelleyEraIndex (Consensus.EraIndex (Z (K ()))) =
       AnyEraInMode ShelleyEraInShelleyMode
@@ -299,4 +401,7 @@ fromConsensusEraIndex CardanoMode = fromShelleyEraIndex
 
     fromShelleyEraIndex (Consensus.EraIndex (S (S (S (S (Z (K ()))))))) =
       AnyEraInMode AlonzoEraInCardanoMode
+
+    fromShelleyEraIndex (Consensus.EraIndex (S (S (S (S (S (Z (K ())))))))) =
+      AnyEraInMode BabbageEraInCardanoMode
 

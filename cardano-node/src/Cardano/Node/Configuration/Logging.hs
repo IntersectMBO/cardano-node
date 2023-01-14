@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -22,14 +23,16 @@ module Cardano.Node.Configuration.Logging
   , LOContent (..)
   ) where
 
+import qualified Cardano.Api as Api
 import           Cardano.Prelude hiding (trace)
 
+import qualified Control.Concurrent as Conc
 import qualified Control.Concurrent.Async as Async
 import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad.Trans.Except.Extra (catchIOExceptT)
-import           Control.Tracer
+import           "contra-tracer" Control.Tracer
 import           Data.List (nub)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import           Data.Text (pack)
 import           Data.Time.Clock (UTCTime, getCurrentTime)
 import           Data.Version (showVersion)
@@ -63,7 +66,7 @@ import qualified Cardano.BM.Trace as Trace
 import           Cardano.BM.Tracing
 
 import qualified Cardano.Chain.Genesis as Gen
-import           Cardano.Slotting.Slot (EpochSize (..))
+import qualified Cardano.Ledger.Shelley.API as SL
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
 import           Ouroboros.Consensus.Byron.Ledger.Conversions
 import           Ouroboros.Consensus.Cardano.Block
@@ -73,13 +76,13 @@ import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Shelley.Ledger.Ledger
-import qualified Shelley.Spec.Ledger.API as SL
 
-import           Cardano.Api.Protocol.Types (BlockType (..), protocolInfo)
-import           Cardano.Config.Git.Rev (gitRev)
+import           Cardano.Git.Rev (gitRev)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import           Cardano.Node.Types
+import           Cardano.Slotting.Slot (EpochSize (..))
+import           Cardano.Tracing.Config (TraceOptions (..))
 import           Cardano.Tracing.OrphanInstances.Common ()
 import           Paths_cardano_node (version)
 
@@ -153,7 +156,6 @@ createLoggingLayer
   -> SomeConsensusProtocol
   -> ExceptT ConfigError IO LoggingLayer
 createLoggingLayer ver nodeConfig' p = do
-
   logConfig <- loggingCLIConfiguration $
     if ncLoggingSwitch nodeConfig'
     -- Re-interpret node config again, as logging 'Configuration':
@@ -165,21 +167,21 @@ createLoggingLayer ver nodeConfig' p = do
     Config.setTextOption logConfig "appversion" ver
     Config.setTextOption logConfig "appcommit" gitRev
 
-  (baseTrace, switchBoard) <- liftIO $ setupTrace_ logConfig "cardano"
+  (baseTrace', switchBoard) <- liftIO $ setupTrace_ logConfig "cardano"
 
   let loggingEnabled :: Bool
       loggingEnabled = ncLoggingSwitch nodeConfig'
       trace :: Trace IO Text
       trace = if loggingEnabled
-              then baseTrace
+              then baseTrace'
               else Trace.nullTracer
 
   when loggingEnabled $ liftIO $
     loggingPreInit nodeConfig' logConfig switchBoard trace
 
-  mEKGServer <- liftIO $ Switchboard.getSbEKGServer switchBoard
+  mbEKGServer <- liftIO $ Switchboard.getSbEKGServer switchBoard
 
-  mbEkgDirect <- case mEKGServer of
+  mbEkgDirect <- case mbEKGServer of
                   Nothing -> pure Nothing
                   Just sv -> do
                     refGauge   <- liftIO $ newMVar Map.empty
@@ -244,7 +246,7 @@ createLoggingLayer ver nodeConfig' p = do
 
      when (ncLogMetrics nodeConfig) $
        -- Record node metrics, if configured
-       startCapturingMetrics trace
+       startCapturingMetrics (ncTraceConfig nodeConfig) trace
 
    mkLogLayer :: Configuration -> Switchboard Text -> Maybe EKGDirect -> Trace IO Text -> LoggingLayer
    mkLogLayer logConfig switchBoard mbEkgDirect trace =
@@ -267,14 +269,20 @@ createLoggingLayer ver nodeConfig' p = do
        , llEKGDirect = mbEkgDirect
        }
 
-   startCapturingMetrics :: Trace IO Text -> IO ()
-   startCapturingMetrics tr = do
+   startCapturingMetrics :: TraceOptions
+    -> Trace IO Text
+    -> IO ()
+   startCapturingMetrics (TraceDispatcher _) _tr = do
+      pure ()
+
+   startCapturingMetrics _ tr = do
      void . Async.async . forever $ do
        readResourceStats
          >>= maybe (pure ())
                    (traceResourceStats
                       (appendName "node" tr))
-       threadDelay 1000000 -- TODO:  make configurable
+       Conc.threadDelay 1000000 -- TODO:  make configurable
+
    traceResourceStats :: Trace IO Text -> ResourceStats -> IO ()
    traceResourceStats tr rs = do
      traceWith (toLogObject' NormalVerbosity $ appendName "resources" tr) rs
@@ -305,30 +313,35 @@ shutdownLoggingLayer = shutdown . llSwitchboard
 -- The node provides the basic node's information for TraceForwarderBK.
 -- It will be sent once TraceForwarderBK is connected to an external process
 -- (for example, RTView).
+--
+-- TODO: it should return 'StartupTrace' rather than raw 'LogObject's.
+--
 nodeBasicInfo :: NodeConfiguration
               -> SomeConsensusProtocol
               -> UTCTime
               -> IO [LogObject Text]
 nodeBasicInfo nc (SomeConsensusProtocol whichP pForInfo) nodeStartTime' = do
   meta <- mkLOMeta Notice Public
-  let cfg = pInfoConfig $ protocolInfo pForInfo
+  let cfg = pInfoConfig $ Api.protocolInfo pForInfo
       protocolDependentItems =
         case whichP of
-          ByronBlockType ->
+          Api.ByronBlockType ->
             let DegenLedgerConfig cfgByron = Consensus.configLedger cfg
             in getGenesisValuesByron cfg cfgByron
-          ShelleyBlockType ->
+          Api.ShelleyBlockType ->
             let DegenLedgerConfig cfgShelley = Consensus.configLedger cfg
             in getGenesisValues "Shelley" cfgShelley
-          CardanoBlockType ->
-            let CardanoLedgerConfig cfgByron cfgShelley cfgAllegra cfgMary cfgAlonzo = Consensus.configLedger cfg
+          Api.CardanoBlockType ->
+            let CardanoLedgerConfig cfgByron cfgShelley cfgAllegra
+                                    cfgMary cfgAlonzo cfgBabbage = Consensus.configLedger cfg
             in getGenesisValuesByron cfg cfgByron
                ++ getGenesisValues "Shelley" cfgShelley
                ++ getGenesisValues "Allegra" cfgAllegra
                ++ getGenesisValues "Mary"    cfgMary
                ++ getGenesisValues "Alonzo"  cfgAlonzo
+               ++ getGenesisValues "Babbage"  cfgBabbage
       items = nub $
-        [ ("protocol",      pack . protocolName $ ncProtocol nc)
+        [ ("protocol",      pack . show $ ncProtocol nc)
         , ("version",       pack . showVersion $ version)
         , ("commit",        gitRev)
         , ("nodeStartTime", show nodeStartTime')

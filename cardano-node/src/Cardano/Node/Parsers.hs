@@ -1,14 +1,17 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Node.Parsers
   ( nodeCLIParser
+  , parseConfigFile
   , parserHelpHeader
   , parserHelpOptions
   , renderHelpDoc
   ) where
 
-import           Cardano.Prelude hiding (option)
+import           Cardano.Prelude
 import           Prelude (String)
 
 import           Data.Time.Clock (secondsToDiffTime)
@@ -17,11 +20,16 @@ import qualified Options.Applicative as Opt
 import qualified Options.Applicative.Help as OptI
 import           System.Posix.Types (Fd (..))
 
-import           Ouroboros.Network.Block (MaxSlotNo (..), SlotNo (..))
-
+import           Ouroboros.Consensus.Mempool.API (MempoolCapacityBytes (..),
+                   MempoolCapacityBytesOverride (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
 
+import           Cardano.Logging.Types
+import           Cardano.Node.Configuration.NodeAddress (NodeHostIPv4Address (NodeHostIPv4Address),
+                   NodeHostIPv6Address (NodeHostIPv6Address), PortNumber, SocketPath (SocketPath))
 import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..), lastOption)
+import           Cardano.Node.Configuration.Socket
+import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
 
 nodeCLIParser  :: Parser PartialNodeConfiguration
@@ -38,7 +46,8 @@ nodeRunParser = do
   -- Filepaths
   topFp <- lastOption parseTopologyFile
   dbFp <- lastOption parseDbPath
-  socketFp <-   lastOption $ parseSocketPath "Path to a cardano-node socket"
+  socketFp <- lastOption $ parseSocketPath "Path to a cardano-node socket"
+  traceForwardSocket <- lastOption parseTracerSocketMode
 
   -- Protocol files
   byronCertFile   <- optional parseByronDelegationCert
@@ -59,17 +68,20 @@ nodeRunParser = do
 
   validate <- lastOption parseValidateDB
   shutdownIPC <- lastOption parseShutdownIPC
+  shutdownOnLimit <- lastOption parseShutdownOn
 
-  shutdownOnSlotSynced <- lastOption parseShutdownOnSlotSynced
+  maybeMempoolCapacityOverride <- lastOption parseMempoolCapacityOverride
 
   pure $ PartialNodeConfiguration
-           { pncNodeIPv4Addr = nIPv4Address
-           , pncNodeIPv6Addr = nIPv6Address
-           , pncNodePortNumber = nPortNumber
+           { pncSocketConfig =
+               Last . Just $ SocketConfig
+                 nIPv4Address
+                 nIPv6Address
+                 nPortNumber
+                 socketFp
            , pncConfigFile   = ConfigYamlFilePath <$> nodeConfigFp
            , pncTopologyFile = TopologyFile <$> topFp
            , pncDatabaseFile = DbFile <$> dbFp
-           , pncSocketPath   = socketFp
            , pncDiffusionMode = mempty
            , pncSnapshotInterval = snapshotInterval
            , pncTestEnableDevelopmentNetworkProtocols = mempty
@@ -82,14 +94,24 @@ nodeRunParser = do
              , shelleyBulkCredsFile
              }
            , pncValidateDB = validate
-           , pncShutdownIPC = shutdownIPC
-           , pncShutdownOnSlotSynced = shutdownOnSlotSynced
+           , pncShutdownConfig =
+               Last . Just $ ShutdownConfig (getLast shutdownIPC) (getLast shutdownOnLimit)
            , pncProtocolConfig = mempty
            , pncMaxConcurrencyBulkSync = mempty
            , pncMaxConcurrencyDeadline = mempty
            , pncLoggingSwitch = mempty
            , pncLogMetrics = mempty
            , pncTraceConfig = mempty
+           , pncTraceForwardSocket = traceForwardSocket
+           , pncMaybeMempoolCapacityOverride = maybeMempoolCapacityOverride
+           , pncProtocolIdleTimeout = mempty
+           , pncTimeWaitTimeout = mempty
+           , pncAcceptedConnectionsLimit = mempty
+           , pncTargetNumberOfRootPeers = mempty
+           , pncTargetNumberOfKnownPeers = mempty
+           , pncTargetNumberOfEstablishedPeers = mempty
+           , pncTargetNumberOfActivePeers = mempty
+           , pncEnableP2P = mempty
            }
 
 parseSocketPath :: Text -> Parser SocketPath
@@ -101,9 +123,25 @@ parseSocketPath helpMessage =
         <> metavar "FILEPATH"
     )
 
+parseTracerSocketMode :: Parser (SocketPath, ForwarderMode)
+parseTracerSocketMode =
+  ((, Responder) . SocketPath <$> strOption
+   ( long "tracer-socket-path-accept"
+       <> help "Accept incoming cardano-tracer connection at local socket"
+       <> completer (bashCompleter "file")
+       <> metavar "FILEPATH"
+    ))
+  <|>
+  ((, Initiator) . SocketPath <$> strOption
+   ( long "tracer-socket-path-connect"
+       <> help "Connect to cardano-tracer listening on a local socket"
+       <> completer (bashCompleter "file")
+       <> metavar "FILEPATH"
+    ))
+
 parseHostIPv4Addr :: Parser NodeHostIPv4Address
 parseHostIPv4Addr =
-    option (eitherReader parseNodeHostIPv4Address) (
+    Opt.option (eitherReader parseNodeHostIPv4Address) (
           long "host-addr"
        <> metavar "IPV4"
        <> help "An optional IPv4 address"
@@ -111,7 +149,7 @@ parseHostIPv4Addr =
 
 parseHostIPv6Addr :: Parser NodeHostIPv6Address
 parseHostIPv6Addr =
-    option (eitherReader parseNodeHostIPv6Address) (
+    Opt.option (eitherReader parseNodeHostIPv6Address) (
           long "host-ipv6-addr"
        <> metavar "IPV6"
        <> help "An optional IPv6 address"
@@ -131,13 +169,13 @@ parseNodeHostIPv6Address str =
   maybe
     (Left $
       "Failed to parse IPv6 address: " ++ str ++
-      ". If you want to specify an IPv4 adddress, use --host-addr option.")
+      ". If you want to specify an IPv4 address, use --host-addr option.")
     (Right . NodeHostIPv6Address)
     (readMaybe str)
 
 parsePort :: Parser PortNumber
 parsePort =
-    option ((fromIntegral :: Int -> PortNumber) <$> auto) (
+    Opt.option ((fromIntegral :: Int -> PortNumber) <$> auto) (
           long "port"
        <> metavar "PORT"
        <> help "The port number"
@@ -152,6 +190,24 @@ parseConfigFile =
     <> help "Configuration file for the cardano-node"
     <> completer (bashCompleter "file")
     )
+
+parseMempoolCapacityOverride :: Parser MempoolCapacityBytesOverride
+parseMempoolCapacityOverride = parseOverride <|> parseNoOverride
+  where
+    parseOverride :: Parser MempoolCapacityBytesOverride
+    parseOverride =
+      MempoolCapacityBytesOverride . MempoolCapacityBytes <$>
+      Opt.option (auto @Word32)
+        (  long "mempool-capacity-override"
+        <> metavar "BYTES"
+        <> help "The number of bytes"
+        )
+    parseNoOverride :: Parser MempoolCapacityBytesOverride
+    parseNoOverride =
+      flag' NoMempoolCapacityBytesOverride
+        (  long "no-mempool-capacity-override"
+        <> help "The port number"
+        )
 
 parseDbPath :: Parser FilePath
 parseDbPath =
@@ -169,24 +225,14 @@ parseValidateDB =
       <> help "Validate all on-disk database files"
     )
 
-parseShutdownIPC :: Parser (Maybe Fd)
+parseShutdownIPC :: Parser Fd
 parseShutdownIPC =
-    optional $ option (Fd <$> auto) (
-         long "shutdown-ipc"
-      <> metavar "FD"
-      <> help "Shut down the process when this inherited FD reaches EOF"
-      <> hidden
-    )
-
-parseShutdownOnSlotSynced :: Parser MaxSlotNo
-parseShutdownOnSlotSynced =
-    fmap (fromMaybe NoMaxSlotNo) $
-    optional $ option (MaxSlotNo . SlotNo <$> auto) (
-         long "shutdown-on-slot-synced"
-      <> metavar "SLOT"
-      <> help "Shut down the process after ChainDB is synced up to the specified slot"
-      <> hidden
-    )
+  Opt.option (Fd <$> auto) (
+           long "shutdown-ipc"
+        <> metavar "FD"
+        <> help "Shut down the process when this inherited FD reaches EOF"
+        <> hidden
+      )
 
 parseTopologyFile :: Parser FilePath
 parseTopologyFile =
@@ -263,7 +309,7 @@ parseVrfKeyFilePath =
 parseSnapshotInterval :: Parser SnapshotInterval
 parseSnapshotInterval = fmap (RequestedSnapshotInterval . secondsToDiffTime) parseDifftime
   where
-  parseDifftime = option auto
+  parseDifftime = Opt.option auto
     ( long "snapshot-interval"
         <> metavar "SNAPSHOTINTERVAL"
         <> help "Snapshot Interval (in second)"
@@ -282,4 +328,4 @@ parserHelpOptions = fromMaybe mempty . OptI.unChunk . OptI.fullDesc (Opt.prefs m
 -- | Render the help pretty document.
 renderHelpDoc :: Int -> OptI.Doc -> String
 renderHelpDoc cols =
-  (`OptI.displayS` "") . OptI.renderPretty 1.0 cols
+  (`OptI.renderShowS` "") . OptI.layoutPretty (OptI.LayoutOptions (OptI.AvailablePerLine cols 1.0))

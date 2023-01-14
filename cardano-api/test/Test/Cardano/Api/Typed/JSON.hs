@@ -1,9 +1,5 @@
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -13,12 +9,12 @@ module Test.Cardano.Api.Typed.JSON
   ) where
 
 import           Cardano.Prelude
-import           Data.Aeson
-import           Gen.Cardano.Api.Typed
-import           Gen.Tasty.Hedgehog.Group (fromGroup)
-import           Hedgehog (Property, discover, forAll, tripping)
+import           Data.Aeson (eitherDecode, encode)
+import           Hedgehog (Property, forAll, tripping)
+import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.Hedgehog (testPropertyNamed)
+import           Gen.Cardano.Api.Typed (genMaybePraosNonce, genProtocolParameters)
 import           Test.Cardano.Api.Typed.Orphans ()
-import           Test.Tasty (TestTree)
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Gen as Gen
@@ -38,4 +34,7 @@ prop_roundtrip_protocol_parameters_JSON = H.property $ do
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
-tests = fromGroup $$discover
+tests = testGroup "Test.Cardano.Api.Typed.JSON"
+  [ testPropertyNamed "roundtrip praos nonce JSON"         "roundtrip praos nonce JSON"         prop_roundtrip_praos_nonce_JSON
+  , testPropertyNamed "roundtrip protocol parameters JSON" "roundtrip protocol parameters JSON" prop_roundtrip_protocol_parameters_JSON
+  ]

@@ -16,8 +16,8 @@ import           Data.ByteString (ByteString)
 import           Data.Text (Text)
 
 import qualified Data.List as List
-import qualified Data.Set as Set
 import           Data.Set (Set)
+import qualified Data.Set as Set
 
 import           Control.Monad (guard)
 
@@ -68,8 +68,9 @@ deserialiseFromBech32 asType bech32Str = do
     payload <- Bech32.dataPartToBytes dataPart
                  ?! Bech32DataPartToBytesError (Bech32.dataPartToText dataPart)
 
-    value <- deserialiseFromRawBytes asType payload
-               ?! Bech32DeserialiseFromBytesError payload
+    value <- case eitherDeserialiseFromRawBytes asType payload of
+      Right a -> Right a
+      Left _ -> Left $ Bech32DeserialiseFromBytesError payload
 
     let expectedPrefix = bech32PrefixFor value
     guard (actualPrefix == expectedPrefix)
@@ -96,8 +97,9 @@ deserialiseAnyOfFromBech32 types bech32Str = do
     payload <- Bech32.dataPartToBytes dataPart
                  ?! Bech32DataPartToBytesError (Bech32.dataPartToText dataPart)
 
-    value <- deserialiseFromRawBytes actualType payload
-               ?! Bech32DeserialiseFromBytesError payload
+    value <- case eitherDeserialiseFromRawBytes actualType payload of
+      Right a -> Right a
+      Left _ -> Left $ Bech32DeserialiseFromBytesError payload
 
     let expectedPrefix = bech32PrefixFor value
     guard (actualPrefix == expectedPrefix)

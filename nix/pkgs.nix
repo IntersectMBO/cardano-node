@@ -1,128 +1,129 @@
 # our packages overlay
-final: prev: with final;
-  let
-    compiler = config.haskellNix.compiler or "ghc8104";
-  in {
-  cardanoNodeProject = import ./haskell.nix {
-    inherit compiler
-      pkgs
-      lib
-      stdenv
-      haskell-nix
-      buildPackages
-      gitrev
-      ;
-  };
-  cardanoNodeHaskellPackages = cardanoNodeProject.hsPkgs;
-  cardanoNodeProfiledHaskellPackages = (import ./haskell.nix {
-    inherit compiler
-      pkgs
-      lib
-      stdenv
-      haskell-nix
-      buildPackages
-      gitrev
-      ;
-    inherit (cardanoNodeProject) projectPackages;
-    inherit (cardanoNodeProject.projectModule) src cabalProjectLocal;
-    profiling = true;
-  }).hsPkgs;
-  cardanoNodeEventlogHaskellPackages = (import ./haskell.nix {
-    inherit compiler
-      pkgs
-      lib
-      stdenv
-      haskell-nix
-      buildPackages
-      gitrev
-      ;
-    inherit (cardanoNodeProject) projectPackages;
-    inherit (cardanoNodeProject.projectModule) src cabalProjectLocal;
-    eventlog = true;
-  }).hsPkgs;
-  cardanoNodeAssertedHaskellPackages = (import ./haskell.nix {
-    inherit compiler
-      pkgs
-      lib
-      stdenv
-      haskell-nix
-      buildPackages
-      gitrev
-      ;
-    inherit (cardanoNodeProject) projectPackages;
-    inherit (cardanoNodeProject.projectModule) src cabalProjectLocal;
-    assertedPackages = [
-      "ouroboros-consensus"
-      "ouroboros-consensus-cardano"
-      "ouroboros-consensus-byron"
-      "ouroboros-consensus-shelley"
-      "ouroboros-network"
-      "network-mux"
-    ];
-  }).hsPkgs;
+final: prev: with final; {
 
-  #Grab the executable component of our package.
-  inherit (cardanoNodeHaskellPackages.cardano-node.components.exes) cardano-node;
-  inherit (cardanoNodeHaskellPackages.cardano-cli.components.exes) cardano-cli;
-  inherit (cardanoNodeHaskellPackages.cardano-topology.components.exes) cardano-topology;
-  inherit (cardanoNodeHaskellPackages.tx-generator.components.exes) tx-generator;
-  inherit (cardanoNodeHaskellPackages.bech32.components.exes) bech32;
-  inherit (cardanoNodeHaskellPackages.cardano-submit-api.components.exes) cardano-submit-api;
-  cardano-node-profiled = cardanoNodeProfiledHaskellPackages.cardano-node.components.exes.cardano-node;
-  cardano-node-eventlogged = cardanoNodeEventlogHaskellPackages.cardano-node.components.exes.cardano-node;
-  cardano-node-asserted = cardanoNodeAssertedHaskellPackages.cardano-node.components.exes.cardano-node;
+  inherit (cardanoNodeProject.args) compiler-nix-name;
 
-  # expose the db-converter and cardano-ping from the ouroboros-network we depend on
-  inherit (cardanoNodeHaskellPackages.ouroboros-consensus-byron.components.exes) db-converter;
-  inherit (cardanoNodeHaskellPackages.network-mux.components.exes) cardano-ping;
+  # The is used by nix/regenerate.sh to pre-compute package list to avoid double evaluation.
+  genProjectPackages = lib.genAttrs
+    (lib.attrNames (haskell-nix.haskellLib.selectProjectPackages
+      cardanoNodeProject.hsPkgs))
+    (name: lib.attrNames cardanoNodeProject.pkg-set.options.packages.value.${name}.components.exes);
 
-  cabal = haskell-nix.tool compiler "cabal" {
+  cabal = haskell-nix.tool compiler-nix-name "cabal" {
     version = "latest";
     inherit (cardanoNodeProject) index-state;
   };
 
-  hlint = haskell-nix.tool compiler "hlint" {
+  hlint = haskell-nix.tool compiler-nix-name "hlint" {
     version = "3.2.7";
     inherit (cardanoNodeProject) index-state;
   };
 
-  cardanolib-py = callPackage ./cardanolib-py {};
+  ghcid = haskell-nix.tool compiler-nix-name "ghcid" {
+    version = "0.8.7";
+    inherit (cardanoNodeProject) index-state;
+  };
+
+  haskell-language-server = haskell-nix.tool compiler-nix-name "haskell-language-server" {
+    version = "latest";
+    inherit (cardanoNodeProject) index-state;
+  };
+
+  haskellBuildUtils = prev.haskellBuildUtils.override {
+    inherit compiler-nix-name;
+    inherit (cardanoNodeProject) index-state;
+  };
+
+  cardanolib-py = callPackage ./cardanolib-py { };
 
   scripts = lib.recursiveUpdate (import ./scripts.nix { inherit pkgs; })
     (import ./scripts-submit-api.nix { inherit pkgs; });
 
-  dockerImage = let
-    defaultConfig = {
-      stateDir = "/data";
-      dbPrefix = "db";
-      socketPath = "/ipc/node.socket";
-    };
-  in callPackage ./docker {
-    exe = "cardano-node";
-    scripts = import ./scripts.nix {
-      inherit pkgs;
-      customConfigs = [ defaultConfig customConfig ];
-    };
-    script = "node";
-  };
+  clusterTests = import ./workbench/tests { inherit pkgs; };
 
-  submitApiDockerImage = let
-    defaultConfig = {
-      socketPath = "/ipc/node.socket";
-    };
-  in callPackage ./docker {
-    exe = "cardano-submit-api";
-    scripts = import ./scripts-submit-api.nix {
-      inherit pkgs;
-      customConfigs = [ defaultConfig customConfig ];
-    };
-    script = "submit-api";
-  };
+  plutus-scripts = callPackage ./plutus-scripts.nix { plutus-builder = plutus-example; };
 
-  # NixOS tests run a node and submit-api and validate it listens
-  nixosTests = import ./nixos/tests {
-    inherit pkgs;
-  };
+  dockerImage =
+    let
+      defaultConfig = {
+        stateDir = "/data";
+        dbPrefix = "db";
+        socketPath = "/ipc/node.socket";
+      };
+    in
+    callPackage ./docker {
+      exe = "cardano-node";
+      scripts = import ./scripts.nix {
+        inherit pkgs;
+        customConfigs = [ defaultConfig customConfig ];
+      };
+      script = "node";
+    };
 
-  clusterTests = import ./supervisord-cluster/tests { inherit pkgs; };
+  submitApiDockerImage =
+    let
+      defaultConfig = {
+        socketPath = "/node-ipc/node.socket";
+        listenAddress = "0.0.0.0";
+      };
+    in
+    callPackage ./docker/submit-api.nix {
+      exe = "cardano-submit-api";
+      scripts = import ./scripts-submit-api.nix {
+        inherit pkgs;
+        customConfigs = [ defaultConfig customConfig ];
+      };
+      script = "submit-api";
+    };
+
+  # A generic, parameteric version of the workbench development environment.
+  workbench = pkgs.callPackage ./workbench {};
+
+  all-profiles-json = workbench.profile-names-json;
+
+  # A parametrisable workbench, that can be used with nix-shell or lorri.
+  # See https://input-output-hk.github.io/haskell.nix/user-guide/development/
+  # The general idea is:
+  # backendName -> useCabalRun -> backend
+  # stateDir -> batchName -> profileName -> backend -> workbench -> runner
+  # * `workbench` is in case a pinned version of the workbench is needed.
+  workbench-runner =
+    let backendRegistry =
+        {
+            supervisor = ./workbench/backend/supervisor.nix;
+            nomad =      ./workbench/backend/nomad.nix;
+        };
+    in
+    { stateDir           ? customConfig.localCluster.stateDir
+    , batchName          ? customConfig.localCluster.batchName
+    , profileName        ? customConfig.localCluster.profileName
+    , backendName        ? customConfig.localCluster.backendName
+    , useCabalRun        ? false
+    , profiled           ? false
+    , cardano-node-rev   ? null
+    , workbench          ? pkgs.workbench
+    , workbenchDevMode   ? false
+    }:
+    let
+        # The `useCabalRun` flag is set in the backend to allow the backend to
+        # override its value. The runner uses the value of `useCabalRun` from
+        # the backend to prevent a runner using a different value.
+        backend = import (backendRegistry."${backendName}")
+                   { inherit pkgs lib useCabalRun; };
+    in import ./workbench/backend/runner.nix
+      {
+        inherit pkgs lib cardanoNodePackages;
+        inherit stateDir batchName profileName backend;
+        inherit cardano-node-rev;
+        inherit workbench workbenchDevMode;
+      };
+
+  # Disable failing python uvloop tests
+  python38 = prev.python38.override {
+    packageOverrides = pythonFinal: pythonPrev: {
+      uvloop = pythonPrev.uvloop.overrideAttrs (attrs: {
+        disabledTestPaths = [ "tests/test_tcp.py" "tests/test_sourcecode.py" "tests/test_dns.py" ];
+      });
+    };
+  };
 }

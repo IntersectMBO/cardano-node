@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 set -e
-# Unoffiical bash strict mode.
+# Unofficial bash strict mode.
 # See: http://redsymbol.net/articles/unofficial-bash-strict-mode/
 set -u
 set -o pipefail
@@ -59,11 +59,30 @@ FUNDS_PER_BYRON_ADDRESS=$((${FUNDS_PER_GENESIS_ADDRESS} - 1000000))
 NETWORK_MAGIC=42
 SECURITY_PARAM=10
 
-OS=$(uname -s) DATE=
-case $OS in
-  Darwin )       DATE="gdate";;
-  * )            DATE="date";;
+UNAME=$(uname -s) DATE=
+case $UNAME in
+  Darwin )      DATE="gdate";;
+  Linux )       DATE="date";;
+  MINGW64_NT* ) UNAME="Windows_NT"
+                DATE="date";;
 esac
+
+UNAME=$(uname -s) SED=
+case $UNAME in
+  Darwin )      SED="gsed";;
+  Linux )       SED="sed";;
+esac
+
+sprocket() {
+  if [ "$UNAME" == "Windows_NT" ]; then
+    # Named pipes names on Windows must have the structure: "\\.\pipe\PipeName"
+    # See https://docs.microsoft.com/en-us/windows/win32/ipc/pipe-names
+    echo -n '\\.\pipe\'
+    echo "$1" | sed 's|/|\\|g'
+  else
+    echo "$1"
+  fi
+}
 
 START_TIME="$(${DATE} -d "now + 30 seconds" +%s)"
 
@@ -74,7 +93,7 @@ fi
 
 # copy and tweak the configuration
 cp configuration/defaults/byron-mainnet/configuration.yaml ${ROOT}/
-sed -i ${ROOT}/configuration.yaml \
+$SED -i ${ROOT}/configuration.yaml \
     -e 's/Protocol: RealPBFT/Protocol: Cardano/' \
     -e '/Protocol/ aPBftSignatureThreshold: 0.6' \
     -e 's/minSeverity: Info/minSeverity: Debug/' \
@@ -220,16 +239,16 @@ for N in ${BFT_NODES_N}; do
     --secret byron/payment-keys.00$((${N} - 1)).key \
 
   cardano-cli byron key signing-key-address \
-    --testnet-magic 42 \
+    --testnet-magic ${NETWORK_MAGIC} \
     --secret byron/payment-keys.00$((${N} - 1)).key > byron/address-00$((${N} - 1))
 
   cardano-cli byron key signing-key-address \
-    --testnet-magic 42 \
+    --testnet-magic ${NETWORK_MAGIC} \
     --secret byron/genesis-keys.00$((${N} - 1)).key > byron/genesis-address-00$((${N} - 1))
 
   cardano-cli byron transaction issue-genesis-utxo-expenditure \
     --genesis-json byron/genesis.json \
-    --testnet-magic 42 \
+    --testnet-magic ${NETWORK_MAGIC} \
     --tx tx$((${N} - 1)).tx \
     --wallet-key byron/delegate-keys.00$((${N} - 1)).key \
     --rich-addr-from "$(head -n 1 byron/genesis-address-00$((${N} - 1)))" \
@@ -240,7 +259,7 @@ done
 # Update Proposal and votes
 cardano-cli byron governance create-update-proposal \
             --filepath update-proposal \
-            --testnet-magic 42 \
+            --testnet-magic "${NETWORK_MAGIC}" \
             --signing-key byron/delegate-keys.000.key \
             --protocol-version-major 1 \
             --protocol-version-minor 0 \
@@ -253,7 +272,7 @@ cardano-cli byron governance create-update-proposal \
 for N in ${BFT_NODES_N}; do
     cardano-cli byron governance create-proposal-vote \
                 --proposal-filepath update-proposal \
-                --testnet-magic 42 \
+                --testnet-magic ${NETWORK_MAGIC} \
                 --signing-key byron/delegate-keys.00$((${N} - 1)).key \
                 --vote-yes \
                 --output-filepath update-vote.00$((${N} - 1))
@@ -261,7 +280,7 @@ done
 
 cardano-cli byron governance create-update-proposal \
             --filepath update-proposal-1 \
-            --testnet-magic 42 \
+            --testnet-magic ${NETWORK_MAGIC} \
             --signing-key byron/delegate-keys.000.key \
             --protocol-version-major 2 \
             --protocol-version-minor 0 \
@@ -274,7 +293,7 @@ cardano-cli byron governance create-update-proposal \
 for N in ${BFT_NODES_N}; do
     cardano-cli byron governance create-proposal-vote \
                 --proposal-filepath update-proposal-1 \
-                --testnet-magic 42 \
+                --testnet-magic ${NETWORK_MAGIC} \
                 --signing-key byron/delegate-keys.00$((${N} - 1)).key \
                 --vote-yes \
                 --output-filepath update-vote-1.00$((${N} - 1))
@@ -289,30 +308,64 @@ echo "====================================================================="
 
 # Set up our template
 mkdir shelley
-cardano-cli genesis create --testnet-magic 42 --genesis-dir shelley
 
-# Then edit the genesis.spec.json ...
+# Copy the QA testnet alonzo genesis which is equivalent to the mainnet
 
-# We're going to use really quick epochs (300 seconds), by using short slots 0.2s
-# and K=10, but we'll keep long KES periods so we don't have to bother
-# cycling KES keys
-sed -i shelley/genesis.spec.json \
-    -e 's/"slotLength": 1/"slotLength": 0.2/' \
-    -e 's/"activeSlotsCoeff": 5.0e-2/"activeSlotsCoeff": 0.1/' \
-    -e 's/"securityParam": 2160/"securityParam": 10/' \
-    -e 's/"epochLength": 432000/"epochLength": 1500/' \
-    -e 's/"maxLovelaceSupply": 0/"maxLovelaceSupply": 1000000000000/' \
-    -e 's/"decentralisationParam": 1/"decentralisationParam": 0.7/' \
-    -e 's/"major": 0/"major": 2/' \
-    -e 's/"updateQuorum": 5/"updateQuorum": 2/'
+cp ../configuration/cardano/shelley_qa-alonzo-genesis.json shelley/genesis.alonzo.spec.json
+
+cardano-cli genesis create --testnet-magic ${NETWORK_MAGIC} --genesis-dir shelley
+
 
 # Now generate for real:
 
 cardano-cli genesis create \
-    --testnet-magic 42 \
+    --testnet-magic ${NETWORK_MAGIC} \
     --genesis-dir shelley/ \
     --gen-genesis-keys ${NUM_BFT_NODES} \
     --gen-utxo-keys 1
+
+echo "What is in shelley"
+echo "$(ls shelley)"
+
+cp "shelley/genesis.json" "shelley/copy-genesis.json"
+
+# We're going to use really quick epochs (300 seconds), by using short slots 0.2s
+# and K=10, but we'll keep long KES periods so we don't have to bother
+# cycling KES keys
+
+
+jq -M '. + {slotLength:0.1, securityParam:10, activeSlotsCoeff:0.1, securityParam:10, epochLength:500, maxLovelaceSupply:1000000000000, updateQuorum:2}' "shelley/copy-genesis.json" > "shelley/copy2-genesis.json"
+jq --raw-output '.protocolParams.protocolVersion.major = 2 | .protocolParams.minFeeA = 44 | .protocolParams.minFeeB = 155381 | .protocolParams.minUTxOValue = 1000000 | .protocolParams.decentralisationParam = 0.7 | .protocolParams.rho = 0.1 | .protocolParams.tau = 0.1' "shelley/copy2-genesis.json" > "shelley/genesis.json"
+
+rm "shelley/copy2-genesis.json"
+rm "shelley/copy-genesis.json"
+
+cardano-cli stake-address key-gen \
+  --verification-key-file shelley/utxo-keys/utxo-stake.vkey \
+  --signing-key-file shelley/utxo-keys/utxo-stake.skey
+
+cardano-cli address key-gen \
+  --verification-key-file shelley/utxo-keys/utxo2.vkey \
+  --signing-key-file shelley/utxo-keys/utxo2.skey
+
+cardano-cli stake-address key-gen \
+  --verification-key-file shelley/utxo-keys/utxo2-stake.vkey \
+  --signing-key-file shelley/utxo-keys/utxo2-stake.skey
+
+# Create a symlink to all the payment keys in utxo-keys directory
+mkdir -p utxo-keys
+
+for x in $(find shelley/utxo-keys -type f); do
+  if cat "$x" | jq -e 'select(
+      false
+      or .type == "GenesisUTxOVerificationKey_ed25519"
+      or .type == "GenesisUTxOSigningKey_ed25519"
+      or .type == "PaymentSigningKeyShelley_ed25519"
+      or .type == "PaymentVerificationKeyShelley_ed25519"
+      )' > /dev/null; then
+    ln -sf "../$x" "utxo-keys/$(basename "$x")"
+  fi
+done
 
 echo "====================================================================="
 echo "Generated genesis keys and genesis files:"
@@ -407,13 +460,13 @@ for ADDR in ${ADDRS}; do
   cardano-cli address build \
       --payment-verification-key-file addresses/${ADDR}.vkey \
       --stake-verification-key-file addresses/${ADDR}-stake.vkey \
-      --testnet-magic 42 \
+      --testnet-magic ${NETWORK_MAGIC} \
       --out-file addresses/${ADDR}.addr
 
   # Stake addresses
   cardano-cli stake-address build \
       --stake-verification-key-file addresses/${ADDR}-stake.vkey \
-      --testnet-magic 42 \
+      --testnet-magic ${NETWORK_MAGIC} \
       --out-file addresses/${ADDR}-stake.addr
 
   # Stake addresses registration certs
@@ -440,7 +493,7 @@ for N in ${USER_POOL_N}; do
 done
 
 echo "Generated payment address keys, stake address keys,"
-echo "stake address regitration certs, and stake address delegatation certs"
+echo "stake address registration certs, and stake address delegation certs"
 echo
 ls -1 addresses/
 echo "====================================================================="
@@ -451,7 +504,7 @@ echo "====================================================================="
 for NODE in ${POOL_NODES}; do
 
   cardano-cli stake-pool registration-certificate \
-    --testnet-magic 42 \
+    --testnet-magic ${NETWORK_MAGIC} \
     --pool-pledge 0 --pool-cost 0 --pool-margin 0 \
     --cold-verification-key-file             ${NODE}/shelley/operator.vkey \
     --vrf-verification-key-file              ${NODE}/shelley/vrf.vkey \
@@ -469,59 +522,108 @@ echo " * Start the nodes"
 echo " * Initiate successive protocol updates"
 echo " * Query the node's ledger state"
 echo
-echo "To start the nodes, in separate terminals use:"
+echo "To start the nodes, in separate terminals use the following scripts:"
 echo
+
+mkdir -p run
+
 for NODE in ${BFT_NODES}; do
+  (
+    echo "#!/usr/bin/env bash"
+    echo ""
+    echo "cardano-node run \\"
+    echo "  --config                          ${ROOT}/configuration.yaml \\"
+    echo "  --topology                        ${ROOT}/${NODE}/topology.json \\"
+    echo "  --database-path                   ${ROOT}/${NODE}/db \\"
+    echo "  --socket-path                     '$(sprocket "${ROOT}/${NODE}/node.sock")' \\"
+    echo "  --shelley-kes-key                 ${ROOT}/${NODE}/shelley/kes.skey \\"
+    echo "  --shelley-vrf-key                 ${ROOT}/${NODE}/shelley/vrf.skey \\"
+    echo "  --shelley-operational-certificate ${ROOT}/${NODE}/shelley/node.cert \\"
+    echo "  --port                            $(cat ${NODE}/port) \\"
+    echo "  --delegation-certificate          ${ROOT}/${NODE}/byron/delegate.cert \\"
+    echo "  --signing-key                     ${ROOT}/${NODE}/byron/delegate.key \\"
+    echo "  | tee -a ${ROOT}/${NODE}/node.log"
+  ) > run/${NODE}.sh
 
-  echo "cardano-node run \\"
-  echo "  --config                          ${ROOT}/configuration.yaml \\"
-  echo "  --topology                        ${ROOT}/${NODE}/topology.json \\"
-  echo "  --database-path                   ${ROOT}/${NODE}/db \\"
-  echo "  --socket-path                     ${ROOT}/${NODE}/node.sock \\"
-  echo "  --shelley-kes-key                 ${ROOT}/${NODE}/shelley/kes.skey \\"
-  echo "  --shelley-vrf-key                 ${ROOT}/${NODE}/shelley/vrf.skey \\"
-  echo "  --shelley-operational-certificate ${ROOT}/${NODE}/shelley/node.cert \\"
-  echo "  --port                            $(cat ${NODE}/port) \\"
-  echo "  --delegation-certificate          ${ROOT}/${NODE}/byron/delegate.cert \\"
-  echo "  --signing-key                     ${ROOT}/${NODE}/byron/delegate.key \\"
-  echo "  | tee -a ${ROOT}/${NODE}/node.log"
+  chmod a+x run/${NODE}.sh
 
+  echo $ROOT/run/${NODE}.sh
 done
+
 for NODE in ${POOL_NODES}; do
+  (
+    echo "#!/usr/bin/env bash"
+    echo ""
+    echo "cardano-node run \\"
+    echo "  --config                          ${ROOT}/configuration.yaml \\"
+    echo "  --topology                        ${ROOT}/${NODE}/topology.json \\"
+    echo "  --database-path                   ${ROOT}/${NODE}/db \\"
+    echo "  --socket-path                     '$(sprocket "${ROOT}/${NODE}/node.sock")' \\"
+    echo "  --shelley-kes-key                 ${ROOT}/${NODE}/shelley/kes.skey \\"
+    echo "  --shelley-vrf-key                 ${ROOT}/${NODE}/shelley/vrf.skey \\"
+    echo "  --shelley-operational-certificate ${ROOT}/${NODE}/shelley/node.cert \\"
+    echo "  --port                            $(cat ${NODE}/port) \\"
+    echo "  | tee -a ${ROOT}/${NODE}/node.log"
+  ) > run/${NODE}.sh
 
-  echo "cardano-node run \\"
-  echo "  --config                          ${ROOT}/configuration.yaml \\"
-  echo "  --topology                        ${ROOT}/${NODE}/topology.json \\"
-  echo "  --database-path                   ${ROOT}/${NODE}/db \\"
-  echo "  --socket-path                     ${ROOT}/${NODE}/node.sock \\"
-  echo "  --shelley-kes-key                 ${ROOT}/${NODE}/shelley/kes.skey \\"
-  echo "  --shelley-vrf-key                 ${ROOT}/${NODE}/shelley/vrf.skey \\"
-  echo "  --shelley-operational-certificate ${ROOT}/${NODE}/shelley/node.cert \\"
-  echo "  --port                            $(cat ${NODE}/port) \\"
-  echo "  | tee -a ${ROOT}/${NODE}/node.log"
+  chmod a+x run/${NODE}.sh
 
+  echo $ROOT/run/${NODE}.sh
 done
+
+echo "#!/usr/bin/env bash" > run/all.sh
+echo "" >> run/all.sh
+
+chmod a+x run/all.sh
+
+for NODE in ${BFT_NODES}; do
+  echo "$ROOT/run/${NODE}.sh &" >> run/all.sh
+done
+
+for NODE in ${POOL_NODES}; do
+  echo "$ROOT/run/${NODE}.sh &" >> run/all.sh
+done
+
+echo "" >> run/all.sh
+echo "wait" >> run/all.sh
+
+chmod a+x run/all.sh
+
+echo
+echo "Alternatively, you can run all the nodes in one go:"
+echo
+echo "$ROOT/run/all.sh"
 
 echo
 echo "In order to do the protocol updates, proceed as follows:"
 echo
-echo "  0. wait for the nodes to start producing blocks"
-echo "  1. invoke ./scripts/byron-to-alonzo/update-1.sh"
+echo "  0. invoke ./scripts/byron-to-alonzo/mkfiles.sh"
+echo "  1. wait for the nodes to start producing blocks"
+echo "  2. invoke ./scripts/byron-to-alonzo/update-1.sh <N>"
+echo "     if you are early enough in the epoch N = current epoch"
+echo "     if not N = current epoch + 1. This applies for all update proposals"
 echo "     wait for the next epoch for the update to take effect"
 echo
-echo "  2. invoke ./scripts/byron-to-alonzo/update-2.sh"
-echo "  3. restart the nodes"
+echo "  3. invoke ./scripts/byron-to-alonzo/update-2.sh"
+echo "  4. restart the nodes"
 echo "     wait for the next epoch for the update to take effect"
+echo "     you should be in the Shelley era if the update was successful"
 echo
-echo "  4. invoke ./scripts/byron-to-alonzo/update-3.sh <N>"
+echo "  5. invoke ./scripts/byron-to-alonzo/update-3.sh <N>"
 echo "     Here, <N> the current epoch (2 if you're quick)."
 echo "     If you provide the wrong epoch, you will see an error"
 echo "     that will tell you the current epoch, and can run"
 echo "     the script again."
-echo "  5. restart the nodes"
+echo "  6. restart the nodes"
 echo "     wait for the next epoch for the update to take effect"
-echo "  6. invoke ./scripts/byron-to-alonzo/update-4.sh <N>"
-echo "  7. restart the nodes"
+echo "     you should be in the Allegra era if the update was successful"
+echo "  7. invoke ./scripts/byron-to-alonzo/update-4.sh <N>"
+echo "  8. restart the nodes"
+echo "     wait for the next epoch for the update to take effect"
+echo "     you should be in the Mary era if the update was successful"
+echo "  9. invoke ./scripts/byron-to-alonzo/update-5.sh <N>"
+echo "     wait for the next epoch for the update to take effect"
+echo "     you should be in the Alonzo era if the update was successful"
 echo
 echo "You can observe the status of the updates by grepping the logs, via"
 echo
@@ -549,43 +651,48 @@ popd
 # For an automatic transition at epoch 0, specifying mary, allegra or shelley
 # will start the node in the appropriate era.
 echo ""
+
+# These are needed for cardano-submit-api
+echo "EnableLogMetrics: False" >> ${ROOT}/configuration.yaml
+echo "EnableLogging: True" >> ${ROOT}/configuration.yaml
+
 if [ "$1" = "alonzo" ]; then
-  echo "TestShelleyHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
-  echo "TestAllegraHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
-  echo "TestMaryHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
-  echo "TestAlonzoHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
+  echo "TestShelleyHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
+  echo "TestAllegraHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
+  echo "TestMaryHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
+  echo "TestAlonzoHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
   echo "TestEnableDevelopmentHardForkEras: True" >> ${ROOT}/configuration.yaml
   echo "TestEnableDevelopmentNetworkProtocols: True" >> ${ROOT}/configuration.yaml
 
-  sed -i ${ROOT}/configuration.yaml \
+  $SED -i ${ROOT}/configuration.yaml \
       -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 5/'
 
   # Copy the cost model
-  mkdir ${ROOT}/shelley/alonzo
-  cp configuration/cardano/alonzo/shelley_qa_cost-model.json ${ROOT}/shelley/alonzo/costmodel.json
   echo "Nodes will start in Alonzo era from epoch 0"
 
 elif [ "$1" = "mary" ]; then
   echo "TestShelleyHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
   echo "TestAllegraHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
   echo "TestMaryHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
-  sed -i ${ROOT}/configuration.yaml \
+  $SED -i ${ROOT}/configuration.yaml \
       -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 4/'
   echo "Nodes will start in Mary era from epoch 0"
 
 elif [ "$1" = "allegra" ]; then
   echo "TestShelleyHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
   echo "TestAllegraHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
-  sed -i ${ROOT}/configuration.yaml \
+  $SED -i ${ROOT}/configuration.yaml \
       -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 3/'
   echo "Nodes will start in Allegra era from epoch 0"
 
 elif [ "$1" = "shelley" ]; then
   echo "TestShelleyHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
-  sed -i ${ROOT}/configuration.yaml \
+  $SED -i ${ROOT}/configuration.yaml \
       -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 2/'
   echo "Nodes will start in Shelley era from epoch 0"
 
 else
   echo "Default yaml configuration applied."
 fi
+
+(cd "$ROOT"; ln -s node-bft1/node.sock main.sock)

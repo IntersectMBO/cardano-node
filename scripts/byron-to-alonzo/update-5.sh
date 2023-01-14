@@ -6,7 +6,7 @@ set -e
 # This script will initiate the transition to protocol version 5 (Alonzo).
 
 # You need to provide the current epoch as a positional argument (the Shelley
-# update system requires this to be includded in the update proposal).
+# update system requires this to be included in the update proposal).
 
 
 # In order for this to be successful, you need to already be in protocol version
@@ -43,11 +43,13 @@ cardano-cli governance create-update-proposal \
 
 cardano-cli transaction build-raw \
             --mary-era \
-            --fee 0 \
+            --fee 186181 \
             --tx-in $TXID2#0\
             --tx-in $TXID2#1\
+            --tx-in $TXID2#2\
             --tx-out $(cat addresses/user1.addr)+$((${COINS_IN_INPUT} / 2)) \
             --tx-out $(cat addresses/user1.addr)+$((${COINS_IN_INPUT} / 2)) \
+            --tx-out $(cat addresses/user1.addr)+9017396137 \
             --update-proposal-file update-proposal-alonzo \
             --out-file tx4.txbody
 
@@ -73,4 +75,3 @@ popd
 
 echo "Restart the nodes now to endorse the update."
 
-cardano-cli transaction submit --cardano-mode --testnet-magic 42 --tx-file mary.tx
