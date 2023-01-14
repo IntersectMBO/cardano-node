@@ -401,6 +401,31 @@ Byron vote submission:
                           (--mainnet | --testnet-magic NATURAL)
                           --filepath UpdateProposalVoteFile
 
+Development
+===========
+
+GHCID
+-----
+
+run *ghcid* with: ``ghcid -c "cabal repl exe:cardano-node --reorder-goals"``
+
+Note: When developing locally, for any package you are working on, in **cabal.project** set, *ghc-options* to ``-Wwarn`` and set the ``development`` flag, e.g.::
+
+  package cardano-node
+    ghc-options: -Wwarn
+    flags: +development
+  
+Otherwise GHC might complain about unused packages.
+
+Haskell Language Server
+-----------------------
+
+When using Haskell Langague Server with Visual Studio Code, you may find that
+`HLINT annotations are ignored<https://github.com/haskell/haskell-language-server/issues/638>`.
+
+To work around this, you may run the script `./scripts/reconfigure-hlint.sh` to generate a `.hlint.yaml`
+file with HLINT ignore rules derived from the source code.
+
 ****
 Native Tokens
 ****
