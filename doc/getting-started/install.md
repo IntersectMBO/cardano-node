@@ -204,6 +204,7 @@ echo "with-compiler: ghc-8.10.7" >> cabal.project.local
 Build the node and CLI with `cabal`:
 
 ```bash
+cabal update
 cabal build all
 ```
 
