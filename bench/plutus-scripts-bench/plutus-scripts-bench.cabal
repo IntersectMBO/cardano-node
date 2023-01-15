@@ -28,7 +28,7 @@ common project-config
     buildable: False
 
 common common-definitions
-  build-depends:      base ^>=4.14
+  build-depends:      base >= 4.14 && < 4.17
   default-language:   Haskell2010
   default-extensions:
     NoImplicitPrelude
@@ -55,13 +55,13 @@ library
   exposed-modules:
     Cardano.Benchmarking.PlutusScripts
     Cardano.Benchmarking.PlutusScripts.CustomCallTypes
-  
+
   other-modules:
     Cardano.Benchmarking.PlutusScripts.CustomCall
     Cardano.Benchmarking.PlutusScripts.EcdsaSecp256k1Loop
     Cardano.Benchmarking.PlutusScripts.Loop
     Cardano.Benchmarking.PlutusScripts.SchnorrSecp256k1Loop
-  
+
   --------------------------
   -- IOG dependencies
   --------------------------
