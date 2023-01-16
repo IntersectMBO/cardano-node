@@ -100,8 +100,8 @@ roundtrip_TxBody_envelope era = H.property $ do
 allTxBodyEnvelopeRoundtrips :: [TestTree]
 allTxBodyEnvelopeRoundtrips =
   [ testPropertyNamed
-      ("roundtrip " <> (fromString . Text.unpack $ renderEra aEra) <> " TxBody envelope")
-      ("roundtrip " <> (fromString . Text.unpack $ renderEra aEra) <> " TxBody envelope")
+      ("roundtrip " <> fromString (Text.unpack $ renderEra aEra) <> " TxBody envelope")
+      ("roundtrip " <> fromString (Text.unpack $ renderEra aEra) <> " TxBody envelope")
       (roundtrip_TxBody_envelope era)
   | aEra@(AnyCardanoEra era) <- [minBound..(AnyCardanoEra BabbageEra)]
   ]
