@@ -22,7 +22,7 @@ import           System.Directory (createDirectoryIfMissing, doesDirectoryExist,
 import           System.Directory.Extra (listFiles)
 import           System.FilePath ((</>))
 
-import           Cardano.Logging (Namespace, TraceObject (..))
+import           Cardano.Logging (TraceObject (..))
 
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Handlers.Logs.Utils
@@ -103,9 +103,9 @@ traceObjectToText TraceObject{toHuman, toHostname, toNamespace, toSeverity, toTh
   thId = T.filter isDigit toThreadId
   time = T.pack $ formatTime defaultTimeLocale "%F %T%2Q %Z" toTimestamp
 
-mkName :: Namespace -> T.Text
+mkName :: [T.Text] -> T.Text
 mkName []    = "noname"
-mkName names = T.intercalate "." names
+mkName l = T.intercalate "." l
 
 traceObjectToJSON :: TraceObject -> Maybe T.Text
 traceObjectToJSON TraceObject{toMachine, toTimestamp, toNamespace, toHostname, toSeverity, toThreadId} =

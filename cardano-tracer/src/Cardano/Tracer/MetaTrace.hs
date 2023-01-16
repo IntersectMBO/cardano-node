@@ -20,7 +20,7 @@ module Cardano.Tracer.MetaTrace
   ) where
 
 import qualified "trace-dispatcher" Control.Tracer as T
-import           Data.Aeson (ToJSON (..), (.=))
+import           Data.Aeson (ToJSON (..))
 import qualified Data.Aeson as AE
 import           Data.Function
 import qualified Data.Map.Strict as Map
@@ -33,22 +33,6 @@ import           Cardano.Logging
 
 import           Cardano.Tracer.Configuration
 
-
-ctorTracerTrace :: TracerTrace -> Text
-ctorTracerTrace = \case
-  TracerParamsAre{}            -> "TracerParamsAre"
-  TracerConfigIs{}             -> "TracerConfigIs"
-  TracerInitStarted{}          -> "TracerInitStarted"
-  TracerInitEventQueues{}      -> "TracerInitEventQueues"
-  TracerInitDone{}             -> "TracerInitDone"
-  TracerSockListen{}           -> "TracerSockListen"
-  TracerSockIncoming{}         -> "TracerSockIncoming"
-  TracerSockConnecting{}       -> "TracerSockConnecting"
-  TracerSockConnected{}        -> "TracerSockConnected"
-  TracerShutdownInitiated{}    -> "TracerShutdownInitiated"
-  TracerShutdownHistBackup{}   -> "TracerShutdownHistBackup"
-  TracerShutdownComplete{}     -> "TracerShutdownComplete"
-  TracerError{}                -> "TracerError"
 
 data TracerTrace
   = TracerParamsAre
@@ -94,11 +78,59 @@ jsonEncodingOptions = AE.defaultOptions
 instance LogFormatting TracerTrace where
   forHuman = T.pack . show
   forMachine DMinimal  _ = mempty
-  forMachine DNormal   t = mconcat [ "kind" .= AE.String (ctorTracerTrace t) ]
+  forMachine DNormal   _ = mempty
   forMachine DDetailed t = forMachine DMaximum t
   forMachine DMaximum  t = case AE.toJSON t of
                              AE.Object x -> x
                              _ -> error "Impossible"
+
+instance MetaTrace TracerTrace where
+    namespaceFor TracerParamsAre {} = Namespace [] ["ParamsAre"]
+    namespaceFor TracerConfigIs {} = Namespace [] ["ConfigIs"]
+    namespaceFor TracerInitStarted = Namespace [] ["InitStart"]
+    namespaceFor TracerInitEventQueues = Namespace [] ["EventQueues"]
+    namespaceFor TracerInitDone = Namespace [] ["InitDone"]
+    namespaceFor TracerSockListen {} = Namespace [] ["SockListen"]
+    namespaceFor TracerSockIncoming {} = Namespace [] ["SockIncoming"]
+    namespaceFor TracerSockConnecting {} = Namespace [] ["SockConnecting"]
+    namespaceFor TracerSockConnected {} = Namespace [] ["SockConnected"]
+    namespaceFor TracerShutdownInitiated = Namespace [] ["ShutdownInitiated"]
+    namespaceFor TracerShutdownHistBackup = Namespace [] ["ShutdownHistBackup"]
+    namespaceFor TracerShutdownComplete = Namespace [] ["ShutdownComplete"]
+    namespaceFor TracerError {} = Namespace [] ["Error"]
+
+    severityFor (Namespace _ ["ParamsAre"]) _ = Just Warning
+    severityFor (Namespace _ ["ConfigIs"]) _ = Just Warning
+    severityFor (Namespace _ ["InitStart"]) _ = Just Info
+    severityFor (Namespace _ ["EventQueues"]) _ = Just Info
+    severityFor (Namespace _ ["InitDone"]) _ = Just Info
+    severityFor (Namespace _ ["SockListen"]) _ = Just Info
+    severityFor (Namespace _ ["SockIncoming"]) _ = Just Info
+    severityFor (Namespace _ ["SockConnecting"]) _ = Just Info
+    severityFor (Namespace _ ["SockConnected"]) _ = Just Info
+    severityFor (Namespace _ ["ShutdownInitiated"]) _ = Just Warning
+    severityFor (Namespace _ ["ShutdownHistBackup"]) _ = Just Info
+    severityFor (Namespace _ ["ShutdownComplete"]) _ = Just Warning
+    severityFor (Namespace _ ["Error"]) _ = Just Error
+    severityFor _ _ = Nothing
+
+    documentFor _ = Just ""
+
+    allNamespaces = [
+        Namespace [] ["ParamsAre"]
+      , Namespace [] ["ConfigIs"]
+      , Namespace [] ["InitStart"]
+      , Namespace [] ["EventQueues"]
+      , Namespace [] ["InitDone"]
+      , Namespace [] ["SockListen"]
+      , Namespace [] ["SockIncoming"]
+      , Namespace [] ["SockConnecting"]
+      , Namespace [] ["SockConnected"]
+      , Namespace [] ["ShutdownInitiated"]
+      , Namespace [] ["ShutdownHistBackup"]
+      , Namespace [] ["ShutdownComplete"]
+      , Namespace [] ["Error"]
+      ]
 
 stderrShowTracer :: Trace IO TracerTrace
 stderrShowTracer =
@@ -122,17 +154,11 @@ mkTracerTracer defSeverity = do
     machineFormatter Nothing base
     >>= withDetailsFromConfig
   let tr = metaBase
-           & withNamesAppended ((:[]) . ctorTracerTrace)
-           & appendName "Tracer"
+           & withInnerNames
+           & appendPrefixName "Tracer"
            & withSeverity
-               (\case
-                   TracerParamsAre{}         -> Warning
-                   TracerConfigIs{}          -> Warning
-                   TracerShutdownInitiated{} -> Warning
-                   TracerShutdownComplete{}  -> Warning
-                   TracerError{}             -> Error
-                   _                         -> Info)
-  configureTracers initialTraceConfig trDoc [tr]
+
+  configureTracers initialTraceConfig [tr]
   pure tr
  where
    initialTraceConfig :: TraceConfig
@@ -147,5 +173,3 @@ mkTracerTracer defSeverity = do
                    , (["Tracer"], [ConfDetail DMaximum])
                    ]
      }
-   trDoc :: Documented TracerTrace
-   trDoc = Documented []
