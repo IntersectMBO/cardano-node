@@ -166,11 +166,10 @@
           shell = import ./shell.nix { inherit pkgs customConfig cardano-mainnet-mirror; };
           devShells = {
             inherit (shell) devops;
+            default = shell.dev;
             cluster = shell;
             profiled = project.profiled.shell;
           };
-
-          devShell = shell.dev;
 
           # NixOS tests run a node and submit-api and validate it listens
           nixosTests = import ./nix/nixos/tests {
@@ -247,9 +246,7 @@
             cardano-deployment = pkgs.cardanoLib.mkConfigHtml { inherit (pkgs.cardanoLib.environments) mainnet testnet; };
           } // optionalAttrs (system == "x86_64-linux") {
             native = packages // {
-              shells = devShells // {
-                default = devShell;
-              };
+              shells = devShells;
               internal = {
                 roots.project = project.roots;
                 plan-nix.project = project.plan-nix;
@@ -301,9 +298,7 @@
                 platform = "macos";
                 exes = lib.collect lib.isDerivation (collectExes project);
               };
-              shells = removeAttrs devShells [ "profiled" ] // {
-                default = devShell;
-              };
+              shells = removeAttrs devShells [ "profiled" ];
               internal = {
                 roots.project = project.roots;
                 plan-nix.project = project.plan-nix;
@@ -344,7 +339,7 @@
           defaultApp = apps.cardano-node;
 
           # This is used by `nix develop .` to open a devShell
-          inherit devShell devShells;
+          inherit devShells;
 
           # The parametrisable workbench.
           inherit workbench;
