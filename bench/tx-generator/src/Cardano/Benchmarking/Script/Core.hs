@@ -435,8 +435,21 @@ makePlutusContext ScriptSpec{..} = do
 
       case plutusAutoBudgetMaxOut protocolParameters script autoBudget of
         Left err -> liftTxGenError err
-        Right PlutusAutoBudget{..} -> do
+        Right (PlutusAutoBudget{..}, loopCalibration) -> do
           preRun <- preExecuteScriptAction protocolParameters script autoBudgetDatum autoBudgetRedeemer
+          let
+            summary = PlutusAutoBudgetSummary
+              { budgetPerTx       = perTxBudget
+              , budgetPerTxInput  = budget
+              , scriptId          = scriptSpecFile
+              , loopCounter       = loopCalibration
+              , budgetUsed        = preRun
+              , scriptDatum       = autoBudgetDatum
+              , scriptRedeemer    = autoBudgetRedeemer
+              }
+            summaryFile = "plutus-auto-budget-summary.json"
+          liftIO $ BSL.writeFile summaryFile $ prettyPrintOrdered summary
+          traceDebug $ "makePlutusContext : auto budget calibration summary saved in: " ++ summaryFile
           return (autoBudgetDatum, autoBudgetRedeemer, preRun)
 
   let msg = mconcat [ "Plutus Benchmark :"
