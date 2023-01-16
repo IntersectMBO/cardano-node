@@ -118,8 +118,10 @@ checkPlutusBuiltin ::
      IO ()
 checkPlutusBuiltin
   = do
-    let
-      ~(Just script) = findPlutusScript "CustomCall.hs"
+    let script = case findPlutusScript "CustomCall.hs" of
+                    Just x -> x
+                    Nothing -> error "Error: CustomCall.hs not found"
+
     putStrLn "* serialisation of built-in Plutus script:"
     BSL.putStrLn $ encodePlutusScript script
 
@@ -166,8 +168,9 @@ checkPlutusLoop (Just PlutusOn{..})
       Right units -> putStrLn $ "--> execution successful; got budget: " ++ show units
 
     putStrLn "* What does the redeemer look like when the loop counter is maxed out?"
-    let
-        ~(Just budget) = protocolParamMaxTxExUnits protocolParameters
+    let budget = case protocolParamMaxTxExUnits protocolParameters of
+                    Just x -> x
+                    Nothing -> error "Cannot find protocolParamMaxTxExUnits"
         autoBudget = PlutusAutoBudget
           { autoBudgetUnits = budget
           , autoBudgetDatum = ScriptDataNumber 0

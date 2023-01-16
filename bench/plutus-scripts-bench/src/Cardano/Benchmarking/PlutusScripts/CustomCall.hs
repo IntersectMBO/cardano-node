@@ -18,10 +18,8 @@ import           Prelude as Haskell (String, (.), (<$>))
 
 import           Cardano.Api (PlutusScript, PlutusScriptV2)
 import           Cardano.Api.Shelley (PlutusScript (..))
-import           Codec.Serialise (serialise)
-import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
-import qualified Plutus.V2.Ledger.Api as PlutusV2
+import qualified PlutusLedgerApi.V2 as PlutusV2
 import qualified PlutusTx
 import           PlutusTx.Prelude as Plutus hiding (Semigroup (..), (.), (<$>))
 
@@ -68,14 +66,8 @@ unwrap :: BuiltinData -> CustomCallArg
 unwrap  = PlutusV2.unsafeFromBuiltinData
 -- Note: type-constraining unsafeFromBuiltinData decreases script's execution units.
 
-validator :: PlutusV2.Validator
-validator = PlutusV2.mkValidatorScript $$(PlutusTx.compile [|| mkValidator ||])
-
-script :: PlutusV2.Script
-script = PlutusV2.unValidatorScript validator
-
 customCallScriptShortBs :: SBS.ShortByteString
-customCallScriptShortBs = SBS.toShort . LBS.toStrict $ serialise script
+customCallScriptShortBs = PlutusV2.serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||])
 
 scriptSerialized :: PlutusScript PlutusScriptV2
 scriptSerialized = PlutusScriptSerialised customCallScriptShortBs
