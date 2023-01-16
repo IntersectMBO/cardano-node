@@ -1,13 +1,20 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module  Cardano.TxGenerator.PlutusContext
-        ( plutusAutoBudgetMaxOut
+        ( PlutusAutoBudgetSummary(..)
+        , plutusAutoBudgetMaxOut
         , readScriptData
         , scriptDataModifyNumber
         )
         where
+
+import           GHC.Generics (Generic)
 
 import           Control.Monad.Trans.Except.Extra
 import           Data.Aeson as Aeson
@@ -17,6 +24,22 @@ import           Cardano.Api.Shelley (ProtocolParameters)
 
 import           Cardano.TxGenerator.Setup.Plutus (preExecutePlutusScript)
 import           Cardano.TxGenerator.Types
+
+
+data PlutusAutoBudgetSummary =
+  PlutusAutoBudgetSummary
+  { budgetPerTx       :: !ExecutionUnits
+  , budgetPerTxInput  :: !ExecutionUnits
+  , scriptId          :: !FilePath
+  , loopCounter       :: !Integer
+  , budgetUsed        :: !ExecutionUnits
+  , scriptDatum       :: !ScriptData
+  , scriptRedeemer    :: !ScriptData
+  }
+  deriving (Generic, ToJSON)
+
+instance ToJSON ScriptData where
+  toJSON = scriptDataToJson ScriptDataJsonDetailedSchema
 
 
 -- | load serialized ScriptData, filling in an empty value if no .json file is given
@@ -37,11 +60,11 @@ readScriptData jsonFilePath
 --      termination value when counting down.
 --   2. In the redeemer's argument structure, this value is the first numerical value
 --      that's encountered during traversal.
-plutusAutoBudgetMaxOut :: ProtocolParameters -> ScriptInAnyLang -> PlutusAutoBudget -> Either TxGenError PlutusAutoBudget
+plutusAutoBudgetMaxOut :: ProtocolParameters -> ScriptInAnyLang -> PlutusAutoBudget -> Either TxGenError (PlutusAutoBudget, Integer)
 plutusAutoBudgetMaxOut protocolParams script pab@PlutusAutoBudget{..}
   = do
-    redeemer' <- toLoopArgument <$> binarySearch isInLimits 0 searchUpperBound
-    pure $ pab {autoBudgetRedeemer = redeemer'}
+    n <- binarySearch isInLimits 0 searchUpperBound
+    pure (pab {autoBudgetRedeemer = toLoopArgument n}, n)
   where
     -- The highest loop counter that is tried - this is about 10 times the current mainnet limit.
     searchUpperBound = 20000

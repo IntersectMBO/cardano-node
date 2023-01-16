@@ -52,6 +52,12 @@ def all_profile_variants:
     } as $dataset_miniature
   |
     { genesis:
+      { utxo:                               (1   * $M)
+      , delegators:                         (0.2 * $M)
+      }
+    } as $dataset_small
+  |
+    { genesis:
       { utxo:                               (30 * $M)
       , delegators:                         0
       , shelley:
@@ -184,6 +190,10 @@ def all_profile_variants:
      .generator.epochs                = 4
     ) as $for_4ep
   |
+    ({} |
+     .generator.epochs                = 12
+    ) as $for_12ep
+  |
     ({}
      | .node.shutdown_on_block_synced   = 1
     ) as $for_1blk
@@ -210,6 +220,10 @@ def all_profile_variants:
      .generator.tps                   = 0.2
     ) as $current_tps_saturation_plutus
   |
+    ({}
+     | .generator.tps                 = 0.4
+    ) as $double_tps_saturation_plutus
+  |
    ($current_tps_saturation_plutus *
     { extra_desc: "with Plutus workload"
     , generator:
@@ -229,7 +243,9 @@ def all_profile_variants:
             { "int": 1000000 }
           }
       }
-    }) as $plutus_loop_counter
+    }
+    | .generator.tx_fee        = 1360000
+    ) as $plutus_loop_counter
   |
    ({ generator:
       { plutus:
@@ -251,6 +267,7 @@ def all_profile_variants:
           }
       }
     }
+    | .generator.tx_fee        = 1025000
     | .genesis.pparamsEpoch    = timeline::lastKnownEpoch
     | .genesis.pparamsOverlays = ["v8-preview"]
     ) as $plutus_loop_secp_ecdsa
@@ -275,6 +292,7 @@ def all_profile_variants:
           }
       }
     }
+    | .generator.tx_fee        = 1020000
     | .genesis.pparamsEpoch    = timeline::lastKnownEpoch
     | .genesis.pparamsOverlays = ["v8-preview"]
     ) as $plutus_loop_secp_schnorr
@@ -336,6 +354,16 @@ def all_profile_variants:
    ($scenario_fixed_loaded * $doublet * $dataset_miniature * $for_15blk * $no_filtering *
     { desc: "Miniature dataset, CI-friendly duration, bench scale"
     }) as $cibench_base
+  |
+   ($scenario_fixed_loaded * $dataset_small * $for_12ep *
+    { node:
+      { shutdown_on_slot_synced:        7200
+      }
+      , desc: "Small dataset, honest 12 epochs duration"
+    }
+    | .genesis.pparamsEpoch    = timeline::lastKnownEpoch
+    | .genesis.pparamsOverlays = ["v8-preview"]
+    ) as $plutuscall_base
   |
    ($scenario_fixed_loaded * $triplet * $dataset_oct2021 *
     { node:
@@ -469,6 +497,17 @@ def all_profile_variants:
   ## CI variants: test duration, 3 blocks, dense10
   , $citest_base * $singleton_dense10 *
     { name: "ci-test-dense10"
+    }
+
+  ## Plutus call variants: 12 epochs
+  , $plutuscall_base * $plutus_base * $double_tps_saturation_plutus * $plutus_loop_counter *
+    { name: "plutuscall-loop"
+    }
+  , $plutuscall_base * $plutus_base * $double_tps_saturation_plutus * $plutus_loop_secp_ecdsa *
+    { name: "plutuscall-secp-ecdsa"
+    }
+  , $plutuscall_base * $plutus_base * $double_tps_saturation_plutus * $plutus_loop_secp_schnorr *
+    { name: "plutuscall-secp-schnorr"
     }
 
 ## Dish variants
