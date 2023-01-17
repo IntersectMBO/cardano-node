@@ -140,6 +140,7 @@ library
                       , iproute
                       , memory
                       , microlens
+                      , mtl
                       , network
                       , nothunks
                       , optparse-applicative-fork
