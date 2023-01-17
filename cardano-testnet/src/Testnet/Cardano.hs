@@ -6,6 +6,10 @@
 module Testnet.Cardano
   ( ForkPoint(..)
   , CardanoTestnetOptions(..)
+  , cardanoPoolNodes
+  , cardanoBftNodes
+  , cardanoNumPoolNodes
+  , extraBftNodeCliArgs
   , defaultTestnetOptions
   , TestnetNodeOptions(..)
   , cardanoDefaultTestnetNodeOptions
@@ -16,6 +20,8 @@ module Testnet.Cardano
 
   , cardanoTestnet
   ) where
+
+import           Prelude
 
 import qualified Cardano.Crypto.Hash.Blake2b
 import qualified Cardano.Crypto.Hash.Class
@@ -33,7 +39,6 @@ import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Hedgehog.Extras.Stock.Time (formatIso8601, showUTCTimeSeconds)
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
-import           Prelude
 import           System.FilePath.Posix ((</>))
 
 import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesisData)
@@ -77,8 +82,7 @@ data Era = Byron | Shelley | Allegra | Mary | Alonzo deriving (Eq, Enum, Bounded
 data CardanoTestnetOptions = CardanoTestnetOptions
   { -- | List of node options. Each option will result in a single node being
     -- created.
-    cardanoBftNodeOptions :: [TestnetNodeOptions]
-  , cardanoNumPoolNodes :: Int
+    cardanoNodes :: [TestnetNodeOptions]
   , cardanoEra :: Era
   , cardanoEpochLength :: Int
   , cardanoSlotLength :: Double
@@ -89,8 +93,7 @@ data CardanoTestnetOptions = CardanoTestnetOptions
 
 defaultTestnetOptions :: CardanoTestnetOptions
 defaultTestnetOptions = CardanoTestnetOptions
-  { cardanoBftNodeOptions = L.replicate 2 cardanoDefaultTestnetNodeOptions
-  , cardanoNumPoolNodes = 1
+  { cardanoNodes = cardanoDefaultTestnetNodeOptions
   , cardanoEra = Alonzo
   , cardanoEpochLength = 1500
   , cardanoSlotLength = 0.2
@@ -99,16 +102,36 @@ defaultTestnetOptions = CardanoTestnetOptions
   , cardanoNodeLoggingFormat = NodeLoggingFormatAsText
   }
 
-newtype TestnetNodeOptions = TestnetNodeOptions
-  { -- | These arguments will be appended to the default set of CLI options when
+-- | Specify a BFT node (Pre-Babbage era only) or an SPO (Shelley era onwards only)
+data TestnetNodeOptions
+  = BftTestnetNodeOptions [String]
+    -- ^ These arguments will be appended to the default set of CLI options when
     -- starting the node.
-    extraNodeCliArgs :: [String]
-  } deriving (Eq, Show)
+  | SpoTestnetNodeOptions
+  deriving (Eq, Show)
 
-cardanoDefaultTestnetNodeOptions :: TestnetNodeOptions
-cardanoDefaultTestnetNodeOptions = TestnetNodeOptions
-  { extraNodeCliArgs = []
-  }
+extraBftNodeCliArgs :: TestnetNodeOptions -> [String]
+extraBftNodeCliArgs (BftTestnetNodeOptions args) = args
+extraBftNodeCliArgs SpoTestnetNodeOptions = []
+
+cardanoPoolNodes :: [TestnetNodeOptions] -> [TestnetNodeOptions]
+cardanoPoolNodes = filter (== SpoTestnetNodeOptions)
+
+cardanoBftNodes :: [TestnetNodeOptions] -> [TestnetNodeOptions]
+cardanoBftNodes = filter (/= SpoTestnetNodeOptions)
+
+cardanoNumPoolNodes :: [TestnetNodeOptions] -> Int
+cardanoNumPoolNodes = length . cardanoPoolNodes
+
+cardanoNumBftNodes :: [TestnetNodeOptions] -> Int
+cardanoNumBftNodes = length . cardanoBftNodes
+
+cardanoDefaultTestnetNodeOptions :: [TestnetNodeOptions]
+cardanoDefaultTestnetNodeOptions =
+  [ BftTestnetNodeOptions []
+  , BftTestnetNodeOptions []
+  , SpoTestnetNodeOptions
+  ]
 
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"
@@ -161,9 +184,9 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
   configurationFile <- H.noteShow $ tempAbsPath </> "configuration.yaml"
-  let numBftNodes = L.length (cardanoBftNodeOptions testnetOptions)
+  let numBftNodes = cardanoNumBftNodes $ cardanoNodes testnetOptions
       bftNodesN = [1 .. numBftNodes]
-      poolNodesN = [1 .. cardanoNumPoolNodes testnetOptions]
+      poolNodesN = [1 .. cardanoNumPoolNodes $ cardanoNodes testnetOptions]
       bftNodeNames = ("node-bft" <>) . show @Int <$> bftNodesN
       poolNodeNames = ("node-pool" <>) . show @Int <$> poolNodesN
       allNodeNames = bftNodeNames <> poolNodeNames
@@ -247,7 +270,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   forM_ allNodeNames $ \node -> do
     let port = fromJust $ M.lookup node nodeToPort
     H.lbsWriteFile (tempAbsPath </> node </> "topology.json") $
-      mkTopologyConfig (numBftNodes + cardanoNumPoolNodes testnetOptions)
+      mkTopologyConfig (numBftNodes + cardanoNumPoolNodes (cardanoNodes testnetOptions))
                        allPorts port (cardanoEnableP2P testnetOptions)
 
     H.writeFile (tempAbsPath </> node </> "port") (show port)
@@ -432,7 +455,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
     , "--genesis-dir", tempAbsPath </> "shelley"
     , "--gen-genesis-keys", show @Int numBftNodes
     , "--start-time", formatIso8601 startTime
-    , "--gen-utxo-keys", show @Int (cardanoNumPoolNodes testnetOptions)
+    , "--gen-utxo-keys", show (cardanoNumBftNodes $ cardanoNodes testnetOptions)
     ]
 
   -- Generated genesis keys and genesis files
@@ -725,7 +748,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   --------------------------------
   -- Launch cluster of three nodes
 
-  let bftNodeNameAndOpts = L.zip bftNodeNames (cardanoBftNodeOptions testnetOptions)
+  let bftNodeNameAndOpts = L.zip bftNodeNames (cardanoBftNodes $ cardanoNodes testnetOptions)
   bftNodes <- forM bftNodeNameAndOpts $ \(node, nodeOpts) -> do
     startNode tempBaseAbsPath tempAbsPath logDir socketDir node
       ([ "run"
@@ -737,7 +760,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
         , "--shelley-operational-certificate", tempAbsPath </> node </> "shelley/node.cert"
         , "--delegation-certificate",  tempAbsPath </> node </> "byron/delegate.cert"
         , "--signing-key", tempAbsPath </> node </> "byron/delegate.key"
-        ] <> extraNodeCliArgs nodeOpts)
+        ] <> extraBftNodeCliArgs nodeOpts)
 
   H.threadDelay 100000
 

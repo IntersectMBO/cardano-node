@@ -7,15 +7,16 @@ module Test.ShutdownOnSlotSynced
   ) where
 
 import           Prelude
+
 import           Control.Monad
 import           Data.Either (isRight)
 import           Data.List (find, isInfixOf)
 import           Data.Maybe
 import           GHC.IO.Exception (ExitCode (ExitSuccess))
 import           GHC.Stack (callStack)
-import           System.FilePath ((</>))
 import qualified System.Directory as IO
-import           Text.Read (readMaybe) 
+import           System.FilePath ((</>))
+import           Text.Read (readMaybe)
 
 import           Hedgehog (Property, assert, (===))
 import qualified Hedgehog.Extras.Test.Base as H
@@ -23,7 +24,7 @@ import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 
 import           Cardano.Testnet
-import           Testnet.Util.Runtime (TestnetRuntime(..))
+import           Testnet.Util.Runtime (TestnetRuntime (..))
 
 hprop_shutdownOnSlotSynced :: Property
 hprop_shutdownOnSlotSynced = integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
@@ -37,12 +38,10 @@ hprop_shutdownOnSlotSynced = integration . H.runFinallies . H.workspace "chairma
   let fastTestnetOptions = CardanoOnlyTestnetOptions $ cardanoDefaultTestnetOptions
         { cardanoEpochLength = 300
         , cardanoSlotLength = slotLen
-        , cardanoBftNodeOptions =
-          [ TestnetNodeOptions
-              { extraNodeCliArgs = ["--shutdown-on-slot-synced", show maxSlot]
-              }
-          , cardanoDefaultTestnetNodeOptions
-          , cardanoDefaultTestnetNodeOptions
+        , cardanoNodes =
+          [ BftTestnetNodeOptions ["--shutdown-on-slot-synced", show maxSlot]
+          , BftTestnetNodeOptions []
+          , SpoTestnetNodeOptions
           ]
         }
   TestnetRuntime { bftNodes = node:_ } <- testnet fastTestnetOptions conf

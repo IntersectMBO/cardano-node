@@ -7,15 +7,16 @@ module Parsers.Cardano
   ) where
 
 import           Prelude
+
 import qualified Data.List as L
 import           Options.Applicative
 import qualified Options.Applicative as OA
 import           Text.Read
 
-import           Testnet.Util.Runtime (readNodeLoggingFormat)
 import           Testnet
 import           Testnet.Cardano
 import           Testnet.Run (runTestnet)
+import           Testnet.Util.Runtime (readNodeLoggingFormat)
 
 
 data CardanoOptions = CardanoOptions
@@ -25,21 +26,7 @@ data CardanoOptions = CardanoOptions
 
 optsTestnet :: Parser CardanoTestnetOptions
 optsTestnet = CardanoTestnetOptions
-  <$> OA.option
-      ((`L.replicate` cardanoDefaultTestnetNodeOptions) <$> auto)
-      (   OA.long "num-bft-nodes"
-      <>  OA.help "Number of BFT nodes"
-      <>  OA.metavar "COUNT"
-      <>  OA.showDefault
-      <>  OA.value (cardanoBftNodeOptions defaultTestnetOptions)
-      )
-  <*> OA.option auto
-      (   OA.long "num-pool-nodes"
-      <>  OA.help "Number of pool nodes"
-      <>  OA.metavar "COUNT"
-      <>  OA.showDefault
-      <>  OA.value (cardanoNumPoolNodes defaultTestnetOptions)
-      )
+  <$> pNumBftAndSpoNodes
   <*> OA.option (OA.eitherReader readEither)
       (   OA.long "era"
       <>  OA.help ("Era to upgrade to.  " <> show @[Era] [minBound .. maxBound])
@@ -82,6 +69,26 @@ optsTestnet = CardanoTestnetOptions
       <>  OA.showDefault
       <>  OA.value (cardanoNodeLoggingFormat defaultTestnetOptions)
       )
+
+pNumBftAndSpoNodes :: Parser [TestnetNodeOptions]
+pNumBftAndSpoNodes =
+  (++)
+    <$> OA.option
+          ((`L.replicate` BftTestnetNodeOptions []) <$> auto)
+          (   OA.long "num-bft-nodes"
+          <>  OA.help "Number of BFT nodes"
+          <>  OA.metavar "COUNT"
+          <>  OA.showDefault
+          <>  OA.value (cardanoNodes defaultTestnetOptions)
+          )
+    <*> OA.option
+          ((`L.replicate` SpoTestnetNodeOptions) <$> auto)
+          (   OA.long "num-pool-nodes"
+          <>  OA.help "Number of pool nodes"
+          <>  OA.metavar "COUNT"
+          <>  OA.showDefault
+          <>  OA.value (cardanoNodes defaultTestnetOptions)
+          )
 
 optsCardano :: Parser CardanoOptions
 optsCardano = CardanoOptions
