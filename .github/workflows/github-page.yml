@@ -3,7 +3,7 @@ name: "Haddock documentation"
 on: [push]
 
 jobs:
-  doc-only-changes:
+  check-for-doc-only-changes:
     runs-on: ubuntu-latest
 
     outputs:
@@ -17,7 +17,8 @@ jobs:
         paths_ignore: '["**/*.md", "**/*.rst", "**/LICENSE", "**/NOTICE"]'
 
   build:
-    if: needs.doc-only-changes.outputs.should_skip != 'true'
+    needs: check-for-doc-only-changes
+    if: needs.check-for-doc-only-changes.outputs.should_skip != 'true'
     runs-on: ${{ matrix.os }}
 
     defaults:
