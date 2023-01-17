@@ -18,6 +18,27 @@ jobs:
       with:
         paths_ignore: '["**/*.md", "**/*.rst", "**/LICENSE", "**/NOTICE"]'
 
+    - name: Result
+      run: |
+        echo "should_skip: ${{ steps.skip_check.outputs.should_skip }}"
+
+        echo "reason: ${{ steps.skip_check.outputs.reason }}"
+
+        echo "== skipped_by =="
+        cat <<EOF
+        ${{ steps.skip_check.outputs.skipped_by }}
+        EOF
+
+        echo "== paths_result =="
+        cat <<EOF
+        ${{ steps.skip_check.outputs.paths_result }}
+        EOF
+
+        echo "== changed_files =="
+        cat <<EOF
+        ${{ steps.skip_check.outputs.changed_files }}
+        EOF
+
   check-cabal-files:
     needs: check-for-doc-only-changes
     if: needs.check-for-doc-only-changes.outputs.should_skip != 'true'
