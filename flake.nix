@@ -293,7 +293,10 @@
                   inherit pkgs;
                   inherit (exes.cardano-node.identifier) version;
                   platform = "win64";
-                  exes = lib.collect lib.isDerivation projectExes;
+                  exes = lib.collect lib.isDerivation (
+                    # FIXME: restore tx-generator once plutus-scripts-bench is fixed for windows:
+                    removeAttrs projectExes ["tx-generator"]
+                  );
                 };
                 internal.roots.project = windowsProject.roots;
               });
@@ -314,7 +317,14 @@
               };
             };
           };
-          defaultNonRequiredPaths = [ "windows.checks.cardano-tracer.cardano-tracer-test" ] ++
+          defaultNonRequiredPaths = [ "windows.checks.cardano-tracer.cardano-tracer-test"
+              #FIXME: plutus-scripts-bench (dep of tx-generator) does not compile for windows:
+              "windows.tx-generator"
+              "windows.benchmarks.tx-generator"
+              "windows.tests.tx-generator.tx-generator-apitest"
+              "windows.checks.tx-generator.tx-generator-apitest"
+              "windows.tests.tx-generator.tx-generator-test"
+              "windows.checks.tx-generator.tx-generator-test"] ++
             lib.optionals (system == "x86_64-darwin") [
               #FIXME:  ExceptionInLinkedThread (ThreadId 253) pokeSockAddr: path is too long
               "native.checks/cardano-testnet/cardano-testnet-tests"
