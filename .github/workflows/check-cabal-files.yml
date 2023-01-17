@@ -5,7 +5,21 @@ on:
   create:
 
 jobs:
+  doc-only-changes:
+    runs-on: ubuntu-latest
+
+    outputs:
+        should_skip: ${{ steps.skip_check.outputs.should_skip }}
+
+    steps:
+    - name: Check if only documentation changes
+      id: skip_check
+      uses: fkirc/skip-duplicate-actions@v5
+      with:
+        paths_ignore: '["**/*.md", "**/*.rst", "**/LICENSE", "**/NOTICE"]'
+
   check-cabal-files:
+    if: needs.doc-only-changes.outputs.should_skip != 'true'
     runs-on: ubuntu-latest
 
     steps:
