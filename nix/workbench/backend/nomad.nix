@@ -74,6 +74,8 @@ let
               inherit
                 (pkgs.cardanoNodePackages)
                 cardano-node cardano-tracer tx-generator;
+
+              cardano-node-eventlogged = pkgs.cardanoNodePackages.cardano-node.passthru.eventlogged;
             };
         supervisorConf =
           import ./supervisor-conf.nix
