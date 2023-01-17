@@ -12,6 +12,10 @@ jobs:
         shell: bash
 
     steps:
+    - name: Skip documentation only changes
+      uses: fkirc/skip-duplicate-actions@v5
+      with:
+        paths_ignore: '["**/*.md", "**/*.rst"]'
 
     - uses: actions/checkout@v2
 

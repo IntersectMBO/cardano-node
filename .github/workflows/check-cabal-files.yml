@@ -9,6 +9,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Skip documentation only changes
+      uses: fkirc/skip-duplicate-actions@v5
+      with:
+        paths_ignore: '["**/*.md", "**/*.rst"]'
+
     - name: Install Haskell
       uses: input-output-hk/setup-haskell@v1
       id: setup-haskell
