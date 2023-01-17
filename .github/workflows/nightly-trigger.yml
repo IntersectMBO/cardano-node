@@ -6,7 +6,7 @@ on:
     - cron:  '0 5 * * *'
 
 jobs:
-  check-for-doc-only-changes:
+  doc-only-changes:
     outputs:
         should_skip: ${{ steps.skip_check.outputs.should_skip }}
 
@@ -18,8 +18,7 @@ jobs:
         paths_ignore: '["**/*.md", "**/*.rst", "**/LICENSE", "**/NOTICE"]'
 
   build:
-    needs: check-for-doc-only-changes
-    if: needs.check-for-doc-only-changes.outputs.should_skip != 'true'
+    if: needs.doc-only-changes.outputs.should_skip != 'true'
     runs-on: ubuntu-latest
 
     defaults:

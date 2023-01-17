@@ -5,7 +5,7 @@ on:
   create:
 
 jobs:
-  check-for-doc-only-changes:
+  doc-only-changes:
     runs-on: ubuntu-latest
 
     outputs:
@@ -19,8 +19,7 @@ jobs:
         paths_ignore: '["**/*.md", "**/*.rst", "**/LICENSE", "**/NOTICE"]'
 
   check-cabal-files:
-    needs: check-for-doc-only-changes
-    if: needs.check-for-doc-only-changes.outputs.should_skip != 'true'
+    if: needs.doc-only-changes.outputs.should_skip != 'true'
     runs-on: ubuntu-latest
 
     steps:
