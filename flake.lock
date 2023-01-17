@@ -13913,6 +13913,10 @@
         "node-process": "node-process_4",
         "node-snapshot": "node-snapshot_4",
         "plutus-apps": "plutus-apps_8",
+        "std": [
+          "tullia",
+          "std"
+        ],
         "tullia": "tullia_4",
         "utils": "utils_32"
       }
