@@ -63,6 +63,9 @@
     };
 
     cardano-mainnet-mirror.url = "github:input-output-hk/cardano-mainnet-mirror/nix";
+
+    tullia.url = "github:input-output-hk/tullia";
+    std.follows = "tullia/std";
   };
 
   outputs =
@@ -79,6 +82,7 @@
     , node-measured
     , node-process
     , cardano-node-workbench
+    , std
     , ...
     }@input:
     let
@@ -156,6 +160,7 @@
 
           project = (import ./nix/haskell.nix {
             inherit (pkgs) haskell-nix gitrev;
+            inherit (std) incl;
             inputMap = {
               "https://input-output-hk.github.io/cardano-haskell-packages" = CHaP;
             };
