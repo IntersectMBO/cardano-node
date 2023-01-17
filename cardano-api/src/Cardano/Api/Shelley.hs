@@ -61,6 +61,9 @@ module Cardano.Api.Shelley
     fromMaryValue,
     calcMinimumDeposit,
 
+    -- * Arbitrary signing
+    signArbitraryBytesKes,
+
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
     Tx(ShelleyTx),
