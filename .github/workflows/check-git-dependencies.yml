@@ -2,6 +2,9 @@ name: Check git dependencies
 
 on:
   push:
+    paths-ignore:
+      - '**.md'
+      - '**.rst'
 
 jobs:
   build:

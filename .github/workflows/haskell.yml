@@ -2,6 +2,9 @@ name: Haskell CI
 
 on:
   push:
+    paths-ignore:
+      - '**.md'
+      - '**.rst'
   workflow_dispatch:
     inputs:
       tests:
@@ -16,6 +19,9 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+
+    # Always run on master
+    if: github.event_name != 'create' || github.ref_name == 'master'
 
     strategy:
       fail-fast: false

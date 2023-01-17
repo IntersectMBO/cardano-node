@@ -1,6 +1,10 @@
 name: "Haddock documentation"
 
-on: [push]
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+      - '**.rst'
 
 jobs:
   build:
