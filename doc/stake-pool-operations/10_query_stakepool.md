@@ -16,12 +16,18 @@ $ cardano-cli query stake-snapshot \
     --stake-pool-id 00beef0a9be2f6d897ed24a613cf547bb20cd282a04edfc53d477114 \
     --mainnet
 {
-    "poolStakeGo": 40278547538358,
-    "activeStakeGo": 22753958467474959,
-    "poolStakeMark": 40424218559492,
-    "activeStakeMark": 22670949084364797,
-    "poolStakeSet": 39898761956772,
-    "activeStakeSet": 22488877070796904
+  "pools": {
+    "00beef0a9be2f6d897ed24a613cf547bb20cd282a04edfc53d477114": {
+      "stakeGo": 40278547538358,
+      "stakeMark": 40424218559492,
+      "stakeSet": 39898761956772
+    }
+  },
+  "total": {
+    "stakeGo": 22753958467474959,
+    "stakeMark": 22670949084364797,
+    "stakeSet": 22488877070796904
+  }
 }
 ```
 
@@ -29,8 +35,8 @@ Each snapshot is taken at the end of a different era.  The `go` snapshot is the 
 was taken two epochs earlier, `set` was taken one epoch ago, and `mark` was taken immediately
 before the start of the current epoch.
 
-This command is for debugging purposes only and may fail when used in a memory constrained
-environment due to the size of the ledger state.
+The command accepts zero or more occurences of the `--stake-pool-id` option.  Alternatively, to query
+all pools supply the `--all-stake-pools` option instead.
 
 # Querying for pool parameters
 

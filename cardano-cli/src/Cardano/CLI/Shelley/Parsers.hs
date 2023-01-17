@@ -990,11 +990,22 @@ pQueryCmd =
                             <*> pNetworkId
                             <*> pMaybeOutputFile
 
+    pAllStakePoolsOrOnly :: Parser (AllOrOnly [Hash StakePoolKey])
+    pAllStakePoolsOrOnly = pAll <|> pOnly
+      where pAll :: Parser (AllOrOnly [Hash StakePoolKey])
+            pAll = Opt.flag' All
+              (  Opt.long "all-stake-pools"
+              <> Opt.help "Query for all stake pools"
+              )
+            pOnly :: Parser (AllOrOnly [Hash StakePoolKey])
+            pOnly = Only <$> many pStakePoolVerificationKeyHash
+
     pQueryStakeSnapshot :: Parser QueryCmd
     pQueryStakeSnapshot = QueryStakeSnapshot'
       <$> pConsensusModeParams
       <*> pNetworkId
-      <*> pStakePoolVerificationKeyHash
+      <*> pAllStakePoolsOrOnly
+      <*> pMaybeOutputFile
 
     pQueryPoolState :: Parser QueryCmd
     pQueryPoolState = QueryPoolState'
@@ -2572,10 +2583,12 @@ pStakePoolVerificationKeyHash :: Parser (Hash StakePoolKey)
 pStakePoolVerificationKeyHash =
     Opt.option
       (pBech32StakePoolId <|> pHexStakePoolId)
-        (  Opt.long "stake-pool-id"
-        <> Opt.metavar "STAKE-POOL-ID"
-        <> Opt.help "Stake pool ID/verification key hash (either \
-                    \Bech32-encoded or hex-encoded)."
+        (   Opt.long "stake-pool-id"
+        <>  Opt.metavar "STAKE_POOL_ID"
+        <>  Opt.help
+            (   "Stake pool ID/verification key hash (either Bech32-encoded or hex-encoded).  "
+            <>  "Zero or more occurences of this option is allowed."
+            )
         )
   where
     pHexStakePoolId :: ReadM (Hash StakePoolKey)

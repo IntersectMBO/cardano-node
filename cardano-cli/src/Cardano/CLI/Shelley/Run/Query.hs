@@ -25,7 +25,7 @@ module Cardano.CLI.Shelley.Run.Query
   , executeQuery
   ) where
 
-import           Cardano.Prelude
+import           Cardano.Prelude hiding (All)
 import           Prelude (String, id)
 
 import           Cardano.Api
@@ -95,7 +95,6 @@ import           Ouroboros.Network.Block (Serialised (..))
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
-import qualified Ouroboros.Consensus.Shelley.Ledger.Query as Consensus
 
 import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
@@ -187,8 +186,8 @@ runQueryCmd cmd =
       runQueryStakeAddressInfo consensusModeParams addr network mOutFile
     QueryDebugLedgerState' consensusModeParams network mOutFile ->
       runQueryLedgerState consensusModeParams network mOutFile
-    QueryStakeSnapshot' consensusModeParams network poolid ->
-      runQueryStakeSnapshot consensusModeParams network poolid
+    QueryStakeSnapshot' consensusModeParams network allOrOnlyPoolIds mOutFile ->
+      runQueryStakeSnapshot consensusModeParams network allOrOnlyPoolIds mOutFile
     QueryProtocolState' consensusModeParams network mOutFile ->
       runQueryProtocolState consensusModeParams network mOutFile
     QueryUTxO' consensusModeParams qFilter networkId mOutFile ->
@@ -671,9 +670,10 @@ runQueryTxMempool (AnyConsensusModeParams cModeParams) network query mOutFile = 
 runQueryStakeSnapshot
   :: AnyConsensusModeParams
   -> NetworkId
-  -> Hash StakePoolKey
+  -> AllOrOnly [Hash StakePoolKey]
+  -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryStakeSnapshot (AnyConsensusModeParams cModeParams) network poolId = do
+runQueryStakeSnapshot (AnyConsensusModeParams cModeParams) network allOrOnlyPoolIds mOutFile = do
   SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr $ newExceptT readEnvSocketPath
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
@@ -687,9 +687,12 @@ runQueryStakeSnapshot (AnyConsensusModeParams cModeParams) network poolId = do
   eInMode <- toEraInMode era cMode
     & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
 
-  let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryStakeSnapshot poolId
+  let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryStakeSnapshot $ case allOrOnlyPoolIds of
+        All -> Nothing
+        Only poolIds -> Just $ Set.fromList poolIds
+
   result <- executeQuery era cModeParams localNodeConnInfo qInMode
-  obtainLedgerEraClassConstraints sbe writeStakeSnapshot result
+  obtainLedgerEraClassConstraints sbe (writeStakeSnapshots mOutFile) result
 
 
 runQueryLedgerState
@@ -850,30 +853,19 @@ writeLedgerState mOutFile qState@(SerialisedDebugLedgerState serLedgerState) =
       handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
         $ LBS.writeFile fpath $ unSerialised serLedgerState
 
-writeStakeSnapshot :: forall era ledgerera. ()
+writeStakeSnapshots :: forall era ledgerera. ()
   => ShelleyLedgerEra era ~ ledgerera
   => Era.Crypto ledgerera ~ StandardCrypto
-  => SerialisedStakeSnapshots era
+  => Maybe OutputFile
+  -> SerialisedStakeSnapshots era
   -> ExceptT ShelleyQueryCmdError IO ()
-writeStakeSnapshot qState =
+writeStakeSnapshots mOutFile qState =
   case decodeStakeSnapshot qState of
     Left err -> left (ShelleyQueryCmdStakeSnapshotDecodeError err)
 
     Right (StakeSnapshot snapshot) -> do
       -- Calculate the three pool and active stake values for the given pool
-      liftIO . LBS.putStrLn $ encodePretty $ Aeson.object $
-        [ "activeStakeMark" .= Consensus.ssMarkTotal snapshot
-        , "activeStakeSet"  .= Consensus.ssSetTotal snapshot
-        , "activeStakeGo"   .= Consensus.ssGoTotal snapshot
-        ] <> poolFields snapshot
-  where poolFields :: Consensus.StakeSnapshots (Ledger.Crypto (ShelleyLedgerEra era)) -> [Aeson.Pair]
-        poolFields snapshot = case Map.elems (Consensus.ssStakeSnapshots snapshot) of
-          [pool] -> 
-            [ "poolStakeMark"   .= Consensus.ssMarkPool pool
-            , "poolStakeSet"    .= Consensus.ssSetPool pool
-            , "poolStakeGo"     .= Consensus.ssGoPool pool
-            ]
-          _ -> []
+      liftIO . (maybe LBS.putStrLn (LBS.writeFile . unOutputFile) mOutFile) $ encodePretty snapshot
 
 -- | This function obtains the pool parameters, equivalent to the following jq query on the output of query ledger-state
 --   .nesEs.esLState._delegationState._pstate._pParams.<pool_id>

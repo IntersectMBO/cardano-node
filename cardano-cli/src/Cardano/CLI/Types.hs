@@ -38,6 +38,7 @@ module Cardano.CLI.Types
   , VerificationKeyFile (..)
   , Params (..)
   , RequiredSigner (..)
+  , AllOrOnly(..)
   ) where
 
 import           Cardano.Prelude hiding (Word64)
@@ -180,6 +181,8 @@ data OutputFormat
   = OutputFormatHex
   | OutputFormatBech32
   deriving (Eq, Show)
+
+data AllOrOnly a = All | Only a deriving (Eq, Show)
 
 -- | This data structure is used to allow nicely formatted output in the query pool-params command.
 -- params are the current pool parameter settings, futureparams are new parameters, retiringEpoch is the

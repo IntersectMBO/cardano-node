@@ -361,7 +361,11 @@ data QueryCmd =
   | QueryUTxO' AnyConsensusModeParams QueryUTxOFilter NetworkId (Maybe OutputFile)
   | QueryDebugLedgerState' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryProtocolState' AnyConsensusModeParams NetworkId (Maybe OutputFile)
-  | QueryStakeSnapshot' AnyConsensusModeParams NetworkId (Hash StakePoolKey)
+  | QueryStakeSnapshot'
+      AnyConsensusModeParams
+      NetworkId
+      (AllOrOnly [Hash StakePoolKey])
+      (Maybe OutputFile)
   | QueryKesPeriodInfo
       AnyConsensusModeParams
       NetworkId
@@ -510,8 +514,9 @@ data MetadataFile = MetadataFileJSON FilePath
 
   deriving Show
 
-newtype OutputFile
-  = OutputFile FilePath
+newtype OutputFile = OutputFile
+  { unOutputFile :: FilePath
+  }
   deriving Show
 
 newtype PoolMetadataFile = PoolMetadataFile

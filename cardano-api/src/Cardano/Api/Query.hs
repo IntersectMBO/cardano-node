@@ -260,7 +260,7 @@ data QueryInShelleyBasedEra era result where
     -> QueryInShelleyBasedEra era (SerialisedPoolDistribution era)
 
   QueryStakeSnapshot
-    :: PoolId
+    :: Maybe (Set PoolId)
     -> QueryInShelleyBasedEra era (SerialisedStakeSnapshots era)
 
 deriving instance Show (QueryInShelleyBasedEra era result)
@@ -631,8 +631,8 @@ toConsensusQueryShelleyBased erainmode QueryCurrentEpochState =
 toConsensusQueryShelleyBased erainmode (QueryPoolState poolIds) =
     Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR (Consensus.GetPoolState (Set.map unStakePoolKeyHash <$> poolIds))))
 
-toConsensusQueryShelleyBased erainmode (QueryStakeSnapshot poolId) =
-    Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR (Consensus.GetStakeSnapshots (Just (Set.singleton (unStakePoolKeyHash poolId))))))
+toConsensusQueryShelleyBased erainmode (QueryStakeSnapshot mPoolIds) =
+    Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR (Consensus.GetStakeSnapshots (fmap (Set.map unStakePoolKeyHash) mPoolIds))))
 
 toConsensusQueryShelleyBased erainmode (QueryPoolDistribution poolIds) =
     Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR (Consensus.GetPoolDistr (getPoolIds <$> poolIds))))
