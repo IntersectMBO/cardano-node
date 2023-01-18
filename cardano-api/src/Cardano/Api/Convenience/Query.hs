@@ -15,8 +15,8 @@ module Cardano.Api.Convenience.Query (
 
 import           Prelude
 
-import           Control.Monad.Trans.Except (ExceptT(..), except, runExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT)
+import           Control.Monad.Trans.Except (ExceptT (..), except, runExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistMaybe)
 import           Data.Bifunctor (first)
 import           Data.Function ((&))
 import           Data.Set (Set)
@@ -78,7 +78,7 @@ queryStateForBalancedTx era networkId allTxIns = runExceptT $ do
   qSbe <- except $ getSbe $ cardanoEraStyle era
 
   qeInMode <- toEraInMode era CardanoMode
-    & onNothingThrow (EraConsensusModeMismatch (AnyConsensusMode CardanoMode) (getIsCardanoEraConstraint era $ AnyCardanoEra era))
+    & hoistMaybe (EraConsensusModeMismatch (AnyConsensusMode CardanoMode) (getIsCardanoEraConstraint era $ AnyCardanoEra era))
 
   -- Queries
   let utxoQuery = QueryInEra qeInMode $ QueryInShelleyBasedEra qSbe

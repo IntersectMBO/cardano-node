@@ -16,7 +16,6 @@ module Cardano.Api.Utils
   , failEitherWith
   , noInlineMaybeToStrictMaybe
   , note
-  , onNothingThrow
   , parseFilePath
   , readFileBlocking
   , renderEra
@@ -51,7 +50,6 @@ import           System.Directory (emptyPermissions, readable, setPermissions)
 #endif
 
 import           Cardano.Api.Eras
-import Control.Monad.Trans.Except (ExceptT, throwE)
 
 (?!) :: Maybe a -> e -> Either e a
 Nothing ?! e = Left e
@@ -60,9 +58,6 @@ Just x  ?! _ = Right x
 (?!.) :: Either e a -> (e -> e') -> Either e' a
 Left  e ?!. f = Left (f e)
 Right x ?!. _ = Right x
-
-onNothingThrow :: Monad m => e -> Maybe a -> ExceptT e m a
-onNothingThrow e = maybe (throwE e) pure
 
 {-# NOINLINE noInlineMaybeToStrictMaybe #-}
 noInlineMaybeToStrictMaybe :: Maybe a -> StrictMaybe a
