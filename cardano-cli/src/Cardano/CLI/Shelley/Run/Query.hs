@@ -865,7 +865,7 @@ writeStakeSnapshots mOutFile qState =
 
     Right (StakeSnapshot snapshot) -> do
       -- Calculate the three pool and active stake values for the given pool
-      liftIO . (maybe LBS.putStrLn (LBS.writeFile . unOutputFile) mOutFile) $ encodePretty snapshot
+      liftIO . maybe LBS.putStrLn (LBS.writeFile . unOutputFile) mOutFile $ encodePretty snapshot
 
 -- | This function obtains the pool parameters, equivalent to the following jq query on the output of query ledger-state
 --   .nesEs.esLState._delegationState._pstate._pParams.<pool_id>
