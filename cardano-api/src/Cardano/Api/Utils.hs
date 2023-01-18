@@ -16,7 +16,10 @@ module Cardano.Api.Utils
   , failEitherWith
   , noInlineMaybeToStrictMaybe
   , note
-  , onNothingThrow
+  , onNothing
+  , onNothingThrowA
+  , onLeft
+  , onLeftThrowIt
   , parseFilePath
   , readFileBlocking
   , renderEra
@@ -33,6 +36,7 @@ import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as Builder
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Function ((&))
 import           Data.Maybe.Strict
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -51,7 +55,7 @@ import           System.Directory (emptyPermissions, readable, setPermissions)
 #endif
 
 import           Cardano.Api.Eras
-import Control.Monad.Trans.Except (ExceptT, throwE)
+import           Control.Monad.Trans.Except (ExceptT, throwE)
 
 (?!) :: Maybe a -> e -> Either e a
 Nothing ?! e = Left e
@@ -61,8 +65,17 @@ Just x  ?! _ = Right x
 Left  e ?!. f = Left (f e)
 Right x ?!. _ = Right x
 
-onNothingThrow :: Monad m => e -> Maybe a -> ExceptT e m a
-onNothingThrow e = maybe (throwE e) pure
+onNothing :: Monad m => ExceptT e m a -> ExceptT e m (Maybe a) -> ExceptT e m a
+onNothing h f = f >>= maybe h pure
+
+onNothingThrowA :: Monad m => e -> ExceptT e m (Maybe a) -> ExceptT e m a
+onNothingThrowA = onNothing . throwE
+
+onLeft :: Monad m => (e -> ExceptT x m a) -> ExceptT x m (Either e a) -> ExceptT x m a
+onLeft h f = f >>= either h pure
+
+onLeftThrowIt :: Monad m => ExceptT x m (Either x a) -> ExceptT x m a
+onLeftThrowIt f = f & onLeft throwE
 
 {-# NOINLINE noInlineMaybeToStrictMaybe #-}
 noInlineMaybeToStrictMaybe :: Maybe a -> StrictMaybe a
