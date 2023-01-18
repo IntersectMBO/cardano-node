@@ -110,6 +110,7 @@ import qualified Ouroboros.Consensus.Ledger.Query as Consensus
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Ouroboros.Network.Block (Serialised (..))
+import           Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
 
 import           Cardano.Binary
 import           Cardano.Slotting.Slot (WithOrigin (..))
@@ -129,6 +130,7 @@ import           Cardano.Api.Certificate
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.GenesisParameters
+import           Cardano.Api.IPC.Version
 import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
@@ -169,6 +171,14 @@ data QueryInMode mode result where
     :: ConsensusMode mode
     -> QueryInMode mode ChainPoint
 
+instance NodeToClientVersionOf (QueryInMode mode result) where
+  nodeToClientVersionOf (QueryCurrentEra _) = NodeToClientV_9
+  nodeToClientVersionOf (QueryInEra _ q) = nodeToClientVersionOf q
+  nodeToClientVersionOf (QueryEraHistory _) = NodeToClientV_9
+  nodeToClientVersionOf QuerySystemStart = NodeToClientV_9
+  nodeToClientVersionOf QueryChainBlockNo = NodeToClientV_10
+  nodeToClientVersionOf (QueryChainPoint _) = NodeToClientV_10
+
 data EraHistory mode where
   EraHistory
     :: ConsensusBlockForMode mode ~ Consensus.HardForkBlock xs
@@ -201,6 +211,10 @@ data QueryInEra era result where
      QueryInShelleyBasedEra :: ShelleyBasedEra era
                             -> QueryInShelleyBasedEra era result
                             -> QueryInEra era result
+
+instance NodeToClientVersionOf (QueryInEra era result) where
+  nodeToClientVersionOf QueryByronUpdateState = NodeToClientV_9
+  nodeToClientVersionOf (QueryInShelleyBasedEra _ q) = nodeToClientVersionOf q
 
 deriving instance Show (QueryInEra era result)
 
@@ -263,6 +277,23 @@ data QueryInShelleyBasedEra era result where
     :: Maybe (Set PoolId)
     -> QueryInShelleyBasedEra era (SerialisedStakeSnapshots era)
 
+instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
+  nodeToClientVersionOf QueryEpoch = NodeToClientV_9
+  nodeToClientVersionOf QueryGenesisParameters = NodeToClientV_9
+  nodeToClientVersionOf QueryProtocolParameters = NodeToClientV_9
+  nodeToClientVersionOf QueryProtocolParametersUpdate = NodeToClientV_9
+  nodeToClientVersionOf QueryStakeDistribution = NodeToClientV_9
+  nodeToClientVersionOf (QueryUTxO f) = nodeToClientVersionOf f
+  nodeToClientVersionOf (QueryStakeAddresses _ _) = NodeToClientV_9
+  nodeToClientVersionOf QueryStakePools = NodeToClientV_9
+  nodeToClientVersionOf (QueryStakePoolParameters _) = NodeToClientV_9
+  nodeToClientVersionOf QueryDebugLedgerState = NodeToClientV_9
+  nodeToClientVersionOf QueryProtocolState = NodeToClientV_9
+  nodeToClientVersionOf QueryCurrentEpochState = NodeToClientV_9
+  nodeToClientVersionOf (QueryPoolState _) = NodeToClientV_14
+  nodeToClientVersionOf (QueryPoolDistribution _) = NodeToClientV_14
+  nodeToClientVersionOf (QueryStakeSnapshot _) = NodeToClientV_14
+
 deriving instance Show (QueryInShelleyBasedEra era result)
 
 
@@ -288,7 +319,10 @@ data QueryUTxOFilter =
    | QueryUTxOByTxIn (Set TxIn)
   deriving (Eq, Show)
 
---TODO: provide appropriate instances for these types as needed, e.g. JSON
+instance NodeToClientVersionOf QueryUTxOFilter where
+  nodeToClientVersionOf QueryUTxOWhole = NodeToClientV_9
+  nodeToClientVersionOf (QueryUTxOByAddress _) = NodeToClientV_9
+  nodeToClientVersionOf (QueryUTxOByTxIn _) = NodeToClientV_9
 
 newtype ByronUpdateState = ByronUpdateState Byron.Update.State
   deriving Show
