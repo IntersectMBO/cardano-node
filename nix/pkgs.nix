@@ -9,29 +9,26 @@ final: prev: with final; {
       cardanoNodeProject.hsPkgs))
     (name: lib.attrNames cardanoNodeProject.pkg-set.options.packages.value.${name}.components.exes);
 
-  cabal = haskell-nix.tool compiler-nix-name "cabal" {
-    version = "latest";
-    inherit (cardanoNodeProject) index-state;
-  };
+  cabal = haskell-nix.cabal-install.${compiler-nix-name};
 
   hlint = haskell-nix.tool compiler-nix-name "hlint" {
     version = "3.2.7";
-    inherit (cardanoNodeProject) index-state;
+    index-state = "2022-09-27T00:00:00Z";
   };
 
   ghcid = haskell-nix.tool compiler-nix-name "ghcid" {
     version = "0.8.7";
-    inherit (cardanoNodeProject) index-state;
+    index-state = "2022-09-27T00:00:00Z";
   };
 
   haskell-language-server = haskell-nix.tool compiler-nix-name "haskell-language-server" {
-    version = "latest";
-    inherit (cardanoNodeProject) index-state;
+    version = "1.8.0.0";
+    index-state = "2022-09-27T00:00:00Z";
   };
 
   haskellBuildUtils = prev.haskellBuildUtils.override {
     inherit compiler-nix-name;
-    inherit (cardanoNodeProject) index-state;
+    index-state = "2022-09-27T00:00:00Z";
   };
 
   cardanolib-py = callPackage ./cardanolib-py { };
