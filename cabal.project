@@ -147,9 +147,10 @@ source-repository-package
 source-repository-package
    type: git
    location: https://github.com/input-output-hk/ouroboros-network
-   tag: d51b99d6677150c01ee411c30f1fb2ebf561fbcc
-   --sha256: 1w9g3ybfp8fkajrcb7dxzsqhdadiycfbr4zndyfqs6dsqplfm8fa
+   tag: ea8f657533b64ad3494d3695c945c8fb24c6a0f1
+   --sha256: 0bnj1xj5gajk6v46517sgzjcxdwyw5l5bmqhv37k8gcsyfads5hx
    subdir:
+     anti-diff
      monoidal-synchronisation
      network-mux
      ouroboros-consensus
@@ -164,10 +165,22 @@ source-repository-package
      ouroboros-network-mock
      ouroboros-network-protocols
      ouroboros-network-testing
-     ouroboros-consensus-cardano-tools
+     semigroupoid
 
 source-repository-package
    type: git
    location: https://github.com/input-output-hk/ekg-forward-fork
    tag: 6cf25fbbaf9815e07f695982da4cfbb1581239c3
-   --sha256: 0qwvx04l9q3h7acb0a3b8iarqcn5bkqhwaplbga5pvryqp3lhn00
+   --sha256: 1gk1bcq3p5gmdxn86hiazk4j9nqvds5l40hl8l6ljgcvik5il6d6
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/haskell-lmdb
+  tag: 08e5c1572e98e599d60bb24a7b2569879a35a7b1
+  --sha256: 13sk1knypzd13cw09wpp9zj3j2cr999ay75aqq15k2zv9hmiszyn
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/lmdb-simple
+  tag: 04d371afc341be8ebf82e5fa084e5f7374392960
+  --sha256: 0a9kbf739vp6pvhclfj24l44rlqps9jrsk0n1kswr0yfcrbi7zm4

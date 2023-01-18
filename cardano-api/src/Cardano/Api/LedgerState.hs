@@ -105,8 +105,8 @@ import           Cardano.Api.Modes (CardanoMode, EpochSlots (..))
 import qualified Cardano.Api.Modes as Api
 import           Cardano.Api.NetworkId (NetworkId (..), NetworkMagic (NetworkMagic))
 import           Cardano.Api.ProtocolParameters
-import           Cardano.Api.Query (CurrentEpochState (..), PoolDistribution (unPoolDistr), ProtocolState,
-                   SerialisedCurrentEpochState (..), SerialisedPoolDistribution,
+import           Cardano.Api.Query (CurrentEpochState (..), PoolDistribution (unPoolDistr),
+                   ProtocolState, SerialisedCurrentEpochState (..), SerialisedPoolDistribution,
                    decodeCurrentEpochState, decodePoolDistribution, decodeProtocolState)
 import           Cardano.Api.Utils (textShow)
 import           Cardano.Binary (DecoderError, FromCBOR)
@@ -151,8 +151,10 @@ import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
 import qualified Ouroboros.Consensus.HardFork.Combinator.AcrossEras as HFC
 import qualified Ouroboros.Consensus.HardFork.Combinator.Basics as HFC
 import qualified Ouroboros.Consensus.Ledger.Abstract as Ledger
-import           Ouroboros.Consensus.Ledger.Basics (EmptyMK, ValuesMK, LedgerResult (lrEvents), lrResult)
+import           Ouroboros.Consensus.Ledger.Basics (LedgerResult (lrEvents), lrResult)
 import qualified Ouroboros.Consensus.Ledger.Extended as Ledger
+import           Ouroboros.Consensus.Ledger.Tables (ApplyMapKind' (..), DiffMK, TableStuff (..),
+                   ValuesMK, zipOverLedgerTables)
 import qualified Ouroboros.Consensus.Mempool.TxLimits as TxLimits
 import qualified Ouroboros.Consensus.Node.ProtocolInfo as Consensus
 import           Ouroboros.Consensus.Protocol.Abstract (ChainDepState, ConsensusProtocol (..))
@@ -165,6 +167,7 @@ import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Shelley
 import qualified Ouroboros.Consensus.Shelley.Ledger.Ledger as Shelley
 import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesis (..))
 import qualified Ouroboros.Consensus.Shelley.Node.Praos as Consensus
+import           Ouroboros.Consensus.Storage.LedgerDB.HD.DiffSeq (applyDiff)
 import           Ouroboros.Consensus.TypeFamilyWrappers (WrapLedgerEvent (WrapLedgerEvent))
 import qualified Ouroboros.Network.Block
 import qualified Ouroboros.Network.Protocol.ChainSync.Client as CS
@@ -252,27 +255,27 @@ applyBlock env oldState validationMode block
         ShelleyBasedEraBabbage -> Consensus.BlockBabbage shelleyBlock
 
 pattern LedgerStateByron
-  :: Ledger.LedgerState Byron.ByronBlock EmptyMK
+  :: Ledger.LedgerState Byron.ByronBlock ValuesMK
   -> LedgerState
 pattern LedgerStateByron st <- LedgerState (Consensus.LedgerStateByron st)
 
 pattern LedgerStateShelley
-  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.ShelleyEra Shelley.StandardCrypto)) EmptyMK
+  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.ShelleyEra Shelley.StandardCrypto)) ValuesMK
   -> LedgerState
 pattern LedgerStateShelley st <- LedgerState  (Consensus.LedgerStateShelley st)
 
 pattern LedgerStateAllegra
-  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.AllegraEra Shelley.StandardCrypto)) EmptyMK
+  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.AllegraEra Shelley.StandardCrypto)) ValuesMK
   -> LedgerState
 pattern LedgerStateAllegra st <- LedgerState  (Consensus.LedgerStateAllegra st)
 
 pattern LedgerStateMary
-  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.MaryEra Shelley.StandardCrypto)) EmptyMK
+  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.MaryEra Shelley.StandardCrypto)) ValuesMK
   -> LedgerState
 pattern LedgerStateMary st <- LedgerState  (Consensus.LedgerStateMary st)
 
 pattern LedgerStateAlonzo
-  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.AlonzoEra Shelley.StandardCrypto)) EmptyMK
+  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.AlonzoEra Shelley.StandardCrypto)) ValuesMK
   -> LedgerState
 pattern LedgerStateAlonzo st <- LedgerState  (Consensus.LedgerStateAlonzo st)
 
@@ -855,7 +858,7 @@ readByteString fp cfgType = ExceptT $
 
 initLedgerStateVar :: GenesisConfig -> LedgerState
 initLedgerStateVar genesisConfig = LedgerState
-  { clsState = Ledger.forgetLedgerTables $ Ledger.ledgerState $ Consensus.pInfoInitLedger protocolInfo
+  { clsState = Ledger.ledgerState $ Consensus.pInfoInitLedger protocolInfo
   }
   where
     protocolInfo = mkProtocolInfoCardano genesisConfig
@@ -863,7 +866,7 @@ initLedgerStateVar genesisConfig = LedgerState
 newtype LedgerState = LedgerState
   { clsState :: Ledger.LedgerState
                   (HFC.HardForkBlock
-                    (Consensus.CardanoEras Consensus.StandardCrypto)) EmptyMK
+                    (Consensus.CardanoEras Consensus.StandardCrypto)) ValuesMK
   }
 
 type LedgerStateEvents = (LedgerState, [LedgerEvent])
@@ -875,7 +878,7 @@ toLedgerStateEvents ::
     )
     ( Shelley.LedgerState
         (HFC.HardForkBlock (Consensus.CardanoEras Shelley.StandardCrypto))
-        EmptyMK
+        ValuesMK
     ) ->
   LedgerStateEvents
 toLedgerStateEvents lr = (ledgerState, ledgerEvents)
@@ -1223,12 +1226,11 @@ tickThenReapplyCheckHash
     -> Consensus.CardanoBlock Consensus.StandardCrypto
     -> Shelley.LedgerState
         (HFC.HardForkBlock
-            (Consensus.CardanoEras Shelley.StandardCrypto)) EmptyMK
+            (Consensus.CardanoEras Shelley.StandardCrypto)) ValuesMK
     -> Either LedgerStateError LedgerStateEvents
 tickThenReapplyCheckHash cfg block lsb =
   if Consensus.blockPrevHash block == Ledger.ledgerTipHash lsb
-    then Right . toLedgerStateEvents . fmap Ledger.forgetLedgerTables
-          $ Ledger.tickThenReapplyLedgerResult cfg block (utxohdStopGap lsb)
+    then Right . toLedgerStateEvents . fmap (\st -> zipOverLedgerTables f st $ projectLedgerTables lsb) $ Ledger.tickThenReapplyLedgerResult cfg block lsb
     else Left $ ApplyBlockHashMismatch $ mconcat
                   [ "Ledger state hash mismatch. Ledger head is slot "
                   , textShow
@@ -1249,6 +1251,8 @@ tickThenReapplyCheckHash cfg block lsb =
                       $ Ouroboros.Network.Block.blockHash block
                   , "."
                   ]
+  where f :: Ord k => DiffMK k v -> ValuesMK k v -> ValuesMK k v
+        f (ApplyDiffMK d) (ApplyValuesMK v) = ApplyValuesMK (applyDiff v d)
 
 -- Like 'Consensus.tickThenReapply' but also checks that the previous hash from
 -- the block matches the head hash of the ledger state.
@@ -1258,15 +1262,14 @@ tickThenApply
     -> Consensus.CardanoBlock Consensus.StandardCrypto
     -> Shelley.LedgerState
         (HFC.HardForkBlock
-            (Consensus.CardanoEras Shelley.StandardCrypto)) EmptyMK
+            (Consensus.CardanoEras Shelley.StandardCrypto)) ValuesMK
     -> Either LedgerStateError LedgerStateEvents
 tickThenApply cfg block lsb
-  = either (Left . ApplyBlockError) (Right . toLedgerStateEvents . fmap Ledger.forgetLedgerTables)
+  = either (Left . ApplyBlockError) (Right . toLedgerStateEvents . fmap (\st -> zipOverLedgerTables f st $ projectLedgerTables lsb))
   $ runExcept
-  $ Ledger.tickThenApplyLedgerResult cfg block (utxohdStopGap lsb)
-
-utxohdStopGap :: l EmptyMK -> l ValuesMK
-utxohdStopGap = error "UTXO HD" -- FIXME
+  $ Ledger.tickThenApplyLedgerResult cfg block lsb
+  where f :: Ord k => DiffMK k v -> ValuesMK k v -> ValuesMK k v
+        f (ApplyDiffMK d) (ApplyValuesMK v) = ApplyValuesMK (applyDiff v d)
 
 renderByteArray :: ByteArrayAccess bin => bin -> Text
 renderByteArray =

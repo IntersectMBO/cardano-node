@@ -45,7 +45,6 @@ import qualified Text.Parsec.Token as Parsec
 
 import qualified Cardano.Ledger.BaseTypes as Shelley
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
-import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type
 
 import           Cardano.Api

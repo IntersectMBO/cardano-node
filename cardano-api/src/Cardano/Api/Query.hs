@@ -94,7 +94,8 @@ import           Data.Text (Text)
 import           Data.Typeable
 import           Prelude
 
-import           Ouroboros.Network.Protocol.LocalStateQuery.Type (FootprintL (..), QueryWithSomeResult (..))
+import           Ouroboros.Network.Protocol.LocalStateQuery.Type (FootprintL (..),
+                   QueryWithSomeResult (..))
 
 import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch)
@@ -253,6 +254,10 @@ data QueryInShelleyBasedEra era fp result where
      QueryCurrentEpochState
        :: QueryInShelleyBasedEra era SmallL (SerialisedCurrentEpochState era)
 
+     QueryPoolState
+       :: Maybe (Set PoolId)
+       -> QueryInShelleyBasedEra era SmallL (SerialisedPoolState era)
+
      QueryPoolDistribution
        :: Maybe (Set PoolId)
        -> QueryInShelleyBasedEra era SmallL (SerialisedPoolDistribution era)
@@ -261,7 +266,7 @@ data QueryInShelleyBasedEra era fp result where
        :: Maybe (Set PoolId)
        -> QueryInShelleyBasedEra era SmallL (SerialisedStakeSnapshots era)
 
-deriving instance Show (QueryInShelleyBasedEra era result)
+deriving instance Show (QueryInShelleyBasedEra era fp result)
 
 -- ----------------------------------------------------------------------------
 -- Wrapper types used in queries
@@ -631,13 +636,13 @@ toConsensusQueryShelleyBased erainmode QueryCurrentEpochState =
     QueryWithSomeResult (consensusQueryInEraInMode erainmode (Consensus.GetCBOR Consensus.DebugEpochState))
 
 toConsensusQueryShelleyBased erainmode (QueryPoolState poolIds) =
-    Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR (Consensus.GetPoolState (Set.map unStakePoolKeyHash <$> poolIds))))
+    QueryWithSomeResult (consensusQueryInEraInMode erainmode (Consensus.GetCBOR (Consensus.GetPoolState (Set.map unStakePoolKeyHash <$> poolIds))))
 
 toConsensusQueryShelleyBased erainmode (QueryStakeSnapshot mPoolIds) =
-    Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR (Consensus.GetStakeSnapshots (fmap (Set.map unStakePoolKeyHash) mPoolIds))))
+    QueryWithSomeResult (consensusQueryInEraInMode erainmode (Consensus.GetCBOR (Consensus.GetStakeSnapshots (fmap (Set.map unStakePoolKeyHash) mPoolIds))))
 
 toConsensusQueryShelleyBased erainmode (QueryPoolDistribution poolIds) =
-    Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR (Consensus.GetPoolDistr (getPoolIds <$> poolIds))))
+    QueryWithSomeResult (consensusQueryInEraInMode erainmode (Consensus.GetCBOR (Consensus.GetPoolDistr (getPoolIds <$> poolIds))))
   where
     getPoolIds :: Set PoolId -> Set (Shelley.KeyHash Shelley.StakePool Consensus.StandardCrypto)
     getPoolIds = Set.map (\(StakePoolKeyHash kh) -> kh)

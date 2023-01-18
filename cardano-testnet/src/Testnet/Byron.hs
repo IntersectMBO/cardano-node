@@ -218,7 +218,7 @@ testnet testnetOptions H.Conf {..} = do
         , "--shutdown-ipc", "0"
         -- UTxO-HD configurations
         , "--lmdb-ledger-db-backend"
-        , "--lmdb-mapsize", "2Gi"
+        , "--lmdb-mapsize", "2"
         ] <&>
         ( \cp -> cp
           { IO.std_in = IO.CreatePipe

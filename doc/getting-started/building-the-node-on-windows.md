@@ -166,11 +166,6 @@ cd cardano-node
 Add the following to the `cabal.project.local` file (if you don't already have it, create one) in the source code folder:
 
 ```
-package lmdb
-  extra-lib-dirs:     "<lmdb-library-path> Or standard path E.g. C:\\msys64\\mingw64\\include or C:/tools/ghcup/msys64/mingw64/lib"
-  extra-include-dirs: "<lmdb-library-path> Or standard path E.g. C:\\msys64\\mingw64\\include or C:/tools/ghcup/msys64/mingw64/include"
-
--- If pkg-config is available, use it.
 package HsOpenSSL
   flags: +use-pkg-config
 

@@ -49,6 +49,7 @@ jobs:
           mingw-w64-x86_64-pkg-config
           mingw-w64-x86_64-libsodium
           mingw-w64-x86_64-openssl
+          mingw-w64-x86_64-lmdb
           base-devel
           autoconf-wrapper
           autoconf
@@ -73,6 +74,7 @@ jobs:
         sudo apt-get update
         sudo apt-get -y install libsodium23 libsodium-dev
         sudo apt-get -y install libsystemd0 libsystemd-dev
+        sudo apt-get -y install liblmdb
         sudo apt-get -y remove --purge software-properties-common
         sudo apt-get -y autoremove
 
@@ -83,7 +85,7 @@ jobs:
     - name: "MAC: Install build environment (brew)"
       if: runner.os == 'macOS'
       run: |
-        brew install libsodium
+        brew install libsodium lmdb
 
     - name: "MAC: Install build environment (for secp256k1)"
       if: runner.os == 'macOS'

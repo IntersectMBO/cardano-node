@@ -68,7 +68,7 @@ import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraForge
                    OneEraForgeStateUpdateError (..))
 import           Ouroboros.Consensus.HardFork.Combinator.Embed.Unary
 import           Ouroboros.Consensus.HardFork.Combinator.Util.Functors (Flip (..))
-import           Ouroboros.Consensus.Ledger.Basics (EmptyMK)
+import           Ouroboros.Consensus.Ledger.Tables (EmptyMK)
 import           Ouroboros.Consensus.Ledger.Abstract (IsLedger)
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
 import           Ouroboros.Consensus.Node (NodeKernel (..))

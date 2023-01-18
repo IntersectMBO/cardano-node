@@ -739,7 +739,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
         , "--signing-key", tempAbsPath </> node </> "byron/delegate.key"
         -- UTxO-HD configurations
         , "--lmdb-ledger-db-backend"
-        , "--lmdb-mapsize", "2Gi"
+        , "--lmdb-mapsize", "2"
         ] <> extraNodeCliArgs nodeOpts)
 
   H.threadDelay 100000

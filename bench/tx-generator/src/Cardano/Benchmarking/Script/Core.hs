@@ -35,7 +35,6 @@ import qualified Data.Text as Text (unpack)
 import           Prelude
 
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type
-import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 import           Cardano.Api
 import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ProtocolParameters,
                    protocolParamMaxTxExUnits, protocolParamPrices)

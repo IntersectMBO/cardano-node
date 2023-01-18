@@ -411,7 +411,7 @@ shelleyTestnet testnetOptions H.Conf {..} = do
         , "--host-addr", ifaceAddress
         -- UTxO-HD configurations
         , "--lmdb-ledger-db-backend"
-        , "--lmdb-mapsize", "2Gi"
+        , "--lmdb-mapsize", "2"
         ]
 
   now <- H.noteShowIO DTC.getCurrentTime

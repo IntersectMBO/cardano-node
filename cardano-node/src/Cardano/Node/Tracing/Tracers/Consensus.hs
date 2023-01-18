@@ -996,10 +996,6 @@ instance
     [ IntM "Mempool.TxsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "Mempool.MempoolBytes" (fromIntegral $ msNumBytes mpSz)
     ]
-  asMetrics (TraceMempoolManuallyRemovedTxs [] _txs1 mpSz) =
-    [ IntM "Mempool.TxsInMempool" (fromIntegral $ msNumTxs mpSz)
-    , IntM "Mempool.MempoolBytes" (fromIntegral $ msNumBytes mpSz)
-    ]
   asMetrics (TraceMempoolManuallyRemovedTxs txs _txs1 mpSz) =
     [ IntM "Mempool.TxsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "Mempool.MempoolBytes" (fromIntegral $ msNumBytes mpSz)

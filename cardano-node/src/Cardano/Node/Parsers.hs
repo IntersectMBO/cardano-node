@@ -11,7 +11,7 @@ module Cardano.Node.Parsers
   , renderHelpDoc
   ) where
 
-import           Cardano.Prelude
+import           Cardano.Prelude hiding (option)
 import           Prelude (String)
 
 import           Data.Time.Clock (secondsToDiffTime)

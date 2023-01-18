@@ -87,9 +87,6 @@ import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPo
 import           Ouroboros.Network.Subscription (DnsSubscriptionTarget (..),
                    IPSubscriptionTarget (..))
 
-import           Cardano.Api
-import qualified Cardano.Api.Protocol.Types as Protocol
-
 import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
                    gatherConfiguredSockets, getSocketOrSocketInfoAddr)
