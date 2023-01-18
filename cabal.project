@@ -77,6 +77,7 @@ test-show-details: direct
 
 constraints:
     hedgehog >= 1.0
+  , hedgehog-extras == 0.2.0.0
   , bimap >= 0.4.0
   , libsystemd-journal >= 1.4.4
   , systemd >= 2.3.0
