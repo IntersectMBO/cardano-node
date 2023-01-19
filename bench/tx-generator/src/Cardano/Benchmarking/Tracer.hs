@@ -253,6 +253,10 @@ instance LogFormatting (TraceBenchTxSubmit TxId) where
       mconcat [ "kind" .= A.String "TraceBenchTxSubError"
               , "msg"  .= A.String s
               ]
+    TraceBenchPlutusBudgetSummary summary ->
+      mconcat [ "kind"    .= A.String "TraceBenchPlutusBudgetSummary"
+              , "summary" .= toJSON summary
+              ]
 
 instance MetaTrace (TraceBenchTxSubmit TxId) where
     namespaceFor TraceTxGeneratorVersion {} = Namespace [] ["TxGeneratorVersion"]
