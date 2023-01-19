@@ -52,13 +52,12 @@ import           Cardano.Benchmarking.Types
 import           Cardano.Benchmarking.Version as Version
 
 generatorTracer ::
-     LogFormatting a
-  => (a -> Namespace)
-  -> Text
+     (LogFormatting a, MetaTrace a)
+  => Text
   -> Maybe (Trace IO FormattedMessage)
   -> Maybe (Trace IO FormattedMessage)
   -> IO (Trace IO a)
-generatorTracer namesFor tracerName mbTrStdout mbTrForward = do
+generatorTracer tracerName mbTrStdout mbTrForward = do
   forwardTrace <- case mbTrForward of
                         Nothing -> mempty
                         Just trForward -> forwardFormatter Nothing trForward
@@ -67,9 +66,8 @@ generatorTracer namesFor tracerName mbTrStdout mbTrForward = do
                         Just trForward -> machineFormatter Nothing trForward
   let tr = forwardTrace <> stdoutTrace
   tr'  <- withDetailsFromConfig tr
-  pure $ withNamesAppended namesFor
-          $ appendName tracerName
-              tr'
+  pure $ withInnerNames $ appendPrefixName tracerName tr'
+
 
 initNullTracers :: BenchTracers
 initNullTracers = BenchTracers
@@ -84,14 +82,14 @@ initDefaultTracers :: IO BenchTracers
 initDefaultTracers = do
   mbStdoutTracer <- fmap Just standardTracer
   let mbForwardingTracer = Nothing
-  benchTracer <-  generatorTracer singletonName "benchmark"  mbStdoutTracer mbForwardingTracer
-  configureTracers initialTraceConfig benchTracerDocumented [benchTracer]
-  n2nSubmitTracer <- generatorTracer singletonName "submitN2N"  mbStdoutTracer mbForwardingTracer
-  configureTracers initialTraceConfig nodeToNodeSubmissionTraceDocumented [n2nSubmitTracer]
-  connectTracer <- generatorTracer singletonName "connect"  mbStdoutTracer mbForwardingTracer
-  configureTracers initialTraceConfig sendRecvConnectDocumented [connectTracer]
-  submitTracer <- generatorTracer namesForSubmission2 "submit"  mbStdoutTracer mbForwardingTracer
-  configureTracers initialTraceConfig submission2Documented [submitTracer]
+  benchTracer <-  generatorTracer "benchmark" mbStdoutTracer mbForwardingTracer
+  configureTracers initialTraceConfig [benchTracer]
+  n2nSubmitTracer <- generatorTracer "submitN2N" mbStdoutTracer mbForwardingTracer
+  configureTracers initialTraceConfig [n2nSubmitTracer]
+  connectTracer <- generatorTracer "connect" mbStdoutTracer mbForwardingTracer
+  configureTracers initialTraceConfig [connectTracer]
+  submitTracer <- generatorTracer "submit" mbStdoutTracer mbForwardingTracer
+  configureTracers initialTraceConfig [submitTracer]
 
   return $ BenchTracers
     { btTxSubmit_    = Tracer (traceWith benchTracer)
@@ -113,17 +111,17 @@ initTracers iomgr networkId tracerSocket = do
           pure (forwardTracer forwardSink, dataPointTracer dpStore)
   mbStdoutTracer <- fmap Just standardTracer
   let mbForwardingTracer = Just forwardingTracer
-  benchTracer <-  generatorTracer singletonName "benchmark" mbStdoutTracer mbForwardingTracer
-  configureTracers initialTraceConfig benchTracerDocumented [benchTracer]
-  n2nSubmitTracer <- generatorTracer singletonName "submitN2N" mbStdoutTracer mbForwardingTracer
-  configureTracers initialTraceConfig nodeToNodeSubmissionTraceDocumented [n2nSubmitTracer]
-  connectTracer <- generatorTracer singletonName "connect" mbStdoutTracer mbForwardingTracer
-  configureTracers initialTraceConfig sendRecvConnectDocumented [connectTracer]
-  submitTracer <- generatorTracer namesForSubmission2 "submit" mbStdoutTracer mbForwardingTracer
-  configureTracers initialTraceConfig submission2Documented [submitTracer]
+  benchTracer <-  generatorTracer "benchmark" mbStdoutTracer mbForwardingTracer
+  configureTracers initialTraceConfig [benchTracer]
+  n2nSubmitTracer <- generatorTracer "submitN2N" mbStdoutTracer mbForwardingTracer
+  configureTracers initialTraceConfig [n2nSubmitTracer]
+  connectTracer <- generatorTracer "connect" mbStdoutTracer mbForwardingTracer
+  configureTracers initialTraceConfig [connectTracer]
+  submitTracer <- generatorTracer "submit" mbStdoutTracer mbForwardingTracer
+  configureTracers initialTraceConfig [submitTracer]
   -- Now we need to provide "Nodeinfo" DataPoint, to forward generator's name
   -- to the acceptor application (for example, 'cardano-tracer').
-  nodeInfoTracer <- mkDataPointTracer dpTracer (const ["NodeInfo"])
+  nodeInfoTracer <- mkDataPointTracer dpTracer
   prepareGenInfo >>= traceWith nodeInfoTracer
 
   traceWith benchTracer $ TraceTxGeneratorVersion Version.txGeneratorVersion
@@ -163,11 +161,8 @@ initialTraceConfig = TraceConfig {
     , tcResourceFrequency = Just 1000 -- Every second
     }
   where
-    initConf :: Text -> (Namespace, [ConfigOption])
+    initConf :: Text -> ([Text], [ConfigOption])
     initConf tr = ([tr], [ConfDetail DMaximum])
-
-singletonName :: (ConstructorName f, Generic a, Rep a ~ D1 c f) => a -> [Text]
-singletonName a = [ genericName a ]
 
 genericName :: (ConstructorName f, Generic a, Rep a ~ D1 c f) => a -> Text
 genericName x = Text.pack $ constructorName $ unM1 $ from x
@@ -181,8 +176,6 @@ instance (ConstructorName f, ConstructorName g) => ConstructorName (f :+: g) whe
 instance (Constructor ('MetaCons n f r)) => ConstructorName (C1 ('MetaCons n f r) x) where
   constructorName = conName
 
-genericConstructorsOf :: forall a c f. (Rep a ~ D1 c f, ConstructorsOf f) => Proxy a -> [Text]
-genericConstructorsOf _ = map Text.pack $ constructorsOf (Proxy :: Proxy f)
 
 class ConstructorsOf (f :: Type -> Type ) where
   constructorsOf :: Proxy f -> [String]
@@ -261,9 +254,46 @@ instance LogFormatting (TraceBenchTxSubmit TxId) where
               , "msg"  .= A.String s
               ]
 
-benchTracerDocumented :: Documented (TraceBenchTxSubmit TxId)
-benchTracerDocumented
-  = Documented $ map (emptyDoc2 "benchmark") $ genericConstructorsOf (Proxy :: Proxy (TraceBenchTxSubmit x))
+instance MetaTrace (TraceBenchTxSubmit TxId) where
+    namespaceFor TraceTxGeneratorVersion {} = Namespace [] ["TxGeneratorVersion"]
+    namespaceFor TraceBenchTxSubRecv {} = Namespace [] ["BenchTxSubRecv"]
+    namespaceFor TraceBenchTxSubStart {} = Namespace [] ["BenchTxSubStart"]
+    namespaceFor SubmissionClientReplyTxIds {} = Namespace [] ["SubmissionClientReplyTxIds"]
+    namespaceFor TraceBenchTxSubServReq {} = Namespace [] ["BenchTxSubServReq"]
+    namespaceFor SubmissionClientDiscardAcknowledged {} = Namespace [] ["SubmissionClientDiscardAcknowledged"]
+    namespaceFor TraceBenchTxSubServDrop {} = Namespace [] ["BenchTxSubServDrop"]
+    namespaceFor SubmissionClientUnAcked {} = Namespace [] ["SubmissionClientUnAcked"]
+    namespaceFor TraceBenchTxSubServUnav {} = Namespace [] ["BenchTxSubServUnav"]
+    namespaceFor TraceBenchTxSubServFed {} = Namespace [] ["BenchTxSubServFed"]
+    namespaceFor TraceBenchTxSubServCons {} = Namespace [] ["BenchTxSubServCons"]
+    namespaceFor TraceBenchTxSubIdle {} = Namespace [] ["BenchTxSubIdle"]
+    namespaceFor TraceBenchTxSubRateLimit {} = Namespace [] ["BenchTxSubRateLimit"]
+    namespaceFor TraceBenchTxSubSummary {} = Namespace [] ["eBenchTxSubSummary"]
+    namespaceFor TraceBenchTxSubDebug {} = Namespace [] ["BenchTxSubDebug"]
+    namespaceFor TraceBenchTxSubError {} = Namespace [] ["BenchTxSubError"]
+
+    severityFor _ _ = Just Info
+
+    documentFor _ = Just ""
+
+    allNamespaces = [
+          Namespace [] ["TxGeneratorVersion"]
+        , Namespace [] ["BenchTxSubRecv"]
+        , Namespace [] ["BenchTxSubStart"]
+        , Namespace [] ["SubmissionClientReplyTxIds"]
+        , Namespace [] ["BenchTxSubServReq"]
+        , Namespace [] ["SubmissionClientDiscardAcknowledged"]
+        , Namespace [] ["BenchTxSubServDrop"]
+        , Namespace [] ["SubmissionClientUnAcked"]
+        , Namespace [] ["BenchTxSubServUnav"]
+        , Namespace [] ["BenchTxSubServFed"]
+        , Namespace [] ["BenchTxSubServCons"]
+        , Namespace [] ["BenchTxSubIdle"]
+        , Namespace [] ["BenchTxSubRateLimit"]
+        , Namespace [] ["eBenchTxSubSummary"]
+        , Namespace [] ["BenchTxSubDebug"]
+        , Namespace [] ["BenchTxSubError"]
+        ]
 
 instance LogFormatting NodeToNodeSubmissionTrace where
   forHuman = Text.pack . show
@@ -290,33 +320,54 @@ instance LogFormatting NodeToNodeSubmissionTrace where
        [ "kind" .= A.String "TxList"
        , "sent" .= A.toJSON sent ]
 
-nodeToNodeSubmissionTraceDocumented :: Documented NodeToNodeSubmissionTrace
-nodeToNodeSubmissionTraceDocumented
-  = Documented $ map (emptyDoc2 "submitN2N") $ genericConstructorsOf (Proxy :: Proxy NodeToNodeSubmissionTrace)
+
+instance MetaTrace NodeToNodeSubmissionTrace where
+    namespaceFor ReqIdsBlocking {} = Namespace [] ["ReqIdsBlocking"]
+    namespaceFor IdsListBlocking {} = Namespace [] ["IdsListBlocking"]
+    namespaceFor ReqIdsNonBlocking {} = Namespace [] ["ReqIdsNonBlocking"]
+    namespaceFor IdsListNonBlocking {} = Namespace [] ["IdsListNonBlocking"]
+    namespaceFor EndOfProtocol {} = Namespace [] ["EndOfProtocol"]
+    namespaceFor ReqTxs {} = Namespace [] ["ReqTxs"]
+    namespaceFor TxList {} = Namespace [] ["TxList"]
+
+    severityFor _ _ = Just Info
+
+    documentFor _ = Just ""
+
+    allNamespaces = [
+          Namespace [] ["ReqIdsBlocking"]
+        , Namespace [] ["IdsListBlocking"]
+        , Namespace [] ["ReqIdsNonBlocking"]
+        , Namespace [] ["IdsListNonBlocking"]
+        , Namespace [] ["EndOfProtocol"]
+        , Namespace [] ["ReqTxs"]
+        , Namespace [] ["TxList"]
+        ]
 
 instance LogFormatting SendRecvConnect where
   forHuman = Text.pack . show
   forMachine _ _ = KeyMap.fromList [ "kind" .= A.String "SendRecvConnect" ]
 
-sendRecvConnectDocumented :: Documented SendRecvConnect
-sendRecvConnectDocumented = Documented
-  [ emptyDoc ["connect"]
-  ]
+instance MetaTrace SendRecvConnect where
+    namespaceFor _ = Namespace [] ["ReqIdsBlocking"]
+    severityFor _ _ = Just Info
+
+    documentFor _ = Just ""
+
+    allNamespaces = [
+          Namespace [] ["SendRecvConnect"]
+        ]
 
 instance LogFormatting SendRecvTxSubmission2 where
   forHuman = Text.pack . show
   forMachine _ _ = KeyMap.fromList [ "kind" .= A.String "SendRecvTxSubmission2" ]
 
-namesForSubmission2 :: SendRecvTxSubmission2 ->  [Text]
-namesForSubmission2 _ = []
+instance MetaTrace SendRecvTxSubmission2 where
+    namespaceFor _ = Namespace [] ["SendRecvTxSubmission2"]
+    severityFor _ _ = Just Info
 
-submission2Documented :: Documented SendRecvTxSubmission2
-submission2Documented = Documented
-  [ emptyDoc ["submission2"]
-  ]
+    documentFor _ = Just ""
 
-emptyDoc :: Namespace -> DocMsg a
-emptyDoc ns = DocMsg ns [] "ToDo: write benchmark tracer docs"
-
-emptyDoc2 :: Text -> Text -> DocMsg a
-emptyDoc2 n1 n2 = DocMsg [n1, n2] [] "ToDo: write benchmark tracer docs"
+    allNamespaces = [
+          Namespace [] ["SendRecvTxSubmission2"]
+        ]
