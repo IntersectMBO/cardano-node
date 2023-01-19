@@ -4,10 +4,10 @@ module Cardano.Logging.TraceDispatcherMessage
   , TraceDispatcherMessage (..)
   ) where
 
-import Data.Aeson hiding (Error)
-import Data.Text
+import           Data.Aeson hiding (Error)
+import           Data.Text
 
-import Cardano.Logging.Types
+import           Cardano.Logging.Types
 
 
 data UnknownNamespaceKind =

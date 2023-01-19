@@ -8,14 +8,14 @@ module Cardano.Logging.FrequencyLimiter (
 )where
 
 import           Control.Monad.IO.Unlift
-import           Data.Time.Clock.System
 import           Data.Text
+import           Data.Time.Clock.System
 
 import qualified Control.Tracer as T
 
 import           Cardano.Logging.Trace
-import           Cardano.Logging.Types
 import           Cardano.Logging.TraceDispatcherMessage
+import           Cardano.Logging.Types
 
 -- | Threshold for starting and stopping of the limiter
 budgetLimit :: Double

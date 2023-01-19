@@ -1,9 +1,9 @@
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE RecordWildCards       #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Logging.Formatter (
     humanFormatter
@@ -21,7 +21,7 @@ import qualified Data.ByteString.Lazy as BS
 import           Data.Functor.Contravariant
 import           Data.List (intersperse)
 import           Data.Maybe (fromMaybe)
-import           Data.Text (Text, pack, stripPrefix, replace)
+import           Data.Text (Text, pack, replace, stripPrefix)
 import           Data.Text.Encoding (decodeUtf8)
 import           Data.Text.Lazy (toStrict)
 import           Data.Text.Lazy.Builder as TB

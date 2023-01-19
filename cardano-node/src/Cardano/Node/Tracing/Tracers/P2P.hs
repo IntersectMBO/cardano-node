@@ -13,11 +13,12 @@ module Cardano.Node.Tracing.Tracers.P2P
 
 import           Cardano.Logging
 import           Cardano.Prelude hiding (group, show)
-import           Data.Aeson (ToJSON, ToJSONKey, Value (..), Object, object, toJSON, toJSONList, (.=))
+import           Data.Aeson (Object, ToJSON, ToJSONKey, Value (..), object, toJSON, toJSONList,
+                   (.=))
 import           Data.Aeson.Types (listValue)
+import           Data.List (last)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import           Data.List (last)
 import           Data.Text (pack)
 import           Network.Socket (SockAddr (..))
 import           Prelude (show)

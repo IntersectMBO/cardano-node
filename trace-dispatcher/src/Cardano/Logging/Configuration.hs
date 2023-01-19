@@ -34,8 +34,8 @@ import qualified Control.Tracer as T
 import           Cardano.Logging.DocuGenerator (addFiltered, addLimiter)
 import           Cardano.Logging.FrequencyLimiter (limitFrequency)
 import           Cardano.Logging.Trace
-import           Cardano.Logging.Types
 import           Cardano.Logging.TraceDispatcherMessage
+import           Cardano.Logging.Types
 
 
 -- | Call this function at initialisation, and later for reconfiguration

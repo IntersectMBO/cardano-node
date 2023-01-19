@@ -9,7 +9,7 @@ module Cardano.Tracer.Handlers.Logs.File
 import           Control.Concurrent.Extra (Lock, withLock)
 import           Control.Monad (unless)
 import           Control.Monad.Extra (ifM)
-import           Data.Aeson (Value, (.=), decodeStrict', pairs)
+import           Data.Aeson (Value, decodeStrict', pairs, (.=))
 import           Data.Aeson.Encoding (encodingToLazyByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS

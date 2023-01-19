@@ -7,8 +7,8 @@ module Examples.Documentation (
   docTracers
 ) where
 
-import qualified Data.Text.IO as T
 import qualified Data.Map as Map
+import qualified Data.Text.IO as T
 
 import           Cardano.Logging
 import           Examples.TestObjects

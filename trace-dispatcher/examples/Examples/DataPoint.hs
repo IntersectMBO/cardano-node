@@ -1,5 +1,5 @@
-{-# LANGUAGE DeriveGeneric       #-}
-{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
@@ -11,9 +11,9 @@ module Examples.DataPoint (
 import qualified Data.Aeson as A
 import           Data.ByteString.Lazy.UTF8
 import qualified Data.Map.Strict as M
-import           Trace.Forward.Utils.DataPoint (DataPoint (..))
 import           GHC.Conc
 import           GHC.Generics (Generic)
+import           Trace.Forward.Utils.DataPoint (DataPoint (..))
 
 import           Cardano.Logging
 

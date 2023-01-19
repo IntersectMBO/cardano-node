@@ -9,9 +9,9 @@ module Cardano.Logging.Tracer.EKG (
 import           Cardano.Logging.DocuGenerator
 import           Cardano.Logging.Types
 
+import           Control.Concurrent.MVar
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Tracer as T
-import           Control.Concurrent.MVar
 import qualified Data.Map.Strict as Map
 import           Data.Text (Text, pack)
 import qualified System.Metrics as Metrics

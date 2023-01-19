@@ -17,8 +17,8 @@ module Cardano.Node.Tracing.Era.Shelley () where
 
 import           Data.Aeson (ToJSON (..), Value (..), (.=))
 import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Types as Aeson
 import qualified Data.Aeson.Key as Aeson
+import qualified Data.Aeson.Types as Aeson
 import qualified Data.Set as Set
 
 import           Cardano.Api (textShow)
