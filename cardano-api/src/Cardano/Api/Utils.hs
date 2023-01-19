@@ -1,6 +1,8 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeApplications #-}
 
 #if !defined(mingw32_HOST_OS)
 #define UNIX
@@ -22,6 +24,8 @@ module Cardano.Api.Utils
   , runParsecParser
   , textShow
   , writeSecrets
+  , onLeft
+  , onNothing
   ) where
 
 import           Prelude
@@ -50,6 +54,7 @@ import           System.Directory (emptyPermissions, readable, setPermissions)
 #endif
 
 import           Cardano.Api.Eras
+import           Control.Monad.Trans.Except (ExceptT)
 
 (?!) :: Maybe a -> e -> Either e a
 Nothing ?! e = Left e
@@ -134,3 +139,44 @@ renderEra (AnyCardanoEra MaryEra)    = "Mary"
 renderEra (AnyCardanoEra AlonzoEra)  = "Alonzo"
 renderEra (AnyCardanoEra BabbageEra) = "Babbage"
 
+-- $setup
+--
+-- >>> import Control.Monad.Trans.Except (ExceptT(..), throwE)
+
+-- | Handle the Left constructor in returned Either.
+--
+-- This is meant to be used like this:
+--
+-- >>> :{
+-- operation :: ExceptT Text IO (Either String ())
+-- operation = pure (Left "fail")
+--
+-- foo :: ExceptT Text IO String ()
+-- foo = do
+--   operation
+--     & onLeft (\e -> throwE (Text.pack e))
+--
+-- runExceptT foo
+-- :}
+-- Left "fail"
+onLeft :: forall e x m a. Monad m => (e -> ExceptT x m a) -> ExceptT x m (Either e a) -> ExceptT x m a
+onLeft h f = f >>= either h pure
+
+-- | Handle the Nothing constructor in returned Maybe.
+--
+-- This is meant to be used like this:
+--
+-- >>> :{
+-- operation :: ExceptT Text IO (Maybe ())
+-- operation = pure Nothing
+--
+-- foo :: ExceptT Text IO String ()
+-- foo = do
+--   operation
+--     & onLeft (throwE (Text.pack "fail"))
+--
+-- runExceptT foo
+-- :}
+-- Left "fail"
+onNothing :: forall x m a. Monad m => ExceptT x m a -> ExceptT x m (Maybe a) -> ExceptT x m a
+onNothing h f = f >>= maybe h pure

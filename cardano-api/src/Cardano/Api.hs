@@ -527,6 +527,8 @@ module Cardano.Api (
     Error(..),
     throwErrorAsException,
     FileError(..),
+    onLeft,
+    onNothing,
 
     -- * Node interaction
     -- | Operations that involve talking to a local Cardano node.
