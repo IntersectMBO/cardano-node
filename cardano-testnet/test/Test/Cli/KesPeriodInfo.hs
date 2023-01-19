@@ -34,8 +34,8 @@ import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
 import qualified System.Info as SYS
 
-import           Test.Misc
 import           Cardano.Testnet
+import           Test.Misc
 import           Testnet.Util.Process
 import           Testnet.Util.Runtime
 
@@ -51,7 +51,7 @@ hprop_kes_period_info = integration . H.runFinallies . H.workspace "chairman" $ 
                               tempAbsBasePath' Nothing
 
   let fastTestnetOptions = CardanoOnlyTestnetOptions $ cardanoDefaultTestnetOptions
-                             { cardanoBftNodeOptions = replicate 1 cardanoDefaultTestnetNodeOptions
+                             { cardanoNodes = cardanoDefaultTestnetNodeOptions
                              , cardanoEpochLength = 500
                              , cardanoSlotLength = 0.02
                              , cardanoActiveSlotsCoeff = 0.1

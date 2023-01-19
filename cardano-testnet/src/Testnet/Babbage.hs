@@ -31,12 +31,12 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified System.Info as OS
 
+import qualified Testnet.Conf as H
 import qualified Testnet.Util.Assert as H
 import           Testnet.Util.Process (execCli_)
 import           Testnet.Util.Runtime (Delegator (..), NodeLoggingFormat (..), PaymentKeyPair (..),
-                   PoolNode (PoolNode), PoolNodeKeys (..), StakingKeyPair (..),
-                   TestnetRuntime (..), startNode)
-import qualified Testnet.Conf as H
+                   PoolNode (PoolNode), PoolNodeKeys (..), StakingKeyPair (..), TestnetRuntime (..),
+                   startNode)
 
 
 {- HLINT ignore "Redundant flip" -}
