@@ -58,7 +58,6 @@ import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import           Ouroboros.Consensus.Shelley.Eras as Consensus (StandardAllegra, StandardAlonzo,
                    StandardBabbage, StandardMary, StandardShelley)
 
-
 -- | A type used as a tag to distinguish the Byron era.
 data ByronEra
 
