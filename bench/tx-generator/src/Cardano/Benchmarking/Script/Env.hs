@@ -39,6 +39,8 @@ module Cardano.Benchmarking.Script.Env (
         , setEnvThreads
         , getEnvWallets
         , setEnvWallets
+        , getEnvSummary
+        , setEnvSummary
 ) where
 
 import           Control.Monad.IO.Class
@@ -61,7 +63,9 @@ import           Cardano.Benchmarking.Wallet
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 import           Ouroboros.Network.NodeToClient (IOManager)
 
+import           Cardano.TxGenerator.PlutusContext (PlutusBudgetSummary)
 import           Cardano.TxGenerator.Types (TxGenError (..))
+
 
 data Env = Env { protoParams :: Maybe ProtocolParameterMode
                , benchTracers :: Maybe Tracer.BenchTracers
@@ -72,6 +76,7 @@ data Env = Env { protoParams :: Maybe ProtocolParameterMode
                , envKeys :: Map String (SigningKey PaymentKey)
                , envThreads :: Map String AsyncBenchmarkControl
                , envWallets :: Map String WalletRef
+               , envSummary :: Maybe PlutusBudgetSummary
                }
 
 emptyEnv :: Env
@@ -84,6 +89,7 @@ emptyEnv = Env { protoParams = Nothing
                , envSocketPath = Nothing
                , envThreads = Map.empty
                , envWallets = Map.empty
+               , envSummary = Nothing
                }
 
 type ActionM a = ExceptT Error (RWST IOManager () Env IO) a
@@ -140,6 +146,9 @@ setEnvThreads key val = modifyEnv (\e -> e { envThreads = Map.insert key val (en
 setEnvWallets :: String -> WalletRef -> ActionM ()
 setEnvWallets key val = modifyEnv (\e -> e { envWallets = Map.insert key val (envWallets e) })
 
+setEnvSummary :: PlutusBudgetSummary -> ActionM ()
+setEnvSummary val = modifyEnv (\e -> e { envSummary = pure val })
+
 getEnvVal :: (Env -> Maybe t) -> String -> ActionM t
 getEnvVal acc s = do
   lift (RWS.gets acc) >>= \case
@@ -179,6 +188,9 @@ getEnvThreads = getEnvMap envThreads
 
 getEnvWallets :: String -> ActionM WalletRef
 getEnvWallets = getEnvMap envWallets
+
+getEnvSummary :: ActionM (Maybe PlutusBudgetSummary)
+getEnvSummary = lift (RWS.gets envSummary)
 
 traceBenchTxSubmit :: (forall txId. x -> Tracer.TraceBenchTxSubmit txId) -> x -> ActionM ()
 traceBenchTxSubmit tag msg = do
