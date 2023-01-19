@@ -90,7 +90,8 @@ library
                         Cardano.CLI.Shelley.Run.TextView
                         Cardano.CLI.Shelley.Run.Transaction
                         Cardano.CLI.Shelley.Run.Read
-                        Cardano.CLI.Shelley.Run.Validate
+                        Cardano.CLI.Shelley.Run.Rpc
+                        Cardano.CLI.Shelley.Run.Validate                      
 
                         Cardano.CLI.TopHandler
 
@@ -152,6 +153,8 @@ library
                       , utf8-string
                       , vector
                       , yaml
+                      , http-conduit
+                      , case-insensitive
 
 executable cardano-cli
   import:               project-config
@@ -165,6 +168,7 @@ executable cardano-cli
                       , cardano-prelude
                       , optparse-applicative-fork
                       , transformers-except
+
 
 test-suite cardano-cli-test
   import:               project-config

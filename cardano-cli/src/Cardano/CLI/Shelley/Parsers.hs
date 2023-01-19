@@ -6,6 +6,7 @@
 module Cardano.CLI.Shelley.Parsers
   ( -- * CLI command parser
     parseShelleyCommands
+  , parseRpcCommand
 
     -- * CLI command and flag types
   , module Cardano.CLI.Shelley.Commands
@@ -99,6 +100,37 @@ parseShelleyCommands =
             )
 
       ]
+
+parseRpcCommand :: Parser RpcCommand
+parseRpcCommand =
+  Opt.hsubparser $ Opt.command  "rpc" (Opt.info pRpcCmd  (Opt.progDesc "Call cardano rpc over network"))
+
+
+pRpcCmd :: Parser RpcCommand
+pRpcCmd =RpcCommand
+      <$> Opt.strOption (
+                Opt.value "http://localhost:3345"
+            <>  Opt.long "url"
+            <> Opt.showDefault
+            <> Opt.help "Rpc Address")
+      <*> optional (Opt.strOption (
+                  Opt.long "user"
+              <>  Opt.short 'u'
+              <>  Opt.help "Basic auth  \"User:Password\""))
+      <*> pHeaders
+      <*> pMethod
+      <*> pArgs
+  where
+    pHeaders = many $  Opt.strOption (Opt.long  "header"
+          <>  Opt.short 'H'
+          <>  Opt.help "Rpc extra HTTP headers \"HeaderName:HeaderValue\"")
+
+    pMethod = Opt.strArgument ( Opt.metavar  "method"
+        <>  Opt.help "Json RPC method"
+      )
+    pArgs = many $ Opt.strArgument ( Opt.metavar  "argument"
+        <>  Opt.help "RPC method arguments"
+      )
 
 pTextViewCmd :: Parser TextViewCmd
 pTextViewCmd =

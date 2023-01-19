@@ -15,7 +15,9 @@ module Cardano.CLI.Shelley.Commands
   , GovernanceCmd (..)
   , GenesisCmd (..)
   , TextViewCmd (..)
+  , RpcCommand(..)
   , renderShelleyCommand
+  , renderRpcCommand
 
     -- * CLI flag types
   , AddressKeyType (..)
@@ -57,6 +59,9 @@ import           Cardano.CLI.Types
 
 import           Cardano.Chain.Common (BlockCount)
 import           Cardano.Ledger.Shelley.TxBody (MIRPot)
+import qualified Data.Text as Text
+import Data.Maybe (isJust)
+import Data.Char (isSpace)
 --
 -- Shelley CLI command data types
 --
@@ -431,6 +436,23 @@ data TextViewCmd
   = TextViewInfo !FilePath (Maybe OutputFile)
   deriving Show
 
+
+data RpcCommand
+  = RpcCommand {
+      rcpUrl:: Text,
+      rpcBasicAuth :: Maybe Text,
+      rpcHeaders :: [Text],
+      rpcMethod :: Text,
+      rpcArgs :: [Text]
+    }
+  deriving Show
+
+renderRpcCommand :: RpcCommand -> Text
+renderRpcCommand (RpcCommand _ _ _  method args) = Text.unwords $ map addQuotes $ method : args
+  where
+    addQuotes txt = if isJust $  Text.findIndex isSpace  txt
+                      then Text.concat ["\"",txt,"\""]
+                      else txt
 
 renderTextViewCmd :: TextViewCmd -> Text
 renderTextViewCmd (TextViewInfo _ _) = "text-view decode-cbor"
