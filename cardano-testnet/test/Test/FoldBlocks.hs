@@ -81,3 +81,5 @@ prop_foldBlocks = U.integration . H.runFinallies . H.workspace "chairman" $ \tem
   -- test to finish.
   _ <- liftIO $ IO.readMVar lock
   H.assert True
+
+
