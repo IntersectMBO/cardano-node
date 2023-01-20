@@ -157,3 +157,11 @@ source-repository-package
   location: https://github.com/denisshevchenko/threepenny-gui
   tag: 4ec92ded05ccf59ba4a874be4b404ac1b6d666b6
   --sha256: 00fvvaf4ir4hskq4a6gggbh2wmdvy8j8kn6s4m1p1vlh8m8mq514
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-network
+  tag: 1d199629d35a75e0221f7a5807ae192bf800422f
+  --sha256: 1ga8f3k2751a08smllc7f5kjdjc6pf694y1nzks1lgrapbzn23kw
+  subdir:
+    ouroboros-network
