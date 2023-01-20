@@ -23,50 +23,53 @@ module Testnet.Cardano
 
 import           Prelude
 
-import qualified Cardano.Crypto.Hash.Blake2b
-import qualified Cardano.Crypto.Hash.Class
 import           Control.Monad
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.Trans.Except
 import           Data.Aeson ((.=))
+import qualified Data.Aeson as J
 import qualified Data.ByteString as BS
 import           Data.ByteString.Lazy (ByteString)
-import           Data.List ((\\))
-import           Data.Maybe
-import           Data.String
-import qualified Hedgehog as H
-import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
-import           Hedgehog.Extras.Stock.Time (formatIso8601, showUTCTimeSeconds)
-import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
-import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
-import           System.FilePath.Posix ((</>))
-
-import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesisData)
-import qualified Cardano.Node.Configuration.Topology as NonP2P
-import qualified Cardano.Node.Configuration.TopologyP2P as P2P
-import qualified Data.Aeson as J
 import qualified Data.HashMap.Lazy as HM
+import           Data.List ((\\))
 import qualified Data.List as L
 import qualified Data.Map.Strict as M
+import           Data.Maybe
+import           Data.String
 import qualified Data.Time.Clock as DTC
+import           Data.Word
+import qualified System.Directory as IO
+import           System.FilePath.Posix ((</>))
+import qualified System.Info as OS
+
+import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesisData)
+import qualified Cardano.Crypto.Hash.Blake2b
+import qualified Cardano.Crypto.Hash.Class
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
+
+import qualified Cardano.Node.Configuration.Topology as NonP2P
+import qualified Cardano.Node.Configuration.TopologyP2P as P2P
+
+import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.Aeson as J
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
+import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Stock.OS as OS
 import qualified Hedgehog.Extras.Stock.String as S
+import           Hedgehog.Extras.Stock.Time (formatIso8601, showUTCTimeSeconds)
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Network as H
-import qualified System.Directory as IO
-import qualified System.Info as OS
+
+import qualified Testnet.Conf as H
 import qualified Testnet.Util.Assert as H
 import qualified Testnet.Util.Process as H
 import           Testnet.Util.Process (execCli_)
 import           Testnet.Util.Runtime as TR (NodeLoggingFormat (..), PaymentKeyPair (..),
                    PoolNode (PoolNode), PoolNodeKeys (..), TestnetRuntime (..), startNode)
-
-import qualified Testnet.Conf as H
 
 {- HLINT ignore "Redundant flip" -}
 {- HLINT ignore "Redundant id" -}
@@ -87,6 +90,7 @@ data CardanoTestnetOptions = CardanoTestnetOptions
   , cardanoEpochLength :: Int
   , cardanoSlotLength :: Double
   , cardanoActiveSlotsCoeff :: Double
+  , cardanoMaxSupply :: Word64 -- ^ The amount of ADA you are starting your testnet with
   , cardanoEnableP2P :: Bool
   , cardanoNodeLoggingFormat :: NodeLoggingFormat
   } deriving (Eq, Show)
@@ -98,6 +102,7 @@ defaultTestnetOptions = CardanoTestnetOptions
   , cardanoEpochLength = 1500
   , cardanoSlotLength = 0.2
   , cardanoActiveSlotsCoeff = 0.2
+  , cardanoMaxSupply = 10020000000
   , cardanoEnableP2P = False
   , cardanoNodeLoggingFormat = NodeLoggingFormatAsText
   }
@@ -190,8 +195,8 @@ cardanoTestnet testnetOptions H.Conf {..} = do
       bftNodeNames = ("node-bft" <>) . show @Int <$> bftNodesN
       poolNodeNames = ("node-pool" <>) . show @Int <$> poolNodesN
       allNodeNames = bftNodeNames <> poolNodeNames
-      maxByronSupply = 10020000000
-      fundsPerGenesisAddress = maxByronSupply `div` numBftNodes
+      maxByronSupply = cardanoMaxSupply testnetOptions
+      fundsPerGenesisAddress = maxByronSupply `div` fromIntegral numBftNodes
       fundsPerByronAddress = fundsPerGenesisAddress - 100000000
       userPoolN = poolNodesN
       maxShelleySupply = 1000000000000
@@ -309,7 +314,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
     , "--k", show @Int securityParam
     , "--n-poor-addresses", "0"
     , "--n-delegate-addresses", show @Int numBftNodes
-    , "--total-balance", show @Int maxByronSupply
+    , "--total-balance", show @Word64 maxByronSupply
     , "--delegate-share", "1"
     , "--avvm-entry-count", "0"
     , "--avvm-entry-balance", "0"
@@ -359,7 +364,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
       , "--tx", tempAbsPath </> "tx0.tx"
       , "--wallet-key", tempAbsPath </> "byron/delegate-keys.000.key"
       , "--rich-addr-from", richAddrFrom
-      , "--txout", show @(String, Int) (txAddr, fundsPerByronAddress)
+      , "--txout", show @(String, Word64) (txAddr, fundsPerByronAddress)
       ]
 
   -- Update Proposal and votes
