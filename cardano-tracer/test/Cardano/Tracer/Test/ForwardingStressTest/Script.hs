@@ -35,7 +35,7 @@ import           Cardano.Tracer.Test.Utils
 simpleTestConfig :: TraceConfig
 simpleTestConfig = emptyTraceConfig {
   tcOptions = fromList
-    [([] :: Namespace,
+    [([],
          [ ConfSeverity (SeverityF (Just Debug))
          , ConfDetail DNormal
          , ConfBackend [Forwarder]
@@ -50,8 +50,7 @@ runScriptForwarding ::
   -> IORef Int
   -> IO (Trace IO Message)
   -> Property
-runScriptForwarding ts@TestSetup{..} msgCounter tracerGetter =
-    trace ("Test setup " ++ show ts) $ do
+runScriptForwarding TestSetup{..} msgCounter tracerGetter = do
       let generator :: Gen [Script] = vectorOf (unI tsThreads) $
             case unI tsMessages of
               Nothing -> scale (* 1000) arbitrary
@@ -59,20 +58,17 @@ runScriptForwarding ts@TestSetup{..} msgCounter tracerGetter =
       forAll generator (\ (scripts :: [Script])
         -> ioProperty $ do
           tr <- tracerGetter
-          configureTracers simpleTestConfig docMessage [tr]
-          let scripts' = map (\ (Script sc) -> Script
-                             $ filter (\(ScriptedMessage _ msg) ->
-                                namesForMessage msg /= ["Message2"]) sc) scripts
-              scripts'' = map (\ (Script sc) -> Script (sort sc))  scripts'
-              scripts''' = zipWith (\ (Script sc) ind -> Script (
-                            withMessageIds (unI tsThreads) ind sc)) scripts'' [0..]
-              scripts'''' = map (\ (Script sc) -> Script
-                              $ map (withTimeFactor (unI tsTime)) sc) scripts'''
+          configureTracers simpleTestConfig [tr]
+          let scripts' = map (\ (Script sc) -> Script (sort sc))  scripts
+              scripts'' = zipWith (\ (Script sc) ind -> Script (
+                            withMessageIds (unI tsThreads) ind sc)) scripts' [0..]
+              scripts''' = map (\ (Script sc) -> Script
+                              $ map (withTimeFactor (unI tsTime)) sc) scripts''
 
 
           -- putStrLn ("runTest " ++ show scripts)
           children :: MVar [MVar (Either SomeException ())] <- newMVar []
-          mapM_ (\sc -> forkChild children (playIt sc tr 0.0)) scripts''''
+          mapM_ (\sc -> forkChild children (playIt sc tr 0.0)) scripts'''
           res <- waitForChildren children []
           let resErr = mapMaybe
                       (\case
@@ -82,7 +78,7 @@ runScriptForwarding ts@TestSetup{..} msgCounter tracerGetter =
           if not (null resErr)
             then throw (head resErr)
             else        -- Oracle
-              let numMsg = sum (map (\ (Script sc) -> length sc) scripts'''')
+              let numMsg = sum (map (\ (Script sc) -> length sc) scripts''')
               in if numMsg > 0 then do
                 -- TODO mutiple files
                 let logfileGlobPattern = unI tsWorkDir <> "/logs/*sock@*/node-*.json"

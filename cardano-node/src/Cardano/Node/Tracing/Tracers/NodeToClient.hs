@@ -10,6 +10,7 @@
 
 module Cardano.Node.Tracing.Tracers.NodeToClient () where
 
+
 import           Cardano.Logging
 import           Cardano.Prelude hiding (Show, show)
 import           Data.Aeson (Value (String), (.=))
@@ -23,6 +24,8 @@ import           Ouroboros.Network.Protocol.ChainSync.Type as ChainSync
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LSQ
 import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Type as LTM
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
+
+{-# ANN module ("HLint: ignore Redundant bracket" :: Text) #-}
 
 
 instance LogFormatting (AnyMessageAndAgency ps)

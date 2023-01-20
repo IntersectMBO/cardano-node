@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts #-}
+-- {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE QuantifiedConstraints #-}
@@ -6,9 +6,9 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-{-# OPTIONS_GHC -Wno-orphans  #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Node.Tracing.Tracers.NodeToNode
+module Cardano.Node.Tracing.Tracers.NodeToNode 
    (
    ) where
 

@@ -1,0 +1,8 @@
+networkMagic: 42
+network:
+  tag: AcceptAt
+  contents: "tracer.sock"
+logging:
+- logRoot: "/tmp/logs"
+  logMode: FileMode
+  logFormat: ForMachine

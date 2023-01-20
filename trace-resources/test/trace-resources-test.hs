@@ -32,10 +32,7 @@ playScript = ioProperty $ do
                       forwardTracer'
                       (Just ekgTracer')
                       ["Test"]
-                      (const ["ResourceStats"])
-                      (const Info)
-                      (const Public)
-  configureTracers emptyTraceConfig docResourceStats [tr]
+  configureTracers emptyTraceConfig [tr]
   traceIt tr 10
 
 traceIt :: Trace IO ResourceStats -> Int -> IO Bool
