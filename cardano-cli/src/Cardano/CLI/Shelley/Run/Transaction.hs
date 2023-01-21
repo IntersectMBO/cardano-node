@@ -18,7 +18,7 @@ module Cardano.CLI.Shelley.Run.Transaction
   , toTxOutInAnyEra
   ) where
 
-import           Control.Monad (forM_, void)
+import           Control.Monad (forM, forM_, void)
 import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans (MonadTrans (..))
 import           Control.Monad.Trans.Except (ExceptT)
@@ -376,19 +376,13 @@ runTxBuildCmd
   scripts <- firstExceptT ShelleyTxCmdScriptFileError $
                      mapM (readFileScriptInAnyLang . unScriptFile) scriptFiles
   txAuxScripts <- hoistEither $ first ShelleyTxCmdAuxScriptsValidationError $ validateTxAuxScripts cEra scripts
-  mpparams <- case mPparams of
-                Just ppFp -> Just <$> firstExceptT ShelleyTxCmdProtocolParamsError (readProtocolParametersSourceSpec ppFp)
-                Nothing -> return Nothing
+  mpparams <- forM mPparams $ \ppFp ->
+    firstExceptT ShelleyTxCmdProtocolParamsError (readProtocolParametersSourceSpec ppFp)
 
-  mProp <- case mUpProp of
-             Just (UpdateProposalFile upFp) ->
-              Just <$> firstExceptT ShelleyTxCmdReadTextViewFileError
-                         (newExceptT $ readFileTextEnvelope AsUpdateProposal upFp)
-             Nothing -> return Nothing
+  mProp <- forM mUpProp $ \(UpdateProposalFile upFp) ->
+    firstExceptT ShelleyTxCmdReadTextViewFileError (newExceptT $ readFileTextEnvelope AsUpdateProposal upFp)
   requiredSigners  <- mapM (firstExceptT ShelleyTxCmdRequiredSignerError .  newExceptT . readRequiredSigner) reqSigners
-  mReturnCollateral <- case mReturnColl of
-                         Just retCol -> Just <$> toTxOutInAnyEra cEra retCol
-                         Nothing -> return Nothing
+  mReturnCollateral <- forM mReturnColl $ toTxOutInAnyEra cEra
 
   txOuts <- mapM (toTxOutInAnyEra cEra) txouts
 
@@ -504,18 +498,15 @@ runTxBuildRawCmd
   scripts <- firstExceptT ShelleyTxCmdScriptFileError $
                      mapM (readFileScriptInAnyLang . unScriptFile) scriptFiles
   txAuxScripts <- hoistEither $ first ShelleyTxCmdAuxScriptsValidationError $ validateTxAuxScripts cEra scripts
-  pparams <- case mpparams of
-              Just ppFp -> Just <$> firstExceptT ShelleyTxCmdProtocolParamsError (readProtocolParametersSourceSpec ppFp)
-              Nothing -> return Nothing
-  mProp <- case mUpProp of
-             Just (UpdateProposalFile upFp) ->
-              Just <$> firstExceptT ShelleyTxCmdReadTextViewFileError
-                         (newExceptT $ readFileTextEnvelope AsUpdateProposal upFp)
-             Nothing -> return Nothing
+
+  pparams <- forM mpparams $ \ppFp ->
+    firstExceptT ShelleyTxCmdProtocolParamsError (readProtocolParametersSourceSpec ppFp)
+
+  mProp <- forM mUpProp $ \(UpdateProposalFile upFp) ->
+    firstExceptT ShelleyTxCmdReadTextViewFileError (newExceptT $ readFileTextEnvelope AsUpdateProposal upFp)
+
   requiredSigners  <- mapM (firstExceptT ShelleyTxCmdRequiredSignerError .  newExceptT . readRequiredSigner) reqSigners
-  mReturnCollateral <- case mReturnColl of
-                         Just retCol -> Just <$> toTxOutInAnyEra cEra retCol
-                         Nothing -> return Nothing
+  mReturnCollateral <- forM mReturnColl $ toTxOutInAnyEra cEra
   txOuts <- mapM (toTxOutInAnyEra cEra) txouts
 
     -- the same collateral input can be used for several plutus scripts
