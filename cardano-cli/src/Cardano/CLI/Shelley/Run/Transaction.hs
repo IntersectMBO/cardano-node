@@ -412,42 +412,41 @@ runTxBuildCmd
   case outputOptions of
     OutputScriptCostOnly fp -> do
       let BuildTxWith mTxProtocolParams = txProtocolParams txBodycontent
-      case mTxProtocolParams of
-        Just pparams ->
-          case protocolParamPrices pparams of
-            Just executionUnitPrices -> do
-              let consensusMode = consensusModeOnly cModeParams
-                  bpp = bundleProtocolParams cEra pparams
-              case consensusMode of
-                CardanoMode -> do
-                  (nodeEraUTxO, _, eraHistory, systemStart, _)
-                    <- firstExceptT ShelleyTxCmdQueryConvenienceError
-                         . newExceptT $ queryStateForBalancedTx nodeEra nid allTxInputs
-                  -- Why do we cast the era? The user can specify an era prior to the era that the node is currently in.
-                  -- We cannot use the user specified era to construct a query against a node because it may differ
-                  -- from the node's era and this will result in the 'QueryEraMismatch' failure.
-                  txEraUtxo <-
-                    case first ShelleyTxCmdTxEraCastErr (eraCast cEra nodeEraUTxO) of
-                      Right txEraUtxo -> return txEraUtxo
-                      Left e -> left e
 
-                  scriptExecUnitsMap <-
-                    firstExceptT ShelleyTxCmdTxExecUnitsErr $ hoistEither
-                      $ evaluateTransactionExecutionUnits
-                          systemStart (toLedgerEpochInfo eraHistory)
-                          bpp txEraUtxo balancedTxBody
+      pparams <- pure mTxProtocolParams & onNothing (left ShelleyTxCmdProtocolParametersNotPresentInTxBody)
 
-                  scriptCostOutput <-
-                    firstExceptT ShelleyTxCmdPlutusScriptCostErr $ hoistEither
-                      $ renderScriptCosts
-                          txEraUtxo
-                          executionUnitPrices
-                          (collectTxBodyScriptWitnesses txBodycontent)
-                          scriptExecUnitsMap
-                  liftIO $ LBS.writeFile fp $ encodePretty scriptCostOutput
-                _ -> left ShelleyTxCmdPlutusScriptsRequireCardanoMode
-            Nothing -> left ShelleyTxCmdPParamExecutionUnitsNotAvailable
-        Nothing -> left ShelleyTxCmdProtocolParametersNotPresentInTxBody
+
+      executionUnitPrices <- pure (protocolParamPrices pparams) & onNothing (left ShelleyTxCmdPParamExecutionUnitsNotAvailable)
+
+      let consensusMode = consensusModeOnly cModeParams
+          bpp = bundleProtocolParams cEra pparams
+
+      case consensusMode of
+        CardanoMode -> do
+          (nodeEraUTxO, _, eraHistory, systemStart, _)
+            <- firstExceptT ShelleyTxCmdQueryConvenienceError
+                  . newExceptT $ queryStateForBalancedTx nodeEra nid allTxInputs
+          -- Why do we cast the era? The user can specify an era prior to the era that the node is currently in.
+          -- We cannot use the user specified era to construct a query against a node because it may differ
+          -- from the node's era and this will result in the 'QueryEraMismatch' failure.
+          txEraUtxo <- pure (eraCast cEra nodeEraUTxO) & onLeft (left . ShelleyTxCmdTxEraCastErr)
+
+          scriptExecUnitsMap <-
+            firstExceptT ShelleyTxCmdTxExecUnitsErr $ hoistEither
+              $ evaluateTransactionExecutionUnits
+                  systemStart (toLedgerEpochInfo eraHistory)
+                  bpp txEraUtxo balancedTxBody
+
+          scriptCostOutput <-
+            firstExceptT ShelleyTxCmdPlutusScriptCostErr $ hoistEither
+              $ renderScriptCosts
+                  txEraUtxo
+                  executionUnitPrices
+                  (collectTxBodyScriptWitnesses txBodycontent)
+                  scriptExecUnitsMap
+          liftIO $ LBS.writeFile fp $ encodePretty scriptCostOutput
+        _ -> left ShelleyTxCmdPlutusScriptsRequireCardanoMode
+
     OutputTxBodyOnly (TxBodyFile fpath) ->
       let noWitTx = makeSignedTransaction [] balancedTxBody
       in  lift (writeTxFileTextEnvelopeCddl fpath noWitTx)
