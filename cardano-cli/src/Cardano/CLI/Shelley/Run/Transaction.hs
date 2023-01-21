@@ -423,9 +423,10 @@ runTxBuildCmd
 
       case consensusMode of
         CardanoMode -> do
-          (nodeEraUTxO, _, eraHistory, systemStart, _)
-            <- firstExceptT ShelleyTxCmdQueryConvenienceError
-                  . newExceptT $ queryStateForBalancedTx nodeEra nid allTxInputs
+          (nodeEraUTxO, _, eraHistory, systemStart, _) <-
+            lift (queryStateForBalancedTx nodeEra nid allTxInputs)
+              & onLeft (left . ShelleyTxCmdQueryConvenienceError)
+
           -- Why do we cast the era? The user can specify an era prior to the era that the node is currently in.
           -- We cannot use the user specified era to construct a query against a node because it may differ
           -- from the node's era and this will result in the 'QueryEraMismatch' failure.
@@ -746,10 +747,7 @@ runTxBuild era (AnyConsensusModeParams cModeParams) networkId mScriptValidity
       -- Why do we cast the era? The user can specify an era prior to the era that the node is currently in.
       -- We cannot use the user specified era to construct a query against a node because it may differ
       -- from the node's era and this will result in the 'QueryEraMismatch' failure.
-      txEraUtxo <- case first ShelleyTxCmdTxEraCastErr (eraCast era nodeEraUTxO) of
-                     Right txEraUtxo -> return txEraUtxo
-                     Left e -> left e
-
+      txEraUtxo <- pure (eraCast era nodeEraUTxO) & onLeft (left . ShelleyTxCmdTxEraCastErr)
 
       balancedTxBody@(BalancedTxBody _ _ _ fee) <-
         firstExceptT ShelleyTxCmdBalanceTxBody
