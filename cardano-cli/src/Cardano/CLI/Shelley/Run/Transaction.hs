@@ -1070,9 +1070,9 @@ runTxSign txOrTxBody witSigningData mnw (TxFile outTxFile) = do
   let (sksByron, sksShelley) = partitionSomeWitnesses $ map categoriseSomeWitness sks
 
   case txOrTxBody of
-    (InputTxFile (TxFile inputTxFilePath)) -> do
+    InputTxFile (TxFile inputTxFilePath) -> do
       inputTxFile <- liftIO $ fileOrPipe inputTxFilePath
-      anyTx <- firstExceptT ShelleyTxCmdCddlError . newExceptT $ readFileTx inputTxFile
+      anyTx <- lift (readFileTx inputTxFile) & onLeft (left . ShelleyTxCmdCddlError)
 
       InAnyShelleyBasedEra _era tx <-
           onlyInShelleyBasedEras "sign for Byron era transactions" anyTx
@@ -1090,7 +1090,7 @@ runTxSign txOrTxBody witSigningData mnw (TxFile outTxFile) = do
       firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
         writeTxFileTextEnvelopeCddl outTxFile signedTx
 
-    (InputTxBodyFile (TxBodyFile txbodyFilePath)) -> do
+    InputTxBodyFile (TxBodyFile txbodyFilePath) -> do
       txbodyFile <- liftIO $ fileOrPipe txbodyFilePath
       unwitnessed <- firstExceptT ShelleyTxCmdCddlError . newExceptT
                        $ readFileTxBody txbodyFile
@@ -1143,8 +1143,7 @@ runTxSubmit (AnyConsensusModeParams cModeParams) network txFilePath = do
     SocketPath sockPath <- lift readEnvSocketPath & onLeft (left . ShelleyTxCmdSocketEnvError)
 
     txFile <- liftIO $ fileOrPipe txFilePath
-    InAnyCardanoEra era tx <- firstExceptT ShelleyTxCmdCddlError . newExceptT
-                                $ readFileTx txFile
+    InAnyCardanoEra era tx <- lift (readFileTx txFile) & onLeft (left . ShelleyTxCmdCddlError)
     let cMode = AnyConsensusMode $ consensusModeOnly cModeParams
     eraInMode <- hoistMaybe
                    (ShelleyTxCmdEraConsensusModeMismatch (Just txFilePath) cMode (AnyCardanoEra era))
@@ -1336,8 +1335,7 @@ runTxGetTxId txfile = do
 
         InputTxFile (TxFile txFilePath) -> do
           txFile <- liftIO $ fileOrPipe txFilePath
-          InAnyCardanoEra era tx <- firstExceptT ShelleyTxCmdCddlError . newExceptT
-                                      $ readFileTx txFile
+          InAnyCardanoEra era tx <- lift (readFileTx txFile) & onLeft (left . ShelleyTxCmdCddlError)
           return . InAnyCardanoEra era $ getTxBody tx
 
     liftIO $ BS.putStrLn $ serialiseToRawBytesHex (getTxId txbody)
@@ -1359,8 +1357,7 @@ runTxView = \case
     liftIO $ BS.putStr $ friendlyTxBodyBS era txbody
   InputTxFile (TxFile txFilePath) -> do
     txFile <- liftIO $ fileOrPipe txFilePath
-    InAnyCardanoEra era tx <- firstExceptT ShelleyTxCmdCddlError . newExceptT
-                                $ readFileTx txFile
+    InAnyCardanoEra era tx <- lift (readFileTx txFile) & onLeft (left . ShelleyTxCmdCddlError)
     liftIO $ BS.putStr $ friendlyTxBS era tx
 
 
