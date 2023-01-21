@@ -20,9 +20,10 @@ module Cardano.CLI.Shelley.Run.Transaction
 
 import           Control.Monad (forM_, void)
 import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans (MonadTrans (..))
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, hoistMaybe, left,
-                   newExceptT, onNothing)
+                   newExceptT, onLeft, onNothing)
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.Bifunctor (Bifunctor (..))
 import qualified Data.ByteString.Char8 as BS
@@ -349,8 +350,7 @@ runTxBuildCmd
   -- We cannot use the user specified era to construct a query against a node because it may differ
   -- from the node's era and this will result in the 'QueryEraMismatch' failure.
 
-  SocketPath sockPath <- firstExceptT ShelleyTxCmdSocketEnvError
-                           $ newExceptT readEnvSocketPath
+  SocketPath sockPath <- lift readEnvSocketPath & onLeft (left . ShelleyTxCmdSocketEnvError)
 
   let localNodeConnInfo = LocalNodeConnectInfo
                             { localConsensusModeParams = cModeParams
@@ -706,8 +706,7 @@ runTxBuild era (AnyConsensusModeParams cModeParams) networkId mScriptValidity
         & onNothing (left (ShelleyTxCmdEraConsensusModeMismatchTxBalance outputOptions
                             (AnyConsensusMode CardanoMode) (AnyCardanoEra era)))
 
-      SocketPath sockPath <- firstExceptT ShelleyTxCmdSocketEnvError
-                             $ newExceptT readEnvSocketPath
+      SocketPath sockPath <- lift readEnvSocketPath & onLeft (left . ShelleyTxCmdSocketEnvError)
 
       let allTxInputs = inputsThatRequireWitnessing ++ allReferenceInputs ++ txinsc
           localNodeConnInfo = LocalNodeConnectInfo
@@ -1141,9 +1140,7 @@ runTxSubmit
   -> FilePath
   -> ExceptT ShelleyTxCmdError IO ()
 runTxSubmit (AnyConsensusModeParams cModeParams) network txFilePath = do
-
-    SocketPath sockPath <- firstExceptT ShelleyTxCmdSocketEnvError
-                             $ newExceptT readEnvSocketPath
+    SocketPath sockPath <- lift readEnvSocketPath & onLeft (left . ShelleyTxCmdSocketEnvError)
 
     txFile <- liftIO $ fileOrPipe txFilePath
     InAnyCardanoEra era tx <- firstExceptT ShelleyTxCmdCddlError . newExceptT
