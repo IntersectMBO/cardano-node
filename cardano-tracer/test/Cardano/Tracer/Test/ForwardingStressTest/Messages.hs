@@ -28,7 +28,7 @@ instance MetaTrace Message where
   severityFor   _ns _ = Nothing
 
   privacyFor    (Namespace _ ["Message1"]) _ = Just Public
-  privacyFor    (Namespace _ ["Message2"]) _ = Just Confidential
+  privacyFor    (Namespace _ ["Message2"]) _ = Just Public
   privacyFor    (Namespace _ ["Message3"]) _ = Just Public
   privacyFor    _ns _ = Nothing
 
