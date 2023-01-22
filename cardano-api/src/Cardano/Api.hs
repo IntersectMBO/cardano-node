@@ -838,6 +838,13 @@ module Cardano.Api (
     queryStateForBalancedTx,
     renderQueryConvenienceError,
 
+    -- ** Oops-enabled queries
+    queryUtxo_,
+    queryProtocolParams_,
+    queryEraHistory_,
+    queryStakePools_,
+    querySystemStart_,
+
     -- ** Constraint satisfaction functions
     getIsCardanoEraConstraint,
 
