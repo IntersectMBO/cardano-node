@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
@@ -13,10 +14,18 @@ module Cardano.Api.Convenience.Query (
     -- * Simplest query related
     executeQueryCardanoMode,
     queryStateForBalancedTx,
+
+    queryUtxo_,
+    queryProtocolParams_,
+    queryEraHistory_,
+    queryStakePools_,
+    querySystemStart_,
+
     renderQueryConvenienceError,
   ) where
 
 import           Control.Monad.Oops (CouldBe, Variant, runOopsInEither)
+import qualified Control.Monad.Oops as OO
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Except (ExceptT (..), runExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left, newExceptT, onLeft,
@@ -35,6 +44,7 @@ import           Cardano.Api.Environment
 import           Cardano.Api.Eras
 import           Cardano.Api.IPC
 import           Cardano.Api.IPC.AnyQuery
+import           Cardano.Api.IPC.Monad (LocalStateQueryExpr, queryExpr_)
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
@@ -60,6 +70,54 @@ renderQueryConvenienceError (EraConsensusModeMismatch cMode anyCEra) =
   "Consensus mode and era mismatch. Consensus mode: " <> textShow cMode <>
   " Era: " <> textShow anyCEra
 renderQueryConvenienceError (QueryConvenienceError e) = Text.pack $ show e
+
+queryUtxo_ :: ()
+  => e `CouldBe` UnsupportedNtcVersionError
+  => e `CouldBe` EraMismatch
+  => EraInMode era mode
+  -> ShelleyBasedEra era
+  -> [TxIn]
+  -> ExceptT (Variant e) (LocalStateQueryExpr block point (AnyQuery mode) r IO) (UTxO era)
+queryUtxo_ qeInMode qSbe allTxIns = do
+  let query = AnyQueryShelleyBasedEra $ QueryShelleyBasedEra qeInMode $ QueryInShelleyBasedEra qSbe $
+        QueryUTxO (QueryUTxOByTxIn (Set.fromList allTxIns))
+
+  queryExpr_ query & OO.onLeft @EraMismatch OO.throw
+
+queryProtocolParams_ :: ()
+  => e `CouldBe` UnsupportedNtcVersionError
+  => e `CouldBe` EraMismatch
+  => EraInMode era mode
+  -> ShelleyBasedEra era
+  -> ExceptT (Variant e) (LocalStateQueryExpr block point (AnyQuery mode) r IO) ProtocolParameters
+queryProtocolParams_ qeInMode qSbe = do
+  let query = AnyQueryShelleyBasedEra $ QueryShelleyBasedEra qeInMode $ QueryInShelleyBasedEra qSbe QueryProtocolParameters
+
+  queryExpr_ query & OO.onLeft @EraMismatch OO.throw
+
+queryEraHistory_ :: ()
+  => e `CouldBe` UnsupportedNtcVersionError
+  => ExceptT (Variant e) (LocalStateQueryExpr block point (AnyQuery CardanoMode) r IO) (EraHistory CardanoMode)
+queryEraHistory_ = do
+  let query = AnyQueryAnyEra $ QueryEraHistory CardanoModeIsMultiEra
+
+  queryExpr_ query
+
+queryStakePools_ :: ()
+  => e `CouldBe` UnsupportedNtcVersionError
+  => e `CouldBe` QueryConvenienceError
+  => EraInMode era mode
+  -> ShelleyBasedEra era
+  -> ExceptT (Variant e) (LocalStateQueryExpr block point (AnyQuery mode) r IO) (Set PoolId)
+queryStakePools_ qeInMode qSbe = do
+  let query = AnyQueryShelleyBasedEra $ QueryShelleyBasedEra qeInMode $ QueryInShelleyBasedEra qSbe $ QueryStakePools
+
+  queryExpr_ query & OO.onLeft @EraMismatch (OO.throw . QueryEraMismatch)
+
+querySystemStart_ :: ()
+  => e `CouldBe` UnsupportedNtcVersionError
+  => ExceptT (Variant e) (LocalStateQueryExpr block point (AnyQuery mode) r IO) SystemStart
+querySystemStart_ = queryExpr_ $ AnyQueryAnyEra QuerySystemStart
 
 -- | A convenience function to query the relevant information, from
 -- the local node, for Cardano.Api.Convenience.Construction.constructBalancedTx
