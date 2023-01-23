@@ -216,7 +216,7 @@ runQueryProtocolParameters (AnyConsensusModeParams cModeParams) network mOutFile
 
   result <- liftIO $ executeLocalStateQueryExpr localNodeConnInfo Nothing $ runExceptT $ do
     anyE@(AnyCardanoEra era) <- lift (determineEraExpr cModeParams)
-      & onLeft (throwE . ShelleyQueryCmdUnsupportedNtcVersion)
+      & onLeft (left . ShelleyQueryCmdUnsupportedNtcVersion)
 
     case cardanoEraStyle era of
       LegacyByronEra -> left ShelleyQueryCmdByronEra
@@ -227,8 +227,8 @@ runQueryProtocolParameters (AnyConsensusModeParams cModeParams) network mOutFile
           & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
 
         lift (queryExpr $ QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters)
-          & onLeft (throwE . ShelleyQueryCmdUnsupportedNtcVersion)
-          & onLeft (throwE . ShelleyQueryCmdEraMismatch)
+          & onLeft (left . ShelleyQueryCmdUnsupportedNtcVersion)
+          & onLeft (left . ShelleyQueryCmdEraMismatch)
 
   writeProtocolParameters mOutFile =<< except (join (first ShelleyQueryCmdAcquireFailure result))
 
@@ -284,7 +284,7 @@ runQueryTip
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
-  SocketPath sockPath <- lift readEnvSocketPath & onLeft (throwE . ShelleyQueryCmdEnvVarSocketErr)
+  SocketPath sockPath <- lift readEnvSocketPath & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
 
   case consensusModeOnly cModeParams of
     CardanoMode -> do
@@ -292,11 +292,11 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
 
       eLocalState <- ExceptT $ fmap sequence $
         executeLocalStateQueryExpr localNodeConnInfo Nothing $ runExceptT $ do
-          era           <- lift (queryExpr (QueryCurrentEra CardanoModeIsMultiEra)) & onLeft (throwE . ShelleyQueryCmdUnsupportedNtcVersion)
-          eraHistory    <- lift (queryExpr (QueryEraHistory CardanoModeIsMultiEra)) & onLeft (throwE . ShelleyQueryCmdUnsupportedNtcVersion)
-          mChainBlockNo <- lift (queryExpr  QueryChainBlockNo                     ) & onLeft (throwE . ShelleyQueryCmdUnsupportedNtcVersion) & fmap Just
-          mChainPoint   <- lift (queryExpr (QueryChainPoint CardanoMode          )) & onLeft (throwE . ShelleyQueryCmdUnsupportedNtcVersion) & fmap Just
-          mSystemStart  <- lift (queryExpr  QuerySystemStart                      ) & onLeft (throwE . ShelleyQueryCmdUnsupportedNtcVersion) & fmap Just
+          era <- lift (queryExpr (QueryCurrentEra CardanoModeIsMultiEra)) & onLeft (left . ShelleyQueryCmdUnsupportedNtcVersion)
+          eraHistory <- lift (queryExpr (QueryEraHistory CardanoModeIsMultiEra)) & onLeft (left . ShelleyQueryCmdUnsupportedNtcVersion)
+          mChainBlockNo <- lift (queryExpr  QueryChainBlockNo) & onLeft (left . ShelleyQueryCmdUnsupportedNtcVersion) & fmap Just
+          mChainPoint <- lift (queryExpr (QueryChainPoint CardanoMode)) & onLeft (left . ShelleyQueryCmdUnsupportedNtcVersion) & fmap Just
+          mSystemStart <- lift (queryExpr  QuerySystemStart) & onLeft (left . ShelleyQueryCmdUnsupportedNtcVersion) & fmap Just
 
           return O.QueryTipLocalState
             { O.era = era
@@ -1016,7 +1016,7 @@ runQueryStakePools
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryStakePools (AnyConsensusModeParams cModeParams)
                           network mOutFile = do
-  SocketPath sockPath <- lift readEnvSocketPath & onLeft (throwE . ShelleyQueryCmdEnvVarSocketErr)
+  SocketPath sockPath <- lift readEnvSocketPath & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
 
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
@@ -1027,7 +1027,7 @@ runQueryStakePools (AnyConsensusModeParams cModeParams)
           ShelleyMode -> return $ AnyCardanoEra ShelleyEra
           CardanoMode ->
             lift (queryExpr $ QueryCurrentEra CardanoModeIsMultiEra)
-              & onLeft (throwE . ShelleyQueryCmdUnsupportedNtcVersion)
+              & onLeft (left . ShelleyQueryCmdUnsupportedNtcVersion)
 
         let cMode = consensusModeOnly cModeParams
 
@@ -1037,10 +1037,10 @@ runQueryStakePools (AnyConsensusModeParams cModeParams)
         sbe <- getSbe $ cardanoEraStyle era
 
         lift (queryExpr (QueryInEra eInMode $ QueryInShelleyBasedEra sbe $ QueryStakePools))
-          & onLeft (throwE . ShelleyQueryCmdUnsupportedNtcVersion)
-          & onLeft (throwE . ShelleyQueryCmdEraMismatch)
-    ) & onLeft (throwE . ShelleyQueryCmdAcquireFailure)
-      & onLeft throwE
+          & onLeft (left . ShelleyQueryCmdUnsupportedNtcVersion)
+          & onLeft (left . ShelleyQueryCmdEraMismatch)
+    ) & onLeft (left . ShelleyQueryCmdAcquireFailure)
+      & onLeft left
 
   writeStakePools mOutFile poolIds
 
