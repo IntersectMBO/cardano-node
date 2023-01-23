@@ -158,6 +158,7 @@ library
                       , mtl
                       , network
                       , nothunks
+                      , oops ^>= 0.2
                       , optparse-applicative-fork
                       , ouroboros-consensus >= 0.6
                       , ouroboros-consensus-cardano >= 0.5
