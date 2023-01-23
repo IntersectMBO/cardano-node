@@ -4,20 +4,16 @@ module Parsers.Shelley
   , runShelleyOptions
   ) where
 
+import           Prelude
 
-import           Data.Eq
-import           Data.Function
-import           Data.Int
-import           Data.Maybe
-import           Data.Semigroup
 import           Options.Applicative
-import           System.IO (IO)
-import           Testnet.Run (runTestnet)
-import           Testnet
-import           Testnet.Shelley
-import           Text.Show
-
 import qualified Options.Applicative as OA
+
+import           Testnet
+import           Testnet.Run (runTestnet)
+import           Testnet.Shelley
+import           Testnet.Utils
+
 
 data ShelleyOptions = ShelleyOptions
   { maybeTestnetMagic :: Maybe Int
@@ -68,13 +64,7 @@ optsTestnet = ShelleyTestnetOptions
       <>  OA.showDefault
       <>  OA.value (shelleySlotLength defaultTestnetOptions)
       )
-  <*> OA.option auto
-      (   OA.long "max-lovelace-supply"
-      <>  OA.help "Max lovelace supply"
-      <>  OA.metavar "INTEGER"
-      <>  OA.showDefault
-      <>  OA.value (shelleyMaxLovelaceSupply defaultTestnetOptions)
-      )
+  <*> pMaxLovelaceSupply
   <*> OA.option auto
       (   OA.long "enable-p2p"
       <>  OA.help "Enable P2P"

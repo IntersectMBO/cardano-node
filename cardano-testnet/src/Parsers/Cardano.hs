@@ -17,7 +17,7 @@ import           Testnet
 import           Testnet.Cardano
 import           Testnet.Run (runTestnet)
 import           Testnet.Util.Runtime (readNodeLoggingFormat)
-
+import           Testnet.Utils
 
 data CardanoOptions = CardanoOptions
   { maybeTestnetMagic :: Maybe Int
@@ -55,6 +55,7 @@ optsTestnet = CardanoTestnetOptions
       <>  OA.showDefault
       <>  OA.value (cardanoActiveSlotsCoeff defaultTestnetOptions)
       )
+  <*> pMaxLovelaceSupply
   <*> OA.option auto
       (   OA.long "enable-p2p"
       <>  OA.help "Enable P2P"

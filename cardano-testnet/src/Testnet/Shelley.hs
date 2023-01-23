@@ -12,6 +12,9 @@ module Testnet.Shelley
   , hprop_testnet_pause
   ) where
 
+import           Prelude
+
+
 import           Control.Monad
 import           Control.Monad.IO.Class (MonadIO (liftIO))
 import           Control.Monad.Trans.Resource (MonadResource (liftResourceT), resourceForkIO)
@@ -22,11 +25,11 @@ import           Data.List ((\\))
 import           Data.Maybe
 import           Data.String
 import           Data.Time.Clock (UTCTime)
+import           Data.Word
 import           Hedgehog.Extras.Stock.Aeson (rewriteObject)
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
-import           Prelude
 import           System.FilePath.Posix ((</>))
 
 import qualified Cardano.Node.Configuration.Topology as NonP2P
@@ -67,7 +70,7 @@ data ShelleyTestnetOptions = ShelleyTestnetOptions
   , shelleySecurityParam :: Int
   , shelleyEpochLength :: Int
   , shelleySlotLength :: Double
-  , shelleyMaxLovelaceSupply :: Integer
+  , shelleyMaxLovelaceSupply :: Word64
   , shelleyEnableP2P :: Bool
   } deriving (Eq, Show)
 
@@ -101,7 +104,7 @@ rewriteGenesisSpec testnetOptions startTime =
     . HM.insert "securityParam" (J.toJSON @Int (shelleySecurityParam testnetOptions))
     . HM.insert "epochLength" (J.toJSON @Int (shelleyEpochLength testnetOptions))
     . HM.insert "slotLength" (J.toJSON @Double (shelleySlotLength testnetOptions))
-    . HM.insert "maxLovelaceSupply" (J.toJSON @Integer (shelleyMaxLovelaceSupply testnetOptions))
+    . HM.insert "maxLovelaceSupply" (J.toJSON @Word64 (shelleyMaxLovelaceSupply testnetOptions))
     . HM.insert "systemStart" (J.toJSON @String (DTC.formatIso8601 startTime))
     . flip HM.adjust "protocolParams"
       ( rewriteObject (HM.insert "decentralisationParam" (toJSON @Double 0.7))
@@ -362,7 +365,7 @@ shelleyTestnet testnetOptions H.Conf {..} = do
       , "--invalid-hereafter", "1000"
       , "--fee", "0"
       , "--tx-in", genesisTxinResult
-      , "--tx-out", userNAddr <> "+" <> show @Integer (shelleyMaxLovelaceSupply testnetOptions)
+      , "--tx-out", userNAddr <> "+" <> show @Word64 (shelleyMaxLovelaceSupply testnetOptions)
       , "--certificate-file", tempAbsPath </> "addresses/pool-owner" <> n <> "-stake.reg.cert"
       , "--certificate-file", tempAbsPath </> "node-pool" <> n <> "/registration.cert"
       , "--certificate-file", tempAbsPath </> "addresses/user" <> n <> "-stake.reg.cert"

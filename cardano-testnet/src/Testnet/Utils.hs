@@ -5,6 +5,9 @@ module Testnet.Utils
   ( QueryTipOutput(..)
   , queryTip
   , waitUntilEpoch
+
+  -- ** Parsers
+  , pMaxLovelaceSupply
   ) where
 
 import           Cardano.Api
@@ -15,16 +18,19 @@ import           Control.Concurrent (threadDelay)
 import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad
 import           Control.Monad.IO.Class
-import           Data.Aeson (fromJSON)
+import           Data.Aeson
+import           Data.Word
 import           GHC.Stack
-import           Hedgehog.Extras.Test.Process (ExecConfig)
-import           Hedgehog.Internal.Property (MonadTest)
+import           Options.Applicative
 import           System.Directory (doesFileExist, removeFile)
 
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
-import qualified Testnet.Util.Process as H
+import           Hedgehog.Extras.Test.Process (ExecConfig)
+import           Hedgehog.Internal.Property (MonadTest)
 
+import           Testnet.Cardano (CardanoTestnetOptions (..), defaultTestnetOptions)
+import qualified Testnet.Util.Process as H
 
 -- | Submit the desired epoch to wait to.
 waitUntilEpoch
@@ -81,3 +87,16 @@ queryTip (QueryTipOutput fp) testnetMag execConfig = do
   H.noteShowM $ H.jsonErrorFail $ fromJSON @QueryTipLocalStateOutput tipJSON
 
 newtype QueryTipOutput = QueryTipOutput { unQueryTipOutput :: FilePath}
+
+
+-- Parsers
+
+pMaxLovelaceSupply :: Parser Word64
+pMaxLovelaceSupply =
+  option auto
+      (   long "max-lovelace-supply"
+      <>  help "Max lovelace supply that your testnet starts with."
+      <>  metavar "WORD64"
+      <>  showDefault
+      <>  value (cardanoMaxSupply defaultTestnetOptions)
+      )
