@@ -15,6 +15,8 @@ import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
 import           Data.Aeson (FromJSON, eitherDecodeFileStrict', encode)
 import qualified Data.ByteString.Lazy.Char8 as BSL (putStrLn)
+import           Data.List (sortOn)
+import           Data.Ord (comparing)
 import           Options.Applicative as Opt
 import           Options.Applicative.Common as Opt (runParserInfo)
 
@@ -35,7 +37,8 @@ import           Cardano.TxGenerator.Setup.Plutus
 import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Types
 
-import           Cardano.Benchmarking.Script.Aeson (prettyPrint, prettyPrintYaml)
+import           Cardano.Benchmarking.Script.Aeson (prettyPrint, prettyPrintOrdered,
+                   prettyPrintYaml)
 import           Cardano.Benchmarking.Script.Selftest (testScript)
 import           Cardano.Benchmarking.Script.Types (SubmitMode (..))
 
@@ -176,7 +179,25 @@ checkPlutusLoop (Just PlutusOn{..})
           , autoBudgetDatum = ScriptDataNumber 0
           , autoBudgetRedeemer = scriptDataModifyNumber (const 1_000_000) redeemer
           }
-    putStrLn $ "--> " ++ show (plutusAutoBudgetMaxOut protocolParameters script autoBudget)
+    putStrLn $ "--> " ++ show (plutusAutoBudgetMaxOut protocolParameters script autoBudget TargetTxExpenditure 1)
+
+    let
+      blockMaxOut b = do
+        let summaries = map (summaryOfScript b) [1.0, 1.25, 1.5, 1.75, 2.0, 2.25]
+        -- mapM_ (BSL.putStrLn . prettyPrintOrdered) $
+        BSL.putStrLn $ prettyPrintOrdered $ last $
+           -- sortOn (executionSteps . projectedBudgetUnusedPerBlock) summaries
+           sortOn projectedLoopsPerBlock summaries
+
+
+      summaryOfScript b s =
+        let
+          ~(Right result@(b', _, _)) = plutusAutoBudgetMaxOut protocolParameters script b (TargetBlockExpenditure s) 1
+          ~(Right preRun) = preExecutePlutusScript protocolParameters script (autoBudgetDatum b') (autoBudgetRedeemer b')
+        in plutusBudgetSummary protocolParameters ("with factor " ++ show s) result preRun 1
+
+    putStrLn "--> summary for best block budget fit:"
+    blockMaxOut autoBudget
 
   where
     getRedeemerFile =

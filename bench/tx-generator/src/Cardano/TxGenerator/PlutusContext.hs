@@ -3,11 +3,13 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ViewPatterns #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module  Cardano.TxGenerator.PlutusContext
         ( PlutusAutoLimitingFactor(..)
+        , PlutusBudgetFittingStrategy(..)
         , PlutusBudgetSummary(..)
         , plutusAutoBudgetMaxOut
         , plutusBudgetSummary
@@ -17,6 +19,7 @@ module  Cardano.TxGenerator.PlutusContext
         where
 
 import           GHC.Generics (Generic)
+import           GHC.Natural (Natural)
 
 import           Control.Monad.Trans.Except.Extra
 import           Data.Aeson as Aeson
@@ -33,15 +36,18 @@ data PlutusBudgetSummary =
   { budgetPerBlock          :: !ExecutionUnits
   , budgetPerTx             :: !ExecutionUnits
   , budgetPerTxInput        :: !ExecutionUnits
-  , budgetFractionPerInput  :: !Double
+  , budgetTarget            :: !ExecutionUnits
   , scriptId                :: !FilePath
-  , loopCounter             :: !Integer
-  , loopLimitingFactors     :: ![PlutusAutoLimitingFactor]
-  , budgetUsedPerTxInput    :: !ExecutionUnits
   , scriptArgDatum          :: !ScriptData
   , scriptArgRedeemer       :: !ScriptData
-  , txPerBlockProjected     :: !Int
-  , txSizeProjected         :: !(Maybe Int)
+  , loopCounter             :: !Int
+  , loopLimitingFactors     :: ![PlutusAutoLimitingFactor]
+  , budgetUsedPerTxInput    :: !ExecutionUnits
+  , projectedBudgetUnusedPerBlock :: !ExecutionUnits
+  , projectedBudgetUnusedPerTx    :: !ExecutionUnits
+  , projectedTxPerBlock     :: !Int
+  , projectedLoopsPerBlock  :: !Int
+  , projectedTxSize         :: !(Maybe Int)
   }
   deriving (Generic, Show, ToJSON)
 
@@ -49,6 +55,10 @@ data PlutusAutoLimitingFactor
   = ExceededMemoryLimit
   | ExceededStepLimit
   deriving (Generic, Eq, Show, ToJSON)
+
+data PlutusBudgetFittingStrategy
+  = TargetTxExpenditure
+  | TargetBlockExpenditure Double
 
 instance ToJSON ScriptData where
   toJSON = scriptDataToJson ScriptDataJsonDetailedSchema
@@ -72,14 +82,40 @@ readScriptData jsonFilePath
 --      termination value when counting down.
 --   2. In the redeemer's argument structure, this value is the first numerical value
 --      that's encountered during traversal.
-plutusAutoBudgetMaxOut :: ProtocolParameters -> ScriptInAnyLang -> PlutusAutoBudget -> Either TxGenError (PlutusAutoBudget, Integer, [PlutusAutoLimitingFactor])
-plutusAutoBudgetMaxOut protocolParams script pab@PlutusAutoBudget{..}
+plutusAutoBudgetMaxOut ::
+     ProtocolParameters
+  -> ScriptInAnyLang
+  -> PlutusAutoBudget
+  -> PlutusBudgetFittingStrategy
+  -> Int
+  -> Either TxGenError (PlutusAutoBudget, Int, [PlutusAutoLimitingFactor])
+plutusAutoBudgetMaxOut
+  protocolParams@ProtocolParameters
+    { protocolParamMaxBlockExUnits  = Just budgetPerBlock
+    , protocolParamMaxTxExUnits     = Just budgetPerTx
+    }
+  script
+  pab@PlutusAutoBudget{..}
+  target
+  txInputs
   = do
     (n, limitFactors) <- binarySearch isInLimits 0 searchUpperBound
-    pure (pab {autoBudgetRedeemer = toLoopArgument n}, n, limitFactors)
+    let pab' = pab {autoBudgetUnits = targetBudget, autoBudgetRedeemer = toLoopArgument n}
+    pure (pab', fromIntegral n, limitFactors)
   where
     -- The highest loop counter that is tried - this is about 10 times the current mainnet limit.
-    searchUpperBound = 20000
+    searchUpperBound  = 20000
+
+    targetTxPerBlock :: Double -> Int
+    targetTxPerBlock  s =
+      let mTx :: Double = fromIntegral (executionMemory budgetPerTx)
+      in ceiling $ s * max
+        (fromIntegral (executionSteps budgetPerBlock) / fromIntegral (executionSteps budgetPerTx))
+        (fromIntegral (executionMemory budgetPerBlock) / mTx)
+
+    targetBudget = case target of
+      TargetTxExpenditure       -> calc budgetPerTx div txInputs                            -- optimize for maximum expenditure of per-tx-budget
+      TargetBlockExpenditure s  -> calc budgetPerBlock div (targetTxPerBlock s * txInputs)  -- optimize for maximum expenditure of per-block-budget
 
     toLoopArgument n = scriptDataModifyNumber (+ n) autoBudgetRedeemer
 
@@ -87,13 +123,16 @@ plutusAutoBudgetMaxOut protocolParams script pab@PlutusAutoBudget{..}
     isInLimits :: Integer -> Either TxGenError [PlutusAutoLimitingFactor]
     isInLimits n = do
       used <- preExecutePlutusScript protocolParams script autoBudgetDatum (toLoopArgument n)
-      pure $   [ExceededStepLimit   | executionSteps used > executionSteps autoBudgetUnits]
-            ++ [ExceededMemoryLimit | executionMemory used > executionMemory autoBudgetUnits]
+      pure $   [ExceededStepLimit   | executionSteps used > executionSteps targetBudget]
+            ++ [ExceededMemoryLimit | executionMemory used > executionMemory targetBudget]
+
+plutusAutoBudgetMaxOut _ _ _ _ _
+  = error "plutusAutoBudgetMaxOut : call to function in pre-Alonzo era. This is an implementation error in tx-generator."
 
 plutusBudgetSummary ::
      ProtocolParameters
   -> FilePath
-  -> (PlutusAutoBudget, Integer, [PlutusAutoLimitingFactor])
+  -> (PlutusAutoBudget, Int, [PlutusAutoLimitingFactor])
   -> ExecutionUnits
   -> Int
   -> PlutusBudgetSummary
@@ -106,18 +145,20 @@ plutusBudgetSummary
   (PlutusAutoBudget{..}, loopCounter, loopLimitingFactors)
   budgetUsedPerTxInput
   txInputs
-    = PlutusBudgetSummary{..}
+  = PlutusBudgetSummary{..}
   where
-    txSizeProjected         = Nothing           -- we defer this value until after splitting phase
+    projectedTxSize         = Nothing           -- we defer this value until after splitting phase
     scriptArgDatum          = autoBudgetDatum
     scriptArgRedeemer       = autoBudgetRedeemer
-    budgetPerTxInput        = autoBudgetUnits
-    budgetFractionPerInput  = 1.0 / fromIntegral txInputs
-    txPerBlockProjected     = fromIntegral $ min
-                                (executionSteps budgetPerBlock  `div` totalSteps)
-                                (executionMemory budgetPerBlock `div` totalMemory)
-    totalSteps              = fromIntegral txInputs * executionSteps autoBudgetUnits
-    totalMemory             = fromIntegral txInputs * executionMemory autoBudgetUnits
+    budgetPerTxInput        = calc budgetPerTx div txInputs
+    budgetTarget            = autoBudgetUnits
+    projectedTxPerBlock     = fromIntegral $ min
+                                (executionSteps budgetPerBlock  `div` executionSteps usedPerTx)
+                                (executionMemory budgetPerBlock `div` executionMemory usedPerTx)
+    projectedLoopsPerBlock  = loopCounter * txInputs * projectedTxPerBlock
+    projectedBudgetUnusedPerTx    = budgetPerTx `minus` usedPerTx
+    projectedBudgetUnusedPerBlock = budgetPerBlock `minus` calc usedPerTx (*) projectedTxPerBlock
+    usedPerTx                = calc budgetUsedPerTxInput (*) txInputs
 
 plutusBudgetSummary _ _ _ _ _
   = error "plutusBudgetSummary : call to function in pre-Alonzo era. This is an implementation error in tx-generator."
@@ -157,3 +198,12 @@ binarySearch f a_ b_ = do
           if withinLimits limitingFactors'
             then go limitingFactors m b
             else go limitingFactors' a m
+
+
+minus :: ExecutionUnits -> ExecutionUnits -> ExecutionUnits
+minus (ExecutionUnits a b) (ExecutionUnits a' b')
+  = ExecutionUnits (a - a') (b - b')
+
+calc :: ExecutionUnits -> (Natural -> Natural -> Natural) -> Int -> ExecutionUnits
+calc (ExecutionUnits a b) op (fromIntegral -> n)
+  = ExecutionUnits (a `op` n) (b `op` n)
