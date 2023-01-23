@@ -644,11 +644,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
     --  2. register the stake pool 1
     --  3. register the user1 stake address
     --  4. delegate from the user1 stake address to the stake pool
-    txIn <- H.noteShow . S.strip =<< H.execCli
-      [ "genesis", "initial-txin"
-      , "--testnet-magic", show @Int testnetMagic
-      , "--verification-key-file", tempAbsPath </> "shelley/utxo-keys/utxo1.vkey"
-      ]
+    txIn <- H.noteShow . S.strip =<< createShelleyGenesisInitialTxIn testnetMagic (tempAbsPath </> "shelley/utxo-keys/utxo1.vkey")
 
     H.note_ txIn
 

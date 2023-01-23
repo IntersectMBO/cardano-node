@@ -4,11 +4,19 @@
 -- | All Byron and Shelley Genesis related functionality
 module Testnet.Genesis
   ( defaultByronGenesisJsonValue
+  , createShelleyGenesisInitialTxIn
   ) where
 
 import           Prelude
 
+import           Control.Monad.Catch
+import           Control.Monad.IO.Class
 import           Data.Aeson
+
+import           Hedgehog.Internal.Property
+
+import           Testnet.Util.Process
+
 
 -- | We need a Byron genesis in order to be able to hardfork to the later Shelley based eras.
 -- The values here don't matter as the testnet conditions are ultimately determined
@@ -38,3 +46,17 @@ defaultByronGenesisJsonValue =
     , "updateProposalThd" .= toJSON @String "100000000000000"
     , "updateVoteThd" .= toJSON @String "1000000000000"
     ]
+
+-- | The Shelley initial UTxO is constructed from the 'sgInitialFunds' field which
+-- is not a full UTxO but just a map from addresses to coin values. Therefore this
+-- command creates a transaction input that defaults to the 0th index and therefore
+-- we can spend spend this tx input in a transaction.
+createShelleyGenesisInitialTxIn
+  :: (MonadTest m, MonadCatch m, MonadIO m)
+  => Int -> FilePath -> m String
+createShelleyGenesisInitialTxIn testnetMagic vKeyFp =
+  execCli
+      [ "genesis", "initial-txin"
+      , "--testnet-magic", show @Int testnetMagic
+      , "--verification-key-file", vKeyFp
+      ]

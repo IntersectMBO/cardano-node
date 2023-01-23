@@ -53,7 +53,9 @@ import qualified Hedgehog.Extras.Test.Network as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
 import qualified System.Info as OS
+
 import qualified Testnet.Conf as H
+import           Testnet.Genesis
 import qualified Testnet.Util.Base as H
 import qualified Testnet.Util.Process as H
 import           Testnet.Util.Process (execCli_)
@@ -352,11 +354,9 @@ shelleyTestnet testnetOptions H.Conf {..} = do
     --  2. register the stake pool n
     --  3. register the usern stake address
     --  4. delegate from the usern stake address to the stake pool
-    genesisTxinResult <- H.noteShowM $ S.strip <$> H.execCli
-      [ "genesis", "initial-txin"
-      , "--testnet-magic", show @Int testnetMagic
-      , "--verification-key-file", tempAbsPath </> "utxo-keys/utxo" <> n <> ".vkey"
-      ]
+    genesisTxinResult
+      <- H.noteShowM $ S.strip <$> createShelleyGenesisInitialTxIn testnetMagic (tempAbsPath </> "utxo-keys/utxo" <> n <> ".vkey")
+
 
     userNAddr <- H.readFile $ tempAbsPath </> "addresses/user" <> n <> ".addr"
 
