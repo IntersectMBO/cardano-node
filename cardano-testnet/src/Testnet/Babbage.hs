@@ -31,8 +31,8 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified System.Info as OS
 
+import           Testnet.Commands.Genesis
 import qualified Testnet.Conf as H
-import           Testnet.Genesis
 import qualified Testnet.Util.Assert as H
 import           Testnet.Util.Process (execCli_)
 import           Testnet.Util.Runtime (Delegator (..), NodeLoggingFormat (..), PaymentKeyPair (..),
@@ -53,7 +53,7 @@ data BabbageTestnetOptions = BabbageTestnetOptions
 defaultTestnetOptions :: BabbageTestnetOptions
 defaultTestnetOptions = BabbageTestnetOptions
   { babbageNumSpoNodes = 3
-  , babbageSlotDuration = 1000
+  , babbageSlotDuration = 200
   , babbageSecurityParam = 10
   , babbageTotalBalance = 10020000000
   , babbageNodeLoggingFormat = NodeLoggingFormatAsJson

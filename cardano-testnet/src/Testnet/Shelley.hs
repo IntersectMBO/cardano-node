@@ -54,8 +54,8 @@ import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
 import qualified System.Info as OS
 
+import           Testnet.Commands.Genesis
 import qualified Testnet.Conf as H
-import           Testnet.Genesis
 import qualified Testnet.Util.Base as H
 import qualified Testnet.Util.Process as H
 import           Testnet.Util.Process (execCli_)

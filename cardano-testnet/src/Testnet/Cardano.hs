@@ -63,8 +63,9 @@ import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Network as H
 
+import           Testnet.Commands.Genesis
+import           Testnet.Commands.Governance
 import qualified Testnet.Conf as H
-import           Testnet.Genesis
 import qualified Testnet.Util.Assert as H
 import qualified Testnet.Util.Process as H
 import           Testnet.Util.Process (execCli_)
@@ -347,19 +348,11 @@ cardanoTestnet testnetOptions H.Conf {..} = do
       ]
 
   -- Update Proposal and votes
-  execCli_
-    [ "byron", "governance", "create-update-proposal"
-    , "--filepath", tempAbsPath </> "update-proposal"
-    , "--testnet-magic", show @Int testnetMagic
-    , "--signing-key", tempAbsPath </> "byron/delegate-keys.000.key"
-    , "--protocol-version-major", "1"
-    , "--protocol-version-minor", "0"
-    , "--protocol-version-alt", "0"
-    , "--application-name", "cardano-sl"
-    , "--software-version-num", "1"
-    , "--system-tag", "linux"
-    , "--installer-hash", "0"
-    ]
+  createByronUpdateProposal
+    testnetMagic
+    (tempAbsPath </> "byron/delegate-keys.000.key")
+    (tempAbsPath </> "update-proposal")
+    1
 
   forM_ bftNodesN $ \n -> do
     execCli_
@@ -371,19 +364,11 @@ cardanoTestnet testnetOptions H.Conf {..} = do
       , "--output-filepath", tempAbsPath </> "update-vote.00" <> show @Int (n - 1)
       ]
 
-  execCli_
-    [ "byron", "governance", "create-update-proposal"
-    , "--filepath", tempAbsPath </> "update-proposal-1"
-    , "--testnet-magic", show @Int testnetMagic
-    , "--signing-key", tempAbsPath </> "byron/delegate-keys.000.key"
-    , "--protocol-version-major", "2"
-    , "--protocol-version-minor", "0"
-    , "--protocol-version-alt", "0"
-    , "--application-name", "cardano-sl"
-    , "--software-version-num", "1"
-    , "--system-tag", "linux"
-    , "--installer-hash", "0"
-    ]
+  createByronUpdateProposal
+    testnetMagic
+    (tempAbsPath </> "byron/delegate-keys.000.key")
+    (tempAbsPath </> "update-proposal-1")
+    2
 
   forM_ bftNodesN $ \n ->
     execCli_

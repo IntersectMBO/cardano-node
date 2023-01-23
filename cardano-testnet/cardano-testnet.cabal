@@ -79,7 +79,8 @@ library
                         Testnet.Babbage
                         Testnet.Cardano
                         Testnet.Conf
-                        Testnet.Genesis
+                        Testnet.Commands.Genesis
+                        Testnet.Commands.Governance
                         Testnet.Run
                         Testnet.Shelley
                         Testnet.Utils

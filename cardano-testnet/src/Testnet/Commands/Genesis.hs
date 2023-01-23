@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 -- | All Byron and Shelley Genesis related functionality
-module Testnet.Genesis
+module Testnet.Commands.Genesis
   ( defaultByronGenesisJsonValue
   , createShelleyGenesisInitialTxIn
   ) where
