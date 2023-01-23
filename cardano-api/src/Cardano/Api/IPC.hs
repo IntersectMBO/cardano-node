@@ -57,6 +57,7 @@ module Cardano.Api.IPC (
     QueryInEra(..),
     QueryInShelleyBasedEra(..),
     queryNodeLocalState,
+    queryNodeLocalState_,
 
     -- *** Local tx monitoring
     LocalTxMonitorClient(..),
@@ -80,18 +81,24 @@ module Cardano.Api.IPC (
     NodeToClientVersion(..),
 
     UnsupportedNtcVersionError(..),
+
+    -- ** Error types
+    AcquireFailure(..),
   ) where
-
-import           Data.Void (Void)
-
-import           Data.Aeson (ToJSON, object, toJSON, (.=))
-import qualified Data.ByteString.Lazy as LBS
-import qualified Data.Map.Strict as Map
 
 import           Control.Concurrent.STM (TMVar, atomically, newEmptyTMVarIO, putTMVar, takeTMVar,
                    tryPutTMVar)
 import           Control.Monad (void)
+import           Control.Monad.IO.Class
+import           Control.Monad.Oops (CouldBe, Variant, runOopsInEither)
+import qualified Control.Monad.Oops as OO
+import           Control.Monad.Trans.Except
 import           Control.Tracer (nullTracer)
+import           Data.Aeson (ToJSON, object, toJSON, (.=))
+import qualified Data.ByteString.Lazy as LBS
+import           Data.Function ((&))
+import qualified Data.Map.Strict as Map
+import           Data.Void (Void)
 
 import           Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
 import qualified Ouroboros.Network.Block as Net
@@ -586,17 +593,26 @@ queryNodeLocalState :: forall mode result.
                     -> Maybe ChainPoint
                     -> QueryInMode mode result
                     -> IO (Either AcquiringFailure result)
-queryNodeLocalState connctInfo mpoint query = do
-    resultVar <- newEmptyTMVarIO
-    connectToLocalNode
-      connctInfo
+queryNodeLocalState connctInfo mpoint query =
+  runOopsInEither $ queryNodeLocalState_ connctInfo mpoint query
+
+queryNodeLocalState_ :: forall e mode result. ()
+  => e `CouldBe` AcquiringFailure
+  => LocalNodeConnectInfo mode
+  -> Maybe ChainPoint
+  -> QueryInMode mode result
+  -> ExceptT (Variant e) IO result
+queryNodeLocalState_ connectInfo mpoint query = do
+    resultVar <- liftIO newEmptyTMVarIO
+    liftIO $ connectToLocalNode
+      connectInfo
       LocalNodeClientProtocols {
         localChainSyncClient    = NoLocalChainSyncClient,
         localStateQueryClient   = Just (singleQuery mpoint resultVar),
         localTxSubmissionClient = Nothing,
         localTxMonitoringClient = Nothing
       }
-    atomically (takeTMVar resultVar)
+    liftIO (atomically (takeTMVar resultVar)) & OO.onLeft OO.throw
   where
     singleQuery
       :: Maybe ChainPoint
