@@ -77,7 +77,9 @@ module Cardano.Api.IPC (
     consensusModeOnly,
     toAcquiringFailure,
 
-    NodeToClientVersion(..)
+    NodeToClientVersion(..),
+
+    UnsupportedNtcVersionError(..),
   ) where
 
 import           Prelude
@@ -130,6 +132,7 @@ import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Consensus
 import           Cardano.Api.Block
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.InMode
+import           Cardano.Api.IPC.Version
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.Protocol

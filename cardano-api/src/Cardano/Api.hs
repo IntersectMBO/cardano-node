@@ -620,6 +620,7 @@ module Cardano.Api (
     UTxO(..),
     queryNodeLocalState,
     executeQueryCardanoMode,
+    UnsupportedNtcVersionError(..),
 
     -- *** Local tx monitoring
     LocalTxMonitorClient(..),

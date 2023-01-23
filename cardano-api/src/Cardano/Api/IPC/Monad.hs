@@ -9,17 +9,15 @@ module Cardano.Api.IPC.Monad
   , determineEraExpr
   ) where
 
-import           Control.Applicative
+import           Prelude
+
 import           Control.Concurrent.STM
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Reader
 import           Control.Monad.Trans.Cont
+import           Control.Monad.Trans.Except (ExceptT (..), runExceptT)
 import           Data.Bifunctor (first)
-import           Data.Either
-import           Data.Function
-import           Data.Maybe
-import           System.IO
 
 import           Cardano.Ledger.Shelley.Scripts ()
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
@@ -28,6 +26,7 @@ import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Net.Query
 import           Cardano.Api.Block
 import           Cardano.Api.Eras
 import           Cardano.Api.IPC
+import           Cardano.Api.IPC.Version
 import           Cardano.Api.Modes
 
 
@@ -97,21 +96,30 @@ setupLocalStateQueryExpr waitDone mPointVar' resultVar' ntcVersion f =
         pure $ Net.Query.SendMsgDone ()
     }
 
+-- | Get the node server's Node-to-Client version.
+getNtcVersion :: LocalStateQueryExpr block point (QueryInMode mode) r IO NodeToClientVersion
+getNtcVersion = LocalStateQueryExpr ask
+
 -- | Use 'queryExpr' in a do block to construct monadic local state queries.
-queryExpr :: QueryInMode mode a -> LocalStateQueryExpr block point (QueryInMode mode) r IO a
-queryExpr q =
-  LocalStateQueryExpr . ReaderT $ \_ -> ContT $ \f -> pure $
-    Net.Query.SendMsgQuery q $
-      Net.Query.ClientStQuerying
-      { Net.Query.recvMsgResult = f
-      }
+queryExpr :: QueryInMode mode a -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError a)
+queryExpr q = do
+  let minNtcVersion = nodeToClientVersionOf q
+  ntcVersion <- getNtcVersion
+  if ntcVersion >= minNtcVersion
+    then
+      fmap Right . LocalStateQueryExpr . ReaderT $ \_ -> ContT $ \f -> pure $
+        Net.Query.SendMsgQuery q $
+          Net.Query.ClientStQuerying
+          { Net.Query.recvMsgResult = f
+          }
+    else pure (Left (UnsupportedNtcVersionError minNtcVersion ntcVersion))
 
 -- | A monad expression that determines what era the node is in.
 determineEraExpr ::
      ConsensusModeParams mode
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO AnyCardanoEra
-determineEraExpr cModeParams =
+  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError AnyCardanoEra)
+determineEraExpr cModeParams = runExceptT $
   case consensusModeOnly cModeParams of
     ByronMode -> return $ AnyCardanoEra ByronEra
     ShelleyMode -> return $ AnyCardanoEra ShelleyEra
-    CardanoMode -> queryExpr $ QueryCurrentEra CardanoModeIsMultiEra
+    CardanoMode -> ExceptT $ queryExpr $ QueryCurrentEra CardanoModeIsMultiEra
