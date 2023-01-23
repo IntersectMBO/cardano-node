@@ -2,6 +2,7 @@
 
 module Testnet.Commands.Governance
   ( createByronUpdateProposal
+  , createByronUpdateProposalVote
   ) where
 
 import           Prelude
@@ -31,3 +32,16 @@ createByronUpdateProposal testnetMagic signingKeyFp updateProposalFp ptclMajorVe
     , "--system-tag", "linux"
     , "--installer-hash", "0"
     ]
+
+createByronUpdateProposalVote
+  :: (MonadTest m, MonadCatch m, MonadIO m)
+  => Int -> String -> String -> String -> m ()
+createByronUpdateProposalVote testnetMagic updateProposalFp signingKey outputFp =
+    execCli_
+      [ "byron", "governance", "create-proposal-vote"
+      , "--proposal-filepath", updateProposalFp
+      , "--testnet-magic", show testnetMagic
+      , "--signing-key", signingKey
+      , "--vote-yes"
+      , "--output-filepath", outputFp
+      ]

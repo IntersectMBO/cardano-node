@@ -355,14 +355,11 @@ cardanoTestnet testnetOptions H.Conf {..} = do
     1
 
   forM_ bftNodesN $ \n -> do
-    execCli_
-      [ "byron", "governance", "create-proposal-vote"
-      , "--proposal-filepath", tempAbsPath </> "update-proposal"
-      , "--testnet-magic", show @Int testnetMagic
-      , "--signing-key", tempAbsPath </> "byron/delegate-keys.00" <> show @Int (n - 1) <> ".key"
-      , "--vote-yes"
-      , "--output-filepath", tempAbsPath </> "update-vote.00" <> show @Int (n - 1)
-      ]
+    createByronUpdateProposalVote
+      testnetMagic
+      (tempAbsPath </> "update-proposal")
+      (tempAbsPath </> "byron/delegate-keys.00" <> show @Int (n - 1) <> ".key")
+      (tempAbsPath </> "update-vote.00" <> show @Int (n - 1))
 
   createByronUpdateProposal
     testnetMagic
@@ -371,14 +368,11 @@ cardanoTestnet testnetOptions H.Conf {..} = do
     2
 
   forM_ bftNodesN $ \n ->
-    execCli_
-      [ "byron", "governance", "create-proposal-vote"
-      , "--proposal-filepath", tempAbsPath </> "update-proposal-1"
-      , "--testnet-magic", show @Int testnetMagic
-      , "--signing-key", tempAbsPath </> "byron/delegate-keys.00" <> show @Int (n - 1) <> ".key"
-      , "--vote-yes"
-      , "--output-filepath", tempAbsPath </> "update-vote-1.00" <> show @Int (n - 1)
-      ]
+    createByronUpdateProposalVote
+      testnetMagic
+      (tempAbsPath </> "update-proposal-1")
+      (tempAbsPath </> "byron/delegate-keys.00" <> show @Int (n - 1) <> ".key")
+      (tempAbsPath </> "update-vote-1.00" <> show @Int (n - 1))
 
   -- Generated genesis keys and genesis files
   H.noteEachM_ . H.listDirectory $ tempAbsPath </> "byron"
