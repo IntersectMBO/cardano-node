@@ -339,7 +339,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
           traceDebug $ "Projected Tx size in bytes: " ++ show txSize
           summary_ <- getEnvSummary
           forM_ summary_ $ \summary -> do
-            let summary' = summary {txSizeProjected = Just txSize}
+            let summary' = summary {projectedTxSize = Just txSize}
             setEnvSummary summary'
             traceBenchTxSubmit TraceBenchPlutusBudgetSummary summary'
           dumpBudgetSummaryIfExisting
@@ -437,31 +437,27 @@ makePlutusContext ScriptSpec{..} = do
             ]
       return (sData, redeemer, units)
 
-    AutoScript redeemerFile budgetFraction -> do
+    AutoScript redeemerFile txInputs -> do
       redeemer <- liftIOSafe $ readScriptData redeemerFile
       let
-        budget = ExecutionUnits
-                    (executionSteps perTxBudget  `div` fromIntegral budgetFraction)
-                    (executionMemory perTxBudget `div` fromIntegral budgetFraction)
-
         -- reflects properties hard-coded into the loop scripts for benchmarking:
         -- 1. script datum is not used
         -- 2. the loop terminates at 1_000_000 when counting down
         -- 3. the loop's initial value is the first numerical value in the redeemer argument structure
         autoBudget = PlutusAutoBudget
-          { autoBudgetUnits = budget
+          { autoBudgetUnits = perTxBudget
           , autoBudgetDatum = ScriptDataNumber 0
           , autoBudgetRedeemer = scriptDataModifyNumber (const 1_000_000) redeemer
           }
-      traceDebug $ "Plutus auto mode : Available budget per Tx input / script run: " ++ show budget
-                   ++ " -- fraction of protocolParamMaxTxExUnits budget: 1/" ++ show budgetFraction
+      traceDebug $ "Plutus auto mode : Available budget per Tx: " ++ show perTxBudget
+                   ++ " -- split between inputs per Tx: " ++ show txInputs
 
-      case plutusAutoBudgetMaxOut protocolParameters script autoBudget of
+      case plutusAutoBudgetMaxOut protocolParameters script autoBudget (TargetBlockExpenditure 1.25) txInputs of
         Left err -> liftTxGenError err
         Right result@(PlutusAutoBudget{..}, _, _) -> do
           preRun <- preExecuteScriptAction protocolParameters script autoBudgetDatum autoBudgetRedeemer
           setEnvSummary $
-            plutusBudgetSummary protocolParameters scriptSpecFile result preRun budgetFraction
+            plutusBudgetSummary protocolParameters scriptSpecFile result preRun txInputs
           dumpBudgetSummaryIfExisting
           return (autoBudgetDatum, autoBudgetRedeemer, preRun)
 
