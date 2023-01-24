@@ -1,5 +1,4 @@
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
 
 -- | This top-level module is used by 'cardano-tracer' app.
 module Cardano.Tracer.Run

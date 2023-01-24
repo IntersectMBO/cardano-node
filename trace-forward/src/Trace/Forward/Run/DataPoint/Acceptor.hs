@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Trace.Forward.Run.DataPoint.Acceptor
@@ -8,21 +7,21 @@ module Trace.Forward.Run.DataPoint.Acceptor
   ) where
 
 import qualified Codec.Serialise as CBOR
+import           Control.Concurrent.STM.TMVar (putTMVar)
+import           Control.Concurrent.STM.TVar (modifyTVar', readTVar, readTVarIO)
 import           Control.Exception (finally)
 import           Control.Monad (unless)
 import           Control.Monad.Extra (ifM)
 import           Control.Monad.STM (atomically, check)
-import           Control.Concurrent.STM.TVar (modifyTVar', readTVar, readTVarIO)
-import           Control.Concurrent.STM.TMVar (putTMVar)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Void (Void)
-import           Ouroboros.Network.Mux (MuxMode (..), MuxPeer (..), RunMiniProtocol (..))
 import           Ouroboros.Network.Driver.Simple (runPeer)
+import           Ouroboros.Network.Mux (MuxMode (..), MuxPeer (..), RunMiniProtocol (..))
 
+import           Trace.Forward.Configuration.DataPoint (AcceptorConfiguration (..))
 import qualified Trace.Forward.Protocol.DataPoint.Acceptor as Acceptor
 import qualified Trace.Forward.Protocol.DataPoint.Codec as Acceptor
 import           Trace.Forward.Protocol.DataPoint.Type (DataPointName)
-import           Trace.Forward.Configuration.DataPoint (AcceptorConfiguration (..))
 import           Trace.Forward.Utils.DataPoint (DataPointRequestor (..))
 
 acceptDataPointsInit
@@ -46,7 +45,7 @@ runPeerWithRequestor
   -> IO DataPointRequestor
   -> IO ()
   -> MuxPeer LBS.ByteString IO ()
-runPeerWithRequestor config mkDPRequestor peerErrorHandler = 
+runPeerWithRequestor config mkDPRequestor peerErrorHandler =
   MuxPeerRaw $ \channel -> do
     dpRequestor <- mkDPRequestor
     runPeer

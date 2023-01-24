@@ -138,7 +138,7 @@ limitFrequency thresholdFrequency limiterName vtracer ltracer = do
                                 then 10.0
                                 else thresholdPeriod / elapsedTime
       let spendReward = if rawSpendReward < 1.0 && rawSpendReward > 0.0
-                                then - ((1.0 / rawSpendReward) - 1.0)
+                                then 1.0 - (1.0 / rawSpendReward)
                                 else rawSpendReward - 1.0
       -- Normalize so that (0.0-10.0) means message
       -- arrive quicker then threshold
