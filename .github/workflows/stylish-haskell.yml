@@ -17,6 +17,21 @@ jobs:
 
       STYLISH_HASKELL_VERSION: "0.14.4.0"
 
+      STYLISH_HASKELL_PATHS: >
+        cardano-testnet
+        cardano-git-rev
+        cardano-api
+        cardano-node
+        cardano-client-demo
+        cardano-node-chairman
+        cardano-tracer
+        trace-resources
+        cardano-node-capi
+        trace-dispatcher
+        trace-forward
+        cardano-cli
+        cardano-submit-api
+
     steps:
     - name: Install Haskell
       uses: input-output-hk/setup-haskell@v1
@@ -101,7 +116,7 @@ jobs:
         git add .
         git stash
 
-        for x in $(git ls-tree --full-tree --name-only -r HEAD); do
+        for x in $(git ls-tree --full-tree --name-only -r HEAD ${{ env.STYLISH_HASKELL_PATHS }}); do
           if [ "${x##*.}" == "hs" ]; then
             stylish-haskell -i $x
           fi
@@ -114,7 +129,7 @@ jobs:
         git add .
         git stash
         git fetch origin master --unshallow
-        for x in $(git diff --name-only HEAD origin/master); do
+        for x in $(git diff --name-only HEAD origin/master ${{ env.STYLISH_HASKELL_PATHS }}); do
           if [ "${x##*.}" == "hs" ]; then
             stylish-haskell -i $x
           fi
