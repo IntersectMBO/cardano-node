@@ -16,8 +16,6 @@ module Cardano.Api.NetworkId (
     fromShelleyNetwork,
   ) where
 
-import           Prelude
-
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 
 import qualified Cardano.Chain.Common as Byron (NetworkMagic (..))

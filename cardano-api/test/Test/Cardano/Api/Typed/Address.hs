@@ -5,7 +5,6 @@ module Test.Cardano.Api.Typed.Address
   ) where
 
 import           Cardano.Api
-import           Cardano.Prelude (($), Eq, Show)
 import           Gen.Cardano.Api.Typed (genAddressByron, genAddressShelley)
 import           Hedgehog (Property)
 import           Test.Cardano.Api.Typed.Orphans ()
@@ -59,5 +58,5 @@ tests = testGroup "Test.Cardano.Api.Typed.Address"
   [ testPropertyNamed "roundtrip shelley address" "roundtrip shelley address" prop_roundtrip_shelley_address
   , testPropertyNamed "roundtrip byron address"   "roundtrip byron address" prop_roundtrip_byron_address
   , testPropertyNamed "roundtrip byron address JSON"   "roundtrip byron address JSON" prop_roundtrip_byron_address_JSON
-  , testPropertyNamed "roundtrip shelley address JSON"   "roundtrip shelley address JSON" prop_roundtrip_shelley_address_JSON  
+  , testPropertyNamed "roundtrip shelley address JSON"   "roundtrip shelley address JSON" prop_roundtrip_shelley_address_JSON
   ]

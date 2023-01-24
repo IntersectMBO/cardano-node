@@ -7,8 +7,11 @@ module Test.Cardano.Api.Metadata
   ) where
 
 import           Cardano.Api
-import           Cardano.Prelude
+
 import           Gen.Cardano.Api.Metadata
+
+import           Data.ByteString (ByteString)
+import           Data.Word (Word64)
 import           Hedgehog (Property, property, (===))
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testPropertyNamed)

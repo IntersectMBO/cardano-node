@@ -5,7 +5,6 @@ module Test.Cardano.Api.KeysByron
   ) where
 
 import           Cardano.Api (AsType (AsByronKey, AsSigningKey), Key (deterministicSigningKey))
-import           Cardano.Prelude ((<$>))
 import           Gen.Hedgehog.Roundtrip.CBOR (roundtrip_CBOR)
 import           Hedgehog (Property)
 import           Test.Cardano.Api.Typed.Orphans ()

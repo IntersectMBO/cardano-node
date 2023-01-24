@@ -6,8 +6,6 @@ module Cardano.Api.Genesis
   , shelleyGenesisDefaults
   ) where
 
-import           Prelude
-
 import qualified Data.ListMap as ListMap
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)

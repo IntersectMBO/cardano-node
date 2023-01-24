@@ -9,8 +9,6 @@ module Cardano.Api.Keys.Read
   , readKeyFileAnyOf
   ) where
 
-import           Prelude
-
 import           Control.Exception
 import           Data.Bifunctor
 import           Data.ByteString as BS

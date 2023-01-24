@@ -48,8 +48,6 @@ module Cardano.Api.Block (
     makeChainTip,
   ) where
 
-import           Prelude
-
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS

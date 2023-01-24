@@ -91,7 +91,6 @@ import           Data.Sharing (FromSharedCBOR, Interns, Share)
 import           Data.SOP.Strict (SListI)
 import           Data.Text (Text)
 import           Data.Typeable
-import           Prelude
 
 import           Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
 

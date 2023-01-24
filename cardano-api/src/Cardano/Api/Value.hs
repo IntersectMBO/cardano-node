@@ -55,8 +55,6 @@ module Cardano.Api.Value
   , AsType(..)
   ) where
 
-import           Prelude
-
 import           Data.Aeson (FromJSON, FromJSONKey, ToJSON, object, parseJSON, toJSON, withObject)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Aeson

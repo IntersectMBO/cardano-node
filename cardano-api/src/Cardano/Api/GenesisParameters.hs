@@ -16,8 +16,6 @@ module Cardano.Api.GenesisParameters (
 
   ) where
 
-import           Prelude
-
 import           Data.Time (NominalDiffTime, UTCTime)
 
 import           Cardano.Slotting.Slot (EpochSize (..))

@@ -12,12 +12,15 @@ module Cardano.Api.SerialiseRaw
   , serialiseToRawBytesHexText
   ) where
 
-import           Cardano.Prelude
-import           Prelude (String)
-
+import           Data.Bifunctor (Bifunctor (..))
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as Base16
+import           Data.Data (typeRep)
+import           Data.Either.Combinators (rightToMaybe)
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import           Data.Typeable (TypeRep, Typeable)
 
 import           Cardano.Api.Error (Error, displayError)
 import           Cardano.Api.HasTypeProxy

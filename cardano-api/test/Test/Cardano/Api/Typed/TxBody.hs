@@ -6,7 +6,7 @@ module Test.Cardano.Api.Typed.TxBody
 
 import           Cardano.Api
 import           Cardano.Api.Shelley (ReferenceScript (..), refScriptToShelleyScript)
-import           Cardano.Prelude
+import           Data.Maybe (isJust)
 import           Data.Type.Equality (TestEquality (testEquality))
 import           Gen.Cardano.Api.Typed (genTxBodyContent)
 import           Hedgehog (MonadTest, Property, annotateShow, failure, (===))

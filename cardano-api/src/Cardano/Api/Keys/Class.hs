@@ -11,8 +11,6 @@ module Cardano.Api.Keys.Class
   , AsType(AsVerificationKey, AsSigningKey)
   ) where
 
-import           Prelude
-
 import           Data.Kind (Type)
 
 import qualified Cardano.Crypto.DSIGN.Class as Crypto

@@ -76,8 +76,6 @@ module Cardano.Api.Address (
     isKeyAddress
   ) where
 
-import           Prelude
-
 import           Control.Applicative ((<|>))
 import           Data.Aeson (FromJSON (..), ToJSON (..), withText, (.=))
 import qualified Data.Aeson as Aeson
@@ -104,7 +102,6 @@ import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.Keys.Class
 import           Cardano.Api.Keys.Byron
 import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.NetworkId

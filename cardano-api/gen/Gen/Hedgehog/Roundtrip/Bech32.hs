@@ -3,7 +3,6 @@ module Gen.Hedgehog.Roundtrip.Bech32
   ) where
 
 import           Cardano.Api
-import           Cardano.Prelude
 import           Hedgehog (Gen, Property)
 
 import qualified Hedgehog as H

@@ -10,8 +10,6 @@ module Cardano.Api.SerialiseBech32
   , deserialiseAnyOfFromBech32
   ) where
 
-import           Prelude
-
 import           Data.ByteString (ByteString)
 import           Data.Text (Text)
 

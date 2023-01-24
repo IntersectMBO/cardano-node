@@ -13,8 +13,6 @@ module Cardano.Api.Convenience.Construction (
 
   ) where
 
-import           Prelude
-
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)

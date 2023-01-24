@@ -10,8 +10,6 @@ module Cardano.Api.Error
   , FileError(..)
   ) where
 
-import           Prelude
-
 import           Control.Exception (Exception (..), IOException, throwIO)
 import           System.IO (Handle)
 

@@ -46,8 +46,6 @@ module Cardano.Api.Eras
            AsByron,    AsShelley,    AsAllegra,    AsMary,    AsAlonzo,    AsBabbage)
   ) where
 
-import           Prelude
-
 import           Cardano.Api.HasTypeProxy
 
 import           Control.DeepSeq

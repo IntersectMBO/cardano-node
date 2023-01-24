@@ -82,8 +82,6 @@ module Cardano.Api.IPC (
     UnsupportedNtcVersionError(..),
   ) where
 
-import           Prelude
-
 import           Data.Void (Void)
 
 import           Data.Aeson (ToJSON, object, toJSON, (.=))

@@ -14,8 +14,6 @@ module Cardano.Api.StakePoolMetadata (
     Hash(..),
   ) where
 
-import           Prelude
-
 import           Data.Bifunctor (first)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
@@ -33,7 +31,6 @@ import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.Keys.Class
 import           Cardano.Api.Keys.Byron
 import           Cardano.Api.Keys.Praos
 import           Cardano.Api.Script

@@ -105,6 +105,8 @@ module Gen.Cardano.Api.Typed
   , genRational
   ) where
 
+import           Cardano.Prelude (panic)
+
 import           Cardano.Api hiding (txIns)
 import qualified Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
@@ -116,14 +118,18 @@ import           Cardano.Api.Shelley (Hash (ScriptDataHash), KESPeriod (KESPerio
                    StakeCredential (StakeCredentialByKey), StakePoolKey,
                    refInsScriptsAndInlineDatsSupportedInEra)
 
-import           Cardano.Prelude
-
-import           Control.Monad.Fail (fail)
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
 import           Data.Coerce
+import           Data.Int (Int64)
+import           Data.Map.Strict (Map)
+import           Data.Maybe (maybeToList)
+import           Data.Ratio (Ratio, (%))
 import           Data.String
 import qualified Data.Text as Text
+import           Data.Word (Word64)
+import           Numeric.Natural (Natural)
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto

@@ -6,7 +6,6 @@ module Gen.Hedgehog.Roundtrip.CBOR
   ) where
 
 import           Cardano.Api
-import           Cardano.Prelude
 import           Hedgehog (Gen, Property)
 
 import qualified Hedgehog as H

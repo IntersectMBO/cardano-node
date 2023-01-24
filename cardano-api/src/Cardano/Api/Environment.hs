@@ -8,8 +8,6 @@ module Cardano.Api.Environment
   , renderEnvSocketError
   ) where
 
-import           Prelude
-
 import           Data.Aeson
 import           Data.Text (Text)
 import qualified Data.Text as Text

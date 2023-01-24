@@ -24,8 +24,6 @@ module Cardano.Api.InMode (
     fromConsensusApplyTxErr,
   ) where
 
-import           Prelude
-
 import           Data.SOP.Strict (NS (S, Z))
 
 import qualified Ouroboros.Consensus.Byron.Ledger as Consensus

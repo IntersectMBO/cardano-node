@@ -43,8 +43,6 @@ module Cardano.Api.Modes (
     fromConsensusEraIndex,
   ) where
 
-import           Prelude
-
 import           Cardano.Api.Eras
 import           Cardano.Ledger.Crypto (StandardCrypto)
 

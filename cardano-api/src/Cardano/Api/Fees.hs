@@ -41,8 +41,6 @@ module Cardano.Api.Fees (
     toLedgerEpochInfo,
   ) where
 
-import           Prelude
-
 import qualified Data.Array as Array
 import           Data.Bifunctor (bimap, first)
 import qualified Data.ByteString as BS
@@ -55,8 +53,8 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           GHC.Records (HasField (..))
-import           Numeric.Natural
 import           Lens.Micro ((^.))
+import           Numeric.Natural
 
 import           Control.Monad.Trans.Except
 import qualified Prettyprinter as PP
@@ -947,7 +945,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     -- 4. balance the transaction and update tx change output
     txbody0 <-
       first TxBodyError $ createAndValidateTransactionBody txbodycontent
-        { txOuts = txOuts txbodycontent ++ 
+        { txOuts = txOuts txbodycontent ++
                    [TxOut changeaddr (lovelaceToTxOutValue 0) TxOutDatumNone ReferenceScriptNone]
             --TODO: think about the size of the change output
             -- 1,2,4 or 8 bytes?

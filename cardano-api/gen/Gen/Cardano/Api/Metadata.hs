@@ -7,8 +7,10 @@ module Gen.Cardano.Api.Metadata
   ) where
 
 import           Cardano.Api
-import           Cardano.Prelude
 import           Data.Aeson (ToJSON (..))
+import           Data.ByteString (ByteString)
+import           Data.Text (Text)
+import           Data.Word (Word64)
 import           Hedgehog (Gen)
 
 import qualified Data.Aeson as Aeson

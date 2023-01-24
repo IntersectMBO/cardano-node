@@ -24,8 +24,6 @@ module Cardano.Api.Utils
   , writeSecrets
   ) where
 
-import           Prelude
-
 import           Control.Exception (bracket)
 import           Control.Monad (forM_)
 import qualified Data.Aeson.Types as Aeson

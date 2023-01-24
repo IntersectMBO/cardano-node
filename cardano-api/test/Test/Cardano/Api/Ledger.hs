@@ -5,7 +5,6 @@ module Test.Cardano.Api.Ledger
   ) where
 
 import           Cardano.Ledger.Address (deserialiseAddr, serialiseAddr)
-import           Cardano.Prelude (($))
 import           Hedgehog (Property)
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import           Test.Cardano.Api.Genesis (exampleShelleyGenesis)

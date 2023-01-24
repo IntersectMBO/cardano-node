@@ -15,8 +15,6 @@ module Cardano.Api.Protocol
   , ProtocolClientInfoArgs(..)
   ) where
 
-import           Cardano.Prelude
-
 import           Ouroboros.Consensus.Cardano
 import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Cardano.ByronHFC (ByronBlockHFC)

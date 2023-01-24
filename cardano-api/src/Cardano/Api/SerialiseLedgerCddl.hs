@@ -27,8 +27,6 @@ module Cardano.Api.SerialiseLedgerCddl
   )
   where
 
-import           Prelude
-
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
                    newExceptT, runExceptT)
 import           Data.Aeson

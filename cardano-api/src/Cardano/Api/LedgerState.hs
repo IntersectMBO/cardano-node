@@ -50,8 +50,6 @@ module Cardano.Api.LedgerState
   )
   where
 
-import           Prelude
-
 import           Control.Exception
 import           Control.Monad (when)
 import           Control.Monad.Trans.Class
@@ -105,8 +103,8 @@ import           Cardano.Api.Modes (CardanoMode, EpochSlots (..))
 import qualified Cardano.Api.Modes as Api
 import           Cardano.Api.NetworkId (NetworkId (..), NetworkMagic (NetworkMagic))
 import           Cardano.Api.ProtocolParameters
-import           Cardano.Api.Query (CurrentEpochState (..), PoolDistribution (unPoolDistr), ProtocolState,
-                   SerialisedCurrentEpochState (..), SerialisedPoolDistribution,
+import           Cardano.Api.Query (CurrentEpochState (..), PoolDistribution (unPoolDistr),
+                   ProtocolState, SerialisedCurrentEpochState (..), SerialisedPoolDistribution,
                    decodeCurrentEpochState, decodePoolDistribution, decodeProtocolState)
 import           Cardano.Api.Utils (textShow)
 import           Cardano.Binary (DecoderError, FromCBOR)

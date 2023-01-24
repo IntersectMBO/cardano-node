@@ -8,13 +8,12 @@ module Test.Cardano.Api.Typed.JSON
   ( tests
   ) where
 
-import           Cardano.Prelude
 import           Data.Aeson (eitherDecode, encode)
+import           Gen.Cardano.Api.Typed (genMaybePraosNonce, genProtocolParameters)
 import           Hedgehog (Property, forAll, tripping)
+import           Test.Cardano.Api.Typed.Orphans ()
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testPropertyNamed)
-import           Gen.Cardano.Api.Typed (genMaybePraosNonce, genProtocolParameters)
-import           Test.Cardano.Api.Typed.Orphans ()
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Gen as Gen

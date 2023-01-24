@@ -5,7 +5,6 @@ module Test.Cardano.Api.Typed.Envelope
   ) where
 
 import           Cardano.Api
-import           Cardano.Prelude
 import           Gen.Cardano.Api.Typed
 import           Hedgehog (Property)
 import           Test.Cardano.Api.Typed.Orphans ()

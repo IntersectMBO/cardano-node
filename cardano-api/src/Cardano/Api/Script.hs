@@ -110,8 +110,6 @@ module Cardano.Api.Script (
     Hash(..),
   ) where
 
-import           Prelude
-
 import qualified Data.ByteString.Lazy as LBS
 import           Data.ByteString.Short (ShortByteString)
 import qualified Data.ByteString.Short as SBS
