@@ -363,7 +363,9 @@ runTxBuildRaw (AnyCardanoEra era)
     allReferenceInputs
       <- getAllReferenceInputs era inputsAndScriptFiles mValue certFiles withdrawals readOnlyRefIns
     inputsAndMaybeScriptWits <- readScriptWitnessFiles era inputsAndScriptFiles
-    validatedCollateralTxIns <- validateTxInsCollateral era txinsc
+    -- the same collateral input can be used for several plutus scripts
+    let filteredTxinsc = Set.toList $ Set.fromList txinsc
+    validatedCollateralTxIns <- validateTxInsCollateral era filteredTxinsc
     validatedRefInputs <- validateTxInsReference era allReferenceInputs
     validatedTxOuts <- validateTxOuts era txouts
     validatedTotCollateral <- validateTxTotalCollateral era mTotCollateral
@@ -457,7 +459,9 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
 
   allReferenceInputs <- getAllReferenceInputs era inputsAndScriptFiles mValue certFiles withdrawals readOnlyRefIns
   inputsAndMaybeScriptWits <- readScriptWitnessFiles era inputsAndScriptFiles
-  validatedCollateralTxIns <- validateTxInsCollateral era txinsc
+  -- the same collateral input can be used for several plutus scripts
+  let filteredTxinsc = Set.toList $ Set.fromList txinsc
+  validatedCollateralTxIns <- validateTxInsCollateral era filteredTxinsc
   validatedRefInputs <- validateTxInsReference era allReferenceInputs
   validatedTxOuts <- validateTxOuts era txouts
   validatedTotCollateral <- validateTxTotalCollateral era mTotCollateral
