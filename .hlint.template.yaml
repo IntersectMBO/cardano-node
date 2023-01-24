@@ -7,7 +7,7 @@
 
 
 # Warnings currently triggered by your code
-# - ignore: {name: "Move brackets to avoid $"}
+- ignore: {name: "Move brackets to avoid $"}
 
 # Specify additional command line arguments
 #

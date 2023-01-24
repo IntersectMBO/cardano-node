@@ -1036,7 +1036,7 @@ runQueryStakePools (AnyConsensusModeParams cModeParams)
 
         sbe <- getSbe $ cardanoEraStyle era
 
-        lift (queryExpr (QueryInEra eInMode $ QueryInShelleyBasedEra sbe $ QueryStakePools))
+        lift (queryExpr (QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryStakePools))
           & onLeft (left . ShelleyQueryCmdUnsupportedNtcVersion)
           & onLeft (left . ShelleyQueryCmdEraMismatch)
     ) & onLeft (left . ShelleyQueryCmdAcquireFailure)

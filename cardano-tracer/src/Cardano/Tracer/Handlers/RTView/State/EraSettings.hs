@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Cardano.Tracer.Handlers.RTView.State.EraSettings
   ( EraSettings (..)
   , ErasSettings

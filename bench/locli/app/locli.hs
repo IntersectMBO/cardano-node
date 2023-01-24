@@ -1,12 +1,10 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 import           Cardano.Prelude hiding (option)
 
 import           Control.Monad.Trans.Except.Exit (orDie)
 import qualified Options.Applicative as Opt
 
-import           Cardano.TopHandler
 import           Cardano.Command (opts, pref, renderCommandError, runCommand)
+import           Cardano.TopHandler
 
 
 main :: IO ()
