@@ -1,5 +1,5 @@
 status = [
-  "ci/push",
+  "ci/push/required",
 ]
 timeout_sec = 7200
 required_approvals = 1

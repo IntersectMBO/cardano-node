@@ -4555,11 +4555,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1667394105,
-        "narHash": "sha256-YhS7zGd6jK/QM/+wWyj0zUBZmE3HOXAL/kpJptGYIWg=",
+        "lastModified": 1672846257,
+        "narHash": "sha256-khuzjVfyNCVcsV5cHRyyb2OgWLbYLKSJlrVDNmc2Tv4=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "7fc7625a9ab2ba137bc70ddbc89a13d3fdb78c8b",
+        "rev": "ca3d466ed36011bcc14290c6d36c503eb03eb71b",
         "type": "github"
       },
       "original": {
@@ -7681,11 +7681,11 @@
     "plutus-apps_4": {
       "flake": false,
       "locked": {
-        "lastModified": 1647347289,
-        "narHash": "sha256-dxKZ1Zvflyt6igYm39POV6X/0giKbfb4U7D1TvevQls=",
+        "lastModified": 1668055541,
+        "narHash": "sha256-c0XuranD91kZ7uR0gemZQOFDNRv3pFXunJC4j064mtc=",
         "owner": "input-output-hk",
         "repo": "plutus-apps",
-        "rev": "2a40552f4654d695f21783c86e8ae59243ce9dfa",
+        "rev": "1651d36a0f6458e7d2326d57dbc1baa00034d70d",
         "type": "github"
       },
       "original": {

@@ -13,12 +13,12 @@
 }:
 
 let
-  lib = pkgs.lib;
+  inherit (pkgs) lib;
   name = "cardano-node-${version}-${platform}";
 
 in pkgs.runCommand name {
-    buildInputs = with pkgs.buildPackages; [
-      zip
+    nativeBuildInputs = with pkgs.pkgsBuildBuild; [
+      haskellBuildUtils bintools nix zip
     ];
   } ''
   mkdir -p $out release
@@ -28,6 +28,10 @@ in pkgs.runCommand name {
   mkdir -p configuration
   cp -Rv ${../configuration}/* ./configuration/
   chmod -R +w .
+
+  ${lib.optionalString (platform == "macos") (lib.concatMapStrings (exe: ''
+    rewrite-libs . ${exe}/bin/*
+  '') exes)}
 
   ${if (platform == "win64")
     then "zip -r $out/${name}.zip ."
