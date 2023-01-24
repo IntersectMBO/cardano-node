@@ -156,6 +156,7 @@ source-repository-package
      ouroboros-consensus
      ouroboros-consensus-byron
      ouroboros-consensus-cardano
+     ouroboros-consensus-cardano-tools
      ouroboros-consensus-diffusion
      ouroboros-consensus-protocol
      ouroboros-consensus-shelley

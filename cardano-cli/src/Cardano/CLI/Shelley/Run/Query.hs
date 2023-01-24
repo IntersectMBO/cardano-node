@@ -59,7 +59,8 @@ import qualified System.IO as IO
 import           Text.Printf (printf)
 
 import           Cardano.Binary (DecoderError)
-import           Cardano.CLI.Helpers (HelpersError (..), hushM, pPrintCBOR, renderHelpersError)
+import           Cardano.CLI.Helpers (HelpersError (..), Some (..), hushM,
+                   pPrintCBOR, renderHelpersError)
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (VerificationKeyOrHashOrFile,
                    readVerificationKeyOrHashOrFile)
@@ -190,9 +191,7 @@ runQueryCmd cmd =
       runQueryStakeSnapshot consensusModeParams network allOrOnlyPoolIds mOutFile
     QueryProtocolState' consensusModeParams network mOutFile ->
       runQueryProtocolState consensusModeParams network mOutFile
-    QueryUTxOWhole' consensusModeParams qFilter networkId mOutFile ->
-      runQueryUTxO consensusModeParams qFilter networkId mOutFile
-    QueryUTxOLarge' consensusModeParams qFilter networkId mOutFile ->
+    QueryUTxO' consensusModeParams qFilter networkId mOutFile ->
       runQueryUTxO consensusModeParams qFilter networkId mOutFile
     QueryKesPeriodInfo consensusModeParams network nodeOpCert mOutFile ->
       runQueryKesPeriodInfo consensusModeParams network nodeOpCert mOutFile
@@ -366,12 +365,12 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
 
 runQueryUTxO
   :: AnyConsensusModeParams
-  -> QueryUTxOFilter fp
+  -> Some QueryUTxOFilter
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryUTxO (AnyConsensusModeParams cModeParams)
-             qfilter network mOutFile = do
+             (Some qfilter) network mOutFile = do
   SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr
                          $ newExceptT readEnvSocketPath
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath

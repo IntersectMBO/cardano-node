@@ -52,14 +52,14 @@ import           Cardano.Api.Shelley
 
 import           Data.Text (Text)
 
-import           Ouroboros.Network.Protocol.LocalStateQuery.Type
-
+import           Cardano.CLI.Helpers (Some(..))
 import           Cardano.CLI.Shelley.Key (PaymentVerifier, StakeVerifier, VerificationKeyOrFile,
                    VerificationKeyOrHashOrFile, VerificationKeyTextOrFile)
 import           Cardano.CLI.Types
 
 import           Cardano.Chain.Common (BlockCount)
 import           Cardano.Ledger.Shelley.TxBody (MIRPot)
+
 --
 -- Shelley CLI command data types
 --
@@ -361,8 +361,7 @@ data QueryCmd =
   | QueryStakePools' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryStakeDistribution' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryStakeAddressInfo AnyConsensusModeParams StakeAddress NetworkId (Maybe OutputFile)
-  | QueryUTxOWhole' AnyConsensusModeParams (QueryUTxOFilter 'WholeL) NetworkId (Maybe OutputFile)
-  | QueryUTxOLarge' AnyConsensusModeParams (QueryUTxOFilter 'LargeL) NetworkId (Maybe OutputFile)
+  | QueryUTxO' AnyConsensusModeParams (Some QueryUTxOFilter) NetworkId (Maybe OutputFile)
   | QueryDebugLedgerState' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryProtocolState' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryStakeSnapshot'
@@ -389,8 +388,7 @@ renderQueryCmd cmd =
     QueryStakePools' {} -> "query stake-pools"
     QueryStakeDistribution' {} -> "query stake-distribution"
     QueryStakeAddressInfo {} -> "query stake-address-info"
-    QueryUTxOWhole' {} -> "query utxo"
-    QueryUTxOLarge' {} -> "query utxo"
+    QueryUTxO' {} -> "query utxo"
     QueryDebugLedgerState' {} -> "query ledger-state"
     QueryProtocolState' {} -> "query protocol-state"
     QueryStakeSnapshot' {} -> "query stake-snapshot"

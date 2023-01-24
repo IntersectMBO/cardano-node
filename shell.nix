@@ -100,8 +100,6 @@ let
       nixWrapped
       cardano-cli
       bech32
-      cardano-ping
-      cardano-cli
       cardano-node
       cardano-topology
       cardano-tracer

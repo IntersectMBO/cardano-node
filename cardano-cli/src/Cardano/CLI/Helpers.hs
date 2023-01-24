@@ -3,6 +3,7 @@
 
 module Cardano.CLI.Helpers
   ( HelpersError(..)
+  , Some(..)
   , printWarning
   , deprecationWarning
   , ensureNewFile
@@ -129,3 +130,9 @@ hushM :: forall e m a. Monad m => Either e a -> (e -> m ()) -> m (Maybe a)
 hushM r f = case r of
   Right a -> return (Just a)
   Left e -> f e >> return Nothing
+
+data Some (f :: k -> Type) where
+    Some :: f a -> Some f
+
+instance Show (Some f) where
+  show = const "Some(..)"

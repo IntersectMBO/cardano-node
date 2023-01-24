@@ -52,6 +52,7 @@ import           Cardano.Api.Shelley
 
 import           Cardano.Chain.Common (BlockCount (BlockCount))
 import           Cardano.CLI.Shelley.Commands
+import           Cardano.CLI.Shelley.Helpers (Some (..))
 import           Cardano.CLI.Shelley.Key (PaymentVerifier (..), StakeVerifier (..),
                    VerificationKeyOrFile (..), VerificationKeyOrHashOrFile (..),
                    VerificationKeyTextOrFile (..))
@@ -951,23 +952,13 @@ pQueryCmd =
                   <*> pMaybeOutputFile
 
     pQueryUTxO :: Parser QueryCmd
-    pQueryUTxO = pQueryUTxOWhole <|> pQueryUTxOLarge
+    pQueryUTxO =
+      (QueryUTxO'
+       <$> pConsensusModeParams
+       <*> pQueryUTxOFilterWhole
+       <*> pNetworkId
+       <*> pMaybeOutputFile)
 
-    pQueryUTxOWhole :: Parser QueryCmd
-    pQueryUTxOWhole =
-      QueryUTxOWhole'
-        <$> pConsensusModeParams
-        <*> pQueryUTxOFilterWhole
-        <*> pNetworkId
-        <*> pMaybeOutputFile
-
-    pQueryUTxOLarge :: Parser QueryCmd
-    pQueryUTxOLarge =
-      QueryUTxOLarge'
-        <$> pConsensusModeParams
-        <*> pQueryUTxOFilterLarge
-        <*> pNetworkId
-        <*> pMaybeOutputFile
 
     pQueryStakePools :: Parser QueryCmd
     pQueryStakePools =
@@ -2471,10 +2462,11 @@ pTxByronWitnessCount =
       <> Opt.value 0
       )
 
-pQueryUTxOFilterWhole :: Parser (QueryUTxOFilter 'WholeL)
-pQueryUTxOFilterWhole =
-      pQueryUTxOWhole
-  <|> pQueryUTxOByAddress
+pQueryUTxOFilterWhole :: Parser (Some QueryUTxOFilter)
+pQueryUTxOFilterWhole =  (
+      Some <$> pQueryUTxOWhole
+  <|> Some <$> pQueryUTxOByAddress
+  <|> Some <$> pQueryUTxOByTxIn)
   where
     pQueryUTxOWhole =
       Opt.flag' QueryUTxOWhole
@@ -2493,10 +2485,6 @@ pQueryUTxOFilterWhole =
           <> Opt.help "Filter by Cardano address(es) (Bech32-encoded)."
           )
 
-pQueryUTxOFilterLarge :: Parser (QueryUTxOFilter 'LargeL)
-pQueryUTxOFilterLarge =
-      pQueryUTxOByTxIn
-  where
     pQueryUTxOByTxIn :: Parser (QueryUTxOFilter 'LargeL)
     pQueryUTxOByTxIn = QueryUTxOByTxIn . Set.fromList <$> some pByTxIn
 
