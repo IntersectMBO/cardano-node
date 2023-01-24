@@ -12,8 +12,8 @@ repository cardano-haskell-packages
 
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
-index-state: 2022-09-27T00:00:00Z
-index-state: cardano-haskell-packages 2022-10-25T20:00:00Z
+index-state: 2022-09-27T18:00:00Z
+index-state: cardano-haskell-packages 2023-01-26T18:00:00Z
 
 packages:
     cardano-api
@@ -90,12 +90,12 @@ constraints:
     -- TODO: these should be set in cabal files, but avoiding setting them in lower dependencies for initial CHaP release
   , cardano-prelude == 0.1.0.0
   , base-deriving-via == 0.1.0.0
-  , cardano-binary  == 1.5.0
+  , cardano-binary == 1.5.0
   , cardano-binary-test == 1.3.0
-  , cardano-crypto-class  == 2.0.0.0.1
-  , cardano-crypto-praos  == 2.0.0.0.1
-  , cardano-crypto-tests  == 2.0.0.0.1
-  , cardano-slotting  == 0.1.0.0
+  , cardano-crypto-class == 2.0.0.0.1
+  , cardano-crypto-praos == 2.0.0.0.1
+  , cardano-crypto-tests == 2.0.0.0.1
+  , cardano-slotting == 0.1.0.0
   , measures == 0.1.0.0
   , orphans-deriving-via == 0.1.0.0
   , strict-containers == 0.1.0.0
@@ -106,7 +106,48 @@ constraints:
   , prettyprinter-configurable == 0.1.0.0
   , plutus-ghc-stub == 8.6.5
   , word-array == 0.1.0.0
-  , word-array == 0.1.0.0
+  , cardano-crypto-wrapper == 1.3.0
+  , byron-spec-chain == 0.1.0.0
+  , byron-spec-ledger == 0.1.0.0
+  , cardano-data == 0.1.0.1
+  , cardano-ledger-alonzo == 0.1.0.0
+  , cardano-ledger-babbage == 0.1.0.0
+  , cardano-ledger-byron == 0.1.0.0
+  , cardano-ledger-core == 0.1.0.0
+  , cardano-ledger-pretty == 0.1.0.0
+  , cardano-ledger-shelley == 0.1.0.0
+  , cardano-ledger-shelley-ma == 0.1.0.0
+  , cardano-ledger-shelley-test == 0.1.0.0
+  , cardano-protocol-tpraos == 0.1.0.0
+  , non-integral == 0.1.0.0
+  , set-algebra == 0.1.0.0
+  , small-steps == 0.1.0.0
+  , small-steps-test == 0.1.0.0
+  , vector-map == 0.1.0.0
+  , contra-tracer == 0.1.0.0
+  , lobemo-backend-aggregation == 0.1.0.0
+  , lobemo-backend-monitoring == 0.1.0.0
+  , lobemo-backend-trace-forwarder == 0.1.0.0
+  , lobemo-scribe-systemd == 0.1.0.0
+  , typed-protocols == 0.1.0.0
+  , typed-protocols-cborg == 0.1.0.0
+  , ekg-forward == 0.1.0
+  , ap-normalize == 0.1.0.1
+  , cardano-prelude-test == 0.1.0.1
+  , generic-monoid == 0.1.0.1
+  , lobemo-backend-ekg == 0.1.0.1
+  , monoidal-synchronisation == 0.1.0.1
+  , network-mux == 0.1.0.1
+  , ouroboros-consensus == 0.1.0.1
+  , ouroboros-consensus-byron == 0.1.0.1
+  , ouroboros-consensus-cardano == 0.1.0.1
+  , ouroboros-consensus-protocol == 0.1.0.1
+  , ouroboros-consensus-shelley == 0.1.0.1
+  , ouroboros-network == 0.1.0.1
+  , ouroboros-network-framework == 0.1.0.1
+  , ouroboros-network-testing == 0.1.0.1
+  , tracer-transformers == 0.1.0.1
+  , wl-pprint-annotated == 0.1.0.1
 
 extra-packages:
     ouroboros-consensus-cardano-tools == 0.1.0.0
@@ -148,4 +189,3 @@ source-repository-package
   location: https://github.com/denisshevchenko/threepenny-gui
   tag: 4ec92ded05ccf59ba4a874be4b404ac1b6d666b6
   --sha256: 00fvvaf4ir4hskq4a6gggbh2wmdvy8j8kn6s4m1p1vlh8m8mq514
-
