@@ -26,8 +26,6 @@ module Cardano.Api.Keys.Praos (
     signArbitraryBytesKes,
   ) where
 
-import           Prelude
-
 import           Data.ByteString (ByteString)
 import           Data.Either.Combinators (maybeToRight)
 import           Data.String (IsString (..))

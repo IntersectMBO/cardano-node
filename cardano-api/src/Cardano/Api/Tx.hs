@@ -47,8 +47,6 @@ module Cardano.Api.Tx (
            AsKeyWitness, AsByronWitness, AsShelleyWitness),
   ) where
 
-import           Prelude
-
 import           Data.Maybe
 
 import           Data.ByteString (ByteString)
@@ -95,8 +93,8 @@ import qualified Cardano.Ledger.Keys as Shelley
 import qualified Cardano.Ledger.Keys.Bootstrap as Shelley
 import qualified Cardano.Ledger.SafeHash as Ledger
 
-import qualified Cardano.Ledger.Shelley.Tx as Shelley
 import qualified Cardano.Ledger.Shelley.API as Ledger (ShelleyTx (..))
+import qualified Cardano.Ledger.Shelley.Tx as Shelley
 
 import           Cardano.Ledger.Alonzo (AlonzoScript)
 import qualified Cardano.Ledger.Alonzo as Alonzo
@@ -109,8 +107,8 @@ import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.Keys.Class
 import           Cardano.Api.Keys.Byron
+import           Cardano.Api.Keys.Class
 import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.NetworkId
 import           Cardano.Api.SerialiseCBOR

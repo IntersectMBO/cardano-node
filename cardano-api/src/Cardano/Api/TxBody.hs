@@ -156,8 +156,6 @@ module Cardano.Api.TxBody (
     AsType(AsTxId, AsTxBody, AsByronTxBody, AsShelleyTxBody, AsMaryTxBody),
   ) where
 
-import           Prelude
-
 import           Control.Applicative (some)
 import           Control.Monad (guard)
 import           Data.Aeson (object, withObject, (.:), (.:?), (.=))
@@ -205,19 +203,19 @@ import qualified Cardano.Crypto.Hashing as Byron
 
 import qualified Cardano.Ledger.Address as Shelley
 import qualified Cardano.Ledger.AuxiliaryData as Ledger
+import           Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..),
+                   BabbageTxBody (BabbageTxBody), BabbageTxOut (BabbageTxOut))
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe)
+import qualified Cardano.Ledger.Block as Ledger
 import qualified Cardano.Ledger.Coin as Ledger
+import           Cardano.Ledger.Core (EraAuxiliaryData)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Credential as Shelley
 import           Cardano.Ledger.Crypto (StandardCrypto)
+import qualified Cardano.Ledger.Era as CC
 import qualified Cardano.Ledger.Keys as Shelley
 import qualified Cardano.Ledger.SafeHash as SafeHash
-import           Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..),
-                   BabbageTxBody (BabbageTxBody), BabbageTxOut (BabbageTxOut))
-import qualified Cardano.Ledger.Block as Ledger
-import           Cardano.Ledger.Core (EraAuxiliaryData)
-import qualified Cardano.Ledger.Era as CC
 import qualified Cardano.Ledger.TxIn as Ledger
 import           Cardano.Ledger.Val (isZero)
 
@@ -228,23 +226,23 @@ import qualified Cardano.Ledger.Shelley.Metadata as Shelley
 import qualified Cardano.Ledger.Shelley.Tx as Shelley
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 
-import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as Allegra
+import           Cardano.Ledger.Mary.Value (MaryValue)
 import           Cardano.Ledger.ShelleyMA.AuxiliaryData (MAAuxiliaryData (..))
+import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as Allegra
+import           Cardano.Ledger.ShelleyMA.TxBody (MATxBody (..))
 import qualified Cardano.Ledger.ShelleyMA.TxBody as Allegra
 import qualified Cardano.Ledger.ShelleyMA.TxBody as Mary
-import           Cardano.Ledger.ShelleyMA.TxBody (MATxBody (..))
-import           Cardano.Ledger.Mary.Value (MaryValue)
 
+import           Cardano.Ledger.Alonzo.Data (AlonzoAuxiliaryData (AlonzoAuxiliaryData))
+import qualified Cardano.Ledger.Alonzo.Data as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
-import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
-import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
-import           Cardano.Ledger.Alonzo.Data (AlonzoAuxiliaryData (AlonzoAuxiliaryData))
-import qualified Cardano.Ledger.Alonzo.Data as Alonzo
 import           Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (AlonzoTxBody),
                    AlonzoTxOut (AlonzoTxOut))
+import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
+import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 
 import qualified Cardano.Ledger.Babbage.PParams as Babbage
 import qualified Cardano.Ledger.Babbage.TxBody as Babbage

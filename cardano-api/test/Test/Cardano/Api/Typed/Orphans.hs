@@ -7,8 +7,6 @@
 
 module Test.Cardano.Api.Typed.Orphans () where
 
-import           Cardano.Prelude
-
 import           Cardano.Api.Shelley
 import           Cardano.Crypto.Hash hiding (Hash)
 import           Cardano.Crypto.KES

@@ -13,8 +13,6 @@ module Cardano.Api.Convenience.Query (
     renderQueryConvenienceError,
   ) where
 
-import           Prelude
-
 import           Control.Monad.Trans.Except (ExceptT (..), except, runExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistMaybe)
 import           Data.Bifunctor (first)

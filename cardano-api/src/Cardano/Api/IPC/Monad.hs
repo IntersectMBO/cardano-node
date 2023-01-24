@@ -9,8 +9,6 @@ module Cardano.Api.IPC.Monad
   , determineEraExpr
   ) where
 
-import           Prelude
-
 import           Control.Concurrent.STM
 import           Control.Monad
 import           Control.Monad.IO.Class

@@ -4,7 +4,6 @@ module Test.Cardano.Api.Typed.Script
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
-import           Cardano.Prelude
 import           Data.Aeson
 import           Gen.Cardano.Api.Typed
 import           Hedgehog (Property, (===))

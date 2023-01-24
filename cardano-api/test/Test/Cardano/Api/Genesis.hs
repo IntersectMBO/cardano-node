@@ -7,8 +7,6 @@ module Test.Cardano.Api.Genesis
   ( exampleShelleyGenesis
   ) where
 
-import           Cardano.Prelude
-
 import           Cardano.Api.Shelley (ShelleyGenesis (..))
 
 import           Data.ListMap (ListMap (ListMap))

@@ -5,10 +5,7 @@ module Gen.Cardano.Crypto.Seed
 
 import           Cardano.Api (AsType, Key)
 import           Cardano.Crypto.Seed (Seed)
-import           Data.Functor ((<$>))
-import           Data.Int (Int)
 import           Hedgehog (MonadGen, Range)
-import           Prelude (fromIntegral)
 
 import qualified Cardano.Api as API
 import qualified Cardano.Crypto.Seed as C

@@ -12,8 +12,7 @@ module Test.Cardano.Api.Crypto
   )
 where
 
-import           Cardano.Prelude
-import           Prelude (String)
+import           Data.Proxy (Proxy (..))
 
 import           Cardano.Api.Crypto.Ed25519Bip32 (Ed25519Bip32DSIGN, SignKeyDSIGN (..))
 

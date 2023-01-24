@@ -35,8 +35,6 @@ module Cardano.Api.TxIn (
     renderTxIn,
   ) where
 
-import           Prelude
-
 import           Control.Applicative (some)
 import           Data.Aeson (withText)
 import qualified Data.Aeson as Aeson

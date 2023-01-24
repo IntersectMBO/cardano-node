@@ -35,8 +35,6 @@ module Cardano.Api.Keys.Shelley (
     Hash(..),
   ) where
 
-import           Prelude
-
 import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText, withText)
 import           Data.Bifunctor (first)
 import           Data.ByteString (ByteString)

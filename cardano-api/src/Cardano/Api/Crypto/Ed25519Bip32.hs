@@ -18,11 +18,11 @@ module Cardano.Api.Crypto.Ed25519Bip32
   )
 where
 
-import           Cardano.Prelude hiding (show)
-import           Prelude (show)
-
+import           Control.DeepSeq (NFData)
 import           Data.ByteArray as BA (ByteArrayAccess, ScrubbedBytes, convert)
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
+import           GHC.Generics (Generic)
 import           NoThunks.Class (InspectHeap (..), NoThunks)
 
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..))

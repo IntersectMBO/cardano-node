@@ -40,8 +40,6 @@ module Cardano.Api.TxMetadata (
     AsType(..)
   ) where
 
-import           Prelude
-
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy

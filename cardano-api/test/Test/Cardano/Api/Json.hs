@@ -8,7 +8,6 @@ module Test.Cardano.Api.Json
 
 import           Cardano.Api.Orphans ()
 import           Cardano.Api.Shelley
-import           Cardano.Prelude
 import           Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), eitherDecode, encode)
 import           Data.Aeson.Types (Parser, parseEither)
 import           Gen.Cardano.Api (genAlonzoGenesis)

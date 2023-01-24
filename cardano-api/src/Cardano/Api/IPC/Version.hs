@@ -6,9 +6,6 @@ module Cardano.Api.IPC.Version
   , UnsupportedNtcVersionError(..)
   ) where
 
-import           Data.Eq (Eq)
-import           Text.Show (Show)
-
 import           Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
 
 -- | The query 'a' is a versioned query, which means it requires the Node to support a minimum

@@ -8,8 +8,6 @@ module Cardano.Api.SerialiseUsing
   , UsingBech32(..)
   ) where
 
-import           Prelude
-
 import qualified Data.Aeson.Types as Aeson
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as Base16

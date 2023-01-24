@@ -17,8 +17,6 @@
 
 module Cardano.Api.Orphans () where
 
-import           Prelude
-
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, pairs, (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)

@@ -15,8 +15,6 @@ module Cardano.Api.SpecialByron
     toByronLedgertoByronVote,
   ) where
 
-import           Prelude
-
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as M

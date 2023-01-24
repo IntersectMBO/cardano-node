@@ -18,8 +18,6 @@ module Cardano.Api.DeserialiseAnyOf
   , renderSomeAddressVerificationKey
   ) where
 
-import           Prelude
-
 import qualified Data.Aeson as Aeson
 import           Data.Bifunctor (first)
 import           Data.ByteString (ByteString)
@@ -42,8 +40,8 @@ import           Cardano.Api.SerialiseTextEnvelope
 
 -- TODO: Think about if these belong
 import           Cardano.Api.Address
-import           Cardano.Api.Keys.Class
 import           Cardano.Api.Keys.Byron
+import           Cardano.Api.Keys.Class
 import           Cardano.Api.Keys.Praos
 import           Cardano.Api.Keys.Shelley
 

@@ -36,11 +36,8 @@ import           Cardano.Ledger.Shelley.Rules.PoolReap (ShelleyPoolreapEvent (..
 import           Cardano.Ledger.Shelley.Rules.Rupd (RupdEvent (..))
 import           Cardano.Ledger.Shelley.Rules.Tick (ShelleyTickEvent (NewEpochEvent))
 import           Control.State.Transition (Event)
-import           Data.Function (($), (.))
-import           Data.Functor (fmap)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (Maybe (Just, Nothing))
 import           Data.Set (Set)
 import           Data.SOP.Strict
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)

@@ -18,8 +18,6 @@ module Cardano.Api.OperationalCertificate (
     AsType(..)
   ) where
 
-import           Prelude
-
 import           Data.Word
 
 import           Cardano.Ledger.Crypto (StandardCrypto)
@@ -30,8 +28,8 @@ import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.Keys.Class
 import           Cardano.Api.Keys.Byron
+import           Cardano.Api.Keys.Class
 import           Cardano.Api.Keys.Praos
 import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.ProtocolParameters

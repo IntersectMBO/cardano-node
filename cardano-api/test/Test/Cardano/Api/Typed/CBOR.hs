@@ -7,7 +7,8 @@ module Test.Cardano.Api.Typed.CBOR
   ) where
 
 import           Cardano.Api
-import           Cardano.Prelude
+
+import           Data.Proxy (Proxy (..))
 import           Data.String (IsString (..))
 import           Gen.Cardano.Api.Typed
 import           Gen.Hedgehog.Roundtrip.CBOR (roundtrip_CBOR, roundtrip_CDDL_Tx)

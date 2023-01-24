@@ -4,8 +4,6 @@ module Cardano.Api.ValueParser
   , policyId
   ) where
 
-import           Prelude
-
 import           Control.Applicative (many, some, (<|>))
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Char as Char

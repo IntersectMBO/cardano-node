@@ -35,8 +35,6 @@ module Cardano.Api.ScriptData (
     Hash(..),
   ) where
 
-import           Prelude
-
 import           Data.Bifunctor (first)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
