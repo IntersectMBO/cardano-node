@@ -5,9 +5,10 @@ module Test.Cardano.Api.Typed.Address
   ) where
 
 import           Cardano.Api
-import           Gen.Cardano.Api.Typed (genAddressByron, genAddressShelley)
+
 import           Hedgehog (Property)
 import           Test.Cardano.Api.Typed.Orphans ()
+import           Test.Gen.Cardano.Api.Typed (genAddressByron, genAddressShelley)
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testPropertyNamed)
 

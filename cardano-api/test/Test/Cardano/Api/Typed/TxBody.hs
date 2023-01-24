@@ -8,9 +8,9 @@ import           Cardano.Api
 import           Cardano.Api.Shelley (ReferenceScript (..), refScriptToShelleyScript)
 import           Data.Maybe (isJust)
 import           Data.Type.Equality (TestEquality (testEquality))
-import           Gen.Cardano.Api.Typed (genTxBodyContent)
 import           Hedgehog (MonadTest, Property, annotateShow, failure, (===))
 import           Test.Cardano.Api.Typed.Orphans ()
+import           Test.Gen.Cardano.Api.Typed (genTxBodyContent)
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testPropertyNamed)
 

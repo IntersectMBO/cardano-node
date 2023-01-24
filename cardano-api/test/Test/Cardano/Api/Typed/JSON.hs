@@ -9,9 +9,10 @@ module Test.Cardano.Api.Typed.JSON
   ) where
 
 import           Data.Aeson (eitherDecode, encode)
-import           Gen.Cardano.Api.Typed (genMaybePraosNonce, genProtocolParameters)
+
 import           Hedgehog (Property, forAll, tripping)
 import           Test.Cardano.Api.Typed.Orphans ()
+import           Test.Gen.Cardano.Api.Typed (genMaybePraosNonce, genProtocolParameters)
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testPropertyNamed)
 

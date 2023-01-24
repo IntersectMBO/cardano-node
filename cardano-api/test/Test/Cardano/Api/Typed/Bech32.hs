@@ -2,10 +2,10 @@ module Test.Cardano.Api.Typed.Bech32
   ( tests
   ) where
 
-import           Cardano.Api (AsType(AsStakeAddress, AsShelleyAddress))
-import           Gen.Cardano.Api.Typed( genAddressShelley, genStakeAddress)
-import           Gen.Hedgehog.Roundtrip.Bech32 (roundtrip_Bech32)
+import           Cardano.Api (AsType (AsShelleyAddress, AsStakeAddress))
 import           Hedgehog (Property)
+import           Test.Gen.Cardano.Api.Typed (genAddressShelley, genStakeAddress)
+import           Test.Hedgehog.Roundtrip.Bech32 (roundtrip_Bech32)
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testPropertyNamed)
 

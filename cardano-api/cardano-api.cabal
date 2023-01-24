@@ -179,12 +179,12 @@ library gen
 
   hs-source-dirs:       gen
 
-  exposed-modules:      Gen.Cardano.Api
-                        Gen.Cardano.Api.Metadata
-                        Gen.Cardano.Api.Typed
-                        Gen.Cardano.Crypto.Seed
-                        Gen.Hedgehog.Roundtrip.Bech32
-                        Gen.Hedgehog.Roundtrip.CBOR
+  exposed-modules:      Test.Gen.Cardano.Api
+                        Test.Gen.Cardano.Api.Metadata
+                        Test.Gen.Cardano.Api.Typed
+                        Test.Gen.Cardano.Crypto.Seed
+                        Test.Hedgehog.Roundtrip.Bech32
+                        Test.Hedgehog.Roundtrip.CBOR
 
   build-depends:        aeson             >= 1.5.6.0
                       , base16-bytestring

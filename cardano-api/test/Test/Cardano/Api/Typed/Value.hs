@@ -2,16 +2,19 @@ module Test.Cardano.Api.Typed.Value
   ( tests
   ) where
 
+import           Prelude
+
 import           Cardano.Api (ValueNestedBundle (..), ValueNestedRep (..), valueFromNestedRep,
                    valueToNestedRep)
+
 import           Data.Aeson (eitherDecode, encode)
 import           Data.List (groupBy, sort)
-import           Gen.Cardano.Api.Typed (genAssetName, genValueDefault, genValueNestedRep)
+import qualified Data.Map.Strict as Map
+
 import           Hedgehog (Property, forAll, property, tripping, (===))
+import           Test.Gen.Cardano.Api.Typed (genAssetName, genValueDefault, genValueNestedRep)
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testPropertyNamed)
-
-import qualified Data.Map.Strict as Map
 
 prop_roundtrip_Value_JSON :: Property
 prop_roundtrip_Value_JSON =
