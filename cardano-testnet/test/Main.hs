@@ -44,3 +44,4 @@ main = do
   args <- E.getArgs
 
   E.withArgs args $ tests >>= T.defaultMainWithIngredients ingredients
+
