@@ -1,5 +1,3 @@
-
-
 module Testnet.Commands.Governance
   ( createByronUpdateProposal
   , createByronUpdateProposalVote
@@ -9,6 +7,7 @@ import           Prelude
 
 import           Control.Monad.Catch
 import           Control.Monad.IO.Class
+import           GHC.Stack (HasCallStack, withFrozenCallStack)
 
 import           Testnet.Util.Process (execCli_)
 
@@ -16,10 +15,10 @@ import           Hedgehog.Internal.Property
 
 
 createByronUpdateProposal
-  :: (MonadTest m, MonadCatch m, MonadIO m)
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => Int -> String -> String -> Int -> m ()
 createByronUpdateProposal testnetMagic signingKeyFp updateProposalFp ptclMajorVersion =
-  execCli_
+  withFrozenCallStack $ execCli_
     [ "byron", "governance", "create-update-proposal"
     , "--filepath", updateProposalFp
     , "--testnet-magic", show testnetMagic
@@ -34,10 +33,10 @@ createByronUpdateProposal testnetMagic signingKeyFp updateProposalFp ptclMajorVe
     ]
 
 createByronUpdateProposalVote
-  :: (MonadTest m, MonadCatch m, MonadIO m)
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => Int -> String -> String -> String -> m ()
 createByronUpdateProposalVote testnetMagic updateProposalFp signingKey outputFp =
-    execCli_
+    withFrozenCallStack $ execCli_
       [ "byron", "governance", "create-proposal-vote"
       , "--proposal-filepath", updateProposalFp
       , "--testnet-magic", show testnetMagic

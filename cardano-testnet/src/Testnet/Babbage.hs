@@ -8,20 +8,16 @@
 {-# OPTIONS_GHC -Wno-unused-local-binds -Wno-unused-matches #-}
 
 module Testnet.Babbage
-  ( BabbageTestnetOptions(..)
-  , defaultTestnetOptions
-  , TestnetRuntime (..)
+  ( TestnetRuntime (..)
   , PaymentKeyPair(..)
 
   , babbageTestnet
   ) where
 
+import           Prelude
+
 import           Control.Monad
 import           Data.Aeson (encode, object, toJSON, (.=))
-import           Hedgehog.Extras.Stock.Time (showUTCTimeSeconds)
-import           Prelude
-import           System.FilePath.Posix ((</>))
-
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
 import qualified Data.Time.Clock as DTC
@@ -29,10 +25,12 @@ import qualified Hedgehog.Extras.Stock.Aeson as J
 import qualified Hedgehog.Extras.Stock.OS as OS
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
+import           System.FilePath.Posix ((</>))
 import qualified System.Info as OS
 
 import           Testnet.Commands.Genesis
 import qualified Testnet.Conf as H
+import           Testnet.Options
 import qualified Testnet.Util.Assert as H
 import           Testnet.Util.Process (execCli_)
 import           Testnet.Util.Runtime (Delegator (..), NodeLoggingFormat (..), PaymentKeyPair (..),
@@ -41,23 +39,6 @@ import           Testnet.Util.Runtime (Delegator (..), NodeLoggingFormat (..), P
 
 
 {- HLINT ignore "Redundant flip" -}
-
-data BabbageTestnetOptions = BabbageTestnetOptions
-  { babbageNumSpoNodes :: Int
-  , babbageSlotDuration :: Int
-  , babbageSecurityParam :: Int
-  , babbageTotalBalance :: Int
-  , babbageNodeLoggingFormat :: NodeLoggingFormat
-  } deriving (Eq, Show)
-
-defaultTestnetOptions :: BabbageTestnetOptions
-defaultTestnetOptions = BabbageTestnetOptions
-  { babbageNumSpoNodes = 3
-  , babbageSlotDuration = 200
-  , babbageSecurityParam = 10
-  , babbageTotalBalance = 10020000000
-  , babbageNodeLoggingFormat = NodeLoggingFormatAsJson
-  }
 
 -- | For an unknown reason, CLI commands are a lot slower on Windows than on Linux and
 -- MacOS.  We need to allow a lot more time to set up a testnet.
@@ -75,20 +56,13 @@ babbageTestnet testnetOptions H.Conf {..} = do
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
 
-  execCli_
-    [ "byron", "genesis", "genesis"
-    , "--protocol-magic", show @Int testnetMagic
-    , "--start-time", showUTCTimeSeconds startTime
-    , "--k", show @Int (babbageSecurityParam testnetOptions)
-    , "--n-poor-addresses", "0"
-    , "--n-delegate-addresses", show @Int (babbageNumSpoNodes testnetOptions)
-    , "--total-balance", show @Int (babbageTotalBalance testnetOptions)
-    , "--delegate-share", "1"
-    , "--avvm-entry-count", "0"
-    , "--avvm-entry-balance", "0"
-    , "--protocol-parameters-file", tempAbsPath </> "byron.genesis.spec.json"
-    , "--genesis-output-dir", tempAbsPath </> "byron-gen-command"
-    ]
+  createByronGenesis
+    testnetMagic
+    startTime
+    testnetOptions
+    (tempAbsPath </> "byron.genesis.spec.json")
+    (tempAbsPath </> "byron-gen-command")
+
 
   -- Because in Babbage the overlay schedule and decentralization parameter
   -- are deprecated, we must use the "create-staked" cli command to create
