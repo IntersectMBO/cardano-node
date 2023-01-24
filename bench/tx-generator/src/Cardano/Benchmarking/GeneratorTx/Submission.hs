@@ -8,7 +8,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -102,7 +101,7 @@ mkSubmissionSummary ::
   -> IO SubmissionSummary
 mkSubmissionSummary ssThreadName startTime reportsRefs
  = do
-  results <- sequence (STM.atomically . STM.readTMVar <$> reportsRefs)
+  results <- mapM (STM.atomically . STM.readTMVar) reportsRefs
   let (failures, reports) = partitionEithers results
   now <- Clock.getCurrentTime
   let ssElapsed = Clock.diffUTCTime now startTime

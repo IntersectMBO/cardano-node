@@ -284,7 +284,7 @@ runChairman tracer networkId runningTime socketPaths cModeParams secParam = do
                 }
           in connectToLocalNode localConnInfo protocolsInMode
 
-    atomically (readTVar chainsVar)
+    readTVarIO chainsVar
 
 -- Shared State, and its API.
 

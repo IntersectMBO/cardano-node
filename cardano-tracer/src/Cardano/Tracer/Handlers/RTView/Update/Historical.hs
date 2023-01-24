@@ -1,7 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Tracer.Handlers.RTView.Update.Historical
@@ -33,7 +32,7 @@ import           Data.Time.Clock.System (getSystemTime, systemToUTCTime)
 import qualified Data.Vector as V
 import           System.Directory (createDirectoryIfMissing, doesDirectoryExist, doesFileExist)
 import           System.Directory.Extra (listFiles)
-import           System.FilePath ((</>), takeBaseName)
+import           System.FilePath (takeBaseName, (</>))
 import           System.Time.Extra (sleep)
 import           Text.Read (readMaybe)
 

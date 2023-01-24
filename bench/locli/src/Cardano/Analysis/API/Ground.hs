@@ -329,7 +329,7 @@ dumpAssociatedObjects ident xs = liftIO $
 
 readAssociatedObjects :: forall a.
   FromJSON a => String -> [JsonLogfile] -> ExceptT Text IO [(JsonLogfile, a)]
-readAssociatedObjects ident fs = firstExceptT T.pack . newExceptT . fmap sequence . fmap (fmap sequence) $
+readAssociatedObjects ident fs = firstExceptT T.pack . newExceptT . fmap (mapM sequence) $
   flip mapConcurrently fs $
     \jf@(JsonLogfile f) -> do
         x <- eitherDecode @a <$> LBS.readFile (replaceExtension f $ ident <> ".json")

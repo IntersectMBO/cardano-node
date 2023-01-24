@@ -227,9 +227,9 @@ instance FromJSON PartialNodeConfiguration where
                              then do
                                partialTraceSelection <- parseJSON $ Object v
                                if useTraceDispatcher
-                               then Last . Just <$> return (PartialTraceDispatcher partialTraceSelection)
-                               else Last . Just <$> return (PartialTracingOnLegacy partialTraceSelection)
-                             else Last . Just <$> return PartialTracingOff
+                               then return $ Last $ Just $ PartialTraceDispatcher partialTraceSelection
+                               else return $ Last $ Just $ PartialTracingOnLegacy partialTraceSelection
+                             else return $ Last $ Just PartialTracingOff
 
       -- Protocol parameters
       protocol <-  v .:? "Protocol" .!= ByronProtocol

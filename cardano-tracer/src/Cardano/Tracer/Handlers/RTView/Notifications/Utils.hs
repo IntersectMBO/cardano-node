@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Tracer.Handlers.RTView.Notifications.Utils
   ( addNewEvent

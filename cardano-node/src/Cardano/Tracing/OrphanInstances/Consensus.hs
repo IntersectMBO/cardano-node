@@ -12,6 +12,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
+{-# LANGUAGE InstanceSigs #-}
 
 module Cardano.Tracing.OrphanInstances.Consensus () where
 
@@ -103,8 +104,9 @@ instance Transformable Text IO ConsensusStartupException where
 instance HasTextFormatter ConsensusStartupException where
 
 instance ConvertRawHash blk => ConvertRawHash (Header blk) where
-  toShortRawHash _ h = toShortRawHash (Proxy @blk) h
-  fromShortRawHash _ bs = fromShortRawHash (Proxy @blk) bs
+  toShortRawHash _ = toShortRawHash (Proxy @blk)
+  fromShortRawHash _ = fromShortRawHash (Proxy @blk)
+  hashSize :: proxy (Header blk) -> Word32
   hashSize _ = hashSize (Proxy @blk)
 
 --

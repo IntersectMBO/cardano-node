@@ -245,8 +245,8 @@ nodeSubmitTx network gentx = do
 --TODO: remove these local definitions when the updated ledger lib is available
 fromCborTxAux :: LB.ByteString ->  Either Binary.DecoderError (UTxO.ATxAux B.ByteString)
 fromCborTxAux lbs =
-    fmap (annotationBytes lbs)
-      $ Binary.decodeFullDecoder "Cardano.Chain.UTxO.TxAux.fromCborTxAux"
+    annotationBytes lbs
+      <$> Binary.decodeFullDecoder "Cardano.Chain.UTxO.TxAux.fromCborTxAux"
                                  Binary.fromCBOR lbs
   where
     annotationBytes :: Functor f => LB.ByteString -> f Binary.ByteSpan -> f B.ByteString

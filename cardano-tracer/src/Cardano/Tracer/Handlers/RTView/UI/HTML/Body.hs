@@ -466,7 +466,7 @@ mkPageBody tracerEnv networkConfig dsIxs = do
       whenJustM (readMaybe <$> get value selectUpdatePeriod) $ \(periodInSec :: Int) -> do
         whenM (get UI.running chartUpdateTimer) $ UI.stop chartUpdateTimer
         unless (periodInSec == 0) $ do
-          void $ return chartUpdateTimer # set UI.interval (periodInSec * 1000)
+          void $ return chartUpdateTimer # set UI.interval (periodInSec * 1_000)
           UI.start chartUpdateTimer
         saveChartsSettings tracerEnv
 

@@ -1,5 +1,9 @@
 {-# LANGUAGE UndecidableInstances #-}
+
 {-# OPTIONS_GHC -Wno-name-shadowing -Wno-orphans #-}
+
+{- HLINT ignore "Use mapMaybe" -}
+
 module Cardano.Analysis.Summary (module Cardano.Analysis.Summary) where
 
 import Prelude                                      (head, last)

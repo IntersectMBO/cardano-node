@@ -64,14 +64,14 @@ updateResourcesHistory nodeId (ResHistory rHistory) lastResources metricName met
     case decimal metricValue of
       Left _ -> return ()
       Right (bytes :: Word64, _) -> do
-        let !memoryInMB = fromIntegral bytes / 1024 / 1024 :: Double
+        let !memoryInMB = fromIntegral bytes / 1_024 / 1_024 :: Double
         addHistoricalData rHistory nodeId now MemoryData $ ValueD memoryInMB
 
   updateGCLiveMemory =
     case decimal metricValue of
       Left _ -> return ()
       Right (bytes :: Word64, _) -> do
-        let !memoryInMB = fromIntegral bytes / 1024 / 1024 :: Double
+        let !memoryInMB = fromIntegral bytes / 1_024 / 1_024 :: Double
         addHistoricalData rHistory nodeId now GCLiveMemoryData $ ValueD memoryInMB
 
   updateGCMajorNum =

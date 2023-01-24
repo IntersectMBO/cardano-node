@@ -8,6 +8,8 @@
 {-# OPTIONS_GHC -Wno-missed-specialisations #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
+{- HLINT ignore "Redundant <$>" -}
+
 module Cardano.Benchmarking.GeneratorTx
   ( AsyncBenchmarkControl
   , walletBenchmark

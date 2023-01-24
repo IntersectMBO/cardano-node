@@ -38,6 +38,9 @@ import           Ouroboros.Network.BlockFetch.ClientState (PeerFetchInFlight (..
 
 import           Cardano.Node.Queries
 
+{- HLINT ignore "Use =<<" -}
+{- HLINT ignore "Use <=<" -}
+
 data Peer blk =
   Peer
   !RemoteConnectionId

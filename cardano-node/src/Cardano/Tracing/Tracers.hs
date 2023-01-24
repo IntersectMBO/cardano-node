@@ -542,7 +542,7 @@ traceChainMetrics
 traceChainMetrics Nothing _ _ _ _ = nullTracer
 traceChainMetrics (Just _ekgDirect) tForks _blockConfig _fStats tr = do
   Tracer $ \ev ->
-    fromMaybe (pure ()) $ doTrace <$> chainTipInformation ev
+    maybe (pure ()) doTrace (chainTipInformation ev)
   where
     chainTipInformation :: ChainDB.TraceEvent blk -> Maybe ChainInformation
     chainTipInformation = \case
@@ -777,10 +777,8 @@ traceBlockFetchServerMetrics trMeta meta tBlocksServed tLocalUp tMaxSlotNo trace
                             return (served, Just lu)
 
       traceI trMeta meta "served.block.count" served
-      case mbLocalUpstreamyness of
-           Just localUpstreamyness ->
-             traceI trMeta meta "served.block.latest.count" localUpstreamyness
-           Nothing -> return ()
+      forM_ mbLocalUpstreamyness $ \localUpstreamyness ->
+          traceI trMeta meta "served.block.latest.count" localUpstreamyness
 
 
 -- | CdfCounter tracks the number of time a value below 'limit' has been seen.

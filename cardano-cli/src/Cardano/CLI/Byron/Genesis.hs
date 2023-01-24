@@ -118,12 +118,11 @@ mkGenesisSpec gp = do
 
   where
     mkGenesisInitialiser :: Bool -> Genesis.GenesisInitializer
-    mkGenesisInitialiser useHeavyDlg =
+    mkGenesisInitialiser =
       Genesis.GenesisInitializer
       (gpTestnetBalance gp)
       (gpFakeAvvmOptions gp)
       (Common.lovelacePortionToRational (gpAvvmBalanceFactor gp))
-      useHeavyDlg
 
 -- | Generate a genesis, for given blockchain start time, protocol parameters,
 -- security parameter, protocol magic, testnet balance options, fake AVVM options,
@@ -169,7 +168,7 @@ dumpGenesis (NewDirectory outDir) genesisData gs = do
   else liftIO $ createDirectory outDir
   liftIO $ LB.writeFile genesisJSONFile (canonicalEncodePretty genesisData)
 
-  dlgCerts <- mapM findDelegateCert . map ByronSigningKey $ gsRichSecrets gs
+  dlgCerts <- mapM (findDelegateCert . ByronSigningKey) $ gsRichSecrets gs
 
   liftIO $ wOut "genesis-keys" "key"
                 serialiseToRawBytes

@@ -6,6 +6,8 @@
 
 {-# OPTIONS_GHC -fno-warn-unused-imports #-}
 
+{- HLINT ignore "Use map" -}
+
 module Main (main) where
 
 import           Control.Monad
@@ -150,7 +152,7 @@ checkPlutusLoop (Just PlutusOn{..})
     putStrLn $ "--> Read plutus script: " ++ plutusScript
     protocolParameters <- readProtocolParametersOrDie
 
-    let count = 1792        -- arbitrary counter for a loop script; should respect mainnet limits
+    let count = 1_792        -- arbitrary counter for a loop script; should respect mainnet limits
 
     redeemerFile <- getRedeemerFile
     redeemer <- readScriptData redeemerFile >>= \case

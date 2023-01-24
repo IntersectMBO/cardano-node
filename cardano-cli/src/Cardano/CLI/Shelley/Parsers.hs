@@ -1502,14 +1502,14 @@ pTxMetadataJsonSchema =
         (  Opt.long "json-metadata-no-schema"
         <> Opt.help "Use the \"no schema\" conversion from JSON to tx metadata."
         )
-    *> pure TxMetadataJsonNoSchema
+    $> TxMetadataJsonNoSchema
     )
   <|>
     (  Opt.flag' ()
         (  Opt.long "json-metadata-detailed-schema"
         <> Opt.help "Use the \"detailed schema\" conversion from JSON to tx metadata."
         )
-    *> pure TxMetadataJsonDetailedSchema
+    $> TxMetadataJsonDetailedSchema
     )
   <|>
     -- Default to the no-schema conversion.

@@ -35,7 +35,7 @@ import           System.IO.Error (isDoesNotExistError)
 import           System.Systemd.Daemon (getActivatedSockets)
 #endif
 
-
+{- HLINT ignore "Use =<<" -}
 
 
 -- | Since we support systemd socket activation, we have to handle being

@@ -1,6 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Cardano.Tracer.Handlers.Logs.Rotator
@@ -16,16 +15,15 @@ import           Data.List.Extra (dropEnd)
 import qualified Data.List.NonEmpty as NE
 import           Data.Time (diffUTCTime, getCurrentTime)
 import           Data.Word (Word16, Word32, Word64)
-import           System.Directory (doesDirectoryExist, getFileSize, makeAbsolute,
-                   removeFile)
+import           System.Directory (doesDirectoryExist, getFileSize, makeAbsolute, removeFile)
 import           System.Directory.Extra (listDirectories, listFiles)
-import           System.FilePath ((</>), takeDirectory)
+import           System.FilePath (takeDirectory, (</>))
 import           System.Time.Extra (sleep)
 
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.Logs.Utils (createEmptyLogRotation,
-                   getTimeStampFromLog, isItLog)
+import           Cardano.Tracer.Handlers.Logs.Utils (createEmptyLogRotation, getTimeStampFromLog,
+                   isItLog)
 import           Cardano.Tracer.Utils (showProblemIfAny)
 
 -- | Runs rotation mechanism for the log files.

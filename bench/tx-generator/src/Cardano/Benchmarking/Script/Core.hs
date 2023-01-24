@@ -103,7 +103,7 @@ addFund era wallet txIn lovelace keyName = do
   fundKey  <- getEnvKeys keyName
   let
     mkOutValue :: forall era. IsShelleyBasedEra era => AsType era -> ActionM (InAnyCardanoEra TxOutValue)
-    mkOutValue = \_ -> return $ InAnyCardanoEra (cardanoEra @era) (lovelaceToTxOutValue lovelace)
+    mkOutValue _ = return $ InAnyCardanoEra (cardanoEra @era) (lovelaceToTxOutValue lovelace)
   outValue <- withEra era mkOutValue
   addFundToWallet wallet txIn outValue fundKey
 
@@ -123,7 +123,7 @@ getLocalSubmitTx :: ActionM LocalSubmitTx
 getLocalSubmitTx = submitTxToNodeLocal <$> getLocalConnectInfo
 
 delay :: Double -> ActionM ()
-delay t = liftIO $ threadDelay $ floor $ 1000000 * t
+delay t = liftIO $ threadDelay $ floor $ 1_000_000 * t
 
 waitBenchmarkCore :: AsyncBenchmarkControl ->  ActionM ()
 waitBenchmarkCore ctl = do

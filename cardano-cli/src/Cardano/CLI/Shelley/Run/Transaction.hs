@@ -19,7 +19,7 @@ module Cardano.CLI.Shelley.Run.Transaction
   ) where
 
 import           Cardano.Prelude hiding (All, Any)
-import           Prelude (String, error, id)
+import           Prelude (String, error)
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, hoistMaybe, left,
                    newExceptT)
@@ -361,7 +361,7 @@ runTxBuildCmd
                                      $ readScriptWitnessFilesThruple cEra wdrls
   txMetadata <- firstExceptT ShelleyTxCmdMetadataError
                   . newExceptT $ readTxMetadata cEra metadataSchema metadataFiles
-  valuesWithScriptWits <- readValueScriptWitnesses cEra $ maybe (mempty, []) id mValue
+  valuesWithScriptWits <- readValueScriptWitnesses cEra $ fromMaybe (mempty, []) mValue
   scripts <- firstExceptT ShelleyTxCmdScriptFileError $
                      mapM (readFileScriptInAnyLang . unScriptFile) scriptFiles
   txAuxScripts <- hoistEither $ first ShelleyTxCmdAuxScriptsValidationError $ validateTxAuxScripts cEra scripts
@@ -486,7 +486,7 @@ runTxBuildRawCmd
                                      $ readScriptWitnessFilesThruple cEra wdrls
   txMetadata <- firstExceptT ShelleyTxCmdMetadataError
                   . newExceptT $ readTxMetadata cEra metadataSchema metadataFiles
-  valuesWithScriptWits <- readValueScriptWitnesses cEra $ maybe (mempty, []) id mValue
+  valuesWithScriptWits <- readValueScriptWitnesses cEra $ fromMaybe (mempty, []) mValue
   scripts <- firstExceptT ShelleyTxCmdScriptFileError $
                      mapM (readFileScriptInAnyLang . unScriptFile) scriptFiles
   txAuxScripts <- hoistEither $ first ShelleyTxCmdAuxScriptsValidationError $ validateTxAuxScripts cEra scripts

@@ -37,7 +37,7 @@ instance HasTextFormatter (WithAddr Socket.SockAddr ErrorPolicyTrace) where
 
 -- transform @ErrorPolicyTrace@
 instance Transformable Text IO (WithAddr Socket.SockAddr ErrorPolicyTrace) where
-  trTransformer verb tr = trStructured verb tr
+  trTransformer = trStructured
 
 instance ToObject (WithAddr Socket.SockAddr ErrorPolicyTrace) where
   toObject _verb (WithAddr addr ev) =

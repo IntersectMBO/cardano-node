@@ -65,7 +65,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Data.Text (pack)
 import           Network.Socket (SockAddr (..))
-import           Prelude (id, show)
+import           Prelude (show)
 
 import           Cardano.Node.Configuration.TopologyP2P ()
 import           Cardano.Tracing.OrphanInstances.Network ()
@@ -333,7 +333,7 @@ instance LogFormatting (TracePeerSelection SockAddr) where
              ]
   forMachine _dtal (TraceGossipResults res) =
     mconcat [ "kind" .= String "GossipResults"
-             , "result" .= toJSONList (map ( bimap show id <$> ) res)
+             , "result" .= toJSONList (map (first show <$>) res)
              ]
   forMachine _dtal (TraceForgetColdPeers targetKnown actualKnown sp) =
     mconcat [ "kind" .= String "ForgeColdPeers"

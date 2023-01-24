@@ -16,7 +16,7 @@
 module Cardano.Tracing.OrphanInstances.Network () where
 
 import           Cardano.Prelude hiding (group, show)
-import           Prelude (String, id, show)
+import           Prelude (String, show)
 
 import           Control.Monad.Class.MonadTime (DiffTime, Time (..))
 import           Data.Aeson (Value (..))
@@ -650,7 +650,7 @@ instance (Show peer, ToObject peer)
   trTransformer = trStructuredText
 instance (Show peer)
       => HasTextFormatter (WithMuxBearer peer MuxTrace) where
-  formatText (WithMuxBearer peer ev) = \_o ->
+  formatText (WithMuxBearer peer ev) _o =
         "Bearer on " <> pack (show peer)
      <> " event: " <> pack (show ev)
 
@@ -1456,7 +1456,7 @@ instance ToObject (TracePeerSelection SockAddr) where
              ]
   toObject _verb (TraceGossipResults res) =
     mconcat [ "kind" .= String "GossipResults"
-             , "result" .= Aeson.toJSONList (map ( bimap show id <$> ) res)
+             , "result" .= Aeson.toJSONList (map ( first show <$> ) res)
              ]
   toObject _verb (TraceForgetColdPeers targetKnown actualKnown sp) =
     mconcat [ "kind" .= String "ForgeColdPeers"

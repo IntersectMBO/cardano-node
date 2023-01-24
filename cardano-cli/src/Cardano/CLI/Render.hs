@@ -1,3 +1,5 @@
+{- HLINT ignore "Redundant id" -}
+
 module Cardano.CLI.Render
   ( customRenderHelp
   ) where

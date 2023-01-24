@@ -104,23 +104,23 @@ validateCBOR :: CBORObject -> LByteString -> Either HelpersError Text
 validateCBOR cborObject bs =
   case cborObject of
     CBORBlockByron epochSlots -> do
-      () <$ decodeCBOR bs (fromCBORABlockOrBoundary epochSlots)
+      void $ decodeCBOR bs (fromCBORABlockOrBoundary epochSlots)
       Right "Valid Byron block."
 
     CBORDelegationCertificateByron -> do
-      () <$ decodeCBOR bs (fromCBOR :: Decoder s Delegation.Certificate)
+      void $ decodeCBOR bs (fromCBOR :: Decoder s Delegation.Certificate)
       Right "Valid Byron delegation certificate."
 
     CBORTxByron -> do
-      () <$ decodeCBOR bs (fromCBOR :: Decoder s UTxO.Tx)
+      void $ decodeCBOR bs (fromCBOR :: Decoder s UTxO.Tx)
       Right "Valid Byron Tx."
 
     CBORUpdateProposalByron -> do
-      () <$ decodeCBOR bs (fromCBOR :: Decoder s Update.Proposal)
+      void $ decodeCBOR bs (fromCBOR :: Decoder s Update.Proposal)
       Right "Valid Byron update proposal."
 
     CBORVoteByron -> do
-      () <$ decodeCBOR bs (fromCBOR :: Decoder s Update.Vote)
+      void $ decodeCBOR bs (fromCBOR :: Decoder s Update.Vote)
       Right "Valid Byron vote."
 
 -- | Convert an Either to a Maybe and execute the supplied handler

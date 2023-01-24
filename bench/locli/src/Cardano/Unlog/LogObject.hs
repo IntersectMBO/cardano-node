@@ -5,7 +5,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE ViewPatterns #-}
+
 {-# OPTIONS_GHC -Wno-partial-fields -Wno-orphans #-}
+
+{- HLINT ignore "Redundant <$>" -}
+{- HLINT ignore "Redundant if" -}
+{- HLINT ignore "Use infix" -}
 
 module Cardano.Unlog.LogObject (module Cardano.Unlog.LogObject) where
 
