@@ -2,9 +2,6 @@
 # Builds Haskell packages with Haskell.nix
 ############################################################################
 { haskell-nix
-, # Version info (git revision)
-  gitrev
-, inputMap
 , incl
 }:
 let
@@ -19,7 +16,6 @@ let
                             , buildProject
                             , ...
                             }: {
-    inherit inputMap;
     name = "cardano-node";
     src = ../.;
     compiler-nix-name = "ghc8107";
@@ -225,7 +221,8 @@ let
   });
 in project.appendOverlays (with haskellLib.projectOverlays; [
   projectComponents
-  (final: prev: let inherit (final.pkgs) lib; in {
+  (final: prev:
+    let inherit (final.pkgs) lib gitrev; in {
     profiled = final.appendModule {
       modules = [{
         enableLibraryProfiling = true;
