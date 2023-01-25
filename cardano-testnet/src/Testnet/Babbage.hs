@@ -32,6 +32,7 @@ import qualified Hedgehog.Extras.Test.File as H
 import qualified System.Info as OS
 
 import qualified Testnet.Conf as H
+import           Testnet.Genesis
 import qualified Testnet.Util.Assert as H
 import           Testnet.Util.Process (execCli_)
 import           Testnet.Util.Runtime (Delegator (..), NodeLoggingFormat (..), PaymentKeyPair (..),
@@ -67,29 +68,8 @@ babbageTestnet :: BabbageTestnetOptions -> H.Conf -> H.Integration TestnetRuntim
 babbageTestnet testnetOptions H.Conf {..} = do
   H.createDirectoryIfMissing (tempAbsPath </> "logs")
 
-  H.lbsWriteFile (tempAbsPath </> "byron.genesis.spec.json") . encode $ object
-    [ "heavyDelThd"       .= ("300000000000" :: String)
-    , "maxBlockSize"      .= ("2000000" :: String)
-    , "maxTxSize"         .= ("4096" :: String)
-    , "maxHeaderSize"     .= ("2000000" :: String)
-    , "maxProposalSize"   .= ("700" :: String)
-    , "mpcThd"            .= ("20000000000000" :: String)
-    , "scriptVersion"     .= (0 :: Int)
-    , "slotDuration"      .= show @Int (babbageSlotDuration testnetOptions)
-    , "unlockStakeEpoch"  .= ("18446744073709551615" :: String)
-    , "updateImplicit"    .= ("10000" :: String)
-    , "updateProposalThd" .= ("100000000000000" :: String)
-    , "updateVoteThd"     .= ("1000000000000" :: String)
-    , "softforkRule" .= object
-      [ "initThd" .= ("900000000000000" :: String)
-      , "minThd" .= ("600000000000000" :: String)
-      , "thdDecrement" .= ("50000000000000" :: String)
-      ]
-    , "txFeePolicy" .= object
-      [ "multiplier" .= ("43946000000" :: String)
-      , "summand" .= ("155381000000000" :: String)
-      ]
-    ]
+  H.lbsWriteFile (tempAbsPath </> "byron.genesis.spec.json")
+    . encode $ defaultByronGenesisJsonValue
 
   void $ H.note OS.os
   currentTime <- H.noteShowIO DTC.getCurrentTime

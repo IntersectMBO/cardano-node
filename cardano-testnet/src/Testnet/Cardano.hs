@@ -26,7 +26,6 @@ import           Prelude
 import           Control.Monad
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.Trans.Except
-import           Data.Aeson ((.=))
 import qualified Data.Aeson as J
 import qualified Data.ByteString as BS
 import           Data.ByteString.Lazy (ByteString)
@@ -65,6 +64,7 @@ import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Network as H
 
 import qualified Testnet.Conf as H
+import           Testnet.Genesis
 import qualified Testnet.Util.Assert as H
 import qualified Testnet.Util.Process as H
 import           Testnet.Util.Process (execCli_)
@@ -280,29 +280,8 @@ cardanoTestnet testnetOptions H.Conf {..} = do
 
     H.writeFile (tempAbsPath </> node </> "port") (show port)
 
-  H.lbsWriteFile (tempAbsPath </> "byron.genesis.spec.json") . J.encode $ J.object
-    [ "heavyDelThd" .= J.toJSON @String "300000000000"
-    , "maxBlockSize" .= J.toJSON @String "2000000"
-    , "maxTxSize" .= J.toJSON @String "4096"
-    , "maxHeaderSize" .= J.toJSON @String "2000000"
-    , "maxProposalSize" .= J.toJSON @String "700"
-    , "mpcThd" .= J.toJSON @String "20000000000000"
-    , "scriptVersion" .= J.toJSON @Int 0
-    , "slotDuration" .= J.toJSON @String "1000"
-    , "softforkRule" .= J.object
-      [ "initThd" .= J.toJSON @String "900000000000000"
-      , "minThd" .= J.toJSON @String "600000000000000"
-      , "thdDecrement" .= J.toJSON @String "50000000000000"
-      ]
-    , "txFeePolicy" .= J.object
-      [ "multiplier" .= J.toJSON @String "43946000000"
-      , "summand" .= J.toJSON @String "155381000000000"
-      ]
-    , "unlockStakeEpoch" .= J.toJSON @String "18446744073709551615"
-    , "updateImplicit" .= J.toJSON @String "10000"
-    , "updateProposalThd" .= J.toJSON @String "100000000000000"
-    , "updateVoteThd" .= J.toJSON @String "1000000000000"
-    ]
+  H.lbsWriteFile (tempAbsPath </> "byron.genesis.spec.json")
+    . J.encode $ defaultByronGenesisJsonValue
 
   -- stuff
   execCli_

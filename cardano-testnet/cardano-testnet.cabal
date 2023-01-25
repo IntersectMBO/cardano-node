@@ -80,6 +80,7 @@ library
                         Testnet.Babbage
                         Testnet.Cardano
                         Testnet.Conf
+                        Testnet.Genesis
                         Testnet.Run
                         Testnet.Shelley
                         Testnet.Utils
