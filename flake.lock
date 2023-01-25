@@ -7723,11 +7723,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1670489000,
-        "narHash": "sha256-JewWjqVJSt+7eZQT9bGdhlSsS9dmsSKsMzK9g11tcLU=",
+        "lastModified": 1674063615,
+        "narHash": "sha256-xz/+7zO/O+2XrnxoFOjyEc72Sdy2ieQLpDq78XG15oI=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "61510bb482eaca8cb7d61f40f5d375d95ea1fbf7",
+        "rev": "ccd5bf7d8168a0452d9ec504ea1b559ada7752df",
         "type": "github"
       },
       "original": {

@@ -115,6 +115,14 @@ constraints:
 package snap-server
   flags: +openssl
 
+-- This flag is needed because Nix's libsodium doesn't seem to include the
+-- `crypto_vrf_ietfdraft03_proofbytes` symbol. Should be removed in the near
+-- future.
+--
+-- See https://github.com/input-output-hk/cardano-base/pull/341
+package cardano-crypto-praos
+    flags: -external-libsodium-vrf
+
 package comonad
   flags: -test-doctests
 
@@ -171,8 +179,8 @@ source-repository-package
 source-repository-package
    type: git
    location: https://github.com/input-output-hk/ekg-forward-fork
-   tag: 6cf25fbbaf9815e07f695982da4cfbb1581239c3
-   --sha256: 1gk1bcq3p5gmdxn86hiazk4j9nqvds5l40hl8l6ljgcvik5il6d6
+   tag: dd60b3121d482f94d2f65face35a4e2b33221b97
+   --sha256: 1vpncm0ylkcdfv3ifj34q81l6shqmwn11hbxp600lywpy013slpx
 
 source-repository-package
   type: git

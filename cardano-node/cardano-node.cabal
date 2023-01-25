@@ -187,10 +187,10 @@ library
                       , stm
                       , text
                       , time
-                      , tracer-transformers
                       , trace-dispatcher
                       , trace-forward
                       , trace-resources
+                      , tracer-transformers
                       , transformers
                       , transformers-except
                       , typed-protocols ^>= 0.1
