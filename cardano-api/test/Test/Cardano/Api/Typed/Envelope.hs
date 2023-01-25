@@ -6,9 +6,12 @@ module Test.Cardano.Api.Typed.Envelope
 
 import           Cardano.Api
 
+import           Data.Proxy
 import           Data.String (fromString)
 import qualified Data.Text as Text
+
 import           Gen.Cardano.Api.Typed
+
 import           Hedgehog (Property)
 import           Test.Cardano.Api.Typed.Orphans ()
 import           Test.Gen.Cardano.Api.Typed

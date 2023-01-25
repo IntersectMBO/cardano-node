@@ -20,14 +20,9 @@ module Cardano.Api.TxBodyInstances () where
 
 import           Prelude
 
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Typeable (Typeable)
 
 import qualified Cardano.Binary as CBOR
-import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
-import qualified Cardano.Ledger.Core as Ledger
-import qualified Cardano.Ledger.Serialization as CBOR
 
 import           Cardano.Api.Eras
 import           Cardano.Api.SerialiseCBOR
