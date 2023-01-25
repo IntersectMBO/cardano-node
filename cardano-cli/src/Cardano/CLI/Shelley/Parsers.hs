@@ -51,8 +51,8 @@ import           Cardano.Api
 import           Cardano.Api.Shelley
 
 import           Cardano.Chain.Common (BlockCount (BlockCount))
+import           Cardano.CLI.Helpers (Some (..))
 import           Cardano.CLI.Shelley.Commands
-import           Cardano.CLI.Shelley.Helpers (Some (..))
 import           Cardano.CLI.Shelley.Key (PaymentVerifier (..), StakeVerifier (..),
                    VerificationKeyOrFile (..), VerificationKeyOrHashOrFile (..),
                    VerificationKeyTextOrFile (..))

@@ -1,5 +1,8 @@
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE KindSignatures #-}
 
 module Cardano.CLI.Helpers
   ( HelpersError(..)
@@ -17,6 +20,7 @@ module Cardano.CLI.Helpers
 
 import           Cardano.Prelude
 import           Prelude (String)
+import qualified GHC.Show as Show
 
 import           Codec.CBOR.Pretty (prettyHexEnc)
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
@@ -134,5 +138,5 @@ hushM r f = case r of
 data Some (f :: k -> Type) where
     Some :: f a -> Some f
 
-instance Show (Some f) where
+instance Show.Show (Some f) where
   show = const "Some(..)"
