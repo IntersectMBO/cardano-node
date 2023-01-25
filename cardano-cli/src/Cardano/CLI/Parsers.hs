@@ -10,7 +10,7 @@ import           Cardano.Prelude
 import           Cardano.CLI.Byron.Parsers (backwardsCompatibilityCommands, parseByronCommands)
 import           Cardano.CLI.Render (customRenderHelp)
 import           Cardano.CLI.Run (ClientCommand (..))
-import           Cardano.CLI.Shelley.Parsers (parseShelleyCommands)
+import           Cardano.CLI.Shelley.Parsers (parseShelleyCommands, parseRpcCommand)
 import           Options.Applicative
 import           Prelude (String)
 
@@ -45,6 +45,7 @@ parseClientCommand =
     -- so we list it first.
     [ parseShelley
     , parseByron
+    , fmap RPCCommand parseRpcCommand 
     , parseDeprecatedShelleySubcommand
     , backwardsCompatibilityCommands
     , parseDisplayVersion opts

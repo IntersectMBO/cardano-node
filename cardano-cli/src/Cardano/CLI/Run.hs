@@ -18,7 +18,7 @@ import qualified Data.Text.IO as Text
 import           Cardano.CLI.Byron.Commands (ByronCommand)
 import           Cardano.CLI.Byron.Run (ByronClientCmdError, renderByronClientCmdError,
                    runByronClientCommand)
-import           Cardano.CLI.Shelley.Commands (ShelleyCommand)
+import           Cardano.CLI.Shelley.Commands (ShelleyCommand, RpcCommand)
 import           Cardano.CLI.Shelley.Run (ShelleyClientCmdError, renderShelleyClientCmdError,
                    runShelleyClientCommand)
 
@@ -34,6 +34,7 @@ import           System.Info (arch, compilerName, compilerVersion, os)
 
 import qualified Data.List as L
 import qualified System.IO as IO
+import Cardano.CLI.Shelley.Run.Rpc (runRpcCmd)
 
 -- | Sub-commands of 'cardano-cli'.
 data ClientCommand =
@@ -43,6 +44,8 @@ data ClientCommand =
 
     -- | Shelley Related Commands
   | ShelleyCommand ShelleyCommand
+
+  | RPCCommand RpcCommand
 
     -- | Shelley-related commands that have been parsed under the
     -- now-deprecated \"shelley\" subcommand.
@@ -58,6 +61,7 @@ data ClientCommandErrors
 runClientCommand :: ClientCommand -> ExceptT ClientCommandErrors IO ()
 runClientCommand (ByronCommand c) = firstExceptT ByronClientError $ runByronClientCommand c
 runClientCommand (ShelleyCommand c) = firstExceptT (ShelleyClientError c) $ runShelleyClientCommand c
+runClientCommand (RPCCommand cmd ) = runRpcCmd cmd
 runClientCommand (DeprecatedShelleySubcommand c) =
   firstExceptT (ShelleyClientError c)
     $ runShelleyClientCommandWithDeprecationWarning
