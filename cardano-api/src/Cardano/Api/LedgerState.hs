@@ -57,7 +57,7 @@ import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, left)
 import           Control.State.Transition
 import           Data.Aeson as Aeson
-import qualified Data.Aeson.Types as Data.Aeson.Types.Internal
+import           Data.Aeson.Types (Parser)
 import           Data.Bifunctor
 import           Data.ByteArray (ByteArrayAccess)
 import qualified Data.ByteArray
@@ -764,7 +764,7 @@ instance FromJSON NodeConfig where
   parseJSON v =
       Aeson.withObject "NodeConfig" parse v
     where
-      parse :: Object -> Data.Aeson.Types.Internal.Parser NodeConfig
+      parse :: Object -> Parser NodeConfig
       parse o =
         NodeConfig
           <$> o .:? "PBftSignatureThreshold"
@@ -786,47 +786,47 @@ instance FromJSON NodeConfig where
           <*> parseAlonzoHardForkEpoch o
           <*> parseBabbageHardForkEpoch o
 
-      parseByronProtocolVersion :: Object -> Data.Aeson.Types.Internal.Parser Cardano.Chain.Update.ProtocolVersion
+      parseByronProtocolVersion :: Object -> Parser Cardano.Chain.Update.ProtocolVersion
       parseByronProtocolVersion o =
         Cardano.Chain.Update.ProtocolVersion
           <$> o .: "LastKnownBlockVersion-Major"
           <*> o .: "LastKnownBlockVersion-Minor"
           <*> o .: "LastKnownBlockVersion-Alt"
 
-      parseByronSoftwareVersion :: Object -> Data.Aeson.Types.Internal.Parser Cardano.Chain.Update.SoftwareVersion
+      parseByronSoftwareVersion :: Object -> Parser Cardano.Chain.Update.SoftwareVersion
       parseByronSoftwareVersion o =
         Cardano.Chain.Update.SoftwareVersion
           <$> fmap Cardano.Chain.Update.ApplicationName (o .: "ApplicationName")
           <*> o .: "ApplicationVersion"
 
-      parseShelleyHardForkEpoch :: Object -> Data.Aeson.Types.Internal.Parser Consensus.TriggerHardFork
+      parseShelleyHardForkEpoch :: Object -> Parser Consensus.TriggerHardFork
       parseShelleyHardForkEpoch o =
         asum
           [ Consensus.TriggerHardForkAtEpoch <$> o .: "TestShelleyHardForkAtEpoch"
           , pure $ Consensus.TriggerHardForkAtVersion 2 -- Mainnet default
           ]
 
-      parseAllegraHardForkEpoch :: Object -> Data.Aeson.Types.Internal.Parser Consensus.TriggerHardFork
+      parseAllegraHardForkEpoch :: Object -> Parser Consensus.TriggerHardFork
       parseAllegraHardForkEpoch o =
         asum
           [ Consensus.TriggerHardForkAtEpoch <$> o .: "TestAllegraHardForkAtEpoch"
           , pure $ Consensus.TriggerHardForkAtVersion 3 -- Mainnet default
           ]
 
-      parseMaryHardForkEpoch :: Object -> Data.Aeson.Types.Internal.Parser Consensus.TriggerHardFork
+      parseMaryHardForkEpoch :: Object -> Parser Consensus.TriggerHardFork
       parseMaryHardForkEpoch o =
         asum
           [ Consensus.TriggerHardForkAtEpoch <$> o .: "TestMaryHardForkAtEpoch"
           , pure $ Consensus.TriggerHardForkAtVersion 4 -- Mainnet default
           ]
 
-      parseAlonzoHardForkEpoch :: Object -> Data.Aeson.Types.Internal.Parser Consensus.TriggerHardFork
+      parseAlonzoHardForkEpoch :: Object -> Parser Consensus.TriggerHardFork
       parseAlonzoHardForkEpoch o =
         asum
           [ Consensus.TriggerHardForkAtEpoch <$> o .: "TestAlonzoHardForkAtEpoch"
           , pure $ Consensus.TriggerHardForkAtVersion 5 -- Mainnet default
           ]
-      parseBabbageHardForkEpoch :: Object -> Data.Aeson.Types.Internal.Parser Consensus.TriggerHardFork
+      parseBabbageHardForkEpoch :: Object -> Parser Consensus.TriggerHardFork
       parseBabbageHardForkEpoch o =
         asum
           [ Consensus.TriggerHardForkAtEpoch <$> o .: "TestBabbageHardForkAtEpoch"
