@@ -1,6 +1,6 @@
 WB_ENV_DEFAULT='
 { "type":         "supervisor"
-, "cacheDir":     "'$HOME'/.cache/cardano-workbench"
+, "cacheDir":     "'${XDG_CACHE_HOME:-$HOME/.cache}'/cardano-workbench"
 , "basePort":     30000
 , "staggerPorts": true
 }'

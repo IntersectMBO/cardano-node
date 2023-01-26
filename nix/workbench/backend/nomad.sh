@@ -48,7 +48,7 @@ case "$op" in
         # Can't reside inside $dir, can't use a path longer than 108 characters!
         # See: https://man7.org/linux/man-pages/man7/unix.7.html
         # char        sun_path[108];            /* Pathname */
-        setenvjqstr 'podman_socket_path' "/run/user/$UID/workbench-podman.sock"
+        setenvjqstr 'podman_socket_path' "${XDG_RUNTIME_DIR:-/run/user/$UID}/workbench-podman.sock"
 
         # Fetch all the default values that are inside the meta stanza:
         ## Get the job and group name from the job's JSON description.
