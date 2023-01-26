@@ -2,8 +2,8 @@
 , lib
 # Cardano packages/executables.
 , cardano-node, cardano-node-eventlogged
-, cardano-tracer, tx-generator
-# OCI Image builder.
+, cardano-tracer
+, tx-generator
 }:
 
 let
@@ -86,6 +86,7 @@ in (rec {
     clusterNode = {
       imageName = clusterNode.imageName;
       imageTag = clusterNode.imageTag;
+      # https://github.com/containers/skopeo/blob/main/docs/skopeo-copy.1.md
       copyToPodman = "${clusterNode.copyToPodman}/bin/copy-to-podman";
     };
   };

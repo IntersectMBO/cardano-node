@@ -64,7 +64,7 @@ let
       ++
       (with pkgs; [
         # https://docs.podman.io/en/latest/markdown/podman.1.html#rootless-mode
-        podman
+        podman # cni cni-plugins
         # Was not needed even thou it says so!
         # https://docs.podman.io/en/latest/markdown/podman.1.html#note-unsupported-file-systems-in-rootless-mode
         # fuse-overlayfs
@@ -80,7 +80,6 @@ let
               inherit
                 (pkgs.cardanoNodePackages)
                 cardano-node cardano-tracer tx-generator;
-
               cardano-node-eventlogged = pkgs.cardanoNodePackages.cardano-node.passthru.eventlogged;
             };
         supervisorConf =

@@ -105,7 +105,7 @@ let
     namespace = "default";
 
     # The region in which to execute the job.
-    region = "workbench-region";
+    region = "workbench-region-1";
 
     #  A list of datacenters in the region which are eligible for task
     # placement. This must be provided, and does not have a default.
@@ -184,14 +184,6 @@ let
         mode = "fail";
       };
 
-      # The network stanza specifies the networking requirements for the task
-      # group, including the network mode and port allocations.
-      # https://developer.hashicorp.com/nomad/docs/job-specification/network
-      # TODO: Use "bridge" mode and port allocations ?
-      network = {
-        mode = "host";
-      };
-
       # Specifies a key-value map that annotates with user-defined metadata.
       # Used as a "template" to generate the envars passed to the container.
       # This makes it easier to change them using `jq` inside the workbench!
@@ -204,6 +196,39 @@ let
         SUPERVISORD_CONFIG = container_supervisord_conf;
         SUPERVISORD_LOGLEVEL = container_supervisord_loglevel;
         ONE_TRACER_PER_NODE = oneTracerPerNode;
+      };
+
+      # The network stanza specifies the networking requirements for the task
+      # group, including the network mode and port allocations.
+      # https://developer.hashicorp.com/nomad/docs/job-specification/network
+      # TODO: Use "bridge" mode and port allocations ?
+      network = {
+        # FIXME: "bridge" right now is not working. Client error is:
+        # {"@level":"error","@message":"prerun failed","@module":"client.alloc_runner","@timestamp":"2023-02-01T13:52:24.948596Z","alloc_id":"03faca46-0fdc-4ba0-01e9-50f67c088f99","error":"pre-run hook \"network\" failed: failed to create network for alloc: mkdir /var/run/netns: permission denied"}
+        # {"@level":"info","@message":"waiting for task to exit","@module":"client.alloc_runner","@timestamp":"2023-02-01T13:52:24.983021Z","alloc_id":"03faca46-0fdc-4ba0-01e9-50f67c088f99","task":"tracer"}
+        # {"@level":"info","@message":"marking allocation for GC","@module":"client.gc","@timestamp":"2023-02-01T13:52:24.983055Z","alloc_id":"03faca46-0fdc-4ba0-01e9-50f67c088f99"}
+        # {"@level":"info","@message":"node registration complete","@module":"client","@timestamp":"2023-02-01T13:52:27.489795Z"}
+        mode = "host";
+        port =
+          let
+            valueF = (port: {
+              to = ''${toString port}'';
+            });
+          in lib.listToAttrs (
+            # If not oneTracerPerNode, an individual tracer task is needed (instead
+            # of running a tracer alongside a node with supervisor)
+            lib.optionals (profileNix.value.node.tracer && !oneTracerPerNode) [
+              {name = "tracer";    value = valueF 31000;}
+            ]
+            ++
+            (lib.mapAttrsToList
+              (_: nodeSpec: {
+                name = nodeSpec.name;
+                value = valueF nodeSpec.port;
+              })
+              (profileNix.node-specs.value)
+            )
+          );
       };
 
       # TODO:
@@ -247,6 +272,35 @@ let
           # `null` because we are using a "template" (see below).
           env = {};
 
+          # https://developer.hashicorp.com/nomad/docs/job-specification/service
+          service = {
+            # Specifies the name this service will be advertised as in Consul.
+            # If not supplied, this will default to the name of the job, task
+            # group, and task concatenated together with a dash, like
+            # "docs-example-server". Each service must have a unique name within
+            # the cluster. Names must adhere to RFC-1123 §2.1 and are limited to
+            # alphanumeric and hyphen characters (i.e. [a-z0-9\-]), and be less
+            # than 64 characters in length.
+            name = "${name}";
+            # Specifies the service registration provider to use for service
+            # registrations. Valid options are either consul or nomad. All
+            # services within a single task group must utilise the same provider
+            # value.
+            provider = "nomad";
+            # Specifies the port to advertise for this service. The value of
+            # port depends on which address_mode is being used:
+            # - alloc: Advertise the mapped to value of the labeled port and the
+            # allocation address. If a to value is not set, the port falls back
+            # to using the allocated host port. The port field may be a numeric
+            # port or a port label specified in the same group's network block.
+            # - driver: Advertise the port determined by the driver (e.g.
+            # Docker). The port may be a numeric port or a port label specified
+            # in the driver's ports field.
+            # - host: Advertise the host port for this service. port must match
+            # a port label specified in the network block.
+            port = "${name}";
+          };
+
           # Specifies the set of templates to render for the task. Templates can
           # be used to inject both static and dynamic configuration with data
           # populated from environment variables, Consul and Vault.
@@ -274,6 +328,25 @@ let
               change_mode = "noop";
               error_on_missing_key = true;
             }
+# TODO
+            # Dynamically generated addresses
+/*
+            {
+              env = false;
+              destination = "${container_statedir}/addresses.json";
+              data = ''
+                <<EOH
+                  {
+                    {{ range nomadService "redis" }}
+                      DEMO_REDIS_ADDR={{ .Address }}:{{ .Port }}
+                    {{ end }}
+                  }
+                EOH
+              ''
+              change_mode = "noop";
+              error_on_missing_key = true;
+            }
+*/
             # supervisord
             ## supervisord configuration file.
             {
@@ -458,7 +531,7 @@ let
         # If not oneTracerPerNode, an individual tracer task is needed (instead
         # of running a tracer alongside a node with supervisor)
         lib.optionals (profileNix.value.node.tracer && !oneTracerPerNode) [
-          {name = "tracer";    value = valueF "tracer"    [];}
+          {name = "tracer";    value = valueF "tracer" [];}
         ]
         ++
         (lib.mapAttrsToList
