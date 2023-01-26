@@ -73,6 +73,8 @@
     std.follows = "tullia/std";
 
     nix2container.url = "github:nlewo/nix2container";
+
+    cardano-automation.url = "github:input-output-hk/cardano-automation";
   };
 
   outputs =
@@ -92,6 +94,7 @@
     , tullia
     , std
     , nix2container
+    , cardano-automation
     , ...
     }@input:
     let
@@ -117,6 +120,7 @@
         (final: prev: {
           inherit customConfig nix2container;
           inherit (tullia.packages.${final.system}) tullia nix-systems;
+          bench-data-publish = cardano-automation.outputs.packages.${final.system}."bench-data-publish:exe:bench-data-publish";
           gitrev = final.customConfig.gitrev or self.rev or "0000000000000000000000000000000000000000";
           commonLib = lib
             // iohkNix.lib

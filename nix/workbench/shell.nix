@@ -108,14 +108,21 @@ in project.shellFor {
     workbenchRunner.interactive-start
     workbenchRunner.interactive-stop
     workbenchRunner.interactive-restart
-  ] ++ lib.optional haveGlibcLocales pkgs.glibcLocales
-  ++ lib.optionals (!backend.useCabalRun) [cardano-topology cardano-cli locli]
+  ]
+  # Backend packages take precendence.
   ++ backend.extraShellPkgs
-  ++ lib.optionals (!workbenchDevMode)
-    [
-      workbenchRunner.workbench.workbench
+  ++ [
+      # Publish
+      bench-data-publish
+      # Publish tunnel
+      yq nomad vault-bin norouter socat
+      # Debugging
+      postgresql
     ]
-    ;
+  ++ lib.optional haveGlibcLocales pkgs.glibcLocales
+  ++ lib.optionals (!backend.useCabalRun) [ cardano-topology cardano-cli locli ]
+  ++ lib.optionals (!workbenchDevMode) [ workbenchRunner.workbench.workbench ]
+  ;
 
 } // { inherit shellHook;
      }
