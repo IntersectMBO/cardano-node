@@ -3,12 +3,6 @@ final: prev: with final; {
 
   inherit (cardanoNodeProject.args) compiler-nix-name;
 
-  # The is used by nix/regenerate.sh to pre-compute package list to avoid double evaluation.
-  genProjectPackages = lib.genAttrs
-    (lib.attrNames (haskell-nix.haskellLib.selectProjectPackages
-      cardanoNodeProject.hsPkgs))
-    (name: lib.attrNames cardanoNodeProject.pkg-set.options.packages.value.${name}.components.exes);
-
   cabal = haskell-nix.cabal-install.${compiler-nix-name};
 
   hlint = haskell-nix.tool compiler-nix-name "hlint" {

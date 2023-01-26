@@ -70,7 +70,7 @@ rec {
     in
     {
       "ci/pr/required" = mkBulkJobsTask "pr.required";
-      "ci/pr/nonrequired" = mkBulkJobsTask "pr.nonrequired";
+      "ci/pr/nonrequired" = mkBulkJobsTask "pr.nonrequired --keep-going";
       "ci/push/required" = mkBulkJobsTask "required";
 
       "ci/cardano-deployment" = { lib, ... } @ args: {
