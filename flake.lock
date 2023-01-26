@@ -14610,11 +14610,11 @@
         "std": "std_4"
       },
       "locked": {
-        "lastModified": 1674645024,
-        "narHash": "sha256-HMd6pnBlV2eSqB5Cy+KHmhNiLu2oybsoWHqDDXIErKo=",
+        "lastModified": 1674742391,
+        "narHash": "sha256-6rmKvTohmyGpxGv8ecZKBef9p3SQzRNMz3Mldr5CIe8=",
         "owner": "input-output-hk",
         "repo": "tullia",
-        "rev": "68201331f733c82a5598e39ec8e455db0d40594a",
+        "rev": "6ff10fd4f6b80d8ef5b4b2baafa4740277bce4c6",
         "type": "github"
       },
       "original": {
