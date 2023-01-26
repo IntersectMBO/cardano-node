@@ -31,4 +31,4 @@ jobs:
 
     - name: Run hlint
       run: |
-        nix build '.#checks/hlint'
+        nix build -L '.#checks/hlint'
