@@ -197,7 +197,10 @@
             ))
             # checks run on default system only;
             // (optionalAttrs (system == defaultSystem) {
-            });
+            hlint = pkgs.callPackage pkgs.hlintCheck {
+              inherit (project.args) src;
+            };
+          });
 
           exes = (collectExes project) // {
             inherit (pkgs) cabalProjectRegenerate checkCabalProject;
@@ -314,7 +317,11 @@
               };
             };
           };
-          defaultNonRequiredPaths = [ "windows.checks.cardano-tracer.cardano-tracer-test"
+          defaultNonRequiredPaths = [
+              # hlint required status is controled via the github action:
+              "native.checks/hlint"
+              #FIXME: cardano-tracer-test for windows should probably be disabled in haskell.nix config:
+              "windows.checks.cardano-tracer.cardano-tracer-test"
               #FIXME: plutus-scripts-bench (dep of tx-generator) does not compile for windows:
               "windows.tx-generator"
               "windows.benchmarks.tx-generator"
