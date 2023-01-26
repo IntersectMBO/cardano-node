@@ -34,6 +34,7 @@ import           Generic.Data (gmappend)
 import           Cardano.BM.Tracing (TracingVerbosity (..))
 import           Cardano.Node.Orphans ()
 
+{- HLINT ignore "Functor law" -}
 
 data TraceOptions
   = TracingOff

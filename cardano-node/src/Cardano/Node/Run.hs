@@ -99,6 +99,8 @@ import           Cardano.Node.Queries
 import           Cardano.Node.TraceConstraints (TraceConstraints)
 import           Cardano.Tracing.Tracers
 
+{- HLINT ignore "Fuse concatMap/map" -}
+{- HLINT ignore "Redundant <$>" -}
 {- HLINT ignore "Use fewer imports" -}
 
 runNode
@@ -160,9 +162,7 @@ installSigTermHandler = do
     Signals.sigTERM
     (Signals.CatchOnce $ do
       runThreadIdMay <- deRefWeak runThreadIdWk
-      case runThreadIdMay of
-        Nothing -> return ()
-        Just runThreadId -> killThread runThreadId
+      forM_ runThreadIdMay $ \runThreadId -> killThread runThreadId
     )
     Nothing
 #endif
@@ -486,7 +486,7 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
       DisabledP2PMode -> return ()
       EnabledP2PMode  -> do
         traceWith (startupTracer tracers) P2PWarning
-        when (not $ ncTestEnableDevelopmentNetworkProtocols nc)
+        unless (ncTestEnableDevelopmentNetworkProtocols nc)
           $ traceWith (startupTracer tracers)
                       P2PWarningDevelopementNetworkProtocols
       ) :: IO () -- annoying, but unavoidable for GADT type inference

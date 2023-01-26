@@ -68,7 +68,7 @@ convertLogging tsc = do
 ---------------------------------------------------------------------------------------------------
 
 instance FromJSON (GenTxSubmitNodeConfig Logging.Representation) where
-  parseJSON o = Aeson.withObject "top-level" parseGenTxSubmitNodeConfig o
+  parseJSON = Aeson.withObject "top-level" parseGenTxSubmitNodeConfig
 
 parseGenTxSubmitNodeConfig :: Object -> Parser (GenTxSubmitNodeConfig Logging.Representation)
 parseGenTxSubmitNodeConfig o = GenTxSubmitNodeConfig

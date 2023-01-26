@@ -2,6 +2,8 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{- HLINT ignore "Use map" -}
+
 module Cardano.Logging.DocuGenerator (
     addDocumentedNamespace
   , addDocs

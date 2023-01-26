@@ -1,6 +1,10 @@
 {-# LANGUAGE StrictData #-}
+
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing -Wno-orphans #-}
+
 {- HLINT ignore "Use head" -}
+{- HLINT ignore "Evaluate" -}
+
 module Cardano.Analysis.MachPerf (module Cardano.Analysis.MachPerf) where
 
 import Cardano.Prelude hiding (head)

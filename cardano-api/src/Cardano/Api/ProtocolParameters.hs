@@ -8,6 +8,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
+{- HLINT ignore "Redundant ==" -}
+
 -- | The various Cardano protocol parameters, including:
 --
 -- * the current values of updatable protocol parameters: 'ProtocolParameters'

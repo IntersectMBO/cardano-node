@@ -1,4 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
+
+{- HLINT ignore "Evaluate" -}
+
 module Cardano.Analysis.API.Dictionary (module Cardano.Analysis.API.Dictionary) where
 
 import Cardano.Prelude

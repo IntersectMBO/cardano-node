@@ -23,9 +23,7 @@ startResourceTracer tr delayMilliseconds = do
     resourceThread :: IO ()
     resourceThread = forever $ do
       mbrs <- readResourceStats
-      case mbrs of
-        Just rs -> traceWith tr rs
-        Nothing -> pure ()
+      forM_ mbrs $ \rs -> traceWith tr rs
       threadDelay (delayMilliseconds * 1000)
 
 --------------------------------------------------------------------------------

@@ -1,16 +1,18 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+{- HLINT ignore "Monoid law, left identity" -}
+
 module Cardano.CLI.Parsers
   ( opts
   , pref
   ) where
 
-import           Cardano.Prelude
 import           Cardano.CLI.Byron.Parsers (backwardsCompatibilityCommands, parseByronCommands)
 import           Cardano.CLI.Render (customRenderHelp)
 import           Cardano.CLI.Run (ClientCommand (..))
 import           Cardano.CLI.Shelley.Parsers (parseShelleyCommands)
+import           Cardano.Prelude
 import           Options.Applicative
 import           Prelude (String)
 

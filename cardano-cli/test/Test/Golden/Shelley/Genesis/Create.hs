@@ -26,7 +26,9 @@ import qualified Hedgehog.Gen as G
 import qualified Hedgehog.Range as R
 import qualified System.Directory as IO
 
+{- HLINT ignore "Use <$>" -}
 {- HLINT ignore "Use camelCase" -}
+{- HLINT ignore "Use mapM" -}
 {- HLINT ignore "Reduce duplication" -}
 
 parseMaxLovelaceSupply :: J.Value -> J.Parser Int

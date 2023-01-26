@@ -99,9 +99,8 @@ import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
 import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
 
-{- HLINT ignore "Reduce duplication" -}
-{- HLINT ignore "Use const" -}
-{- HLINT ignore "Use let" -}
+{- HLINT ignore "Move brackets to avoid $" -}
+{- HLINT ignore "Redundant flip" -}
 
 data ShelleyQueryCmdError
   = ShelleyQueryCmdEnvVarSocketErr !EnvSocketError

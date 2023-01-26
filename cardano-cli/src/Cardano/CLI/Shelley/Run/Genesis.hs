@@ -13,6 +13,7 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {- HLINT ignore "Reduce duplication" -}
+{- HLINT ignore "Redundant <$>" -}
 {- HLINT ignore "Use let" -}
 
 module Cardano.CLI.Shelley.Run.Genesis
@@ -114,8 +115,8 @@ import           Cardano.Chain.Update hiding (ProtocolParameters)
 import           Cardano.Slotting.Slot (EpochSize (EpochSize))
 import           Data.Fixed (Fixed (MkFixed))
 import qualified Data.Yaml as Yaml
-import           Text.JSON.Canonical (parseCanonicalJSON, renderCanonicalJSON)
 import qualified Text.JSON.Canonical (ToJSON)
+import           Text.JSON.Canonical (parseCanonicalJSON, renderCanonicalJSON)
 
 import           Data.ListMap (ListMap (..))
 
@@ -943,8 +944,8 @@ computeInsecureDelegation
   -> Ledger.PoolParams StandardCrypto
   -> IO (StdGen, Delegation)
 computeInsecureDelegation g0 nw pool = do
-    (paymentVK, g1) <- fmap (first getVerificationKey) $ generateInsecureSigningKey g0 AsPaymentKey
-    (stakeVK  , g2) <- fmap (first getVerificationKey) $ generateInsecureSigningKey g1 AsStakeKey
+    (paymentVK, g1) <- first getVerificationKey <$> generateInsecureSigningKey g0 AsPaymentKey
+    (stakeVK  , g2) <- first getVerificationKey <$> generateInsecureSigningKey g1 AsStakeKey
 
     let stakeAddressReference = StakeAddressByValue . StakeCredentialByKey . verificationKeyHash $ stakeVK
     let initialUtxoAddr = makeShelleyAddress nw (PaymentCredentialByKey (verificationKeyHash paymentVK)) stakeAddressReference
@@ -1039,7 +1040,7 @@ updateTemplate (SystemStart start)
     subtractForTreasury :: Integer
     subtractForTreasury = nonDelegCoin `quot` 10
     nonDelegCoin, delegCoin :: Integer
-    nonDelegCoin = fromIntegral (fromMaybe maximumLovelaceSupply (unLovelace <$> mAmountNonDeleg))
+    nonDelegCoin = fromIntegral (maybe maximumLovelaceSupply unLovelace mAmountNonDeleg)
     delegCoin = fromIntegral amountDeleg
 
     distribute :: Integer -> [AddressInEra ShelleyEra] -> [(AddressInEra ShelleyEra, Lovelace)]
@@ -1122,7 +1123,7 @@ updateCreateStakedOutputTemplate
     subtractForTreasury :: Integer
     subtractForTreasury = nonDelegCoin `quot` 10
     nonDelegCoin, delegCoin :: Integer
-    nonDelegCoin = fromIntegral (fromMaybe maximumLovelaceSupply (unLovelace <$> mAmountNonDeleg))
+    nonDelegCoin = fromIntegral (maybe maximumLovelaceSupply unLovelace mAmountNonDeleg)
     delegCoin = fromIntegral amountDeleg
 
     distribute :: Integer -> Int -> [AddressInEra ShelleyEra] -> [(AddressInEra ShelleyEra, Lovelace)]

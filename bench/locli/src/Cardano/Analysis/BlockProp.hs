@@ -1,9 +1,13 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE StrictData #-}
+
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing #-}
 {-# OPTIONS_GHC -Wno-unused-imports -Wno-partial-fields -Wno-unused-matches -Wno-deprecations -Wno-unused-local-binds -Wno-incomplete-record-updates #-}
-{- HLINT ignore "Use head" -}
+
 {- HLINT ignore "Avoid lambda" -}
+{- HLINT ignore "Eta reduce" -}
+{- HLINT ignore "Use head" -}
+
 module Cardano.Analysis.BlockProp
   ( summariseMultiBlockProp
   , MachView

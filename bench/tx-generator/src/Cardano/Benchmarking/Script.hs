@@ -45,4 +45,4 @@ runScript script iom = runActionM execScript iom >>= \case
 shutDownLogging :: ActionM ()
 shutDownLogging = do
   traceError "QRT Last Message. LoggingLayer going to shutdown. 73 . . . ."
-  liftIO $ threadDelay (200*1000)
+  liftIO $ threadDelay (200 * 1_000)

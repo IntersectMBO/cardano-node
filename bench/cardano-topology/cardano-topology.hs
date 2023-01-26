@@ -4,6 +4,9 @@
 {-# LANGUAGE TupleSections #-}
 {-# OPTIONS_GHC -Wno-partial-fields -Wno-name-shadowing #-}
 
+{- HLINT ignore "Redundant id" -}
+{- HLINT ignore "Use concatMap" -}
+
 import           Prelude hiding (id)
 
 import           Data.Aeson

@@ -10,6 +10,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
+{- HLINT ignore "Redundant fmap" -}
+
 module Cardano.Api.LedgerState
   ( -- * Initialization / Accumulation
     Env(..)
@@ -761,8 +763,8 @@ data NodeConfig = NodeConfig
   }
 
 instance FromJSON NodeConfig where
-  parseJSON v =
-      Aeson.withObject "NodeConfig" parse v
+  parseJSON =
+      Aeson.withObject "NodeConfig" parse
     where
       parse :: Object -> Parser NodeConfig
       parse o =
@@ -1076,9 +1078,8 @@ readShelleyGenesis (GenesisFile file) expectedGenesisHash = do
   where
     checkExpectedGenesisHash :: GenesisHashShelley -> ExceptT ShelleyGenesisError IO ()
     checkExpectedGenesisHash actual =
-      if actual /= expectedGenesisHash
-        then left (ShelleyGenesisHashMismatch actual expectedGenesisHash)
-        else pure ()
+      when (actual /= expectedGenesisHash) $
+        left (ShelleyGenesisHashMismatch actual expectedGenesisHash)
 
 data ShelleyGenesisError
      = ShelleyGenesisReadError !FilePath !Text
@@ -1121,9 +1122,8 @@ readAlonzoGenesis (GenesisFile file) expectedGenesisHash = do
   where
     checkExpectedGenesisHash :: GenesisHashAlonzo -> ExceptT AlonzoGenesisError IO ()
     checkExpectedGenesisHash actual =
-      if actual /= expectedGenesisHash
-        then left (AlonzoGenesisHashMismatch actual expectedGenesisHash)
-        else pure ()
+      when (actual /= expectedGenesisHash) $
+        left (AlonzoGenesisHashMismatch actual expectedGenesisHash)
 
 data AlonzoGenesisError
      = AlonzoGenesisReadError !FilePath !Text

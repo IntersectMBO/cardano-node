@@ -1,6 +1,8 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
 
+{- HLINT ignore "Redundant ==" -}
+
 module Cardano.Tracer.Test.Logs.Tests
   ( tests
   ) where
@@ -9,19 +11,18 @@ import           Control.Concurrent.Async (withAsync)
 import           Control.Monad (forM)
 import           Data.List.Extra (notNull)
 import qualified Data.List.NonEmpty as NE
-import           Test.Tasty
-import           Test.Tasty.QuickCheck
 import           System.Directory
 import           System.Directory.Extra
 import           System.FilePath
 import           System.Time.Extra
+import           Test.Tasty
+import           Test.Tasty.QuickCheck
 
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Handlers.Logs.Utils (isItLog)
-import           Cardano.Tracer.Run (doRunCardanoTracer)
 import           Cardano.Tracer.MetaTrace
-import           Cardano.Tracer.Utils (applyBrake, initProtocolsBrake,
-                   initDataPointRequestors)
+import           Cardano.Tracer.Run (doRunCardanoTracer)
+import           Cardano.Tracer.Utils (applyBrake, initDataPointRequestors, initProtocolsBrake)
 
 import           Cardano.Tracer.Test.Forwarder
 import           Cardano.Tracer.Test.TestSetup

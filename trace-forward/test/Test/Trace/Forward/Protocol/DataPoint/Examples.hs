@@ -1,6 +1,8 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{- HLINT ignore "Use map" -}
+
 module Test.Trace.Forward.Protocol.DataPoint.Examples
   ( dataPointAcceptorApply
   , dataPointForwarderCount
