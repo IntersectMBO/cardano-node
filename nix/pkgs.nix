@@ -13,23 +13,23 @@ final: prev: with final; {
 
   hlint = haskell-nix.tool compiler-nix-name "hlint" {
     version = "3.2.7";
-    index-state = "2022-12-11T00:00:00Z";
+    index-state = "2023-01-20T05:50:56Z";
   };
 
   ghcid = haskell-nix.tool compiler-nix-name "ghcid" {
     version = "0.8.7";
-    index-state = "2022-12-11T00:00:00Z";
+    index-state = "2023-01-20T05:50:56Z";
   };
 
-  haskell-language-server = haskell-nix.tool "ghc8107" "haskell-language-server" {
+  haskell-language-server = haskell-nix.tool compiler-nix-name "haskell-language-server" {
     # ghcide 1.9.0.0 does not compile on ghc 8.10.7
     version = {ghc8107 = "1.8.0.0";}.${compiler-nix-name} or "1.9.0.0";
-    index-state = {ghc8107 = "2022-12-11T00:00:00Z";}.${compiler-nix-name} or "2023-01-11T00:00:00Z";
+    index-state = "2023-01-20T05:50:56Z";
   };
 
   haskellBuildUtils = prev.haskellBuildUtils.override {
     inherit compiler-nix-name;
-    index-state = "2022-12-11T00:00:00Z";
+    index-state = "2023-01-20T05:50:56Z";
   };
 
   cardanolib-py = callPackage ./cardanolib-py { };
