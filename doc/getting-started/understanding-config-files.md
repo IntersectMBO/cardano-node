@@ -15,9 +15,9 @@ Tells your node to which nodes in the network it should talk to. A minimal versi
   ]
 }
 ```
-* This means that your node will contact node at ip `x.x.x.x` on `port 3001`.
+* This means that your node will contact node at IP `x.x.x.x` on `port 3001`.
 
-* `valency` tells the node how many connections your node should have. It only has an effect for dns addresses. If a dns address is given, valency governs to how many resolved ip addresses should we maintain active (hot) connection; for ip addresses, valency is used as a Boolean value, where `0` means to ignore the address.
+* `valency` determines how many active (hot) outgoing connections to different resolved IP addresses your node should maintain when a DNS address is specified. The valency setting has no effect when setting an IP address, except when using `0` to disable the connection.
 
 Your __block-producing__ node must __ONLY__ talk to your __relay nodes__, and the relay node should talk to other relay nodes in the network. Go to our telegram channel to find out IP addresses and ports of peers.
 
@@ -77,12 +77,12 @@ A minimal version of this file looks like this:
     `PublicRoots` represent a source of fallback peers, a source of peers to be used if peers
     from the ledger (`useLedgerAfterSlot`) is disabled or unavailable.
 
-* This means that your node will contact node at ip `x.x.x.x` on `port 3001`, and resolve
-    dns domain `y.y.y.y` (assuming they are), and try to maintain a connection with at least `1` of the
-    resolved ips.
+* This means that your node will contact node at IP `x.x.x.x` on `port 3001`, and resolve
+    DNS domain `y.y.y.y` (assuming they are), and try to maintain a connection with at least `1` of the
+    resolved IPs.
 
 * `valency` tells the node how many connections your node should try to pick
-  from the given group. If a dns address is given, valency governs to how many
+  from the given group. If a DNS address is given, valency governs to how many
   resolved ip addresses should we maintain active (hot) connection.
 
 * Local roots groups shall be non-overlapping.
@@ -91,7 +91,7 @@ Your __block-producing__ node must __ONLY__ talk to your __relay nodes__, and th
 
 You __can__ tell the node that the topology configuration file changed by sending a SIGHUP
 signal to the `cardano-node` process, e.g. `pkill -HUP cardano-node`. After receiving the
-signal, `cardano-node` will re-read the file and restart all dns resolution. Please
+signal, `cardano-node` will re-read the file and restart all DNS resolution. Please
 **note** that this only applies to the topology configuration file!
 
 One can disable ledger peers by setting the `useLedgerAfterSlot` to a negative
