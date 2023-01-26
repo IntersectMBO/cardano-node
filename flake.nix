@@ -197,10 +197,7 @@
             ))
             # checks run on default system only;
             // (optionalAttrs (system == defaultSystem) {
-            hlint = pkgs.callPackage pkgs.hlintCheck {
-              inherit (project.args) src;
-            };
-          });
+            });
 
           exes = (collectExes project) // {
             inherit (pkgs) cabalProjectRegenerate checkCabalProject;
