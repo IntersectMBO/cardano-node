@@ -143,7 +143,7 @@ library
                       , filepath
                       , mime-mail
                       , optparse-applicative
-                      , ouroboros-network
+                      , ouroboros-network-api
                       , ouroboros-network-framework
                       , signal
                       , smtp-mail == 0.3.0.0
@@ -209,7 +209,7 @@ library demo-forwarder-lib
                       , filepath
                       , generic-data
                       , optparse-applicative-fork
-                      , ouroboros-network
+                      , ouroboros-network-api
                       , ouroboros-network-framework
                       , tasty-quickcheck
                       , time
@@ -249,7 +249,7 @@ library demo-acceptor-lib
                       , filepath
                       , generic-data
                       , optparse-applicative-fork
-                      , ouroboros-network
+                      , ouroboros-network-api
                       , stm
                       , text
                       , tasty-quickcheck
@@ -301,7 +301,7 @@ test-suite cardano-tracer-test
                       , filepath
                       , generic-data
                       , optparse-applicative-fork
-                      , ouroboros-network
+                      , ouroboros-network-api
                       , ouroboros-network-framework
                       , QuickCheck
                       , stm

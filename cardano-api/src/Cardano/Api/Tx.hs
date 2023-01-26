@@ -64,7 +64,6 @@ import qualified Data.Vector as Vector
 --
 import           Cardano.Binary (Annotated (..))
 import qualified Cardano.Binary as CBOR
-import qualified Cardano.Prelude as CBOR (cborError)
 
 --
 -- Crypto API used by consensus and Shelley (and should be used by Byron)

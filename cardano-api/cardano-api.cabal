@@ -146,10 +146,13 @@ library
                       , ouroboros-consensus
                       , ouroboros-consensus-byron
                       , ouroboros-consensus-cardano
+                      , ouroboros-consensus-diffusion
                       , ouroboros-consensus-protocol
                       , ouroboros-consensus-shelley
                       , ouroboros-network
+                      , ouroboros-network-api
                       , ouroboros-network-framework
+                      , ouroboros-network-protocols
                       , parsec
                       , plutus-ledger-api ^>= 1.0
                       , prettyprinter

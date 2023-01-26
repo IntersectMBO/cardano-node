@@ -106,6 +106,7 @@ import           Ouroboros.Network.TxSubmission.Inbound (ProcessedTxCount (..),
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound (..))
 
 import qualified Ouroboros.Network.Diffusion as ND
+import Ouroboros.Network.SizeInBytes (SizeInBytes(..))
 
 {- HLINT ignore "Use record patterns" -}
 
@@ -742,14 +743,14 @@ instance ( ConvertTxId blk
     mconcat [ "kind" .= String "MsgBlock"
              , "agency" .= String (pack $ show stok)
              , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
-             , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+             , "blockSize" .= toJSON (getSizeInBytes (estimateBlockSize (getHeader blk)))
              ]
 
   toObject verb (AnyMessageAndAgency stok (MsgBlock blk)) =
     mconcat [ "kind" .= String "MsgBlock"
              , "agency" .= String (pack $ show stok)
              , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
-             , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+             , "blockSize" .= toJSON (getSizeInBytes (estimateBlockSize (getHeader blk)))
              , "txIds" .= toJSON (presentTx <$> extractTxs blk)
              ]
       where
@@ -1123,7 +1124,7 @@ instance (HasHeader header, ConvertRawHash header)
   toObject _verb (BlockFetch.CompletedBlockFetch pt _ _ _ delay blockSize) =
     mconcat [ "kind"  .= String "CompletedBlockFetch"
              , "delay" .= (realToFrac delay :: Double)
-             , "size"  .= blockSize
+             , "size"  .= getSizeInBytes blockSize
              , "block" .= String
                (case pt of
                   GenesisPoint -> "Genesis"

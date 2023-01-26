@@ -51,7 +51,8 @@ executable cardano-node-chairman
                       , io-classes ^>= 0.3
                       , optparse-applicative-fork
                       , ouroboros-consensus
-                      , ouroboros-network
+                      , ouroboros-network-api
+                      , ouroboros-network-protocols
                       , strict-stm
                       , text
                       , time

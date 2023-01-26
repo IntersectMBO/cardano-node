@@ -96,7 +96,7 @@ constraints:
   -- Needed until ouroboros-network gets proper bounds
   , byron-spec-chain == 0.1.1.1
   , byron-spec-ledger == 0.1.1.1
-  , cardano-binary == 1.5.0
+  , cardano-binary == 1.5.0.1
   , cardano-ledger-alonzo == 0.1.1.1
   , cardano-ledger-babbage == 0.1.1.1
   , cardano-ledger-byron == 0.1.1.1
@@ -107,6 +107,7 @@ constraints:
   , cardano-ledger-shelley == 0.1.1.1
   , cardano-ledger-shelley-ma == 0.1.1.1
   , cardano-ledger-shelley-test == 0.1.1.1
+  , cardano-prelude == 0.1.0.1
   , cardano-protocol-tpraos == 0.1.1.1
   , hedgehog-extras >= 0.3.0.3
 
@@ -149,17 +150,27 @@ source-repository-package
 source-repository-package
    type: git
    location: https://github.com/input-output-hk/ouroboros-network
-   tag: 72863b0fc78abdc2b8e29f0dda96c06da3dd11d0
-   --sha256: 0qwvx04l9q3h7acb0a3b8iarqcn5bkqhwaplbga5pvryqp3lhn00
+   tag: 17f15b4ceedbbcfd81ca9449fd834870cd065b0f
+   --sha256: 1zlb12hm3ji0hhksw9qmdlqqi2zw37046d6zq5cys36gmrcznmy2
    subdir:
      monoidal-synchronisation
      network-mux
      ouroboros-consensus
      ouroboros-consensus-byron
      ouroboros-consensus-cardano
+     ouroboros-consensus-diffusion
      ouroboros-consensus-protocol
      ouroboros-consensus-shelley
      ouroboros-network
+     ouroboros-network-api
      ouroboros-network-framework
+     ouroboros-network-mock
+     ouroboros-network-protocols
      ouroboros-network-testing
      ouroboros-consensus-cardano-tools
+
+source-repository-package
+   type: git
+   location: https://github.com/input-output-hk/ekg-forward-fork
+   tag: 6cf25fbbaf9815e07f695982da4cfbb1581239c3
+   --sha256: 0qwvx04l9q3h7acb0a3b8iarqcn5bkqhwaplbga5pvryqp3lhn00
