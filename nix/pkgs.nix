@@ -6,7 +6,7 @@ final: prev: with final; {
   cabal = haskell-nix.cabal-install.${compiler-nix-name};
 
   hlint = haskell-nix.tool compiler-nix-name "hlint" {
-    version = "3.2.7";
+    version = {ghc8107 = "3.4.1";}.${compiler-nix-name} or "3.5";
     index-state = "2023-01-20T05:50:56Z";
   };
 
