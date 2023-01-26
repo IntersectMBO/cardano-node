@@ -1,0 +1,138 @@
+name: Stylish Haskell
+
+on:
+  push:
+  create:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+
+    env:
+      # Modify this value to "invalidate" the cabal cache.
+      CABAL_CACHE_VERSION: "2022-12-30"
+
+      STYLISH_HASKELL_VERSION: "0.14.4.0"
+
+      STYLISH_HASKELL_PATHS: >
+        cardano-testnet
+        cardano-git-rev
+        cardano-api
+        cardano-node
+        cardano-client-demo
+        cardano-node-chairman
+        cardano-tracer
+        trace-resources
+        cardano-node-capi
+        trace-dispatcher
+        trace-forward
+        cardano-cli
+        cardano-submit-api
+
+    steps:
+    - name: Install Haskell
+      uses: input-output-hk/setup-haskell@v1
+      id: setup-haskell
+      with:
+        ghc-version: 9.2.4
+        cabal-version: 3.8.1.0
+
+    - name: Cabal update
+      run: cabal update
+
+    - name: Get stylish-haskell
+      run: cabal get "stylish-haskell-$STYLISH_HASKELL_VERSION"
+
+    - name: Build dry run for stylish-haskell
+      run: |
+        cd "stylish-haskell-$STYLISH_HASKELL_VERSION"
+        cabal build all --dry-run
+
+    # For users who fork cardano-node and want to define a writable cache, then can set up their own
+    # S3 bucket then define in their forked repository settings the following secrets:
+    #
+    #   AWS_ACCESS_KEY_ID
+    #   AWS_SECRET_ACCESS_KEY
+    #   BINARY_CACHE_URI
+    #   BINARY_CACHE_REGION
+    - name: Cabal cache over S3
+      uses: action-works/cabal-cache-s3@v1
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      with:
+        region: ${{ secrets.BINARY_CACHE_REGION }}
+        dist-dir: stylish-haskell-${{ env.STYLISH_HASKELL_VERSION }}/dist-newstyle
+        store-path: ${{ steps.setup-haskell.outputs.cabal-store }}
+        threads: 16
+        archive-uri: ${{ secrets.BINARY_CACHE_URI }}/${{ env.CABAL_CACHE_VERSION }}/${{ runner.os }}
+        skip: "${{ secrets.BINARY_CACHE_URI == '' }}"
+
+    # It's important to ensure that people who fork this repository can not only successfully build in
+    # CI by default, but also have meaning cabal store caching.
+    #
+    # Because syncing with S3 requires credentials, we cannot rely on S3 for this. For this reason a
+    # https fallback is used. The https server mirrors the content of the S3 bucket. The https cabal
+    # store archive is read-only for security reasons.
+    #
+    # Users who fork this repository who want to have a writable cabal store archive are encouraged
+    # to set up their own S3 bucket.
+    - name: Cabal cache over HTTPS
+      uses: action-works/cabal-cache-s3@v1
+      with:
+        dist-dir: stylish-haskell-${{ env.STYLISH_HASKELL_VERSION }}/dist-newstyle
+        store-path: ${{ steps.setup-haskell.outputs.cabal-store }}
+        threads: 16
+        archive-uri: https://iohk.cache.haskellworks.io/${{ env.CABAL_CACHE_VERSION }}/${{ runner.os }}
+        skip: "${{ secrets.BINARY_CACHE_URI != '' }}"
+        enable-save: false
+
+    - name: Build stylish-haskell
+      run: |
+        cd "stylish-haskell-$STYLISH_HASKELL_VERSION"
+        cabal build all
+
+    - name: Install stylish-haskell
+      run: |
+        cd "stylish-haskell-$STYLISH_HASKELL_VERSION"
+        cabal install exe:stylish-haskell
+
+    - name: Remove stylish-haskell build directory
+      run: rm -rf "stylish-haskell-$STYLISH_HASKELL_VERSION"
+
+    - name: stylish-haskell installation directory
+      run: find . -name stylish-haskell
+
+    - name: Add installation directory to path
+      run: echo "PATH=$HOME/.cabal/bin:$PATH" >> $GITHUB_ENV
+
+    - uses: actions/checkout@v2
+
+    - name: Run stylish-haskell over all Haskell files
+      run: |
+        git add .
+        git stash
+
+        for x in $(git ls-tree --full-tree --name-only -r HEAD ${{ env.STYLISH_HASKELL_PATHS }}); do
+          if [ "${x##*.}" == "hs" ]; then
+            stylish-haskell -i $x
+          fi
+        done
+
+        git --no-pager diff
+
+    - name: Run stylish-haskell over all modified files
+      run: |
+        git add .
+        git stash
+        git fetch origin master --unshallow
+        for x in $(git diff --name-only HEAD origin/master ${{ env.STYLISH_HASKELL_PATHS }}); do
+          if [ "${x##*.}" == "hs" ]; then
+            stylish-haskell -i $x
+          fi
+        done
+
+        git --no-pager diff --exit-code
