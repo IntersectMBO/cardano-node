@@ -70,7 +70,7 @@ rec {
     in
     {
       "ci/pr/required" = mkBulkJobsTask "pr.required";
-      "ci/pr/nonrequired" = mkBulkJobsTask "pr.nonrequired";
+      "ci/pr/nonrequired" = mkBulkJobsTask "pr.nonrequired --keep-going";
       "ci/push/required" = mkBulkJobsTask "required";
 
       "ci/cardano-deployment" = { lib, ... } @ args: {
@@ -104,7 +104,7 @@ rec {
         #lib.io.github_push
         #input: "${ciInputName}"
         #repo: "${repository}"
-        #branch: "master|staging|trying"
+        #branch: "master|release/.*"
       '';
     in
     {
@@ -117,10 +117,23 @@ rec {
         task = "ci/cardano-deployment";
         io = pushIo;
       };
-
+      # This one is used for both PR status and bors:
       "cardano-node/ci/pr/required" = {
         task = "ci/pr/required";
-        io = prIo;
+        io = ''
+          let github = {
+            #input: "${ciInputName}"
+            #repo: "${repository}"
+          }
+          let borsBranches = {
+            #branch: "staging|trying"
+          }
+          #lib.merge
+          #ios: [
+            #lib.io.github_pr & github,
+            #lib.io.github_push & borsBranches & github,
+          ]
+        '';
       };
       "cardano-node/ci/pr/nonrequired" = {
         task = "ci/pr/nonrequired";
