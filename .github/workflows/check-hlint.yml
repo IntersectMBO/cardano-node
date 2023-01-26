@@ -1,4 +1,4 @@
-name: Check mainnet configuration
+name: Check HLint
 
 on:
   push:
@@ -29,23 +29,6 @@ jobs:
 
     - uses: actions/checkout@v2
 
-    - name: Refresh cardano-node mainnet configuration
+    - name: Run hlint
       run: |
-        nix build --no-update-lock-file .#hydraJobs.cardano-deployment
-        SOURCE=$(pwd)/result
-        TARGET=$(pwd)/configuration/cardano
-
-        copyFile() {
-          echo $1
-          cp ${SOURCE}/$1 ${TARGET}/$1
-        }
-
-        copyFile "mainnet-alonzo-genesis.json"
-        copyFile "mainnet-byron-genesis.json"
-        copyFile "mainnet-config.json"
-        copyFile "mainnet-shelley-genesis.json"
-        copyFile "mainnet-topology.json"
-
-    - name: Check mainnet for mainnet configuration differences
-      run: |
-        git diff --exit-code
+        nix build -L '.#checks/hlint'
