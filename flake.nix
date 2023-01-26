@@ -244,6 +244,9 @@
 
         ciJobs =
           let
+            ciJobsVariants = mapAttrs (_: p:
+              (mkFlakeAttrs (pkgs.extend (prev: final: { cardanoNodeProject = p; }))).ciJobs
+            ) project.projectVariants;
             ciJobs = {
               cardano-deployment = pkgs.cardanoLib.mkConfigHtml { inherit (pkgs.cardanoLib.environments) mainnet testnet; };
             } // optionalAttrs (system == "x86_64-linux") {
@@ -259,6 +262,7 @@
                 asserted = lib.genAttrs [ "cardano-node" ] (n:
                   packages.${n}.passthru.asserted
                 );
+                variants = mapAttrs (_: v: removeAttrs v.native ["variants"]) ciJobsVariants;
               };
               musl =
                 let
@@ -273,6 +277,7 @@
                     exes = lib.collect lib.isDerivation projectExes;
                   };
                   internal.roots.project = muslProject.roots;
+                  variants = mapAttrs (_: v: removeAttrs v.musl ["variants"]) ciJobsVariants;
                 };
               windows =
                 let
@@ -292,6 +297,7 @@
                     );
                   };
                   internal.roots.project = windowsProject.roots;
+                  variants = mapAttrs (_: v: removeAttrs v.windows ["variants"]) ciJobsVariants;
                 });
             } // optionalAttrs (system == "x86_64-darwin") {
               native = lib.filterAttrs
@@ -310,30 +316,26 @@
                   roots.project = project.roots;
                   plan-nix.project = project.plan-nix;
                 };
+                variants = mapAttrs (_: v: removeAttrs v.musl ["variants"]) ciJobsVariants;
               };
             };
             nonRequiredPaths = [
               # hlint required status is controled via the github action:
-              "native.checks/hlint"
+              "native\\.(.*\\.)?checks/hlint"
               #FIXME: cardano-tracer-test for windows should probably be disabled in haskell.nix config:
-              "windows.checks.cardano-tracer.cardano-tracer-test"
+              "windows\\.(.*\\.)?checks\\.cardano-tracer\\.cardano-tracer-test"
               #FIXME: plutus-scripts-bench (dep of tx-generator) does not compile for windows:
-              "windows.tx-generator"
-              "windows.benchmarks.tx-generator"
-              "windows.tests.tx-generator.tx-generator-apitest"
-              "windows.checks.tx-generator.tx-generator-apitest"
-              "windows.tests.tx-generator.tx-generator-test"
-              "windows.checks.tx-generator.tx-generator-test"
+              "windows\\.(.*\\.)?tx-generator.*"
             ] ++
             lib.optionals (system == "x86_64-darwin") [
               #FIXME:  ExceptionInLinkedThread (ThreadId 253) pokeSockAddr: path is too long
-              "native.checks/cardano-testnet/cardano-testnet-tests"
+              "native\\.(.*\\.)?.checks/cardano-testnet/cardano-testnet-tests"
             ];
           in
           pkgs.callPackages iohkNix.utils.ciJobsAggregates
             {
               inherit ciJobs;
-              nonRequiredPaths = map lib.hasPrefix nonRequiredPaths;
+              nonRequiredPaths = map (r: p: builtins.match r p != null) nonRequiredPaths;
             } // ciJobs // {
             pr = {
               # We use a generic gitrev for PR CI to avoid unecessary rebuilds:

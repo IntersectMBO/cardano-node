@@ -37,7 +37,7 @@ jobs:
       uses: input-output-hk/setup-haskell@v1
       id: setup-haskell
       with:
-        ghc-version: 9.2.4
+        ghc-version: 9.2.5
         cabal-version: 3.8.1.0
 
     - name: Cabal update
