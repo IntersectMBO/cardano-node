@@ -178,7 +178,34 @@ let
                   ${exportNodePath}
                   export CARDANO_SUBMIT_API=${config.hsPkgs.cardano-submit-api.components.exes.cardano-submit-api}/bin/cardano-submit-api${pkgs.stdenv.hostPlatform.extensions.executable}
                   export CARDANO_NODE_SRC=${filteredProjectBase}
+                ''
+                # the cardano-testnet-tests, use sockets stored in a temporary directory
+                # however on macOS the socket path's max is 104 chars. The package name
+                # is already long, and as such the constructed socket path
+                #
+                #   /private/tmp/nix-build-cardano-testnet-test-cardano-testnet-tests-1.36.0-check.drv-1/chairman-test-93c5d9288dd8e6bc/socket/node-bft1
+                #
+                # exceeds taht limit easily. We therefore set a different tmp directory
+                # during the preBuild phase.
+                + ''
+                  # unset TMPDIR, otherwise mktemp will use that as a base
+                  unset TMPDIR
+                  export TMPDIR=$(mktemp -d)
+                  export TMP=$TMPDIR
                 '';
+              # cardano-tracer-test-ext, will default to /tmp/testTracerExt, which means
+              # if this test is run in parallel, things will just hang; or break.
+              packages.cardano-tracer.components.tests.cardano-tracer-test-ext.preCheck = ''
+                  # unset TMPDIR, otherwise mktemp will use that as a base
+                  unset TMPDIR
+                  export TMPDIR=$(mktemp -d)
+                  export TMP=$TMPDIR
+                  mkdir $TMP/testTracerExt
+                  # workaround the broken --workdir argument parser.
+                  # (it doesn't properly strip args before passing them to tasty;
+                  # also needs them to be quoted)
+                  export WORKDIR=$TMP/testTracerExt
+              '';
             })
           ({ pkgs, ... }: lib.mkIf (!pkgs.stdenv.hostPlatform.isDarwin) {
             # Needed for profiled builds to fix an issue loading recursion-schemes part of makeBaseFunctor

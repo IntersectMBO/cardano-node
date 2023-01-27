@@ -58,8 +58,8 @@ let
       modules = import ../../nixos/module-list.nix ++ [
         (import ../../nixos/cardano-tracer-service.nix pkgs)
         systemdCompat extra
+        { config._module.args = { inherit pkgs; }; }
       ];
-      args = { inherit pkgs; };
     };
     in eval.config.services.cardano-tracer;
 

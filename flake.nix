@@ -29,6 +29,7 @@
     };
     utils.url = "github:numtide/flake-utils";
     iohkNix = {
+      # pin iohk-nix to an older revision without the sodium renaming
       url = "github:input-output-hk/iohk-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
@@ -316,7 +317,7 @@
                   roots.project = project.roots;
                   plan-nix.project = project.plan-nix;
                 };
-                variants = mapAttrs (_: v: removeAttrs v.musl ["variants"]) ciJobsVariants;
+                variants = mapAttrs (_: v: removeAttrs v.native ["variants"]) ciJobsVariants;
               };
             };
             nonRequiredPaths = [

@@ -9,9 +9,10 @@ import           Data.Functor ((<&>))
 import           Data.Functor.Identity
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.List as L
+import           Data.Maybe (fromMaybe)
 import           Data.Monoid
 import qualified System.Directory as Sys
-import           System.Environment (setEnv, unsetEnv)
+import           System.Environment (setEnv, unsetEnv, lookupEnv)
 import qualified System.IO as Sys
 import           System.PosixCompat.Files (fileExist)
 import qualified System.Process as Sys
@@ -28,6 +29,7 @@ import           Ouroboros.Network.NodeToClient (withIOManager)
 main :: IO ()
 main = do
     setEnv "TASTY_NUM_THREADS" "1" -- For sequential running of tests (because of Windows).
+    mbWorkdir <- lookupEnv "WORKDIR"
 
     ts' <- getTestSetup
              TestSetup
@@ -37,7 +39,7 @@ main = do
              , tsSockInternal = Last $ Just "tracer.sock"
              , tsSockExternal = Last $ Just "tracer.sock"
              , tsNetworkMagic = Last $ Just $ NetworkMagic 42
-             , tsWorkDir      = Last $ Just "/tmp/testTracerExt"
+             , tsWorkDir      = Last $ Just $ fromMaybe "/tmp/testTracerExt" mbWorkdir
              }
 
     -- 1. Prepare directory hierarchy
