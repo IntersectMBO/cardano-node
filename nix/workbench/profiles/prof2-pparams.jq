@@ -2,6 +2,7 @@
 ### Sampling the protocol parameters timeline at arbitrary epoch#.
 ###
 import "epoch-timeline"    as timeline;
+import "delta-blockbudget" as blockbudget;
 import "delta-v8-preview"  as v8preview;
 
 def filterMapPParams(flt; map):
@@ -22,7 +23,9 @@ def epochPP(x):
 ### Combining timeline with arbitrary extensions:
 ###
 def overlays:
-  { "v8-preview": v8preview::delta
+  { "doublebudget": blockbudget::delta_doublebudget
+  , "stepshalf":    blockbudget::delta_stepshalf
+  , "v8-preview":   v8preview::delta
   };
 
 def pParamsWithOverlays(epoch; overlay_names):

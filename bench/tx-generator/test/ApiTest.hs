@@ -17,6 +17,7 @@ import           Data.Aeson (FromJSON, eitherDecodeFileStrict', encode)
 import qualified Data.ByteString.Lazy.Char8 as BSL (putStrLn)
 import           Data.List (sortOn)
 import           Data.Ord (comparing)
+import           GHC.Natural (Natural)
 import           Options.Applicative as Opt
 import           Options.Applicative.Common as Opt (runParserInfo)
 
@@ -25,7 +26,7 @@ import           System.Exit (die, exitSuccess)
 import           System.FilePath
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (ProtocolParameters, fromPlutusData, protocolParamMaxTxExUnits)
+import           Cardano.Api.Shelley (ProtocolParameters (..), fromPlutusData)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Types (AdjustFilePaths (..), GenesisFile (..))
 
@@ -179,27 +180,25 @@ checkPlutusLoop (Just PlutusOn{..})
           , autoBudgetDatum = ScriptDataNumber 0
           , autoBudgetRedeemer = scriptDataModifyNumber (const 1_000_000) redeemer
           }
+
+        pparamsStepFraction d = case protocolParamMaxBlockExUnits protocolParameters of
+          Just u  -> protocolParameters {protocolParamMaxBlockExUnits = Just u {executionSteps = executionSteps u `mul` d}}
+          Nothing -> protocolParameters
     putStrLn $ "--> " ++ show (plutusAutoBudgetMaxOut protocolParameters script autoBudget TargetTxExpenditure 1)
 
     let
-      blockMaxOut b = do
-        let summaries = map (summaryOfScript b) [1.0, 1.25, 1.5, 1.75, 2.0, 2.25]
-        -- mapM_ (BSL.putStrLn . prettyPrintOrdered) $
-        BSL.putStrLn $ prettyPrintOrdered $ last $
-           -- sortOn (executionSteps . projectedBudgetUnusedPerBlock) summaries
-           sortOn projectedLoopsPerBlock summaries
+      blockMaxOut b d =
+        case plutusAutoScaleBlockfit (pparamsStepFraction d) ("with factor " ++ show d) script b 1 of
+          Right (summary, _, _) -> BSL.putStrLn $ prettyPrintOrdered summary
+          Left err              -> print err
 
-
-      summaryOfScript b s =
-        let
-          ~(Right result@(b', _, _)) = plutusAutoBudgetMaxOut protocolParameters script b (TargetBlockExpenditure s) 1
-          ~(Right preRun) = preExecutePlutusScript protocolParameters script (autoBudgetDatum b') (autoBudgetRedeemer b')
-        in plutusBudgetSummary protocolParameters ("with factor " ++ show s) result preRun 1
-
-    putStrLn "--> summary for best block budget fit:"
-    blockMaxOut autoBudget
+    putStrLn "--> summary for best block budget fits:"
+    mapM_ (blockMaxOut autoBudget) [1.0, 0.5]
 
   where
+    mul :: Natural -> Double -> Natural
+    mul n d = floor $ d * fromIntegral n
+
     getRedeemerFile =
       let redeemerPath = (<.> ".redeemer.json") $ dropExtension $ takeFileName plutusScript
       in getDataFileName $ "data" </> redeemerPath

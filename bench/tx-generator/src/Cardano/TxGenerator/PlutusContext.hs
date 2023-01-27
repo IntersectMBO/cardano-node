@@ -12,6 +12,7 @@ module  Cardano.TxGenerator.PlutusContext
         , PlutusBudgetFittingStrategy(..)
         , PlutusBudgetSummary(..)
         , plutusAutoBudgetMaxOut
+        , plutusAutoScaleBlockfit
         , plutusBudgetSummary
         , readScriptData
         , scriptDataModifyNumber
@@ -23,6 +24,8 @@ import           GHC.Natural (Natural)
 
 import           Control.Monad.Trans.Except.Extra
 import           Data.Aeson as Aeson
+import           Data.List (maximumBy)
+import           Data.Ord (comparing)
 
 import           Cardano.Api
 import           Cardano.Api.Shelley (ProtocolParameters (..))
@@ -36,6 +39,7 @@ data PlutusBudgetSummary =
   { budgetPerBlock          :: !ExecutionUnits
   , budgetPerTx             :: !ExecutionUnits
   , budgetPerTxInput        :: !ExecutionUnits
+  , budgetStrategy          :: !PlutusBudgetFittingStrategy
   , budgetTarget            :: !ExecutionUnits
   , scriptId                :: !FilePath
   , scriptArgDatum          :: !ScriptData
@@ -59,6 +63,7 @@ data PlutusAutoLimitingFactor
 data PlutusBudgetFittingStrategy
   = TargetTxExpenditure
   | TargetBlockExpenditure Double
+  deriving (Generic, Eq, Show, ToJSON)
 
 instance ToJSON ScriptData where
   toJSON = scriptDataToJson ScriptDataJsonDetailedSchema
@@ -75,6 +80,28 @@ readScriptData jsonFilePath
         handleIOExceptT (TxGenError . show) (eitherDecodeFileStrict' jsonFilePath)
     firstExceptT ApiError . hoistEither $
        scriptDataFromJson ScriptDataJsonDetailedSchema sData
+
+-- finds the optimal scaling factor for block expenditure, by aiming at highest loop count per block
+plutusAutoScaleBlockfit ::
+     ProtocolParameters
+  -> FilePath
+  -> ScriptInAnyLang
+  -> PlutusAutoBudget
+  -> Int
+  -> Either TxGenError (PlutusBudgetSummary, PlutusAutoBudget, ExecutionUnits)
+plutusAutoScaleBlockfit pparams fp script pab txInputs
+  = do
+    summaries <- mapM go factors
+    pure $ maximumBy (comparing (\(s, _, _) -> projectedLoopsPerBlock s)) summaries
+  where
+    factors = [1.0, 1.25 .. 2.25]
+    go (TargetBlockExpenditure -> strat) = do
+      result@(pab', _, _) <- plutusAutoBudgetMaxOut pparams script pab strat txInputs
+      preRun <- preExecutePlutusScript pparams script (autoBudgetDatum pab') (autoBudgetRedeemer pab')
+      pure  ( plutusBudgetSummary pparams fp strat result preRun txInputs
+            , pab'
+            , preRun
+            )
 
 -- | Use a binary search to find a loop counter that maxes out the available script execution units.
 --   plutusAutoBudgetMaxOut makes two assumptions about the loop / PlutusAuto script:
@@ -132,6 +159,7 @@ plutusAutoBudgetMaxOut _ _ _ _ _
 plutusBudgetSummary ::
      ProtocolParameters
   -> FilePath
+  -> PlutusBudgetFittingStrategy
   -> (PlutusAutoBudget, Int, [PlutusAutoLimitingFactor])
   -> ExecutionUnits
   -> Int
@@ -142,6 +170,7 @@ plutusBudgetSummary
     , protocolParamMaxTxExUnits     = Just budgetPerTx
     }
   scriptId
+  budgetStrategy
   (PlutusAutoBudget{..}, loopCounter, loopLimitingFactors)
   budgetUsedPerTxInput
   txInputs
@@ -160,7 +189,7 @@ plutusBudgetSummary
     projectedBudgetUnusedPerBlock = budgetPerBlock `minus` calc usedPerTx (*) projectedTxPerBlock
     usedPerTx                = calc budgetUsedPerTxInput (*) txInputs
 
-plutusBudgetSummary _ _ _ _ _
+plutusBudgetSummary _ _ _ _ _ _
   = error "plutusBudgetSummary : call to function in pre-Alonzo era. This is an implementation error in tx-generator."
 
 

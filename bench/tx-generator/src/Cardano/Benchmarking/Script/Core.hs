@@ -451,13 +451,20 @@ makePlutusContext ScriptSpec{..} = do
           }
       traceDebug $ "Plutus auto mode : Available budget per Tx: " ++ show perTxBudget
                    ++ " -- split between inputs per Tx: " ++ show txInputs
-
+      {-
       case plutusAutoBudgetMaxOut protocolParameters script autoBudget (TargetBlockExpenditure 1.25) txInputs of
         Left err -> liftTxGenError err
         Right result@(PlutusAutoBudget{..}, _, _) -> do
           preRun <- preExecuteScriptAction protocolParameters script autoBudgetDatum autoBudgetRedeemer
           setEnvSummary $
             plutusBudgetSummary protocolParameters scriptSpecFile result preRun txInputs
+          dumpBudgetSummaryIfExisting
+          return (autoBudgetDatum, autoBudgetRedeemer, preRun)
+      -}
+      case plutusAutoScaleBlockfit protocolParameters scriptSpecFile script autoBudget txInputs of
+        Left err -> liftTxGenError err
+        Right (summary, PlutusAutoBudget{..}, preRun) -> do
+          setEnvSummary summary
           dumpBudgetSummaryIfExisting
           return (autoBudgetDatum, autoBudgetRedeemer, preRun)
 

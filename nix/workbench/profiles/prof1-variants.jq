@@ -191,8 +191,8 @@ def all_profile_variants:
     ) as $for_4ep
   |
     ({} |
-     .generator.epochs                = 12
-    ) as $for_12ep
+     .generator.epochs                = 15
+    ) as $for_15ep
   |
     ({}
      | .node.shutdown_on_block_synced   = 1
@@ -268,8 +268,6 @@ def all_profile_variants:
       }
     }
     | .generator.tx_fee        = 1025000
-    | .genesis.pparamsEpoch    = timeline::lastKnownEpoch
-    | .genesis.pparamsOverlays = ["v8-preview"]
     ) as $plutus_loop_secp_ecdsa
   |
    ({ generator:
@@ -293,13 +291,29 @@ def all_profile_variants:
       }
     }
     | .generator.tx_fee        = 1020000
-    | .genesis.pparamsEpoch    = timeline::lastKnownEpoch
-    | .genesis.pparamsOverlays = ["v8-preview"]
     ) as $plutus_loop_secp_schnorr
+  ##
+  ### Definition vocabulary:  genesis variants
+  ##
   |
+    ({}
+      | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
+      | .genesis.pparamsOverlays      = ["v8-preview"]
+    ) as $costmodel_v8_preview
+  |
+    ({}
+      | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
+      | .genesis.pparamsOverlays      = ["v8-preview", "stepshalf"]
+    ) as $costmodel_v8_preview_stepshalf
+  |
+    ({}
+      | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
+      | .genesis.pparamsOverlays      = ["v8-preview", "doublebudget"]
+    ) as $costmodel_v8_preview_doubleb
   ##
   ### Definition vocabulary:  node config variants
   ##
+  |
     ({ extra_desc:                     "without cardano-tracer"
      , suffix:                         "notracer"
      }|
@@ -355,15 +369,15 @@ def all_profile_variants:
     { desc: "Miniature dataset, CI-friendly duration, bench scale"
     }) as $cibench_base
   |
-   ($scenario_fixed_loaded * $dataset_small * $for_12ep *
+   ($scenario_fixed_loaded * $dataset_small * $for_15ep *
     { node:
-      { shutdown_on_slot_synced:        7200
-      }
-      , desc: "Small dataset, honest 12 epochs duration"
-    }
-    | .genesis.pparamsEpoch    = timeline::lastKnownEpoch
-    | .genesis.pparamsOverlays = ["v8-preview"]
-    ) as $plutuscall_base
+        { shutdown_on_slot_synced:        9000
+        }
+      , analysis:
+        { filters:                        ["epoch3+", "size-moderate"] 
+        }
+      , desc: "Small dataset, honest 15 epochs duration"
+    }) as $plutuscall_base
   |
    ($scenario_fixed_loaded * $triplet * $dataset_oct2021 *
     { node:
@@ -418,15 +432,15 @@ def all_profile_variants:
   , { name: "default"
     , desc: "Default, as per nix/workbench/profiles/defaults.jq"
     }
-  , $plutus_base * $plutus_loop_counter *
+  , $plutus_base * $costmodel_v8_preview * $plutus_loop_counter *
     { name: "plutus"
     , desc: "Default with Plutus workload: CPU/memory limit saturation counter loop"
     }
-  , $plutus_base * $plutus_loop_secp_ecdsa *
+  , $plutus_base * $costmodel_v8_preview * $plutus_loop_secp_ecdsa *
     { name: "plutus-secp-ecdsa"
     , desc: "Default with Plutus workload: CPU/memory limit saturation ECDSA SECP256k1 loop"
     }
-  , $plutus_base * $plutus_loop_secp_schnorr *
+  , $plutus_base * $costmodel_v8_preview * $plutus_loop_secp_schnorr *
     { name: "plutus-secp-schnorr"
     , desc: "Default with Plutus workload: CPU/memory limit saturation Schnorr SECP256k1 loop"
     }
@@ -481,13 +495,13 @@ def all_profile_variants:
   , $cibench_base * $p2p *
     { name: "ci-bench-p2p"
     }
-  , $cibench_base * $plutus_base * $plutus_loop_counter *
+  , $cibench_base * $plutus_base * $costmodel_v8_preview * $plutus_loop_counter *
     { name: "ci-bench-plutus"
     }
-  , $cibench_base * $plutus_base * $plutus_loop_secp_ecdsa *
+  , $cibench_base * $plutus_base * $costmodel_v8_preview * $plutus_loop_secp_ecdsa *
     { name: "ci-bench-plutus-secp-ecdsa"
     }
-  , $cibench_base * $plutus_base * $plutus_loop_secp_schnorr *
+  , $cibench_base * $plutus_base * $costmodel_v8_preview * $plutus_loop_secp_schnorr *
     { name: "ci-bench-plutus-secp-schnorr"
     }
   , $cibench_base * $without_tracer *
@@ -499,15 +513,33 @@ def all_profile_variants:
     { name: "ci-test-dense10"
     }
 
-  ## Plutus call variants: 12 epochs
-  , $plutuscall_base * $plutus_base * $double_tps_saturation_plutus * $plutus_loop_counter *
+  ## Plutus call variants: 15 epochs
+  , $plutus_base * $costmodel_v8_preview * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_counter *
     { name: "plutuscall-loop"
     }
-  , $plutuscall_base * $plutus_base * $double_tps_saturation_plutus * $plutus_loop_secp_ecdsa *
+  , $plutus_base * $costmodel_v8_preview * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_secp_ecdsa *
     { name: "plutuscall-secp-ecdsa"
     }
-  , $plutuscall_base * $plutus_base * $double_tps_saturation_plutus * $plutus_loop_secp_schnorr *
+  , $plutus_base * $costmodel_v8_preview * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_secp_schnorr *
     { name: "plutuscall-secp-schnorr"
+    }
+  , $plutus_base * $costmodel_v8_preview_stepshalf * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_counter *
+    { name: "plutuscall-loop-stepshalf"
+    }
+  , $plutus_base * $costmodel_v8_preview_stepshalf * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_secp_ecdsa *
+    { name: "plutuscall-secp-ecdsa-stepshalf"
+    }
+  , $plutus_base * $costmodel_v8_preview_stepshalf * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_secp_schnorr *
+    { name: "plutuscall-secp-schnorr-stepshalf"
+    }    
+  , $plutus_base * $costmodel_v8_preview_doubleb * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_counter *
+    { name: "plutuscall-loop-doubleb"
+    }
+  , $plutus_base * $costmodel_v8_preview_doubleb * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_secp_ecdsa *
+    { name: "plutuscall-secp-ecdsa-doubleb"
+    }
+  , $plutus_base * $costmodel_v8_preview_doubleb * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_secp_schnorr *
+    { name: "plutuscall-secp-schnorr-doubleb"
     }
 
 ## Dish variants
