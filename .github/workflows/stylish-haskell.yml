@@ -129,7 +129,7 @@ jobs:
         git add .
         git stash
         git fetch origin master --unshallow
-        for x in $(git diff --name-only HEAD origin/master ${{ env.STYLISH_HASKELL_PATHS }}); do
+        for x in $(git diff --name-only origin/master HEAD ${{ env.STYLISH_HASKELL_PATHS }}); do
           if [ "${x##*.}" == "hs" ]; then
             stylish-haskell -i $x
           fi
