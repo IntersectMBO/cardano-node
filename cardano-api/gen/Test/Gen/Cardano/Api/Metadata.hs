@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Gen.Cardano.Api.Metadata
+module Test.Gen.Cardano.Api.Metadata
   ( genTxMetadata
   , genTxMetadataValue
   , genJsonForTxMetadata

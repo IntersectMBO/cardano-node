@@ -10,9 +10,9 @@ import           Cardano.Api.Orphans ()
 import           Cardano.Api.Shelley
 import           Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), eitherDecode, encode)
 import           Data.Aeson.Types (Parser, parseEither)
-import           Gen.Cardano.Api (genAlonzoGenesis)
-import           Gen.Cardano.Api.Typed
 import           Hedgehog (Property, forAll, tripping)
+import           Test.Gen.Cardano.Api (genAlonzoGenesis)
+import           Test.Gen.Cardano.Api.Typed
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testPropertyNamed)
 

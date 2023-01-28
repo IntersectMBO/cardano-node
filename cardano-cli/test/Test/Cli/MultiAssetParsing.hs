@@ -13,7 +13,7 @@ import           Hedgehog.Gen (filter)
 
 import           Cardano.Api (parseValue, renderValue, renderValuePretty, valueToList)
 
-import           Gen.Cardano.Api.Typed (genValueDefault)
+import           Test.Gen.Cardano.Api.Typed (genValueDefault)
 
 prop_roundtrip_Value_parse_render :: Property
 prop_roundtrip_Value_parse_render =

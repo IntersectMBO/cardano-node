@@ -6,7 +6,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Gen.Cardano.Api.Typed
+module Test.Gen.Cardano.Api.Typed
   ( genAddressByron
   , genAddressInEra
   , genAddressShelley
@@ -146,9 +146,9 @@ import           Cardano.Ledger.Alonzo.Language (Language (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import           Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 
-import           Gen.Cardano.Api.Metadata (genTxMetadata)
 import           Test.Cardano.Chain.UTxO.Gen (genVKWitness)
 import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
+import           Test.Gen.Cardano.Api.Metadata (genTxMetadata)
 
 {- HLINT ignore "Reduce duplication" -}
 

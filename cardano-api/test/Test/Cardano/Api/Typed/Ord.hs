@@ -5,9 +5,9 @@ module Test.Cardano.Api.Typed.Ord
 import           Cardano.Api
 import           Cardano.Api.Shelley
 
-import           Gen.Cardano.Api.Typed
 import           Hedgehog (Property, (===))
 import           Test.Cardano.Api.Metadata (genTxMetadataValue)
+import           Test.Gen.Cardano.Api.Typed
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testPropertyNamed)
 

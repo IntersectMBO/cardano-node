@@ -6,7 +6,7 @@ module Test.Cli.JSON where
 import           Cardano.Prelude hiding (filter)
 
 import           Cardano.Api.Shelley
-import           Gen.Cardano.Api.Typed (genLovelace, genSlotNo, genStakeAddress,
+import           Test.Gen.Cardano.Api.Typed (genLovelace, genSlotNo, genStakeAddress,
                    genVerificationKeyHash)
 
 import           Data.Aeson

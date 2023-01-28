@@ -3,7 +3,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Gen.Cardano.Api
+module Test.Gen.Cardano.Api
   ( genMetadata
   , genAlonzoGenesis
   ) where
@@ -17,7 +17,7 @@ import qualified Data.Text as Text
 import           Data.Word (Word64)
 
 --TODO: why do we have this odd split? We can get rid of the old name "typed"
-import           Gen.Cardano.Api.Typed (genCostModel, genRational)
+import           Test.Gen.Cardano.Api.Typed (genCostModel, genRational)
 
 import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo

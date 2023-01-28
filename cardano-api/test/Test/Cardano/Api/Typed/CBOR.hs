@@ -10,10 +10,10 @@ import           Cardano.Api
 
 import           Data.Proxy (Proxy (..))
 import           Data.String (IsString (..))
-import           Gen.Cardano.Api.Typed
-import           Gen.Hedgehog.Roundtrip.CBOR (roundtrip_CBOR, roundtrip_CDDL_Tx)
 import           Hedgehog (Property, forAll, property, success, tripping)
 import           Test.Cardano.Api.Typed.Orphans ()
+import           Test.Gen.Cardano.Api.Typed
+import           Test.Hedgehog.Roundtrip.CBOR (roundtrip_CBOR, roundtrip_CDDL_Tx)
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testPropertyNamed)
 

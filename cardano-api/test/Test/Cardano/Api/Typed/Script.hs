@@ -5,9 +5,9 @@ module Test.Cardano.Api.Typed.Script
 import           Cardano.Api
 import           Cardano.Api.Shelley
 import           Data.Aeson
-import           Gen.Cardano.Api.Typed
 import           Hedgehog (Property, (===))
 import           Hedgehog.Extras.Aeson
+import           Test.Gen.Cardano.Api.Typed
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testPropertyNamed)
 

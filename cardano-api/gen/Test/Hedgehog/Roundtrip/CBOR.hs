@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Gen.Hedgehog.Roundtrip.CBOR
+module Test.Hedgehog.Roundtrip.CBOR
   ( roundtrip_CBOR
   , roundtrip_CDDL_Tx
   ) where

@@ -1,4 +1,4 @@
-module Gen.Hedgehog.Roundtrip.Bech32
+module Test.Hedgehog.Roundtrip.Bech32
   ( roundtrip_Bech32
   ) where
 
