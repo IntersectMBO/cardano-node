@@ -12,10 +12,12 @@ module Cardano.Node.Protocol.Byron
   , readLeaderCredentials
   ) where
 
+import           Cardano.Prelude (ConvertText (..), canonicalDecodePretty)
 
-import           Cardano.Prelude
+import           Control.Monad.Except (throwError)
 import           Control.Monad.Trans.Except.Extra (bimapExceptT, firstExceptT, hoistEither, left)
 import qualified Data.ByteString.Lazy as LB
+import           Data.Maybe (fromMaybe)
 import qualified Data.Text as Text
 
 import           Cardano.Api.Byron
@@ -42,6 +44,9 @@ import           Cardano.Tracing.OrphanInstances.Shelley ()
 import           Cardano.Node.Tracing.Era.Byron ()
 import           Cardano.Node.Tracing.Era.HardFork ()
 import           Cardano.Node.Tracing.Tracers.ChainDB ()
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans.Except (ExceptT)
+import           Data.Text (Text)
 
 
 
@@ -134,7 +139,7 @@ readGenesis (GenesisFile file) mbExpectedGenesisHash ncReqNetworkMagic = do
       $ h
       where
         impossible =
-          panic "fromByronGenesisHash: old and new crypto libs disagree on hash size"
+          error "fromByronGenesisHash: old and new crypto libs disagree on hash size"
 
 
 

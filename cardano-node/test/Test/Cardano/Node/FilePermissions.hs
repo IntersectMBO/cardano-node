@@ -11,6 +11,8 @@ module Test.Cardano.Node.FilePermissions
   ( tests
   ) where
 
+import           Control.Monad.Except
+import           Data.Foldable
 import           System.Directory (removeFile)
 
 import           Cardano.Api
@@ -39,6 +41,7 @@ import           System.Posix.Files
 import           System.Posix.IO (closeFd, createFile)
 import           System.Posix.Types (FileMode)
 
+import           Control.Exception (bracket)
 import           Hedgehog (Gen, classify, forAll)
 import qualified Hedgehog.Gen as Gen
 #endif

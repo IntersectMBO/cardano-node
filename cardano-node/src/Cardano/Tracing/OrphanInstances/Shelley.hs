@@ -17,13 +17,13 @@
 
 module Cardano.Tracing.OrphanInstances.Shelley () where
 
-import           Cardano.Prelude
-
 import           Data.Aeson (Value (..), object)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.Types as Aeson
+import           Data.Set (Set)
 import qualified Data.Set as Set
+import           Data.Text (Text)
 import qualified Data.Text as Text
 
 import           Cardano.Api (textShow)
@@ -32,11 +32,11 @@ import           Cardano.Api.Orphans ()
 import qualified Cardano.Api.Shelley as Api
 import           Cardano.Ledger.Crypto (StandardCrypto)
 
+import           Cardano.Node.Tracing.Tracers.KESInfo ()
 import           Cardano.Slotting.Block (BlockNo (..))
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Consensus ()
 import           Cardano.Tracing.Render (renderTxId)
-import           Cardano.Node.Tracing.Tracers.KESInfo ()
 
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
@@ -501,14 +501,14 @@ instance ( ShelleyBasedEra era
              , "error" .= String "Too many asset ids in the tx output"
              ]
 
-renderBadInputsUTxOErr ::  Set (TxIn era) -> Aeson.Value
+renderBadInputsUTxOErr :: Set (TxIn era) -> Aeson.Value
 renderBadInputsUTxOErr txIns
   | Set.null txIns = String "The transaction contains no inputs."
   | otherwise = String "The transaction contains inputs that do not exist in the UTxO set."
 
 renderValueNotConservedErr :: Show val => val -> val -> Aeson.Value
 renderValueNotConservedErr consumed produced = String $
-    "This transaction consumed " <> show consumed <> " but produced " <> show produced
+    "This transaction consumed " <> textShow consumed <> " but produced " <> textShow produced
 
 instance Ledger.Era era => ToObject (ShelleyPpupPredFailure era) where
   toObject _verb (NonGenesisUpdatePPUP proposalKeys genesisKeys) =
@@ -518,7 +518,7 @@ instance Ledger.Era era => ToObject (ShelleyPpupPredFailure era) where
     mconcat [ "kind" .= String "PPUpdateWrongEpoch"
              , "currentEpoch" .= currEpoch
              , "intendedEpoch" .= intendedEpoch
-             , "votingPeriod"  .= String (show votingPeriod)
+             , "votingPeriod"  .= String (textShow votingPeriod)
              ]
   toObject _verb (PVCannotFollowPPUP badPv) =
     mconcat [ "kind" .= String "PVCannotFollowPPUP"
@@ -692,7 +692,7 @@ instance ( ToObject (PredicateFailure (Core.EraRule "EPOCH" era))
   toObject verb (MirFailure f) = toObject verb f
   toObject _verb (CorruptRewardUpdate update) =
     mconcat [ "kind" .= String "CorruptRewardUpdate"
-             , "update" .= String (show update) ]
+             , "update" .= String (textShow update) ]
 
 
 instance ( ToObject (PredicateFailure (Core.EraRule "POOLREAP" era))
@@ -1010,24 +1010,24 @@ instance ToJSON (Alonzo.CollectError StandardCrypto) where
                 String $
                   "Cannot construct a Plutus ScriptContext from this transaction "
                     <> "due to a Byron UTxO being created or spent: "
-                    <> show txOutSource
+                    <> textShow txOutSource
               Alonzo.TranslationLogicMissingInput txin ->
-                String $ "Transaction input does not exist in the UTxO: " <> show txin
+                String $ "Transaction input does not exist in the UTxO: " <> textShow txin
               Alonzo.RdmrPtrPointsToNothing ptr ->
                 object
                   [ "kind" .= String "RedeemerPointerPointsToNothing"
                   , "ptr" .= (Api.renderScriptWitnessIndex . Api.fromAlonzoRdmrPtr) ptr
                   ]
               Alonzo.LanguageNotSupported lang ->
-                String $ "Language not supported: " <> show lang
+                String $ "Language not supported: " <> textShow lang
               Alonzo.InlineDatumsNotSupported txOutSource ->
-                String $ "Inline datums not supported, output source: " <> show txOutSource
+                String $ "Inline datums not supported, output source: " <> textShow txOutSource
               Alonzo.ReferenceScriptsNotSupported txOutSource ->
-                String $ "Reference scripts not supported, output source: " <> show txOutSource
+                String $ "Reference scripts not supported, output source: " <> textShow txOutSource
               Alonzo.ReferenceInputsNotSupported txins ->
-                String $ "Reference inputs not supported: " <> show txins
+                String $ "Reference inputs not supported: " <> textShow txins
               Alonzo.TimeTranslationPastHorizon msg ->
-                String $ "Time translation requested past the horizon: " <> show msg
+                String $ "Time translation requested past the horizon: " <> textShow msg
           ]
 
 instance ToJSON Alonzo.TagMismatchDescription where
@@ -1058,7 +1058,7 @@ instance ( Ledger.Era era
          , Show (PredicateFailure (Ledger.EraRule "LEDGERS" era))
          ) => ToObject (AlonzoBbodyPredFailure era) where
   toObject _ err = mconcat [ "kind" .= String "AlonzoBbodyPredFail"
-                            , "error" .= String (show err)
+                            , "error" .= String (textShow err)
                             ]
 
 --------------------------------------------------------------------------------
@@ -1128,7 +1128,7 @@ instance Core.Crypto crypto => ToObject (Praos.PraosValidationErr crypto) where
         mconcat [ "kind" .= String "VRFKeyBadProof"
                 , "slotNumberUsedInVrfCalculation" .= slotNo
                 , "nonceUsedInVrfCalculation" .= nonce
-                , "calculatedVrfValue" .= String (show vrfCalculatedVal)
+                , "calculatedVrfValue" .= String (textShow vrfCalculatedVal)
                 ]
       Praos.VRFLeaderValueTooBig leaderValue sigma f->
         mconcat [ "kind" .= String "VRFLeaderValueTooBig"

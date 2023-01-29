@@ -26,13 +26,18 @@ module Cardano.Node.Handlers.Shutdown
   )
 where
 
-import           Cardano.Prelude
+import           Control.Applicative (Alternative (..))
+import           Control.Concurrent.Async (race_)
+import           Control.Exception (try)
+import           Control.Exception.Base (throwIO)
+import           Control.Monad (void, when)
 import           Data.Aeson (FromJSON, ToJSON)
+import           Data.Text (Text, pack)
 import           Generic.Data.Orphans ()
-
-import           Data.Text (pack)
+import           GHC.Generics (Generic)
 import qualified GHC.IO.Handle.FD as IO (fdToHandle)
 import qualified Options.Applicative as Opt
+import           System.Exit (ExitCode (..))
 import qualified System.IO as IO
 import qualified System.IO.Error as IO
 import           System.Posix.Types (Fd (Fd))
@@ -148,7 +153,7 @@ maybeSpawnOnSlotSyncedShutdownHandler sc tr registry chaindb =
   spawnLimitTerminator :: ShutdownOn -> IO ()
   spawnLimitTerminator limit =
     void $ forkLinkedWatcher registry "slotLimitTerminator" Watcher {
-        wFingerprint = identity
+        wFingerprint = id
       , wInitial     = Nothing
       , wReader      =
           case limit of

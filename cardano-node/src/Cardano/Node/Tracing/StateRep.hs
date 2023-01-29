@@ -19,11 +19,15 @@ module Cardano.Node.Tracing.StateRep
   , traceNodeStateShutdown
   ) where
 
+import           Cardano.Api (textShow)
+
 import           Cardano.Logging
-import           Cardano.Prelude
+
 import           Data.Aeson
+import           Data.Text (Text)
 import           Data.Time.Clock
 import           Data.Time.Clock.POSIX
+import           GHC.Generics (Generic)
 
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import qualified Ouroboros.Consensus.Block.RealPoint as RP
@@ -244,7 +248,7 @@ traceNodeStateStartup
 traceNodeStateStartup tr ev =
   case ev of
     Startup.StartupSocketConfigError e ->
-      traceWith tr $ NodeStartup $ StartupSocketConfigError (show e)
+      traceWith tr $ NodeStartup $ StartupSocketConfigError (textShow e)
     Startup.StartupDBValidation ->
       traceWith tr $ NodeStartup StartupDBValidation
     Startup.NetworkConfigUpdate ->

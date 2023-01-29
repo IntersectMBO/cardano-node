@@ -10,15 +10,14 @@ module Cardano.Node.Tracing.Tracers.Diffusion
   () where
 
 import           Cardano.Logging
-import           Cardano.Prelude hiding (Show, show)
 import           Data.Aeson (Value (String), (.=))
 import           Data.Text (pack)
 import           Network.Mux (MuxTrace (..), WithMuxBearer (..))
 import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
-import           Text.Show
 
 import           Cardano.Node.Configuration.TopologyP2P (UseLedger (..))
 
+import qualified Data.List as List
 import qualified Ouroboros.Network.Diffusion as ND
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.LedgerPeers (NumberOfPeers (..), PoolStake (..),
@@ -477,7 +476,7 @@ instance LogFormatting TraceLedgerPeers where
     mconcat
       [ "kind" .= String "PickedPeers"
       , "desiredCount" .= n
-      , "count" .= length addrs
+      , "count" .= List.length addrs
       , "addresses" .= show addrs
       ]
   forMachine _dtal (FetchingNewLedgerState cnt) =

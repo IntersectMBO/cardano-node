@@ -15,7 +15,6 @@ import           Cardano.Prelude hiding (Show, show)
 import           Data.Aeson (Value (String), (.=))
 import           Data.Text (pack)
 import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
-import           Text.Show
 
 import           Ouroboros.Consensus.Ledger.Query (Query)
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv (..))
@@ -91,7 +90,7 @@ instance MetaTrace (AnyMessageAndAgency ps) =>
 
   allNamespaces =
     let cn = allNamespaces :: [Namespace (AnyMessageAndAgency ps)]
-    in map (nsPrependInner "Send") cn ++ map (nsPrependInner "Receive") cn
+    in fmap (nsPrependInner "Send") cn ++ fmap (nsPrependInner "Receive") cn
 
 
 -- --------------------------------------------------------------------------------

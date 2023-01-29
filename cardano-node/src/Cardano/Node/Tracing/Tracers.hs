@@ -13,9 +13,9 @@ module Cardano.Node.Tracing.Tracers
   ) where
 
 import           Codec.CBOR.Read (DeserialiseFailure)
+import           Data.Proxy (Proxy (..))
 
 import           Cardano.Logging
-import           Cardano.Prelude hiding (trace)
 
 import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.Tracers.BlockReplayProgress

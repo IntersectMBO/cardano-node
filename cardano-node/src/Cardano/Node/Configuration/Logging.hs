@@ -23,17 +23,24 @@ module Cardano.Node.Configuration.Logging
   , LOContent (..)
   ) where
 
+import           Cardano.Api (textShow)
 import qualified Cardano.Api as Api
-import           Cardano.Prelude hiding (trace)
 
 import qualified Control.Concurrent as Conc
 import qualified Control.Concurrent.Async as Async
+import           Control.Concurrent.MVar (MVar, newMVar)
+import           Control.Concurrent.STM (STM)
+import           Control.Exception (IOException)
 import           Control.Exception.Safe (MonadCatch)
+import           Control.Monad (forM_, forever, void, when)
+import           Control.Monad.Except (ExceptT)
+import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except.Extra (catchIOExceptT)
 import           "contra-tracer" Control.Tracer
 import           Data.List (nub)
 import qualified Data.Map.Strict as Map
-import           Data.Text (pack)
+import           Data.Maybe (isJust)
+import           Data.Text (Text, pack)
 import           Data.Time.Clock (UTCTime, getCurrentTime)
 import           Data.Version (showVersion)
 import           System.Metrics.Counter (Counter)
@@ -344,7 +351,7 @@ nodeBasicInfo nc (SomeConsensusProtocol whichP pForInfo) nodeStartTime' = do
         [ ("protocol",      pack . show $ ncProtocol nc)
         , ("version",       pack . showVersion $ version)
         , ("commit",        gitRev)
-        , ("nodeStartTime", show nodeStartTime')
+        , ("nodeStartTime", textShow nodeStartTime')
         ] ++ protocolDependentItems
       logObjects =
         map (\(nm, msg) -> LogObject ("basicInfo." <> nm) meta (LogMessage msg)) items
@@ -352,14 +359,14 @@ nodeBasicInfo nc (SomeConsensusProtocol whichP pForInfo) nodeStartTime' = do
  where
   getGenesisValuesByron cfg config =
     let genesis = byronLedgerConfig config
-    in [ ("systemStartTime",  show (WCT.getSystemStart . getSystemStart $ Consensus.configBlock cfg))
-       , ("slotLengthByron",  show (WCT.getSlotLength . fromByronSlotLength $ genesisSlotLength genesis))
-       , ("epochLengthByron", show (unEpochSize . fromByronEpochSlots $ Gen.configEpochSlots genesis))
+    in [ ("systemStartTime",  textShow (WCT.getSystemStart . getSystemStart $ Consensus.configBlock cfg))
+       , ("slotLengthByron",  textShow (WCT.getSlotLength . fromByronSlotLength $ genesisSlotLength genesis))
+       , ("epochLengthByron", textShow (unEpochSize . fromByronEpochSlots $ Gen.configEpochSlots genesis))
        ]
   getGenesisValues era config =
     let genesis = shelleyLedgerGenesis $ shelleyLedgerConfig config
-    in [ ("systemStartTime",          show (SL.sgSystemStart genesis))
-       , ("slotLength" <> era,        show (WCT.getSlotLength . WCT.mkSlotLength $ SL.sgSlotLength genesis))
-       , ("epochLength" <> era,       show (unEpochSize . SL.sgEpochLength $ genesis))
-       , ("slotsPerKESPeriod" <> era, show (SL.sgSlotsPerKESPeriod genesis))
+    in [ ("systemStartTime",          textShow (SL.sgSystemStart genesis))
+       , ("slotLength" <> era,        textShow (WCT.getSlotLength . WCT.mkSlotLength $ SL.sgSlotLength genesis))
+       , ("epochLength" <> era,       textShow (unEpochSize . SL.sgEpochLength $ genesis))
+       , ("slotsPerKESPeriod" <> era, textShow (SL.sgSlotsPerKESPeriod genesis))
        ]

@@ -4,7 +4,6 @@
 #define UNIX
 #endif
 
-import           Cardano.Prelude
 import           Hedgehog.Main (defaultMain)
 
 #ifdef UNIX

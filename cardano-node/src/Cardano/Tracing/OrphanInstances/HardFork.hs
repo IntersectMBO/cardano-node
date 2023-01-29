@@ -17,8 +17,6 @@
 
 module Cardano.Tracing.OrphanInstances.HardFork () where
 
-import           Cardano.Prelude hiding (All)
-
 import           Data.Aeson
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Short as SBS

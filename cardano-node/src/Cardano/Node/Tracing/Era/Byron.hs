@@ -16,9 +16,9 @@ module Cardano.Node.Tracing.Era.Byron () where
 import           Cardano.Tracing.OrphanInstances.Byron ()
 
 import           Cardano.Logging
-import           Cardano.Prelude
-import           Data.Aeson (Value (String), (.=))
 
+import           Data.Aeson (Value (String), (.=))
+import           Data.ByteString (ByteString)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 
@@ -32,6 +32,7 @@ import           Ouroboros.Consensus.Byron.Ledger.Inspect (ByronLedgerUpdate (..
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, txId)
 import           Ouroboros.Consensus.Util.Condense (condense)
 
+import           Cardano.Api (textShow)
 import           Cardano.Chain.Block (ABlockOrBoundaryHdr (..), AHeader (..),
                    ChainValidationError (..), delegationCertificate)
 import           Cardano.Chain.Byron.API (ApplyMempoolPayloadErr (..))
@@ -49,22 +50,22 @@ instance LogFormatting ApplyMempoolPayloadErr where
   forMachine _dtal (MempoolTxErr utxoValidationErr) =
     mconcat
       [ "kind" .= String "MempoolTxErr"
-      , "error" .= String (show utxoValidationErr)
+      , "error" .= String (textShow utxoValidationErr)
       ]
   forMachine _dtal (MempoolDlgErr delegScheduleError) =
     mconcat
       [ "kind" .= String "MempoolDlgErr"
-      , "error" .= String (show delegScheduleError)
+      , "error" .= String (textShow delegScheduleError)
       ]
   forMachine _dtal (MempoolUpdateProposalErr iFaceErr) =
     mconcat
       [ "kind" .= String "MempoolUpdateProposalErr"
-      , "error" .= String (show iFaceErr)
+      , "error" .= String (textShow iFaceErr)
       ]
   forMachine _dtal (MempoolUpdateVoteErr iFaceErrr) =
     mconcat
       [ "kind" .= String "MempoolUpdateVoteErr"
-      , "error" .= String (show iFaceErrr)
+      , "error" .= String (textShow iFaceErrr)
       ]
 
 instance LogFormatting ByronLedgerUpdate where

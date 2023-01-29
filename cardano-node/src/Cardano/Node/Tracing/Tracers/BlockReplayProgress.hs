@@ -5,11 +5,13 @@ module Cardano.Node.Tracing.Tracers.BlockReplayProgress
    , ReplayBlockStats(..)
   ) where
 
+import           Control.Monad.IO.Class (MonadIO)
 import           Data.Aeson (Value (String), (.=))
 import           Data.Text (pack)
 
+import           Cardano.Api (textShow)
+
 import           Cardano.Logging
-import           Cardano.Prelude
 
 import           Ouroboros.Consensus.Block (realPointSlot)
 import           Ouroboros.Network.Block (pointSlot, unSlotNo)
@@ -37,7 +39,7 @@ instance LogFormatting ReplayBlockStats where
       [ "kind" .= String "ReplayBlockStats"
       , "progress" .= String (pack $ show rpsProgress)
       ]
-  forHuman ReplayBlockStats {..} = "Block replay progress " <> show rpsProgress <> "%"
+  forHuman ReplayBlockStats {..} = "Block replay progress " <> textShow rpsProgress <> "%"
   asMetrics ReplayBlockStats {..} =
      [DoubleM "ChainDB.BlockReplayProgress" rpsProgress]
 

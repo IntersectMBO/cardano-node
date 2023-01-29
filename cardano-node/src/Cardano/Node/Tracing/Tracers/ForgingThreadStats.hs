@@ -49,11 +49,11 @@ instance LogFormatting ForgeThreadStats where
     <> " last slot "      <> showT ftsLastSlot
   forMachine _dtal ForgeThreadStats {..} =
     mconcat [ "kind" .= String "ForgeThreadStats"
-             , "nodeCannotForgeNum" .= String (show ftsNodeCannotForgeNum)
-             , "nodeIsLeaderNum"    .= String (show ftsNodeIsLeaderNum)
-             , "blocksForgedNum"    .= String (show ftsBlocksForgedNum)
-             , "slotsMissed"        .= String (show ftsSlotsMissedNum)
-             , "lastSlot"           .= String (show ftsLastSlot)
+             , "nodeCannotForgeNum" .= String (showT ftsNodeCannotForgeNum)
+             , "nodeIsLeaderNum"    .= String (showT ftsNodeIsLeaderNum)
+             , "blocksForgedNum"    .= String (showT ftsBlocksForgedNum)
+             , "slotsMissed"        .= String (showT ftsSlotsMissedNum)
+             , "lastSlot"           .= String (showT ftsLastSlot)
              ]
   asMetrics ForgeThreadStats {..} =
     [ IntM "Forge.NodeCannotForgeNum" (fromIntegral ftsNodeCannotForgeNum)
@@ -91,10 +91,10 @@ instance LogFormatting ForgingStats where
     <> " slots missed "   <> showT fsSlotsMissedNum
   forMachine _dtal ForgingStats {..} =
     mconcat [ "kind" .= String "ForgingStats"
-             , "nodeCannotForgeNum" .= String (show fsNodeCannotForgeNum)
-             , "nodeIsLeaderNum"    .= String (show fsNodeIsLeaderNum)
-             , "blocksForgedNum"    .= String (show fsBlocksForgedNum)
-             , "slotsMissed"        .= String (show fsSlotsMissedNum)
+             , "nodeCannotForgeNum" .= String (showT fsNodeCannotForgeNum)
+             , "nodeIsLeaderNum"    .= String (showT fsNodeIsLeaderNum)
+             , "blocksForgedNum"    .= String (showT fsBlocksForgedNum)
+             , "slotsMissed"        .= String (showT fsSlotsMissedNum)
              ]
   asMetrics ForgingStats {..} =
     [ IntM "Forge.NodeCannotForgeNum" (fromIntegral fsNodeCannotForgeNum)
