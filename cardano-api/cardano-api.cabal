@@ -124,7 +124,6 @@ library
                       , cardano-ledger-byron ^>= 0.1
                       , cardano-ledger-core ^>= 0.1
                       , cardano-ledger-shelley-ma ^>= 0.1
-                      , cardano-prelude
                       , cardano-protocol-tpraos >= 0.1
                       , cardano-slotting >= 0.1
                       , cborg
@@ -197,7 +196,6 @@ library gen
                       , cardano-ledger-alonzo-test
                       , cardano-ledger-byron-test ^>= 1.4
                       , cardano-ledger-core ^>= 0.1
-                      , cardano-prelude
                       , containers
                       , hedgehog
                       , cardano-ledger-shelley ^>= 0.1
