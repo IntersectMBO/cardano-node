@@ -3,9 +3,6 @@ module Testnet.Util.Base
   , isLinux
   ) where
 
-import           Data.Bool (Bool)
-import           Data.Eq (Eq (..))
-import           Data.Function
 import           GHC.Stack (HasCallStack)
 import           System.Info (os)
 

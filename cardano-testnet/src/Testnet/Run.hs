@@ -5,13 +5,8 @@ module Testnet.Run
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Resource
-import           Data.Bool
-import           Data.Function
-import           Data.Int
-import           Data.Maybe
 import           System.Console.ANSI (Color (..), ColorIntensity (..), ConsoleLayer (..), SGR (..))
 import           System.FilePath ((</>))
-import           System.IO (IO)
 
 import qualified Control.Concurrent as IO
 import qualified Control.Concurrent.STM as STM

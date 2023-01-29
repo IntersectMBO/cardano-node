@@ -11,27 +11,16 @@ module Testnet.Byron
   , defaultTestnetOptions
   ) where
 
-import           Control.Monad (Monad(..), forM_, void, (=<<), when)
+import           Control.Monad (forM_, void, when)
 import           Data.Aeson (Value)
-import           Data.Bool (Bool(..))
 import           Data.ByteString.Lazy (ByteString)
-import           Data.Eq (Eq)
-import           Data.Function (($), (.), flip)
-import           Data.Functor (Functor(..), (<&>))
-import           Data.Int (Int)
-import           Data.Maybe (Maybe(Just))
-import           Data.Ord (Ord((<=)))
-import           Data.Semigroup (Semigroup((<>)))
-import           Data.String (String)
-import           GHC.Num (Num((-)))
-import           GHC.Real (fromIntegral)
+import           Data.Functor ((<&>))
 import           Hedgehog.Extras.Stock.Aeson (rewriteObject)
-import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket(..))
+import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Hedgehog.Extras.Stock.Time (showUTCTimeSeconds)
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           System.FilePath.Posix ((</>))
-import           Text.Show (Show(show))
-import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter(..))
-import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint(..))
 
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P

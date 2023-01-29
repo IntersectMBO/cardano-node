@@ -4,16 +4,9 @@ module Parsers.Byron
   , runByronOptions
   ) where
 
-import           Data.Eq
-import           Data.Function
-import           Data.Int
-import           Data.Maybe
-import           Data.Semigroup
 import           Options.Applicative
-import           System.IO (IO)
 import           Testnet.Byron
 import           Testnet.Run (runTestnet)
-import           Text.Show
 
 import qualified Options.Applicative as OA
 
