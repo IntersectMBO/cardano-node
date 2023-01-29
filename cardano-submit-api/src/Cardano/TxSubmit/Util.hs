@@ -1,5 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
-
 module Cardano.TxSubmit.Util
   ( logException
   ) where

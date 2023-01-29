@@ -10,13 +10,9 @@ import           Cardano.BM.Data.Severity (Severity (Debug, Error, Notice, Warni
 import           Cardano.BM.Data.Tracer (HasPrivacyAnnotation, HasSeverityAnnotation (..),
                    HasTextFormatter, ToObject (toObject), Transformable (..), trStructured)
 import           Data.Aeson ((.=))
-import           Data.String (String)
 import           Data.Text (Text)
 import           Ouroboros.Network.NodeToClient (ErrorPolicyTrace (..), WithAddr (..))
-import           System.IO (IO)
-import           Text.Show (Show (..))
 
-import           Data.Monoid (mconcat)
 import qualified Network.Socket as Socket
 
 instance HasPrivacyAnnotation (WithAddr Socket.SockAddr ErrorPolicyTrace)

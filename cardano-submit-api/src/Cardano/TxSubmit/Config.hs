@@ -1,5 +1,4 @@
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -14,20 +13,12 @@ module Cardano.TxSubmit.Config
 
 import           Cardano.Api
 
-import           Control.Applicative (Applicative (pure, (<*>)))
 import           Control.Exception (IOException, catch)
 import           Data.Aeson (FromJSON (..), Object, Value (..), (.:))
 import           Data.Aeson.Types (Parser)
 import           Data.Bool (bool)
 import           Data.ByteString (ByteString)
-import           Data.Either (Either (Left, Right))
-import           Data.Eq (Eq)
-import           Data.Function (($))
-import           Data.Functor (Functor (..), (<$>))
-import           Data.Semigroup (Semigroup ((<>)))
 import           Protolude.Panic (panic)
-import           System.IO (FilePath, IO)
-import           Text.Show (Show)
 
 import qualified Cardano.BM.Configuration as Logging
 import qualified Cardano.BM.Configuration.Model as Logging

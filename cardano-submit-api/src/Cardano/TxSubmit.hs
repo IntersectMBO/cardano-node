@@ -1,5 +1,4 @@
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.TxSubmit
@@ -14,13 +13,9 @@ import           Cardano.TxSubmit.Config (GenTxSubmitNodeConfig (..), ToggleLogg
                    TxSubmitNodeConfig, readTxSubmitNodeConfig)
 import           Cardano.TxSubmit.Metrics (registerMetricsServer)
 import           Cardano.TxSubmit.Web (runTxSubmitServer)
-import           Control.Applicative (Applicative (..))
 import           Control.Monad (void)
 import           Control.Monad.IO.Class (MonadIO (liftIO))
-import           Data.Either (Either (..))
-import           Data.Function (($))
 import           Data.Text (Text)
-import           System.IO (IO)
 
 import qualified Cardano.BM.Setup as Logging
 import qualified Cardano.BM.Trace as Logging

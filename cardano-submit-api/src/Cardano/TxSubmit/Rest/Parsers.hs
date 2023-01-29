@@ -7,9 +7,6 @@ module Cardano.TxSubmit.Rest.Parsers
   ) where
 
 import           Cardano.TxSubmit.Rest.Types (WebserverConfig (..))
-import           Control.Applicative (Applicative (pure), (<$>))
-import           Data.Function (($))
-import           Data.Semigroup ((<>))
 import           Data.String (fromString)
 import           Network.Wai.Handler.Warp (HostPreference, Port)
 import           Options.Applicative (Parser, auto, help, long, metavar, option, showDefault,
