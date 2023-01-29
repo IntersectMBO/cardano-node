@@ -7,15 +7,20 @@ module Cardano.Chairman.Commands.Run
   ( cmdRun
   ) where
 
+import           Cardano.Prelude (ConvertText (..))
+
 import qualified Cardano.Api as Api
-import           Cardano.Prelude
 
 import           Control.Monad.Class.MonadTime (DiffTime)
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans.Except (runExceptT)
 import           Control.Tracer (Tracer (..), stdoutTracer)
-import qualified Data.Text as Text
+import           Data.Monoid (Last (..))
+import           Data.Text (Text)
 import qualified Data.Time.Clock as DTC
 import           Options.Applicative
 import qualified Options.Applicative as Opt
+import           System.Exit (exitFailure)
 import qualified System.IO as IO
 
 import           Cardano.Node.Configuration.NodeAddress
@@ -102,8 +107,8 @@ run RunOpts
 
   ptclConfig <- case getProtocolConfiguration configYamlPc of
                   Nothing ->
-                    panic $ "Node protocol configuration was not specified "<>
-                            "in Config yaml filepath: " <> Text.pack (unConfigPath caConfigYaml)
+                    error $ "Node protocol configuration was not specified "<>
+                            "in Config yaml filepath: " <> unConfigPath caConfigYaml
                   Just ptclConfig -> return ptclConfig
 
   eitherSomeProtocol <- runExceptT $ mkConsensusProtocol ptclConfig Nothing

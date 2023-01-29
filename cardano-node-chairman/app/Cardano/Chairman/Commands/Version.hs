@@ -5,15 +5,10 @@ module Cardano.Chairman.Commands.Version
   ) where
 
 import           Cardano.Git.Rev (gitRev)
-import           Data.Eq
-import           Data.Function
-import           Data.Monoid
 import           Data.Version (showVersion)
 import           Options.Applicative
 import           Paths_cardano_node_chairman (version)
-import           System.IO (IO)
 import           System.Info (arch, compilerName, compilerVersion, os)
-import           Text.Show
 
 import qualified Data.Text as T
 import qualified System.IO as IO
