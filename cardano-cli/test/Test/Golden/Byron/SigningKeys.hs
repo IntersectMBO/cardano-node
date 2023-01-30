@@ -4,9 +4,10 @@ module Test.Golden.Byron.SigningKeys
   ( tests
   ) where
 
-import           Cardano.Prelude
-
 import           Codec.CBOR.Read (deserialiseFromBytes)
+import           Control.Monad (void)
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans.Except (runExceptT)
 import qualified Data.ByteString.Lazy as LB
 
 import qualified Cardano.Crypto.Signing as Crypto

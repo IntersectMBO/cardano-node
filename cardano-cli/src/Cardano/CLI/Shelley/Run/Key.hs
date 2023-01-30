@@ -12,8 +12,6 @@ module Cardano.CLI.Shelley.Run.Key
   , decodeBech32
   ) where
 
-import           Cardano.Prelude
-
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Text as Text
@@ -41,6 +39,14 @@ import           Cardano.CLI.Shelley.Key (VerificationKeyTextOrFile (..),
                    VerificationKeyTextOrFileError, readVerificationKeyTextOrFileAnyOf,
                    renderVerificationKeyTextOrFileError)
 import           Cardano.CLI.Types (SigningKeyFile (..), VerificationKeyFile (..))
+import           Cardano.Prelude (MonadIO (..))
+import           Control.Exception (Exception (..), IOException)
+import           Control.Monad.Trans.Except (ExceptT)
+import           Data.Bifunctor (Bifunctor (..))
+import           Data.ByteString (ByteString)
+import           Data.Text (Text)
+import qualified Data.Text.Encoding as Text
+import           System.Exit (exitFailure)
 
 
 data ShelleyKeyCmdError
@@ -349,7 +355,7 @@ convertByronSigningKey mPwd byronFormat convert
                          case mPwd of
                            -- Change password to empty string
                            Just pwd -> return . Crypto.SigningKey
-                                         $ Crypto.xPrvChangePass (encodeUtf8 pwd) (encodeUtf8 "") xprv
+                                         $ Crypto.xPrvChangePass (Text.encodeUtf8 pwd) (Text.encodeUtf8 "") xprv
                            Nothing -> return sk
                        ByronApi.AByronSigningKey (ByronSigningKey sk) -> return sk
 
@@ -388,7 +394,7 @@ runConvertByronGenesisVerificationKey
 runConvertByronGenesisVerificationKey (VerificationKeyBase64 b64ByronVKey)
                                       (OutputFile vkeyPathNew) = do
 
-    vk <- firstExceptT (ShelleyKeyCmdByronKeyParseError . show)
+    vk <- firstExceptT (ShelleyKeyCmdByronKeyParseError . textShow)
         . hoistEither
         . Byron.Crypto.parseFullVerificationKey
         . Text.pack
@@ -515,7 +521,7 @@ readFileITNKey fp = do
   eStr <- Exception.try $ readFile fp
   case eStr of
     Left e -> return . Left $ ItnReadBech32FileError fp e
-    Right str -> return . Right . Text.concat $ Text.words str
+    Right str -> return . Right . Text.concat $ Text.words $ Text.pack str
 
 --------------------------------------------------------------------------------
 -- `cardano-address` extended signing key conversions
@@ -602,7 +608,7 @@ readBech32Bip32SigningKeyFile (SigningKeyFile fp) = do
   case eStr of
     Left e -> pure . Left $ FileIOError fp e
     Right str ->
-      case decodeBech32 (Text.concat $ Text.words str) of
+      case decodeBech32 (Text.concat $ Text.words $ Text.pack str) of
         Left err ->
           pure $ Left $
             FileError fp (CardanoAddressSigningKeyBech32DecodeError err)

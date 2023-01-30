@@ -4,7 +4,8 @@ module Test.Golden.Shelley.Node.IssueOpCert
   ( golden_shelleyNodeIssueOpCert
   ) where
 
-import           Cardano.Prelude
+import           Control.Monad (void)
+import           Control.Monad.IO.Class (MonadIO (..))
 import           Hedgehog (Property)
 import           Test.OptParse
 

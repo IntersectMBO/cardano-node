@@ -1,5 +1,3 @@
-import           Cardano.Prelude
-
 import           Hedgehog.Main (defaultMain)
 
 import qualified Test.Golden.Byron.SigningKeys

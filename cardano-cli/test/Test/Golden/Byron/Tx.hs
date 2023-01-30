@@ -4,12 +4,14 @@ module Test.Golden.Byron.Tx
   ( txTests
   ) where
 
-import           Cardano.CLI.Byron.Tx
-import           Cardano.Prelude
-import qualified Data.Text as Text
-
 import           Cardano.Chain.UTxO (ATxAux)
+import           Cardano.CLI.Byron.Tx
 
+import           Control.Monad (void)
+import           Control.Monad.IO.Class (liftIO)
+import           Control.Monad.Trans.Except (runExceptT)
+import           Data.ByteString (ByteString)
+import qualified Data.Text as Text
 
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H

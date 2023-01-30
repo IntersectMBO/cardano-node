@@ -2,15 +2,11 @@ module Test.Cli.Shelley.Run.Query
   ( tests
   ) where
 
-import           Cardano.Slotting.Time (RelativeTime(..))
-import           Control.Monad (return)
-import           Data.Bool
-import           Data.Function
+import           Cardano.Slotting.Time (RelativeTime (..))
 import           Hedgehog (Property, (===))
-import           System.IO as IO
 
 import qualified Cardano.CLI.Shelley.Run.Query as Q
-import qualified Hedgehog as H 
+import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 
 unit_percentage :: Property

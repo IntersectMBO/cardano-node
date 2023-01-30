@@ -11,9 +11,6 @@ module Cardano.CLI.Shelley.Run.Address
   , makeStakeAddressRef
   ) where
 
-import           Cardano.Prelude hiding (putStrLn)
-
-
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left, newExceptT)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text as Text
@@ -30,6 +27,9 @@ import           Cardano.CLI.Shelley.Parsers (AddressCmd (..), AddressKeyType (.
 import           Cardano.CLI.Shelley.Run.Address.Info (ShelleyAddressInfoError, runAddressInfo)
 import           Cardano.CLI.Shelley.Run.Read
 import           Cardano.CLI.Types
+import           Cardano.Prelude (MonadIO (..))
+import           Control.Monad.Trans.Except (ExceptT)
+import           Data.Text (Text)
 
 data ShelleyAddressCmdError
   = ShelleyAddressCmdAddressInfoError !ShelleyAddressInfoError

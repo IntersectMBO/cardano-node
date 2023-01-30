@@ -4,7 +4,6 @@ module Test.Golden.Shelley.TextView.DecodeCbor
   ( golden_shelleyTextViewDecodeCbor
   ) where
 
-import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse
 

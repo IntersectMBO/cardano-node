@@ -4,13 +4,13 @@ module Cardano.CLI.Shelley.Run.Governance
   , runGovernanceCmd
   ) where
 
-import           Cardano.Prelude
-
-import           Data.Aeson
-import qualified Data.ByteString.Lazy as LB
-import qualified Data.Text as Text
-
+import           Control.Monad (unless, when)
+import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, left, newExceptT)
+import           Data.Aeson (eitherDecode)
+import qualified Data.ByteString.Lazy as LB
+import           Data.Text (Text)
+import qualified Data.Text as Text
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
@@ -170,7 +170,7 @@ runGovernanceUpdateProposal (OutputFile upFile) eNo genVerKeyFiles upPprams mCos
                         (AsVerificationKey AsGenesisKey)
                         vkeyFile
                   | VerificationKeyFile vkeyFile <- genVerKeyFiles ]
-    let genKeyHashes = map verificationKeyHash genVKeys
+    let genKeyHashes = fmap verificationKeyHash genVKeys
         upProp = makeShelleyUpdateProposal finalUpPprams genKeyHashes eNo
     firstExceptT ShelleyGovernanceCmdTextEnvWriteError . newExceptT $
       writeFileTextEnvelope upFile Nothing upProp

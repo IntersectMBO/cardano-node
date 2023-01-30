@@ -6,12 +6,15 @@ module Cardano.CLI.Shelley.Run.Address.Info
 
 import           Cardano.Api
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..))
-import           Cardano.Prelude
+
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (left)
 import           Data.Aeson (ToJSON (..), object, (.=))
 import           Data.Aeson.Encode.Pretty (encodePretty)
-
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.Text (Text)
+import           Options.Applicative (Alternative (..))
 
 newtype ShelleyAddressInfoError = ShelleyAddressInvalid Text
   deriving Show

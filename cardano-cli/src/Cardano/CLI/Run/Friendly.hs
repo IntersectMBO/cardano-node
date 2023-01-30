@@ -10,18 +10,24 @@
 -- | User-friendly pretty-printing for textual user interfaces (TUI)
 module Cardano.CLI.Run.Friendly (friendlyTxBS, friendlyTxBodyBS) where
 
-import           Cardano.Prelude
-
 import           Data.Aeson (Value (..), object, toJSON, (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.Types as Aeson
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BSC
+import           Data.Char (isAscii)
+import           Data.Function ((&))
+import           Data.Functor ((<&>))
 import qualified Data.Map.Strict as Map
+import           Data.Maybe (catMaybes, isJust)
+import           Data.Ratio (numerator)
 import qualified Data.Text as Text
 import           Data.Yaml (array)
 import           Data.Yaml.Pretty (setConfCompare)
 import qualified Data.Yaml.Pretty as Yaml
+import           GHC.Real (denominator)
+import           GHC.Unicode (isAlphaNum)
 
 import           Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness))
@@ -200,7 +206,7 @@ friendlyTxOut (TxOut addr amount mdatum script) =
 friendlyStakeReference :: StakeAddressReference -> Aeson.Value
 friendlyStakeReference = \case
   NoStakeAddress -> Null
-  StakeAddressByPointer ptr -> String (show ptr)
+  StakeAddressByPointer ptr -> String (textShow ptr)
   StakeAddressByValue cred -> object [friendlyStakeCredential cred]
 
 friendlyUpdateProposal :: TxUpdateProposal era -> Aeson.Value

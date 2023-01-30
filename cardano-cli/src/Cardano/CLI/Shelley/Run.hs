@@ -4,8 +4,6 @@ module Cardano.CLI.Shelley.Run
   , runShelleyClientCommand
   ) where
 
-import           Cardano.Prelude
-
 import           Cardano.Api
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
@@ -24,6 +22,8 @@ import           Cardano.CLI.Shelley.Run.Transaction
                                          -- Block, System, DevOps
 import           Cardano.CLI.Shelley.Run.Genesis
 import           Cardano.CLI.Shelley.Run.TextView
+import           Cardano.Prelude (ExceptT)
+import           Data.Text (Text)
 
 data ShelleyClientCmdError
   = ShelleyCmdAddressError !ShelleyAddressCmdError

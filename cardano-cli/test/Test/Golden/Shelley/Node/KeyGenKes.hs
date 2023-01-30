@@ -4,7 +4,7 @@ module Test.Golden.Shelley.Node.KeyGenKes
   ( golden_shelleyNodeKeyGenKes
   ) where
 
-import           Cardano.Prelude
+import           Control.Monad (void)
 import           Hedgehog (Property)
 import           Test.OptParse
 

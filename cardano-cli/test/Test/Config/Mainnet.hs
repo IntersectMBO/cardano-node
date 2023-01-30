@@ -7,16 +7,9 @@ module Test.Config.Mainnet
   ) where
 
 import           Cardano.Api (initialLedgerState, renderInitialLedgerStateError)
-import           Control.Monad
 import           Control.Monad.Trans.Except
-import           Data.Bool (Bool(..))
-import           Data.Either (Either(..))
-import           Data.Function
-import           Data.Maybe
 import           Hedgehog (Property, (===))
 import           System.FilePath ((</>))
-import           System.IO (IO)
-import           Text.Show
 
 import qualified Data.Aeson as J
 import qualified Data.Text as T

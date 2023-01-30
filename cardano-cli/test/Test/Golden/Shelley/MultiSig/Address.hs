@@ -6,7 +6,6 @@ module Test.Golden.Shelley.MultiSig.Address
   , golden_shelleyAtLeastMultiSigAddressBuild
   ) where
 
-import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse as OP
 

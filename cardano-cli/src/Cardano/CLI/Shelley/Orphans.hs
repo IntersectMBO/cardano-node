@@ -23,14 +23,13 @@ import qualified Cardano.Ledger.PoolDistr as Ledger
 import qualified Cardano.Ledger.Shelley.EpochBoundary as Ledger
 import qualified Cardano.Ledger.Shelley.PoolRank as Ledger
 import           Cardano.Ledger.TxIn (TxId (..))
-import           Cardano.Prelude (Bool(True), Category((.)))
 import qualified Cardano.Protocol.TPraos.API as Ledger
 import           Cardano.Protocol.TPraos.BHeader (HashHeader (..))
 import qualified Cardano.Protocol.TPraos.Rules.Prtcl as Ledger
 import qualified Cardano.Protocol.TPraos.Rules.Tickn as Ledger
 import qualified Cardano.Slotting.Slot as Cardano
 import qualified Control.SetAlgebra as SetAlgebra (BiMap, forwards)
-import           Data.Aeson (FromJSON(..), KeyValue((.=)), ToJSON(..), ToJSONKey)
+import           Data.Aeson (FromJSON (..), KeyValue ((.=)), ToJSON (..), ToJSONKey)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Short as SBS

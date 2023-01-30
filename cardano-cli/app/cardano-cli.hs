@@ -5,8 +5,6 @@
 #define UNIX
 #endif
 
-import           Cardano.Prelude
-
 import           Control.Monad.Trans.Except.Exit (orDie)
 import qualified Options.Applicative as Opt
 

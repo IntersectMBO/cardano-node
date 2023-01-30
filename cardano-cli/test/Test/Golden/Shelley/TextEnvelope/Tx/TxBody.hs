@@ -4,11 +4,10 @@ module Test.Golden.Shelley.TextEnvelope.Tx.TxBody
   ( golden_shelleyTxBody
   ) where
 
-import           Cardano.Prelude
-
 import           Hedgehog (Property)
 import           Test.OptParse
 
+import           Control.Monad (void)
 import qualified Hedgehog.Extras.Test.Base as H
 
 {- HLINT ignore "Use camelCase" -}
