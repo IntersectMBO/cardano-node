@@ -19,6 +19,7 @@ module Cardano.CLI.Shelley.Run.Query
   , renderShelleyQueryCmdError
   , renderLocalStateQueryError
   , runQueryCmd
+  , toEpochInfo
   , determineEra
   , mergeDelegsAndRewards
   , percentage
