@@ -44,16 +44,16 @@ constructBalancedTx
   -> Maybe Word       -- ^ Override key witnesses
   -> UTxO era         -- ^ Just the transaction inputs, not the entire 'UTxO'.
   -> ProtocolParameters
-  -> EraHistory CardanoMode
+  -> LedgerEpochInfo
   -> SystemStart
   -> Set PoolId       -- ^ The set of registered stake pools
   -> [ShelleyWitnessSigningKey]
   -> Either TxBodyErrorAutoBalance (Tx era)
 constructBalancedTx eInMode txbodcontent changeAddr mOverrideWits utxo pparams
-                    eraHistory systemStart stakePools shelleyWitSigningKeys = do
+                    ledgerEpochInfo systemStart stakePools shelleyWitSigningKeys = do
   BalancedTxBody _ txbody _txBalanceOutput _fee
     <- makeTransactionBodyAutoBalance
-         eInMode systemStart eraHistory
+         eInMode systemStart ledgerEpochInfo
          pparams stakePools utxo txbodcontent
          changeAddr mOverrideWits
 
