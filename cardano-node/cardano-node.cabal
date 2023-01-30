@@ -29,6 +29,7 @@ common project-config
 
   default-extensions:   NoImplicitPrelude
                         OverloadedStrings
+  build-depends:        base >= 4.14 && < 4.17
 
   ghc-options:          -Wall
                         -Wcompat

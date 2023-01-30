@@ -92,11 +92,7 @@ library
 
   other-modules:        Paths_locli
   autogen-modules:      Paths_locli
-<<<<<<< HEAD
-=======
 
-<<<<<<< HEAD
->>>>>>> 88570cea4 (Updated ledger and ouroboros-network dependencies)
   build-depends:        aeson
                       , Histogram
                       , aeson-pretty
@@ -141,58 +137,7 @@ library
                       , unordered-containers
                       , utf8-string
                       , vector
-<<<<<<< HEAD
                       , cardano-strict-containers ^>= 0.1
-=======
-                      , cardano-strict-containers == 0.1.0.1
-=======
-  build-depends:       aeson
-                     , Histogram
-                     , aeson-pretty
-                     , async
-                     , attoparsec
-                     , attoparsec-iso8601
-                     , bytestring
-                     , cardano-git-rev
-                     , cardano-ledger-core
-                     , cardano-prelude
-                     , cardano-slotting
-                     , containers
-                     , deepseq
-                     , directory
-                     , ede
-                     , extra
-                     , file-embed
-                     , filepath
-                     , fingertree
-                     , ghc
-                     , gnuplot
-                     , iohk-monitoring
-                     , optparse-applicative-fork
-                     , optparse-generic
-                     , ouroboros-consensus
-                     -- for Data.SOP.Strict:
-                     , ouroboros-network
-                     , process
-                     , quiet
-                     , scientific
-                     , split
-                     , statistics
-                     , system-filepath
-                     , template-haskell
-                     , text
-                     , text-short
-                     , time
-                     , trace-resources
-                     , transformers
-                     , transformers-except
-                     , unix
-                     , unordered-containers
-                     , utf8-string
-                     , vector
-                     , cardano-strict-containers ^>= 0.1
->>>>>>> 9cc96f2ac (Updated ledger and ouroboros-network dependencies)
->>>>>>> 88570cea4 (Updated ledger and ouroboros-network dependencies)
 
 executable locli
   import:               project-config

@@ -65,12 +65,11 @@ mkCardanoTracer' trStdout trForward mbTrEkg tracerPrefix hook = do
                     >>= hook
 
     -- handle the metrics
-    metricsTrace <- pure (case mbTrEkg of
+    metricsTrace <- (maybeSilent hasNoMetrics tracerPrefix
+                        . filterTrace (\ (_, v) -> not (Prelude.null (asMetrics v))))
+                        (case mbTrEkg of
                             Nothing -> Trace NT.nullTracer
                             Just ekgTrace -> metricsFormatter "Cardano" ekgTrace)
-                    >>=
-                      maybeSilent hasNoMetrics tracerPrefix
-                        . filterTrace (\ (_, v) -> not (Prelude.null (asMetrics v)))
                     >>= hook
     pure (messageTrace <> metricsTrace)
 

@@ -52,7 +52,6 @@ import qualified Cardano.Ledger.Babbage.TxBody as Babbage
 import qualified Cardano.Ledger.Coin as Shelley
 import           Cardano.Ledger.Core (EraTxOut)
 import qualified Cardano.Ledger.Core as Core
-import           Cardano.Ledger.Core (EraTxOut)
 import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.PoolDistr as Ledger
 import qualified Cardano.Ledger.SafeHash as SafeHash

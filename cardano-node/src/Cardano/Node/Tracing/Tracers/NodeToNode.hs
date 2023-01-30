@@ -1,4 +1,4 @@
--- {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE QuantifiedConstraints #-}

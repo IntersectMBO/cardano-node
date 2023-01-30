@@ -218,9 +218,6 @@ import           Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..),
                    BabbageTxBody (BabbageTxBody), BabbageTxOut (BabbageTxOut))
 import qualified Cardano.Ledger.TxIn as Ledger
 import           Cardano.Ledger.Val (isZero)
-import qualified Cardano.Ledger.Block as Ledger
-import           Cardano.Ledger.Core (EraAuxiliaryData)
-import qualified Cardano.Ledger.Era as CC
 
 import           Cardano.Ledger.Shelley.API (ShelleyTxOut (ShelleyTxOut))
 import qualified Cardano.Ledger.Shelley.API as Ledger hiding (TxBody, TxOut)

@@ -22,7 +22,5 @@ startResourceTracer tr delayMilliseconds = do
       mbrs <- readResourceStats
       forM_ mbrs $ \rs -> traceWith tr rs
       threadDelay (delayMilliseconds * 1000)
-      case mbrs of
-        Just rs -> traceWith tr rs
-        Nothing -> pure ()
+      maybe (pure ()) (traceWith tr) mbrs
       threadDelay (delayMilliseconds * 1000)
