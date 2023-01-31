@@ -47,7 +47,7 @@ package cardano-git-rev
   ghc-options: -Werror
 
 package cardano-node
-  ghc-options: -Werror
+--  ghc-options: -Werror
 
 package cardano-node-chairman
   ghc-options: -Werror

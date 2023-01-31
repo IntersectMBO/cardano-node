@@ -117,15 +117,7 @@ data StartupTrace blk =
   | BIByron BasicInfoByron
   | BINetwork BasicInfoNetwork
 
-severityStartupTracer :: StartupTrace blk -> SeverityS
-severityStartupTracer (StartupSocketConfigError _) = Error
-severityStartupTracer NetworkConfigUpdate = Notice
-severityStartupTracer (NetworkConfigUpdateError _) = Error
-severityStartupTracer NetworkConfigUpdateUnsupported = Warning
-severityStartupTracer P2PWarning = Warning
-severityStartupTracer P2PWarningDevelopementNetworkProtocols = Warning
-severityStartupTracer WarningDevelopmentNetworkProtocols {} = Warning
-severityStartupTracer _ = Info
+
 
 data BasicInfoCommon = BasicInfoCommon {
     biConfigPath    :: FilePath
@@ -166,19 +158,25 @@ data NodeInfo = NodeInfo
   , niSystemStartTime :: UTCTime
   } deriving (Eq, Generic, ToJSON, FromJSON, Show)
 
-docNodeInfoTraceEvent :: Documented NodeInfo
-docNodeInfoTraceEvent = Documented [
-    DocMsg
-      ["NodeInfo"]
-        []
-        "Basic information about this node collected at startup\
+instance MetaTrace NodeInfo where
+  namespaceFor NodeInfo {}  =
+    Namespace [] ["NodeInfo"]
+  severityFor  (Namespace _ ["NodeInfo"]) _ =
+    Just Info
+  severityFor _ns _ =
+    Nothing
+  documentFor  (Namespace _ ["NodeInfo"]) = Just
+    "Basic information about this node collected at startup\
         \\n\
         \\n _niName_: Name of the node. \
         \\n _niProtocol_: Protocol which this nodes uses. \
         \\n _niVersion_: Software version which this node is using. \
         \\n _niStartTime_: Start time of this node. \
         \\n _niSystemStartTime_: How long did the start of the node took."
-  ]
+  documentFor _ns =
+     Nothing
+  allNamespaces = [ Namespace [] ["NodeInfo"]]
+
 
 -- | Prepare basic info about the node. This info will be sent to 'cardano-tracer'.
 prepareNodeInfo
@@ -243,15 +241,20 @@ data NodeStartupInfo = NodeStartupInfo {
   , suiSlotsPerKESPeriod :: Word64
   } deriving (Eq, Generic, ToJSON, FromJSON, Show)
 
-docNodeStartupInfoTraceEvent :: Documented NodeStartupInfo
-docNodeStartupInfoTraceEvent = Documented
-  [ DocMsg
-      ["NodeStartupInfo"]
-        []
-        "Startup information about this node, required for RTView\
+instance MetaTrace NodeStartupInfo where
+  namespaceFor NodeStartupInfo {}  =
+    Namespace [] ["NodeStartupInfo"]
+  severityFor  (Namespace _ ["NodeStartupInfo"]) _ =
+    Just Info
+  severityFor _ns _ =
+    Nothing
+  documentFor  (Namespace _ ["NodeStartupInfo"]) = Just
+    "Startup information about this node, required for RTView\
         \\n\
         \\n _suiEra_: Name of the current era. \
         \\n _suiSlotLength_: Slot length, in seconds. \
         \\n _suiEpochLength_: Epoch length, in slots. \
         \\n _suiSlotsPerKESPeriod_: KES period length, in slots."
-  ]
+  documentFor _ns =
+     Nothing
+  allNamespaces = [ Namespace [] ["NodeStartupInfo"]]

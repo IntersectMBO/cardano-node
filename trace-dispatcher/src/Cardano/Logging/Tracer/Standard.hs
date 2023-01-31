@@ -1,4 +1,4 @@
-{-# LANGUAGE RankNTypes          #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Logging.Tracer.Standard (
@@ -7,7 +7,7 @@ module Cardano.Logging.Tracer.Standard (
 
 import           Control.Concurrent.Async
 import           Control.Concurrent.Chan.Unagi.Bounded
-import           Control.Exception (catch, BlockedIndefinitelyOnMVar)
+import           Control.Exception (BlockedIndefinitelyOnMVar, catch)
 import           Control.Monad (forever, when)
 import           Control.Monad.IO.Class
 import           Data.IORef (IORef, modifyIORef', newIORef, readIORef)
@@ -56,7 +56,7 @@ standardTracer = do
         Nothing -> when (isNothing $ stRunning st) $
                       startStdoutThread stateRef
         Just _  -> pure ()
-    output _ lk c@(Left Document {}) =
+    output _ lk c@(Left TCDocument {}) =
        docIt
         (Stdout MachineFormat) -- TODO Find out the right format
         (lk, c)

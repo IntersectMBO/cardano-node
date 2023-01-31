@@ -3,14 +3,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports #-}
 
-module Cardano.Node.Tracing.Tracers.Peer
-  ( PeerT (..)
-  , startPeerTracer
-  , namesForPeers
-  , severityPeers
-  , docPeers
-  , ppPeer
-  ) where
+module Cardano.Node.Tracing.Tracers.Peer where
+--   ( PeerT (..)
+--   , startPeerTracer
+--   , namesForPeers
+--   , severityPeers
+--   , docPeers
+--   , ppPeer
+--   ) where
 
 import           Cardano.Prelude hiding (atomically)
 import           Prelude (String)
@@ -118,29 +118,21 @@ getCurrentPeers nkd = mapNodeKernelDataIO extractPeers nkd
                         $ Map.lookup cid peerStates
     pure . Map.elems $ peers
 
---------------------------------------------------------------------------------
--- Peers Tracer
---------------------------------------------------------------------------------
-
-namesForPeers :: [PeerT blk] -> [Text]
-namesForPeers _ = []
-
-severityPeers :: [PeerT blk] -> SeverityS
-severityPeers [] = Debug
-severityPeers _ = Notice
+-- --------------------------------------------------------------------------------
+-- -- Peers Tracer
+-- --------------------------------------------------------------------------------
 
 instance LogFormatting [PeerT blk] where
   forMachine _ []       = mempty
   forMachine dtal xs    = mconcat
-    [ "kind"  .= String "NodeKernelPeers"
-    , "peers" .= toJSON (foldl' (\acc x -> forMachine dtal x : acc) [] xs)
+    [ "peers" .= toJSON (foldl' (\acc x -> forMachine dtal x : acc) [] xs)
     ]
   forHuman peers = Text.concat $ intersperse ", " (map ppPeer peers)
   asMetrics peers = [IntM "Net.PeersFromNodeKernel" (fromIntegral (length peers))]
 
 instance LogFormatting (PeerT blk) where
   forMachine _dtal (PeerT cid _af status inflight) =
-    mconcat [ "peerAddress"   .= String (Text.pack . show . remoteAddress $ cid)
+    mconcat [  "peerAddress"   .= String (Text.pack . show . remoteAddress $ cid)
              , "peerStatus"    .= String (Text.pack . ppStatus $ status)
              , "peerSlotNo"    .= String (Text.pack . ppMaxSlotNo . peerFetchMaxSlotNo $ inflight)
              , "peerReqsInF"   .= String (show . peerFetchReqsInFlight $ inflight)
@@ -148,10 +140,20 @@ instance LogFormatting (PeerT blk) where
              , "peerBytesInF"  .= String (show . peerFetchBytesInFlight $ inflight)
              ]
 
-docPeers :: Documented [PeerT blk]
-docPeers = Documented [
-      DocMsg
-        []
-        [("Net.PeersFromNodeKernel","")]
-        ""
-    ]
+instance MetaTrace [PeerT blk] where
+  namespaceFor _  =
+    Namespace [] ["PeersFromNodeKernel"]
+  severityFor  (Namespace _ ["PeersFromNodeKernel"]) (Just []) =
+    Just Debug
+  severityFor  (Namespace _ ["PeersFromNodeKernel"]) _ =
+    Just Info
+  severityFor _ns _ =
+    Nothing
+  documentFor (Namespace _ ["PeersFromNodeKernel"]) =
+    Just ""
+  documentFor _ns =
+    Nothing
+  metricsDocFor (Namespace _ ["PeersFromNodeKernel"]) =
+    [("Net.PeersFromNodeKernel","")]
+  metricsDocFor _ns = []
+  allNamespaces = [ Namespace [] ["PeersFromNodeKernel"]]

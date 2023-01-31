@@ -2,7 +2,7 @@
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
-module Cardano.Tracing.Shutdown where
+module Cardano.Tracing.Shutdown () where
 
 import Prelude (IO)
 import Data.Text (Text)

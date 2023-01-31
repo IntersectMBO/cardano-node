@@ -9,9 +9,9 @@ module Cardano.Logging.Tracer.EKG (
 import           Cardano.Logging.DocuGenerator
 import           Cardano.Logging.Types
 
+import           Control.Concurrent.MVar
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Tracer as T
-import           Control.Concurrent.MVar
 import qualified Data.Map.Strict as Map
 import           Data.Text (Text, pack)
 import qualified System.Metrics as Metrics
@@ -38,8 +38,8 @@ ekgTracer storeOrServer = liftIO $ do
     output rgsGauges rgsLabels rgsCounters
       (LoggingContext{..}, Right (FormattedMetrics m)) =
         liftIO $ mapM_
-          (setIt rgsGauges rgsLabels rgsCounters lcNamespace) m
-    output _ _ _ p@(_, Left Document {}) =
+          (setIt rgsGauges rgsLabels rgsCounters (lcNSPrefix ++ lcNSInner)) m
+    output _ _ _ p@(_, Left TCDocument {}) =
       docIt EKGBackend p
     output _ _ _ (LoggingContext{}, _) =
       pure ()
@@ -48,7 +48,7 @@ ekgTracer storeOrServer = liftIO $ do
          MVar (Map.Map Text Gauge.Gauge)
       -> MVar (Map.Map Text Label.Label)
       -> MVar (Map.Map Text Counter.Counter)
-      -> Namespace
+      -> [Text]
       -> Metric
       -> IO ()
     setIt rgsGauges _rgsLabels _rgsCounters _namespace
@@ -66,10 +66,10 @@ ekgTracer storeOrServer = liftIO $ do
           Nothing -> Counter.inc counter
           Just i  -> Counter.add counter (fromIntegral i)
 
-    setFunc :: 
-         (Text -> Metrics.Store -> IO m) 
-      -> (Text -> Server -> IO m) 
-      -> Text 
+    setFunc ::
+         (Text -> Metrics.Store -> IO m)
+      -> (Text -> Server -> IO m)
+      -> Text
       -> Map.Map Text m
       -> IO (Map.Map Text m, m)
     setFunc creator1 creator2 name rgsMap = do

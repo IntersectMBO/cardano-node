@@ -19,7 +19,6 @@ import           Test.Tasty
 import           Test.Tasty.QuickCheck
 
 import           Cardano.Logging
-import           Cardano.Tracer.Test.ForwardingStressTest.Messages
 import           Cardano.Tracer.Test.ForwardingStressTest.Script
 import           Cardano.Tracer.Test.ForwardingStressTest.Types
 import           Cardano.Tracer.Test.Utils
@@ -38,7 +37,7 @@ main = do
              , tsSockInternal = Last $ Just "tracer.sock"
              , tsSockExternal = Last $ Just "tracer.sock"
              , tsNetworkMagic = Last $ Just $ NetworkMagic 42
-             , tsWorkDir      = Last $ Just "./test"
+             , tsWorkDir      = Last $ Just "/tmp/testTracerExt"
              }
 
     -- 1. Prepare directory hierarchy
@@ -96,7 +95,6 @@ getExternalTracerState TestSetup{..} ref = do
       tr <- mkCardanoTracer
               stdTr fwdTr Nothing
               ["Test"]
-              namesForMessage severityForMessage privacyForMessage
       let st = (procHdl, tr)
       writeIORef ref $ Just st
       pure st

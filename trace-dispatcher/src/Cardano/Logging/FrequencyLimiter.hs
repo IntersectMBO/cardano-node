@@ -1,21 +1,19 @@
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Logging.FrequencyLimiter (
     limitFrequency
-  , LimitingMessage(..)
   , LimiterSpec (..)
 )where
 
 import           Control.Monad.IO.Unlift
-import qualified Control.Tracer as T
-import           Data.Aeson (Value (..), (.=))
-import           Data.Text (Text, pack)
+import           Data.Text
 import           Data.Time.Clock.System
-import           GHC.Generics
+
+import qualified Control.Tracer as T
 
 import           Cardano.Logging.Trace
+import           Cardano.Logging.TraceDispatcherMessage
 import           Cardano.Logging.Types
 
 -- | Threshold for starting and stopping of the limiter
@@ -31,41 +29,6 @@ data LimiterSpec = LimiterSpec {
   , lsName      :: Text
   , lsFrequency :: Double
 }
-
-data LimitingMessage =
-    StartLimiting Text
-    -- ^ This message indicates the start of frequency limiting
-  | StopLimiting Text Int
-    -- ^ This message indicates the stop of frequency limiting,
-    -- and gives the number of messages that has been suppressed
-  | RememberLimiting Text Int
-    -- ^ This message remembers of ongoing frequency limiting,
-    -- and gives the number of messages that has been suppressed
-
-  deriving (Eq, Ord, Show, Generic)
-
-instance LogFormatting LimitingMessage where
-  forHuman (StartLimiting txt) = "Start of frequency limiting for " <> txt
-  forHuman (StopLimiting txt num) = "Stop of frequency limiting for " <> txt <>
-    ". Suppressed " <> pack (show num) <> " messages."
-  forHuman (RememberLimiting txt num) = "Frequency limiting still active for " <> txt <>
-    ". Suppressed so far " <> pack (show num) <> " messages."
-  forMachine _dtl StartLimiting{} = mconcat
-        [ "kind" .= String "StartLimiting"
-        ]
-  forMachine _dtl (StopLimiting _txt num) = mconcat
-        [ "kind" .= String "StopLimiting"
-        , "numSuppressed" .= Number (fromIntegral num)
-        ]
-  forMachine _dtl (RememberLimiting _txt num) = mconcat
-        [ "kind" .= String "RememberLimiting"
-        , "numSuppressed" .= Number (fromIntegral num)
-        ]
-  asMetrics (StartLimiting _txt)          = []
-  asMetrics (StopLimiting txt num)        = [IntM
-                                              ("SuppressedMessages " <> txt)
-                                              (fromIntegral num)]
-  asMetrics (RememberLimiting _txt _num)  = []
 
 data FrequencyRec a = FrequencyRec {
     frMessage  :: Maybe a   -- ^ The message to pass
@@ -112,10 +75,10 @@ limitFrequency
   :: forall a m . MonadUnliftIO m
   => Double   -- messages per second
   -> Text     -- name of this limiter
+  -> Trace m TraceDispatcherMessage -- the limiters messages
   -> Trace m a -- the limited trace
-  -> Trace m LimitingMessage -- the limiters messages
   -> m (Trace m a) -- the original trace
-limitFrequency thresholdFrequency limiterName vtracer ltracer = do
+limitFrequency thresholdFrequency limiterName ltracer vtracer = do
     timeNow <- systemTimeToSeconds <$> liftIO getSystemTime
     foldMTraceM
       (checkLimiting (1.0 / thresholdFrequency))

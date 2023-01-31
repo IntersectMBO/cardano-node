@@ -1,5 +1,5 @@
-{-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Logging.Tracer.Forward
@@ -33,7 +33,7 @@ forwardTracer forwardSink =
     writeToSink sink lo
   output _sink LoggingContext {} (Left Reset) = liftIO $ do
     pure ()
-  output _sink lk (Left c@Document {}) =
+  output _sink lk (Left c@TCDocument {}) =
     docIt Forwarder (lk, Left c)
   output _sink LoggingContext {} (Right _)  = pure ()
    -- writeToSink sink lo

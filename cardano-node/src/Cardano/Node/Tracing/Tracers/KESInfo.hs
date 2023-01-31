@@ -1,26 +1,29 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
 module Cardano.Node.Tracing.Tracers.KESInfo
-  ( severityKESInfo
-  , namesForKESInfo
-  , traceAsKESInfo
-  , docForgeKESInfo
-  ) where
+   (
+      traceAsKESInfo
+   ) where
 
-import           Data.SOP.Strict
+import           Data.Aeson (ToJSON (..), Value (..), (.=))
+import qualified Data.Text as Text
+import           Prelude (show)
 
 import           Cardano.Logging
-import           Cardano.Prelude hiding (All, Show, show)
-
 import           Cardano.Node.Queries (GetKESInfo (..))
-import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
+import           Cardano.Prelude hiding (All, Show, show)
+import           Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod))
 
 import           Ouroboros.Consensus.Block.Forging
 import           Ouroboros.Consensus.Node.Tracers (TraceLabelCreds (..))
@@ -48,23 +51,33 @@ traceAsMaybeKESInfo pr (Trace tr) = Trace $
           (lc, Left ctrl) -> (lc, Left ctrl))
         tr
 
---------------------------------------------------------------------------------
--- KESInfo Tracer
---------------------------------------------------------------------------------
+-- --------------------------------------------------------------------------------
+-- -- KESInfo Tracer
+-- --------------------------------------------------------------------------------
 
-severityKESInfo :: TraceLabelCreds HotKey.KESInfo -> SeverityS
-severityKESInfo (TraceLabelCreds _creds a) = severityKESInfo'  a
+deriving newtype instance ToJSON KESPeriod
 
-severityKESInfo' :: HotKey.KESInfo -> SeverityS
-severityKESInfo' forgeStateInfo =
+
+instance LogFormatting HotKey.KESInfo where
+  forMachine _dtal forgeStateInfo =
     let maxKesEvos = endKesPeriod - startKesPeriod
         oCertExpiryKesPeriod = startKesPeriod + maxKesEvos
         kesPeriodsUntilExpiry = max 0 (oCertExpiryKesPeriod - currKesPeriod)
-    in if kesPeriodsUntilExpiry > 7
-      then Info
-      else if kesPeriodsUntilExpiry <= 1
-        then Alert
-        else Warning
+    in
+      if kesPeriodsUntilExpiry > 7
+        then mconcat
+              [ "kind" .= String "KESInfo"
+              , "startPeriod" .= startKesPeriod
+              , "endPeriod" .= currKesPeriod
+              , "evolution" .= endKesPeriod
+              ]
+        else mconcat
+              [ "kind" .= String "ExpiryLogMessage"
+              , "keyExpiresIn" .= kesPeriodsUntilExpiry
+              , "startPeriod" .= startKesPeriod
+              , "endPeriod" .= currKesPeriod
+              , "evolution" .= endKesPeriod
+              ]
     where
     HotKey.KESInfo
       { HotKey.kesStartPeriod = KESPeriod startKesPeriod
@@ -72,18 +85,97 @@ severityKESInfo' forgeStateInfo =
       , HotKey.kesEndPeriod = KESPeriod endKesPeriod
       } = forgeStateInfo
 
-namesForKESInfo :: TraceLabelCreds HotKey.KESInfo -> [Text]
-namesForKESInfo (TraceLabelCreds _creds a) = namesForKESInfo' a
+  forHuman forgeStateInfo =
+    let maxKesEvos = endKesPeriod - startKesPeriod
+        oCertExpiryKesPeriod = startKesPeriod + maxKesEvos
+        kesPeriodsUntilExpiry = max 0 (oCertExpiryKesPeriod - currKesPeriod)
+    in if kesPeriodsUntilExpiry > 7
+      then "KES info startPeriod  " <> (Text.pack . show) startKesPeriod
+            <> " currPeriod " <> (Text.pack . show) currKesPeriod
+            <> " endPeriod " <> (Text.pack . show) endKesPeriod
+             <> (Text.pack . show) kesPeriodsUntilExpiry
+             <> " KES periods."
+      else "Operational key will expire in "
+             <> (Text.pack . show) kesPeriodsUntilExpiry
+             <> " KES periods."
+    where
+    HotKey.KESInfo
+      { HotKey.kesStartPeriod = KESPeriod startKesPeriod
+      , HotKey.kesEvolution = currKesPeriod
+      , HotKey.kesEndPeriod = KESPeriod endKesPeriod
+      } = forgeStateInfo
 
-namesForKESInfo' :: HotKey.KESInfo -> [Text]
-namesForKESInfo' _fsi = []
+  asMetrics forgeStateInfo =
+      let maxKesEvos = endKesPeriod - startKesPeriod
+          oCertExpiryKesPeriod = startKesPeriod + maxKesEvos
+      in  [
+            IntM "KESInfo.operationalCertificateStartKESPeriod"
+              (fromIntegral startKesPeriod)
+          , IntM "KESInfo.operationalCertificateExpiryKESPeriod"
+              (fromIntegral (startKesPeriod + maxKesEvos))
+          , IntM "KESInfo.currentKESPeriod"
+              (fromIntegral currKesPeriod)
+          , IntM "KESInfo.remainingKESPeriods"
+              (fromIntegral (max 0 (oCertExpiryKesPeriod - currKesPeriod)))
+          ]
+    where
+    HotKey.KESInfo
+      { HotKey.kesStartPeriod = KESPeriod startKesPeriod
+      , HotKey.kesEvolution = currKesPeriod
+      , HotKey.kesEndPeriod = KESPeriod endKesPeriod
+      } = forgeStateInfo
 
-docForgeKESInfo :: Documented (TraceLabelCreds HotKey.KESInfo)
-docForgeKESInfo = Documented [
-    DocMsg
-      []
-      []
+
+instance MetaTrace HotKey.KESInfo where
+    namespaceFor HotKey.KESInfo {} = Namespace [] []
+
+    severityFor (Namespace _ _) (Just forgeStateInfo) = Just $
+      let maxKesEvos = endKesPeriod - startKesPeriod
+          oCertExpiryKesPeriod = startKesPeriod + maxKesEvos
+          kesPeriodsUntilExpiry = max 0 (oCertExpiryKesPeriod - currKesPeriod)
+      in if kesPeriodsUntilExpiry > 7
+        then Info
+        else if kesPeriodsUntilExpiry <= 1
+          then Alert
+          else Warning
+      where
+      HotKey.KESInfo
+        { HotKey.kesStartPeriod = KESPeriod startKesPeriod
+        , HotKey.kesEvolution = currKesPeriod
+        , HotKey.kesEndPeriod = KESPeriod endKesPeriod
+        } = forgeStateInfo
+    severityFor (Namespace _ _) Nothing = Just Info
+
+    documentFor (Namespace _ _) = Just
       "kesStartPeriod \
-      \\nkesEndPeriod is kesStartPeriod + tpraosMaxKESEvo\
-      \\nkesEvolution is the current evolution or /relative period/."
-    ]
+       \\nkesEndPeriod is kesStartPeriod + tpraosMaxKESEvo\
+       \\nkesEvolution is the current evolution or /relative period/."
+
+    metricsDocFor (Namespace _ _) =
+        [ ("KESInfo.operationalCertificateStartKESPeriod", "")
+        , ("KESInfo.operationalCertificateExpiryKESPeriod", "")
+        , ("KESInfo.currentKESPeriod", "")
+        , ("KESInfo.remainingKESPeriods", "")]
+
+    allNamespaces = []
+
+
+
+
+instance LogFormatting HotKey.KESEvolutionError where
+  forMachine dtal (HotKey.KESCouldNotEvolve kesInfo targetPeriod) =
+    mconcat
+      [ "kind" .= String "KESCouldNotEvolve"
+      , "kesInfo" .= forMachine dtal kesInfo
+      , "targetPeriod" .= targetPeriod
+      ]
+  forMachine dtal (HotKey.KESKeyAlreadyPoisoned kesInfo targetPeriod) =
+    mconcat
+      [ "kind" .= String "KESKeyAlreadyPoisoned"
+      , "kesInfo" .= forMachine dtal kesInfo
+      , "targetPeriod" .= targetPeriod
+      ]
+
+
+
+

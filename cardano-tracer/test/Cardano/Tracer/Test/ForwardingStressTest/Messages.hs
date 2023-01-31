@@ -1,13 +1,8 @@
 module Cardano.Tracer.Test.ForwardingStressTest.Messages (
-    namesForMessage
-  , severityForMessage
-  , privacyForMessage
-  , docMessage
-  , getMessageID
+    getMessageID
   , setMessageID
   ) where
 
-import           Data.Text
 
 import           Cardano.Logging
 import           Cardano.Tracer.Test.ForwardingStressTest.Types
@@ -22,33 +17,35 @@ setMessageID (Message1 _ v) mid = Message1 mid v
 setMessageID (Message2 _ v) mid = Message2 mid v
 setMessageID (Message3 _ v) mid = Message3 mid v
 
-namesForMessage :: Message -> [Text]
-namesForMessage Message1 {} = ["Message1"]
-namesForMessage Message2 {} = ["Message2"]
-namesForMessage Message3 {} = ["Message3"]
+instance MetaTrace Message where
+  namespaceFor  Message1 {} = Namespace [] ["Message1"]
+  namespaceFor  Message2 {} = Namespace [] ["Message2"]
+  namespaceFor  Message3 {} = Namespace [] ["Message3"]
 
-severityForMessage :: Message -> SeverityS
-severityForMessage Message1 {} = Debug
-severityForMessage Message2 {} = Info
-severityForMessage Message3 {} = Error
+  severityFor   (Namespace _ ["Message1"]) _ = Just Debug
+  severityFor   (Namespace _ ["Message2"]) _ = Just Info
+  severityFor   (Namespace _ ["Message3"]) _ = Just Error
+  severityFor   _ns _ = Nothing
 
-privacyForMessage :: Message -> Privacy
-privacyForMessage Message1 {} = Public
-privacyForMessage Message2 {} = Confidential
-privacyForMessage Message3 {} = Public
+  privacyFor    (Namespace _ ["Message1"]) _ = Just Public
+  privacyFor    (Namespace _ ["Message2"]) _ = Just Public
+  privacyFor    (Namespace _ ["Message3"]) _ = Just Public
+  privacyFor    _ns _ = Nothing
 
-docMessage :: Documented Message
-docMessage = Documented [
-    DocMsg
-      ["Message1"]
-      []
-      "The first message."
-  , DocMsg
-      ["Message2"]
-      []
-      "The second message."
-  , DocMsg
-      ["Message3"]
-      [("Metrics1", "A number")]
-      "The third message."
-  ]
+  documentFor   (Namespace _ ["Message1"]) = Just "The first message."
+  documentFor   (Namespace _ ["Message2"]) = Just "The second message."
+  documentFor   (Namespace _ ["Message3"]) = Just "The third message."
+  documentFor   _ns = Nothing
+
+  metricsDocFor (Namespace _ ["Message1"]) =
+    [ ("Metrics1", "A number")
+    , ("Metrics2", "A number")
+    , ("Metrics3", "A number")
+    , ("Metrics4", "A number")
+    , ("Metrics5", "A number")
+    ]
+  metricsDocFor _ =  []
+
+  allNamespaces = [ Namespace [] ["Message1"]
+                  , Namespace [] ["Message2"]
+                  , Namespace [] ["Message3"]]

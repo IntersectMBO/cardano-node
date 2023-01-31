@@ -21,6 +21,7 @@ import           Cardano.Prelude
 
 import           Data.Aeson (Value (..), object)
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.Set as Set
 import qualified Data.Text as Text
@@ -35,6 +36,7 @@ import           Cardano.Slotting.Block (BlockNo (..))
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Consensus ()
 import           Cardano.Tracing.Render (renderTxId)
+import           Cardano.Node.Tracing.Tracers.KESInfo ()
 
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
@@ -99,7 +101,7 @@ import qualified Cardano.Ledger.ShelleyMA.Rules as MA
 import           Cardano.Protocol.TPraos.API (ChainTransitionError (ChainTransitionError))
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod))
 import           Cardano.Protocol.TPraos.Rules.Prtcl
-import qualified Data.Aeson.Key as Aeson
+
 
 
 {- HLINT ignore "Use :" -}
@@ -142,31 +144,6 @@ instance Core.Crypto crypto => ToObject (TPraosCannotForge crypto) where
       [ "kind" .= String "TPraosCannotLeadWrongVRF"
       , "expected" .= genDlgVRFHash
       , "actual" .= coreNodeVRFHash
-      ]
-
-deriving newtype instance ToJSON KESPeriod
-
-instance ToObject HotKey.KESInfo where
-  toObject _verb HotKey.KESInfo { kesStartPeriod, kesEndPeriod, kesEvolution } =
-    mconcat
-      [ "kind" .= String "KESInfo"
-      , "startPeriod" .= kesStartPeriod
-      , "endPeriod" .= kesEndPeriod
-      , "evolution" .= kesEvolution
-      ]
-
-instance ToObject HotKey.KESEvolutionError where
-  toObject verb (HotKey.KESCouldNotEvolve kesInfo targetPeriod) =
-    mconcat
-      [ "kind" .= String "KESCouldNotEvolve"
-      , "kesInfo" .= toObject verb kesInfo
-      , "targetPeriod" .= targetPeriod
-      ]
-  toObject verb (HotKey.KESKeyAlreadyPoisoned kesInfo targetPeriod) =
-    mconcat
-      [ "kind" .= String "KESKeyAlreadyPoisoned"
-      , "kesInfo" .= toObject verb kesInfo
-      , "targetPeriod" .= targetPeriod
       ]
 
 instance ( ShelleyBasedEra era
@@ -851,7 +828,28 @@ instance ToObject (OcertPredicateFailure crypto) where
              , "error" .= String "A counter was not found for this stake pool key hash"
              ]
 
+instance ToObject HotKey.KESInfo where
+  toObject _verb HotKey.KESInfo { kesStartPeriod, kesEndPeriod, kesEvolution } =
+    mconcat
+      [ "kind" .= String "KESInfo"
+      , "startPeriod" .= kesStartPeriod
+      , "endPeriod" .= kesEndPeriod
+      , "evolution" .= kesEvolution
+      ]
 
+instance ToObject HotKey.KESEvolutionError where
+  toObject verb (HotKey.KESCouldNotEvolve kesInfo targetPeriod) =
+    mconcat
+      [ "kind" .= String "KESCouldNotEvolve"
+      , "kesInfo" .= toObject verb kesInfo
+      , "targetPeriod" .= targetPeriod
+      ]
+  toObject verb (HotKey.KESKeyAlreadyPoisoned kesInfo targetPeriod) =
+    mconcat
+      [ "kind" .= String "KESKeyAlreadyPoisoned"
+      , "kesInfo" .= toObject verb kesInfo
+      , "targetPeriod" .= targetPeriod
+      ]
 
 instance ToObject (UpdnPredicateFailure crypto) where
   toObject _verb x = case x of {} -- no constructors

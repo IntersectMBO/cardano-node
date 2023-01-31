@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports #-}
 
@@ -33,19 +33,20 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Text as Text
 
-import "contra-tracer" Control.Tracer (Tracer, traceWith)
+import           "contra-tracer" Control.Tracer (Tracer, traceWith)
 
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Slotting.Slot (SlotNo (..))
 
 import           Cardano.Node.Configuration.NodeAddress
-import           Cardano.Node.Types
-import           Cardano.Node.Startup (StartupTrace (..))
 import           Cardano.Node.Configuration.Topology (TopologyError (..))
+import           Cardano.Node.Startup (StartupTrace (..))
+import           Cardano.Node.Types
 
 import           Ouroboros.Network.NodeToNode (PeerAdvertise (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
+
 
 
 -- | A newtype wrapper around 'UseLedgerAfter' which provides 'FromJSON' and
@@ -248,7 +249,7 @@ readTopologyFile tr nc = do
   combine a b = case (a, b) of
     (Right {}, _)     -> return a
     (_, Right {})     -> traceWith tr NetworkConfigLegacy
-                      >> return (getLegacy <$> b)
+                           >> return (getLegacy <$> b)
     (Left _, Left _)  -> -- ignore parsing error of legacy format
                          return a
 

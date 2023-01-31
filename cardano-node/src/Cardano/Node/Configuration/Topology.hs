@@ -24,9 +24,9 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Text as Text
 
+import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Types
-import           Cardano.Node.Configuration.NodeAddress
 
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
 

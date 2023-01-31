@@ -2,7 +2,6 @@
 
 module Examples.Configuration (
     testConfig
-  , testMessageDocumented
 ) where
 
 import           Control.Monad.IO.Class
@@ -24,18 +23,21 @@ instance LogFormatting TestMessage where
            , "text" AE..= AE.String text
            ]
 
-testMessageDocumented :: Documented TestMessage
-testMessageDocumented = Documented
-  [ DocMsg ["TestMessage"] [] "just a text"
-  ]
+instance MetaTrace TestMessage where
+  namespaceFor (TestMessage _text) = Namespace [] ["TestMessage"]
+  severityFor (Namespace _ ["TestMessage"]) _ = Just Info
+  privacyFor  (Namespace _ ["TestMessage"]) _ = Just Public
+  documentFor (Namespace _ ["TestMessage"]) = Just "Just a test"
+  metricsDocFor (Namespace _ ["TestMessage"]) = []
+  allNamespaces = [Namespace [] ["TestMessage"]]
 
 tracers :: MonadIO m => m (Trace m TestMessage, Trace m TestMessage, Trace m TestMessage)
 tracers  = do
   t <-  standardTracer
   t0 <- humanFormatter True (Just "cardano") t
-  t1 <- appendName "TestMessage" . appendName "tracer1" <$> filterSeverityFromConfig t0
-  t2 <- appendName "TestMessage" . appendName "tracer2" <$> filterSeverityFromConfig t0
-  t3 <- appendName "TestMessage" . appendName "tracer3" <$> filterSeverityFromConfig t0
+  t1 <- withInnerNames . appendPrefixName "tracer1" <$> filterSeverityFromConfig t0
+  t2 <- withInnerNames . appendPrefixName "tracer2" <$> filterSeverityFromConfig t0
+  t3 <- withInnerNames . appendPrefixName "tracer3" <$> filterSeverityFromConfig t0
   pure (t1, t2, t3)
 
 config1 :: TraceConfig
@@ -80,7 +82,7 @@ testConfig' ::
   -> Trace IO TestMessage
   -> IO ()
 testConfig' tc t1 t2 t3 = do
-    configureTracers tc testMessageDocumented [t1, t2, t3]
+    configureTracers tc [t1, t2, t3]
     traceWith (setSeverity Critical t1) (TestMessage "Now setting config")
     traceWith
       (setSeverity Error t1)

@@ -17,7 +17,7 @@ import           Cardano.Logging
 config1 :: TraceConfig
 config1 = emptyTraceConfig {
   tcOptions = fromList
-    [([] :: Namespace,
+    [([],
          [ ConfSeverity (SeverityF (Just Debug))
          , ConfDetail DNormal
          , ConfBackend [Stdout HumanFormatColoured, Forwarder, EKGBackend]
@@ -28,7 +28,7 @@ config1 = emptyTraceConfig {
 config2 :: TraceConfig
 config2 = emptyTraceConfig {
   tcOptions = fromList
-    [ ([] :: Namespace,
+    [ ([],
          [ ConfSeverity (SeverityF (Just Debug))
          , ConfDetail DNormal
          , ConfBackend [Stdout HumanFormatColoured, Forwarder, EKGBackend]
@@ -50,7 +50,7 @@ config2 = emptyTraceConfig {
 config3 :: TraceConfig
 config3 = emptyTraceConfig {
   tcOptions = fromList
-    [ ([] :: Namespace,
+    [ ([],
          [ ConfSeverity (SeverityF (Just Debug))
          , ConfDetail DNormal
          , ConfBackend [Stdout HumanFormatColoured, Forwarder, EKGBackend]
@@ -73,7 +73,7 @@ config3 = emptyTraceConfig {
 config4 :: TraceConfig
 config4 = emptyTraceConfig {
   tcOptions = fromList
-    [([] :: Namespace,
+    [([],
          [ ConfSeverity (SeverityF (Just Debug))
          , ConfDetail DNormal
          , ConfBackend [EKGBackend]

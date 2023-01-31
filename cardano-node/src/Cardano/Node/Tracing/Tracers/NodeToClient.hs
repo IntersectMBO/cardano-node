@@ -1,31 +1,15 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
-module Cardano.Node.Tracing.Tracers.NodeToClient
-  ( severityTChainSync
-  , namesForTChainSync
-  , docTChainSyncNodeToClient
-  , docTChainSyncNodeToNode
-  , docTChainSyncNodeToNodeSerisalised
+module Cardano.Node.Tracing.Tracers.NodeToClient () where
 
-  , severityTTxMonitor
-  , namesForTTxMonitor
-  , docTTxMonitor
-
-  , severityTTxSubmission
-  , namesForTTxSubmission
-  , docTTxSubmission
-
-  , severityTStateQuery
-  , namesForTStateQuery
-  , docTStateQuery
-  ) where
 
 import           Cardano.Logging
 import           Cardano.Prelude hiding (Show, show)
@@ -34,20 +18,14 @@ import           Data.Text (pack)
 import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
 import           Text.Show
 
-import           Cardano.Slotting.Slot (SlotNo)
-
-import           Network.Mux.Trace (TraceLabelPeer (..))
-
 import           Ouroboros.Consensus.Ledger.Query (Query)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId)
-
-import           Ouroboros.Network.Block (Point, Serialised, Tip)
-import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv (..))
 import           Ouroboros.Network.Protocol.ChainSync.Type as ChainSync
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LSQ
 import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Type as LTM
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
+
+{-# ANN module ("HLint: ignore Redundant bracket" :: Text) #-}
 
 
 instance LogFormatting (AnyMessageAndAgency ps)
@@ -63,53 +41,63 @@ instance LogFormatting (AnyMessageAndAgency ps)
   asMetrics (TraceSendMsg m) = asMetrics m
   asMetrics (TraceRecvMsg m) = asMetrics m
 
+instance MetaTrace (AnyMessageAndAgency ps) =>
+            MetaTrace (TraceSendRecv ps) where
+  namespaceFor (TraceSendMsg msg) =
+    nsPrependInner "Send" (namespaceFor msg)
+  namespaceFor (TraceRecvMsg msg) =
+    nsPrependInner "Receive" (namespaceFor msg)
 
---------------------------------------------------------------------------------
--- TChainSync Tracer
---------------------------------------------------------------------------------
+  severityFor (Namespace out ("Send" : tl)) (Just (TraceSendMsg msg)) =
+    severityFor (Namespace out tl) (Just msg)
+  severityFor (Namespace out ("Send" : tl)) Nothing =
+    severityFor (Namespace out tl :: Namespace (AnyMessageAndAgency ps)) Nothing
+  severityFor (Namespace out ("Receive" : tl)) (Just (TraceSendMsg msg)) =
+    severityFor (Namespace out tl) (Just msg)
+  severityFor (Namespace out ("Receive" : tl)) Nothing =
+    severityFor (Namespace out tl :: Namespace (AnyMessageAndAgency ps)) Nothing
+  severityFor _ _ = Nothing
 
-severityTChainSync :: BlockFetch.TraceLabelPeer peer (TraceSendRecv
-    (ChainSync (Serialised blk) (Point blk) (Tip blk))) -> SeverityS
-severityTChainSync (BlockFetch.TraceLabelPeer _ v) = severityTChainSync' v
-  where
-    severityTChainSync' (TraceSendMsg msg) = severityTChainSync'' msg
-    severityTChainSync' (TraceRecvMsg msg) = severityTChainSync'' msg
+  privacyFor (Namespace out ("Send" : tl)) (Just (TraceSendMsg msg)) =
+    privacyFor (Namespace out tl) (Just msg)
+  privacyFor (Namespace out ("Send" : tl)) Nothing =
+    privacyFor (Namespace out tl :: Namespace (AnyMessageAndAgency ps)) Nothing
+  privacyFor (Namespace out ("Receive" : tl)) (Just (TraceSendMsg msg)) =
+    privacyFor (Namespace out tl) (Just msg)
+  privacyFor (Namespace out ("Receive" : tl)) Nothing =
+    privacyFor (Namespace out tl :: Namespace (AnyMessageAndAgency ps)) Nothing
+  privacyFor _ _ = Nothing
 
-    severityTChainSync'' (AnyMessageAndAgency _agency msg) = severityTChainSync''' msg
+  detailsFor (Namespace out ("Send" : tl)) (Just (TraceSendMsg msg)) =
+    detailsFor (Namespace out tl) (Just msg)
+  detailsFor (Namespace out ("Send" : tl)) Nothing =
+    detailsFor (Namespace out tl :: Namespace (AnyMessageAndAgency ps)) Nothing
+  detailsFor (Namespace out ("Receive" : tl)) (Just (TraceSendMsg msg)) =
+    detailsFor (Namespace out tl) (Just msg)
+  detailsFor (Namespace out ("Receive" : tl)) Nothing =
+    detailsFor (Namespace out tl :: Namespace (AnyMessageAndAgency ps)) Nothing
+  detailsFor _ _ = Nothing
 
-    severityTChainSync''' :: Message
-                                     (ChainSync header point tip) from to
-                                   -> SeverityS
-    severityTChainSync''' MsgRequestNext {}       = Info
-    severityTChainSync''' MsgAwaitReply {}        = Info
-    severityTChainSync''' MsgRollForward {}       = Info
-    severityTChainSync''' MsgRollBackward {}      = Info
-    severityTChainSync''' MsgFindIntersect {}     = Info
-    severityTChainSync''' MsgIntersectFound {}    = Info
-    severityTChainSync''' MsgIntersectNotFound {} = Info
-    severityTChainSync''' MsgDone {}              = Info
+  metricsDocFor (Namespace out ("Send" : tl)) =
+    metricsDocFor (nsCast (Namespace out tl) :: Namespace (AnyMessageAndAgency ps))
+  metricsDocFor (Namespace out ("Receive" : tl)) =
+    metricsDocFor (nsCast (Namespace out tl) :: Namespace (AnyMessageAndAgency ps))
+  metricsDocFor _ = []
 
-namesForTChainSync :: BlockFetch.TraceLabelPeer peer (TraceSendRecv
-    (ChainSync (Serialised blk) (Point blk) (Tip blk))) -> [Text]
-namesForTChainSync (BlockFetch.TraceLabelPeer _ v) = namesTChainSync v
-  where
+  documentFor (Namespace out ("Send" : tl)) =
+    documentFor (nsCast (Namespace out tl) :: Namespace (AnyMessageAndAgency ps))
+  documentFor (Namespace out ("Receive" : tl)) =
+    documentFor (nsCast (Namespace out tl) :: Namespace (AnyMessageAndAgency ps))
+  documentFor _ = Nothing
 
-    namesTChainSync (TraceSendMsg msg) = "Send" : namesTChainSync' msg
-    namesTChainSync (TraceRecvMsg msg) = "Receive" : namesTChainSync' msg
+  allNamespaces =
+    let cn = allNamespaces :: [Namespace (AnyMessageAndAgency ps)]
+    in map (nsPrependInner "Send") cn ++ map (nsPrependInner "Receive") cn
 
-    namesTChainSync' (AnyMessageAndAgency _agency msg) = namesTChainSync'' msg
 
-    namesTChainSync'' :: Message (ChainSync header point tip) from to
-                               -> [Text]
-    namesTChainSync'' MsgRequestNext {}       = ["RequestNext"]
-    namesTChainSync'' MsgAwaitReply {}        = ["AwaitReply"]
-    namesTChainSync'' MsgRollForward {}       = ["RollForward"]
-    namesTChainSync'' MsgRollBackward {}      = ["RollBackward"]
-    namesTChainSync'' MsgFindIntersect {}     = ["FindIntersect"]
-    namesTChainSync'' MsgIntersectFound {}    = ["IntersectFound"]
-    namesTChainSync'' MsgIntersectNotFound {} = ["IntersectNotFound"]
-    namesTChainSync'' MsgDone {}              = ["Done"]
-
+-- --------------------------------------------------------------------------------
+-- -- TChainSync Tracer
+-- --------------------------------------------------------------------------------
 
 instance LogFormatting (AnyMessageAndAgency (ChainSync blk pt tip)) where
    forMachine _dtal (AnyMessageAndAgency stok ChainSync.MsgRequestNext{}) =
@@ -145,118 +133,87 @@ instance LogFormatting (AnyMessageAndAgency (ChainSync blk pt tip)) where
               , "agency" .= String (pack $ show stok)
               ]
 
-docTChainSyncNodeToClient :: Documented (BlockFetch.TraceLabelPeer peer (TraceSendRecv
-    (ChainSync x (Point blk) (Tip blk))))
-docTChainSyncNodeToClient =
-    addDocumentedNamespace  ["Send"] docTChainSync
-    `addDocs` addDocumentedNamespace  ["Receive"] docTChainSync
+instance MetaTrace (AnyMessageAndAgency (ChainSync blk pt tip)) where
+    namespaceFor (AnyMessageAndAgency _agency (MsgRequestNext {})) =
+      Namespace [] ["RequestNext"]
+    namespaceFor (AnyMessageAndAgency _agency (MsgAwaitReply {})) =
+      Namespace [] ["AwaitReply"]
+    namespaceFor (AnyMessageAndAgency _agency (MsgRollForward {})) =
+      Namespace [] ["RollForward"]
+    namespaceFor (AnyMessageAndAgency _agency (MsgRollBackward {})) =
+      Namespace [] ["RollBackward"]
+    namespaceFor (AnyMessageAndAgency _agency (MsgFindIntersect {})) =
+      Namespace [] ["FindIntersect"]
+    namespaceFor (AnyMessageAndAgency _agency (MsgIntersectFound {})) =
+      Namespace [] ["IntersectFound"]
+    namespaceFor (AnyMessageAndAgency _agency (MsgIntersectNotFound {})) =
+      Namespace [] ["IntersectNotFound"]
+    namespaceFor (AnyMessageAndAgency _agency (MsgDone {})) =
+      Namespace [] ["Done"]
 
+    severityFor (Namespace _ ["RequestNext"]) _ = Just Info
+    severityFor (Namespace _ ["AwaitReply"]) _ = Just Info
+    severityFor (Namespace _ ["RollForward"]) _ = Just Info
+    severityFor (Namespace _ ["RollBackward"]) _ = Just Info
+    severityFor (Namespace _ ["FindIntersect"]) _ = Just Info
+    severityFor (Namespace _ ["IntersectFound"]) _ = Just Info
+    severityFor (Namespace _ ["IntersectNotFound"]) _ = Just Info
+    severityFor (Namespace _ ["Done"]) _ = Just Info
+    severityFor _ _ = Nothing
 
-docTChainSyncNodeToNode :: Documented (BlockFetch.TraceLabelPeer peer (TraceSendRecv
-    (ChainSync x (Point blk) (Tip blk))))
-docTChainSyncNodeToNode =
-    addDocumentedNamespace  ["Send"] docTChainSync
-    `addDocs` addDocumentedNamespace  ["Receive"] docTChainSync
-
-docTChainSyncNodeToNodeSerisalised :: Documented (BlockFetch.TraceLabelPeer peer (TraceSendRecv
-    (ChainSync x (Point blk) (Tip blk))))
-docTChainSyncNodeToNodeSerisalised =
-    addDocumentedNamespace  ["Send"] docTChainSync
-    `addDocs` addDocumentedNamespace  ["Receive"] docTChainSync
-
-
-docTChainSync :: Documented (BlockFetch.TraceLabelPeer peer (TraceSendRecv
-    (ChainSync x (Point blk) (Tip blk))))
-docTChainSync = Documented [
-      DocMsg
-        ["RequestNext"]
-        []
-        "Request the next update from the producer. The response can be a roll \
+    documentFor (Namespace _ ["RequestNext"]) = Just
+      "Request the next update from the producer. The response can be a roll \
         \forward, a roll back or wait."
-    , DocMsg
-        ["AwaitReply"]
-        []
+    documentFor (Namespace _ ["AwaitReply"]) = Just
         "Acknowledge the request but require the consumer to wait for the next \
         \update. This means that the consumer is synced with the producer, and \
         \the producer is waiting for its own chain state to change."
-    , DocMsg
-        ["RollForward"]
-        []
+    documentFor (Namespace _ ["RollForward"]) = Just
         "Tell the consumer to extend their chain with the given header. \
         \\n \
         \The message also tells the consumer about the head point of the producer."
-    , DocMsg
-        ["RollBackward"]
-        []
+    documentFor (Namespace _ ["RollBackward"]) = Just
         "Tell the consumer to roll back to a given point on their chain. \
         \\n \
         \The message also tells the consumer about the head point of the producer."
-    , DocMsg
-        ["FindIntersect"]
-        []
+    documentFor (Namespace _ ["FindIntersect"]) = Just
         "Ask the producer to try to find an improved intersection point between \
         \the consumer and producer's chains. The consumer sends a sequence of \
         \points and it is up to the producer to find the first intersection point \
         \on its chain and send it back to the consumer."
-    , DocMsg
-        ["IntersectFound"]
-        []
+    documentFor (Namespace _ ["IntersectFound"]) = Just
         "The reply to the consumer about an intersection found. \
         \The consumer can decide weather to send more points. \
         \\n \
         \The message also tells the consumer about the head point of the producer."
-    , DocMsg
-        ["IntersectNotFound"]
-        []
+    documentFor (Namespace _ ["IntersectNotFound"]) = Just
         "The reply to the consumer that no intersection was found: none of the \
         \points the consumer supplied are on the producer chain. \
         \\n \
         \The message also tells the consumer about the head point of the producer."
-    , DocMsg
-        ["Done"]
-        []
+    documentFor (Namespace _ ["Done"]) = Just
         "We have to explain to the framework what our states mean, in terms of \
         \which party has agency in each state. \
         \\n \
         \Idle states are where it is for the client to send a message, \
         \busy states are where the server is expected to send a reply."
-  ]
+    documentFor _ = Nothing
+
+    allNamespaces = [
+        Namespace [] ["RequestNext"]
+      , Namespace [] ["AwaitReply"]
+      , Namespace [] ["RollForward"]
+      , Namespace [] ["RollBackward"]
+      , Namespace [] ["FindIntersect"]
+      , Namespace [] ["IntersectFound"]
+      , Namespace [] ["IntersectNotFound"]
+      , Namespace [] ["Done"]
+      ]
+
 
 --------------------------------------------------------------------------------
 -- LocalTxMonitor Tracer
 --------------------------------------------------------------------------------
-
-severityTTxMonitor
-  :: TraceLabelPeer peer
-       (TraceSendRecv (LTM.LocalTxMonitor (GenTxId blk) (GenTx blk) SlotNo))
-  -> SeverityS
-severityTTxMonitor _ = Info
-
-namesForTTxMonitor
-  :: TraceLabelPeer peer
-       (TraceSendRecv (LTM.LocalTxMonitor (GenTxId blk) (GenTx blk) SlotNo))
-  -> [Text]
-namesForTTxMonitor (TraceLabelPeer _ v) = namesForTTxMonitor' v
-  where
-    namesForTTxMonitor' (TraceSendMsg msg) = "Send"    : namesForTTxMonitor'' msg
-    namesForTTxMonitor' (TraceRecvMsg msg) = "Receive" : namesForTTxMonitor'' msg
-
-    namesForTTxMonitor'' (AnyMessageAndAgency _agency msg) = namesForTTxMonitor''' msg
-
-    namesForTTxMonitor''' :: Message (LTM.LocalTxMonitor (GenTxId blk) (GenTx blk) SlotNo)
-                                     from to
-                          -> [Text]
-    namesForTTxMonitor''' LTM.MsgAcquire {} = ["Acquire"]
-    namesForTTxMonitor''' LTM.MsgAcquired {} = ["Acquired"]
-    namesForTTxMonitor''' LTM.MsgAwaitAcquire {} = ["AwaitAcquire"]
-    namesForTTxMonitor''' LTM.MsgNextTx {} = ["NextTx"]
-    namesForTTxMonitor''' LTM.MsgReplyNextTx {} = ["ReplyNextTx"]
-    namesForTTxMonitor''' LTM.MsgHasTx {} = ["HasTx"]
-    namesForTTxMonitor''' LTM.MsgReplyHasTx {} = ["ReplyHasTx"]
-    namesForTTxMonitor''' LTM.MsgGetSizes {} = ["GetSizes"]
-    namesForTTxMonitor''' LTM.MsgReplyGetSizes {} = ["ReplyGetSizes"]
-    namesForTTxMonitor''' LTM.MsgRelease {} = ["Release"]
-    namesForTTxMonitor''' LTM.MsgDone {} = ["Done"]
 
 instance LogFormatting (AnyMessageAndAgency (LTM.LocalTxMonitor txid tx slotNo)) where
   forMachine _dtal (AnyMessageAndAgency stok LTM.MsgAcquire {}) =
@@ -304,58 +261,83 @@ instance LogFormatting (AnyMessageAndAgency (LTM.LocalTxMonitor txid tx slotNo))
              , "agency" .= String (pack $ show stok)
              ]
 
-docTTxMonitor :: Documented
-  (TraceLabelPeer
-     localPeer
-     (TraceSendRecv
-        (LTM.LocalTxMonitor
-           (GenTxId blk) (GenTx blk) SlotNo)))
-docTTxMonitor =
-  addDocumentedNamespace  ["Send"] docTState
-   `addDocs` addDocumentedNamespace  ["Receive"] docTState
+instance MetaTrace (AnyMessageAndAgency (LTM.LocalTxMonitor txid tx slotNo)) where
+    namespaceFor (AnyMessageAndAgency _agency LTM.MsgAcquire {}) =
+      Namespace [] ["Acquire"]
+    namespaceFor (AnyMessageAndAgency _agency LTM.MsgAcquired {}) =
+      Namespace [] ["Acquired"]
+    namespaceFor (AnyMessageAndAgency _agency LTM.MsgAwaitAcquire {}) =
+      Namespace [] ["AwaitAcquire"]
+    namespaceFor (AnyMessageAndAgency _agency LTM.MsgNextTx {}) =
+      Namespace [] ["NextTx"]
+    namespaceFor (AnyMessageAndAgency _agency LTM.MsgReplyNextTx {}) =
+      Namespace [] ["ReplyNextTx"]
+    namespaceFor (AnyMessageAndAgency _agency LTM.MsgHasTx {}) =
+      Namespace [] ["HasTx"]
+    namespaceFor (AnyMessageAndAgency _agency LTM.MsgReplyHasTx {}) =
+      Namespace [] ["ReplyHasTx"]
+    namespaceFor (AnyMessageAndAgency _agency LTM.MsgGetSizes {}) =
+      Namespace [] ["GetSizes"]
+    namespaceFor (AnyMessageAndAgency _agency LTM.MsgReplyGetSizes {}) =
+      Namespace [] ["ReplyGetSizes"]
+    namespaceFor (AnyMessageAndAgency _agency LTM.MsgRelease {}) =
+      Namespace [] ["Release"]
+    namespaceFor (AnyMessageAndAgency _agency LTM.MsgDone {}) =
+      Namespace [] ["Done"]
 
+    severityFor (Namespace _ ["Acquire"]) _ = Just Info
+    severityFor (Namespace _ ["Acquired"]) _ = Just Info
+    severityFor (Namespace _ ["AwaitAcquire"]) _ = Just Info
+    severityFor (Namespace _ ["NextTx"]) _ = Just Info
+    severityFor (Namespace _ ["ReplyNextTx"]) _ = Just Info
+    severityFor (Namespace _ ["HasTx"]) _ = Just Info
+    severityFor (Namespace _ ["ReplyHasTx"]) _ = Just Info
+    severityFor (Namespace _ ["GetSizes"]) _ = Just Info
+    severityFor (Namespace _ ["ReplyGetSizes"]) _ = Just Info
+    severityFor (Namespace _ ["Release"]) _ = Just Info
+    severityFor (Namespace _ ["Done"]) _ = Just Info
+    severityFor _ _ = Nothing
 
+    documentFor (Namespace _ ["Acquire"]) = Just
+      ""
+    documentFor (Namespace _ ["Acquired"]) = Just
+      ""
+    documentFor (Namespace _ ["AwaitAcquire"]) = Just
+      ""
+    documentFor (Namespace _ ["NextTx"]) = Just
+      ""
+    documentFor (Namespace _ ["ReplyNextTx"]) = Just
+      ""
+    documentFor (Namespace _ ["HasTx"]) = Just
+      ""
+    documentFor (Namespace _ ["ReplyHasTx"]) = Just
+      ""
+    documentFor (Namespace _ ["GetSizes"]) = Just
+      ""
+    documentFor (Namespace _ ["ReplyGetSizes"]) = Just
+      ""
+    documentFor (Namespace _ ["Release"]) = Just
+      ""
+    documentFor (Namespace _ ["Done"]) = Just
+      ""
+    documentFor _ = Nothing
+
+    allNamespaces = [
+        Namespace [] ["Acquire"]
+      , Namespace [] ["Acquired"]
+      , Namespace [] ["AwaitAcquire"]
+      , Namespace [] ["NextTx"]
+      , Namespace [] ["ReplyNextTx"]
+      , Namespace [] ["HasTx"]
+      , Namespace [] ["ReplyHasTx"]
+      , Namespace [] ["GetSizes"]
+      , Namespace [] ["ReplyGetSizes"]
+      , Namespace [] ["Release"]
+      , Namespace [] ["Done"]
+      ]
 --------------------------------------------------------------------------------
 -- LocalTxSubmission Tracer
 --------------------------------------------------------------------------------
-
-severityTTxSubmission :: BlockFetch.TraceLabelPeer peer
-  (TraceSendRecv (LTS.LocalTxSubmission (GenTx blk) (ApplyTxErr blk)))
-  -> SeverityS
-severityTTxSubmission (BlockFetch.TraceLabelPeer _ v) = severityTTxSubmission' v
-  where
-    severityTTxSubmission' (TraceSendMsg msg) = severityTTxSubmission'' msg
-    severityTTxSubmission' (TraceRecvMsg msg) = severityTTxSubmission'' msg
-
-    severityTTxSubmission'' (AnyMessageAndAgency _agency msg) = severityTTxSubmission''' msg
-
-    severityTTxSubmission''' :: Message
-                                        (LTS.LocalTxSubmission tx reject) from to
-                                      -> SeverityS
-    severityTTxSubmission''' LTS.MsgSubmitTx {} = Info
-    severityTTxSubmission''' LTS.MsgAcceptTx {} = Info
-    severityTTxSubmission''' LTS.MsgRejectTx {} = Info
-    severityTTxSubmission''' LTS.MsgDone {}     = Info
-
-
-namesForTTxSubmission :: BlockFetch.TraceLabelPeer peer
-  (TraceSendRecv (LTS.LocalTxSubmission (GenTx blk) (ApplyTxErr blk)))
-  -> [Text]
-namesForTTxSubmission (BlockFetch.TraceLabelPeer _ v) = namesTTxSubmission v
-  where
-    namesTTxSubmission (TraceSendMsg msg) = "Send" : namesTTxSubmission' msg
-    namesTTxSubmission (TraceRecvMsg msg) = "Receive" : namesTTxSubmission' msg
-
-    namesTTxSubmission' (AnyMessageAndAgency _agency msg) = namesTTxSubmission'' msg
-
-    namesTTxSubmission'' :: Message
-                                    (LTS.LocalTxSubmission tx reject) from to
-                                  -> [Text]
-    namesTTxSubmission'' LTS.MsgSubmitTx {} = ["SubmitTx"]
-    namesTTxSubmission'' LTS.MsgAcceptTx {} = ["AcceptTx"]
-    namesTTxSubmission'' LTS.MsgRejectTx {} = ["RejectTx"]
-    namesTTxSubmission'' LTS.MsgDone {}     = ["Done"]
-
 
 instance LogFormatting (AnyMessageAndAgency (LTS.LocalTxSubmission tx err)) where
   forMachine _dtal (AnyMessageAndAgency stok LTS.MsgSubmitTx{}) =
@@ -375,91 +357,43 @@ instance LogFormatting (AnyMessageAndAgency (LTS.LocalTxSubmission tx err)) wher
              , "agency" .= String (pack $ show stok)
              ]
 
-docTTxSubmission :: Documented
-  (BlockFetch.TraceLabelPeer
-     localPeer
-     (TraceSendRecv
-        (LTS.LocalTxSubmission
-           (GenTx blk) (ApplyTxErr blk))))
-docTTxSubmission =
-  addDocumentedNamespace  ["Send"] docTTxSubmission'
-   `addDocs` addDocumentedNamespace  ["Receive"] docTTxSubmission'
+instance MetaTrace (AnyMessageAndAgency (LTS.LocalTxSubmission tx err)) where
+    namespaceFor (AnyMessageAndAgency _agency LTS.MsgSubmitTx{}) =
+      Namespace [] ["SubmitTx"]
+    namespaceFor (AnyMessageAndAgency _agency LTS.MsgAcceptTx{}) =
+      Namespace [] ["AcceptTx"]
+    namespaceFor (AnyMessageAndAgency _agency LTS.MsgRejectTx{}) =
+      Namespace [] ["RejectTx"]
+    namespaceFor (AnyMessageAndAgency _agency LTS.MsgDone{}) =
+      Namespace [] ["Done"]
 
-docTTxSubmission' :: Documented
-   (BlockFetch.TraceLabelPeer
-      localPeer
-      (TraceSendRecv
-         (LTS.LocalTxSubmission
-            (GenTx blk) (ApplyTxErr blk))))
-docTTxSubmission' = Documented [
-      DocMsg
-        ["SubmitTx"]
-        []
-        "The client submits a single transaction and waits a reply."
-    , DocMsg
-        ["AcceptTx"]
-        []
-        "The server can reply to inform the client that it has accepted the \
+    severityFor (Namespace _ ["SubmitTx"]) _ = Just Info
+    severityFor (Namespace _ ["AcceptTx"]) _ = Just Info
+    severityFor (Namespace _ ["RejectTx"]) _ = Just Info
+    severityFor (Namespace _ ["Done"]) _ = Just Info
+    severityFor _ _ = Nothing
+
+    documentFor (Namespace _ ["SubmitTx"]) = Just
+      "The client submits a single transaction and waits a reply."
+    documentFor (Namespace _ ["AcceptTx"]) = Just
+      "The server can reply to inform the client that it has accepted the \
         \transaction."
-    , DocMsg
-        ["RejectTx"]
-        []
-        "The server can reply to inform the client that it has rejected the \
+    documentFor (Namespace _ ["RejectTx"]) = Just
+      "The server can reply to inform the client that it has rejected the \
         \transaction. A reason for the rejection is included."
-    , DocMsg
-        ["Done"]
-        []
-        "The client can terminate the protocol."
-  ]
+    documentFor (Namespace _ ["Done"]) = Just
+      "The client can terminate the protocol."
+    documentFor _ = Nothing
 
+    allNamespaces = [
+        Namespace [] ["SubmitTx"]
+      , Namespace [] ["AcceptTx"]
+      , Namespace [] ["RejectTx"]
+      , Namespace [] ["Done"]
+      ]
 --------------------------------------------------------------------------------
 -- TStateQuery Tracer
 --------------------------------------------------------------------------------
-
-severityTStateQuery :: BlockFetch.TraceLabelPeer peer
-  (TraceSendRecv (LSQ.LocalStateQuery blk (Point blk) query))
-  -> SeverityS
-severityTStateQuery (BlockFetch.TraceLabelPeer _ v) = severityTStateQuery' v
-  where
-    severityTStateQuery' (TraceSendMsg msg) = severityTStateQuery'' msg
-    severityTStateQuery' (TraceRecvMsg msg) = severityTStateQuery'' msg
-
-    severityTStateQuery'' (AnyMessageAndAgency _agency msg) = severityTStateQuery''' msg
-
-    severityTStateQuery''' :: Message
-                                    (LSQ.LocalStateQuery block point query1) from to
-                                  -> SeverityS
-    severityTStateQuery''' LSQ.MsgAcquire {}   = Info
-    severityTStateQuery''' LSQ.MsgAcquired {}  = Info
-    severityTStateQuery''' LSQ.MsgFailure {}   = Warning
-    severityTStateQuery''' LSQ.MsgQuery {}     = Info
-    severityTStateQuery''' LSQ.MsgResult {}    = Info
-    severityTStateQuery''' LSQ.MsgRelease {}   = Info
-    severityTStateQuery''' LSQ.MsgReAcquire {} = Info
-    severityTStateQuery''' LSQ.MsgDone {}      = Info
-
-namesForTStateQuery :: BlockFetch.TraceLabelPeer peer
-  (TraceSendRecv (LSQ.LocalStateQuery blk (Point blk) query))
-  -> [Text]
-namesForTStateQuery (BlockFetch.TraceLabelPeer _ v) = namesForTStateQuery' v
-  where
-    namesForTStateQuery' (TraceSendMsg msg) = "Send" : namesForTStateQuery'' msg
-    namesForTStateQuery' (TraceRecvMsg msg) = "Receive" : namesForTStateQuery'' msg
-
-    namesForTStateQuery'' (AnyMessageAndAgency _agency msg) = namesForTStateQuery''' msg
-
-    namesForTStateQuery''' :: Message
-                                    (LSQ.LocalStateQuery block point query1) from to
-                                  -> [Text]
-
-    namesForTStateQuery''' LSQ.MsgAcquire {}   = ["Acquire"]
-    namesForTStateQuery''' LSQ.MsgAcquired {}  = ["Acquired"]
-    namesForTStateQuery''' LSQ.MsgFailure {}   = ["Failure"]
-    namesForTStateQuery''' LSQ.MsgQuery {}     = ["Query"]
-    namesForTStateQuery''' LSQ.MsgResult {}    = ["Result"]
-    namesForTStateQuery''' LSQ.MsgRelease {}   = ["Release"]
-    namesForTStateQuery''' LSQ.MsgReAcquire {} = ["ReAcquire"]
-    namesForTStateQuery''' LSQ.MsgDone {}      = ["Done"]
 
 instance (forall result. Show (Query blk result))
       => LogFormatting (AnyMessageAndAgency (LSQ.LocalStateQuery blk pt (Query blk))) where
@@ -496,56 +430,57 @@ instance (forall result. Show (Query blk result))
              , "agency" .= String (pack $ show stok)
              ]
 
-docTStateQuery :: Documented
-      (BlockFetch.TraceLabelPeer peer
-       (TraceSendRecv
-       (LSQ.LocalStateQuery blk pt (Query blk))))
-docTStateQuery =
-   addDocumentedNamespace  ["Send"] docTState
-    `addDocs` addDocumentedNamespace  ["Receive"] docTState
+instance MetaTrace (AnyMessageAndAgency (LSQ.LocalStateQuery blk pt (Query blk))) where
+    namespaceFor (AnyMessageAndAgency _agency LSQ.MsgAcquire{}) =
+      Namespace [] ["Acquire"]
+    namespaceFor (AnyMessageAndAgency _agency LSQ.MsgAcquired{}) =
+      Namespace [] ["Acquired"]
+    namespaceFor (AnyMessageAndAgency _agency LSQ.MsgFailure{}) =
+      Namespace [] ["Failure"]
+    namespaceFor (AnyMessageAndAgency _agency LSQ.MsgQuery{}) =
+      Namespace [] ["Query"]
+    namespaceFor (AnyMessageAndAgency _agency LSQ.MsgResult{}) =
+      Namespace [] ["Result"]
+    namespaceFor (AnyMessageAndAgency _agency LSQ.MsgRelease{}) =
+      Namespace [] ["Release"]
+    namespaceFor (AnyMessageAndAgency _agency LSQ.MsgReAcquire{}) =
+      Namespace [] ["ReAcquire"]
+    namespaceFor (AnyMessageAndAgency _agency LSQ.MsgDone{}) =
+      Namespace [] ["Done"]
 
-docTState :: Documented
-      (BlockFetch.TraceLabelPeer peer
-       (TraceSendRecv
-         x))
-docTState = Documented [
-      DocMsg
-        ["Acquire"]
-        []
-        "The client requests that the state as of a particular recent point on \
+    severityFor (Namespace _ ["Acquire"]) _ = Just Info
+    severityFor (Namespace _ ["Acquired"]) _ = Just Info
+    severityFor (Namespace _ ["Failure"]) _ = Just Warning
+    severityFor (Namespace _ ["Query"]) _ = Just Info
+    severityFor (Namespace _ ["Result"]) _ = Just Info
+    severityFor (Namespace _ ["Release"]) _ = Just Info
+    severityFor (Namespace _ ["ReAcquire"]) _ = Just Info
+    severityFor (Namespace _ ["Done"]) _ = Just Info
+    severityFor _ _ = Nothing
+
+    documentFor (Namespace _ ["Acquire"]) = Just
+      "The client requests that the state as of a particular recent point on \
         \the server's chain (within K of the tip) be made available to query, \
         \and waits for confirmation or failure. \
         \\n \
         \From 'NodeToClient_V8' onwards if the point is not specified, current tip \
         \will be acquired.  For previous versions of the protocol 'point' must be \
         \given."
-    , DocMsg
-        ["Acquired"]
-        []
-        "The server can confirm that it has the state at the requested point."
-    , DocMsg
-        ["Failure"]
-        []
-        "The server can report that it cannot obtain the state for the \
+    documentFor (Namespace _ ["Acquired"]) = Just
+      "The server can confirm that it has the state at the requested point."
+    documentFor (Namespace _ ["Failure"]) = Just
+      "The server can report that it cannot obtain the state for the \
         \requested point."
-    , DocMsg
-        ["Query"]
-        []
-        "The client can perform queries on the current acquired state."
-    , DocMsg
-        ["Result"]
-        []
-        "The server must reply with the queries."
-    , DocMsg
-        ["Release"]
-        []
-        "The client can instruct the server to release the state. This lets \
+    documentFor (Namespace _ ["Query"]) = Just
+      "The client can perform queries on the current acquired state."
+    documentFor (Namespace _ ["Result"]) = Just
+      "The server must reply with the queries."
+    documentFor (Namespace _ ["Release"]) = Just
+      "The client can instruct the server to release the state. This lets \
         \the server free resources."
-    , DocMsg
-        ["ReAcquire"]
-        []
-        "This is like 'MsgAcquire' but for when the client already has a \
-        \state. By moveing to another state directly without a 'MsgRelease' it \
+    documentFor (Namespace _ ["ReAcquire"]) = Just
+      "This is like 'MsgAcquire' but for when the client already has a \
+        \state. By moving to another state directly without a 'MsgRelease' it \
         \enables optimisations on the server side (e.g. moving to the state for \
         \the immediate next block). \
         \\n \
@@ -555,8 +490,17 @@ docTState = Documented [
         \From 'NodeToClient_V8' onwards if the point is not specified, current tip \
         \will be acquired.  For previous versions of the protocol 'point' must be \
         \given."
-    , DocMsg
-        ["Done"]
-        []
-        "The client can terminate the protocol."
-  ]
+    documentFor (Namespace _ ["Done"]) = Just
+      "The client can terminate the protocol."
+    documentFor _ = Nothing
+
+    allNamespaces = [
+        Namespace [] ["Acquire"]
+      , Namespace [] ["Acquired"]
+      , Namespace [] ["Failure"]
+      , Namespace [] ["Query"]
+      , Namespace [] ["Result"]
+      , Namespace [] ["Release"]
+      , Namespace [] ["ReAcquire"]
+      , Namespace [] ["Done"]
+      ]

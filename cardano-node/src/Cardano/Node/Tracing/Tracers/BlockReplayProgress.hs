@@ -1,11 +1,8 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Cardano.Node.Tracing.Tracers.BlockReplayProgress
-  ( severityReplayBlockStats
-  , namesForReplayBlockStats
-  , withReplayedBlock
-  , docReplayedBlock
-  , ReplayBlockStats(..)
+  (  withReplayedBlock
+   , ReplayBlockStats(..)
   ) where
 
 import           Data.Aeson (Value (String), (.=))
@@ -34,12 +31,6 @@ emptyReplayBlockStats = ReplayBlockStats False 0.0 0.0
 -- ReplayBlockStats Tracer
 --------------------------------------------------------------------------------
 
-namesForReplayBlockStats :: ReplayBlockStats -> Namespace
-namesForReplayBlockStats _ = ["LedgerReplay"]
-
-severityReplayBlockStats :: ReplayBlockStats -> SeverityS
-severityReplayBlockStats _ = Info
-
 instance LogFormatting ReplayBlockStats where
   forMachine _dtal ReplayBlockStats {..} =
     mconcat
@@ -50,13 +41,23 @@ instance LogFormatting ReplayBlockStats where
   asMetrics ReplayBlockStats {..} =
      [DoubleM "ChainDB.BlockReplayProgress" rpsProgress]
 
-docReplayedBlock :: Documented ReplayBlockStats
-docReplayedBlock = Documented [
-    DocMsg
-      ["LedgerReplay"]
-      [("ChainDB.BlockReplayProgress", "Progress in percent")]
-      "Counts up the percent of a block replay."
-  ] 
+instance MetaTrace ReplayBlockStats where
+  namespaceFor ReplayBlockStats {} = Namespace [] ["LedgerReplay"]
+
+  severityFor (Namespace _ ["LedgerReplay"]) _ = Just Info
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace _ ["LedgerReplay"]) = Just
+    "Counts block replays and calculates the percent."
+  documentFor _ = Nothing
+
+  metricsDocFor (Namespace _ ["LedgerReplay"]) =
+     [("ChainDB.BlockReplayProgress", "Progress in percent")]
+  metricsDocFor _ = []
+
+  allNamespaces =
+    [ Namespace [] ["LedgerReplay"]
+    ]
 
 withReplayedBlock :: Trace IO ReplayBlockStats
     -> IO (Trace IO (ChainDB.TraceEvent blk))

@@ -6,47 +6,20 @@
 {-# OPTIONS_GHC -Wno-name-shadowing -Wno-orphans #-}
 
 module Cardano.Node.Tracing.Tracers.Shutdown
-  ( namesForShutdown
-  , severityShutdown
-  , ppShutdownTrace
-  , docShutdown
+  ( ppShutdownTrace
   ) where
 
-import           Cardano.Logging
-import           Cardano.Node.Handlers.Shutdown
 import           Data.Aeson (Value (..), (.=))
 import           Data.Monoid (mconcat, (<>))
 import           Data.Text (Text, pack)
-import           Prelude (show)
+import           Prelude (Maybe (..), show)
 
---------------------------------------------------------------------------------
--- ShutdownTrace Tracer
---------------------------------------------------------------------------------
+import           Cardano.Logging
+import           Cardano.Node.Handlers.Shutdown
 
-namesForShutdown :: ShutdownTrace -> [Text]
-namesForShutdown = \case
-  ShutdownRequested{}         -> ["Requested"]
-  AbnormalShutdown{}          -> ["Abnormal"]
-  ShutdownUnexpectedInput{}   -> ["UnexpectedInput"]
-  RequestingShutdown{}        -> ["Requesting"]
-  ShutdownArmedAt{}           -> ["ArmedAt"]
-
-severityShutdown :: ShutdownTrace -> SeverityS
-severityShutdown = \case
-  ShutdownRequested{}         -> Warning
-  AbnormalShutdown{}          -> Error
-  ShutdownUnexpectedInput{}   -> Error
-  RequestingShutdown{}        -> Warning
-  ShutdownArmedAt{}           -> Warning
-
-ppShutdownTrace :: ShutdownTrace -> Text
-ppShutdownTrace = \case
-  ShutdownRequested             -> "Received shutdown request"
-  AbnormalShutdown              -> "non-isEOFerror shutdown request"
-  ShutdownUnexpectedInput text  ->
-    "Received shutdown request but found unexpected input in --shutdown-ipc FD: " <> text
-  RequestingShutdown reason     -> "Ringing the node shutdown doorbell:  " <> reason
-  ShutdownArmedAt lim           -> "Will terminate upon reaching " <> pack (show lim)
+-- --------------------------------------------------------------------------------
+-- -- ShutdownTrace Tracer
+-- --------------------------------------------------------------------------------
 
 instance LogFormatting ShutdownTrace where
   forHuman = ppShutdownTrace
@@ -66,29 +39,58 @@ instance LogFormatting ShutdownTrace where
           mconcat [ "kind"   .= String "ShutdownArmedAt"
                   , "limit"  .= lim ]
 
-docShutdown :: Documented ShutdownTrace
-docShutdown = addDocumentedNamespace  [] docShutdown'
+ppShutdownTrace :: ShutdownTrace -> Text
+ppShutdownTrace = \case
+  ShutdownRequested             -> "Received shutdown request"
+  AbnormalShutdown              -> "non-isEOFerror shutdown request"
+  ShutdownUnexpectedInput text  ->
+    "Received shutdown request but found unexpected input in --shutdown-ipc FD: " <> text
+  RequestingShutdown reason     -> "Ringing the node shutdown doorbell:  " <> reason
+  ShutdownArmedAt lim           -> "Will terminate upon reaching " <> pack (show lim)
 
-docShutdown' :: Documented ShutdownTrace
-docShutdown' = Documented
-  [ DocMsg
-      ["Requested"]
-      []
-      "Node shutdown was requested."
-  ,  DocMsg
-      ["Abnormal"]
-      []
-      "non-isEOFerror shutdown request"
-  ,  DocMsg
-      ["UnexpectedInput"]
-      []
-      "Received shutdown request but found unexpected input in --shutdown-ipc FD: "
-  , DocMsg
-      ["Requesting"]
-      []
-      "Ringing the node shutdown doorbell"
-  , DocMsg
-      ["ArmedAt"]
-      []
-      "Setting up node shutdown at given slot / block."
-  ]
+instance MetaTrace ShutdownTrace where
+  namespaceFor ShutdownRequested {} =
+    Namespace [] ["Requested"]
+  namespaceFor AbnormalShutdown {} =
+    Namespace [] ["Abnormal"]
+  namespaceFor ShutdownUnexpectedInput {} =
+    Namespace [] ["UnexpectedInput"]
+  namespaceFor RequestingShutdown {} =
+    Namespace [] ["Requesting"]
+  namespaceFor ShutdownArmedAt {} =
+    Namespace [] ["ArmedAt"]
+
+  severityFor  (Namespace _ ["Requested"]) _ =
+    Just Warning
+  severityFor  (Namespace _ ["Abnormal"]) _ =
+    Just Error
+  severityFor  (Namespace _ ["UnexpectedInput"]) _ =
+    Just Error
+  severityFor  (Namespace _ ["Requesting"]) _ =
+    Just Warning
+  severityFor  (Namespace _ ["ArmedAt"]) _ =
+    Just Warning
+  severityFor _ns _ =
+    Nothing
+
+  documentFor  (Namespace _ ["Requested"]) =
+    Just "Node shutdown was requested."
+  documentFor  (Namespace _ ["Abnormal"]) =
+    Just "non-isEOFerror shutdown request"
+  documentFor  (Namespace _ ["UnexpectedInput"]) =
+    Just "Received shutdown request but found unexpected input in --shutdown-ipc FD: "
+  documentFor  (Namespace _ ["Requesting"]) =
+    Just "Ringing the node shutdown doorbell"
+  documentFor  (Namespace _ ["ArmedAt"])  =
+    Just "Setting up node shutdown at given slot / block."
+  documentFor _ns =
+    Nothing
+
+  allNamespaces =
+    [ Namespace [] ["Requested"]
+    , Namespace [] ["Abnormal"]
+    , Namespace [] ["UnexpectedInput"]
+    , Namespace [] ["Requesting"]
+    , Namespace [] ["ArmedAt"]
+    ]
+

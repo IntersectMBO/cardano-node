@@ -20,7 +20,7 @@ on the namespace, and require a one-to-one correspondence between namespaces and
 
 As we have two mechanisms for the same purpose for historic reasons, we will soon
 __deprecate the Kind field__, and it will disappear in the near future. So we strongly
-advise to use namespaces for any analysis tools of traces!
+advice to use namespaces for any analysis tools of traces!
 
 ### Configuration of new tracing
 
