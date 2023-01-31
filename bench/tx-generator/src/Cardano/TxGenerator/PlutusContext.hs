@@ -24,7 +24,7 @@ import           GHC.Natural (Natural)
 
 import           Control.Monad.Trans.Except.Extra
 import           Data.Aeson as Aeson
-import           Data.List (maximumBy)
+import           Data.List (maximumBy, minimumBy)
 import           Data.Ord (comparing)
 
 import           Cardano.Api
@@ -52,6 +52,7 @@ data PlutusBudgetSummary =
   , projectedTxPerBlock     :: !Int
   , projectedLoopsPerBlock  :: !Int
   , projectedTxSize         :: !(Maybe Int)
+  , strategyMessage         :: !(Maybe String)
   }
   deriving (Generic, Show, ToJSON)
 
@@ -63,6 +64,7 @@ data PlutusAutoLimitingFactor
 data PlutusBudgetFittingStrategy
   = TargetTxExpenditure
   | TargetBlockExpenditure Double
+  | TargetTxsPerBlock Int
   deriving (Generic, Eq, Show, ToJSON)
 
 instance ToJSON ScriptData where
@@ -87,15 +89,31 @@ plutusAutoScaleBlockfit ::
   -> FilePath
   -> ScriptInAnyLang
   -> PlutusAutoBudget
+  -> Maybe Int
   -> Int
   -> Either TxGenError (PlutusBudgetSummary, PlutusAutoBudget, ExecutionUnits)
-plutusAutoScaleBlockfit pparams fp script pab txInputs
+plutusAutoScaleBlockfit pparams fp script pab mFixedTxPerBlock txInputs
   = do
-    summaries <- mapM go factors
-    pure $ maximumBy (comparing (\(s, _, _) -> projectedLoopsPerBlock s)) summaries
+    summaries <- mapM go scalingStrats
+    let
+      maxLoops  = maximumBy (comparing (projectedLoopsPerBlock . fst3)) summaries
+      minSteps  = minimumBy (comparing (executionSteps . projectedBudgetUnusedPerBlock . fst3)) summaries
+      msg
+        | length scalingStrats == 1 =
+          "a fixed txs per block was specified"
+        | budgetStrategy (fst3 maxLoops) == budgetStrategy (fst3 minSteps) =
+          "maximizes loops per block AND minimizes unused execution steps per block"
+        | otherwise =
+          "maximizes loops per block BUT DOES NOT minimize unused execution steps per block"
+    pure $ setMessage msg maxLoops
   where
-    factors = [1.0, 1.25 .. 2.25]
-    go (TargetBlockExpenditure -> strat) = do
+    fst3 (x, _, _)  = x
+    setMessage msg (summ, b, c) = (summ {strategyMessage = Just msg}, b, c)
+
+    scalingStrats
+       = maybe (TargetBlockExpenditure <$> [1.0, 1.25 .. 2.0]) (\t -> [TargetTxsPerBlock t]) mFixedTxPerBlock
+
+    go strat = do
       result@(pab', _, _) <- plutusAutoBudgetMaxOut pparams script pab strat txInputs
       preRun <- preExecutePlutusScript pparams script (autoBudgetDatum pab') (autoBudgetRedeemer pab')
       pure  ( plutusBudgetSummary pparams fp strat result preRun txInputs
@@ -141,8 +159,9 @@ plutusAutoBudgetMaxOut
         (fromIntegral (executionMemory budgetPerBlock) / mTx)
 
     targetBudget = case target of
-      TargetTxExpenditure       -> calc budgetPerTx div txInputs                            -- optimize for maximum expenditure of per-tx-budget
-      TargetBlockExpenditure s  -> calc budgetPerBlock div (targetTxPerBlock s * txInputs)  -- optimize for maximum expenditure of per-block-budget
+      TargetTxExpenditure       -> calc budgetPerTx div txInputs                              -- optimize for maximum expenditure of per-tx-budget
+      TargetBlockExpenditure s  -> calc budgetPerBlock div (targetTxPerBlock s * txInputs)    -- optimize for maximum expenditure of per-block-budget
+      TargetTxsPerBlock t       -> calc budgetPerBlock div (t * txInputs) `bmin` budgetPerTx  -- optimize for stable txs per block
 
     toLoopArgument n = scriptDataModifyNumber (+ n) autoBudgetRedeemer
 
@@ -177,6 +196,7 @@ plutusBudgetSummary
   = PlutusBudgetSummary{..}
   where
     projectedTxSize         = Nothing           -- we defer this value until after splitting phase
+    strategyMessage         = Nothing
     scriptArgDatum          = autoBudgetDatum
     scriptArgRedeemer       = autoBudgetRedeemer
     budgetPerTxInput        = calc budgetPerTx div txInputs
@@ -236,3 +256,7 @@ minus (ExecutionUnits a b) (ExecutionUnits a' b')
 calc :: ExecutionUnits -> (Natural -> Natural -> Natural) -> Int -> ExecutionUnits
 calc (ExecutionUnits a b) op (fromIntegral -> n)
   = ExecutionUnits (a `op` n) (b `op` n)
+
+bmin :: ExecutionUnits -> ExecutionUnits -> ExecutionUnits
+bmin (ExecutionUnits a b) (ExecutionUnits a' b')
+  = ExecutionUnits (min a a') (min b b')
