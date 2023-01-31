@@ -513,33 +513,33 @@ def all_profile_variants:
     { name: "ci-test-dense10"
     }
 
-  ## Plutus call variants: 15 epochs
+  ## Plutus call variants: 15 epochs, with differences in block budget execution step limit
   , $plutus_base * $costmodel_v8_preview * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_counter *
-    { name: "plutuscall-loop"
+    { name: "plutuscall-loop-plain"
     }
   , $plutus_base * $costmodel_v8_preview * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_secp_ecdsa *
-    { name: "plutuscall-secp-ecdsa"
+    { name: "plutuscall-secp-ecdsa-plain"
     }
   , $plutus_base * $costmodel_v8_preview * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_secp_schnorr *
-    { name: "plutuscall-secp-schnorr"
+    { name: "plutuscall-secp-schnorr-plain"
     }
   , $plutus_base * $costmodel_v8_preview_stepshalf * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_counter *
-    { name: "plutuscall-loop-stepshalf"
+    { name: "plutuscall-loop-half"
     }
   , $plutus_base * $costmodel_v8_preview_stepshalf * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_secp_ecdsa *
-    { name: "plutuscall-secp-ecdsa-stepshalf"
+    { name: "plutuscall-secp-ecdsa-half"
     }
   , $plutus_base * $costmodel_v8_preview_stepshalf * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_secp_schnorr *
-    { name: "plutuscall-secp-schnorr-stepshalf"
+    { name: "plutuscall-secp-schnorr-half"
     }    
   , $plutus_base * $costmodel_v8_preview_doubleb * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_counter *
-    { name: "plutuscall-loop-doubleb"
+    { name: "plutuscall-loop-double"
     }
   , $plutus_base * $costmodel_v8_preview_doubleb * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_secp_ecdsa *
-    { name: "plutuscall-secp-ecdsa-doubleb"
+    { name: "plutuscall-secp-ecdsa-double"
     }
   , $plutus_base * $costmodel_v8_preview_doubleb * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_secp_schnorr *
-    { name: "plutuscall-secp-schnorr-doubleb"
+    { name: "plutuscall-secp-schnorr-double"
     }
 
 ## Dish variants

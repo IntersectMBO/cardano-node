@@ -182,18 +182,21 @@ checkPlutusLoop (Just PlutusOn{..})
           }
 
         pparamsStepFraction d = case protocolParamMaxBlockExUnits protocolParameters of
-          Just u  -> protocolParameters {protocolParamMaxBlockExUnits = Just u {executionSteps = executionSteps u `mul` d}}
+          Just u  -> protocolParameters {protocolParamMaxBlockExUnits = Just u
+              { executionSteps = executionSteps u `mul` d
+              }
+            }
           Nothing -> protocolParameters
     putStrLn $ "--> " ++ show (plutusAutoBudgetMaxOut protocolParameters script autoBudget TargetTxExpenditure 1)
 
     let
       blockMaxOut b d =
-        case plutusAutoScaleBlockfit (pparamsStepFraction d) ("with factor " ++ show d) script b 1 of
+        case plutusAutoScaleBlockfit (pparamsStepFraction d) ("factor for block execution steps: " ++ show d) script b (Just 8) 1 of
           Right (summary, _, _) -> BSL.putStrLn $ prettyPrintOrdered summary
           Left err              -> print err
 
-    putStrLn "--> summary for best block budget fits:"
-    mapM_ (blockMaxOut autoBudget) [1.0, 0.5]
+    putStrLn "--> summaries for block budget fits:"
+    mapM_ (blockMaxOut autoBudget) [1.0, 0.5, 2.0]
 
   where
     mul :: Natural -> Double -> Natural

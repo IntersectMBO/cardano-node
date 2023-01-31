@@ -461,7 +461,7 @@ makePlutusContext ScriptSpec{..} = do
           dumpBudgetSummaryIfExisting
           return (autoBudgetDatum, autoBudgetRedeemer, preRun)
       -}
-      case plutusAutoScaleBlockfit protocolParameters scriptSpecFile script autoBudget txInputs of
+      case plutusAutoScaleBlockfit protocolParameters scriptSpecFile script autoBudget (Just 8) txInputs of
         Left err -> liftTxGenError err
         Right (summary, PlutusAutoBudget{..}, preRun) -> do
           setEnvSummary summary
