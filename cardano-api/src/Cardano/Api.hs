@@ -239,6 +239,7 @@ module Cardano.Api (
     totalAndReturnCollateralSupportedInEra,
 
     -- ** Fee calculation
+    LedgerEpochInfo(..),
     transactionFee,
     toLedgerEpochInfo,
     estimateTransactionFee,

@@ -428,7 +428,7 @@ runTxBuildCmd
 
                      scriptExecUnitsMap <- firstExceptT ShelleyTxCmdTxExecUnitsErr $ hoistEither
                                              $ evaluateTransactionExecutionUnits
-                                                 eInMode systemStart eraHistory
+                                                 eInMode systemStart (toLedgerEpochInfo eraHistory)
                                                  pparams txEraUtxo balancedTxBody
                      scriptCostOutput <- firstExceptT ShelleyTxCmdPlutusScriptCostErr $ hoistEither
                                            $ renderScriptCosts
@@ -753,7 +753,7 @@ runTxBuild era (AnyConsensusModeParams cModeParams) networkId mScriptValidity
       balancedTxBody@(BalancedTxBody _ _ _ fee) <-
         firstExceptT ShelleyTxCmdBalanceTxBody
           . hoistEither
-          $ makeTransactionBodyAutoBalance eInMode systemStart eraHistory
+          $ makeTransactionBodyAutoBalance eInMode systemStart (toLedgerEpochInfo eraHistory)
                                            pparams stakePools txEraUtxo txBodyContent
                                            cAddr mOverrideWits
 

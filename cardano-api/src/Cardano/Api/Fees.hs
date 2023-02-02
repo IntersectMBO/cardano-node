@@ -38,7 +38,6 @@ module Cardano.Api.Fees (
 
     -- * Internal helpers
     mapTxScriptWitnesses,
-    toLedgerEpochInfo,
   ) where
 
 import qualified Data.Array as Array
@@ -56,13 +55,11 @@ import           GHC.Records (HasField (..))
 import           Lens.Micro ((^.))
 import           Numeric.Natural
 
-import           Control.Monad.Trans.Except
 import qualified Prettyprinter as PP
 import qualified Prettyprinter.Render.String as PP
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Ledger.BaseTypes as Ledger
-import           Cardano.Slotting.EpochInfo (EpochInfo, hoistEpochInfo)
 
 import qualified Cardano.Chain.Common as Byron
 
@@ -505,13 +502,14 @@ evaluateTransactionExecutionUnits
   :: forall era mode.
      EraInMode era mode
   -> SystemStart
-  -> EraHistory mode
+  -> LedgerEpochInfo
   -> ProtocolParameters
   -> UTxO era
   -> TxBody era
   -> Either TransactionValidityError
             (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
-evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo txbody =
+evaluateTransactionExecutionUnits _eraInMode systemstart (LedgerEpochInfo ledgerEpochInfo)
+                                  pparams utxo txbody =
     case makeSignedTransaction [] txbody of
       ByronTx {}                 -> evalPreAlonzo
       ShelleyTx era tx' ->
@@ -548,7 +546,7 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
              (toLedgerPParams era pparams)
              tx
              (toLedgerUTxO era utxo)
-             (toLedgerEpochInfo history)
+             ledgerEpochInfo
              systemstart
              cModelArray
         of Left err -> Left (TransactionValidityTranslationError err)
@@ -570,7 +568,7 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
              (toLedgerPParams era pparams)
              tx
              (toLedgerUTxO era utxo)
-             (toLedgerEpochInfo history)
+             ledgerEpochInfo
              systemstart
              costModelsArray
         of Left err    -> Left (TransactionValidityTranslationError err)
@@ -631,10 +629,6 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
     obtainHasFieldConstraint CollateralInAlonzoEra f =  f
     obtainHasFieldConstraint CollateralInBabbageEra f =  f
 
-toLedgerEpochInfo :: EraHistory mode -> EpochInfo (Either Text.Text)
-toLedgerEpochInfo (EraHistory _ interpreter) =
-    hoistEpochInfo (first (Text.pack . show) . runExcept) $
-      Consensus.interpreterToEpochInfo interpreter
 
 -- ----------------------------------------------------------------------------
 -- Transaction balance
@@ -927,7 +921,7 @@ makeTransactionBodyAutoBalance
      IsShelleyBasedEra era
   => EraInMode era mode
   -> SystemStart
-  -> EraHistory mode
+  -> LedgerEpochInfo
   -> ProtocolParameters
   -> Set PoolId       -- ^ The set of registered stake pools
   -> UTxO era         -- ^ Just the transaction inputs, not the entire 'UTxO'.
