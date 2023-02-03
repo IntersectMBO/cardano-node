@@ -40,7 +40,7 @@ trace-documentation:
 ###
 ### Workbench
 ###
-workbench-ci: workbench-ci-test ci-test-auto ci-test-autonix ci-test-autonomad
+workbench-ci: workbench-ci-test ci-test-auto ci-test-autonix ci-test-autonomadpodman
 CI_TARGETS := hlint workbench-ci haddock-hoogle
 ci:  ci-report ci-targets
 ci-report:

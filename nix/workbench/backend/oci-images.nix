@@ -1,9 +1,6 @@
 { pkgs
 , lib
-# Cardano packages/executables.
-, cardano-node, cardano-node-eventlogged
-, cardano-tracer
-, tx-generator
+, containerPkgs
 }:
 
 let
@@ -24,18 +21,13 @@ let
     # Further reading for hints:
     # https://stackoverflow.com/questions/39965432/docker-container-unable-to-resolve-localhost
     copyToRoot = with pkgs; [ iana-etc ];
-    # All these layers are added to /nix/store, nothing is in `$PATH`.
     maxLayers = 25;
-    layers = with pkgs; [
-      # Runtime to be able run bash commands from `podman`/`nomad`.
-      (n2c.buildLayer {deps = [ bashInteractive coreutils  ];})
-      # Supervisor.
-      (n2c.buildLayer {deps = [ python3Packages.supervisor ];})
-      # Cardano packages.
-      (n2c.buildLayer {deps = [ cardano-node cardano-node-eventlogged ];})
-      (n2c.buildLayer {deps = [ cardano-tracer             ];})
-      (n2c.buildLayer {deps = [ tx-generator               ];})
-    ];
+    # Transform the input binaries sections into layers.
+    # These layers are added to the container's /nix/store, nothing in `$PATH`.
+    layers = (lib.attrsets.mapAttrsToList
+      (name: attr: n2c.buildLayer {deps = [ attr.nix-store-path ];})
+      containerPkgs
+    );
     # OCI container specification:
     # https://github.com/opencontainers/image-spec/blob/3a7f492d3f1bcada656a7d8c08f3f9bbd05e7406/specs-go/v1/config.go#L24
     config = {
@@ -43,53 +35,15 @@ let
       User = "0:0";
       # The stanza `WorkingDir` is not used because the config file of
       # `supervisord` depends on the working directory.
-      Entrypoint =
-        let
-          entrypoint = pkgs.writeShellApplication {
-            name = "entrypoint";
-            runtimeInputs = with pkgs; [
-              coreutils
-              bashInteractive
-              python3Packages.supervisor
-            ];
-            text = ''
-              # The SUPERVISOR_NIX variable must be set
-              [ -z "''${SUPERVISOR_NIX:-}" ] && echo "SUPERVISOR_NIX env var must be set -- aborting" && exit 1
-
-              # The SUPERVISORD_CONFIG variable must be set
-              [ -z "''${SUPERVISORD_CONFIG:-}" ] && echo "SUPERVISORD_CONFIG env var must be set -- aborting" && exit 1
-
-              # Create a link to the `supervisor` Nix folder.
-              # First check if already exists to be able to restart containers.
-              if ! test -e "$SUPERVISOR_NIX"
-              then
-                "${pkgs.coreutils}"/bin/ln -s "${pkgs.python3Packages.supervisor}" "$SUPERVISOR_NIX"
-              fi
-
-              # The SUPERVISORD_LOGLEVEL defaults to "info"
-              # The logging level at which supervisor should write to the
-              # activity log. Valid levels are trace, debug, info, warn, error
-              # and critical.
-              LOGLEVEL="''${SUPERVISORD_LOGLEVEL:-info}"
-
-              # Start `supervisord` on the foreground.
-              "${pkgs.python3Packages.supervisor}"/bin/supervisord --nodaemon --configuration "$SUPERVISORD_CONFIG" --loglevel="$LOGLEVEL"
-            '';
-          };
-        in
-          [ "${entrypoint}/bin/entrypoint" ];
+      Entrypoint = []; # `nix2container` includes these derivations inside the image
     };
   };
 
-in (rec {
-  value = {
-    clusterNode = {
-      imageName = clusterNode.imageName;
-      imageTag = clusterNode.imageTag;
-      # https://github.com/containers/skopeo/blob/main/docs/skopeo-copy.1.md
-      copyToPodman = "${clusterNode.copyToPodman}/bin/copy-to-podman";
-    };
-  };
-  JSON = pkgs.writeText "oci-images.json"
-    (lib.generators.toJSON {} value);
-})
+in
+
+  {
+    imageName = clusterNode.imageName;
+    imageTag = clusterNode.imageTag;
+    # https://github.com/containers/skopeo/blob/main/docs/skopeo-copy.1.md
+    copyToPodman = "${clusterNode.copyToPodman}/bin/copy-to-podman";
+  }
