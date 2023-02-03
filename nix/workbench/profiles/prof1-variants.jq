@@ -137,6 +137,12 @@ def all_profile_variants:
     } as $triplet
   |
     { composition:
+      { n_singular_hosts:               4
+      , n_dense_hosts:                  0
+      }
+    } as $quadruplet
+  |
+    { composition:
       { n_singular_hosts:               6
       , n_dense_hosts:                  0
       }
@@ -174,6 +180,12 @@ def all_profile_variants:
     } as $compressed_timescale
   |
     { genesis:
+      { epoch_length:                   8000
+      , parameter_k:                    40
+      }
+    } as $model_timescale
+  |
+    { genesis:
       { epoch_length:                   (3600 * 24 * 5)
       , parameter_k:                    (18   * 24 * 5)
       }
@@ -189,6 +201,10 @@ def all_profile_variants:
     ({} |
      .generator.epochs                = 4
     ) as $for_4ep
+  |
+    ({} |
+     .generator.epochs                = 7
+    ) as $for_7ep
   |
     ({} |
      .generator.epochs                = 15
@@ -215,6 +231,9 @@ def all_profile_variants:
   | ({}|
      .generator.tps                   = 15
     ) as $current_tps_saturation_value
+  | ({}|
+     .generator.tps                   = 9
+    ) as $model_tps_saturation_value
   |
     ({}|
      .generator.tps                   = 0.2
@@ -348,6 +367,10 @@ def all_profile_variants:
     { scenario:                        "fixed-loaded"
     }) as $scenario_fixed_loaded
   |
+   ($model_timescale * $model_tps_saturation_value *
+    { scenario:                        "fixed-loaded"
+    }) as $scenario_model
+  |
    ({ scenario:                        "idle"
     }) as $scenario_idle
   |
@@ -374,10 +397,32 @@ def all_profile_variants:
         { shutdown_on_slot_synced:        9000
         }
       , analysis:
-        { filters:                        ["epoch3+", "size-moderate"] 
+        { filters:                        ["epoch3+", "size-moderate"]
         }
       , desc: "Small dataset, honest 15 epochs duration"
     }) as $plutuscall_base
+  |
+   ($scenario_model * $quadruplet * $dataset_current * $for_7ep *
+    { node:
+        { shutdown_on_slot_synced:        56000
+        }
+      , analysis:
+        { filters:                        ["epoch3+", "size-full"]
+        }
+      , generator:
+        { init_cooldown:                  45
+        }
+      , genesis:
+        { funds_balance:                  20000000000000
+        }
+      , desc: "Status-quo dataset, honest 7 epochs duration"
+    }) as $model_base
+  |
+   ($model_base * $plutus_base *
+    { analysis:
+        { filters:                        ["epoch3+", "size-moderate"]
+        }
+    }) as $modelplutus_base
   |
    ($scenario_fixed_loaded * $triplet * $dataset_oct2021 *
     { node:
@@ -540,6 +585,25 @@ def all_profile_variants:
     }
   , $plutus_base * $costmodel_v8_preview_doubleb * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_secp_schnorr *
     { name: "plutuscall-secp-schnorr-double"
+    }
+
+## Model value variant: 7 epochs (128GB RAM needed; 16GB for testing locally)
+  , $model_base * $costmodel_v8_preview *
+    { name: "model-value"
+    }
+  , $model_base * $costmodel_v8_preview * $dataset_small *
+    { name: "model-value-test"
+    }
+
+## Model plutus variants: 7 epochs, with differences in block budget execution step limit (128GB RAM needed)
+  , $modelplutus_base * $costmodel_v8_preview * $double_tps_saturation_plutus * $plutus_loop_secp_ecdsa *
+    { name: "model-secp-ecdsa-plain"
+    }
+  , $modelplutus_base * $costmodel_v8_preview_stepshalf * $double_tps_saturation_plutus * $plutus_loop_secp_ecdsa *
+    { name: "model-secp-ecdsa-half"
+    }
+  , $modelplutus_base * $costmodel_v8_preview_doubleb * $double_tps_saturation_plutus * $plutus_loop_secp_ecdsa *
+    { name: "model-secp-ecdsa-double"
     }
 
 ## Dish variants

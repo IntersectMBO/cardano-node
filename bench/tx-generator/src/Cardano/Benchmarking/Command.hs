@@ -47,6 +47,11 @@ runCommand = withIOManager $ \iocp -> do
     JsonHL file nodeConfigOverwrite cardanoTracerOverwrite -> do
       opts <- parseJSONFile fromJSON file
       finalOpts <- mangleTracerConfig cardanoTracerOverwrite <$> mangleNodeConfig nodeConfigOverwrite opts
+
+      Prelude.putStrLn $ 
+          "--> initial options:\n" ++ show opts ++
+        "\n--> final options:\n" ++ show finalOpts
+
       case compileOptions finalOpts of
         Right script -> runScript script iocp >>= handleError
         err -> handleError err
