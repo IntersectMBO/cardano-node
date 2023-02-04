@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-api
-version:                1.35.5
+version:                1.35.6
 description:            The cardano api
 author:                 IOHK
 maintainer:             operations@iohk.io
@@ -140,8 +140,8 @@ library
                       , ouroboros-consensus-cardano
                       , ouroboros-consensus-protocol
                       , ouroboros-consensus-shelley
-                      , ouroboros-network
-                      , ouroboros-network-framework
+                      , ouroboros-network ^>= 0.3
+                      , ouroboros-network-framework ^>= 0.2
                       , parsec
                       , plutus-ledger-api
                       , prettyprinter

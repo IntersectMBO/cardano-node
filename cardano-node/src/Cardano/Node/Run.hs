@@ -22,7 +22,7 @@ import           Data.IP (toSockAddr)
 import           Prelude (String, error, id, show)
 
 import qualified Control.Concurrent.Async as Async
-import           Control.Monad.Class.MonadSTM.Strict
+import           Control.Concurrent.Class.MonadSTM.Strict
 import           Control.Monad.Trans.Except.Extra (left)
 import           "contra-tracer" Control.Tracer
 import qualified Data.Map.Strict as Map
@@ -391,7 +391,7 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
       EnabledP2PMode -> do
         traceWith (startupTracer tracers)
                   (StartupP2PInfo (ncDiffusionMode nc))
-        nt <- TopologyP2P.readTopologyFileOrError nc
+        nt <- TopologyP2P.readTopologyFileOrError (startupTracer tracers) nc
         let (localRoots, publicRoots) = producerAddresses nt
         traceWith (startupTracer tracers)
                 $ NetworkConfig localRoots
@@ -471,11 +471,7 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
   logStartupWarnings = do
     (case p2pMode of
       DisabledP2PMode -> return ()
-      EnabledP2PMode  -> do
-        traceWith (startupTracer tracers) P2PWarning
-        when (not $ ncTestEnableDevelopmentNetworkProtocols nc)
-          $ traceWith (startupTracer tracers)
-                      P2PWarningDevelopementNetworkProtocols
+      EnabledP2PMode  -> traceWith (startupTracer tracers) P2PWarning
       ) :: IO () -- annoying, but unavoidable for GADT type inference
 
     let developmentNtnVersions =
@@ -500,6 +496,7 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
                      developmentNtcVersions)
 
 #ifdef UNIX
+  -- only used when P2P is enabled
   updateTopologyConfiguration :: StrictTVar IO [(Int, Map RelayAccessPoint PeerAdvertise)]
                               -> StrictTVar IO [RelayAccessPoint]
                               -> StrictTVar IO UseLedgerAfter
@@ -507,7 +504,7 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
   updateTopologyConfiguration localRootsVar publicRootsVar useLedgerVar =
     Signals.Catch $ do
       traceWith (startupTracer tracers) NetworkConfigUpdate
-      result <- try $ readTopologyFileOrError nc
+      result <- try $ TopologyP2P.readTopologyFileOrError (startupTracer tracers) nc
       case result of
         Left (FatalError err) ->
           traceWith (startupTracer tracers)
@@ -610,6 +607,8 @@ mkP2PArguments NodeConfiguration {
       , P2P.daReadUseLedgerAfter
       , P2P.daProtocolIdleTimeout = ncProtocolIdleTimeout
       , P2P.daTimeWaitTimeout     = ncTimeWaitTimeout
+      , P2P.daDeadlineChurnInterval = 3300
+      , P2P.daBulkChurnInterval = 300
       }
   where
     daPeerSelectionTargets = PeerSelectionTargets {

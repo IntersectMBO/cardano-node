@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -16,6 +17,7 @@ module Cardano.Node.Tracing.Tracers.Startup
 import           Prelude
 
 import           Data.Aeson (ToJSON (..), Value (..), (.=))
+import qualified Data.Aeson as Aeson
 import           Data.List (intercalate)
 import qualified Data.Map as Map
 import           Data.Text (Text, pack)
@@ -133,13 +135,31 @@ namesStartupInfo = \case
   NetworkConfigUpdateUnsupported            -> ["NetworkConfigUpdateUnsupported"]
   NetworkConfigUpdateError {}               -> ["NetworkConfigUpdateError"]
   NetworkConfig {}                          -> ["NetworkConfig"]
+  NetworkConfigLegacy {}                    -> ["NetworkConfigLegacy"]
   P2PWarning {}                             -> ["P2PWarning"]
-  P2PWarningDevelopementNetworkProtocols {} -> ["P2PWarningDevelopementNetworkProtocols"]
   WarningDevelopmentNetworkProtocols {}     -> ["WarningDevelopmentNetworkProtocols"]
   BICommon {}                               -> ["Common"]
   BIShelley {}                              -> ["ShelleyBased"]
   BIByron {}                                -> ["Byron"]
   BINetwork {}                              -> ["Network"]
+
+
+data VersionTuple a b = VersionTuple a b
+
+-- TODO: provide JSON instance for `BlockNodeToClientVersion`
+instance Show blkVersion => ToJSON (VersionTuple NodeToClientVersion blkVersion) where
+    toJSON (VersionTuple nodeToClientVersion blockVersion) =
+      Aeson.object [ "nodeToClientVersion" .= toJSON nodeToClientVersion
+                   , "blockVersion" .= String (pack . show $ blockVersion)
+                   ]
+
+-- TODO: provide JSON instance for `BlockNodeToNodeVersion`
+instance Show blkVersion => ToJSON (VersionTuple NodeToNodeVersion blkVersion) where
+    toJSON (VersionTuple nodeToClientVersion blockVersion) =
+      Aeson.object [ "nodeToNodeVersion" .= toJSON nodeToClientVersion
+                   , "blockVersion" .= String (pack . show $ blockVersion)
+                   ]
+
 
 instance ( Show (BlockNodeToNodeVersion blk)
          , Show (BlockNodeToClientVersion blk)
@@ -162,9 +182,9 @@ instance ( Show (BlockNodeToNodeVersion blk)
         case dtal of
           DMaximum ->
             [ "nodeToNodeVersions" .=
-                toJSON (map show . Map.assocs $ supportedNodeToNodeVersions)
+                toJSON (map (uncurry VersionTuple) . Map.assocs $ supportedNodeToNodeVersions)
             , "nodeToClientVersions" .=
-                toJSON (map show . Map.assocs $ supportedNodeToClientVersions)
+                toJSON (map (uncurry VersionTuple) . Map.assocs $ supportedNodeToClientVersions)
             ]
           _ ->
             [ "maxNodeToNodeVersion" .=
@@ -212,12 +232,13 @@ instance ( Show (BlockNodeToNodeVersion blk)
                , "publicRoots" .= toJSON publicRoots
                , "useLedgerAfter" .= UseLedger useLedgerAfter
                ]
+  forMachine _dtal NetworkConfigLegacy =
+      mconcat [ "kind" .= String "NetworkConfigLegacy"
+              , "message" .= String p2pNetworkConfigLegacyMessage
+              ]
   forMachine _dtal P2PWarning =
       mconcat [ "kind" .= String "P2PWarning"
                , "message" .= String p2pWarningMessage ]
-  forMachine _dtal P2PWarningDevelopementNetworkProtocols =
-      mconcat [ "kind" .= String "P2PWarningDevelopementNetworkProtocols"
-               , "message" .= String p2pWarningDevelopmentNetworkProtocolsMessage ]
   forMachine _ver (WarningDevelopmentNetworkProtocols ntnVersions ntcVersions) =
       mconcat [ "kind" .= String "WarningDevelopmentNetworkProtocols"
                , "message" .= String "enabled development network protocols"
@@ -319,11 +340,9 @@ ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerAfter) =
                             ++ show (unSlotNo slotNo)
       DontUseLedger         -> "Don't use ledger to get root peers."
   ]
+ppStartupInfoTrace NetworkConfigLegacy = p2pNetworkConfigLegacyMessage
 
 ppStartupInfoTrace P2PWarning = p2pWarningMessage
-
-ppStartupInfoTrace P2PWarningDevelopementNetworkProtocols =
-    p2pWarningDevelopmentNetworkProtocolsMessage
 
 ppStartupInfoTrace (WarningDevelopmentNetworkProtocols ntnVersions ntcVersions) =
      "enabled development network protocols: "
@@ -358,13 +377,17 @@ ppStartupInfoTrace (BICommon BasicInfoCommon {..}) =
 
 p2pWarningMessage :: Text
 p2pWarningMessage =
-      "unsupported and unverified version of "
-   <> "`cardano-node` with peer-to-peer networking capabilities"
+      "You are using an early release of peer-to-peer capabilities, "
+   <> "please report any issues."
 
-p2pWarningDevelopmentNetworkProtocolsMessage :: Text
-p2pWarningDevelopmentNetworkProtocolsMessage =
-    "peer-to-peer requires TestEnableDevelopmentNetworkProtocols to be set to True"
-
+p2pNetworkConfigLegacyMessage :: Text
+p2pNetworkConfigLegacyMessage =
+    pack
+  $ intercalate "\n"
+  [ "You are using legacy p2p topology file format."
+  , "See https://github.com/input-output-hk/cardano-node/issues/4559"
+  , "Note that the legacy p2p format will be removed in `1.37` release."
+  ]
 
 docStartupInfo :: Documented (StartupTrace blk)
 docStartupInfo = Documented [

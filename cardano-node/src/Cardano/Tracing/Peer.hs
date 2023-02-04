@@ -13,7 +13,7 @@ module Cardano.Tracing.Peer
 import           Cardano.Prelude hiding (atomically)
 import           Prelude (String)
 
-import qualified Control.Monad.Class.MonadSTM.Strict as STM
+import qualified Control.Concurrent.Class.MonadSTM.Strict as STM
 import           Data.Aeson (ToJSON (..), Value (..), toJSON, (.=))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set

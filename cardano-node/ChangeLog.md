@@ -1,5 +1,37 @@
 # Changelog for cardano-node
 
+## 1.35.5 -- January 2023
+
+### node changes
+
+None
+
+### consensus changes
+
+None
+
+### network changes
+
+- 'EnableP2P' configuration option does not require
+  'TestEnableDevelopmentNetworkProtocols' any more.  We support running at most
+  one p2p relay, if an SPO is running at least two relays.
+
+- Added 'DemoteLocalAsynchronous' warning trace.  It indicates that a remote
+  local root peer was demoted to cold (either due to connection error or
+  misbehaviour). (input-output-hk/ouroboros-network#4127)
+
+- New P2P topology file format, see [issue #4563][#4563] or the [config
+  files][understanding-config-files] documentation.  The old p2p topology
+  format will be supported for next two major releases of the node (the last
+  major version which will support it is `1.37`). (#4563)
+
+[#4563]: https://github.com/input-output-hk/cardano-node/issues/4563
+[understanding-config-files]: https://github.com/input-output-hk/cardano-node/blob/master/doc/getting-started/understanding-config-files.md
+
+### ledger changes
+
+None
+
 ## 1.35.4 -- October 2022
 
 ### node changes

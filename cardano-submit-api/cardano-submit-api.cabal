@@ -33,7 +33,7 @@ common mtl                          { build-depends: mtl                        
 common network                      { build-depends: network                          >= 3.1.2.1                  }
 common optparse-applicative-fork    { build-depends: optparse-applicative-fork        >= 0.16.1.0                 }
 common ouroboros-consensus-cardano  { build-depends: ouroboros-consensus-cardano      >= 0.1.0.0                  }
-common ouroboros-network            { build-depends: ouroboros-network                >= 0.1.0.0                  }
+common ouroboros-network            { build-depends: ouroboros-network                >= 0.3.0.0                  }
 common prometheus                   { build-depends: prometheus                       >= 2.2.2                    }
 common protolude                    { build-depends: protolude                        >= 0.3.0                    }
 common servant                      { build-depends: servant                          >= 0.18.2                   }
