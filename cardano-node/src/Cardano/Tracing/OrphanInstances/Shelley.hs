@@ -102,8 +102,6 @@ import           Cardano.Protocol.TPraos.API (ChainTransitionError (ChainTransit
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod))
 import           Cardano.Protocol.TPraos.Rules.Prtcl
 
-
-
 {- HLINT ignore "Use :" -}
 
 --

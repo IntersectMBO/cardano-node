@@ -10,7 +10,6 @@
 
 module Cardano.Node.Tracing.Tracers.NodeToClient () where
 
-
 import           Cardano.Logging
 import           Cardano.Prelude hiding (Show, show)
 import           Data.Aeson (Value (String), (.=))

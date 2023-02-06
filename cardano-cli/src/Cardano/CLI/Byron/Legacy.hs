@@ -10,7 +10,7 @@ module Cardano.CLI.Byron.Legacy (
     , decodeLegacyDelegateKey
     ) where
 
-import           Cardano.Prelude hiding (option)
+import           Cardano.Prelude
 
 import qualified Codec.CBOR.Decoding as D
 import qualified Codec.CBOR.Encoding as E

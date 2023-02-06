@@ -220,8 +220,8 @@ let
       };
     in evalModules {
       prefix = [];
-      modules = import ../../nixos/module-list.nix ++ [ systemdCompat extra ];
-      args = { inherit pkgs; };
+      modules = import ../../nixos/module-list.nix ++ [ systemdCompat extra ] 
+              ++ [ { config._module.args = { inherit pkgs; }; } ];
     };
     in eval.config.services.cardano-node;
 

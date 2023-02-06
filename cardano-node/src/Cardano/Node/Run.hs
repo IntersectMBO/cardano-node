@@ -70,7 +70,7 @@ import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
-import           Ouroboros.Consensus.Node (NetworkP2PMode (..), RunNode, RunNodeArgs (..),
+import           Ouroboros.Consensus.Node (NetworkP2PMode (..), RunNodeArgs (..),
                    StdRunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
@@ -307,10 +307,7 @@ handlePeersListSimple tr nodeKern = forever $ do
 -- create a new block.
 
 handleSimpleNode
-  :: forall blk p2p
-  . ( RunNode blk
-    , Api.Protocol IO blk
-    )
+  :: forall blk p2p . Api.Protocol IO blk
   => Api.ProtocolInfoArgs IO blk
   -> NetworkP2PMode p2p
   -> Tracers RemoteConnectionId LocalConnectionId blk p2p
@@ -622,10 +619,10 @@ mkP2PArguments NodeConfiguration {
       , P2P.daReadLocalRootPeers
       , P2P.daReadPublicRootPeers
       , P2P.daReadUseLedgerAfter
-      , P2P.daProtocolIdleTimeout = ncProtocolIdleTimeout
-      , P2P.daTimeWaitTimeout     = ncTimeWaitTimeout
+      , P2P.daProtocolIdleTimeout   = ncProtocolIdleTimeout
+      , P2P.daTimeWaitTimeout       = ncTimeWaitTimeout
       , P2P.daDeadlineChurnInterval = 3300
-      , P2P.daBulkChurnInterval = 300
+      , P2P.daBulkChurnInterval     = 300
       }
   where
     daPeerSelectionTargets = PeerSelectionTargets {

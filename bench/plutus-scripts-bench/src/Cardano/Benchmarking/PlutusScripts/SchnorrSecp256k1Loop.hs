@@ -14,10 +14,8 @@ import           Language.Haskell.TH.Syntax
 
 import           Cardano.Api (PlutusScript, PlutusScriptV2)
 import           Cardano.Api.Shelley (PlutusScript (..))
-import           Codec.Serialise (serialise)
-import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
-import qualified Plutus.V2.Ledger.Api as PlutusV2
+import qualified PlutusLedgerApi.V2 as PlutusV2
 import qualified PlutusTx
 import qualified PlutusTx.Builtins as BI
 import           PlutusTx.Prelude as P hiding (Semigroup (..), (.), (<$>))
@@ -44,14 +42,8 @@ mkValidator _datum red _txContext =
       | BI.verifySchnorrSecp256k1Signature v m s = loop (pred i) v m s
       | otherwise = P.traceError "Trace error: Schnorr validation failed"
 
-validator :: PlutusV2.Validator
-validator = PlutusV2.mkValidatorScript $$(PlutusTx.compile [|| mkValidator ||])
-
-script :: PlutusV2.Script
-script = PlutusV2.unValidatorScript validator
-
 v2SchnorrLoopScriptShortBs :: SBS.ShortByteString
-v2SchnorrLoopScriptShortBs = SBS.toShort . LBS.toStrict $ serialise script
+v2SchnorrLoopScriptShortBs = PlutusV2.serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||])
 
 scriptSerialized :: PlutusScript PlutusScriptV2
 scriptSerialized = PlutusScriptSerialised v2SchnorrLoopScriptShortBs

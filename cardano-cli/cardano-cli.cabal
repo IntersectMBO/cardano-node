@@ -24,7 +24,7 @@ common project-config
 
   default-extensions:   NoImplicitPrelude
                         OverloadedStrings
-  build-depends:        base >= 4.14 && < 4.15
+  build-depends:        base >= 4.14 && < 4.17
 
   ghc-options:          -Wall
                         -Wcompat
@@ -38,13 +38,8 @@ common maybe-unix
   if !os(windows)
      build-depends:     unix
 
-common maybe-Win32
-  if os(windows)
-     build-depends:     Win32
-
 library
   import:               project-config
-                      , maybe-Win32
 
   if flag(unexpected_thunks)
     cpp-options:        -DUNEXPECTED_THUNKS

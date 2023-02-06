@@ -127,7 +127,6 @@ import           Numeric.Natural (Natural)
 import           Data.Aeson (Value (..), object, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
-import qualified Data.Sequence.Strict as Seq
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vector
 
@@ -151,7 +150,7 @@ import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 
-import qualified Plutus.V1.Ledger.Examples as Plutus
+import qualified PlutusLedgerApi.Test.Examples as Plutus
 
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
@@ -167,6 +166,7 @@ import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.TxIn
 import           Cardano.Api.Utils (failEitherWith)
+import qualified Data.Sequence.Strict as Seq
 
 -- ----------------------------------------------------------------------------
 -- Types for script language and version

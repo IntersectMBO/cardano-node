@@ -1504,8 +1504,8 @@ currentEpochEligibleLeadershipSlots :: forall era ledgerera. ()
   => Consensus.PraosProtocolSupportsNode (Api.ConsensusProtocol era)
   => HasField "_d" (Core.PParams ledgerera) UnitInterval
   -- => Crypto.Signable (Crypto.VRF (Ledger.Crypto ledgerera)) Shelley.Spec.Seed
-  => Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Spec.Credential 'Shelley.Spec.Staking (Cardano.Ledger.Era.Crypto (ShelleyLedgerEra era)))
- -- => Ledger.Crypto ledgerera ~ Shelley.StandardCrypto
+  -- => Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Spec.Credential 'Shelley.Spec.Staking (Cardano.Ledger.Era.Crypto (ShelleyLedgerEra era)))
+  -- => Ledger.Crypto ledgerera ~ Shelley.StandardCrypto
   => FromCBOR (Consensus.ChainDepState (Api.ConsensusProtocol era))
   -- => Consensus.ChainDepState (ConsensusProtocol era) ~ Consensus.ChainDepState (ConsensusProtocol era)
   => ShelleyBasedEra era

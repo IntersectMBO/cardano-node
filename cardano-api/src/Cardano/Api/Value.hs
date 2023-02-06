@@ -75,9 +75,6 @@ import qualified Data.Text.Encoding as Text
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Ledger.Coin as Shelley
 import           Cardano.Ledger.Crypto (StandardCrypto)
-import           Cardano.Ledger.Mary.Value (MaryValue (..))
-import qualified Cardano.Ledger.Mary.Value as Mary
-import qualified Cardano.Ledger.ShelleyMA.Rules as Shelley
 
 import           Cardano.Api.Error (displayError)
 import           Cardano.Api.HasTypeProxy
@@ -86,6 +83,9 @@ import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.Utils (failEitherWith)
+import Cardano.Ledger.Mary.Value (MaryValue (..))
+import qualified Cardano.Ledger.Mary.Value as Mary
+import qualified Cardano.Ledger.ShelleyMA.Rules as Shelley
 
 -- ----------------------------------------------------------------------------
 -- Lovelace

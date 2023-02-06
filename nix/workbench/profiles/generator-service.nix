@@ -78,8 +78,8 @@ let
       modules = import ../../nixos/module-list.nix ++ [
         (import ../../nixos/tx-generator-service.nix pkgs)
         systemdCompat extra
+        { config._module.args = { inherit pkgs; }; }
       ];
-      args = { inherit pkgs; };
     };
     in eval.config.services.tx-generator;
 

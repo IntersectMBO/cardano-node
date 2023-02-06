@@ -18,7 +18,7 @@ extra-doc-files:        README.md
 
 common project-config
   default-language:     Haskell2010
-  build-depends:        base >= 4.14 && < 4.15
+  build-depends:        base >= 4.14 && < 4.17
 
   ghc-options:          -Wall
                         -Wcompat
@@ -286,7 +286,6 @@ test-suite cardano-tracer-test
                         Cardano.Tracer.Test.TestSetup
                         Cardano.Tracer.Test.Utils
                         Cardano.Tracer.Test.Queue.Tests
-
   build-depends:        aeson
                       , async
                       , bytestring
@@ -303,7 +302,6 @@ test-suite cardano-tracer-test
                       , optparse-applicative-fork
                       , ouroboros-network
                       , ouroboros-network-framework
-                      , QuickCheck
                       , stm
                       , tasty
                       , tasty-quickcheck

@@ -153,6 +153,12 @@ toConsensusGenTx (TxInMode (ShelleyTx _ tx) BabbageEraInCardanoMode) =
   where
     tx' = Consensus.mkShelleyTx tx
 
+
+toConsensusGenTx (TxInMode (ShelleyTx _ _) ByronEraInByronMode) =
+  error "Cardano.Api.InMode.toConsensusGenTx: ShelleyTx In Byron era"
+toConsensusGenTx (TxInMode (ShelleyTx _ _) ByronEraInCardanoMode) =
+  error "Cardano.Api.InMode.toConsensusGenTx: ShelleyTx In Byron era"
+
 -- ----------------------------------------------------------------------------
 -- Transaction ids in the context of a consensus mode
 --

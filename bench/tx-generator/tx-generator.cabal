@@ -36,8 +36,7 @@ library
                         -Wredundant-constraints
                         -Wwarn=deprecations
 
-  exposed-modules:
-                        Cardano.Benchmarking.Command
+  exposed-modules:      Cardano.Benchmarking.Command
                         Cardano.Benchmarking.Compiler
                         Cardano.Benchmarking.GeneratorTx
                         Cardano.Benchmarking.GeneratorTx.NodeToNode
@@ -82,11 +81,11 @@ library
 
   autogen-modules:      Paths_tx_generator
 
-  build-depends:        aeson
+  build-depends:        base >=4.12 && <5
+                      , aeson
                       , aeson-pretty
                       , async
                       , attoparsec
-                      , base >=4.12 && <5
                       , base16-bytestring
                       , bytestring
                       , cardano-api
@@ -110,6 +109,7 @@ library
                       , generic-monoid
                       , ghc-prim
                       , io-classes ^>= 0.3
+                      , mtl
                       , network
                       , network-mux
                       , optparse-applicative-fork
@@ -191,6 +191,18 @@ test-suite tx-generator-apitest
 
   other-modules:        Paths_tx_generator
   autogen-modules:      Paths_tx_generator
+
+  build-depends:       base >=4.12 && <5
+                     , aeson
+                     , bytestring
+                     , filepath
+                     , optparse-applicative-fork
+                     , cardano-api
+                     , cardano-cli
+                     , cardano-node
+                     , transformers
+                     , transformers-except
+                     , tx-generator
 
 test-suite tx-generator-test
   hs-source-dirs:       test

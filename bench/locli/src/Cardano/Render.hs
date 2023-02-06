@@ -102,32 +102,32 @@ renderScalar v Field{..} =
       showInt = T.pack.printf "%d"
       showW64 = T.pack.printf "%d"
   in case fSelect of
-    IInt     (($v)->x) ->                 showInt x
-    IWord64M (($v)->x) -> smaybe "---"    showW64 x
-    IWord64  (($v)->x) ->                 showW64 x
-    IFloat   (($v)->x) ->      packWi $ printf "%F" x
-    IDeltaTM (($v)->x) -> smaybe "---"     showDt x
-    IDeltaT  (($v)->x) ->                  showDt x
-    IDate    (($v)->x) -> packWi $ take 10 $ show x
-    ITime    (($v)->x) -> packWi $ take  8 $ drop 11 $ show x
-    IText    (($v)->x) -> T.take wi . T.dropWhileEnd (== 's') $ x
+    IInt     (($ v)->x) ->                 showInt x
+    IWord64M (($ v)->x) -> smaybe "---"    showW64 x
+    IWord64  (($ v)->x) ->                 showW64 x
+    IFloat   (($ v)->x) ->      packWi $ printf "%F" x
+    IDeltaTM (($ v)->x) -> smaybe "---"     showDt x
+    IDeltaT  (($ v)->x) ->                  showDt x
+    IDate    (($ v)->x) -> packWi $ take 10 $ show x
+    ITime    (($ v)->x) -> packWi $ take  8 $ drop 11 $ show x
+    IText    (($ v)->x) -> T.take wi . T.dropWhileEnd (== 's') $ x
 
 renderFieldCentiles :: a p -> (forall v. Divisible v => CDF p v -> [[v]]) -> Field DSelect p a -> [[Text]]
 renderFieldCentiles x cdfProj Field{..} =
   case fSelect of
-    DInt    (cdfProj . ($x) ->ds) -> ds <&> fmap (p.printf "%d")
-    DWord64 (cdfProj . ($x) ->ds) -> ds <&> fmap (p.printf "%d")
-    DFloat  (cdfProj . ($x) ->ds) -> ds <&> fmap (p.printf "%F")
-    DDeltaT (cdfProj . ($x) ->ds) -> ds <&> fmap (justifyData (width fWidth).T.dropWhileEnd (== 's').p.show)
+    DInt    (cdfProj . ($ x) ->ds) -> ds <&> fmap (p.printf "%d")
+    DWord64 (cdfProj . ($ x) ->ds) -> ds <&> fmap (p.printf "%d")
+    DFloat  (cdfProj . ($ x) ->ds) -> ds <&> fmap (p.printf "%F")
+    DDeltaT (cdfProj . ($ x) ->ds) -> ds <&> fmap (justifyData (width fWidth).T.dropWhileEnd (== 's').p.show)
  where p = T.pack
 
 renderFieldCentilesWidth :: a p -> (forall v. Divisible v => CDF p v -> [[v]]) -> Field DSelect p a -> [[Text]]
 renderFieldCentilesWidth x cdfProj Field{..} =
   case fSelect of
-    DInt    (cdfProj . ($x) ->ds) -> ds <&> fmap (T.center (width fWidth) ' '.T.pack.printf "%d")
-    DWord64 (cdfProj . ($x) ->ds) -> ds <&> fmap (T.center (width fWidth) ' '.T.pack.printf "%d")
-    DFloat  (cdfProj . ($x) ->ds) -> ds <&> fmap (renderFloatStr fWidth.printf "%*F" (width fWidth + 1))
-    DDeltaT (cdfProj . ($x) ->ds) -> ds <&> fmap (renderFloatStr fWidth.dropWhileEnd (== 's').show)
+    DInt    (cdfProj . ($ x) ->ds) -> ds <&> fmap (T.center (width fWidth) ' '.T.pack.printf "%d")
+    DWord64 (cdfProj . ($ x) ->ds) -> ds <&> fmap (T.center (width fWidth) ' '.T.pack.printf "%d")
+    DFloat  (cdfProj . ($ x) ->ds) -> ds <&> fmap (renderFloatStr fWidth.printf "%*F" (width fWidth + 1))
+    DDeltaT (cdfProj . ($ x) ->ds) -> ds <&> fmap (renderFloatStr fWidth.dropWhileEnd (== 's').show)
 
 renderFloatStr :: Width -> String -> Text
 renderFloatStr w = justifyData w'. T.take w' . T.pack . stripLeadingZero

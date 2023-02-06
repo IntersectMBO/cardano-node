@@ -64,7 +64,6 @@ import qualified Data.Vector as Vector
 --
 import           Cardano.Binary (Annotated (..))
 import qualified Cardano.Binary as CBOR
-import qualified Cardano.Prelude as CBOR (cborError)
 
 --
 -- Crypto API used by consensus and Shelley (and should be used by Byron)
@@ -155,6 +154,7 @@ instance Eq (Tx era) where
         ShelleyBasedEraBabbage -> txA == txB
 
     (==) ByronTx{} (ShelleyTx era _) = case era of {}
+    (==) (ShelleyTx era _) ByronTx{} = case era of {}
 
 -- The GADT in the ShelleyTx case requires a custom instance
 instance Show (Tx era) where

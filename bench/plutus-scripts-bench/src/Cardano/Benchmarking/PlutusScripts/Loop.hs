@@ -15,11 +15,9 @@ import           Prelude hiding (pred, ($), (&&), (<), (==))
 
 import           Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV1)
 
-import           Codec.Serialise
-import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
 
-import qualified Plutus.V1.Ledger.Scripts as Plutus
+import qualified PlutusLedgerApi.V2 as PlutusV2
 import           PlutusTx
 import           PlutusTx.Builtins (unsafeDataAsI)
 import           PlutusTx.Prelude hiding (Semigroup (..), unless, (.), (<$>))
@@ -40,14 +38,8 @@ mkValidator _datum redeemer _txContext
     n = unsafeDataAsI redeemer
     loop i = if i == 1000000 then () else loop $ pred i
 
-validator :: Plutus.Validator
-validator = Plutus.mkValidatorScript $$(PlutusTx.compile [|| mkValidator ||])
-
-script :: Plutus.Script
-script = Plutus.unValidatorScript validator
-
 loopScriptShortBs :: SBS.ShortByteString
-loopScriptShortBs = SBS.toShort . LBS.toStrict $ serialise script
+loopScriptShortBs = PlutusV2.serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||])
 
 scriptSerialized :: PlutusScript PlutusScriptV1
 scriptSerialized = PlutusScriptSerialised loopScriptShortBs

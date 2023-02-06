@@ -25,7 +25,7 @@ import           Cardano.Ledger.Credential (Credential (..), PaymentCredential, 
                    StakeReference (..))
 import           Cardano.Ledger.Keys (GenDelegPair (..), Hash, KeyHash (..), KeyRole (..),
                    VerKeyVRF)
-import           Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), emptyPParams)
+import           Cardano.Ledger.Shelley.PParams (emptyPParams, ShelleyPParamsHKD (..))
 
 import           Test.Cardano.Ledger.Shelley.Utils (unsafeBoundRational)
 

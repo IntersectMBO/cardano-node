@@ -85,6 +85,7 @@ import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Slotting.Slot (EpochNo)
 
+import           Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD(..), BabbagePParamsUpdate, BabbagePParams)
 import           Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Core as Ledger
@@ -94,17 +95,13 @@ import qualified Cardano.Ledger.Keys as Ledger
 -- Some of the things from Cardano.Ledger.ShelleyPParams are generic across all
 -- eras, and some are specific to the Shelley era (and other pre-Alonzo eras).
 -- So we import in twice under different names.
-import qualified Cardano.Ledger.Shelley.API as Ledger hiding (PParams)
-import           Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..),
-                   ShelleyPParamsUpdate)
 
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import           Cardano.Ledger.Alonzo.PParams (AlonzoPParams, AlonzoPParamsHKD (..),
                    AlonzoPParamsUpdate)
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
-
-import           Cardano.Ledger.Babbage.PParams (BabbagePParams, BabbagePParamsHKD (..),
-                   BabbagePParamsUpdate)
+import qualified Cardano.Ledger.Shelley.API as Ledger hiding (PParams)
+import           Cardano.Ledger.Shelley.PParams (ShelleyPParamsUpdate, ShelleyPParamsHKD (..), ShelleyPParams)
 
 import           Text.PrettyBy.Default (display)
 
