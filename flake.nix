@@ -53,9 +53,13 @@
 
     node-measured = {
       url = "github:input-output-hk/cardano-node";
+      inputs.cardano-node-workbench.follows = "cardano-node-workbench";
+      # break the recursion
+      inputs.node-measured.follows = "node-measured";
     };
     node-snapshot = {
       url = "github:input-output-hk/cardano-node/7f00e3ea5a61609e19eeeee4af35241571efdf5c";
+      inputs.membench.follows = "empty-flake";
     };
     node-process = {
       url = "github:input-output-hk/cardano-node";
@@ -65,8 +69,10 @@
     cardano-node-workbench = {
       url = "github:input-output-hk/cardano-node/ed9932c52aaa535b71f72a5b4cc0cecb3344a5a3";
       # This is to avoid circular import (TODO: remove this workbench pin entirely using materialization):
-      inputs.membench.url = "github:input-output-hk/empty-flake";
+      inputs.membench.follows = "empty-flake";
     };
+
+    empty-flake.url = "github:input-output-hk/empty-flake";
 
     cardano-mainnet-mirror.url = "github:input-output-hk/cardano-mainnet-mirror/nix";
 
