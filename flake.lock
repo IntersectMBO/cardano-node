@@ -20303,11 +20303,11 @@
         "std": "std_10"
       },
       "locked": {
-        "lastModified": 1675092209,
-        "narHash": "sha256-GO7dZUqQpOSCgv+IFFhXcs1pmPjRRBD68NGfQ2Q+p6I=",
+        "lastModified": 1675695930,
+        "narHash": "sha256-B7rEZ/DBUMlK1AcJ9ajnAPPxqXY6zW2SBX+51bZV0Ac=",
         "owner": "input-output-hk",
         "repo": "tullia",
-        "rev": "da00892292f6a6db98ec5566e0b5f3629dd10cf2",
+        "rev": "621365f2c725608f381b3ad5b57afef389fd4c31",
         "type": "github"
       },
       "original": {
