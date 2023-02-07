@@ -74,7 +74,7 @@ let
       haskellBuildUtils
       pkgs.graphviz
       weeder
-      nixWrapped
+      nix
       pkgconfig
       profiteur
       profiterole
@@ -132,7 +132,7 @@ let
     packages = _: [];
 
     nativeBuildInputs = with cardanoNodePackages; [
-      nixWrapped
+      nix
       cardano-cli
       bech32
       cardano-ping

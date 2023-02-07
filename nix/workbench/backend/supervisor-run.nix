@@ -83,7 +83,7 @@ in
               gnused
               jq
               moreutils
-              nixWrapped
+              nix
               pstree
               python3Packages.supervisor
               workbench.workbench
