@@ -84,7 +84,7 @@ in
               gnused
               jq
               moreutils
-              nixWrapped
+              nix
               pstree
               workbench.workbench
               zstd

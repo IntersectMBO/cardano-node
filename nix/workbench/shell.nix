@@ -93,7 +93,7 @@ in project.shellFor {
     pkgs.graphviz
     graphmod
     weeder
-    nixWrapped
+    nix
     pkgconfig
     profiteur
     profiterole
