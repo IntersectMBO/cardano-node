@@ -5,7 +5,7 @@ module Cardano.CLI.TopHandler
 -- The code in this module derives from multiple authors over many years.
 -- It is all under the BSD3 license below.
 --
--- Copyright (c) 2019 Input Output (Hong Kong) Ltd.
+-- Copyright (c) 2019 Input Output Global Inc (IOG).
 --               2017 Edward Z. Yang
 --               2015 Edsko de Vries
 --               2009 Duncan Coutts
