@@ -1,5 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{- HLINT ignore "Monad law, left identity" -}
+
 module Cardano.Logging.Tracer.Composed (
     mkCardanoTracer
   , mkCardanoTracer'
