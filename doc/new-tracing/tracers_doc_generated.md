@@ -5,7 +5,7 @@
 ### [Trace Messages](#trace-messages)
 
 1. __BlockFetch__
-	1. __Client__
+	1. __Clientⓣ__
 		1. [AcknowledgedFetchRequest](#blockfetchclientacknowledgedfetchrequest)
 		1. [AddedFetchRequest](#blockfetchclientaddedfetchrequest)
 		1. [ClientTerminating](#blockfetchclientclientterminating)
@@ -14,10 +14,11 @@
 		1. [RejectedFetchBatch](#blockfetchclientrejectedfetchbatch)
 		1. [SendFetchRequest](#blockfetchclientsendfetchrequest)
 		1. [StartedFetchBatch](#blockfetchclientstartedfetchbatch)
-	1. __Decision__
+	1. __Decisionⓣⓜ__
 		1. [Accept](#blockfetchdecisionaccept)
 		1. [Decline](#blockfetchdecisiondecline)
-	1. __Remote__
+		1. [EmptyPeersFetch](#blockfetchdecisionemptypeersfetch)
+	1. __Remoteⓣⓢ__
 		1. __Receive__
 			1. [BatchDone](#blockfetchremotereceivebatchdone)
 			1. [Block](#blockfetchremotereceiveblock)
@@ -32,7 +33,7 @@
 			1. [NoBlocks](#blockfetchremotesendnoblocks)
 			1. [RequestRange](#blockfetchremotesendrequestrange)
 			1. [StartBatch](#blockfetchremotesendstartbatch)
-		1. __Serialised__
+		1. __Serialisedⓣⓢ__
 			1. __Receive__
 				1. [BatchDone](#blockfetchremoteserialisedreceivebatchdone)
 				1. [Block](#blockfetchremoteserialisedreceiveblock)
@@ -47,13 +48,13 @@
 				1. [NoBlocks](#blockfetchremoteserialisedsendnoblocks)
 				1. [RequestRange](#blockfetchremoteserialisedsendrequestrange)
 				1. [StartBatch](#blockfetchremoteserialisedsendstartbatch)
-	1. __Server__
+	1. __Serverⓣⓜ__
 		1. [SendBlock](#blockfetchserversendblock)
-1. __BlockchainTime__
+1. __BlockchainTimeⓣ__
 	1. [CurrentSlotUnknown](#blockchaintimecurrentslotunknown)
 	1. [StartTimeInTheFuture](#blockchaintimestarttimeinthefuture)
 	1. [SystemClockMovedBack](#blockchaintimesystemclockmovedback)
-1. __ChainDB__
+1. __ChainDBⓣⓜ__
 	1. __AddBlockEvent__
 		1. __AddBlockValidation__
 			1. [CandidateContainsFutureBlocks](#chaindbaddblockeventaddblockvalidationcandidatecontainsfutureblocks)
@@ -139,10 +140,10 @@
 		1. [DeletedSnapshot](#chaindbledgereventdeletedsnapshot)
 		1. [InvalidSnapshot](#chaindbledgereventinvalidsnapshot)
 		1. [TookSnapshot](#chaindbledgereventtooksnapshot)
-	1. __LedgerReplayEvent__
-		1. [ReplayFromGenesis](#chaindbledgerreplayeventreplayfromgenesis)
-		1. [ReplayFromSnapshot](#chaindbledgerreplayeventreplayfromsnapshot)
-		1. [ReplayedBlock](#chaindbledgerreplayeventreplayedblock)
+	1. __LedgerReplay__
+		1. [ReplayFromGenesis](#chaindbledgerreplayreplayfromgenesis)
+		1. [ReplayFromSnapshot](#chaindbledgerreplayreplayfromsnapshot)
+		1. [ReplayedBlock](#chaindbledgerreplayreplayedblock)
 	1. __OpenEvent__
 		1. [ClosedDB](#chaindbopeneventcloseddb)
 		1. [OpenedDB](#chaindbopeneventopeneddb)
@@ -153,7 +154,7 @@
 		1. [StartedOpeningImmutableDB](#chaindbopeneventstartedopeningimmutabledb)
 		1. [StartedOpeningLgrDB](#chaindbopeneventstartedopeninglgrdb)
 		1. [StartedOpeningVolatileDB](#chaindbopeneventstartedopeningvolatiledb)
-	1. __ReplayBlock__
+	1. __ReplayBlockⓣⓜ__
 		1. [LedgerReplay](#chaindbreplayblockledgerreplay)
 	1. __VolatileDbEvent__
 		1. [BlockAlreadyHere](#chaindbvolatiledbeventblockalreadyhere)
@@ -161,13 +162,13 @@
 		1. [InvalidFileNames](#chaindbvolatiledbeventinvalidfilenames)
 		1. [Truncate](#chaindbvolatiledbeventtruncate)
 1. __ChainSync__
-	1. __Client__
+	1. __Clientⓣ__
 		1. [DownloadedHeader](#chainsyncclientdownloadedheader)
 		1. [Exception](#chainsyncclientexception)
 		1. [FoundIntersection](#chainsyncclientfoundintersection)
 		1. [RolledBack](#chainsyncclientrolledback)
 		1. [Termination](#chainsyncclienttermination)
-	1. __Local__
+	1. __Localⓣⓢ__
 		1. __Receive__
 			1. [AwaitReply](#chainsynclocalreceiveawaitreply)
 			1. [Done](#chainsynclocalreceivedone)
@@ -186,7 +187,7 @@
 			1. [RequestNext](#chainsynclocalsendrequestnext)
 			1. [RollBackward](#chainsynclocalsendrollbackward)
 			1. [RollForward](#chainsynclocalsendrollforward)
-	1. __Remote__
+	1. __Remoteⓣⓢ__
 		1. __Receive__
 			1. [AwaitReply](#chainsyncremotereceiveawaitreply)
 			1. [Done](#chainsyncremotereceivedone)
@@ -205,7 +206,7 @@
 			1. [RequestNext](#chainsyncremotesendrequestnext)
 			1. [RollBackward](#chainsyncremotesendrollbackward)
 			1. [RollForward](#chainsyncremotesendrollforward)
-		1. __Serialised__
+		1. __Serialisedⓣⓢ__
 			1. __Receive__
 				1. [AwaitReply](#chainsyncremoteserialisedreceiveawaitreply)
 				1. [Done](#chainsyncremoteserialisedreceivedone)
@@ -224,13 +225,12 @@
 				1. [RequestNext](#chainsyncremoteserialisedsendrequestnext)
 				1. [RollBackward](#chainsyncremoteserialisedsendrollbackward)
 				1. [RollForward](#chainsyncremoteserialisedsendrollforward)
-	1. __ServerBlock__
+	1. __ServerBlockⓣⓢ__
 		1. [Update](#chainsyncserverblockupdate)
-	1. __ServerHeader__
+	1. __ServerHeaderⓣⓢ__
 		1. [Update](#chainsyncserverheaderupdate)
 1. __Forge__
-	1. [KESInfo](#forgekesinfo)
-	1. __Loop__
+	1. __Loopⓣⓜ__
 		1. [AdoptedBlock](#forgeloopadoptedblock)
 		1. [BlockContext](#forgeloopblockcontext)
 		1. [BlockFromFuture](#forgeloopblockfromfuture)
@@ -250,18 +250,18 @@
 		1. [SlotIsImmutable](#forgeloopslotisimmutable)
 		1. [StartLeadershipCheck](#forgeloopstartleadershipcheck)
 		1. [StartLeadershipCheckPlus](#forgeloopstartleadershipcheckplus)
-1. __Mempool__
+1. __Mempoolⓣⓜ__
 	1. [AddedTx](#mempooladdedtx)
 	1. [ManuallyRemovedTxs](#mempoolmanuallyremovedtxs)
 	1. [RejectedTx](#mempoolrejectedtx)
 	1. [RemoveTxs](#mempoolremovetxs)
-1. __Net__
-	1. __AcceptPolicy__
+1. __Netⓣⓢ__
+	1. __AcceptPolicyⓣ__
 		1. [ConnectionHardLimit](#netacceptpolicyconnectionhardlimit)
 		1. [ConnectionLimitResume](#netacceptpolicyconnectionlimitresume)
 		1. [ConnectionRateLimiting](#netacceptpolicyconnectionratelimiting)
 	1. __ConnectionManager__
-		1. __Local__
+		1. __Localⓣⓜ__
 			1. [Connect](#netconnectionmanagerlocalconnect)
 			1. [ConnectError](#netconnectionmanagerlocalconnecterror)
 			1. [ConnectionCleanup](#netconnectionmanagerlocalconnectioncleanup)
@@ -283,7 +283,7 @@
 			1. [TerminatingConnection](#netconnectionmanagerlocalterminatingconnection)
 			1. [UnexpectedlyFalseAssertion](#netconnectionmanagerlocalunexpectedlyfalseassertion)
 			1. [UnregisterConnection](#netconnectionmanagerlocalunregisterconnection)
-		1. __Remote__
+		1. __Remoteⓣⓢ__
 			1. [Connect](#netconnectionmanagerremoteconnect)
 			1. [ConnectError](#netconnectionmanagerremoteconnecterror)
 			1. [ConnectionCleanup](#netconnectionmanagerremoteconnectioncleanup)
@@ -306,7 +306,7 @@
 			1. [Transition](#netconnectionmanagerremotetransition)
 			1. [UnexpectedlyFalseAssertion](#netconnectionmanagerremoteunexpectedlyfalseassertion)
 			1. [UnregisterConnection](#netconnectionmanagerremoteunregisterconnection)
-	1. __DNSResolver__
+	1. __DNSResolverⓣ__
 		1. [LookupAAAAError](#netdnsresolverlookupaaaaerror)
 		1. [LookupAAAAResult](#netdnsresolverlookupaaaaresult)
 		1. [LookupAError](#netdnsresolverlookupaerror)
@@ -315,7 +315,7 @@
 		1. [LookupIPv4First](#netdnsresolverlookupipv4first)
 		1. [LookupIPv6First](#netdnsresolverlookupipv6first)
 	1. __ErrorPolicy__
-		1. __Local__
+		1. __Localⓣ__
 			1. [AcceptException](#neterrorpolicylocalacceptexception)
 			1. [KeepSuspended](#neterrorpolicylocalkeepsuspended)
 			1. [LocalNodeError](#neterrorpolicylocallocalnodeerror)
@@ -326,7 +326,7 @@
 			1. [SuspendPeer](#neterrorpolicylocalsuspendpeer)
 			1. [UnhandledApplicationException](#neterrorpolicylocalunhandledapplicationexception)
 			1. [UnhandledConnectionException](#neterrorpolicylocalunhandledconnectionexception)
-		1. __Remote__
+		1. __Remoteⓣ__
 			1. [AcceptException](#neterrorpolicyremoteacceptexception)
 			1. [KeepSuspended](#neterrorpolicyremotekeepsuspended)
 			1. [LocalNodeError](#neterrorpolicyremotelocalnodeerror)
@@ -338,7 +338,7 @@
 			1. [UnhandledApplicationException](#neterrorpolicyremoteunhandledapplicationexception)
 			1. [UnhandledConnectionException](#neterrorpolicyremoteunhandledconnectionexception)
 	1. __Handshake__
-		1. __Local__
+		1. __Localⓣⓢ__
 			1. __Receive__
 				1. [AcceptVersion](#nethandshakelocalreceiveacceptversion)
 				1. [ProposeVersions](#nethandshakelocalreceiveproposeversions)
@@ -349,7 +349,7 @@
 				1. [ProposeVersions](#nethandshakelocalsendproposeversions)
 				1. [Refuse](#nethandshakelocalsendrefuse)
 				1. [ReplyVersions](#nethandshakelocalsendreplyversions)
-		1. __Remote__
+		1. __Remoteⓣⓢ__
 			1. __Receive__
 				1. [AcceptVersion](#nethandshakeremotereceiveacceptversion)
 				1. [ProposeVersions](#nethandshakeremotereceiveproposeversions)
@@ -361,7 +361,7 @@
 				1. [Refuse](#nethandshakeremotesendrefuse)
 				1. [ReplyVersions](#nethandshakeremotesendreplyversions)
 	1. __InboundGovernor__
-		1. __Local__
+		1. __Localⓣⓜ__
 			1. [DemotedToColdRemote](#netinboundgovernorlocaldemotedtocoldremote)
 			1. [DemotedToWarmRemote](#netinboundgovernorlocaldemotedtowarmremote)
 			1. [InboundGovernorCounters](#netinboundgovernorlocalinboundgovernorcounters)
@@ -379,7 +379,7 @@
 			1. [ResponderTerminated](#netinboundgovernorlocalresponderterminated)
 			1. [UnexpectedlyFalseAssertion](#netinboundgovernorlocalunexpectedlyfalseassertion)
 			1. [WaitIdleRemote](#netinboundgovernorlocalwaitidleremote)
-		1. __Remote__
+		1. __Remoteⓣⓜ__
 			1. [DemotedToColdRemote](#netinboundgovernorremotedemotedtocoldremote)
 			1. [DemotedToWarmRemote](#netinboundgovernorremotedemotedtowarmremote)
 			1. [InboundGovernorCounters](#netinboundgovernorremoteinboundgovernorcounters)
@@ -395,13 +395,13 @@
 			1. [ResponderStartFailure](#netinboundgovernorremoteresponderstartfailure)
 			1. [ResponderStarted](#netinboundgovernorremoteresponderstarted)
 			1. [ResponderTerminated](#netinboundgovernorremoteresponderterminated)
-			1. __Transition__
+			1. __Transitionⓣ__
 				1. [Transition](#netinboundgovernorremotetransitiontransition)
 			1. [UnexpectedlyFalseAssertion](#netinboundgovernorremoteunexpectedlyfalseassertion)
 			1. [WaitIdleRemote](#netinboundgovernorremotewaitidleremote)
 	1. [KeepAliveClient](#netkeepaliveclient)
 	1. __Mux__
-		1. __Local__
+		1. __Localⓣ__
 			1. [ChannelRecvEnd](#netmuxlocalchannelrecvend)
 			1. [ChannelRecvStart](#netmuxlocalchannelrecvstart)
 			1. [ChannelSendEnd](#netmuxlocalchannelsendend)
@@ -430,7 +430,7 @@
 			1. [State](#netmuxlocalstate)
 			1. [TCPInfo](#netmuxlocaltcpinfo)
 			1. [Terminating](#netmuxlocalterminating)
-		1. __Remote__
+		1. __Remoteⓣ__
 			1. [ChannelRecvEnd](#netmuxremotechannelrecvend)
 			1. [ChannelRecvStart](#netmuxremotechannelrecvstart)
 			1. [ChannelSendEnd](#netmuxremotechannelsendend)
@@ -460,18 +460,18 @@
 			1. [TCPInfo](#netmuxremotetcpinfo)
 			1. [Terminating](#netmuxremoteterminating)
 	1. __PeerSelection__
-		1. __Actions__
+		1. __Actionsⓣ__
 			1. [MonitoringError](#netpeerselectionactionsmonitoringerror)
 			1. [MonitoringResult](#netpeerselectionactionsmonitoringresult)
 			1. [StatusChangeFailure](#netpeerselectionactionsstatuschangefailure)
 			1. [StatusChanged](#netpeerselectionactionsstatuschanged)
-		1. __Counters__
+		1. __Countersⓣⓜ__
 			1. [Counters](#netpeerselectioncounterscounters)
-		1. __Initiator__
+		1. __Initiatorⓣⓢ__
 			1. [GovernorState](#netpeerselectioninitiatorgovernorstate)
-		1. __Responder__
+		1. __Responderⓣⓢ__
 			1. [GovernorState](#netpeerselectionrespondergovernorstate)
-		1. __Selection__
+		1. __Selectionⓣ__
 			1. [ChurnMode](#netpeerselectionselectionchurnmode)
 			1. [ChurnWait](#netpeerselectionselectionchurnwait)
 			1. [DemoteAsynchronous](#netpeerselectionselectiondemoteasynchronous)
@@ -502,7 +502,7 @@
 			1. [PublicRootsResults](#netpeerselectionselectionpublicrootsresults)
 			1. [TargetsChanged](#netpeerselectionselectiontargetschanged)
 	1. __Peers__
-		1. __Ledger__
+		1. __Ledgerⓣⓢ__
 			1. [DisabledLedgerPeers](#netpeersledgerdisabledledgerpeers)
 			1. [FallingBackToBootstrapPeers](#netpeersledgerfallingbacktobootstrappeers)
 			1. [FetchingNewLedgerState](#netpeersledgerfetchingnewledgerstate)
@@ -512,29 +512,29 @@
 			1. [ReusingLedgerState](#netpeersledgerreusingledgerstate)
 			1. [TraceUseLedgerAfter](#netpeersledgertraceuseledgerafter)
 			1. [WaitingOnRequest](#netpeersledgerwaitingonrequest)
-		1. __List__
+		1. __Listⓣⓢ__
 			1. [PeersFromNodeKernel](#netpeerslistpeersfromnodekernel)
-		1. __LocalRoot__
+		1. __LocalRootⓣ__
 			1. [LocalRootDomains](#netpeerslocalrootlocalrootdomains)
 			1. [LocalRootError](#netpeerslocalrootlocalrooterror)
 			1. [LocalRootFailure](#netpeerslocalrootlocalrootfailure)
 			1. [LocalRootGroups](#netpeerslocalrootlocalrootgroups)
 			1. [LocalRootResult](#netpeerslocalrootlocalrootresult)
 			1. [LocalRootWaiting](#netpeerslocalrootlocalrootwaiting)
-		1. __PublicRoot__
+		1. __PublicRootⓣ__
 			1. [PublicRootDomains](#netpeerspublicrootpublicrootdomains)
 			1. [PublicRootFailure](#netpeerspublicrootpublicrootfailure)
 			1. [PublicRootRelayAccessPoint](#netpeerspublicrootpublicrootrelayaccesspoint)
 			1. [PublicRootResult](#netpeerspublicrootpublicrootresult)
 	1. __Server__
-		1. __Local__
+		1. __Localⓣ__
 			1. [AcceptConnection](#netserverlocalacceptconnection)
 			1. [AcceptError](#netserverlocalaccepterror)
 			1. [AcceptPolicy](#netserverlocalacceptpolicy)
 			1. [Error](#netserverlocalerror)
 			1. [Started](#netserverlocalstarted)
 			1. [Stopped](#netserverlocalstopped)
-		1. __Remote__
+		1. __Remoteⓣ__
 			1. [AcceptConnection](#netserverremoteacceptconnection)
 			1. [AcceptError](#netserverremoteaccepterror)
 			1. [AcceptPolicy](#netserverremoteacceptpolicy)
@@ -542,7 +542,7 @@
 			1. [Started](#netserverremotestarted)
 			1. [Stopped](#netserverremotestopped)
 	1. __Subscription__
-		1. __DNS__
+		1. __DNSⓣ__
 			1. [AllocateSocket](#netsubscriptiondnsallocatesocket)
 			1. [ApplicationException](#netsubscriptiondnsapplicationexception)
 			1. [CloseSocket](#netsubscriptiondnsclosesocket)
@@ -561,7 +561,7 @@
 			1. [SubscriptionWaitingNewConnection](#netsubscriptiondnssubscriptionwaitingnewconnection)
 			1. [TryConnectToPeer](#netsubscriptiondnstryconnecttopeer)
 			1. [UnsupportedRemoteAddr](#netsubscriptiondnsunsupportedremoteaddr)
-		1. __IP__
+		1. __IPⓣ__
 			1. [AllocateSocket](#netsubscriptionipallocatesocket)
 			1. [ApplicationException](#netsubscriptionipapplicationexception)
 			1. [CloseSocket](#netsubscriptionipclosesocket)
@@ -580,7 +580,7 @@
 			1. [SubscriptionWaitingNewConnection](#netsubscriptionipsubscriptionwaitingnewconnection)
 			1. [TryConnectToPeer](#netsubscriptioniptryconnecttopeer)
 			1. [UnsupportedRemoteAddr](#netsubscriptionipunsupportedremoteaddr)
-1. __NodeState__
+1. __NodeStateⓣ__
 	1. [NodeAddBlock](#nodestatenodeaddblock)
 	1. [NodeInitChainSelection](#nodestatenodeinitchainselection)
 	1. [NodeKernelOnline](#nodestatenodekernelonline)
@@ -590,17 +590,17 @@
 	1. [NodeTracingOnlineConfiguring](#nodestatenodetracingonlineconfiguring)
 	1. [OpeningDbs](#nodestateopeningdbs)
 1. [Resources](#resources)
-1. __Shutdown__
+1. __Shutdownⓣ__
 	1. [Abnormal](#shutdownabnormal)
 	1. [ArmedAt](#shutdownarmedat)
 	1. [Requested](#shutdownrequested)
 	1. [Requesting](#shutdownrequesting)
 	1. [UnexpectedInput](#shutdownunexpectedinput)
-1. __Startup__
+1. __Startupⓣ__
 	1. [Byron](#startupbyron)
 	1. [Common](#startupcommon)
 	1. [DBValidation](#startupdbvalidation)
-	1. __DiffusionInit__
+	1. __DiffusionInitⓣ__
 		1. [ConfiguringLocalSocket](#startupdiffusioninitconfiguringlocalsocket)
 		1. [ConfiguringServerSocket](#startupdiffusioninitconfiguringserversocket)
 		1. [CreateSystemdSocketForSnocketPath](#startupdiffusioninitcreatesystemdsocketforsnocketpath)
@@ -632,7 +632,7 @@
 	1. [SocketConfigError](#startupsocketconfigerror)
 	1. [Time](#startuptime)
 	1. [WarningDevelopmentNetworkProtocols](#startupwarningdevelopmentnetworkprotocols)
-1. __StateQueryServer__
+1. __StateQueryServerⓣ__
 	1. __Receive__
 		1. [Acquire](#statequeryserverreceiveacquire)
 		1. [Acquired](#statequeryserverreceiveacquired)
@@ -652,7 +652,7 @@
 		1. [Release](#statequeryserversendrelease)
 		1. [Result](#statequeryserversendresult)
 1. __TxSubmission__
-	1. __Local__
+	1. __Localⓣⓢ__
 		1. __Receive__
 			1. [AcceptTx](#txsubmissionlocalreceiveaccepttx)
 			1. [Done](#txsubmissionlocalreceivedone)
@@ -663,9 +663,9 @@
 			1. [Done](#txsubmissionlocalsenddone)
 			1. [RejectTx](#txsubmissionlocalsendrejecttx)
 			1. [SubmitTx](#txsubmissionlocalsendsubmittx)
-	1. __LocalServer__
+	1. __LocalServerⓣⓢ__
 		1. [ReceivedTx](#txsubmissionlocalserverreceivedtx)
-	1. __MonitorClient__
+	1. __MonitorClientⓣⓢ__
 		1. __Receive__
 			1. [Acquire](#txsubmissionmonitorclientreceiveacquire)
 			1. [Acquired](#txsubmissionmonitorclientreceiveacquired)
@@ -690,7 +690,7 @@
 			1. [ReplyGetSizes](#txsubmissionmonitorclientsendreplygetsizes)
 			1. [ReplyHasTx](#txsubmissionmonitorclientsendreplyhastx)
 			1. [ReplyNextTx](#txsubmissionmonitorclientsendreplynexttx)
-	1. __Remote__
+	1. __Remoteⓣⓢ__
 		1. __Receive__
 			1. [Done](#txsubmissionremotereceivedone)
 			1. [MsgInit](#txsubmissionremotereceivemsginit)
@@ -705,13 +705,13 @@
 			1. [ReplyTxs](#txsubmissionremotesendreplytxs)
 			1. [RequestTxIds](#txsubmissionremotesendrequesttxids)
 			1. [RequestTxs](#txsubmissionremotesendrequesttxs)
-	1. __TxInbound__
+	1. __TxInboundⓣⓜ__
 		1. [CanRequestMoreTxs](#txsubmissiontxinboundcanrequestmoretxs)
 		1. [CannotRequestMoreTxs](#txsubmissiontxinboundcannotrequestmoretxs)
 		1. [Collected](#txsubmissiontxinboundcollected)
 		1. [Processed](#txsubmissiontxinboundprocessed)
 		1. [Terminated](#txsubmissiontxinboundterminated)
-	1. __TxOutbound__
+	1. __TxOutboundⓣⓢ__
 		1. [ControlMessage](#txsubmissiontxoutboundcontrolmessage)
 		1. [RecvMsgRequest](#txsubmissiontxoutboundrecvmsgrequest)
 		1. [SendMsgReply](#txsubmissiontxoutboundsendmsgreply)
@@ -755,11 +755,6 @@
 	1. [RemainingKESPeriods](#forgeremainingkesperiods)
 	1. [SlotIsImmutable](#forgeslotisimmutable)
 	1. [UtxoSize](#forgeutxosize)
-1. __KESInfo__
-	1. [currentKESPeriod](#kesinfocurrentkesperiod)
-	1. [operationalCertificateExpiryKESPeriod](#kesinfooperationalcertificateexpirykesperiod)
-	1. [operationalCertificateStartKESPeriod](#kesinfooperationalcertificatestartkesperiod)
-	1. [remainingKESPeriods](#kesinforemainingkesperiods)
 1. __Mempool__
 	1. [MempoolBytes](#mempoolmempoolbytes)
 	1. [TxsInMempool](#mempooltxsinmempool)
@@ -1009,6 +1004,25 @@ Backends:
       `Stdout MachineFormat`,
       `Forwarder`
 Filtered `Visible` by config value: `Info`
+
+### BlockFetch.Decision.EmptyPeersFetch
+
+
+> Throughout the decision making process we accumulate reasons to decline to fetch any blocks. This message carries the intermediate and final results.
+
+
+Severity:  `Debug`
+Privacy:   `Public`
+Details:   `DNormal`
+
+
+From current configuration:
+
+Backends:
+      `EKGBackend`,
+      `Stdout MachineFormat`,
+      `Forwarder`
+Filtered `Invisible` by config value: `Info`
 
 ### BlockFetch.Remote.Receive.BatchDone
 
@@ -2883,7 +2897,7 @@ Backends:
       `Forwarder`
 Filtered `Visible` by config value: `Info`
 
-### ChainDB.LedgerReplayEvent.ReplayFromGenesis
+### ChainDB.LedgerReplay.ReplayFromGenesis
 
 
 > There were no LedgerDB snapshots on disk, so we're replaying all blocks starting from Genesis against the initial ledger. The @replayTo@ parameter corresponds to the block at the tip of the ImmDB, i.e., the last block to replay.
@@ -2902,7 +2916,7 @@ Backends:
       `Forwarder`
 Filtered `Visible` by config value: `Info`
 
-### ChainDB.LedgerReplayEvent.ReplayFromSnapshot
+### ChainDB.LedgerReplay.ReplayFromSnapshot
 
 
 > There was a LedgerDB snapshot on disk corresponding to the given tip. We're replaying more recent blocks against it. The @replayTo@ parameter corresponds to the block at the tip of the ImmDB, i.e., the last block to replay.
@@ -2921,7 +2935,7 @@ Backends:
       `Forwarder`
 Filtered `Visible` by config value: `Info`
 
-### ChainDB.LedgerReplayEvent.ReplayedBlock
+### ChainDB.LedgerReplay.ReplayedBlock
 
 
 > We replayed the given block (reference) on the genesis snapshot during the initialisation of the LedgerDB.
@@ -4278,27 +4292,6 @@ Backends:
       `Stdout MachineFormat`,
       `Forwarder`
 Filtered `Invisible` by config value: `Notice`
-
-### Forge.KESInfo
-
-
-> kesStartPeriod 
-> kesEndPeriod is kesStartPeriod + tpraosMaxKESEvo
-> kesEvolution is the current evolution or /relative period/.
-
-
-Severity:  `Info`
-Privacy:   `Public`
-Details:   `DNormal`
-
-
-From current configuration:
-
-Backends:
-      `EKGBackend`,
-      `Stdout MachineFormat`,
-      `Forwarder`
-Filtered `Visible` by config value: `Info`
 
 ### Forge.Loop.AdoptedBlock
 
@@ -12475,34 +12468,6 @@ Forge.Loop.SlotIsImmutable
 Dispatched by: 
 Forge.Loop.StartLeadershipCheckPlus
 
-### KESInfo.currentKESPeriod
-
-
-
-Dispatched by: 
-Forge.KESInfo
-
-### KESInfo.operationalCertificateExpiryKESPeriod
-
-
-
-Dispatched by: 
-Forge.KESInfo
-
-### KESInfo.operationalCertificateStartKESPeriod
-
-
-
-Dispatched by: 
-Forge.KESInfo
-
-### KESInfo.remainingKESPeriods
-
-
-
-Dispatched by: 
-Forge.KESInfo
-
 ### Mempool.MempoolBytes
 
 > Byte size of the mempool
@@ -12832,6 +12797,6 @@ TxSubmission.TxInbound.Collected
 
 Configuration: TraceConfig {tcOptions = fromList [([],[ConfSeverity {severity = Notice},ConfDetail {detail = DNormal},ConfBackend {backends = [Stdout MachineFormat,EKGBackend,Forwarder]}]),(["BlockFetch","Client","CompletedBlockFetch"],[ConfLimiter {maxFrequency = 2.0}]),(["BlockFetch","Decision"],[ConfSeverity {severity = Info}]),(["ChainDB"],[ConfSeverity {severity = Info}]),(["ChainDB","AddBlockEvent","AddBlockValidation","ValidCandidate"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB","AddBlockEvent","AddedBlockToQueue"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB","AddBlockEvent","AddedBlockToVolatileDB"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB","CopyToImmutableDBEvent","CopiedBlockToImmutableDB"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainSync","Client"],[ConfSeverity {severity = Info}]),(["ChainSync","Client","DownloadedHeader"],[ConfLimiter {maxFrequency = 2.0}]),(["DNSSubscription"],[ConfSeverity {severity = Info}]),(["DiffusionInit"],[ConfSeverity {severity = Info}]),(["ErrorPolicy"],[ConfSeverity {severity = Info}]),(["Forge"],[ConfSeverity {severity = Info}]),(["IpSubscription"],[ConfSeverity {severity = Info}]),(["LocalErrorPolicy"],[ConfSeverity {severity = Info}]),(["Mempool"],[ConfSeverity {severity = Info}]),(["Net","ConnectionManager","Remote"],[ConfSeverity {severity = Info}]),(["Net","InboundGovernor","Remote"],[ConfSeverity {severity = Info}]),(["Net","Mux","Remote"],[ConfSeverity {severity = Info}]),(["Net","PeerSelection"],[ConfSeverity {severity = Info}]),(["Resources"],[ConfSeverity {severity = Info}])], tcForwarder = TraceOptionForwarder {tofConnQueueSize = 2000, tofDisconnQueueSize = 200000, tofVerbosity = Minimum}, tcNodeName = Nothing, tcPeerFrequency = Just 3000, tcResourceFrequency = Just 4000}
 
-683 log messages.
+679 log messages.
 
-Generated at 2023-01-18 12:22:18.487778394 CET.
+Generated at 2023-02-08 18:19:08.071683952 -05.
