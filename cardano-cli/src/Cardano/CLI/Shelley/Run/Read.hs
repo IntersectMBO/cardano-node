@@ -577,6 +577,12 @@ readWitnessSigningData (KeyWitnessSigningData (SigningKeyFile skFile) mbByronAdd
 data RequiredSignerError
   = RequiredSignerErrorFile (FileError InputDecodeError)
   | RequiredSignerErrorByronKey SigningKeyFile
+  deriving Show
+
+instance Error RequiredSignerError where
+  displayError (RequiredSignerErrorFile fe) = displayError fe
+  displayError (RequiredSignerErrorByronKey skey) =
+    "Byron witnesses not supported: " <> unSigningKeyFile skey
 
 readRequiredSigner :: RequiredSigner -> IO (Either RequiredSignerError (Hash PaymentKey))
 readRequiredSigner (RequiredSignerHash h) = return $ Right h
