@@ -454,7 +454,7 @@ newtype DocCollector = DocCollector (IORef (Map Int LogDoc))
 data LogDoc = LogDoc {
     ldDoc             :: !Text
   , ldMetricsDoc      :: !(Map.Map Text Text)
-  , ldNamespace       :: ![[Text]]
+  , ldNamespace       :: ![([Text],[Text])]
   , ldSeverityCoded   :: !(Maybe SeverityS)
   , ldPrivacyCoded    :: !(Maybe Privacy)
   , ldDetailsCoded    :: !(Maybe DetailLevel)
@@ -462,10 +462,11 @@ data LogDoc = LogDoc {
   , ldBackends        :: ![BackendConfig]
   , ldFiltered        :: ![SeverityF]
   , ldLimiter         :: ![(Text, Double)]
+  , ldSilent          :: Bool
 } deriving(Eq, Show)
 
 emptyLogDoc :: Text -> [(Text, Text)] -> LogDoc
-emptyLogDoc d m = LogDoc d (Map.fromList m) [] Nothing Nothing Nothing [] [] [] []
+emptyLogDoc d m = LogDoc d (Map.fromList m) [] Nothing Nothing Nothing [] [] [] [] False
 
 -- | Type for the functions foldTraceM and foldMTraceM from module
 -- Cardano/Logging/Trace

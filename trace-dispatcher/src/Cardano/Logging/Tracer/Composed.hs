@@ -63,11 +63,11 @@ mkCardanoTracer' trStdout trForward mbTrEkg tracerPrefix hook = do
     messageTrace <- withBackendsFromConfig backendsAndFormat
                     >>= withLimitersFromConfig internalTr
                     >>= addContextAndFilter internalTr
-                    >>= maybeSilent isSilentTracer tracerPrefix
+                    >>= maybeSilent isSilentTracer tracerPrefix False
                     >>= hook
 
     -- handle the metrics
-    metricsTrace <- (maybeSilent hasNoMetrics tracerPrefix
+    metricsTrace <- (maybeSilent hasNoMetrics tracerPrefix True
                         . filterTrace (\ (_, v) -> not (Prelude.null (asMetrics v))))
                         (case mbTrEkg of
                             Nothing -> Trace NT.nullTracer

@@ -23,6 +23,7 @@ module Cardano.Logging.Configuration
 
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.IO.Unlift (MonadUnliftIO)
+import           Control.Monad (unless)
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import           Data.List (maximumBy, nub)
 import qualified Data.Map as Map
@@ -31,7 +32,7 @@ import           Data.Text (Text, intercalate, unpack)
 
 import qualified Control.Tracer as T
 
-import           Cardano.Logging.DocuGenerator (addFiltered, addLimiter)
+import           Cardano.Logging.DocuGenerator (addFiltered, addLimiter, addSilent)
 import           Cardano.Logging.FrequencyLimiter (limitFrequency)
 import           Cardano.Logging.Trace
 import           Cardano.Logging.TraceDispatcherMessage
@@ -67,29 +68,38 @@ configureTracers config tracers = do
 maybeSilent :: forall m a. (MonadIO m) =>
    ( TraceConfig -> Namespace a -> Bool)
   -> [Text]
+  -> Bool
   -> Trace m a
   -> m (Trace m a)
-maybeSilent selectorFunc prefixNames tr = do
-    ref  <- liftIO (newIORef False)
+maybeSilent selectorFunc prefixNames isMetrics tr = do
+    ref  <- liftIO (newIORef Nothing)
     pure $ Trace $ T.arrow $ T.emit $ mkTrace ref
   where
     mkTrace ref (lc, Right a) = do
       silence <- liftIO $ readIORef ref
-      if silence
+      if silence == Just True
         then pure ()
         else T.traceWith (unpackTrace tr) (lc, Right a)
     mkTrace ref (lc, Left (Config c)) = do
-      let val = selectorFunc c (Namespace prefixNames [] :: Namespace a)
-      liftIO $ writeIORef ref val
+      silence <- liftIO $ readIORef ref
+      case silence of
+        Nothing -> do
+          let val = selectorFunc c (Namespace prefixNames [] :: Namespace a)
+          liftIO $ writeIORef ref (Just val)
+        Just _ -> pure ()
       T.traceWith (unpackTrace tr) (lc,  Left (Config c))
     mkTrace ref (lc, Left Reset) = do
-      liftIO $ writeIORef ref False
+      liftIO $ writeIORef ref Nothing
       T.traceWith (unpackTrace tr) (lc,  Left Reset)
+    mkTrace ref (lc, Left c@TCDocument {}) = do
+      silence <- liftIO $ readIORef ref
+      unless isMetrics
+        (addSilent c silence)
+      T.traceWith (unpackTrace tr) (lc,  Left c)
     mkTrace _ref (lc, Left other) =
       T.traceWith (unpackTrace tr) (lc,  Left other)
 
 -- When all messages are filtered out, it is silent
--- TODO YUP handle exception
 isSilentTracer :: forall a. MetaTrace a => TraceConfig -> Namespace a -> Bool
 isSilentTracer tc (Namespace prefixNS _) =
     let allNS = allNamespaces :: [Namespace a]
