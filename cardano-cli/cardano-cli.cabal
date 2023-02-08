@@ -163,8 +163,6 @@ executable cardano-cli
 
 test-suite cardano-cli-test
   import:               project-config
-                      , maybe-Win32
-                      , maybe-unix
 
   hs-source-dirs:       test
   main-is:              cardano-cli-test.hs
@@ -176,6 +174,7 @@ test-suite cardano-cli-test
                       , cardano-api
                       , cardano-api:gen
                       , cardano-cli
+                      , cardano-node
                       , cardano-prelude
                       , cardano-slotting ^>= 0.1
                       , containers
@@ -188,7 +187,6 @@ test-suite cardano-cli-test
                       , text
                       , time
                       , transformers
-                      , transformers-except
                       , yaml
 
   other-modules:        Test.Config.Mainnet
