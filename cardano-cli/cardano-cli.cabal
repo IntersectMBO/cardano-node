@@ -163,7 +163,6 @@ executable cardano-cli
 
 test-suite cardano-cli-test
   import:               project-config
-                      , maybe-Win32
                       , maybe-unix
 
   hs-source-dirs:       test
