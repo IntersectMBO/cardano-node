@@ -19,15 +19,24 @@ module Cardano.Node.Run
   ) where
 
 import qualified Cardano.Api as Api
-import           Cardano.Prelude hiding (ByteString, STM, atomically, show, take, trace)
-import           Data.IP (toSockAddr)
-import           Prelude (String, id, show)
+import           Prelude
 
+import           Control.Concurrent
 import           Control.Concurrent.Class.MonadSTM.Strict
-import           Control.Monad.Trans.Except.Extra (left)
+import           Control.Exception
+import           Control.Monad
+import           Control.Monad.IO.Class (liftIO)
+import           Control.Monad.Trans.Except
+import           Control.Monad.Trans.Except.Extra
 import           "contra-tracer" Control.Tracer
+import           Data.Either
+import           Data.IP (toSockAddr)
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Text (breakOn, pack, take)
+import           Data.Maybe
+import           Data.Monoid
+import           Data.Proxy
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Time.Clock (getCurrentTime)
@@ -37,6 +46,7 @@ import           Network.HostName (getHostName)
 import           Network.Socket (Socket)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
 import           System.Environment (lookupEnv)
+import           System.Exit
 
 #ifdef UNIX
 import           GHC.Weak (deRefWeak)
@@ -61,12 +71,23 @@ import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    PartialNodeConfiguration (..), SomeNetworkP2PMode (..),
                    defaultPartialNodeConfiguration, makeNodeConfiguration, parseNodeConfigurationFP)
+import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
+                   gatherConfiguredSockets, getSocketOrSocketInfoAddr)
+import qualified Cardano.Node.Configuration.Topology as TopologyNonP2P
+import           Cardano.Node.Configuration.TopologyP2P
+import qualified Cardano.Node.Configuration.TopologyP2P as TopologyP2P
+import           Cardano.Node.Handlers.Shutdown
+import           Cardano.Node.Protocol (mkConsensusProtocol)
+import           Cardano.Node.Protocol.Types
+import           Cardano.Node.Queries
 import           Cardano.Node.Startup
+import           Cardano.Node.TraceConstraints (TraceConstraints)
 import           Cardano.Node.Tracing.API
 import           Cardano.Node.Tracing.StateRep (NodeState (NodeKernelOnline))
 import           Cardano.Node.Tracing.Tracers.Startup (getStartupInfo)
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
+import           Cardano.Tracing.Tracers
 
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
@@ -87,18 +108,6 @@ import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPo
 import           Ouroboros.Network.Subscription (DnsSubscriptionTarget (..),
                    IPSubscriptionTarget (..))
 
-import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
-                   gatherConfiguredSockets, getSocketOrSocketInfoAddr)
-import qualified Cardano.Node.Configuration.Topology as TopologyNonP2P
-import           Cardano.Node.Configuration.TopologyP2P
-import qualified Cardano.Node.Configuration.TopologyP2P as TopologyP2P
-import           Cardano.Node.Handlers.Shutdown
-import           Cardano.Node.Protocol (mkConsensusProtocol)
-import           Cardano.Node.Protocol.Types
-import           Cardano.Node.Queries
-import           Cardano.Node.TraceConstraints (TraceConstraints)
-import           Cardano.Tracing.Tracers
-
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
 {- HLINT ignore "Use fewer imports" -}
@@ -115,7 +124,7 @@ runNode cmdPc = do
     configYamlPc <- parseNodeConfigurationFP . getLast $ pncConfigFile cmdPc
 
     nc <- case makeNodeConfiguration $ defaultPartialNodeConfiguration <> configYamlPc <> cmdPc of
-            Left err -> panic $ "Error in creating the NodeConfiguration: " <> Text.pack err
+            Left err -> error $ "Error in creating the NodeConfiguration: " <> err
             Right nc' -> return nc'
 
     putStrLn $ "Node configuration: " <> show nc
@@ -124,7 +133,7 @@ runNode cmdPc = do
       Just vrfFp -> do vrf <- runExceptT $ checkVRFFilePermissions vrfFp
                        case vrf of
                          Left err ->
-                           putTextLn (renderVRFPrivateKeyFilePermissionError err) >> exitFailure
+                           putStrLn (Text.unpack $ renderVRFPrivateKeyFilePermissionError err) >> exitFailure
                          Right () ->
                            pure ()
       Nothing -> pure ()
@@ -214,10 +223,10 @@ handleNodeWithTracers cmdPc nc p networkMagic runP = do
             p
 
           loggingLayer <- case eLoggingLayer of
-            Left err  -> putTextLn (Text.pack $ show err) >> exitFailure
+            Left err  -> print err >> exitFailure
             Right res -> return res
           !trace <- setupTrace loggingLayer
-          let tracer = contramap pack $ toLogObject trace
+          let tracer = contramap Text.pack $ toLogObject trace
           logTracingVerbosity nc tracer
 
           -- Legacy logging infrastructure must trace 'nodeStartTime' and 'nodeBasicInfo'.
@@ -282,14 +291,14 @@ setupTrace
   :: LoggingLayer
   -> IO (Trace IO Text)
 setupTrace loggingLayer = do
-    hn <- maybe hostname (pure . pack) =<< lookupEnv "CARDANO_NODE_LOGGING_HOSTNAME"
-    return $
-        setHostname hn $
-        llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
+   hn <- maybe hostname (return . Text.pack) =<< lookupEnv "CARDANO_NODE_LOGGING_HOSTNAME"
+   return . setHostname hn $
+     llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
   where
-    hostname = do
-      hn0 <- pack <$> getHostName
-      return $ take 8 $ fst $ breakOn "." hn0
+   hostname :: IO Text
+   hostname = do
+     hn0 <- Text.pack <$> getHostName
+     return $ Text.take 8 $ fst $ Text.breakOn "." hn0
 
 {-
 -- TODO: needs to be finished (issue #4362)
@@ -519,11 +528,11 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
     Signals.Catch $ do
       traceWith (startupTracer tracers) NetworkConfigUpdate
       result <- try $ TopologyP2P.readTopologyFileOrError (startupTracer tracers) nc
-      case result of
-        Left (FatalError err) ->
+      case result :: Either IOException NetworkTopology of
+        Left err ->
           traceWith (startupTracer tracers)
                   $ NetworkConfigUpdateError
-                  $ pack "Error reading topology configuration file:" <> err
+                  $ Text.pack $ "Error reading topology configuration file:" <> show err
         Right nt -> do
           let (localRoots, publicRoots) = producerAddresses nt
           traceWith (startupTracer tracers)
