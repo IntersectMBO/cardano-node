@@ -15,7 +15,7 @@ let
     ]
   ++ lib.optionals ( useCabalRun)
     (with haskellPackages; [
-      cabalWrapped
+      cabal-install
       ghcid
       haskellBuildUtils
       cabal-plan
