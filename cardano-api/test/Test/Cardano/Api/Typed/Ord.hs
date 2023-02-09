@@ -49,7 +49,7 @@ prop_ord_distributive_TxMetadata =
 
 prop_ord_distributive_ScriptData :: Property
 prop_ord_distributive_ScriptData =
-    ord_distributive genScriptData toPlutusData
+    ord_distributive (getScriptData <$> genHashableScriptData) toPlutusData
 
 -- -----------------------------------------------------------------------------
 

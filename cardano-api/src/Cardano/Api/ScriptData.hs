@@ -1,11 +1,17 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Api.ScriptData (
     -- * Script data
+    HashableScriptData,
+    hashScriptDataBytes,
+    getOriginalScriptDataBytes,
+    getScriptData,
+    unsafeHashableScriptData,
     ScriptData(..),
 
     -- * Script data hashes
@@ -23,6 +29,9 @@ module Cardano.Api.ScriptData (
     ScriptDataJsonSchemaError (..),
     scriptDataFromJsonDetailedSchema,
     scriptDataToJsonDetailedSchema,
+    ScriptBytesError(..),
+    ScriptDataJsonBytesError(..),
+    scriptDataJsonToHashable,
 
     -- * Internal conversion functions
     toPlutusData,
@@ -35,11 +44,14 @@ module Cardano.Api.ScriptData (
     Hash(..),
   ) where
 
+import qualified Cardano.Binary as CBOR
+import           Codec.Serialise.Class (Serialise (..))
 import           Data.Bifunctor (first)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.ByteString.Short as SB
 import qualified Data.Char as Char
 import           Data.Either.Combinators
 import qualified Data.List as List
@@ -77,14 +89,42 @@ import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
-import qualified Cardano.Binary as CBOR
-
 import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.TxMetadata (pBytes, pSigned, parseAll)
-import           Codec.Serialise.Class (Serialise (..))
+
+-- Original script data bytes
+data HashableScriptData
+  = HashableScriptData
+      !BS.ByteString -- ^ Original 'ScriptData' bytes
+      !ScriptData
+      deriving (Eq, Show)
+
+instance HasTypeProxy HashableScriptData where
+    data AsType HashableScriptData = AsHashableScriptData
+    proxyToAsType _ = AsHashableScriptData
+
+instance SerialiseAsCBOR HashableScriptData where
+    serialiseToCBOR (HashableScriptData origBytes _) = origBytes
+    deserialiseFromCBOR AsHashableScriptData bs =
+      HashableScriptData bs
+        <$> CBOR.decodeFullDecoder "ScriptData" fromCBOR (LBS.fromStrict bs)
+
+
+getOriginalScriptDataBytes :: HashableScriptData -> BS.ByteString
+getOriginalScriptDataBytes (HashableScriptData bs _) = bs
+
+getScriptData :: HashableScriptData -> ScriptData
+getScriptData (HashableScriptData _ sd) = sd
+
+-- | Warning: Creating 'HashableScriptData' from a 'ScriptData' value pretty
+-- much guarantees the original bytes used to create the 'ScriptData'
+-- value will be different if we serialize `HashableScriptData` again.
+-- Do not use this.
+unsafeHashableScriptData :: ScriptData -> HashableScriptData
+unsafeHashableScriptData sd = HashableScriptData (serialiseToCBOR sd) sd
 
 -- ----------------------------------------------------------------------------
--- Script data
+-- Script data - Allows us to represent script data as JSON
 --
 
 data ScriptData = ScriptDataConstructor
@@ -131,24 +171,41 @@ instance ToCBOR ScriptData where
   toCBOR = encode @Plutus.Data . toPlutusData
 
 instance FromCBOR ScriptData where
+  fromCBOR :: CBOR.Decoder s ScriptData
   fromCBOR = fromPlutusData <$> decode @Plutus.Data
 
-hashScriptData :: ScriptData -> Hash ScriptData
-hashScriptData = ScriptDataHash
-               . Alonzo.hashData
-               . (toAlonzoData :: ScriptData -> Alonzo.Data StandardAlonzo)
+hashScriptDataBytes :: HashableScriptData -> Hash ScriptData
+hashScriptDataBytes  =
+  ScriptDataHash . Alonzo.hashData . (toAlonzoData :: HashableScriptData  -> Alonzo.Data StandardAlonzo)
 
+{-# DEPRECATED hashScriptData "Use hashScriptDataBytes" #-}
+hashScriptData :: HashableScriptData -> Hash ScriptData
+hashScriptData = hashScriptDataBytes
 
 -- ----------------------------------------------------------------------------
 -- Conversion functions
 --
 
-toAlonzoData :: ScriptData -> Alonzo.Data ledgerera
-toAlonzoData = Alonzo.Data . toPlutusData
+newtype ScriptBytesError = ScriptBytesError String deriving Show
 
-fromAlonzoData :: Alonzo.Data ledgerera -> ScriptData
-fromAlonzoData = fromPlutusData . Alonzo.getPlutusData
+-- There is a subtlety here. We must use the original bytes
+-- when converting to and from `HashableScriptData`/`Data`. This
+-- avoids problems that arise due to reserialization of the script
+-- data i.e differing script data hashes due to the re-encoding being slightly
+-- different to the original encoding. See: https://github.com/input-output-hk/cardano-ledger/issues/2943
 
+toAlonzoData :: HashableScriptData -> Alonzo.Data ledgerera
+toAlonzoData =
+  either
+  (\ e -> error $ "toAlonzoData: " <> show e)
+  Alonzo.binaryDataToData
+  . first ScriptBytesError . Alonzo.makeBinaryData . SB.toShort . getOriginalScriptDataBytes
+
+fromAlonzoData :: Alonzo.Data ledgerera -> HashableScriptData
+fromAlonzoData d =
+  HashableScriptData
+    (Ledger.originalBytes d)
+    (fromPlutusData $ Alonzo.getPlutusData d)
 
 toPlutusData :: ScriptData -> Plutus.Data
 toPlutusData (ScriptDataConstructor int xs)
@@ -195,11 +252,7 @@ validateScriptData d =
         |    n >         fromIntegral (maxBound :: Word64)
           || n < negate (fromIntegral (maxBound :: Word64))
         ]
-    collect (ScriptDataBytes bs) =
-        [ ScriptDataBytesTooLong len
-        | let len = BS.length bs
-        , len > scriptDataByteStringMaxLength
-        ]
+    collect ScriptDataBytes{} = []
     collect (ScriptDataList xs) =
         foldMap collect xs
 
@@ -213,12 +266,6 @@ validateScriptData d =
         | n > fromIntegral (maxBound :: Word64) || n < 0 ]
      <> foldMap collect xs
 
-
--- | The maximum length of a script data byte string value.
-scriptDataByteStringMaxLength :: Int
-scriptDataByteStringMaxLength = 64
-
-
 -- | An error in script data due to an out-of-range value.
 --
 data ScriptDataRangeError =
@@ -230,11 +277,6 @@ data ScriptDataRangeError =
     -- | The number is outside the maximum range of @-2^64-1 .. 2^64-1@.
     --
   | ScriptDataConstructorOutOfRange !Integer
-
-    -- | The length of a byte string metadatum value exceeds the maximum of
-    -- 64 bytes.
-    --
-  | ScriptDataBytesTooLong !Int
   deriving (Eq, Show)
 
 instance Error ScriptDataRangeError where
@@ -246,12 +288,7 @@ instance Error ScriptDataRangeError where
       "Constructor numbers in script data value "
         <> show n
         <> " is outside the range 0 .. 2^64-1."
-  displayError (ScriptDataBytesTooLong actualLen) =
-      "Byte strings in script data must consist of at most "
-        <> show scriptDataByteStringMaxLength
-        <> " bytes, but it consists of "
-        <> show actualLen
-        <> " bytes."
+
 
 
 -- ----------------------------------------------------------------------------
@@ -327,10 +364,10 @@ data ScriptDataJsonSchema =
 --
 scriptDataFromJson :: ScriptDataJsonSchema
                    -> Aeson.Value
-                   -> Either ScriptDataJsonError ScriptData
+                   -> Either ScriptDataJsonError HashableScriptData
 scriptDataFromJson schema v = do
     d <- first (ScriptDataJsonSchemaError v) (scriptDataFromJson' v)
-    first (ScriptDataRangeError v) (validateScriptData d)
+    first (ScriptDataRangeError v) (validateScriptData $ getScriptData d)
     return d
   where
     scriptDataFromJson' =
@@ -347,7 +384,7 @@ scriptDataFromJson schema v = do
 -- See 'ScriptDataJsonSchema' for the details.
 --
 scriptDataToJson :: ScriptDataJsonSchema
-                 -> ScriptData
+                 -> HashableScriptData
                  -> Aeson.Value
 scriptDataToJson schema =
     case schema of
@@ -359,8 +396,8 @@ scriptDataToJson schema =
 -- JSON conversion using the the "no schema" style
 --
 
-scriptDataToJsonNoSchema :: ScriptData -> Aeson.Value
-scriptDataToJsonNoSchema = conv
+scriptDataToJsonNoSchema :: HashableScriptData -> Aeson.Value
+scriptDataToJsonNoSchema = conv . getScriptData
   where
     conv :: ScriptData -> Aeson.Value
     conv (ScriptDataNumber n) = Aeson.Number (fromInteger n)
@@ -400,8 +437,8 @@ scriptDataToJsonNoSchema = conv
 
 scriptDataFromJsonNoSchema :: Aeson.Value
                            -> Either ScriptDataJsonSchemaError
-                                     ScriptData
-scriptDataFromJsonNoSchema = conv
+                                     HashableScriptData
+scriptDataFromJsonNoSchema = fmap (\sd -> HashableScriptData (serialiseToCBOR sd) sd) . conv
   where
     conv :: Aeson.Value
          -> Either ScriptDataJsonSchemaError ScriptData
@@ -446,13 +483,35 @@ scriptDataFromJsonNoSchema = conv
 bytesPrefix :: Text
 bytesPrefix = "0x"
 
+data ScriptDataJsonBytesError
+    = ScriptDataJsonBytesErrorValue ScriptDataJsonError
+    | ScriptDataJsonBytesErrorInvalid ScriptDataRangeError
+    deriving Show
+
+instance Error ScriptDataJsonBytesError where
+  displayError (ScriptDataJsonBytesErrorValue e) =
+    "Error decoding ScriptData JSON value: " <> show e
+  displayError (ScriptDataJsonBytesErrorInvalid e) =
+    "ScriptData is invalid: " <> show e
+
+
+-- | This allows us to take JSON formatted ScriptData and encode it in the CDDL format
+-- whilst preserving the original bytes.
+scriptDataJsonToHashable
+  :: ScriptDataJsonSchema
+  -> Aeson.Value -- ^ ScriptData Value
+  -> Either ScriptDataJsonBytesError HashableScriptData
+scriptDataJsonToHashable schema scriptDataVal = do
+  sData <- first ScriptDataJsonBytesErrorValue $ scriptDataFromJson schema scriptDataVal
+  first ScriptDataJsonBytesErrorInvalid $ validateScriptData $ getScriptData sData
+  return sData
 
 -- ----------------------------------------------------------------------------
 -- JSON conversion using the "detailed schema" style
 --
 
-scriptDataToJsonDetailedSchema :: ScriptData -> Aeson.Value
-scriptDataToJsonDetailedSchema = conv
+scriptDataToJsonDetailedSchema :: HashableScriptData -> Aeson.Value
+scriptDataToJsonDetailedSchema = conv . getScriptData
   where
     conv :: ScriptData -> Aeson.Value
     conv (ScriptDataNumber n) = singleFieldObject "int"
@@ -481,8 +540,8 @@ scriptDataToJsonDetailedSchema = conv
 
 scriptDataFromJsonDetailedSchema :: Aeson.Value
                                  -> Either ScriptDataJsonSchemaError
-                                           ScriptData
-scriptDataFromJsonDetailedSchema = conv
+                                           HashableScriptData
+scriptDataFromJsonDetailedSchema = fmap (\sd -> HashableScriptData (serialiseToCBOR sd) sd) . conv
   where
     conv :: Aeson.Value
          -> Either ScriptDataJsonSchemaError ScriptData

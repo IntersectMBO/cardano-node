@@ -16,7 +16,10 @@
 
 - **Breaking change** - `deserialiseFromRawBytes` method of the `SerialiseAsRawBytes` type class to return `Either` instead of `Maybe`.  Deprecate `eitherDeserialiseFromRawBytes`.  Use `deserialiseFromRawBytes` instead.
 
-- The `cardano-cli governance create-update-proposal` command to reject empty cost model.
+- The `cardano-cli governance create-update-proposal` command to reject empty cost model ([PR4885](https://github.com/input-output-hk/cardano-node/pull/4885))
+
+- **Breaking change** - Preserve ScriptData bytes with HashableScriptData ([PR4886](https://github.com/input-output-hk/cardano-node/pull/4886))
+
 
 - **Breaking change** - `determineEraExpr` to return `IO (Either UnsupportedNtcVersionError AnyCardanoEra)` instead of `IO AnyCardanoEra`.
   ([PR4788](https://github.com/input-output-hk/cardano-node/pull/4788))

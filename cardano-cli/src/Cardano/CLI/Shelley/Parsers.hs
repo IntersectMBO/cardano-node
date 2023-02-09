@@ -17,7 +17,6 @@ module Cardano.CLI.Shelley.Parsers
 import           Cardano.Prelude (ConvertText (..))
 
 import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Parser as Aeson.Parser
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
 import           Data.Bifunctor
 import           Data.ByteString (ByteString)
@@ -349,11 +348,15 @@ pScriptDataOrFile dataFlagPrefix helpTextForValue helpTextForFile =
         ]
       ]
 
+    readerScriptData :: ReadM HashableScriptData
     readerScriptData = do
-      v <- readerJSON
-      case scriptDataFromJson ScriptDataJsonNoSchema v of
-        Left err -> fail (displayError err)
-        Right sd -> return sd
+      v <- Opt.str
+      case Aeson.eitherDecode v of
+        Left e -> fail $ "readerScriptData: " <> e
+        Right sDataValue ->
+          case scriptDataJsonToHashable ScriptDataJsonNoSchema sDataValue of
+            Left err -> fail (displayError err)
+            Right sd -> return sd
 
 pStakeAddressCmd :: Parser StakeAddressCmd
 pStakeAddressCmd =
@@ -3373,9 +3376,6 @@ readRational =
       (toRational <$> readerFromAttoParser Atto.scientific)
   <|> readFractionAsRational
 
-readerJSON :: Opt.ReadM Aeson.Value
-readerJSON = readerFromAttoParser Aeson.Parser.json
-
 readerFromAttoParser :: Atto.Parser a -> Opt.ReadM a
 readerFromAttoParser p =
     Opt.eitherReader (Atto.parseOnly (p <* Atto.endOfInput) . BSC.pack)
@@ -3384,8 +3384,6 @@ readerFromParsecParser :: Parsec.Parser a -> Opt.ReadM a
 readerFromParsecParser p =
     Opt.eitherReader (first formatError . Parsec.parse (p <* Parsec.eof) "")
   where
-    --TODO: the default parsec error formatting is quite good, but we could
-    -- customise it somewhat:
     formatError err =
       Parsec.showErrorMessages "or" "unknown parse error"
                                "expecting" "unexpected" "end of input"

@@ -78,7 +78,7 @@ prop_json_roundtrip_eraInMode = H.property $ do
 
 prop_json_roundtrip_scriptdata_detailed_json :: Property
 prop_json_roundtrip_scriptdata_detailed_json = H.property $ do
-  sData <- forAll genScriptData
+  sData <- forAll genHashableScriptData
   tripping sData scriptDataToJsonDetailedSchema scriptDataFromJsonDetailedSchema
 
 tests :: TestTree

@@ -436,7 +436,7 @@ txOutToJsonValue era (TxOut addr val dat refScript) =
        TxOutDatumInTx' _ h _ ->
          "datumhash" .= toJSON h
        TxOutDatumInline _ datum ->
-         "inlineDatumhash"  .= toJSON (hashScriptData datum)
+         "inlineDatumhash"  .= toJSON (hashScriptDataBytes datum)
 
    datJsonVal :: TxOutDatum ctx era -> Aeson.Value
    datJsonVal d =
@@ -488,14 +488,14 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
             inlineDatum <- o .:? "inlineDatum"
             mInlineDatum <-
               case (inlineDatum, inlineDatumHash) of
-                (Just dVal, Just h) ->
-                  case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
+                (Just dVal, Just h) -> do
+                  case scriptDataJsonToHashable ScriptDataJsonDetailedSchema dVal of
                     Left err ->
                       fail $ "Error parsing TxOut JSON: " <> displayError err
-                    Right sData ->
-                      if hashScriptData sData /= h
+                    Right hashableData -> do
+                      if hashScriptDataBytes hashableData /= h
                       then fail "Inline datum not equivalent to inline datum hash"
-                      else return $ TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra sData
+                      else return $ TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra hashableData
                 (Nothing, Nothing) -> return TxOutDatumNone
                 (_,_) -> fail "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
 
@@ -534,14 +534,14 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
                                           <*> o .: "value"
                                           <*> return TxOutDatumNone
                                           <*> return ReferenceScriptNone
-               (Just dVal, Just dHash) ->
-                 case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
-                   Left err ->
-                     fail $ "Error parsing TxOut JSON: " <> displayError err
-                   Right sData -> TxOut <$> o .: "address"
-                                        <*> o .: "value"
-                                        <*> return (TxOutDatumInTx' supp dHash sData)
-                                        <*> return ReferenceScriptNone
+               (Just dVal, Just dHash) -> do
+                 case scriptDataJsonToHashable ScriptDataJsonDetailedSchema dVal of
+                   Left e -> fail $ "Error parsing ScriptData: " <> show e
+                   Right hashableData ->
+                      TxOut <$> o .: "address"
+                            <*> o .: "value"
+                            <*> return (TxOutDatumInTx' supp dHash hashableData)
+                            <*> return ReferenceScriptNone
                (Nothing, Just dHash) ->
                  TxOut <$> o .: "address"
                        <*> o .: "value"
@@ -577,14 +577,14 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxUTxO era) where
             inlineDatum <- o .:? "inlineDatum"
             mInlineDatum <-
               case (inlineDatum, inlineDatumHash) of
-                (Just dVal, Just h) ->
-                  case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
-                    Left err ->
-                      fail $ "Error parsing TxOut JSON: " <> displayError err
-                    Right sData ->
-                      if hashScriptData sData /= h
-                      then fail "Inline datum not equivalent to inline datum hash"
-                      else return $ TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra sData
+                (Just dVal, Just h) -> do
+                     case scriptDataJsonToHashable ScriptDataJsonDetailedSchema dVal of
+                        Left err ->
+                          fail $ "Error parsing TxOut JSON: " <> displayError err
+                        Right hashableData -> do
+                          if hashScriptDataBytes hashableData /= h
+                          then fail "Inline datum not equivalent to inline datum hash"
+                          else return $ TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra hashableData
                 (Nothing, Nothing) -> return TxOutDatumNone
                 (_,_) -> fail "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
 
@@ -669,7 +669,8 @@ toShelleyTxOut _ (TxOut addr (TxOutValue MultiAssetInAlonzoEra value) txoutdata 
 toShelleyTxOut era (TxOut addr (TxOutValue MultiAssetInBabbageEra value) txoutdata refScript) =
     let cEra = shelleyBasedToCardanoEra era
     in BabbageTxOut (toShelleyAddr addr) (toMaryValue value)
-                     (toBabbageTxOutDatum txoutdata) (refScriptToShelleyScript cEra refScript)
+                    (toBabbageTxOutDatum txoutdata)
+                    (refScriptToShelleyScript cEra refScript)
 
 
 fromShelleyTxOut :: ShelleyLedgerEra era ~ ledgerera
@@ -1342,7 +1343,7 @@ data TxOutDatum ctx era where
      --
      TxOutDatumInTx'  :: ScriptDataSupportedInEra era
                       -> Hash ScriptData
-                      -> ScriptData
+                      -> HashableScriptData
                       -> TxOutDatum CtxTx era
 
      -- | A transaction output that specifies the whole datum instead of the
@@ -1350,7 +1351,7 @@ data TxOutDatum ctx era where
      -- it only exists at the transaction output.
      --
      TxOutDatumInline :: ReferenceTxInsScriptsInlineDatumsSupportedInEra era
-                      -> ScriptData
+                      -> HashableScriptData
                       -> TxOutDatum ctx era
 
 deriving instance Eq   (TxOutDatum ctx era)
@@ -1377,11 +1378,11 @@ instance EraCast (TxOutDatum ctx)  where
 
 pattern TxOutDatumInTx
   :: ScriptDataSupportedInEra era
-  -> ScriptData
+  -> HashableScriptData
   -> TxOutDatum CtxTx era
 pattern TxOutDatumInTx s d <- TxOutDatumInTx' s _ d
   where
-    TxOutDatumInTx s d = TxOutDatumInTx' s (hashScriptData d) d
+    TxOutDatumInTx s d = TxOutDatumInTx' s (hashScriptDataBytes d) d
 
 {-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutDatumInTx', TxOutDatumInline #-}
 {-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutDatumInTx , TxOutDatumInline #-}
@@ -3169,7 +3170,7 @@ convScriptData era txOuts scriptWitnesses =
                 , let d' = toAlonzoData d
                 ]
 
-          scriptdata :: [ScriptData]
+          scriptdata :: [HashableScriptData]
           scriptdata =
               [ d | TxOut _ _ (TxOutDatumInTx _ d) _ <- txOuts ]
            ++ [ d | (_, AnyScriptWitness
@@ -3456,7 +3457,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
           , let d' = toAlonzoData d
           ]
 
-    scriptdata :: [ScriptData]
+    scriptdata :: [HashableScriptData]
     scriptdata =
         [ d | TxOut _ _ (TxOutDatumInTx _ d) _ <- txOuts ]
      ++ [ d | (_, AnyScriptWitness
@@ -3565,7 +3566,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraBabbage
           , let d' = toAlonzoData d
           ]
 
-    scriptdata :: [ScriptData]
+    scriptdata :: [HashableScriptData]
     scriptdata =
         [ d | TxOut _ _ (TxOutDatumInTx _ d) _ <- txOuts ]
      ++ [ d | (_, AnyScriptWitness
@@ -3895,12 +3896,14 @@ calculateExecutionUnitsLovelace euPrices eUnits =
 -- onchain within a transaction output.
 --
 
-scriptDataToInlineDatum :: ScriptData -> Babbage.Datum ledgerera
-scriptDataToInlineDatum = Babbage.Datum . Alonzo.dataToBinaryData . toAlonzoData
+scriptDataToInlineDatum :: HashableScriptData -> Babbage.Datum ledgerera
+scriptDataToInlineDatum d =
+  Babbage.Datum . Alonzo.dataToBinaryData $ toAlonzoData d
 
 binaryDataToScriptData
-  :: ReferenceTxInsScriptsInlineDatumsSupportedInEra era -> Alonzo.BinaryData ledgerera -> ScriptData
-binaryDataToScriptData ReferenceTxInsScriptsInlineDatumsInBabbageEra  d =
+  :: ReferenceTxInsScriptsInlineDatumsSupportedInEra era
+  -> Alonzo.BinaryData ledgerera -> HashableScriptData
+binaryDataToScriptData ReferenceTxInsScriptsInlineDatumsInBabbageEra d =
   fromAlonzoData $ Alonzo.binaryDataToData d
 
 
