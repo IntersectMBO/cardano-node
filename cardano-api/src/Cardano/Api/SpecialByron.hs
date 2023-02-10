@@ -53,7 +53,7 @@ instance HasTypeProxy ByronUpdateProposal where
 
 instance SerialiseAsRawBytes ByronUpdateProposal where
   serialiseToRawBytes (ByronUpdateProposal proposal) = annotation proposal
-  eitherDeserialiseFromRawBytes AsByronUpdateProposal bs =
+  deserialiseFromRawBytes AsByronUpdateProposal bs =
     let lBs = LB.fromStrict bs
     in case Binary.decodeFull lBs of
         Left e -> Left $ SerialiseAsRawBytesError $ "Unable to deserialise ByronUpdateProposal: " <> show e
@@ -166,7 +166,7 @@ instance HasTypeProxy ByronVote where
 
 instance SerialiseAsRawBytes ByronVote where
   serialiseToRawBytes (ByronVote vote) = Binary.serialize' $ fmap (const ()) vote
-  eitherDeserialiseFromRawBytes AsByronVote bs =
+  deserialiseFromRawBytes AsByronVote bs =
     let lBs = LB.fromStrict bs
     in case Binary.decodeFull lBs of
          Left e -> Left $ SerialiseAsRawBytesError $ "Unable to deserialise ByronVote: " <> show e

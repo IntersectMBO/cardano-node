@@ -291,7 +291,7 @@ newtype instance Hash BlockHeader = HeaderHash SBS.ShortByteString
 instance SerialiseAsRawBytes (Hash BlockHeader) where
     serialiseToRawBytes (HeaderHash bs) = SBS.fromShort bs
 
-    eitherDeserialiseFromRawBytes (AsHash AsBlockHeader) bs
+    deserialiseFromRawBytes (AsHash AsBlockHeader) bs
       | BS.length bs == 32 = Right $! HeaderHash (SBS.toShort bs)
       | otherwise          = Left (SerialiseAsRawBytesError "Unable to deserialise Hash BlockHeader")
 

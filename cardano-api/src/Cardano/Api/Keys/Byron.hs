@@ -142,7 +142,7 @@ instance SerialiseAsRawBytes (VerificationKey ByronKey) where
     serialiseToRawBytes (ByronVerificationKey (Byron.VerificationKey xvk)) =
       Crypto.HD.unXPub xvk
 
-    eitherDeserialiseFromRawBytes (AsVerificationKey AsByronKey) bs =
+    deserialiseFromRawBytes (AsVerificationKey AsByronKey) bs =
       first (\msg -> SerialiseAsRawBytesError ("Unable to deserialise VerificationKey ByronKey" ++ msg)) $
         ByronVerificationKey . Byron.VerificationKey <$> Crypto.HD.xpub bs
 
@@ -150,7 +150,7 @@ instance SerialiseAsRawBytes (SigningKey ByronKey) where
     serialiseToRawBytes (ByronSigningKey (Byron.SigningKey xsk)) =
       toStrictByteString $ Crypto.toCBORXPrv xsk
 
-    eitherDeserialiseFromRawBytes (AsSigningKey AsByronKey) bs =
+    deserialiseFromRawBytes (AsSigningKey AsByronKey) bs =
       first (\e -> SerialiseAsRawBytesError ("Unable to deserialise SigningKey ByronKey" ++ show e)) $
         ByronSigningKey . Byron.SigningKey . snd <$> CBOR.deserialiseFromBytes Byron.fromCBORXPrv (LB.fromStrict bs)
 
@@ -164,7 +164,7 @@ instance SerialiseAsRawBytes (Hash ByronKey) where
     serialiseToRawBytes (ByronKeyHash (Byron.KeyHash vkh)) =
       Byron.abstractHashToBytes vkh
 
-    eitherDeserialiseFromRawBytes (AsHash AsByronKey) bs =
+    deserialiseFromRawBytes (AsHash AsByronKey) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash ByronKey") $
         ByronKeyHash . Byron.KeyHash <$> Byron.abstractHashFromBytes bs
 
@@ -236,7 +236,7 @@ instance SerialiseAsRawBytes (Hash ByronKeyLegacy) where
     serialiseToRawBytes (ByronKeyHashLegacy (Byron.KeyHash vkh)) =
       Byron.abstractHashToBytes vkh
 
-    eitherDeserialiseFromRawBytes (AsHash AsByronKeyLegacy) bs =
+    deserialiseFromRawBytes (AsHash AsByronKeyLegacy) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash ByronKeyLegacy") $
         ByronKeyHashLegacy . Byron.KeyHash <$> Byron.abstractHashFromBytes bs
 
@@ -244,7 +244,7 @@ instance SerialiseAsRawBytes (VerificationKey ByronKeyLegacy) where
     serialiseToRawBytes (ByronVerificationKeyLegacy (Byron.VerificationKey xvk)) =
       Crypto.HD.unXPub xvk
 
-    eitherDeserialiseFromRawBytes (AsVerificationKey AsByronKeyLegacy) bs =
+    deserialiseFromRawBytes (AsVerificationKey AsByronKeyLegacy) bs =
       first (\msg -> SerialiseAsRawBytesError ("Unable to deserialise VerificationKey ByronKeyLegacy" ++ msg)) $
         ByronVerificationKeyLegacy . Byron.VerificationKey <$> Crypto.HD.xpub bs
 
@@ -252,7 +252,7 @@ instance SerialiseAsRawBytes (SigningKey ByronKeyLegacy) where
     serialiseToRawBytes (ByronSigningKeyLegacy (Byron.SigningKey xsk)) =
       Crypto.HD.unXPrv xsk
 
-    eitherDeserialiseFromRawBytes (AsSigningKey AsByronKeyLegacy) bs =
+    deserialiseFromRawBytes (AsSigningKey AsByronKeyLegacy) bs =
       first (\e -> SerialiseAsRawBytesError ("Unable to deserialise SigningKey ByronKeyLegacy" ++ show e)) $
         ByronSigningKeyLegacy . snd <$> CBOR.deserialiseFromBytes decodeLegacyDelegateKey (LB.fromStrict bs)
      where

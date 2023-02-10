@@ -75,7 +75,7 @@ generateInsecureSigningKey
   -> IO (SigningKey keyrole, StdGen)
 generateInsecureSigningKey g keytype = do
   let (bs, g') = Random.genByteString (fromIntegral $ deterministicSigningKeySeedSize keytype) g
-  case eitherDeserialiseFromRawBytes (AsSigningKey keytype) bs of
+  case deserialiseFromRawBytes (AsSigningKey keytype) bs of
     Right key -> return (key, g')
     Left (SerialiseAsRawBytesError msg) -> error $ "generateInsecureSigningKey: Unable to generate insecure key: " <> msg
 

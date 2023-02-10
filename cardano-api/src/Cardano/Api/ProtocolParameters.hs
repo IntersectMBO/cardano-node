@@ -85,7 +85,8 @@ import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Slotting.Slot (EpochNo)
 
-import           Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD(..), BabbagePParamsUpdate, BabbagePParams)
+import           Cardano.Ledger.Babbage.PParams (BabbagePParams, BabbagePParamsHKD (..),
+                   BabbagePParamsUpdate)
 import           Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Core as Ledger
@@ -101,7 +102,8 @@ import           Cardano.Ledger.Alonzo.PParams (AlonzoPParams, AlonzoPParamsHKD 
                    AlonzoPParamsUpdate)
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Shelley.API as Ledger hiding (PParams)
-import           Cardano.Ledger.Shelley.PParams (ShelleyPParamsUpdate, ShelleyPParamsHKD (..), ShelleyPParams)
+import           Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..),
+                   ShelleyPParamsUpdate)
 
 import           Text.PrettyBy.Default (display)
 
@@ -686,7 +688,7 @@ instance SerialiseAsRawBytes PraosNonce where
     serialiseToRawBytes (PraosNonce h) =
       Crypto.hashToBytes h
 
-    eitherDeserialiseFromRawBytes AsPraosNonce bs =
+    deserialiseFromRawBytes AsPraosNonce bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise PraosNonce") $
         PraosNonce <$> Crypto.hashFromBytes bs
 

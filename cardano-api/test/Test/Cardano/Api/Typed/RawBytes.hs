@@ -80,7 +80,7 @@ roundtrip_raw_bytes
 roundtrip_raw_bytes asType g =
   H.property $ do
     v <- H.forAll g
-    H.tripping v serialiseToRawBytes (eitherDeserialiseFromRawBytes asType)
+    H.tripping v serialiseToRawBytes (deserialiseFromRawBytes asType)
 
 roundtrip_verification_key_hash_raw
   :: (Key keyrole, Eq (Hash keyrole), Show (Hash keyrole))
@@ -89,7 +89,7 @@ roundtrip_verification_key_hash_raw roletoken =
   H.property $ do
     vKey <- H.forAll $ genVerificationKey roletoken
     let vKeyHash = verificationKeyHash vKey
-    H.tripping vKeyHash serialiseToRawBytes (eitherDeserialiseFromRawBytes (AsHash roletoken))
+    H.tripping vKeyHash serialiseToRawBytes (deserialiseFromRawBytes (AsHash roletoken))
 
 -- -----------------------------------------------------------------------------
 

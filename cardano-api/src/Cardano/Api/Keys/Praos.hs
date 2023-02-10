@@ -97,7 +97,7 @@ instance SerialiseAsRawBytes (VerificationKey KesKey) where
     serialiseToRawBytes (KesVerificationKey vk) =
       Crypto.rawSerialiseVerKeyKES vk
 
-    eitherDeserialiseFromRawBytes (AsVerificationKey AsKesKey) bs =
+    deserialiseFromRawBytes (AsVerificationKey AsKesKey) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise VerificationKey KesKey") $
         KesVerificationKey <$> Crypto.rawDeserialiseVerKeyKES bs
 
@@ -105,7 +105,7 @@ instance SerialiseAsRawBytes (SigningKey KesKey) where
     serialiseToRawBytes (KesSigningKey sk) =
       Crypto.rawSerialiseSignKeyKES sk
 
-    eitherDeserialiseFromRawBytes (AsSigningKey AsKesKey) bs =
+    deserialiseFromRawBytes (AsSigningKey AsKesKey) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise SigningKey KesKey") $
         KesSigningKey <$> Crypto.rawDeserialiseSignKeyKES bs
 
@@ -130,7 +130,7 @@ instance SerialiseAsRawBytes (Hash KesKey) where
     serialiseToRawBytes (KesKeyHash vkh) =
       Crypto.hashToBytes vkh
 
-    eitherDeserialiseFromRawBytes (AsHash AsKesKey) bs =
+    deserialiseFromRawBytes (AsHash AsKesKey) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash KesKey") $
         KesKeyHash <$> Crypto.hashFromBytes bs
 
@@ -204,7 +204,7 @@ instance SerialiseAsRawBytes (VerificationKey VrfKey) where
     serialiseToRawBytes (VrfVerificationKey vk) =
       Crypto.rawSerialiseVerKeyVRF vk
 
-    eitherDeserialiseFromRawBytes (AsVerificationKey AsVrfKey) bs =
+    deserialiseFromRawBytes (AsVerificationKey AsVrfKey) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise VerificationKey VrfKey") $
         VrfVerificationKey <$> Crypto.rawDeserialiseVerKeyVRF bs
 
@@ -212,7 +212,7 @@ instance SerialiseAsRawBytes (SigningKey VrfKey) where
     serialiseToRawBytes (VrfSigningKey sk) =
       Crypto.rawSerialiseSignKeyVRF sk
 
-    eitherDeserialiseFromRawBytes (AsSigningKey AsVrfKey) bs =
+    deserialiseFromRawBytes (AsSigningKey AsVrfKey) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise SigningKey VrfKey") $
         VrfSigningKey <$> Crypto.rawDeserialiseSignKeyVRF bs
 
@@ -236,7 +236,7 @@ instance SerialiseAsRawBytes (Hash VrfKey) where
     serialiseToRawBytes (VrfKeyHash vkh) =
       Crypto.hashToBytes vkh
 
-    eitherDeserialiseFromRawBytes (AsHash AsVrfKey) bs =
+    deserialiseFromRawBytes (AsHash AsVrfKey) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash VrfKey") $
         VrfKeyHash <$> Crypto.hashFromBytes bs
 
