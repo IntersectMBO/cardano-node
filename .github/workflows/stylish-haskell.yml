@@ -33,6 +33,11 @@ jobs:
         cardano-submit-api
 
     steps:
+    - name: Workaround runner image issue
+      if: runner.os == 'Linux'
+      # https://github.com/actions/runner-images/issues/7061
+      run: sudo chown -R $USER /usr/local/.ghcup
+
     - name: Install Haskell
       uses: input-output-hk/setup-haskell@v1
       id: setup-haskell

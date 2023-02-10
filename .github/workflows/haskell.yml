@@ -39,6 +39,11 @@ jobs:
       SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
 
     steps:
+    - name: Workaround runner image issue
+      if: runner.os == 'Linux'
+      # https://github.com/actions/runner-images/issues/7061
+      run: sudo chown -R $USER /usr/local/.ghcup
+
     - name: Install Haskell
       uses: input-output-hk/setup-haskell@v1
       id: setup-haskell
