@@ -12,8 +12,6 @@ module Test.Cli.Pipes
 
 import           Prelude
 
-import qualified Hedgehog as H
-
 #ifdef UNIX
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Char8 as BSC
@@ -25,7 +23,7 @@ import           Cardano.CLI.Shelley.Run.Read
 import           Test.OptParse
 
 import           Hedgehog (Property, discover, forAll, (===))
-import qualified Hedgehog
+import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Gen as G
@@ -36,7 +34,6 @@ import           System.FilePath ((</>))
 #else
 
 import           Hedgehog (Property, discover, property, success)
-import qualified Hedgehog
 #endif
 
 #ifdef UNIX
@@ -99,4 +96,4 @@ prop_readFromPipe = property success
 
 tests :: IO Bool
 tests =
-  Hedgehog.checkParallel $$discover
+  H.checkParallel $$discover
