@@ -66,7 +66,7 @@ deserialiseFromBech32 asType bech32Str = do
     payload <- Bech32.dataPartToBytes dataPart
                  ?! Bech32DataPartToBytesError (Bech32.dataPartToText dataPart)
 
-    value <- case eitherDeserialiseFromRawBytes asType payload of
+    value <- case deserialiseFromRawBytes asType payload of
       Right a -> Right a
       Left _ -> Left $ Bech32DeserialiseFromBytesError payload
 
@@ -95,7 +95,7 @@ deserialiseAnyOfFromBech32 types bech32Str = do
     payload <- Bech32.dataPartToBytes dataPart
                  ?! Bech32DataPartToBytesError (Bech32.dataPartToText dataPart)
 
-    value <- case eitherDeserialiseFromRawBytes actualType payload of
+    value <- case deserialiseFromRawBytes actualType payload of
       Right a -> Right a
       Left _ -> Left $ Bech32DeserialiseFromBytesError payload
 

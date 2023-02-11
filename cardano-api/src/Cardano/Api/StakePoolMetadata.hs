@@ -77,7 +77,7 @@ instance HasTypeProxy StakePoolMetadata where
 instance SerialiseAsRawBytes (Hash StakePoolMetadata) where
     serialiseToRawBytes (StakePoolMetadataHash h) = Crypto.hashToBytes h
 
-    eitherDeserialiseFromRawBytes (AsHash AsStakePoolMetadata) bs =
+    deserialiseFromRawBytes (AsHash AsStakePoolMetadata) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash StakePoolMetadata") $
         StakePoolMetadataHash <$> Crypto.hashFromBytes bs
 

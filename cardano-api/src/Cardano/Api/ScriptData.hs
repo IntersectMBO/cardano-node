@@ -118,7 +118,7 @@ instance SerialiseAsRawBytes (Hash ScriptData) where
     serialiseToRawBytes (ScriptDataHash dh) =
       Crypto.hashToBytes (Ledger.extractHash dh)
 
-    eitherDeserialiseFromRawBytes (AsHash AsScriptData) bs =
+    deserialiseFromRawBytes (AsHash AsScriptData) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash ScriptData") $
         ScriptDataHash . Ledger.unsafeMakeSafeHash <$> Crypto.hashFromBytes bs
 

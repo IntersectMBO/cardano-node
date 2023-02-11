@@ -83,7 +83,7 @@ import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.Utils (failEitherWith)
-import Cardano.Ledger.Mary.Value (MaryValue (..))
+import           Cardano.Ledger.Mary.Value (MaryValue (..))
 import qualified Cardano.Ledger.Mary.Value as Mary
 import qualified Cardano.Ledger.ShelleyMA.Rules as Shelley
 
@@ -152,8 +152,8 @@ instance HasTypeProxy PolicyId where
 
 instance SerialiseAsRawBytes PolicyId where
     serialiseToRawBytes (PolicyId sh) = serialiseToRawBytes sh
-    eitherDeserialiseFromRawBytes AsPolicyId bs =
-      PolicyId <$> eitherDeserialiseFromRawBytes AsScriptHash bs
+    deserialiseFromRawBytes AsPolicyId bs =
+      PolicyId <$> deserialiseFromRawBytes AsScriptHash bs
 
 scriptPolicyId :: Script lang -> PolicyId
 scriptPolicyId = PolicyId . hashScript
@@ -177,7 +177,7 @@ instance HasTypeProxy AssetName where
 
 instance SerialiseAsRawBytes AssetName where
     serialiseToRawBytes (AssetName bs) = bs
-    eitherDeserialiseFromRawBytes AsAssetName bs
+    deserialiseFromRawBytes AsAssetName bs
       | BS.length bs <= 32 = Right (AssetName bs)
       | otherwise          = Left $ SerialiseAsRawBytesError $
           "Unable to deserialise AssetName (the bytestring should be no longer than 32 bytes long " <>

@@ -83,5 +83,5 @@ submitByronVote network voteFp = do
 readByronVote :: FilePath -> ExceptT ByronVoteError IO ByronVote
 readByronVote fp = do
   voteBs <- liftIO $ BS.readFile fp
-  let voteResult = eitherDeserialiseFromRawBytes AsByronVote voteBs
+  let voteResult = deserialiseFromRawBytes AsByronVote voteBs
   hoistEither $ first (const (ByronVoteDecodingError fp)) voteResult

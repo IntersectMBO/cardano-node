@@ -117,7 +117,7 @@ instance SerialiseAsRawBytes (VerificationKey PaymentKey) where
     serialiseToRawBytes (PaymentVerificationKey (Shelley.VKey vk)) =
       Crypto.rawSerialiseVerKeyDSIGN vk
 
-    eitherDeserialiseFromRawBytes (AsVerificationKey AsPaymentKey) bs =
+    deserialiseFromRawBytes (AsVerificationKey AsPaymentKey) bs =
       maybe
         (Left (SerialiseAsRawBytesError "Unable to deserialise VerificationKey PaymentKey"))
         (Right . PaymentVerificationKey . Shelley.VKey)
@@ -127,7 +127,7 @@ instance SerialiseAsRawBytes (SigningKey PaymentKey) where
     serialiseToRawBytes (PaymentSigningKey sk) =
       Crypto.rawSerialiseSignKeyDSIGN sk
 
-    eitherDeserialiseFromRawBytes (AsSigningKey AsPaymentKey) bs =
+    deserialiseFromRawBytes (AsSigningKey AsPaymentKey) bs =
       maybe
         (Left (SerialiseAsRawBytesError "Unable to serialise AsSigningKey AsPaymentKey"))
         (Right . PaymentSigningKey)
@@ -152,7 +152,7 @@ instance SerialiseAsRawBytes (Hash PaymentKey) where
     serialiseToRawBytes (PaymentKeyHash (Shelley.KeyHash vkh)) =
       Crypto.hashToBytes vkh
 
-    eitherDeserialiseFromRawBytes (AsHash AsPaymentKey) bs =
+    deserialiseFromRawBytes (AsHash AsPaymentKey) bs =
       maybeToRight
         (SerialiseAsRawBytesError "Unable to deserialise Hash PaymentKey")
         (PaymentKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs)
@@ -264,7 +264,7 @@ instance SerialiseAsRawBytes (VerificationKey PaymentExtendedKey) where
     serialiseToRawBytes (PaymentExtendedVerificationKey xpub) =
       Crypto.HD.unXPub xpub
 
-    eitherDeserialiseFromRawBytes (AsVerificationKey AsPaymentExtendedKey) bs =
+    deserialiseFromRawBytes (AsVerificationKey AsPaymentExtendedKey) bs =
       first
         (const (SerialiseAsRawBytesError "Unable to deserialise VerificationKey PaymentExtendedKey"))
         (PaymentExtendedVerificationKey <$> Crypto.HD.xpub bs)
@@ -273,7 +273,7 @@ instance SerialiseAsRawBytes (SigningKey PaymentExtendedKey) where
     serialiseToRawBytes (PaymentExtendedSigningKey xprv) =
       Crypto.HD.unXPrv xprv
 
-    eitherDeserialiseFromRawBytes (AsSigningKey AsPaymentExtendedKey) bs =
+    deserialiseFromRawBytes (AsSigningKey AsPaymentExtendedKey) bs =
       first
         (const (SerialiseAsRawBytesError "Unable to deserialise SigningKey PaymentExtendedKey"))
         (PaymentExtendedSigningKey <$> Crypto.HD.xprv bs)
@@ -298,7 +298,7 @@ instance SerialiseAsRawBytes (Hash PaymentExtendedKey) where
     serialiseToRawBytes (PaymentExtendedKeyHash (Shelley.KeyHash vkh)) =
       Crypto.hashToBytes vkh
 
-    eitherDeserialiseFromRawBytes (AsHash AsPaymentExtendedKey) bs =
+    deserialiseFromRawBytes (AsHash AsPaymentExtendedKey) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash PaymentExtendedKey") $
         PaymentExtendedKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
@@ -371,7 +371,7 @@ instance SerialiseAsRawBytes (VerificationKey StakeKey) where
     serialiseToRawBytes (StakeVerificationKey (Shelley.VKey vk)) =
       Crypto.rawSerialiseVerKeyDSIGN vk
 
-    eitherDeserialiseFromRawBytes (AsVerificationKey AsStakeKey) bs =
+    deserialiseFromRawBytes (AsVerificationKey AsStakeKey) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise VerificationKey StakeKey") $
         StakeVerificationKey . Shelley.VKey <$>
           Crypto.rawDeserialiseVerKeyDSIGN bs
@@ -380,7 +380,7 @@ instance SerialiseAsRawBytes (SigningKey StakeKey) where
     serialiseToRawBytes (StakeSigningKey sk) =
       Crypto.rawSerialiseSignKeyDSIGN sk
 
-    eitherDeserialiseFromRawBytes (AsSigningKey AsStakeKey) bs =
+    deserialiseFromRawBytes (AsSigningKey AsStakeKey) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise SigningKey StakeKey") $
         StakeSigningKey <$> Crypto.rawDeserialiseSignKeyDSIGN bs
 
@@ -404,7 +404,7 @@ instance SerialiseAsRawBytes (Hash StakeKey) where
     serialiseToRawBytes (StakeKeyHash (Shelley.KeyHash vkh)) =
       Crypto.hashToBytes vkh
 
-    eitherDeserialiseFromRawBytes (AsHash AsStakeKey) bs =
+    deserialiseFromRawBytes (AsHash AsStakeKey) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash StakeKey") $
         StakeKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
@@ -515,7 +515,7 @@ instance SerialiseAsRawBytes (VerificationKey StakeExtendedKey) where
     serialiseToRawBytes (StakeExtendedVerificationKey xpub) =
       Crypto.HD.unXPub xpub
 
-    eitherDeserialiseFromRawBytes (AsVerificationKey AsStakeExtendedKey) bs =
+    deserialiseFromRawBytes (AsVerificationKey AsStakeExtendedKey) bs =
       first (\msg -> SerialiseAsRawBytesError ("Unable to deserialise VerificationKey StakeExtendedKey: " ++ msg)) $
         StakeExtendedVerificationKey <$> Crypto.HD.xpub bs
 
@@ -523,7 +523,7 @@ instance SerialiseAsRawBytes (SigningKey StakeExtendedKey) where
     serialiseToRawBytes (StakeExtendedSigningKey xprv) =
       Crypto.HD.unXPrv xprv
 
-    eitherDeserialiseFromRawBytes (AsSigningKey AsStakeExtendedKey) bs =
+    deserialiseFromRawBytes (AsSigningKey AsStakeExtendedKey) bs =
       first (\msg -> SerialiseAsRawBytesError ("Unable to deserialise SigningKey StakeExtendedKey: " ++ msg)) $
         StakeExtendedSigningKey <$> Crypto.HD.xprv bs
 
@@ -547,7 +547,7 @@ instance SerialiseAsRawBytes (Hash StakeExtendedKey) where
     serialiseToRawBytes (StakeExtendedKeyHash (Shelley.KeyHash vkh)) =
       Crypto.hashToBytes vkh
 
-    eitherDeserialiseFromRawBytes (AsHash AsStakeExtendedKey) bs =
+    deserialiseFromRawBytes (AsHash AsStakeExtendedKey) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash StakeExtendedKey") $
         StakeExtendedKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
@@ -619,7 +619,7 @@ instance SerialiseAsRawBytes (VerificationKey GenesisKey) where
     serialiseToRawBytes (GenesisVerificationKey (Shelley.VKey vk)) =
       Crypto.rawSerialiseVerKeyDSIGN vk
 
-    eitherDeserialiseFromRawBytes (AsVerificationKey AsGenesisKey) bs =
+    deserialiseFromRawBytes (AsVerificationKey AsGenesisKey) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise VerificationKey GenesisKey") $
         GenesisVerificationKey . Shelley.VKey <$>
           Crypto.rawDeserialiseVerKeyDSIGN bs
@@ -628,7 +628,7 @@ instance SerialiseAsRawBytes (SigningKey GenesisKey) where
     serialiseToRawBytes (GenesisSigningKey sk) =
       Crypto.rawSerialiseSignKeyDSIGN sk
 
-    eitherDeserialiseFromRawBytes (AsSigningKey AsGenesisKey) bs =
+    deserialiseFromRawBytes (AsSigningKey AsGenesisKey) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise SigningKey GenesisKey") $
         GenesisSigningKey <$> Crypto.rawDeserialiseSignKeyDSIGN bs
 
@@ -644,7 +644,7 @@ instance SerialiseAsRawBytes (Hash GenesisKey) where
     serialiseToRawBytes (GenesisKeyHash (Shelley.KeyHash vkh)) =
       Crypto.hashToBytes vkh
 
-    eitherDeserialiseFromRawBytes (AsHash AsGenesisKey) bs =
+    deserialiseFromRawBytes (AsHash AsGenesisKey) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash GenesisKey") $
         GenesisKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
@@ -756,7 +756,7 @@ instance SerialiseAsRawBytes (VerificationKey GenesisExtendedKey) where
     serialiseToRawBytes (GenesisExtendedVerificationKey xpub) =
       Crypto.HD.unXPub xpub
 
-    eitherDeserialiseFromRawBytes (AsVerificationKey AsGenesisExtendedKey) bs =
+    deserialiseFromRawBytes (AsVerificationKey AsGenesisExtendedKey) bs =
       first (const (SerialiseAsRawBytesError "Unable to deserialise VerificationKey GenesisExtendedKey")) $
         GenesisExtendedVerificationKey<$> Crypto.HD.xpub bs
 
@@ -764,7 +764,7 @@ instance SerialiseAsRawBytes (SigningKey GenesisExtendedKey) where
     serialiseToRawBytes (GenesisExtendedSigningKey xprv) =
       Crypto.HD.unXPrv xprv
 
-    eitherDeserialiseFromRawBytes (AsSigningKey AsGenesisExtendedKey) bs =
+    deserialiseFromRawBytes (AsSigningKey AsGenesisExtendedKey) bs =
       first (\msg -> SerialiseAsRawBytesError ("Unable to deserialise SigningKey GenesisExtendedKey" ++ msg)) $
         GenesisExtendedSigningKey <$> Crypto.HD.xprv bs
 
@@ -780,7 +780,7 @@ instance SerialiseAsRawBytes (Hash GenesisExtendedKey) where
     serialiseToRawBytes (GenesisExtendedKeyHash (Shelley.KeyHash vkh)) =
       Crypto.hashToBytes vkh
 
-    eitherDeserialiseFromRawBytes (AsHash AsGenesisExtendedKey) bs =
+    deserialiseFromRawBytes (AsHash AsGenesisExtendedKey) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash GenesisExtendedKey") $
         GenesisExtendedKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
@@ -853,7 +853,7 @@ instance SerialiseAsRawBytes (VerificationKey GenesisDelegateKey) where
     serialiseToRawBytes (GenesisDelegateVerificationKey (Shelley.VKey vk)) =
       Crypto.rawSerialiseVerKeyDSIGN vk
 
-    eitherDeserialiseFromRawBytes (AsVerificationKey AsGenesisDelegateKey) bs =
+    deserialiseFromRawBytes (AsVerificationKey AsGenesisDelegateKey) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise VerificationKey GenesisDelegateKey") $
       GenesisDelegateVerificationKey . Shelley.VKey <$>
         Crypto.rawDeserialiseVerKeyDSIGN bs
@@ -862,7 +862,7 @@ instance SerialiseAsRawBytes (SigningKey GenesisDelegateKey) where
     serialiseToRawBytes (GenesisDelegateSigningKey sk) =
       Crypto.rawSerialiseSignKeyDSIGN sk
 
-    eitherDeserialiseFromRawBytes (AsSigningKey AsGenesisDelegateKey) bs =
+    deserialiseFromRawBytes (AsSigningKey AsGenesisDelegateKey) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise SigningKey GenesisDelegateKey") $
         GenesisDelegateSigningKey <$> Crypto.rawDeserialiseSignKeyDSIGN bs
 
@@ -878,7 +878,7 @@ instance SerialiseAsRawBytes (Hash GenesisDelegateKey) where
     serialiseToRawBytes (GenesisDelegateKeyHash (Shelley.KeyHash vkh)) =
       Crypto.hashToBytes vkh
 
-    eitherDeserialiseFromRawBytes (AsHash AsGenesisDelegateKey) bs =
+    deserialiseFromRawBytes (AsHash AsGenesisDelegateKey) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash GenesisDelegateKey") $
         GenesisDelegateKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
@@ -994,7 +994,7 @@ instance SerialiseAsRawBytes (VerificationKey GenesisDelegateExtendedKey) where
     serialiseToRawBytes (GenesisDelegateExtendedVerificationKey xpub) =
       Crypto.HD.unXPub xpub
 
-    eitherDeserialiseFromRawBytes (AsVerificationKey AsGenesisDelegateExtendedKey) bs =
+    deserialiseFromRawBytes (AsVerificationKey AsGenesisDelegateExtendedKey) bs =
       first (\msg -> SerialiseAsRawBytesError ("Unable to deserialise VerificationKey GenesisDelegateExtendedKey: " ++ msg)) $
         GenesisDelegateExtendedVerificationKey <$> Crypto.HD.xpub bs
 
@@ -1002,7 +1002,7 @@ instance SerialiseAsRawBytes (SigningKey GenesisDelegateExtendedKey) where
     serialiseToRawBytes (GenesisDelegateExtendedSigningKey xprv) =
       Crypto.HD.unXPrv xprv
 
-    eitherDeserialiseFromRawBytes (AsSigningKey AsGenesisDelegateExtendedKey) bs =
+    deserialiseFromRawBytes (AsSigningKey AsGenesisDelegateExtendedKey) bs =
       first (\msg -> SerialiseAsRawBytesError ("Unable to deserialise SigningKey GenesisDelegateExtendedKey: " ++ msg)) $
         GenesisDelegateExtendedSigningKey <$> Crypto.HD.xprv bs
 
@@ -1018,7 +1018,7 @@ instance SerialiseAsRawBytes (Hash GenesisDelegateExtendedKey) where
     serialiseToRawBytes (GenesisDelegateExtendedKeyHash (Shelley.KeyHash vkh)) =
       Crypto.hashToBytes vkh
 
-    eitherDeserialiseFromRawBytes (AsHash AsGenesisDelegateExtendedKey) bs =
+    deserialiseFromRawBytes (AsHash AsGenesisDelegateExtendedKey) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash GenesisDelegateExtendedKey: ") $
         GenesisDelegateExtendedKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
@@ -1091,7 +1091,7 @@ instance SerialiseAsRawBytes (VerificationKey GenesisUTxOKey) where
     serialiseToRawBytes (GenesisUTxOVerificationKey (Shelley.VKey vk)) =
       Crypto.rawSerialiseVerKeyDSIGN vk
 
-    eitherDeserialiseFromRawBytes (AsVerificationKey AsGenesisUTxOKey) bs =
+    deserialiseFromRawBytes (AsVerificationKey AsGenesisUTxOKey) bs =
       maybeToRight (SerialiseAsRawBytesError "Enable to deserialise VerificationKey GenesisUTxOKey") $
         GenesisUTxOVerificationKey . Shelley.VKey <$> Crypto.rawDeserialiseVerKeyDSIGN bs
 
@@ -1099,7 +1099,7 @@ instance SerialiseAsRawBytes (SigningKey GenesisUTxOKey) where
     serialiseToRawBytes (GenesisUTxOSigningKey sk) =
       Crypto.rawSerialiseSignKeyDSIGN sk
 
-    eitherDeserialiseFromRawBytes (AsSigningKey AsGenesisUTxOKey) bs =
+    deserialiseFromRawBytes (AsSigningKey AsGenesisUTxOKey) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise SigningKey GenesisUTxOKey") $
         GenesisUTxOSigningKey <$> Crypto.rawDeserialiseSignKeyDSIGN bs
 
@@ -1115,7 +1115,7 @@ instance SerialiseAsRawBytes (Hash GenesisUTxOKey) where
     serialiseToRawBytes (GenesisUTxOKeyHash (Shelley.KeyHash vkh)) =
       Crypto.hashToBytes vkh
 
-    eitherDeserialiseFromRawBytes (AsHash AsGenesisUTxOKey) bs =
+    deserialiseFromRawBytes (AsHash AsGenesisUTxOKey) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash GenesisUTxOKey") $
         GenesisUTxOKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
@@ -1192,7 +1192,7 @@ instance SerialiseAsRawBytes (VerificationKey StakePoolKey) where
     serialiseToRawBytes (StakePoolVerificationKey (Shelley.VKey vk)) =
       Crypto.rawSerialiseVerKeyDSIGN vk
 
-    eitherDeserialiseFromRawBytes (AsVerificationKey AsStakePoolKey) bs =
+    deserialiseFromRawBytes (AsVerificationKey AsStakePoolKey) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise VerificationKey StakePoolKey") $
         StakePoolVerificationKey . Shelley.VKey <$>
           Crypto.rawDeserialiseVerKeyDSIGN bs
@@ -1201,7 +1201,7 @@ instance SerialiseAsRawBytes (SigningKey StakePoolKey) where
     serialiseToRawBytes (StakePoolSigningKey sk) =
       Crypto.rawSerialiseSignKeyDSIGN sk
 
-    eitherDeserialiseFromRawBytes (AsSigningKey AsStakePoolKey) bs =
+    deserialiseFromRawBytes (AsSigningKey AsStakePoolKey) bs =
       maybe
         (Left (SerialiseAsRawBytesError "Unable to deserialise SigningKey StakePoolKey"))
         (Right . StakePoolSigningKey)
@@ -1226,7 +1226,7 @@ instance SerialiseAsRawBytes (Hash StakePoolKey) where
     serialiseToRawBytes (StakePoolKeyHash (Shelley.KeyHash vkh)) =
       Crypto.hashToBytes vkh
 
-    eitherDeserialiseFromRawBytes (AsHash AsStakePoolKey) bs =
+    deserialiseFromRawBytes (AsHash AsStakePoolKey) bs =
       maybeToRight
         (SerialiseAsRawBytesError "Unable to deserialise Hash StakePoolKey")
         (StakePoolKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs)

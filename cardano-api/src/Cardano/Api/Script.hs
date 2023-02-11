@@ -935,7 +935,7 @@ instance SerialiseAsRawBytes ScriptHash where
     serialiseToRawBytes (ScriptHash (Shelley.ScriptHash h)) =
       Crypto.hashToBytes h
 
-    eitherDeserialiseFromRawBytes AsScriptHash bs =
+    deserialiseFromRawBytes AsScriptHash bs =
       maybeToRight (SerialiseAsRawBytesError "Enable to deserialise ScriptHash") $
         ScriptHash . Shelley.ScriptHash <$> Crypto.hashFromBytes bs
 
@@ -1076,7 +1076,7 @@ instance HasTypeProxy lang => HasTypeProxy (PlutusScript lang) where
 instance (HasTypeProxy lang, Typeable lang) => SerialiseAsRawBytes (PlutusScript lang) where
     serialiseToRawBytes (PlutusScriptSerialised sbs) = SBS.fromShort sbs
 
-    eitherDeserialiseFromRawBytes (AsPlutusScript _) bs =
+    deserialiseFromRawBytes (AsPlutusScript _) bs =
       -- TODO alonzo: validate the script syntax and fail decoding if invalid
       Right (PlutusScriptSerialised (SBS.toShort bs))
 

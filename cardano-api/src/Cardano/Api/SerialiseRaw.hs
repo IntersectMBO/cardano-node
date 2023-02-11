@@ -9,6 +9,7 @@ module Cardano.Api.SerialiseRaw
   , SerialiseAsRawBytesError(..)
   , serialiseToRawBytesHex
   , deserialiseFromRawBytesHex
+  , eitherDeserialiseFromRawBytes
   , serialiseToRawBytesHexText
   ) where
 
@@ -16,7 +17,6 @@ import           Data.Bifunctor (Bifunctor (..))
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as Base16
 import           Data.Data (typeRep)
-import           Data.Either.Combinators (rightToMaybe)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -35,10 +35,11 @@ class (HasTypeProxy a, Typeable a) => SerialiseAsRawBytes a where
 
   serialiseToRawBytes :: a -> ByteString
 
-  deserialiseFromRawBytes :: AsType a -> ByteString -> Maybe a
-  deserialiseFromRawBytes asType bs = rightToMaybe $ eitherDeserialiseFromRawBytes asType bs
+  deserialiseFromRawBytes :: AsType a -> ByteString -> Either SerialiseAsRawBytesError a
 
-  eitherDeserialiseFromRawBytes :: AsType a -> ByteString -> Either SerialiseAsRawBytesError a
+eitherDeserialiseFromRawBytes :: SerialiseAsRawBytes a => AsType a -> ByteString -> Either SerialiseAsRawBytesError a
+eitherDeserialiseFromRawBytes = deserialiseFromRawBytes
+{-# DEPRECATED eitherDeserialiseFromRawBytes "Use deserialiseFromRawBytes instead" #-}
 
 serialiseToRawBytesHex :: SerialiseAsRawBytes a => a -> ByteString
 serialiseToRawBytesHex = Base16.encode . serialiseToRawBytes
@@ -74,6 +75,6 @@ deserialiseFromRawBytesHex
   => AsType a -> ByteString -> Either RawBytesHexError a
 deserialiseFromRawBytesHex proxy hex = do
   raw <- first (RawBytesHexErrorBase16DecodeFail hex) $ Base16.decode hex
-  case eitherDeserialiseFromRawBytes proxy raw of
+  case deserialiseFromRawBytes proxy raw of
     Left e -> Left $ RawBytesHexErrorRawBytesDecodeFail hex (typeRep proxy) e
     Right a -> Right a

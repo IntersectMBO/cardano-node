@@ -77,7 +77,7 @@ readByronUpdateProposal :: FilePath -> ExceptT ByronUpdateProposalError IO Byron
 readByronUpdateProposal fp = do
   proposalBs <- handleIOExceptT (ByronReadUpdateProposalFileFailure fp . toS . displayException)
                   $ BS.readFile fp
-  let proposalResult = eitherDeserialiseFromRawBytes AsByronUpdateProposal proposalBs
+  let proposalResult = deserialiseFromRawBytes AsByronUpdateProposal proposalBs
   hoistEither $ first (const (UpdateProposalDecodingError fp)) proposalResult
 
 submitByronUpdateProposal

@@ -472,6 +472,7 @@ module Cardano.Api (
     -- | Some types have a natural raw binary format.
     SerialiseAsRawBytes,
     serialiseToRawBytes,
+    deserialiseFromRawBytes,
     eitherDeserialiseFromRawBytes,
     serialiseToRawBytesHex,
     deserialiseFromRawBytesHex,

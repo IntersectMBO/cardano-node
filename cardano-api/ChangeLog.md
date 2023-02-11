@@ -14,6 +14,8 @@
 
 - **Breaking change** - Reduce exposed modules in cardano-api ([PR4546](https://github.com/input-output-hk/cardano-node/pull/4546))
 
+- **Breaking change** - `deserialiseFromRawBytes` method of the `SerialiseAsRawBytes` type class to return `Either` instead of `Maybe`.  Deprecate `eitherDeserialiseFromRawBytes`.  Use `deserialiseFromRawBytes` instead.
+
 ### Bugs
 
 - Allow reading text envelopes from pipes ([PR 4384](https://github.com/input-output-hk/cardano-node/pull/4384))
