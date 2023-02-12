@@ -4,7 +4,8 @@ module Test.Golden.Shelley.Transaction.Assemble
   ( golden_shelleyTransactionAssembleWitness_SigningKey
   ) where
 
-import           Cardano.Prelude
+import           Control.Monad (void)
+
 import           Hedgehog (Property)
 import           Test.OptParse
 

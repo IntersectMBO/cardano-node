@@ -5,7 +5,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -40,16 +39,16 @@ module Cardano.Tracing.OrphanInstances.Common
   , mkLOMeta
   ) where
 
-import           Cardano.Prelude
-import           Prelude (fail)
-
 import           Data.Aeson hiding (Value)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Short as SBS
 import           Data.Scientific (coefficient)
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import           Data.Void (Void)
 import           Network.Socket (PortNumber)
+import           Text.Read (readMaybe)
 
 import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..), PrivacyAnnotation (..),
                    mkLOMeta)
@@ -83,7 +82,7 @@ instance FromJSON TracingVerbosity where
                             <> "Encountered: " <> show invalid
 
 instance FromJSON PortNumber where
-  parseJSON (Number portNum) = case readMaybe . show @Integer @Text $ coefficient portNum of
+  parseJSON (Number portNum) = case readMaybe . show $ coefficient portNum of
     Just port -> pure port
     Nothing -> fail $ show portNum <> " is not a valid port number."
   parseJSON invalid  = fail $ "Parsing of port number failed due to type mismatch. "

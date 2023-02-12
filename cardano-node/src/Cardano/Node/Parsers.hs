@@ -11,14 +11,18 @@ module Cardano.Node.Parsers
   , renderHelpDoc
   ) where
 
-import           Cardano.Prelude
-import           Prelude (String)
+import           Cardano.Prelude (ConvertText (..))
 
+import           Data.Maybe (fromMaybe)
+import           Data.Monoid (Last (..))
+import           Data.Text (Text)
 import           Data.Time.Clock (secondsToDiffTime)
+import           Data.Word (Word32)
 import           Options.Applicative hiding (str)
 import qualified Options.Applicative as Opt
 import qualified Options.Applicative.Help as OptI
 import           System.Posix.Types (Fd (..))
+import           Text.Read (readMaybe)
 
 import           Ouroboros.Consensus.Mempool.API (MempoolCapacityBytes (..),
                    MempoolCapacityBytesOverride (..))

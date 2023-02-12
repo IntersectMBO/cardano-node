@@ -4,18 +4,18 @@ module Cardano.CLI.Render
   ( customRenderHelp
   ) where
 
-import           Cardano.Prelude
-import           Data.Function (id)
+import           Data.Text (Text)
 import           Options.Applicative
 import           Options.Applicative.Help.Ann
 import           Options.Applicative.Help.Types (helpText, renderHelp)
-import           Prelude (String)
 import           Prettyprinter
 import           Prettyprinter.Render.Util.SimpleDocTree
 
 import qualified Data.Text as T
 import qualified System.Environment as IO
 import qualified System.IO.Unsafe as IO
+
+import           Cardano.Api (textShow)
 
 cliHelpTraceEnabled :: Bool
 cliHelpTraceEnabled = IO.unsafePerformIO $ do
@@ -44,7 +44,7 @@ customRenderHelpAsHtml cols
     renderElement :: Ann -> Text -> Text
     renderElement ann x = if cliHelpTraceEnabled
       then case ann of
-        AnnTrace _ name -> "<span name=" <> show name <> ">" <> x <> "</span>"
+        AnnTrace _ name -> "<span name=" <> textShow name <> ">" <> x <> "</span>"
         AnnStyle _ -> x
       else x
     wrapper = if cliHelpTraceEnabled

@@ -12,9 +12,17 @@ module Cardano.CLI.Shelley.Run.Key
   , decodeBech32
   ) where
 
+import           Control.Exception (Exception (..), IOException)
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans.Except (ExceptT)
+import           Data.Bifunctor (Bifunctor (..))
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
+import           Data.Text (Text)
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
+import           System.Exit (exitFailure)
 
 import qualified Control.Exception as Exception
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, left, newExceptT)
@@ -39,14 +47,6 @@ import           Cardano.CLI.Shelley.Key (VerificationKeyTextOrFile (..),
                    VerificationKeyTextOrFileError, readVerificationKeyTextOrFileAnyOf,
                    renderVerificationKeyTextOrFileError)
 import           Cardano.CLI.Types (SigningKeyFile (..), VerificationKeyFile (..))
-import           Cardano.Prelude (MonadIO (..))
-import           Control.Exception (Exception (..), IOException)
-import           Control.Monad.Trans.Except (ExceptT)
-import           Data.Bifunctor (Bifunctor (..))
-import           Data.ByteString (ByteString)
-import           Data.Text (Text)
-import qualified Data.Text.Encoding as Text
-import           System.Exit (exitFailure)
 
 
 data ShelleyKeyCmdError

@@ -9,12 +9,12 @@ module Cardano.CLI.Byron.Commands
   , NewCertificateFile (..)
   ) where
 
-import           Cardano.Prelude
+import           Data.String (IsString)
 
 import           Cardano.Chain.Update (InstallerHash (..), ProtocolVersion (..),
-                     SoftwareVersion (..), SystemTag (..))
+                   SoftwareVersion (..), SystemTag (..))
 
-import           Cardano.Api       hiding (GenesisParameters)
+import           Cardano.Api hiding (GenesisParameters)
 import           Cardano.Api.Byron hiding (GenesisParameters)
 
 import           Cardano.CLI.Byron.Genesis

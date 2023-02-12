@@ -8,8 +8,7 @@ module Test.Golden.Shelley.Transaction.Build
   , golden_shelleyTransactionBuild_WithdrawalScriptWitnessed
   ) where
 
-import           Cardano.Prelude
-import           Prelude (String)
+import           Control.Monad (void)
 
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BSC

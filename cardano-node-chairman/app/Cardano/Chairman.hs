@@ -11,16 +11,19 @@
 
 module Cardano.Chairman (chairmanTest) where
 
-import           Cardano.Prelude hiding (ByteString, STM, atomically, catch, show, throwIO)
-import           Prelude (String, error, show)
-
 import           Control.Concurrent.Class.MonadSTM.Strict
+import           Control.Monad (void)
 import           Control.Monad.Class.MonadAsync
 import           Control.Monad.Class.MonadThrow
 import           Control.Monad.Class.MonadTimer
 import           Control.Tracer
 import           Data.Coerce (coerce)
+import qualified Data.List as List
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           Data.Ord (comparing)
+import           Data.Proxy (Proxy (..))
+import           Data.Word (Word64)
 
 import           Ouroboros.Consensus.Block.Abstract
 import           Ouroboros.Consensus.Config.SecurityParam
@@ -122,7 +125,7 @@ consensusCondition cMode chains securityParam =
           | (peerid1, chain1) <- Map.toList chains
           , (peerid2, chain2) <- Map.toList chains
           ]
-     in case find (forkTooLong . snd) forks of
+     in case List.find (forkTooLong . snd) forks of
           Just ((peerid1, peerid2), (intersection, tip1, tip2)) ->do
             let apiTip1 = fromConsensusTip cMode $ AF.anchorToTip tip1
                 apiTip2 = fromConsensusTip cMode $ AF.anchorToTip tip2
@@ -139,7 +142,7 @@ consensusCondition cMode chains securityParam =
               ConsensusSuccess
                 -- the minimum intersection point:
                 (fromAnchor
-                   $ minimumBy (comparing AF.anchorToBlockNo)
+                   $ List.minimumBy (comparing AF.anchorToBlockNo)
                        [ intersection | (_,(intersection,_,_)) <- forks ])
                 -- all the chain tips:
                 [ (peerid, fromConsensusTip cMode $ AF.anchorToTip (AF.headAnchor chain))
@@ -234,7 +237,7 @@ progressCondition :: BlockNo
                   -> ConsensusSuccess
                   -> Either ProgressFailure ProgressSuccess
 progressCondition minBlockNo (ConsensusSuccess _ tips) = do
-   case find (\(_, ct) -> getBlockNo ct < minBlockNo) tips of
+   case List.find (\(_, ct) -> getBlockNo ct < minBlockNo) tips of
     Just (peerid, tip) -> Left (ProgressFailure minBlockNo peerid tip)
     Nothing -> Right (ProgressSuccess minBlockNo)
  where

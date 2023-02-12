@@ -3,8 +3,6 @@
 
 module Test.Cli.JSON where
 
-import           Cardano.Prelude hiding (filter)
-
 import           Cardano.Api.Shelley
 import           Test.Gen.Cardano.Api.Typed (genLovelace, genSlotNo, genStakeAddress,
                    genVerificationKeyHash)
@@ -13,6 +11,7 @@ import           Data.Aeson
 import qualified Data.Map.Strict as Map
 import           Data.Time
 import           Data.Time.Clock.System
+import           Data.Word (Word64)
 
 import           Cardano.CLI.Shelley.Output (QueryKesPeriodInfoOutput (..),
                    createOpCertIntervalInfo)
@@ -38,7 +37,7 @@ genDelegationsAndRewards = do
   let delegMapAmt = Map.fromList $ zip sAddrs sLovelace
   poolIDs <- Gen.list r genPoolId
   let delegMapPool = Map.fromList $ zip sAddrs poolIDs
-  return $ DelegationsAndRewards (delegMapAmt,delegMapPool)
+  return $ DelegationsAndRewards (delegMapAmt, delegMapPool)
 
 genOpCertIntervalInformation :: Gen OpCertIntervalInformation
 genOpCertIntervalInformation = do

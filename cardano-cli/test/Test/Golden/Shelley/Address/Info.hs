@@ -4,7 +4,8 @@ module Test.Golden.Shelley.Address.Info
   ( golden_shelleyAddressInfo
   ) where
 
-import           Cardano.Prelude
+import           Control.Monad (when)
+
 import           Hedgehog (Property)
 import           Test.OptParse
 

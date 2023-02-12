@@ -29,11 +29,13 @@ module Cardano.Node.Types
   , renderVRFPrivateKeyFilePermissionError
   ) where
 
-import           Cardano.Prelude
-import           Prelude (fail)
-
 import           Data.Aeson
+import           Data.ByteString (ByteString)
+import           Data.Monoid (Last)
+import           Data.String (IsString)
+import           Data.Text (Text)
 import qualified Data.Text as Text
+import           Data.Word (Word16, Word8)
 
 import           Cardano.Api
 import qualified Cardano.Chain.Update as Byron

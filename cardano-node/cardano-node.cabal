@@ -151,6 +151,7 @@ library
                       , cborg ^>= 0.2.4
                       , contra-tracer
                       , containers
+                      , deepseq
                       , directory
                       , dns
                       , ekg
@@ -211,7 +212,6 @@ executable cardano-node
   build-depends:        base >= 4.14 && < 4.17
                       , cardano-git-rev
                       , cardano-node
-                      , cardano-prelude
                       , optparse-applicative-fork
                       , text
 
@@ -227,7 +227,6 @@ test-suite cardano-node-test
                       , bytestring
                       , cardano-api
                       , cardano-node
-                      , cardano-prelude
                       , cardano-slotting ^>= 0.1
                       , directory
                       , hedgehog
@@ -239,7 +238,6 @@ test-suite cardano-node-test
                       , mtl
                       , text
                       , time
-                      , transformers
                       , vector
 
   other-modules:        Test.Cardano.Node.FilePermissions

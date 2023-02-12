@@ -22,14 +22,19 @@ module Cardano.Tracing.Config
   , TraceInboundGovernorCounters
   ) where
 
-import           Cardano.Prelude
-import           Prelude (String)
-
+import           Control.Monad (MonadPlus (..))
 import           Data.Aeson
 import qualified Data.Aeson.Key as Aeson
 import           Data.Aeson.Types
+import           Data.Bifunctor (Bifunctor (..))
+import           Data.Monoid (Last (..))
+import           Data.Proxy (Proxy (..))
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Generic.Data (gmappend)
+import           GHC.Generics (Generic)
+import           GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
+
 
 import           Cardano.BM.Tracing (TracingVerbosity (..))
 import           Cardano.Node.Orphans ()

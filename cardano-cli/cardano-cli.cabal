@@ -119,10 +119,12 @@ library
                       , cborg >= 0.2.4 && < 0.3
                       , containers
                       , cryptonite
+                      , deepseq
                       , directory
                       , filepath
                       , formatting
                       , iproute
+                      , mtl
                       , network
                       , optparse-applicative-fork
                       , ouroboros-consensus
@@ -174,7 +176,6 @@ test-suite cardano-cli-test
                       , cardano-api:gen
                       , cardano-cli
                       , cardano-node
-                      , cardano-prelude
                       , cardano-slotting ^>= 0.1
                       , containers
                       , directory

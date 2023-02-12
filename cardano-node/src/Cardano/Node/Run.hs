@@ -9,6 +9,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
 #if !defined(mingw32_HOST_OS)
 #define UNIX
 #endif
@@ -19,17 +21,31 @@ module Cardano.Node.Run
   ) where
 
 import qualified Cardano.Api as Api
-import           Cardano.Prelude hiding (ByteString, STM, atomically, show, take, trace)
-import           Data.IP (toSockAddr)
-import           Prelude (String, id, show)
 
+import           Cardano.Prelude (FatalError (..))
+
+import           Data.Bits
+import           Data.IP (toSockAddr)
+
+import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId)
 import           Control.Concurrent.Class.MonadSTM.Strict
+import           Control.Exception (try)
+import           Control.Monad (forM_, unless, void, when)
+import           Control.Monad.Class.MonadThrow (MonadThrow (..))
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans.Except (ExceptT, runExceptT)
 import           Control.Monad.Trans.Except.Extra (left)
 import           "contra-tracer" Control.Tracer
+import           Data.Either (partitionEithers)
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Text (breakOn, pack, take)
+import           Data.Maybe (catMaybes, mapMaybe)
+import           Data.Monoid (Last (..))
+import           Data.Proxy (Proxy (..))
+import           Data.Text (Text, breakOn, pack)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import qualified Data.Text.IO as Text
 import           Data.Time.Clock (getCurrentTime)
 import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import           Data.Version (showVersion)
@@ -37,7 +53,7 @@ import           Network.HostName (getHostName)
 import           Network.Socket (Socket)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
 import           System.Environment (lookupEnv)
-
+import           System.Exit (exitFailure)
 #ifdef UNIX
 import           GHC.Weak (deRefWeak)
 import           System.Posix.Files
@@ -115,7 +131,7 @@ runNode cmdPc = do
     configYamlPc <- parseNodeConfigurationFP . getLast $ pncConfigFile cmdPc
 
     nc <- case makeNodeConfiguration $ defaultPartialNodeConfiguration <> configYamlPc <> cmdPc of
-            Left err -> panic $ "Error in creating the NodeConfiguration: " <> Text.pack err
+            Left err -> error $ "Error in creating the NodeConfiguration: " <> err
             Right nc' -> return nc'
 
     putStrLn $ "Node configuration: " <> show nc
@@ -124,7 +140,7 @@ runNode cmdPc = do
       Just vrfFp -> do vrf <- runExceptT $ checkVRFFilePermissions vrfFp
                        case vrf of
                          Left err ->
-                           putTextLn (renderVRFPrivateKeyFilePermissionError err) >> exitFailure
+                           Text.putStrLn (renderVRFPrivateKeyFilePermissionError err) >> exitFailure
                          Right () ->
                            pure ()
       Nothing -> pure ()
@@ -214,7 +230,7 @@ handleNodeWithTracers cmdPc nc p networkMagic runP = do
             p
 
           loggingLayer <- case eLoggingLayer of
-            Left err  -> putTextLn (Text.pack $ show err) >> exitFailure
+            Left err  -> Text.putStrLn (Text.pack $ show err) >> exitFailure
             Right res -> return res
           !trace <- setupTrace loggingLayer
           let tracer = contramap pack $ toLogObject trace
@@ -289,7 +305,7 @@ setupTrace loggingLayer = do
   where
     hostname = do
       hn0 <- pack <$> getHostName
-      return $ take 8 $ fst $ breakOn "." hn0
+      return $ Text.take 8 $ fst $ breakOn "." hn0
 
 {-
 -- TODO: needs to be finished (issue #4362)

@@ -1,13 +1,10 @@
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Node.Orphans () where
-
-import           Cardano.Prelude
-import           Prelude (fail)
 
 import           Cardano.Api.Orphans ()
 
@@ -16,8 +13,8 @@ import qualified Data.Text as Text
 
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import qualified Cardano.Chain.Update as Update
-import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.CompactAddress as Ledger
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..))
 
 instance FromJSON TracingVerbosity where

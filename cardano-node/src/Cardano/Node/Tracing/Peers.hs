@@ -6,9 +6,9 @@ module Cardano.Node.Tracing.Peers
   , traceNodePeers
   ) where
 
-import           Cardano.Prelude
-
 import           Data.Aeson (FromJSON, ToJSON)
+import           Data.Text (Text)
+import           GHC.Generics (Generic)
 
 import           Cardano.Logging
 

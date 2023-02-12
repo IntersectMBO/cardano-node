@@ -1,11 +1,11 @@
 module Test.Utilities (diffVsGoldenFile) where
 
-import           Cardano.Prelude
-import           Prelude (String)
-import qualified Prelude
+import           Cardano.Prelude (ConvertText (..))
 
+import           Control.Monad.IO.Class (MonadIO (liftIO))
 import           Data.Algorithm.Diff (PolyDiff (Both), getGroupedDiff)
 import           Data.Algorithm.DiffOutput (ppDiff)
+import           GHC.Stack (callStack)
 import           Hedgehog (MonadTest)
 import           Hedgehog.Extras.Test.Base (failMessage)
 

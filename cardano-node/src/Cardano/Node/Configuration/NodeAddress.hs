@@ -30,16 +30,16 @@ module Cardano.Node.Configuration.NodeAddress
   ) where
 
 import           Cardano.Api
-import           Cardano.Prelude
-import           Prelude (fail)
 
 import           Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, (.:), (.=))
 import           Data.IP (IP (..), IPv4, IPv6)
 import qualified Data.IP as IP
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Network.DNS as DNS (Domain)
 import           Network.Socket (PortNumber, SockAddr (..))
+import           Text.Read (readMaybe)
 
 import           Ouroboros.Network.PeerSelection.RootPeersDNS (DomainAccessPoint (..))
 

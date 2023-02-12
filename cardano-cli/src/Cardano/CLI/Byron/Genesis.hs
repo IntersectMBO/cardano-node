@@ -12,12 +12,21 @@ module Cardano.CLI.Byron.Genesis
   )
 where
 
-import           Cardano.Prelude hiding (show, trace)
-import           Prelude (String)
+import           Cardano.Prelude (canonicalDecodePretty, canonicalEncodePretty)
 
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans (MonadTrans (..))
+import           Control.Monad.Trans.Except (ExceptT (..), withExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left, right)
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LB
+import qualified Data.List as List
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           Data.String (IsString)
+import           Data.Text (Text)
+import qualified Data.Text.Encoding as Text
+import           Data.Text.Lazy (toStrict)
 import           Data.Text.Lazy.Builder (toLazyText)
 import           Data.Time (UTCTime)
 import           Formatting.Buildable
@@ -187,7 +196,7 @@ dumpGenesis (NewDirectory outDir) genesisData gs = do
 
   findDelegateCert :: SigningKey ByronKey -> ExceptT ByronGenesisError IO Certificate
   findDelegateCert bSkey@(ByronSigningKey sk) =
-    case find (isCertForSK sk) (Map.elems dlgCertMap) of
+    case List.find (isCertForSK sk) (Map.elems dlgCertMap) of
       Nothing -> left . NoGenesisDelegationForKey
                  . prettyPublicKey $ getVerificationKey bSkey
       Just x  -> right x
@@ -196,7 +205,7 @@ dumpGenesis (NewDirectory outDir) genesisData gs = do
   genesisJSONFile = outDir <> "/genesis.json"
 
   printFakeAvvmSecrets :: Crypto.RedeemSigningKey -> ByteString
-  printFakeAvvmSecrets rskey = encodeUtf8 . toStrict . toLazyText $ build rskey
+  printFakeAvvmSecrets rskey = Text.encodeUtf8 . toStrict . toLazyText $ build rskey
 
   -- Compare a given 'SigningKey' with a 'Certificate' 'VerificationKey'
   isCertForSK :: Crypto.SigningKey -> Certificate -> Bool

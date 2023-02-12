@@ -4,7 +4,8 @@ module Test.Golden.Version
   ( golden_version
   ) where
 
-import           Cardano.Prelude
+import           Control.Monad (void)
+
 import           Hedgehog (Property)
 import           Test.OptParse
 

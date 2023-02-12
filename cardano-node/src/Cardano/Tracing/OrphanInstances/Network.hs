@@ -15,17 +15,19 @@
 
 module Cardano.Tracing.OrphanInstances.Network () where
 
-import           Cardano.Prelude hiding (group, show)
-import           Prelude (String, show)
-
+import           Control.Exception (Exception (..), SomeException (..))
 import           Control.Monad.Class.MonadTime (DiffTime, Time (..))
 import           Data.Aeson (Value (..))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (listValue)
+import           Data.Bifunctor (Bifunctor (..))
+import           Data.Data (Proxy (..))
+import           Data.Foldable (Foldable (..))
+import           Data.Functor.Identity (Identity (..))
 import qualified Data.IP as IP
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import           Data.Text (pack)
+import           Data.Text (Text, pack)
 
 import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
 import           Network.TypedProtocol.Core (PeerHasAgency (..))

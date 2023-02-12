@@ -4,7 +4,7 @@ module Test.Golden.Shelley.Transaction.Sign
   ( golden_shelleyTransactionSign
   ) where
 
-import           Cardano.Prelude
+import           Control.Monad (void)
 import           Hedgehog (Property)
 import           Test.OptParse
 

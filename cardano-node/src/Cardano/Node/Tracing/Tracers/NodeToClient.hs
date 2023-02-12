@@ -11,9 +11,9 @@
 module Cardano.Node.Tracing.Tracers.NodeToClient () where
 
 import           Cardano.Logging
-import           Cardano.Prelude hiding (Show, show)
 import           Data.Aeson (Value (String), (.=))
-import           Data.Text (pack)
+import           Data.Text (Text, pack)
+
 import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
 
 import           Ouroboros.Consensus.Ledger.Query (Query)

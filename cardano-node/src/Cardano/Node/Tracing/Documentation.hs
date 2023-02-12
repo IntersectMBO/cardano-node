@@ -17,8 +17,11 @@ module Cardano.Node.Tracing.Documentation
   , docTracers
   ) where
 
+import           Control.Exception (SomeException)
 import           Data.Aeson.Types (ToJSON)
+import           Data.Proxy (Proxy (..))
 import qualified Data.Text.IO as T
+import           GHC.Generics (Generic)
 import           Network.Mux (MuxTrace (..), WithMuxBearer (..))
 import qualified Network.Socket as Socket
 import qualified Options.Applicative as Opt
@@ -26,7 +29,6 @@ import qualified Options.Applicative as Opt
 import           Cardano.Logging
 import           Cardano.Logging.Resources
 import           Cardano.Logging.Resources.Types ()
-import           Cardano.Prelude hiding (trace)
 
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
 import           Cardano.Node.Tracing.Formatting ()

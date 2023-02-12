@@ -10,9 +10,13 @@ module Cardano.Node.Tracing.Tracers.ForgingThreadStats
   ) where
 
 import           Cardano.Logging
-import           Cardano.Prelude hiding (All, concat, (:.:))
+
+import           Control.Concurrent (ThreadId, myThreadId)
+import           Control.Monad.IO.Class (MonadIO (..))
 import           Data.Aeson (Value (..), (.=))
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           Data.Maybe (fromMaybe)
 
 import           Cardano.Node.Tracing.Tracers.StartLeadershipCheck (ForgeTracerType)
 import           Cardano.Slotting.Slot (SlotNo (..))

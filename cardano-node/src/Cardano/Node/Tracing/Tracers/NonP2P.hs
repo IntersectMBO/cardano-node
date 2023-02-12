@@ -10,7 +10,8 @@ module Cardano.Node.Tracing.Tracers.NonP2P
     () where
 
 import           Cardano.Logging
-import           Cardano.Prelude hiding (Show, show)
+
+import           Control.Exception (Exception (..), SomeException (..))
 import           Data.Aeson (Value (String), (.=))
 import qualified Data.IP as IP
 import           Data.Text (pack)

@@ -24,10 +24,9 @@ module Cardano.Node.Tracing.Render
   , renderWithOrigin
   ) where
 
-import           Cardano.Prelude
-import           Prelude (id)
-
 import qualified Data.ByteString.Base16 as B16
+import           Data.Proxy (Proxy (..))
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 

@@ -2,7 +2,7 @@
 
 module Test.Golden.TxView (txViewTests) where
 
-import           Cardano.Prelude
+import           Control.Monad (void)
 
 import           Hedgehog (Group (..), Property, checkSequential)
 import           Hedgehog.Extras (Integration, moduleWorkspace, note_, propertyOnce)
