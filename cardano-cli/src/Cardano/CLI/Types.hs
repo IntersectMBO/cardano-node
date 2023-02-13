@@ -105,6 +105,13 @@ data OpCertNodeAndOnDiskCounterInformation
   | OpCertOnDiskCounterBehindNodeState
       OpCertOnDiskCounter
       OpCertNodeStateCounter
+  -- | The on disk operational certificate has a counter
+  -- that is ahead of the counter in the node state by more
+  -- than 1. The on disk operational certificate is invalid in
+  -- this case.
+  | OpCertOnDiskCounterTooFarAheadOfNodeState
+      OpCertOnDiskCounter
+      OpCertNodeStateCounter
   -- | The corresponding counter for operational certificate
   -- was not found in the node state. This means the relevant
   -- stake pool has not minted a block yet. When the stake pool

@@ -507,6 +507,7 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
      -> OpCertNodeAndOnDiskCounterInformation
    opCertNodeAndOnDiskCounters o@(OpCertOnDiskCounter odc) (Just n@(OpCertNodeStateCounter nsc))
      | odc < nsc = OpCertOnDiskCounterBehindNodeState o n
+     | odc > nsc + 1 = OpCertOnDiskCounterTooFarAheadOfNodeState o n
      | otherwise = OpCertOnDiskCounterMoreThanOrEqualToNodeState o n
    opCertNodeAndOnDiskCounters o Nothing = OpCertNoBlocksMintedYet o
 
@@ -529,6 +530,10 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
      case opCertCounterInfo of
       OpCertOnDiskCounterMoreThanOrEqualToNodeState _ _ ->
         "✓ The operational certificate counter agrees with the node protocol state counter"
+      OpCertOnDiskCounterTooFarAheadOfNodeState onDiskC nodeStateC ->
+        "✗ The operational certificate counter too far ahead of the node protocol state counter in the operational certificate at: " <> opCertFile <> "\n" <>
+        "  On disk operational certificate counter: " <> show (unOpCertOnDiskCounter onDiskC) <> "\n" <>
+        "  Protocol state counter: " <> show (unOpCertNodeStateCounter nodeStateC)
       OpCertOnDiskCounterBehindNodeState onDiskC nodeStateC ->
         "✗ The protocol state counter is greater than the counter in the operational certificate at: " <> opCertFile <> "\n" <>
         "  On disk operational certificate counter: " <> show (unOpCertOnDiskCounter onDiskC) <> "\n" <>
@@ -553,6 +558,7 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
          (onDiskCounter, mNodeCounter) = case oCertCounterInfo of
                                            OpCertOnDiskCounterMoreThanOrEqualToNodeState d n -> (d, Just n)
                                            OpCertOnDiskCounterBehindNodeState d n -> (d, Just n)
+                                           OpCertOnDiskCounterTooFarAheadOfNodeState d n -> (d, Just n)
                                            OpCertNoBlocksMintedYet d -> (d, Nothing)
 
      in O.QueryKesPeriodInfoOutput
