@@ -550,7 +550,15 @@ EOF
             "$env"
             "$depl"
             "$run"
-            'if test -f compressed/logs-$obj.tar.zst; then cat compressed/logs-$obj.tar.zst; else tar c $obj --zstd --ignore-failed-read; fi'
+            'for f in ${files[*]};
+             do fp=${f/%/.tar.zst};
+                fpp=${fp/#/compressed/logs-};
+                if test -f $fpp;
+                then cat $fpp;
+                else tar c $f --zstd --ignore-failed-read;
+                fi;
+             done;
+             '
 
             common-run-files
             $mach
@@ -584,7 +592,7 @@ EOF
                    "$env"
                    "$depl"
                    "$run"
-                   'tar c ${files[*]} --zstd'
+                   'tar c ${files[*]} --zstd;'
 
                    common-run-files
                    ${analysis_files[*]}
@@ -792,7 +800,7 @@ run_aws_get() {
     local xs=(${xs2[*]})
 
     local count=${#xs[*]}
-    progress "run | fetch $(white $run)" "objects to fetch:  $(white $count) total"
+    progress "run | fetch $(white $run)" "objects to fetch:  $(white $count) total:  ${objects[*]}"
 
     local max_batch=9 base=0 batch
     while test $base -lt $count
@@ -800,9 +808,9 @@ run_aws_get() {
        {
            local lbatch=(${batch[*]})
            ssh $env -- \
-               sh -c "'files=(${lbatch[*]}); cd $depl/runs/$run && ${remote_tar_cmd}'" |
+               sh -c "'files=(${lbatch[*]}); cd $depl/runs/$run && { ${remote_tar_cmd} }'" |
                (cd $dir
-                tar x --zstd ||
+                tar x --zstd --ignore-zeros ||
                     progress "fetch error" "'files=(${lbatch[*]}); cd $depl/runs/$run && ${remote_tar_cmd}'"
                )
            progress "run | fetch $(white $run)" "batch done:  $(yellow ${batch[*]})"
@@ -810,6 +818,7 @@ run_aws_get() {
        sleep 1
        base=$((base + max_batch))
     done
+    progress "run | fetch $(white $run)" "batches started, waiting.."
     wait
 
     progress "run | fetch" "adding manifest"
