@@ -80,6 +80,7 @@ module Cardano.Api.IPC (
     NodeToClientVersion(..),
 
     UnsupportedNtcVersionError(..),
+    renderUnsupportedNtcVersionError,
   ) where
 
 import           Data.Void (Void)

@@ -1,11 +1,19 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Cardano.Api.IPC.Version
   ( NodeToClientVersionOf (..)
   , MinNodeToClientVersion
 
   -- *** Error types
   , UnsupportedNtcVersionError(..)
+  , renderUnsupportedNtcVersionError
   ) where
 
+import           Prelude
+
+import           Data.Text (Text)
+
+import           Cardano.Api.Utils (textShow)
 import           Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
 
 -- | The query 'a' is a versioned query, which means it requires the Node to support a minimum
@@ -32,3 +40,10 @@ type MinNodeToClientVersion = NodeToClientVersion
 
 data UnsupportedNtcVersionError = UnsupportedNtcVersionError !MinNodeToClientVersion !NodeToClientVersion
   deriving (Eq, Show)
+
+renderUnsupportedNtcVersionError :: UnsupportedNtcVersionError -> Text
+renderUnsupportedNtcVersionError = \case
+  UnsupportedNtcVersionError minNtcVersion ntcVersion ->
+    "Unsupported feature for the node-to-client protocol version.\n" <>
+    "This query requires at least " <> textShow minNtcVersion <> " but the node negotiated " <> textShow ntcVersion <> ".\n" <>
+    "Later node versions support later protocol versions (but development protocol versions are not enabled in the node by default)."
