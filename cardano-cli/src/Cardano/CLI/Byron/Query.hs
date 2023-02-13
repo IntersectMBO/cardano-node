@@ -10,12 +10,15 @@ module Cardano.CLI.Byron.Query
   ) where
 
 import           Cardano.Api
-import           Cardano.Prelude
 
+import           Control.Monad.IO.Unlift (MonadIO (..))
+import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy as LB
+import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
+import qualified Data.Text.IO as Text
 
 
 {- HLINT ignore "Reduce duplication" -}
@@ -44,6 +47,6 @@ runGetLocalNodeTip networkId = do
           }
 
     tip <- liftIO $ getLocalChainTip connctInfo
-    liftIO . putTextLn . Text.decodeUtf8 . LB.toStrict $ encodePretty tip
+    liftIO . Text.putStrLn . Text.decodeUtf8 . LB.toStrict $ encodePretty tip
 
 

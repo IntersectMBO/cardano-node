@@ -5,15 +5,17 @@ module Test.Golden.Byron.Vote
   ) where
 
 import           Cardano.CLI.Byron.Vote
-import           Cardano.Prelude
+
+import           Control.Monad (void)
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans.Except (runExceptT)
 import qualified Data.Text as Text
+import qualified Hedgehog.Extras.Test.Base as H
 
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
 import           Hedgehog.Internal.Property (failWith)
 import           Test.OptParse
-
-import qualified Hedgehog.Extras.Test.Base as H
 
 {- HLINT ignore "Use camelCase" -}
 

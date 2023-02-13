@@ -5,15 +5,19 @@ module Test.Cli.ITN
   ) where
 
 import           Cardano.CLI.Shelley.Run.Key (decodeBech32)
-import           Cardano.Prelude
-import           Hedgehog (Property, (===))
-import           Test.OptParse
 
 import qualified Codec.Binary.Bech32 as Bech32
+import           Control.Monad (void)
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as Base16
+import           Data.Text (Text)
+import qualified Data.Text.IO as Text
+import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
+import           Test.OptParse
 
 {- HLINT ignore "Reduce duplication" -}
 
@@ -38,8 +42,8 @@ prop_convertITNKeys = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   outputHaskellSignKeyFp <- noteTempFile tempDir "haskell-signing-key.key"
 
   -- Write ITN keys to disk
-  liftIO $ writeFile itnVerKeyFp itnVerKey
-  liftIO $ writeFile itnSignKeyFp itnSignKey
+  liftIO $ Text.writeFile itnVerKeyFp itnVerKey
+  liftIO $ Text.writeFile itnSignKeyFp itnSignKey
   H.assertFilesExist [itnVerKeyFp, itnSignKeyFp]
 
   -- Generate haskell stake verification key

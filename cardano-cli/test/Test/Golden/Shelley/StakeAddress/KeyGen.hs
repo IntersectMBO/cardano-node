@@ -4,10 +4,10 @@ module Test.Golden.Shelley.StakeAddress.KeyGen
   ( golden_shelleyStakeAddressKeyGen
   ) where
 
-import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse
 
+import           Control.Monad (void)
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 

@@ -41,10 +41,9 @@ module Cardano.CLI.Types
   , AllOrOnly(..)
   ) where
 
-import           Cardano.Prelude hiding (Word64)
-
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, pairs, (.=))
 import qualified Data.Aeson as Aeson
+import           Data.String (IsString)
 import qualified Data.Text as Text
 import           Data.Word (Word64)
 
@@ -173,8 +172,8 @@ data OpCertIntervalInformation
 
 instance FromJSON GenesisFile where
   parseJSON (Aeson.String genFp) = pure . GenesisFile $ Text.unpack genFp
-  parseJSON invalid = panic $ "Parsing of GenesisFile failed due to type mismatch. "
-                           <> "Encountered: " <> Text.pack (show invalid)
+  parseJSON invalid = error $ "Parsing of GenesisFile failed due to type mismatch. "
+                           <> "Encountered: " <> show invalid
 
 -- | The desired output format.
 data OutputFormat

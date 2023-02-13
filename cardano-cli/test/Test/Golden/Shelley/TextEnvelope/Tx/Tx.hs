@@ -4,8 +4,7 @@ module Test.Golden.Shelley.TextEnvelope.Tx.Tx
   ( golden_shelleyTx
   ) where
 
-import           Cardano.Prelude
-
+import           Control.Monad (void)
 import           Hedgehog (Property)
 import           Test.OptParse
 

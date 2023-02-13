@@ -10,14 +10,17 @@ module Cardano.Tracing.Peer
   , tracePeers
   ) where
 
-import           Cardano.Prelude hiding (atomically)
-import           Prelude (String)
-
 import qualified Control.Concurrent.Class.MonadSTM.Strict as STM
+import           Control.DeepSeq (NFData (..))
 import           Data.Aeson (ToJSON (..), Value (..), toJSON, (.=))
+import           Data.Functor ((<&>))
+import qualified Data.List as List
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import           Data.Text (Text)
 import qualified Data.Text as Text
+import           GHC.Generics (Generic)
 import           NoThunks.Class (AllowThunk (..), NoThunks)
 import           Text.Printf (printf)
 
@@ -128,7 +131,7 @@ instance ToObject [Peer blk] where
   toObject verb xs = mconcat
     [ "kind"  .= String "NodeKernelPeers"
     , "peers" .= toJSON
-      (foldl' (\acc x -> toObject verb x : acc) [] xs)
+      (List.foldl' (\acc x -> toObject verb x : acc) [] xs)
     ]
 
 instance ToObject (Peer blk) where
@@ -136,7 +139,7 @@ instance ToObject (Peer blk) where
     mconcat [ "peerAddress"   .= String (Text.pack . show . remoteAddress $ cid)
             , "peerStatus"    .= String (Text.pack . ppStatus $ status)
             , "peerSlotNo"    .= String (Text.pack . ppMaxSlotNo . peerFetchMaxSlotNo $ inflight)
-            , "peerReqsInF"   .= String (show . peerFetchReqsInFlight $ inflight)
-            , "peerBlocksInF" .= String (show . Set.size . peerFetchBlocksInFlight $ inflight)
-            , "peerBytesInF"  .= String (show . peerFetchBytesInFlight $ inflight)
+            , "peerReqsInF"   .= String (Text.pack . show . peerFetchReqsInFlight $ inflight)
+            , "peerBlocksInF" .= String (Text.pack . show . Set.size . peerFetchBlocksInFlight $ inflight)
+            , "peerBytesInF"  .= String (Text.pack . show . peerFetchBytesInFlight $ inflight)
             ]

@@ -24,14 +24,17 @@ module Cardano.Node.Configuration.TopologyP2P
   )
 where
 
-import           Cardano.Prelude hiding (ap)
-import           Prelude (String)
-
+import           Control.Exception (IOException)
 import qualified Control.Exception as Exception
+import           Control.Exception.Base (Exception (..))
+import           Control.Monad (MonadPlus (..))
 import           Data.Aeson
+import           Data.Bifunctor (Bifunctor (..))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.Text (Text)
 import qualified Data.Text as Text
+import           Data.Word (Word64)
 
 import           "contra-tracer" Control.Tracer (Tracer, traceWith)
 
@@ -268,6 +271,6 @@ readTopologyFileOrError :: Tracer IO (StartupTrace blk)
                         -> NodeConfiguration -> IO NetworkTopology
 readTopologyFileOrError tr nc =
       readTopologyFile tr nc
-  >>= either (\err -> panic $ "Cardano.Node.Configuration.TopologyP2P.readTopologyFile: "
-                           <> err)
+  >>= either (\err -> error $ "Cardano.Node.Configuration.TopologyP2P.readTopologyFile: "
+                           <> Text.unpack err)
              pure

@@ -11,11 +11,11 @@ module Cardano.CLI.Shelley.Run.Address
   , makeStakeAddressRef
   ) where
 
-import           Cardano.Prelude hiding (putStrLn)
-
-
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left, newExceptT)
 import qualified Data.ByteString.Char8 as BS
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 

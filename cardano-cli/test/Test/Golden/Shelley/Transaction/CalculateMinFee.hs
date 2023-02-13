@@ -4,7 +4,6 @@ module Test.Golden.Shelley.Transaction.CalculateMinFee
   ( golden_shelleyTransactionCalculateMinFee
   ) where
 
-import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse
 

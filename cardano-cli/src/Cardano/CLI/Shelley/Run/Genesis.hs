@@ -30,28 +30,47 @@ module Cardano.CLI.Shelley.Run.Genesis
   , readProtocolParametersSourceSpec
   ) where
 
-import           Cardano.Prelude hiding (unlines)
-import           Prelude (String, error, id, unlines, zip3)
-
+import           Control.DeepSeq (NFData, force)
+import           Control.Exception (IOException)
+import           Control.Monad (forM, forM_, unless, when)
+import           Control.Monad.Except (MonadError (..), runExceptT)
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans.Except (ExceptT, throwE, withExceptT)
 import           Data.Aeson hiding (Key)
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.Aeson.KeyMap as Aeson
+import           Data.Bifunctor (Bifunctor (..))
 import qualified Data.Binary.Get as Bin
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.Char (isDigit)
 import           Data.Coerce (coerce)
+import           Data.Data (Proxy (..))
+import           Data.Either (fromRight)
+import           Data.Function (on)
+import           Data.Functor (void)
+import           Data.Functor.Identity
 import qualified Data.List as List
 import qualified Data.List.Split as List
 import qualified Data.ListMap as ListMap
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-
+import           Data.Maybe (fromMaybe)
 import qualified Data.Sequence.Strict as Seq
 import           Data.String (fromString)
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import           Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, getCurrentTime,
                    secondsToNominalDiffTime)
+import           Data.Word (Word64)
+import           GHC.Generics (Generic)
+import qualified System.IO as IO
+import qualified System.Random as Random
+import           System.Random (StdGen)
+import           Text.Read (readMaybe)
 
 import           Cardano.Binary (Annotated (Annotated), ToCBOR (..))
 
@@ -122,8 +141,7 @@ import           Data.ListMap (ListMap (..))
 
 import qualified Cardano.CLI.IO.Lazy as Lazy
 
-import qualified System.Random as Random
-import           System.Random (StdGen)
+import           Cardano.Prelude (canonicalEncodePretty)
 
 data ShelleyGenesisCmdError
   = ShelleyGenesisCmdAesonDecodeError !FilePath !Text
@@ -457,7 +475,7 @@ generateShelleyNodeSecrets shelleyDelegateKeys shelleyGenesisvkeys = do
     opCertInputs :: [(VerificationKey KesKey, SigningKey GenesisDelegateExtendedKey)]
     opCertInputs = zip (map getVerificationKey kesKeys) shelleyDelegateKeys
     createOpCert :: (VerificationKey KesKey, SigningKey GenesisDelegateExtendedKey) -> (OperationalCertificate, OperationalCertificateIssueCounter)
-    createOpCert (kesKey, delegateKey) = either (error . show) identity eResult
+    createOpCert (kesKey, delegateKey) = either (error . show) id eResult
       where
         eResult = issueOperationalCertificate kesKey (Right delegateKey) (KESPeriod 0) counter
         counter = OperationalCertificateIssueCounter 0 (convert . getVerificationKey $ delegateKey)
@@ -639,7 +657,7 @@ runGenesisCreateCardano (GenesisDir rootdir)
 
     findDelegateCert :: Genesis.GenesisData -> SigningKey ByronKey -> ExceptT ByronGenesisError IO Dlg.Certificate
     findDelegateCert byronGenesis bSkey@(ByronSigningKey sk) = do
-      case find (isCertForSK sk) (Map.elems $ dlgCertMap byronGenesis) of
+      case List.find (isCertForSK sk) (Map.elems $ dlgCertMap byronGenesis) of
         Nothing -> throwE . NoGenesisDelegationForKey
                    . Byron.prettyPublicKey $ getVerificationKey bSkey
         Just x  -> pure x
@@ -740,7 +758,7 @@ runGenesisCreateStaked (GenesisDir rootdir)
   void $ writeFileGenesis (rootdir </> "genesis.alonzo.json") $ WritePretty alonzoGenesis
   --TODO: rationalise the naming convention on these genesis json files.
 
-  liftIO $ Text.hPutStrLn stderr $ mconcat $
+  liftIO $ Text.hPutStrLn IO.stderr $ mconcat $
     [ "generated genesis with: "
     , textShow genNumGenesisKeys, " genesis keys, "
     , textShow genNumUTxOKeys, " non-delegating UTxO keys, "
@@ -1157,7 +1175,7 @@ writeFileGenesis fpath genesis = do
        WritePretty a -> LBS.toStrict $ encodePretty a
        WriteCanonical a -> LBS.toStrict
           . renderCanonicalJSON
-          . either (error "error parsing json that was just encoded!?") identity
+          . either (error "error parsing json that was just encoded!?") id
           . parseCanonicalJSON
           . canonicalEncodePretty $ a
 
@@ -1272,8 +1290,8 @@ extractFileNameIndexes files = do
       []     -> return ()
       files' -> throwError (ShelleyGenesisCmdFilesNoIndex files')
     case filter (\g -> length g > 1)
-       . groupBy ((==) `on` snd)
-       . sortBy (compare `on` snd)
+       . List.groupBy ((==) `on` snd)
+       . List.sortBy (compare `on` snd)
        $ [ (file, ix) | (file, Just ix) <- filesIxs ] of
       [] -> return ()
       (g:_) -> throwError (ShelleyGenesisCmdFilesDupIndex (map fst g))

@@ -12,9 +12,9 @@ import           Cardano.CLI.Byron.Parsers (backwardsCompatibilityCommands, pars
 import           Cardano.CLI.Render (customRenderHelp)
 import           Cardano.CLI.Run (ClientCommand (..))
 import           Cardano.CLI.Shelley.Parsers (parseShelleyCommands)
-import           Cardano.Prelude
+
+import           Data.Foldable
 import           Options.Applicative
-import           Prelude (String)
 
 import qualified Options.Applicative as Opt
 

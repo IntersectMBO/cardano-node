@@ -8,13 +8,12 @@ module Cardano.CLI.Byron.Vote
   , submitByronVote
   ) where
 
-import           Cardano.Prelude
-
+import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither)
 import           Control.Tracer (stdoutTracer, traceWith)
 import qualified Data.ByteString as BS
+import           Data.Text (Text)
 import qualified Data.Text as Text
-
 
 import qualified Cardano.Binary as Binary
 import           Cardano.CLI.Byron.UpdateProposal (ByronUpdateProposalError,
@@ -30,6 +29,8 @@ import           Cardano.CLI.Byron.Tx (ByronTxError, nodeSubmitTx)
 import           Cardano.CLI.Helpers (HelpersError, ensureNewFileLBS)
 import           Cardano.CLI.Shelley.Commands (ByronKeyFormat (..))
 import           Cardano.CLI.Types
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Data.Bifunctor (first)
 
 
 data ByronVoteError

@@ -18,21 +18,28 @@ module Cardano.CLI.Shelley.Run.Transaction
   , toTxOutInAnyEra
   ) where
 
-import           Cardano.Prelude hiding (All, Any)
-import           Prelude (String, error)
-
+import           Control.Monad (forM_)
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, hoistMaybe, left,
                    newExceptT)
 import           Data.Aeson.Encode.Pretty (encodePretty)
+import           Data.Bifunctor (Bifunctor (..))
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.Data ((:~:) (..))
+import           Data.Foldable (Foldable (..))
 import qualified Data.List as List
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           Data.Maybe (catMaybes, fromMaybe)
+import           Data.Set (Set)
 import qualified Data.Set as Set
+import           Data.Text (Text)
 import qualified Data.Text as Text
+import qualified Data.Text.IO as Text
 import           Data.Type.Equality (TestEquality (..))
 import qualified System.IO as IO
-
 
 import           Cardano.Api
 import           Cardano.Api.Byron hiding (SomeByronSigningKey (..))
@@ -125,7 +132,7 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdReadWitnessSigningDataError witSignDataErr ->
       renderReadWitnessSigningDataError witSignDataErr
     ShelleyTxCmdRequiredSignerByronKeyError (SigningKeyFile fp) ->
-      "Byron key witness was used as a required signer: " <> show fp
+      "Byron key witness was used as a required signer: " <> textShow fp
     ShelleyTxCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyTxCmdSocketEnvError envSockErr -> renderEnvSocketError envSockErr
     ShelleyTxCmdTxSubmitError res -> "Error while submitting tx: " <> res
@@ -156,14 +163,14 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdWitnessEraMismatch era era' (WitnessFile file) ->
       "The era of a witness does not match the era of the transaction. " <>
       "The transaction is for the " <> renderEra era <> " era, but the " <>
-      "witness in " <> show file <> " is for the " <> renderEra era' <> " era."
+      "witness in " <> textShow file <> " is for the " <> renderEra era' <> " era."
 
     ShelleyTxCmdScriptLanguageNotSupportedInEra (AnyScriptLanguage lang) era ->
-      "The script language " <> show lang <> " is not supported in the " <>
+      "The script language " <> textShow lang <> " is not supported in the " <>
       renderEra era <> " era."
 
     ShelleyTxCmdEraConsensusModeMismatch fp mode era ->
-       "Submitting " <> renderEra era <> " era transaction (" <> show fp <>
+       "Submitting " <> renderEra era <> " era transaction (" <> textShow fp <>
        ") is not supported in the " <> renderMode mode <> " consensus mode."
     ShelleyTxCmdPolicyIdsMissing policyids ->
       "The \"--mint\" flag specifies an asset with a policy Id, but no \
@@ -178,7 +185,7 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdUnsupportedMode mode -> "Unsupported mode: " <> renderMode mode
     ShelleyTxCmdByronEra -> "This query cannot be used for the Byron era"
     ShelleyTxCmdEraConsensusModeMismatchTxBalance fp mode era ->
-       "Cannot balance " <> renderEra era <> " era transaction body (" <> show fp <>
+       "Cannot balance " <> renderEra era <> " era transaction body (" <> textShow fp <>
        ") because is not supported in the " <> renderMode mode <> " consensus mode."
     ShelleyTxCmdBalanceTxBody err' -> Text.pack $ displayError err'
     ShelleyTxCmdTxInsDoNotExist e ->
@@ -195,9 +202,9 @@ renderShelleyTxCmdError err =
       "Execution units not available in the protocol parameters. This is \
       \likely due to not being in the Alonzo era"
     ShelleyTxCmdReferenceScriptsNotSupportedInEra (AnyCardanoEra era) ->
-      "TxCmd: Reference scripts not supported in era: " <> show era
+      "TxCmd: Reference scripts not supported in era: " <> textShow era
     ShelleyTxCmdTxEraCastErr (EraCastError value fromEra toEra) ->
-      "Unable to cast era from " <> show fromEra <> " to " <> show toEra <> " the value " <> show value
+      "Unable to cast era from " <> textShow fromEra <> " to " <> textShow toEra <> " the value " <> textShow value
     ShelleyTxCmdQueryConvenienceError e ->
       renderQueryConvenienceError e
     ShelleyTxCmdQueryNotScriptLocked e ->
@@ -757,7 +764,7 @@ runTxBuild era (AnyConsensusModeParams cModeParams) networkId mScriptValidity
                                            pparams stakePools txEraUtxo txBodyContent
                                            cAddr mOverrideWits
 
-      putStrLn $ "Estimated transaction fee: " <> (show fee :: String)
+      liftIO $ putStrLn $ "Estimated transaction fee: " <> (show fee :: String)
 
       return balancedTxBody
 
@@ -915,7 +922,7 @@ toTxOutInAnyEra era (TxOutAnyEra addr' val' mDatumHash refScriptFp) = do
            toTxDatumReferenceScriptBabbage sup inlineDatumRefScriptSupp mDatumHash refScriptFp
          (Nothing, Just _) ->
            -- TODO: Figure out how to make this state unrepresentable
-           panic "toTxOutInAnyEra: Should not be possible that inline datums are allowed but datums are not"
+           error "toTxOutInAnyEra: Should not be possible that inline datums are allowed but datums are not"
   pure $ TxOut addr val datum refScript
  where
   getReferenceScript
@@ -1145,7 +1152,7 @@ runTxSubmit (AnyConsensusModeParams cModeParams) network txFile = do
 
     res <- liftIO $ submitTxToNodeLocal localNodeConnInfo txInMode
     case res of
-      Net.Tx.SubmitSuccess -> liftIO $ putTextLn "Transaction successfully submitted."
+      Net.Tx.SubmitSuccess -> liftIO $ Text.putStrLn "Transaction successfully submitted."
       Net.Tx.SubmitFail reason ->
         case reason of
           TxValidationErrorInMode err _eraInMode -> left . ShelleyTxCmdTxSubmitError . Text.pack $ show err
@@ -1231,7 +1238,7 @@ runTxCreatePolicyId :: ScriptFile -> ExceptT ShelleyTxCmdError IO ()
 runTxCreatePolicyId (ScriptFile sFile) = do
   ScriptInAnyLang _ script <- firstExceptT ShelleyTxCmdScriptFileError $
                                 readFileScriptInAnyLang sFile
-  liftIO . putTextLn . serialiseToRawBytesHexText $ hashScript script
+  liftIO . Text.putStrLn . serialiseToRawBytesHexText $ hashScript script
 
 
 -- | Error reading the data required to construct a key witness.

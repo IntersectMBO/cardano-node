@@ -26,16 +26,13 @@ module Cardano.CLI.Shelley.Run.Query
   , executeQuery
   ) where
 
-import           Cardano.Prelude hiding (All)
-import           Prelude (String, id)
-
 import           Cardano.Api
 import qualified Cardano.Api as Api
 import           Cardano.Api.Byron
 import           Cardano.Api.Orphans ()
 import           Cardano.Api.Shelley
 
-import           Control.Monad.Trans.Except (except)
+import           Control.Monad.Trans.Except (ExceptT (..), except, runExcept, runExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
                    hoistMaybe, left, onLeft, onNothing)
 import           Data.Aeson as Aeson
@@ -97,6 +94,20 @@ import qualified Ouroboros.Consensus.HardFork.History as Consensus
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
 
+import           Control.Monad (forM, forM_, join)
+import           Control.Monad.IO.Class (MonadIO)
+import           Control.Monad.IO.Unlift (MonadIO (..))
+import           Control.Monad.Trans.Class
+import           Data.Bifunctor (Bifunctor (..))
+import           Data.Function ((&))
+import           Data.Functor ((<&>))
+import qualified Data.List as List
+import           Data.Map.Strict (Map)
+import           Data.Proxy (Proxy (..))
+import           Data.Set (Set)
+import           Data.Text (Text)
+import           Data.Text.Lazy (toStrict)
+import           GHC.Records (HasField)
 import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
 
@@ -142,15 +153,15 @@ renderShelleyQueryCmdError err =
     ShelleyQueryCmdHelpersError helpersErr -> renderHelpersError helpersErr
     ShelleyQueryCmdAcquireFailure acquireFail -> Text.pack $ show acquireFail
     ShelleyQueryCmdByronEra -> "This query cannot be used for the Byron era"
-    ShelleyQueryCmdPoolIdError poolId -> "The pool id does not exist: " <> show poolId
+    ShelleyQueryCmdPoolIdError poolId -> "The pool id does not exist: " <> textShow poolId
     ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) (AnyCardanoEra era) ->
-      "Consensus mode and era mismatch. Consensus mode: " <> show cMode <>
-      " Era: " <> show era
+      "Consensus mode and era mismatch. Consensus mode: " <> textShow cMode <>
+      " Era: " <> textShow era
     ShelleyQueryCmdEraMismatch (EraMismatch ledgerEra queryEra) ->
       "\nAn error mismatch occurred." <> "\nSpecified query era: " <> queryEra <>
       "\nCurrent ledger era: " <> ledgerEra
     ShelleyQueryCmdUnsupportedMode mode -> "Unsupported mode: " <> renderMode mode
-    ShelleyQueryCmdPastHorizon e -> "Past horizon: " <> show e
+    ShelleyQueryCmdPastHorizon e -> "Past horizon: " <> textShow e
     ShelleyQueryCmdSystemStartUnavailable -> "System start unavailable"
     ShelleyQueryCmdGenesisReadError err' -> Text.pack $ displayError err'
     ShelleyQueryCmdLeaderShipError e -> Text.pack $ displayError e
@@ -171,7 +182,7 @@ renderShelleyQueryCmdError err =
       "Failed to decode StakeSnapshot.  Error: " <> Text.pack (show decoderError)
     ShelleyQueryCmdUnsupportedNtcVersion (UnsupportedNtcVersionError minNtcVersion ntcVersion) ->
       "Unsupported feature for the node-to-client protocol version.\n" <>
-      "This query requires at least " <> show minNtcVersion <> " but the node negotiated " <> show ntcVersion <> ".\n" <>
+      "This query requires at least " <> textShow minNtcVersion <> " but the node negotiated " <> textShow ntcVersion <> ".\n" <>
       "Later node versions support later protocol versions (but development protocol versions are not enabled in the node by default)."
 
 runQueryCmd :: QueryCmd -> ExceptT ShelleyQueryCmdError IO ()
@@ -791,9 +802,9 @@ data ShelleyQueryCmdLocalStateQueryError
 renderLocalStateQueryError :: ShelleyQueryCmdLocalStateQueryError -> Text
 renderLocalStateQueryError lsqErr =
   case lsqErr of
-    AcquireFailureError err -> "Local state query acquire failure: " <> show err
+    AcquireFailureError err -> "Local state query acquire failure: " <> textShow err
     EraMismatchError err ->
-      "A query from a certain era was applied to a ledger from a different era: " <> show err
+      "A query from a certain era was applied to a ledger from a different era: " <> textShow err
     ByronProtocolNotSupportedError ->
       "The attempted local state query does not support the Byron protocol."
     ShelleyProtocolEraMismatch ->
@@ -1275,7 +1286,7 @@ runQueryLeadershipSchedule (AnyConsensusModeParams cModeParams) network
     -> SystemStart
     -> LBS.ByteString
   printLeadershipScheduleAsJson leadershipSlots eInfo sStart =
-    encodePretty $ showLeadershipSlot <$> sort (Set.toList leadershipSlots)
+    encodePretty $ showLeadershipSlot <$> List.sort (Set.toList leadershipSlots)
     where
       showLeadershipSlot :: SlotNo -> Aeson.Value
       showLeadershipSlot lSlot@(SlotNo sn) =

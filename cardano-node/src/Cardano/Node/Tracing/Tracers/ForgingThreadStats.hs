@@ -10,9 +10,13 @@ module Cardano.Node.Tracing.Tracers.ForgingThreadStats
   ) where
 
 import           Cardano.Logging
-import           Cardano.Prelude hiding (All, concat, (:.:))
+
+import           Control.Concurrent (ThreadId, myThreadId)
+import           Control.Monad.IO.Class (MonadIO (..))
 import           Data.Aeson (Value (..), (.=))
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           Data.Maybe (fromMaybe)
 
 import           Cardano.Node.Tracing.Tracers.StartLeadershipCheck (ForgeTracerType)
 import           Cardano.Slotting.Slot (SlotNo (..))
@@ -49,11 +53,11 @@ instance LogFormatting ForgeThreadStats where
     <> " last slot "      <> showT ftsLastSlot
   forMachine _dtal ForgeThreadStats {..} =
     mconcat [ "kind" .= String "ForgeThreadStats"
-             , "nodeCannotForgeNum" .= String (show ftsNodeCannotForgeNum)
-             , "nodeIsLeaderNum"    .= String (show ftsNodeIsLeaderNum)
-             , "blocksForgedNum"    .= String (show ftsBlocksForgedNum)
-             , "slotsMissed"        .= String (show ftsSlotsMissedNum)
-             , "lastSlot"           .= String (show ftsLastSlot)
+             , "nodeCannotForgeNum" .= String (showT ftsNodeCannotForgeNum)
+             , "nodeIsLeaderNum"    .= String (showT ftsNodeIsLeaderNum)
+             , "blocksForgedNum"    .= String (showT ftsBlocksForgedNum)
+             , "slotsMissed"        .= String (showT ftsSlotsMissedNum)
+             , "lastSlot"           .= String (showT ftsLastSlot)
              ]
   asMetrics ForgeThreadStats {..} =
     [ IntM "Forge.NodeCannotForgeNum" (fromIntegral ftsNodeCannotForgeNum)
@@ -91,10 +95,10 @@ instance LogFormatting ForgingStats where
     <> " slots missed "   <> showT fsSlotsMissedNum
   forMachine _dtal ForgingStats {..} =
     mconcat [ "kind" .= String "ForgingStats"
-             , "nodeCannotForgeNum" .= String (show fsNodeCannotForgeNum)
-             , "nodeIsLeaderNum"    .= String (show fsNodeIsLeaderNum)
-             , "blocksForgedNum"    .= String (show fsBlocksForgedNum)
-             , "slotsMissed"        .= String (show fsSlotsMissedNum)
+             , "nodeCannotForgeNum" .= String (showT fsNodeCannotForgeNum)
+             , "nodeIsLeaderNum"    .= String (showT fsNodeIsLeaderNum)
+             , "blocksForgedNum"    .= String (showT fsBlocksForgedNum)
+             , "slotsMissed"        .= String (showT fsSlotsMissedNum)
              ]
   asMetrics ForgingStats {..} =
     [ IntM "Forge.NodeCannotForgeNum" (fromIntegral fsNodeCannotForgeNum)

@@ -8,20 +8,19 @@ module Cardano.Node.Protocol.Alonzo
   , validateGenesis
   ) where
 
-import           Prelude (String)
-import           Cardano.Prelude
-
 import           Cardano.Api
 
 import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 
-import           Cardano.Node.Types
 import           Cardano.Node.Orphans ()
+import           Cardano.Node.Types
 
 import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 
-import           Cardano.Node.Protocol.Shelley (readGenesisAny, GenesisReadError)
+import           Cardano.Node.Protocol.Shelley (GenesisReadError, readGenesisAny)
+
+import           Control.Monad.Except (ExceptT)
 
 --
 -- Alonzo genesis

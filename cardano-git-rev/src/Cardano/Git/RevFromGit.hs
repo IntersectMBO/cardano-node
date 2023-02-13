@@ -2,10 +2,9 @@ module Cardano.Git.RevFromGit
   ( gitRevFromGit
   ) where
 
-import           Cardano.Prelude
-import           Prelude (String)
-
+import           Control.Exception (catch)
 import qualified Language.Haskell.TH as TH
+import           System.Exit (ExitCode (..))
 import qualified System.IO as IO
 import           System.IO.Error (isDoesNotExistError)
 import           System.Process (readProcessWithExitCode)

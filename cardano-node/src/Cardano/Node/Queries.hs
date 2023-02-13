@@ -36,12 +36,13 @@ module Cardano.Node.Queries
   , fromSMaybe
   ) where
 
-import           Cardano.Prelude hiding (All, (:.:))
-
+import           Control.Monad.STM (atomically)
+import           Data.ByteString (ByteString)
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.Map.Strict as Map
 import           Data.SOP.Strict
 import qualified Data.UMap as UM
+import           Data.Word (Word64)
 
 import qualified Cardano.Chain.Block as Byron
 import qualified Cardano.Chain.UTxO as Byron

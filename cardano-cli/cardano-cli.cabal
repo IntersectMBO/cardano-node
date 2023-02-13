@@ -22,8 +22,7 @@ Flag unexpected_thunks
 common project-config
   default-language:     Haskell2010
 
-  default-extensions:   NoImplicitPrelude
-                        OverloadedStrings
+  default-extensions:   OverloadedStrings
   build-depends:        base >= 4.14 && < 4.17
 
   ghc-options:          -Wall
@@ -120,10 +119,12 @@ library
                       , cborg >= 0.2.4 && < 0.3
                       , containers
                       , cryptonite
+                      , deepseq
                       , directory
                       , filepath
                       , formatting
                       , iproute
+                      , mtl
                       , network
                       , optparse-applicative-fork
                       , ouroboros-consensus
@@ -157,7 +158,6 @@ executable cardano-cli
 
   build-depends:        cardano-cli
                       , cardano-crypto-class ^>= 2.0
-                      , cardano-prelude
                       , optparse-applicative-fork
                       , transformers-except
 
@@ -171,11 +171,11 @@ test-suite cardano-cli-test
   build-depends:        aeson
                       , bech32            >= 1.1.0
                       , base16-bytestring
+                      , bytestring
                       , cardano-api
                       , cardano-api:gen
                       , cardano-cli
                       , cardano-node
-                      , cardano-prelude
                       , cardano-slotting ^>= 0.1
                       , containers
                       , directory
@@ -231,6 +231,7 @@ test-suite cardano-cli-golden
                       , hedgehog-extras
                       , text
                       , time
+                      , transformers
                       , unordered-containers
   build-tool-depends:   cardano-cli:cardano-cli
 

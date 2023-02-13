@@ -5,13 +5,13 @@ module Cardano.CLI.Shelley.Run.StakeAddress
   , runStakeAddressKeyGenToFile
   ) where
 
-import           Cardano.Prelude
-
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans.Except (ExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 import qualified Data.ByteString.Char8 as BS
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
-
-import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 
 import           Cardano.Api
 import           Cardano.Api.Shelley

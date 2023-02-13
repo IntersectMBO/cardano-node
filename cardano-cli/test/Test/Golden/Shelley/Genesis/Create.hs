@@ -5,9 +5,12 @@ module Test.Golden.Shelley.Genesis.Create
   ( golden_shelleyGenesisCreate
   ) where
 
-import           Cardano.Prelude
+import           Control.Monad (void)
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Data.Bifunctor (Bifunctor (..))
+import           Data.Foldable (for_)
+
 import           Hedgehog (Property, forAll, (===))
-import           Prelude (String)
 import           Test.OptParse as OP
 
 import qualified Data.Aeson as J

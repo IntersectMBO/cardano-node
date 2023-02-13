@@ -17,7 +17,6 @@ extra-source-files:     README.md
 
 common project-config
   default-language:     Haskell2010
-  default-extensions:   NoImplicitPrelude
   build-depends:        base >= 4.14 && < 4.17
 
   ghc-options:          -Wall
@@ -36,8 +35,7 @@ library
   exposed-modules:      Cardano.Git.Rev
                         Cardano.Git.RevFromGit
 
-  build-depends:        cardano-prelude
-                      , file-embed
+  build-depends:        file-embed
                       , process
                       , template-haskell
                       , text

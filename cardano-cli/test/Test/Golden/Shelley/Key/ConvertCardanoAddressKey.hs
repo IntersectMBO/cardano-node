@@ -7,7 +7,8 @@ module Test.Golden.Shelley.Key.ConvertCardanoAddressKey
   , golden_convertCardanoAddressShelleyStakeSigningKey
   ) where
 
-import           Cardano.Prelude hiding (readFile)
+import           Control.Monad (void)
+import           Data.Text (Text)
 import           Hedgehog (Property, (===))
 import           Test.OptParse
 

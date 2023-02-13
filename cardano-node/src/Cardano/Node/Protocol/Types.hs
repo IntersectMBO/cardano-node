@@ -12,10 +12,10 @@ module Cardano.Node.Protocol.Types
   ) where
 
 import qualified Cardano.Api as Api
-import           Cardano.Prelude (Generic, NFData)
-import           Prelude
 
+import           Control.DeepSeq (NFData)
 import           Data.Aeson
+import           GHC.Generics (Generic)
 import           NoThunks.Class (NoThunks)
 
 import           Cardano.Node.Orphans ()

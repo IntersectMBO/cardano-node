@@ -4,7 +4,9 @@ module Test.Golden.Byron.UpdateProposal
   ( updateProposalTest
   ) where
 
-import           Cardano.Prelude
+import           Control.Monad (void)
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans.Except (runExceptT)
 import qualified Data.Text as Text
 
 import           Cardano.CLI.Byron.UpdateProposal

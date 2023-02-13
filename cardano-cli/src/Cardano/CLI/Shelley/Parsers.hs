@@ -14,22 +14,30 @@ module Cardano.CLI.Shelley.Parsers
   , parseTxIn
   ) where
 
-import           Cardano.Prelude hiding (All, Any)
-import           Prelude (String)
+import           Cardano.Prelude (ConvertText (..))
 
-import           Control.Monad.Fail (fail)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Parser as Aeson.Parser
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
+import           Data.Bifunctor
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as BSC
+import           Data.Foldable
+import           Data.Functor (($>))
 import qualified Data.IP as IP
+import           Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
+import           Data.Maybe (fromMaybe)
+import           Data.Ratio ((%))
 import qualified Data.Set as Set
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Format (defaultTimeLocale, parseTimeOrError)
+import           Data.Word (Word64)
+import           GHC.Natural (Natural)
 import           Network.Socket (PortNumber)
 import           Options.Applicative hiding (help, str)
 import qualified Options.Applicative as Opt
@@ -41,6 +49,7 @@ import qualified Text.Parsec.Error as Parsec
 import qualified Text.Parsec.Language as Parsec
 import qualified Text.Parsec.String as Parsec
 import qualified Text.Parsec.Token as Parsec
+import           Text.Read (readEither, readMaybe)
 
 import qualified Cardano.Ledger.BaseTypes as Shelley
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
@@ -2799,7 +2808,7 @@ pSingleHostAddress = singleHostAddress
   singleHostAddress ipv4 ipv6 port =
     case (ipv4, ipv6) of
       (Nothing, Nothing) ->
-        panic "Please enter either an IPv4 or IPv6 address for the pool relay"
+        error "Please enter either an IPv4 or IPv6 address for the pool relay"
       (Just i4, Nothing) ->
         StakePoolRelayIp (Just i4) Nothing (Just port)
       (Nothing, Just i6) ->

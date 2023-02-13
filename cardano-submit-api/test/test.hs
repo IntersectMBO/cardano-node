@@ -1,6 +1,3 @@
-
-import           System.IO (IO)
-
 import qualified System.IO as IO
 
 main :: IO ()

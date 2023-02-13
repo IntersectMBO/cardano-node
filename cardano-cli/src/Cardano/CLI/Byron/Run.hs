@@ -6,11 +6,14 @@ module Cardano.CLI.Byron.Run
   , runByronClientCommand
   ) where
 
-import           Cardano.Prelude
-
+import           Control.Monad.IO.Class (MonadIO (liftIO))
+import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, left)
+import           Data.Bifunctor (Bifunctor (..))
 import qualified Data.ByteString.Char8 as BS
+import           Data.Text (Text)
 import qualified Data.Text as Text
+import qualified Data.Text.IO as Text
 import qualified Data.Text.Lazy.Builder as Builder
 import qualified Data.Text.Lazy.IO as TL
 import qualified Formatting as F
@@ -20,7 +23,7 @@ import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
-import           Cardano.Api hiding (UpdateProposal, GenesisParameters)
+import           Cardano.Api hiding (GenesisParameters, UpdateProposal)
 import           Cardano.Api.Byron (SomeByronSigningKey (..), Tx (..))
 
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
@@ -113,7 +116,7 @@ runValidateCBOR :: CBORObject -> FilePath -> ExceptT ByronClientCmdError IO ()
 runValidateCBOR cborObject fp = do
   bs <- firstExceptT ByronCmdHelpersError $ readCBOR fp
   res <- hoistEither . first ByronCmdHelpersError $ validateCBOR cborObject bs
-  liftIO $ putTextLn res
+  liftIO $ Text.putStrLn res
 
 runPrettyPrintCBOR :: FilePath -> ExceptT ByronClientCmdError IO ()
 runPrettyPrintCBOR fp = do
@@ -123,7 +126,7 @@ runPrettyPrintCBOR fp = do
 runPrettySigningKeyPublic :: ByronKeyFormat -> SigningKeyFile -> ExceptT ByronClientCmdError IO ()
 runPrettySigningKeyPublic bKeyFormat skF = do
   sK <- firstExceptT ByronCmdKeyFailure $ readByronSigningKey bKeyFormat skF
-  liftIO . putTextLn . prettyPublicKey $ byronWitnessToVerKey sK
+  liftIO . Text.putStrLn . prettyPublicKey $ byronWitnessToVerKey sK
 
 runMigrateDelegateKeyFrom
   :: SigningKeyFile
@@ -143,7 +146,7 @@ runPrintGenesisHash :: GenesisFile -> ExceptT ByronClientCmdError IO ()
 runPrintGenesisHash genFp = do
     genesis <- firstExceptT ByronCmdGenesisError $
                  readGenesis genFp dummyNetwork
-    liftIO . putTextLn $ formatter genesis
+    liftIO . Text.putStrLn $ formatter genesis
   where
     -- For this purpose of getting the hash, it does not matter what network
     -- value we use here.
@@ -163,7 +166,7 @@ runPrintSigningKeyAddress
 runPrintSigningKeyAddress bKeyFormat networkid skF = do
   sK <- firstExceptT ByronCmdKeyFailure $ readByronSigningKey bKeyFormat skF
   let sKeyAddr = prettyAddress . makeByronAddress networkid $ byronWitnessToVerKey sK
-  liftIO $ putTextLn sKeyAddr
+  liftIO $ Text.putStrLn sKeyAddr
 
 runKeygen :: NewSigningKeyFile -> ExceptT ByronClientCmdError IO ()
 runKeygen (NewSigningKeyFile skF)  = do

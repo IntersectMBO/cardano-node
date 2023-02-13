@@ -4,7 +4,7 @@ module Test.Golden.Shelley.StakeAddress.DeregistrationCertificate
   ( golden_shelleyStakeAddressDeregistrationCertificate
   ) where
 
-import           Cardano.Prelude
+import           Control.Monad (void)
 import           Hedgehog (Property)
 import           System.FilePath ((</>))
 import           Test.OptParse

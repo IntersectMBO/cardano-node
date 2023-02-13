@@ -21,18 +21,17 @@ module Cardano.Node.Configuration.POM
   )
 where
 
-import           Cardano.Prelude
-import qualified GHC.Show as Show
-import           Prelude (String)
-
-import           Control.Monad (fail)
 import           Data.Aeson
 import qualified Data.Aeson.Types as Aeson
+import           Data.Bifunctor (Bifunctor (..))
+import           Data.Monoid (Last (..))
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Time.Clock (DiffTime)
 import           Data.Yaml (decodeFileThrow)
 import           Generic.Data (gmappend)
 import           Generic.Data.Orphans ()
+import           GHC.Generics (Generic)
 import           Options.Applicative
 import           System.FilePath (takeDirectory, (</>))
 

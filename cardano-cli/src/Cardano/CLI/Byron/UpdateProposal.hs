@@ -8,11 +8,15 @@ module Cardano.CLI.Byron.UpdateProposal
   , submitByronUpdateProposal
   ) where
 
-import           Cardano.Prelude
+import           Cardano.Prelude (ConvertText (..))
 
+import           Control.Exception (Exception (..))
+import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither)
 import           Control.Tracer (stdoutTracer, traceWith)
+import           Data.Bifunctor (Bifunctor (..))
 import qualified Data.ByteString as BS
+import           Data.Text (Text)
 
 import           Cardano.Chain.Update (InstallerHash (..), ProtocolVersion (..),
                    SoftwareVersion (..), SystemTag (..))

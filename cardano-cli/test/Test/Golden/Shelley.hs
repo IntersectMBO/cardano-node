@@ -9,8 +9,6 @@ module Test.Golden.Shelley
   , txTests
   ) where
 
-import           Cardano.Prelude
-
 import           Test.Golden.Shelley.Address.Build (golden_shelleyAddressBuild)
 import           Test.Golden.Shelley.Address.Info (golden_shelleyAddressInfo)
 import           Test.Golden.Shelley.Address.KeyGen (golden_shelleyAddressKeyGen)

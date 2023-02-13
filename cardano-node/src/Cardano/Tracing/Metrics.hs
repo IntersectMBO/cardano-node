@@ -21,10 +21,13 @@ module Cardano.Tracing.Metrics
   , threadStatsProjection
   ) where
 
-import           Cardano.Prelude hiding (All, (:.:))
-
+import           Control.Concurrent (ThreadId, myThreadId)
 import           Control.Concurrent.STM
+import           Control.Monad (join)
+import           Data.Functor (void)
+import           Data.Int (Int64)
 import           Data.IORef (IORef, atomicModifyIORef', newIORef)
+import           Data.Map (Map)
 import qualified Data.Map.Strict as Map
 
 

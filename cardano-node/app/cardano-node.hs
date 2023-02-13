@@ -1,16 +1,13 @@
-{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
-
-import           Cardano.Prelude
-import qualified Data.Text as Text
-import           Prelude (String)
 
 import           Options.Applicative
 import qualified Options.Applicative as Opt
 import           Options.Applicative.Help ((<$$>))
 
 import           Cardano.Git.Rev (gitRev)
+import qualified Data.Text as Text
+import qualified Data.Text.IO as Text
 import           Data.Version (showVersion)
 import           Paths_cardano_node (version)
 import           System.Info (arch, compilerName, compilerVersion, os)
@@ -85,7 +82,7 @@ parseVersionCmd =
 
 runVersionCommand :: IO ()
 runVersionCommand =
-    putTextLn $ mconcat
+    Text.putStrLn $ mconcat
       [ "cardano-node ", renderVersion version
       , " - ", Text.pack os, "-", Text.pack arch
       , " - ", Text.pack compilerName, "-", renderVersion compilerVersion

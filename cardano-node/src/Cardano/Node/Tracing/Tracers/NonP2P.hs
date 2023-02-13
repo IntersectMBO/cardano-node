@@ -10,12 +10,12 @@ module Cardano.Node.Tracing.Tracers.NonP2P
     () where
 
 import           Cardano.Logging
-import           Cardano.Prelude hiding (Show, show)
+
+import           Control.Exception (Exception (..), SomeException (..))
 import           Data.Aeson (Value (String), (.=))
 import qualified Data.IP as IP
 import           Data.Text (pack)
 import qualified Network.Socket as Socket
-import           Text.Show
 
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
@@ -89,7 +89,7 @@ instance MetaTrace tr => MetaTrace (WithIPList tr) where
     privacyFor ns (Just (WithIPList _ _ ev)) =
       privacyFor (nsCast ns) (Just ev)
     documentFor ns = documentFor (nsCast ns :: Namespace tr)
-    allNamespaces  = map nsCast
+    allNamespaces  = fmap nsCast
           (allNamespaces :: [Namespace tr])
 
 instance MetaTrace tr => MetaTrace (WithDomainName tr) where
@@ -104,7 +104,7 @@ instance MetaTrace tr => MetaTrace (WithDomainName tr) where
     privacyFor ns (Just (WithDomainName _ ev)) =
       privacyFor (nsCast ns) (Just ev)
     documentFor ns = documentFor (nsCast ns :: Namespace tr)
-    allNamespaces  = map nsCast
+    allNamespaces  = fmap nsCast
           (allNamespaces :: [Namespace tr])
 
 instance MetaTrace (SubscriptionTrace adr) where
@@ -334,7 +334,7 @@ instance MetaTrace tr => MetaTrace (NtN.WithAddr addr tr) where
     privacyFor ns (Just (NtN.WithAddr _ ev)) =
       privacyFor (nsCast ns) (Just ev)
     documentFor ns = documentFor (nsCast ns :: Namespace tr)
-    allNamespaces  = map nsCast
+    allNamespaces  = fmap nsCast
           (allNamespaces :: [Namespace tr])
 
 instance MetaTrace NtN.ErrorPolicyTrace where

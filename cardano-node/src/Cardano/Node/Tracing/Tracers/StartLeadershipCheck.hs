@@ -13,9 +13,11 @@ module Cardano.Node.Tracing.Tracers.StartLeadershipCheck
 
 
 import           Cardano.Logging
-import           Cardano.Prelude
 import qualified "trace-dispatcher" Control.Tracer as T
+
+import           Control.Concurrent.STM (atomically)
 import           Data.IORef (readIORef)
+import           Data.Word (Word64)
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (BlockNo (..), blockNo, unBlockNo)

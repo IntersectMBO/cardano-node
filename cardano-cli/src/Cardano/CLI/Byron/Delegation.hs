@@ -12,8 +12,9 @@ module Cardano.CLI.Byron.Delegation
   )
 where
 
-import           Cardano.Prelude hiding (show, trace)
+import           Prelude hiding ((.))
 
+import           Control.Category
 import           Control.Monad.Trans.Except.Extra (left)
 import qualified Data.ByteString.Lazy as LB
 import           Formatting (Format, sformat)
@@ -28,6 +29,12 @@ import qualified Cardano.Crypto as Crypto
 
 import           Cardano.CLI.Byron.Key (ByronKeyFailure, renderByronKeyFailure)
 import           Cardano.CLI.Types (CertificateFile (..))
+import           Cardano.Prelude (canonicalDecodePretty, canonicalEncodePretty)
+import           Control.Monad (unless)
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans.Except (ExceptT)
+import           Data.ByteString (ByteString)
+import           Data.Text (Text)
 
 data ByronDelegationError
   = CertificateValidationErrors !FilePath ![Text]

@@ -19,12 +19,6 @@ import           Cardano.Api (AnyCardanoEra, AnyConsensusMode (..), Error (..), 
 import           Cardano.Binary (DecoderError)
 import           Data.Aeson (ToJSON (..), Value (..))
 import           Data.ByteString.Char8 (ByteString)
-import           Data.Either (Either (Right))
-import           Data.Eq (Eq (..))
-import           Data.Function (id, (.))
-import           Data.Functor (Functor (fmap))
-import           Data.Int (Int)
-import           Data.Monoid (Monoid (mconcat), (<>))
 import           Data.Text (Text)
 import           Formatting (build, sformat)
 import           GHC.Generics (Generic)
@@ -33,7 +27,6 @@ import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
 import           Servant (Accept (..), JSON, MimeRender (..), MimeUnrender (..), PostAccepted,
                    ReqBody, (:>))
 import           Servant.API.Generic (ToServantApi, (:-))
-import           Text.Show (Show (..))
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.List as L

@@ -12,15 +12,19 @@ module Cardano.Node.Tracing.Tracers.Peer where
 --   , ppPeer
 --   ) where
 
-import           Cardano.Prelude hiding (atomically)
-import           Prelude (String)
-
 import qualified Control.Concurrent.Class.MonadSTM.Strict as STM
 import           "contra-tracer" Control.Tracer
 
+import           Control.Concurrent (threadDelay)
+import           Control.Concurrent.Async
+import           Control.Monad (forever)
 import           Data.Aeson (ToJSON (..), Value (..), toJSON, (.=))
+import           Data.Functor ((<&>))
+import qualified Data.List as List
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Text.Printf (printf)
 
@@ -125,9 +129,9 @@ getCurrentPeers nkd = mapNodeKernelDataIO extractPeers nkd
 instance LogFormatting [PeerT blk] where
   forMachine _ []       = mempty
   forMachine dtal xs    = mconcat
-    [ "peers" .= toJSON (foldl' (\acc x -> forMachine dtal x : acc) [] xs)
+    [ "peers" .= toJSON (List.foldl' (\acc x -> forMachine dtal x : acc) [] xs)
     ]
-  forHuman peers = Text.concat $ intersperse ", " (map ppPeer peers)
+  forHuman peers = Text.concat $ List.intersperse ", " (map ppPeer peers)
   asMetrics peers = [IntM "Net.PeersFromNodeKernel" (fromIntegral (length peers))]
 
 instance LogFormatting (PeerT blk) where
@@ -135,9 +139,9 @@ instance LogFormatting (PeerT blk) where
     mconcat [  "peerAddress"   .= String (Text.pack . show . remoteAddress $ cid)
              , "peerStatus"    .= String (Text.pack . ppStatus $ status)
              , "peerSlotNo"    .= String (Text.pack . ppMaxSlotNo . peerFetchMaxSlotNo $ inflight)
-             , "peerReqsInF"   .= String (show . peerFetchReqsInFlight $ inflight)
-             , "peerBlocksInF" .= String (show . Set.size . peerFetchBlocksInFlight $ inflight)
-             , "peerBytesInF"  .= String (show . peerFetchBytesInFlight $ inflight)
+             , "peerReqsInF"   .= String (Text.pack . show . peerFetchReqsInFlight $ inflight)
+             , "peerBlocksInF" .= String (Text.pack . show . Set.size . peerFetchBlocksInFlight $ inflight)
+             , "peerBytesInF"  .= String (Text.pack . show . peerFetchBytesInFlight $ inflight)
              ]
 
 instance MetaTrace [PeerT blk] where

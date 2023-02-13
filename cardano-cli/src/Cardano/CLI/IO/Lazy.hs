@@ -10,12 +10,8 @@ module Cardano.CLI.IO.Lazy
   , forStateM
   ) where
 
-import Control.Applicative (Applicative((<*>), pure), (<$>))
-import Control.Monad (Monad(..))
-import Control.Monad.IO.Unlift (MonadIO(liftIO), MonadUnliftIO, askUnliftIO, UnliftIO(unliftIO))
-import Data.Function (($), (.), flip)
-import Data.Int (Int)
-import System.IO (IO)
+import           Control.Monad.IO.Unlift (MonadIO (liftIO), MonadUnliftIO, UnliftIO (unliftIO),
+                   askUnliftIO)
 
 import qualified Data.List as L
 import qualified System.IO.Unsafe as IO

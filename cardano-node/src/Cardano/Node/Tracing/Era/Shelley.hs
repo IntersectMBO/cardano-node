@@ -19,7 +19,9 @@ import           Data.Aeson (ToJSON (..), Value (..), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.Types as Aeson
+import           Data.Set (Set)
 import qualified Data.Set as Set
+import           Data.Text (Text)
 
 import           Cardano.Api (textShow)
 import qualified Cardano.Api as Api
@@ -28,7 +30,6 @@ import qualified Cardano.Api.Shelley as Api
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Logging
-import           Cardano.Prelude
 import           Cardano.Slotting.Block (BlockNo (..))
 
 import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, blockSlot)
@@ -144,7 +145,6 @@ instance Core.Crypto era => LogFormatting (TPraosCannotForge era) where
       , "expected" .= genDlgVRFHash
       , "actual" .= coreNodeVRFHash
       ]
-
 
 
 instance ( ShelleyBasedEra era
@@ -514,7 +514,7 @@ renderBadInputsUTxOErr txIns
 
 renderValueNotConservedErr :: Show val => val -> val -> Value
 renderValueNotConservedErr consumed produced = String $
-    "This transaction consumed " <> show consumed <> " but produced " <> show produced
+    "This transaction consumed " <> textShow consumed <> " but produced " <> textShow produced
 
 instance Core.Crypto (Ledger.Crypto era) => LogFormatting (ShelleyPpupPredFailure era) where
   forMachine _dtal (NonGenesisUpdatePPUP proposalKeys genesisKeys) =
@@ -524,7 +524,7 @@ instance Core.Crypto (Ledger.Crypto era) => LogFormatting (ShelleyPpupPredFailur
     mconcat [ "kind" .= String "PPUpdateWrongEpoch"
              , "currentEpoch" .= currEpoch
              , "intendedEpoch" .= intendedEpoch
-             , "votingPeriod"  .= String (show votingPeriod)
+             , "votingPeriod"  .= String (textShow votingPeriod)
              ]
   forMachine _dtal (PVCannotFollowPPUP badPv) =
     mconcat [ "kind" .= String "PVCannotFollowPPUP"
@@ -700,7 +700,7 @@ instance ( LogFormatting (PredicateFailure (Core.EraRule "EPOCH" era))
   forMachine dtal (MirFailure f) = forMachine dtal f
   forMachine _dtal (CorruptRewardUpdate update) =
     mconcat [ "kind" .= String "CorruptRewardUpdate"
-             , "update" .= String (show update) ]
+             , "update" .= String (textShow update) ]
 
 
 instance ( LogFormatting (PredicateFailure (Core.EraRule "POOLREAP" era))
@@ -965,7 +965,7 @@ instance ( Ledger.Era era
          , Show (PredicateFailure (Ledger.EraRule "LEDGERS" era))
          ) => LogFormatting (AlonzoBbodyPredFailure era) where
   forMachine _ err = mconcat [ "kind" .= String "AlonzoBbodyPredFail"
-                            , "error" .= String (show err)
+                            , "error" .= String (textShow err)
                             ]
 --------------------------------------------------------------------------------
 -- Babbage related
@@ -1034,7 +1034,7 @@ instance Core.Crypto crypto => LogFormatting (Praos.PraosValidationErr crypto) w
         mconcat [ "kind" .= String "VRFKeyBadProof"
                 , "slotNumberUsedInVrfCalculation" .= slotNo
                 , "nonceUsedInVrfCalculation" .= nonce
-                , "calculatedVrfValue" .= String (show vrfCalculatedVal)
+                , "calculatedVrfValue" .= String (textShow vrfCalculatedVal)
                 ]
       Praos.VRFLeaderValueTooBig leaderValue sigma f->
         mconcat [ "kind" .= String "VRFLeaderValueTooBig"

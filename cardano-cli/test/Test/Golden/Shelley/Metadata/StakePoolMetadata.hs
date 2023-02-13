@@ -4,7 +4,10 @@ module Test.Golden.Shelley.Metadata.StakePoolMetadata
   ( golden_stakePoolMetadataHash
   ) where
 
-import           Cardano.Prelude
+import           Control.Monad (void)
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Data.Text (Text)
+import qualified Data.Text.IO as Text
 import           Hedgehog (Property)
 import           Test.OptParse as OP
 
@@ -21,7 +24,7 @@ golden_stakePoolMetadataHash = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir
   outputStakePoolMetadataHashFp <- noteTempFile tempDir "stake-pool-metadata-hash.txt"
 
   -- Write the example stake pool metadata to disk
-  liftIO $ writeFile stakePoolMetadataFile exampleStakePoolMetadata
+  liftIO $ Text.writeFile stakePoolMetadataFile exampleStakePoolMetadata
 
   -- Hash the stake pool metadata
   void $ execCardanoCLI

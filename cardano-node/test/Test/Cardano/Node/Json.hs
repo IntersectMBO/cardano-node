@@ -4,10 +4,10 @@ module Test.Cardano.Node.Json
   ( tests
   ) where
 
-import           Cardano.Prelude
 import           Cardano.Node.Configuration.TopologyP2P (NetworkTopology)
 
 import           Data.Aeson (decode, encode, fromJSON, toJSON)
+import           Data.Maybe (isJust)
 
 import           Hedgehog (Property, discover)
 import qualified Hedgehog

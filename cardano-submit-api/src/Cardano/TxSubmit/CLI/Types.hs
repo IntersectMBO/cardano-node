@@ -6,8 +6,6 @@ module Cardano.TxSubmit.CLI.Types
 
 import           Cardano.Api (AnyConsensusModeParams, NetworkId (..), SocketPath)
 import           Cardano.TxSubmit.Rest.Types (WebserverConfig)
-import           Data.Int
-import           System.IO (FilePath)
 
 -- | The product type of all command line arguments
 data TxSubmitNodeParams = TxSubmitNodeParams

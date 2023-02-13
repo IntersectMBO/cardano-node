@@ -7,11 +7,11 @@ module Cardano.Node.Tracing.Formatting
   (
   ) where
 
-import           Cardano.Prelude ()
 import           Data.Aeson (Value (String), toJSON, (.=))
+import           Data.Proxy (Proxy(..))
+import           Data.Void (Void)
 
 import           Cardano.Logging (LogFormatting (..))
-import           Cardano.Prelude hiding (Show, show)
 
 import           Cardano.Node.Tracing.Render (renderHeaderHashForDetails)
 

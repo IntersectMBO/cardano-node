@@ -19,22 +19,18 @@ extra-source-files:     CHANGELOG.md
 common project-config
   default-language:     Haskell2010
   build-depends:        base >= 4.14 && < 4.17
-  default-extensions:   NoImplicitPrelude
 
   ghc-options:          -Wall
                         -Wcompat
                         -Wincomplete-record-updates
                         -Wincomplete-uni-patterns
                         -Wno-all-missed-specialisations
-                        -Wno-implicit-prelude
                         -Wno-missing-import-lists
                         -Wno-safe
                         -Wno-unsafe
                         -Wunused-packages
                         -fwarn-incomplete-patterns
                         -fwarn-redundant-constraints
-
-  default-extensions:   NoImplicitPrelude
 
 library
   import:               project-config

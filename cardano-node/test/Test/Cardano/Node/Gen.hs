@@ -19,25 +19,26 @@ module Test.Cardano.Node.Gen
 
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.KeyMap as Aeson.KeyMap
-import qualified Data.Vector as Vector
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Vector as Vector
 
-import           Cardano.Prelude
-
-import           Cardano.Node.Configuration.TopologyP2P (NetworkTopology (..), PublicRootPeers (..),
-                   LocalRootPeersGroups (..), LocalRootPeersGroup (..), RootConfig (..),
-                   NodeSetup (..), PeerAdvertise (..), UseLedger (..))
 import           Cardano.Node.Configuration.NodeAddress (NodeAddress' (..), NodeHostIPAddress (..),
-                   NodeHostIPv4Address (..), NodeHostIPv6Address (..),
-                   NodeIPAddress, NodeIPv4Address, NodeIPv6Address)
+                   NodeHostIPv4Address (..), NodeHostIPv6Address (..), NodeIPAddress,
+                   NodeIPv4Address, NodeIPv6Address)
+import           Cardano.Node.Configuration.TopologyP2P (LocalRootPeersGroup (..),
+                   LocalRootPeersGroups (..), NetworkTopology (..), NodeSetup (..),
+                   PeerAdvertise (..), PublicRootPeers (..), RootConfig (..), UseLedger (..))
 import           Cardano.Slotting.Slot (SlotNo (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
-import           Ouroboros.Network.PeerSelection.RelayAccessPoint (
-                   DomainAccessPoint (..), RelayAccessPoint (..))
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (DomainAccessPoint (..),
+                   RelayAccessPoint (..))
 
 
 import qualified Data.IP as IP
 
+import           Cardano.Api (textShow)
+
+import           Data.Word (Word32)
 import           Hedgehog (Gen)
 import           Hedgehog.Corpus (cooking)
 import qualified Hedgehog.Gen as Gen
@@ -60,7 +61,7 @@ genNetworkTopologyEncoding = Aeson.encode <$> genNetworkTopologyValue
 -- | Generate a Aeson.Object which encodes a p2p topology.
 --
 genNetworkTopologyValue :: Gen Aeson.Object
-genNetworkTopologyValue = 
+genNetworkTopologyValue =
     (\a b c -> Aeson.KeyMap.fromList
                  [ ("localRoots", Aeson.Array . Vector.fromList $ a)
                  , ("publicRoots", Aeson.Array . Vector.fromList $ b)
@@ -83,7 +84,7 @@ genNetworkTopologyValue =
 
     genPublicRootsValue :: Gen Aeson.Value
     genPublicRootsValue =
-      (\a b -> Aeson.Object $ Aeson.KeyMap.fromList 
+      (\a b -> Aeson.Object $ Aeson.KeyMap.fromList
                  [ ("accessPoints", Aeson.Array . Vector.fromList $ a)
                  , ("advertise", Aeson.Bool b)
                  ]
@@ -93,7 +94,7 @@ genNetworkTopologyValue =
     genAccessPointValue :: Gen Aeson.Value
     genAccessPointValue =
       (\a -> Aeson.Object $ Aeson.KeyMap.fromList
-                 [ ("address", Aeson.String (show $ naHostAddress a))
+                 [ ("address", Aeson.String (textShow $ naHostAddress a))
                  , ("port", Aeson.Number (fromIntegral $ naPort a))
                  ]
       ) <$> genNodeIPAddress

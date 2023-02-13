@@ -1,4 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.TxSubmit.CLI.Parsers
@@ -14,11 +13,7 @@ import           Cardano.Api (AnyConsensusModeParams (..), ConsensusModeParams (
                    EpochSlots (..), NetworkId (..), NetworkMagic (..), SocketPath (..))
 import           Cardano.TxSubmit.CLI.Types (ConfigFile (..), TxSubmitNodeParams (..))
 import           Cardano.TxSubmit.Rest.Parsers (pWebserverConfig)
-import           Control.Applicative (Alternative (..), Applicative (..), (<**>))
-import           Data.Function ((.))
-import           Data.Functor (Functor (fmap), (<$>))
-import           Data.Int
-import           Data.Semigroup (Semigroup ((<>)))
+import           Control.Applicative (Alternative (..), (<**>))
 import           Data.Word (Word64)
 import           Options.Applicative (Parser, ParserInfo)
 

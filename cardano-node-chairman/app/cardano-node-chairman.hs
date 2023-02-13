@@ -2,10 +2,7 @@ module Main where
 
 import           Cardano.Chairman.Commands
 import           Control.Monad
-import           Data.Function
-import           Data.Semigroup
 import           Options.Applicative
-import           System.IO (IO)
 
 main :: IO ()
 main = join

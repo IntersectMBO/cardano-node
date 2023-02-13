@@ -1,6 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -10,13 +9,19 @@ module Cardano.CLI.Byron.Legacy (
     , decodeLegacyDelegateKey
     ) where
 
-import           Cardano.Prelude
+import           Cardano.Prelude (cborError)
+
+import           Control.Monad (when)
+import           Formatting (build, formatToString)
 
 import qualified Codec.CBOR.Decoding as D
 import qualified Codec.CBOR.Encoding as E
 
+import           Cardano.Api (textShow)
 import           Cardano.Crypto.Signing (SigningKey (..))
 import qualified Cardano.Crypto.Wallet as Wallet
+import           Data.Text (Text)
+
 
 -- | LegacyDelegateKey is a subset of the UserSecret's from the legacy codebase:
 -- 1. the VSS keypair must be present
@@ -31,7 +36,7 @@ encodeXPrv a = E.encodeBytes $ Wallet.unXPrv a
 
 decodeXPrv :: D.Decoder s Wallet.XPrv
 decodeXPrv =
-  toCborError . Wallet.xprv =<< D.decodeBytesCanonical
+  either (fail . formatToString build) pure . Wallet.xprv =<< D.decodeBytesCanonical
 
 -- Stolen from: cardano-sl/binary/src/Pos/Binary/Class/Core.hs
 -- | Enforces that the input size is the same as the decoded one, failing in
@@ -44,7 +49,7 @@ enforceSize lbl requestedSize = D.decodeListLenCanonical >>= matchSize requested
 matchSize :: Int -> Text -> Int -> D.Decoder s ()
 matchSize requestedSize lbl actualSize =
   when (actualSize /= requestedSize) $
-    cborError (lbl <> " failed the size check. Expected " <> show requestedSize <> ", found " <> show actualSize)
+    cborError (lbl <> " failed the size check. Expected " <> textShow requestedSize <> ", found " <> textShow actualSize)
 
 -- | Encoder for a Byron/Classic signing key.
 --   Lifted from cardano-sl legacy codebase.

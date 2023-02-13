@@ -22,15 +22,21 @@ module Cardano.CLI.Byron.Tx
   )
 where
 
-import           Cardano.Prelude hiding (trace, (%))
-import           Prelude (error)
-
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left, newExceptT)
+import           Data.Bifunctor (Bifunctor (..))
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as LB
+import qualified Data.List as List
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import qualified Data.Text as T
+import           Data.Maybe (fromMaybe, mapMaybe)
+import           Data.String (IsString)
+import           Data.Text (Text)
 import qualified Data.Text as Text
+import qualified Data.Text.IO as Text
 import           Formatting (sformat, (%))
 
 import           Cardano.Api
@@ -128,9 +134,9 @@ genesisUTxOTxIn gc vk genAddr =
     handleMissingAddr :: Maybe UTxO.TxIn -> UTxO.TxIn
     handleMissingAddr  = fromMaybe . error
       $  "\nGenesis UTxO has no address\n"
-      <> T.unpack (prettyAddress (ByronAddress genAddr))
+      <> Text.unpack (prettyAddress (ByronAddress genAddr))
       <> "\n\nIt has the following, though:\n\n"
-      <> Cardano.Prelude.concat (T.unpack . prettyAddress <$> map ByronAddress (Map.keys initialUtxo))
+      <> List.concatMap (Text.unpack . prettyAddress . ByronAddress) (Map.keys initialUtxo)
 
 -- | Generate a transaction spending genesis UTxO at a given address,
 --   to given outputs, signed by the given key.
@@ -233,7 +239,7 @@ nodeSubmitTx network gentx = do
           }
     res <- liftIO $ submitTxToNodeLocal connctInfo (TxInByronSpecial gentx ByronEraInCardanoMode)
     case res of
-      Net.Tx.SubmitSuccess -> liftIO $ putTextLn "Transaction successfully submitted."
+      Net.Tx.SubmitSuccess -> liftIO $ Text.putStrLn "Transaction successfully submitted."
       Net.Tx.SubmitFail reason ->
         case reason of
           TxValidationErrorInMode err _eraInMode -> left . ByronTxSubmitError . Text.pack $ show err

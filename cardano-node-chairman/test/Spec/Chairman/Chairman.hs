@@ -6,22 +6,12 @@ module Spec.Chairman.Chairman
   ( chairmanOver
   ) where
 
-import           Control.Monad
-import           Data.Either
-import           Data.Eq
-import           Data.Function
-import           Data.Functor
-import           Data.Int
-import           Data.Maybe
-import           Data.Semigroup
-import           Data.String
-import           GHC.Num
+import           Control.Monad (when)
+import           Data.Functor ((<&>))
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Hedgehog.Extras.Test.Base (Integration)
 import           System.Exit (ExitCode (..))
 import           System.FilePath.Posix ((</>))
-import           System.IO (FilePath)
-import           Text.Show
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO

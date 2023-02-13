@@ -7,7 +7,7 @@ module Cardano.Node.Tracing.API
   ( initTraceDispatcher
   ) where
 
-import           Cardano.Prelude (first)
+import           Data.Bifunctor (first)
 import           Prelude
 
 import           "contra-tracer" Control.Tracer (traceWith)

@@ -20,9 +20,11 @@ module Cardano.Node.Protocol.Shelley
   , validateGenesis
   ) where
 
+import           Cardano.Prelude (ConvertText (..))
+import           Control.Exception (IOException)
+import           Control.Monad.Except (ExceptT, MonadError (..))
+
 import qualified Cardano.Api as Api
-import           Cardano.Prelude
-import           Prelude (String, id)
 
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
@@ -310,7 +312,7 @@ newtype GenesisValidationError = GenesisValidationErrors [Shelley.ValidationErr]
 
 instance Error GenesisValidationError where
   displayError (GenesisValidationErrors vErrs) =
-    T.unpack (unlines (map Shelley.describeValidationErr vErrs))
+    T.unpack (T.unlines (map Shelley.describeValidationErr vErrs))
 
 
 data PraosLeaderCredentialsError =

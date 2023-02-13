@@ -2,10 +2,7 @@ module Testnet.Parsers
   ( commands
   ) where
 
-import           Data.Function
-import           Data.Monoid
 import           Options.Applicative
-import           System.IO (IO)
 import           Parsers.Babbage
 import           Parsers.Byron
 import           Parsers.Cardano

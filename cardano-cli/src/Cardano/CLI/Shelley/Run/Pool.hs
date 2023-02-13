@@ -4,15 +4,11 @@ module Cardano.CLI.Shelley.Run.Pool
   , runPoolCmd
   ) where
 
-import           Cardano.Prelude
-
-import qualified Data.Text as Text
-import qualified Data.Text.IO as Text
-
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
                    newExceptT)
-
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.Text as Text
+import qualified Data.Text.IO as Text
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
@@ -21,6 +17,9 @@ import           Cardano.CLI.Shelley.Key (VerificationKeyOrFile, readVerificatio
 import           Cardano.CLI.Types (OutputFormat (..))
 
 import qualified Cardano.Ledger.Slot as Shelley
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans.Except (ExceptT)
+import           Data.Text (Text)
 
 data ShelleyPoolCmdError
   = ShelleyPoolCmdReadFileError !(FileError TextEnvelopeError)

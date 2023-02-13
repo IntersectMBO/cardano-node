@@ -21,19 +21,22 @@ module Cardano.CLI.Byron.Parsers
   , parseUpdateVoteThd
   ) where
 
-import           Cardano.Prelude
-import           Prelude (String)
+import           Cardano.Prelude (ConvertText (..))
 
-import           Control.Monad (fail)
+import           Control.Monad (when)
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
 import           Data.Attoparsec.Combinator ((<?>))
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy.Char8 as C8
 import qualified Data.Char as Char
-import qualified Data.Text as Text
+import           Data.Foldable
+import           Data.Text (Text)
 import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import           Data.Word (Word16, Word64)
 import           Formatting (build, sformat)
+import           GHC.Natural (Natural)
+import           GHC.Word (Word8)
 
 import           Options.Applicative
 import qualified Options.Applicative as Opt
@@ -301,13 +304,13 @@ parseTxOut =
   pAddressInEra :: Text -> AddressInEra ByronEra
   pAddressInEra t =
     case decodeAddressBase58 t of
-      Left err -> panic $ "Bad Base58 address: " <> Text.pack (show err)
+      Left err -> error $ "Bad Base58 address: " <> show err
       Right byronAddress -> AddressInEra ByronAddressInAnyEra $ ByronAddress byronAddress
 
   pLovelaceTxOut :: Word64 -> TxOutValue ByronEra
   pLovelaceTxOut l =
     if l > (maxBound :: Word64)
-    then panic $ show l <> " lovelace exceeds the Word64 upper bound"
+    then error $ show l <> " lovelace exceeds the Word64 upper bound"
     else TxOutAdaOnly AdaOnlyInByronEra . Lovelace $ toInteger l
 
 readerFromAttoParser :: Atto.Parser a -> Opt.ReadM a
@@ -706,7 +709,7 @@ parseUTCTime optname desc =
 cliParseBase58Address :: Text -> Address ByronAddr
 cliParseBase58Address t =
   case decodeAddressBase58 t of
-    Left err -> panic $ "Bad Base58 address: " <> Text.pack (show err)
+    Left err -> error $ "Bad Base58 address: " <> show err
     Right byronAddress -> ByronAddress byronAddress
 
 parseFraction :: String -> String -> Parser Rational
@@ -735,7 +738,7 @@ parseLovelace optname desc =
     then fail $ show i <> " lovelace exceeds the Word64 upper bound"
     else case toByronLovelace (Lovelace i) of
            Just byronLovelace -> return byronLovelace
-           Nothing -> panic $ "Error converting lovelace: " <> Text.pack (show i)
+           Nothing -> error $ "Error converting lovelace: " <> show i
 
 readDouble :: ReadM Double
 readDouble = do

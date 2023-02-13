@@ -13,11 +13,10 @@ module Cardano.Node.Tracing.Tracers.NodeToNode
    ) where
 
 import           Cardano.Logging
-import           Cardano.Prelude hiding (Show, show)
 import           Data.Aeson (Value (String), toJSON, (.=))
+import           Data.Proxy (Proxy (..))
 import           Data.Text (pack)
 import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
-import           Text.Show
 
 import           Cardano.Node.Queries (ConvertTxId)
 import           Cardano.Node.Tracing.Render (renderHeaderHash, renderTxIdForDetails)

@@ -58,6 +58,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import qualified Data.Vector as Vector
+import           Formatting (build, formatToString)
 
 --
 -- Common types, consensus, network
@@ -431,7 +432,7 @@ decodeShelleyBasedWitness era =
       case t of
         0 -> fmap (fmap (ShelleyKeyWitness era)) fromCBOR
         1 -> fmap (fmap (ShelleyBootstrapWitness era)) fromCBOR
-        _ -> CBOR.cborError $ CBOR.DecoderErrorUnknownTag
+        _ -> fail . formatToString build $ CBOR.DecoderErrorUnknownTag
                                 "Shelley Witness" (fromIntegral t)
 
 

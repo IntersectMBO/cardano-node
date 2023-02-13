@@ -8,12 +8,9 @@ module Test.Gen.Cardano.Api
   , genAlonzoGenesis
   ) where
 
-import           Cardano.Prelude (panic)
-
 import           Cardano.Api.Shelley as Api
 
 import qualified Data.Map.Strict as Map
-import qualified Data.Text as Text
 import           Data.Word (Word64)
 
 --TODO: why do we have this odd split? We can get rid of the old name "typed"
@@ -92,7 +89,7 @@ genCostModels = do
   CostModel cModel <- genCostModel
   lang <- genLanguage
   case Alonzo.mkCostModel lang cModel of
-    Left err -> panic . Text.pack $ "genCostModels: " <> show err
+    Left err -> error $ "genCostModels: " <> show err
     Right alonzoCostModel ->
       Alonzo.CostModels . conv <$> Gen.list (Range.linear 1 3) (return alonzoCostModel)
  where

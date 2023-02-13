@@ -105,8 +105,6 @@ module Test.Gen.Cardano.Api.Typed
   , genRational
   ) where
 
-import           Cardano.Prelude (panic)
-
 import           Cardano.Api hiding (txIns)
 import qualified Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
@@ -127,7 +125,6 @@ import           Data.Map.Strict (Map)
 import           Data.Maybe (maybeToList)
 import           Data.Ratio (Ratio, (%))
 import           Data.String
-import qualified Data.Text as Text
 import           Data.Word (Word64)
 import           Numeric.Natural (Natural)
 
@@ -498,7 +495,7 @@ genTxValidityUpperBound era =
       pure (TxValidityNoUpperBound supported)
 
     (Nothing, Nothing) ->
-      panic "genTxValidityUpperBound: unexpected era support combination"
+      error "genTxValidityUpperBound: unexpected era support combination"
 
 genTxValidityRange
   :: CardanoEra era
@@ -863,7 +860,7 @@ genCostModel = do
   eCostModel <- Alonzo.mkCostModel <$> genPlutusLanguage
                                    <*> mapM (const $ Gen.integral (Range.linear 0 5000)) costModelParams
   case eCostModel of
-    Left err -> panic $ Text.pack $ "genCostModel: " <> show err
+    Left err -> error $ "genCostModel: " <> show err
     Right cModel -> return . CostModel $ Alonzo.getCostModelParams cModel
 
 genPlutusLanguage :: Gen Language

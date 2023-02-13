@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -12,17 +13,19 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
-{-# LANGUAGE InstanceSigs #-}
 
 module Cardano.Tracing.OrphanInstances.Consensus () where
 
-import           Cardano.Prelude hiding (show)
-import           Prelude (id, show)
-
+import           Cardano.Prelude (maximumDef)
 import           Data.Aeson (Value (..))
-import           Data.Text (pack)
+import qualified Data.Aeson as Aeson
+import           Data.Data (Proxy (..))
+import           Data.Foldable (Foldable (..))
+import           Data.Text (Text, pack)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import           Data.Word (Word32)
+import           GHC.Generics (Generic)
 import           Numeric (showFFloat)
 
 import           Cardano.Slotting.Slot (fromWithOrigin)
@@ -33,7 +36,8 @@ import           Cardano.Tracing.Render (renderChainHash, renderChunkNo, renderH
                    renderPointForVerbosity, renderRealPoint, renderRealPointAsPhrase,
                    renderTipBlockNo, renderTipHash, renderWithOrigin)
 
-import           Cardano.Node.Tracing.Tracers.ConsensusStartupException (ConsensusStartupException (..))
+import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
+                   (ConsensusStartupException (..))
 
 import           Ouroboros.Consensus.Block (BlockProtocol, BlockSupportsProtocol, CannotForge,
                    ConvertRawHash (..), ForgeStateUpdateError, Header, RealPoint, blockNo,
@@ -79,7 +83,7 @@ import           Ouroboros.Network.Point (withOrigin)
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 -- TODO: 'TraceCacheEvent' should be exported by the 'Impl' module
-import qualified Data.Aeson as Aeson
+import           Data.Function (on)
 import qualified Ouroboros.Consensus.Storage.ImmutableDB.API as ImmDB
 import qualified Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types as ImmDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB

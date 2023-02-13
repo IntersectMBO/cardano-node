@@ -15,8 +15,6 @@
 module Cardano.Node.Tracing.Era.HardFork ()
   where
 
-import           Cardano.Prelude hiding (All)
-
 import           Cardano.Tracing.OrphanInstances.HardFork ()
 
 import           Data.Aeson

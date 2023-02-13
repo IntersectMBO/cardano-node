@@ -9,14 +9,14 @@ module Cardano.CLI.Shelley.Run.Node
   , readColdVerificationKeyOrFile
   ) where
 
-import           Cardano.Prelude hiding ((<.>))
-import           Prelude (id)
-
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans.Except (ExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, newExceptT)
 import qualified Data.ByteString.Char8 as BS
 import           Data.String (fromString)
+import           Data.Text (Text)
 import qualified Data.Text as Text
-
-import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, newExceptT)
+import           Data.Word (Word64)
 
 import           Cardano.Api
 import           Cardano.Api.Shelley

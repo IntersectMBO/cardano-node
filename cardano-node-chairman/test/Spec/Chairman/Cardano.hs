@@ -4,10 +4,6 @@ module Spec.Chairman.Cardano
   ( hprop_chairman
   ) where
 
-import           Control.Monad ((=<<))
-import           Data.Function
-import           Data.Functor
-import           Data.Maybe
 import           Spec.Chairman.Chairman (chairmanOver)
 import           System.FilePath ((</>))
 

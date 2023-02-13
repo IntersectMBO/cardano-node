@@ -4,7 +4,7 @@ module Test.Golden.Shelley.Address.KeyGen
   ( golden_shelleyAddressKeyGen
   ) where
 
-import           Cardano.Prelude
+import           Control.Monad (void)
 import           Hedgehog (Property)
 import           Test.OptParse
 

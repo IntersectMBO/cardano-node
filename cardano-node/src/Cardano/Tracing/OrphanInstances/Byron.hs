@@ -10,9 +10,10 @@
 
 module Cardano.Tracing.OrphanInstances.Byron () where
 
-import           Cardano.Prelude
+import           Cardano.Api (textShow)
 
 import           Data.Aeson (Value (..))
+import           Data.ByteString (ByteString)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 
@@ -47,22 +48,22 @@ instance ToObject ApplyMempoolPayloadErr where
   toObject _verb (MempoolTxErr utxoValidationErr) =
     mconcat
       [ "kind" .= String "MempoolTxErr"
-      , "error" .= String (show utxoValidationErr)
+      , "error" .= String (textShow utxoValidationErr)
       ]
   toObject _verb (MempoolDlgErr delegScheduleError) =
     mconcat
       [ "kind" .= String "MempoolDlgErr"
-      , "error" .= String (show delegScheduleError)
+      , "error" .= String (textShow delegScheduleError)
       ]
   toObject _verb (MempoolUpdateProposalErr iFaceErr) =
     mconcat
       [ "kind" .= String "MempoolUpdateProposalErr"
-      , "error" .= String (show iFaceErr)
+      , "error" .= String (textShow iFaceErr)
       ]
   toObject _verb (MempoolUpdateVoteErr iFaceErrr) =
     mconcat
       [ "kind" .= String "MempoolUpdateVoteErr"
-      , "error" .= String (show iFaceErrr)
+      , "error" .= String (textShow iFaceErrr)
       ]
 
 instance ToObject ByronLedgerUpdate where

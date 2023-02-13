@@ -5,8 +5,8 @@ module Test.Cardano.Node.POM
   ( tests
   ) where
 
-import           Cardano.Prelude
-
+import           Data.Monoid (Last (..))
+import           Data.Text (Text)
 import           Data.Time.Clock (secondsToDiffTime)
 
 import           Cardano.Node.Configuration.POM

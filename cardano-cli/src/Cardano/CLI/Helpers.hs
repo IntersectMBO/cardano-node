@@ -14,8 +14,7 @@ module Cardano.CLI.Helpers
   , hushM
   ) where
 
-import           Cardano.Prelude
-import           Prelude (String)
+import           Cardano.Prelude (ConvertText (..))
 
 import           Codec.CBOR.Pretty (prettyHexEnc)
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
@@ -35,6 +34,15 @@ import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.UTxO as UTxO
 import           Cardano.CLI.Types
 
+import           Control.Exception (Exception (..), IOException)
+import           Control.Monad (unless, when)
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans.Except (ExceptT)
+import           Data.Bifunctor (Bifunctor (..))
+import           Data.ByteString (ByteString)
+import           Data.Functor (void)
+import           Data.Text (Text)
+import qualified Data.Text.IO as Text
 import qualified System.Directory as IO
 
 data HelpersError
@@ -55,7 +63,7 @@ renderHelpersError err =
     IOError' fp ioE -> "Error at: " <> Text.pack fp <> " Error: " <> Text.pack (show ioE)
 
 decodeCBOR
-  :: LByteString
+  :: LB.ByteString
   -> (forall s. Decoder s a)
   -> Either HelpersError (LB.ByteString, a)
 decodeCBOR bs decoder =
@@ -85,22 +93,22 @@ ensureNewFile writer outFile blob = do
 ensureNewFileLBS :: FilePath -> ByteString -> ExceptT HelpersError IO ()
 ensureNewFileLBS = ensureNewFile BS.writeFile
 
-pPrintCBOR :: LByteString -> ExceptT HelpersError IO ()
+pPrintCBOR :: LB.ByteString -> ExceptT HelpersError IO ()
 pPrintCBOR bs = do
   case deserialiseFromBytes decodeTerm bs of
     Left err -> left $ CBORPrettyPrintError err
     Right (remaining, decodedVal) -> do
-      liftIO . putTextLn . toS . prettyHexEnc $ encodeTerm decodedVal
+      liftIO . Text.putStrLn . toS . prettyHexEnc $ encodeTerm decodedVal
       unless (LB.null remaining) $
         pPrintCBOR remaining
 
-readCBOR :: FilePath -> ExceptT HelpersError IO LByteString
+readCBOR :: FilePath -> ExceptT HelpersError IO LB.ByteString
 readCBOR fp =
   handleIOExceptT
     (ReadCBORFileFailure fp . toS . displayException)
     (LB.readFile fp)
 
-validateCBOR :: CBORObject -> LByteString -> Either HelpersError Text
+validateCBOR :: CBORObject -> LB.ByteString -> Either HelpersError Text
 validateCBOR cborObject bs =
   case cborObject of
     CBORBlockByron epochSlots -> do

@@ -1,4 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.TxSubmit.Metrics
@@ -7,13 +6,8 @@ module Cardano.TxSubmit.Metrics
   , registerMetricsServer
   ) where
 
-import           Control.Applicative (Applicative (pure), (<$>), (<*>))
 import           Control.Concurrent.Async (Async, async)
 import           Control.Monad.Reader (MonadIO (liftIO), MonadReader (ask), ReaderT (runReaderT))
-import           Data.Function (($), (.))
-import           Data.Int
-import           Data.Monoid (Monoid (mempty))
-import           System.IO (IO)
 import           System.Metrics.Prometheus.Concurrent.RegistryT (RegistryT (..), registerGauge,
                    runRegistryT, unRegistryT)
 import           System.Metrics.Prometheus.Http.Scrape (serveMetricsT)

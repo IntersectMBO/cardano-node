@@ -30,8 +30,6 @@ module Cardano.Api.Keys.Byron (
     toByronSigningKey
   ) where
 
-import qualified Cardano.Prelude as CBOR (toCborError)
-
 import qualified Codec.CBOR.Decoding as CBOR
 import qualified Codec.CBOR.Read as CBOR
 import           Control.Monad
@@ -42,6 +40,7 @@ import           Data.Either.Combinators
 import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import           Formatting (build, formatToString)
 
 import qualified Cardano.Crypto.DSIGN.Class as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
@@ -272,8 +271,7 @@ instance SerialiseAsRawBytes (SigningKey ByronKeyLegacy) where
                     )
 
       decodeXPrv :: CBOR.Decoder s Wallet.XPrv
-      decodeXPrv = CBOR.decodeBytesCanonical >>= CBOR.toCborError . Wallet.xprv
-
+      decodeXPrv = CBOR.decodeBytesCanonical >>= either (fail . formatToString build) pure . Wallet.xprv
 
       -- | Decoder for a Byron/Classic signing key.
       --   Lifted from cardano-sl legacy codebase.

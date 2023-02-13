@@ -4,7 +4,8 @@ module Cardano.CLI.Shelley.Run
   , runShelleyClientCommand
   ) where
 
-import           Cardano.Prelude
+import           Control.Monad.Trans.Except (ExceptT)
+import           Data.Text (Text)
 
 import           Cardano.Api
 

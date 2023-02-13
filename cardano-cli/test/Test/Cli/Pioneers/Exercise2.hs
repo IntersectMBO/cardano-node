@@ -4,7 +4,7 @@ module Test.Cli.Pioneers.Exercise2
   ( tests
   ) where
 
-import           Cardano.Prelude
+import           Control.Monad (void)
 import           Hedgehog (Property)
 import           Test.OptParse
 

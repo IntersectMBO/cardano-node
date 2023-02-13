@@ -27,18 +27,24 @@ module Cardano.Tracing.Tracers
   , traceCounter
   ) where
 
-import           Cardano.Prelude hiding (show)
-import           Prelude (String, show)
-
 import           GHC.Clock (getMonotonicTimeNSec)
 
 import           Codec.CBOR.Read (DeserialiseFailure)
+import           Control.Concurrent (MVar, modifyMVar_)
+import           Control.Concurrent.STM (STM, atomically)
+import           Control.Monad (forM_, when)
 import           Data.Aeson (ToJSON (..), Value (..))
+import           Data.Functor ((<&>))
+import           Data.Int (Int64)
 import           Data.IntPSQ (IntPSQ)
 import qualified Data.IntPSQ as Pq
 import qualified Data.Map.Strict as Map
+import           Data.Proxy (Proxy (..))
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Time (NominalDiffTime, UTCTime)
+import           Data.Word (Word64)
+import           GHC.TypeLits (KnownNat, Nat, natVal)
 import qualified System.Metrics.Counter as Counter
 import qualified System.Metrics.Gauge as Gauge
 import qualified System.Metrics.Label as Label

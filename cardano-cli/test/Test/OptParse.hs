@@ -9,10 +9,6 @@ module Test.OptParse
   , noteTempFile
   ) where
 
-import           Cardano.Prelude hiding (lines, readFile, stderr, stdout)
-import           Prelude (String)
-import qualified Prelude
-
 import           Control.Monad.Catch
 import qualified GHC.Stack as GHC
 
@@ -20,6 +16,8 @@ import           Cardano.Api
 
 import           Cardano.CLI.Shelley.Run.Read
 
+import           Control.Monad.IO.Class (MonadIO (..))
+import           GHC.Stack (CallStack, HasCallStack)
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Process as H
 import           Hedgehog.Internal.Property (Diff, MonadTest, liftTest, mkTest)
@@ -59,7 +57,7 @@ checkTextEnvelopeFormat tve reference created = do
                       => Either (FileError TextEnvelopeError) TextEnvelope
                       -> m TextEnvelope
    handleTextEnvelope (Right refTextEnvelope) = return refTextEnvelope
-   handleTextEnvelope (Left fileErr) = failWithCustom callStack Nothing . displayError $ fileErr
+   handleTextEnvelope (Left fileErr) = failWithCustom GHC.callStack Nothing . displayError $ fileErr
 
    typeTitleEquivalence :: MonadTest m => TextEnvelope -> TextEnvelope -> m ()
    typeTitleEquivalence (TextEnvelope refType refTitle _)
@@ -87,13 +85,13 @@ cardanoCliPath = "cardano-cli"
 
 -- | Return the input file path after annotating it relative to the project root directory
 noteInputFile :: (MonadTest m, HasCallStack) => FilePath -> m FilePath
-noteInputFile filePath = withFrozenCallStack $ do
+noteInputFile filePath = GHC.withFrozenCallStack $ do
   H.annotate $ cardanoCliPath <> "/" <> filePath
   return filePath
 
 -- | Return the test file path after annotating it relative to the project root directory
 noteTempFile :: (MonadTest m, HasCallStack) => FilePath -> FilePath -> m FilePath
-noteTempFile tempDir filePath = withFrozenCallStack $ do
+noteTempFile tempDir filePath = GHC.withFrozenCallStack $ do
   let relPath = tempDir <> "/" <> filePath
   H.annotate $ cardanoCliPath <> "/" <> relPath
   return relPath
@@ -117,7 +115,7 @@ equivalence x y = do
   ok <- H.eval (x == y)
   if ok
     then H.success
-    else failDiffCustom callStack x y
+    else failDiffCustom GHC.callStack x y
 
 -- | Takes a 'CallStack' so the error can be rendered at the appropriate call site.
 failWithCustom :: MonadTest m => CallStack -> Maybe Diff -> String -> m a
@@ -129,7 +127,7 @@ failDiffCustom :: (MonadTest m, Show a) => CallStack -> a -> a -> m ()
 failDiffCustom cS x y =
   case valueDiff <$> mkValue x <*> mkValue y of
     Nothing ->
-      withFrozenCallStack $
+      GHC.withFrozenCallStack $
         failWithCustom cS Nothing $
         Prelude.unlines [
             "Failed"
@@ -140,11 +138,11 @@ failDiffCustom cS x y =
           ]
 
     Just vdiff@(ValueSame _) ->
-      withFrozenCallStack $
+      GHC.withFrozenCallStack $
         failWithCustom cS (Just $
           H.Diff "━━━ Failed ("  "" "no differences" "" ") ━━━" vdiff) ""
 
     Just vdiff ->
-      withFrozenCallStack $
+      GHC.withFrozenCallStack $
         failWithCustom cS (Just $
           H.Diff "━━━ Failed (" "- lhs" ") (" "+ rhs" ") ━━━" vdiff) ""

@@ -4,7 +4,7 @@ module Test.Golden.Shelley.Genesis.KeyGenDelegate
   ( golden_shelleyGenesisKeyGenDelegate
   ) where
 
-import           Cardano.Prelude
+import           Control.Monad (void)
 import           Hedgehog (Property)
 import           Test.OptParse
 

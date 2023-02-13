@@ -10,32 +10,23 @@ module Testnet.Util.Assert
   , getRelevantLeaderSlots
   ) where
 
-import           Control.Monad (Monad (..), fail)
+import           Prelude hiding (lines)
+
 import           Control.Monad.IO.Class (MonadIO)
 import           Control.Monad.Trans.Reader (ReaderT)
 import           Control.Monad.Trans.Resource (ResourceT)
 import           Data.Aeson (FromJSON (..), Value, (.:))
-import           Data.Bool (Bool (..))
-import           Data.Eq (Eq (..))
-import           Data.Function (($), (.))
-import           Data.Functor ((<$>))
-import           Data.Int (Int)
-import           Data.Maybe (Maybe (..), mapMaybe)
-import           Data.Ord (Ord (..))
-import           Data.Semigroup ((<>))
 import           Data.Text (Text)
 import           Data.Word (Word8)
 import           GHC.Stack (HasCallStack)
 import           Hedgehog (MonadTest)
 import           Hedgehog.Extras.Internal.Test.Integration (IntegrationState)
-import           System.FilePath (FilePath)
-import           System.IO (IO)
-import           Text.Show (Show (..))
 
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as L
+import           Data.Maybe (mapMaybe)
 import qualified Data.Maybe as Maybe
 import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H

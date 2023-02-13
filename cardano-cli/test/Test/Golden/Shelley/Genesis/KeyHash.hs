@@ -4,7 +4,6 @@ module Test.Golden.Shelley.Genesis.KeyHash
   ( golden_shelleyGenesisKeyHash
   ) where
 
-import           Cardano.Prelude
 import           Hedgehog (Property, (===))
 import           Test.OptParse as OP
 

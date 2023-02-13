@@ -1,4 +1,3 @@
-import           Cardano.Prelude
 
 import           Hedgehog.Main (defaultMain)
 

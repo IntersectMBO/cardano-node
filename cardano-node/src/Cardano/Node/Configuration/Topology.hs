@@ -15,14 +15,17 @@ module Cardano.Node.Configuration.Topology
   )
 where
 
-import           Cardano.Prelude
-import           Prelude (String)
-
+import           Control.Exception (Exception (..), IOException)
 import qualified Control.Exception as Exception
 import           Data.Aeson
+import           Data.Bifunctor (Bifunctor (..))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.Foldable
+import           Data.Text (Text)
 import qualified Data.Text as Text
+import           Data.Word (Word64)
+import           Text.Read (readMaybe)
 
 import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
@@ -152,6 +155,6 @@ readTopologyFile nc = do
 readTopologyFileOrError :: NodeConfiguration -> IO NetworkTopology
 readTopologyFileOrError nc =
       readTopologyFile nc
-  >>= either (\err -> panic $ "Cardano.Node.Configuration.Topology.readTopologyFile: "
-                           <> err)
+  >>= either (\err -> error $ "Cardano.Node.Configuration.Topology.readTopologyFile: "
+                           <> Text.unpack err)
              pure

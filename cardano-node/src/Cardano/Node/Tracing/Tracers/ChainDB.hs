@@ -12,19 +12,21 @@ module Cardano.Node.Tracing.Tracers.ChainDB
    ( withAddedToCurrentChainEmptyLimited
    ) where
 
+import           Cardano.Prelude (maximumDef)
+
 import           Data.Aeson (Value (String), toJSON, (.=))
+import           Data.Int (Int64)
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import           Data.Word (Word64)
 import           Numeric (showFFloat)
-import           Prelude (id)
-import           Text.Show
 
 import           Cardano.Logging
 import           Cardano.Node.Tracing.Era.Byron ()
 import           Cardano.Node.Tracing.Era.Shelley ()
 import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.Render
-import           Cardano.Prelude hiding (Show, show, trace)
 
 import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.HeaderValidation (HeaderEnvelopeError (..), HeaderError (..),
@@ -45,7 +47,6 @@ import qualified Ouroboros.Consensus.Storage.LedgerDB.Types as LedgerDB
 import qualified Ouroboros.Consensus.Storage.VolatileDB as VolDB
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Consensus.Util.Enclose
-
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
 

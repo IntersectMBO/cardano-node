@@ -7,10 +7,6 @@ module Cardano.Node.STM
   , modifyReadTVarIO'
   ) where
 
-import Data.Function
-import Control.Monad
-import System.IO (IO)
-
 import qualified Control.Concurrent.STM as STM
 
 -- | Mutate the contents of a TVar and return the new value of the TVar (non-strict).

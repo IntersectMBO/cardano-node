@@ -6,8 +6,9 @@ module Cardano.Node.Tracing.Peers
   , traceNodePeers
   ) where
 
-import           Cardano.Prelude
 import           Data.Aeson (FromJSON, ToJSON)
+import           Data.Text (Text)
+import           GHC.Generics (Generic)
 
 import           Cardano.Logging
 
@@ -41,4 +42,4 @@ traceNodePeers
   :: Trace IO NodePeers
   -> [PeerT blk]
   -> IO ()
-traceNodePeers tr ev = traceWith tr $ NodePeers (map ppPeer ev)
+traceNodePeers tr ev = traceWith tr $ NodePeers (fmap ppPeer ev)

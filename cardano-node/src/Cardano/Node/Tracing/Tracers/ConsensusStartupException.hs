@@ -6,13 +6,11 @@ module Cardano.Node.Tracing.Tracers.ConsensusStartupException
   ( ConsensusStartupException (..)
   ) where
 
-import           Cardano.Prelude hiding (Show, show)
-
 import           Data.Aeson (Value (String), (.=))
 import qualified Data.Text as Text
-import           Text.Show
 
 import           Cardano.Logging.Types
+import           Control.Exception (SomeException)
 
 -- | Exceptions logged when the consensus is initialising.
 --

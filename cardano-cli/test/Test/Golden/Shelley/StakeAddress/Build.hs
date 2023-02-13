@@ -4,7 +4,6 @@ module Test.Golden.Shelley.StakeAddress.Build
   ( golden_shelleyStakeAddressBuild
   ) where
 
-import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse as OP
 

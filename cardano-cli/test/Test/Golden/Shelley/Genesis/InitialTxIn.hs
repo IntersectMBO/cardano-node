@@ -4,7 +4,6 @@ module Test.Golden.Shelley.Genesis.InitialTxIn
   ( golden_shelleyGenesisInitialTxIn
   ) where
 
-import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse
 

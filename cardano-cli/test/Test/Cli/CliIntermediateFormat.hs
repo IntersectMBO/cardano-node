@@ -5,7 +5,8 @@ module Test.Cli.CliIntermediateFormat
   ( tests
   ) where
 
-import           Cardano.Prelude
+import           Control.Monad (void)
+
 import           Hedgehog (Property, discover)
 import           Test.OptParse
 

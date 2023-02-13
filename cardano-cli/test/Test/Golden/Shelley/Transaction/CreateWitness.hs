@@ -4,9 +4,7 @@ module Test.Golden.Shelley.Transaction.CreateWitness
   ( golden_shelleyTransactionSigningKeyWitness
   ) where
 
-import           Cardano.Prelude
-import           Prelude (String)
-
+import           Control.Monad (void)
 import           Hedgehog (Property)
 import           Test.OptParse
 

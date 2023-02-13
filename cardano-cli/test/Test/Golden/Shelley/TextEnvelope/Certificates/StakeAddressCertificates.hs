@@ -5,7 +5,7 @@ module Test.Golden.Shelley.TextEnvelope.Certificates.StakeAddressCertificates
   ) where
 
 import           Cardano.Api (AsType (..), HasTextEnvelope (..))
-import           Cardano.Prelude
+import           Control.Monad (void)
 import           Hedgehog (Property)
 import           Test.OptParse
 
