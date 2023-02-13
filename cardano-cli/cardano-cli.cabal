@@ -142,6 +142,7 @@ library
                       , ouroboros-network-protocols
                       , parsec
                       , prettyprinter
+                      , prettyprinter-ansi-terminal
                       , random
                       , cardano-ledger-shelley ^>= 0.1
                       , set-algebra ^>= 0.1
