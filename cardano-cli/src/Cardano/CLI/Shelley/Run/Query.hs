@@ -510,7 +510,8 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
    opCertNodeAndOnDiskCounters o@(OpCertOnDiskCounter odc) (Just n@(OpCertNodeStateCounter nsc))
      | odc < nsc = OpCertOnDiskCounterBehindNodeState o n
      | odc > nsc + 1 = OpCertOnDiskCounterTooFarAheadOfNodeState o n
-     | otherwise = OpCertOnDiskCounterMoreThanOrEqualToNodeState o n
+     | odc == nsc + 1 = OpCertOnDiskCounterAheadOfNodeState o n
+     | otherwise = OpCertOnDiskCounterEqualToNodeState o n
    opCertNodeAndOnDiskCounters o Nothing = OpCertNoBlocksMintedYet o
 
    opCertExpiryUtcTime
@@ -530,11 +531,18 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
    renderOpCertNodeAndOnDiskCounterInformation :: FilePath -> OpCertNodeAndOnDiskCounterInformation -> String
    renderOpCertNodeAndOnDiskCounterInformation opCertFile opCertCounterInfo =
      case opCertCounterInfo of
-      OpCertOnDiskCounterMoreThanOrEqualToNodeState _ _ ->
+      OpCertOnDiskCounterEqualToNodeState _ _ ->
         PP.renderStringDefault $
           PP.green "✓" PP.<+> PP.hang 0
               ( PP.vsep
                 [ "The operational certificate counter agrees with the node protocol state counter"
+                ]
+              )
+      OpCertOnDiskCounterAheadOfNodeState _ _ ->
+        PP.renderStringDefault $
+          PP.green "✓" PP.<+> PP.hang 0
+              ( PP.vsep
+                [ "The operational certificate counter ahead of the node protocol state counter by 1"
                 ]
               )
       OpCertOnDiskCounterTooFarAheadOfNodeState onDiskC nodeStateC ->
@@ -578,9 +586,10 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
                             OpCertExpired _ end _ -> (end, Nothing)
                             OpCertSomeOtherError _ end _ -> (end, Nothing)
          (onDiskCounter, mNodeCounter) = case oCertCounterInfo of
-                                           OpCertOnDiskCounterMoreThanOrEqualToNodeState d n -> (d, Just n)
-                                           OpCertOnDiskCounterBehindNodeState d n -> (d, Just n)
+                                           OpCertOnDiskCounterEqualToNodeState d n -> (d, Just n)
+                                           OpCertOnDiskCounterAheadOfNodeState d n -> (d, Just n)
                                            OpCertOnDiskCounterTooFarAheadOfNodeState d n -> (d, Just n)
+                                           OpCertOnDiskCounterBehindNodeState d n -> (d, Just n)
                                            OpCertNoBlocksMintedYet d -> (d, Nothing)
 
      in O.QueryKesPeriodInfoOutput
