@@ -53,19 +53,34 @@ module Cardano.CLI.Shelley.Run.Read
   , RequiredSignerError(..)
   , categoriseSomeWitness
   , readRequiredSigner
+
+  -- * FileOrPipe
+  , FileOrPipe
+  , fileOrPipe
+  , fileOrPipePath
+  , fileOrPipeCache
+  , readFileOrPipe
   ) where
 
 import           Prelude
 
+import           Control.Exception (bracket)
+import           Control.Monad (unless)
 import           Control.Monad.Trans.Except (ExceptT (..), runExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, left)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, left,
+                   newExceptT)
 import qualified Data.Aeson as Aeson
 import           Data.Bifunctor (first)
+import qualified Data.ByteString.Builder as Builder
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.List as List
 import qualified Data.Text as Text
 import           Data.Word
+import           GHC.IO.Handle (hClose, hIsSeekable)
+import           GHC.IO.Handle.FD (openFileBlocking)
+import           System.IO (IOMode (ReadMode))
 
 
 import           Cardano.Api
@@ -447,11 +462,11 @@ deserialiseScriptInAnyLang bs =
 
 newtype CddlTx = CddlTx {unCddlTx :: InAnyCardanoEra Tx} deriving (Show, Eq)
 
-readFileTx :: FilePath -> IO (Either CddlError (InAnyCardanoEra Tx))
-readFileTx fp = do
-  eAnyTx <- readFileInAnyCardanoEra AsTx fp
+readFileTx :: FileOrPipe -> IO (Either CddlError (InAnyCardanoEra Tx))
+readFileTx file = do
+  eAnyTx <- readFileInAnyCardanoEra AsTx file
   case eAnyTx of
-    Left e -> fmap unCddlTx <$> acceptTxCDDLSerialisation e
+    Left e -> fmap unCddlTx <$> acceptTxCDDLSerialisation file e
     Right tx -> return $ Right tx
 
 -- IncompleteCddlFormattedTx is an CDDL formatted tx or partial tx
@@ -463,11 +478,11 @@ data IncompleteTx
   = UnwitnessedCliFormattedTxBody (InAnyCardanoEra TxBody)
   | IncompleteCddlFormattedTx (InAnyCardanoEra Tx)
 
-readFileTxBody :: FilePath -> IO (Either CddlError IncompleteTx)
-readFileTxBody fp = do
-  eTxBody <- readFileInAnyCardanoEra AsTxBody fp
+readFileTxBody :: FileOrPipe -> IO (Either CddlError IncompleteTx)
+readFileTxBody file = do
+  eTxBody <- readFileInAnyCardanoEra AsTxBody file
   case eTxBody of
-    Left e -> fmap (IncompleteCddlFormattedTx . unCddlTx) <$> acceptTxCDDLSerialisation e
+    Left e -> fmap (IncompleteCddlFormattedTx . unCddlTx) <$> acceptTxCDDLSerialisation file e
     Right txBody -> return $ Right $ UnwitnessedCliFormattedTxBody txBody
 
 data CddlError = CddlErrorTextEnv
@@ -484,21 +499,22 @@ renderCddlError (CddlErrorTextEnv textEnvErr cddlErr) = mconcat
 renderCddlError (CddlIOError e) = Text.pack $ displayError e
 
 acceptTxCDDLSerialisation
-  :: FileError TextEnvelopeError
+  :: FileOrPipe
+  -> FileError TextEnvelopeError
   -> IO (Either CddlError CddlTx)
-acceptTxCDDLSerialisation err =
+acceptTxCDDLSerialisation file err =
   case err of
-   e@(FileError fp (TextEnvelopeDecodeError _)) ->
-      first (CddlErrorTextEnv e) <$> readCddlTx fp
-   e@(FileError fp (TextEnvelopeAesonDecodeError _)) ->
-      first (CddlErrorTextEnv e) <$> readCddlTx fp
-   e@(FileError fp (TextEnvelopeTypeError _ _)) ->
-      first (CddlErrorTextEnv e) <$> readCddlTx fp
+   e@(FileError _ (TextEnvelopeDecodeError _)) ->
+      first (CddlErrorTextEnv e) <$> readCddlTx file
+   e@(FileError _ (TextEnvelopeAesonDecodeError _)) ->
+      first (CddlErrorTextEnv e) <$> readCddlTx file
+   e@(FileError _ (TextEnvelopeTypeError _ _)) ->
+      first (CddlErrorTextEnv e) <$> readCddlTx file
    e@FileErrorTempFile{} -> return . Left $ CddlIOError e
    e@FileIOError{} -> return . Left $ CddlIOError e
 
-readCddlTx :: FilePath -> IO (Either (FileError TextEnvelopeCddlError) CddlTx)
-readCddlTx = readFileTextEnvelopeCddlAnyOf teTypes
+readCddlTx :: FileOrPipe -> IO (Either (FileError TextEnvelopeCddlError) CddlTx)
+readCddlTx = readFileOrPipeTextEnvelopeCddlAnyOf teTypes
  where
     teTypes = [ FromCDDLTx "Witnessed Tx ByronEra" CddlTx
               , FromCDDLTx "Witnessed Tx ShelleyEra" CddlTx
@@ -521,7 +537,8 @@ newtype CddlWitness = CddlWitness { unCddlWitness :: InAnyCardanoEra KeyWitness}
 readFileTxKeyWitness :: FilePath
                 -> IO (Either CddlWitnessError (InAnyCardanoEra KeyWitness))
 readFileTxKeyWitness fp = do
-  eWitness <- readFileInAnyCardanoEra AsKeyWitness fp
+  file <- fileOrPipe fp
+  eWitness <- readFileInAnyCardanoEra AsKeyWitness file
   case eWitness of
     Left e -> fmap unCddlWitness <$> acceptKeyWitnessCDDLSerialisation e
     Right keyWit -> return $ Right keyWit
@@ -727,10 +744,10 @@ readFileInAnyCardanoEra
      , HasTextEnvelope (thing BabbageEra)
      )
   => (forall era. AsType era -> AsType (thing era))
-  -> FilePath
+  -> FileOrPipe
   -> IO (Either (FileError TextEnvelopeError) (InAnyCardanoEra thing))
 readFileInAnyCardanoEra asThing =
- readFileTextEnvelopeAnyOf
+ readFileOrPipeTextEnvelopeAnyOf
    [ FromSomeType (asThing AsByronEra)   (InAnyCardanoEra ByronEra)
    , FromSomeType (asThing AsShelleyEra) (InAnyCardanoEra ShelleyEra)
    , FromSomeType (asThing AsAllegraEra) (InAnyCardanoEra AllegraEra)
@@ -738,3 +755,88 @@ readFileInAnyCardanoEra asThing =
    , FromSomeType (asThing AsAlonzoEra)  (InAnyCardanoEra AlonzoEra)
    , FromSomeType (asThing AsBabbageEra) (InAnyCardanoEra BabbageEra)
    ]
+
+-- | We need a type for handling files that may be actually be things like
+-- pipes. Currently the CLI makes no guarantee that a "file" will only
+-- be read once. This is a problem for a user who who expects to be able to pass
+-- a pipe. To handle this, we have a type for representing either files or pipes
+-- where the contents will be saved in memory if what we're reading is a pipe (so
+-- it can be re-read later). Unfortunately this means we can't easily stream data
+-- from pipes, but at present that's not an issue.
+data FileOrPipe = FileOrPipe FilePath (IORef (Maybe LBS.ByteString))
+
+
+instance Show FileOrPipe where
+    show (FileOrPipe fp _) = show fp
+
+fileOrPipe :: FilePath -> IO FileOrPipe
+fileOrPipe fp = FileOrPipe fp <$> newIORef Nothing
+
+-- | Get the path backing a FileOrPipe. This should primarily be used when
+-- generating error messages for a user. A user should not call directly
+-- call a function like readFile on the result of this function
+fileOrPipePath :: FileOrPipe -> FilePath
+fileOrPipePath (FileOrPipe fp _) = fp
+
+fileOrPipeCache :: FileOrPipe -> IO (Maybe LBS.ByteString)
+fileOrPipeCache (FileOrPipe _ c) = readIORef c
+
+-- | Get the contents of a file or pipe. This function reads the entire
+-- contents of the file or pipe, and is blocking.
+readFileOrPipe :: FileOrPipe -> IO LBS.ByteString
+readFileOrPipe (FileOrPipe fp cacheRef) = do
+    cached <- readIORef cacheRef
+    case cached of
+      Just dat -> pure dat
+      Nothing -> bracket
+        (openFileBlocking fp ReadMode)
+        hClose
+        (\handle -> do
+          -- An arbitrary block size.
+          let blockSize = 4096
+          let go acc = do
+                next <- BS.hGet handle blockSize
+                if BS.null next
+                then pure acc
+                else go (acc <> Builder.byteString next)
+          contents <- go mempty
+          let dat = Builder.toLazyByteString contents
+          -- If our file is not seekable, it's likely a pipe, so we need to
+          -- save the result for subsequent calls
+          seekable <- hIsSeekable handle
+          unless seekable (writeIORef cacheRef (Just dat))
+          pure dat)
+
+readFileOrPipeTextEnvelopeAnyOf
+  :: [FromSomeType HasTextEnvelope b]
+  -> FileOrPipe
+  -> IO (Either (FileError TextEnvelopeError) b)
+readFileOrPipeTextEnvelopeAnyOf types file = do
+    let path = fileOrPipePath file
+    runExceptT $ do
+      content <- handleIOExceptT (FileIOError path) $ readFileOrPipe file
+      firstExceptT (FileError path) $ hoistEither $ do
+        te <- first TextEnvelopeAesonDecodeError $ Aeson.eitherDecode' content
+        deserialiseFromTextEnvelopeAnyOf types te
+
+readFileOrPipeTextEnvelopeCddlAnyOf
+  :: [FromSomeTypeCDDL TextEnvelopeCddl b]
+  -> FileOrPipe
+  -> IO (Either (FileError TextEnvelopeCddlError) b)
+readFileOrPipeTextEnvelopeCddlAnyOf types file = do
+  let path = fileOrPipePath file
+  runExceptT $ do
+    te <- newExceptT $ readTextEnvelopeCddlFromFileOrPipe file
+    firstExceptT (FileError path) $ hoistEither $ do
+      deserialiseFromTextEnvelopeCddlAnyOf types te
+
+readTextEnvelopeCddlFromFileOrPipe
+  :: FileOrPipe
+  -> IO (Either (FileError TextEnvelopeCddlError) TextEnvelopeCddl)
+readTextEnvelopeCddlFromFileOrPipe file = do
+  let path = fileOrPipePath file
+  runExceptT $ do
+    bs <- handleIOExceptT (FileIOError path) $
+            readFileOrPipe file
+    firstExceptT (FileError path . TextEnvelopeCddlAesonDecodeError path)
+      . hoistEither $ Aeson.eitherDecode' bs

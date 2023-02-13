@@ -510,6 +510,7 @@ module Cardano.Api (
     -- single API.
     FromSomeTypeCDDL(..),
     readFileTextEnvelopeCddlAnyOf,
+    deserialiseFromTextEnvelopeCddlAnyOf,
     writeTxFileTextEnvelopeCddl,
     writeTxWitnessFileTextEnvelopeCddl,
     serialiseTxLedgerCddl,

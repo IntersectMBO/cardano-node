@@ -70,7 +70,9 @@ checkTxCddlFormat
   => FilePath -- ^ Reference/golden file
   -> FilePath -- ^ Newly created file
   -> m ()
-checkTxCddlFormat reference created = do
+checkTxCddlFormat referencePath createdPath = do
+  reference <- liftIO $ fileOrPipe referencePath
+  created <- liftIO $ fileOrPipe createdPath
   r <- liftIO $ readCddlTx reference
   c <- liftIO $ readCddlTx created
   r H.=== c
