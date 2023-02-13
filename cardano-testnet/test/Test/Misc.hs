@@ -6,6 +6,7 @@ import           Control.Monad.IO.Class
 import           Data.List (isInfixOf)
 import qualified GHC.Stack as GHC
 
+import qualified Cardano.CLI.Pretty as PP
 import           Cardano.CLI.Shelley.Output
 import           Cardano.CLI.Shelley.Run.Query
 import           Cardano.CLI.Types
@@ -21,16 +22,16 @@ prop_op_cert_valid_kes_period opCertFp output =
       OpCertWithinInterval{} -> success
       info@OpCertStartingKesPeriodIsInTheFuture{} ->
         failMessage GHC.callStack
-          $ "Expected OpCertWithinInterval but got: OpCertStartingKesPeriodIsInTheFuture " <> "\n"
-          <> renderOpCertIntervalInformation opCertFp info
+          $ "Expected OpCertWithinInterval but got: OpCertStartingKesPeriodIsInTheFuture\n"
+          <> PP.renderStringDefault (renderOpCertIntervalInformation opCertFp info)
       info@OpCertExpired{} ->
         failMessage GHC.callStack
-          $ "Expected OpCertWithinInterval but got: OpCertExpired " <> "\n"
-          <> renderOpCertIntervalInformation opCertFp info
+          $ "Expected OpCertWithinInterval but got: OpCertExpired\n"
+          <> PP.renderStringDefault (renderOpCertIntervalInformation opCertFp info)
       info@OpCertSomeOtherError{} ->
         failMessage GHC.callStack
-          $ "Expected OpCertWithinInterval but got: OpCertSomeOtherError " <> "\n"
-          <> renderOpCertIntervalInformation opCertFp info
+          $ "Expected OpCertWithinInterval but got: OpCertSomeOtherError\n"
+          <> PP.renderStringDefault (renderOpCertIntervalInformation opCertFp info)
 
 
 -- | This property parses the node's logs for the output "TraceForgedBlock" to confirm that
