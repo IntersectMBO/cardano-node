@@ -4,6 +4,15 @@ module Cardano.CLI.Pretty
     hPutLn,
     renderDefault,
     renderStringDefault,
+
+    black,
+    red,
+    green,
+    yellow,
+    blue,
+    magenta,
+    cyan,
+    white,
   ) where
 
 import           Control.Exception (bracket_)
@@ -39,4 +48,28 @@ renderStringDefault :: PP.Doc PP.AnsiStyle -> String
 renderStringDefault =  TextLazy.unpack . renderDefault
 
 renderDefault :: PP.Doc PP.AnsiStyle -> TextLazy.Text
-renderDefault =  PP.renderLazy . PP.layoutPretty PP.defaultLayoutOptions-- { PP.layoutPageWidth = PP.Unbounded }
+renderDefault =  PP.renderLazy . PP.layoutPretty PP.defaultLayoutOptions
+
+black :: PP.Doc PP.AnsiStyle -> PP.Doc PP.AnsiStyle
+black = PP.annotate (PP.color PP.Black)
+
+red :: PP.Doc PP.AnsiStyle -> PP.Doc PP.AnsiStyle
+red = PP.annotate (PP.color PP.Red)
+
+green :: PP.Doc PP.AnsiStyle -> PP.Doc PP.AnsiStyle
+green = PP.annotate (PP.color PP.Green)
+
+yellow :: PP.Doc PP.AnsiStyle -> PP.Doc PP.AnsiStyle
+yellow = PP.annotate (PP.color PP.Yellow)
+
+blue :: PP.Doc PP.AnsiStyle -> PP.Doc PP.AnsiStyle
+blue = PP.annotate (PP.color PP.Blue)
+
+magenta :: PP.Doc PP.AnsiStyle -> PP.Doc PP.AnsiStyle
+magenta = PP.annotate (PP.color PP.Magenta)
+
+cyan :: PP.Doc PP.AnsiStyle -> PP.Doc PP.AnsiStyle
+cyan = PP.annotate (PP.color PP.Cyan)
+
+white :: PP.Doc PP.AnsiStyle -> PP.Doc PP.AnsiStyle
+white = PP.annotate (PP.color PP.White)
