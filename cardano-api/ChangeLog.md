@@ -16,6 +16,8 @@
 
 - **Breaking change** - `deserialiseFromRawBytes` method of the `SerialiseAsRawBytes` type class to return `Either` instead of `Maybe`.  Deprecate `eitherDeserialiseFromRawBytes`.  Use `deserialiseFromRawBytes` instead.
 
+- The `cardano-cli governance create-update-proposal` command to reject empty cost model.
+
 ### Bugs
 
 - Allow reading text envelopes from pipes ([PR 4384](https://github.com/input-output-hk/cardano-node/pull/4384))
