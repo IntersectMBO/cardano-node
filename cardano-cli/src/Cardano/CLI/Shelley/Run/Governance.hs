@@ -10,6 +10,8 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
                    onLeft)
 import           Data.Aeson (eitherDecode)
 import qualified Data.ByteString.Lazy as LB
+import           Data.Function ((&))
+import qualified Data.List as List
 import           Data.Text (Text)
 import qualified Data.Text as Text
 
@@ -21,9 +23,8 @@ import           Cardano.CLI.Shelley.Key (VerificationKeyOrHashOrFile,
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Types
 
+import           Cardano.Ledger.Alonzo.Scripts (CostModels (..))
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
-import           Control.Monad.IO.Unlift (MonadIO (..))
-import           Data.Function ((&))
 
 
 data ShelleyGovernanceCmdError
@@ -39,6 +40,7 @@ data ShelleyGovernanceCmdError
       !Int
       -- ^ Number of reward amounts
   | ShelleyGovernanceCmdCostModelsJsonDecodeErr !FilePath !Text
+  | ShelleyGovernanceCmdEmptyCostModel !FilePath
   deriving Show
 
 renderShelleyGovernanceError :: ShelleyGovernanceCmdError -> Text
@@ -55,8 +57,10 @@ renderShelleyGovernanceError err =
        <> " The number of staking keys: " <> textShow numVKeys
        <> " and the number of reward amounts: " <> textShow numRwdAmts
        <> " are not equivalent."
-    ShelleyGovernanceCmdCostModelsJsonDecodeErr err' fp ->
-      "Error decoding cost model: " <> Text.pack err' <> " at: " <> fp
+    ShelleyGovernanceCmdCostModelsJsonDecodeErr fp err' ->
+      "Error decoding cost model: " <> err' <> " at: " <> Text.pack fp
+    ShelleyGovernanceCmdEmptyCostModel fp ->
+      "The decoded cost model was empty at: " <> Text.pack fp
     ShelleyGovernanceCmdCostModelReadError err' ->
       "Error reading the cost model: " <> Text.pack (displayError err')
 
@@ -162,6 +166,8 @@ runGovernanceUpdateProposal (OutputFile upFile) eNo genVerKeyFiles upPprams mCos
 
       cModels <- pure (eitherDecode costModelsBs)
         & onLeft (left . ShelleyGovernanceCmdCostModelsJsonDecodeErr fp . Text.pack)
+
+      when (List.null (unCostModels cModels)) $ left (ShelleyGovernanceCmdEmptyCostModel fp)
 
       return $ upPprams {protocolUpdateCostModels = fromAlonzoCostModels cModels}
 
