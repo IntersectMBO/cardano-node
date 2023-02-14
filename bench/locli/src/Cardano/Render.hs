@@ -94,9 +94,10 @@ justifyProp    w = T.center        w ' '
 renderCentiles :: Int -> [Centile] -> [Text]
 renderCentiles wi = fmap (T.take wi . T.pack . printf "%f" . unCentile)
 
-renderScalar  :: a -> Field ISelect I a -> Text
-renderScalar v Field{..} =
-  let wi = width fWidth
+renderScalarLim  :: Maybe Int -> a -> Field ISelect I a -> Text
+renderScalarLim wLim v Field{..} =
+  let wi = unWidth fWidth <|> wLim
+           & fromMaybe (error "renderScalar:  request to render a width-free-field, without a supplied width limit.")
       packWi  = T.pack.take wi
       showDt  = packWi.dropWhileEnd (== 's').show
       showInt = T.pack.printf "%d"
@@ -118,24 +119,16 @@ renderFieldCentiles x cdfProj Field{..} =
     DInt    (cdfProj . ($ x) ->ds) -> ds <&> fmap (p.printf "%d")
     DWord64 (cdfProj . ($ x) ->ds) -> ds <&> fmap (p.printf "%d")
     DFloat  (cdfProj . ($ x) ->ds) -> ds <&> fmap (p.printf "%F")
-    DDeltaT (cdfProj . ($ x) ->ds) -> ds <&> fmap (justifyData (width fWidth).T.dropWhileEnd (== 's').p.show)
+    DDeltaT (cdfProj . ($ x) ->ds) -> ds <&> fmap (justifyData (unsafeUnWidth "renderFieldCentiles/DDeltaT" fWidth).T.dropWhileEnd (== 's').p.show)
  where p = T.pack
 
 renderFieldCentilesWidth :: a p -> (forall v. Divisible v => CDF p v -> [[v]]) -> Field DSelect p a -> [[Text]]
 renderFieldCentilesWidth x cdfProj Field{..} =
   case fSelect of
-    DInt    (cdfProj . ($ x) ->ds) -> ds <&> fmap (T.center (width fWidth) ' '.T.pack.printf "%d")
-    DWord64 (cdfProj . ($ x) ->ds) -> ds <&> fmap (T.center (width fWidth) ' '.T.pack.printf "%d")
-    DFloat  (cdfProj . ($ x) ->ds) -> ds <&> fmap (renderFloatStr fWidth.printf "%*F" (width fWidth + 1))
-    DDeltaT (cdfProj . ($ x) ->ds) -> ds <&> fmap (renderFloatStr fWidth.dropWhileEnd (== 's').show)
-
-renderFloatStr :: Width -> String -> Text
-renderFloatStr w = justifyData w'. T.take w' . T.pack . stripLeadingZero
- where
-   w' = width w
-   stripLeadingZero = \case
-     '0':xs@('.':_) -> xs
-     xs -> xs
+    DInt    (cdfProj . ($ x) ->ds) -> ds <&> fmap (formatInt fWidth)
+    DWord64 (cdfProj . ($ x) ->ds) -> ds <&> fmap (formatInt fWidth)
+    DFloat  (cdfProj . ($ x) ->ds) -> ds <&> fmap (formatDouble fWidth)
+    DDeltaT (cdfProj . ($ x) ->ds) -> ds <&> fmap (formatDiffTime fWidth)
 
 renderSummary :: forall f a. (a ~ Summary f, TimelineFields a, ToJSON a)
   => RenderFormat -> Anchor -> (Field ISelect I a -> Bool) -> a -> [Text]
@@ -157,7 +150,7 @@ renderSummary _ a fieldSelr summ =
     , tExtended       = True
     , tApexHeader     = Just "Parameter"
     , tColumns        = --transpose $
-                        [fields' <&> renderScalar summ]
+                        [fields' <&> renderScalarLim (Just 32) summ]
     -- , tColumns        = [kvs <&> snd]
     , tRowHeaders     = fields' <&> fShortDesc
     , tSummaryHeaders = []
@@ -184,26 +177,32 @@ renderTimeline flt comments xs =
          : concat (fmap (rtCommentary l) comments))
 
    entry :: a -> Text
-   entry = renderLineDist . renderScalar
+   entry = renderLineDist . renderScalarLim Nothing
 
    fields' :: [Field ISelect I a]
    fields' = filter flt timelineFields
 
    head1, head2 :: Maybe Text
-   head1 = if all ((== 0) . T.length . fHead1) fields' then Nothing
-           else Just (renderLineHead (uncurry T.take . ((+1).width.fWidth&&&fHead1)))
-   head2 = if all ((== 0) . T.length . fHead2) fields' then Nothing
-           else Just (renderLineHead (uncurry T.take . ((+1).width.fWidth&&&fHead2)))
+   head1 =
+     if all ((== 0) . T.length . fHead1) fields'
+     then Nothing
+     else Just $ renderLineHead
+          (uncurry T.take . ((+1).unsafeUnWidth "renderTimeline".fWidth&&&fHead1))
+   head2 =
+     if all ((== 0) . T.length . fHead2) fields'
+     then Nothing
+     else Just $ renderLineHead
+          (uncurry T.take . ((+1).unsafeUnWidth "renderTimeline".fWidth&&&fHead2))
 
    -- Different strategies: fields are forcefully separated,
    --                       whereas heads can use the extra space
-   renderLineHead = mconcat . renderLine' justifyHead (toEnum.(+ 1).width.fWidth)
+   renderLineHead = mconcat . renderLine' justifyHead (toEnum.(+ 1).unsafeUnWidth "renderTimeline".fWidth)
    renderLineDist :: (Field ISelect I a -> Text) -> Text
    renderLineDist = T.intercalate " " . renderLine' justifyData fWidth
 
    renderLine' :: (Int -> Text -> Text) -> (Field ISelect I a -> Width) -> (Field ISelect I a -> Text) -> [Text]
    renderLine' jfn wfn rfn = fields'
-                             <&> \f -> jfn (width $ wfn f) (rfn f)
+                             <&> \f -> jfn (unsafeUnWidth "renderTimeline" $ wfn f) (rfn f)
 
 mapRenderCDF :: forall p a. CDFFields a p
              => (Field DSelect p a -> Bool) -> Maybe [Centile]
@@ -396,11 +395,11 @@ renderAnalysisCDFs a fieldSelr _c2a centiSelr AsPretty x =
  where
    head1, head2 :: Maybe Text
    head1 = if all ((== 0) . T.length . fHead1) fields' then Nothing
-           else Just (renderLineHead1 (uncurry T.take . ((+1) . width . fWidth &&& fHead1)))
+           else Just (renderLineHead1 (uncurry T.take . ((+1) . unsafeUnWidth "renderAnalysisCDFs/AsPretty" . fWidth &&& fHead1)))
    head2 = if all ((== 0) . T.length . fHead2) fields' then Nothing
-           else Just (renderLineHead2 (uncurry T.take . ((+1) . width . fWidth &&& fHead2)))
-   renderLineHead1 = mconcat . ("      ":) . renderLine' justifyHead (toEnum . (+ 1) . width . fWidth)
-   renderLineHead2 = mconcat . (" %tile":) . renderLine' justifyHead (toEnum . (+ 1) . width . fWidth)
+           else Just (renderLineHead2 (uncurry T.take . ((+1) . unsafeUnWidth "renderAnalysisCDFs/AsPretty" . fWidth &&& fHead2)))
+   renderLineHead1 = mconcat . ("      ":) . renderLine' justifyHead (toEnum . (+ 1) . unsafeUnWidth "renderAnalysisCDFs/AsPretty" . fWidth)
+   renderLineHead2 = mconcat . (" %tile":) . renderLine' justifyHead (toEnum . (+ 1) . unsafeUnWidth "renderAnalysisCDFs/AsPretty" . fWidth)
 
    pLines :: [Text]
    pLines = fields'
@@ -431,17 +430,20 @@ renderAnalysisCDFs a fieldSelr _c2a centiSelr AsPretty x =
      [ (justifyCentile 6 "avg" :) $
        (\f -> flip (renderField justifyData fWidth) f $ const $
                 mapSomeFieldCDF
-                  (fit (fWidth f) .T.pack . printf "%F" . cdfAverageVal)  x (fSelect f))
+                  (fit f .T.pack . printf "%F" . cdfAverageVal)  x (fSelect f))
        <$> fields'
      , (justifyProp 6 "size" :) $
        (\f -> flip (renderField justifyHead fWidth) f $ const $
                 mapSomeFieldCDF
-                  (fit (fWidth f) . T.pack . show . cdfSize)    x (fSelect f))
+                  (fit f . T.pack . show . cdfSize)    x (fSelect f))
        <$> fields'
      ]
 
-   fit :: Width -> Text -> Text
-   fit (width -> w) t =
+   forceWidth :: Field DSelect p a -> Int
+   forceWidth Field{..} = unsafeUnWidth ("renderAnalysisCDFs/AsPretty/" <> T.unpack fId) fWidth
+
+   fit :: Field DSelect p a -> Text -> Text
+   fit (forceWidth -> w) t =
      if T.length t > w &&
         -- Drop all non-floats, and floats with significant digit overflowing:
         maybe True (> w) (T.findIndex (== '.') t)
@@ -452,9 +454,56 @@ renderAnalysisCDFs a fieldSelr _c2a centiSelr AsPretty x =
    renderLine' jfn wfn rfn  = renderField jfn wfn rfn <$> fields'
 
    renderField :: forall f. (Int -> Text -> Text) -> (f -> Width) -> (f -> Text) -> f -> Text
-   renderField jfn wfn rend f = jfn (width $ wfn f) (rend f)
+   renderField jfn wfn rend f = jfn (unsafeUnWidth "renderAnalysisCDFs/AsPretty" $ wfn f) (rend f)
 
    -- populationIndices :: [Int]
    -- populationIndices = [1..maxPopulationSize]
    -- maxPopulationSize :: Int
    -- maxPopulationSize = last . sort $ mapSomeFieldCDF cdfSize x . fSelect <$> cdfFields @a @p
+
+--
+-- Rendering mini-lib
+--
+-- Terms & conditions:
+--
+-- - "format" means "fit width"
+--
+formatInt :: Integral a => Width -> a -> Text
+formatInt = centerLim renderInt handleStrOverflowTrimMark
+ where
+   renderInt :: Integral a => a -> Text
+   renderInt x = T.pack $ printf "%d" (fromIntegral x :: Integer)
+
+formatDouble :: Width -> Double -> Text
+formatDouble = centerLim renderDouble handleStrOverflowFloat
+ where
+   renderDouble :: Double -> Text
+   renderDouble x = T.pack $ printf "%F" x
+
+formatDiffTime :: Width -> NominalDiffTime -> Text
+formatDiffTime = centerLim renderDiffTime handleStrOverflowTrim
+ where
+   renderDiffTime :: NominalDiffTime -> Text
+   renderDiffTime = T.pack . dropWhileEnd (== 's').show
+
+handleStrOverflowFloat :: Int -> Text -> Text
+handleStrOverflowFloat w = justifyData w. T.take w . stripLeadingZero
+ where
+   stripLeadingZero x@(T.isPrefixOf "0." -> True) = T.drop 2 x
+   stripLeadingZero x = x
+
+handleStrOverflowTrimMark :: Int -> Text -> Text
+handleStrOverflowTrimMark w s =
+  let len = length s
+  in if len <= w then s
+     else T.take (w - 1) s <> ">"
+
+handleStrOverflowTrim :: Int -> Text -> Text
+handleStrOverflowTrim = T.take
+
+centerLim :: (a -> Text) -> (Int -> Text -> Text) -> Width -> a -> Text
+centerLim rend handleOverflow wLim x =
+  mapWidth
+    (error "Wno is not a valid width limit: centerLim")
+    (\w -> T.center w ' ' $ handleOverflow w (rend x))
+    wLim

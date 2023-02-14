@@ -115,10 +115,21 @@ data Precision
   | P3
   deriving (Eq, Enum, Ord, Show)
 
-{-# INLINE width #-}
-width :: Width -> Int
-width Wno = 80
-width x   = fromEnum x
+{-# INLINE unWidth #-}
+unWidth :: Width -> Maybe Int
+unWidth Wno = Nothing
+unWidth x   = Just $ fromEnum x
+
+{-# INLINE unsafeUnWidth #-}
+unsafeUnWidth :: String -> Width -> Int
+unsafeUnWidth ctx Wno = error $ "Unexpected Wno (indeterminate width): " <> ctx
+unsafeUnWidth _ x   = fromEnum x
+
+{-# INLINE mapWidth #-}
+mapWidth :: a -> (Int -> a) -> Width -> a
+mapWidth wNo wSome = \case
+  Wno -> wNo
+  x   -> wSome (fromEnum x)
 
 -- | Encapsulate all metadata about a metric (a projection) of
 --   a certain projectible (a kind of analysis results):

@@ -641,7 +641,9 @@ fW64' id h1 h2 wi u sel = fBoth id h1 h2 wi u P0 Lin Free sel "" ""
 
 fGrp :: Text -> Width -> Unit -> Precision -> Scale -> Range -> [Unit -> Precision -> Scale -> Range -> Width -> Text -> [Field s p a]] -> [Field s p a]
 fGrp hTop w u p s r fs = mconcat $
-  zip fs (nChunksEachOf (length fs) (width w + 1) hTop)
+  zip fs (nChunksEachOf (length fs)
+                        (unsafeUnWidth ("width of group " <> T.unpack hTop) w + 1)
+                        hTop)
     <&> \(f, chunk) -> f u p s r w chunk
 
 -- fUni :: Text -> Text         -> Width -> Unit -> Precision -> Scale -> Range -> s p a -> Text -> Text -> [Field s p a]
@@ -659,7 +661,9 @@ fGrp2' id h1 h2 sel sd d u p s r wi = [Field id h1 h2 wi u p s r sel sd d]
 
 fGrpF :: Text -> Width -> [Width -> Text -> [Field s p a]] -> [Field s p a]
 fGrpF hTop w fs = mconcat $
-  zip fs (nChunksEachOf (length fs) (width w) hTop)
+  zip fs (nChunksEachOf (length fs)
+                        (unsafeUnWidth ("width of group " <> T.unpack hTop) w)
+                        hTop)
     <&> \(f, chunk) -> f w chunk
 
 fGrpF' :: Text -> Text -> Unit -> Precision -> Scale -> Range -> s p a -> Text -> Text -> Width -> Text -> [Field s p a]
