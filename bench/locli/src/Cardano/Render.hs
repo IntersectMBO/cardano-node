@@ -86,7 +86,7 @@ renderAnchorDate :: Anchor -> Text
 renderAnchorDate = showText . posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral @Int . round . utcTimeToPOSIXSeconds . aWhen
 
 justifyHead, justifyData, justifyCentile, justifyProp :: Int -> Text -> Text
-justifyHead    w = T.center        w ' '
+justifyHead    w = T.justifyLeft   w ' '
 justifyData    w = T.justifyLeft   w ' '
 justifyCentile w = T.justifyLeft   w ' '
 justifyProp    w = T.center        w ' '
@@ -99,7 +99,7 @@ renderScalarLim wLim v Field{..} =
   let wi = unWidth fWidth <|> wLim
            & fromMaybe (error "renderScalar:  request to render a width-free-field, without a supplied width limit.")
       packWi  = T.pack.take wi
-      showDt  = packWi.dropWhileEnd (== 's').show
+      showDt  = handleStrOverflowFloat wi.renderDiffTime
       showInt = T.pack.printf "%d"
       showW64 = T.pack.printf "%d"
   in case fSelect of
@@ -113,17 +113,17 @@ renderScalarLim wLim v Field{..} =
     ITime    (($ v)->x) -> packWi $ take  8 $ drop 11 $ show x
     IText    (($ v)->x) -> T.take wi . T.dropWhileEnd (== 's') $ x
 
+-- renderFieldCentiles :: a p -> (forall v. Divisible v => CDF p v -> [[v]]) -> Field DSelect p a -> [[Text]]
+-- renderFieldCentiles x cdfProj Field{..} =
+--   case fSelect of
+--     DInt    (cdfProj . ($x) ->ds) -> ds <&> fmap (p.printf "%d")
+--     DWord64 (cdfProj . ($x) ->ds) -> ds <&> fmap (p.printf "%d")
+--     DFloat  (cdfProj . ($x) ->ds) -> ds <&> fmap (p.printf "%F")
+--     DDeltaT (cdfProj . ($x) ->ds) -> ds <&> fmap (justifyData (unsafeUnWidth "renderFieldCentiles/DDeltaT" fWidth).T.dropWhileEnd (== 's').p.show)
+--  where p = T.pack
+
 renderFieldCentiles :: a p -> (forall v. Divisible v => CDF p v -> [[v]]) -> Field DSelect p a -> [[Text]]
 renderFieldCentiles x cdfProj Field{..} =
-  case fSelect of
-    DInt    (cdfProj . ($ x) ->ds) -> ds <&> fmap (p.printf "%d")
-    DWord64 (cdfProj . ($ x) ->ds) -> ds <&> fmap (p.printf "%d")
-    DFloat  (cdfProj . ($ x) ->ds) -> ds <&> fmap (p.printf "%F")
-    DDeltaT (cdfProj . ($ x) ->ds) -> ds <&> fmap (justifyData (unsafeUnWidth "renderFieldCentiles/DDeltaT" fWidth).T.dropWhileEnd (== 's').p.show)
- where p = T.pack
-
-renderFieldCentilesWidth :: a p -> (forall v. Divisible v => CDF p v -> [[v]]) -> Field DSelect p a -> [[Text]]
-renderFieldCentilesWidth x cdfProj Field{..} =
   case fSelect of
     DInt    (cdfProj . ($ x) ->ds) -> ds <&> fmap (formatInt fWidth)
     DWord64 (cdfProj . ($ x) ->ds) -> ds <&> fmap (formatInt fWidth)
@@ -187,16 +187,18 @@ renderTimeline flt comments xs =
      if all ((== 0) . T.length . fHead1) fields'
      then Nothing
      else Just $ renderLineHead
-          (uncurry T.take . ((+1).unsafeUnWidth "renderTimeline".fWidth&&&fHead1))
+          (uncurry (takeAlign T.justifyLeft) . ((+1).unsafeUnWidth "renderTimeline head1".fWidth&&&fHead1))
    head2 =
      if all ((== 0) . T.length . fHead2) fields'
      then Nothing
      else Just $ renderLineHead
-          (uncurry T.take . ((+1).unsafeUnWidth "renderTimeline".fWidth&&&fHead2))
+          (uncurry (takeAlign T.justifyLeft) . ((+1).unsafeUnWidth "renderTimeline head2".fWidth&&&fHead2))
+   takeAlign f n = f n ' ' . T.take n
 
    -- Different strategies: fields are forcefully separated,
    --                       whereas heads can use the extra space
-   renderLineHead = mconcat . renderLine' justifyHead (toEnum.(+ 1).unsafeUnWidth "renderTimeline".fWidth)
+   renderLineHead = mconcat . renderLine' justifyHead fWidth
+   -- renderLineHead = mconcat . renderLine' justifyHead (toEnum.(+ 1).unsafeUnWidth "renderTimeline".fWidth)
    renderLineDist :: (Field ISelect I a -> Text) -> Text
    renderLineDist = T.intercalate " " . renderLine' justifyData fWidth
 
@@ -291,13 +293,15 @@ renderAnalysisCDFs a@Anchor{..} fieldSelr _c2a centileSelr AsOrg x =
     { tColHeaders     = fields' <&> fId
     , tExtended       = True
     , tApexHeader     = Just "centile"
-    , tColumns        = fields' <&> fmap (T.intercalate ":") . renderFieldCentilesWidth x cdfSamplesProps
+    , tColumns        = fields' <&> fmap (T.intercalate ":") . renderFieldCentiles x cdfSamplesProps
     , tRowHeaders     = percSpecs <&> T.take 6 . T.pack . printf "%.4f" . unCentile
     , tSummaryHeaders = ["avg", "samples"]
     , tSummaryValues  = [ fields' <&>
-                          \f@Field{..} -> mapField x (T.take (width fWidth + 1) . T.pack . printf "%f" . cdfAverageVal) f
+                          \f@Field{..} ->
+                            mapField x (formatDouble fWidth . cdfAverageVal) f
                         , fields' <&>
-                          \f@Field{}   -> mapField x (T.pack . printf "%d" . cdfSize) f
+                          \f@Field{..} ->
+                            mapField x (formatInt    fWidth . cdfSize) f
                         ] & transpose
     , tFormula = []
     , tConstants = []
@@ -334,14 +338,14 @@ renderAnalysisCDFs a@Anchor{..} fieldSelr aspect _centileSelr AsReport x =
     , tApexHeader     = Just "metric"
     , tColumns        = transpose $
                         fields' <&>
-                        fmap (T.take 6 . T.pack . printf "%f")
+                        fmap (formatDouble W6)
                         . mapFieldWithKey x (snd hdrsProjs)
     , tRowHeaders     = fields' <&> fShortDesc
     , tSummaryHeaders = []
     , tSummaryValues  = []
     , tFormula = []
     , tConstants = [("nSamples",
-                     fields' <&> mapField x (T.pack . show . cdfSize) & head)]
+                     fields' <&> mapField x (formatInt W4 . cdfSize) & head)]
     }
   }
  where
@@ -406,7 +410,7 @@ renderAnalysisCDFs a fieldSelr _c2a centiSelr AsPretty x =
             <&>
             -- fmap (T.intercalate " ") .
             fmap T.concat .
-            renderFieldCentilesWidth x cdfSamplesProps
+            renderFieldCentiles x cdfSamplesProps
             & ((justifyCentile 6 <$> renderCentiles 6 centiles) :)
             & transpose
             & fmap (T.intercalate " ")
@@ -480,26 +484,32 @@ formatDouble = centerLim renderDouble handleStrOverflowFloat
    renderDouble :: Double -> Text
    renderDouble x = T.pack $ printf "%F" x
 
-formatDiffTime :: Width -> NominalDiffTime -> Text
-formatDiffTime = centerLim renderDiffTime handleStrOverflowTrim
+formatDoubleTrim :: Width -> Double -> Text
+formatDoubleTrim = centerLim renderDouble handleStrOverflowTrim
  where
-   renderDiffTime :: NominalDiffTime -> Text
-   renderDiffTime = T.pack . dropWhileEnd (== 's').show
+   renderDouble :: Double -> Text
+   renderDouble x = T.pack $ printf "%F" x
+
+formatDiffTime :: Width -> NominalDiffTime -> Text
+formatDiffTime = centerLim renderDiffTime handleStrOverflowFloat
+
+renderDiffTime :: NominalDiffTime -> Text
+renderDiffTime = T.pack . dropWhileEnd (== 's').show
 
 handleStrOverflowFloat :: Int -> Text -> Text
-handleStrOverflowFloat w = justifyData w. T.take w . stripLeadingZero
+handleStrOverflowFloat w = T.take w . stripLeadingZero
  where
-   stripLeadingZero x@(T.isPrefixOf "0." -> True) = T.drop 2 x
+   stripLeadingZero x@(T.isPrefixOf "0." -> True) = T.drop 1 x
    stripLeadingZero x = x
+
+handleStrOverflowTrim :: Int -> Text -> Text
+handleStrOverflowTrim = T.take
 
 handleStrOverflowTrimMark :: Int -> Text -> Text
 handleStrOverflowTrimMark w s =
   let len = length s
   in if len <= w then s
      else T.take (w - 1) s <> ">"
-
-handleStrOverflowTrim :: Int -> Text -> Text
-handleStrOverflowTrim = T.take
 
 centerLim :: (a -> Text) -> (Int -> Text -> Text) -> Width -> a -> Text
 centerLim rend handleOverflow wLim x =

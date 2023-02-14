@@ -9,11 +9,11 @@ where
 
 import Cardano.Prelude
 
-import Data.ByteString qualified as BS
+import Data.ByteString   qualified as BS
 import Data.HashMap.Lazy qualified as HM
-import Data.Map.Strict qualified as Map
-import Data.Text qualified as T
-import Data.Text.Lazy qualified as LT
+import Data.Map.Strict   qualified as Map
+import Data.Text         qualified as T
+import Data.Text.Lazy    qualified as LT
 import Data.Time.Clock
 import System.FilePath as FS
 import System.Posix.User
@@ -207,6 +207,8 @@ generate (InputDir ede) mReport (summ, cp, bp) rest = do
    defaultReportPath = ede <> "/report.ede"
    fenv = HM.fromList
      []
+   onlyKeys :: [Text] -> Map.Map Text DictEntry -> [DictEntry]
+   onlyKeys ks m = [ x | (flip Map.lookup m -> Just x) <- ks ]
    env rc b rs = fromPairs
      [ "report"     .= rc
      , "base"       .= b
@@ -214,4 +216,37 @@ generate (InputDir ede) mReport (summ, cp, bp) rest = do
      , "summary"    .= liftTmplSection (summaryReportSection summ)
      , "analyses"   .= (liftTmplSection <$> analysesReportSections cp bp)
      , "dictionary" .= metricDictionary
+     , "charts"     .=
+       ((dClusterPerf metricDictionary & onlyKeys
+          [ "CentiCpu"
+          , "CentiGC"
+          , "CentiMut"
+          , "Alloc"
+          , "GcsMajor"
+          , "GcsMinor"
+          , "Heap"
+          , "Live"
+          , "RSS"
+
+          , "cdfStarted"
+          , "cdfBlkCtx"
+          , "cdfLgrState"
+          , "cdfLgrView"
+          , "cdfLeading"
+          , "cdfForged"
+
+          , "cdfDensity"
+          , "cdfBlockGap"
+          , "cdfSpanLensCpu"
+          , "cdfSpanLensCpuEpoch"
+          ])
+        <>
+        (dBlockProp   metricDictionary & onlyKeys
+          [ "cdfPeerNotices"
+          , "cdfPeerAdoptions"
+          , "cdf0.50"
+          , "cdf0.80"
+          , "cdf0.90"
+          , "cdf0.96"
+          ]))
      ]

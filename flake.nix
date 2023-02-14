@@ -138,7 +138,9 @@
           inherit customConfig nix2container;
           inherit (tullia.packages.${final.system}) tullia nix-systems;
           bench-data-publish = cardano-automation.outputs.packages.${final.system}."bench-data-publish:exe:bench-data-publish";
-          em = import em { nixpkgsSrcs = nixpkgs.outPath; nixpkgsRev = nixpkgs.rev; };
+          em = import em { inherit (final) system;
+                           nixpkgsSrcs = nixpkgs.outPath;
+                           nixpkgsRev = nixpkgs.rev; };
           gitrev = final.customConfig.gitrev or self.rev or "0000000000000000000000000000000000000000";
           commonLib = lib
             // iohkNix.lib

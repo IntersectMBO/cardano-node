@@ -1762,6 +1762,22 @@
         "type": "github"
       }
     },
+    "em": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1676998710,
+        "narHash": "sha256-JBRDpeZK4zGaV4wZh6vpDdREcFWgLL2uTImYh8xazAM=",
+        "owner": "deepfire",
+        "repo": "em",
+        "rev": "fdeb0111b3d4028b8c1b32ba946ff3f42669e25c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "deepfire",
+        "repo": "em",
+        "type": "github"
+      }
+    },
     "empty-flake": {
       "locked": {
         "lastModified": 1630400035,
@@ -1774,22 +1790,6 @@
       "original": {
         "owner": "input-output-hk",
         "repo": "empty-flake",
-        "type": "github"
-      }
-    },
-    "em": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1675414377,
-        "narHash": "sha256-slJPiaxB59kNNp5PSh/kdSfGlOX9xW0rX9eXWtPIZns=",
-        "owner": "deepfire",
-        "repo": "em",
-        "rev": "8f1f5e54d4a2f46adb69890b58792e23cb6e79fb",
-        "type": "github"
-      },
-      "original": {
-        "owner": "deepfire",
-        "repo": "em",
         "type": "github"
       }
     },

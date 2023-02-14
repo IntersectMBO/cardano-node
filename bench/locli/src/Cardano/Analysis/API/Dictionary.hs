@@ -12,6 +12,7 @@ import Data.Map.Strict qualified as M
 import Cardano.Analysis.API.Field
 import Cardano.Analysis.API.Types
 import Cardano.Analysis.API.Metrics ()
+import Cardano.Util (showText)
 
 
 data DictEntry where
@@ -19,8 +20,13 @@ data DictEntry where
     { deField       :: !Text
     , deShortDesc   :: !Text
     , deDescription :: !Text
+    , deLogScale    :: !Text
+    , deRange       :: !Text
+    , deUnit        :: !Text
     } -> DictEntry
   deriving (Generic, FromJSON, ToJSON, Show)
+
+data ChartArgs
 
 data Dictionary where
   Dictionary ::
@@ -41,4 +47,13 @@ metricDictionary =
          { deField       = fId
          , deShortDesc   = fShortDesc
          , deDescription = fDescription
+         , deLogScale    = case fScale of
+                             Log -> "true"
+                             Lin -> "false"
+         , deRange       = case fRange of
+                             Free -> ""
+                             Z0 x -> "0:" <> showText x
+                             Z1 x -> "0:" <> showText x
+                             R01  -> "0:1"
+         , deUnit        = renderUnit fUnit
          }
