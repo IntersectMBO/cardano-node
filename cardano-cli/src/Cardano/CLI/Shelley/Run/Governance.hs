@@ -6,7 +6,8 @@ module Cardano.CLI.Shelley.Run.Governance
 
 import           Control.Monad (unless, when)
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, left, newExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, left, newExceptT,
+                   onLeft)
 import           Data.Aeson (eitherDecode)
 import qualified Data.ByteString.Lazy as LB
 import           Data.Text (Text)
@@ -21,6 +22,8 @@ import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Types
 
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
+import           Control.Monad.IO.Unlift (MonadIO (..))
+import           Data.Function ((&))
 
 
 data ShelleyGovernanceCmdError
@@ -152,26 +155,24 @@ runGovernanceUpdateProposal
   -> Maybe FilePath -- ^ Cost models file path
   -> ExceptT ShelleyGovernanceCmdError IO ()
 runGovernanceUpdateProposal (OutputFile upFile) eNo genVerKeyFiles upPprams mCostModelFp = do
-    finalUpPprams
-      <- case mCostModelFp of
-           Nothing -> return upPprams
-           Just fp -> do
-             costModelsBs <-
-               handleIOExceptT (ShelleyGovernanceCmdCostModelReadError . FileIOError fp)
-                 $ LB.readFile fp
-             case eitherDecode costModelsBs of
-               Right cModels -> return $ upPprams {protocolUpdateCostModels = fromAlonzoCostModels cModels}
-               Left err -> left $ ShelleyGovernanceCmdCostModelsJsonDecodeErr fp $ Text.pack err
+  finalUpPprams <- case mCostModelFp of
+    Nothing -> return upPprams
+    Just fp -> do
+      costModelsBs <- handleIOExceptT (ShelleyGovernanceCmdCostModelReadError . FileIOError fp) $ LB.readFile fp
 
-    when (finalUpPprams == mempty) $ left ShelleyGovernanceCmdEmptyUpdateProposalError
-    genVKeys <- sequence
-                  [ firstExceptT ShelleyGovernanceCmdTextEnvReadError . newExceptT $
-                      readFileTextEnvelope
-                        (AsVerificationKey AsGenesisKey)
-                        vkeyFile
-                  | VerificationKeyFile vkeyFile <- genVerKeyFiles ]
-    let genKeyHashes = fmap verificationKeyHash genVKeys
-        upProp = makeShelleyUpdateProposal finalUpPprams genKeyHashes eNo
-    firstExceptT ShelleyGovernanceCmdTextEnvWriteError . newExceptT $
-      writeFileTextEnvelope upFile Nothing upProp
+      cModels <- pure (eitherDecode costModelsBs)
+        & onLeft (left . ShelleyGovernanceCmdCostModelsJsonDecodeErr fp . Text.pack)
+
+      return $ upPprams {protocolUpdateCostModels = fromAlonzoCostModels cModels}
+
+  when (finalUpPprams == mempty) $ left ShelleyGovernanceCmdEmptyUpdateProposalError
+
+  genVKeys <- sequence
+    [ firstExceptT ShelleyGovernanceCmdTextEnvReadError . newExceptT $ readFileTextEnvelope (AsVerificationKey AsGenesisKey) vkeyFile
+    | VerificationKeyFile vkeyFile <- genVerKeyFiles
+    ]
+  let genKeyHashes = fmap verificationKeyHash genVKeys
+      upProp = makeShelleyUpdateProposal finalUpPprams genKeyHashes eNo
+
+  firstExceptT ShelleyGovernanceCmdTextEnvWriteError . newExceptT $ writeFileTextEnvelope upFile Nothing upProp
 
