@@ -21,12 +21,14 @@ module Cardano.Api.Convenience.Query (
     queryStakePools_,
     querySystemStart_,
 
+    handleQueryConvenienceErrors_,
+
     renderQueryConvenienceError,
   ) where
 
 import           Control.Monad.Oops (CouldBe, Variant, runOopsInEither)
 import qualified Control.Monad.Oops as OO
-import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans (MonadTrans (..))
 import           Control.Monad.Trans.Except (ExceptT (..), runExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left, newExceptT, onLeft,
                    onNothing)
@@ -70,6 +72,15 @@ renderQueryConvenienceError (EraConsensusModeMismatch cMode anyCEra) =
   "Consensus mode and era mismatch. Consensus mode: " <> textShow cMode <>
   " Era: " <> textShow anyCEra
 renderQueryConvenienceError (QueryConvenienceError e) = Text.pack $ show e
+
+handleQueryConvenienceErrors_ :: ()
+  => Monad m
+  => e `CouldBe` QueryConvenienceError
+  => ExceptT (Variant (EraMismatch : AcquiringFailure : e)) m a
+  -> ExceptT (Variant e) m a
+handleQueryConvenienceErrors_ f = f
+  & OO.catch @EraMismatch (OO.throw . QueryEraMismatch)
+  & OO.catch @AcquiringFailure (OO.throw . AcqFailure)
 
 queryUtxo_ :: ()
   => e `CouldBe` UnsupportedNtcVersionError

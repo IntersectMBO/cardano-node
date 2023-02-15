@@ -859,6 +859,7 @@ module Cardano.Api (
     queryEraHistory_,
     queryStakePools_,
     querySystemStart_,
+    handleQueryConvenienceErrors_,
 
     -- ** Constraint satisfaction functions
     getIsCardanoEraConstraint,
