@@ -43,6 +43,8 @@
 , coreutils
 , curl
 , glibcLocales
+, gnutar
+, gzip
 , iana-etc
 , iproute
 , iputils
@@ -68,6 +70,8 @@ let
       coreutils         # Basic utilities expected in GNU OS's
       curl              # CLI tool for transferring files via URLs
       glibcLocales      # Locale information for the GNU C Library
+      gnutar            # GNU tar
+      gzip              # Gnuzip
       iana-etc          # IANA protocol and port number assignments
       iproute           # Utilities for controlling TCP/IP networking
       iputils           # Useful utilities for Linux networking
@@ -83,12 +87,26 @@ let
   # To choose a network, use `-e NETWORK testnet`
   clusterStatements = lib.concatStringsSep "\n" (lib.mapAttrsToList (env: scripts: let
     scriptBin = scripts.${script};
+    snapshotStatements = ''
+      if [ -n "''${USE_SNAPSHOT:-}" ]; then
+        SNAPSHOT_BASE_URL="''${SNAPSHOT_BASE_URL:-https://update-cardano-mainnet.iohk.io/cardano-node-state}"
+        SNAPSHOT_FILE_NAME="''${SNAPSHOT_FILE_NAME:-db-mainnet.tar.gz}"
+        DATA_DIR="''${DATA_DIR:-/data/db}"
+      fi
+      if [ -n "''${SNAPSHOT_BASE_URL:-}" ]; then
+        pull_snapshot
+        extract_snapshot_tgz_to "$DATA_DIR" 1
+      fi
+    '';
     in ''
       elif [[ "$NETWORK" == "${env}" ]]; then
+        ${lib.optionalString (env == "mainnet") "${snapshotStatements}"}
         exec ${scriptBin}/bin/${scriptBin.name} $@
     '') scripts);
 
   runNetwork = pkgs.writeShellScriptBin "run-network" ''
+    ${pull-snapshot}
+
     if [[ -z "$NETWORK" ]]; then
       echo "[Error] Cannot obtain NETWORK env variable"
       exit 1
@@ -106,6 +124,57 @@ let
   mainnetConfigFile = builtins.toFile "mainnet-config.json"
     (builtins.toJSON commonLib.environments.mainnet.nodeConfig);
   mainnetTopologyFile = commonLib.mkEdgeTopology { edgeNodes = [ commonLib.environments.mainnet.relaysNew ]; valency = 2; };
+
+  pull-snapshot = ''
+    function pull_snapshot {
+      [ -z "''${SNAPSHOT_BASE_URL:-}" ] && echo "SNAPSHOT_BASE_URL env var must be set -- aborting" && exit 1
+      [ -z "''${SNAPSHOT_FILE_NAME:-}" ] && echo "SNAPSHOT_FILE_NAME env var must be set -- aborting" && exit 1
+      [ -z "''${DATA_DIR:-}" ] && echo "DATA_DIR env var must be set -- aborting" && exit 1
+
+      SNAPSHOT_DIR="$DATA_DIR/initial-snapshot"
+      mkdir -p "$SNAPSHOT_DIR"
+
+      # we are already initialized
+      [ -s "$SNAPSHOT_DIR/$SNAPSHOT_FILE_NAME.sha256sum" ] && INITIALIZED=true && return
+
+      # shellcheck source=/dev/null
+      source ${pkgs.cacert}/nix-support/setup-hook
+      echo "Downloading $SNAPSHOT_BASE_URL/$SNAPSHOT_FILE_NAME into $SNAPSHOT_DIR  ..." >&2
+      if curl -fL "$SNAPSHOT_BASE_URL/$SNAPSHOT_FILE_NAME" --output "$SNAPSHOT_DIR/$SNAPSHOT_FILE_NAME"; then
+        echo "Downloading $SNAPSHOT_BASE_URL/$SNAPSHOT_FILE_NAME.sha256sum into $SNAPSHOT_DIR ..." >&2
+        if curl -fL "$SNAPSHOT_BASE_URL/$SNAPSHOT_FILE_NAME.sha256sum" --output "$SNAPSHOT_DIR/$SNAPSHOT_FILE_NAME.sha256sum"; then
+          echo -n "pushd: " >&2
+          pushd "$SNAPSHOT_DIR" >&2
+          echo "Validating sha256sum for ./$SNAPSHOT_FILE_NAME." >&2
+          if sha256sum -c "$SNAPSHOT_FILE_NAME.sha256sum" >&2; then
+            echo "Downloading  $SNAPSHOT_BASE_URL/$SNAPSHOT_FILE_NAME{,.sha256sum} into $SNAPSHOT_DIR complete." >&2
+          else
+            echo "Could retrieve snapshot, but could not validate its checksum -- aborting" && exit 1
+          fi
+          echo -n "popd: " >&2
+          popd >&2
+        else
+          echo "Could retrieve snapshot, but not its sha256 file -- aborting" && exit 1
+        fi
+      else
+        echo "No snapshot pulled -- aborting" && exit 1
+      fi
+    }
+    function extract_snapshot_tgz_to {
+      local targetDir="$1"
+      local strip="''${2:-0}"
+      mkdir -p "$targetDir"
+
+      [ -n "''${INITIALIZED:-}" ] && return
+
+      echo "Extracting snapshot to $targetDir ..." >&2
+      if tar --strip-components="$strip" -C "$targetDir" -zxf "$SNAPSHOT_DIR/$SNAPSHOT_FILE_NAME"; then
+        echo "Extracting snapshot to $targetDir complete." >&2
+      else
+        echo "Extracting snapshot to $targetDir failed -- aborting" && exit 1
+      fi
+    }
+  '';
 
 in
   dockerTools.buildImage {
