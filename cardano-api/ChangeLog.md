@@ -345,6 +345,15 @@
 - Export `LocalTxSubmissionClient` data constructor
   ([PR 5096](https://github.com/input-output-hk/cardano-node/pull/5096))
 
+- Introduce the `oops` library to `cardano-api` and `cardano-cli` to simplify error handling.  The following functions that make use of `oops` have been added to `Cardano.Api`.
+
+  * `determineEraExpr_`
+  * `getNtcVersion_`
+  * `handleQueryConvenienceErrors_`
+  * `queryExpr_`
+  * `queryNodeLocalState_`
+  * `queryStateForBalancedTx_`
+
 ### Bugs
 
 - Fix: Add `AStakeExtendedVerificationKey` back into `deserialiseAnyVerificationKeyTextEnvelope`
