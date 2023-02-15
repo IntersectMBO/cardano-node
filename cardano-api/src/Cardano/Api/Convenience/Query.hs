@@ -17,17 +17,21 @@ module Cardano.Api.Convenience.Query (
 
     queryStateForBalancedTx,
 
+    queryStateForBalancedTx_,
     queryUtxo_,
     queryProtocolParams_,
     queryEraHistory_,
     queryStakePools_,
     querySystemStart_,
 
+    handleQueryConvenienceErrors_,
+
     renderQueryConvenienceError,
   ) where
 
-import           Control.Monad.Oops (CouldBe, Variant, runOopsInEither, runOopsInExceptT)
+import           Control.Monad.Oops (CouldBe, Variant, runOopsInEither)
 import qualified Control.Monad.Oops as OO
+import           Control.Monad.Trans (MonadTrans (..))
 import           Control.Monad.Trans.Except (ExceptT (..), runExceptT)
 import           Control.Monad.Trans.Except.Extra (left, onLeft, onNothing)
 import           Data.Function ((&))
@@ -54,7 +58,6 @@ import           Cardano.Api.Query
 import           Cardano.Api.TxBody
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
-import           Control.Monad.Trans (MonadTrans (..))
 
 data QueryConvenienceError
   = AcqFailure AcquiringFailure
@@ -78,6 +81,16 @@ renderQueryConvenienceError (EraConsensusModeMismatch cMode anyCEra) =
 renderQueryConvenienceError (QueryConvenienceUnsupportedNodeToClientVersion
   (UnsupportedNtcVersionError minNodeToClientVersion nodeToClientVersion)) =
   "Unsupported Node to Client version: " <> textShow minNodeToClientVersion <> " " <> textShow nodeToClientVersion
+
+handleQueryConvenienceErrors_ :: ()
+  => Monad m
+  => e `CouldBe` QueryConvenienceError
+  => ExceptT (Variant (EraMismatch : AcquiringFailure : UnsupportedNtcVersionError : e)) m a
+  -> ExceptT (Variant e) m a
+handleQueryConvenienceErrors_ f = f
+  & OO.catch @EraMismatch (OO.throw . QueryEraMismatch)
+  & OO.catch @AcquiringFailure (OO.throw . AcqFailure)
+  & OO.catch @UnsupportedNtcVersionError (OO.throw . QueryConvenienceUnsupportedNodeToClientVersion)
 
 queryUtxo_ :: ()
   => e `CouldBe` UnsupportedNtcVersionError
@@ -161,7 +174,33 @@ queryStateForBalancedTx
                                       , Map StakeCredential Lovelace
                                       )
         )
-queryStateForBalancedTx socketPath era networkId allTxIns certs = runExceptT $ runOopsInExceptT @QueryConvenienceError $ do
+queryStateForBalancedTx socketPath era networkId allTxIns certs = runExceptT $ OO.runOopsInExceptT @QueryConvenienceError $ do
+  queryStateForBalancedTx_ socketPath era networkId allTxIns certs
+    & OO.catch @EraMismatch (OO.throw . QueryEraMismatch)
+    & OO.catch @AcquiringFailure (OO.throw . AcqFailure)
+    & OO.catch @UnsupportedNtcVersionError (OO.throw . QueryConvenienceUnsupportedNodeToClientVersion)
+
+-- | A convenience function to query the relevant information, from
+-- the local node, for Cardano.Api.Convenience.Construction.constructBalancedTx
+queryStateForBalancedTx_ :: ()
+  => e `CouldBe` QueryConvenienceError
+  => e `CouldBe` AcquiringFailure
+  => e `CouldBe` UnsupportedNtcVersionError
+  => e `CouldBe` EraMismatch
+  => SocketPath
+  -> CardanoEra era
+  -> NetworkId
+  -> [TxIn]
+  -> [Certificate]
+  -> ExceptT (Variant e) IO
+      ( UTxO era
+      , ProtocolParameters
+      , EraHistory CardanoMode
+      , SystemStart
+      , Set PoolId
+      , Map StakeCredential Lovelace
+      )
+queryStateForBalancedTx_ socketPath era networkId allTxIns certs = do
   let cModeParams = CardanoModeParams $ EpochSlots 21600
 
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams networkId socketPath
@@ -176,22 +215,19 @@ queryStateForBalancedTx socketPath era networkId allTxIns certs = runExceptT $ r
         _ -> Nothing
 
   -- Query execution
-  executeLocalStateQueryExpr_ localNodeConnInfo Nothing
-    ( do  utxo <- queryUtxo_ qeInMode qSbe allTxIns
-          pparams <- queryProtocolParams_ qeInMode qSbe
-          eraHistory <- queryEraHistory_
-          systemStart <- querySystemStart_
-          stakePools <- queryStakePools_ qeInMode qSbe
-          stakeDelegDeposits <-
-            if null stakeCreds
-              then pure mempty
-              else
-                queryStakeDelegDeposits_ qeInMode qSbe stakeCreds
+  executeLocalStateQueryExpr_ localNodeConnInfo Nothing $ do
+    utxo <- queryUtxo_ qeInMode qSbe allTxIns
+    pparams <- queryProtocolParams_ qeInMode qSbe
+    eraHistory <- queryEraHistory_
+    systemStart <- querySystemStart_
+    stakePools <- queryStakePools_ qeInMode qSbe
+    stakeDelegDeposits <-
+      if null stakeCreds
+        then pure mempty
+        else
+          queryStakeDelegDeposits_ qeInMode qSbe stakeCreds
 
-          pure (utxo, pparams, eraHistory, systemStart, stakePools, stakeDelegDeposits)
-    ) & OO.catch @EraMismatch (OO.throw . QueryEraMismatch)
-      & OO.catch @AcquiringFailure (OO.throw . AcqFailure)
-      & OO.catch @UnsupportedNtcVersionError (OO.throw . QueryConvenienceUnsupportedNodeToClientVersion)
+    pure (utxo, pparams, eraHistory, systemStart, stakePools, stakeDelegDeposits)
 
 -- | Query the node to determine which era it is in.
 determineEra

@@ -6,6 +6,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
@@ -19,6 +20,7 @@ module Cardano.CLI.Shelley.Run.Transaction
 
 import           Control.Monad (forM, forM_, void)
 import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Oops (runOopsInExceptT)
 import           Control.Monad.Trans (MonadTrans (..))
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, hoistMaybe, left,
@@ -402,7 +404,6 @@ runTxBuildCmd
 
       pparams <- pure mTxProtocolParams & onNothing (left ShelleyTxCmdProtocolParametersNotPresentInTxBody)
 
-
       executionUnitPrices <- pure (protocolParamPrices pparams) & onNothing (left ShelleyTxCmdPParamExecutionUnitsNotAvailable)
 
       let consensusMode = consensusModeOnly cModeParams
@@ -410,9 +411,11 @@ runTxBuildCmd
 
       case consensusMode of
         CardanoMode -> do
-          (nodeEraUTxO, _, eraHistory, systemStart, _, _) <-
-            lift (queryStateForBalancedTx socketPath nodeEra nid allTxInputs [])
-              & onLeft (left . ShelleyTxCmdQueryConvenienceError)
+          (nodeEraUTxO, _, eraHistory, systemStart, _, _)
+            <- queryStateForBalancedTx_ socketPath nodeEra nid allTxInputs []
+                & handleQueryConvenienceErrors_
+                & runOopsInExceptT @QueryConvenienceError
+                & firstExceptT ShelleyTxCmdQueryConvenienceError
 
           -- Why do we cast the era? The user can specify an era prior to the era that the node is currently in.
           -- We cannot use the user specified era to construct a query against a node because it may differ
@@ -702,8 +705,10 @@ runTxBuild
               _ -> []
 
       (nodeEraUTxO, pparams, eraHistory, systemStart, stakePools, stakeDelegDeposits) <-
-        firstExceptT ShelleyTxCmdQueryConvenienceError . newExceptT
-          $ queryStateForBalancedTx socketPath nodeEra networkId allTxInputs certs
+        queryStateForBalancedTx_ socketPath nodeEra networkId allTxInputs certs
+          & handleQueryConvenienceErrors_
+          & runOopsInExceptT @QueryConvenienceError
+          & firstExceptT ShelleyTxCmdQueryConvenienceError
 
       validatedPParams <- hoistEither $ first ShelleyTxCmdProtocolParametersValidationError
                                       $ validateProtocolParameters era (Just pparams)
