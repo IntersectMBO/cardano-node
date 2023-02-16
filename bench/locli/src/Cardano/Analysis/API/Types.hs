@@ -82,6 +82,8 @@ data BlockProp f
     , cdfForgerLgrState      :: !(CDF f NominalDiffTime)
     , cdfForgerLgrView       :: !(CDF f NominalDiffTime)
     , cdfForgerLeads         :: !(CDF f NominalDiffTime)
+    , cdfForgerTicked        :: !(CDF f NominalDiffTime)
+    , cdfForgerMemSnap       :: !(CDF f NominalDiffTime)
     , cdfForgerForges        :: !(CDF f NominalDiffTime)
     , cdfForgerAnnouncements :: !(CDF f NominalDiffTime)
     , cdfForgerAdoptions     :: !(CDF f NominalDiffTime)
@@ -170,6 +172,8 @@ data ForgerEvents a
   , bfeLgrState     :: !(SMaybe a)
   , bfeLgrView      :: !(SMaybe a)
   , bfeLeading      :: !(SMaybe a)
+  , bfeTicked       :: !(SMaybe a)
+  , bfeMemSnap      :: !(SMaybe a)
   , bfeForged       :: !(SMaybe a)
   , bfeAnnounced    :: !(SMaybe a)
   , bfeSending      :: !(SMaybe a)
@@ -211,8 +215,10 @@ data BlockForge
   , bfBlkCtx       :: !(SMaybe NominalDiffTime) -- ^ Since forge loop start
   , bfLgrState     :: !(SMaybe NominalDiffTime) -- ^ Since block context
   , bfLgrView      :: !(SMaybe NominalDiffTime) -- ^ Since ledger state
-  , bfLeading      :: !NominalDiffTime -- ^ Since ledger view
-  , bfForged       :: !NominalDiffTime -- ^ Since leading
+  , bfLeading      :: !NominalDiffTime -- ^ Since ledger view OR loop start
+  , bfTicked       :: !(SMaybe NominalDiffTime) -- ^ Since leading
+  , bfMemSnap      :: !(SMaybe NominalDiffTime) -- ^ Since ticked
+  , bfForged       :: !NominalDiffTime -- ^ Since ticked OR loop start
   , bfAnnounced    :: !NominalDiffTime -- ^ Since forging
   , bfSending      :: !NominalDiffTime -- ^ Since announcement
   , bfAdopted      :: !NominalDiffTime -- ^ Since announcement
@@ -229,6 +235,8 @@ allBlockForgeTimes  f BlockForge{..}
   <> smaybe mempty (f "bfLgrState") bfLgrState
   <> smaybe mempty (f "bfLgrView")  bfLgrView
   <>                f "bfLeading"   bfLeading
+  <> smaybe mempty (f "bfTicked")   bfTicked
+  <> smaybe mempty (f "bfMemSnap")  bfMemSnap
   <>                f "bfForged"    bfForged
   <>                f "bfAnnounced" bfAnnounced
   <>                f "bfSending"   bfSending

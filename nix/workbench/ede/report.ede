@@ -16,6 +16,12 @@
 #+AUTHOR: {{ report.author }}, Cardano Performance team
 #+DATE: {{ report.date }}
 
+#+BEGIN_COMMENT
+Keybindings:
+
+- C-c C-x C-x :: recompute everything: tables & charts
+#+END_COMMENT
+
 *** Manifest
 
 We compare {% for run in runs %}{%if !run.first%}{%if !run.last%}, {%else%} and {%endif%}{%endif%}{{ run.value.ver }}/{{ run.value.meta.era | toTitle }}{% endfor %} relative to ={{ base.ver }}=/{{ base.meta.era | toTitle }}, under {{ base.workload }} workload.
@@ -55,12 +61,6 @@ We compare {% for run in runs %}{%if !run.first%}{%if !run.last%}, {%else%} and 
 * Appendix A: charts
 
 *** Cluster performance charts
-
-#+BEGIN_COMMENT
-Keybindings:
-
-- C-c C-x C-x :: recompute all srcblocks & show result image
-#+END_COMMENT
 
 {% for m in charts %}
     - {{ m.value.deShortDesc }} ({{ m.value.deField }}) :: {{ m.value.deDescription }}

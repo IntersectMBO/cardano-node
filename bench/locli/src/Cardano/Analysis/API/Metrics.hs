@@ -218,7 +218,7 @@ bpFieldsControl, bpFieldsForger, bpFieldsPeers, bpFieldsEndToEnd, bpFieldsEndToE
 bpFieldsControl =
   [ "cdfBlocksPerHost", "cdfBlocksFilteredRatio", "cdfBlocksChainedRatio", "cdfBlockBattles", "cdfBlockSizes" ]
 bpFieldsForger =
-  [ "cdfForgerStarts", "cdfForgerBlkCtx", "cdfForgerLgrState", "cdfForgerLgrView", "cdfForgerLeads", "cdfForgerForges", "cdfForgerAnnouncements", "cdfForgerSends", "cdfForgerAdoptions" ]
+  [ "cdfForgerStarts", "cdfForgerBlkCtx", "cdfForgerLgrState", "cdfForgerLgrView", "cdfForgerLeads", "cdfForgerTicked", "cdfForgerMemSnap", "cdfForgerForges", "cdfForgerAnnouncements", "cdfForgerSends", "cdfForgerAdoptions" ]
 bpFieldsPeers =
   [ "cdfPeerNotices", "cdfPeerRequests", "cdfPeerFetches", "cdfPeerAnnouncements", "cdfPeerSends", "cdfPeerAdoptions" ]
 bpFieldsEndToEnd =
@@ -248,6 +248,14 @@ instance CDFFields BlockProp p where
     , fGrp' "cdfForgerLeads"         "Lead" (DDeltaT cdfForgerLeads)
       "Leadership check duration"
       "Leadership check duration (TraceNodeIsNotLeader, TraceNodeIsLeader), relative  to ledger view acquisition"
+
+    , fGrp' "cdfForgerTicked"        "Tick" (DDeltaT cdfForgerTicked)
+      "Ledger ticking"
+      "Time spent ticking the ledger state (TraceForgeTickedLedgerState), relative to leadership check completion"
+
+    , fGrp' "cdfForgerMemSnap"       "Snap" (DDeltaT cdfForgerMemSnap)
+      "Mempool snapshotting"
+      "Time spent taking a mempool snapshot (TraceForgingMempoolSnapshot), relative to ledger ticking conclusion"
 
     , fGrp' "cdfForgerForges"        "Forg" (DDeltaT cdfForgerForges)
       "Leadership to forged"
@@ -357,6 +365,8 @@ instance TimelineFields BlockEvents where
     , fGrp' "bfLgrState"    "LgrSta" (IDeltaTM (bfLgrState.beForge)) "" ""
     , fGrp' "bfLgrView"     "LgrVie" (IDeltaTM (bfLgrView .beForge)) "" ""
     , fGrp' "bfLeading"     "Lead"   (IDeltaT (bfLeading  .beForge)) "" ""
+    , fGrp' "bfTicked"      "LgrTck" (IDeltaTM (bfTicked   .beForge)) "" ""
+    , fGrp' "bfMemSnap"     "MemSna" (IDeltaTM (bfMemSnap  .beForge)) "" ""
     , fGrp' "bfForged"      "Forge"  (IDeltaT (bfForged   .beForge)) "" ""
     , fGrp' "bfAnnounced"   "Announ" (IDeltaT (bfAnnounced.beForge)) "" ""
     , fGrp' "bfSending"     "Sendin" (IDeltaT (bfSending  .beForge)) "" ""
@@ -492,7 +502,7 @@ instance CDFFields MachPerf p where
       "Major GCs"
       "Major garbage collection RTS events"
 
-   <> fW64 "GcsMinor"        "GC" "Min" W3 Ev    (DWord64 (rGcsMajor.mpResourceCDFs))
+   <> fW64 "GcsMinor"        "GC" "Min" W3 Ev    (DWord64 (rGcsMinor.mpResourceCDFs))
       "Minor GCs"
       "Minor garbage collection RTS events"
 
