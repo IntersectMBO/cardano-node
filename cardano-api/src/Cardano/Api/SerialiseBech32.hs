@@ -155,15 +155,17 @@ instance Error Bech32DecodeError where
      <> ", but it was expected to be "
      <> List.intercalate " or " (map show (Set.toList permitted))
 
-    Bech32DataPartToBytesError _dataPart ->
-        "There was an error in extracting the bytes from the data part of the \
-        \Bech32-encoded string."
+    Bech32DataPartToBytesError _dataPart -> mconcat
+      [ "There was an error in extracting the bytes from the data part of the "
+      , "Bech32-encoded string."
+      ]
 
-    Bech32DeserialiseFromBytesError _bytes ->
-        "There was an error in deserialising the data part of the \
-        \Bech32-encoded string into a value of the expected type."
+    Bech32DeserialiseFromBytesError _bytes -> mconcat
+      [ "There was an error in deserialising the data part of the "
+      , "Bech32-encoded string into a value of the expected type."
+      ]
 
-    Bech32WrongPrefix actual expected ->
-        "Mismatch in the Bech32 prefix: the actual prefix is " <> show actual
-     <> ", but the prefix for this payload value should be " <> show expected
-
+    Bech32WrongPrefix actual expected -> mconcat
+      [ "Mismatch in the Bech32 prefix: the actual prefix is " <> show actual
+      , ", but the prefix for this payload value should be " <> show expected
+      ]
