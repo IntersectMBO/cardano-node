@@ -26,11 +26,14 @@ command' c descr p =
 opts :: ParserInfo ClientCommand
 opts =
   Opt.info (parseClientCommand <**> Opt.helper)
-    ( Opt.fullDesc
-      <> Opt.header
-      "cardano-cli - utility to support a variety of key\
-      \ operations (genesis generation, migration,\
-      \ pretty-printing..) for different system generations."
+    ( mconcat
+      [ Opt.fullDesc
+      , Opt.header $ mconcat
+        [ "cardano-cli - utility to support a variety of key"
+        , " operations (genesis generation, migration,"
+        , " pretty-printing..) for different system generations."
+        ]
+      ]
     )
 
 pref :: ParserPrefs

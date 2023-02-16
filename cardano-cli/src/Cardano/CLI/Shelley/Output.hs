@@ -219,9 +219,12 @@ instance FromJSON QueryTipLocalStateOutput where
                  mEra'
                  mEpoch'
                  mSyncProgress'
-      (_,_,_) -> fail "QueryTipLocalStateOutput was incorrectly JSON encoded.\
-                      \ Expected slot, header hash and block number (ChainTip)\
-                      \ or none (ChainTipAtGenesis)"
+      (_,_,_) ->
+        fail $ mconcat
+          [ "QueryTipLocalStateOutput was incorrectly JSON encoded."
+          , " Expected slot, header hash and block number (ChainTip)"
+          , " or none (ChainTipAtGenesis)"
+          ]
 
 data ScriptCostOutput =
   ScriptCostOutput

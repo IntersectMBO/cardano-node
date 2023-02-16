@@ -231,21 +231,25 @@ pScriptFor name (Just deprecated) help =
 
 pReferenceTxIn :: String -> String -> Parser TxIn
 pReferenceTxIn prefix scriptType =
-  Opt.option (readerFromParsecParser parseTxIn)
-    (  Opt.long (prefix ++ "tx-in-reference")
-    <> Opt.metavar "TX-IN"
-    <> Opt.help ("TxId#TxIx - Specify a reference input. The reference input must have\
-                 \ a " <> scriptType <> " reference script attached.")
-    )
+  Opt.option (readerFromParsecParser parseTxIn) $ mconcat
+    [ Opt.long (prefix ++ "tx-in-reference")
+    , Opt.metavar "TX-IN"
+    , Opt.help $ mconcat
+      [ "TxId#TxIx - Specify a reference input. The reference input must have"
+      , " a " <> scriptType <> " reference script attached."
+      ]
+    ]
 
 pReadOnlyReferenceTxIn :: Parser TxIn
 pReadOnlyReferenceTxIn =
-  Opt.option (readerFromParsecParser parseTxIn)
-    (  Opt.long "read-only-tx-in-reference"
-    <> Opt.metavar "TX-IN"
-    <> Opt.help "Specify a read only reference input. This reference input is not witnessing anything \
-                \it is simply provided in the plutus script context."
-    )
+  Opt.option (readerFromParsecParser parseTxIn) $ mconcat
+    [ Opt.long "read-only-tx-in-reference"
+    , Opt.metavar "TX-IN"
+    , Opt.help $ mconcat
+      [ "Specify a read only reference input. This reference input is not witnessing anything "
+      , "it is simply provided in the plutus script context."
+      ]
+    ]
 
 
 pScriptWitnessFiles :: forall witctx.
@@ -317,30 +321,33 @@ pScriptDataOrFile dataFlagPrefix helpTextForValue helpTextForFile =
   <|> pScriptDataFile
   <|> pScriptDataValue
   where
-    pScriptDataCborFile = ScriptDataCborFile <$>
-      Opt.strOption
-        (  Opt.long (dataFlagPrefix ++ "-cbor-file")
-        <> Opt.metavar "CBOR FILE"
-        <> Opt.help (helpTextForFile ++ " The file must follow the special \
-                                         \JSON schema for script data.")
-        )
+    pScriptDataCborFile = fmap ScriptDataCborFile . Opt.strOption $ mconcat
+      [ Opt.long (dataFlagPrefix ++ "-cbor-file")
+      , Opt.metavar "CBOR FILE"
+      , Opt.help $ mconcat
+        [ helpTextForFile
+        , " The file must follow the special JSON schema for script data."
+        ]
+      ]
 
-    pScriptDataFile = ScriptDataJsonFile <$>
-      Opt.strOption
-        (  Opt.long (dataFlagPrefix ++ "-file")
-        <> Opt.metavar "JSON FILE"
-        <> Opt.help (helpTextForFile ++ " The file must follow the special \
-                                         \JSON schema for script data.")
-        )
+    pScriptDataFile = fmap ScriptDataJsonFile . Opt.strOption $ mconcat
+      [ Opt.long (dataFlagPrefix ++ "-file")
+      , Opt.metavar "JSON FILE"
+      , Opt.help $ mconcat
+        [ helpTextForFile ++ " The file must follow the special "
+        , "JSON schema for script data."
+        ]
+      ]
 
-    pScriptDataValue = ScriptDataValue <$>
-      Opt.option readerScriptData
-        (  Opt.long (dataFlagPrefix ++ "-value")
-        <> Opt.metavar "JSON VALUE"
-        <> Opt.help (helpTextForValue ++ " There is no schema: (almost) any \
-                                         \JSON value is supported, including \
-                                         \top-level strings and numbers.")
-        )
+    pScriptDataValue = fmap ScriptDataValue . Opt.option readerScriptData $ mconcat
+      [ Opt.long (dataFlagPrefix ++ "-value")
+      , Opt.metavar "JSON VALUE"
+      , Opt.help $ mconcat
+        [ helpTextForValue
+        , " There is no schema: (almost) any JSON value is supported, including "
+        , "top-level strings and numbers."
+        ]
+      ]
 
     readerScriptData = do
       v <- readerJSON
@@ -825,25 +832,25 @@ pTransaction =
 pNodeCmd :: Parser NodeCmd
 pNodeCmd =
   asum
-    [ subParser "key-gen"
-        (Opt.info pKeyGenOperator $
-           Opt.progDesc "Create a key pair for a node operator's offline \
-                       \ key and a new certificate issue counter")
-    , subParser "key-gen-KES"
-        (Opt.info pKeyGenKES $
-           Opt.progDesc "Create a key pair for a node KES operational key")
-    , subParser "key-gen-VRF"
-        (Opt.info pKeyGenVRF $
-           Opt.progDesc "Create a key pair for a node VRF operational key")
-    , subParser "key-hash-VRF"
-        (Opt.info pKeyHashVRF $
-           Opt.progDesc "Print hash of a node's operational VRF key.")
-    , subParser "new-counter"
-        (Opt.info pNewCounter $
-           Opt.progDesc "Create a new certificate issue counter")
-    , subParser "issue-op-cert"
-        (Opt.info pIssueOpCert $
-           Opt.progDesc "Issue a node operational certificate")
+    [ subParser "key-gen" . Opt.info pKeyGenOperator . Opt.progDesc $ mconcat
+      [ "Create a key pair for a node operator's offline "
+      , "key and a new certificate issue counter"
+      ]
+    , subParser "key-gen-KES" . Opt.info pKeyGenKES . Opt.progDesc $ mconcat
+      [ "Create a key pair for a node KES operational key"
+      ]
+    , subParser "key-gen-VRF" . Opt.info pKeyGenVRF . Opt.progDesc $ mconcat
+      [ "Create a key pair for a node VRF operational key"
+      ]
+    , subParser "key-hash-VRF". Opt.info pKeyHashVRF . Opt.progDesc $ mconcat
+      [ "Print hash of a node's operational VRF key."
+      ]
+    , subParser "new-counter" . Opt.info pNewCounter . Opt.progDesc $ mconcat
+      [ "Create a new certificate issue counter"
+      ]
+    , subParser "issue-op-cert" . Opt.info pIssueOpCert . Opt.progDesc $ mconcat
+      [ "Issue a node operational certificate"
+      ]
     ]
   where
     pKeyGenOperator :: Parser NodeCmd
@@ -1060,28 +1067,29 @@ pQueryCmd =
 
 pGovernanceCmd :: Parser GovernanceCmd
 pGovernanceCmd =
- asum
-   [ subParser "create-mir-certificate"
-       (Opt.info (pMIRPayStakeAddresses <|> mirCertParsers) $
-         Opt.progDesc "Create an MIR (Move Instantaneous Rewards) certificate")
-   , subParser "create-genesis-key-delegation-certificate"
-       (Opt.info pGovernanceGenesisKeyDelegationCertificate $
-         Opt.progDesc "Create a genesis key delegation certificate")
-   , subParser "create-update-proposal"
-       (Opt.info pUpdateProposal $
-         Opt.progDesc "Create an update proposal")
-   ]
+  asum
+    [ subParser "create-mir-certificate"
+      $ Opt.info (pMIRPayStakeAddresses <|> mirCertParsers)
+      $ Opt.progDesc "Create an MIR (Move Instantaneous Rewards) certificate"
+    , subParser "create-genesis-key-delegation-certificate"
+      $ Opt.info pGovernanceGenesisKeyDelegationCertificate
+      $ Opt.progDesc "Create a genesis key delegation certificate"
+    , subParser "create-update-proposal"
+      $ Opt.info pUpdateProposal
+      $ Opt.progDesc "Create an update proposal"
+    ]
   where
     mirCertParsers :: Parser GovernanceCmd
     mirCertParsers = asum
-      [ subParser "stake-addresses" (Opt.info pMIRPayStakeAddresses $
-          Opt.progDesc "Create an MIR certificate to pay stake addresses")
-      , subParser "transfer-to-treasury" (Opt.info pMIRTransferToTreasury $
-          Opt.progDesc "Create an MIR certificate to transfer from the reserves pot\
-                       \ to the treasury pot")
-      , subParser "transfer-to-rewards" (Opt.info pMIRTransferToReserves $
-          Opt.progDesc "Create an MIR certificate to transfer from the treasury pot\
-                       \ to the reserves pot")
+      [ subParser "stake-addresses"
+        $ Opt.info pMIRPayStakeAddresses
+        $ Opt.progDesc "Create an MIR certificate to pay stake addresses"
+      , subParser "transfer-to-treasury"
+        $ Opt.info pMIRTransferToTreasury
+        $ Opt.progDesc "Create an MIR certificate to transfer from the reserves pot to the treasury pot"
+      , subParser "transfer-to-rewards"
+        $ Opt.info pMIRTransferToReserves
+        $ Opt.progDesc "Create an MIR certificate to transfer from the treasury pot to the reserves pot"
       ]
 
     pMIRPayStakeAddresses :: Parser GovernanceCmd
@@ -1491,9 +1499,11 @@ pCertificateFile balanceExecUnits =
      "the use of the certificate." <|>
     pPlutusStakeReferenceScriptWitnessFiles "certificate-" bExecUnits
 
-  helpText = "Filepath of the certificate. This encompasses all \
-             \types of certificates (stake pool certificates, \
-             \stake key certificates etc). Optionally specify a script witness."
+  helpText = mconcat
+    [ "Filepath of the certificate. This encompasses all "
+    , "types of certificates (stake pool certificates, "
+    , "stake key certificates etc). Optionally specify a script witness."
+    ]
 
 pPoolMetadataFile :: Parser PoolMetadataFile
 pPoolMetadataFile =
@@ -1571,10 +1581,12 @@ pWithdrawal balance =
      "the withdrawal of rewards." <|>
    pPlutusStakeReferenceScriptWitnessFiles "withdrawal-" balance
 
-  helpText = "The reward withdrawal as StakeAddress+Lovelace where \
-             \StakeAddress is the Bech32-encoded stake address \
-             \followed by the amount in Lovelace. Optionally specify \
-             \a script witness."
+  helpText = mconcat
+    [ "The reward withdrawal as StakeAddress+Lovelace where "
+    , "StakeAddress is the Bech32-encoded stake address "
+    , "followed by the amount in Lovelace. Optionally specify "
+    , "a script witness."
+    ]
 
   parseWithdrawal :: Parsec.Parser (StakeAddress, Lovelace)
   parseWithdrawal =
@@ -1641,22 +1653,25 @@ pRequiredSigner =
   <|> RequiredSignerHash <$> sPayKeyHash
  where
   sKeyFile :: Parser SigningKeyFile
-  sKeyFile = SigningKeyFile <$>
-    Opt.strOption
-      (  Opt.long "required-signer"
-      <> Opt.metavar "FILE"
-      <> Opt.help "Input filepath of the signing key (zero or more) whose \
-                  \signature is required."
-      <> Opt.completer (Opt.bashCompleter "file")
-      )
+  sKeyFile = fmap SigningKeyFile $ Opt.strOption $ mconcat
+    [ Opt.long "required-signer"
+    , Opt.metavar "FILE"
+    , Opt.help $ mconcat
+      [ "Input filepath of the signing key (zero or more) whose "
+      , "signature is required."
+      ]
+    , Opt.completer (Opt.bashCompleter "file")
+    ]
   sPayKeyHash :: Parser (Hash PaymentKey)
   sPayKeyHash =
-    Opt.option (readerFromParsecParser $ parseHash (AsHash AsPaymentKey))
-      (  Opt.long "required-signer-hash"
-      <> Opt.metavar "HASH"
-      <> Opt.help "Hash of the verification key (zero or more) whose \
-                  \signature is required."
-      )
+    Opt.option (readerFromParsecParser $ parseHash (AsHash AsPaymentKey)) $ mconcat
+      [ Opt.long "required-signer-hash"
+      , Opt.metavar "HASH"
+      , Opt.help $ mconcat
+        [ "Hash of the verification key (zero or more) whose "
+        , "signature is required."
+        ]
+      ]
 
 pVrfSigningKeyFile :: Parser SigningKeyFile
 pVrfSigningKeyFile =
@@ -2147,35 +2162,39 @@ pTxInCollateral =
 pReturnCollateral :: Parser TxOutAnyEra
 pReturnCollateral =
   Opt.option (readerFromParsecParser parseTxOutAnyEra)
-          (  Opt.long "tx-out-return-collateral"
-          <> Opt.metavar "ADDRESS VALUE"
-          -- TODO alonzo: Update the help text to describe the new syntax as well.
-          <> Opt.help "The transaction output as ADDRESS VALUE where ADDRESS is \
-                      \the Bech32-encoded address followed by the value in \
-                      \Lovelace. In the situation where your collateral txin \
-                      \over collateralizes the transaction, you can optionally \
-                      \specify a tx out of your choosing to return the excess Lovelace."
+          ( mconcat
+            [ Opt.long "tx-out-return-collateral"
+            , Opt.metavar "ADDRESS VALUE"
+            -- TODO alonzo: Update the help text to describe the new syntax as well.
+            , Opt.help ( "The transaction output as ADDRESS VALUE where ADDRESS is " <>
+                        "the Bech32-encoded address followed by the value in " <>
+                        "Lovelace. In the situation where your collateral txin " <>
+                        "over collateralizes the transaction, you can optionally " <>
+                        "specify a tx out of your choosing to return the excess Lovelace."
+            )
+            ]
           )
     <*> pure TxOutDatumByNone -- TODO: Babbage era - we should be able to return these
     <*> pure ReferenceScriptAnyEraNone -- TODO: Babbage era - we should be able to return these
 
 pTotalCollateral :: Parser Lovelace
 pTotalCollateral =
-  Opt.option (Lovelace <$> readerFromParsecParser decimal)
-    (  Opt.long "tx-total-collateral"
-    <> Opt.metavar "INTEGER"
-    <> Opt.help "The total amount of collateral that will be collected \
-                 \as fees in the event of a Plutus script failure. Must be used \
-                 \in conjuction with \"--tx-out-return-collateral\"."
-    )
+  Opt.option (Lovelace <$> readerFromParsecParser decimal) $ mconcat
+  [ Opt.long "tx-total-collateral"
+  , Opt.metavar "INTEGER"
+  , Opt.help $ mconcat
+    [ "The total amount of collateral that will be collected "
+    , "as fees in the event of a Plutus script failure. Must be used "
+    , "in conjuction with \"--tx-out-return-collateral\"."
+    ]
+  ]
 
 pWitnessOverride :: Parser Word
-pWitnessOverride = Opt.option Opt.auto
-  (  Opt.long "witness-override"
-  <> Opt.metavar "WORD"
-  <> Opt.help "Specify and override the number of \
-              \witnesses the transaction requires."
-  )
+pWitnessOverride = Opt.option Opt.auto $ mconcat
+  [ Opt.long "witness-override"
+  , Opt.metavar "WORD"
+  , Opt.help "Specify and override the number of witnesses the transaction requires."
+  ]
 
 parseTxIn :: Parsec.Parser TxIn
 parseTxIn = TxIn <$> parseTxId <*> (Parsec.char '#' *> parseTxIx)
@@ -2214,40 +2233,60 @@ pTxOutDatum =
   <|> pure TxOutDatumByNone
   where
     pTxOutDatumByHashOnly =
-      TxOutDatumByHashOnly <$>
-        Opt.option (readerFromParsecParser $ parseHash (AsHash AsScriptData))
-          (  Opt.long "tx-out-datum-hash"
-          <> Opt.metavar "HASH"
-          <> Opt.help "The script datum hash for this tx output, as \
-                     \the raw datum hash (in hex)."
-          )
+      fmap TxOutDatumByHashOnly
+      $ Opt.option (readerFromParsecParser $ parseHash (AsHash AsScriptData))
+      $ mconcat
+        [ Opt.long "tx-out-datum-hash"
+        , Opt.metavar "HASH"
+        , Opt.help $ mconcat
+          [ "The script datum hash for this tx output, as "
+          , "the raw datum hash (in hex)."
+          ]
+        ]
 
-    pTxOutDatumByHashOf =
-      TxOutDatumByHashOf <$>
+    pTxOutDatumByHashOf = TxOutDatumByHashOf <$>
         pScriptDataOrFile
           "tx-out-datum-hash"
-          "The script datum hash for this tx output, by hashing the \
-          \script datum given here in JSON syntax."
-          "The script datum hash for this tx output, by hashing the \
-          \script datum in the given JSON file."
+          ( mconcat
+            [ "The script datum hash for this tx output, by hashing the "
+            , "script datum given here in JSON syntax."
+            ]
+          )
+          ( mconcat
+            [ "The script datum hash for this tx output, by hashing the "
+            , "script datum in the given JSON file."
+            ]
+          )
 
     pTxOutDatumByValue =
       TxOutDatumByValue <$>
         pScriptDataOrFile
           "tx-out-datum-embed"
-          "The script datum to embed in the tx for this output, \
-          \given here in JSON syntax."
-          "The script datum to embed in the tx for this output, \
-          \in the given JSON file."
+          ( mconcat
+            [ "The script datum to embed in the tx for this output, "
+            , "given here in JSON syntax."
+            ]
+          )
+          ( mconcat
+            [ "The script datum to embed in the tx for this output, "
+            , "in the given JSON file."
+            ]
+          )
 
     pTxOutInlineDatumByValue =
       TxOutInlineDatumByValue <$>
         pScriptDataOrFile
           "tx-out-inline-datum"
-          "The script datum to embed in the tx output as an inline datum, \
-          \given here in JSON syntax."
-          "The script datum to embed in the tx output as an inline datum, \
-          \in the given JSON file."
+          ( mconcat
+            [ "The script datum to embed in the tx output as an inline datum, "
+            , "given here in JSON syntax."
+            ]
+          )
+          ( mconcat
+            [ "The script datum to embed in the tx output as an inline datum, "
+            , "in the given JSON file."
+            ]
+          )
 
 pRefScriptFp :: Parser ReferenceScriptAnyEra
 pRefScriptFp =
@@ -2309,8 +2348,10 @@ pMintMultiAsset balanceExecUnits =
            ManualBalance -> pExecutionUnits "mint-reference-tx-in")
      <*> (Just <$> pPolicyId)
 
-  helpText = "Mint multi-asset value(s) with the multi-asset cli syntax. \
-              \You must specify a script witness."
+  helpText = mconcat
+    [ "Mint multi-asset value(s) with the multi-asset cli syntax. "
+    , "You must specify a script witness."
+    ]
 
 pPolicyId :: Parser PolicyId
 pPolicyId =
@@ -2322,47 +2363,47 @@ pPolicyId =
 
 
 pInvalidBefore :: Parser SlotNo
-pInvalidBefore =
-  SlotNo <$>
-    ( Opt.option Opt.auto
-       (  Opt.long "invalid-before"
-       <> Opt.metavar "SLOT"
-       <> Opt.help "Time that transaction is valid from (in slots)."
-       )
-    <|>
-      Opt.option Opt.auto
-        (  Opt.long "lower-bound"
-        <> Opt.metavar "SLOT"
-        <> Opt.help "Time that transaction is valid from (in slots) \
-                    \(deprecated; use --invalid-before instead)."
-        <> Opt.internal
-        )
-    )
+pInvalidBefore = fmap SlotNo $ asum
+  [ Opt.option Opt.auto $ mconcat
+    [ Opt.long "invalid-before"
+    , Opt.metavar "SLOT"
+    , Opt.help "Time that transaction is valid from (in slots)."
+    ]
+  , Opt.option Opt.auto $ mconcat
+    [ Opt.long "lower-bound"
+    , Opt.metavar "SLOT"
+    , Opt.help $ mconcat
+      [ "Time that transaction is valid from (in slots) "
+      , "(deprecated; use --invalid-before instead)."
+      ]
+    , Opt.internal
+    ]
+  ]
 
 pInvalidHereafter :: Parser SlotNo
 pInvalidHereafter =
-  SlotNo <$>
-    ( Opt.option Opt.auto
-        (  Opt.long "invalid-hereafter"
-        <> Opt.metavar "SLOT"
-        <> Opt.help "Time that transaction is valid until (in slots)."
-        )
-    <|>
-      Opt.option Opt.auto
-        (  Opt.long "upper-bound"
-        <> Opt.metavar "SLOT"
-        <> Opt.help "Time that transaction is valid until (in slots) \
-                    \(deprecated; use --invalid-hereafter instead)."
-       <> Opt.internal
-        )
-    <|>
-      Opt.option Opt.auto
-        (  Opt.long "ttl"
-        <> Opt.metavar "SLOT"
-        <> Opt.help "Time to live (in slots) (deprecated; use --invalid-hereafter instead)."
-        <> Opt.internal
-        )
-    )
+  fmap SlotNo $ asum
+  [ Opt.option Opt.auto $ mconcat
+    [ Opt.long "invalid-hereafter"
+    , Opt.metavar "SLOT"
+    , Opt.help "Time that transaction is valid until (in slots)."
+    ]
+  , Opt.option Opt.auto $ mconcat
+    [ Opt.long "upper-bound"
+    , Opt.metavar "SLOT"
+    , Opt.help $ mconcat
+      [ "Time that transaction is valid until (in slots) "
+      , "(deprecated; use --invalid-hereafter instead)."
+      ]
+    , Opt.internal
+    ]
+  , Opt.option Opt.auto $ mconcat
+    [ Opt.long "ttl"
+    , Opt.metavar "SLOT"
+    , Opt.help "Time to live (in slots) (deprecated; use --invalid-hereafter instead)."
+    , Opt.internal
+    ]
+  ]
 
 pTxFee :: Parser Lovelace
 pTxFee =
@@ -2782,14 +2823,16 @@ pMultiHostName =
 pSingleHostName :: Parser StakePoolRelay
 pSingleHostName =
   StakePoolRelayDnsARecord <$> pDNSName <*> optional pPort
- where
-  pDNSName :: Parser ByteString
-  pDNSName = Opt.option (Opt.eitherReader eDNSName)
-               (  Opt.long "single-host-pool-relay"
-               <> Opt.metavar "STRING"
-               <> Opt.help "The stake pool relay's DNS name that corresponds to an\
-                            \ A or AAAA DNS record"
-               )
+  where
+    pDNSName :: Parser ByteString
+    pDNSName = Opt.option (Opt.eitherReader eDNSName) $ mconcat
+      [ Opt.long "single-host-pool-relay"
+      , Opt.metavar "STRING"
+      , Opt.help $ mconcat
+        [ "The stake pool relay's DNS name that corresponds to an"
+        , " A or AAAA DNS record"
+        ]
+      ]
 
 eDNSName :: String -> Either String ByteString
 eDNSName str =
@@ -3091,65 +3134,86 @@ pUTxOCostPerByte =
 pExecutionUnitPrices :: Parser ExecutionUnitPrices
 pExecutionUnitPrices = ExecutionUnitPrices
   <$> Opt.option readRational
-      (  Opt.long "price-execution-steps"
-      <> Opt.metavar "RATIONAL"
-      <> Opt.help "Step price of execution units for script languages that use \
-                  \them (from Alonzo era).  (Examples: '1.1', '11/10')"
+      ( mconcat
+        [ Opt.long "price-execution-steps"
+        , Opt.metavar "RATIONAL"
+        , Opt.help $ mconcat
+          [ "Step price of execution units for script languages that use "
+          , "them (from Alonzo era).  (Examples: '1.1', '11/10')"
+          ]
+        ]
       )
   <*> Opt.option readRational
-      (  Opt.long "price-execution-memory"
-      <> Opt.metavar "RATIONAL"
-      <> Opt.help "Memory price of execution units for script languages that \
-                  \use them (from Alonzo era).  (Examples: '1.1', '11/10')"
+      ( mconcat
+        [ Opt.long "price-execution-memory"
+        , Opt.metavar "RATIONAL"
+        , Opt.help $ mconcat
+          [ "Memory price of execution units for script languages that "
+          , "use them (from Alonzo era).  (Examples: '1.1', '11/10')"
+          ]
+        ]
       )
 
 pMaxTxExecutionUnits :: Parser ExecutionUnits
 pMaxTxExecutionUnits =
   uncurry ExecutionUnits <$>
   Opt.option Opt.auto
-    (  Opt.long "max-tx-execution-units"
-    <> Opt.metavar "(INT, INT)"
-    <> Opt.help "Max total script execution resources units allowed per tx \
-                \(from Alonzo era). They are denominated as follows (steps, memory)."
-    )
+      ( mconcat
+        [ Opt.long "max-tx-execution-units"
+        , Opt.metavar "(INT, INT)"
+        , Opt.help $ mconcat
+          [ "Max total script execution resources units allowed per tx "
+          , "(from Alonzo era). They are denominated as follows (steps, memory)."
+          ]
+        ]
+      )
 
 pMaxBlockExecutionUnits :: Parser ExecutionUnits
 pMaxBlockExecutionUnits =
   uncurry ExecutionUnits <$>
   Opt.option Opt.auto
-    (  Opt.long "max-block-execution-units"
-    <> Opt.metavar "(INT, INT)"
-    <> Opt.help "Max total script execution resources units allowed per block \
-                \(from Alonzo era). They are denominated as follows (steps, memory)."
-    )
+      ( mconcat
+        [ Opt.long "max-block-execution-units"
+        , Opt.metavar "(INT, INT)"
+        , Opt.help $ mconcat
+          [ "Max total script execution resources units allowed per block "
+          , "(from Alonzo era). They are denominated as follows (steps, memory)."
+          ]
+        ]
+      )
 
 pMaxValueSize :: Parser Natural
 pMaxValueSize =
-  Opt.option Opt.auto
-    (  Opt.long "max-value-size"
-    <> Opt.metavar "INT"
-    <> Opt.help "Max size of a multi-asset value in a tx output (from Alonzo \
-                \era)."
-    )
+  Opt.option Opt.auto $ mconcat
+  [ Opt.long "max-value-size"
+  , Opt.metavar "INT"
+  , Opt.help $ mconcat
+    [ "Max size of a multi-asset value in a tx output (from Alonzo era)."
+    ]
+  ]
 
 pCollateralPercent :: Parser Natural
 pCollateralPercent =
-  Opt.option Opt.auto
-    (  Opt.long "collateral-percent"
-    <> Opt.metavar "INT"
-    <> Opt.help "The percentage of the script contribution to the txfee that \
-                \must be provided as collateral inputs when including Plutus \
-                \scripts (from Alonzo era)."
-    )
+  Opt.option Opt.auto $ mconcat
+  [ Opt.long "collateral-percent"
+  , Opt.metavar "INT"
+  , Opt.help $ mconcat
+    [ "The percentage of the script contribution to the txfee that "
+    , "must be provided as collateral inputs when including Plutus "
+    , "scripts (from Alonzo era)."
+    ]
+  ]
 
 pMaxCollateralInputs :: Parser Natural
 pMaxCollateralInputs =
-  Opt.option Opt.auto
-    (  Opt.long "max-collateral-inputs"
-    <> Opt.metavar "INT"
-    <> Opt.help "The maximum number of collateral inputs allowed in a \
-                \transaction (from Alonzo era)."
-    )
+  Opt.option Opt.auto $ mconcat
+  [ Opt.long "max-collateral-inputs"
+  , Opt.metavar "INT"
+  , Opt.help $ mconcat
+    [ "The maximum number of collateral inputs allowed in a "
+    , "transaction (from Alonzo era)."
+    ]
+  ]
 
 pConsensusModeParams :: Parser AnyConsensusModeParams
 pConsensusModeParams = asum
@@ -3201,12 +3265,14 @@ pProtocolVersion =
         <> Opt.help "Major protocol version. An increase indicates a hard fork."
         )
     pProtocolMinorVersion =
-      Opt.option Opt.auto
-        (  Opt.long "protocol-minor-version"
-        <> Opt.metavar "NATURAL"
-        <> Opt.help "Minor protocol version. An increase indicates a soft fork\
-                    \ (old software canvalidate but not produce new blocks)."
-        )
+      Opt.option Opt.auto $ mconcat
+        [ Opt.long "protocol-minor-version"
+        , Opt.metavar "NATURAL"
+        , Opt.help $ mconcat
+          [ "Minor protocol version. An increase indicates a soft fork"
+          , " (old software canvalidate but not produce new blocks)."
+          ]
+        ]
 
 --
 -- Shelley CLI flag field parsers

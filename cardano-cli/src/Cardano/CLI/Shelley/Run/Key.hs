@@ -76,12 +76,12 @@ renderShelleyKeyCmdError err =
     ShelleyKeyCmdByronKeyFailure e -> Byron.renderByronKeyFailure e
     ShelleyKeyCmdByronKeyParseError errTxt -> errTxt
     ShelleyKeyCmdItnKeyConvError convErr -> renderConversionError convErr
-    ShelleyKeyCmdWrongKeyTypeError -> Text.pack "Please use a signing key file \
-                                   \when converting ITN BIP32 or Extended keys"
+    ShelleyKeyCmdWrongKeyTypeError ->
+      Text.pack "Please use a signing key file when converting ITN BIP32 or Extended keys"
     ShelleyKeyCmdCardanoAddressSigningKeyFileError fileErr ->
       Text.pack (displayError fileErr)
-    ShelleyKeyCmdNonLegacyKey fp -> "Signing key at: " <> Text.pack fp <> " is not a legacy Byron signing key and should \
-                                    \ not need to be converted."
+    ShelleyKeyCmdNonLegacyKey fp ->
+      "Signing key at: " <> Text.pack fp <> " is not a legacy Byron signing key and should not need to be converted."
     ShelleyKeyCmdVerificationKeyReadError e -> renderVerificationKeyTextOrFileError e
     ShelleyKeyCmdExpectedExtendedVerificationKey someVerKey ->
       "Expected an extended verification key but got: " <> renderSomeAddressVerificationKey someVerKey

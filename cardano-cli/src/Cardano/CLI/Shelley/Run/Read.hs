@@ -475,10 +475,11 @@ data CddlError = CddlErrorTextEnv
                | CddlIOError (FileError TextEnvelopeError)
 
 renderCddlError :: CddlError -> Text
-renderCddlError (CddlErrorTextEnv textEnvErr cddlErr) =
-  "Failed to decode neither the cli's serialisation format nor the ledger's \
-  \CDDL serialisation format. TextEnvelope error: " <> Text.pack (displayError textEnvErr) <> "\n" <>
-  "TextEnvelopeCddl error: " <> Text.pack (displayError cddlErr)
+renderCddlError (CddlErrorTextEnv textEnvErr cddlErr) = mconcat
+  [ "Failed to decode neither the cli's serialisation format nor the ledger's "
+  , "CDDL serialisation format. TextEnvelope error: " <> Text.pack (displayError textEnvErr) <> "\n"
+  , "TextEnvelopeCddl error: " <> Text.pack (displayError cddlErr)
+  ]
 renderCddlError (CddlIOError e) = Text.pack $ displayError e
 
 acceptTxCDDLSerialisation
