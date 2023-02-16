@@ -594,78 +594,106 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
   detailsFor _ _ = Just DNormal
 
   metricsDocFor (Namespace _ ["SwitchedToAFork"]) =
-        [ ("ChainDB.Density",
-          "The actual number of blocks created over the maximum expected number\
-          \ of blocks that could be created over the span of the last @k@ blocks.")
-        , ("ChainDB.Slots",
-          "Number of slots in this chain fragment.")
-        , ("ChainDB.Blocks",
-          "Number of blocks in this chain fragment.")
-        , ("ChainDB.SlotInEpoch",
-          "Relative slot number of the tip of the current chain within the\
-          \epoch..")
-        , ("ChainDB.Epoch",
-          "In which epoch is the tip of the current chain.")
+        [ ( "ChainDB.Density"
+          , mconcat
+            [ "The actual number of blocks created over the maximum expected number"
+            , " of blocks that could be created over the span of the last @k@ blocks."
+            ]
+          )
+        , ( "ChainDB.Slots"
+          , "Number of slots in this chain fragment."
+          )
+        , ( "ChainDB.Blocks"
+          , "Number of blocks in this chain fragment."
+          )
+        , ( "ChainDB.SlotInEpoch"
+          , mconcat
+            [ "Relative slot number of the tip of the current chain within the"
+            , " epoch.."
+            ]
+          )
+        , ( "ChainDB.Epoch"
+          , "In which epoch is the tip of the current chain."
+          )
         ]
   metricsDocFor (Namespace _ ["AddedToCurrentChain"]) =
-        [("ChainDB.Density",
-          "The actual number of blocks created over the maximum expected number\
-          \ of blocks that could be created over the span of the last @k@ blocks.")
-        , ("ChainDB.Slots",
-          "Number of slots in this chain fragment.")
-        , ("ChainDB.Blocks",
-          "Number of blocks in this chain fragment.")
-        , ("ChainDB.SlotInEpoch",
-          "Relative slot number of the tip of the current chain within the\
-          \epoch..")
-        , ("ChainDB.Epoch",
-          "In which epoch is the tip of the current chain.")
+        [ ( "ChainDB.Density"
+          , mconcat
+            [ "The actual number of blocks created over the maximum expected number"
+            , " of blocks that could be created over the span of the last @k@ blocks."
+            ]
+          )
+        , ( "ChainDB.Slots"
+          , "Number of slots in this chain fragment."
+          )
+        , ( "ChainDB.Blocks"
+          , "Number of blocks in this chain fragment."
+          )
+        , ( "ChainDB.SlotInEpoch"
+          , mconcat
+            [ "Relative slot number of the tip of the current chain within the"
+            , " epoch.."
+            ]
+          )
+        , ( "ChainDB.Epoch"
+          , "In which epoch is the tip of the current chain."
+          )
         ]
   metricsDocFor _ = []
 
-  documentFor (Namespace _ ["IgnoreBlockOlderThanK"]) = Just
-    "A block with a 'BlockNo' more than @k@ back than the current tip\
-         \ was ignored."
+  documentFor (Namespace _ ["IgnoreBlockOlderThanK"]) = Just $ mconcat
+    [ "A block with a 'BlockNo' more than @k@ back than the current tip"
+    , " was ignored."
+    ]
   documentFor (Namespace _ ["IgnoreBlockAlreadyInVolatileDB"]) = Just
     "A block that is already in the Volatile DB was ignored."
   documentFor (Namespace _ ["IgnoreInvalidBlock"]) = Just
     "A block that is invalid was ignored."
-  documentFor (Namespace _ ["AddedBlockToQueue"]) = Just
-    "The block was added to the queue and will be added to the ChainDB by\
-         \ the background thread. The size of the queue is included.."
-  documentFor (Namespace _ ["BlockInTheFuture"]) = Just
-    "The block is from the future, i.e., its slot number is greater than\
-         \ the current slot (the second argument)."
+  documentFor (Namespace _ ["AddedBlockToQueue"]) = Just $ mconcat
+    [ "The block was added to the queue and will be added to the ChainDB by"
+    , " the background thread. The size of the queue is included.."
+    ]
+  documentFor (Namespace _ ["BlockInTheFuture"]) = Just $ mconcat
+    [ "The block is from the future, i.e., its slot number is greater than"
+    , " the current slot (the second argument)."
+    ]
   documentFor (Namespace _ ["AddedBlockToVolatileDB"]) = Just
     "A block was added to the Volatile DB"
-  documentFor (Namespace _ ["PoppedBlockFromQueue"]) = Just""
-  documentFor (Namespace _ ["TryAddToCurrentChain"]) = Just
-    "The block fits onto the current chain, we'll try to use it to extend\
-         \ our chain."
-  documentFor (Namespace _ ["TrySwitchToAFork"]) = Just
-    "The block fits onto some fork, we'll try to switch to that fork (if\
-         \ it is preferable to our chain)"
-  documentFor (Namespace _ ["StoreButDontChange"]) = Just
-    "The block fits onto some fork, we'll try to switch to that fork (if\
-         \ it is preferable to our chain)."
-  documentFor (Namespace _ ["ChangingSelection"]) = Just
-    "The new block fits onto the current chain (first\
-         \ fragment) and we have successfully used it to extend our (new) current\
-         \ chain (second fragment)."
-  documentFor (Namespace _ ["AddedToCurrentChain"]) = Just
-    "The new block fits onto the current chain (first\
-         \ fragment) and we have successfully used it to extend our (new) current\
-         \ chain (second fragment)."
-  documentFor (Namespace _out ["SwitchedToAFork"]) = Just
-    "The new block fits onto some fork and we have switched to that fork\
-             \ (second fragment), as it is preferable to our (previous) current chain\
-             \ (first fragment)."
+  documentFor (Namespace _ ["PoppedBlockFromQueue"]) = Just ""
+  documentFor (Namespace _ ["TryAddToCurrentChain"]) = Just $ mconcat
+    [ "The block fits onto the current chain, we'll try to use it to extend"
+    , " our chain."
+    ]
+  documentFor (Namespace _ ["TrySwitchToAFork"]) = Just $ mconcat
+    [ "The block fits onto some fork, we'll try to switch to that fork (if"
+    , " it is preferable to our chain)"
+    ]
+  documentFor (Namespace _ ["StoreButDontChange"]) = Just $ mconcat
+    [ "The block fits onto some fork, we'll try to switch to that fork (if"
+    , " it is preferable to our chain)."
+    ]
+  documentFor (Namespace _ ["ChangingSelection"]) = Just $ mconcat
+    [ "The new block fits onto the current chain (first"
+    , " fragment) and we have successfully used it to extend our (new) current"
+    , " chain (second fragment)."
+    ]
+  documentFor (Namespace _ ["AddedToCurrentChain"]) = Just $ mconcat
+    [ "The new block fits onto the current chain (first"
+    , " fragment) and we have successfully used it to extend our (new) current"
+    , " chain (second fragment)."
+    ]
+  documentFor (Namespace _out ["SwitchedToAFork"]) = Just $ mconcat
+    [ "The new block fits onto some fork and we have switched to that fork"
+    , " (second fragment), as it is preferable to our (previous) current chain"
+    , " (first fragment)."
+    ]
   documentFor (Namespace out ("AddBlockValidation" : tl)) =
     documentFor (Namespace out tl :: Namespace (ChainDB.TraceValidationEvent blk))
-  documentFor (Namespace _ ["ChainSelectionForFutureBlock"]) = Just
-    "Run chain selection for a block that was previously from the future.\
-         \ This is done for all blocks from the future each time a new block is\
-         \ added."
+  documentFor (Namespace _ ["ChainSelectionForFutureBlock"]) = Just $ mconcat
+    [ "Run chain selection for a block that was previously from the future."
+    , " This is done for all blocks from the future each time a new block is"
+    , " added."
+    ]
   documentFor (Namespace out ("PipeliningEvent" : tl)) =
     documentFor (Namespace out tl :: Namespace (ChainDB.TracePipeliningEvent blk))
   documentFor _ = Nothing
@@ -764,17 +792,20 @@ addedHdrsNewChain fro to_ =
 instance (ConvertRawHash blk, StandardHash blk) =>
             LogFormatting (ChainDB.TraceFollowerEvent blk) where
   forHuman ChainDB.NewFollower = "A new Follower was created"
-  forHuman (ChainDB.FollowerNoLongerInMem _rrs) =
-    "The follower was in the 'FollowerInMem' state but its point is no longer on\
-    \ the in-memory chain fragment, so it has to switch to the\
-    \ 'FollowerInImmutableDB' state"
-  forHuman (ChainDB.FollowerSwitchToMem point slot) =
-    "The follower was in the 'FollowerInImmutableDB' state and is switched to\
-    \ the 'FollowerInMem' state. Point: " <> showT point <> " slot: " <> showT slot
-  forHuman (ChainDB.FollowerNewImmIterator point slot) =
-    "The follower is in the 'FollowerInImmutableDB' state but the iterator is\
-    \ exhausted while the ImmDB has grown, so we open a new iterator to\
-    \ stream these blocks too. Point: " <> showT point <> " slot: " <> showT slot
+  forHuman (ChainDB.FollowerNoLongerInMem _rrs) = mconcat
+    [ "The follower was in the 'FollowerInMem' state but its point is no longer on"
+    , " the in-memory chain fragment, so it has to switch to the"
+    , " 'FollowerInImmutableDB' state"
+    ]
+  forHuman (ChainDB.FollowerSwitchToMem point slot) = mconcat
+    [ "The follower was in the 'FollowerInImmutableDB' state and is switched to"
+    , " the 'FollowerInMem' state. Point: " <> showT point <> " slot: " <> showT slot
+    ]
+  forHuman (ChainDB.FollowerNewImmIterator point slot) = mconcat
+    [ "The follower is in the 'FollowerInImmutableDB' state but the iterator is"
+    , " exhausted while the ImmDB has grown, so we open a new iterator to"
+    , " stream these blocks too. Point: " <> showT point <> " slot: " <> showT slot
+    ]
 
   forMachine _dtal ChainDB.NewFollower =
       mconcat [ "kind" .= String "NewFollower" ]
@@ -803,16 +834,19 @@ instance MetaTrace (ChainDB.TraceFollowerEvent blk) where
 
   documentFor (Namespace _ ["NewFollower"]) = Just
     "A new follower was created."
-  documentFor (Namespace _ ["FollowerNoLongerInMem"]) = Just
-    "The follower was in 'FollowerInMem' state and is switched to\
-    \ the 'FollowerInImmutableDB' state."
-  documentFor (Namespace _ ["FollowerSwitchToMem"]) = Just
-     "The follower was in the 'FollowerInImmutableDB' state and is switched to\
-   \ the 'FollowerInMem' state."
-  documentFor (Namespace _ ["FollowerNewImmIterator"]) = Just
-     "The follower is in the 'FollowerInImmutableDB' state but the iterator is\
-         \ exhausted while the ImmDB has grown, so we open a new iterator to\
-         \ stream these blocks too."
+  documentFor (Namespace _ ["FollowerNoLongerInMem"]) = Just $ mconcat
+    [ "The follower was in 'FollowerInMem' state and is switched to"
+    , " the 'FollowerInImmutableDB' state."
+    ]
+  documentFor (Namespace _ ["FollowerSwitchToMem"]) = Just $ mconcat
+    [ "The follower was in the 'FollowerInImmutableDB' state and is switched to"
+    , " the 'FollowerInMem' state."
+    ]
+  documentFor (Namespace _ ["FollowerNewImmIterator"]) = Just $ mconcat
+    [ "The follower is in the 'FollowerInImmutableDB' state but the iterator is"
+    , " exhausted while the ImmDB has grown, so we open a new iterator to"
+    , " stream these blocks too."
+    ]
   documentFor _ = Nothing
 
   allNamespaces =
@@ -891,9 +925,10 @@ instance MetaTrace (ChainDB.TraceGCEvent blk) where
 
   documentFor (Namespace _ ["PerformedGC"]) = Just
     "A garbage collection for the given 'SlotNo' was performed."
-  documentFor (Namespace _ ["ScheduledGC"]) = Just
-     "A garbage collection for the given 'SlotNo' was scheduled to happen\
-     \ at the given time."
+  documentFor (Namespace _ ["ScheduledGC"]) = Just $ mconcat
+     [ "A garbage collection for the given 'SlotNo' was scheduled to happen"
+     , " at the given time."
+     ]
   documentFor _ = Nothing
 
   allNamespaces =
@@ -963,9 +998,10 @@ instance MetaTrace (ChainDB.TraceInitChainSelEvent blk) where
 
   documentFor (Namespace _ ["InitalChainSelected"]) = Just
     "A garbage collection for the given 'SlotNo' was performed."
-  documentFor (Namespace _ ["StartedInitChainSelection"]) = Just
-     "A garbage collection for the given 'SlotNo' was scheduled to happen\
-     \ at the given time."
+  documentFor (Namespace _ ["StartedInitChainSelection"]) = Just $ mconcat
+    [ "A garbage collection for the given 'SlotNo' was scheduled to happen"
+    , " at the given time."
+    ]
   documentFor (Namespace o ("InitChainSelValidation" : tl)) =
      documentFor (Namespace o tl :: Namespace (ChainDB.TraceValidationEvent blk))
   documentFor _ = Nothing
@@ -1059,20 +1095,24 @@ instance MetaTrace (ChainDB.TraceValidationEvent blk) where
     severityFor (Namespace _ ["UpdateLedgerDb"]) _ = Just Debug
     severityFor _ _ = Nothing
 
-    documentFor (Namespace _ ["ValidCandidate"]) = Just
-        "An event traced during validating performed while adding a block.\
-        \ A candidate chain was valid."
-    documentFor (Namespace _ ["CandidateContainsFutureBlocks"]) = Just
-        "An event traced during validating performed while adding a block.\
-        \ Candidate contains headers from the future which do no exceed the\
-        \ clock skew."
-    documentFor (Namespace _ ["CandidateContainsFutureBlocksExceedingClockSkew"]) = Just
-        "An event traced during validating performed while adding a block.\
-        \ Candidate contains headers from the future which exceed the\
-        \ clock skew."
-    documentFor (Namespace _ ["InvalidBlock"]) = Just
-        "An event traced during validating performed while adding a block.\
-        \ A point was found to be invalid."
+    documentFor (Namespace _ ["ValidCandidate"]) = Just $ mconcat
+        [ "An event traced during validating performed while adding a block."
+        , " A candidate chain was valid."
+        ]
+    documentFor (Namespace _ ["CandidateContainsFutureBlocks"]) = Just $ mconcat
+        [ "An event traced during validating performed while adding a block."
+        , " Candidate contains headers from the future which do no exceed the"
+        , " clock skew."
+        ]
+    documentFor (Namespace _ ["CandidateContainsFutureBlocksExceedingClockSkew"]) = Just $ mconcat
+        [ "An event traced during validating performed while adding a block."
+        , " Candidate contains headers from the future which exceed the"
+        , " clock skew."
+        ]
+    documentFor (Namespace _ ["InvalidBlock"]) = Just $ mconcat
+        [ "An event traced during validating performed while adding a block."
+        , " A point was found to be invalid."
+        ]
     documentFor (Namespace _ ["UpdateLedgerDb"]) = Just ""
     documentFor _ = Nothing
 
@@ -1202,27 +1242,33 @@ instance  ( StandardHash blk
           , ConvertRawHash blk
           ) => LogFormatting (ChainDB.TraceIteratorEvent blk) where
   forHuman (ChainDB.UnknownRangeRequested ev') = forHuman ev'
-  forHuman (ChainDB.BlockMissingFromVolatileDB realPt) =
-      "This block is no longer in the VolatileDB because it has been garbage\
-         \ collected. It might now be in the ImmDB if it was part of the\
-         \ current chain. Block: " <> renderRealPoint realPt
-  forHuman (ChainDB.StreamFromImmutableDB sFrom sTo) =
-      "Stream only from the ImmDB. StreamFrom:" <> showT sFrom <>
-        " StreamTo: " <> showT sTo
-  forHuman (ChainDB.StreamFromBoth sFrom sTo pts) =
-      "Stream from both the VolatileDB and the ImmDB."
-        <> " StreamFrom: " <> showT sFrom <> " StreamTo: " <> showT sTo
-        <> " Points: " <> showT (map renderRealPoint pts)
-  forHuman (ChainDB.StreamFromVolatileDB sFrom sTo pts) =
-      "Stream only from the VolatileDB."
-        <> " StreamFrom: " <> showT sFrom <> " StreamTo: " <> showT sTo
-        <> " Points: " <> showT (map renderRealPoint pts)
-  forHuman (ChainDB.BlockWasCopiedToImmutableDB pt) =
-      "This block has been garbage collected from the VolatileDB is now\
-        \ found and streamed from the ImmDB. Block: " <> renderRealPoint pt
-  forHuman (ChainDB.BlockGCedFromVolatileDB pt) =
-      "This block no longer in the VolatileDB and isn't in the ImmDB\
-        \ either; it wasn't part of the current chain. Block: " <> renderRealPoint pt
+  forHuman (ChainDB.BlockMissingFromVolatileDB realPt) = mconcat
+    [ "This block is no longer in the VolatileDB because it has been garbage"
+    , " collected. It might now be in the ImmDB if it was part of the"
+    , " current chain. Block: " <> renderRealPoint realPt
+    ]
+  forHuman (ChainDB.StreamFromImmutableDB sFrom sTo) = mconcat
+    [ "Stream only from the ImmDB. StreamFrom:" <> showT sFrom
+    , " StreamTo: " <> showT sTo
+    ]
+  forHuman (ChainDB.StreamFromBoth sFrom sTo pts) = mconcat
+    [ "Stream from both the VolatileDB and the ImmDB."
+    , " StreamFrom: " <> showT sFrom <> " StreamTo: " <> showT sTo
+    , " Points: " <> showT (map renderRealPoint pts)
+    ]
+  forHuman (ChainDB.StreamFromVolatileDB sFrom sTo pts) = mconcat
+    [ "Stream only from the VolatileDB."
+    , " StreamFrom: " <> showT sFrom <> " StreamTo: " <> showT sTo
+    , " Points: " <> showT (map renderRealPoint pts)
+    ]
+  forHuman (ChainDB.BlockWasCopiedToImmutableDB pt) = mconcat
+    [ "This block has been garbage collected from the VolatileDB is now"
+    , " found and streamed from the ImmDB. Block: " <> renderRealPoint pt
+    ]
+  forHuman (ChainDB.BlockGCedFromVolatileDB pt) = mconcat
+    [ "This block no longer in the VolatileDB and isn't in the ImmDB"
+    , " either; it wasn't part of the current chain. Block: " <> renderRealPoint pt
+    ]
   forHuman ChainDB.SwitchBackToVolatileDB = "SwitchBackToVolatileDB"
 
   forMachine _dtal (ChainDB.UnknownRangeRequested unkRange) =
@@ -1312,21 +1358,25 @@ instance MetaTrace (ChainDB.TraceIteratorEvent blk) where
       "Stream only from the ImmDB."
     documentFor (Namespace _ ["StreamFromBoth"]) = Just
       "Stream from both the VolatileDB and the ImmDB."
-    documentFor (Namespace _ ["BlockMissingFromVolatileDB"]) = Just
-      "A block is no longer in the VolatileDB because it has been garbage\
-       \ collected. It might now be in the ImmDB if it was part of the\
-       \ current chain."
-    documentFor (Namespace _ ["BlockWasCopiedToImmutableDB"]) = Just
-      "A block that has been garbage collected from the VolatileDB is now\
-       \ found and streamed from the ImmDB."
-    documentFor (Namespace _ ["BlockGCedFromVolatileDB"]) = Just
-      "A block is no longer in the VolatileDB and isn't in the ImmDB\
-       \ either; it wasn't part of the current chain."
-    documentFor (Namespace _ ["SwitchBackToVolatileDB"]) = Just
-      "We have streamed one or more blocks from the ImmDB that were part\
-      \ of the VolatileDB when initialising the iterator. Now, we have to look\
-      \ back in the VolatileDB again because the ImmDB doesn't have the\
-      \ next block we're looking for."
+    documentFor (Namespace _ ["BlockMissingFromVolatileDB"]) = Just $ mconcat
+      [ "A block is no longer in the VolatileDB because it has been garbage"
+      , " collected. It might now be in the ImmDB if it was part of the"
+      , " current chain."
+      ]
+    documentFor (Namespace _ ["BlockWasCopiedToImmutableDB"]) = Just $ mconcat
+      [ "A block that has been garbage collected from the VolatileDB is now"
+      , " found and streamed from the ImmDB."
+      ]
+    documentFor (Namespace _ ["BlockGCedFromVolatileDB"]) = Just $ mconcat
+      [ "A block is no longer in the VolatileDB and isn't in the ImmDB"
+      , " either; it wasn't part of the current chain."
+      ]
+    documentFor (Namespace _ ["SwitchBackToVolatileDB"]) = Just $ mconcat
+      [ "We have streamed one or more blocks from the ImmDB that were part"
+      , " of the VolatileDB when initialising the iterator. Now, we have to look"
+      , " back in the VolatileDB again because the ImmDB doesn't have the"
+      , " next block we're looking for."
+      ]
     documentFor _ = Nothing
 
     allNamespaces =
@@ -1489,23 +1539,26 @@ instance MetaTrace (LedgerDB.TraceReplayEvent blk) where
     severityFor  (Namespace _ ["ReplayedBlock"]) _ = Just Info
     severityFor _ _ = Nothing
 
-    documentFor (Namespace _ ["ReplayFromGenesis"]) = Just
-      "There were no LedgerDB snapshots on disk, so we're replaying all\
-      \ blocks starting from Genesis against the initial ledger.\
-      \ The @replayTo@ parameter corresponds to the block at the tip of the\
-      \ ImmDB, i.e., the last block to replay."
-    documentFor (Namespace _ ["ReplayFromSnapshot"]) = Just
-      "There was a LedgerDB snapshot on disk corresponding to the given tip.\
-      \ We're replaying more recent blocks against it.\
-      \ The @replayTo@ parameter corresponds to the block at the tip of the\
-      \ ImmDB, i.e., the last block to replay."
-    documentFor (Namespace _ ["ReplayedBlock"]) = Just
-      "We replayed the given block (reference) on the genesis snapshot\
-      \ during the initialisation of the LedgerDB.\
-      \\n\
-      \ The @blockInfo@ parameter corresponds replayed block and the @replayTo@\
-      \ parameter corresponds to the block at the tip of the ImmDB, i.e.,\
-      \ the last block to replay."
+    documentFor (Namespace _ ["ReplayFromGenesis"]) = Just $ mconcat
+      [ "There were no LedgerDB snapshots on disk, so we're replaying all"
+      , " blocks starting from Genesis against the initial ledger."
+      , " The @replayTo@ parameter corresponds to the block at the tip of the"
+      , " ImmDB, i.e., the last block to replay."
+      ]
+    documentFor (Namespace _ ["ReplayFromSnapshot"]) = Just $ mconcat
+      [ "There was a LedgerDB snapshot on disk corresponding to the given tip."
+      , " We're replaying more recent blocks against it."
+      , " The @replayTo@ parameter corresponds to the block at the tip of the"
+      , " ImmDB, i.e., the last block to replay."
+      ]
+    documentFor (Namespace _ ["ReplayedBlock"]) = Just $ mconcat
+      [ "We replayed the given block (reference) on the genesis snapshot"
+      , " during the initialisation of the LedgerDB."
+      , "\n"
+      , " The @blockInfo@ parameter corresponds replayed block and the @replayTo@"
+      , " parameter corresponds to the block at the tip of the ImmDB, i.e.,"
+      , " the last block to replay."
+      ]
     documentFor _ = Nothing
 
     allNamespaces =
@@ -1659,9 +1712,10 @@ instance MetaTrace (ImmDB.TraceEvent blk) where
       "The last location was validatet"
     documentFor (Namespace o ("ChunkValidation" : tl)) =
        documentFor (Namespace o tl :: Namespace (ImmDB.TraceChunkValidation blk chunkNo))
-    documentFor (Namespace _ ["ChunkFileDoesntFit"]) = Just
-      "The hash of the last block in the previous epoch doesn't match the\
-       \ previous hash of the first block in the current epoch"
+    documentFor (Namespace _ ["ChunkFileDoesntFit"]) = Just $ mconcat
+      [ "The hash of the last block in the previous epoch doesn't match the"
+      , " previous hash of the first block in the current epoch"
+      ]
     documentFor (Namespace _ ["Migrating"]) = Just
       "Performing a migration of the on-disk files."
     documentFor (Namespace _ ["DeletingAfter"]) = Just
@@ -1858,9 +1912,10 @@ instance MetaTrace ImmDB.TraceCacheEvent where
       "Past chunk found in the cache"
     documentFor (Namespace _ ["PastChunkMiss"]) = Just
       "Past chunk was not found in the cache"
-    documentFor (Namespace _ ["PastChunkEvict"]) = Just
-      "The least recently used past chunk was evicted because the cache\
-       \ was full."
+    documentFor (Namespace _ ["PastChunkEvict"]) = Just $ mconcat
+      [ "The least recently used past chunk was evicted because the cache"
+      , " was full."
+      ]
     documentFor (Namespace _ ["PastChunkExpired"]) = Just
       ""
     documentFor _ = Nothing

@@ -159,42 +159,50 @@ instance MetaTrace (AnyMessageAndAgency (ChainSync blk pt tip)) where
     severityFor (Namespace _ ["Done"]) _ = Just Info
     severityFor _ _ = Nothing
 
-    documentFor (Namespace _ ["RequestNext"]) = Just
-      "Request the next update from the producer. The response can be a roll \
-        \forward, a roll back or wait."
-    documentFor (Namespace _ ["AwaitReply"]) = Just
-        "Acknowledge the request but require the consumer to wait for the next \
-        \update. This means that the consumer is synced with the producer, and \
-        \the producer is waiting for its own chain state to change."
-    documentFor (Namespace _ ["RollForward"]) = Just
-        "Tell the consumer to extend their chain with the given header. \
-        \\n \
-        \The message also tells the consumer about the head point of the producer."
-    documentFor (Namespace _ ["RollBackward"]) = Just
-        "Tell the consumer to roll back to a given point on their chain. \
-        \\n \
-        \The message also tells the consumer about the head point of the producer."
-    documentFor (Namespace _ ["FindIntersect"]) = Just
-        "Ask the producer to try to find an improved intersection point between \
-        \the consumer and producer's chains. The consumer sends a sequence of \
-        \points and it is up to the producer to find the first intersection point \
-        \on its chain and send it back to the consumer."
-    documentFor (Namespace _ ["IntersectFound"]) = Just
-        "The reply to the consumer about an intersection found. \
-        \The consumer can decide weather to send more points. \
-        \\n \
-        \The message also tells the consumer about the head point of the producer."
-    documentFor (Namespace _ ["IntersectNotFound"]) = Just
-        "The reply to the consumer that no intersection was found: none of the \
-        \points the consumer supplied are on the producer chain. \
-        \\n \
-        \The message also tells the consumer about the head point of the producer."
-    documentFor (Namespace _ ["Done"]) = Just
-        "We have to explain to the framework what our states mean, in terms of \
-        \which party has agency in each state. \
-        \\n \
-        \Idle states are where it is for the client to send a message, \
-        \busy states are where the server is expected to send a reply."
+    documentFor (Namespace _ ["RequestNext"]) = Just $ mconcat
+      [ "Request the next update from the producer. The response can be a roll "
+      , "forward, a roll back or wait."
+      ]
+    documentFor (Namespace _ ["AwaitReply"]) = Just $ mconcat
+      [ "Acknowledge the request but require the consumer to wait for the next "
+      , "update. This means that the consumer is synced with the producer, and "
+      , "the producer is waiting for its own chain state to change."
+      ]
+    documentFor (Namespace _ ["RollForward"]) = Just $ mconcat
+      [ "Tell the consumer to extend their chain with the given header. "
+      , "\n "
+      , "The message also tells the consumer about the head point of the producer."
+      ]
+    documentFor (Namespace _ ["RollBackward"]) = Just $ mconcat
+      [ "Tell the consumer to roll back to a given point on their chain. "
+      , "\n "
+      , "The message also tells the consumer about the head point of the producer."
+      ]
+    documentFor (Namespace _ ["FindIntersect"]) = Just $ mconcat
+      [ "Ask the producer to try to find an improved intersection point between "
+      , "the consumer and producer's chains. The consumer sends a sequence of "
+      , "points and it is up to the producer to find the first intersection point "
+      , "on its chain and send it back to the consumer."
+      ]
+    documentFor (Namespace _ ["IntersectFound"]) = Just $ mconcat
+      [ "The reply to the consumer about an intersection found. "
+      , "The consumer can decide weather to send more points. "
+      , "\n "
+      , "The message also tells the consumer about the head point of the producer."
+      ]
+    documentFor (Namespace _ ["IntersectNotFound"]) = Just $ mconcat
+      [ "The reply to the consumer that no intersection was found: none of the "
+      , "points the consumer supplied are on the producer chain. "
+      , "\n "
+      , "The message also tells the consumer about the head point of the producer."
+      ]
+    documentFor (Namespace _ ["Done"]) = Just $ mconcat
+      [ "We have to explain to the framework what our states mean, in terms of "
+      , "which party has agency in each state. "
+      , "\n "
+      , "Idle states are where it is for the client to send a message, "
+      , "busy states are where the server is expected to send a reply."
+      ]
     documentFor _ = Nothing
 
     allNamespaces = [
@@ -456,38 +464,42 @@ instance MetaTrace (AnyMessageAndAgency (LSQ.LocalStateQuery blk pt (Query blk))
     severityFor (Namespace _ ["Done"]) _ = Just Info
     severityFor _ _ = Nothing
 
-    documentFor (Namespace _ ["Acquire"]) = Just
-      "The client requests that the state as of a particular recent point on \
-        \the server's chain (within K of the tip) be made available to query, \
-        \and waits for confirmation or failure. \
-        \\n \
-        \From 'NodeToClient_V8' onwards if the point is not specified, current tip \
-        \will be acquired.  For previous versions of the protocol 'point' must be \
-        \given."
+    documentFor (Namespace _ ["Acquire"]) = Just $ mconcat
+      [ "The client requests that the state as of a particular recent point on "
+      , "the server's chain (within K of the tip) be made available to query, "
+      , "and waits for confirmation or failure. "
+      , "\n "
+      , "From 'NodeToClient_V8' onwards if the point is not specified, current tip "
+      , "will be acquired.  For previous versions of the protocol 'point' must be "
+      , "given."
+      ]
     documentFor (Namespace _ ["Acquired"]) = Just
       "The server can confirm that it has the state at the requested point."
-    documentFor (Namespace _ ["Failure"]) = Just
-      "The server can report that it cannot obtain the state for the \
-        \requested point."
+    documentFor (Namespace _ ["Failure"]) = Just $ mconcat
+      [ "The server can report that it cannot obtain the state for the "
+      , "requested point."
+      ]
     documentFor (Namespace _ ["Query"]) = Just
       "The client can perform queries on the current acquired state."
     documentFor (Namespace _ ["Result"]) = Just
       "The server must reply with the queries."
-    documentFor (Namespace _ ["Release"]) = Just
-      "The client can instruct the server to release the state. This lets \
-        \the server free resources."
-    documentFor (Namespace _ ["ReAcquire"]) = Just
-      "This is like 'MsgAcquire' but for when the client already has a \
-        \state. By moving to another state directly without a 'MsgRelease' it \
-        \enables optimisations on the server side (e.g. moving to the state for \
-        \the immediate next block). \
-        \\n \
-        \Note that failure to re-acquire is equivalent to 'MsgRelease', \
-        \rather than keeping the exiting acquired state. \
-        \\n \
-        \From 'NodeToClient_V8' onwards if the point is not specified, current tip \
-        \will be acquired.  For previous versions of the protocol 'point' must be \
-        \given."
+    documentFor (Namespace _ ["Release"]) = Just $ mconcat
+      [ "The client can instruct the server to release the state. This lets "
+      , "the server free resources."
+      ]
+    documentFor (Namespace _ ["ReAcquire"]) = Just $ mconcat
+      [ "This is like 'MsgAcquire' but for when the client already has a "
+      , "state. By moving to another state directly without a 'MsgRelease' it "
+      , "enables optimisations on the server side (e.g. moving to the state for "
+      , "the immediate next block). "
+      , "\n "
+      , "Note that failure to re-acquire is equivalent to 'MsgRelease', "
+      , "rather than keeping the exiting acquired state. "
+      , "\n "
+      , "From 'NodeToClient_V8' onwards if the point is not specified, current tip "
+      , "will be acquired.  For previous versions of the protocol 'point' must be "
+      , "given."
+      ]
     documentFor (Namespace _ ["Done"]) = Just
       "The client can terminate the protocol."
     documentFor _ = Nothing

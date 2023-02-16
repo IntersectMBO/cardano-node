@@ -204,11 +204,13 @@ instance ToObject ChainPredicateFailure where
              , "currentProtocol" .= currentPtcl
              , "supportedProtocol" .= supportedPtcl ]
       where
-        explanation = "A scheduled major protocol version change (hard fork) \
-                      \has taken place on the chain, but this node does not \
-                      \understand the new major protocol version. This node \
-                      \must be upgraded before it can continue with the new \
-                      \protocol version."
+        explanation = mconcat
+          [ "A scheduled major protocol version change (hard fork) "
+          , "has taken place on the chain, but this node does not "
+          , "understand the new major protocol version. This node "
+          , "must be upgraded before it can continue with the new "
+          , "protocol version."
+          ]
 
 instance ToObject (PrtlSeqFailure crypto) where
   toObject _verb (WrongSlotIntervalPrtclSeq (SlotNo lastSlot) (SlotNo currSlot)) =
@@ -396,10 +398,14 @@ instance ( ShelleyBasedEra era
   -- TODO: Add the minimum allowed UTxO value to OutputTooSmallUTxO
   toObject _verb (OutputTooSmallUTxO badOutputs) =
     mconcat [ "kind" .= String "OutputTooSmallUTxO"
-             , "outputs" .= badOutputs
-             , "error" .= String "The output is smaller than the allow minimum \
-                                 \UTxO value defined in the protocol parameters"
-             ]
+            , "outputs" .= badOutputs
+            , "error" .= String
+              ( mconcat
+                [ "The output is smaller than the allow minimum "
+                , "UTxO value defined in the protocol parameters"
+                ]
+              )
+            ]
   toObject _verb (OutputBootAddrAttrsTooBig badOutputs) =
     mconcat [ "kind" .= String "OutputBootAddrAttrsTooBig"
              , "outputs" .= badOutputs
@@ -483,10 +489,14 @@ instance ( ShelleyBasedEra era
   -- TODO: Add the minimum allowed UTxO value to OutputTooSmallUTxO
   toObject _verb (MA.OutputTooSmallUTxO badOutputs) =
     mconcat [ "kind" .= String "OutputTooSmallUTxO"
-             , "outputs" .= badOutputs
-             , "error" .= String "The output is smaller than the allow minimum \
-                                 \UTxO value defined in the protocol parameters"
-             ]
+            , "outputs" .= badOutputs
+            , "error" .= String
+              ( mconcat
+                [ "The output is smaller than the allow minimum "
+                , "UTxO value defined in the protocol parameters"
+                ]
+              )
+            ]
   toObject verb (MA.UpdateFailure f) = toObject verb f
   toObject _verb (MA.OutputBootAddrAttrsTooBig badOutputs) =
     mconcat [ "kind" .= String "OutputBootAddrAttrsTooBig"
@@ -789,26 +799,38 @@ instance Core.Crypto crypto => ToObject (OverlayPredicateFailure crypto) where
 instance ToObject (OcertPredicateFailure crypto) where
   toObject _verb (KESBeforeStartOCERT (KESPeriod oCertstart) (KESPeriod current)) =
     mconcat [ "kind" .= String "KESBeforeStartOCERT"
-             , "opCertKESStartPeriod" .= String (textShow oCertstart)
-             , "currentKESPeriod" .= String (textShow current)
-             , "error" .= String "Your operational certificate's KES start period \
-                                 \is before the KES current period."
-             ]
+            , "opCertKESStartPeriod" .= String (textShow oCertstart)
+            , "currentKESPeriod" .= String (textShow current)
+            , "error" .= String
+              ( mconcat
+                [ "Your operational certificate's KES start period "
+                , "is before the KES current period."
+                ]
+              )
+            ]
   toObject _verb (KESAfterEndOCERT (KESPeriod current) (KESPeriod oCertstart) maxKESEvolutions) =
     mconcat [ "kind" .= String "KESAfterEndOCERT"
-             , "currentKESPeriod" .= String (textShow current)
-             , "opCertKESStartPeriod" .= String (textShow oCertstart)
-             , "maxKESEvolutions" .= String  (textShow maxKESEvolutions)
-             , "error" .= String "The operational certificate's KES start period is \
-                                 \greater than the max number of KES + the KES current period"
-             ]
+            , "currentKESPeriod" .= String (textShow current)
+            , "opCertKESStartPeriod" .= String (textShow oCertstart)
+            , "maxKESEvolutions" .= String  (textShow maxKESEvolutions)
+            , "error" .= String
+              ( mconcat
+                [ "The operational certificate's KES start period is "
+                , "greater than the max number of KES + the KES current period"
+                ]
+              )
+            ]
   toObject _verb (CounterTooSmallOCERT lastKEScounterUsed currentKESCounter) =
     mconcat [ "kind" .= String "CounterTooSmallOCert"
-             , "currentKESCounter" .= String (textShow currentKESCounter)
-             , "lastKESCounter" .= String (textShow lastKEScounterUsed)
-             , "error" .= String "The operational certificate's last KES counter is greater \
-                                 \than the current KES counter."
-             ]
+            , "currentKESCounter" .= String (textShow currentKESCounter)
+            , "lastKESCounter" .= String (textShow lastKEScounterUsed)
+            , "error" .= String
+              ( mconcat
+                [ "The operational certificate's last KES counter is greater "
+                , "than the current KES counter."
+                ]
+              )
+            ]
   toObject _verb (InvalidSignatureOCERT oCertCounter oCertKESStartPeriod) =
     mconcat [ "kind" .= String "InvalidSignatureOCERT"
              , "opCertKESStartPeriod" .= String (textShow oCertKESStartPeriod)
@@ -911,10 +933,14 @@ instance ( Ledger.Era era
              ]
   toObject _verb (Alonzo.OutputTooSmallUTxO badOutputs) =
     mconcat [ "kind" .= String "OutputTooSmallUTxO"
-             , "outputs" .= badOutputs
-             , "error" .= String "The output is smaller than the allow minimum \
-                                 \UTxO value defined in the protocol parameters"
-             ]
+            , "outputs" .= badOutputs
+            , "error" .= String
+              ( mconcat
+                [ "The output is smaller than the allow minimum "
+                , "UTxO value defined in the protocol parameters"
+                ]
+              )
+            ]
   toObject verb (Alonzo.UtxosFailure predFailure) =
     toObject verb predFailure
   toObject _verb (Alonzo.OutputBootAddrAttrsTooBig txouts) =

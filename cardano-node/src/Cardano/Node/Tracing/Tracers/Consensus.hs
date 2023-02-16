@@ -154,18 +154,21 @@ instance (LogFormatting (LedgerUpdate blk), LogFormatting (LedgerWarning blk))
 
 instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
       => LogFormatting (TraceChainSyncClientEvent blk) where
-  forHuman (TraceDownloadedHeader pt) =
-    "While following a candidate chain, we rolled forward by downloading a\
-    \ header. " <> showT (headerPoint pt)
+  forHuman (TraceDownloadedHeader pt) = mconcat
+    [ "While following a candidate chain, we rolled forward by downloading a"
+    , " header. "
+    , showT (headerPoint pt)
+    ]
   forHuman (TraceRolledBack tip) =
     "While following a candidate chain, we rolled back to the given point: "
       <> showT tip
   forHuman (TraceException exc) =
     "An exception was thrown by the Chain Sync Client. "
       <> showT exc
-  forHuman TraceFoundIntersection {} =
-      "We found an intersection between our chain fragment and the\
-      \ candidate's chain."
+  forHuman TraceFoundIntersection {} = mconcat
+    [ "We found an intersection between our chain fragment and the"
+    , " candidate's chain."
+    ]
   forHuman (TraceTermination res) =
       "The client has terminated. " <> showT res
 
@@ -212,16 +215,18 @@ instance MetaTrace (TraceChainSyncClientEvent blk) where
   severityFor (Namespace _ ["Termination"]) _ = Just Notice
   severityFor _ _ = Nothing
 
-  documentFor (Namespace _ ["DownloadedHeader"]) = Just
-    "While following a candidate chain, we rolled forward by downloading a\
-    \ header."
+  documentFor (Namespace _ ["DownloadedHeader"]) = Just $ mconcat
+    [ "While following a candidate chain, we rolled forward by downloading a"
+    , " header."
+    ]
   documentFor (Namespace _ ["RolledBack"]) = Just
     "While following a candidate chain, we rolled back to the given point."
   documentFor (Namespace _ ["Exception"]) = Just
     "An exception was thrown by the Chain Sync Client."
-  documentFor (Namespace _ ["FoundIntersection"]) = Just
-    "We found an intersection between our chain fragment and the\
-    \ candidate's chain."
+  documentFor (Namespace _ ["FoundIntersection"]) = Just $ mconcat
+    [ "We found an intersection between our chain fragment and the"
+    , " candidate's chain."
+    ]
   documentFor (Namespace _ ["Termination"]) = Just
     "The client has terminated."
   documentFor _ = Nothing
@@ -481,10 +486,11 @@ instance MetaTrace (FetchDecision [Point header]) where
       [("Blockfetch.ConnectedPeers", "Number of connected peers")]
     metricsDocFor _ = []
 
-    documentFor _ =  Just
-      "Throughout the decision making process we accumulate reasons to decline\
-      \ to fetch any blocks. This message carries the intermediate and final\
-      \ results."
+    documentFor _ =  Just $ mconcat
+      [ "Throughout the decision making process we accumulate reasons to decline"
+      , " to fetch any blocks. This message carries the intermediate and final"
+      , " results."
+      ]
     allNamespaces =
       [ Namespace [] ["Decline"]
       , Namespace [] ["Accept"]]
@@ -564,30 +570,36 @@ instance MetaTrace (BlockFetch.TraceFetchClientState header) where
     severityFor (Namespace _ ["ClientTerminating"]) _ = Just Notice
     severityFor _ _ = Nothing
 
-    documentFor (Namespace _ ["AddedFetchRequest"]) = Just
-      "The block fetch decision thread has added a new fetch instruction\
-        \ consisting of one or more individual request ranges."
-    documentFor (Namespace _ ["AcknowledgedFetchRequest"]) = Just
-      "Mark the point when the fetch client picks up the request added\
-            \ by the block fetch decision thread. Note that this event can happen\
-            \ fewer times than the 'AddedFetchRequest' due to fetch request merging."
-    documentFor (Namespace _ ["SendFetchRequest"]) = Just
-      "Mark the point when fetch request for a fragment is actually sent\
-       \ over the wire."
-    documentFor (Namespace _ ["StartedFetchBatch"]) = Just
-      "Mark the start of receiving a streaming batch of blocks. This will\
-      \ be followed by one or more 'CompletedBlockFetch' and a final\
-      \ 'CompletedFetchBatch'"
+    documentFor (Namespace _ ["AddedFetchRequest"]) = Just $ mconcat
+      [ "The block fetch decision thread has added a new fetch instruction"
+      , " consisting of one or more individual request ranges."
+      ]
+    documentFor (Namespace _ ["AcknowledgedFetchRequest"]) = Just $ mconcat
+      [ "Mark the point when the fetch client picks up the request added"
+      , " by the block fetch decision thread. Note that this event can happen"
+      , " fewer times than the 'AddedFetchRequest' due to fetch request merging."
+      ]
+    documentFor (Namespace _ ["SendFetchRequest"]) = Just $ mconcat
+      [ "Mark the point when fetch request for a fragment is actually sent"
+      , " over the wire."
+      ]
+    documentFor (Namespace _ ["StartedFetchBatch"]) = Just $ mconcat
+      [ "Mark the start of receiving a streaming batch of blocks. This will"
+      , " be followed by one or more 'CompletedBlockFetch' and a final"
+      , " 'CompletedFetchBatch'"
+      ]
     documentFor (Namespace _ ["CompletedFetchBatch"]) = Just
       "Mark the successful end of receiving a streaming batch of blocks."
     documentFor (Namespace _ ["CompletedBlockFetch"]) = Just
       ""
-    documentFor (Namespace _ ["RejectedFetchBatch"]) = Just
-      "If the other peer rejects our request then we have this event\
-       \ instead of 'StartedFetchBatch' and 'CompletedFetchBatch'."
-    documentFor (Namespace _ ["ClientTerminating"]) = Just
-      "The client is terminating.  Log the number of outstanding\
-       \ requests."
+    documentFor (Namespace _ ["RejectedFetchBatch"]) = Just $ mconcat
+      [ "If the other peer rejects our request then we have this event"
+      , " instead of 'StartedFetchBatch' and 'CompletedFetchBatch'."
+      ]
+    documentFor (Namespace _ ["ClientTerminating"]) = Just $ mconcat
+      [ "The client is terminating.  Log the number of outstanding"
+      , " requests."
+      ]
     documentFor _ = Nothing
 
     allNamespaces = [
@@ -702,14 +714,16 @@ instance MetaTrace (TraceTxSubmissionInbound txid tx) where
       "Just processed transaction pass/fail breakdown."
     documentFor (Namespace _ ["Terminated"]) = Just
       "Server received 'MsgDone'."
-    documentFor (Namespace _ ["CanRequestMoreTxs"]) = Just
-      "There are no replies in flight, but we do know some more txs we\
-      \ can ask for, so lets ask for them and more txids."
-    documentFor (Namespace _ ["CannotRequestMoreTxs"]) = Just
-      "There's no replies in flight, and we have no more txs we can\
-      \ ask for so the only remaining thing to do is to ask for more\
-      \ txids. Since this is the only thing to do now, we make this a\
-      \ blocking call."
+    documentFor (Namespace _ ["CanRequestMoreTxs"]) = Just $ mconcat
+      [ "There are no replies in flight, but we do know some more txs we"
+      , " can ask for, so lets ask for them and more txids."
+      ]
+    documentFor (Namespace _ ["CannotRequestMoreTxs"]) = Just $ mconcat
+      [ "There's no replies in flight, and we have no more txs we can"
+      , " ask for so the only remaining thing to do is to ask for more"
+      , " txids. Since this is the only thing to do now, we make this a"
+      , " blocking call."
+      ]
     documentFor _ = Nothing
 
     allNamespaces = [
@@ -906,13 +920,15 @@ instance MetaTrace (TraceEventMempool blk) where
 
     documentFor (Namespace _ ["AddedTx"]) = Just
       "New, valid transaction that was added to the Mempool."
-    documentFor (Namespace _ ["RejectedTx"]) = Just
-      "New, invalid transaction thas was rejected and thus not added to\
-       \ the Mempool."
-    documentFor (Namespace _ ["RemoveTxs"]) = Just
-      "Previously valid transactions that are no longer valid because of\
-      \ changes in the ledger state. These transactions have been removed\
-      \ from the Mempool."
+    documentFor (Namespace _ ["RejectedTx"]) = Just $ mconcat
+      [ "New, invalid transaction thas was rejected and thus not added to"
+      , " the Mempool."
+      ]
+    documentFor (Namespace _ ["RemoveTxs"]) = Just $ mconcat
+      [ "Previously valid transactions that are no longer valid because of"
+      , " changes in the ledger state. These transactions have been removed"
+      , " from the Mempool."
+      ]
     documentFor (Namespace _ ["ManuallyRemovedTxs"]) = Just
       "Transactions that have been manually removed from the Mempool."
     documentFor _ = Nothing
@@ -987,9 +1003,10 @@ instance MetaTrace  (ForgeTracerType blk) where
   metricsDocFor ns =
     metricsDocFor (nsCast ns :: Namespace (TraceForgeEvent blk))
 
-  documentFor (Namespace _ ["StartLeadershipCheckPlus"]) = Just
-    "We adopted the block we produced, we also trace the transactions\
-    \  that were adopted."
+  documentFor (Namespace _ ["StartLeadershipCheckPlus"]) = Just $ mconcat
+    [ "We adopted the block we produced, we also trace the transactions"
+    , "  that were adopted."
+    ]
   documentFor ns =
     documentFor (nsCast ns :: Namespace (TraceForgeEvent blk))
 
@@ -1387,125 +1404,140 @@ instance MetaTrace (TraceForgeEvent blk) where
 
   documentFor (Namespace _ ["StartLeadershipCheck"]) = Just
     "Start of the leadership check."
-  documentFor (Namespace _ ["SlotIsImmutable"]) = Just
-    "Leadership check failed: the tip of the ImmutableDB inhabits the\
-        \  current slot\
-        \ \
-        \  This might happen in two cases.\
-        \ \
-        \   1. the clock moved backwards, on restart we ignored everything from the\
-        \      VolatileDB since it's all in the future, and now the tip of the\
-        \      ImmutableDB points to a block produced in the same slot we're trying\
-        \      to produce a block in\
-        \ \
-        \   2. k = 0 and we already adopted a block from another leader of the same\
-        \      slot.\
-        \ \
-        \  We record both the current slot number as well as the tip of the\
-        \  ImmutableDB.\
-        \ \
-        \ See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>"
-  documentFor (Namespace _ ["BlockFromFuture"]) = Just
-    "Leadership check failed: the current chain contains a block from a slot\
-      \  /after/ the current slot\
-      \ \
-      \  This can only happen if the system is under heavy load.\
-      \ \
-      \  We record both the current slot number as well as the slot number of the\
-      \  block at the tip of the chain.\
-      \ \
-      \  See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>"
-  documentFor (Namespace _ ["BlockContext"]) = Just
-    "We found out to which block we are going to connect the block we are about\
-      \  to forge.\
-      \ \
-      \  We record the current slot number, the block number of the block to\
-      \  connect to and its point.\
-      \ \
-      \  Note that block number of the block we will try to forge is one more than\
-      \  the recorded block number."
-  documentFor (Namespace _ ["NoLedgerState"]) = Just
-    "Leadership check failed: we were unable to get the ledger state for the\
-      \  point of the block we want to connect to\
-      \ \
-      \  This can happen if after choosing which block to connect to the node\
-      \  switched to a different fork. We expect this to happen only rather\
-      \  rarely, so this certainly merits a warning; if it happens a lot, that\
-      \  merits an investigation.\
-      \ \
-      \  We record both the current slot number as well as the point of the block\
-      \  we attempt to connect the new block to (that we requested the ledger\
-      \  state for)."
-  documentFor (Namespace _ ["LedgerState"]) = Just
-     "We obtained a ledger state for the point of the block we want to\
-      \  connect to\
-      \ \
-      \  We record both the current slot number as well as the point of the block\
-      \  we attempt to connect the new block to (that we requested the ledger\
-      \  state for)."
-  documentFor (Namespace _ ["NoLedgerView"]) = Just
-    "Leadership check failed: we were unable to get the ledger view for the\
-      \  current slot number\
-      \ \
-      \  This will only happen if there are many missing blocks between the tip of\
-      \  our chain and the current slot.\
-      \ \
-      \  We record also the failure returned by 'forecastFor'."
-  documentFor (Namespace _ ["LedgerView"]) = Just
-    "We obtained a ledger view for the current slot number\
-      \ \
-      \  We record the current slot number."
-  documentFor (Namespace _ ["ForgeStateUpdateError"]) =  Just
-    "Updating the forge state failed.\
-      \ \
-      \  For example, the KES key could not be evolved anymore.\
-      \ \
-      \  We record the error returned by 'updateForgeState'."
-  documentFor (Namespace _ ["NodeCannotForge"]) =  Just
-   "We did the leadership check and concluded that we should lead and forge\
-      \  a block, but cannot.\
-      \ \
-      \  This should only happen rarely and should be logged with warning severity.\
-      \ \
-      \  Records why we cannot forge a block."
-  documentFor (Namespace _ ["NodeNotLeader"]) =  Just
-    "We did the leadership check and concluded we are not the leader\
-      \ \
-      \  We record the current slot number"
-  documentFor (Namespace _ ["NodeIsLeader"]) =  Just
-    "We did the leadership check and concluded we /are/ the leader\
-      \\n\
-      \  The node will soon forge; it is about to read its transactions from the\
-      \  Mempool. This will be followed by ForgedBlock."
+  documentFor (Namespace _ ["SlotIsImmutable"]) = Just $ mconcat
+    [ "Leadership check failed: the tip of the ImmutableDB inhabits the"
+    , "  current slot"
+    , " "
+    , "  This might happen in two cases."
+    , " "
+    , "   1. the clock moved backwards, on restart we ignored everything from the"
+    , "      VolatileDB since it's all in the future, and now the tip of the"
+    , "      ImmutableDB points to a block produced in the same slot we're trying"
+    , "      to produce a block in"
+    , " "
+    , "   2. k = 0 and we already adopted a block from another leader of the same"
+    , "      slot."
+    , " "
+    , "  We record both the current slot number as well as the tip of the"
+    , "  ImmutableDB."
+    , " "
+    , " See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>"
+    ]
+  documentFor (Namespace _ ["BlockFromFuture"]) = Just $ mconcat
+    [ "Leadership check failed: the current chain contains a block from a slot"
+    , "  /after/ the current slot"
+    , " "
+    , "  This can only happen if the system is under heavy load."
+    , " "
+    , "  We record both the current slot number as well as the slot number of the"
+    , "  block at the tip of the chain."
+    , " "
+    , "  See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>"
+    ]
+  documentFor (Namespace _ ["BlockContext"]) = Just $ mconcat
+    [ "We found out to which block we are going to connect the block we are about"
+    , "  to forge."
+    , " "
+    , "  We record the current slot number, the block number of the block to"
+    , "  connect to and its point."
+    , " "
+    , "  Note that block number of the block we will try to forge is one more than"
+    , "  the recorded block number."
+    ]
+  documentFor (Namespace _ ["NoLedgerState"]) = Just $ mconcat
+    [ "Leadership check failed: we were unable to get the ledger state for the"
+    , "  point of the block we want to connect to"
+    , " "
+    , "  This can happen if after choosing which block to connect to the node"
+    , "  switched to a different fork. We expect this to happen only rather"
+    , "  rarely, so this certainly merits a warning; if it happens a lot, that"
+    , "  merits an investigation."
+    , " "
+    , "  We record both the current slot number as well as the point of the block"
+    , "  we attempt to connect the new block to (that we requested the ledger"
+    , "  state for)."
+    ]
+  documentFor (Namespace _ ["LedgerState"]) = Just $ mconcat
+    [ "We obtained a ledger state for the point of the block we want to"
+    , "  connect to"
+    , " "
+    , "  We record both the current slot number as well as the point of the block"
+    , "  we attempt to connect the new block to (that we requested the ledger"
+    , "  state for)."
+    ]
+  documentFor (Namespace _ ["NoLedgerView"]) = Just $ mconcat
+    [ "Leadership check failed: we were unable to get the ledger view for the"
+    , "  current slot number"
+    , " "
+    , "  This will only happen if there are many missing blocks between the tip of"
+    , "  our chain and the current slot."
+    , " "
+    , "  We record also the failure returned by 'forecastFor'."
+    ]
+  documentFor (Namespace _ ["LedgerView"]) = Just $ mconcat
+    [ "We obtained a ledger view for the current slot number"
+    , " "
+    , "  We record the current slot number."
+    ]
+  documentFor (Namespace _ ["ForgeStateUpdateError"]) = Just $ mconcat
+    [ "Updating the forge state failed."
+    , " "
+    , "  For example, the KES key could not be evolved anymore."
+    , " "
+    , "  We record the error returned by 'updateForgeState'."
+    ]
+  documentFor (Namespace _ ["NodeCannotForge"]) = Just $ mconcat
+    [ "We did the leadership check and concluded that we should lead and forge"
+    , "  a block, but cannot."
+    , " "
+    , "  This should only happen rarely and should be logged with warning severity."
+    , " "
+    , "  Records why we cannot forge a block."
+    ]
+  documentFor (Namespace _ ["NodeNotLeader"]) = Just $ mconcat
+    [ "We did the leadership check and concluded we are not the leader"
+    , " "
+    , "  We record the current slot number"
+    ]
+  documentFor (Namespace _ ["NodeIsLeader"]) = Just $ mconcat
+    [ "We did the leadership check and concluded we /are/ the leader"
+    , "\n"
+    , "  The node will soon forge; it is about to read its transactions from the"
+    , "  Mempool. This will be followed by ForgedBlock."
+    ]
   documentFor (Namespace _ ["ForgeTickedLedgerState"]) = Just ""
   documentFor (Namespace _ ["ForgingMempoolSnapshot"]) = Just ""
-  documentFor (Namespace _ ["ForgedBlock"]) = Just
-    "We forged a block.\
-      \\n\
-      \  We record the current slot number, the point of the predecessor, the block\
-      \  itself, and the total size of the mempool snapshot at the time we produced\
-      \  the block (which may be significantly larger than the block, due to\
-      \  maximum block size)\
-      \\n\
-      \  This will be followed by one of three messages:\
-      \\n\
-      \  * AdoptedBlock (normally)\
-      \\n\
-      \  * DidntAdoptBlock (rarely)\
-      \\n\
-      \  * ForgedInvalidBlock (hopefully never, this would indicate a bug)"
-  documentFor (Namespace _ ["DidntAdoptBlock"]) = Just
-    "We did not adopt the block we produced, but the block was valid. We\
-      \  must have adopted a block that another leader of the same slot produced\
-      \  before we got the chance of adopting our own block. This is very rare,\
-      \  this warrants a warning."
-  documentFor (Namespace _ ["ForgedInvalidBlock"]) = Just
-    "We forged a block that is invalid according to the ledger in the\
-      \  ChainDB. This means there is an inconsistency between the mempool\
-      \  validation and the ledger validation. This is a serious error!"
-  documentFor (Namespace _ ["AdoptedBlock"]) = Just
-    "We adopted the block we produced, we also trace the transactions\
-       \  that were adopted."
+  documentFor (Namespace _ ["ForgedBlock"]) = Just $ mconcat
+    [ "We forged a block."
+    , "\n"
+    , "  We record the current slot number, the point of the predecessor, the block"
+    , "  itself, and the total size of the mempool snapshot at the time we produced"
+    , "  the block (which may be significantly larger than the block, due to"
+    , "  maximum block size)"
+    , "\n"
+    , "  This will be followed by one of three messages:"
+    , "\n"
+    , "  * AdoptedBlock (normally)"
+    , "\n"
+    , "  * DidntAdoptBlock (rarely)"
+    , "\n"
+    , "  * ForgedInvalidBlock (hopefully never, this would indicate a bug)"
+    ]
+  documentFor (Namespace _ ["DidntAdoptBlock"]) = Just $ mconcat
+    [ "We did not adopt the block we produced, but the block was valid. We"
+    , "  must have adopted a block that another leader of the same slot produced"
+    , "  before we got the chance of adopting our own block. This is very rare,"
+    , "  this warrants a warning."
+    ]
+  documentFor (Namespace _ ["ForgedInvalidBlock"]) = Just $ mconcat
+    [ "We forged a block that is invalid according to the ledger in the"
+    , "  ChainDB. This means there is an inconsistency between the mempool"
+    , "  validation and the ledger validation. This is a serious error!"
+    ]
+  documentFor (Namespace _ ["AdoptedBlock"]) = Just $ mconcat
+    [ "We adopted the block we produced, we also trace the transactions"
+    , "  that were adopted."
+    ]
   documentFor _ = Nothing
 
   allNamespaces =
@@ -1573,36 +1605,39 @@ instance MetaTrace (TraceBlockchainTimeEvent t) where
   severityFor (Namespace _ ["SystemClockMovedBack"]) _ = Just Warning
   severityFor _ _ = Nothing
 
-  documentFor (Namespace _ ["StartTimeInTheFuture"]) = Just
-    "The start time of the blockchain time is in the future\
-      \\n\
-      \ We have to block (for 'NominalDiffTime') until that time comes."
-  documentFor (Namespace _ ["CurrentSlotUnknown"]) = Just
-    "Current slot is not yet known\
-      \\n\
-      \ This happens when the tip of our current chain is so far in the past that\
-      \ we cannot translate the current wallclock to a slot number, typically\
-      \ during syncing. Until the current slot number is known, we cannot\
-      \ produce blocks. Seeing this message during syncing therefore is\
-      \ normal and to be expected.\
-      \\n\
-      \ We record the current time (the time we tried to translate to a 'SlotNo')\
-      \ as well as the 'PastHorizonException', which provides detail on the\
-      \ bounds between which we /can/ do conversions. The distance between the\
-      \ current time and the upper bound should rapidly decrease with consecutive\
-      \ 'CurrentSlotUnknown' messages during syncing."
-  documentFor (Namespace _ ["SystemClockMovedBack"]) = Just
-    "The system clock moved back an acceptable time span, e.g., because of\
-      \ an NTP sync.\
-      \\n\
-      \ The system clock moved back such that the new current slot would be\
-      \ smaller than the previous one. If this is within the configured limit, we\
-      \ trace this warning but *do not change the current slot*. The current slot\
-      \ never decreases, but the current slot may stay the same longer than\
-      \ expected.\
-      \\n\
-      \ When the system clock moved back more than the configured limit, we shut\
-      \ down with a fatal exception."
+  documentFor (Namespace _ ["StartTimeInTheFuture"]) = Just $ mconcat
+    [ "The start time of the blockchain time is in the future"
+    , "\n"
+    , " We have to block (for 'NominalDiffTime') until that time comes."
+    ]
+  documentFor (Namespace _ ["CurrentSlotUnknown"]) = Just $ mconcat
+    [ "Current slot is not yet known"
+    , "\n"
+    , " This happens when the tip of our current chain is so far in the past that"
+    , " we cannot translate the current wallclock to a slot number, typically"
+    , " during syncing. Until the current slot number is known, we cannot"
+    , " produce blocks. Seeing this message during syncing therefore is"
+    , " normal and to be expected."
+    , "\n"
+    , " We record the current time (the time we tried to translate to a 'SlotNo')"
+    , " as well as the 'PastHorizonException', which provides detail on the"
+    , " bounds between which we /can/ do conversions. The distance between the"
+    , " current time and the upper bound should rapidly decrease with consecutive"
+    , " 'CurrentSlotUnknown' messages during syncing."
+    ]
+  documentFor (Namespace _ ["SystemClockMovedBack"]) = Just $ mconcat
+    [ "The system clock moved back an acceptable time span, e.g., because of"
+    , " an NTP sync."
+    , "\n"
+    , " The system clock moved back such that the new current slot would be"
+    , " smaller than the previous one. If this is within the configured limit, we"
+    , " trace this warning but *do not change the current slot*. The current slot"
+    , " never decreases, but the current slot may stay the same longer than"
+    , " expected."
+    , "\n"
+    , " When the system clock moved back more than the configured limit, we shut"
+    , " down with a fatal exception."
+    ]
   documentFor _ = Nothing
 
   allNamespaces =

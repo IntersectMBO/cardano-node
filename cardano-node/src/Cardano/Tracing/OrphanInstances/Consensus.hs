@@ -618,27 +618,36 @@ instance ( ConvertRawHash blk
             ChainDB.ForkTooOld streamFrom ->
               "The requested range forks off too far in the past"
               <> showT streamFrom
-        ChainDB.BlockMissingFromVolatileDB realPt ->
-          "This block is no longer in the VolatileDB because it has been garbage\
-           \ collected. It might now be in the ImmutableDB if it was part of the\
-           \ current chain. Block: " <> renderRealPoint realPt
-        ChainDB.StreamFromImmutableDB sFrom sTo ->
-          "Stream only from the ImmutableDB. StreamFrom:" <> showT sFrom <>
-          " StreamTo: " <> showT sTo
-        ChainDB.StreamFromBoth sFrom sTo pts ->
-          "Stream from both the VolatileDB and the ImmutableDB."
-          <> " StreamFrom: " <> showT sFrom <> " StreamTo: " <> showT sTo
-          <> " Points: " <> showT (map renderRealPoint pts)
-        ChainDB.StreamFromVolatileDB sFrom sTo pts ->
-          "Stream only from the VolatileDB."
-          <> " StreamFrom: " <> showT sFrom <> " StreamTo: " <> showT sTo
-          <> " Points: " <> showT (map renderRealPoint pts)
-        ChainDB.BlockWasCopiedToImmutableDB pt ->
-          "This block has been garbage collected from the VolatileDB is now\
-          \ found and streamed from the ImmutableDB. Block: " <> renderRealPoint pt
-        ChainDB.BlockGCedFromVolatileDB pt ->
-          "This block no longer in the VolatileDB and isn't in the ImmutableDB\
-          \ either; it wasn't part of the current chain. Block: " <> renderRealPoint pt
+        ChainDB.BlockMissingFromVolatileDB realPt -> mconcat
+          [ "This block is no longer in the VolatileDB because it has been garbage"
+          , " collected. It might now be in the ImmutableDB if it was part of the"
+          , " current chain. Block: "
+          , renderRealPoint realPt
+          ]
+        ChainDB.StreamFromImmutableDB sFrom sTo -> mconcat
+          [ "Stream only from the ImmutableDB. StreamFrom:"
+          , showT sFrom
+          , " StreamTo: "
+          , showT sTo
+          ]
+        ChainDB.StreamFromBoth sFrom sTo pts -> mconcat
+          [ "Stream from both the VolatileDB and the ImmutableDB."
+          , " StreamFrom: " <> showT sFrom <> " StreamTo: " <> showT sTo
+          , " Points: " <> showT (map renderRealPoint pts)
+          ]
+        ChainDB.StreamFromVolatileDB sFrom sTo pts -> mconcat
+          [ "Stream only from the VolatileDB."
+          , " StreamFrom: " <> showT sFrom <> " StreamTo: " <> showT sTo
+          , " Points: " <> showT (map renderRealPoint pts)
+          ]
+        ChainDB.BlockWasCopiedToImmutableDB pt -> mconcat
+          [ "This block has been garbage collected from the VolatileDB is now"
+          , " found and streamed from the ImmutableDB. Block: " <> renderRealPoint pt
+          ]
+        ChainDB.BlockGCedFromVolatileDB pt -> mconcat
+          [ "This block no longer in the VolatileDB and isn't in the ImmutableDB"
+          , " either; it wasn't part of the current chain. Block: " <> renderRealPoint pt
+          ]
         ChainDB.SwitchBackToVolatileDB ->  "SwitchBackToVolatileDB"
       ChainDB.TraceImmutableDBEvent ev -> case ev of
         ImmDB.NoValidLastLocation ->

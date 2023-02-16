@@ -203,9 +203,10 @@ instance MetaTrace (SubscriptionTrace adr) where
       "Waiting delay time before attempting a new connection."
     documentFor (Namespace _  ["Start"]) = Just
       "Starting Subscription Worker with a valency."
-    documentFor (Namespace _  ["Restart"]) = Just
-      "Restarting Subscription after duration with desired valency and\
-        \ current valency."
+    documentFor (Namespace _  ["Restart"]) = Just $ mconcat
+      [ "Restarting Subscription after duration with desired valency and"
+      , " current valency."
+      ]
     documentFor (Namespace _  ["ConnectionExist"]) = Just
       "Connection exists to destination."
     documentFor (Namespace _  ["UnsupportedRemoteAddr"]) = Just

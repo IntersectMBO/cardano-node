@@ -260,12 +260,15 @@ readTopologyFile tr nc = do
   handler e = Text.pack $ "Cardano.Node.Configuration.Topology.readTopologyFile: "
                         ++ displayException e
   handlerJSON :: String -> Text
-  handlerJSON err = "Is your topology file formatted correctly? \
-                    \Expecting P2P Topology file format. \
-                    \The port and valency fields should be numerical. \
-                    \If you specified the correct topology file \
-                    \make sure that you correctly setup EnableP2P \
-                    \configuration flag. " <> Text.pack err
+  handlerJSON err = mconcat
+    [ "Is your topology file formatted correctly? "
+    , "Expecting P2P Topology file format. "
+    , "The port and valency fields should be numerical. "
+    , "If you specified the correct topology file "
+    , "make sure that you correctly setup EnableP2P "
+    , "configuration flag. "
+    , Text.pack err
+    ]
 
 readTopologyFileOrError :: Tracer IO (StartupTrace blk)
                         -> NodeConfiguration -> IO NetworkTopology

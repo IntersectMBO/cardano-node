@@ -446,9 +446,10 @@ instance MetaTrace (TracePeerSelection SockAddr) where
     documentFor (Namespace [] ["PublicRootsRequest"]) = Just  ""
     documentFor (Namespace [] ["PublicRootsResults"]) = Just  ""
     documentFor (Namespace [] ["PublicRootsFailure"]) = Just  ""
-    documentFor (Namespace [] ["GossipRequests"]) = Just
-      "target known peers, actual known peers, peers available for gossip,\
-      \ peers selected for gossip"
+    documentFor (Namespace [] ["GossipRequests"]) = Just $ mconcat
+      [ "target known peers, actual known peers, peers available for gossip,"
+      , " peers selected for gossip"
+      ]
     documentFor (Namespace [] ["GossipResults"]) = Just  ""
     documentFor (Namespace [] ["ForgetColdPeers"]) = Just
       "target known peers, actual known peers, selected peers"
@@ -456,9 +457,10 @@ instance MetaTrace (TracePeerSelection SockAddr) where
       "target established, actual established, selected peers"
     documentFor (Namespace [] ["PromoteColdLocalPeers"]) = Just
       "target local established, actual local established, selected peers"
-    documentFor (Namespace [] ["PromoteColdFailed"]) = Just
-      "target established, actual established, peer, delay until next\
-      \ promotion, reason"
+    documentFor (Namespace [] ["PromoteColdFailed"]) = Just $ mconcat
+      [ "target established, actual established, peer, delay until next"
+      , " promotion, reason"
+      ]
     documentFor (Namespace [] ["PromoteColdDone"]) = Just
       "target active, actual active, selected peers"
     documentFor (Namespace [] ["PromoteWarmPeers"]) = Just
@@ -1242,12 +1244,14 @@ instance MetaTrace (InboundGovernorTrace addr) where
     documentFor (Namespace _ ["ResponderTerminated"]) = Just ""
     documentFor (Namespace _ ["PromotedToWarmRemote"]) = Just ""
     documentFor (Namespace _ ["PromotedToHotRemote"]) = Just ""
-    documentFor (Namespace _ ["DemotedToColdRemote"]) = Just
-      "All mini-protocols terminated.  The boolean is true if this connection\
-      \ was not used by p2p-governor, and thus the connection will be terminated."
-    documentFor (Namespace _ ["DemotedToWarmRemote"]) = Just
-      "All mini-protocols terminated.  The boolean is true if this connection\
-      \ was not used by p2p-governor, and thus the connection will be terminated."
+    documentFor (Namespace _ ["DemotedToColdRemote"]) = Just $ mconcat
+      [ "All mini-protocols terminated.  The boolean is true if this connection"
+      , " was not used by p2p-governor, and thus the connection will be terminated."
+      ]
+    documentFor (Namespace _ ["DemotedToWarmRemote"]) = Just $ mconcat
+      [ "All mini-protocols terminated.  The boolean is true if this connection"
+      , " was not used by p2p-governor, and thus the connection will be terminated."
+      ]
     documentFor (Namespace _ ["WaitIdleRemote"]) = Just ""
     documentFor (Namespace _ ["MuxCleanExit"]) = Just ""
     documentFor (Namespace _ ["MuxErrored"]) = Just ""
@@ -1361,12 +1365,14 @@ instance MetaTrace NtN.AcceptConnectionsPolicyTrace where
     severityFor (Namespace _ ["ConnectionLimitResume"]) _ = Just Info
     severityFor _ _ = Nothing
 
-    documentFor (Namespace _ ["ConnectionRateLimiting"]) = Just
-      "Rate limiting accepting connections,\
-        \ delaying next accept for given time, currently serving n connections."
-    documentFor (Namespace _ ["ConnectionHardLimit"]) = Just
-      "Hard rate limit reached,\
-        \ waiting until the number of connections drops below n."
+    documentFor (Namespace _ ["ConnectionRateLimiting"]) = Just $ mconcat
+      [ "Rate limiting accepting connections,"
+      , " delaying next accept for given time, currently serving n connections."
+      ]
+    documentFor (Namespace _ ["ConnectionHardLimit"]) = Just $ mconcat
+      [ "Hard rate limit reached,"
+      , " waiting until the number of connections drops below n."
+      ]
     documentFor (Namespace _ ["ConnectionLimitResume"]) = Just
       ""
     documentFor _ = Nothing
