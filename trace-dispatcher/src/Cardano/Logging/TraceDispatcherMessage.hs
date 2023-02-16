@@ -81,15 +81,18 @@ instance MetaTrace TraceDispatcherMessage where
 
     documentFor (Namespace _ ["StartLimiting"])    = Just
       "This message indicates the start of frequency limiting"
-    documentFor (Namespace _ ["StopLimiting"])     = Just
-      "This message indicates the stop of frequency limiting,\
-      \ and gives the number of messages that has been suppressed"
-    documentFor (Namespace _ ["RememberLimiting"]) = Just
-      "^ This message remembers of ongoing frequency limiting,\
-       \ and gives the number of messages that has been suppressed"
-    documentFor (Namespace _ ["UnknownNamespace"]) = Just
-      "A value was queried for a namespaces from a tracer,\
-      \which is unknown. This inicates a bug in the tracer implementation."
+    documentFor (Namespace _ ["StopLimiting"])     = Just $ mconcat
+      [ "This message indicates the stop of frequency limiting,"
+      , " and gives the number of messages that has been suppressed"
+      ]
+    documentFor (Namespace _ ["RememberLimiting"]) = Just $ mconcat
+      [ "^ This message remembers of ongoing frequency limiting,"
+      , " and gives the number of messages that has been suppressed"
+      ]
+    documentFor (Namespace _ ["UnknownNamespace"]) = Just $ mconcat
+      [ "A value was queried for a namespaces from a tracer,"
+      , "which is unknown. This inicates a bug in the tracer implementation."
+      ]
 
     allNamespaces = [
         Namespace [] ["StartLimiting"]
