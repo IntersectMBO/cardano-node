@@ -275,6 +275,7 @@ instance MetaTrace (TraceBenchTxSubmit TxId) where
     namespaceFor TraceBenchTxSubSummary {} = Namespace [] ["eBenchTxSubSummary"]
     namespaceFor TraceBenchTxSubDebug {} = Namespace [] ["BenchTxSubDebug"]
     namespaceFor TraceBenchTxSubError {} = Namespace [] ["BenchTxSubError"]
+    namespaceFor TraceBenchPlutusBudgetSummary {} = Namespace [] ["BenchPlutusBudgetSummary"]
 
     severityFor _ _ = Just Info
 
@@ -297,6 +298,7 @@ instance MetaTrace (TraceBenchTxSubmit TxId) where
         , Namespace [] ["eBenchTxSubSummary"]
         , Namespace [] ["BenchTxSubDebug"]
         , Namespace [] ["BenchTxSubError"]
+        , Namespace [] ["BenchPlutusBudgetSummary"]
         ]
 
 instance LogFormatting NodeToNodeSubmissionTrace where
