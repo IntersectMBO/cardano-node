@@ -70,7 +70,7 @@ mkUTxOScript networkId (script, txOutDatum) witness value
     Just tag -> TxOut
                   plutusScriptAddr
                   (lovelaceToTxOutValue v)
-                  (TxOutDatumHash tag $ hashScriptData txOutDatum)
+                  (TxOutDatumHash tag $ hashScriptDataBytes $ unsafeHashableScriptData txOutDatum)
                   ReferenceScriptNone
 
   mkNewFund :: Lovelace -> TxIx -> TxId -> Fund

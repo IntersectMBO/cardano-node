@@ -79,10 +79,10 @@ instance FromJSON ProtocolParametersSource where
 
 -- Orphan instance used in the tx-generator
 instance ToJSON ScriptData where
-  toJSON = scriptDataToJson ScriptDataJsonNoSchema
+  toJSON = scriptDataToJson ScriptDataJsonNoSchema . unsafeHashableScriptData
 instance FromJSON ScriptData where
   parseJSON v = case scriptDataFromJson ScriptDataJsonNoSchema v of
-    Right r -> return r
+    Right r -> return $ getScriptData r
     Left err -> fail $ show err
 
 instance ToJSON Generator where

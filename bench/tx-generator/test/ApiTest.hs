@@ -131,11 +131,11 @@ checkPlutusBuiltin
 
     protocolParameters <- readProtocolParametersOrDie
     forM_ bArgs $ \bArg -> do
-      let apiData = toApiData bArg
+      let apiData = unsafeHashableScriptData $ toApiData bArg
       putStrLn $ "* executing with mode: " ++ show (fst bArg)
       putStrLn "* custom script data in Cardano API format:"
       BSL.putStrLn $ encode $ scriptDataToJson ScriptDataJsonDetailedSchema apiData
-      case preExecutePlutusScript protocolParameters script apiData apiData of
+      case preExecutePlutusScript protocolParameters script (getScriptData apiData) apiData of
         Left err -> putStrLn $ "--> execution failed: " ++ show err
         Right units -> putStrLn $ "--> execution successful; got budget: " ++ show units
   where
@@ -165,9 +165,9 @@ checkPlutusLoop (Just PlutusOn{..})
       Left err -> die (show err)
       Right redeemer -> do
         putStrLn $ "--> read redeemer: " ++ redeemerFile
-        return $ scriptDataModifyNumber (+ count) redeemer
+        return $ scriptDataModifyNumber (+ count) $ getScriptData redeemer
 
-    case preExecutePlutusScript protocolParameters script (ScriptDataNumber 0) redeemer of
+    case preExecutePlutusScript protocolParameters script (ScriptDataNumber 0) (unsafeHashableScriptData redeemer) of
       Left err -> putStrLn $ "--> execution failed: " ++ show err
       Right units -> putStrLn $ "--> execution successful; got budget: " ++ show units
 
@@ -178,7 +178,7 @@ checkPlutusLoop (Just PlutusOn{..})
         autoBudget = PlutusAutoBudget
           { autoBudgetUnits = budget
           , autoBudgetDatum = ScriptDataNumber 0
-          , autoBudgetRedeemer = scriptDataModifyNumber (const 1_000_000) redeemer
+          , autoBudgetRedeemer = unsafeHashableScriptData $ scriptDataModifyNumber (const 1_000_000) redeemer
           }
 
         pparamsStepFraction d = case protocolParamMaxBlockExUnits protocolParameters of
