@@ -149,6 +149,9 @@ let
       pkgs.time
     ];
 
+    # build tools for all hasPkgs not needed (would include duplicates for cardano-cli, cardano-node, etc.)
+    allToolDeps = false;
+
     shellHook = ''
       echo "DevOps Tools" \
       | ${figlet}/bin/figlet -f banner -c \
