@@ -37,9 +37,9 @@ module Cardano.Testnet (
   ) where
 
 import           Testnet
-import           Testnet.Babbage
 import           Testnet.Cardano
 import           Testnet.Conf hiding (base)
+import           Testnet.Options
 import           Testnet.Shelley as Shelley
 import           Testnet.Utils (waitUntilEpoch)
 

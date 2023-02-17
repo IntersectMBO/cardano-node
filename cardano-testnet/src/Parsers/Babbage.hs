@@ -4,12 +4,12 @@ module Parsers.Babbage
   , runBabbageOptions
   ) where
 
-import           Prelude
 import           Options.Applicative
 import qualified Options.Applicative as OA
+import           Prelude
 
 import           Testnet
-import           Testnet.Babbage
+import           Testnet.Options
 import           Testnet.Run (runTestnet)
 import           Testnet.Util.Runtime (readNodeLoggingFormat)
 

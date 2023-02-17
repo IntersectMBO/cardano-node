@@ -63,8 +63,9 @@ import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Network as H
 
+import           Testnet.Commands.Genesis
+import           Testnet.Commands.Governance
 import qualified Testnet.Conf as H
-import           Testnet.Genesis
 import qualified Testnet.Util.Assert as H
 import qualified Testnet.Util.Process as H
 import           Testnet.Util.Process (execCli_)
@@ -347,53 +348,31 @@ cardanoTestnet testnetOptions H.Conf {..} = do
       ]
 
   -- Update Proposal and votes
-  execCli_
-    [ "byron", "governance", "create-update-proposal"
-    , "--filepath", tempAbsPath </> "update-proposal"
-    , "--testnet-magic", show @Int testnetMagic
-    , "--signing-key", tempAbsPath </> "byron/delegate-keys.000.key"
-    , "--protocol-version-major", "1"
-    , "--protocol-version-minor", "0"
-    , "--protocol-version-alt", "0"
-    , "--application-name", "cardano-sl"
-    , "--software-version-num", "1"
-    , "--system-tag", "linux"
-    , "--installer-hash", "0"
-    ]
+  createByronUpdateProposal
+    testnetMagic
+    (tempAbsPath </> "byron/delegate-keys.000.key")
+    (tempAbsPath </> "update-proposal")
+    1
 
   forM_ bftNodesN $ \n -> do
-    execCli_
-      [ "byron", "governance", "create-proposal-vote"
-      , "--proposal-filepath", tempAbsPath </> "update-proposal"
-      , "--testnet-magic", show @Int testnetMagic
-      , "--signing-key", tempAbsPath </> "byron/delegate-keys.00" <> show @Int (n - 1) <> ".key"
-      , "--vote-yes"
-      , "--output-filepath", tempAbsPath </> "update-vote.00" <> show @Int (n - 1)
-      ]
+    createByronUpdateProposalVote
+      testnetMagic
+      (tempAbsPath </> "update-proposal")
+      (tempAbsPath </> "byron/delegate-keys.00" <> show @Int (n - 1) <> ".key")
+      (tempAbsPath </> "update-vote.00" <> show @Int (n - 1))
 
-  execCli_
-    [ "byron", "governance", "create-update-proposal"
-    , "--filepath", tempAbsPath </> "update-proposal-1"
-    , "--testnet-magic", show @Int testnetMagic
-    , "--signing-key", tempAbsPath </> "byron/delegate-keys.000.key"
-    , "--protocol-version-major", "2"
-    , "--protocol-version-minor", "0"
-    , "--protocol-version-alt", "0"
-    , "--application-name", "cardano-sl"
-    , "--software-version-num", "1"
-    , "--system-tag", "linux"
-    , "--installer-hash", "0"
-    ]
+  createByronUpdateProposal
+    testnetMagic
+    (tempAbsPath </> "byron/delegate-keys.000.key")
+    (tempAbsPath </> "update-proposal-1")
+    2
 
   forM_ bftNodesN $ \n ->
-    execCli_
-      [ "byron", "governance", "create-proposal-vote"
-      , "--proposal-filepath", tempAbsPath </> "update-proposal-1"
-      , "--testnet-magic", show @Int testnetMagic
-      , "--signing-key", tempAbsPath </> "byron/delegate-keys.00" <> show @Int (n - 1) <> ".key"
-      , "--vote-yes"
-      , "--output-filepath", tempAbsPath </> "update-vote-1.00" <> show @Int (n - 1)
-      ]
+    createByronUpdateProposalVote
+      testnetMagic
+      (tempAbsPath </> "update-proposal-1")
+      (tempAbsPath </> "byron/delegate-keys.00" <> show @Int (n - 1) <> ".key")
+      (tempAbsPath </> "update-vote-1.00" <> show @Int (n - 1))
 
   -- Generated genesis keys and genesis files
   H.noteEachM_ . H.listDirectory $ tempAbsPath </> "byron"
@@ -644,11 +623,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
     --  2. register the stake pool 1
     --  3. register the user1 stake address
     --  4. delegate from the user1 stake address to the stake pool
-    txIn <- H.noteShow . S.strip =<< H.execCli
-      [ "genesis", "initial-txin"
-      , "--testnet-magic", show @Int testnetMagic
-      , "--verification-key-file", tempAbsPath </> "shelley/utxo-keys/utxo1.vkey"
-      ]
+    txIn <- H.noteShow . S.strip =<< createShelleyGenesisInitialTxIn testnetMagic (tempAbsPath </> "shelley/utxo-keys/utxo1.vkey")
 
     H.note_ txIn
 
