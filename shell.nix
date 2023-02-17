@@ -101,7 +101,6 @@ let
       cardano-cli
       bech32
       cardano-ping
-      cardano-cli
       cardano-node
       cardano-topology
       cardano-tracer
@@ -118,6 +117,9 @@ let
       pstree
       pkgs.time
     ];
+
+    # Disable build tools for all of hsPkgs (would include duplicates for cardano-cli, cardano-node, etc.)
+    allToolDeps = false;
 
     shellHook = ''
       echo "DevOps Tools" \
