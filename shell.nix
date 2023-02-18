@@ -97,7 +97,7 @@ let
     packages = _: [];
 
     nativeBuildInputs = with cardanoNodePackages; [
-      nixWrapped
+      nix
       cardano-cli
       bech32
       cardano-ping
