@@ -258,17 +258,20 @@ instance MetaTrace (AnyMessageAndAgency (HS.Handshake nt term)) where
     severityFor (Namespace _ ["Refuse"]) _ = Just Info
     severityFor _ _ = Nothing
 
-    documentFor (Namespace _ ["ProposeVersions"]) = Just
-      "Propose versions together with version parameters.  It must be\
-        \ encoded to a sorted list.."
-    documentFor (Namespace _ ["ReplyVersions"]) = Just
-      "`MsgReplyVersions` received as a response to 'MsgProposeVersions'.  It\
-        \ is not supported to explicitly send this message. It can only be\
-        \ received as a copy of 'MsgProposeVersions' in a simultaneous open\
-        \ scenario."
-    documentFor (Namespace _ ["AcceptVersion"]) = Just
-        "The remote end decides which version to use and sends chosen version.\
-        \The server is allowed to modify version parameters."
+    documentFor (Namespace _ ["ProposeVersions"]) = Just $ mconcat
+      [ "Propose versions together with version parameters.  It must be"
+      , " encoded to a sorted list.."
+      ]
+    documentFor (Namespace _ ["ReplyVersions"]) = Just $ mconcat
+      [ "`MsgReplyVersions` received as a response to 'MsgProposeVersions'.  It"
+      , " is not supported to explicitly send this message. It can only be"
+      , " received as a copy of 'MsgProposeVersions' in a simultaneous open"
+      , " scenario."
+      ]
+    documentFor (Namespace _ ["AcceptVersion"]) = Just $ mconcat
+      [ "The remote end decides which version to use and sends chosen version."
+      , "The server is allowed to modify version parameters."
+      ]
     documentFor (Namespace _ ["Refuse"]) = Just
         "It refuses to run any version."
     documentFor _ = Nothing
@@ -548,9 +551,10 @@ instance MetaTrace TraceLedgerPeers where
       "Trace for a peer picked with accumulated and relative stake of its pool."
     documentFor (Namespace _ ["PickedPeers"]) = Just
       "Trace for the number of peers we wanted to pick and the list of peers picked."
-    documentFor (Namespace _ ["FetchingNewLedgerState"]) = Just
-      "Trace for fetching a new list of peers from the ledger. Int is the number of peers\
-      \ returned."
+    documentFor (Namespace _ ["FetchingNewLedgerState"]) = Just $ mconcat
+      [ "Trace for fetching a new list of peers from the ledger. Int is the number of peers"
+      , " returned."
+      ]
     documentFor (Namespace _ ["DisabledLedgerPeers"]) = Just
       "Trace for when getting peers from the ledger is disabled, that is DontUseLedger."
     documentFor (Namespace _ ["TraceUseLedgerAfter"]) = Just

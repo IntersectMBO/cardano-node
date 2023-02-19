@@ -397,8 +397,10 @@ hprop_kes_period_info = integration . H.runFinallies . H.workspace "chairman" $ 
   _txin3 <- H.noteShow . head $ Map.keys utxo3
 
 
-  H.note_ "Wait for the node to mint blocks. This will be in the following epoch so lets wait\
-          \ until the END of the following epoch."
+  H.note_ $ mconcat
+    [ "Wait for the node to mint blocks. This will be in the following epoch so lets wait"
+    , " until the END of the following epoch."
+    ]
 
   void $ execCli' execConfig
     [ "query",  "tip"
@@ -446,8 +448,10 @@ hprop_kes_period_info = integration . H.runFinallies . H.workspace "chairman" $ 
 
   H.note_ $ "Current Epoch: " <> show currEpoch2
 
-  H.note_ "Check to see if the node has minted blocks. This confirms that the operational\
-           \ certificate is valid"
+  H.note_ $ mconcat
+    [ "Check to see if the node has minted blocks. This confirms that the operational"
+    , " certificate is valid"
+    ]
 
   -- TODO: Linking to the node log file like this is fragile.
   spoLogFile <- H.note $ tempAbsPath </> "logs/node-pool1.stdout.log"

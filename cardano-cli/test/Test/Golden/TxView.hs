@@ -37,11 +37,9 @@ golden_view_byron =
         [ "transaction", "build-raw"
         , "--byron-era"
         , "--tx-in"
-        ,   "F8EC302D19E3C8251C30B1434349BF2E949A1DBF14A4EBC3D512918D2D4D5C56\
-            \#88"
+        ,   "F8EC302D19E3C8251C30B1434349BF2E949A1DBF14A4EBC3D512918D2D4D5C56#88"
         , "--tx-out"
-        ,   "5oP9ib6ym3XfwXuy3ksXZzgtBzXSArXAACQVXKqcPhiLnHVYjXJNu2T6Zomh8LAWLV\
-            \+68"
+        ,   "5oP9ib6ym3XfwXuy3ksXZzgtBzXSArXAACQVXKqcPhiLnHVYjXJNu2T6Zomh8LAWLV+68"
         , "--out-file", transactionBodyFile
         ]
 
@@ -71,13 +69,15 @@ golden_view_shelley = let
 
     let extraEntropySeed = "c0ffee"
     note_ $ "extra entropy seed: " ++ extraEntropySeed
-    note_
-      "extra entropy hash:\
-      \ 88f04f011dcded879039ae4b9b20219d9448e5c7b42c2d1f638fb8740e0ab8be"
+    note_ $ mconcat
+      [ "extra entropy hash:"
+      , " 88f04f011dcded879039ae4b9b20219d9448e5c7b42c2d1f638fb8740e0ab8be"
+      ]
 
-    note_
-      "genesis-verification-key-file hash:\
-      \ 81cb0bc5b6fbba391e6f7ec3d9271cbea25bcbf907181b7c4d5f8c2f"
+    note_ $ mconcat
+      [ "genesis-verification-key-file hash:"
+      , " 81cb0bc5b6fbba391e6f7ec3d9271cbea25bcbf907181b7c4d5f8c2f"
+      ]
 
     -- Create update proposal
     void $
@@ -113,15 +113,13 @@ golden_view_shelley = let
         [ "transaction", "build-raw"
         , "--shelley-era"
         , "--tx-in"
-        ,   "fe5dd07fb576bff960d6e066eade5b26cdb5afebe29f76ea58d0a098bce5d891\
-            \#29"
+        ,   "fe5dd07fb576bff960d6e066eade5b26cdb5afebe29f76ea58d0a098bce5d891#29"
         , "--tx-out"
         ,   "addr_test1vz7w0r9epak6nmnh3mc8e2ypkjyu8zsc3xf7dpct6k577acxmcfyv+31"
         , "--fee", "32"
         , "--invalid-hereafter", "33"
         , "--withdrawal"
-        ,   "stake_test1up00fz9lyqs5sjks82k22eqz7a9srym9vysjgp3h2ua2v2cm522kg\
-            \+42"
+        ,   "stake_test1up00fz9lyqs5sjks82k22eqz7a9srym9vysjgp3h2ua2v2cm522kg+42"
         , "--update-proposal-file", updateProposalFile
         , "--out-file", transactionBodyFile
         ]
@@ -146,13 +144,14 @@ golden_view_allegra =
         [ "transaction", "build-raw"
         , "--allegra-era"
         , "--tx-in"
-        ,   "fe5dd07fb576bff960d6e066eade5b26cdb5afebe29f76ea58d0a098bce5d891\
-            \#94"
+        ,   "fe5dd07fb576bff960d6e066eade5b26cdb5afebe29f76ea58d0a098bce5d891#94"
         , "--tx-out"
-        ,   "addr_test1\
-            \qrefnr4k09pvge6dq83v6s67ruter8sftmky8qrmkqqsxy7q5psgn8tgqmupq4r7\
-            \9jmxlyk4eqt6z6hj5g8jd8393msqaw47f4\
-            \+99"
+        , mconcat
+          [ "addr_test1"
+          , "qrefnr4k09pvge6dq83v6s67ruter8sftmky8qrmkqqsxy7q5psgn8tgqmupq4r7"
+          , "9jmxlyk4eqt6z6hj5g8jd8393msqaw47f4"
+          , "+99"
+          ]
         , "--fee", "100"
         , "--invalid-hereafter", "101"
         , "--out-file", transactionBodyFile
@@ -176,48 +175,51 @@ golden_view_mary =
         [ "transaction", "build-raw"
         , "--mary-era"
         , "--tx-in"
-        ,   "fe5dd07fb576bff960d6e066eade5b26cdb5afebe29f76ea58d0a098bce5d891\
-            \#135"
+        ,   "fe5dd07fb576bff960d6e066eade5b26cdb5afebe29f76ea58d0a098bce5d891#135"
         , "--tx-out"
-        ,   "addr_test1\
-            \qrefnr4k09pvge6dq83v6s67ruter8sftmky8qrmkqqsxy7q5psgn8tgqmupq4r7\
-            \9jmxlyk4eqt6z6hj5g8jd8393msqaw47f4\
-            \ + \
-            \138\
-            \ + \
-            \130 d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf\
-            \ + \
-            \132 a06ee5ffdd7f9b5bd992eb9543f44418323f81229526b77b0e4be067.cafe\
-            \ + \
-            \134 d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf.f00d\
-            \ + \
-            \136 a06ee5ffdd7f9b5bd992eb9543f44418323f81229526b77b0e4be067.dead\
-            \ + \
-            \138\
-              \ d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf\
-              \.736e6f77\
-            \ + \
-            \142\
-              \ a06ee5ffdd7f9b5bd992eb9543f44418323f81229526b77b0e4be067\
-              \.736b79"
+        ,   mconcat
+            [ "addr_test1"
+            , "qrefnr4k09pvge6dq83v6s67ruter8sftmky8qrmkqqsxy7q5psgn8tgqmupq4r7"
+            , "9jmxlyk4eqt6z6hj5g8jd8393msqaw47f4"
+            , " + "
+            , "138"
+            , " + "
+            , "130 d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf"
+            , " + "
+            , "132 a06ee5ffdd7f9b5bd992eb9543f44418323f81229526b77b0e4be067.cafe"
+            , " + "
+            , "134 d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf.f00d"
+            , " + "
+            , "136 a06ee5ffdd7f9b5bd992eb9543f44418323f81229526b77b0e4be067.dead"
+            , " + "
+            , "138"
+            ,   " d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf"
+            ,   ".736e6f77"
+            , " + "
+            , "142"
+            ,   " a06ee5ffdd7f9b5bd992eb9543f44418323f81229526b77b0e4be067"
+            ,   ".736b79"
+            ]
         , "--fee", "139"
         , "--invalid-before", "140"
         , "--mint"
-        ,   "130 d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf\
-            \ + \
-            \132 a06ee5ffdd7f9b5bd992eb9543f44418323f81229526b77b0e4be067.cafe\
-            \ + \
-            \134 d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf.f00d\
-            \ + \
-            \136 a06ee5ffdd7f9b5bd992eb9543f44418323f81229526b77b0e4be067.dead\
-            \ + \
-            \138\
-              \ d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf\
-              \.736e6f77\
-            \ + \
-            \142\
-              \ a06ee5ffdd7f9b5bd992eb9543f44418323f81229526b77b0e4be067\
-              \.736b79"
+        ,   mconcat
+            [ "130 d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf"
+            , " + "
+            , "132 a06ee5ffdd7f9b5bd992eb9543f44418323f81229526b77b0e4be067.cafe"
+            , " + "
+            , "134 d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf.f00d"
+            , " + "
+            , "136 a06ee5ffdd7f9b5bd992eb9543f44418323f81229526b77b0e4be067.dead"
+            , " + "
+            , "138"
+            ,   " d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf"
+            ,   ".736e6f77"
+            , " + "
+            , "142"
+            ,   " a06ee5ffdd7f9b5bd992eb9543f44418323f81229526b77b0e4be067"
+            ,   ".736b79"
+            ]
         , "--mint-script-file", "test/data/golden/mary/scripts/mint.all"
         , "--mint-script-file", "test/data/golden/mary/scripts/mint.sig"
         , "--out-file", transactionBodyFile
@@ -236,11 +238,9 @@ createAlonzoTxBody mUpdateProposalFile transactionBodyFile = do
       (   [ "transaction", "build-raw"
           , "--alonzo-era"
           , "--tx-in"
-          ,   "ed7c8f68c194cc763ee65ad22ef0973e26481be058c65005fd39fb93f9c43a20\
-              \#212"
+          ,   "ed7c8f68c194cc763ee65ad22ef0973e26481be058c65005fd39fb93f9c43a20#212"
           , "--tx-in-collateral"
-          ,   "c9765d7d0e3955be8920e6d7a38e1f3f2032eac48c7c59b0b9193caa87727e7e\
-              \#256"
+          ,   "c9765d7d0e3955be8920e6d7a38e1f3f2032eac48c7c59b0b9193caa87727e7e#256"
           , "--fee", "213"
           , "--required-signer-hash"
           ,   "98717eaba8105a50a2a71831267552e337dfdc893bef5e40b8676d27"
@@ -260,9 +260,10 @@ golden_view_alonzo =
       updateProposalFile <- noteTempFile tempDir "update-proposal"
       transactionBodyFile <- noteTempFile tempDir "transaction-body"
 
-      note_
-        "genesis-verification-key-file hash:\
-        \ 1bafa294233a5a7ffbf539ae798da0943aa83d2a19398c2d0e5af114"
+      note_ $ mconcat
+        [ "genesis-verification-key-file hash:"
+        , " 1bafa294233a5a7ffbf539ae798da0943aa83d2a19398c2d0e5af114"
+        ]
 
       -- Create update proposal
       void $

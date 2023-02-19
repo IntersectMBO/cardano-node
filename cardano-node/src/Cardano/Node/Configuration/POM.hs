@@ -306,9 +306,11 @@ instance FromJSON PartialNodeConfiguration where
             maybeString :: Maybe String <- v .:? "MempoolCapacityBytesOverride"
             case maybeString of
               Just "NoOverride" -> return (Just NoMempoolCapacityBytesOverride)
-              Just invalid ->  fmap Just . Aeson.parseFail $
-                    "Invalid value for 'MempoolCapacityBytesOverride'.  \
-                    \Expecting byte count or NoOverride.  Value was: " <> show invalid
+              Just invalid ->  fmap Just . Aeson.parseFail $ mconcat
+                [ "Invalid value for 'MempoolCapacityBytesOverride'.  "
+                , "Expecting byte count or NoOverride.  Value was: "
+                , show invalid
+                ]
               Nothing -> return Nothing
       parseByronProtocol v = do
         primary   <- v .:? "ByronGenesisFile"

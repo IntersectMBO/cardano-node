@@ -209,11 +209,13 @@ instance LogFormatting ChainPredicateFailure where
              , "currentProtocol" .= currentPtcl
              , "supportedProtocol" .= supportedPtcl ]
       where
-        explanation = "A scheduled major protocol version change (hard fork) \
-                      \has taken place on the chain, but this node does not \
-                      \understand the new major protocol version. This node \
-                      \must be upgraded before it can continue with the new \
-                      \protocol version."
+        explanation = mconcat
+          [ "A scheduled major protocol version change (hard fork) "
+          , "has taken place on the chain, but this node does not "
+          , "understand the new major protocol version. This node "
+          , "must be upgraded before it can continue with the new "
+          , "protocol version."
+          ]
 
 instance LogFormatting (PrtlSeqFailure crypto) where
   forMachine _dtal (WrongSlotIntervalPrtclSeq (SlotNo lastSlot) (SlotNo currSlot)) =
@@ -411,10 +413,14 @@ instance ( ShelleyBasedEra era
   -- TODO: Add the minimum allowed UTxO value to OutputTooSmallUTxO
   forMachine _dtal (OutputTooSmallUTxO badOutputs) =
     mconcat [ "kind" .= String "OutputTooSmallUTxO"
-             , "outputs" .= badOutputs
-             , "error" .= String "The output is smaller than the allow minimum \
-                                 \UTxO value defined in the protocol parameters"
-             ]
+            , "outputs" .= badOutputs
+            , "error" .= String
+              ( mconcat
+                [ "The output is smaller than the allow minimum "
+                , "UTxO value defined in the protocol parameters"
+                ]
+              )
+            ]
   forMachine _dtal (OutputBootAddrAttrsTooBig badOutputs) =
     mconcat [ "kind" .= String "OutputBootAddrAttrsTooBig"
              , "outputs" .= badOutputs
@@ -489,10 +495,14 @@ instance ( ShelleyBasedEra era
   -- TODO: Add the minimum allowed UTxO value to OutputTooSmallUTxO
   forMachine _dtal (MA.OutputTooSmallUTxO badOutputs) =
     mconcat [ "kind" .= String "OutputTooSmallUTxO"
-             , "outputs" .= badOutputs
-             , "error" .= String "The output is smaller than the allow minimum \
-                                 \UTxO value defined in the protocol parameters"
-             ]
+            , "outputs" .= badOutputs
+            , "error" .= String
+              ( mconcat
+                [ "The output is smaller than the allow minimum "
+                , "UTxO value defined in the protocol parameters"
+                ]
+              )
+            ]
   forMachine dtal (MA.UpdateFailure f) = forMachine dtal f
   forMachine _dtal (MA.OutputBootAddrAttrsTooBig badOutputs) =
     mconcat [ "kind" .= String "OutputBootAddrAttrsTooBig"
@@ -797,26 +807,38 @@ instance Core.Crypto crypto => LogFormatting (OverlayPredicateFailure crypto) wh
 instance LogFormatting (OcertPredicateFailure crypto) where
   forMachine _dtal (KESBeforeStartOCERT (KESPeriod oCertstart) (KESPeriod current)) =
     mconcat [ "kind" .= String "KESBeforeStartOCERT"
-             , "opCertKESStartPeriod" .= String (textShow oCertstart)
-             , "currentKESPeriod" .= String (textShow current)
-             , "error" .= String "Your operational certificate's KES start period \
-                                 \is before the KES current period."
-             ]
+            , "opCertKESStartPeriod" .= String (textShow oCertstart)
+            , "currentKESPeriod" .= String (textShow current)
+            , "error" .= String
+              ( mconcat
+                [ "Your operational certificate's KES start period "
+                , "is before the KES current period."
+                ]
+              )
+            ]
   forMachine _dtal (KESAfterEndOCERT (KESPeriod current) (KESPeriod oCertstart) maxKESEvolutions) =
     mconcat [ "kind" .= String "KESAfterEndOCERT"
-             , "currentKESPeriod" .= String (textShow current)
-             , "opCertKESStartPeriod" .= String (textShow oCertstart)
-             , "maxKESEvolutions" .= String  (textShow maxKESEvolutions)
-             , "error" .= String "The operational certificate's KES start period is \
-                                 \greater than the max number of KES + the KES current period"
-             ]
+            , "currentKESPeriod" .= String (textShow current)
+            , "opCertKESStartPeriod" .= String (textShow oCertstart)
+            , "maxKESEvolutions" .= String  (textShow maxKESEvolutions)
+            , "error" .= String
+              ( mconcat
+                [ "The operational certificate's KES start period is "
+                , "greater than the max number of KES + the KES current period"
+                ]
+              )
+            ]
   forMachine _dtal (CounterTooSmallOCERT lastKEScounterUsed currentKESCounter) =
     mconcat [ "kind" .= String "CounterTooSmallOCert"
-             , "currentKESCounter" .= String (textShow currentKESCounter)
-             , "lastKESCounter" .= String (textShow lastKEScounterUsed)
-             , "error" .= String "The operational certificate's last KES counter is greater \
-                                 \than the current KES counter."
-             ]
+            , "currentKESCounter" .= String (textShow currentKESCounter)
+            , "lastKESCounter" .= String (textShow lastKEScounterUsed)
+            , "error" .= String
+              ( mconcat
+                [ "The operational certificate's last KES counter is greater "
+                , "than the current KES counter."
+                ]
+              )
+            ]
   forMachine _dtal (InvalidSignatureOCERT oCertCounter oCertKESStartPeriod) =
     mconcat [ "kind" .= String "InvalidSignatureOCERT"
              , "opCertKESStartPeriod" .= String (textShow oCertKESStartPeriod)
@@ -893,10 +915,14 @@ instance ( ShelleyBasedEra era
              ]
   forMachine _dtal (Alonzo.OutputTooSmallUTxO badOutputs) =
     mconcat [ "kind" .= String "OutputTooSmallUTxO"
-             , "outputs" .= badOutputs
-             , "error" .= String "The output is smaller than the allow minimum \
-                                 \UTxO value defined in the protocol parameters"
-             ]
+            , "outputs" .= badOutputs
+            , "error" .= String
+              ( mconcat
+                [ "The output is smaller than the allow minimum "
+                , "UTxO value defined in the protocol parameters"
+                ]
+              )
+            ]
   forMachine dtal (Alonzo.UtxosFailure predFailure) =
     forMachine dtal predFailure
   forMachine _dtal (Alonzo.OutputBootAddrAttrsTooBig txouts) =

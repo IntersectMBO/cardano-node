@@ -112,34 +112,36 @@ instance MetaTrace (TraceForgeEvent blk) where
     "Start of the leadership check\n\
     \\n\
     \We record the current slot number."
-  documentFor (Namespace _ ["SlotIsImmutable"]) = Just
-      "Leadership check failed: the tip of the ImmutableDB inhabits the\n\
-    \current slot\n\
-    \\n\
-    \This might happen in two cases.\n\
-    \\n\
-    \1. the clock moved backwards, on restart we ignored everything from the\n\
-    \   VolatileDB since it's all in the future, and now the tip of the\n\
-    \   ImmutableDB points to a block produced in the same slot we're trying\n\
-    \   to produce a block in\n\
-    \\n\
-    \2. k = 0 and we already adopted a block from another leader of the same\n\
-    \   slot.\n\
-    \\n\
-    \We record both the current slot number as well as the tip of the\n\
-    \ImmutableDB.\n\
-    \\n\
-    \See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>"
-  documentFor (Namespace _ ["BlockFromFuture"]) = Just
-      "Leadership check failed: the current chain contains a block from a slot\n\
-    \/after/ the current slot\n\
-    \\n\
-    \This can only happen if the system is under heavy load.\n\
-    \\n\
-    \We record both the current slot number as well as the slot number of the\n\
-    \block at the tip of the chain.\n\
-    \\n\
-    \See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>"
+  documentFor (Namespace _ ["SlotIsImmutable"]) = Just $ mconcat
+    [ "Leadership check failed: the tip of the ImmutableDB inhabits the\n"
+    , "current slot\n"
+    , "\n"
+    , "This might happen in two cases.\n"
+    , "\n"
+    , "1. the clock moved backwards, on restart we ignored everything from the\n"
+    , "   VolatileDB since it's all in the future, and now the tip of the\n"
+    , "   ImmutableDB points to a block produced in the same slot we're trying\n"
+    , "   to produce a block in\n"
+    , "\n"
+    , "2. k = 0 and we already adopted a block from another leader of the same\n"
+    , "   slot.\n"
+    , "\n"
+    , "We record both the current slot number as well as the tip of the\n"
+    , "ImmutableDB.\n"
+    , "\n"
+    , "See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>"
+    ]
+  documentFor (Namespace _ ["BlockFromFuture"]) = Just $ mconcat
+    [ "Leadership check failed: the current chain contains a block from a slot\n"
+    , "/after/ the current slot\n"
+    , "\n"
+    , "This can only happen if the system is under heavy load.\n"
+    , "\n"
+    , "We record both the current slot number as well as the slot number of the\n"
+    , "block at the tip of the chain.\n"
+    , "\n"
+    , "See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>"
+    ]
   documentFor _ns = Nothing
   metricsDocFor (Namespace _ _) = []
   allNamespaces = [ Namespace [] ["StartLeadershipCheck"]
@@ -153,8 +155,11 @@ instance LogFormatting (TraceForgeEvent LogBlock) where
       (unSlotNo slotNo)
   forHuman (TraceSlotIsImmutable slotNo immutableTipPoint immutableTipBlkNo) = pack $
     printf
-      "Couldn't forge block because slot %u is immutable. \
-        \ Immutable tip: %s, immutable tip block no: %i."
+      ( mconcat
+        [ "Couldn't forge block because slot %u is immutable. "
+        , " Immutable tip: %s, immutable tip block no: %i."
+        ]
+      )
       (unSlotNo slotNo)
       (show immutableTipPoint)
       (unBlockNo immutableTipBlkNo)

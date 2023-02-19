@@ -172,16 +172,18 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdEraConsensusModeMismatch fp mode era ->
        "Submitting " <> renderEra era <> " era transaction (" <> textShow fp <>
        ") is not supported in the " <> renderMode mode <> " consensus mode."
-    ShelleyTxCmdPolicyIdsMissing policyids ->
-      "The \"--mint\" flag specifies an asset with a policy Id, but no \
-      \corresponding monetary policy script has been provided as a witness \
-      \(via the \"--mint-script-file\" flag). The policy Id in question is: "
-      <> Text.intercalate ", " (map serialiseToRawBytesHexText policyids)
+    ShelleyTxCmdPolicyIdsMissing policyids -> mconcat
+      [ "The \"--mint\" flag specifies an asset with a policy Id, but no "
+      , "corresponding monetary policy script has been provided as a witness "
+      , "(via the \"--mint-script-file\" flag). The policy Id in question is: "
+      , Text.intercalate ", " (map serialiseToRawBytesHexText policyids)
+      ]
 
-    ShelleyTxCmdPolicyIdsExcess policyids ->
-      "A script provided to witness minting does not correspond to the policy \
-      \id of any asset specified in the \"--mint\" field. The script hash is: "
-      <> Text.intercalate ", " (map serialiseToRawBytesHexText policyids)
+    ShelleyTxCmdPolicyIdsExcess policyids -> mconcat
+      [ "A script provided to witness minting does not correspond to the policy "
+      , "id of any asset specified in the \"--mint\" field. The script hash is: "
+      , Text.intercalate ", " (map serialiseToRawBytesHexText policyids)
+      ]
     ShelleyTxCmdUnsupportedMode mode -> "Unsupported mode: " <> renderMode mode
     ShelleyTxCmdByronEra -> "This query cannot be used for the Byron era"
     ShelleyTxCmdEraConsensusModeMismatchTxBalance fp mode era ->
@@ -192,15 +194,17 @@ renderShelleyTxCmdError err =
       renderTxInsExistError e
     ShelleyTxCmdMinimumUTxOErr err' -> Text.pack $ displayError err'
     ShelleyTxCmdPParamsErr err' -> Text.pack $ displayError err'
-    ShelleyTxCmdTextEnvCddlError textEnvErr cddlErr ->
-      "Failed to decode neither the cli's serialisation format nor the ledger's \
-      \CDDL serialisation format. TextEnvelope error: " <> Text.pack (displayError textEnvErr) <> "\n" <>
-      "TextEnvelopeCddl error: " <> Text.pack (displayError cddlErr)
+    ShelleyTxCmdTextEnvCddlError textEnvErr cddlErr -> mconcat
+      [ "Failed to decode neither the cli's serialisation format nor the ledger's "
+      , "CDDL serialisation format. TextEnvelope error: " <> Text.pack (displayError textEnvErr) <> "\n"
+      , "TextEnvelopeCddl error: " <> Text.pack (displayError cddlErr)
+      ]
     ShelleyTxCmdTxExecUnitsErr err' ->  Text.pack $ displayError err'
     ShelleyTxCmdPlutusScriptCostErr err'-> Text.pack $ displayError err'
-    ShelleyTxCmdPParamExecutionUnitsNotAvailable ->
-      "Execution units not available in the protocol parameters. This is \
-      \likely due to not being in the Alonzo era"
+    ShelleyTxCmdPParamExecutionUnitsNotAvailable -> mconcat
+      [ "Execution units not available in the protocol parameters. This is "
+      , "likely due to not being in the Alonzo era"
+      ]
     ShelleyTxCmdReferenceScriptsNotSupportedInEra (AnyCardanoEra era) ->
       "TxCmd: Reference scripts not supported in era: " <> textShow era
     ShelleyTxCmdTxEraCastErr (EraCastError value fromEra toEra) ->
