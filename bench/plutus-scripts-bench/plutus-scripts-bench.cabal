@@ -47,6 +47,7 @@ common common-definitions
 
 library
   import:          common-definitions
+                 , project-config
   hs-source-dirs:  src
 
   if flag(unexpected_thunks)
