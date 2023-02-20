@@ -100,6 +100,18 @@ jobs:
         git-ref: ${{ env.SECP256K1_REF }}
         cache-version: ${{ env.SECP_CACHE_VERSION }}
 
+    - name: pkg-config inspection 1
+      run: |
+        pkg-config libsodium --libs
+
+    - name: pkg-config inspection 2
+      run: |
+        pkg-config libsodium --cflags
+
+    - name: pkg-config inspection 3
+      run: |
+        pkg-config --list-all
+
     - name: Cabal update
       run: cabal update
 
