@@ -157,8 +157,8 @@ mkTracerTracer defSeverity = do
            & withInnerNames
            & appendPrefixName "Tracer"
            & withSeverity
-
-  configureTracers initialTraceConfig [tr]
+  configReflection <- emptyConfigReflection
+  configureTracers configReflection initialTraceConfig [tr]
   pure tr
  where
    initialTraceConfig :: TraceConfig

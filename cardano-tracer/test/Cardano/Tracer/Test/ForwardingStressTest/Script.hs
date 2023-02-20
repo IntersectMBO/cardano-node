@@ -58,7 +58,8 @@ runScriptForwarding TestSetup{..} msgCounter tracerGetter = do
       forAll generator (\ (scripts :: [Script])
         -> ioProperty $ do
           tr <- tracerGetter
-          configureTracers simpleTestConfig [tr]
+          confState <- emptyConfigReflection
+          configureTracers confState simpleTestConfig [tr]
           let scripts' = map (\ (Script sc) -> Script (sort sc))  scripts
               scripts'' = zipWith (\ (Script sc) ind -> Script (
                             withMessageIds (unI tsThreads) ind sc)) scripts' [0..]
