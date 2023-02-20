@@ -102,6 +102,10 @@ jobs:
 
     - name: pkg-config inspection 1
       run: |
+        brew install pkg-config
+
+    - name: pkg-config inspection 1
+      run: |
         pkg-config libsodium --libs
 
     - name: pkg-config inspection 2
