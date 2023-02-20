@@ -340,7 +340,8 @@ renderAnalysisCDFs a@Anchor{..} fieldSelr aspect _centileSelr AsReport x =
                         fields' <&>
                         fmap (formatDouble W6)
                         . mapFieldWithKey x (snd hdrsProjs)
-    , tRowHeaders     = fields' <&> fShortDesc
+    , tRowHeaders     = fields' <&> (\Field{..} ->
+                                       fShortDesc <> ", " <> renderUnit fUnit)
     , tSummaryHeaders = []
     , tSummaryValues  = []
     , tFormula = []
@@ -432,27 +433,15 @@ renderAnalysisCDFs a fieldSelr _c2a centiSelr AsPretty x =
    sizeAvg :: [Text]
    sizeAvg = fmap (T.intercalate " ")
      [ (justifyCentile 6 "avg" :) $
-       (\f -> flip (renderField justifyData fWidth) f $ const $
-                mapSomeFieldCDF
-                  (fit f .T.pack . printf "%F" . cdfAverageVal)  x (fSelect f))
+       (\f -> mapSomeFieldCDF (formatDouble (fWidth f) . cdfAverageVal) x (fSelect f))
+       -- (\f -> flip (renderField justifyData fWidth) f $ const $
+       --          mapSomeFieldCDF
+       --            (fit f .T.pack . printf "%F" . cdfAverageVal)  x (fSelect f))
        <$> fields'
      , (justifyProp 6 "size" :) $
-       (\f -> flip (renderField justifyHead fWidth) f $ const $
-                mapSomeFieldCDF
-                  (fit f . T.pack . show . cdfSize)    x (fSelect f))
+       (\f -> mapSomeFieldCDF (formatInt (fWidth f) . cdfSize) x (fSelect f))
        <$> fields'
      ]
-
-   forceWidth :: Field DSelect p a -> Int
-   forceWidth Field{..} = unsafeUnWidth ("renderAnalysisCDFs/AsPretty/" <> T.unpack fId) fWidth
-
-   fit :: Field DSelect p a -> Text -> Text
-   fit (forceWidth -> w) t =
-     if T.length t > w &&
-        -- Drop all non-floats, and floats with significant digit overflowing:
-        maybe True (> w) (T.findIndex (== '.') t)
-     then "..."
-     else T.take w t
 
    renderLine' :: (Int -> Text -> Text) -> (Field DSelect p a -> Width) -> (Field DSelect p a -> Text) -> [Text]
    renderLine' jfn wfn rfn  = renderField jfn wfn rfn <$> fields'
@@ -473,19 +462,13 @@ renderAnalysisCDFs a fieldSelr _c2a centiSelr AsPretty x =
 -- - "format" means "fit width"
 --
 formatInt :: Integral a => Width -> a -> Text
-formatInt = centerLim renderInt handleStrOverflowTrimMark
+formatInt = centerLim renderInt (handleStrOverflowTrimMark $ const True)
  where
    renderInt :: Integral a => a -> Text
    renderInt x = T.pack $ printf "%d" (fromIntegral x :: Integer)
 
 formatDouble :: Width -> Double -> Text
 formatDouble = centerLim renderDouble handleStrOverflowFloat
- where
-   renderDouble :: Double -> Text
-   renderDouble x = T.pack $ printf "%F" x
-
-formatDoubleTrim :: Width -> Double -> Text
-formatDoubleTrim = centerLim renderDouble handleStrOverflowTrim
  where
    renderDouble :: Double -> Text
    renderDouble x = T.pack $ printf "%F" x
@@ -497,19 +480,26 @@ renderDiffTime :: NominalDiffTime -> Text
 renderDiffTime = T.pack . dropWhileEnd (== 's').show
 
 handleStrOverflowFloat :: Int -> Text -> Text
-handleStrOverflowFloat w = T.take w . stripLeadingZero
+handleStrOverflowFloat w =
+  handleStrOverflowTrimMark decideCutMark w . stripTrailingDot . stripLeadingZero
  where
+   decideCutMark :: Text -> Bool
+   decideCutMark = isNothing . T.findIndex (== '.')
    stripLeadingZero x@(T.isPrefixOf "0." -> True) = T.drop 1 x
    stripLeadingZero x = x
+   stripTrailingDot x@(T.isSuffixOf "."  -> True) = T.dropEnd 1 x
+   stripTrailingDot x = x
 
 handleStrOverflowTrim :: Int -> Text -> Text
 handleStrOverflowTrim = T.take
 
-handleStrOverflowTrimMark :: Int -> Text -> Text
-handleStrOverflowTrimMark w s =
+handleStrOverflowTrimMark :: (Text -> Bool) -> Int -> Text -> Text
+handleStrOverflowTrimMark f w s =
   let len = length s
   in if len <= w then s
-     else T.take (w - 1) s <> ">"
+     else if f s
+          then T.take (w - 1) s <> ">"
+          else T.take  w      s
 
 centerLim :: (a -> Text) -> (Int -> Text -> Text) -> Width -> a -> Text
 centerLim rend handleOverflow wLim x =

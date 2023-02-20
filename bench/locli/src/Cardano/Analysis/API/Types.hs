@@ -124,7 +124,6 @@ data MachPerf f
     , cdfLgrState          :: !(CDF f NominalDiffTime)
     , cdfLgrView           :: !(CDF f NominalDiffTime)
     , cdfLeading           :: !(CDF f NominalDiffTime)
-    , cdfForged            :: !(CDF f NominalDiffTime)
     , cdfBlockGap          :: !(CDF f Word64)
     , cdfSpanLensCpu       :: !(CDF f Int)
     , cdfSpanLensCpuEpoch  :: !(CDF f Int)
@@ -339,6 +338,8 @@ data SlotStats a
     , slBlkCtx       :: !(SMaybe a)
     , slLgrState     :: !(SMaybe a)
     , slLgrView      :: !(SMaybe a)
+    , slTicked       :: !(SMaybe a)
+    , slMemSnap      :: !(SMaybe a)
     , slLeading      :: !(SMaybe a)
     , slForged       :: !(SMaybe a)
     , slMempoolTxs   :: !Word64

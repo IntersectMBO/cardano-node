@@ -228,7 +228,7 @@ bpFieldsEndToEndBrief =
 
 instance CDFFields BlockProp p where
   cdfFields =
-      fGrp ",------------- Forger event Δt: -------------."
+      fGrp ",---------------- Forger event Δt: -----------------."
             W4 Sec P3 Log Free
     [ fGrp' "cdfForgerStarts"        "Loop" (DDeltaT cdfForgerStarts)
       "Started forge loop iteration"
@@ -273,7 +273,7 @@ instance CDFFields BlockProp p where
       "Forged to self-adopted"
       "Time between block forging completion and adoption (TraceAdoptedBlock)"
     ]
-   <> fGrp ",------- Peer event Δt: -------."
+   <> fGrp ",------ Peer event Δt: ------."
             W4 Sec P3 Log Free
     [ fGrp' "cdfPeerNotices"         "Noti" (DDeltaT cdfPeerNotices)
       "First peer notice"
@@ -365,8 +365,8 @@ instance TimelineFields BlockEvents where
     , fGrp' "bfLgrState"    "LgrSta" (IDeltaTM (bfLgrState.beForge)) "" ""
     , fGrp' "bfLgrView"     "LgrVie" (IDeltaTM (bfLgrView .beForge)) "" ""
     , fGrp' "bfLeading"     "Lead"   (IDeltaT (bfLeading  .beForge)) "" ""
-    , fGrp' "bfTicked"      "LgrTck" (IDeltaTM (bfTicked   .beForge)) "" ""
-    , fGrp' "bfMemSnap"     "MemSna" (IDeltaTM (bfMemSnap  .beForge)) "" ""
+    , fGrp' "bfTicked"      "LgrTck" (IDeltaTM (bfTicked  .beForge)) "" ""
+    , fGrp' "bfMemSnap"     "MemSna" (IDeltaTM (bfMemSnap .beForge)) "" ""
     , fGrp' "bfForged"      "Forge"  (IDeltaT (bfForged   .beForge)) "" ""
     , fGrp' "bfAnnounced"   "Announ" (IDeltaT (bfAnnounced.beForge)) "" ""
     , fGrp' "bfSending"     "Sendin" (IDeltaT (bfSending  .beForge)) "" ""
@@ -474,10 +474,6 @@ instance CDFFields MachPerf p where
     , fGrp' "cdfLeading"     "Lead"        (DDeltaT cdfLeading)
       "Leadership check duration"
       "Leadership check duration (TraceNodeIsNotLeader, TraceNodeIsLeader), relative  to ledger view acquisition"
-
-    , fGrp' "cdfForged"   "   Forge"       (DDeltaT cdfForged)
-      "Leading to block forged"
-      "Time spent forging the block (TraceForgedBlock), relative to positive leadership decision"
     ]
    <> fBoth "cdfBlockGap" "Block" "gap"  W4 Sec P2 Lin Free (DWord64 cdfBlockGap)
       "Interblock gap"
@@ -519,7 +515,7 @@ instance CDFFields MachPerf p where
       "RTS live GC dateset"
       "RTS-reported GC live data size, MB"
     ]
-   <> fBoth "Alloc"  "Alloc" "MB"       W5 MBs P0 Lin (Z0 5000) (DWord64 (rAlloc.mpResourceCDFs))
+   <> fBoth "Alloc"  "Alloc" "MB/s"     W5 MBs P0 Lin (Z0 5000) (DWord64 (rAlloc.mpResourceCDFs))
       "RTS alloc rate"
       "RTS-reported allocation rate, MB/sec"
 
@@ -542,7 +538,7 @@ instance CDFFields MachPerf p where
       "Number of bytes which this process caused to be sent to the storage layer, modulo truncate(), per second"
     ]
 
-   <> fGrp  "CPU% spans"                W5 Len P0 Lin Free
+   <> fGrp  "CPU-85%span"               W5 Len P0 Lin Free
     [ fGrp' "cdfSpanLensCpu"        "All" (DInt cdfSpanLensCpu)
       "CPU 85% spans"
       "Length of over-85% CPU usage peaks"
@@ -569,7 +565,7 @@ instance TimelineFields (SlotStats NominalDiffTime) where
    <> fW64' "epochSlot"   "ep."  "slot" W4 Slo (IWord64 (unEpochSlot   .slEpochSlot))
    <> fW64' "epoch"       "ep"      "#" W2 Epo (IWord64 (unEpochNo     .slEpoch))
    <> fW64' "safetyInt"   "saf"   "int" W3 Ix  (IWord64 (unEpochSafeInt.slEpochSafeInt))
-   <> fGrp "block"                      W5 Blk P0 Lin Free
+   <> fGrp "block"                      W4 Blk P0 Lin Free
     [ fGrp' "block"                 "no."      (IWord64 (unBlockNo.slBlockNo)) "" ""
     , fGrp' "blockGap"              "gap"      (IWord64 slBlockGap) "" ""
     ]
@@ -589,6 +585,8 @@ instance TimelineFields (SlotStats NominalDiffTime) where
     , fGrp2' "lgrState"     "ledgr" "state"    (IDeltaTM slLgrState) "" ""
     , fGrp2' "lgrView"      "ledgr" "view"     (IDeltaTM slLgrView) "" ""
     , fGrp2' "leadChecked"  "ledsh" "chekd"    (IDeltaTM slLeading) "" ""
+    , fGrp2' "lgrTicked"    "ledgr" "tickd"    (IDeltaTM slTicked) "" ""
+    , fGrp2' "mempoolSnap"  "mpool" "snapd"    (IDeltaTM slMemSnap) "" ""
     , fGrp2' "forge"        "forge" "done"     (IDeltaTM slForged) "" ""
     ]
    <> fGrpF  ",-mempool tx work-."      W4

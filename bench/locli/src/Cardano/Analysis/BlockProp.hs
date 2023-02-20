@@ -514,11 +514,13 @@ blockProp run@Run{genesis} Chain{..} = do
     , cdfBlocksFilteredRatio = cdf stdCentiles (blockStats <&>
                                                 uncurry ((/) `on`
                                                          fromIntegral . unCount)
-                                                . (bsFiltered &&& bsChained))
+                                                . (bsFiltered &&& bsChained)
+                                                & filter (not . isNaN))
     , cdfBlocksChainedRatio  = cdf stdCentiles (blockStats <&>
                                                 uncurry ((/) `on`
                                                          fromIntegral . unCount)
-                                                . (bsChained &&& bsTotal))
+                                                . (bsChained &&& bsTotal)
+                                                & filter (not . isNaN))
     }
  where
    blockStats = Map.elems cBlockStats

@@ -233,7 +233,6 @@ generate (InputDir ede) mReport (summ, cp, bp) rest = do
           , "cdfLgrState"
           , "cdfLgrView"
           , "cdfLeading"
-          , "cdfForged"
 
           , "cdfDensity"
           , "cdfBlockGap"
@@ -242,7 +241,13 @@ generate (InputDir ede) mReport (summ, cp, bp) rest = do
           ])
         <>
         (dBlockProp   metricDictionary & onlyKeys
-          [ "cdfPeerNotices"
+          [ "cdfForgerLeads"
+          , "cdfForgerTicked"
+          , "cdfForgerMemSnap"
+          , "cdfForgerForges"
+          , "cdfForgerAnnouncements"
+          , "cdfForgerSends"
+          , "cdfPeerNotices"
           , "cdfPeerAdoptions"
           , "cdf0.50"
           , "cdf0.80"

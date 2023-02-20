@@ -56,7 +56,7 @@ data Unit
 
 renderUnit :: Unit -> Text
 renderUnit = \case
-    Sec -> "sec"
+    Sec -> "s"
     Hz  -> "Hz"
     B   -> "B"
     KB  -> "KB"
