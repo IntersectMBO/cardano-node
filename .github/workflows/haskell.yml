@@ -45,7 +45,7 @@ jobs:
       run: sudo chown -R $USER /usr/local/.ghcup
 
     - name: Install Haskell
-      uses: input-output-hk/setup-haskell@v1
+      uses: input-output-hk/setup-haskell@v1.0.1
       id: setup-haskell
       with:
         ghc-version: ${{ matrix.ghc }}
@@ -99,22 +99,6 @@ jobs:
       with:
         git-ref: ${{ env.SECP256K1_REF }}
         cache-version: ${{ env.SECP_CACHE_VERSION }}
-
-    - name: pkg-config inspection 1
-      run: |
-        brew install pkg-config
-
-    - name: pkg-config inspection 1
-      run: |
-        pkg-config libsodium --libs
-
-    - name: pkg-config inspection 2
-      run: |
-        pkg-config libsodium --cflags
-
-    - name: pkg-config inspection 3
-      run: |
-        pkg-config --list-all
 
     - name: Cabal update
       run: cabal update
