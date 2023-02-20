@@ -17,19 +17,16 @@ module Cardano.CLI.Pretty
 
 import           Control.Exception (bracket_)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
-import           Data.Function (($), (.))
-import           Data.String (String)
-import           Prelude (IO)
+import           Prettyprinter
+import           Prettyprinter.Render.Terminal
 
 import qualified Control.Concurrent.QSem as IO
 import qualified Data.Text.Lazy as TextLazy
-import qualified Data.Text.Lazy.IO as LT
-import qualified Prettyprinter as PP
-import qualified Prettyprinter.Render.Terminal as PP
+import qualified Data.Text.Lazy.IO as TextLazy
 import qualified System.IO as IO
 import qualified System.IO.Unsafe as IO
 
-type Ann = PP.AnsiStyle
+type Ann = AnsiStyle
 
 sem :: IO.QSem
 sem = IO.unsafePerformIO $ IO.newQSem 1
@@ -38,38 +35,38 @@ sem = IO.unsafePerformIO $ IO.newQSem 1
 consoleBracket :: IO a -> IO a
 consoleBracket = bracket_ (IO.waitQSem sem) (IO.signalQSem sem)
 
-putLn :: MonadIO m => PP.Doc PP.AnsiStyle -> m ()
-putLn = liftIO . consoleBracket . LT.putStrLn . renderDefault
+putLn :: MonadIO m => Doc AnsiStyle -> m ()
+putLn = liftIO . consoleBracket . TextLazy.putStrLn . renderDefault
 
-hPutLn :: MonadIO m => IO.Handle -> PP.Doc PP.AnsiStyle -> m ()
-hPutLn h = liftIO . consoleBracket . LT.hPutStr h . renderDefault
+hPutLn :: MonadIO m => IO.Handle -> Doc AnsiStyle -> m ()
+hPutLn h = liftIO . consoleBracket . TextLazy.hPutStr h . renderDefault
 
-renderStringDefault :: PP.Doc PP.AnsiStyle -> String
+renderStringDefault :: Doc AnsiStyle -> String
 renderStringDefault =  TextLazy.unpack . renderDefault
 
-renderDefault :: PP.Doc PP.AnsiStyle -> TextLazy.Text
-renderDefault =  PP.renderLazy . PP.layoutPretty PP.defaultLayoutOptions
+renderDefault :: Doc AnsiStyle -> TextLazy.Text
+renderDefault =  renderLazy . layoutPretty defaultLayoutOptions
 
-black :: PP.Doc PP.AnsiStyle -> PP.Doc PP.AnsiStyle
-black = PP.annotate (PP.color PP.Black)
+black :: Doc AnsiStyle -> Doc AnsiStyle
+black = annotate (color Black)
 
-red :: PP.Doc PP.AnsiStyle -> PP.Doc PP.AnsiStyle
-red = PP.annotate (PP.color PP.Red)
+red :: Doc AnsiStyle -> Doc AnsiStyle
+red = annotate (color Red)
 
-green :: PP.Doc PP.AnsiStyle -> PP.Doc PP.AnsiStyle
-green = PP.annotate (PP.color PP.Green)
+green :: Doc AnsiStyle -> Doc AnsiStyle
+green = annotate (color Green)
 
-yellow :: PP.Doc PP.AnsiStyle -> PP.Doc PP.AnsiStyle
-yellow = PP.annotate (PP.color PP.Yellow)
+yellow :: Doc AnsiStyle -> Doc AnsiStyle
+yellow = annotate (color Yellow)
 
-blue :: PP.Doc PP.AnsiStyle -> PP.Doc PP.AnsiStyle
-blue = PP.annotate (PP.color PP.Blue)
+blue :: Doc AnsiStyle -> Doc AnsiStyle
+blue = annotate (color Blue)
 
-magenta :: PP.Doc PP.AnsiStyle -> PP.Doc PP.AnsiStyle
-magenta = PP.annotate (PP.color PP.Magenta)
+magenta :: Doc AnsiStyle -> Doc AnsiStyle
+magenta = annotate (color Magenta)
 
-cyan :: PP.Doc PP.AnsiStyle -> PP.Doc PP.AnsiStyle
-cyan = PP.annotate (PP.color PP.Cyan)
+cyan :: Doc AnsiStyle -> Doc AnsiStyle
+cyan = annotate (color Cyan)
 
-white :: PP.Doc PP.AnsiStyle -> PP.Doc PP.AnsiStyle
-white = PP.annotate (PP.color PP.White)
+white :: Doc AnsiStyle -> Doc AnsiStyle
+white = annotate (color White)

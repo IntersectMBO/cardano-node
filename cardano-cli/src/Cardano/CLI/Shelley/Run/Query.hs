@@ -53,13 +53,13 @@ import           Data.Time.Clock
 import qualified Data.Vector as Vector
 import           Formatting.Buildable (build)
 import           Numeric (showEFloat)
-import qualified Prettyprinter as PP
+import           Prettyprinter
 import qualified System.IO as IO
 import           Text.Printf (printf)
 
 import           Cardano.Binary (DecoderError)
 import           Cardano.CLI.Helpers (HelpersError (..), hushM, pPrintCBOR, renderHelpersError)
-import qualified Cardano.CLI.Pretty as PP
+import           Cardano.CLI.Pretty
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (VerificationKeyOrHashOrFile,
                    readVerificationKeyOrHashOrFile)
@@ -532,43 +532,43 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
    renderOpCertNodeAndOnDiskCounterInformation opCertFile opCertCounterInfo =
      case opCertCounterInfo of
       OpCertOnDiskCounterEqualToNodeState _ _ ->
-        PP.renderStringDefault $
-          PP.green "✓" PP.<+> PP.hang 0
-              ( PP.vsep
+        renderStringDefault $
+          green "✓" <+> hang 0
+              ( vsep
                 [ "The operational certificate counter agrees with the node protocol state counter"
                 ]
               )
       OpCertOnDiskCounterAheadOfNodeState _ _ ->
-        PP.renderStringDefault $
-          PP.green "✓" PP.<+> PP.hang 0
-              ( PP.vsep
+        renderStringDefault $
+          green "✓" <+> hang 0
+              ( vsep
                 [ "The operational certificate counter ahead of the node protocol state counter by 1"
                 ]
               )
       OpCertOnDiskCounterTooFarAheadOfNodeState onDiskC nodeStateC ->
-        PP.renderStringDefault $
-          PP.red "✗" PP.<+> PP.hang 0
-            ( PP.vsep
-              [ "The operational certificate counter too far ahead of the node protocol state counter in the operational certificate at: " <> PP.pretty opCertFile
-              , "On disk operational certificate counter: " <> PP.pretty (unOpCertOnDiskCounter onDiskC)
-              , "Protocol state counter: " <> PP.pretty (unOpCertNodeStateCounter nodeStateC)
+        renderStringDefault $
+          red "✗" <+> hang 0
+            ( vsep
+              [ "The operational certificate counter too far ahead of the node protocol state counter in the operational certificate at: " <> pretty opCertFile
+              , "On disk operational certificate counter: " <> pretty (unOpCertOnDiskCounter onDiskC)
+              , "Protocol state counter: " <> pretty (unOpCertNodeStateCounter nodeStateC)
               ]
             )
       OpCertOnDiskCounterBehindNodeState onDiskC nodeStateC ->
-        PP.renderStringDefault $
-          PP.red "✗" PP.<+> PP.hang 0
-            ( PP.vsep
-              [ "The protocol state counter is greater than the counter in the operational certificate at: " <> PP.pretty opCertFile
-              , "On disk operational certificate counter: " <> PP.pretty (unOpCertOnDiskCounter onDiskC)
-              , "Protocol state counter: " <> PP.pretty (unOpCertNodeStateCounter nodeStateC)
+        renderStringDefault $
+          red "✗" <+> hang 0
+            ( vsep
+              [ "The protocol state counter is greater than the counter in the operational certificate at: " <> pretty opCertFile
+              , "On disk operational certificate counter: " <> pretty (unOpCertOnDiskCounter onDiskC)
+              , "Protocol state counter: " <> pretty (unOpCertNodeStateCounter nodeStateC)
               ]
             )
       OpCertNoBlocksMintedYet (OpCertOnDiskCounter onDiskC) ->
-        PP.renderStringDefault $
-          PP.red "✗" PP.<+> PP.hang 0
-            ( PP.vsep
-              [ "No blocks minted so far with the operational certificate at: " <> PP.pretty opCertFile
-              , "On disk operational certificate counter: " <> PP.pretty onDiskC
+        renderStringDefault $
+          red "✗" <+> hang 0
+            ( vsep
+              [ "No blocks minted so far with the operational certificate at: " <> pretty opCertFile
+              , "On disk operational certificate counter: " <> pretty onDiskC
               ]
             )
 
@@ -635,40 +635,40 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
 renderOpCertIntervalInformation :: FilePath -> OpCertIntervalInformation -> String
 renderOpCertIntervalInformation opCertFile opCertInfo = case opCertInfo of
   OpCertWithinInterval _start _end _current _stillExp ->
-    PP.renderStringDefault $
-      PP.green "✓" PP.<+> PP.hang 0
-        ( PP.vsep
+    renderStringDefault $
+      green "✓" <+> hang 0
+        ( vsep
           [ "Operational certificate's KES period is within the correct KES period interval"
           ]
         )
   OpCertStartingKesPeriodIsInTheFuture (OpCertStartingKesPeriod start) (OpCertEndingKesPeriod end) (CurrentKesPeriod current) ->
-    PP.renderStringDefault $
-      PP.red "✗" PP.<+> PP.hang 0
-        ( PP.vsep
-          [ "Node operational certificate at: " <> PP.pretty opCertFile <> " has an incorrectly specified starting KES period. "
-          , "Current KES period: " <> PP.pretty current
-          , "Operational certificate's starting KES period: " <> PP.pretty start
-          , "Operational certificate's expiry KES period: " <> PP.pretty end
+    renderStringDefault $
+      red "✗" <+> hang 0
+        ( vsep
+          [ "Node operational certificate at: " <> pretty opCertFile <> " has an incorrectly specified starting KES period. "
+          , "Current KES period: " <> pretty current
+          , "Operational certificate's starting KES period: " <> pretty start
+          , "Operational certificate's expiry KES period: " <> pretty end
           ]
         )
   OpCertExpired _ (OpCertEndingKesPeriod end) (CurrentKesPeriod current) ->
-    PP.renderStringDefault $
-      PP.red "✗" PP.<+> PP.hang 0
-        ( PP.vsep
-          [ "Node operational certificate at: " <> PP.pretty opCertFile <> " has expired. "
-          , "Current KES period: " <> PP.pretty current
-          , "Operational certificate's expiry KES period: " <> PP.pretty end
+    renderStringDefault $
+      red "✗" <+> hang 0
+        ( vsep
+          [ "Node operational certificate at: " <> pretty opCertFile <> " has expired. "
+          , "Current KES period: " <> pretty current
+          , "Operational certificate's expiry KES period: " <> pretty end
           ]
         )
 
   OpCertSomeOtherError (OpCertStartingKesPeriod start) (OpCertEndingKesPeriod end) (CurrentKesPeriod current) ->
-    PP.renderStringDefault $
-      PP.red "✗" PP.<+> PP.hang 0
-        ( PP.vsep
-          [ "An unknown error occurred with operational certificate at: " <> PP.pretty opCertFile
-          , "Current KES period: " <> PP.pretty current
-          , "Operational certificate's starting KES period: " <> PP.pretty start
-          , "Operational certificate's expiry KES period: " <> PP.pretty end
+    renderStringDefault $
+      red "✗" <+> hang 0
+        ( vsep
+          [ "An unknown error occurred with operational certificate at: " <> pretty opCertFile
+          , "Current KES period: " <> pretty current
+          , "Operational certificate's starting KES period: " <> pretty start
+          , "Operational certificate's expiry KES period: " <> pretty end
           ]
         )
 

@@ -1,5 +1,5 @@
-{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -56,9 +56,8 @@ import qualified Data.Text as Text
 import           GHC.Records (HasField (..))
 import           Lens.Micro ((^.))
 import           Numeric.Natural
-
-import qualified Prettyprinter as PP
-import qualified Prettyprinter.Render.String as PP
+import           Prettyprinter
+import           Prettyprinter.Render.String
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Ledger.BaseTypes as Ledger
@@ -419,10 +418,10 @@ instance Error ScriptExecutionError where
       "The Plutus script evaluation failed: " ++ pp evalErr ++
       "\nScript debugging logs: " <> mconcat (map (\t -> Text.unpack $ t `Text.append` "\n") logs)
     where
-      pp :: PP.Pretty p => p -> String
-      pp = PP.renderString
-         . PP.layoutPretty PP.defaultLayoutOptions
-         . PP.pretty
+      pp :: Pretty p => p -> String
+      pp = renderString
+         . layoutPretty defaultLayoutOptions
+         . pretty
 
   displayError ScriptErrorExecutionUnitsOverflow =
       "The execution units required by this Plutus script overflows a 64bit "
