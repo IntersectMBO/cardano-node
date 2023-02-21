@@ -514,25 +514,28 @@ evaluateTransactionExecutionUnits
 evaluateTransactionExecutionUnits eraInMode systemstart epochInfo pparams utxo txbody =
   case makeSignedTransaction [] txbody of
     ByronTx {} -> evalPreAlonzo
-    ShelleyTx _era _tx' ->
-      evaluateShelleyBasedTransactionExecutionUnits eraInMode systemstart epochInfo pparams utxo txbody
+    ShelleyTx sbe tx' ->
+      evaluateShelleyBasedTransactionExecutionUnits eraInMode sbe systemstart epochInfo pparams utxo txbody tx'
 
 evaluateShelleyBasedTransactionExecutionUnits
-  :: forall era mode.
-     EraInMode era mode
+  :: forall ledgerera era mode.
+     ShelleyLedgerEra era ~ ledgerera
+  => EraInMode era mode
+  -> ShelleyBasedEra era
   -> SystemStart
   -> LedgerEpochInfo
   -> ProtocolParameters
   -> UTxO era
   -> TxBody era
+  -> Ledger.Tx (ShelleyLedgerEra era)
   -> Either TransactionValidityError
             (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
-evaluateShelleyBasedTransactionExecutionUnits _eraInMode systemstart (LedgerEpochInfo ledgerEpochInfo)
-                                  pparams utxo txbody =
+evaluateShelleyBasedTransactionExecutionUnits _eraInMode sbe systemstart (LedgerEpochInfo ledgerEpochInfo)
+                                  pparams utxo txbody tx' =
     case makeSignedTransaction [] txbody of
       ByronTx {}                 -> evalPreAlonzo
-      ShelleyTx era tx' ->
-        case era of
+      ShelleyTx era _tx' ->
+        case sbe of
           ShelleyBasedEraShelley -> evalPreAlonzo
           ShelleyBasedEraAllegra -> evalPreAlonzo
           ShelleyBasedEraMary    -> evalPreAlonzo
@@ -542,14 +545,14 @@ evaluateShelleyBasedTransactionExecutionUnits _eraInMode systemstart (LedgerEpoc
               Just supp -> obtainHasFieldConstraint supp $ evalBabbage era tx'
               Nothing -> return mempty
   where
-    evalAlonzo :: forall ledgerera.
-                  ShelleyLedgerEra era ~ ledgerera
-               => ledgerera ~ Alonzo.AlonzoEra Ledger.StandardCrypto
-               => HasField "_maxTxExUnits" (Ledger.PParams ledgerera) Alonzo.ExUnits
-               => HasField"_protocolVersion" (Ledger.PParams ledgerera) Ledger.ProtVer
-               => LedgerEraConstraints ledgerera
+    evalAlonzo :: forall ledgerera2.
+                  ShelleyLedgerEra era ~ ledgerera2
+               => ledgerera2 ~ Alonzo.AlonzoEra Ledger.StandardCrypto
+               => HasField "_maxTxExUnits" (Ledger.PParams ledgerera2) Alonzo.ExUnits
+               => HasField"_protocolVersion" (Ledger.PParams ledgerera2) Ledger.ProtVer
+               => LedgerEraConstraints ledgerera2
                => ShelleyBasedEra era
-               -> Ledger.Tx ledgerera
+               -> Ledger.Tx ledgerera2
                -> Either TransactionValidityError
                          (Map ScriptWitnessIndex
                               (Either ScriptExecutionError ExecutionUnits))
@@ -565,13 +568,13 @@ evaluateShelleyBasedTransactionExecutionUnits _eraInMode systemstart (LedgerEpoc
         of Left err -> Left (TransactionValidityTranslationError err)
            Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
 
-    evalBabbage :: forall ledgerera.
-                  ShelleyLedgerEra era ~ ledgerera
-               => ledgerera ~ Babbage.BabbageEra Ledger.StandardCrypto
-               => HasField "_maxTxExUnits" (Ledger.PParams ledgerera) Alonzo.ExUnits
-               => HasField"_protocolVersion" (Ledger.PParams ledgerera) Ledger.ProtVer
+    evalBabbage :: forall ledgerera2.
+                  ShelleyLedgerEra era ~ ledgerera2
+               => ledgerera2 ~ Babbage.BabbageEra Ledger.StandardCrypto
+               => HasField "_maxTxExUnits" (Ledger.PParams ledgerera2) Alonzo.ExUnits
+               => HasField"_protocolVersion" (Ledger.PParams ledgerera2) Ledger.ProtVer
                => ShelleyBasedEra era
-               -> Ledger.Tx ledgerera
+               -> Ledger.Tx ledgerera2
                -> Either TransactionValidityError
                          (Map ScriptWitnessIndex
                               (Either ScriptExecutionError ExecutionUnits))
@@ -636,8 +639,7 @@ evaluateShelleyBasedTransactionExecutionUnits _eraInMode systemstart (LedgerEpoc
 
 
     obtainHasFieldConstraint
-      :: ShelleyLedgerEra era ~ ledgerera
-      => CollateralSupportedInEra era
+      :: CollateralSupportedInEra era
       -> (HasField "_maxTxExUnits" (Ledger.PParams ledgerera) Alonzo.ExUnits => a) ->  a
     obtainHasFieldConstraint CollateralInAlonzoEra f =  f
     obtainHasFieldConstraint CollateralInBabbageEra f =  f
