@@ -516,8 +516,8 @@ evaluateTransactionExecutionUnits _eraInMode systemstart epochInfo pparams utxo 
   case makeSignedTransaction [] txbody of
     ByronTx {} -> evalPreAlonzo
     ShelleyTx sbe tx' ->
-      let lPParams = toLedgerPParams sbe pparams in
-      evaluateShelleyBasedTxExecutionUnits sbe systemstart epochInfo pparams lPParams utxo tx'
+      let lpparams = toLedgerPParams sbe pparams in
+      evaluateShelleyBasedTxExecutionUnits sbe systemstart epochInfo pparams lpparams utxo tx'
 
 -- | Compute the 'ExecutionUnits' needed for each script in the transaction.
 --
@@ -536,11 +536,11 @@ evaluateShelleyBasedTransactionExecutionUnits
   -> TxBody era
   -> Either TransactionValidityError
             (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
-evaluateShelleyBasedTransactionExecutionUnits sbe systemstart epochInfo pparams lPParams utxo txbody =
+evaluateShelleyBasedTransactionExecutionUnits sbe systemstart epochInfo pparams lpparams utxo txbody =
   case makeSignedTransaction [] txbody of
     ByronTx {} -> evalPreAlonzo
     ShelleyTx _sbe tx' ->
-      evaluateShelleyBasedTxExecutionUnits sbe systemstart epochInfo pparams lPParams utxo tx'
+      evaluateShelleyBasedTxExecutionUnits sbe systemstart epochInfo pparams lpparams utxo tx'
 
 evaluateShelleyBasedTxExecutionUnits
   :: forall ledgerera era.
@@ -554,7 +554,7 @@ evaluateShelleyBasedTxExecutionUnits
   -> Ledger.Tx (ShelleyLedgerEra era)
   -> Either TransactionValidityError
             (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
-evaluateShelleyBasedTxExecutionUnits sbe systemstart epochInfo pparams lPParams utxo tx' =
+evaluateShelleyBasedTxExecutionUnits sbe systemstart epochInfo pparams lpparams utxo tx' =
   case sbe of
     ShelleyBasedEraShelley -> evalPreAlonzo
     ShelleyBasedEraAllegra -> evalPreAlonzo
@@ -581,7 +581,7 @@ evaluateShelleyBasedTxExecutionUnits sbe systemstart epochInfo pparams lPParams 
     evalAlonzo era tx = do
       cModelArray <- toAlonzoCostModelsArray (protocolParamCostModels pparams)
       case Alonzo.evaluateTransactionExecutionUnits
-             lPParams
+             lpparams
              tx
              (toLedgerUTxO era utxo)
              ledgerEpochInfo
@@ -603,7 +603,7 @@ evaluateShelleyBasedTxExecutionUnits sbe systemstart epochInfo pparams lPParams 
     evalBabbage era tx = do
       costModelsArray <- toAlonzoCostModelsArray (protocolParamCostModels pparams)
       case Alonzo.evaluateTransactionExecutionUnits
-             lPParams
+             lpparams
              tx
              (toLedgerUTxO era utxo)
              ledgerEpochInfo

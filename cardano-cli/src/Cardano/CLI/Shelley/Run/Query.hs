@@ -1207,7 +1207,7 @@ runQueryLeadershipSchedule (AnyConsensusModeParams cModeParams) network
       let currentEpochQuery = QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryEpoch
       curentEpoch <- executeQuery era cModeParams localNodeConnInfo currentEpochQuery
 
-      let lPParams = toLedgerPParams sbe pparams
+      let lpparams = toLedgerPParams sbe pparams
 
       schedule <- case whichSchedule of
         CurrentEpoch -> do
@@ -1220,7 +1220,7 @@ runQueryLeadershipSchedule (AnyConsensusModeParams cModeParams) network
               shelleyGenesis
               eInfo
               pparams
-              lPParams
+              lpparams
               ptclState
               poolid
               vrkSkey
@@ -1236,7 +1236,7 @@ runQueryLeadershipSchedule (AnyConsensusModeParams cModeParams) network
           firstExceptT ShelleyQueryCmdLeaderShipError $ hoistEither
             $ eligibleLeaderSlotsConstaints sbe
             $ nextEpochEligibleLeadershipSlots sbe shelleyGenesis
-              serCurrentEpochState ptclState poolid vrkSkey pparams lPParams
+              serCurrentEpochState ptclState poolid vrkSkey pparams lpparams
               eInfo (tip, curentEpoch)
 
       case mJsonOutputFile of

@@ -1365,7 +1365,7 @@ nextEpochEligibleLeadershipSlots
   -> EpochInfo (Either Text)
   -> (ChainTip, EpochNo)
   -> Either LeadershipError (Set SlotNo)
-nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (VrfSigningKey vrfSkey) pParams lPParams eInfo (cTip, currentEpoch) = do
+nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (VrfSigningKey vrfSkey) pParams lpparams eInfo (cTip, currentEpoch) = do
   (_, currentEpochLastSlot) <- first LeaderErrSlotRangeCalculationFailure
                                  $ Slot.epochInfoRange eInfo currentEpoch
 
@@ -1421,7 +1421,7 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
       markSnapshotPoolDistr = ShelleyAPI.unPoolDistr . ShelleyAPI.calculatePoolDistr $ snapshot
 
   let slotRangeOfInterest = Set.filter
-        (not . Ledger.isOverlaySlot firstSlotOfEpoch (getField @"_d" lPParams))
+        (not . Ledger.isOverlaySlot firstSlotOfEpoch (getField @"_d" lpparams))
         $ Set.fromList [firstSlotOfEpoch .. lastSlotofEpoch]
 
   case sbe of
@@ -1550,7 +1550,7 @@ currentEpochEligibleLeadershipSlots :: forall era ledgerera. ()
   -> SerialisedPoolDistribution era
   -> EpochNo -- ^ Current EpochInfo
   -> Either LeadershipError (Set SlotNo)
-currentEpochEligibleLeadershipSlots sbe sGen eInfo pParams lPParams ptclState poolid (VrfSigningKey vrkSkey) serPoolDistr currentEpoch = do
+currentEpochEligibleLeadershipSlots sbe sGen eInfo pParams lpparams ptclState poolid (VrfSigningKey vrkSkey) serPoolDistr currentEpoch = do
 
   chainDepState :: ChainDepState (Api.ConsensusProtocol era) <-
     first LeaderErrDecodeProtocolStateFailure $ decodeProtocolState ptclState
@@ -1569,7 +1569,7 @@ currentEpochEligibleLeadershipSlots sbe sGen eInfo pParams lPParams ptclState po
       $ decodePoolDistribution serPoolDistr
 
   let slotRangeOfInterest = Set.filter
-        (not . Ledger.isOverlaySlot firstSlotOfEpoch (getField @"_d" lPParams))
+        (not . Ledger.isOverlaySlot firstSlotOfEpoch (getField @"_d" lpparams))
         $ Set.fromList [firstSlotOfEpoch .. lastSlotofEpoch]
 
   case sbe of
