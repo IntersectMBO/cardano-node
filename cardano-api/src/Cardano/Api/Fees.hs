@@ -511,7 +511,23 @@ evaluateTransactionExecutionUnits
   -> TxBody era
   -> Either TransactionValidityError
             (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
-evaluateTransactionExecutionUnits _eraInMode systemstart (LedgerEpochInfo ledgerEpochInfo)
+evaluateTransactionExecutionUnits eraInMode systemstart epochInfo pparams utxo txbody =
+  case makeSignedTransaction [] txbody of
+    ByronTx {} -> evalPreAlonzo
+    ShelleyTx _era _tx' ->
+      evaluateShelleyBasedTransactionExecutionUnits eraInMode systemstart epochInfo pparams utxo txbody
+
+evaluateShelleyBasedTransactionExecutionUnits
+  :: forall era mode.
+     EraInMode era mode
+  -> SystemStart
+  -> LedgerEpochInfo
+  -> ProtocolParameters
+  -> UTxO era
+  -> TxBody era
+  -> Either TransactionValidityError
+            (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
+evaluateShelleyBasedTransactionExecutionUnits _eraInMode systemstart (LedgerEpochInfo ledgerEpochInfo)
                                   pparams utxo txbody =
     case makeSignedTransaction [] txbody of
       ByronTx {}                 -> evalPreAlonzo
