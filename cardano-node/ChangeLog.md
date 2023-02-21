@@ -1,5 +1,16 @@
 # Changelog for cardano-node
 
+## vNext
+
+### node changes
+
+- So far the `AcceptedConnectionLimit`s from the configuration file where
+  ignored, the node always used the hard coded values. This is fixed in #4902.
+
+### consensus changes
+
+### network changes
+
 ## 1.35.5 -- November 2022
 
 ### node changes

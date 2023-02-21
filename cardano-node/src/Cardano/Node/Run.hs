@@ -375,12 +375,7 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
                 Just (ActualSocket localSocket) -> Just (Left  localSocket)
                 Just (SocketInfo localAddr)     -> Just (Right localAddr)
                 Nothing                         -> Nothing
-          , Diffusion.daAcceptedConnectionsLimit =
-              AcceptedConnectionsLimit
-                { acceptedConnectionsHardLimit = 512
-                , acceptedConnectionsSoftLimit = 384
-                , acceptedConnectionsDelay     = 5
-                }
+          , Diffusion.daAcceptedConnectionsLimit = ncAcceptedConnectionsLimit nc
           , Diffusion.daMode = ncDiffusionMode nc
           }
 
