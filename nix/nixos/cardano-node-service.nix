@@ -230,6 +230,15 @@ in {
         '';
       };
 
+      isProducer = mkOption {
+        type = types.bool;
+        default = false;
+        description = ''
+          Whether this node is intended to be a producer.
+          Internal option for inter-module communication.
+        '';
+      };
+
       # Byron signing/delegation
 
       signingKey = mkOption {

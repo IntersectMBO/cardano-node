@@ -1762,6 +1762,22 @@
         "type": "github"
       }
     },
+    "em": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1676998710,
+        "narHash": "sha256-JBRDpeZK4zGaV4wZh6vpDdREcFWgLL2uTImYh8xazAM=",
+        "owner": "deepfire",
+        "repo": "em",
+        "rev": "fdeb0111b3d4028b8c1b32ba946ff3f42669e25c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "deepfire",
+        "repo": "em",
+        "type": "github"
+      }
+    },
     "empty-flake": {
       "locked": {
         "lastModified": 1630400035,
@@ -7074,6 +7090,22 @@
         "type": "github"
       }
     },
+    "ops-lib": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1675186784,
+        "narHash": "sha256-HqDtrvk1l7YeREzCSEpUtChtlEgT6Tww9WrJiozjukc=",
+        "owner": "input-output-hk",
+        "repo": "ops-lib",
+        "rev": "5be29ed53b2a4cbbf4cf326fa2e9c1f2b754d26d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "input-output-hk",
+        "repo": "ops-lib",
+        "type": "github"
+      }
+    },
     "ouroboros-network": {
       "flake": false,
       "locked": {
@@ -7218,6 +7250,7 @@
         "cardano-mainnet-mirror": "cardano-mainnet-mirror",
         "cardano-node-workbench": "cardano-node-workbench",
         "customConfig": "customConfig_2",
+        "em": "em",
         "empty-flake": "empty-flake",
         "flake-compat": "flake-compat_5",
         "hackageNix": "hackageNix",
@@ -7235,6 +7268,7 @@
         "node-measured": "node-measured",
         "node-process": "node-process_2",
         "node-snapshot": "node-snapshot_2",
+        "ops-lib": "ops-lib",
         "plutus-apps": "plutus-apps_3",
         "std": [
           "tullia",

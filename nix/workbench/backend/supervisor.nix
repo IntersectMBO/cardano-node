@@ -1,14 +1,12 @@
 { pkgs
 , lib
+, stateDir
 , useCabalRun
+, basePort
 , ...
 }:
+with lib;
 let
-  name = "supervisor";
-
-  # Unlike the nomad backend `useCabalRun` is honored here.
-  inherit useCabalRun;
-
   extraShellPkgs = with pkgs;
     [
       python3Packages.supervisor
@@ -36,13 +34,41 @@ let
           inherit pkgs lib stateDir;
           inetHttpServerPort = "127.0.0.1:9001";
         };
-      in pkgs.runCommand "workbench-backend-output-${profileNix.name}-${name}"
+      in pkgs.runCommand "workbench-backend-output-${profileNix.profileName}-supervisor"
         {supervisorConfPath = supervisorConf.INI;}
         ''
         mkdir $out
         cp    $supervisorConfPath           $out/supervisor.conf
         '';
+
+  overlay =
+    proTopo: self: super:
+    {
+    };
+
+  service-modules = {
+    node =
+      { config, ... }:
+      let selfCfg = config.services.cardano-node;
+          i       = toString selfCfg.nodeId;
+      in
+      { #_file = ./supervisor.nix;
+
+        services.cardano-node.stateDir = stateDir + "/node-${i}";
+        services.cardano-node.operationalCertificate =
+          mkIf (selfCfg.isProducer)
+            "../genesis/node-keys/node${i}.opcert";
+        services.cardano-node.kesKey =
+          mkIf (selfCfg.isProducer)
+            "../genesis/node-keys/node-kes${i}.skey";
+        services.cardano-node.vrfKey =
+          mkIf (selfCfg.isProducer)
+            "../genesis/node-keys/node-vrf${i}.skey";
+      };
+  };
 in
 {
-  inherit name useCabalRun extraShellPkgs materialise-profile;
+  name = "supervisor";
+
+  inherit extraShellPkgs materialise-profile overlay basePort useCabalRun service-modules;
 }

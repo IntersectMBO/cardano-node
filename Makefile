@@ -40,11 +40,15 @@ trace-documentation:
 ###
 ### Workbench
 ###
-CI_TARGETS := hlint workbench-ci-test haddock-hoogle
+workbench-ci: workbench-ci-test ci-test-auto ci-test-autonix ci-test-autonomad
+CI_TARGETS := hlint workbench-ci haddock-hoogle
 ci:  ci-report ci-targets
 ci-report:
 	@echo -e "\033[34mGoals under test\033[0m:  \033[33m$(CI_TARGETS)\033[0m"
 ci-targets:  $(CI_TARGETS)
+
+workbench-internals-walkthrough:
+	emn nix/workbench/doc.org
 
 ##
 ## Base targets:
@@ -71,7 +75,7 @@ ps:                                              ## Plain-text list of profiles
 ##
 PROFILES_BASE         := default plutus plutus-secp-ecdsa plutus-secp-schnorr oldtracing idle tracer-only
 PROFILES_STARTSTOP    := startstop startstop-p2p startstop-plutus startstop-notracer startstop-oldtracing
-PROFILES_CI_TEST      := ci-test ci-test-p2p ci-test-plutus ci-test-notracer ci-test-dense10
+PROFILES_CI_TEST      := ci-test ci-test-p2p ci-test-plutus ci-test-notracer ci-test-dense10 aws-test
 PROFILES_CI_BENCH     := ci-bench ci-bench-p2p ci-bench-plutus ci-bench-plutus-secp-ecdsa ci-bench-plutus-secp-schnorr ci-bench-notracer
 PROFILES_10           := 10 10-p2p 10-plutus 10-notracer
 PROFILES_FORGE_STRESS := forge-stress forge-stress-p2p forge-stress-plutus forge-stress-plutus-singleton forge-stress-notracer

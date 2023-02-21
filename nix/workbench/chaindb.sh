@@ -14,9 +14,9 @@ EOF
 }
 
 cardano_mainnet_geneses=(
-    --arg byron   "$global_basedir"/profiles/presets/mainnet/genesis/byron/genesis.json
-    --arg shelley "$global_basedir"/profiles/presets/mainnet/genesis/genesis-shelley.json
-    --arg alonzo  "$global_basedir"/profiles/presets/mainnet/genesis/genesis.alonzo.json
+    --arg byron   "$global_basedir"/profile/presets/mainnet/genesis/byron/genesis.json
+    --arg shelley "$global_basedir"/profile/presets/mainnet/genesis/genesis-shelley.json
+    --arg alonzo  "$global_basedir"/profile/presets/mainnet/genesis/genesis.alonzo.json
     --arg shelley_hash '1a3be38bcbb7911969283716ad7aa550250226b76a61fc51cc9a9a35d9276d81'
 )
 

@@ -100,31 +100,31 @@ instance TimelineFields SummaryOne where
       "Era"
       "Benchmark era"
 
-   <> fScalar "delegators"             Wno Cnt (IWord64 $     delegators.sumGenesisSpec)
+   <> fScalar "delegators"             W12 Cnt (IWord64 $     delegators.sumGenesisSpec)
       "Delegation map size"
       ""
 
-   <> fScalar "utxo"                   Wno Cnt (IWord64 $           utxo.sumGenesisSpec)
+   <> fScalar "utxo"                   W12 Cnt (IWord64 $           utxo.sumGenesisSpec)
       "Starting UTxO set size"
       "Extra UTxO set size at the beginning of the benchmark"
 
-   <> fScalar "add_tx_size"            Wno B   (IWord64 $      add_tx_size.sumGenerator)
+   <> fScalar "add_tx_size"            W6  B   (IWord64 $      add_tx_size.sumGenerator)
       "Extra tx payload"
       ""
 
-   <> fScalar "inputs_per_tx"          Wno Cnt (IWord64 $    inputs_per_tx.sumGenerator)
+   <> fScalar "inputs_per_tx"          W3  Cnt (IWord64 $    inputs_per_tx.sumGenerator)
       "Tx inputs"
       ""
 
-   <> fScalar "outputs_per_tx"         Wno Cnt (IWord64 $   outputs_per_tx.sumGenerator)
+   <> fScalar "outputs_per_tx"         W3  Cnt (IWord64 $   outputs_per_tx.sumGenerator)
       "Tx Outputs"
       ""
 
-   <> fScalar "tps"                    Wno Hz  (IFloat $               tps.sumGenerator)
+   <> fScalar "tps"                    W7  Hz  (IFloat $               tps.sumGenerator)
       "TPS"
       "Offered load, transactions per second"
 
-   <> fScalar "tx_count"               Wno Cnt (IWord64 $         tx_count.sumGenerator)
+   <> fScalar "tx_count"               W12 Cnt (IWord64 $         tx_count.sumGenerator)
       "Transaction count"
       "Number of transactions prepared for submission, but not necessarily submitted"
 
@@ -132,27 +132,27 @@ instance TimelineFields SummaryOne where
       "Plutus script"
       "Name of th Plutus script used for smart contract workload generation, if any"
 
-   <> fScalar "sumHosts"               Wno Cnt (IInt   $   unCount.sumHosts)
+   <> fScalar "sumHosts"               W4  Cnt (IInt   $   unCount.sumHosts)
       "Machines"
       "Number of machines under analysis"
 
-   <> fScalar "sumFilters"             Wno Cnt (IInt   $   length.snd.sumFilters)
+   <> fScalar "sumFilters"             W2  Cnt (IInt   $   length.snd.sumFilters)
       "Number of filters applied"
       ""
 
-   <> fScalar "cdfLogLinesEmitted"     W6  Cnt (IFloat $ cdfAverageVal.cdfLogLinesEmitted)
+   <> fScalar "cdfLogLinesEmitted"     W12 Cnt (IFloat $ cdfAverageVal.cdfLogLinesEmitted)
       "Log text lines emitted per host"
       ""
 
-   <> fScalar "cdfLogObjectsEmitted"   W6  Cnt (IFloat $ cdfAverageVal.cdfLogObjectsEmitted)
+   <> fScalar "cdfLogObjectsEmitted"   W12 Cnt (IFloat $ cdfAverageVal.cdfLogObjectsEmitted)
       "Log objects emitted per host"
       ""
 
-   <> fScalar "cdfLogObjects"          W6  Cnt (IFloat $ cdfAverageVal.cdfLogObjects)
+   <> fScalar "cdfLogObjects"          W12 Cnt (IFloat $ cdfAverageVal.cdfLogObjects)
       "Log objects analysed per host"
       ""
 
-   <> fScalar "cdfRuntime"             W6  Sec (IFloat $ cdfAverageVal.cdfRuntime)
+   <> fScalar "cdfRuntime"             W7  Sec (IFloat $ cdfAverageVal.cdfRuntime)
       "Host run time, s"
       ""
 
@@ -160,15 +160,15 @@ instance TimelineFields SummaryOne where
       "Host log line rate, Hz"
       ""
 
-   <> fScalar "sumLogObjectsTotal"     Wno Cnt (IInt   $ unCount.sumLogObjectsTotal)
+   <> fScalar "sumLogObjectsTotal"     W12 Cnt (IInt   $ unCount.sumLogObjectsTotal)
       "Total log objects analysed"
       ""
 
-   <> fScalar "ddRawCount.sumDomainTime"      Wno Sec (IInt   $       ddRawCount.sumDomainTime)
+   <> fScalar "ddRawCount.sumDomainTime"      W12 Sec (IInt   $       ddRawCount.sumDomainTime)
       "Run time, s"
       ""
 
-   <> fScalar "ddFilteredCount.sumDomainTime" Wno Sec (IInt   $  ddFilteredCount.sumDomainTime)
+   <> fScalar "ddFilteredCount.sumDomainTime" W12 Sec (IInt   $  ddFilteredCount.sumDomainTime)
       "Analysed run duration, s"
       ""
 
@@ -176,31 +176,31 @@ instance TimelineFields SummaryOne where
       "Run time efficiency"
       ""
 
-   <> fScalar "ddRaw.sumStartSpread"      Wno Sec (IDeltaT$ intvDurationSec.ddRaw.sumStartSpread)
+   <> fScalar "ddRaw.sumStartSpread"      W9 Sec (IDeltaT$ intvDurationSec.ddRaw.sumStartSpread)
       "Node start spread, s"
       ""
 
-   <> fScalar "ddRaw.sumStopSpread"       Wno Sec (IDeltaT$ intvDurationSec.ddRaw.sumStopSpread)
+   <> fScalar "ddRaw.sumStopSpread"       W9 Sec (IDeltaT$ intvDurationSec.ddRaw.sumStopSpread)
       "Node stop spread, s"
       ""
 
-   <> fScalar "ddFiltered.sumStartSpread" Wno Sec (IDeltaT$ maybe 0 intvDurationSec.ddFiltered.sumStartSpread)
+   <> fScalar "ddFiltered.sumStartSpread" W9 Sec (IDeltaT$ maybe 0 intvDurationSec.ddFiltered.sumStartSpread)
       "Perf analysis start spread, s"
       ""
 
-   <> fScalar "ddFiltered.sumStopSpread"  Wno Sec (IDeltaT$ maybe 0 intvDurationSec.ddFiltered.sumStopSpread)
+   <> fScalar "ddFiltered.sumStopSpread"  W9 Sec (IDeltaT$ maybe 0 intvDurationSec.ddFiltered.sumStopSpread)
       "Perf analysis stop spread, s"
       ""
 
-   <> fScalar "sumDomainSlots"         Wno Slo (IInt   $ ddFilteredCount.sumDomainSlots)
+   <> fScalar "sumDomainSlots"         W12 Slo (IInt   $ ddFilteredCount.sumDomainSlots)
       "Slots analysed"
       ""
 
-   <> fScalar "sumDomainBlocks"        Wno Blk (IInt  $ ddFilteredCount.sumDomainBlocks)
+   <> fScalar "sumDomainBlocks"        W10 Blk (IInt  $ ddFilteredCount.sumDomainBlocks)
       "Blocks analysed"
       ""
 
-   <> fScalar "sumBlocksRejected"      Wno Cnt (IInt  $     unCount . sumBlocksRejected)
+   <> fScalar "sumBlocksRejected"      W10 Cnt (IInt  $     unCount . sumBlocksRejected)
       "Blocks rejected"
       ""
   -- fieldJSONOverlay f = (:[]) . tryOverlayFieldDescription f
@@ -218,7 +218,7 @@ bpFieldsControl, bpFieldsForger, bpFieldsPeers, bpFieldsEndToEnd, bpFieldsEndToE
 bpFieldsControl =
   [ "cdfBlocksPerHost", "cdfBlocksFilteredRatio", "cdfBlocksChainedRatio", "cdfBlockBattles", "cdfBlockSizes" ]
 bpFieldsForger =
-  [ "cdfForgerStarts", "cdfForgerBlkCtx", "cdfForgerLgrState", "cdfForgerLgrView", "cdfForgerLeads", "cdfForgerForges", "cdfForgerAnnouncements", "cdfForgerSends", "cdfForgerAdoptions" ]
+  [ "cdfForgerStarts", "cdfForgerBlkCtx", "cdfForgerLgrState", "cdfForgerLgrView", "cdfForgerLeads", "cdfForgerTicked", "cdfForgerMemSnap", "cdfForgerForges", "cdfForgerAnnouncements", "cdfForgerSends", "cdfForgerAdoptions" ]
 bpFieldsPeers =
   [ "cdfPeerNotices", "cdfPeerRequests", "cdfPeerFetches", "cdfPeerAnnouncements", "cdfPeerSends", "cdfPeerAdoptions" ]
 bpFieldsEndToEnd =
@@ -228,7 +228,7 @@ bpFieldsEndToEndBrief =
 
 instance CDFFields BlockProp p where
   cdfFields =
-      fGrp ",------------- Forger event Δt: -------------."
+      fGrp ",---------------- Forger event Δt: -----------------."
             W4 Sec P3 Log Free
     [ fGrp' "cdfForgerStarts"        "Loop" (DDeltaT cdfForgerStarts)
       "Started forge loop iteration"
@@ -249,23 +249,31 @@ instance CDFFields BlockProp p where
       "Leadership check duration"
       "Leadership check duration (TraceNodeIsNotLeader, TraceNodeIsLeader), relative  to ledger view acquisition"
 
+    , fGrp' "cdfForgerTicked"        "Tick" (DDeltaT cdfForgerTicked)
+      "Ledger ticking"
+      "Time spent ticking the ledger state (TraceForgeTickedLedgerState), relative to leadership check completion"
+
+    , fGrp' "cdfForgerMemSnap"       "Snap" (DDeltaT cdfForgerMemSnap)
+      "Mempool snapshotting"
+      "Time spent taking a mempool snapshot (TraceForgingMempoolSnapshot), relative to ledger ticking conclusion"
+
     , fGrp' "cdfForgerForges"        "Forg" (DDeltaT cdfForgerForges)
       "Leadership to forged"
-      "Time spent forging the block (TraceForgedBlock), relative to positive leadership decision"
+      "Time spent forging the block: TraceForgedBlock relative to positive leadership decision"
 
     , fGrp' "cdfForgerAnnouncements" "Anno" (DDeltaT cdfForgerAnnouncements)
       "Forged to announced"
-      "Time until block was announced (ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock), since block forging completion"
+      "Time between block forging completion and announcement (ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock)"
 
     , fGrp' "cdfForgerSends"         "Send" (DDeltaT cdfForgerSends)
       "Forged to sending"
-      "Time until block sending was initiated (TraceBlockFetchServerSendBlock), since block forging completion"
+      "Time between block forging completion and begin-of-sending (TraceBlockFetchServerSendBlock)"
 
     , fGrp' "cdfForgerAdoptions"     "Adop" (DDeltaT cdfForgerAdoptions)
       "Forged to self-adopted"
-      "Time it took to adopt the block (TraceAdoptedBlock), since block forging completion"
+      "Time between block forging completion and adoption (TraceAdoptedBlock)"
     ]
-   <> fGrp ",------- Peer event Δt: -------."
+   <> fGrp ",------ Peer event Δt: ------."
             W4 Sec P3 Log Free
     [ fGrp' "cdfPeerNotices"         "Noti" (DDeltaT cdfPeerNotices)
       "First peer notice"
@@ -307,17 +315,18 @@ instance CDFFields BlockProp p where
       | (i, ct@(Centile centi)) <- zip [0::Int ..] adoptionCentiles
       ]
 
-   <> fBoth "cdfBlocksPerHost" "Host" "blks" W4 Blk P0 Lin Free (DInt cdfBlocksPerHost)
+   <> fGrpF "Host block stats" W5
+    [ fGrpF' "cdfBlocksPerHost"       "total" Blk P0 Lin Free (DInt cdfBlocksPerHost)
       "Blocks per host"
-      "For a given host, number of blocks made during the entire observation period"
+      "For each host, number of blocks made during the entire observation period"
 
-   <> fBoth "cdfBlocksFilteredRatio" "Filtr" "blks" W4 Rto P3 Lin R01 (DFloat cdfBlocksFilteredRatio)
+    , fGrpF' "cdfBlocksFilteredRatio" "fltrd" Rto P3 Lin R01 (DFloat cdfBlocksFilteredRatio)
       "Filtered to chained block ratio"
-      "For a given host, ratio of blocks that passed filtering / all on chain"
+      "For each host, ratio of blocks that passed filtering / all on chain"
 
-   <> fBoth "cdfBlocksChainedRatio" "Chain" "blks" W4 Rto P3 Lin R01 (DFloat cdfBlocksChainedRatio)
+    , fGrpF' "cdfBlocksChainedRatio" "chaind" Rto P3 Lin R01 (DFloat cdfBlocksChainedRatio)
       "Chained to forged block ratio"
-      "For a given host, ratio of blocks that made into chain / all forged"
+      "For each host, ratio of blocks that made into chain / all forged"]
 
    <> fBoth "cdfBlockBattles" "Battl" " #" W4 Blk P0 Lin Free (DInt cdfBlockBattles)
       "Height & slot battles"
@@ -356,6 +365,8 @@ instance TimelineFields BlockEvents where
     , fGrp' "bfLgrState"    "LgrSta" (IDeltaTM (bfLgrState.beForge)) "" ""
     , fGrp' "bfLgrView"     "LgrVie" (IDeltaTM (bfLgrView .beForge)) "" ""
     , fGrp' "bfLeading"     "Lead"   (IDeltaT (bfLeading  .beForge)) "" ""
+    , fGrp' "bfTicked"      "LgrTck" (IDeltaTM (bfTicked  .beForge)) "" ""
+    , fGrp' "bfMemSnap"     "MemSna" (IDeltaTM (bfMemSnap .beForge)) "" ""
     , fGrp' "bfForged"      "Forge"  (IDeltaT (bfForged   .beForge)) "" ""
     , fGrp' "bfAnnounced"   "Announ" (IDeltaT (bfAnnounced.beForge)) "" ""
     , fGrp' "bfSending"     "Sendin" (IDeltaT (bfSending  .beForge)) "" ""
@@ -463,75 +474,71 @@ instance CDFFields MachPerf p where
     , fGrp' "cdfLeading"     "Lead"        (DDeltaT cdfLeading)
       "Leadership check duration"
       "Leadership check duration (TraceNodeIsNotLeader, TraceNodeIsLeader), relative  to ledger view acquisition"
-
-    , fGrp' "cdfForged"   "   Forge"       (DDeltaT cdfForged)
-      "Leading to block forged"
-      "Time spent forging the block (TraceForgedBlock), relative to positive leadership decision"
     ]
-   <> fBoth "cdfBlockGap" "Block" "gap" W4 Sec P2 Lin Free    (DWord64 cdfBlockGap)
-      "Interblock gap, s"
+   <> fBoth "cdfBlockGap" "Block" "gap"  W4 Sec P2 Lin Free (DWord64 cdfBlockGap)
+      "Interblock gap"
       "Time between blocks"
 
-   <> fBoth "cdfDensity" "Dens" "ity"   W5 Rto P2 Lin Free (DFloat cdfDensity)
+   <> fBoth "cdfDensity" "Chain" "dens." W5 Rto P2 Lin Free (DFloat cdfDensity)
       "Chain density"
-      "Chain density, for the last 'k' slots"
+      "Block/slot ratio, for the last 'k' slots"
 
    <> fPct  "CentiCpu"            "CPU" (Z1 200) (DWord64 (rCentiCpu.mpResourceCDFs))
-      "Process CPU usage, %"
-      "Kernel-reported CPU process usage, of a single core"
+      "Process CPU usage"
+      "Kernel-reported CPU process usage, % of a single core"
 
    <> fPct  "CentiGC"              "GC" (Z1 200) (DWord64 (rCentiGC .mpResourceCDFs))
-      "RTS GC CPU usage, %"
-      "RTS-reported GC CPU usage, of a single core"
+      "RTS GC CPU usage"
+      "RTS-reported GC CPU usage, % of a single core"
 
    <> fPct  "CentiMut"            "MUT" (Z1 200) (DWord64 (rCentiMut.mpResourceCDFs))
-      "RTS Mutator CPU usage, %"
-      "RTS-reported mutator CPU usage, of a single core"
+      "RTS Mutator CPU usage"
+      "RTS-reported mutator CPU usage, % of a single core"
    <> fW64 "GcsMajor"        "GC" "Maj" W3 Ev    (DWord64 (rGcsMajor.mpResourceCDFs))
       "Major GCs"
-      "Major GC events"
+      "Major garbage collection RTS events"
 
-   <> fW64 "GcsMinor"        "GC" "Min" W3 Ev    (DWord64 (rGcsMajor.mpResourceCDFs))
+   <> fW64 "GcsMinor"        "GC" "Min" W3 Ev    (DWord64 (rGcsMinor.mpResourceCDFs))
       "Minor GCs"
-      "Minor GC events"
+      "Minor garbage collection RTS events"
 
    <> fGrp  "Memory usage, MB"          W5 MB P0 Lin Free
     [ fGrp' "RSS"                 "RSS"    (DWord64 (rRSS.mpResourceCDFs))
-      "Kernel RSS, MB"
+      "Kernel RSS"
       "Kernel-reported RSS (Resident Set Size) of the process, MB"
 
     , fGrp' "Heap"               "Heap"    (DWord64 (rHeap.mpResourceCDFs))
-      "RTS heap size, MB"
+      "RTS heap size"
       "RTS-reported heap size, MB"
 
     , fGrp' "Live"               "Live"    (DWord64 (rLive.mpResourceCDFs))
-      "RTS GC live bytes, MB"
+      "RTS live GC dateset"
       "RTS-reported GC live data size, MB"
     ]
-   <> fBoth "Alloc"  "Alloc" "MB"       W5 MB P0 Lin (Z0 5000) (DWord64 (rAlloc.mpResourceCDFs))
-      "RTS alloc rate MB/s"
+   <> fBoth "Alloc"  "Alloc" "MB/s"     W5 MBs P0 Lin (Z0 5000) (DWord64 (rAlloc.mpResourceCDFs))
+      "RTS alloc rate"
       "RTS-reported allocation rate, MB/sec"
 
    <> fGrp  "NetIO, kB/s"               W5 KBs P0 Lin Free
     [ fGrp' "NetRd"        "recv"          (DWord64 (rNetRd.mpResourceCDFs))
-      "Network reads kB/s"
+      "Network reads"
       "Network reads, kB/sec"
 
     , fGrp' "NetWr"        "send"          (DWord64 (rNetWr.mpResourceCDFs))
-      "Network writes kB/s"
+      "Network writes"
       "Network writes, kB/sec"
     ]
    <> fGrp  "FS IO, kB/s"               W5 KBs P0 Lin Free
     [ fGrp' "FsRd"         "read"          (DWord64 (rFsRd.mpResourceCDFs))
-      "Filesystem reads, kB/s"
+      "Filesystem reads"
       "Number of bytes which this process really did cause to be fetched from the storage layer, per second"
 
     , fGrp' "FsWr"         "write"         (DWord64 (rFsWr.mpResourceCDFs))
-      "Filesystem writes, kB/s"
+      "Filesystem writes"
       "Number of bytes which this process caused to be sent to the storage layer, modulo truncate(), per second"
     ]
 
-   <> fGrp  "CPU% spans"                W5 Len P0 Lin Free
+   <> fGrp  "CPU-85%span"               W5 Len P0 Lin Free
     [ fGrp' "cdfSpanLensCpu"        "All" (DInt cdfSpanLensCpu)
       "CPU 85% spans"
       "Length of over-85% CPU usage peaks"
@@ -556,18 +563,18 @@ instance TimelineFields (SlotStats NominalDiffTime) where
 
       fW64' "slot"       "abs." "slot#" W5 Slo (IWord64 (unSlotNo      .slSlot))
    <> fW64' "epochSlot"   "ep."  "slot" W4 Slo (IWord64 (unEpochSlot   .slEpochSlot))
-   <> fW64' "epoch"       "ep."     "#" W2 Epo (IWord64 (unEpochNo     .slEpoch))
-   <> fW64' "safetyInt"  "safe"   "int" W3 Ix  (IWord64 (unEpochSafeInt.slEpochSafeInt))
-   <> fGrp "block"                      W5 Blk P0 Lin Free
+   <> fW64' "epoch"       "ep"      "#" W2 Epo (IWord64 (unEpochNo     .slEpoch))
+   <> fW64' "safetyInt"   "saf"   "int" W3 Ix  (IWord64 (unEpochSafeInt.slEpochSafeInt))
+   <> fGrp "block"                      W4 Blk P0 Lin Free
     [ fGrp' "block"                 "no."      (IWord64 (unBlockNo.slBlockNo)) "" ""
     , fGrp' "blockGap"              "gap"      (IWord64 slBlockGap) "" ""
     ]
    <> fGrp2                             W3 Ev  P0 Lin Free
     [ fGrp2' "forgeLoop"    "forg"  "loo"      (IWord64 slCountStarts) "" ""
-    , fGrp2' "blockCtx"     "blok"  "ctx"      (IWord64 slCountBlkCtx) "" ""
-    , fGrp2' "ledgerState"  "ledg"  "sta"      (IWord64 slCountLgrState) "" ""
-    , fGrp2' "ledgerView"   "ledg"  "viw"      (IWord64 slCountLgrView) "" ""
-    , fGrp2' "leadShips"    "ship"  "win"      (IWord64 slCountLeads) "" ""
+    , fGrp2' "blockCtx"     "blk"   "ctx"      (IWord64 slCountBlkCtx) "" ""
+    , fGrp2' "ledgerState"  "lgr"   "sta"      (IWord64 slCountLgrState) "" ""
+    , fGrp2' "ledgerView"   "lgr"   "viw"      (IWord64 slCountLgrView) "" ""
+    , fGrp2' "leadShips"    "ldr"   "win"      (IWord64 slCountLeads) "" ""
     , fGrp2' "forges"       "For"   "ge"       (IWord64 slCountForges) "" ""
     , fGrp2' "CDBSnap"      "CDB"   "snap"     (IWord64 slChainDBSnap) "" ""
     , fGrp2' "rejTxs"       "rej"   "txs"      (IWord64 slRejectedTx) "" ""
@@ -578,9 +585,11 @@ instance TimelineFields (SlotStats NominalDiffTime) where
     , fGrp2' "lgrState"     "ledgr" "state"    (IDeltaTM slLgrState) "" ""
     , fGrp2' "lgrView"      "ledgr" "view"     (IDeltaTM slLgrView) "" ""
     , fGrp2' "leadChecked"  "ledsh" "chekd"    (IDeltaTM slLeading) "" ""
+    , fGrp2' "lgrTicked"    "ledgr" "tickd"    (IDeltaTM slTicked) "" ""
+    , fGrp2' "mempoolSnap"  "mpool" "snapd"    (IDeltaTM slMemSnap) "" ""
     , fGrp2' "forge"        "forge" "done"     (IDeltaTM slForged) "" ""
     ]
-   <> fGrpF  "mempool tx"               W4
+   <> fGrpF  ",-mempool tx work-."      W4
     [ fGrpF' "SpanTxsMem"          "span" Sec P3 Log Free (IDeltaTM slSpanTxsMem) "" ""
     , fGrpF' "TxsCollected"        "cold" Uni P0 Lin Free (IWord64 slTxsCollected) "" ""
     , fGrpF' "TxsAccepted"         "accd" Uni P0 Lin Free (IWord64 slTxsAccepted) "" ""
@@ -641,7 +650,9 @@ fW64' id h1 h2 wi u sel = fBoth id h1 h2 wi u P0 Lin Free sel "" ""
 
 fGrp :: Text -> Width -> Unit -> Precision -> Scale -> Range -> [Unit -> Precision -> Scale -> Range -> Width -> Text -> [Field s p a]] -> [Field s p a]
 fGrp hTop w u p s r fs = mconcat $
-  zip fs (nChunksEachOf (length fs) (width w + 1) hTop)
+  zip fs (nChunksEachOf (length fs)
+                        (unsafeUnWidth ("width of group " <> T.unpack hTop) w + 1)
+                        hTop)
     <&> \(f, chunk) -> f u p s r w chunk
 
 -- fUni :: Text -> Text         -> Width -> Unit -> Precision -> Scale -> Range -> s p a -> Text -> Text -> [Field s p a]
@@ -659,7 +670,9 @@ fGrp2' id h1 h2 sel sd d u p s r wi = [Field id h1 h2 wi u p s r sel sd d]
 
 fGrpF :: Text -> Width -> [Width -> Text -> [Field s p a]] -> [Field s p a]
 fGrpF hTop w fs = mconcat $
-  zip fs (nChunksEachOf (length fs) (width w) hTop)
+  zip fs (nChunksEachOf (length fs)
+                        (unsafeUnWidth ("width of group " <> T.unpack hTop) w + 1)
+                        hTop)
     <&> \(f, chunk) -> f w chunk
 
 fGrpF' :: Text -> Text -> Unit -> Precision -> Scale -> Range -> s p a -> Text -> Text -> Width -> Text -> [Field s p a]

@@ -61,6 +61,8 @@ summariseMultiBlockProp centiles bs@(headline:_) = do
   cdfForgerLgrState         <- cdf2OfCDFs comb $ bs <&> cdfForgerLgrState
   cdfForgerLgrView          <- cdf2OfCDFs comb $ bs <&> cdfForgerLgrView
   cdfForgerLeads            <- cdf2OfCDFs comb $ bs <&> cdfForgerLeads
+  cdfForgerTicked           <- cdf2OfCDFs comb $ bs <&> cdfForgerTicked
+  cdfForgerMemSnap          <- cdf2OfCDFs comb $ bs <&> cdfForgerMemSnap
   cdfForgerForges           <- cdf2OfCDFs comb $ bs <&> cdfForgerForges
   cdfForgerAdoptions        <- cdf2OfCDFs comb $ bs <&> cdfForgerAdoptions
   cdfForgerAnnouncements    <- cdf2OfCDFs comb $ bs <&> cdfForgerAnnouncements
@@ -244,6 +246,8 @@ data MachView
   , mvLgrState :: !(SMaybe UTCTime)
   , mvLgrView  :: !(SMaybe UTCTime)
   , mvLeading  :: !(SMaybe UTCTime)
+  , mvTicked   :: !(SMaybe UTCTime)
+  , mvMemSnap  :: !(SMaybe UTCTime)
   }
   deriving (FromJSON, Generic, NFData, ToJSON)
 
@@ -395,6 +399,8 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
           , bfLgrState   = bfeLgrState
           , bfLgrView    = bfeLgrView
           , bfLeading    = bfeLeading   & handleMiss "Δt Leading"
+          , bfTicked     = bfeTicked
+          , bfMemSnap    = bfeMemSnap
           , bfForged     = bfeForged    & handleMiss "Δt Forged"
           -- NOTE (XXX, TODO, FIXME):
           --    1. we need to get to the bottom of this
@@ -484,6 +490,8 @@ blockProp run@Run{genesis} Chain{..} = do
     , cdfForgerLgrState      = forgerEventsCDF           (bfLgrState  . beForge)
     , cdfForgerLgrView       = forgerEventsCDF           (bfLgrView   . beForge)
     , cdfForgerLeads         = forgerEventsCDF   (SJust . bfLeading   . beForge)
+    , cdfForgerTicked        = forgerEventsCDF           (bfTicked    . beForge)
+    , cdfForgerMemSnap       = forgerEventsCDF           (bfMemSnap   . beForge)
     , cdfForgerForges        = forgerEventsCDF   (SJust . bfForged    . beForge)
     , cdfForgerAnnouncements = forgerEventsCDF   (SJust . bfAnnounced . beForge)
     , cdfForgerSends         = forgerEventsCDF   (SJust . bfSending   . beForge)
@@ -506,11 +514,13 @@ blockProp run@Run{genesis} Chain{..} = do
     , cdfBlocksFilteredRatio = cdf stdCentiles (blockStats <&>
                                                 uncurry ((/) `on`
                                                          fromIntegral . unCount)
-                                                . (bsFiltered &&& bsChained))
+                                                . (bsFiltered &&& bsChained)
+                                                & filter (not . isNaN))
     , cdfBlocksChainedRatio  = cdf stdCentiles (blockStats <&>
                                                 uncurry ((/) `on`
                                                          fromIntegral . unCount)
-                                                . (bsChained &&& bsTotal))
+                                                . (bsChained &&& bsTotal)
+                                                & filter (not . isNaN))
     }
  where
    blockStats = Map.elems cBlockStats
@@ -571,6 +581,8 @@ blockEventMapsFromLogObjects run (f@(unJsonLogfile -> fp), xs@(x:_)) =
      , mvLgrState = SNothing
      , mvLgrView  = SNothing
      , mvLeading  = SNothing
+     , mvTicked   = SNothing
+     , mvMemSnap  = SNothing
      }
 
 blockPropMachEventsStep :: Run -> JsonLogfile -> MachView -> LogObject -> MachView
@@ -635,6 +647,8 @@ blockPropMachEventsStep run@Run{genesis} (JsonLogfile fp) mv@MachView{..} lo = c
         , bfeLgrState     = mvLgrState
         , bfeLgrView      = mvLgrView
         , bfeLeading      = mvLeading
+        , bfeTicked       = mvTicked
+        , bfeMemSnap      = mvMemSnap
         , bfeForged       = SJust loAt
         , bfeAnnounced    = SNothing
         , bfeSending      = SNothing
@@ -692,6 +706,10 @@ blockPropMachEventsStep run@Run{genesis} (JsonLogfile fp) mv@MachView{..} lo = c
   LogObject{loAt, loBody=LOTraceLeadershipDecided _ leading} ->
     if not leading then mv
     else mv { mvLeading = SJust loAt }
+  LogObject{loAt, loBody=LOTickedLedgerState {}} ->
+    mv { mvTicked  = SJust loAt }
+  LogObject{loAt, loBody=LOMempoolSnapshot{}} ->
+    mv { mvMemSnap = SJust loAt }
   _ -> mv
  where
    fail' :: Host -> Hash -> BPErrorKind -> BPError
@@ -717,7 +735,11 @@ deltifyEvents (MFE x@ForgerEvents{..}) =
   , bfeLeading   = (diffUTCTime <$> bfeLeading   <*> bfeLgrView)
                    <|>
                    (diffUTCTime <$> bfeLeading   <*> bfeStarted)
-  , bfeForged    = diffUTCTime <$> bfeForged    <*> bfeLeading
+  , bfeTicked    = diffUTCTime <$> bfeTicked     <*> bfeLeading
+  , bfeMemSnap   = diffUTCTime <$> bfeMemSnap    <*> bfeTicked
+  , bfeForged    = (diffUTCTime <$> bfeForged    <*> bfeMemSnap)
+                   <|>
+                   (diffUTCTime <$> bfeForged    <*> bfeLeading)
   , bfeAnnounced = diffUTCTime <$> bfeAnnounced <*> bfeForged
   , bfeSending   = diffUTCTime <$> bfeSending   <*> bfeForged
   , bfeAdopted   = diffUTCTime <$> bfeAdopted   <*> bfeForged

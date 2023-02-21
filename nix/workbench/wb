@@ -9,18 +9,19 @@ global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
 
 . "$global_basedir"/lib.sh
 . "$global_basedir"/env.sh
-. "$global_basedir"/profile.sh
 . "$global_basedir"/chaindb.sh
-. "$global_basedir"/genesis.sh
-. "$global_basedir"/topology.sh
 . "$global_basedir"/manifest.sh
+. "$global_basedir"/publish.sh
 . "$global_basedir"/run.sh
 . "$global_basedir"/scenario.sh
-. "$global_basedir"/analyse.sh
-. "$global_basedir"/publish.sh
-. "$global_basedir"/explain-mode.sh
 
-. "$global_basedir"/backend.sh
+. "$global_basedir"/analyse/analyse.sh
+. "$global_basedir"/profile/profile.sh
+. "$global_basedir"/genesis/genesis.sh
+. "$global_basedir"/topology/topology.sh
+
+. "$global_basedir"/backend/backend.sh
+. "$global_basedir"/backend/nixops.sh
 . "$global_basedir"/backend/nomad.sh
 . "$global_basedir"/backend/supervisor.sh
 
@@ -104,11 +105,11 @@ $(red USAGE:)
 
       $(helpopt --batch-name NAME)               Override the batch name (default: $(green ${batchName:-default}))
 
-      $(helpopt --profile-name NAME)             Select profile by name (default: $(green default))
       $(helpopt --iterations \| --times \| --iter \| -n ITERATIONS)
                                       Run this many iterations of the profile.
 
-      $(helpopt --profile DIR)                   Select profile by complete spec stored in DIR.
+      $(helpopt --profile-data DIR)              Path to generic profile data.
+      $(helpopt --backend-data DIR)              Path to backend-specific data.
 
       $(helpopt --idle)                          Use the $(blue idle) scenario.
       $(helpopt --scenario \| -s SCENARIO)        Use the specified scenario.
@@ -132,8 +133,8 @@ EOF
 start()
 {
     local batch_name=
-    local profile_name= profile=
-    local backend=${WB_BACKEND:-supervisor}
+    local profile_data=
+    local backend_data=
     local node_source=.
     local node_rev=
     local cabal_mode=
@@ -154,29 +155,34 @@ start()
     while test $# -gt 0
     do case "$1" in
         --batch-name )                   batch_name=$2;   shift;;
-        --profile-name )                 profile_name=$2; shift;;
         --iterations | --times | --iter | -n ) iterations=$2; no_retry_failed_runs=; shift;;
         --cache-dir )                    setenvjqstr 'cacheDir' $2; shift;;
         --base-port )                    setenvjq    'basePort' $2; shift;;
 
-        --profile )                      run_allocate_args+=($1 $2); profile=$2; shift;;
+        --backend-data )                 backend_data=$2; shift;;
+
+        --cabal-mode | --cabal )         cabal_mode=t;;
+        --node-source )                  node_source=$2; shift;;
+        --node-rev )                     node_rev=$2; shift;;
+
+        ## Allocate
         --genesis-cache-entry )          run_allocate_args+=($1 $2); shift;;
         --topology )                     run_allocate_args+=($1 $2); shift;;
+        --profile-data )                 run_allocate_args+=($1 $2); profile_data=$2; shift;;
+        -- )                             shift ## Bulk-pass:
+                                         run_allocate_args+=("$@")
+                                         break;;
 
+        ## Start
         --idle )                         run_start_args+=($1);;
         --scenario | -s )                run_start_args+=($1 $2); shift;;
 
+        ## Analyse
         --no-analysis )                  no_analysis=true;;
         --analysis-can-fail | -af )      analysis_can_fail=t;;
         --filters )                      analyse_args+=($1 $2); shift;;
 
-        --node-source )                  node_source=$2; shift;;
-        --node-rev )                     node_rev=$2; shift;;
-        --cabal-mode | --cabal )         run_allocate_args+=($1); cabal_mode=t;;
-        --skip-prebuild | -sp )          skip_prebuild=t;;
-        --supervisor | --backend-supervisor )
-                                         backend=supervisor;;
-
+        ## Aux
         --verbose | -v )                 export verbose=t;;
         --trace | --debug )              set -x;;
         --trace-wb | --trace-workbench ) export WB_EXTRA_FLAGS=--trace;;
@@ -189,12 +195,12 @@ start()
     then . $(dirname "$0")/lib-cabal.sh
     fi
 
-    backend assert-is $backend
+    backend validate
     backend assert-stopped
-    backend setenv-defaults "$profile"
+    backend setenv-defaults "$backend_data"
 
-    profile_name=${profile_name:-$(jq '.name' -r $profile/profile.json)}
-    analysis_type=$(jq '.analysis.type' -r $profile/profile.json)
+    profile_name=$(jq '.name' -r $profile_data/profile.json)
+    analysis_type=$(jq '.analysis.type' -r $profile_data/profile.json)
 
     local top_i
     for ((top_i=0; top_i<$iterations; top_i++))
@@ -203,21 +209,21 @@ start()
        local manifest=$(manifest collect-from-checkout "$node_source" $node_rev)
        manifest report "$manifest"
 
-       if test -z "$cabal_mode" -o -n "$prebuild_done"
-       then true
-       elif test -n "$skip_prebuild"
-       then progress "workbench | cabal" "skipping Cabal prebuilding due to $(yellow --skip-prebuild)"
-       else workbench-prebuild-executables
+       if test -n "$cabal_mode" -a -z "$prebuild_done"
+       then workbench-prebuild-executables
             prebuild_done=t
        fi
 
        progress "top-level" "profile $(with_color 'yellow' $profile_name), iteration $(with_color 'white' $((top_i+1))) of $(with_color 'yellow' $iterations)"
 
-       local args=(
-            ${run_allocate_args[@]}
+       local allocate_args=(
+           $batch_name
+           $profile_name
+           $WB_BACKEND
             --manifest "$manifest"
-        )
-       run ${run_args[@]} 'allocate' $batch_name $profile_name $backend "${args[@]}"
+            ${run_allocate_args[@]}
+       )
+       run "${run_args[@]}" allocate "${allocate_args[@]}"
        local run=$(run current-tag)
 
        current_run_path=$(run current-path)
@@ -249,9 +255,11 @@ finish()
     run stop $(run current-tag)
 }
 
-pass_flags=()
 while test $# -gt 0
 do case "$1" in
+       --nixops     | --backend-nixops )     export WB_BACKEND=nixops;;
+       --nomad      | --backend-nomad )      export WB_BACKEND=nomad;;
+       --supervisor | --backend-supervisor ) export WB_BACKEND=supervisor;;
        --cls )
            echo -en "\ec">&2;;
        --trace | --debug )

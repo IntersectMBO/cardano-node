@@ -177,6 +177,14 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
             <$> v .: "slot"
             <*> pure False
 
+  , (,,,) "TraceForgeTickedLedgerState" "Forge.TickedLedgerState" "Forge.Loop.TickedLedgerState" $
+    \v -> LOTickedLedgerState
+            <$> v .: "slot"
+
+  , (,,,) "TraceForgingMempoolSnapshot" "Forge.MempoolSnapshot" "Forge.Loop.MempoolSnapshot" $
+    \v -> LOMempoolSnapshot
+            <$> v .: "slot"
+
   -- Forging:
   , (,,,) "TraceForgedBlock" "Forge.ForgedBlock" "Forge.Loop.ForgedBlock" $
     \v -> LOBlockForged
@@ -320,6 +328,12 @@ data LOBody
   | LOTraceLeadershipDecided
     { loSlotNo           :: !SlotNo
     , loLeader           :: !Bool
+    }
+  | LOTickedLedgerState
+    { loSlotNo           :: !SlotNo
+    }
+  | LOMempoolSnapshot
+    { loSlotNo           :: !SlotNo
     }
   -- Forging:
   | LOBlockForged

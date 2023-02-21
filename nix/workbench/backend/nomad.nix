@@ -1,5 +1,7 @@
 { pkgs
 , lib
+
+, basePort
 ## `useCabalRun` not used here like in `supervisor.nix`.
 , ...
 }:
@@ -74,6 +76,8 @@ let
               inherit
                 (pkgs.cardanoNodePackages)
                 cardano-node cardano-tracer tx-generator;
+
+              cardano-node-eventlogged = pkgs.cardanoNodePackages.cardano-node.passthru.eventlogged;
             };
         supervisorConf =
           import ./supervisor-conf.nix
@@ -90,7 +94,7 @@ let
               # Actually always "false", may evolve to a "cloud" flag!
               oneTracerPerNode = false;
             };
-      in pkgs.runCommand "workbench-backend-output-${profileNix.name}-${name}"
+      in pkgs.runCommand "workbench-backend-output-${profileNix.profileName}-nomad"
         ({
           ociImagesJSON = ociImages.JSON;
           inherit nomadJobJSON;
@@ -100,7 +104,14 @@ let
         ln -s $ociImagesJSON                           $out/oci-images.json
         ln -s $nomadJobJSON                            $out/nomad-job.json
         '';
+
+  overlay =
+    proTopo: self: super:
+    {
+    };
 in
 {
-  inherit name useCabalRun extraShellPkgs materialise-profile;
+  name = "nomad";
+
+  inherit extraShellPkgs materialise-profile overlay basePort useCabalRun;
 }
