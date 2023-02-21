@@ -959,10 +959,9 @@ data BalancedTxBody era
 -- which can be queried from a local node.
 --
 makeTransactionBodyAutoBalance
-  :: forall era mode.
+  :: forall era.
      IsShelleyBasedEra era
-  => EraInMode era mode
-  -> SystemStart
+  => SystemStart
   -> LedgerEpochInfo
   -> ProtocolParameters
   -> Set PoolId       -- ^ The set of registered stake pools
@@ -971,7 +970,7 @@ makeTransactionBodyAutoBalance
   -> AddressInEra era -- ^ Change address
   -> Maybe Word       -- ^ Override key witnesses
   -> Either TxBodyErrorAutoBalance (BalancedTxBody era)
-makeTransactionBodyAutoBalance eraInMode systemstart history pparams
+makeTransactionBodyAutoBalance systemstart history pparams
                             poolids utxo txbodycontent changeaddr mnkeys = do
 
     let lpparams = toLedgerPParams era pparams

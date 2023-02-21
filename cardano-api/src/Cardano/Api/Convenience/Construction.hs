@@ -24,8 +24,6 @@ import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.Fees
-import           Cardano.Api.IPC
-import           Cardano.Api.Modes
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
 import           Cardano.Api.Tx
@@ -38,8 +36,7 @@ import           Cardano.Api.Utils
 -- for constructBalancedTx.
 constructBalancedTx
   :: IsShelleyBasedEra era
-  => EraInMode era CardanoMode
-  -> TxBodyContent BuildTx era
+  => TxBodyContent BuildTx era
   -> AddressInEra era -- ^ Change address
   -> Maybe Word       -- ^ Override key witnesses
   -> UTxO era         -- ^ Just the transaction inputs, not the entire 'UTxO'.
@@ -49,11 +46,11 @@ constructBalancedTx
   -> Set PoolId       -- ^ The set of registered stake pools
   -> [ShelleyWitnessSigningKey]
   -> Either TxBodyErrorAutoBalance (Tx era)
-constructBalancedTx eInMode txbodcontent changeAddr mOverrideWits utxo pparams
+constructBalancedTx txbodcontent changeAddr mOverrideWits utxo pparams
                     ledgerEpochInfo systemStart stakePools shelleyWitSigningKeys = do
   BalancedTxBody _ txbody _txBalanceOutput _fee
     <- makeTransactionBodyAutoBalance
-         eInMode systemStart ledgerEpochInfo
+         systemStart ledgerEpochInfo
          pparams stakePools utxo txbodcontent
          changeAddr mOverrideWits
 

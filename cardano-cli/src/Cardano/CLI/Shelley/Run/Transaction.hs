@@ -18,11 +18,11 @@ module Cardano.CLI.Shelley.Run.Transaction
   , toTxOutInAnyEra
   ) where
 
-import           Control.Monad (forM_)
+import           Control.Monad (forM_, void)
 import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, hoistMaybe, left,
-                   newExceptT)
+                   newExceptT, onNothing)
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.Bifunctor (Bifunctor (..))
 import qualified Data.ByteString.Char8 as BS
@@ -54,6 +54,7 @@ import           Cardano.CLI.Shelley.Run.Read
 import           Cardano.CLI.Shelley.Run.Validate
 import           Cardano.CLI.Types
 
+import           Data.Function ((&))
 import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
 
@@ -699,11 +700,9 @@ runTxBuild era (AnyConsensusModeParams cModeParams) networkId mScriptValidity
 
   case (consensusMode, cardanoEraStyle era) of
     (CardanoMode, ShelleyBasedEra _sbe) -> do
-      eInMode <- case toEraInMode era CardanoMode of
-                   Just result -> return result
-                   Nothing ->
-                     left (ShelleyTxCmdEraConsensusModeMismatchTxBalance outputOptions
-                            (AnyConsensusMode CardanoMode) (AnyCardanoEra era))
+      void $ pure (toEraInMode era CardanoMode)
+        & onNothing (left (ShelleyTxCmdEraConsensusModeMismatchTxBalance outputOptions
+                            (AnyConsensusMode CardanoMode) (AnyCardanoEra era)))
 
       SocketPath sockPath <- firstExceptT ShelleyTxCmdSocketEnvError
                              $ newExceptT readEnvSocketPath
@@ -764,7 +763,7 @@ runTxBuild era (AnyConsensusModeParams cModeParams) networkId mScriptValidity
       balancedTxBody@(BalancedTxBody _ _ _ fee) <-
         firstExceptT ShelleyTxCmdBalanceTxBody
           . hoistEither
-          $ makeTransactionBodyAutoBalance eInMode systemStart (toLedgerEpochInfo eraHistory)
+          $ makeTransactionBodyAutoBalance systemStart (toLedgerEpochInfo eraHistory)
                                            pparams stakePools txEraUtxo txBodyContent
                                            cAddr mOverrideWits
 
