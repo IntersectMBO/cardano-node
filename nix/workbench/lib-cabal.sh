@@ -21,6 +21,7 @@ export WB_NODE_EXECPREFIX="eval ${WB_TIME[*]@Q}"
 
 function workbench-prebuild-executables()
 {
+    eval $muffle_trace_set_exit
     msg "prebuilding executables (because of useCabalRun)"
     git diff --exit-code --quiet && echo -n ' ' || echo -n "$(yellow local changes +) "
     git --no-pager log -n1 --alternate-refs --pretty=format:"%Cred%cr %Cblue%h %Cgreen%D %Cblue%s%Creset" --color
@@ -34,6 +35,7 @@ function workbench-prebuild-executables()
        cabal $(test -z "${verbose:-}" && echo '-v0') build ${WB_FLAGS_CABAL} -- exe:$exe 2>&1 >/dev/null || return 1
     done
     echo
+    eval $restore_trace
 }
 
 function cardano-cli() {

@@ -1,7 +1,8 @@
 global_rundir_def=$(realpath ${WB_RUNDIR:-$PWD/run})
 
 usage_run() {
-     usage "run" "Managing cluster runs" <<EOF
+    set +x
+    usage "run" "Managing cluster runs" <<EOF
     $(helpcmd list-runs)              List local runs
      $(blk runs lsr)
     $(helpcmd list-remote)            List AWS runs

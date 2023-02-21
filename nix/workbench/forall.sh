@@ -20,5 +20,5 @@ case "${op}" in
         # $subop
         ;;
 
-    * ) usage_forall;; esac
+    * ) set +x; usage_forall;; esac
 }

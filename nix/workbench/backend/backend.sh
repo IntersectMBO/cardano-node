@@ -74,5 +74,5 @@ case "${op}" in
           true
         ;;
 
-    * ) usage_backend;; esac
+    * ) set +x; usage_backend;; esac
 }

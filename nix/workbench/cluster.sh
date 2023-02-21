@@ -18,5 +18,5 @@ case "${op}" in
         # $subop
         ;;
 
-    * ) usage_cluster;; esac
+    * ) set +x; usage_cluster;; esac
 }
