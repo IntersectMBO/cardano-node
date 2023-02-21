@@ -440,6 +440,10 @@ makePlutusContext ScriptSpec{..} = do
     AutoScript redeemerFile txInputs -> do
       redeemer <- liftIOSafe $ readScriptData redeemerFile
       let
+        strategy = case scriptSpecPlutusType of
+          LimitTxPerBlock_8 -> TargetTxsPerBlock 8
+          _                 -> TargetTxExpenditure
+
         -- reflects properties hard-coded into the loop scripts for benchmarking:
         -- 1. script datum is not used
         -- 2. the loop terminates at 1_000_000 when counting down
@@ -451,17 +455,8 @@ makePlutusContext ScriptSpec{..} = do
           }
       traceDebug $ "Plutus auto mode : Available budget per Tx: " ++ show perTxBudget
                    ++ " -- split between inputs per Tx: " ++ show txInputs
-      {-
-      case plutusAutoBudgetMaxOut protocolParameters script autoBudget (TargetBlockExpenditure 1.25) txInputs of
-        Left err -> liftTxGenError err
-        Right result@(PlutusAutoBudget{..}, _, _) -> do
-          preRun <- preExecuteScriptAction protocolParameters script autoBudgetDatum autoBudgetRedeemer
-          setEnvSummary $
-            plutusBudgetSummary protocolParameters scriptSpecFile result preRun txInputs
-          dumpBudgetSummaryIfExisting
-          return (autoBudgetDatum, autoBudgetRedeemer, preRun)
-      -}
-      case plutusAutoScaleBlockfit protocolParameters scriptSpecFile script autoBudget (Just 8) txInputs of
+
+      case plutusAutoScaleBlockfit protocolParameters scriptSpecFile script autoBudget strategy txInputs of
         Left err -> liftTxGenError err
         Right (summary, PlutusAutoBudget{..}, preRun) -> do
           setEnvSummary summary

@@ -191,7 +191,7 @@ checkPlutusLoop (Just PlutusOn{..})
 
     let
       blockMaxOut b d =
-        case plutusAutoScaleBlockfit (pparamsStepFraction d) ("factor for block execution steps: " ++ show d) script b (Just 8) 1 of
+        case plutusAutoScaleBlockfit (pparamsStepFraction d) ("factor for block execution steps: " ++ show d) script b (TargetTxsPerBlock 8) 1 of
           Right (summary, _, _) -> BSL.putStrLn $ prettyPrintOrdered summary
           Left err              -> print err
 
