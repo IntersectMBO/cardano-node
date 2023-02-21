@@ -511,40 +511,36 @@ evaluateTransactionExecutionUnits
   -> TxBody era
   -> Either TransactionValidityError
             (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
-evaluateTransactionExecutionUnits eraInMode systemstart epochInfo pparams utxo txbody =
+evaluateTransactionExecutionUnits _eraInMode systemstart epochInfo pparams utxo txbody =
   case makeSignedTransaction [] txbody of
     ByronTx {} -> evalPreAlonzo
     ShelleyTx sbe tx' ->
-      evaluateShelleyBasedTransactionExecutionUnits eraInMode sbe systemstart epochInfo pparams utxo txbody tx'
+      evaluateShelleyBasedTransactionExecutionUnits sbe systemstart epochInfo pparams utxo tx'
 
 evaluateShelleyBasedTransactionExecutionUnits
-  :: forall ledgerera era mode.
+  :: forall ledgerera era.
      ShelleyLedgerEra era ~ ledgerera
-  => EraInMode era mode
-  -> ShelleyBasedEra era
+  => ShelleyBasedEra era
   -> SystemStart
   -> LedgerEpochInfo
   -> ProtocolParameters
   -> UTxO era
-  -> TxBody era
   -> Ledger.Tx (ShelleyLedgerEra era)
   -> Either TransactionValidityError
             (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
-evaluateShelleyBasedTransactionExecutionUnits _eraInMode sbe systemstart (LedgerEpochInfo ledgerEpochInfo)
-                                  pparams utxo txbody tx' =
-    case makeSignedTransaction [] txbody of
-      ByronTx {}                 -> evalPreAlonzo
-      ShelleyTx era _tx' ->
-        case sbe of
-          ShelleyBasedEraShelley -> evalPreAlonzo
-          ShelleyBasedEraAllegra -> evalPreAlonzo
-          ShelleyBasedEraMary    -> evalPreAlonzo
-          ShelleyBasedEraAlonzo  -> evalAlonzo era tx'
-          ShelleyBasedEraBabbage ->
-            case collateralSupportedInEra $ shelleyBasedToCardanoEra era of
-              Just supp -> obtainHasFieldConstraint supp $ evalBabbage era tx'
-              Nothing -> return mempty
+evaluateShelleyBasedTransactionExecutionUnits sbe systemstart epochInfo pparams utxo tx' =
+  case sbe of
+    ShelleyBasedEraShelley -> evalPreAlonzo
+    ShelleyBasedEraAllegra -> evalPreAlonzo
+    ShelleyBasedEraMary    -> evalPreAlonzo
+    ShelleyBasedEraAlonzo  -> evalAlonzo sbe tx'
+    ShelleyBasedEraBabbage ->
+      case collateralSupportedInEra $ shelleyBasedToCardanoEra sbe of
+        Just supp -> obtainHasFieldConstraint supp $ evalBabbage sbe tx'
+        Nothing -> return mempty
   where
+    LedgerEpochInfo ledgerEpochInfo = epochInfo
+
     evalAlonzo :: forall ledgerera2.
                   ShelleyLedgerEra era ~ ledgerera2
                => ledgerera2 ~ Alonzo.AlonzoEra Ledger.StandardCrypto
