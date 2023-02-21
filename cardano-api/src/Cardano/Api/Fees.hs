@@ -526,12 +526,6 @@ evaluateTransactionExecutionUnits _eraInMode systemstart (LedgerEpochInfo ledger
               Just supp -> obtainHasFieldConstraint supp $ evalBabbage era tx'
               Nothing -> return mempty
   where
-    -- Pre-Alonzo eras do not support languages with execution unit accounting.
-    evalPreAlonzo :: Either TransactionValidityError
-                            (Map ScriptWitnessIndex
-                                 (Either ScriptExecutionError ExecutionUnits))
-    evalPreAlonzo = Right Map.empty
-
     evalAlonzo :: forall ledgerera.
                   ShelleyLedgerEra era ~ ledgerera
                => ledgerera ~ Alonzo.AlonzoEra Ledger.StandardCrypto
@@ -632,6 +626,11 @@ evaluateTransactionExecutionUnits _eraInMode systemstart (LedgerEpochInfo ledger
     obtainHasFieldConstraint CollateralInAlonzoEra f =  f
     obtainHasFieldConstraint CollateralInBabbageEra f =  f
 
+-- | Pre-Alonzo eras do not support languages with execution unit accounting.
+evalPreAlonzo :: Either TransactionValidityError
+                        (Map ScriptWitnessIndex
+                              (Either ScriptExecutionError ExecutionUnits))
+evalPreAlonzo = Right Map.empty
 
 -- ----------------------------------------------------------------------------
 -- Transaction balance
