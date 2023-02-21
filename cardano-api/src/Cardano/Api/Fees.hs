@@ -1,5 +1,5 @@
-{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -11,6 +11,7 @@
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | Fee calculation
 --
@@ -236,7 +237,7 @@ estimateTransactionFee _ _ _ (ByronTx _) =
 --
 evaluateTransactionFee :: forall era.
                           IsShelleyBasedEra era
-                       => ProtocolParameters
+                       => Ledger.PParams (ShelleyLedgerEra era)
                        -> TxBody era
                        -> Word  -- ^ The number of Shelley key witnesses
                        -> Word  -- ^ The number of Byron key witnesses
@@ -244,23 +245,22 @@ evaluateTransactionFee :: forall era.
 evaluateTransactionFee _ _ _ byronwitcount | byronwitcount > 0 =
   error "evaluateTransactionFee: TODO support Byron key witnesses"
 
-evaluateTransactionFee pparams txbody keywitcount _byronwitcount =
+evaluateTransactionFee lpparams txbody keywitcount _byronwitcount =
     case makeSignedTransaction [] txbody of
       ByronTx{} -> case shelleyBasedEra :: ShelleyBasedEra era of {}
       --TODO: we could actually support Byron here, it'd be different but simpler
 
-      ShelleyTx era tx -> withLedgerConstraints era (evalShelleyBasedEra era tx)
+      ShelleyTx era tx -> withLedgerConstraints era (evalShelleyBasedEra tx)
   where
     evalShelleyBasedEra :: forall ledgerera.
                            ShelleyLedgerEra era ~ ledgerera
                         => Ledger.CLI ledgerera
-                        => ShelleyBasedEra era
-                        -> Ledger.Tx ledgerera
+                        => Ledger.Tx ledgerera
                         -> Lovelace
-    evalShelleyBasedEra era tx =
+    evalShelleyBasedEra tx =
       fromShelleyLovelace $
         Ledger.evaluateTransactionFee
-          (toLedgerPParams era pparams)
+          lpparams
           tx
           keywitcount
 
@@ -993,7 +993,8 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
 
     let nkeys = fromMaybe (estimateTransactionKeyWitnessCount txbodycontent1)
                           mnkeys
-        fee   = evaluateTransactionFee pparams txbody1 nkeys 0 --TODO: byron keys
+        lpparams = toLedgerPParams era pparams
+        fee   = evaluateTransactionFee lpparams txbody1 nkeys 0 --TODO: byron keys
         (retColl, reqCol) = calcReturnAndTotalCollateral
                               fee pparams (txInsCollateral txbodycontent)
                               (txReturnCollateral txbodycontent)
