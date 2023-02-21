@@ -252,6 +252,7 @@ module Cardano.Api (
 
     -- ** Script execution units
     evaluateTransactionExecutionUnits,
+    evaluateShelleyBasedTransactionExecutionUnits,
     ScriptExecutionError(..),
     TransactionValidityError(..),
 

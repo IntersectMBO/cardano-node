@@ -24,6 +24,7 @@ module Cardano.Api.Fees (
 
     -- * Script execution units
     evaluateTransactionExecutionUnits,
+    evaluateShelleyBasedTransactionExecutionUnits,
     ScriptExecutionError(..),
     TransactionValidityError(..),
 
@@ -515,8 +516,14 @@ evaluateTransactionExecutionUnits _eraInMode systemstart epochInfo pparams utxo 
   case makeSignedTransaction [] txbody of
     ByronTx {} -> evalPreAlonzo
     ShelleyTx sbe tx' ->
-      evaluateShelleyBasedTransactionExecutionUnits sbe systemstart epochInfo pparams utxo tx'
+      let lPParams = toLedgerPParams sbe pparams in
+      evaluateShelleyBasedTxExecutionUnits sbe systemstart epochInfo pparams lPParams utxo tx'
 
+-- | Compute the 'ExecutionUnits' needed for each script in the transaction.
+--
+-- This works by running all the scripts and counting how many execution units
+-- are actually used.
+--
 evaluateShelleyBasedTransactionExecutionUnits
   :: forall ledgerera era.
      ShelleyLedgerEra era ~ ledgerera
@@ -524,11 +531,30 @@ evaluateShelleyBasedTransactionExecutionUnits
   -> SystemStart
   -> LedgerEpochInfo
   -> ProtocolParameters
+  -> Ledger.PParams (ShelleyLedgerEra era)
+  -> UTxO era
+  -> TxBody era
+  -> Either TransactionValidityError
+            (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
+evaluateShelleyBasedTransactionExecutionUnits sbe systemstart epochInfo pparams lPParams utxo txbody =
+  case makeSignedTransaction [] txbody of
+    ByronTx {} -> evalPreAlonzo
+    ShelleyTx _sbe tx' ->
+      evaluateShelleyBasedTxExecutionUnits sbe systemstart epochInfo pparams lPParams utxo tx'
+
+evaluateShelleyBasedTxExecutionUnits
+  :: forall ledgerera era.
+     ShelleyLedgerEra era ~ ledgerera
+  => ShelleyBasedEra era
+  -> SystemStart
+  -> LedgerEpochInfo
+  -> ProtocolParameters
+  -> Ledger.PParams (ShelleyLedgerEra era)
   -> UTxO era
   -> Ledger.Tx (ShelleyLedgerEra era)
   -> Either TransactionValidityError
             (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
-evaluateShelleyBasedTransactionExecutionUnits sbe systemstart epochInfo pparams utxo tx' =
+evaluateShelleyBasedTxExecutionUnits sbe systemstart epochInfo pparams lPParams utxo tx' =
   case sbe of
     ShelleyBasedEraShelley -> evalPreAlonzo
     ShelleyBasedEraAllegra -> evalPreAlonzo
@@ -555,7 +581,7 @@ evaluateShelleyBasedTransactionExecutionUnits sbe systemstart epochInfo pparams 
     evalAlonzo era tx = do
       cModelArray <- toAlonzoCostModelsArray (protocolParamCostModels pparams)
       case Alonzo.evaluateTransactionExecutionUnits
-             (toLedgerPParams era pparams)
+             lPParams
              tx
              (toLedgerUTxO era utxo)
              ledgerEpochInfo
@@ -577,7 +603,7 @@ evaluateShelleyBasedTransactionExecutionUnits sbe systemstart epochInfo pparams 
     evalBabbage era tx = do
       costModelsArray <- toAlonzoCostModelsArray (protocolParamCostModels pparams)
       case Alonzo.evaluateTransactionExecutionUnits
-             (toLedgerPParams era pparams)
+             lPParams
              tx
              (toLedgerUTxO era utxo)
              ledgerEpochInfo
@@ -948,6 +974,8 @@ makeTransactionBodyAutoBalance
 makeTransactionBodyAutoBalance eraInMode systemstart history pparams
                             poolids utxo txbodycontent changeaddr mnkeys = do
 
+    let lpparams = toLedgerPParams era pparams
+
     -- Our strategy is to:
     -- 1. evaluate all the scripts to get the exec units, update with ex units
     -- 2. figure out the overall min fees
@@ -962,10 +990,11 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
         }
 
     exUnitsMap <- first TxBodyErrorValidityInterval $
-                    evaluateTransactionExecutionUnits
-                      eraInMode
+                    evaluateShelleyBasedTransactionExecutionUnits
+                      era
                       systemstart history
                       pparams
+                      lpparams
                       utxo
                       txbody0
 
@@ -1006,7 +1035,6 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
 
     let nkeys = fromMaybe (estimateTransactionKeyWitnessCount txbodycontent1)
                           mnkeys
-        lpparams = toLedgerPParams era pparams
         fee   = evaluateTransactionFee lpparams txbody1 nkeys 0 --TODO: byron keys
         (retColl, reqCol) = calcReturnAndTotalCollateral
                               fee pparams (txInsCollateral txbodycontent)
