@@ -268,7 +268,7 @@ def all_profile_variants:
   |
    ({ generator:
       { plutus:
-          { type:                      "LimitSaturationLoop"
+          { type:                      "LimitTxPerBlock_8"
           , script:                    "v2/ecdsa-secp256k1-loop.plutus"
           , redeemer:
             { constructor: 0
@@ -291,7 +291,7 @@ def all_profile_variants:
   |
    ({ generator:
       { plutus:
-          { type:                       "LimitSaturationLoop"
+          { type:                       "LimitTxPerBlock_8"
           , script:                     "v2/schnorr-secp256k1-loop.plutus"
           , redeemer:
             { constructor: 0

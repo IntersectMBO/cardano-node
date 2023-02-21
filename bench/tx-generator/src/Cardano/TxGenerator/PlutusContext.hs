@@ -6,6 +6,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# OPTIONS_GHC -fno-warn-overlapping-patterns #-}
 
 module  Cardano.TxGenerator.PlutusContext
         ( PlutusAutoLimitingFactor(..)
@@ -61,10 +62,11 @@ data PlutusAutoLimitingFactor
   | ExceededStepLimit
   deriving (Generic, Eq, Show, ToJSON)
 
+-- | This type specifies the end to which a script's loop counter is calibrated
 data PlutusBudgetFittingStrategy
-  = TargetTxExpenditure
-  | TargetBlockExpenditure Double
-  | TargetTxsPerBlock Int
+  = TargetTxExpenditure                     -- ^ calibrate for maximum expenditure of per-tx-budget
+  | TargetBlockExpenditure (Maybe Double)   -- ^ calibrate for maximum expenditure of per-block-budget, with a scaling factor of [1.0, 2.0]
+  | TargetTxsPerBlock Int                   -- ^ calibrate for stable tx count per block
   deriving (Generic, Eq, Show, ToJSON)
 
 instance ToJSON ScriptData where
@@ -83,35 +85,40 @@ readScriptData jsonFilePath
     firstExceptT ApiError . hoistEither $
        scriptDataFromJson ScriptDataJsonDetailedSchema sData
 
--- finds the optimal scaling factor for block expenditure, by aiming at highest loop count per block
+-- | Can find the optimal scaling factor for block expenditure, by aiming at highest
+-- loop count per block iff TargetBlockExpenditure Nothing is given;
+-- will calibrate loop for any fully specified fitting strategy otherwise
 plutusAutoScaleBlockfit ::
      ProtocolParameters
   -> FilePath
   -> ScriptInAnyLang
   -> PlutusAutoBudget
-  -> Maybe Int
+  -> PlutusBudgetFittingStrategy
   -> Int
   -> Either TxGenError (PlutusBudgetSummary, PlutusAutoBudget, ExecutionUnits)
-plutusAutoScaleBlockfit pparams fp script pab mFixedTxPerBlock txInputs
+plutusAutoScaleBlockfit pparams fp script pab strategy txInputs
   = do
     summaries <- mapM go scalingStrats
     let
       maxLoops  = maximumBy (comparing (projectedLoopsPerBlock . fst3)) summaries
       minSteps  = minimumBy (comparing (executionSteps . projectedBudgetUnusedPerBlock . fst3)) summaries
-      msg
-        | length scalingStrats == 1 =
-          "a fixed txs per block was specified"
-        | budgetStrategy (fst3 maxLoops) == budgetStrategy (fst3 minSteps) =
-          "maximizes loops per block AND minimizes unused execution steps per block"
-        | otherwise =
-          "maximizes loops per block BUT DOES NOT minimize unused execution steps per block"
+      msg = case scalingStrats of
+        [TargetTxExpenditure] -> "maxing out loops for tx budget was indicated"
+        [TargetTxsPerBlock t] -> "a fixed " ++ show t ++ " txs per block was specified"
+        _
+          | budgetStrategy (fst3 maxLoops) == budgetStrategy (fst3 minSteps) ->
+            "maximizes loops per block AND minimizes unused execution steps per block"
+          | otherwise ->
+            "maximizes loops per block BUT DOES NOT minimize unused execution steps per block"
     pure $ setMessage msg maxLoops
   where
     fst3 (x, _, _)  = x
     setMessage msg (summ, b, c) = (summ {strategyMessage = Just msg}, b, c)
 
     scalingStrats
-       = maybe (TargetBlockExpenditure <$> [1.0, 1.25 .. 2.0]) (\t -> [TargetTxsPerBlock t]) mFixedTxPerBlock
+      = case strategy of
+        TargetBlockExpenditure Nothing  -> TargetBlockExpenditure . Just <$> [1.0, 1.25 .. 2.0]
+        s                               -> [s]
 
     go strat = do
       result@(pab', _, _) <- plutusAutoBudgetMaxOut pparams script pab strat txInputs
@@ -134,6 +141,8 @@ plutusAutoBudgetMaxOut ::
   -> PlutusBudgetFittingStrategy
   -> Int
   -> Either TxGenError (PlutusAutoBudget, Int, [PlutusAutoLimitingFactor])
+plutusAutoBudgetMaxOut _ _ _ (TargetBlockExpenditure Nothing) _
+  = Left $ TxGenError "plutusAutoBudgetMaxOut : a scaling factor is required for TargetBlockExpenditure"
 plutusAutoBudgetMaxOut
   protocolParams@ProtocolParameters
     { protocolParamMaxBlockExUnits  = Just budgetPerBlock
@@ -159,9 +168,10 @@ plutusAutoBudgetMaxOut
         (fromIntegral (executionMemory budgetPerBlock) / mTx)
 
     targetBudget = case target of
-      TargetTxExpenditure       -> calc budgetPerTx div txInputs                              -- optimize for maximum expenditure of per-tx-budget
-      TargetBlockExpenditure s  -> calc budgetPerBlock div (targetTxPerBlock s * txInputs)    -- optimize for maximum expenditure of per-block-budget
-      TargetTxsPerBlock t       -> calc budgetPerBlock div (t * txInputs) `bmin` budgetPerTx  -- optimize for stable txs per block
+      TargetTxExpenditure             -> calc budgetPerTx div txInputs
+      TargetTxsPerBlock t             -> calc budgetPerBlock div (t * txInputs) `bmin` budgetPerTx
+      TargetBlockExpenditure (Just s) -> calc budgetPerBlock div (targetTxPerBlock s * txInputs)
+      TargetBlockExpenditure Nothing  -> error "plutusAutoBudgetMaxOut : TargetBlockExpenditure Nothing should be unreachable. This is an implementation error in tx-generator."
 
     toLoopArgument n = scriptDataModifyNumber (+ n) autoBudgetRedeemer
 
