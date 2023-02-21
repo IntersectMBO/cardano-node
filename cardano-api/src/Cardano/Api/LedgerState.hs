@@ -127,9 +127,9 @@ import           Cardano.Ledger.BaseTypes (Globals (..), Nonce, UnitInterval, (â
 import qualified Cardano.Ledger.BaseTypes as Shelley.Spec
 import qualified Cardano.Ledger.BHeaderView as Ledger
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Credential as Shelley.Spec
 import qualified Cardano.Ledger.Era
-import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Keys as Shelley.Spec
 import qualified Cardano.Ledger.Keys as SL
 import qualified Cardano.Ledger.PoolDistr as SL
@@ -1361,10 +1361,11 @@ nextEpochEligibleLeadershipSlots
   -> SigningKey VrfKey
   -- ^ VRF signing key of the stake pool
   -> ProtocolParameters
+  -> Ledger.PParams (ShelleyLedgerEra era)
   -> EpochInfo (Either Text)
   -> (ChainTip, EpochNo)
   -> Either LeadershipError (Set SlotNo)
-nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (VrfSigningKey vrfSkey) pParams eInfo (cTip, currentEpoch) = do
+nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (VrfSigningKey vrfSkey) pParams lPParams eInfo (cTip, currentEpoch) = do
   (_, currentEpochLastSlot) <- first LeaderErrSlotRangeCalculationFailure
                                  $ Slot.epochInfoRange eInfo currentEpoch
 
@@ -1420,7 +1421,7 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
       markSnapshotPoolDistr = ShelleyAPI.unPoolDistr . ShelleyAPI.calculatePoolDistr $ snapshot
 
   let slotRangeOfInterest = Set.filter
-        (not . Ledger.isOverlaySlot firstSlotOfEpoch (getField @"_d" (toLedgerPParams sbe pParams)))
+        (not . Ledger.isOverlaySlot firstSlotOfEpoch (getField @"_d" lPParams))
         $ Set.fromList [firstSlotOfEpoch .. lastSlotofEpoch]
 
   case sbe of
@@ -1542,13 +1543,14 @@ currentEpochEligibleLeadershipSlots :: forall era ledgerera. ()
   -> ShelleyGenesis Shelley.StandardShelley
   -> EpochInfo (Either Text)
   -> ProtocolParameters
+  -> Ledger.PParams (ShelleyLedgerEra era)
   -> ProtocolState era
   -> PoolId
   -> SigningKey VrfKey
   -> SerialisedPoolDistribution era
   -> EpochNo -- ^ Current EpochInfo
   -> Either LeadershipError (Set SlotNo)
-currentEpochEligibleLeadershipSlots sbe sGen eInfo pParams ptclState poolid (VrfSigningKey vrkSkey) serPoolDistr currentEpoch = do
+currentEpochEligibleLeadershipSlots sbe sGen eInfo pParams lPParams ptclState poolid (VrfSigningKey vrkSkey) serPoolDistr currentEpoch = do
 
   chainDepState :: ChainDepState (Api.ConsensusProtocol era) <-
     first LeaderErrDecodeProtocolStateFailure $ decodeProtocolState ptclState
@@ -1567,7 +1569,7 @@ currentEpochEligibleLeadershipSlots sbe sGen eInfo pParams ptclState poolid (Vrf
       $ decodePoolDistribution serPoolDistr
 
   let slotRangeOfInterest = Set.filter
-        (not . Ledger.isOverlaySlot firstSlotOfEpoch (getField @"_d" (toLedgerPParams sbe pParams)))
+        (not . Ledger.isOverlaySlot firstSlotOfEpoch (getField @"_d" lPParams))
         $ Set.fromList [firstSlotOfEpoch .. lastSlotofEpoch]
 
   case sbe of

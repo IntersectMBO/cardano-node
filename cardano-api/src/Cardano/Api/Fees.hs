@@ -645,7 +645,7 @@ evaluateTransactionExecutionUnits _eraInMode systemstart (LedgerEpochInfo ledger
 --
 evaluateTransactionBalance :: forall era.
                               IsShelleyBasedEra era
-                           => ProtocolParameters
+                           => Ledger.PParams (ShelleyLedgerEra era)
                            -> Set PoolId
                            -> UTxO era
                            -> TxBody era
@@ -654,7 +654,7 @@ evaluateTransactionBalance _ _ _ (ByronTxBody _) =
     case shelleyBasedEra :: ShelleyBasedEra era of {}
     --TODO: we could actually support Byron here, it'd be different but simpler
 
-evaluateTransactionBalance pparams poolids utxo
+evaluateTransactionBalance lpparams poolids utxo
                            (ShelleyTxBody era txbody _ _ _ _) =
     withLedgerConstraints
       era
@@ -685,7 +685,7 @@ evaluateTransactionBalance pparams poolids utxo
     evalMultiAsset evidence =
       TxOutValue evidence . fromMaryValue $
          Ledger.evaluateTransactionBalance
-           (toLedgerPParams era pparams)
+           lpparams
            (toLedgerUTxO era utxo)
            isNewPool
            txbody
@@ -700,7 +700,7 @@ evaluateTransactionBalance pparams poolids utxo
     evalAdaOnly evidence =
      TxOutAdaOnly evidence . fromShelleyLovelace
        $ Ledger.evaluateTransactionBalance
-           (toLedgerPParams era pparams)
+           lpparams
            (toLedgerUTxO era utxo)
            isNewPool
            txbody
@@ -1010,7 +1010,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
                  txReturnCollateral = retColl,
                  txTotalCollateral = reqCol
                }
-    let balance = evaluateTransactionBalance pparams poolids utxo txbody2
+    let balance = evaluateTransactionBalance lpparams poolids utxo txbody2
 
     mapM_ (`checkMinUTxOValue` pparams) $ txOuts txbodycontent1
 
