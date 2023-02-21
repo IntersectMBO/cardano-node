@@ -372,30 +372,30 @@ EOF
         local profile_name=${1:?$usage}; shift
         local backend_name=${1:?$usage}; shift
 
-        local profile= topology= genesis_cache_entry= manifest= cabal_mode=
+        local profile_data= topology= genesis_cache_entry= manifest=
         while test $# -gt 0
         do case "$1" in
                --manifest )            manifest=$2; shift;;
-               --profile )             profile=$2; shift;;
+               --profile-data )        profile_data=$2; shift;;
                --topology )            topology=$2; shift;;
                --genesis-cache-entry ) genesis_cache_entry=$2; shift;;
-               --cabal-mode | --cabal ) cabal_mode=t;;
                -- ) shift; break;;
                --* ) msg "FATAL:  unknown flag '$1'"; usage_run;;
                * ) break;; esac; shift; done
+        local backend_args=("$@")
 
         ## 1. genesis cache entry
         progress "run | genesis" "cache entry:  $(if test -n "$genesis_cache_entry"; then echo pre-supplied; else echo preparing a new one..; fi)"
         if test -z "$genesis_cache_entry"
         then genesis_cache_entry=$(
                  genesis prepare-cache-entry \
-                     "$profile"/profile.json \
-                  "$profile"/node-specs.json)
+                     "$profile_data"/profile.json \
+                  "$profile_data"/node-specs.json)
         fi
 
         ## 2. allocate time
         progress "run | time" "allocating time:"
-        local timing=$(profile allocate-time "$profile"/profile.json)
+        local timing=$(profile allocate-time "$profile_data"/profile.json)
         profile describe-timing "$timing"
 
         ## 3. decide the tag:
@@ -415,14 +415,14 @@ EOF
             fatal "profile | allocate failed to create writable run directory:  $dir"
 
         ## 5. populate the directory:
-        progress "run | profile" "$(if test -n "$profile"; then echo "pre-supplied ($profile_name):  $profile"; else echo "computed:  $profile_name"; fi)"
-        if test -n "$profile"
+        progress "run | profile" "$(if test -n "$profile_data"; then echo "pre-supplied ($profile_name):  $profile_data"; else echo "computed:  $profile_name"; fi)"
+        if test -n "$profile_data"
         then
-            test "$(jq -r .name $profile/profile.json)" = "$profile_name" ||
-                fatal "profile | allocate incoherence:  --profile $profile/profile.json mismatches '$profile_name'"
-            ln -s "$profile"                 "$dir"/profile
-            cp    "$profile"/profile.json    "$dir"/profile.json
-            cp    "$profile"/node-specs.json "$dir"/node-specs.json
+            test "$(jq -r .name $profile_data/profile.json)" = "$profile_name" ||
+                fatal "profile | allocate incoherence:  --profile-data $profile_data/profile.json mismatches '$profile_name'"
+            ln -s "$profile_data"                 "$dir"/profile
+            cp    "$profile_data"/profile.json    "$dir"/profile.json
+            cp    "$profile_data"/node-specs.json "$dir"/node-specs.json
         else
             fail "Mode no longer supported:  operation without profile/ directory."
         fi
@@ -457,7 +457,7 @@ EOF
         then fail "internal error:  no genesis cache entry"
 
         else genesis derive-from-cache      \
-                     "$profile"             \
+                     "$profile_data"        \
                      "$timing"              \
                      "$genesis_cache_entry" \
                      "$dir"/genesis
@@ -467,7 +467,10 @@ EOF
         cp "$dir"/genesis/genesis.alonzo.json  "$dir"/genesis.alonzo.json
         echo >&2
 
-        backend allocate-run "$dir"
+        if test "$WB_BACKEND" != 'nomad'
+        then run_instantiate_rundir_profile_services "$dir"; fi
+
+        backend allocate-run "$dir" "${backend_args[@]}"
 
         progress "run" "allocated $(with_color white $run) @ $dir"
         run     describe "$run"
@@ -565,7 +568,7 @@ EOF
         local env='bench'
         local depl='bench-1'
 
-        progress "aws" "trying to fetch analyses:  $(white ${runs[*]})"
+        progress "run | aws" "trying to fetch analyses:  $(white ${runs[*]})"
         for run in ${runs[*]}
         do if   test "$(ssh $env -- sh -c "'ls -ld $depl/runs/$run          | wc -l'")" = 0
            then fail "fetch-analysis:  run does not exist on AWS: $(white $run)"
@@ -926,3 +929,35 @@ run_ls_sets_cmd() {
           cut -d/ -f2 |
           sort -u || true'
 }
+
+run_instantiate_rundir_profile_services() {
+    local dir=${1:?run_instantiate_rundir_profile_services arg1: expects a run directory}; shift
+
+    local svcs=$dir/profile/node-services.json
+    local gtor=$dir/profile/generator-service.json
+    local trac=$dir/profile/tracer-service.json
+
+    for node in $(jq_tolist 'keys' "$dir"/node-specs.json)
+    do local node_dir="$dir"/$node
+       mkdir -p                                          "$node_dir"
+       jq      '."'"$node"'"' "$dir"/node-specs.json   > "$node_dir"/node-spec.json
+       cp $(jq '."'"$node"'"."config"'         -r $svcs) "$node_dir"/config.json
+       cp $(jq '."'"$node"'"."service-config"' -r $svcs) "$node_dir"/service-config.json
+       cp $(jq '."'"$node"'"."start"'          -r $svcs) "$node_dir"/start.sh
+       cp $(jq '."'"$node"'"."topology"'       -r $svcs) "$node_dir"/topology.json
+    done
+
+    local gen_dir="$dir"/generator
+    mkdir -p                                              "$gen_dir"
+    cp $(jq '."run-script"'                    -r $gtor)  "$gen_dir"/run-script.json
+    cp $(jq '."service-config"'                -r $gtor)  "$gen_dir"/service-config.json
+    cp $(jq '."start"'                         -r $gtor)  "$gen_dir"/start.sh
+
+    local trac_dir="$dir"/tracer
+    mkdir -p                                    "$trac_dir"
+    cp $(jq '."tracer-config"'                 -r $trac) "$trac_dir"/tracer-config.json
+    cp $(jq '."service-config"'                -r $trac) "$trac_dir"/service-config.json
+    cp $(jq '."config"'                        -r $trac) "$trac_dir"/config.json
+    cp $(jq '."start"'                         -r $trac) "$trac_dir"/start.sh
+}
+

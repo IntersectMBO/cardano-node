@@ -11,22 +11,22 @@
 , workbench
 , workbenchDevMode      ? false
 ##
-, cacheDir              ? "${__getEnv "HOME"}/.cache/cardano-workbench"
 , basePort              ? 30000
+, cacheDir              ? "${__getEnv "HOME"}/.cache/cardano-workbench"
 }:
 let
   backendName = backend.name;
 
   inherit (backend) useCabalRun;
 
-  with-backend-profile = workbench.with-profile
-    { inherit stateDir profileName backend basePort workbench; };
-
-  inherit (with-backend-profile) profileNix profile topology genesis;
+  profileNix = workbench.materialise-profile
+    { inherit basePort stateDir useCabalRun profileName backend; };
+  backendNix = backend.materialise-profile
+    { inherit stateDir profileNix; };
 in
   let
 
-    inherit (profile.value) era composition monetary;
+    inherit (profileNix.value) era composition monetary;
 
     path = pkgs.lib.makeBinPath path';
     path' =
@@ -36,28 +36,28 @@ in
       ++ pkgs.lib.optionals (!workbenchDevMode)
       [ workbench.workbench ];
 
-    interactive-start = pkgs.writeScriptBin "start-cluster" ''
+    workbench-interactive-start = pkgs.writeScriptBin "start-cluster" ''
       set -euo pipefail
 
       export PATH=$PATH:${path}
 
       wb start \
         --batch-name   ${batchName} \
-        --profile-name ${profileName} \
-        --profile      ${profile} \
+        --profile-data ${profileNix} \
+        --backend-data ${backendNix} \
         --cache-dir    ${cacheDir} \
         --base-port    ${toString basePort} \
         ${pkgs.lib.optionalString useCabalRun ''--cabal''} \
         "$@"
     '';
 
-    interactive-stop = pkgs.writeScriptBin "stop-cluster" ''
+    workbench-interactive-stop = pkgs.writeScriptBin "stop-cluster" ''
       set -euo pipefail
 
       wb finish "$@"
     '';
 
-    interactive-restart = pkgs.writeScriptBin "restart-cluster" ''
+    workbench-interactive-restart = pkgs.writeScriptBin "restart-cluster" ''
       set -euo pipefail
 
       wb run restart "$@" && \
@@ -68,13 +68,9 @@ in
       name:
       "report ${name}-log $out ${name}/stdout";
 
-    profile-run =
+    workbench-profile-run =
       { trace ? false }:
       let
-        inherit
-          (with-backend-profile)
-          profileNix profile topology genesis;
-
         run = pkgs.runCommand "workbench-run-${backendName}-${profileName}"
           { requiredSystemFeatures = [ "benchmark" ];
             nativeBuildInputs = with cardanoNodePackages; with pkgs; [
@@ -105,10 +101,10 @@ in
               wb
               ${pkgs.lib.optionalString trace "--trace"}
               start
-              --profile-name        ${profileName}
-              --profile             ${profile}
-              --topology            ${topology}
-              --genesis-cache-entry ${genesis}
+              --profile-data        ${profileNix}
+              --backend-data        ${backendNix}
+              --topology            ${profileNix.topology.files}
+              --genesis-cache-entry ${profileNix.genesis.files}
               --batch-name          smoke-test
               --base-port           ${toString basePort}
               --node-source         ${pkgs.cardanoNodeProject.args.src}
@@ -143,11 +139,19 @@ in
     run // {
       analysis = workbench.run-analysis { inherit pkgs workbench profileNix run; };
     };
+
+  overlay = self: super:
+    (backend.overlay profileNix self super
+    //
+    {
+      inherit workbench-interactive-start;
+      inherit workbench-interactive-stop;
+      inherit workbench-interactive-restart;
+    });
 in
 {
-  inherit stateDir batchName profileName backend;
-  inherit workbench;
-  inherit profileNix profile topology genesis;
-  inherit interactive-start interactive-stop interactive-restart;
-  inherit profile-run;
+  inherit profileName profileNix;
+  inherit workbench-profile-run;
+
+  inherit batchName stateDir backend overlay;
 }

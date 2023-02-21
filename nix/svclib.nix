@@ -6,6 +6,16 @@ let
 
   id = x: x;
 
+  requireEnv = name:
+    let value = builtins.getEnv name;
+    in if value == ""
+       then abort "${name} environment variable is not set"
+       else value;
+
+  envOrDefault = name: default:
+    let value = builtins.getEnv name;
+    in if value == "" then default else value;
+
   ## Make a launch script for a service,
   ## given:
   ##  - service name
@@ -244,8 +254,10 @@ let
 in
 {
   inherit
-  defServiceModule
-  mkScriptOfService
-  mkServiceScript
+    defServiceModule
+    mkScriptOfService
+    mkServiceScript
+    requireEnv
+    envOrDefault
   ;
 }

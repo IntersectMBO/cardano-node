@@ -7,15 +7,15 @@ in
 , backendName ? defaultCustomConfig.localCluster.backendName
 , useCabalRun ? true
 , workbenchDevMode ? defaultCustomConfig.localCluster.workbenchDevMode
+# to use profiled build of haskell dependencies:
+, profiled ? false
 , customConfig ? {
-    inherit withHoogle;
+    inherit profiled withHoogle;
     localCluster =  {
-      inherit profileName workbenchDevMode;
+      inherit profileName backendName useCabalRun workbenchDevMode;
     };
   }
 , pkgs ? import ./nix customConfig
-# to use profiled build of haskell dependencies:
-, profiled ? false
 , cardano-mainnet-mirror ? __getFlake "github:input-output-hk/cardano-mainnet-mirror/nix"
 }:
 with pkgs;
@@ -64,14 +64,13 @@ let
           inherit cardano-mainnet-mirror;
           inherit workbenchDevMode;
           inherit profiled withHoogle;
-          workbenchRunner =
-            pkgs.workbench-runner
-              { inherit profileName backendName useCabalRun profiled; };
+          workbench-runner = pkgs.workbench-runner
+            { inherit profileName backendName useCabalRun profiled; };
         };
 
   devops =
     let profileName = "devops-bage";
-        workbenchRunner = pkgs.workbench-runner
+        workbench-runner = pkgs.workbench-runner
           {
             inherit profileName;
             backendName = "supervisor";
@@ -79,7 +78,7 @@ let
           };
         devopsShellParams =
           { inherit profileName;
-            inherit (workbenchRunner) backend;
+            inherit (workbench-runner) backend;
             inherit workbenchDevMode profiled;
             withMainnet = false;
           };
@@ -88,7 +87,7 @@ let
             { inherit pkgs lib haskellLib project;
               inherit setLocale haveGlibcLocales commandHelp;
               inherit cardano-mainnet-mirror;
-              inherit workbenchRunner workbenchDevMode;
+              inherit workbench-runner workbenchDevMode;
               inherit profiled withHoogle;
             };
     in project.shellFor {
@@ -110,13 +109,13 @@ let
       pkgs.graphviz
       python3Packages.supervisor
       python3Packages.ipython
-      workbenchRunner.interactive-start
-      workbenchRunner.interactive-stop
-      workbenchRunner.interactive-restart
       cardanolib-py
-      workbenchRunner.workbench.workbench
       pstree
       pkgs.time
+      workbench.workbench
+      workbench-interactive-start
+      workbench-interactive-stop
+      workbench-interactive-restart
     ];
 
     shellHook = ''
@@ -127,7 +126,7 @@ let
       ${devopsShell.shellHook devopsShellParams}
 
       # Socket path default to first node launched by "start-cluster":
-      export CARDANO_NODE_SOCKET_PATH=$(wb backend get-node-socket-path ${workbenchRunner.stateDir} 'node-0')
+      export CARDANO_NODE_SOCKET_PATH=$(wb backend get-node-socket-path ${workbench-runner.stateDir} 'node-0')
 
       ${setLocale}
 

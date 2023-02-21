@@ -26,10 +26,11 @@ let
       '';
 
       installPhase = ''
-        mkdir -p                                     $out/bin
-        cp    -a wb chain-filters profiles *.sh *.jq $out/bin
-        mkdir -p                                     $out/bin/backend
-        cp    -a backend/*.sh                        $out/bin/backend
+        mkdir -p                                                    $out/bin
+        cp    -a wb ede profile                                     $out/bin
+        for dir in . analyse backend genesis topology
+        do cp    -a $dir/*                                          $out/bin/$dir
+        done
       '';
 
       dontStrip = true;
@@ -65,55 +66,33 @@ let
       ${jq}/bin/jq '${query}' "''${args[@]}" > $out
     '';
 
-  profile-names-json =
-    runWorkbenchJqOnly "profile-names.json" "profiles list";
+  jsonFilePretty = name: x: runJq name ''--null-input --sort-keys
+                                         --argjson x '${x}'
+                                       '' "$x";
 
-  profile-names =
-    __fromJSON (__readFile profile-names-json);
-
-  with-profile =
-    # `workbench` is the pinned workbench in case there is one.
-    { stateDir, profileName, backend, basePort, workbench }:
-    let
-      ps =
-        let
-          mkProfile =
-            profileName:
-            pkgs.callPackage ./profiles
-              { inherit pkgs lib;
-                inherit stateDir profileName;
-                # `useCabalRun`, final decision, from the backend!
-                inherit (backend) useCabalRun;
-                inherit basePort;
-                inherit workbench;
-              };
-        in genAttrs profile-names mkProfile;
-
-      profileNix = ps."${profileName}"
-        or (throw "No such profile: ${profileName};  Known profiles: ${toString (__attrNames ps)}");
-
-      profile = import ./profile.nix   { inherit pkgs lib stateDir profileNix backend; };
-
-      topology = import ./topology.nix { inherit pkgs profileNix profile; };
-
-      genesis = import ./genesis.nix   { inherit pkgs profile; };
-    in {
-      inherit
-        profileNix profile
-        topology
-        genesis;
-    };
-
-  run-analysis = import ./analyse.nix;
+  run-analysis = import ./analyse/analyse.nix;
 
 in {
   inherit workbench' workbench runWorkbench runWorkbenchJqOnly;
-
-  inherit runJq;
-
-  inherit profile-names profile-names-json;
-
-  inherit with-profile;
+  inherit runJq jsonFilePretty;
 
   inherit run-analysis;
+
+  inherit
+    (pkgs.callPackage ./profile/profile.nix
+      {
+        inherit runJq jsonFilePretty runWorkbenchJqOnly runWorkbench;
+      })
+    profileJson
+    topologyFiles
+    nodeSpecsJson
+    genesisFiles
+    services
+    profile
+    profileData
+
+    profile-names-json
+    profile-names
+
+    materialise-profile;
 }

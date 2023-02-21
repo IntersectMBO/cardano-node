@@ -198,7 +198,7 @@ in {
           then cfg.cardanoNodePackages.cardano-node.passthru.profiled
           else if cfg.eventlog then cfg.cardanoNodePackages.cardano-node.passthru.eventlogged
           else if cfg.asserts then cfg.cardanoNodePackages.cardano-node.passthru.asserted
-          else cfg.cardanoNodePackages.passthru.cardano-node;
+          else cfg.cardanoNodePackages.cardano-node;
         defaultText = "cardano-node";
         description = ''
           The cardano-node package that should be used
@@ -227,6 +227,15 @@ in {
         default = "testnet";
         description = ''
           environment node will connect to
+        '';
+      };
+
+      isProducer = mkOption {
+        type = types.bool;
+        default = false;
+        description = ''
+          Whether this node is intended to be a producer.
+          Internal option for inter-module communication.
         '';
       };
 

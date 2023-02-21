@@ -150,6 +150,6 @@ manifest_cabal_package_localisations() {
        ! git -C "$dir" diff --exit-code --quiet --staged -- cabal.project
     then
         git -C "$dir" diff --exit-code          -- cabal.project
-        git -C "$dir" diff --exit --staged-code -- cabal.project
+        git -C "$dir" diff --exit-code --staged -- cabal.project
     fi | grep -F '+    ../' | cut -d/ -f2-3
 }

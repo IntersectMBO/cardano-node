@@ -1,0 +1,67 @@
+* Key entry/intermediate points
+*** =Makefile= /convenience/
+    - all workbench shell targets [[file:~/cardano-node/Makefile::$(eval $(call define_profile_targets,$(SHELL_PROFILES)))]]
+      - define_profile_targets [[file:~/cardano-node/lib.mk::define define_profile_targets]]
+        - proftgt [[file:~/cardano-node/lib.mk::$(1): shell]]
+          - shell [[file:~/cardano-node/Makefile::shell: ## Nix shell, (workbench from /nix/store), vars: PROFILE, CMD, RUN]]
+            - =Makefile= -> Nix =workbench-shell= [[file:~/cardano-node/Makefile::nix-shell -A 'workbench-shell' --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} --argstr backendName ${BACKEND} ${ARGS} ${if ${CMD},--command "${CMD}"} ${if ${RUN},--run "${RUN}"}]]
+*** =start-cluster= /shell script available inside workbench shell/
+    - workbench-interactive-start [[file:backend/runner.nix::workbench-interactive-start = pkgs.writeScriptBin "start-cluster" '']]
+*** =workbench-shell= /Nix attribute implementing the workbench shell/
+    - workbench-shell [[file:~/cardano-node/shell.nix::workbench-shell =]]
+      - workbench-runner [[file:~/cardano-node/nix/pkgs.nix::workbench-runner =]]
+        - nixops.nix     [[file:backend/nixops.nix::name = "nixops";]]
+        - nomad.nix      [[file:backend/nomad.nix::name = "nomad";]]
+        - supervisor.nix [[file:backend/supervisor.nix::name = "supervisor";]]
+        - workbench-interactive-start [[file:backend/runner.nix::workbench-interactive-start = pkgs.writeScriptBin "start-cluster" '']]
+      - profileNix [[file:shell.nix::inherit (workbench-runner) profileName profileNix backend;]]
+        - materialise-profile [[file:profile/profile.nix::materialise-profile =]]
+      - shellHook [[file:shell.nix::shellHook = { profileName, backend, profiled, workbenchDevMode, withMainnet }: '']]
+*** =workbench.materialise-profile= /aka profileNix/
+    - materialise-profile [[file:profile/profile.nix::materialise-profile =]]
+      - profile [[file:profile/profile.nix::profile = { profileName]]
+      - profileData [[file:profile/profile.nix::profileData = { profile }:]]
+*** workbench CI jobs  /from Cicero, but can be invoked via Makefile/
+    - =make workbench-ci-test= [[file:~/cardano-node/nix.mk::nix build --out-link result-ci-test '.#hydraJobs.native.workbench-ci-test' --cores 0]]
+      - workbench-ci-test [[file:~/cardano-node/flake.nix::workbench-ci-test =]]
+        - workbench-profile-run [[file:backend/runner.nix::workbench-profile-run =]]
+          - profileNix [[file:backend/runner.nix::profileNix = workbench.materialise-profile]]
+          - backendNix [[file:backend/runner.nix::backendNix = backend.materialise-profile]]
+* Backends
+*** Nixops
+    - nixops.sh
+      - physical-aws.nix
+        - deployment.nix:mkCoreNode
+          - instances.core-node
+          - cardano-ops.roles.pool :: role-pool.nix
+            - config: =keys=
+            - cardano-ops.modules.base-service :: module-base-service.nix
+              - options: services.cardano-node.{allProducers,publicIp}
+              - =service definitions= :: ../../../nixos/*-service.nix
+              - cardano-ops.modules.common :: module-common.nix
+              - config: envvars, firewall
+              - config: services.cardano-node =main definition=
+              - config: systemd.services.cardano-node
+* nixops backend
+  - nixops create/modify :: [[file:backend/nixops.sh::nix/workbench/backend/nixops/physical-$nixops_backend.nix]]
+    - defaults :: [[file:backend/nixops/physical-aws.nix::defaults = { name, resources, config, ... }: {]]
+    - resources :: [[file:backend/nixops/physical-aws.nix::resources = {]]
+    - cluster :: [[file:backend/nixops/physical-aws.nix::cluster = import ./cluster.nix {]]
+      - mkCoreNode :: [[file:backend/nixops/cluster.nix::mkCoreNode = def:]]
+        - instances.core-node
+        - cardano-ops.roles.pool :: [[file:backend/nixops.nix::pool = import ./nixops/role-pool.nix self;]]
+          - keys: =services.c-n= =systemd.services.c-n= =deployment.keys=
+          - modules.base-service :: [[file:backend/nixops/role-pool.nix::cardano-ops.modules.base-service]]
+            - services :: [[file:backend/nixops/module-base-service.nix::../../../nixos]]
+            - options :: [[file:backend/nixops/module-base-service.nix::options = {]]
+            - config :: [[file:backend/nixops/module-base-service.nix::config = {]]
+              - random stuff: disk, socket, firewall, users, networking
+              - svcs.c-t = profileNix.tracer-service.serviceConfig.value
+              - svcs.c-n = profileNix.node-services.${name}.serviceConfig.value
+            - modules.common :: [[file:backend/nixops/module-base-service.nix::cardano-ops.modules.common]]
+              - iohk-ops-lib.modules.common
+              - options :: [[file:backend/nixops/module-common.nix::options = {]]
+              - config :: [[file:backend/nixops/module-common.nix::config = {]]
+                - deployment.keys
+                  - config.json
+                  - topology.json

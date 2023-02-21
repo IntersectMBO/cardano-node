@@ -21,13 +21,13 @@ case "$op" in
         test "$(sleep 0.5s; netstat -pltn 2>/dev/null | grep ':9001 ' | wc -l)" != "0";;
 
     setenv-defaults )
-        local usage="USAGE: wb supervisor $op PROFILE-DIR"
-        local profile_dir=${1:?$usage}
+        local usage="USAGE: wb supervisor $op BACKEND-DIR"
+        local backend_dir=${1:?$usage}
 
         setenvjq    'port_shift_ekg'        100
         setenvjq    'port_shift_prometheus' 200
         setenvjq    'port_shift_rtview'     300
-        setenvjqstr 'supervisor_conf'      "$profile_dir"/supervisor.conf
+        setenvjqstr 'supervisor_conf'      "$backend_dir"/supervisor.conf
         ;;
 
     allocate-run )
@@ -38,32 +38,6 @@ case "$op" in
         do case "$1" in
                --* ) msg "FATAL:  unknown flag '$1'"; usage_supervisor;;
                * ) break;; esac; shift; done
-
-        local svcs=$dir/profile/node-services.json
-        for node in $(jq_tolist 'keys' "$dir"/node-specs.json)
-        do local node_dir="$dir"/$node
-           mkdir -p                                          "$node_dir"
-           jq      '."'"$node"'"' "$dir"/node-specs.json   > "$node_dir"/node-spec.json
-           cp $(jq '."'"$node"'"."config"'         -r $svcs) "$node_dir"/config.json
-           cp $(jq '."'"$node"'"."service-config"' -r $svcs) "$node_dir"/service-config.json
-           cp $(jq '."'"$node"'"."start"'          -r $svcs) "$node_dir"/start.sh
-           cp $(jq '."'"$node"'"."topology"'       -r $svcs) "$node_dir"/topology.json
-        done
-
-        local gtor=$dir/profile/generator-service.json
-        gen_dir="$dir"/generator
-        mkdir -p                              "$gen_dir"
-        cp $(jq '."run-script"'     -r $gtor) "$gen_dir"/run-script.json
-        cp $(jq '."service-config"' -r $gtor) "$gen_dir"/service-config.json
-        cp $(jq '."start"'          -r $gtor) "$gen_dir"/start.sh
-
-        local trac=$dir/profile/tracer-service.json
-        trac_dir="$dir"/tracer
-        mkdir -p                                    "$trac_dir"
-        cp $(jq '."tracer-config"'        -r $trac) "$trac_dir"/tracer-config.json
-        cp $(jq '."nixos-service-config"' -r $trac) "$trac_dir"/nixos-service-config.json
-        cp $(jq '."config"'               -r $trac) "$trac_dir"/config.json
-        cp $(jq '."start"'                -r $trac) "$trac_dir"/start.sh
 
         local supervisor_conf=$(envjqr 'supervisor_conf')
 

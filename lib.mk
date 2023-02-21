@@ -27,12 +27,14 @@ endif
 endef
 
 define define_profile_targets
-$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof),           $$(prof),false, true,false,false,false, supervisor)))
-$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-prof,      $$(prof),false, true,false,false, true, supervisor)))
-$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-auto,      $$(prof),false, true, true,false,false, supervisor)))
-$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-autostay,  $$(prof),false, true, true, true,false, supervisor)))
-$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nix,       $$(prof), true,false,false,false,false, supervisor)))
-$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-autonix,   $$(prof), true,false, true,false,false, supervisor)))
-$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nomad,     $$(prof), true,false,false,false,false, nomad)))
-$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-autonomad, $$(prof), true,false, true,false,false, nomad)))
+$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof),            $$(prof),false, true,false,false,false, supervisor)))
+$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-prof,       $$(prof),false, true,false,false, true, supervisor)))
+$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-auto,       $$(prof),false, true, true,false,false, supervisor)))
+$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-autostay,   $$(prof),false, true, true, true,false, supervisor)))
+$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nix,        $$(prof), true,false,false,false,false, supervisor)))
+$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-autonix,    $$(prof), true,false, true,false,false, supervisor)))
+$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nomad,      $$(prof), true,false,false,false,false, nomad)))
+$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-autonomad,  $$(prof), true,false, true,false,false, nomad)))
+$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nixops,     $$(prof), true, true,false,false,false, nixops)))
+$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-autonixops, $$(prof), true, true, true, true,false, nixops)))
 endef

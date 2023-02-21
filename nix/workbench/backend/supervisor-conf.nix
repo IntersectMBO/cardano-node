@@ -27,22 +27,6 @@ let
       };
     }
     //
-    lib.attrsets.optionalAttrs (unixHttpServerPort != null) {
-      unix_http_server = {
-        file = unixHttpServerPort;
-        chmod = "0777";
-      };
-    }
-    //
-    lib.attrsets.optionalAttrs (inetHttpServerPort != null) {
-      inet_http_server = {
-        port = inetHttpServerPort;
-      };
-    }
-    //
-    listToAttrs
-      (mapAttrsToList (_: nodeSvcSupervisorProgram) (profileNix.node-services))
-    //
     {
       "program:generator" = {
         directory      = "${stateDir}/generator";
@@ -58,7 +42,8 @@ let
       };
     }
     //
-    lib.attrsets.optionalAttrs (profileNix.value.node.tracer) {
+    lib.attrsets.optionalAttrs (profileNix.value.node.tracer)
+    {
       "program:tracer" = {
         directory      = "${stateDir}/tracer";
         command        = "sh start.sh";
@@ -71,25 +56,39 @@ let
         startretries   = 1;
         startsecs      = 1;
       };
-    };
-
-  ##
-  ## nodeSvcSupervisorProgram :: NodeService -> SupervisorConfSection
-  ##
-  ## Refer to: http://supervisord.org/configuration.html#program-x-section-settings
-  ##
-  nodeSvcSupervisorProgram = { nodeSpec, service, ... }:
-    nameValuePair "program:${nodeSpec.value.name}" {
-      directory      = "${service.value.stateDir 0}";
-      command        = "sh start.sh";
-      stdout_logfile = "${service.value.stateDir 0}/stdout";
-      stderr_logfile = "${service.value.stateDir 0}/stderr";
-      stopasgroup    = false;
-      killasgroup    = false;
-      autostart      = false;
-      autorestart    = false;
-      startretries   = 1;
-      startsecs      = 1;
+    }
+    //
+    listToAttrs
+      (flip mapAttrsToList profileNix.node-services
+        (_: { nodeSpec, service, ... }:
+          nameValuePair "program:${nodeSpec.value.name}" {
+            ##
+            ## Refer to: http://supervisord.org/configuration.html#program-x-section-settings
+            ##
+            directory      = "${service.value.stateDir 0}";
+            command        = "sh start.sh";
+            stdout_logfile = "${service.value.stateDir 0}/stdout";
+            stderr_logfile = "${service.value.stateDir 0}/stderr";
+            stopasgroup    = false;
+            killasgroup    = false;
+            autostart      = false;
+            autorestart    = false;
+            startretries   = 1;
+            startsecs      = 1;
+          })
+        )
+    //
+    lib.attrsets.optionalAttrs (unixHttpServerPort != null) {
+      unix_http_server = {
+        file = unixHttpServerPort;
+        chmod = "0777";
+      };
+    }
+    //
+    lib.attrsets.optionalAttrs (inetHttpServerPort != null) {
+      inet_http_server = {
+        port = inetHttpServerPort;
+      };
     };
 
 in {
