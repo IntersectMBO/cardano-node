@@ -1,22 +1,21 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | This module provides convenience functions when dealing with Plutus scripts.
---   It currently only supports PlutusV1 script & cost model.
 module Cardano.TxGenerator.Setup.Plutus
        ( readPlutusScript
        , preExecutePlutusScript
        )
        where
-import           Control.Monad.Writer (runWriter)
 
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import           Data.Text (Text)
+import           Data.Bifunctor (bimap)
+import           Data.Map.Strict as Map (lookup, toAscList)
 
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
+import           Control.Monad.Writer (runWriter)
 
 import           Cardano.CLI.Shelley.Run.Read (readFileScriptInAnyLang)
 
@@ -29,6 +28,9 @@ import qualified PlutusLedgerApi.V1 as PlutusV1
 import qualified PlutusLedgerApi.V2 as PlutusV2
 
 import           Cardano.TxGenerator.Types
+
+
+type ProtocolVersion = (Int, Int)
 
 
 readPlutusScript :: FilePath -> IO (Either TxGenError ScriptInAnyLang)
@@ -46,36 +48,45 @@ preExecutePlutusScript ::
   -> ScriptData
   -> ScriptRedeemer
   -> Either TxGenError ExecutionUnits
-preExecutePlutusScript protocolParameters script@(ScriptInAnyLang scriptLang _) datum redeemer
+preExecutePlutusScript
+  ProtocolParameters{protocolParamCostModels, protocolParamProtocolVersion}
+  script@(ScriptInAnyLang scriptLang _)
+  datum
+  redeemer
   = runExcept $ do
+    costModel <- hoistMaybe (TxGenError $ "preExecutePlutusScript: cost model unavailable for: " ++ show scriptLang) $
+      case script of
+        ScriptInAnyLang _ (PlutusScript lang _) ->
+          AnyPlutusScriptVersion lang `Map.lookup` protocolParamCostModels
+        _ ->
+          Nothing
+
     case script of
       ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV1) script' ->
-        hoistEither $ preExecutePlutusV1 protocolParameters script' datum redeemer
+        hoistEither $ preExecutePlutusV1 protocolVersion script' datum redeemer costModel
       ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV2) script' ->
-        hoistEither $ preExecutePlutusV2 protocolParameters script' datum redeemer
+        hoistEither $ preExecutePlutusV2 protocolVersion script' datum redeemer costModel
       _ ->
         throwE $ TxGenError $ "preExecutePlutusScript: script not supported: " ++ show scriptLang
+  where
+    protocolVersion :: ProtocolVersion
+    protocolVersion = bimap fromIntegral fromIntegral protocolParamProtocolVersion
 
 preExecutePlutusV1 ::
-     ProtocolParameters
+     ProtocolVersion
   -> Script PlutusScriptV1
   -> ScriptData
   -> ScriptRedeemer
+  -> CostModel
   -> Either TxGenError ExecutionUnits
-preExecutePlutusV1 protocolParameters (PlutusScript _ (PlutusScriptSerialised script)) datum redeemer
-    = fst $                       -- for now, we discard warnings (:: PlutusCore.Evaluation.Machine.CostModelInterface.CostModelApplyWarn)
-        runWriter $ runExceptT go
+preExecutePlutusV1 protocolVersion_ (PlutusScript _ (PlutusScriptSerialised script)) datum redeemer costModel
+  = fst $ runWriter $ runExceptT go       -- for now, we discard warnings (:: PlutusCore.Evaluation.Machine.CostModelInterface.CostModelApplyWarn)
   where
+    protocolVersion = uncurry PlutusV1.ProtocolVersion protocolVersion_
     go
       = do
-      CostModel costModel <- hoistMaybe (TxGenError "preExecutePlutusScript: costModel unavailable") $
-        AnyPlutusScriptVersion PlutusScriptV1 `Map.lookup` protocolParamCostModels protocolParameters
       evaluationContext <- firstExceptT PlutusError $
         PlutusV1.mkEvaluationContext (flattenCostModel costModel)
-
-      let
-        (majVer, minVer) = protocolParamProtocolVersion protocolParameters
-        protocolVersion = PlutusV1.ProtocolVersion (fromIntegral majVer) (fromIntegral minVer)
 
       exBudget <- firstExceptT PlutusError $
         hoistEither $
@@ -85,7 +96,7 @@ preExecutePlutusV1 protocolParameters (PlutusScript _ (PlutusScriptSerialised sc
             , PlutusV1.toData dummyContext
             ]
 
-      x <- hoistMaybe (TxGenError "preExecutePlutusScript: could not convert to execution units") $
+      x <- hoistMaybe (TxGenError "preExecutePlutusV1: could not convert to execution units") $
         exBudgetToExUnits exBudget
       return $ fromAlonzoExUnits x
 
@@ -110,25 +121,20 @@ preExecutePlutusV1 protocolParameters (PlutusScript _ (PlutusScriptSerialised sc
       }
 
 preExecutePlutusV2 ::
-     ProtocolParameters
+     ProtocolVersion
   -> Script PlutusScriptV2
   -> ScriptData
   -> ScriptRedeemer
+  -> CostModel
   -> Either TxGenError ExecutionUnits
-preExecutePlutusV2 protocolParameters (PlutusScript _ (PlutusScriptSerialised script)) datum redeemer
-    = fst $                       -- for now, we discard warnings (:: PlutusCore.Evaluation.Machine.CostModelInterface.CostModelApplyWarn)
-        runWriter $ runExceptT go
+preExecutePlutusV2 protocolVersion_ (PlutusScript _ (PlutusScriptSerialised script)) datum redeemer costModel
+  = fst $ runWriter $ runExceptT go       -- for now, we discard warnings (:: PlutusCore.Evaluation.Machine.CostModelInterface.CostModelApplyWarn)
   where
+    protocolVersion = uncurry PlutusV2.ProtocolVersion protocolVersion_
     go
       = do
-      CostModel costModel <- hoistMaybe (TxGenError "preExecutePlutusScript: costModel unavailable") $
-        AnyPlutusScriptVersion PlutusScriptV1 `Map.lookup` protocolParamCostModels protocolParameters
       evaluationContext <- firstExceptT PlutusError $
         PlutusV2.mkEvaluationContext (flattenCostModel costModel)
-
-      let
-        (majVer, minVer) = protocolParamProtocolVersion protocolParameters
-        protocolVersion = PlutusV2.ProtocolVersion (fromIntegral majVer) (fromIntegral minVer)
 
       exBudget <- firstExceptT PlutusError $
         hoistEither $
@@ -138,7 +144,7 @@ preExecutePlutusV2 protocolParameters (PlutusScript _ (PlutusScriptSerialised sc
             , PlutusV2.toData dummyContext
             ]
 
-      x <- hoistMaybe (TxGenError "preExecutePlutusScript: could not convert to execution units") $
+      x <- hoistMaybe (TxGenError "preExecutePlutusV2: could not convert to execution units") $
         exBudgetToExUnits exBudget
       return $ fromAlonzoExUnits x
 
@@ -164,9 +170,11 @@ preExecutePlutusV2 protocolParameters (PlutusScript _ (PlutusScriptSerialised sc
       , PlutusV2.txInfoRedeemers = PlutusV2.fromList []
       }
 
--- This is an incredibly bad idea. The order of the output list is inportant, but:
+-- The order of the output list is important, but:
 --  * This way of flattening it is not guaranteed to always be correct.
 --  * There is no way to ensure that the list remains in the correct order.
--- IMO, the `[Integer]` should *NEVER* have been exposed from `ledger`.
-flattenCostModel :: Map Text Integer -> [Integer]
-flattenCostModel = map snd . Map.toAscList
+-- However, we're bound to the type `Cardano.Api.ProtocolParameters.CostModel` which
+-- might be changed from a key-value map to something providing stronger guarantees.
+flattenCostModel :: CostModel -> [Integer]
+flattenCostModel (CostModel cm)
+  = snd <$> Map.toAscList cm
