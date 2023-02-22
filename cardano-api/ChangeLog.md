@@ -18,6 +18,12 @@
 
 - The `cardano-cli governance create-update-proposal` command to reject empty cost model.
 
+- **Breaking change** - `determineEraExpr` to return `IO (Either UnsupportedNtcVersionError AnyCardanoEra)` instead of `IO AnyCardanoEra`.
+  ([PR4788](https://github.com/input-output-hk/cardano-node/pull/4788))
+
+- **Breaking change** - `queryExpr` to return `IO (Either UnsupportedNtcVersionError a)` instead of `IO a`.
+  ([PR4788](https://github.com/input-output-hk/cardano-node/pull/4788))
+
 ### Bugs
 
 - Allow reading text envelopes from pipes ([PR 4384](https://github.com/input-output-hk/cardano-node/pull/4384))
