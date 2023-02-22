@@ -29,7 +29,7 @@ module Cardano.Logging.DocuGenerator (
 import           Data.IORef (modifyIORef, newIORef, readIORef)
 import           Data.List (groupBy, intersperse, nub, sortBy)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromMaybe)
+import           Data.Maybe (fromMaybe, mapMaybe)
 import           Data.Text (Text, pack, toLower)
 import qualified Data.Text as T
 import           Data.Text.Internal.Builder (toLazyText)
@@ -43,7 +43,6 @@ import qualified Control.Tracer as T
 
 import           Trace.Forward.Utils.DataPoint (DataPoint (..))
 
-import           Debug.Trace (trace)
 
 
 -- | Convenience function for adding a namespace prefix to a documented
@@ -57,13 +56,11 @@ addDocumentedNamespace  tl (Documented list) =
 showT :: Show a => a -> Text
 showT = pack . show
 
-
 data DocuResult =
   DocuTracer Builder
   | DocuMetric Builder
   | DocuDatapoint Builder
   deriving (Show)
-
 
 data DocTracer = DocTracer {
       dtTracerNames :: [[Text]]
@@ -71,7 +68,6 @@ data DocTracer = DocTracer {
     , dtNoMetrics   :: [[Text]]
     , dtBuilderList :: [([Text], DocuResult)]
 } deriving (Show)
-
 
 instance Semigroup DocTracer where
   dtl <> dtr = DocTracer
@@ -162,15 +158,16 @@ documentTracer tracer = do
             sortBy (\a b -> compare ((fst . fst) a) ((fst . fst) b)) nameCommentNamespaceList
           groupedNameCommentNamespaceList =
             groupBy (\a b -> (fst . fst) a == (fst . fst) b) sortedNameCommentNamespaceList
-      in map documentMetrics' groupedNameCommentNamespaceList
+      in mapMaybe documentMetrics' groupedNameCommentNamespaceList
 
-    documentMetrics' :: [( (Text, Text) , [([Text],[Text])] )] -> ([Text], DocuResult)
+    documentMetrics' :: [( (Text, Text) , [([Text],[Text])] )] -> Maybe ([Text], DocuResult)
     documentMetrics' ncns@(((name, comment), _) : _tail) =
-      ([name], DocuMetric
+      Just ([name], DocuMetric
               $ mconcat $ intersperse(fromText "\n\n")
                     [ metricToBuilder (name,comment)
                     , namespacesMetricsBuilder (nub (concatMap snd ncns))
                     ])
+    documentMetrics' [] = Nothing
 
     namespacesBuilder :: [([Text], [Text])] -> Builder
     namespacesBuilder [ns] = namespaceBuilder ns
@@ -390,6 +387,7 @@ docIt backend (LoggingContext {..},
                         Just e  -> e
                         Nothing -> error "DocuGenerator>>missing log doc"))
         docMap)
+docIt _ (_, _) = pure ()
 
 -- | Callback for doc collection
 docItDatapoint :: MonadIO m =>
@@ -408,11 +406,12 @@ docItDatapoint _backend (LoggingContext {..},
                         Just e  -> e
                         Nothing -> error "DocuGenerator>>missing log doc"))
         docMap)
+docItDatapoint _backend (LoggingContext {}, _) = pure ()
 
 
 -- Finally generate a text from all the builders
 docuResultsToText :: DocTracer -> TraceConfig -> IO Text
-docuResultsToText dt@DocTracer {..} configuration = trace ("***" ++ show dt) $ do
+docuResultsToText dt@DocTracer {..} configuration = do
   time <- getZonedTime
   let traceBuilders = sortBy (\ (l,_) (r,_) -> compare l r)
                           (filter (isTracer . snd) dtBuilderList)
@@ -495,7 +494,7 @@ generateTOC dt traces metrics datapoints =
                           ns' = drop cpl ns
                           context' = take cpl context
                       in namespaceToTocWithContext condDocTracer (builders, context') ns' ns ref
-        [] -> trace "namespaceToToc: empty namespace" ([],[])
+        [] -> ([],[])
     namespaceToTocWithContext ::
          Maybe DocTracer
       -> ([Builder], [Text])
@@ -531,6 +530,8 @@ generateTOC dt traces metrics datapoints =
 
     splitToNS :: [Text] -> [Text]
     splitToNS [sym] = T.split (== '.') sym
+    splitToNS other = other
+
 
     getSymbolsOf :: [Text] -> DocTracer -> Text
     getSymbolsOf ns DocTracer {..} =

@@ -37,7 +37,8 @@ testEKG = do
     server <- forkServer "localhost" 8000
     tracer <- ekgTracer (Right server)
     let formattedTracer = metricsFormatter "cardano" tracer
-    configureTracers emptyTraceConfig [formattedTracer]
+    confState <- emptyConfigReflection
+    configureTracers confState emptyTraceConfig [formattedTracer]
     loop (appendPrefixName "ekg1" formattedTracer) 1
   where
     loop :: Trace IO Measure -> Int -> IO ()

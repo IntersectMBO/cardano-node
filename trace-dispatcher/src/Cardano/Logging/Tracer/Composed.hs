@@ -1,16 +1,14 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 {- HLINT ignore "Monad law, left identity" -}
 
 module Cardano.Logging.Tracer.Composed (
-    mkCardanoTracer
+    traceTracerInfo
+  , mkCardanoTracer
   , mkCardanoTracer'
   , mkMetricsTracer
   ) where
-
-
-import           Data.Maybe (fromMaybe)
-import           Data.Text
 
 import           Cardano.Logging.Configuration
 import           Cardano.Logging.Formatter
@@ -18,9 +16,34 @@ import           Cardano.Logging.Trace
 import           Cardano.Logging.TraceDispatcherMessage
 import           Cardano.Logging.Types
 
+
+import           Data.Maybe (fromMaybe)
+import           Data.Text hiding (map)
 import qualified Control.Tracer as NT
 import qualified Data.List as L
+import qualified Data.Set as Set
+import           Data.IORef
 
+
+traceTracerInfo ::
+     Trace IO FormattedMessage
+  -> Trace IO FormattedMessage
+  -> ConfigReflection
+  -> IO ()
+traceTracerInfo trStdout trForward (ConfigReflection silentRef metricsRef) = do
+    internalTr <- backendsAndFormat
+                      trStdout
+                      trForward
+                      (Just [Forwarder, Stdout MachineFormat])
+                      (Trace NT.nullTracer)
+    silentSet <- readIORef silentRef
+    metricSet <- readIORef metricsRef
+    let silentList  = map (intercalate (singleton '.')) (Set.toList silentSet)
+    let metricsList = map (intercalate (singleton '.')) (Set.toList metricSet)
+    traceWith (withInnerNames (appendPrefixNames ["Reflection"] internalTr))
+              (TracerInfo silentList metricsList)
+    writeIORef silentRef Set.empty
+    writeIORef metricsRef Set.empty
 
 -- | Construct a tracer according to the requirements for cardano node.
 -- The tracer gets a 'name', which is appended to its namespace.
@@ -57,10 +80,11 @@ mkCardanoTracer' :: forall evt evt1.
   -> IO (Trace IO evt)
 mkCardanoTracer' trStdout trForward mbTrEkg tracerPrefix hook = do
 
-    internalTr <- withBackendsFromConfig backendsAndFormat
+    internalTr <- fmap (appendPrefixNames ["Reflection"])
+                       (withBackendsFromConfig (backendsAndFormat trStdout trForward))
 
     -- handle the messages
-    messageTrace <- withBackendsFromConfig backendsAndFormat
+    messageTrace <- withBackendsFromConfig (backendsAndFormat trStdout trForward)
                     >>= withLimitersFromConfig internalTr
                     >>= addContextAndFilter internalTr
                     >>= maybeSilent isSilentTracer tracerPrefix False
@@ -90,33 +114,35 @@ mkCardanoTracer' trStdout trForward mbTrEkg tracerPrefix hook = do
               >>= withDetails' (traceWith tri)
       pure $ withInnerNames $ appendPrefixNames tracerPrefix tr'
 
-    backendsAndFormat ::
-         LogFormatting a
-      => Maybe [BackendConfig]
-      -> Trace m x
-      -> IO (Trace IO a)
-    backendsAndFormat mbBackends _ =
-      let backends' = fromMaybe
-                      [EKGBackend, Forwarder, Stdout HumanFormatColoured]
-                      mbBackends
-      in do
-        mbForwardTrace <- if Forwarder `L.elem` backends'
-                            then fmap (Just . filterTraceByPrivacy (Just Public))
-                                  (forwardFormatter Nothing trForward)
-                            else pure Nothing
-        mbStdoutTrace  <-  if Stdout HumanFormatColoured `L.elem` backends'
+backendsAndFormat ::
+     LogFormatting a
+  => Trace IO FormattedMessage
+  -> Trace IO FormattedMessage
+  -> Maybe [BackendConfig]
+  -> Trace IO x
+  -> IO (Trace IO a)
+backendsAndFormat trStdout trForward mbBackends _ =
+  let backends' = fromMaybe
+                  [EKGBackend, Forwarder, Stdout HumanFormatColoured]
+                  mbBackends
+  in do
+    mbForwardTrace <- if Forwarder `L.elem` backends'
+                        then fmap (Just . filterTraceByPrivacy (Just Public))
+                              (forwardFormatter Nothing trForward)
+                        else pure Nothing
+    mbStdoutTrace  <-  if Stdout HumanFormatColoured `L.elem` backends'
+                        then fmap Just
+                            (humanFormatter True Nothing trStdout)
+                        else if Stdout HumanFormatUncoloured `L.elem` backends'
+                          then fmap Just
+                              (humanFormatter False Nothing trStdout)
+                          else if Stdout MachineFormat `L.elem` backends'
                             then fmap Just
-                                (humanFormatter True Nothing trStdout)
-                            else if Stdout HumanFormatUncoloured `L.elem` backends'
-                              then fmap Just
-                                  (humanFormatter False Nothing trStdout)
-                              else if Stdout MachineFormat `L.elem` backends'
-                                then fmap Just
-                                  (machineFormatter Nothing trStdout)
-                                else pure Nothing
-        case mbForwardTrace <> mbStdoutTrace of
-          Nothing -> pure $ Trace NT.nullTracer
-          Just tr -> pure $ preFormatted backends' tr
+                              (machineFormatter Nothing trStdout)
+                            else pure Nothing
+    case mbForwardTrace <> mbStdoutTrace of
+      Nothing -> pure $ Trace NT.nullTracer
+      Just tr -> pure $ preFormatted backends' tr
 
 -- A basic ttracer just for metrics
 mkMetricsTracer :: Maybe (Trace IO FormattedMessage) -> Trace IO FormattedMessage

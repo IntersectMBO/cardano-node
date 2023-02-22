@@ -21,8 +21,9 @@ testLimiting = do
   tflimit <- humanFormatter True (Just "limiter") t
   tf2 <- limitFrequency 5 "5 messages per second" tflimit tf
   tf3 <- limitFrequency 15 "15 messages per second" tflimit tf
-  configureTracers emptyTraceConfig [tflimit]
-  configureTracers emptyTraceConfig [tf2, tf3]
+  confState <- emptyConfigReflection
+  configureTracers confState emptyTraceConfig [tflimit]
+  configureTracers confState emptyTraceConfig [tf2, tf3]
   let tr = tf2 <> tf3
 
   repeated tr 1000 10000 -- 100 messages per second

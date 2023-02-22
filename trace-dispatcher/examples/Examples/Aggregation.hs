@@ -64,8 +64,8 @@ testAggregation = do
     simpleTracer <- standardTracer
     formTracer <- humanFormatter True (Just "cardano") simpleTracer
     tracer <- foldTraceM calculate emptyStats (contramap unfold formTracer)
-
-    configureTracers emptyTraceConfig [formTracer]
+    confState <- emptyConfigReflection
+    configureTracers confState emptyTraceConfig [formTracer]
 
     traceWith tracer 1.0
     traceWith tracer 2.0

@@ -152,6 +152,7 @@ instance AE.FromJSON ConfigRepresentation where
                            <*> obj .:? "TraceOptionNodeName"
                            <*> obj .:? "TraceOptionPeerFrequency"
                            <*> obj .:? "TraceOptionResourceFrequency"
+    parseJSON _ = mempty
 
 data ConfigOptionRep = ConfigOptionRep
     { severity :: Maybe SeverityF
@@ -167,6 +168,8 @@ instance AE.FromJSON ConfigOptionRep where
                          <*> obj .:? "detail"
                          <*> obj .:? "backends"
                          <*> obj .:? "maxFrequency"
+  parseJSON _ = mempty
+
 
 toConfigOptions :: ConfigOptionRep -> [ConfigOption]
 toConfigOptions ConfigOptionRep {..} =

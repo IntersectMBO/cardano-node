@@ -82,8 +82,6 @@ library
                         -Widentities
                         -Wredundant-constraints
                         -Wmissing-export-lists
-                        -Wno-incomplete-patterns
-
 
 executable trace-dispatcher-examples
   import:               project-config

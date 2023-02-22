@@ -15,7 +15,8 @@ test1 :: IO ()
 test1 = do
     stdoutTracer' <- standardTracer
     simpleTracer <- machineFormatter (Just "cardano") stdoutTracer'
-    configureTracers emptyTraceConfig [simpleTracer]
+    confState <- emptyConfigReflection
+    configureTracers confState emptyTraceConfig [simpleTracer]
     let simpleTracer1 = filterTraceBySeverity
                           (Just (SeverityF (Just Warning)))
                           simpleTracer
@@ -33,7 +34,8 @@ test2 :: IO ()
 test2 = do
     stdoutTracer' <- standardTracer
     simpleTracer <- humanFormatter True (Just "cardano") stdoutTracer'
-    configureTracers emptyTraceConfig [simpleTracer]
+    confState <- emptyConfigReflection
+    configureTracers confState emptyTraceConfig [simpleTracer]
     let simpleTracer1  = filterTraceBySeverity
                               (Just (SeverityF (Just Warning)))
                               (withSeverity simpleTracer)
