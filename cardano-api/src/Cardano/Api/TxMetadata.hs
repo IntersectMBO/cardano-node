@@ -43,9 +43,7 @@ module Cardano.Api.TxMetadata (
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.SerialiseCBOR
-import qualified Cardano.Binary as CBOR
-import qualified Cardano.Ledger.Shelley.Metadata as Shelley
+import qualified Cardano.Ledger.Shelley.TxAuxData as Shelley
 import           Control.Applicative (Alternative (..))
 import           Control.Monad (guard, when)
 import qualified Data.Aeson as Aeson
@@ -104,23 +102,23 @@ instance HasTypeProxy TxMetadata where
     data AsType TxMetadata = AsTxMetadata
     proxyToAsType _ = AsTxMetadata
 
-instance SerialiseAsCBOR TxMetadata where
-    serialiseToCBOR =
-          CBOR.serialize'
-        . (Shelley.Metadata :: Map Word64 Shelley.Metadatum -> Shelley.Metadata ())
-        -- The Shelley (Metadata era) is always polymorphic in era,
-        -- so we pick the unit type.
-        . toShelleyMetadata
-        . (\(TxMetadata m) -> m)
+-- instance SerialiseAsCBOR TxMetadata where
+--     serialiseToCBOR =
+--           CBOR.serialize'
+--         . (Shelley.Metadata :: Map Word64 Shelley.Metadatum -> Shelley.Metadata ())
+--         -- The Shelley (Metadata era) is always polymorphic in era,
+--         -- so we pick the unit type.
+--         . toShelleyMetadata
+--         . (\(TxMetadata m) -> m)
 
-    deserialiseFromCBOR AsTxMetadata bs =
-          TxMetadata
-        . fromShelleyMetadata
-        . (\(Shelley.Metadata m) -> m)
-      <$> (CBOR.decodeAnnotator "TxMetadata" fromCBOR (LBS.fromStrict bs)
-           :: Either CBOR.DecoderError (Shelley.Metadata ()))
-        -- The Shelley (Metadata era) is always polymorphic in era,
-        -- so we pick the unit type.
+--     deserialiseFromCBOR AsTxMetadata bs =
+--           TxMetadata
+--         . fromShelleyMetadata
+--         . (\(Shelley.Metadata m) -> m)
+--       <$> (CBOR.decodeAnnotator "TxMetadata" fromCBOR (LBS.fromStrict bs)
+--            :: Either CBOR.DecoderError (Shelley.Metadata ()))
+--         -- The Shelley (Metadata era) is always polymorphic in era,
+--         -- so we pick the unit type.
 
 makeTransactionMetadata :: Map Word64 TxMetadataValue -> TxMetadata
 makeTransactionMetadata = TxMetadata
