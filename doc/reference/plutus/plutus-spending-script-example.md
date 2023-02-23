@@ -17,7 +17,7 @@ process involving:
 + sending ADA to the Plutus script address
 + spending ADA at the Plutus script address
 
-In this example we will use the [AlwaysSucceeds](../../../plutus-example/plutus-example/src/Cardano/PlutusExample/AlwaysSucceeds.hs) Plutus spending script. In order to execute a Plutus spending script, we require the following:
+In this example we will use the [AlwaysSucceeds](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-example/src/PlutusExample/PlutusVersion1/AlwaysSucceeds.hs) Plutus spending script. In order to execute a Plutus spending script, we require the following:
 
 - Collateral tx input(s) - these are provided and are forfeited in the event the Plutus script fails to execute.
 - A Plutus tx output with accompanying datum hash. This is the tx output that sits at the Plutus script address. It must have a datum hash, otherwise, it is unspendable.

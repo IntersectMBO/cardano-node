@@ -273,7 +273,7 @@ None
 - Remove ledger-based validation of `Datum`. This is now done entirely by Plutus
   on deserialisation. (#2757)
 - Add documentation on all ledger events. This can be found at
-  https://github.com/input-output-hk/cardano-ledger/blob/master/docs/LedgerEvents.md(#2778)
+  https://github.com/input-output-hk/cardano-ledger/blob/master/docs/LedgerEvents.md (#2778)
 - In the Alonzo era, extend the epoch info provided by Plutus to allow time
   translation arbitrarily into the future. This pertains to a bug in consensus
   which was allowing arbitrarily distant translation only in the last era. This

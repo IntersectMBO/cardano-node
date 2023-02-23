@@ -18,7 +18,7 @@
      if the `dist-newstyle` directory is absent.
 
      Before you can use `--nix`, you'll need to set up Nix -- please see
-     the `Building under Nix` section [here](https://github.com/input-output-hk/cardano-node/blob/master/doc/building-running.md#building-under-nix)
+     the `Building cardano-node with Nix` section [here](https://github.com/input-output-hk/cardano-node/blob/master/doc/getting-started/building-the-node-using-nix.md#building-cardano-node-with-nix)
 
   2. using Cabal -- if you already have the development context set up
      (dependencies, GHC, etc.), then this is the fastest way to iterate.
@@ -152,8 +152,6 @@ Submit the tx:
 The `submit-tx.sh` script by default sends the transaction to node with node id 0.
 
 NB: This will submit a tx based on the `configuration/defaults/liveview/config-0.yaml` config file.
-
-See cardano-cli's [Transactions](../cardano-node/README.md#transactions) section for instructions on how to generate a tx.
 
 ## Startup testnet with dns
 

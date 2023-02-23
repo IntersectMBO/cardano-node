@@ -12,7 +12,7 @@ process involving:
 + the creation of the `AlwaysSucceeds` Plutus minting script (i.e. anybody can mint)
 + the creation of a transaction that mints multi-assets using the `AlwaysSucceeds` Plutus minting script
 
-In this example we will use the [anyone can mint](../../../plutus-example/plutus-example/src/Cardano/PlutusExample/MintingScript.hs) Plutus minting script. To execute it, we require the following:
+In this example we will use the [anyone can mint](https://github.com/input-output-hk/plutus-apps/blob/main/plutus-example/src/PlutusExample/PlutusVersion1/MintingScript.hs) Plutus minting script. To execute it, we require the following:
 
 - Collateral tx input(s) that are provided and forfeited if the Plutus script fails to execute.
 - Serialization of the Plutus script in the text envelope format (required for cardano-cli).

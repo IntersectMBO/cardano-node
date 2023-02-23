@@ -163,5 +163,5 @@ Detailed Schema:
 
 Here are some materials for further reading:
 
-+ Tx metadata motivation and use: [Design Specification for Delegation and Incentives in Cardano](https://hydra.iohk.io/build/3744897/download/1/delegation_design_spec.pdf), p 53.
++ Tx metadata motivation and use: [Design Specification for Delegation and Incentives in Cardano](https://github.com/input-output-hk/cardano-ledger/releases/latest/download/shelley-delegation.pdf), p 53.
 + [Tx metadata in wallet-CLI](https://github.com/input-output-hk/cardano-wallet/wiki/TxMetadata).

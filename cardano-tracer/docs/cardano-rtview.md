@@ -59,7 +59,7 @@ $ ./cardano-tracer -c minimal-example-rtview.json
 
 ## Node's Side
 
-Now, open your node's configuration file (if you took it from [Hydra](https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/index.html), it's `mainnet-config.json`) and add the following lines in it:
+Now, open your node's configuration file (if you took it from the [Cardano World Repository](https://book.world.dev.cardano.org/environments.html), it's `config.json`) and add the following lines in it:
 
 ```
 "UseTraceDispatcher": true,

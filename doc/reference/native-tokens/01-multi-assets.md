@@ -1,6 +1,6 @@
 # Multi-asset support
 
-From the Mary ledger upgrade and onwards, Cardano supports [multi-assets](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/specs.shelley-ma/latest/download-by-type/doc-pdf/shelley-ma), also referred to as a *native tokens* feature. This feature extends the ledger’s accounting infrastructure (originally designed for processing ada-only transactions) to accommodate transactions using a range of assets. These assets include ada and a variety of user-defined token types, the mixture of which can be transacted in a single tx output.
+From the Mary ledger upgrade and onwards, Cardano supports [multi-assets](https://github.com/input-output-hk/cardano-ledger/releases/download/cardano-ledger-spec-2023-01-18/mary-ledger.pdf), also referred to as a *native tokens* feature. This feature extends the ledger’s accounting infrastructure (originally designed for processing ada-only transactions) to accommodate transactions using a range of assets. These assets include ada and a variety of user-defined token types, the mixture of which can be transacted in a single tx output.
 
 ## What is a multi-asset?
 
