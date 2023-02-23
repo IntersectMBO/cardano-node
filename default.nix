@@ -5,7 +5,9 @@ in
 {
   # override scripts with custom configuration
   withHoogle ? defaultCustomConfig.withHoogle
-, profileName ? defaultCustomConfig.localCluster.profileName
+, profileNix ? null
+, profileName ? if profileNix != null then profileNix.profileName
+                else defaultCustomConfig.localCluster.profileName;
 , workbenchDevMode ? defaultCustomConfig.localCluster.workbenchDevMode
 , customConfig ? {
     inherit withHoogle;

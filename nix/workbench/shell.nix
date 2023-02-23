@@ -7,7 +7,7 @@
 ##
 , cardano-mainnet-mirror
 ##
-, workbenchRunner
+, workbench-runner
 , workbenchDevMode ? false
 ##
 , profiled ? false
@@ -18,16 +18,25 @@
 with lib;
 
 let
-    inherit (workbenchRunner) profileName backend profile;
+    ## TODO:  globally rename all profileNix occurences to profileData
+    inherit (workbench-runner) profileName profileNix backend;
 
     shellHook = { profileName, backend, profiled, workbenchDevMode, withMainnet }: ''
       while test $# -gt 0
       do shift; done       ## Flush argv[]
 
-      echo 'workbench shellHook:  profileName=${profileName} backendName=${backend.name} useCabalRun=${toString backend.useCabalRun} workbenchDevMode=${toString workbenchDevMode} profiled=${toString profiled} '
-      export WB_BACKEND=${backend.name}
+      . nix/workbench/lib.sh
+
       export WB_SHELL_PROFILE=${profileName}
-      export WB_SHELL_PROFILE_DIR=${profile}
+      export WB_SHELL_PROFILE_DATA=${profileNix}
+      export WB_BACKEND=${backend.name}
+      export WB_DEPLOYMENT_NAME=''${WB_DEPLOYMENT_NAME:-$(basename $(pwd))}
+      export NIXOPS_DEPLOYMENT=$WB_DEPLOYMENT_NAME
+      progress "profile name"           $WB_SHELL_PROFILE
+      progress "WB_SHELL_PROFILE_DATA=" $WB_SHELL_PROFILE_DATA
+      progress "backend name"           $WB_BACKEND
+      progress "deployment name"        $WB_DEPLOYMENT_NAME
+      progress "params"                 'useCabalRun=${toString backend.useCabalRun} workbenchDevMode=${toString workbenchDevMode} profiled=${toString profiled}'
 
       ${optionalString
         workbenchDevMode
@@ -44,14 +53,13 @@ let
       ${optionalString
         backend.useCabalRun
         ''
-      . nix/workbench/lib.sh
       . nix/workbench/lib-cabal.sh ${optionalString profiled "--profiled"}
         ''}
 
       export CARDANO_NODE_SOCKET_PATH=run/current/node-0/node.socket
 
       function workbench_atexit() {
-          if wb backend is-running
+          if wb backend is-running run/current
           then stop-cluster
           fi
       }
@@ -105,9 +113,9 @@ in project.shellFor {
     pkgs.moreutils
     pkgs.pstree
     pkgs.time
-    workbenchRunner.interactive-start
-    workbenchRunner.interactive-stop
-    workbenchRunner.interactive-restart
+    workbench-interactive-start
+    workbench-interactive-stop
+    workbench-interactive-restart
   ]
   # Backend packages take precendence.
   ++ backend.extraShellPkgs
@@ -118,10 +126,11 @@ in project.shellFor {
       yq nomad vault-bin norouter socat
       # Debugging
       postgresql
-    ]
+  ]
   ++ lib.optional haveGlibcLocales pkgs.glibcLocales
   ++ lib.optionals (!backend.useCabalRun) [ cardano-topology cardano-cli locli ]
-  ++ lib.optionals (!workbenchDevMode) [ workbenchRunner.workbench.workbench ]
+  ++ lib.optionals (!workbenchDevMode) [ workbench.workbench ]
+  ++ lib.optional (pkgs.system == "x86_64-linux") pkgs.em
   ;
 
 } // { inherit shellHook;

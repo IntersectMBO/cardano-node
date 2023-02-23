@@ -1,4 +1,5 @@
 self: {
+  profiled   = false;
   withHoogle = true;
   localCluster = {
     cacheDir    = "${self.localCluster.stateDir}/.cache";
@@ -9,6 +10,7 @@ self: {
     basePort    = 30000;
     workbenchDevMode = true;
     extraBackendConfig = {};
+    useCabalRun = true;
   };
   membench = {
     snapshotSlot = 37173650;

@@ -1,19 +1,19 @@
-#+begin_src gnuplot :file {{ args.metric }}.png
+#+begin_src gnuplot :file {{ args.deField }}.png
 load "../../bench/workbench.gnuplot"
-{% if args.logscale %}
+{% if args.deLogScale == "true" %}
 set logscale y
 {% else %}
 unset logscale y
 {% endif %}
-{% if args.yrange %}
-set yrange [{{ args.yrange }}]
+{% if args.deRange != "" %}
+set yrange [{{ args.deRange }}]
 {% else %}
-set yrange [*:*]
+set yrange [0.02:*]
 {% endif %}
-{% if args.ylabel %}
-set ylabel "{{ args.ylabel }}"
+{% if args.deShortDesc != "" %}
+set ylabel "{{ args.deShortDesc }}, {{ args.deUnit }}"
 {% endif %}
-eval cdfI_{{ (runs | length) + 1 }}("{{ args.metric }}", "{{ args.title }}", \
+eval cdfI_{{ (runs | length) + 1 }}("{{ args.deField }}", "{{ args.deDescription | remove("'") }}", \
             "{{ base.meta.tag }}/{{ base.meta.batch }}/{{ base.meta.era | toTitle }}",   "{{ base.meta.tag }}", \
 {% for run in runs %}
             "{{ run.value.meta.tag }}/{{ run.value.meta.batch }}/{{ run.value.meta.era | toTitle }}", "{{ run.value.meta.tag }}"{% if !run.last %},{% endif %} \

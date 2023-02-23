@@ -170,12 +170,14 @@ intraConnectRing withChords bidirectional specs =
 
 main :: IO ()
 main = do
-  (topoParams, topoJson, topoDot) <- execParser opts
+  (topoParams, topoJson, topoDot, withExplorer) <- execParser opts
 
   let topoSpec = mkTopology topoParams
-      topo = mkNode <$> topoSpec
+      cores = mkNode <$> topoSpec
+      relays = [ mkExplorer (locationRegion EU) cores
+               | withExplorer ]
 
-  writeTopo topo topoJson
+  writeTopo cores relays topoJson
   maybe (pure ()) (writeDot  topoSpec) topoDot
  where
    opts = info (cliParser <**> helper)
@@ -183,18 +185,22 @@ main = do
     <> progDesc "Cardano topology generator"
     <> header "make-topology - generate Cardano node topologies" )
 
-   cliParser :: Parser (TopoParams, FilePath, Maybe FilePath)
+   cliParser :: Parser (TopoParams, FilePath, Maybe FilePath, Bool)
    cliParser =
-     (,,) <$> subparser topoParamsParser
-          <*> strOption
-             ( long "topology-output"
-            <> help "Topology file to write"
-            <> metavar "OUTFILE" )
-          <*> optional
-              (strOption
-              ( long "dot-output"
-              <> help "Dot file to write"
-              <> metavar "OUTFILE" ))
+     (,,,)
+     <$> subparser topoParamsParser
+     <*> strOption
+        ( long "topology-output"
+       <> help "Topology file to write"
+       <> metavar "OUTFILE" )
+     <*> optional
+        (strOption
+        ( long "dot-output"
+       <> help "Dot file to write"
+       <> metavar "OUTFILE" ))
+     <*> flag False True
+         ( long "with-explorer"
+        <> help "Add an explorer to the topology")
 
    topoParamsParser =
      command "torus"
@@ -255,10 +261,10 @@ main = do
 
 --- * To JSON topology
 ---
-writeTopo :: [Node] -> FilePath -> IO ()
-writeTopo topo f =
+writeTopo :: [Node] -> [Node] -> FilePath -> IO ()
+writeTopo cores relays f =
   IO.withFile f IO.WriteMode $ \hnd ->
-    LBS.hPutStrLn hnd . encode $ Topology topo []
+    LBS.hPutStrLn hnd . encode $ Topology cores relays
 
 mkNode :: Spec -> Node
 mkNode Spec{..} = Node{..}
@@ -270,6 +276,16 @@ mkNode Spec{..} = Node{..}
     stakePool = isJust mpools
     region = locationRegion loc
     producers = idName <$> links
+
+mkExplorer :: String -> [Node] -> Node
+mkExplorer region cores = Node{ name = "explorer"
+                              , ..}
+  where
+    org = "IOHK"
+    nodeId = length cores
+    pools = Nothing
+    stakePool = False
+    producers = name <$> cores
 
 data Topology = Topology
   { coreNodes  :: [Node]

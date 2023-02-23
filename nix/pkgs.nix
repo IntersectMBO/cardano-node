@@ -1,7 +1,62 @@
 # our packages overlay
-final: prev: with final; {
+final: prev:
 
+let
+  inherit (prev) customConfig;
+  inherit (final) pkgs cardanoNodePackages;
+  inherit (prev.pkgs) lib;
+
+  # A generic, fully parameteric version of the workbench development environment.
+  workbench = pkgs.callPackage ./workbench {};
+
+  # A conveniently-parametrisable workbench preset.
+  # See https://input-output-hk.github.io/haskell.nix/user-guide/development/
+  # The general idea is:
+  # 1. backendName -> useCabalRun -> backend
+  # 2. stateDir -> batchName -> profileName -> backend -> workbench -> runner
+  # * `workbench` is in case a pinned version of the workbench is needed.
+  workbench-runner =
+    let backendRegistry =
+        {
+            nixops     = ./workbench/backend/nixops.nix;
+            nomad      = ./workbench/backend/nomad.nix;
+            supervisor = ./workbench/backend/supervisor.nix;
+        };
+    in
+    { stateDir           ? customConfig.localCluster.stateDir
+    , batchName          ? customConfig.localCluster.batchName
+    , profileNix         ? null
+    , profileName        ? if profileNix != null then profileNix.profileName
+                           else customConfig.localCluster.profileName
+    , backendName        ? customConfig.localCluster.backendName
+    , basePort           ? customConfig.localCluster.basePort
+    , useCabalRun        ? customConfig.localCluster.useCabalRun
+    , workbenchDevMode   ? customConfig.localCluster.workbenchDevMode
+    , profiled           ? customConfig.profiled
+    , cardano-node-rev   ? null
+    , workbench          ? pkgs.workbench
+    }:
+    let
+        # The `useCabalRun` flag is set in the backend to allow the backend to
+        # override its value. The runner uses the value of `useCabalRun` from
+        # the backend to prevent a runner using a different value.
+        backend = import (backendRegistry."${backendName}")
+                   { inherit pkgs lib stateDir basePort useCabalRun; };
+    in import ./workbench/backend/runner.nix
+      {
+        inherit pkgs lib cardanoNodePackages;
+        inherit stateDir batchName profileName backend;
+        inherit cardano-node-rev;
+        inherit workbench workbenchDevMode;
+      };
+
+  # Workbench instantiated by parameters from customConfig:
+  custom-config-workbench-runner = workbench-runner {};
+
+in with final;
+{
   inherit (cardanoNodeProject.args) compiler-nix-name;
+  inherit workbench workbench-runner;
 
   cabal = haskell-nix.cabal-install.${compiler-nix-name};
 
@@ -68,47 +123,7 @@ final: prev: with final; {
       script = "submit-api";
     };
 
-  # A generic, parameteric version of the workbench development environment.
-  workbench = pkgs.callPackage ./workbench {};
-
   all-profiles-json = workbench.profile-names-json;
-
-  # A parametrisable workbench, that can be used with nix-shell or lorri.
-  # See https://input-output-hk.github.io/haskell.nix/user-guide/development/
-  # The general idea is:
-  # backendName -> useCabalRun -> backend
-  # stateDir -> batchName -> profileName -> backend -> workbench -> runner
-  # * `workbench` is in case a pinned version of the workbench is needed.
-  workbench-runner =
-    let backendRegistry =
-        {
-            supervisor = ./workbench/backend/supervisor.nix;
-            nomad =      ./workbench/backend/nomad.nix;
-        };
-    in
-    { stateDir           ? customConfig.localCluster.stateDir
-    , batchName          ? customConfig.localCluster.batchName
-    , profileName        ? customConfig.localCluster.profileName
-    , backendName        ? customConfig.localCluster.backendName
-    , useCabalRun        ? false
-    , profiled           ? false
-    , cardano-node-rev   ? null
-    , workbench          ? pkgs.workbench
-    , workbenchDevMode   ? false
-    }:
-    let
-        # The `useCabalRun` flag is set in the backend to allow the backend to
-        # override its value. The runner uses the value of `useCabalRun` from
-        # the backend to prevent a runner using a different value.
-        backend = import (backendRegistry."${backendName}")
-                   { inherit pkgs lib useCabalRun; };
-    in import ./workbench/backend/runner.nix
-      {
-        inherit pkgs lib cardanoNodePackages;
-        inherit stateDir batchName profileName backend;
-        inherit cardano-node-rev;
-        inherit workbench workbenchDevMode;
-      };
 
   # Disable failing python uvloop tests
   python38 = prev.python38.override {
@@ -118,4 +133,5 @@ final: prev: with final; {
       });
     };
   };
-}
+} //
+custom-config-workbench-runner.overlay final prev

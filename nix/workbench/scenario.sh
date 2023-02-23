@@ -71,15 +71,15 @@ case "$op" in
         # containers directories).
         backend start "$dir"
 
-        # `chaindb` observer:
-        local observer=(
+        # `chaindb` explorer:
+        local explorer=(
             mainnet-chunks-with-snapshot-at-slot
             "$dir"/node-1/run/current/node-1/db-testnet
-            $(jq '.chaindb.ledger_snapshot.observer'       $p)
-            $(jq '.chaindb.mainnet_chunks.observer'        $p)
+            $(jq '.chaindb.ledger_snapshot.explorer'       $p)
+            $(jq '.chaindb.mainnet_chunks.explorer'        $p)
         )
-        progress "scenario" "preparing ChainDB for the $(green "observer (fetcher)")"
-        chaindb "${observer[@]}"
+        progress "scenario" "preparing ChainDB for the $(green "explorer (fetcher)")"
+        chaindb "${explorer[@]}"
         # `chaindb` server:
         local chaindb_server=(
             mainnet-chunks-with-snapshot-at-slot

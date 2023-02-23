@@ -1,7 +1,8 @@
 { pkgs
 , lib
 # Cardano packages/executables.
-, cardano-node, cardano-tracer, tx-generator
+, cardano-node, cardano-node-eventlogged
+, cardano-tracer, tx-generator
 # OCI Image builder.
 }:
 
@@ -31,7 +32,7 @@ let
       # Supervisor.
       (n2c.buildLayer {deps = [ python3Packages.supervisor ];})
       # Cardano packages.
-      (n2c.buildLayer {deps = [ cardano-node               ];})
+      (n2c.buildLayer {deps = [ cardano-node cardano-node-eventlogged ];})
       (n2c.buildLayer {deps = [ cardano-tracer             ];})
       (n2c.buildLayer {deps = [ tx-generator               ];})
     ];

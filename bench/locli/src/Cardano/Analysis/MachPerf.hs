@@ -83,6 +83,8 @@ timelineFromLogObjects run@Run{genesis} (f, xs') =
      , slLgrState   = SNothing
      , slLgrView    = SNothing
      , slLeading    = SNothing
+     , slTicked     = SNothing
+     , slMemSnap    = SNothing
      , slForged     = SNothing
      , slSpanTxsMem = SNothing
      , slMempoolTxs = 0
@@ -235,6 +237,16 @@ timelineStep Run{genesis} f a@TimelineAccum{aSlotStats=cur:_, ..} lo =
        sl { slCountLeads = slCountLeads + if lead then 1 else 0
           , slLeading    = SJust loAt
           }
+  LogObject{loAt, loHost, loBody=LOTickedLedgerState slot} ->
+    forNonFutureSlot a slot "LedgerTicked" loHost $
+      \sl@SlotStats{} ->
+       sl { slTicked     = SJust loAt
+          }
+  LogObject{loAt, loHost, loBody=LOMempoolSnapshot slot} ->
+    forNonFutureSlot a slot "MempoolSnapshotted" loHost $
+      \sl@SlotStats{} ->
+       sl { slMemSnap    = SJust loAt
+          }
   LogObject{loAt, loHost, loBody=LOBlockForged{loSlotNo}} ->
     if loSlotNo > slSlot cur
     then error $ mconcat
@@ -328,6 +340,8 @@ patchSlotGap genesis curSlot a@TimelineAccum{aSlotStats=last:_, ..} =
           , slLgrState    = SNothing
           , slLgrView     = SNothing
           , slLeading     = SNothing
+          , slTicked      = SNothing
+          , slMemSnap     = SNothing
           , slForged      = SNothing
           , slSpanTxsMem  = SNothing
           , slTxsCollected= 0
@@ -347,7 +361,7 @@ patchSlotGap genesis curSlot a@TimelineAccum{aSlotStats=last:_, ..} =
     where slStart = slotStart genesis slot
 
 addTimelineSlot :: Genesis -> SlotNo -> UTCTime -> TimelineAccum -> TimelineAccum
-addTimelineSlot genesis slot time a@TimelineAccum{..} =
+addTimelineSlot genesis slot _time a@TimelineAccum{..} =
   let (epoch, epochSlot) = genesis `unsafeParseSlot` slot in
     a { aSlotStats = SlotStats
         { slSlot        = slot
@@ -362,11 +376,13 @@ addTimelineSlot genesis slot time a@TimelineAccum{..} =
         , slCountLgrView = 0
         , slCountLeads  = 0
         , slCountForges = 0
-        , slStarted     = SJust time
+        , slStarted     = SNothing
         , slBlkCtx      = SNothing
         , slLgrState    = SNothing
         , slLgrView     = SNothing
         , slLeading     = SNothing
+        , slTicked      = SNothing
+        , slMemSnap     = SNothing
         , slForged      = SNothing
         , slSpanTxsMem  = SNothing
         , slTxsCollected= 0
@@ -428,7 +444,11 @@ deltifySlotStats gsis s@SlotStats{..} =
   , slLeading   = (diffUTCTime <$> slLeading   <*> slLgrView)
                   <|>
                   (diffUTCTime <$> slLeading   <*> slStarted)
-  , slForged    =  diffUTCTime <$> slForged    <*> slLeading
+  , slTicked    =  diffUTCTime <$> slTicked    <*> slLeading
+  , slMemSnap   =  diffUTCTime <$> slMemSnap   <*> slTicked
+  , slForged    = (diffUTCTime <$> slForged    <*> slMemSnap)
+                  <|>
+                  (diffUTCTime <$> slForged    <*> slLeading)
   }
 
 -- Field 6 "productiv"   "Produc" "tivity"  (IText
@@ -505,7 +525,6 @@ slotStatsMachPerf run (f, slots) =
   , cdfLgrState          = dist (slLgrState `mapSMaybe` slots)
   , cdfLgrView           = dist (slLgrView `mapSMaybe` slots)
   , cdfLeading           = dist (slLeading `mapSMaybe` slots)
-  , cdfForged            = dist (filter (/= 0) $ slForged `mapSMaybe` slots)
   , cdfBlockGap          = dist (slBlockGap <$> slots)
   , cdfSpanLensCpu       = dist sssSpanLensCpu
   , cdfSpanLensCpuEpoch  = dist sssSpanLensCpuEpoch
@@ -538,7 +557,6 @@ summariseClusterPerf centiles mps@(headline:_) = do
   cdfLgrState          <- cdf2OfCDFs comb $ mps <&> cdfLgrState
   cdfLgrView           <- cdf2OfCDFs comb $ mps <&> cdfLgrView
   cdfLeading           <- cdf2OfCDFs comb $ mps <&> cdfLeading
-  cdfForged            <- cdf2OfCDFs comb $ mps <&> cdfForged
   cdfBlockGap          <- cdf2OfCDFs comb $ mps <&> cdfBlockGap
   cdfSpanLensCpu       <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpu
   cdfSpanLensCpuEpoch  <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpuEpoch
@@ -572,7 +590,6 @@ summariseMultiClusterPerf centiles mps@(headline:_) = do
   cdfLgrState          <- cdf2OfCDFs comb $ mps <&> cdfLgrState
   cdfLgrView           <- cdf2OfCDFs comb $ mps <&> cdfLgrView
   cdfLeading           <- cdf2OfCDFs comb $ mps <&> cdfLeading
-  cdfForged            <- cdf2OfCDFs comb $ mps <&> cdfForged
   cdfBlockGap          <- cdf2OfCDFs comb $ mps <&> cdfBlockGap
   cdfSpanLensCpu       <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpu
   cdfSpanLensCpuEpoch  <- cdf2OfCDFs comb $ mps <&> cdfSpanLensCpuEpoch
