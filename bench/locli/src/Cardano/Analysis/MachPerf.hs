@@ -223,11 +223,14 @@ timelineStep Run{genesis} f accum@TimelineAccum{aSlotStats=cur:_, ..} lo =
   -- Next, events that rely on their slotstats to pre-exist:
   --  - again, note the use of forNonFutureSlot
   LogObject{loBody=LOBlockContext slot blockNo, loHost, loAt} ->
-    (forNonFutureSlot accum slot "BlockContext" loHost $
+    (mapTAHead
+      -- NOTE: we attribute the block number change only by the slot of arrival.
+      (\sl -> sl { slBlockNo     = blockNo }) $
+     forNonFutureSlot accum slot "BlockContext" loHost $
+      -- NOTE: the rest of the properties get assigned in the past.
       \sl ->
        sl { slCountBlkCtx = slCountBlkCtx sl + 1
           , slBlkCtx      = SJust loAt
-          , slBlockNo     = blockNo
           , slBlockGap    = if blockNo /= aBlockNo then 0 else slBlockGap cur
           })
     { aBlockNo        = blockNo
