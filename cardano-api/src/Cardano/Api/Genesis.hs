@@ -10,12 +10,15 @@ import qualified Data.ListMap as ListMap
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
 import qualified Data.Time as Time
+import           Lens.Micro
 
 import           Cardano.Ledger.BaseTypes as Ledger
-import           Cardano.Ledger.Shelley.PParams as Ledger (emptyPParams, ShelleyPParamsHKD (..))
-import           Cardano.Slotting.Slot (EpochSize (..))
+import           Cardano.Ledger.Coin (Coin (..))
+import           Cardano.Ledger.Crypto (Crypto)
+import           Cardano.Ledger.Shelley.Core
+import           Cardano.Ledger.Shelley.Genesis (NominalDiffTimeMicro, ShelleyGenesis (..),
+                   emptyGenesisStaking)
 
-import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesis (..), emptyGenesisStaking)
 
 
 -- | Some reasonable starting defaults for constructing a 'ShelleyGenesis'.
@@ -29,7 +32,7 @@ import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesis (..), emptyGen
 -- * 'sgMaxLovelaceSupply' must be at least the sum of the 'sgInitialFunds'
 --   but more if you want to allow for rewards.
 --
-shelleyGenesisDefaults :: ShelleyGenesis crypto
+shelleyGenesisDefaults :: Crypto crypto => ShelleyGenesis crypto
 shelleyGenesisDefaults =
   ShelleyGenesis
     {
@@ -39,27 +42,26 @@ shelleyGenesisDefaults =
     , sgNetworkId             = Ledger.Testnet
 
       -- consensus protocol parameters
-    , sgSlotLength            = 1.0 :: Time.NominalDiffTime -- 1s slots
+    , sgSlotLength            = 1.0 :: NominalDiffTimeMicro -- 1s slots
     , sgActiveSlotsCoeff      = fromMaybe
                                   (error "shelleyGenesisDefaults: impossible")
                                   (Ledger.boundRational (1/20))  -- 20s block times on average
     , sgSecurityParam         = k
-    , sgEpochLength           = EpochSize (k * 10 * 20) -- 10k/f
+    , sgEpochLength           = Ledger.EpochSize (k * 10 * 20) -- 10k/f
     , sgSlotsPerKESPeriod     = 60 * 60 * 36        -- 1.5 days with 1s slots
     , sgMaxKESEvolutions      = 60                  -- 90 days
     , sgUpdateQuorum          = 5                   -- assuming 7 genesis keys
 
     -- ledger protocol parameters
     , sgProtocolParams        =
-        Ledger.emptyPParams
-        { Ledger._d = maxBound
-        , Ledger._maxBHSize = 1100                  -- TODO: compute from crypto
-        , Ledger._maxBBSize = 64 * 1024             -- max 64kb blocks
-        , Ledger._maxTxSize = 16 * 1024             -- max 16kb txs
-        , Ledger._eMax      = 18
-        , Ledger._minfeeA   = 1                     -- The linear factor for the minimum fee calculation
-        , Ledger._minfeeB   = 0                     -- The constant factor for the minimum fee calculation
-        }
+        emptyPParams
+        & ppDL         .~ maxBound
+        & ppMaxBHSizeL .~ 1100                  -- TODO: compute from crypto
+        & ppMaxBBSizeL .~ 64 * 1024             -- max 64kb blocks
+        & ppMaxTxSizeL .~ 16 * 1024             -- max 16kb txs
+        & ppEMaxL      .~ 18
+        & ppMinFeeAL   .~ Coin 1                -- The linear factor for the minimum fee calculation
+        & ppMinFeeBL   .~ Coin 0                -- The constant factor for the minimum fee calculation
 
       -- genesis keys and initial funds
     , sgGenDelegs             = Map.empty

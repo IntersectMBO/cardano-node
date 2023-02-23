@@ -126,6 +126,7 @@ source-repository-package
     ouroboros-network
     ouroboros-network-framework
     ouroboros-network-testing
+    ouroboros-network-protocols
     ouroboros-consensus-cardano-tools
 
 -- Waiting for proper Windows ghc-9.2 release.
