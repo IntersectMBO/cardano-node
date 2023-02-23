@@ -1,0 +1,18 @@
+{
+    "ignorePatterns": [
+        {
+            "pattern": "^(http|https)://127.0.0.1"
+        },
+        {
+            "pattern": "https://iohk.myjetbrains.com"
+        },
+        {
+            "pattern": "https://iohk.zendesk.com"
+        }
+    ],
+    "retryOn429": true,
+    "aliveStatusCodes": [
+        200,
+        206
+    ]
+}
