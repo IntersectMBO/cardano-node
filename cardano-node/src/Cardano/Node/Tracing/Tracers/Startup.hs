@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -364,15 +365,25 @@ instance MetaTrace  (StartupTrace blk) where
     ]
 
 
+nodeToClientVersionToInt :: NodeToClientVersion -> Int
+nodeToClientVersionToInt = \case
+  NodeToClientV_9 -> 9
+  NodeToClientV_10 -> 10
+  NodeToClientV_11 -> 11
+  NodeToClientV_12 -> 12
+  NodeToClientV_13 -> 13
+  NodeToClientV_14 -> 14
 
+nodeToNodeVersionToInt :: NodeToNodeVersion -> Int
+nodeToNodeVersionToInt = \case
+  NodeToNodeV_7 -> 7
+  NodeToNodeV_8 -> 8
+  NodeToNodeV_9 -> 9
+  NodeToNodeV_10 -> 10
 
 -- | Pretty print 'StartupInfoTrace'
 --
-ppStartupInfoTrace :: ( Show (BlockNodeToNodeVersion blk)
-                      , Show (BlockNodeToClientVersion blk)
-                      )
-                   => StartupTrace blk
-                   -> Text
+ppStartupInfoTrace :: StartupTrace blk -> Text
 ppStartupInfoTrace (StartupInfo addresses
                                 localSocket
                                 supportedNodeToNodeVersions
@@ -381,16 +392,8 @@ ppStartupInfoTrace (StartupInfo addresses
   $ "\n" ++ intercalate "\n"
     [ "node addresses:          " ++ intercalate ", " (map ppN2NSocketInfo addresses)
     , "local socket:            " ++ maybe "NONE" ppN2CSocketInfo localSocket
-    , "node-to-node versions:\n"
-       ++ intercalate "\n"
-          (map (\(v, bv) -> show v ++ "\t" ++ show bv)
-        . Map.assocs
-        $ supportedNodeToNodeVersions)
-    , "node-to-client versions:\n"
-       ++ intercalate "\n"
-          (map (\(v, bv) -> show v ++ "\t" ++ show bv)
-        . Map.assocs
-        $ supportedNodeToClientVersions)
+    , "node-to-node versions:   " ++ show (fmap nodeToNodeVersionToInt (Map.keys supportedNodeToNodeVersions))
+    , "node-to-client versions: " ++ show (fmap nodeToClientVersionToInt (Map.keys supportedNodeToClientVersions))
     ]
 
 ppStartupInfoTrace (StartupP2PInfo diffusionMode) =
