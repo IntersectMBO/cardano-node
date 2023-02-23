@@ -14,6 +14,13 @@
 
 - Add `slotInEpoch` and `slotsToEpochEnd` to output of `query tip` command ([PR 4912](https://github.com/input-output-hk/cardano-node/pull/4912))
 
+- Add `--stake-address` option to the following CLI commands ([PR 3404](https://github.com/input-output-hk/cardano-node/pull/3404)):
+  - address build
+  - stake-address build
+  - stake-address registration-certificate
+  - stake-address delegation-certificate
+  - stake-address deregistration-certificate
+
 ### Bugs
 
 - Allow reading signing keys from a pipe ([PR 4342](https://github.com/input-output-hk/cardano-node/pull/4342))
