@@ -1,12 +1,12 @@
 # Changelog for cardano-node
 
-## 1.35.5 -- January 2023
+## 1.35.6 -- Febuary 2023
 
-### node changes
+### consensus changes
 
 None
 
-### consensus changes
+### ledger changes
 
 None
 
@@ -25,10 +25,27 @@ None
   format will be supported for next two major releases of the node (the last
   major version which will support it is `1.37`). (#4563)
 
+- Fixed a tight loop when demoting a peer from hot to warm timeouts
+  (input-output-hk/ouroboros-network#4357).
+
 [#4563]: https://github.com/input-output-hk/cardano-node/issues/4563
 [understanding-config-files]: https://github.com/input-output-hk/cardano-node/blob/master/doc/getting-started/understanding-config-files.md
 
+## 1.35.5 -- January 2023
+
+### node changes
+
+None
+
+### consensus changes
+
+None
+
 ### ledger changes
+
+None
+
+### network changes
 
 None
 

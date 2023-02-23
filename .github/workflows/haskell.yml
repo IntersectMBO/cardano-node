@@ -128,6 +128,12 @@ jobs:
       if: runner.os == 'Linux'
       run: sudo apt-get -y install autoconf automake libtool
 
+    # macOS doesn't come with pkg-config out of the box.
+    - name: "MAC: Install pkg-config (brew)"
+      if: runner.os == 'macOS'
+      run: |
+        brew install pkg-config
+
     - name: "MAC: Install build environment (brew)"
       if: runner.os == 'macOS'
       run: |
