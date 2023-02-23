@@ -1,4 +1,5 @@
 status = [
+  "check-cabal-files",
   "ci/pr/required",
 ]
 timeout_sec = 7200
