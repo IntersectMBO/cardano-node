@@ -139,9 +139,9 @@ import           Cardano.Slotting.Slot (SlotNo)
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Ledger
 
+import qualified Cardano.Ledger.Allegra.Scripts as Timelock
 import qualified Cardano.Ledger.Keys as Shelley
 import qualified Cardano.Ledger.Shelley.Scripts as Shelley
-import qualified Cardano.Ledger.ShelleyMA.Timelocks as Timelock
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo

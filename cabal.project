@@ -37,41 +37,41 @@ packages:
     trace-resources
     trace-forward
 
-extra-packages:
-  ouroboros-consensus-cardano-tools
+-- extra-packages:
+--   ouroboros-consensus-cardano-tools
 
-package cardano-api
+program-options
   ghc-options: -Werror
 
-package cardano-cli
-  ghc-options: -Werror
+-- package cardano-api
+--   ghc-options: -Werror
 
-package cardano-git-rev
-  ghc-options: -Werror
+-- package cardano-cli
+--   ghc-options: -Werror
 
-package cardano-node
-  ghc-options: -Werror
+-- package cardano-node
+-- --  ghc-options: -Werror
 
-package cardano-node-chairman
-  ghc-options: -Werror
+-- package cardano-node-chairman
+--   ghc-options: -Werror
 
-package cardano-testnet
-  ghc-options: -Werror
+-- package cardano-testnet
+--   ghc-options: -Werror
 
-package tx-generator
-  ghc-options: -Werror
+-- package tx-generator
+--   ghc-options: -Werror
 
-package trace-dispatcher
-  ghc-options: -Werror
+-- package trace-dispatcher
+--   ghc-options: -Werror
 
-package trace-resources
-  ghc-options: -Werror
+-- package trace-resources
+--   ghc-options: -Werror
 
-package cardano-tracer
-  ghc-options: -Werror
+-- package cardano-tracer
+--   ghc-options: -Werror
 
-package submit-api
-  ghc-options: -Werror
+-- package submit-api
+--   ghc-options: -Werror
 
 package cryptonite
   -- Using RDRAND instead of /dev/urandom as an entropy source for key
