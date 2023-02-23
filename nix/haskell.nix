@@ -2,9 +2,7 @@
 # Builds Haskell packages with Haskell.nix
 ############################################################################
 { haskell-nix
-, # Version info (git revision)
-  gitrev
-, inputMap
+, incl
 }:
 let
 
@@ -18,34 +16,8 @@ let
                             , buildProject
                             , ...
                             }: {
-    inherit inputMap;
     name = "cardano-node";
-    # We clean-up src to avoid rebuild for unrelated changes for tests that use $CARDANO_NODE_SRC:
-    src =
-      let
-        src = haskellLib.cleanSourceWith {
-          src = ../.;
-          name = "cardano-node-src";
-          filter = path: type:
-            let
-              relPath = lib.removePrefix "${src.origSrcSubDir}/" path;
-            in
-            # excludes top-level directories not part of cabal project (or used by tests):
-            (type != "directory"
-            || (builtins.match ".*/.*" relPath != null)
-            || (!(lib.elem relPath [
-              "nix"
-              "doc"
-              "ci"
-            ])
-            && !(lib.hasPrefix "." relPath)))
-            # exclude ".gitignore" files
-            && !(lib.hasSuffix ".gitignore" relPath)
-            # only keep cabal.project from files at root:
-            && (type == "directory" || builtins.match ".*/.*" relPath != null || (relPath == "cabal.project"));
-        };
-      in
-      src;
+    src = ../.;
     compiler-nix-name = "ghc8107";
     cabalProjectLocal = ''
       allow-newer: terminfo:base
@@ -122,45 +94,88 @@ let
             })
             projectPackagesExes;
         })
-        ({ pkgs, config, ... }: {
-          # Packages we wish to ignore version bounds of.
-          # This is similar to jailbreakCabal, however it
-          # does not require any messing with cabal files.
-          packages.katip.doExactConfig = true;
-          # split data output for ekg to reduce closure size
-          packages.ekg.components.library.enableSeparateDataOutput = true;
-          # cardano-cli-test depends on cardano-cli
-          # TODO: do not depend on the whole `src` just to access a few files.
-          packages.cardano-cli.preCheck = "
-          export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}
-          export CARDANO_NODE_SRC=${src}
-        ";
-          packages.cardano-node-chairman.components.tests.chairman-tests.build-tools =
-            lib.mkForce [
-              pkgs.lsof
-              config.hsPkgs.cardano-node.components.exes.cardano-node
-              config.hsPkgs.cardano-cli.components.exes.cardano-cli
-              config.hsPkgs.cardano-node-chairman.components.exes.cardano-node-chairman
-            ];
-          # cardano-node-chairman depends on cardano-node and cardano-cli
-          # TODO: do not depend on the whole `src` just to access a few files.
-          packages.cardano-node-chairman.preCheck = "
-          export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}
-          export CARDANO_NODE=${config.hsPkgs.cardano-node.components.exes.cardano-node}/bin/cardano-node${pkgs.stdenv.hostPlatform.extensions.executable}
-          export CARDANO_NODE_CHAIRMAN=${config.hsPkgs.cardano-node-chairman.components.exes.cardano-node-chairman}/bin/cardano-node-chairman${pkgs.stdenv.hostPlatform.extensions.executable}
-          export CARDANO_NODE_SRC=${src}
-        ";
-          # cardano-testnet needs access to the git repository source
-          # TODO: do not depend on the whole `src` just to access a few files.
-          packages.cardano-testnet.preCheck = "
-          export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}
-          export CARDANO_NODE=${config.hsPkgs.cardano-node.components.exes.cardano-node}/bin/cardano-node${pkgs.stdenv.hostPlatform.extensions.executable}
-          export CARDANO_SUBMIT_API=${config.hsPkgs.cardano-submit-api.components.exes.cardano-submit-api}/bin/cardano-submit-api${pkgs.stdenv.hostPlatform.extensions.executable}
-          ${lib.optionalString (!pkgs.stdenv.hostPlatform.isWindows) ''
-          ''}
-          export CARDANO_NODE_SRC=${src}
-        ";
-        })
+          ({ pkgs, config, ... }:
+            let
+              exportCliPath = "export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}";
+              exportNodePath = "export CARDANO_NODE=${config.hsPkgs.cardano-node.components.exes.cardano-node}/bin/cardano-node${pkgs.stdenv.hostPlatform.extensions.executable}";
+              mainnetConfigFiles = [
+                "configuration/cardano/mainnet-config.yaml"
+                "configuration/cardano/mainnet-config.json"
+                "configuration/cardano/mainnet-byron-genesis.json"
+                "configuration/cardano/mainnet-shelley-genesis.json"
+                "configuration/cardano/mainnet-alonzo-genesis.json"
+              ];
+            in
+            {
+              # Packages we wish to ignore version bounds of.
+              # This is similar to jailbreakCabal, however it
+              # does not require any messing with cabal files.
+              packages.katip.doExactConfig = true;
+              # split data output for ekg to reduce closure size
+              packages.ekg.components.library.enableSeparateDataOutput = true;
+              # cardano-cli tests depend on cardano-cli and some config files:
+              packages.cardano-cli.components.tests.cardano-cli-golden.preCheck =
+                let
+                  # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
+                  filteredProjectBase = incl ../. [
+                    "scripts/plutus/scripts/v1/custom-guess-42-datum-42.plutus"
+                  ];
+                in
+                ''
+                  ${exportCliPath}
+                  export CARDANO_NODE_SRC=${filteredProjectBase}
+                '';
+              packages.cardano-cli.components.tests.cardano-cli-test.preCheck =
+                let
+                  # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
+                  filteredProjectBase = incl ../. mainnetConfigFiles;
+                in
+                ''
+                  ${exportCliPath}
+                  export CARDANO_NODE_SRC=${filteredProjectBase}
+                '';
+              packages.cardano-node-chairman.components.tests.chairman-tests.build-tools =
+                lib.mkForce [
+                  pkgs.lsof
+                  config.hsPkgs.cardano-node.components.exes.cardano-node
+                  config.hsPkgs.cardano-cli.components.exes.cardano-cli
+                  config.hsPkgs.cardano-node-chairman.components.exes.cardano-node-chairman
+                ];
+              # cardano-node-chairman depends on cardano-node and cardano-cli, and some config files
+              packages.cardano-node-chairman.preCheck =
+                let
+                  # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
+                  filteredProjectBase = incl ../. [
+                    "configuration/chairman"
+                    "configuration/defaults/byron-mainnet"
+                    "cardano-cli/test/data/golden/alonzo/genesis.alonzo.spec.json"
+                    "scripts/protocol-params.json"
+                  ];
+                in
+                ''
+                  ${exportCliPath}
+                  ${exportNodePath}
+                  export CARDANO_NODE_CHAIRMAN=${config.hsPkgs.cardano-node-chairman.components.exes.cardano-node-chairman}/bin/cardano-node-chairman${pkgs.stdenv.hostPlatform.extensions.executable}
+                  export CARDANO_NODE_SRC=${filteredProjectBase}
+                '';
+              # cardano-testnet depends on cardano-node, cardano-cli, cardano-submit-api and some config files
+              packages.cardano-testnet.preCheck =
+                let
+                  # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
+                  filteredProjectBase = incl ../. (mainnetConfigFiles ++ [
+                    "configuration/cardano/mainnet-topology.json"
+                    "configuration/defaults/byron-mainnet"
+                    "cardano-cli/test/data/golden/alonzo/genesis.alonzo.spec.json"
+                    "scripts/babbage/alonzo-babbage-test-genesis.json"
+                  ]);
+                in
+                ''
+                  ${exportCliPath}
+                  ${exportNodePath}
+                  export CARDANO_SUBMIT_API=${config.hsPkgs.cardano-submit-api.components.exes.cardano-submit-api}/bin/cardano-submit-api${pkgs.stdenv.hostPlatform.extensions.executable}
+                  export CARDANO_NODE_SRC=${filteredProjectBase}
+                '';
+            })
         ({ pkgs, ... }: lib.mkIf (!pkgs.stdenv.hostPlatform.isDarwin) {
           # Needed for profiled builds to fix an issue loading recursion-schemes part of makeBaseFunctor
           # that is missing from the `_p` output.  See https://gitlab.haskell.org/ghc/ghc/-/issues/18320
@@ -206,7 +221,8 @@ let
   });
 in project.appendOverlays (with haskellLib.projectOverlays; [
   projectComponents
-  (final: prev: let inherit (final.pkgs) lib; in {
+  (final: prev:
+    let inherit (final.pkgs) lib gitrev; in {
     profiled = final.appendModule {
       modules = [{
         enableLibraryProfiling = true;

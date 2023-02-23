@@ -83,7 +83,7 @@ in
               gnused
               jq
               moreutils
-              nixWrapped
+              nix
               pstree
               python3Packages.supervisor
               workbench.workbench
@@ -108,7 +108,7 @@ in
               --genesis-cache-entry ${genesis}
               --batch-name          smoke-test
               --base-port           ${toString basePort}
-              --node-source         ${pkgs.cardanoNodeProject.args.src.origSrc}
+              --node-source         ${pkgs.cardanoNodeProject.args.src}
               --node-rev            ${cardano-node-rev}
               --cache-dir           ./cache
             )
