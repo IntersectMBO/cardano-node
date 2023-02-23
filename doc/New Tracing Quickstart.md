@@ -24,7 +24,7 @@ advice to use namespaces for any analysis tools of traces!
 
 ### Configuration of new tracing
 
-In Cardano a default configuration is given in the module [Link text Here](https://link-url-here.or [Cardano.Node.Tracing.DefaultTraceConfig](https://github.com/input-output-hk/cardano-node/blob/master/cardano-node/src/Cardano/Node/Tracing/DefaultTraceConfig.hs). In the config file all entries of the default configuration can be overridden. To remove a frequency limiter, define a limiter with maxFrequency 0.0.
+In Cardano a default configuration is given in the module [Cardano.Node.Tracing.DefaultTraceConfig](https://github.com/input-output-hk/cardano-node/blob/master/cardano-node/src/Cardano/Node/Tracing/DefaultTraceConfig.hs). In the config file all entries of the default configuration can be overridden. To remove a frequency limiter, define a limiter with maxFrequency 0.0.
 
 1. Specify a filter for the severity of the messages you want to see, e.g.:
 
