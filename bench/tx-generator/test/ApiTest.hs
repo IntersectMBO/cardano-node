@@ -15,6 +15,9 @@ import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
 import           Data.Aeson (FromJSON, eitherDecodeFileStrict', encode)
 import qualified Data.ByteString.Lazy.Char8 as BSL (putStrLn)
+import           Data.List (sortOn)
+import           Data.Ord (comparing)
+import           GHC.Natural (Natural)
 import           Options.Applicative as Opt
 import           Options.Applicative.Common as Opt (runParserInfo)
 
@@ -23,7 +26,7 @@ import           System.Exit (die, exitSuccess)
 import           System.FilePath
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (ProtocolParameters, fromPlutusData, protocolParamMaxTxExUnits)
+import           Cardano.Api.Shelley (ProtocolParameters (..), fromPlutusData)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Types (AdjustFilePaths (..), GenesisFile (..))
 
@@ -35,7 +38,8 @@ import           Cardano.TxGenerator.Setup.Plutus
 import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Types
 
-import           Cardano.Benchmarking.Script.Aeson (prettyPrint, prettyPrintYaml)
+import           Cardano.Benchmarking.Script.Aeson (prettyPrint, prettyPrintOrdered,
+                   prettyPrintYaml)
 import           Cardano.Benchmarking.Script.Selftest (testScript)
 import           Cardano.Benchmarking.Script.Types (SubmitMode (..))
 
@@ -176,9 +180,28 @@ checkPlutusLoop (Just PlutusOn{..})
           , autoBudgetDatum = ScriptDataNumber 0
           , autoBudgetRedeemer = scriptDataModifyNumber (const 1_000_000) redeemer
           }
-    putStrLn $ "--> " ++ show (plutusAutoBudgetMaxOut protocolParameters script autoBudget)
+
+        pparamsStepFraction d = case protocolParamMaxBlockExUnits protocolParameters of
+          Just u  -> protocolParameters {protocolParamMaxBlockExUnits = Just u
+              { executionSteps = executionSteps u `mul` d
+              }
+            }
+          Nothing -> protocolParameters
+    putStrLn $ "--> " ++ show (plutusAutoBudgetMaxOut protocolParameters script autoBudget TargetTxExpenditure 1)
+
+    let
+      blockMaxOut b d =
+        case plutusAutoScaleBlockfit (pparamsStepFraction d) ("factor for block execution steps: " ++ show d) script b (TargetTxsPerBlock 8) 1 of
+          Right (summary, _, _) -> BSL.putStrLn $ prettyPrintOrdered summary
+          Left err              -> print err
+
+    putStrLn "--> summaries for block budget fits:"
+    mapM_ (blockMaxOut autoBudget) [1.0, 0.5, 2.0]
 
   where
+    mul :: Natural -> Double -> Natural
+    mul n d = floor $ d * fromIntegral n
+
     getRedeemerFile =
       let redeemerPath = (<.> ".redeemer.json") $ dropExtension $ takeFileName plutusScript
       in getDataFileName $ "data" </> redeemerPath

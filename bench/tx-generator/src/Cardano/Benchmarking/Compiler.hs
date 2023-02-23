@@ -137,7 +137,7 @@ splittingPhase srcWallet = do
   plutusPayMode :: DstWallet -> Compiler PayMode
   plutusPayMode dst = do
     ~(Just plutus@PlutusOn{..}) <- askNixOption _nix_plutus
-    scriptSpec <- if plutusType == LimitSaturationLoop
+    scriptSpec_ <- if hasLoopCalibration plutusType
       then case plutusRedeemer of
         Nothing -> throwCompileError $ SomeCompilerError "Plutus loop autoscript requires a redeemer."
         Just redeemer -> do
@@ -154,7 +154,7 @@ splittingPhase srcWallet = do
                       executionUnits
                       debugMode
           pure $ ScriptSpec plutusScript budget
-    return $ PayToScript scriptSpec dst
+    return $ PayToScript (scriptSpec_ plutusType) dst
 
 -- Generate src and dst wallet names for a splitSequence.
 -- testCompiler (error "opts") $ splitSequenceWalletNames (WalletName "w1") (WalletName "w2") (unfoldSplitSequence 1 1000 10000)

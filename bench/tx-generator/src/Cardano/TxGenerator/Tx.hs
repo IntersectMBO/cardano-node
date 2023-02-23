@@ -7,7 +7,8 @@ module  Cardano.TxGenerator.Tx
         (module Cardano.TxGenerator.Tx)
         where
 
-import           Data.Bifunctor (bimap)
+import           Data.Bifunctor (bimap, second)
+import qualified Data.ByteString as BS (length)
 import           Data.Maybe (mapMaybe)
 
 import           Cardano.Api
@@ -64,6 +65,21 @@ sourceToStoreTransactionNew txGenerator fundSource valueSplitter toStore =
           storeAction txId
           return $ Right tx
 
+-- just a preview of a transaction:
+-- not intended to be submitted; funds remain unchanged
+sourceTransactionPreview ::
+     TxGenerator era
+  -> [Fund]
+  -> ([Lovelace] -> split)
+  -> CreateAndStoreList m era split
+  -> Either TxGenError (Tx era)
+sourceTransactionPreview txGenerator inputFunds valueSplitter toStore =
+  second fst $
+    txGenerator inputFunds outputs
+ where
+  split         = valueSplitter $ map getFundLovelace inputFunds
+  (outputs, _)  = toStore split
+
 genTx :: forall era. IsShelleyBasedEra era =>
      ProtocolParameters
   -> (TxInsCollateral era, [Fund])
@@ -104,3 +120,10 @@ genTx protocolParameters (collateral, collFunds) fee metadata inFunds outputs
     ShelleyBasedEraMary    -> TxValidityNoUpperBound ValidityNoUpperBoundInMaryEra
     ShelleyBasedEraAlonzo  -> TxValidityNoUpperBound ValidityNoUpperBoundInAlonzoEra
     ShelleyBasedEraBabbage -> TxValidityNoUpperBound ValidityNoUpperBoundInBabbageEra
+
+
+txSizeInBytes :: forall era. IsShelleyBasedEra era =>
+     Tx era
+  -> Int
+txSizeInBytes
+  = BS.length . serialiseToCBOR

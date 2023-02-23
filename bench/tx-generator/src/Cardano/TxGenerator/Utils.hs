@@ -42,7 +42,10 @@ includeChange :: Lovelace -> [Lovelace] -> [Lovelace] -> PayWithChange
 includeChange fee spend have = case compare changeValue 0 of
   GT -> PayWithChange changeValue spend
   EQ -> PayExact spend
-  LT -> error "includeChange: Bad transaction: insufficient funds"
+  LT -> error $ "includeChange: Bad transaction: insufficient funds" ++
+                "\n   have: " ++ show have ++
+                "\n  spend: " ++ show spend ++
+                "\n    fee: " ++ show fee
   where changeValue = sum have - sum spend - fee
 
 

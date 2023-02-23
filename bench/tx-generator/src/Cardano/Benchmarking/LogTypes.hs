@@ -52,6 +52,7 @@ import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
 
 import           Cardano.Benchmarking.Types
 import           Cardano.Benchmarking.Version as Version
+import           Cardano.TxGenerator.PlutusContext (PlutusBudgetSummary)
 import           Cardano.TxGenerator.Types (TPSRate)
 
 data BenchTracers =
@@ -96,6 +97,8 @@ data TraceBenchTxSubmit txid
   -- ^ SubmissionSummary.
   | TraceBenchTxSubDebug String
   | TraceBenchTxSubError Text
+  | TraceBenchPlutusBudgetSummary PlutusBudgetSummary
+  -- ^ PlutusBudgetSummary.
   deriving stock (Show, Generic)
 
 data SubmissionSummary

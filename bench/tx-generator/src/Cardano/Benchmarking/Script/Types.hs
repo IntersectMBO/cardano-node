@@ -17,7 +17,7 @@ module Cardano.Benchmarking.Script.Types (
         , ProtocolParameterMode(..)
         , ProtocolParametersSource(QueryLocalNode, UseLocalProtocolFile)
         , ScriptBudget(AutoScript, StaticScriptBudget)
-        , ScriptSpec(ScriptSpec, scriptSpecFile, scriptSpecBudget)
+        , ScriptSpec(..)
         , SubmitMode(Benchmark, DiscardTX, DumpToFile, LocalSocket,
                 NodeToNode)
         , TargetNodes
@@ -110,6 +110,7 @@ data ScriptSpec = ScriptSpec
   {
     scriptSpecFile :: !FilePath
   , scriptSpecBudget :: !ScriptBudget
+  , scriptSpecPlutusType :: !TxGenPlutusType
   }
   deriving (Show, Eq)
 deriving instance Generic ScriptSpec

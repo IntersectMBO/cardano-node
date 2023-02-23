@@ -52,6 +52,12 @@ def all_profile_variants:
     } as $dataset_miniature
   |
     { genesis:
+      { utxo:                               (1   * $M)
+      , delegators:                         (0.2 * $M)
+      }
+    } as $dataset_small
+  |
+    { genesis:
       { utxo:                               (30 * $M)
       , delegators:                         0
       , shelley:
@@ -131,6 +137,12 @@ def all_profile_variants:
     } as $triplet
   |
     { composition:
+      { n_singular_hosts:               4
+      , n_dense_hosts:                  0
+      }
+    } as $quadruplet
+  |
+    { composition:
       { n_singular_hosts:               6
       , n_dense_hosts:                  0
       }
@@ -182,6 +194,12 @@ def all_profile_variants:
     } as $compressed_timescale
   |
     { genesis:
+      { epoch_length:                   8000
+      , parameter_k:                    40
+      }
+    } as $model_timescale
+  |
+    { genesis:
       { epoch_length:                   (3600 * 24 * 5)
       , parameter_k:                    (18   * 24 * 5)
       }
@@ -197,6 +215,14 @@ def all_profile_variants:
     ({} |
      .generator.epochs                = 4
     ) as $for_4ep
+  |
+    ({} |
+     .generator.epochs                = 7
+    ) as $for_7ep
+  |
+    ({} |
+     .generator.epochs                = 15
+    ) as $for_15ep
   |
     ({}
      | .node.shutdown_on_block_synced   = 1
@@ -219,10 +245,17 @@ def all_profile_variants:
   | ({}|
      .generator.tps                   = 15
     ) as $current_tps_saturation_value
+  | ({}|
+     .generator.tps                   = 9
+    ) as $model_tps_saturation_value
   |
     ({}|
      .generator.tps                   = 0.2
     ) as $current_tps_saturation_plutus
+  |
+    ({}
+     | .generator.tps                 = 0.4
+    ) as $double_tps_saturation_plutus
   |
    ($current_tps_saturation_plutus *
     { extra_desc: "with Plutus workload"
@@ -243,11 +276,13 @@ def all_profile_variants:
             { "int": 1000000 }
           }
       }
-    }) as $plutus_loop_counter
+    }
+    | .generator.tx_fee        = 1360000
+    ) as $plutus_loop_counter
   |
    ({ generator:
       { plutus:
-          { type:                      "LimitSaturationLoop"
+          { type:                      "LimitTxPerBlock_8"
           , script:                    "v2/ecdsa-secp256k1-loop.plutus"
           , redeemer:
             { constructor: 0
@@ -265,13 +300,12 @@ def all_profile_variants:
           }
       }
     }
-    | .genesis.pparamsEpoch    = timeline::lastKnownEpoch
-    | .genesis.pparamsOverlays = ["v8-preview"]
+    | .generator.tx_fee        = 1025000
     ) as $plutus_loop_secp_ecdsa
   |
    ({ generator:
       { plutus:
-          { type:                       "LimitSaturationLoop"
+          { type:                       "LimitTxPerBlock_8"
           , script:                     "v2/schnorr-secp256k1-loop.plutus"
           , redeemer:
             { constructor: 0
@@ -289,13 +323,30 @@ def all_profile_variants:
           }
       }
     }
-    | .genesis.pparamsEpoch    = timeline::lastKnownEpoch
-    | .genesis.pparamsOverlays = ["v8-preview"]
+    | .generator.tx_fee        = 1020000
     ) as $plutus_loop_secp_schnorr
+  ##
+  ### Definition vocabulary:  genesis variants
+  ##
   |
+    ({}
+      | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
+      | .genesis.pparamsOverlays      = ["v8-preview"]
+    ) as $costmodel_v8_preview
+  |
+    ({}
+      | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
+      | .genesis.pparamsOverlays      = ["v8-preview", "stepshalf"]
+    ) as $costmodel_v8_preview_stepshalf
+  |
+    ({}
+      | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
+      | .genesis.pparamsOverlays      = ["v8-preview", "doublebudget"]
+    ) as $costmodel_v8_preview_doubleb
   ##
   ### Definition vocabulary:  node config variants
   ##
+  |
     ({ extra_desc:                     "without cardano-tracer"
      , suffix:                         "notracer"
      }|
@@ -330,6 +381,10 @@ def all_profile_variants:
     { scenario:                        "fixed-loaded"
     }) as $scenario_fixed_loaded
   |
+   ($model_timescale * $model_tps_saturation_value *
+    { scenario:                        "fixed-loaded"
+    }) as $scenario_model
+  |
    ({ scenario:                        "idle"
     }) as $scenario_idle
   |
@@ -350,6 +405,38 @@ def all_profile_variants:
    ($scenario_fixed_loaded * $doublet * $dataset_miniature * $for_15blk * $no_filtering *
     { desc: "Miniature dataset, CI-friendly duration, bench scale"
     }) as $cibench_base
+  |
+   ($scenario_fixed_loaded * $dataset_small * $for_15ep *
+    { node:
+        { shutdown_on_slot_synced:        9000
+        }
+      , analysis:
+        { filters:                        ["epoch3+", "size-moderate"]
+        }
+      , desc: "Small dataset, honest 15 epochs duration"
+    }) as $plutuscall_base
+  |
+   ($scenario_model * $quadruplet * $dataset_current * $for_7ep *
+    { node:
+        { shutdown_on_slot_synced:        56000
+        }
+      , analysis:
+        { filters:                        ["epoch3+", "size-full"]
+        }
+      , generator:
+        { init_cooldown:                  45
+        }
+      , genesis:
+        { funds_balance:                  20000000000000
+        }
+      , desc: "Status-quo dataset, honest 7 epochs duration"
+    }) as $model_base
+  |
+   ($model_base * $plutus_base *
+    { analysis:
+        { filters:                        ["epoch3+", "size-moderate"]
+        }
+    }) as $modelplutus_base
   |
    ($scenario_fixed_loaded * $triplet * $dataset_oct2021 *
     { node:
@@ -404,15 +491,15 @@ def all_profile_variants:
   , { name: "default"
     , desc: "Default, as per nix/workbench/profile/prof0-defaults.jq"
     }
-  , $plutus_base * $plutus_loop_counter *
+  , $plutus_base * $costmodel_v8_preview * $plutus_loop_counter *
     { name: "plutus"
     , desc: "Default with Plutus workload: CPU/memory limit saturation counter loop"
     }
-  , $plutus_base * $plutus_loop_secp_ecdsa *
+  , $plutus_base * $costmodel_v8_preview * $plutus_loop_secp_ecdsa *
     { name: "plutus-secp-ecdsa"
     , desc: "Default with Plutus workload: CPU/memory limit saturation ECDSA SECP256k1 loop"
     }
-  , $plutus_base * $plutus_loop_secp_schnorr *
+  , $plutus_base * $costmodel_v8_preview * $plutus_loop_secp_schnorr *
     { name: "plutus-secp-schnorr"
     , desc: "Default with Plutus workload: CPU/memory limit saturation Schnorr SECP256k1 loop"
     }
@@ -470,13 +557,13 @@ def all_profile_variants:
   , $cibench_base * $p2p *
     { name: "ci-bench-p2p"
     }
-  , $cibench_base * $plutus_base * $plutus_loop_counter *
+  , $cibench_base * $plutus_base * $costmodel_v8_preview * $plutus_loop_counter *
     { name: "ci-bench-plutus"
     }
-  , $cibench_base * $plutus_base * $plutus_loop_secp_ecdsa *
+  , $cibench_base * $plutus_base * $costmodel_v8_preview * $plutus_loop_secp_ecdsa *
     { name: "ci-bench-plutus-secp-ecdsa"
     }
-  , $cibench_base * $plutus_base * $plutus_loop_secp_schnorr *
+  , $cibench_base * $plutus_base * $costmodel_v8_preview * $plutus_loop_secp_schnorr *
     { name: "ci-bench-plutus-secp-schnorr"
     }
   , $cibench_base * $without_tracer *
@@ -486,6 +573,54 @@ def all_profile_variants:
   ## CI variants: test duration, 3 blocks, dense10
   , $citest_base * $singleton_dense10 *
     { name: "ci-test-dense10"
+    }
+
+  ## Plutus call variants: 15 epochs, with differences in block budget execution step limit
+  , $plutus_base * $costmodel_v8_preview * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_counter *
+    { name: "plutuscall-loop-plain"
+    }
+  , $plutus_base * $costmodel_v8_preview * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_secp_ecdsa *
+    { name: "plutuscall-secp-ecdsa-plain"
+    }
+  , $plutus_base * $costmodel_v8_preview * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_secp_schnorr *
+    { name: "plutuscall-secp-schnorr-plain"
+    }
+  , $plutus_base * $costmodel_v8_preview_stepshalf * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_counter *
+    { name: "plutuscall-loop-half"
+    }
+  , $plutus_base * $costmodel_v8_preview_stepshalf * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_secp_ecdsa *
+    { name: "plutuscall-secp-ecdsa-half"
+    }
+  , $plutus_base * $costmodel_v8_preview_stepshalf * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_secp_schnorr *
+    { name: "plutuscall-secp-schnorr-half"
+    }    
+  , $plutus_base * $costmodel_v8_preview_doubleb * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_counter *
+    { name: "plutuscall-loop-double"
+    }
+  , $plutus_base * $costmodel_v8_preview_doubleb * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_secp_ecdsa *
+    { name: "plutuscall-secp-ecdsa-double"
+    }
+  , $plutus_base * $costmodel_v8_preview_doubleb * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_secp_schnorr *
+    { name: "plutuscall-secp-schnorr-double"
+    }
+
+## Model value variant: 7 epochs (128GB RAM needed; 16GB for testing locally)
+  , $model_base * $costmodel_v8_preview *
+    { name: "model-value"
+    }
+  , $model_base * $costmodel_v8_preview * $dataset_small *
+    { name: "model-value-test"
+    }
+
+## Model plutus variants: 7 epochs, with differences in block budget execution step limit (128GB RAM needed)
+  , $modelplutus_base * $costmodel_v8_preview * $double_tps_saturation_plutus * $plutus_loop_secp_ecdsa *
+    { name: "model-secp-ecdsa-plain"
+    }
+  , $modelplutus_base * $costmodel_v8_preview_stepshalf * $double_tps_saturation_plutus * $plutus_loop_secp_ecdsa *
+    { name: "model-secp-ecdsa-half"
+    }
+  , $modelplutus_base * $costmodel_v8_preview_doubleb * $double_tps_saturation_plutus * $plutus_loop_secp_ecdsa *
+    { name: "model-secp-ecdsa-double"
     }
 
 ## Dish variants

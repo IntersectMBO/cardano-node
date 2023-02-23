@@ -25,6 +25,7 @@ common project-config
     buildable: False
 
 library
+  import:               project-config
   hs-source-dirs:       src
   ghc-options:          -Wall
                         -Wcompat
@@ -154,6 +155,7 @@ library
                         -fno-omit-interface-pragmas
 
 executable tx-generator
+  import:               project-config
   hs-source-dirs:       app
   main-is:              tx-generator.hs
   default-language:     Haskell2010
@@ -166,6 +168,7 @@ executable tx-generator
                       , tx-generator
 
 test-suite tx-generator-apitest
+  import:               project-config
   hs-source-dirs:       test
   main-is:              ApiTest.hs
   type:                 exitcode-stdio-1.0
@@ -205,6 +208,7 @@ test-suite tx-generator-apitest
                      , tx-generator
 
 test-suite tx-generator-test
+  import:               project-config
   hs-source-dirs:       test
   main-is:              Main.hs
   type:                 exitcode-stdio-1.0
@@ -223,6 +227,7 @@ test-suite tx-generator-test
                         -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
 benchmark tx-generator-bench
+  import:               project-config
   hs-source-dirs:       test
   main-is:              Bench.hs
   type:                 exitcode-stdio-1.0

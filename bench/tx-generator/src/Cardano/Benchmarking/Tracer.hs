@@ -253,6 +253,10 @@ instance LogFormatting (TraceBenchTxSubmit TxId) where
       mconcat [ "kind" .= A.String "TraceBenchTxSubError"
               , "msg"  .= A.String s
               ]
+    TraceBenchPlutusBudgetSummary summary ->
+      mconcat [ "kind"    .= A.String "TraceBenchPlutusBudgetSummary"
+              , "summary" .= toJSON summary
+              ]
 
 instance MetaTrace (TraceBenchTxSubmit TxId) where
     namespaceFor TraceTxGeneratorVersion {} = Namespace [] ["TxGeneratorVersion"]
@@ -271,6 +275,7 @@ instance MetaTrace (TraceBenchTxSubmit TxId) where
     namespaceFor TraceBenchTxSubSummary {} = Namespace [] ["eBenchTxSubSummary"]
     namespaceFor TraceBenchTxSubDebug {} = Namespace [] ["BenchTxSubDebug"]
     namespaceFor TraceBenchTxSubError {} = Namespace [] ["BenchTxSubError"]
+    namespaceFor TraceBenchPlutusBudgetSummary {} = Namespace [] ["BenchPlutusBudgetSummary"]
 
     severityFor _ _ = Just Info
 
@@ -293,6 +298,7 @@ instance MetaTrace (TraceBenchTxSubmit TxId) where
         , Namespace [] ["eBenchTxSubSummary"]
         , Namespace [] ["BenchTxSubDebug"]
         , Namespace [] ["BenchTxSubError"]
+        , Namespace [] ["BenchPlutusBudgetSummary"]
         ]
 
 instance LogFormatting NodeToNodeSubmissionTrace where
