@@ -150,6 +150,8 @@ data QueryTipLocalStateOutput = QueryTipLocalStateOutput
   { localStateChainTip :: ChainTip
   , mEra :: Maybe AnyCardanoEra
   , mEpoch :: Maybe EpochNo
+  , mSlotInEpoch :: Maybe Word64
+  , mSlotsToEpochEnd :: Maybe Word64
   , mSyncProgress :: Maybe Text
   } deriving Show
 
@@ -169,6 +171,8 @@ instance ToJSON QueryTipLocalStateOutput where
       object $
         ( ("era" ..=? mEra a)
         . ("epoch" ..=? mEpoch a)
+        . ("slotInEpoch" ..=? mSlotInEpoch a)
+        . ("slotsToEpochEnd" ..=? mSlotsToEpochEnd a)
         . ("syncProgress" ..=? mSyncProgress a)
         ) []
     ChainTip slotNo blockHeader blockNo ->
@@ -178,6 +182,8 @@ instance ToJSON QueryTipLocalStateOutput where
         . ("block" ..= blockNo)
         . ("era" ..=? mEra a)
         . ("epoch" ..=? mEpoch a)
+        . ("slotInEpoch" ..=? mSlotInEpoch a)
+        . ("slotsToEpochEnd" ..=? mSlotsToEpochEnd a)
         . ("syncProgress" ..=? mSyncProgress a)
         ) []
   toEncoding a = case localStateChainTip a of
@@ -185,6 +191,8 @@ instance ToJSON QueryTipLocalStateOutput where
       pairs $ mconcat $
         ( ("era" ..=? mEra a)
         . ("epoch" ..=? mEpoch a)
+        . ("slotInEpoch" ..=? mSlotInEpoch a)
+        . ("slotsToEpochEnd" ..=? mSlotsToEpochEnd a)
         . ("syncProgress" ..=? mSyncProgress a)
         ) []
     ChainTip slotNo blockHeader blockNo ->
@@ -194,6 +202,8 @@ instance ToJSON QueryTipLocalStateOutput where
         . ("block" ..= blockNo)
         . ("era" ..=? mEra a)
         . ("epoch" ..=? mEpoch a)
+        . ("slotInEpoch" ..=? mSlotInEpoch a)
+        . ("slotsToEpochEnd" ..=? mSlotsToEpochEnd a)
         . ("syncProgress" ..=? mSyncProgress a)
         ) []
 
@@ -206,18 +216,24 @@ instance FromJSON QueryTipLocalStateOutput where
     mSlot <- o .:? "slot"
     mHash <- o .:? "hash"
     mBlock <- o .:? "block"
+    mSlotInEpoch' <- o .:? "slotInEpoch"
+    mSlotsToEpochEnd' <- o .:? "slotsToEpochEnd"
     case (mSlot, mHash, mBlock) of
       (Nothing, Nothing, Nothing) ->
         pure $ QueryTipLocalStateOutput
                  ChainTipAtGenesis
                  mEra'
                  mEpoch'
+                 mSlotInEpoch'
+                 mSlotsToEpochEnd'
                  mSyncProgress'
       (Just slot, Just hash, Just block) ->
         pure $ QueryTipLocalStateOutput
                  (ChainTip slot hash block)
                  mEra'
                  mEpoch'
+                 mSlotInEpoch'
+                 mSlotsToEpochEnd'
                  mSyncProgress'
       (_,_,_) ->
         fail $ mconcat

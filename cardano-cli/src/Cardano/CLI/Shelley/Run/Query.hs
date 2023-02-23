@@ -340,9 +340,11 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
               , O.mEra = Nothing
               , O.mEpoch = Nothing
               , O.mSyncProgress = Nothing
+              , O.mSlotInEpoch = Nothing
+              , O.mSlotsToEpochEnd = Nothing
               }
 
-          Right (epochNo, _, _) -> do
+          Right (epochNo, SlotsInEpoch slotsInEpoch, SlotsToEpochEnd slotsToEpochEnd) -> do
             syncProgressResult <- runExceptT $ do
               systemStart <- fmap getSystemStart (O.mSystemStart localState) & hoistMaybe ShelleyQueryCmdSystemStartUnavailable
               nowSeconds <- toRelativeTime (SystemStart systemStart) <$> liftIO getCurrentTime
@@ -359,6 +361,8 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
               { O.localStateChainTip = chainTip
               , O.mEra = Just (O.era localState)
               , O.mEpoch = Just epochNo
+              , O.mSlotInEpoch = Just slotsInEpoch
+              , O.mSlotsToEpochEnd = Just slotsToEpochEnd
               , O.mSyncProgress = mSyncProgress
               }
 
