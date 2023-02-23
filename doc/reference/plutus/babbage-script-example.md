@@ -28,7 +28,7 @@ Below is an example that shows how to use a reference Plutus spending script wit
 + sending ada to the Plutus script address
 + spending ada at the Plutus script address using the Plutus reference script
 + creating a read only reference tx output
-+ the creation of the reference [minting script](scripts/plutus/scripts/v2) at a transaction output.
++ the creation of the reference [minting script](../../../scripts/plutus/scripts/v2) at a transaction output.
 
 In this example we will use the [Required Redeemer](../../../scripts/plutus/scripts/v2/required-redeemer.plutus) Plutus spending script and a [minting script](../../../scripts/plutus/scripts/v2/minting-script.plutus). In order to execute a reference Plutus spending script, we require the following:
 

@@ -1,6 +1,6 @@
 # trace-forward
 
-This library specifies two protocols allowing to forward different information from the node to external applications (for example, `cardano-tracer` or `cardano-wallet`). These protocols are built upon [`typed-protocols`](https://github.com/input-output-hk/ouroboros-network/tree/master/typed-protocols).
+This library specifies two protocols allowing to forward different information from the node to external applications (for example, `cardano-tracer` or `cardano-wallet`). These protocols are built upon [`typed-protocols`](https://github.com/input-output-hk/typed-protocols).
 
 The first one allows forwarding `TraceObject`s from the node to external applications. You can think of `TraceObject` as a log item, which will be saved in log files.
 

@@ -40,7 +40,7 @@ Please note that `cardano-tracer` can work as an aggregator as well: _one_ `card
 
 # Build and run
 
-Please make sure you have [Nix installed](https://nixos.org/guides/install-nix.html).
+Please make sure you have [Nix installed](https://nixos.org/download.html#download-nix).
 
 First of all, go to Nix shell using the following command (from the root of `cardano-node` repository):
 
@@ -250,7 +250,7 @@ Please use `ConnectTo`-based scenario only if you really need it. Otherwise, it 
 
 The field `networkMagic` specifies the value of network magic. It is an integer constant from the genesis file, the node uses this value for the network handshake with peers. Since `cardano-tracer` should be connected to the node, it needs that network magic.
 
-The value from the example above, `764824073`, is taken from the Shelley genesis file for [Mainnet](https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/index.html). Please take this value from the genesis file your nodes are launched with.
+The value from the example above, `764824073`, is taken from the Shelley genesis file for [Mainnet](https://book.world.dev.cardano.org/environments.html). Please take this value from the genesis file your nodes are launched with.
 
 ## Requests
 
