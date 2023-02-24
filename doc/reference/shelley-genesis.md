@@ -1193,34 +1193,37 @@ export CARDANO_NODE_SOCKET_PATH=$PWD/example/node1/node.sock
 In this demo we are running two nodes however so we'll specify the env var each
 time in the command.
 
+```bash
+CARDANO_NODE_SOCKET_PATH=example/node1/node.sock \
+  cardano-cli query protocol-parameters \
+  --testnet-magic 42 \
+  --shelley-mode
+```
+
 ```json
-$ CARDANO_NODE_SOCKET_PATH=example/node1/node.sock \
-    cardano-cli query protocol-parameters \
-    --testnet-magic 42 \
-    --shelley-mode
 {
-    "poolDeposit": 0,
-    "protocolVersion": {
-        "minor": 0,
-        "major": 0
-    },
-    "minUTxOValue": 0,
-    "decentralisationParam": 1,
-    "maxTxSize": 16384,
-    "minPoolCost": 0,
-    "minFeeA": 0,
-    "maxBlockBodySize": 65536,
-    "minFeeB": 0,
-    "eMax": 18,
-    "extraEntropy": {
-        "tag": "NeutralNonce"
-    },
-    "maxBlockHeaderSize": 1100,
-    "keyDeposit": 0,
-    "nOpt": 100,
-    "rho": 0,
-    "tau": 0,
-    "a0": 0
+  "poolDeposit": 0,
+  "protocolVersion": {
+      "minor": 0,
+      "major": 0
+  },
+  "minUTxOValue": 0,
+  "decentralisationParam": 1,
+  "maxTxSize": 16384,
+  "minPoolCost": 0,
+  "minFeeA": 0,
+  "maxBlockBodySize": 65536,
+  "minFeeB": 0,
+  "eMax": 18,
+  "extraEntropy": {
+    "tag": "NeutralNonce"
+  },
+  "maxBlockHeaderSize": 1100,
+  "keyDeposit": 0,
+  "nOpt": 100,
+  "rho": 0,
+  "tau": 0,
+  "a0": 0
 }
 ```
 
@@ -1363,6 +1366,7 @@ Available options:
 ```
 
 So let's do it
+
 ```bash
 $ cardano-cli address key-gen \
     --verification-key-file example/addr1.vkey \
@@ -1400,6 +1404,7 @@ This command can also build payment addresses that are associated with stake
 addresses, and thus have the ability to delegate the stake rights.
 
 For now however let's see our boring address with no stake rights:
+
 ```bash
 $ cardano-cli address build \
     --payment-verification-key-file example/addr1.vkey \
@@ -1599,6 +1604,7 @@ querying the node, we have to specify `--testnet-magic 1097911063`, otherwise it
 defaults to mainnet and then the handshake with the node would fail.
 
 So let's do it.
+
 ```bash
 CARDANO_NODE_SOCKET_PATH=example/node1/node.sock \
     cardano-cli transaction submit \
@@ -1613,6 +1619,7 @@ see that the next block included the transaction.
 
 We can also check using the UTxO query, but now using the new address we moved
 the funds to
+
 ```bash
 CARDANO_NODE_SOCKET_PATH=example/node1/node.sock \
     cardano-cli query utxo \
