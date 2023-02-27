@@ -1,6 +1,8 @@
 status = [
   "check-cabal-files",
-  "ci/pr/required",
+  "ci/hydra-build:x86_64-linux.pr.required",
+  "ci/hydra-build:x86_64-darwin.pr.required",
+  "ci/hydra-build:aarch64-darwin.pr.required",
 ]
 timeout_sec = 7200
 required_approvals = 1
