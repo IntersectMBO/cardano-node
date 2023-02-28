@@ -27,6 +27,7 @@ module Test.Gen.Cardano.Api.Typed
   , genUTxO
 
     -- * Scripts
+  , genHashableScriptData
   , genReferenceScript
   , genScript
   , genSimpleScript
@@ -35,6 +36,7 @@ module Test.Gen.Cardano.Api.Typed
   , genScriptInEra
   , genScriptHash
   , genScriptData
+  , genScriptDataSchema
   , genScriptValidity
 
   , genAssetName
@@ -109,12 +111,13 @@ import           Cardano.Api hiding (txIns)
 import qualified Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
-import           Cardano.Api.Shelley (Hash (ScriptDataHash), KESPeriod (KESPeriod),
+import           Cardano.Api.Shelley (Hash (..), KESPeriod (KESPeriod),
                    OperationalCertificateIssueCounter (OperationalCertificateIssueCounter),
                    PlutusScript (PlutusScriptSerialised), ProtocolParameters (ProtocolParameters),
                    ReferenceScript (..), ReferenceTxInsScriptsInlineDatumsSupportedInEra (..),
                    StakeCredential (StakeCredentialByKey), StakePoolKey,
                    refInsScriptsAndInlineDatsSupportedInEra)
+
 
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
@@ -220,6 +223,18 @@ genPlutusScript _ =
     -- We make no attempt to create a valid script
     PlutusScriptSerialised . SBS.toShort <$> Gen.bytes (Range.linear 0 32)
 
+genScriptDataSchema :: Gen ScriptDataJsonSchema
+genScriptDataSchema = Gen.element [ScriptDataJsonNoSchema, ScriptDataJsonDetailedSchema]
+
+genHashableScriptData :: Gen HashableScriptData
+genHashableScriptData = do
+  sd <- genScriptData
+  case deserialiseFromCBOR AsHashableScriptData $ serialiseToCBOR sd of
+    Left e -> error $ "genHashableScriptData: " <> show e
+    Right r -> return r
+
+
+{-# DEPRECATED genScriptData "Use genHashableScriptData" #-}
 genScriptData :: Gen ScriptData
 genScriptData =
     Gen.recursive
@@ -891,13 +906,13 @@ genTxOutDatumHashTxContext era = case era of
     AlonzoEra  -> Gen.choice
                     [ pure TxOutDatumNone
                     , TxOutDatumHash ScriptDataInAlonzoEra <$> genHashScriptData
-                    , TxOutDatumInTx ScriptDataInAlonzoEra <$> genScriptData
+                    , TxOutDatumInTx ScriptDataInAlonzoEra <$> genHashableScriptData
                     ]
     BabbageEra -> Gen.choice
                     [ pure TxOutDatumNone
                     , TxOutDatumHash ScriptDataInBabbageEra <$> genHashScriptData
-                    , TxOutDatumInTx ScriptDataInBabbageEra <$> genScriptData
-                    , TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra <$> genScriptData
+                    , TxOutDatumInTx ScriptDataInBabbageEra <$> genHashableScriptData
+                    , TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra <$> genHashableScriptData
                     ]
 
 genTxOutDatumHashUTxOContext :: CardanoEra era -> Gen (TxOutDatum CtxUTxO era)
@@ -913,7 +928,7 @@ genTxOutDatumHashUTxOContext era = case era of
     BabbageEra -> Gen.choice
                     [ pure TxOutDatumNone
                     , TxOutDatumHash ScriptDataInBabbageEra <$> genHashScriptData
-                    , TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra <$> genScriptData
+                    , TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra <$> genHashableScriptData
                     ]
 
 mkDummyHash :: forall h a. CRYPTO.HashAlgorithm h => Int -> CRYPTO.Hash h a

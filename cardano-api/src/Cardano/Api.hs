@@ -399,6 +399,11 @@ module Cardano.Api (
     examplePlutusScriptAlwaysFails,
 
     -- ** Script data
+    HashableScriptData,
+    hashScriptDataBytes,
+    getOriginalScriptDataBytes,
+    getScriptData,
+    unsafeHashableScriptData,
     ScriptData(..),
     hashScriptData,
 
@@ -412,6 +417,8 @@ module Cardano.Api (
     scriptDataToJson,
     ScriptDataJsonError (..),
     ScriptDataJsonSchemaError (..),
+    ScriptDataJsonBytesError,
+    scriptDataJsonToHashable,
 
     -- ** Script execution units
     ExecutionUnits(..),

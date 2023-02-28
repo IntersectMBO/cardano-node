@@ -92,7 +92,7 @@ preExecutePlutusV1 protocolVersion_ (PlutusScript _ (PlutusScriptSerialised scri
         hoistEither $
           snd $ PlutusV1.evaluateScriptCounting protocolVersion PlutusV1.Verbose evaluationContext script
             [ toPlutusData datum
-            , toPlutusData redeemer
+            , toPlutusData (getScriptData redeemer)
             , PlutusV1.toData dummyContext
             ]
 
@@ -140,7 +140,7 @@ preExecutePlutusV2 protocolVersion_ (PlutusScript _ (PlutusScriptSerialised scri
         hoistEither $
           snd $ PlutusV2.evaluateScriptCounting protocolVersion PlutusV2.Verbose evaluationContext script
             [ toPlutusData datum
-            , toPlutusData redeemer
+            , toPlutusData (getScriptData redeemer)
             , PlutusV2.toData dummyContext
             ]
 

@@ -70,13 +70,13 @@ data PlutusBudgetFittingStrategy
   deriving (Generic, Eq, Show, ToJSON)
 
 instance ToJSON ScriptData where
-  toJSON = scriptDataToJson ScriptDataJsonDetailedSchema
+  toJSON = scriptDataToJson ScriptDataJsonDetailedSchema . unsafeHashableScriptData
 
 
 -- | load serialized ScriptData, filling in an empty value if no .json file is given
-readScriptData :: FilePath -> IO (Either TxGenError ScriptData)
+readScriptData :: FilePath -> IO (Either TxGenError HashableScriptData)
 readScriptData ""
-  = pure $ Right $ ScriptDataNumber 0             -- TODO: make sure this is an adequate empty value
+  = pure $ Right $ unsafeHashableScriptData $ ScriptDataNumber 0             -- TODO: make sure this is an adequate empty value
 readScriptData jsonFilePath
   = runExceptT $ do
     sData :: Aeson.Value <-
@@ -154,7 +154,7 @@ plutusAutoBudgetMaxOut
   txInputs
   = do
     (n, limitFactors) <- binarySearch isInLimits 0 searchUpperBound
-    let pab' = pab {autoBudgetUnits = targetBudget, autoBudgetRedeemer = toLoopArgument n}
+    let pab' = pab {autoBudgetUnits = targetBudget, autoBudgetRedeemer = unsafeHashableScriptData $ toLoopArgument n}
     pure (pab', fromIntegral n, limitFactors)
   where
     -- The highest loop counter that is tried - this is about 10 times the current mainnet limit.
@@ -173,12 +173,12 @@ plutusAutoBudgetMaxOut
       TargetBlockExpenditure (Just s) -> calc budgetPerBlock div (targetTxPerBlock s * txInputs)
       TargetBlockExpenditure Nothing  -> error "plutusAutoBudgetMaxOut : TargetBlockExpenditure Nothing should be unreachable. This is an implementation error in tx-generator."
 
-    toLoopArgument n = scriptDataModifyNumber (+ n) autoBudgetRedeemer
+    toLoopArgument n = scriptDataModifyNumber (+ n) $ getScriptData autoBudgetRedeemer
 
     -- the execution is considered within limits when there's no limiting factor, i.e. the list is empty
     isInLimits :: Integer -> Either TxGenError [PlutusAutoLimitingFactor]
     isInLimits n = do
-      used <- preExecutePlutusScript protocolParams script autoBudgetDatum (toLoopArgument n)
+      used <- preExecutePlutusScript protocolParams script autoBudgetDatum (unsafeHashableScriptData $ toLoopArgument n)
       pure $   [ExceededStepLimit   | executionSteps used > executionSteps targetBudget]
             ++ [ExceededMemoryLimit | executionMemory used > executionMemory targetBudget]
 
@@ -208,7 +208,7 @@ plutusBudgetSummary
     projectedTxSize         = Nothing           -- we defer this value until after splitting phase
     strategyMessage         = Nothing
     scriptArgDatum          = autoBudgetDatum
-    scriptArgRedeemer       = autoBudgetRedeemer
+    scriptArgRedeemer       = getScriptData autoBudgetRedeemer
     budgetPerTxInput        = calc budgetPerTx div txInputs
     budgetTarget            = autoBudgetUnits
     projectedTxPerBlock     = fromIntegral $ min

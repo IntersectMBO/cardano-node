@@ -196,9 +196,9 @@ library gen
                       , cardano-ledger-alonzo-test
                       , cardano-ledger-byron-test ^>= 1.4
                       , cardano-ledger-core ^>= 0.1
+                      , cardano-ledger-shelley ^>= 0.1
                       , containers
                       , hedgehog
-                      , cardano-ledger-shelley ^>= 0.1
                       , text
 
 test-suite cardano-api-test
@@ -216,11 +216,13 @@ test-suite cardano-api-test
                       , cardano-crypto-class ^>= 2.0
                       , cardano-crypto-test ^>= 1.4
                       , cardano-crypto-tests ^>= 2.0
+                      , cardano-ledger-alonzo ^>= 0.1
                       , cardano-ledger-core ^>= 0.1
                       , cardano-slotting ^>= 0.1
                       , containers
                       , hedgehog
                       , hedgehog-extras
+                      , mtl
                       , ouroboros-consensus
                       , ouroboros-consensus-shelley
                       , QuickCheck

@@ -954,7 +954,7 @@ toTxOutInAnyEra era (TxOutAnyEra addr' val' mDatumHash refScriptFp) = do
        TxOutDatumByHashOf fileOrSdata -> do
          sData <- firstExceptT ShelleyTxCmdScriptDataError
                     $ readScriptDataOrFile fileOrSdata
-         pure (TxOutDatumHash sDataSupp $ hashScriptData sData, refScript)
+         pure (TxOutDatumHash sDataSupp $ hashScriptDataBytes sData, refScript)
        TxOutDatumByValue fileOrSdata -> do
          sData <- firstExceptT ShelleyTxCmdScriptDataError
                     $ readScriptDataOrFile fileOrSdata
@@ -974,7 +974,7 @@ toTxOutInAnyEra era (TxOutAnyEra addr' val' mDatumHash refScriptFp) = do
       TxOutDatumByHashOf sDataOrFile -> do
         sData <- firstExceptT ShelleyTxCmdScriptDataError
                    $ readScriptDataOrFile sDataOrFile
-        pure (TxOutDatumHash supp $ hashScriptData sData)
+        pure (TxOutDatumHash supp $ hashScriptDataBytes sData)
       TxOutDatumByValue sDataOrFile -> do
         sData <- firstExceptT ShelleyTxCmdScriptDataError
                    $ readScriptDataOrFile sDataOrFile
@@ -1316,7 +1316,7 @@ mkShelleyBootstrapWitnesses mnw txBody =
 runTxHashScriptData :: ScriptDataOrFile -> ExceptT ShelleyTxCmdError IO ()
 runTxHashScriptData scriptDataOrFile = do
     d <- firstExceptT ShelleyTxCmdScriptDataError $ readScriptDataOrFile scriptDataOrFile
-    liftIO $ BS.putStrLn $ serialiseToRawBytesHex (hashScriptData d)
+    liftIO $ BS.putStrLn $ serialiseToRawBytesHex (hashScriptDataBytes d)
 
 runTxGetTxId :: InputTxBodyOrTxFile -> ExceptT ShelleyTxCmdError IO ()
 runTxGetTxId txfile = do

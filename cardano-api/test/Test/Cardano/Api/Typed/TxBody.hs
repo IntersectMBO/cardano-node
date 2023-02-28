@@ -50,7 +50,7 @@ prop_roundtrip_txbodycontent_txouts =
   matchDatum :: MonadTest m => (TxOutDatum CtxTx era, TxOutDatum CtxTx era) -> m ()
   matchDatum = \case
     (TxOutDatumHash _ dh, TxOutDatumInTx _ d) ->
-      dh === hashScriptData d
+      dh === hashScriptDataBytes d
     (a, b) ->
       a === b
 

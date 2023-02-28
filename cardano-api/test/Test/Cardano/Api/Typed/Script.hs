@@ -119,7 +119,7 @@ prop_roundtrip_SimpleScriptV2_JSON =
 prop_roundtrip_ScriptData :: Property
 prop_roundtrip_ScriptData =
   H.property $ do
-    sData <- H.forAll genScriptData
+    sData <- H.forAll genHashableScriptData
     sData === fromAlonzoData (toAlonzoData sData)
 
 -- -----------------------------------------------------------------------------

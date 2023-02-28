@@ -310,6 +310,7 @@ data ScriptDataError =
   | ScriptDataErrorConversion !FilePath !ScriptDataJsonError
   | ScriptDataErrorValidation !FilePath !ScriptDataRangeError
   | ScriptDataErrorMetadataDecode !FilePath !CBOR.DecoderError
+  | ScriptDataErrorJsonBytes !ScriptDataJsonBytesError
 
 renderScriptDataError :: ScriptDataError -> Text
 renderScriptDataError (ScriptDataErrorFile err) =
@@ -326,6 +327,9 @@ renderScriptDataError (ScriptDataErrorValidation fp sDataRangeErr) =
 renderScriptDataError (ScriptDataErrorMetadataDecode fp decoderErr) =
   Text.pack $ "Error decoding CBOR metadata at: " <> show fp <>
               " Error: " <> show decoderErr
+renderScriptDataError (ScriptDataErrorJsonBytes e) =
+  Text.pack $ displayError e
+
 
 readScriptDatumOrFile :: ScriptDatumOrFile witctx
                       -> ExceptT ScriptDataError IO (ScriptDatum witctx)
@@ -340,25 +344,22 @@ readScriptRedeemerOrFile :: ScriptRedeemerOrFile
 readScriptRedeemerOrFile = readScriptDataOrFile
 
 readScriptDataOrFile :: ScriptDataOrFile
-                     -> ExceptT ScriptDataError IO ScriptData
+                     -> ExceptT ScriptDataError IO HashableScriptData
 readScriptDataOrFile (ScriptDataValue d) = return d
 readScriptDataOrFile (ScriptDataJsonFile fp) = do
-  bs <- handleIOExceptT (ScriptDataErrorFile . FileIOError fp) $ LBS.readFile fp
-  v  <- firstExceptT (ScriptDataErrorJsonParse fp)
-          $ hoistEither $ Aeson.eitherDecode' bs
-  sd <- firstExceptT (ScriptDataErrorConversion fp)
-          $ hoistEither $ scriptDataFromJson ScriptDataJsonDetailedSchema v
-  firstExceptT (ScriptDataErrorValidation fp)
-          $ hoistEither $ validateScriptData sd
-  return sd
+  sDataBs <- handleIOExceptT (ScriptDataErrorFile . FileIOError fp) $ LBS.readFile fp
+  sDataValue <- hoistEither . first (ScriptDataErrorJsonParse fp) $ Aeson.eitherDecode sDataBs
+  hoistEither
+    . first ScriptDataErrorJsonBytes
+    $ scriptDataJsonToHashable ScriptDataJsonNoSchema sDataValue
+
 readScriptDataOrFile (ScriptDataCborFile fp) = do
-  bs <- handleIOExceptT (ScriptDataErrorFile . FileIOError fp)
-          $ BS.readFile fp
-  sd <- firstExceptT (ScriptDataErrorMetadataDecode fp)
-          $ hoistEither $ deserialiseFromCBOR AsScriptData bs
+  origBs <- handleIOExceptT (ScriptDataErrorFile . FileIOError fp) (BS.readFile fp)
+  hSd <- firstExceptT (ScriptDataErrorMetadataDecode fp)
+          $ hoistEither $ deserialiseFromCBOR AsHashableScriptData origBs
   firstExceptT (ScriptDataErrorValidation fp)
-          $ hoistEither $ validateScriptData sd
-  return sd
+          $ hoistEither $ validateScriptData $ getScriptData hSd
+  return hSd
 
 
 --

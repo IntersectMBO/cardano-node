@@ -425,10 +425,10 @@ makePlutusContext ScriptSpec{..} = do
 
   (scriptData, scriptRedeemer, executionUnits) <- case scriptSpecBudget of
     StaticScriptBudget sDataFile redeemerFile units withCheck -> do
-      sData <- liftIOSafe $ readScriptData sDataFile
-      redeemer <-liftIOSafe $ readScriptData redeemerFile
+      sData <- liftIOSafe (readScriptData sDataFile)
+      redeemer <- liftIOSafe (readScriptData redeemerFile)
       when withCheck $ do
-        unitsPreRun <- preExecuteScriptAction protocolParameters script sData redeemer
+        unitsPreRun <- preExecuteScriptAction protocolParameters script (getScriptData sData) (getScriptData redeemer)
         unless (units == unitsPreRun) $
           throwE $ WalletError $ concat [
               " Stated execution Units do not match result of pre execution. "
@@ -451,7 +451,7 @@ makePlutusContext ScriptSpec{..} = do
         autoBudget = PlutusAutoBudget
           { autoBudgetUnits = perTxBudget
           , autoBudgetDatum = ScriptDataNumber 0
-          , autoBudgetRedeemer = scriptDataModifyNumber (const 1_000_000) redeemer
+          , autoBudgetRedeemer = unsafeHashableScriptData $ scriptDataModifyNumber (const 1_000_000) (getScriptData redeemer)
           }
       traceDebug $ "Plutus auto mode : Available budget per Tx: " ++ show perTxBudget
                    ++ " -- split between inputs per Tx: " ++ show txInputs
@@ -461,7 +461,7 @@ makePlutusContext ScriptSpec{..} = do
         Right (summary, PlutusAutoBudget{..}, preRun) -> do
           setEnvSummary summary
           dumpBudgetSummaryIfExisting
-          return (autoBudgetDatum, autoBudgetRedeemer, preRun)
+          return (unsafeHashableScriptData autoBudgetDatum, autoBudgetRedeemer, preRun)
 
   let msg = mconcat [ "Plutus Benchmark :"
                     , " Script: ", scriptSpecFile
@@ -494,7 +494,7 @@ makePlutusContext ScriptSpec{..} = do
                               (ScriptDatumForTxIn scriptData)
                               scriptRedeemer
                               executionUnits
-      in return (ScriptWitness ScriptWitnessForSpending scriptWitness, script, scriptData, scriptFee)
+      in return (ScriptWitness ScriptWitnessForSpending scriptWitness, script, getScriptData scriptData, scriptFee)
     _ ->
       liftTxGenError $ TxGenError "runPlutusBenchmark: only Plutus scripts supported"
 
@@ -505,7 +505,7 @@ preExecuteScriptAction ::
   -> ScriptData
   -> ActionM ExecutionUnits
 preExecuteScriptAction protocolParameters script scriptData redeemer
-  = case Plutus.preExecutePlutusScript protocolParameters script scriptData redeemer of
+  = case Plutus.preExecutePlutusScript protocolParameters script scriptData (unsafeHashableScriptData redeemer) of
       Left err -> throwE $ WalletError ( "makePlutusContext preExecuteScript failed: " ++ show err )
       Right costs -> return costs
 
