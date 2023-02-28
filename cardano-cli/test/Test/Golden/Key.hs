@@ -12,5 +12,10 @@ keyTests :: IO Bool
 keyTests =
   H.checkSequential
     $ H.Group "Key command group"
-        [ ("golden_KeyNonExtendedKey", Test.Golden.Key.NonExtendedKey.golden_KeyNonExtendedKey)
+        [ ( "golden_KeyNonExtendedKey_GenesisExtendedVerificationKey"
+          , Test.Golden.Key.NonExtendedKey.golden_KeyNonExtendedKey_GenesisExtendedVerificationKey
+          )
+        , ( "golden_KeyNonExtendedKey_StakeExtendedVerificationKeyShelley"
+          , Test.Golden.Key.NonExtendedKey.golden_KeyNonExtendedKey_StakeExtendedVerificationKeyShelley
+          )
         ]
