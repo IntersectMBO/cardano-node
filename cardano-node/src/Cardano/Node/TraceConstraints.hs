@@ -1,7 +1,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE MonoLocalBinds #-}
 
 module Cardano.Node.TraceConstraints (TraceConstraints) where
 
@@ -29,6 +28,7 @@ import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
 type TraceConstraints blk =
     ( ConvertTxId blk
     , HasIssuer blk
+    , HasKESMetricsData blk
     , HasTxs blk
     , HasTxId (GenTx blk)
     , LedgerQueries blk

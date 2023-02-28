@@ -140,18 +140,19 @@ library
                       , cardano-git-rev
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
-                      , cardano-ledger-core
-                      , cardano-ledger-byron
-                      , cardano-ledger-shelley
-                      , cardano-ledger-shelley-ma
                       , cardano-ledger-alonzo
                       , cardano-ledger-babbage
+                      , cardano-ledger-byron
+                      , cardano-ledger-core
+                      , cardano-ledger-shelley
+                      , cardano-ledger-shelley-ma
                       , cardano-prelude
                       , cardano-protocol-tpraos ^>= 0.1
                       , cardano-slotting ^>= 0.1
                       , cborg ^>= 0.2.4
                       , contra-tracer
                       , containers
+                      , contra-tracer
                       , deepseq
                       , directory
                       , dns
@@ -160,9 +161,9 @@ library
                       , filepath
                       , generic-data
                       , hostname
-                      , iproute
                       , io-classes ^>= 0.3
                       , iohk-monitoring
+                      , iproute
                       , lobemo-backend-aggregation
                       , lobemo-backend-ekg
                       , lobemo-backend-monitoring
