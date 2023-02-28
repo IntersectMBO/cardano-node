@@ -13,8 +13,6 @@ import qualified GHC.Stack as GHC
 
 import           Cardano.Api
 
-import           Cardano.CLI.Shelley.Run.Read
-
 import           Control.Monad.IO.Class (MonadIO (..))
 import           GHC.Stack (CallStack, HasCallStack)
 import qualified Hedgehog as H

@@ -5,7 +5,9 @@ module Test.Golden.Shelley.TextEnvelope.Tx.Tx
   ) where
 
 import           Cardano.Api
-import           Cardano.Prelude
+import           Prelude
+
+import           Control.Monad
 
 import           Hedgehog (Property)
 import           Test.OptParse
