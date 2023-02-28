@@ -119,6 +119,10 @@ let
         } // optionalAttrs backend.useCabalRun {
           # Allow the shell function to take precedence.
           executable     = "cardano-node";
+        } // optionalAttrs isProducer {
+          operationalCertificate = "../genesis/node-keys/node${toString i}.opcert";
+          kesKey                 = "../genesis/node-keys/node-kes${toString i}.skey";
+          vrfKey                 = "../genesis/node-keys/node-vrf${toString i}.skey";
         } // optionalAttrs profile.node.tracer {
           tracerSocketPathConnect = mkDefault "../tracer/tracer.socket";
         });

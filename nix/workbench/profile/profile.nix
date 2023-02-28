@@ -54,9 +54,7 @@ rec {
     };
 
   ## WARNING:  IFD !!
-  profile = { profileName
-            , basePort, stateDir, useCabalRun
-            , backend }:
+  profile = { profileName, backend }:
     rec {
       inherit profileName;
 
@@ -149,11 +147,11 @@ rec {
 
   materialise-profile =
     # `workbench` is the pinned workbench in case there is one.
-    { basePort, stateDir, useCabalRun, profileName, backend }:
+    { profileName, backend }:
     let
       mkProfileData = profileName:
         profileData {
-          profile = profile { inherit profileName basePort stateDir useCabalRun backend; };
+          profile = profile { inherit profileName backend; };
         };
       ps = lib.genAttrs profile-names mkProfileData;
     in

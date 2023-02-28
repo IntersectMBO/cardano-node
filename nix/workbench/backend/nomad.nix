@@ -1,8 +1,12 @@
 { pkgs
 , lib
-
+, stateDir
 , basePort
-## `useCabalRun` not used here like in `supervisor.nix`.
+## `useCabalRun` not used here unlike `supervisor.nix`.
+# TODO: Fetch this from config services inside materialise-profile !
+, eventlogged ? true
+# The exec driver uses SRE's plugin that allows Nix derivation artifacts!
+, execTaskDriver
 , ...
 }:
 let
@@ -68,7 +72,7 @@ let
 
   # Backend-specific Nix bits:
   materialise-profile =
-    { stateDir, profileNix }:
+    { profileNix }:
       let
         ociImages =
           import ./oci-images.nix
@@ -109,9 +113,20 @@ let
     proTopo: self: super:
     {
     };
+
+  service-modules = {
+    node = { config, ... }:
+      let selfCfg = config.services.cardano-node;
+          i       = toString selfCfg.nodeId;
+      in {
+          services.cardano-node.stateDir = stateDir + "/node-${i}";
+        }
+    ;
+  };
+
 in
 {
   name = "nomad";
 
-  inherit extraShellPkgs materialise-profile overlay basePort useCabalRun;
+  inherit extraShellPkgs materialise-profile overlay stateDir basePort useCabalRun service-modules;
 }

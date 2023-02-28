@@ -1,6 +1,8 @@
 { pkgs
 , lib
+, stateDir # Not used here, just returned
 , basePort
+## `useCabalRun` not used here unlike `supervisor.nix`.
 , ...
 }:
 with lib; with pkgs.commonLib;
@@ -265,7 +267,7 @@ let
     };
 
   materialise-profile =
-    { stateDir, profileNix }:
+    { profileNix }:
       let
       in pkgs.runCommand "workbench-backend-output-${profileNix.profileName}-nixops"
         {}
@@ -307,7 +309,7 @@ in
 {
   name = "nixops";
 
-  inherit extraShellPkgs materialise-profile overlay service-modules basePort;
+  inherit extraShellPkgs materialise-profile overlay service-modules stateDir basePort;
 
   useCabalRun = false;
 }

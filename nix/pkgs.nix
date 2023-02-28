@@ -12,8 +12,8 @@ let
   # A conveniently-parametrisable workbench preset.
   # See https://input-output-hk.github.io/haskell.nix/user-guide/development/
   # The general idea is:
-  # 1. backendName -> useCabalRun -> backend
-  # 2. stateDir -> batchName -> profileName -> backend -> workbench -> runner
+  # 1. backendName -> stateDir -> basePort -> useCabalRun -> backend
+  # 2. batchName -> profileName -> backend -> workbench -> runner
   # * `workbench` is in case a pinned version of the workbench is needed.
   workbench-runner =
     let backendRegistry =
@@ -45,7 +45,7 @@ let
     in import ./workbench/backend/runner.nix
       {
         inherit pkgs lib cardanoNodePackages;
-        inherit stateDir batchName profileName backend;
+        inherit batchName profileName backend;
         inherit cardano-node-rev;
         inherit workbench workbenchDevMode;
       };
