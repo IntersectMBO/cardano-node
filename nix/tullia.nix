@@ -48,11 +48,11 @@ rec {
 
         command.text = config.preset.github.status.lib.reportBulk {
           bulk.text = ''
-            nix eval .#outputs.hydraJobs --apply __attrNames --json |
+            nix eval .#legacyPackages --apply __attrNames --json |
             nix-systems -i |
             jq 'with_entries(select(.value))' # filter out systems that we cannot build for
           '';
-          each.text = ''nix build -L .#hydraJobs."$1".${jobsAttrs}'';
+          each.text = ''nix build -L .#legacyPackages."$1".hydraJobs.${jobsAttrs}'';
           skippedDescription = lib.escapeShellArg "No nix builder available for this system";
         };
 

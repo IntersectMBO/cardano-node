@@ -357,13 +357,7 @@
             {
               inherit ciJobs;
               nonRequiredPaths = map (r: p: builtins.match r p != null) nonRequiredPaths;
-            } // ciJobs // {
-            pr = {
-              # We use a generic gitrev for PR CI to avoid unecessary rebuilds:
-              inherit ((mkFlakeAttrs (pkgs.extend (prev: final: { gitrev = "0000000000000000000000000000000000000000"; }))).ciJobs)
-                required nonrequired;
-            };
-          };
+            } // ciJobs;
       };
 
       flake = eachSystem supportedSystems (system:
@@ -378,14 +372,18 @@
             inherit config system overlays;
           };
           inherit (mkFlakeAttrs pkgs) environments packages checks apps project ciJobs devShells workbench;
+          # We use a generic gitrev for PR CI to avoid unecessary rebuilds:
+          ciJobsPrs = (mkFlakeAttrs (pkgs.extend (prev: final: { gitrev = "0000000000000000000000000000000000000000"; }))).ciJobs;
         in
         {
 
-          inherit environments checks project ciJobs devShells workbench;
+          inherit environments checks project ciJobsPrs devShells workbench;
 
           legacyPackages = pkgs // {
             # allows access to hydraJobs without specifying <arch>:
-            hydraJobs = ciJobs;
+            hydraJobs = ciJobs // {
+              pr = ciJobsPrs;
+            };
           };
 
           packages = packages // {
@@ -403,9 +401,16 @@
       );
 
     in
-    removeAttrs flake [ "ciJobs" ] // {
+    removeAttrs flake [ "ciJobsPrs" ] // {
 
-      hydraJobs = flake.ciJobs;
+      hydraJobs = flake.ciJobsPrs // (let pkgs = self.legacyPackages.${defaultSystem}; in {
+        inherit (pkgs.callPackages iohkNix.utils.ciJobsAggregates {
+          ciJobs = lib.mapAttrs (_: lib.getAttr "required") flake.ciJobsPrs // {
+            # ensure hydra notify:
+            gitrev = pkgs.writeText "gitrev" pkgs.gitrev;
+          };
+        }) required;
+      });
 
       # allows precise paths (avoid fallbacks) with nix build/eval:
       outputs = self;
