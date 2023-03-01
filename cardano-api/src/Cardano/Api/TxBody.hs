@@ -922,6 +922,13 @@ data ValidityUpperBoundSupportedInEra era where
 deriving instance Eq   (ValidityUpperBoundSupportedInEra era)
 deriving instance Show (ValidityUpperBoundSupportedInEra era)
 
+instance Semigroup (ValidityUpperBoundSupportedInEra era) where
+  ValidityUpperBoundInShelleyEra <> ValidityUpperBoundInShelleyEra = ValidityUpperBoundInShelleyEra
+  ValidityUpperBoundInAllegraEra <> ValidityUpperBoundInAllegraEra = ValidityUpperBoundInAllegraEra
+  ValidityUpperBoundInMaryEra <> ValidityUpperBoundInMaryEra = ValidityUpperBoundInMaryEra
+  ValidityUpperBoundInAlonzoEra <> ValidityUpperBoundInAlonzoEra = ValidityUpperBoundInAlonzoEra
+  ValidityUpperBoundInBabbageEra <> ValidityUpperBoundInBabbageEra = ValidityUpperBoundInBabbageEra
+
 validityUpperBoundSupportedInEra :: CardanoEra era
                                  -> Maybe (ValidityUpperBoundSupportedInEra era)
 validityUpperBoundSupportedInEra ByronEra   = Nothing
@@ -953,6 +960,13 @@ data ValidityNoUpperBoundSupportedInEra era where
 deriving instance Eq   (ValidityNoUpperBoundSupportedInEra era)
 deriving instance Show (ValidityNoUpperBoundSupportedInEra era)
 
+instance Semigroup (ValidityNoUpperBoundSupportedInEra era) where
+  ValidityNoUpperBoundInByronEra <> ValidityNoUpperBoundInByronEra = ValidityNoUpperBoundInByronEra
+  ValidityNoUpperBoundInAllegraEra <> ValidityNoUpperBoundInAllegraEra = ValidityNoUpperBoundInAllegraEra
+  ValidityNoUpperBoundInMaryEra <> ValidityNoUpperBoundInMaryEra = ValidityNoUpperBoundInMaryEra
+  ValidityNoUpperBoundInAlonzoEra <> ValidityNoUpperBoundInAlonzoEra = ValidityNoUpperBoundInAlonzoEra
+  ValidityNoUpperBoundInBabbageEra <> ValidityNoUpperBoundInBabbageEra = ValidityNoUpperBoundInBabbageEra
+
 validityNoUpperBoundSupportedInEra :: CardanoEra era
                                    -> Maybe (ValidityNoUpperBoundSupportedInEra era)
 validityNoUpperBoundSupportedInEra ByronEra   = Just ValidityNoUpperBoundInByronEra
@@ -979,6 +993,12 @@ data ValidityLowerBoundSupportedInEra era where
 
 deriving instance Eq   (ValidityLowerBoundSupportedInEra era)
 deriving instance Show (ValidityLowerBoundSupportedInEra era)
+
+instance Semigroup (ValidityLowerBoundSupportedInEra era) where
+  ValidityLowerBoundInAllegraEra <> ValidityLowerBoundInAllegraEra = ValidityLowerBoundInAllegraEra
+  ValidityLowerBoundInMaryEra <> ValidityLowerBoundInMaryEra = ValidityLowerBoundInMaryEra
+  ValidityLowerBoundInAlonzoEra <> ValidityLowerBoundInAlonzoEra = ValidityLowerBoundInAlonzoEra
+  ValidityLowerBoundInBabbageEra <> ValidityLowerBoundInBabbageEra = ValidityLowerBoundInBabbageEra
 
 validityLowerBoundSupportedInEra :: CardanoEra era
                                  -> Maybe (ValidityLowerBoundSupportedInEra era)
@@ -1525,9 +1545,9 @@ deriving instance Eq   (TxValidityUpperBound era)
 deriving instance Show (TxValidityUpperBound era)
 
 instance Semigroup (TxValidityUpperBound era) where
-    (TxValidityNoUpperBound _) <> x = x
-    x <> (TxValidityNoUpperBound _) = x
-    (TxValidityUpperBound wit l) <> (TxValidityUpperBound _ r) = TxValidityUpperBound wit (min l r)
+    TxValidityNoUpperBound _ <> x = x
+    x <> TxValidityNoUpperBound _ = x
+    TxValidityUpperBound lWit l <> TxValidityUpperBound rWit r = TxValidityUpperBound (lWit <> rWit) (min l r)
 
 instance IsCardanoEra era => Monoid (TxValidityUpperBound era) where
     mempty = case cardanoEra @era of
@@ -1552,7 +1572,7 @@ deriving instance Show (TxValidityLowerBound era)
 instance Semigroup (TxValidityLowerBound era) where
     TxValidityNoLowerBound <> x = x
     x <> TxValidityNoLowerBound = x
-    (TxValidityLowerBound wit l) <> (TxValidityLowerBound _ r) = TxValidityLowerBound wit (max l r)
+    TxValidityLowerBound lWit l <> TxValidityLowerBound rWit r = TxValidityLowerBound (lWit <> rWit) (max l r)
 
 instance Monoid (TxValidityLowerBound era) where
     mempty = TxValidityNoLowerBound
