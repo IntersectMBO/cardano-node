@@ -366,7 +366,7 @@ readScriptDataOrFile (ScriptDataJsonFile fp) = do
   sDataValue <- hoistEither . first (ScriptDataErrorJsonParse fp) $ Aeson.eitherDecode sDataBs
   hoistEither
     . first ScriptDataErrorJsonBytes
-    $ scriptDataJsonToHashable ScriptDataJsonNoSchema sDataValue
+    $ scriptDataJsonToHashable ScriptDataJsonDetailedSchema sDataValue
 
 readScriptDataOrFile (ScriptDataCborFile fp) = do
   origBs <- handleIOExceptT (ScriptDataErrorFile . FileIOError fp) (BS.readFile fp)
