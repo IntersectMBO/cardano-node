@@ -87,37 +87,39 @@ mkDispatchTracers
   -> IO (Tracers (ConnectionId RemoteAddress) (ConnectionId LocalAddress) blk p2p)
 mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enableP2P p = do
 
+    configReflection <- emptyConfigReflection
+
     nodeInfoDP <- mkDataPointTracer trDataPoint
-    configureTracers trConfig [nodeInfoDP]
+    configureTracers configReflection trConfig [nodeInfoDP]
 
     nodeStartupInfoDP <- mkDataPointTracer trDataPoint
-    configureTracers trConfig [nodeStartupInfoDP]
+    configureTracers configReflection trConfig [nodeStartupInfoDP]
 
     nodeStateDP <- mkDataPointTracer trDataPoint
-    configureTracers trConfig [nodeStateDP]
+    configureTracers configReflection trConfig [nodeStateDP]
 
     stateTr <- mkCardanoTracer trBase trForward mbTrEKG ["NodeState"]
-    configureTracers trConfig [stateTr]
+    configureTracers configReflection trConfig [stateTr]
 
     nodePeersDP <- mkDataPointTracer trDataPoint
-    configureTracers trConfig [nodePeersDP]
+    configureTracers configReflection trConfig [nodePeersDP]
 
     peersTr <- mkCardanoTracer trBase trForward mbTrEKG
                     ["Net", "Peers", "List"]
-    configureTracers trConfig [peersTr]
+    configureTracers configReflection trConfig [peersTr]
 
     resourcesTr <- mkCardanoTracer trBase trForward mbTrEKG []
-    configureTracers trConfig [resourcesTr]
+    configureTracers configReflection trConfig [resourcesTr]
 
     startupTr <- mkCardanoTracer trBase trForward mbTrEKG ["Startup"]
-    configureTracers trConfig [startupTr]
+    configureTracers configReflection trConfig [startupTr]
 
     shutdownTr <- mkCardanoTracer trBase trForward mbTrEKG ["Shutdown"]
-    configureTracers trConfig  [shutdownTr]
+    configureTracers configReflection trConfig  [shutdownTr]
 
     chainDBTr <- mkCardanoTracer' trBase trForward mbTrEKG ["ChainDB"]
                                     withAddedToCurrentChainEmptyLimited
-    configureTracers trConfig [chainDBTr]
+    configureTracers configReflection trConfig [chainDBTr]
     -- Filter out replayed blocks for this tracer
     let chainDBTr' = filterTrace
                       (\case (_, ChainDB.TraceLedgerReplayEvent
@@ -129,20 +131,20 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
     replayBlockTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["ChainDB", "ReplayBlock"]
-    configureTracers trConfig [replayBlockTr]
+    configureTracers configReflection trConfig [replayBlockTr]
 
     -- This tracer handles replayed blocks specially
     replayBlockTr' <- withReplayedBlock replayBlockTr
 
 
     consensusTr <-
-      mkConsensusTracers trBase trForward mbTrEKG trDataPoint trConfig nodeKernel
+      mkConsensusTracers configReflection trBase trForward mbTrEKG trDataPoint trConfig nodeKernel
 
     nodeToClientTr <-
-      mkNodeToClientTracers trBase trForward mbTrEKG trDataPoint trConfig
+      mkNodeToClientTracers configReflection trBase trForward mbTrEKG trDataPoint trConfig
 
     nodeToNodeTr <-
-      mkNodeToNodeTracers trBase trForward mbTrEKG trDataPoint trConfig
+      mkNodeToNodeTracers configReflection trBase trForward mbTrEKG trDataPoint trConfig
 
     diffusionTr :: Diffusion.Tracers
                     RemoteAddress
@@ -150,10 +152,12 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
                     LocalAddress
                     NodeToClientVersion
                     IO <-
-      mkDiffusionTracers trBase trForward mbTrEKG trDataPoint trConfig
+      mkDiffusionTracers configReflection trBase trForward mbTrEKG trDataPoint trConfig
 
     diffusionTrExtra <-
-      mkDiffusionTracersExtra trBase trForward mbTrEKG trDataPoint trConfig enableP2P
+      mkDiffusionTracersExtra configReflection trBase trForward mbTrEKG trDataPoint trConfig enableP2P
+
+    traceTracerInfo trBase trForward configReflection
 
     pure Tracers
       {
@@ -184,22 +188,23 @@ mkConsensusTracers :: forall blk.
   , LogFormatting (TraceLabelPeer
                     (ConnectionId RemoteAddress) (TraceChainSyncClientEvent blk))
   )
-  => Trace IO FormattedMessage
+  => ConfigReflection
+  -> Trace IO FormattedMessage
   -> Trace IO FormattedMessage
   -> Maybe (Trace IO FormattedMessage)
   -> Trace IO DataPoint
   -> TraceConfig
   -> NodeKernelData blk
   -> IO (Consensus.Tracers IO (ConnectionId RemoteAddress) (ConnectionId LocalAddress) blk)
-mkConsensusTracers trBase trForward mbTrEKG _trDataPoint trConfig nodeKernel = do
+mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConfig nodeKernel = do
     chainSyncClientTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
                  ["ChainSync", "Client"]
-    configureTracers trConfig [chainSyncClientTr]
+    configureTracers configReflection trConfig [chainSyncClientTr]
     chainSyncServerHeaderTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["ChainSync", "ServerHeader"]
-    configureTracers trConfig [chainSyncServerHeaderTr]
+    configureTracers configReflection trConfig [chainSyncServerHeaderTr]
 
     -- Special chainSync server metrics
     -- any server header event advances the counter
@@ -213,17 +218,17 @@ mkConsensusTracers trBase trForward mbTrEKG _trDataPoint trConfig nodeKernel = d
     chainSyncServerBlockTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["ChainSync", "ServerBlock"]
-    configureTracers trConfig [chainSyncServerBlockTr]
+    configureTracers configReflection trConfig [chainSyncServerBlockTr]
 
     blockFetchDecisionTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["BlockFetch", "Decision"]
-    configureTracers trConfig [blockFetchDecisionTr]
+    configureTracers configReflection trConfig [blockFetchDecisionTr]
 
     blockFetchClientTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["BlockFetch", "Client"]
-    configureTracers trConfig [blockFetchClientTr]
+    configureTracers configReflection trConfig [blockFetchClientTr]
 
     -- Special blockFetch client metrics, send directly to EKG
     blockFetchClientMetricsTr <- do
@@ -238,59 +243,59 @@ mkConsensusTracers trBase trForward mbTrEKG _trDataPoint trConfig nodeKernel = d
     blockFetchServerTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["BlockFetch", "Server"]
-    configureTracers trConfig [blockFetchServerTr]
+    configureTracers configReflection trConfig [blockFetchServerTr]
 
     forgeKESInfoTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Forge"]
-    configureTracers trConfig [forgeKESInfoTr]
+    configureTracers configReflection trConfig [forgeKESInfoTr]
 
     txInboundTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["TxSubmission", "TxInbound"]
-    configureTracers trConfig [txInboundTr]
+    configureTracers configReflection trConfig [txInboundTr]
 
     txOutboundTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["TxSubmission", "TxOutbound"]
-    configureTracers trConfig [txOutboundTr]
+    configureTracers configReflection trConfig [txOutboundTr]
 
     localTxSubmissionServerTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["TxSubmission", "LocalServer"]
-    configureTracers trConfig [localTxSubmissionServerTr]
+    configureTracers configReflection trConfig [localTxSubmissionServerTr]
 
     mempoolTr   <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Mempool"]
-    configureTracers trConfig [mempoolTr]
+    configureTracers configReflection trConfig [mempoolTr]
 
     forgeTr    <- mkCardanoTracer'
                 trBase trForward mbTrEKG
                 ["Forge", "Loop"]
                 (forgeTracerTransform nodeKernel)
-    configureTracers trConfig [forgeTr]
+    configureTracers configReflection trConfig [forgeTr]
 
     forgeThreadStatsTr <- mkCardanoTracer'
                 trBase trForward mbTrEKG
                 ["Forge"]
                 forgeThreadStats
-    configureTracers trConfig [forgeThreadStatsTr]
+    configureTracers configReflection trConfig [forgeThreadStatsTr]
 
     blockchainTimeTr   <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["BlockchainTime"]
-    configureTracers trConfig [blockchainTimeTr]
+    configureTracers configReflection trConfig [blockchainTimeTr]
 
     keepAliveClientTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Net"]
-    configureTracers trConfig [keepAliveClientTr]
+    configureTracers configReflection trConfig [keepAliveClientTr]
 
     consensusStartupErrorTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Consensus", "Startup"]
-    configureTracers trConfig [consensusStartupErrorTr]
+    configureTracers configReflection trConfig [consensusStartupErrorTr]
 
     pure $ Consensus.Tracers
       { Consensus.chainSyncClientTracer = Tracer $
@@ -331,36 +336,37 @@ mkConsensusTracers trBase trForward mbTrEKG _trDataPoint trConfig nodeKernel = d
 
 mkNodeToClientTracers :: forall blk.
      Consensus.RunNode blk
-  => Trace IO FormattedMessage
+  => ConfigReflection
+  -> Trace IO FormattedMessage
   -> Trace IO FormattedMessage
   -> Maybe (Trace IO FormattedMessage)
   -> Trace IO DataPoint
   -> TraceConfig
   -> IO (NodeToClient.Tracers IO (ConnectionId LocalAddress) blk DeserialiseFailure)
-mkNodeToClientTracers trBase trForward mbTrEKG _trDataPoint trConfig = do
+mkNodeToClientTracers configReflection trBase trForward mbTrEKG _trDataPoint trConfig = do
     chainSyncTr <-
       mkCardanoTracer
         trBase trForward mbTrEKG
         ["ChainSync", "Local"]
-    configureTracers trConfig [chainSyncTr]
+    configureTracers configReflection trConfig [chainSyncTr]
 
     txMonitorTr <-
       mkCardanoTracer
         trBase trForward mbTrEKG
         ["TxSubmission", "MonitorClient"]
-    configureTracers trConfig [txMonitorTr]
+    configureTracers configReflection trConfig [txMonitorTr]
 
     txSubmissionTr <-
       mkCardanoTracer
         trBase trForward mbTrEKG
         ["TxSubmission", "Local"]
-    configureTracers trConfig [txSubmissionTr]
+    configureTracers configReflection trConfig [txSubmissionTr]
 
     stateQueryTr <-
       mkCardanoTracer
         trBase trForward mbTrEKG
         ["StateQueryServer"]
-    configureTracers trConfig [stateQueryTr]
+    configureTracers configReflection trConfig [stateQueryTr]
 
     pure $ NtC.Tracers
       { NtC.tChainSyncTracer = Tracer $
@@ -376,38 +382,39 @@ mkNodeToClientTracers trBase trForward mbTrEKG _trDataPoint trConfig = do
 mkNodeToNodeTracers :: forall blk.
   ( Consensus.RunNode blk
   , TraceConstraints blk)
-  => Trace IO FormattedMessage
+  => ConfigReflection
+  -> Trace IO FormattedMessage
   -> Trace IO FormattedMessage
   -> Maybe (Trace IO FormattedMessage)
   -> Trace IO DataPoint
   -> TraceConfig
   -> IO (NodeToNode.Tracers IO (ConnectionId RemoteAddress) blk DeserialiseFailure)
-mkNodeToNodeTracers trBase trForward mbTrEKG _trDataPoint trConfig = do
+mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trConfig = do
 
     chainSyncTracer <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["ChainSync", "Remote"]
-    configureTracers trConfig [chainSyncTracer]
+    configureTracers configReflection trConfig [chainSyncTracer]
 
     chainSyncSerialisedTr <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["ChainSync", "Remote", "Serialised"]
-    configureTracers trConfig [chainSyncSerialisedTr]
+    configureTracers configReflection trConfig [chainSyncSerialisedTr]
 
     blockFetchTr  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["BlockFetch", "Remote"]
-    configureTracers trConfig [blockFetchTr]
+    configureTracers configReflection trConfig [blockFetchTr]
 
     blockFetchSerialisedTr <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["BlockFetch", "Remote", "Serialised"]
-    configureTracers trConfig [blockFetchSerialisedTr]
+    configureTracers configReflection trConfig [blockFetchSerialisedTr]
 
     txSubmission2Tracer  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["TxSubmission", "Remote"]
-    configureTracers trConfig [txSubmission2Tracer]
+    configureTracers configReflection trConfig [txSubmission2Tracer]
 
     pure $ NtN.Tracers
       { NtN.tChainSyncTracer = Tracer $
@@ -423,44 +430,45 @@ mkNodeToNodeTracers trBase trForward mbTrEKG _trDataPoint trConfig = do
       }
 
 mkDiffusionTracers
-  :: Trace IO FormattedMessage
+  :: ConfigReflection
+  -> Trace IO FormattedMessage
   -> Trace IO FormattedMessage
   -> Maybe (Trace IO FormattedMessage)
   -> Trace IO DataPoint
   -> TraceConfig
   -> IO (Diffusion.Tracers RemoteAddress NodeToNodeVersion
         LocalAddress NodeToClientVersion IO)
-mkDiffusionTracers  trBase trForward mbTrEKG _trDataPoint trConfig = do
+mkDiffusionTracers configReflection trBase trForward mbTrEKG _trDataPoint trConfig = do
 
     dtMuxTr   <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Net", "Mux", "Remote"]
-    configureTracers trConfig [dtMuxTr]
+    configureTracers configReflection trConfig [dtMuxTr]
 
     dtLocalMuxTr   <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Net", "Mux", "Local"]
-    configureTracers trConfig [dtLocalMuxTr]
+    configureTracers configReflection trConfig [dtLocalMuxTr]
 
     dtHandshakeTr   <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Net", "Handshake", "Remote"]
-    configureTracers trConfig [dtHandshakeTr]
+    configureTracers configReflection trConfig [dtHandshakeTr]
 
     dtLocalHandshakeTr  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Net", "Handshake", "Local"]
-    configureTracers trConfig [dtLocalHandshakeTr]
+    configureTracers configReflection trConfig [dtLocalHandshakeTr]
 
     dtDiffusionInitializationTr   <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Startup", "DiffusionInit"]
-    configureTracers trConfig [dtDiffusionInitializationTr]
+    configureTracers configReflection trConfig [dtDiffusionInitializationTr]
 
     dtLedgerPeersTr   <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Net", "Peers", "Ledger"]
-    configureTracers trConfig [dtLedgerPeersTr]
+    configureTracers configReflection trConfig [dtLedgerPeersTr]
 
     pure $ Diffusion.Tracers
        { Diffusion.dtMuxTracer                     = Tracer $
@@ -478,89 +486,90 @@ mkDiffusionTracers  trBase trForward mbTrEKG _trDataPoint trConfig = do
        }
 
 mkDiffusionTracersExtra  :: forall p2p.
-     Trace IO FormattedMessage
+     ConfigReflection
+  -> Trace IO FormattedMessage
   -> Trace IO FormattedMessage
   -> Maybe (Trace IO FormattedMessage)
   -> Trace IO DataPoint
   -> TraceConfig
   -> NetworkP2PMode p2p
   -> IO (Diffusion.ExtraTracers p2p)
-mkDiffusionTracersExtra trBase trForward mbTrEKG _trDataPoint trConfig EnabledP2PMode = do
+mkDiffusionTracersExtra configReflection trBase trForward mbTrEKG _trDataPoint trConfig EnabledP2PMode = do
 
     localRootPeersTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
       ["Net", "Peers", "LocalRoot"]
-    configureTracers trConfig [localRootPeersTr]
+    configureTracers configReflection trConfig [localRootPeersTr]
 
     publicRootPeersTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
       ["Net", "Peers", "PublicRoot"]
-    configureTracers trConfig [publicRootPeersTr]
+    configureTracers configReflection trConfig [publicRootPeersTr]
 
     peerSelectionTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
       ["Net", "PeerSelection", "Selection"]
-    configureTracers trConfig [peerSelectionTr]
+    configureTracers configReflection trConfig [peerSelectionTr]
 
     debugPeerSelectionTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
       ["Net", "PeerSelection", "Initiator"]
-    configureTracers trConfig [debugPeerSelectionTr]
+    configureTracers configReflection trConfig [debugPeerSelectionTr]
 
     debugPeerSelectionResponderTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
       ["Net", "PeerSelection", "Responder"]
-    configureTracers trConfig [debugPeerSelectionResponderTr]
+    configureTracers configReflection trConfig [debugPeerSelectionResponderTr]
 
     peerSelectionCountersTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
       ["Net", "PeerSelection"]
-    configureTracers trConfig [peerSelectionCountersTr]
+    configureTracers configReflection trConfig [peerSelectionCountersTr]
 
     peerSelectionActionsTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
       ["Net", "PeerSelection", "Actions"]
-    configureTracers trConfig [peerSelectionActionsTr]
+    configureTracers configReflection trConfig [peerSelectionActionsTr]
 
     connectionManagerTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
       ["Net", "ConnectionManager", "Remote"]
-    configureTracers trConfig [connectionManagerTr]
+    configureTracers configReflection trConfig [connectionManagerTr]
 
     connectionManagerTransitionsTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
       ["Net", "ConnectionManager", "Remote"]
-    configureTracers trConfig [connectionManagerTransitionsTr]
+    configureTracers configReflection trConfig [connectionManagerTransitionsTr]
 
     serverTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
       ["Net", "Server", "Remote"]
-    configureTracers trConfig [serverTr]
+    configureTracers configReflection trConfig [serverTr]
 
     inboundGovernorTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
       ["Net", "InboundGovernor", "Remote"]
-    configureTracers trConfig [inboundGovernorTr]
+    configureTracers configReflection trConfig [inboundGovernorTr]
 
     localInboundGovernorTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
       ["Net", "InboundGovernor", "Local"]
-    configureTracers trConfig [localInboundGovernorTr]
+    configureTracers configReflection trConfig [localInboundGovernorTr]
 
     inboundGovernorTransitionsTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
       ["Net", "InboundGovernor", "Transition"]
-    configureTracers trConfig [inboundGovernorTransitionsTr]
+    configureTracers configReflection trConfig [inboundGovernorTransitionsTr]
 
     localConnectionManagerTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
       ["Net", "ConnectionManager", "Local"]
-    configureTracers trConfig [localConnectionManagerTr]
+    configureTracers configReflection trConfig [localConnectionManagerTr]
 
     localServerTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
       ["Net", "Server", "Local"]
-    configureTracers trConfig [localServerTr]
+    configureTracers configReflection trConfig [localServerTr]
 
     pure $ Diffusion.P2PTracers P2P.TracersExtra
              { P2P.dtTraceLocalRootPeersTracer = Tracer $
@@ -595,37 +604,37 @@ mkDiffusionTracersExtra trBase trForward mbTrEKG _trDataPoint trConfig EnabledP2
                  traceWith localServerTr
              }
 
-mkDiffusionTracersExtra trBase trForward mbTrEKG _trDataPoint trConfig DisabledP2PMode = do
+mkDiffusionTracersExtra configReflection trBase trForward mbTrEKG _trDataPoint trConfig DisabledP2PMode = do
 
     dtIpSubscriptionTr   <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Net", "Subscription", "IP"]
-    configureTracers trConfig [dtIpSubscriptionTr]
+    configureTracers configReflection trConfig [dtIpSubscriptionTr]
 
     dtDnsSubscriptionTr  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Net", "Subscription", "DNS"]
-    configureTracers trConfig [dtDnsSubscriptionTr]
+    configureTracers configReflection trConfig [dtDnsSubscriptionTr]
 
     dtDnsResolverTr  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Net", "DNSResolver"]
-    configureTracers trConfig [dtDnsResolverTr]
+    configureTracers configReflection trConfig [dtDnsResolverTr]
 
     dtErrorPolicyTr  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Net", "ErrorPolicy", "Remote"]
-    configureTracers trConfig [dtErrorPolicyTr]
+    configureTracers configReflection trConfig [dtErrorPolicyTr]
 
     dtLocalErrorPolicyTr <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Net", "ErrorPolicy", "Local"]
-    configureTracers trConfig [dtLocalErrorPolicyTr]
+    configureTracers configReflection trConfig [dtLocalErrorPolicyTr]
 
     dtAcceptPolicyTr    <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Net", "AcceptPolicy"]
-    configureTracers trConfig [dtAcceptPolicyTr]
+    configureTracers configReflection trConfig [dtAcceptPolicyTr]
 
     pure $ Diffusion.NonP2PTracers NonP2P.TracersExtra
        { NonP2P.dtIpSubscriptionTracer = Tracer $

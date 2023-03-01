@@ -10,11 +10,6 @@ module Cardano.Logging.Trace (
   , filterTraceMaybe
   , filterTraceBySeverity
   , withLoggingContext
-  , appendPrefixName
-  , appendPrefixNames
-  , appendInnerName
-  , appendInnerNames
-  , withInnerNames
   , setSeverity
   , withSeverity
   , withSeverity'
@@ -32,6 +27,12 @@ module Cardano.Logging.Trace (
   , foldMTraceM
   , foldMCondTraceM
   , routingTrace
+
+  , appendPrefixName
+  , appendPrefixNames
+  , appendInnerName
+  , appendInnerNames
+  , withInnerNames
   ) where
 
 import           Control.Monad (join, when)

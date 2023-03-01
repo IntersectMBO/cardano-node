@@ -28,7 +28,8 @@ testRouting = do
     tf <- machineFormatter (Just "cardano") t
     let t1 = appendPrefixName "tracer1" tf
     let t2 = appendPrefixName "tracer2" tf
-    configureTracers emptyTraceConfig [t1, t2]
+    confState <- emptyConfigReflection
+    configureTracers confState emptyTraceConfig [t1, t2]
     r1 <- routingTracer1 t1 t2
     r2 <- routingTracer2 t1 t2
     traceWith r1 message1

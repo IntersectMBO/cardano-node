@@ -9,7 +9,6 @@ import           Data.Text
 
 import           Cardano.Logging.Types
 
-
 data UnknownNamespaceKind =
     UKFSeverity
   | UKFPrivacy
@@ -31,6 +30,9 @@ data TraceDispatcherMessage =
     -- and gives the number of messages that has been suppressed
   | UnknownNamespace [Text] [Text] UnknownNamespaceKind
     -- ^ An internal error was detected
+  | TracerInfo [Text] [Text]
+    -- ^  The first array signifies the namespace of silent tracers
+    --    The second array signifies the namespace tracers without metrics
   deriving Show
 
 instance LogFormatting TraceDispatcherMessage where
@@ -42,6 +44,10 @@ instance LogFormatting TraceDispatcherMessage where
   forHuman (UnknownNamespace nsUnknown nsLegal qk) = "Unknown namespace detected "
     <> intercalate (singleton '.') nsUnknown <> ". Used for querying " <> (pack . show) qk
     <> " a legal namespace would be " <> intercalate (singleton '.') nsLegal <> "."
+  forHuman (TracerInfo silent noMetrics) = "The tracing system has silent the following tracer,"
+    <> " as they will never have any output according to the current config: "
+    <> intercalate (singleton ' ') silent <> ". The following tracers will not emit metrics "
+    <> intercalate (singleton ' ') noMetrics <> "."
 
   forMachine _dtl StartLimiting {} = mconcat
         [ "kind" .= String "StartLimiting"
@@ -60,6 +66,11 @@ instance LogFormatting TraceDispatcherMessage where
         , "legalNamespace" .= String (intercalate (singleton '.') nsleg)
         , "querying" .= String ((pack . show) query)
         ]
+  forMachine _dtl (TracerInfo silent noMetrics) = mconcat
+        [ "kind" .= String "TracerMeta"
+        , "silentTracers" .= String (intercalate (singleton ' ') silent)
+        , "noMetrics" .= String (intercalate (singleton ' ') noMetrics)
+        ]
 
   asMetrics StartLimiting {} = []
   asMetrics (StopLimiting txt num)  = [IntM
@@ -67,17 +78,22 @@ instance LogFormatting TraceDispatcherMessage where
                                         (fromIntegral num)]
   asMetrics RememberLimiting {} = []
   asMetrics UnknownNamespace {} = []
+  asMetrics TracerInfo {}       = []
 
 instance MetaTrace TraceDispatcherMessage where
     namespaceFor StartLimiting {}    = Namespace [] ["StartLimiting"]
     namespaceFor StopLimiting {}     = Namespace [] ["StopLimiting"]
     namespaceFor RememberLimiting {} = Namespace [] ["RememberLimiting"]
     namespaceFor UnknownNamespace {} = Namespace [] ["UnknownNamespace"]
+    namespaceFor TracerInfo {}       = Namespace [] ["TracerInfo"]
 
     severityFor (Namespace _ ["StartLimiting"]) _    = Just Info
     severityFor (Namespace _ ["StopLimiting"]) _     = Just Info
     severityFor (Namespace _ ["RememberLimiting"]) _ = Just Info
     severityFor (Namespace _ ["UnknownNamespace"]) _ = Just Error
+    severityFor (Namespace _ ["TracerInfo"]) _       = Just Info
+    severityFor _ _                                  = Nothing
+
 
     documentFor (Namespace _ ["StartLimiting"])    = Just
       "This message indicates the start of frequency limiting"
@@ -93,10 +109,16 @@ instance MetaTrace TraceDispatcherMessage where
       [ "A value was queried for a namespaces from a tracer,"
       , "which is unknown. This inicates a bug in the tracer implementation."
       ]
+    documentFor (Namespace _ ["TracerInfo"]) = Just $ mconcat
+      [ "Writes out tracers with metrics and silent tracers."
+      ]
+    documentFor _ = Nothing
+
 
     allNamespaces = [
         Namespace [] ["StartLimiting"]
       , Namespace [] ["StopLimiting"]
       , Namespace [] ["RememberLimiting"]
       , Namespace [] ["UnknownNamespace"]
+      , Namespace [] ["TracerInfo"]
       ]

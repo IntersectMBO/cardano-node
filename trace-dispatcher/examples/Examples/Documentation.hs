@@ -34,10 +34,11 @@ docTracers = do
                  $ withPrivacy
                     $ withDetails
                         t2'
-  configureTracers config1 [t1, t2]
+  confState <- emptyConfigReflection
+  configureTracers confState config1 [t1, t2]
   bl <- documentTracer t1
   b2 <- documentTracer t2
-  res <- docuResultsToText (bl ++ b2) config1
+  res <- docuResultsToText (bl <> b2) config1
   T.writeFile "/tmp/Testdocu.md" res
 
 config1 :: TraceConfig

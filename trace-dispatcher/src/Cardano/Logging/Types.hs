@@ -37,6 +37,8 @@ module Cardano.Logging.Types (
   , Verbosity(..)
   , TraceOptionForwarder(..)
   , defaultForwarder
+  , ConfigReflection(..)
+  , emptyConfigReflection
   , TraceConfig(..)
   , emptyTraceConfig
   , FormattedMessage(..)
@@ -57,7 +59,10 @@ import qualified Control.Tracer as T
 import           Data.Aeson ((.=))
 import qualified Data.Aeson as AE
 import qualified Data.Aeson.Text as AE
+import           Data.Set (Set)
+import qualified Data.Set as Set
 import qualified Data.HashMap.Strict as HM
+
 import           Data.IORef
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -300,6 +305,14 @@ data TraceObject = TraceObject {
 -- Configuration
 
 -- |
+data ConfigReflection = ConfigReflection (IORef (Set [Text])) (IORef (Set [Text]))
+
+emptyConfigReflection :: IO ConfigReflection
+emptyConfigReflection  = do
+    silence <- newIORef Set.empty
+    hasMetrics <- newIORef Set.empty
+    pure $ ConfigReflection silence hasMetrics
+
 data FormattedMessage =
       FormattedHuman Bool Text
       -- ^ The bool specifies if the formatting includes colours
@@ -399,6 +412,8 @@ instance AE.FromJSON TraceOptionForwarder where
         <$> obj AE..:? "connQueueSize"    AE..!= 2000
         <*> obj AE..:? "disconnQueueSize" AE..!= 200000
         <*> obj AE..:? "verbosity"        AE..!= Minimum
+    parseJSON _ = mempty
+
 
 defaultForwarder :: TraceOptionForwarder
 defaultForwarder = TraceOptionForwarder {
@@ -445,8 +460,8 @@ emptyTraceConfig = TraceConfig {
 data TraceControl where
     Reset     :: TraceControl
     Config    :: TraceConfig -> TraceControl
-    Optimize  :: TraceControl
-    TCDocument  :: Int -> DocCollector -> TraceControl
+    Optimize  :: IORef (Set [Text]) -> IORef (Set [Text]) -> TraceControl
+    TCDocument  :: Int  -> DocCollector -> TraceControl
 
 
 newtype DocCollector = DocCollector (IORef (Map Int LogDoc))
@@ -454,7 +469,7 @@ newtype DocCollector = DocCollector (IORef (Map Int LogDoc))
 data LogDoc = LogDoc {
     ldDoc             :: !Text
   , ldMetricsDoc      :: !(Map.Map Text Text)
-  , ldNamespace       :: ![[Text]]
+  , ldNamespace       :: ![([Text],[Text])]
   , ldSeverityCoded   :: !(Maybe SeverityS)
   , ldPrivacyCoded    :: !(Maybe Privacy)
   , ldDetailsCoded    :: !(Maybe DetailLevel)
@@ -462,10 +477,11 @@ data LogDoc = LogDoc {
   , ldBackends        :: ![BackendConfig]
   , ldFiltered        :: ![SeverityF]
   , ldLimiter         :: ![(Text, Double)]
+  , ldSilent          :: Bool
 } deriving(Eq, Show)
 
 emptyLogDoc :: Text -> [(Text, Text)] -> LogDoc
-emptyLogDoc d m = LogDoc d (Map.fromList m) [] Nothing Nothing Nothing [] [] [] []
+emptyLogDoc d m = LogDoc d (Map.fromList m) [] Nothing Nothing Nothing [] [] [] [] False
 
 -- | Type for the functions foldTraceM and foldMTraceM from module
 -- Cardano/Logging/Trace

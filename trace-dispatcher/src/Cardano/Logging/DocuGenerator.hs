@@ -16,18 +16,20 @@ module Cardano.Logging.DocuGenerator (
   , docIt
   , addFiltered
   , addLimiter
+  , addSilent
   -- Convenience functions
   , showT
   , addDocumentedNamespace
 
   , DocuResult
+  , DocTracer
 ) where
 
 
 import           Data.IORef (modifyIORef, newIORef, readIORef)
 import           Data.List (groupBy, intersperse, nub, sortBy)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromMaybe)
+import           Data.Maybe (fromMaybe, mapMaybe)
 import           Data.Text (Text, pack, toLower)
 import qualified Data.Text as T
 import           Data.Text.Internal.Builder (toLazyText)
@@ -42,6 +44,7 @@ import qualified Control.Tracer as T
 import           Trace.Forward.Utils.DataPoint (DataPoint (..))
 
 
+
 -- | Convenience function for adding a namespace prefix to a documented
 addDocumentedNamespace  :: [Text] -> Documented a -> Documented a
 addDocumentedNamespace  tl (Documented list) =
@@ -53,11 +56,25 @@ addDocumentedNamespace  tl (Documented list) =
 showT :: Show a => a -> Text
 showT = pack . show
 
-
 data DocuResult =
   DocuTracer Builder
   | DocuMetric Builder
   | DocuDatapoint Builder
+  deriving (Show)
+
+data DocTracer = DocTracer {
+      dtTracerNames :: [[Text]]
+    , dtSilent      :: [[Text]]
+    , dtNoMetrics   :: [[Text]]
+    , dtBuilderList :: [([Text], DocuResult)]
+} deriving (Show)
+
+instance Semigroup DocTracer where
+  dtl <> dtr = DocTracer
+                 (dtTracerNames dtl <> dtTracerNames dtr)
+                 (dtSilent dtl <> dtSilent dtr)
+                 (dtNoMetrics dtl <> dtNoMetrics dtr)
+                 (dtBuilderList dtl <> dtBuilderList dtr)
 
 isTracer :: DocuResult -> Bool
 isTracer DocuTracer {} = True
@@ -80,17 +97,16 @@ documentTracer' :: forall a a1.
      MetaTrace a
   => (Trace IO a1 -> IO (Trace IO a))
   -> Trace IO a1
-  -> IO [([Text], DocuResult)]
+  -> IO DocTracer
 documentTracer' hook tracer = do
     tr' <- hook tracer
     documentTracer tr'
 
--- This fuction calls document tracers and returns a list with namespaces
--- and an associated DocuResult
+-- This fuction calls document tracers and returns a DocTracer result
 documentTracer :: forall a.
      MetaTrace a
   => Trace IO a
-  -> IO [([Text], DocuResult)]
+  -> IO DocTracer
 documentTracer tracer = do
     DocCollector docRef <- documentTracersRun [tracer]
     items <- fmap Map.toList (liftIO (readIORef docRef))
@@ -98,11 +114,25 @@ documentTracer tracer = do
                         (\ (_,l) (_,r) -> compare (ldNamespace l) (ldNamespace r))
                         items
     let messageDocs = map (\(i, ld) -> case ldNamespace ld of
-                                []     -> (["No prefix namespace"], documentItem (i, ld))
-                                (hn:_) -> (hn, documentItem (i, ld))) sortedItems
+                                        (prn,pon) : _  -> (prn ++ pon, documentItem (i, ld))
+                                        []             -> (["No ns"], documentItem (i, ld))) sortedItems
         metricsItems = map snd $ filter (not . Map.null . ldMetricsDoc . snd) sortedItems
         metricsDocs = documentMetrics metricsItems
-    pure $ messageDocs ++ metricsDocs
+        tracerName = case sortedItems of
+                      ((_i, ld) : _) -> case ldNamespace ld of
+                                          (prn, _pon) : _  -> prn
+                                          []               -> []
+                      []             -> []
+        silent = case sortedItems of
+                      ((_i, ld) : _) -> ldSilent ld
+                      [] -> False
+        hasNoMetrics = null metricsItems
+    pure $ DocTracer
+            [tracerName]
+            [tracerName | silent]
+            [tracerName | hasNoMetrics]
+            (messageDocs ++ metricsDocs)
+
   where
     documentItem :: (Int, LogDoc) -> DocuResult
     documentItem (_idx, ld@LogDoc {..}) =
@@ -120,7 +150,7 @@ documentTracer tracer = do
                       , configBuilder ld
                       ]
 
-    documentMetrics :: [LogDoc] -> [([Text], DocuResult)]
+    documentMetrics :: [LogDoc] -> [([Text],DocuResult)]
     documentMetrics logDocs =
       let nameCommentNamespaceList =
             concatMap (\ld -> zip (Map.toList (ldMetricsDoc ld)) (repeat (ldNamespace ld))) logDocs
@@ -128,34 +158,36 @@ documentTracer tracer = do
             sortBy (\a b -> compare ((fst . fst) a) ((fst . fst) b)) nameCommentNamespaceList
           groupedNameCommentNamespaceList =
             groupBy (\a b -> (fst . fst) a == (fst . fst) b) sortedNameCommentNamespaceList
-      in map documentMetrics' groupedNameCommentNamespaceList
+      in mapMaybe documentMetrics' groupedNameCommentNamespaceList
 
-    documentMetrics' :: [((Text, Text), [[Text]])] -> ([Text], DocuResult)
+    documentMetrics' :: [( (Text, Text) , [([Text],[Text])] )] -> Maybe ([Text], DocuResult)
     documentMetrics' ncns@(((name, comment), _) : _tail) =
-      ([name], DocuMetric
+      Just ([name], DocuMetric
               $ mconcat $ intersperse(fromText "\n\n")
                     [ metricToBuilder (name,comment)
                     , namespacesMetricsBuilder (nub (concatMap snd ncns))
                     ])
+    documentMetrics' [] = Nothing
 
-    namespacesBuilder :: [[Text]] -> Builder
+    namespacesBuilder :: [([Text], [Text])] -> Builder
     namespacesBuilder [ns] = namespaceBuilder ns
     namespacesBuilder []   = fromText "__Warning__: namespace missing"
     namespacesBuilder nsl  =
       mconcat (intersperse (singleton '\n')(map namespaceBuilder nsl))
 
-    namespaceBuilder :: [Text] -> Builder
-    namespaceBuilder ns = fromText "### " <>
-      mconcat (intersperse (singleton '.') (map fromText ns))
+    namespaceBuilder :: ([Text], [Text]) -> Builder
+    namespaceBuilder (nsPr, nsPo) = fromText "### " <>
+      mconcat (intersperse (singleton '.') (map fromText (nsPr ++ nsPo)))
 
-    namespacesMetricsBuilder :: [[Text]] -> Builder
+    namespacesMetricsBuilder :: [ ([Text], [Text])] -> Builder
     namespacesMetricsBuilder [ns] = fromText "Dispatched by: \n" <> namespaceMetricsBuilder ns
     namespacesMetricsBuilder []   = mempty
     namespacesMetricsBuilder nsl  = fromText "Dispatched by: \n" <>
       mconcat (intersperse (singleton '\n')(map namespaceMetricsBuilder nsl))
 
-    namespaceMetricsBuilder :: [Text] -> Builder
-    namespaceMetricsBuilder ns = mconcat (intersperse (singleton '.') (map fromText ns))
+    namespaceMetricsBuilder :: ([Text], [Text]) -> Builder
+    namespaceMetricsBuilder (nsPr, nsPo) = mconcat (intersperse (singleton '.')
+                                                      (map fromText (nsPr ++ nsPo)))
 
     propertiesBuilder :: LogDoc -> Builder
     propertiesBuilder LogDoc {..} =
@@ -312,6 +344,18 @@ addLimiter (TCDocument idx (DocCollector docRef)) (ln, lf) = do
         docMap)
 addLimiter _ _ = pure ()
 
+addSilent :: MonadIO m => TraceControl -> Maybe Bool -> m ()
+addSilent (TCDocument idx (DocCollector docRef)) (Just silent) = do
+  liftIO $ modifyIORef docRef (\ docMap ->
+      Map.insert
+        idx
+        ((\e -> e { ldSilent = silent})
+          (case Map.lookup idx docMap of
+                        Just e  -> e
+                        Nothing -> error "DocuGenerator>>missing log doc"))
+        docMap)
+addSilent _ _ = pure ()
+
 -- | Callback for doc collection
 docIt :: MonadIO m
   => BackendConfig
@@ -334,8 +378,8 @@ docIt backend (LoggingContext {..},
       Map.insert
         idx
         ((\e -> e { ldBackends  = backend : ldBackends e
-                  , ldNamespace = nub ((lcNSPrefix ++ lcNSInner) : ldNamespace e)
-                  , ldDetails        = case lcDetails of
+                  , ldNamespace = nub ((lcNSPrefix,lcNSInner) : ldNamespace e)
+                  , ldDetails   = case lcDetails of
                                     Nothing -> ldDetails e
                                     Just d  -> d : ldDetails e
                   })
@@ -343,6 +387,7 @@ docIt backend (LoggingContext {..},
                         Just e  -> e
                         Nothing -> error "DocuGenerator>>missing log doc"))
         docMap)
+docIt _ (_, _) = pure ()
 
 -- | Callback for doc collection
 docItDatapoint :: MonadIO m =>
@@ -354,28 +399,33 @@ docItDatapoint _backend (LoggingContext {..},
   liftIO $ modifyIORef docRef (\ docMap ->
       Map.insert
         idx
-        ((\e -> e { ldNamespace = nub ((lcNSPrefix ++ lcNSInner) : ldNamespace e)
+        ((\e -> e { ldNamespace = nub ((lcNSPrefix, lcNSInner) : ldNamespace e)
                   , ldBackends  = [DatapointBackend]
                   })
           (case Map.lookup idx docMap of
                         Just e  -> e
                         Nothing -> error "DocuGenerator>>missing log doc"))
         docMap)
+docItDatapoint _backend (LoggingContext {}, _) = pure ()
 
 
 -- Finally generate a text from all the builders
-docuResultsToText :: [([Text], DocuResult)] -> TraceConfig -> IO Text
-docuResultsToText builderList configuration = do
+docuResultsToText :: DocTracer -> TraceConfig -> IO Text
+docuResultsToText dt@DocTracer {..} configuration = do
   time <- getZonedTime
   let traceBuilders = sortBy (\ (l,_) (r,_) -> compare l r)
-                          (filter (isTracer . snd) builderList)
+                          (filter (isTracer . snd) dtBuilderList)
       metricsBuilders = sortBy (\ (l,_) (r,_) -> compare l r)
-                          (filter (isMetric .snd) builderList)
+                          (filter (isMetric .snd) dtBuilderList)
       datapointBuilders = sortBy (\ (l,_) (r,_) -> compare l r)
-                          (filter (isDatapoint . snd) builderList)
+                          (filter (isDatapoint . snd) dtBuilderList)
       header  = fromText "# Cardano Trace Documentation\n\n"
       header1  = fromText "## Table Of Contents\n\n"
-      toc      = generateTOC (map fst traceBuilders) (map fst metricsBuilders) (map fst datapointBuilders)
+      toc      = generateTOC dt
+                    (map fst traceBuilders)
+                    (map fst metricsBuilders)
+                    (map fst datapointBuilders)
+
       header2  = fromText "\n## Trace Messages\n\n"
       contentT = mconcat $ intersperse (fromText "\n\n")
                               (map (unpackDocu . snd) traceBuilders)
@@ -386,7 +436,7 @@ docuResultsToText builderList configuration = do
       contentD = mconcat $ intersperse (fromText "\n\n")
                               (map (unpackDocu . snd) datapointBuilders)
       config  = fromString $ "\n\nConfiguration: " <> show configuration <> "\n\n"
-      numbers = fromString $  show (length builderList) <> " log messages." <> "\n\n"
+      numbers = fromString $  show (length dtBuilderList) <> " log messages." <> "\n\n"
       ts      = fromString $ "Generated at " <> show time <> ".\n"
   pure $ toStrict $ toLazyText (
          header
@@ -403,74 +453,96 @@ docuResultsToText builderList configuration = do
       <> ts)
 
 
-generateTOC :: [[Text]] -> [[Text]] -> [[Text]] -> Builder
-generateTOC traces metrics datapoints =
+generateTOC :: DocTracer -> [[Text]] -> [[Text]] -> [[Text]] -> Builder
+generateTOC dt traces metrics datapoints =
        generateTOCTraces
     <> generateTOCMetrics
     <> generateTOCDatapoints
   where
     generateTOCTraces =
       fromText "### [Trace Messages](#trace-messages)\n\n"
-      <> mconcat (reverse (fst (foldl namespaceToToc ([], []) traces)))
+      <> mconcat (reverse (fst (foldl (namespaceToToc (Just dt)) ([], []) traces)))
       <> fromText "\n"
     generateTOCMetrics =
       fromText "### [Metrics](#metrics)\n\n"
-      <> mconcat (reverse (fst (foldl namespaceToToc ([], []) (map splitToNS metrics))))
+      <> mconcat (reverse (fst (foldl (namespaceToToc Nothing) ([], []) (map splitToNS metrics))))
       <> fromText "\n"
     generateTOCDatapoints =
       fromText "### [Datapoints](#datapoints)\n\n"
-      <> mconcat (reverse (fst (foldl namespaceToToc ([], []) datapoints)))
+      <> mconcat (reverse (fst (foldl (namespaceToToc Nothing) ([], []) datapoints)))
       <> fromText "\n"
 
-    namespaceToToc :: ([Builder], [Text]) -> [Text]-> ([Builder], [Text])
-    namespaceToToc (builders, context) ns =
+    namespaceToToc :: Maybe DocTracer -> ([Builder], [Text]) -> [Text]-> ([Builder], [Text])
+    namespaceToToc condDocTracer (builders, context) ns =
       let ref = namespaceRefBuilder ns
-          ns' = if take 2 ns == ["Cardano", "Node"]
-                  then drop 2 ns
-                  else ns
-      in if init ns' == context
-        then
-          (( fromString (concat (replicate (length context) "\t"))
-          <> fromText "1. "
-          <> fromText "["
-          <> case ns of
-                _hd : _tl -> fromText (last ns')
-                _ -> fromText "Error empty namespace"
-          <> fromText "](#"
-          <> ref
-          <> fromText ")\n") : builders, context)
-        else
-          let cpl  = commonPrefixLength context ns'
-              ns'' = drop cpl ns'
-              context' = take cpl context
-          in namespaceToTocWithContext (builders, context') ns'' ref
-
+      in case ns of
+        (hd:tl) -> if init (hd:tl) == context
+                    then
+                      let symbolsText = case condDocTracer of
+                                          Nothing -> ""
+                                          Just docTracers -> getSymbolsOf ns docTracers
+                      in ( fromString (concat (replicate (length context) "\t"))
+                          <> fromText "1. "
+                          <> fromText "["
+                          <> fromText (last ns)
+                          <> fromText symbolsText
+                          <> fromText "](#"
+                          <> ref
+                          <> fromText ")\n" : builders, context)
+                    else
+                      let cpl  = commonPrefixLength context ns
+                          ns' = drop cpl ns
+                          context' = take cpl context
+                      in namespaceToTocWithContext condDocTracer (builders, context') ns' ns ref
+        [] -> ([],[])
     namespaceToTocWithContext ::
-         ([Builder], [Text])
+         Maybe DocTracer
+      -> ([Builder], [Text])
+      -> [Text]
       -> [Text]
       -> Builder
       -> ([Builder], [Text])
-    namespaceToTocWithContext (builders, context) ns ref =
+    namespaceToTocWithContext condDocTracer (builders, context) ns nsFull ref =
       case ns of
-        [single] ->   ((fromString (concat (replicate (length context) "\t"))
-                      <> fromText "1. "
-                      <> fromText "["
-                      <> fromText single
-                      <> fromText "](#"
-                      <> ref
-                      <> fromText ")\n") : builders, context)
+        [single] -> let symbolsText = case condDocTracer of
+                              Nothing -> ""
+                              Just docTracers -> getSymbolsOf (context ++ [single]) docTracers
+                    in ((fromString (concat (replicate (length context) "\t"))
+                                <> fromText "1. "
+                                <> fromText "["
+                                <> fromText single
+                                <> fromText symbolsText
+                                <> fromText "](#"
+                                <> ref
+                                <> fromText ")\n") : builders, context)
         (hdn : tln) ->
-          let builder = fromString (concat (replicate (length context) "\t"))
+          let symbolsText = case condDocTracer of
+                              Nothing -> ""
+                              Just docTracers -> getSymbolsOf (context ++ [hdn]) docTracers
+              builder = fromString (concat (replicate (length context) "\t"))
                         <> fromText "1. __"
                         <> fromText hdn
+                        <> fromText symbolsText
                         <> fromText "__\n"
-          in  namespaceToTocWithContext
-              (builder : builders, context ++ [hdn]) tln ref
+          in  namespaceToTocWithContext condDocTracer
+                (builder : builders, context ++ [hdn]) tln nsFull ref
         [] -> error "inpossible"
 
     splitToNS :: [Text] -> [Text]
     splitToNS [sym] = T.split (== '.') sym
+    splitToNS other = other
 
+
+    getSymbolsOf :: [Text] -> DocTracer -> Text
+    getSymbolsOf ns DocTracer {..} =
+      let isTracer' = elem ns dtTracerNames
+      in  if isTracer'
+            then
+              let isSilent  = elem ns dtSilent
+                  noMetrics = elem ns dtNoMetrics
+              in "\9443" <> if isSilent then "\9442" else ""
+                      <> if noMetrics then "" else "\9436"
+            else ""
 
     commonPrefixLength :: Eq a => [a] -> [a] -> Int
     commonPrefixLength [] _ = 0

@@ -82,14 +82,15 @@ initDefaultTracers :: IO BenchTracers
 initDefaultTracers = do
   mbStdoutTracer <- fmap Just standardTracer
   let mbForwardingTracer = Nothing
+  confState       <- emptyConfigReflection
   benchTracer <-  generatorTracer "benchmark" mbStdoutTracer mbForwardingTracer
-  configureTracers initialTraceConfig [benchTracer]
+  configureTracers confState initialTraceConfig [benchTracer]
   n2nSubmitTracer <- generatorTracer "submitN2N" mbStdoutTracer mbForwardingTracer
-  configureTracers initialTraceConfig [n2nSubmitTracer]
+  configureTracers confState initialTraceConfig [n2nSubmitTracer]
   connectTracer <- generatorTracer "connect" mbStdoutTracer mbForwardingTracer
-  configureTracers initialTraceConfig [connectTracer]
+  configureTracers confState initialTraceConfig [connectTracer]
   submitTracer <- generatorTracer "submit" mbStdoutTracer mbForwardingTracer
-  configureTracers initialTraceConfig [submitTracer]
+  configureTracers confState initialTraceConfig [submitTracer]
 
   return $ BenchTracers
     { btTxSubmit_    = Tracer (traceWith benchTracer)
@@ -111,14 +112,15 @@ initTracers iomgr networkId tracerSocket = do
           pure (forwardTracer forwardSink, dataPointTracer dpStore)
   mbStdoutTracer <- fmap Just standardTracer
   let mbForwardingTracer = Just forwardingTracer
+  confState       <- emptyConfigReflection
   benchTracer <-  generatorTracer "benchmark" mbStdoutTracer mbForwardingTracer
-  configureTracers initialTraceConfig [benchTracer]
+  configureTracers confState initialTraceConfig [benchTracer]
   n2nSubmitTracer <- generatorTracer "submitN2N" mbStdoutTracer mbForwardingTracer
-  configureTracers initialTraceConfig [n2nSubmitTracer]
+  configureTracers confState initialTraceConfig [n2nSubmitTracer]
   connectTracer <- generatorTracer "connect" mbStdoutTracer mbForwardingTracer
-  configureTracers initialTraceConfig [connectTracer]
+  configureTracers confState initialTraceConfig [connectTracer]
   submitTracer <- generatorTracer "submit" mbStdoutTracer mbForwardingTracer
-  configureTracers initialTraceConfig [submitTracer]
+  configureTracers confState initialTraceConfig [submitTracer]
   -- Now we need to provide "Nodeinfo" DataPoint, to forward generator's name
   -- to the acceptor application (for example, 'cardano-tracer').
   nodeInfoTracer <- mkDataPointTracer dpTracer

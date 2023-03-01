@@ -15,12 +15,13 @@ import           System.Remote.Monitoring (forkServer)
 
 main :: IO ()
 main = do
+  configState <- emptyConfigReflection
   stdioTr <- standardTracer
-  tr      <- stdoutTracers stdioTr
-  filtr   <- filterTracers stdioTr
-  imtr    <- inMemoryTracers
-  tlTr    <- timeLimitedTracers stdioTr
-  ekgTr   <- ekgTracers
+  tr      <- stdoutTracers configState stdioTr
+  filtr   <- filterTracers configState stdioTr
+  imtr    <- inMemoryTracers configState
+  tlTr    <- timeLimitedTracers configState stdioTr
+  ekgTr   <- ekgTracers configState
   defaultMain [
     bgroup "tracer" [
                         bench "sendMessageStdout1"  $ whnfIO (sendMessage 1 tr)
@@ -48,8 +49,8 @@ main = do
                     ]
               ]
 
-stdoutTracers :: Trace IO FormattedMessage -> IO (Trace IO Message)
-stdoutTracers stdoutTracer = do
+stdoutTracers :: ConfigReflection -> Trace IO FormattedMessage -> IO (Trace IO Message)
+stdoutTracers confState stdoutTracer = do
     forwardTrRef    <- newIORef []
     forwardTracer'  <- testTracer forwardTrRef
     tr              <- mkCardanoTracer
@@ -57,11 +58,11 @@ stdoutTracers stdoutTracer = do
                         forwardTracer'
                         Nothing
                         ["Test"]
-    configureTracers config1 [tr]
+    configureTracers confState config1 [tr]
     pure tr
 
-filterTracers :: Trace IO FormattedMessage -> IO (Trace IO Message)
-filterTracers stdoutTracer = do
+filterTracers :: ConfigReflection -> Trace IO FormattedMessage -> IO (Trace IO Message)
+filterTracers confState stdoutTracer = do
     forwardTrRef    <- newIORef []
     forwardTracer'  <- testTracer forwardTrRef
     tr              <- mkCardanoTracer
@@ -69,11 +70,11 @@ filterTracers stdoutTracer = do
                         forwardTracer'
                         Nothing
                         ["Test"]
-    configureTracers config2 [tr]
+    configureTracers confState config2 [tr]
     pure tr
 
-inMemoryTracers :: IO (Trace IO Message)
-inMemoryTracers = do
+inMemoryTracers :: ConfigReflection -> IO (Trace IO Message)
+inMemoryTracers confState = do
     stdoutTrRef     <- newIORef []
     stdoutTracer'   <- testTracer stdoutTrRef
     forwardTrRef    <- newIORef []
@@ -83,11 +84,11 @@ inMemoryTracers = do
                         forwardTracer'
                         Nothing
                         ["Test"]
-    configureTracers config1 [tr]
+    configureTracers confState config1 [tr]
     pure tr
 
-timeLimitedTracers :: Trace IO FormattedMessage -> IO (Trace IO Message)
-timeLimitedTracers stdoutTracer = do
+timeLimitedTracers :: ConfigReflection -> Trace IO FormattedMessage -> IO (Trace IO Message)
+timeLimitedTracers confState stdoutTracer = do
     forwardTrRef    <- newIORef []
     forwardTracer'  <- testTracer forwardTrRef
     tr              <- mkCardanoTracer
@@ -95,11 +96,11 @@ timeLimitedTracers stdoutTracer = do
                         forwardTracer'
                         Nothing
                         ["Test"]
-    configureTracers config3 [tr]
+    configureTracers confState config3 [tr]
     pure tr
 
-ekgTracers :: IO (Trace IO Message)
-ekgTracers = do
+ekgTracers :: ConfigReflection -> IO (Trace IO Message)
+ekgTracers confState = do
     stdoutTrRef     <- newIORef []
     stdoutTracer'   <- testTracer stdoutTrRef
     forwardTrRef    <- newIORef []
@@ -111,7 +112,7 @@ ekgTracers = do
                         forwardTracer'
                         Nothing
                         ["Test"]
-    configureTracers config4 [tr]
+    configureTracers confState config4 [tr]
     pure tr
 
 timesRepeat :: Int -> IO () -> IO ()

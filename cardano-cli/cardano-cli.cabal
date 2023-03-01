@@ -37,6 +37,10 @@ common maybe-unix
   if !os(windows)
      build-depends:     unix
 
+common maybe-bytestring
+  if !os(windows)
+     build-depends:     bytestring
+
 library
   import:               project-config
 
@@ -162,7 +166,7 @@ executable cardano-cli
                       , transformers-except
 
 test-suite cardano-cli-test
-  import:               project-config
+  import:               project-config, maybe-unix, maybe-bytestring
 
   hs-source-dirs:       test
   main-is:              cardano-cli-test.hs
@@ -201,6 +205,7 @@ test-suite cardano-cli-test
                         Test.Cli.Pioneers.Exercise4
                         Test.Cli.Pioneers.Exercise5
                         Test.Cli.Pioneers.Exercise6
+                        Test.Cli.Pipes
                         Test.Cli.Shelley.Run.Query
                         Test.OptParse
 
@@ -227,7 +232,7 @@ test-suite cardano-cli-golden
                       , directory
                       , exceptions
                       , filepath
-                      , hedgehog
+                      , hedgehog ^>= 1.2
                       , hedgehog-extras
                       , text
                       , time

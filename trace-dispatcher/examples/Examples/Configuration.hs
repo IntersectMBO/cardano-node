@@ -82,7 +82,8 @@ testConfig' ::
   -> Trace IO TestMessage
   -> IO ()
 testConfig' tc t1 t2 t3 = do
-    configureTracers tc [t1, t2, t3]
+    confState <- emptyConfigReflection
+    configureTracers confState tc [t1, t2, t3]
     traceWith (setSeverity Critical t1) (TestMessage "Now setting config")
     traceWith
       (setSeverity Error t1)

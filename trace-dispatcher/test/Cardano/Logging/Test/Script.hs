@@ -21,7 +21,7 @@ import           Data.Time.Clock.System
 import           Test.QuickCheck
 
 import           Cardano.Logging
-import           Cardano.Logging.Test.Config ()
+import           Cardano.Logging.Test.Config()
 import           Cardano.Logging.Test.Tracer
 import           Cardano.Logging.Test.Types
 
@@ -46,7 +46,8 @@ runScriptSimple time oracle = do
                         forwardTracer'
                         (Just ekgTracer')
                         ["Test"]
-    configureTracers conf [tr]
+    confState       <- emptyConfigReflection
+    configureTracers confState conf [tr]
     let sortedMsgs = sort msgs
     let (msgsWithIds,_) = withMessageIds 0 sortedMsgs
     let timedMessages = map (withTimeFactor time) msgsWithIds
@@ -87,7 +88,8 @@ runScriptMultithreaded time oracle = do
                           forwardTracer'
                           (Just ekgTracer')
                           ["Test"]
-      configureTracers conf [tr]
+      confState <- emptyConfigReflection
+      configureTracers confState conf [tr]
       let sortedMsgs1 = sort msgs1
           (msgsWithIds1,_) = withMessageIds 0 sortedMsgs1
           timedMessages1 = map (withTimeFactor time) msgsWithIds1
@@ -154,7 +156,8 @@ runScriptMultithreadedWithReconfig time oracle = do
                           forwardTracer'
                           (Just ekgTracer')
                           ["Test"]
-      configureTracers conf [tr]
+      confState <- emptyConfigReflection
+      configureTracers confState conf [tr]
       let sortedMsgs1 = sort msgs1
           (msgsWithIds1,_) = withMessageIds 0 sortedMsgs1
           timedMessages1 = map (withTimeFactor time) msgsWithIds1
@@ -171,7 +174,7 @@ runScriptMultithreadedWithReconfig time oracle = do
       _ <- forkChild children (playIt (Script timedMessages1) tr 0.0)
       _ <- forkChild children (playIt (Script timedMessages2) tr 0.0)
       _ <- forkChild children (playIt (Script timedMessages3) tr 0.0)
-      _ <- forkChild children (playReconfigure reconfigTime conf2 tr)
+      _ <- forkChild children (playReconfigure confState reconfigTime conf2 tr)
 
       res <- waitForChildren children []
       let resErr = mapMaybe
@@ -219,7 +222,8 @@ runScriptMultithreadedWithConstantReconfig time oracle = do
                           forwardTracer'
                           (Just ekgTracer')
                           ["Test"]
-      configureTracers conf1 [tr]
+      confState <- emptyConfigReflection
+      configureTracers confState conf1 [tr]
       let sortedMsgs1 = sort msgs1
       let (msgsWithIds1,_) = withMessageIds 0 sortedMsgs1
       let timedMessages1 = map (withTimeFactor time) msgsWithIds1
@@ -236,7 +240,7 @@ runScriptMultithreadedWithConstantReconfig time oracle = do
       _ <- forkChild children (playIt (Script timedMessages1) tr 0.0)
       _ <- forkChild children (playIt (Script timedMessages2) tr 0.0)
       _ <- forkChild children (playIt (Script timedMessages3) tr 0.0)
-      _ <- forkChild children (playReconfigureContinuously time conf1 conf2 tr)
+      _ <- forkChild children (playReconfigureContinuously confState time conf1 conf2 tr)
 
       res <- waitForChildren children []
       let resErr = mapMaybe
@@ -281,19 +285,20 @@ waitForChildren children accum = do
       waitForChildren children (res : accum)
 
 -- | Plays a script in a single thread
-playReconfigure :: Double -> TraceConfig -> Trace IO Message -> IO ()
-playReconfigure time config tr = do
+playReconfigure :: ConfigReflection -> Double -> TraceConfig -> Trace IO Message -> IO ()
+playReconfigure confState time config tr = do
 
   threadDelay (round (time * 1000000))
-  configureTracers config [tr]
+  configureTracers confState config [tr]
 
 playReconfigureContinuously ::
-     Double
+     ConfigReflection
+  -> Double
   -> TraceConfig
   -> TraceConfig
   -> Trace IO Message
   -> IO ()
-playReconfigureContinuously time config1 config2 tr = do
+playReconfigureContinuously confState time config1 config2 tr = do
     startTime <- systemTimeToSeconds <$> getSystemTime
     go startTime 0
   where
@@ -304,10 +309,10 @@ playReconfigureContinuously time config1 config2 tr = do
         then pure ()
         else if alt == 0
               then do
-                 configureTracers config1 [tr]
+                 configureTracers confState config1 [tr]
                  go startTime 1
               else do
-                 configureTracers config2 [tr]
+                 configureTracers confState config2 [tr]
                  go startTime 0
 
 
