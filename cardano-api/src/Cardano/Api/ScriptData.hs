@@ -490,9 +490,9 @@ data ScriptDataJsonBytesError
 
 instance Error ScriptDataJsonBytesError where
   displayError (ScriptDataJsonBytesErrorValue e) =
-    "Error decoding ScriptData JSON value: " <> show e
+    "Error decoding ScriptData JSON value: " <> displayError e
   displayError (ScriptDataJsonBytesErrorInvalid e) =
-    "ScriptData is invalid: " <> show e
+    "ScriptData is invalid: " <> displayError e
 
 
 -- | This allows us to take JSON formatted ScriptData and encode it in the CDDL format
