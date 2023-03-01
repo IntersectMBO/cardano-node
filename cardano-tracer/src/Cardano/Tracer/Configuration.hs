@@ -24,7 +24,9 @@ import           Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
 import           Data.List.Extra (notNull)
 import           Data.Maybe (catMaybes)
+import           Data.Map.Strict (Map)
 import           Data.Word (Word16, Word32, Word64)
+import           Data.Text (Text)
 import           Data.Yaml (decodeFileEither)
 import           GHC.Generics (Generic)
 import           System.Exit (die)
@@ -91,6 +93,7 @@ data TracerConfig = TracerConfig
   , logging        :: !(NonEmpty LoggingParams)     -- ^ Logging parameters.
   , rotation       :: !(Maybe RotationParams)       -- ^ Rotation parameters.
   , verbosity      :: !(Maybe Verbosity)            -- ^ Verbosity of the tracer itself.
+  , metricsComp    :: !(Maybe (Map Text Text))      -- ^ Metrics compability map from metrics name to metrics name
   } deriving (Eq, Generic, FromJSON, ToJSON, Show)
 
 -- | Read the tracer's configuration file.

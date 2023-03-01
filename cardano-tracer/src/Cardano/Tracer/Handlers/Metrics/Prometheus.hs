@@ -103,7 +103,7 @@ runPrometheusServer tracerEnv (Endpoint host port) = forever $ do
       Just [nodeName] -> do
         liftIO (askNodeId tracerEnv $ decodeUtf8 nodeName) >>= \case
           Nothing -> writeText "No such a node!"
-          Just anId -> writeText =<< liftIO (getMetricsFromNode anId teAcceptedMetrics)
+          Just anId -> writeText =<< liftIO (getMetricsFromNode tracerEnv anId teAcceptedMetrics)
       _ -> writeText "No such a node!"
 
 type MetricName  = Text
@@ -111,10 +111,11 @@ type MetricValue = Text
 type MetricsList = [(MetricName, MetricValue)]
 
 getMetricsFromNode
-  :: NodeId
+  :: TracerEnv
+  -> NodeId
   -> AcceptedMetrics
   -> IO Text
-getMetricsFromNode nodeId acceptedMetrics =
+getMetricsFromNode tracerEnv nodeId acceptedMetrics =
   readTVarIO acceptedMetrics >>=
     (\case
         Nothing ->
@@ -124,7 +125,11 @@ getMetricsFromNode nodeId acceptedMetrics =
     ) . M.lookup nodeId
  where
   getListOfMetrics :: Sample -> MetricsList
-  getListOfMetrics = filter (not . T.null . fst) . map metricsWeNeed . HM.toList
+  getListOfMetrics =
+      metricsCompability
+      . filter (not . T.null . fst)
+      . map metricsWeNeed
+      . HM.toList
 
   metricsWeNeed (mName, mValue) =
     case mValue of
@@ -143,3 +148,14 @@ getMetricsFromNode nodeId acceptedMetrics =
     . T.replace " " "_"
     . T.replace "-" "_"
     . T.replace "." "_"
+
+  metricsCompability :: MetricsList -> MetricsList
+  metricsCompability metricsList =
+      case metricsComp (teConfig tracerEnv) of
+        Nothing -> metricsList
+        Just mmap -> foldl  (\ accu p'@(mn,mv) -> case M.lookup mn mmap of
+                                                Nothing -> p' : accu
+                                                Just rep -> p' : (rep,mv) : accu)
+                            []
+                            metricsList
+
