@@ -46,15 +46,15 @@ rec {
                                   }: {
         imports = [ common ];
 
-        command.text = config.preset.github.status.lib.reportBulk {
-          bulk.text = ''
-            nix eval .#legacyPackages --apply __attrNames --json |
+        command.text = ''
+          # filter out systems that we cannot build for:
+          systems=$(nix eval .#legacyPackages --apply __attrNames --json |
             nix-systems -i |
-            jq 'with_entries(select(.value))' # filter out systems that we cannot build for
-          '';
-          each.text = ''nix build -L .#legacyPackages."$1".hydraJobs.${jobsAttrs}'';
-          skippedDescription = lib.escapeShellArg "No nix builder available for this system";
-        };
+            jq -r 'with_entries(select(.value)) | keys | .[]')
+          targets=$(for s in $systems; do echo .#legacyPackages."$s".hydraJobs.${jobsAttrs}; done)
+          # shellcheck disable=SC2086
+          nix build -L $targets
+        '';
 
         env.NIX_CONFIG = ''
           # `kvm` for NixOS tests
@@ -72,6 +72,7 @@ rec {
       "ci/pr/required" = mkBulkJobsTask "pr.required";
       "ci/pr/nonrequired" = mkBulkJobsTask "pr.nonrequired --keep-going";
       "ci/push/required" = mkBulkJobsTask "required";
+      "ci/push/nonrequired" = mkBulkJobsTask "nonrequired --keep-going";
 
       "ci/cardano-deployment" = { lib, ... } @ args: {
         imports = [ common ];
@@ -100,6 +101,20 @@ rec {
         #input: "${ciInputName}"
         #repo: "${repository}"
       '';
+      prAndBorsIo = ''
+        let github = {
+          #input: "${ciInputName}"
+          #repo: "${repository}"
+        }
+        let borsBranches = {
+          #branch: "staging|trying"
+        }
+        #lib.merge
+        #ios: [
+          #lib.io.github_pr & github,
+          #lib.io.github_push & borsBranches & github,
+        ]
+      '';
       pushIo = ''
         #lib.io.github_push
         #input: "${ciInputName}"
@@ -113,27 +128,17 @@ rec {
         task = "ci/push/required";
         io = pushIo;
       };
+      "cardano-node/ci/push/nonrequired" = {
+        task = "ci/push/nonrequired";
+        io = pushIo;
+      };
       "cardano-node/ci/push/cardano-deployment" = {
         task = "ci/cardano-deployment";
         io = pushIo;
       };
-      # This one is used for both PR status and bors:
       "cardano-node/ci/pr/required" = {
         task = "ci/pr/required";
-        io = ''
-          let github = {
-            #input: "${ciInputName}"
-            #repo: "${repository}"
-          }
-          let borsBranches = {
-            #branch: "staging|trying"
-          }
-          #lib.merge
-          #ios: [
-            #lib.io.github_pr & github,
-            #lib.io.github_push & borsBranches & github,
-          ]
-        '';
+        io = prIo;
       };
       "cardano-node/ci/pr/nonrequired" = {
         task = "ci/pr/nonrequired";
