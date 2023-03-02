@@ -69,10 +69,10 @@ rec {
       };
     in
     {
-      "ci/pr/required" = mkBulkJobsTask "pr.required";
-      "ci/pr/nonrequired" = mkBulkJobsTask "pr.nonrequired --keep-going";
-      "ci/push/required" = mkBulkJobsTask "required";
-      "ci/push/nonrequired" = mkBulkJobsTask "nonrequired --keep-going";
+      "ci/pr/nix/required" = mkBulkJobsTask "pr.required";
+      "ci/pr/nix/nonrequired" = mkBulkJobsTask "pr.nonrequired --keep-going";
+      "ci/push/nix/required" = mkBulkJobsTask "required";
+      "ci/push/nix/nonrequired" = mkBulkJobsTask "nonrequired --keep-going";
 
       "ci/cardano-deployment" = { lib, ... } @ args: {
         imports = [ common ];
@@ -81,16 +81,6 @@ rec {
         '';
         memory = 1024 * 16;
         nomad.resources.cpu = 10000;
-      };
-
-      "ci/push" = { lib, ... } @ args: {
-        imports = [ common ];
-        after = [ "ci/push/required" "ci/cardano-deployment" ];
-      };
-
-      "ci/pr" = { lib, ... } @ args: {
-        imports = [ common ];
-        after = [ "ci/pr/required" "ci/pr/nonrequired" "ci/cardano-deployment" ];
       };
     };
 
@@ -124,24 +114,24 @@ rec {
     in
     {
 
-      "cardano-node/ci/push/required" = {
-        task = "ci/push/required";
+      "cardano-node/ci/push/nix/required" = {
+        task = "ci/push/nix/required";
         io = pushIo;
       };
-      "cardano-node/ci/push/nonrequired" = {
-        task = "ci/push/nonrequired";
+      "cardano-node/ci/push/nix/nonrequired" = {
+        task = "ci/push/nix/nonrequired";
         io = pushIo;
       };
       "cardano-node/ci/push/cardano-deployment" = {
         task = "ci/cardano-deployment";
         io = pushIo;
       };
-      "cardano-node/ci/pr/required" = {
-        task = "ci/pr/required";
+      "cardano-node/ci/pr/nix/required" = {
+        task = "ci/pr/nix/required";
         io = prIo;
       };
-      "cardano-node/ci/pr/nonrequired" = {
-        task = "ci/pr/nonrequired";
+      "cardano-node/ci/pr/nix/nonrequired" = {
+        task = "ci/pr/nix/nonrequired";
         io = prIo;
       };
       "cardano-node/ci/pr/cardano-deployment" = {
