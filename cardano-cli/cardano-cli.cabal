@@ -114,12 +114,12 @@ library
                       , cardano-crypto-wrapper ^>= 1.5
                       , cardano-data ^>= 1.0
                       , cardano-git-rev
-                      , cardano-ledger-alonzo ^>= 1.0
-                      , cardano-ledger-allegra ^>= 1.0
+                      , cardano-ledger-alonzo ^>= 1.1
+                      , cardano-ledger-allegra ^>= 1.1
                       , cardano-ledger-byron ^>= 1.0
-                      , cardano-ledger-core ^>= 1.0
-                      , cardano-ledger-mary ^>= 1.0
-                      , cardano-ledger-shelley ^>= 1.0
+                      , cardano-ledger-core ^>= 1.1
+                      , cardano-ledger-mary ^>= 1.1
+                      , cardano-ledger-shelley ^>= 1.1
                       , cardano-ping
                       , cardano-prelude
                       , cardano-protocol-tpraos ^>= 1.0

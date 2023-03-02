@@ -4,6 +4,10 @@
 
 ### Features
 
+- Changed type of `protocolParamTxFeeFixed`, `protocolParamTxFeePerByte` from `Natural` to
+  `Lovelace` and `protocolUpdateTxFeeFixed` and `protocolUpdateTxFeePerByte` from `Maybe
+  Natural` to `Maybe Lovelace`
+
 - Append, not prepend change output when balancing a transaction ([PR 4343](https://github.com/input-output-hk/cardano-node/pull/4343))
 
 - Expose convenience functions `executeQueryCardanoMode`, `determineEra`, `constructBalancedTx` and `queryStateForBalancedTx` ([PR 4446](https://github.com/input-output-hk/cardano-node/pull/4446))

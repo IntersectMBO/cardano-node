@@ -181,7 +181,7 @@ library
                       , network-mux ^>= 0.3
                       , nothunks
                       , optparse-applicative-fork
-                      , ouroboros-consensus ^>= 0.2
+                      , ouroboros-consensus ^>= 0.3
                       , ouroboros-consensus-byron
                       , ouroboros-consensus-cardano
                       , ouroboros-consensus-diffusion
