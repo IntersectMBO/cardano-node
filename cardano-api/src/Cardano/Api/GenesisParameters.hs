@@ -21,8 +21,10 @@ import           Data.Time (NominalDiffTime, UTCTime)
 import           Cardano.Slotting.Slot (EpochSize (..))
 
 import qualified Cardano.Ledger.BaseTypes as Ledger
+import qualified Cardano.Ledger.Crypto as Ledger
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley
 
+import           Cardano.Api.Eras (ShelleyBasedEra (ShelleyBasedEraShelley))
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Value
@@ -99,7 +101,7 @@ data GenesisParameters =
 -- Conversion functions
 --
 
-fromShelleyGenesis :: Shelley.ShelleyGenesis era -> GenesisParameters
+fromShelleyGenesis :: Shelley.ShelleyGenesis Ledger.StandardCrypto -> GenesisParameters
 fromShelleyGenesis
     Shelley.ShelleyGenesis {
       Shelley.sgSystemStart
@@ -126,12 +128,13 @@ fromShelleyGenesis
                                               sgActiveSlotsCoeff
     , protocolParamSecurity               = fromIntegral sgSecurityParam
     , protocolParamEpochLength            = sgEpochLength
-    , protocolParamSlotLength             = sgSlotLength
+    , protocolParamSlotLength             = Shelley.fromNominalDiffTimeMicro sgSlotLength
     , protocolParamSlotsPerKESPeriod      = fromIntegral sgSlotsPerKESPeriod
     , protocolParamMaxKESEvolutions       = fromIntegral sgMaxKESEvolutions
     , protocolParamUpdateQuorum           = fromIntegral sgUpdateQuorum
     , protocolParamMaxLovelaceSupply      = Lovelace
                                               (fromIntegral sgMaxLovelaceSupply)
-    , protocolInitialUpdateableProtocolParameters = fromShelleyPParams
+    , protocolInitialUpdateableProtocolParameters = fromLedgerPParams
+                                                      ShelleyBasedEraShelley
                                                       sgProtocolParams
     }
