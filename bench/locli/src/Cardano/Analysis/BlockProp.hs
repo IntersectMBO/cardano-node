@@ -485,29 +485,29 @@ blockProp run@Run{genesis} Chain{..} = do
   pure $ BlockProp
     { bpDomainSlots      = [cDomSlots]
     , bpDomainBlocks     = [cDomBlocks]
-    , cdfForgerStarts    = forgerEventsCDF   (SJust . bfStarted   . beForge)
-    , cdfForgerBlkCtx    = forgerEventsCDF           (bfBlkCtx    . beForge)
-    , cdfForgerLgrState  = forgerEventsCDF           (bfLgrState  . beForge)
-    , cdfForgerLgrView   = forgerEventsCDF           (bfLgrView   . beForge)
-    , cdfForgerLeads     = forgerEventsCDF   (SJust . bfLeading   . beForge)
-    , cdfForgerTicked    = forgerEventsCDF           (bfTicked    . beForge)
-    , cdfForgerMemSnap   = forgerEventsCDF           (bfMemSnap   . beForge)
-    , cdfForgerForges    = forgerEventsCDF   (SJust . bfForged    . beForge)
-    , cdfForgerAnnounces = forgerEventsCDF   (SJust . bfAnnounced . beForge)
-    , cdfForgerSends     = forgerEventsCDF   (SJust . bfSending   . beForge)
-    , cdfForgerAdoptions = forgerEventsCDF   (SJust . bfAdopted   . beForge)
-    , cdfPeerNotices     = observerEventsCDF (SJust . boNoticed)   "noticed"
-    , cdfPeerRequests    = observerEventsCDF (SJust . boRequested) "requested"
-    , cdfPeerFetches     = observerEventsCDF (SJust . boFetched)   "fetched"
-    , cdfPeerAnnounces   = observerEventsCDF boAnnounced           "announced"
-    , cdfPeerSends       = observerEventsCDF boSending             "sending"
-    , cdfPeerAdoptions   = observerEventsCDF boAdopted             "adopted"
+    , cdfForgerStarts    = forgerCDF   (SJust . bfStarted   . beForge)
+    , cdfForgerBlkCtx    = forgerCDF           (bfBlkCtx    . beForge)
+    , cdfForgerLgrState  = forgerCDF           (bfLgrState  . beForge)
+    , cdfForgerLgrView   = forgerCDF           (bfLgrView   . beForge)
+    , cdfForgerLeads     = forgerCDF   (SJust . bfLeading   . beForge)
+    , cdfForgerTicked    = forgerCDF           (bfTicked    . beForge)
+    , cdfForgerMemSnap   = forgerCDF           (bfMemSnap   . beForge)
+    , cdfForgerForges    = forgerCDF   (SJust . bfForged    . beForge)
+    , cdfForgerAnnounces = forgerCDF   (SJust . bfAnnounced . beForge)
+    , cdfForgerSends     = forgerCDF   (SJust . bfSending   . beForge)
+    , cdfForgerAdoptions = forgerCDF   (SJust . bfAdopted   . beForge)
+    , cdfPeerNotices     = observerCDF (SJust . boNoticed)   earliest "noticed"
+    , cdfPeerRequests    = observerCDF (SJust . boRequested) each "requested"
+    , cdfPeerFetches     = observerCDF (SJust . boFetched)   each "fetched"
+    , cdfPeerAnnounces   = observerCDF boAnnounced           each "announced"
+    , cdfPeerSends       = observerCDF boSending             each "sending"
+    , cdfPeerAdoptions   = observerCDF boAdopted             each "adopted"
     , bpPropagation      = Map.fromList
       [ ( T.pack $ printf "cdf%.2f" p'
-        , forgerEventsCDF (SJust . unI . projectCDF' "bePropagation" p . bePropagation))
+        , forgerCDF (SJust . unI . projectCDF' "bePropagation" p . bePropagation))
       | p@(Centile p') <- adoptionCentiles <> [Centile 1.0] ]
-    , cdfBlockBattles        = forgerEventsCDF   (SJust . unCount . beForks)
-    , cdfBlockSizes          = forgerEventsCDF   (SJust . bfBlockSize . beForge)
+    , cdfBlockBattles        = forgerCDF   (SJust . unCount . beForks)
+    , cdfBlockSizes          = forgerCDF   (SJust . bfBlockSize . beForge)
     , bpVersion              = getLocliVersion
     , cdfBlocksPerHost       = cdf stdCentiles (blockStats <&> unCount
                                                 . bsTotal)
@@ -526,36 +526,33 @@ blockProp run@Run{genesis} Chain{..} = do
    blockStats = Map.elems cBlockStats
 
    analysisChain :: [BlockEvents]
-   analysisChain       = filter (all snd . beAcceptance) cMainChain
+   analysisChain = filter (all snd . beAcceptance) cMainChain
 
-   forgerEventsCDF   :: Divisible a => (BlockEvents -> SMaybe a) -> CDF I a
-   forgerEventsCDF   = flip (witherToDistrib (cdf stdCentiles)) analysisChain
-   observerEventsCDF   :: (BlockObservation -> SMaybe NominalDiffTime) -> String -> CDF I NominalDiffTime
-   observerEventsCDF = mapChainToPeerBlockObservationCDF stdCentiles analysisChain
+   forgerCDF :: Divisible a => (BlockEvents -> SMaybe a) -> CDF I a
+   forgerCDF = flip (witherToDistrib (cdf stdCentiles)) analysisChain
 
-   mapChainToBlockEventCDF ::
-     Divisible a
-     => [Centile]
-     -> [BlockEvents]
-     -> (BlockEvents -> SMaybe a)
-     -> CDF I a
-   mapChainToBlockEventCDF percs cbes proj =
-     cdf percs $
-       mapSMaybe proj cbes
+   each, earliest :: [NominalDiffTime] -> [NominalDiffTime]
+   each = identity
+   earliest = (:[]) . minimum
 
-   mapChainToPeerBlockObservationCDF ::
-        [Centile]
-     -> [BlockEvents]
-     -> (BlockObservation -> SMaybe NominalDiffTime)
-     -> String
-     -> CDF I NominalDiffTime
-   mapChainToPeerBlockObservationCDF percs cbes proj desc =
-     cdf percs $
-       concat $ cbes <&> blockObservations
+   observerCDF :: (BlockObservation -> SMaybe NominalDiffTime)
+               -> ([NominalDiffTime] -> [NominalDiffTime])
+               -> String -> CDF I NominalDiffTime
+   observerCDF proj subset _ =
+     mapChainBlockEventsCDF stdCentiles analysisChain (subset . blockObservations)
     where
       blockObservations :: BlockEvents -> [NominalDiffTime]
       blockObservations be =
         proj `mapSMaybe` filter isValidBlockObservation (beObservations be)
+
+   mapChainBlockEventsCDF ::
+     Divisible a
+     => [Centile]
+     -> [BlockEvents]
+     -> (BlockEvents -> [a])
+     -> CDF I a
+   mapChainBlockEventsCDF percs cbes f =
+     cdf percs (concatMap f cbes)
 
 witherToDistrib ::
      ([b] -> CDF p b)
