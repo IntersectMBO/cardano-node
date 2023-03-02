@@ -85,7 +85,7 @@ import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.Utils (failEitherWith)
 import           Cardano.Ledger.Mary.Value (MaryValue (..))
 import qualified Cardano.Ledger.Mary.Value as Mary
-import qualified Cardano.Ledger.ShelleyMA.Rules as Shelley
+import           Cardano.Ledger.Mary.TxOut as Mary (scaledMinDeposit)
 
 -- ----------------------------------------------------------------------------
 -- Lovelace
@@ -266,13 +266,11 @@ valueToLovelace v =
 
 toMaryValue :: Value -> MaryValue StandardCrypto
 toMaryValue v =
-    MaryValue lovelace other
+    Mary.valueFromList lovelace other
   where
     Quantity lovelace = selectAsset v AdaAssetId
-      --TODO: write QC tests to show it's ok to use Map.fromAscListWith here
-    other = Map.fromListWith Map.union
-              [ (toMaryPolicyID pid, Map.singleton (toMaryAssetName name) q)
-              | (AssetId pid name, Quantity q) <- valueToList v ]
+    other = [ (toMaryPolicyID pid, toMaryAssetName name, q)
+            | (AssetId pid name, Quantity q) <- valueToList v ]
 
     toMaryPolicyID :: PolicyId -> Mary.PolicyID StandardCrypto
     toMaryPolicyID (PolicyId sh) = Mary.PolicyID (toShelleyScriptHash sh)
@@ -288,8 +286,7 @@ fromMaryValue (MaryValue lovelace other) =
       Map.fromList $
         [ (AdaAssetId, Quantity lovelace) | lovelace /= 0 ]
      ++ [ (AssetId (fromMaryPolicyID pid) (fromMaryAssetName name), Quantity q)
-        | (pid, as) <- Map.toList other
-        , (name, q) <- Map.toList as ]
+        | (pid, name, q) <- Mary.flattenMultiAsset other ]
   where
     fromMaryPolicyID :: Mary.PolicyID StandardCrypto -> PolicyId
     fromMaryPolicyID (Mary.PolicyID sh) = PolicyId (fromShelleyScriptHash sh)
@@ -301,7 +298,7 @@ fromMaryValue (MaryValue lovelace other) =
 -- mininimum UTxO value derived from the 'ProtocolParameters'
 calcMinimumDeposit :: Value -> Lovelace -> Lovelace
 calcMinimumDeposit v minUTxo =
-  fromShelleyLovelace $ Shelley.scaledMinDeposit (toMaryValue v) (toShelleyLovelace minUTxo)
+  fromShelleyLovelace $ Mary.scaledMinDeposit (toMaryValue v) (toShelleyLovelace minUTxo)
 
 -- ----------------------------------------------------------------------------
 -- An alternative nested representation
