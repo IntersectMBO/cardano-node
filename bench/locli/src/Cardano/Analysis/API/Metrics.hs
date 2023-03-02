@@ -219,9 +219,9 @@ bpFieldsControl, bpFieldsForger, bpFieldsPeers, bpFieldsEndToEnd, bpFieldsEndToE
 bpFieldsControl =
   [ "cdfBlocksPerHost", "cdfBlocksFilteredRatio", "cdfBlocksChainedRatio", "cdfBlockBattles", "cdfBlockSizes" ]
 bpFieldsForger =
-  [ "cdfForgerStarts", "cdfForgerBlkCtx", "cdfForgerLgrState", "cdfForgerLgrView", "cdfForgerLeads", "cdfForgerTicked", "cdfForgerMemSnap", "cdfForgerForges", "cdfForgerAnnouncements", "cdfForgerSends", "cdfForgerAdoptions" ]
+  [ "cdfForgerStarts", "cdfForgerBlkCtx", "cdfForgerLgrState", "cdfForgerLgrView", "cdfForgerLeads", "cdfForgerTicked", "cdfForgerMemSnap", "cdfForgerForges", "cdfForgerAnnounces", "cdfForgerSends", "cdfForgerAdoptions" ]
 bpFieldsPeers =
-  [ "cdfPeerNotices", "cdfPeerRequests", "cdfPeerFetches", "cdfPeerAnnouncements", "cdfPeerSends", "cdfPeerAdoptions" ]
+  [ "cdfPeerNotices", "cdfPeerRequests", "cdfPeerFetches", "cdfPeerAnnounces", "cdfPeerSends", "cdfPeerAdoptions" ]
 bpFieldsEndToEnd =
   adoptionCentiles      <&> FieldName . renderAdoptionCentile
 bpFieldsEndToEndBrief =
@@ -262,7 +262,7 @@ instance CDFFields BlockProp p where
       "Leadership to forged"
       "Time spent forging the block: TraceForgedBlock relative to positive leadership decision"
 
-    , fGrp' "cdfForgerAnnouncements" "Anno" (DDeltaT cdfForgerAnnouncements)
+    , fGrp' "cdfForgerAnnounces"     "Anno" (DDeltaT cdfForgerAnnounces)
       "Forged to announced"
       "Time between block forging completion and announcement (ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock)"
 
@@ -288,7 +288,7 @@ instance CDFFields BlockProp p where
       "Fetch duration"
       "Time it took the peer to complete fetching the block (BlockFetchClient.CompletedBlockFetch), after having requested it"
 
-    , fGrp' "cdfPeerAnnouncements"   "Anno" (DDeltaT cdfPeerAnnouncements)
+    , fGrp' "cdfPeerAnnounces"       "Anno" (DDeltaT cdfPeerAnnounces)
       "Fetched to announced"
       "Time it took a peer to announce the block (ChainSyncServerEvent.TraceChainSyncServerUpdate), since it was fetched"
 

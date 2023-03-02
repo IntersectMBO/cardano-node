@@ -245,7 +245,7 @@ generate (InputDir ede) mReport (summ, cp, bp) rest = do
           , "cdfForgerTicked"
           , "cdfForgerMemSnap"
           , "cdfForgerForges"
-          , "cdfForgerAnnouncements"
+          , "cdfForgerAnnounces"
           , "cdfForgerSends"
           , "cdfPeerNotices"
           , "cdfPeerAdoptions"

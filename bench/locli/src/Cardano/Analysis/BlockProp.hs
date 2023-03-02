@@ -65,13 +65,13 @@ summariseMultiBlockProp centiles bs@(headline:_) = do
   cdfForgerMemSnap          <- cdf2OfCDFs comb $ bs <&> cdfForgerMemSnap
   cdfForgerForges           <- cdf2OfCDFs comb $ bs <&> cdfForgerForges
   cdfForgerAdoptions        <- cdf2OfCDFs comb $ bs <&> cdfForgerAdoptions
-  cdfForgerAnnouncements    <- cdf2OfCDFs comb $ bs <&> cdfForgerAnnouncements
+  cdfForgerAnnounces        <- cdf2OfCDFs comb $ bs <&> cdfForgerAnnounces
   cdfForgerSends            <- cdf2OfCDFs comb $ bs <&> cdfForgerSends
   cdfPeerNotices            <- cdf2OfCDFs comb $ bs <&> cdfPeerNotices
   cdfPeerRequests           <- cdf2OfCDFs comb $ bs <&> cdfPeerRequests
   cdfPeerFetches            <- cdf2OfCDFs comb $ bs <&> cdfPeerFetches
   cdfPeerAdoptions          <- cdf2OfCDFs comb $ bs <&> cdfPeerAdoptions
-  cdfPeerAnnouncements      <- cdf2OfCDFs comb $ bs <&> cdfPeerAnnouncements
+  cdfPeerAnnounces          <- cdf2OfCDFs comb $ bs <&> cdfPeerAnnounces
   cdfPeerSends              <- cdf2OfCDFs comb $ bs <&> cdfPeerSends
   cdfBlockBattles           <- cdf2OfCDFs comb $ bs <&> cdfBlockBattles
   cdfBlockSizes             <- cdf2OfCDFs comb $ bs <&> cdfBlockSizes
@@ -483,26 +483,26 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
 blockProp :: Run -> Chain -> IO BlockPropOne
 blockProp run@Run{genesis} Chain{..} = do
   pure $ BlockProp
-    { bpDomainSlots          = [cDomSlots]
-    , bpDomainBlocks         = [cDomBlocks]
-    , cdfForgerStarts        = forgerEventsCDF   (SJust . bfStarted   . beForge)
-    , cdfForgerBlkCtx        = forgerEventsCDF           (bfBlkCtx    . beForge)
-    , cdfForgerLgrState      = forgerEventsCDF           (bfLgrState  . beForge)
-    , cdfForgerLgrView       = forgerEventsCDF           (bfLgrView   . beForge)
-    , cdfForgerLeads         = forgerEventsCDF   (SJust . bfLeading   . beForge)
-    , cdfForgerTicked        = forgerEventsCDF           (bfTicked    . beForge)
-    , cdfForgerMemSnap       = forgerEventsCDF           (bfMemSnap   . beForge)
-    , cdfForgerForges        = forgerEventsCDF   (SJust . bfForged    . beForge)
-    , cdfForgerAnnouncements = forgerEventsCDF   (SJust . bfAnnounced . beForge)
-    , cdfForgerSends         = forgerEventsCDF   (SJust . bfSending   . beForge)
-    , cdfForgerAdoptions     = forgerEventsCDF   (SJust . bfAdopted   . beForge)
-    , cdfPeerNotices         = observerEventsCDF (SJust . boNoticed)   "noticed"
-    , cdfPeerRequests        = observerEventsCDF (SJust . boRequested) "requested"
-    , cdfPeerFetches         = observerEventsCDF (SJust . boFetched)   "fetched"
-    , cdfPeerAnnouncements   = observerEventsCDF boAnnounced           "announced"
-    , cdfPeerSends           = observerEventsCDF boSending             "sending"
-    , cdfPeerAdoptions       = observerEventsCDF boAdopted             "adopted"
-    , bpPropagation          = Map.fromList
+    { bpDomainSlots      = [cDomSlots]
+    , bpDomainBlocks     = [cDomBlocks]
+    , cdfForgerStarts    = forgerEventsCDF   (SJust . bfStarted   . beForge)
+    , cdfForgerBlkCtx    = forgerEventsCDF           (bfBlkCtx    . beForge)
+    , cdfForgerLgrState  = forgerEventsCDF           (bfLgrState  . beForge)
+    , cdfForgerLgrView   = forgerEventsCDF           (bfLgrView   . beForge)
+    , cdfForgerLeads     = forgerEventsCDF   (SJust . bfLeading   . beForge)
+    , cdfForgerTicked    = forgerEventsCDF           (bfTicked    . beForge)
+    , cdfForgerMemSnap   = forgerEventsCDF           (bfMemSnap   . beForge)
+    , cdfForgerForges    = forgerEventsCDF   (SJust . bfForged    . beForge)
+    , cdfForgerAnnounces = forgerEventsCDF   (SJust . bfAnnounced . beForge)
+    , cdfForgerSends     = forgerEventsCDF   (SJust . bfSending   . beForge)
+    , cdfForgerAdoptions = forgerEventsCDF   (SJust . bfAdopted   . beForge)
+    , cdfPeerNotices     = observerEventsCDF (SJust . boNoticed)   "noticed"
+    , cdfPeerRequests    = observerEventsCDF (SJust . boRequested) "requested"
+    , cdfPeerFetches     = observerEventsCDF (SJust . boFetched)   "fetched"
+    , cdfPeerAnnounces   = observerEventsCDF boAnnounced           "announced"
+    , cdfPeerSends       = observerEventsCDF boSending             "sending"
+    , cdfPeerAdoptions   = observerEventsCDF boAdopted             "adopted"
+    , bpPropagation      = Map.fromList
       [ ( T.pack $ printf "cdf%.2f" p'
         , forgerEventsCDF (SJust . unI . projectCDF' "bePropagation" p . bePropagation))
       | p@(Centile p') <- adoptionCentiles <> [Centile 1.0] ]
