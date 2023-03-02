@@ -65,7 +65,7 @@ import           Cardano.BM.Trace (traceNamedObject)
 import           Cardano.BM.Tracing
 
 import           Ouroboros.Consensus.Block (BlockConfig, BlockProtocol, CannotForge,
-                   ConvertRawHash (..), ForgeStateInfo, ForgeStateUpdateError, Header, HeaderHash,
+                   ConvertRawHash (..), ForgeStateInfo, ForgeStateUpdateError, Header,
                    realPointHash, realPointSlot)
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..),
                    TraceBlockchainTimeEvent (..))
@@ -88,8 +88,8 @@ import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import           Ouroboros.Consensus.Util.Enclose
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
-import           Ouroboros.Network.Block (BlockNo (..), ChainHash (..), ChainUpdate (..),
-                   HasHeader (..), Point, StandardHash, blockNo, pointSlot, unBlockNo)
+import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), HasHeader (..), Point,
+                   StandardHash, blockNo, pointSlot, unBlockNo)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState (..),
                    TraceLabelPeer (..))
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
@@ -558,7 +558,7 @@ traceChainMetrics (Just _ekgDirect) tForks _blockConfig _fStats tr = do
   Tracer $ \ev ->
     maybe (pure ()) doTrace (chainTipInformation ev)
   where
-    chainTipInformation :: ChainDB.TraceEvent blk -> Maybe (ChainInformation blk)
+    chainTipInformation :: ChainDB.TraceEvent blk -> Maybe ChainInformation
     chainTipInformation = \case
       ChainDB.TraceAddBlockEvent ev -> case ev of
         ChainDB.SwitchedToAFork _warnings newTipInfo oldChain newChain ->
@@ -570,10 +570,10 @@ traceChainMetrics (Just _ekgDirect) tForks _blockConfig _fStats tr = do
         _ -> Nothing
       _ -> Nothing
 
-    doTrace :: ChainInformation blk -> IO ()
+    doTrace :: ChainInformation -> IO ()
     doTrace
         ChainInformation { slots, blocks, density, epoch, slotInEpoch, fork, tipBlockHash, tipBlockParentHash, tipBlockIssuerVerificationKeyHash } = do
-      -- TODO this is executed each time the newFhain changes. How cheap is it?
+      -- TODO this is executed each time the newChain changes. How cheap is it?
       meta <- mkLOMeta Critical Public
 
       traceD tr meta "density"     (fromRational density)
@@ -584,17 +584,7 @@ traceChainMetrics (Just _ekgDirect) tForks _blockConfig _fStats tr = do
       when fork $
         traceI tr meta "forks" =<< STM.modifyReadTVarIO tForks succ
 
-
-      let tipBlockHashText :: Text
-          tipBlockHashText = renderHeaderHash (Proxy @blk) tipBlockHash
-
-          tipBlockParentHashText :: Text
-          tipBlockParentHashText =
-            renderChainHash
-              (Text.decodeLatin1 . B16.encode . toRawHash (Proxy @blk))
-              tipBlockParentHash
-
-          tipBlockIssuerVkHashText :: Text
+      let tipBlockIssuerVkHashText :: Text
           tipBlockIssuerVkHashText =
             case tipBlockIssuerVerificationKeyHash of
               NoBlockIssuer -> "NoBlockIssuer"
@@ -602,11 +592,11 @@ traceChainMetrics (Just _ekgDirect) tForks _blockConfig _fStats tr = do
                 Text.decodeLatin1 (B16.encode bs)
       traceNamedObject
         (appendName "tipBlockHash" tr)
-        (meta, LogMessage tipBlockHashText)
+        (meta, LogMessage tipBlockHash)
 
       traceNamedObject
         (appendName "tipBlockParentHash" tr)
-        (meta, LogMessage tipBlockParentHashText)
+        (meta, LogMessage tipBlockParentHash)
 
       traceNamedObject
         (appendName "tipBlockIssuerVerificationKeyHash" tr)
@@ -1502,7 +1492,7 @@ traceInboundGovernorCountersMetrics (OnOff True) (Just ekgDirect) = ipgcTracer
 
 -- | get information about a chain fragment
 
-data ChainInformation blk = ChainInformation
+data ChainInformation = ChainInformation
   { slots :: Word64
   , blocks :: Word64
   , density :: Rational
@@ -1518,22 +1508,25 @@ data ChainInformation blk = ChainInformation
     -- current chain.
   , fork :: Bool
     -- ^ Was this a fork.
-  , tipBlockHash :: HeaderHash blk
+  , tipBlockHash :: Text
     -- ^ Hash of the last adopted block.
-  , tipBlockParentHash :: ChainHash (Header blk)
+  , tipBlockParentHash :: Text
     -- ^ Hash of the parent block of the last adopted block.
   , tipBlockIssuerVerificationKeyHash :: BlockIssuerVerificationKeyHash
     -- ^ Hash of the last adopted block issuer's verification key.
   }
 
 chainInformation
-  :: forall blk. (HasHeader (Header blk), HasIssuer blk)
+  :: forall blk. ()
+  => HasHeader (Header blk)
+  => HasIssuer blk
+  => ConvertRawHash blk
   => ChainDB.NewTipInfo blk
   -> Bool
   -> AF.AnchoredFragment (Header blk) -- ^ Old fragment.
   -> AF.AnchoredFragment (Header blk) -- ^ New fragment.
   -> Int64
-  -> ChainInformation blk
+  -> ChainInformation
 chainInformation newTipInfo fork oldFrag frag blocksUncoupledDelta = ChainInformation
     { slots = unSlotNo $ fromWithOrigin 0 (AF.headSlot frag)
     , blocks = unBlockNo $ fromWithOrigin (BlockNo 1) (AF.headBlockNo frag)
@@ -1542,8 +1535,8 @@ chainInformation newTipInfo fork oldFrag frag blocksUncoupledDelta = ChainInform
     , slotInEpoch = ChainDB.newTipSlotInEpoch newTipInfo
     , blocksUncoupledDelta = blocksUncoupledDelta
     , fork = fork
-    , tipBlockHash = realPointHash (ChainDB.newTipPoint newTipInfo)
-    , tipBlockParentHash = AF.headHash oldFrag
+    , tipBlockHash = renderHeaderHash (Proxy @blk) $ realPointHash (ChainDB.newTipPoint newTipInfo)
+    , tipBlockParentHash = renderChainHash (Text.decodeLatin1 . B16.encode . toRawHash (Proxy @blk)) $ AF.headHash oldFrag
     , tipBlockIssuerVerificationKeyHash = tipIssuerVkHash
     }
   where
