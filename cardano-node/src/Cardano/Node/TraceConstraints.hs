@@ -1,6 +1,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+
 module Cardano.Node.TraceConstraints (TraceConstraints) where
 
 
@@ -10,6 +11,7 @@ import           Cardano.BM.Tracing (ToObject)
 import           Cardano.Logging (LogFormatting)
 import           Cardano.Node.Queries (ConvertTxId, GetKESInfo (..), HasKESInfo (..),
                    HasKESMetricsData (..), LedgerQueries)
+import           Cardano.Tracing.HasIssuer (HasIssuer)
 
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateUpdateError,
                    Header)
@@ -25,6 +27,8 @@ import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
 -- | Tracing-related constraints for monitoring purposes.
 type TraceConstraints blk =
     ( ConvertTxId blk
+    , HasIssuer blk
+    , HasKESMetricsData blk
     , HasTxs blk
     , HasTxId (GenTx blk)
     , LedgerQueries blk
