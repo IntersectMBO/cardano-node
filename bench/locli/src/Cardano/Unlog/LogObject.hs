@@ -136,6 +136,12 @@ instance Print ShortText where
 
 deriving instance NFData a => NFData (Resources a)
 
+loPretty :: LogObject -> LText.Text
+loPretty LogObject{..} = mconcat
+  [ stripS . LText.pack $ show loAt, " "
+  , LText.pack $ show loBody ]
+ where stripS x = fromMaybe x $ LText.stripSuffix " UTC" x
+
 --
 -- LogObject stream interpretation
 --

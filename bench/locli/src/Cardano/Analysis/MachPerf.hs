@@ -1,7 +1,6 @@
 {-# LANGUAGE StrictData #-}
-
+{-# LANGUAGE MultiWayIf #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing -Wno-orphans #-}
-
 {- HLINT ignore "Use head" -}
 {- HLINT ignore "Evaluate" -}
 
@@ -61,6 +60,7 @@ timelineFromLogObjects run@Run{genesis} (f, xs') =
      , aRunScalars    = zeroRunScalars
      , aTxsCollectedAt= mempty
      , aHost          = firstLogObjectHost
+     , aLogObjects    = []
      }
    zeroRunScalars :: RunScalars
    zeroRunScalars  = RunScalars Nothing Nothing Nothing
@@ -98,29 +98,49 @@ timelineFromLogObjects run@Run{genesis} (f, xs') =
      , slRejectedTx = 0
      , slBlockNo = 0
      , slBlockGap = 0
+     , slLogObjects  = []
      }
 
 timelineStep :: Run -> JsonLogfile -> TimelineAccum -> LogObject -> TimelineAccum
-timelineStep Run{genesis} f a@TimelineAccum{aSlotStats=cur:_, ..} lo =
-  let continue :: SlotNo -> UTCTime -> TimelineAccum
-      continue slot loAt =
-        if slot < slSlot cur then a
-        else a
+timelineStep Run{genesis} f accum@TimelineAccum{aSlotStats=cur:_, ..} lo =
+  -- 1. skip pre-historic events not subject to performance analysis;
+  --    Potentially _collapsingly huge_, depending on what portion of logs you get.
+  if loAt lo < systemStart genesis then accum else
+  let continue :: SlotNo -> LogObject -> TimelineAccum -> TimelineAccum
+      continue slot LogObject{loAt} acc =
+        if slot < slSlot cur then acc
+        else acc
+             & taFlushSlotLOs
              & (if slot - slSlot cur <= 1
                 then identity                   -- for the next slot, no gap to patch
                 else patchSlotGap genesis slot) -- for a future slot, patch the gap just until
-             & if slot == slSlot cur
-               then identity                    -- for the current slot, nothing to add
-               else addTimelineSlot genesis slot loAt
+             & (if slot == slSlot cur
+                then identity                    -- for the current slot, nothing to add
+                else addTimelineSlot genesis slot loAt)
       mapExistingSlot :: SlotNo -> (SlotStats UTCTime -> SlotStats UTCTime) -> TimelineAccum -> TimelineAccum
-      mapExistingSlot slot fSlot a'@TimelineAccum{aSlotStats=last:_} =
-        (if slot < slSlot last -- for a slot gone by
-         then forTANth  a' (fromIntegral . unSlotNo $ slSlot last - slot) fSlot
-         else forTAHead a' fSlot)
+      mapExistingSlot slot fSlot acc@TimelineAccum{aSlotStats=last:_} =
+        if
+          | slot < slSlot last -- for a slot gone by
+            -> forTANth  acc (fromIntegral . unSlotNo $ slSlot last - slot) fSlot
+          | slot == slSlot last
+            -> forTAHead acc fSlot
+          | otherwise -> error $ mconcat
+            [ "mapExistingSlot called on a future slot ", show slot, ", "
+            , "with the current slot being ", show $ slSlot last ]
+      _mapSinceExistingSlot :: SlotNo -> (SlotStats UTCTime -> SlotStats UTCTime) -> TimelineAccum -> TimelineAccum
+      _mapSinceExistingSlot slot fSlot acc@TimelineAccum{aSlotStats=last:_} =
+        if
+          | slot < slSlot last -- for a slot gone by
+            -> forSinceTANth  acc (fromIntegral . unSlotNo $ slSlot last - slot) fSlot
+          | slot == slSlot last
+            -> forTAHead acc fSlot
+          | otherwise -> error $ mconcat
+            [ "mapSinceExistingSlot called on a future slot ", show slot, ", "
+            , "with the current slot being ", show $ slSlot last ]
       forExistingSlot :: SlotNo -> TimelineAccum -> (SlotStats UTCTime -> SlotStats UTCTime) -> TimelineAccum
-      forExistingSlot slot a' fSlot = mapExistingSlot slot fSlot a'
+      forExistingSlot slot acc fSlot = mapExistingSlot slot fSlot acc
       forNonFutureSlot :: TimelineAccum -> SlotNo -> String -> Host -> (SlotStats UTCTime -> SlotStats UTCTime) -> TimelineAccum
-      forNonFutureSlot TimelineAccum{aSlotStats=cur:_} slot desc host x =
+      forNonFutureSlot acc@TimelineAccum{aSlotStats=cur:_} slot desc host x =
         if slot > slSlot cur
         then error $ mconcat
              [ desc, " for a future slot=", show slot
@@ -128,13 +148,14 @@ timelineStep Run{genesis} f a@TimelineAccum{aSlotStats=cur:_, ..} lo =
              , " host=", unpack . toText $ unHost host
              , " file=", unJsonLogfile f
              ]
-        else forExistingSlot slot a x
-  in if loAt lo < systemStart genesis then a else
+        else forExistingSlot slot acc x
+  in
+  taRecordLO lo $
   case lo of
   -- First, events that can extend the timeline:
-  --
+  --  - note the mandatory use of 'continue', which performs the extension:
   LogObject{loAt, loBody=LOResources rs} ->
-    continue slot loAt
+    continue slot lo accum
     & mapExistingSlot slot
      (\sl -> sl { slResources   = SJust $ extractResAccums accs })
     & \a' -> a' { aResAccums    = accs
@@ -144,7 +165,7 @@ timelineStep Run{genesis} f a@TimelineAccum{aSlotStats=cur:_, ..} lo =
      slot = impliedSlot genesis loAt
      accs = updateResAccums loAt rs aResAccums
   LogObject{loAt, loBody=LOTraceStartLeadershipCheck slot utxo density} ->
-    continue slot loAt
+    continue slot lo accum
     & mapExistingSlot slot
     (\sl@SlotStats{..} ->
         sl { slCountStarts = slCountStarts + 1
@@ -154,26 +175,19 @@ timelineStep Run{genesis} f a@TimelineAccum{aSlotStats=cur:_, ..} lo =
            })
   -- Next, events that technically should extend the timeline,
   -- but we don't really care for their misattribution to incur the overhead:
-  --
+  --  - note the mandatory use of 'forTAHead' for SlotStats-modifying messages:
   LogObject{loBody=LOMempoolTxs txCount} ->
-    (forTAHead a
+    (forTAHead accum
       \s-> s { slMempoolTxs = txCount })
     { aMempoolTxs     = txCount }
   LogObject{loBody=LOMempoolRejectedTx} ->
-    forTAHead a
-      \s-> s { slRejectedTx = slRejectedTx cur + 1 }
+    forTAHead accum
+      (\s-> s { slRejectedTx = slRejectedTx cur + 1 })
   LogObject{loBody=LOLedgerTookSnapshot} ->
-    forTAHead a
-      \s-> s { slChainDBSnap = slChainDBSnap cur + 1 }
-  LogObject{loBody=LOGeneratorSummary _noFails rssub rselap rsthr} ->
-    a { aRunScalars =
-        RunScalars
-        { rsSubmitted     = Just rssub
-        , rsElapsed       = Just rselap
-        , rsThreadwiseTps = Just rsthr
-        } }
+    forTAHead accum
+      (\s-> s { slChainDBSnap = slChainDBSnap cur + 1 })
   LogObject{loBody=LOTxsCollected coll, loTid, loAt} ->
-    (forTAHead a
+    (forTAHead accum
       \s-> s { slTxsCollected = slTxsCollected cur + max 0 (fromIntegral coll) })
     { aTxsCollectedAt =
       aTxsCollectedAt &
@@ -185,7 +199,7 @@ timelineStep Run{genesis} f a@TimelineAccum{aSlotStats=cur:_, ..} lo =
       `Map.alter` loTid
     }
   LogObject{loBody=LOTxsProcessed acc rej, loTid, loAt} ->
-    (forTAHead a
+    (forTAHead accum
       \s@SlotStats{..}-> s
       { slSpanTxsMem =
           case loTid `Map.lookup` aTxsCollectedAt of
@@ -207,9 +221,9 @@ timelineStep Run{genesis} f a@TimelineAccum{aSlotStats=cur:_, ..} lo =
     { aTxsCollectedAt = loTid `Map.delete` aTxsCollectedAt
     }
   -- Next, events that rely on their slotstats to pre-exist:
-  --
+  --  - again, note the use of forNonFutureSlot
   LogObject{loBody=LOBlockContext slot blockNo, loHost, loAt} ->
-    (forNonFutureSlot a slot "BlockContext" loHost $
+    (forNonFutureSlot accum slot "BlockContext" loHost $
       \sl ->
        sl { slCountBlkCtx = slCountBlkCtx sl + 1
           , slBlkCtx      = SJust loAt
@@ -217,55 +231,103 @@ timelineStep Run{genesis} f a@TimelineAccum{aSlotStats=cur:_, ..} lo =
           , slBlockGap    = if blockNo /= aBlockNo then 0 else slBlockGap cur
           })
     { aBlockNo        = blockNo
-    , aLastBlockSlot  = a & lastBlockSlot blockNo
+    , aLastBlockSlot  = accum & lastBlockSlot blockNo
     }
   LogObject{loBody=LOLedgerState slot, loHost, loAt} ->
-    forNonFutureSlot a slot "LedgerState" loHost $
-      \sl@SlotStats{..} ->
-       sl { slCountLgrState = slCountLgrState + 1
-          , slLgrState      = SJust loAt
-          }
+    forNonFutureSlot accum slot "LedgerState" loHost
+      (\sl@SlotStats{..} ->
+          sl { slCountLgrState = slCountLgrState + 1
+             , slLgrState      = SJust loAt
+             })
   LogObject{loBody=LOLedgerView slot, loHost, loAt} ->
-    forNonFutureSlot a slot "LedgerView" loHost $
-      \sl@SlotStats{..} ->
-       sl { slCountLgrView = slCountLgrView + 1
-          , slLgrView      = SJust loAt
-          }
+    forNonFutureSlot accum slot "LedgerView" loHost
+      (\sl@SlotStats{..} ->
+          sl { slCountLgrView = slCountLgrView + 1
+             , slLgrView      = SJust loAt
+             })
   LogObject{loAt, loHost, loBody=LOTraceLeadershipDecided slot lead} ->
-    forNonFutureSlot a slot "LeadDecided" loHost $
-      \sl@SlotStats{..} ->
-       sl { slCountLeads = slCountLeads + if lead then 1 else 0
-          , slLeading    = SJust loAt
-          }
+    forNonFutureSlot accum slot "LeadDecided" loHost
+      (\sl@SlotStats{..} ->
+          sl { slCountLeads = slCountLeads + if lead then 1 else 0
+             , slLeading    = SJust loAt
+             })
   LogObject{loAt, loHost, loBody=LOTickedLedgerState slot} ->
-    forNonFutureSlot a slot "LedgerTicked" loHost $
-      \sl@SlotStats{} ->
-       sl { slTicked     = SJust loAt
-          }
+    forNonFutureSlot accum slot "LedgerTicked" loHost
+      (\sl@SlotStats{} ->
+          sl { slTicked     = SJust loAt
+             })
   LogObject{loAt, loHost, loBody=LOMempoolSnapshot slot} ->
-    forNonFutureSlot a slot "MempoolSnapshotted" loHost $
-      \sl@SlotStats{} ->
-       sl { slMemSnap    = SJust loAt
-          }
+    forNonFutureSlot accum slot "MempoolSnapshotted" loHost
+      (\sl@SlotStats{} ->
+          sl { slMemSnap    = SJust loAt
+             })
   LogObject{loAt, loHost, loBody=LOBlockForged{loSlotNo}} ->
-    if loSlotNo > slSlot cur
-    then error $ mconcat
-         [ "BlockForged for a future slot=", show loSlotNo
-         , " cur=", show (slSlot cur)
-         , " host=", unpack . toText $ unHost loHost
-         ]
-    else forExistingSlot loSlotNo a $
-           onBlockForge loAt
+    forNonFutureSlot accum loSlotNo "MempoolSnapshotted" loHost
+      (\sl@SlotStats{..} ->
+          sl { slCountForges = slCountForges + 1
+             , slForged      = SJust loAt
+             })
    where
-     onBlockForge :: UTCTime -> SlotStats UTCTime -> SlotStats UTCTime
-     onBlockForge now sl@SlotStats{..} =
-       sl { slCountForges = slCountForges + 1
-          , slForged      = SJust now
-          }
-  _ -> a
-timelineStep _ _ a _ = a
--- The "fold" state that accumulates as we process 'LogObject's into a stream
--- of 'SlotStats'.
+  -- Aux/one-shot things.
+  --
+  LogObject{loBody=LOGeneratorSummary _noFails rssub rselap rsthr} ->
+    accum { aRunScalars =
+            RunScalars
+              { rsSubmitted     = Just rssub
+              , rsElapsed       = Just rselap
+              , rsThreadwiseTps = Just rsthr
+              } }
+  _ -> accum
+ where
+   taRecordLO :: LogObject -> TimelineAccum -> TimelineAccum
+   taRecordLO lo a@TimelineAccum{aLogObjects} = a { aLogObjects = lo:aLogObjects }
+
+   taFlushSlotLOs :: TimelineAccum -> TimelineAccum
+   taFlushSlotLOs ta@TimelineAccum{aSlotStats=cur:xs, ..} =
+     ta { aSlotStats  = cur { slLogObjects = aLogObjects } : xs
+        , aLogObjects = []
+        }
+
+   -- | Map `f` over the latest slot in the timeline accumulator.
+   mapTAHead :: (SlotStats UTCTime -> SlotStats UTCTime) -> TimelineAccum -> TimelineAccum
+   mapTAHead f xs@TimelineAccum{aSlotStats=s:ss} = xs {aSlotStats=f s:ss}
+
+   -- | Map `f` over the latest slot in the timeline accumulator.
+   forTAHead :: TimelineAccum -> (SlotStats UTCTime -> SlotStats UTCTime) -> TimelineAccum
+   forTAHead xs@TimelineAccum{aSlotStats=s:ss} f = xs {aSlotStats=f s:ss}
+
+   -- | Map `f` over the n-th-from-the-top slot in the timeline accumulator.
+   forTANth :: TimelineAccum -> Int -> (SlotStats UTCTime -> SlotStats UTCTime) -> TimelineAccum
+   forTANth xs@TimelineAccum{aSlotStats=ss, aHost} n f =
+     xs { aSlotStats = mapNth f n ss }
+    where
+      mapNth :: (a -> a) -> Int -> [a] -> [a]
+      mapNth f n xs =
+        case splitAt n xs of
+          (pre, x:post) -> pre <> (f x : post)
+          _ -> error $ mconcat
+               [ "mapNth: couldn't go ", show n, "-deep into the timeline, "
+               , "host=", unpack . toText $ unHost aHost
+               ]
+
+   -- | Map `f` over n most recent slots in the timeline accumulator.
+   forSinceTANth :: TimelineAccum -> Int -> (SlotStats UTCTime -> SlotStats UTCTime) -> TimelineAccum
+   forSinceTANth xs@TimelineAccum{aSlotStats=ss, aHost} n f =
+     xs { aSlotStats = mapSinceNth f n ss }
+    where
+      mapSinceNth :: (a -> a) -> Int -> [a] -> [a]
+      mapSinceNth f n xs =
+        case splitAt n xs of
+          (pre, x:post) -> fmap f pre <> (f x : post)
+          _ -> error $ mconcat
+               [ "mapSinceNth: couldn't go ", show n, "-deep into the timeline, "
+               , "host=", unpack . toText $ unHost aHost
+               ]
+
+--timelineStep _ _ a _ = a
+
+-- | The "fold" state that accumulates as we process 'LogObject's into a stream
+--   of 'SlotStats'.
 data TimelineAccum
   = TimelineAccum
   { aResAccums     :: ResAccums
@@ -277,23 +339,8 @@ data TimelineAccum
   , aRunScalars    :: RunScalars
   , aTxsCollectedAt:: Map.Map TId UTCTime
   , aHost          :: Host
+  , aLogObjects    :: [LogObject]
   }
-
-forTAHead :: TimelineAccum -> (SlotStats UTCTime -> SlotStats UTCTime) -> TimelineAccum
-forTAHead xs@TimelineAccum{aSlotStats=s:ss} f = xs {aSlotStats=f s:ss}
-
-forTANth :: TimelineAccum -> Int -> (SlotStats UTCTime -> SlotStats UTCTime) -> TimelineAccum
-forTANth xs@TimelineAccum{aSlotStats=ss, aHost} n f =
-  xs { aSlotStats = mapNth f n ss }
- where
-   mapNth :: (a -> a) -> Int -> [a] -> [a]
-   mapNth f n xs =
-     case splitAt n xs of
-       (pre, x:post) -> pre <> (f x : post)
-       _ -> error $ mconcat
-            [ "mapNth: couldn't go ", show n, "-deep into the timeline, "
-            , "host=", unpack . toText $ unHost aHost
-            ]
 
 lastBlockSlot :: BlockNo -> TimelineAccum -> SlotNo
 lastBlockSlot new TimelineAccum{aSlotStats=SlotStats{..}:_,..} =
@@ -355,7 +402,9 @@ patchSlotGap genesis curSlot a@TimelineAccum{aSlotStats=last:_, ..} =
           , slBlockNo     = aBlockNo
           , slBlockGap    = unSlotNo $ slot - aLastBlockSlot
           , slResources   = SJust $ zeroObsoleteValues
-                                    <*> extractResAccums aResAccums}
+                                    <*> extractResAccums aResAccums
+          , slLogObjects  = []
+          }
           : aSlotStats acc
         }
     where slStart = slotStart genesis slot
@@ -396,7 +445,9 @@ addTimelineSlot genesis slot _time a@TimelineAccum{..} =
         , slBlockNo     = aBlockNo
         , slBlockGap    = unSlotNo $ slot - aLastBlockSlot
         , slResources   = SJust $ zeroObsoleteValues
-                                  <*> extractResAccums aResAccums}
+                                  <*> extractResAccums aResAccums
+        , slLogObjects  = []
+        }
         : aSlotStats
       }
     where slStart = slotStart genesis slot

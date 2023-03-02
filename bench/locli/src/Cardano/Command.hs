@@ -63,7 +63,7 @@ data ChainCommand
   |            DumpSlotsRaw
   |          FilterSlots    [JsonFilterFile] [ChainFilter]
   |            DumpSlots
-  |        TimelineSlots    RenderConfig
+  |        TimelineSlots    RenderConfig [TimelineComments (SlotStats NominalDiffTime)]
 
   |      ComputePropagation
   |       RenderPropagation RenderConfig TextOutputFile PropSubset
@@ -165,7 +165,8 @@ parseChainCommand =
      (DumpSlots & pure)
    , op "timeline-slots" "Render machine slot timelines, alongside input files"
      (TimelineSlots
-       <$> parseFixedRenderConfig AsPretty)
+       <$> parseFixedRenderConfig AsPretty
+       <*> many parseTimelineCommentsSS)
    ]) <|>
 
    subparser (mconcat [ commandGroup "Block propagation:  analysis"
@@ -252,8 +253,15 @@ parseChainCommand =
 
 parseTimelineCommentsBP :: Parser (TimelineComments BlockEvents)
 parseTimelineCommentsBP =
-  [ Opt.flag' BEErrors     (Opt.long "chain-errors"   <> Opt.help "Show per-block anomalies")
-  , Opt.flag' BEFilterOuts (Opt.long "filter-reasons" <> Opt.help "Explain per-block filter-out reasons")
+  [ Opt.flag' BEErrors     (Opt.long "with-chain-errors"   <> Opt.help "Show per-block anomalies")
+  , Opt.flag' BEFilterOuts (Opt.long "with-filter-reasons" <> Opt.help "Explain per-block filter-out reasons")
+  ] & \case
+        (x:xs) -> foldl (<|>) x xs
+        [] -> error "Crazy world."
+
+parseTimelineCommentsSS :: Parser (TimelineComments (SlotStats NominalDiffTime))
+parseTimelineCommentsSS =
+  [ Opt.flag' SSLogObjects (Opt.long "with-logobjects"     <> Opt.help "Show per-slot logobjects")
   ] & \case
         (x:xs) -> foldl (<|>) x xs
         [] -> error "Crazy world."
@@ -526,10 +534,10 @@ runChainCommand _ c@DumpSlots = missingCommandData c
   ["filtered slots"]
 
 runChainCommand s@State{sRun=Just _run, sSlots=Just slots}
-  c@(TimelineSlots rc) = do
+  c@(TimelineSlots rc comments) = do
   progress "mach" (Q $ printf "dumping %d slot timelines: %s" (length slots) (show rc :: String))
   dumpAssociatedTextStreams "mach"
-    (fmap (fmap $ renderTimeline rc (sRunAnchor s) (const True) []) slots)
+    (fmap (fmap $ renderTimeline rc (sRunAnchor s) (const True) comments) slots)
     & firstExceptT (CommandError c)
   pure s
 runChainCommand _ c@TimelineSlots{} = missingCommandData c

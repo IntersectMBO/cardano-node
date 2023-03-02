@@ -86,7 +86,7 @@ analyse_default_op='standard'
 
 analyse() {
 local sargs=() filters=()
-local dump_logobjects= dump_machviews= dump_chain= dump_slots_raw= dump_slots= unfiltered=
+local dump_logobjects= dump_machviews= dump_chain= dump_slots_raw= dump_slots= unfiltered= without_datever_meta=
 local multi_aspect='--inter-cdf' rtsmode= force_prepare=
 local locli_render=() locli_timeline=()
 locli_args=()
@@ -115,7 +115,8 @@ do case "$1" in
        --force-prepare | -fp )     sargs+=($1);    force_prepare='true';;
        --with-filter-reasons )     sargs+=($1);    locli_timeline+=($1);;
        --with-chain-error )        sargs+=($1);    locli_timeline+=($1);;
-       --without-datever-meta )    sargs+=($1);    locli_render+=($1);;
+       --with-logobjects )         sargs+=($1);    locli_timeline+=($1);;
+       --without-datever-meta )    sargs+=($1);    locli_render+=($1); without_datever_meta='true';;
        --without-run-meta )        sargs+=($1);    locli_render+=($1);;
        --trace )                   sargs+=($1);    set -x;;
        * ) break;; esac; shift; done
@@ -542,7 +543,7 @@ case "$op" in
                , hlLogs:           ["'"$adir/logs-$mach.flt.json"'", null]
                , hlFilteredSha256: ""
                }
-           | .rlFilterDate = (now | todate)
+           | .rlFilterDate = ('$(if test -z "$without_datever_meta"; then echo -n now; else echo -n 0; fi)' | todate)
            | .rlFilterKeys = ($keys | split("\n"))
            ' --rawfile            keys $keyfile
         done

@@ -27,6 +27,7 @@ import Data.CDF
 
 import Cardano.JSON
 import Cardano.Util
+import Cardano.Unlog.LogObject          qualified as LO
 import Cardano.Analysis.API.Context
 import Cardano.Analysis.API.Field
 import Cardano.Analysis.API.Ground
@@ -556,9 +557,6 @@ instance CDFFields MachPerf p where
          _dumpJSON _x = error $ "kvs:\n" <> (T.unpack . ST.toText . fromMaybe "" . ST.fromByteString . LBS.toStrict . AE.encode $ _x)
 
 instance TimelineFields (SlotStats NominalDiffTime) where
-  data TimelineComments (SlotStats NominalDiffTime)
-    deriving Show
-
   timelineFields =
 
       fW64' "slot"       "abs." "slot#" W5 Slo (IWord64 (unSlotNo      .slSlot))
@@ -614,6 +612,14 @@ instance TimelineFields (SlotStats NominalDiffTime) where
    <> fBoth "mempoolTxs" "Mempool" "txs" W7 Uni P0 Lin Free (IWord64 slMempoolTxs) "" ""
    <> fBoth "utxoSize"  "UTxO" "entries" W9 Uni P0 Lin Free (IWord64 slUtxoSize) "" ""
    where fm = fmap
+
+  data TimelineComments (SlotStats NominalDiffTime)
+    = SSLogObjects
+    deriving Show
+
+  rtCommentary SlotStats{..} =
+    \case
+      SSLogObjects -> ("           " <>) . LO.loPretty <$> reverse slLogObjects
 
 -- * Instances, depending on the metrics' instances:
 --

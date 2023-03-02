@@ -350,6 +350,7 @@ data SlotStats a
     , slUtxoSize     :: !Word64
     , slDensity      :: !Double
     , slResources    :: !(SMaybe (Resources Word64))
+    , slLogObjects   :: ![LogObject]
     }
   deriving (Generic, Show, ToJSON)
   deriving anyclass NFData
