@@ -75,7 +75,6 @@ $CARDANO_CLI transaction build \
   --tx-out-reference-script-file "$plutusspendingscript" \
   --tx-out "$addressformintingrefscript+$lovelaceattxindiv6" \
   --tx-out-reference-script-file "$plutusmintingscript" \
-  --protocol-params-file "$WORK/pparams.json" \
   --out-file "$WORK/create-datum-output.body"
 
 $CARDANO_CLI transaction sign \
@@ -182,8 +181,7 @@ $CARDANO_CLI transaction build \
   --mint-plutus-script-v2 \
   --mint-reference-tx-in-redeemer-file "$redeemerfilepath" \
   --policy-id "$mintpolicyid" \
-  --tx-out "$dummyaddress2+10000000 + 5 $mintpolicyid.4D696C6C6172436F696E" \
-  --protocol-params-file "$WORK/pparams.json"
+  --tx-out "$dummyaddress2+10000000 + 5 $mintpolicyid.4D696C6C6172436F696E" 
 
 $CARDANO_CLI transaction sign \
   --tx-body-file $WORK/test-alonzo-ref-script.body \
