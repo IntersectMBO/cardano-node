@@ -369,14 +369,14 @@
     in
     removeAttrs flake [ "ciJobsPrs" ] // {
 
-      hydraJobs = flake.ciJobsPrs // (let pkgs = self.legacyPackages.${defaultSystem}; in {
+      hydraJobs = let pkgs = self.legacyPackages.${defaultSystem}; in {
         inherit (pkgs.callPackages iohkNix.utils.ciJobsAggregates {
           ciJobs = lib.mapAttrs (_: lib.getAttr "required") flake.ciJobsPrs // {
             # ensure hydra notify:
             gitrev = pkgs.writeText "gitrev" pkgs.gitrev;
           };
         }) required;
-      });
+      };
 
       # allows precise paths (avoid fallbacks) with nix build/eval:
       outputs = self;
