@@ -108,7 +108,7 @@ do case "$1" in
        --dump-slots      | -s )    sargs+=($1);    dump_slots='true';;
        --multi-overall )           sargs+=($1);    multi_aspect='--overall';;
        --multi-inter-cdf )         sargs+=($1);    multi_aspect='--inter-cdf';;
-       --rtsmode-aws | --aws )     sargs+=($1);    rtsmode='aws';;
+       --rtsmode-serial )          sargs+=($1);    rtsmode='serial';;
        --rtsmode-lomem | --lomem ) sargs+=($1);    rtsmode='lomem';;
        --rtsmode-hipar )           sargs+=($1);    rtsmode='hipar';;
        --perf-omit-host )          sargs+=($1 "$2"); perf_omit_hosts+=($2); shift;;
@@ -608,18 +608,12 @@ case "$op" in
 }
 
 call_locli() {
-    local rtsmode="$1"; shift
+    local rtsmode="${1:-hipar}"; shift
     local args=("$@")
-
-    if test -z "$rtsmode"
-    then if curl --connect-timeout 0.5 http://169.254.169.254/latest/meta-data >/dev/null 2>&1
-         then rtsmode='aws'
-         else rtsmode='hipar'; fi; fi
 
     echo "{ \"rtsmode\": \"$rtsmode\" }"
     case "$rtsmode" in
-        aws )   ## Work around the odd parallelism bug killing performance on AWS:
-                locli_args+=(+RTS -N1 -A128M -RTS);;
+        serial )locli_args+=(+RTS -N1 -A128M -RTS);;
         lomem ) locli_args+=(+RTS -N3 -A8M -RTS);;
         hipar ) locli_args+=();;
         * )     fail "unknown rtsmode: $rtsmode";;
