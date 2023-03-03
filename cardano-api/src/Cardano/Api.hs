@@ -751,6 +751,9 @@ module Cardano.Api (
     txInsExistInUTxO,
     notScriptLockedTxIns,
     textShow,
+
+    -- ** CLI option parsing
+    bounded,
   ) where
 
 import           Cardano.Api.Address

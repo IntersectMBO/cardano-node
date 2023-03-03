@@ -26,12 +26,12 @@ module Cardano.Node.Handlers.Shutdown
   )
 where
 
-import           Control.Applicative (Alternative (..))
 import           Control.Concurrent.Async (race_)
 import           Control.Exception (try)
 import           Control.Exception.Base (throwIO)
 import           Control.Monad (void, when)
 import           Data.Aeson (FromJSON, ToJSON)
+import           Data.Foldable (asum)
 import           Data.Text (Text, pack)
 import           Generic.Data.Orphans ()
 import           GHC.Generics (Generic)
@@ -42,6 +42,7 @@ import qualified System.IO as IO
 import qualified System.IO.Error as IO
 import           System.Posix.Types (Fd (Fd))
 
+import           Cardano.Api (bounded)
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           "contra-tracer" Control.Tracer
 import           Ouroboros.Consensus.Block (Header)
@@ -49,7 +50,6 @@ import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.Util.ResourceRegistry (ResourceRegistry)
 import           Ouroboros.Consensus.Util.STM (Watcher (..), forkLinkedWatcher)
 import           Ouroboros.Network.Block (BlockNo (..), HasHeader, SlotNo (..), pointSlot)
-
 
 data ShutdownOn
   = ASlot  !SlotNo
@@ -61,21 +61,21 @@ deriving instance FromJSON ShutdownOn
 deriving instance ToJSON ShutdownOn
 
 parseShutdownOn :: Opt.Parser ShutdownOn
-parseShutdownOn =
-    Opt.option (ASlot . SlotNo <$> Opt.auto) (
-         Opt.long "shutdown-on-slot-synced"
-      <> Opt.metavar "SLOT"
-      <> Opt.help "Shut down the process after ChainDB is synced up to the specified slot"
-      <> Opt.hidden
-    )
-    <|>
-    Opt.option (ABlock . BlockNo <$> Opt.auto) (
-         Opt.long "shutdown-on-block-synced"
-      <> Opt.metavar "BLOCK"
-      <> Opt.help "Shut down the process after ChainDB is synced up to the specified block"
-      <> Opt.hidden
-    )
-    <|> pure NoShutdown
+parseShutdownOn = asum
+  [ Opt.option (ASlot . SlotNo <$> bounded "SLOT") $ mconcat
+    [ Opt.long "shutdown-on-slot-synced"
+    , Opt.metavar "SLOT"
+    , Opt.help "Shut down the process after ChainDB is synced up to the specified slot"
+    , Opt.hidden
+    ]
+  , Opt.option (ABlock . BlockNo <$> bounded "BLOCK") $ mconcat
+    [ Opt.long "shutdown-on-block-synced"
+    , Opt.metavar "BLOCK"
+    , Opt.help "Shut down the process after ChainDB is synced up to the specified block"
+    , Opt.hidden
+    ]
+  , pure NoShutdown
+  ]
 
 data ShutdownTrace
   = ShutdownRequested
