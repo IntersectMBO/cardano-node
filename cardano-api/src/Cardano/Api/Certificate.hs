@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Certificates embedded in transactions
@@ -56,6 +57,8 @@ import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
 import qualified Cardano.Ledger.BaseTypes as Shelley
 import qualified Cardano.Ledger.Coin as Shelley (toDeltaCoin)
+import qualified Cardano.Ledger.Core as Shelley
+import qualified Cardano.Ledger.Shelley as Shelley
 import           Cardano.Ledger.Shelley.TxBody (MIRPot (..))
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 
@@ -100,10 +103,10 @@ instance HasTypeProxy Certificate where
     proxyToAsType _ = AsCertificate
 
 instance ToCBOR Certificate where
-    toCBOR = toCBOR . toShelleyCertificate
+    toCBOR = Shelley.toEraCBOR @Shelley.Shelley . toShelleyCertificate
 
 instance FromCBOR Certificate where
-    fromCBOR = fromShelleyCertificate <$> fromCBOR
+    fromCBOR = fromShelleyCertificate <$> Shelley.fromEraCBOR @Shelley.Shelley
 
 instance HasTextEnvelope Certificate where
     textEnvelopeType _ = "CertificateShelley"
@@ -247,7 +250,7 @@ toShelleyCertificate (GenesisKeyDelegationCertificate
                        (GenesisDelegateKeyHash delegatekh)
                        (VrfKeyHash             vrfkh)) =
     Shelley.DCertGenesis $
-      Shelley.GenesisDelegCert
+      Shelley.ConstitutionalDelegCert
         genesiskh
         delegatekh
         vrfkh
@@ -306,7 +309,7 @@ fromShelleyCertificate (Shelley.DCertPool (Shelley.RetirePool poolid epochno)) =
       epochno
 
 fromShelleyCertificate (Shelley.DCertGenesis
-                         (Shelley.GenesisDelegCert genesiskh delegatekh vrfkh)) =
+                         (Shelley.ConstitutionalDelegCert genesiskh delegatekh vrfkh)) =
     GenesisKeyDelegationCertificate
       (GenesisKeyHash         genesiskh)
       (GenesisDelegateKeyHash delegatekh)
@@ -345,19 +348,19 @@ toShelleyPoolParams StakePoolParameters {
     --TODO: validate pool parameters such as the PoolMargin below, but also
     -- do simple client-side sanity checks, e.g. on the pool metadata url
     Shelley.PoolParams {
-      Shelley._poolId     = poolkh
-    , Shelley._poolVrf    = vrfkh
-    , Shelley._poolPledge = toShelleyLovelace stakePoolPledge
-    , Shelley._poolCost   = toShelleyLovelace stakePoolCost
-    , Shelley._poolMargin = fromMaybe
-                              (error "toShelleyPoolParams: invalid PoolMargin")
-                              (Shelley.boundRational stakePoolMargin)
-    , Shelley._poolRAcnt  = toShelleyStakeAddr stakePoolRewardAccount
-    , Shelley._poolOwners = Set.fromList
-                              [ kh | StakeKeyHash kh <- stakePoolOwners ]
-    , Shelley._poolRelays = Seq.fromList
-                              (map toShelleyStakePoolRelay stakePoolRelays)
-    , Shelley._poolMD     = toShelleyPoolMetadata <$>
+      Shelley.ppId      = poolkh
+    , Shelley.ppVrf     = vrfkh
+    , Shelley.ppPledge  = toShelleyLovelace stakePoolPledge
+    , Shelley.ppCost    = toShelleyLovelace stakePoolCost
+    , Shelley.ppMargin  = fromMaybe
+                               (error "toShelleyPoolParams: invalid PoolMargin")
+                               (Shelley.boundRational stakePoolMargin)
+    , Shelley.ppRewardAcnt   = toShelleyStakeAddr stakePoolRewardAccount
+    , Shelley.ppOwners  = Set.fromList
+                               [ kh | StakeKeyHash kh <- stakePoolOwners ]
+    , Shelley.ppRelays  = Seq.fromList
+                               (map toShelleyStakePoolRelay stakePoolRelays)
+    , Shelley.ppMetadata = toShelleyPoolMetadata <$>
                               maybeToStrictMaybe stakePoolMetadata
     }
   where
@@ -383,8 +386,8 @@ toShelleyPoolParams StakePoolParameters {
                           , stakePoolMetadataHash = StakePoolMetadataHash mdh
                           } =
       Shelley.PoolMetadata {
-        Shelley._poolMDUrl  = toShelleyUrl stakePoolMetadataURL
-      , Shelley._poolMDHash = Crypto.hashToBytes mdh
+        Shelley.pmUrl  = toShelleyUrl stakePoolMetadataURL
+      , Shelley.pmHash = Crypto.hashToBytes mdh
       }
 
     toShelleyDnsName :: ByteString -> Shelley.DnsName
@@ -401,28 +404,28 @@ fromShelleyPoolParams :: Shelley.PoolParams StandardCrypto
                       -> StakePoolParameters
 fromShelleyPoolParams
     Shelley.PoolParams {
-      Shelley._poolId
-    , Shelley._poolVrf
-    , Shelley._poolPledge
-    , Shelley._poolCost
-    , Shelley._poolMargin
-    , Shelley._poolRAcnt
-    , Shelley._poolOwners
-    , Shelley._poolRelays
-    , Shelley._poolMD
+      Shelley.ppId
+    , Shelley.ppVrf
+    , Shelley.ppPledge
+    , Shelley.ppCost
+    , Shelley.ppMargin
+    , Shelley.ppRewardAcnt
+    , Shelley.ppOwners
+    , Shelley.ppRelays
+    , Shelley.ppMetadata
     } =
     StakePoolParameters {
-      stakePoolId            = StakePoolKeyHash _poolId
-    , stakePoolVRF           = VrfKeyHash _poolVrf
-    , stakePoolCost          = fromShelleyLovelace _poolCost
-    , stakePoolMargin        = Shelley.unboundRational _poolMargin
-    , stakePoolRewardAccount = fromShelleyStakeAddr _poolRAcnt
-    , stakePoolPledge        = fromShelleyLovelace _poolPledge
-    , stakePoolOwners        = map StakeKeyHash (Set.toList _poolOwners)
+      stakePoolId            = StakePoolKeyHash ppId
+    , stakePoolVRF           = VrfKeyHash ppVrf
+    , stakePoolCost          = fromShelleyLovelace ppCost
+    , stakePoolMargin        = Shelley.unboundRational ppMargin
+    , stakePoolRewardAccount = fromShelleyStakeAddr ppRewardAcnt
+    , stakePoolPledge        = fromShelleyLovelace ppPledge
+    , stakePoolOwners        = map StakeKeyHash (Set.toList ppOwners)
     , stakePoolRelays        = map fromShelleyStakePoolRelay
-                                   (Foldable.toList _poolRelays)
+                                   (Foldable.toList ppRelays)
     , stakePoolMetadata      = fromShelleyPoolMetadata <$>
-                                 strictMaybeToMaybe _poolMD
+                                 strictMaybeToMaybe ppMetadata
     }
   where
     fromShelleyStakePoolRelay :: Shelley.StakePoolRelay -> StakePoolRelay
@@ -443,15 +446,15 @@ fromShelleyPoolParams
 
     fromShelleyPoolMetadata :: Shelley.PoolMetadata -> StakePoolMetadataReference
     fromShelleyPoolMetadata Shelley.PoolMetadata {
-                              Shelley._poolMDUrl
-                            , Shelley._poolMDHash
+                              Shelley.pmUrl
+                            , Shelley.pmHash
                             } =
       StakePoolMetadataReference {
-        stakePoolMetadataURL  = Shelley.urlToText _poolMDUrl
+        stakePoolMetadataURL  = Shelley.urlToText pmUrl
       , stakePoolMetadataHash = StakePoolMetadataHash
                               . fromMaybe (error "fromShelleyPoolMetadata: invalid hash. TODO: proper validation")
                               . Crypto.hashFromBytes
-                              $ _poolMDHash
+                              $ pmHash
       }
 
     --TODO: change the ledger rep of the DNS name to use ShortByteString
