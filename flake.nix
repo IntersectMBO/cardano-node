@@ -59,27 +59,6 @@
     # };
     customConfig.url = "github:input-output-hk/empty-flake";
 
-    node-measured = {
-      url = "github:input-output-hk/cardano-node";
-      inputs.cardano-node-workbench.follows = "cardano-node-workbench";
-      # break the recursion
-      inputs.node-measured.follows = "node-measured";
-    };
-    node-snapshot = {
-      url = "github:input-output-hk/cardano-node/7f00e3ea5a61609e19eeeee4af35241571efdf5c";
-      inputs.membench.follows = "empty-flake";
-    };
-    node-process = {
-      url = "github:input-output-hk/cardano-node";
-      flake = false;
-    };
-    ## This pin is to prevent workbench-produced geneses being regenerated each time the node is bumped.
-    cardano-node-workbench = {
-      url = "github:input-output-hk/cardano-node/ed9932c52aaa535b71f72a5b4cc0cecb3344a5a3";
-      # This is to avoid circular import (TODO: remove this workbench pin entirely using materialization):
-      inputs.membench.follows = "empty-flake";
-    };
-
     empty-flake.url = "github:input-output-hk/empty-flake";
 
     cardano-mainnet-mirror.url = "github:input-output-hk/cardano-mainnet-mirror/nix";
@@ -103,10 +82,6 @@
     , ops-lib
     , plutus-apps
     , cardano-mainnet-mirror
-    , node-snapshot
-    , node-measured
-    , node-process
-    , cardano-node-workbench
     , tullia
     , std
     , nix2container
@@ -148,15 +123,6 @@
             // import ./nix/svclib.nix { inherit (final) pkgs; };
         })
         (import ./nix/pkgs.nix)
-        (import ./nix/workbench/membench/membench-overlay.nix
-          {
-            inherit
-              lib
-              input
-              cardano-mainnet-mirror
-              node-snapshot node-measured node-process;
-            customConfig = customConfig.membench;
-          })
         self.overlay
       ] ++ (import ops-lib.outPath {}).overlays;
 
