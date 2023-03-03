@@ -1,11 +1,11 @@
-name: Haskell Windows & Mac CI
+name: Haskell Linux CI
 
 on:
   push:
   create:
 
 jobs:
-  build:
+  linux_ci:
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -17,7 +17,7 @@ jobs:
 
         ghc: ["8.10.7", "9.2.5"]
         cabal: ["3.8.1.0"]
-        os: [macos-latest, windows-latest]
+        os: [ubuntu-latest]
 
     env:
       # Modify this value to "invalidate" the cabal cache.
@@ -28,45 +28,35 @@ jobs:
 
       # current ref from: 27.02.2022
       SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
+    
 
     steps:
+    - name: Workaround runner image issue
+      # https://github.com/actions/runner-images/issues/7061
+      run: sudo chown -R $USER /usr/local/.ghcup
+
     - name: Install Haskell
       uses: input-output-hk/setup-haskell@v1
       id: setup-haskell
       with:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: ${{ matrix.cabal }}
-        pacman-packages: >
-          mingw-w64-x86_64-pkg-config
-          mingw-w64-x86_64-libsodium
-          mingw-w64-x86_64-openssl
-          base-devel
-          autoconf-wrapper
-          autoconf
-          automake
-          libtool
-          make
 
     - uses: actions/checkout@v2
 
-    - name: "[PowerShell] Add build script path"
-      if: runner.os == 'Windows'
-      shell: pwsh
-      run: Add-Content $env:GITHUB_PATH "$(pwd)/.github/bin"
-
     - name: "[Bash] Add build script path"
-      if: runner.os != 'Windows'
       run: echo "$(pwd)/.github/bin" >> $GITHUB_PATH
 
-
-    - name: "MAC: Install build environment (brew)"
-      if: runner.os == 'macOS'
+    - name: "LINUX: Install build environment (apt-get)"
       run: |
-        brew install libsodium
+        sudo apt-get update
+        sudo apt-get -y install libsodium23 libsodium-dev
+        sudo apt-get -y install libsystemd0 libsystemd-dev
+        sudo apt-get -y remove --purge software-properties-common
+        sudo apt-get -y autoremove
 
-    - name: "MAC: Install build environment (for secp256k1)"
-      if: runner.os == 'macOS'
-      run: brew install autoconf automake libtool
+    - name: "LINUX: Install build environment (for secp256k1)"
+      run: sudo apt-get -y install autoconf automake libtool
 
     - name: Install secp256k1
       uses: input-output-hk/setup-secp256k1@v1
@@ -84,12 +74,8 @@ jobs:
         echo "# cabal.project.local"
         cat cabal.project.local
 
-    - name: Build dry run
-      run: |
-        # The tests call out to msys2 commands. We generally do not want to mix toolchains, so
-        # we are very deliberate about only adding msys64 to the path where absolutely necessary.
-        ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;{0}" -f $env:PATH)') || '' }}
-        cabal build all --dry-run --minimize-conflict-set
+    - name: Generate dist-newstyle/cache/plan.json
+      run: cabal build all --dry-run --minimize-conflict-set
 
     # For users who fork cardano-node and want to define a writable cache, then can set up their own
     # S3 bucket then define in their forked repository settings the following secrets:
@@ -112,7 +98,7 @@ jobs:
         skip: "${{ secrets.BINARY_CACHE_URI == '' }}"
 
     # It's important to ensure that people who fork this repository can not only successfully build in
-    # CI by default, but also have meaning cabal store caching.
+    # CI by default, but also have meaningful cabal store caching.
     #
     # Because syncing with S3 requires credentials, we cannot rely on S3 for this. For this reason a
     # https fallback is used. The https server mirrors the content of the S3 bucket. The https cabal
@@ -130,30 +116,16 @@ jobs:
         skip: "${{ secrets.BINARY_CACHE_URI != '' }}"
         enable-save: false
 
-    - name: Build core components
-      run: |
-        # The tests call out to msys2 commands. We generally do not want to mix toolchains, so
-        # we are very deliberate about only adding msys64 to the path where absolutely necessary.
-        ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;{0}" -f $env:PATH)') || '' }}
-        cabal build cardano-node cardano-cli cardano-node-chairman cardano-submit-api -j1
 
     - name: Build remaining components
-      run: |
-        # The tests call out to msys2 commands. We generally do not want to mix toolchains, so
-        # we are very deliberate about only adding msys64 to the path where absolutely necessary.
-        ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;{0}" -f $env:PATH)') || '' }}
-        cabal build all
+      run: cabal build all
 
     - name: Run tests
       env:
         TMPDIR: ${{ runner.temp }}
         TMP: ${{ runner.temp }}
         KEEP_WORKSPACE: 1
-      run: |
-        # The tests call out to msys2 commands. We generally do not want to mix toolchains, so
-        # we are very deliberate about only adding msys64 to the path where absolutely necessary.
-        ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;{0}" -f $env:PATH)') || '' }}
-        cabal test cardano-testnet cardano-api cardano-node cardano-node-chairman cardano-cli cardano-submit-api
+      run: cabal test cardano-testnet cardano-api cardano-node cardano-node-chairman cardano-cli cardano-submit-api
 
     - name: "Tar artifacts"
       shell: bash
@@ -212,7 +184,7 @@ jobs:
     #     limit-access-to-actor: true
 
   release:
-    needs: [build]
+    needs: [linux_ci]
     if: ${{ startsWith(github.ref, 'refs/tags') }}
     runs-on: ubuntu-latest
     steps:
