@@ -664,12 +664,11 @@ pNetworkId =
 
 pTestnetMagic :: Parser NetworkMagic
 pTestnetMagic =
-  NetworkMagic <$>
-    Opt.option Opt.auto
-      (  Opt.long "testnet-magic"
-      <> Opt.metavar "NATURAL"
-      <> Opt.help "Specify a testnet magic id."
-      )
+  fmap NetworkMagic $ Opt.option (bounded "TESTNET_MAGIC") $ mconcat
+    [ Opt.long "testnet-magic"
+    , Opt.metavar "NATURAL"
+    , Opt.help "Specify a testnet magic id."
+    ]
 
 parseNewSigningKeyFile :: String -> Parser NewSigningKeyFile
 parseNewSigningKeyFile opt =

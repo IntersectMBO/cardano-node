@@ -10,9 +10,11 @@ module Cardano.TxSubmit.CLI.Parsers
   ) where
 
 import           Cardano.Api (AnyConsensusModeParams (..), ConsensusModeParams (..),
-                   EpochSlots (..), NetworkId (..), NetworkMagic (..), SocketPath (..))
+                   EpochSlots (..), NetworkId (..), NetworkMagic (..), SocketPath (..), bounded)
+
 import           Cardano.TxSubmit.CLI.Types (ConfigFile (..), TxSubmitNodeParams (..))
 import           Cardano.TxSubmit.Rest.Parsers (pWebserverConfig)
+
 import           Control.Applicative (Alternative (..), (<**>))
 import           Data.Word (Word64)
 import           Options.Applicative (Parser, ParserInfo)
@@ -56,11 +58,12 @@ pNetworkId = pMainnet <|> fmap Testnet pTestnetMagic
       )
 
     pTestnetMagic :: Parser NetworkMagic
-    pTestnetMagic = NetworkMagic <$> Opt.option Opt.auto
-      (   Opt.long "testnet-magic"
-      <>  Opt.metavar "NATURAL"
-      <>  Opt.help "Specify a testnet magic id."
-      )
+    pTestnetMagic =
+      fmap NetworkMagic $ Opt.option (bounded "TESTNET_MAGIC") $ mconcat
+        [ Opt.long "testnet-magic"
+        , Opt.metavar "TESTNET_MAGIC"
+        , Opt.help "Specify a testnet magic id."
+        ]
 
 
 -- TODO: This was ripped from `cardano-cli` because, unfortunately, it's not

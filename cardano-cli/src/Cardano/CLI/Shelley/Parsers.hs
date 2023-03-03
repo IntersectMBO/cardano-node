@@ -1730,31 +1730,28 @@ pSigningKeyFile fdir =
 
 pKesPeriod :: Parser KESPeriod
 pKesPeriod =
-  KESPeriod <$>
-    Opt.option Opt.auto
-      (  Opt.long "kes-period"
-      <> Opt.metavar "NATURAL"
-      <> Opt.help "The start of the KES key validity period."
-      )
+  fmap KESPeriod $ Opt.option (bounded "KES_PERIOD") $ mconcat
+    [ Opt.long "kes-period"
+    , Opt.metavar "NATURAL"
+    , Opt.help "The start of the KES key validity period."
+    ]
 
 pEpochNo :: Parser EpochNo
 pEpochNo =
-  EpochNo <$>
-    Opt.option Opt.auto
-      (  Opt.long "epoch"
-      <> Opt.metavar "NATURAL"
-      <> Opt.help "The epoch number."
-      )
+  fmap EpochNo $ Opt.option (bounded "EPOCH") $ mconcat
+    [ Opt.long "epoch"
+    , Opt.metavar "NATURAL"
+    , Opt.help "The epoch number."
+    ]
 
 
 pEpochNoUpdateProp :: Parser EpochNo
 pEpochNoUpdateProp =
-  EpochNo <$>
-    Opt.option Opt.auto
-      (  Opt.long "epoch"
-      <> Opt.metavar "NATURAL"
-      <> Opt.help "The epoch number in which the update proposal is valid."
-      )
+  fmap EpochNo $ Opt.option (bounded "EPOCH") $ mconcat
+    [ Opt.long "epoch"
+    , Opt.metavar "EPOCH"
+    , Opt.help "The epoch number in which the update proposal is valid."
+    ]
 
 pGenesisFile :: String -> Parser GenesisFile
 pGenesisFile desc =
@@ -2054,12 +2051,11 @@ pNetworkId =
 
 pTestnetMagic :: Parser NetworkMagic
 pTestnetMagic =
-  NetworkMagic <$>
-    Opt.option Opt.auto
-      (  Opt.long "testnet-magic"
-      <> Opt.metavar "NATURAL"
-      <> Opt.help "Specify a testnet magic id."
-      )
+  fmap NetworkMagic $ Opt.option (bounded "TESTNET_MAGIC") $ mconcat
+    [ Opt.long "testnet-magic"
+    , Opt.metavar "TESTNET_MAGIC"
+    , Opt.help "Specify a testnet magic id."
+    ]
 
 pTxSubmitFile :: Parser FilePath
 pTxSubmitFile =
@@ -2367,12 +2363,12 @@ pPolicyId =
 
 pInvalidBefore :: Parser SlotNo
 pInvalidBefore = fmap SlotNo $ asum
-  [ Opt.option Opt.auto $ mconcat
+  [ Opt.option (bounded "SLOT") $ mconcat
     [ Opt.long "invalid-before"
     , Opt.metavar "SLOT"
     , Opt.help "Time that transaction is valid from (in slots)."
     ]
-  , Opt.option Opt.auto $ mconcat
+  , Opt.option (bounded "SLOT") $ mconcat
     [ Opt.long "lower-bound"
     , Opt.metavar "SLOT"
     , Opt.help $ mconcat
@@ -2386,12 +2382,12 @@ pInvalidBefore = fmap SlotNo $ asum
 pInvalidHereafter :: Parser SlotNo
 pInvalidHereafter =
   fmap SlotNo $ asum
-  [ Opt.option Opt.auto $ mconcat
+  [ Opt.option (bounded "SLOT") $ mconcat
     [ Opt.long "invalid-hereafter"
     , Opt.metavar "SLOT"
     , Opt.help "Time that transaction is valid until (in slots)."
     ]
-  , Opt.option Opt.auto $ mconcat
+  , Opt.option (bounded "SLOT") $ mconcat
     [ Opt.long "upper-bound"
     , Opt.metavar "SLOT"
     , Opt.help $ mconcat
@@ -2400,7 +2396,7 @@ pInvalidHereafter =
       ]
     , Opt.internal
     ]
-  , Opt.option Opt.auto $ mconcat
+  , Opt.option (bounded "SLOT") $ mconcat
     [ Opt.long "ttl"
     , Opt.metavar "SLOT"
     , Opt.help "Time to live (in slots) (deprecated; use --invalid-hereafter instead)."
@@ -3051,12 +3047,11 @@ pPoolDeposit =
 
 pEpochBoundRetirement :: Parser EpochNo
 pEpochBoundRetirement =
-    EpochNo <$>
-    Opt.option Opt.auto
-      (  Opt.long "pool-retirement-epoch-boundary"
-      <> Opt.metavar "INT"
-      <> Opt.help "Epoch bound on pool retirement."
-      )
+  fmap EpochNo $ Opt.option (bounded "EPOCH_BOUNDARY") $ mconcat
+    [ Opt.long "pool-retirement-epoch-boundary"
+    , Opt.metavar "EPOCH_BOUNDARY"
+    , Opt.help "Epoch bound on pool retirement."
+    ]
 
 pNumberOfPools :: Parser Natural
 pNumberOfPools =
@@ -3248,14 +3243,13 @@ defaultByronEpochSlots = 21600
 
 pEpochSlots :: Parser EpochSlots
 pEpochSlots =
-  EpochSlots <$>
-    Opt.option Opt.auto
-      (  Opt.long "epoch-slots"
-      <> Opt.metavar "NATURAL"
-      <> Opt.help "The number of slots per epoch for the Byron era."
-      <> Opt.value defaultByronEpochSlots -- Default to the mainnet value.
-      <> Opt.showDefault
-      )
+  fmap EpochSlots $ Opt.option (bounded "SLOTS") $ mconcat
+    [ Opt.long "epoch-slots"
+    , Opt.metavar "SLOTS"
+    , Opt.help "The number of slots per epoch for the Byron era."
+    , Opt.value defaultByronEpochSlots -- Default to the mainnet value.
+    , Opt.showDefault
+    ]
 
 pProtocolVersion :: Parser (Natural, Natural)
 pProtocolVersion =

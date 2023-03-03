@@ -1,6 +1,9 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 #if !defined(mingw32_HOST_OS)
 #define UNIX
@@ -22,10 +25,13 @@ module Cardano.Api.Utils
   , runParsecParser
   , textShow
   , writeSecrets
+
+    -- ** CLI option parsing
+  , bounded
   ) where
 
 import           Control.Exception (bracket)
-import           Control.Monad (forM_)
+import           Control.Monad (forM_, when)
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as Builder
@@ -48,6 +54,9 @@ import           System.Directory (emptyPermissions, readable, setPermissions)
 #endif
 
 import           Cardano.Api.Eras
+import           Options.Applicative (ReadM)
+import           Options.Applicative.Builder (eitherReader)
+import qualified Text.Read as Read
 
 (?!) :: Maybe a -> e -> Either e a
 Nothing ?! e = Left e
@@ -131,3 +140,10 @@ renderEra (AnyCardanoEra AllegraEra) = "Allegra"
 renderEra (AnyCardanoEra MaryEra)    = "Mary"
 renderEra (AnyCardanoEra AlonzoEra)  = "Alonzo"
 renderEra (AnyCardanoEra BabbageEra) = "Babbage"
+
+bounded :: forall a. (Bounded a, Integral a, Show a) => String -> ReadM a
+bounded t = eitherReader $ \s -> do
+  i <- Read.readEither @Integer s
+  when (i < fromIntegral (minBound @a)) $ Left $ t <> " must not be less than " <> show (minBound @a)
+  when (i > fromIntegral (maxBound @a)) $ Left $ t <> " must not greater than " <> show (maxBound @a)
+  pure (fromIntegral i)

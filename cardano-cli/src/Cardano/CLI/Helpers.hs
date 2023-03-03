@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.CLI.Helpers
   ( HelpersError(..)
@@ -19,12 +20,22 @@ import           Cardano.Prelude (ConvertText (..))
 import           Codec.CBOR.Pretty (prettyHexEnc)
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import           Codec.CBOR.Term (decodeTerm, encodeTerm)
+import           Control.Exception (Exception (..), IOException)
+import           Control.Monad (unless, when)
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (handleIOExceptT, left)
+import           Data.Bifunctor (Bifunctor (..))
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LB
+import           Data.Functor (void)
+import           Data.Text (Text)
 import qualified Data.Text as Text
+import qualified Data.Text.IO as Text
 import qualified System.Console.ANSI as ANSI
 import           System.Console.ANSI
+import qualified System.Directory as IO
 import qualified System.IO as IO
 
 import           Cardano.Binary (Decoder, fromCBOR)
@@ -33,17 +44,6 @@ import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.UTxO as UTxO
 import           Cardano.CLI.Types
-
-import           Control.Exception (Exception (..), IOException)
-import           Control.Monad (unless, when)
-import           Control.Monad.IO.Class (MonadIO (..))
-import           Control.Monad.Trans.Except (ExceptT)
-import           Data.Bifunctor (Bifunctor (..))
-import           Data.ByteString (ByteString)
-import           Data.Functor (void)
-import           Data.Text (Text)
-import qualified Data.Text.IO as Text
-import qualified System.Directory as IO
 
 data HelpersError
   = CBORPrettyPrintError !DeserialiseFailure
