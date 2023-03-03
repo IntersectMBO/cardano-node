@@ -126,11 +126,12 @@ in project.shellFor {
       yq nomad vault-bin norouter socat
       # Debugging
       postgresql
+      # Performance report generation
+      em
   ]
   ++ lib.optional haveGlibcLocales pkgs.glibcLocales
   ++ lib.optionals (!backend.useCabalRun) [ cardano-topology cardano-cli locli ]
   ++ lib.optionals (!workbenchDevMode) [ workbench.workbench ]
-  ++ lib.optional (pkgs.system == "x86_64-linux") pkgs.em
   ;
 
 } // { inherit shellHook;
