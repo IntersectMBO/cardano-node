@@ -448,7 +448,7 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
       eraHistory <- lift (queryNodeLocalState localNodeConnInfo Nothing eraHistoryQuery)
         & onLeft (left . ShelleyQueryCmdAcquireFailure)
 
-      let eInfo = toEpochInfo eraHistory
+      let eInfo = toTentativeEpochInfo eraHistory
 
 
       -- We get the operational certificate counter from the protocol state and check that
@@ -515,13 +515,13 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
    opCertNodeAndOnDiskCounters o Nothing = OpCertNoBlocksMintedYet o
 
    opCertExpiryUtcTime
-     :: EpochInfo (Either Text)
+     :: Tentative (EpochInfo (Either Text))
      -> GenesisParameters
      -> OpCertEndingKesPeriod
      -> Maybe UTCTime
    opCertExpiryUtcTime eInfo gParams (OpCertEndingKesPeriod oCertExpiryKesPeriod) =
      let time = epochInfoSlotToUTCTime
-                  eInfo
+                  (tentative eInfo)
                   (SystemStart $ protocolParamSystemStart gParams)
                   (fromIntegral $ oCertExpiryKesPeriod * fromIntegral (protocolParamSlotsPerKESPeriod gParams))
      in case time of
@@ -576,7 +576,7 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
    createQueryKesPeriodInfoOutput
      :: OpCertIntervalInformation
      -> OpCertNodeAndOnDiskCounterInformation
-     -> EpochInfo (Either Text)
+     -> Tentative (EpochInfo (Either Text))
      -> GenesisParameters
      -> O.QueryKesPeriodInfoOutput
    createQueryKesPeriodInfoOutput oCertIntervalInfo oCertCounterInfo eInfo gParams  =
@@ -1415,8 +1415,24 @@ queryResult eAcq = pure eAcq
 
 toEpochInfo :: EraHistory CardanoMode -> EpochInfo (Either Text)
 toEpochInfo (EraHistory _ interpreter) =
-  hoistEpochInfo (first (Text.pack . show ) . runExcept)
+  hoistEpochInfo (first (Text.pack . show) . runExcept)
     $ Consensus.interpreterToEpochInfo interpreter
+
+-- | A value that is tentative or produces a tentative value if used.  These values
+-- are considered accurate only if some future event such as a hard fork does not
+-- render them invalid.
+newtype Tentative a = Tentative { tentative :: a } deriving (Eq, Show)
+
+-- | Get an Epoch Info that computes tentative values.  The values computed are
+-- tentative because it uses an interpreter that is extended past the horizon.
+-- This interpreter will compute accurate values into the future as long as a
+-- a hard fork does not happen in the intervening time.  Those values are thus
+-- "tentative" because they can change in the event of a hard fork.
+toTentativeEpochInfo :: EraHistory CardanoMode -> Tentative (EpochInfo (Either Text))
+toTentativeEpochInfo (EraHistory _ interpreter) =
+  Tentative
+    $ hoistEpochInfo (first (Text.pack . show) . runExcept)
+    $ Consensus.interpreterToEpochInfo (Consensus.unsafeExtendSafeZone interpreter)
 
 obtainLedgerEraClassConstraints
   :: ShelleyLedgerEra era ~ ledgerera
