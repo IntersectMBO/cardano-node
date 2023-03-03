@@ -12,6 +12,8 @@
 
 - Allow assembling transactions with no witnesses ([PR 4408](https://github.com/input-output-hk/cardano-node/pull/4408))
 
+- Add `slotInEpoch` and `slotsToEpochEnd` to output of `query tip` command ([PR 4912](https://github.com/input-output-hk/cardano-node/pull/4912))
+
 ### Bugs
 
 - Allow reading signing keys from a pipe ([PR 4342](https://github.com/input-output-hk/cardano-node/pull/4342))
