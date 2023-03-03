@@ -250,3 +250,12 @@ jobs:
         asset_path: ./artifacts-ubuntu-latest/cardano-submit-api.tar.gz
         asset_name: cardano-submit-api_${{ steps.create_release_tag.outputs.TAG }}-linux.tar.gz
         asset_content_type: application/gzip
+
+  build-complete:
+    runs-on: ubuntu-latest
+
+    needs: build
+
+    steps:
+    - name: Build complete
+      run: echo "Build complete"
