@@ -9,9 +9,6 @@ The `scripts` directory consists of the following directories:
 - [byron-to-alonzo](#byron-to-alonzo)
 - [plutus](#plutus)
 
-#### benchmarking
-Contains all the scripts relevant to benchmarking `cardano-node`. See the benchmarking [README](benchmarking/README.md).
-
 #### buildkite
 Contains scripts relevant to IOHK's CI.
 
