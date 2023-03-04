@@ -56,25 +56,25 @@ import Cardano.Analysis.API
 summariseMultiBlockProp :: [Centile] -> [BlockPropOne] -> Either CDFError MultiBlockProp
 summariseMultiBlockProp _ [] = error "Asked to summarise empty list of BlockPropOne"
 summariseMultiBlockProp centiles bs@(headline:_) = do
-  cdfForgerStarts           <- cdf2OfCDFs comb $ bs <&> cdfForgerStarts
+  cdfForgerStart            <- cdf2OfCDFs comb $ bs <&> cdfForgerStart
   cdfForgerBlkCtx           <- cdf2OfCDFs comb $ bs <&> cdfForgerBlkCtx
   cdfForgerLgrState         <- cdf2OfCDFs comb $ bs <&> cdfForgerLgrState
   cdfForgerLgrView          <- cdf2OfCDFs comb $ bs <&> cdfForgerLgrView
-  cdfForgerLeads            <- cdf2OfCDFs comb $ bs <&> cdfForgerLeads
+  cdfForgerLead             <- cdf2OfCDFs comb $ bs <&> cdfForgerLead
   cdfForgerTicked           <- cdf2OfCDFs comb $ bs <&> cdfForgerTicked
   cdfForgerMemSnap          <- cdf2OfCDFs comb $ bs <&> cdfForgerMemSnap
-  cdfForgerForges           <- cdf2OfCDFs comb $ bs <&> cdfForgerForges
-  cdfForgerAdoptions        <- cdf2OfCDFs comb $ bs <&> cdfForgerAdoptions
-  cdfForgerAnnounces        <- cdf2OfCDFs comb $ bs <&> cdfForgerAnnounces
-  cdfForgerSends            <- cdf2OfCDFs comb $ bs <&> cdfForgerSends
-  cdfPeerNotices            <- cdf2OfCDFs comb $ bs <&> cdfPeerNotices
-  cdfPeerRequests           <- cdf2OfCDFs comb $ bs <&> cdfPeerRequests
-  cdfPeerFetches            <- cdf2OfCDFs comb $ bs <&> cdfPeerFetches
-  cdfPeerAdoptions          <- cdf2OfCDFs comb $ bs <&> cdfPeerAdoptions
-  cdfPeerAnnounces          <- cdf2OfCDFs comb $ bs <&> cdfPeerAnnounces
-  cdfPeerSends              <- cdf2OfCDFs comb $ bs <&> cdfPeerSends
-  cdfBlockBattles           <- cdf2OfCDFs comb $ bs <&> cdfBlockBattles
-  cdfBlockSizes             <- cdf2OfCDFs comb $ bs <&> cdfBlockSizes
+  cdfForgerForge            <- cdf2OfCDFs comb $ bs <&> cdfForgerForge
+  cdfForgerAnnounce         <- cdf2OfCDFs comb $ bs <&> cdfForgerAnnounce
+  cdfForgerSend             <- cdf2OfCDFs comb $ bs <&> cdfForgerSend
+  cdfForgerAdoption         <- cdf2OfCDFs comb $ bs <&> cdfForgerAdoption
+  cdfPeerNotice             <- cdf2OfCDFs comb $ bs <&> cdfPeerNotice
+  cdfPeerRequest            <- cdf2OfCDFs comb $ bs <&> cdfPeerRequest
+  cdfPeerFetch              <- cdf2OfCDFs comb $ bs <&> cdfPeerFetch
+  cdfPeerAdoption           <- cdf2OfCDFs comb $ bs <&> cdfPeerAdoption
+  cdfPeerAnnounce           <- cdf2OfCDFs comb $ bs <&> cdfPeerAnnounce
+  cdfPeerSend               <- cdf2OfCDFs comb $ bs <&> cdfPeerSend
+  cdfBlockBattle            <- cdf2OfCDFs comb $ bs <&> cdfBlockBattle
+  cdfBlockSize              <- cdf2OfCDFs comb $ bs <&> cdfBlockSize
   cdfBlocksPerHost          <- cdf2OfCDFs comb $ bs <&> cdfBlocksPerHost
   cdfBlocksFilteredRatio    <- cdf2OfCDFs comb $ bs <&> cdfBlocksFilteredRatio
   cdfBlocksChainedRatio     <- cdf2OfCDFs comb $ bs <&> cdfBlocksChainedRatio
@@ -159,6 +159,13 @@ mapMbe f o e = \case
   MFE x -> f x
   MOE x -> o x
   MBE x -> e x
+
+mapMbeMayNE :: (ForgerEvents a -> SMaybe b) -> (ObserverEvents a -> SMaybe b)
+       -> MachBlockEvents a -> SMaybe b
+mapMbeMayNE f o = \case
+  MFE x -> f x
+  MOE x -> o x
+  MBE{} -> SNothing
 
 mbeForge :: MachBlockEvents a -> Maybe (ForgerEvents a)
 mbeForge = mapMbe Just (const Nothing) (const Nothing)
@@ -284,7 +291,7 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
                   (mFltDoms <&> snd3)
                   (length cMainChain)
                   (length accepta)
-  , cBlockStats = Map.fromList $ machViews <&> (mvHost &&& mvBlockStats)
+  , cHostBlockStats = Map.fromList $ machViews <&> (mvHost &&& mvBlockStats)
   , ..
   }
  where
@@ -295,12 +302,12 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
    blkSets :: (Set Hash, Set Hash)
    blkSets@(acceptaBlocks, rejectaBlocks) =
      both (Set.fromList . fmap beBlock) (accepta, cRejecta)
-   mvBlockStats :: MachView -> BlockStats
-   mvBlockStats (fmap bfeBlock . mvForges -> fs) = BlockStats {..}
-    where bsUnchained = (countListAll                         fs & unsafeCoerceCount)
-                       - bsFiltered - bsRejected
-          bsFiltered  = countList (`Set.member` acceptaBlocks) fs & unsafeCoerceCount
-          bsRejected  = countList (`Set.member` rejectaBlocks) fs & unsafeCoerceCount
+   mvBlockStats :: MachView -> HostBlockStats
+   mvBlockStats (fmap bfeBlock . mvForges -> fs) = HostBlockStats {..}
+    where hbsUnchained = (countListAll                         fs & unsafeCoerceCount)
+                       - hbsFiltered - hbsRejected
+          hbsFiltered  = countList (`Set.member` acceptaBlocks) fs & unsafeCoerceCount
+          hbsRejected  = countList (`Set.member` rejectaBlocks) fs & unsafeCoerceCount
 
    (blk0,  blkL)  = (head &&& last) cMainChain
    mFltDoms :: Maybe (Interval SlotNo, Interval BlockNo, Int)
@@ -410,6 +417,10 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
                            <|> (if True -- bfeBlockNo == 0 -- silliness
                                 then SJust 0.01 else SNothing)
                            & handleMiss "Δt Announced (forger)"
+          , bfAnnouncedCum = bfeAnnouncedCum
+                           <|> (if True -- bfeBlockNo == 0 -- silliness
+                                then SJust 0.01 else SNothing)
+                           & handleMiss "Δt AnnouncedCum (forger)"
           , bfSending    = bfeSending
                            <|> (if True -- bfeBlockNo == 0 -- silliness
                                 then SJust 0.01 else SNothing)
@@ -485,45 +496,45 @@ blockProp run@Run{genesis} Chain{..} = do
   pure $ BlockProp
     { bpDomainSlots      = [cDomSlots]
     , bpDomainBlocks     = [cDomBlocks]
-    , cdfForgerStarts    = forgerCDF   (SJust . bfStarted   . beForge)
+    , cdfForgerStart     = forgerCDF   (SJust . bfStarted   . beForge)
     , cdfForgerBlkCtx    = forgerCDF           (bfBlkCtx    . beForge)
     , cdfForgerLgrState  = forgerCDF           (bfLgrState  . beForge)
     , cdfForgerLgrView   = forgerCDF           (bfLgrView   . beForge)
-    , cdfForgerLeads     = forgerCDF   (SJust . bfLeading   . beForge)
+    , cdfForgerLead      = forgerCDF   (SJust . bfLeading   . beForge)
     , cdfForgerTicked    = forgerCDF           (bfTicked    . beForge)
     , cdfForgerMemSnap   = forgerCDF           (bfMemSnap   . beForge)
-    , cdfForgerForges    = forgerCDF   (SJust . bfForged    . beForge)
-    , cdfForgerAnnounces = forgerCDF   (SJust . bfAnnounced . beForge)
-    , cdfForgerSends     = forgerCDF   (SJust . bfSending   . beForge)
-    , cdfForgerAdoptions = forgerCDF   (SJust . bfAdopted   . beForge)
-    , cdfPeerNotices     = observerCDF (SJust . boNoticed)   earliest "noticed"
-    , cdfPeerRequests    = observerCDF (SJust . boRequested) each "requested"
-    , cdfPeerFetches     = observerCDF (SJust . boFetched)   each "fetched"
-    , cdfPeerAnnounces   = observerCDF boAnnounced           each "announced"
-    , cdfPeerSends       = observerCDF boSending             each "sending"
-    , cdfPeerAdoptions   = observerCDF boAdopted             each "adopted"
+    , cdfForgerForge     = forgerCDF   (SJust . bfForged    . beForge)
+    , cdfForgerAnnounce  = forgerCDF   (SJust . bfAnnounced . beForge)
+    , cdfForgerSend      = forgerCDF   (SJust . bfSending   . beForge)
+    , cdfForgerAdoption  = forgerCDF   (SJust . bfAdopted   . beForge)
+    , cdfPeerNotice      = observerCDF (SJust . boNoticed)   earliest "noticed"
+    , cdfPeerRequest     = observerCDF (SJust . boRequested) each "requested"
+    , cdfPeerFetch       = observerCDF (SJust . boFetched)   each "fetched"
+    , cdfPeerAnnounce    = observerCDF boAnnounced           each "announced"
+    , cdfPeerSend        = observerCDF boSending             each "sending"
+    , cdfPeerAdoption    = observerCDF boAdopted             each "adopted"
     , bpPropagation      = Map.fromList
       [ ( T.pack $ printf "cdf%.2f" p'
         , forgerCDF (SJust . unI . projectCDF' "bePropagation" p . bePropagation))
       | p@(Centile p') <- adoptionCentiles <> [Centile 1.0] ]
-    , cdfBlockBattles        = forgerCDF   (SJust . unCount . beForks)
-    , cdfBlockSizes          = forgerCDF   (SJust . bfBlockSize . beForge)
+    , cdfBlockBattle         = forgerCDF   (SJust . unCount . beForks)
+    , cdfBlockSize           = forgerCDF   (SJust . bfBlockSize . beForge)
     , bpVersion              = getLocliVersion
-    , cdfBlocksPerHost       = cdf stdCentiles (blockStats <&> unCount
-                                                . bsTotal)
-    , cdfBlocksFilteredRatio = cdf stdCentiles (blockStats <&>
+    , cdfBlocksPerHost       = cdf stdCentiles (hostBlockStats <&> unCount
+                                                . hbsTotal)
+    , cdfBlocksFilteredRatio = cdf stdCentiles (hostBlockStats <&>
                                                 uncurry ((/) `on`
                                                          fromIntegral . unCount)
-                                                . (bsFiltered &&& bsChained)
+                                                . (hbsFiltered &&& hbsChained)
                                                 & filter (not . isNaN))
-    , cdfBlocksChainedRatio  = cdf stdCentiles (blockStats <&>
+    , cdfBlocksChainedRatio  = cdf stdCentiles (hostBlockStats <&>
                                                 uncurry ((/) `on`
                                                          fromIntegral . unCount)
-                                                . (bsChained &&& bsTotal)
+                                                . (hbsChained &&& hbsTotal)
                                                 & filter (not . isNaN))
     }
  where
-   blockStats = Map.elems cBlockStats
+   hostBlockStats = Map.elems cHostBlockStats
 
    analysisChain :: [BlockEvents]
    analysisChain = filter (all snd . beAcceptance) cMainChain
@@ -676,7 +687,7 @@ blockPropMachEventsStep run@Run{genesis} (JsonLogfile fp) mv@MachView{..} lo = c
   LogObject{loAt, loHost, loBody=LOChainSyncServerSendHeader{loBlock}} ->
     let mbe0 = getBlock loBlock
                & fromMaybe (fail loHost loBlock $ BPEUnexpectedAsFirst Announce)
-    in if isSJust (mbeAnnounced mbe0) then mv else
+    in if isSJust (mapMbeMayNE bfeAnnounced boeAnnounced mbe0) then mv else
       bimapMbe
       (\x -> x { bfeAnnounced=SJust loAt })
       (\x -> x { boeAnnounced=SJust loAt })
