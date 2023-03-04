@@ -88,6 +88,7 @@ data BlockProp f
     , cdfForgerAnnounce      :: !(CDF f NominalDiffTime)
     , cdfForgerAdoption      :: !(CDF f NominalDiffTime)
     , cdfForgerSend          :: !(CDF f NominalDiffTime)
+    , cdfForgerAnnounceCum   :: !(CDF f NominalDiffTime)
     , cdfPeerNotice          :: !(CDF f NominalDiffTime)
     , cdfPeerRequest         :: !(CDF f NominalDiffTime)
     , cdfPeerFetch           :: !(CDF f NominalDiffTime)
@@ -175,6 +176,7 @@ data ForgerEvents a
   , bfeMemSnap      :: !(SMaybe a)
   , bfeForged       :: !(SMaybe a)
   , bfeAnnounced    :: !(SMaybe a)
+  , bfeAnnouncedCum :: !(SMaybe a)
   , bfeSending      :: !(SMaybe a)
   , bfeAdopted      :: !(SMaybe a)
   , bfeChainDelta   :: !Int
@@ -219,6 +221,7 @@ data BlockForge
   , bfMemSnap      :: !(SMaybe NominalDiffTime) -- ^ Since ticked
   , bfForged       :: !NominalDiffTime -- ^ Since ticked OR loop start
   , bfAnnounced    :: !NominalDiffTime -- ^ Since forging
+  , bfAnnouncedCum :: !NominalDiffTime -- ^ Since slot start
   , bfSending      :: !NominalDiffTime -- ^ Since announcement
   , bfAdopted      :: !NominalDiffTime -- ^ Since announcement
   , bfChainDelta   :: !Int             -- ^ ChainDelta during adoption
@@ -238,6 +241,7 @@ allBlockForgeTimes  f BlockForge{..}
   <> smaybe mempty (f "bfMemSnap")  bfMemSnap
   <>                f "bfForged"    bfForged
   <>                f "bfAnnounced" bfAnnounced
+  <>                f "bfAnnouncedCum" bfAnnouncedCum
   <>                f "bfSending"   bfSending
   <>                f "bfAdopted"   bfAdopted
 

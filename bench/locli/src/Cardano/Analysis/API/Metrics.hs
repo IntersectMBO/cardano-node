@@ -219,7 +219,7 @@ bpFieldsControl, bpFieldsForger, bpFieldsPeers, bpFieldsEndToEnd, bpFieldsEndToE
 bpFieldsControl =
   [ "cdfBlocksPerHost", "cdfBlocksFilteredRatio", "cdfBlocksChainedRatio", "cdfBlockBattle", "cdfBlockSize" ]
 bpFieldsForger =
-  [ "cdfForgerStart", "cdfForgerBlkCtx", "cdfForgerLgrState", "cdfForgerLgrView", "cdfForgerLead", "cdfForgerTicked", "cdfForgerMemSnap", "cdfForgerForge", "cdfForgerAnnounce", "cdfForgerSend", "cdfForgerAdoption" ]
+  [ "cdfForgerStart", "cdfForgerBlkCtx", "cdfForgerLgrState", "cdfForgerLgrView", "cdfForgerLead", "cdfForgerTicked", "cdfForgerMemSnap", "cdfForgerForge", "cdfForgerAnnounce", "cdfForgerSend", "cdfForgerAdoption", "cdfForgerAnnounceCum" ]
 bpFieldsPeers =
   [ "cdfPeerNotice", "cdfPeerRequest", "cdfPeerFetch", "cdfPeerAnnounce", "cdfPeerSend", "cdfPeerAdoption" ]
 bpFieldsEndToEnd =
@@ -229,7 +229,7 @@ bpFieldsEndToEndBrief =
 
 instance CDFFields BlockProp p where
   cdfFields =
-      fGrp ",---------------- Forger event Δt: -----------------."
+      fGrp ",------------------- Forger event Δt: ---------------------."
             W4 Sec P3 Log Free
     [ fGrp' "cdfForgerStart"         "Loop" (DDeltaT cdfForgerStart)
       "Started forge loop iteration"
@@ -264,7 +264,7 @@ instance CDFFields BlockProp p where
 
     , fGrp' "cdfForgerAnnounce"      "Anno" (DDeltaT cdfForgerAnnounce)
       "Forged to announced"
-      "Time between block forging completion and announcement (ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock)"
+      "Time between block forging completion and header announcement (ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock)"
 
     , fGrp' "cdfForgerSend"          "Send" (DDeltaT cdfForgerSend)
       "Forged to sending"
@@ -273,6 +273,10 @@ instance CDFFields BlockProp p where
     , fGrp' "cdfForgerAdoption"      "Adop" (DDeltaT cdfForgerAdoption)
       "Forged to self-adopted"
       "Time between block forging completion and adoption (TraceAdoptedBlock)"
+
+    , fGrp' "cdfForgerAnnounceCum"   "AnnC" (DDeltaT cdfForgerAnnounceCum)
+      "Slot start to announced"
+      "Time since slot start until header announcement (ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock)"
     ]
    <> fGrp ",------ Peer event Δt: ------."
             W4 Sec P3 Log Free
@@ -372,6 +376,7 @@ instance TimelineFields BlockEvents where
     , fGrp' "bfAnnounced"   "Announ" (IDeltaT (bfAnnounced.beForge)) "" ""
     , fGrp' "bfSending"     "Sendin" (IDeltaT (bfSending  .beForge)) "" ""
     , fGrp' "bfAdopted"     "Adopt"  (IDeltaT (bfAdopted  .beForge)) "" ""
+    , fGrp' "bfAnnouncedCum" "AnnCum"(IDeltaT (bfAnnouncedCum.beForge)) "" ""
     ]
    <> fGrp "-- Peer event Δt averages: --"
             W4 Sec P3 Log Free

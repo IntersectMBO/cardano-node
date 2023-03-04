@@ -67,6 +67,7 @@ summariseMultiBlockProp centiles bs@(headline:_) = do
   cdfForgerAnnounce         <- cdf2OfCDFs comb $ bs <&> cdfForgerAnnounce
   cdfForgerSend             <- cdf2OfCDFs comb $ bs <&> cdfForgerSend
   cdfForgerAdoption         <- cdf2OfCDFs comb $ bs <&> cdfForgerAdoption
+  cdfForgerAnnounceCum      <- cdf2OfCDFs comb $ bs <&> cdfForgerAnnounceCum
   cdfPeerNotice             <- cdf2OfCDFs comb $ bs <&> cdfPeerNotice
   cdfPeerRequest            <- cdf2OfCDFs comb $ bs <&> cdfPeerRequest
   cdfPeerFetch              <- cdf2OfCDFs comb $ bs <&> cdfPeerFetch
@@ -505,6 +506,7 @@ blockProp run@Run{genesis} Chain{..} = do
     , cdfForgerMemSnap   = forgerCDF           (bfMemSnap   . beForge)
     , cdfForgerForge     = forgerCDF   (SJust . bfForged    . beForge)
     , cdfForgerAnnounce  = forgerCDF   (SJust . bfAnnounced . beForge)
+    , cdfForgerAnnounceCum = forgerCDF   (SJust . bfAnnouncedCum . beForge)
     , cdfForgerSend      = forgerCDF   (SJust . bfSending   . beForge)
     , cdfForgerAdoption  = forgerCDF   (SJust . bfAdopted   . beForge)
     , cdfPeerNotice      = observerCDF (SJust . boNoticed)   earliest "noticed"
@@ -659,6 +661,7 @@ blockPropMachEventsStep run@Run{genesis} (JsonLogfile fp) mv@MachView{..} lo = c
         , bfeMemSnap      = mvMemSnap
         , bfeForged       = SJust loAt
         , bfeAnnounced    = SNothing
+        , bfeAnnouncedCum = SNothing
         , bfeSending      = SNothing
         , bfeAdopted      = SNothing
         , bfeChainDelta   = 0
@@ -749,6 +752,7 @@ deltifyEvents (MFE x@ForgerEvents{..}) =
                    <|>
                    (diffUTCTime <$> bfeForged    <*> bfeLeading)
   , bfeAnnounced = diffUTCTime <$> bfeAnnounced <*> bfeForged
+  , bfeAnnouncedCum = bfeAnnounced <&> (`sinceSlot` bfeSlotStart)
   , bfeSending   = diffUTCTime <$> bfeSending   <*> bfeForged
   , bfeAdopted   = diffUTCTime <$> bfeAdopted   <*> bfeForged
   } & \case
