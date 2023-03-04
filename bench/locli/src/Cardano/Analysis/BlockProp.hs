@@ -68,7 +68,8 @@ summariseMultiBlockProp centiles bs@(headline:_) = do
   cdfForgerSend             <- cdf2OfCDFs comb $ bs <&> cdfForgerSend
   cdfForgerAdoption         <- cdf2OfCDFs comb $ bs <&> cdfForgerAdoption
   cdfForgerAnnounceCum      <- cdf2OfCDFs comb $ bs <&> cdfForgerAnnounceCum
-  cdfPeerNotice             <- cdf2OfCDFs comb $ bs <&> cdfPeerNotice
+  cdfPeerNoticeFirst        <- cdf2OfCDFs comb $ bs <&> cdfPeerNoticeFirst
+  cdfPeerFetchFirst         <- cdf2OfCDFs comb $ bs <&> cdfPeerFetchFirst
   cdfPeerRequest            <- cdf2OfCDFs comb $ bs <&> cdfPeerRequest
   cdfPeerFetch              <- cdf2OfCDFs comb $ bs <&> cdfPeerFetch
   cdfPeerAdoption           <- cdf2OfCDFs comb $ bs <&> cdfPeerAdoption
@@ -436,18 +437,19 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
         , beObservations =
             catSMaybes $
             os <&> \ObserverEvents{..}->
-              BlockObservation
-                <$> SJust boeHost
-                <*> SJust bfeSlotStart
-                <*> boeNoticed
-                <*> boeRequested
-                <*> boeFetched
-                <*> SJust boeAnnounced
-                <*> SJust boeSending
-                <*> SJust boeAdopted
-                <*> SJust boeChainDelta
-                <*> SJust boeErrorsCrit
-                <*> SJust boeErrorsSoft
+              do
+                let boObserver   = boeHost
+                    boSlotStart  = bfeSlotStart
+                    boAnnounced  = boeAnnounced
+                    boSending    = boeSending
+                    boAdopted    = boeAdopted
+                    boChainDelta = boeChainDelta
+                    boErrorsCrit = boeErrorsCrit
+                    boErrorsSoft = boeErrorsSoft
+                boNoticed   <- boeNoticed
+                boRequested <- boeRequested
+                boFetched   <- boeFetched
+                pure BlockObservation{..}
         , bePropagation  = cdf adoptionCentiles adoptions
         , beOtherBlocks  = otherBlocks <&>
                            \(ForgerEvents{bfeBlock}, _) -> bfeBlock
@@ -509,7 +511,8 @@ blockProp run@Run{genesis} Chain{..} = do
     , cdfForgerAnnounceCum = forgerCDF   (SJust . bfAnnouncedCum . beForge)
     , cdfForgerSend      = forgerCDF   (SJust . bfSending   . beForge)
     , cdfForgerAdoption  = forgerCDF   (SJust . bfAdopted   . beForge)
-    , cdfPeerNotice      = observerCDF (SJust . boNoticed)   earliest "noticed"
+    , cdfPeerNoticeFirst = observerCDF (SJust . boNoticed)    earliest "noticed"
+    , cdfPeerFetchFirst  = observerCDF (SJust . boFetchedCum) earliest "fetched"
     , cdfPeerRequest     = observerCDF (SJust . boRequested) each "requested"
     , cdfPeerFetch       = observerCDF (SJust . boFetched)   each "fetched"
     , cdfPeerAnnounce    = observerCDF boAnnounced           each "announced"
@@ -537,6 +540,9 @@ blockProp run@Run{genesis} Chain{..} = do
     }
  where
    hostBlockStats = Map.elems cHostBlockStats
+
+   boFetchedCum :: BlockObservation -> NominalDiffTime
+   boFetchedCum BlockObservation{..} = boNoticed + boRequested + boFetched
 
    analysisChain :: [BlockEvents]
    analysisChain = filter (all snd . beAcceptance) cMainChain

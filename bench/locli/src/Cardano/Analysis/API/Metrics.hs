@@ -221,7 +221,7 @@ bpFieldsControl =
 bpFieldsForger =
   [ "cdfForgerStart", "cdfForgerBlkCtx", "cdfForgerLgrState", "cdfForgerLgrView", "cdfForgerLead", "cdfForgerTicked", "cdfForgerMemSnap", "cdfForgerForge", "cdfForgerAnnounce", "cdfForgerSend", "cdfForgerAdoption", "cdfForgerAnnounceCum" ]
 bpFieldsPeers =
-  [ "cdfPeerNotice", "cdfPeerRequest", "cdfPeerFetch", "cdfPeerAnnounce", "cdfPeerSend", "cdfPeerAdoption" ]
+  [ "cdfPeerNoticeFirst", "cdfPeerFetchFirst", "cdfPeerRequest", "cdfPeerFetch", "cdfPeerAnnounce", "cdfPeerSend", "cdfPeerAdoption" ]
 bpFieldsEndToEnd =
   adoptionCentiles      <&> FieldName . renderAdoptionCentile
 bpFieldsEndToEndBrief =
@@ -229,7 +229,7 @@ bpFieldsEndToEndBrief =
 
 instance CDFFields BlockProp p where
   cdfFields =
-      fGrp ",------------------- Forger event Δt: ---------------------."
+      fGrp ",------------------ Forger event Δt: --------------------."
             W4 Sec P3 Log Free
     [ fGrp' "cdfForgerStart"         "Loop" (DDeltaT cdfForgerStart)
       "Started forge loop iteration"
@@ -280,9 +280,13 @@ instance CDFFields BlockProp p where
     ]
    <> fGrp ",------ Peer event Δt: ------."
             W4 Sec P3 Log Free
-    [ fGrp' "cdfPeerNotice"          "Noti" (DDeltaT cdfPeerNotice)
+    [ fGrp' "cdfPeerNoticeFirst"     "NtiF" (DDeltaT cdfPeerNoticeFirst)
       "First peer notice"
       "Time it took for the fastest peer to notice the block (ChainSyncClientEvent.TraceDownloadedHeader), since block's slot start"
+
+    , fGrp' "cdfPeerFetchFirst"      "FetF" (DDeltaT cdfPeerFetchFirst)
+      "First peer fetch"
+      "Time it took for the fastest peer to fetch the block (BlockFetchClient.CompletedBlockFetch), since block's slot start"
 
     , fGrp' "cdfPeerRequest"         "Requ" (DDeltaT cdfPeerRequest)
       "Notice to fetch request"
