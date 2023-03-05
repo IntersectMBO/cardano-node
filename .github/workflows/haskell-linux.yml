@@ -4,6 +4,11 @@ on:
   push:
   create:
 
+# Limit concurrent runs of this workflow within a single PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   linux_ci:
     runs-on: ${{ matrix.os }}
@@ -11,10 +16,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Add more elements to this list to run multiple instances of the build in CI.  Increasing the
-        # number instances is a good way to trigger flaky build failures
-        n: [1]
-
         ghc: ["8.10.7", "9.2.5"]
         cabal: ["3.8.1.0"]
         os: [ubuntu-latest]
@@ -163,7 +164,7 @@ jobs:
       if: ${{ always() }}
       continue-on-error: true
       with:
-        name: chairman-test-artifacts-${{ matrix.os }}-${{ matrix.n }}-${{ matrix.ghc }}
+        name: chairman-test-artifacts-${{ matrix.os }}-${{ matrix.ghc }}
         path: ${{ runner.temp }}/chairman/
 
     # Uncomment the following back in for debugging. Remember to launch a `pwsh` from
