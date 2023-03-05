@@ -45,7 +45,7 @@ library
                       , exceptions
                       , filepath
                       , hedgehog
-                      , hedgehog-extras
+                      , hedgehog-extras ^>= 0.4
                       , optparse-applicative-fork
                       , ouroboros-network
                       , process
@@ -130,7 +130,7 @@ test-suite cardano-testnet-tests
                       , directory
                       , filepath
                       , hedgehog
-                      , hedgehog-extras
+                      , hedgehog-extras ^>= 0.4
                       , process
                       , tasty
                       , text

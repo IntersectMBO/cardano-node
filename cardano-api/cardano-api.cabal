@@ -221,7 +221,7 @@ test-suite cardano-api-test
                       , cardano-slotting ^>= 0.1
                       , containers
                       , hedgehog
-                      , hedgehog-extras
+                      , hedgehog-extras ^>= 0.4
                       , mtl
                       , ouroboros-consensus
                       , ouroboros-consensus-shelley

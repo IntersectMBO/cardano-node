@@ -186,7 +186,7 @@ test-suite cardano-cli-test
                       , exceptions
                       , filepath
                       , hedgehog
-                      , hedgehog-extras
+                      , hedgehog-extras ^>= 0.4
                       , parsec
                       , text
                       , time
@@ -233,7 +233,7 @@ test-suite cardano-cli-golden
                       , exceptions
                       , filepath
                       , hedgehog ^>= 1.2
-                      , hedgehog-extras
+                      , hedgehog-extras ^>= 0.4
                       , text
                       , time
                       , transformers
