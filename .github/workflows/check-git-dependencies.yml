@@ -2,6 +2,7 @@ name: Check git dependencies
 
 on:
   push:
+  merge_group:
 
 # Limit concurrent runs of this workflow within a single PR
 concurrency:

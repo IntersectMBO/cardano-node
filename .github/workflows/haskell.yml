@@ -2,7 +2,7 @@ name: Haskell Windows & Mac CI
 
 on:
   push:
-  create:
+  merge_group:
 
 # Limit concurrent runs of this workflow within a single PR
 concurrency:
