@@ -3787,11 +3787,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1675397182,
-        "narHash": "sha256-uVqKdtxUDSbLJfaHEs+t+wc9K4iMfPVmcYF5psbK4rI=",
+        "lastModified": 1677173339,
+        "narHash": "sha256-d+MnGMZn9NYgu7mD6YqvDLCKii9uDwcVea72LmMy8NI=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "03a6755865b7461b3b75dc34c3dd2d5e74920196",
+        "rev": "fca95a0183a52e601281d3a7d6c664cb5853f270",
         "type": "github"
       },
       "original": {

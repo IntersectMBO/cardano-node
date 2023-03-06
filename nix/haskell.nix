@@ -254,7 +254,7 @@ in
 project.appendOverlays (with haskellLib.projectOverlays; [
   projectComponents
   (final: prev:
-    let inherit (final.pkgs) lib gitrev; in {
+    let inherit (final.pkgs) lib gitrev setGitRevForPaths; in {
       profiled = final.appendModule {
         modules = [{
           enableLibraryProfiling = true;
@@ -287,29 +287,18 @@ project.appendOverlays (with haskellLib.projectOverlays; [
       # add passthru and gitrev to hsPkgs:
       hsPkgs = lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))
         (path: value:
-          if (lib.isAttrs value) then
-            lib.recursiveUpdate
-              (if lib.elemAt path 2 == "exes" && lib.elem (lib.elemAt path 3) [ "cardano-node" "cardano-cli" ] then
-              # Stamp executables with version info.
-              # Done outside the haskell.nix derivation to avoid compilation and tests depending on rev.
-                final.pkgs.buildPackages.runCommand value.name
-                  {
-                    inherit (value) exeName exePath meta passthru;
-                  } ''
-                  mkdir -p $out
-                  cp --no-preserve=timestamps --recursive ${value}/* $out/
-                  chmod -R +w $out/bin
-                  ${final.pkgs.pkgsBuildBuild.haskellBuildUtils}/bin/set-git-rev "${gitrev}" $out/bin/*
-                ''
-              else value)
-              {
-                # Also add convenient passthru to some alternative compilation configurations:
-                passthru = {
-                  profiled = lib.getAttrFromPath path final.profiled.hsPkgs;
-                  asserted = lib.getAttrFromPath path final.asserted.hsPkgs;
-                  eventlogged = lib.getAttrFromPath path final.eventlogged.hsPkgs;
-                };
-              } else value)
-        prev.hsPkgs;
+          if (lib.isAttrs value)
+          then lib.recursiveUpdate value {
+              # Also add convenient passthru to some alternative compilation configurations:
+              passthru = {
+                profiled = lib.getAttrFromPath path final.profiled.hsPkgs;
+                asserted = lib.getAttrFromPath path final.asserted.hsPkgs;
+                eventlogged = lib.getAttrFromPath path final.eventlogged.hsPkgs;
+              };
+            }
+          else value)
+        (setGitRevForPaths gitrev [
+          "cardano-node.components.exes.cardano-node"
+          "cardano-cli.components.exes.cardano-cli"] prev.hsPkgs);
     })
 ])
