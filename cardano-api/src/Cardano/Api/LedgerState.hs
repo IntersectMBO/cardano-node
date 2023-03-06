@@ -22,6 +22,8 @@ module Cardano.Api.LedgerState
       , LedgerStateMary
       , LedgerStateAlonzo
       )
+  , encodeLedgerState
+  , decodeLedgerState
   , initialLedgerState
   , applyBlock
   , ValidationMode(..)
@@ -52,6 +54,7 @@ module Cardano.Api.LedgerState
 
 import           Prelude
 
+import qualified Cardano.Binary as CBOR
 import           Control.Exception
 import           Control.Monad (when)
 import           Control.Monad.Trans.Class
@@ -78,7 +81,7 @@ import qualified Data.Sequence as Seq
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Sharing (FromSharedCBOR, Interns, Share)
-import           Data.SOP.Strict (NP (..))
+import           Data.SOP.Strict (K (..), NP (..), fn, (:.:) (Comp))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -140,6 +143,7 @@ import           Cardano.Slotting.Slot (WithOrigin (At, Origin))
 import qualified Cardano.Slotting.Slot as Slot
 import qualified Ouroboros.Consensus.Block.Abstract as Consensus
 import qualified Ouroboros.Consensus.Byron.Ledger.Block as Byron
+import qualified Ouroboros.Consensus.Byron.Ledger.Ledger as Byron
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import qualified Ouroboros.Consensus.Cardano.CanHardFork as Consensus
@@ -148,6 +152,7 @@ import qualified Ouroboros.Consensus.Config as Consensus
 import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
 import qualified Ouroboros.Consensus.HardFork.Combinator.AcrossEras as HFC
 import qualified Ouroboros.Consensus.HardFork.Combinator.Basics as HFC
+import qualified Ouroboros.Consensus.HardFork.Combinator.Serialisation.Common as HFC
 import qualified Ouroboros.Consensus.Ledger.Abstract as Ledger
 import           Ouroboros.Consensus.Ledger.Basics (LedgerResult (lrEvents), lrResult)
 import qualified Ouroboros.Consensus.Ledger.Extended as Ledger
@@ -863,6 +868,31 @@ newtype LedgerState = LedgerState
                   (HFC.HardForkBlock
                     (Consensus.CardanoEras Consensus.StandardCrypto))
   }
+
+encodeLedgerState :: LedgerState -> CBOR.Encoding
+encodeLedgerState (LedgerState (HFC.HardForkLedgerState st)) =
+  HFC.encodeTelescope
+    (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* Nil)
+    st
+  where
+    byron = fn (K . Byron.encodeByronLedgerState)
+    shelley = fn (K . Shelley.encodeShelleyLedgerState)
+    allegra = fn (K . Shelley.encodeShelleyLedgerState)
+    mary = fn (K . Shelley.encodeShelleyLedgerState)
+    alonzo = fn (K . Shelley.encodeShelleyLedgerState)
+    babbage = fn (K . Shelley.encodeShelleyLedgerState)
+
+decodeLedgerState :: forall s. CBOR.Decoder s LedgerState
+decodeLedgerState =
+  LedgerState . HFC.HardForkLedgerState
+    <$> HFC.decodeTelescope (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* Nil)
+  where
+    byron = Comp Byron.decodeByronLedgerState
+    shelley = Comp Shelley.decodeShelleyLedgerState
+    allegra = Comp Shelley.decodeShelleyLedgerState
+    mary = Comp Shelley.decodeShelleyLedgerState
+    alonzo = Comp Shelley.decodeShelleyLedgerState
+    babbage = Comp Shelley.decodeShelleyLedgerState
 
 type LedgerStateEvents = (LedgerState, [LedgerEvent])
 

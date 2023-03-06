@@ -512,6 +512,8 @@ module Cardano.Api (
     envSecurityParam,
     LedgerState(..),
     initialLedgerState,
+    encodeLedgerState,
+    decodeLedgerState,
     applyBlock,
     ValidationMode(..),
 
