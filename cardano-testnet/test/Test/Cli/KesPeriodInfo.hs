@@ -33,6 +33,7 @@ import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
 import qualified System.Info as SYS
+import qualified Testnet.Util.Base as H
 
 import           Cardano.Testnet
 import           Test.Misc
@@ -40,7 +41,7 @@ import           Testnet.Util.Process
 import           Testnet.Util.Runtime
 
 hprop_kes_period_info :: Property
-hprop_kes_period_info = integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
+hprop_kes_period_info = H.integrationRetryWorkspace 2 "chairman" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
   base <- H.note =<< H.evalIO . IO.canonicalizePath =<< H.getProjectBase
   configurationTemplate

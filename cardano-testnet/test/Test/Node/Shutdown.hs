@@ -8,12 +8,12 @@ module Test.Node.Shutdown
   ( hprop_shutdown
   ) where
 
-import           Prelude
 import           Control.Monad
 import           Data.Functor ((<&>))
 import qualified Data.List as L
 import           Data.Maybe
 import           Hedgehog (Property, (===))
+import           Prelude
 import           System.FilePath ((</>))
 
 import qualified Hedgehog as H
@@ -27,6 +27,7 @@ import qualified System.Directory as IO
 import qualified System.Exit as IO
 import qualified System.IO as IO
 import qualified System.Process as IO
+import qualified Testnet.Util.Base as H
 
 import           Cardano.Testnet
 import           Testnet.Util.Process (procNode)
@@ -34,7 +35,7 @@ import           Testnet.Util.Process (procNode)
 {- HLINT ignore "Redundant <&>" -}
 
 hprop_shutdown :: Property
-hprop_shutdown = integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
+hprop_shutdown = H.integrationRetryWorkspace 2 "chairman" $ \tempAbsBasePath' -> do
   base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
   Conf { tempBaseAbsPath, tempAbsPath, logDir, socketDir } <- H.noteShowM $

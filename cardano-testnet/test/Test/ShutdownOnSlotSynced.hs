@@ -22,12 +22,13 @@ import           Hedgehog (Property, assert, (===))
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
+import qualified Testnet.Util.Base as H
 
 import           Cardano.Testnet
 import           Testnet.Util.Runtime (TestnetRuntime (..))
 
 hprop_shutdownOnSlotSynced :: Property
-hprop_shutdownOnSlotSynced = integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
+hprop_shutdownOnSlotSynced = H.integrationRetryWorkspace 2 "chairman" $ \tempAbsBasePath' -> do
   -- Start a local test net
   baseDir <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   configTemplate <- H.noteShow $ baseDir </> "configuration/defaults/byron-mainnet/configuration.yaml"

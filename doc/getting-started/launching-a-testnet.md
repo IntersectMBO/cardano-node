@@ -45,7 +45,7 @@ $ cabal run cardano-testnet shelley
 ...
        ┏━━ testnet/Testnet/Run.hs ━━━
     25 ┃ testnetProperty :: (H.Conf -> H.Integration ()) -> H.Property
-    26 ┃ testnetProperty tn = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsPath' -> do
+    26 ┃ testnetProperty tn = H.integrationRetryWorkspace 2 "chairman" $ \tempAbsPath' -> do
        ┃ │ Workspace: /private/var/folders/zh/ln41q4zs52x2fd61rxccmq640000gn/T/chairman/test-acaaa345c8802769
     27 ┃   conf@H.Conf {..} <- H.mkConf tempAbsPath' 42
     28 ┃
