@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ghc: ["8.10.7", "9.2.7"]
+        ghc: ["8.10.7", "9.2.7", "9.6.1"]
         cabal: ["3.10.1.0"]
         os: [ubuntu-latest]
 
@@ -51,6 +51,9 @@ jobs:
     - name: Workaround runner image issue
       # https://github.com/actions/runner-images/issues/7061
       run: sudo chown -R $USER /usr/local/.ghcup
+
+    - name: Add GHCUp Pre-release channel
+      run: ghcup config add-release-channel https://raw.githubusercontent.com/haskell/ghcup-metadata/master/ghcup-prereleases-0.0.7.yaml
 
     - name: Install Haskell
       uses: input-output-hk/setup-haskell@v1
