@@ -310,7 +310,7 @@ instance CDFFields BlockProp p where
     ]
    <> [ Field (renderAdoptionCentile ct) (r!!i)
                                          (T.take 4 $ T.pack $ printf "%.04f" centi)
-                                        W4 Rto P3 Log Free
+                                        W4 Sec P3 Log Free
         (DDeltaT $
           checkCentile i centi
           . fromMaybe (error $ printf "No centile %d/%f in bpPropagation."
@@ -548,14 +548,14 @@ instance CDFFields MachPerf p where
       "Number of bytes which this process caused to be sent to the storage layer, modulo truncate(), per second"
     ]
 
-   <> fGrp  "CPU-85%span"               W5 Len P0 Lin Free
+   <> fGrp  "CPU-85%span"               W5 Slo P0 Lin Free
     [ fGrp' "cdfSpanLensCpu"        "All" (DInt cdfSpanLensCpu)
       "CPU 85% spans"
-      "Length of over-85% CPU usage peaks"
+      "Length of over-85% CPU usage peaks, slots"
 
     , fGrp' "cdfSpanLensCpuEpoch" "Epoch" (DInt cdfSpanLensCpuEpoch)
       "CPU spans at Ep boundary"
-      "Length of over-85% CPU usage peaks, starting at epoch boundary"
+      "Length of over-85% CPU usage peaks, starting at epoch boundary, slots"
     ]
 
   fieldJSONOverlay f kvs =
