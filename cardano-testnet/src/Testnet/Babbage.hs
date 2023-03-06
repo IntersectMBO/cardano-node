@@ -21,12 +21,14 @@ import           Data.Aeson (encode, object, toJSON, (.=))
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
 import qualified Data.Time.Clock as DTC
+import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.Aeson as J
 import qualified Hedgehog.Extras.Stock.OS as OS
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import           System.FilePath.Posix ((</>))
 import qualified System.Info as OS
+
 
 import           Testnet.Commands.Genesis
 import qualified Testnet.Conf as H
@@ -76,7 +78,11 @@ babbageTestnet testnetOptions H.Conf {..} = do
 
   configurationFile <- H.noteShow $ tempAbsPath </> "configuration.yaml"
 
-  H.readFile configurationTemplate >>= H.writeFile configurationFile
+  case configurationTemplate of
+    Just template -> H.readFile template >>= H.writeFile configurationFile
+    Nothing ->
+      -- TODO: We want to use a default value for the yaml file in this case.
+      H.note "No configuration yaml template provided" >> H.failure
 
   H.rewriteYamlFile (tempAbsPath </> "configuration.yaml") . J.rewriteObject
     $ HM.delete "GenesisFile"

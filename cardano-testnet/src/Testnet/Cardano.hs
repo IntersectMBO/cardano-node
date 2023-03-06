@@ -27,14 +27,18 @@ import           Control.Monad
 import           Control.Monad.IO.Class (MonadIO)
 import           Control.Monad.Trans.Except
 import qualified Data.Aeson as J
+import qualified Data.Aeson.Key as Key
+import           Data.Aeson.KeyMap (KeyMap)
+import qualified Data.Aeson.KeyMap as Aeson
 import qualified Data.ByteString as BS
-import           Data.ByteString.Lazy (ByteString)
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Lazy as HM
 import           Data.List ((\\))
 import qualified Data.List as L
 import qualified Data.Map.Strict as M
 import           Data.Maybe
 import           Data.String
+import           Data.Text (Text)
 import qualified Data.Time.Clock as DTC
 import           Data.Word
 import qualified System.Directory as IO
@@ -66,6 +70,7 @@ import qualified Hedgehog.Extras.Test.Network as H
 import           Testnet.Commands.Genesis
 import           Testnet.Commands.Governance
 import qualified Testnet.Conf as H
+import           Testnet.Options hiding (defaultTestnetOptions)
 import qualified Testnet.Util.Assert as H
 import qualified Testnet.Util.Process as H
 import           Testnet.Util.Process (execCli_)
@@ -148,7 +153,7 @@ startTimeOffsetSeconds :: DTC.NominalDiffTime
 startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
 
 
-mkTopologyConfig :: Int -> [Int] -> Int -> Bool -> ByteString
+mkTopologyConfig :: Int -> [Int] -> Int -> Bool -> LBS.ByteString
 mkTopologyConfig numNodes allPorts port False = J.encode topologyNonP2P
   where
     topologyNonP2P :: NonP2P.NetworkTopology
@@ -207,64 +212,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
 
   let securityParam = 10
 
-  H.readFile configurationTemplate >>= H.writeFile configurationFile
-
-  forkOptions <- pure $ id
-    . HM.insert "EnableLogMetrics" (J.toJSON False)
-    . HM.insert "EnableLogging" (J.toJSON True)
-    . case cardanoEra testnetOptions of
-        Byron -> id
-          . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 1)
-
-        Shelley -> id
-          . HM.insert "TestShelleyHardForkAtEpoch" (J.toJSON @Int 0)
-          . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 2)
-
-        Allegra -> id
-          . HM.insert "TestShelleyHardForkAtEpoch" (J.toJSON @Int 0)
-          . HM.insert "TestAllegraHardForkAtEpoch" (J.toJSON @Int 0)
-          . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 3)
-
-        Mary -> id
-          . HM.insert "TestShelleyHardForkAtEpoch" (J.toJSON @Int 0)
-          . HM.insert "TestAllegraHardForkAtEpoch" (J.toJSON @Int 0)
-          . HM.insert "TestMaryHardForkAtEpoch" (J.toJSON @Int 0)
-          . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 4)
-
-        Alonzo -> id
-          . HM.insert "TestShelleyHardForkAtEpoch" (J.toJSON @Int 0)
-          . HM.insert "TestAllegraHardForkAtEpoch" (J.toJSON @Int 0)
-          . HM.insert "TestMaryHardForkAtEpoch" (J.toJSON @Int 0)
-          . HM.insert "TestAlonzoHardForkAtEpoch" (J.toJSON @Int 0)
-          . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 6)
-
-  -- We're going to use really quick epochs (300 seconds), by using short slots 0.2s
-  -- and K=10, but we'll keep long KES periods so we don't have to bother
-  -- cycling KES keys
-  H.rewriteYamlFile (tempAbsPath </> "configuration.yaml") . J.rewriteObject
-    $ HM.insert "Protocol" (J.toJSON @String "Cardano")
-    . HM.insert "PBftSignatureThreshold" (J.toJSON @Double 0.6)
-    . HM.insert "minSeverity" (J.toJSON @String "Debug")
-    . HM.insert "ByronGenesisFile" (J.toJSON @String "byron/genesis.json")
-    . HM.insert "ShelleyGenesisFile" (J.toJSON @String "shelley/genesis.json")
-    . HM.insert "AlonzoGenesisFile" (J.toJSON @String "shelley/genesis.alonzo.json")
-    . HM.insert "ConwayGenesisFile" (J.toJSON @String "shelley/genesis.conway.json")
-    . HM.insert "RequiresNetworkMagic" (J.toJSON @String "RequiresMagic")
-    . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 6)
-    . HM.insert "LastKnownBlockVersion-Minor" (J.toJSON @Int 0)
-    . HM.insert "TraceBlockchainTime" (J.toJSON True)
-    . HM.delete "GenesisFile"
-    . HM.insert "ExperimentalHardForksEnabled" (J.toJSON @Bool True)
-    . HM.insert "EnableP2P" (J.toJSON @Bool (cardanoEnableP2P testnetOptions))
-    . flip HM.alter "setupScribes"
-        ( fmap
-          . J.rewriteArrayElements
-            . J.rewriteObject
-              . HM.insert "scFormat"
-                $ case cardanoNodeLoggingFormat testnetOptions of
-                  NodeLoggingFormatAsJson -> "ScJson"
-                  NodeLoggingFormatAsText -> "ScText")
-    . forkOptions
+  H.createDirectoryIfMissing_ logDir
 
   forM_ allNodeNames $ \node -> do
     H.createDirectoryIfMissing_ $ tempAbsPath </> node
@@ -700,15 +648,22 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   H.assertIO . IO.doesFileExist $ tempAbsPath </> "tx1.tx"
 
   -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
+  -- TODO: These genesis filepaths should not be hardcoded. Using the cli as a library
+  -- rather as an executable will allow us to get the genesis files paths in a more
+  -- direct fashion.
   byronGenesisHash <- getByronGenesisHash $ tempAbsPath </> "byron/genesis.json"
-  shelleyGenesisHash <- getShelleyGenesisHash $ tempAbsPath </> "shelley/genesis.json"
-  alonzoGenesisHash <- getShelleyGenesisHash $ tempAbsPath </> "shelley/genesis.alonzo.json"
-  conwayGenesisHash <- getShelleyGenesisHash $ tempAbsPath </> "shelley/genesis.conway.json"
-  H.rewriteYamlFile (tempAbsPath </> "configuration.yaml") . J.rewriteObject
-    $ HM.insert "ByronGenesisHash" byronGenesisHash
-    . HM.insert "ShelleyGenesisHash" shelleyGenesisHash
-    . HM.insert "AlonzoGenesisHash" alonzoGenesisHash
-    . HM.insert "ConwayGenesisHash" conwayGenesisHash
+  shelleyGenesisHash <- getShelleyGenesisHash (tempAbsPath </> "shelley/genesis.json") "ShelleyGenesisHash"
+  alonzoGenesisHash <- getShelleyGenesisHash (tempAbsPath </> "shelley/genesis.alonzo.json") "AlonzoGenesisHash"
+  conwayGenesisHash <- getShelleyGenesisHash (tempAbsPath </> "shelley/genesis.conway.json") "ConwayGenesisHash"
+
+  -- TODO: We default to defaultYamlConfig however to enable forking to the appropriate era, we need
+  -- to be able to create the appropriate default config value, based on the era.
+  -- i.e defaultConfigValue :: CardanoEra era -> Aeson.Value. Do this in a separate PR.
+
+  let finalYamlConfig :: LBS.ByteString
+      finalYamlConfig = J.encode $ J.Object $ mconcat [byronGenesisHash, shelleyGenesisHash, alonzoGenesisHash, conwayGenesisHash, defaultYamlConfig]
+
+  H.evalIO $ LBS.writeFile (tempAbsPath </> "configuration.yaml") finalYamlConfig
 
   --------------------------------
   -- Launch cluster of three nodes
@@ -768,15 +723,15 @@ cardanoTestnet testnetOptions H.Conf {..} = do
 
 -- * Generate hashes for genesis.json files
 
-getByronGenesisHash :: (H.MonadTest m, MonadIO m) => FilePath -> m J.Value
+getByronGenesisHash :: (H.MonadTest m, MonadIO m) => FilePath -> m (KeyMap J.Value)
 getByronGenesisHash path = do
   e <- runExceptT $ readGenesisData path
   (_, genesisHash) <- H.leftFail e
-  let genesisHash' = J.toJSON $ unGenesisHash genesisHash
-  pure genesisHash'
+  let genesisHash' = unGenesisHash genesisHash
+  pure . Aeson.singleton "ByronGenesisHash" $ J.toJSON genesisHash'
 
-getShelleyGenesisHash :: (H.MonadTest m, MonadIO m) => FilePath -> m J.Value
-getShelleyGenesisHash path = do
-  content <- H.evalIO $ BS.readFile path
+getShelleyGenesisHash :: (H.MonadTest m, MonadIO m) => FilePath -> Text -> m (KeyMap J.Value)
+getShelleyGenesisHash path key = do
+  content <- H.evalIO  $ BS.readFile path
   let genesisHash = Cardano.Crypto.Hash.Class.hashWith id content :: Cardano.Crypto.Hash.Class.Hash Cardano.Crypto.Hash.Blake2b.Blake2b_256 BS.ByteString
-  pure $ J.toJSON genesisHash
+  pure . Aeson.singleton (Key.fromText key) $ J.toJSON genesisHash

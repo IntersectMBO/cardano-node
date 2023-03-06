@@ -53,6 +53,7 @@ library
                       , random
                       , resourcet
                       , safe-exceptions
+                      , scientific
                       , stm
                       , tasty
                       , tasty-expected-failure
@@ -61,6 +62,7 @@ library
                       , time
                       , transformers
                       , unordered-containers
+                      , vector
 
   hs-source-dirs:       src
   exposed-modules:      Cardano.Testnet
