@@ -41,7 +41,7 @@ import           Testnet.Util.Process
 import           Testnet.Util.Runtime
 
 hprop_kes_period_info :: Property
-hprop_kes_period_info = H.integrationRetryWorkspace 2 "chairman" $ \tempAbsBasePath' -> do
+hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
   base <- H.note =<< H.evalIO . IO.canonicalizePath =<< H.getProjectBase
   configurationTemplate

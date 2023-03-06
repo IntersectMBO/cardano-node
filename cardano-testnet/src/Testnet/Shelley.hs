@@ -440,7 +440,7 @@ shelleyTestnet testnetOptions H.Conf {..} = do
     }
 
 hprop_testnet :: H.Property
-hprop_testnet = H.integrationRetryWorkspace 2 "chairman" $ \tempAbsPath' -> do
+hprop_testnet = H.integrationRetryWorkspace 2 "shelley-testnet" $ \tempAbsPath' -> do
   base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
   conf <- H.mkConf (H.ProjectBase base) (H.YamlFilePath configurationTemplate) tempAbsPath' Nothing

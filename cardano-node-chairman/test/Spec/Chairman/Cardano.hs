@@ -20,7 +20,7 @@ import qualified Cardano.Testnet as H
 {- HLINT ignore "Redundant flip" -}
 
 hprop_chairman :: H.Property
-hprop_chairman = H.integrationRetryWorkspace 2 "chairman" $ \tempAbsPath' -> do
+hprop_chairman = H.integrationRetryWorkspace 2 "cardano-chairman" $ \tempAbsPath' -> do
   base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
   conf <- H.mkConf (H.ProjectBase base) (H.YamlFilePath configurationTemplate) tempAbsPath' Nothing

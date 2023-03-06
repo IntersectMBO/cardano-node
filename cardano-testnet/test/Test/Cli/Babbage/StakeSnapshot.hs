@@ -45,7 +45,7 @@ import           Testnet.Util.Process
 import           Testnet.Util.Runtime
 
 hprop_stakeSnapshot :: Property
-hprop_stakeSnapshot = H.integrationRetryWorkspace 2 "alonzo" $ \tempAbsBasePath' -> do
+hprop_stakeSnapshot = H.integrationRetryWorkspace 2 "babbage-stake-snapshot" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
   base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
