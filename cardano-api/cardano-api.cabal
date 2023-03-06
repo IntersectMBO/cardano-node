@@ -121,10 +121,11 @@ library
                       , cardano-data ^>= 1.0
                       , cardano-ledger-alonzo ^>= 1.1
                       , cardano-ledger-allegra ^>= 1.1
-                      , cardano-ledger-api >= 1.0
+                      , cardano-ledger-api >= 1.1
                       , cardano-ledger-babbage ^>= 1.1
                       , cardano-ledger-binary ^>= 1.0.1
                       , cardano-ledger-byron ^>= 1.0
+                      , cardano-ledger-conway ^>= 1.1
                       , cardano-ledger-core ^>= 1.1
                       , cardano-ledger-mary ^>= 1.1
                       , cardano-ledger-shelley ^>= 1.1
