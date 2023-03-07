@@ -181,6 +181,15 @@ allow-newer:
   , libsystemd-journal:base
   -- This is required for 9.2.
   , katip:Win32
+  -- for 9.6.1-rc1
+  , *:base
+  , *:template-haskell
+  , *:ghc-prim
+  , *:ghc-boot
+  , *:ghc
+  , *:mtl
+  , *:transformers
+  , *:unix
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
