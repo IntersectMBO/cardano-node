@@ -45,6 +45,9 @@ module Cardano.Api.Tx (
     -- * Data family instances
     AsType(AsTx, AsByronTx, AsShelleyTx, AsMaryTx, AsAllegraTx, AsAlonzoTx,
            AsKeyWitness, AsByronWitness, AsShelleyWitness),
+
+    -- * Utils
+    eraProtVerLow,
   ) where
 
 import           Data.Maybe
