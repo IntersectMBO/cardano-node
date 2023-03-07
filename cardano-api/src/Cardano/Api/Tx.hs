@@ -53,18 +53,11 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 
-import           Data.Functor.Identity (Identity)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import qualified Data.Vector as Vector
-import           Formatting (build, formatToString)
-
---
--- Common types, consensus, network
---
-import           Cardano.Binary (Annotated (..))
-import qualified Cardano.Binary as CBOR
+import           Lens.Micro
 
 --
 -- Crypto API used by consensus and Shelley (and should be used by Byron)
@@ -85,6 +78,9 @@ import qualified Cardano.Crypto.Signing as Byron
 --
 -- Shelley imports
 --
+import           Cardano.Ledger.Binary (Annotated (..))
+import qualified Cardano.Ledger.Binary as CBOR
+
 import           Cardano.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
 import           Cardano.Ledger.Crypto (StandardCrypto)
 
@@ -93,15 +89,8 @@ import qualified Cardano.Ledger.Keys as Shelley
 import qualified Cardano.Ledger.Keys.Bootstrap as Shelley
 import qualified Cardano.Ledger.SafeHash as Ledger
 
-import qualified Cardano.Ledger.Shelley.API as Ledger (ShelleyTx (..))
-import qualified Cardano.Ledger.Shelley.Tx as Shelley
-
-import           Cardano.Ledger.Alonzo (AlonzoScript)
-import qualified Cardano.Ledger.Alonzo as Alonzo
-import           Cardano.Ledger.Alonzo.Tx (AlonzoTx (AlonzoTx))
-import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
-import           Cardano.Ledger.Alonzo.TxWitness (TxWitness (TxWitness))
-import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
+import qualified Cardano.Ledger.Alonzo.Core as L
+import qualified Cardano.Ledger.Api as L
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
@@ -127,7 +116,7 @@ data Tx era where
 
      ShelleyTx
        :: ShelleyBasedEra era
-       -> Ledger.Tx (ShelleyLedgerEra era)
+       -> L.Tx (ShelleyLedgerEra era)
        -> Tx era
 
 
@@ -238,7 +227,7 @@ instance IsCardanoEra era => SerialiseAsCBOR (Tx era) where
         ByronEra ->
           ByronTx <$>
             CBOR.decodeFullAnnotatedBytes
-              "Byron Tx" fromCBOR (LBS.fromStrict bs)
+              CBOR.byronProtVer "Byron Tx" CBOR.decCBOR (LBS.fromStrict bs)
 
         -- Use the same derialisation impl, but at different types:
         ShelleyEra -> deserialiseShelleyBasedTx
@@ -257,15 +246,22 @@ instance IsCardanoEra era => SerialiseAsCBOR (Tx era) where
 -- | The serialisation format for the different Shelley-based eras are not the
 -- same, but they can be handled generally with one overloaded implementation.
 --
-serialiseShelleyBasedTx :: ToCBOR tx => tx -> ByteString
-serialiseShelleyBasedTx = CBOR.serialize'
+serialiseShelleyBasedTx :: forall ledgerera .
+                           L.Era ledgerera
+                        => CBOR.EncCBOR (L.Tx ledgerera)
+                        => L.Tx ledgerera
+                        -> ByteString
+serialiseShelleyBasedTx = CBOR.serialize' (L.eraProtVerLow @ledgerera)
 
-deserialiseShelleyBasedTx :: FromCBOR (CBOR.Annotator tx)
-                          => (tx -> tx')
+deserialiseShelleyBasedTx :: forall ledgerera tx' .
+                             L.Era ledgerera
+                          => CBOR.DecCBOR (CBOR.Annotator (L.Tx ledgerera))
+                          => (L.Tx ledgerera -> tx')
                           -> ByteString
                           -> Either CBOR.DecoderError tx'
 deserialiseShelleyBasedTx mkTx bs =
-    mkTx <$> CBOR.decodeAnnotator "Shelley Tx" fromCBOR (LBS.fromStrict bs)
+    mkTx <$> CBOR.decodeFullAnnotator
+               (L.eraProtVerLow @ledgerera) "Shelley Tx" CBOR.decCBOR (LBS.fromStrict bs)
 
 
 instance IsCardanoEra era => HasTextEnvelope (Tx era) where
@@ -292,7 +288,7 @@ data KeyWitness era where
 
      ShelleyKeyWitness
        :: ShelleyBasedEra era
-       -> Shelley.WitVKey Shelley.Witness StandardCrypto
+       -> L.WitVKey Shelley.Witness StandardCrypto
        -> KeyWitness era
 
 
@@ -404,24 +400,38 @@ pattern AsShelleyWitness :: AsType (KeyWitness ShelleyEra)
 pattern AsShelleyWitness = AsKeyWitness AsShelleyEra
 {-# COMPLETE AsShelleyWitness #-}
 
+-- This could be a useful function in other places, so it would be nice to find a beter
+-- home for it.
+-- | Lookup the lower major protocol version for the shelley based era
+eraProtVerLow :: ShelleyBasedEra era -> CBOR.Version
+eraProtVerLow era =
+  case era of
+    ShelleyBasedEraShelley -> L.eraProtVerLow @L.Shelley
+    ShelleyBasedEraAllegra -> L.eraProtVerLow @L.Allegra
+    ShelleyBasedEraMary    -> L.eraProtVerLow @L.Mary
+    ShelleyBasedEraAlonzo  -> L.eraProtVerLow @L.Alonzo
+    ShelleyBasedEraBabbage -> L.eraProtVerLow @L.Babbage
+    ShelleyBasedEraConway  -> L.eraProtVerLow @L.Conway
+
 -- This custom instance differs from cardano-ledger
 -- because we want to be able to tell the difference between
 -- on disk witnesses for the cli's 'assemble' command.
 instance IsCardanoEra era => SerialiseAsCBOR (KeyWitness era) where
-    serialiseToCBOR (ByronKeyWitness wit) = CBOR.serialize' wit
+    serialiseToCBOR (ByronKeyWitness wit) =
+      CBOR.serialize' (CBOR.byronProtVer) wit
 
-    serialiseToCBOR (ShelleyKeyWitness _era wit) =
-      CBOR.serializeEncoding' $
+    serialiseToCBOR (ShelleyKeyWitness era wit) =
+      CBOR.serialize' (eraProtVerLow  era) $
       encodeShelleyBasedKeyWitness wit
 
-    serialiseToCBOR (ShelleyBootstrapWitness _era wit) =
-      CBOR.serializeEncoding' $
+    serialiseToCBOR (ShelleyBootstrapWitness era wit) =
+      CBOR.serialize' (eraProtVerLow era) $
       encodeShelleyBasedBootstrapWitness wit
 
     deserialiseFromCBOR _ bs =
       case cardanoEra :: CardanoEra era of
         ByronEra ->
-          ByronKeyWitness <$> CBOR.decodeFull' bs
+          ByronKeyWitness <$> CBOR.decodeFull' CBOR.byronProtVer bs
 
         -- Use the same derialisation impl, but at different types:
         ShelleyEra -> decodeShelleyBasedWitness ShelleyBasedEraShelley bs
@@ -432,29 +442,32 @@ instance IsCardanoEra era => SerialiseAsCBOR (KeyWitness era) where
         ConwayEra  -> decodeShelleyBasedWitness ShelleyBasedEraConway bs
 
 
-encodeShelleyBasedKeyWitness :: ToCBOR w => w -> CBOR.Encoding
+encodeShelleyBasedKeyWitness :: CBOR.EncCBOR w => w -> CBOR.Encoding
 encodeShelleyBasedKeyWitness wit =
-    CBOR.encodeListLen 2 <> CBOR.encodeWord 0 <> toCBOR wit
+    CBOR.encodeListLen 2 <> CBOR.encodeWord 0 <> CBOR.encCBOR wit
 
-encodeShelleyBasedBootstrapWitness :: ToCBOR w => w -> CBOR.Encoding
+encodeShelleyBasedBootstrapWitness :: CBOR.EncCBOR w => w -> CBOR.Encoding
 encodeShelleyBasedBootstrapWitness wit =
-    CBOR.encodeListLen 2 <> CBOR.encodeWord 1 <> toCBOR wit
+    CBOR.encodeListLen 2 <> CBOR.encodeWord 1 <> CBOR.encCBOR wit
 
 decodeShelleyBasedWitness :: forall era.
-                             ShelleyBasedEra era
+                             L.Era (ShelleyLedgerEra era)
+                          => ShelleyBasedEra era
                           -> ByteString
                           -> Either CBOR.DecoderError (KeyWitness era)
 decodeShelleyBasedWitness era =
-    CBOR.decodeAnnotator "Shelley Witness" decode . LBS.fromStrict
+    CBOR.decodeFullAnnotator (L.eraProtVerLow @(ShelleyLedgerEra era))
+      "Shelley Witness" decode
+    . LBS.fromStrict
   where
     decode :: CBOR.Decoder s (CBOR.Annotator (KeyWitness era))
     decode =  do
       CBOR.decodeListLenOf 2
       t <- CBOR.decodeWord
       case t of
-        0 -> fmap (fmap (ShelleyKeyWitness era)) fromCBOR
-        1 -> fmap (fmap (ShelleyBootstrapWitness era)) fromCBOR
-        _ -> fail . formatToString build $ CBOR.DecoderErrorUnknownTag
+        0 -> fmap (fmap (ShelleyKeyWitness era)) CBOR.decCBOR
+        1 -> fmap (fmap (ShelleyBootstrapWitness era)) CBOR.decCBOR
+        _ -> CBOR.cborError $ CBOR.DecoderErrorUnknownTag
                                 "Shelley Witness" (fromIntegral t)
 
 
@@ -482,62 +495,51 @@ getTxBody :: forall era. Tx era -> TxBody era
 getTxBody (ByronTx Byron.ATxAux { Byron.aTaTx = txbody }) =
     ByronTxBody txbody
 
-getTxBody (ShelleyTx era tx) =
+getTxBody (ShelleyTx era tx') =
     case era of
-      ShelleyBasedEraShelley -> getShelleyTxBody tx
-      ShelleyBasedEraAllegra -> getShelleyTxBody tx
-      ShelleyBasedEraMary    -> getShelleyTxBody tx
+      ShelleyBasedEraShelley -> getShelleyTxBody tx'
+      ShelleyBasedEraAllegra -> getShelleyTxBody tx'
+      ShelleyBasedEraMary    -> getShelleyTxBody tx'
       ShelleyBasedEraAlonzo  ->
-        getAlonzoTxBody ScriptDataInAlonzoEra TxScriptValiditySupportedInAlonzoEra tx
+        getAlonzoTxBody ScriptDataInAlonzoEra TxScriptValiditySupportedInAlonzoEra tx'
       ShelleyBasedEraBabbage ->
-        getAlonzoTxBody ScriptDataInBabbageEra TxScriptValiditySupportedInBabbageEra tx
+        getAlonzoTxBody ScriptDataInBabbageEra TxScriptValiditySupportedInBabbageEra tx'
       ShelleyBasedEraConway ->
-        getAlonzoTxBody ScriptDataInConwayEra TxScriptValiditySupportedInConwayEra tx
+        getAlonzoTxBody ScriptDataInConwayEra TxScriptValiditySupportedInConwayEra tx'
   where
     getShelleyTxBody :: forall ledgerera.
                         ShelleyLedgerEra era ~ ledgerera
-                     => Ledger.Witnesses ledgerera ~ Shelley.WitnessSetHKD Identity ledgerera
                      => Ledger.EraTx ledgerera
-                     => Ledger.ShelleyTx ledgerera
+                     => L.Tx ledgerera
                      -> TxBody era
-    getShelleyTxBody Ledger.ShelleyTx {
-                       Shelley.body       = txbody,
-                       Shelley.auxiliaryData = txAuxiliaryData,
-                       Shelley.wits = Shelley.WitnessSet
-                                              _addrWits
-                                               msigWits
-                                              _bootWits
-                     } =
-      ShelleyTxBody era txbody
-                    (Map.elems msigWits)
+    getShelleyTxBody tx =
+      let txBody     = tx ^. L.bodyTxL
+          txAuxData  = tx ^. L.auxDataTxL
+          scriptWits = tx ^. L.witsTxL . L.scriptTxWitsL
+      in ShelleyTxBody era txBody
+                    (Map.elems scriptWits)
                     TxBodyNoScriptData
-                    (strictMaybeToMaybe txAuxiliaryData)
+                    (strictMaybeToMaybe txAuxData)
                     TxScriptValidityNone
 
     getAlonzoTxBody :: forall ledgerera.
                        ShelleyLedgerEra era ~ ledgerera
-                    => Ledger.Era ledgerera
-                    => Ledger.Script ledgerera ~ AlonzoScript ledgerera
+                    => L.AlonzoEraTx ledgerera
                     => ScriptDataSupportedInEra era
                     -> TxScriptValiditySupportedInEra era
-                    -> AlonzoTx ledgerera
+                    -> L.Tx ledgerera
                     -> TxBody era
-    getAlonzoTxBody scriptDataInEra txScriptValidityInEra
-                    AlonzoTx {
-                      Alonzo.body = txbody,
-                      Alonzo.wits = TxWitness
-                                     _addrWits
-                                     _bootWits
-                                     txscripts
-                                     txdats
-                                     redeemers,
-                      Alonzo.auxiliaryData = auxiliaryData,
-                      Alonzo.isValid = isValid
-                    } =
-      ShelleyTxBody era txbody
-                    (Map.elems txscripts)
-                    (TxBodyScriptData scriptDataInEra txdats redeemers)
-                    (strictMaybeToMaybe auxiliaryData)
+    getAlonzoTxBody scriptDataInEra txScriptValidityInEra tx =
+      let txBody       = tx ^. L.bodyTxL
+          txAuxData    = tx ^. L.auxDataTxL
+          scriptWits   = tx ^. L.witsTxL . L.scriptTxWitsL
+          datsWits     = tx ^. L.witsTxL . L.datsTxWitsL
+          redeemerWits = tx ^. L.witsTxL . L.rdmrsTxWitsL
+          isValid      = tx ^. L.isValidTxL
+      in ShelleyTxBody era txBody
+                    (Map.elems scriptWits)
+                    (TxBodyScriptData scriptDataInEra datsWits redeemerWits)
+                    (strictMaybeToMaybe txAuxData)
                     (TxScriptValidity txScriptValidityInEra (isValidToScriptValidity isValid))
 
 getTxWitnesses :: forall era. Tx era -> [KeyWitness era]
@@ -547,48 +549,30 @@ getTxWitnesses (ByronTx Byron.ATxAux { Byron.aTaWitness = witnesses }) =
   . unAnnotated
   $ witnesses
 
-getTxWitnesses (ShelleyTx era tx) =
+getTxWitnesses (ShelleyTx era tx') =
     case era of
-      ShelleyBasedEraShelley -> getShelleyTxWitnesses tx
-      ShelleyBasedEraAllegra -> getShelleyTxWitnesses tx
-      ShelleyBasedEraMary    -> getShelleyTxWitnesses tx
-      ShelleyBasedEraAlonzo  -> getAlonzoTxWitnesses  tx
-      ShelleyBasedEraBabbage -> getAlonzoTxWitnesses  tx
-      ShelleyBasedEraConway  -> getAlonzoTxWitnesses  tx
+      ShelleyBasedEraShelley -> getShelleyTxWitnesses tx'
+      ShelleyBasedEraAllegra -> getShelleyTxWitnesses tx'
+      ShelleyBasedEraMary    -> getShelleyTxWitnesses tx'
+      ShelleyBasedEraAlonzo  -> getAlonzoTxWitnesses  tx'
+      ShelleyBasedEraBabbage -> getAlonzoTxWitnesses  tx'
+      ShelleyBasedEraConway  -> getAlonzoTxWitnesses  tx'
   where
     getShelleyTxWitnesses :: forall ledgerera.
-                             Ledger.EraTx ledgerera
-                          => Ledger.Crypto ledgerera ~ StandardCrypto
-                          => Ledger.Witnesses ledgerera ~ Shelley.WitnessSetHKD Identity ledgerera
-                          => Ledger.ShelleyTx ledgerera
+                             L.EraTx ledgerera
+                          => L.EraCrypto ledgerera ~ StandardCrypto
+                          => L.Tx ledgerera
                           -> [KeyWitness era]
-    getShelleyTxWitnesses Ledger.ShelleyTx {
-                            Shelley.wits =
-                              Shelley.WitnessSet
-                                addrWits
-                               _msigWits
-                                bootWits
-                          } =
-        map (ShelleyBootstrapWitness era) (Set.elems bootWits)
-     ++ map (ShelleyKeyWitness       era) (Set.elems addrWits)
+    getShelleyTxWitnesses tx =
+        map (ShelleyBootstrapWitness era) (Set.elems (tx ^. L.witsTxL . L.bootAddrTxWitsL))
+     ++ map (ShelleyKeyWitness       era) (Set.elems (tx ^. L.witsTxL . L.addrTxWitsL))
 
     getAlonzoTxWitnesses :: forall ledgerera.
-                            Ledger.Crypto ledgerera ~ StandardCrypto
-                         => Ledger.Script ledgerera ~ Alonzo.AlonzoScript ledgerera
-                         => Ledger.Era ledgerera
-                         => AlonzoTx ledgerera
+                            L.EraCrypto ledgerera ~ StandardCrypto
+                         => L.EraTx ledgerera
+                         => L.Tx ledgerera
                          -> [KeyWitness era]
-    getAlonzoTxWitnesses AlonzoTx {
-                           Alonzo.wits =
-                             TxWitness
-                               addrWits
-                               bootWits
-                               _txscripts
-                               _txdats
-                               _txrdmrs
-                         } =
-        map (ShelleyBootstrapWitness era) (Set.elems bootWits)
-     ++ map (ShelleyKeyWitness       era) (Set.elems addrWits)
+    getAlonzoTxWitnesses = getShelleyTxWitnesses
 
 makeSignedTransaction :: forall era.
      [KeyWitness era]
@@ -608,60 +592,57 @@ makeSignedTransaction witnesses (ShelleyTxBody era txbody
                                                scriptValidity
                                                ) =
     case era of
-      ShelleyBasedEraShelley -> makeShelleySignedTransaction txbody
-      ShelleyBasedEraAllegra -> makeShelleySignedTransaction txbody
-      ShelleyBasedEraMary    -> makeShelleySignedTransaction txbody
-      ShelleyBasedEraAlonzo  -> makeAlonzoSignedTransaction  txbody
-      ShelleyBasedEraBabbage -> makeAlonzoSignedTransaction  txbody
-      ShelleyBasedEraConway  -> makeAlonzoSignedTransaction  txbody
+      ShelleyBasedEraShelley -> shelleySignedTransaction
+      ShelleyBasedEraAllegra -> shelleySignedTransaction
+      ShelleyBasedEraMary    -> shelleySignedTransaction
+      ShelleyBasedEraAlonzo  -> alonzoSignedTransaction
+      ShelleyBasedEraBabbage -> alonzoSignedTransaction
+      ShelleyBasedEraConway  -> alonzoSignedTransaction
   where
-    makeShelleySignedTransaction
+    txCommon
       :: forall ledgerera.
          ShelleyLedgerEra era ~ ledgerera
-      => Ledger.Crypto ledgerera ~ StandardCrypto
-      => Ledger.Witnesses ledgerera ~ Shelley.WitnessSetHKD Identity ledgerera
-      => Ledger.Tx ledgerera ~ Ledger.ShelleyTx ledgerera
-      => Ledger.EraTx ledgerera
-      => Ledger.TxBody ledgerera
-      -> Tx era
-    makeShelleySignedTransaction txbody' =
-      ShelleyTx era $
-        Ledger.ShelleyTx
-          txbody'
-          (Shelley.WitnessSet
-            (Set.fromList [ w | ShelleyKeyWitness _ w <- witnesses ])
-            (Map.fromList [ (Ledger.hashScript @ledgerera sw, sw)
-                          | sw <- txscripts ])
-            (Set.fromList [ w | ShelleyBootstrapWitness _ w <- witnesses ]))
-          (maybeToStrictMaybe txmetadata)
+      => L.EraCrypto ledgerera ~ StandardCrypto
+      => L.EraTx ledgerera
+      => L.Tx ledgerera
+    txCommon =
+        L.mkBasicTx txbody
+          & L.witsTxL .~
+            (L.mkBasicTxWits
+              & L.addrTxWitsL .~ Set.fromList [ w | ShelleyKeyWitness _ w <- witnesses ]
+              & L.scriptTxWitsL .~
+                Map.fromList [ (Ledger.hashScript @ledgerera sw, sw)
+                             | sw <- txscripts ]
+              & L.bootAddrTxWitsL .~
+                Set.fromList [ w | ShelleyBootstrapWitness _ w <- witnesses ]
+            )
+          & L.auxDataTxL .~ maybeToStrictMaybe txmetadata
 
-    makeAlonzoSignedTransaction
+    shelleySignedTransaction
       :: forall ledgerera.
          ShelleyLedgerEra era ~ ledgerera
-      => Ledger.Crypto ledgerera ~ StandardCrypto
-      => Ledger.Tx ledgerera ~ AlonzoTx ledgerera
-      => Ledger.Script ledgerera ~ AlonzoScript ledgerera
-      => Ledger.EraScript ledgerera
-      => Ledger.TxBody ledgerera
-      -> Tx era
-    makeAlonzoSignedTransaction txbody' =
-      ShelleyTx era $
-        AlonzoTx
-          txbody'
-          (TxWitness
-            (Set.fromList [ w | ShelleyKeyWitness _ w <- witnesses ])
-            (Set.fromList [ w | ShelleyBootstrapWitness _ w <- witnesses ])
-            (Map.fromList [ (Ledger.hashScript @ledgerera sw, sw)
-                          | sw <- txscripts ])
-            datums
-            redeemers)
-          (txScriptValidityToIsValid scriptValidity)
-          (maybeToStrictMaybe txmetadata)
+      => Ledger.EraCrypto ledgerera ~ StandardCrypto
+      => Ledger.EraTx ledgerera
+      => Tx era
+    shelleySignedTransaction = ShelleyTx era $ txCommon
+
+    alonzoSignedTransaction
+      :: forall ledgerera.
+         ShelleyLedgerEra era ~ ledgerera
+      => Ledger.EraCrypto ledgerera ~ StandardCrypto
+      => L.AlonzoEraTx ledgerera
+      => Tx era
+    alonzoSignedTransaction =
+      ShelleyTx era
+        (txCommon
+         & L.witsTxL . L.datsTxWitsL .~ datums
+         & L.witsTxL . L.rdmrsTxWitsL .~ redeemers
+         & L.isValidTxL .~ txScriptValidityToIsValid scriptValidity)
       where
         (datums, redeemers) =
           case txscriptdata of
             TxBodyScriptData _ ds rs -> (ds, rs)
-            TxBodyNoScriptData       -> (mempty, Alonzo.Redeemers mempty)
+            TxBodyNoScriptData       -> (mempty, L.Redeemers mempty)
 
 makeByronKeyWitness :: forall key.
                        IsByronKey key
@@ -785,7 +766,7 @@ makeShelleyBasedBootstrapWitness era nwOrAddr txbody (ByronSigningKey sk) =
     -- reconstruct the mini-Merkel tree that is a Byron address. The suffix
     -- bytes are the serialised address attributes.
     attributes =
-      CBOR.serialize' $
+      CBOR.serialize' CBOR.byronProtVer $
         Byron.mkAttributes Byron.AddrAttributes {
           Byron.aaVKDerivationPath = derivationPath,
           Byron.aaNetworkMagic     = networkMagic
@@ -863,7 +844,7 @@ makeShelleyKeyWitness (ShelleyTxBody era txbody _ _ _ _) =
             vk        = getShelleyKeyWitnessVerificationKey sk
             signature = makeShelleySignature txhash sk
          in ShelleyKeyWitness era $
-              Shelley.WitVKey vk signature
+              L.WitVKey vk signature
 
 makeShelleyKeyWitness ByronTxBody{} =
     case shelleyBasedEra :: ShelleyBasedEra era of {}
