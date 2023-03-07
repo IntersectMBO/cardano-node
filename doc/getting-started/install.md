@@ -38,7 +38,7 @@ sudo yum install git gcc gcc-c++ tmux gmp-devel make tar xz wget zlib-devel libt
 sudo install systemd-devel ncurses-devel ncurses-compat-libs which jq openssl-devel lmdb-devel -y
 ```
 
-For Debian/Ubuntu, use the following instead:
+For Debian/Ubuntu:
 
 ```bash
 sudo apt-get update -y
@@ -47,7 +47,26 @@ sudo apt-get install automake build-essential pkg-config libffi-dev libgmp-dev l
 
 Optional dependencies that may be required: llvm libnuma-dev
 
-If you are using a different flavor of Linux, you will need to use the correct package manager for your platform instead of `yum` or `apt-get`, and the names of the packages you need to install might differ.  On MacOSX, use the Homebrew (`brew`) installer.
+If you are using a different flavor of Linux, you will need to use the correct package manager for your platform instead of `yum` or `apt-get`, and the names of the packages you need to install might differ. 
+
+For MacOS:
+
+You'll need the following packages and tools on your MacOS system:
+
+* [Xcode](https://developer.apple.com/xcode) - The Apple Development IDE and SDK/Tools
+* [Xcode Command Line Tools](https://developer.apple.com/xcode/features/), you can install it by typing `xcode-select --install` in the terminal.
+* [Homebrew](https://brew.sh) - The Missing Package Manager for MacOS (or Linux)
+
+Then using homebrew install the following:
+
+```bash
+brew install jq libtool autoconf automake pkg-config openssl
+```
+#### You will need to install llvm in case you are using M1
+
+```
+brew install llvm@13
+```
 
 #### Installing the Haskell environment
 
