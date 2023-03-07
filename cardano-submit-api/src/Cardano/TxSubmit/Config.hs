@@ -18,14 +18,12 @@ import           Data.Aeson (FromJSON (..), Object, Value (..), (.:))
 import           Data.Aeson.Types (Parser)
 import           Data.Bool (bool)
 import           Data.ByteString (ByteString)
-import           Protolude.Panic (panic)
 
 import qualified Cardano.BM.Configuration as Logging
 import qualified Cardano.BM.Configuration.Model as Logging
 import qualified Cardano.BM.Data.Configuration as Logging
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as B8
-import qualified Data.Text as T
 import qualified Data.Yaml as Yaml
 
 type TxSubmitNodeConfig = GenTxSubmitNodeConfig Logging.Configuration
@@ -43,13 +41,13 @@ readTxSubmitNodeConfig :: FilePath -> IO TxSubmitNodeConfig
 readTxSubmitNodeConfig fp = do
     res <- Yaml.decodeEither' <$> readLoggingConfig
     case res of
-      Left err -> panic $ "readTxSubmitNodeConfig: Error parsing config: " <> textShow err
+      Left err -> error $ "readTxSubmitNodeConfig: Error parsing config: " <> Yaml.prettyPrintParseException err
       Right icr -> convertLogging icr
   where
     readLoggingConfig :: IO ByteString
     readLoggingConfig =
       catch (B8.readFile fp) $ \(_ :: IOException) ->
-        panic $ "Cannot find the logging configuration file at : " <> T.pack fp
+        error $ "Cannot find the logging configuration file at : " <> fp
 
 convertLogging :: GenTxSubmitNodeConfig Logging.Representation -> IO TxSubmitNodeConfig
 convertLogging tsc = do
