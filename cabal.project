@@ -12,10 +12,10 @@ repository cardano-haskell-packages
 
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
-index-state: 2023-01-20T05:50:56Z
+index-state: 2023-03-06T05:24:58Z
 
 index-state:
-  , hackage.haskell.org 2023-01-20T05:50:56Z
+  , hackage.haskell.org 2023-03-06T05:24:58Z
   , cardano-haskell-packages 2022-12-14T00:40:15Z
 
 packages:
@@ -171,7 +171,6 @@ allow-newer:
   , tree-diff:hashable
   , Unique:hashable
   , ouroboros-network:hashable
-  , hedgehog-extras:base
   , libsystemd-journal:base
   -- This is required for 9.2.
   , katip:Win32
@@ -179,13 +178,6 @@ allow-newer:
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
-
--- And has the adjustments for the ledger refactor
-source-repository-package
-   type: git
-   location: https://github.com/input-output-hk/hedgehog-extras
-   tag: 9ea1845ca2036e7a1ae9fcebe393526540c5c233
-   --sha256: 1436dwmz9v6ky9kzgnr4flzlzjxwh2zjkds9fnayc1ddang6wwb6
 
 -- And has the adjustments for the ledger refactor
 source-repository-package

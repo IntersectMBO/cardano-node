@@ -37,6 +37,7 @@ import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
 import qualified System.Info as SYS
+import qualified Testnet.Util.Base as H
 
 import           Cardano.Testnet
 import           Testnet.Util.Assert
@@ -44,7 +45,7 @@ import           Testnet.Util.Process
 import           Testnet.Util.Runtime
 
 hprop_leadershipSchedule :: Property
-hprop_leadershipSchedule = integration . H.runFinallies . H.workspace "alonzo" $ \tempAbsBasePath' -> do
+hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-schedule" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
   base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"

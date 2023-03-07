@@ -52,7 +52,7 @@ import           Testnet.Util.Process
 import           Testnet.Util.Runtime
 
 hprop_leadershipSchedule :: Property
-hprop_leadershipSchedule = integration . H.runFinallies . H.workspace "alonzo" $ \tempAbsBasePath' -> do
+hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedule" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
   base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"

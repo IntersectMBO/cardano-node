@@ -40,11 +40,12 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
+import qualified Testnet.Util.Base as H
 import           Testnet.Util.Process
 import           Testnet.Util.Runtime
 
 hprop_stakeSnapshot :: Property
-hprop_stakeSnapshot = integration . H.runFinallies . H.workspace "alonzo" $ \tempAbsBasePath' -> do
+hprop_stakeSnapshot = H.integrationRetryWorkspace 2 "babbage-stake-snapshot" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
   base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
