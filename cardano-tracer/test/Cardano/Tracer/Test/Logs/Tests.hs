@@ -80,6 +80,7 @@ propLogs ts@TestSetup{..} format rootDir localSock = do
                          , rpKeepFilesNum  = 10
                          }
     , verbosity      = Just Minimum
+    , metricsComp    = Nothing
     }
 
 propMultiInit :: TestSetup Identity -> LogFormat -> FilePath -> FilePath -> FilePath -> IO Property
@@ -107,6 +108,7 @@ propMultiInit ts@TestSetup{..} format rootDir localSock1 localSock2 = do
     , logging        = NE.fromList [LoggingParams root FileMode format]
     , rotation       = Nothing
     , verbosity      = Just Minimum
+    , metricsComp    = Nothing
     }
 
 propMultiResp :: TestSetup Identity -> LogFormat -> FilePath -> FilePath -> IO Property
@@ -134,6 +136,7 @@ propMultiResp ts@TestSetup{..} format rootDir localSock = do
     , logging        = NE.fromList [LoggingParams root FileMode format]
     , rotation       = Nothing
     , verbosity      = Just Minimum
+    , metricsComp    = Nothing
     }
 
 checkMultiResults :: FilePath -> IO Property
