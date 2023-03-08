@@ -166,19 +166,19 @@ library
                       , lobemo-backend-monitoring
                       , lobemo-backend-trace-forwarder
                       , network
-                      , network-mux ^>= 0.2
+                      , network-mux ^>= 0.3
                       , nothunks
                       , optparse-applicative-fork
-                      , ouroboros-consensus ^>= 0.1.0.2
+                      , ouroboros-consensus
                       , ouroboros-consensus-byron
                       , ouroboros-consensus-cardano
                       , ouroboros-consensus-diffusion
                       , ouroboros-consensus-protocol
                       , ouroboros-consensus-shelley
-                      , ouroboros-network  ^>= 0.2
-                      , ouroboros-network-api ^>= 0.1
-                      , ouroboros-network-framework ^>= 0.2
-                      , ouroboros-network-protocols ^>= 0.2
+                      , ouroboros-network
+                      , ouroboros-network-api
+                      , ouroboros-network-framework
+                      , ouroboros-network-protocols
                       , psqueues
                       , safe-exceptions
                       , scientific

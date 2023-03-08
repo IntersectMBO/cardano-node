@@ -143,16 +143,16 @@ library
                       , network
                       , nothunks
                       , optparse-applicative-fork
-                      , ouroboros-consensus
+                      , ouroboros-consensus ^>= 0.2
                       , ouroboros-consensus-byron
-                      , ouroboros-consensus-cardano
-                      , ouroboros-consensus-diffusion
+                      , ouroboros-consensus-cardano ^>= 0.3
+                      , ouroboros-consensus-diffusion ^>= 0.2
                       , ouroboros-consensus-protocol
                       , ouroboros-consensus-shelley
-                      , ouroboros-network
-                      , ouroboros-network-api
-                      , ouroboros-network-framework
-                      , ouroboros-network-protocols
+                      , ouroboros-network ^>= 0.4
+                      , ouroboros-network-api ^>= 0.1
+                      , ouroboros-network-framework ^>= 0.3
+                      , ouroboros-network-protocols ^>= 0.2
                       , parsec
                       , plutus-ledger-api ^>= 1.0
                       , prettyprinter

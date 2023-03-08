@@ -31,7 +31,8 @@ import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionData
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion,
                    simpleSingletonVersions)
-import           Ouroboros.Network.Snocket (Snocket, localAddressFromPath, localSnocket)
+import           Ouroboros.Network.Snocket (Snocket, MakeBearer,
+                   localAddressFromPath, localSnocket, makeLocalBearer)
 import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..),
                    SomeResponderApplication (..), cleanNetworkMutableState, connectToNode,
                    newNetworkMutableState, nullNetworkConnectTracers, nullNetworkServerTracers,
@@ -123,7 +124,7 @@ launchForwarders iomgr magic
                  ekgStore sink dpStore tracerSocketMode =
   -- If 'tracerSocketMode' is not specified, it's impossible to establish
   -- network connection with acceptor application (for example, 'cardano-tracer').
-  -- In this case, we should not lauch forwarders.
+  -- In this case, we should not launch forwarders.
   case tracerSocketMode of
     Nothing -> return ()
     Just (socketPath, mode) ->
@@ -157,14 +158,15 @@ launchForwardersViaLocalSocket
 launchForwardersViaLocalSocket
   iomgr magic ekgConfig tfConfig dpfConfig sink ekgStore dpStore p mode =
   (case mode of
-     Initiator -> doConnectToAcceptor magic (localSnocket iomgr) mempty
-     Responder -> doListenToAcceptor magic (localSnocket iomgr) mempty)
+     Initiator -> doConnectToAcceptor magic (localSnocket iomgr) makeLocalBearer mempty
+     Responder -> doListenToAcceptor magic (localSnocket iomgr) makeLocalBearer mempty)
   (localAddressFromPath p)
   noTimeLimitsHandshake ekgConfig tfConfig dpfConfig sink ekgStore dpStore
 
 doConnectToAcceptor
   :: NetworkMagic
   -> Snocket IO fd addr
+  -> MakeBearer IO fd
   -> (fd -> IO ())
   -> addr
   -> ProtocolTimeLimits (Handshake ForwardingVersion Term)
@@ -175,10 +177,11 @@ doConnectToAcceptor
   -> Maybe EKG.Store
   -> DataPointStore
   -> IO ()
-doConnectToAcceptor magic snocket configureSocket address timeLimits
+doConnectToAcceptor magic snocket makeBearer configureSocket address timeLimits
                     ekgConfig tfConfig dpfConfig sink ekgStore dpStore = do
   connectToNode
     snocket
+    makeBearer
     configureSocket
     (codecHandshake forwardingVersionCodec)
     timeLimits
@@ -219,6 +222,7 @@ doListenToAcceptor
   :: Ord addr
   => NetworkMagic
   -> Snocket IO fd addr
+  -> MakeBearer IO fd
   -> (fd -> addr -> IO ())
   -> addr
   -> ProtocolTimeLimits (Handshake ForwardingVersion Term)
@@ -229,12 +233,13 @@ doListenToAcceptor
   -> Maybe EKG.Store
   -> DataPointStore
   -> IO ()
-doListenToAcceptor magic snocket configureSocket address timeLimits
+doListenToAcceptor magic snocket makeBearer configureSocket address timeLimits
                    ekgConfig tfConfig dpfConfig sink ekgStore dpStore = do
   networkState <- newNetworkMutableState
   race_ (cleanNetworkMutableState networkState)
         $ withServerNode
             snocket
+            makeBearer
             configureSocket
             nullNetworkServerTracers
             networkState
