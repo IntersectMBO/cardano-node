@@ -220,6 +220,37 @@ We explicitly use the GHC version that we installed earlier.  This avoids defaul
 echo "with-compiler: ghc-8.10.7" >> cabal.project.local
 ```
 
+You will need to run following commands on M1, those commands will set some cabal related options before building
+```bash
+echo "package trace-dispatcher" >> cabal.project.local
+echo "  ghc-options: -Wwarn" >> cabal.project.local
+echo "" >> cabal.project.local
+
+echo "package HsOpenSSL" >> cabal.project.local
+echo "  flags: -homebrew-openssl" >> cabal.project.local
+echo "" >> cabal.project.local
+```
+
+More recent versions of MacOS seems to install openssl in a different location than expected by default. If you have installed openssl via homebrew and encounter the following build error:
+
+```bash
+Failed to build HsOpenSSL-0.11.7.2. The failure occurred during the configure
+step.
+[1 of 1] Compiling Main (...)
+Linking .../dist-newstyle/tmp/src-75805/HsOpenSSL-0.11.7.2/dist/setup/setup ...
+Configuring HsOpenSSL-0.11.7.2...
+setup: Can’t find OpenSSL library
+```
+
+You'll most likely need to add relevant symlinks as follows:
+```
+sudo mkdir -p /usr/local/opt/openssl
+sudo ln -s /opt/homebrew/opt/openssl@3/lib /usr/local/opt/openssl/lib
+sudo ln -s /opt/homebrew/opt/openssl@3/include /usr/local/opt/openssl/include
+```
+
+This is a wart of the `HsOpenSSL` library wrapper, and using classic methods such as setting `LDFLAGS` & `CPPFLAGS`, or using `--extra-include-dirs` and `--extra-lib-dirs` won't work properly.
+
 #### Building and installing the node
 
 Build the node and CLI with `cabal`:
