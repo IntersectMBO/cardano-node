@@ -170,6 +170,7 @@ import qualified Data.ByteString.Lazy as LBS
 import           Data.Foldable (for_, toList)
 import           Data.Function (on)
 import           Data.List (intercalate, sortBy)
+import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -3378,7 +3379,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
         TxScriptValidityNone
   where
     scripts :: [Ledger.Script StandardMary]
-    scripts = catMaybes
+    scripts = List.nub $ catMaybes
       [ toShelleyScript <$> scriptWitnessScript scriptwitness
       | (_, AnyScriptWitness scriptwitness)
           <- collectTxBodyScriptWitnesses txbodycontent
@@ -3443,7 +3444,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
     witnesses = collectTxBodyScriptWitnesses txbodycontent
 
     scripts :: [Ledger.Script StandardAlonzo]
-    scripts = catMaybes
+    scripts = List.nub $ catMaybes
       [ toShelleyScript <$> scriptWitnessScript scriptwitness
       | (_, AnyScriptWitness scriptwitness) <- witnesses
       ]
@@ -3551,7 +3552,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraBabbage
     witnesses = collectTxBodyScriptWitnesses txbodycontent
 
     scripts :: [Ledger.Script StandardBabbage]
-    scripts = catMaybes
+    scripts = List.nub $ catMaybes
       [ toShelleyScript <$> scriptWitnessScript scriptwitness
       | (_, AnyScriptWitness scriptwitness) <- witnesses
       ]
