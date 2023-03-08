@@ -15,7 +15,7 @@ import qualified Hedgehog as H
 
 {- HLINT ignore "Use camelCase" -}
 
-exampleSimpleScriptV1_All :: SimpleScript SimpleScriptV1
+exampleSimpleScriptV1_All :: SimpleScript
 exampleSimpleScriptV1_All =
   RequireAllOf
     [ RequireSignature "e09d36c79dec9bd1b3d9e152247701cd0bb860b5ebfd1de8abb6735a"
@@ -28,7 +28,7 @@ exampleSimpleScriptV1_All =
     , RequireSignature "6b732c60c267bab894854d6dd57a04a94e603fcc4c36274c9ed75952"
     ]
 
-exampleSimpleScriptV1_Any :: SimpleScript SimpleScriptV1
+exampleSimpleScriptV1_Any :: SimpleScript
 exampleSimpleScriptV1_Any =
   RequireAnyOf
     [ RequireSignature "d92b712d1882c3b0f75b6f677e0b2cbef4fbc8b8121bb9dde324ff09"
@@ -39,7 +39,7 @@ exampleSimpleScriptV1_Any =
     , RequireSignature "622be5fab3b5c3f371a50a535e4d3349c942a98cecee93b24e2fd11d"
     ]
 
-exampleSimpleScriptV1_MofN :: SimpleScript SimpleScriptV1
+exampleSimpleScriptV1_MofN :: SimpleScript
 exampleSimpleScriptV1_MofN =
   RequireMOf 2
     [ RequireSignature "2f3d4cf10d0471a1db9f2d2907de867968c27bca6272f062cd1c2413"
@@ -49,26 +49,26 @@ exampleSimpleScriptV1_MofN =
     ]
 
 
-exampleSimpleScriptV2_All :: SimpleScript SimpleScriptV2
+exampleSimpleScriptV2_All :: SimpleScript
 exampleSimpleScriptV2_All =
   RequireAllOf
     [ RequireSignature "e09d36c79dec9bd1b3d9e152247701cd0bb860b5ebfd1de8abb6735a"
-    , RequireTimeBefore TimeLocksInSimpleScriptV2 (SlotNo 42)
+    , RequireTimeBefore (SlotNo 42)
     ]
 
-exampleSimpleScriptV2_Any :: SimpleScript SimpleScriptV2
+exampleSimpleScriptV2_Any :: SimpleScript
 exampleSimpleScriptV2_Any =
   RequireAnyOf
     [ RequireSignature "d92b712d1882c3b0f75b6f677e0b2cbef4fbc8b8121bb9dde324ff09"
-    , RequireTimeAfter TimeLocksInSimpleScriptV2 (SlotNo 42)
+    , RequireTimeAfter (SlotNo 42)
     ]
 
-exampleSimpleScriptV2_MofN :: SimpleScript SimpleScriptV2
+exampleSimpleScriptV2_MofN :: SimpleScript
 exampleSimpleScriptV2_MofN =
   RequireMOf 1
     [ RequireSignature "2f3d4cf10d0471a1db9f2d2907de867968c27bca6272f062cd1c2413"
     , RequireSignature "f856c0c5839bab22673747d53f1ae9eed84afafb085f086e8e988614"
-    , RequireTimeBefore TimeLocksInSimpleScriptV2 (SlotNo 42)
+    , RequireTimeBefore (SlotNo 42)
     ]
 
 -- -----------------------------------------------------------------------------
@@ -104,16 +104,10 @@ prop_golden_SimpleScriptV2_MofN =
                             "test/Golden/Script/SimpleV2/atleast"
 
 
-prop_roundtrip_SimpleScriptV1_JSON :: Property
-prop_roundtrip_SimpleScriptV1_JSON =
+prop_roundtrip_SimpleScript_JSON :: Property
+prop_roundtrip_SimpleScript_JSON =
   H.property $ do
-    mss <- H.forAll $ genSimpleScript SimpleScriptV1
-    H.tripping mss encode eitherDecode
-
-prop_roundtrip_SimpleScriptV2_JSON :: Property
-prop_roundtrip_SimpleScriptV2_JSON =
-  H.property $ do
-    mss <- H.forAll $ genSimpleScript SimpleScriptV2
+    mss <- H.forAll genSimpleScript
     H.tripping mss encode eitherDecode
 
 prop_roundtrip_ScriptData :: Property
@@ -132,7 +126,6 @@ tests = testGroup "Test.Cardano.Api.Typed.Script"
   , testPropertyNamed "golden SimpleScriptV2 All"     "golden SimpleScriptV2 All"     prop_golden_SimpleScriptV2_All
   , testPropertyNamed "golden SimpleScriptV2 Any"     "golden SimpleScriptV2 Any"     prop_golden_SimpleScriptV2_Any
   , testPropertyNamed "golden SimpleScriptV2 MofN"    "golden SimpleScriptV2 MofN"    prop_golden_SimpleScriptV2_MofN
-  , testPropertyNamed "roundtrip SimpleScriptV1 JSON" "roundtrip SimpleScriptV1 JSON" prop_roundtrip_SimpleScriptV1_JSON
-  , testPropertyNamed "roundtrip SimpleScriptV2 JSON" "roundtrip SimpleScriptV2 JSON" prop_roundtrip_SimpleScriptV2_JSON
+  , testPropertyNamed "roundtrip SimpleScript JSON"   "roundtrip SimpleScript JSON"   prop_roundtrip_SimpleScript_JSON
   , testPropertyNamed "roundtrip ScriptData"          "roundtrip ScriptData"          prop_roundtrip_ScriptData
   ]

@@ -58,16 +58,13 @@ prop_roundtrip_txbodycontent_txouts =
   -- because V2 is a superset of V1. So we accept that as a valid conversion.
   matchRefScript :: MonadTest m => (ReferenceScript BabbageEra, ReferenceScript BabbageEra) -> m ()
   matchRefScript (a, b)
-    | isSimpleScriptV1 a && isSimpleScriptV2 b =
+    | isSimpleScriptV2 a && isSimpleScriptV2 b =
       refScriptToShelleyScript BabbageEra a === refScriptToShelleyScript BabbageEra b
     | otherwise =
       a === b
 
-  isSimpleScriptV1 :: ReferenceScript era -> Bool
-  isSimpleScriptV1 = isLang (SimpleScriptLanguage SimpleScriptV1)
-
   isSimpleScriptV2 :: ReferenceScript era -> Bool
-  isSimpleScriptV2 = isLang (SimpleScriptLanguage SimpleScriptV2)
+  isSimpleScriptV2 = isLang SimpleScriptLanguage
 
   isLang :: ScriptLanguage a -> ReferenceScript era -> Bool
   isLang expected = \case

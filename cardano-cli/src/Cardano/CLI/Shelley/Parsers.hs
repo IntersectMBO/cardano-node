@@ -2118,7 +2118,7 @@ pTxIn balance =
       :: TxIn
       -> ScriptWitnessFiles WitCtxTxIn
     createSimpleReferenceScriptWitnessFiles refTxIn  =
-      let simpleLang = AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV2)
+      let simpleLang = AnyScriptLanguage SimpleScriptLanguage
       in SimpleReferenceScriptWitnessFiles refTxIn simpleLang Nothing
 
   pPlutusReferenceScriptWitness :: BalanceTxExecUnits -> Parser (ScriptWitnessFiles WitCtxTxIn)
@@ -2331,7 +2331,7 @@ pMintMultiAsset balanceExecUnits =
       -> PolicyId
       -> ScriptWitnessFiles WitCtxMint
     createSimpleMintingReferenceScriptWitnessFiles refTxIn pid =
-      let simpleLang = AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV2)
+      let simpleLang = AnyScriptLanguage SimpleScriptLanguage
       in SimpleReferenceScriptWitnessFiles refTxIn simpleLang (Just pid)
 
   pPlutusMintReferenceScriptWitnessFiles
