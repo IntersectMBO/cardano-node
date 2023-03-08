@@ -108,3 +108,64 @@ allow-newer:
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+-- And has the adjustments for the ledger refactor
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-network
+  tag: 321472170618560f56565c2459e3ac0892b1fe2e
+  --sha256: 1i5h28ris135b6gi94y1ccnf80bkhhjxhsvncngpsxmbz2dl7rdj
+  subdir:
+    monoidal-synchronisation
+    network-mux
+    ouroboros-consensus
+    ouroboros-consensus-byron
+    ouroboros-consensus-cardano
+    ouroboros-consensus-protocol
+    ouroboros-consensus-shelley
+    ouroboros-network
+    ouroboros-network-framework
+    ouroboros-network-testing
+    ouroboros-consensus-cardano-tools
+
+-- Waiting for proper Windows ghc-9.2 release.
+source-repository-package
+   type: git
+   location: https://github.com/input-output-hk/snap-core
+   tag: b87b2ffa52bf58867a7239ebe74f61b1a2c762d2
+   --sha256: 0ndm57z5zpxd5n8s47kh8k1jfqf3b78qv7gkgrx9wwaajs9bf196
+
+-- source-repository-package
+--   type: git
+--   location: https://github.com/input-output-hk/cardano-ledger
+--   tag: 66b1490467b512bab88552f7c2bb7f36d6adfa53
+--   --sha256: 1y3x0nz0bcndhwdn1h4qgxjmgvymy0in6rs3nvy4avz8hrij7rj9
+--   subdir:
+--     eras/alonzo/impl
+--     eras/alonzo/test-suite
+--     eras/allegra/impl
+--     eras/babbage/impl
+--     eras/babbage/test-suite
+--     eras/byron/chain/executable-spec
+--     eras/byron/crypto
+--     eras/byron/crypto/test
+--     eras/byron/ledger/executable-spec
+--     eras/byron/ledger/impl
+--     eras/byron/ledger/impl/test
+--     eras/conway/impl
+--     eras/conway/test-suite
+--     eras/mary/impl
+--     eras/shelley-ma/impl
+--     eras/shelley-ma/test-suite
+--     eras/shelley/impl
+--     eras/shelley/test-suite
+--     libs/cardano-data
+--     libs/cardano-ledger-binary
+--     libs/cardano-ledger-core
+--     libs/cardano-ledger-pretty
+--     libs/cardano-protocol-tpraos
+--     libs/non-integral
+--     libs/set-algebra
+--     libs/small-steps
+--     libs/small-steps-test
+--     libs/vector-map
