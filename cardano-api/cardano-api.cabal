@@ -129,7 +129,7 @@ library
                       , cardano-ledger-core ^>= 1.1
                       , cardano-ledger-mary ^>= 1.1
                       , cardano-ledger-shelley ^>= 1.1
-                      , cardano-protocol-tpraos >= 1.0
+                      , cardano-protocol-tpraos >= 1.0.1
                       , cardano-slotting >= 0.1
                       , cardano-strict-containers ^>= 0.1
                       , cborg

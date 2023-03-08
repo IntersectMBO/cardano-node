@@ -22,7 +22,6 @@ import           Data.Word
 
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Keys as Shelley
-import qualified Cardano.Ledger.Serialization as CBOR (CBORGroup (..))
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
@@ -60,11 +59,11 @@ data OperationalCertificateIssueCounter =
 
 instance ToCBOR OperationalCertificate where
     toCBOR (OperationalCertificate ocert vkey) =
-      toCBOR (CBOR.CBORGroup ocert, vkey)
+      toCBOR (ocert, vkey)
 
 instance FromCBOR OperationalCertificate where
     fromCBOR = do
-      (CBOR.CBORGroup ocert, vkey) <- fromCBOR
+      (ocert, vkey) <- fromCBOR
       return (OperationalCertificate ocert vkey)
 
 instance ToCBOR OperationalCertificateIssueCounter where
