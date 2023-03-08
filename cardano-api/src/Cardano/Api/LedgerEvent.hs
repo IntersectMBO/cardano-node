@@ -22,17 +22,17 @@ import           Cardano.Api.Block (EpochNo)
 import           Cardano.Api.Certificate (Certificate)
 import           Cardano.Api.Keys.Shelley (Hash (StakePoolKeyHash), StakePoolKey)
 import           Cardano.Api.Value (Lovelace, fromShelleyDeltaLovelace, fromShelleyLovelace)
-import           Cardano.Ledger.Alonzo (AlonzoEra)
 import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyEvent (..), AlonzoUtxoEvent (..),
                    AlonzoUtxosEvent (FailedPlutusScriptsEvent, SuccessfulPlutusScriptsEvent),
                    AlonzoUtxowEvent (..))
 import           Cardano.Ledger.Alonzo.TxInfo (PlutusDebug)
-import           Cardano.Ledger.Babbage (BabbageEra)
+import           Cardano.Ledger.Api.Era (AllegraEra, AlonzoEra, BabbageEra, ConwayEra, MaryEra,
+                   ShelleyEra)
 import qualified Cardano.Ledger.Coin as Ledger
+import           Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Core as Ledger.Core
 import qualified Cardano.Ledger.Credential as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
-import           Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Keys as Ledger
 import           Cardano.Ledger.Shelley.API (InstantaneousRewards (InstantaneousRewards))
 import           Cardano.Ledger.Shelley.Rewards (Reward)
@@ -80,32 +80,29 @@ class ConvertLedgerEvent blk where
 instance ConvertLedgerEvent ByronBlock where
   toLedgerEvent _ = Nothing
 
-instance
-  ( EraCrypto ledgerera ~ StandardCrypto,
-    Event (Ledger.Core.EraRule "TICK" ledgerera) ~ ShelleyTickEvent ledgerera,
-    Event (Ledger.Core.EraRule "NEWEPOCH" ledgerera) ~ ShelleyNewEpochEvent ledgerera,
-    Event (Ledger.Core.EraRule "EPOCH" ledgerera) ~ ShelleyEpochEvent ledgerera,
-    Event (Ledger.Core.EraRule "POOLREAP" ledgerera) ~ ShelleyPoolreapEvent ledgerera,
-    Event (Ledger.Core.EraRule "MIR" ledgerera) ~ ShelleyMirEvent ledgerera,
-    Event (Ledger.Core.EraRule "RUPD" ledgerera) ~ RupdEvent StandardCrypto
-  ) =>
-  ConvertLedgerEvent (ShelleyBlock protocol ledgerera)
-  where
+instance ConvertLedgerEvent (ShelleyBlock protocol (ShelleyEra StandardCrypto)) where
   toLedgerEvent = toLedgerEventShelley
 
-instance {-# OVERLAPPING #-} ConvertLedgerEvent (ShelleyBlock protocol (AlonzoEra StandardCrypto))
-  where
+instance ConvertLedgerEvent (ShelleyBlock protocol (MaryEra StandardCrypto)) where
+  toLedgerEvent = toLedgerEventShelley
+
+instance ConvertLedgerEvent (ShelleyBlock protocol (AllegraEra StandardCrypto)) where
+  toLedgerEvent = toLedgerEventShelley
+
+instance ConvertLedgerEvent (ShelleyBlock protocol (AlonzoEra StandardCrypto)) where
   toLedgerEvent evt = case unwrapLedgerEvent evt of
     LEPlutusSuccess ds -> Just $ SuccessfulPlutusScript ds
     LEPlutusFailure ds -> Just $ FailedPlutusScript ds
     _ -> toLedgerEventShelley evt
 
-instance {-# OVERLAPPING #-} ConvertLedgerEvent (ShelleyBlock protocol (BabbageEra StandardCrypto))
-  where
+instance ConvertLedgerEvent (ShelleyBlock protocol (BabbageEra StandardCrypto)) where
   toLedgerEvent evt = case unwrapLedgerEvent evt of
     LEPlutusSuccess ds -> Just $ SuccessfulPlutusScript ds
     LEPlutusFailure ds -> Just $ FailedPlutusScript ds
     _ -> toLedgerEventShelley evt
+
+instance ConvertLedgerEvent (ShelleyBlock protocol (ConwayEra StandardCrypto)) where
+  toLedgerEvent _evt = Nothing -- LEDGER rule is defined anew in Conway
 
 instance All ConvertLedgerEvent xs => ConvertLedgerEvent (HardForkBlock xs) where
   toLedgerEvent =
