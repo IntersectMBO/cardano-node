@@ -51,7 +51,6 @@ library
                       , ouroboros-consensus-cardano
                       , ouroboros-network
                       , prometheus
-                      , protolude
                       , servant
                       , servant-server
                       , streaming-commons
