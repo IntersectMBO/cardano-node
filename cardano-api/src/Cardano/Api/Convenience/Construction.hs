@@ -29,6 +29,7 @@ import           Cardano.Api.Query
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
 import           Cardano.Api.Utils
+import           Cardano.Api.Value
 
 -- | Construct a balanced transaction.
 -- See Cardano.Api.Convenience.Query.queryStateForBalancedTx for a
@@ -44,14 +45,16 @@ constructBalancedTx
   -> LedgerEpochInfo
   -> SystemStart
   -> Set PoolId       -- ^ The set of registered stake pools
+  -> Map.Map StakeCredential Lovelace
   -> [ShelleyWitnessSigningKey]
   -> Either TxBodyErrorAutoBalance (Tx era)
 constructBalancedTx txbodcontent changeAddr mOverrideWits utxo pparams
-                    ledgerEpochInfo systemStart stakePools shelleyWitSigningKeys = do
+                    ledgerEpochInfo systemStart stakePools
+                    stakeDelegDeposits shelleyWitSigningKeys = do
   BalancedTxBody _ txbody _txBalanceOutput _fee
     <- makeTransactionBodyAutoBalance
          systemStart ledgerEpochInfo
-         pparams stakePools utxo txbodcontent
+         pparams stakePools stakeDelegDeposits utxo txbodcontent
          changeAddr mOverrideWits
 
   let keyWits = map (makeShelleyKeyWitness txbody) shelleyWitSigningKeys

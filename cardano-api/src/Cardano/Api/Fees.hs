@@ -635,14 +635,15 @@ evaluateTransactionBalance :: forall era.
                               IsShelleyBasedEra era
                            => BundledProtocolParameters era
                            -> Set PoolId
+                           -> Map StakeCredential Lovelace
                            -> UTxO era
                            -> TxBody era
                            -> TxOutValue era
-evaluateTransactionBalance _ _ _ (ByronTxBody _) =
+evaluateTransactionBalance _ _ _ _ (ByronTxBody _) =
     case shelleyBasedEra :: ShelleyBasedEra era of {}
     --TODO: we could actually support Byron here, it'd be different but simpler
 
-evaluateTransactionBalance bpp poolids utxo
+evaluateTransactionBalance bpp poolids stakeDelegDeposits utxo
                            (ShelleyTxBody era txbody _ _ _ _) =
     withLedgerConstraints
       era
@@ -664,15 +665,11 @@ evaluateTransactionBalance bpp poolids utxo
     isRegPool :: Ledger.KeyHash Ledger.StakePool Ledger.StandardCrypto -> Bool
     isRegPool kh = StakePoolKeyHash kh `Set.member` poolids
 
-    -- TODO: Add deposit map as an argument and implement a deposit loookup query in
-    -- consensus and cardano-cli. This is be fixed in a subsequent PR.
     lookupDelegDeposit ::
       Ledger.Credential 'Ledger.Staking L.StandardCrypto -> Maybe Ledger.Coin
-    lookupDelegDeposit = const (Just defaultDelegDeposit)
-
-    defaultDelegDeposit =
-      toShelleyLovelace $
-      protocolParamStakeAddressDeposit (unbundleProtocolParams bpp)
+    lookupDelegDeposit stakeCred =
+      toShelleyLovelace <$>
+      Map.lookup (fromShelleyStakeCredential stakeCred) stakeDelegDeposits
 
     evalMultiAsset :: forall ledgerera.
                       ShelleyLedgerEra era ~ ledgerera
@@ -723,12 +720,12 @@ evaluateTransactionBalance bpp poolids utxo
           => MultiAssetSupportedInEra era
           -> a)
       -> a
-    withLedgerConstraints ShelleyBasedEraShelley f _  = f AdaOnlyInShelleyEra
-    withLedgerConstraints ShelleyBasedEraAllegra f _  = f AdaOnlyInAllegraEra
-    withLedgerConstraints ShelleyBasedEraMary    _ f  = f MultiAssetInMaryEra
-    withLedgerConstraints ShelleyBasedEraAlonzo  _ f  = f MultiAssetInAlonzoEra
+    withLedgerConstraints ShelleyBasedEraShelley f _ = f AdaOnlyInShelleyEra
+    withLedgerConstraints ShelleyBasedEraAllegra f _ = f AdaOnlyInAllegraEra
+    withLedgerConstraints ShelleyBasedEraMary    _ f = f MultiAssetInMaryEra
+    withLedgerConstraints ShelleyBasedEraAlonzo  _ f = f MultiAssetInAlonzoEra
     withLedgerConstraints ShelleyBasedEraBabbage _ f = f MultiAssetInBabbageEra
-    withLedgerConstraints ShelleyBasedEraConway _ f = f MultiAssetInConwayEra
+    withLedgerConstraints ShelleyBasedEraConway  _ f = f MultiAssetInConwayEra
 
 type LedgerEraConstraints ledgerera =
        ( Ledger.EraCrypto ledgerera ~ Ledger.StandardCrypto
@@ -908,14 +905,18 @@ makeTransactionBodyAutoBalance
   => SystemStart
   -> LedgerEpochInfo
   -> ProtocolParameters
-  -> Set PoolId       -- ^ The set of registered stake pools
+  -> Set PoolId       -- ^ The set of registered stake pools, that are being
+                      --   unregistered in this transaction.
+  -> Map StakeCredential Lovelace
+                      -- ^ Map of all deposits for stake credentials that are being
+                      --   unregistered in this transaction
   -> UTxO era         -- ^ Just the transaction inputs, not the entire 'UTxO'.
   -> TxBodyContent BuildTx era
   -> AddressInEra era -- ^ Change address
   -> Maybe Word       -- ^ Override key witnesses
   -> Either TxBodyErrorAutoBalance (BalancedTxBody era)
-makeTransactionBodyAutoBalance systemstart history pparams
-                            poolids utxo txbodycontent changeaddr mnkeys = do
+makeTransactionBodyAutoBalance systemstart history pparams poolids stakeDelegDeposits
+                            utxo txbodycontent changeaddr mnkeys = do
 
     -- Our strategy is to:
     -- 1. evaluate all the scripts to get the exec units, update with ex units
@@ -1007,7 +1008,7 @@ makeTransactionBodyAutoBalance systemstart history pparams
                  txReturnCollateral = retColl,
                  txTotalCollateral = reqCol
                }
-    let balance = evaluateTransactionBalance bpparams poolids utxo txbody2
+    let balance = evaluateTransactionBalance bpparams poolids stakeDelegDeposits utxo txbody2
 
     forM_ (txOuts txbodycontent1) $ \txout -> checkMinUTxOValue txout bpparams
 

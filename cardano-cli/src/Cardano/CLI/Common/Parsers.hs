@@ -6,9 +6,8 @@ module Cardano.CLI.Common.Parsers
 
 import           Cardano.Api (AnyConsensusModeParams (..), ConsensusModeParams (..),
                    EpochSlots (..), NetworkId (..), NetworkMagic (..), SocketPath (..), bounded)
-import           Cardano.CLI.Environment (EnvCli (envCliNetworkId))
+import           Cardano.CLI.Environment (EnvCli (envCliNetworkId, envCliSocketPath))
 
-import           Cardano.CLI.Environment (EnvCli (envCliSocketPath))
 import           Data.Foldable
 import           Data.Maybe (maybeToList)
 import           Data.Word (Word64)
