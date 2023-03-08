@@ -528,6 +528,10 @@ evaluateTransactionExecutionUnits systemstart epochInfo bpp utxo txbody =
             case collateralSupportedInEra $ shelleyBasedToCardanoEra sbe of
               Just supp -> obtainHasFieldConstraint supp $ evalConway sbe tx'
               Nothing -> return mempty
+          ShelleyBasedEraConway ->
+            case collateralSupportedInEra $ shelleyBasedToCardanoEra era of
+              Just supp -> obtainHasFieldConstraint supp $ evalConway era tx'
+              Nothing -> return mempty
   where
     LedgerEpochInfo ledgerEpochInfo = epochInfo
 
@@ -594,9 +598,9 @@ evaluateTransactionExecutionUnits systemstart epochInfo bpp utxo txbody =
                          (Map ScriptWitnessIndex
                               (Either ScriptExecutionError ExecutionUnits))
     evalConway era tx = do
-      costModelsArray <- toAlonzoCostModelsArray (protocolParamCostModels (unbundleProtocolParams bpp))
+      costModelsArray <- toAlonzoCostModelsArray (protocolParamCostModels pparams)
       case Alonzo.evaluateTransactionExecutionUnits
-             (toLedgerPParams era (unbundleProtocolParams bpp))
+             (toLedgerPParams era pparams)
              tx
              (toLedgerUTxO era utxo)
              ledgerEpochInfo
@@ -1379,6 +1383,12 @@ calculateMinimumUTxO era txout@(TxOut _ v _ _) bpp =
     ShelleyBasedEraConway ->
       let lTxOut = toShelleyTxOutAny era txout
           minUTxO = Shelley.evaluateMinLovelaceOutput (unbundleLedgerShelleyBasedProtocolParams era bpp) lTxOut
+          val = fromShelleyLovelace minUTxO
+      in Right val
+    ShelleyBasedEraConway ->
+      let lTxOut = toShelleyTxOutAny era txout
+          babPParams = toConwayPParams pparams'
+          minUTxO = Shelley.evaluateMinLovelaceOutput babPParams lTxOut
           val = fromShelleyLovelace minUTxO
       in Right val
  where
