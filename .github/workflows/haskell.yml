@@ -212,6 +212,13 @@ jobs:
     #   with:
     #     limit-access-to-actor: true
 
+  build-complete:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Build complete
+      run: echo 'Build complete'
+
   release:
     needs: [build]
     if: ${{ startsWith(github.ref, 'refs/tags') }}
