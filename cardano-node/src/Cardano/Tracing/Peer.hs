@@ -13,7 +13,7 @@ module Cardano.Tracing.Peer
 import           Cardano.Prelude hiding (atomically)
 import           Prelude (String)
 
-import qualified Control.Monad.Class.MonadSTM.Strict as STM
+import qualified Control.Concurrent.Class.MonadSTM.Strict as STM
 import           Data.Aeson (ToJSON (..), Value (..), toJSON, (.=))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -37,6 +37,8 @@ import           Ouroboros.Network.BlockFetch.ClientState (PeerFetchInFlight (..
                    PeerFetchStatus (..), readFetchClientState)
 
 import           Cardano.Node.Queries
+import Ouroboros.Network.NodeToNode (RemoteAddress)
+import Ouroboros.Network.SizeInBytes (getSizeInBytes)
 
 data Peer blk =
   Peer
@@ -63,7 +65,7 @@ ppInFlight f = printf
  (ppMaxSlotNo $ peerFetchMaxSlotNo f)
  (peerFetchReqsInFlight f)
  (Set.size $ peerFetchBlocksInFlight f)
- (peerFetchBytesInFlight f)
+ (getSizeInBytes (peerFetchBytesInFlight f))
 
 ppMaxSlotNo :: Net.MaxSlotNo -> String
 ppMaxSlotNo Net.NoMaxSlotNo = "???"
@@ -89,7 +91,7 @@ getCurrentPeers nkd = mapNodeKernelDataIO extractPeers nkd
     -> STM.STM IO (Map peer (Net.AnchoredFragment (Header blk)))
   getCandidates var = STM.readTVar var >>= traverse STM.readTVar
 
-  extractPeers :: NodeKernel IO RemoteConnectionId LocalConnectionId blk
+  extractPeers :: NodeKernel IO RemoteAddress LocalConnectionId blk
                 -> IO [Peer blk]
   extractPeers kernel = do
     peerStates <- fmap tuple3pop <$> (   STM.atomically

@@ -1,6 +1,5 @@
 
 import           Cardano.Crypto.Libsodium (sodiumInit)
-import           Cardano.Prelude
 
 import           Test.Tasty (TestTree, defaultMain, testGroup)
 

@@ -27,7 +27,6 @@ import           Cardano.Prelude
 import           Data.Aeson
 import           Data.Time.Clock
 
-import           Cardano.Api.Protocol.Types (BlockType (..), protocolInfo)
 import qualified Cardano.Ledger.Shelley.API as SL
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import qualified Ouroboros.Consensus.Block.RealPoint as RP
@@ -47,6 +46,7 @@ import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import qualified Cardano.Node.Startup as Startup
 import           Cardano.Slotting.Slot (EpochNo, SlotNo (..), WithOrigin)
 import           Cardano.Tracing.OrphanInstances.Network ()
+import qualified Cardano.Api as Api
 
 instance FromJSON ChunkNo
 instance FromJSON (WithOrigin SlotNo)
@@ -248,13 +248,13 @@ getSlotForNow
   -> IO SlotNo
 getSlotForNow (SomeConsensusProtocol whichP pInfo) s = do
   now <- getCurrentTime
-  let cfg = pInfoConfig $ protocolInfo pInfo
+  let cfg = pInfoConfig $ Api.protocolInfo pInfo
   case whichP of
-    ShelleyBlockType -> do
+    Api.ShelleyBlockType -> do
       let DegenLedgerConfig cfgShelley = Consensus.configLedger cfg
           nowSinceSystemStart = now `diffUTCTime` getSystemStartTime cfgShelley
       return . SlotNo $ floor nowSinceSystemStart
-    CardanoBlockType -> do
+    Api.CardanoBlockType -> do
       let CardanoLedgerConfig _ cfgShelley cfgAllegra cfgMary
                                 cfgAlonzo cfgBabbage =
             Consensus.configLedger cfg

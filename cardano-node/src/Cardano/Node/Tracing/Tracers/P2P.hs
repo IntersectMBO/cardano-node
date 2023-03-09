@@ -103,6 +103,7 @@ namesForLocalRootPeers :: TraceLocalRootPeers ntnAddr resolverError -> [Text]
 namesForLocalRootPeers TraceLocalRootDomains {} = ["LocalRootDomains"]
 namesForLocalRootPeers TraceLocalRootWaiting {} = ["LocalRootWaiting"]
 namesForLocalRootPeers TraceLocalRootResult {}  = ["LocalRootResult"]
+namesForLocalRootPeers TraceLocalRootReconfigured {} = ["LocalRootReconfigured"]
 namesForLocalRootPeers TraceLocalRootGroups {}  = ["LocalRootGroups"]
 namesForLocalRootPeers TraceLocalRootFailure {} = ["LocalRootFailure"]
 namesForLocalRootPeers TraceLocalRootError {}   = ["LocalRootError"]
@@ -125,6 +126,11 @@ instance (ToJSONKey ntnAddr, ToJSONKey RelayAccessPoint, Show ntnAddr, Show exce
     mconcat [ "kind" .= String "LocalRootResult"
              , "domainAddress" .= toJSON d
              , "result" .= toJSONList res
+             ]
+  forMachine _dtal (TraceLocalRootReconfigured old new) =
+    mconcat [ "kind" .= String "LocalRootReconfigured"
+             , "oldLocalRoots" .= toJSONList old
+             , "newLocalRoots" .= toJSONList new
              ]
   forMachine _dtal (TraceLocalRootGroups groups) =
     mconcat [ "kind" .= String "LocalRootGroups"
@@ -189,7 +195,7 @@ severityPublicRootPeers _ = Info
 instance LogFormatting TracePublicRootPeers where
   forMachine _dtal (TracePublicRootRelayAccessPoint relays) =
     mconcat [ "kind" .= String "PublicRootRelayAddresses"
-             , "relayAddresses" .= toJSONList relays
+             , "relayAddresses" .= toJSON relays
              ]
   forMachine _dtal (TracePublicRootDomains domains) =
     mconcat [ "kind" .= String "PublicRootDomains"
@@ -238,8 +244,9 @@ namesForPeerSelection TraceTargetsChanged {}        = ["TargetsChanged"]
 namesForPeerSelection TracePublicRootsRequest {}    = ["PublicRootsRequest"]
 namesForPeerSelection TracePublicRootsResults {}    = ["PublicRootsResults"]
 namesForPeerSelection TracePublicRootsFailure {}    = ["PublicRootsFailure"]
-namesForPeerSelection TraceGossipRequests {}        = ["GossipRequests"]
-namesForPeerSelection TraceGossipResults {}         = ["GossipResults"]
+namesForPeerSelection TracePeerShareRequests {}        = ["PeerShareRequests"]
+namesForPeerSelection TracePeerShareResults {}         = ["PeerShareResults"]
+namesForPeerSelection TracePeerShareResultsFiltered {} = ["PeerShareResultsFiltered"]
 namesForPeerSelection TraceForgetColdPeers {}       = ["ForgetColdPeers"]
 namesForPeerSelection TracePromoteColdPeers {}      = ["PromoteColdPeers"]
 namesForPeerSelection TracePromoteColdLocalPeers {} = ["PromoteColdLocalPeers"]
@@ -258,6 +265,7 @@ namesForPeerSelection TraceDemoteLocalHotPeers {}   = ["DemoteLocalHotPeers"]
 namesForPeerSelection TraceDemoteHotFailed {}       = ["DemoteHotFailed"]
 namesForPeerSelection TraceDemoteHotDone {}         = ["DemoteHotDone"]
 namesForPeerSelection TraceDemoteAsynchronous {}    = ["DemoteAsynchronous"]
+namesForPeerSelection TraceDemoteLocalAsynchronous {} = ["DemoteLocalAsynchronous"]
 namesForPeerSelection TraceGovernorWakeup {}        = ["GovernorWakeup"]
 namesForPeerSelection TraceChurnWait {}             = ["ChurnWait"]
 namesForPeerSelection TraceChurnMode {}             = ["ChurnMode"]
@@ -269,8 +277,9 @@ severityPeerSelection TraceTargetsChanged        {} = Notice
 severityPeerSelection TracePublicRootsRequest    {} = Info
 severityPeerSelection TracePublicRootsResults    {} = Info
 severityPeerSelection TracePublicRootsFailure    {} = Error
-severityPeerSelection TraceGossipRequests        {} = Debug
-severityPeerSelection TraceGossipResults         {} = Debug
+severityPeerSelection TracePeerShareRequests        {} = Info
+severityPeerSelection TracePeerShareResults         {} = Info
+severityPeerSelection TracePeerShareResultsFiltered {} = Info
 severityPeerSelection TraceForgetColdPeers       {} = Info
 severityPeerSelection TracePromoteColdPeers      {} = Info
 severityPeerSelection TracePromoteColdLocalPeers {} = Info
@@ -289,6 +298,7 @@ severityPeerSelection TraceDemoteLocalHotPeers   {} = Info
 severityPeerSelection TraceDemoteHotFailed       {} = Info
 severityPeerSelection TraceDemoteHotDone         {} = Info
 severityPeerSelection TraceDemoteAsynchronous    {} = Info
+severityPeerSelection TraceDemoteLocalAsynchronous {} = Info
 severityPeerSelection TraceGovernorWakeup        {} = Info
 severityPeerSelection TraceChurnWait             {} = Info
 severityPeerSelection TraceChurnMode             {} = Info
@@ -321,16 +331,20 @@ instance LogFormatting (TracePeerSelection SockAddr) where
              , "group" .= group
              , "diffTime" .= dt
              ]
-  forMachine _dtal (TraceGossipRequests targetKnown actualKnown aps sps) =
-    mconcat [ "kind" .= String "GossipRequests"
+  forMachine _dtal (TracePeerShareRequests targetKnown actualKnown aps sps) =
+    mconcat [ "kind" .= String "PeerShareRequests"
              , "targetKnown" .= targetKnown
              , "actualKnown" .= actualKnown
              , "availablePeers" .= toJSONList (toList aps)
              , "selectedPeers" .= toJSONList (toList sps)
              ]
-  forMachine _dtal (TraceGossipResults res) =
-    mconcat [ "kind" .= String "GossipResults"
+  forMachine _dtal (TracePeerShareResults res) =
+    mconcat [ "kind" .= String "PeerShareResults"
              , "result" .= toJSONList (map ( bimap show id <$> ) res)
+             ]
+  forMachine _dtal (TracePeerShareResultsFiltered res) =
+    mconcat [ "kind" .= String "PeerShareResultsFiltered"
+             , "result" .= toJSONList (map show res)
              ]
   forMachine _dtal (TraceForgetColdPeers targetKnown actualKnown sp) =
     mconcat [ "kind" .= String "ForgeColdPeers"
@@ -438,6 +452,10 @@ instance LogFormatting (TracePeerSelection SockAddr) where
              , "peer" .= toJSON p
              ]
   forMachine _dtal (TraceDemoteAsynchronous msp) =
+    mconcat [ "kind" .= String "DemoteAsynchronous"
+             , "state" .= toJSON msp
+             ]
+  forMachine _dtal (TraceDemoteLocalAsynchronous msp) =
     mconcat [ "kind" .= String "DemoteAsynchronous"
              , "state" .= toJSON msp
              ]
@@ -591,13 +609,13 @@ peerSelectionTargetsToObject
 -- DebugPeerSelection Tracer
 --------------------------------------------------------------------------------
 
-namesForDebugPeerSelection :: DebugPeerSelection SockAddr peerConn -> [Text]
+namesForDebugPeerSelection :: DebugPeerSelection SockAddr -> [Text]
 namesForDebugPeerSelection _ = ["GovernorState"]
 
-severityDebugPeerSelection :: DebugPeerSelection SockAddr peerConn -> SeverityS
+severityDebugPeerSelection :: DebugPeerSelection SockAddr -> SeverityS
 severityDebugPeerSelection _ = Debug
 
-instance Show peerConn => LogFormatting (DebugPeerSelection SockAddr peerConn) where
+instance LogFormatting (DebugPeerSelection SockAddr) where
   forMachine DNormal (TraceGovernorState blockedAt wakeupAfter
                    PeerSelectionState { targets, knownPeers, establishedPeers, activePeers }) =
     mconcat [ "kind" .= String "DebugPeerSelection"
@@ -618,7 +636,7 @@ instance Show peerConn => LogFormatting (DebugPeerSelection SockAddr peerConn) w
              ]
   forHuman = pack . show
 
-docDebugPeerSelection :: Documented (DebugPeerSelection SockAddr peerConn)
+docDebugPeerSelection :: Documented (DebugPeerSelection SockAddr)
 docDebugPeerSelection = Documented
   [  DocMsg
       ["GovernorState"]
@@ -666,13 +684,13 @@ docPeerSelectionCounters = Documented
 -- PeerSelectionActions Tracer
 --------------------------------------------------------------------------------
 
-namesForPeerSelectionActions :: PeerSelectionActionsTrace ntnAddr -> [Text]
+namesForPeerSelectionActions :: PeerSelectionActionsTrace ntnAddr laddr -> [Text]
 namesForPeerSelectionActions PeerStatusChanged   {}     = ["StatusChanged"]
 namesForPeerSelectionActions PeerStatusChangeFailure {} = ["StatusChangeFailure"]
 namesForPeerSelectionActions PeerMonitoringError {}     = ["MonitoringError"]
 namesForPeerSelectionActions PeerMonitoringResult {}    = ["MonitoringResult"]
 
-severityPeerSelectionActions :: PeerSelectionActionsTrace ntnAddr -> SeverityS
+severityPeerSelectionActions :: PeerSelectionActionsTrace ntnAddr laddr -> SeverityS
 severityPeerSelectionActions PeerStatusChanged {}       = Info
 severityPeerSelectionActions PeerStatusChangeFailure {} = Error
 severityPeerSelectionActions PeerMonitoringError {}     = Error
@@ -680,7 +698,7 @@ severityPeerSelectionActions PeerMonitoringResult {}    = Debug
 
 -- TODO: Write PeerStatusChangeType ToJSON at ouroboros-network
 -- For that an export is needed at ouroboros-network
-instance LogFormatting (PeerSelectionActionsTrace SockAddr) where
+instance Show laddr => LogFormatting (PeerSelectionActionsTrace SockAddr laddr) where
   forMachine _dtal (PeerStatusChanged ps) =
     mconcat [ "kind" .= String "PeerStatusChanged"
              , "peerStatusChangeType" .= show ps
@@ -702,11 +720,11 @@ instance LogFormatting (PeerSelectionActionsTrace SockAddr) where
              ]
   forHuman = pack . show
 
-docPeerSelectionActions :: Documented (PeerSelectionActionsTrace ntnAddr)
+docPeerSelectionActions :: Documented (PeerSelectionActionsTrace ntnAddr laddr)
 docPeerSelectionActions =
     addDocumentedNamespace  []  docPeerSelectionActions'
 
-docPeerSelectionActions' :: Documented (PeerSelectionActionsTrace ntnAddr)
+docPeerSelectionActions' :: Documented (PeerSelectionActionsTrace ntnAddr laddr)
 docPeerSelectionActions' = Documented
   [  DocMsg
       ["StatusChanged"]
@@ -753,7 +771,6 @@ namesForConnectionManager TrConnectionManagerCounters {} = ["ConnectionManagerCo
 namesForConnectionManager TrState {} = ["State"]
 namesForConnectionManager ConnectionManager.TrUnexpectedlyFalseAssertion {} =
                             ["UnexpectedlyFalseAssertion"]
-namesForConnectionManager TrUnknownConnection {} = ["UnknownConnection"]
 
 severityConnectionManager ::
   ConnectionManagerTrace addr
@@ -769,8 +786,8 @@ severityConnectionManager (TrConnectionHandler _ ev')             =
           TrHandshakeSuccess {}     -> Info
           TrHandshakeClientError {} -> Notice
           TrHandshakeServerError {} -> Info
-          TrError _ _ ShutdownNode  -> Critical
-          TrError _ _ ShutdownPeer  -> Info
+          TrConnectionHandlerError _ _ ShutdownNode  -> Critical
+          TrConnectionHandlerError _ _ ShutdownPeer  -> Info
 
 severityConnectionManager TrShutdown                              = Info
 severityConnectionManager TrConnectionExists {}                   = Info
@@ -788,7 +805,6 @@ severityConnectionManager TrConnectionManagerCounters {}          = Info
 severityConnectionManager TrState {}                              = Info
 severityConnectionManager ConnectionManager.TrUnexpectedlyFalseAssertion {} =
                             Error
-severityConnectionManager TrUnknownConnection {}                  = Debug
 
 instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
           ToJSON addr, ToJSON versionNumber, ToJSON agreedOptions)
@@ -925,11 +941,6 @@ instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
           [ "kind" .= String "UnexpectedlyFalseAssertion"
           , "info" .= String (pack . show $ info)
           ]
-    forMachine _dtal (TrUnknownConnection info) =
-      mconcat
-        [ "kind" .= String "UnknownConnection"
-        , "info" .= String (pack . show $ info)
-        ]
     forHuman = pack . show
     asMetrics (TrConnectionManagerCounters ConnectionManagerCounters {..}) =
           [ IntM
@@ -968,7 +979,7 @@ instance (Show versionNumber, ToJSON versionNumber, ToJSON agreedOptions)
       [ "kind" .= String "HandshakeServerError"
       , "reason" .= toJSON err
       ]
-  forMachine _dtal (TrError e err cerr) =
+  forMachine _dtal (TrConnectionHandlerError e err cerr) =
     mconcat
       [ "kind" .= String "Error"
       , "context" .= show e

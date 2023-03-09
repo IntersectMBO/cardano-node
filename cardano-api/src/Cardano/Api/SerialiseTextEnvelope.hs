@@ -37,8 +37,6 @@ module Cardano.Api.SerialiseTextEnvelope
   , AsType(..)
   ) where
 
-import           Prelude
-
 import           Data.Bifunctor (first)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as Base16
@@ -68,10 +66,10 @@ import           Cardano.Api.Utils (readFileBlocking)
 #ifdef UNIX
 import           Control.Exception (IOException, bracket, bracketOnError, try)
 import           System.Directory ()
-import           System.Posix.Files (ownerModes, setFdOwnerAndGroup)
-import           System.Posix.IO (OpenMode (..), closeFd, openFd, fdToHandle, defaultFileFlags)
-import           System.Posix.User (getRealUserID)
 import           System.IO (hClose)
+import           System.Posix.Files (ownerModes, setFdOwnerAndGroup)
+import           System.Posix.IO (OpenMode (..), closeFd, defaultFileFlags, fdToHandle, openFd)
+import           System.Posix.User (getRealUserID)
 #else
 import           Control.Exception (bracketOnError)
 import           System.Directory (removeFile, renameFile)

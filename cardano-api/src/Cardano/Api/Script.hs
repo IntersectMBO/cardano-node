@@ -24,6 +24,7 @@ module Cardano.Api.Script (
     PlutusScriptVersion(..),
     AnyScriptLanguage(..),
     AnyPlutusScriptVersion(..),
+    IsPlutusScriptLanguage(..),
     IsScriptLanguage(..),
     IsSimpleScriptLanguage(..),
 
@@ -109,11 +110,10 @@ module Cardano.Api.Script (
     Hash(..),
   ) where
 
-import           Prelude
-
 import qualified Data.ByteString.Lazy as LBS
 import           Data.ByteString.Short (ShortByteString)
 import qualified Data.ByteString.Short as SBS
+import           Data.Either.Combinators (maybeToRight)
 import           Data.Foldable (toList)
 import           Data.Scientific (toBoundedInteger)
 import           Data.String (IsString)
@@ -142,7 +142,6 @@ import           Cardano.Slotting.Slot (SlotNo)
 
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Ledger
-import qualified Cardano.Ledger.Era as Ledger
 
 import qualified Cardano.Ledger.Keys as Shelley
 import qualified Cardano.Ledger.Shelley.Scripts as Shelley
@@ -159,7 +158,7 @@ import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.KeysShelley
+import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.ScriptData
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
@@ -936,8 +935,9 @@ instance SerialiseAsRawBytes ScriptHash where
     serialiseToRawBytes (ScriptHash (Shelley.ScriptHash h)) =
       Crypto.hashToBytes h
 
-    deserialiseFromRawBytes AsScriptHash bs =
-      ScriptHash . Shelley.ScriptHash <$> Crypto.hashFromBytes bs
+    eitherDeserialiseFromRawBytes AsScriptHash bs =
+      maybeToRight (SerialiseAsRawBytesError "Enable to deserialise ScriptHash") $
+        ScriptHash . Shelley.ScriptHash <$> Crypto.hashFromBytes bs
 
 
 hashScript :: Script lang -> ScriptHash
@@ -1073,12 +1073,12 @@ instance HasTypeProxy lang => HasTypeProxy (PlutusScript lang) where
     data AsType (PlutusScript lang) = AsPlutusScript (AsType lang)
     proxyToAsType _ = AsPlutusScript (proxyToAsType (Proxy :: Proxy lang))
 
-instance HasTypeProxy lang => SerialiseAsRawBytes (PlutusScript lang) where
+instance (HasTypeProxy lang, Typeable lang) => SerialiseAsRawBytes (PlutusScript lang) where
     serialiseToRawBytes (PlutusScriptSerialised sbs) = SBS.fromShort sbs
 
-    deserialiseFromRawBytes (AsPlutusScript _) bs =
+    eitherDeserialiseFromRawBytes (AsPlutusScript _) bs =
       -- TODO alonzo: validate the script syntax and fail decoding if invalid
-      Just (PlutusScriptSerialised (SBS.toShort bs))
+      Right (PlutusScriptSerialised (SBS.toShort bs))
 
 instance (IsPlutusScriptLanguage lang, Typeable lang) =>
          HasTextEnvelope (PlutusScript lang) where

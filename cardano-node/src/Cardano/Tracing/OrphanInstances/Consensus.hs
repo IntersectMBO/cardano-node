@@ -80,6 +80,7 @@ import qualified Data.Aeson as Aeson
 import qualified Ouroboros.Consensus.Storage.ImmutableDB.API as ImmDB
 import qualified Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types as ImmDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
+import Ouroboros.Network.SizeInBytes (getSizeInBytes)
 
 
 {- HLINT ignore "Use const" -}
@@ -1425,7 +1426,7 @@ instance ( tx ~ GenTx blk
           (Proxy @blk)
           MaximalVerbosity
           (blockHash blk)
-      , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+      , "blockSize" .= toJSON (getSizeInBytes (estimateBlockSize (getHeader blk)))
       , "txIds" .= toJSON (map (show . txId . txForgetValidated) txs)
       ]
   toObject verb (TraceAdoptedBlock slotNo blk _txs) =
@@ -1436,7 +1437,7 @@ instance ( tx ~ GenTx blk
           (Proxy @blk)
           verb
           (blockHash blk)
-      , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+      , "blockSize" .= toJSON (getSizeInBytes (estimateBlockSize (getHeader blk)))
       ]
 
 

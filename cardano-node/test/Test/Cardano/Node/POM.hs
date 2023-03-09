@@ -24,6 +24,7 @@ import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
 import           Hedgehog (Property, discover, withTests, (===))
 import qualified Hedgehog
 import           Hedgehog.Internal.Property (evalEither, failWith)
+import Ouroboros.Network.PeerSelection.PeerSharing.Type (PeerSharing (..))
 
 
 -- This is a simple test to check that the POM technique is working as intended.
@@ -77,6 +78,7 @@ testPartialYamlConfig =
     , pncTargetNumberOfEstablishedPeers = mempty
     , pncTargetNumberOfActivePeers = mempty
     , pncEnableP2P = Last (Just DisabledP2PMode)
+    , pncPeerSharing = mempty
     }
 
 -- | Example partial configuration theoretically created
@@ -110,6 +112,7 @@ testPartialCliConfig =
     , pncTargetNumberOfEstablishedPeers = mempty
     , pncTargetNumberOfActivePeers = mempty
     , pncEnableP2P = Last (Just DisabledP2PMode)
+    , pncPeerSharing = mempty
     }
 
 -- | Expected final NodeConfiguration
@@ -151,6 +154,7 @@ eExpectedConfig = do
     , ncTargetNumberOfEstablishedPeers = 50
     , ncTargetNumberOfActivePeers = 20
     , ncEnableP2P = SomeNetworkP2PMode Consensus.DisabledP2PMode
+    , ncPeerSharing = NoPeerSharing
     }
 
 -- -----------------------------------------------------------------------------

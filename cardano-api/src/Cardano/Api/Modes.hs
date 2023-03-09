@@ -43,8 +43,6 @@ module Cardano.Api.Modes (
     fromConsensusEraIndex,
   ) where
 
-import           Prelude
-
 import           Cardano.Api.Eras
 import           Cardano.Ledger.Crypto (StandardCrypto)
 
@@ -209,6 +207,13 @@ instance FromJSON (EraInMode AlonzoEra CardanoMode) where
   parseJSON invalid =
       invalidJSONFailure "AlonzoEraInCardanoMode"
                          "parsing 'EraInMode AlonzoEra CardanoMode' failed, "
+                         invalid
+
+instance FromJSON (EraInMode BabbageEra CardanoMode) where
+  parseJSON "BabbageEraInCardanoMode" = pure BabbageEraInCardanoMode
+  parseJSON invalid =
+      invalidJSONFailure "BabbageEraInCardanoMode"
+                         "parsing 'EraInMode Babbage CardanoMode' failed, "
                          invalid
 
 invalidJSONFailure :: String -> String -> Value -> Parser a

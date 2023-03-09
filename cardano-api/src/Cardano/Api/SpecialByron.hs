@@ -15,8 +15,6 @@ module Cardano.Api.SpecialByron
     toByronLedgertoByronVote,
   ) where
 
-import           Prelude
-
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as M
@@ -24,7 +22,7 @@ import           Data.Word
 import           Numeric.Natural
 
 import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.KeysByron
+import           Cardano.Api.Keys.Byron
 import           Cardano.Api.NetworkId (NetworkId, toByronProtocolMagicId)
 import           Cardano.Api.SerialiseRaw
 
@@ -32,9 +30,9 @@ import qualified Cardano.Binary as Binary
 import           Cardano.Chain.Common (LovelacePortion, TxFeePolicy)
 import           Cardano.Chain.Slotting
 import           Cardano.Chain.Update (AProposal (aBody, annotation), InstallerHash,
-                     ProposalBody (ProposalBody), ProtocolParametersUpdate (..), ProtocolVersion,
-                     SoftforkRule, SoftwareVersion, SystemTag, UpId, mkVote, recoverUpId,
-                     recoverVoteId, signProposal)
+                   ProposalBody (ProposalBody), ProtocolParametersUpdate (..), ProtocolVersion,
+                   SoftforkRule, SoftwareVersion, SystemTag, UpId, mkVote, recoverUpId,
+                   recoverVoteId, signProposal)
 import qualified Cardano.Chain.Update.Vote as ByronVote
 import           Cardano.Crypto (SafeSigner, noPassSafeSigner)
 
@@ -55,11 +53,11 @@ instance HasTypeProxy ByronUpdateProposal where
 
 instance SerialiseAsRawBytes ByronUpdateProposal where
   serialiseToRawBytes (ByronUpdateProposal proposal) = annotation proposal
-  deserialiseFromRawBytes AsByronUpdateProposal bs =
+  eitherDeserialiseFromRawBytes AsByronUpdateProposal bs =
     let lBs = LB.fromStrict bs
     in case Binary.decodeFull lBs of
-        Left _deserFail -> Nothing
-        Right proposal -> Just (ByronUpdateProposal proposal')
+        Left e -> Left $ SerialiseAsRawBytesError $ "Unable to deserialise ByronUpdateProposal: " <> show e
+        Right proposal -> Right (ByronUpdateProposal proposal')
           where
             proposal' :: AProposal ByteString
             proposal' = Binary.annotationBytes lBs proposal
@@ -168,11 +166,11 @@ instance HasTypeProxy ByronVote where
 
 instance SerialiseAsRawBytes ByronVote where
   serialiseToRawBytes (ByronVote vote) = Binary.serialize' $ fmap (const ()) vote
-  deserialiseFromRawBytes AsByronVote bs =
+  eitherDeserialiseFromRawBytes AsByronVote bs =
     let lBs = LB.fromStrict bs
     in case Binary.decodeFull lBs of
-         Left _deserFail -> Nothing
-         Right vote -> Just . ByronVote $ annotateVote vote lBs
+         Left e -> Left $ SerialiseAsRawBytesError $ "Unable to deserialise ByronVote: " <> show e
+         Right vote -> Right . ByronVote $ annotateVote vote lBs
    where
     annotateVote :: ByronVote.AVote Binary.ByteSpan -> LB.ByteString -> ByronVote.AVote ByteString
     annotateVote vote bs' = Binary.annotationBytes bs' vote

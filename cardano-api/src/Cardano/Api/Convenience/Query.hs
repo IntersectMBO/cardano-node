@@ -13,9 +13,10 @@ module Cardano.Api.Convenience.Query (
     renderQueryConvenienceError,
   ) where
 
-import           Prelude
-
+import           Control.Monad.Trans.Except (ExceptT (..), except, runExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistMaybe)
 import           Data.Bifunctor (first)
+import           Data.Function ((&))
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
@@ -63,48 +64,37 @@ queryStateForBalancedTx
   -> NetworkId
   -> [TxIn]
   -> IO (Either QueryConvenienceError (UTxO era, ProtocolParameters, EraHistory CardanoMode, SystemStart, Set PoolId))
-queryStateForBalancedTx era networkId allTxIns = do
- eSocketPath <- first SockErr <$> readEnvSocketPath
- case eSocketPath of
-  Left e -> return $ Left e
-  Right (SocketPath sockPath) -> do
-    let cModeParams = CardanoModeParams $ EpochSlots 21600
-        localNodeConnInfo = LocalNodeConnectInfo
-                              cModeParams
-                              networkId
-                              sockPath
-    eSbe <- return . getSbe $ cardanoEraStyle era
-    case eSbe of
-      Left e -> return $ Left e
-      Right qSbe -> do
-        case toEraInMode era CardanoMode of
-          Just qeInMode -> do
+queryStateForBalancedTx era networkId allTxIns = runExceptT $ do
+  SocketPath sockPath <- ExceptT $ first SockErr <$> readEnvSocketPath
 
-            -- Queries
-            let utxoQuery = QueryInEra qeInMode $ QueryInShelleyBasedEra qSbe
-                              $ QueryUTxO (QueryUTxOByTxIn (Set.fromList allTxIns))
-                pparamsQuery = QueryInEra qeInMode
-                                 $ QueryInShelleyBasedEra qSbe QueryProtocolParameters
-                eraHistoryQuery = QueryEraHistory CardanoModeIsMultiEra
-                systemStartQuery = QuerySystemStart
-                stakePoolsQuery = QueryInEra qeInMode . QueryInShelleyBasedEra qSbe $ QueryStakePools
+  let cModeParams = CardanoModeParams $ EpochSlots 21600
+      localNodeConnInfo = LocalNodeConnectInfo
+                            cModeParams
+                            networkId
+                            sockPath
 
-            -- Query execution
-            eUtxo <- executeQueryCardanoMode era networkId utxoQuery
-            ePparams <- executeQueryCardanoMode era networkId pparamsQuery
-            eEraHistory <- queryNodeLocalState localNodeConnInfo Nothing eraHistoryQuery
-            eSystemStart <- queryNodeLocalState localNodeConnInfo Nothing systemStartQuery
-            eStakePools <- executeQueryCardanoMode era networkId stakePoolsQuery
-            return $ do
-              utxo <- eUtxo
-              pparams <- ePparams
-              eraHistory <- first AcqFailure eEraHistory
-              systemStart <- first AcqFailure eSystemStart
-              stakePools <- eStakePools
-              Right (utxo, pparams, eraHistory, systemStart, stakePools)
-          Nothing -> return $ Left $ EraConsensusModeMismatch
-                                      (AnyConsensusMode CardanoMode)
-                                      (getIsCardanoEraConstraint era $ AnyCardanoEra era)
+  qSbe <- except $ getSbe $ cardanoEraStyle era
+
+  qeInMode <- toEraInMode era CardanoMode
+    & hoistMaybe (EraConsensusModeMismatch (AnyConsensusMode CardanoMode) (getIsCardanoEraConstraint era $ AnyCardanoEra era))
+
+  -- Queries
+  let utxoQuery = QueryInEra qeInMode $ QueryInShelleyBasedEra qSbe
+                    $ QueryUTxO (QueryUTxOByTxIn (Set.fromList allTxIns))
+      pparamsQuery = QueryInEra qeInMode
+                        $ QueryInShelleyBasedEra qSbe QueryProtocolParameters
+      eraHistoryQuery = QueryEraHistory CardanoModeIsMultiEra
+      systemStartQuery = QuerySystemStart
+      stakePoolsQuery = QueryInEra qeInMode . QueryInShelleyBasedEra qSbe $ QueryStakePools
+
+  -- Query execution
+  utxo <- ExceptT $ executeQueryCardanoMode era networkId utxoQuery
+  pparams <- ExceptT $ executeQueryCardanoMode era networkId pparamsQuery
+  eraHistory <- firstExceptT AcqFailure $ ExceptT $ queryNodeLocalState localNodeConnInfo Nothing eraHistoryQuery
+  systemStart <- firstExceptT AcqFailure $ ExceptT $ queryNodeLocalState localNodeConnInfo Nothing systemStartQuery
+  stakePools <- ExceptT $ executeQueryCardanoMode era networkId stakePoolsQuery
+
+  return (utxo, pparams, eraHistory, systemStart, stakePools)
 
 -- | Query the node to determine which era it is in.
 determineEra
@@ -130,18 +120,17 @@ executeQueryCardanoMode
   -> NetworkId
   -> QueryInMode CardanoMode (Either EraMismatch result)
   -> IO (Either QueryConvenienceError result)
-executeQueryCardanoMode era nid q = do
-  eSocketPath <- first SockErr <$> readEnvSocketPath
-  case eSocketPath of
-   Left e -> return $ Left e
-   Right (SocketPath sockPath) -> do
-     let localConnectInfo =
-           LocalNodeConnectInfo
-             { localConsensusModeParams = CardanoModeParams (EpochSlots 21600)
-             , localNodeNetworkId = nid
-             , localNodeSocketPath = sockPath
-             }
-     executeQueryAnyMode era localConnectInfo q
+executeQueryCardanoMode era nid q = runExceptT $ do
+  SocketPath sockPath <- firstExceptT SockErr . ExceptT $ readEnvSocketPath
+
+  let localConnectInfo =
+        LocalNodeConnectInfo
+          { localConsensusModeParams = CardanoModeParams (EpochSlots 21600)
+          , localNodeNetworkId = nid
+          , localNodeSocketPath = sockPath
+          }
+
+  ExceptT $ executeQueryAnyMode era localConnectInfo q
 
 -- | Execute a query against the local node in any mode.
 executeQueryAnyMode

@@ -55,8 +55,6 @@ module Cardano.Api.Value
   , AsType(..)
   ) where
 
-import           Prelude
-
 import           Data.Aeson (FromJSON, FromJSONKey, ToJSON, object, parseJSON, toJSON, withObject)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Aeson
@@ -77,8 +75,9 @@ import qualified Data.Text.Encoding as Text
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Ledger.Coin as Shelley
 import           Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Ledger.Mary.Value (MaryValue (..))
 import qualified Cardano.Ledger.Mary.Value as Mary
-import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as Shelley
+import qualified Cardano.Ledger.ShelleyMA.Rules as Shelley
 
 import           Cardano.Api.Error (displayError)
 import           Cardano.Api.HasTypeProxy
@@ -153,8 +152,8 @@ instance HasTypeProxy PolicyId where
 
 instance SerialiseAsRawBytes PolicyId where
     serialiseToRawBytes (PolicyId sh) = serialiseToRawBytes sh
-    deserialiseFromRawBytes AsPolicyId bs =
-      PolicyId <$> deserialiseFromRawBytes AsScriptHash bs
+    eitherDeserialiseFromRawBytes AsPolicyId bs =
+      PolicyId <$> eitherDeserialiseFromRawBytes AsScriptHash bs
 
 scriptPolicyId :: Script lang -> PolicyId
 scriptPolicyId = PolicyId . hashScript
@@ -178,9 +177,11 @@ instance HasTypeProxy AssetName where
 
 instance SerialiseAsRawBytes AssetName where
     serialiseToRawBytes (AssetName bs) = bs
-    deserialiseFromRawBytes AsAssetName bs
-      | BS.length bs <= 32 = Just (AssetName bs)
-      | otherwise          = Nothing
+    eitherDeserialiseFromRawBytes AsAssetName bs
+      | BS.length bs <= 32 = Right (AssetName bs)
+      | otherwise          = Left $ SerialiseAsRawBytesError $
+          "Unable to deserialise AssetName (the bytestring should be no longer than 32 bytes long " <>
+          "which corresponds to a hex representation of 64 characters)"
 
 
 data AssetId = AdaAssetId
@@ -263,9 +264,9 @@ valueToLovelace v =
       [(AdaAssetId, q)] -> Just (quantityToLovelace q)
       _                 -> Nothing
 
-toMaryValue :: Value -> Mary.Value StandardCrypto
+toMaryValue :: Value -> MaryValue StandardCrypto
 toMaryValue v =
-    Mary.Value lovelace other
+    MaryValue lovelace other
   where
     Quantity lovelace = selectAsset v AdaAssetId
       --TODO: write QC tests to show it's ok to use Map.fromAscListWith here
@@ -280,8 +281,8 @@ toMaryValue v =
     toMaryAssetName (AssetName n) = Mary.AssetName $ Short.toShort n
 
 
-fromMaryValue :: Mary.Value StandardCrypto -> Value
-fromMaryValue (Mary.Value lovelace other) =
+fromMaryValue :: MaryValue StandardCrypto -> Value
+fromMaryValue (MaryValue lovelace other) =
     Value $
       --TODO: write QC tests to show it's ok to use Map.fromAscList here
       Map.fromList $

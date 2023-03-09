@@ -17,7 +17,7 @@ import           Cardano.Prelude (Generic, NFData)
 import           Data.Aeson
 import           NoThunks.Class (NoThunks)
 
-import qualified Cardano.Api.Protocol.Types as Cardano
+import qualified Cardano.Api as Cardano
 
 import           Cardano.Node.Orphans ()
 import           Cardano.Node.Queries (HasKESInfo, HasKESMetricsData)

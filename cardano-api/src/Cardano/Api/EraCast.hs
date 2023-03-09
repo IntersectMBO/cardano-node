@@ -7,9 +7,7 @@ module Cardano.Api.EraCast
   ) where
 
 import           Cardano.Api.Eras (CardanoEra (..), IsCardanoEra)
-import           Data.Either (Either)
 import           Data.Kind (Type)
-import           Text.Show (Show (..))
 
 data EraCastError = forall fromEra toEra value.
   ( IsCardanoEra fromEra

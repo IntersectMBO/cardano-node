@@ -76,7 +76,7 @@ import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Shelley.Ledger.Ledger
 
-import           Cardano.Api.Protocol.Types (BlockType (..), protocolInfo)
+import qualified Cardano.Api as Api
 
 import           Cardano.Git.Rev (gitRev)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
@@ -323,16 +323,16 @@ nodeBasicInfo :: NodeConfiguration
               -> IO [LogObject Text]
 nodeBasicInfo nc (SomeConsensusProtocol whichP pForInfo) nodeStartTime' = do
   meta <- mkLOMeta Notice Public
-  let cfg = pInfoConfig $ protocolInfo pForInfo
+  let cfg = pInfoConfig $ Api.protocolInfo pForInfo
       protocolDependentItems =
         case whichP of
-          ByronBlockType ->
+          Api.ByronBlockType ->
             let DegenLedgerConfig cfgByron = Consensus.configLedger cfg
             in getGenesisValuesByron cfg cfgByron
-          ShelleyBlockType ->
+          Api.ShelleyBlockType ->
             let DegenLedgerConfig cfgShelley = Consensus.configLedger cfg
             in getGenesisValues "Shelley" cfgShelley
-          CardanoBlockType ->
+          Api.CardanoBlockType ->
             let CardanoLedgerConfig cfgByron cfgShelley cfgAllegra
                                     cfgMary cfgAlonzo cfgBabbage = Consensus.configLedger cfg
             in getGenesisValuesByron cfg cfgByron

@@ -13,8 +13,6 @@ module Cardano.Api.Convenience.Construction (
 
   ) where
 
-import           Prelude
-
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
@@ -53,7 +51,7 @@ constructBalancedTx
   -> Either TxBodyErrorAutoBalance (Tx era)
 constructBalancedTx eInMode txbodcontent changeAddr mOverrideWits utxo pparams
                     eraHistory systemStart stakePools shelleyWitSigningKeys = do
-  BalancedTxBody txbody _txBalanceOutput _fee
+  BalancedTxBody _ txbody _txBalanceOutput _fee
     <- makeTransactionBodyAutoBalance
          eInMode systemStart eraHistory
          pparams stakePools utxo txbodcontent

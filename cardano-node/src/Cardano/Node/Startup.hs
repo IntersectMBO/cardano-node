@@ -7,6 +7,7 @@
 
 module Cardano.Node.Startup where
 
+import qualified Cardano.Api as Api
 import           Prelude
 
 import           Data.Aeson (FromJSON, ToJSON)
@@ -36,14 +37,12 @@ import           Ouroboros.Consensus.Shelley.Ledger.Ledger (shelleyLedgerGenesis
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket,
                    NodeToClientVersion)
-import           Ouroboros.Network.NodeToNode (DiffusionMode (..), NodeToNodeVersion)
+import           Ouroboros.Network.NodeToNode (DiffusionMode (..), NodeToNodeVersion, PeerAdvertise)
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
-import           Ouroboros.Network.PeerSelection.Types (PeerAdvertise)
 import           Ouroboros.Network.Subscription.Dns (DnsSubscriptionTarget (..))
 import           Ouroboros.Network.Subscription.Ip (IPSubscriptionTarget (..))
 
-import           Cardano.Api.Protocol.Types (BlockType (..), protocolInfo)
 import           Cardano.Logging
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol.Types (Protocol (..), SomeConsensusProtocol (..))
@@ -91,7 +90,7 @@ data StartupTrace blk =
   -- updated.
   --
   | NetworkConfig [(Int, Map RelayAccessPoint PeerAdvertise)]
-                  [RelayAccessPoint]
+                  (Map RelayAccessPoint PeerAdvertise)
                   UseLedgerAfter
 
   -- | Warn when 'EnableP2P' is set.
@@ -182,17 +181,17 @@ prepareNodeInfo ptcl (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = 
     , niSystemStartTime = systemStartTime
     }
  where
-  cfg = pInfoConfig $ protocolInfo pForInfo
+  cfg = pInfoConfig $ Api.protocolInfo pForInfo
 
   systemStartTime :: UTCTime
   systemStartTime =
     case whichP of
-      ByronBlockType ->
+      Api.ByronBlockType ->
         getSystemStartByron
-      ShelleyBlockType ->
+      Api.ShelleyBlockType ->
         let DegenLedgerConfig cfgShelley = configLedger cfg
         in getSystemStartShelley cfgShelley
-      CardanoBlockType ->
+      Api.CardanoBlockType ->
         let CardanoLedgerConfig _ cfgShelley cfgAllegra cfgMary cfgAlonzo cfgBabbage = configLedger cfg
         in minimum [ getSystemStartByron
                    , getSystemStartShelley cfgShelley

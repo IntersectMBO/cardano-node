@@ -50,6 +50,7 @@ import           Ouroboros.Consensus.Mempool.API (MempoolCapacityBytes (..),
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode (..))
+import Ouroboros.Network.PeerSelection.PeerSharing.Type (PeerSharing (..))
 
 data NetworkP2PMode = EnabledP2PMode | DisabledP2PMode
   deriving (Eq, Show, Generic)
@@ -139,6 +140,9 @@ data NodeConfiguration
 
          -- Enable experimental P2P mode
        , ncEnableP2P :: SomeNetworkP2PMode
+
+         -- Enable PeerSharing
+       , ncPeerSharing :: PeerSharing
        } deriving (Eq, Show)
 
 
@@ -191,6 +195,9 @@ data PartialNodeConfiguration
 
          -- Enable experimental P2P mode
        , pncEnableP2P :: !(Last NetworkP2PMode)
+
+         -- Enable PeerSharing
+       , pncPeerSharing :: !(Last PeerSharing)
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where
@@ -271,6 +278,9 @@ instance FromJSON PartialNodeConfiguration where
               Just False -> Last $ Just DisabledP2PMode
               Just True  -> Last $ Just EnabledP2PMode
 
+      pncPeerSharing <-
+        Last <$> v .:? "PeerSharing" .!= Just NoPeerSharing
+
       pure PartialNodeConfiguration {
              pncProtocolConfig
            , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty pncSocketPath
@@ -298,6 +308,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncTargetNumberOfEstablishedPeers
            , pncTargetNumberOfActivePeers
            , pncEnableP2P
+           , pncPeerSharing
            }
     where
       parseMempoolCapacityBytesOverride v = parseNoOverride <|> parseOverride
@@ -449,6 +460,7 @@ defaultPartialNodeConfiguration =
     , pncTargetNumberOfEstablishedPeers = Last (Just 50)
     , pncTargetNumberOfActivePeers      = Last (Just 20)
     , pncEnableP2P                      = Last (Just DisabledP2PMode)
+    , pncPeerSharing                    = Last (Just NoPeerSharing)
     }
 
 lastOption :: Parser a -> Parser (Last a)
@@ -493,6 +505,9 @@ makeNodeConfiguration pnc = do
   enableP2P <-
     lastToEither "Missing EnableP2P"
     $ pncEnableP2P pnc
+  ncPeerSharing <-
+    lastToEither "Missing PeerSharing"
+    $ pncPeerSharing pnc
 
   -- TODO: This is not mandatory
   testEnableDevelopmentNetworkProtocols <-
@@ -534,6 +549,7 @@ makeNodeConfiguration pnc = do
              , ncEnableP2P = case enableP2P of
                  EnabledP2PMode  -> SomeNetworkP2PMode Consensus.EnabledP2PMode
                  DisabledP2PMode -> SomeNetworkP2PMode Consensus.DisabledP2PMode
+             , ncPeerSharing
              }
 
 ncProtocol :: NodeConfiguration -> Protocol

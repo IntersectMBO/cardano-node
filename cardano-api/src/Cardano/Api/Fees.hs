@@ -7,7 +7,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
@@ -42,21 +41,19 @@ module Cardano.Api.Fees (
     toLedgerEpochInfo,
   ) where
 
-import           Prelude
-
 import qualified Data.Array as Array
 import           Data.Bifunctor (bimap, first)
 import qualified Data.ByteString as BS
 import           Data.ByteString.Short (ShortByteString)
-import           Data.Map (Map)
-import qualified Data.Map as Map
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes, fromMaybe, maybeToList)
 import           Data.Ratio
-import           Data.Sequence.Strict (StrictSeq (..))
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           GHC.Records (HasField (..))
+import           Lens.Micro ((^.))
 import           Numeric.Natural
 
 import           Control.Monad.Trans.Except
@@ -70,23 +67,23 @@ import           Cardano.Slotting.EpochInfo (EpochInfo, hoistEpochInfo)
 import qualified Cardano.Chain.Common as Byron
 
 import qualified Cardano.Ledger.Coin as Ledger
+import           Cardano.Ledger.Core (EraTx (sizeTxF))
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Crypto as Ledger
 import qualified Cardano.Ledger.Era as Ledger.Era (Crypto)
-import qualified Cardano.Ledger.Hashes as Ledger
 import qualified Cardano.Ledger.Keys as Ledger
-import qualified Cardano.Ledger.Shelley.API as Ledger (CLI, DCert, TxIn, Wdrl)
+import qualified Cardano.Ledger.Shelley.API as Ledger (CLI)
 import qualified Cardano.Ledger.Shelley.API.Wallet as Ledger (evaluateTransactionBalance,
                    evaluateTransactionFee)
-
 import qualified Cardano.Ledger.Shelley.API.Wallet as Shelley
-import           Cardano.Ledger.Shelley.PParams (PParams' (..))
+import           Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
+import           Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
 
-import qualified Cardano.Ledger.Mary.Value as Mary
+import           Cardano.Ledger.Mary.Value (MaryValue)
 
 import qualified Cardano.Ledger.Alonzo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
-import           Cardano.Ledger.Alonzo.PParams (PParams' (..))
+import           Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tools as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
@@ -96,7 +93,7 @@ import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 import qualified Plutus.V1.Ledger.Api as Plutus
 
 import qualified Cardano.Ledger.Babbage as Babbage
-import           Cardano.Ledger.Babbage.PParams (PParams' (..))
+import           Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
 
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
 
@@ -135,16 +132,15 @@ transactionFee txFeeFixed txFeePerByte tx =
   let a = toInteger txFeePerByte
       b = toInteger txFeeFixed
   in case tx of
-       ShelleyTx _ tx' -> let x = obtainHasField shelleyBasedEra $ getField @"txsize" tx'
+       ShelleyTx _ tx' -> let x = obtainHasField shelleyBasedEra $ tx' ^. sizeTxF
                           in Lovelace (a * x + b)
        --TODO: This can be made to work for Byron txs too. Do that: fill in this case
        -- and remove the IsShelleyBasedEra constraint.
        ByronTx _ -> case shelleyBasedEra :: ShelleyBasedEra ByronEra of {}
  where
   obtainHasField
-    :: ShelleyLedgerEra era ~ ledgerera
-    => ShelleyBasedEra era
-    -> ( HasField "txsize" (Ledger.Tx (ShelleyLedgerEra era)) Integer
+    :: ShelleyBasedEra era
+    -> ( EraTx (ShelleyLedgerEra era)
         => a)
     -> a
   obtainHasField ShelleyBasedEraShelley f = f
@@ -538,6 +534,8 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
     evalAlonzo :: forall ledgerera.
                   ShelleyLedgerEra era ~ ledgerera
                => ledgerera ~ Alonzo.AlonzoEra Ledger.StandardCrypto
+               => HasField "_maxTxExUnits" (Ledger.PParams ledgerera) Alonzo.ExUnits
+               => HasField"_protocolVersion" (Ledger.PParams ledgerera) Ledger.ProtVer
                => LedgerEraConstraints ledgerera
                => ShelleyBasedEra era
                -> Ledger.Tx ledgerera
@@ -661,13 +659,28 @@ evaluateTransactionBalance _ _ _ (ByronTxBody _) =
 
 evaluateTransactionBalance pparams poolids utxo
                            (ShelleyTxBody era txbody _ _ _ _) =
-    withLedgerConstraints era evalAdaOnly evalMultiAsset
+    withLedgerConstraints
+      era
+      (getShelleyEraTxBodyConstraint era evalAdaOnly)
+      (getShelleyEraTxBodyConstraint era evalMultiAsset)
   where
+    getShelleyEraTxBodyConstraint
+      :: forall era' a.
+         ShelleyBasedEra era'
+      -> (ShelleyEraTxBody (ShelleyLedgerEra era') => a)
+      -> a
+    getShelleyEraTxBodyConstraint ShelleyBasedEraShelley x = x
+    getShelleyEraTxBodyConstraint ShelleyBasedEraMary x = x
+    getShelleyEraTxBodyConstraint ShelleyBasedEraAllegra x = x
+    getShelleyEraTxBodyConstraint ShelleyBasedEraAlonzo x = x
+    getShelleyEraTxBodyConstraint ShelleyBasedEraBabbage x = x
+
     isNewPool :: Ledger.KeyHash Ledger.StakePool Ledger.StandardCrypto -> Bool
     isNewPool kh = StakePoolKeyHash kh `Set.notMember` poolids
 
     evalMultiAsset :: forall ledgerera.
                       ShelleyLedgerEra era ~ ledgerera
+                   => ShelleyEraTxBody ledgerera
                    => LedgerEraConstraints ledgerera
                    => LedgerMultiAssetConstraints ledgerera
                    => MultiAssetSupportedInEra era
@@ -682,6 +695,7 @@ evaluateTransactionBalance pparams poolids utxo
 
     evalAdaOnly :: forall ledgerera.
                    ShelleyLedgerEra era ~ ledgerera
+                => ShelleyEraTxBody ledgerera
                 => LedgerEraConstraints ledgerera
                 => LedgerAdaOnlyConstraints ledgerera
                 => OnlyAdaSupportedInEra era
@@ -726,8 +740,7 @@ type LedgerAdaOnlyConstraints ledgerera =
          Ledger.Value ledgerera ~ Ledger.Coin
 
 type LedgerMultiAssetConstraints ledgerera =
-       ( Ledger.Value ledgerera ~ Mary.Value Ledger.StandardCrypto
-       , HasField "mint" (Ledger.TxBody ledgerera) (Ledger.Value ledgerera)
+       ( Ledger.Value ledgerera ~ MaryValue Ledger.StandardCrypto
        )
 
 type LedgerPParamsConstraints ledgerera =
@@ -738,11 +751,7 @@ type LedgerPParamsConstraints ledgerera =
        )
 
 type LedgerTxBodyConstraints ledgerera =
-       ( HasField "certs" (Ledger.TxBody ledgerera)
-                          (StrictSeq (Ledger.DCert Ledger.StandardCrypto))
-       , HasField "inputs" (Ledger.TxBody ledgerera)
-                           (Set (Ledger.TxIn Ledger.StandardCrypto))
-       , HasField "wdrls" (Ledger.TxBody ledgerera) (Ledger.Wdrl Ledger.StandardCrypto)
+       ( Ledger.EraTx ledgerera
        )
 
 
@@ -886,6 +895,7 @@ handleExUnitsErrors ScriptInvalid failuresMap exUnitsMap
 
 data BalancedTxBody era
   = BalancedTxBody
+      (TxBodyContent BuildTx era)
       (TxBody era)
       (TxOut CtxTx era) -- ^ Transaction balance (change output)
       Lovelace    -- ^ Estimated transaction fee
@@ -934,10 +944,9 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     -- 3. update tx with fees
     -- 4. balance the transaction and update tx change output
     txbody0 <-
-      first TxBodyError $ makeTransactionBody txbodycontent
-        { txOuts =
-              TxOut changeaddr (lovelaceToTxOutValue 0) TxOutDatumNone ReferenceScriptNone
-            : txOuts txbodycontent
+      first TxBodyError $ createAndValidateTransactionBody txbodycontent
+        { txOuts = txOuts txbodycontent ++
+                   [TxOut changeaddr (lovelaceToTxOutValue 0) TxOutDatumNone ReferenceScriptNone]
             --TODO: think about the size of the change output
             -- 1,2,4 or 8 bytes?
         }
@@ -974,7 +983,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
 
     let (dummyCollRet, dummyTotColl) = maybeDummyTotalCollAndCollReturnOutput txbodycontent changeaddr
     txbody1 <- first TxBodyError $ -- TODO: impossible to fail now
-               makeTransactionBody txbodycontent1 {
+               createAndValidateTransactionBody txbodycontent1 {
                  txFee  = TxFeeExplicit explicitTxFees $ Lovelace (2^(32 :: Integer) - 1),
                  txOuts = TxOut changeaddr
                                 (lovelaceToTxOutValue $ Lovelace (2^(64 :: Integer)) - 1)
@@ -998,7 +1007,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     -- Here we do not want to start with any change output, since that's what
     -- we need to calculate.
     txbody2 <- first TxBodyError $ -- TODO: impossible to fail now
-               makeTransactionBody txbodycontent1 {
+               createAndValidateTransactionBody txbodycontent1 {
                  txFee = TxFeeExplicit explicitTxFees fee,
                  txReturnCollateral = retColl,
                  txTotalCollateral = reqCol
@@ -1025,9 +1034,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     -- fit within the encoding size we picked above when calculating the fee.
     -- Yes this could be an over-estimate by a few bytes if the fee or change
     -- would fit within 2^16-1. That's a possible optimisation.
-    txbody3 <-
-      first TxBodyError $ -- TODO: impossible to fail now
-        makeTransactionBody txbodycontent1 {
+    let finalTxBodyContent = txbodycontent1 {
           txFee  = TxFeeExplicit explicitTxFees fee,
           txOuts = accountForNoChange
                      (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone)
@@ -1035,7 +1042,12 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
           txReturnCollateral = retColl,
           txTotalCollateral = reqCol
         }
-    return (BalancedTxBody txbody3 (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone) fee)
+    txbody3 <-
+      first TxBodyError $ -- TODO: impossible to fail now. We need to implement a function
+                          -- that simply creates a transaction body because we have already
+                          -- validated the transaction body earlier within makeTransactionBodyAutoBalance
+        createAndValidateTransactionBody finalTxBodyContent
+    return (BalancedTxBody finalTxBodyContent txbody3 (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone) fee)
  where
    -- Essentially we check for the existence of collateral inputs. If they exist we
    -- create a fictitious collateral return output. Why? Because we need to put dummy values
@@ -1152,11 +1164,11 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
    checkMinUTxOValue txout@(TxOut _ v _ _) pparams' = do
      minUTxO  <- first TxBodyErrorMinUTxOMissingPParams
                    $ calculateMinimumUTxO era txout pparams'
-     if txOutValueToLovelace v >= selectLovelace minUTxO
+     if txOutValueToLovelace v >= minUTxO
      then Right ()
      else Left $ TxBodyErrorMinUTxONotMet
                    (txOutInAnyEra txout)
-                   (selectLovelace minUTxO)
+                   minUTxO
 
 substituteExecutionUnits :: Map ScriptWitnessIndex ExecutionUnits
                          -> TxBodyContent BuildTx era
@@ -1313,30 +1325,30 @@ calculateMinimumUTxO
   :: ShelleyBasedEra era
   -> TxOut CtxTx era
   -> ProtocolParameters
-  -> Either MinimumUTxOError Value
+  -> Either MinimumUTxOError Lovelace
 calculateMinimumUTxO era txout@(TxOut _ v _ _) pparams' =
   case era of
-    ShelleyBasedEraShelley -> lovelaceToValue <$> getMinUTxOPreAlonzo pparams'
+    ShelleyBasedEraShelley -> getMinUTxOPreAlonzo pparams'
     ShelleyBasedEraAllegra -> calcMinUTxOAllegraMary
     ShelleyBasedEraMary -> calcMinUTxOAllegraMary
     ShelleyBasedEraAlonzo ->
       let lTxOut = toShelleyTxOutAny era txout
           babPParams = toAlonzoPParams pparams'
           minUTxO = Shelley.evaluateMinLovelaceOutput babPParams lTxOut
-          val = lovelaceToValue $ fromShelleyLovelace minUTxO
+          val = fromShelleyLovelace minUTxO
       in Right val
     ShelleyBasedEraBabbage ->
       let lTxOut = toShelleyTxOutAny era txout
           babPParams = toBabbagePParams pparams'
           minUTxO = Shelley.evaluateMinLovelaceOutput babPParams lTxOut
-          val = lovelaceToValue $ fromShelleyLovelace minUTxO
+          val = fromShelleyLovelace minUTxO
       in Right val
  where
-   calcMinUTxOAllegraMary :: Either MinimumUTxOError Value
+   calcMinUTxOAllegraMary :: Either MinimumUTxOError Lovelace
    calcMinUTxOAllegraMary = do
      let val = txOutValueToValue v
      minUTxO <- getMinUTxOPreAlonzo pparams'
-     Right . lovelaceToValue $ calcMinimumDeposit val minUTxO
+     Right $ calcMinimumDeposit val minUTxO
 
    getMinUTxOPreAlonzo
      :: ProtocolParameters -> Either MinimumUTxOError Lovelace

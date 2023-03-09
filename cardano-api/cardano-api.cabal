@@ -1,8 +1,12 @@
 cabal-version: 3.0
 
 name:                   cardano-api
-version:                1.35.5
-description:            The cardano api
+version:                1.36.0
+synopsis:               The cardano api
+description:            The cardano api.
+category:               Cardano,
+                        API,
+copyright:              2023 Input Output (Hong Kong) Ltd.
 author:                 IOHK
 maintainer:             operations@iohk.io
 license:                Apache-2.0
@@ -11,12 +15,10 @@ license-files:          LICENSE
 build-type:             Simple
 extra-source-files:     README.md, ChangeLog.md
 
-common base                         { build-depends: base                             >= 4.14       && < 4.15     }
-
 common project-config
   default-language:     Haskell2010
-  default-extensions:   NoImplicitPrelude
-                        OverloadedStrings
+  default-extensions:   OverloadedStrings
+  build-depends:        base >= 4.14 && < 4.15
 
   ghc-options:          -Wall
                         -Wcompat
@@ -31,23 +33,23 @@ common maybe-unix
      build-depends:    unix
 
 library
-  import:               base, project-config, maybe-unix
+  import:               project-config, maybe-unix
 
   hs-source-dirs:       src
 
+  -- Do not expose any additional modules. The correct way
+  -- to expose new functionality is via Cardano.Api or
+  -- Cardano.Api.Shelley
   exposed-modules:      Cardano.Api
                         Cardano.Api.Byron
                         Cardano.Api.ChainSync.Client
                         Cardano.Api.ChainSync.ClientPipelined
                         Cardano.Api.Crypto.Ed25519Bip32
-                        Cardano.Api.EraCast
-                        Cardano.Api.Protocol.Types
                         Cardano.Api.Shelley
                         -- TODO: Eliminate in the future when
                         -- we create wrapper types for the ledger types
                         -- in this module
                         Cardano.Api.Orphans
-                        Cardano.Api.SerialiseTextEnvelope
 
   other-modules:
                         -- Splitting up the big Typed module:
@@ -57,7 +59,9 @@ library
                         Cardano.Api.Convenience.Constraints
                         Cardano.Api.Convenience.Construction
                         Cardano.Api.Convenience.Query
+                        Cardano.Api.DeserialiseAnyOf
                         Cardano.Api.Environment
+                        Cardano.Api.EraCast
                         Cardano.Api.Eras
                         Cardano.Api.Error
                         Cardano.Api.Fees
@@ -67,17 +71,20 @@ library
                         Cardano.Api.IPC
                         Cardano.Api.IPC.Monad
                         Cardano.Api.InMode
+                        Cardano.Api.IPC.Version
                         Cardano.Api.Json
-                        Cardano.Api.Key
-                        Cardano.Api.KeysByron
-                        Cardano.Api.KeysPraos
-                        Cardano.Api.KeysShelley
+                        Cardano.Api.Keys.Byron
+                        Cardano.Api.Keys.Class
+                        Cardano.Api.Keys.Praos
+                        Cardano.Api.Keys.Read
+                        Cardano.Api.Keys.Shelley
                         Cardano.Api.LedgerEvent
                         Cardano.Api.LedgerState
                         Cardano.Api.Modes
                         Cardano.Api.NetworkId
                         Cardano.Api.OperationalCertificate
                         Cardano.Api.ProtocolParameters
+                        Cardano.Api.Protocol
                         Cardano.Api.Query
                         Cardano.Api.Script
                         Cardano.Api.ScriptData
@@ -86,16 +93,15 @@ library
                         Cardano.Api.SerialiseJSON
                         Cardano.Api.SerialiseLedgerCddl
                         Cardano.Api.SerialiseRaw
+                        Cardano.Api.SerialiseTextEnvelope
                         Cardano.Api.SerialiseUsing
-                        Cardano.Api.Shelley.Genesis
+                        Cardano.Api.Genesis
                         Cardano.Api.SpecialByron
                         Cardano.Api.StakePoolMetadata
                         Cardano.Api.Tx
                         Cardano.Api.TxBody
                         Cardano.Api.TxIn
                         Cardano.Api.TxMetadata
-                        Cardano.Api.TxSubmit.ErrorRender
-                        Cardano.Api.TxSubmit.Types
                         Cardano.Api.Utils
                         Cardano.Api.Value
                         Cardano.Api.ValueParser
@@ -110,28 +116,30 @@ library
                       , bytestring
                       , cardano-binary
                       , cardano-crypto
-                      , cardano-crypto-class
-                      , cardano-crypto-wrapper
-                      , cardano-data
-                      , cardano-ledger-alonzo
-                      , cardano-ledger-babbage
-                      , cardano-ledger-byron
-                      , cardano-ledger-core
-                      , cardano-ledger-shelley-ma
+                      , cardano-crypto-class ^>= 2.0
+                      , cardano-crypto-wrapper ^>= 1.4
+                      , cardano-data ^>= 0.1
+                      , cardano-ledger-alonzo ^>= 0.1
+                      , cardano-ledger-babbage ^>= 0.1
+                      , cardano-ledger-byron ^>= 0.1
+                      , cardano-ledger-core ^>= 0.1
+                      , cardano-ledger-shelley-ma ^>= 0.1
                       , cardano-prelude
-                      , cardano-protocol-tpraos
-                      , cardano-slotting
+                      , cardano-protocol-tpraos >= 0.1
+                      , cardano-slotting >= 0.1
                       , cborg
-                      , vector-map
                       , contra-tracer
                       , containers
                       , cryptonite
                       , deepseq
                       , directory
+                      , either
                       , filepath
                       , formatting
                       , iproute
                       , memory
+                      , microlens
+                      , mtl
                       , network
                       , nothunks
                       , optparse-applicative-fork
@@ -140,61 +148,66 @@ library
                       , ouroboros-consensus-cardano
                       , ouroboros-consensus-protocol
                       , ouroboros-consensus-shelley
+                      , ouroboros-consensus-diffusion
                       , ouroboros-network
                       , ouroboros-network-framework
+                      , ouroboros-network-protocols
+                      , ouroboros-network-api
                       , parsec
-                      , plutus-ledger-api
+                      , plutus-ledger-api ^>= 1.0
                       , prettyprinter
-                      , prettyprinter-configurable
+                      , prettyprinter-configurable ^>= 0.1
+                      , random
                       , scientific
                       , serialise
-                      , small-steps
-                      , cardano-ledger-shelley
-                      , small-steps
+                      , small-steps ^>= 0.1
+                      , cardano-ledger-shelley ^>= 0.1
+                      , small-steps ^>= 0.1
                       , stm
-                      , strict-containers
+                      , cardano-strict-containers ^>= 0.1
                       , text
                       , time
                       , transformers
                       , transformers-except
-                      , typed-protocols
+                      , typed-protocols ^>= 0.1
                       , unordered-containers >= 0.2.11
                       , vector
+                      , vector-map ^>= 0.1
                       , yaml
 
 library gen
-  import:               base, project-config
+  import:               project-config
 
   visibility:           public
 
   hs-source-dirs:       gen
 
-  exposed-modules:      Gen.Cardano.Api
-                        Gen.Cardano.Api.Metadata
-                        Gen.Cardano.Api.Typed
-                        Gen.Cardano.Crypto.Seed
-                        Gen.Hedgehog.Roundtrip.Bech32
-                        Gen.Hedgehog.Roundtrip.CBOR
+  exposed-modules:      Test.Gen.Cardano.Api
+                        Test.Gen.Cardano.Api.Metadata
+                        Test.Gen.Cardano.Api.Typed
+                        Test.Gen.Cardano.Crypto.Seed
+                        Test.Hedgehog.Roundtrip.Bech32
+                        Test.Hedgehog.Roundtrip.CBOR
 
   build-depends:        aeson             >= 1.5.6.0
                       , base16-bytestring
                       , bytestring
                       , cardano-api
                       , cardano-binary
-                      , cardano-crypto-class
-                      , cardano-crypto-test
-                      , cardano-ledger-alonzo
-                      , cardano-ledger-byron-test
-                      , cardano-ledger-core
+                      , cardano-crypto-class ^>= 2.0
+                      , cardano-crypto-test ^>= 1.4
+                      , cardano-ledger-alonzo ^>= 0.1
+                      , cardano-ledger-byron-test ^>= 1.4
+                      , cardano-ledger-core ^>= 0.1
                       , cardano-prelude
                       , containers
                       , hedgehog
-                      , plutus-core
-                      , cardano-ledger-shelley
+                      , plutus-core ^>= 1.0
+                      , cardano-ledger-shelley ^>= 0.1
                       , text
 
 test-suite cardano-api-test
-  import:               base, project-config
+  import:               project-config
   hs-source-dirs:       test
   main-is:              cardano-api-test.hs
   type:                 exitcode-stdio-1.0
@@ -203,26 +216,24 @@ test-suite cardano-api-test
                       , bytestring
                       , cardano-api
                       , cardano-api:gen
-                      , cardano-binary
+                      , cardano-data ^>= 0.1
                       , cardano-crypto
-                      , cardano-crypto-class
-                      , cardano-crypto-test
-                      , cardano-crypto-tests
-                      , cardano-ledger-core
-                      , cardano-prelude
-                      , cardano-slotting
+                      , cardano-crypto-class ^>= 2.0
+                      , cardano-crypto-test ^>= 1.4
+                      , cardano-crypto-tests ^>= 2.0
+                      , cardano-ledger-core ^>= 0.1
+                      , cardano-slotting ^>= 0.1
                       , containers
                       , hedgehog
                       , hedgehog-extras
                       , ouroboros-consensus
                       , ouroboros-consensus-shelley
                       , QuickCheck
-                      , cardano-ledger-shelley
-                      , cardano-ledger-shelley-test
+                      , cardano-ledger-shelley ^>= 0.1
+                      , cardano-ledger-shelley-test ^>= 0.1
                       , tasty
                       , tasty-hedgehog
                       , tasty-quickcheck
-                      , tasty-th
                       , time
 
   other-modules:        Test.Cardano.Api.Crypto

@@ -1,23 +1,20 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Test.Cardano.Api.Typed.Value
   ( tests
   ) where
 
 import           Prelude
 
+import           Cardano.Api (ValueNestedBundle (..), ValueNestedRep (..), valueFromNestedRep,
+                   valueToNestedRep)
+
 import           Data.Aeson (eitherDecode, encode)
 import           Data.List (groupBy, sort)
 import qualified Data.Map.Strict as Map
+
 import           Hedgehog (Property, forAll, property, tripping, (===))
-import           Test.Tasty (TestTree)
-import           Test.Tasty.Hedgehog (testProperty)
-import           Test.Tasty.TH (testGroupGenerator)
-
-import           Cardano.Api (ValueNestedBundle (ValueNestedBundle, ValueNestedBundleAda),
-                   ValueNestedRep (..), valueFromNestedRep, valueToNestedRep)
-
-import           Gen.Cardano.Api.Typed (genAssetName, genValueDefault, genValueNestedRep)
+import           Test.Gen.Cardano.Api.Typed (genAssetName, genValueDefault, genValueNestedRep)
+import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.Hedgehog (testPropertyNamed)
 
 prop_roundtrip_Value_JSON :: Property
 prop_roundtrip_Value_JSON =
@@ -86,4 +83,10 @@ prop_roundtrip_AssetName_JSONKey =
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
-tests = $testGroupGenerator
+tests = testGroup "Test.Cardano.Api.Typed.Value"
+  [ testPropertyNamed "roundtrip Value JSON"              "roundtrip Value JSON"              prop_roundtrip_Value_JSON
+  , testPropertyNamed "roundtrip Value flatten unflatten" "roundtrip Value flatten unflatten" prop_roundtrip_Value_flatten_unflatten
+  , testPropertyNamed "roundtrip Value unflatten flatten" "roundtrip Value unflatten flatten" prop_roundtrip_Value_unflatten_flatten
+  , testPropertyNamed "roundtrip AssetName JSON"          "roundtrip AssetName JSON"          prop_roundtrip_AssetName_JSON
+  , testPropertyNamed "roundtrip AssetName JSONKey"       "roundtrip AssetName JSONKey"       prop_roundtrip_AssetName_JSONKey
+  ]

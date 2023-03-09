@@ -48,8 +48,6 @@ module Cardano.Api.Block (
     makeChainTip,
   ) where
 
-import           Prelude
-
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
@@ -83,7 +81,7 @@ import qualified Cardano.Ledger.Era as Ledger
 import           Cardano.Api.Eras
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.KeysShelley
+import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.Modes
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseUsing
@@ -293,9 +291,9 @@ newtype instance Hash BlockHeader = HeaderHash SBS.ShortByteString
 instance SerialiseAsRawBytes (Hash BlockHeader) where
     serialiseToRawBytes (HeaderHash bs) = SBS.fromShort bs
 
-    deserialiseFromRawBytes (AsHash AsBlockHeader) bs
-      | BS.length bs == 32 = Just $! HeaderHash (SBS.toShort bs)
-      | otherwise          = Nothing
+    eitherDeserialiseFromRawBytes (AsHash AsBlockHeader) bs
+      | BS.length bs == 32 = Right $! HeaderHash (SBS.toShort bs)
+      | otherwise          = Left (SerialiseAsRawBytesError "Unable to deserialise Hash BlockHeader")
 
 instance HasTypeProxy BlockHeader where
     data AsType BlockHeader = AsBlockHeader
@@ -341,6 +339,11 @@ data ChainPoint = ChainPointAtGenesis
                 | ChainPoint !SlotNo !(Hash BlockHeader)
   deriving (Eq, Show)
 
+instance Ord ChainPoint where
+  compare ChainPointAtGenesis ChainPointAtGenesis = EQ
+  compare ChainPointAtGenesis _ = LT
+  compare _ ChainPointAtGenesis = GT
+  compare (ChainPoint sn _) (ChainPoint sn' _) = compare sn sn'
 
 toConsensusPointInMode :: ConsensusMode mode
                        -> ChainPoint

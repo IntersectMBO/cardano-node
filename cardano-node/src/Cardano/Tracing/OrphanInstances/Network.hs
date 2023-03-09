@@ -16,10 +16,10 @@
 module Cardano.Tracing.OrphanInstances.Network () where
 
 import           Cardano.Prelude hiding (group, show)
-import           Prelude (String, id, show)
+import           Prelude (String, show)
 
 import           Control.Monad.Class.MonadTime (DiffTime, Time (..))
-import           Data.Aeson (Value (..))
+import           Data.Aeson (Value (..), ToJSON (toJSONList))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (listValue)
 import qualified Data.IP as IP
@@ -104,6 +104,9 @@ import           Ouroboros.Network.TxSubmission.Inbound (ProcessedTxCount (..),
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound (..))
 
 import qualified Ouroboros.Network.Diffusion as ND
+import Ouroboros.Network.SizeInBytes (SizeInBytes(..))
+import           Ouroboros.Network.ExitPolicy (ReconnectDelay (..))
+import Ouroboros.Network.Protocol.PeerSharing.Type (PeerSharingResult (..))
 
 {- HLINT ignore "Use record patterns" -}
 
@@ -112,8 +115,8 @@ import qualified Ouroboros.Network.Diffusion as ND
 --
 -- NOTE: this list is sorted by the unqualified name of the outermost type.
 
-instance HasPrivacyAnnotation (ND.InitializationTracer ntnAddr ntcAddr)
-instance HasSeverityAnnotation (ND.InitializationTracer ntnAddr ntcAddr) where
+instance HasPrivacyAnnotation (ND.DiffusionTracer ntnAddr ntcAddr)
+instance HasSeverityAnnotation (ND.DiffusionTracer ntnAddr ntcAddr) where
   getSeverityAnnotation _ = Info
 
 instance HasPrivacyAnnotation (NtC.HandshakeTr LocalAddress NodeToClientVersion)
@@ -385,8 +388,9 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TracePublicRootsRequest    {} -> Info
       TracePublicRootsResults    {} -> Info
       TracePublicRootsFailure    {} -> Error
-      TraceGossipRequests        {} -> Debug
-      TraceGossipResults         {} -> Debug
+      TracePeerShareRequests     {} -> Info
+      TracePeerShareResults      {} -> Info
+      TracePeerShareResultsFiltered {} -> Info
       TraceForgetColdPeers       {} -> Info
       TracePromoteColdPeers      {} -> Info
       TracePromoteColdLocalPeers {} -> Info
@@ -405,16 +409,17 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TraceDemoteHotFailed       {} -> Info
       TraceDemoteHotDone         {} -> Info
       TraceDemoteAsynchronous    {} -> Info
+      TraceDemoteLocalAsynchronous {} -> Info
       TraceGovernorWakeup        {} -> Info
       TraceChurnWait             {} -> Info
       TraceChurnMode             {} -> Info
 
-instance HasPrivacyAnnotation (DebugPeerSelection addr conn)
-instance HasSeverityAnnotation (DebugPeerSelection addr conn) where
+instance HasPrivacyAnnotation (DebugPeerSelection addr)
+instance HasSeverityAnnotation (DebugPeerSelection addr) where
   getSeverityAnnotation _ = Debug
 
-instance HasPrivacyAnnotation (PeerSelectionActionsTrace SockAddr)
-instance HasSeverityAnnotation (PeerSelectionActionsTrace SockAddr) where
+instance HasPrivacyAnnotation (PeerSelectionActionsTrace SockAddr versionNumber)
+instance HasSeverityAnnotation (PeerSelectionActionsTrace SockAddr versionNumber) where
   getSeverityAnnotation ev =
    case ev of
      PeerStatusChanged {}       -> Info
@@ -441,8 +446,8 @@ instance HasSeverityAnnotation (ConnectionManagerTrace addr (ConnectionHandlerTr
           TrHandshakeSuccess {}               -> Info
           TrHandshakeClientError {}           -> Notice
           TrHandshakeServerError {}           -> Info
-          TrError _ _ ShutdownNode            -> Critical
-          TrError _ _ ShutdownPeer            -> Info
+          TrConnectionHandlerError _ _ ShutdownNode -> Critical
+          TrConnectionHandlerError _ _ ShutdownPeer -> Info
 
       TrShutdown                              -> Info
       TrConnectionExists {}                   -> Info
@@ -459,7 +464,6 @@ instance HasSeverityAnnotation (ConnectionManagerTrace addr (ConnectionHandlerTr
       TrConnectionManagerCounters {}          -> Info
       TrState {}                              -> Info
       ConnMgr.TrUnexpectedlyFalseAssertion {} -> Error
-      TrUnknownConnection {}                  -> Debug
 
 instance HasPrivacyAnnotation (ConnMgr.AbstractTransitionTrace addr)
 instance HasSeverityAnnotation (ConnMgr.AbstractTransitionTrace addr) where
@@ -508,9 +512,9 @@ instance HasSeverityAnnotation (Server.RemoteTransitionTrace addr) where
 --
 -- NOTE: this list is sorted by the unqualified name of the outermost type.
 
-instance Transformable Text IO (ND.InitializationTracer RemoteAddress LocalAddress) where
+instance Transformable Text IO (ND.DiffusionTracer RemoteAddress LocalAddress) where
   trTransformer = trStructuredText
-instance HasTextFormatter (ND.InitializationTracer RemoteAddress LocalAddress) where
+instance HasTextFormatter (ND.DiffusionTracer RemoteAddress LocalAddress) where
   formatText a _ = pack (show a)
 
 instance Transformable Text IO (NtN.HandshakeTr RemoteAddress NodeToNodeVersion) where
@@ -665,17 +669,16 @@ instance Transformable Text IO (TracePeerSelection SockAddr) where
 instance HasTextFormatter (TracePeerSelection SockAddr) where
   formatText a _ = pack (show a)
 
-instance Show conn
-      => Transformable Text IO (DebugPeerSelection SockAddr conn) where
+instance Transformable Text IO (DebugPeerSelection SockAddr) where
   trTransformer = trStructuredText
-instance HasTextFormatter (DebugPeerSelection SockAddr conn) where
+instance HasTextFormatter (DebugPeerSelection SockAddr) where
   -- One can only change what is logged with respect to verbosity using json
   -- format.
   formatText _ obj = pack (show obj)
 
-instance Transformable Text IO (PeerSelectionActionsTrace SockAddr) where
+instance Show versionNumber => Transformable Text IO (PeerSelectionActionsTrace SockAddr versionNumber) where
   trTransformer = trStructuredText
-instance HasTextFormatter (PeerSelectionActionsTrace SockAddr) where
+instance Show versionNumber => HasTextFormatter (PeerSelectionActionsTrace SockAddr versionNumber) where
   formatText a _ = pack (show a)
 
 instance Transformable Text IO PeerSelectionCounters where
@@ -738,14 +741,14 @@ instance ( ConvertTxId blk
     mconcat [ "kind" .= String "MsgBlock"
              , "agency" .= String (pack $ show stok)
              , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
-             , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+             , "blockSize" .= toJSON (getSizeInBytes (estimateBlockSize (getHeader blk)))
              ]
 
   toObject verb (AnyMessageAndAgency stok (MsgBlock blk)) =
     mconcat [ "kind" .= String "MsgBlock"
              , "agency" .= String (pack $ show stok)
              , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
-             , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+             , "blockSize" .= toJSON (getSizeInBytes (estimateBlockSize (getHeader blk)))
              , "txIds" .= toJSON (presentTx <$> extractTxs blk)
              ]
       where
@@ -972,7 +975,7 @@ instance ToObject (FetchDecision [Point header]) where
              ]
 
 -- TODO: use 'ToJSON' constraints
-instance (Show ntnAddr, Show ntcAddr) => ToObject (ND.InitializationTracer ntnAddr ntcAddr) where
+instance (Show ntnAddr, Show ntcAddr) => ToObject (ND.DiffusionTracer ntnAddr ntcAddr) where
   toObject _verb (ND.RunServer sockAddr) = mconcat
     [ "kind" .= String "RunServer"
     , "socketAddress" .= String (pack (show sockAddr))
@@ -1037,6 +1040,10 @@ instance (Show ntnAddr, Show ntcAddr) => ToObject (ND.InitializationTracer ntnAd
     [ "kind" .= String "DiffusionErrored"
     , "path" .= String (pack (show exception))
     ]
+  toObject _verb (ND.SystemdSocketConfiguration config) = mconcat
+    [ "kind" .= String "SystemdSocketConfiguration"
+    , "message" .= String (pack (show config))
+    ]
 
 instance ToObject (NtC.HandshakeTr LocalAddress NodeToClientVersion) where
   toObject _verb (WithMuxBearer b ev) =
@@ -1096,7 +1103,7 @@ instance (HasHeader header, ConvertRawHash header)
     mconcat [ "kind" .= String "AddedFetchRequest" ]
   toObject _verb BlockFetch.AcknowledgedFetchRequest {} =
     mconcat [ "kind" .= String "AcknowledgedFetchRequest" ]
-  toObject _verb (BlockFetch.SendFetchRequest af) =
+  toObject _verb (BlockFetch.SendFetchRequest af _) =
     mconcat [ "kind" .= String "SendFetchRequest"
              , "head" .= String (renderChainHash
                                   (renderHeaderHash (Proxy @header))
@@ -1115,7 +1122,7 @@ instance (HasHeader header, ConvertRawHash header)
   toObject _verb (BlockFetch.CompletedBlockFetch pt _ _ _ delay blockSize) =
     mconcat [ "kind"  .= String "CompletedBlockFetch"
              , "delay" .= (realToFrac delay :: Double)
-             , "size"  .= blockSize
+             , "size"  .= getSizeInBytes blockSize
              , "block" .= String
                (case pt of
                   GenesisPoint -> "Genesis"
@@ -1350,6 +1357,11 @@ instance Show exception => ToObject (TraceLocalRootPeers RemoteAddress exception
     mconcat [ "kind" .= String "LocalRootGroups"
              , "localRootGroups" .= toJSON groups
              ]
+  toObject _verb (TraceLocalRootReconfigured old new) =
+    mconcat [ "kind" .= String "LocalRootReconfigured"
+             , "oldLocalRootGroups" .= toJSON old
+             , "newLocalRootGroups" .= toJSON new
+             ]
   toObject _verb (TraceLocalRootFailure d dexception) =
     mconcat [ "kind" .= String "LocalRootFailure"
              , "domainAddress" .= toJSON d
@@ -1367,7 +1379,7 @@ instance ToJSON IP where
 instance ToObject TracePublicRootPeers where
   toObject _verb (TracePublicRootRelayAccessPoint relays) =
     mconcat [ "kind" .= String "PublicRootRelayAddresses"
-             , "relayAddresses" .= Aeson.toJSONList relays
+             , "relayAddresses" .= Aeson.toJSON relays
              ]
   toObject _verb (TracePublicRootDomains domains) =
     mconcat [ "kind" .= String "PublicRootDomains"
@@ -1386,6 +1398,13 @@ instance ToObject TracePublicRootPeers where
 
 instance ToJSON PeerStatus where
   toJSON = String . pack . show
+
+instance ToJSON ReconnectDelay where
+  toJSON = toJSON . reconnectDelay
+
+instance ToJSON addr => ToJSON (PeerSharingResult addr) where
+  toJSON (PeerSharingResult addrs) = toJSONList addrs
+  toJSON PeerSharingNotRegisteredYet = String "PeerSharingNotRegisteredYet"
 
 instance (Aeson.ToJSONKey peerAddr, ToJSON peerAddr, Show peerAddr)
   => ToJSON (LocalRootPeers peerAddr) where
@@ -1437,16 +1456,20 @@ instance ToObject (TracePeerSelection SockAddr) where
              , "group" .= group
              , "diffTime" .= dt
              ]
-  toObject _verb (TraceGossipRequests targetKnown actualKnown aps sps) =
-    mconcat [ "kind" .= String "GossipRequests"
+  toObject _verb (TracePeerShareRequests targetKnown actualKnown aps sps) =
+    mconcat [ "kind" .= String "PeerShareRequests"
              , "targetKnown" .= targetKnown
              , "actualKnown" .= actualKnown
              , "availablePeers" .= Aeson.toJSONList (toList aps)
              , "selectedPeers" .= Aeson.toJSONList (toList sps)
              ]
-  toObject _verb (TraceGossipResults res) =
-    mconcat [ "kind" .= String "GossipResults"
-             , "result" .= Aeson.toJSONList (map ( bimap show id <$> ) res)
+  toObject _verb (TracePeerShareResults res) =
+    mconcat [ "kind" .= String "PeerShareResults"
+             , "result" .= Aeson.toJSONList (map show res)
+             ]
+  toObject _verb (TracePeerShareResultsFiltered res) =
+    mconcat [ "kind" .= String "PeerShareResultsFiltered"
+             , "result" .= Aeson.toJSONList res
              ]
   toObject _verb (TraceForgetColdPeers targetKnown actualKnown sp) =
     mconcat [ "kind" .= String "ForgeColdPeers"
@@ -1557,6 +1580,10 @@ instance ToObject (TracePeerSelection SockAddr) where
     mconcat [ "kind" .= String "DemoteAsynchronous"
              , "state" .= toJSON msp
              ]
+  toObject _verb (TraceDemoteLocalAsynchronous msp) =
+    mconcat [ "kind" .= String "DemoteLocalAsynchronous"
+             , "state" .= toJSON msp
+             ]
   toObject _verb TraceGovernorWakeup =
     mconcat [ "kind" .= String "GovernorWakeup"
              ]
@@ -1620,7 +1647,7 @@ peerSelectionTargetsToObject
                , "active" .= targetNumberOfActivePeers
                ]
 
-instance Show peerConn => ToObject (DebugPeerSelection SockAddr peerConn) where
+instance ToObject (DebugPeerSelection SockAddr) where
   toObject verb (TraceGovernorState blockedAt wakeupAfter
                    PeerSelectionState { targets, knownPeers, establishedPeers, activePeers })
       | verb <= NormalVerbosity =
@@ -1643,7 +1670,7 @@ instance Show peerConn => ToObject (DebugPeerSelection SockAddr peerConn) where
 
 -- TODO: Write PeerStatusChangeType ToJSON at ouroboros-network
 -- For that an export is needed at ouroboros-network
-instance ToObject (PeerSelectionActionsTrace SockAddr) where
+instance Show versionNumber => ToObject (PeerSelectionActionsTrace SockAddr versionNumber) where
   toObject _verb (PeerStatusChanged ps) =
     mconcat [ "kind" .= String "PeerStatusChanged"
              , "peerStatusChangeType" .= show ps
@@ -1742,10 +1769,11 @@ instance ToJSON NodeToClientVersion where
   toJSON x = String (pack $ show x)
 
 instance ToJSON NodeToNodeVersionData where
-  toJSON (NodeToNodeVersionData (NetworkMagic m) dm) =
+  toJSON (NodeToNodeVersionData (NetworkMagic m) dm ps) =
     Aeson.object [ "kind" .= String "NodeToNodeVersionData"
                  , "networkMagic" .= toJSON m
                  , "diffusionMode" .= show dm
+                 , "peerSharing" .= show ps
                  ]
 
 instance ToJSON NodeToClientVersionData where
@@ -1772,7 +1800,7 @@ instance (Show versionNumber, ToJSON versionNumber, ToJSON agreedOptions)
       [ "kind" .= String "HandshakeServerError"
       , "reason" .= toJSON err
       ]
-  toObject _verb (TrError e err cerr) =
+  toObject _verb (TrConnectionHandlerError e err cerr) =
     mconcat
       [ "kind" .= String "Error"
       , "context" .= show e
@@ -1916,10 +1944,6 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
         mconcat
           [ "kind" .= String "UnexpectedlyFalseAssertion"
           , "info" .= String (pack . show $ info)
-          ]
-      TrUnknownConnection {} ->
-        mconcat
-          [ "kind" .= String "UnknownConnection"
           ]
 
 instance ToJSON state => ToJSON (ConnMgr.MaybeUnknown state) where

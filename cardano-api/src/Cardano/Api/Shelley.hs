@@ -61,6 +61,9 @@ module Cardano.Api.Shelley
     fromMaryValue,
     calcMinimumDeposit,
 
+    -- * Arbitrary signing
+    signArbitraryBytesKes,
+
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
     Tx(ShelleyTx),
@@ -204,8 +207,22 @@ module Cardano.Api.Shelley
     ProtocolState(..),
     decodeProtocolState,
     SerialisedDebugLedgerState(..),
+    CurrentEpochState(..),
     SerialisedCurrentEpochState(..),
     decodeCurrentEpochState,
+
+    PoolState(..),
+    SerialisedPoolState(..),
+    decodePoolState,
+
+    PoolDistribution(..),
+    SerialisedPoolDistribution(..),
+    decodePoolDistribution,
+
+    StakeSnapshot(..),
+    SerialisedStakeSnapshots(..),
+    decodeStakeSnapshot,
+
     UTxO(..),
     AcquiringFailure(..),
     SystemStart(..),
@@ -231,10 +248,12 @@ import           Cardano.Api.Address
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
-import           Cardano.Api.IPC
+import           Cardano.Api.Genesis
 import           Cardano.Api.InMode
-import           Cardano.Api.KeysPraos
-import           Cardano.Api.KeysShelley
+import           Cardano.Api.IPC
+import           Cardano.Api.Keys.Byron
+import           Cardano.Api.Keys.Praos
+import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.LedgerState
 import           Cardano.Api.NetworkId
 import           Cardano.Api.OperationalCertificate
@@ -242,7 +261,6 @@ import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
 import           Cardano.Api.Script
 import           Cardano.Api.ScriptData
-import           Cardano.Api.Shelley.Genesis
 import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody

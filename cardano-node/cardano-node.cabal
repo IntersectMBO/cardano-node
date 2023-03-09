@@ -168,8 +168,11 @@ library
                       , ouroboros-consensus-cardano
                       , ouroboros-consensus-protocol
                       , ouroboros-consensus-shelley
+                      , ouroboros-consensus-diffusion
                       , ouroboros-network
                       , ouroboros-network-framework
+                      , ouroboros-network-api
+                      , ouroboros-network-protocols
                       , psqueues
                       , safe-exceptions
                       , scientific
@@ -225,7 +228,9 @@ test-suite cardano-node-test
                       , hedgehog-corpus
                       , iproute
                       , ouroboros-consensus
+                      , ouroboros-consensus-diffusion
                       , ouroboros-network
+                      , ouroboros-network-api
                       , time
 
   other-modules:        Test.Cardano.Node.FilePermissions

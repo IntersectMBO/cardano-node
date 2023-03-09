@@ -10,6 +10,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
+{- HLINT ignore "Redundant fmap" -}
+
 module Cardano.Api.LedgerState
   ( -- * Initialization / Accumulation
     Env(..)
@@ -50,8 +52,6 @@ module Cardano.Api.LedgerState
   )
   where
 
-import           Prelude
-
 import           Control.Exception
 import           Control.Monad (when)
 import           Control.Monad.Trans.Class
@@ -59,7 +59,7 @@ import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, left)
 import           Control.State.Transition
 import           Data.Aeson as Aeson
-import qualified Data.Aeson.Types as Data.Aeson.Types.Internal
+import           Data.Aeson.Types (Parser)
 import           Data.Bifunctor
 import           Data.ByteArray (ByteArrayAccess)
 import qualified Data.ByteArray
@@ -82,7 +82,7 @@ import           Data.SOP.Strict (NP (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import           Data.Text.Lazy (toStrict)
+import qualified Data.Text.Lazy as LT
 import           Data.Text.Lazy.Builder (toLazyText)
 import           Data.Word
 import qualified Data.Yaml as Yaml
@@ -99,14 +99,15 @@ import           Cardano.Api.IPC (ConsensusModeParams (..),
                    LocalChainSyncClient (LocalChainSyncClientPipelined),
                    LocalNodeClientProtocols (..), LocalNodeClientProtocolsInMode,
                    LocalNodeConnectInfo (..), connectToLocalNode)
-import           Cardano.Api.KeysPraos
+import           Cardano.Api.Keys.Praos
 import           Cardano.Api.LedgerEvent (LedgerEvent, toLedgerEvent)
 import           Cardano.Api.Modes (CardanoMode, EpochSlots (..))
 import qualified Cardano.Api.Modes as Api
 import           Cardano.Api.NetworkId (NetworkId (..), NetworkMagic (NetworkMagic))
 import           Cardano.Api.ProtocolParameters
-import           Cardano.Api.Query (CurrentEpochState (..), ProtocolState,
-                   SerialisedCurrentEpochState (..), decodeCurrentEpochState, decodeProtocolState)
+import           Cardano.Api.Query (CurrentEpochState (..), PoolDistribution (unPoolDistr),
+                   ProtocolState, SerialisedCurrentEpochState (..), SerialisedPoolDistribution,
+                   decodeCurrentEpochState, decodePoolDistribution, decodeProtocolState)
 import           Cardano.Api.Utils (textShow)
 import           Cardano.Binary (DecoderError, FromCBOR)
 import qualified Cardano.Chain.Genesis
@@ -129,6 +130,7 @@ import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Keys as Shelley.Spec
 import qualified Cardano.Ledger.Keys as SL
 import qualified Cardano.Ledger.PoolDistr as SL
+import           Cardano.Ledger.SafeHash (HashAnnotated)
 import qualified Cardano.Ledger.Shelley.API as ShelleyAPI
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley.Spec
 import qualified Cardano.Protocol.TPraos.API as TPraos
@@ -761,10 +763,10 @@ data NodeConfig = NodeConfig
   }
 
 instance FromJSON NodeConfig where
-  parseJSON v =
-      Aeson.withObject "NodeConfig" parse v
+  parseJSON =
+      Aeson.withObject "NodeConfig" parse
     where
-      parse :: Object -> Data.Aeson.Types.Internal.Parser NodeConfig
+      parse :: Object -> Parser NodeConfig
       parse o =
         NodeConfig
           <$> o .:? "PBftSignatureThreshold"
@@ -786,47 +788,47 @@ instance FromJSON NodeConfig where
           <*> parseAlonzoHardForkEpoch o
           <*> parseBabbageHardForkEpoch o
 
-      parseByronProtocolVersion :: Object -> Data.Aeson.Types.Internal.Parser Cardano.Chain.Update.ProtocolVersion
+      parseByronProtocolVersion :: Object -> Parser Cardano.Chain.Update.ProtocolVersion
       parseByronProtocolVersion o =
         Cardano.Chain.Update.ProtocolVersion
           <$> o .: "LastKnownBlockVersion-Major"
           <*> o .: "LastKnownBlockVersion-Minor"
           <*> o .: "LastKnownBlockVersion-Alt"
 
-      parseByronSoftwareVersion :: Object -> Data.Aeson.Types.Internal.Parser Cardano.Chain.Update.SoftwareVersion
+      parseByronSoftwareVersion :: Object -> Parser Cardano.Chain.Update.SoftwareVersion
       parseByronSoftwareVersion o =
         Cardano.Chain.Update.SoftwareVersion
           <$> fmap Cardano.Chain.Update.ApplicationName (o .: "ApplicationName")
           <*> o .: "ApplicationVersion"
 
-      parseShelleyHardForkEpoch :: Object -> Data.Aeson.Types.Internal.Parser Consensus.TriggerHardFork
+      parseShelleyHardForkEpoch :: Object -> Parser Consensus.TriggerHardFork
       parseShelleyHardForkEpoch o =
         asum
           [ Consensus.TriggerHardForkAtEpoch <$> o .: "TestShelleyHardForkAtEpoch"
           , pure $ Consensus.TriggerHardForkAtVersion 2 -- Mainnet default
           ]
 
-      parseAllegraHardForkEpoch :: Object -> Data.Aeson.Types.Internal.Parser Consensus.TriggerHardFork
+      parseAllegraHardForkEpoch :: Object -> Parser Consensus.TriggerHardFork
       parseAllegraHardForkEpoch o =
         asum
           [ Consensus.TriggerHardForkAtEpoch <$> o .: "TestAllegraHardForkAtEpoch"
           , pure $ Consensus.TriggerHardForkAtVersion 3 -- Mainnet default
           ]
 
-      parseMaryHardForkEpoch :: Object -> Data.Aeson.Types.Internal.Parser Consensus.TriggerHardFork
+      parseMaryHardForkEpoch :: Object -> Parser Consensus.TriggerHardFork
       parseMaryHardForkEpoch o =
         asum
           [ Consensus.TriggerHardForkAtEpoch <$> o .: "TestMaryHardForkAtEpoch"
           , pure $ Consensus.TriggerHardForkAtVersion 4 -- Mainnet default
           ]
 
-      parseAlonzoHardForkEpoch :: Object -> Data.Aeson.Types.Internal.Parser Consensus.TriggerHardFork
+      parseAlonzoHardForkEpoch :: Object -> Parser Consensus.TriggerHardFork
       parseAlonzoHardForkEpoch o =
         asum
           [ Consensus.TriggerHardForkAtEpoch <$> o .: "TestAlonzoHardForkAtEpoch"
           , pure $ Consensus.TriggerHardForkAtVersion 5 -- Mainnet default
           ]
-      parseBabbageHardForkEpoch :: Object -> Data.Aeson.Types.Internal.Parser Consensus.TriggerHardFork
+      parseBabbageHardForkEpoch :: Object -> Parser Consensus.TriggerHardFork
       parseBabbageHardForkEpoch o =
         asum
           [ Consensus.TriggerHardForkAtEpoch <$> o .: "TestBabbageHardForkAtEpoch"
@@ -1076,9 +1078,8 @@ readShelleyGenesis (GenesisFile file) expectedGenesisHash = do
   where
     checkExpectedGenesisHash :: GenesisHashShelley -> ExceptT ShelleyGenesisError IO ()
     checkExpectedGenesisHash actual =
-      if actual /= expectedGenesisHash
-        then left (ShelleyGenesisHashMismatch actual expectedGenesisHash)
-        else pure ()
+      when (actual /= expectedGenesisHash) $
+        left (ShelleyGenesisHashMismatch actual expectedGenesisHash)
 
 data ShelleyGenesisError
      = ShelleyGenesisReadError !FilePath !Text
@@ -1121,9 +1122,8 @@ readAlonzoGenesis (GenesisFile file) expectedGenesisHash = do
   where
     checkExpectedGenesisHash :: GenesisHashAlonzo -> ExceptT AlonzoGenesisError IO ()
     checkExpectedGenesisHash actual =
-      if actual /= expectedGenesisHash
-        then left (AlonzoGenesisHashMismatch actual expectedGenesisHash)
-        else pure ()
+      when (actual /= expectedGenesisHash) $
+        left (AlonzoGenesisHashMismatch actual expectedGenesisHash)
 
 data AlonzoGenesisError
      = AlonzoGenesisReadError !FilePath !Text
@@ -1294,7 +1294,7 @@ instance Error LeadershipError where
   displayError LeaderErrDecodeLedgerStateFailure =
     "Failed to successfully decode ledger state"
   displayError (LeaderErrDecodeProtocolStateFailure (_, decErr)) =
-    "Failed to successfully decode protocol state: " <> Text.unpack (toStrict . toLazyText $ build decErr)
+    "Failed to successfully decode protocol state: " <> Text.unpack (LT.toStrict . toLazyText $ build decErr)
   displayError LeaderErrGenesisSlot =
     "Leadership schedule currently cannot be calculated from genesis"
   displayError (LeaderErrStakePoolHasNoStake poolId) =
@@ -1313,7 +1313,9 @@ instance Error LeadershipError where
 
 nextEpochEligibleLeadershipSlots
   :: forall era.
-     HasField "_d" (Core.PParams (ShelleyLedgerEra era)) UnitInterval
+     ( HasField "_d" (Core.PParams (ShelleyLedgerEra era)) UnitInterval
+     , HashAnnotated (Core.TxBody (ShelleyLedgerEra era)) Core.EraIndependentTxBody (Ledger.Crypto (ShelleyLedgerEra era))
+     )
   => Ledger.Era (ShelleyLedgerEra era)
   => Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Spec.Credential 'Shelley.Spec.Staking (Cardano.Ledger.Era.Crypto (ShelleyLedgerEra era)))
   => FromCBOR (Consensus.ChainDepState (Api.ConsensusProtocol era))
@@ -1382,9 +1384,10 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
                                  $ obtainDecodeEpochStateConstraints sbe
                                  $ decodeCurrentEpochState serCurrEpochState
 
-  let markSnapshotPoolDistr :: Map (SL.KeyHash 'SL.StakePool Shelley.StandardCrypto) (SL.IndividualPoolStake Shelley.StandardCrypto)
-      markSnapshotPoolDistr = ShelleyAPI.unPoolDistr . ShelleyAPI.calculatePoolDistr . ShelleyAPI._pstakeMark
-                                $ obtainIsStandardCrypto sbe $ ShelleyAPI.esSnapshots cEstate
+  let snapshot :: ShelleyAPI.SnapShot Shelley.StandardCrypto
+      snapshot = ShelleyAPI._pstakeMark $ obtainIsStandardCrypto sbe $ ShelleyAPI.esSnapshots cEstate
+      markSnapshotPoolDistr :: Map (SL.KeyHash 'SL.StakePool Shelley.StandardCrypto) (SL.IndividualPoolStake Shelley.StandardCrypto)
+      markSnapshotPoolDistr = ShelleyAPI.unPoolDistr . ShelleyAPI.calculatePoolDistr $ snapshot
 
   let slotRangeOfInterest = Set.filter
         (not . Ledger.isOverlaySlot firstSlotOfEpoch (getField @"_d" (toLedgerPParams sbe pParams)))
@@ -1482,6 +1485,10 @@ obtainDecodeEpochStateConstraints
       , FromCBOR (State (Core.EraRule "PPUP" ledgerera))
       , FromCBOR (Core.Value ledgerera)
       , FromSharedCBOR (Core.TxOut ledgerera)
+      , HashAnnotated
+          (Core.TxBody ledgerera)
+          Core.EraIndependentTxBody
+          (Ledger.Crypto (ShelleyLedgerEra era))
       ) => a) -> a
 obtainDecodeEpochStateConstraints ShelleyBasedEraShelley f = f
 obtainDecodeEpochStateConstraints ShelleyBasedEraAllegra f = f
@@ -1508,10 +1515,10 @@ currentEpochEligibleLeadershipSlots :: forall era ledgerera. ()
   -> ProtocolState era
   -> PoolId
   -> SigningKey VrfKey
-  -> SerialisedCurrentEpochState era
+  -> SerialisedPoolDistribution era
   -> EpochNo -- ^ Current EpochInfo
   -> Either LeadershipError (Set SlotNo)
-currentEpochEligibleLeadershipSlots sbe sGen eInfo pParams ptclState poolid (VrfSigningKey vrkSkey) serCurrEpochState currentEpoch = do
+currentEpochEligibleLeadershipSlots sbe sGen eInfo pParams ptclState poolid (VrfSigningKey vrkSkey) serPoolDistr currentEpoch = do
 
   chainDepState :: ChainDepState (Api.ConsensusProtocol era) <-
     first LeaderErrDecodeProtocolStateFailure $ decodeProtocolState ptclState
@@ -1524,17 +1531,10 @@ currentEpochEligibleLeadershipSlots sbe sGen eInfo pParams ptclState poolid (Vrf
   (firstSlotOfEpoch, lastSlotofEpoch) :: (SlotNo, SlotNo) <- first LeaderErrSlotRangeCalculationFailure
     $ Slot.epochInfoRange eInfo currentEpoch
 
-  CurrentEpochState (cEstate :: ShelleyAPI.EpochState (ShelleyLedgerEra era)) <-
-    first LeaderErrDecodeProtocolEpochStateFailure
+  setSnapshotPoolDistr <-
+    first LeaderErrDecodeProtocolEpochStateFailure . fmap (SL.unPoolDistr . unPoolDistr)
       $ obtainDecodeEpochStateConstraints sbe
-      $ decodeCurrentEpochState serCurrEpochState
-
-  -- We need the "set" stake distribution (distribution of the previous epoch)
-  -- in order to calculate the leadership schedule of the current epoch.
-  let setSnapshotPoolDistr :: Map (SL.KeyHash 'SL.StakePool Shelley.StandardCrypto) (SL.IndividualPoolStake Shelley.StandardCrypto)
-      setSnapshotPoolDistr = ShelleyAPI.unPoolDistr . ShelleyAPI.calculatePoolDistr
-                                . ShelleyAPI._pstakeSet . obtainIsStandardCrypto sbe
-                                $ ShelleyAPI.esSnapshots cEstate
+      $ decodePoolDistribution serPoolDistr
 
   let slotRangeOfInterest = Set.filter
         (not . Ledger.isOverlaySlot firstSlotOfEpoch (getField @"_d" (toLedgerPParams sbe pParams)))

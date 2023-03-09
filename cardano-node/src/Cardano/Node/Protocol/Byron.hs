@@ -14,13 +14,11 @@ module Cardano.Node.Protocol.Byron
 
 
 import           Cardano.Prelude
-import           Control.Monad.Trans.Except.Extra (bimapExceptT, firstExceptT, hoistEither,
-                   hoistMaybe, left)
+import           Control.Monad.Trans.Except.Extra (bimapExceptT, firstExceptT, hoistEither, left)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as Text
 
 import           Cardano.Api.Byron
-import qualified Cardano.Api.Protocol.Types as Protocol
 
 import qualified Cardano.Crypto.Hash as Crypto
 
@@ -80,7 +78,7 @@ mkSomeConsensusProtocolByron NodeByronProtocolConfiguration {
 
     optionalLeaderCredentials <- readLeaderCredentials genesisConfig files
 
-    return $ SomeConsensusProtocol Protocol.ByronBlockType $ Protocol.ProtocolInfoArgsByron $ Consensus.ProtocolParamsByron {
+    return $ SomeConsensusProtocol ByronBlockType $ ProtocolInfoArgsByron $ Consensus.ProtocolParamsByron {
         byronGenesis = genesisConfig,
         byronPbftSignatureThreshold =
           PBftSignatureThreshold <$> npcByronPbftSignatureThresh,
@@ -158,8 +156,9 @@ readLeaderCredentials genesisConfig
 
          signingKeyFileBytes <- liftIO $ LB.readFile signingKeyFile
          delegCertFileBytes <- liftIO $ LB.readFile delegCertFile
-         ByronSigningKey signingKey <- hoistMaybe (SigningKeyDeserialiseFailure signingKeyFile)
-                         $ deserialiseFromRawBytes (AsSigningKey AsByronKey) $ LB.toStrict signingKeyFileBytes
+         ByronSigningKey signingKey <- firstExceptT (const (SigningKeyDeserialiseFailure signingKeyFile))
+                         . hoistEither
+                         $ eitherDeserialiseFromRawBytes (AsSigningKey AsByronKey) $ LB.toStrict signingKeyFileBytes
          delegCert  <- firstExceptT (CanonicalDecodeFailure delegCertFile)
                          . hoistEither
                          $ canonicalDecodePretty delegCertFileBytes

@@ -1,23 +1,20 @@
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Test.Cardano.Api.Typed.TxBody
   ( tests
   ) where
 
-import           Cardano.Prelude
-
-import           Hedgehog (Property, annotateShow, failure, (===), MonadTest)
-import qualified Hedgehog as H
-import           Test.Tasty (TestTree)
-import           Test.Tasty.Hedgehog (testProperty)
-import           Test.Tasty.TH (testGroupGenerator)
-
 import           Cardano.Api
 import           Cardano.Api.Shelley (ReferenceScript (..), refScriptToShelleyScript)
+import           Data.Maybe (isJust)
 import           Data.Type.Equality (TestEquality (testEquality))
-import           Gen.Cardano.Api.Typed
+import           Hedgehog (MonadTest, Property, annotateShow, failure, (===))
 import           Test.Cardano.Api.Typed.Orphans ()
+import           Test.Gen.Cardano.Api.Typed (genTxBodyContent)
+import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.Hedgehog (testPropertyNamed)
+
+import qualified Hedgehog as H
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -27,7 +24,7 @@ prop_roundtrip_txbodycontent_txouts =
   H.property $ do
     content <- H.forAll $ genTxBodyContent BabbageEra
     -- Create the ledger body & auxiliaries
-    body <- case makeTransactionBody content of
+    body <- case createAndValidateTransactionBody content of
       Left err -> annotateShow err >> failure
       Right body -> pure body
     annotateShow body
@@ -78,4 +75,6 @@ prop_roundtrip_txbodycontent_txouts =
     _ -> False
 
 tests :: TestTree
-tests = $testGroupGenerator
+tests = testGroup "Test.Cardano.Api.Typed.TxBody"
+  [ testPropertyNamed "roundtrip txbodycontent txouts" "roundtrip txbodycontent txouts" prop_roundtrip_txbodycontent_txouts
+  ]

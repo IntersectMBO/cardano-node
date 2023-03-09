@@ -8,8 +8,6 @@ module Cardano.Api.SerialiseCBOR
   , ToCBOR(..)
   ) where
 
-import           Prelude
-
 import           Data.ByteString (ByteString)
 
 import           Cardano.Binary (FromCBOR, ToCBOR)

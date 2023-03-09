@@ -10,8 +10,6 @@ module Cardano.Api.Error
   , FileError(..)
   ) where
 
-import           Prelude
-
 import           Control.Exception (Exception (..), IOException, throwIO)
 import           System.IO (Handle)
 
@@ -61,5 +59,5 @@ instance Error e => Error (FileError e) where
     path ++ ": " ++ displayError e
 
 instance Error IOException where
-  displayError ioEx = show ioEx
+  displayError = show
 

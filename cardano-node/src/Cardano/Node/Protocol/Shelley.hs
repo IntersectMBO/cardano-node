@@ -46,7 +46,7 @@ import qualified Cardano.Ledger.Shelley.Genesis as Shelley
 
 import qualified Cardano.Api as Api (FileError (..))
 import           Cardano.Api.Orphans ()
-import qualified Cardano.Api.Protocol.Types as Protocol
+import qualified Cardano.Api as Protocol
 import           Cardano.Api.Shelley hiding (FileError)
 
 import           Cardano.Node.Types

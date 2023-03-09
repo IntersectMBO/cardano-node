@@ -12,8 +12,7 @@ module Test.Cardano.Api.Crypto
   )
 where
 
-import           Cardano.Prelude
-import           Prelude (String)
+import           Data.Proxy (Proxy (..))
 
 import           Cardano.Api.Crypto.Ed25519Bip32 (Ed25519Bip32DSIGN, SignKeyDSIGN (..))
 
@@ -69,13 +68,13 @@ testDSIGNAlgorithm _ n =
       , testGroup "size"
         [ testProperty "VerKey"  $ prop_size_serialise @(VerKeyDSIGN v)
                                                        rawSerialiseVerKeyDSIGN
-                                                       (sizeVerKeyDSIGN (Proxy @ v))
+                                                       (sizeVerKeyDSIGN (Proxy @v))
         , testProperty "SignKey" $ prop_size_serialise @(SignKeyDSIGN v)
                                                        rawSerialiseSignKeyDSIGN
-                                                       (sizeSignKeyDSIGN (Proxy @ v))
+                                                       (sizeSignKeyDSIGN (Proxy @v))
         , testProperty "Sig"     $ prop_size_serialise @(SigDSIGN v)
                                                        rawSerialiseSigDSIGN
-                                                       (sizeSigDSIGN (Proxy @ v))
+                                                       (sizeSigDSIGN (Proxy @v))
         ]
 
       , testGroup "direct CBOR"

@@ -22,7 +22,7 @@ import           Data.IP (toSockAddr)
 import           Prelude (String, error, id, show)
 
 import qualified Control.Concurrent.Async as Async
-import           Control.Monad.Class.MonadSTM.Strict
+import           Control.Concurrent.Class.MonadSTM.Strict
 import           Control.Monad.Trans.Except.Extra (left)
 import           "contra-tracer" Control.Tracer
 import qualified Data.Map.Strict as Map
@@ -87,7 +87,7 @@ import           Ouroboros.Network.Subscription (DnsSubscriptionTarget (..),
                    IPSubscriptionTarget (..))
 
 import           Cardano.Api
-import qualified Cardano.Api.Protocol.Types as Protocol
+import qualified Cardano.Api as Api
 
 import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
                    gatherConfiguredSockets, getSocketOrSocketInfoAddr)
@@ -144,7 +144,7 @@ runNode cmdPc = do
     let networkMagic :: NetworkMagic =
           case p of
             SomeConsensusProtocol _ runP ->
-              let ProtocolInfo { pInfoConfig } = Protocol.protocolInfo runP
+              let ProtocolInfo { pInfoConfig } = Api.protocolInfo runP
               in getNetworkMagic $ Consensus.configBlock pInfoConfig
 
     case p of
@@ -173,19 +173,19 @@ installSigTermHandler = do
 
 handleNodeWithTracers
   :: ( TraceConstraints blk
-     , Protocol.Protocol IO blk
+     , Api.Protocol IO blk
      )
   => PartialNodeConfiguration
   -> NodeConfiguration
   -> SomeConsensusProtocol
   -> NetworkMagic
-  -> Protocol.ProtocolInfoArgs IO blk
+  -> Api.ProtocolInfoArgs IO blk
   -> IO ()
 handleNodeWithTracers cmdPc nc p networkMagic runP = do
   -- This IORef contains node kernel structure which holds node kernel.
   -- Used for ledger queries and peer connection status.
   nodeKernelData <- mkNodeKernelData
-  let ProtocolInfo { pInfoConfig = cfg } = Protocol.protocolInfo runP
+  let ProtocolInfo { pInfoConfig = cfg } = Api.protocolInfo runP
   case ncEnableP2P nc of
     SomeNetworkP2PMode p2pMode -> do
       let fp = maybe  "No file path found!"
@@ -295,13 +295,13 @@ handlePeersListSimple tr nodeKern = forever $ do
 handleSimpleNode
   :: forall blk p2p
   . ( RunNode blk
-    , Protocol.Protocol IO blk
+    , Api.Protocol IO blk
     )
-  => Protocol.ProtocolInfoArgs IO blk
+  => Api.ProtocolInfoArgs IO blk
   -> NetworkP2PMode p2p
   -> Tracers RemoteConnectionId LocalConnectionId blk p2p
   -> NodeConfiguration
-  -> (NodeKernel IO RemoteConnectionId LocalConnectionId blk -> IO ())
+  -> (NodeKernel IO RemoteAddress LocalConnectionId blk -> IO ())
   -- ^ Called on the 'NodeKernel' after creating it, but before the network
   -- layer is initialised.  This implies this function must not block,
   -- otherwise the node won't actually start.
@@ -316,7 +316,7 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
     traceWith (startupTracer tracers)
       StartupDBValidation
 
-  let pInfo = Protocol.protocolInfo runP
+  let pInfo = Api.protocolInfo runP
 
   (publicIPv4SocketOrAddr, publicIPv6SocketOrAddr, localSocketOrPath) <- do
     result <- runExceptT (gatherConfiguredSockets $ ncSocketConfig nc)
@@ -386,6 +386,7 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
                 (Node.getChainDB nodeKernel)
               onKernel nodeKernel
           , rnEnableP2P      = p2pMode
+          , rnPeerSharing    = ncPeerSharing nc
           }
     in case p2pMode of
       EnabledP2PMode -> do
@@ -501,7 +502,7 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
 
 #ifdef UNIX
   updateTopologyConfiguration :: StrictTVar IO [(Int, Map RelayAccessPoint PeerAdvertise)]
-                              -> StrictTVar IO [RelayAccessPoint]
+                              -> StrictTVar IO (Map RelayAccessPoint PeerAdvertise)
                               -> StrictTVar IO UseLedgerAfter
                               -> Signals.Handler
   updateTopologyConfiguration localRootsVar publicRootsVar useLedgerVar =
@@ -589,7 +590,7 @@ mkP2PArguments
   -> STM IO [(Int, Map RelayAccessPoint PeerAdvertise)]
      -- ^ non-overlapping local root peers groups; the 'Int' denotes the
      -- valency of its group.
-  -> STM IO [RelayAccessPoint]
+  -> STM IO (Map RelayAccessPoint PeerAdvertise)
   -> STM IO UseLedgerAfter
   -> Diffusion.ExtraArguments 'Diffusion.P2P IO
 mkP2PArguments NodeConfiguration {
@@ -598,7 +599,8 @@ mkP2PArguments NodeConfiguration {
                  ncTargetNumberOfEstablishedPeers,
                  ncTargetNumberOfActivePeers,
                  ncProtocolIdleTimeout,
-                 ncTimeWaitTimeout
+                 ncTimeWaitTimeout,
+                 ncPeerSharing
                }
                daReadLocalRootPeers
                daReadPublicRootPeers
@@ -610,6 +612,9 @@ mkP2PArguments NodeConfiguration {
       , P2P.daReadUseLedgerAfter
       , P2P.daProtocolIdleTimeout = ncProtocolIdleTimeout
       , P2P.daTimeWaitTimeout     = ncTimeWaitTimeout
+      , P2P.daDeadlineChurnInterval = 3300
+      , P2P.daBulkChurnInterval = 300
+      , P2P.daOwnPeerSharing = ncPeerSharing
       }
   where
     daPeerSelectionTargets = PeerSelectionTargets {
@@ -649,7 +654,7 @@ producerAddressesNonP2P nt =
 
 producerAddresses
   :: NetworkTopology
-  -> ([(Int, Map RelayAccessPoint PeerAdvertise)], [RelayAccessPoint])
+  -> ([(Int, Map RelayAccessPoint PeerAdvertise)], Map RelayAccessPoint PeerAdvertise)
 producerAddresses nt =
   case nt of
     RealNodeTopology lrpg prp _ ->
@@ -659,8 +664,8 @@ producerAddresses nt =
                      )
             )
             (groups lrpg)
-      , concatMap (map fst . rootConfigToRelayAccessPoint)
-                  (map publicRoots prp)
+      , foldMap (Map.fromList . rootConfigToRelayAccessPoint)
+                (map publicRoots prp)
       )
 
 useLedgerAfterSlot

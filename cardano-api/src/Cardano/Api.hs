@@ -48,6 +48,7 @@ module Cardano.Api (
     castVerificationKey,
     castSigningKey,
     generateSigningKey,
+    generateInsecureSigningKey,
 
     -- ** Hashes
     -- | In Cardano most keys are identified by their hash, and hashes are
@@ -154,7 +155,8 @@ module Cardano.Api (
 
     -- ** Transaction bodies
     TxBody(TxBody),
-    makeTransactionBody,
+    createAndValidateTransactionBody,
+    makeTransactionBody, -- TODO: Remove
     TxBodyContent(..),
     TxBodyError(..),
     TxBodyScriptData(..),
@@ -165,6 +167,7 @@ module Cardano.Api (
 
     -- ** Transaction inputs
     TxIn(TxIn),
+    TxIns,
     TxIx(TxIx),
     renderTxIn,
 
@@ -217,6 +220,7 @@ module Cardano.Api (
     WithdrawalsSupportedInEra(..),
     CertificatesSupportedInEra(..),
     UpdateProposalSupportedInEra(..),
+    TxTotalAndReturnCollateralSupportedInEra(..),
 
     -- ** Feature availability functions
     collateralSupportedInEra,
@@ -263,6 +267,7 @@ module Cardano.Api (
     scriptValidityToTxScriptValidity,
     txScriptValiditySupportedInShelleyBasedEra,
     txScriptValiditySupportedInCardanoEra,
+    txScriptValidityToScriptValidity,
 
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
@@ -340,6 +345,7 @@ module Cardano.Api (
     PlutusScriptVersion(..),
     AnyScriptLanguage(..),
     AnyPlutusScriptVersion(..),
+    IsPlutusScriptLanguage(..),
     IsScriptLanguage(..),
     IsSimpleScriptLanguage(..),
 
@@ -419,6 +425,17 @@ module Cardano.Api (
 
     -- * Serialisation
     -- | Support for serialising data in JSON, CBOR and text files.
+    InputFormat (..),
+    InputDecodeError (..),
+    deserialiseInput,
+    deserialiseInputAnyOf,
+    renderInputDecodeError,
+
+    SomeAddressVerificationKey(..),
+    deserialiseAnyVerificationKey,
+    deserialiseAnyVerificationKeyBech32,
+    deserialiseAnyVerificationKeyTextEnvelope,
+    renderSomeAddressVerificationKey,
 
     -- ** CBOR
     SerialiseAsCBOR,
@@ -454,10 +471,11 @@ module Cardano.Api (
     -- | Some types have a natural raw binary format.
     SerialiseAsRawBytes,
     serialiseToRawBytes,
-    deserialiseFromRawBytes,
+    eitherDeserialiseFromRawBytes,
     serialiseToRawBytesHex,
     deserialiseFromRawBytesHex,
     serialiseToRawBytesHexText,
+    RawBytesHexError(..),
 
     -- ** Text envelope
     -- | Support for a envelope file format with text headers and a hex-encoded
@@ -468,6 +486,7 @@ module Cardano.Api (
     TextEnvelopeDescr,
     TextEnvelopeError(..),
     textEnvelopeRawCBOR,
+    textEnvelopeToJSON,
     serialiseToTextEnvelope,
     deserialiseFromTextEnvelope,
     readFileTextEnvelope,
@@ -488,12 +507,21 @@ module Cardano.Api (
     deserialiseTxLedgerCddl,
     serialiseWitnessLedgerCddl,
     deserialiseWitnessLedgerCddl,
+    TextEnvelopeCddl(..), -- TODO: Deprecate this when we stop supporting the cli's
+                          -- intermediate txbody format.
     TextEnvelopeCddlError(..),
 
     -- *** Reading one of several key types
+    readKeyFile,
+    readKeyFileTextEnvelope,
+    readKeyFileAnyOf,
+
+    -- *** Read one of several types
     FromSomeType(..),
     deserialiseFromTextEnvelopeAnyOf,
     readFileTextEnvelopeAnyOf,
+
+
 
     -- * Errors
     Error(..),
@@ -560,6 +588,12 @@ module Cardano.Api (
     CardanoMode,
     --  connectToRemoteNode,
 
+    -- ** Protocol related types
+    BlockType(..),
+    Protocol(..),
+    ProtocolInfoArgs(..),
+
+
     -- *** Chain sync protocol
     -- | To construct a @ChainSyncClient@ see @Cardano.Api.Client@ or
     -- @Cardano.Api.ClientPipelined@.
@@ -572,6 +606,7 @@ module Cardano.Api (
     LocalTxSubmissionClient,
     TxInMode(..),
     TxValidationErrorInMode(..),
+    SubmitResult(..),
     runLocalTxSubmissionClient,
     submitTxToNodeLocal,
 
@@ -585,6 +620,7 @@ module Cardano.Api (
     UTxO(..),
     queryNodeLocalState,
     executeQueryCardanoMode,
+    UnsupportedNtcVersionError(..),
 
     -- *** Local tx monitoring
     LocalTxMonitorClient(..),
@@ -592,6 +628,8 @@ module Cardano.Api (
     LocalTxMonitoringResult(..),
     MempoolSizeAndCapacity(..),
     queryTxMonitoringLocal,
+
+    TxIdInMode(..),
 
     EraHistory(..),
     getProgress,
@@ -695,6 +733,7 @@ module Cardano.Api (
     -- ** Misc
     ScriptLockedTxInsError(..),
     TxInsExistError(..),
+    renderEra,
     renderNotScriptLockedTxInsError,
     renderTxInsExistError,
     txInsExistInUTxO,
@@ -708,6 +747,7 @@ import           Cardano.Api.Certificate
 import           Cardano.Api.Convenience.Constraints
 import           Cardano.Api.Convenience.Construction
 import           Cardano.Api.Convenience.Query
+import           Cardano.Api.DeserialiseAnyOf
 import           Cardano.Api.Environment
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
@@ -716,16 +756,19 @@ import           Cardano.Api.Fees
 import           Cardano.Api.GenesisParameters
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.InMode
 import           Cardano.Api.IPC
 import           Cardano.Api.IPC.Monad
-import           Cardano.Api.Key
-import           Cardano.Api.KeysByron
-import           Cardano.Api.KeysShelley
+import           Cardano.Api.Keys.Byron
+import           Cardano.Api.Keys.Class
+import           Cardano.Api.Keys.Read
+import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.LedgerEvent
 import           Cardano.Api.LedgerState
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.OperationalCertificate
+import           Cardano.Api.Protocol
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query hiding (LedgerState (..))
 import           Cardano.Api.Script

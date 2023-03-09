@@ -396,6 +396,8 @@ mkConsensusTracers trBase trForward mbTrEKG _trDataPoint trConfig nodeKernel = d
           Tracer (\(Consensus.TraceLabelCreds _ x) -> traceWith (contramap Left forgeThreadStatsTr) x)
       , Consensus.blockchainTimeTracer = Tracer $
           traceWith blockchainTimeTr
+      , Consensus.consensusStartupErrorTracer = Tracer $
+          mempty
       , Consensus.keepAliveClientTracer = Tracer $
           traceWith keepAliveClientTr
       }
@@ -570,7 +572,7 @@ mkDiffusionTracers  trBase trForward mbTrEKG _trDataPoint trConfig = do
            traceWith dtLocalMuxTr
        , Diffusion.dtLocalHandshakeTracer          = Tracer $
            traceWith dtLocalHandshakeTr
-       , Diffusion.dtDiffusionInitializationTracer = Tracer $
+       , Diffusion.dtDiffusionTracer               = Tracer $
            traceWith dtDiffusionInitializationTr
        , Diffusion.dtLedgerPeersTracer             = Tracer $
            traceWith dtLedgerPeersTr

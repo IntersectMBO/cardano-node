@@ -4,15 +4,22 @@
 
 ### Features
 
-
-## 1.35.4 -- October 2022
-
-- Expose `Key` interface via `Cardano.Api.Shelley` ([PR4048](https://github.com/input-output-hk/cardano-node/pull/4048))
-- Append, not prepend change output when balancing a transaction ([PR4343](https://github.com/input-output-hk/cardano-node/pull/4343))
+- Append, not prepend change output when balancing a transaction ([PR 4343](https://github.com/input-output-hk/cardano-node/pull/4343))
 
 - Expose convenience functions `executeQueryCardanoMode`, `determineEra`, `constructBalancedTx` and `queryStateForBalancedTx` ([PR 4446](https://github.com/input-output-hk/cardano-node/pull/4446))
 
+- Expand `BalancedTxBody` to include `TxBodyContent` ([PR 4491](https://github.com/input-output-hk/cardano-node/pull/4491))
+
+- Change `calculateMinimumUTxO` to return `Lovelace` instead of a `Value` ([PR 4482](https://github.com/input-output-hk/cardano-node/pull/4482))
+
+- **Breaking change** - Reduce exposed modules in cardano-api ([PR4546](https://github.com/input-output-hk/cardano-node/pull/4546))
+
+### Bugs
+
+- Allow reading text envelopes from pipes ([PR 4384](https://github.com/input-output-hk/cardano-node/pull/4384))
+
 ## 1.35.3 -- August 2022
+
 - Fix leadership schedule for current on babbage (#4106)
 - Update build to allow all invalid scripts (again) (#4088)
 - Fix building of Alonzo transaction in Babbage era. (#4166)
@@ -53,14 +60,13 @@ None
 - Restore deleted comment (#4044)
 - Do not require decentralization parameter in protocol parameters (#4051)
 
-
 ## 1.34.0 -- February 2022
 
 - Expose `lovelaceToTxOutValue`. (#3381)
 - Implement two functions: `currentEpochEligibleLeadershipSlots` and
   `nextEpochEligibleLeadershipSlots` to get the leadership slots for the
   current/next epoch respectively. (#3464, #3494)
-- Various small intenral fixes. (#3466)
+- Various small internal fixes. (#3466)
 - Add a `capi` library to support using the cardano node as a C library in other
   software. (#3501)
 - `fromShelleyAddr` now takes an explicit `ShelleyBasedEra` parameter to
@@ -101,7 +107,7 @@ None
 
 - Support for automated Tx building. (#2953)
 - A few additional exports for API consumers. (#3001, #3055)
-- Miscallaneous internal improvements. (#2948)
+- Miscellaneous internal improvements. (#2948)
 - Block folding interface now derives the network ID automatically from the
   ledger config. (#2955, #2975)
 - Improve the error generated when a Tx output does not meet the minimum UTxO

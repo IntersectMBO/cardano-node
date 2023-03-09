@@ -46,17 +46,15 @@ module Cardano.Api.Eras
            AsByron,    AsShelley,    AsAllegra,    AsMary,    AsAlonzo,    AsBabbage)
   ) where
 
-import           Prelude
-
 import           Cardano.Api.HasTypeProxy
 
+import           Control.DeepSeq
 import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
 import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 
 import           Ouroboros.Consensus.Shelley.Eras as Consensus (StandardAllegra, StandardAlonzo,
                    StandardBabbage, StandardMary, StandardShelley)
-
 
 -- | A type used as a tag to distinguish the Byron era.
 data ByronEra
@@ -306,6 +304,14 @@ data ShelleyBasedEra era where
      ShelleyBasedEraMary    :: ShelleyBasedEra MaryEra
      ShelleyBasedEraAlonzo  :: ShelleyBasedEra AlonzoEra
      ShelleyBasedEraBabbage :: ShelleyBasedEra BabbageEra
+
+instance NFData (ShelleyBasedEra era) where
+  rnf = \case
+    ShelleyBasedEraShelley -> ()
+    ShelleyBasedEraAllegra -> ()
+    ShelleyBasedEraMary    -> ()
+    ShelleyBasedEraAlonzo  -> ()
+    ShelleyBasedEraBabbage -> ()
 
 deriving instance Eq   (ShelleyBasedEra era)
 deriving instance Ord  (ShelleyBasedEra era)

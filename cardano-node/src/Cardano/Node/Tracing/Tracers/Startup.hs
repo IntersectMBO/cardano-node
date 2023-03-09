@@ -49,8 +49,7 @@ import           Ouroboros.Consensus.Shelley.Ledger.Ledger (shelleyLedgerGenesis
 
 import           Cardano.Logging
 
-import           Cardano.Api (NetworkMagic (..), SlotNo (..))
-import           Cardano.Api.Protocol.Types (BlockType (..), protocolInfo)
+import           Cardano.Api (NetworkMagic (..), SlotNo (..), BlockType (..), protocolInfo)
 
 import           Cardano.Git.Rev (gitRev)
 
@@ -313,7 +312,7 @@ ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerAfter) =
   , "  " ++ intercalate "\n  " (map (\(x,y) -> show (x, Map.assocs y))
                                     localRoots)
   , "Public Roots:"
-  , "  " ++ intercalate "\n  " (map show publicRoots)
+  , "  " ++ intercalate "\n  " (map show $ Map.assocs publicRoots)
   , case useLedgerAfter of
       UseLedgerAfter slotNo -> "Get root peers from the ledger after slot "
                             ++ show (unSlotNo slotNo)

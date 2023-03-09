@@ -391,7 +391,7 @@ docLocalHandshake = addDocumentedNamespace  ["Send"] docHandshake'
 -- DiffusionInit Tracer
 --------------------------------------------------------------------------------
 
-severityDiffusionInit :: ND.InitializationTracer rard ladr -> SeverityS
+severityDiffusionInit :: ND.DiffusionTracer rard ladr -> SeverityS
 severityDiffusionInit ND.RunServer {}                         = Info
 severityDiffusionInit ND.RunLocalServer {}                    = Info
 severityDiffusionInit ND.UsingSystemdSocket {}                = Info
@@ -407,8 +407,9 @@ severityDiffusionInit ND.ServerSocketUp {}                    = Info
 severityDiffusionInit ND.UnsupportedLocalSystemdSocket {}     = Info
 severityDiffusionInit ND.UnsupportedReadySocketCase {}        = Info
 severityDiffusionInit ND.DiffusionErrored {}                  = Info
+severityDiffusionInit ND.SystemdSocketConfiguration {}        = Warning
 
-namesForDiffusionInit  :: ND.InitializationTracer rard ladr -> [Text]
+namesForDiffusionInit  :: ND.DiffusionTracer rard ladr -> [Text]
 namesForDiffusionInit  ND.RunServer {}                         =
   ["RunServer"]
 namesForDiffusionInit  ND.RunLocalServer {}                    =
@@ -439,9 +440,11 @@ namesForDiffusionInit  ND.UnsupportedReadySocketCase {}        =
   ["UnsupportedReadySocketCase"]
 namesForDiffusionInit  ND.DiffusionErrored {}                  =
   ["DiffusionErrored"]
+namesForDiffusionInit  ND.SystemdSocketConfiguration {}        =
+  ["SystemdSocketConfiguration"]
 
 instance (Show ntnAddr, Show ntcAddr) =>
-  LogFormatting (ND.InitializationTracer ntnAddr ntcAddr)  where
+  LogFormatting (ND.DiffusionTracer ntnAddr ntcAddr)  where
   forMachine _dtal (ND.RunServer sockAddr) = mconcat
     [ "kind" .= String "RunServer"
     , "socketAddress" .= String (pack (show sockAddr))
@@ -506,11 +509,15 @@ instance (Show ntnAddr, Show ntcAddr) =>
     [ "kind" .= String "DiffusionErrored"
     , "path" .= String (pack (show exception))
     ]
+  forMachine _dtal (ND.SystemdSocketConfiguration config) = mconcat
+    [ "kind" .= String "SystemdSocketConfiguration"
+    , "path" .= String (pack (show config))
+    ]
 
-docDiffusionInit :: Documented (ND.InitializationTracer Socket.SockAddr NtC.LocalAddress)
+docDiffusionInit :: Documented (ND.DiffusionTracer Socket.SockAddr NtC.LocalAddress)
 docDiffusionInit =  addDocumentedNamespace  [] docDiffusionInit'
 
-docDiffusionInit' :: Documented (ND.InitializationTracer Socket.SockAddr NtC.LocalAddress)
+docDiffusionInit' :: Documented (ND.DiffusionTracer Socket.SockAddr NtC.LocalAddress)
 docDiffusionInit' = Documented [
     DocMsg
       ["RunServer"]

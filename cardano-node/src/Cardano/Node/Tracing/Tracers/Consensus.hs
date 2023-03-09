@@ -124,6 +124,7 @@ import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, e
 import           Ouroboros.Consensus.Node.Tracers
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import           Ouroboros.Consensus.Util.Enclose
+import Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
 
 
@@ -405,7 +406,7 @@ data ClientMetrics = ClientMetrics {
   , cmCdf3sVar :: CdfCounter
   , cmCdf5sVar :: CdfCounter
   , cmDelay    :: Double
-  , cmBlockSize :: Word32
+  , cmBlockSize :: SizeInBytes
   , cmTraceIt  :: Bool
 }
 
@@ -557,12 +558,13 @@ instance (HasHeader header, ConvertRawHash header) =>
     mconcat [ "kind" .= String "AddedFetchRequest" ]
   forMachine _dtal BlockFetch.AcknowledgedFetchRequest {} =
     mconcat [ "kind" .= String "AcknowledgedFetchRequest" ]
-  forMachine _dtal (BlockFetch.SendFetchRequest af) =
+  forMachine _dtal (BlockFetch.SendFetchRequest af _) =
     mconcat [ "kind" .= String "SendFetchRequest"
             , "head" .= String (renderChainHash
                                  (renderHeaderHash (Proxy @header))
                                  (AF.headHash af))
-            , "length" .= toJSON (fragmentLength af)]
+            , "length" .= toJSON (fragmentLength af)
+            ]
    where
      -- NOTE: this ignores the Byron era with its EBB complication:
      -- the length would be underestimated by 1, if the AF is anchored
@@ -576,7 +578,7 @@ instance (HasHeader header, ConvertRawHash header) =>
   forMachine _dtal (BlockFetch.CompletedBlockFetch pt _ _ _ delay blockSize) =
     mconcat [ "kind"  .= String "CompletedBlockFetch"
             , "delay" .= (realToFrac delay :: Double)
-            , "size"  .= blockSize
+            , "size"  .= getSizeInBytes blockSize
             , "block" .= String
               (case pt of
                  GenesisPoint -> "Genesis"
@@ -1210,7 +1212,7 @@ instance ( tx ~ GenTx blk
           (Proxy @blk)
           DDetailed
           (blockHash blk)
-      , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+      , "blockSize" .= toJSON (getSizeInBytes (estimateBlockSize (getHeader blk)))
       , "txIds" .= toJSON (map (show . txId . txForgetValidated) txs)
       ]
   forMachine dtal (TraceAdoptedBlock slotNo blk _txs) =
@@ -1221,7 +1223,7 @@ instance ( tx ~ GenTx blk
           (Proxy @blk)
           dtal
           (blockHash blk)
-      , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+      , "blockSize" .= toJSON (getSizeInBytes (estimateBlockSize (getHeader blk)))
       ]
 
 
