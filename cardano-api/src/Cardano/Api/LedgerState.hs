@@ -62,7 +62,6 @@ import           Control.Monad (when)
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, left)
-import           Control.State.Transition
 import           Data.Aeson as Aeson
 import           Data.Aeson.Types (Parser)
 import           Data.Bifunctor
@@ -77,7 +76,7 @@ import           Data.Foldable
 import           Data.IORef
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (mapMaybe)
+import           Data.Maybe (fromMaybe, mapMaybe)
 import           Data.Proxy (Proxy (Proxy))
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
@@ -92,7 +91,7 @@ import           Data.Text.Lazy.Builder (toLazyText)
 import           Data.Word
 import qualified Data.Yaml as Yaml
 import           Formatting.Buildable (build)
-import           GHC.Records (HasField (..))
+import           Lens.Micro ((^.))
 import           Network.TypedProtocol.Pipelined (Nat (..))
 import           System.FilePath
 
@@ -114,7 +113,6 @@ import           Cardano.Api.Query (CurrentEpochState (..), PoolDistribution (un
                    ProtocolState, SerialisedCurrentEpochState (..), SerialisedPoolDistribution,
                    decodeCurrentEpochState, decodePoolDistribution, decodeProtocolState)
 import           Cardano.Api.Utils (textShow)
-import           Cardano.Binary (DecoderError, FromCBOR)
 import qualified Cardano.Chain.Genesis
 import qualified Cardano.Chain.Update
 import           Cardano.Crypto (ProtocolMagicId (unProtocolMagicId), RequiresNetworkMagic (..))
@@ -125,18 +123,16 @@ import qualified Cardano.Crypto.ProtocolMagic
 import qualified Cardano.Crypto.VRF as Crypto
 import qualified Cardano.Crypto.VRF.Class as VRF
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
-import           Cardano.Ledger.BaseTypes (Globals (..), Nonce, UnitInterval, (⭒))
+import           Cardano.Ledger.BaseTypes (Globals (..), Nonce, (⭒))
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.BHeaderView as Ledger
-import qualified Cardano.Ledger.Conway.Genesis as Conway (ConwayGenesis (..))
-import qualified Cardano.Ledger.Core as Core
+import           Cardano.Ledger.Binary (DecCBOR, DecoderError, FromCBOR, mkVersion)
 import qualified Cardano.Ledger.Credential as Ledger
-import qualified Cardano.Ledger.Era
 import qualified Cardano.Ledger.Keys as Ledger
 import qualified Cardano.Ledger.Keys as SL
 import qualified Cardano.Ledger.PoolDistr as SL
-import           Cardano.Ledger.SafeHash (HashAnnotated)
 import qualified Cardano.Ledger.Shelley.API as ShelleyAPI
+import qualified Cardano.Ledger.Shelley.Core as Core
 import qualified Cardano.Ledger.Shelley.Genesis as Ledger
 import qualified Cardano.Protocol.TPraos.API as TPraos
 import           Cardano.Protocol.TPraos.BHeader (checkLeaderNatValue)
@@ -1052,7 +1048,6 @@ mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesis alonzoGene
           (ncShelleyToAllegra dnc)
           (ncAllegraToMary dnc)
           (Consensus.ProtocolTransitionParamsShelleyBased alonzoGenesis (ncMaryToAlonzo dnc))
-          -- (Consensus.ProtocolTransitionParamsShelleyBased alonzoGenesis (ncAlonzoToBabbage dnc))
           (Consensus.ProtocolTransitionParamsShelleyBased () (ncAlonzoToBabbage dnc))
           (Consensus.ProtocolTransitionParamsShelleyBased conwayGenesis (ncBabbageToConway dnc))
 
@@ -1061,10 +1056,11 @@ shelleyPraosNonce sCfg = Ledger.Nonce (Cardano.Crypto.Hash.Class.castHash . unGe
 
 shelleyProtVer :: NodeConfig -> Ledger.ProtVer
 shelleyProtVer dnc =
-  let bver = ncByronProtocolVersion dnc in
-  Ledger.ProtVer
-    (fromIntegral $ Cardano.Chain.Update.pvMajor bver)
-    (fromIntegral $ Cardano.Chain.Update.pvMinor bver)
+  let bver = ncByronProtocolVersion dnc
+      majVer = Cardano.Chain.Update.pvMajor bver
+  in Ledger.ProtVer
+       (fromMaybe (error $ "Invalid major version: " ++ show majVer) $ mkVersion majVer)
+       (fromIntegral $ Cardano.Chain.Update.pvMinor bver)
 
 readCardanoGenesisConfig
         :: NodeConfig
@@ -1449,11 +1445,9 @@ instance Error LeadershipError where
   displayError LeaderErrCandidateNonceStillEvolving = "Candidate nonce is still evolving"
 
 nextEpochEligibleLeadershipSlots
-  :: forall era.
-     ( HasField "_d" (Core.PParams (ShelleyLedgerEra era)) UnitInterval
-     , HashAnnotated (Core.TxBody (ShelleyLedgerEra era)) Core.EraIndependentTxBody (Ledger.EraCrypto (ShelleyLedgerEra era))
-     )
-  => Ledger.Era (ShelleyLedgerEra era)
+  :: forall era. ()
+  => Core.EraTxOut (ShelleyLedgerEra era)
+  => Core.EraGovernance (ShelleyLedgerEra era)
   => FromCBOR (Consensus.ChainDepState (Api.ConsensusProtocol era))
   => Consensus.PraosProtocolSupportsNode (Api.ConsensusProtocol era)
   => ShelleyBasedEra era
@@ -1525,8 +1519,9 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
       markSnapshotPoolDistr :: Map (SL.KeyHash 'SL.StakePool Shelley.StandardCrypto) (SL.IndividualPoolStake Shelley.StandardCrypto)
       markSnapshotPoolDistr = ShelleyAPI.unPoolDistr . ShelleyAPI.calculatePoolDistr $ snapshot
 
-  let slotRangeOfInterest = Set.filter
-        (not . Ledger.isOverlaySlot firstSlotOfEpoch (getField @"_d" (unbundleLedgerShelleyBasedProtocolParams sbe bpp)))
+  let pp = unbundleLedgerShelleyBasedProtocolParams pParams
+      slotRangeOfInterest = Set.filter
+        (not . Ledger.isOverlaySlot firstSlotOfEpoch (pp ^. Core.ppDG))
         $ Set.fromList [firstSlotOfEpoch .. lastSlotofEpoch]
 
   case sbe of
@@ -1605,7 +1600,7 @@ isLeadingSlotsPraos slotRangeOfInterest poolid snapshotPoolDistr eNonce vrfSkey 
 obtainIsStandardCrypto
   :: ShelleyLedgerEra era ~ ledgerera
   => ShelleyBasedEra era
-  -> (Ledger.EraCrypto ledgerera ~ Shelley.StandardCrypto => a)
+  -> (Core.EraCrypto ledgerera ~ Shelley.StandardCrypto => a)
   -> a
 obtainIsStandardCrypto ShelleyBasedEraShelley f = f
 obtainIsStandardCrypto ShelleyBasedEraAllegra f = f
@@ -1619,12 +1614,8 @@ obtainDecodeEpochStateConstraints
   :: ShelleyLedgerEra era ~ ledgerera
   => ShelleyBasedEra era
   -> (( FromCBOR (Core.PParams ledgerera)
-      , FromCBOR (State (Core.EraRule "PPUP" ledgerera))
-      , FromCBOR (Core.Value ledgerera)
-      , HashAnnotated
-          (Core.TxBody ledgerera)
-          Core.EraIndependentTxBody
-          (Ledger.EraCrypto (ShelleyLedgerEra era))
+      , FromCBOR (Core.GovernanceState ledgerera)
+      , DecCBOR (Core.Value ledgerera)
       ) => a) -> a
 obtainDecodeEpochStateConstraints ShelleyBasedEraShelley f = f
 obtainDecodeEpochStateConstraints ShelleyBasedEraAllegra f = f
@@ -1637,13 +1628,9 @@ obtainDecodeEpochStateConstraints ShelleyBasedEraConway  f = f
 -- expected to mint a block.
 currentEpochEligibleLeadershipSlots :: forall era ledgerera. ()
   => ShelleyLedgerEra era ~ ledgerera
-  => Ledger.Era ledgerera
+  => Core.EraPParams ledgerera
   => Consensus.PraosProtocolSupportsNode (Api.ConsensusProtocol era)
-  => HasField "_d" (Core.PParams ledgerera) UnitInterval
-  -- => Crypto.Signable (Crypto.VRF (Ledger.EraCrypto ledgerera)) Ledger.Seed
-  -- => Ledger.EraCrypto ledgerera ~ Shelley.StandardCrypto
   => FromCBOR (Consensus.ChainDepState (Api.ConsensusProtocol era))
-  -- => Consensus.ChainDepState (ConsensusProtocol era) ~ Consensus.ChainDepState (ConsensusProtocol era)
   => ShelleyBasedEra era
   -> ShelleyGenesis Shelley.StandardShelley
   -> EpochInfo (Either Text)
@@ -1672,8 +1659,9 @@ currentEpochEligibleLeadershipSlots sbe sGen eInfo bpp ptclState poolid (VrfSign
       $ obtainDecodeEpochStateConstraints sbe
       $ decodePoolDistribution serPoolDistr
 
-  let slotRangeOfInterest = Set.filter
-        (not . Ledger.isOverlaySlot firstSlotOfEpoch (getField @"_d" (unbundleLedgerShelleyBasedProtocolParams sbe bpp)))
+  let pp = unbundleLedgerShelleyBasedProtocolParams sbe bpp
+      slotRangeOfInterest = Set.filter
+        (not . Ledger.isOverlaySlot firstSlotOfEpoch (pp ^. Core.ppDG))
         $ Set.fromList [firstSlotOfEpoch .. lastSlotofEpoch]
 
   case sbe of
