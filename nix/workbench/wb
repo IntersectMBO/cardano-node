@@ -26,6 +26,7 @@ global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
 . "$global_basedir"/backend/supervisor.sh
 
 usage_main() {
+    set +x
     test $# -lt 1 ||
         msg "Unknown op: $1"
      __usage "OP" "Top-level OPs" <<EOF
@@ -186,6 +187,8 @@ start()
         --verbose | -v )                 export verbose=t;;
         --trace | --debug )              set -x;;
         --trace-wb | --trace-workbench ) export WB_EXTRA_FLAGS=--trace;;
+        --skip-prebuild | -sp )          skip_prebuild=t;;
+
         --help )                         usage_start
                                          exit 1;;
         * ) fatal "while parsing remaining 'wb start' args:  $*";;
@@ -260,10 +263,11 @@ do case "$1" in
        --nixops     | --backend-nixops )     export WB_BACKEND=nixops;;
        --nomad      | --backend-nomad )      export WB_BACKEND=nomad;;
        --supervisor | --backend-supervisor ) export WB_BACKEND=supervisor;;
-       --cls )
-           echo -en "\ec">&2;;
-       --trace | --debug )
-           set -x;;
+
+       --cls )                          echo -en "\ec">&2;;
+       --verbose | -v )                 export verbose=t;;
+       --trace | --debug )              set -x;;
+       --trace-wb | --trace-workbench ) export WB_EXTRA_FLAGS=--trace;;
        --help )
            usage_main; exit 1;;
        --help-full | --help-all | --help-extra | --help-aliases | --aliases )

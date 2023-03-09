@@ -1,3 +1,4 @@
+{-# LANGUAGE ApplicativeDo #-}
 {-# OPTIONS_GHC -fmax-pmcheck-models=25000 #-}
 module Cardano.Command (module Cardano.Command) where
 
@@ -56,31 +57,31 @@ data ChainCommand
   |         RebuildChain    [JsonFilterFile] [ChainFilter]
   |            DumpChain    (JsonOutputFile [BlockEvents]) (JsonOutputFile [BlockEvents])
   |            ReadChain    (JsonInputFile [BlockEvents])
-  |        TimelineChain    TextOutputFile [TimelineComments BlockEvents]
+  |        TimelineChain    RenderConfig TextOutputFile [TimelineComments BlockEvents]
 
   |         CollectSlots    [JsonLogfile]
   |            DumpSlotsRaw
   |          FilterSlots    [JsonFilterFile] [ChainFilter]
   |            DumpSlots
-  |        TimelineSlots
+  |        TimelineSlots    RenderConfig [TimelineComments (SlotStats NominalDiffTime)]
 
   |      ComputePropagation
-  |       RenderPropagation RenderFormat TextOutputFile PropSubset
+  |       RenderPropagation RenderConfig TextOutputFile PropSubset
   |        ReadPropagations [JsonInputFile BlockPropOne]
   | ComputeMultiPropagation
-  |  RenderMultiPropagation RenderFormat TextOutputFile PropSubset CDF2Aspect
+  |  RenderMultiPropagation RenderConfig TextOutputFile PropSubset CDF2Aspect
 
   |         ComputeMachPerf
-  |          RenderMachPerf RenderFormat PerfSubset
+  |          RenderMachPerf RenderConfig PerfSubset
 
   |      ComputeClusterPerf
-  |       RenderClusterPerf RenderFormat TextOutputFile PerfSubset
+  |       RenderClusterPerf RenderConfig TextOutputFile PerfSubset
   |        ReadClusterPerfs [JsonInputFile MultiClusterPerf]
   | ComputeMultiClusterPerf
-  |  RenderMultiClusterPerf RenderFormat TextOutputFile PerfSubset CDF2Aspect
+  |  RenderMultiClusterPerf RenderConfig TextOutputFile PerfSubset CDF2Aspect
 
   |      ComputeSummary
-  |       RenderSummary     RenderFormat TextOutputFile
+  |       RenderSummary     RenderConfig TextOutputFile
   |         ReadSummaries   [JsonInputFile SummaryOne]
 
   |             Compare     InputDir (Maybe TextInputFile) TextOutputFile
@@ -110,7 +111,7 @@ parseChainCommand =
      (Unlog
        <$> optJsonInputFile    "run-logs"       "Run log manifest (API/Types.hs:RunLogs)"
        <*> Opt.flag False True (Opt.long "lodecodeerror-ok"
-                                    <> Opt.help "Allow non-EOF LODecodeError logobjects")
+                                 <> Opt.help "Allow non-EOF LODecodeError logobjects")
        <*> many
            (optLOAnyType      "ok-loany"        "[MULTI] Allow a particular LOAnyType"))
    , op "dump-logobjects" "Dump lifted log object streams, alongside input files"
@@ -143,7 +144,8 @@ parseChainCommand =
        <*> optJsonOutputFile "chain-rejecta" "JSON rejected chain output file")
    , op "timeline-chain" "Render chain timeline"
      (TimelineChain
-       <$> optTextOutputFile "timeline"      "Render a human-readable reconstructed chain view"
+       <$> parseFixedRenderConfig AsPretty
+       <*> optTextOutputFile "timeline"      "Render a human-readable reconstructed chain view"
        <*> many parseTimelineCommentsBP)
    ]) <|>
 
@@ -162,7 +164,9 @@ parseChainCommand =
    , op "dump-slots" "Dump filtered slot stats stream, alongside input files"
      (DumpSlots & pure)
    , op "timeline-slots" "Render machine slot timelines, alongside input files"
-     (TimelineSlots & pure)
+     (TimelineSlots
+       <$> parseFixedRenderConfig AsPretty
+       <*> many parseTimelineCommentsSS)
    ]) <|>
 
    subparser (mconcat [ commandGroup "Block propagation:  analysis"
@@ -187,7 +191,7 @@ parseChainCommand =
    , op "compute-machperf" "Statistical analysis on per-slot machine data"
      (ComputeMachPerf & pure)
    , op "render-machperf" "Write machine performance analysis results, along input files"
-     (pure $ RenderMachPerf AsPretty PerfFull)
+     (pure $ RenderMachPerf (mkRenderConfigDef AsPretty) PerfFull)
    ]) <|>
 
    subparser (mconcat [ commandGroup "Cluster performance:  analysis"
@@ -249,16 +253,41 @@ parseChainCommand =
 
 parseTimelineCommentsBP :: Parser (TimelineComments BlockEvents)
 parseTimelineCommentsBP =
-  [ Opt.flag' BEErrors     (Opt.long "chain-errors"   <> Opt.help "Show per-block anomalies")
-  , Opt.flag' BEFilterOuts (Opt.long "filter-reasons" <> Opt.help "Explain per-block filter-out reasons")
+  [ Opt.flag' BEErrors     (Opt.long "with-chain-errors"   <> Opt.help "Show per-block anomalies")
+  , Opt.flag' BEFilterOuts (Opt.long "with-filter-reasons" <> Opt.help "Explain per-block filter-out reasons")
   ] & \case
         (x:xs) -> foldl (<|>) x xs
         [] -> error "Crazy world."
 
-writerOpt :: (RenderFormat -> TextOutputFile -> a) -> String -> RenderFormat -> Parser a
-writerOpt ctor desc mode = ctor mode <$> optTextOutputFile opt (desc <> descSuf)
+parseTimelineCommentsSS :: Parser (TimelineComments (SlotStats NominalDiffTime))
+parseTimelineCommentsSS =
+  [ Opt.flag' SSLogObjects (Opt.long "with-logobjects"     <> Opt.help "Show per-slot logobjects")
+  ] & \case
+        (x:xs) -> foldl (<|>) x xs
+        [] -> error "Crazy world."
+
+parseWithoutDateVerMeta, parseWithoutRunMeta :: Parser Bool
+parseWithoutDateVerMeta =
+  Opt.flag True False (Opt.long "without-datever-meta" <>
+                       Opt.help "Omit date/version from report rendering.")
+parseWithoutRunMeta =
+  Opt.flag True False (Opt.long "without-run-meta" <>
+                       Opt.help "Omit run metadata from report rendering.")
+
+parseFixedRenderConfig :: RenderFormat -> Parser RenderConfig
+parseFixedRenderConfig cf =
+  RenderConfig cf
+    <$> parseWithoutDateVerMeta
+    <*> parseWithoutRunMeta
+
+writerOpt :: (RenderConfig -> TextOutputFile -> a) -> String -> RenderFormat -> Parser a
+writerOpt ctor desc rcFormat = do
+  (\rcDateVerMetadata rcRunMetadata -> ctor RenderConfig{..})
+    <$> parseWithoutDateVerMeta
+    <*> parseWithoutRunMeta
+    <*> optTextOutputFile opt (desc <> descSuf)
  where
-   (,) opt descSuf = optDescSuf mode
+   (,) opt descSuf = optDescSuf rcFormat
    optDescSuf :: RenderFormat -> (String, String)
    optDescSuf = \case
      AsJSON    -> (,) "json"    " results as complete JSON dump"
@@ -267,7 +296,7 @@ writerOpt ctor desc mode = ctor mode <$> optTextOutputFile opt (desc <> descSuf)
      AsReport  -> (,) "org-report"  " as Org-mode summary table"
      AsPretty  -> (,) "pretty"  " as text report"
 
-writerOpts :: (RenderFormat -> TextOutputFile -> a) -> String -> Parser a
+writerOpts :: (RenderConfig -> TextOutputFile -> a) -> String -> Parser a
 writerOpts ctor desc = enumFromTo minBound maxBound
                        <&> writerOpt ctor desc
                        & \case
@@ -442,9 +471,9 @@ runChainCommand _ c@DumpChain{} = missingCommandData c
   ["chain"]
 
 runChainCommand s@State{sRun=Just _run, sChain=Just Chain{..}}
-  c@(TimelineChain f comments) = do
-  progress "chain" (Q $ printf "dumping prettyprinted chain")
-  dumpText "chain" (renderTimeline (const True) comments cMainChain) f
+  c@(TimelineChain rc f comments) = do
+  progress "chain" (Q $ printf "dumping prettyprinted chain: %s" (show rc :: String))
+  dumpText "chain" (renderTimeline rc (sRunAnchor s) (const True) comments cMainChain) f
     & firstExceptT (CommandError c)
   pure s
 runChainCommand _ c@TimelineChain{} = missingCommandData c
@@ -505,10 +534,10 @@ runChainCommand _ c@DumpSlots = missingCommandData c
   ["filtered slots"]
 
 runChainCommand s@State{sRun=Just _run, sSlots=Just slots}
-  c@TimelineSlots = do
-  progress "mach" (Q $ printf "dumping %d slot timelines" $ length slots)
+  c@(TimelineSlots rc comments) = do
+  progress "mach" (Q $ printf "dumping %d slot timelines: %s" (length slots) (show rc :: String))
   dumpAssociatedTextStreams "mach"
-    (fmap (fmap $ renderTimeline (const True) []) slots)
+    (fmap (fmap $ renderTimeline rc (sRunAnchor s) (const True) comments) slots)
     & firstExceptT (CommandError c)
   pure s
 runChainCommand _ c@TimelineSlots{} = missingCommandData c
@@ -523,11 +552,11 @@ runChainCommand _ c@ComputePropagation = missingCommandData c
   ["run metadata & genesis", "chain", "data domains for slots & blocks"]
 
 runChainCommand s@State{sBlockProp=Just [prop]}
-  c@(RenderPropagation mode f subset) = do
+  c@(RenderPropagation rc@RenderConfig{..} f subset) = do
   progress "block-propagation" $ Q "rendering block propagation CDFs"
-  forM_ (renderAnalysisCDFs (sRunAnchor s) (propSubsetFn subset) OfOverallDataset Nothing mode prop) $
+  forM_ (renderAnalysisCDFs (sRunAnchor s) (propSubsetFn subset) OfOverallDataset Nothing rc prop) $
     \(name, body) ->
-      dumpText (T.unpack name) body (modeFilename f name mode)
+      dumpText (T.unpack name) body (modeFilename f name rcFormat)
       & firstExceptT (CommandError c)
   pure s
 runChainCommand _ c@RenderPropagation{} = missingCommandData c
@@ -554,11 +583,11 @@ runChainCommand _ c@ComputeMultiPropagation{} = missingCommandData c
   ["block propagation"]
 
 runChainCommand s@State{sMultiBlockProp=Just prop}
-  c@(RenderMultiPropagation mode f subset aspect) = do
+  c@(RenderMultiPropagation rc@RenderConfig{..} f subset aspect) = do
   progress "block-propagations" (Q "rendering multi-run block propagation")
-  forM_ (renderAnalysisCDFs (sTagsAnchor s) (propSubsetFn subset) aspect Nothing mode prop) $
+  forM_ (renderAnalysisCDFs (sTagsAnchor s) (propSubsetFn subset) aspect Nothing rc prop) $
     \(name, body) ->
-      dumpText (T.unpack name) body (modeFilename f name mode)
+      dumpText (T.unpack name) body (modeFilename f name rcFormat)
       & firstExceptT (CommandError c)
   pure s
 runChainCommand _ c@RenderMultiPropagation{} = missingCommandData c
@@ -595,11 +624,11 @@ runChainCommand _ c@ComputeClusterPerf{} = missingCommandData c
   ["machine performance stats"]
 
 runChainCommand s@State{sClusterPerf=Just [perf]}
-  c@(RenderClusterPerf mode f subset) = do
+  c@(RenderClusterPerf rc@RenderConfig{..} f subset) = do
   progress "clusterperf" (Q $ printf "rendering cluster performance")
-  forM_ (renderAnalysisCDFs (sRunAnchor s) (perfSubsetFn subset) OfOverallDataset Nothing mode perf) $
+  forM_ (renderAnalysisCDFs (sRunAnchor s) (perfSubsetFn subset) OfOverallDataset Nothing rc perf) $
     \(name, body) ->
-      dumpText (T.unpack name) body (modeFilename f name mode)
+      dumpText (T.unpack name) body (modeFilename f name rcFormat)
       & firstExceptT (CommandError c)
   pure s
 runChainCommand _ c@RenderClusterPerf{} = missingCommandData c
@@ -626,11 +655,11 @@ runChainCommand _ c@ComputeMultiClusterPerf{} = missingCommandData c
   ["cluster performance stats"]
 
 runChainCommand s@State{sMultiClusterPerf=Just (MultiClusterPerf perf)}
-  c@(RenderMultiClusterPerf mode f subset aspect) = do
+  c@(RenderMultiClusterPerf rc@RenderConfig{..} f subset aspect) = do
   progress "clusterperfs" (Q $ printf "rendering multi-run cluster performance")
-  forM_ (renderAnalysisCDFs (sTagsAnchor s) (perfSubsetFn subset) aspect Nothing mode perf) $
+  forM_ (renderAnalysisCDFs (sTagsAnchor s) (perfSubsetFn subset) aspect Nothing rc perf) $
     \(name, body) ->
-      dumpText (T.unpack name) body (modeFilename f name mode)
+      dumpText (T.unpack name) body (modeFilename f name rcFormat)
       & firstExceptT (CommandError c)
   pure s
 runChainCommand _ c@RenderMultiClusterPerf{} = missingCommandData c
@@ -643,12 +672,12 @@ runChainCommand s c@ComputeSummary = do
     & firstExceptT (CommandError c . show)
   pure s { sSummaries = Just [summary] }
 
-runChainCommand s@State{sSummaries = Just (summary:_)} c@(RenderSummary fmt f) = do
+runChainCommand s@State{sSummaries = Just (summary:_)} c@(RenderSummary rc@RenderConfig{..} f) = do
   progress "summary" (Q $ printf "rendering summary")
-  dumpText "summary" body (modeFilename f "" fmt)
+  dumpText "summary" body (modeFilename f "" rcFormat)
     & firstExceptT (CommandError c)
   pure s
- where body = renderSummary fmt (sRunAnchor s) (iFields sumFieldsReport) summary
+ where body = renderSummary rc (sRunAnchor s) (iFields sumFieldsReport) summary
 runChainCommand _ c@RenderSummary{} = missingCommandData c
   ["run summary"]
 

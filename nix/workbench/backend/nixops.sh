@@ -278,7 +278,7 @@ EOF
 
         fatal "'nixops' backend does not implement:  $op";;
 
-    * ) usage_nixops;; esac
+    * ) set +x; usage_nixops;; esac
 }
 
 function node_wait_for_commit_id() {

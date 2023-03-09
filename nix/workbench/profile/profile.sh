@@ -178,7 +178,7 @@ case "$op" in
           timing_pretty_describe(.)
         ';;
 
-    * ) usage_profile;; esac
+    * ) set +x; usage_profile;; esac
 }
 
 with_era_profiles() {

@@ -22,6 +22,30 @@ import Cardano.Util
 import Cardano.Analysis.API
 
 
+data RenderConfig
+  = RenderConfig
+  { rcFormat          :: RenderFormat
+  , rcDateVerMetadata :: Bool
+  , rcRunMetadata     :: Bool
+  }
+  deriving Show
+
+mkRenderConfigDef :: RenderFormat -> RenderConfig
+mkRenderConfigDef rcFormat =
+  RenderConfig
+  { rcDateVerMetadata = True
+  , rcRunMetadata     = True
+  , ..
+  }
+
+data RenderFormat
+  = AsJSON
+  | AsGnuplot
+  | AsOrg
+  | AsReport
+  | AsPretty
+  deriving (Eq, Show, Bounded, Enum)
+
 -- | Explain the poor human a little bit of what was going on:
 data Anchor
   = Anchor
@@ -40,11 +64,13 @@ tagsAnchor :: [Text] -> UTCTime -> ([FilterName], [ChainFilter]) -> Maybe (DataD
 tagsAnchor aRuns aWhen aFilters aSlots aBlocks =
   Anchor { aVersion = getLocliVersion, .. }
 
-renderAnchor :: Anchor -> Text
-renderAnchor a = mconcat
-  [ "runs: ", renderAnchorRuns a, ", "
-  , renderAnchorNoRuns a
-  ]
+renderAnchor :: RenderConfig -> Anchor -> Text
+renderAnchor RenderConfig{..} a = mconcat $
+  (if rcRunMetadata  then ["runs: ", renderAnchorRuns a, ", "] else [])
+  <>
+  [renderAnchorFiltersAndDomains a, ", "]
+  <>
+  [ renderAnchorDateVer a | rcDateVerMetadata ]
 
 renderAnchorRuns :: Anchor -> Text
 renderAnchorRuns Anchor{..} = mconcat
@@ -74,10 +100,9 @@ renderAnchorDomains Anchor{..} = mconcat $
                                                  ddFilteredCount  ddRawCount
          ]
 
-renderAnchorNoRuns :: Anchor -> Text
-renderAnchorNoRuns a@Anchor{..} = mconcat
-  [ renderAnchorFiltersAndDomains a
-  , ", ", renderProgramAndVersion aVersion
+renderAnchorDateVer :: Anchor -> Text
+renderAnchorDateVer a@Anchor{..} = mconcat
+  [ renderProgramAndVersion aVersion
   , ", analysed at ", renderAnchorDate a
   ]
 
@@ -85,6 +110,18 @@ renderAnchorNoRuns a@Anchor{..} = mconcat
 renderAnchorDate :: Anchor -> Text
 renderAnchorDate = showText . posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral @Int . round . utcTimeToPOSIXSeconds . aWhen
 
+renderAnchorOrgProperties :: RenderConfig -> Anchor -> [(Text, Text)]
+renderAnchorOrgProperties RenderConfig{rcDateVerMetadata, rcRunMetadata} a =
+  [ ("TITLE",    renderAnchorRuns a )                  | rcRunMetadata ]
+  <>
+  [ ("SUBTITLE", renderAnchorFiltersAndDomains a) ]
+  <>
+  [ ("DATE",     renderAnchorDate a)                   | rcDateVerMetadata ]
+  <>
+  [ ("VERSION",  renderProgramAndVersion (aVersion a)) | rcDateVerMetadata ]
+
+--
+--
 justifyHead, justifyData, justifyCentile, justifyProp :: Int -> Text -> Text
 justifyHead    w = T.justifyLeft   w ' '
 justifyData    w = T.justifyLeft   w ' '
@@ -131,18 +168,12 @@ renderFieldCentiles x cdfProj Field{..} =
     DDeltaT (cdfProj . ($ x) ->ds) -> ds <&> fmap (formatDiffTime fWidth)
 
 renderSummary :: forall f a. (a ~ Summary f, TimelineFields a, ToJSON a)
-  => RenderFormat -> Anchor -> (Field ISelect I a -> Bool) -> a -> [Text]
-renderSummary AsJSON    _ _ x = (:[]) . LT.toStrict $ encodeToLazyText x
-renderSummary AsGnuplot _ _ _ = error "renderSummary: output not supported:  gnuplot"
-renderSummary AsPretty  _ _ _ = error "renderSummary: output not supported:  pretty"
-renderSummary _ a fieldSelr summ =
+  => RenderConfig -> Anchor -> (Field ISelect I a -> Bool) -> a -> [Text]
+renderSummary RenderConfig{rcFormat=AsJSON} _ _ x = (:[]) . LT.toStrict $ encodeToLazyText x
+renderSummary rc@RenderConfig{rcFormat=AsReport} a fieldSelr summ =
   render $
   Props
-  { oProps = [ ("TITLE",    renderAnchorRuns a )
-             , ("SUBTITLE", renderAnchorFiltersAndDomains a)
-             , ("DATE",     renderAnchorDate a)
-             , ("VERSION",  renderProgramAndVersion (aVersion a))
-             ]
+  { oProps = renderAnchorOrgProperties rc a
   , oConstants = []
   , oBody = (:[]) $
     Table
@@ -162,10 +193,13 @@ renderSummary _ a fieldSelr summ =
  where
    fields' :: [Field ISelect I a]
    fields' = filter fieldSelr timelineFields
+renderSummary rc  _ _ _ =
+  error $ "renderSummary: RenderConfig not supported:  " <> show rc
 
-renderTimeline :: forall (a :: Type). TimelineFields a => (Field ISelect I a -> Bool) -> [TimelineComments a] -> [a] -> [Text]
-renderTimeline flt comments xs =
-  concatMap (uncurry fLine) $ zip xs [(0 :: Int)..]
+renderTimeline :: forall (a :: Type). TimelineFields a => RenderConfig -> Anchor -> (Field ISelect I a -> Bool) -> [TimelineComments a] -> [a] -> [Text]
+renderTimeline rc a flt comments xs =
+  ("# " <> renderAnchor rc a)
+  : concatMap (uncurry fLine) (zip xs [(0 :: Int)..])
  where
    fLine :: a -> Int -> [Text]
    fLine l i =
@@ -236,14 +270,6 @@ mapRenderCDF fieldSelr centiSelr fSampleProps x =
    cdfSamplesProps :: Divisible c => CDF p c -> [[c]]
    cdfSamplesProps = fmap (fSampleProps . snd) . cdfSamples . subsetCenti
 
-data RenderFormat
-  = AsJSON
-  | AsGnuplot
-  | AsOrg
-  | AsReport
-  | AsPretty
-  deriving (Eq, Show, Bounded, Enum)
-
 -- | When rendering a CDF-of-CDFs _and_ subsetting the data, how to subset:
 data CDF2Aspect
   = OfOverallDataset   -- ^ Overall dataset statistical summary.
@@ -266,27 +292,23 @@ modeFilename orig@(TextOutputFile f) name = \case
   AsReport  -> orig
   AsPretty  -> orig
 
-renderAnalysisCDFs :: forall a p. (CDFFields a p, KnownCDF p, ToJSON (a p)) => Anchor -> (Field DSelect p a -> Bool) -> CDF2Aspect -> Maybe [Centile] -> RenderFormat -> a p -> [(Text, [Text])]
+renderAnalysisCDFs :: forall a p. (CDFFields a p, KnownCDF p, ToJSON (a p)) => Anchor -> (Field DSelect p a -> Bool) -> CDF2Aspect -> Maybe [Centile] -> RenderConfig -> a p -> [(Text, [Text])]
 
-renderAnalysisCDFs _anchor _fieldSelr _c2a _centileSelr AsJSON x = (:[]) . ("",) . (:[]) . LT.toStrict $
+renderAnalysisCDFs _anchor _fieldSelr _c2a _centileSelr RenderConfig{rcFormat=AsJSON} x = (:[]) . ("",) . (:[]) . LT.toStrict $
   encodeToLazyText x
 
-renderAnalysisCDFs anchor fieldSelr _c2a _centileSelr AsGnuplot x =
+renderAnalysisCDFs anchor fieldSelr _c2a _centileSelr rc@RenderConfig{rcFormat=AsGnuplot} x =
   filter fieldSelr cdfFields <&>
   \Field{fId=cdfField} ->
     (,) cdfField $
-    "# " <> renderAnchor anchor :
+    "# " <> renderAnchor rc anchor :
     (mapRenderCDF ((== cdfField) . fId) Nothing (unliftCDFValExtra cdfIx) x
      & fmap (T.intercalate " "))
 
-renderAnalysisCDFs a@Anchor{..} fieldSelr _c2a centileSelr AsOrg x =
+renderAnalysisCDFs a fieldSelr _c2a centileSelr rc@RenderConfig{rcFormat=AsOrg} x =
   (:[]) . ("",) . render $
   Props
-  { oProps = [ ("TITLE",    renderAnchorRuns a )
-             , ("SUBTITLE", renderAnchorFiltersAndDomains a)
-             , ("DATE",     renderAnchorDate a)
-             , ("VERSION",  renderProgramAndVersion aVersion)
-             ]
+  { oProps = renderAnchorOrgProperties rc a
   , oConstants = []
   , oBody = (:[]) $
     Table
@@ -322,14 +344,10 @@ renderAnalysisCDFs a@Anchor{..} fieldSelr _c2a centileSelr AsOrg x =
                      id
                      centileSelr
 
-renderAnalysisCDFs a@Anchor{..} fieldSelr aspect _centileSelr AsReport x =
+renderAnalysisCDFs a fieldSelr aspect _centileSelr rc@RenderConfig{rcFormat=AsReport} x =
   (:[]) . ("",) . render $
   Props
-  { oProps = [ ("TITLE",    renderAnchorRuns a )
-             , ("SUBTITLE", renderAnchorFiltersAndDomains a)
-             , ("DATE",     renderAnchorDate a)
-             , ("VERSION",  renderProgramAndVersion aVersion)
-             ]
+  { oProps = renderAnchorOrgProperties rc a
   , oConstants = []
   , oBody = (:[]) $
     Table
@@ -391,9 +409,9 @@ renderAnalysisCDFs a@Anchor{..} fieldSelr aspect _centileSelr AsReport x =
              , fromIntegral cdfSize
              ]))
 
-renderAnalysisCDFs a fieldSelr _c2a centiSelr AsPretty x =
+renderAnalysisCDFs a fieldSelr _c2a centiSelr rc@RenderConfig{rcFormat=AsPretty} x =
   (:[]) . ("",) $
-  renderAnchor a
+  renderAnchor rc a
   :  catMaybes [head1, head2]
   <> pLines
   <> sizeAvg

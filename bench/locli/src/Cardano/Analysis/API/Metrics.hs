@@ -27,6 +27,7 @@ import Data.CDF
 
 import Cardano.JSON
 import Cardano.Util
+import Cardano.Unlog.LogObject          qualified as LO
 import Cardano.Analysis.API.Context
 import Cardano.Analysis.API.Field
 import Cardano.Analysis.API.Ground
@@ -216,11 +217,11 @@ propSubsetFn = \case
 
 bpFieldsControl, bpFieldsForger, bpFieldsPeers, bpFieldsEndToEnd, bpFieldsEndToEndBrief :: [FieldName]
 bpFieldsControl =
-  [ "cdfBlocksPerHost", "cdfBlocksFilteredRatio", "cdfBlocksChainedRatio", "cdfBlockBattles", "cdfBlockSizes" ]
+  [ "cdfBlocksPerHost", "cdfBlocksFilteredRatio", "cdfBlocksChainedRatio", "cdfBlockBattle", "cdfBlockSize" ]
 bpFieldsForger =
-  [ "cdfForgerStarts", "cdfForgerBlkCtx", "cdfForgerLgrState", "cdfForgerLgrView", "cdfForgerLeads", "cdfForgerTicked", "cdfForgerMemSnap", "cdfForgerForges", "cdfForgerAnnouncements", "cdfForgerSends", "cdfForgerAdoptions" ]
+  [ "cdfForgerStart", "cdfForgerBlkCtx", "cdfForgerLgrState", "cdfForgerLgrView", "cdfForgerLead", "cdfForgerTicked", "cdfForgerMemSnap", "cdfForgerForge", "cdfForgerAnnounce", "cdfForgerSend", "cdfForgerAdoption", "cdfForgerAnnounceCum" ]
 bpFieldsPeers =
-  [ "cdfPeerNotices", "cdfPeerRequests", "cdfPeerFetches", "cdfPeerAnnouncements", "cdfPeerSends", "cdfPeerAdoptions" ]
+  [ "cdfPeerNoticeFirst", "cdfPeerFetchFirst", "cdfPeerRequest", "cdfPeerFetch", "cdfPeerAnnounce", "cdfPeerSend", "cdfPeerAdoption" ]
 bpFieldsEndToEnd =
   adoptionCentiles      <&> FieldName . renderAdoptionCentile
 bpFieldsEndToEndBrief =
@@ -228,9 +229,9 @@ bpFieldsEndToEndBrief =
 
 instance CDFFields BlockProp p where
   cdfFields =
-      fGrp ",---------------- Forger event Δt: -----------------."
+      fGrp ",------------------ Forger event Δt: --------------------."
             W4 Sec P3 Log Free
-    [ fGrp' "cdfForgerStarts"        "Loop" (DDeltaT cdfForgerStarts)
+    [ fGrp' "cdfForgerStart"         "Loop" (DDeltaT cdfForgerStart)
       "Started forge loop iteration"
       "Forge loop iteration delay (TraceStartLeadershipCheck), relative to slot start"
     , fGrp' "cdfForgerBlkCtx"        "BkCt" (DDeltaT cdfForgerBlkCtx)
@@ -245,7 +246,7 @@ instance CDFFields BlockProp p where
       "Acquired ledger view"
       "Ledger view acquired (TraceLedgerView), relative to ledger state acquisition"
 
-    , fGrp' "cdfForgerLeads"         "Lead" (DDeltaT cdfForgerLeads)
+    , fGrp' "cdfForgerLead"          "Lead" (DDeltaT cdfForgerLead)
       "Leadership check duration"
       "Leadership check duration (TraceNodeIsNotLeader, TraceNodeIsLeader), relative  to ledger view acquisition"
 
@@ -257,51 +258,59 @@ instance CDFFields BlockProp p where
       "Mempool snapshotting"
       "Time spent taking a mempool snapshot (TraceForgingMempoolSnapshot), relative to ledger ticking conclusion"
 
-    , fGrp' "cdfForgerForges"        "Forg" (DDeltaT cdfForgerForges)
+    , fGrp' "cdfForgerForge"         "Forg" (DDeltaT cdfForgerForge)
       "Leadership to forged"
       "Time spent forging the block: TraceForgedBlock relative to positive leadership decision"
 
-    , fGrp' "cdfForgerAnnouncements" "Anno" (DDeltaT cdfForgerAnnouncements)
+    , fGrp' "cdfForgerAnnounce"      "Anno" (DDeltaT cdfForgerAnnounce)
       "Forged to announced"
-      "Time between block forging completion and announcement (ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock)"
+      "Time between block forging completion and header announcement (ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock)"
 
-    , fGrp' "cdfForgerSends"         "Send" (DDeltaT cdfForgerSends)
+    , fGrp' "cdfForgerSend"          "Send" (DDeltaT cdfForgerSend)
       "Forged to sending"
       "Time between block forging completion and begin-of-sending (TraceBlockFetchServerSendBlock)"
 
-    , fGrp' "cdfForgerAdoptions"     "Adop" (DDeltaT cdfForgerAdoptions)
+    , fGrp' "cdfForgerAdoption"      "Adop" (DDeltaT cdfForgerAdoption)
       "Forged to self-adopted"
       "Time between block forging completion and adoption (TraceAdoptedBlock)"
+
+    , fGrp' "cdfForgerAnnounceCum"   "AnnC" (DDeltaT cdfForgerAnnounceCum)
+      "Slot start to announced"
+      "Time since slot start until header announcement (ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock)"
     ]
    <> fGrp ",------ Peer event Δt: ------."
             W4 Sec P3 Log Free
-    [ fGrp' "cdfPeerNotices"         "Noti" (DDeltaT cdfPeerNotices)
+    [ fGrp' "cdfPeerNoticeFirst"     "NtiF" (DDeltaT cdfPeerNoticeFirst)
       "First peer notice"
       "Time it took for the fastest peer to notice the block (ChainSyncClientEvent.TraceDownloadedHeader), since block's slot start"
 
-    , fGrp' "cdfPeerRequests"        "Requ" (DDeltaT cdfPeerRequests)
+    , fGrp' "cdfPeerFetchFirst"      "FetF" (DDeltaT cdfPeerFetchFirst)
+      "First peer fetch"
+      "Time it took for the fastest peer to fetch the block (BlockFetchClient.CompletedBlockFetch), since block's slot start"
+
+    , fGrp' "cdfPeerRequest"         "Requ" (DDeltaT cdfPeerRequest)
       "Notice to fetch request"
       "Time it took the peer to request the block body (BlockFetchClient.SendFetchRequest), after it have seen its header"
 
-    , fGrp' "cdfPeerFetches"         "Fetc" (DDeltaT cdfPeerFetches)
+    , fGrp' "cdfPeerFetch"           "Fetc" (DDeltaT cdfPeerFetch)
       "Fetch duration"
       "Time it took the peer to complete fetching the block (BlockFetchClient.CompletedBlockFetch), after having requested it"
 
-    , fGrp' "cdfPeerAnnouncements"   "Anno" (DDeltaT cdfPeerAnnouncements)
+    , fGrp' "cdfPeerAnnounce"        "Anno" (DDeltaT cdfPeerAnnounce)
       "Fetched to announced"
       "Time it took a peer to announce the block (ChainSyncServerEvent.TraceChainSyncServerUpdate), since it was fetched"
 
-    , fGrp' "cdfPeerSends"           "Send" (DDeltaT cdfPeerSends)
+    , fGrp' "cdfPeerSend"            "Send" (DDeltaT cdfPeerSend)
       "Fetched to sending"
       "Time until the peer started sending the block (BlockFetchServer.SendBlock), since it was fetched"
 
-    , fGrp' "cdfPeerAdoptions"       "Adop" (DDeltaT cdfPeerAdoptions)
+    , fGrp' "cdfPeerAdoption"        "Adop" (DDeltaT cdfPeerAdoption)
       "Fetched to adopted"
       "Time until the peer adopts the block (TraceAddBlockEvent.AddedToCurrentChain), since it was fetched"
     ]
    <> [ Field (renderAdoptionCentile ct) (r!!i)
                                          (T.take 4 $ T.pack $ printf "%.04f" centi)
-                                        W4 Rto P3 Log Free
+                                        W4 Sec P3 Log Free
         (DDeltaT $
           checkCentile i centi
           . fromMaybe (error $ printf "No centile %d/%f in bpPropagation."
@@ -328,11 +337,11 @@ instance CDFFields BlockProp p where
       "Chained to forged block ratio"
       "For each host, ratio of blocks that made into chain / all forged"]
 
-   <> fBoth "cdfBlockBattles" "Battl" " #" W4 Blk P0 Lin Free (DInt cdfBlockBattles)
+   <> fBoth "cdfBlockBattle"  "Battl" " #" W4 Blk P0 Lin Free (DInt cdfBlockBattle)
       "Height & slot battles"
       "For a given block, number of all abandoned blocks at its block height.  Sum of height and slot battles"
 
-   <> fBoth "cdfBlockSizes" "Size" "bytes" W9 B   P0 Lin Free (DInt cdfBlockSizes)
+   <> fBoth "cdfBlockSize"  "Size" "bytes" W9 B   P0 Lin Free (DInt cdfBlockSize)
       "Block size"
       "Block size, in bytes"
    where r = nChunksEachOf (length adoptionCentiles) 5
@@ -371,6 +380,7 @@ instance TimelineFields BlockEvents where
     , fGrp' "bfAnnounced"   "Announ" (IDeltaT (bfAnnounced.beForge)) "" ""
     , fGrp' "bfSending"     "Sendin" (IDeltaT (bfSending  .beForge)) "" ""
     , fGrp' "bfAdopted"     "Adopt"  (IDeltaT (bfAdopted  .beForge)) "" ""
+    , fGrp' "bfAnnouncedCum" "AnnCum"(IDeltaT (bfAnnouncedCum.beForge)) "" ""
     ]
    <> fGrp "-- Peer event Δt averages: --"
             W4 Sec P3 Log Free
@@ -538,14 +548,14 @@ instance CDFFields MachPerf p where
       "Number of bytes which this process caused to be sent to the storage layer, modulo truncate(), per second"
     ]
 
-   <> fGrp  "CPU-85%span"               W5 Len P0 Lin Free
+   <> fGrp  "CPU-85%span"               W5 Slo P0 Lin Free
     [ fGrp' "cdfSpanLensCpu"        "All" (DInt cdfSpanLensCpu)
       "CPU 85% spans"
-      "Length of over-85% CPU usage peaks"
+      "Length of over-85% CPU usage peaks, slots"
 
     , fGrp' "cdfSpanLensCpuEpoch" "Epoch" (DInt cdfSpanLensCpuEpoch)
       "CPU spans at Ep boundary"
-      "Length of over-85% CPU usage peaks, starting at epoch boundary"
+      "Length of over-85% CPU usage peaks, starting at epoch boundary, slots"
     ]
 
   fieldJSONOverlay f kvs =
@@ -556,9 +566,6 @@ instance CDFFields MachPerf p where
          _dumpJSON _x = error $ "kvs:\n" <> (T.unpack . ST.toText . fromMaybe "" . ST.fromByteString . LBS.toStrict . AE.encode $ _x)
 
 instance TimelineFields (SlotStats NominalDiffTime) where
-  data TimelineComments (SlotStats NominalDiffTime)
-    deriving Show
-
   timelineFields =
 
       fW64' "slot"       "abs." "slot#" W5 Slo (IWord64 (unSlotNo      .slSlot))
@@ -614,6 +621,14 @@ instance TimelineFields (SlotStats NominalDiffTime) where
    <> fBoth "mempoolTxs" "Mempool" "txs" W7 Uni P0 Lin Free (IWord64 slMempoolTxs) "" ""
    <> fBoth "utxoSize"  "UTxO" "entries" W9 Uni P0 Lin Free (IWord64 slUtxoSize) "" ""
    where fm = fmap
+
+  data TimelineComments (SlotStats NominalDiffTime)
+    = SSLogObjects
+    deriving Show
+
+  rtCommentary SlotStats{..} =
+    \case
+      SSLogObjects -> ("           " <>) . LO.loPretty <$> reverse slLogObjects
 
 -- * Instances, depending on the metrics' instances:
 --

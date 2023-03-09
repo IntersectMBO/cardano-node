@@ -59,17 +59,17 @@ deriving instance (FromJSON (f NominalDiffTime), FromJSON (f Int), FromJSON (f D
 deriving instance (  ToJSON (f NominalDiffTime),   ToJSON (f Int),   ToJSON (f Double)) =>   ToJSON (Summary f)
 deriving instance (    Show (f NominalDiffTime),     Show (f Int),     Show (f Double)) =>     Show (Summary f)
 
-data BlockStats
-  = BlockStats
-    { bsFiltered  :: Count ForgerEvents
-    , bsRejected  :: Count ForgerEvents
-    , bsUnchained :: Count ForgerEvents
+data HostBlockStats
+  = HostBlockStats
+    { hbsFiltered  :: !(Count ForgerEvents)
+    , hbsRejected  :: !(Count ForgerEvents)
+    , hbsUnchained :: !(Count ForgerEvents)
     }
     deriving (Generic, FromJSON, ToJSON)
 
-bsTotal, bsChained :: BlockStats -> Count ForgerEvents
-bsTotal   BlockStats{..} = bsFiltered + bsRejected + bsUnchained
-bsChained BlockStats{..} = bsFiltered + bsRejected
+hbsTotal, hbsChained :: HostBlockStats -> Count ForgerEvents
+hbsTotal   HostBlockStats{..} = hbsFiltered + hbsRejected + hbsUnchained
+hbsChained HostBlockStats{..} = hbsFiltered + hbsRejected
 
 -- | Results of block propagation analysis.
 data BlockProp f
@@ -77,28 +77,30 @@ data BlockProp f
     { bpVersion              :: !Cardano.Analysis.API.LocliVersion.LocliVersion
     , bpDomainSlots          :: ![DataDomain SlotNo]
     , bpDomainBlocks         :: ![DataDomain BlockNo]
-    , cdfForgerStarts        :: !(CDF f NominalDiffTime)
+    , cdfForgerStart         :: !(CDF f NominalDiffTime)
     , cdfForgerBlkCtx        :: !(CDF f NominalDiffTime)
     , cdfForgerLgrState      :: !(CDF f NominalDiffTime)
     , cdfForgerLgrView       :: !(CDF f NominalDiffTime)
-    , cdfForgerLeads         :: !(CDF f NominalDiffTime)
+    , cdfForgerLead          :: !(CDF f NominalDiffTime)
     , cdfForgerTicked        :: !(CDF f NominalDiffTime)
     , cdfForgerMemSnap       :: !(CDF f NominalDiffTime)
-    , cdfForgerForges        :: !(CDF f NominalDiffTime)
-    , cdfForgerAnnouncements :: !(CDF f NominalDiffTime)
-    , cdfForgerAdoptions     :: !(CDF f NominalDiffTime)
-    , cdfForgerSends         :: !(CDF f NominalDiffTime)
-    , cdfPeerNotices         :: !(CDF f NominalDiffTime)
-    , cdfPeerRequests        :: !(CDF f NominalDiffTime)
-    , cdfPeerFetches         :: !(CDF f NominalDiffTime)
-    , cdfPeerAnnouncements   :: !(CDF f NominalDiffTime)
-    , cdfPeerAdoptions       :: !(CDF f NominalDiffTime)
-    , cdfPeerSends           :: !(CDF f NominalDiffTime)
+    , cdfForgerForge         :: !(CDF f NominalDiffTime)
+    , cdfForgerAnnounce      :: !(CDF f NominalDiffTime)
+    , cdfForgerAdoption      :: !(CDF f NominalDiffTime)
+    , cdfForgerSend          :: !(CDF f NominalDiffTime)
+    , cdfForgerAnnounceCum   :: !(CDF f NominalDiffTime)
+    , cdfPeerNoticeFirst     :: !(CDF f NominalDiffTime)
+    , cdfPeerFetchFirst      :: !(CDF f NominalDiffTime)
+    , cdfPeerRequest         :: !(CDF f NominalDiffTime)
+    , cdfPeerFetch           :: !(CDF f NominalDiffTime)
+    , cdfPeerAnnounce        :: !(CDF f NominalDiffTime)
+    , cdfPeerAdoption        :: !(CDF f NominalDiffTime)
+    , cdfPeerSend            :: !(CDF f NominalDiffTime)
     , cdfBlocksPerHost       :: !(CDF f Int)
     , cdfBlocksFilteredRatio :: !(CDF f Double)
     , cdfBlocksChainedRatio  :: !(CDF f Double)
-    , cdfBlockBattles        :: !(CDF f Int)
-    , cdfBlockSizes          :: !(CDF f Int)
+    , cdfBlockBattle         :: !(CDF f Int)
+    , cdfBlockSize           :: !(CDF f Int)
     , bpPropagation          :: !(Map Text (CDF f NominalDiffTime))
     }
   deriving (Generic)
@@ -148,11 +150,11 @@ newtype MultiClusterPerf
 --
 data Chain
   = Chain
-  { cDomSlots   :: !(DataDomain SlotNo)
-  , cDomBlocks  :: !(DataDomain BlockNo)
-  , cRejecta    :: ![BlockEvents]
-  , cMainChain  :: ![BlockEvents]
-  , cBlockStats :: !(Map Host BlockStats)
+  { cDomSlots       :: !(DataDomain SlotNo)
+  , cDomBlocks      :: !(DataDomain BlockNo)
+  , cRejecta        :: ![BlockEvents]
+  , cMainChain      :: ![BlockEvents]
+  , cHostBlockStats :: !(Map Host HostBlockStats)
   }
 
 -- | Block's events, as seen by its forger.
@@ -175,6 +177,7 @@ data ForgerEvents a
   , bfeMemSnap      :: !(SMaybe a)
   , bfeForged       :: !(SMaybe a)
   , bfeAnnounced    :: !(SMaybe a)
+  , bfeAnnouncedCum :: !(SMaybe a)
   , bfeSending      :: !(SMaybe a)
   , bfeAdopted      :: !(SMaybe a)
   , bfeChainDelta   :: !Int
@@ -219,6 +222,7 @@ data BlockForge
   , bfMemSnap      :: !(SMaybe NominalDiffTime) -- ^ Since ticked
   , bfForged       :: !NominalDiffTime -- ^ Since ticked OR loop start
   , bfAnnounced    :: !NominalDiffTime -- ^ Since forging
+  , bfAnnouncedCum :: !NominalDiffTime -- ^ Since slot start
   , bfSending      :: !NominalDiffTime -- ^ Since announcement
   , bfAdopted      :: !NominalDiffTime -- ^ Since announcement
   , bfChainDelta   :: !Int             -- ^ ChainDelta during adoption
@@ -238,6 +242,7 @@ allBlockForgeTimes  f BlockForge{..}
   <> smaybe mempty (f "bfMemSnap")  bfMemSnap
   <>                f "bfForged"    bfForged
   <>                f "bfAnnounced" bfAnnounced
+  <>                f "bfAnnouncedCum" bfAnnouncedCum
   <>                f "bfSending"   bfSending
   <>                f "bfAdopted"   bfAdopted
 
@@ -350,6 +355,7 @@ data SlotStats a
     , slUtxoSize     :: !Word64
     , slDensity      :: !Double
     , slResources    :: !(SMaybe (Resources Word64))
+    , slLogObjects   :: ![LogObject]
     }
   deriving (Generic, Show, ToJSON)
   deriving anyclass NFData

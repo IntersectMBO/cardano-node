@@ -241,11 +241,11 @@ generate (InputDir ede) mReport (summ, cp, bp) rest = do
           ])
         <>
         (dBlockProp   metricDictionary & onlyKeys
-          [ "cdfForgerLeads"
+          [ "cdfForgerLead"
           , "cdfForgerTicked"
           , "cdfForgerMemSnap"
           , "cdfForgerForges"
-          , "cdfForgerAnnouncements"
+          , "cdfForgerAnnounces"
           , "cdfForgerSends"
           , "cdfPeerNotices"
           , "cdfPeerAdoptions"
