@@ -27,54 +27,56 @@ module Testnet.Cardano
 
 import           Prelude
 
+import qualified Cardano.Crypto.Hash.Blake2b
+import qualified Cardano.Crypto.Hash.Class
 import           Control.Monad
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.Trans.Except
 import qualified Data.Aeson as J
 import qualified Data.ByteString as BS
 import           Data.ByteString.Lazy (ByteString)
-import qualified Data.HashMap.Lazy as HM
 import           Data.List ((\\))
-import qualified Data.List as L
-import qualified Data.Map.Strict as M
 import           Data.Maybe
 import           Data.String
-import qualified Data.Time.Clock as DTC
 import           Data.Word
-import qualified System.Directory as IO
-import           System.FilePath.Posix ((</>))
-import qualified System.Info as OS
-
-import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesisData)
-import qualified Cardano.Crypto.Hash.Blake2b
-import qualified Cardano.Crypto.Hash.Class
+import qualified Hedgehog as H
+import           Hedgehog.Extras.Stock.Time (formatIso8601, showUTCTimeSeconds)
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
+import           System.FilePath.Posix ((</>))
 
+import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesisData)
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
-
-import qualified Hedgehog as H
+import qualified Data.HashMap.Lazy as HM
+import qualified Data.List as L
+import qualified Data.Map.Strict as M
+import qualified Data.Time.Clock as DTC
 import qualified Hedgehog.Extras.Stock.Aeson as J
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
-import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Stock.OS as OS
 import qualified Hedgehog.Extras.Stock.String as S
-import           Hedgehog.Extras.Stock.Time (formatIso8601, showUTCTimeSeconds)
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Network as H
+import qualified System.Directory as IO
+import qualified System.Info as OS
+
 
 import           Testnet.Commands.Genesis
 import           Testnet.Commands.Governance
-import qualified Testnet.Conf as H
 import qualified Testnet.Util.Assert as H
+import           Testnet.Util.Cli
 import qualified Testnet.Util.Process as H
 import           Testnet.Util.Process (execCli_)
-import           Testnet.Util.Runtime as TR (NodeLoggingFormat (..), PaymentKeyPair (..),
-                   PoolNode (PoolNode), PoolNodeKeys (..), TestnetRuntime (..), startNode)
+import           Testnet.Util.Runtime as TR (NodeLoggingFormat (..), PaymentKeyPair (..)
+                   , PoolNode(..), PoolNodeKeys(..), NodeRuntime (..), TestnetRuntime (..), startNode, makeSprocket, TmpPath(..)
+                   , getLogDir)
+
+import qualified Testnet.Conf as H
+import           Testnet.Conf hiding (testnetMagic)
 
 {- HLINT ignore "Redundant flip" -}
 {- HLINT ignore "Redundant id" -}
@@ -189,11 +191,91 @@ mkTopologyConfig numNodes allPorts port True = J.encode topologyP2P
         (P2P.UseLedger DontUseLedger)
 
 cardanoTestnet :: CardanoTestnetOptions -> H.Conf -> H.Integration TestnetRuntime
-cardanoTestnet testnetOptions H.Conf {..} = do
+cardanoTestnet testnetOptions configuration@H.Conf {tempAbsPath, testnetMagic} = do
+  let tmpDir = tempAbsPath
   void $ H.note OS.os
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
-  configurationFile <- H.noteShow $ tempAbsPath </> "configuration.yaml"
+  let
+      numBftNodes = cardanoNumBftNodes $ cardanoNodes testnetOptions
+      bftNodesN = [1 .. numBftNodes]
+      poolNodesN = [1 .. cardanoNumPoolNodes $ cardanoNodes testnetOptions]
+      bftNodeNames = ("node-bft" <>) . show @Int <$> bftNodesN
+      poolNodeNames = ("node-pool" <>) . show @Int <$> poolNodesN
+      allNodeNames = bftNodeNames <> poolNodeNames
+
+  ( byronGenesisKeys
+    , byronDelegationCerts
+    , byronDelegationKeys) <- cardanoTestnetByronGenesis
+       (TmpPath tmpDir)
+       testnetMagic
+       testnetOptions
+       (configurationTemplate configuration)
+       startTime
+{-
+  -- dead code: not checked in any test
+  cardanoTestnetByronGenesisExpenditure testnetOptions configuration byronGenesisKeys
+  cardanoTestnetByronGovernance
+    (L.length $ cardanoBftNodeOptions testnetOptions)
+    testnetMagic
+    tmpDir
+-}
+  cardanoTestnetShelleyGenesis
+    (base configuration)
+    (TmpPath tmpDir)
+    testnetMagic
+    testnetOptions
+    startTime
+
+  operatorKeys <- cardanoTestnetOperatorKeys tmpDir poolNodeNames
+  vrfKeys <- cardanoTestnetVrfKeys tmpDir poolNodeNames
+  poolNodeKeys <- cardanoTestnetPoolKeys tmpDir poolNodesN operatorKeys vrfKeys
+  cardanoTestnetDelegationKeyLinks tmpDir bftNodesN
+  cardanoTestnetKesKeys tmpDir allNodeNames
+
+  wallets <- cardanoTestnetPaymentKeys tmpDir testnetMagic poolNodesN
+--  cardanoTestnetPoolCerts tmpDir testnetMagic poolNodesN      -- dead code
+  bftNodes <- cardanoTestnetLaunchBftNodes (TmpPath tmpDir) testnetOptions
+  H.threadDelay 100000
+
+  -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
+  byronGenesisHash <- getByronGenesisHash $ tmpDir </> "byron/genesis.json"
+  shelleyGenesisHash <- getShelleyGenesisHash $ tmpDir </> "shelley/genesis.json"
+  alonzoGenesisHash <- getShelleyGenesisHash $ tmpDir </> "shelley/genesis.alonzo.json"
+  H.rewriteYamlFile (tmpDir </> "configuration.yaml") . J.rewriteObject
+    $ HM.insert "ByronGenesisHash" byronGenesisHash
+    . HM.insert "ShelleyGenesisHash" shelleyGenesisHash
+    . HM.insert "AlonzoGenesisHash" alonzoGenesisHash
+
+  poolRuntimes <- cardanoTestnetLaunchPoolNodes (TmpPath tmpDir) poolNodeNames
+
+  cardanoTestnetWaitStartup configuration (cardanoNodeLoggingFormat testnetOptions) allNodeNames
+  configurationFile <- H.noteShow $ tmpDir </> "configuration.yaml"
+
+  let
+  return TestnetRuntime
+    { configurationFile
+    , shelleyGenesisFile = tmpDir </> "shelley/genesis.json"
+    , testnetMagic
+    , bftNodes
+    , poolNodes = zipWith PoolNode poolRuntimes poolNodeKeys
+    , wallets
+    , delegators = error "Testnet.Cardana delegators undefind"
+    }
+
+cardanoTestnetByronGenesis
+  :: TmpPath
+  -> TestnetMagic
+  -> CardanoTestnetOptions
+  -> FilePath
+  -> DTC.UTCTime
+  -> H.Integration
+    ( [File ByronKey]
+    , [File ByronDelegationCert]
+    , [File ByronDelegationKey]
+    )
+cardanoTestnetByronGenesis tp testnetMagic testnetOptions configurationTemplate startTime = do
+  let (TmpPath tmpDir) = tp
   let numBftNodes = cardanoNumBftNodes $ cardanoNodes testnetOptions
       bftNodesN = [1 .. numBftNodes]
       poolNodesN = [1 .. cardanoNumPoolNodes $ cardanoNodes testnetOptions]
@@ -201,18 +283,12 @@ cardanoTestnet testnetOptions H.Conf {..} = do
       poolNodeNames = ("node-pool" <>) . show @Int <$> poolNodesN
       allNodeNames = bftNodeNames <> poolNodeNames
       maxByronSupply = cardanoMaxSupply testnetOptions
-      fundsPerGenesisAddress = maxByronSupply `div` fromIntegral numBftNodes
-      fundsPerByronAddress = fundsPerGenesisAddress - 100000000
-      userPoolN = poolNodesN
-      maxShelleySupply = 1000000000000
 
   allPorts <- H.noteShowIO $ IO.allocateRandomPorts (L.length allNodeNames)
   nodeToPort <- H.noteShow (M.fromList (L.zip allNodeNames allPorts))
 
   let securityParam = 10
-
-  H.createDirectoryIfMissing logDir
-
+  configurationFile <- H.noteShow $ tmpDir </> "configuration.yaml"
   H.readFile configurationTemplate >>= H.writeFile configurationFile
 
   forkOptions <- pure $ id
@@ -247,7 +323,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   -- We're going to use really quick epochs (300 seconds), by using short slots 0.2s
   -- and K=10, but we'll keep long KES periods so we don't have to bother
   -- cycling KES keys
-  H.rewriteYamlFile (tempAbsPath </> "configuration.yaml") . J.rewriteObject
+  H.rewriteYamlFile (tmpDir </> "configuration.yaml") . J.rewriteObject
     $ HM.insert "Protocol" (J.toJSON @String "Cardano")
     . HM.insert "PBftSignatureThreshold" (J.toJSON @Double 0.6)
     . HM.insert "minSeverity" (J.toJSON @String "Debug")
@@ -273,20 +349,20 @@ cardanoTestnet testnetOptions H.Conf {..} = do
     . forkOptions
 
   forM_ allNodeNames $ \node -> do
-    H.createDirectoryIfMissing $ tempAbsPath </> node
-    H.createDirectoryIfMissing $ tempAbsPath </> node </> "byron"
-    H.createDirectoryIfMissing $ tempAbsPath </> node </> "shelley"
+    H.createDirectoryIfMissing $ tmpDir </> node
+    H.createDirectoryIfMissing $ tmpDir </> node </> "byron"
+    H.createDirectoryIfMissing $ tmpDir </> node </> "shelley"
 
   -- Make topology files
   forM_ allNodeNames $ \node -> do
     let port = fromJust $ M.lookup node nodeToPort
-    H.lbsWriteFile (tempAbsPath </> node </> "topology.json") $
+    H.lbsWriteFile (tmpDir </> node </> "topology.json") $
       mkTopologyConfig (numBftNodes + cardanoNumPoolNodes (cardanoNodes testnetOptions))
                        allPorts port (cardanoEnableP2P testnetOptions)
 
-    H.writeFile (tempAbsPath </> node </> "port") (show port)
 
-  H.lbsWriteFile (tempAbsPath </> "byron.genesis.spec.json")
+    H.writeFile (tmpDir </> node </> "port") (show port)
+  H.lbsWriteFile (tmpDir </> "byron.genesis.spec.json")
     . J.encode $ defaultByronGenesisJsonValue
 
   -- stuff
@@ -303,92 +379,128 @@ cardanoTestnet testnetOptions H.Conf {..} = do
     , "--delegate-share", "1"
     , "--avvm-entry-count", "0"
     , "--avvm-entry-balance", "0"
-    , "--protocol-parameters-file", tempAbsPath </> "byron.genesis.spec.json"
-    , "--genesis-output-dir", tempAbsPath </> "byron"
+    , "--protocol-parameters-file", tmpDir </> "byron.genesis.spec.json"
+    , "--genesis-output-dir", tmpDir </> "byron"
     ]
 
   H.renameFile
-    (tempAbsPath </> "byron.genesis.spec.json")
-    (tempAbsPath </> "byron/genesis.spec.json")
+    (tmpDir </> "byron.genesis.spec.json")
+    (tmpDir </> "byron/genesis.spec.json")
 
   -- Symlink the BFT operator keys from the genesis delegates, for uniformity
   forM_ bftNodesN $ \n -> do
-    H.createFileLink (tempAbsPath </> "byron/delegate-keys.00" <> show @Int (n - 1) <> ".key") (tempAbsPath </> "node-bft" <> show @Int n </> "byron/delegate.key")
-    H.createFileLink (tempAbsPath </> "byron/delegation-cert.00" <> show @Int (n - 1) <> ".json") (tempAbsPath </> "node-bft" <> show @Int n </> "byron/delegate.cert")
+    H.createFileLink (tmpDir </> "byron/delegate-keys.00" <> show @Int (n - 1) <> ".key") (tmpDir </> "node-bft" <> show @Int n </> "byron/delegate.key")
+    H.createFileLink (tmpDir </> "byron/delegation-cert.00" <> show @Int (n - 1) <> ".json") (tmpDir </> "node-bft" <> show @Int n </> "byron/delegate.cert")
+  let
+    forallBftNodesMkFile x = forM [1..numBftNodes] (fakeItH . x)
+
+  (genesisKeys :: [File ByronKey])<- forallBftNodesMkFile $ \n -> "byron/genesis-keys.00" <> show @Int (n - 1) <> ".json"
+  (delegationCerts :: [File ByronDelegationCert]) <- forallBftNodesMkFile $ \n -> "byron/delegate-keys.00" <> show @Int (n - 1) <> ".key"
+  (delegationKeys :: [File ByronDelegationKey]) <- forallBftNodesMkFile $ \n -> "byron/delegation-cert.00" <> show @Int (n - 1) <> ".json"
+
+  return (genesisKeys, delegationCerts, delegationKeys)
+
+
+{-
+cardanoTestnetByronGenesisExpenditure creates an transaction `tx0.tx'
+which however is never used anywhere ??
+-}
+cardanoTestnetByronGenesisExpenditure
+  :: CardanoTestnetOptions
+  -> H.Conf
+  -> [File ByronKey]
+  -> H.Integration ()
+cardanoTestnetByronGenesisExpenditure testnetOptions H.Conf {..} genesisKeys = do
+  let tmpDir = tempAbsPath
+  let numBftNodes = cardanoNumBftNodes $ cardanoNodes testnetOptions
 
   -- Create keys and addresses to withdraw the initial UTxO into
-  forM_ bftNodesN $ \n -> do
-    execCli_
-      [ "keygen"
-      , "--secret", tempAbsPath </> "byron/payment-keys.00" <> show @Int (n - 1) <> ".key"
-      ]
+  byronAddress0:_ <- forM [1 .. numBftNodes] $ \n -> do
+    skey <- cliKeyGen tmpDir $ "byron/payment-keys.00" <> show @Int (n - 1) <> ".key"
+    cliSigningKeyAddress tmpDir testnetMagic skey $ "byron/address-00" <> show @Int (n - 1)
 
-    H.execCli
-      [ "signing-key-address"
-      , "--testnet-magic", show @Int testnetMagic
-      , "--secret", tempAbsPath </> "byron/payment-keys.00" <> show @Int (n - 1) <> ".key"
-      ] >>= H.writeFile (tempAbsPath </> "byron/address-00" <> show @Int (n - 1))
+  byronGensisAddress0:_ <- forM (zip [1 .. numBftNodes] genesisKeys) $ \(n,key) -> do
+    cliSigningKeyAddress tmpDir testnetMagic
+      key
+      ("byron/genesis-address-00" <> show @Int (n - 1))
 
-    -- Write Genesis addresses to files
-    H.execCli
-      [ "signing-key-address"
-      , "--testnet-magic", show @Int testnetMagic
-      , "--secret", tempAbsPath </> "byron/genesis-keys.00" <> show @Int (n - 1) <> ".key"
-      ] >>= H.writeFile (tempAbsPath </> "byron/genesis-address-00" <> show @Int (n - 1))
+  richAddrFrom <- S.firstLine <$> H.readFile (tmpDir </> "byron/genesis-address-000")
+  txAddr <- S.firstLine <$> H.readFile (unFile byronAddress0)
+  let
+      maxByronSupply = 10020000000
+      fundsPerGenesisAddress = maxByronSupply `div` numBftNodes
+      fundsPerByronAddress = fundsPerGenesisAddress - 100000000
 
-  do
-    richAddrFrom <- S.firstLine <$> H.readFile (tempAbsPath </> "byron/genesis-address-000")
-    txAddr <- S.firstLine <$> H.readFile (tempAbsPath </> "byron/address-000")
+  -- Create Byron address that moves funds out of the genesis UTxO into a regular
+  -- address.
+  execCli_
+    [ "issue-genesis-utxo-expenditure"
+    , "--genesis-json", tempAbsPath </> "byron/genesis.json"
+    , "--testnet-magic", show @Int testnetMagic
+    , "--tx", tempAbsPath </> "tx0.tx"
+    , "--wallet-key", tempAbsPath </> "byron/delegate-keys.000.key"
+    , "--rich-addr-from", richAddrFrom
+    , "--txout", show @(String, Int) (txAddr, fundsPerByronAddress)
+    ]
 
-    -- Create Byron address that moves funds out of the genesis UTxO into a regular
-    -- address.
-    execCli_
-      [ "issue-genesis-utxo-expenditure"
-      , "--genesis-json", tempAbsPath </> "byron/genesis.json"
-      , "--testnet-magic", show @Int testnetMagic
-      , "--tx", tempAbsPath </> "tx0.tx"
-      , "--wallet-key", tempAbsPath </> "byron/delegate-keys.000.key"
-      , "--rich-addr-from", richAddrFrom
-      , "--txout", show @(String, Word64) (txAddr, fundsPerByronAddress)
-      ]
-
-  -- Update Proposal and votes
+{-
+cardanoTestnetByronGovernance creates two update-proposals and two update-votes.
+However they are never transmitted to the chain ?!
+-}
+cardanoTestnetByronGovernance
+  :: Int
+  -> Int
+  -> FilePath
+  -> H.Integration ()
+cardanoTestnetByronGovernance numBftNodes testnetMagic tmpDir = do
+  let bftNodesN = [1 .. numBftNodes]
   createByronUpdateProposal
     testnetMagic
-    (tempAbsPath </> "byron/delegate-keys.000.key")
-    (tempAbsPath </> "update-proposal")
+    (tmpDir </> "byron/delegate-keys.000.key")
+    (tmpDir </> "update-proposal")
     1
 
   forM_ bftNodesN $ \n -> do
     createByronUpdateProposalVote
       testnetMagic
-      (tempAbsPath </> "update-proposal")
-      (tempAbsPath </> "byron/delegate-keys.00" <> show @Int (n - 1) <> ".key")
-      (tempAbsPath </> "update-vote.00" <> show @Int (n - 1))
+      (tmpDir </> "update-proposal")
+      (tmpDir </> "byron/delegate-keys.00" <> show @Int (n - 1) <> ".key")
+      (tmpDir </> "update-vote.00" <> show @Int (n - 1))
 
   createByronUpdateProposal
     testnetMagic
-    (tempAbsPath </> "byron/delegate-keys.000.key")
-    (tempAbsPath </> "update-proposal-1")
+    (tmpDir </> "byron/delegate-keys.000.key")
+    (tmpDir </> "update-proposal-1")
     2
 
   forM_ bftNodesN $ \n ->
     createByronUpdateProposalVote
       testnetMagic
-      (tempAbsPath </> "update-proposal-1")
-      (tempAbsPath </> "byron/delegate-keys.00" <> show @Int (n - 1) <> ".key")
-      (tempAbsPath </> "update-vote-1.00" <> show @Int (n - 1))
+      (tmpDir </> "update-proposal-1")
+      (tmpDir </> "byron/delegate-keys.00" <> show @Int (n - 1) <> ".key")
+      (tmpDir </> "update-vote-1.00" <> show @Int (n - 1))
 
   -- Generated genesis keys and genesis files
-  H.noteEachM_ . H.listDirectory $ tempAbsPath </> "byron"
+  H.noteEachM_ . H.listDirectory $ tmpDir </> "byron"
+
+cardanoTestnetShelleyGenesis
+  :: FilePath
+  -> TmpPath
+  -> TestnetMagic
+  -> CardanoTestnetOptions
+  -> DTC.UTCTime
+  -> H.Integration ()
+cardanoTestnetShelleyGenesis base (TmpPath tmpDir) testnetMagic testnetOptions startTime = do
+  let numBftNodes = cardanoNumBftNodes $ cardanoNodes testnetOptions
+      maxShelleySupply = 1000000000000
 
   -- Set up our template
-  H.createDirectoryIfMissing $ tempAbsPath </> "shelley"
+  H.createDirectoryIfMissing $ tmpDir </> "shelley"
 
   -- TODO: This is fragile, we should be passing in all necessary
   -- configuration files.
-  let sourceAlonzoGenesisSpecFile = base </> "cardano-cli/test/data/golden/alonzo/genesis.alonzo.spec.json"
-  alonzoSpecFile <- H.noteTempFile tempAbsPath "shelley/genesis.alonzo.spec.json"
+  let sourceAlonzoGenesisSpecFile = base </> "cardano-cli/test/data/golden/alonzo/genesis.alonzo.spec.json" -- only use of base in this module
+  alonzoSpecFile <- H.noteTempFile tmpDir "shelley/genesis.alonzo.spec.json"
   liftIO $ IO.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
 
   let sourceConwayGenesisSpecFile = base </> "cardano-cli/test/data/golden/conway/genesis.conway.spec.json"
@@ -398,7 +510,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   execCli_
     [ "genesis", "create"
     , "--testnet-magic", show @Int testnetMagic
-    , "--genesis-dir", tempAbsPath </> "shelley"
+    , "--genesis-dir", tmpDir </> "shelley"
     , "--start-time", formatIso8601 startTime
     ]
 
@@ -407,7 +519,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   -- We're going to use really quick epochs (300 seconds), by using short slots 0.2s
   -- and K=10, but we'll keep long KES periods so we don't have to bother
   -- cycling KES keys
-  H.rewriteJsonFile (tempAbsPath </> "shelley/genesis.spec.json") . J.rewriteObject
+  H.rewriteJsonFile (tmpDir </> "shelley/genesis.spec.json") . J.rewriteObject
     $ HM.insert "activeSlotsCoeff" (J.toJSON @Double (cardanoActiveSlotsCoeff testnetOptions))
     . HM.insert "securityParam" (J.toJSON @Int 10)
     . HM.insert "epochLength" (J.toJSON @Int (cardanoEpochLength testnetOptions))
@@ -424,16 +536,16 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   execCli_
     [ "genesis", "create"
     , "--testnet-magic", show @Int testnetMagic
-    , "--genesis-dir", tempAbsPath </> "shelley"
+    , "--genesis-dir", tmpDir </> "shelley"
     , "--gen-genesis-keys", show @Int numBftNodes
     , "--start-time", formatIso8601 startTime
     , "--gen-utxo-keys", show (cardanoNumBftNodes $ cardanoNodes testnetOptions)
     ]
 
   -- Generated genesis keys and genesis files
-  H.noteEachM_ . H.listDirectory $ tempAbsPath </> "shelley"
+  H.noteEachM_ . H.listDirectory $ tmpDir </> "shelley"
 
-  H.rewriteJsonFile (tempAbsPath </> "shelley/genesis.json") . J.rewriteObject
+  H.rewriteJsonFile (tmpDir </> "shelley/genesis.json") . J.rewriteObject
     $ flip HM.adjust "protocolParams"
       ( J.rewriteObject
         ( flip HM.adjust "protocolVersion"
@@ -444,168 +556,171 @@ cardanoTestnet testnetOptions H.Conf {..} = do
     . HM.insert "updateQuorum" (J.toJSON @Int 2)
 
   -- Generated shelley/genesis.json
-  H.cat $ tempAbsPath </> "shelley/genesis.json"
+  H.cat $ tmpDir </> "shelley/genesis.json"
 
   -- Generated alonzo/genesis.json
   --TODO: rationalise the naming convention on these genesis json files.
-  H.cat $ tempAbsPath </> "shelley/genesis.alonzo.json"
-  H.cat $ tempAbsPath </> "shelley/genesis.conway.json"
+  H.cat $ tmpDir </> "shelley/genesis.alonzo.json"
+  H.cat $ tmpDir </> "shelley/genesis.conway.json"
 
-  -- Make the pool operator cold keys
-  -- This was done already for the BFT nodes as part of the genesis creation
+cardanoTestnetOperatorKeys
+  :: TmpDir
+  -> [String]
+  -> H.Integration [(File (Operator VKey), File (Operator SKey), File OperatorCounter)]
+cardanoTestnetOperatorKeys tmpDir poolNodeNames
+  = forM poolNodeNames $ \node -> cliNodeKeyGen tmpDir
+      (node </> "shelley/operator.vkey")
+      (node </> "shelley/operator.skey")
+      (node </> "shelley/operator.counter")
 
-  poolKeys <- forM poolNodesN $ \i -> do
+cardanoTestnetVrfKeys
+  :: TmpDir
+  -> [String]
+  -> H.Integration [(File (Vrf VKey), File (Vrf SKey))]
+cardanoTestnetVrfKeys tmpDir poolNodeNames
+  = forM poolNodeNames $
+      \node -> cliNodeKeyGenVrf tmpDir $ KeyNames (node </> "shelley/vrf.vkey") (node </> "shelley/vrf.skey")
+
+cardanoTestnetPoolKeys
+ :: TmpDir
+ -> [Int]
+ -> [(File (Operator VKey) , File (Operator SKey), File OperatorCounter)]
+ -> [(File (Vrf VKey), File (Vrf SKey))]
+ ->  H.Integration [PoolNodeKeys]
+cardanoTestnetPoolKeys tmpDir poolNodesN operatorKeys vrfKeys = do
+  forM (zip3 poolNodesN operatorKeys vrfKeys) $ \(i, opKey, vrfKey) -> do
     let node = "node-pool" <> show @Int i
 
-    execCli_
-      [ "node", "key-gen"
-      , "--cold-verification-key-file", tempAbsPath </> node </> "shelley/operator.vkey"
-      , "--cold-signing-key-file", tempAbsPath </> node </> "shelley/operator.skey"
-      , "--operational-certificate-issue-counter-file", tempAbsPath </> node </> "shelley/operator.counter"
-      ]
-
-    poolNodeKeysColdVkey <- H.note $ tempAbsPath </> "node-pool" <> show i <> "/shelley/operator.vkey"
-    poolNodeKeysColdSkey <- H.note $ tempAbsPath </> "node-pool" <> show i <> "/shelley/operator.skey"
-    poolNodeKeysVrfVkey <- H.note $ tempAbsPath </> node </> "shelley/vrf.vkey"
-    poolNodeKeysVrfSkey <- H.note $ tempAbsPath </> node </> "shelley/vrf.skey"
-    poolNodeKeysStakingVkey <- H.note $ tempAbsPath </> node </> "shelley/staking.vkey"
-    poolNodeKeysStakingSkey <- H.note $ tempAbsPath </> node </> "shelley/staking.skey"
-
-    execCli_
-      [ "node", "key-gen-VRF"
-      , "--verification-key-file", poolNodeKeysVrfVkey
-      , "--signing-key-file", poolNodeKeysVrfSkey
-      ]
+    poolNodeKeysColdVkey <- H.note $ tmpDir </> node <> "/shelley/operator.vkey"
+    poolNodeKeysColdSkey <- H.note $ tmpDir </> node <> "/shelley/operator.skey"
+    poolNodeKeysVrfVkey <- H.note $ tmpDir </> node </> "shelley/vrf.vkey"
+    poolNodeKeysVrfSkey <- H.note $ tmpDir </> node </> "shelley/vrf.skey"
 
     return PoolNodeKeys
       { TR.poolNodeKeysColdVkey
       , TR.poolNodeKeysColdSkey
+      , poolNodeKeysOperator = opKey
       , TR.poolNodeKeysVrfVkey
       , TR.poolNodeKeysVrfSkey
-      , TR.poolNodeKeysStakingVkey
-      , TR.poolNodeKeysStakingSkey
+      , TR.poolNodeKeysVrf = vrfKey
       }
 
+cardanoTestnetDelegationKeyLinks
+  :: TmpDir
+  -> [Int]
+  -> H.Integration ()
+cardanoTestnetDelegationKeyLinks tmpDir bftNodesN = do
   -- Symlink the BFT operator keys from the genesis delegates, for uniformity
   forM_ bftNodesN $ \n -> do
-    H.createFileLink (tempAbsPath </> "shelley/delegate-keys/delegate" <> show @Int n <> ".skey") (tempAbsPath </> "node-bft" <> show @Int n </> "shelley/operator.skey")
-    H.createFileLink (tempAbsPath </> "shelley/delegate-keys/delegate" <> show @Int n <> ".vkey") (tempAbsPath </> "node-bft" <> show @Int n </> "shelley/operator.vkey")
-    H.createFileLink (tempAbsPath </> "shelley/delegate-keys/delegate" <> show @Int n <> ".counter") (tempAbsPath </> "node-bft" <> show @Int n </> "shelley/operator.counter")
-    H.createFileLink (tempAbsPath </> "shelley/delegate-keys/delegate" <> show @Int n <> ".vrf.vkey") (tempAbsPath </> "node-bft" <> show @Int n </> "shelley/vrf.vkey")
-    H.createFileLink (tempAbsPath </> "shelley/delegate-keys/delegate" <> show @Int n <> ".vrf.skey") (tempAbsPath </> "node-bft" <> show @Int n </> "shelley/vrf.skey")
+    H.createFileLink (tmpDir </> "shelley/delegate-keys/delegate" <> show @Int n <> ".skey") (tmpDir </> "node-bft" <> show @Int n </> "shelley/operator.skey")
+    H.createFileLink (tmpDir </> "shelley/delegate-keys/delegate" <> show @Int n <> ".vkey") (tmpDir </> "node-bft" <> show @Int n </> "shelley/operator.vkey")
+    H.createFileLink (tmpDir </> "shelley/delegate-keys/delegate" <> show @Int n <> ".counter") (tmpDir </> "node-bft" <> show @Int n </> "shelley/operator.counter")
+    H.createFileLink (tmpDir </> "shelley/delegate-keys/delegate" <> show @Int n <> ".vrf.vkey") (tmpDir </> "node-bft" <> show @Int n </> "shelley/vrf.vkey")
+    H.createFileLink (tmpDir </> "shelley/delegate-keys/delegate" <> show @Int n <> ".vrf.skey") (tmpDir </> "node-bft" <> show @Int n </> "shelley/vrf.skey")
 
+cardanoTestnetKesKeys
+  :: TmpDir
+  -> [String]
+  -> H.Integration ()
+cardanoTestnetKesKeys tmpDir allNodeNames = do
   -- Make hot keys and for all nodes
   forM_ allNodeNames $ \node -> do
-    execCli_
-      [ "node", "key-gen-KES"
-      , "--verification-key-file", tempAbsPath </> node </> "shelley/kes.vkey"
-      , "--signing-key-file",      tempAbsPath </> node </> "shelley/kes.skey"
-      ]
+    cliNodeKeyGenKes tmpDir $ KeyNames (node </> "shelley/kes.vkey") (node </> "shelley/kes.skey")
 
     execCli_
       [ "node", "issue-op-cert"
       , "--kes-period", "0"
-      , "--kes-verification-key-file", tempAbsPath </> node </> "shelley/kes.vkey"
-      , "--cold-signing-key-file", tempAbsPath </> node </> "shelley/operator.skey"
-      , "--operational-certificate-issue-counter-file", tempAbsPath </> node </> "shelley/operator.counter"
-      , "--out-file", tempAbsPath </> node </> "shelley/node.cert"
+      , "--kes-verification-key-file",  tmpDir </> node </> "shelley/kes.vkey"
+      , "--cold-signing-key-file",  tmpDir </> node </> "shelley/operator.skey"
+      , "--operational-certificate-issue-counter-file", tmpDir </> node </> "shelley/operator.counter"
+      , "--out-file", tmpDir </> node </> "shelley/node.cert"
       ]
 
-  -- Generated node operator keys (cold, hot) and operational certs
-  forM_ allNodeNames $ \node -> H.noteEachM_ . H.listDirectory $ tempAbsPath </> node </> "byron"
-
+cardanoTestnetPaymentKeys
+  :: TmpDir
+  -> Int
+  -> [Int]
+  -> H.Integration [PaymentKeyPair]
+cardanoTestnetPaymentKeys tmpDir testnetMagic poolNodesN = do
   -- Make some payment and stake addresses
   -- user1..n:       will own all the funds in the system, we'll set this up from
   --                 initial utxo the
   -- pool-owner1..n: will be the owner of the pools and we'll use their reward
   --                 account for pool rewards
-  let userAddrs = ("user" <>) . show @Int <$> userPoolN
+  let userAddrs = ("user" <>) . show @Int <$> poolNodesN
       poolAddrs = ("pool-owner" <>) . show @Int <$> poolNodesN
       addrs = userAddrs <> poolAddrs
 
-
-  H.createDirectoryIfMissing $ tempAbsPath </> "addresses"
+  H.createDirectoryIfMissing $ tmpDir </> "addresses"
 
   wallets <- forM addrs $ \addr -> do
-    let paymentSKey = tempAbsPath </> "addresses/" <> addr <> ".skey"
-    let paymentVKey = tempAbsPath </> "addresses/" <> addr <> ".vkey"
+    let paymentSKey = tmpDir </> "addresses/" <> addr <> ".skey"
+    let paymentVKey = tmpDir </> "addresses/" <> addr <> ".vkey"
 
     -- Payment address keys
-    execCli_
-      [ "address", "key-gen"
-      , "--verification-key-file", paymentVKey
-      , "--signing-key-file", paymentSKey
-      ]
+    -- TODO !
 
-    execCli_
-      [ "address", "key-gen"
-      , "--verification-key-file", tempAbsPath </> "shelley/utxo-keys/utxo2.vkey"
-      , "--signing-key-file", tempAbsPath </> "shelley/utxo-keys/utxo2.skey"
-      ]
-
-    execCli_
-      [ "stake-address", "key-gen"
-      , "--verification-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.vkey"
-      , "--signing-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.skey"
-      ]
-
-    execCli_
-      [ "stake-address", "key-gen"
-      , "--verification-key-file", tempAbsPath </> "shelley/utxo-keys/utxo-stake.vkey"
-      , "--signing-key-file", tempAbsPath </> "shelley/utxo-keys/utxo-stake.skey"
-      ]
-
-    execCli_
-      [ "stake-address", "key-gen"
-      , "--verification-key-file", tempAbsPath </> "shelley/utxo-keys/utxo2-stake.vkey"
-      , "--signing-key-file", tempAbsPath </> "shelley/utxo-keys/utxo2-stake.skey"
-      ]
+    cliAddressKeyGen tmpDir $ KeyNames ("addresses" </> addr <> ".vkey") ("addresses" </> addr <> ".skey")
+    cliAddressKeyGen tmpDir $ KeyNames "shelley/utxo-keys/utxo2.vkey" "shelley/utxo-keys/utxo2.skey"
+    cliStakeAddressKeyGen tmpDir $ KeyNames ("addresses" </> addr <> "-stake.vkey") ("addresses" </> addr <> "-stake.skey")
+    cliStakeAddressKeyGen tmpDir $ KeyNames "shelley/utxo-keys/utxo-stake.vkey" "shelley/utxo-keys/utxo-stake.skey"
+    cliStakeAddressKeyGen tmpDir $ KeyNames "shelley/utxo-keys/utxo2-stake.vkey" "shelley/utxo-keys/utxo2-stake.skey"
 
     -- Payment addresses
     execCli_
       [ "address", "build"
-      , "--payment-verification-key-file", tempAbsPath </> "addresses/" <> addr <> ".vkey"
-      , "--stake-verification-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.vkey"
+      , "--payment-verification-key-file", tmpDir </> "addresses/" <> addr <> ".vkey"
+      , "--stake-verification-key-file", tmpDir </> "addresses/" <> addr <> "-stake.vkey"
       , "--testnet-magic", show @Int testnetMagic
-      , "--out-file", tempAbsPath </> "addresses/" <> addr <> ".addr"
+      , "--out-file", tmpDir </> "addresses/" <> addr <> ".addr"
       ]
 
     -- Stake addresses
     execCli_
       [ "stake-address", "build"
-      , "--stake-verification-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.vkey"
+      , "--stake-verification-key-file", tmpDir </> "addresses/" <> addr <> "-stake.vkey"
       , "--testnet-magic", show @Int testnetMagic
-      , "--out-file", tempAbsPath </> "addresses/" <> addr <> "-stake.addr"
+      , "--out-file", tmpDir </> "addresses/" <> addr <> "-stake.addr"
       ]
 
     -- Stake addresses registration certs
     execCli_
       [ "stake-address", "registration-certificate"
-      , "--stake-verification-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.vkey"
-      , "--out-file", tempAbsPath </> "addresses/" <> addr <> "-stake.reg.cert"
+      , "--stake-verification-key-file", tmpDir </> "addresses/" <> addr <> "-stake.vkey"
+      , "--out-file", tmpDir </> "addresses/" <> addr <> "-stake.reg.cert"
       ]
 
     pure $ PaymentKeyPair
       { paymentSKey
       , paymentVKey
       }
+  return wallets
+
+cardanoTestnetPoolCerts
+  :: TmpDir
+  -> TestnetMagic
+  -> [Int]
+  -> H.Integration ()
+cardanoTestnetPoolCerts tmpDir testnetMagic poolNodesN = do
+  let poolNodeNames = ("node-pool" <>) . show @Int <$> poolNodesN
+      maxShelleySupply = 1000000000000
 
   -- user N will delegate to pool N
-  forM_ userPoolN $ \n -> do
+  forM_ poolNodesN $ \n -> do
     -- Stake address delegation certs
     execCli_
       [ "stake-address", "delegation-certificate"
-      , "--stake-verification-key-file", tempAbsPath </> "addresses/user" <> show @Int n <> "-stake.vkey"
-      , "--cold-verification-key-file", tempAbsPath </> "node-pool" <> show @Int n </> "shelley/operator.vkey"
-      , "--out-file", tempAbsPath </> "addresses/user" <> show @Int n <> "-stake.deleg.cert"
+      , "--stake-verification-key-file", tmpDir </> "addresses/user" <> show @Int n <> "-stake.vkey"
+      , "--cold-verification-key-file", tmpDir </> "node-pool" <> show @Int n </> "shelley/operator.vkey"
+      , "--out-file", tmpDir </> "addresses/user" <> show @Int n <> "-stake.deleg.cert"
       ]
 
-    H.createFileLink (tempAbsPath </> "addresses/pool-owner" <> show @Int n <> "-stake.vkey") (tempAbsPath </> "node-pool" <> show @Int n </> "owner.vkey")
-    H.createFileLink (tempAbsPath </> "addresses/pool-owner" <> show @Int n <> "-stake.skey") (tempAbsPath </> "node-pool" <> show @Int n </> "owner.skey")
+    H.createFileLink (tmpDir </> "addresses/pool-owner" <> show @Int n <> "-stake.vkey") (tmpDir </> "node-pool" <> show @Int n </> "owner.vkey")
+    H.createFileLink (tmpDir </> "addresses/pool-owner" <> show @Int n <> "-stake.skey") (tmpDir </> "node-pool" <> show @Int n </> "owner.skey")
 
   -- Generated payment address keys, stake address keys,
   -- stake address registration certs, and stake address delegation certs
-  H.noteEachM_ . H.listDirectory $ tempAbsPath </> "addresses"
+  H.noteEachM_ . H.listDirectory $ tmpDir </> "addresses"
 
   -- Next is to make the stake pool registration cert
   forM_ poolNodeNames $ \node -> do
@@ -613,15 +728,15 @@ cardanoTestnet testnetOptions H.Conf {..} = do
       [ "stake-pool", "registration-certificate"
       , "--testnet-magic", show @Int testnetMagic
       , "--pool-pledge", "0", "--pool-cost", "0", "--pool-margin", "0"
-      , "--cold-verification-key-file", tempAbsPath </> node </> "shelley/operator.vkey"
-      , "--vrf-verification-key-file", tempAbsPath </> node </> "shelley/vrf.vkey"
-      , "--reward-account-verification-key-file", tempAbsPath </> node </> "owner.vkey"
-      , "--pool-owner-stake-verification-key-file", tempAbsPath </> node </> "owner.vkey"
-      , "--out-file", tempAbsPath </> node </> "registration.cert"
+      , "--cold-verification-key-file", tmpDir </> node </> "shelley/operator.vkey"
+      , "--vrf-verification-key-file", tmpDir </> node </> "shelley/vrf.vkey"
+      , "--reward-account-verification-key-file", tmpDir </> node </> "owner.vkey"
+      , "--pool-owner-stake-verification-key-file", tmpDir </> node </> "owner.vkey"
+      , "--out-file", tmpDir </> node </> "registration.cert"
       ]
 
   -- Generated stake pool registration certs
-  forM_ poolNodeNames $ \node -> H.assertIO . IO.doesFileExist $ tempAbsPath </> node </> "registration.cert"
+  forM_ poolNodeNames $ \node -> H.assertIO . IO.doesFileExist $ tmpDir </> node </> "registration.cert"
 
   -- Now we'll construct one whopper of a transaction that does everything
   -- just to show off that we can, and to make the script shorter
@@ -633,11 +748,11 @@ cardanoTestnet testnetOptions H.Conf {..} = do
     --  2. register the stake pool 1
     --  3. register the user1 stake address
     --  4. delegate from the user1 stake address to the stake pool
-    txIn <- H.noteShow . S.strip =<< createShelleyGenesisInitialTxIn testnetMagic (tempAbsPath </> "shelley/utxo-keys/utxo1.vkey")
+    txIn <- H.noteShow . S.strip =<< createShelleyGenesisInitialTxIn testnetMagic (tmpDir </> "shelley/utxo-keys/utxo1.vkey")
 
     H.note_ txIn
 
-    user1Addr <- H.readFile $ tempAbsPath </> "addresses/user1.addr"
+    user1Addr <- H.readFile $ tmpDir </> "addresses/user1.addr"
 
     execCli_
       [ "transaction", "build-raw"
@@ -645,11 +760,11 @@ cardanoTestnet testnetOptions H.Conf {..} = do
       , "--fee", "0"
       , "--tx-in", txIn
       , "--tx-out",  user1Addr <> "+" <> show @Int maxShelleySupply
-      , "--certificate-file", tempAbsPath </> "addresses/pool-owner1-stake.reg.cert"
-      , "--certificate-file", tempAbsPath </> "node-pool1/registration.cert"
-      , "--certificate-file", tempAbsPath </> "addresses/user1-stake.reg.cert"
-      , "--certificate-file", tempAbsPath </> "addresses/user1-stake.deleg.cert"
-      , "--out-file", tempAbsPath </> "tx1.txbody"
+      , "--certificate-file", tmpDir </> "addresses/pool-owner1-stake.reg.cert"
+      , "--certificate-file", tmpDir </> "node-pool1/registration.cert"
+      , "--certificate-file", tmpDir </> "addresses/user1-stake.reg.cert"
+      , "--certificate-file", tmpDir </> "addresses/user1-stake.deleg.cert"
+      , "--out-file", tmpDir </> "tx1.txbody"
       ]
   -- TODO: this will become the transaction to register the pool, etc.
   -- We'll need to pick the tx-in from the actual UTxO since it contains the txid,
@@ -693,17 +808,17 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   -- 3. the pool1 operator key, due to the pool registration cert
   execCli_
     [ "transaction", "sign"
-    , "--signing-key-file", tempAbsPath </> "shelley/utxo-keys/utxo1.skey"
-    , "--signing-key-file", tempAbsPath </> "addresses/user1-stake.skey"
-    , "--signing-key-file", tempAbsPath </> "node-pool1/owner.skey"
-    , "--signing-key-file", tempAbsPath </> "node-pool1/shelley/operator.skey"
+    , "--signing-key-file", tmpDir </> "shelley/utxo-keys/utxo1.skey"
+    , "--signing-key-file", tmpDir </> "addresses/user1-stake.skey"
+    , "--signing-key-file", tmpDir </> "node-pool1/owner.skey"
+    , "--signing-key-file", tmpDir </> "node-pool1/shelley/operator.skey"
     , "--testnet-magic", show @Int testnetMagic
-    , "--tx-body-file", tempAbsPath </> "tx1.txbody"
-    , "--out-file", tempAbsPath </> "tx1.tx"
+    , "--tx-body-file", tmpDir </> "tx1.txbody"
+    , "--out-file", tmpDir </> "tx1.tx"             -------tx1.tx never used !
     ]
 
   -- Generated a signed 'do it all' transaction:
-  H.assertIO . IO.doesFileExist $ tempAbsPath </> "tx1.tx"
+  H.assertIO . IO.doesFileExist $ tmpDir </> "tx1.tx"
 
   -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
   byronGenesisHash <- getByronGenesisHash $ tempAbsPath </> "byron/genesis.json"
@@ -716,61 +831,66 @@ cardanoTestnet testnetOptions H.Conf {..} = do
     . HM.insert "AlonzoGenesisHash" alonzoGenesisHash
     . HM.insert "ConwayGenesisHash" conwayGenesisHash
 
-  --------------------------------
-  -- Launch cluster of three nodes
+cardanoTestnetLaunchBftNodes
+  :: TmpPath
+  -> CardanoTestnetOptions
+  -> H.Integration [ NodeRuntime ]
+cardanoTestnetLaunchBftNodes tp@(TmpPath tmpDir) testnetOptions = do
+  let numBftNodes = cardanoNumBftNodes $ cardanoNodes testnetOptions
+      bftNodesN = [1 .. numBftNodes]
+      bftNodeNames = ("node-bft" <>) . show @Int <$> bftNodesN
 
   let bftNodeNameAndOpts = L.zip bftNodeNames (cardanoBftNodes $ cardanoNodes testnetOptions)
-  bftNodes <- forM bftNodeNameAndOpts $ \(node, nodeOpts) -> do
-    startNode tempBaseAbsPath tempAbsPath logDir socketDir node
+  forM bftNodeNameAndOpts $ \(node, nodeOpts) -> do
+    startNode tp node
       ([ "run"
-        , "--config",  tempAbsPath </> "configuration.yaml"
-        , "--topology",  tempAbsPath </> node </> "topology.json"
-        , "--database-path", tempAbsPath </> node </> "db"
-        , "--shelley-kes-key", tempAbsPath </> node </> "shelley/kes.skey"
-        , "--shelley-vrf-key", tempAbsPath </> node </> "shelley/vrf.skey"
-        , "--shelley-operational-certificate", tempAbsPath </> node </> "shelley/node.cert"
-        , "--delegation-certificate",  tempAbsPath </> node </> "byron/delegate.cert"
-        , "--signing-key", tempAbsPath </> node </> "byron/delegate.key"
+        , "--config",  tmpDir </> "configuration.yaml"
+        , "--topology",  tmpDir </> node </> "topology.json"
+        , "--database-path", tmpDir </> node </> "db"
+        , "--shelley-kes-key", tmpDir </> node </> "shelley/kes.skey"
+        , "--shelley-vrf-key", tmpDir </> node </> "shelley/vrf.skey"
+        , "--shelley-operational-certificate", tmpDir </> node </> "shelley/node.cert"
+        , "--delegation-certificate",  tmpDir </> node </> "byron/delegate.cert"
+        , "--signing-key", tmpDir </> node </> "byron/delegate.key"
         ] <> extraBftNodeCliArgs nodeOpts)
 
-  H.threadDelay 100000
+cardanoTestnetLaunchPoolNodes
+  :: TmpPath
+  -> [String]
+  -> H.Integration [ NodeRuntime ]
+cardanoTestnetLaunchPoolNodes tp@(TmpPath tmpDir) poolNodeNames = do
+  forM poolNodeNames $ \node -> do
+    startNode tp node
+      [ "run"
+      , "--config", tmpDir </> "configuration.yaml"
+      , "--topology", tmpDir </> node </> "topology.json"
+      , "--database-path", tmpDir </> node </> "db"
+      , "--shelley-kes-key", tmpDir </> node </> "shelley/kes.skey"
+      , "--shelley-vrf-key", tmpDir </> node </> "shelley/vrf.skey"
+      , "--shelley-operational-certificate", tmpDir </> node </> "shelley/node.cert"
+      , "--host-addr", ifaceAddress
+      ]
 
-  poolNodes <- forM (L.zip poolNodeNames poolKeys) $ \(node, key) -> do
-    runtime <- startNode tempBaseAbsPath tempAbsPath logDir socketDir node
-        [ "run"
-        , "--config", tempAbsPath </> "configuration.yaml"
-        , "--topology", tempAbsPath </> node </> "topology.json"
-        , "--database-path", tempAbsPath </> node </> "db"
-        , "--shelley-kes-key", tempAbsPath </> node </> "shelley/kes.skey"
-        , "--shelley-vrf-key", tempAbsPath </> node </> "shelley/vrf.skey"
-        , "--shelley-operational-certificate", tempAbsPath </> node </> "shelley/node.cert"
-        , "--host-addr", ifaceAddress
-        ]
-    return $ PoolNode runtime key
-
+cardanoTestnetWaitStartup
+  :: H.Conf
+  -> NodeLoggingFormat
+  -> [String]
+  -> H.Integration ()
+cardanoTestnetWaitStartup H.Conf {..} loggingFormat allNodeNames = do
   now <- H.noteShowIO DTC.getCurrentTime
   deadline <- H.noteShow $ DTC.addUTCTime 90 now
 
   forM_ allNodeNames $ \node -> do
-    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)
+    sprocket <- H.noteShow $ makeSprocket (TmpPath tempAbsPath) node
     _spocketSystemNameFile <- H.noteShow $ IO.sprocketSystemName sprocket
     H.byDeadlineM 10 deadline "Failed to connect to node socket" $ H.assertM $ H.doesSprocketExist sprocket
 
   forM_ allNodeNames $ \node -> do
-    nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
-    H.assertChainExtended deadline (cardanoNodeLoggingFormat testnetOptions) nodeStdoutFile
+    nodeStdoutFile <- H.noteTempFile (getLogDir $ TmpPath tempAbsPath) $ node <> ".stdout.log"
+    H.assertChainExtended deadline loggingFormat nodeStdoutFile
 
   H.noteShowIO_ DTC.getCurrentTime
 
-  return TestnetRuntime
-    { configurationFile
-    , shelleyGenesisFile = tempAbsPath </> "shelley/genesis.json"
-    , testnetMagic
-    , bftNodes
-    , poolNodes
-    , wallets
-    , delegators = [] -- TODO this should be populated
-    }
 
 -- * Generate hashes for genesis.json files
 
