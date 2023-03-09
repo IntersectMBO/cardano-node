@@ -8,7 +8,6 @@ module Spec.Chairman.Chairman
 
 import           Control.Monad (when)
 import           Data.Functor ((<&>))
-import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Hedgehog.Extras.Test.Base (Integration)
 import           System.Exit (ExitCode (..))
 import           System.FilePath.Posix ((</>))
@@ -23,23 +22,25 @@ import qualified System.IO as IO
 import qualified System.Process as IO
 
 import qualified Cardano.Testnet as H
+import           Testnet.Util.Runtime (TmpPath(..), getLogDir, getSocketDir, getTmpBaseAbsPath, makeSprocket)
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Redundant <&>" -}
 {- HLINT ignore "Redundant flip" -}
 
-mkSprocket :: FilePath -> FilePath -> String -> Sprocket
-mkSprocket tempBaseAbsPath socketDir node = Sprocket tempBaseAbsPath (socketDir </> node)
-
 chairmanOver :: Int -> Int -> H.Conf -> [String] -> Integration ()
 chairmanOver timeoutSeconds requiredProgress H.Conf {..} allNodes = do
+  let
+    logDir = getLogDir (TmpPath tempAbsPath)
+    socketDir = getSocketDir (TmpPath tempAbsPath)
+    tempBaseAbsPath = getTmpBaseAbsPath (TmpPath tempAbsPath)
   maybeChairman <- H.evalIO $ IO.lookupEnv "DISABLE_CHAIRMAN"
 
   when (maybeChairman /= Just "1") $ do
     nodeStdoutFile <- H.noteTempFile logDir $ "chairman" <> ".stdout.log"
     nodeStderrFile <- H.noteTempFile logDir $ "chairman" <> ".stderr.log"
 
-    sprockets <- H.noteEach $ fmap (mkSprocket tempBaseAbsPath socketDir) allNodes
+    sprockets <- H.noteEach $ fmap (makeSprocket $ TmpPath tempAbsPath) allNodes
 
     H.createDirectoryIfMissing $ tempBaseAbsPath </> socketDir
 

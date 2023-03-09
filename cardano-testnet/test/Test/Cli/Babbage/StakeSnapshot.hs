@@ -49,7 +49,7 @@ hprop_stakeSnapshot = H.integrationRetryWorkspace 2 "babbage-stake-snapshot" $ \
   H.note_ SYS.os
   base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
-  conf@Conf { tempBaseAbsPath, tempAbsPath } <- H.noteShowM $
+  conf@Conf { tempAbsPath } <- H.noteShowM $
     mkConf (ProjectBase base) (YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
 
   work <- H.note $ tempAbsPath </> "work"
@@ -78,7 +78,7 @@ hprop_stakeSnapshot = H.integrationRetryWorkspace 2 "babbage-stake-snapshot" $ \
       -- The environment must be passed onto child process on Windows in order to
       -- successfully start that process.
       <> env
-    , H.execConfigCwd = Last $ Just tempBaseAbsPath
+    , H.execConfigCwd = Last $ Just $ getTmpBaseAbsPath $ TmpPath tempAbsPath
     }
 
   tipDeadline <- H.noteShowM $ DTC.addUTCTime 210 <$> H.noteShowIO DTC.getCurrentTime

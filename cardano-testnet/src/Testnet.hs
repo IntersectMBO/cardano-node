@@ -7,9 +7,6 @@ module Testnet
   ) where
 
 import           Control.Monad
-import           Prelude
-
-
 
 import           Hedgehog
 import           Hedgehog.Extras.Test.Base (Integration, noteShow_)
