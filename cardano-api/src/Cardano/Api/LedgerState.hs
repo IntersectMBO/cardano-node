@@ -66,7 +66,8 @@ import           Data.Aeson.Types (Parser)
 import           Data.Bifunctor
 import           Data.ByteArray (ByteArrayAccess)
 import qualified Data.ByteArray
-import           Data.ByteString as BS
+import           Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy as LB
 import           Data.ByteString.Short as BSS
@@ -126,6 +127,7 @@ import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import           Cardano.Ledger.BaseTypes (Globals (..), Nonce, UnitInterval, (⭒))
 import qualified Cardano.Ledger.BaseTypes as Shelley.Spec
 import qualified Cardano.Ledger.BHeaderView as Ledger
+import           Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Credential as Shelley.Spec
 import qualified Cardano.Ledger.Era
@@ -158,7 +160,7 @@ import qualified Ouroboros.Consensus.HardFork.Combinator.Serialisation.Common as
 import qualified Ouroboros.Consensus.Ledger.Abstract as Ledger
 import           Ouroboros.Consensus.Ledger.Basics (LedgerResult (lrEvents), lrResult)
 import qualified Ouroboros.Consensus.Ledger.Extended as Ledger
-import qualified Ouroboros.Consensus.Mempool.TxLimits as TxLimits
+import qualified Ouroboros.Consensus.Mempool.Capacity as TxLimits
 import qualified Ouroboros.Consensus.Node.ProtocolInfo as Consensus
 import           Ouroboros.Consensus.Protocol.Abstract (ChainDepState, ConsensusProtocol (..))
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
@@ -255,6 +257,7 @@ applyBlock env oldState validationMode block
         ShelleyBasedEraMary    -> Consensus.BlockMary shelleyBlock
         ShelleyBasedEraAlonzo  -> Consensus.BlockAlonzo shelleyBlock
         ShelleyBasedEraBabbage -> Consensus.BlockBabbage shelleyBlock
+        ShelleyBasedEraConway  -> Consensus.BlockConway shelleyBlock
 
 pattern LedgerStateByron
   :: Ledger.LedgerState Byron.ByronBlock
@@ -713,7 +716,7 @@ genesisConfigToEnv
   -- enp
   genCfg =
     case genCfg of
-      GenesisCardano _ bCfg sCfg _
+      GenesisCardano _ bCfg sCfg _ _
         | Cardano.Crypto.ProtocolMagic.unProtocolMagicId (Cardano.Chain.Genesis.configProtocolMagicId bCfg) /= Shelley.Spec.sgNetworkMagic (scConfig sCfg) ->
             Left . NECardanoConfig $
               mconcat
@@ -742,6 +745,7 @@ readNetworkConfig (NetworkConfigFile ncf) = do
       { ncByronGenesisFile = adjustGenesisFilePath (mkAdjustPath ncf) (ncByronGenesisFile ncfg)
       , ncShelleyGenesisFile = adjustGenesisFilePath (mkAdjustPath ncf) (ncShelleyGenesisFile ncfg)
       , ncAlonzoGenesisFile = adjustGenesisFilePath (mkAdjustPath ncf) (ncAlonzoGenesisFile ncfg)
+      , ncConwayGenesisFile = adjustGenesisFilePath (mkAdjustPath ncf) (ncConwayGenesisFile ncfg)
       }
 
 data NodeConfig = NodeConfig
@@ -752,6 +756,8 @@ data NodeConfig = NodeConfig
   , ncShelleyGenesisHash :: !GenesisHashShelley
   , ncAlonzoGenesisFile :: !GenesisFile
   , ncAlonzoGenesisHash :: !GenesisHashAlonzo
+  , ncConwayGenesisFile :: !GenesisFile
+  , ncConwayGenesisHash :: !GenesisHashConway
   , ncRequiresNetworkMagic :: !Cardano.Crypto.RequiresNetworkMagic
   , ncByronSoftwareVersion :: !Cardano.Chain.Update.SoftwareVersion
   , ncByronProtocolVersion :: !Cardano.Chain.Update.ProtocolVersion
@@ -765,6 +771,7 @@ data NodeConfig = NodeConfig
                               Shelley.StandardMary)
   , ncMaryToAlonzo     :: !Consensus.TriggerHardFork
   , ncAlonzoToBabbage  :: !Consensus.TriggerHardFork
+  , ncBabbageToConway  :: !Consensus.TriggerHardFork
   }
 
 instance FromJSON NodeConfig where
@@ -781,6 +788,8 @@ instance FromJSON NodeConfig where
           <*> fmap GenesisHashShelley (o .: "ShelleyGenesisHash")
           <*> fmap GenesisFile (o .: "AlonzoGenesisFile")
           <*> fmap GenesisHashAlonzo (o .: "AlonzoGenesisHash")
+          <*> fmap GenesisFile (o .: "ConwayGenesisFile")
+          <*> fmap GenesisHashConway (o .: "ConwayGenesisHash")
           <*> o .: "RequiresNetworkMagic"
           <*> parseByronSoftwareVersion o
           <*> parseByronProtocolVersion o
@@ -792,6 +801,7 @@ instance FromJSON NodeConfig where
                  <$> parseMaryHardForkEpoch o)
           <*> parseAlonzoHardForkEpoch o
           <*> parseBabbageHardForkEpoch o
+          <*> parseConwayHardForkEpoch o
 
       parseByronProtocolVersion :: Object -> Parser Cardano.Chain.Update.ProtocolVersion
       parseByronProtocolVersion o =
@@ -840,6 +850,13 @@ instance FromJSON NodeConfig where
           , pure $ Consensus.TriggerHardForkAtVersion 7 -- Mainnet default
           ]
 
+      parseConwayHardForkEpoch :: Object -> Parser Consensus.TriggerHardFork
+      parseConwayHardForkEpoch o =
+        asum
+          [ Consensus.TriggerHardForkAtEpoch <$> o .: "TestConwayHardForkAtEpoch"
+          , pure $ Consensus.TriggerHardForkAtVersion 8 -- Mainnet default
+          ]
+
 parseNodeConfig :: ByteString -> Either Text NodeConfig
 parseNodeConfig bs =
   case Yaml.decodeEither' bs of
@@ -874,7 +891,7 @@ newtype LedgerState = LedgerState
 encodeLedgerState :: LedgerState -> CBOR.Encoding
 encodeLedgerState (LedgerState (HFC.HardForkLedgerState st)) =
   HFC.encodeTelescope
-    (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* Nil)
+    (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* Nil)
     st
   where
     byron = fn (K . Byron.encodeByronLedgerState)
@@ -883,11 +900,12 @@ encodeLedgerState (LedgerState (HFC.HardForkLedgerState st)) =
     mary = fn (K . Shelley.encodeShelleyLedgerState)
     alonzo = fn (K . Shelley.encodeShelleyLedgerState)
     babbage = fn (K . Shelley.encodeShelleyLedgerState)
+    conway = fn (K . Shelley.encodeShelleyLedgerState)
 
 decodeLedgerState :: forall s. CBOR.Decoder s LedgerState
 decodeLedgerState =
   LedgerState . HFC.HardForkLedgerState
-    <$> HFC.decodeTelescope (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* Nil)
+    <$> HFC.decodeTelescope (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* Nil)
   where
     byron = Comp Byron.decodeByronLedgerState
     shelley = Comp Shelley.decodeShelleyLedgerState
@@ -895,6 +913,7 @@ decodeLedgerState =
     mary = Comp Shelley.decodeShelleyLedgerState
     alonzo = Comp Shelley.decodeShelleyLedgerState
     babbage = Comp Shelley.decodeShelleyLedgerState
+    conway = Comp Shelley.decodeShelleyLedgerState
 
 type LedgerStateEvents = (LedgerState, [LedgerEvent])
 
@@ -922,6 +941,7 @@ data GenesisConfig
       !Cardano.Chain.Genesis.Config
       !ShelleyConfig
       !AlonzoGenesis
+      !(ConwayGenesis Shelley.StandardCrypto)
 
 data ShelleyConfig = ShelleyConfig
   { scConfig :: !(Shelley.Spec.ShelleyGenesis Shelley.StandardShelley)
@@ -942,6 +962,10 @@ newtype GenesisHashShelley = GenesisHashShelley
 
 newtype GenesisHashAlonzo = GenesisHashAlonzo
   { unGenesisHashAlonzo :: Cardano.Crypto.Hash.Class.Hash Cardano.Crypto.Hash.Blake2b.Blake2b_256 ByteString
+  } deriving newtype (Eq, Show)
+
+newtype GenesisHashConway = GenesisHashConway
+  { unGenesisHashConway :: Cardano.Crypto.Hash.Class.Hash Cardano.Crypto.Hash.Blake2b.Blake2b_256 ByteString
   } deriving newtype (Eq, Show)
 
 newtype LedgerStateDir = LedgerStateDir
@@ -966,7 +990,7 @@ mkProtocolInfoCardano ::
     IO
     (HFC.HardForkBlock
             (Consensus.CardanoEras Consensus.StandardCrypto))
-mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesis alonzoGenesis)
+mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesis alonzoGenesis conwayGenesis)
   = Consensus.protocolInfoCardano
           Consensus.ProtocolParamsByron
             { Consensus.byronGenesis = byronGenesis
@@ -1001,11 +1025,16 @@ mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesis alonzoGene
             { Consensus.babbageProtVer = shelleyProtVer dnc
             , Consensus.babbageMaxTxCapacityOverrides = TxLimits.mkOverrides TxLimits.noOverridesMeasure
             }
+          Consensus.ProtocolParamsConway
+            { Consensus.conwayProtVer = shelleyProtVer dnc
+            , Consensus.conwayMaxTxCapacityOverrides = TxLimits.mkOverrides TxLimits.noOverridesMeasure
+            }
           (ncByronToShelley dnc)
           (ncShelleyToAllegra dnc)
           (ncAllegraToMary dnc)
           (Consensus.ProtocolTransitionParamsShelleyBased alonzoGenesis (ncMaryToAlonzo dnc))
           (Consensus.ProtocolTransitionParamsShelleyBased alonzoGenesis (ncAlonzoToBabbage dnc))
+          (Consensus.ProtocolTransitionParamsShelleyBased conwayGenesis (ncBabbageToConway dnc))
 
 shelleyPraosNonce :: ShelleyConfig -> Shelley.Spec.Nonce
 shelleyPraosNonce sCfg = Shelley.Spec.Nonce (Cardano.Crypto.Hash.Class.castHash . unGenesisHashShelley $ scGenesisHash sCfg)
@@ -1025,12 +1054,14 @@ readCardanoGenesisConfig enc =
     <$> readByronGenesisConfig enc
     <*> readShelleyGenesisConfig enc
     <*> readAlonzoGenesisConfig enc
+    <*> readConwayGenesisConfig enc
 
 data GenesisConfigError
   = NEError !Text
   | NEByronConfig !FilePath !Cardano.Chain.Genesis.ConfigurationError
   | NEShelleyConfig !FilePath !Text
   | NEAlonzoConfig !FilePath !Text
+  | NEConwayConfig !FilePath !Text
   | NECardanoConfig !Text
 
 renderGenesisConfigError :: GenesisConfigError -> Text
@@ -1048,6 +1079,10 @@ renderGenesisConfigError ne =
     NEAlonzoConfig fp txt ->
       mconcat
         [ "Failed reading Alonzo genesis file ", textShow fp, ": ", txt
+        ]
+    NEConwayConfig fp txt ->
+      mconcat
+        [ "Failed reading Conway genesis file ", textShow fp, ": ", txt
         ]
     NECardanoConfig err ->
       mconcat
@@ -1093,6 +1128,14 @@ readAlonzoGenesisConfig enc = do
   let file = unGenesisFile $ ncAlonzoGenesisFile enc
   firstExceptT (NEAlonzoConfig file . renderAlonzoGenesisError)
     $ readAlonzoGenesis (GenesisFile file) (ncAlonzoGenesisHash enc)
+
+readConwayGenesisConfig
+    :: NodeConfig
+    -> ExceptT GenesisConfigError IO (ConwayGenesis Shelley.StandardCrypto)
+readConwayGenesisConfig enc = do
+  let file = unGenesisFile $ ncConwayGenesisFile enc
+  firstExceptT (NEConwayConfig file . renderConwayGenesisError)
+    $ readConwayGenesis (GenesisFile file) (ncConwayGenesisHash enc)
 
 readShelleyGenesis
     :: GenesisFile -> GenesisHashShelley
@@ -1178,6 +1221,50 @@ renderAlonzoGenesisError sge =
           ]
 
       AlonzoGenesisDecodeError fp err ->
+        mconcat
+          [ "There was an error parsing the genesis file: ", Text.pack fp
+          , " Error: ", err
+          ]
+
+readConwayGenesis
+    :: GenesisFile -> GenesisHashConway
+    -> ExceptT ConwayGenesisError IO (ConwayGenesis Shelley.StandardCrypto)
+readConwayGenesis (GenesisFile file) expectedGenesisHash = do
+    content <- handleIOExceptT (ConwayGenesisReadError file . textShow) $ BS.readFile file
+    let genesisHash = GenesisHashConway (Cardano.Crypto.Hash.Class.hashWith id content)
+    checkExpectedGenesisHash genesisHash
+    firstExceptT (ConwayGenesisDecodeError file . Text.pack)
+                  . hoistEither
+                  $ Aeson.eitherDecodeStrict' content
+  where
+    checkExpectedGenesisHash :: GenesisHashConway -> ExceptT ConwayGenesisError IO ()
+    checkExpectedGenesisHash actual =
+      when (actual /= expectedGenesisHash) $
+        left (ConwayGenesisHashMismatch actual expectedGenesisHash)
+
+data ConwayGenesisError
+     = ConwayGenesisReadError !FilePath !Text
+     | ConwayGenesisHashMismatch !GenesisHashConway !GenesisHashConway -- actual, expected
+     | ConwayGenesisDecodeError !FilePath !Text
+     deriving Show
+
+renderConwayGenesisError :: ConwayGenesisError -> Text
+renderConwayGenesisError sge =
+    case sge of
+      ConwayGenesisReadError fp err ->
+        mconcat
+          [ "There was an error reading the genesis file: ", Text.pack fp
+          , " Error: ", err
+          ]
+
+      ConwayGenesisHashMismatch actual expected ->
+        mconcat
+          [ "Wrong Conway genesis file: the actual hash is ", renderHash (unGenesisHashConway actual)
+          , ", but the expected Conway genesis hash given in the node "
+          , "configuration file is ", renderHash (unGenesisHashConway expected), "."
+          ]
+
+      ConwayGenesisDecodeError fp err ->
         mconcat
           [ "There was an error parsing the genesis file: ", Text.pack fp
           , " Error: ", err
@@ -1429,7 +1516,7 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
     ShelleyBasedEraMary     -> isLeadingSlotsTPraos slotRangeOfInterest poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
     ShelleyBasedEraAlonzo   -> isLeadingSlotsTPraos slotRangeOfInterest poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
     ShelleyBasedEraBabbage  -> isLeadingSlotsPraos  slotRangeOfInterest poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
-
+    ShelleyBasedEraConway   -> isLeadingSlotsPraos  slotRangeOfInterest poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
  where
   globals = constructGlobals sGen eInfo pParams
 
@@ -1506,6 +1593,7 @@ obtainIsStandardCrypto ShelleyBasedEraAllegra f = f
 obtainIsStandardCrypto ShelleyBasedEraMary    f = f
 obtainIsStandardCrypto ShelleyBasedEraAlonzo  f = f
 obtainIsStandardCrypto ShelleyBasedEraBabbage f = f
+obtainIsStandardCrypto ShelleyBasedEraConway  f = f
 
 
 obtainDecodeEpochStateConstraints
@@ -1525,6 +1613,7 @@ obtainDecodeEpochStateConstraints ShelleyBasedEraAllegra f = f
 obtainDecodeEpochStateConstraints ShelleyBasedEraMary    f = f
 obtainDecodeEpochStateConstraints ShelleyBasedEraAlonzo  f = f
 obtainDecodeEpochStateConstraints ShelleyBasedEraBabbage f = f
+obtainDecodeEpochStateConstraints ShelleyBasedEraConway  f = f
 
 -- | Return the slots at which a particular stake pool operator is
 -- expected to mint a block.
@@ -1576,6 +1665,7 @@ currentEpochEligibleLeadershipSlots sbe sGen eInfo pParams ptclState poolid (Vrf
     ShelleyBasedEraMary -> isLeadingSlotsTPraos slotRangeOfInterest poolid setSnapshotPoolDistr epochNonce vrkSkey f
     ShelleyBasedEraAlonzo -> isLeadingSlotsTPraos slotRangeOfInterest poolid setSnapshotPoolDistr epochNonce vrkSkey f
     ShelleyBasedEraBabbage -> isLeadingSlotsPraos slotRangeOfInterest poolid setSnapshotPoolDistr epochNonce vrkSkey f
+    ShelleyBasedEraConway -> isLeadingSlotsPraos slotRangeOfInterest poolid setSnapshotPoolDistr epochNonce vrkSkey f
 
  where
   globals = constructGlobals sGen eInfo pParams

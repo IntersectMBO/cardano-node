@@ -100,6 +100,8 @@ import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesisStaking (..))
 import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.Coin (Coin (..))
+import           Cardano.Ledger.Conway.Genesis ()
+import qualified Cardano.Ledger.Conway.Genesis as Conway
 import qualified Cardano.Ledger.Keys as Ledger
 import qualified Cardano.Ledger.Shelley.API as Ledger
 import qualified Cardano.Ledger.Shelley.PParams as Shelley
@@ -219,7 +221,7 @@ runGenesisCmd (GenesisVerKey vk sk) = runGenesisVerKey vk sk
 runGenesisCmd (GenesisTxIn vk nw mOutFile) = runGenesisTxIn vk nw mOutFile
 runGenesisCmd (GenesisAddr vk nw mOutFile) = runGenesisAddr vk nw mOutFile
 runGenesisCmd (GenesisCreate gd gn un ms am nw) = runGenesisCreate gd gn un ms am nw
-runGenesisCmd (GenesisCreateCardano gd gn un ms am k slotLength sc nw bg sg ag mNodeCfg) = runGenesisCreateCardano gd gn un ms am k slotLength sc nw bg sg ag mNodeCfg
+runGenesisCmd (GenesisCreateCardano gd gn un ms am k slotLength sc nw bg sg ag cg mNodeCfg) = runGenesisCreateCardano gd gn un ms am k slotLength sc nw bg sg ag cg mNodeCfg
 runGenesisCmd (GenesisCreateStaked gd gn gp gl un ms am ds nw bf bp su relayJsonFp) =
   runGenesisCreateStaked gd gn gp gl un ms am ds nw bf bp su relayJsonFp
 runGenesisCmd (GenesisHashFile gf) = runGenesisHashFile gf
@@ -416,6 +418,7 @@ runGenesisCreate (GenesisDir rootdir)
 
   template <- readShelleyGenesisWithDefault (rootdir </> "genesis.spec.json") adjustTemplate
   alonzoGenesis <- readAlonzoGenesis (rootdir </> "genesis.alonzo.spec.json")
+  conwayGenesis <- readConwayGenesis (rootdir </> "genesis.conway.spec.json")
 
   forM_ [ 1 .. genNumGenesisKeys ] $ \index -> do
     createGenesisKeys  gendir  index
@@ -435,13 +438,13 @@ runGenesisCreate (GenesisDir rootdir)
 
   void $ writeFileGenesis (rootdir </> "genesis.json")        $ WritePretty shelleyGenesis
   void $ writeFileGenesis (rootdir </> "genesis.alonzo.json") $ WritePretty alonzoGenesis
+  void $ writeFileGenesis (rootdir </> "genesis.conway.json") $ WritePretty conwayGenesis
   --TODO: rationalise the naming convention on these genesis json files.
   where
     adjustTemplate t = t { sgNetworkMagic = unNetworkMagic (toNetworkMagic network) }
     gendir  = rootdir </> "genesis-keys"
     deldir  = rootdir </> "delegate-keys"
     utxodir = rootdir </> "utxo-keys"
-
 
 toSKeyJSON :: Key a => SigningKey a -> ByteString
 toSKeyJSON = LBS.toStrict . textEnvelopeToJSON Nothing
@@ -519,12 +522,13 @@ runGenesisCreateCardano :: GenesisDir
                  -> FilePath -- ^ Byron Genesis
                  -> FilePath -- ^ Shelley Genesis
                  -> FilePath -- ^ Alonzo Genesis
+                 -> FilePath -- ^ Conway Genesis
                  -> Maybe FilePath
                  -> ExceptT ShelleyGenesisCmdError IO ()
 runGenesisCreateCardano (GenesisDir rootdir)
                  genNumGenesisKeys genNumUTxOKeys
                  mStart mAmount mSecurity slotLength mSlotCoeff
-                 network byronGenesisT shelleyGenesisT alonzoGenesisT mNodeCfg = do
+                 network byronGenesisT shelleyGenesisT alonzoGenesisT conwayGenesisT mNodeCfg = do
   start <- maybe (SystemStart <$> getCurrentTimePlus30) pure mStart
   (byronGenesis', byronSecrets) <- convertToShelleyError $ Byron.mkGenesis $ byronParams start
   let
@@ -566,6 +570,7 @@ runGenesisCreateCardano (GenesisDir rootdir)
       }
   shelleyGenesisTemplate <- liftIO $ overrideShelleyGenesis . fromRight (error "shelley genesis template not found") <$> readAndDecodeShelleyGenesis shelleyGenesisT
   alonzoGenesis <- readAlonzoGenesis alonzoGenesisT
+  conwayGenesis <- readConwayGenesis conwayGenesisT
   (delegateMap, vrfKeys, kesKeys, opCerts) <- liftIO $ generateShelleyNodeSecrets shelleyDelegateKeys shelleyGenesisvkeys
   let
     shelleyGenesis :: ShelleyGenesis StandardShelley
@@ -601,6 +606,7 @@ runGenesisCreateCardano (GenesisDir rootdir)
   byronGenesisHash <- writeFileGenesis (rootdir </> "byron-genesis.json") $ WriteCanonical byronGenesis
   shelleyGenesisHash <- writeFileGenesis (rootdir </> "shelley-genesis.json") $ WritePretty shelleyGenesis
   alonzoGenesisHash <- writeFileGenesis (rootdir </> "alonzo-genesis.json") $ WritePretty alonzoGenesis
+  conwayGenesisHash <- writeFileGenesis (rootdir </> "conway-genesis.json") $ WritePretty conwayGenesis
 
   liftIO $ do
     case mNodeCfg of
@@ -614,6 +620,7 @@ runGenesisCreateCardano (GenesisDir rootdir)
               $ setHash "ByronGenesisHash" byronGenesisHash
               $ setHash "ShelleyGenesisHash" shelleyGenesisHash
               $ setHash "AlonzoGenesisHash" alonzoGenesisHash
+              $ setHash "ConwayGenesisHash" conwayGenesisHash
               obj
           updateConfig x = x
           newConfig :: Yaml.Value
@@ -695,6 +702,7 @@ runGenesisCreateStaked (GenesisDir rootdir)
 
   template <- readShelleyGenesisWithDefault (rootdir </> "genesis.spec.json") adjustTemplate
   alonzoGenesis <- readAlonzoGenesis (rootdir </> "genesis.alonzo.spec.json")
+  conwayGenesis <- readConwayGenesis (rootdir </> "genesis.conway.spec.json")
 
   forM_ [ 1 .. genNumGenesisKeys ] $ \index -> do
     createGenesisKeys gendir index
@@ -756,6 +764,7 @@ runGenesisCreateStaked (GenesisDir rootdir)
   liftIO $ LBS.writeFile (rootdir </> "genesis.json") $ Aeson.encode shelleyGenesis
 
   void $ writeFileGenesis (rootdir </> "genesis.alonzo.json") $ WritePretty alonzoGenesis
+  void $ writeFileGenesis (rootdir </> "genesis.conway.json") $ WritePretty conwayGenesis
   --TODO: rationalise the naming convention on these genesis json files.
 
   liftIO $ Text.hPutStrLn IO.stderr $ mconcat $
@@ -1335,6 +1344,13 @@ readAlonzoGenesis fpath = do
   firstExceptT (ShelleyGenesisCmdAesonDecodeError fpath . Text.pack)
     . hoistEither $ Aeson.eitherDecode' lbs
 
+readConwayGenesis
+  :: FilePath
+  -> ExceptT ShelleyGenesisCmdError IO (Conway.ConwayGenesis StandardCrypto)
+readConwayGenesis fpath = do
+  lbs <- handleIOExceptT (ShelleyGenesisCmdGenesisFileError . FileIOError fpath) $ LBS.readFile fpath
+  firstExceptT (ShelleyGenesisCmdAesonDecodeError fpath . Text.pack)
+    . hoistEither $ Aeson.eitherDecode' lbs
 
 -- Protocol Parameters
 

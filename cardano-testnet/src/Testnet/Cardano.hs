@@ -250,6 +250,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
     . HM.insert "ByronGenesisFile" (J.toJSON @String "byron/genesis.json")
     . HM.insert "ShelleyGenesisFile" (J.toJSON @String "shelley/genesis.json")
     . HM.insert "AlonzoGenesisFile" (J.toJSON @String "shelley/genesis.alonzo.json")
+    . HM.insert "ConwayGenesisFile" (J.toJSON @String "shelley/genesis.conway.json")
     . HM.insert "RequiresNetworkMagic" (J.toJSON @String "RequiresMagic")
     . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 6)
     . HM.insert "LastKnownBlockVersion-Minor" (J.toJSON @Int 0)
@@ -386,6 +387,10 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   alonzoSpecFile <- H.noteTempFile tempAbsPath "shelley/genesis.alonzo.spec.json"
   liftIO $ IO.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
 
+  let sourceConwayGenesisSpecFile = base </> "cardano-cli/test/data/golden/conway/genesis.conway.spec.json"
+  conwaySpecFile <- H.noteTempFile tempAbsPath "shelley/genesis.conway.spec.json"
+  liftIO $ IO.copyFile sourceConwayGenesisSpecFile conwaySpecFile
+
   execCli_
     [ "genesis", "create"
     , "--testnet-magic", show @Int testnetMagic
@@ -440,6 +445,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   -- Generated alonzo/genesis.json
   --TODO: rationalise the naming convention on these genesis json files.
   H.cat $ tempAbsPath </> "shelley/genesis.alonzo.json"
+  H.cat $ tempAbsPath </> "shelley/genesis.conway.json"
 
   -- Make the pool operator cold keys
   -- This was done already for the BFT nodes as part of the genesis creation
@@ -699,10 +705,12 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   byronGenesisHash <- getByronGenesisHash $ tempAbsPath </> "byron/genesis.json"
   shelleyGenesisHash <- getShelleyGenesisHash $ tempAbsPath </> "shelley/genesis.json"
   alonzoGenesisHash <- getShelleyGenesisHash $ tempAbsPath </> "shelley/genesis.alonzo.json"
+  conwayGenesisHash <- getShelleyGenesisHash $ tempAbsPath </> "shelley/genesis.conway.json"
   H.rewriteYamlFile (tempAbsPath </> "configuration.yaml") . J.rewriteObject
     $ HM.insert "ByronGenesisHash" byronGenesisHash
     . HM.insert "ShelleyGenesisHash" shelleyGenesisHash
     . HM.insert "AlonzoGenesisHash" alonzoGenesisHash
+    . HM.insert "ConwayGenesisHash" conwayGenesisHash
 
   --------------------------------
   -- Launch cluster of three nodes

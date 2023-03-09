@@ -26,7 +26,7 @@ import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion,
                    simpleSingletonVersions)
 import           Ouroboros.Network.Snocket (LocalAddress, LocalSocket, Snocket,
-                   localAddressFromPath, localSnocket)
+                   makeLocalBearer, localAddressFromPath, localSnocket)
 import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..), ConnectionId (..),
                    SomeResponderApplication (..), cleanNetworkMutableState, newNetworkMutableState,
                    nullNetworkServerTracers, withServerNode)
@@ -94,6 +94,7 @@ doListenToForwarder snocket address netMagic timeLimits app = do
   race_ (cleanNetworkMutableState networkState)
         $ withServerNode
             snocket
+            makeLocalBearer
             mempty -- LocalSocket does not need to be configured
             nullNetworkServerTracers
             networkState

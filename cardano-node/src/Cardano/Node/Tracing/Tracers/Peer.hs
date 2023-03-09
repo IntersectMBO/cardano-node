@@ -12,6 +12,8 @@ module Cardano.Node.Tracing.Tracers.Peer where
 --   , ppPeer
 --   ) where
 
+import           Cardano.Node.Orphans ()
+
 import qualified Control.Concurrent.Class.MonadSTM.Strict as STM
 import           "contra-tracer" Control.Tracer
 

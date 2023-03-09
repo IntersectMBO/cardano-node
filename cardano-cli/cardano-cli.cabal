@@ -113,6 +113,7 @@ library
                       , cardano-data ^>= 0.1
                       , cardano-ledger-alonzo ^>= 0.1
                       , cardano-ledger-byron ^>= 0.1
+                      , cardano-ledger-conway
                       , cardano-ledger-core ^>= 0.1
                       , cardano-ledger-shelley-ma ^>= 0.1
                       , cardano-prelude
@@ -136,7 +137,8 @@ library
                       , ouroboros-consensus-cardano
                       , ouroboros-consensus-protocol
                       , ouroboros-consensus-shelley
-                      , ouroboros-network
+                      , ouroboros-network-api
+                      , ouroboros-network-protocols
                       , parsec
                       , prettyprinter
                       , random

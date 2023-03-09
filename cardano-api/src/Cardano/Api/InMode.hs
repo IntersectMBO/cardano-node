@@ -102,6 +102,10 @@ fromConsensusGenTx CardanoMode (Consensus.HardForkGenTx (Consensus.OneEraGenTx (
   let Consensus.ShelleyTx _txid shelleyEraTx = tx'
   in TxInMode (ShelleyTx ShelleyBasedEraBabbage shelleyEraTx) BabbageEraInCardanoMode
 
+fromConsensusGenTx CardanoMode (Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (S (S (Z tx'))))))))) =
+  let Consensus.ShelleyTx _txid shelleyEraTx = tx'
+  in TxInMode (ShelleyTx ShelleyBasedEraConway shelleyEraTx) ConwayEraInCardanoMode
+
 toConsensusGenTx :: ConsensusBlockForMode mode ~ block
                  => TxInMode mode
                  -> Consensus.GenTx block
@@ -153,6 +157,10 @@ toConsensusGenTx (TxInMode (ShelleyTx _ tx) BabbageEraInCardanoMode) =
   where
     tx' = Consensus.mkShelleyTx tx
 
+toConsensusGenTx (TxInMode (ShelleyTx _ tx) ConwayEraInCardanoMode) =
+    Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (S (S (Z tx'))))))))
+  where
+    tx' = Consensus.mkShelleyTx tx
 
 toConsensusGenTx (TxInMode (ShelleyTx _ _) ByronEraInByronMode) =
   error "Cardano.Api.InMode.toConsensusGenTx: ShelleyTx In Byron era"
@@ -224,6 +232,12 @@ toConsensusTxId (TxIdInMode txid BabbageEraInCardanoMode) =
   txid' :: Consensus.TxId (Consensus.GenTx Consensus.StandardBabbageBlock)
   txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
 
+toConsensusTxId (TxIdInMode txid ConwayEraInCardanoMode) =
+  Consensus.HardForkGenTxId (Consensus.OneEraGenTxId (S (S (S (S (S (S (Z (Consensus.WrapGenTxId txid')))))))))
+ where
+  txid' :: Consensus.TxId (Consensus.GenTx Consensus.StandardConwayBlock)
+  txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
+
 -- ----------------------------------------------------------------------------
 -- Transaction validation errors in the context of eras and consensus modes
 --
@@ -277,6 +291,12 @@ instance Show (TxValidationError era) where
     showsPrec p (ShelleyTxValidationError ShelleyBasedEraBabbage err) =
       showParen (p >= 11)
         ( showString "ShelleyTxValidationError ShelleyBasedEraBabbage "
+        . showsPrec 11 err
+        )
+
+    showsPrec p (ShelleyTxValidationError ShelleyBasedEraConway err) =
+      showParen (p >= 11)
+        ( showString "ShelleyTxValidationError ShelleyBasedEraConway "
         . showsPrec 11 err
         )
 
@@ -343,6 +363,11 @@ fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrBabbage err) =
     TxValidationErrorInMode
       (ShelleyTxValidationError ShelleyBasedEraBabbage err)
       BabbageEraInCardanoMode
+
+fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrConway err) =
+    TxValidationErrorInMode
+      (ShelleyTxValidationError ShelleyBasedEraConway err)
+      ConwayEraInCardanoMode
 
 fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrWrongEra err) =
     TxValidationEraMismatch err

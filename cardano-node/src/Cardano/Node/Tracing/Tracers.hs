@@ -53,7 +53,7 @@ import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import qualified Ouroboros.Consensus.Node.Run as Consensus
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
-import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
+import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 
 import           Network.Mux.Trace (TraceLabelPeer (..))
 

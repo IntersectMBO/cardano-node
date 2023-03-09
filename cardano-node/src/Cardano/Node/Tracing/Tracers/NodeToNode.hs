@@ -13,7 +13,7 @@ module Cardano.Node.Tracing.Tracers.NodeToNode
    ) where
 
 import           Cardano.Logging
-import           Data.Aeson (Value (String), toJSON, (.=))
+import           Data.Aeson (Value (String), ToJSON (..), (.=))
 import           Data.Proxy (Proxy (..))
 import           Data.Text (pack)
 import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
@@ -29,6 +29,7 @@ import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, e
 import           Ouroboros.Network.Block (Point, Serialised, blockHash)
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch (..), Message (..))
 import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as STX
+import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
 --------------------------------------------------------------------------------
 -- BlockFetch Tracer
@@ -80,6 +81,9 @@ instance ( ConvertTxId blk
     mconcat [ "kind" .= String "MsgClientDone"
              , "agency" .= String (pack $ show stok)
              ]
+
+instance ToJSON SizeInBytes where
+    toJSON (SizeInBytes s) = toJSON s
 
 instance MetaTrace (AnyMessageAndAgency (BlockFetch blk1 (Point blk2))) where
     namespaceFor (AnyMessageAndAgency _stok MsgRequestRange{}) =

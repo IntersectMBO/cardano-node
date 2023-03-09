@@ -17,3 +17,4 @@ getIsCardanoEraConstraint AllegraEra f = f
 getIsCardanoEraConstraint MaryEra f = f
 getIsCardanoEraConstraint AlonzoEra f = f
 getIsCardanoEraConstraint BabbageEra f = f
+getIsCardanoEraConstraint ConwayEra f = f

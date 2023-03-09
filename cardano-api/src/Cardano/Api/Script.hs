@@ -517,11 +517,14 @@ data ScriptLanguageInEra lang era where
      SimpleScriptInMary      :: ScriptLanguageInEra SimpleScript' MaryEra
      SimpleScriptInAlonzo    :: ScriptLanguageInEra SimpleScript' AlonzoEra
      SimpleScriptInBabbage   :: ScriptLanguageInEra SimpleScript' BabbageEra
+     SimpleScriptInConway    :: ScriptLanguageInEra SimpleScript' ConwayEra
 
      PlutusScriptV1InAlonzo  :: ScriptLanguageInEra PlutusScriptV1 AlonzoEra
      PlutusScriptV1InBabbage :: ScriptLanguageInEra PlutusScriptV1 BabbageEra
+     PlutusScriptV1InConway  :: ScriptLanguageInEra PlutusScriptV1 ConwayEra
 
      PlutusScriptV2InBabbage :: ScriptLanguageInEra PlutusScriptV2 BabbageEra
+     PlutusScriptV2InConway  :: ScriptLanguageInEra PlutusScriptV2 ConwayEra
 
 
 
@@ -569,6 +572,9 @@ scriptLanguageSupportedInEra era lang =
       (BabbageEra, PlutusScriptLanguage PlutusScriptV2) ->
         Just PlutusScriptV2InBabbage
 
+      (ConwayEra, PlutusScriptLanguage PlutusScriptV2) ->
+        Just PlutusScriptV2InConway
+
       _ -> Nothing
 
 languageOfScriptLanguageInEra :: ScriptLanguageInEra lang era
@@ -580,10 +586,14 @@ languageOfScriptLanguageInEra langInEra =
       SimpleScriptInMary      -> SimpleScriptLanguage
       SimpleScriptInAlonzo    -> SimpleScriptLanguage
       SimpleScriptInBabbage   -> SimpleScriptLanguage
+      SimpleScriptInConway    -> SimpleScriptLanguage
 
       PlutusScriptV1InAlonzo  -> PlutusScriptLanguage PlutusScriptV1
       PlutusScriptV1InBabbage -> PlutusScriptLanguage PlutusScriptV1
+      PlutusScriptV1InConway  -> PlutusScriptLanguage PlutusScriptV1
+
       PlutusScriptV2InBabbage -> PlutusScriptLanguage PlutusScriptV2
+      PlutusScriptV2InConway  -> PlutusScriptLanguage PlutusScriptV2
 
 eraOfScriptLanguageInEra :: ScriptLanguageInEra lang era
                          -> ShelleyBasedEra era
@@ -599,8 +609,12 @@ eraOfScriptLanguageInEra langInEra =
       PlutusScriptV1InAlonzo  -> ShelleyBasedEraAlonzo
 
       SimpleScriptInBabbage   -> ShelleyBasedEraBabbage
+      SimpleScriptInConway    -> ShelleyBasedEraConway
+
       PlutusScriptV1InBabbage -> ShelleyBasedEraBabbage
+      PlutusScriptV1InConway  -> ShelleyBasedEraConway
       PlutusScriptV2InBabbage -> ShelleyBasedEraBabbage
+      PlutusScriptV2InConway  -> ShelleyBasedEraConway
 
 -- | Given a target era and a script in some language, check if the language is
 -- supported in that era, and if so return a 'ScriptInEra'.
@@ -743,6 +757,9 @@ scriptWitnessScript (SimpleScriptWitness SimpleScriptInAlonzo (SScript script)) 
 
 scriptWitnessScript (SimpleScriptWitness SimpleScriptInBabbage (SScript script)) =
     Just $ ScriptInEra SimpleScriptInBabbage (SimpleScript script)
+
+scriptWitnessScript (SimpleScriptWitness SimpleScriptInConway (SScript script)) =
+    Just $ ScriptInEra SimpleScriptInConway (SimpleScript script)
 
 scriptWitnessScript (PlutusScriptWitness langInEra version (PScript script) _ _ _) =
     Just $ ScriptInEra langInEra (PlutusScript version script)
@@ -1008,17 +1025,20 @@ toShelleyScript (ScriptInEra langInEra (SimpleScript script)) =
       SimpleScriptInMary    -> toAllegraTimelock script
       SimpleScriptInAlonzo  -> Alonzo.TimelockScript (toAllegraTimelock script)
       SimpleScriptInBabbage -> Alonzo.TimelockScript (toAllegraTimelock script)
+      SimpleScriptInConway  -> Alonzo.TimelockScript (toAllegraTimelock script)
 
 toShelleyScript (ScriptInEra langInEra (PlutusScript PlutusScriptV1
                                          (PlutusScriptSerialised script))) =
     case langInEra of
       PlutusScriptV1InAlonzo  -> Alonzo.PlutusScript Alonzo.PlutusV1 script
       PlutusScriptV1InBabbage -> Alonzo.PlutusScript Alonzo.PlutusV1 script
+      PlutusScriptV1InConway  -> Alonzo.PlutusScript Alonzo.PlutusV1 script
 
 toShelleyScript (ScriptInEra langInEra (PlutusScript PlutusScriptV2
                                          (PlutusScriptSerialised script))) =
     case langInEra of
       PlutusScriptV2InBabbage -> Alonzo.PlutusScript Alonzo.PlutusV2 script
+      PlutusScriptV2InConway  -> Alonzo.PlutusScript Alonzo.PlutusV2 script
 
 fromShelleyBasedScript  :: ShelleyBasedEra era
                         -> Ledger.Script (ShelleyLedgerEra era)
@@ -1055,6 +1075,18 @@ fromShelleyBasedScript era script =
             . PlutusScript PlutusScriptV1 $ PlutusScriptSerialised s
         Alonzo.PlutusScript Alonzo.PlutusV2 s ->
           ScriptInEra PlutusScriptV2InBabbage
+            . PlutusScript PlutusScriptV2 $ PlutusScriptSerialised s
+
+    ShelleyBasedEraConway ->
+      case script of
+        Alonzo.TimelockScript s ->
+          ScriptInEra SimpleScriptInConway
+            . SimpleScript $ fromAllegraTimelock  s
+        Alonzo.PlutusScript Alonzo.PlutusV1 s ->
+          ScriptInEra PlutusScriptV1InConway
+            . PlutusScript PlutusScriptV1 $ PlutusScriptSerialised s
+        Alonzo.PlutusScript Alonzo.PlutusV2 s ->
+          ScriptInEra PlutusScriptV2InConway
             . PlutusScript PlutusScriptV2 $ PlutusScriptSerialised s
 
 
@@ -1280,6 +1312,7 @@ instance EraCast ReferenceScript where
 
 data ReferenceTxInsScriptsInlineDatumsSupportedInEra era where
     ReferenceTxInsScriptsInlineDatumsInBabbageEra :: ReferenceTxInsScriptsInlineDatumsSupportedInEra BabbageEra
+    ReferenceTxInsScriptsInlineDatumsInConwayEra :: ReferenceTxInsScriptsInlineDatumsSupportedInEra ConwayEra
 
 deriving instance Eq (ReferenceTxInsScriptsInlineDatumsSupportedInEra era)
 deriving instance Show (ReferenceTxInsScriptsInlineDatumsSupportedInEra era)
@@ -1292,6 +1325,7 @@ refInsScriptsAndInlineDatsSupportedInEra AllegraEra = Nothing
 refInsScriptsAndInlineDatsSupportedInEra MaryEra    = Nothing
 refInsScriptsAndInlineDatsSupportedInEra AlonzoEra  = Nothing
 refInsScriptsAndInlineDatsSupportedInEra BabbageEra = Just ReferenceTxInsScriptsInlineDatumsInBabbageEra
+refInsScriptsAndInlineDatsSupportedInEra ConwayEra  = Just ReferenceTxInsScriptsInlineDatumsInConwayEra
 
 refScriptToShelleyScript
   :: CardanoEra era

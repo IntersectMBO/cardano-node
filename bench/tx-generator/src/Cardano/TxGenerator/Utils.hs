@@ -21,7 +21,8 @@ liftAnyEra f x = case x of
   InAnyCardanoEra AllegraEra a ->   InAnyCardanoEra AllegraEra $ f a
   InAnyCardanoEra MaryEra a    ->   InAnyCardanoEra MaryEra $ f a
   InAnyCardanoEra AlonzoEra a  ->   InAnyCardanoEra AlonzoEra $ f a
-  InAnyCardanoEra BabbageEra a  ->  InAnyCardanoEra BabbageEra $ f a
+  InAnyCardanoEra BabbageEra a ->   InAnyCardanoEra BabbageEra $ f a
+  InAnyCardanoEra ConwayEra a  ->   InAnyCardanoEra ConwayEra $ f a
 
 keyAddress :: forall era. IsShelleyBasedEra era => NetworkId -> SigningKey PaymentKey -> AddressInEra era
 keyAddress networkId k
@@ -61,7 +62,7 @@ mkTxValidityUpperBound =
   TxValidityUpperBound (fromJust $ validityUpperBoundSupportedInEra (cardanoEra @era))
 
 mkTxOutValueAdaOnly :: forall era . IsShelleyBasedEra era => Lovelace -> TxOutValue era
-mkTxOutValueAdaOnly l = either 
+mkTxOutValueAdaOnly l = either
   (`TxOutAdaOnly` l)
   (\p -> TxOutValue p $ lovelaceToValue l)
   (multiAssetSupportedInEra (cardanoEra @era))

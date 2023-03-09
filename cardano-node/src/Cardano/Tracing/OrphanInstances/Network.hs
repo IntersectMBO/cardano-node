@@ -100,6 +100,7 @@ import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
 import           Ouroboros.Network.Server2 (ServerTrace (..))
 import qualified Ouroboros.Network.Server2 as Server
 import           Ouroboros.Network.Snocket (LocalAddress (..))
+import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (..),
                    SubscriberError (..), SubscriptionTrace (..), WithDomainName (..),
                    WithIPList (..))
@@ -744,14 +745,14 @@ instance ( ConvertTxId blk
     mconcat [ "kind" .= String "MsgBlock"
              , "agency" .= String (pack $ show stok)
              , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
-             , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+             , "blockSize" .= toJSON (getSizeInBytes $ estimateBlockSize (getHeader blk))
              ]
 
   toObject verb (AnyMessageAndAgency stok (MsgBlock blk)) =
     mconcat [ "kind" .= String "MsgBlock"
              , "agency" .= String (pack $ show stok)
              , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
-             , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+             , "blockSize" .= toJSON (getSizeInBytes $ estimateBlockSize (getHeader blk))
              , "txIds" .= toJSON (presentTx <$> extractTxs blk)
              ]
       where
@@ -1125,7 +1126,7 @@ instance (HasHeader header, ConvertRawHash header)
   toObject _verb (BlockFetch.CompletedBlockFetch pt _ _ _ delay blockSize) =
     mconcat [ "kind"  .= String "CompletedBlockFetch"
              , "delay" .= (realToFrac delay :: Double)
-             , "size"  .= blockSize
+             , "size"  .= getSizeInBytes blockSize
              , "block" .= String
                (case pt of
                   GenesisPoint -> "Genesis"
@@ -1369,6 +1370,9 @@ instance Show exception => ToObject (TraceLocalRootPeers RemoteAddress exception
     mconcat [ "kind" .= String "LocalRootError"
              , "domainAddress" .= toJSON d
              , "reason" .= show dexception
+             ]
+  toObject _verb (TraceLocalRootReconfigured _ _) =
+    mconcat [ "kind" .= String "LocalRootReconfigured"
              ]
 
 instance ToJSON IP where

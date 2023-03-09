@@ -75,6 +75,7 @@ library
                         Cardano.Node.Protocol.Alonzo
                         Cardano.Node.Protocol.Byron
                         Cardano.Node.Protocol.Cardano
+                        Cardano.Node.Protocol.Conway
                         Cardano.Node.Protocol.Shelley
                         Cardano.Node.Protocol.Types
                         Cardano.Node.Queries
@@ -136,10 +137,15 @@ library
                       , base16-bytestring
                       , bytestring
                       , cardano-api
-                      , cardano-data ^>= 0.1
+                      , cardano-data >= 0.1
                       , cardano-git-rev
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
+                      , cardano-ledger-core
+                      , cardano-ledger-byron
+                      , cardano-ledger-conway
+                      , cardano-ledger-shelley
+                      , cardano-ledger-shelley-ma
                       , cardano-ledger-alonzo
                       , cardano-ledger-babbage
                       , cardano-ledger-byron
@@ -147,9 +153,9 @@ library
                       , cardano-ledger-shelley
                       , cardano-ledger-shelley-ma
                       , cardano-prelude
-                      , cardano-protocol-tpraos ^>= 0.1
-                      , cardano-slotting ^>= 0.1
-                      , cborg ^>= 0.2.4
+                      , cardano-protocol-tpraos >= 0.1
+                      , cardano-slotting >= 0.1
+                      , cborg >= 0.2.4
                       , contra-tracer
                       , containers
                       , contra-tracer
@@ -161,7 +167,8 @@ library
                       , filepath
                       , generic-data
                       , hostname
-                      , io-classes ^>= 0.3
+                      , iproute
+                      , io-classes >= 0.3
                       , iohk-monitoring
                       , iproute
                       , lobemo-backend-aggregation
@@ -170,16 +177,19 @@ library
                       , lobemo-backend-trace-forwarder
                       , mtl
                       , network
-                      , network-mux ^>= 0.2
+                      , network-mux >= 0.2
                       , nothunks
                       , optparse-applicative-fork
-                      , ouroboros-consensus ^>= 0.1.0.2
+                      , ouroboros-consensus >= 0.2
                       , ouroboros-consensus-byron
                       , ouroboros-consensus-cardano
+                      , ouroboros-consensus-diffusion
                       , ouroboros-consensus-protocol
                       , ouroboros-consensus-shelley
-                      , ouroboros-network  ^>= 0.2
-                      , ouroboros-network-framework ^>= 0.2
+                      , ouroboros-network >= 0.3
+                      , ouroboros-network-api
+                      , ouroboros-network-framework >= 0.3
+                      , ouroboros-network-protocols
                       , psqueues
                       , safe-exceptions
                       , scientific
@@ -193,7 +203,7 @@ library
                       , trace-resources
                       , transformers
                       , transformers-except
-                      , typed-protocols ^>= 0.1
+                      , typed-protocols >= 0.1
                       , yaml
 
 executable cardano-node
@@ -229,14 +239,16 @@ test-suite cardano-node-test
                       , bytestring
                       , cardano-api
                       , cardano-node
-                      , cardano-slotting ^>= 0.1
+                      , cardano-slotting >= 0.1
                       , directory
                       , hedgehog
                       , hedgehog-corpus
                       , iproute
                       , mtl
                       , ouroboros-consensus
+                      , ouroboros-consensus-diffusion
                       , ouroboros-network
+                      , ouroboros-network-api
                       , mtl
                       , text
                       , time

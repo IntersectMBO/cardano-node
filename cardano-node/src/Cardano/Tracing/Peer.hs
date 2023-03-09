@@ -10,6 +10,8 @@ module Cardano.Tracing.Peer
   , tracePeers
   ) where
 
+import           Cardano.Node.Orphans ()
+
 import qualified Control.Concurrent.Class.MonadSTM.Strict as STM
 import           Control.DeepSeq (NFData (..))
 import           Data.Aeson (ToJSON (..), Value (..), toJSON, (.=))

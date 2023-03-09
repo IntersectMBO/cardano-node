@@ -909,6 +909,12 @@ genTxOutDatumHashTxContext era = case era of
                     , TxOutDatumInTx ScriptDataInBabbageEra <$> genHashableScriptData
                     , TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra <$> genHashableScriptData
                     ]
+    ConwayEra -> Gen.choice
+                    [ pure TxOutDatumNone
+                    , TxOutDatumHash ScriptDataInConwayEra <$> genHashScriptData
+                    , TxOutDatumInTx ScriptDataInConwayEra <$> genHashableScriptData
+                    , TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInConwayEra <$> genHashableScriptData
+                    ]
 
 genTxOutDatumHashUTxOContext :: CardanoEra era -> Gen (TxOutDatum CtxUTxO era)
 genTxOutDatumHashUTxOContext era = case era of
@@ -924,6 +930,11 @@ genTxOutDatumHashUTxOContext era = case era of
                     [ pure TxOutDatumNone
                     , TxOutDatumHash ScriptDataInBabbageEra <$> genHashScriptData
                     , TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra <$> genHashableScriptData
+                    ]
+    ConwayEra -> Gen.choice
+                    [ pure TxOutDatumNone
+                    , TxOutDatumHash ScriptDataInConwayEra <$> genHashScriptData
+                    , TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInConwayEra <$> genHashableScriptData
                     ]
 
 mkDummyHash :: forall h a. CRYPTO.HashAlgorithm h => Int -> CRYPTO.Hash h a

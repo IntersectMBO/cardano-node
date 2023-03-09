@@ -609,6 +609,7 @@ toConsensusQuery (QueryInEra erainmode (QueryInShelleyBasedEra era q)) =
       MaryEraInCardanoMode    -> toConsensusQueryShelleyBased erainmode q
       AlonzoEraInCardanoMode  -> toConsensusQueryShelleyBased erainmode q
       BabbageEraInCardanoMode -> toConsensusQueryShelleyBased erainmode q
+      ConwayEraInCardanoMode -> toConsensusQueryShelleyBased erainmode q
 
 
 toConsensusQueryShelleyBased
@@ -707,6 +708,7 @@ consensusQueryInEraInMode erainmode =
       MaryEraInCardanoMode    -> Consensus.QueryIfCurrentMary
       AlonzoEraInCardanoMode  -> Consensus.QueryIfCurrentAlonzo
       BabbageEraInCardanoMode -> Consensus.QueryIfCurrentBabbage
+      ConwayEraInCardanoMode -> Consensus.QueryIfCurrentConway
 
 -- ----------------------------------------------------------------------------
 -- Conversions of query results from the consensus types.
@@ -827,6 +829,16 @@ fromConsensusQueryResult (QueryInEra BabbageEraInCardanoMode
         -> bimap fromConsensusEraMismatch
                  (fromConsensusQueryResultShelleyBased
                     ShelleyBasedEraBabbage q q'')
+                 r'
+      _ -> fromConsensusQueryResultMismatch
+
+fromConsensusQueryResult (QueryInEra ConwayEraInCardanoMode
+                                     (QueryInShelleyBasedEra _era q)) q' r' =
+    case q' of
+      Consensus.BlockQuery (Consensus.QueryIfCurrentConway q'')
+        -> bimap fromConsensusEraMismatch
+                 (fromConsensusQueryResultShelleyBased
+                    ShelleyBasedEraConway q q'')
                  r'
       _ -> fromConsensusQueryResultMismatch
 

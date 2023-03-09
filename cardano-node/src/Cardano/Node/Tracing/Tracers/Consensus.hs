@@ -55,6 +55,7 @@ import           Ouroboros.Network.BlockFetch.Decision
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
+import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 import           Ouroboros.Network.TxSubmission.Inbound hiding (txId)
 import           Ouroboros.Network.TxSubmission.Outbound
 
@@ -66,7 +67,7 @@ import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent (..), LedgerUpd
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTxId, HasTxId,
                    LedgerSupportsMempool, txForgetValidated, txId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
-import           Ouroboros.Consensus.Mempool.API (MempoolSize (..), TraceEventMempool (..))
+import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
@@ -387,7 +388,7 @@ calculateBlockFetchClientMetrics cm@ClientMetrics {..} _lc
                                             , cmCdf3sVar  = cdf3sVar'
                                             , cmCdf5sVar  = cdf5sVar'
                                             , cmDelay     = realToFrac  forgeDelay
-                                            , cmBlockSize = blockSize
+                                            , cmBlockSize = getSizeInBytes blockSize
                                             , cmTraceIt   = True
                                             , cmSlotMap   = slotMap''}
                             else let
@@ -402,7 +403,7 @@ calculateBlockFetchClientMetrics cm@ClientMetrics {..} _lc
                                        , cmCdf3sVar  = cdf3sVar'
                                        , cmCdf5sVar  = cdf5sVar'
                                        , cmDelay     = realToFrac forgeDelay
-                                       , cmBlockSize = blockSize
+                                       , cmBlockSize = getSizeInBytes blockSize
                                        , cmTraceIt   = True
                                        , cmSlotMap   = slotMap'}
                                    else pure cm {
@@ -525,7 +526,7 @@ instance (HasHeader header, ConvertRawHash header) =>
     forMachine _dtal (BlockFetch.CompletedBlockFetch pt _ _ _ delay blockSize) =
       mconcat [ "kind"  .= String "CompletedBlockFetch"
               , "delay" .= (realToFrac delay :: Double)
-              , "size"  .= blockSize
+              , "size"  .= getSizeInBytes blockSize
               , "block" .= String
                 (case pt of
                   GenesisPoint -> "Genesis"
@@ -1166,7 +1167,7 @@ instance ( tx ~ GenTx blk
           (Proxy @blk)
           DDetailed
           (blockHash blk)
-      , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+      , "blockSize" .= toJSON (getSizeInBytes $ estimateBlockSize (getHeader blk))
       , "txIds" .= toJSON (map (show . txId . txForgetValidated) txs)
       ]
   forMachine dtal (TraceAdoptedBlock slotNo blk _txs) =
@@ -1177,7 +1178,7 @@ instance ( tx ~ GenTx blk
           (Proxy @blk)
           dtal
           (blockHash blk)
-      , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+      , "blockSize" .= toJSON (getSizeInBytes $ estimateBlockSize (getHeader blk))
       ]
 
   forHuman (TraceStartLeadershipCheck slotNo) =

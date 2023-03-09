@@ -72,12 +72,15 @@ golden_shelleyGenesisCreate = propertyOnce $ do
   H.moduleWorkspace "tmp" $ \tempDir -> do
     sourceGenesisSpecFile <- noteInputFile "test/data/golden/shelley/genesis/genesis.spec.json"
     sourceAlonzoGenesisSpecFile <- noteInputFile "test/data/golden/alonzo/genesis.alonzo.spec.json"
+    sourceConwayGenesisSpecFile <- noteInputFile "test/data/golden/conway/genesis.conway.spec.json"
 
     genesisSpecFile <- noteTempFile tempDir "genesis.spec.json"
     alonzoSpecFile <- noteTempFile tempDir "genesis.alonzo.spec.json"
+    conwaySpecFile <- noteTempFile tempDir "genesis.conway.spec.json"
 
     liftIO $ IO.copyFile sourceGenesisSpecFile genesisSpecFile
     liftIO $ IO.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
+    liftIO $ IO.copyFile sourceConwayGenesisSpecFile conwaySpecFile
 
     let genesisFile = tempDir <> "/genesis.json"
 
@@ -160,10 +163,12 @@ golden_shelleyGenesisCreate = propertyOnce $ do
     (utxoCount, fmtUtxoCount) <- fmap (OP.withSnd show) $ forAll $ G.int (R.linear 4 19)
 
     sourceAlonzoGenesisSpecFile <- noteInputFile "test/data/golden/alonzo/genesis.alonzo.spec.json"
-
     alonzoSpecFile <- noteTempFile tempDir "genesis.alonzo.spec.json"
-
     liftIO $ IO.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
+
+    sourceConwayGenesisSpecFile <- noteInputFile "test/data/golden/conway/genesis.conway.spec.json"
+    conwaySpecFile <- noteTempFile tempDir "genesis.conway.spec.json"
+    liftIO $ IO.copyFile sourceConwayGenesisSpecFile conwaySpecFile
 
     -- Create the genesis json file and required keys
     void $ execCardanoCLI

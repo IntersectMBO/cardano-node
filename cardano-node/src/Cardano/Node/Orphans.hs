@@ -16,6 +16,10 @@ import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Ledger.CompactAddress as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..))
+import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
+
+import           Text.Printf (PrintfArg (..))
+
 
 instance FromJSON TracingVerbosity where
   parseJSON (String str) = case str of
@@ -28,6 +32,9 @@ instance FromJSON TracingVerbosity where
                            <> "Encountered: " <> show invalid
 
 deriving instance Show TracingVerbosity
+
+instance PrintfArg SizeInBytes where
+    formatArg (SizeInBytes s) = formatArg s
 
 instance ToJSON (Ledger.CompactAddr StandardCrypto) where
   toJSON = toJSON . Ledger.decompactAddr

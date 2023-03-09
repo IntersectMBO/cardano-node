@@ -41,7 +41,8 @@ import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionData
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion,
                    simpleSingletonVersions)
-import           Ouroboros.Network.Snocket (Snocket, localAddressFromPath, localSnocket)
+import           Ouroboros.Network.Snocket (MakeBearer, Snocket, makeLocalBearer,
+                   localAddressFromPath, localSnocket)
 import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..),
                    SomeResponderApplication (..), cleanNetworkMutableState, connectToNode,
                    newNetworkMutableState, nullNetworkConnectTracers, nullNetworkServerTracers,
@@ -100,6 +101,7 @@ launchForwardersSimple' ts iomgr mode p connSize disconnSize = do
       doConnectToAcceptor
         ts
         (localSnocket iomgr)
+        makeLocalBearer
         (localAddressFromPath p)
         noTimeLimitsHandshake
         (ekgConfig, tfConfig, dpfConfig)
@@ -107,6 +109,7 @@ launchForwardersSimple' ts iomgr mode p connSize disconnSize = do
       doListenToAcceptor
         ts
         (localSnocket iomgr)
+        makeLocalBearer
         (localAddressFromPath p)
         noTimeLimitsHandshake
         (ekgConfig, tfConfig, dpfConfig)
@@ -139,6 +142,7 @@ launchForwardersSimple' ts iomgr mode p connSize disconnSize = do
 doConnectToAcceptor
   :: TestSetup Identity
   -> Snocket IO fd addr
+  -> MakeBearer IO fd
   -> addr
   -> ProtocolTimeLimits (Handshake ForwardingVersion Term)
   -> ( EKGF.ForwarderConfiguration
@@ -146,7 +150,7 @@ doConnectToAcceptor
      , DPF.ForwarderConfiguration
      )
   -> IO ()
-doConnectToAcceptor TestSetup{..} snocket address timeLimits (ekgConfig, tfConfig, dpfConfig) = do
+doConnectToAcceptor TestSetup{..} snocket muxBearer address timeLimits (ekgConfig, tfConfig, dpfConfig) = do
   store <- EKG.newStore
   EKG.registerGcMetrics store
   sink <- initForwardSink tfConfig
@@ -155,6 +159,7 @@ doConnectToAcceptor TestSetup{..} snocket address timeLimits (ekgConfig, tfConfi
   withAsync (traceObjectsWriter sink) $ \_ -> do
     connectToNode
       snocket
+      muxBearer
       mempty
       (codecHandshake forwardingVersionCodec)
       timeLimits
@@ -190,6 +195,7 @@ doListenToAcceptor
   :: Ord addr
   => TestSetup Identity
   -> Snocket IO fd addr
+  -> MakeBearer IO fd
   -> addr
   -> ProtocolTimeLimits (Handshake ForwardingVersion Term)
   -> ( EKGF.ForwarderConfiguration
@@ -198,7 +204,7 @@ doListenToAcceptor
      )
   -> IO ()
 doListenToAcceptor TestSetup{..}
-  snocket address timeLimits (ekgConfig, tfConfig, dpfConfig) = do
+  snocket muxBearer address timeLimits (ekgConfig, tfConfig, dpfConfig) = do
 
   store <- EKG.newStore
   EKG.registerGcMetrics store
@@ -210,6 +216,7 @@ doListenToAcceptor TestSetup{..}
     race_ (cleanNetworkMutableState networkState)
           $ withServerNode
               snocket
+              muxBearer
               mempty
               nullNetworkServerTracers
               networkState

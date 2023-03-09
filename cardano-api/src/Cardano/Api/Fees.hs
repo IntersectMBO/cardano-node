@@ -92,6 +92,7 @@ import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 
 import qualified Cardano.Ledger.Babbage as Babbage
 import           Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
+import qualified Cardano.Ledger.Conway as Conway
 
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
 
@@ -148,6 +149,7 @@ transactionFee txFeeFixed txFeePerByte tx =
   obtainHasField ShelleyBasedEraMary    f = f
   obtainHasField ShelleyBasedEraAlonzo  f = f
   obtainHasField ShelleyBasedEraBabbage f = f
+  obtainHasField ShelleyBasedEraConway  f = f
 
 {-# DEPRECATED transactionFee "Use 'evaluateTransactionFee' instead" #-}
 
@@ -276,6 +278,7 @@ evaluateTransactionFee pparams txbody keywitcount _byronwitcount =
     withLedgerConstraints ShelleyBasedEraMary    f = f
     withLedgerConstraints ShelleyBasedEraAlonzo  f = f
     withLedgerConstraints ShelleyBasedEraBabbage f = f
+    withLedgerConstraints ShelleyBasedEraConway  f = f
 
 -- | Give an approximate count of the number of key witnesses (i.e. signatures)
 -- a transaction will need.
@@ -525,6 +528,10 @@ evaluateTransactionExecutionUnits _eraInMode systemstart (LedgerEpochInfo ledger
             case collateralSupportedInEra $ shelleyBasedToCardanoEra era of
               Just supp -> obtainHasFieldConstraint supp $ evalBabbage era tx'
               Nothing -> return mempty
+          ShelleyBasedEraConway ->
+            case collateralSupportedInEra $ shelleyBasedToCardanoEra era of
+              Just supp -> obtainHasFieldConstraint supp $ evalConway era tx'
+              Nothing -> return mempty
   where
     -- Pre-Alonzo eras do not support languages with execution unit accounting.
     evalPreAlonzo :: Either TransactionValidityError
@@ -566,6 +573,28 @@ evaluateTransactionExecutionUnits _eraInMode systemstart (LedgerEpochInfo ledger
                          (Map ScriptWitnessIndex
                               (Either ScriptExecutionError ExecutionUnits))
     evalBabbage era tx = do
+      costModelsArray <- toAlonzoCostModelsArray (protocolParamCostModels pparams)
+      case Alonzo.evaluateTransactionExecutionUnits
+             (toLedgerPParams era pparams)
+             tx
+             (toLedgerUTxO era utxo)
+             ledgerEpochInfo
+             systemstart
+             costModelsArray
+        of Left err    -> Left (TransactionValidityTranslationError err)
+           Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
+
+    evalConway :: forall ledgerera.
+                  ShelleyLedgerEra era ~ ledgerera
+               => ledgerera ~ Conway.ConwayEra Ledger.StandardCrypto
+               => HasField "_maxTxExUnits" (Ledger.PParams ledgerera) Alonzo.ExUnits
+               => HasField"_protocolVersion" (Ledger.PParams ledgerera) Ledger.ProtVer
+               => ShelleyBasedEra era
+               -> Ledger.Tx ledgerera
+               -> Either TransactionValidityError
+                         (Map ScriptWitnessIndex
+                              (Either ScriptExecutionError ExecutionUnits))
+    evalConway era tx = do
       costModelsArray <- toAlonzoCostModelsArray (protocolParamCostModels pparams)
       case Alonzo.evaluateTransactionExecutionUnits
              (toLedgerPParams era pparams)
@@ -631,6 +660,7 @@ evaluateTransactionExecutionUnits _eraInMode systemstart (LedgerEpochInfo ledger
       -> (HasField "_maxTxExUnits" (Ledger.PParams ledgerera) Alonzo.ExUnits => a) ->  a
     obtainHasFieldConstraint CollateralInAlonzoEra f =  f
     obtainHasFieldConstraint CollateralInBabbageEra f =  f
+    obtainHasFieldConstraint CollateralInConwayEra f =  f
 
 
 -- ----------------------------------------------------------------------------
@@ -671,6 +701,7 @@ evaluateTransactionBalance pparams poolids utxo
     getShelleyEraTxBodyConstraint ShelleyBasedEraAllegra x = x
     getShelleyEraTxBodyConstraint ShelleyBasedEraAlonzo x = x
     getShelleyEraTxBodyConstraint ShelleyBasedEraBabbage x = x
+    getShelleyEraTxBodyConstraint ShelleyBasedEraConway x = x
 
     isNewPool :: Ledger.KeyHash Ledger.StakePool Ledger.StandardCrypto -> Bool
     isNewPool kh = StakePoolKeyHash kh `Set.notMember` poolids
@@ -727,6 +758,7 @@ evaluateTransactionBalance pparams poolids utxo
     withLedgerConstraints ShelleyBasedEraMary    _ f  = f MultiAssetInMaryEra
     withLedgerConstraints ShelleyBasedEraAlonzo  _ f  = f MultiAssetInAlonzoEra
     withLedgerConstraints ShelleyBasedEraBabbage _ f = f MultiAssetInBabbageEra
+    withLedgerConstraints ShelleyBasedEraConway _ f = f MultiAssetInConwayEra
 
 type LedgerEraConstraints ledgerera =
        ( Ledger.Era.Crypto ledgerera ~ Ledger.StandardCrypto
@@ -1340,6 +1372,12 @@ calculateMinimumUTxO era txout@(TxOut _ v _ _) pparams' =
     ShelleyBasedEraBabbage ->
       let lTxOut = toShelleyTxOutAny era txout
           babPParams = toBabbagePParams pparams'
+          minUTxO = Shelley.evaluateMinLovelaceOutput babPParams lTxOut
+          val = fromShelleyLovelace minUTxO
+      in Right val
+    ShelleyBasedEraConway ->
+      let lTxOut = toShelleyTxOutAny era txout
+          babPParams = toConwayPParams pparams'
           minUTxO = Shelley.evaluateMinLovelaceOutput babPParams lTxOut
           val = fromShelleyLovelace minUTxO
       in Right val

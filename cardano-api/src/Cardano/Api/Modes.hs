@@ -154,7 +154,8 @@ data EraInMode era mode where
      AllegraEraInCardanoMode :: EraInMode AllegraEra CardanoMode
      MaryEraInCardanoMode    :: EraInMode MaryEra    CardanoMode
      AlonzoEraInCardanoMode  :: EraInMode AlonzoEra  CardanoMode
-     BabbageEraInCardanoMode :: EraInMode BabbageEra  CardanoMode
+     BabbageEraInCardanoMode :: EraInMode BabbageEra CardanoMode
+     ConwayEraInCardanoMode  :: EraInMode ConwayEra  CardanoMode
 
 deriving instance Show (EraInMode era mode)
 
@@ -216,6 +217,13 @@ instance FromJSON (EraInMode BabbageEra CardanoMode) where
                          "parsing 'EraInMode Babbage CardanoMode' failed, "
                          invalid
 
+instance FromJSON (EraInMode ConwayEra CardanoMode) where
+  parseJSON "ConwayEraInCardanoMode" = pure ConwayEraInCardanoMode
+  parseJSON invalid =
+      invalidJSONFailure "ConwayEraInCardanoMode"
+                         "parsing 'EraInMode Conway CardanoMode' failed, "
+                         invalid
+
 invalidJSONFailure :: String -> String -> Value -> Parser a
 invalidJSONFailure expectedType errorMsg invalidValue =
     prependFailure errorMsg
@@ -230,6 +238,7 @@ instance ToJSON (EraInMode era mode) where
   toJSON MaryEraInCardanoMode = "MaryEraInCardanoMode"
   toJSON AlonzoEraInCardanoMode = "AlonzoEraInCardanoMode"
   toJSON BabbageEraInCardanoMode = "BabbageEraInCardanoMode"
+  toJSON ConwayEraInCardanoMode = "ConwayEraInCardanoMode"
 
 eraInModeToEra :: EraInMode era mode -> CardanoEra era
 eraInModeToEra ByronEraInByronMode     = ByronEra
@@ -240,6 +249,7 @@ eraInModeToEra AllegraEraInCardanoMode = AllegraEra
 eraInModeToEra MaryEraInCardanoMode    = MaryEra
 eraInModeToEra AlonzoEraInCardanoMode  = AlonzoEra
 eraInModeToEra BabbageEraInCardanoMode = BabbageEra
+eraInModeToEra ConwayEraInCardanoMode  = ConwayEra
 
 
 data AnyEraInMode mode where
@@ -259,6 +269,7 @@ anyEraInModeToAnyEra (AnyEraInMode erainmode) =
     MaryEraInCardanoMode    -> AnyCardanoEra MaryEra
     AlonzoEraInCardanoMode  -> AnyCardanoEra AlonzoEra
     BabbageEraInCardanoMode -> AnyCardanoEra BabbageEra
+    ConwayEraInCardanoMode  -> AnyCardanoEra ConwayEra
 
 
 -- | The consensus-mode-specific parameters needed to connect to a local node
@@ -307,6 +318,7 @@ type family ConsensusBlockForEra era where
   ConsensusBlockForEra MaryEra    = Consensus.StandardMaryBlock
   ConsensusBlockForEra AlonzoEra  = Consensus.StandardAlonzoBlock
   ConsensusBlockForEra BabbageEra = Consensus.StandardBabbageBlock
+  ConsensusBlockForEra ConwayEra = Consensus.StandardConwayBlock
 
 type family ConsensusCryptoForBlock block where
   ConsensusCryptoForBlock Consensus.ByronBlockHFC = StandardCrypto
@@ -319,7 +331,7 @@ type family ConsensusProtocol era where
   ConsensusProtocol MaryEra = Consensus.TPraos StandardCrypto
   ConsensusProtocol AlonzoEra = Consensus.TPraos StandardCrypto
   ConsensusProtocol BabbageEra = Consensus.Praos StandardCrypto
-
+  ConsensusProtocol ConwayEra = Consensus.Praos StandardCrypto
 
 type family ChainDepStateProtocol era where
   ChainDepStateProtocol ShelleyEra = Consensus.TPraosState StandardCrypto
@@ -327,6 +339,7 @@ type family ChainDepStateProtocol era where
   ChainDepStateProtocol MaryEra = Consensus.TPraosState StandardCrypto
   ChainDepStateProtocol AlonzoEra = Consensus.TPraosState StandardCrypto
   ChainDepStateProtocol BabbageEra = Consensus.PraosState StandardCrypto
+  ChainDepStateProtocol ConwayEra = Consensus.PraosState StandardCrypto
 
 eraIndex0 :: Consensus.EraIndex (x0 : xs)
 eraIndex0 = Consensus.eraIndexZero
@@ -346,6 +359,9 @@ eraIndex4 = eraIndexSucc eraIndex3
 eraIndex5 :: Consensus.EraIndex (x5 : x4 : x3 : x2 : x1 : x0 : xs)
 eraIndex5 = eraIndexSucc eraIndex4
 
+eraIndex6 :: Consensus.EraIndex (x6 : x5 : x4 : x3 : x2 : x1 : x0 : xs)
+eraIndex6 = eraIndexSucc eraIndex5
+
 toConsensusEraIndex :: ConsensusBlockForMode mode ~ Consensus.HardForkBlock xs
                     => EraInMode era mode
                     -> Consensus.EraIndex xs
@@ -358,6 +374,7 @@ toConsensusEraIndex AllegraEraInCardanoMode = eraIndex2
 toConsensusEraIndex MaryEraInCardanoMode    = eraIndex3
 toConsensusEraIndex AlonzoEraInCardanoMode  = eraIndex4
 toConsensusEraIndex BabbageEraInCardanoMode = eraIndex5
+toConsensusEraIndex ConwayEraInCardanoMode  = eraIndex6
 
 
 fromConsensusEraIndex :: ConsensusBlockForMode mode ~ Consensus.HardForkBlock xs
@@ -402,4 +419,7 @@ fromConsensusEraIndex CardanoMode = fromShelleyEraIndex
 
     fromShelleyEraIndex (Consensus.EraIndex (S (S (S (S (S (Z (K ())))))))) =
       AnyEraInMode BabbageEraInCardanoMode
+
+    fromShelleyEraIndex (Consensus.EraIndex (S (S (S (S (S (S (Z (K ()))))))))) =
+      AnyEraInMode ConwayEraInCardanoMode
 

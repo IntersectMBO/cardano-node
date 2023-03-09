@@ -85,6 +85,7 @@ $CARDANO_CLI byron genesis genesis \
 
 
 cp scripts/babbage/alonzo-babbage-test-genesis.json "${ROOT}/genesis.alonzo.spec.json"
+cp scripts/babbage/conway-babbage-test-genesis.json "${ROOT}/genesis.conway.spec.json"
 
 cp configuration/defaults/byron-mainnet/configuration.yaml "${ROOT}/"
 $SED -i "${ROOT}/configuration.yaml" \
@@ -94,6 +95,7 @@ $SED -i "${ROOT}/configuration.yaml" \
      -e 's|GenesisFile: genesis.json|ByronGenesisFile: genesis/byron/genesis.json|' \
      -e '/ByronGenesisFile/ aShelleyGenesisFile: genesis/shelley/genesis.json' \
      -e '/ByronGenesisFile/ aAlonzoGenesisFile: genesis/shelley/genesis.alonzo.json' \
+     -e '/ByronGenesisFile/ aConwayGenesisFile: genesis/shelley/genesis.conway.json' \
      -e 's/RequiresNoMagic/RequiresMagic/' \
      -e 's/LastKnownBlockVersion-Major: 0/LastKnownBlockVersion-Major: 6/' \
      -e 's/LastKnownBlockVersion-Minor: 2/LastKnownBlockVersion-Minor: 0/'
@@ -103,6 +105,7 @@ $SED -i "${ROOT}/configuration.yaml" \
   echo "TestMaryHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
   echo "TestAlonzoHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
   echo "TestBabbageHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
+  echo "TestConwayHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
   echo "TestEnableDevelopmentNetworkProtocols: True" >> "${ROOT}/configuration.yaml"
 
 # Copy the cost mode
@@ -134,6 +137,7 @@ mkdir -p "${ROOT}/genesis/shelley"
 
 mv "${ROOT}/byron-gen-command/genesis.json" "${ROOT}/genesis/byron/genesis-wrong.json"
 mv "${ROOT}/genesis.alonzo.json" "${ROOT}/genesis/shelley/genesis.alonzo.json"
+mv "${ROOT}/genesis.conway.json" "${ROOT}/genesis/shelley/genesis.conway.json"
 mv "${ROOT}/genesis.json" "${ROOT}/genesis/shelley/genesis.json"
 
 jq --raw-output '.protocolConsts.protocolMagic = 42' "${ROOT}/genesis/byron/genesis-wrong.json" > "${ROOT}/genesis/byron/genesis.json"

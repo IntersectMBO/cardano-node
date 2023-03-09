@@ -6,7 +6,8 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-{-# OPTIONS_GHC -Wno-orphans  #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Node.Tracing.Tracers.ChainDB
    ( withAddedToCurrentChainEmptyLimited
@@ -41,9 +42,8 @@ import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.ImmutableDB as ImmDB
 import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (chunkNoToInt)
 import qualified Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types as ImmDB
-import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
-import           Ouroboros.Consensus.Storage.LedgerDB.Types (UpdateLedgerDbTraceEvent (..))
-import qualified Ouroboros.Consensus.Storage.LedgerDB.Types as LedgerDB
+import           Ouroboros.Consensus.Storage.LedgerDB (UpdateLedgerDbTraceEvent (..))
+import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import qualified Ouroboros.Consensus.Storage.VolatileDB as VolDB
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Consensus.Util.Enclose
@@ -88,10 +88,11 @@ instance (  LogFormatting (Header blk)
   forHuman (ChainDB.TraceInitChainSelEvent v)      = forHuman v
   forHuman (ChainDB.TraceOpenEvent v)              = forHuman v
   forHuman (ChainDB.TraceIteratorEvent v)          = forHuman v
-  forHuman (ChainDB.TraceLedgerEvent v)            = forHuman v
+  forHuman (ChainDB.TraceSnapshotEvent v)          = forHuman v
   forHuman (ChainDB.TraceLedgerReplayEvent v)      = forHuman v
   forHuman (ChainDB.TraceImmutableDBEvent v)       = forHuman v
   forHuman (ChainDB.TraceVolatileDBEvent v)        = forHuman v
+  forHuman (ChainDB.TraceLedgerEvent v)            = forHuman v
 
   forMachine details (ChainDB.TraceAddBlockEvent v) =
     forMachine details v
@@ -107,13 +108,15 @@ instance (  LogFormatting (Header blk)
     forMachine details v
   forMachine details (ChainDB.TraceIteratorEvent v) =
     forMachine details v
-  forMachine details (ChainDB.TraceLedgerEvent v) =
+  forMachine details (ChainDB.TraceSnapshotEvent v) =
     forMachine details v
   forMachine details (ChainDB.TraceLedgerReplayEvent v) =
     forMachine details v
   forMachine details (ChainDB.TraceImmutableDBEvent v) =
     forMachine details v
   forMachine details (ChainDB.TraceVolatileDBEvent v) =
+    forMachine details v
+  forMachine details (ChainDB.TraceLedgerEvent v) =
     forMachine details v
 
   asMetrics (ChainDB.TraceAddBlockEvent v)          = asMetrics v
@@ -123,10 +126,11 @@ instance (  LogFormatting (Header blk)
   asMetrics (ChainDB.TraceInitChainSelEvent v)      = asMetrics v
   asMetrics (ChainDB.TraceOpenEvent v)              = asMetrics v
   asMetrics (ChainDB.TraceIteratorEvent v)          = asMetrics v
-  asMetrics (ChainDB.TraceLedgerEvent v)            = asMetrics v
+  asMetrics (ChainDB.TraceSnapshotEvent v)          = asMetrics v
   asMetrics (ChainDB.TraceLedgerReplayEvent v)      = asMetrics v
   asMetrics (ChainDB.TraceImmutableDBEvent v)       = asMetrics v
   asMetrics (ChainDB.TraceVolatileDBEvent v)        = asMetrics v
+  asMetrics (ChainDB.TraceLedgerEvent v)            = asMetrics v
 
 
 instance MetaTrace  (ChainDB.TraceEvent blk) where
@@ -144,7 +148,7 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     nsPrependInner "OpenEvent" (namespaceFor ev)
   namespaceFor (ChainDB.TraceIteratorEvent ev) =
     nsPrependInner "IteratorEvent" (namespaceFor ev)
-  namespaceFor (ChainDB.TraceLedgerEvent ev) =
+  namespaceFor (ChainDB.TraceSnapshotEvent ev) =
     nsPrependInner "LedgerEvent" (namespaceFor ev)
   namespaceFor (ChainDB.TraceLedgerReplayEvent ev) =
      nsPrependInner "LedgerReplay" (namespaceFor ev)
@@ -152,6 +156,8 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     nsPrependInner "ImmDbEvent" (namespaceFor ev)
   namespaceFor (ChainDB.TraceVolatileDBEvent ev) =
      nsPrependInner "VolatileDbEvent" (namespaceFor ev)
+  namespaceFor (ChainDB.TraceLedgerEvent ev) =
+     nsPrependInner "TraceLedgerEvent" (namespaceFor ev)
 
   severityFor (Namespace out ("AddBlockEvent" : tl)) (Just (ChainDB.TraceAddBlockEvent ev')) =
     severityFor (Namespace out tl) (Just ev')
@@ -181,10 +187,10 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     severityFor (Namespace out tl) (Just ev')
   severityFor (Namespace out ("IteratorEvent" : tl)) Nothing =
     severityFor (Namespace out tl :: Namespace (ChainDB.TraceIteratorEvent blk)) Nothing
-  severityFor (Namespace out ("LedgerEvent" : tl)) (Just (ChainDB.TraceLedgerEvent ev')) =
+  severityFor (Namespace out ("LedgerEvent" : tl)) (Just (ChainDB.TraceSnapshotEvent ev')) =
     severityFor (Namespace out tl) (Just ev')
   severityFor (Namespace out ("LedgerEvent" : tl)) Nothing =
-    severityFor (Namespace out tl :: Namespace (LedgerDB.TraceEvent blk)) Nothing
+    severityFor (Namespace out tl :: Namespace (LedgerDB.TraceSnapshotEvent blk)) Nothing
   severityFor (Namespace out ("LedgerReplay" : tl)) (Just (ChainDB.TraceLedgerReplayEvent ev')) =
     severityFor (Namespace out tl) (Just ev')
   severityFor (Namespace out ("LedgerReplay" : tl)) Nothing =
@@ -227,10 +233,10 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     privacyFor (Namespace out tl) (Just ev')
   privacyFor (Namespace out ("IteratorEvent" : tl)) Nothing =
     privacyFor (Namespace out tl :: Namespace (ChainDB.TraceIteratorEvent blk)) Nothing
-  privacyFor (Namespace out ("LedgerEvent" : tl)) (Just (ChainDB.TraceLedgerEvent ev')) =
+  privacyFor (Namespace out ("LedgerEvent" : tl)) (Just (ChainDB.TraceSnapshotEvent ev')) =
     privacyFor (Namespace out tl) (Just ev')
   privacyFor (Namespace out ("LedgerEvent" : tl)) Nothing =
-    privacyFor (Namespace out tl :: Namespace (LedgerDB.TraceEvent blk)) Nothing
+    privacyFor (Namespace out tl :: Namespace (LedgerDB.TraceSnapshotEvent blk)) Nothing
   privacyFor (Namespace out ("LedgerReplay" : tl)) (Just (ChainDB.TraceLedgerReplayEvent ev')) =
     privacyFor (Namespace out tl) (Just ev')
   privacyFor (Namespace out ("LedgerReplay" : tl)) Nothing =
@@ -273,7 +279,7 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     detailsFor (Namespace out tl) (Just ev')
   detailsFor (Namespace out ("IteratorEvent" : tl)) Nothing =
     detailsFor (Namespace out tl :: Namespace (ChainDB.TraceIteratorEvent blk)) Nothing
-  detailsFor (Namespace out ("LedgerEvent" : tl)) (Just (ChainDB.TraceLedgerEvent ev')) =
+  detailsFor (Namespace out ("LedgerEvent" : tl)) (Just (ChainDB.TraceSnapshotEvent ev')) =
     detailsFor (Namespace out tl) (Just ev')
   detailsFor (Namespace out ("LedgerEvent" : tl)) Nothing =
     detailsFor (Namespace out tl :: Namespace (LedgerDB.TraceReplayEvent blk)) Nothing
@@ -306,7 +312,7 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
   metricsDocFor (Namespace out ("IteratorEvent" : tl)) =
     metricsDocFor (Namespace out tl :: Namespace (ChainDB.TraceIteratorEvent blk))
   metricsDocFor (Namespace out ("LedgerEvent" : tl)) =
-    metricsDocFor (Namespace out tl :: Namespace (LedgerDB.TraceEvent blk))
+    metricsDocFor (Namespace out tl :: Namespace (LedgerDB.TraceSnapshotEvent blk))
   metricsDocFor (Namespace out ("LedgerReplay" : tl)) =
     metricsDocFor (Namespace out tl :: Namespace (LedgerDB.TraceReplayEvent blk))
   metricsDocFor (Namespace out ("ImmDbEvent" : tl)) =
@@ -330,7 +336,7 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
   documentFor (Namespace out ("IteratorEvent" : tl)) =
     documentFor (Namespace out tl :: Namespace (ChainDB.TraceIteratorEvent blk))
   documentFor (Namespace out ("LedgerEvent" : tl)) =
-    documentFor (Namespace out tl :: Namespace (LedgerDB.TraceEvent blk))
+    documentFor (Namespace out tl :: Namespace (LedgerDB.TraceSnapshotEvent blk))
   documentFor (Namespace out ("LedgerReplay" : tl)) =
     documentFor (Namespace out tl :: Namespace (LedgerDB.TraceReplayEvent blk))
   documentFor (Namespace out ("ImmDbEvent" : tl)) =
@@ -355,7 +361,7 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
           ++ map  (nsPrependInner "IteratorEvent")
                   (allNamespaces :: [Namespace (ChainDB.TraceIteratorEvent blk)])
           ++ map  (nsPrependInner "LedgerEvent")
-                  (allNamespaces :: [Namespace (LedgerDB.TraceEvent blk)])
+                  (allNamespaces :: [Namespace (LedgerDB.TraceSnapshotEvent blk)])
           ++ map  (nsPrependInner "LedgerReplay")
                   (allNamespaces :: [Namespace (LedgerDB.TraceReplayEvent blk)])
           ++ map  (nsPrependInner "ImmDbEvent")
@@ -1433,12 +1439,12 @@ instance MetaTrace (ChainDB.UnknownRange blk) where
       ]
 
 -- --------------------------------------------------------------------------------
--- -- LedgerDB.TraceEvent
+-- -- LedgerDB.TraceSnapshotEvent
 -- --------------------------------------------------------------------------------
 
 instance ( StandardHash blk
          , ConvertRawHash blk)
-         => LogFormatting (LedgerDB.TraceEvent blk) where
+         => LogFormatting (LedgerDB.TraceSnapshotEvent blk) where
   forHuman (LedgerDB.TookSnapshot snap pt) =
       "Took ledger snapshot " <> showT snap <>
         " at " <> renderRealPointAsPhrase pt
@@ -1459,7 +1465,7 @@ instance ( StandardHash blk
              , "snapshot" .= forMachine dtals snap
              , "failure" .= show failure ]
 
-instance MetaTrace (LedgerDB.TraceEvent blk) where
+instance MetaTrace (LedgerDB.TraceSnapshotEvent blk) where
     namespaceFor LedgerDB.TookSnapshot {} = Namespace [] ["TookSnapshot"]
     namespaceFor LedgerDB.DeletedSnapshot {} = Namespace [] ["DeletedSnapshot"]
     namespaceFor LedgerDB.InvalidSnapshot {} = Namespace [] ["InvalidSnapshot"]

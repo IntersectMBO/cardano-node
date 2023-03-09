@@ -437,7 +437,7 @@ renderTextViewCmd (TextViewInfo _ _) = "text-view decode-cbor"
 
 data GenesisCmd
   = GenesisCreate GenesisDir Word Word (Maybe SystemStart) (Maybe Lovelace) NetworkId
-  | GenesisCreateCardano GenesisDir Word Word (Maybe SystemStart) (Maybe Lovelace) BlockCount Word Rational NetworkId FilePath FilePath FilePath (Maybe FilePath)
+  | GenesisCreateCardano GenesisDir Word Word (Maybe SystemStart) (Maybe Lovelace) BlockCount Word Rational NetworkId FilePath FilePath FilePath FilePath (Maybe FilePath)
   | GenesisCreateStaked
       GenesisDir
       Word

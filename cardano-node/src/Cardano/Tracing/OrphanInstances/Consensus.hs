@@ -12,7 +12,8 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-{-# OPTIONS_GHC -Wno-orphans  #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Tracing.OrphanInstances.Consensus () where
 
@@ -51,7 +52,7 @@ import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger, LedgerEvent 
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxId,
                    LedgerSupportsMempool, TxId, txForgetValidated, txId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
-import           Ouroboros.Consensus.Mempool.API (MempoolSize (..), TraceEventMempool (..))
+import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent (..))
@@ -67,8 +68,8 @@ import qualified Ouroboros.Consensus.Protocol.BFT as BFT
 import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
 import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (ChunkNo (..),
                    chunkNoToInt)
-import           Ouroboros.Consensus.Storage.LedgerDB.Types
-import qualified Ouroboros.Consensus.Storage.LedgerDB.Types as LedgerDB
+import           Ouroboros.Consensus.Storage.LedgerDB (PushGoal (..), Pushing (..), PushStart (..))
+import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import qualified Ouroboros.Consensus.Storage.VolatileDB.Impl as VolDb
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 
@@ -80,13 +81,13 @@ import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), SlotNo (..), StandardHash,
                    Tip (..), blockHash, pointSlot, tipFromHeader)
 import           Ouroboros.Network.Point (withOrigin)
+import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 -- TODO: 'TraceCacheEvent' should be exported by the 'Impl' module
 import           Data.Function (on)
 import qualified Ouroboros.Consensus.Storage.ImmutableDB.API as ImmDB
 import qualified Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types as ImmDB
-import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
 
 
 {- HLINT ignore "Use const" -}
@@ -119,6 +120,7 @@ instance ConvertRawHash blk => ConvertRawHash (Header blk) where
 
 instance HasPrivacyAnnotation (ChainDB.TraceEvent blk)
 instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
+  getSeverityAnnotation (ChainDB.TraceLedgerEvent _ev) = Debug
   getSeverityAnnotation (ChainDB.TraceAddBlockEvent ev) = case ev of
     ChainDB.IgnoreBlockOlderThanK {} -> Info
     ChainDB.IgnoreBlockAlreadyInVolatileDB {} -> Info
@@ -149,7 +151,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     LedgerDB.ReplayFromSnapshot {} -> Info
     LedgerDB.ReplayedBlock {} -> Info
 
-  getSeverityAnnotation (ChainDB.TraceLedgerEvent ev) = case ev of
+  getSeverityAnnotation (ChainDB.TraceSnapshotEvent ev) = case ev of
     LedgerDB.TookSnapshot {} -> Info
     LedgerDB.DeletedSnapshot {} -> Debug
     LedgerDB.InvalidSnapshot {} -> Error
@@ -464,6 +466,7 @@ instance ( ConvertRawHash blk
          , InspectLedger blk)
       => HasTextFormatter (ChainDB.TraceEvent blk) where
     formatText tev _obj = case tev of
+      ChainDB.TraceLedgerEvent _ev -> "TraceLedgerEvent"
       ChainDB.TraceAddBlockEvent ev -> case ev of
         ChainDB.IgnoreBlockOlderThanK pt ->
           "Ignoring block older than K: " <> renderRealPointAsPhrase pt
@@ -512,7 +515,7 @@ instance ( ConvertRawHash blk
             "Candidate contains blocks from future exceeding clock skew limit: " <>
             renderPointAsPhrase (AF.headPoint c) <> ", slots " <>
             Text.intercalate ", " (map (renderPoint . headerPoint) hdrs)
-          ChainDB.UpdateLedgerDbTraceEvent (LedgerDB.StartedPushingBlockToTheLedgerDb  (LedgerDB.PushStart start) (LedgerDB.PushGoal goal) (LedgerDB.Pushing curr)) ->
+          ChainDB.UpdateLedgerDbTraceEvent (LedgerDB.StartedPushingBlockToTheLedgerDb  (PushStart start) (PushGoal goal) (Pushing curr)) ->
             let fromSlot = unSlotNo $ realPointSlot start
                 atSlot   = unSlotNo $ realPointSlot curr
                 atDiff   = atSlot - fromSlot
@@ -553,7 +556,7 @@ instance ( ConvertRawHash blk
           <> ". Progress: "
           <> showProgressT (fromIntegral atDiff) (fromIntegral toDiff)
           <> "%"
-      ChainDB.TraceLedgerEvent ev -> case ev of
+      ChainDB.TraceSnapshotEvent ev -> case ev of
         LedgerDB.InvalidSnapshot snap failure ->
           "Invalid snapshot " <> showT snap <> showT failure
         LedgerDB.TookSnapshot snap pt ->
@@ -600,7 +603,7 @@ instance ( ConvertRawHash blk
           ChainDB.ValidCandidate af     -> "Valid candidate at tip " <> renderPointAsPhrase (AF.lastPoint af)
           ChainDB.CandidateContainsFutureBlocks {} -> "Found a candidate containing future blocks during Initial chain selection, truncating the candidate and retrying to select a best candidate."
           ChainDB.CandidateContainsFutureBlocksExceedingClockSkew {} -> "Found a candidate containing future blocks exceeding clock skew during Initial chain selection, truncating the candidate and retrying to select a best candidate."
-          ChainDB.UpdateLedgerDbTraceEvent (LedgerDB.StartedPushingBlockToTheLedgerDb (LedgerDB.PushStart start) (LedgerDB.PushGoal goal) (LedgerDB.Pushing curr)) ->
+          ChainDB.UpdateLedgerDbTraceEvent (LedgerDB.StartedPushingBlockToTheLedgerDb (PushStart start) (PushGoal goal) (Pushing curr)) ->
             let fromSlot = unSlotNo $ realPointSlot start
                 atSlot   = unSlotNo $ realPointSlot curr
                 atDiff   = atSlot - fromSlot
@@ -926,7 +929,7 @@ instance ( ConvertRawHash blk
         mconcat [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.CandidateContainsFutureBlocksExceedingClockSkew"
                  , "block"   .= renderPointForVerbosity verb (AF.headPoint c)
                  , "headers" .= map (renderPointForVerbosity verb . headerPoint) hdrs ]
-      ChainDB.UpdateLedgerDbTraceEvent (LedgerDB.StartedPushingBlockToTheLedgerDb (LedgerDB.PushStart start) (LedgerDB.PushGoal goal) (LedgerDB.Pushing curr)) ->
+      ChainDB.UpdateLedgerDbTraceEvent (LedgerDB.StartedPushingBlockToTheLedgerDb (PushStart start) (PushGoal goal) (Pushing curr)) ->
         mconcat [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.UpdateLedgerDb"
                  , "startingBlock" .= renderRealPoint start
                  , "currentBlock" .= renderRealPoint curr
@@ -954,6 +957,7 @@ instance ( ConvertRawHash blk
         mconcat [ "kind" .= String "TraceAddBlockEvent.PipeliningEvent.OutdatedTentativeHeader"
                  , "block" .= renderPointForVerbosity verb (blockPoint hdr)
                  ]
+
    where
      addedHdrsNewChain
        :: AF.AnchoredFragment (Header blk)
@@ -966,6 +970,10 @@ instance ( ConvertRawHash blk
          Nothing -> [] -- No sense to do validation here.
      chainLengthΔ :: AF.AnchoredFragment (Header blk) -> AF.AnchoredFragment (Header blk) -> Int
      chainLengthΔ = on (-) (fromWithOrigin (-1) . fmap (fromIntegral . unBlockNo) . AF.headBlockNo)
+
+  toObject _verb (ChainDB.TraceLedgerEvent _ev) =
+      mconcat [ "kind" .= String "TraceLedgerEvent" ]
+
   toObject MinimalVerbosity (ChainDB.TraceLedgerReplayEvent _ev) = mempty -- no output
   toObject verb (ChainDB.TraceLedgerReplayEvent ev) = case ev of
     LedgerDB.ReplayFromGenesis _replayTo ->
@@ -979,17 +987,17 @@ instance ( ConvertRawHash blk
                , "slot" .= unSlotNo (realPointSlot pt)
                , "tip"  .= withOrigin 0 unSlotNo (pointSlot replayTo) ]
 
-  toObject MinimalVerbosity (ChainDB.TraceLedgerEvent _ev) = mempty -- no output
-  toObject verb (ChainDB.TraceLedgerEvent ev) = case ev of
+  toObject MinimalVerbosity (ChainDB.TraceSnapshotEvent _ev) = mempty -- no output
+  toObject verb (ChainDB.TraceSnapshotEvent ev) = case ev of
     LedgerDB.TookSnapshot snap pt ->
-      mconcat [ "kind" .= String "TraceLedgerEvent.TookSnapshot"
+      mconcat [ "kind" .= String "TraceSnapshotEvent.TookSnapshot"
                , "snapshot" .= toObject verb snap
                , "tip" .= show pt ]
     LedgerDB.DeletedSnapshot snap ->
-      mconcat [ "kind" .= String "TraceLedgerEvent.DeletedSnapshot"
+      mconcat [ "kind" .= String "TraceSnapshotEvent.DeletedSnapshot"
                , "snapshot" .= toObject verb snap ]
     LedgerDB.InvalidSnapshot snap failure ->
-      mconcat [ "kind" .= String "TraceLedgerEvent.InvalidSnapshot"
+      mconcat [ "kind" .= String "TraceSnapshotEvent.InvalidSnapshot"
                , "snapshot" .= toObject verb snap
                , "failure" .= show failure ]
 
@@ -1066,7 +1074,7 @@ instance ( ConvertRawHash blk
                  , "block"   .= renderPointForVerbosity verb (AF.headPoint c)
                  , "headers" .= map (renderPointForVerbosity verb . headerPoint) hdrs ]
       ChainDB.UpdateLedgerDbTraceEvent
-        (StartedPushingBlockToTheLedgerDb (PushStart start) (PushGoal goal) (Pushing curr) ) ->
+        (LedgerDB.StartedPushingBlockToTheLedgerDb (PushStart start) (PushGoal goal) (Pushing curr) ) ->
           mconcat [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.UpdateLedgerDbTraceEvent.StartedPushingBlockToTheLedgerDb"
                    , "startingBlock" .= renderRealPoint start
                    , "currentBlock" .= renderRealPoint curr
@@ -1449,7 +1457,7 @@ instance ( RunNode blk
           (Proxy @blk)
           MaximalVerbosity
           (blockHash blk)
-      , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+      , "blockSize" .= toJSON (getSizeInBytes $ estimateBlockSize (getHeader blk))
       , "txIds" .= toJSON (map (show . txId . txForgetValidated) txs)
       ]
   toObject verb (TraceAdoptedBlock slotNo blk _txs) =
@@ -1460,7 +1468,7 @@ instance ( RunNode blk
           (Proxy @blk)
           verb
           (blockHash blk)
-      , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+      , "blockSize" .= toJSON (getSizeInBytes $ estimateBlockSize (getHeader blk))
       ]
 
 

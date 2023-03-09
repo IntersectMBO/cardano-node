@@ -60,6 +60,7 @@ module Cardano.Api.ProtocolParameters (
     toAlonzoCostModels,
     toAlonzoPParams,
     toBabbagePParams,
+    toConwayPParams,
 
     -- * Data family instances
     AsType(..)
@@ -909,6 +910,7 @@ toLedgerPParamsUpdate ShelleyBasedEraAllegra = toShelleyPParamsUpdate
 toLedgerPParamsUpdate ShelleyBasedEraMary    = toShelleyPParamsUpdate
 toLedgerPParamsUpdate ShelleyBasedEraAlonzo  = toAlonzoPParamsUpdate
 toLedgerPParamsUpdate ShelleyBasedEraBabbage = toBabbagePParamsUpdate
+toLedgerPParamsUpdate ShelleyBasedEraConway  = toConwayPParamsUpdate
 
 
 --TODO: we should do validation somewhere, not just silently drop changes that
@@ -1105,6 +1107,11 @@ toBabbagePParamsUpdate
                                     noInlineMaybeToStrictMaybe protocolUpdateUTxOCostPerByte
     }
 
+-- Conway uses the same PParams as Babbage.
+toConwayPParamsUpdate :: ProtocolParametersUpdate
+                       -> BabbagePParamsUpdate ledgerera
+toConwayPParamsUpdate = toBabbagePParamsUpdate
+
 -- ----------------------------------------------------------------------------
 -- Conversion functions: updates from ledger types
 --
@@ -1139,6 +1146,7 @@ fromLedgerPParamsUpdate ShelleyBasedEraAllegra = fromShelleyPParamsUpdate
 fromLedgerPParamsUpdate ShelleyBasedEraMary    = fromShelleyPParamsUpdate
 fromLedgerPParamsUpdate ShelleyBasedEraAlonzo  = fromAlonzoPParamsUpdate
 fromLedgerPParamsUpdate ShelleyBasedEraBabbage = fromBabbagePParamsUpdate
+fromLedgerPParamsUpdate ShelleyBasedEraConway  = fromConwayPParamsUpdate
 
 
 fromShelleyPParamsUpdate :: ShelleyPParamsUpdate ledgerera
@@ -1343,6 +1351,9 @@ fromBabbagePParamsUpdate
                                             strictMaybeToMaybe _coinsPerUTxOByte
     }
 
+fromConwayPParamsUpdate :: BabbagePParamsUpdate ledgerera
+                         -> ProtocolParametersUpdate
+fromConwayPParamsUpdate = fromBabbagePParamsUpdate
 
 -- ----------------------------------------------------------------------------
 -- Conversion functions: protocol parameters to ledger types
@@ -1360,6 +1371,7 @@ toLedgerPParams ShelleyBasedEraAllegra = toShelleyPParams
 toLedgerPParams ShelleyBasedEraMary    = toShelleyPParams
 toLedgerPParams ShelleyBasedEraAlonzo  = toAlonzoPParams
 toLedgerPParams ShelleyBasedEraBabbage = toBabbagePParams
+toLedgerPParams ShelleyBasedEraConway  = toConwayPParams
 
 toShelleyPParams :: ProtocolParameters -> ShelleyPParams ledgerera
 toShelleyPParams ProtocolParameters {
@@ -1602,6 +1614,9 @@ toBabbagePParams ProtocolParameters { protocolParamCollateralPercent = Nothing }
 toBabbagePParams ProtocolParameters { protocolParamMaxCollateralInputs = Nothing } =
   error "toBabbagePParams: must specify protocolParamMaxCollateralInputs"
 
+toConwayPParams :: ProtocolParameters -> BabbagePParams ledgerera
+toConwayPParams = toBabbagePParams
+
 -- ----------------------------------------------------------------------------
 -- Conversion functions: protocol parameters from ledger types
 --
@@ -1615,6 +1630,7 @@ fromLedgerPParams ShelleyBasedEraAllegra = fromShelleyPParams
 fromLedgerPParams ShelleyBasedEraMary    = fromShelleyPParams
 fromLedgerPParams ShelleyBasedEraAlonzo  = fromAlonzoPParams
 fromLedgerPParams ShelleyBasedEraBabbage = fromBabbagePParams
+fromLedgerPParams ShelleyBasedEraConway  = fromConwayPParams
 
 
 fromShelleyPParams :: ShelleyPParams ledgerera
@@ -1784,6 +1800,9 @@ fromBabbagePParams
     , protocolParamUTxOCostPerByte     = Just (fromShelleyLovelace _coinsPerUTxOByte)
     }
 
+fromConwayPParams :: BabbagePParams ledgerera -> ProtocolParameters
+fromConwayPParams = fromBabbagePParams
+
 data ProtocolParametersError =
     PParamsErrorMissingMinUTxoValue AnyCardanoEra
   | PParamsErrorMissingAlonzoProtocolParameter
@@ -1814,6 +1833,7 @@ checkProtocolParameters sbe ProtocolParameters{..} =
     ShelleyBasedEraMary -> checkMinUTxOVal
     ShelleyBasedEraAlonzo -> checkAlonzoParams
     ShelleyBasedEraBabbage -> checkBabbageParams
+    ShelleyBasedEraConway -> checkBabbageParams
  where
    era :: CardanoEra era
    era = shelleyBasedToCardanoEra sbe

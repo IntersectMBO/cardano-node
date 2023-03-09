@@ -17,6 +17,7 @@ module Cardano.CLI.Shelley.Orphans () where
 import           Cardano.Api.Orphans ()
 import qualified Cardano.Ledger.AuxiliaryData as Ledger
 import qualified Cardano.Ledger.Credential as Ledger
+import           Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import qualified Cardano.Ledger.Mary.Value as Ledger.Mary
 import qualified Cardano.Ledger.PoolDistr as Ledger
@@ -116,3 +117,8 @@ instance ToJSON (Cardano.WithOrigin Cardano.SlotNo) where
   toJSON = \case
     Cardano.Origin -> Aeson.String "origin"
     Cardano.At (Cardano.SlotNo n) -> toJSON n
+
+-- This instance should be exported from ledger but is currently not,
+instance CC.Crypto c => ToJSON (ConwayGenesis c) where
+  toJSON (ConwayGenesis genDelegs) =
+    Aeson.object ["genDelegs" .= toJSON genDelegs]
