@@ -35,13 +35,12 @@ instance Show FoldBlocksException where
 -- that main thread blocks on.
 prop_foldBlocks :: H.Property
 prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath' -> do
-
   -- Start testnet
   base <- HE.noteM $ liftIO . IO.canonicalizePath =<< HE.getProjectBase
-  configTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
+  configTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml" --- outside of the package directory !!
   conf <- HE.noteShowM $
     TN.mkConf (TN.ProjectBase base) (TN.YamlFilePath configTemplate)
-      (tempAbsBasePath' <> "/")
+      (tempAbsBasePath' <> "/") --  '<> "/")'  is needed otherwise test fails !
       Nothing
 
   let options = CardanoOnlyTestnetOptions $ cardanoDefaultTestnetOptions

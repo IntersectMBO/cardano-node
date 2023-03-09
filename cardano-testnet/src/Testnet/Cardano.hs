@@ -242,10 +242,12 @@ cardanoTestnet testnetOptions configuration@H.Conf {tempAbsPath, testnetMagic} =
   byronGenesisHash <- getByronGenesisHash $ tmpDir </> "byron/genesis.json"
   shelleyGenesisHash <- getShelleyGenesisHash $ tmpDir </> "shelley/genesis.json"
   alonzoGenesisHash <- getShelleyGenesisHash $ tmpDir </> "shelley/genesis.alonzo.json"
+  conwayGenesisHash <- getShelleyGenesisHash $ tmpDir </> "shelley/genesis.conway.json"
   H.rewriteYamlFile (tmpDir </> "configuration.yaml") . J.rewriteObject
     $ HM.insert "ByronGenesisHash" byronGenesisHash
     . HM.insert "ShelleyGenesisHash" shelleyGenesisHash
     . HM.insert "AlonzoGenesisHash" alonzoGenesisHash
+    . HM.insert "ConwayGenesisHash" conwayGenesisHash
 
   poolRuntimes <- cardanoTestnetLaunchPoolNodes (TmpPath tmpDir) poolNodeNames
 
@@ -499,12 +501,12 @@ cardanoTestnetShelleyGenesis base (TmpPath tmpDir) testnetMagic testnetOptions s
 
   -- TODO: This is fragile, we should be passing in all necessary
   -- configuration files.
-  let sourceAlonzoGenesisSpecFile = base </> "cardano-cli/test/data/golden/alonzo/genesis.alonzo.spec.json" -- only use of base in this module
+  let sourceAlonzoGenesisSpecFile = base </> "cardano-cli/test/data/golden/alonzo/genesis.alonzo.spec.json" -- use of base in this module
   alonzoSpecFile <- H.noteTempFile tmpDir "shelley/genesis.alonzo.spec.json"
   liftIO $ IO.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
 
-  let sourceConwayGenesisSpecFile = base </> "cardano-cli/test/data/golden/conway/genesis.conway.spec.json"
-  conwaySpecFile <- H.noteTempFile tempAbsPath "shelley/genesis.conway.spec.json"
+  let sourceConwayGenesisSpecFile = base </> "cardano-cli/test/data/golden/conway/genesis.conway.spec.json" -- use of base in this module
+  conwaySpecFile <- H.noteTempFile tmpDir "shelley/genesis.conway.spec.json"
   liftIO $ IO.copyFile sourceConwayGenesisSpecFile conwaySpecFile
 
   execCli_
@@ -653,7 +655,7 @@ cardanoTestnetPaymentKeys tmpDir testnetMagic poolNodesN = do
 
   H.createDirectoryIfMissing $ tmpDir </> "addresses"
 
-  wallets <- forM addrs $ \addr -> do
+  forM addrs $ \addr -> do
     let paymentSKey = tmpDir </> "addresses/" <> addr <> ".skey"
     let paymentVKey = tmpDir </> "addresses/" <> addr <> ".vkey"
 
@@ -694,7 +696,6 @@ cardanoTestnetPaymentKeys tmpDir testnetMagic poolNodesN = do
       { paymentSKey
       , paymentVKey
       }
-  return wallets
 
 cardanoTestnetPoolCerts
   :: TmpDir
@@ -820,17 +821,6 @@ cardanoTestnetPoolCerts tmpDir testnetMagic poolNodesN = do
   -- Generated a signed 'do it all' transaction:
   H.assertIO . IO.doesFileExist $ tmpDir </> "tx1.tx"
 
-  -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
-  byronGenesisHash <- getByronGenesisHash $ tempAbsPath </> "byron/genesis.json"
-  shelleyGenesisHash <- getShelleyGenesisHash $ tempAbsPath </> "shelley/genesis.json"
-  alonzoGenesisHash <- getShelleyGenesisHash $ tempAbsPath </> "shelley/genesis.alonzo.json"
-  conwayGenesisHash <- getShelleyGenesisHash $ tempAbsPath </> "shelley/genesis.conway.json"
-  H.rewriteYamlFile (tempAbsPath </> "configuration.yaml") . J.rewriteObject
-    $ HM.insert "ByronGenesisHash" byronGenesisHash
-    . HM.insert "ShelleyGenesisHash" shelleyGenesisHash
-    . HM.insert "AlonzoGenesisHash" alonzoGenesisHash
-    . HM.insert "ConwayGenesisHash" conwayGenesisHash
-
 cardanoTestnetLaunchBftNodes
   :: TmpPath
   -> CardanoTestnetOptions
@@ -890,9 +880,6 @@ cardanoTestnetWaitStartup H.Conf {..} loggingFormat allNodeNames = do
     H.assertChainExtended deadline loggingFormat nodeStdoutFile
 
   H.noteShowIO_ DTC.getCurrentTime
-
-
--- * Generate hashes for genesis.json files
 
 getByronGenesisHash :: (H.MonadTest m, MonadIO m) => FilePath -> m J.Value
 getByronGenesisHash path = do

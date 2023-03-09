@@ -4,15 +4,13 @@ module Parsers.Shelley
   , runShelleyOptions
   ) where
 
-import           Prelude
-
 import           Options.Applicative
 import qualified Options.Applicative as OA
 
 import           Testnet
 import           Testnet.Run (runTestnet)
 import           Testnet.Shelley
-import           Testnet.Utils
+import           Testnet.Utils (pMaxLovelaceSupply)
 
 
 data ShelleyOptions = ShelleyOptions

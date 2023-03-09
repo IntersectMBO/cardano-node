@@ -17,7 +17,7 @@ import           Testnet
 import           Testnet.Cardano
 import           Testnet.Run (runTestnet)
 import           Testnet.Util.Runtime (readNodeLoggingFormat)
-import           Testnet.Utils
+import           Testnet.Utils (pMaxLovelaceSupply)
 
 data CardanoOptions = CardanoOptions
   { maybeTestnetMagic :: Maybe Int

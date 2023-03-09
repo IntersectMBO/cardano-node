@@ -43,6 +43,7 @@ import qualified System.IO as IO
 import qualified System.Process as IO
 import qualified Testnet.Conf as H
 import qualified Testnet.Util.Process as H
+import           Testnet.Util.Runtime (TmpPath(..), getLogDir, getSocketDir, getTmpBaseAbsPath, makeSprocket)
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Redundant <&>" -}
@@ -165,6 +166,11 @@ testnet testnetOptions H.Conf {..} = do
   let nodeIndexes = [0..numBftNodes testnetOptions - 1]
   let allNodes = fmap (\i -> "node-" <> show @Int i) nodeIndexes
 
+  let
+    logDir = getLogDir (TmpPath tempAbsPath)
+    socketDir = getSocketDir (TmpPath tempAbsPath)
+    tempBaseAbsPath = getTmpBaseAbsPath (TmpPath tempAbsPath)
+
   H.createDirectoryIfMissing logDir
 
   -- Launch cluster of three nodes in P2P Mode
@@ -173,7 +179,7 @@ testnet testnetOptions H.Conf {..} = do
     dbDir <- H.noteShow $ tempAbsPath </> "db/node-" <> si
     nodeStdoutFile <- H.noteTempFile tempAbsPath $ "cardano-node-" <> si <> ".stdout.log"
     nodeStderrFile <- H.noteTempFile tempAbsPath $ "cardano-node-" <> si <> ".stderr.log"
-    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> "node-" <> si)
+    sprocket <- H.noteShow $ makeSprocket (TmpPath tempAbsPath) ("node-" <> si)
     portString <- H.note $ show @Int (allPorts L.!! i)
     topologyFile <- H.noteShow $ tempAbsPath </> "topology-node-" <> si <> ".json"
     configFile <- H.noteShow $ tempAbsPath </> "config-" <> si <> ".yaml"
