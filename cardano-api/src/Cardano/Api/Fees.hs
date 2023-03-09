@@ -69,29 +69,27 @@ import qualified Cardano.Ledger.Coin as Ledger
 import           Cardano.Ledger.Core (EraTx (sizeTxF))
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Crypto as Ledger
-import qualified Cardano.Ledger.Era as Ledger.Era (Crypto)
+
 import qualified Cardano.Ledger.Keys as Ledger
 
 import           Cardano.Ledger.Mary.Value (MaryValue)
 
-import qualified Cardano.Ledger.Shelley.API as Ledger (CLI)
 import qualified Cardano.Ledger.Shelley.API.Wallet as Ledger (evaluateTransactionBalance,
                    evaluateTransactionFee)
 import qualified Cardano.Ledger.Shelley.API.Wallet as Shelley
-import           Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import           Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
 
 import qualified Cardano.Ledger.Alonzo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
-import           Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+import qualified Cardano.Ledger.Alonzo.Scripts as L
 import qualified Cardano.Ledger.Alonzo.Tools as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
-import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
+import qualified Cardano.Ledger.Alonzo.TxWits as Alonzo
+import qualified Cardano.Ledger.Api.Scripts as L
 
 import qualified Cardano.Ledger.Babbage as Babbage
-import           Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
 import qualified Cardano.Ledger.Conway as Conway
 
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
@@ -254,8 +252,8 @@ evaluateTransactionFee bpparams txbody keywitcount _byronwitcount =
   where
     evalShelleyBasedEra :: forall ledgerera.
                            ShelleyLedgerEra era ~ ledgerera
-                        => Ledger.CLI ledgerera
-                        => Ledger.Tx ledgerera
+                        => ShelleyBasedEra era
+                        -> Ledger.Tx ledgerera
                         -> Lovelace
     evalShelleyBasedEra tx =
       fromShelleyLovelace $
@@ -268,7 +266,7 @@ evaluateTransactionFee bpparams txbody keywitcount _byronwitcount =
     withLedgerConstraints
       :: ShelleyLedgerEra era ~ ledgerera
       => ShelleyBasedEra era
-      -> (   Ledger.CLI ledgerera
+      -> ( () --  Ledger.CLI ledgerera
           => a)
       -> a
     withLedgerConstraints ShelleyBasedEraShelley f = f
@@ -631,30 +629,30 @@ evaluateTransactionExecutionUnits systemstart epochInfo bpp utxo txbody =
                                    -> ScriptExecutionError
     fromAlonzoScriptExecutionError failure =
       case failure of
-        Alonzo.UnknownTxIn     txin -> ScriptErrorMissingTxIn txin'
+        L.UnknownTxIn     txin -> ScriptErrorMissingTxIn txin'
                                          where txin' = fromShelleyTxIn txin
-        Alonzo.InvalidTxIn     txin -> ScriptErrorTxInWithoutDatum txin'
+        L.InvalidTxIn     txin -> ScriptErrorTxInWithoutDatum txin'
                                          where txin' = fromShelleyTxIn txin
-        Alonzo.MissingDatum      dh -> ScriptErrorWrongDatum (ScriptDataHash dh)
-        Alonzo.ValidationFailedV1 err logs -> ScriptErrorEvaluationFailed err logs
-        Alonzo.ValidationFailedV2 err logs -> ScriptErrorEvaluationFailed err logs
-        Alonzo.IncompatibleBudget _ -> ScriptErrorExecutionUnitsOverflow
+        L.MissingDatum      dh -> ScriptErrorWrongDatum (ScriptDataHash dh)
+        L.ValidationFailedV1 err logs -> ScriptErrorEvaluationFailed err logs
+        L.ValidationFailedV2 err logs -> ScriptErrorEvaluationFailed err logs
+        L.IncompatibleBudget _ -> ScriptErrorExecutionUnitsOverflow
 
         -- This is only possible for spending scripts and occurs when
         -- we attempt to spend a key witnessed tx input with a Plutus
         -- script witness.
-        Alonzo.RedeemerNotNeeded rdmrPtr scriptHash ->
+        L.RedeemerNotNeeded rdmrPtr scriptHash ->
           ScriptErrorNotPlutusWitnessedTxIn
             (fromAlonzoRdmrPtr rdmrPtr)
             (fromShelleyScriptHash scriptHash)
-        Alonzo.RedeemerPointsToUnknownScriptHash rdmrPtr ->
+        L.RedeemerPointsToUnknownScriptHash rdmrPtr ->
           ScriptErrorRedeemerPointsToUnknownScriptHash $ fromAlonzoRdmrPtr rdmrPtr
         -- This should not occur while using cardano-cli because we zip together
         -- the Plutus script and the use site (txin, certificate etc). Therefore
         -- the redeemer pointer will always point to a Plutus script.
-        Alonzo.MissingScript rdmrPtr resolveable -> ScriptErrorMissingScript rdmrPtr resolveable
+        L.MissingScript rdmrPtr resolveable -> ScriptErrorMissingScript rdmrPtr resolveable
 
-        Alonzo.NoCostModelInLedgerState l -> ScriptErrorMissingCostModel l
+        L.NoCostModelInLedgerState l -> ScriptErrorMissingCostModel l
 
 
     obtainHasFieldConstraint
@@ -763,8 +761,8 @@ evaluateTransactionBalance bpp poolids utxo
     withLedgerConstraints ShelleyBasedEraConway _ f = f MultiAssetInConwayEra
 
 type LedgerEraConstraints ledgerera =
-       ( Ledger.Era.Crypto ledgerera ~ Ledger.StandardCrypto
-       , Ledger.CLI ledgerera
+       ( Ledger.EraCrypto ledgerera ~ Ledger.StandardCrypto
+       -- , Ledger.CLI ledgerera
        )
 
 type LedgerAdaOnlyConstraints ledgerera =

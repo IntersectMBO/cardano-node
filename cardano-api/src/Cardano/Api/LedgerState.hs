@@ -1519,7 +1519,7 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
       markSnapshotPoolDistr :: Map (SL.KeyHash 'SL.StakePool Shelley.StandardCrypto) (SL.IndividualPoolStake Shelley.StandardCrypto)
       markSnapshotPoolDistr = ShelleyAPI.unPoolDistr . ShelleyAPI.calculatePoolDistr $ snapshot
 
-  let pp = unbundleLedgerShelleyBasedProtocolParams pParams
+  let pp = unbundleLedgerShelleyBasedProtocolParams sbe bpp
       slotRangeOfInterest = Set.filter
         (not . Ledger.isOverlaySlot firstSlotOfEpoch (pp ^. Core.ppDG))
         $ Set.fromList [firstSlotOfEpoch .. lastSlotofEpoch]
