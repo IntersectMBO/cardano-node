@@ -3,8 +3,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-unused-do-bind #-}
 
-{-# OPTIONS_GHC -Wno-unused-matches #-}
 module Testnet.Shelley
   ( ShelleyTestnetOptions(..)
   , defaultTestnetOptions
@@ -12,9 +12,6 @@ module Testnet.Shelley
   , hprop_testnet
   , hprop_testnet_pause
   ) where
-
-import           Prelude
-
 
 import           Control.Monad
 import           Control.Monad.IO.Class (MonadIO (liftIO))
@@ -28,9 +25,9 @@ import           Data.String
 import           Data.Time.Clock (UTCTime)
 import           Data.Word
 import           Hedgehog.Extras.Stock.Aeson (rewriteObject)
-import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
+
 import           System.FilePath.Posix ((</>))
 
 import qualified Cardano.Node.Configuration.Topology as NonP2P
@@ -230,6 +227,7 @@ shelleyTestnet testnetOptions H.Conf {..} = do
       ]
 
     cliNodeKeyGenVrf tempAbsPath $ KeyNames (n </> "vrf.vkey") (n </> "vrf.skey")
+
   -- Symlink the BFT operator keys from the genesis delegates, for uniformity
   forM_ praosNodesN $ \n -> do
     H.createFileLink (tempAbsPath </> "delegate-keys/delegate" <> n <> ".skey") (tempAbsPath </> "node-praos" <> n </> "operator.skey")
@@ -240,7 +238,7 @@ shelleyTestnet testnetOptions H.Conf {..} = do
 
   --  Make hot keys and for all nodes
   forM_ allNodes $ \node -> do
-    keys <- cliNodeKeyGenKes tempAbsPath $ KeyNames (node </> "key.vkey") (node </> "key.skey")
+    cliNodeKeyGenKes tempAbsPath $ KeyNames (node </> "key.vkey") (node </> "key.skey")
 
     execCli_
       [ "node", "issue-op-cert"
@@ -271,10 +269,10 @@ shelleyTestnet testnetOptions H.Conf {..} = do
 
   forM_ addrs $ \addr -> do
     -- Payment address keys
-    addresse <- cliAddressKeyGen tempAbsPath $ KeyNames ("addresses" </> addr <> ".vkey") ("addresses" </> addr <> ".skey")
+    cliAddressKeyGen tempAbsPath $ KeyNames ("addresses" </> addr <> ".vkey") ("addresses" </> addr <> ".skey")
 
     -- Stake address keys
-    stake_address <- cliStakeAddressKeyGen tempAbsPath
+    cliStakeAddressKeyGen tempAbsPath
       $ KeyNames
           ("addresses" </> addr <> "-stake.vkey")
           ("addresses" </> addr <> "-stake.skey")
@@ -389,14 +387,12 @@ shelleyTestnet testnetOptions H.Conf {..} = do
   --------------------------------
   -- Launch cluster of three nodes
 
-  H.createDirectoryIfMissing logDir
-
   H.readFile (base </> "configuration/chairman/shelley-only/configuration.yaml")
     <&> L.unlines . fmap (rewriteConfiguration (shelleyEnableP2P testnetOptions)) . L.lines
     >>= H.writeFile (tempAbsPath </> "configuration.yaml")
 
   allNodeRuntimes <- forM allNodes
-     $ \node -> startNode tempBaseAbsPath tempAbsPath logDir socketDir node
+     $ \node -> startNode (TmpPath tempAbsPath) node
         [ "run"
         , "--config", tempAbsPath </> "configuration.yaml"
         , "--topology", tempAbsPath </> node </> "topology.json"
@@ -411,12 +407,12 @@ shelleyTestnet testnetOptions H.Conf {..} = do
   deadline <- H.noteShow $ DTC.addUTCTime 90 now
 
   forM_ allNodes $ \node -> do
-    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)
+    sprocket <- H.noteShow $ makeSprocket (TmpPath tempAbsPath) node
     _spocketSystemNameFile <- H.noteShow $ IO.sprocketSystemName sprocket
     H.byDeadlineM 10 deadline "Failed to connect to node socket" $ H.assertM $ H.doesSprocketExist sprocket
 
   forM_ allNodes $ \node -> do
-    nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
+    nodeStdoutFile <- H.noteTempFile (getLogDir $ TmpPath tempAbsPath) $ node <> ".stdout.log"
     H.assertByDeadlineIOCustom "stdout does not contain \"until genesis start time\"" deadline $ IO.fileContains "until genesis start time at" nodeStdoutFile
     H.assertByDeadlineIOCustom "stdout does not contain \"Chain extended\"" deadline $ IO.fileContains "Chain extended, new tip" nodeStdoutFile
 

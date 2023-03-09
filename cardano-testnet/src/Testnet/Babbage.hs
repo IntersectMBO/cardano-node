@@ -32,10 +32,11 @@ import           Testnet.Commands.Genesis
 import qualified Testnet.Conf as H
 import           Testnet.Options
 import qualified Testnet.Util.Assert as H
+import           Testnet.Util.Cli
 import           Testnet.Util.Process (execCli_)
 import           Testnet.Util.Runtime (Delegator (..), NodeLoggingFormat (..), PaymentKeyPair (..),
-                   PoolNode (PoolNode), PoolNodeKeys (..), StakingKeyPair (..), TestnetRuntime (..),
-                   startNode)
+                   PoolNode (PoolNode), PoolNodeKeys (..), StakingKeyPair (..),
+                   TestnetRuntime (..), startNode, getLogDir, TmpPath(..) )
 
 
 {- HLINT ignore "Redundant flip" -}
@@ -124,10 +125,12 @@ babbageTestnet testnetOptions H.Conf {..} = do
     PoolNodeKeys
       { poolNodeKeysColdVkey = tempAbsPath </> "pools" </> "cold" <> show n <> ".vkey"
       , poolNodeKeysColdSkey = tempAbsPath </> "pools" </> "cold" <> show n <> ".skey"
+      , poolNodeKeysVrf = ( File $ tempAbsPath </> "node-spo" <> show n </> "vrf.vkey"
+                          , File $ tempAbsPath </> "node-spo" <> show n </> "vrf.skey"
+                          )
       , poolNodeKeysVrfVkey = tempAbsPath </> "node-spo" <> show n </> "vrf.vkey"
       , poolNodeKeysVrfSkey = tempAbsPath </> "node-spo" <> show n </> "vrf.skey"
-      , poolNodeKeysStakingVkey = tempAbsPath </> "pools" </> "staking-reward" <> show n <> ".vkey"
-      , poolNodeKeysStakingSkey = tempAbsPath </> "pools" </> "staking-reward" <> show n <> ".skey"
+      , poolNodeKeysOperator = undefined
       }
 
   wallets <- forM [1..3] $ \idx -> do
@@ -271,7 +274,7 @@ babbageTestnet testnetOptions H.Conf {..} = do
     ]
 
   poolNodes <- forM (L.zip spoNodes poolKeys) $ \(node,key) -> do
-    runtime <- startNode tempBaseAbsPath tempAbsPath logDir socketDir node
+    runtime <- startNode (TmpPath tempAbsPath) node
         [ "run"
         , "--config", tempAbsPath </> "configuration.yaml"
         , "--topology", tempAbsPath </> node </> "topology.json"
@@ -288,7 +291,7 @@ babbageTestnet testnetOptions H.Conf {..} = do
   deadline <- H.noteShow $ DTC.addUTCTime 90 now
 
   forM_ spoNodes $ \node -> do
-    nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
+    nodeStdoutFile <- H.noteTempFile (getLogDir $ TmpPath tempAbsPath) $ node <> ".stdout.log"
     H.assertChainExtended deadline (babbageNodeLoggingFormat testnetOptions) nodeStdoutFile
 
   H.noteShowIO_ DTC.getCurrentTime
