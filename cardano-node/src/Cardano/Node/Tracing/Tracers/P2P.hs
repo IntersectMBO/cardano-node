@@ -1104,7 +1104,7 @@ namesForConnectionManagerTransition ConnectionManager.TransitionTrace {} =
 
 severityConnectionManagerTransition
   :: ConnectionManager.AbstractTransitionTrace peerAddr -> SeverityS
-severityConnectionManagerTransition _ = Debug
+severityConnectionManagerTransition _ = Info
 
 instance (Show peerAddr, ToJSON peerAddr)
       => LogFormatting (ConnectionManager.AbstractTransitionTrace peerAddr) where
