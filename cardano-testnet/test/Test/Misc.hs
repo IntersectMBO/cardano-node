@@ -21,15 +21,15 @@ prop_op_cert_valid_kes_period opCertFp output =
       OpCertWithinInterval{} -> success
       info@OpCertStartingKesPeriodIsInTheFuture{} ->
         failMessage GHC.callStack
-          $ "Expected OpCertWithinInterval but got: OpCertStartingKesPeriodIsInTheFuture " <> "\n"
+          $ "Expected OpCertWithinInterval but got: OpCertStartingKesPeriodIsInTheFuture\n"
           <> renderOpCertIntervalInformation opCertFp info
       info@OpCertExpired{} ->
         failMessage GHC.callStack
-          $ "Expected OpCertWithinInterval but got: OpCertExpired " <> "\n"
+          $ "Expected OpCertWithinInterval but got: OpCertExpired\n"
           <> renderOpCertIntervalInformation opCertFp info
       info@OpCertSomeOtherError{} ->
         failMessage GHC.callStack
-          $ "Expected OpCertWithinInterval but got: OpCertSomeOtherError " <> "\n"
+          $ "Expected OpCertWithinInterval but got: OpCertSomeOtherError\n"
           <> renderOpCertIntervalInformation opCertFp info
 
 

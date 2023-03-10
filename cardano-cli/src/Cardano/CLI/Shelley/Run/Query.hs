@@ -53,11 +53,13 @@ import           Data.Time.Clock
 import qualified Data.Vector as Vector
 import           Formatting.Buildable (build)
 import           Numeric (showEFloat)
+import           Prettyprinter
 import qualified System.IO as IO
 import           Text.Printf (printf)
 
 import           Cardano.Binary (DecoderError)
 import           Cardano.CLI.Helpers (HelpersError (..), hushM, pPrintCBOR, renderHelpersError)
+import           Cardano.CLI.Pretty
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (VerificationKeyOrHashOrFile,
                    readVerificationKeyOrHashOrFile)
@@ -91,8 +93,10 @@ import           Ouroboros.Consensus.Protocol.TPraos (StandardCrypto)
 import           Ouroboros.Network.Block (Serialised (..))
 
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
+import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
+import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
 
 import           Control.Monad (forM, forM_, join)
 import           Control.Monad.IO.Class (MonadIO)
@@ -108,8 +112,6 @@ import           Data.Set (Set)
 import           Data.Text (Text)
 import           Data.Text.Lazy (toStrict)
 import           GHC.Records (HasField)
-import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
-import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
 
 {- HLINT ignore "Move brackets to avoid $" -}
 {- HLINT ignore "Redundant flip" -}
@@ -507,7 +509,9 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
      -> OpCertNodeAndOnDiskCounterInformation
    opCertNodeAndOnDiskCounters o@(OpCertOnDiskCounter odc) (Just n@(OpCertNodeStateCounter nsc))
      | odc < nsc = OpCertOnDiskCounterBehindNodeState o n
-     | otherwise = OpCertOnDiskCounterMoreThanOrEqualToNodeState o n
+     | odc > nsc + 1 = OpCertOnDiskCounterTooFarAheadOfNodeState o n
+     | odc == nsc + 1 = OpCertOnDiskCounterAheadOfNodeState o n
+     | otherwise = OpCertOnDiskCounterEqualToNodeState o n
    opCertNodeAndOnDiskCounters o Nothing = OpCertNoBlocksMintedYet o
 
    opCertExpiryUtcTime
@@ -527,15 +531,46 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
    renderOpCertNodeAndOnDiskCounterInformation :: FilePath -> OpCertNodeAndOnDiskCounterInformation -> String
    renderOpCertNodeAndOnDiskCounterInformation opCertFile opCertCounterInfo =
      case opCertCounterInfo of
-      OpCertOnDiskCounterMoreThanOrEqualToNodeState _ _ ->
-        "✓ The operational certificate counter agrees with the node protocol state counter"
+      OpCertOnDiskCounterEqualToNodeState _ _ ->
+        renderStringDefault $
+          green "✓" <+> hang 0
+              ( vsep
+                [ "The operational certificate counter agrees with the node protocol state counter"
+                ]
+              )
+      OpCertOnDiskCounterAheadOfNodeState _ _ ->
+        renderStringDefault $
+          green "✓" <+> hang 0
+              ( vsep
+                [ "The operational certificate counter ahead of the node protocol state counter by 1"
+                ]
+              )
+      OpCertOnDiskCounterTooFarAheadOfNodeState onDiskC nodeStateC ->
+        renderStringDefault $
+          red "✗" <+> hang 0
+            ( vsep
+              [ "The operational certificate counter too far ahead of the node protocol state counter in the operational certificate at: " <> pretty opCertFile
+              , "On disk operational certificate counter: " <> pretty (unOpCertOnDiskCounter onDiskC)
+              , "Protocol state counter: " <> pretty (unOpCertNodeStateCounter nodeStateC)
+              ]
+            )
       OpCertOnDiskCounterBehindNodeState onDiskC nodeStateC ->
-        "✗ The protocol state counter is greater than the counter in the operational certificate at: " <> opCertFile <> "\n" <>
-        "  On disk operational certificate counter: " <> show (unOpCertOnDiskCounter onDiskC) <> "\n" <>
-        "  Protocol state counter: " <> show (unOpCertNodeStateCounter nodeStateC)
+        renderStringDefault $
+          red "✗" <+> hang 0
+            ( vsep
+              [ "The protocol state counter is greater than the counter in the operational certificate at: " <> pretty opCertFile
+              , "On disk operational certificate counter: " <> pretty (unOpCertOnDiskCounter onDiskC)
+              , "Protocol state counter: " <> pretty (unOpCertNodeStateCounter nodeStateC)
+              ]
+            )
       OpCertNoBlocksMintedYet (OpCertOnDiskCounter onDiskC) ->
-        "✗ No blocks minted so far with the operational certificate at: " <> opCertFile <> "\n" <>
-        "  On disk operational certificate counter: " <> show onDiskC
+        renderStringDefault $
+          red "✗" <+> hang 0
+            ( vsep
+              [ "No blocks minted so far with the operational certificate at: " <> pretty opCertFile
+              , "On disk operational certificate counter: " <> pretty onDiskC
+              ]
+            )
 
 
    createQueryKesPeriodInfoOutput
@@ -551,7 +586,9 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
                             OpCertExpired _ end _ -> (end, Nothing)
                             OpCertSomeOtherError _ end _ -> (end, Nothing)
          (onDiskCounter, mNodeCounter) = case oCertCounterInfo of
-                                           OpCertOnDiskCounterMoreThanOrEqualToNodeState d n -> (d, Just n)
+                                           OpCertOnDiskCounterEqualToNodeState d n -> (d, Just n)
+                                           OpCertOnDiskCounterAheadOfNodeState d n -> (d, Just n)
+                                           OpCertOnDiskCounterTooFarAheadOfNodeState d n -> (d, Just n)
                                            OpCertOnDiskCounterBehindNodeState d n -> (d, Just n)
                                            OpCertNoBlocksMintedYet d -> (d, Nothing)
 
@@ -596,25 +633,44 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
 
 
 renderOpCertIntervalInformation :: FilePath -> OpCertIntervalInformation -> String
-renderOpCertIntervalInformation _ (OpCertWithinInterval _start _end _current _stillExp) =
-  "✓ Operational certificate's KES period is within the correct KES period interval"
-renderOpCertIntervalInformation opCertFile
-  (OpCertStartingKesPeriodIsInTheFuture (OpCertStartingKesPeriod start)
-    (OpCertEndingKesPeriod end) (CurrentKesPeriod current)) =
-   "✗ Node operational certificate at: " <> opCertFile <> " has an incorrectly specified starting KES period. " <> "\n" <>
-   "  Current KES period: " <> show current <> "\n" <>
-   "  Operational certificate's starting KES period: " <> show start <> "\n" <>
-   "  Operational certificate's expiry KES period: " <> show end
-renderOpCertIntervalInformation opCertFile (OpCertExpired _ (OpCertEndingKesPeriod end) (CurrentKesPeriod current)) =
-  "✗ Node operational certificate at: " <> opCertFile <> " has expired. " <> "\n" <>
-  "  Current KES period: " <> show current <> "\n" <>
-  "  Operational certificate's expiry KES period: " <> show end
-renderOpCertIntervalInformation opCertFile
-  (OpCertSomeOtherError (OpCertStartingKesPeriod start) (OpCertEndingKesPeriod end) (CurrentKesPeriod current)) =
-    "✗ An unknown error occurred with operational certificate at: " <> opCertFile <>
-    "  Current KES period: " <> show current <> "\n" <>
-    "  Operational certificate's starting KES period: " <> show start <> "\n" <>
-    "  Operational certificate's expiry KES period: " <> show end
+renderOpCertIntervalInformation opCertFile opCertInfo = case opCertInfo of
+  OpCertWithinInterval _start _end _current _stillExp ->
+    renderStringDefault $
+      green "✓" <+> hang 0
+        ( vsep
+          [ "Operational certificate's KES period is within the correct KES period interval"
+          ]
+        )
+  OpCertStartingKesPeriodIsInTheFuture (OpCertStartingKesPeriod start) (OpCertEndingKesPeriod end) (CurrentKesPeriod current) ->
+    renderStringDefault $
+      red "✗" <+> hang 0
+        ( vsep
+          [ "Node operational certificate at: " <> pretty opCertFile <> " has an incorrectly specified starting KES period. "
+          , "Current KES period: " <> pretty current
+          , "Operational certificate's starting KES period: " <> pretty start
+          , "Operational certificate's expiry KES period: " <> pretty end
+          ]
+        )
+  OpCertExpired _ (OpCertEndingKesPeriod end) (CurrentKesPeriod current) ->
+    renderStringDefault $
+      red "✗" <+> hang 0
+        ( vsep
+          [ "Node operational certificate at: " <> pretty opCertFile <> " has expired. "
+          , "Current KES period: " <> pretty current
+          , "Operational certificate's expiry KES period: " <> pretty end
+          ]
+        )
+
+  OpCertSomeOtherError (OpCertStartingKesPeriod start) (OpCertEndingKesPeriod end) (CurrentKesPeriod current) ->
+    renderStringDefault $
+      red "✗" <+> hang 0
+        ( vsep
+          [ "An unknown error occurred with operational certificate at: " <> pretty opCertFile
+          , "Current KES period: " <> pretty current
+          , "Operational certificate's starting KES period: " <> pretty start
+          , "Operational certificate's expiry KES period: " <> pretty end
+          ]
+        )
 
 -- | Query the current and future parameters for a stake pool, including the retirement date.
 -- Any of these may be empty (in which case a null will be displayed).

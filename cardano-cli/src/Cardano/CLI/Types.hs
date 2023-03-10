@@ -93,16 +93,23 @@ newtype GenesisFile = GenesisFile
 
 data OpCertNodeAndOnDiskCounterInformation
   -- | The on disk operational certificate has a counter
-  -- that is larger than or equal to its corresponding
-  -- counter in the node state. The on disk operational
-  -- certificate therefore has a valid counter.
-  = OpCertOnDiskCounterMoreThanOrEqualToNodeState
+  -- that is equal to its corresponding counter in the
+  -- node state. The on disk operational certificate therefore
+  -- has a valid counter.
+  = OpCertOnDiskCounterEqualToNodeState
+      OpCertOnDiskCounter
+      OpCertNodeStateCounter
+  -- | The on disk operational certificate has a counter
+  -- that is ahead of the counter in the node state by 1.
+  -- The on disk operational certificate is invalid in
+  -- this case.
+  | OpCertOnDiskCounterAheadOfNodeState
       OpCertOnDiskCounter
       OpCertNodeStateCounter
   -- | The on disk operational certificate has a counter
   -- that is less than the counter in the node state. The
   -- on disk operational certificate is invalid in this case.
-  | OpCertOnDiskCounterBehindNodeState
+  | OpCertOnDiskCounterTooFarAheadOfNodeState
       OpCertOnDiskCounter
       OpCertNodeStateCounter
   -- | The corresponding counter for operational certificate
@@ -110,6 +117,13 @@ data OpCertNodeAndOnDiskCounterInformation
   -- stake pool has not minted a block yet. When the stake pool
   -- has minted a block the corresponding operational certificate's
   -- counter will be present in the node state.
+  | OpCertOnDiskCounterBehindNodeState
+      OpCertOnDiskCounter
+      OpCertNodeStateCounter
+  -- | The on disk operational certificate has a counter
+  -- that is ahead of the counter in the node state by more
+  -- than 1. The on disk operational certificate is invalid in
+  -- this case.
   | OpCertNoBlocksMintedYet
       OpCertOnDiskCounter
   deriving (Eq, Show)
