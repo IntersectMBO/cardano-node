@@ -14,10 +14,6 @@
       url = "github:input-output-hk/hackage.nix";
       flake = false;
     };
-    nixTools = {
-      url = "github:input-output-hk/nix-tools";
-      flake = false;
-    };
     haskellNix = {
       url = "github:input-output-hk/haskell.nix";
       inputs.nixpkgs.follows = "nixpkgs";
