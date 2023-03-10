@@ -4,7 +4,8 @@
 
 ### node changes
 
-None
+- **Breaking change** - Less verbose node-to-client and node-to-node version logging
+  ([PR4911](https://github.com/input-output-hk/cardano-node/pull/4911))
 
 ### consensus changes
 
