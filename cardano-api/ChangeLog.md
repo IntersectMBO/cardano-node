@@ -29,6 +29,8 @@
   
 - **Breaking change** - Remove distinction between multisig and timelock scripts([PR4763](https://github.com/input-output-hk/cardano-node/pull/4763))
 
+- **Breaking change** Change return type of `queryNodeLocalState` to new `AcquiringFailure` type.
+
 ### Bugs
 
 - Allow reading text envelopes from pipes ([PR 4384](https://github.com/input-output-hk/cardano-node/pull/4384))
