@@ -39,7 +39,7 @@ The `transaction` command contains the following subcommands:
 * `sign`: signs the transaction
 * `assemble`: combines and assembles the transaction witness(es) with a transaction body to create a transaction
 * `witness`: witnesses a transaction
-* `submit`: submits the transaction to the local node whose Unix domain socket is obtained from the CARANO_NODE_SOCKET_PATH environment variable (uses the `--cardano-mode`, `--byron-mode`, `--shelley-mode` flags)
+* `submit`: submits the transaction to the local node whose Unix domain socket is obtained from the CARDANO_NODE_SOCKET_PATH environment variable (uses the `--cardano-mode`, `--byron-mode`, `--shelley-mode` flags)
 * `calculate-min-fee`: calculates the minimum fee for the transaction
 * `calculate-min-required-utxo`: calculates the minimum required ADA for a transaction output
 * `hash-script-data`: calculates the hash of script data (datums)
