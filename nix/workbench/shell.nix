@@ -96,7 +96,6 @@ in project.shellFor {
 
   # These programs will be available inside the nix-shell.
   nativeBuildInputs = with pkgs; with haskellPackages; with cardanoNodePackages; [
-    cardano-ping
     db-analyser
     pkgs.graphviz
     graphmod

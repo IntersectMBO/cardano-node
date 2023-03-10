@@ -99,7 +99,6 @@ let
       nix
       cardano-cli
       bech32
-      cardano-ping
       cardano-node
       cardano-topology
       cardano-tracer

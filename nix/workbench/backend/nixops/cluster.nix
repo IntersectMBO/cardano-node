@@ -88,7 +88,6 @@ in {
 
   environment.systemPackages = with pkgs;
     [ cardano-cli
-      cardano-ping
     ];
 }
 // listToAttrs (concatLists [
