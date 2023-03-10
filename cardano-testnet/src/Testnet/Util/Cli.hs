@@ -58,7 +58,7 @@ newtype Comment = Comment { unComment :: String}
 instance IsString Comment where fromString a = Comment a
 
 instance Semigroup Comment where
-  (Comment a) <> (Comment b) = Comment $ a <> "-" <> b
+  Comment a <> Comment b = Comment $ a <> "-" <> b
 
 -- Could also use IO (timestamp).
 makeFilePath :: MonadGen m => FilePath -> Comment -> FilePath -> m FilePath
@@ -134,6 +134,7 @@ data ByronDelegationCert
 
 type TmpDir = FilePath
 type TestnetMagic = Int
+
 newtype File a = File {unFile :: FilePath}
   deriving (Show, Eq)
 
@@ -143,21 +144,19 @@ newtype File a = File {unFile :: FilePath}
 fakeItH :: FilePath -> H.Integration (File a)
 fakeItH filePath = do
   return $ File filePath
-  {-
-  exists <- liftIO $ fileExists filePath
-  if exists
-    then return $ File filePath
-    else error (filePath <> " does not exist.")
+{-
+  TODO: check that the file actually exists.
+  TODO: Is there a simple function in the test framework for that ?
 -}
 
 fakeIt :: FilePath -> File a
 fakeIt = File
 
 getVKeyPath ::  (File (a VKey), File (a SKey)) -> FilePath
-getVKeyPath (File a, _ ) = a
+getVKeyPath = unFile . fst
 
 getSKeyPath ::  (File (a VKey), File (a SKey)) -> FilePath
-getSKeyPath (_, File a) = a
+getSKeyPath = unFile . snd
 
 -- Byron
 cliKeyGen :: TmpDir -> FilePath -> H.Integration (File ByronKey)

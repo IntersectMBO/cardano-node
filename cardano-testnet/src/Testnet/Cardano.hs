@@ -277,8 +277,8 @@ cardanoTestnetByronGenesis
     , [File ByronDelegationKey]
     )
 cardanoTestnetByronGenesis tp testnetMagic testnetOptions configurationTemplate startTime = do
-  let (TmpPath tmpDir) = tp
-  let numBftNodes = cardanoNumBftNodes $ cardanoNodes testnetOptions
+  let TmpPath tmpDir = tp
+      numBftNodes = cardanoNumBftNodes $ cardanoNodes testnetOptions
       bftNodesN = [1 .. numBftNodes]
       poolNodesN = [1 .. cardanoNumPoolNodes $ cardanoNodes testnetOptions]
       bftNodeNames = ("node-bft" <>) . show @Int <$> bftNodesN
@@ -364,6 +364,7 @@ cardanoTestnetByronGenesis tp testnetMagic testnetOptions configurationTemplate 
 
 
     H.writeFile (tmpDir </> node </> "port") (show port)
+
   H.lbsWriteFile (tmpDir </> "byron.genesis.spec.json")
     . J.encode $ defaultByronGenesisJsonValue
 
@@ -396,16 +397,16 @@ cardanoTestnetByronGenesis tp testnetMagic testnetOptions configurationTemplate 
   let
     forallBftNodesMkFile x = forM [1..numBftNodes] (fakeItH . x)
 
-  (genesisKeys :: [File ByronKey])<- forallBftNodesMkFile $ \n -> "byron/genesis-keys.00" <> show @Int (n - 1) <> ".json"
-  (delegationCerts :: [File ByronDelegationCert]) <- forallBftNodesMkFile $ \n -> "byron/delegate-keys.00" <> show @Int (n - 1) <> ".key"
-  (delegationKeys :: [File ByronDelegationKey]) <- forallBftNodesMkFile $ \n -> "byron/delegation-cert.00" <> show @Int (n - 1) <> ".json"
+  genesisKeys <- forallBftNodesMkFile $ \n -> "byron/genesis-keys.00" <> show @Int (n - 1) <> ".json"
+  delegationCerts <- forallBftNodesMkFile $ \n -> "byron/delegate-keys.00" <> show @Int (n - 1) <> ".key"
+  delegationKeys <- forallBftNodesMkFile $ \n -> "byron/delegation-cert.00" <> show @Int (n - 1) <> ".json"
 
   return (genesisKeys, delegationCerts, delegationKeys)
 
 
 {-
 cardanoTestnetByronGenesisExpenditure creates an transaction `tx0.tx'
-which however is never used anywhere ??
+TODO: a test that transmits tx0.tx and checks that it gets accepted.
 -}
 cardanoTestnetByronGenesisExpenditure
   :: CardanoTestnetOptions
@@ -447,7 +448,8 @@ cardanoTestnetByronGenesisExpenditure testnetOptions H.Conf {..} genesisKeys = d
 
 {-
 cardanoTestnetByronGovernance creates two update-proposals and two update-votes.
-However they are never transmitted to the chain ?!
+TODO: There should be a test that transmits thoese proposals and checks
+that they get activated.
 -}
 cardanoTestnetByronGovernance
   :: Int
