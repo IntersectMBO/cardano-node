@@ -949,9 +949,9 @@ instance MetaTrace (ChainDB.TraceGCEvent blk) where
 instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
   => LogFormatting (ChainDB.TraceInitChainSelEvent blk) where
     forHuman (ChainDB.InitChainSelValidation v) = forHuman v
-    forHuman (ChainDB.InitalChainSelected {}) =
+    forHuman ChainDB.InitalChainSelected{} =
         "Initial chain selected"
-    forHuman (ChainDB.StartedInitChainSelection {}) =
+    forHuman ChainDB.StartedInitChainSelection {} =
         "Started initial chain selection"
 
     forMachine dtal (ChainDB.InitChainSelValidation v) = forMachine dtal v
