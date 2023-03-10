@@ -23,7 +23,7 @@ import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionData
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion,
                    simpleSingletonVersions)
-import           Ouroboros.Network.Snocket (LocalAddress, LocalSocket, Snocket,
+import           Ouroboros.Network.Snocket (LocalAddress, LocalSocket, Snocket, makeLocalBearer,
                    localAddressFromPath, localSnocket)
 import           Ouroboros.Network.Socket (ConnectionId (..), connectToNode,
                    nullNetworkConnectTracers)
@@ -89,6 +89,7 @@ doConnectToForwarder
 doConnectToForwarder snocket address netMagic timeLimits app =
   connectToNode
     snocket
+    makeLocalBearer
     mempty -- LocalSocket does not require to be configured
     (codecHandshake forwardingVersionCodec)
     timeLimits

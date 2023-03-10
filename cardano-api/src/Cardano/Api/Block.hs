@@ -153,6 +153,12 @@ instance Show (Block era) where
         . showsPrec 11 block
         )
 
+    showsPrec p (ShelleyBlock ShelleyBasedEraConway block) =
+      showParen (p >= 11)
+        ( showString "ShelleyBlock ShelleyBasedEraConway "
+        . showsPrec 11 block
+        )
+
 getBlockTxs :: forall era . Block era -> [Tx era]
 getBlockTxs (ByronBlock Consensus.ByronBlock { Consensus.byronBlockRaw }) =
     case byronBlockRaw of
@@ -190,6 +196,7 @@ obtainConsensusShelleyCompatibleEra ShelleyBasedEraAllegra f = f
 obtainConsensusShelleyCompatibleEra ShelleyBasedEraMary    f = f
 obtainConsensusShelleyCompatibleEra ShelleyBasedEraAlonzo  f = f
 obtainConsensusShelleyCompatibleEra ShelleyBasedEraBabbage f = f
+obtainConsensusShelleyCompatibleEra ShelleyBasedEraConway f = f
 
 -- ----------------------------------------------------------------------------
 -- Block in a consensus mode
@@ -247,6 +254,10 @@ fromConsensusBlock CardanoMode =
         BlockInMode (ShelleyBlock ShelleyBasedEraBabbage b')
                      BabbageEraInCardanoMode
 
+      Consensus.BlockConway b' ->
+        BlockInMode (ShelleyBlock ShelleyBasedEraConway b')
+                     ConwayEraInCardanoMode
+
 toConsensusBlock
   :: ConsensusBlockForMode mode ~ block
   => Consensus.LedgerSupportsProtocol
@@ -269,6 +280,7 @@ toConsensusBlock bInMode =
     BlockInMode (ShelleyBlock ShelleyBasedEraMary b') MaryEraInCardanoMode -> Consensus.BlockMary b'
     BlockInMode (ShelleyBlock ShelleyBasedEraAlonzo b') AlonzoEraInCardanoMode -> Consensus.BlockAlonzo b'
     BlockInMode (ShelleyBlock ShelleyBasedEraBabbage b') BabbageEraInCardanoMode -> Consensus.BlockBabbage b'
+    BlockInMode (ShelleyBlock ShelleyBasedEraConway b') ConwayEraInCardanoMode -> Consensus.BlockConway b'
 
 -- ----------------------------------------------------------------------------
 -- Block headers
@@ -307,6 +319,7 @@ getBlockHeader (ShelleyBlock shelleyEra block) = case shelleyEra of
   ShelleyBasedEraMary -> go
   ShelleyBasedEraAlonzo -> go
   ShelleyBasedEraBabbage -> go
+  ShelleyBasedEraConway -> go
   where
     go :: Consensus.ShelleyCompatible (ConsensusProtocol era) (ShelleyLedgerEra era)
        => BlockHeader

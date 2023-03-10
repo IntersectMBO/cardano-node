@@ -34,7 +34,7 @@ import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
 import           Cardano.Node.Types
 import           Ouroboros.Consensus.Cardano
 import qualified Ouroboros.Consensus.Cardano as Consensus
-import qualified Ouroboros.Consensus.Mempool.TxLimits as TxLimits
+import qualified Ouroboros.Consensus.Mempool.Capacity as TxLimits
 
 import           Cardano.Node.Protocol.Types
 import           Cardano.Tracing.OrphanInstances.Byron ()

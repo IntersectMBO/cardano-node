@@ -265,11 +265,6 @@ class KnownCDF a where
 instance KnownCDF      I  where cdfIx = CDFI
 instance KnownCDF (CDF I) where cdfIx = CDF2
 
-type family CDFProj a where
-  CDFProj (CDF I a) = I a
-  CDFProj (CDF (CDF I) a) = CDF I a
--- indexCDF i d = snd $ cdfSamples (trace (printf "i=%d of %d" i (length $ cdfSamples d) :: String) d) !! i
-
 liftCDFVal :: forall a p. Real a => a -> CDFIx p -> p a
 liftCDFVal x = \case
   CDFI -> I x

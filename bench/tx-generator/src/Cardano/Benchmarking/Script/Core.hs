@@ -74,6 +74,7 @@ liftCoreWithEra era coreCall = withEra era ( liftIO . runExceptT . coreCall)
 withEra :: AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ActionM x) -> ActionM x
 withEra era action = do
   case era of
+    AnyCardanoEra ConwayEra  -> action AsConwayEra
     AnyCardanoEra BabbageEra -> action AsBabbageEra
     AnyCardanoEra AlonzoEra  -> action AsAlonzoEra
     AnyCardanoEra MaryEra    -> action AsMaryEra
@@ -189,6 +190,7 @@ queryRemoteProtocolParameters = do
     AnyCardanoEra MaryEra    -> callQuery $ QueryInEra    MaryEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraMary    QueryProtocolParameters
     AnyCardanoEra AlonzoEra  -> callQuery $ QueryInEra  AlonzoEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraAlonzo QueryProtocolParameters
     AnyCardanoEra BabbageEra -> callQuery $ QueryInEra BabbageEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraBabbage QueryProtocolParameters
+    AnyCardanoEra ConwayEra  -> callQuery $ QueryInEra  ConwayEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraConway QueryProtocolParameters
 
 getProtocolParameters :: ActionM ProtocolParameters
 getProtocolParameters = do

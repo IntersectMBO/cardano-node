@@ -38,7 +38,7 @@ import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.Keys (coerceKeyRole)
 
 import qualified Ouroboros.Consensus.Cardano as Consensus
-import qualified Ouroboros.Consensus.Mempool.TxLimits as TxLimits
+import qualified Ouroboros.Consensus.Mempool.Capacity as TxLimits
 import           Ouroboros.Consensus.Protocol.Praos.Common (PraosCanBeLeader (..))
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParamsShelley (..),

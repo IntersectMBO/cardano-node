@@ -34,7 +34,7 @@ import qualified Ouroboros.Consensus.Block.RealPoint as RP
 import qualified Ouroboros.Consensus.Node.NetworkProtocolVersion as NPV
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal
-import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LgrDb
+import qualified Ouroboros.Consensus.Storage.LedgerDB as LgrDb
 import           Ouroboros.Network.Block (pointSlot)
 
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)

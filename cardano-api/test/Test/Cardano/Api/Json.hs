@@ -60,6 +60,7 @@ prop_json_roundtrip_eraInMode = H.property $ do
   H.assert $ parseEither rountripEraInModeParser MaryEraInCardanoMode == Right MaryEraInCardanoMode
   H.assert $ parseEither rountripEraInModeParser AlonzoEraInCardanoMode == Right AlonzoEraInCardanoMode
   H.assert $ parseEither rountripEraInModeParser BabbageEraInCardanoMode == Right BabbageEraInCardanoMode
+  H.assert $ parseEither rountripEraInModeParser ConwayEraInCardanoMode == Right ConwayEraInCardanoMode
 
   where
     -- Defined this way instead of using 'tripping' in order to warn the
@@ -75,6 +76,7 @@ prop_json_roundtrip_eraInMode = H.property $ do
       MaryEraInCardanoMode -> parseJSON $ toJSON MaryEraInCardanoMode
       AlonzoEraInCardanoMode -> parseJSON $ toJSON AlonzoEraInCardanoMode
       BabbageEraInCardanoMode -> parseJSON $ toJSON BabbageEraInCardanoMode
+      ConwayEraInCardanoMode -> parseJSON $ toJSON ConwayEraInCardanoMode
 
 prop_json_roundtrip_scriptdata_detailed_json :: Property
 prop_json_roundtrip_scriptdata_detailed_json = H.property $ do

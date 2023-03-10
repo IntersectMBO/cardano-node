@@ -140,6 +140,7 @@ renderEra (AnyCardanoEra AllegraEra) = "Allegra"
 renderEra (AnyCardanoEra MaryEra)    = "Mary"
 renderEra (AnyCardanoEra AlonzoEra)  = "Alonzo"
 renderEra (AnyCardanoEra BabbageEra) = "Babbage"
+renderEra (AnyCardanoEra ConwayEra)  = "Conway"
 
 bounded :: forall a. (Bounded a, Integral a, Show a) => String -> ReadM a
 bounded t = eitherReader $ \s -> do

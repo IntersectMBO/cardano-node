@@ -120,6 +120,7 @@ genTx protocolParameters (collateral, collFunds) fee metadata inFunds outputs
     ShelleyBasedEraMary    -> TxValidityNoUpperBound ValidityNoUpperBoundInMaryEra
     ShelleyBasedEraAlonzo  -> TxValidityNoUpperBound ValidityNoUpperBoundInAlonzoEra
     ShelleyBasedEraBabbage -> TxValidityNoUpperBound ValidityNoUpperBoundInBabbageEra
+    ShelleyBasedEraConway  -> TxValidityNoUpperBound ValidityNoUpperBoundInConwayEra
 
 
 txSizeInBytes :: forall era. IsShelleyBasedEra era =>

@@ -27,7 +27,7 @@ import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 import qualified Ouroboros.Consensus.Shelley.Node.Praos as Praos
 
 import           Ouroboros.Consensus.Cardano.Condense ()
-import qualified Ouroboros.Consensus.Mempool.TxLimits as TxLimits
+import qualified Ouroboros.Consensus.Mempool.Capacity as TxLimits
 
 import           Cardano.Api
 import           Cardano.Api.Orphans ()
@@ -38,6 +38,7 @@ import           Cardano.Tracing.OrphanInstances.Shelley ()
 
 import qualified Cardano.Node.Protocol.Alonzo as Alonzo
 import qualified Cardano.Node.Protocol.Byron as Byron
+import qualified Cardano.Node.Protocol.Conway as Conway
 import qualified Cardano.Node.Protocol.Shelley as Shelley
 import           Cardano.Node.Protocol.Types
 
@@ -61,6 +62,7 @@ mkSomeConsensusProtocolCardano
   :: NodeByronProtocolConfiguration
   -> NodeShelleyProtocolConfiguration
   -> NodeAlonzoProtocolConfiguration
+  -> NodeConwayProtocolConfiguration
   -> NodeHardForkProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT CardanoProtocolInstantiationError IO SomeConsensusProtocol
@@ -83,6 +85,10 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcAlonzoGenesisFile,
                              npcAlonzoGenesisFileHash
                            }
+                           NodeConwayProtocolConfiguration {
+                             npcConwayGenesisFile,
+                             npcConwayGenesisFileHash
+                           }
                            NodeHardForkProtocolConfiguration {
                             -- npcTestEnableDevelopmentHardForkEras,
                             -- During testing of the Alonzo era, we conditionally declared that we
@@ -99,7 +105,9 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcTestAlonzoHardForkAtEpoch,
                              npcTestAlonzoHardForkAtVersion,
                              npcTestBabbageHardForkAtEpoch,
-                             npcTestBabbageHardForkAtVersion
+                             npcTestBabbageHardForkAtVersion,
+                             npcTestConwayHardForkAtEpoch,
+                             npcTestConwayHardForkAtVersion
                            }
                            files = do
     byronGenesis <-
@@ -121,6 +129,11 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
       firstExceptT CardanoProtocolInstantiationAlonzoGenesisReadError $
         Alonzo.readGenesis npcAlonzoGenesisFile
                            npcAlonzoGenesisFileHash
+
+    (conwayGenesis, _conwayGenesisHash) <-
+      firstExceptT CardanoProtocolInstantiationConwayGenesisReadError $
+        Conway.readGenesis npcConwayGenesisFile
+                           npcConwayGenesisFileHash
 
     shelleyLeaderCredentials <-
       firstExceptT CardanoProtocolInstantiationPraosLeaderCredentialsError $
@@ -215,6 +228,15 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           Praos.babbageMaxTxCapacityOverrides =
             TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
+        Praos.ProtocolParamsConway {
+          -- This is /not/ the Babbage protocol version. It is the protocol
+          -- version that this node will declare that it understands, when it
+          -- is in the Babbage era. Since Babbage is currently the last known
+          -- protocol version then this is also the Babbage protocol version.
+          Praos.conwayProtVer = ProtVer 9 0,
+          Praos.conwayMaxTxCapacityOverrides =
+            TxLimits.mkOverrides TxLimits.noOverridesMeasure
+        }
         -- ProtocolParamsTransition specifies the parameters needed to transition between two eras
         -- The comments below also apply for the Shelley -> Allegra and Allegra -> Mary hard forks.
         -- Byron to Shelley hard fork parameters
@@ -283,6 +305,16 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                 Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
 
         }
+        -- Alonzo to Conway hard fork parameters
+        Consensus.ProtocolTransitionParamsShelleyBased {
+          transitionTranslationContext = conwayGenesis,
+          transitionTrigger =
+             case npcTestConwayHardForkAtEpoch of
+                Nothing -> Consensus.TriggerHardForkAtVersion
+                             (maybe 8 fromIntegral npcTestConwayHardForkAtVersion)
+                Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
+
+        }
 
 ------------------------------------------------------------------------------
 -- Errors
@@ -296,6 +328,9 @@ data CardanoProtocolInstantiationError =
          Shelley.GenesisReadError
 
      | CardanoProtocolInstantiationAlonzoGenesisReadError
+         Shelley.GenesisReadError
+
+     | CardanoProtocolInstantiationConwayGenesisReadError
          Shelley.GenesisReadError
 
      | CardanoProtocolInstantiationPraosLeaderCredentialsError
@@ -312,6 +347,8 @@ instance Error CardanoProtocolInstantiationError where
     "Shelley related: " <> displayError err
   displayError (CardanoProtocolInstantiationAlonzoGenesisReadError err) =
     "Alonzo related: " <> displayError err
+  displayError (CardanoProtocolInstantiationConwayGenesisReadError err) =
+    "Conway related : " <> displayError err
   displayError (CardanoProtocolInstantiationPraosLeaderCredentialsError err) =
     displayError err
   displayError (CardanoProtocolInstantiationErrorAlonzo err) =

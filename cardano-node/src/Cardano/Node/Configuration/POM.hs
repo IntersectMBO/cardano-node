@@ -44,7 +44,7 @@ import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config
-import           Ouroboros.Consensus.Mempool.API (MempoolCapacityBytes (..),
+import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
                    MempoolCapacityBytesOverride (..))
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
@@ -244,6 +244,7 @@ instance FromJSON PartialNodeConfiguration where
             Last . Just  <$> (NodeProtocolConfigurationCardano <$> parseByronProtocol v
                                                                <*> parseShelleyProtocol v
                                                                <*> parseAlonzoProtocol v
+                                                               <*> parseConwayProtocol v
                                                                <*> parseHardForkProtocol v)
       pncMaybeMempoolCapacityOverride <- Last <$> parseMempoolCapacityBytesOverride v
 
@@ -368,10 +369,17 @@ instance FromJSON PartialNodeConfiguration where
       parseAlonzoProtocol v = do
         npcAlonzoGenesisFile     <- v .:  "AlonzoGenesisFile"
         npcAlonzoGenesisFileHash <- v .:? "AlonzoGenesisHash"
-
         pure NodeAlonzoProtocolConfiguration {
                npcAlonzoGenesisFile
              , npcAlonzoGenesisFileHash
+             }
+
+      parseConwayProtocol v = do
+        npcConwayGenesisFile     <- v .:  "ConwayGenesisFile"
+        npcConwayGenesisFileHash <- v .:? "ConwayGenesisHash"
+        pure NodeConwayProtocolConfiguration {
+               npcConwayGenesisFile
+             , npcConwayGenesisFileHash
              }
 
       parseHardForkProtocol v = do
@@ -394,6 +402,9 @@ instance FromJSON PartialNodeConfiguration where
         npcTestBabbageHardForkAtEpoch   <- v .:? "TestBabbageHardForkAtEpoch"
         npcTestBabbageHardForkAtVersion <- v .:? "TestBabbageHardForkAtVersion"
 
+        npcTestConwayHardForkAtEpoch   <- v .:? "TestConwayHardForkAtEpoch"
+        npcTestConwayHardForkAtVersion <- v .:? "TestConwayHardForkAtVersion"
+
         pure NodeHardForkProtocolConfiguration {
                npcTestEnableDevelopmentHardForkEras,
 
@@ -410,7 +421,10 @@ instance FromJSON PartialNodeConfiguration where
                npcTestAlonzoHardForkAtVersion,
 
                npcTestBabbageHardForkAtEpoch,
-               npcTestBabbageHardForkAtVersion
+               npcTestBabbageHardForkAtVersion,
+
+               npcTestConwayHardForkAtEpoch,
+               npcTestConwayHardForkAtVersion
              }
 
 -- | Default configuration is mainnet

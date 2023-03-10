@@ -3,4 +3,5 @@
 configuration/cardano/mainnet-config.json text eol=lf
 configuration/cardano/mainnet-alonzo-genesis.json text eol=lf
 configuration/cardano/mainnet-byron-genesis.json text eol=lf
+configuration/cardano/mainnet-conway-genesis.json text eol=lf
 configuration/cardano/mainnet-shelley-genesis.json text eol=lf

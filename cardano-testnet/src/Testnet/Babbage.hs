@@ -70,8 +70,11 @@ babbageTestnet testnetOptions H.Conf {..} = do
 
   alonzoBabbageTestGenesisJsonSourceFile <- H.noteShow $ base </> "scripts/babbage/alonzo-babbage-test-genesis.json"
   alonzoBabbageTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath </> "genesis.alonzo.spec.json"
-
   H.copyFile alonzoBabbageTestGenesisJsonSourceFile alonzoBabbageTestGenesisJsonTargetFile
+
+  conwayBabbageTestGenesisJsonSourceFile <- H.noteShow $ base </> "scripts/babbage/conway-babbage-test-genesis.json"
+  conwayBabbageTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath </> "genesis.conway.spec.json"
+  H.copyFile conwayBabbageTestGenesisJsonSourceFile conwayBabbageTestGenesisJsonTargetFile
 
   configurationFile <- H.noteShow $ tempAbsPath </> "configuration.yaml"
 
@@ -85,6 +88,7 @@ babbageTestnet testnetOptions H.Conf {..} = do
     . HM.insert "ByronGenesisFile" (toJSON @String "genesis/byron/genesis.json")
     . HM.insert "ShelleyGenesisFile" (toJSON @String "genesis/shelley/genesis.json")
     . HM.insert "AlonzoGenesisFile" (toJSON @String "genesis/shelley/genesis.alonzo.json")
+    . HM.insert "ConwayGenesisFile" (toJSON @String "genesis/shelley/genesis.conway.json")
     . HM.insert "RequiresNetworkMagic" (toJSON @String "RequiresMagic")
     . HM.insert "LastKnownBlockVersion-Major" (toJSON @Int 6)
     . HM.insert "LastKnownBlockVersion-Minor" (toJSON @Int 0)
@@ -165,6 +169,7 @@ babbageTestnet testnetOptions H.Conf {..} = do
 
   H.renameFile (tempAbsPath </> "byron-gen-command/genesis.json") (tempAbsPath </> "genesis/byron/genesis.json")
   H.renameFile (tempAbsPath </> "genesis.alonzo.json") (tempAbsPath </> "genesis/shelley/genesis.alonzo.json")
+  H.renameFile (tempAbsPath </> "genesis.conway.json") (tempAbsPath </> "genesis/shelley/genesis.conway.json")
   H.renameFile (tempAbsPath </> "genesis.json") (tempAbsPath </> "genesis/shelley/genesis.json")
 
   H.rewriteJsonFile (tempAbsPath </> "genesis/byron/genesis.json") $ J.rewriteObject

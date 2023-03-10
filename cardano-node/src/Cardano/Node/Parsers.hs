@@ -24,7 +24,7 @@ import qualified Options.Applicative.Help as OptI
 import           System.Posix.Types (Fd (..))
 import           Text.Read (readMaybe)
 
-import           Ouroboros.Consensus.Mempool.API (MempoolCapacityBytes (..),
+import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
                    MempoolCapacityBytesOverride (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
 

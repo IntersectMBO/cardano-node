@@ -35,6 +35,7 @@ import qualified Cardano.Ledger.Babbage as Babbage
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.Compactible (Compactible (fromCompact))
+import qualified Cardano.Ledger.Conway as Conway
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Shelley.PoolRank as Shelley
 import           Cardano.Ledger.UnifiedMap (UnifiedMap)
@@ -276,7 +277,7 @@ instance ToJSON (BabbagePParamsUpdate era) where
      ++ [ "collateralPercentage"  .= x | x <- mbfield (Babbage._collateralPercentage pp) ]
      ++ [ "maxCollateralInputs"   .= x | x <- mbfield (Babbage._maxCollateralInputs pp) ]
 
-instance ToJSON (BabbagePParams (Babbage.BabbageEra Consensus.StandardCrypto)) where
+instance ToJSON (BabbagePParams (era Consensus.StandardCrypto)) where
   toJSON pp =
     Aeson.object
       [ "minFeeA" .= Babbage._minfeeA pp
@@ -344,9 +345,10 @@ instance ( Ledger.Era era
       SNothing -> toEncoding Aeson.Null
       SJust dH -> toEncoding $ ScriptDataHash dH
 
-
-
 instance ToJSON (AlonzoScript (Babbage.BabbageEra Consensus.StandardCrypto)) where
+  toJSON = Aeson.String . Text.decodeUtf8 . B16.encode . CBOR.serialize'
+
+instance ToJSON (AlonzoScript (Conway.ConwayEra Consensus.StandardCrypto)) where
   toJSON = Aeson.String . Text.decodeUtf8 . B16.encode . CBOR.serialize'
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.DPState crypto) where

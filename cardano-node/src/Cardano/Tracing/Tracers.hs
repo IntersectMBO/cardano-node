@@ -77,7 +77,7 @@ import           Ouroboros.Consensus.Ledger.Query (BlockQuery)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxs,
                    LedgerSupportsMempool)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
-import           Ouroboros.Consensus.Mempool.API (MempoolSize (..), TraceEventMempool (..))
+import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempool (..))
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
 import qualified Ouroboros.Consensus.Network.NodeToNode as NodeToNode
 import           Ouroboros.Consensus.Node (NetworkP2PMode (..))
@@ -109,8 +109,7 @@ import           Ouroboros.Network.NodeToClient (LocalAddress)
 import           Ouroboros.Network.NodeToNode (RemoteAddress)
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
-import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
-import qualified Ouroboros.Consensus.Storage.LedgerDB.Types as LedgerDB
+import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 
 import           Cardano.Tracing.Config
 import           Cardano.Tracing.HasIssuer (BlockIssuerVerificationKeyHash (..), HasIssuer (..))
@@ -172,7 +171,7 @@ nullTracersP2P = Tracers
   , peersTracer = nullTracer
   }
 
-nullTracersNonP2P :: Tracers peer localPeer blk Diffusion.NonP2P
+nullTracersNonP2P :: Tracers peer localPeer blk 'Diffusion.NonP2P
 nullTracersNonP2P = Tracers
   { chainDBTracer = nullTracer
   , consensusTracers = Consensus.nullTracers

@@ -156,7 +156,7 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
       TokNonBlocking ->  pure $ SendMsgReplyTxIds
                              (NonBlockingReply $ txToIdSize <$> newTxs)
                              (client stateC)
-                    
+
   requestTxs ::
        LocalState era
     -> [GenTxId CardanoBlock]
@@ -192,6 +192,7 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
     ShelleyBasedEraMary     -> toConsensusGenTx $ TxInMode tx MaryEraInCardanoMode
     ShelleyBasedEraAlonzo   -> toConsensusGenTx $ TxInMode tx AlonzoEraInCardanoMode
     ShelleyBasedEraBabbage  -> toConsensusGenTx $ TxInMode tx BabbageEraInCardanoMode
+    ShelleyBasedEraConway   -> toConsensusGenTx $ TxInMode tx ConwayEraInCardanoMode
 
   fromGenTxId :: GenTxId CardanoBlock -> TxId
   fromGenTxId (Block.GenTxIdShelley (Mempool.ShelleyTxId i)) = fromShelleyTxId i

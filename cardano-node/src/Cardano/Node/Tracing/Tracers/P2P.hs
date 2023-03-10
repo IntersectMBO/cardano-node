@@ -87,6 +87,11 @@ instance (ToJSONKey ntnAddr, ToJSONKey RelayAccessPoint, Show ntnAddr, Show exce
              , "domainAddress" .= toJSON d
              , "reason" .= show exception
              ]
+  forMachine _dtal (TraceLocalRootReconfigured d exception) =
+    mconcat [ "kind" .= String "LocalRootReconfigured"
+             , "domainAddress" .= toJSON d
+             , "reason" .= show exception
+             ]
   forHuman = pack . show
 
 instance MetaTrace (TraceLocalRootPeers ntnAddr exception) where
@@ -96,6 +101,7 @@ instance MetaTrace (TraceLocalRootPeers ntnAddr exception) where
   namespaceFor TraceLocalRootGroups {} = Namespace [] ["LocalRootGroups"]
   namespaceFor TraceLocalRootFailure {} = Namespace [] ["LocalRootFailure"]
   namespaceFor TraceLocalRootError {} = Namespace [] ["LocalRootError"]
+  namespaceFor TraceLocalRootReconfigured {} = Namespace [] ["LocalRootReconfigured"]
 
   severityFor (Namespace [] ["LocalRootDomains"]) _ = Just Info
   severityFor (Namespace [] ["LocalRootWaiting"]) _ = Just Info

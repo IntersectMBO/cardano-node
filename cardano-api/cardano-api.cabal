@@ -121,6 +121,7 @@ library
                       , cardano-data ^>= 0.1
                       , cardano-ledger-alonzo ^>= 0.1
                       , cardano-ledger-babbage ^>= 0.1
+                      , cardano-ledger-conway
                       , cardano-ledger-byron ^>= 0.1
                       , cardano-ledger-core ^>= 0.1
                       , cardano-ledger-shelley-ma ^>= 0.1
@@ -145,10 +146,13 @@ library
                       , ouroboros-consensus
                       , ouroboros-consensus-byron
                       , ouroboros-consensus-cardano
+                      , ouroboros-consensus-diffusion
                       , ouroboros-consensus-protocol
                       , ouroboros-consensus-shelley
                       , ouroboros-network
+                      , ouroboros-network-api
                       , ouroboros-network-framework
+                      , ouroboros-network-protocols
                       , parsec
                       , plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.1
                       , prettyprinter

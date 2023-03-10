@@ -1247,7 +1247,10 @@ pGenesisCmd =
                           "JSON file with genesis defaults for each shelley."
                     <*> parseFilePath
                           "alonzo-template"
-                          "JSON file with genesis defaults for each alonzo."
+                          "JSON file with genesis defaults for alonzo."
+                    <*> parseFilePath
+                          "conway-template"
+                          "JSON file with genesis defaults for conway."
                     <*> pNodeConfigTemplate
 
     pGenesisCreate :: Parser GenesisCmd
