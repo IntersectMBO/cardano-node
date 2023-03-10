@@ -26,12 +26,11 @@ module Testnet.Util.Runtime
   , getTmpBaseAbsPath    -- used for Testnet.Byron
   ) where
 
-
 import           Control.Monad
 import           Data.Aeson (FromJSON)
 import qualified Data.List as L
-
 import           Data.Text (Text)
+
 import           GHC.Generics (Generic)
 import qualified Hedgehog as H
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
@@ -48,6 +47,7 @@ import qualified System.Process as IO
 
 import           Testnet.Util.Cli
 import qualified Testnet.Util.Process as H
+
 
 data NodeLoggingFormat = NodeLoggingFormatAsJson | NodeLoggingFormatAsText deriving (Eq, Show)
 
@@ -127,18 +127,24 @@ makeSprocket
   -> String
   -> Sprocket
 makeSprocket tmpPath node
-  = Sprocket (getTmpBaseAbsPath tmpPath)  (getSocketDir tmpPath </> node)
+  = Sprocket (getTmpBaseAbsPath tmpPath) (getSocketDir tmpPath </> node)
+
 newtype TmpPath = TmpPath
   { unTmpPath :: FilePath
   } deriving (Eq, Show)
+
 getTmpRelPath :: TmpPath -> FilePath
 getTmpRelPath (TmpPath fp) = FP.makeRelative (getTmpBaseAbsPath (TmpPath fp)) fp
+
 getSocketDir :: TmpPath -> FilePath
 getSocketDir fp = getTmpRelPath fp </> "socket"
+
 getTmpBaseAbsPath :: TmpPath -> FilePath
 getTmpBaseAbsPath (TmpPath fp) = FP.takeDirectory fp
+
 getLogDir :: TmpPath -> FilePath
 getLogDir (TmpPath fp) = fp </> "logs"
+
 -- | Start a node, creating file handles, sockets and temp-dirs.
 startNode
   :: TmpPath
@@ -154,6 +160,7 @@ startNode tp@(TmpPath tempAbsPath) node nodeCmd = do
     logDir = getLogDir tp
 
   H.createDirectoryIfMissing logDir
+
   dbDir <- H.noteShow $ tempAbsPath </> "db/" <> node
   nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
   nodeStderrFile <- H.noteTempFile logDir $ node <> ".stderr.log"

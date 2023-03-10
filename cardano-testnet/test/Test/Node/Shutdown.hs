@@ -40,7 +40,7 @@ hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' ->
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
   Conf { tempAbsPath } <- H.noteShowM $
     mkConf (ProjectBase base) (YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
-  let logDir = getLogDir (TmpPath tempAbsPath) 
+  let logDir = getLogDir (TmpPath tempAbsPath)
       tempBaseAbsPath = getTmpBaseAbsPath (TmpPath tempAbsPath)
       socketDir = getSocketDir (TmpPath tempAbsPath)
 
