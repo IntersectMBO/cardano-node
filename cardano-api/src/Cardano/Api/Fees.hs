@@ -1,5 +1,5 @@
-{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -10,7 +10,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
 
 -- | Fee calculation
 --
@@ -42,6 +41,7 @@ module Cardano.Api.Fees (
     mapTxScriptWitnesses,
   ) where
 
+import           Control.Monad (forM_)
 import qualified Data.Array as Array
 import           Data.Bifunctor (bimap, first)
 import qualified Data.ByteString as BS
@@ -102,7 +102,6 @@ import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
-import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
@@ -238,7 +237,7 @@ estimateTransactionFee _ _ _ (ByronTx _) =
 --
 evaluateTransactionFee :: forall era.
                           IsShelleyBasedEra era
-                       => ProtocolParameters
+                       => BundledProtocolParameters era
                        -> TxBody era
                        -> Word  -- ^ The number of Shelley key witnesses
                        -> Word  -- ^ The number of Byron key witnesses
@@ -246,23 +245,22 @@ evaluateTransactionFee :: forall era.
 evaluateTransactionFee _ _ _ byronwitcount | byronwitcount > 0 =
   error "evaluateTransactionFee: TODO support Byron key witnesses"
 
-evaluateTransactionFee pparams txbody keywitcount _byronwitcount =
+evaluateTransactionFee bpparams txbody keywitcount _byronwitcount =
     case makeSignedTransaction [] txbody of
       ByronTx{} -> case shelleyBasedEra :: ShelleyBasedEra era of {}
       --TODO: we could actually support Byron here, it'd be different but simpler
 
-      ShelleyTx era tx -> withLedgerConstraints era (evalShelleyBasedEra era tx)
+      ShelleyTx era tx -> withLedgerConstraints era (evalShelleyBasedEra tx)
   where
     evalShelleyBasedEra :: forall ledgerera.
                            ShelleyLedgerEra era ~ ledgerera
                         => Ledger.CLI ledgerera
-                        => ShelleyBasedEra era
-                        -> Ledger.Tx ledgerera
+                        => Ledger.Tx ledgerera
                         -> Lovelace
-    evalShelleyBasedEra era tx =
+    evalShelleyBasedEra tx =
       fromShelleyLovelace $
         Ledger.evaluateTransactionFee
-          (toLedgerPParams era pparams)
+          (unbundleLedgerShelleyBasedProtocolParams shelleyBasedEra bpparams)
           tx
           keywitcount
 
@@ -505,39 +503,40 @@ instance Error TransactionValidityError where
 -- are actually used.
 --
 evaluateTransactionExecutionUnits
-  :: forall era mode.
-     EraInMode era mode
-  -> SystemStart
+  :: forall era.
+     SystemStart
   -> LedgerEpochInfo
-  -> ProtocolParameters
+  -> BundledProtocolParameters era
   -> UTxO era
   -> TxBody era
   -> Either TransactionValidityError
             (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
-evaluateTransactionExecutionUnits _eraInMode systemstart (LedgerEpochInfo ledgerEpochInfo)
-                                  pparams utxo txbody =
+evaluateTransactionExecutionUnits systemstart epochInfo bpp utxo txbody =
     case makeSignedTransaction [] txbody of
-      ByronTx {}                 -> evalPreAlonzo
-      ShelleyTx era tx' ->
-        case era of
+      ByronTx {}                -> evalPreAlonzo
+      ShelleyTx sbe tx' ->
+        case sbe of
           ShelleyBasedEraShelley -> evalPreAlonzo
           ShelleyBasedEraAllegra -> evalPreAlonzo
           ShelleyBasedEraMary    -> evalPreAlonzo
-          ShelleyBasedEraAlonzo  -> evalAlonzo era tx'
+          ShelleyBasedEraAlonzo  -> evalAlonzo sbe tx'
           ShelleyBasedEraBabbage ->
-            case collateralSupportedInEra $ shelleyBasedToCardanoEra era of
-              Just supp -> obtainHasFieldConstraint supp $ evalBabbage era tx'
+            case collateralSupportedInEra $ shelleyBasedToCardanoEra sbe of
+              Just supp -> obtainHasFieldConstraint supp $ evalBabbage sbe tx'
               Nothing -> return mempty
           ShelleyBasedEraConway ->
-            case collateralSupportedInEra $ shelleyBasedToCardanoEra era of
-              Just supp -> obtainHasFieldConstraint supp $ evalConway era tx'
+            case collateralSupportedInEra $ shelleyBasedToCardanoEra sbe of
+              Just supp -> obtainHasFieldConstraint supp $ evalConway sbe tx'
               Nothing -> return mempty
   where
-    -- Pre-Alonzo eras do not support languages with execution unit accounting.
+    LedgerEpochInfo ledgerEpochInfo = epochInfo
+
+    -- | Pre-Alonzo eras do not support languages with execution unit accounting.
     evalPreAlonzo :: Either TransactionValidityError
                             (Map ScriptWitnessIndex
-                                 (Either ScriptExecutionError ExecutionUnits))
+                                  (Either ScriptExecutionError ExecutionUnits))
     evalPreAlonzo = Right Map.empty
+
 
     evalAlonzo :: forall ledgerera.
                   ShelleyLedgerEra era ~ ledgerera
@@ -551,9 +550,9 @@ evaluateTransactionExecutionUnits _eraInMode systemstart (LedgerEpochInfo ledger
                          (Map ScriptWitnessIndex
                               (Either ScriptExecutionError ExecutionUnits))
     evalAlonzo era tx = do
-      cModelArray <- toAlonzoCostModelsArray (protocolParamCostModels pparams)
+      cModelArray <- toAlonzoCostModelsArray (protocolParamCostModels (unbundleProtocolParams  bpp))
       case Alonzo.evaluateTransactionExecutionUnits
-             (toLedgerPParams era pparams)
+             (unbundleLedgerShelleyBasedProtocolParams era bpp)
              tx
              (toLedgerUTxO era utxo)
              ledgerEpochInfo
@@ -573,9 +572,9 @@ evaluateTransactionExecutionUnits _eraInMode systemstart (LedgerEpochInfo ledger
                          (Map ScriptWitnessIndex
                               (Either ScriptExecutionError ExecutionUnits))
     evalBabbage era tx = do
-      costModelsArray <- toAlonzoCostModelsArray (protocolParamCostModels pparams)
+      costModelsArray <- toAlonzoCostModelsArray (protocolParamCostModels (unbundleProtocolParams bpp))
       case Alonzo.evaluateTransactionExecutionUnits
-             (toLedgerPParams era pparams)
+             (unbundleLedgerShelleyBasedProtocolParams era bpp)
              tx
              (toLedgerUTxO era utxo)
              ledgerEpochInfo
@@ -595,9 +594,9 @@ evaluateTransactionExecutionUnits _eraInMode systemstart (LedgerEpochInfo ledger
                          (Map ScriptWitnessIndex
                               (Either ScriptExecutionError ExecutionUnits))
     evalConway era tx = do
-      costModelsArray <- toAlonzoCostModelsArray (protocolParamCostModels pparams)
+      costModelsArray <- toAlonzoCostModelsArray (protocolParamCostModels (unbundleProtocolParams bpp))
       case Alonzo.evaluateTransactionExecutionUnits
-             (toLedgerPParams era pparams)
+             (toLedgerPParams era (unbundleProtocolParams bpp))
              tx
              (toLedgerUTxO era utxo)
              ledgerEpochInfo
@@ -662,7 +661,6 @@ evaluateTransactionExecutionUnits _eraInMode systemstart (LedgerEpochInfo ledger
     obtainHasFieldConstraint CollateralInBabbageEra f =  f
     obtainHasFieldConstraint CollateralInConwayEra f =  f
 
-
 -- ----------------------------------------------------------------------------
 -- Transaction balance
 --
@@ -675,7 +673,7 @@ evaluateTransactionExecutionUnits _eraInMode systemstart (LedgerEpochInfo ledger
 --
 evaluateTransactionBalance :: forall era.
                               IsShelleyBasedEra era
-                           => ProtocolParameters
+                           => BundledProtocolParameters era
                            -> Set PoolId
                            -> UTxO era
                            -> TxBody era
@@ -684,7 +682,7 @@ evaluateTransactionBalance _ _ _ (ByronTxBody _) =
     case shelleyBasedEra :: ShelleyBasedEra era of {}
     --TODO: we could actually support Byron here, it'd be different but simpler
 
-evaluateTransactionBalance pparams poolids utxo
+evaluateTransactionBalance bpp poolids utxo
                            (ShelleyTxBody era txbody _ _ _ _) =
     withLedgerConstraints
       era
@@ -716,7 +714,7 @@ evaluateTransactionBalance pparams poolids utxo
     evalMultiAsset evidence =
       TxOutValue evidence . fromMaryValue $
          Ledger.evaluateTransactionBalance
-           (toLedgerPParams era pparams)
+           (unbundleLedgerShelleyBasedProtocolParams era bpp)
            (toLedgerUTxO era utxo)
            isNewPool
            txbody
@@ -731,7 +729,7 @@ evaluateTransactionBalance pparams poolids utxo
     evalAdaOnly evidence =
      TxOutAdaOnly evidence . fromShelleyLovelace
        $ Ledger.evaluateTransactionBalance
-           (toLedgerPParams era pparams)
+           (unbundleLedgerShelleyBasedProtocolParams era bpp)
            (toLedgerUTxO era utxo)
            isNewPool
            txbody
@@ -952,10 +950,9 @@ data BalancedTxBody era
 -- which can be queried from a local node.
 --
 makeTransactionBodyAutoBalance
-  :: forall era mode.
+  :: forall era.
      IsShelleyBasedEra era
-  => EraInMode era mode
-  -> SystemStart
+  => SystemStart
   -> LedgerEpochInfo
   -> ProtocolParameters
   -> Set PoolId       -- ^ The set of registered stake pools
@@ -964,7 +961,7 @@ makeTransactionBodyAutoBalance
   -> AddressInEra era -- ^ Change address
   -> Maybe Word       -- ^ Override key witnesses
   -> Either TxBodyErrorAutoBalance (BalancedTxBody era)
-makeTransactionBodyAutoBalance eraInMode systemstart history pparams
+makeTransactionBodyAutoBalance systemstart history pparams
                             poolids utxo txbodycontent changeaddr mnkeys = do
 
     -- Our strategy is to:
@@ -982,9 +979,8 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
 
     exUnitsMap <- first TxBodyErrorValidityInterval $
                     evaluateTransactionExecutionUnits
-                      eraInMode
                       systemstart history
-                      pparams
+                      bpparams
                       utxo
                       txbody0
 
@@ -1025,7 +1021,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
 
     let nkeys = fromMaybe (estimateTransactionKeyWitnessCount txbodycontent1)
                           mnkeys
-        fee   = evaluateTransactionFee pparams txbody1 nkeys 0 --TODO: byron keys
+        fee   = evaluateTransactionFee bpparams txbody1 nkeys 0 --TODO: byron keys
         (retColl, reqCol) = calcReturnAndTotalCollateral
                               fee pparams (txInsCollateral txbodycontent)
                               (txReturnCollateral txbodycontent)
@@ -1041,9 +1037,9 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
                  txReturnCollateral = retColl,
                  txTotalCollateral = reqCol
                }
-    let balance = evaluateTransactionBalance pparams poolids utxo txbody2
+    let balance = evaluateTransactionBalance bpparams poolids utxo txbody2
 
-    mapM_ (`checkMinUTxOValue` pparams) $ txOuts txbodycontent1
+    forM_ (txOuts txbodycontent1) $ \txout -> checkMinUTxOValue txout bpparams
 
     -- check if the balance is positive or negative
     -- in one case we can produce change, in the other the inputs are insufficient
@@ -1078,6 +1074,8 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
         createAndValidateTransactionBody finalTxBodyContent
     return (BalancedTxBody finalTxBodyContent txbody3 (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone) fee)
  where
+   bpparams = bundleProtocolParams era' pparams
+
    -- Essentially we check for the existence of collateral inputs. If they exist we
    -- create a fictitious collateral return output. Why? Because we need to put dummy values
    -- to get a fee estimate (i.e we overestimate the fee.)
@@ -1183,7 +1181,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     | txOutValueToLovelace balance < 0 =
         Left . TxBodyErrorAdaBalanceNegative $ txOutValueToLovelace balance
     | otherwise =
-        case checkMinUTxOValue (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone) pparams of
+        case checkMinUTxOValue (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone) bpparams of
           Left (TxBodyErrorMinUTxONotMet txOutAny minUTxO) ->
             Left $ TxBodyErrorAdaBalanceTooSmall txOutAny minUTxO (txOutValueToLovelace balance)
           Left err -> Left err
@@ -1191,11 +1189,10 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
 
    checkMinUTxOValue
      :: TxOut CtxTx era
-     -> ProtocolParameters
+     -> BundledProtocolParameters era
      -> Either TxBodyErrorAutoBalance ()
-   checkMinUTxOValue txout@(TxOut _ v _ _) pparams' = do
-     minUTxO  <- first TxBodyErrorMinUTxOMissingPParams
-                   $ calculateMinimumUTxO era txout pparams'
+   checkMinUTxOValue txout@(TxOut _ v _ _) bpp = do
+     minUTxO  <- first TxBodyErrorMinUTxOMissingPParams $ calculateMinimumUTxO era txout bpp
      if txOutValueToLovelace v >= minUTxO
      then Right ()
      else Left $ TxBodyErrorMinUTxONotMet
@@ -1356,36 +1353,33 @@ mapTxScriptWitnesses f txbodycontent@TxBodyContent {
 calculateMinimumUTxO
   :: ShelleyBasedEra era
   -> TxOut CtxTx era
-  -> ProtocolParameters
+  -> BundledProtocolParameters era
   -> Either MinimumUTxOError Lovelace
-calculateMinimumUTxO era txout@(TxOut _ v _ _) pparams' =
+calculateMinimumUTxO era txout@(TxOut _ v _ _) bpp =
   case era of
-    ShelleyBasedEraShelley -> getMinUTxOPreAlonzo pparams'
+    ShelleyBasedEraShelley -> getMinUTxOPreAlonzo (unbundleProtocolParams bpp)
     ShelleyBasedEraAllegra -> calcMinUTxOAllegraMary
     ShelleyBasedEraMary -> calcMinUTxOAllegraMary
     ShelleyBasedEraAlonzo ->
       let lTxOut = toShelleyTxOutAny era txout
-          babPParams = toAlonzoPParams pparams'
-          minUTxO = Shelley.evaluateMinLovelaceOutput babPParams lTxOut
+          minUTxO = Shelley.evaluateMinLovelaceOutput (unbundleLedgerShelleyBasedProtocolParams era bpp) lTxOut
           val = fromShelleyLovelace minUTxO
       in Right val
     ShelleyBasedEraBabbage ->
       let lTxOut = toShelleyTxOutAny era txout
-          babPParams = toBabbagePParams pparams'
-          minUTxO = Shelley.evaluateMinLovelaceOutput babPParams lTxOut
+          minUTxO = Shelley.evaluateMinLovelaceOutput (unbundleLedgerShelleyBasedProtocolParams era bpp) lTxOut
           val = fromShelleyLovelace minUTxO
       in Right val
     ShelleyBasedEraConway ->
       let lTxOut = toShelleyTxOutAny era txout
-          babPParams = toConwayPParams pparams'
-          minUTxO = Shelley.evaluateMinLovelaceOutput babPParams lTxOut
+          minUTxO = Shelley.evaluateMinLovelaceOutput (unbundleLedgerShelleyBasedProtocolParams era bpp) lTxOut
           val = fromShelleyLovelace minUTxO
       in Right val
  where
    calcMinUTxOAllegraMary :: Either MinimumUTxOError Lovelace
    calcMinUTxOAllegraMary = do
      let val = txOutValueToValue v
-     minUTxO <- getMinUTxOPreAlonzo pparams'
+     minUTxO <- getMinUTxOPreAlonzo (unbundleProtocolParams  bpp)
      Right $ calcMinimumDeposit val minUTxO
 
    getMinUTxOPreAlonzo

@@ -1192,7 +1192,8 @@ runQueryLeadershipSchedule (AnyConsensusModeParams cModeParams) network
   anyE@(AnyCardanoEra era) <- lift (determineEra cModeParams localNodeConnInfo)
     & onLeft (left . ShelleyQueryCmdAcquireFailure)
 
-  sbe <- getSbe $ cardanoEraStyle era
+  sbe <- getSbe (cardanoEraStyle era)
+
   let cMode = consensusModeOnly cModeParams
 
   poolid <- lift (readVerificationKeyOrHashOrFile AsStakePoolKey coldVerKeyFile)
@@ -1222,6 +1223,8 @@ runQueryLeadershipSchedule (AnyConsensusModeParams cModeParams) network
       let currentEpochQuery = QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryEpoch
       curentEpoch <- executeQuery era cModeParams localNodeConnInfo currentEpochQuery
 
+      let bpp = bundleProtocolParams era pparams
+
       schedule <- case whichSchedule of
         CurrentEpoch -> do
           serCurrentEpochState <- executeQuery era cModeParams localNodeConnInfo $
@@ -1232,7 +1235,7 @@ runQueryLeadershipSchedule (AnyConsensusModeParams cModeParams) network
               sbe
               shelleyGenesis
               eInfo
-              pparams
+              bpp
               ptclState
               poolid
               vrkSkey
@@ -1248,7 +1251,7 @@ runQueryLeadershipSchedule (AnyConsensusModeParams cModeParams) network
           firstExceptT ShelleyQueryCmdLeaderShipError $ hoistEither
             $ eligibleLeaderSlotsConstaints sbe
             $ nextEpochEligibleLeadershipSlots sbe shelleyGenesis
-              serCurrentEpochState ptclState poolid vrkSkey pparams
+              serCurrentEpochState ptclState poolid vrkSkey bpp
               eInfo (tip, curentEpoch)
 
       case mJsonOutputFile of

@@ -2,7 +2,9 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -23,6 +25,10 @@ module Cardano.Api.ProtocolParameters (
     checkProtocolParameters,
     ProtocolParametersError(..),
     EpochNo,
+    BundledProtocolParameters(..),
+    bundleProtocolParams,
+    unbundleProtocolParams,
+    unbundleLedgerShelleyBasedProtocolParams,
 
     -- * Updates to the protocol parameters
     ProtocolParametersUpdate(..),
@@ -63,7 +69,7 @@ module Cardano.Api.ProtocolParameters (
     toConwayPParams,
 
     -- * Data family instances
-    AsType(..)
+    AsType(..),
   ) where
 
 import           Control.Applicative ((<|>))
@@ -1354,6 +1360,42 @@ fromBabbagePParamsUpdate
 fromConwayPParamsUpdate :: BabbagePParamsUpdate ledgerera
                          -> ProtocolParametersUpdate
 fromConwayPParamsUpdate = fromBabbagePParamsUpdate
+
+-- | Bundle cardano-api representation and ledger representation of protocol parameters together so
+-- they can be computed once and passed around rather than re-computed unecessarily.
+--
+-- The consructor arguments are intentionally lazy so that the values are not computed if not used
+-- (which may be the case for some code paths).
+data BundledProtocolParameters era where
+  BundleAsByronProtocolParameters
+    :: ProtocolParameters
+    -> BundledProtocolParameters ByronEra
+  BundleAsShelleyBasedProtocolParameters
+    :: ShelleyBasedEra era
+    -> ProtocolParameters
+    -> Ledger.PParams (ShelleyLedgerEra era)
+    -> BundledProtocolParameters era
+
+bundleProtocolParams :: CardanoEra era -> ProtocolParameters -> BundledProtocolParameters era
+bundleProtocolParams cEra pp = case cardanoEraStyle cEra of
+  LegacyByronEra -> BundleAsByronProtocolParameters pp
+  ShelleyBasedEra sbe -> BundleAsShelleyBasedProtocolParameters sbe pp (toLedgerPParams sbe pp)
+
+unbundleLedgerShelleyBasedProtocolParams
+  :: ShelleyBasedEra era
+  -> BundledProtocolParameters era
+  -> Ledger.PParams (ShelleyLedgerEra era)
+unbundleLedgerShelleyBasedProtocolParams = \case
+  ShelleyBasedEraShelley -> \(BundleAsShelleyBasedProtocolParameters _ _ lpp) -> lpp
+  ShelleyBasedEraAllegra -> \(BundleAsShelleyBasedProtocolParameters _ _ lpp) -> lpp
+  ShelleyBasedEraMary -> \(BundleAsShelleyBasedProtocolParameters _ _ lpp) -> lpp
+  ShelleyBasedEraAlonzo -> \(BundleAsShelleyBasedProtocolParameters _ _ lpp) -> lpp
+  ShelleyBasedEraBabbage -> \(BundleAsShelleyBasedProtocolParameters _ _ lpp) -> lpp
+  ShelleyBasedEraConway -> \(BundleAsShelleyBasedProtocolParameters _ _ lpp) -> lpp
+
+unbundleProtocolParams :: BundledProtocolParameters era -> ProtocolParameters
+unbundleProtocolParams (BundleAsByronProtocolParameters pp) = pp
+unbundleProtocolParams (BundleAsShelleyBasedProtocolParameters _ pp _) = pp
 
 -- ----------------------------------------------------------------------------
 -- Conversion functions: protocol parameters to ledger types
