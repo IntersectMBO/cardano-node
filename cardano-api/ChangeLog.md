@@ -31,6 +31,11 @@
 
 - **Breaking change** Change return type of `queryNodeLocalState` to new `AcquiringFailure` type.
 
+- **Breaking change** - For performance reasons, `evaluateTransactionFee` to take a
+  `Ledger.PParams (ShelleyLedgerEra era)` argument instead of `ProtocolParameters`
+  New type `BundledProtocolParameters` and new functions `bundleProtocolParams` and `unbundleProtocolParams`.
+  ([PR4903](https://github.com/input-output-hk/cardano-node/pull/4903))
+
 ### Bugs
 
 - Allow reading text envelopes from pipes ([PR 4384](https://github.com/input-output-hk/cardano-node/pull/4384))

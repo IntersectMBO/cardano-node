@@ -685,6 +685,11 @@ module Cardano.Api (
 
     NetworkMagic(..),
 
+    -- * Protocol parameters
+    BundledProtocolParameters(..),
+    bundleProtocolParams,
+    unbundleProtocolParams,
+
     -- ** Conversions
     toLedgerPParams,
     fromLedgerPParams,

@@ -18,17 +18,18 @@ module Cardano.CLI.Shelley.Run.Transaction
   , toTxOutInAnyEra
   ) where
 
-import           Control.Monad (forM_)
+import           Control.Monad (forM_, void)
 import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, hoistMaybe, left,
-                   newExceptT)
+                   newExceptT, onNothing)
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.Bifunctor (Bifunctor (..))
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Data ((:~:) (..))
 import           Data.Foldable (Foldable (..))
+import           Data.Function ((&))
 import qualified Data.List as List
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -420,37 +421,39 @@ runTxBuildCmd
       let BuildTxWith mTxProtocolParams = txProtocolParams txBodycontent
       case mTxProtocolParams of
         Just pparams ->
-         case protocolParamPrices pparams of
-           Just executionUnitPrices -> do
-             let consensusMode = consensusModeOnly cModeParams
-             case consensusMode of
-               CardanoMode -> do
-                 (nodeEraUTxO, _, eraHistory, systemStart, _)
-                   <- firstExceptT ShelleyTxCmdQueryConvenienceError
+          case protocolParamPrices pparams of
+            Just executionUnitPrices -> do
+              let consensusMode = consensusModeOnly cModeParams
+                  bpp = bundleProtocolParams cEra pparams
+              case consensusMode of
+                CardanoMode -> do
+                  (nodeEraUTxO, _, eraHistory, systemStart, _)
+                    <- firstExceptT ShelleyTxCmdQueryConvenienceError
                          . newExceptT $ queryStateForBalancedTx nodeEra nid allTxInputs
-                 case toEraInMode cEra CardanoMode of
-                   Just eInMode -> do
-                     -- Why do we cast the era? The user can specify an era prior to the era that the node is currently in.
-                     -- We cannot use the user specified era to construct a query against a node because it may differ
-                     -- from the node's era and this will result in the 'QueryEraMismatch' failure.
-                     txEraUtxo <- case first ShelleyTxCmdTxEraCastErr (eraCast cEra nodeEraUTxO) of
-                                    Right txEraUtxo -> return txEraUtxo
-                                    Left e -> left e
+                  -- Why do we cast the era? The user can specify an era prior to the era that the node is currently in.
+                  -- We cannot use the user specified era to construct a query against a node because it may differ
+                  -- from the node's era and this will result in the 'QueryEraMismatch' failure.
+                  txEraUtxo <-
+                    case first ShelleyTxCmdTxEraCastErr (eraCast cEra nodeEraUTxO) of
+                      Right txEraUtxo -> return txEraUtxo
+                      Left e -> left e
 
-                     scriptExecUnitsMap <- firstExceptT ShelleyTxCmdTxExecUnitsErr $ hoistEither
-                                             $ evaluateTransactionExecutionUnits
-                                                 eInMode systemStart (toLedgerEpochInfo eraHistory)
-                                                 pparams txEraUtxo balancedTxBody
-                     scriptCostOutput <- firstExceptT ShelleyTxCmdPlutusScriptCostErr $ hoistEither
-                                           $ renderScriptCosts
-                                               txEraUtxo
-                                               executionUnitPrices
-                                               (collectTxBodyScriptWitnesses txBodycontent)
-                                               scriptExecUnitsMap
-                     liftIO $ LBS.writeFile fp $ encodePretty scriptCostOutput
-                   Nothing -> left $ ShelleyTxCmdUnsupportedMode (AnyConsensusMode consensusMode)
-               _ -> left ShelleyTxCmdPlutusScriptsRequireCardanoMode
-           Nothing -> left ShelleyTxCmdPParamExecutionUnitsNotAvailable
+                  scriptExecUnitsMap <-
+                    firstExceptT ShelleyTxCmdTxExecUnitsErr $ hoistEither
+                      $ evaluateTransactionExecutionUnits
+                          systemStart (toLedgerEpochInfo eraHistory)
+                          bpp txEraUtxo balancedTxBody
+
+                  scriptCostOutput <-
+                    firstExceptT ShelleyTxCmdPlutusScriptCostErr $ hoistEither
+                      $ renderScriptCosts
+                          txEraUtxo
+                          executionUnitPrices
+                          (collectTxBodyScriptWitnesses txBodycontent)
+                          scriptExecUnitsMap
+                  liftIO $ LBS.writeFile fp $ encodePretty scriptCostOutput
+                _ -> left ShelleyTxCmdPlutusScriptsRequireCardanoMode
+            Nothing -> left ShelleyTxCmdPParamExecutionUnitsNotAvailable
         Nothing -> left ShelleyTxCmdProtocolParametersNotPresentInTxBody
     OutputTxBodyOnly (TxBodyFile fpath) ->
       let noWitTx = makeSignedTransaction [] balancedTxBody
@@ -699,11 +702,9 @@ runTxBuild era (AnyConsensusModeParams cModeParams) networkId mScriptValidity
 
   case (consensusMode, cardanoEraStyle era) of
     (CardanoMode, ShelleyBasedEra _sbe) -> do
-      eInMode <- case toEraInMode era CardanoMode of
-                   Just result -> return result
-                   Nothing ->
-                     left (ShelleyTxCmdEraConsensusModeMismatchTxBalance outputOptions
-                            (AnyConsensusMode CardanoMode) (AnyCardanoEra era))
+      void $ pure (toEraInMode era CardanoMode)
+        & onNothing (left (ShelleyTxCmdEraConsensusModeMismatchTxBalance outputOptions
+                            (AnyConsensusMode CardanoMode) (AnyCardanoEra era)))
 
       SocketPath sockPath <- firstExceptT ShelleyTxCmdSocketEnvError
                              $ newExceptT readEnvSocketPath
@@ -764,7 +765,7 @@ runTxBuild era (AnyConsensusModeParams cModeParams) networkId mScriptValidity
       balancedTxBody@(BalancedTxBody _ _ _ fee) <-
         firstExceptT ShelleyTxCmdBalanceTxBody
           . hoistEither
-          $ makeTransactionBodyAutoBalance eInMode systemStart (toLedgerEpochInfo eraHistory)
+          $ makeTransactionBodyAutoBalance systemStart (toLedgerEpochInfo eraHistory)
                                            pparams stakePools txEraUtxo txBodyContent
                                            cAddr mOverrideWits
 
@@ -1240,7 +1241,7 @@ runTxCalculateMinRequiredUTxO (AnyCardanoEra era) protocolParamsSourceSpec txOut
       firstExceptT ShelleyTxCmdPParamsErr . hoistEither
         $ checkProtocolParameters sbe pp
       minValue <- firstExceptT ShelleyTxCmdMinimumUTxOErr
-                    . hoistEither $ calculateMinimumUTxO sbe out pp
+                    . hoistEither $ calculateMinimumUTxO sbe out (bundleProtocolParams era pp)
       liftIO . IO.print $ minValue
 
 runTxCreatePolicyId :: ScriptFile -> ExceptT ShelleyTxCmdError IO ()
