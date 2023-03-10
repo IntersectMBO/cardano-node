@@ -139,7 +139,6 @@
           inherit (ouroboros-consensus-cardano-tools.components.exes) db-analyser db-synthesizer;
           inherit (bech32.components.exes) bech32;
         } // lib.optionalAttrs hostPlatform.isUnix {
-          inherit (network-mux.components.exes) cardano-ping;
           inherit plutus-example;
         });
 
