@@ -37,6 +37,9 @@ packages:
     trace-resources
     trace-forward
 
+extra-packages:
+  ouroboros-consensus-cardano-tools
+
 package cardano-api
   ghc-options: -Werror
 
