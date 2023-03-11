@@ -270,6 +270,7 @@ instance LedgerQueries (Cardano.CardanoBlock c) where
     Cardano.LedgerStateMary    ledgerMary    -> ledgerUtxoSize ledgerMary
     Cardano.LedgerStateAlonzo  ledgerAlonzo  -> ledgerUtxoSize ledgerAlonzo
     Cardano.LedgerStateBabbage ledgerBabbage -> ledgerUtxoSize ledgerBabbage
+    Cardano.LedgerStateConway  ledgerConway  -> ledgerUtxoSize ledgerConway
   ledgerDelegMapSize = \case
     Cardano.LedgerStateByron   ledgerByron   -> ledgerDelegMapSize ledgerByron
     Cardano.LedgerStateShelley ledgerShelley -> ledgerDelegMapSize ledgerShelley
@@ -277,6 +278,8 @@ instance LedgerQueries (Cardano.CardanoBlock c) where
     Cardano.LedgerStateMary    ledgerMary    -> ledgerDelegMapSize ledgerMary
     Cardano.LedgerStateAlonzo  ledgerAlonzo  -> ledgerDelegMapSize ledgerAlonzo
     Cardano.LedgerStateBabbage ledgerBabbage -> ledgerDelegMapSize ledgerBabbage
+    Cardano.LedgerStateConway  ledgerConway  -> ledgerDelegMapSize ledgerConway
+
 --
 -- * Node kernel
 --
