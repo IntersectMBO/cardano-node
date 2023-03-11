@@ -1,14 +1,26 @@
-# Create Cardano
+# Creating Cardano testnets 
 
-In [Shelley genesis](doc/reference/shelley-genesis.md) we discussed how to manually create a Shelley blockchain and how to create a testnet semi-automatically with `cardano-cli genesis create`. That does not cover what to do when we need a testnet that starts in Byron era and is updated to the latest era. This requires a fair amount of manual work: converting genesis and delegate keys from Byron to Shelley, creating genesis files, handling file hashing and manually updating the configuration file, etc.
+In [Shelley genesis](shelley-genesis.md) we discussed how to manually create a Shelley blockchain
+and how to create a testnet semi-automatically using the `cardano-cli genesis create` command. That explainer
+did not cover the steps needed to create a testnet that starts in the Byron era and is updated to the latest
+era. This process requires a fair amount of manual work: converting genesis and delegate keys from Byron to
+Shelley, creating genesis files, handling file hashing, manually updating the configuration file, etc.
 
-Creating a testnet that starts in Byron and can easily transition to Shelley and later eras is easy with `cardano-cli genesis create-cardano` command. Keep in mind that on a production network, we need to use the manual method described in [Shelley genesis](./shelley-genesis.md).
+Creating a testnet that starts in Byron and can transition to Shelley and later eras is possible with the
+`cardano-cli genesis create-cardano` command. Note that on mainnet, we need to use the manual method
+described in [Shelley genesis](shelley-genesis.md).
 
-`create-cardano` automatically generates the Byron, Shelley and Alonzo genesis files, together with the needed genesis keys, delegate keys, utxo keys; it also handles all the hashing and generates the configuration file for the node.  
+The `create-cardano` command automatically generates the Byron, Shelley and Alonzo genesis files, including
+the needed genesis keys, delegate keys, and UTXO keys. This command also handles all the hashing and
+generates the configuration file for the node.
 
-`create-cardano` requires us to provide template files for node configuration file, Byron genesis, Shelley genesis and Alonzo genesis. These template files contain the parameters we want for our testnet for each era and the configuration file for the nodes. You can find template files in the [cardano-world repository](https://github.com/input-output-hk/cardano-world/tree/master/nix/cardano/environments/testnet-template) and edit them to your needs.
+The `create-cardano` command also requires us to provide template files for the node configuration file,
+Byron genesis, Shelley genesis and Alonzo genesis. These template files contain the parameters needed for
+the testnet, all eras, and the configuration file for the nodes. You can find template files in the
+[cardano-world repository](https://github.com/input-output-hk/cardano-world/tree/master/nix/cardano/environments/testnet-template)
+and adjust them to your needs.
 
-The help for `create-cardano` shows the parameters that it takes:
+By calling help for `create-cardano`, you will see the needed parameters:
 
 ```bash
 $ cardano-cli genesis create-cardano
@@ -16,40 +28,40 @@ $ cardano-cli genesis create-cardano
 --genesis-dir DIR        The genesis directory containing the genesis template
                          and required genesis/delegation/spending keys.
 --gen-genesis-keys INT   The number of genesis keys to make [default is 3].
---gen-utxo-keys INT      The number of UTxO keys to make [default is 0].
+--gen-utxo-keys INT      The number of UTXO keys to create [default is 0].
 --start-time UTC-TIME    The genesis start time in YYYY-MM-DDThh:mm:ssZ
                          format. If unspecified, will be the current time +30
                          seconds.
---supply LOVELACE        The initial coin supply in Lovelace which will be
+--supply LOVELACE        The initial coin supply in lovelace which will be
                          evenly distributed across initial, non-delegating
                          stake holders.
---security-param INT     Security parameter for genesis file [default is 108].
---slot-length INT        slot length (ms) parameter for genesis file [default
+--security-param INT     Security parameter for the genesis file [default is 108].
+--slot-length INT        Slot length (ms) parameter for genesis file [default
                          is 1000].
 --slot-coefficient RATIONAL
-                         Slot Coefficient for genesis file [default is .05].
---mainnet                Use the mainnet magic id.
---testnet-magic NATURAL  Specify a testnet magic id.
+                         Slot coefficient for the genesis file [default is .05].
+--mainnet                Use the mainnet magic ID.
+--testnet-magic NATURAL  Specify a testnet magic ID.
 --byron-template FILEPATH
-                         JSON file with genesis defaults for each byron.
+                         JSON file with genesis defaults for each Byron.
 --shelley-template FILEPATH
-                         JSON file with genesis defaults for each shelley.
+                         JSON file with genesis defaults for each Shelley.
 --alonzo-template FILEPATH
-                         JSON file with genesis defaults for each alonzo.
+                         JSON file with genesis defaults for each Alonzo.
 --node-config-template FILEPATH
-                         the node config template
+                         The node config template
 
 ```
 
-A few things to consider:
+There are also a few things to consider:
 
-* The _maximum supply_ is hardcoded to 45 billion ADA (like in mainnet). The amount in `--supply` is distributed evenly across initial UTXO keys. The difference between 45 billion and `--supply` will be available on the _Reserves_ when updating to the Shelley era.
+* The _maximum supply_ is hardcoded to 45 billion ada (like on mainnet). The amount in `--supply` is distributed evenly across initial UTXO keys. The difference between 45 billion and `--supply` will be available on the _Reserves_ when updating to the Shelley era.
 
 * `--slot-length`, `--security-param` and `--slot-coefficient` together determine the epoch length on the resulting network. Byron epochs last _10k_ slots, and Shelley epochs last _10k/f_ slots. Where _k_ is the security parameter and _f_ is the slot coefficient.
 
 ### Example
 
-For a network with 3 genesis keys, 3 delegate nodes, 2 non-delegated UTXO keys with 5 billion each and 10 minutes epochs, run:
+For a network with three genesis keys, three delegate nodes, two non-delegated UTXO keys with five billion each and 10 minutes epochs, run:
 
 ```bash
 $ cardano-cli genesis create-cardano \
@@ -69,17 +81,17 @@ $ cardano-cli genesis create-cardano \
 
 This creates the following:
 
-* The "cluster" directory
+* The 'cluster' directory
 * Byron, Shelley and Alonzo genesis files
-* Node configuration file
-* 3 Byron era genesis keys
-* 3 Shelley era genesis keys (converted from Byron keys)
-* 3 Delegate Byron keys
-* 3 Delegation certificates
-* 3 Operational certificates and operational certificate counters
-* 3 Cold, KES and VRF keys
-* 2 Byron era non delegated UTXO keys
-* 2 Shelley era UTXO keys (Converted from Byron keys)  
+* The node configuration file
+* Three Byron era genesis keys
+* Three Shelley era genesis keys (converted from Byron keys)
+* Three delegate Byron keys
+* Three delegation certificates
+* Three operational certificates and operational certificate counters
+* Three cold, KES, and VRF keys
+* Two Byron era non-delegated UTXO keys
+* Two Shelley era UTXO keys (converted from Byron keys)  
 
 ```bash
 $ tree cluster/
@@ -158,10 +170,10 @@ Starting the cluster requires topology files for each of the nodes. For example:
    ]
  }
 ```
-Note: For details about topology files please refer to [Understanding configuration files](../getting-started/understanding-config-files.md)
+Note: For details about topology files please refer to [Understanding configuration files](../getting-started/understanding-config-files.md).
 
 
-Then we run the nodes with block production keys, for example:
+Then, run the nodes with block production keys, for example:
 
 ```bash
 $ cardano-node run \
@@ -174,4 +186,4 @@ $ cardano-node run \
 --signing-key delegate-keys/byron.000.key
 ```  
 
-Updating the testnet to later eras can be done via update proposals, please refer to [Cardano governance](./cardano-governance.md) to learn how to do it.
+Updating the testnet to later eras can be done using update proposals, please refer to [Cardano governance](./cardano-governance.md) to learn how to do it.
