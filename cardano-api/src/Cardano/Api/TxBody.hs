@@ -2724,7 +2724,7 @@ fromLedgerTxOuts era body scriptdata =
       , txouts <- toList (Babbage.outputs body)
       ]
     ShelleyBasedEraConway ->
-      [ fromConwayTxOut
+      [ fromBabbageTxOut
           MultiAssetInConwayEra
           ScriptDataInConwayEra
           ReferenceTxInsScriptsInlineDatumsInConwayEra
@@ -2807,47 +2807,6 @@ fromBabbageTxOut multiAssetInEra scriptDataInEra inlineDatumsInEra txdatums txou
 
    (BabbageTxOut addr val datum mRefScript) = txout
 
-fromConwayTxOut
-  :: forall ledgerera era. Ledger.Era ledgerera
-  => IsShelleyBasedEra era
-  => ShelleyLedgerEra era ~ ledgerera
-  => Ledger.Crypto ledgerera ~ StandardCrypto
-  => Ledger.Value ledgerera ~ MaryValue StandardCrypto
-  => MultiAssetSupportedInEra era
-  -> ScriptDataSupportedInEra era
-  -> ReferenceTxInsScriptsInlineDatumsSupportedInEra era
-  -> Map (Alonzo.DataHash StandardCrypto)
-         (Alonzo.Data ledgerera)
-  -> BabbageTxOut ledgerera
-  -> TxOut CtxTx era
-fromConwayTxOut multiAssetInEra scriptDataInEra inlineDatumsInEra txdatums txout =
-   TxOut
-     (fromShelleyAddr shelleyBasedEra addr)
-     (TxOutValue multiAssetInEra (fromMaryValue val))
-     conwayTxOutDatum
-     (case mRefScript of
-       SNothing -> ReferenceScriptNone
-       SJust rScript -> fromShelleyScriptToReferenceScript shelleyBasedEra rScript
-     )
- where
-   -- NOTE: This is different to 'fromConwayTxOutDatum' as it may resolve
-   -- 'DatumHash' values using the datums included in the transaction.
-   conwayTxOutDatum :: TxOutDatum CtxTx era
-   conwayTxOutDatum =
-     case datum of
-       Babbage.NoDatum -> TxOutDatumNone
-       Babbage.DatumHash dh -> resolveDatumInTx dh
-       Babbage.Datum d ->
-         TxOutDatumInline inlineDatumsInEra $
-           binaryDataToScriptData inlineDatumsInEra d
-
-   resolveDatumInTx :: Alonzo.DataHash StandardCrypto -> TxOutDatum CtxTx era
-   resolveDatumInTx dh
-      | Just d <- Map.lookup dh txdatums
-                  = TxOutDatumInTx' scriptDataInEra (ScriptDataHash dh) (fromAlonzoData d)
-      | otherwise = TxOutDatumHash scriptDataInEra (ScriptDataHash dh)
-
-   (BabbageTxOut addr val datum mRefScript) = txout
 
 fromLedgerTxTotalCollateral
   :: ShelleyBasedEra era
