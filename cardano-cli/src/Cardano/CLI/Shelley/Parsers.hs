@@ -419,10 +419,10 @@ pStakeAddressSource =
 
 pStakeKeyHash :: Parser (Hash StakeKey)
 pStakeKeyHash =
-  Opt.option (eitherReader (deserialiseFromRawBytesBase16 . BSC.pack)) $ mconcat
+  Opt.option readStakeKeyHash $ mconcat
     [ Opt.long "stake-address"
     , Opt.metavar "HASH"
-    , Opt.help "Stake address key (Bech32 or hex-encoded)."
+    , Opt.help "Stake address key (hex-encoded)."
     ]
 
 pKeyCmd :: Parser KeyCmd
@@ -3349,6 +3349,16 @@ readVerificationKey asType =
     deserialiseFromBech32OrHex str =
       first (Text.unpack . renderInputDecodeError) $
         deserialiseInput (AsVerificationKey asType) keyFormats (BSC.pack str)
+
+-- | Read a Bech32 or hex-encoded stake key.
+readStakeKeyHash :: Opt.ReadM (Hash StakeKey)
+readStakeKeyHash = Opt.eitherReader deserialiseFromHex
+  where
+    deserialiseFromHex :: String -> Either String (Hash StakeKey)
+    deserialiseFromHex =
+      first (\e -> "Invalid stake key hash: " ++ displayError e)
+        . deserialiseFromRawBytesHex (AsHash AsStakeKey)
+        . BSC.pack
 
 readOutputFormat :: Opt.ReadM OutputFormat
 readOutputFormat = do
