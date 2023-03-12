@@ -58,8 +58,8 @@ import           Cardano.Api.Shelley
 
 import           Cardano.Chain.Common (BlockCount (BlockCount))
 import           Cardano.CLI.Shelley.Commands
-import           Cardano.CLI.Shelley.Key (PaymentVerifier (..), StakeVerifier (..),
-                   VerificationKeyOrFile (..), VerificationKeyOrHashOrFile (..),
+import           Cardano.CLI.Shelley.Key (PaymentVerifier (..), StakeAddressSource (..),
+                   StakeVerifier (..), VerificationKeyOrFile (..), VerificationKeyOrHashOrFile (..),
                    VerificationKeyTextOrFile (..))
 import           Cardano.CLI.Types
 
@@ -385,25 +385,45 @@ pStakeAddressCmd =
     pStakeAddressKeyHash = StakeAddressKeyHash <$> pStakeVerificationKeyOrFile <*> pMaybeOutputFile
 
     pStakeAddressBuild :: Parser StakeAddressCmd
-    pStakeAddressBuild = StakeAddressBuild <$> pStakeVerifier
-                                           <*> pNetworkId
-                                           <*> pMaybeOutputFile
+    pStakeAddressBuild =
+      StakeAddressBuild
+        <$> pStakeAddressSource
+        <*> pNetworkId
+        <*> pMaybeOutputFile
 
     pStakeAddressRegistrationCert :: Parser StakeAddressCmd
-    pStakeAddressRegistrationCert = StakeRegistrationCert
-                                      <$> pStakeVerifier
-                                      <*> pOutputFile
+    pStakeAddressRegistrationCert =
+      StakeRegistrationCert
+        <$> pStakeAddressSource
+        <*> pOutputFile
 
     pStakeAddressDeregistrationCert :: Parser StakeAddressCmd
-    pStakeAddressDeregistrationCert = StakeCredentialDeRegistrationCert
-                                        <$> pStakeVerifier
-                                        <*> pOutputFile
+    pStakeAddressDeregistrationCert =
+      StakeCredentialDeRegistrationCert
+        <$> pStakeAddressSource
+        <*> pOutputFile
 
     pStakeAddressDelegationCert :: Parser StakeAddressCmd
-    pStakeAddressDelegationCert = StakeCredentialDelegationCert
-                                    <$> pStakeVerifier
-                                    <*> pStakePoolVerificationKeyOrHashOrFile
-                                    <*> pOutputFile
+    pStakeAddressDelegationCert =
+      StakeCredentialDelegationCert
+        <$> pStakeAddressSource
+        <*> pStakePoolVerificationKeyOrHashOrFile
+        <*> pOutputFile
+
+pStakeAddressSource :: Parser StakeAddressSource
+pStakeAddressSource =
+  asum
+    [ StakeAddressSourceOfStakeVerifier <$> pStakeVerifier
+    , StakeAddressSourceOfStakeKeyHash <$> pStakeKeyHash
+    ]
+
+pStakeKeyHash :: Parser (Hash StakeKey)
+pStakeKeyHash =
+  Opt.option (eitherReader (deserialiseFromRawBytesBase16 . BSC.pack)) $ mconcat
+    [ Opt.long "stake-address"
+    , Opt.metavar "HASH"
+    , Opt.help "Stake address key (Bech32 or hex-encoded)."
+    ]
 
 pKeyCmd :: Parser KeyCmd
 pKeyCmd =

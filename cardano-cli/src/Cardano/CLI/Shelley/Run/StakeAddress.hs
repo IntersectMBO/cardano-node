@@ -8,9 +8,11 @@ module Cardano.CLI.Shelley.Run.StakeAddress
   ) where
 
 import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, left, newExceptT, onLeft)
 import qualified Data.ByteString.Char8 as BS
+import           Data.Function ((&))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
@@ -18,8 +20,8 @@ import qualified Data.Text.IO as Text
 import           Cardano.Api
 import           Cardano.Api.Shelley
 
-import           Cardano.CLI.Shelley.Key (StakeVerifier (..), VerificationKeyOrFile,
-                   VerificationKeyOrHashOrFile, readVerificationKeyOrFile,
+import           Cardano.CLI.Shelley.Key (StakeAddressSource (..), StakeVerifier (..),
+                   VerificationKeyOrFile, VerificationKeyOrHashOrFile, readVerificationKeyOrFile,
                    readVerificationKeyOrHashOrFile)
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Shelley.Run.Read
@@ -41,14 +43,14 @@ renderShelleyStakeAddressCmdError err =
 runStakeAddressCmd :: StakeAddressCmd -> ExceptT ShelleyStakeAddressCmdError IO ()
 runStakeAddressCmd (StakeAddressKeyGen vk sk) = runStakeAddressKeyGenToFile vk sk
 runStakeAddressCmd (StakeAddressKeyHash vk mOutputFp) = runStakeAddressKeyHash vk mOutputFp
-runStakeAddressCmd (StakeAddressBuild stakeVerifier nw mOutputFp) =
-  runStakeAddressBuild stakeVerifier nw mOutputFp
-runStakeAddressCmd (StakeRegistrationCert stakeVerifier outputFp) =
-  runStakeCredentialRegistrationCert stakeVerifier outputFp
-runStakeAddressCmd (StakeCredentialDelegationCert stakeVerifier stkPoolVerKeyHashOrFp outputFp) =
-  runStakeCredentialDelegationCert stakeVerifier stkPoolVerKeyHashOrFp outputFp
-runStakeAddressCmd (StakeCredentialDeRegistrationCert stakeVerifier outputFp) =
-  runStakeCredentialDeRegistrationCert stakeVerifier outputFp
+runStakeAddressCmd (StakeAddressBuild stakeAddressSource nw mOutputFp) =
+  runStakeAddressBuild stakeAddressSource nw mOutputFp
+runStakeAddressCmd (StakeRegistrationCert stakeAddressSource outputFp) =
+  runStakeCredentialRegistrationCert stakeAddressSource outputFp
+runStakeAddressCmd (StakeCredentialDelegationCert stakeAddressSource stkPoolVerKeyHashOrFp outputFp) =
+  runStakeCredentialDelegationCert stakeAddressSource stkPoolVerKeyHashOrFp outputFp
+runStakeAddressCmd (StakeCredentialDeRegistrationCert stakeAddressSource outputFp) =
+  runStakeCredentialDeRegistrationCert stakeAddressSource outputFp
 
 
 --
@@ -87,56 +89,74 @@ runStakeAddressKeyHash stakeVerKeyOrFile mOutputFp = do
     Nothing -> liftIO $ BS.putStrLn hexKeyHash
 
 runStakeAddressBuild
-  :: StakeVerifier
+  :: StakeAddressSource
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyStakeAddressCmdError IO ()
-runStakeAddressBuild stakeVerifier network mOutputFp = do
-  stakeAddr <- getStakeAddressFromVerifier network stakeVerifier
-  let stakeAddrText = serialiseAddress stakeAddr
-  liftIO $
-    case mOutputFp of
-      Just (OutputFile fpath) -> Text.writeFile fpath stakeAddrText
-      Nothing -> Text.putStrLn stakeAddrText
+runStakeAddressBuild stakeAddressSource network mOutputFp = do
+  case stakeAddressSource of
+    StakeAddressSourceOfStakeVerifier stakeVerifier -> do
+      stakeAddr <- getStakeAddressFromVerifier network stakeVerifier
+      let stakeAddrText = serialiseAddress stakeAddr
+
+      case mOutputFp of
+        Just (OutputFile fpath) -> liftIO $ Text.writeFile fpath stakeAddrText
+        Nothing -> liftIO $ Text.putStrLn stakeAddrText
+
+    StakeAddressSourceOfStakeKeyHash stakeKeyHash -> do
+          let stakeCred = StakeCredentialByKey stakeKeyHash
+              stakeAddr = makeStakeAddress network stakeCred
+              stakeAddrText = serialiseAddress stakeAddr
+          case mOutputFp of
+            Just (OutputFile fpath) -> liftIO $ Text.writeFile fpath stakeAddrText
+            Nothing -> liftIO $ Text.putStrLn stakeAddrText
 
 
 runStakeCredentialRegistrationCert
-  :: StakeVerifier
+  :: StakeAddressSource
   -> OutputFile
   -> ExceptT ShelleyStakeAddressCmdError IO ()
-runStakeCredentialRegistrationCert stakeVerifier (OutputFile oFp) = do
-  stakeCred <- getStakeCredentialFromVerifier stakeVerifier
-  writeRegistrationCert stakeCred
+runStakeCredentialRegistrationCert stakeAddressSource (OutputFile oFp) = do
+  case stakeAddressSource of
+    StakeAddressSourceOfStakeVerifier stakeVerifier -> do
+      stakeCred <- getStakeCredentialFromVerifier stakeVerifier
+      writeRegistrationCert stakeCred
+    StakeAddressSourceOfStakeKeyHash stakeKeyHash ->
+      writeRegistrationCert (StakeCredentialByKey stakeKeyHash)
 
- where
-  writeRegistrationCert
-    :: StakeCredential
-    -> ExceptT ShelleyStakeAddressCmdError IO ()
-  writeRegistrationCert sCred = do
-    let deRegCert = makeStakeAddressRegistrationCertificate sCred
-    firstExceptT ShelleyStakeAddressCmdWriteFileError
-      . newExceptT
-      $ writeFileTextEnvelope oFp (Just regCertDesc) deRegCert
+  where
+    writeRegistrationCert
+      :: StakeCredential
+      -> ExceptT ShelleyStakeAddressCmdError IO ()
+    writeRegistrationCert sCred = do
+      let deRegCert = makeStakeAddressRegistrationCertificate sCred
+      lift (writeFileTextEnvelope oFp (Just regCertDesc) deRegCert)
+        & onLeft (left . ShelleyStakeAddressCmdWriteFileError)
 
-  regCertDesc :: TextEnvelopeDescr
-  regCertDesc = "Stake Address Registration Certificate"
+    regCertDesc :: TextEnvelopeDescr
+    regCertDesc = "Stake Address Registration Certificate"
 
 
 runStakeCredentialDelegationCert
-  :: StakeVerifier
+  :: StakeAddressSource
   -- ^ Delegator stake verification key, verification key file or script file.
   -> VerificationKeyOrHashOrFile StakePoolKey
   -- ^ Delegatee stake pool verification key or verification key file or
   -- verification key hash.
   -> OutputFile
   -> ExceptT ShelleyStakeAddressCmdError IO ()
-runStakeCredentialDelegationCert stakeVerifier poolVKeyOrHashOrFile (OutputFile outFp) = do
-  poolStakeVKeyHash <-
-    firstExceptT
-      ShelleyStakeAddressCmdReadKeyFileError
-      (newExceptT $ readVerificationKeyOrHashOrFile AsStakePoolKey poolVKeyOrHashOrFile)
-  stakeCred <- getStakeCredentialFromVerifier stakeVerifier
-  writeDelegationCert stakeCred poolStakeVKeyHash
+runStakeCredentialDelegationCert stakeAddressSource poolVKeyOrHashOrFile (OutputFile outFp) = do
+  poolStakeVKeyHash <- firstExceptT ShelleyStakeAddressCmdReadKeyFileError
+      . newExceptT
+      $ readVerificationKeyOrHashOrFile AsStakePoolKey poolVKeyOrHashOrFile
+
+  case stakeAddressSource of
+    StakeAddressSourceOfStakeVerifier stakeVerifier -> do
+        stakeCred <- getStakeCredentialFromVerifier stakeVerifier
+        writeDelegationCert stakeCred poolStakeVKeyHash
+
+    StakeAddressSourceOfStakeKeyHash stakeKeyHash ->
+      writeDelegationCert (StakeCredentialByKey stakeKeyHash) poolStakeVKeyHash
 
   where
     writeDelegationCert
@@ -145,22 +165,26 @@ runStakeCredentialDelegationCert stakeVerifier poolVKeyOrHashOrFile (OutputFile 
       -> ExceptT ShelleyStakeAddressCmdError IO ()
     writeDelegationCert sCred poolStakeVKeyHash = do
       let delegCert = makeStakeAddressDelegationCertificate sCred poolStakeVKeyHash
-      firstExceptT ShelleyStakeAddressCmdWriteFileError
-        . newExceptT
-        $ writeFileTextEnvelope outFp (Just delegCertDesc) delegCert
+
+      lift (writeFileTextEnvelope outFp (Just delegCertDesc) delegCert)
+        & onLeft (left . ShelleyStakeAddressCmdWriteFileError)
 
     delegCertDesc :: TextEnvelopeDescr
     delegCertDesc = "Stake Address Delegation Certificate"
 
 
 runStakeCredentialDeRegistrationCert
-  :: StakeVerifier
+  :: StakeAddressSource
   -> OutputFile
   -> ExceptT ShelleyStakeAddressCmdError IO ()
-runStakeCredentialDeRegistrationCert stakeVerifier (OutputFile oFp) = do
-  stakeCred <- getStakeCredentialFromVerifier stakeVerifier
-  writeDeregistrationCert stakeCred
+runStakeCredentialDeRegistrationCert stakeAddressSource (OutputFile oFp) = do
+  case stakeAddressSource of
+    StakeAddressSourceOfStakeVerifier stakeVerifier -> do
+      stakeCred <- getStakeCredentialFromVerifier stakeVerifier
+      writeDeregistrationCert stakeCred
 
+    StakeAddressSourceOfStakeKeyHash stakeKeyHash ->
+      writeDeregistrationCert (StakeCredentialByKey stakeKeyHash)
   where
     writeDeregistrationCert
       :: StakeCredential

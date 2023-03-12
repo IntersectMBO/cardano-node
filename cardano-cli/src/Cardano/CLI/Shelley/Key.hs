@@ -21,6 +21,7 @@ module Cardano.CLI.Shelley.Key
 
   , PaymentVerifier(..)
   , StakeVerifier(..)
+  , StakeAddressSource(..)
 
   , generateKeyPair
   ) where
@@ -104,6 +105,11 @@ data StakeVerifier
   | StakeVerifierScriptFile ScriptFile
   | StakeVerifierAddress StakeAddress
   deriving (Eq, Show)
+
+data StakeAddressSource
+  = StakeAddressSourceOfStakeVerifier StakeVerifier
+  | StakeAddressSourceOfStakeKeyHash (Hash StakeKey)
+  deriving Show
 
 -- | Either an unvalidated text representation of a verification key or a path
 -- to a verification key file.
