@@ -20,6 +20,7 @@ index-state:
 
 packages:
     cardano-api
+    cardano-api-gen
     cardano-cli
     cardano-client-demo
     cardano-git-rev
