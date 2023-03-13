@@ -100,6 +100,7 @@ $SED -i ${ROOT}/configuration.yaml \
     -e 's|GenesisFile: genesis.json|ByronGenesisFile: byron/genesis.json|' \
     -e '/ByronGenesisFile/ aShelleyGenesisFile: shelley/genesis.json' \
     -e '/ByronGenesisFile/ aAlonzoGenesisFile: shelley/genesis.alonzo.json' \
+    -e '/ByronGenesisFile/ aConwayGenesisFile: shelley/genesis.conway.json' \
     -e 's/RequiresNoMagic/RequiresMagic/' \
     -e 's/LastKnownBlockVersion-Major: 0/LastKnownBlockVersion-Major: 1/' \
     -e 's/LastKnownBlockVersion-Minor: 2/LastKnownBlockVersion-Minor: 0/'
@@ -309,9 +310,10 @@ echo "====================================================================="
 # Set up our template
 mkdir shelley
 
-# Copy the QA testnet alonzo genesis which is equivalent to the mainnet
+# Copy the QA testnet alonzo and conway genesis files which is equivalent to the mainnet
 
 cp ../configuration/cardano/shelley_qa-alonzo-genesis.json shelley/genesis.alonzo.spec.json
+cp ../configuration/cardano/shelley_qa-conway-genesis.json shelley/genesis.conway.spec.json
 
 cardano-cli genesis create --testnet-magic ${NETWORK_MAGIC} --genesis-dir shelley
 
