@@ -110,6 +110,12 @@ let
                 "configuration/cardano/mainnet-byron-genesis.json"
                 "configuration/cardano/mainnet-shelley-genesis.json"
                 "configuration/cardano/mainnet-alonzo-genesis.json"
+                "configuration/cardano/mainnet-conway-genesis.json"
+              ];
+              goldenConfigFiles = [
+                "configuration/defaults/byron-mainnet"
+                "cardano-cli/test/data/golden/alonzo/genesis.alonzo.spec.json"
+                "cardano-cli/test/data/golden/conway/genesis.conway.spec.json"
               ];
             in
             {
@@ -151,10 +157,7 @@ let
               packages.cardano-node-chairman.preCheck =
                 let
                   # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
-                  filteredProjectBase = incl ../. [
-                    "configuration/defaults/byron-mainnet"
-                    "cardano-cli/test/data/golden/alonzo/genesis.alonzo.spec.json"
-                  ];
+                  filteredProjectBase = incl ../. goldenConfigFiles;
                 in
                 ''
                   ${exportCliPath}
@@ -166,11 +169,11 @@ let
               packages.cardano-testnet.preCheck =
                 let
                   # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
-                  filteredProjectBase = incl ../. (mainnetConfigFiles ++ [
+                  filteredProjectBase = incl ../. (mainnetConfigFiles ++ goldenConfigFiles ++ [
                     "configuration/cardano/mainnet-topology.json"
-                    "configuration/defaults/byron-mainnet"
-                    "cardano-cli/test/data/golden/alonzo/genesis.alonzo.spec.json"
+                    "configuration/cardano/mainnet-conway-genesis.json"
                     "scripts/babbage/alonzo-babbage-test-genesis.json"
+                    "scripts/babbage/conway-babbage-test-genesis.json"
                   ]);
                 in
                 ''
