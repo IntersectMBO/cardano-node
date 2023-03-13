@@ -222,6 +222,23 @@
                 }).workbench-profile-run { };
 
             inherit (pkgs) all-profiles-json;
+
+            system-tests = pkgs.writeShellApplication {
+              name = "system-tests";
+              runtimeInputs = with pkgs; [ git gnused ];
+              text = ''
+                  NODE_REV="${self.rev or (throw "Sorry, need clean/pushed git revision to run system tests")}"
+                  MAKE_TARGET=testpr
+                  mkdir -p tmp && cd tmp
+                  rm -rf cardano-node-tests
+                  git clone https://github.com/input-output-hk/cardano-node-tests.git
+                  cd cardano-node-tests
+                  sed -i '1 s/^.*$/#! \/usr\/bin\/env bash/' ./.github/regression.sh
+                  export NODE_REV
+                  export MAKE_TARGET
+                  nix develop --accept-flake-config .#base -c ./.github/regression.sh 2>&1
+              '';
+            };
           }
           # Add checks to be able to build them individually
           // (prefixNamesWith "checks/" checks);

@@ -82,6 +82,18 @@ rec {
         memory = 1024 * 16;
         nomad.resources.cpu = 10000;
       };
+
+      "ci/pr/system-tests" = {lib, ...} @ args: {
+        imports = [common];
+        after = [];
+
+        command.text = ''
+          nix run -L .#system-tests
+        '';
+
+        memory = 1024 * 64;
+        nomad.resources.cpu = 40000;
+      };
     };
 
   actions =
@@ -136,6 +148,10 @@ rec {
       };
       "cardano-node/ci/pr/cardano-deployment" = {
         task = "ci/cardano-deployment";
+        io = prIo;
+      };
+      "cardano-node/ci/pr/system-tests" = {
+        task = "ci/pr/system-tests";
         io = prIo;
       };
     };
