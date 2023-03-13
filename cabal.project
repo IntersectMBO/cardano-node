@@ -156,6 +156,9 @@ constraints:
   , Unique >= 0.4.7.8
   , tree-diff >= 0.2.2
 
+  -- Haddock is broken in this release. Waiting for the next release
+  , http2 < 4.0.0
+
 -- We'll need this once ouroboros has been pushed into CHaP
 -- extra-packages:
 --     ouroboros-consensus-cardano-tools == 0.1.0.0
