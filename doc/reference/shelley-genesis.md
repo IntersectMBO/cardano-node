@@ -502,6 +502,19 @@ And if we compare this with the `initialFunds` from the generated file we see
 This means we'll start with 0 lovelace in a special genesis UTxO at that
 address.
 
+Side note: The above addresses are in hex.  It is possible to translate them
+into [bech32](https://hackage.haskell.org/package/bech32) and back again like this:
+
+```bash
+$ echo 600547e1d85598a728f577497a122c98f42a56d7411e23e97ed4d3956c | bech32 addr_test
+addr_test1vqz50cwc2kv2w284wayh5y3vnr6z54khgy0z86t76nfe2mqgj2dvn
+$ echo addr_test1vqz50cwc2kv2w284wayh5y3vnr6z54khgy0z86t76nfe2mqgj2dvn | bech32
+600547e1d85598a728f577497a122c98f42a56d7411e23e97ed4d3956c
+```
+
+Note, the prefix argument passed into `bech32` will need to be `addr` or `addr_test`
+depending on whether the address is for `mainnet` or a testnet.
+
 Ok, so zero lovelace is not that useful. We can however edit the
 `genesis.spec.json` and set the `maxLovelaceSupply` there, or we specify the
 initial supply when we re-generate the genesis file. Either way, it will be
