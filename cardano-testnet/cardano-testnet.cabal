@@ -87,6 +87,9 @@ library
                         Testnet.Options
                         Testnet.Run
                         Testnet.Shelley
+                        Testnet.Test.LeadershipSchedule
+                        Testnet.Test.ShutdownOnSlotSynced
+                        Testnet.Test.StakeSnapshot                                       
                         Testnet.Utils
                         Paths_cardano_testnet
 

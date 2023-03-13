@@ -19,6 +19,7 @@ module Testnet.Cardano
   , cardanoDefaultTestnetNodeOptions
 
   , Era(..)
+  , RunTest (..)
   , TestnetRuntime (..)
   , PaymentKeyPair(..)
 
@@ -77,6 +78,10 @@ import           Testnet.Util.Runtime as TR (NodeLoggingFormat (..), PaymentKeyP
 
 import qualified Testnet.Conf as H
 import           Testnet.Conf hiding (testnetMagic)
+
+import           Testnet.Test.StakeSnapshot (testStakeSnapshot)
+import           Testnet.Test.LeadershipSchedule (testLeadershipSchedule)
+import           Testnet.Test.ShutdownOnSlotSynced (testShutdownOnSlotSynced)
 
 {- HLINT ignore "Redundant flip" -}
 {- HLINT ignore "Redundant id" -}
@@ -190,8 +195,15 @@ mkTopologyConfig numNodes allPorts port True = J.encode topologyP2P
         []
         (P2P.UseLedger DontUseLedger)
 
-cardanoTestnet :: CardanoTestnetOptions -> H.Conf -> H.Integration TestnetRuntime
-cardanoTestnet testnetOptions configuration@H.Conf {tempAbsPath, testnetMagic} = do
+data RunTest
+  = StartTestnetOnly
+  | TestShutdownOnSlotSynced
+  | TestStakeSnapshot
+  | TestLeadershipSchedule
+  deriving (Show)
+
+cardanoTestnet :: RunTest -> CardanoTestnetOptions -> H.Conf -> H.Integration TestnetRuntime
+cardanoTestnet runTest testnetOptions configuration@H.Conf {tempAbsPath, testnetMagic} = do
   let tmpDir = tempAbsPath
   void $ H.note OS.os
   currentTime <- H.noteShowIO DTC.getCurrentTime
@@ -253,17 +265,35 @@ cardanoTestnet testnetOptions configuration@H.Conf {tempAbsPath, testnetMagic} =
 
   cardanoTestnetWaitStartup configuration (cardanoNodeLoggingFormat testnetOptions) allNodeNames
   configurationFile <- H.noteShow $ tmpDir </> "configuration.yaml"
-
   let
-  return TestnetRuntime
-    { configurationFile
-    , shelleyGenesisFile = tmpDir </> "shelley/genesis.json"
-    , testnetMagic
-    , bftNodes
-    , poolNodes = zipWith PoolNode poolRuntimes poolNodeKeys
-    , wallets
-    , delegators = error "Testnet.Cardana delegators undefind"
-    }
+    poolNodes = zipWith PoolNode poolRuntimes poolNodeKeys
+    testnetRuntime = TestnetRuntime
+        { configurationFile
+        , shelleyGenesisFile = tmpDir </> "shelley/genesis.json"
+        , testnetMagic
+        , bftNodes
+        , poolNodes = poolNodes
+        , wallets
+        , delegators = error "Testnet.Cardana delegators undefind"
+        }
+
+  case runTest of
+    StartTestnetOnly -> return testnetRuntime 
+    TestShutdownOnSlotSynced -> do
+      let maxSlot = 1500
+          timeout :: Int
+          timeout = round (40 + (fromIntegral maxSlot * cardanoSlotLength testnetOptions))
+      testShutdownOnSlotSynced maxSlot timeout (head bftNodes)
+      return testnetRuntime
+    TestLeadershipSchedule -> do
+      poolNode1 <- H.headM poolNodes
+      testLeadershipSchedule (TmpPath tmpDir) testnetMagic (tmpDir </> "shelley/genesis.json") poolNode1
+      return testnetRuntime
+    TestStakeSnapshot -> do
+      poolNode1 <- H.headM poolNodes
+      poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1      
+      testStakeSnapshot (TmpPath tmpDir) testnetMagic poolSprocket1
+      return testnetRuntime
 
 cardanoTestnetByronGenesis
   :: TmpPath

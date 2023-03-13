@@ -5,8 +5,10 @@ module Cardano.Testnet (
 
   -- ** Start a testnet
   testnet,
+  cardanoTestnet,
 
   -- ** Testnet options
+  RunTest (..),
   TestnetOptions(..),
   CardanoTestnetOptions(..),
   BabbageTestnetOptions(..),

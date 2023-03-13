@@ -24,6 +24,7 @@ module Testnet.Util.Runtime
   , getLogDir            -- used for Testnet.Byron
   , getSocketDir         -- used for Testnet.Byron
   , getTmpBaseAbsPath    -- used for Testnet.Byron
+  , getWorkDir           -- used in Testnet.Test.StakeSnapshot
   ) where
 
 import           Control.Monad
@@ -144,6 +145,9 @@ getTmpBaseAbsPath (TmpPath fp) = FP.takeDirectory fp
 
 getLogDir :: TmpPath -> FilePath
 getLogDir (TmpPath fp) = fp </> "logs"
+
+getWorkDir :: TmpPath -> FilePath
+getWorkDir (TmpPath fp) = fp </> "work"
 
 -- | Start a node, creating file handles, sockets and temp-dirs.
 startNode

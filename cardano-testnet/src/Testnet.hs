@@ -44,7 +44,7 @@ testnet options conf = case options of
   BabbageOnlyTestnetOptions o -> babbageTestnet o conf
   CardanoOnlyTestnetOptions o -> do
     testnetMinimumConfigurationRequirements o
-    cardanoTestnet o conf
+    cardanoTestnet StartTestnetOnly o conf
 
 babbageDefaultTestnetOptions :: BabbageTestnetOptions
 babbageDefaultTestnetOptions = Options.defaultTestnetOptions
