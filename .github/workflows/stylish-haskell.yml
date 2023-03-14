@@ -58,7 +58,7 @@ jobs:
 
         echo "PATH=/tmp/stylish-haskell-v$version-linux-x86_64:$PATH" >> $GITHUB_ENV
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Run stylish-haskell over all Haskell files
       run: |
