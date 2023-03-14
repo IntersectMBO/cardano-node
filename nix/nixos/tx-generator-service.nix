@@ -109,6 +109,7 @@ in pkgs.commonLib.defServiceModule
                                       "mary"
                                       "alonzo"
                                       "babbage"
+                                      "conway"
                                     ])
                               "mary"
                               "Cardano era to generate transactions for.";

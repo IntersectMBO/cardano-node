@@ -1,4 +1,4 @@
-global_genesis_format_version=March-14-2022
+global_genesis_format_version=March-14-2023
 
 usage_genesis() {
      usage "genesis" "Genesis" <<EOF
@@ -161,8 +161,15 @@ case "$op" in
            "$global_basedir"/profile/presets/mainnet/genesis/genesis.alonzo.json \
            >   "$dir"/genesis.alonzo.spec.json
 
-        cardano-cli genesis create --genesis-dir "$dir"/ \
-            $(jq '.cli_args.createSpec | join(" ")' "$profile_json" --raw-output)
+        jq '{ genDelegs: {} }' --null-input \
+           >   "$dir"/genesis.conway.spec.json
+
+        local create_args=(
+              --genesis-dir "$dir"/ $(jq '.cli_args.createSpec | join(" ")' "$profile_json" --raw-output)
+        )
+        verbose "genesis" "$(colorise cardano-cli genesis create ${create_args[*]})"
+        cardano-cli genesis create "${create_args[@]}" ||
+            fail "failed:  $(colorise cardano-cli genesis create ${create_args[*]})"
 
         ## Overlay the verbatim genesis part into the profile spec:
         local params=(
@@ -207,11 +214,13 @@ case "$op" in
         | from_entries
         ' "$node_specs" > "$dir"/pool-relays.json
 
-        params=(--genesis-dir "$dir"
-                --relay-specification-file "$dir/pool-relays.json"
-                $(jq '.cli_args.createFinalBulk | join(" ")' "$profile_json" --raw-output)
-               )
-        time cardano-cli genesis create-staked "${params[@]}"
+        create_staked_args=(
+            --genesis-dir "$dir"
+            --relay-specification-file "$dir/pool-relays.json"
+            $(jq '.cli_args.createFinalBulk | join(" ")' "$profile_json" --raw-output)
+        )
+        verbose "genesis" "$(colorise cardano-cli genesis create-staked ${create_staked_args[*]})"
+        cardano-cli genesis create-staked "${create_staked_args[@]}"
         jq      . "$dir"/genesis.json > "$dir"/genesis-shelley.json &&
             rm -f "$dir"/genesis.json
         mv "$dir"/genesis.spec.json "$dir"/genesis-shelley.spec.json

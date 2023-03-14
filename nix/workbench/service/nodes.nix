@@ -134,6 +134,7 @@ let
           AlonzoGenesisFile    = "../genesis/genesis.alonzo.json";
           ShelleyGenesisFile   = "../genesis/genesis-shelley.json";
           ByronGenesisFile     = "../genesis/byron/genesis.json";
+          ConwayGenesisFile    = "../genesis/genesis.conway.json";
         }
       );
 
@@ -161,6 +162,7 @@ let
           [ "AlonzoGenesisHash"
             "ByronGenesisHash"
             "ShelleyGenesisHash"
+            "ConwayGenesisHash"
           ]
         //
         {
@@ -208,6 +210,14 @@ let
             TestMaryHardForkAtEpoch    = 0;
             TestAlonzoHardForkAtEpoch  = 0;
             TestBabbageHardForkAtEpoch = 0;
+          };
+        conway =
+          { TestShelleyHardForkAtEpoch = 0;
+            TestAllegraHardForkAtEpoch = 0;
+            TestMaryHardForkAtEpoch    = 0;
+            TestAlonzoHardForkAtEpoch  = 0;
+            TestBabbageHardForkAtEpoch = 0;
+            TestConwayHardForkAtEpoch  = 0;
           };
       }.${profile.era};
     };
