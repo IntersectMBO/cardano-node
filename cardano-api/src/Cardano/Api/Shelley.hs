@@ -240,7 +240,6 @@ module Cardano.Api.Shelley
     fromAlonzoCostModels,
     --TODO: arrange not to export these
     toShelleyNetwork,
-    fromShelleyPParams,
 
   ) where
 
