@@ -101,7 +101,7 @@ txSubmitApp trace metrics connectInfo networkId socketPath =
 -- Fails if the environment variable is not set.
 readEnvSocketPath :: ExceptT EnvSocketError IO SocketPath
 readEnvSocketPath =
-    maybe (left $ CliEnvVarLookup (T.pack envName)) (pure . SocketPath)
+    maybe (left $ CliEnvVarDoesNotExist (T.pack envName)) (pure . SocketPath)
       =<< liftIO (lookupEnv envName)
   where
     envName :: String

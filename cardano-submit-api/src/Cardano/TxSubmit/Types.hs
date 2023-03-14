@@ -49,7 +49,7 @@ data TxSubmitWebApiError
   | TxSubmitBadTx !Text
   | TxSubmitFail TxCmdError
 
-newtype EnvSocketError = CliEnvVarLookup Text deriving (Eq, Show)
+newtype EnvSocketError = CliEnvVarDoesNotExist Text deriving (Eq, Show)
 
 data TxCmdError
   = TxCmdSocketEnvError EnvSocketError
