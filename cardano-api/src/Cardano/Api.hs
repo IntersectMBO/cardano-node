@@ -421,7 +421,6 @@ module Cardano.Api (
     ExecutionUnits(..),
     ExecutionUnitPrices(..),
     CostModel(..),
-    validateCostModel,
 
     -- ** Script addresses
     -- | Making addresses from scripts.
