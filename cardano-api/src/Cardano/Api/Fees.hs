@@ -52,45 +52,37 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes, fromMaybe, maybeToList)
 import           Data.Ratio
 import           Data.Set (Set)
-import qualified Data.Set as Set
 import qualified Data.Text as Text
-import           GHC.Records (HasField (..))
 import           Lens.Micro ((^.))
 import           Numeric.Natural
 import           Prettyprinter
 import           Prettyprinter.Render.String
 
 import qualified Cardano.Binary as CBOR
-import qualified Cardano.Ledger.BaseTypes as Ledger
 
 import qualified Cardano.Chain.Common as Byron
 
 import qualified Cardano.Ledger.Coin as Ledger
 import           Cardano.Ledger.Core (EraTx (sizeTxF))
-import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Crypto as Ledger
-
-import qualified Cardano.Ledger.Keys as Ledger
+import           Cardano.Ledger.UTxO as Ledger (EraUTxO)
 
 import           Cardano.Ledger.Mary.Value (MaryValue)
 
 import qualified Cardano.Ledger.Shelley.API.Wallet as Ledger (evaluateTransactionBalance,
                    evaluateTransactionFee)
-import qualified Cardano.Ledger.Shelley.API.Wallet as Shelley
 import           Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
 
-import qualified Cardano.Ledger.Alonzo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as L
-import qualified Cardano.Ledger.Alonzo.Tools as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxWits as Alonzo
-import qualified Cardano.Ledger.Api.Scripts as L
+import qualified Cardano.Ledger.Api as L
 
-import qualified Cardano.Ledger.Babbage as Babbage
 import qualified Cardano.Ledger.Conway as Conway
+import qualified Cardano.Ledger.Conway.Core as Ledger
 
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
 
@@ -130,23 +122,22 @@ transactionFee txFeeFixed txFeePerByte tx =
   let a = toInteger txFeePerByte
       b = toInteger txFeeFixed
   in case tx of
-       ShelleyTx _ tx' -> let x = obtainHasField shelleyBasedEra $ tx' ^. sizeTxF
+       ShelleyTx _ tx' -> let x = obtainEraTx shelleyBasedEra $ tx' ^. sizeTxF
                           in Lovelace (a * x + b)
        --TODO: This can be made to work for Byron txs too. Do that: fill in this case
        -- and remove the IsShelleyBasedEra constraint.
        ByronTx _ -> case shelleyBasedEra :: ShelleyBasedEra ByronEra of {}
  where
-  obtainHasField
+  obtainEraTx
     :: ShelleyBasedEra era
-    -> ( EraTx (ShelleyLedgerEra era)
-        => a)
+    -> (EraTx (ShelleyLedgerEra era) => a)
     -> a
-  obtainHasField ShelleyBasedEraShelley f = f
-  obtainHasField ShelleyBasedEraAllegra f = f
-  obtainHasField ShelleyBasedEraMary    f = f
-  obtainHasField ShelleyBasedEraAlonzo  f = f
-  obtainHasField ShelleyBasedEraBabbage f = f
-  obtainHasField ShelleyBasedEraConway  f = f
+  obtainEraTx ShelleyBasedEraShelley f = f
+  obtainEraTx ShelleyBasedEraAllegra f = f
+  obtainEraTx ShelleyBasedEraMary    f = f
+  obtainEraTx ShelleyBasedEraAlonzo  f = f
+  obtainEraTx ShelleyBasedEraBabbage f = f
+  obtainEraTx ShelleyBasedEraConway  f = f
 
 {-# DEPRECATED transactionFee "Use 'evaluateTransactionFee' instead" #-}
 
@@ -252,8 +243,8 @@ evaluateTransactionFee bpparams txbody keywitcount _byronwitcount =
   where
     evalShelleyBasedEra :: forall ledgerera.
                            ShelleyLedgerEra era ~ ledgerera
-                        => ShelleyBasedEra era
-                        -> Ledger.Tx ledgerera
+                        => EraTx ledgerera
+                        => Ledger.Tx ledgerera
                         -> Lovelace
     evalShelleyBasedEra tx =
       fromShelleyLovelace $
@@ -266,8 +257,7 @@ evaluateTransactionFee bpparams txbody keywitcount _byronwitcount =
     withLedgerConstraints
       :: ShelleyLedgerEra era ~ ledgerera
       => ShelleyBasedEra era
-      -> ( () --  Ledger.CLI ledgerera
-          => a)
+      -> (EraTx ledgerera => a)
       -> a
     withLedgerConstraints ShelleyBasedEraShelley f = f
     withLedgerConstraints ShelleyBasedEraAllegra f = f
@@ -520,15 +510,11 @@ evaluateTransactionExecutionUnits systemstart epochInfo bpp utxo txbody =
           ShelleyBasedEraAlonzo  -> evalAlonzo sbe tx'
           ShelleyBasedEraBabbage ->
             case collateralSupportedInEra $ shelleyBasedToCardanoEra sbe of
-              Just supp -> obtainHasFieldConstraint supp $ evalBabbage sbe tx'
+              Just supp -> obtainBabbageEraPParams supp $ evalBabbage sbe tx'
               Nothing -> return mempty
           ShelleyBasedEraConway ->
             case collateralSupportedInEra $ shelleyBasedToCardanoEra sbe of
-              Just supp -> obtainHasFieldConstraint supp $ evalConway sbe tx'
-              Nothing -> return mempty
-          ShelleyBasedEraConway ->
-            case collateralSupportedInEra $ shelleyBasedToCardanoEra era of
-              Just supp -> obtainHasFieldConstraint supp $ evalConway era tx'
+              Just supp -> obtainBabbageEraPParams supp $ evalConway sbe tx'
               Nothing -> return mempty
   where
     LedgerEpochInfo ledgerEpochInfo = epochInfo
@@ -540,20 +526,15 @@ evaluateTransactionExecutionUnits systemstart epochInfo bpp utxo txbody =
     evalPreAlonzo = Right Map.empty
 
 
-    evalAlonzo :: forall ledgerera.
-                  ShelleyLedgerEra era ~ ledgerera
-               => ledgerera ~ Alonzo.AlonzoEra Ledger.StandardCrypto
-               => HasField "_maxTxExUnits" (Ledger.PParams ledgerera) Alonzo.ExUnits
-               => HasField"_protocolVersion" (Ledger.PParams ledgerera) Ledger.ProtVer
-               => LedgerEraConstraints ledgerera
+    evalAlonzo :: ShelleyLedgerEra era ~ L.Alonzo
                => ShelleyBasedEra era
-               -> Ledger.Tx ledgerera
+               -> Ledger.Tx L.Alonzo
                -> Either TransactionValidityError
                          (Map ScriptWitnessIndex
                               (Either ScriptExecutionError ExecutionUnits))
     evalAlonzo era tx = do
-      cModelArray <- toAlonzoCostModelsArray (protocolParamCostModels (unbundleProtocolParams  bpp))
-      case Alonzo.evaluateTransactionExecutionUnits
+      cModelArray <- toAlonzoCostModelsArray (protocolParamCostModels (unbundleProtocolParams bpp))
+      case L.evaluateTransactionExecutionUnits
              (unbundleLedgerShelleyBasedProtocolParams era bpp)
              tx
              (toLedgerUTxO era utxo)
@@ -563,19 +544,16 @@ evaluateTransactionExecutionUnits systemstart epochInfo bpp utxo txbody =
         of Left err -> Left (TransactionValidityTranslationError err)
            Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
 
-    evalBabbage :: forall ledgerera.
-                  ShelleyLedgerEra era ~ ledgerera
-               => ledgerera ~ Babbage.BabbageEra Ledger.StandardCrypto
-               => HasField "_maxTxExUnits" (Ledger.PParams ledgerera) Alonzo.ExUnits
-               => HasField"_protocolVersion" (Ledger.PParams ledgerera) Ledger.ProtVer
-               => ShelleyBasedEra era
-               -> Ledger.Tx ledgerera
-               -> Either TransactionValidityError
-                         (Map ScriptWitnessIndex
-                              (Either ScriptExecutionError ExecutionUnits))
+    evalBabbage :: ShelleyLedgerEra era ~ L.Babbage
+                => Ledger.EraPParams L.Babbage
+                => ShelleyBasedEra era
+                -> Ledger.Tx L.Babbage
+                -> Either TransactionValidityError
+                          (Map ScriptWitnessIndex
+                               (Either ScriptExecutionError ExecutionUnits))
     evalBabbage era tx = do
       costModelsArray <- toAlonzoCostModelsArray (protocolParamCostModels (unbundleProtocolParams bpp))
-      case Alonzo.evaluateTransactionExecutionUnits
+      case L.evaluateTransactionExecutionUnits
              (unbundleLedgerShelleyBasedProtocolParams era bpp)
              tx
              (toLedgerUTxO era utxo)
@@ -588,17 +566,16 @@ evaluateTransactionExecutionUnits systemstart epochInfo bpp utxo txbody =
     evalConway :: forall ledgerera.
                   ShelleyLedgerEra era ~ ledgerera
                => ledgerera ~ Conway.ConwayEra Ledger.StandardCrypto
-               => HasField "_maxTxExUnits" (Ledger.PParams ledgerera) Alonzo.ExUnits
-               => HasField"_protocolVersion" (Ledger.PParams ledgerera) Ledger.ProtVer
+               => Ledger.AlonzoEraPParams ledgerera
                => ShelleyBasedEra era
                -> Ledger.Tx ledgerera
                -> Either TransactionValidityError
                          (Map ScriptWitnessIndex
                               (Either ScriptExecutionError ExecutionUnits))
     evalConway era tx = do
-      costModelsArray <- toAlonzoCostModelsArray (protocolParamCostModels pparams)
-      case Alonzo.evaluateTransactionExecutionUnits
-             (toLedgerPParams era pparams)
+      costModelsArray <- toAlonzoCostModelsArray (protocolParamCostModels (unbundleProtocolParams bpp))
+      case L.evaluateTransactionExecutionUnits
+             (unbundleLedgerShelleyBasedProtocolParams era bpp)
              tx
              (toLedgerUTxO era utxo)
              ledgerEpochInfo
@@ -612,11 +589,12 @@ evaluateTransactionExecutionUnits systemstart epochInfo bpp utxo txbody =
       :: Map AnyPlutusScriptVersion CostModel
       -> Either TransactionValidityError (Array.Array Alonzo.Language Alonzo.CostModel)
     toAlonzoCostModelsArray costmodels = do
-      Alonzo.CostModels cModels <- first (TransactionValidityCostModelError costmodels) $ toAlonzoCostModels costmodels
+      L.CostModels cModels _ _ <-
+        first (TransactionValidityCostModelError costmodels) $ toAlonzoCostModels costmodels
       return $ Array.array (minBound, maxBound) (Map.toList cModels)
 
     fromLedgerScriptExUnitsMap
-      :: Map Alonzo.RdmrPtr (Either (Alonzo.TransactionScriptFailure Ledger.StandardCrypto)
+      :: Map Alonzo.RdmrPtr (Either (L.TransactionScriptFailure Ledger.StandardCrypto)
                                     Alonzo.ExUnits)
       -> Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits)
     fromLedgerScriptExUnitsMap exmap =
@@ -625,7 +603,7 @@ evaluateTransactionExecutionUnits systemstart epochInfo bpp utxo txbody =
            bimap fromAlonzoScriptExecutionError fromAlonzoExUnits exunitsOrFailure)
         | (rdmrptr, exunitsOrFailure) <- Map.toList exmap ]
 
-    fromAlonzoScriptExecutionError :: Alonzo.TransactionScriptFailure Ledger.StandardCrypto
+    fromAlonzoScriptExecutionError :: L.TransactionScriptFailure Ledger.StandardCrypto
                                    -> ScriptExecutionError
     fromAlonzoScriptExecutionError failure =
       case failure of
@@ -634,8 +612,10 @@ evaluateTransactionExecutionUnits systemstart epochInfo bpp utxo txbody =
         L.InvalidTxIn     txin -> ScriptErrorTxInWithoutDatum txin'
                                          where txin' = fromShelleyTxIn txin
         L.MissingDatum      dh -> ScriptErrorWrongDatum (ScriptDataHash dh)
-        L.ValidationFailedV1 err logs -> ScriptErrorEvaluationFailed err logs
-        L.ValidationFailedV2 err logs -> ScriptErrorEvaluationFailed err logs
+        L.ValidationFailure (L.ValidationFailedV1 err logs _) ->
+          ScriptErrorEvaluationFailed err logs
+        L.ValidationFailure (L.ValidationFailedV2 err logs _) ->
+          ScriptErrorEvaluationFailed err logs
         L.IncompatibleBudget _ -> ScriptErrorExecutionUnitsOverflow
 
         -- This is only possible for spending scripts and occurs when
@@ -655,13 +635,13 @@ evaluateTransactionExecutionUnits systemstart epochInfo bpp utxo txbody =
         L.NoCostModelInLedgerState l -> ScriptErrorMissingCostModel l
 
 
-    obtainHasFieldConstraint
+    obtainBabbageEraPParams
       :: ShelleyLedgerEra era ~ ledgerera
       => CollateralSupportedInEra era
-      -> (HasField "_maxTxExUnits" (Ledger.PParams ledgerera) Alonzo.ExUnits => a) ->  a
-    obtainHasFieldConstraint CollateralInAlonzoEra f =  f
-    obtainHasFieldConstraint CollateralInBabbageEra f =  f
-    obtainHasFieldConstraint CollateralInConwayEra f =  f
+      -> (Ledger.EraPParams ledgerera => a) ->  a
+    obtainBabbageEraPParams CollateralInAlonzoEra f =  f
+    obtainBabbageEraPParams CollateralInBabbageEra f =  f
+    obtainBabbageEraPParams CollateralInConwayEra f =  f
 
 -- ----------------------------------------------------------------------------
 -- Transaction balance
@@ -703,8 +683,7 @@ evaluateTransactionBalance bpp poolids utxo
     getShelleyEraTxBodyConstraint ShelleyBasedEraBabbage x = x
     getShelleyEraTxBodyConstraint ShelleyBasedEraConway x = x
 
-    isNewPool :: Ledger.KeyHash Ledger.StakePool Ledger.StandardCrypto -> Bool
-    isNewPool kh = StakePoolKeyHash kh `Set.notMember` poolids
+    dpstate = error "Unimplemented. Requires a new Query"
 
     evalMultiAsset :: forall ledgerera.
                       ShelleyLedgerEra era ~ ledgerera
@@ -717,8 +696,8 @@ evaluateTransactionBalance bpp poolids utxo
       TxOutValue evidence . fromMaryValue $
          Ledger.evaluateTransactionBalance
            (unbundleLedgerShelleyBasedProtocolParams era bpp)
+           dpstate
            (toLedgerUTxO era utxo)
-           isNewPool
            txbody
 
     evalAdaOnly :: forall ledgerera.
@@ -732,8 +711,8 @@ evaluateTransactionBalance bpp poolids utxo
      TxOutAdaOnly evidence . fromShelleyLovelace
        $ Ledger.evaluateTransactionBalance
            (unbundleLedgerShelleyBasedProtocolParams era bpp)
+           dpstate
            (toLedgerUTxO era utxo)
-           isNewPool
            txbody
 
     -- Conjur up all the necessary class instances and evidence
@@ -762,7 +741,7 @@ evaluateTransactionBalance bpp poolids utxo
 
 type LedgerEraConstraints ledgerera =
        ( Ledger.EraCrypto ledgerera ~ Ledger.StandardCrypto
-       -- , Ledger.CLI ledgerera
+       , Ledger.EraUTxO ledgerera
        )
 
 type LedgerAdaOnlyConstraints ledgerera =
@@ -773,11 +752,7 @@ type LedgerMultiAssetConstraints ledgerera =
        )
 
 type LedgerPParamsConstraints ledgerera =
-       ( HasField "_minfeeA"     (Ledger.PParams ledgerera) Natural
-       , HasField "_minfeeB"     (Ledger.PParams ledgerera) Natural
-       , HasField "_keyDeposit"  (Ledger.PParams ledgerera) Ledger.Coin
-       , HasField "_poolDeposit" (Ledger.PParams ledgerera) Ledger.Coin
-       )
+         Ledger.EraPParams ledgerera
 
 type LedgerTxBodyConstraints ledgerera =
        ( Ledger.EraTx ledgerera
@@ -1370,23 +1345,20 @@ calculateMinimumUTxO era txout@(TxOut _ v _ _) bpp =
     ShelleyBasedEraMary -> calcMinUTxOAllegraMary
     ShelleyBasedEraAlonzo ->
       let lTxOut = toShelleyTxOutAny era txout
-          minUTxO = Shelley.evaluateMinLovelaceOutput (unbundleLedgerShelleyBasedProtocolParams era bpp) lTxOut
+          babPParams = unbundleLedgerShelleyBasedProtocolParams era bpp
+          minUTxO = L.getMinCoinTxOut babPParams lTxOut
           val = fromShelleyLovelace minUTxO
       in Right val
     ShelleyBasedEraBabbage ->
       let lTxOut = toShelleyTxOutAny era txout
-          minUTxO = Shelley.evaluateMinLovelaceOutput (unbundleLedgerShelleyBasedProtocolParams era bpp) lTxOut
+          babPParams = unbundleLedgerShelleyBasedProtocolParams era bpp
+          minUTxO = L.getMinCoinTxOut babPParams lTxOut
           val = fromShelleyLovelace minUTxO
       in Right val
     ShelleyBasedEraConway ->
       let lTxOut = toShelleyTxOutAny era txout
-          minUTxO = Shelley.evaluateMinLovelaceOutput (unbundleLedgerShelleyBasedProtocolParams era bpp) lTxOut
-          val = fromShelleyLovelace minUTxO
-      in Right val
-    ShelleyBasedEraConway ->
-      let lTxOut = toShelleyTxOutAny era txout
-          babPParams = toConwayPParams pparams'
-          minUTxO = Shelley.evaluateMinLovelaceOutput babPParams lTxOut
+          babPParams = unbundleLedgerShelleyBasedProtocolParams era bpp
+          minUTxO = L.getMinCoinTxOut babPParams lTxOut
           val = fromShelleyLovelace minUTxO
       in Right val
  where
