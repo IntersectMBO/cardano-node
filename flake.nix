@@ -329,6 +329,10 @@
               "native\\.(.*\\.)?checks/hlint"
               #system-tests are build and run separately:
               "native\\.(.*\\.)?system-tests"
+            ] ++
+            lib.optionals (system == "x86_64-darwin") [
+              #FIXME: make variants nonrequired for macos until CI has more capacity for macos builds
+              "native\\.variants\\..*"
             ];
           in
           pkgs.callPackages iohkNix.utils.ciJobsAggregates
