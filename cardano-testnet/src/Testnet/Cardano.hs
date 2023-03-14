@@ -761,6 +761,9 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   return TestnetRuntime
     { configurationFile
     , shelleyGenesisFile = tempAbsPath </> "shelley/genesis.json"
+{-
+Testnet.Babbage uses : shelleyGenesisFile = tmpDir </> "genesis/shelley/genesis.json"
+-}
     , testnetMagic
     , bftNodes
     , poolNodes

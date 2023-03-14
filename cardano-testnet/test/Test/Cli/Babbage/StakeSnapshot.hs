@@ -13,6 +13,7 @@
 
 module Test.Cli.Babbage.StakeSnapshot
   ( hprop_stakeSnapshot
+  , testStakeSnapshot
   ) where
 
 import           Prelude
@@ -41,6 +42,7 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified Testnet.Util.Base as H
+import           Testnet.Util.Cli
 import           Testnet.Util.Process
 import           Testnet.Util.Runtime
 
@@ -64,12 +66,16 @@ hprop_stakeSnapshot = H.integrationRetryWorkspace 2 "babbage-stake-snapshot" $ \
     { testnetMagic
     , poolNodes
     } <- testnet testnetOptions conf
-
   poolNode1 <- H.headM poolNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
+  testStakeSnapshot (TmpPath tempAbsPath) testnetMagic poolSprocket1
+
+testStakeSnapshot :: TmpPath -> TestnetMagic -> IO.Sprocket -> H.Integration ()
+testStakeSnapshot tmpPath testnetMagic poolSprocket1 = do
+  work <- H.note $ getWorkDir tmpPath
+  H.createDirectoryIfMissing work
 
   env <- H.evalIO getEnvironment
-
-  poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
 
   execConfig <- H.noteShow H.ExecConfig
     { H.execConfigEnv = Last $ Just $
