@@ -717,8 +717,7 @@ consensusQueryInEraInMode erainmode =
 fromConsensusQueryResult :: forall mode block result result'. ConsensusBlockForMode mode ~ block
                          => QueryInMode mode result
                          -> Consensus.Query block result'
-                         -> result'
-                         -> result
+                         -> (result' -> result)
 fromConsensusQueryResult (QueryEraHistory CardanoModeIsMultiEra) q' r' =
     case q' of
       Consensus.BlockQuery (Consensus.QueryHardFork Consensus.GetInterpreter)

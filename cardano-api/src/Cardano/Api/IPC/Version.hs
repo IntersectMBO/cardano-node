@@ -30,5 +30,7 @@ class NodeToClientVersionOf a where
 
 type MinNodeToClientVersion = NodeToClientVersion
 
-data UnsupportedNtcVersionError = UnsupportedNtcVersionError !MinNodeToClientVersion !NodeToClientVersion
+data UnsupportedNtcVersionError = UnsupportedNtcVersionError
+                                    !MinNodeToClientVersion -- ^ Query version
+                                    !NodeToClientVersion    -- ^ Node version
   deriving (Eq, Show)
