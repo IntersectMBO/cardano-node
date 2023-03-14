@@ -169,6 +169,7 @@ let
           TestEnableDevelopmentHardForkEras     = true;
           TestEnableDevelopmentNetworkProtocols = true;
           TurnOnLogMetrics                      = true;
+          SnapshotFrequency                     = 1100;
         };
       tracing-transform = {
         trace-dispatcher = cfg:
