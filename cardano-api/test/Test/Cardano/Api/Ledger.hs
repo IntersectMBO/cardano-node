@@ -11,7 +11,7 @@ import           Cardano.Api.Shelley
 import           Control.Monad.Identity
 
 import           Cardano.Ledger.Address (deserialiseAddr, serialiseAddr)
-import qualified Cardano.Ledger.Alonzo.Data as Alonzo
+import qualified Cardano.Ledger.Api as L
 import           Cardano.Ledger.Crypto
 import           Cardano.Ledger.SafeHash
 
@@ -21,10 +21,11 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Aeson as H
 import           Hedgehog.Internal.Property
 import           Test.Cardano.Api.Genesis (exampleShelleyGenesis)
-import           Test.Cardano.Ledger.Shelley.Serialisation.Generators.Genesis (genAddress)
+import           Test.Cardano.Ledger.Core.Arbitrary ()
 import           Test.Gen.Cardano.Api.Typed
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testPropertyNamed)
+import           Hedgehog.Gen.QuickCheck (arbitrary)
 
 prop_golden_ShelleyGenesis :: Property
 prop_golden_ShelleyGenesis = H.goldenTestJsonValuePretty exampleShelleyGenesis "test/Golden/ShelleyGenesis"
@@ -35,7 +36,7 @@ prop_golden_ShelleyGenesis = H.goldenTestJsonValuePretty exampleShelleyGenesis "
 prop_roundtrip_Address_CBOR :: Property
 prop_roundtrip_Address_CBOR = H.property $ do
   -- If this fails, FundPair and ShelleyGenesis can also fail.
-  addr <- H.forAll (genAddress @StandardCrypto)
+  addr <- H.forAll (arbitrary @(L.Addr StandardCrypto))
   H.tripping addr serialiseAddr deserialiseAddr
 
 -- prop_original_scriptdata_bytes_preserved and prop_roundtrip_scriptdata_plutusdata
@@ -52,13 +53,13 @@ prop_original_scriptdata_bytes_preserved = H.property $ do
     Left e -> failWith Nothing $ show e
     Right hScriptData -> do
       let ScriptDataHash apiHash = hashScriptDataBytes hScriptData
-          ledgerAlonzoData = toAlonzoData hScriptData :: Alonzo.Data StandardAlonzo
-      -- We check that our hashScriptDataBytes is equivalent to `Alonzo.hashData`
+          ledgerAlonzoData = toAlonzoData hScriptData :: L.Data StandardAlonzo
+      -- We check that our hashScriptDataBytes is equivalent to `L.hashData`
       -- This test will let us know if our 'hashScriptDataBytes' is ever broken
-      Alonzo.hashData ledgerAlonzoData === apiHash
+      L.hashData ledgerAlonzoData === apiHash
 
       -- We also check that the original bytes are the same after the calling
-      -- toAlonzoData :: HashableScriptData -> Alonzo.Data ledgerera.
+      -- toAlonzoData :: HashableScriptData -> L.Data ledgerera.
       originalBytes ledgerAlonzoData === getOriginalScriptDataBytes hScriptData
 
 prop_roundtrip_scriptdata_plutusdata :: Property
