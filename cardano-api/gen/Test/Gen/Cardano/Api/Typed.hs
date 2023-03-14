@@ -807,8 +807,8 @@ genProtocolParameters =
     <*> genNat
     <*> genNat
     <*> genNat
-    <*> genNat
-    <*> genNat
+    <*> genLovelace
+    <*> genLovelace
     <*> Gen.maybe genLovelace
     <*> genLovelace
     <*> genLovelace
@@ -838,8 +838,8 @@ genProtocolParametersUpdate = do
   protocolUpdateMaxBlockHeaderSize  <- Gen.maybe genNat
   protocolUpdateMaxBlockBodySize    <- Gen.maybe genNat
   protocolUpdateMaxTxSize           <- Gen.maybe genNat
-  protocolUpdateTxFeeFixed          <- Gen.maybe genNat
-  protocolUpdateTxFeePerByte        <- Gen.maybe genNat
+  protocolUpdateTxFeeFixed          <- Gen.maybe genLovelace
+  protocolUpdateTxFeePerByte        <- Gen.maybe genLovelace
   protocolUpdateMinUTxOValue        <- Gen.maybe genLovelace
   protocolUpdateStakeAddressDeposit <- Gen.maybe genLovelace
   protocolUpdateStakePoolDeposit    <- Gen.maybe genLovelace
