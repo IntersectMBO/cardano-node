@@ -14,10 +14,6 @@
       url = "github:input-output-hk/hackage.nix";
       flake = false;
     };
-    nixTools = {
-      url = "github:input-output-hk/nix-tools";
-      flake = false;
-    };
     haskellNix = {
       url = "github:input-output-hk/haskell.nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -323,16 +319,20 @@
               };
             };
             nonRequiredPaths = [
-              # hlint required status is controled via the github action:
-              "native\\.(.*\\.)?checks/hlint"
+              #FIXME: hydraJobs.native.workbench-ci-test need some work to support Conway
+              "native\\.(.*\\.)?workbench-ci-test"
               #FIXME: cardano-tracer-test for windows should probably be disabled in haskell.nix config:
               "windows\\.(.*\\.)?checks\\.cardano-tracer\\.cardano-tracer-test"
               #FIXME: plutus-scripts-bench (dep of tx-generator) does not compile for windows:
               "windows\\.(.*\\.)?tx-generator.*"
+              # hlint required status is controled via the github action:
+              "native\\.(.*\\.)?checks/hlint"
+              #system-tests are build and run separately:
+              "native\\.(.*\\.)?system-tests"
             ] ++
             lib.optionals (system == "x86_64-darwin") [
-              #FIXME:  ExceptionInLinkedThread (ThreadId 253) pokeSockAddr: path is too long
-              "native\\.(.*\\.)?.checks/cardano-testnet/cardano-testnet-tests"
+              #FIXME: make variants nonrequired for macos until CI has more capacity for macos builds
+              "native\\.variants\\..*"
             ];
           in
           pkgs.callPackages iohkNix.utils.ciJobsAggregates
