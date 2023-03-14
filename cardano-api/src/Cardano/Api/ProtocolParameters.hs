@@ -775,7 +775,7 @@ fromAlonzoPrices Alonzo.Prices{Alonzo.prSteps, Alonzo.prMem} =
 -- Script cost models
 --
 
-newtype CostModel = CostModel [Integer] --(Map Text Integer)
+newtype CostModel = CostModel [Integer] --TODO: decide if we need a Map or a list: (Map Text Integer)
   deriving (Eq, Show)
   deriving newtype (ToJSON, FromJSON)
   deriving newtype (ToCBOR, FromCBOR)
