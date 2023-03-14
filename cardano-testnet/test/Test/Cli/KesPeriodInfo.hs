@@ -5,7 +5,8 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cli.KesPeriodInfo
-  ( hprop_kes_period_info
+  ( hprop_kesPeriodInfo
+  , testKesPeriodInfo
   ) where
 
 import           Cardano.Api
@@ -40,8 +41,8 @@ import           Test.Misc
 import           Testnet.Util.Process
 import           Testnet.Util.Runtime
 
-hprop_kes_period_info :: Property
-hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempAbsBasePath' -> do
+hprop_kesPeriodInfo :: Property
+hprop_kesPeriodInfo = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
   base <- H.note =<< H.evalIO . IO.canonicalizePath =<< H.getProjectBase
   configurationTemplate
@@ -58,12 +59,23 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
                              , cardanoActiveSlotsCoeff = 0.1
                              }
   runTime@TestnetRuntime { testnetMagic } <- testnet fastTestnetOptions conf
+
   let sprockets = bftSprockets runTime
+  poolSprocket1 <- H.headM sprockets
+  testKesPeriodInfo tempBaseAbsPath tempAbsPath testnetMagic poolSprocket1
+
+testKesPeriodInfo
+  :: FilePath    -- ^ The tempBaseAbsPath
+  -> FilePath    -- ^ The tempAbsPath
+  -> Int         -- ^ The testnetMagic
+  -> IO.Sprocket -- ^ The poolSprocket1
+  -> H.Integration ()
+testKesPeriodInfo tempBaseAbsPath tempAbsPath testnetMagic poolSprocket1 = do
   env <- H.evalIO getEnvironment
 
   execConfig <- H.noteShow H.ExecConfig
         { H.execConfigEnv = Last $ Just $
-          [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName (head sprockets))
+          [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName poolSprocket1)
           ]
           -- The environment must be passed onto child process on Windows in order to
           -- successfully start that process.

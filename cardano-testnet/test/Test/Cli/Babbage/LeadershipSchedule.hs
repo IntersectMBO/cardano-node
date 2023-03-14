@@ -14,6 +14,7 @@
 
 module Test.Cli.Babbage.LeadershipSchedule
   ( hprop_leadershipSchedule
+  , testLeadershipSchedule
   ) where
 
 import           Cardano.CLI.Shelley.Output (QueryTipLocalStateOutput (..))
@@ -52,26 +53,33 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
   conf@Conf { tempBaseAbsPath, tempAbsPath } <- H.noteShowM $
     mkConf (ProjectBase base) (YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
 
-  work <- H.note $ tempAbsPath </> "work"
-  H.createDirectoryIfMissing work
-
   let
     testnetOptions = BabbageOnlyTestnetOptions $ babbageDefaultTestnetOptions
       { babbageNodeLoggingFormat = NodeLoggingFormatAsJson
       }
-  tr@TestnetRuntime
+  TestnetRuntime
     { testnetMagic
     , poolNodes
     -- , wallets
     -- , delegators
     } <- testnet testnetOptions conf
-
   poolNode1 <- H.headM poolNodes
+  testLeadershipSchedule tempBaseAbsPath tempAbsPath testnetMagic (tempAbsPath </> "genesis/shelley/genesis.json") poolNode1
 
-  env <- H.evalIO getEnvironment
+testLeadershipSchedule
+  :: FilePath -- ^ The tempBaseAbsPath
+  -> FilePath -- ^ The tempAbsPath
+  -> Int      -- ^ The testnetMagic
+  -> FilePath -- ^ The shelleyGenesisFile
+  -> PoolNode -- ^ The poolNode1
+  -> H.Integration ()
+testLeadershipSchedule tempBaseAbsPath tempAbsPath testnetMagic shelleyGenesisFile poolNode1 = do
+  work <- H.note $ tempAbsPath </> "work"
+  H.createDirectoryIfMissing work
 
   poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
 
+  env <- H.evalIO getEnvironment
   execConfig <- H.noteShow H.ExecConfig
     { H.execConfigEnv = Last $ Just $
       [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName poolSprocket1)
@@ -117,7 +125,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
       void $ execCli' execConfig
         [ "query", "leadership-schedule"
         , "--testnet-magic", show @Int testnetMagic
-        , "--genesis", shelleyGenesisFile tr
+        , "--genesis", shelleyGenesisFile
         , "--stake-pool-id", stakePoolId
         , "--vrf-signing-key-file", poolVrfSkey
         , "--out-file", scheduleFile
@@ -160,7 +168,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
       void $ execCli' execConfig
         [ "query", "leadership-schedule"
         , "--testnet-magic", show @Int testnetMagic
-        , "--genesis", shelleyGenesisFile tr
+        , "--genesis", shelleyGenesisFile
         , "--stake-pool-id", stakePoolId
         , "--vrf-signing-key-file", poolVrfSkey
         , "--out-file", scheduleFile

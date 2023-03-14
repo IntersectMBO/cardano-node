@@ -4,6 +4,7 @@
 
 module Test.ShutdownOnSlotSynced
   ( hprop_shutdownOnSlotSynced
+  , testShutdownOnSlotSynced
   ) where
 
 import           Prelude
@@ -46,10 +47,16 @@ hprop_shutdownOnSlotSynced = H.integrationRetryWorkspace 2 "shutdown-on-slot-syn
           ]
         }
   TestnetRuntime { bftNodes = node:_ } <- testnet fastTestnetOptions conf
+  let timeout = round (40 + (fromIntegral maxSlot * slotLen))
+  testShutdownOnSlotSynced maxSlot timeout node
 
+testShutdownOnSlotSynced
+  :: Integer      -- ^ The max slotnumber
+  -> Int          -- ^ The timeout
+  -> NodeRuntime  -- ^ The node runtime
+  -> H.Integration ()
+testShutdownOnSlotSynced maxSlot timeout node = do
   -- Wait for the node to exit
-  let timeout :: Int
-      timeout = round (40 + (fromIntegral maxSlot * slotLen))
   mExitCodeRunning <- H.waitSecondsForProcess timeout (nodeProcessHandle node)
 
   -- Check results
