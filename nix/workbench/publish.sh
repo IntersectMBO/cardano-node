@@ -400,7 +400,7 @@ publish() {
           # Checks
           if wb publish socat pid >/dev/null
           then
-            fatal "socat is already running, call 'wb publish socat stop'"
+            fatal "socat is already running, call 'wb publish socat stop' first"
           fi
           # Create config
           echo "{\"local_port\":${local_port}}" > "$socat_config_file"
@@ -413,7 +413,7 @@ publish() {
           then
             jq -r .local_port "${socat_config_file}"
           else
-            fatal "socat is not configured, call 'wb publish socat configure [LOCAL_PORT=15432]'"
+            fatal "socat is not configured, call 'wb publish socat configure [LOCAL_PORT=15432]' first"
           fi
         ;;
         start )
@@ -424,7 +424,7 @@ publish() {
           # Checks
           if wb publish socat pid >/dev/null
           then
-            fatal "socat is already running, call 'wb publish socat stop'"
+            fatal "socat is already running, call 'wb publish socat stop' first"
           fi
           # Tunnel vars
           local local_host local_port
@@ -483,6 +483,7 @@ publish() {
             rm "$socat_pid_file"
           else
             msg "socat is not running"
+            false
           fi
         ;;
         pid-file )
@@ -492,8 +493,9 @@ publish() {
           local socat_pid_file=$(wb publish socat pid-file)
           if test -f $socat_pid_file
           then
+            # Check if the process is running
             local socat_pid_number=$(cat "${socat_pid_file}")
-            if kill -0 "${socat_pid_number}"
+            if kill -0 "${socat_pid_number}" 2>&1 >/dev/null
             then
               echo "${socat_pid_number}"
             else
@@ -541,7 +543,7 @@ publish() {
           # Checks
           if wb publish norouter pid >/dev/null
           then
-            fatal "norouter is already running, call 'wb publish norouter stop'"
+            fatal "norouter is already running, call 'wb publish norouter stop' first"
           fi
           # Create config
           # SRE parameters.
@@ -577,7 +579,7 @@ EOF
           then
             yq -r .hosts.postgresql.ports[0] "${norouter_config_file}" | cut -d ":" -f 1
           else
-            fatal "norouter is not configured, call 'wb publish norouter configure [LOCAL_PORT=15432]'"
+            fatal "norouter is not configured, call 'wb publish norouter configure [LOCAL_PORT=15432]' first"
           fi
         ;;
         start )
@@ -589,7 +591,7 @@ EOF
           # Checks
           if wb publish norouter pid >/dev/null
           then
-            fatal "norouter is already running, call 'wb publish norouter stop'"
+            fatal "norouter is already running, call 'wb publish norouter stop' first"
           fi
           # Tunnel vars
           local local_host local_port
@@ -643,6 +645,7 @@ EOF
             rm "$norouter_pid_file"
           else
             msg "norouter is not running"
+            false
           fi
         ;;
         pid-file )
@@ -652,8 +655,9 @@ EOF
           local norouter_pid_file=$(wb publish norouter pid-file)
           if test -f $norouter_pid_file
           then
+            # Check if the process is running
             local norouter_pid_number=$(cat "${norouter_pid_file}")
-            if kill -0 "${norouter_pid_number}"
+            if kill -0 "${norouter_pid_number}" 2>&1 >/dev/null
             then
               echo "${norouter_pid_number}"
             else

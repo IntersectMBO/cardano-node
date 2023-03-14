@@ -12,17 +12,26 @@ let
   # A conveniently-parametrisable workbench preset.
   # See https://input-output-hk.github.io/haskell.nix/user-guide/development/
   # The general idea is:
-  # 1. backendName -> useCabalRun -> backend
-  # 2. stateDir -> batchName -> profileName -> backend -> workbench -> runner
+  # 1. backendName -> stateDir -> basePort -> useCabalRun -> backend
+  # 2. batchName -> profileName -> backend -> workbench -> runner
   # * `workbench` is in case a pinned version of the workbench is needed.
   workbench-runner =
-    let backendRegistry =
-        {
-            nixops     = ./workbench/backend/nixops.nix;
-            nomad      = ./workbench/backend/nomad.nix;
-            supervisor = ./workbench/backend/supervisor.nix;
-        };
-    in
+  let
+    backendRegistry =
+      {
+        nixops      = params:
+          import ./workbench/backend/nixops.nix params;
+        nomad       = params:
+          import ./workbench/backend/nomad.nix (params // {execTaskDriver=false;});
+        nomadexec   = params:
+          import ./workbench/backend/nomad.nix (params // {execTaskDriver=true; });
+        nomadpodman = params:
+          import ./workbench/backend/nomad.nix (params // {execTaskDriver=false;});
+        supervisor  = params:
+          import ./workbench/backend/supervisor.nix params;
+      }
+    ;
+  in
     { stateDir           ? customConfig.localCluster.stateDir
     , batchName          ? customConfig.localCluster.batchName
     , profileNix         ? null
@@ -40,12 +49,12 @@ let
         # The `useCabalRun` flag is set in the backend to allow the backend to
         # override its value. The runner uses the value of `useCabalRun` from
         # the backend to prevent a runner using a different value.
-        backend = import (backendRegistry."${backendName}")
+        backend = (backendRegistry."${backendName}")
                    { inherit pkgs lib stateDir basePort useCabalRun; };
     in import ./workbench/backend/runner.nix
       {
         inherit pkgs lib cardanoNodePackages;
-        inherit stateDir batchName profileName backend;
+        inherit batchName profileName backend;
         inherit cardano-node-rev;
         inherit workbench workbenchDevMode;
       };
