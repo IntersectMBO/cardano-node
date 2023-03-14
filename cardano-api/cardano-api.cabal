@@ -174,7 +174,6 @@ library
                       , typed-protocols ^>= 0.1
                       , unordered-containers >= 0.2.11
                       , vector
-                      , vector-map ^>= 1.0
                       , yaml
 
 library gen
@@ -222,15 +221,17 @@ test-suite cardano-api-test
                       , cardano-crypto-class ^>= 2.1
                       , cardano-crypto-test ^>= 1.5
                       , cardano-crypto-tests ^>= 2.1
-                      , cardano-ledger-core ^>= 1.1
+                      , cardano-ledger-api ^>= 1.1
+                      , cardano-ledger-core:{cardano-ledger-core, testlib} ^>= 1.1
                       , cardano-ledger-shelley ^>= 1.1
                       , cardano-ledger-shelley-test ^>= 1.0
                       , cardano-slotting ^>= 0.1
                       , containers
                       , hedgehog
                       , hedgehog-extras ^>= 0.4
+                      , hedgehog-quickcheck
                       , mtl
-                      , ouroboros-consensus
+                      , microlens
                       , ouroboros-consensus-shelley
                       , QuickCheck
                       , tasty
