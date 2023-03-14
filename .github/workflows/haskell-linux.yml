@@ -52,7 +52,7 @@ jobs:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: ${{ matrix.cabal }}
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: "[Bash] Add build script path"
       run: echo "$(pwd)/.github/bin" >> $GITHUB_PATH
@@ -206,7 +206,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2.3.4
+      uses: actions/checkout@v3
 
     - name: Create Release Tag
       id: create_release_tag
