@@ -115,7 +115,7 @@ genAlonzoGenesis = do
 
   return Alonzo.AlonzoGenesis
     { Alonzo.agCoinsPerUTxOWord = Ledger.CoinPerWord coinsPerUTxOWord
-    , Alonzo.agCostModels = Alonzo.CostModels mempty mempty  mempty
+    , Alonzo.agCostModels = Alonzo.CostModels mempty mempty mempty
     , Alonzo.agPrices = prices'
     , Alonzo.agMaxTxExUnits = maxTxExUnits'
     , Alonzo.agMaxBlockExUnits = maxBlockExUnits'
