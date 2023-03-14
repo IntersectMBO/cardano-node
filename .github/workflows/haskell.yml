@@ -68,7 +68,6 @@ jobs:
       if: runner.os != 'Windows'
       run: echo "$(pwd)/.github/bin" >> $GITHUB_PATH
 
-
     - name: "MAC: Install build environment (brew)"
       if: runner.os == 'macOS'
       run: |
@@ -163,63 +162,188 @@ jobs:
         # The tests call out to msys2 commands. We generally do not want to mix toolchains, so
         # we are very deliberate about only adding msys64 to the path where absolutely necessary.
         ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;{0}" -f $env:PATH)') || '' }}
-        cabal test cardano-testnet cardano-api cardano-node cardano-node-chairman cardano-cli cardano-submit-api
+        cabal test cardano-api cardano-node cardano-cli
 
     - name: "Tar artifacts"
       shell: bash
       run: |
         mkdir -p artifacts
 
-        for exe in $(cat dist-newstyle/cache/plan.json | jq -r '."install-plan"[] | select(.style == "local" and (."component-name" | startswith("exe:"))) | ."bin-file"'); do
+        for exe in $(
+            cat dist-newstyle/cache/plan.json | jq -r '
+                ."install-plan"[]
+              | select(
+                  .style == "local" and
+                  (."component-name" | type == "string" ) and
+                  (."component-name" | (startswith("exe:") or startswith("test:")))
+                )
+              | ."bin-file"
+              '); do
           if [ -f $exe ]; then
             echo "Including artifact $exe"
 
-            ( cd artifacts
-              tar -C "$(dirname $exe)" -czf "$(basename $exe).tar.gz" "$(basename $exe)"
-            )
+            cp "$exe" artifacts/
           else
             echo "Skipping artifact $exe"
           fi
         done
 
-    - name: Save Artifact
-      if: matrix.ghc == '8.10.7'
-      uses: actions/upload-artifact@v1
+        cp dist-newstyle/cache/plan.json artifacts/
+
+    - name: Save Artifacts
+      uses: actions/upload-artifact@v3
       with:
-        name: artifacts-${{ matrix.os }}
+        name: artifacts-${{ matrix.os }}-${{ matrix.ghc }}-${{ github.run_id }}
+        path: artifacts
+
+    - name: Workspace
+      run: |
+        echo ${{ github.workspace }}
+        echo $GITHUB_WORKSPACE
+
+  integration-tests:
+    needs: [build]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        ghc: ["9.2.7"]
+        cabal: ["3.8.1.0"]
+        os: [macos-latest, windows-latest]
+
+    env:
+      # Modify this value to "invalidate" the cabal cache.
+      CABAL_CACHE_VERSION: "2022-12-30"
+
+      # Modify this value to "invalidate" the secp cache.
+      SECP_CACHE_VERSION: "2022-12-30"
+
+      # current ref from: 27.02.2022
+      SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
+
+    steps:
+    - name: Install Haskell
+      uses: input-output-hk/setup-haskell@v1
+      id: setup-haskell
+      with:
+        ghc-version: ${{ matrix.ghc }}
+        cabal-version: ${{ matrix.cabal }}
+        pacman-packages: >
+          mingw-w64-x86_64-pkg-config
+          mingw-w64-x86_64-libsodium
+          mingw-w64-x86_64-openssl
+          base-devel
+          autoconf-wrapper
+          autoconf
+          automake
+          libtool
+          make
+
+    - uses: actions/checkout@v2
+
+    - name: "[PowerShell] Add build script path"
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: Add-Content $env:GITHUB_PATH "$(pwd)/.github/bin"
+
+    - name: "[Bash] Add build script path"
+      if: runner.os != 'Windows'
+      run: echo "$(pwd)/.github/bin" >> $GITHUB_PATH
+
+    - name: "MAC: Install build environment (brew)"
+      if: runner.os == 'macOS'
+      run: |
+        brew install libsodium
+
+    - name: "MAC: Install build environment (for secp256k1)"
+      if: runner.os == 'macOS'
+      run: brew install autoconf automake libtool
+
+    - name: Install secp256k1
+      uses: input-output-hk/setup-secp256k1@v1
+      with:
+        git-ref: ${{ env.SECP256K1_REF }}
+        cache-version: ${{ env.SECP_CACHE_VERSION }}
+
+    - uses: actions/checkout@v2
+
+    - name: Download Artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: artifacts-${{ matrix.os }}-${{ matrix.ghc }}-${{ github.run_id }}
         path: ./artifacts
 
-    - name: Delete socket files in chairman tests in preparation for uploading artifacts
-      if: ${{ always() }}
+    - name: Extract artifacts
       shell: bash
       run: |
-        if [ -d "${{ runner.temp }}/chairman" ]; then
-          find "${{ runner.temp }}/chairman" -type s -exec rm -f {} \;
-        fi
+        mkdir -p dist-newstyle/cache
+        cp artifacts/plan.json dist-newstyle/cache/plan.json
 
-    - uses: actions/upload-artifact@v2
-      if: ${{ always() }}
-      continue-on-error: true
+    - name: "[PowerShell] Add artifact path"
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: Add-Content $env:GITHUB_PATH "$(pwd)/artifacts"
+
+    - name: "[Bash] Add artifact path"
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        echo "$(pwd)/artifacts" >> $GITHUB_PATH
+        for x in $(find artifacts -type f); do
+          if file $x | grep executable; then
+            chmod a+x $x
+          fi
+        done
+
+    - name: "[Bash] Setup environment"
+      shell: bash
+      run: |
+        echo "CARDANO_CLI=cardano-cli" >> $GITHUB_ENV
+        echo "CARDANO_NODE=cardano-node" >> $GITHUB_ENV
+        echo "CARDANO_NODE_CHAIRMAN=cardano-node-chairman" >> $GITHUB_ENV
+
+    - name: "[Bash] Copy files for hedgehog"
+      shell: bash
+      run: |
+        # Copy source files into locations so that hedgehog can find them
+        mkdir -p tmp
+        ( cd tmp
+          for source in $(find ../cardano-testnet/src -name '*.hs'; find ../cardano-node-chairman/test -name '*.hs'); do
+            target=$(echo $source | cut -d / -f 4-)
+            mkdir -p $(dirname src/$target)
+            ln -s $(readlink -f $source) src/$target
+          done
+        )
+
+    - name: Run testnet tests
+      env:
+        TMPDIR: ${{ runner.temp }}
+        TMP: ${{ runner.temp }}
+        KEEP_WORKSPACE: 1
+      run: |
+        # The tests call out to msys2 commands. We generally do not want to mix toolchains, so
+        # we are very deliberate about only adding msys64 to the path where absolutely necessary.
+        ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;{0}" -f $env:PATH)') || '' }}
+        cd cardano-testnet
+        cardano-testnet-tests
+
+    - name: Run chairman tests
+      env:
+        TMPDIR: ${{ runner.temp }}
+        TMP: ${{ runner.temp }}
+        KEEP_WORKSPACE: 1
+      run: |
+        # The tests call out to msys2 commands. We generally do not want to mix toolchains, so
+        # we are very deliberate about only adding msys64 to the path where absolutely necessary.
+        ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;{0}" -f $env:PATH)') || '' }}
+        cd cardano-node-chairman
+        chairman-tests
+
+    - name: Setup tmate session
+      if: ${{ failure() }}
+      uses: mxschmitt/action-tmate@v3
       with:
-        name: chairman-test-artifacts-${{ matrix.os }}-${{ matrix.ghc }}
-        path: ${{ runner.temp }}/chairman/
-
-    # Uncomment the following back in for debugging. Remember to launch a `pwsh` from
-    # the tmux session to debug `pwsh` issues. And be reminded that the `/msys2` and
-    # `/msys2/mingw64` paths are not in PATH by default for the workflow, but tmate
-    # will put them in.
-    # You may also want to run
-    #
-    #   $env:PATH=("C:\Program Files\PowerShell\7;{0}" -f $env:ORIGINAL_PATH)
-    #
-    # to restore the original path.  Do note that some test might need msys2
-    # and will silently fail if msys2 is not in path. See the "Run tests" step.
-    #
-    # - name: Setup tmate session
-    #   if: ${{ failure() }}
-    #   uses: mxschmitt/action-tmate@v3
-    #   with:
-    #     limit-access-to-actor: true
+        limit-access-to-actor: true
 
   build-complete:
     needs: [build]
@@ -253,7 +377,7 @@ jobs:
         prerelease: false
 
     - name: Download Artifact
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v3
       with:
         name: artifacts-ubuntu-latest
 
