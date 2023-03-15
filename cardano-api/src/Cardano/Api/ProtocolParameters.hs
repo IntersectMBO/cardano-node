@@ -200,7 +200,7 @@ data ProtocolParameters =
        --
        protocolParamTxFeeFixed :: Lovelace,
 
-       -- | The linear factor for the minimum fee calculation.
+       -- | Per byte linear factor for the minimum fee calculation.
        --
        protocolParamTxFeePerByte :: Lovelace,
 
