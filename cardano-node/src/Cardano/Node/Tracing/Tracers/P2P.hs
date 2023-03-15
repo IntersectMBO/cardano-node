@@ -776,11 +776,11 @@ severityConnectionManager ::
   ConnectionManagerTrace addr
     (ConnectionHandlerTrace versionNumber agreedOptions) -> SeverityS
 severityConnectionManager TrIncludeConnection {}                  = Debug
-severityConnectionManager TrUnregisterConnection {}               = Debug
+severityConnectionManager TrUnregisterConnection {}               = Info
 severityConnectionManager TrConnect {}                            = Debug
 severityConnectionManager TrConnectError {}                       = Info
-severityConnectionManager TrTerminatingConnection {}              = Debug
-severityConnectionManager TrTerminatedConnection {}               = Debug
+severityConnectionManager TrTerminatingConnection {}              = Info
+severityConnectionManager TrTerminatedConnection {}               = Info
 severityConnectionManager (TrConnectionHandler _ ev')             =
         case ev' of
           TrHandshakeSuccess {}     -> Info
@@ -798,7 +798,7 @@ severityConnectionManager TrConnectionNotFound {}                 = Debug
 severityConnectionManager TrForbiddenOperation {}                 = Info
 
 severityConnectionManager TrPruneConnections {}                   = Notice
-severityConnectionManager TrConnectionCleanup {}                  = Debug
+severityConnectionManager TrConnectionCleanup {}                  = Info
 severityConnectionManager TrConnectionTimeWait {}                 = Debug
 severityConnectionManager TrConnectionTimeWaitDone {}             = Debug
 severityConnectionManager TrConnectionManagerCounters {}          = Info

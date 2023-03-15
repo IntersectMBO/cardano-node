@@ -436,11 +436,11 @@ instance HasSeverityAnnotation (ConnectionManagerTrace addr (ConnectionHandlerTr
   getSeverityAnnotation ev =
     case ev of
       TrIncludeConnection {}                  -> Debug
-      TrUnregisterConnection {}               -> Debug
+      TrUnregisterConnection {}               -> Info
       TrConnect {}                            -> Debug
       TrConnectError {}                       -> Info
-      TrTerminatingConnection {}              -> Debug
-      TrTerminatedConnection {}               -> Debug
+      TrTerminatingConnection {}              -> Info
+      TrTerminatedConnection {}               -> Info
       TrConnectionHandler _ ev'     ->
         case ev' of
           TrHandshakeSuccess {}               -> Info
@@ -458,7 +458,7 @@ instance HasSeverityAnnotation (ConnectionManagerTrace addr (ConnectionHandlerTr
       TrForbiddenOperation {}                 -> Info
 
       TrPruneConnections {}                   -> Notice
-      TrConnectionCleanup {}                  -> Debug
+      TrConnectionCleanup {}                  -> Info
       TrConnectionTimeWait {}                 -> Debug
       TrConnectionTimeWaitDone {}             -> Debug
       TrConnectionManagerCounters {}          -> Info
@@ -495,7 +495,7 @@ instance HasSeverityAnnotation (InboundGovernorTrace addr) where
       InboundGovernor.TrDemotedToColdRemote {}     -> Info
       InboundGovernor.TrDemotedToWarmRemote {}     -> Info
       InboundGovernor.TrWaitIdleRemote {}          -> Debug
-      InboundGovernor.TrMuxCleanExit {}            -> Debug
+      InboundGovernor.TrMuxCleanExit {}            -> Info
       InboundGovernor.TrMuxErrored {}              -> Info
       InboundGovernor.TrInboundGovernorCounters {} -> Info
       InboundGovernor.TrRemoteState {}             -> Debug
