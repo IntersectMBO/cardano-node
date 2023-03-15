@@ -8,6 +8,7 @@ module Testnet.Util.Runtime
   , NodeLoggingFormat(..)
   , PaymentKeyPair(..)
   , StakingKeyPair(..)
+  , TmpAbsolutePath(..)
   , TestnetRuntime(..)
   , NodeRuntime(..)
   , PoolNode(..)
@@ -37,7 +38,7 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 
-import           System.FilePath.Posix ((</>))
+import           System.FilePath.Posix
 import qualified System.Info as OS
 import qualified System.IO as IO
 import qualified System.Process as IO
@@ -99,6 +100,23 @@ data LeadershipSlot = LeadershipSlot
   , slotTime    :: Text
   } deriving (Eq, Show, Generic, FromJSON)
 
+-- Temporary path used at runtime
+newtype TmpAbsolutePath = TmpAbsolutePath
+  { unTmpPath :: FilePath
+  } deriving (Eq, Show)
+
+makeTmpRelPath :: TmpAbsolutePath -> FilePath
+makeTmpRelPath (TmpAbsolutePath fp) = makeRelative (makeTmpBaseAbsPath (TmpAbsolutePath fp)) fp
+
+makeSocketDir :: TmpAbsolutePath -> FilePath
+makeSocketDir fp = makeTmpRelPath fp </> "socket"
+
+makeTmpBaseAbsPath :: TmpAbsolutePath -> FilePath
+makeTmpBaseAbsPath (TmpAbsolutePath fp) = takeDirectory fp
+
+makeLogDir :: TmpAbsolutePath -> FilePath
+makeLogDir (TmpAbsolutePath fp) = fp </> "logs"
+
 poolNodeStdout :: PoolNode -> FilePath
 poolNodeStdout = nodeStdout . poolRuntime
 
@@ -119,20 +137,18 @@ allNodes tr = bftNodes tr <> fmap poolRuntime (poolNodes tr)
 
 -- | Start a node, creating file handles, sockets and temp-dirs.
 startNode
-  :: String
-  -- ^ The tempBaseAbsPath
-  -> FilePath
-  -- ^ The tempAbsPath
-  -> FilePath
-  -- ^ The log directory
-  -> FilePath
-  -- ^ The directory where the sockets are created
+  :: TmpAbsolutePath
+  -- ^ The temporary absolute path
   -> String
   -- ^ The name of the node
   -> [String]
   -- ^ The command --socket-path and --port will be added automatically.
   -> H.Integration NodeRuntime
-startNode tempBaseAbsPath tempAbsPath logDir socketDir node nodeCmd = do
+startNode tp@(TmpAbsolutePath tempAbsPath) node nodeCmd = do
+  let tempBaseAbsPath = makeTmpBaseAbsPath tp
+      socketDir = makeSocketDir tp
+      logDir = makeLogDir tp
+
   dbDir <- H.noteShow $ tempAbsPath </> "db/" <> node
   nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
   nodeStderrFile <- H.noteTempFile logDir $ node <> ".stderr.log"
