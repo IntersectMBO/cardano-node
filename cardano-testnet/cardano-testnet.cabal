@@ -43,6 +43,7 @@ library
                       , containers
                       , directory
                       , exceptions
+                      , extra
                       , filepath
                       , hedgehog
                       , hedgehog-extras ^>= 0.4

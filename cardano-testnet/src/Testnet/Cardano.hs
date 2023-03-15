@@ -32,6 +32,7 @@ import           Data.ByteString.Lazy (ByteString)
 import qualified Data.HashMap.Lazy as HM
 import           Data.List ((\\))
 import qualified Data.List as L
+import qualified Data.List.Extra as L
 import qualified Data.Map.Strict as M
 import           Data.Maybe
 import           Data.String
@@ -747,16 +748,33 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   now <- H.noteShowIO DTC.getCurrentTime
   deadline <- H.noteShow $ DTC.addUTCTime 90 now
 
-  forM_ allNodeNames $ \node -> do
+  sprockets <- forM allNodeNames $ \node -> do
     sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)
     _spocketSystemNameFile <- H.noteShow $ IO.sprocketSystemName sprocket
     H.byDeadlineM 10 deadline "Failed to connect to node socket" $ H.assertM $ H.doesSprocketExist sprocket
+    pure sprocket
+
+  sprocket <- H.headM sprockets
 
   forM_ allNodeNames $ \node -> do
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
     H.assertChainExtended deadline (cardanoNodeLoggingFormat testnetOptions) nodeStdoutFile
 
   H.noteShowIO_ DTC.getCurrentTime
+
+  execConfig <- H.mkExecConfig tempBaseAbsPath sprocket
+
+  forM_ addrs $ \addrName -> do
+    addr <- fmap L.trim $ H.readFile $ tempAbsPath </> "addresses/" <> addrName <> ".addr"
+
+    result <- H.execCli' execConfig
+      [ "query", "utxo"
+      , "--address", addr
+      , "--testnet-magic", show @Int testnetMagic
+      , "--out-file", "/dev/stdout"
+      ]
+
+    H.note_ result
 
   return TestnetRuntime
     { configurationFile
