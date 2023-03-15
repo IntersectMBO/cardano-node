@@ -38,9 +38,11 @@ hprop_shutdown :: Property
 hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> do
   base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
-  Conf { tempBaseAbsPath, tempAbsPath, logDir, socketDir } <- H.noteShowM $
+  Conf { tempAbsPath } <- H.noteShowM $
     mkConf (ProjectBase base) (YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
-
+  let logDir = makeLogDir (TmpAbsolutePath tempAbsPath)
+      tempBaseAbsPath = makeTmpBaseAbsPath (TmpAbsolutePath tempAbsPath)
+      socketDir = makeSocketDir (TmpAbsolutePath tempAbsPath)
   [port] <- H.noteShowIO $ IO.allocateRandomPorts 1
 
   H.createDirectoryIfMissing logDir

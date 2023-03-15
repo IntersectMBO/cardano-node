@@ -1,5 +1,5 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-unused-local-binds -Wno-unused-matches #-}
@@ -43,6 +43,7 @@ import qualified System.IO as IO
 import qualified System.Process as IO
 import qualified Testnet.Conf as H
 import qualified Testnet.Util.Process as H
+import qualified Testnet.Util.Runtime as TR
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Redundant <&>" -}
@@ -125,7 +126,7 @@ mkTopologyConfig i numBftNodes allPorts True = J.encode topologyP2P
 
 
 testnet :: TestnetOptions -> H.Conf -> H.Integration [String]
-testnet testnetOptions H.Conf {..} = do
+testnet testnetOptions H.Conf {H.base, H.tempAbsPath, H.testnetMagic} = do
   void $ H.note OS.os
   baseConfig <- H.noteShow $ base </> "configuration/chairman/defaults/simpleview"
   currentTime <- H.noteShowIO DTC.getCurrentTime
@@ -165,6 +166,10 @@ testnet testnetOptions H.Conf {..} = do
   let nodeIndexes = [0..numBftNodes testnetOptions - 1]
   let allNodes = fmap (\i -> "node-" <> show @Int i) nodeIndexes
 
+  let
+      logDir = TR.makeLogDir (TR.TmpAbsolutePath tempAbsPath)
+      socketDir = TR.makeSocketDir (TR.TmpAbsolutePath tempAbsPath)
+      tempBaseAbsPath = TR.makeTmpBaseAbsPath (TR.TmpAbsolutePath tempAbsPath)
   H.createDirectoryIfMissing logDir
 
   -- Launch cluster of three nodes in P2P Mode
@@ -173,7 +178,7 @@ testnet testnetOptions H.Conf {..} = do
     dbDir <- H.noteShow $ tempAbsPath </> "db/node-" <> si
     nodeStdoutFile <- H.noteTempFile tempAbsPath $ "cardano-node-" <> si <> ".stdout.log"
     nodeStderrFile <- H.noteTempFile tempAbsPath $ "cardano-node-" <> si <> ".stderr.log"
-    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> "node-" <> si)
+    sprocket <- H.noteShow $ TR.makeSprocket (TR.TmpAbsolutePath tempAbsPath) $ "node-" <> si
     portString <- H.note $ show @Int (allPorts L.!! i)
     topologyFile <- H.noteShow $ tempAbsPath </> "topology-node-" <> si <> ".json"
     configFile <- H.noteShow $ tempAbsPath </> "config-" <> si <> ".yaml"

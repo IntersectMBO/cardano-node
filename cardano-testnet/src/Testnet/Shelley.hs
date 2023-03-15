@@ -1,7 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Testnet.Shelley
@@ -27,7 +26,6 @@ import           Data.String
 import           Data.Time.Clock (UTCTime)
 import           Data.Word
 import           Hedgehog.Extras.Stock.Aeson (rewriteObject)
-import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           System.FilePath.Posix ((</>))
@@ -157,7 +155,7 @@ mkTopologyConfig numPraosNodes allPorts port True = J.encode topologyP2P
         (P2P.UseLedger DontUseLedger)
 
 shelleyTestnet :: ShelleyTestnetOptions -> H.Conf -> H.Integration TestnetRuntime
-shelleyTestnet testnetOptions H.Conf {..} = do
+shelleyTestnet testnetOptions H.Conf {H.base, H.tempAbsPath, H.testnetMagic} = do
   void $ H.note OS.os
 
   let praosNodesN = show @Int <$> [1 .. shelleyNumPraosNodes testnetOptions]
@@ -399,7 +397,7 @@ shelleyTestnet testnetOptions H.Conf {..} = do
 
   --------------------------------
   -- Launch cluster of three nodes
-
+  let logDir = makeLogDir (TmpAbsolutePath tempAbsPath)
   H.createDirectoryIfMissing logDir
 
   H.readFile (base </> "configuration/chairman/shelley-only/configuration.yaml")
@@ -407,7 +405,7 @@ shelleyTestnet testnetOptions H.Conf {..} = do
     >>= H.writeFile (tempAbsPath </> "configuration.yaml")
 
   allNodeRuntimes <- forM allNodes
-     $ \node -> startNode tempBaseAbsPath tempAbsPath logDir socketDir node
+     $ \node -> startNode (TmpAbsolutePath tempAbsPath) node
         [ "run"
         , "--config", tempAbsPath </> "configuration.yaml"
         , "--topology", tempAbsPath </> node </> "topology.json"
@@ -422,7 +420,7 @@ shelleyTestnet testnetOptions H.Conf {..} = do
   deadline <- H.noteShow $ DTC.addUTCTime 90 now
 
   forM_ allNodes $ \node -> do
-    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)
+    sprocket <- H.noteShow $ makeSprocket (TmpAbsolutePath tempAbsPath) node
     _spocketSystemNameFile <- H.noteShow $ IO.sprocketSystemName sprocket
     H.byDeadlineM 10 deadline "Failed to connect to node socket" $ H.assertM $ H.doesSprocketExist sprocket
 

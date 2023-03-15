@@ -47,11 +47,12 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   configurationTemplate
     <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
 
-  conf@Conf { tempBaseAbsPath, tempAbsPath }
+  conf@Conf { tempAbsPath }
     <- H.noteShowM $ mkConf (ProjectBase base) (YamlFilePath configurationTemplate)
                               tempAbsBasePath' Nothing
 
-  let fastTestnetOptions = CardanoOnlyTestnetOptions $ cardanoDefaultTestnetOptions
+  let tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath
+      fastTestnetOptions = CardanoOnlyTestnetOptions $ cardanoDefaultTestnetOptions
                              { cardanoNodes = cardanoDefaultTestnetNodeOptions
                              , cardanoEpochLength = 500
                              , cardanoSlotLength = 0.02

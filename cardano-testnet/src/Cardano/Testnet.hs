@@ -20,8 +20,12 @@ module Cardano.Testnet (
   -- * Configuration
   Conf(..),
   ProjectBase(..),
+  TmpAbsolutePath(..),
   YamlFilePath(..),
   mkConf,
+  makeLogDir,
+  makeSocketDir,
+  makeTmpBaseAbsPath,
 
   -- * Processes
   procChairman,

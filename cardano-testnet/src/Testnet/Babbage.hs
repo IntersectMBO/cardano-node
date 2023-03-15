@@ -1,7 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -35,7 +34,7 @@ import qualified Testnet.Util.Assert as H
 import           Testnet.Util.Process (execCli_)
 import           Testnet.Util.Runtime (Delegator (..), NodeLoggingFormat (..), PaymentKeyPair (..),
                    PoolNode (PoolNode), PoolNodeKeys (..), StakingKeyPair (..), TestnetRuntime (..),
-                   startNode)
+                   TmpAbsolutePath (..), makeLogDir, startNode)
 
 
 {- HLINT ignore "Redundant flip" -}
@@ -46,7 +45,7 @@ startTimeOffsetSeconds :: DTC.NominalDiffTime
 startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
 
 babbageTestnet :: BabbageTestnetOptions -> H.Conf -> H.Integration TestnetRuntime
-babbageTestnet testnetOptions H.Conf {..} = do
+babbageTestnet testnetOptions H.Conf {H.base, H.configurationTemplate, H.tempAbsPath, H.testnetMagic} = do
   H.createDirectoryIfMissing (tempAbsPath </> "logs")
 
   H.lbsWriteFile (tempAbsPath </> "byron.genesis.spec.json")
@@ -271,7 +270,7 @@ babbageTestnet testnetOptions H.Conf {..} = do
     ]
 
   poolNodes <- forM (L.zip spoNodes poolKeys) $ \(node,key) -> do
-    runtime <- startNode tempBaseAbsPath tempAbsPath logDir socketDir node
+    runtime <- startNode (TmpAbsolutePath tempAbsPath) node
         [ "run"
         , "--config", tempAbsPath </> "configuration.yaml"
         , "--topology", tempAbsPath </> node </> "topology.json"
@@ -288,7 +287,7 @@ babbageTestnet testnetOptions H.Conf {..} = do
   deadline <- H.noteShow $ DTC.addUTCTime 90 now
 
   forM_ spoNodes $ \node -> do
-    nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
+    nodeStdoutFile <- H.noteTempFile (makeLogDir $ TmpAbsolutePath tempAbsPath) $ node <> ".stdout.log"
     H.assertChainExtended deadline (babbageNodeLoggingFormat testnetOptions) nodeStdoutFile
 
   H.noteShowIO_ DTC.getCurrentTime

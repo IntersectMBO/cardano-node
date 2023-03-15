@@ -49,13 +49,14 @@ hprop_stakeSnapshot = H.integrationRetryWorkspace 2 "babbage-stake-snapshot" $ \
   H.note_ SYS.os
   base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
-  conf@Conf { tempBaseAbsPath, tempAbsPath } <- H.noteShowM $
+  conf@Conf { tempAbsPath } <- H.noteShowM $
     mkConf (ProjectBase base) (YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
 
   work <- H.note $ tempAbsPath </> "work"
   H.createDirectoryIfMissing work
 
   let
+    tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath
     testnetOptions = BabbageOnlyTestnetOptions $ babbageDefaultTestnetOptions
       { babbageNodeLoggingFormat = NodeLoggingFormatAsJson
       }

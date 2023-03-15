@@ -1,5 +1,5 @@
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Testnet.Conf
   ( ProjectBase(..)
@@ -29,4 +29,4 @@ data Conf = Conf
 mkConf :: ProjectBase -> YamlFilePath -> FilePath -> Maybe Int -> H.Integration Conf
 mkConf (ProjectBase base) (YamlFilePath configurationTemplate) tempAbsPath maybeMagic = do
   testnetMagic <- H.noteShowIO $ maybe (IO.randomRIO (1000, 2000)) return maybeMagic
-  return $ Conf {..}
+  return $ Conf {base, configurationTemplate, tempAbsPath, testnetMagic}

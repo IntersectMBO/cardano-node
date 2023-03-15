@@ -1,6 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Testnet.Cardano
@@ -53,7 +52,6 @@ import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.Aeson as J
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
-import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Stock.OS as OS
 import qualified Hedgehog.Extras.Stock.String as S
@@ -70,7 +68,8 @@ import qualified Testnet.Util.Assert as H
 import qualified Testnet.Util.Process as H
 import           Testnet.Util.Process (execCli_)
 import           Testnet.Util.Runtime as TR (NodeLoggingFormat (..), PaymentKeyPair (..),
-                   PoolNode (PoolNode), PoolNodeKeys (..), TestnetRuntime (..), startNode)
+                   PoolNode (PoolNode), PoolNodeKeys (..), TestnetRuntime (..),
+                   TmpAbsolutePath (..), makeLogDir, makeSprocket, startNode)
 
 {- HLINT ignore "Redundant flip" -}
 {- HLINT ignore "Redundant id" -}
@@ -185,7 +184,7 @@ mkTopologyConfig numNodes allPorts port True = J.encode topologyP2P
         (P2P.UseLedger DontUseLedger)
 
 cardanoTestnet :: CardanoTestnetOptions -> H.Conf -> H.Integration TestnetRuntime
-cardanoTestnet testnetOptions H.Conf {..} = do
+cardanoTestnet testnetOptions H.Conf {H.base, H.tempAbsPath, H.configurationTemplate, H.testnetMagic} = do
   void $ H.note OS.os
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
@@ -206,7 +205,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   nodeToPort <- H.noteShow (M.fromList (L.zip allNodeNames allPorts))
 
   let securityParam = 10
-
+      logDir = makeLogDir $ TmpAbsolutePath tempAbsPath
   H.createDirectoryIfMissing logDir
 
   H.readFile configurationTemplate >>= H.writeFile configurationFile
@@ -717,7 +716,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
 
   let bftNodeNameAndOpts = L.zip bftNodeNames (cardanoBftNodes $ cardanoNodes testnetOptions)
   bftNodes <- forM bftNodeNameAndOpts $ \(node, nodeOpts) -> do
-    startNode tempBaseAbsPath tempAbsPath logDir socketDir node
+    startNode (TmpAbsolutePath tempAbsPath) node
       ([ "run"
         , "--config",  tempAbsPath </> "configuration.yaml"
         , "--topology",  tempAbsPath </> node </> "topology.json"
@@ -732,7 +731,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   H.threadDelay 100000
 
   poolNodes <- forM (L.zip poolNodeNames poolKeys) $ \(node, key) -> do
-    runtime <- startNode tempBaseAbsPath tempAbsPath logDir socketDir node
+    runtime <- startNode (TmpAbsolutePath tempAbsPath) node
         [ "run"
         , "--config", tempAbsPath </> "configuration.yaml"
         , "--topology", tempAbsPath </> node </> "topology.json"
@@ -748,7 +747,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   deadline <- H.noteShow $ DTC.addUTCTime 90 now
 
   forM_ allNodeNames $ \node -> do
-    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)
+    sprocket <- H.noteShow $ TR.makeSprocket (TR.TmpAbsolutePath tempAbsPath) node
     _spocketSystemNameFile <- H.noteShow $ IO.sprocketSystemName sprocket
     H.byDeadlineM 10 deadline "Failed to connect to node socket" $ H.assertM $ H.doesSprocketExist sprocket
 
