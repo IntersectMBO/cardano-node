@@ -257,6 +257,8 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                -- Version 5 is Alonzo
                -- Version 6 is Alonzo (intra era hardfork)
                -- Version 7 is Babbage
+               -- Version 8 is Babbage (intra era hardfork)
+               -- Version 9 is Conway
                --
                -- But we also provide an override to allow for simpler test setups
                -- such as triggering at the 0 -> 1 transition .
@@ -311,10 +313,15 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           transitionTrigger =
              case npcTestConwayHardForkAtEpoch of
                 Nothing -> Consensus.TriggerHardForkAtVersion
-                             (maybe 8 fromIntegral npcTestConwayHardForkAtVersion)
+                             (maybe 9 fromIntegral npcTestConwayHardForkAtVersion)
                 Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
 
         }
+
+        ----------------------------------------------------------------------
+        -- WARNING When adding new entries above, be aware that if there is an
+        -- intra-era fork, then the numbering is not consecutive.
+        ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
 -- Errors
