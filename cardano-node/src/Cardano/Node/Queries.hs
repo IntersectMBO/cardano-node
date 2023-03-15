@@ -41,7 +41,6 @@ import           Data.ByteString (ByteString)
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.Map.Strict as Map
 import           Data.SOP.Strict
-import qualified Data.UMap as UM
 import           Data.Word (Word64)
 
 import qualified Cardano.Chain.Block as Byron
@@ -56,6 +55,7 @@ import qualified Cardano.Ledger.SafeHash as Ledger
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import qualified Cardano.Ledger.Shelley.UTxO as Shelley
 import qualified Cardano.Ledger.TxIn as Ledger
+import qualified Cardano.Ledger.UMapCompact as UM
 
 import           Ouroboros.Consensus.Block (ForgeStateInfo, ForgeStateUpdateError)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
@@ -242,7 +242,7 @@ instance LedgerQueries Byron.ByronBlock where
 instance LedgerQueries (Shelley.ShelleyBlock protocol era) where
   ledgerUtxoSize =
       (\(Shelley.UTxO xs)-> Map.size xs)
-    . Shelley._utxo
+    . Shelley.utxosUtxo
     . Shelley.lsUTxOState
     . Shelley.esLState
     . Shelley.nesEs
@@ -250,7 +250,7 @@ instance LedgerQueries (Shelley.ShelleyBlock protocol era) where
   ledgerDelegMapSize =
       UM.size
     . UM.Delegations
-    . Shelley._unified
+    . Shelley.dsUnified
     . Shelley.dpsDState
     . Shelley.lsDPState
     . Shelley.esLState
