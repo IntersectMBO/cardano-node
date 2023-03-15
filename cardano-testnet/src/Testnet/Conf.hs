@@ -7,11 +7,9 @@ module Testnet.Conf
   , mkConf
   ) where
 
-import           System.FilePath ((</>))
+import           Testnet.Util.Runtime
 
 import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.File as H
-import qualified System.FilePath.Posix as FP
 import qualified System.Random as IO
 
 newtype ProjectBase = ProjectBase
@@ -23,11 +21,7 @@ newtype YamlFilePath = YamlFilePath
   } deriving (Eq, Show)
 
 data Conf = Conf
-  { tempAbsPath :: FilePath
-  , tempRelPath :: FilePath
-  , tempBaseAbsPath :: FilePath
-  , logDir :: FilePath
-  , socketDir :: FilePath
+  { tempAbsPath :: TmpAbsolutePath
   , configurationTemplate :: Maybe FilePath
   , testnetMagic :: Int
   } deriving (Eq, Show)
@@ -35,18 +29,12 @@ data Conf = Conf
 mkConf :: Maybe YamlFilePath -> FilePath -> Maybe Int -> H.Integration Conf
 mkConf mConfigTemplate tempAbsPath' maybeMagic = do
   testnetMagic' <- H.noteShowIO $ maybe (IO.randomRIO (1000, 2000)) return maybeMagic
-  tempBaseAbsPath' <- H.noteShow $ FP.takeDirectory tempAbsPath'
-  tempRelPath' <- H.noteShow $ FP.makeRelative tempBaseAbsPath' tempAbsPath'
-  socketDir' <- H.createSubdirectoryIfMissing tempBaseAbsPath' $ tempRelPath' </> "socket"
-  logDir' <- H.createDirectoryIfMissing $ tempAbsPath' </> "logs"
   let configTemplate = unYamlFilePath <$> mConfigTemplate
 
   return $ Conf
-    { tempAbsPath = tempAbsPath'
-    , tempRelPath = tempRelPath'
-    , tempBaseAbsPath = tempBaseAbsPath'
-    , logDir = logDir'
-    , socketDir = socketDir'
+    { tempAbsPath = TmpAbsolutePath tempAbsPath'
     , configurationTemplate = configTemplate
     , testnetMagic = testnetMagic'
     }
+
+

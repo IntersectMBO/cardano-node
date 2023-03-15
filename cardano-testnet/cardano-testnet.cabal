@@ -76,6 +76,7 @@ library
                         Testnet.Babbage
                         Testnet.Byron
                         Testnet.Commands.Genesis
+                        Testnet.Conf
                         Testnet.Options
                         Testnet.Topology 
                         Testnet.Utils
@@ -95,7 +96,6 @@ library
                         Parsers.Version
                         Testnet
                         Testnet.Cardano
-                        Testnet.Conf
                         Testnet.Commands.Governance
                         Testnet.Run
                         Testnet.Shelley
