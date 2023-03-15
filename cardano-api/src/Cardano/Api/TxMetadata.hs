@@ -43,6 +43,8 @@ module Cardano.Api.TxMetadata (
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.SerialiseCBOR (SerialiseAsCBOR (..))
+import qualified Cardano.Ledger.Binary as CBOR
 import qualified Cardano.Ledger.Shelley.TxAuxData as Shelley
 import           Control.Applicative (Alternative (..))
 import           Control.Monad (guard, when)
@@ -102,23 +104,20 @@ instance HasTypeProxy TxMetadata where
     data AsType TxMetadata = AsTxMetadata
     proxyToAsType _ = AsTxMetadata
 
--- instance SerialiseAsCBOR TxMetadata where
---     serialiseToCBOR =
---           CBOR.serialize'
---         . (Shelley.Metadata :: Map Word64 Shelley.Metadatum -> Shelley.Metadata ())
---         -- The Shelley (Metadata era) is always polymorphic in era,
---         -- so we pick the unit type.
---         . toShelleyMetadata
---         . (\(TxMetadata m) -> m)
+instance SerialiseAsCBOR TxMetadata where
+    serialiseToCBOR =
+          -- This is a workaround. There is a tiny chance that serialization could change
+          -- for Metadata in the future, depending on the era it is being used in. For now
+          -- we can pretend like it is the same for all eras starting with Shelley
+          CBOR.serialize' CBOR.shelleyProtVer
+        . toShelleyMetadata
+        . (\(TxMetadata m) -> m)
 
---     deserialiseFromCBOR AsTxMetadata bs =
---           TxMetadata
---         . fromShelleyMetadata
---         . (\(Shelley.Metadata m) -> m)
---       <$> (CBOR.decodeAnnotator "TxMetadata" fromCBOR (LBS.fromStrict bs)
---            :: Either CBOR.DecoderError (Shelley.Metadata ()))
---         -- The Shelley (Metadata era) is always polymorphic in era,
---         -- so we pick the unit type.
+    deserialiseFromCBOR AsTxMetadata bs =
+          TxMetadata
+        . fromShelleyMetadata
+      <$> (CBOR.decodeFullDecoder' CBOR.shelleyProtVer "TxMetadata" CBOR.decCBOR bs
+           :: Either CBOR.DecoderError (Map Word64 Shelley.Metadatum))
 
 makeTransactionMetadata :: Map Word64 TxMetadataValue -> TxMetadata
 makeTransactionMetadata = TxMetadata
