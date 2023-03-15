@@ -19,7 +19,6 @@ import qualified Data.Aeson.Types as J
 import           Data.List ((\\))
 import qualified Data.List as L
 import qualified Data.Map.Strict as Map
-import           Data.Monoid (Last (..))
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Text as T
@@ -28,16 +27,15 @@ import           GHC.Stack (callStack)
 
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 import           Prelude
 import qualified System.Directory as IO
-import           System.Environment (getEnvironment)
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
+import qualified Testnet.Util.Process as H
 
 import           Cardano.Api (AlonzoEra, SerialiseAddress (serialiseAddress), UTxO (UTxO))
 import qualified Cardano.Api as Api
@@ -72,17 +70,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedu
 
   poolNode1 <- H.headM poolNodes
 
-  env <- H.evalIO getEnvironment
-
-  execConfig <- H.noteShow H.ExecConfig
-    { H.execConfigEnv = Last $ Just $
-      [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName $ head $ bftSprockets tr)
-      ]
-      -- The environment must be passed onto child process on Windows in order to
-      -- successfully start that process.
-      <> env
-    , H.execConfigCwd = Last $ Just tempBaseAbsPath
-    }
+  execConfig <- H.headM (bftSprockets tr) >>= H.mkExecConfig tempBaseAbsPath
 
   -- First we note all the relevant files
   H.note_ base

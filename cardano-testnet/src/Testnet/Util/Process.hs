@@ -10,27 +10,27 @@ module Testnet.Util.Process
   , procNode
   , procSubmitApi
   , procChairman
+  , mkExecConfig
   ) where
 
-import           Prelude
-
 import qualified Control.Concurrent as IO
-import           Control.Monad
+import           Control.Monad (unless, void)
 import           Control.Monad.Catch (MonadCatch)
-import           Control.Monad.IO.Class
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Data.Monoid (Last (..))
 import           Data.Time.Clock (UTCTime)
 import qualified Data.Time.Clock as DTC
 import           GHC.Stack (HasCallStack)
-import           Hedgehog (MonadTest)
-import           Hedgehog.Extras.Test.Process (ExecConfig)
-import           System.Process (CreateProcess)
-
 import qualified GHC.Stack as GHC
-import           Hedgehog.Extras.Test.Base
+import           Hedgehog (MonadTest)
+import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
+import           Hedgehog.Extras.Test.Base (failMessage, noteShow)
+import           Hedgehog.Extras.Test.Process (ExecConfig)
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified Hedgehog.Internal.Property as H
 import qualified System.Environment as IO
 import qualified System.IO.Unsafe as IO
+import           System.Process (CreateProcess)
 
 -- | Path to the bash executable.  This is used on Windows so that the caller can supply a Windows
 -- path to the bash executable because there is no reliable way to invoke bash without the full
@@ -138,3 +138,22 @@ assertByDeadlineIOCustom str deadline f = GHC.withFrozenCallStack $ do
       else do
         H.annotateShow currentTime
         failMessage GHC.callStack $ "Condition not met by deadline: " <> str
+
+mkExecConfig :: ()
+  => MonadTest m
+  => MonadIO m
+  => FilePath
+  -> IO.Sprocket
+  -> m ExecConfig
+mkExecConfig tempBaseAbsPath sprocket = do
+  env <- H.evalIO IO.getEnvironment
+
+  noteShow H.ExecConfig
+        { H.execConfigEnv = Last $ Just $
+          [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName sprocket)
+          ]
+          -- The environment must be passed onto child process on Windows in order to
+          -- successfully start that process.
+          <> env
+        , H.execConfigCwd = Last $ Just tempBaseAbsPath
+        }
