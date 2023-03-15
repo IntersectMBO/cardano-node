@@ -168,7 +168,7 @@ None
 - Allow provision of optional datums to a transaction using the CLI option
   `--tx-out-datum-embed-value`. This mechanism can for example be used to
   provide the actual script locking an output, for use when spending it. (#3171)
-- Fix the use of withdrawls using the `transaction build` command. (#3317)
+- Fix the use of withdrawals using the `transaction build` command. (#3317)
 - Allow extended payment keys to be specified as a Plutus required signer.
   (#3319)
 
@@ -191,7 +191,7 @@ None
   everywhere for consistency. (#3181)
 - Allow the `tx build` command to spend the entirety of a UTxO and create no
   change output. (#3188)
-- Add withdrawls to the `tx view` command. (#2613)
+- Add withdrawals to the `tx view` command. (#2613)
 ## 1.29.0 -- August 2021
 
 - Add a "tx build" command to the CLI. This command takes care of calculating
