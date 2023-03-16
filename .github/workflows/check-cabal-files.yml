@@ -32,7 +32,7 @@ jobs:
       uses: input-output-hk/setup-haskell@v1
       id: setup-haskell
       with:
-        cabal-version: "3.10.1.0"
+        cabal-version: "3.8.1.0"
 
     - uses: actions/checkout@v3
 
