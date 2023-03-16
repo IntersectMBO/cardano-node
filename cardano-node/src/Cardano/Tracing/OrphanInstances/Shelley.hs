@@ -79,6 +79,7 @@ import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure (..), Alonz
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import           Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
+import           Cardano.Ledger.Conway.Governance -- (govActionIdToText)
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import           Cardano.Ledger.Shelley.Rules
 import           Cardano.Protocol.TPraos.API (ChainTransitionError (ChainTransitionError))
@@ -246,8 +247,6 @@ instance ( ShelleyBasedEra era
   toObject verb (DelegsFailure f) = toObject verb f
 
 instance ( ShelleyBasedEra era
-         , ToObject (PredicateFailure (ShelleyUTXO era))
-         , ToObject (PredicateFailure (ShelleyUTXOW era))
          , ToObject (PredicateFailure (Core.EraRule "DELEGS" era))
          , ToObject (PredicateFailure (Core.EraRule "UTXOW" era))
          , ToObject (PredicateFailure (Core.EraRule "TALLY" era))
@@ -257,9 +256,21 @@ instance ( ShelleyBasedEra era
   toObject verb (Conway.ConwayTallyFailure f) = toObject verb f
 
 instance ( ShelleyBasedEra era
+         ) => ToObject (Conway.ConwayTallyPredFailure era) where
+  toObject = undefined
+  -- toObject _ (Conway.VoterDoesNotHaveRole credential voteRole) =
+  --   mconcat [ "kind" .= String "VoterDoesNotHaveRole"
+  --           , "credential" .= textShow credential
+  --           , "voteRole" .= textShow voteRole
+  --           ]
+  -- toObject _ (Conway.GovernanceActionDoesNotExist govActionId) =
+  --   mconcat [ "kind" .= String "GovernanceActionDoesNotExist"
+  --           , "credential" .= govActionIdToText govActionId
+  --           ]
+
+instance ( ShelleyBasedEra era
          , ToJSON (Ledger.Value era)
          , ToJSON (Ledger.TxOut era)
-         , ToObject (PredicateFailure (Ledger.EraRule "PPUP" era))
          , ToObject (PPUPPredFailure era)
          , ToObject (PredicateFailure (Ledger.EraRule "UTXO" era))
          , Ledger.EraCrypto era ~ StandardCrypto
@@ -374,7 +385,6 @@ instance ( ShelleyBasedEra era
 instance ( ShelleyBasedEra era
          , ToJSON (Core.Value era)
          , ToJSON (Core.TxOut era)
-         , ToObject (PredicateFailure (Core.EraRule "PPUP" era))
          , ToObject (PPUPPredFailure era)
          )
       => ToObject (ShelleyUtxoPredFailure era) where
@@ -445,7 +455,6 @@ instance ToJSON Allegra.ValidityInterval where
 instance ( ShelleyBasedEra era
          , ToJSON (Core.Value era)
          , ToJSON (Core.TxOut era)
-         , ToObject (PredicateFailure (Core.EraRule "PPUP" era))
          , ToObject (PPUPPredFailure era)
          ) => ToObject (AllegraUtxoPredFailure era) where
   toObject _verb (Allegra.BadInputsUTxO badInputs) =
@@ -704,7 +713,6 @@ instance ( ToObject (PredicateFailure (Core.EraRule "EPOCH" era))
 
 instance ( ToObject (PredicateFailure (Core.EraRule "POOLREAP" era))
          , ToObject (PredicateFailure (Core.EraRule "SNAP" era))
-         , ToObject (PredicateFailure (Core.EraRule "UPEC" era))
          , ToObject (UpecPredFailure era)
          ) => ToObject (ShelleyEpochPredFailure era) where
   toObject verb (PoolReapFailure f) = toObject verb f
@@ -990,7 +998,6 @@ instance ( Ledger.Era era
     mconcat [ "kind" .= String "NoCollateralInputs" ]
 
 instance ( ToJSON (Alonzo.CollectError (Ledger.EraCrypto era))
-         , ToObject (PredicateFailure (Ledger.EraRule "PPUP" era))
          , ToObject (PPUPPredFailure era)
          ) =>ToObject (AlonzoUtxosPredFailure era) where
   toObject _ (Alonzo.ValidationTagMismatch isValidating reason) =
@@ -1119,7 +1126,6 @@ instance ( Ledger.Era era
          , ToJSON (Ledger.Value era)
          , ToJSON (Ledger.TxOut era)
          , ToObject (PPUPPredFailure era)
-         , ToObject (PredicateFailure (Ledger.EraRule "PPUP" era))
          , ToObject (PredicateFailure (Ledger.EraRule "UTXO" era))
          ) => ToObject (BabbageUtxowPredFailure era) where
   toObject v err =

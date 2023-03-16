@@ -106,8 +106,8 @@ instance MetaTrace MuxTrace where
       Namespace [] ["StartedOnDemand"]
     namespaceFor MuxTraceTerminating {}           =
       Namespace [] ["Terminating"]
-    namespaceFor MuxTraceShutdown {}              =
-      Namespace [] ["Shutdown"]
+    -- namespaceFor MuxTraceShutdown {}              =
+    --   Namespace [] ["Shutdown"]
     namespaceFor MuxTraceTCPInfo {}               =
       Namespace [] ["TCPInfo"]
 
