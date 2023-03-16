@@ -142,17 +142,14 @@ library
                       , cardano-git-rev
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
-                      , cardano-ledger-core
-                      , cardano-ledger-byron
-                      , cardano-ledger-conway
-                      , cardano-ledger-shelley
-                      , cardano-ledger-shelley-ma
                       , cardano-ledger-alonzo
+                      , cardano-ledger-allegra
                       , cardano-ledger-babbage
                       , cardano-ledger-byron
+                      , cardano-ledger-conway
                       , cardano-ledger-core
                       , cardano-ledger-shelley
-                      , cardano-ledger-shelley-ma
+                      , cardano-ledger-mary
                       , cardano-prelude
                       , cardano-protocol-tpraos ^>= 1.0
                       , cardano-slotting ^>= 0.1

@@ -52,17 +52,17 @@ import           Ouroboros.Consensus.Shelley.Ledger.Inspect
 import qualified Ouroboros.Consensus.Shelley.Protocol.Praos as Praos
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
+import qualified Cardano.Ledger.Allegra.Scripts as Allegra
 import qualified Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import qualified Cardano.Ledger.AuxiliaryData as Core
 import           Cardano.Ledger.BaseTypes (activeSlotLog, strictMaybeToMaybe)
 import           Cardano.Ledger.Chain
-import qualified Cardano.Ledger.Core as Core hiding (Crypto)
+import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Crypto as Core
 import qualified Cardano.Ledger.SafeHash as SafeHash
-import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA
 import           Cardano.Protocol.TPraos.BHeader (LastAppliedBlock, labBlockNo)
 import           Cardano.Protocol.TPraos.Rules.OCert
 import           Cardano.Protocol.TPraos.Rules.Overlay
@@ -72,32 +72,15 @@ import           Cardano.Protocol.TPraos.Rules.Updn
 -- TODO: this should be exposed via Cardano.Api
 import           Cardano.Ledger.Shelley.API
 
+import           Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
+import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure (..), AlonzoUtxoPredFailure,
                    AlonzoUtxosPredFailure, AlonzoUtxowPredFailure (..))
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import           Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
-import           Cardano.Ledger.Shelley.Rules.Bbody
-import           Cardano.Ledger.Shelley.Rules.Deleg
-import           Cardano.Ledger.Shelley.Rules.Delegs
-import           Cardano.Ledger.Shelley.Rules.Delpl
-import           Cardano.Ledger.Shelley.Rules.Epoch
-import           Cardano.Ledger.Shelley.Rules.Ledger
-import           Cardano.Ledger.Shelley.Rules.Ledgers
-import           Cardano.Ledger.Shelley.Rules.Mir
-import           Cardano.Ledger.Shelley.Rules.NewEpoch
-import           Cardano.Ledger.Shelley.Rules.Newpp
-import           Cardano.Ledger.Shelley.Rules.Pool
-import           Cardano.Ledger.Shelley.Rules.PoolReap
-import           Cardano.Ledger.Shelley.Rules.Ppup
-import           Cardano.Ledger.Shelley.Rules.Rupd
-import           Cardano.Ledger.Shelley.Rules.Snap
-import           Cardano.Ledger.Shelley.Rules.Tick
-import           Cardano.Ledger.Shelley.Rules.Upec
-import           Cardano.Ledger.Shelley.Rules.Utxo
-import           Cardano.Ledger.Shelley.Rules.Utxow
-import           Cardano.Ledger.ShelleyMA.Rules (ShelleyMAUtxoPredFailure)
-import qualified Cardano.Ledger.ShelleyMA.Rules as MA
+import qualified Cardano.Ledger.Conway.Rules as Conway
+import           Cardano.Ledger.Shelley.Rules
 import           Cardano.Protocol.TPraos.API (ChainTransitionError (ChainTransitionError))
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod))
 import           Cardano.Protocol.TPraos.Rules.Prtcl
@@ -263,11 +246,23 @@ instance ( ShelleyBasedEra era
   toObject verb (DelegsFailure f) = toObject verb f
 
 instance ( ShelleyBasedEra era
+         , ToObject (PredicateFailure (ShelleyUTXO era))
+         , ToObject (PredicateFailure (ShelleyUTXOW era))
+         , ToObject (PredicateFailure (Core.EraRule "DELEGS" era))
+         , ToObject (PredicateFailure (Core.EraRule "UTXOW" era))
+         , ToObject (PredicateFailure (Core.EraRule "TALLY" era))
+         ) => ToObject (Conway.ConwayLedgerPredFailure era) where
+  toObject verb (Conway.ConwayUtxowFailure f) = toObject verb f
+  toObject verb (Conway.ConwayDelegsFailure f) = toObject verb f
+  toObject verb (Conway.ConwayTallyFailure f) = toObject verb f
+
+instance ( ShelleyBasedEra era
          , ToJSON (Ledger.Value era)
          , ToJSON (Ledger.TxOut era)
          , ToObject (PredicateFailure (Ledger.EraRule "PPUP" era))
+         , ToObject (PPUPPredFailure era)
          , ToObject (PredicateFailure (Ledger.EraRule "UTXO" era))
-         , Ledger.Crypto era ~ StandardCrypto
+         , Ledger.EraCrypto era ~ StandardCrypto
          ) => ToObject (AlonzoUtxowPredFailure era) where
   toObject v (ShelleyInAlonzoUtxowPredFailure utxoPredFail) =
     toObject v utxoPredFail
@@ -380,6 +375,7 @@ instance ( ShelleyBasedEra era
          , ToJSON (Core.Value era)
          , ToJSON (Core.TxOut era)
          , ToObject (PredicateFailure (Core.EraRule "PPUP" era))
+         , ToObject (PPUPPredFailure era)
          )
       => ToObject (ShelleyUtxoPredFailure era) where
   toObject _verb (BadInputsUTxO badInputs) =
@@ -437,11 +433,11 @@ instance ( ShelleyBasedEra era
              ]
 
 
-instance ToJSON MA.ValidityInterval where
+instance ToJSON Allegra.ValidityInterval where
   toJSON vi =
     Aeson.object $
-        [ "invalidBefore"    .= x | x <- mbfield (MA.invalidBefore    vi) ]
-     ++ [ "invalidHereafter" .= x | x <- mbfield (MA.invalidHereafter vi) ]
+        [ "invalidBefore"    .= x | x <- mbfield (Allegra.invalidBefore    vi) ]
+     ++ [ "invalidHereafter" .= x | x <- mbfield (Allegra.invalidHereafter vi) ]
     where
       mbfield SNothing  = []
       mbfield (SJust x) = [x]
@@ -450,44 +446,45 @@ instance ( ShelleyBasedEra era
          , ToJSON (Core.Value era)
          , ToJSON (Core.TxOut era)
          , ToObject (PredicateFailure (Core.EraRule "PPUP" era))
-         ) => ToObject (ShelleyMAUtxoPredFailure era) where
-  toObject _verb (MA.BadInputsUTxO badInputs) =
+         , ToObject (PPUPPredFailure era)
+         ) => ToObject (AllegraUtxoPredFailure era) where
+  toObject _verb (Allegra.BadInputsUTxO badInputs) =
     mconcat [ "kind" .= String "BadInputsUTxO"
              , "badInputs" .= badInputs
              , "error" .= renderBadInputsUTxOErr badInputs
              ]
-  toObject _verb (MA.OutsideValidityIntervalUTxO validityInterval slot) =
+  toObject _verb (Allegra.OutsideValidityIntervalUTxO validityInterval slot) =
     mconcat [ "kind" .= String "ExpiredUTxO"
              , "validityInterval" .= validityInterval
              , "slot" .= slot ]
-  toObject _verb (MA.MaxTxSizeUTxO txsize maxtxsize) =
+  toObject _verb (Allegra.MaxTxSizeUTxO txsize maxtxsize) =
     mconcat [ "kind" .= String "MaxTxSizeUTxO"
              , "size" .= txsize
              , "maxSize" .= maxtxsize ]
-  toObject _verb MA.InputSetEmptyUTxO =
+  toObject _verb Allegra.InputSetEmptyUTxO =
     mconcat [ "kind" .= String "InputSetEmptyUTxO" ]
-  toObject _verb (MA.FeeTooSmallUTxO minfee txfee) =
+  toObject _verb (Allegra.FeeTooSmallUTxO minfee txfee) =
     mconcat [ "kind" .= String "FeeTooSmallUTxO"
              , "minimum" .= minfee
              , "fee" .= txfee ]
-  toObject _verb (MA.ValueNotConservedUTxO consumed produced) =
+  toObject _verb (Allegra.ValueNotConservedUTxO consumed produced) =
     mconcat [ "kind" .= String "ValueNotConservedUTxO"
              , "consumed" .= consumed
              , "produced" .= produced
              , "error" .= renderValueNotConservedErr consumed produced
              ]
-  toObject _verb (MA.WrongNetwork network addrs) =
+  toObject _verb (Allegra.WrongNetwork network addrs) =
     mconcat [ "kind" .= String "WrongNetwork"
              , "network" .= network
              , "addrs"   .= addrs
              ]
-  toObject _verb (MA.WrongNetworkWithdrawal network addrs) =
+  toObject _verb (Allegra.WrongNetworkWithdrawal network addrs) =
     mconcat [ "kind" .= String "WrongNetworkWithdrawal"
              , "network" .= network
              , "addrs"   .= addrs
              ]
   -- TODO: Add the minimum allowed UTxO value to OutputTooSmallUTxO
-  toObject _verb (MA.OutputTooSmallUTxO badOutputs) =
+  toObject _verb (Allegra.OutputTooSmallUTxO badOutputs) =
     mconcat [ "kind" .= String "OutputTooSmallUTxO"
             , "outputs" .= badOutputs
             , "error" .= String
@@ -497,15 +494,15 @@ instance ( ShelleyBasedEra era
                 ]
               )
             ]
-  toObject verb (MA.UpdateFailure f) = toObject verb f
-  toObject _verb (MA.OutputBootAddrAttrsTooBig badOutputs) =
+  toObject verb (Allegra.UpdateFailure f) = toObject verb f
+  toObject _verb (Allegra.OutputBootAddrAttrsTooBig badOutputs) =
     mconcat [ "kind" .= String "OutputBootAddrAttrsTooBig"
              , "outputs" .= badOutputs
              , "error" .= String "The Byron address attributes are too big"
              ]
-  toObject _verb MA.TriesToForgeADA =
+  toObject _verb Allegra.TriesToForgeADA =
     mconcat [ "kind" .= String "TriesToForgeADA" ]
-  toObject _verb (MA.OutputTooBigUTxO badOutputs) =
+  toObject _verb (Allegra.OutputTooBigUTxO badOutputs) =
     mconcat [ "kind" .= String "OutputTooBigUTxO"
              , "outputs" .= badOutputs
              , "error" .= String "Too many asset ids in the tx output"
@@ -708,6 +705,7 @@ instance ( ToObject (PredicateFailure (Core.EraRule "EPOCH" era))
 instance ( ToObject (PredicateFailure (Core.EraRule "POOLREAP" era))
          , ToObject (PredicateFailure (Core.EraRule "SNAP" era))
          , ToObject (PredicateFailure (Core.EraRule "UPEC" era))
+         , ToObject (UpecPredFailure era)
          ) => ToObject (ShelleyEpochPredFailure era) where
   toObject verb (PoolReapFailure f) = toObject verb f
   toObject verb (SnapFailure f) = toObject verb f
@@ -891,6 +889,7 @@ instance ( Ledger.Era era
          , ToJSON (Ledger.Value era)
          , ToJSON (Ledger.TxOut era)
          , ToObject (PredicateFailure (Ledger.EraRule "UTXOS" era))
+         , ToObject (PPUPPredFailure era)
          , ShelleyBasedEra era
          ) => ToObject (AlonzoUtxoPredFailure era) where
   toObject _verb (Alonzo.BadInputsUTxO badInputs) =
@@ -990,8 +989,9 @@ instance ( Ledger.Era era
   toObject _verb Alonzo.NoCollateralInputs =
     mconcat [ "kind" .= String "NoCollateralInputs" ]
 
-instance ( ToJSON (Alonzo.CollectError (Ledger.Crypto era))
+instance ( ToJSON (Alonzo.CollectError (Ledger.EraCrypto era))
          , ToObject (PredicateFailure (Ledger.EraRule "PPUP" era))
+         , ToObject (PPUPPredFailure era)
          ) =>ToObject (AlonzoUtxosPredFailure era) where
   toObject _ (Alonzo.ValidationTagMismatch isValidating reason) =
     mconcat [ "kind" .= String "ValidationTagMismatch"
@@ -1096,6 +1096,7 @@ instance ( ToJSON (Ledger.Value era)
          , ShelleyBasedEra era
          , ToObject (ShelleyUtxowPredFailure era)
          , ToObject (PredicateFailure (Ledger.EraRule "UTXOS" era))
+         , ToObject (PPUPPredFailure era)
          ) => ToObject (BabbageUtxoPredFailure era) where
   toObject v err =
     case err of
@@ -1114,10 +1115,10 @@ instance ( ToJSON (Ledger.Value era)
 
 instance ( Ledger.Era era
          , ShelleyBasedEra era
-         , Ledger.Crypto era ~ StandardCrypto
+         , Ledger.EraCrypto era ~ StandardCrypto
          , ToJSON (Ledger.Value era)
          , ToJSON (Ledger.TxOut era)
-         , ToObject (ShelleyUtxowPredFailure era)
+         , ToObject (PPUPPredFailure era)
          , ToObject (PredicateFailure (Ledger.EraRule "PPUP" era))
          , ToObject (PredicateFailure (Ledger.EraRule "UTXO" era))
          ) => ToObject (BabbageUtxowPredFailure era) where
@@ -1239,5 +1240,3 @@ showLastAppBlockNo wOblk =  case withOriginToMaybe wOblk of
 -- Common to cardano-cli
 
 deriving newtype instance Core.Crypto crypto => ToJSON (Core.AuxiliaryDataHash crypto)
-
-deriving newtype instance Core.Crypto crypto => ToJSON (TxId crypto)
