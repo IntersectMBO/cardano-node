@@ -93,7 +93,7 @@ data TracerConfig = TracerConfig
   , logging        :: !(NonEmpty LoggingParams)     -- ^ Logging parameters.
   , rotation       :: !(Maybe RotationParams)       -- ^ Rotation parameters.
   , verbosity      :: !(Maybe Verbosity)            -- ^ Verbosity of the tracer itself.
-  , metricsComp    :: !(Maybe (Map Text Text))      -- ^ Metrics compability map from metrics name to metrics name
+  , metricsComp    :: !(Maybe (Map Text Text))      -- ^ Metrics compatibility map from metrics name to metrics name
   } deriving (Eq, Generic, FromJSON, ToJSON, Show)
 
 -- | Read the tracer's configuration file.

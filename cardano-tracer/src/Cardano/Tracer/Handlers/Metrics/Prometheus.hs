@@ -126,7 +126,7 @@ getMetricsFromNode tracerEnv nodeId acceptedMetrics =
  where
   getListOfMetrics :: Sample -> MetricsList
   getListOfMetrics =
-      metricsCompability
+      metricsCompatibility
       . filter (not . T.null . fst)
       . map metricsWeNeed
       . HM.toList
@@ -149,8 +149,8 @@ getMetricsFromNode tracerEnv nodeId acceptedMetrics =
     . T.replace "-" "_"
     . T.replace "." "_"
 
-  metricsCompability :: MetricsList -> MetricsList
-  metricsCompability metricsList =
+  metricsCompatibility :: MetricsList -> MetricsList
+  metricsCompatibility metricsList =
       case metricsComp (teConfig tracerEnv) of
         Nothing -> metricsList
         Just mmap -> foldl  (\ accu p'@(mn,mv) -> case M.lookup mn mmap of

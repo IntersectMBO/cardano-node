@@ -41,11 +41,14 @@ let serviceConfigToJSON =
           epHost    = "127.0.0.1";
           epPort    = 3200; ## supervisord.portShiftPrometheus
         } // (cfg.prometheus or {});
-        ## TODO YUP: replace with real mappings
-        metricsComp = {
-            "Mempool.TxsInMempool" = "Mempool.TxsInMempool.Mapped";
-            "ChainDB.SlotNum" = "ChainDB.SlotNum.Mapped";
-        };
+        # Just an example for metrics compatibility mapping.
+        # An entry means the first entry has the second entry as alias.
+        # The Metrics is then avalable, both with the original and the mapped name.
+        # Only one mapping per message is supported.
+        # metricsComp = {
+        #     "Mempool.TxsInMempool" = "Mempool.TxsInMempool.Mapped";
+        #     "ChainDB.SlotNum" = "ChainDB.SlotNum.Mapped";
+        # };
       };
 in pkgs.commonLib.defServiceModule
   (lib: with lib;
