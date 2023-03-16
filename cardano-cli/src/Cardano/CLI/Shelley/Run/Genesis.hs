@@ -141,7 +141,6 @@ import           Data.ListMap (ListMap (..))
 
 import qualified Cardano.CLI.IO.Lazy as Lazy
 
-import           Cardano.Api.Crypto.Ed25519Bip32 (SignKeyDSIGN (..))
 import           Cardano.Prelude (canonicalEncodePretty)
 
 data ShelleyGenesisCmdError
@@ -557,15 +556,22 @@ runGenesisCreateCardano (GenesisDir rootdir)
       }
 
     genesisKeys = gsDlgIssuersSecrets byronSecrets
+
+    byronGenesisKeys :: [SigningKey ByronKey]
     byronGenesisKeys = map ByronSigningKey genesisKeys
-    shelleyGenesisKeys = map convertGenesisKey genesisKeys
+
+    shelleyGenesisKeys :: [SigningKey GenesisExtendedKey]
+    shelleyGenesisKeys = map castSigningKey byronGenesisKeys
+
     shelleyGenesisvkeys :: [VerificationKey GenesisKey]
     shelleyGenesisvkeys = map (castVerificationKey . getVerificationKey) shelleyGenesisKeys
 
     delegateKeys = gsRichSecrets byronSecrets
     byronDelegateKeys = map ByronSigningKey delegateKeys
+
     shelleyDelegateKeys :: [SigningKey GenesisDelegateExtendedKey]
-    shelleyDelegateKeys = map convertDelegate delegateKeys
+    shelleyDelegateKeys = map castSigningKey byronDelegateKeys
+
     shelleyDelegatevkeys :: [VerificationKey GenesisDelegateKey]
     shelleyDelegatevkeys = map (castVerificationKey . getVerificationKey) shelleyDelegateKeys
 
@@ -647,11 +653,6 @@ runGenesisCreateCardano (GenesisDir rootdir)
 
   where
     convertToShelleyError = withExceptT ShelleyGenesisCmdByronError
-    convertGenesisKey :: Byron.SigningKey -> SigningKey GenesisExtendedKey
-    convertGenesisKey (Byron.SigningKey xsk) = GenesisExtendedSigningKey (SignKeyEd25519Bip32DSIGN xsk)
-
-    convertDelegate :: Byron.SigningKey -> SigningKey GenesisDelegateExtendedKey
-    convertDelegate (Byron.SigningKey xsk) = GenesisDelegateExtendedSigningKey (SignKeyEd25519Bip32DSIGN xsk)
 
     convertPoor :: Byron.SigningKey -> SigningKey ByronKey
     convertPoor = ByronSigningKey

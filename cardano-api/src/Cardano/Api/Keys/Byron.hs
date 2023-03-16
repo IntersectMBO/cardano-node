@@ -179,6 +179,15 @@ instance CastVerificationKeyRole ByronKey PaymentKey where
       . (castVerificationKey :: VerificationKey ByronKey
                              -> VerificationKey PaymentExtendedKey)
 
+instance CastSigningKeyRole ByronKey GenesisExtendedKey where
+  castSigningKey :: SigningKey ByronKey -> SigningKey GenesisExtendedKey
+  castSigningKey (ByronSigningKey (Byron.SigningKey xsk)) =
+    GenesisExtendedSigningKey $ SignKeyEd25519Bip32DSIGN xsk
+
+instance CastSigningKeyRole ByronKey GenesisDelegateExtendedKey where
+  castSigningKey (ByronSigningKey (Byron.SigningKey xsk)) =
+    GenesisDelegateExtendedSigningKey $ SignKeyEd25519Bip32DSIGN xsk
+
 instance IsByronKey ByronKey where
   byronKeyFormat = ByronModernKeyFormat
 
