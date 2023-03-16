@@ -119,6 +119,7 @@ main = do
     , logging        = NE.fromList [LoggingParams root FileMode format]
     , rotation       = Nothing
     , verbosity      = Nothing
+    , metricsComp    = Nothing
     }
 
   generate num = replicate num . mkTraceObject <$> getCurrentTime
