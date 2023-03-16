@@ -367,7 +367,10 @@ nodeBasicInfo nc (SomeConsensusProtocol whichP pForInfo) nodeStartTime' = do
   getGenesisValues era config =
     let genesis = shelleyLedgerGenesis $ shelleyLedgerConfig config
     in [ ("systemStartTime",          textShow (SL.sgSystemStart genesis))
-       , ("slotLength" <> era,        textShow (WCT.getSlotLength . WCT.mkSlotLength $ SL.sgSlotLength genesis))
+       , ("slotLength" <> era,        textShow (WCT.getSlotLength
+                                                . WCT.mkSlotLength
+                                                . SL.fromNominalDiffTimeMicro
+                                                $ SL.sgSlotLength genesis))
        , ("epochLength" <> era,       textShow (unEpochSize . SL.sgEpochLength $ genesis))
        , ("slotsPerKESPeriod" <> era, textShow (SL.sgSlotsPerKESPeriod genesis))
        ]
