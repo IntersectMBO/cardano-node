@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Node.Protocol.Shelley
   ( mkSomeConsensusProtocolShelley
@@ -40,11 +41,10 @@ import           Cardano.Ledger.Keys (coerceKeyRole)
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Mempool.Capacity as TxLimits
 import           Ouroboros.Consensus.Protocol.Praos.Common (PraosCanBeLeader (..))
-import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParamsShelley (..),
                    ProtocolParamsShelleyBased (..), ShelleyLeaderCredentials (..))
 
-import           Cardano.Ledger.BaseTypes (ProtVer (..))
+import           Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley
 
 import           Cardano.Api.Orphans ()
@@ -97,7 +97,7 @@ mkSomeConsensusProtocolShelley NodeShelleyProtocolConfiguration {
       }
       Consensus.ProtocolParamsShelley {
         shelleyProtVer =
-          ProtVer 2 0,
+          ProtVer (natVersion @2) 0,
         shelleyMaxTxCapacityOverrides =
           TxLimits.mkOverrides TxLimits.noOverridesMeasure
       }
@@ -108,7 +108,7 @@ genesisHashToPraosNonce (GenesisHash h) = Nonce (Crypto.castHash h)
 readGenesis :: GenesisFile
             -> Maybe GenesisHash
             -> ExceptT GenesisReadError IO
-                       (ShelleyGenesis StandardShelley, GenesisHash)
+                       (ShelleyGenesis StandardCrypto, GenesisHash)
 readGenesis = readGenesisAny
 
 readGenesisAny :: FromJSON genesis
@@ -132,7 +132,7 @@ readGenesisAny (GenesisFile file) mbExpectedGenesisHash = do
           -> throwError (GenesisHashMismatch actual expected)
         _ -> return ()
 
-validateGenesis :: ShelleyGenesis StandardShelley
+validateGenesis :: ShelleyGenesis StandardCrypto
                 -> ExceptT GenesisValidationError IO ()
 validateGenesis genesis =
     firstExceptT GenesisValidationErrors . hoistEither $
