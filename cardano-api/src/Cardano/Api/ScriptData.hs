@@ -628,7 +628,7 @@ instance Error ScriptDataJsonSchemaError where
      ++ LBS.unpack (Aeson.encode v)
     displayError (ScriptDataJsonBadObject v) =
         "JSON object does not match the schema.\nExpected a single field named "
-     ++ "\"int\", \"bytes\", \"string\", \"list\" or \"map\".\n"
+     ++ "\"int\", \"bytes\", \"list\" or \"map\".\n"
      ++ "Unexpected object field(s): "
      ++ LBS.unpack (Aeson.encode (KeyMap.fromList $ first Aeson.fromText <$> v))
     displayError (ScriptDataJsonBadMapPair v) =
