@@ -47,6 +47,11 @@ case "$op" in
         cp -f $supervisor_conf "$dir"/supervisor/supervisord.conf
         ;;
 
+    deploy-genesis )
+        local usage="USAGE: wb backend $op RUN-DIR"
+        local dir=${1:?$usage}; shift
+        ;;
+
     describe-run )
         local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}

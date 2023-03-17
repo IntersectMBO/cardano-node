@@ -42,6 +42,7 @@ case "${op}" in
     setenv-defaults )            backend_$WB_BACKEND "$@";;
     allocate-run )               backend_$WB_BACKEND "$@";;
     describe-run )               backend_$WB_BACKEND "$@";;
+    deploy-genesis )             backend_$WB_BACKEND "$@";;
     start )                      backend_$WB_BACKEND "$@";;
     start-nodes )                backend_$WB_BACKEND "$@";;
     start-node )                 backend_$WB_BACKEND "$@";;

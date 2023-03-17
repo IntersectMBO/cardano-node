@@ -81,46 +81,6 @@ let
         cd "''${TASK_WORKDIR}"
       fi
 
-      # If the "genesis" directory already exists, Nomad or Podman have
-      # created it or mounted it. Do nothing with it!
-      if ! test -d /local/run/current/genesis
-      then
-        # Check if a Nomad "artifact" was downloaded and create the folder!
-        # Until this Nomad PR is merged and released, Nomad extracts
-        # artifacts setting files ownerships to the user running the
-        # Nomad client. So, for example, I'm running the Nomad client as
-        # root to be able to used the exec drivers but as processes are
-        # run as "nobody:nogoup" / "65534:65534" inside the chroot cardano-node
-        # exists with error "permission denied"!
-        # https://github.com/hashicorp/nomad/pull/13755
-        # https://github.com/hashicorp/nomad/issues/5020
-        if test -f /local/run/current/genesis.tar.zst
-        then
-          ${coreutils}/bin/mkdir -p /local/run/current/genesis
-          PATH="''${PATH}:${zstd}/bin";              \
-          ${gnutar}/bin/tar --extract --zstd         \
-          --file=/local/run/current/genesis.tar.zst  \
-          --one-top-level=/local/run/current/genesis \
-          --same-permissions                         \
-          --no-same-owner                            \
-          --numeric-owner                            \
-          --owner="$(${coreutils}/bin/id --user)"    \
-          --group="$(${coreutils}/bin/id --group)"
-        else
-          if ! test "''${NOMAD_TASK_NAME}" = "tracer"
-          then
-            echo "ERROR: No genesis folder and no genesis tar.zst file"
-            echo "ls -la /local/run/current/:"
-            ${coreutils}/bin/ls -la /local/run/current/
-            exit 1
-          else
-            echo "Running \"tracer\", no genesis folder is needed!"
-          fi
-        fi
-      else
-        echo "INFO: The genesis folder exists, the workbench must have taken care of this!"
-      fi
-
       # The SUPERVISOR_NIX variable must be set
       [ -z "''${SUPERVISOR_NIX:-}" ] && echo "SUPERVISOR_NIX env var must be set -- aborting" && exit 1
 
@@ -226,7 +186,6 @@ let
       SUPERVISORD_CONFIG = task_supervisord_conf;
       SUPERVISORD_LOGLEVEL = task_supervisord_loglevel;
       ONE_TRACER_PER_NODE = oneTracerPerNode;
-      GENESIS_HTTP_ARTIFACT_SOURCE = "http://127.0.0.1:12000";
     };
 
     # A group defines a series of tasks that should be co-located
@@ -598,16 +557,6 @@ let
           (if execTaskDriver
             then {
               driver = "exec";
-
-              # TODO: Make it download to NOMAD_ALLOC_DIR and share it!
-              # https://developer.hashicorp.com/nomad/docs/job-specification/artifact#destination
-              # https://developer.hashicorp.com/nomad/docs/runtime/environment#task-directories
-              # https://github.com/hashicorp/nomad/issues/1368
-              artifact = {
-                source = "\${NOMAD_META_GENESIS_HTTP_ARTIFACT_SOURCE}/\${NOMAD_JOB_NAME}.tar.zst?archive=false";
-                destination = "local/run/current/genesis.tar.zst";
-                mode = "file";
-              };
 
               config = {
 
