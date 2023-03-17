@@ -4,20 +4,6 @@ on:
   push:
   merge_group:
 
-# When pushing branches (and/or updating PRs), we do want to cancel previous
-# build runs. We assume they are stale now; and do not want to spend CI time and
-# resources on continuing to continue those runs. This is what the concurrency.group
-# value lets us express. When using merge queues, we now have to consider
-# - runs triggers by commits per pull-request
-#   we want to cancel any previous run. So they should all get the same group (per PR)
-# - runs refs/heads/gh-readonly-queue/<target branch name> (they should all get their
-#   unique git ref, we don't want to cancel any of the ones in the queue)
-# - if it's neither, we fall back to the run_id (this is a unique number for each
-#   workflow run; it does not change if you "rerun" a job)
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.type }}-${{ startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.ref || github.event.pull_request.number || github.run_id }}
-  cancel-in-progress: true
-
 jobs:
   check-cabal-files:
     runs-on: ubuntu-latest
