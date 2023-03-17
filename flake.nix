@@ -319,8 +319,6 @@
               };
             };
             nonRequiredPaths = [
-              #FIXME: hydraJobs.native.workbench-ci-test need some work to support Conway
-              "native\\.(.*\\.)?workbench-ci-test"
               #FIXME: cardano-tracer-test for windows should probably be disabled in haskell.nix config:
               "windows\\.(.*\\.)?checks\\.cardano-tracer\\.cardano-tracer-test"
               #FIXME: plutus-scripts-bench (dep of tx-generator) does not compile for windows:

@@ -125,6 +125,7 @@ snapshot-at-slot )
          jq '{ AlonzoGenesisFile:             .alonzo
              , ByronGenesisFile:              .byron
              , ShelleyGenesisFile:            .shelley
+             , ConwayGenesisFile:             .conway
              , ShelleyGenesisHash:            "'$shelleyGenesisHash'"
              , RequiresNetworkMagic:          "RequiresNoMagic"
              # , Protocol:                      "Cardano"

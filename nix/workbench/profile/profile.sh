@@ -22,6 +22,7 @@ global_profile_eras=(
     mary
     alonzo
     babbage
+    conway
 )
 
 profile_default_op='profile-json'
