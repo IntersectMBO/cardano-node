@@ -854,8 +854,13 @@ instance FromJSON NodeConfig where
       parseConwayHardForkEpoch o =
         asum
           [ Consensus.TriggerHardForkAtEpoch <$> o .: "TestConwayHardForkAtEpoch"
-          , pure $ Consensus.TriggerHardForkAtVersion 8 -- Mainnet default
+          , pure $ Consensus.TriggerHardForkAtVersion 9 -- Mainnet default
           ]
+
+      ----------------------------------------------------------------------
+      -- WARNING When adding new entries above, be aware that if there is an
+      -- intra-era fork, then the numbering is not consecutive.
+      ----------------------------------------------------------------------
 
 parseNodeConfig :: ByteString -> Either Text NodeConfig
 parseNodeConfig bs =

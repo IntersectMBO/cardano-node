@@ -90,7 +90,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcConwayGenesisFileHash
                            }
                            NodeHardForkProtocolConfiguration {
-                            -- npcTestEnableDevelopmentHardForkEras,
+                            npcTestEnableDevelopmentHardForkEras,
                             -- During testing of the Alonzo era, we conditionally declared that we
                             -- knew about the Alonzo era. We do so only when a config option for
                             -- testing development/unstable eras is used. This lets us include
@@ -233,7 +233,10 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           -- version that this node will declare that it understands, when it
           -- is in the Babbage era. Since Babbage is currently the last known
           -- protocol version then this is also the Babbage protocol version.
-          Praos.conwayProtVer = ProtVer 9 0,
+          Praos.conwayProtVer =
+            if npcTestEnableDevelopmentHardForkEras
+              then ProtVer 9 0
+              else ProtVer 8 0,
           Praos.conwayMaxTxCapacityOverrides =
             TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
@@ -257,6 +260,8 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                -- Version 5 is Alonzo
                -- Version 6 is Alonzo (intra era hardfork)
                -- Version 7 is Babbage
+               -- Version 8 is Babbage (intra era hardfork)
+               -- Version 9 is Conway
                --
                -- But we also provide an override to allow for simpler test setups
                -- such as triggering at the 0 -> 1 transition .
@@ -311,10 +316,15 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           transitionTrigger =
              case npcTestConwayHardForkAtEpoch of
                 Nothing -> Consensus.TriggerHardForkAtVersion
-                             (maybe 8 fromIntegral npcTestConwayHardForkAtVersion)
+                             (maybe 9 fromIntegral npcTestConwayHardForkAtVersion)
                 Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
 
         }
+
+        ----------------------------------------------------------------------
+        -- WARNING When adding new entries above, be aware that if there is an
+        -- intra-era fork, then the numbering is not consecutive.
+        ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
 -- Errors
