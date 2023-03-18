@@ -102,6 +102,7 @@ executable stake-credential-history
                         cardano-ledger-alonzo,
                         cardano-api,
                         cardano-data,
+                        cardano-ledger-babbage,
                         cardano-ledger-core,
                         cardano-ledger-shelley,
                         vector-map,

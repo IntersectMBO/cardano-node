@@ -7,8 +7,10 @@
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
+
 import           Cardano.Ledger.Address (getRewardAcnt)
 import           Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
+import           Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
 import qualified Cardano.Ledger.BaseTypes as L
 import           Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Core as LC
@@ -16,6 +18,9 @@ import qualified Cardano.Ledger.Shelley.API as L
 import qualified Cardano.Ledger.Shelley.Rewards as L
 import qualified Cardano.Ledger.Shelley.RewardUpdate as L
 import qualified Cardano.Ledger.UnifiedMap as UM
+import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
+import qualified Ouroboros.Consensus.Shelley.Ledger as Shelley
+
 import qualified Codec.Binary.Bech32 as Bech32
 import           Control.Monad.Trans.Except (runExceptT)
 import qualified Data.Binary.Get as B
@@ -34,8 +39,6 @@ import qualified Data.VMap as VMap
 import           GHC.Records (HasField (..))
 import           Options.Applicative (Parser, (<**>), (<|>))
 import qualified Options.Applicative as Opt
-import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
-import qualified Ouroboros.Consensus.Shelley.Ledger as Shelley
 
 data State = State
   { lastCheckpoint    :: SlotNo
@@ -278,6 +281,10 @@ main = do
                        ("mary",    L.nesEL ls, Just (L.nesRu ls, getGoSnapshot ls, getBalances ls, getPV ls))
                      LedgerStateAlonzo    (Shelley.ShelleyLedgerState _ ls _) ->
                        ("alonzo",  L.nesEL ls, Just (L.nesRu ls, getGoSnapshot ls, getBalances ls, getPV ls))
+                     LedgerStateBabbage  (Shelley.ShelleyLedgerState _ ls _) ->
+                       ("babbage", L.nesEL ls, Just (L.nesRu ls, getGoSnapshot ls, getBalances ls, getPV ls))
+                     LedgerStateConway  (Shelley.ShelleyLedgerState _ ls _) ->
+                       ("conway", L.nesEL ls, Just (L.nesRu ls, getGoSnapshot ls, getBalances ls, getPV ls))
 
              let txBodyComponents = map ( (\(TxBody txbc) -> txbc) . getTxBody ) transactions
 
