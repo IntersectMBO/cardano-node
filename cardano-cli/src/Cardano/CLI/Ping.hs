@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TypeApplications #-}
 
-{- HLINT "Avoid $" -}
+{- HLINT ignore "Move brackets to avoid $" -}
 
 module Cardano.CLI.Ping
   ( PingCmd(..)
@@ -11,11 +11,11 @@ module Cardano.CLI.Ping
   , parsePingCmd
   ) where
 
-import           Control.Applicative (optional)
+import           Control.Applicative ((<|>))
 import           Control.Concurrent.Class.MonadSTM.Strict (StrictTMVar)
 import qualified Control.Concurrent.Class.MonadSTM.Strict as STM
 import           Control.Exception (SomeException)
-import           Control.Monad (forM, unless, when)
+import           Control.Monad (forM, unless)
 import           Control.Monad.Class.MonadAsync (MonadAsync (async, wait, waitCatch))
 import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad.Trans.Except (ExceptT)
@@ -23,7 +23,6 @@ import           Control.Monad.Trans.Except.Extra (left)
 import           Control.Tracer (Tracer (..))
 import           Data.List (foldl')
 import qualified Data.List as L
-import           Data.Maybe (isNothing)
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Word (Word32)
@@ -36,15 +35,23 @@ import qualified System.IO as IO
 
 import qualified Cardano.Network.Ping as CNP
 
-data PingClientCmdError
-  = PingClientCmdErrorOfInvalidHostIp
-  | PingClientCmdErrorOfExceptions ![(AddrInfo, SomeException)]
+newtype PingClientCmdError = PingClientCmdError [(AddrInfo, SomeException)]
 
+data EndPoint = HostEndPoint String | UnixSockEndPoint String deriving (Eq, Show)
+
+maybeHostEndPoint :: EndPoint -> Maybe String
+maybeHostEndPoint = \case
+  HostEndPoint host -> Just host
+  UnixSockEndPoint _ -> Nothing
+
+maybeUnixSockEndPoint :: EndPoint -> Maybe String
+maybeUnixSockEndPoint = \case
+  HostEndPoint _ -> Nothing
+  UnixSockEndPoint sock -> Just sock
 
 data PingCmd = PingCmd
   { pingCmdCount    :: !Word32
-  , pingCmdHost     :: !(Maybe String)
-  , pingCmdUnixSock :: !(Maybe String)
+  , pingCmdEndPoint :: !EndPoint
   , pingCmdPort     :: !String
   , pingCmdMagic    :: !Word32
   , pingCmdJson     :: !Bool
@@ -57,8 +64,8 @@ pingClient stdout stderr cmd = CNP.pingClient stdout stderr opts
           { CNP.pingOptsQuiet     = pingCmdQuiet cmd
           , CNP.pingOptsJson      = pingCmdJson cmd
           , CNP.pingOptsCount     = pingCmdCount cmd
-          , CNP.pingOptsHost      = pingCmdHost cmd
-          , CNP.pingOptsUnixSock  = pingCmdUnixSock cmd
+          , CNP.pingOptsHost      = maybeHostEndPoint (pingCmdEndPoint cmd)
+          , CNP.pingOptsUnixSock  = maybeUnixSockEndPoint (pingCmdEndPoint cmd)
           , CNP.pingOptsPort      = pingCmdPort cmd
           , CNP.pingOptsMagic     = pingCmdMagic cmd
           }
@@ -69,31 +76,34 @@ runPingCmd options = do
 
   msgQueue <- liftIO STM.newEmptyTMVarIO
 
-  when (isNothing (pingCmdHost options) && isNothing (pingCmdUnixSock options)) $
-    left PingClientCmdErrorOfInvalidHostIp
-
-  (addresses, versions) <- case pingCmdUnixSock options of
-    Nothing -> do
-      addrs <- liftIO $ Socket.getAddrInfo (Just hints) (pingCmdHost options) (Just (pingCmdPort options))
+  -- 'addresses' are all the endpoints to connect to and 'versions' are the node protocol versions
+  -- to ping with.
+  (addresses, versions) <- case pingCmdEndPoint options of
+    HostEndPoint host -> do
+      addrs <- liftIO $ Socket.getAddrInfo (Just hints) (Just host) (Just (pingCmdPort options))
       return (addrs, CNP.supportedNodeToNodeVersions $ pingCmdMagic options)
-    Just fname ->
-      return
-        ( [ Socket.AddrInfo [] Socket.AF_UNIX Socket.Stream
-              Socket.defaultProtocol (Socket.SockAddrUnix fname)
-              Nothing
-          ]
-        , CNP.supportedNodeToClientVersions $ pingCmdMagic options
-        )
+    UnixSockEndPoint fname -> do
+      let addr = Socket.AddrInfo
+            [] Socket.AF_UNIX Socket.Stream
+            Socket.defaultProtocol (Socket.SockAddrUnix fname) Nothing
+      return ([addr], CNP.supportedNodeToClientVersions $ pingCmdMagic options)
 
+  -- Logger async thread handle
   laid <- liftIO . async $ CNP.logger msgQueue $ pingCmdJson options
+  -- Ping client thread handles
   caids <- forM addresses $ liftIO . async . pingClient (Tracer $ doLog msgQueue) (Tracer doErrLog) options versions
   res <- L.zip addresses <$> mapM (liftIO . waitCatch) caids
   liftIO $ doLog msgQueue CNP.LogEnd
   liftIO $ wait laid
-  case foldl' partition ([],[]) res of
+
+  -- Collect errors 'es' from failed pings and 'addrs' from successful pings.
+  let (es, addrs) = foldl' partition ([],[]) res
+
+  -- Report any errors
+  case (es, addrs) of
     ([], _) -> liftIO IO.exitSuccess
-    (es, []) -> left $ PingClientCmdErrorOfExceptions es
-    (es, _) -> do
+    (_, []) -> left $ PingClientCmdError es
+    (_, _) -> do
       unless (pingCmdQuiet options) $ mapM_ (liftIO . IO.hPrint IO.stderr) es
       liftIO IO.exitSuccess
 
@@ -112,8 +122,7 @@ runPingCmd options = do
 
 renderPingClientCmdError :: PingClientCmdError -> Text
 renderPingClientCmdError = \case
-  PingClientCmdErrorOfInvalidHostIp -> "Specify host/ip with '-h <hostname>' or a unix socket with -u <file name>"
-  PingClientCmdErrorOfExceptions es -> T.intercalate "\n" $ T.pack . show <$> es
+  PingClientCmdError es -> T.intercalate "\n" $ T.pack . show <$> es
 
 parsePingCmd :: Opt.Parser PingCmd
 parsePingCmd = Opt.hsubparser $ mconcat
@@ -123,6 +132,27 @@ parsePingCmd = Opt.hsubparser $ mconcat
     , PP.pretty @String "It negotiates a handshake and keeps sending keep alive messages."
     ]
   ]
+
+pHost :: Opt.Parser String
+pHost =
+  Opt.strOption $ mconcat
+    [ Opt.long "host"
+    , Opt.short 'h'
+    , Opt.metavar "HOST"
+    , Opt.help "Hostname/IP, e.g. relay.iohk.example."
+    ]
+
+pUnixSocket :: Opt.Parser String
+pUnixSocket =
+  Opt.strOption $ mconcat
+    [ Opt.long "unixsock"
+    , Opt.short 'u'
+    , Opt.metavar "SOCKET"
+    , Opt.help "Unix socket, e.g. file.socket."
+    ]
+
+pEndPoint :: Opt.Parser EndPoint
+pEndPoint = fmap HostEndPoint pHost <|> fmap UnixSockEndPoint pUnixSocket
 
 pPing :: Opt.Parser PingCmd
 pPing = PingCmd
@@ -137,20 +167,7 @@ pPing = PingCmd
         , Opt.value maxBound
         ]
       )
-  <*> ( optional $ Opt.strOption $ mconcat
-        [ Opt.long "host"
-        , Opt.short 'h'
-        , Opt.metavar "HOST"
-        , Opt.help "Hostname/IP, e.g. relay.iohk.example."
-        ]
-      )
-  <*> ( optional $ Opt.strOption $ mconcat
-        [ Opt.long "unixsock"
-        , Opt.short 'u'
-        , Opt.metavar "SOCKET"
-        , Opt.help "Unix socket, e.g. file.socket."
-        ]
-      )
+  <*> pEndPoint
   <*> ( Opt.strOption $ mconcat
         [ Opt.long "port"
         , Opt.short 'p'
