@@ -49,12 +49,13 @@ module Cardano.Api.Block (
     makeChainTip,
   ) where
 
-import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.=))
+import           Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
 import           Data.Foldable (Foldable (toList))
 import           Data.String (IsString)
+import           Data.Text (Text)
 
 import           Cardano.Slotting.Block (BlockNo)
 import           Cardano.Slotting.Slot (EpochNo, SlotNo, WithOrigin (..))
