@@ -19,7 +19,7 @@ Tells your node to which nodes in the network it should talk to. A minimal versi
 
 * `valency` determines how many active (hot) outgoing connections to different resolved IP addresses your node should maintain when a DNS address is specified. The valency setting has no effect when setting an IP address, except when using `0` to disable the connection.
 
-Your __block-producing__ node must __ONLY__ talk to your __relay nodes__, and the relay node should talk to other relay nodes in the network. Go to our telegram channel to find out IP addresses and ports of peers.
+Your __block-producing__ node must __ONLY__ talk to your __relay nodes__, and the relay nodes should talk to other relay nodes in the network. Go to https://explorer.cardano.org/relays/topology.json to find out IP addresses and ports of peers.  The `topology.json` found at this link is updated once a week.
 
 #### The P2P topology.json file
 
