@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         ghc: ["9.2.7"]
-        cabal: ["3.8.1.0"]
+        cabal: ["3.10.1.0"]
         os: [ubuntu-latest]
 
     env:
