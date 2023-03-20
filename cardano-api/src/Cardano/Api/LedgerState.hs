@@ -23,6 +23,8 @@ module Cardano.Api.LedgerState
       , LedgerStateAllegra
       , LedgerStateMary
       , LedgerStateAlonzo
+      , LedgerStateBabbage
+      , LedgerStateConway
       )
   , encodeLedgerState
   , decodeLedgerState
@@ -284,11 +286,23 @@ pattern LedgerStateAlonzo
   -> LedgerState
 pattern LedgerStateAlonzo st <- LedgerState  (Consensus.LedgerStateAlonzo st)
 
+pattern LedgerStateBabbage
+  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.BabbageEra Shelley.StandardCrypto))
+  -> LedgerState
+pattern LedgerStateBabbage st <- LedgerState  (Consensus.LedgerStateBabbage st)
+
+pattern LedgerStateConway
+  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.ConwayEra Shelley.StandardCrypto))
+  -> LedgerState
+pattern LedgerStateConway st <- LedgerState  (Consensus.LedgerStateConway st)
+
 {-# COMPLETE LedgerStateByron
            , LedgerStateShelley
            , LedgerStateAllegra
            , LedgerStateMary
-           , LedgerStateAlonzo #-}
+           , LedgerStateAlonzo
+           , LedgerStateBabbage
+           , LedgerStateConway #-}
 
 data FoldBlocksError
   = FoldBlocksInitialLedgerStateError InitialLedgerStateError
