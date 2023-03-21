@@ -11,8 +11,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ghc: ["8.10.7", "9.2.7" ]
-        cabal: ["3.8.1.0"]
+        ghc: ["8.10.7", "9.2.7"]
+        cabal: ["3.10.1.0"]
         os: [ubuntu-latest]
 
     env:
@@ -111,7 +111,7 @@ jobs:
         dist-dir: dist-newstyle
         store-path: ${{ steps.setup-haskell.outputs.cabal-store }}
         threads: 16
-        archive-uri: ${{ secrets.BINARY_CACHE_URI }}/${{ env.CABAL_CACHE_VERSION }}/${{ runner.os }}
+        archive-uri: ${{ secrets.BINARY_CACHE_URI }}/${{ env.CABAL_CACHE_VERSION }}/${{ runner.os }}/${{ matrix.cabal }}/${{ matrix.ghc }}
         skip: "${{ secrets.BINARY_CACHE_URI == '' }}"
 
     # It's important to ensure that people who fork this repository can not only successfully build in
@@ -129,7 +129,7 @@ jobs:
         dist-dir: dist-newstyle
         store-path: ${{ steps.setup-haskell.outputs.cabal-store }}
         threads: 16
-        archive-uri: https://iohk.cache.haskellworks.io/${{ env.CABAL_CACHE_VERSION }}/${{ runner.os }}
+        archive-uri: https://iohk.cache.haskellworks.io/${{ env.CABAL_CACHE_VERSION }}/${{ runner.os }}/${{ matrix.cabal }}/${{ matrix.ghc }}
         skip: "${{ secrets.BINARY_CACHE_URI != '' }}"
         enable-save: false
 
