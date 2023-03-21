@@ -197,7 +197,7 @@ library gen
                       , cardano-crypto-class ^>= 2.0
                       , cardano-crypto-test ^>= 1.4
                       , cardano-ledger-alonzo ^>= 0.1
-                      , cardano-ledger-alonzo-test
+                      , cardano-ledger-alonzo-test ^>= 0.1
                       , cardano-ledger-byron-test ^>= 1.4
                       , cardano-ledger-core ^>= 0.1
                       , cardano-ledger-shelley ^>= 0.1

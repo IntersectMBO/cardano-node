@@ -57,7 +57,7 @@ library
   if os(linux) && flag(systemd)
     cpp-options:        -DSYSTEMD
     build-depends:      lobemo-scribe-systemd
-                      , systemd
+                      , systemd >= 2.3.0
 
   hs-source-dirs:       src
 
