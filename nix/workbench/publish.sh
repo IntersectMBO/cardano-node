@@ -132,7 +132,6 @@ publish() {
   local nomad_task_name="norouter"
   ## `bench-data-publish`/cardano-automation specific parameters:
   local pg_db="perf"
-  local pg_schema="api_prototype"
 
   # Note on the use of bash's `local`:
   # "Local can only be used within a function; it makes the variable name have a
@@ -182,8 +181,8 @@ publish() {
       # TODO: Use of this environment variable is not recommended for security
       # reasons, as some operating systems allow non-root users to see process
       # environment variables via ps; instead consider using a password file.
-      msg "Calling 'BENCH_DATA_PASS=\"...\" bench-data-publish -h \"${pg_host}\" -P \"${pg_port}\" -u \"${pg_user}\" --db \"${pg_db}\" -s \"${pg_schema}\" $@' ..."
-      BENCH_DATA_PASS="${pg_pass}" bench-data-publish -h "${pg_host}" -P "${pg_port}" -u "${pg_user}" --db "${pg_db}" -s "${pg_schema}" $@
+      msg "Calling 'BENCH_DATA_PASS=\"...\" bench-data-publish -h \"${pg_host}\" -P \"${pg_port}\" -u \"${pg_user}\" --db \"${pg_db}\" $@' ..."
+      BENCH_DATA_PASS="${pg_pass}" bench-data-publish -h "${pg_host}" -P "${pg_port}" -u "${pg_user}" --db "${pg_db}" $@
       ;;
 
     psql-cloud)
