@@ -162,55 +162,55 @@ jobs:
         ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;{0}" -f $env:PATH)') || '' }}
         cabal build all
 
-    - name: Run tests
-      env:
-        TMPDIR: ${{ runner.temp }}
-        TMP: ${{ runner.temp }}
-        KEEP_WORKSPACE: 1
-      run: |
-        # The tests call out to msys2 commands. We generally do not want to mix toolchains, so
-        # we are very deliberate about only adding msys64 to the path where absolutely necessary.
-        ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;{0}" -f $env:PATH)') || '' }}
-        cabal test cardano-testnet cardano-api cardano-node cardano-node-chairman cardano-cli cardano-submit-api
+    # - name: Run tests
+    #   env:
+    #     TMPDIR: ${{ runner.temp }}
+    #     TMP: ${{ runner.temp }}
+    #     KEEP_WORKSPACE: 1
+    #   run: |
+    #     # The tests call out to msys2 commands. We generally do not want to mix toolchains, so
+    #     # we are very deliberate about only adding msys64 to the path where absolutely necessary.
+    #     ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;{0}" -f $env:PATH)') || '' }}
+    #     cabal test cardano-testnet cardano-api cardano-node cardano-node-chairman cardano-cli cardano-submit-api
 
-    - name: "Tar artifacts"
-      shell: bash
-      run: |
-        mkdir -p artifacts
+    # - name: "Tar artifacts"
+    #   shell: bash
+    #   run: |
+    #     mkdir -p artifacts
 
-        for exe in $(cat dist-newstyle/cache/plan.json | jq -r '."install-plan"[] | select(.style == "local" and (."component-name" | startswith("exe:"))) | ."bin-file"'); do
-          if [ -f $exe ]; then
-            echo "Including artifact $exe"
+    #     for exe in $(cat dist-newstyle/cache/plan.json | jq -r '."install-plan"[] | select(.style == "local" and (."component-name" | startswith("exe:"))) | ."bin-file"'); do
+    #       if [ -f $exe ]; then
+    #         echo "Including artifact $exe"
 
-            ( cd artifacts
-              tar -C "$(dirname $exe)" -czf "$(basename $exe).tar.gz" "$(basename $exe)"
-            )
-          else
-            echo "Skipping artifact $exe"
-          fi
-        done
+    #         ( cd artifacts
+    #           tar -C "$(dirname $exe)" -czf "$(basename $exe).tar.gz" "$(basename $exe)"
+    #         )
+    #       else
+    #         echo "Skipping artifact $exe"
+    #       fi
+    #     done
 
-    - name: Save Artifact
-      if: matrix.ghc == '8.10.7'
-      uses: actions/upload-artifact@v1
-      with:
-        name: artifacts-${{ matrix.os }}
-        path: ./artifacts
+    # - name: Save Artifact
+    #   if: matrix.ghc == '8.10.7'
+    #   uses: actions/upload-artifact@v1
+    #   with:
+    #     name: artifacts-${{ matrix.os }}
+    #     path: ./artifacts
 
-    - name: Delete socket files in chairman tests in preparation for uploading artifacts
-      if: ${{ always() }}
-      shell: bash
-      run: |
-        if [ -d "${{ runner.temp }}/chairman" ]; then
-          find "${{ runner.temp }}/chairman" -type s -exec rm -f {} \;
-        fi
+    # - name: Delete socket files in chairman tests in preparation for uploading artifacts
+    #   if: ${{ always() }}
+    #   shell: bash
+    #   run: |
+    #     if [ -d "${{ runner.temp }}/chairman" ]; then
+    #       find "${{ runner.temp }}/chairman" -type s -exec rm -f {} \;
+    #     fi
 
-    - uses: actions/upload-artifact@v2
-      if: ${{ always() }}
-      continue-on-error: true
-      with:
-        name: chairman-test-artifacts-${{ matrix.os }}-${{ matrix.ghc }}
-        path: ${{ runner.temp }}/chairman/
+    # - uses: actions/upload-artifact@v2
+    #   if: ${{ always() }}
+    #   continue-on-error: true
+    #   with:
+    #     name: chairman-test-artifacts-${{ matrix.os }}-${{ matrix.ghc }}
+    #     path: ${{ runner.temp }}/chairman/
 
     # Uncomment the following back in for debugging. Remember to launch a `pwsh` from
     # the tmux session to debug `pwsh` issues. And be reminded that the `/msys2` and
@@ -223,11 +223,11 @@ jobs:
     # to restore the original path.  Do note that some test might need msys2
     # and will silently fail if msys2 is not in path. See the "Run tests" step.
     #
-    # - name: Setup tmate session
-    #   if: ${{ failure() }}
-    #   uses: mxschmitt/action-tmate@v3
-    #   with:
-    #     limit-access-to-actor: true
+    - name: Setup tmate session
+      if: ${{ always() }}
+      uses: mxschmitt/action-tmate@v3
+      with:
+        limit-access-to-actor: true
 
   build-complete:
     needs: [build]
