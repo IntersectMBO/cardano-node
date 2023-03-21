@@ -223,11 +223,11 @@
         "tullia": "tullia_2"
       },
       "locked": {
-        "lastModified": 1674567399,
-        "narHash": "sha256-Oh0i63+nmB4JxuHDFD54Ry/ORoY2FqxrSi+HSAwSdbA=",
+        "lastModified": 1679408951,
+        "narHash": "sha256-xM78upkrXjRu/739V/IxFrA9m+6rvgOiolt4ReKLAog=",
         "owner": "input-output-hk",
         "repo": "cardano-automation",
-        "rev": "24fbdeabe90d33aff1fb83bc39d53250f0ff34f6",
+        "rev": "628f135d243d4a9e388c187e4c6179246038ee72",
         "type": "github"
       },
       "original": {
