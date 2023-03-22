@@ -606,7 +606,7 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
             , " of blocks that could be created over the span of the last @k@ blocks."
             ]
           )
-        , ( "ChainDB.Slots"
+        , ( "ChainDB.SlotNum"
           , "Number of slots in this chain fragment."
           )
         , ( "ChainDB.Blocks"
@@ -629,7 +629,7 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
             , " of blocks that could be created over the span of the last @k@ blocks."
             ]
           )
-        , ( "ChainDB.Slots"
+        , ( "ChainDB.SlotNum"
           , "Number of slots in this chain fragment."
           )
         , ( "ChainDB.Blocks"
