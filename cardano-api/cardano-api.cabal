@@ -109,7 +109,6 @@ library
   build-depends:        aeson             >= 1.5.6.0
                       , aeson-pretty      >= 0.8.5
                       , attoparsec
-                      , array
                       , base16-bytestring >= 1.0
                       , base58-bytestring
                       , bech32 >= 1.1.0
@@ -123,7 +122,7 @@ library
                       , cardano-ledger-allegra ^>= 1.1
                       , cardano-ledger-api >= 1.1
                       , cardano-ledger-babbage ^>= 1.1
-                      , cardano-ledger-binary ^>= 1.0.1
+                      , cardano-ledger-binary ^>= 1.1
                       , cardano-ledger-byron ^>= 1.0
                       , cardano-ledger-conway ^>= 1.1
                       , cardano-ledger-core ^>= 1.1
@@ -224,7 +223,7 @@ test-suite cardano-api-test
                       , cardano-ledger-api ^>= 1.1
                       , cardano-ledger-core:{cardano-ledger-core, testlib} ^>= 1.1
                       , cardano-ledger-shelley ^>= 1.1
-                      , cardano-ledger-shelley-test ^>= 1.0
+                      , cardano-ledger-shelley-test ^>= 1.1
                       , cardano-slotting ^>= 0.1
                       , containers
                       , hedgehog
