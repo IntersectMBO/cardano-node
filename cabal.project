@@ -113,8 +113,8 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: f6bc60dff6a4a7c49ec909d2db80a6277c177d0b
-  --sha256: 09mp5ivjlvkix9f2vab046832as7mfqdhylvp9qc75g1mw8i2vnr
+  tag: 7f6afd7ba652bd20d5aaf31a9450dddda7e2f0bd
+  --sha256: 0wlvgiiyqp14xd7d49h9709dg2dv7wk1b44kbdy596mg8g3v93nw
   subdir:
     monoidal-synchronisation
     network-mux
@@ -130,6 +130,15 @@ source-repository-package
     ouroboros-consensus-cardano-tools
     ouroboros-consensus-diffusion
 
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/fs-sim
+  tag: 13a1cfa5a82740c5723fb0a279b3f32f98c8b494
+  --sha256: 1q783gsb0hh4i0slvfwp5nppi8h425pkvj0kqr2lpl06y7y2gq41
+  subdir:
+    fs-api
+    fs-sim
+
 -- Waiting for proper Windows ghc-9.2 release.
 source-repository-package
    type: git
@@ -140,8 +149,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 39d83188c872a51825bdad0875920bca78513024
-  --sha256: 1q682fcqd20sdc4lwqjhcqi7fvlx5b5xrl9v39vim7mvrykskgd9
+  tag: 79ac5fb0600c8b84c05742ab052018236c225927
+  --sha256: 17hanlp66syjszx6dbd9v1hkm7hbmx7ppv5xjgr17xdsjr9j5zwh
   subdir:
     eras/alonzo/impl
     eras/alonzo/test-suite
