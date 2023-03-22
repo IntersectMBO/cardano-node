@@ -42,7 +42,6 @@ module Cardano.Api.Fees (
   ) where
 
 import           Control.Monad (forM_)
-import qualified Data.Array as Array
 import           Data.Bifunctor (bimap, first)
 import qualified Data.ByteString as BS
 import           Data.ByteString.Short (ShortByteString)
@@ -52,6 +51,7 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes, fromMaybe, maybeToList)
 import           Data.Ratio
 import           Data.Set (Set)
+import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Lens.Micro ((^.))
 import           Numeric.Natural
@@ -65,17 +65,16 @@ import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Ledger.Coin as Ledger
 import           Cardano.Ledger.Core (EraTx (sizeTxF))
 import qualified Cardano.Ledger.Crypto as Ledger
+import qualified Cardano.Ledger.Keys as Ledger
 import           Cardano.Ledger.UTxO as Ledger (EraUTxO)
 
 import           Cardano.Ledger.Mary.Value (MaryValue)
 
-import qualified Cardano.Ledger.Shelley.API.Wallet as Ledger (evaluateTransactionBalance,
-                   evaluateTransactionFee)
+import qualified Cardano.Ledger.Shelley.API.Wallet as Ledger (evaluateTransactionFee)
 import           Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
 
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
-import qualified Cardano.Ledger.Alonzo.Scripts as L
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxWits as Alonzo
@@ -533,14 +532,12 @@ evaluateTransactionExecutionUnits systemstart epochInfo bpp utxo txbody =
                          (Map ScriptWitnessIndex
                               (Either ScriptExecutionError ExecutionUnits))
     evalAlonzo era tx = do
-      cModelArray <- toAlonzoCostModelsArray (protocolParamCostModels (unbundleProtocolParams bpp))
-      case L.evaluateTransactionExecutionUnits
+      case L.evalTxExUnits
              (unbundleLedgerShelleyBasedProtocolParams era bpp)
              tx
              (toLedgerUTxO era utxo)
              ledgerEpochInfo
              systemstart
-             cModelArray
         of Left err -> Left (TransactionValidityTranslationError err)
            Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
 
@@ -552,14 +549,12 @@ evaluateTransactionExecutionUnits systemstart epochInfo bpp utxo txbody =
                           (Map ScriptWitnessIndex
                                (Either ScriptExecutionError ExecutionUnits))
     evalBabbage era tx = do
-      costModelsArray <- toAlonzoCostModelsArray (protocolParamCostModels (unbundleProtocolParams bpp))
-      case L.evaluateTransactionExecutionUnits
+      case L.evalTxExUnits
              (unbundleLedgerShelleyBasedProtocolParams era bpp)
              tx
              (toLedgerUTxO era utxo)
              ledgerEpochInfo
              systemstart
-             costModelsArray
         of Left err    -> Left (TransactionValidityTranslationError err)
            Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
 
@@ -573,25 +568,14 @@ evaluateTransactionExecutionUnits systemstart epochInfo bpp utxo txbody =
                          (Map ScriptWitnessIndex
                               (Either ScriptExecutionError ExecutionUnits))
     evalConway era tx = do
-      costModelsArray <- toAlonzoCostModelsArray (protocolParamCostModels (unbundleProtocolParams bpp))
-      case L.evaluateTransactionExecutionUnits
+      case L.evalTxExUnits
              (unbundleLedgerShelleyBasedProtocolParams era bpp)
              tx
              (toLedgerUTxO era utxo)
              ledgerEpochInfo
              systemstart
-             costModelsArray
         of Left err    -> Left (TransactionValidityTranslationError err)
            Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
-
-
-    toAlonzoCostModelsArray
-      :: Map AnyPlutusScriptVersion CostModel
-      -> Either TransactionValidityError (Array.Array Alonzo.Language Alonzo.CostModel)
-    toAlonzoCostModelsArray costmodels = do
-      L.CostModels cModels _ _ <-
-        first (TransactionValidityCostModelError costmodels) $ toAlonzoCostModels costmodels
-      return $ Array.array (minBound, maxBound) (Map.toList cModels)
 
     fromLedgerScriptExUnitsMap
       :: Map Alonzo.RdmrPtr (Either (L.TransactionScriptFailure Ledger.StandardCrypto)
@@ -683,7 +667,12 @@ evaluateTransactionBalance bpp poolids utxo
     getShelleyEraTxBodyConstraint ShelleyBasedEraBabbage x = x
     getShelleyEraTxBodyConstraint ShelleyBasedEraConway x = x
 
-    dpstate = error "Unimplemented. Requires a new Query"
+    isRegPool :: Ledger.KeyHash Ledger.StakePool Ledger.StandardCrypto -> Bool
+    isRegPool kh = StakePoolKeyHash kh `Set.member` poolids
+
+    -- FIXME: Add deposit map as an argument and implement a depsit loookup query in
+    -- consensus and cardano-cli
+    lookupDelegDeposit _cred = Nothing
 
     evalMultiAsset :: forall ledgerera.
                       ShelleyLedgerEra era ~ ledgerera
@@ -694,9 +683,10 @@ evaluateTransactionBalance bpp poolids utxo
                    -> TxOutValue era
     evalMultiAsset evidence =
       TxOutValue evidence . fromMaryValue $
-         Ledger.evaluateTransactionBalance
+         L.evalBalanceTxBody
            (unbundleLedgerShelleyBasedProtocolParams era bpp)
-           dpstate
+           lookupDelegDeposit
+           isRegPool
            (toLedgerUTxO era utxo)
            txbody
 
@@ -709,9 +699,10 @@ evaluateTransactionBalance bpp poolids utxo
                 -> TxOutValue era
     evalAdaOnly evidence =
      TxOutAdaOnly evidence . fromShelleyLovelace
-       $ Ledger.evaluateTransactionBalance
+       $ L.evalBalanceTxBody
            (unbundleLedgerShelleyBasedProtocolParams era bpp)
-           dpstate
+           lookupDelegDeposit
+           isRegPool
            (toLedgerUTxO era utxo)
            txbody
 
