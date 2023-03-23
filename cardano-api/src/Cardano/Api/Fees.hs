@@ -54,7 +54,6 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Lens.Micro ((^.))
-import           Numeric.Natural
 import           Prettyprinter
 import           Prettyprinter.Render.String
 
@@ -113,8 +112,8 @@ import           Cardano.Api.Value
 --
 transactionFee :: forall era.
                   IsShelleyBasedEra era
-               => Natural -- ^ The fixed tx fee
-               -> Natural -- ^ The tx fee per byte
+               => Lovelace -- ^ The fixed tx fee
+               -> Lovelace -- ^ The tx fee per byte
                -> Tx era
                -> Lovelace
 transactionFee txFeeFixed txFeePerByte tx =
@@ -155,8 +154,8 @@ transactionFee txFeeFixed txFeePerByte tx =
 estimateTransactionFee :: forall era.
                           IsShelleyBasedEra era
                        => NetworkId
-                       -> Natural -- ^ The fixed tx fee
-                       -> Natural -- ^ The tx fee per byte
+                       -> Lovelace -- ^ The fixed tx fee
+                       -> Lovelace -- ^ The tx fee per byte
                        -> Tx era
                        -> Int -- ^ The number of extra UTxO transaction inputs
                        -> Int -- ^ The number of extra transaction outputs
