@@ -8,25 +8,22 @@
 import           Cardano.Api
 import           Cardano.Api.Shelley
 
-import           Cardano.Ledger.Address (getRewardAcnt)
-import           Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
-import           Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
+import           Cardano.Ledger.Address (decodeRewardAcnt)
 import qualified Cardano.Ledger.BaseTypes as L
 import           Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Core as LC
 import qualified Cardano.Ledger.Shelley.API as L
 import qualified Cardano.Ledger.Shelley.Rewards as L
 import qualified Cardano.Ledger.Shelley.RewardUpdate as L
-import qualified Cardano.Ledger.UnifiedMap as UM
+import qualified Cardano.Ledger.UMapCompact as UM
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import qualified Ouroboros.Consensus.Shelley.Ledger as Shelley
 
 import qualified Codec.Binary.Bech32 as Bech32
 import           Control.Monad.Trans.Except (runExceptT)
-import qualified Data.Binary.Get as B
+import           Control.Monad.Trans.Fail.String
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
-import qualified Data.ByteString.Lazy as BSL
 import           Data.Char (ord)
 import           Data.Foldable (toList)
 import           Data.List (intercalate)
@@ -34,9 +31,8 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
 import           Data.Set (Set)
 import qualified Data.Text as T
-import qualified Data.UMap as UM
 import qualified Data.VMap as VMap
-import           GHC.Records (HasField (..))
+import           Lens.Micro ((^.))
 import           Options.Applicative (Parser, (<**>), (<|>))
 import qualified Options.Applicative as Opt
 
@@ -56,7 +52,7 @@ startingState = State
   , lastRewStartEpoch = EpochNo 0
   , lastRewEndEpoch   = EpochNo 0
   , lastEra           = "byron"
-  , lastProtocolVer   = L.ProtVer 0 0
+  , lastProtocolVer   = L.ProtVer (L.natVersion @0) 0
   }
 
 data IsOwner = IsOwnerYes | IsOwnerNo
@@ -155,9 +151,7 @@ msg ev = putStrLn (message ev)
       show t <> "-" <> (tail . init $ show kh) <> "-" <> show (fromShelleyLovelace love)
 
 decodeStakeAddress :: BS.ByteString -> Either String (L.RewardAcnt StandardCrypto)
-decodeStakeAddress bs = case B.runGetOrFail getRewardAcnt (BSL.fromStrict bs) of
-  Left  (_remaining, _offset, message) -> Left message
-  Right (_remaining, _offset,  result) -> Right result
+decodeStakeAddress bs = runFail $ decodeRewardAcnt bs
 
 decodeStakeAddressAsHex :: String -> Either String (L.Credential 'L.Staking StandardCrypto)
 decodeStakeAddressAsHex s = do
@@ -261,11 +255,15 @@ main = do
              (Block (BlockHeader slotNo _blockHeaderHash (BlockNo _blockNoI)) transactions)
              _era)
            state -> do
-             let getGoSnapshot = L.unStake . L._stake . L._pstakeGo . L.esSnapshots . L.nesEs
-                 getBalances = UM.unUnify . UM.Rewards . L._unified . L.dpsDState . L.lsDPState . L.esLState . L.nesEs
-                 getPV :: HasField "_protocolVersion" (LC.PParams era) L.ProtVer =>
-                   L.NewEpochState era -> L.ProtVer
-                 getPV = getField @"_protocolVersion" . L.esPp . L.nesEs
+             let getGoSnapshot = L.unStake . L.ssStake . L.ssStakeGo . L.esSnapshots . L.nesEs
+                 getBalances = UM.rewView
+                             . L.dsUnified
+                             . L.dpsDState
+                             . L.lsDPState
+                             . L.esLState
+                             . L.nesEs
+                 getPV :: LC.EraPParams era => L.NewEpochState era -> L.ProtVer
+                 getPV nes = L.esPp (L.nesEs nes) ^. LC.ppProtocolVersionL
 
 
              -- in non-byron eras, get the necessary components of the ledger state
