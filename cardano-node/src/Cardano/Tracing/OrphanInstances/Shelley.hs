@@ -263,7 +263,7 @@ instance ( ShelleyBasedEra era
             ]
   toObject _ (Conway.GovernanceActionDoesNotExist govActionId) =
     mconcat [ "kind" .= String "GovernanceActionDoesNotExist"
-            , "credential" .= govActionIdToText govActionId
+            , "govActionId" .= govActionIdToText govActionId
             ]
 
 instance ( ShelleyBasedEra era
