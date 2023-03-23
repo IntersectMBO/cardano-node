@@ -15,13 +15,7 @@
 module Cardano.CLI.Shelley.Orphans () where
 
 import           Cardano.Api.Orphans ()
-import qualified Cardano.Ledger.AuxiliaryData as Ledger
-import qualified Cardano.Ledger.Credential as Ledger
-import qualified Cardano.Ledger.EpochBoundary as Ledger
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import qualified Cardano.Ledger.Mary.Value as Ledger.Mary
-import qualified Cardano.Ledger.PoolDistr as Ledger
-import qualified Cardano.Ledger.Shelley.PoolRank as Ledger
 import qualified Cardano.Protocol.TPraos.API as Ledger
 import           Cardano.Protocol.TPraos.BHeader (HashHeader (..))
 import qualified Cardano.Protocol.TPraos.Rules.Prtcl as Ledger
@@ -32,7 +26,6 @@ import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Short as SBS
 import qualified Data.Text.Encoding as Text
-import qualified Data.VMap as VMap
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronHash (..))
 import           Ouroboros.Consensus.HardFork.Combinator (OneEraHash (..))
 import           Ouroboros.Consensus.Protocol.Praos (PraosState)
@@ -73,19 +66,9 @@ deriving newtype instance FromJSON BlockNo
 deriving newtype instance CC.Crypto crypto => ToJSON (ShelleyHash crypto)
 deriving newtype instance CC.Crypto crypto => ToJSON (HashHeader crypto)
 
-deriving newtype instance ToJSON (Ledger.AuxiliaryDataHash StandardCrypto)
-deriving newtype instance ToJSON Ledger.LogWeight
-deriving newtype instance ToJSON (Ledger.PoolDistr StandardCrypto)
-
-deriving newtype instance ToJSON (Ledger.Stake StandardCrypto)
-
-deriving instance ToJSON (Ledger.StakeReference StandardCrypto)
-
 deriving instance ToJSON (Ledger.PrtclState StandardCrypto)
 deriving instance ToJSON Ledger.TicknState
 deriving instance ToJSON (Ledger.ChainDepState StandardCrypto)
-
-deriving newtype  instance ToJSON    (Ledger.Mary.PolicyID StandardCrypto)
 
 instance ToJSON (TPraosState StandardCrypto) where
   toJSON s = Aeson.object

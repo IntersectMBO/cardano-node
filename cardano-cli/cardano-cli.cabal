@@ -117,7 +117,9 @@ library
                       , cardano-ledger-alonzo ^>= 1.1
                       , cardano-ledger-allegra ^>= 1.1
                       , cardano-ledger-byron ^>= 1.0
+                      , cardano-ledger-binary >= 1.0
                       , cardano-ledger-core ^>= 1.1
+                      , cardano-ledger-conway ^>= 1.1
                       , cardano-ledger-mary ^>= 1.1
                       , cardano-ledger-shelley ^>= 1.1
                       , cardano-ping
@@ -136,6 +138,7 @@ library
                       , io-classes
                       , iproute
                       , mtl
+                      , microlens
                       , network
                       , optparse-applicative-fork
                       , ouroboros-consensus

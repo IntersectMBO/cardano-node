@@ -16,6 +16,7 @@ import           GHC.Natural
 import           Cardano.Api
 
 import           Cardano.Api.Shelley (ProtocolParameters)
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Shelley.API as Ledger (ShelleyGenesis)
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 -- import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
@@ -23,7 +24,7 @@ import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Cardano.TxGenerator.Fund (Fund)
 
 -- convenience alias for use trhougout the API
-type ShelleyGenesis       = Ledger.ShelleyGenesis StandardShelley
+type ShelleyGenesis       = Ledger.ShelleyGenesis StandardCrypto
 
 -- some type aliases to keep compatibility with code in Cardano.Benchmarking
 type NumberOfInputsPerTx  = Int

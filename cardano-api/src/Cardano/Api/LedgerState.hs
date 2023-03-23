@@ -1451,7 +1451,7 @@ nextEpochEligibleLeadershipSlots
   => FromCBOR (Consensus.ChainDepState (Api.ConsensusProtocol era))
   => Consensus.PraosProtocolSupportsNode (Api.ConsensusProtocol era)
   => ShelleyBasedEra era
-  -> ShelleyGenesis Shelley.StandardShelley
+  -> ShelleyGenesis Shelley.StandardCrypto
   -> SerialisedCurrentEpochState era
   -- ^ We need the mark stake distribution in order to predict
   --   the following epoch's leadership schedule
@@ -1632,7 +1632,7 @@ currentEpochEligibleLeadershipSlots :: forall era ledgerera. ()
   => Consensus.PraosProtocolSupportsNode (Api.ConsensusProtocol era)
   => FromCBOR (Consensus.ChainDepState (Api.ConsensusProtocol era))
   => ShelleyBasedEra era
-  -> ShelleyGenesis Shelley.StandardShelley
+  -> ShelleyGenesis Shelley.StandardCrypto
   -> EpochInfo (Either Text)
   -> BundledProtocolParameters era
   -> ProtocolState era
@@ -1679,7 +1679,7 @@ currentEpochEligibleLeadershipSlots sbe sGen eInfo bpp ptclState poolid (VrfSign
   f = activeSlotCoeff globals
 
 constructGlobals
-  :: ShelleyGenesis Shelley.StandardShelley
+  :: ShelleyGenesis Shelley.StandardCrypto
   -> EpochInfo (Either Text)
   -> ProtocolParameters
   -> Globals

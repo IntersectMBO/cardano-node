@@ -121,7 +121,6 @@ import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Cardano.Slotting.Time (SystemStart (..))
 
 import qualified Cardano.Chain.Update.Validation.Interface as Byron.Update
-import qualified Control.State.Transition.Extended as Ledger
 
 import           Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
@@ -139,13 +138,11 @@ import           Cardano.Api.IPC.Version
 import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
-import           Cardano.Api.Orphans ()
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.TxBody
 import           Cardano.Api.Value
 import           Data.Word (Word64)
 
-import           Cardano.Ledger.SafeHash (HashAnnotated)
 import qualified Data.Aeson.KeyMap as KeyMap
 
 -- ----------------------------------------------------------------------------
@@ -386,11 +383,7 @@ instance
     ( Typeable era
     , Core.EraTxOut (ShelleyLedgerEra era)
     , Core.EraGovernance (ShelleyLedgerEra era)
-    , FromCBOR (Core.PParams (ShelleyLedgerEra era))
     , DecCBOR (Shelley.StashedAVVMAddresses (ShelleyLedgerEra era))
-    , FromCBOR (Core.Value (ShelleyLedgerEra era))
-    , FromCBOR (Ledger.State (Core.EraRule "PPUP" (ShelleyLedgerEra era)))
-    , HashAnnotated (Core.TxBody (ShelleyLedgerEra era)) Core.EraIndependentTxBody (Core.EraCrypto (ShelleyLedgerEra era))
     ) => FromCBOR (DebugLedgerState era) where
   fromCBOR = DebugLedgerState <$>
     (fromCBOR :: Plain.Decoder s (Shelley.NewEpochState (ShelleyLedgerEra era)))
