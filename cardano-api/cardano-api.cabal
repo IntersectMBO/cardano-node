@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-api
-version:                1.36.0
+version:                8.0.0
 synopsis:               The cardano api
 description:            The cardano api.
 category:               Cardano,
