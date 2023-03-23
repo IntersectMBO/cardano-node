@@ -126,7 +126,7 @@ import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import           Cardano.Ledger.BaseTypes (Globals (..), Nonce, (⭒))
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.BHeaderView as Ledger
-import           Cardano.Ledger.Binary (DecCBOR, DecoderError, FromCBOR, mkVersion)
+import           Cardano.Ledger.Binary (DecoderError, FromCBOR, mkVersion)
 import qualified Cardano.Ledger.Credential as Ledger
 import qualified Cardano.Ledger.Keys as Ledger
 import qualified Cardano.Ledger.Keys as SL
@@ -1446,8 +1446,8 @@ instance Error LeadershipError where
 
 nextEpochEligibleLeadershipSlots
   :: forall era. ()
-  => Core.EraTxOut (ShelleyLedgerEra era)
-  => Core.EraGovernance (ShelleyLedgerEra era)
+  -- => Core.EraTxOut (ShelleyLedgerEra era)
+  -- => Core.EraGovernance (ShelleyLedgerEra era)
   => FromCBOR (Consensus.ChainDepState (Api.ConsensusProtocol era))
   => Consensus.PraosProtocolSupportsNode (Api.ConsensusProtocol era)
   => ShelleyBasedEra era
@@ -1510,45 +1510,47 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
 
   -- Then we get the "mark" snapshot. This snapshot will be used for the next
   -- epoch's leadership schedule.
-  CurrentEpochState cEstate <- first LeaderErrDecodeProtocolEpochStateFailure
-                                 $ obtainDecodeEpochStateConstraints sbe
-                                 $ decodeCurrentEpochState serCurrEpochState
+  -- CurrentEpochState cEstate <- first LeaderErrDecodeProtocolEpochStateFailure
+  --                                $ obtainDecodeEpochStateConstraints sbe
+  --                                $ decodeCurrentEpochState serCurrEpochState
+  CurrentEpochState cEstate <- first LeaderErrDecodeProtocolEpochStateFailure $
+                                decodeCurrentEpochState sbe serCurrEpochState
 
   let snapshot :: ShelleyAPI.SnapShot Shelley.StandardCrypto
       snapshot = ShelleyAPI.ssStakeMark $ obtainIsStandardCrypto sbe $ ShelleyAPI.esSnapshots cEstate
       markSnapshotPoolDistr :: Map (SL.KeyHash 'SL.StakePool Shelley.StandardCrypto) (SL.IndividualPoolStake Shelley.StandardCrypto)
       markSnapshotPoolDistr = ShelleyAPI.unPoolDistr . ShelleyAPI.calculatePoolDistr $ snapshot
 
-  let pp = unbundleLedgerShelleyBasedProtocolParams sbe bpp
-      slotRangeOfInterest = Set.filter
+  let slotRangeOfInterest :: Core.EraPParams ledgerera => Core.PParams ledgerera -> Set SlotNo
+      slotRangeOfInterest pp = Set.filter
         (not . Ledger.isOverlaySlot firstSlotOfEpoch (pp ^. Core.ppDG))
         $ Set.fromList [firstSlotOfEpoch .. lastSlotofEpoch]
 
   case sbe of
-    ShelleyBasedEraShelley  -> isLeadingSlotsTPraos slotRangeOfInterest poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
-    ShelleyBasedEraAllegra  -> isLeadingSlotsTPraos slotRangeOfInterest poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
-    ShelleyBasedEraMary     -> isLeadingSlotsTPraos slotRangeOfInterest poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
-    ShelleyBasedEraAlonzo   -> isLeadingSlotsTPraos slotRangeOfInterest poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
-    ShelleyBasedEraBabbage  -> isLeadingSlotsPraos  slotRangeOfInterest poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
-    ShelleyBasedEraConway   -> isLeadingSlotsPraos  slotRangeOfInterest poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
+    ShelleyBasedEraShelley  ->
+      let pp = unbundleLedgerShelleyBasedProtocolParams ShelleyBasedEraShelley bpp
+      in isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
+    ShelleyBasedEraAllegra  ->
+      let pp = unbundleLedgerShelleyBasedProtocolParams ShelleyBasedEraAllegra bpp
+      in isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
+    ShelleyBasedEraMary     ->
+      let pp = unbundleLedgerShelleyBasedProtocolParams ShelleyBasedEraMary bpp
+      in isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
+    ShelleyBasedEraAlonzo   ->
+      let pp = unbundleLedgerShelleyBasedProtocolParams ShelleyBasedEraAlonzo bpp
+      in isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
+    ShelleyBasedEraBabbage  ->
+      let pp = unbundleLedgerShelleyBasedProtocolParams ShelleyBasedEraBabbage bpp
+      in isLeadingSlotsPraos  (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
+    ShelleyBasedEraConway   ->
+      let pp = unbundleLedgerShelleyBasedProtocolParams ShelleyBasedEraConway bpp
+      in isLeadingSlotsPraos  (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
  where
   globals = constructGlobals sGen eInfo (unbundleProtocolParams bpp)
 
   f :: Ledger.ActiveSlotCoeff
   f = activeSlotCoeff globals
 
-
---getFromCbor
---  :: ShelleyBasedEra era
---  -> (( FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
---      , FromCBOR (ChainDepStateProtocol era)
---      ) => a)
---  -> a
---getFromCbor ShelleyBasedEraShelley f = f
---getFromCbor ShelleyBasedEraAllegra f = f
---getFromCbor ShelleyBasedEraMary f = f
---getFromCbor ShelleyBasedEraAlonzo f = f
---getFromCbor ShelleyBasedEraBabbage f = f
 
 -- | Return slots a given stake pool operator is leading.
 -- See Leader Value Calculation in the Shelley ledger specification.
@@ -1610,27 +1612,12 @@ obtainIsStandardCrypto ShelleyBasedEraBabbage f = f
 obtainIsStandardCrypto ShelleyBasedEraConway  f = f
 
 
-obtainDecodeEpochStateConstraints
-  :: ShelleyLedgerEra era ~ ledgerera
-  => ShelleyBasedEra era
-  -> (( FromCBOR (Core.PParams ledgerera)
-      , FromCBOR (Core.GovernanceState ledgerera)
-      , DecCBOR (Core.Value ledgerera)
-      ) => a) -> a
-obtainDecodeEpochStateConstraints ShelleyBasedEraShelley f = f
-obtainDecodeEpochStateConstraints ShelleyBasedEraAllegra f = f
-obtainDecodeEpochStateConstraints ShelleyBasedEraMary    f = f
-obtainDecodeEpochStateConstraints ShelleyBasedEraAlonzo  f = f
-obtainDecodeEpochStateConstraints ShelleyBasedEraBabbage f = f
-obtainDecodeEpochStateConstraints ShelleyBasedEraConway  f = f
-
 -- | Return the slots at which a particular stake pool operator is
 -- expected to mint a block.
-currentEpochEligibleLeadershipSlots :: forall era ledgerera. ()
-  => ShelleyLedgerEra era ~ ledgerera
-  => Core.EraPParams ledgerera
+currentEpochEligibleLeadershipSlots :: forall era. ()
   => Consensus.PraosProtocolSupportsNode (Api.ConsensusProtocol era)
   => FromCBOR (Consensus.ChainDepState (Api.ConsensusProtocol era))
+  => Shelley.EraCrypto (ShelleyLedgerEra era) ~ Shelley.StandardCrypto
   => ShelleyBasedEra era
   -> ShelleyGenesis Shelley.StandardCrypto
   -> EpochInfo (Either Text)
@@ -1656,21 +1643,32 @@ currentEpochEligibleLeadershipSlots sbe sGen eInfo bpp ptclState poolid (VrfSign
 
   setSnapshotPoolDistr <-
     first LeaderErrDecodeProtocolEpochStateFailure . fmap (SL.unPoolDistr . unPoolDistr)
-      $ obtainDecodeEpochStateConstraints sbe
-      $ decodePoolDistribution serPoolDistr
+      $ decodePoolDistribution sbe serPoolDistr
 
-  let pp = unbundleLedgerShelleyBasedProtocolParams sbe bpp
-      slotRangeOfInterest = Set.filter
+  let slotRangeOfInterest :: Core.EraPParams ledgerera => Core.PParams ledgerera -> Set SlotNo
+      slotRangeOfInterest pp = Set.filter
         (not . Ledger.isOverlaySlot firstSlotOfEpoch (pp ^. Core.ppDG))
         $ Set.fromList [firstSlotOfEpoch .. lastSlotofEpoch]
 
   case sbe of
-    ShelleyBasedEraShelley -> isLeadingSlotsTPraos slotRangeOfInterest poolid setSnapshotPoolDistr epochNonce vrkSkey f
-    ShelleyBasedEraAllegra -> isLeadingSlotsTPraos slotRangeOfInterest poolid setSnapshotPoolDistr epochNonce vrkSkey f
-    ShelleyBasedEraMary -> isLeadingSlotsTPraos slotRangeOfInterest poolid setSnapshotPoolDistr epochNonce vrkSkey f
-    ShelleyBasedEraAlonzo -> isLeadingSlotsTPraos slotRangeOfInterest poolid setSnapshotPoolDistr epochNonce vrkSkey f
-    ShelleyBasedEraBabbage -> isLeadingSlotsPraos slotRangeOfInterest poolid setSnapshotPoolDistr epochNonce vrkSkey f
-    ShelleyBasedEraConway -> isLeadingSlotsPraos slotRangeOfInterest poolid setSnapshotPoolDistr epochNonce vrkSkey f
+    ShelleyBasedEraShelley ->
+      let pp = unbundleLedgerShelleyBasedProtocolParams ShelleyBasedEraShelley bpp
+      in isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid setSnapshotPoolDistr epochNonce vrkSkey f
+    ShelleyBasedEraAllegra ->
+      let pp = unbundleLedgerShelleyBasedProtocolParams ShelleyBasedEraAllegra bpp
+      in isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid setSnapshotPoolDistr epochNonce vrkSkey f
+    ShelleyBasedEraMary ->
+      let pp = unbundleLedgerShelleyBasedProtocolParams ShelleyBasedEraMary bpp
+      in isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid setSnapshotPoolDistr epochNonce vrkSkey f
+    ShelleyBasedEraAlonzo ->
+      let pp = unbundleLedgerShelleyBasedProtocolParams ShelleyBasedEraAlonzo bpp
+      in isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid setSnapshotPoolDistr epochNonce vrkSkey f
+    ShelleyBasedEraBabbage ->
+      let pp = unbundleLedgerShelleyBasedProtocolParams ShelleyBasedEraBabbage bpp
+      in isLeadingSlotsPraos (slotRangeOfInterest pp) poolid setSnapshotPoolDistr epochNonce vrkSkey f
+    ShelleyBasedEraConway ->
+      let pp = unbundleLedgerShelleyBasedProtocolParams ShelleyBasedEraConway bpp
+      in isLeadingSlotsPraos (slotRangeOfInterest pp) poolid setSnapshotPoolDistr epochNonce vrkSkey f
 
  where
   globals = constructGlobals sGen eInfo (unbundleProtocolParams bpp)

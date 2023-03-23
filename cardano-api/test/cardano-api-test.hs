@@ -1,12 +1,6 @@
 module Main where
 
-import System.IO (
-  BufferMode (LineBuffering),
-  hSetBuffering,
-  hSetEncoding,
-  stdout,
-  utf8,
- )
+import           System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
 
 import           Cardano.Crypto.Libsodium (sodiumInit)
 

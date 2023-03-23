@@ -1,5 +1,6 @@
+module Main where
 
-import           Hedgehog.Main (defaultMain)
+import           System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
 
 import qualified Test.Cli.CliIntermediateFormat
 import qualified Test.Cli.FilePermissions
@@ -15,9 +16,12 @@ import qualified Test.Cli.Shelley.Run.Query
 import qualified Test.Config.Mainnet
 
 import           Hedgehog.Extras.Stock.OS (isWin32)
+import           Hedgehog.Main (defaultMain)
 
 main :: IO ()
-main =
+main = do
+  hSetBuffering stdout LineBuffering
+  hSetEncoding stdout utf8
   defaultMain
     [ Test.Cli.CliIntermediateFormat.tests
     , Test.Cli.FilePermissions.tests
