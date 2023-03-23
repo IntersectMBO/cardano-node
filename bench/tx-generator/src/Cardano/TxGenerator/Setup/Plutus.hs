@@ -176,5 +176,4 @@ preExecutePlutusV2 protocolVersion_ (PlutusScript _ (PlutusScriptSerialised scri
 -- However, we're bound to the type `Cardano.Api.ProtocolParameters.CostModel` which
 -- might be changed from a key-value map to something providing stronger guarantees.
 flattenCostModel :: CostModel -> [Integer]
-flattenCostModel (CostModel cm)
-  = snd <$> Map.toAscList cm
+flattenCostModel (CostModel cm) = cm

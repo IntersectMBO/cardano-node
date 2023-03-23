@@ -152,7 +152,6 @@ library
                       , prettyprinter
                       , prettyprinter-ansi-terminal
                       , random
-                      , set-algebra ^>= 1.0
                       , split
                       , strict-stm
                       , text
@@ -235,7 +234,7 @@ test-suite cardano-cli-golden
                       , bytestring
                       , cardano-api
                       , cardano-cli
-                      , cardano-crypto-wrapper ^>= 1.5
+                      , cardano-crypto-wrapper ^>= 1.5.1
                       , cardano-ledger-byron ^>= 1.0
                       , cardano-prelude
                       , cborg
