@@ -1,3 +1,12 @@
+module Main where
+
+import System.IO (
+  BufferMode (LineBuffering),
+  hSetBuffering,
+  hSetEncoding,
+  stdout,
+  utf8,
+ )
 
 import           Cardano.Crypto.Libsodium (sodiumInit)
 
@@ -23,6 +32,8 @@ main :: IO ()
 main = do
   -- TODO: Remove sodiumInit: https://github.com/input-output-hk/cardano-base/issues/175
   sodiumInit
+  hSetBuffering stdout LineBuffering
+  hSetEncoding stdout utf8
   defaultMain tests
 
 tests :: TestTree

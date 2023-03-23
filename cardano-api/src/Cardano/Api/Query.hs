@@ -392,9 +392,6 @@ instance
 instance ( IsShelleyBasedEra era
          , ShelleyLedgerEra era ~ ledgerera
          , Consensus.ShelleyBasedEra ledgerera
-         , ToJSON (Core.PParams ledgerera)
-         , ToJSON (Core.PParamsUpdate ledgerera)
-         , ToJSON (Core.TxOut ledgerera)
          ) => ToJSON (DebugLedgerState era) where
   toJSON = object . toDebugLedgerStatePair
   toEncoding = Aeson.pairs . mconcat . toDebugLedgerStatePair
