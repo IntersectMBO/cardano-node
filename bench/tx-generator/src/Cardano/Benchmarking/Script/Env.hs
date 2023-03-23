@@ -60,6 +60,7 @@ import           Cardano.Benchmarking.OuroborosImports (NetworkId, PaymentKey, S
                    SigningKey, StandardShelley)
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Wallet
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 import           Ouroboros.Network.NodeToClient (IOManager)
 
@@ -69,7 +70,7 @@ import           Cardano.TxGenerator.Types (TxGenError (..))
 
 data Env = Env { protoParams :: Maybe ProtocolParameterMode
                , benchTracers :: Maybe Tracer.BenchTracers
-               , envGenesis :: Maybe (ShelleyGenesis StandardShelley)
+               , envGenesis :: Maybe (ShelleyGenesis StandardCrypto)
                , envProtocol :: Maybe SomeConsensusProtocol
                , envNetworkId :: Maybe NetworkId
                , envSocketPath :: Maybe FilePath
@@ -125,7 +126,7 @@ setProtoParamMode val = modifyEnv (\e -> e { protoParams = pure val })
 setBenchTracers :: Tracer.BenchTracers -> ActionM ()
 setBenchTracers val = modifyEnv (\e -> e { benchTracers = pure val })
 
-setEnvGenesis :: ShelleyGenesis StandardShelley -> ActionM ()
+setEnvGenesis :: ShelleyGenesis StandardCrypto -> ActionM ()
 setEnvGenesis val = modifyEnv (\e -> e { envGenesis = pure val })
 
 setEnvKeys :: String -> SigningKey PaymentKey -> ActionM ()
@@ -168,7 +169,7 @@ getProtoParamMode = getEnvVal protoParams "ProtocolParameterMode"
 getBenchTracers :: ActionM Tracer.BenchTracers
 getBenchTracers = getEnvVal benchTracers "BenchTracers"
 
-getEnvGenesis :: ActionM (ShelleyGenesis StandardShelley)
+getEnvGenesis :: ActionM (ShelleyGenesis StandardCrypto)
 getEnvGenesis = getEnvVal envGenesis "Genesis"
 
 getEnvKeys :: String -> ActionM (SigningKey PaymentKey)
