@@ -1041,16 +1041,15 @@ instance ( ShelleyBasedEra era
 
 instance ( ShelleyBasedEra era
          ) => LogFormatting (Conway.ConwayTallyPredFailure era) where
-  forMachine = undefined
-  -- forMachine _ (Conway.VoterDoesNotHaveRole credential voteRole) =
-  --   mconcat [ "kind" .= String "VoterDoesNotHaveRole"
-  --           , "credential" .= textShow credential
-  --           , "voteRole" .= textShow voteRole
-  --           ]
-  -- forMachine _ (Conway.GovernanceActionDoesNotExist govActionId) =
-  --   mconcat [ "kind" .= String "GovernanceActionDoesNotExist"
-  --           , "credential" .= govActionIdToText govActionId
-  --           ]
+  forMachine _ (Conway.VoterDoesNotHaveRole credential voteRole) =
+    mconcat [ "kind" .= String "VoterDoesNotHaveRole"
+            , "credential" .= textShow credential
+            , "voteRole" .= textShow voteRole
+            ]
+  forMachine _ (Conway.GovernanceActionDoesNotExist govActionId) =
+    mconcat [ "kind" .= String "GovernanceActionDoesNotExist"
+            , "credential" .= govActionIdToText govActionId
+            ]
 
 
 instance Core.Crypto crypto => LogFormatting (Praos.PraosValidationErr crypto) where
