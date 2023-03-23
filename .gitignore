@@ -64,3 +64,6 @@ logs
 /testnet
 
 .vscode/
+
+# Test artifacts
+cardano-tracer/cardano-tracer-test
