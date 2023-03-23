@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -1050,7 +1049,7 @@ toBabbagePParamsUpdate
   pure ppuBabbage
 
 requireParam :: String -> (a -> Either String b) -> Maybe a -> Either String b
-requireParam paramName f = maybe (Left $ "Must specify " ++ paramName) f
+requireParam paramName = maybe (Left $ "Must specify " ++ paramName)
 
 mkProtVer :: (Natural, Natural) -> Either String Ledger.ProtVer
 mkProtVer (majorProtVer, minorProtVer) =

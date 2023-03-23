@@ -457,7 +457,6 @@ instance HasSeverityAnnotation (ConnectionManagerTrace addr (ConnectionHandlerTr
       TrShutdown                              -> Info
       TrConnectionExists {}                   -> Info
       TrForbiddenConnection {}                -> Info
-      -- TrImpossibleConnection {}               -> Info
       TrConnectionFailure {}                  -> Info
       TrConnectionNotFound {}                 -> Debug
       TrForbiddenOperation {}                 -> Info
@@ -1902,11 +1901,6 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
           [ "kind" .= String "ForbiddenConnection"
           , "connectionId" .= toJSON connId
           ]
-      -- TrImpossibleConnection connId ->
-      --   mconcat
-      --     [ "kind" .= String "ImpossibleConnection"
-      --     , "connectionId" .= toJSON connId
-      --     ]
       TrConnectionFailure connId ->
         mconcat
           [ "kind" .= String "ConnectionFailure"
