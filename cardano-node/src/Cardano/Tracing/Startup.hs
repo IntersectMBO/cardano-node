@@ -8,6 +8,7 @@ module Cardano.Tracing.Startup where
 
 import           Data.Text (Text)
 import           Prelude
+import           Data.Aeson (ToJSON)
 
 import           Cardano.Logging (LogFormatting (..))
 import           Cardano.Node.Startup
@@ -37,6 +38,8 @@ instance HasPrivacyAnnotation (StartupTrace blk)
 
 instance ( Show (BlockNodeToNodeVersion blk)
          , Show (BlockNodeToClientVersion blk)
+         , ToJSON (BlockNodeToNodeVersion blk)
+         , ToJSON (BlockNodeToClientVersion blk)
          )
       => Transformable Text IO (StartupTrace blk) where
   trTransformer = trStructuredText
@@ -46,6 +49,8 @@ instance HasTextFormatter (StartupTrace blk) where
 
 instance ( Show (BlockNodeToNodeVersion blk)
          , Show (BlockNodeToClientVersion blk)
+         , ToJSON (BlockNodeToNodeVersion blk)
+         , ToJSON (BlockNodeToClientVersion blk)
          )
         => ToObject (StartupTrace blk) where
   toObject verb = forMachine (toDetailLevel verb)

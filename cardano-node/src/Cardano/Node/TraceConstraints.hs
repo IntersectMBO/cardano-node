@@ -21,6 +21,8 @@ import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent, LedgerUpdate, 
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, HasTxId, HasTxs (..))
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
+import           Ouroboros.Consensus.Node.NetworkProtocolVersion (
+                   HasNetworkProtocolVersion(BlockNodeToClientVersion, BlockNodeToNodeVersion))
 
 
 
@@ -46,6 +48,9 @@ type TraceConstraints blk =
     , ToObject (ValidationErr (BlockProtocol blk))
     , ToObject (CannotForge blk)
     , ToObject (ForgeStateUpdateError blk)
+
+    , ToJSON (BlockNodeToClientVersion blk)
+    , ToJSON (BlockNodeToNodeVersion blk)
 
     , LogFormatting (ApplyTxErr blk)
     , LogFormatting (GenTx blk)
