@@ -13,8 +13,6 @@ import qualified Data.Text as Text
 
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import qualified Cardano.Chain.Update as Update
-import qualified Cardano.Ledger.CompactAddress as Ledger
-import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..))
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
@@ -35,13 +33,6 @@ deriving instance Show TracingVerbosity
 
 instance PrintfArg SizeInBytes where
     formatArg (SizeInBytes s) = formatArg s
-
-instance ToJSON (Ledger.CompactAddr StandardCrypto) where
-  toJSON = toJSON . Ledger.decompactAddr
-
---Not currently needed, but if we do need it, this is the general instance.
---instance (ToJSON a, Ledger.Compactible a) => ToJSON (Ledger.CompactForm a) where
---  toJSON = toJSON  . Ledger.fromCompact
 
 instance FromJSON Update.ApplicationName where
   parseJSON (String x) = pure $ Update.ApplicationName x

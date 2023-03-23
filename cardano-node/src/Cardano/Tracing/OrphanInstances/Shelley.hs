@@ -56,7 +56,6 @@ import qualified Cardano.Ledger.Allegra.Scripts as Allegra
 import qualified Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
-import qualified Cardano.Ledger.AuxiliaryData as Core
 import           Cardano.Ledger.BaseTypes (activeSlotLog, strictMaybeToMaybe)
 import           Cardano.Ledger.Chain
 import qualified Cardano.Ledger.Core as Core
@@ -79,7 +78,7 @@ import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure (..), Alonz
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import           Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
-import           Cardano.Ledger.Conway.Governance -- (govActionIdToText)
+import           Cardano.Ledger.Conway.Governance (govActionIdToText)
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import           Cardano.Ledger.Shelley.Rules
 import           Cardano.Protocol.TPraos.API (ChainTransitionError (ChainTransitionError))
@@ -257,16 +256,15 @@ instance ( ShelleyBasedEra era
 
 instance ( ShelleyBasedEra era
          ) => ToObject (Conway.ConwayTallyPredFailure era) where
-  toObject = undefined
-  -- toObject _ (Conway.VoterDoesNotHaveRole credential voteRole) =
-  --   mconcat [ "kind" .= String "VoterDoesNotHaveRole"
-  --           , "credential" .= textShow credential
-  --           , "voteRole" .= textShow voteRole
-  --           ]
-  -- toObject _ (Conway.GovernanceActionDoesNotExist govActionId) =
-  --   mconcat [ "kind" .= String "GovernanceActionDoesNotExist"
-  --           , "credential" .= govActionIdToText govActionId
-  --           ]
+  toObject _ (Conway.VoterDoesNotHaveRole credential voteRole) =
+    mconcat [ "kind" .= String "VoterDoesNotHaveRole"
+            , "credential" .= textShow credential
+            , "voteRole" .= textShow voteRole
+            ]
+  toObject _ (Conway.GovernanceActionDoesNotExist govActionId) =
+    mconcat [ "kind" .= String "GovernanceActionDoesNotExist"
+            , "credential" .= govActionIdToText govActionId
+            ]
 
 instance ( ShelleyBasedEra era
          , ToJSON (Ledger.Value era)
@@ -1242,7 +1240,3 @@ showLastAppBlockNo :: WithOrigin (LastAppliedBlock crypto) -> Text
 showLastAppBlockNo wOblk =  case withOriginToMaybe wOblk of
                      Nothing -> "Genesis Block"
                      Just blk -> textShow . unBlockNo $ labBlockNo blk
-
--- Common to cardano-cli
-
-deriving newtype instance Core.Crypto crypto => ToJSON (Core.AuxiliaryDataHash crypto)
