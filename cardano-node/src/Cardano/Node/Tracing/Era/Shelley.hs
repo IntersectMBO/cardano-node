@@ -256,8 +256,6 @@ instance ( ShelleyBasedEra era
   forMachine dtal (DelegsFailure f) = forMachine dtal f
 
 instance ( ShelleyBasedEra era
-         , ToJSON (Ledger.Value era)
-         , ToJSON (Ledger.TxOut era)
          , Ledger.EraCrypto era ~ StandardCrypto
          , LogFormatting (PPUPPredFailure era)
          , LogFormatting (PredicateFailure (Ledger.EraRule "UTXO" era))
@@ -376,8 +374,6 @@ instance ( ShelleyBasedEra era
              ]
 
 instance ( ShelleyBasedEra era
-         , ToJSON (Core.Value era)
-         , ToJSON (Core.TxOut era)
          , LogFormatting (PPUPPredFailure era)
          )
       => LogFormatting (ShelleyUtxoPredFailure era) where
@@ -436,8 +432,6 @@ instance ( ShelleyBasedEra era
              ]
 
 instance ( ShelleyBasedEra era
-         , ToJSON (Core.Value era)
-         , ToJSON (Core.TxOut era)
          , ToJSON Allegra.ValidityInterval
          , LogFormatting (PPUPPredFailure era)
          ) => LogFormatting (AllegraUtxoPredFailure era) where
@@ -855,8 +849,6 @@ instance LogFormatting (ShelleyUpecPredFailure era) where
 -- Alonzo related
 --------------------------------------------------------------------------------
 instance ( ShelleyBasedEra era
-         , ToJSON (Ledger.Value era)
-         , ToJSON (Ledger.TxOut era)
          , LogFormatting (PredicateFailure (Ledger.EraRule "UTXOS" era))
          ) => LogFormatting (AlonzoUtxoPredFailure era) where
   forMachine _dtal (Alonzo.BadInputsUTxO badInputs) =
@@ -1005,8 +997,6 @@ instance ( Ledger.Era era
 instance ( Ledger.Era era
          , ShelleyBasedEra era
          , Ledger.EraCrypto era ~ StandardCrypto
-         , ToJSON (Ledger.Value era)
-         , ToJSON (Ledger.TxOut era)
          , LogFormatting (PPUPPredFailure era)
          , LogFormatting (ShelleyUtxowPredFailure era)
          , LogFormatting (PredicateFailure (Ledger.EraRule "UTXO" era))
