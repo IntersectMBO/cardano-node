@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-node-chairman
-version:                1.36.0
+version:                8.0.0
 synopsis:               The cardano full node
 description:            The cardano full node.
 category:               Cardano,
