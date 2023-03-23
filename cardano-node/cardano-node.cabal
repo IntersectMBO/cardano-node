@@ -138,7 +138,6 @@ library
                       , base16-bytestring
                       , bytestring
                       , cardano-api
-                      , cardano-data ^>= 1.0
                       , cardano-git-rev
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
@@ -149,7 +148,6 @@ library
                       , cardano-ledger-conway
                       , cardano-ledger-core
                       , cardano-ledger-shelley
-                      , cardano-ledger-mary
                       , cardano-prelude
                       , cardano-protocol-tpraos ^>= 1.0
                       , cardano-slotting ^>= 0.1
