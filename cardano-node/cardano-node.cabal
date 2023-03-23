@@ -169,8 +169,8 @@ library
                       , ouroboros-consensus-cardano ^>= 0.2
                       , ouroboros-consensus-protocol
                       , ouroboros-consensus-shelley
-                      , ouroboros-network  ^>= 0.3.0.1
-                      , ouroboros-network-framework ^>= 0.2
+                      , ouroboros-network  ^>= 0.3.0.2
+                      , ouroboros-network-framework ^>= 0.2.0.1
                       , psqueues
                       , safe-exceptions
                       , scientific
