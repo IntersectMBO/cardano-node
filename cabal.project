@@ -43,14 +43,14 @@ packages:
 program-options
   ghc-options: -Werror
 
--- package cardano-api
---   ghc-options: -Werror
+package cardano-api
+  ghc-options: -Werror
 
 -- package cardano-cli
 --   ghc-options: -Werror
 
--- package cardano-node
--- --  ghc-options: -Werror
+package cardano-node
+  ghc-options: -Werror
 
 -- package cardano-node-chairman
 --   ghc-options: -Werror
