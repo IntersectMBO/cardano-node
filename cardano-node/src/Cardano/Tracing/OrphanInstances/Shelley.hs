@@ -1227,6 +1227,17 @@ instance ToObject Praos.PraosEnvelopeError where
                 , "blockSize" .= blockSize
                 ]
 
+instance ToJSON ShelleyNodeToNodeVersion where
+  toJSON ShelleyNodeToNodeVersion1 = String "ShelleyNodeToNodeVersion1"
+
+instance ToJSON ShelleyNodeToClientVersion where
+  toJSON ShelleyNodeToClientVersion1 = String "ShelleyNodeToClientVersion1"
+  toJSON ShelleyNodeToClientVersion2 = String "ShelleyNodeToClientVersion2"
+  toJSON ShelleyNodeToClientVersion3 = String "ShelleyNodeToClientVersion3"
+  toJSON ShelleyNodeToClientVersion4 = String "ShelleyNodeToClientVersion4"
+  toJSON ShelleyNodeToClientVersion5 = String "ShelleyNodeToClientVersion5"
+  toJSON ShelleyNodeToClientVersion6 = String "ShelleyNodeToClientVersion6"
+
 --------------------------------------------------------------------------------
 -- Helper functions
 --------------------------------------------------------------------------------

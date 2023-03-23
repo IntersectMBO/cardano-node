@@ -129,23 +129,23 @@ getStartupInfo nc (SomeConsensusProtocol whichP pForInfo) fp = do
 --
 data ConsensusNetworkVersionTuple a b = ConsensusNetworkVersionTuple a b
 
--- TODO: provide JSON instance for `BlockNodeToClientVersion`
-instance Show blkVersion => ToJSON (ConsensusNetworkVersionTuple NodeToClientVersion blkVersion) where
+instance ToJSON blkVersion => ToJSON (ConsensusNetworkVersionTuple NodeToClientVersion blkVersion) where
     toJSON (ConsensusNetworkVersionTuple nodeToClientVersion blockVersion) =
       Aeson.object [ "nodeToClientVersion" .= toJSON nodeToClientVersion
-                   , "blockVersion" .= String (pack . show $ blockVersion)
+                   , "blockVersion" .= toJSON blockVersion
                    ]
 
--- TODO: provide JSON instance for `BlockNodeToNodeVersion`
-instance Show blkVersion => ToJSON (ConsensusNetworkVersionTuple NodeToNodeVersion blkVersion) where
+instance ToJSON blkVersion => ToJSON (ConsensusNetworkVersionTuple NodeToNodeVersion blkVersion) where
     toJSON (ConsensusNetworkVersionTuple nodeToClientVersion blockVersion) =
       Aeson.object [ "nodeToNodeVersion" .= toJSON nodeToClientVersion
-                   , "blockVersion" .= String (pack . show $ blockVersion)
+                   , "blockVersion" .= toJSON blockVersion
                    ]
 
 
 instance ( Show (BlockNodeToNodeVersion blk)
          , Show (BlockNodeToClientVersion blk)
+         , ToJSON (BlockNodeToNodeVersion blk)
+         , ToJSON (BlockNodeToClientVersion blk)
          )
         => LogFormatting (StartupTrace blk) where
   forHuman = ppStartupInfoTrace
