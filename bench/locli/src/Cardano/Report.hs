@@ -92,12 +92,12 @@ data Section where
     , sTitle     :: !Text
     } -> Section
 
-summaryReportSection :: SummaryOne -> Section
+summaryReportSection :: Summary f -> Section
 summaryReportSection summ =
   STable summ (ISel @SummaryOne $ iFields sumFieldsReport) "Parameter" "Value"   "summary" "summary.org"
     "Overall run parameters"
 
-analysesReportSections :: MachPerf (CDF I) -> BlockProp I -> [Section]
+analysesReportSections :: MachPerf (CDF I) -> BlockProp f -> [Section]
 analysesReportSections mp bp =
   [ STable mp (DSel @MachPerf  $ dFields mtFieldsReport)   "metric"  "average"    "perf" "clusterperf.report.org"
     "Resource Usage"
@@ -120,7 +120,7 @@ analysesReportSections mp bp =
 --
 
 liftTmplRun :: Summary a -> TmplRun
-liftTmplRun Summary{sumGenerator=GeneratorProfile{..}
+liftTmplRun Summary{sumWorkload=GeneratorProfile{..}
                    ,sumMeta=meta@Metadata{..}} =
   TmplRun
   { trMeta      = meta
@@ -207,9 +207,9 @@ instance ToJSON TmplSection where
     ]
 
 generate :: InputDir -> Maybe TextInputFile
-         -> (SummaryOne, ClusterPerf, BlockPropOne) -> [(SummaryOne, ClusterPerf, BlockPropOne)]
+         -> (SomeSummary, ClusterPerf, SomeBlockProp) -> [(SomeSummary, ClusterPerf, SomeBlockProp)]
          -> IO (ByteString, Text)
-generate (InputDir ede) mReport (summ, cp, bp) rest = do
+generate (InputDir ede) mReport (SomeSummary summ, cp, SomeBlockProp bp) rest = do
   ctx  <- getReport (last restTmpls & trManifest & mNodeApproxVer) Nothing
   tmplRaw <- BS.readFile (maybe defaultReportPath unTextInputFile mReport)
   tmpl <- parseWith defaultSyntax (includeFile ede) "report" tmplRaw
@@ -218,7 +218,7 @@ generate (InputDir ede) mReport (summ, cp, bp) rest = do
       renderWith fenv x (env ctx baseTmpl restTmpls)
  where
    baseTmpl  =       liftTmplRun        summ
-   restTmpls = fmap (liftTmplRun. fst3) rest
+   restTmpls = fmap ((\(SomeSummary ss) -> liftTmplRun ss). fst3) rest
 
    defaultReportPath = ede <> "/report.ede"
    fenv = HM.fromList

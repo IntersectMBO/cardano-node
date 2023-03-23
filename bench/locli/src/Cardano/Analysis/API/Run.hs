@@ -7,11 +7,13 @@ import Cardano.Prelude
 
 import Control.Monad (fail)
 import Data.Aeson qualified as Aeson
+import Data.Aeson ((.=))
 
 import Cardano.Util
 import Cardano.Analysis.API.ChainFilter
 import Cardano.Analysis.API.Context
 import Cardano.Analysis.API.Ground
+import Cardano.Analysis.API.Types
 
 data AnalysisCmdError
   = AnalysisCmdError                                   !Text
@@ -57,6 +59,29 @@ instance FromJSON RunPartial where
     let metadata = Metadata{..}
         genesis  = ()
     pure Run{..}
+
+-- | Given a Summary object,
+--   produce a JSON file readable by the above RunPartial FromJSON instance.
+--   Keep in sync.  Better still, automate it so it's not necessary.
+summaryMetaJson :: Summary f -> Value
+summaryMetaJson Summary{sumMeta=Metadata{..}, ..} =
+  object [ "meta" .= meta ]
+ where meta =
+         object $
+         -- keep in sync with 'data Metadata'
+         [ "tag"       .= tag
+         , "batch"     .= batch
+         , "profile"   .= profile
+         , "era"       .= era
+         , "manifest"  .= manifest
+         ] <>
+         -- keep in sync with the above instance
+         [ "profile_content" .=
+           object
+           [ "generator" .= toJSON sumWorkload
+           , "genesis"   .= toJSON sumGenesisSpec
+           ]
+         ]
 
 readRun :: JsonInputFile Genesis -> JsonInputFile RunPartial -> ExceptT AnalysisCmdError IO Run
 readRun shelleyGenesis runmeta = do

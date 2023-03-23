@@ -462,13 +462,13 @@ runSlotFilters ::
      Run
   -> [ChainFilter]
   -> [(JsonLogfile, [SlotStats a])]
-  -> IO (DataDomain SlotNo, [(JsonLogfile, [SlotStats a])])
+  -> IO (DataDomain I SlotNo, [(JsonLogfile, [SlotStats a])])
 runSlotFilters Run{genesis} flts slots =
   mapConcurrentlyPure (fmap $ filterSlotStats flts) slots
     <&> \filtered ->
           (,) (domain filtered) filtered
  where
-   domain :: [(JsonLogfile, [SlotStats a])] -> DataDomain SlotNo
+   domain :: [(JsonLogfile, [SlotStats a])] -> DataDomain I SlotNo
    domain filtered = mkDataDomain
      ((CP.head samplePre  <&> slSlot) & fromMaybe 0)
      ((lastMay samplePre  <&> slSlot) & fromMaybe 0)
@@ -567,8 +567,9 @@ slotStatsMachPerf _ (JsonLogfile f, []) =
 slotStatsMachPerf run (f, slots) =
   Right . (f,) $ MachPerf
   { mpVersion            = getLocliVersion
-  , mpDomainSlots        = [domSlots]
-  , cdfHostSlots         = dist [fromIntegral $ ddFilteredCount domSlots]
+  , mpDomainSlots        = domSlots
+  , mpDomainCDFSlots     = domSlots -- At unit-arity it's just a replica.
+  , cdfHostSlots         = dist [fromIntegral . unI $ ddFilteredCount domSlots]
   --
   , cdfStarts            = dist (slCountStarts <$> slots)
   , cdfLeads             = dist (slCountLeads <$> slots)
@@ -587,12 +588,12 @@ slotStatsMachPerf run (f, slots) =
   , ..
   }
  where
-   domSlots      = mkDataDomainInj sFirst sLast (fromIntegral . unSlotNo)
+   domSlots = mkDataDomainInj sFirst sLast (fromIntegral . unSlotNo)
 
    (,) sFirst sLast = (slSlot . head &&& slSlot . last) slots
 
    dist :: Divisible a => [a] -> CDF I a
-   dist = cdf stdCentiles
+   dist = cdfZ stdCentiles
 
    SlotStatsSummary{..} = slotStatsSummary run slots
 
@@ -621,15 +622,17 @@ summariseClusterPerf centiles mps@(headline:_) = do
       (xs :: [CDF I Word64]) -> cdf2OfCDFs comb xs :: Either CDFError (CDF (CDF I) Word64)
 
   pure MachPerf
-    { mpVersion     = mpVersion headline
-    , mpDomainSlots = domSlots
+    { mpVersion        = mpVersion headline
+    , mpDomainSlots    = slotDomains
+    , mpDomainCDFSlots = slotDomains & traverseDataDomain (cdf stdCentiles . fmap unI)
     , ..
     }
  where
-   domSlots = concat $ mps <&> mpDomainSlots
-
    comb :: forall a. Divisible a => Combine I a
    comb = stdCombine1 centiles
+
+   slotDomains :: [DataDomain I SlotNo]
+   slotDomains = mps <&> mpDomainSlots
 
 summariseMultiClusterPerf :: [Centile] -> [ClusterPerf] -> Either CDFError MultiClusterPerf
 summariseMultiClusterPerf _ [] = error "Asked to summarise empty list of MachPerfOne"
@@ -654,10 +657,19 @@ summariseMultiClusterPerf centiles mps@(headline:_) = do
       (xs :: [CDF (CDF I) Word64]) -> cdf2OfCDFs comb xs :: Either CDFError (CDF (CDF I) Word64)
 
   pure . MultiClusterPerf $ MachPerf
-    { mpVersion          = mpVersion headline
-    , mpDomainSlots      = concat         $ mps <&> mpDomainSlots
+    { mpVersion        = mpVersion headline
+    , mpDomainSlots    = slotDomains
+    , mpDomainCDFSlots =
+      -- The simpler option, smashing the data from multiple runs into a single CDF:
+        slotDomains & traverseDataDomain (cdf stdCentiles . fmap unI)
+      -- Arguably, the proper option:
+      -- mps <&> mpDomainCDFSlots
+      --   & traverseDataDomain (cdf2OfCDFs comb)
     , ..
     }
  where
+   slotDomains :: [DataDomain I SlotNo]
+   slotDomains = concat $ mps <&> mpDomainSlots
+
    comb :: forall a. Divisible a => Combine (CDF I) a
    comb = stdCombine2 centiles

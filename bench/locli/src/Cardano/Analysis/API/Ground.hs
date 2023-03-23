@@ -31,6 +31,7 @@ import System.FilePath                  qualified as F
 import Cardano.Slotting.Slot            (EpochNo(..), SlotNo(..))
 import Ouroboros.Network.Block          (BlockNo(..))
 
+import Data.CDF
 import Data.DataDomain
 import Cardano.Util
 
@@ -68,7 +69,7 @@ instance FromJSONKey Hash where
 
 newtype Count a = Count { unCount :: Int }
   deriving (Eq, Generic, Ord, Show)
-  deriving newtype (FromJSON, Num, ToJSON)
+  deriving newtype (Divisible, FromJSON, Num, Real, ToJSON)
   deriving anyclass NFData
 
 countMap :: Map.Map a b -> Count a
@@ -163,6 +164,14 @@ newtype CsvOutputFile
 newtype OutputFile
   = OutputFile { unOutputFile :: FilePath }
   deriving (Show, Eq)
+
+---
+--- Orphans
+---
+deriving newtype instance Real      BlockNo
+deriving newtype instance Divisible BlockNo
+deriving newtype instance Real      SlotNo
+deriving newtype instance Divisible SlotNo
 
 ---
 --- Readers

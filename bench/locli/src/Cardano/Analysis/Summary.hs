@@ -1,5 +1,5 @@
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
-
 {-# OPTIONS_GHC -Wno-name-shadowing -Wno-orphans #-}
 
 {- HLINT ignore "Use mapMaybe" -}
@@ -9,12 +9,99 @@ module Cardano.Analysis.Summary (module Cardano.Analysis.Summary) where
 import Prelude                                      (head, last)
 import Cardano.Prelude
 
+import Data.Either.Extra                            (mapLeft)
 import Data.Map.Strict                  qualified as Map
+import Data.Text                        qualified as Text
 
 import Cardano.Analysis.API
-import Cardano.Unlog.LogObject
+import Cardano.Unlog.LogObject               hiding (Text)
 import Cardano.Util
 
+
+data SummaryError
+  = SEEmptyDataset
+  | SEIncoherentRunGeneses       [Genesis]
+  | SEIncoherentRunGenesisSpecs  [GenesisSpec]
+  | SEIncoherentRunWorkloads     [GeneratorProfile]
+  | SEIncoherentRunProfiles      [Text]
+  | SEIncoherentRunEras          [Text]
+  | SEIncoherentRunVersions      [Manifest]
+  | SEIncoherentRunFilters       [([FilterName], [ChainFilter])]
+  | SECDFError                   CDFError
+  deriving Show
+
+summariseMultiSummary ::
+     UTCTime
+  -> [Centile]
+  -> [SummaryOne]
+  -> Either SummaryError MultiSummary
+summariseMultiSummary _ _ [] = error "Asked to summarise empty list of Summary"
+summariseMultiSummary sumAnalysisTime centiles xs@(headline:xss) = do
+  sumHosts               <- pure $ cdf centiles $ xs <&> unI . sumHosts
+  sumLogObjectsTotal     <- pure $ cdf centiles $ xs <&> unI . sumLogObjectsTotal
+  sumChainRejectionStats <- pure $ xs <&> sumChainRejectionStats
+                                 & concat
+  sumBlocksRejected      <- pure $ cdf centiles $ xs <&> unI . sumBlocksRejected
+  sumDomainTime          <- pure $ xs <&> sumDomainTime
+                                   & traverseDataDomain (cdf centiles . fmap unI)
+  sumStartSpread         <- pure $ xs <&> sumStartSpread
+                                   & traverseDataDomain (cdf centiles . fmap unI)
+  sumStopSpread          <- pure $ xs <&> sumStopSpread
+                                   & traverseDataDomain (cdf centiles . fmap unI)
+  sumDomainSlots         <- traverseDataDomain'
+                              (mapLeft SECDFError
+                               . collapseCDFs (stdCombine1 centiles))
+                              (xs <&> sumDomainSlots)
+  sumDomainBlocks        <- pure $ xs <&> sumDomainBlocks
+                                   & traverseDataDomain (cdf centiles . fmap unI)
+
+  sumMeta                <- summariseMetadata $ xs <&> sumMeta
+  sumFilters             <- allEqOrElse (xs <&> sumFilters) SEIncoherentRunFilters
+
+  cdfLogLinesEmitted     <- sumCDF2 $ xs <&> cdfLogLinesEmitted
+  cdfLogObjectsEmitted   <- sumCDF2 $ xs <&> cdfLogObjectsEmitted
+  cdfLogObjects          <- sumCDF2 $ xs <&> cdfLogObjects
+  cdfRuntime             <- sumCDF2 $ xs <&> cdfRuntime
+  cdfLogLineRate         <- sumCDF2 $ xs <&> cdfLogLineRate
+  sumGenesis             <- find (not .genesesSameButTimeP (sumGenesis headline))
+                                 (sumGenesis <$> xss)
+                            & maybe (Right $ sumGenesis headline)
+                              (Left .SEIncoherentRunGeneses .(sumGenesis headline:).(:[]))
+  sumGenesisSpec         <- find (not .(== (sumGenesisSpec headline)))
+                                 (sumGenesisSpec <$> xss)
+                            & maybe (Right $ sumGenesisSpec headline)
+                              (Left .SEIncoherentRunGenesisSpecs .(sumGenesisSpec headline:).(:[]))
+  sumWorkload            <- find (not .(== (sumWorkload headline)))
+                                 (sumWorkload <$> xss)
+                            & maybe (Right $ sumWorkload headline)
+                              (Left .SEIncoherentRunWorkloads .(sumWorkload headline:).(:[]))
+  pure $ Summary
+    { ..
+    }
+ where
+   summariseMetadata :: [Metadata] -> Either SummaryError Metadata
+   summariseMetadata [] = Left SEEmptyDataset
+   summariseMetadata xs@(headline:_) = do
+     profile  <- allEqOrElse (xs <&> profile)  SEIncoherentRunProfiles
+     era      <- allEqOrElse (xs <&> era)      SEIncoherentRunEras
+     manifest <- allEqOrElse (xs <&> manifest) SEIncoherentRunVersions
+     -- XXX: magic transformation that happens to match
+     --      the logic in 'analyse.sh multi-call' on line with "local run="
+     pure Metadata { tag   =  xs <&> tag & sort & last & Text.take 16 & (<> "_variance")
+                   , batch = batch headline
+                   , .. }
+
+   allEqOrElse :: Eq a => [a] -> ([a] -> SummaryError) -> Either SummaryError a
+   allEqOrElse [] _ = Left SEEmptyDataset
+   allEqOrElse xss@(headline:xs) err =
+     all (== headline) xs
+     & bool (Left $ err xss) (Right headline)
+
+   sumCDF2 :: Divisible a => [CDF I a] -> Either SummaryError (CDF (CDF I) a)
+   sumCDF2 xs = cdf2OfCDFs (stdCombine1 centiles) xs & bimap SECDFError identity
+
+   -- comb :: forall a. Divisible a => Combine I a
+   -- comb = stdCombine1 centiles
 
 computeSummary ::
      UTCTime
@@ -32,7 +119,7 @@ computeSummary sumAnalysisTime
                sumMeta
                sumGenesis
                sumGenesisSpec
-               sumGenerator
+               sumWorkload
                rl@RunLogs{..}
                sumFilters
                MachPerf{..}
@@ -40,23 +127,11 @@ computeSummary sumAnalysisTime
                Chain{..}
   =
   Summary
-  { sumHosts           = countMap rlHostLogs
-  , sumLogObjectsTotal = countListsAll objLists
-  , sumBlocksRejected  = countListAll cRejecta
-  , sumDomainTime      =
-      DataDomain (Interval minStartRaw maxStopRaw)  (Just $ Interval minStartFlt maxStopFlt)
-                 (maxStopRaw  `utcTimeDeltaSec` minStartRaw)
-                 (maxStopFlt  `utcTimeDeltaSec` minStartFlt)
-  , sumStartSpread     =
-      DataDomain (Interval minStartRaw maxStartRaw) (Just $ Interval minStartFlt maxStartFlt)
-                 (maxStartRaw `utcTimeDeltaSec` minStartRaw)
-                 (maxStartFlt `utcTimeDeltaSec` minStartFlt)
-  , sumStopSpread      =
-      DataDomain (Interval minStopRaw  maxStopRaw)  (Just $ Interval minStopFlt  maxStopFlt)
-                 (maxStopRaw  `utcTimeDeltaSec` minStopRaw)
-                 (maxStopFlt  `utcTimeDeltaSec` minStopFlt)
-  , sumDomainSlots     = Prelude.head mpDomainSlots
-  , sumDomainBlocks    = Prelude.head bpDomainBlocks
+  { sumHosts           = I $ countMap rlHostLogs
+  , sumLogObjectsTotal = I $ countListsAll objLists
+  , sumBlocksRejected  = I $ countListAll cRejecta
+  , sumDomainSlots     = mpDomainCDFSlots
+  , sumDomainBlocks    = bpDomainCDFBlocks
   --
   , cdfLogObjects        = cdf stdCentiles (objLists <&> length)
   , cdfLogObjectsEmitted = cdf stdCentiles logObjectsEmitted
@@ -74,8 +149,7 @@ computeSummary sumAnalysisTime
      & unzip
    objLists = rlLogs rl <&> snd
 
-   (,) minStartRaw maxStartRaw = (minimum &&& maximum) losFirsts
-   (,) minStopRaw  maxStopRaw  = (minimum &&& maximum) losLasts
+   losFirsts, losLasts :: [UTCTime]
    losFirsts  = objLists <&> loAt . Prelude.head
    losLasts   = objLists <&> loAt . Prelude.last
    runtimes :: [NominalDiffTime]
@@ -83,18 +157,52 @@ computeSummary sumAnalysisTime
    lineRates  = zipWith (/) (textLinesEmitted <&> fromIntegral)
                             (runtimes <&> fromIntegral @Int . truncate)
 
-   (,) minStartFlt maxStartFlt = (timeOf *** timeOf) startMinMaxS
-   (,) minStopFlt  maxStopFlt  = (timeOf *** timeOf) stopMinMaxS
-   startMinMaxS = (minimum &&& maximum) slotFirsts
-   stopMinMaxS  = (minimum &&& maximum) slotLasts
-   slotFirsts  = slotDomains <&> low
-   slotLasts   = slotDomains <&> high
-   slotDomains = catMaybes (ddFiltered <$> mpDomainSlots)
-   timeOf = unSlotStart . slotStart sumGenesis
+   (,,) sumDomainTime sumStartSpread sumStopSpread =
+     slotDomains sumGenesis (losFirsts, losLasts) mpDomainSlots
 
+   sumChainRejectionStats :: [(ChainFilter, Int)]
    sumChainRejectionStats =
      cRejecta
      <&> fmap fst . filter (not . snd) . beAcceptance
       &  concat
       &  foldr' (\k m -> Map.insertWith (+) k 1 m) Map.empty
       &  Map.toList
+
+deriving newtype instance (Num (I Int))
+
+slotDomains :: Genesis
+            -> ([UTCTime], [UTCTime])
+            -> [DataDomain I SlotNo]
+            -> ( DataDomain I RUTCTime
+               , DataDomain I RUTCTime
+               , DataDomain I RUTCTime)
+slotDomains gsis (firstLOs, lastLOs) (catMaybes . fmap ddFiltered -> xs) =
+  ( DataDomain (I <$> Interval minStartRaw maxStopRaw)
+        (Just $ I <$> Interval minStartFlt maxStopFlt)
+               (I $ maxStopRaw  `utcTimeDeltaSec` minStartRaw)
+               (I $ maxStopFlt  `utcTimeDeltaSec` minStartFlt)
+    <&> toRUTCTime
+  , DataDomain (I <$> Interval minStartRaw maxStartRaw)
+        (Just $ I <$> Interval minStartFlt maxStartFlt)
+               (I $ maxStartRaw `utcTimeDeltaSec` minStartRaw)
+               (I $ maxStartFlt `utcTimeDeltaSec` minStartFlt)
+    <&> toRUTCTime
+  , DataDomain (I <$> Interval minStopRaw  maxStopRaw)
+        (Just $ I <$> Interval minStopFlt  maxStopFlt)
+               (I $ maxStopRaw  `utcTimeDeltaSec` minStopRaw)
+               (I $ maxStopFlt  `utcTimeDeltaSec` minStopFlt)
+    <&> toRUTCTime
+  )
+ where
+   minStartRaw, maxStartRaw, minStopRaw, maxStopRaw :: UTCTime
+   (,) minStartRaw maxStartRaw = (minimum &&& maximum) firstLOs
+   (,) minStopRaw  maxStopRaw  = (minimum &&& maximum) lastLOs
+
+   (,) minStartFlt maxStartFlt = (timeOf *** timeOf) startMinMaxS
+   (,) minStopFlt  maxStopFlt  = (timeOf *** timeOf) stopMinMaxS
+   startMinMaxS = (minimum &&& maximum) slotFirsts
+   stopMinMaxS  = (minimum &&& maximum) slotLasts
+   slotFirsts  = xs <&> unI . low
+   slotLasts   = xs <&> unI . high
+
+   timeOf = unSlotStart . slotStart gsis

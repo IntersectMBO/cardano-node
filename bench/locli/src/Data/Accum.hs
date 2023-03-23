@@ -10,7 +10,6 @@ module Data.Accum
   , divAccum
   , mulAccum
   , updateAccum
-  , zeroUTCTime
   -- Various accumulators
   , mkAccumNew
   , mkAccumDelta
