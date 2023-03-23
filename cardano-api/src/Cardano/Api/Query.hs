@@ -124,6 +124,7 @@ import qualified Cardano.Chain.Update.Validation.Interface as Byron.Update
 
 import           Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
+import           Cardano.Ledger.Crypto (Crypto)
 import qualified Cardano.Ledger.Shelley.API as Shelley
 import qualified Cardano.Ledger.Shelley.Core as Core
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
@@ -140,6 +141,7 @@ import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.TxBody
+import           Cardano.Api.Tx (eraProtVerLow)
 import           Cardano.Api.Value
 import           Data.Word (Word64)
 
@@ -432,14 +434,19 @@ newtype SerialisedCurrentEpochState era
 newtype CurrentEpochState era = CurrentEpochState (Shelley.EpochState (ShelleyLedgerEra era))
 
 decodeCurrentEpochState
-  :: forall era.
-  ( Core.EraTxOut (ShelleyLedgerEra era)
-  , Core.EraGovernance (ShelleyLedgerEra era)
-  )
-  => SerialisedCurrentEpochState era
+  :: ShelleyBasedEra era
+  -> SerialisedCurrentEpochState era
   -> Either DecoderError (CurrentEpochState era)
-decodeCurrentEpochState (SerialisedCurrentEpochState (Serialised ls)) =
-  CurrentEpochState <$> Plain.decodeFull ls
+decodeCurrentEpochState sbe (SerialisedCurrentEpochState (Serialised ls)) =
+  CurrentEpochState <$>
+    case sbe of
+      ShelleyBasedEraShelley -> Plain.decodeFull ls
+      ShelleyBasedEraAllegra -> Plain.decodeFull ls
+      ShelleyBasedEraMary    -> Plain.decodeFull ls
+      ShelleyBasedEraAlonzo  -> Plain.decodeFull ls
+      ShelleyBasedEraBabbage -> Plain.decodeFull ls
+      ShelleyBasedEraConway  -> Plain.decodeFull ls
+
 
 newtype SerialisedPoolState era
   = SerialisedPoolState (Serialised (Shelley.PState (Core.EraCrypto (ShelleyLedgerEra era))))
@@ -463,13 +470,12 @@ newtype PoolDistribution era = PoolDistribution
   }
 
 decodePoolDistribution
-  :: forall era. ()
-  => Core.Era (ShelleyLedgerEra era)
-  => DecCBOR (Shelley.PoolDistr (Core.EraCrypto (ShelleyLedgerEra era)))
-  => SerialisedPoolDistribution era
+  :: forall era. (Crypto (Core.EraCrypto (ShelleyLedgerEra era)))
+  => ShelleyBasedEra era
+  -> SerialisedPoolDistribution era
   -> Either DecoderError (PoolDistribution era)
-decodePoolDistribution (SerialisedPoolDistribution (Serialised ls)) =
-  PoolDistribution <$> decodeFull (Core.eraProtVerLow @(ShelleyLedgerEra era)) ls
+decodePoolDistribution sbe (SerialisedPoolDistribution (Serialised ls)) =
+  PoolDistribution <$> decodeFull (eraProtVerLow sbe) ls
 
 newtype SerialisedStakeSnapshots era
   = SerialisedStakeSnapshots (Serialised (Consensus.StakeSnapshots (Core.EraCrypto (ShelleyLedgerEra era))))

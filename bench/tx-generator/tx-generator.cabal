@@ -98,6 +98,7 @@ library
                       , cardano-git-rev
                       , cardano-ledger-alonzo
                       , cardano-ledger-byron
+                      , cardano-ledger-core
                       , cardano-node
                       , cardano-prelude
                       , contra-tracer

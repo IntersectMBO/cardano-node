@@ -18,7 +18,6 @@ import           Cardano.Api
 import           Cardano.Api.Shelley (ProtocolParameters)
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Shelley.API as Ledger (ShelleyGenesis)
-import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 -- import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 
 import           Cardano.TxGenerator.Fund (Fund)

@@ -5,13 +5,7 @@
 #endif
 
 import           Hedgehog.Main (defaultMain)
-import System.IO (
-  BufferMode (LineBuffering),
-  hSetBuffering,
-  hSetEncoding,
-  stdout,
-  utf8,
- )
+import           System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
 
 #ifdef UNIX
 import qualified Test.Cardano.Node.FilePermissions
