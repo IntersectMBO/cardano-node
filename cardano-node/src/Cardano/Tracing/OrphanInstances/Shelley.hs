@@ -267,8 +267,6 @@ instance ( ShelleyBasedEra era
             ]
 
 instance ( ShelleyBasedEra era
-         , ToJSON (Ledger.Value era)
-         , ToJSON (Ledger.TxOut era)
          , ToObject (PPUPPredFailure era)
          , ToObject (PredicateFailure (Ledger.EraRule "UTXO" era))
          , Ledger.EraCrypto era ~ StandardCrypto
@@ -381,8 +379,6 @@ instance ( ShelleyBasedEra era
              ]
 
 instance ( ShelleyBasedEra era
-         , ToJSON (Core.Value era)
-         , ToJSON (Core.TxOut era)
          , ToObject (PPUPPredFailure era)
          )
       => ToObject (ShelleyUtxoPredFailure era) where
@@ -451,8 +447,6 @@ instance ToJSON Allegra.ValidityInterval where
       mbfield (SJust x) = [x]
 
 instance ( ShelleyBasedEra era
-         , ToJSON (Core.Value era)
-         , ToJSON (Core.TxOut era)
          , ToObject (PPUPPredFailure era)
          ) => ToObject (AllegraUtxoPredFailure era) where
   toObject _verb (Allegra.BadInputsUTxO badInputs) =
@@ -892,8 +886,6 @@ instance ToObject (ShelleyUpecPredFailure era) where
 
 
 instance ( Ledger.Era era
-         , ToJSON (Ledger.Value era)
-         , ToJSON (Ledger.TxOut era)
          , ToObject (PredicateFailure (Ledger.EraRule "UTXOS" era))
          , ToObject (PPUPPredFailure era)
          , ShelleyBasedEra era
@@ -1096,9 +1088,7 @@ instance ( Ledger.Era era
 -- Babbage related
 --------------------------------------------------------------------------------
 
-instance ( ToJSON (Ledger.Value era)
-         , ToJSON (Ledger.TxOut era)
-         , ShelleyBasedEra era
+instance ( ShelleyBasedEra era
          , ToObject (ShelleyUtxowPredFailure era)
          , ToObject (PredicateFailure (Ledger.EraRule "UTXOS" era))
          , ToObject (PPUPPredFailure era)
@@ -1121,8 +1111,6 @@ instance ( ToJSON (Ledger.Value era)
 instance ( Ledger.Era era
          , ShelleyBasedEra era
          , Ledger.EraCrypto era ~ StandardCrypto
-         , ToJSON (Ledger.Value era)
-         , ToJSON (Ledger.TxOut era)
          , ToObject (PPUPPredFailure era)
          , ToObject (PredicateFailure (Ledger.EraRule "UTXO" era))
          ) => ToObject (BabbageUtxowPredFailure era) where
