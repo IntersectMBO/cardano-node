@@ -69,7 +69,7 @@ import           Cardano.Ledger.Shelley.Rules
 
 import           Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
-import           Cardano.Ledger.Conway.Governance -- (govActionIdToText)
+import           Cardano.Ledger.Conway.Governance (govActionIdToText)
 import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure, AlonzoUtxoPredFailure,
                    AlonzoUtxosPredFailure, AlonzoUtxowPredFailure (..))
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
@@ -1048,7 +1048,7 @@ instance ( ShelleyBasedEra era
             ]
   forMachine _ (Conway.GovernanceActionDoesNotExist govActionId) =
     mconcat [ "kind" .= String "GovernanceActionDoesNotExist"
-            , "credential" .= govActionIdToText govActionId
+            , "govActionId" .= govActionIdToText govActionId
             ]
 
 

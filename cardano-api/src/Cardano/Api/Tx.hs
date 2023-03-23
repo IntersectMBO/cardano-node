@@ -421,10 +421,10 @@ eraProtVerLow era =
 -- on disk witnesses for the cli's 'assemble' command.
 instance IsCardanoEra era => SerialiseAsCBOR (KeyWitness era) where
     serialiseToCBOR (ByronKeyWitness wit) =
-      CBOR.serialize' (CBOR.byronProtVer) wit
+      CBOR.serialize' CBOR.byronProtVer wit
 
     serialiseToCBOR (ShelleyKeyWitness era wit) =
-      CBOR.serialize' (eraProtVerLow  era) $
+      CBOR.serialize' (eraProtVerLow era) $
       encodeShelleyBasedKeyWitness wit
 
     serialiseToCBOR (ShelleyBootstrapWitness era wit) =
@@ -627,7 +627,7 @@ makeSignedTransaction witnesses (ShelleyTxBody era txbody
       => Ledger.EraCrypto ledgerera ~ StandardCrypto
       => Ledger.EraTx ledgerera
       => Tx era
-    shelleySignedTransaction = ShelleyTx era $ txCommon
+    shelleySignedTransaction = ShelleyTx era txCommon
 
     alonzoSignedTransaction
       :: forall ledgerera.
