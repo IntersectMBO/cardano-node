@@ -1,6 +1,6 @@
 # Changelog for cardano-node
 
-## vNext
+## 1.35.7 -- March 2023
 
 ### consensus changes
 
