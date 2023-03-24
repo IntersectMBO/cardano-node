@@ -12,11 +12,11 @@ repository cardano-haskell-packages
 
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
-index-state: 2023-03-06T05:24:58Z
+index-state: 2023-03-23T10:00:52Z
 
 index-state:
-  , hackage.haskell.org 2023-03-06T05:24:58Z
-  , cardano-haskell-packages 2023-03-21T10:00:52Z
+  , hackage.haskell.org 2023-03-23T10:00:52Z
+  , cardano-haskell-packages 2023-03-23T10:00:52Z
 
 packages:
     cardano-api
@@ -152,6 +152,7 @@ constraints:
   , cardano-ledger-core >= 0.1.1.2
   , cardano-ledger-pretty >= 0.1.1.2
   , hashable >= 1.4.0.0
+  , selective >= 0.7
   , text-short >= 0.1.5
   , Unique >= 0.4.7.8
   , tree-diff >= 0.2.2
@@ -190,6 +191,7 @@ allow-newer:
   , *:mtl
   , *:transformers
   , *:unix
+  , validation-selective:selective
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
