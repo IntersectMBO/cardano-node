@@ -9,6 +9,7 @@ module Cardano.CLI.Parsers
   ) where
 
 import           Cardano.CLI.Byron.Parsers (backwardsCompatibilityCommands, parseByronCommands)
+import           Cardano.CLI.Ping (parsePingCmd)
 import           Cardano.CLI.Render (customRenderHelp)
 import           Cardano.CLI.Run (ClientCommand (..))
 import           Cardano.CLI.Shelley.Parsers (parseShelleyCommands)
@@ -50,6 +51,7 @@ parseClientCommand =
     -- so we list it first.
     [ parseShelley
     , parseByron
+    , parsePing
     , parseDeprecatedShelleySubcommand
     , backwardsCompatibilityCommands
     , parseDisplayVersion opts
@@ -66,6 +68,9 @@ parseByron =
         "Byron specific commands"
          parseByronCommands
     ]
+
+parsePing :: Parser ClientCommand
+parsePing = CliPingCommand <$> parsePingCmd
 
 -- | Parse Shelley-related commands at the top level of the CLI.
 parseShelley :: Parser ClientCommand

@@ -13,7 +13,7 @@ module Cardano.Node.Tracing.Tracers.NodeToNode
    ) where
 
 import           Cardano.Logging
-import           Data.Aeson (Value (String), ToJSON (..), (.=))
+import           Data.Aeson (ToJSON (..), Value (String), (.=))
 import           Data.Proxy (Proxy (..))
 import           Data.Text (pack)
 import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))

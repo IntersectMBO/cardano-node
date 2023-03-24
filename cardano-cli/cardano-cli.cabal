@@ -91,6 +91,8 @@ library
                         Cardano.CLI.Shelley.Run.Read
                         Cardano.CLI.Shelley.Run.Validate
 
+                        Cardano.CLI.Ping
+
                         Cardano.CLI.TopHandler
 
   other-modules:        Paths_cardano_cli
@@ -100,35 +102,38 @@ library
                       , aeson-pretty      >= 0.8.5
                       , ansi-terminal
                       , attoparsec
+                      , base16-bytestring >= 1.0
                       , bech32            >= 1.1.0
                       , binary
                       , bytestring
-                      , base16-bytestring >= 1.0
                       , canonical-json
                       , cardano-api
                       , cardano-binary
-                      , cardano-git-rev
                       , cardano-crypto
                       , cardano-crypto-class ^>= 2.0
                       , cardano-crypto-wrapper ^>= 1.4
                       , cardano-data ^>= 0.1
+                      , cardano-git-rev
                       , cardano-ledger-alonzo ^>= 0.1
                       , cardano-ledger-byron ^>= 0.1
                       , cardano-ledger-conway
                       , cardano-ledger-core ^>= 0.1
+                      , cardano-ledger-shelley ^>= 0.1
                       , cardano-ledger-shelley-ma ^>= 0.1
+                      , cardano-ping
                       , cardano-prelude
                       , cardano-protocol-tpraos ^>= 0.1
                       , cardano-slotting ^>= 0.1
-                      , vector-map ^>= 0.1
-                      , contra-tracer
+                      , cardano-strict-containers ^>= 0.1
                       , cborg >= 0.2.4 && < 0.3
                       , containers
+                      , contra-tracer
                       , cryptonite
                       , deepseq
                       , directory
                       , filepath
                       , formatting
+                      , io-classes
                       , iproute
                       , mtl
                       , network
@@ -144,10 +149,9 @@ library
                       , prettyprinter
                       , prettyprinter-ansi-terminal
                       , random
-                      , cardano-ledger-shelley ^>= 0.1
                       , set-algebra ^>= 0.1
                       , split
-                      , cardano-strict-containers ^>= 0.1
+                      , strict-stm
                       , text
                       , time
                       , transformers
@@ -155,6 +159,7 @@ library
                       , unliftio-core
                       , utf8-string
                       , vector
+                      , vector-map ^>= 0.1
                       , yaml
 
 executable cardano-cli
@@ -177,9 +182,9 @@ test-suite cardano-cli-test
   type:                 exitcode-stdio-1.0
 
   build-depends:        aeson
-                      , bech32            >= 1.1.0
                       , base16-bytestring
                       , bytestring
+                      , bech32            >= 1.1.0
                       , cardano-api
                       , cardano-api:gen
                       , cardano-cli

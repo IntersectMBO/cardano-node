@@ -21,6 +21,7 @@ import qualified System.IO as IO
 import           Cardano.CLI.Byron.Commands (ByronCommand)
 import           Cardano.CLI.Byron.Run (ByronClientCmdError, renderByronClientCmdError,
                    runByronClientCommand)
+import           Cardano.CLI.Ping (PingCmd (..), PingClientCmdError (..), renderPingClientCmdError, runPingCmd)
 import           Cardano.CLI.Shelley.Commands (ShelleyCommand)
 import           Cardano.CLI.Shelley.Run (ShelleyClientCmdError, renderShelleyClientCmdError,
                    runShelleyClientCommand)
@@ -48,16 +49,20 @@ data ClientCommand =
     -- now-deprecated \"shelley\" subcommand.
   | DeprecatedShelleySubcommand ShelleyCommand
 
+  | CliPingCommand PingCmd
+
   | forall a. Help ParserPrefs (ParserInfo a)
   | DisplayVersion
 
 data ClientCommandErrors
   = ByronClientError ByronClientCmdError
   | ShelleyClientError ShelleyCommand ShelleyClientCmdError
+  | PingClientError PingClientCmdError
 
 runClientCommand :: ClientCommand -> ExceptT ClientCommandErrors IO ()
 runClientCommand (ByronCommand c) = firstExceptT ByronClientError $ runByronClientCommand c
 runClientCommand (ShelleyCommand c) = firstExceptT (ShelleyClientError c) $ runShelleyClientCommand c
+runClientCommand (CliPingCommand c) = firstExceptT PingClientError $ runPingCmd c
 runClientCommand (DeprecatedShelleySubcommand c) =
   firstExceptT (ShelleyClientError c)
     $ runShelleyClientCommandWithDeprecationWarning
@@ -70,6 +75,8 @@ renderClientCommandError (ByronClientError err) =
   renderByronClientCmdError err
 renderClientCommandError (ShelleyClientError cmd err) =
   renderShelleyClientCmdError cmd err
+renderClientCommandError (PingClientError err) =
+  renderPingClientCmdError err
 
 -- | Combine an 'ExceptT' that will write a warning message to @stderr@ with
 -- the provided 'ExceptT'.
