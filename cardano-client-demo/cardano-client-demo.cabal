@@ -111,3 +111,22 @@ executable stake-credential-history
                         ouroboros-consensus-shelley,
                         text,
                         transformers,
+
+executable plutus-events
+  import:               project-config
+  main-is:              PlutusEvents.hs
+  ghc-options:          -Wall
+                        -Wcompat
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wpartial-fields
+                        -Wredundant-constraints
+                        -Wunused-packages
+  build-depends:        cardano-api,
+                        optparse-applicative,
+                        text,
+                        transformers,
+                        base64-bytestring,
+                        bytestring,
+                        cardano-binary,
+                        cardano-ledger-alonzo,
