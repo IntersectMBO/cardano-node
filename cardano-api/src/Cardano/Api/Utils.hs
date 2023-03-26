@@ -19,7 +19,6 @@ module Cardano.Api.Utils
   , failEitherWith
   , noInlineMaybeToStrictMaybe
   , note
-  , parseFilePath
   , readFileBlocking
   , renderEra
   , runParsecParser
@@ -40,7 +39,6 @@ import           Data.Maybe.Strict
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           GHC.IO.Handle.FD (openFileBlocking)
-import qualified Options.Applicative as Opt
 import           System.FilePath ((</>))
 import           System.IO (IOMode (ReadMode), hClose)
 import qualified Text.Parsec as Parsec
@@ -93,15 +91,6 @@ note :: MonadFail m => String -> Maybe a -> m a
 note msg = \case
   Nothing -> fail msg
   Just a -> pure a
-
-parseFilePath :: String -> String -> Opt.Parser FilePath
-parseFilePath optname desc =
-  Opt.strOption
-    ( Opt.long optname
-    <> Opt.metavar "FILEPATH"
-    <> Opt.help desc
-    <> Opt.completer (Opt.bashCompleter "file")
-    )
 
 writeSecrets :: FilePath -> [Char] -> [Char] -> (a -> BS.ByteString) -> [a] -> IO ()
 writeSecrets outDir prefix suffix secretOp xs =

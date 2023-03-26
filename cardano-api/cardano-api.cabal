@@ -84,6 +84,7 @@ library
                         Cardano.Api.LedgerState
                         Cardano.Api.Modes
                         Cardano.Api.NetworkId
+                        Cardano.Api.Options
                         Cardano.Api.OperationalCertificate
                         Cardano.Api.Protocol
                         Cardano.Api.ProtocolParameters

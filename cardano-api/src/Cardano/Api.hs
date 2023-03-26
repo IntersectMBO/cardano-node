@@ -771,7 +771,6 @@ module Cardano.Api (
     chainPointToSlotNo,
     chainPointToHeaderHash,
     makeChainTip,
-    parseFilePath,
     writeSecrets,
 
     -- ** Cast functions
@@ -803,6 +802,14 @@ module Cardano.Api (
 
     -- ** CLI option parsing
     bounded,
+    fileOption,
+    inFileOption,
+    outFileOption,
+    parseFile,
+    parseFileIn,
+    parseFilePath,
+    parseFileOut,
+    parseDirectory,
   ) where
 
 import           Cardano.Api.Address
@@ -833,6 +840,7 @@ import           Cardano.Api.LedgerState
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.OperationalCertificate
+import           Cardano.Api.Options
 import           Cardano.Api.Protocol
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query hiding (LedgerState (..))
@@ -851,3 +859,4 @@ import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
 import           Cardano.Api.ValueParser
+
