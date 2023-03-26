@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -17,6 +18,7 @@ import qualified Cardano.Api as Api
 import           Prelude
 
 import           Data.Aeson (ToJSON (..), Value (..), (.=))
+import qualified Data.Aeson as Aeson
 import           Data.List (intercalate)
 import qualified Data.Map.Strict as Map
 import           Data.Text (Text, pack)
@@ -121,6 +123,27 @@ getStartupInfo nc (SomeConsensusProtocol whichP pForInfo) fp = do
 -- -- StartupInfo Tracer
 -- --------------------------------------------------------------------------------
 
+
+-- | A tuple of consensus and network versions.  It's used to derive a custom
+-- `FromJSON` and `ToJSON` instances.
+--
+data ConsensusNetworkVersionTuple a b = ConsensusNetworkVersionTuple a b
+
+-- TODO: provide JSON instance for `BlockNodeToClientVersion`
+instance Show blkVersion => ToJSON (ConsensusNetworkVersionTuple NodeToClientVersion blkVersion) where
+    toJSON (ConsensusNetworkVersionTuple nodeToClientVersion blockVersion) =
+      Aeson.object [ "nodeToClientVersion" .= toJSON nodeToClientVersion
+                   , "blockVersion" .= String (pack . show $ blockVersion)
+                   ]
+
+-- TODO: provide JSON instance for `BlockNodeToNodeVersion`
+instance Show blkVersion => ToJSON (ConsensusNetworkVersionTuple NodeToNodeVersion blkVersion) where
+    toJSON (ConsensusNetworkVersionTuple nodeToClientVersion blockVersion) =
+      Aeson.object [ "nodeToNodeVersion" .= toJSON nodeToClientVersion
+                   , "blockVersion" .= String (pack . show $ blockVersion)
+                   ]
+
+
 instance ( Show (BlockNodeToNodeVersion blk)
          , Show (BlockNodeToClientVersion blk)
          )
@@ -142,9 +165,9 @@ instance ( Show (BlockNodeToNodeVersion blk)
         case dtal of
           DMaximum ->
             [ "nodeToNodeVersions" .=
-                toJSON (map show . Map.assocs $ supportedNodeToNodeVersions)
+                toJSON (map (uncurry ConsensusNetworkVersionTuple) . Map.assocs $ supportedNodeToNodeVersions)
             , "nodeToClientVersions" .=
-                toJSON (map show . Map.assocs $ supportedNodeToClientVersions)
+                toJSON (map (uncurry ConsensusNetworkVersionTuple) . Map.assocs $ supportedNodeToClientVersions)
             ]
           _ ->
             [ "maxNodeToNodeVersion" .=
@@ -199,14 +222,15 @@ instance ( Show (BlockNodeToNodeVersion blk)
   forMachine _dtal P2PWarning =
       mconcat [ "kind" .= String "P2PWarning"
                , "message" .= String p2pWarningMessage ]
-  forMachine _dtal P2PWarningDevelopementNetworkProtocols =
-      mconcat [ "kind" .= String "P2PWarningDevelopementNetworkProtocols"
-               , "message" .= String p2pWarningDevelopmentNetworkProtocolsMessage ]
-  forMachine _ver (WarningDevelopmentNetworkProtocols ntnVersions ntcVersions) =
-      mconcat [ "kind" .= String "WarningDevelopmentNetworkProtocols"
+  forMachine _ver (WarningDevelopmentNodeToNodeVersions ntnVersions) =
+      mconcat [ "kind" .= String "WarningDevelopmentNodeToNodeVersions"
                , "message" .= String "enabled development network protocols"
-               , "nodeToNodeDevelopmentVersions" .= String (showT ntnVersions)
-               , "nodeToClientDevelopmentVersions" .= String (showT ntcVersions)
+               , "versions" .= String (showT ntnVersions)
+               ]
+  forMachine _ver (WarningDevelopmentNodeToClientVersions ntcVersions) =
+      mconcat [ "kind" .= String "WarningDevelopmentNodeToClientVersions"
+               , "message" .= String "enabled development network protocols"
+               , "versions" .= String (showT ntcVersions)
                ]
   forMachine _dtal (BINetwork BasicInfoNetwork {..}) =
       mconcat [ "kind" .= String "BasicInfoNetwork"
@@ -264,10 +288,10 @@ instance MetaTrace  (StartupTrace blk) where
     Namespace [] ["NetworkConfigLegacy"]
   namespaceFor P2PWarning {}  =
     Namespace [] ["P2PWarning"]
-  namespaceFor P2PWarningDevelopementNetworkProtocols {}  =
-    Namespace [] ["P2PWarningDevelopementNetworkProtocols"]
-  namespaceFor WarningDevelopmentNetworkProtocols {}  =
-    Namespace [] ["WarningDevelopmentNetworkProtocols"]
+  namespaceFor WarningDevelopmentNodeToNodeVersions {}  =
+    Namespace [] ["WarningDevelopmentNodeToNodeVersions"]
+  namespaceFor WarningDevelopmentNodeToClientVersions {}  =
+    Namespace [] ["WarningDevelopmentNodeToClientVersions"]
   namespaceFor BICommon {}  =
     Namespace [] ["Common"]
   namespaceFor BIShelley {}  =
@@ -282,8 +306,8 @@ instance MetaTrace  (StartupTrace blk) where
   severityFor (Namespace _ ["NetworkConfigUpdateError"]) _ = Just Error
   severityFor (Namespace _ ["NetworkConfigUpdateUnsupported"]) _ = Just Warning
   severityFor (Namespace _ ["P2PWarning"]) _ = Just Warning
-  severityFor (Namespace _ ["P2PWarningDevelopementNetworkProtocols"]) _ = Just Warning
-  severityFor (Namespace _ ["WarningDevelopmentNetworkProtocols"]) _ = Just Warning
+  severityFor (Namespace _ ["WarningDevelopmentNodeToNodeVersions"]) _ = Just Warning
+  severityFor (Namespace _ ["WarningDevelopmentNodeToClientVersions"]) _ = Just Warning
   severityFor _ _ = Just Info
 
   documentFor (Namespace [] ["Info"]) = Just
@@ -310,9 +334,9 @@ instance MetaTrace  (StartupTrace blk) where
     ""
   documentFor (Namespace [] ["P2PWarning"]) = Just
     ""
-  documentFor (Namespace [] ["P2PWarningDevelopementNetworkProtocols"]) = Just
+  documentFor (Namespace [] ["WarningDevelopmentNodeToNodeVersions"]) = Just
     ""
-  documentFor (Namespace [] ["WarningDevelopmentNetworkProtocols"]) = Just
+  documentFor (Namespace [] ["WarningDevelopmentNodeToClientVersions"]) = Just
     ""
   documentFor (Namespace [] ["Common"]) = Just $ mconcat
     [ "_biConfigPath_: is the path to the config in use. "
@@ -358,8 +382,8 @@ instance MetaTrace  (StartupTrace blk) where
     , Namespace [] ["NetworkConfig"]
     , Namespace [] ["NetworkConfigLegacy"]
     , Namespace [] ["P2PWarning"]
-    , Namespace [] ["P2PWarningDevelopementNetworkProtocols"]
-    , Namespace [] ["WarningDevelopmentNetworkProtocols"]
+    , Namespace [] ["WarningDevelopmentNodeToNodeVersions"]
+    , Namespace [] ["WarningDevelopmentNodeToClientVersions"]
     , Namespace [] ["Common"]
     , Namespace [] ["ShelleyBased"]
     , Namespace [] ["Byron"]
@@ -441,13 +465,12 @@ ppStartupInfoTrace NetworkConfigLegacy = p2pNetworkConfigLegacyMessage
 
 ppStartupInfoTrace P2PWarning = p2pWarningMessage
 
-ppStartupInfoTrace P2PWarningDevelopementNetworkProtocols =
-    p2pWarningDevelopmentNetworkProtocolsMessage
-
-ppStartupInfoTrace (WarningDevelopmentNetworkProtocols ntnVersions ntcVersions) =
-     "enabled development network protocols: "
+ppStartupInfoTrace (WarningDevelopmentNodeToNodeVersions ntnVersions) =
+     "enabled development node-to-node versions: "
   <> showT ntnVersions
-  <> " "
+
+ppStartupInfoTrace (WarningDevelopmentNodeToClientVersions ntcVersions) =
+     "enabled development node-to-client versions: "
   <> showT ntcVersions
 
 ppStartupInfoTrace (BINetwork BasicInfoNetwork {..}) =
@@ -477,12 +500,8 @@ ppStartupInfoTrace (BICommon BasicInfoCommon {..}) =
 
 p2pWarningMessage :: Text
 p2pWarningMessage =
-      "unsupported and unverified version of "
-   <> "`cardano-node` with peer-to-peer networking capabilities"
-
-p2pWarningDevelopmentNetworkProtocolsMessage :: Text
-p2pWarningDevelopmentNetworkProtocolsMessage =
-    "peer-to-peer requires TestEnableDevelopmentNetworkProtocols to be set to True"
+      "You are using an early release of peer-to-peer capabilities, "
+   <> "please report any issues."
 
 p2pNetworkConfigLegacyMessage :: Text
 p2pNetworkConfigLegacyMessage =

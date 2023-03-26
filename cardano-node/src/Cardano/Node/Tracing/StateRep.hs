@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -74,20 +73,14 @@ data AddedToCurrentChain
   = AddedToCurrentChain !EpochNo !SlotNo !SyncPercentage
   deriving (Generic, FromJSON, ToJSON)
 
-deriving instance Generic NPV.NodeToClientVersion
-deriving instance Generic NPV.NodeToNodeVersion
-
-instance FromJSON NPV.NodeToClientVersion
-instance FromJSON NPV.NodeToNodeVersion
-
 data StartupState
   = StartupSocketConfigError Text
   | StartupDBValidation
   | NetworkConfigUpdate
   | NetworkConfigUpdateError Text
   | P2PWarning
-  | P2PWarningDevelopementNetworkProtocols
-  | WarningDevelopmentNetworkProtocols [NPV.NodeToNodeVersion] [NPV.NodeToClientVersion]
+  | WarningDevelopmentNodeToNodeVersions [NPV.NodeToNodeVersion]
+  | WarningDevelopmentNodeToClientVersions [NPV.NodeToClientVersion]
   deriving (Generic, FromJSON, ToJSON)
 
 -- | The representation of the current state of node.
@@ -257,10 +250,11 @@ traceNodeStateStartup tr ev =
       traceWith tr $ NodeStartup $ NetworkConfigUpdateError e
     Startup.P2PWarning ->
       traceWith tr $ NodeStartup P2PWarning
-    Startup.P2PWarningDevelopementNetworkProtocols ->
-      traceWith tr $ NodeStartup P2PWarningDevelopementNetworkProtocols
-    Startup.WarningDevelopmentNetworkProtocols n2ns n2cs ->
-      traceWith tr $ NodeStartup $ WarningDevelopmentNetworkProtocols n2ns n2cs
+    Startup.WarningDevelopmentNodeToNodeVersions ntnVersions ->
+      traceWith tr $ NodeStartup (WarningDevelopmentNodeToNodeVersions ntnVersions)
+    Startup.WarningDevelopmentNodeToClientVersions ntcVersions ->
+      traceWith tr $ NodeStartup (WarningDevelopmentNodeToClientVersions ntcVersions)
+    -- TODO: why other constructors are not traced?
     _ -> return ()
 
 traceNodeStateShutdown

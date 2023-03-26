@@ -97,6 +97,17 @@ signal, `cardano-node` will re-read the file and restart all DNS resolution. Ple
 One can disable ledger peers by setting the `useLedgerAfterSlot` to a negative
 value.
 
+If you are synchronizing the network for the first time, please connect to IOG
+relays `relays-new.cardano-mainnet.iohkdev.io` by adding it to your local root
+peers and set `useLedgerAfterSlot` to `0` (to disable ledger peers).  You can
+use different relays as long as you trust them to provide you the honest chain.
+When the node is synced, you can remove it from the local root peers, you
+should also manually check if other stake pool relays are on the same chain as
+you are.  Once you enabled ledger peers by setting `useLedgerAfterSlot` the
+node will connect to relays registered on the chain, and churn through them by
+randomly picking new peers (weighted by stake distribution) and forgetting 20%
+least performing ones.
+
 #### The genesis.json file
 
 The genesis file is generated with the `cardano-cli` by reading a `genesis.spec.json` file, which is out of scope for this document.
