@@ -111,6 +111,7 @@ backend_nomad() {
     # - allocate-run-nomad-job-patch-namespace RUN-DIR NAME         (Nomad only)
     # - allocate-run-nomad-job-patch-nix       RUN-DIR              (Nomad only)
     # - allocate-run-nomad-job-patch-podman    RUN-DIR              (Nomad only)
+    # - deploy-genesis                         RUN-DIR
     # - describe-run                           RUN-DIR
     ############################################################################
     # * Functions in the backend "interface" must use `fatal` when errors!
@@ -212,11 +213,20 @@ backend_nomad() {
           msg $(blue "INFO: Run "\`$(green "vault login -address=\"https://vault.world.dev.cardano.org\" -method=github -path=github-employees; vault read -address=\"https://vault.world.dev.cardano.org\" -field secret_id nomad/creds/perf")$(blue "\` to obtain one"))
           read -p "Hit enter to continue ..."
         fi
-        # FIXME: This is a temporary solution to genesis distribution!
-        # You need to make the HTTP/webfs server publicly available!
-        if test -z "${NOMAD_GENESIS_TUNNEL:-}"
+        # Check all the AWS S3 envars needed for the HTTP PUT request
+        # Using same names as the AWS CLI
+        # https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html
+        if test -z "${AWS_ACCESS_KEY_ID:-}"
         then
-          fatal "Envar \"NOMAD_GENESIS_TUNNEL\" is not set"
+          msg $(red "ERROR: Amazon S3 \"AWS_ACCESS_KEY_ID\" envar is not set")
+          msg $(blue "INFO: Run "\`$(green "vault read -address=\"https://vault.world.dev.cardano.org\" -field access_key aws/creds/perf")$(blue "\` to obtain one"))
+          fatal "Can't run a cluster in the Nomad cloud without \"AWS_ACCESS_KEY_ID\" envar"
+        fi
+        if test -z "${AWS_SECRET_ACCESS_KEY:-}"
+        then
+          msg $(red "ERROR: Amazon S3 \"AWS_SECRET_ACCESS_KEY\" envar is not set")
+          msg $(blue "INFO: Run "\`$(green "vault read -address=\"https://vault.world.dev.cardano.org\" -field secret_key aws/creds/perf")$(blue "\` to obtain one"))
+          fatal "Can't run a cluster in the Nomad cloud without \"AWS_SECRET_ACCESS_KEY\" envar"
         fi
         # The Nomad job spec will contain links ("nix_installables" stanza) to
         # the Nix Flake outputs it needs inside the container, these are
@@ -273,9 +283,9 @@ backend_nomad() {
     # `nix_installables` stanza when using the "exec" driver and is mounted as a
     # local volume for "podman" that currently is only allowed to run locally.
     # - "genesis": it's too big for a "template" stanza so we are mounting it
-    # locally for "podman" and using an "artifact" stanza for "exec", the latter
-    # means creating an HTTP server an instructing Nomad where to download the
-    # file(s) from and where to place the file(s) inside the chroot/container.
+    # locally for "podman" and uploading it to a cloud storage to download using
+    # "nomad exec" when the "exec" task driver is used, the latter means
+    # creating an HTTP server for local runs and using Amazon S2 for cloud runs.
     allocate-run )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
@@ -309,7 +319,7 @@ backend_nomad() {
       ## - Job Name
       ### Must match `^[a-zA-Z0-9-]{1,128}$)` or it won't be possible to use it
       ### as namespace.: "invalid name "2023-02-10-06.34.f178b.ci-test-bage.nom"".
-      local nomad_job_name=$(basename "${dir}" | tr '.' '-')
+      local nomad_job_name=$(basename "${dir}")
       backend_nomad allocate-run-nomad-job-patch-name        "${dir}" \
         "${nomad_job_name}"
       ## - Job Namespace
@@ -330,20 +340,8 @@ backend_nomad() {
       then
         backend_nomad allocate-run-nomad-job-patch-podman    "${dir}"
       fi
-      ## - Patching the genesis artifact location
-      if test "${nomad_environment}" = "cloud"
-      then
-        # FIXME: Testing hack!
-        backend_nomad allocate-run-genesis                   "${dir}" \
-          "${NOMAD_GENESIS_TUNNEL}"
-      elif test "${nomad_environment}" = "local"
-      then
-        backend_nomad allocate-run-genesis                   "${dir}" \
-          "http://127.0.0.1:12000"
-      fi
 
-      # TODO/FIXME: Should go in `start` ?
-      backend_nomad start-nomad "${dir}"
+      backend_nomad start-nomad-job "${dir}"
     ;;
 
     allocate-run-directory-nomad )
@@ -422,35 +420,17 @@ backend_nomad() {
     allocate-run-directory-genesis )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
-      # Nomad jobs when `exec` driver is configured run as `nobody:nobody`
-      # Every job is creating an HTTP server to download a .tar un untar it
-      # with the permissions/ownership we want!
-      mv "${dir}"/genesis "${dir}"/genesis.bak
-      mkdir "${dir}"/genesis
-      mkdir "${dir}"/genesis/byron
-      mkdir "${dir}"/genesis/utxo-keys
-      mkdir "${dir}"/genesis/node-keys
-      cp -a "${dir}"/genesis.bak/genesis.alonzo.json \
-            "${dir}"/genesis/genesis.alonzo.json
-      cp -a "${dir}"/genesis.bak/genesis-shelley.json \
-            "${dir}"/genesis/genesis-shelley.json
-      cp -a "${dir}"/genesis.bak/byron/genesis.json \
-            "${dir}"/genesis/byron/genesis.json
-      cp -a \
-        "${dir}"/genesis.bak/utxo-keys/*.skey \
-        "${dir}"/genesis/utxo-keys/
-      cp -a \
-        "${dir}"/genesis.bak/utxo-keys/*.vkey \
-        "${dir}"/genesis/utxo-keys/
-      cp -a \
-        "${dir}"/genesis.bak/node-keys/*.skey \
-        "${dir}"/genesis/node-keys/
-      cp -a \
-        "${dir}"/genesis.bak/node-keys/*.vkey \
-        "${dir}"/genesis/node-keys/
-      cp -a \
-        "${dir}"/genesis.bak/node-keys/*.opcert \
-        "${dir}"/genesis/node-keys/
+      local nomad_environment=$(envjqr 'nomad_environment')
+      local nomad_task_driver=$(envjqr   'nomad_task_driver')
+
+      # Make sure the "genesis" dir is there when the Nomad job is started and
+      # the podman task driver is used (always local, not used for cloud)
+      # because this directory is going to be mounted
+      if test "${nomad_environment}" = "local" && test "${nomad_task_driver}" = "podman"
+      then
+        mkdir "${dir}"/genesis
+        mkdir "${dir}"/genesis/utxo-keys
+      fi
     ;;
 
     allocate-run-directory-generator )
@@ -577,14 +557,190 @@ backend_nomad() {
       nomad_job_file_create_mounts "${dir}"
     ;;
 
-    allocate-run-genesis )
-      local usage="USAGE: wb backend $op RUN-DIR URI"
+    deploy-genesis )
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+      local nomad_environment=$(envjqr 'nomad_environment')
+      local nomad_task_driver=$(envjqr 'nomad_task_driver')
+      local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
+
+      # Nomad jobs when `exec` driver is configured run as `nobody:nobody`
+      # Every job is creating an HTTP server to download a .tar un untar it
+      # with the permissions/ownership we want!
+      mv "${dir}"/genesis "${dir}"/genesis.bak
+      mkdir "${dir}"/genesis
+      mkdir "${dir}"/genesis/byron
+      mkdir "${dir}"/genesis/utxo-keys
+      mkdir "${dir}"/genesis/node-keys
+      cp -a "${dir}"/genesis.bak/genesis.alonzo.json \
+            "${dir}"/genesis/genesis.alonzo.json
+      cp -a "${dir}"/genesis.bak/genesis.conway.json \
+            "${dir}"/genesis/genesis.conway.json
+      cp -a "${dir}"/genesis.bak/genesis-shelley.json \
+            "${dir}"/genesis/genesis-shelley.json
+      cp -a "${dir}"/genesis.bak/byron/genesis.json \
+            "${dir}"/genesis/byron/genesis.json
+      cp -a \
+        "${dir}"/genesis.bak/utxo-keys/*.skey \
+        "${dir}"/genesis/utxo-keys/
+      cp -a \
+        "${dir}"/genesis.bak/utxo-keys/*.vkey \
+        "${dir}"/genesis/utxo-keys/
+      cp -a \
+        "${dir}"/genesis.bak/node-keys/*.skey \
+        "${dir}"/genesis/node-keys/
+      cp -a \
+        "${dir}"/genesis.bak/node-keys/*.vkey \
+        "${dir}"/genesis/node-keys/
+      cp -a \
+        "${dir}"/genesis.bak/node-keys/*.opcert \
+        "${dir}"/genesis/node-keys/
+
+      # The podman driver should already have the genesis dir mounted!
+      if test "${nomad_task_driver}" = "exec"
+      then
+        if test "${nomad_environment}" = "local"
+        then
+          backend_nomad deploy-genesis-local "${dir}"
+        elif test "${nomad_environment}" = "cloud"
+        then
+          backend_nomad deploy-genesis-cloud "${dir}"
+        fi
+      fi
+    ;;
+
+    deploy-genesis-local )
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+      local nomad_task_driver=$(envjqr 'nomad_task_driver')
+      local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
+      local server_name=$(envjqr 'nomad_server_name')
+      local client_name=$(envjqr 'nomad_client_name')
+
+      # Add genesis to HTTP cache server
+      local nomad_agents_were_already_running=$(envjqr 'nomad_agents_were_already_running')
+      if ! backend_nomad webfs is-running
+      then
+        if ! backend_nomad webfs start
+        then
+          if test "${nomad_agents_were_already_running}" = "false"
+          then
+            backend_nomad nomad agents stop \
+              "${server_name}" "${client_name}" "${nomad_task_driver}"
+          fi
+          fatal "Failed to start HTTP server"
+        fi
+      fi
+      if ! backend_nomad webfs add-genesis-dir "${dir}"/genesis "${nomad_job_name}"
+      then
+        if test "${nomad_agents_were_already_running}" = "false"
+        then
+          backend_nomad nomad agents stop \
+            "${server_name}" "${client_name}" "${nomad_task_driver}"
+        fi
+        fatal "Failed to add genesis to HTTP server"
+      fi
+      backend_nomad deploy-genesis-wget "${dir}" \
+        "http://127.0.0.1:12000/${nomad_job_name}.tar.zst"
+    ;;
+
+    deploy-genesis-cloud )
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+      local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
+
+      local genesis_file_name="${nomad_job_name}.tar.zst"
+      find "${dir}"/genesis -type f -printf "%P\n"    \
+        | tar --create --zstd                         \
+          --file="${dir}"/"${genesis_file_name}"      \
+          --owner=65534 --group=65534 --mode="u=rwx"  \
+          --directory="${dir}"/genesis --files-from=-
+
+      local s3_region="eu-central-1"
+      local s3_host="s3.${s3_region}.amazonaws.com";
+      local s3_bucket_name="iog-cardano-perf";
+      local s3_access_key="${AWS_ACCESS_KEY_ID}";
+      local s3_access_key_secret="${AWS_SECRET_ACCESS_KEY}"
+      local s3_storage_class="STANDARD"
+      local return_code=0
+      aws s3 cp                                                               \
+        "${dir}"/"${genesis_file_name}"                                       \
+        s3://"${s3_bucket_name}"                                              \
+        --content-type "application/zstd"                                     \
+        --region "${s3_region}"                                               \
+        --expected-size "$(stat --printf=%s "${dir}"/"${genesis_file_name}")" \
+      >/dev/null                                                              \
+      || return_code="$?"
+      # https://docs.aws.amazon.com/cli/latest/userguide/cli-services-s3-commands.html#using-s3-commands-managing-objects-copy
+      # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3/cp.html
+      if test "${return_code}" = "0"
+      then
+        # A server response was obtained.
+        msg "File \"${genesis_file_name}\" uploaded"
+      else
+        fatal "Failed to upload ${genesis_file_name}"
+      fi
+      backend_nomad deploy-genesis-wget "${dir}" \
+        "https://${s3_bucket_name}.${s3_host}/${genesis_file_name}"
+    ;;
+
+    deploy-genesis-wget )
+      local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
       local uri=${1:?$usage}; shift
       local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
-      # TODO/FIXME: Without the trailing "/"
-      # Patch the artifact source
-      jq ".job[\"${nomad_job_name}\"][\"meta\"][\"GENESIS_HTTP_ARTIFACT_SOURCE\"] = \"${uri}\"" "${dir}"/nomad/nomad-job.json | sponge "${dir}"/nomad/nomad-job.json
+
+      # Upload and unpack all "genesis" files in parallel!
+      local nodes=($(jq_tolist keys "$dir"/node-specs.json))
+      local wget_path="$(jq -r ".containerPkgs.wget.\"nix-store-path\"" "${dir}"/container-specs.json)"
+      local uploads_array=()
+      for node in ${nodes[*]}
+      do
+        backend_nomad task-exec "${dir}" "${node}"               \
+          "${wget_path}"/bin/wget                                \
+            --output-document=/local/run/current/genesis.tar.zst \
+            "${uri}"                                             \
+        > /dev/null                                              \
+        &
+        uploads_array+=("$!")
+      done
+      # Wait and check!
+      if test -n "${uploads_array}"
+      then
+        if ! wait "${uploads_array[@]}"
+        then
+          fatal "Failed to upload some genesis files"
+        else
+          # Unpack!
+          local coreutils_path="$(jq -r ".containerPkgs.coreutils.\"nix-store-path\"" "${dir}"/container-specs.json)"
+          local tar_path="$(jq -r ".containerPkgs.gnutar.\"nix-store-path\"" "${dir}"/container-specs.json)"
+          local zstd_path="$(jq -r ".containerPkgs.zstd.\"nix-store-path\"" "${dir}"/container-specs.json)"
+          local unpacks_array=()
+          for node in ${nodes[*]}
+          do
+            backend_nomad task-exec "${dir}" "${node}"         \
+              ${tar_path}/bin/tar --extract                    \
+                --use-compress-program="${zstd_path}"/bin/zstd \
+                --file=/local/run/current/genesis.tar.zst      \
+                --one-top-level=/local/run/current/genesis     \
+                --same-permissions                             \
+                --no-same-owner                                \
+                --numeric-owner                                \
+                --owner="$(${coreutils_path}/bin/id --user)"   \
+                --group="$(${coreutils_path}/bin/id --group)"  \
+            &
+            unpacks_array+=("$!")
+          done
+          # Wait and check!
+          if test -n "${unpacks_array}"
+          then
+            if ! wait "${unpacks_array[@]}"
+            then
+              fatal "Failed to unpack some genesis files"
+            fi
+          fi
+        fi
+      fi
     ;;
 
     describe-run )
@@ -596,8 +752,8 @@ backend_nomad() {
 
     ############################################################################
     # Start/stop cluster functions:
-    # - start-nomad     RUN-DIR                                     (Nomad only)
-    # - stop-nomad      RUN-DIR                                     (Nomad only)
+    # - start-nomad-job RUN-DIR                                     (Nomad only)
+    # - stop-nomad-job  RUN-DIR                                     (Nomad only)
     # - is-running      RUN-DIR
     # - start           RUN-DIR
     # - stop-cluster    RUN-DIR
@@ -605,7 +761,7 @@ backend_nomad() {
     ############################################################################
     # * Functions in the backend "interface" must use `fatal` when errors!
 
-    start-nomad )
+    start-nomad-job )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
 
@@ -642,7 +798,7 @@ backend_nomad() {
       fi
 
       # TODO: Genesis when "cloud"!
-      if true || test "${nomad_environment}" != "cloud"
+      if test "${nomad_environment}" != "cloud"
       then
         # Links to Nomad agents logs.
         ln -s "${server_state_dir}"/nomad.log "$dir"/nomad/server-"${server_name}".log
@@ -651,28 +807,6 @@ backend_nomad() {
         ln -s "${client_state_dir}"/nomad.log "$dir"/nomad/client-"${client_name}".log
         ln -s "${client_state_dir}"/stdout "$dir"/nomad/client-"${client_name}".stdout
         ln -s "${client_state_dir}"/stderr "$dir"/nomad/client-"${client_name}".stderr
-        # Add genesis to HTTP cache server
-        if ! backend_nomad webfs is-running
-        then
-          if ! backend_nomad webfs start
-          then
-            if test "$nomad_agents_were_already_running" = "false"
-            then
-              backend_nomad nomad agents stop \
-                "${server_name}" "${client_name}" "${nomad_task_driver}"
-            fi
-            fatal "Failed to start HTTP server"
-          fi
-        fi
-        if ! backend_nomad webfs add-genesis-dir "${dir}"/genesis "${nomad_job_name}"
-        then
-          if test "$nomad_agents_were_already_running" = "false"
-          then
-            backend_nomad nomad agents stop \
-              "${server_name}" "${client_name}" "${nomad_task_driver}"
-          fi
-          fatal "Failed to add genesis to HTTP server"
-        fi
       fi
 
       msg "Starting nomad job ..."
@@ -826,7 +960,7 @@ backend_nomad() {
          }"
     ;;
 
-    stop-nomad )
+    stop-nomad-job )
       local dir=${1:?$usage}; shift
       local nomad_task_driver=$(envjqr                 'nomad_task_driver')
       local server_name=$(envjqr                       'nomad_server_name')
@@ -888,7 +1022,7 @@ backend_nomad() {
       then
         if ! backend_nomad start-tracers "${dir}"
         then
-          backend_nomad stop-nomad "${dir}"
+          backend_nomad stop-nomad-job "${dir}"
         fi
       fi
     ;;
@@ -1289,7 +1423,7 @@ backend_nomad() {
       node_alloc_id=$(backend_nomad nomad job task-name-allocation-id \
         "$dir/nomad/nomad-job.json"                                   \
         "${node}")
-      while ! nomad alloc fs -stat -H "${node_alloc_id}" "${socket_path_absolute}" | grep --quiet "application/octet-stream"
+      while ! nomad alloc fs -stat -H "${node_alloc_id}" "${socket_path_absolute}" 2>/dev/null | grep --quiet "application/octet-stream"
       do printf "%3d" $i; sleep 1
         i=$((i+1))
         if test "${i}" -ge "${patience}"
@@ -1880,14 +2014,14 @@ backend_nomad() {
 
       local task_alloc_id
       task_alloc_id=$(backend_nomad nomad job task-name-allocation-id \
-        "$dir/nomad/nomad-job.json"                                   \
+        "${dir}/nomad/nomad-job.json"                                 \
         "${task}")
       # If you run it without `-i=false -t=false` supervisord starts an
       # interactive shell (output "supervisor>") and breaks the whole script
       # expecting you to hit enter on every call!
-      nomad alloc exec                  \
-        -i=false -t=false               \
-        --task "$task" "$task_alloc_id" \
+      nomad alloc exec                      \
+        -i=false -t=false                   \
+        --task "${task}" "${task_alloc_id}" \
         "$@"
     ;;
 
@@ -1996,7 +2130,7 @@ backend_nomad() {
               if ! job_run_output=$(nomad job run -detach "${job_file}")
               then
                 red "FATAL: Failed to post job (\"${job_file}\") to Nomad server\n"
-                yellow "Try `wb backend pass nomad all nuke` if not using cloud Nomad\n"
+                yellow "Try \`wb backend pass nomad all nuke\` if not using cloud Nomad\n"
                 return 1
               fi
               # Grab the "evaluation" ID from stdout and start monitoring.
@@ -3384,15 +3518,15 @@ EOF
           local pid_file=$(backend_nomad webfs pid-filepath)
           mkdir -p "${document_root}"
           msg "Starting HTTP server ..."
-          # FIXME: "127.0.0.1" instead of "0.0.0.0" ?
+          # Binding to 127.0.0.1 because it's only used for local runs
           webfsd                            \
-            -4 -p 12000 -i 0.0.0.0          \
+            -4 -p 12000 -i 127.0.0.1        \
             -r "${document_root}"           \
             -l "${state_dir}"/webfsd.log    \
              > "${state_dir}"/webfsd.stdout \
             2> "${state_dir}"/webfsd.stderr \
             &
-            pid_number="$!"
+            local pid_number="$!"
             echo "${pid_number}" > "${pid_file}"
         ;;
         stop )

@@ -46,9 +46,9 @@ let
       src = pkgs.fetchFromGitHub { # "github:input-output-hk/nomad/release/1.4.3"
         owner = "input-output-hk";
         repo = pname;
-        rev = "release/${version}";
-        # nix-prefetch-url --unpack https://github.com/input-output-hk/nomad/archive/release/1.4.3.tar.gz
-        sha256 = "0z4bdx0nx6460q9r032l8ghx337h3fpi6cx8wh7i3qllpyi51a2k";
+        rev = "2b8a93390"; # Use to be "release/${version}" but it changes.
+        # nix-prefetch-url --unpack https://github.com/input-output-hk/nomad/archive/2b8a93390/1.4.3.tar.gz
+        sha256 = "0l2sfhpg0p5mjdbipib7q63wlsrczr2fkq9xi641vhgxsjmprvwm";
       };
       # error: either `vendorHash` or `vendorSha256` is required
       # https://discourse.nixos.org/t/buildgomodule-how-to-get-vendorsha256/9317
@@ -79,9 +79,13 @@ let
       else [ nomad-sre ]
     )
     ++
-    # Network tools to be able to use bridge networking and the HTTP server
-    # to upload/download the genesis tar file.
-    [ pkgs.cni-plugins pkgs.webfs ]
+    [
+      # Network tools to be able to use bridge networking and the HTTP server
+      # to upload/download the genesis tar file.
+      pkgs.cni-plugins pkgs.webfs
+      # Amazon S3 HTTP to upload the genesis.
+      pkgs.awscli
+    ]
   ;
 
   # Backend-specific Nix bits:
@@ -137,7 +141,13 @@ let
             zstd = rec {
               nix-store-path  = pkgs.zstd;
               flake-reference = "github:input-output-hk/cardano-node";
-              flake-output = "legacyPackages.x86_64-linux.gnutar";
+              flake-output = "legacyPackages.x86_64-linux.zstd";
+              installable = "${flake-reference}/${gitrev}#${flake-output}";
+            };
+            wget = rec {
+              nix-store-path  = pkgs.wget;
+              flake-reference = "github:input-output-hk/cardano-node";
+              flake-output = "legacyPackages.x86_64-linux.wget";
               installable = "${flake-reference}/${gitrev}#${flake-output}";
             };
             supervisor = rec {
