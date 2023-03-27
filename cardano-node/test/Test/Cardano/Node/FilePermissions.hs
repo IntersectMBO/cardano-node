@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 {-# OPTIONS_GHC -Wno-unused-imports #-}
@@ -59,9 +60,9 @@ prop_createVRFFileWithOwnerPermissions =
     fResult <- liftIO . runExceptT $ checkVRFFilePermissions vrfSign
     case fResult of
       Left err -> failWith Nothing $ show err
-      Right () -> liftIO (removeFile vrfSign) >> success
+      Right () -> liftIO (removeFile (unFile vrfSign)) >> success
 
-createFileWithOwnerPermissions :: HasTextEnvelope a => FilePath -> a -> PropertyT IO ()
+createFileWithOwnerPermissions :: HasTextEnvelope a => File 'Out -> a -> PropertyT IO ()
 createFileWithOwnerPermissions targetfp value = do
   result <- liftIO $ writeLazyByteStringFileWithOwnerPermissions targetfp $ textEnvelopeToJSON Nothing value
   case result of
@@ -77,10 +78,10 @@ prop_sanityCheck_checkVRFFilePermissions =
   property $ do
     -- Correct case: only owner has read permission
     let correctPermission = ownerReadMode
-        vrfPrivateKeyCorrect = "vrf-private-key-correct"
+        vrfPrivateKeyCorrect = File "vrf-private-key-correct"
     correctResult <-
-      liftIO $ bracket  (createFile vrfPrivateKeyCorrect correctPermission)
-                        (\h -> closeFd h >> removeFile vrfPrivateKeyCorrect)
+      liftIO $ bracket  (createFile (unFile vrfPrivateKeyCorrect) correctPermission)
+                        (\h -> closeFd h >> removeFile (unFile vrfPrivateKeyCorrect))
                         (const . liftIO . runExceptT $ checkVRFFilePermissions vrfPrivateKeyCorrect)
     case correctResult of
       Left err ->
@@ -89,7 +90,7 @@ prop_sanityCheck_checkVRFFilePermissions =
       Right () -> success
 
     -- Error case: owner has read permissions & various combinations of other permissions
-    let vrfPrivateKeyOther = "vrf-private-key-other"
+    let vrfPrivateKeyOther = File "vrf-private-key-other"
     oPermissions <- forAll genOtherPermissions
     classify "VRF File has one other permission" $ length oPermissions == 1
     classify "VRF File has two other permissions" $ length oPermissions == 2
@@ -98,10 +99,10 @@ prop_sanityCheck_checkVRFFilePermissions =
       -- Creating a file with other permissions appears to not work
       -- it instead creates a file with owner permissions. Therefore we must
       -- create a file with no permissions and then set other permissions
-      liftIO $ bracket  (do h <- createFile vrfPrivateKeyOther nullFileMode
-                            setFileMode vrfPrivateKeyOther $ createPermissions oPermissions
+      liftIO $ bracket  (do h <- createFile (unFile vrfPrivateKeyOther) nullFileMode
+                            setFileMode (unFile vrfPrivateKeyOther) $ createPermissions oPermissions
                             return h)
-                        (\h -> closeFd h >> removeFile vrfPrivateKeyOther)
+                        (\h -> closeFd h >> removeFile (unFile vrfPrivateKeyOther))
                         (const .liftIO . runExceptT $ checkVRFFilePermissions vrfPrivateKeyOther)
     case otherResult of
       Left (OtherPermissionsExist _) -> success
@@ -112,7 +113,7 @@ prop_sanityCheck_checkVRFFilePermissions =
         failWith Nothing "This should have failed as Other permissions exist"
 
     -- Error case: owner has read permissions & various combinations of group permissions
-    let vrfPrivateKeyGroup = "vrf-private-key-group"
+    let vrfPrivateKeyGroup = File "vrf-private-key-group"
     gPermissions <- forAll genGroupPermissions
     classify "VRF File has one group permission" $ length gPermissions == 1
     classify "VRF File has two group permissions" $ length gPermissions == 2
@@ -121,10 +122,10 @@ prop_sanityCheck_checkVRFFilePermissions =
       -- Creating a file with group permissions appears to not work
       -- it instead creates a file with owner permissions. Therefore we must
       -- create a file with no permissions and then set group permissions.
-      liftIO $ bracket  (do h <- createFile vrfPrivateKeyGroup nullFileMode
-                            setFileMode vrfPrivateKeyGroup $ createPermissions gPermissions
+      liftIO $ bracket  (do h <- createFile (unFile vrfPrivateKeyGroup) nullFileMode
+                            setFileMode (unFile vrfPrivateKeyGroup) $ createPermissions gPermissions
                             return h)
-                        (\h -> closeFd h >> removeFile vrfPrivateKeyGroup)
+                        (\h -> closeFd h >> removeFile (unFile vrfPrivateKeyGroup))
                         (const . liftIO . runExceptT $ checkVRFFilePermissions vrfPrivateKeyGroup)
     case groupResult of
       Left (GroupPermissionsExist _) -> success

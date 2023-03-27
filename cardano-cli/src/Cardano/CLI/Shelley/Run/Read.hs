@@ -514,8 +514,9 @@ readCddlTx = readFileOrPipeTextEnvelopeCddlAnyOf teTypes
 
 newtype CddlWitness = CddlWitness { unCddlWitness :: InAnyCardanoEra KeyWitness}
 
-readFileTxKeyWitness :: FilePath
-                -> IO (Either CddlWitnessError (InAnyCardanoEra KeyWitness))
+readFileTxKeyWitness
+  :: File 'In
+  -> IO (Either CddlWitnessError (InAnyCardanoEra KeyWitness))
 readFileTxKeyWitness fp = do
   file <- fileOrPipe fp
   eWitness <- readFileInAnyCardanoEra AsKeyWitness file
@@ -545,18 +546,20 @@ acceptKeyWitnessCDDLSerialisation
   :: FileError TextEnvelopeError
   -> IO (Either CddlWitnessError CddlWitness)
 acceptKeyWitnessCDDLSerialisation err =
+  -- TODO The fp from FileError is not annotated with direction so this isn't typesafe.
+  -- We should fix this in the future
   case err of
     e@(FileError fp (TextEnvelopeDecodeError _)) ->
-      first (CddlWitnessErrorTextEnv e) <$> readCddlWitness fp
+      first (CddlWitnessErrorTextEnv e) <$> readCddlWitness (File fp)
     e@(FileError fp (TextEnvelopeAesonDecodeError _)) ->
-      first (CddlWitnessErrorTextEnv e) <$> readCddlWitness fp
+      first (CddlWitnessErrorTextEnv e) <$> readCddlWitness (File fp)
     e@(FileError fp (TextEnvelopeTypeError _ _)) ->
-      first (CddlWitnessErrorTextEnv e) <$> readCddlWitness fp
+      first (CddlWitnessErrorTextEnv e) <$> readCddlWitness (File fp)
     e@FileErrorTempFile{} -> return . Left $ CddlWitnessIOError e
     e@FileIOError{} -> return . Left $ CddlWitnessIOError e
 
 readCddlWitness
-  :: FilePath
+  :: File 'In
   -> IO (Either (FileError TextEnvelopeCddlError) CddlWitness)
 readCddlWitness fp = do
   readFileTextEnvelopeCddlAnyOf teTypes fp
@@ -693,13 +696,13 @@ readWitnessSigningData (KeyWitnessSigningData (SigningKeyFile skFile) mbByronAdd
 
 data RequiredSignerError
   = RequiredSignerErrorFile (FileError InputDecodeError)
-  | RequiredSignerErrorByronKey SigningKeyFile
+  | RequiredSignerErrorByronKey (SigningKeyFile 'In)
   deriving Show
 
 instance Error RequiredSignerError where
   displayError (RequiredSignerErrorFile e) = displayError e
   displayError (RequiredSignerErrorByronKey (SigningKeyFile byronSkeyfile)) =
-    "Byron witnesses cannot be used for required signers: " <> byronSkeyfile
+    "Byron witnesses cannot be used for required signers: " <> unFile byronSkeyfile
 
 readRequiredSigner :: RequiredSigner -> IO (Either RequiredSignerError (Hash PaymentKey))
 readRequiredSigner (RequiredSignerHash h) = return $ Right h
@@ -764,8 +767,8 @@ data FileOrPipe = FileOrPipe FilePath (IORef (Maybe LBS.ByteString))
 instance Show FileOrPipe where
     show (FileOrPipe fp _) = show fp
 
-fileOrPipe :: FilePath -> IO FileOrPipe
-fileOrPipe fp = FileOrPipe fp <$> newIORef Nothing
+fileOrPipe :: File 'In -> IO FileOrPipe
+fileOrPipe fp = FileOrPipe (unFile fp) <$> newIORef Nothing
 
 -- | Get the path backing a FileOrPipe. This should primarily be used when
 -- generating error messages for a user. A user should not call directly

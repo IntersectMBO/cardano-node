@@ -235,7 +235,7 @@ instance FromJSON (Legacy NetworkTopology) where
 readTopologyFile :: Tracer IO (StartupTrace blk)
                  -> NodeConfiguration -> IO (Either Text NetworkTopology)
 readTopologyFile tr nc = do
-  eBs <- Exception.try $ BS.readFile (unTopology $ ncTopologyFile nc)
+  eBs <- Exception.try $ BS.readFile (unFile . unTopologyFile $ ncTopologyFile nc)
 
   case eBs of
     Left e -> return . Left $ handler e

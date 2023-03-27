@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+
 module Cardano.CLI.Shelley.Run.TextView
   ( ShelleyTextViewFileError(..)
   , renderShelleyTextViewFileError
@@ -35,10 +37,10 @@ runTextViewCmd cmd =
   case cmd of
     TextViewInfo fpath mOutfile -> runTextViewInfo fpath mOutfile
 
-runTextViewInfo :: FilePath -> Maybe OutputFile -> ExceptT ShelleyTextViewFileError IO ()
+runTextViewInfo :: File 'In -> Maybe (File 'Out) -> ExceptT ShelleyTextViewFileError IO ()
 runTextViewInfo fpath mOutFile = do
   tv <- firstExceptT TextViewReadFileError $ newExceptT (readTextEnvelopeFromFile fpath)
   let lbCBOR = LBS.fromStrict (textEnvelopeRawCBOR tv)
   case mOutFile of
-    Just (OutputFile oFpath) -> liftIO $ LBS.writeFile oFpath lbCBOR
+    Just oFpath -> liftIO $ LBS.writeFile (unFile oFpath) lbCBOR
     Nothing -> firstExceptT TextViewCBORPrettyPrintError $ pPrintCBOR lbCBOR

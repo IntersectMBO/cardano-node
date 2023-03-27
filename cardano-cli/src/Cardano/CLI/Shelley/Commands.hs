@@ -1,4 +1,8 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | Shelley CLI command types
@@ -29,7 +33,6 @@ module Cardano.CLI.Shelley.Commands
   , TxByronWitnessCount (..)
   , SomeKeyFile (..)
   , OpCertCounterFile (..)
-  , OutputFile (..)
   , ProtocolParamsFile (..)
   , WitnessFile (..)
   , TxFile (..)
@@ -56,6 +59,8 @@ import           Cardano.CLI.Types
 
 import           Cardano.Chain.Common (BlockCount)
 import           Cardano.Ledger.Shelley.TxBody (MIRPot)
+import           Data.String (IsString)
+
 --
 -- Shelley CLI command data types
 --
@@ -89,14 +94,14 @@ renderShelleyCommand sc =
     TextViewCmd cmd -> renderTextViewCmd cmd
 
 data AddressCmd
-  = AddressKeyGen AddressKeyType VerificationKeyFile SigningKeyFile
-  | AddressKeyHash VerificationKeyTextOrFile (Maybe OutputFile)
+  = AddressKeyGen AddressKeyType (VerificationKeyFile 'Out) (SigningKeyFile 'Out)
+  | AddressKeyHash VerificationKeyTextOrFile (Maybe (File 'Out))
   | AddressBuild
       PaymentVerifier
       (Maybe StakeIdentifier)
       NetworkId
-      (Maybe OutputFile)
-  | AddressInfo Text (Maybe OutputFile)
+      (Maybe (File 'Out))
+  | AddressInfo Text (Maybe (File 'Out))
   deriving Show
 
 
@@ -109,15 +114,15 @@ renderAddressCmd cmd =
     AddressInfo {} -> "address info"
 
 data StakeAddressCmd
-  = StakeAddressKeyGen VerificationKeyFile SigningKeyFile
-  | StakeAddressKeyHash (VerificationKeyOrFile StakeKey) (Maybe OutputFile)
-  | StakeAddressBuild StakeVerifier NetworkId (Maybe OutputFile)
-  | StakeRegistrationCert StakeIdentifier OutputFile
+  = StakeAddressKeyGen (VerificationKeyFile 'Out) (SigningKeyFile 'Out)
+  | StakeAddressKeyHash (VerificationKeyOrFile StakeKey) (Maybe (File 'Out))
+  | StakeAddressBuild StakeVerifier NetworkId (Maybe (File 'Out))
+  | StakeRegistrationCert StakeIdentifier (File 'Out)
   | StakeCredentialDelegationCert
       StakeIdentifier
       (VerificationKeyOrHashOrFile StakePoolKey)
-      OutputFile
-  | StakeCredentialDeRegistrationCert StakeIdentifier OutputFile
+      (File 'Out)
+  | StakeCredentialDeRegistrationCert StakeIdentifier (File 'Out)
   deriving Show
 
 renderStakeAddressCmd :: StakeAddressCmd -> Text
@@ -131,14 +136,14 @@ renderStakeAddressCmd cmd =
     StakeCredentialDeRegistrationCert {} -> "stake-address deregistration-certificate"
 
 data KeyCmd
-  = KeyGetVerificationKey SigningKeyFile VerificationKeyFile
-  | KeyNonExtendedKey  VerificationKeyFile VerificationKeyFile
-  | KeyConvertByronKey (Maybe Text) ByronKeyType SomeKeyFile OutputFile
-  | KeyConvertByronGenesisVKey VerificationKeyBase64 OutputFile
-  | KeyConvertITNStakeKey SomeKeyFile OutputFile
-  | KeyConvertITNExtendedToStakeKey SomeKeyFile OutputFile
-  | KeyConvertITNBip32ToStakeKey SomeKeyFile OutputFile
-  | KeyConvertCardanoAddressSigningKey CardanoAddressKeyType SigningKeyFile OutputFile
+  = KeyGetVerificationKey (SigningKeyFile 'In) (VerificationKeyFile 'Out)
+  | KeyNonExtendedKey  (VerificationKeyFile 'In) (VerificationKeyFile 'Out)
+  | KeyConvertByronKey (Maybe Text) ByronKeyType (SomeKeyFile 'In) (File 'Out)
+  | KeyConvertByronGenesisVKey VerificationKeyBase64 (File 'Out)
+  | KeyConvertITNStakeKey (SomeKeyFile 'In) (File 'Out)
+  | KeyConvertITNExtendedToStakeKey (SomeKeyFile 'In) (File 'Out)
+  | KeyConvertITNBip32ToStakeKey (SomeKeyFile 'In) (File 'Out)
+  | KeyConvertCardanoAddressSigningKey CardanoAddressKeyType (SigningKeyFile 'In) (File 'Out)
   deriving Show
 
 renderKeyCmd :: KeyCmd -> Text
@@ -178,7 +183,7 @@ data TransactionCmd
       -- ^ Transaction upper bound
       (Maybe Lovelace)
       -- ^ Tx fee
-      [(CertificateFile, Maybe (ScriptWitnessFiles WitCtxStake))]
+      [(CertificateFile 'In, Maybe (ScriptWitnessFiles WitCtxStake))]
       -- ^ Certificates with potential script witness
       [(StakeAddress, Lovelace, Maybe (ScriptWitnessFiles WitCtxStake))]
       TxMetadataJsonSchema
@@ -186,8 +191,8 @@ data TransactionCmd
       -- ^ Auxiliary scripts
       [MetadataFile]
       (Maybe ProtocolParamsFile)
-      (Maybe UpdateProposalFile)
-      TxBodyFile
+      (Maybe (UpdateProposalFile 'In))
+      (TxBodyFile 'Out)
 
     -- | Like 'TxBuildRaw' but without the fee, and with a change output.
   | TxBuild
@@ -219,7 +224,7 @@ data TransactionCmd
       -- ^ Transaction lower bound
       (Maybe SlotNo)
       -- ^ Transaction upper bound
-      [(CertificateFile, Maybe (ScriptWitnessFiles WitCtxStake))]
+      [(CertificateFile 'In, Maybe (ScriptWitnessFiles WitCtxStake))]
       -- ^ Certificates with potential script witness
       [(StakeAddress, Lovelace, Maybe (ScriptWitnessFiles WitCtxStake))]
       -- ^ Withdrawals with potential script witness
@@ -228,15 +233,15 @@ data TransactionCmd
       -- ^ Auxiliary scripts
       [MetadataFile]
       (Maybe ProtocolParamsFile)
-      (Maybe UpdateProposalFile)
+      (Maybe (UpdateProposalFile 'In))
       TxBuildOutputOptions
-  | TxSign InputTxBodyOrTxFile [WitnessSigningData] (Maybe NetworkId) TxFile
-  | TxCreateWitness TxBodyFile WitnessSigningData (Maybe NetworkId) OutputFile
-  | TxAssembleTxBodyWitness TxBodyFile [WitnessFile] OutputFile
-  | TxSubmit AnyConsensusModeParams NetworkId FilePath
+  | TxSign InputTxBodyOrTxFile [WitnessSigningData] (Maybe NetworkId) (TxFile 'Out)
+  | TxCreateWitness (TxBodyFile 'In) WitnessSigningData (Maybe NetworkId) (File 'Out)
+  | TxAssembleTxBodyWitness (TxBodyFile 'In) [WitnessFile 'In] (File 'Out)
+  | TxSubmit AnyConsensusModeParams NetworkId (File 'In)
   | TxMintedPolicyId ScriptFile
   | TxCalculateMinFee
-      TxBodyFile
+      (TxBodyFile 'In)
       (Maybe NetworkId)
       ProtocolParamsFile
       TxInCount
@@ -252,7 +257,7 @@ data TransactionCmd
   | TxGetTxId InputTxBodyOrTxFile
   | TxView InputTxBodyOrTxFile
 
-data InputTxBodyOrTxFile = InputTxBodyFile TxBodyFile | InputTxFile TxFile
+data InputTxBodyOrTxFile = InputTxBodyFile (TxBodyFile 'In) | InputTxFile (TxFile 'In)
   deriving Show
 
 renderTransactionCmd :: TransactionCmd -> Text
@@ -272,13 +277,13 @@ renderTransactionCmd cmd =
     TxView {} -> "transaction view"
 
 data NodeCmd
-  = NodeKeyGenCold VerificationKeyFile SigningKeyFile OpCertCounterFile
-  | NodeKeyGenKES  VerificationKeyFile SigningKeyFile
-  | NodeKeyGenVRF  VerificationKeyFile SigningKeyFile
-  | NodeKeyHashVRF  (VerificationKeyOrFile VrfKey) (Maybe OutputFile)
-  | NodeNewCounter ColdVerificationKeyOrFile Word OpCertCounterFile
-  | NodeIssueOpCert (VerificationKeyOrFile KesKey) SigningKeyFile OpCertCounterFile
-                    KESPeriod OutputFile
+  = NodeKeyGenCold (VerificationKeyFile 'Out) (SigningKeyFile 'Out) (OpCertCounterFile 'Out)
+  | NodeKeyGenKES  (VerificationKeyFile 'Out) (SigningKeyFile 'Out)
+  | NodeKeyGenVRF  (VerificationKeyFile 'Out) (SigningKeyFile 'Out)
+  | NodeKeyHashVRF (VerificationKeyOrFile VrfKey) (Maybe (File 'Out))
+  | NodeNewCounter ColdVerificationKeyOrFile Word (OpCertCounterFile 'Out)
+  | NodeIssueOpCert (VerificationKeyOrFile KesKey) (SigningKeyFile 'In) (OpCertCounterFile 'InOut)
+                    KESPeriod (File 'Out)
   deriving Show
 
 renderNodeCmd :: NodeCmd -> Text
@@ -313,15 +318,15 @@ data PoolCmd
       (Maybe StakePoolMetadataReference)
       -- ^ Stake pool metadata.
       NetworkId
-      OutputFile
+      (File 'Out)
   | PoolRetirementCert
       (VerificationKeyOrFile StakePoolKey)
       -- ^ Stake pool verification key.
       EpochNo
       -- ^ Epoch in which to retire the stake pool.
-      OutputFile
+      (File 'Out)
   | PoolGetId (VerificationKeyOrFile StakePoolKey) OutputFormat
-  | PoolMetadataHash PoolMetadataFile (Maybe OutputFile)
+  | PoolMetadataHash PoolMetadataFile (Maybe (File 'Out))
   deriving Show
 
 renderPoolCmd :: PoolCmd -> Text
@@ -336,32 +341,32 @@ data QueryCmd =
     QueryLeadershipSchedule
       AnyConsensusModeParams
       NetworkId
-      GenesisFile
+      (GenesisFile 'In)
       (VerificationKeyOrHashOrFile StakePoolKey)
-      SigningKeyFile
+      (SigningKeyFile 'In)
       EpochLeadershipSchedule
-      (Maybe OutputFile)
-  | QueryProtocolParameters' AnyConsensusModeParams NetworkId (Maybe OutputFile)
-  | QueryTip AnyConsensusModeParams NetworkId (Maybe OutputFile)
-  | QueryStakePools' AnyConsensusModeParams NetworkId (Maybe OutputFile)
-  | QueryStakeDistribution' AnyConsensusModeParams NetworkId (Maybe OutputFile)
-  | QueryStakeAddressInfo AnyConsensusModeParams StakeAddress NetworkId (Maybe OutputFile)
-  | QueryUTxO' AnyConsensusModeParams QueryUTxOFilter NetworkId (Maybe OutputFile)
-  | QueryDebugLedgerState' AnyConsensusModeParams NetworkId (Maybe OutputFile)
-  | QueryProtocolState' AnyConsensusModeParams NetworkId (Maybe OutputFile)
+      (Maybe (File 'Out))
+  | QueryProtocolParameters' AnyConsensusModeParams NetworkId (Maybe (File 'Out))
+  | QueryTip AnyConsensusModeParams NetworkId (Maybe (File 'Out))
+  | QueryStakePools' AnyConsensusModeParams NetworkId (Maybe (File 'Out))
+  | QueryStakeDistribution' AnyConsensusModeParams NetworkId (Maybe (File 'Out))
+  | QueryStakeAddressInfo AnyConsensusModeParams StakeAddress NetworkId (Maybe (File 'Out))
+  | QueryUTxO' AnyConsensusModeParams QueryUTxOFilter NetworkId (Maybe (File 'Out))
+  | QueryDebugLedgerState' AnyConsensusModeParams NetworkId (Maybe (File 'Out))
+  | QueryProtocolState' AnyConsensusModeParams NetworkId (Maybe (File 'Out))
   | QueryStakeSnapshot'
       AnyConsensusModeParams
       NetworkId
       (AllOrOnly [Hash StakePoolKey])
-      (Maybe OutputFile)
+      (Maybe (File 'Out))
   | QueryKesPeriodInfo
       AnyConsensusModeParams
       NetworkId
-      FilePath
+      (File 'In)
       -- ^ Node operational certificate
-      (Maybe OutputFile)
+      (Maybe (File 'Out))
   | QueryPoolState' AnyConsensusModeParams NetworkId [Hash StakePoolKey]
-  | QueryTxMempool AnyConsensusModeParams NetworkId TxMempoolQuery (Maybe OutputFile)
+  | QueryTxMempool AnyConsensusModeParams NetworkId TxMempoolQuery (Maybe (File 'Out))
   deriving Show
 
 renderQueryCmd :: QueryCmd -> Text
@@ -393,17 +398,18 @@ data GovernanceCmd
       MIRPot
       [StakeAddress]
       [Lovelace]
-      OutputFile
-  | GovernanceMIRTransfer Lovelace OutputFile TransferDirection
+      (File 'Out)
+  | GovernanceMIRTransfer Lovelace (File 'Out) TransferDirection
   | GovernanceGenesisKeyDelegationCertificate
       (VerificationKeyOrHashOrFile GenesisKey)
       (VerificationKeyOrHashOrFile GenesisDelegateKey)
       (VerificationKeyOrHashOrFile VrfKey)
-      OutputFile
-  | GovernanceUpdateProposal OutputFile EpochNo
-                             [VerificationKeyFile]
-                             ProtocolParametersUpdate
-                             (Maybe FilePath)
+      (File 'Out)
+  | GovernanceUpdateProposal
+      (File 'Out) EpochNo
+      [VerificationKeyFile 'In]
+      ProtocolParametersUpdate
+      (Maybe (File 'In))
   deriving Show
 
 renderGovernanceCmd :: GovernanceCmd -> Text
@@ -416,7 +422,7 @@ renderGovernanceCmd cmd =
     GovernanceUpdateProposal {} -> "governance create-update-proposal"
 
 data TextViewCmd
-  = TextViewInfo !FilePath (Maybe OutputFile)
+  = TextViewInfo !(File 'In) !(Maybe (File 'Out))
   deriving Show
 
 
@@ -425,7 +431,21 @@ renderTextViewCmd (TextViewInfo _ _) = "text-view decode-cbor"
 
 data GenesisCmd
   = GenesisCreate GenesisDir Word Word (Maybe SystemStart) (Maybe Lovelace) NetworkId
-  | GenesisCreateCardano GenesisDir Word Word (Maybe SystemStart) (Maybe Lovelace) BlockCount Word Rational NetworkId FilePath FilePath FilePath FilePath (Maybe FilePath)
+  | GenesisCreateCardano
+      GenesisDir
+      Word
+      Word
+      (Maybe SystemStart)
+      (Maybe Lovelace)
+      BlockCount
+      Word
+      Rational
+      NetworkId
+      (File 'In)
+      (File 'In)
+      (File 'In)
+      (File 'In)
+      (Maybe (File 'In))
   | GenesisCreateStaked
       GenesisDir
       Word
@@ -439,15 +459,15 @@ data GenesisCmd
       Word
       Word
       Word
-      (Maybe FilePath) -- ^ Relay specification filepath
-  | GenesisKeyGenGenesis VerificationKeyFile SigningKeyFile
-  | GenesisKeyGenDelegate VerificationKeyFile SigningKeyFile OpCertCounterFile
-  | GenesisKeyGenUTxO VerificationKeyFile SigningKeyFile
-  | GenesisCmdKeyHash VerificationKeyFile
-  | GenesisVerKey VerificationKeyFile SigningKeyFile
-  | GenesisTxIn VerificationKeyFile NetworkId (Maybe OutputFile)
-  | GenesisAddr VerificationKeyFile NetworkId (Maybe OutputFile)
-  | GenesisHashFile GenesisFile
+      (Maybe (File 'In)) -- ^ Relay specification filepath
+  | GenesisKeyGenGenesis (VerificationKeyFile 'Out) (SigningKeyFile 'Out)
+  | GenesisKeyGenDelegate (VerificationKeyFile 'Out) (SigningKeyFile 'Out) (OpCertCounterFile 'Out)
+  | GenesisKeyGenUTxO (VerificationKeyFile 'Out) (SigningKeyFile 'Out)
+  | GenesisCmdKeyHash (VerificationKeyFile 'In)
+  | GenesisVerKey (VerificationKeyFile 'Out) (SigningKeyFile 'In)
+  | GenesisTxIn (VerificationKeyFile 'In) NetworkId (Maybe (File 'Out))
+  | GenesisAddr (VerificationKeyFile 'In) NetworkId (Maybe (File 'Out))
+  | GenesisHashFile (GenesisFile 'In)
   deriving Show
 
 renderGenesisCmd :: GenesisCmd -> Text
@@ -513,10 +533,10 @@ newtype GenesisDir
 -- | Either a verification or signing key, used for conversions and other
 -- commands that make sense for both.
 --
-data SomeKeyFile
-  = AVerificationKeyFile VerificationKeyFile
-  | ASigningKeyFile SigningKeyFile
-  deriving Show
+data SomeKeyFile (direction :: FileDirection)
+  = AVerificationKeyFile (VerificationKeyFile direction)
+  | ASigningKeyFile (SigningKeyFile direction)
+  deriving (Eq, Show)
 
 data AddressKeyType
   = AddressKeyShelley
@@ -542,17 +562,17 @@ data CardanoAddressKeyType
   | CardanoAddressByronPaymentKey
   deriving Show
 
-newtype OpCertCounterFile
-  = OpCertCounterFile FilePath
-  deriving Show
+newtype OpCertCounterFile (direction :: FileDirection) = OpCertCounterFile
+  { unOpCertCounterFile :: File direction
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile)
 
 newtype PrivKeyFile
   = PrivKeyFile FilePath
   deriving Show
 
-newtype WitnessFile
-  = WitnessFile FilePath
-  deriving Show
+newtype WitnessFile (direction :: FileDirection) = WitnessFile
+  { unWitnessFile :: File direction
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile)
 
 -- | A raw verification key given in Base64, and decoded into a ByteString.
 newtype VerificationKeyBase64
@@ -562,7 +582,7 @@ newtype VerificationKeyBase64
 -- | Data required to construct a witness.
 data WitnessSigningData
   = KeyWitnessSigningData
-      !SigningKeyFile
+      !(SigningKeyFile 'In)
       -- ^ Path to a file that should contain a signing key.
       !(Maybe (Address ByronAddr))
       -- ^ An optionally specified Byron address.
@@ -581,5 +601,5 @@ data WitnessSigningData
 data ColdVerificationKeyOrFile
   = ColdStakePoolVerificationKey !(VerificationKey StakePoolKey)
   | ColdGenesisDelegateVerificationKey !(VerificationKey GenesisDelegateKey)
-  | ColdVerificationKeyFile !VerificationKeyFile
+  | ColdVerificationKeyFile !(VerificationKeyFile 'In)
   deriving Show

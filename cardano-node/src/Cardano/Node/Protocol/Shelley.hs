@@ -32,7 +32,7 @@ import qualified Data.ByteString as BS
 import qualified Data.Text as T
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, left,
-                   newExceptT)
+                   newExceptT, onLeft)
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Ledger.Crypto (StandardCrypto)
@@ -61,6 +61,8 @@ import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.Tracers.ChainDB ()
 
 import           Cardano.Node.Protocol.Types
+import           Control.Monad.Trans.Class (MonadTrans (..))
+import           Data.Function ((&))
 
 ------------------------------------------------------------------------------
 -- Shelley protocol
@@ -165,8 +167,8 @@ readLeaderCredentialsSingleton
                       shelleyVRFFile = Just vrfFile,
                       shelleyKESFile = Just kesFile
                     } = do
-    vrfSKey <-
-      firstExceptT FileError (newExceptT $ readFileTextEnvelope (AsSigningKey AsVrfKey) vrfFile)
+    vrfSKey <- lift (readFileTextEnvelope (AsSigningKey AsVrfKey) vrfFile)
+      & onLeft (left . FileError)
 
     (opCert, kesSKey) <- opCertKesKeyCheck kesFile opCertFile
 
@@ -181,9 +183,9 @@ readLeaderCredentialsSingleton ProtocolFilepaths {shelleyKESFile = Nothing} =
      left KESKeyNotSpecified
 
 opCertKesKeyCheck
-  :: FilePath
+  :: File 'In
   -- ^ KES key
-  -> FilePath
+  -> File 'In
   -- ^ Operational certificate
   -> ExceptT PraosLeaderCredentialsError IO (OperationalCertificate, SigningKey KesKey)
 opCertKesKeyCheck kesFile certFile = do
@@ -196,7 +198,7 @@ opCertKesKeyCheck kesFile certFile = do
   -- Specified KES key in operational certificate should match the one
   -- supplied to the node.
   if suppliedKesKeyHash /= opCertSpecifiedKesKeyhash
-  then left $ MismatchedKesKey kesFile certFile
+  then left $ MismatchedKesKey (unFile kesFile) (unFile certFile)
   else return (opCert, kesSKey)
 
 data ShelleyCredentials
@@ -211,34 +213,36 @@ readLeaderCredentialsBulk
   -> ExceptT PraosLeaderCredentialsError IO [ShelleyLeaderCredentials StandardCrypto]
 readLeaderCredentialsBulk ProtocolFilepaths { shelleyBulkCredsFile = mfp } =
   mapM parseShelleyCredentials =<< readBulkFile mfp
- where
-   parseShelleyCredentials
-     :: ShelleyCredentials
-     -> ExceptT PraosLeaderCredentialsError IO (ShelleyLeaderCredentials StandardCrypto)
-   parseShelleyCredentials ShelleyCredentials { scCert, scVrf, scKes } = do
-     mkPraosLeaderCredentials
-       <$> parseEnvelope AsOperationalCertificate scCert
-       <*> parseEnvelope (AsSigningKey AsVrfKey) scVrf
-       <*> parseEnvelope (AsSigningKey AsKesKey) scKes
 
-   readBulkFile
-     :: Maybe FilePath
-     -> ExceptT PraosLeaderCredentialsError IO [ShelleyCredentials]
-   readBulkFile Nothing = pure []
-   readBulkFile (Just fp) = do
-     content <- handleIOExceptT (CredentialsReadError fp) $
-                  BS.readFile fp
-     envelopes <- firstExceptT (EnvelopeParseError fp) $ hoistEither $
-                    Aeson.eitherDecodeStrict' content
-     pure $ uncurry mkCredentials <$> zip [0..] envelopes
-    where
-      mkCredentials :: Int -> (TextEnvelope, TextEnvelope, TextEnvelope)
-                    -> ShelleyCredentials
-      mkCredentials ix (teCert, teVrf, teKes) =
-       let loc ty = fp <> "." <> show ix <> ty
-       in ShelleyCredentials (teCert, loc "cert")
-                             (teVrf,  loc "vrf")
-                             (teKes,  loc "kes")
+  where
+    parseShelleyCredentials
+      :: ShelleyCredentials
+      -> ExceptT PraosLeaderCredentialsError IO (ShelleyLeaderCredentials StandardCrypto)
+    parseShelleyCredentials ShelleyCredentials { scCert, scVrf, scKes } = do
+      mkPraosLeaderCredentials
+        <$> parseEnvelope AsOperationalCertificate scCert
+        <*> parseEnvelope (AsSigningKey AsVrfKey) scVrf
+        <*> parseEnvelope (AsSigningKey AsKesKey) scKes
+
+    readBulkFile
+      :: Maybe (File 'In)
+      -> ExceptT PraosLeaderCredentialsError IO [ShelleyCredentials]
+    readBulkFile Nothing = pure []
+    readBulkFile (Just fp) = do
+      content <- BS.readFile (unFile fp)
+        & handleIOExceptT (CredentialsReadError (unFile fp))
+
+      envelopes <- firstExceptT (EnvelopeParseError (unFile fp)) $ hoistEither $
+                      Aeson.eitherDecodeStrict' content
+      pure $ uncurry mkCredentials <$> zip [0..] envelopes
+      where
+        mkCredentials :: Int -> (TextEnvelope, TextEnvelope, TextEnvelope)
+                      -> ShelleyCredentials
+        mkCredentials ix (teCert, teVrf, teKes) =
+          let loc ty = unFile fp <> "." <> show ix <> ty
+          in ShelleyCredentials (teCert, loc "cert")
+                                (teVrf,  loc "vrf")
+                                (teKes,  loc "kes")
 
 mkPraosLeaderCredentials ::
      OperationalCertificate

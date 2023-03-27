@@ -32,8 +32,8 @@ main = do
   -- Get socket path from CLI argument.
   configFilePath : socketPath : xs <- getArgs
   blockCount <- fmap (either (error . T.unpack . renderFoldBlocksError) id) $ runExceptT $ foldBlocks
-    configFilePath
-    socketPath
+    (File configFilePath)
+    (File socketPath)
     FullValidation
     (0 :: Int) -- We just use a count of the blocks as the current state
     (\_env

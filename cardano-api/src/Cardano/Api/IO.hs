@@ -90,7 +90,7 @@ newtype OutputFile = OutputFile
   deriving newtype (Eq, Ord, Show, IsString, ToJSON, FromJSON)
 
 handleFileForWritingWithOwnerPermission
-  :: FilePath
+  :: File 'Out
   -> (Handle -> IO ())
   -> IO (Either (FileError ()) ())
 handleFileForWritingWithOwnerPermission path f = do
@@ -104,17 +104,17 @@ handleFileForWritingWithOwnerPermission path f = do
     -- it will be immediately turned into a Handle (which will be closed when
     -- the Handle is closed)
     bracketOnError
-      (openFd path WriteOnly (Just ownerModes) defaultFileFlags)
+      (openFd (unFile path) WriteOnly (Just ownerModes) defaultFileFlags)
       closeFd
       (\fd -> setFdOwnerAndGroup fd user (-1) >> pure fd)
   case ownedFile of
     Left (err :: IOException) -> do
-      pure $ Left $ FileIOError path err
+      pure $ Left $ FileIOError (unFile path) err
     Right fd -> do
       bracket
         (fdToHandle fd)
         IO.hClose
-        (runExceptT . handleIOExceptT (FileIOError path) . f)
+        (runExceptT . handleIOExceptT (FileIOError (unFile path)) . f)
 #else
   -- On something other than unix, we make a _new_ file, and since we created it,
   -- we must own it. We then place it at the target location. Unfortunately this
@@ -138,53 +138,53 @@ writeByteStringFile fp bs = runExceptT $
   handleIOExceptT (FileIOError (unFile fp)) $ BS.writeFile (unFile fp) bs
 
 writeByteStringFileWithOwnerPermissions
-  :: FilePath
+  :: File 'Out
   -> BS.ByteString
   -> IO (Either (FileError ()) ())
 writeByteStringFileWithOwnerPermissions fp bs =
   handleFileForWritingWithOwnerPermission fp $ \h ->
     BS.hPut h bs
 
-writeByteStringOutput :: MonadIO m => Maybe FilePath -> ByteString -> m (Either (FileError ()) ())
+writeByteStringOutput :: MonadIO m => Maybe (File 'Out) -> ByteString -> m (Either (FileError ()) ())
 writeByteStringOutput mOutput bs = runExceptT $
   case mOutput of
-    Just fp -> handleIOExceptT (FileIOError fp) $ BS.writeFile fp bs
+    Just fp -> handleIOExceptT (FileIOError (unFile fp)) $ BS.writeFile (unFile fp) bs
     Nothing -> liftIO $ BSC.putStr bs
 
-writeLazyByteStringFile :: MonadIO m => FilePath -> LBS.ByteString -> m (Either (FileError ()) ())
+writeLazyByteStringFile :: MonadIO m => File 'Out -> LBS.ByteString -> m (Either (FileError ()) ())
 writeLazyByteStringFile fp bs = runExceptT $
-  handleIOExceptT (FileIOError fp) $ LBS.writeFile fp bs
+  handleIOExceptT (FileIOError (unFile fp)) $ LBS.writeFile (unFile fp) bs
 
 writeLazyByteStringFileWithOwnerPermissions
-  :: FilePath
+  :: File 'Out
   -> LBS.ByteString
   -> IO (Either (FileError ()) ())
 writeLazyByteStringFileWithOwnerPermissions fp lbs =
   handleFileForWritingWithOwnerPermission fp $ \h ->
     LBS.hPut h lbs
 
-writeLazyByteStringOutput :: MonadIO m => Maybe FilePath -> LBS.ByteString -> m (Either (FileError ()) ())
+writeLazyByteStringOutput :: MonadIO m => Maybe (File 'Out) -> LBS.ByteString -> m (Either (FileError ()) ())
 writeLazyByteStringOutput mOutput bs = runExceptT $
   case mOutput of
-    Just fp -> handleIOExceptT (FileIOError fp) $ LBS.writeFile fp bs
+    Just fp -> handleIOExceptT (FileIOError (unFile fp)) $ LBS.writeFile (unFile fp) bs
     Nothing -> liftIO $ LBSC.putStr bs
 
-writeTextFile :: MonadIO m => FilePath -> Text -> m (Either (FileError ()) ())
+writeTextFile :: MonadIO m => File 'Out -> Text -> m (Either (FileError ()) ())
 writeTextFile fp t = runExceptT $
-  handleIOExceptT (FileIOError fp) $ Text.writeFile fp t
+  handleIOExceptT (FileIOError (unFile fp)) $ Text.writeFile (unFile fp) t
 
 writeTextFileWithOwnerPermissions
-  :: FilePath
+  :: File 'Out
   -> Text
   -> IO (Either (FileError ()) ())
 writeTextFileWithOwnerPermissions fp t =
   handleFileForWritingWithOwnerPermission fp $ \h ->
     Text.hPutStr h t
 
-writeTextOutput :: MonadIO m => Maybe FilePath -> Text -> m (Either (FileError ()) ())
+writeTextOutput :: MonadIO m => Maybe (File 'Out) -> Text -> m (Either (FileError ()) ())
 writeTextOutput mOutput t = runExceptT $
   case mOutput of
-    Just fp -> handleIOExceptT (FileIOError fp) $ Text.writeFile fp t
+    Just fp -> handleIOExceptT (FileIOError (unFile fp)) $ Text.writeFile (unFile fp) t
     Nothing -> liftIO $ Text.putStr t
 
 class MapFile a where

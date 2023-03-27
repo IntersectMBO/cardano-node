@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | This module provides convenience functions when dealing with signing keys.
@@ -37,7 +38,7 @@ parseSigningKeyBase16 k
         , teRawCBOR = addr
         }
 
-readSigningKeyFile :: SigningKeyFile -> IO (Either TxGenError (SigningKey PaymentKey))
+readSigningKeyFile :: SigningKeyFile 'In -> IO (Either TxGenError (SigningKey PaymentKey))
 readSigningKeyFile (SigningKeyFile f)
   = first ApiError <$> readFileTextEnvelopeAnyOf acceptedTypes f
 

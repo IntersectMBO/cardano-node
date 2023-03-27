@@ -1,13 +1,18 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Node.Types
-  ( -- * Configuration
-    AdjustFilePaths(..)
+  ( -- * Files
+    File(..)
+  , FileDirection(..)
+    -- * Configuration
+  , AdjustFilePaths(..)
   , ConfigError(..)
   , ConfigYamlFilePath(..)
   , DbFile(..)
@@ -57,18 +62,17 @@ data ConfigError =
 -- | Filepath of the configuration yaml file. This file determines
 -- all the configuration settings required for the cardano node
 -- (logging, tracing, protocol, slot length etc)
-newtype ConfigYamlFilePath = ConfigYamlFilePath
-  { unConfigPath :: FilePath }
-  deriving newtype (Eq, Show)
+newtype ConfigYamlFilePath (direction :: FileDirection) = ConfigYamlFilePath
+  { unConfigYamlFilePath :: File direction
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile)
 
-newtype DbFile = DbFile
-  { unDB :: FilePath }
-  deriving newtype (Eq, Show)
+newtype DbFile (direction :: FileDirection) = DbFile
+  { unDbFile :: File direction
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile)
 
 newtype GenesisFile = GenesisFile
-  { unGenesisFile :: FilePath }
-  deriving stock (Eq, Ord)
-  deriving newtype (IsString, Show)
+  { unGenesisFile :: FilePath
+  } deriving newtype (Eq, Ord, Show, IsString)
 
 instance FromJSON GenesisFile where
   parseJSON (String genFp) = pure . GenesisFile $ Text.unpack genFp
@@ -107,13 +111,13 @@ class AdjustFilePaths a where
 
 
 data ProtocolFilepaths =
-     ProtocolFilepaths {
-       byronCertFile        :: !(Maybe FilePath)
-     , byronKeyFile         :: !(Maybe FilePath)
-     , shelleyKESFile       :: !(Maybe FilePath)
-     , shelleyVRFFile       :: !(Maybe FilePath)
-     , shelleyCertFile      :: !(Maybe FilePath)
-     , shelleyBulkCredsFile :: !(Maybe FilePath)
+     ProtocolFilepaths
+     { byronCertFile        :: !(Maybe (File 'In))
+     , byronKeyFile         :: !(Maybe (File 'In))
+     , shelleyKESFile       :: !(Maybe (File 'In))
+     , shelleyVRFFile       :: !(Maybe (File 'In))
+     , shelleyCertFile      :: !(Maybe (File 'In))
+     , shelleyBulkCredsFile :: !(Maybe (File 'In))
      } deriving (Eq, Show)
 
 newtype GenesisHash = GenesisHash (Crypto.Hash Crypto.Blake2b_256 ByteString)
@@ -283,9 +287,9 @@ data NodeHardForkProtocolConfiguration =
      }
   deriving (Eq, Show)
 
-newtype TopologyFile = TopologyFile
-  { unTopology :: FilePath }
-  deriving newtype (Show, Eq)
+newtype TopologyFile (direction :: FileDirection) = TopologyFile
+  { unTopologyFile :: File direction
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile)
 
 instance AdjustFilePaths NodeProtocolConfiguration where
 
@@ -331,7 +335,7 @@ instance AdjustFilePaths SocketConfig where
     x { ncSocketPath = adjustFilePaths f ncSocketPath }
 
 instance AdjustFilePaths SocketPath where
-  adjustFilePaths f (SocketPath p) = SocketPath (f p)
+  adjustFilePaths f (SocketPath (File p)) = SocketPath (File (f p))
 
 instance AdjustFilePaths GenesisFile where
   adjustFilePaths f (GenesisFile p) = GenesisFile (f p)

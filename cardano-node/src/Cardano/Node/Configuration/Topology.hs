@@ -134,7 +134,7 @@ instance ToJSON NetworkTopology where
 -- other remote peers it will attempt to connect to.
 readTopologyFile :: NodeConfiguration -> IO (Either Text NetworkTopology)
 readTopologyFile nc = do
-  eBs <- Exception.try $ BS.readFile (unTopology $ ncTopologyFile nc)
+  eBs <- Exception.try $ BS.readFile (unFile . unTopologyFile $ ncTopologyFile nc)
 
   case eBs of
     Left e -> return . Left $ handler e

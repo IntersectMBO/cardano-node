@@ -1,3 +1,6 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeApplications #-}
+
 module Cardano.CLI.Byron.Parsers
   ( ByronCommand(..)
   , NodeCmd(..)
@@ -150,7 +153,7 @@ parseGenesisParameters =
     <$> parseUTCTime
           "start-time"
           "Start time of the new cluster to be enshrined in the new genesis."
-    <*> parseFilePath
+    <*> parseFile @'In
           "protocol-parameters-file"
           "JSON file with protocol parameters."
     <*> parseK
@@ -239,12 +242,12 @@ parseMiscellaneous = mconcat
       "Validate a CBOR blockchain object."
       $ ValidateCBOR
           <$> parseCBORObject
-          <*> parseFilePath "filepath" "Filepath of CBOR file."
+          <*> parseFile @'In "filepath" "Filepath of CBOR file."
   , command'
       "pretty-print-cbor"
       "Pretty print a CBOR file."
       $ PrettyPrintCBOR
-          <$> parseFilePath "filepath" "Filepath of CBOR file."
+          <$> parseFile @'In "filepath" "Filepath of CBOR file."
   ]
 
 
@@ -388,14 +391,14 @@ parseByronUpdateProposal = do
     <*> parseSoftwareVersion
     <*> parseSystemTag
     <*> parseInstallerHash
-    <*> parseFilePath "filepath" "Byron proposal output filepath."
+    <*> parseFile @'Out "filepath" "Byron proposal output filepath."
     <*> pByronProtocolParametersUpdate
 
 parseByronVoteSubmission :: Parser NodeCmd
 parseByronVoteSubmission = do
   SubmitVote
     <$> pNetworkId
-    <*> parseFilePath "filepath" "Filepath of Byron update proposal vote."
+    <*> parseFile @'In "filepath" "Filepath of Byron update proposal vote."
 
 
 pByronProtocolParametersUpdate :: Parser ByronProtocolParametersUpdate
@@ -420,17 +423,17 @@ parseByronUpdateProposalSubmission :: Parser NodeCmd
 parseByronUpdateProposalSubmission =
   SubmitUpdateProposal
     <$> pNetworkId
-    <*> parseFilePath "filepath" "Filepath of Byron update proposal."
+    <*> parseFile @'In "filepath" "Filepath of Byron update proposal."
 
 
 parseByronVote :: Parser NodeCmd
 parseByronVote =
   CreateVote
     <$> pNetworkId
-    <*> (SigningKeyFile <$> parseFilePath "signing-key" "Filepath of signing key.")
-    <*> parseFilePath "proposal-filepath" "Filepath of Byron update proposal."
+    <*> (SigningKeyFile <$> parseFile @'In "signing-key" "Filepath of signing key.")
+    <*> parseFile @'In "proposal-filepath" "Filepath of Byron update proposal."
     <*> parseVoteBool
-    <*> parseFilePath "output-filepath" "Byron vote output filepath."
+    <*> parseFile @'Out "output-filepath" "Byron vote output filepath."
 
 --------------------------------------------------------------------------------
 -- CLI Parsers
@@ -637,7 +640,7 @@ parseK =
     <$> parseIntegral "k" "The security parameter of the Ouroboros protocol."
 
 parseNewDirectory :: String -> String -> Parser NewDirectory
-parseNewDirectory opt desc = NewDirectory <$> parseFilePath opt desc
+parseNewDirectory opt desc = NewDirectory <$> parseDirectory opt desc
 
 parseFractionWithDefault
   :: String
@@ -652,20 +655,20 @@ parseFractionWithDefault optname desc w =
     <> value w
     )
 
-parseNewSigningKeyFile :: String -> Parser NewSigningKeyFile
+parseNewSigningKeyFile :: String -> Parser (NewSigningKeyFile 'Out)
 parseNewSigningKeyFile opt =
   NewSigningKeyFile
-    <$> parseFilePath opt "Non-existent file to write the signing key to."
+    <$> parseFile @'Out opt "Non-existent file to write the signing key to."
 
-parseNewTxFile :: String -> Parser NewTxFile
+parseNewTxFile :: String -> Parser (NewTxFile 'Out)
 parseNewTxFile opt =
   NewTxFile
-    <$> parseFilePath opt "Non-existent file to write the signed transaction to."
+    <$> parseFile @'Out opt "Non-existent file to write the signed transaction to."
 
-parseNewVerificationKeyFile :: String -> Parser NewVerificationKeyFile
+parseNewVerificationKeyFile :: String -> Parser (NewVerificationKeyFile 'Out)
 parseNewVerificationKeyFile opt =
   NewVerificationKeyFile
-    <$> parseFilePath opt "Non-existent file to write the verification key to."
+    <$> parseFile @'Out opt "Non-existent file to write the verification key to."
 
 parseProtocolMagicId :: String -> Parser ProtocolMagicId
 parseProtocolMagicId arg =
@@ -677,10 +680,9 @@ parseProtocolMagic =
   flip AProtocolMagic RequiresMagic . flip Annotated ()
     <$> parseProtocolMagicId "protocol-magic"
 
-parseTxFile :: String -> Parser TxFile
+parseTxFile :: String -> Parser (TxFile 'In)
 parseTxFile opt =
-  TxFile
-    <$> parseFilePath opt "File containing the signed transaction."
+  TxFile <$> parseFile @'In opt "File containing the signed transaction."
 
 parseUTCTime :: String -> String -> Parser UTCTime
 parseUTCTime optname desc =
@@ -728,11 +730,11 @@ readDouble = do
   when (f > 1) $ readerError "fraction must be <= 1"
   return f
 
-parseSigningKeyFile :: String -> String -> Parser SigningKeyFile
-parseSigningKeyFile opt desc = SigningKeyFile <$> parseFilePath opt desc
+parseSigningKeyFile :: String -> String -> Parser (SigningKeyFile direction)
+parseSigningKeyFile opt desc = SigningKeyFile <$> parseFile opt desc
 
 
-parseGenesisFile :: String -> Parser GenesisFile
+parseGenesisFile :: String -> Parser (GenesisFile direction)
 parseGenesisFile opt =
-  GenesisFile <$> parseFilePath opt "Genesis JSON file."
+  GenesisFile <$> parseFile opt "Genesis JSON file."
 

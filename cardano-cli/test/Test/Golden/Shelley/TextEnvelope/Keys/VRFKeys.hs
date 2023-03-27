@@ -4,7 +4,7 @@ module Test.Golden.Shelley.TextEnvelope.Keys.VRFKeys
   ( golden_shelleyVRFKeys
   ) where
 
-import           Cardano.Api (AsType (..), HasTextEnvelope (..))
+import           Cardano.Api (AsType (..), File (File), HasTextEnvelope (..))
 import           Control.Monad (void)
 import           Hedgehog (Property)
 import           Test.OptParse
@@ -38,5 +38,5 @@ golden_shelleyVRFKeys = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
 
   -- Check the newly created files have not deviated from the
   -- golden files
-  checkTextEnvelopeFormat verificationKeyType referenceVerKey verKey
-  checkTextEnvelopeFormat signingKeyType referenceSignKey signKey
+  checkTextEnvelopeFormat verificationKeyType (File referenceVerKey) (File verKey)
+  checkTextEnvelopeFormat signingKeyType (File referenceSignKey) (File signKey)

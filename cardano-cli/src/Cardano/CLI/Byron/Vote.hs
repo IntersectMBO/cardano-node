@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 
 module Cardano.CLI.Byron.Vote
@@ -59,10 +60,10 @@ renderByronVoteError bVerr =
 
 runVoteCreation
   :: NetworkId
-  -> SigningKeyFile
-  -> FilePath
+  -> SigningKeyFile 'In
+  -> File 'In
   -> Bool
-  -> FilePath
+  -> File 'Out
   -> ExceptT ByronVoteError IO ()
 runVoteCreation nw sKey upPropFp voteBool outputFp = do
   sK <- firstExceptT ByronVoteKeyReadFailure $ readByronSigningKey NonLegacyByronKeyFormat sKey
@@ -73,7 +74,7 @@ runVoteCreation nw sKey upPropFp voteBool outputFp = do
 
 submitByronVote
   :: NetworkId
-  -> FilePath
+  -> File 'In
   -> ExceptT ByronVoteError IO ()
 submitByronVote network voteFp = do
     vote <- readByronVote voteFp
@@ -81,8 +82,8 @@ submitByronVote network voteFp = do
     traceWith stdoutTracer ("Vote TxId: " ++ condense (txId genTx))
     firstExceptT ByronVoteTxSubmissionError $ nodeSubmitTx network genTx
 
-readByronVote :: FilePath -> ExceptT ByronVoteError IO ByronVote
+readByronVote :: File 'In -> ExceptT ByronVoteError IO ByronVote
 readByronVote fp = do
-  voteBs <- liftIO $ BS.readFile fp
+  voteBs <- liftIO $ BS.readFile (unFile fp)
   let voteResult = deserialiseFromRawBytes AsByronVote voteBs
-  hoistEither $ first (const (ByronVoteDecodingError fp)) voteResult
+  hoistEither $ first (const (ByronVoteDecodingError (unFile fp))) voteResult

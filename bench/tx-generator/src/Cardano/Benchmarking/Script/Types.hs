@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -50,7 +51,7 @@ data Action where
   InitWallet         :: !String -> Action
   StartProtocol      :: !FilePath -> !(Maybe FilePath) -> Action
   Delay              :: !Double -> Action
-  ReadSigningKey     :: !String -> !SigningKeyFile -> Action
+  ReadSigningKey     :: !String -> !(SigningKeyFile 'In) -> Action
   DefineSigningKey   :: !String -> !(SigningKey PaymentKey) -> Action
   AddFund            :: !AnyCardanoEra -> !String -> !TxIn -> !Lovelace -> !String -> Action
   WaitBenchmark      :: !String -> Action

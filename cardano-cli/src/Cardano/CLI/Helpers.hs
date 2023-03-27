@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -38,13 +39,14 @@ import           System.Console.ANSI
 import qualified System.Directory as IO
 import qualified System.IO as IO
 
+import           Cardano.Api (File (..), FileDirection (..))
+import           Cardano.Binary (Decoder, fromCBOR)
 import           Cardano.Chain.Block (decCBORABlockOrBoundary)
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.UTxO as UTxO
 import           Cardano.CLI.Types
 import           Cardano.Ledger.Binary (byronProtVer, toPlainDecoder)
-import           Cardano.Ledger.Binary.Plain (Decoder, fromCBOR)
 
 data HelpersError
   = CBORPrettyPrintError !DeserialiseFailure
@@ -91,8 +93,8 @@ ensureNewFile writer outFile blob = do
     left $ OutputMustNotAlreadyExist outFile
   liftIO $ writer outFile blob
 
-ensureNewFileLBS :: FilePath -> ByteString -> ExceptT HelpersError IO ()
-ensureNewFileLBS = ensureNewFile BS.writeFile
+ensureNewFileLBS :: File 'Out -> ByteString -> ExceptT HelpersError IO ()
+ensureNewFileLBS = ensureNewFile BS.writeFile . unFile
 
 pPrintCBOR :: LB.ByteString -> ExceptT HelpersError IO ()
 pPrintCBOR bs = do
@@ -103,11 +105,11 @@ pPrintCBOR bs = do
       unless (LB.null remaining) $
         pPrintCBOR remaining
 
-readCBOR :: FilePath -> ExceptT HelpersError IO LB.ByteString
+readCBOR :: File 'In -> ExceptT HelpersError IO LB.ByteString
 readCBOR fp =
   handleIOExceptT
-    (ReadCBORFileFailure fp . toS . displayException)
-    (LB.readFile fp)
+    (ReadCBORFileFailure (unFile fp) . toS . displayException)
+    (LB.readFile (unFile fp))
 
 validateCBOR :: CBORObject -> LB.ByteString -> Either HelpersError Text
 validateCBOR cborObject bs =

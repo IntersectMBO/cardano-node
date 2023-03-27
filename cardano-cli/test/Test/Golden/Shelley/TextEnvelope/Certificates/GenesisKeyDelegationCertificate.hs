@@ -4,7 +4,7 @@ module Test.Golden.Shelley.TextEnvelope.Certificates.GenesisKeyDelegationCertifi
   ( golden_shelleyGenesisKeyDelegationCertificate
   ) where
 
-import           Cardano.Api (AsType (..), HasTextEnvelope (..))
+import           Cardano.Api (AsType (..), File (..), HasTextEnvelope (..))
 import           Control.Monad (void)
 import           Hedgehog (Property)
 import           Test.OptParse
@@ -84,5 +84,5 @@ golden_shelleyGenesisKeyDelegationCertificate =
 
     checkTextEnvelopeFormat
       certificateType
-      referenceCertificateFilePath
-      genesisKeyDelegCertFilePath
+      (File referenceCertificateFilePath)
+      (File genesisKeyDelegCertFilePath)

@@ -4,7 +4,7 @@ module Test.Golden.Shelley.TextEnvelope.Certificates.OperationalCertificate
   ( golden_shelleyOperationalCertificate
   ) where
 
-import           Cardano.Api (AsType (..), HasTextEnvelope (..))
+import           Cardano.Api (AsType (..), File (..), HasTextEnvelope (..))
 import           Control.Monad (void)
 import           Hedgehog (Property)
 import           Test.OptParse
@@ -64,4 +64,4 @@ golden_shelleyOperationalCertificate = propertyOnce . H.moduleWorkspace "tmp" $ 
 
   -- Check the newly created files have not deviated from the
   -- golden files
-  checkTextEnvelopeFormat operationalCertificateType referenceOperationalCertificate operationalCert
+  checkTextEnvelopeFormat operationalCertificateType (File referenceOperationalCertificate) (File operationalCert)

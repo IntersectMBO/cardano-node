@@ -1,5 +1,5 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
-
 
 module Cardano.CLI.Byron.Genesis
   ( ByronGenesisError(..)
@@ -31,7 +31,8 @@ import           Data.Text.Lazy.Builder (toLazyText)
 import           Data.Time (UTCTime)
 import           Formatting.Buildable
 
-import           Cardano.Api (Key (..), NetworkId, textShow, writeSecrets)
+import           Cardano.Api (Directory (..), File (..), FileDirection (..), Key (..), NetworkId,
+                   textShow, writeSecrets)
 
 import           Cardano.Api.Byron (ByronKey, SerialiseAsRawBytes (..), SigningKey (..),
                    toByronRequiresNetworkMagic)
@@ -88,13 +89,13 @@ renderByronGenesisError err =
       "Error while creating genesis, no delegation certificate for this verification key:" <> textShow verKey
 
 newtype NewDirectory =
-  NewDirectory FilePath
+  NewDirectory Directory
   deriving (Eq, Ord, Show, IsString)
 
 -- | Parameters required for generation of new genesis.
 data GenesisParameters = GenesisParameters
   { gpStartTime :: !UTCTime
-  , gpProtocolParamsFile :: !FilePath
+  , gpProtocolParamsFile :: !(File 'In)
   , gpK :: !Common.BlockCount
   , gpProtocolMagic :: !Crypto.ProtocolMagic
   , gpTestnetBalance :: !Genesis.TestnetBalanceOptions
@@ -106,10 +107,10 @@ data GenesisParameters = GenesisParameters
 
 mkGenesisSpec :: GenesisParameters -> ExceptT ByronGenesisError IO Genesis.GenesisSpec
 mkGenesisSpec gp = do
-  protoParamsRaw <- lift . LB.readFile $ gpProtocolParamsFile gp
+  protoParamsRaw <- lift . LB.readFile $ unFile $ gpProtocolParamsFile gp
 
   protocolParameters <- withExceptT
-    (ProtocolParametersParseFailed (gpProtocolParamsFile gp)) $
+    (ProtocolParametersParseFailed (unFile (gpProtocolParamsFile gp))) $
     ExceptT . pure $ canonicalDecodePretty protoParamsRaw
 
   -- We're relying on the generator to fake AVVM and delegation.
@@ -149,12 +150,13 @@ mkGenesis gp = do
     Genesis.generateGenesisData (gpStartTime gp) genesisSpec
 
 -- | Read genesis from a file.
-readGenesis :: GenesisFile
-            -> NetworkId
-            -> ExceptT ByronGenesisError IO Genesis.Config
+readGenesis
+  :: GenesisFile 'In
+  -> NetworkId
+  -> ExceptT ByronGenesisError IO Genesis.Config
 readGenesis (GenesisFile file) nw =
-  firstExceptT (GenesisReadError file) $ do
-    (genesisData, genesisHash) <- Genesis.readGenesisData file
+  firstExceptT (GenesisReadError (unFile file)) $ do
+    (genesisData, genesisHash) <- Genesis.readGenesisData (unFile file)
     return Genesis.Config {
       Genesis.configGenesisData       = genesisData,
       Genesis.configGenesisHash       = genesisHash,
@@ -171,10 +173,10 @@ dumpGenesis
   -> Genesis.GeneratedSecrets
   -> ExceptT ByronGenesisError IO ()
 dumpGenesis (NewDirectory outDir) genesisData gs = do
-  exists <- liftIO $ doesPathExist outDir
+  exists <- liftIO $ doesPathExist (unDirectory outDir)
   if exists
-  then left $ GenesisOutputDirAlreadyExists outDir
-  else liftIO $ createDirectory outDir
+  then left $ GenesisOutputDirAlreadyExists (unDirectory outDir)
+  else liftIO $ createDirectory (unDirectory outDir)
   liftIO $ LB.writeFile genesisJSONFile (canonicalEncodePretty genesisData)
 
   dlgCerts <- mapM (findDelegateCert . ByronSigningKey) $ gsRichSecrets gs
@@ -202,7 +204,7 @@ dumpGenesis (NewDirectory outDir) genesisData gs = do
       Just x  -> right x
 
   genesisJSONFile :: FilePath
-  genesisJSONFile = outDir <> "/genesis.json"
+  genesisJSONFile = unDirectory outDir <> "/genesis.json"
 
   printFakeAvvmSecrets :: Crypto.RedeemSigningKey -> ByteString
   printFakeAvvmSecrets rskey = Text.encodeUtf8 . toStrict . toLazyText $ build rskey
@@ -212,4 +214,4 @@ dumpGenesis (NewDirectory outDir) genesisData gs = do
   isCertForSK sk cert = delegateVK cert == Crypto.toVerification sk
 
   wOut :: String -> String -> (a -> ByteString) -> [a] -> IO ()
-  wOut = writeSecrets outDir
+  wOut = writeSecrets (unDirectory outDir)

@@ -9,6 +9,7 @@ import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (runExceptT)
 import qualified Data.Text as Text
 
+import           Cardano.Api (File (..))
 import           Cardano.CLI.Byron.UpdateProposal
 
 import           Hedgehog (Property, (===))
@@ -39,12 +40,12 @@ golden_byron_update_proposal = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir
     , "--filepath", createdUpdateProposal
     ]
 
-  eGolden <- liftIO . runExceptT $ readByronUpdateProposal goldenUpdateProposal
+  eGolden <- liftIO . runExceptT $ readByronUpdateProposal $ File goldenUpdateProposal
   golden <- case eGolden of
               Left err -> failWith Nothing . Text.unpack $ renderByronUpdateProposalError err
               Right prop -> return prop
 
-  eCreated <- liftIO . runExceptT $ readByronUpdateProposal createdUpdateProposal
+  eCreated <- liftIO . runExceptT $ readByronUpdateProposal $ File createdUpdateProposal
   created <- case eCreated of
                Left err -> failWith Nothing . Text.unpack $ renderByronUpdateProposalError err
                Right prop -> return prop

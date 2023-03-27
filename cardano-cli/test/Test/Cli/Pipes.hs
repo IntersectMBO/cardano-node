@@ -19,6 +19,8 @@ import qualified Data.ByteString.Lazy as LBS
 import           System.IO (hClose, hFlush, hPutStr)
 import           System.Posix.IO (closeFd, createPipe, fdToHandle)
 
+import           Cardano.Api
+
 import           Cardano.CLI.Shelley.Run.Read
 import           Test.OptParse
 
@@ -50,7 +52,7 @@ prop_readFromPipe = H.withTests 10 . H.property . H.moduleWorkspace "tmp" $ \ws 
 
   -- We first test that we can read a filepath
   testFp <- noteInputFile testFile
-  testFileOrPipe <- liftIO $ fileOrPipe testFp
+  testFileOrPipe <- liftIO $ fileOrPipe (File testFp)
   testBs <- liftIO $ readFileOrPipe testFileOrPipe
 
   if LBS.null testBs
@@ -81,7 +83,7 @@ withPipe contents = do
   hPutStr writeHandle contents
   hFlush writeHandle
   hClose writeHandle
-  pipe <- fileOrPipe $ "/dev/fd/" ++ show readEnd
+  pipe <- fileOrPipe $ File $ "/dev/fd/" ++ show readEnd
 
   -- Read contents from pipe
   readContents <- readFileOrPipe pipe

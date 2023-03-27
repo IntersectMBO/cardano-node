@@ -1,4 +1,5 @@
 {-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
@@ -13,6 +14,7 @@ module Cardano.Node.Parsers
 
 import           Cardano.Prelude (ConvertText (..))
 
+import           Data.Foldable
 import           Data.Maybe (fromMaybe)
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
@@ -24,6 +26,7 @@ import qualified Options.Applicative.Help as OptI
 import           System.Posix.Types (Fd (..))
 import           Text.Read (readMaybe)
 
+import           Cardano.Api (fileOption)
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
                    MempoolCapacityBytesOverride (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
@@ -186,14 +189,14 @@ parsePort =
        <> value 0 -- Use an ephemeral port
     )
 
-parseConfigFile :: Parser FilePath
+parseConfigFile :: Parser (File 'In)
 parseConfigFile =
-  strOption
-    ( long "config"
-    <> metavar "NODE-CONFIGURATION"
-    <> help "Configuration file for the cardano-node"
-    <> completer (bashCompleter "file")
-    )
+  fileOption $ mconcat
+    [ long "config"
+    , metavar "NODE-CONFIGURATION"
+    , help "Configuration file for the cardano-node"
+    , completer (bashCompleter "file")
+    ]
 
 parseMempoolCapacityOverride :: Parser MempoolCapacityBytesOverride
 parseMempoolCapacityOverride = parseOverride <|> parseNoOverride
@@ -213,14 +216,14 @@ parseMempoolCapacityOverride = parseOverride <|> parseNoOverride
         <> help "The port number"
         )
 
-parseDbPath :: Parser FilePath
+parseDbPath :: Parser (File 'In)
 parseDbPath =
-  strOption
-    ( long "database-path"
-    <> metavar "FILEPATH"
-    <> help "Directory where the state is stored."
-    <> completer (bashCompleter "file")
-    )
+  fileOption $ mconcat
+    [ long "database-path"
+    , metavar "FILEPATH"
+    , help "Directory where the state is stored."
+    , completer (bashCompleter "file")
+    ]
 
 parseValidateDB :: Parser Bool
 parseValidateDB =
@@ -238,76 +241,81 @@ parseShutdownIPC =
         <> hidden
       )
 
-parseTopologyFile :: Parser FilePath
+parseTopologyFile :: Parser (File 'In)
 parseTopologyFile =
-    strOption (
-            long "topology"
-         <> metavar "FILEPATH"
-         <> help "The path to a file describing the topology."
-         <> completer (bashCompleter "file")
-    )
+  fileOption $ mconcat
+    [ long "topology"
+    , metavar "FILEPATH"
+    , help "The path to a file describing the topology."
+    , completer (bashCompleter "file")
+    ]
 
-parseByronDelegationCert :: Parser FilePath
+parseByronDelegationCert :: Parser (File 'In)
 parseByronDelegationCert =
-  strOption ( long "byron-delegation-certificate"
-    <> metavar "FILEPATH"
-    <> help "Path to the delegation certificate."
-    <> completer (bashCompleter "file")
-    )
-  <|>
-  strOption
-    ( long "delegation-certificate"
-    <> Opt.internal
-    )
+  asum
+    [ fileOption $ mconcat
+      [ long "byron-delegation-certificate"
+      , metavar "FILEPATH"
+      , help "Path to the delegation certificate."
+      , completer (bashCompleter "file")
+      ]
+    , fileOption $ mconcat
+      [ long "delegation-certificate"
+      , Opt.internal
+      ]
+    ]
 
-parseByronSigningKey :: Parser FilePath
+parseByronSigningKey :: Parser (File 'In)
 parseByronSigningKey =
-  strOption ( long "byron-signing-key"
-            <> metavar "FILEPATH"
-            <> help "Path to the Byron signing key."
-            <> completer (bashCompleter "file")
-            )
-  <|>
-  strOption ( long "signing-key"
-            <> Opt.internal
-            )
+  asum
+    [ fileOption $ mconcat
+      [ long "byron-signing-key"
+      , metavar "FILEPATH"
+      , help "Path to the Byron signing key."
+      , completer (bashCompleter "file")
+      ]
+    , fileOption $ mconcat
+      [ long "signing-key"
+      , Opt.internal
+      ]
+    ]
 
-parseOperationalCertFilePath :: Parser FilePath
+parseOperationalCertFilePath :: Parser (File 'In)
 parseOperationalCertFilePath =
-  strOption
-    ( long "shelley-operational-certificate"
-        <> metavar "FILEPATH"
-        <> help "Path to the delegation certificate."
-        <> completer (bashCompleter "file")
-    )
+  fileOption $ mconcat
+    [ long "shelley-operational-certificate"
+    , metavar "FILEPATH"
+    , help "Path to the delegation certificate."
+    , completer (bashCompleter "file")
+    ]
 
-parseBulkCredsFilePath :: Parser FilePath
+parseBulkCredsFilePath :: Parser (File 'In)
 parseBulkCredsFilePath =
-  strOption
-    ( long "bulk-credentials-file"
-        <> metavar "FILEPATH"
-        <> help "Path to the bulk pool credentials file."
-        <> completer (bashCompleter "file")
-    )
+  fileOption $ mconcat
+    [ long "bulk-credentials-file"
+    , metavar "FILEPATH"
+    , help "Path to the bulk pool credentials file."
+    , completer (bashCompleter "file")
+    ]
 
 --TODO: pass the current KES evolution, not the KES_0
-parseKesKeyFilePath :: Parser FilePath
+parseKesKeyFilePath :: Parser (File 'In)
 parseKesKeyFilePath =
-  strOption
-    ( long "shelley-kes-key"
-        <> metavar "FILEPATH"
-        <> help "Path to the KES signing key."
-        <> completer (bashCompleter "file")
-    )
+  fileOption $ mconcat
+    [ long "shelley-kes-key"
+    , metavar "FILEPATH"
+    , help "Path to the KES signing key."
+    , completer (bashCompleter "file")
+    ]
 
-parseVrfKeyFilePath :: Parser FilePath
+parseVrfKeyFilePath :: Parser (File 'In)
 parseVrfKeyFilePath =
-  strOption
-    ( long "shelley-vrf-key"
-        <> metavar "FILEPATH"
-        <> help "Path to the VRF signing key."
-        <> completer (bashCompleter "file")
-    )
+  fileOption $ mconcat
+    [ long "shelley-vrf-key"
+    , metavar "FILEPATH"
+    , help "Path to the VRF signing key."
+    , completer (bashCompleter "file")
+    ]
 
 -- TODO revisit because it sucks
 parseSnapshotInterval :: Parser SnapshotInterval

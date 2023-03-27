@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -23,7 +24,7 @@ import           Cardano.CLI.Types (SigningKeyFile (..))
 import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
 import           Cardano.Node.Types (AdjustFilePaths (..))
 
-import           Cardano.Api (AnyCardanoEra, Lovelace)
+import           Cardano.Api (AnyCardanoEra, FileDirection (..), Lovelace, MapFile (..))
 import           Cardano.TxGenerator.Internal.Orphans ()
 import           Cardano.TxGenerator.Types
 
@@ -42,7 +43,7 @@ data NixServiceOptions = NixServiceOptions {
   , _nix_plutus           :: Maybe TxGenPlutusParams
   , _nix_nodeConfigFile       :: Maybe FilePath
   , _nix_cardanoTracerSocket  :: Maybe FilePath
-  , _nix_sigKey               :: SigningKeyFile
+  , _nix_sigKey               :: SigningKeyFile 'In
   , _nix_localNodeSocketPath  :: String
   , _nix_targetNodes          :: NonEmpty NodeIPv4Address
   } deriving (Show, Eq)
@@ -70,7 +71,7 @@ instance AdjustFilePaths NixServiceOptions where
   adjustFilePaths f opts
     = opts {
       _nix_nodeConfigFile = f <$> _nix_nodeConfigFile opts
-    , _nix_sigKey = SigningKeyFile . f . unSigningKeyFile $ _nix_sigKey opts
+    , _nix_sigKey = mapFile f $ _nix_sigKey opts
     }
 
 

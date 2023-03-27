@@ -8,6 +8,7 @@ import           Control.Monad (void)
 import           Hedgehog (Property)
 import           Test.OptParse
 
+import           Cardano.Api (File (..))
 import qualified Hedgehog.Extras.Test.Base as H
 
 {- HLINT ignore "Use camelCase" -}
@@ -48,4 +49,4 @@ golden_shelleyTx = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
 
   -- Check the newly created files have not deviated from the
   -- golden files
-  checkTxCddlFormat referenceTx transactionFile
+  checkTxCddlFormat referenceTx (File transactionFile)

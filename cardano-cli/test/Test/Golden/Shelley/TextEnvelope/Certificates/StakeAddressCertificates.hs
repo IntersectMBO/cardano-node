@@ -4,7 +4,7 @@ module Test.Golden.Shelley.TextEnvelope.Certificates.StakeAddressCertificates
   ( golden_shelleyStakeAddressCertificates
   ) where
 
-import           Cardano.Api (AsType (..), HasTextEnvelope (..))
+import           Cardano.Api (AsType (..), File (..), HasTextEnvelope (..))
 import           Control.Monad (void)
 import           Hedgehog (Property)
 import           Test.OptParse
@@ -49,7 +49,7 @@ golden_shelleyStakeAddressCertificates = propertyOnce . H.moduleWorkspace "tmp" 
 
   -- Check the newly created files have not deviated from the
   -- golden files
-  checkTextEnvelopeFormat registrationCertificateType referenceRegistrationCertificate registrationCertificate
+  checkTextEnvelopeFormat registrationCertificateType (File referenceRegistrationCertificate) (File registrationCertificate)
 
   -- Create stake address deregistration certificate
   void $ execCardanoCLI
@@ -60,7 +60,7 @@ golden_shelleyStakeAddressCertificates = propertyOnce . H.moduleWorkspace "tmp" 
 
   -- Check the newly created files have not deviated from the
   -- golden files
-  checkTextEnvelopeFormat registrationCertificateType referenceDeregistrationCertificate deregistrationCertificate
+  checkTextEnvelopeFormat registrationCertificateType (File referenceDeregistrationCertificate) (File deregistrationCertificate)
 
 -- TODO: After delegation-certificate command is fixed to take a hash instead of a verification key
 {-

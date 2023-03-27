@@ -4,6 +4,7 @@ module Test.Golden.Byron.Vote
   ( voteTests
   ) where
 
+import           Cardano.Api (File (..))
 import           Cardano.CLI.Byron.Vote
 
 import           Control.Monad (void)
@@ -34,12 +35,12 @@ golden_byron_yes_vote = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
     , "--output-filepath", createdYesVote
     ]
 
-  eGolden <- liftIO . runExceptT $ readByronVote goldenYesVote
+  eGolden <- liftIO . runExceptT $ readByronVote $ File goldenYesVote
   golden <- case eGolden of
               Left err -> failWith Nothing . Text.unpack $ renderByronVoteError err
               Right prop -> return prop
 
-  eCreated <- liftIO . runExceptT $ readByronVote createdYesVote
+  eCreated <- liftIO . runExceptT $ readByronVote $ File createdYesVote
   created <- case eCreated of
                Left err -> failWith Nothing . Text.unpack $ renderByronVoteError err
                Right prop -> return prop
@@ -61,12 +62,12 @@ golden_byron_no_vote = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
     , "--output-filepath", createdNoVote
     ]
 
-  eGolden <- liftIO . runExceptT $ readByronVote goldenNoVote
+  eGolden <- liftIO . runExceptT $ readByronVote $ File goldenNoVote
   golden <- case eGolden of
               Left err -> failWith Nothing . Text.unpack $ renderByronVoteError err
               Right prop -> return prop
 
-  eCreated <- liftIO . runExceptT $ readByronVote createdNoVote
+  eCreated <- liftIO . runExceptT $ readByronVote $ File createdNoVote
   created <- case eCreated of
                Left err -> failWith Nothing . Text.unpack $ renderByronVoteError err
                Right prop -> return prop

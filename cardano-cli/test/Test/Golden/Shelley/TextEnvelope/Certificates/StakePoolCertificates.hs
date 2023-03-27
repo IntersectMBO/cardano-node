@@ -4,7 +4,7 @@ module Test.Golden.Shelley.TextEnvelope.Certificates.StakePoolCertificates
   ( golden_shelleyStakePoolCertificates
   ) where
 
-import           Cardano.Api (AsType (..), HasTextEnvelope (..))
+import           Cardano.Api (AsType (..), File (..), HasTextEnvelope (..))
 import           Control.Monad (void)
 import           Hedgehog (Property)
 import           Test.OptParse
@@ -86,7 +86,7 @@ golden_shelleyStakePoolCertificates = propertyOnce . H.moduleWorkspace "tmp" $ \
 
   -- Check the newly created files have not deviated from the
   -- golden files
-  checkTextEnvelopeFormat registrationCertificateType referenceRegistrationCertificate registrationCertificate
+  checkTextEnvelopeFormat registrationCertificateType (File referenceRegistrationCertificate) (File registrationCertificate)
 
   -- Create stake pool deregistration certificate
   void $ execCardanoCLI
@@ -100,4 +100,4 @@ golden_shelleyStakePoolCertificates = propertyOnce . H.moduleWorkspace "tmp" $ \
 
   -- Check the newly created files have not deviated from the
   -- golden files
-  checkTextEnvelopeFormat registrationCertificateType referenceDeregistrationCertificate deregistrationCertificate
+  checkTextEnvelopeFormat registrationCertificateType (File referenceDeregistrationCertificate) (File deregistrationCertificate)

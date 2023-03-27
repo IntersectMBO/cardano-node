@@ -12,7 +12,7 @@ module Cardano.TxSubmit.Web
 
 import           Cardano.Api (AllegraEra, AnyCardanoEra (AnyCardanoEra),
                    AnyConsensusMode (AnyConsensusMode), AnyConsensusModeParams (..), AsType (..),
-                   CardanoEra (..), Error (..), FromSomeType (..), HasTypeProxy (AsType),
+                   CardanoEra (..), Error (..), File (..), FromSomeType (..), HasTypeProxy (AsType),
                    InAnyCardanoEra (..),
                    LocalNodeConnectInfo (LocalNodeConnectInfo, localConsensusModeParams, localNodeNetworkId, localNodeSocketPath),
                    NetworkId, SerialiseAsCBOR (..), ShelleyEra, SocketPath (..), ToJSON, Tx,
@@ -102,7 +102,7 @@ txSubmitApp trace metrics connectInfo networkId socketPath =
 readEnvSocketPath :: ExceptT EnvSocketError IO SocketPath
 readEnvSocketPath =
     maybe (left $ CliEnvVarLookup (T.pack envName)) (pure . SocketPath)
-      =<< liftIO (lookupEnv envName)
+      =<< liftIO (fmap File <$> lookupEnv envName)
   where
     envName :: String
     envName = "CARDANO_NODE_SOCKET_PATH"

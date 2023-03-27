@@ -36,15 +36,15 @@ main :: IO ()
 main = do
   -- Get cocket path from CLI argument.
   socketDir:_ <- getArgs
-  let socketPath = socketDir </> "node.sock"
+  let socketPath = File $ socketDir </> "node.sock"
 
   -- Connect to the node.
-  putStrLn $ "Connecting to socket: " <> socketPath
+  putStrLn $ "Connecting to socket: " <> unFile socketPath
   connectToLocalNode
     (connectInfo socketPath)
     protocols
   where
-  connectInfo :: FilePath -> LocalNodeConnectInfo CardanoMode
+  connectInfo :: File 'InOut -> LocalNodeConnectInfo CardanoMode
   connectInfo socketPath =
       LocalNodeConnectInfo {
         localConsensusModeParams = CardanoModeParams (Byron.EpochSlots 21600),

@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -99,6 +100,7 @@ import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
+import           Cardano.Api.IO (File (..), FileDirection (..), HasFileMode, MapFile (..))
 import           Cardano.Api.IPC (ConsensusModeParams (..),
                    LocalChainSyncClient (LocalChainSyncClientPipelined),
                    LocalNodeClientProtocols (..), LocalNodeClientProtocolsInMode,
@@ -143,6 +145,8 @@ import           Cardano.Slotting.EpochInfo (EpochInfo)
 import qualified Cardano.Slotting.EpochInfo.API as Slot
 import           Cardano.Slotting.Slot (WithOrigin (At, Origin))
 import qualified Cardano.Slotting.Slot as Slot
+import           Data.Function ((&))
+import           Data.String (IsString)
 import qualified Ouroboros.Consensus.Block.Abstract as Consensus
 import qualified Ouroboros.Consensus.Byron.Ledger.Block as Byron
 import qualified Ouroboros.Consensus.Byron.Ledger.Ledger as Byron
@@ -220,7 +224,7 @@ renderLedgerStateError = \case
 
 -- | Get the environment and initial ledger state.
 initialLedgerState
-  :: FilePath
+  :: File 'In
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
   ->  ExceptT InitialLedgerStateError IO (Env, LedgerState)
   -- ^ The environment and initial ledger state
@@ -313,9 +317,9 @@ renderFoldBlocksError fbe = case fbe of
 -- the node's tip where @k@ is the security parameter.
 foldBlocks
   :: forall a.
-  FilePath
+     File 'In
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
-  -> FilePath
+  -> File 'InOut
   -- ^ Path to local cardano-node socket. This is the path specified by the @--socket-path@ command line option when running the node.
   -> ValidationMode
   -> a
@@ -720,7 +724,7 @@ rollBackLedgerStateHist hist maxInc = Seq.dropWhileL ((> maxInc) . (\(x,_,_) -> 
 --------------------------------------------------------------------------------
 
 genesisConfigToEnv
-  :: GenesisConfig
+  :: GenesisConfig 'In
   -> Either GenesisConfigError Env
 genesisConfigToEnv
   -- enp
@@ -748,25 +752,25 @@ genesisConfigToEnv
                   , envProtocolConfig = Consensus.topLevelConfigProtocol topLevelConfig
                   }
 
-readNetworkConfig :: NetworkConfigFile -> ExceptT Text IO NodeConfig
+readNetworkConfig :: NetworkConfigFile 'In -> ExceptT Text IO (NodeConfig 'In)
 readNetworkConfig (NetworkConfigFile ncf) = do
     ncfg <- (except . parseNodeConfig) =<< readByteString ncf "node"
     return ncfg
-      { ncByronGenesisFile = adjustGenesisFilePath (mkAdjustPath ncf) (ncByronGenesisFile ncfg)
-      , ncShelleyGenesisFile = adjustGenesisFilePath (mkAdjustPath ncf) (ncShelleyGenesisFile ncfg)
-      , ncAlonzoGenesisFile = adjustGenesisFilePath (mkAdjustPath ncf) (ncAlonzoGenesisFile ncfg)
-      , ncConwayGenesisFile = adjustGenesisFilePath (mkAdjustPath ncf) (ncConwayGenesisFile ncfg)
+      { ncByronGenesisFile = adjustGenesisFilePath (mapFile (mkAdjustPath ncf)) (ncByronGenesisFile ncfg)
+      , ncShelleyGenesisFile = adjustGenesisFilePath (mapFile (mkAdjustPath ncf)) (ncShelleyGenesisFile ncfg)
+      , ncAlonzoGenesisFile = adjustGenesisFilePath (mapFile (mkAdjustPath ncf)) (ncAlonzoGenesisFile ncfg)
+      , ncConwayGenesisFile = adjustGenesisFilePath (mapFile (mkAdjustPath ncf)) (ncConwayGenesisFile ncfg)
       }
 
-data NodeConfig = NodeConfig
+data NodeConfig (direction :: FileDirection) = NodeConfig
   { ncPBftSignatureThreshold :: !(Maybe Double)
-  , ncByronGenesisFile :: !GenesisFile
+  , ncByronGenesisFile :: !(GenesisFile direction)
   , ncByronGenesisHash :: !GenesisHashByron
-  , ncShelleyGenesisFile :: !GenesisFile
+  , ncShelleyGenesisFile :: !(GenesisFile direction)
   , ncShelleyGenesisHash :: !GenesisHashShelley
-  , ncAlonzoGenesisFile :: !GenesisFile
+  , ncAlonzoGenesisFile :: !(GenesisFile direction)
   , ncAlonzoGenesisHash :: !GenesisHashAlonzo
-  , ncConwayGenesisFile :: !GenesisFile
+  , ncConwayGenesisFile :: !(GenesisFile direction)
   , ncConwayGenesisHash :: !GenesisHashConway
   , ncRequiresNetworkMagic :: !Cardano.Crypto.RequiresNetworkMagic
   , ncByronSoftwareVersion :: !Cardano.Chain.Update.SoftwareVersion
@@ -784,11 +788,11 @@ data NodeConfig = NodeConfig
   , ncBabbageToConway  :: !Consensus.TriggerHardFork
   }
 
-instance FromJSON NodeConfig where
+instance FromJSON (NodeConfig direction) where
   parseJSON =
       Aeson.withObject "NodeConfig" parse
     where
-      parse :: Object -> Parser NodeConfig
+      parse :: Object -> Parser (NodeConfig direction)
       parse o =
         NodeConfig
           <$> o .:? "PBftSignatureThreshold"
@@ -872,25 +876,25 @@ instance FromJSON NodeConfig where
       -- intra-era fork, then the numbering is not consecutive.
       ----------------------------------------------------------------------
 
-parseNodeConfig :: ByteString -> Either Text NodeConfig
+parseNodeConfig :: ByteString -> Either Text (NodeConfig 'In)
 parseNodeConfig bs =
   case Yaml.decodeEither' bs of
     Left err -> Left $ "Error parsing node config: " <> textShow err
     Right nc -> Right nc
 
-adjustGenesisFilePath :: (FilePath -> FilePath) -> GenesisFile -> GenesisFile
+adjustGenesisFilePath :: (File direction -> File direction) -> GenesisFile direction -> GenesisFile direction
 adjustGenesisFilePath f (GenesisFile p) = GenesisFile (f p)
 
-mkAdjustPath :: FilePath -> (FilePath -> FilePath)
-mkAdjustPath nodeConfigFilePath fp = takeDirectory nodeConfigFilePath </> fp
+mkAdjustPath :: File (direction :: FileDirection) -> (FilePath -> FilePath)
+mkAdjustPath (File nodeConfigFilePath) fp = takeDirectory nodeConfigFilePath </> fp
 
-readByteString :: FilePath -> Text -> ExceptT Text IO ByteString
+readByteString :: File 'In -> Text -> ExceptT Text IO ByteString
 readByteString fp cfgType = ExceptT $
-  catch (Right <$> BS.readFile fp) $ \(_ :: IOException) ->
+  catch (Right <$> BS.readFile (unFile fp)) $ \(_ :: IOException) ->
     return $ Left $ mconcat
-      [ "Cannot read the ", cfgType, " configuration file at : ", Text.pack fp ]
+      [ "Cannot read the ", cfgType, " configuration file at : ", Text.pack (unFile fp) ]
 
-initLedgerStateVar :: GenesisConfig -> LedgerState
+initLedgerStateVar :: GenesisConfig 'In -> LedgerState
 initLedgerStateVar genesisConfig = LedgerState
   { clsState = Ledger.ledgerState $ Consensus.pInfoInitLedger protocolInfo
   }
@@ -949,9 +953,9 @@ toLedgerStateEvents lr = (ledgerState, ledgerEvents)
       $ lrEvents lr
 
 -- Usually only one constructor, but may have two when we are preparing for a HFC event.
-data GenesisConfig
+data GenesisConfig direction
   = GenesisCardano
-      !NodeConfig
+      !(NodeConfig direction)
       !Cardano.Chain.Genesis.Config
       !ShelleyConfig
       !AlonzoGenesis
@@ -962,9 +966,9 @@ data ShelleyConfig = ShelleyConfig
   , scGenesisHash :: !GenesisHashShelley
   }
 
-newtype GenesisFile = GenesisFile
-  { unGenesisFile :: FilePath
-  } deriving Show
+newtype GenesisFile (direction :: FileDirection) = GenesisFile
+  { unGenesisFile :: File direction
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile)
 
 newtype GenesisHashByron = GenesisHashByron
   { unGenesisHashByron :: Text
@@ -990,20 +994,20 @@ newtype NetworkName = NetworkName
   { unNetworkName :: Text
   } deriving Show
 
-newtype NetworkConfigFile = NetworkConfigFile
-  { unNetworkConfigFile :: FilePath
-  } deriving Show
+newtype NetworkConfigFile (direction :: FileDirection) = NetworkConfigFile
+  { _unNetworkConfigFile :: File direction
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile)
 
 newtype SocketPath = SocketPath
   { unSocketPath :: FilePath
   } deriving Show
 
-mkProtocolInfoCardano ::
-  GenesisConfig ->
-  Consensus.ProtocolInfo
-    IO
-    (HFC.HardForkBlock
-            (Consensus.CardanoEras Consensus.StandardCrypto))
+mkProtocolInfoCardano
+  :: GenesisConfig 'In
+  -> Consensus.ProtocolInfo
+        IO
+        (HFC.HardForkBlock
+                (Consensus.CardanoEras Consensus.StandardCrypto))
 mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesis alonzoGenesis conwayGenesis)
   = Consensus.protocolInfoCardano
           Consensus.ProtocolParamsByron
@@ -1053,7 +1057,7 @@ mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesis alonzoGene
 shelleyPraosNonce :: ShelleyConfig -> Ledger.Nonce
 shelleyPraosNonce sCfg = Ledger.Nonce (Cardano.Crypto.Hash.Class.castHash . unGenesisHashShelley $ scGenesisHash sCfg)
 
-shelleyProtVer :: NodeConfig -> Ledger.ProtVer
+shelleyProtVer :: NodeConfig 'In -> Ledger.ProtVer
 shelleyProtVer dnc =
   let bver = ncByronProtocolVersion dnc
       majVer = Cardano.Chain.Update.pvMajor bver
@@ -1062,8 +1066,8 @@ shelleyProtVer dnc =
        (fromIntegral $ Cardano.Chain.Update.pvMinor bver)
 
 readCardanoGenesisConfig
-        :: NodeConfig
-        -> ExceptT GenesisConfigError IO GenesisConfig
+    :: NodeConfig 'In
+    -> ExceptT GenesisConfigError IO (GenesisConfig 'In)
 readCardanoGenesisConfig enc =
   GenesisCardano enc
     <$> readByronGenesisConfig enc
@@ -1118,48 +1122,49 @@ data LookupFail
   deriving (Eq, Show)
 
 readByronGenesisConfig
-        :: NodeConfig
-        -> ExceptT GenesisConfigError IO Cardano.Chain.Genesis.Config
+    :: NodeConfig 'In
+    -> ExceptT GenesisConfigError IO Cardano.Chain.Genesis.Config
 readByronGenesisConfig enc = do
   let file = unGenesisFile $ ncByronGenesisFile enc
   genHash <- firstExceptT NEError
                 . hoistEither
                 $ Cardano.Crypto.Hashing.decodeAbstractHash (unGenesisHashByron $ ncByronGenesisHash enc)
-  firstExceptT (NEByronConfig file)
-                $ Cardano.Chain.Genesis.mkConfigFromFile (ncRequiresNetworkMagic enc) file genHash
+  firstExceptT (NEByronConfig (unFile file))
+                $ Cardano.Chain.Genesis.mkConfigFromFile (ncRequiresNetworkMagic enc) (unFile file) genHash
 
 readShelleyGenesisConfig
-    :: NodeConfig
+    :: NodeConfig 'In
     -> ExceptT GenesisConfigError IO ShelleyConfig
 readShelleyGenesisConfig enc = do
   let file = unGenesisFile $ ncShelleyGenesisFile enc
-  firstExceptT (NEShelleyConfig file . renderShelleyGenesisError)
+  firstExceptT (NEShelleyConfig (unFile file) . renderShelleyGenesisError)
     $ readShelleyGenesis (GenesisFile file) (ncShelleyGenesisHash enc)
 
 readAlonzoGenesisConfig
-    :: NodeConfig
+    :: NodeConfig 'In
     -> ExceptT GenesisConfigError IO AlonzoGenesis
 readAlonzoGenesisConfig enc = do
   let file = unGenesisFile $ ncAlonzoGenesisFile enc
-  firstExceptT (NEAlonzoConfig file . renderAlonzoGenesisError)
+  firstExceptT (NEAlonzoConfig (unFile file) . renderAlonzoGenesisError)
     $ readAlonzoGenesis (GenesisFile file) (ncAlonzoGenesisHash enc)
 
 readConwayGenesisConfig
-    :: NodeConfig
+    :: NodeConfig 'In
     -> ExceptT GenesisConfigError IO (ConwayGenesis Shelley.StandardCrypto)
 readConwayGenesisConfig enc = do
   let file = unGenesisFile $ ncConwayGenesisFile enc
-  firstExceptT (NEConwayConfig file . renderConwayGenesisError)
+  firstExceptT (NEConwayConfig (unFile file) . renderConwayGenesisError)
     $ readConwayGenesis (GenesisFile file) (ncConwayGenesisHash enc)
 
 readShelleyGenesis
-    :: GenesisFile -> GenesisHashShelley
+    :: GenesisFile 'In
+    -> GenesisHashShelley
     -> ExceptT ShelleyGenesisError IO ShelleyConfig
 readShelleyGenesis (GenesisFile file) expectedGenesisHash = do
-    content <- handleIOExceptT (ShelleyGenesisReadError file . textShow) $ BS.readFile file
+    content <- handleIOExceptT (ShelleyGenesisReadError (unFile file) . textShow) $ BS.readFile (unFile file)
     let genesisHash = GenesisHashShelley (Cardano.Crypto.Hash.Class.hashWith id content)
     checkExpectedGenesisHash genesisHash
-    genesis <- firstExceptT (ShelleyGenesisDecodeError file . Text.pack)
+    genesis <- firstExceptT (ShelleyGenesisDecodeError (unFile file) . Text.pack)
                   . hoistEither
                   $ Aeson.eitherDecodeStrict' content
     pure $ ShelleyConfig genesis genesisHash
@@ -1198,13 +1203,14 @@ renderShelleyGenesisError sge =
           ]
 
 readAlonzoGenesis
-    :: GenesisFile -> GenesisHashAlonzo
+    :: GenesisFile 'In -> GenesisHashAlonzo
     -> ExceptT AlonzoGenesisError IO AlonzoGenesis
 readAlonzoGenesis (GenesisFile file) expectedGenesisHash = do
-    content <- handleIOExceptT (AlonzoGenesisReadError file . textShow) $ BS.readFile file
+    content <- BS.readFile (unFile file)
+      & handleIOExceptT (AlonzoGenesisReadError (unFile file) . textShow)
     let genesisHash = GenesisHashAlonzo (Cardano.Crypto.Hash.Class.hashWith id content)
     checkExpectedGenesisHash genesisHash
-    firstExceptT (AlonzoGenesisDecodeError file . Text.pack)
+    firstExceptT (AlonzoGenesisDecodeError (unFile file) . Text.pack)
                   . hoistEither
                   $ Aeson.eitherDecodeStrict' content
   where
@@ -1242,13 +1248,14 @@ renderAlonzoGenesisError sge =
           ]
 
 readConwayGenesis
-    :: GenesisFile -> GenesisHashConway
+    :: GenesisFile 'In
+    -> GenesisHashConway
     -> ExceptT ConwayGenesisError IO (ConwayGenesis Shelley.StandardCrypto)
 readConwayGenesis (GenesisFile file) expectedGenesisHash = do
-    content <- handleIOExceptT (ConwayGenesisReadError file . textShow) $ BS.readFile file
+    content <- handleIOExceptT (ConwayGenesisReadError (unFile file) . textShow) $ BS.readFile (unFile file)
     let genesisHash = GenesisHashConway (Cardano.Crypto.Hash.Class.hashWith id content)
     checkExpectedGenesisHash genesisHash
-    firstExceptT (ConwayGenesisDecodeError file . Text.pack)
+    firstExceptT (ConwayGenesisDecodeError (unFile file) . Text.pack)
                   . hoistEither
                   $ Aeson.eitherDecodeStrict' content
   where

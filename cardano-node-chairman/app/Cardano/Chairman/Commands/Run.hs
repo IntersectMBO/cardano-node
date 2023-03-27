@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -46,17 +47,17 @@ data RunOpts = RunOpts
     -- | Expect this amount of progress (chain growth) by the end of the test.
   , caMinProgress :: !BlockNo
   , caSocketPaths :: ![SocketPath]
-  , caConfigYaml :: !ConfigYamlFilePath
+  , caConfigYaml :: !(ConfigYamlFilePath 'In)
   }
 
-parseConfigFile :: Parser FilePath
+parseConfigFile :: Parser (File 'In)
 parseConfigFile =
-  strOption
-    ( long "config"
-    <> metavar "NODE-CONFIGURATION"
-    <> help "Configuration file for the cardano-node"
-    <> completer (bashCompleter "file")
-    )
+  fileOption $ mconcat
+    [ long "config"
+    , metavar "NODE-CONFIGURATION"
+    , help "Configuration file for the cardano-node"
+    , completer (bashCompleter "file")
+    ]
 
 parseSocketPath :: Text -> Parser SocketPath
 parseSocketPath helpMessage =
@@ -108,7 +109,7 @@ run RunOpts
   ptclConfig <- case getProtocolConfiguration configYamlPc of
                   Nothing ->
                     error $ "Node protocol configuration was not specified "<>
-                            "in Config yaml filepath: " <> unConfigPath caConfigYaml
+                            "in Config yaml filepath: " <> unFile (unConfigYamlFilePath caConfigYaml)
                   Just ptclConfig -> return ptclConfig
 
   eitherSomeProtocol <- runExceptT $ mkConsensusProtocol ptclConfig Nothing

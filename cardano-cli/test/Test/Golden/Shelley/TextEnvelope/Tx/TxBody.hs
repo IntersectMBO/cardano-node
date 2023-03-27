@@ -7,6 +7,7 @@ module Test.Golden.Shelley.TextEnvelope.Tx.TxBody
 import           Hedgehog (Property)
 import           Test.OptParse
 
+import           Cardano.Api (File (..))
 import           Control.Monad (void)
 import qualified Hedgehog.Extras.Test.Base as H
 
@@ -36,4 +37,4 @@ golden_shelleyTxBody = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
 
   -- Check the newly created files have not deviated from the
   -- golden files
-  checkTxCddlFormat referenceTxBody transactionBodyFile
+  checkTxCddlFormat (File referenceTxBody) (File transactionBodyFile)

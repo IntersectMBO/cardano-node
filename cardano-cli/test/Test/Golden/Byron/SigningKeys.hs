@@ -90,7 +90,7 @@ prop_migrate_legacy_to_nonlegacy_signingkeys =
      ]
 
     eSignKey <- liftIO . runExceptT . readByronSigningKey NonLegacyByronKeyFormat
-                  $ SigningKeyFile nonLegacyKeyFp
+                  $ SigningKeyFile (File nonLegacyKeyFp)
 
     case eSignKey of
       Left err -> failWith Nothing $ show err

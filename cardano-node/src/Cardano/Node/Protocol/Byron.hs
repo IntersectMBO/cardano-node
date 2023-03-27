@@ -159,12 +159,12 @@ readLeaderCredentials genesisConfig
     (Nothing, Just _) -> left DelegationCertificateFilepathNotSpecified
     (Just delegCertFile, Just signingKeyFile) -> do
 
-         signingKeyFileBytes <- liftIO $ LB.readFile signingKeyFile
-         delegCertFileBytes <- liftIO $ LB.readFile delegCertFile
-         ByronSigningKey signingKey <- firstExceptT (const (SigningKeyDeserialiseFailure signingKeyFile))
+         signingKeyFileBytes <- liftIO $ LB.readFile (unFile signingKeyFile)
+         delegCertFileBytes <- liftIO $ LB.readFile (unFile delegCertFile)
+         ByronSigningKey signingKey <- firstExceptT (const (SigningKeyDeserialiseFailure (unFile signingKeyFile)))
                          . hoistEither
                          $ deserialiseFromRawBytes (AsSigningKey AsByronKey) $ LB.toStrict signingKeyFileBytes
-         delegCert  <- firstExceptT (CanonicalDecodeFailure delegCertFile)
+         delegCert  <- firstExceptT (CanonicalDecodeFailure (unFile delegCertFile))
                          . hoistEither
                          $ canonicalDecodePretty delegCertFileBytes
 

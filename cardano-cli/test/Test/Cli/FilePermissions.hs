@@ -12,6 +12,7 @@ import qualified Hedgehog
 import qualified Hedgehog.Extras.Test.Base as H
 import           Hedgehog.Internal.Property (failWith)
 
+import           Cardano.Api (File (..))
 import           Control.Monad (void)
 import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (runExceptT)
@@ -33,7 +34,7 @@ prop_createVRFSigningKeyFilePermissions =
       , "--signing-key-file", vrfSignKey
       ]
 
-    result <- liftIO . runExceptT $ checkVRFFilePermissions vrfSignKey
+    result <- liftIO . runExceptT $ checkVRFFilePermissions $ File vrfSignKey
     case result of
       Left err ->
         failWith Nothing

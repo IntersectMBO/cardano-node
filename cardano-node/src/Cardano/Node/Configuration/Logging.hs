@@ -166,7 +166,7 @@ createLoggingLayer ver nodeConfig' p = do
   logConfig <- loggingCLIConfiguration $
     if ncLoggingSwitch nodeConfig'
     -- Re-interpret node config again, as logging 'Configuration':
-    then Just . unConfigPath $ ncConfigFile nodeConfig'
+    then Just . unFile . unConfigYamlFilePath $ ncConfigFile nodeConfig'
     else Nothing
 
   -- These have to be set before the switchboard is set up.

@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 
 module Cardano.CLI.Byron.Run
@@ -112,26 +113,26 @@ runGenesisCommand outDir params = do
   (genData, genSecrets) <- firstExceptT ByronCmdGenesisError $ mkGenesis params
   firstExceptT ByronCmdGenesisError $ dumpGenesis outDir genData genSecrets
 
-runValidateCBOR :: CBORObject -> FilePath -> ExceptT ByronClientCmdError IO ()
+runValidateCBOR :: CBORObject -> File 'In -> ExceptT ByronClientCmdError IO ()
 runValidateCBOR cborObject fp = do
   bs <- firstExceptT ByronCmdHelpersError $ readCBOR fp
   res <- hoistEither . first ByronCmdHelpersError $ validateCBOR cborObject bs
   liftIO $ Text.putStrLn res
 
-runPrettyPrintCBOR :: FilePath -> ExceptT ByronClientCmdError IO ()
+runPrettyPrintCBOR :: File 'In -> ExceptT ByronClientCmdError IO ()
 runPrettyPrintCBOR fp = do
   bs <- firstExceptT ByronCmdHelpersError $ readCBOR fp
   firstExceptT ByronCmdHelpersError $ pPrintCBOR bs
 
-runPrettySigningKeyPublic :: ByronKeyFormat -> SigningKeyFile -> ExceptT ByronClientCmdError IO ()
+runPrettySigningKeyPublic :: ByronKeyFormat -> SigningKeyFile 'In -> ExceptT ByronClientCmdError IO ()
 runPrettySigningKeyPublic bKeyFormat skF = do
   sK <- firstExceptT ByronCmdKeyFailure $ readByronSigningKey bKeyFormat skF
   liftIO . Text.putStrLn . prettyPublicKey $ byronWitnessToVerKey sK
 
 runMigrateDelegateKeyFrom
-  :: SigningKeyFile
+  :: SigningKeyFile 'In
   -- ^ Legacy Byron signing key
-  -> NewSigningKeyFile
+  -> NewSigningKeyFile 'Out
   -> ExceptT ByronClientCmdError IO ()
 runMigrateDelegateKeyFrom oldKey@(SigningKeyFile fp) (NewSigningKeyFile newKey) = do
   sk <- firstExceptT ByronCmdKeyFailure $ readByronSigningKey LegacyByronKeyFormat oldKey
@@ -139,10 +140,10 @@ runMigrateDelegateKeyFrom oldKey@(SigningKeyFile fp) (NewSigningKeyFile newKey) 
                        AByronSigningKeyLegacy (ByronSigningKeyLegacy sKey) ->
                          return . AByronSigningKey $ ByronSigningKey sKey
                        AByronSigningKey _ ->
-                         left . ByronCmdKeyFailure $ CannotMigrateFromNonLegacySigningKey fp
+                         left . ByronCmdKeyFailure $ CannotMigrateFromNonLegacySigningKey (unFile fp)
   firstExceptT ByronCmdHelpersError . ensureNewFileLBS newKey $ serialiseByronWitness migratedWitness
 
-runPrintGenesisHash :: GenesisFile -> ExceptT ByronClientCmdError IO ()
+runPrintGenesisHash :: GenesisFile 'In -> ExceptT ByronClientCmdError IO ()
 runPrintGenesisHash genFp = do
     genesis <- firstExceptT ByronCmdGenesisError $
                  readGenesis genFp dummyNetwork
@@ -161,32 +162,32 @@ runPrintGenesisHash genFp = do
 runPrintSigningKeyAddress
   :: ByronKeyFormat
   -> NetworkId
-  -> SigningKeyFile
+  -> SigningKeyFile 'In
   -> ExceptT ByronClientCmdError IO ()
 runPrintSigningKeyAddress bKeyFormat networkid skF = do
   sK <- firstExceptT ByronCmdKeyFailure $ readByronSigningKey bKeyFormat skF
   let sKeyAddr = prettyAddress . makeByronAddress networkid $ byronWitnessToVerKey sK
   liftIO $ Text.putStrLn sKeyAddr
 
-runKeygen :: NewSigningKeyFile -> ExceptT ByronClientCmdError IO ()
+runKeygen :: NewSigningKeyFile 'Out -> ExceptT ByronClientCmdError IO ()
 runKeygen (NewSigningKeyFile skF)  = do
   sK <- liftIO $ generateSigningKey AsByronKey
   firstExceptT ByronCmdHelpersError . ensureNewFileLBS skF $ serialiseToRawBytes sK
 
-runToVerification :: ByronKeyFormat -> SigningKeyFile -> NewVerificationKeyFile -> ExceptT ByronClientCmdError IO ()
+runToVerification :: ByronKeyFormat -> SigningKeyFile 'In -> NewVerificationKeyFile 'Out -> ExceptT ByronClientCmdError IO ()
 runToVerification bKeyFormat skFp (NewVerificationKeyFile vkFp) = do
   sk <- firstExceptT ByronCmdKeyFailure $ readByronSigningKey bKeyFormat skFp
   let ByronVerificationKey vK = byronWitnessToVerKey sk
   let vKey = Builder.toLazyText $ Crypto.formatFullVerificationKey vK
-  firstExceptT ByronCmdHelpersError $ ensureNewFile TL.writeFile vkFp vKey
+  firstExceptT ByronCmdHelpersError $ ensureNewFile TL.writeFile (unFile vkFp) vKey
 
-runSubmitTx :: NetworkId -> TxFile -> ExceptT ByronClientCmdError IO ()
+runSubmitTx :: NetworkId -> TxFile 'In -> ExceptT ByronClientCmdError IO ()
 runSubmitTx network fp = do
     tx <- firstExceptT ByronCmdTxError $ readByronTx fp
     firstExceptT ByronCmdTxError $
       nodeSubmitTx network (normalByronTxToGenTx tx)
 
-runGetTxId :: TxFile -> ExceptT ByronClientCmdError IO ()
+runGetTxId :: TxFile 'In -> ExceptT ByronClientCmdError IO ()
 runGetTxId fp = firstExceptT ByronCmdTxError $ do
     tx <- readByronTx fp
     let txbody = getTxBody (ByronTx tx)
@@ -194,11 +195,11 @@ runGetTxId fp = firstExceptT ByronCmdTxError $ do
     liftIO $ BS.putStrLn $ serialiseToRawBytesHex txid
 
 runSpendGenesisUTxO
-  :: GenesisFile
+  :: GenesisFile 'In
   -> NetworkId
   -> ByronKeyFormat
-  -> NewTxFile
-  -> SigningKeyFile
+  -> NewTxFile 'Out
+  -> SigningKeyFile 'In
   -> Address ByronAddr
   -> [TxOut CtxTx ByronEra]
   -> ExceptT ByronClientCmdError IO ()
@@ -212,8 +213,8 @@ runSpendGenesisUTxO genesisFile nw bKeyFormat (NewTxFile ctTx) ctKey genRichAddr
 runSpendUTxO
   :: NetworkId
   -> ByronKeyFormat
-  -> NewTxFile
-  -> SigningKeyFile
+  -> NewTxFile 'Out
+  -> SigningKeyFile 'In
   -> [TxIn]
   -> [TxOut CtxTx ByronEra]
   -> ExceptT ByronClientCmdError IO ()

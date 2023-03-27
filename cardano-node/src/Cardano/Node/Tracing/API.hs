@@ -60,7 +60,7 @@ initTraceDispatcher ::
   -> NetworkP2PMode p2p
   -> IO (Tracers RemoteConnectionId LocalConnectionId blk p2p)
 initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
-  trConfig <- readConfigurationWithDefault (unConfigPath $ ncConfigFile nc) defaultCardanoConfig
+  trConfig <- readConfigurationWithDefault (unFile . unConfigYamlFilePath $ ncConfigFile nc) defaultCardanoConfig
   putStrLn $ "New tracer configuration: " <> show trConfig
 
   tracers <- mkTracers trConfig
@@ -95,7 +95,7 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
         then do
           -- TODO: check if this is the correct way to use withIOManager
           (forwardSink, dpStore) <- withIOManager $ \iomgr -> do
-            let tracerSocketMode = Just . first unSocketPath =<< ncTraceForwardSocket nc
+            let tracerSocketMode = Just . first (unFile . unSocketPath) =<< ncTraceForwardSocket nc
             initForwarding iomgr trConfig networkMagic (Just ekgStore) tracerSocketMode
           pure (forwardTracer forwardSink, dataPointTracer dpStore)
         else

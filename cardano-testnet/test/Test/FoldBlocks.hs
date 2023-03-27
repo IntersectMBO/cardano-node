@@ -70,7 +70,7 @@ prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath'
       -- that case we simply restart `foldBlocks` again.
       forever $ do
         let handler _env _ledgerState _ledgerEvents _blockInCardanoMode _ = IO.putMVar lock ()
-        e <- runExceptT (C.foldBlocks configFile socketPathAbs  C.QuickValidation () handler)
+        e <- runExceptT (C.foldBlocks (C.File configFile) (C.File socketPathAbs) C.QuickValidation () handler)
         either (throw . FoldBlocksException) (\_ -> pure ()) e
     link a -- Throw async thread's exceptions in main thread
 

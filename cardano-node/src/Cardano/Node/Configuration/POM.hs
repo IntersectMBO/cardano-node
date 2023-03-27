@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -90,9 +91,9 @@ data NodeConfiguration
            -- | Filepath of the configuration yaml file. This file determines
           -- all the configuration settings required for the cardano node
           -- (logging, tracing, protocol, slot length etc)
-       , ncConfigFile      :: !ConfigYamlFilePath
-       , ncTopologyFile    :: !TopologyFile
-       , ncDatabaseFile    :: !DbFile
+       , ncConfigFile      :: !(ConfigYamlFilePath 'In)
+       , ncTopologyFile    :: !(TopologyFile 'In)
+       , ncDatabaseFile    :: !(DbFile 'In)
        , ncProtocolFiles   :: !ProtocolFilepaths
        , ncValidateDB      :: !Bool
        , ncShutdownConfig  :: !ShutdownConfig
@@ -159,9 +160,9 @@ data PartialNodeConfiguration
          -- | Filepath of the configuration yaml file. This file determines
          -- all the configuration settings required for the cardano node
          -- (logging, tracing, protocol, slot length etc)
-       , pncConfigFile      :: !(Last ConfigYamlFilePath)
-       , pncTopologyFile    :: !(Last TopologyFile)
-       , pncDatabaseFile    :: !(Last DbFile)
+       , pncConfigFile      :: !(Last (ConfigYamlFilePath 'In))
+       , pncTopologyFile    :: !(Last (TopologyFile 'In))
+       , pncDatabaseFile    :: !(Last (DbFile 'In))
        , pncProtocolFiles   :: !(Last ProtocolFilepaths)
        , pncValidateDB      :: !(Last Bool)
        , pncShutdownConfig  :: !(Last ShutdownConfig)
@@ -584,9 +585,9 @@ pncProtocol pnc =
     Last (Just NodeProtocolConfigurationShelley{}) -> Right ShelleyProtocol
     Last (Just NodeProtocolConfigurationCardano{}) -> Right CardanoProtocol
 
-parseNodeConfigurationFP :: Maybe ConfigYamlFilePath -> IO PartialNodeConfiguration
+parseNodeConfigurationFP :: Maybe (ConfigYamlFilePath 'In) -> IO PartialNodeConfiguration
 parseNodeConfigurationFP Nothing = parseNodeConfigurationFP . getLast $ pncConfigFile defaultPartialNodeConfiguration
 parseNodeConfigurationFP (Just (ConfigYamlFilePath fp)) = do
-    nc <- decodeFileThrow fp
+    nc <- decodeFileThrow (unFile fp)
     -- Make all the files be relative to the location of the config file.
-    pure $ adjustFilePaths (takeDirectory fp </>) nc
+    pure $ adjustFilePaths (takeDirectory (unFile fp) </>) nc

@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+
 module Test.OptParse
   ( checkTxCddlFormat
   , checkTextEnvelopeFormat
@@ -41,8 +43,8 @@ execCardanoCLI = GHC.withFrozenCallStack $ H.execFlex "cardano-cli" "CARDANO_CLI
 checkTextEnvelopeFormat
   :: (MonadTest m, MonadIO m, HasCallStack)
   => TextEnvelopeType
-  -> FilePath
-  -> FilePath
+  -> File 'In
+  -> File 'In
   -> m ()
 checkTextEnvelopeFormat tve reference created = GHC.withFrozenCallStack $ do
   eRefTextEnvelope <- liftIO $ readTextEnvelopeOfTypeFromFile tve reference
@@ -67,8 +69,8 @@ checkTextEnvelopeFormat tve reference created = GHC.withFrozenCallStack $ do
 
 checkTxCddlFormat
   :: (MonadTest m, MonadIO m, HasCallStack)
-  => FilePath -- ^ Reference/golden file
-  -> FilePath -- ^ Newly created file
+  => File 'In -- ^ Reference/golden file
+  -> File 'In -- ^ Newly created file
   -> m ()
 checkTxCddlFormat referencePath createdPath = do
   reference <- liftIO $ fileOrPipe referencePath

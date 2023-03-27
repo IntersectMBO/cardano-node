@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -6,6 +7,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-name-shadowing -Wno-orphans #-}
+{-# LANGUAGE DataKinds #-}
 
 module Cardano.Node.Tracing.Tracers.Startup
 
@@ -13,7 +15,7 @@ module Cardano.Node.Tracing.Tracers.Startup
   , ppStartupInfoTrace
   )  where
 
-import           Cardano.Api (NetworkMagic (..), SlotNo (..))
+import           Cardano.Api (File (..), FileDirection (..), NetworkMagic (..), SlotNo (..))
 import qualified Cardano.Api as Api
 import           Prelude
 
@@ -64,7 +66,7 @@ import           Cardano.Node.Startup
 getStartupInfo
   :: NodeConfiguration
   -> SomeConsensusProtocol
-  -> FilePath
+  -> File 'In
   -> IO [StartupTrace blk]
 getStartupInfo nc (SomeConsensusProtocol whichP pForInfo) fp = do
   nodeStartTime <- getCurrentTime
@@ -74,7 +76,7 @@ getStartupInfo nc (SomeConsensusProtocol whichP pForInfo) fp = do
               , biVersion  = pack . showVersion $ version
               , biCommit   = gitRev
               , biNodeStartTime = nodeStartTime
-              , biConfigPath = fp
+              , biConfigPath = unFile fp
               , biNetworkMagic = getNetworkMagic $ Consensus.configBlock cfg
               }
       protocolDependentItems =

@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 
 module Cardano.CLI.Byron.UpdateProposal
@@ -24,7 +25,8 @@ import           Cardano.Chain.Update (InstallerHash (..), ProtocolVersion (..),
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import           Ouroboros.Consensus.Util.Condense (condense)
 
-import           Cardano.Api (NetworkId, SerialiseAsRawBytes (..), textShow)
+import           Cardano.Api (File (..), FileDirection (..), NetworkId, SerialiseAsRawBytes (..),
+                   textShow)
 import           Cardano.Api.Byron (AsType (AsByronUpdateProposal), ByronProtocolParametersUpdate,
                    ByronUpdateProposal, makeByronUpdateProposal, toByronLedgerUpdateProposal)
 
@@ -62,31 +64,31 @@ renderByronUpdateProposalError err =
 
 runProposalCreation
   :: NetworkId
-  -> SigningKeyFile
+  -> SigningKeyFile 'In
   -> ProtocolVersion
   -> SoftwareVersion
   -> SystemTag
   -> InstallerHash
-  -> FilePath
+  -> File 'Out
   -> ByronProtocolParametersUpdate
   -> ExceptT ByronUpdateProposalError IO ()
 runProposalCreation nw sKey@(SigningKeyFile sKeyfp) pVer sVer
                     sysTag insHash outputFp params = do
-  sK <- firstExceptT (ReadSigningKeyFailure sKeyfp) $ readByronSigningKey NonLegacyByronKeyFormat sKey
+  sK <- firstExceptT (ReadSigningKeyFailure (unFile sKeyfp)) $ readByronSigningKey NonLegacyByronKeyFormat sKey
   let proposal = makeByronUpdateProposal nw pVer sVer sysTag insHash sK params
   firstExceptT ByronUpdateProposalWriteError $
     ensureNewFileLBS outputFp $ serialiseToRawBytes proposal
 
-readByronUpdateProposal :: FilePath -> ExceptT ByronUpdateProposalError IO ByronUpdateProposal
+readByronUpdateProposal :: File 'In -> ExceptT ByronUpdateProposalError IO ByronUpdateProposal
 readByronUpdateProposal fp = do
-  proposalBs <- handleIOExceptT (ByronReadUpdateProposalFileFailure fp . toS . displayException)
-                  $ BS.readFile fp
+  proposalBs <- handleIOExceptT (ByronReadUpdateProposalFileFailure (unFile fp) . toS . displayException)
+                  $ BS.readFile (unFile fp)
   let proposalResult = deserialiseFromRawBytes AsByronUpdateProposal proposalBs
-  hoistEither $ first (const (UpdateProposalDecodingError fp)) proposalResult
+  hoistEither $ first (const (UpdateProposalDecodingError (unFile fp))) proposalResult
 
 submitByronUpdateProposal
   :: NetworkId
-  -> FilePath
+  -> File 'In
   -> ExceptT ByronUpdateProposalError IO ()
 submitByronUpdateProposal network proposalFp = do
     proposal  <- readByronUpdateProposal proposalFp

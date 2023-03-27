@@ -4,7 +4,7 @@ module Test.Golden.Shelley.TextEnvelope.Keys.GenesisDelegateKeys
   ( golden_shelleyGenesisDelegateKeys
   ) where
 
-import           Cardano.Api (AsType (..), HasTextEnvelope (..))
+import           Cardano.Api (AsType (..), File (..), HasTextEnvelope (..))
 import           Control.Monad (void)
 import           Hedgehog (Property)
 import           Test.OptParse
@@ -42,6 +42,6 @@ golden_shelleyGenesisDelegateKeys = propertyOnce . H.moduleWorkspace "tmp" $ \te
 
   -- Check the newly created files have not deviated from the
   -- golden files
-  checkTextEnvelopeFormat verificationKeyType referenceVerKey verKey
-  checkTextEnvelopeFormat signingKeyType referenceSignKey signKey
-  checkTextEnvelopeFormat operationalCertCounterType referenceOpCertCounter opCertCounter
+  checkTextEnvelopeFormat verificationKeyType (File referenceVerKey) (File verKey)
+  checkTextEnvelopeFormat signingKeyType (File referenceSignKey) (File signKey)
+  checkTextEnvelopeFormat operationalCertCounterType (File referenceOpCertCounter) (File opCertCounter)

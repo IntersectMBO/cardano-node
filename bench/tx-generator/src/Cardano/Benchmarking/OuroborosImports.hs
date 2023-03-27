@@ -41,6 +41,7 @@ import           Cardano.Api (BlockType (..), ConsensusModeParams (..), EpochSlo
                    LocalNodeConnectInfo (..), NetworkId (..), PaymentKey, SigningKey, TxInMode,
                    TxValidationErrorInMode, protocolInfo, submitTxToNodeLocal)
 import           Cardano.Ledger.Shelley.Genesis (ShelleyGenesis)
+import           Cardano.Node.Types (File (..))
 
 type CardanoBlock = Consensus.CardanoBlock StandardCrypto
 
@@ -65,6 +66,6 @@ makeLocalConnectInfo networkId sock
   = LocalNodeConnectInfo
       (CardanoModeParams (EpochSlots 21600))
       networkId
-      sock
+      (File sock)
 
 type LocalSubmitTx = (TxInMode CardanoMode -> IO (SubmitResult (TxValidationErrorInMode CardanoMode)))

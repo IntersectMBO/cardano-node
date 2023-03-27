@@ -45,7 +45,10 @@ import           System.FilePath ((</>))
 main :: IO ()
 main = do
   -- Get config and socket path from CLI argument.
-  configFilePath : socketPath : xs <- getArgs
+  configFilePath : socketFilePath : xs <- getArgs
+
+  let socketPath = File socketFilePath
+
   byronSlotLength <- case xs of
         byronSlotLengthStr : _ -> return (read byronSlotLengthStr)
         _ -> do
@@ -54,7 +57,7 @@ main = do
           return l
 
   -- Use 'chainSyncClientWithLedgerState' to support ledger state.
-  Right (env, initialLedgerState) <- runExceptT $ initialLedgerState configFilePath
+  Right (env, initialLedgerState) <- runExceptT $ initialLedgerState (File configFilePath)
   let client = chainSyncClientWithLedgerState
         env
         initialLedgerState
@@ -71,12 +74,12 @@ main = do
           }
 
   -- Connect to the node.
-  putStrLn $ "Connecting to socket: " <> socketPath
+  putStrLn $ "Connecting to socket: " <> unFile socketPath
   connectToLocalNode
     (connectInfo socketPath)
     protocols
   where
-  connectInfo :: FilePath -> LocalNodeConnectInfo CardanoMode
+  connectInfo :: File 'InOut -> LocalNodeConnectInfo CardanoMode
   connectInfo socketPath =
       LocalNodeConnectInfo {
         localConsensusModeParams = CardanoModeParams (Byron.EpochSlots 21600),

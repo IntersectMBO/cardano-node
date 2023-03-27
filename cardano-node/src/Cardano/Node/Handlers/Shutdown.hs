@@ -31,7 +31,7 @@ import           Control.Exception (try)
 import           Control.Exception.Base (throwIO)
 import           Control.Monad (void, when)
 import           Data.Aeson (FromJSON, ToJSON)
-import           Data.Foldable (asum)
+import           Data.Foldable
 import           Data.Text (Text, pack)
 import           Generic.Data.Orphans ()
 import           GHC.Generics (Generic)

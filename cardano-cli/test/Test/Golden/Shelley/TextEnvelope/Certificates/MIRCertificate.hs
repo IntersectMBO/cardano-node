@@ -4,7 +4,7 @@ module Test.Golden.Shelley.TextEnvelope.Certificates.MIRCertificate
   ( golden_shelleyMIRCertificate
   ) where
 
-import           Cardano.Api (AsType (..), HasTextEnvelope (..))
+import           Cardano.Api (AsType (..), File (..), HasTextEnvelope (..))
 import           Control.Monad (void)
 import           Hedgehog (Property)
 import           Test.OptParse
@@ -50,4 +50,4 @@ golden_shelleyMIRCertificate = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir
 
   let registrationCertificateType = textEnvelopeType AsCertificate
 
-  checkTextEnvelopeFormat registrationCertificateType referenceMIRCertificate mirCertificate
+  checkTextEnvelopeFormat registrationCertificateType (File referenceMIRCertificate) (File mirCertificate)

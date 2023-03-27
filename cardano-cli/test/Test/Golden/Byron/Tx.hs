@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Test.Golden.Byron.Tx
@@ -7,6 +8,7 @@ module Test.Golden.Byron.Tx
 import           Cardano.Chain.UTxO (ATxAux)
 import           Cardano.CLI.Byron.Tx
 
+import           Cardano.Api (File (..), FileDirection (..))
 import           Control.Monad (void)
 import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad.Trans.Except (runExceptT)
@@ -37,7 +39,7 @@ golden_byronTx_legacy = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
     , "--txout", "(\"2657WMsDfac6eFirdvKVPVMxNVYuACd1RGM2arH3g1y1yaQCr1yYpb2jr2b2aSiDZ\",999)"
     ]
 
-  compareByronTxs createdTx goldenTx
+  compareByronTxs (File createdTx) (File goldenTx)
 
 golden_byronTx :: Property
 golden_byronTx = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
@@ -54,16 +56,16 @@ golden_byronTx = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
     , "--txout", "(\"2657WMsDfac6eFirdvKVPVMxNVYuACd1RGM2arH3g1y1yaQCr1yYpb2jr2b2aSiDZ\",999)"
     ]
 
-  compareByronTxs createdTx goldenTx
+  compareByronTxs (File createdTx) (File goldenTx)
 
-getTxByteString :: FilePath -> H.PropertyT IO (ATxAux ByteString)
+getTxByteString :: File 'In -> H.PropertyT IO (ATxAux ByteString)
 getTxByteString txFp = do
   eATxAuxBS <- liftIO . runExceptT $ readByronTx $ TxFile txFp
   case eATxAuxBS of
     Left err -> failWith Nothing . Text.unpack $ renderByronTxError err
     Right aTxAuxBS -> return aTxAuxBS
 
-compareByronTxs :: FilePath -> FilePath -> H.PropertyT IO ()
+compareByronTxs :: File 'In -> File 'In -> H.PropertyT IO ()
 compareByronTxs createdTx goldenTx = do
   createdATxAuxBS <- getTxByteString createdTx
   goldenATxAuxBS <- getTxByteString goldenTx

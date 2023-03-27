@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 
 module Cardano.CLI.Byron.Commands
@@ -35,31 +36,31 @@ data ByronCommand =
         GenesisParameters
 
   | PrintGenesisHash
-        GenesisFile
+        (GenesisFile 'In)
 
   --- Key Related Commands ---
   | Keygen
-        NewSigningKeyFile
+        (NewSigningKeyFile 'Out)
 
   | ToVerification
         ByronKeyFormat
-        SigningKeyFile
-        NewVerificationKeyFile
+        (SigningKeyFile 'In)
+        (NewVerificationKeyFile 'Out)
 
   | PrettySigningKeyPublic
         ByronKeyFormat
-        SigningKeyFile
+        (SigningKeyFile 'In)
 
   | MigrateDelegateKeyFrom
-        SigningKeyFile
+        (SigningKeyFile 'In)
         -- ^ Old key
-        NewSigningKeyFile
+        (NewSigningKeyFile 'Out)
         -- ^ New Key
 
   | PrintSigningKeyAddress
         ByronKeyFormat
         NetworkId
-        SigningKeyFile
+        (SigningKeyFile 'In)
 
   | GetLocalNodeTip
         NetworkId
@@ -68,16 +69,16 @@ data ByronCommand =
 
   | SubmitTx
         NetworkId
-        TxFile
+        (TxFile 'In)
         -- ^ Filepath of transaction to submit.
 
   | SpendGenesisUTxO
-        GenesisFile
+        (GenesisFile 'In)
         NetworkId
         ByronKeyFormat
-        NewTxFile
+        (NewTxFile 'Out)
         -- ^ Filepath of the newly created transaction.
-        SigningKeyFile
+        (SigningKeyFile 'In)
         -- ^ Signing key of genesis UTxO owner.
         (Address ByronAddr)
         -- ^ Genesis UTxO address.
@@ -86,51 +87,51 @@ data ByronCommand =
   | SpendUTxO
         NetworkId
         ByronKeyFormat
-        NewTxFile
+        (NewTxFile 'Out)
         -- ^ Filepath of the newly created transaction.
-        SigningKeyFile
+        (SigningKeyFile 'In)
         -- ^ Signing key of Tx underwriter.
         [TxIn]
         -- ^ Inputs available for spending to the Tx underwriter's key.
         [TxOut CtxTx ByronEra]
         -- ^ Genesis UTxO output Address.
 
-  | GetTxId TxFile
+  | GetTxId (TxFile 'In)
 
     --- Misc Commands ---
 
   | ValidateCBOR
         CBORObject
         -- ^ Type of the CBOR object
-        FilePath
+        (File 'In)
 
   | PrettyPrintCBOR
-        FilePath
+        (File 'In)
   deriving Show
 
 
 data NodeCmd = CreateVote
                NetworkId
-               SigningKeyFile
-               FilePath -- filepath to update proposal
+               (SigningKeyFile 'In)
+               (File 'In) -- filepath to update proposal
                Bool
-               FilePath
+               (File 'Out)
              | UpdateProposal
                NetworkId
-               SigningKeyFile
+               (SigningKeyFile 'In)
                ProtocolVersion
                SoftwareVersion
                SystemTag
                InstallerHash
-               FilePath
+               (File 'Out)
                ByronProtocolParametersUpdate
              | SubmitUpdateProposal
                NetworkId
-               FilePath
+               (File 'In)
                -- ^ Update proposal filepath.
              | SubmitVote
                NetworkId
-               FilePath
+               (File 'In)
                -- ^ Vote filepath.
               deriving Show
 

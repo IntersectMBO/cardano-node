@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -68,19 +69,19 @@ issueByronGenesisDelegation magic epoch issuerSK delegateVK =
 --   to a delegate key, for a given protocol magic.
 --   If certificate fails validation, throw an error.
 checkByronGenesisDelegation
-  :: CertificateFile
+  :: CertificateFile 'In
   -> ProtocolMagicId
   -> Crypto.VerificationKey
   -> Crypto.VerificationKey
   -> ExceptT ByronDelegationError IO ()
 checkByronGenesisDelegation (CertificateFile certF) magic issuer delegate = do
-  ecert <- liftIO $ canonicalDecodePretty <$> LB.readFile certF
+  ecert <- liftIO $ canonicalDecodePretty <$> LB.readFile (unFile certF)
   case ecert of
-    Left e -> left $ DlgCertificateDeserialisationFailed certF e
+    Left e -> left $ DlgCertificateDeserialisationFailed (unFile certF) e
     Right (cert :: Dlg.Certificate) -> do
       let issues = checkDlgCert cert magic issuer delegate
       unless (null issues) $
-        left $ CertificateValidationErrors certF issues
+        left $ CertificateValidationErrors (unFile certF) issues
 
 checkDlgCert
   :: Dlg.ACertificate a

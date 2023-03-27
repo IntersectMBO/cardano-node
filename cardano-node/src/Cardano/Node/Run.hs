@@ -202,7 +202,7 @@ handleNodeWithTracers cmdPc nc p networkMagic runP = do
   case ncEnableP2P nc of
     SomeNetworkP2PMode p2pMode -> do
       let fp = maybe  "No file path found!"
-                      unConfigPath
+                      unConfigYamlFilePath
                       (getLast (pncConfigFile cmdPc))
       case ncTraceConfig nc of
         TraceDispatcher{} -> do
@@ -442,7 +442,7 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
               , srnBfcMaxConcurrencyDeadline    = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
               , srnChainDbValidateOverride      = ncValidateDB nc
               , srnSnapshotInterval             = ncSnapshotInterval nc
-              , srnDatabasePath                 = dbPath
+              , srnDatabasePath                 = unFile dbPath
               , srnDiffusionArguments           = diffusionArguments
               , srnDiffusionArgumentsExtra      = diffusionArgumentsExtra
               , srnDiffusionTracers             = diffusionTracers tracers
@@ -482,7 +482,7 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
               , srnBfcMaxConcurrencyDeadline   = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
               , srnChainDbValidateOverride     = ncValidateDB nc
               , srnSnapshotInterval            = ncSnapshotInterval nc
-              , srnDatabasePath                = dbPath
+              , srnDatabasePath                = unFile dbPath
               , srnDiffusionArguments          = diffusionArguments
               , srnDiffusionArgumentsExtra     = mkNonP2PArguments ipProducers dnsProducers
               , srnDiffusionTracers            = diffusionTracers tracers
@@ -566,26 +566,26 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
 -- Helper functions
 --------------------------------------------------------------------------------
 
-canonDbPath :: NodeConfiguration -> IO FilePath
+canonDbPath :: NodeConfiguration -> IO (File 'In)
 canonDbPath NodeConfiguration{ncDatabaseFile = DbFile dbFp} = do
-  fp <- canonicalizePath =<< makeAbsolute dbFp
+  fp <- canonicalizePath =<< makeAbsolute (unFile dbFp)
   createDirectoryIfMissing True fp
-  return fp
+  return $ File fp
 
 
 -- | Make sure the VRF private key file is readable only
 -- by the current process owner the node is running under.
-checkVRFFilePermissions :: FilePath -> ExceptT VRFPrivateKeyFilePermissionError IO ()
+checkVRFFilePermissions :: File direction -> ExceptT VRFPrivateKeyFilePermissionError IO ()
 #ifdef UNIX
 checkVRFFilePermissions vrfPrivKey = do
-  fs <- liftIO $ getFileStatus vrfPrivKey
+  fs <- liftIO $ getFileStatus (unFile vrfPrivKey)
   let fm = fileMode fs
   -- Check the the VRF private key file does not give read/write/exec permissions to others.
   when (hasOtherPermissions fm)
-       (left $ OtherPermissionsExist vrfPrivKey)
+       (left $ OtherPermissionsExist (unFile vrfPrivKey))
   -- Check the the VRF private key file does not give read/write/exec permissions to any group.
   when (hasGroupPermissions fm)
-       (left $ GroupPermissionsExist vrfPrivKey)
+       (left $ GroupPermissionsExist (unFile vrfPrivKey))
  where
   hasPermission :: FileMode -> FileMode -> Bool
   hasPermission fModeA fModeB = fModeA `intersectFileModes` fModeB /= nullFileMode
@@ -597,14 +597,14 @@ checkVRFFilePermissions vrfPrivKey = do
   hasGroupPermissions fm' = fm' `hasPermission` groupModes
 #else
 checkVRFFilePermissions vrfPrivKey = do
-  attribs <- liftIO $ getFileAttributes vrfPrivKey
+  attribs <- liftIO $ getFileAttributes (unFile vrfPrivKey)
   -- https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilea
   -- https://docs.microsoft.com/en-us/windows/win32/fileio/file-access-rights-constants
   -- https://docs.microsoft.com/en-us/windows/win32/secauthz/standard-access-rights
   -- https://docs.microsoft.com/en-us/windows/win32/secauthz/generic-access-rights
   -- https://docs.microsoft.com/en-us/windows/win32/secauthz/access-mask
   when (attribs `hasPermission` genericPermissions)
-       (left $ GenericPermissionsExist vrfPrivKey)
+       (left $ GenericPermissionsExist (unFile vrfPrivKey))
  where
   genericPermissions = gENERIC_ALL .|. gENERIC_READ .|. gENERIC_WRITE .|. gENERIC_EXECUTE
   hasPermission fModeA fModeB = fModeA .&. fModeB /= gENERIC_NONE

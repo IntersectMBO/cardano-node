@@ -12,6 +12,7 @@ module Cardano.Node.Configuration.Socket
   )
 where
 
+import           Cardano.Api (File (..))
 import           Cardano.Prelude hiding (local)
 import           Prelude (String)
 import qualified Prelude
@@ -197,8 +198,8 @@ gatherConfiguredSockets SocketConfig { ncNodeIPv4Addr,
       (Just _, Just _)      -> throwError ClashingLocalSocketGiven
       (Nothing, Just sock)  -> return . Just $ ActualSocket sock
       (Just (SocketPath path), Nothing)
-                            -> removeStaleLocalSocket path
-                            $> Just (SocketInfo (LocalAddress path))
+                            -> removeStaleLocalSocket (unFile path)
+                            $> Just (SocketInfo (LocalAddress (unFile path)))
 
     return (ipv4', ipv6', local)
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 
 -- | JSON serialisation
 --
@@ -25,6 +26,7 @@ import qualified Data.ByteString.Lazy as LBS
 
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.IO (File (..), FileDirection (..))
 
 
 newtype JsonDecodeError = JsonDecodeError String
@@ -50,20 +52,19 @@ deserialiseFromJSON _proxy = either (Left . JsonDecodeError) Right
 
 readFileJSON :: FromJSON a
              => AsType a
-             -> FilePath
+             -> File 'In
              -> IO (Either (FileError JsonDecodeError) a)
 readFileJSON ttoken path =
-    runExceptT $ do
-      content <- handleIOExceptT (FileIOError path) $ BS.readFile path
-      firstExceptT (FileError path) $ hoistEither $
-        deserialiseFromJSON ttoken content
+  runExceptT $ do
+    content <- handleIOExceptT (FileIOError (unFile path)) $ BS.readFile (unFile path)
+    firstExceptT (FileError (unFile path)) $ hoistEither $
+      deserialiseFromJSON ttoken content
 
 writeFileJSON :: ToJSON a
-              => FilePath
+              => File 'Out
               -> a
               -> IO (Either (FileError ()) ())
 writeFileJSON path x =
     runExceptT $
-      handleIOExceptT (FileIOError path) $
-        BS.writeFile path (serialiseToJSON x)
-
+      handleIOExceptT (FileIOError (unFile path)) $
+        BS.writeFile (unFile path) (serialiseToJSON x)

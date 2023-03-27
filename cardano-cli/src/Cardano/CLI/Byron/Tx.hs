@@ -1,5 +1,8 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Cardano.CLI.Byron.Tx
@@ -76,9 +79,9 @@ renderByronTxError err =
       "Transaction deserialisation failed at " <> textShow txFp <> " Error: " <> textShow decErr
     EnvSocketError envSockErr -> renderEnvSocketError envSockErr
 
-newtype NewTxFile =
-  NewTxFile FilePath
-  deriving (Eq, Ord, Show, IsString)
+newtype NewTxFile (direction :: FileDirection) = NewTxFile
+  { unNewTxFile :: File direction
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile)
 
 
 -- | Pretty-print an address in its Base58 form, and also
@@ -88,11 +91,11 @@ prettyAddress (ByronAddress addr) = sformat
   (Common.addressF % "\n" % Common.addressDetailedF)
   addr addr
 
-readByronTx :: TxFile -> ExceptT ByronTxError IO (UTxO.ATxAux ByteString)
+readByronTx :: TxFile 'In -> ExceptT ByronTxError IO (UTxO.ATxAux ByteString)
 readByronTx (TxFile fp) = do
-  txBS <- liftIO $ LB.readFile fp
+  txBS <- liftIO $ LB.readFile (unFile fp)
   case fromCborTxAux txBS of
-    Left e -> left $ TxDeserialisationFailed fp e
+    Left e -> left $ TxDeserialisationFailed (unFile fp) e
     Right tx -> pure tx
 
 -- | The 'GenTx' is all the kinds of transactions that can be submitted

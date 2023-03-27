@@ -19,7 +19,7 @@ import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Handlers.Shutdown (ShutdownConfig (..))
 import           Cardano.Node.Protocol.Cardano
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
-import           Cardano.Node.Types (ConfigYamlFilePath (..), GenesisFile,
+import           Cardano.Node.Types (ConfigYamlFilePath (..), File (..), GenesisFile,
                    NodeProtocolConfiguration (..), NodeShelleyProtocolConfiguration (..),
                    ProtocolFilepaths (..))
 import           Cardano.TxGenerator.Types
@@ -63,7 +63,7 @@ mkNodeConfig configFp_
         $ first (TxGenError . ("mkNodeConfig: " ++))
         $! makeNodeConfiguration (configYamlPc <> filesPc)
   where
-    configFp = ConfigYamlFilePath configFp_
+    configFp = ConfigYamlFilePath $ File configFp_
 
     filesPc :: PartialNodeConfiguration
     filesPc = defaultPartialNodeConfiguration

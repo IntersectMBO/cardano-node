@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
@@ -52,6 +53,7 @@ import           System.Directory (emptyPermissions, readable, setPermissions)
 #endif
 
 import           Cardano.Api.Eras
+import           Cardano.Api.IO (File (..), FileDirection (..))
 import           Options.Applicative (ReadM)
 import           Options.Applicative.Builder (eitherReader)
 import qualified Text.Read as Read
@@ -104,9 +106,9 @@ writeSecrets outDir prefix suffix secretOp xs =
     setPermissions filename (emptyPermissions {readable = True})
 #endif
 
-readFileBlocking :: FilePath -> IO BS.ByteString
+readFileBlocking :: File 'In -> IO BS.ByteString
 readFileBlocking path = bracket
-  (openFileBlocking path ReadMode)
+  (openFileBlocking (unFile path) ReadMode)
   hClose
   (\fp -> do
     -- An arbitrary block size.

@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -8,16 +10,18 @@ module Cardano.Api.Environment
   , renderEnvSocketError
   ) where
 
-import           Data.Aeson
+import           Data.Aeson (FromJSON, ToJSON)
+import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           System.Environment (lookupEnv)
 
+import           Cardano.Api.IO (File (..), FileDirection (..), MapFile)
 import           Cardano.Api.Utils (textShow)
 
-newtype SocketPath
-  = SocketPath { unSocketPath :: FilePath }
-  deriving (FromJSON, Show, Eq, Ord)
+newtype SocketPath = SocketPath
+  { unSocketPath :: File 'InOut
+  } deriving newtype (Eq, Ord, Show, IsString, MapFile, FromJSON, ToJSON)
 
 newtype EnvSocketError = CliEnvVarLookup Text deriving Show
 
@@ -34,7 +38,7 @@ readEnvSocketPath = do
     mEnvName <- lookupEnv envName
     case mEnvName of
       Just sPath ->
-        return . Right $ SocketPath sPath
+        return . Right $ SocketPath $ File sPath
       Nothing ->
         return . Left $ CliEnvVarLookup (Text.pack envName)
   where

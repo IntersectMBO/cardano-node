@@ -1,4 +1,7 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures #-}
 
 module Cardano.CLI.Byron.Key
   ( -- * Keys
@@ -58,13 +61,13 @@ renderByronKeyFailure err =
     VerificationKeyDeserialisationFailed vKeyFp deSerError ->
       "Error deserialising verification key at: " <> textShow vKeyFp <> " Error: " <> textShow deSerError
 
-newtype NewSigningKeyFile =
-  NewSigningKeyFile FilePath
-  deriving (Eq, Ord, Show, IsString)
+newtype NewSigningKeyFile (direction :: FileDirection) = NewSigningKeyFile
+  { unNewSigningKeyFile :: File direction
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile)
 
-newtype NewVerificationKeyFile =
-  NewVerificationKeyFile FilePath
-   deriving (Eq, Ord, Show, IsString)
+newtype NewVerificationKeyFile (direction :: FileDirection) = NewVerificationKeyFile
+  { unNewVerificationKeyFile :: File direction
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile)
 
 -- | Print some invariant properties of a public key:
 --   its hash and formatted view.
@@ -81,26 +84,26 @@ byronWitnessToVerKey (AByronSigningKey sKeyNonLeg) = getVerificationKey sKeyNonL
 
 -- TODO:  we need to support password-protected secrets.
 -- | Read signing key from a file.
-readByronSigningKey :: ByronKeyFormat -> SigningKeyFile -> ExceptT ByronKeyFailure IO SomeByronSigningKey
+readByronSigningKey :: ByronKeyFormat -> SigningKeyFile 'In -> ExceptT ByronKeyFailure IO SomeByronSigningKey
 readByronSigningKey bKeyFormat (SigningKeyFile fp) = do
-  sK <- handleIOExceptT (ReadSigningKeyFailure fp . T.pack . displayException) $ SB.readFile fp
+  sK <- handleIOExceptT (ReadSigningKeyFailure (unFile fp) . T.pack . displayException) $ SB.readFile (unFile fp)
   case bKeyFormat of
     LegacyByronKeyFormat ->
       case deserialiseFromRawBytes (AsSigningKey AsByronKeyLegacy) sK of
         Right legKey -> right $ AByronSigningKeyLegacy legKey
-        Left _ -> left $ LegacySigningKeyDeserialisationFailed fp
+        Left _ -> left $ LegacySigningKeyDeserialisationFailed (unFile fp)
     NonLegacyByronKeyFormat ->
       case deserialiseFromRawBytes (AsSigningKey AsByronKey) sK of
         Right nonLegSKey -> right $ AByronSigningKey nonLegSKey
-        Left _ -> left $ SigningKeyDeserialisationFailed fp
+        Left _ -> left $ SigningKeyDeserialisationFailed (unFile fp)
 
 -- | Read verification key from a file.  Throw an error if the file can't be read
 -- or the key fails to deserialise.
-readPaymentVerificationKey :: VerificationKeyFile -> ExceptT ByronKeyFailure IO Crypto.VerificationKey
+readPaymentVerificationKey :: VerificationKeyFile 'In -> ExceptT ByronKeyFailure IO Crypto.VerificationKey
 readPaymentVerificationKey (VerificationKeyFile fp) = do
-  vkB <- handleIOExceptT (ReadVerificationKeyFailure fp . T.pack . displayException) (SB.readFile fp)
+  vkB <- handleIOExceptT (ReadVerificationKeyFailure (unFile fp) . T.pack . displayException) (SB.readFile (unFile fp))
   -- Verification Key
   let eVk = hoistEither . Crypto.parseFullVerificationKey . fromString $ UTF8.toString vkB
   -- Convert error to 'CliError'
-  firstExceptT (VerificationKeyDeserialisationFailed fp . T.pack . show) eVk
+  firstExceptT (VerificationKeyDeserialisationFailed (unFile fp) . T.pack . show) eVk
 

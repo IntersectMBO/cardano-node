@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE GADTs #-}
@@ -48,6 +49,7 @@ import qualified Cardano.Ledger.Binary as CBOR
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.IO (File (..), FileDirection (..))
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.Tx
 import           Cardano.Api.Utils
@@ -213,23 +215,23 @@ deserialiseWitnessLedgerCddl era TextEnvelopeCddl{teCddlRawCBOR,teCddlDescriptio
 
 writeTxFileTextEnvelopeCddl
   :: IsCardanoEra era
-  => FilePath
+  => File 'Out
   -> Tx era
   -> IO (Either (FileError ()) ())
 writeTxFileTextEnvelopeCddl path tx =
   runExceptT $ do
-    handleIOExceptT (FileIOError path) $ LBS.writeFile path txJson
+    handleIOExceptT (FileIOError (unFile path)) $ LBS.writeFile (unFile path) txJson
  where
   txJson = encodePretty' textEnvelopeCddlJSONConfig (serialiseTxLedgerCddl tx) <> "\n"
 
 writeTxWitnessFileTextEnvelopeCddl
   :: ShelleyBasedEra era
-  -> FilePath
+  -> File 'Out
   -> KeyWitness era
   -> IO (Either (FileError ()) ())
 writeTxWitnessFileTextEnvelopeCddl sbe path w =
   runExceptT $ do
-    handleIOExceptT (FileIOError path) $ LBS.writeFile path txJson
+    handleIOExceptT (FileIOError (unFile path)) $ LBS.writeFile (unFile path) txJson
  where
   txJson = encodePretty' textEnvelopeCddlJSONConfig (serialiseWitnessLedgerCddl sbe w) <> "\n"
 
@@ -308,20 +310,20 @@ cddlTypeToEra unknownCddlType = Left $ TextEnvelopeCddlErrUnknownType unknownCdd
 
 readFileTextEnvelopeCddlAnyOf
   :: [FromSomeTypeCDDL TextEnvelopeCddl b]
-  -> FilePath
+  -> File 'In
   -> IO (Either (FileError TextEnvelopeCddlError) b)
 readFileTextEnvelopeCddlAnyOf types path =
   runExceptT $ do
     te <- newExceptT $ readTextEnvelopeCddlFromFile path
-    firstExceptT (FileError path) $ hoistEither $ do
+    firstExceptT (FileError (unFile path)) $ hoistEither $ do
       deserialiseFromTextEnvelopeCddlAnyOf types te
 
 readTextEnvelopeCddlFromFile
-  :: FilePath
+  :: File 'In
   -> IO (Either (FileError TextEnvelopeCddlError) TextEnvelopeCddl)
 readTextEnvelopeCddlFromFile path =
   runExceptT $ do
-    bs <- handleIOExceptT (FileIOError path) $
+    bs <- handleIOExceptT (FileIOError (unFile path)) $
             readFileBlocking path
-    firstExceptT (FileError path . TextEnvelopeCddlAesonDecodeError path)
+    firstExceptT (FileError (unFile path) . TextEnvelopeCddlAesonDecodeError (unFile path))
       . hoistEither $ Aeson.eitherDecodeStrict' bs
