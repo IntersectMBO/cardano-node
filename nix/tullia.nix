@@ -69,10 +69,10 @@ rec {
       };
     in
     {
-      "ci/pr/nix/required" = mkBulkJobsTask "pr.required";
-      "ci/pr/nix/nonrequired" = mkBulkJobsTask "pr.nonrequired --keep-going";
-      "ci/push/nix/required" = mkBulkJobsTask "required";
-      "ci/push/nix/nonrequired" = mkBulkJobsTask "nonrequired --keep-going";
+      "ci/pr/required" = mkBulkJobsTask "pr.required";
+      "ci/pr/nonrequired" = mkBulkJobsTask "pr.nonrequired --keep-going";
+      "ci/push/required" = mkBulkJobsTask "required";
+      "ci/push/nonrequired" = mkBulkJobsTask "nonrequired --keep-going";
 
       "ci/cardano-deployment" = { lib, ... } @ args: {
         imports = [ common ];
@@ -125,24 +125,24 @@ rec {
       '';
     in
     {
-      "cardano-node/ci/push/nix/required" = {
-        task = "ci/push/nix/required";
+      "cardano-node/ci/push/required" = {
+        task = "ci/push/required";
         io = pushIo;
       };
-      "cardano-node/ci/push/nix/nonrequired" = {
-        task = "ci/push/nix/nonrequired";
+      "cardano-node/ci/push/nonrequired" = {
+        task = "ci/push/nonrequired";
         io = pushIo;
       };
       "cardano-node/ci/push/cardano-deployment" = {
         task = "ci/cardano-deployment";
         io = pushIo;
       };
-      "cardano-node/ci/pr/nix/required" = {
-        task = "ci/pr/nix/required";
+      "cardano-node/ci/pr/required" = {
+        task = "ci/pr/required";
         io = prAndBorsIo;
       };
-      "cardano-node/ci/pr/nix/nonrequired" = {
-        task = "ci/pr/nix/nonrequired";
+      "cardano-node/ci/pr/nonrequired" = {
+        task = "ci/pr/nonrequired";
         io = prIo;
       };
       "cardano-node/ci/pr/cardano-deployment" = {
