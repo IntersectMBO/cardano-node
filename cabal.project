@@ -12,11 +12,11 @@ repository cardano-haskell-packages
 
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
-index-state: 2023-03-06T05:24:58Z
+index-state: 2023-03-18T05:24:58Z
 
 index-state:
-  , hackage.haskell.org 2023-03-06T05:24:58Z
-  , cardano-haskell-packages 2023-03-21T10:00:52Z
+  , hackage.haskell.org 2023-03-18T05:24:58Z
+  , cardano-haskell-packages 2023-03-22T09:20:07Z
 
 packages:
     cardano-api
@@ -82,87 +82,6 @@ tests: True
 
 test-show-details: direct
 
-constraints:
-    hedgehog >= 1.0
-  , dependent-sum >= 0.7.1.0
-  , bimap >= 0.4.0
-  , libsystemd-journal >= 1.4.4
-  , systemd >= 2.3.0
-    -- systemd-2.3.0 requires at least network 3.1.1.0 but it doesn't declare
-    -- that dependency
-  , network >= 3.1.1.0
-  , HSOpenSSL >= 0.11.7.2
-  , algebraic-graphs >= 0.7
-  , protolude >= 0.3.2
-
-  -- TODO: these should be set in cabal files, but avoiding setting them in lower dependencies for initial CHaP release
-  , cardano-prelude >= 0.1.0.1
-  , base-deriving-via >= 0.1.0.0
-  -- The cardano-binary API changes in 1.6.*.
-  , cardano-binary == 1.5.*
-  , cardano-binary-test >= 1.3.0
-  , cardano-crypto-class  >= 2.0.0.1
-  , cardano-crypto-praos  >= 2.0.0.0.1
-  , cardano-crypto-tests  >= 2.0.0.0.1
-  , cardano-slotting  >= 0.1.0.0
-  , measures >= 0.1.0.0
-  , orphans-deriving-via >= 0.1.0.0
-  , cardano-strict-containers >= 0.1.0.1
-  , plutus-core^>= 1.1
-  , plutus-ledger-api^>= 1.1
-  , plutus-tx >= 1.0.0.0
-  , plutus-tx-plugin >= 1.0.0.0
-  , prettyprinter-configurable >= 0.1.0.0
-  , plutus-ghc-stub >= 8.6.5
-  , word-array^>= 1.1
-  , io-classes >= 0.2.0.0
-  , typed-protocols >= 0.1.0.1
-  , typed-protocols-examples >= 0.1.0.1
-  , ekg-forward >= 0.2
-  , cardano-ledger-conway >= 0.1.1.2
-  , cardano-ledger-conway-test >= 0.1.1.2
-  , cardano-ledger-shelley >= 0.1.1.2
-  , cardano-ledger-shelley-test >= 0.1.1.2
-  , cardano-ledger-alonzo >= 0.1.1.2
-  , cardano-ledger-alonzo-test >= 0.1.1.2
-  , cardano-crypto-test >= 1.4.2
-  , cardano-crypto-wrapper >= 1.4.2
-  , cardano-ledger-byron-test >= 1.4.2
-  , cardano-ledger-byron >= 0.1.1.2
-  , byron-spec-ledger >= 0.1.1.2
-  , byron-spec-chain >= 0.1.1.2
-  , cardano-ledger-babbage >= 0.1.1.2
-  , cardano-ledger-babbage-test >= 0.1.1.2
-  , cardano-ledger-shelley-ma >= 0.1.1.2
-  , cardano-ledger-shelley-ma-test >= 0.1.1.2
-  , cardano-ledger-pretty >= 0.1.1.2
-  , small-steps-test >= 0.1.1.2
-  , non-integral >= 0.1.1.2
-  , cardano-data >= 0.1.1.2
-  , set-algebra >= 0.1.1.2
-  , cardano-protocol-tpraos >= 0.1.1.2
-  , vector-map >= 0.1.1.2
-  , small-steps >= 0.1.1.2
-  , cardano-ledger-core >= 0.1.1.2
-  , cardano-ledger-test >= 0.1.1.2
-  , ledger-state >= 0.1.1.2
-  , plutus-preprocessor >= 0.1.1.2
-  , cardano-ledger-conway >= 0.1.1.2
-  , cardano-data >= 0.1.1.1
-  , cardano-ledger-core >= 0.1.1.2
-  , cardano-ledger-pretty >= 0.1.1.2
-  , hashable >= 1.4.0.0
-  , text-short >= 0.1.5
-  , Unique >= 0.4.7.8
-  , tree-diff >= 0.2.2
-
-  -- Haddock is broken in this release. Waiting for the next release
-  , http2 < 4.0.0
-
--- We'll need this once ouroboros has been pushed into CHaP
--- extra-packages:
---     ouroboros-consensus-cardano-tools == 0.1.0.0
-
 package snap-server
   flags: +openssl
 
@@ -170,17 +89,21 @@ package comonad
   flags: -test-doctests
 
 allow-newer:
-    ekg:*
+  -- ekg does not suport aeson 2: https://github.com/tibbe/ekg/issues/90
+    ekg:aeson
+  -- ekg does not suport newer snap
+  , ekg:snap-server
+  , ekg:snap-core
+  -- cardano-node-capi depends on aeson > 2.1, even our patched ekg-json only 
+  -- supports between 2 and 2.1
   , ekg-json:aeson
-  , monoidal-containers:aeson
-  , size-based:template-haskell
-  , snap-server:attoparsec
-  , tree-diff:hashable
-  , Unique:hashable
-  , ouroboros-network:hashable
-  , libsystemd-journal:base
-  -- This is required for 9.2.
+  -- These are currently required for 9.2.
+  , enumerator:base
+  , MonadCatchIO-transformers:base
   , katip:Win32
+  , ekg:base
+  , ekg:time
+  , libsystemd-journal:base
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly

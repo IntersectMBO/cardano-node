@@ -125,7 +125,7 @@ library
   build-depends:        aeson
                       , async
                       , async-extras
-                      , bimap
+                      , bimap >= 0.4.0
                       , blaze-html
                       , bytestring
                       , cardano-git-rev
@@ -162,7 +162,7 @@ library
                       , yaml
 
   if os(linux)
-    build-depends:      libsystemd-journal
+    build-depends:      libsystemd-journal >= 1.4.4
 
   if os(windows)
     build-depends:      Win32
