@@ -21,7 +21,7 @@ let
       name = "cardano-node";
       compiler-nix-name = lib.mkDefault "ghc8107";
       # extra-compilers
-      flake.variants = lib.genAttrs ["ghc925"] (x: {compiler-nix-name = x;});
+      flake.variants = lib.genAttrs ["ghc927"] (x: {compiler-nix-name = x;});
       cabalProjectLocal = ''
         allow-newer: terminfo:base
       '' + lib.optionalString pkgs.stdenv.hostPlatform.isWindows ''
