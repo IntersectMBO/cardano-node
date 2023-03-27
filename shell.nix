@@ -60,8 +60,8 @@ let
 
     tools = {
       haskell-language-server = {
-        version = "latest";
-        inherit (project) index-state;
+        version = "1.8.0.0";
+        index-state = "2023-03-13T00:00:00Z";
       };
     };
 
