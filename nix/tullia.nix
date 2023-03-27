@@ -125,7 +125,6 @@ rec {
       '';
     in
     {
-
       "cardano-node/ci/push/nix/required" = {
         task = "ci/push/nix/required";
         io = pushIo;
@@ -140,7 +139,7 @@ rec {
       };
       "cardano-node/ci/pr/nix/required" = {
         task = "ci/pr/nix/required";
-        io = prIo;
+        io = prAndBorsIo;
       };
       "cardano-node/ci/pr/nix/nonrequired" = {
         task = "ci/pr/nix/nonrequired";
@@ -148,11 +147,11 @@ rec {
       };
       "cardano-node/ci/pr/cardano-deployment" = {
         task = "ci/cardano-deployment";
-        io = prIo;
+        io = prAndBorsIo;
       };
       "cardano-node/ci/pr/system-tests" = {
         task = "ci/pr/system-tests";
-        io = prIo;
+        io = prAndBorsIo;
       };
     };
 }
