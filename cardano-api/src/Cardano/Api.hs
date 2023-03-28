@@ -292,7 +292,6 @@ module Cardano.Api (
 
     -- ** Minimum required UTxO calculation
     calculateMinimumUTxO,
-    MinimumUTxOError,
 
     -- ** Script execution units
     evaluateTransactionExecutionUnits,

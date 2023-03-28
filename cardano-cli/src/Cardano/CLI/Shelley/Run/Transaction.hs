@@ -91,7 +91,6 @@ data ShelleyTxCmdError
       !AnyCardanoEra
   | ShelleyTxCmdBalanceTxBody !TxBodyErrorAutoBalance
   | ShelleyTxCmdTxInsDoNotExist !TxInsExistError
-  | ShelleyTxCmdMinimumUTxOErr !MinimumUTxOError
   | ShelleyTxCmdPParamsErr !ProtocolParametersError
   | ShelleyTxCmdTextEnvCddlError
       !(FileError TextEnvelopeError)
@@ -184,7 +183,6 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdBalanceTxBody err' -> Text.pack $ displayError err'
     ShelleyTxCmdTxInsDoNotExist e ->
       renderTxInsExistError e
-    ShelleyTxCmdMinimumUTxOErr err' -> Text.pack $ displayError err'
     ShelleyTxCmdPParamsErr err' -> Text.pack $ displayError err'
     ShelleyTxCmdTextEnvCddlError textEnvErr cddlErr -> mconcat
       [ "Failed to decode neither the cli's serialisation format nor the ledger's "
@@ -1207,8 +1205,7 @@ runTxCalculateMinRequiredUTxO (AnyCardanoEra era) pParamsFile txOut = do
     ShelleyBasedEra sbe -> do
       firstExceptT ShelleyTxCmdPParamsErr . hoistEither
         $ checkProtocolParameters sbe pp
-      minValue <- firstExceptT ShelleyTxCmdMinimumUTxOErr
-                    . hoistEither $ calculateMinimumUTxO sbe out (bundleProtocolParams era pp)
+      let minValue = calculateMinimumUTxO sbe out (bundleProtocolParams era pp)
       liftIO . IO.print $ minValue
 
 runTxCreatePolicyId :: ScriptFile -> ExceptT ShelleyTxCmdError IO ()
