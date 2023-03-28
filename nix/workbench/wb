@@ -23,6 +23,9 @@ global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
 . "$global_basedir"/backend/backend.sh
 . "$global_basedir"/backend/nixops.sh
 . "$global_basedir"/backend/nomad.sh
+. "$global_basedir"/backend/nomad/cloud.sh
+. "$global_basedir"/backend/nomad/exec.sh
+. "$global_basedir"/backend/nomad/podman.sh
 . "$global_basedir"/backend/supervisor.sh
 
 usage_main() {

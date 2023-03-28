@@ -432,7 +432,7 @@ EOF
         else topology make    "$dir"/profile.json "$dir"/topology
         fi
 
-        if test "$WB_BACKEND" != 'nomad'
+        if test "${WB_BACKEND:0:5}" != 'nomad' # Doesn't start with "nomad"
         then run_instantiate_rundir_profile_services "$dir"; fi
 
         ## 5. populate the directory with backend specifics:

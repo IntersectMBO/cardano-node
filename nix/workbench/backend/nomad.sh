@@ -88,190 +88,23 @@ backend_nomad() {
 
   case "$op" in
 
-    name )
-      # Can be:
-      # - nomad-podman    (Using podman task driver in the cloud is not planned)
-      # - nomad-exec-local
-      # - nomad-exec-cloud
-      echo 'nomad'
-    ;;
-
     ############################################################################
     # Configure cluster functions:
     # - setenv-defaults                        BACKEND-DIR
     # - setenv-nomad                           CONTAINER-SPECS-FILE (Nomad only)
     # - allocate-run                           RUN-DIR
-    # - allocate-run-directory-nomad           RUN-DIR              (Nomad only)
+    # - allocate-run-directory-nomad-nodes     RUN-DIR              (Nomad only)
     # - allocate-run-directory-supervisor      RUN-DIR              (Nomad only)
     # - allocate-run-directory-nodes           RUN-DIR              (Nomad only)
-    # - allocate-run-directory-genesis         RUN-DIR              (Nomad only)
     # - allocate-run-directory-generator       RUN-DIR              (Nomad only)
     # - allocate-run-directory-tracers         RUN-DIR              (Nomad only)
     # - allocate-run-nomad-job-patch-name      RUN-DIR NAME         (Nomad only)
     # - allocate-run-nomad-job-patch-namespace RUN-DIR NAME         (Nomad only)
     # - allocate-run-nomad-job-patch-nix       RUN-DIR              (Nomad only)
-    # - allocate-run-nomad-job-patch-podman    RUN-DIR              (Nomad only)
     # - deploy-genesis                         RUN-DIR
     # - describe-run                           RUN-DIR
     ############################################################################
     # * Functions in the backend "interface" must use `fatal` when errors!
-
-    # Sets jq envars "profile_container_specs_file" ,"nomad_environment",
-    # "nomad_task_driver" and "one_tracer_per_node"
-    setenv-defaults )
-      local usage="USAGE: wb backend $op BACKEND-DIR"
-      local backend_dir=${1:?$usage}; shift
-
-      # Store the location of the Nix-built "container-specs" file.
-      # TODO/FIXME: This is the only way to be able to later copy it to "$dir" ?
-      local profile_container_specs_file
-      profile_container_specs_file="${backend_dir}"/container-specs.json
-      setenvjqstr 'profile_container_specs_file' "${profile_container_specs_file}"
-
-      # Set the environment: either "local" or "cloud"!!!
-      local nomad_environment
-      nomad_environment=$(backend_nomad setenv-nomad "${profile_container_specs_file}")
-      # Actually stored in an envar because there is no RUN-DIR available yet.
-      # FIXME: If not stored on disk only this shell will be able to know the
-      # environment and backend specific subcommands run from a different shell
-      # may fail!
-      setenvjqstr 'nomad_environment' "${nomad_environment}"
-
-      # These variables are also available inside the job's "meta" stanza and
-      # should be always obtained from there once it is copied to "$dir"/nomad,
-      # this way not only the machine that started the cluster can use these
-      # backend subcommands.
-      local nomad_task_driver
-      local one_tracer_per_node
-      if test "${nomad_environment}" = "local"
-      then
-        # TODO: Can I use something different? Like from the Nix derivation?
-        if ! podman --version 2>&1 1>/dev/null
-        then
-          nomad_task_driver="exec"
-          # Forcing it
-          one_tracer_per_node="true"
-        else
-          nomad_task_driver="podman"
-          # Forcing it
-          one_tracer_per_node="false"
-        fi
-      elif test "${nomad_environment}" = "cloud"
-      then
-        nomad_task_driver="exec"
-        # TODO: Also forcing it, not implemented yet with "exec"
-        one_tracer_per_node="true"
-      else
-        fatal "Unknown environment \"${nomad_environment}\""
-      fi
-      setenvjqstr 'nomad_task_driver'   "${nomad_task_driver}"
-      setenvjqstr 'one_tracer_per_node' "${one_tracer_per_node}"
-
-      # TODO: Refactor this!
-      setenvjqstr 'nomad_server_name' srv1
-      # As one runs as a normal user and the other as a root, use different
-      # names to allow restarting/reusing without cleaup, this way data folders
-      # already there can be accessed without "permission denied" errors.
-      if test "${nomad_task_driver}" = "podman"
-      then
-        setenvjqstr 'nomad_client_name' cli1-pod
-      else
-        setenvjqstr 'nomad_client_name' cli1-exe
-      fi
-    ;;
-
-    # The environment where we we want to run the Nomad Job based Cardano
-    # cluster can only be obtained from the system or user input / arguments.
-    setenv-nomad )
-      local profile_container_specs_file=${1:?$usage}; shift
-      local nomad_environment
-      # If the most important `nomad` cli envars is present this is not a local
-      # test, I repeat, this is not a drill =)
-      if test -z "${NOMAD_ADDR:-}"
-      then
-        nomad_environment="local"
-        msg $(blue "INFO: Running a local/testing cluster\n")
-      else
-        nomad_environment="cloud"
-        msg $(blue "INFO: Running a Nomad cloud cluster\n")
-        # The abscence of `NOMAD_NAMESPACE` or `NOMAD_TOKEN` needs confirmation
-        if test -z "${NOMAD_NAMESPACE:-}"
-        then
-          msg $(yellow "WARNING: Nomad namespace \"NOMAD_NAMESPACE\" envar is not set")
-          msg $(blue "INFO: The SRE provided namespace for \"Performance and Tracing\" is \"perf\"")
-          read -p "Hit enter to continue ..."
-        else
-          if test "${NOMAD_NAMESPACE}" != "perf"
-          then
-            msg $(yellow "WARNING: Nomad namespace \"NOMAD_NAMESPACE\" envar is not \"perf\"")
-            read -p "Hit enter to continue ..."
-          fi
-        fi
-        if test -z "${NOMAD_TOKEN:-}"
-        then
-          msg $(yellow "WARNING: Nomad token \"NOMAD_TOKEN\" envar is not set")
-          msg $(blue "INFO: Run "\`$(green "vault login -address=\"https://vault.world.dev.cardano.org\" -method=github -path=github-employees; vault read -address=\"https://vault.world.dev.cardano.org\" -field secret_id nomad/creds/perf")$(blue "\` to obtain one"))
-          read -p "Hit enter to continue ..."
-        fi
-        # Check all the AWS S3 envars needed for the HTTP PUT request
-        # Using same names as the AWS CLI
-        # https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html
-        if test -z "${AWS_ACCESS_KEY_ID:-}"
-        then
-          msg $(red "ERROR: Amazon S3 \"AWS_ACCESS_KEY_ID\" envar is not set")
-          msg $(blue "INFO: Run "\`$(green "vault read -address=\"https://vault.world.dev.cardano.org\" -field access_key aws/creds/perf")$(blue "\` to obtain one"))
-          fatal "Can't run a cluster in the Nomad cloud without \"AWS_ACCESS_KEY_ID\" envar"
-        fi
-        if test -z "${AWS_SECRET_ACCESS_KEY:-}"
-        then
-          msg $(red "ERROR: Amazon S3 \"AWS_SECRET_ACCESS_KEY\" envar is not set")
-          msg $(blue "INFO: Run "\`$(green "vault read -address=\"https://vault.world.dev.cardano.org\" -field secret_key aws/creds/perf")$(blue "\` to obtain one"))
-          fatal "Can't run a cluster in the Nomad cloud without \"AWS_SECRET_ACCESS_KEY\" envar"
-        fi
-        # The Nomad job spec will contain links ("nix_installables" stanza) to
-        # the Nix Flake outputs it needs inside the container, these are
-        # refereced with a GitHub commit ID inside the "container-specs" file.
-        local gitrev=$(jq -r .gitrev "${profile_container_specs_file}")
-        msg $(blue "INFO: Found GitHub commit with ID \"$gitrev\"")
-        # Check if the Nix package was created from a dirty git tree
-        if test "$gitrev" = "0000000000000000000000000000000000000000"
-        then
-          fatal "Can't run a cluster in the Nomad cloud without a publicly accessible GitHub commit ID"
-        else
-          msg "Checking if GitHub commit \"$gitrev\" is publicly accessible ..."
-          local curl_response
-          # Makes `curl` return two objects, one with the body the other with
-          # the headers, separated by a newline (`jq -s`).
-          if curl_response=$(curl --silent --show-error --write-out '%{json}' https://api.github.com/repos/input-output-hk/cardano-node/commits/"${gitrev}")
-          then
-            # Check HTTP status code for existance
-            # https://docs.github.com/en/rest/commits/commits?apiVersion=2022-11-28#get-a-commit
-            local headers=$(echo "${curl_response}" | jq -s .[1])
-            if test "$(echo "${headers}" | jq .http_code)" != 200
-            then
-              fatal "GitHub commit \"$gitrev\" is not available online!"
-            fi
-            # Show returned commit info in `git log` fashion
-            local body=$(echo "${curl_response}" | jq -s .[0])
-            msg $(green "commit ${gitrev}")
-            local author_name=$(echo $body | jq -r .commit.author.name)
-            local author_email=$(echo $body | jq -r .commit.author.email)
-            msg $(green "Author: ${author_name} <${author_email}>")
-            local author_date=$(echo $body | jq -r .commit.author.date)
-            msg $(green "Date: ${author_date}")
-            msg $(green "\n")
-            local message=$(echo $body | jq -r .commit.message)
-            msg $(green "\t${message}\n")
-            msg $(green "\n")
-            read -p "Hit enter to continue ..."
-          else
-            fatal "Could not fetch commit info from GitHub (\`curl\` error)"
-          fi
-        fi
-      fi
-      # Return the inferred value!
-      echo "${nomad_environment}"
-    ;;
 
     # "generator", "tracer" and "node" folders contents (start.sh, config files,
     # etc) are included in the Nomad Job spec file as "template" stanzas and are
@@ -295,21 +128,17 @@ backend_nomad() {
         --* ) msg "FATAL:  unknown flag '$1'"; usage_nomad;;
           * ) break;; esac; shift; done
 
-      # Copy the container specs file (container-specs.json)
-      # This is the output file of the Nix derivation
-      local profile_container_specs_file=$(envjqr 'profile_container_specs_file')
-      # Create a nicely sorted and indented copy
-      jq . "${profile_container_specs_file}" > "${dir}"/container-specs.json
+      # The "nomad" folder is created by the sub-backends ("podman", "exec",
+      # "cloud") and filled with the Nomad job spec file to use.
 
-      # Create the dispatcher's local directories hierarchy
-      backend_nomad allocate-run-directory-nomad             "${dir}"
+      # Create the dispatcher's local directories hierarchy.
+      backend_nomad allocate-run-directory-nomad-nodes       "${dir}"
       backend_nomad allocate-run-directory-supervisor        "${dir}"
       backend_nomad allocate-run-directory-nodes             "${dir}"
-      backend_nomad allocate-run-directory-genesis           "${dir}"
       backend_nomad allocate-run-directory-generator         "${dir}"
       backend_nomad allocate-run-directory-tracers           "${dir}"
 
-      # These ones need to be decided at "setenv-defaults"
+      # These ones need to be decided at "setenv-defaults" of each sub-backend.
       local nomad_environment=$(envjqr 'nomad_environment')
       local nomad_task_driver=$(envjqr 'nomad_task_driver')
       # TODO: Store them on disk for later subcommands run from a different shell.
@@ -322,34 +151,15 @@ backend_nomad() {
       local nomad_job_name=$(basename "${dir}")
       backend_nomad allocate-run-nomad-job-patch-name        "${dir}" \
         "${nomad_job_name}"
-      ## - Job Namespace
-      if   test "${nomad_environment}" = "cloud"
-      then
-        backend_nomad allocate-run-nomad-job-patch-namespace "${dir}" \
-          "${NOMAD_NAMESPACE}"
-      elif test "${nomad_environment}" = "local"
-      then
-        backend_nomad allocate-run-nomad-job-patch-namespace "${dir}" \
-          "default"
-      fi
-      ## - Job Task Driver
-      if   test "${nomad_task_driver}" = "exec"
-      then
-        backend_nomad allocate-run-nomad-job-patch-nix       "${dir}"
-      elif test "${nomad_task_driver}" = "podman"
-      then
-        backend_nomad allocate-run-nomad-job-patch-podman    "${dir}"
-      fi
 
       backend_nomad start-nomad-job "${dir}"
     ;;
 
-    allocate-run-directory-nomad )
+    allocate-run-directory-nomad-nodes )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
       local nomad_task_driver=$(envjqr   'nomad_task_driver')
       local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
-      mkdir -p "${dir}"/nomad
       # Nomad specific folders to download the entrypoints scripts and its logs
       # for every Nomad Task.
       local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
@@ -363,19 +173,6 @@ backend_nomad() {
         then
           mkdir "${dir}"/nomad/tracer
         fi
-      fi
-      # Select which version of the Nomad job spec file we are running and copy
-      # it to "nomad/nomad-job.json". The job file will later be "slightly"
-      # modified to suit the running environment.
-      if test "${one_tracer_per_node}" = "true"
-      then
-        jq -r ".nomadJob.${nomad_task_driver}.oneTracerPerNode" \
-          "${dir}"/container-specs.json                         \
-        > "${dir}"/nomad/nomad-job.json
-      else
-        jq -r ".nomadJob.${nomad_task_driver}.oneTracerPerCluster" \
-          "${dir}"/container-specs.json                            \
-        > "${dir}"/nomad/nomad-job.json
       fi
     ;;
 
@@ -415,22 +212,6 @@ backend_nomad() {
         # and we want to hold a copy of what was actually run.
         mkdir "${dir}"/"${node}"
       done
-    ;;
-
-    allocate-run-directory-genesis )
-      local usage="USAGE: wb backend $op RUN-DIR"
-      local dir=${1:?$usage}; shift
-      local nomad_environment=$(envjqr 'nomad_environment')
-      local nomad_task_driver=$(envjqr   'nomad_task_driver')
-
-      # Make sure the "genesis" dir is there when the Nomad job is started and
-      # the podman task driver is used (always local, not used for cloud)
-      # because this directory is going to be mounted
-      if test "${nomad_environment}" = "local" && test "${nomad_task_driver}" = "podman"
-      then
-        mkdir "${dir}"/genesis
-        mkdir "${dir}"/genesis/utxo-keys
-      fi
     ;;
 
     allocate-run-directory-generator )
@@ -516,172 +297,6 @@ backend_nomad() {
           jq ".[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${group_name}\"][\"task\"][\"${task_name}\"][\"config\"][\"nix_installables\"] = \$installables_array" --argjson installables_array "${installables_array}" "${dir}"/nomad/nomad-job.json | sponge "${dir}"/nomad/nomad-job.json
         done
       done
-    ;;
-
-    allocate-run-nomad-job-patch-podman )
-      local usage="USAGE: wb backend $op RUN-DIR"
-      local dir=${1:?$usage}; shift
-      # Look up the OCI image's name and tag (Nix profile).
-      local oci_image_name=$(jq -r .ociImage.imageName "${dir}"/container-specs.json)
-      local oci_image_tag=$( jq -r .ociImage.imageTag  "${dir}"/container-specs.json)
-      if podman image exists "${oci_image_name}:${oci_image_tag}"
-      then
-        setenvjqstr 'oci_image_was_already_available' "true"
-        msg "OCI image ${oci_image_name}:${oci_image_tag} is already available"
-      else
-        setenvjqstr 'oci_image_was_already_available' "false"
-        msg "Creating OCI image ..."
-        # Script that creates the OCI image from nix2container layered output.
-        local oci_image_skopeo_script=$(jq -r .ociImage.copyToPodman "${dir}"/container-specs.json)
-        # TODO: for further research.
-        # STORAGE_DRIVER=overlay "$oci_image_skopeo_script"
-        # If podman 4.2.1 and nomad v1.3.5 this fix is not needed anymore
-        # Forced the `overlay` storage driver or podman won't see the image.
-        # https://docs.podman.io/en/latest/markdown/podman.1.html#note-unsupported-file-  systems-in-rootless-mode
-        # Error was: workbench:  FATAL: OCI image registry.workbench.iog.io/  cluster:2l7wi7sh1zyp2mnl24m13ibnh2wsjvwg cannot be found by podman
-        if ! "${oci_image_skopeo_script}"
-        then
-          fatal "Creation of OCI image ${oci_image_name}:${oci_image_tag} failed"
-        else
-          # Now check that `podman` can see the "cluster" OCI image.
-          if ! podman image exists "${oci_image_name}:${oci_image_tag}"
-          then
-            fatal "OCI image ${oci_image_name}:${oci_image_tag} was created but cannot be found by podman"
-          else
-            msg "OCI image named \"${oci_image_name}:${oci_image_tag}\" created"
-          fi
-        fi
-      fi
-      # It needs to mount the tracer directory if "one_tracer_per_node" is
-      # false, mount the genesis and CARDANO_MAINNET_MIRROR (if needed).
-      nomad_job_file_create_mounts "${dir}"
-    ;;
-
-    deploy-genesis )
-      local usage="USAGE: wb backend $op RUN-DIR"
-      local dir=${1:?$usage}; shift
-      local nomad_environment=$(envjqr 'nomad_environment')
-      local nomad_task_driver=$(envjqr 'nomad_task_driver')
-      local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
-
-      # Nomad jobs when `exec` driver is configured run as `nobody:nobody`
-      # Every job is creating an HTTP server to download a .tar un untar it
-      # with the permissions/ownership we want!
-      mv "${dir}"/genesis "${dir}"/genesis.bak
-      mkdir "${dir}"/genesis
-      mkdir "${dir}"/genesis/byron
-      mkdir "${dir}"/genesis/utxo-keys
-      mkdir "${dir}"/genesis/node-keys
-      cp -a "${dir}"/genesis.bak/genesis.alonzo.json \
-            "${dir}"/genesis/genesis.alonzo.json
-      cp -a "${dir}"/genesis.bak/genesis.conway.json \
-            "${dir}"/genesis/genesis.conway.json
-      cp -a "${dir}"/genesis.bak/genesis-shelley.json \
-            "${dir}"/genesis/genesis-shelley.json
-      cp -a "${dir}"/genesis.bak/byron/genesis.json \
-            "${dir}"/genesis/byron/genesis.json
-      cp -a \
-        "${dir}"/genesis.bak/utxo-keys/*.skey \
-        "${dir}"/genesis/utxo-keys/
-      cp -a \
-        "${dir}"/genesis.bak/utxo-keys/*.vkey \
-        "${dir}"/genesis/utxo-keys/
-      cp -a \
-        "${dir}"/genesis.bak/node-keys/*.skey \
-        "${dir}"/genesis/node-keys/
-      cp -a \
-        "${dir}"/genesis.bak/node-keys/*.vkey \
-        "${dir}"/genesis/node-keys/
-      cp -a \
-        "${dir}"/genesis.bak/node-keys/*.opcert \
-        "${dir}"/genesis/node-keys/
-
-      # The podman driver should already have the genesis dir mounted!
-      if test "${nomad_task_driver}" = "exec"
-      then
-        if test "${nomad_environment}" = "local"
-        then
-          backend_nomad deploy-genesis-local "${dir}"
-        elif test "${nomad_environment}" = "cloud"
-        then
-          backend_nomad deploy-genesis-cloud "${dir}"
-        fi
-      fi
-    ;;
-
-    deploy-genesis-local )
-      local usage="USAGE: wb backend $op RUN-DIR"
-      local dir=${1:?$usage}; shift
-      local nomad_task_driver=$(envjqr 'nomad_task_driver')
-      local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
-      local server_name=$(envjqr 'nomad_server_name')
-      local client_name=$(envjqr 'nomad_client_name')
-
-      # Add genesis to HTTP cache server
-      local nomad_agents_were_already_running=$(envjqr 'nomad_agents_were_already_running')
-      if ! backend_nomad webfs is-running
-      then
-        if ! backend_nomad webfs start
-        then
-          if test "${nomad_agents_were_already_running}" = "false"
-          then
-            backend_nomad nomad agents stop \
-              "${server_name}" "${client_name}" "${nomad_task_driver}"
-          fi
-          fatal "Failed to start HTTP server"
-        fi
-      fi
-      if ! backend_nomad webfs add-genesis-dir "${dir}"/genesis "${nomad_job_name}"
-      then
-        if test "${nomad_agents_were_already_running}" = "false"
-        then
-          backend_nomad nomad agents stop \
-            "${server_name}" "${client_name}" "${nomad_task_driver}"
-        fi
-        fatal "Failed to add genesis to HTTP server"
-      fi
-      backend_nomad deploy-genesis-wget "${dir}" \
-        "http://127.0.0.1:12000/${nomad_job_name}.tar.zst"
-    ;;
-
-    deploy-genesis-cloud )
-      local usage="USAGE: wb backend $op RUN-DIR"
-      local dir=${1:?$usage}; shift
-      local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
-
-      local genesis_file_name="${nomad_job_name}.tar.zst"
-      find "${dir}"/genesis -type f -printf "%P\n"    \
-        | tar --create --zstd                         \
-          --file="${dir}"/"${genesis_file_name}"      \
-          --owner=65534 --group=65534 --mode="u=rwx"  \
-          --directory="${dir}"/genesis --files-from=-
-
-      local s3_region="eu-central-1"
-      local s3_host="s3.${s3_region}.amazonaws.com";
-      local s3_bucket_name="iog-cardano-perf";
-      local s3_access_key="${AWS_ACCESS_KEY_ID}";
-      local s3_access_key_secret="${AWS_SECRET_ACCESS_KEY}"
-      local s3_storage_class="STANDARD"
-      local return_code=0
-      aws s3 cp                                                               \
-        "${dir}"/"${genesis_file_name}"                                       \
-        s3://"${s3_bucket_name}"                                              \
-        --content-type "application/zstd"                                     \
-        --region "${s3_region}"                                               \
-        --expected-size "$(stat --printf=%s "${dir}"/"${genesis_file_name}")" \
-      >/dev/null                                                              \
-      || return_code="$?"
-      # https://docs.aws.amazon.com/cli/latest/userguide/cli-services-s3-commands.html#using-s3-commands-managing-objects-copy
-      # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3/cp.html
-      if test "${return_code}" = "0"
-      then
-        # A server response was obtained.
-        msg "File \"${genesis_file_name}\" uploaded"
-      else
-        fatal "Failed to upload ${genesis_file_name}"
-      fi
-      backend_nomad deploy-genesis-wget "${dir}" \
-        "https://${s3_bucket_name}.${s3_host}/${genesis_file_name}"
     ;;
 
     deploy-genesis-wget )
@@ -4238,70 +3853,6 @@ consul {
 # defaults to true in Nomad Enterprise.
 disable_update_check = true
 EOF
-}
-
-nomad_job_file_create_mounts() {
-    local dir=$1
-    local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
-    local nomad_job_group_name=$(jq -r ". [\"job\"][\"${nomad_job_name}\"][\"group\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
-    local one_tracer_per_node=$(envjqr          'one_tracer_per_node')
-    # If CARDANO_MAINNET_MIRROR is present generate a list of needed volumes.
-    if test -n "${CARDANO_MAINNET_MIRROR}"
-    then
-      # The nix-store path contains 3 levels of symlinks. This is a hack to
-      # avoid creating a container image with all these files.
-      local immutable_store=$(readlink -f "${CARDANO_MAINNET_MIRROR}"/immutable)
-      local mainnet_mirror_volumes="[
-          \"${CARDANO_MAINNET_MIRROR}:${CARDANO_MAINNET_MIRROR}:ro\"
-        , \"${immutable_store}:${immutable_store}:ro\"
-        $(find -L "${immutable_store}" -type f -exec realpath {} \; | xargs dirname | sort | uniq | xargs -I "{}" echo ", \"{}:{}:ro\"")
-      ]"
-    else
-      local mainnet_mirror_volumes="[]"
-    fi
-    # Hint:
-    # - Working dir is: /tmp/cluster/
-    # - Mount point is: /tmp/cluster/run/current
-    ## The workbench is expecting an specific hierarchy of folders and files.
-    local container_mountpoint=$(jq -r ". [\"job\"][\"${nomad_job_name}\"][\"meta\"][\"TASK_STATEDIR\"]" "${dir}"/nomad/nomad-job.json)
-    # Nodes
-    for node in $(jq_tolist 'keys' "${dir}"/node-specs.json)
-    do
-      local task_stanza_name="${node}"
-      # Every node needs access to "./genesis/" and tracer when only 1 is used.
-      local jq_filter="
-        [
-            \"${dir}/genesis:${container_mountpoint}/genesis:ro\"
-          , \"${dir}/genesis/utxo-keys:${container_mountpoint}/genesis/utxo-keys:ro\"
-        ]
-        +
-        (
-          if \$one_tracer_per_node == true
-          then
-            [ ]
-          else
-            [ \"${dir}/tracer:${container_mountpoint}/tracer:rw\" ]
-          end
-        )
-        +
-        \$mainnet_mirror_volumes
-      "
-      local podman_volumes=$(jq "${jq_filter}" --argjson one_tracer_per_node "${one_tracer_per_node}" --argjson mainnet_mirror_volumes "${mainnet_mirror_volumes}" "${dir}"/profile/node-specs.json)
-      jq ".job[\"${nomad_job_name}\"][\"group\"][\"${nomad_job_group_name}\"][\"task\"][\"${node}\"][\"config\"][\"volumes\"] = \$podman_volumes" --argjson podman_volumes "${podman_volumes}" "${dir}"/nomad/nomad-job.json | sponge "${dir}"/nomad/nomad-job.json
-    done
-    # Tracer
-    if jqtest ".node.tracer" "${dir}"/profile.json && ! test "${one_tracer_per_node}" = "true"
-    then
-      local task_stanza_name_t="tracer"
-      # Tracer only needs access to itself (its shared folder).
-      local jq_filter_t="
-        [
-          \"${dir}/tracer:${container_mountpoint}/tracer:rw\"
-        ]
-      "
-      local podman_volumes_t=$(jq "${jq_filter_t}" "${dir}"/profile/node-specs.json)
-      jq ".job[\"${nomad_job_name}\"][\"group\"][\"${nomad_job_group_name}\"][\"task\"][\"tracer\"][\"config\"][\"volumes\"] = \$podman_volumes_t" --argjson podman_volumes_t "${podman_volumes_t}" "${dir}"/nomad/nomad-job.json | sponge "${dir}"/nomad/nomad-job.json
-    fi
 }
 
 ###############################################################################
