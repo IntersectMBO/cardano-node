@@ -1,5 +1,22 @@
 # Changelog for cardano-node
 
+## 1.35.7 -- March 2023
+
+### consensus changes
+
+None
+
+### ledger changes
+
+None
+
+### network changes
+
+- Fixed interoperability bug in non-p2p networking code base which was exposed
+  by p2p nodes. (issue [ouroboros-network#4465])
+
+[ouroboros-network#4465]: https://github.com/input-output-hk/ouroboros-network/issues/4465
+
 ## 1.35.6 -- Febuary 2023
 
 ### consensus changes

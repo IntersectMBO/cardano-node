@@ -23,7 +23,7 @@ final: prev: with final; {
 
   haskell-language-server = haskell-nix.tool compiler-nix-name "haskell-language-server" {
     version = "1.8.0.0";
-    index-state = "2022-09-27T00:00:00Z";
+    index-state = "2023-03-13T00:00:00Z";
   };
 
   haskellBuildUtils = prev.haskellBuildUtils.override {

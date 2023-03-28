@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-node
-version:                1.35.6
+version:                1.35.7
 description:            The cardano full node
 author:                 IOHK
 maintainer:             operations@iohk.io
@@ -169,8 +169,8 @@ library
                       , ouroboros-consensus-cardano ^>= 0.2
                       , ouroboros-consensus-protocol
                       , ouroboros-consensus-shelley
-                      , ouroboros-network  ^>= 0.3.0.1
-                      , ouroboros-network-framework ^>= 0.2
+                      , ouroboros-network  ^>= 0.3.0.2
+                      , ouroboros-network-framework ^>= 0.2.0.1
                       , psqueues
                       , safe-exceptions
                       , scientific
