@@ -46,6 +46,7 @@ import qualified Data.Array as Array
 import           Data.Bifunctor (bimap, first)
 import qualified Data.ByteString as BS
 import           Data.ByteString.Short (ShortByteString)
+import           Data.Function ((&))
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes, fromMaybe, maybeToList)
@@ -1233,11 +1234,11 @@ mapTxScriptWitnesses f txbodycontent@TxBodyContent {
     mappedTxCertificates <- mapScriptWitnessesCertificates txCertificates
 
     Right $ txbodycontent
-      { txIns = mappedTxIns
-      , txMintValue = mappedMintedVals
-      , txCertificates = mappedTxCertificates
-      , txWithdrawals = mappedWithdrawals
-      }
+      & setTxIns mappedTxIns
+      & setTxMintValue mappedMintedVals
+      & setTxCertificates mappedTxCertificates
+      & setTxWithdrawals mappedWithdrawals
+
   where
     mapScriptWitnessesTxIns
       :: [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]

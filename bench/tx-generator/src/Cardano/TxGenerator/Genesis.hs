@@ -19,6 +19,7 @@ module Cardano.TxGenerator.Genesis
 where
 
 import           Data.Bifunctor (bimap, second)
+import           Data.Function ((&))
 import           Data.List (find)
 import qualified Data.ListMap as ListMap (toList)
 
@@ -124,25 +125,11 @@ mkGenesisTransaction key ttl fee txins txouts
       (`signShelleyTransaction` [WitnessGenesisUTxOKey key])
       (createAndValidateTransactionBody txBodyContent)
  where
-  txBodyContent = TxBodyContent {
-      txIns = zip txins $ repeat $ BuildTxWith $ KeyWitness KeyWitnessForSpending
-    , txInsCollateral = TxInsCollateralNone
-    , txInsReference = TxInsReferenceNone
-    , txOuts = txouts
-    , txFee = mkTxFee fee
-    , txValidityRange = (TxValidityNoLowerBound, mkTxValidityUpperBound ttl)
-    , txMetadata = TxMetadataNone
-    , txAuxScripts = TxAuxScriptsNone
-    , txExtraKeyWits = TxExtraKeyWitnessesNone
-    , txProtocolParams = BuildTxWith Nothing
-    , txWithdrawals = TxWithdrawalsNone
-    , txCertificates = TxCertificatesNone
-    , txUpdateProposal = TxUpdateProposalNone
-    , txMintValue = TxMintNone
-    , txScriptValidity = TxScriptValidityNone
-    , txReturnCollateral = TxReturnCollateralNone
-    , txTotalCollateral = TxTotalCollateralNone
-    }
+  txBodyContent = defaultTxBodyContent
+    & setTxIns (zip txins $ repeat $ BuildTxWith $ KeyWitness KeyWitnessForSpending)
+    & setTxOuts txouts
+    & setTxFee (mkTxFee fee)
+    & setTxValidityRange (TxValidityNoLowerBound, mkTxValidityUpperBound ttl)
 
 castKey :: SigningKey PaymentKey -> SigningKey GenesisUTxOKey
 castKey (PaymentSigningKey skey) = GenesisUTxOSigningKey skey
