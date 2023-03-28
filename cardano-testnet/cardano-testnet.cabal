@@ -67,6 +67,7 @@ library
                         Testnet.Byron
                         Testnet.Util.Assert
                         Testnet.Util.Base
+                        Testnet.Util.Cli
                         Testnet.Util.Ignore
                         Testnet.Util.Process
                         Testnet.Util.Runtime
@@ -86,6 +87,9 @@ library
                         Testnet.Options
                         Testnet.Run
                         Testnet.Shelley
+                        Testnet.Test.LeadershipSchedule
+                        Testnet.Test.ShutdownOnSlotSynced
+                        Testnet.Test.StakeSnapshot                                       
                         Testnet.Utils
                         Paths_cardano_testnet
 

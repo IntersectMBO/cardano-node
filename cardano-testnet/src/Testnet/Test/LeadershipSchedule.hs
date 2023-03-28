@@ -12,8 +12,8 @@
 {- HLINT ignore "Use head" -}
 {- HLINT ignore "Use let" -}
 
-module Test.Cli.Babbage.LeadershipSchedule
-  ( hprop_leadershipSchedule
+module Testnet.Test.LeadershipSchedule
+  ( testLeadershipSchedule
   ) where
 
 import           Cardano.CLI.Shelley.Output (QueryTipLocalStateOutput (..))
@@ -21,7 +21,6 @@ import           Control.Monad (void)
 import           Data.List ((\\))
 import           Data.Monoid (Last (..))
 import           GHC.Stack (callStack)
-import           Hedgehog (Property)
 import           Prelude
 import           System.Environment (getEnvironment)
 import           System.FilePath ((</>))
@@ -35,44 +34,19 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
-import qualified System.Directory as IO
-import qualified System.Info as SYS
-import qualified Testnet.Util.Base as H
 
-import           Cardano.Testnet
 import           Testnet.Util.Assert
+import           Testnet.Util.Cli (TestnetMagic)
 import           Testnet.Util.Process
 import           Testnet.Util.Runtime
 
-hprop_leadershipSchedule :: Property
-hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-schedule" $ \tempAbsBasePath' -> do
-  H.note_ SYS.os
-  base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
-  configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
-  conf@Conf { tempAbsPath } <- H.noteShowM $
-    mkConf (ProjectBase base) (YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
-
-  work <- H.note $ tempAbsPath </> "work"
+testLeadershipSchedule :: TmpPath -> TestnetMagic -> FilePath -> PoolNode -> H.Integration ()
+testLeadershipSchedule tmpPath testnetMagic shelleyGenesisFile poolNode1 = do
+  work <- H.note $ getWorkDir tmpPath
   H.createDirectoryIfMissing work
-
-  let
-    tempBaseAbsPath = getTmpBaseAbsPath (TmpPath tempAbsPath)
-    testnetOptions = BabbageOnlyTestnetOptions $ babbageDefaultTestnetOptions
-      { babbageNodeLoggingFormat = NodeLoggingFormatAsJson
-      }
-  tr@TestnetRuntime
-    { testnetMagic
-    , poolNodes
-    -- , wallets
-    -- , delegators
-    } <- testnet testnetOptions conf
-
-  poolNode1 <- H.headM poolNodes
-
-  env <- H.evalIO getEnvironment
-
   poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
 
+  env <- H.evalIO getEnvironment
   execConfig <- H.noteShow H.ExecConfig
     { H.execConfigEnv = Last $ Just $
       [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName poolSprocket1)
@@ -80,7 +54,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
       -- The environment must be passed onto child process on Windows in order to
       -- successfully start that process.
       <> env
-    , H.execConfigCwd = Last $ Just tempBaseAbsPath
+    , H.execConfigCwd = Last $ Just $ getTmpBaseAbsPath tmpPath
     }
 
   tipDeadline <- H.noteShowM $ DTC.addUTCTime 210 <$> H.noteShowIO DTC.getCurrentTime
@@ -110,7 +84,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
   let poolVrfSkey = poolNodeKeysVrfSkey $ poolKeys poolNode1
 
   id do
-    scheduleFile <- H.noteTempFile tempAbsPath "schedule.log"
+    scheduleFile <- H.noteTempFile work "schedule.log"
 
     leadershipScheduleDeadline <- H.noteShowM $ DTC.addUTCTime 180 <$> H.noteShowIO DTC.getCurrentTime
 
@@ -118,7 +92,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
       void $ execCli' execConfig
         [ "query", "leadership-schedule"
         , "--testnet-magic", show @Int testnetMagic
-        , "--genesis", shelleyGenesisFile tr
+        , "--genesis", shelleyGenesisFile
         , "--stake-pool-id", stakePoolId
         , "--vrf-signing-key-file", poolVrfSkey
         , "--out-file", scheduleFile
@@ -153,7 +127,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
     H.assert $ L.null (expectedLeadershipSlotNumbers \\ leaderSlots)
 
   id do
-    scheduleFile <- H.noteTempFile tempAbsPath "schedule.log"
+    scheduleFile <- H.noteTempFile work "schedule.log"
 
     leadershipScheduleDeadline <- H.noteShowM $ DTC.addUTCTime 180 <$> H.noteShowIO DTC.getCurrentTime
 
@@ -161,7 +135,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
       void $ execCli' execConfig
         [ "query", "leadership-schedule"
         , "--testnet-magic", show @Int testnetMagic
-        , "--genesis", shelleyGenesisFile tr
+        , "--genesis", shelleyGenesisFile
         , "--stake-pool-id", stakePoolId
         , "--vrf-signing-key-file", poolVrfSkey
         , "--out-file", scheduleFile

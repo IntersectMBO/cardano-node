@@ -5,8 +5,10 @@ module Cardano.Testnet (
 
   -- ** Start a testnet
   testnet,
+  cardanoTestnet,
 
   -- ** Testnet options
+  RunTest (..),
   TestnetOptions(..),
   CardanoTestnetOptions(..),
   BabbageTestnetOptions(..),
@@ -21,6 +23,11 @@ module Cardano.Testnet (
   Conf(..),
   ProjectBase(..),
   YamlFilePath(..),
+  TmpPath(..),
+  getTmpBaseAbsPath,
+  getSocketDir,
+  getLogDir,
+
   mkConf,
 
   -- * Processes

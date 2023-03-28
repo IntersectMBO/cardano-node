@@ -47,7 +47,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   configurationTemplate
     <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
 
-  conf@Conf { tempBaseAbsPath, tempAbsPath }
+  conf@Conf { tempAbsPath }
     <- H.noteShowM $ mkConf (ProjectBase base) (YamlFilePath configurationTemplate)
                               tempAbsBasePath' Nothing
 
@@ -68,7 +68,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
           -- The environment must be passed onto child process on Windows in order to
           -- successfully start that process.
           <> env
-        , H.execConfigCwd = Last $ Just tempBaseAbsPath
+        , H.execConfigCwd = Last $ Just $ getTmpBaseAbsPath $ TmpPath tempAbsPath
         }
 
   -- First we note all the relevant files

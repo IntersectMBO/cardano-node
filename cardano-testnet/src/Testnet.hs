@@ -7,9 +7,6 @@ module Testnet
   ) where
 
 import           Control.Monad
-import           Prelude
-
-
 
 import           Hedgehog
 import           Hedgehog.Extras.Test.Base (Integration, noteShow_)
@@ -47,7 +44,7 @@ testnet options conf = case options of
   BabbageOnlyTestnetOptions o -> babbageTestnet o conf
   CardanoOnlyTestnetOptions o -> do
     testnetMinimumConfigurationRequirements o
-    cardanoTestnet o conf
+    cardanoTestnet StartTestnetOnly o conf
 
 babbageDefaultTestnetOptions :: BabbageTestnetOptions
 babbageDefaultTestnetOptions = Options.defaultTestnetOptions

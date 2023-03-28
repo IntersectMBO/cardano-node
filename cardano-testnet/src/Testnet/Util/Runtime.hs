@@ -19,15 +19,19 @@ module Testnet.Util.Runtime
   , poolNodeStdout
   , readNodeLoggingFormat
   , startNode
+  , makeSprocket
+  , TmpPath(..)
+  , getLogDir            -- used for Testnet.Byron
+  , getSocketDir         -- used for Testnet.Byron
+  , getTmpBaseAbsPath    -- used for Testnet.Byron
+  , getWorkDir           -- used in Testnet.Test.StakeSnapshot
   ) where
-
-import           Prelude
 
 import           Control.Monad
 import           Data.Aeson (FromJSON)
 import qualified Data.List as L
-
 import           Data.Text (Text)
+
 import           GHC.Generics (Generic)
 import qualified Hedgehog as H
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
@@ -37,12 +41,14 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 
-import           System.FilePath.Posix ((</>))
 import qualified System.Info as OS
 import qualified System.IO as IO
+import           System.FilePath as FP
 import qualified System.Process as IO
 
+import           Testnet.Util.Cli
 import qualified Testnet.Util.Process as H
+
 
 data NodeLoggingFormat = NodeLoggingFormatAsJson | NodeLoggingFormatAsText deriving (Eq, Show)
 
@@ -67,16 +73,16 @@ data NodeRuntime = NodeRuntime
 
 data PoolNode = PoolNode
   { poolRuntime :: NodeRuntime
-  , poolKeys :: PoolNodeKeys
+  , poolKeys :: PoolNodeKeys -- used in Alonzo LeadershipShedule
   }
 
 data PoolNodeKeys = PoolNodeKeys
-  { poolNodeKeysColdVkey :: FilePath
+  { poolNodeKeysColdVkey :: FilePath -- == Operator keys -- used in LeadershipShedule
   , poolNodeKeysColdSkey :: FilePath
+  , poolNodeKeysVrf :: (File (Vrf VKey), File (Vrf SKey))
   , poolNodeKeysVrfVkey :: FilePath
   , poolNodeKeysVrfSkey :: FilePath
-  , poolNodeKeysStakingVkey :: FilePath
-  , poolNodeKeysStakingSkey :: FilePath
+  , poolNodeKeysOperator :: (File (Operator VKey), File (Operator SKey), File OperatorCounter)
   } deriving (Eq, Show)
 
 data PaymentKeyPair = PaymentKeyPair
@@ -117,22 +123,48 @@ readNodeLoggingFormat = \case
 allNodes :: TestnetRuntime -> [NodeRuntime]
 allNodes tr = bftNodes tr <> fmap poolRuntime (poolNodes tr)
 
+makeSprocket
+  :: TmpPath
+  -> String
+  -> Sprocket
+makeSprocket tmpPath node
+  = Sprocket (getTmpBaseAbsPath tmpPath) (getSocketDir tmpPath </> node)
+
+newtype TmpPath = TmpPath
+  { unTmpPath :: FilePath
+  } deriving (Eq, Show)
+
+getTmpRelPath :: TmpPath -> FilePath
+getTmpRelPath (TmpPath fp) = FP.makeRelative (getTmpBaseAbsPath (TmpPath fp)) fp
+
+getSocketDir :: TmpPath -> FilePath
+getSocketDir fp = getTmpRelPath fp </> "socket"
+
+getTmpBaseAbsPath :: TmpPath -> FilePath
+getTmpBaseAbsPath (TmpPath fp) = FP.takeDirectory fp
+
+getLogDir :: TmpPath -> FilePath
+getLogDir (TmpPath fp) = fp </> "logs"
+
+getWorkDir :: TmpPath -> FilePath
+getWorkDir (TmpPath fp) = fp </> "work"
+
 -- | Start a node, creating file handles, sockets and temp-dirs.
 startNode
-  :: String
-  -- ^ The tempBaseAbsPath
-  -> FilePath
-  -- ^ The tempAbsPath
-  -> FilePath
-  -- ^ The log directory
-  -> FilePath
-  -- ^ The directory where the sockets are created
+  :: TmpPath
   -> String
   -- ^ The name of the node
   -> [String]
   -- ^ The command --socket-path and --port will be added automatically.
   -> H.Integration NodeRuntime
-startNode tempBaseAbsPath tempAbsPath logDir socketDir node nodeCmd = do
+startNode tp@(TmpPath tempAbsPath) node nodeCmd = do
+  let
+    tempBaseAbsPath = getTmpBaseAbsPath tp
+    socketDir = getSocketDir tp
+    logDir = getLogDir tp
+
+  H.createDirectoryIfMissing logDir
+
   dbDir <- H.noteShow $ tempAbsPath </> "db/" <> node
   nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
   nodeStderrFile <- H.noteTempFile logDir $ node <> ".stderr.log"

@@ -11,8 +11,8 @@
 {- HLINT ignore "Use head" -}
 {- HLINT ignore "Use let" -}
 
-module Test.Cli.Babbage.StakeSnapshot
-  ( hprop_stakeSnapshot
+module Testnet.Test.StakeSnapshot
+  ( testStakeSnapshot
   ) where
 
 import           Prelude
@@ -26,50 +26,27 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Time.Clock as DTC
 import           GHC.Stack (callStack)
-import qualified System.Directory as IO
 import           System.Environment (getEnvironment)
 import           System.FilePath ((</>))
-import qualified System.Info as SYS
 
 import           Cardano.CLI.Shelley.Output (QueryTipLocalStateOutput (..))
-import           Cardano.Testnet
 
-import           Hedgehog (Property, (===))
+import           Hedgehog ((===))
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
-import qualified Testnet.Util.Base as H
+import           Testnet.Util.Cli (TestnetMagic)
 import           Testnet.Util.Process
 import           Testnet.Util.Runtime
 
-hprop_stakeSnapshot :: Property
-hprop_stakeSnapshot = H.integrationRetryWorkspace 2 "babbage-stake-snapshot" $ \tempAbsBasePath' -> do
-  H.note_ SYS.os
-  base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
-  configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
-  conf@Conf { tempAbsPath } <- H.noteShowM $
-    mkConf (ProjectBase base) (YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
-
-  work <- H.note $ tempAbsPath </> "work"
+testStakeSnapshot :: TmpPath -> TestnetMagic -> IO.Sprocket -> H.Integration ()
+testStakeSnapshot tmpPath testnetMagic poolSprocket1 = do
+  work <- H.note $ getWorkDir tmpPath
   H.createDirectoryIfMissing work
 
-  let
-    testnetOptions = BabbageOnlyTestnetOptions $ babbageDefaultTestnetOptions
-      { babbageNodeLoggingFormat = NodeLoggingFormatAsJson
-      }
-
-  TestnetRuntime
-    { testnetMagic
-    , poolNodes
-    } <- testnet testnetOptions conf
-
-  poolNode1 <- H.headM poolNodes
-
   env <- H.evalIO getEnvironment
-
-  poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
 
   execConfig <- H.noteShow H.ExecConfig
     { H.execConfigEnv = Last $ Just $
@@ -78,7 +55,7 @@ hprop_stakeSnapshot = H.integrationRetryWorkspace 2 "babbage-stake-snapshot" $ \
       -- The environment must be passed onto child process on Windows in order to
       -- successfully start that process.
       <> env
-    , H.execConfigCwd = Last $ Just $ getTmpBaseAbsPath $ TmpPath tempAbsPath
+    , H.execConfigCwd = Last $ Just $ getTmpBaseAbsPath tmpPath
     }
 
   tipDeadline <- H.noteShowM $ DTC.addUTCTime 210 <$> H.noteShowIO DTC.getCurrentTime
