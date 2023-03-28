@@ -115,12 +115,10 @@ library
                       , cardano-data ^>= 1.0
                       , cardano-git-rev
                       , cardano-ledger-alonzo ^>= 1.1
-                      , cardano-ledger-allegra ^>= 1.1
                       , cardano-ledger-byron ^>= 1.0
                       , cardano-ledger-binary >= 1.0
                       , cardano-ledger-core ^>= 1.1
                       , cardano-ledger-conway ^>= 1.1
-                      , cardano-ledger-mary ^>= 1.1
                       , cardano-ledger-shelley ^>= 1.1
                       , cardano-ping
                       , cardano-prelude
@@ -161,7 +159,6 @@ library
                       , unliftio-core
                       , utf8-string
                       , vector
-                      , vector-map ^>= 1.0
                       , yaml
 
 executable cardano-cli

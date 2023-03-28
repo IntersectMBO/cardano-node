@@ -11,7 +11,7 @@ module Cardano.TxGenerator.Setup.Plutus
        where
 
 import           Data.Bifunctor (bimap)
-import           Data.Map.Strict as Map (lookup, toAscList)
+import           Data.Map.Strict as Map (lookup)
 
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
