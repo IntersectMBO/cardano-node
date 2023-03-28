@@ -30,7 +30,7 @@
 
 - **Breaking change** - `queryExpr` to return `IO (Either UnsupportedNtcVersionError a)` instead of `IO a`.
   ([PR4788](https://github.com/input-output-hk/cardano-node/pull/4788))
-  
+
 - **Breaking change** - Remove distinction between multisig and timelock scripts([PR4763](https://github.com/input-output-hk/cardano-node/pull/4763))
 
 - **Breaking change** Change return type of `queryNodeLocalState` to new `AcquiringFailure` type.
@@ -39,6 +39,8 @@
   `Ledger.PParams (ShelleyLedgerEra era)` argument instead of `ProtocolParameters`
   New type `BundledProtocolParameters` and new functions `bundleProtocolParams` and `unbundleProtocolParams`.
   ([PR4903](https://github.com/input-output-hk/cardano-node/pull/4903))
+
+- Fix minUTxO calculation in `calculateMinimumUTxO` function in `cardano-api`
 
 ### Bugs
 
