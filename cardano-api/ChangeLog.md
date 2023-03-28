@@ -44,6 +44,8 @@
 
 - Fix minUTxO calculation in `calculateMinimumUTxO` function in `cardano-api`
 
+- **Breaking change** - `calculateMinimumUTxO` no longer fails, it is a total computation.
+
 ### Bugs
 
 - Allow reading text envelopes from pipes ([PR 4384](https://github.com/input-output-hk/cardano-node/pull/4384))

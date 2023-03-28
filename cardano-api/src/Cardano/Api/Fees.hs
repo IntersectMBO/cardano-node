@@ -35,7 +35,6 @@ module Cardano.Api.Fees (
 
     -- * Minimum UTxO calculation
     calculateMinimumUTxO,
-    MinimumUTxOError(..),
 
     -- * Internal helpers
     mapTxScriptWitnesses,
@@ -62,7 +61,6 @@ import qualified Cardano.Binary as CBOR
 import qualified Cardano.Chain.Common as Byron
 
 import qualified Cardano.Ledger.Coin as Ledger
-import           Cardano.Ledger.Core (EraTx (sizeTxF))
 import qualified Cardano.Ledger.Crypto as Ledger
 import qualified Cardano.Ledger.Keys as Ledger
 import           Cardano.Ledger.UTxO as Ledger (EraUTxO)
@@ -120,7 +118,7 @@ transactionFee txFeeFixed txFeePerByte tx =
   let a = toInteger txFeePerByte
       b = toInteger txFeeFixed
   in case tx of
-       ShelleyTx _ tx' -> let x = obtainEraTx shelleyBasedEra $ tx' ^. sizeTxF
+       ShelleyTx _ tx' -> let x = obtainEraTx shelleyBasedEra $ tx' ^. L.sizeTxF
                           in Lovelace (a * x + b)
        --TODO: This can be made to work for Byron txs too. Do that: fill in this case
        -- and remove the IsShelleyBasedEra constraint.
@@ -128,7 +126,7 @@ transactionFee txFeeFixed txFeePerByte tx =
  where
   obtainEraTx
     :: ShelleyBasedEra era
-    -> (EraTx (ShelleyLedgerEra era) => a)
+    -> (L.EraTx (ShelleyLedgerEra era) => a)
     -> a
   obtainEraTx ShelleyBasedEraShelley f = f
   obtainEraTx ShelleyBasedEraAllegra f = f
@@ -241,7 +239,7 @@ evaluateTransactionFee bpparams txbody keywitcount _byronwitcount =
   where
     evalShelleyBasedEra :: forall ledgerera.
                            ShelleyLedgerEra era ~ ledgerera
-                        => EraTx ledgerera
+                        => L.EraTx ledgerera
                         => Ledger.Tx ledgerera
                         -> Lovelace
     evalShelleyBasedEra tx =
@@ -255,7 +253,7 @@ evaluateTransactionFee bpparams txbody keywitcount _byronwitcount =
     withLedgerConstraints
       :: ShelleyLedgerEra era ~ ledgerera
       => ShelleyBasedEra era
-      -> (EraTx ledgerera => a)
+      -> (L.EraTx ledgerera => a)
       -> a
     withLedgerConstraints ShelleyBasedEraShelley f = f
     withLedgerConstraints ShelleyBasedEraAllegra f = f
@@ -802,7 +800,6 @@ data TxBodyErrorAutoBalance =
          TxOutInAnyEra
          -- ^ Minimum UTxO
          Lovelace
-     | TxBodyErrorMinUTxOMissingPParams MinimumUTxOError
      | TxBodyErrorNonAdaAssetsUnbalanced Value
      | TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap
          ScriptWitnessIndex
@@ -853,8 +850,6 @@ instance Error TxBodyErrorAutoBalance where
 
   displayError (TxBodyErrorNonAdaAssetsUnbalanced val) =
       "Non-Ada assets are unbalanced: " <> Text.unpack (renderValue val)
-
-  displayError (TxBodyErrorMinUTxOMissingPParams err) = displayError err
 
   displayError (TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap sIndex eUnitsMap) =
     "ScriptWitnessIndex (redeemer pointer): " <> show sIndex <> " is missing from the execution "
@@ -1165,7 +1160,7 @@ makeTransactionBodyAutoBalance systemstart history pparams
      -> BundledProtocolParameters era
      -> Either TxBodyErrorAutoBalance ()
    checkMinUTxOValue txout@(TxOut _ v _ _) bpp = do
-     minUTxO  <- first TxBodyErrorMinUTxOMissingPParams $ calculateMinimumUTxO era txout bpp
+     let minUTxO = calculateMinimumUTxO era txout bpp
      if txOutValueToLovelace v >= minUTxO
      then Right ()
      else Left $ TxBodyErrorMinUTxONotMet
@@ -1327,47 +1322,23 @@ calculateMinimumUTxO
   :: ShelleyBasedEra era
   -> TxOut CtxTx era
   -> BundledProtocolParameters era
-  -> Either MinimumUTxOError Lovelace
-calculateMinimumUTxO era txout@(TxOut _ v _ _) bpp =
+  -> Lovelace
+calculateMinimumUTxO era txout bpp =
   case era of
-    ShelleyBasedEraShelley -> getMinUTxOPreAlonzo (unbundleProtocolParams bpp)
-    ShelleyBasedEraAllegra -> calcMinUTxOAllegraMary
-    ShelleyBasedEraMary -> calcMinUTxOAllegraMary
+    ShelleyBasedEraShelley ->
+      calcMinUTxO (unbundleLedgerShelleyBasedProtocolParams era bpp) (toShelleyTxOutAny era txout)
+    ShelleyBasedEraAllegra ->
+      calcMinUTxO (unbundleLedgerShelleyBasedProtocolParams era bpp) (toShelleyTxOutAny era txout)
+    ShelleyBasedEraMary ->
+      calcMinUTxO (unbundleLedgerShelleyBasedProtocolParams era bpp) (toShelleyTxOutAny era txout)
     ShelleyBasedEraAlonzo ->
-      let lTxOut = toShelleyTxOutAny era txout
-          babPParams = unbundleLedgerShelleyBasedProtocolParams era bpp
-          lTxOutWithMinCoin = L.setMinCoinTxOut babPParams lTxOut
-          val = fromShelleyLovelace (lTxOutWithMinCoin ^. L.coinTxOutL)
-      in Right val
+      calcMinUTxO (unbundleLedgerShelleyBasedProtocolParams era bpp) (toShelleyTxOutAny era txout)
     ShelleyBasedEraBabbage ->
-      let lTxOut = toShelleyTxOutAny era txout
-          babPParams = unbundleLedgerShelleyBasedProtocolParams era bpp
-          lTxOutWithMinCoin = L.setMinCoinTxOut babPParams lTxOut
-          val = fromShelleyLovelace (lTxOutWithMinCoin ^. L.coinTxOutL)
-      in Right val
+      calcMinUTxO (unbundleLedgerShelleyBasedProtocolParams era bpp) (toShelleyTxOutAny era txout)
     ShelleyBasedEraConway ->
-      let lTxOut = toShelleyTxOutAny era txout
-          babPParams = unbundleLedgerShelleyBasedProtocolParams era bpp
-          lTxOutWithMinCoin = L.setMinCoinTxOut babPParams lTxOut
-          val = fromShelleyLovelace (lTxOutWithMinCoin ^. L.coinTxOutL)
-      in Right val
+      calcMinUTxO (unbundleLedgerShelleyBasedProtocolParams era bpp) (toShelleyTxOutAny era txout)
  where
-   calcMinUTxOAllegraMary :: Either MinimumUTxOError Lovelace
-   calcMinUTxOAllegraMary = do
-     let val = txOutValueToValue v
-     minUTxO <- getMinUTxOPreAlonzo (unbundleProtocolParams  bpp)
-     Right $ calcMinimumDeposit val minUTxO
-
-   getMinUTxOPreAlonzo
-     :: ProtocolParameters -> Either MinimumUTxOError Lovelace
-   getMinUTxOPreAlonzo =
-     maybe (Left PParamsMinUTxOMissing) Right . protocolParamMinUTxOValue
-
-data MinimumUTxOError =
-    PParamsMinUTxOMissing
-  deriving Show
-
-instance Error MinimumUTxOError where
-  displayError PParamsMinUTxOMissing =
-    "\"minUtxoValue\" field not present in protocol parameters when \
-    \trying to calculate minimum UTxO value."
+   calcMinUTxO :: L.EraTxOut ledgerera => L.PParams ledgerera -> L.TxOut ledgerera -> Lovelace
+   calcMinUTxO pp txOut =
+      let txOutWithMinCoin = L.setMinCoinTxOut pp txOut
+      in fromShelleyLovelace (txOutWithMinCoin ^. L.coinTxOutL)
