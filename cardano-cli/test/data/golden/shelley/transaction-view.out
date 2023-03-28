@@ -66,7 +66,7 @@ update proposal:
       pool influence: 82/83
       pool registration deposit: 83 Lovelace
       pool retirement epoch boundary: 84
-      protocol version: '85.86'
+      protocol version: '8.86'
       transaction fee constant: 75
       transaction fee linear per byte: 76
       treasury expansion: 87/88
