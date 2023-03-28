@@ -21,6 +21,8 @@
   - stake-address delegation-certificate
   - stake-address deregistration-certificate
 
+- Fix minUTxO calculation in `calculate-min-required-utxo`
+
 ### Bugs
 
 - Allow reading signing keys from a pipe ([PR 4342](https://github.com/input-output-hk/cardano-node/pull/4342))

@@ -1336,20 +1336,20 @@ calculateMinimumUTxO era txout@(TxOut _ v _ _) bpp =
     ShelleyBasedEraAlonzo ->
       let lTxOut = toShelleyTxOutAny era txout
           babPParams = unbundleLedgerShelleyBasedProtocolParams era bpp
-          minUTxO = L.getMinCoinTxOut babPParams lTxOut
-          val = fromShelleyLovelace minUTxO
+          lTxOutWithMinCoin = L.setMinCoinTxOut babPParams lTxOut
+          val = fromShelleyLovelace (lTxOutWithMinCoin ^. L.coinTxOutL)
       in Right val
     ShelleyBasedEraBabbage ->
       let lTxOut = toShelleyTxOutAny era txout
           babPParams = unbundleLedgerShelleyBasedProtocolParams era bpp
-          minUTxO = L.getMinCoinTxOut babPParams lTxOut
-          val = fromShelleyLovelace minUTxO
+          lTxOutWithMinCoin = L.setMinCoinTxOut babPParams lTxOut
+          val = fromShelleyLovelace (lTxOutWithMinCoin ^. L.coinTxOutL)
       in Right val
     ShelleyBasedEraConway ->
       let lTxOut = toShelleyTxOutAny era txout
           babPParams = unbundleLedgerShelleyBasedProtocolParams era bpp
-          minUTxO = L.getMinCoinTxOut babPParams lTxOut
-          val = fromShelleyLovelace minUTxO
+          lTxOutWithMinCoin = L.setMinCoinTxOut babPParams lTxOut
+          val = fromShelleyLovelace (lTxOutWithMinCoin ^. L.coinTxOutL)
       in Right val
  where
    calcMinUTxOAllegraMary :: Either MinimumUTxOError Lovelace
