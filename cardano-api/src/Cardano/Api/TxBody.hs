@@ -29,6 +29,31 @@ module Cardano.Api.TxBody (
     createTransactionBody,
     createAndValidateTransactionBody,
     TxBodyContent(..),
+    -- ** Transaction body builders
+    defaultTxBodyContent,
+    defaultTxFee,
+    defaultTxValidityUpperBound,
+    setTxIns,
+    modTxIns,
+    addTxIn,
+    setTxInsCollateral,
+    setTxInsReference,
+    setTxOuts,
+    modTxOuts,
+    addTxOut,
+    setTxTotalCollateral,
+    setTxReturnCollateral,
+    setTxFee,
+    setTxValidityRange,
+    setTxMetadata,
+    setTxAuxScripts,
+    setTxExtraKeyWits,
+    setTxProtocolParams,
+    setTxWithdrawals,
+    setTxCertificates,
+    setTxUpdateProposal,
+    setTxMintValue,
+    setTxScriptValidity,
     TxBodyError(..),
     TxBodyScriptData(..),
     TxScriptValidity(..),
@@ -286,6 +311,7 @@ data ScriptValidity
                   -- Transactions marked as such cannot include scripts that fail validation.
 
   deriving (Eq, Show)
+
 
 instance ToCBOR ScriptValidity where
   toCBOR = toCBOR . scriptValidityToIsValid
@@ -1304,6 +1330,10 @@ data BuildTxWith build a where
      ViewTx      ::      BuildTxWith ViewTx  a
      BuildTxWith :: a -> BuildTxWith BuildTx a
 
+instance Functor (BuildTxWith build) where
+    fmap _ ViewTx = ViewTx
+    fmap f (BuildTxWith x) = BuildTxWith (f x)
+
 deriving instance Eq   a => Eq   (BuildTxWith build a)
 deriving instance Show a => Show (BuildTxWith build a)
 
@@ -1553,6 +1583,16 @@ data TxFee era where
 deriving instance Eq   (TxFee era)
 deriving instance Show (TxFee era)
 
+defaultTxFee :: forall era. IsCardanoEra era => TxFee era
+defaultTxFee = case cardanoEra @era of
+  ByronEra -> TxFeeImplicit TxFeesImplicitInByronEra
+  ShelleyEra -> TxFeeExplicit TxFeesExplicitInShelleyEra mempty
+  AllegraEra -> TxFeeExplicit TxFeesExplicitInAllegraEra mempty
+  MaryEra -> TxFeeExplicit TxFeesExplicitInMaryEra mempty
+  AlonzoEra -> TxFeeExplicit TxFeesExplicitInAlonzoEra mempty
+  BabbageEra -> TxFeeExplicit TxFeesExplicitInBabbageEra mempty
+  ConwayEra -> TxFeeExplicit TxFeesExplicitInConwayEra mempty
+
 
 -- ----------------------------------------------------------------------------
 -- Transaction validity range
@@ -1572,6 +1612,15 @@ data TxValidityUpperBound era where
 deriving instance Eq   (TxValidityUpperBound era)
 deriving instance Show (TxValidityUpperBound era)
 
+defaultTxValidityUpperBound :: forall era. IsCardanoEra era => TxValidityUpperBound era
+defaultTxValidityUpperBound = case cardanoEra @era of
+    ByronEra -> TxValidityNoUpperBound ValidityNoUpperBoundInByronEra
+    ShelleyEra -> TxValidityUpperBound ValidityUpperBoundInShelleyEra maxBound
+    AllegraEra -> TxValidityNoUpperBound ValidityNoUpperBoundInAllegraEra
+    MaryEra -> TxValidityNoUpperBound ValidityNoUpperBoundInMaryEra
+    AlonzoEra -> TxValidityNoUpperBound ValidityNoUpperBoundInAlonzoEra
+    BabbageEra -> TxValidityNoUpperBound ValidityNoUpperBoundInBabbageEra
+    ConwayEra -> TxValidityNoUpperBound ValidityNoUpperBoundInConwayEra
 
 data TxValidityLowerBound era where
 
@@ -1583,7 +1632,6 @@ data TxValidityLowerBound era where
 
 deriving instance Eq   (TxValidityLowerBound era)
 deriving instance Show (TxValidityLowerBound era)
-
 
 -- ----------------------------------------------------------------------------
 -- Transaction metadata (era-dependent)
@@ -1599,7 +1647,6 @@ data TxMetadataInEra era where
 
 deriving instance Eq   (TxMetadataInEra era)
 deriving instance Show (TxMetadataInEra era)
-
 
 -- ----------------------------------------------------------------------------
 -- Auxiliary scripts (era-dependent)
@@ -1647,7 +1694,6 @@ data TxWithdrawals build era where
 deriving instance Eq   (TxWithdrawals build era)
 deriving instance Show (TxWithdrawals build era)
 
-
 -- ----------------------------------------------------------------------------
 -- Certificates within transactions (era-dependent)
 --
@@ -1665,7 +1711,6 @@ data TxCertificates build era where
 deriving instance Eq   (TxCertificates build era)
 deriving instance Show (TxCertificates build era)
 
-
 -- ----------------------------------------------------------------------------
 -- Transaction update proposal (era-dependent)
 --
@@ -1680,7 +1725,6 @@ data TxUpdateProposal era where
 
 deriving instance Eq   (TxUpdateProposal era)
 deriving instance Show (TxUpdateProposal era)
-
 
 -- ----------------------------------------------------------------------------
 -- Value minting within transactions (era-dependent)
@@ -1698,7 +1742,6 @@ data TxMintValue build era where
 
 deriving instance Eq   (TxMintValue build era)
 deriving instance Show (TxMintValue build era)
-
 
 -- ----------------------------------------------------------------------------
 -- Transaction body content
@@ -1727,6 +1770,89 @@ data TxBodyContent build era =
      }
      deriving (Eq, Show)
 
+defaultTxBodyContent :: IsCardanoEra era => TxBodyContent BuildTx era
+defaultTxBodyContent = TxBodyContent
+    { txIns = []
+    , txInsCollateral = TxInsCollateralNone
+    , txInsReference = TxInsReferenceNone
+    , txOuts = []
+    , txTotalCollateral = TxTotalCollateralNone
+    , txReturnCollateral = TxReturnCollateralNone
+    , txFee = defaultTxFee
+    , txValidityRange = (TxValidityNoLowerBound, defaultTxValidityUpperBound)
+    , txMetadata = TxMetadataNone
+    , txAuxScripts = TxAuxScriptsNone
+    , txExtraKeyWits = TxExtraKeyWitnessesNone
+    , txProtocolParams = BuildTxWith Nothing
+    , txWithdrawals = TxWithdrawalsNone
+    , txCertificates = TxCertificatesNone
+    , txUpdateProposal = TxUpdateProposalNone
+    , txMintValue = TxMintNone
+    , txScriptValidity = TxScriptValidityNone
+    }
+
+setTxIns :: TxIns build era -> TxBodyContent build era -> TxBodyContent build era
+setTxIns v txBodyContent = txBodyContent { txIns = v }
+
+modTxIns :: (TxIns build era -> TxIns build era) -> TxBodyContent build era -> TxBodyContent build era
+modTxIns f txBodyContent = txBodyContent { txIns = f (txIns txBodyContent) }
+
+addTxIn :: (TxIn, BuildTxWith build (Witness WitCtxTxIn era)) -> TxBodyContent build era -> TxBodyContent build era
+addTxIn txIn = modTxIns (txIn:)
+
+setTxInsCollateral :: TxInsCollateral era -> TxBodyContent build era -> TxBodyContent build era
+setTxInsCollateral v txBodyContent = txBodyContent { txInsCollateral = v }
+
+setTxInsReference :: TxInsReference build era -> TxBodyContent build era -> TxBodyContent build era
+setTxInsReference v txBodyContent = txBodyContent { txInsReference = v }
+
+setTxOuts :: [TxOut CtxTx era] -> TxBodyContent build era -> TxBodyContent build era
+setTxOuts v txBodyContent = txBodyContent { txOuts = v }
+
+modTxOuts :: ([TxOut CtxTx era] -> [TxOut CtxTx era]) -> TxBodyContent build era -> TxBodyContent build era
+modTxOuts f txBodyContent = txBodyContent { txOuts = f (txOuts txBodyContent) }
+
+addTxOut :: TxOut CtxTx era -> TxBodyContent build era -> TxBodyContent build era
+addTxOut txOut = modTxOuts (txOut:)
+
+setTxTotalCollateral :: TxTotalCollateral era -> TxBodyContent build era -> TxBodyContent build era
+setTxTotalCollateral v txBodyContent = txBodyContent { txTotalCollateral = v }
+
+setTxReturnCollateral :: TxReturnCollateral CtxTx era -> TxBodyContent build era -> TxBodyContent build era
+setTxReturnCollateral v txBodyContent = txBodyContent { txReturnCollateral = v }
+
+setTxFee :: TxFee era -> TxBodyContent build era -> TxBodyContent build era
+setTxFee v txBodyContent = txBodyContent { txFee = v }
+
+setTxValidityRange :: (TxValidityLowerBound era, TxValidityUpperBound era) -> TxBodyContent build era -> TxBodyContent build era
+setTxValidityRange v txBodyContent = txBodyContent { txValidityRange = v }
+
+setTxMetadata :: TxMetadataInEra era -> TxBodyContent build era -> TxBodyContent build era
+setTxMetadata v txBodyContent = txBodyContent { txMetadata = v }
+
+setTxAuxScripts :: TxAuxScripts era -> TxBodyContent build era -> TxBodyContent build era
+setTxAuxScripts v txBodyContent = txBodyContent { txAuxScripts = v }
+
+setTxExtraKeyWits :: TxExtraKeyWitnesses era -> TxBodyContent build era -> TxBodyContent build era
+setTxExtraKeyWits v txBodyContent = txBodyContent { txExtraKeyWits = v }
+
+setTxProtocolParams :: BuildTxWith build (Maybe ProtocolParameters) -> TxBodyContent build era -> TxBodyContent build era
+setTxProtocolParams v txBodyContent = txBodyContent { txProtocolParams = v }
+
+setTxWithdrawals :: TxWithdrawals build era -> TxBodyContent build era -> TxBodyContent build era
+setTxWithdrawals v txBodyContent = txBodyContent { txWithdrawals = v }
+
+setTxCertificates :: TxCertificates build era -> TxBodyContent build era -> TxBodyContent build era
+setTxCertificates v txBodyContent = txBodyContent { txCertificates = v }
+
+setTxUpdateProposal :: TxUpdateProposal era -> TxBodyContent build era -> TxBodyContent build era
+setTxUpdateProposal v txBodyContent = txBodyContent { txUpdateProposal = v }
+
+setTxMintValue :: TxMintValue build era -> TxBodyContent build era -> TxBodyContent build era
+setTxMintValue v txBodyContent = txBodyContent { txMintValue = v }
+
+setTxScriptValidity :: TxScriptValidity era -> TxBodyContent build era -> TxBodyContent build era
+setTxScriptValidity v txBodyContent = txBodyContent { txScriptValidity = v }
 
 -- ----------------------------------------------------------------------------
 -- Transaction bodies
@@ -3307,28 +3433,25 @@ makeByronTransactionBody TxBodyContent { txIns, txOuts } = do
 getByronTxBodyContent :: Annotated Byron.Tx ByteString
                       -> TxBodyContent ViewTx ByronEra
 getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
-    TxBodyContent {
-      txIns              = [ (fromByronTxIn input, ViewTx)
-                           | input <- toList txInputs],
-      txInsCollateral    = TxInsCollateralNone,
-      txInsReference     = TxInsReferenceNone,
-      txOuts             = fromByronTxOut <$> toList txOutputs,
-      txReturnCollateral = TxReturnCollateralNone,
-      txTotalCollateral  = TxTotalCollateralNone,
-      txFee              = TxFeeImplicit TxFeesImplicitInByronEra,
-      txValidityRange    = (TxValidityNoLowerBound,
-                            TxValidityNoUpperBound
-                              ValidityNoUpperBoundInByronEra),
-      txMetadata         = TxMetadataNone,
-      txAuxScripts       = TxAuxScriptsNone,
-      txExtraKeyWits     = TxExtraKeyWitnessesNone,
-      txProtocolParams   = ViewTx,
-      txWithdrawals      = TxWithdrawalsNone,
-      txCertificates     = TxCertificatesNone,
-      txUpdateProposal   = TxUpdateProposalNone,
-      txMintValue        = TxMintNone,
-      txScriptValidity   = TxScriptValidityNone
-    }
+  TxBodyContent
+  { txIns              = [(fromByronTxIn input, ViewTx) | input <- toList txInputs]
+  , txInsCollateral    = TxInsCollateralNone
+  , txInsReference     = TxInsReferenceNone
+  , txOuts             = fromByronTxOut <$> toList txOutputs
+  , txReturnCollateral = TxReturnCollateralNone
+  , txTotalCollateral  = TxTotalCollateralNone
+  , txFee              = TxFeeImplicit TxFeesImplicitInByronEra
+  , txValidityRange    = (TxValidityNoLowerBound, TxValidityNoUpperBound ValidityNoUpperBoundInByronEra)
+  , txMetadata         = TxMetadataNone
+  , txAuxScripts       = TxAuxScriptsNone
+  , txExtraKeyWits     = TxExtraKeyWitnessesNone
+  , txProtocolParams   = ViewTx
+  , txWithdrawals      = TxWithdrawalsNone
+  , txCertificates     = TxCertificatesNone
+  , txUpdateProposal   = TxUpdateProposalNone
+  , txMintValue        = TxMintNone
+  , txScriptValidity   = TxScriptValidityNone
+  }
 
 convTxIns :: TxIns BuildTx era -> Set (Shelley.TxIn StandardCrypto)
 convTxIns txIns = Set.fromList (map (toShelleyTxIn . fst) txIns)

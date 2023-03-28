@@ -9,6 +9,7 @@ module  Cardano.TxGenerator.Tx
 
 import           Data.Bifunctor (bimap, second)
 import qualified Data.ByteString as BS (length)
+import           Data.Function ((&))
 import           Data.Maybe (mapMaybe)
 
 import           Cardano.Api
@@ -93,25 +94,14 @@ genTx protocolParameters (collateral, collFunds) fee metadata inFunds outputs
       (createAndValidateTransactionBody txBodyContent)
  where
   allKeys = mapMaybe getFundKey $ inFunds ++ collFunds
-  txBodyContent = TxBodyContent {
-      txIns = map (\f -> (getFundTxIn f, BuildTxWith $ getFundWitness f)) inFunds
-    , txInsCollateral = collateral
-    , txInsReference = TxInsReferenceNone
-    , txOuts = outputs
-    , txFee = fee
-    , txValidityRange = (TxValidityNoLowerBound, upperBound)
-    , txMetadata = metadata
-    , txAuxScripts = TxAuxScriptsNone
-    , txExtraKeyWits = TxExtraKeyWitnessesNone
-    , txProtocolParams = BuildTxWith $ Just protocolParameters
-    , txWithdrawals = TxWithdrawalsNone
-    , txCertificates = TxCertificatesNone
-    , txUpdateProposal = TxUpdateProposalNone
-    , txMintValue = TxMintNone
-    , txScriptValidity = TxScriptValidityNone
-    , txReturnCollateral = TxReturnCollateralNone
-    , txTotalCollateral = TxTotalCollateralNone
-    }
+  txBodyContent = defaultTxBodyContent
+    & setTxIns (map (\f -> (getFundTxIn f, BuildTxWith $ getFundWitness f)) inFunds)
+    & setTxInsCollateral collateral
+    & setTxOuts outputs
+    & setTxFee fee
+    & setTxValidityRange (TxValidityNoLowerBound, upperBound)
+    & setTxMetadata metadata
+    & setTxProtocolParams (BuildTxWith (Just protocolParameters))
 
   upperBound :: TxValidityUpperBound era
   upperBound = case shelleyBasedEra @era of

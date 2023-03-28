@@ -9,7 +9,9 @@ where
 import           Prelude
 
 import           Cardano.Api
+
 import qualified Data.ByteString as BS
+import           Data.Function ((&))
 import qualified Data.Map.Strict as Map
 import           Data.Word (Word64)
 
@@ -112,26 +114,15 @@ dummyTxSizeInEra metadata = case createAndValidateTransactionBody dummyTx of
   Left err -> error $ "metaDataSize " ++ show err
  where
   dummyTx :: TxBodyContent BuildTx era
-  dummyTx = TxBodyContent {
-      txIns = [( TxIn "dbaff4e270cfb55612d9e2ac4658a27c79da4a5271c6f90853042d1403733810" (TxIx 0)
-               , BuildTxWith $ KeyWitness KeyWitnessForSpending )]
-    , txInsCollateral = TxInsCollateralNone
-    , txInsReference = TxInsReferenceNone
-    , txOuts = []
-    , txFee = mkTxFee 0
-    , txValidityRange = (TxValidityNoLowerBound, mkTxValidityUpperBound 0)
-    , txMetadata = metadata
-    , txAuxScripts = TxAuxScriptsNone
-    , txExtraKeyWits = TxExtraKeyWitnessesNone
-    , txProtocolParams = BuildTxWith Nothing
-    , txWithdrawals = TxWithdrawalsNone
-    , txCertificates = TxCertificatesNone
-    , txUpdateProposal = TxUpdateProposalNone
-    , txMintValue = TxMintNone
-    , txScriptValidity = TxScriptValidityNone
-    , txReturnCollateral = TxReturnCollateralNone
-    , txTotalCollateral = TxTotalCollateralNone
-    }
+  dummyTx = defaultTxBodyContent
+    & setTxIns
+      [ ( TxIn "dbaff4e270cfb55612d9e2ac4658a27c79da4a5271c6f90853042d1403733810" (TxIx 0)
+        , BuildTxWith $ KeyWitness KeyWitnessForSpending
+        )
+      ]
+    & setTxFee (mkTxFee 0)
+    & setTxValidityRange (TxValidityNoLowerBound, mkTxValidityUpperBound 0)
+    & setTxMetadata metadata
 
 dummyTxSize :: forall era . IsShelleyBasedEra era => AsType era -> Maybe TxMetadata -> Int
 dummyTxSize _p m = (dummyTxSizeInEra @era) $ metadataInEra m
