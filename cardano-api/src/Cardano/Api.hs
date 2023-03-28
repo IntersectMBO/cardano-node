@@ -37,9 +37,11 @@ module Cardano.Api (
     -- ** IO
     File(..),
     MapFile(..),
-    HasFileMode(..),
     Directory(..),
     FileDirection(..),
+
+    toFileIn,
+    toFileOut,
 
     writeByteStringFileWithOwnerPermissions,
     writeByteStringFile,
@@ -808,6 +810,13 @@ module Cardano.Api (
     parseFilePath,
     parseFileOut,
     parseDirectory,
+
+    toGenesisFileIn,
+    toGenesisFileOut,
+    toNetworkConfigFileIn,
+    toNetworkConfigFileOut,
+    toNodeConfigIn,
+    toNodeConfigOut,
   ) where
 
 import           Cardano.Api.Address

@@ -33,10 +33,18 @@ module Cardano.Node.Types
   , NodeConwayProtocolConfiguration(..)
   , VRFPrivateKeyFilePermissionError(..)
   , renderVRFPrivateKeyFilePermissionError
+
+  , toConfigYamlFilePathIn
+  , toConfigYamlFilePathOut
+  , toDbFileIn
+  , toDbFileOut
+  , toTopologyFileIn
+  , toTopologyFileOut
   ) where
 
 import           Data.Aeson
 import           Data.ByteString (ByteString)
+import           Data.Coerce (coerce)
 import           Data.Monoid (Last)
 import           Data.String (IsString)
 import           Data.Text (Text)
@@ -64,11 +72,23 @@ data ConfigError =
 -- (logging, tracing, protocol, slot length etc)
 newtype ConfigYamlFilePath (direction :: FileDirection) = ConfigYamlFilePath
   { unConfigYamlFilePath :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile, FromJSON, ToJSON)
+  } deriving newtype (Eq, Ord, Show, IsString, MapFile, FromJSON, ToJSON)
+
+toConfigYamlFilePathIn :: ConfigYamlFilePath 'InOut -> ConfigYamlFilePath 'In
+toConfigYamlFilePathIn = coerce
+
+toConfigYamlFilePathOut :: ConfigYamlFilePath 'InOut -> ConfigYamlFilePath 'Out
+toConfigYamlFilePathOut = coerce
 
 newtype DbFile (direction :: FileDirection) = DbFile
   { unDbFile :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile, FromJSON, ToJSON)
+  } deriving newtype (Eq, Ord, Show, IsString, MapFile, FromJSON, ToJSON)
+
+toDbFileIn :: DbFile 'InOut -> DbFile 'In
+toDbFileIn = coerce
+
+toDbFileOut :: DbFile 'InOut -> DbFile 'Out
+toDbFileOut = coerce
 
 newtype GenesisFile = GenesisFile
   { unGenesisFile :: FilePath
@@ -289,7 +309,13 @@ data NodeHardForkProtocolConfiguration =
 
 newtype TopologyFile (direction :: FileDirection) = TopologyFile
   { unTopologyFile :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile, FromJSON, ToJSON)
+  } deriving newtype (Eq, Ord, Show, IsString, MapFile, FromJSON, ToJSON)
+
+toTopologyFileIn :: TopologyFile 'InOut -> TopologyFile 'In
+toTopologyFileIn = coerce
+
+toTopologyFileOut :: TopologyFile 'InOut -> TopologyFile 'Out
+toTopologyFileOut = coerce
 
 instance AdjustFilePaths NodeProtocolConfiguration where
 

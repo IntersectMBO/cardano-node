@@ -195,7 +195,7 @@ runNodeIssueOpCert kesVerKeyOrFile
 
     ocertIssueCounter <- firstExceptT ShelleyNodeCmdReadFileError
       . newExceptT
-      $ readFileTextEnvelope AsOperationalCertificateIssueCounter (usingIn @File ocertCtrPath)
+      $ readFileTextEnvelope AsOperationalCertificateIssueCounter (toFileIn ocertCtrPath)
 
     verKeyKes <- firstExceptT ShelleyNodeCmdReadKeyFileError
       . newExceptT
@@ -221,7 +221,7 @@ runNodeIssueOpCert kesVerKeyOrFile
     -- a new cert but without updating the counter.
     firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
-      $ writeLazyByteStringFile (usingOut @File ocertCtrPath)
+      $ writeLazyByteStringFile (toFileOut ocertCtrPath)
       $ textEnvelopeToJSON (Just $ ocertCtrDesc $ getCounter nextOcertCtr) nextOcertCtr
 
     firstExceptT ShelleyNodeCmdWriteFileError

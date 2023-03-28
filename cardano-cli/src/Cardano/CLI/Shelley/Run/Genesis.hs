@@ -825,18 +825,18 @@ createDelegateKeys dir index = do
   liftIO $ createDirectoryIfMissing False dir
   runGenesisKeyGenDelegate
         (VerificationKeyFile $ File $ dir </> "delegate" ++ strIndex ++ ".vkey")
-        (usingOut @SigningKeyFile coldSK)
-        (usingOut @OpCertCounterFile opCertCtr)
+        (toSigningKeyFileOut coldSK)
+        (toOpCertCounterFileOut opCertCtr)
   runGenesisKeyGenDelegateVRF
         (VerificationKeyFile $ File $ dir </> "delegate" ++ strIndex ++ ".vrf.vkey")
         (SigningKeyFile $ File $ dir </> "delegate" ++ strIndex ++ ".vrf.skey")
   firstExceptT ShelleyGenesisCmdNodeCmdError $ do
     runNodeKeyGenKES
-        (usingOut @VerificationKeyFile kesVK)
+        (toVerificationKeyFileOut kesVK)
         (SigningKeyFile $ File $ dir </> "delegate" ++ strIndex ++ ".kes.skey")
     runNodeIssueOpCert
-        (VerificationKeyFilePath (usingIn @VerificationKeyFile kesVK))
-        (usingIn @SigningKeyFile coldSK)
+        (VerificationKeyFilePath (toVerificationKeyFileIn kesVK))
+        (toSigningKeyFileIn coldSK)
         opCertCtr
         (KESPeriod 0)
         (File $ dir </> "opcert" ++ strIndex ++ ".cert")
@@ -868,18 +868,18 @@ createPoolCredentials dir index = do
   liftIO $ createDirectoryIfMissing False dir
   firstExceptT ShelleyGenesisCmdNodeCmdError $ do
     runNodeKeyGenKES
-        (usingOut @VerificationKeyFile kesVK)
+        (toVerificationKeyFileOut kesVK)
         (SigningKeyFile $ File $ dir </> "kes" ++ strIndex ++ ".skey")
     runNodeKeyGenVRF
         (VerificationKeyFile $ File $ dir </> "vrf" ++ strIndex ++ ".vkey")
         (SigningKeyFile $ File $ dir </> "vrf" ++ strIndex ++ ".skey")
     runNodeKeyGenCold
         (VerificationKeyFile $ File $ dir </> "cold" ++ strIndex ++ ".vkey")
-        (usingOut @SigningKeyFile coldSK)
-        (usingOut @OpCertCounterFile opCertCtr)
+        (toSigningKeyFileOut coldSK)
+        (toOpCertCounterFileOut opCertCtr)
     runNodeIssueOpCert
-        (VerificationKeyFilePath (usingIn @VerificationKeyFile kesVK))
-        (usingIn @SigningKeyFile coldSK)
+        (VerificationKeyFilePath (toVerificationKeyFileIn kesVK))
+        (toSigningKeyFileIn coldSK)
         opCertCtr
         (KESPeriod 0)
         (File $ dir </> "opcert" ++ strIndex ++ ".cert")
@@ -1003,7 +1003,7 @@ readShelleyGenesisWithDefault
   -> (ShelleyGenesis StandardCrypto -> ShelleyGenesis StandardCrypto)
   -> ExceptT ShelleyGenesisCmdError IO (ShelleyGenesis StandardCrypto)
 readShelleyGenesisWithDefault fpath adjustDefaults = do
-    newExceptT (readAndDecodeShelleyGenesis (usingIn @File fpath))
+    newExceptT (readAndDecodeShelleyGenesis (toFileIn fpath))
       `catchError` \err ->
         case err of
           ShelleyGenesisCmdGenesisFileReadError (FileIOError _ ioe)

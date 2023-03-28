@@ -14,6 +14,11 @@ module Cardano.CLI.Byron.Key
   , readPaymentVerificationKey
   , renderByronKeyFailure
   , byronWitnessToVerKey
+
+  , toNewVerificationKeyFileIn
+  , toNewVerificationKeyFileOut
+  , toNewSigningKeyFileIn
+  , toNewSigningKeyFileOut
   )
 where
 
@@ -23,6 +28,7 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
                    right)
 import qualified Data.ByteString as SB
 import qualified Data.ByteString.UTF8 as UTF8
+import           Data.Coerce (coerce)
 import           Data.String (IsString, fromString)
 import           Data.Text (Text)
 import qualified Data.Text as T
@@ -63,11 +69,23 @@ renderByronKeyFailure err =
 
 newtype NewSigningKeyFile (direction :: FileDirection) = NewSigningKeyFile
   { unNewSigningKeyFile :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile, FromJSON, ToJSON)
+  } deriving newtype (Eq, Ord, Show, IsString, MapFile, FromJSON, ToJSON)
+
+toNewSigningKeyFileIn :: NewSigningKeyFile 'InOut -> NewSigningKeyFile 'In
+toNewSigningKeyFileIn = coerce
+
+toNewSigningKeyFileOut :: NewSigningKeyFile 'InOut -> NewSigningKeyFile 'Out
+toNewSigningKeyFileOut = coerce
 
 newtype NewVerificationKeyFile (direction :: FileDirection) = NewVerificationKeyFile
   { unNewVerificationKeyFile :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile, FromJSON, ToJSON)
+  } deriving newtype (Eq, Ord, Show, IsString, MapFile, FromJSON, ToJSON)
+
+toNewVerificationKeyFileIn :: NewVerificationKeyFile 'InOut -> NewVerificationKeyFile 'In
+toNewVerificationKeyFileIn = coerce
+
+toNewVerificationKeyFileOut :: NewVerificationKeyFile 'InOut -> NewVerificationKeyFile 'Out
+toNewVerificationKeyFileOut = coerce
 
 -- | Print some invariant properties of a public key:
 --   its hash and formatted view.

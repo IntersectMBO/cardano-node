@@ -54,6 +54,13 @@ module Cardano.Api.LedgerState
   , constructGlobals
   , currentEpochEligibleLeadershipSlots
   , nextEpochEligibleLeadershipSlots
+
+  , toGenesisFileIn
+  , toGenesisFileOut
+  , toNetworkConfigFileIn
+  , toNetworkConfigFileOut
+  , toNodeConfigIn
+  , toNodeConfigOut
   )
   where
 
@@ -73,7 +80,9 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy as LB
 import           Data.ByteString.Short as BSS
+import           Data.Coerce (coerce)
 import           Data.Foldable
+import           Data.Function ((&))
 import           Data.IORef
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -84,6 +93,7 @@ import qualified Data.Sequence as Seq
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.SOP.Strict (K (..), NP (..), fn, (:.:) (Comp))
+import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -100,7 +110,7 @@ import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
-import           Cardano.Api.IO (File (..), FileDirection (..), HasFileMode, MapFile (..))
+import           Cardano.Api.IO (File (..), FileDirection (..), MapFile (..))
 import           Cardano.Api.IPC (ConsensusModeParams (..),
                    LocalChainSyncClient (LocalChainSyncClientPipelined),
                    LocalNodeClientProtocols (..), LocalNodeClientProtocolsInMode,
@@ -145,8 +155,6 @@ import           Cardano.Slotting.EpochInfo (EpochInfo)
 import qualified Cardano.Slotting.EpochInfo.API as Slot
 import           Cardano.Slotting.Slot (WithOrigin (At, Origin))
 import qualified Cardano.Slotting.Slot as Slot
-import           Data.Function ((&))
-import           Data.String (IsString)
 import qualified Ouroboros.Consensus.Block.Abstract as Consensus
 import qualified Ouroboros.Consensus.Byron.Ledger.Block as Byron
 import qualified Ouroboros.Consensus.Byron.Ledger.Ledger as Byron
@@ -788,6 +796,12 @@ data NodeConfig (direction :: FileDirection) = NodeConfig
   , ncBabbageToConway  :: !Consensus.TriggerHardFork
   }
 
+toNodeConfigIn :: NodeConfig 'InOut -> NodeConfig 'In
+toNodeConfigIn = coerce
+
+toNodeConfigOut :: NodeConfig 'InOut -> NodeConfig 'Out
+toNodeConfigOut = coerce
+
 instance FromJSON (NodeConfig direction) where
   parseJSON =
       Aeson.withObject "NodeConfig" parse
@@ -968,7 +982,13 @@ data ShelleyConfig = ShelleyConfig
 
 newtype GenesisFile (direction :: FileDirection) = GenesisFile
   { unGenesisFile :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile, FromJSON, ToJSON)
+  } deriving newtype (Eq, Ord, Show, IsString, MapFile, FromJSON, ToJSON)
+
+toGenesisFileIn :: GenesisFile 'InOut -> GenesisFile 'In
+toGenesisFileIn = coerce
+
+toGenesisFileOut :: GenesisFile 'InOut -> GenesisFile 'Out
+toGenesisFileOut = coerce
 
 newtype GenesisHashByron = GenesisHashByron
   { unGenesisHashByron :: Text
@@ -996,7 +1016,13 @@ newtype NetworkName = NetworkName
 
 newtype NetworkConfigFile (direction :: FileDirection) = NetworkConfigFile
   { _unNetworkConfigFile :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile, FromJSON, ToJSON)
+  } deriving newtype (Eq, Ord, Show, IsString, MapFile, FromJSON, ToJSON)
+
+toNetworkConfigFileIn :: NetworkConfigFile 'InOut -> NetworkConfigFile 'In
+toNetworkConfigFileIn = coerce
+
+toNetworkConfigFileOut :: NetworkConfigFile 'InOut -> NetworkConfigFile 'Out
+toNetworkConfigFileOut = coerce
 
 newtype SocketPath = SocketPath
   { unSocketPath :: FilePath

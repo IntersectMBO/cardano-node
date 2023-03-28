@@ -45,12 +45,19 @@ module Cardano.CLI.Shelley.Commands
   , BlockId (..)
   , WitnessSigningData (..)
   , ColdVerificationKeyOrFile (..)
+
+  , toOpCertCounterFileIn
+  , toOpCertCounterFileOut
+  , toWitnessFileIn
+  , toWitnessFileOut
   ) where
 
 import           Prelude
 
 import           Cardano.Api.Shelley
 
+import           Data.Coerce (coerce)
+import           Data.String (IsString)
 import           Data.Text (Text)
 
 import           Cardano.CLI.Shelley.Key (PaymentVerifier, StakeIdentifier, StakeVerifier,
@@ -59,7 +66,6 @@ import           Cardano.CLI.Types
 
 import           Cardano.Chain.Common (BlockCount)
 import           Cardano.Ledger.Shelley.TxBody (MIRPot)
-import           Data.String (IsString)
 
 --
 -- Shelley CLI command data types
@@ -564,7 +570,13 @@ data CardanoAddressKeyType
 
 newtype OpCertCounterFile (direction :: FileDirection) = OpCertCounterFile
   { unOpCertCounterFile :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile, FromJSON, ToJSON)
+  } deriving newtype (Eq, Ord, Show, IsString, MapFile, FromJSON, ToJSON)
+
+toOpCertCounterFileIn :: OpCertCounterFile 'InOut -> OpCertCounterFile 'In
+toOpCertCounterFileIn = coerce
+
+toOpCertCounterFileOut :: OpCertCounterFile 'InOut -> OpCertCounterFile 'Out
+toOpCertCounterFileOut = coerce
 
 newtype PrivKeyFile
   = PrivKeyFile FilePath
@@ -572,7 +584,13 @@ newtype PrivKeyFile
 
 newtype WitnessFile (direction :: FileDirection) = WitnessFile
   { unWitnessFile :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile, FromJSON, ToJSON)
+  } deriving newtype (Eq, Ord, Show, IsString, MapFile, FromJSON, ToJSON)
+
+toWitnessFileIn :: WitnessFile 'InOut -> WitnessFile 'In
+toWitnessFileIn = coerce
+
+toWitnessFileOut :: WitnessFile 'InOut -> WitnessFile 'Out
+toWitnessFileOut = coerce
 
 -- | A raw verification key given in Base64, and decoded into a ByteString.
 newtype VerificationKeyBase64

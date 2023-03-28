@@ -22,9 +22,11 @@ module Cardano.Api.IO
 
   , File(..)
   , MapFile(..)
-  , HasFileMode(..)
   , Directory(..)
   , FileDirection(..)
+
+  , toFileIn
+  , toFileOut
   ) where
 
 #if !defined(mingw32_HOST_OS)
@@ -52,7 +54,6 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy as LBSC
-import           Data.Kind (Type)
 import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text.IO as Text
@@ -60,6 +61,7 @@ import qualified System.IO as IO
 import           System.IO (Handle)
 
 import           Cardano.Api.Error (FileError (..))
+import           Data.Coerce (coerce)
 
 data FileDirection
   = In
@@ -184,13 +186,8 @@ class MapFile a where
 instance MapFile (File direction) where
   mapFile f = File . f . unFile
 
-class HasFileMode (f :: FileDirection -> Type) where
-  usingIn :: f 'InOut -> f 'In
-  usingOut :: f 'InOut -> f 'Out
+toFileIn :: File 'InOut -> File 'In
+toFileIn = coerce
 
-instance HasFileMode File where
-  usingIn :: File 'InOut -> File 'In
-  usingIn = File . unFile
-
-  usingOut :: File 'InOut -> File 'Out
-  usingOut = File . unFile
+toFileOut :: File 'InOut -> File 'Out
+toFileOut = coerce
