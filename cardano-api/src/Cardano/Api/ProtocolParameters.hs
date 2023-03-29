@@ -779,7 +779,6 @@ newtype CostModel = CostModel [Integer]
   deriving newtype (ToJSON, FromJSON)
   deriving newtype (ToCBOR, FromCBOR)
 
--- TODO alonzo: it'd be nice if the library told us what was wrong
 data InvalidCostModel = InvalidCostModel CostModel Alonzo.CostModelApplyError
   deriving Show
 
