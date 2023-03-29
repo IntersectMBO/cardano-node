@@ -182,7 +182,7 @@ module Cardano.Api.TxBody (
   ) where
 
 import           Control.Applicative (some)
-import           Control.Monad (guard)
+import           Control.Monad (guard, unless)
 import           Data.Aeson (object, withObject, (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Aeson
@@ -2589,19 +2589,23 @@ validateTxBodyContent era txBodContent@TxBodyContent {
   in case era of
        ShelleyBasedEraShelley -> do
          validateTxIns txIns
+         guardShelleyTxInsOverflow (map fst txIns)
          validateTxOuts era txOuts
          validateMetadata txMetadata
        ShelleyBasedEraAllegra -> do
          validateTxIns txIns
+         guardShelleyTxInsOverflow (map fst txIns)
          validateTxOuts era txOuts
          validateMetadata txMetadata
        ShelleyBasedEraMary -> do
          validateTxIns txIns
+         guardShelleyTxInsOverflow (map fst txIns)
          validateTxOuts era txOuts
          validateMetadata txMetadata
          validateMintValue txMintValue
        ShelleyBasedEraAlonzo -> do
          validateTxIns txIns
+         guardShelleyTxInsOverflow (map fst txIns)
          validateTxOuts era txOuts
          validateMetadata txMetadata
          validateMintValue txMintValue
@@ -2609,6 +2613,7 @@ validateTxBodyContent era txBodContent@TxBodyContent {
          validateProtocolParameters txProtocolParams languages
        ShelleyBasedEraBabbage -> do
          validateTxIns txIns
+         guardShelleyTxInsOverflow (map fst txIns)
          validateTxOuts era txOuts
          validateMetadata txMetadata
          validateMintValue txMintValue
@@ -2650,9 +2655,10 @@ validateTxInsCollateral
   :: TxInsCollateral era -> Set Alonzo.Language -> Either TxBodyError ()
 validateTxInsCollateral txInsCollateral languages =
   case txInsCollateral of
-    TxInsCollateralNone | not (Set.null languages)
-      -> Left TxBodyEmptyTxInsCollateral
-    _ -> return ()
+    TxInsCollateralNone ->
+      unless (Set.null languages) (Left TxBodyEmptyTxInsCollateral)
+    TxInsCollateral _ collateralTxIns ->
+      guardShelleyTxInsOverflow collateralTxIns
 
 validateTxOuts :: ShelleyBasedEra era -> [TxOut CtxTx era] -> Either TxBodyError ()
 validateTxOuts era txOuts =
@@ -3673,6 +3679,11 @@ getLedgerEraConstraint ShelleyBasedEraMary f = f
 getLedgerEraConstraint ShelleyBasedEraAlonzo f = f
 getLedgerEraConstraint ShelleyBasedEraBabbage f = f
 getLedgerEraConstraint ShelleyBasedEraConway f = f
+
+guardShelleyTxInsOverflow :: [TxIn] -> Either TxBodyError ()
+guardShelleyTxInsOverflow txIns = do
+    for_ txIns $ \txin@(TxIn _ (TxIx txix)) ->
+      guard (txix <= maxShelleyTxInIx) ?! TxBodyInIxOverflow txin
 
 makeShelleyTransactionBody
   :: ShelleyBasedEra era
