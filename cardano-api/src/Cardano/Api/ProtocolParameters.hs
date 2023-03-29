@@ -794,7 +794,6 @@ validateCostModel PlutusScriptV2 (CostModel m) =
     first (InvalidCostModel (CostModel m))
   $ Alonzo.assertWellFormedCostModelParams m
 
--- TODO alonzo: it'd be nice if the library told us what was wrong
 data InvalidCostModel = InvalidCostModel CostModel Alonzo.CostModelApplyError
   deriving Show
 
