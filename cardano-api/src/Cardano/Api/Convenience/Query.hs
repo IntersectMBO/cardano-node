@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -9,7 +10,6 @@ module Cardano.Api.Convenience.Query (
     QueryConvenienceError(..),
     determineEra,
     determineEra_,
-
     -- * Simplest query related
     executeQueryCardanoMode,
     queryStateForBalancedTx,
@@ -95,24 +95,6 @@ queryStateForBalancedTx networkId allTxIns = runExceptT $ do
             systemStart <- queryExprAnyQuery systemStartQuery
             stakePools <- queryExprAnyQueryE stakePoolsQuery
             return (utxo, pparams, eraHistory, systemStart, stakePools)
-
-  -- -- Queries
-  -- let utxoQuery = QueryShelleyBasedEra qeInMode $ QueryInShelleyBasedEra qSbe
-  --                   $ QueryUTxO (QueryUTxOByTxIn (Set.fromList allTxIns))
-  --     pparamsQuery = QueryShelleyBasedEra qeInMode
-  --                       $ QueryInShelleyBasedEra qSbe QueryProtocolParameters
-  --     eraHistoryQuery = QueryEraHistory CardanoModeIsMultiEra
-  --     systemStartQuery = QuerySystemStart
-  --     stakePoolsQuery = QueryShelleyBasedEra qeInMode . QueryInShelleyBasedEra qSbe $ QueryStakePools
-
-  -- -- Query execution
-  -- utxo <- ExceptT $ executeQueryCardanoMode era networkId utxoQuery
-  -- pparams <- ExceptT $ executeQueryCardanoMode era networkId pparamsQuery
-  -- eraHistory <- firstExceptT AcqFailure $ ExceptT $ queryNodeLocalState localNodeConnInfo Nothing eraHistoryQuery
-  -- systemStart <- firstExceptT AcqFailure $ ExceptT $ queryNodeLocalState localNodeConnInfo Nothing systemStartQuery
-  -- stakePools <- ExceptT $ executeQueryCardanoMode era networkId stakePoolsQuery
-
-  -- return (utxo, pparams, eraHistory, systemStart, stakePools)
 
 -- | Query the node to determine which era it is in.
 determineEra
