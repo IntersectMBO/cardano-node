@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2023-03-18T05:24:58Z
-  , cardano-haskell-packages 2023-03-22T09:20:07Z
+  , hackage.haskell.org 2023-03-30T00:00:00Z
+  , cardano-haskell-packages 2023-04-01T00:00:00Z
 
 packages:
     cardano-api
@@ -82,26 +82,6 @@ test-show-details: direct
 
 package snap-server
   flags: +openssl
-
-package comonad
-  flags: -test-doctests
-
-allow-newer:
-  -- ekg does not suport aeson 2: https://github.com/tibbe/ekg/issues/90
-    ekg:aeson
-  -- ekg does not suport newer snap
-  , ekg:snap-server
-  , ekg:snap-core
-  -- cardano-node-capi depends on aeson > 2.1, even our patched ekg-json only
-  -- supports between 2 and 2.1
-  , ekg-json:aeson
-  -- These are currently required for 9.2.
-  , enumerator:base
-  , MonadCatchIO-transformers:base
-  , katip:Win32
-  , ekg:base
-  , ekg:time
-  , libsystemd-journal:base
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
