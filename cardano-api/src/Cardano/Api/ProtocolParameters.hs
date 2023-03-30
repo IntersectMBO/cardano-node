@@ -1191,7 +1191,7 @@ fromAlonzoPParamsUpdate :: Ledger.Crypto crypto
                         => PParamsUpdate (Ledger.AlonzoEra crypto)
                         -> ProtocolParametersUpdate
 fromAlonzoPParamsUpdate ppu =
-  (fromShelleyCommonPParamsUpdate ppu) {
+  (fromAlonzoCommonPParamsUpdate ppu) {
     protocolUpdateUTxOCostPerWord = fromShelleyLovelace . unCoinPerWord <$>
                                       strictMaybeToMaybe (ppu ^. ppuCoinsPerUTxOWordL)
     }
