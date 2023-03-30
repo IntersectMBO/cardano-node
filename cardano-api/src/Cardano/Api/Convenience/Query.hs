@@ -1,6 +1,8 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
@@ -10,7 +12,6 @@ module Cardano.Api.Convenience.Query (
     QueryConvenienceError(..),
     determineEra,
     determineEra_,
-
     -- * Simplest query related
     executeQueryCardanoMode,
 
@@ -18,10 +19,10 @@ module Cardano.Api.Convenience.Query (
     renderQueryConvenienceError,
   ) where
 
-import           Control.Monad.Oops (CouldBe, Variant, runOopsInEither)
-import           Control.Monad.Trans.Except (ExceptT (..), except, runExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistMaybe, left, onLeft,
-                   onNothing)
+import           Control.Monad.Oops (CouldBe, Variant, runOopsInEither, runOopsInExceptT)
+import qualified Control.Monad.Oops as OO
+import           Control.Monad.Trans.Except (ExceptT (..), runExceptT)
+import           Control.Monad.Trans.Except.Extra (left, onLeft, onNothing)
 import           Data.Function ((&))
 import           Data.Map (Map)
 import           Data.Maybe (mapMaybe)
@@ -81,14 +82,15 @@ queryStateForBalancedTx
                                       , Map StakeCredential Lovelace
                                       )
         )
-queryStateForBalancedTx socketPath era networkId allTxIns certs = runExceptT $ do
+queryStateForBalancedTx socketPath era networkId allTxIns certs = runExceptT $ runOopsInExceptT @QueryConvenienceError $ do
   let cModeParams = CardanoModeParams $ EpochSlots 21600
-      localNodeConnInfo = LocalNodeConnectInfo cModeParams networkId socketPath
 
-  qSbe <- except $ getSbe $ cardanoEraStyle era
+  let localNodeConnInfo = LocalNodeConnectInfo cModeParams networkId socketPath
+
+  qSbe <- getSbe (cardanoEraStyle era) & OO.hoistEither
 
   qeInMode <- toEraInMode era CardanoMode
-    & hoistMaybe (EraConsensusModeMismatch (AnyConsensusMode CardanoMode) (getIsCardanoEraConstraint era $ AnyCardanoEra era))
+    & OO.hoistMaybe (EraConsensusModeMismatch (AnyConsensusMode CardanoMode) (getIsCardanoEraConstraint era $ AnyCardanoEra era))
 
   -- Queries
   let utxoQuery = QueryInEra qeInMode $ QueryInShelleyBasedEra qSbe
@@ -105,15 +107,26 @@ queryStateForBalancedTx socketPath era networkId allTxIns certs = runExceptT $ d
         QueryInEra qeInMode . QueryInShelleyBasedEra qSbe $ QueryStakeDelegDeposits stakeCreds
 
   -- Query execution
-  utxo <- ExceptT $ executeQueryCardanoMode socketPath era networkId utxoQuery
-  pparams <- ExceptT $ executeQueryCardanoMode socketPath era networkId pparamsQuery
-  eraHistory <- firstExceptT AcqFailure $ ExceptT $ queryNodeLocalState localNodeConnInfo Nothing eraHistoryQuery
-  systemStart <- firstExceptT AcqFailure $ ExceptT $ queryNodeLocalState localNodeConnInfo Nothing systemStartQuery
-  stakePools <- ExceptT $ executeQueryCardanoMode socketPath era networkId stakePoolsQuery
+  utxo <- queryNodeLocalState_ localNodeConnInfo Nothing utxoQuery
+      & OO.onLeft @EraMismatch (OO.throw . QueryEraMismatch)
+      & OO.catch @AcquiringFailure (OO.throw . AcqFailure)
+  pparams <- queryNodeLocalState_ localNodeConnInfo Nothing pparamsQuery
+      & OO.onLeft @EraMismatch (OO.throw . QueryEraMismatch)
+      & OO.catch @AcquiringFailure (OO.throw . AcqFailure)
+  eraHistory <- queryNodeLocalState_ localNodeConnInfo Nothing eraHistoryQuery
+      & OO.catch @AcquiringFailure (OO.throw . AcqFailure)
+  systemStart <- queryNodeLocalState_ localNodeConnInfo Nothing systemStartQuery
+      & OO.catch @AcquiringFailure (OO.throw . AcqFailure)
+  stakePools <- queryNodeLocalState_ localNodeConnInfo Nothing stakePoolsQuery
+      & OO.onLeft @EraMismatch (OO.throw . QueryEraMismatch)
+      & OO.catch @AcquiringFailure (OO.throw . AcqFailure)
   stakeDelegDeposits <-
     if null stakeCreds
-    then pure mempty
-    else ExceptT $ executeQueryCardanoMode socketPath era networkId stakeDelegDepositsQuery
+      then pure mempty
+      else
+        queryNodeLocalState_ localNodeConnInfo Nothing stakeDelegDepositsQuery
+          & OO.onLeft @EraMismatch (OO.throw . QueryEraMismatch)
+          & OO.catch @AcquiringFailure (OO.throw . AcqFailure)
 
   return (utxo, pparams, eraHistory, systemStart, stakePools, stakeDelegDeposits)
 
