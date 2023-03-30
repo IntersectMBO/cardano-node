@@ -27,6 +27,8 @@
 
 - Query protocol parameters from the node in the `transaction build` command ([PR 4431](https://github.com/input-output-hk/cardano-node/pull/4431))
 
+- Fix `qKesKesKeyExpiry` in `kes-period-info` ([PR 4909](https://github.com/input-output-hk/cardano-node/pull/4909))
+
 ## 1.35.3 -- August 2022
 
 - Update build and build-raw commands to accept simple reference minting scripts (#4087)
