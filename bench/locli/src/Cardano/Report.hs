@@ -17,6 +17,7 @@ import Data.Text.Lazy    qualified as LT
 import Data.Time.Clock
 import System.FilePath as FS
 import System.Posix.User
+import System.Environment (lookupEnv)
 
 import Text.EDE hiding (Id)
 
@@ -48,11 +49,26 @@ instance ToJSON ReportMeta where
 
 getReport :: Version -> Maybe Revision -> IO ReportMeta
 getReport rmTarget mrev = do
-  rmAuthor <- (getUserEntryForID =<< getRealUserID) <&> Author . T.pack . takeWhile (/= ',') . userGecos
+  rmAuthor <- getGecosFullUsername
+              `catch`
+              \(_ :: SomeException) ->
+                 getFallbackUserId
   rmDate <- getCurrentTime
   let rmRevision = fromMaybe (Revision 1) mrev
       rmLocliVersion = getLocliVersion
   pure ReportMeta{..}
+ where
+   getGecosFullUsername, getFallbackUserId :: IO Author
+   getGecosFullUsername =
+     (getUserEntryForID =<< getRealUserID)
+     <&> Author . T.pack . takeWhile (/= ',') . userGecos
+
+   getFallbackUserId =
+     (\user host->
+        Author . T.pack $
+        fromMaybe "user" user <> "@" <> fromMaybe "localhost" host)
+     <$> lookupEnv "USER"
+     <*> lookupEnv "HOSTNAME"
 
 data Workload
   = WValue
