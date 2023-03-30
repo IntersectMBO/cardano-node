@@ -79,6 +79,9 @@ tests: True
 
 test-show-details: direct
 
+-- Always write GHC env files, because they are needed by for repl.
+write-ghc-environment-files: always
+
 package snap-server
   flags: +openssl
 
