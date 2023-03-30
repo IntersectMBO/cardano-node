@@ -113,8 +113,8 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 7f6afd7ba652bd20d5aaf31a9450dddda7e2f0bd
-  --sha256: 0wlvgiiyqp14xd7d49h9709dg2dv7wk1b44kbdy596mg8g3v93nw
+  tag: 7ba95546ec8014e0e03caad3a17eebea32f08e51
+  --sha256: 0g947kazb3clhv7vq4b34zmr0nipr69gslf3638ingwk84pay0fb
   subdir:
     monoidal-synchronisation
     network-mux
@@ -124,6 +124,7 @@ source-repository-package
     ouroboros-consensus-protocol
     ouroboros-consensus-shelley
     ouroboros-network
+    ouroboros-network-api
     ouroboros-network-framework
     ouroboros-network-testing
     ouroboros-network-protocols
