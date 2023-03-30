@@ -116,6 +116,12 @@ prop_roundtrip_ScriptData =
     sData <- H.forAll genHashableScriptData
     sData === fromAlonzoData (toAlonzoData sData)
 
+prop_roundtrip_HashableScriptData_JSON :: Property
+prop_roundtrip_HashableScriptData_JSON =
+  H.property $ do
+    sData <- H.forAll genHashableScriptData
+    H.tripping sData scriptDataToJsonDetailedSchema scriptDataFromJsonDetailedSchema
+
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
@@ -128,4 +134,5 @@ tests = testGroup "Test.Cardano.Api.Typed.Script"
   , testPropertyNamed "golden SimpleScriptV2 MofN"    "golden SimpleScriptV2 MofN"    prop_golden_SimpleScriptV2_MofN
   , testPropertyNamed "roundtrip SimpleScript JSON"   "roundtrip SimpleScript JSON"   prop_roundtrip_SimpleScript_JSON
   , testPropertyNamed "roundtrip ScriptData"          "roundtrip ScriptData"          prop_roundtrip_ScriptData
+  , testPropertyNamed "roundtrip HashableScriptData"  "roundtrip HashableScriptData"  prop_roundtrip_HashableScriptData_JSON
   ]

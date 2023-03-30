@@ -270,7 +270,7 @@ validateScriptData d =
 --
 newtype ScriptDataRangeError =
 
-    -- | The number is outside the maximum range of @-2^64-1 .. 2^64-1@.
+    -- | The constructor number is outside the maximum range of @-2^64-1 .. 2^64-1@.
     --
   ScriptDataConstructorOutOfRange Integer
   deriving (Eq, Show)
