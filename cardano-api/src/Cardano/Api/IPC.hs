@@ -86,6 +86,10 @@ module Cardano.Api.IPC (
     convLocalChainSyncClient,
     convLocalTxSubmissionClient,
     convLocalTxMonitoringClient,
+
+    UnsupportedNtcVersionError(..),
+
+    MinNodeToClientVersion,
   ) where
 
 import           Control.Concurrent.STM (TMVar, atomically, newEmptyTMVarIO, putTMVar, takeTMVar,
@@ -137,6 +141,7 @@ import           Cardano.Api.Block
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.InMode
 import           Cardano.Api.IPC.Error
+import           Cardano.Api.IPC.Version
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.Protocol

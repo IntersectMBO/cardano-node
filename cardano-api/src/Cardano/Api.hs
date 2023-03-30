@@ -718,6 +718,8 @@ module Cardano.Api (
 
     UnsupportedNtcVersionError(..),
 
+    MinNodeToClientVersion,
+
     -- *** Local tx monitoring
     LocalTxMonitorClient(..),
     LocalTxMonitoringQuery(..),
@@ -819,7 +821,9 @@ module Cardano.Api (
     executeLocalStateQueryExpr,
     executeLocalStateQueryExpr_,
     queryExpr,
+    queryExpr_,
     determineEraExpr,
+    determineEraExpr_,
 
     chainPointToSlotNo,
     chainPointToHeaderHash,
@@ -879,7 +883,6 @@ import           Cardano.Api.IPC
 import           Cardano.Api.IPC.AnyQuery
 import           Cardano.Api.IPC.Monad
 import           Cardano.Api.IPC.SimpleQueries
-import           Cardano.Api.IPC.Version
 import           Cardano.Api.Keys.Byron
 import           Cardano.Api.Keys.Class
 import           Cardano.Api.Keys.Read
