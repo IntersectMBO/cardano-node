@@ -9,6 +9,43 @@ manifest() {
 local op=${1:-collect-from-checkout}; if test $# -ge 1; then shift; fi
 
 case "${op}" in
+      contributions-by-repository)
+        local usage="USAGE: wb manifest $0"
+
+        jq '
+        def pkg_id: ."pkg-name" + "-" + ."pkg-version";
+        def repo_hash: .url | split("?")[0];
+
+        def distill_package_data:
+            (.url |  split("?")[0] | split("/")) as $url_parts
+          | { pkg_id: pkg_id
+            , repository: $url_parts[0:2] | join("/")
+            , hash: $url_parts[2]
+            }
+          ;
+
+        def group_nicely:
+            group_by(.repository)
+          | map({
+            repository: .[0].repository,
+            contributions: map({key: .pkg_id, value: .hash}) | from_entries
+          })
+          ;
+
+        # key chap packages by package id, so we can match them easily in the next step
+          $chap
+        | map({ key: pkg_id, value: distill_package_data })
+        | from_entries as $package_origin
+
+        | $plan."install-plan"
+        | map(select(."pkg-src".repo.uri == "https://input-output-hk.github.io/cardano-haskell-packages"))
+        | unique_by(pkg_id)
+        | map($package_origin[pkg_id])
+        | group_nicely[]
+        ' --null-input                              \
+          --argfile plan          $WB_NIX_PLAN      \
+          --argfile chap          $WB_CHAP_PACKAGES
+        ;;
     collect-from-checkout )
         local usage="USAGE: wb manifest $0 CARDANO-NODE-CHECKOUT"
         local dir=${1:-.}; if test $# -ge 1; then shift; fi
