@@ -812,11 +812,17 @@ module Cardano.Api (
     executeLocalStateQueryExprSimple,
 
     -- *** Any query (for shelley based eras only)
+    InvalidEraInMode(..),
+    invalidEraInModeToSbqeEraInMode,
     determineEraInModeAnyQuery,
+    determineEraInModeAnyQuery_,
     determineEraExprAnyQuery,
+    determineEraExprAnyQuery_,
     executeLocalStateQueryExprAnyQuery,
+    executeLocalStateQueryExprAnyQuery_,
     queryExprAnyQuery,
     queryExprAnyQueryE,
+    queryExprAnyQueryE_,
 
     -- ** Monadic queries
     LocalStateQueryExpr,

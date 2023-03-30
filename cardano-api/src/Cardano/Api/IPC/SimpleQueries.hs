@@ -24,8 +24,8 @@ import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
 
 import           Cardano.Api.Block
 import           Cardano.Api.IPC
+import           Cardano.Api.IPC.Monad
 import           Cardano.Api.IPC.Types
-import           Cardano.Api.IPC.Version
 import           Cardano.Api.Query
 
 
@@ -56,11 +56,9 @@ executeLocalStateQueryExprSimple connectInfo mpoint f = do
 
   atomically waitResult
 
-
 -- | Get the node server's Node-to-Client version.
 getNtcVersion :: LocalStateQueryExpr block point (QueryInMode mode) r IO NodeToClientVersion
 getNtcVersion = LocalStateQueryExpr ask
-
 
 -- | Use 'queryExprSimple' in a do block to construct monadic local state queries.
 queryExprSimple

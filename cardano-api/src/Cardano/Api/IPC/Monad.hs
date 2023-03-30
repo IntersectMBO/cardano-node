@@ -7,13 +7,15 @@
 {-# LANGUAGE TypeOperators #-}
 
 module Cardano.Api.IPC.Monad
-  ( LocalStateQueryExpr
+  ( LocalStateQueryExpr(..)
   , executeLocalStateQueryExpr
   , executeLocalStateQueryExpr_
   , queryExpr
   , queryExpr_
   , determineEraExpr
   , determineEraExpr_
+  , getNtcVersion_
+  , setupLocalStateQueryExpr_
 
   , NodeToClientVersionOf (..)
   ) where
@@ -67,7 +69,7 @@ executeLocalStateQueryExpr connectInfo mpoint f =
 
 -- | Execute a local state query expression.
 executeLocalStateQueryExpr_
-  :: forall e mode a . ()
+  :: forall e mode a. ()
   => e `CouldBe` AcquiringFailure
   => LocalNodeConnectInfo mode
   -> Maybe ChainPoint
@@ -100,8 +102,8 @@ setupLocalStateQueryExpr_ :: ()
   -> Maybe ChainPoint
   -> TMVar (Either (Variant e) a)
   -> NodeToClientVersion
-  -> ExceptT (Variant e) (LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO) a
-  -> Net.Query.LocalStateQueryClient (BlockInMode mode) ChainPoint (QueryInMode mode) IO ()
+  -> ExceptT (Variant e) (LocalStateQueryExpr (BlockInMode mode) ChainPoint (q mode) () IO) a
+  -> Net.Query.LocalStateQueryClient (BlockInMode mode) ChainPoint (q mode) IO ()
 setupLocalStateQueryExpr_ waitDone mPointVar' resultVar' ntcVersion f =
   LocalStateQueryClient . pure . Net.Query.SendMsgAcquire mPointVar' $
     Net.Query.ClientStAcquiring
@@ -117,8 +119,8 @@ setupLocalStateQueryExpr_ waitDone mPointVar' resultVar' ntcVersion f =
     }
 
 -- | Get the node server's Node-to-Client version.
-getNtcVersion :: LocalStateQueryExpr block point (QueryInMode mode) r IO NodeToClientVersion
-getNtcVersion = LocalStateQueryExpr ask
+getNtcVersion_ :: ExceptT (Variant e) (LocalStateQueryExpr block point query r IO) NodeToClientVersion
+getNtcVersion_ = lift $ LocalStateQueryExpr ask
 
 -- | Use 'queryExpr' in a do block to construct monadic local state queries.
 queryExpr :: QueryInMode mode a -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError a)
@@ -127,12 +129,13 @@ queryExpr q = runOopsInEither $ queryExpr_ q
 -- | Lift a query value into a monadic query expression.
 -- Use 'queryExpr_' in a do block to construct monadic local state queries.
 queryExpr_ :: ()
+  => NodeToClientVersionOf (q a)
   => e `CouldBe` UnsupportedNtcVersionError
-  => QueryInMode mode a
-  -> ExceptT (Variant e) (LocalStateQueryExpr block point (QueryInMode mode) r IO) a
+  => q a
+  -> ExceptT (Variant e) (LocalStateQueryExpr block point q r IO) a
 queryExpr_ q = do
   let minNtcVersion = nodeToClientVersionOf q
-  ntcVersion <- lift getNtcVersion
+  ntcVersion <- getNtcVersion_
   if ntcVersion >= minNtcVersion
     then
       lift $ LocalStateQueryExpr $ ReaderT $ \_ -> ContT $ \f -> pure $

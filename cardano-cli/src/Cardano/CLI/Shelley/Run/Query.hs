@@ -7,6 +7,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -80,6 +81,7 @@ import           Cardano.Slotting.EpochInfo (EpochInfo (..), epochInfoSlotToUTCT
 
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime (..),
                    toRelativeTime)
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch)
 import           Ouroboros.Consensus.Protocol.TPraos (StandardCrypto)
 
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
@@ -89,6 +91,8 @@ import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
 
 import           Control.Monad.IO.Class (MonadIO)
 import           Control.Monad.IO.Unlift (MonadIO (..))
+import           Control.Monad.Oops (CouldBe, Variant, runOopsInExceptT)
+import qualified Control.Monad.Oops as OO
 import           Control.Monad.Trans.Class
 import           Data.Bifunctor (Bifunctor (..))
 import           Data.Function ((&))
@@ -121,7 +125,7 @@ data ShelleyQueryCmdError
   | ShelleyQueryCmdProtocolStateDecodeFailure !(LBS.ByteString, DecoderError)
   | ShelleyQueryCmdPoolStateDecodeError DecoderError
   | ShelleyQueryCmdStakeSnapshotDecodeError DecoderError
-
+  -- | ShelleyQueryCmdUnsupportedNtcVersion !UnsupportedNtcVersionError
   deriving Show
 
 renderShelleyQueryCmdError :: ShelleyQueryCmdError -> Text
@@ -180,6 +184,9 @@ runQueryCmd cmd =
     QueryTxMempool mNodeSocketPath consensusModeParams network op mOutFile ->
       runQueryTxMempool mNodeSocketPath consensusModeParams network op mOutFile
 
+useOops :: Bool
+useOops = True
+
 runQueryProtocolParameters
   :: SocketPath
   -> AnyConsensusModeParams
@@ -189,20 +196,38 @@ runQueryProtocolParameters
 runQueryProtocolParameters (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network mOutFile = do
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
-  pparams
-    <- firstExceptT ShelleyQueryCmdAnyQueryError . newExceptT
-         $ executeLocalStateQueryExprAnyQuery localNodeConnInfo Nothing $ do
-             AnyCardanoEra era <- determineEraExprAnyQuery cModeParams
-             eInMode <- determineEraInModeAnyQuery era cModeParams
-             case cardanoEraStyle era of
-               LegacyByronEra -> left AllQueryEraExpectedSbe
-               ShelleyBasedEra sbe -> do
-                 let q = AnyQuerySbe eInMode sbe QueryProtocolParameters
-                 queryExprAnyQueryE q
+  if useOops
+    then do
+      pparams <- runOopsInExceptT @ShelleyQueryCmdError $ do
+        executeLocalStateQueryExprAnyQuery_ localNodeConnInfo Nothing
+          (do
+              AnyCardanoEra era <- determineEraExprAnyQuery_ cModeParams
 
+              case cardanoEraStyle era of
+                LegacyByronEra -> OO.throw $ ShelleyQueryCmdAnyQueryError AllQueryEraExpectedSbe
+                ShelleyBasedEra sbe -> do
+                  eInMode <- determineEraInModeAnyQuery_ era cModeParams
+                    & OO.catch @InvalidEraInMode (OO.throw . ShelleyQueryCmdAnyQueryError . AllQueryErrorSbe . invalidEraInModeToSbqeEraInMode)
 
-  writeProtocolParameters mOutFile pparams
+                  Api.queryExprAnyQueryE_ (AnyQuerySbe eInMode sbe QueryProtocolParameters)
+                    & OO.onLeft (OO.throw . ShelleyQueryCmdAnyQueryError . AllQueryErrorSbe . SbqeQueryEraMismatch)
+          ) & OO.catch (OO.throw . ShelleyQueryCmdAnyQueryError . AllQueryErrorSbe . SbqeSimpleQueryError . SimpleQueryErrorAcquiringFail)
+            & OO.catch (OO.throw . ShelleyQueryCmdAnyQueryError . AllQueryErrorSbe . SbqeSimpleQueryError . SimpleQueryErrorUnsupportedVer)
 
+      writeProtocolParameters mOutFile pparams
+    else do
+      pparams
+        <- firstExceptT ShelleyQueryCmdAnyQueryError . newExceptT
+            $ executeLocalStateQueryExprAnyQuery localNodeConnInfo Nothing $ do
+                AnyCardanoEra era <- determineEraExprAnyQuery cModeParams
+                case cardanoEraStyle era of
+                  LegacyByronEra -> left AllQueryEraExpectedSbe
+                  ShelleyBasedEra sbe -> do
+                    eInMode <- determineEraInModeAnyQuery era cModeParams
+                    let q = AnyQuerySbe eInMode sbe QueryProtocolParameters
+                    queryExprAnyQueryE q
+
+      writeProtocolParameters mOutFile pparams
  where
   writeProtocolParameters
     :: Maybe (File () Out)
@@ -260,23 +285,46 @@ runQueryTip (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network m
     CardanoMode -> do
       let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
-      eLocalState <-
-        liftIO $ executeLocalStateQueryExprSimple localNodeConnInfo Nothing $ do
-          era <- queryExprSimple $ QueryCurrentEra CardanoModeIsMultiEra
-          eraHistory <- queryExprSimple $ QueryEraHistory CardanoModeIsMultiEra
-          mChainBlockNo <- queryExprSimple QueryChainBlockNo
-          mChainPoint <- queryExprSimple $ QueryChainPoint CardanoMode
-          mSystemStart <- queryExprSimple QuerySystemStart
+      mLocalState <- if useOops
+        then do
+          eLocalState <- liftIO $ runExceptT $ runOopsInExceptT @ShelleyQueryCmdError $ do
+            executeLocalStateQueryExpr_ localNodeConnInfo Nothing
+              (do
+                  era <- queryExpr_ (QueryCurrentEra CardanoModeIsMultiEra)
+                  eraHistory <- queryExpr_ (QueryEraHistory CardanoModeIsMultiEra)
+                  mChainBlockNo <- queryExpr_ QueryChainBlockNo & OO.catchAsNothing @UnsupportedNtcVersionError
+                  mChainPoint <- queryExpr_ (QueryChainPoint CardanoMode) & OO.catchAsNothing @UnsupportedNtcVersionError
+                  mSystemStart <- queryExpr_ QuerySystemStart & OO.catchAsNothing @UnsupportedNtcVersionError
 
-          return O.QueryTipLocalState
-            { O.era = era
-            , O.eraHistory = eraHistory
-            , O.mSystemStart = Just mSystemStart
-            , O.mChainTip = Just $ makeChainTip mChainBlockNo mChainPoint
-            }
+                  return O.QueryTipLocalState
+                    { O.era = era
+                    , O.eraHistory = eraHistory
+                    , O.mSystemStart = mSystemStart
+                    , O.mChainTip = makeChainTip <$> mChainBlockNo <*> mChainPoint
+                    }
+              ) & OO.catch (OO.throw . ShelleyQueryCmdAnyQueryError . AllQueryErrorSbe . SbqeSimpleQueryError . SimpleQueryErrorAcquiringFail)
+                & OO.catch (OO.throw . ShelleyQueryCmdAnyQueryError . AllQueryErrorSbe . SbqeSimpleQueryError . SimpleQueryErrorUnsupportedVer)
 
-      mLocalState <- hushM (first ShelleyQueryCmdSimpleQueryError eLocalState) $ \e ->
-        liftIO . T.hPutStrLn IO.stderr $ "Warning: Local state unavailable: " <> renderShelleyQueryCmdError e
+          hushM eLocalState $ \e ->
+            liftIO . T.hPutStrLn IO.stderr $ "Warning: Local state unavailable: " <> renderShelleyQueryCmdError e
+        else do
+          eLocalState <-
+            liftIO $ executeLocalStateQueryExprSimple localNodeConnInfo Nothing $ do
+              era <- queryExprSimple $ QueryCurrentEra CardanoModeIsMultiEra
+              eraHistory <- queryExprSimple $ QueryEraHistory CardanoModeIsMultiEra
+              mChainBlockNo <- queryExprSimple QueryChainBlockNo
+              mChainPoint <- queryExprSimple $ QueryChainPoint CardanoMode
+              mSystemStart <- queryExprSimple QuerySystemStart
+
+              return O.QueryTipLocalState
+                { O.era = era
+                , O.eraHistory = eraHistory
+                , O.mSystemStart = Just mSystemStart
+                , O.mChainTip = Just $ makeChainTip mChainBlockNo mChainPoint
+                }
+
+          hushM (first ShelleyQueryCmdSimpleQueryError eLocalState) $ \e ->
+            liftIO . T.hPutStrLn IO.stderr $ "Warning: Local state unavailable: " <> renderShelleyQueryCmdError e
 
       chainTip <- pure (mLocalState >>= O.mChainTip)
         -- The chain tip is unavailable via local state query because we are connecting with an older
@@ -313,7 +361,7 @@ runQueryTip (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network m
 
               return $ flip (percentage tolerance) nowSeconds tipTimeResult
 
-            mSyncProgress <- hushM syncProgressResult $ \e -> do
+            mSyncProgress <- hushM syncProgressResult $ \e ->
               liftIO . T.hPutStrLn IO.stderr $ "Warning: Sync progress unavailable: " <> renderShelleyQueryCmdError e
 
             return $ O.QueryTipLocalStateOutput
@@ -334,7 +382,6 @@ runQueryTip (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network m
 -- | Query the UTxO, filtered by a given set of addresses, from a Shelley node
 -- via the local state query protocol.
 --
-
 runQueryUTxO
   :: SocketPath
   -> AnyConsensusModeParams
@@ -1039,27 +1086,49 @@ runQueryStakePools
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryStakePools (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network mOutFile = do
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
-  execState <- liftIO $ executeLocalStateQueryExprAnyQuery localNodeConnInfo Nothing $ do
-                   AnyCardanoEra era <- determineEraExprAnyQuery cModeParams
-                   eInMode <- determineEraInModeAnyQuery era cModeParams
-                   case cardanoEraStyle era of
-                    LegacyByronEra -> left AllQueryEraExpectedSbe
-                    ShelleyBasedEra sbe -> do
-                      let q = AnyQuerySbe eInMode sbe QueryStakePools
-                      queryExprAnyQueryE q
 
-  poolIds <- firstExceptT ShelleyQueryCmdAnyQueryError $ hoistEither execState
-  writeStakePools mOutFile poolIds
+  if useOops
+    then runOopsInExceptT @ShelleyQueryCmdError
+        -- $ OO.catch @InvalidEraInMode (OO.throw . ShelleyQueryCmdAnyQueryError)
+        $ OO.catch @AllQueryErrors (OO.throw . ShelleyQueryCmdAnyQueryError)
+        $ OO.catch @InvalidEraInMode (OO.throw . AllQueryErrorSbe . invalidEraInModeToSbqeEraInMode)
+        $ do
+      result <- executeLocalStateQueryExprAnyQuery_ localNodeConnInfo Nothing
+        ( do
+            AnyCardanoEra era <- determineEraExprAnyQuery_ cModeParams
+            eInMode <- determineEraInModeAnyQuery_ era cModeParams
+            case cardanoEraStyle era of
+              LegacyByronEra -> OO.throw AllQueryEraExpectedSbe
+              ShelleyBasedEra sbe -> do
+                (queryExpr_ $ AnyQueryShelleyBasedEra $ QueryShelleyBasedEra eInMode $ QueryInShelleyBasedEra sbe QueryStakePools)
+                  & OO.onLeft (OO.throw . ShelleyQueryCmdAnyQueryError . AllQueryErrorSbe . SbqeQueryEraMismatch)
+        )  & OO.catch (OO.throw . ShelleyQueryCmdAnyQueryError . AllQueryErrorSbe . SbqeSimpleQueryError . SimpleQueryErrorAcquiringFail)
+           & OO.catch (OO.throw . ShelleyQueryCmdAnyQueryError . AllQueryErrorSbe . SbqeSimpleQueryError . SimpleQueryErrorUnsupportedVer)
 
-writeStakePools
-  :: Maybe (File () Out)
+      writeStakePools_ mOutFile result
+    else do
+      execState <-
+        liftIO $ executeLocalStateQueryExprAnyQuery localNodeConnInfo Nothing $ do
+          AnyCardanoEra era <- determineEraExprAnyQuery cModeParams
+          eInMode <- determineEraInModeAnyQuery era cModeParams
+          case cardanoEraStyle era of
+            LegacyByronEra -> left AllQueryEraExpectedSbe
+            ShelleyBasedEra sbe -> do
+              let q = AnyQuerySbe eInMode sbe QueryStakePools
+              queryExprAnyQueryE q
+      poolIds <- firstExceptT ShelleyQueryCmdAnyQueryError $ hoistEither execState
+      OO.runOopsInExceptT @ShelleyQueryCmdError $ writeStakePools_ mOutFile poolIds
+
+writeStakePools_ :: ()
+  => e `CouldBe` ShelleyQueryCmdError
+  => Maybe (File () Out)
   -> Set PoolId
-  -> ExceptT ShelleyQueryCmdError IO ()
-writeStakePools (Just (File outFile)) stakePools =
-  handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError outFile) $
-    LBS.writeFile outFile (encodePretty stakePools)
+  -> ExceptT (Variant e) IO ()
+writeStakePools_ (Just outFile) stakePools =
+  liftIO (LBS.writeFile (unFile outFile) (encodePretty stakePools))
+    & OO.onException (OO.throw . ShelleyQueryCmdWriteFileError . FileIOError (unFile outFile))
 
-writeStakePools Nothing stakePools =
+writeStakePools_ Nothing stakePools =
   forM_ (Set.toList stakePools) $ \poolId ->
     liftIO . putStrLn $ Text.unpack (serialiseToBech32 poolId)
 
@@ -1203,49 +1272,112 @@ runQueryLeadershipSchedule
   case cMode of
     CardanoMode -> do
 
-      (eSchedule, eInfo)
-        <- firstExceptT ShelleyQueryCmdAnyQueryError
-              $ newExceptT $ executeLocalStateQueryExprAnyQuery localNodeConnInfo Nothing $ do
-                  AnyCardanoEra era <- determineEraExprAnyQuery cModeParams
-                  eInMode <- determineEraInModeAnyQuery era cModeParams
-                  case cardanoEraStyle era of
-                   LegacyByronEra -> left AllQueryEraExpectedSbe
-                   ShelleyBasedEra sbe' -> do
-                    let pparamsQuery = AnyQuerySbe eInMode sbe' QueryProtocolParameters
-                        ptclStateQuery = AnyQuerySbe eInMode sbe' QueryProtocolState
-                        eraHistoryQuery = AnyQueryAnyEra $ QueryEraHistory CardanoModeIsMultiEra
-                        currentEpochQuery = AnyQuerySbe eInMode sbe' QueryEpoch
-                    pparams <- queryExprAnyQueryE pparamsQuery
-                    ptclState <- queryExprAnyQueryE ptclStateQuery
-                    eraHistory <- queryExprAnyQuery eraHistoryQuery
-                    currentEpoch <- queryExprAnyQueryE currentEpochQuery
+-- data AllQueryErrors
+--   = AllQueryErrorSimple SimpleQueryError
+--   | AllQueryErrorSbe ShelleyBasedQueryError
+--   | AllQueryEraExpectedSbe
+--   deriving Show
 
-                    -- Current Schedule
-                    let poolDistribQuery = AnyQuerySbe eInMode sbe' $ QueryPoolDistribution (Just (Set.singleton poolid))
-                    serializedPoolDistribution <- queryExprAnyQueryE poolDistribQuery
+      (eSchedule, eInfo) <- do
+        if useOops
+          then OO.runOopsInExceptT
+              $ OO.catch @AllQueryErrors (OO.throw . ShelleyQueryCmdAnyQueryError)
+              $ OO.catch @ShelleyBasedQueryError (OO.throw . AllQueryErrorSbe)
+              $ OO.catch @SimpleQueryError (OO.throw . SbqeSimpleQueryError)
+              $ OO.catch @AcquiringFailure (OO.throw . SimpleQueryErrorAcquiringFail)
+              $ OO.catch @UnsupportedNtcVersionError (OO.throw . SimpleQueryErrorUnsupportedVer)
+              $ OO.catch @InvalidEraInMode (OO.throw . invalidEraInModeToSbqeEraInMode)
+              $ do
+            executeLocalStateQueryExprAnyQuery_ localNodeConnInfo Nothing $ do
+              AnyCardanoEra era <- determineEraExprAnyQuery_ cModeParams
+              eInMode <- determineEraInModeAnyQuery_ era cModeParams
+              case cardanoEraStyle era of
+                LegacyByronEra -> OO.throw AllQueryEraExpectedSbe
+                ShelleyBasedEra sbe' -> do
+                  let pparamsQuery = AnyQueryShelleyBasedEra $ QueryShelleyBasedEra eInMode $ QueryInShelleyBasedEra sbe' QueryProtocolParameters
+                      ptclStateQuery = AnyQueryShelleyBasedEra $ QueryShelleyBasedEra eInMode $ QueryInShelleyBasedEra sbe' QueryProtocolState
+                      eraHistoryQuery = AnyQueryAnyEra $ QueryEraHistory CardanoModeIsMultiEra
+                  pparams <- queryExprAnyQueryE_ pparamsQuery
+                    & OO.onLeft @EraMismatch (OO.throw . SbqeQueryEraMismatch)
+                  ptclState <- queryExprAnyQueryE_ ptclStateQuery
+                    & OO.onLeft @EraMismatch (OO.throw . SbqeQueryEraMismatch)
+                  eraHistory <- queryExprAnyQueryE_ eraHistoryQuery
+                    & OO.catch (OO.throw . ShelleyQueryCmdAnyQueryError . AllQueryErrorSbe . SbqeSimpleQueryError . SimpleQueryErrorAcquiringFail)
 
-                    -- Next schedule
-                    let currentEpochStateQuery = AnyQuerySbe eInMode sbe' QueryCurrentEpochState
-                    serCurrentEpochState <- queryExprAnyQueryE currentEpochStateQuery
+                  -- Current Schedule
+                  let poolDistribQuery = AnyQuerySbe eInMode sbe' $ QueryPoolDistribution (Just (Set.singleton poolid))
+                  serializedPoolDistribution <- queryExprAnyQueryE_ poolDistribQuery
+                    & OO.onLeft @EraMismatch (OO.throw . SbqeQueryEraMismatch)
 
-                    tip <- liftIO $ getLocalChainTip localNodeConnInfo
+                  -- Next schedule
+                  let currentEpochStateQuery = AnyQuerySbe eInMode sbe' QueryCurrentEpochState
+                  serCurrentEpochState <- queryExprAnyQueryE_ currentEpochStateQuery
+                    & OO.onLeft @EraMismatch (OO.throw . SbqeQueryEraMismatch)
 
-                    let eInfo = toEpochInfo eraHistory
-                        bpp = bundleProtocolParams era pparams
+                  let currentEpochQuery = AnyQueryShelleyBasedEra $ QueryShelleyBasedEra eInMode $ QueryInShelleyBasedEra sbe' QueryEpoch
+                  currentEpoch <- queryExprAnyQueryE_ currentEpochQuery
+                    & OO.onLeft @EraMismatch (OO.throw . SbqeQueryEraMismatch)
 
-                    let schedule = case whichSchedule of
-                                     CurrentEpoch ->
-                                      eligibleLeaderSlotsConstaints sbe'
-                                        $ currentEpochEligibleLeadershipSlots
-                                            sbe' shelleyGenesis eInfo bpp ptclState
-                                            poolid vrkSkey serializedPoolDistribution currentEpoch
-                                     NextEpoch ->
-                                       eligibleLeaderSlotsConstaints sbe'
-                                         $ nextEpochEligibleLeadershipSlots sbe' shelleyGenesis
-                                           serCurrentEpochState ptclState poolid vrkSkey bpp
-                                           eInfo (tip, currentEpoch)
-                    return (schedule, eInfo)
+                  tip <- liftIO $ getLocalChainTip localNodeConnInfo
 
+                  let eInfo = toEpochInfo eraHistory
+                      bpp = bundleProtocolParams era pparams
+
+                  let schedule =
+                        case whichSchedule of
+                          CurrentEpoch ->
+                            eligibleLeaderSlotsConstaints sbe'
+                              $ currentEpochEligibleLeadershipSlots
+                                  sbe' shelleyGenesis eInfo bpp ptclState
+                                  poolid vrkSkey serializedPoolDistribution currentEpoch
+                          NextEpoch ->
+                            eligibleLeaderSlotsConstaints sbe'
+                              $ nextEpochEligibleLeadershipSlots sbe' shelleyGenesis
+                                serCurrentEpochState ptclState poolid vrkSkey bpp
+                                eInfo (tip, currentEpoch)
+                  return (schedule, eInfo)
+          else firstExceptT ShelleyQueryCmdAnyQueryError $ newExceptT $ do
+            executeLocalStateQueryExprAnyQuery localNodeConnInfo Nothing $ do
+              AnyCardanoEra era <- determineEraExprAnyQuery cModeParams
+              eInMode <- determineEraInModeAnyQuery era cModeParams
+              case cardanoEraStyle era of
+                LegacyByronEra -> left AllQueryEraExpectedSbe
+                ShelleyBasedEra sbe' -> do
+                  let pparamsQuery = AnyQuerySbe eInMode sbe' QueryProtocolParameters
+                      ptclStateQuery = AnyQuerySbe eInMode sbe' QueryProtocolState
+                      eraHistoryQuery = AnyQueryAnyEra $ QueryEraHistory CardanoModeIsMultiEra
+                      currentEpochQuery = AnyQuerySbe eInMode sbe' QueryEpoch
+                  pparams <- queryExprAnyQueryE pparamsQuery
+                  ptclState <- queryExprAnyQueryE ptclStateQuery
+                  eraHistory <- queryExprAnyQuery eraHistoryQuery
+                  currentEpoch <- queryExprAnyQueryE currentEpochQuery
+
+                  -- Current Schedule
+                  let poolDistribQuery = AnyQuerySbe eInMode sbe' $ QueryPoolDistribution (Just (Set.singleton poolid))
+                  serializedPoolDistribution <- queryExprAnyQueryE poolDistribQuery
+
+                  -- Next schedule
+                  let currentEpochStateQuery = AnyQuerySbe eInMode sbe' QueryCurrentEpochState
+                  serCurrentEpochState <- queryExprAnyQueryE currentEpochStateQuery
+
+                  tip <- liftIO $ getLocalChainTip localNodeConnInfo
+
+                  let eInfo = toEpochInfo eraHistory
+                      bpp = bundleProtocolParams era pparams
+
+                  let schedule =
+                        case whichSchedule of
+                          CurrentEpoch ->
+                            eligibleLeaderSlotsConstaints sbe'
+                              $ currentEpochEligibleLeadershipSlots
+                                  sbe' shelleyGenesis eInfo bpp ptclState
+                                  poolid vrkSkey serializedPoolDistribution currentEpoch
+                          NextEpoch ->
+                            eligibleLeaderSlotsConstaints sbe'
+                              $ nextEpochEligibleLeadershipSlots sbe' shelleyGenesis
+                                serCurrentEpochState ptclState poolid vrkSkey bpp
+                                eInfo (tip, currentEpoch)
+                  return (schedule, eInfo)
 
       schedule <- firstExceptT ShelleyQueryCmdLeaderShipError $ hoistEither eSchedule
 
@@ -1317,6 +1449,26 @@ runQueryLeadershipSchedule
 
 
 -- Helpers
+
+-- calcEraInMode
+--   :: CardanoEra era
+--   -> ConsensusMode mode
+--   -> ExceptT ShelleyQueryCmdError IO (EraInMode era mode)
+-- calcEraInMode era mode =
+--   pure (toEraInMode era mode)
+--     & onNothing (left (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode mode) (anyCardanoEra era)))
+
+-- getSbe :: Monad m => CardanoEraStyle era -> ExceptT ShelleyQueryCmdError m (Api.ShelleyBasedEra era)
+-- getSbe LegacyByronEra = left ShelleyQueryCmdByronEra
+-- getSbe (Api.ShelleyBasedEra sbe) = return sbe
+
+-- getSbeInQuery_ :: ()
+--   => Monad m
+--   => e `CouldBe` ShelleyQueryCmdError
+--   => CardanoEraStyle era
+--   -> ExceptT (Variant e) m (ShelleyBasedEra era)
+-- getSbeInQuery_ LegacyByronEra = OO.throw ShelleyQueryCmdByronEra
+-- getSbeInQuery_ (ShelleyBasedEra sbe) = return sbe
 
 toEpochInfo :: EraHistory CardanoMode -> EpochInfo (Either Text)
 toEpochInfo (EraHistory _ interpreter) =

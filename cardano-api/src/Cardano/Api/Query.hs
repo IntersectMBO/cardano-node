@@ -69,6 +69,7 @@ import           Cardano.Api.Block
 import           Cardano.Api.Convenience.Error
 import           Cardano.Api.Eras
 import           Cardano.Api.IPC.Error
+import           Cardano.Api.IPC.Version
 import           Cardano.Api.Modes
 import           Cardano.Api.Query.Error
 import           Cardano.Api.Query.InMode
@@ -85,6 +86,9 @@ data AnyQuery mode result where
   AnyQueryAnyEra :: QueryInMode mode result -> AnyQuery mode result
   AnyQueryShelleyBasedEra :: QueryShelleyBasedEra mode result -> AnyQuery mode result
 
+instance NodeToClientVersionOf (AnyQuery mode result) where
+  nodeToClientVersionOf (AnyQueryAnyEra q) = nodeToClientVersionOf q
+  nodeToClientVersionOf (AnyQueryShelleyBasedEra q) = nodeToClientVersionOf q
 
 pattern AnyQuerySbe
   :: EraInMode era mode

@@ -120,6 +120,7 @@ data ShelleyTxCmdError
   | ShelleyTxCmdTxCertificatesValidationError TxCertificatesValidationError
   | ShelleyTxCmdTxUpdateProposalValidationError TxUpdateProposalValidationError
   | ShelleyTxCmdScriptValidityValidationError TxScriptValidityValidationError
+  | ShelleyTxCmdUnsupportedNtcVersion !UnsupportedNtcVersionError
 
 renderShelleyTxCmdError :: ShelleyTxCmdError -> Text
 renderShelleyTxCmdError err =
@@ -237,6 +238,10 @@ renderShelleyTxCmdError err =
       Text.pack $ displayError e
     ShelleyTxCmdScriptValidityValidationError e ->
       Text.pack $ displayError e
+    ShelleyTxCmdUnsupportedNtcVersion (UnsupportedNtcVersionError minNtcVersion ntcVersion) ->
+      "Unsupported feature for the node-to-client protocol version.\n" <>
+      "This transaction requires at least " <> textShow minNtcVersion <> " but the node negotiated " <> textShow ntcVersion <> ".\n" <>
+      "Later node versions support later protocol versions (but development protocol versions are not enabled in the node by default)."
 
 renderFeature :: TxFeature -> Text
 renderFeature TxFeatureShelleyAddresses     = "Shelley addresses"

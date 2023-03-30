@@ -6,18 +6,28 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Cardano.Api.IPC.AnyQuery
-  ( determineEraInModeAnyQuery
+  ( InvalidEraInMode(..)
+  , invalidEraInModeToSbqeEraInMode
+  , determineEraInModeAnyQuery
+  , determineEraInModeAnyQuery_
   , determineEraExprAnyQuery
+  , determineEraExprAnyQuery_
   , executeLocalStateQueryExprAnyQuery
+  , executeLocalStateQueryExprAnyQuery_
   , queryExprAnyQuery
   , queryExprAnyQueryE
+  , queryExprAnyQueryE_
   ) where
 
 import           Control.Concurrent.STM
 import           Control.Monad.Except
+import           Control.Monad.Oops (CouldBe, Variant)
+import qualified Control.Monad.Oops as OO
 import           Control.Monad.Reader
 import           Control.Monad.Trans.Cont
 import           Control.Monad.Trans.Except.Extra (left)
@@ -51,8 +61,8 @@ import           Cardano.Api.Convenience.Error
 import           Cardano.Api.Eras
 import           Cardano.Api.InMode
 import           Cardano.Api.IPC
+import           Cardano.Api.IPC.Monad
 import           Cardano.Api.IPC.Types
-import           Cardano.Api.IPC.Version
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.Protocol
@@ -86,6 +96,31 @@ executeLocalStateQueryExprAnyQuery connectInfo mpoint f = do
     )
 
   atomically waitResult
+
+-- | Execute a local state query expression.
+executeLocalStateQueryExprAnyQuery_
+  :: forall e mode a. ()
+  => e `CouldBe` AcquiringFailure
+  => LocalNodeConnectInfo mode
+  -> Maybe ChainPoint
+  -> ExceptT (Variant e) (LocalStateQueryExpr (BlockInMode mode) ChainPoint (AnyQuery mode) () IO) a
+  -> ExceptT (Variant e) IO a
+executeLocalStateQueryExprAnyQuery_ connectInfo mpoint f = do
+  tmvResultLocalState <- liftIO (newEmptyTMVarIO @(Either (Variant e) a))
+  let waitResult = readTMVar tmvResultLocalState
+
+  liftIO $ connectToLocalNodeWithVersionAnyQuery
+    connectInfo
+    (\ntcVersion ->
+      LocalNodeClientProtocols
+      { localChainSyncClient    = NoLocalChainSyncClient
+      , localStateQueryClient   = Just $ setupLocalStateQueryExpr_ waitResult mpoint tmvResultLocalState ntcVersion f
+      , localTxSubmissionClient = Nothing
+      , localTxMonitoringClient = Nothing
+      }
+    )
+
+  ExceptT . return =<< liftIO (atomically waitResult)
 
 -- Local state query client related
 --------------------------------------------------
@@ -389,6 +424,35 @@ queryExprAnyQueryE (AnyQueryShelleyBasedEra q) = do
     else left . AllQueryErrorSbe . SbqeSimpleQueryError . SimpleQueryErrorUnsupportedVer
               $ UnsupportedNtcVersionError minNtcVersion ntcVersion
 
+queryExprAnyQueryE_ :: ()
+  => e `CouldBe` UnsupportedNtcVersionError
+  => AnyQuery mode a
+  -> ExceptT (Variant e) (LocalStateQueryExpr block point (AnyQuery mode) r IO) a
+queryExprAnyQueryE_ aq = case aq of
+  AnyQueryAnyEra q -> do
+    let minNtcVersion = nodeToClientVersionOf q
+    ntcVersion <- getNtcVersion_
+    if ntcVersion >= minNtcVersion
+      then do
+        lift . LocalStateQueryExpr . ReaderT $ \_ -> ContT $ \f -> pure $
+                Net.Query.SendMsgQuery (AnyQueryAnyEra q) $
+                  Net.Query.ClientStQuerying
+                  { Net.Query.recvMsgResult = f
+                  }
+      else OO.throw $ UnsupportedNtcVersionError minNtcVersion ntcVersion
+  AnyQueryShelleyBasedEra q -> do
+    let minNtcVersion = nodeToClientVersionOf q
+    ntcVersion <- getNtcVersion_
+    if ntcVersion >= minNtcVersion
+      then
+        lift . LocalStateQueryExpr . ReaderT $ \_ -> ContT $ \f -> pure $
+                Net.Query.SendMsgQuery (AnyQueryShelleyBasedEra q) $
+                  Net.Query.ClientStQuerying
+                  { Net.Query.recvMsgResult = f
+                  }
+
+      else OO.throw $ UnsupportedNtcVersionError minNtcVersion ntcVersion
+
 -- | Use 'queryExprAnyQuery' in a do block to construct monadic local state queries.
 queryExprAnyQuery
   :: AnyQuery mode a
@@ -427,6 +491,16 @@ determineEraExprAnyQuery cModeParams =
     ShelleyMode -> return $ AnyCardanoEra ShelleyEra
     CardanoMode -> queryExprAnyQuery . AnyQueryAnyEra $ QueryCurrentEra CardanoModeIsMultiEra
 
+determineEraExprAnyQuery_ :: ()
+  => e `CouldBe` UnsupportedNtcVersionError
+  => ConsensusModeParams mode
+  -> ExceptT (Variant e) (LocalStateQueryExpr block point (AnyQuery mode) r IO) AnyCardanoEra
+determineEraExprAnyQuery_ cModeParams =
+  case consensusModeOnly cModeParams of
+    ByronMode -> return $ AnyCardanoEra ByronEra
+    ShelleyMode -> return $ AnyCardanoEra ShelleyEra
+    CardanoMode -> queryExprAnyQueryE_ $ AnyQueryAnyEra $ QueryCurrentEra CardanoModeIsMultiEra
+
 determineEraInModeAnyQuery
   :: CardanoEra era
   -> ConsensusModeParams mode
@@ -435,4 +509,20 @@ determineEraInModeAnyQuery era cModeParams = do
   let cMode = consensusModeOnly cModeParams
   case toEraInMode era cMode of
     Nothing -> left . AllQueryErrorSbe $ SbqeEraInMode (anyCardanoEra era) (AnyConsensusMode cMode)
+    Just eInMode -> return eInMode
+
+data InvalidEraInMode = InvalidEraInMode AnyCardanoEra AnyConsensusMode
+
+invalidEraInModeToSbqeEraInMode :: InvalidEraInMode -> ShelleyBasedQueryError
+invalidEraInModeToSbqeEraInMode (InvalidEraInMode era cMode) = SbqeEraInMode era cMode
+
+determineEraInModeAnyQuery_ :: ()
+  => e `CouldBe` InvalidEraInMode
+  => CardanoEra era
+  -> ConsensusModeParams mode
+  -> ExceptT (Variant e) (LocalStateQueryExpr block point (AnyQuery mode) r IO) (EraInMode era mode)
+determineEraInModeAnyQuery_ era cModeParams = do
+  let cMode = consensusModeOnly cModeParams
+  case toEraInMode era cMode of
+    Nothing -> OO.throw $ InvalidEraInMode (anyCardanoEra era) (AnyConsensusMode cMode)
     Just eInMode -> return eInMode
