@@ -4161,11 +4161,6 @@ plugin "nomad-driver-podman" {
 
 EOF
 else
-  local CARDANO_MAINNET_MIRROR_MOUNT=""
-  if test -n "${CARDANO_MAINNET_MIRROR}"
-  then
-    CARDANO_MAINNET_MIRROR_MOUNT="${CARDANO_MAINNET_MIRROR}"
-  fi
   cat >> "${config_file}" <<- EOF
 # TODO: Make the exec plugin config optional ???
 plugin "exec" {
@@ -4199,15 +4194,6 @@ plugin "exec" {
   # the host system.
   # https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities
   allow_caps = [ "kill", "mknod", "net_bind_service" ]
-}
-
-# TODO: I need these to mount tracer and genesis and CARDANO_MAINNET_MIRROR ?
-# https://developer.hashicorp.com/nomad/docs/configuration/client#chroot_env-parameters
-# Specifies a key-value mapping that defines the chroot environment for jobs
-# using the Exec and Java drivers.
-chroot_env {
-  # "${CARDANO_MAINNET_MIRROR_MOUNT}" = "${CARDANO_MAINNET_MIRROR_MOUNT}"
-  # "/bin/ls" = "$(which ls)"
 }
 
 EOF

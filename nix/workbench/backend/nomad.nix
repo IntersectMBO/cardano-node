@@ -95,11 +95,8 @@ let
         supervisorConf = import ./supervisor-conf.nix
           { inherit profileNix;
             inherit pkgs lib stateDir;
-            unixHttpServerPort = if execTaskDriver
-              # ''{{ env "NOMAD_TASK_DIR" }}/supervisor.sock''
-              then "/tmp/supervisor.sock" # TODO: Is this OK?
-              else "/tmp/supervisor.sock"
-            ;
+            # ''{{ env "NOMAD_TASK_DIR" }}/supervisor.sock''
+            unixHttpServerPort = "/tmp/supervisor.sock";
           }
         ;
         # Intermediate / workbench-adhoc container specifications
