@@ -11,7 +11,9 @@ module Cardano.Api.IPC.Monad
   , executeLocalStateQueryExpr
   , executeLocalStateQueryExpr_
   , queryExpr
+  , queryExpr_
   , determineEraExpr
+  , determineEraExpr_
 
   , NodeToClientVersionOf (..)
   ) where
@@ -20,6 +22,7 @@ import           Control.Concurrent.STM
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Oops (CouldBe, Variant, runOopsInEither)
+import qualified Control.Monad.Oops as OO
 import           Control.Monad.Reader
 import           Control.Monad.Trans.Cont
 import           Control.Monad.Trans.Except (ExceptT (..), runExceptT)
@@ -119,24 +122,39 @@ getNtcVersion = LocalStateQueryExpr ask
 
 -- | Use 'queryExpr' in a do block to construct monadic local state queries.
 queryExpr :: QueryInMode mode a -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError a)
-queryExpr q = do
+queryExpr q = runOopsInEither $ queryExpr_ q
+
+-- | Lift a query value into a monadic query expression.
+-- Use 'queryExpr_' in a do block to construct monadic local state queries.
+queryExpr_ :: ()
+  => e `CouldBe` UnsupportedNtcVersionError
+  => QueryInMode mode a
+  -> ExceptT (Variant e) (LocalStateQueryExpr block point (QueryInMode mode) r IO) a
+queryExpr_ q = do
   let minNtcVersion = nodeToClientVersionOf q
-  ntcVersion <- getNtcVersion
+  ntcVersion <- lift getNtcVersion
   if ntcVersion >= minNtcVersion
     then
-      fmap Right . LocalStateQueryExpr . ReaderT $ \_ -> ContT $ \f -> pure $
+      lift $ LocalStateQueryExpr $ ReaderT $ \_ -> ContT $ \f -> pure $
         Net.Query.SendMsgQuery q $
           Net.Query.ClientStQuerying
           { Net.Query.recvMsgResult = f
           }
-    else pure (Left (UnsupportedNtcVersionError minNtcVersion ntcVersion))
+    else OO.throw $ UnsupportedNtcVersionError minNtcVersion ntcVersion
 
 -- | A monad expression that determines what era the node is in.
 determineEraExpr ::
      ConsensusModeParams mode
   -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError AnyCardanoEra)
-determineEraExpr cModeParams = runExceptT $
+determineEraExpr cModeParams = runOopsInEither $ determineEraExpr_ cModeParams
+
+-- | A monadic expresion that determines what era the node is in.
+determineEraExpr_ :: ()
+  => e `CouldBe` UnsupportedNtcVersionError
+  => ConsensusModeParams mode
+  -> ExceptT (Variant e) (LocalStateQueryExpr block point (QueryInMode mode) r IO) AnyCardanoEra
+determineEraExpr_ cModeParams =
   case consensusModeOnly cModeParams of
     ByronMode -> return $ AnyCardanoEra ByronEra
     ShelleyMode -> return $ AnyCardanoEra ShelleyEra
-    CardanoMode -> ExceptT $ queryExpr $ QueryCurrentEra CardanoModeIsMultiEra
+    CardanoMode -> queryExpr_ $ QueryCurrentEra CardanoModeIsMultiEra

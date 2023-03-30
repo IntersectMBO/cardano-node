@@ -82,6 +82,8 @@ module Cardano.Api.IPC (
 
     UnsupportedNtcVersionError(..),
 
+    MinNodeToClientVersion,
+
     -- ** Error types
     AcquireFailure(..),
   ) where
