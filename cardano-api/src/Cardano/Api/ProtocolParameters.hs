@@ -1387,7 +1387,7 @@ toAlonzoPParams
   ppAlonzoCommon <- toAlonzoCommonPParams protocolParameters
   -- QUESTION? This is strange, why do we need to construct Alonzo Tx with Babbage PParams?
   -- This feels to me like an issue with the api design, as there should never be such an
-  -- incosistency, because PParams affect the validity of the transaction.
+  -- inconsistency, because PParams affect the validity of the transaction.
   d <- case protocolParamDecentralization of
          -- The decentralization parameter is deprecated in Babbage
          -- so we default to 0 if no decentralization parameter is found
