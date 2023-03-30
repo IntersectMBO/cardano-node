@@ -1510,9 +1510,6 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
 
   -- Then we get the "mark" snapshot. This snapshot will be used for the next
   -- epoch's leadership schedule.
-  -- CurrentEpochState cEstate <- first LeaderErrDecodeProtocolEpochStateFailure
-  --                                $ obtainDecodeEpochStateConstraints sbe
-  --                                $ decodeCurrentEpochState serCurrEpochState
   CurrentEpochState cEstate <- first LeaderErrDecodeProtocolEpochStateFailure $
                                 decodeCurrentEpochState sbe serCurrEpochState
 
