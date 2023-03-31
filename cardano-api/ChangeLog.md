@@ -44,6 +44,9 @@
 
 - **Breaking change** - `calculateMinimumUTxO` no longer fails, it is a total computation.
 
+- **Breaking change** - `evaluateTransactionBalance`, `makeTransactionBodyAutoBalance` and
+  `constructBalancedTx` aquire a new argument: a map with staking delegation deposits.
+
 ### Bugs
 
 - Allow reading text envelopes from pipes ([PR 4384](https://github.com/input-output-hk/cardano-node/pull/4384))

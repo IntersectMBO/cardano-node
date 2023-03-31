@@ -638,14 +638,15 @@ evaluateTransactionBalance :: forall era.
                               IsShelleyBasedEra era
                            => BundledProtocolParameters era
                            -> Set PoolId
+                           -> Map StakeCredential Lovelace
                            -> UTxO era
                            -> TxBody era
                            -> TxOutValue era
-evaluateTransactionBalance _ _ _ (ByronTxBody _) =
+evaluateTransactionBalance _ _ _ _ (ByronTxBody _) =
     case shelleyBasedEra :: ShelleyBasedEra era of {}
     --TODO: we could actually support Byron here, it'd be different but simpler
 
-evaluateTransactionBalance bpp poolids utxo
+evaluateTransactionBalance bpp poolids stakeDelegDeposits utxo
                            (ShelleyTxBody era txbody _ _ _ _) =
     withLedgerConstraints
       era
@@ -667,9 +668,8 @@ evaluateTransactionBalance bpp poolids utxo
     isRegPool :: Ledger.KeyHash Ledger.StakePool Ledger.StandardCrypto -> Bool
     isRegPool kh = StakePoolKeyHash kh `Set.member` poolids
 
-    -- FIXME: Add deposit map as an argument and implement a depsit loookup query in
-    -- consensus and cardano-cli
-    lookupDelegDeposit _cred = Nothing
+    lookupDelegDeposit cred =
+      toShelleyLovelace <$> Map.lookup (fromShelleyStakeCredential cred) stakeDelegDeposits
 
     evalMultiAsset :: forall ledgerera.
                       ShelleyLedgerEra era ~ ledgerera
@@ -917,14 +917,18 @@ makeTransactionBodyAutoBalance
   => SystemStart
   -> LedgerEpochInfo
   -> ProtocolParameters
-  -> Set PoolId       -- ^ The set of registered stake pools
+  -> Set PoolId       -- ^ The set of registered stake pools, that are being
+                      --   unregistered in this transaction.
+  -> Map StakeCredential Lovelace
+                      -- ^ Map of all deposits for stake credentials that are being
+                      --   unregistered in this transaction
   -> UTxO era         -- ^ Just the transaction inputs, not the entire 'UTxO'.
   -> TxBodyContent BuildTx era
   -> AddressInEra era -- ^ Change address
   -> Maybe Word       -- ^ Override key witnesses
   -> Either TxBodyErrorAutoBalance (BalancedTxBody era)
-makeTransactionBodyAutoBalance systemstart history pparams
-                            poolids utxo txbodycontent changeaddr mnkeys = do
+makeTransactionBodyAutoBalance systemstart history pparams poolids stakeDelegDeposits
+                            utxo txbodycontent changeaddr mnkeys = do
 
     -- Our strategy is to:
     -- 1. evaluate all the scripts to get the exec units, update with ex units
@@ -999,7 +1003,7 @@ makeTransactionBodyAutoBalance systemstart history pparams
                  txReturnCollateral = retColl,
                  txTotalCollateral = reqCol
                }
-    let balance = evaluateTransactionBalance bpparams poolids utxo txbody2
+    let balance = evaluateTransactionBalance bpparams poolids stakeDelegDeposits utxo txbody2
 
     forM_ (txOuts txbodycontent1) $ \txout -> checkMinUTxOValue txout bpparams
 

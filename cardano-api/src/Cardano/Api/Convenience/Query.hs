@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -17,12 +18,15 @@ import           Control.Monad.Trans.Except (ExceptT (..), except, runExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistMaybe)
 import           Data.Bifunctor (first)
 import           Data.Function ((&))
+import           Data.Maybe (mapMaybe)
+import           Data.Map (Map)
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
 
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..))
 
+import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Convenience.Constraints
 import           Cardano.Api.Environment
@@ -34,6 +38,7 @@ import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
 import           Cardano.Api.TxBody
 import           Cardano.Api.Utils
+import           Cardano.Api.Value
 
 data QueryConvenienceError
   = AcqFailure AcquiringFailure
@@ -63,8 +68,16 @@ queryStateForBalancedTx
   :: CardanoEra era
   -> NetworkId
   -> [TxIn]
-  -> IO (Either QueryConvenienceError (UTxO era, ProtocolParameters, EraHistory CardanoMode, SystemStart, Set PoolId))
-queryStateForBalancedTx era networkId allTxIns = runExceptT $ do
+  -> [Certificate]
+  -> IO (Either QueryConvenienceError ( UTxO era
+                                      , ProtocolParameters
+                                      , EraHistory CardanoMode
+                                      , SystemStart
+                                      , Set PoolId
+                                      , Map StakeCredential Lovelace
+                                      )
+        )
+queryStateForBalancedTx era networkId allTxIns certs = runExceptT $ do
   SocketPath sockPath <- ExceptT $ first SockErr <$> readEnvSocketPath
 
   let cModeParams = CardanoModeParams $ EpochSlots 21600
@@ -86,6 +99,11 @@ queryStateForBalancedTx era networkId allTxIns = runExceptT $ do
       eraHistoryQuery = QueryEraHistory CardanoModeIsMultiEra
       systemStartQuery = QuerySystemStart
       stakePoolsQuery = QueryInEra qeInMode . QueryInShelleyBasedEra qSbe $ QueryStakePools
+      stakeCreds = Set.fromList $ flip mapMaybe certs $ \case
+        StakeAddressDeregistrationCertificate cred -> Just cred
+        _ -> Nothing
+      stakeDelegDepositsQuery =
+        QueryInEra qeInMode . QueryInShelleyBasedEra qSbe $ QueryStakeDelegDeposits stakeCreds
 
   -- Query execution
   utxo <- ExceptT $ executeQueryCardanoMode era networkId utxoQuery
@@ -93,8 +111,12 @@ queryStateForBalancedTx era networkId allTxIns = runExceptT $ do
   eraHistory <- firstExceptT AcqFailure $ ExceptT $ queryNodeLocalState localNodeConnInfo Nothing eraHistoryQuery
   systemStart <- firstExceptT AcqFailure $ ExceptT $ queryNodeLocalState localNodeConnInfo Nothing systemStartQuery
   stakePools <- ExceptT $ executeQueryCardanoMode era networkId stakePoolsQuery
+  stakeDelegDeposits <-
+    if null stakeCreds
+    then pure mempty
+    else ExceptT $ executeQueryCardanoMode era networkId stakeDelegDepositsQuery
 
-  return (utxo, pparams, eraHistory, systemStart, stakePools)
+  return (utxo, pparams, eraHistory, systemStart, stakePools, stakeDelegDeposits)
 
 -- | Query the node to determine which era it is in.
 determineEra
