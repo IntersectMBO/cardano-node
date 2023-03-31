@@ -47,11 +47,11 @@ startProtocol configFile tracerSocket = do
   protocol <-  liftToAction $ mkConsensusProtocol nodeConfig
   setEnvProtocol protocol
   setEnvGenesis $ getGenesis protocol
-  let networkId = protocolToNetworkId protocol
+  iomgr <- askIOManager
+
+  let
+    networkId = protocolToNetworkId protocol
+    tracerSocket' = (,,) iomgr networkId `fmap` tracerSocket
+
   setEnvNetworkId networkId
-  tracers <- case tracerSocket of
-    Nothing -> liftIO initDefaultTracers
-    Just socket -> do
-      iomgr <- askIOManager
-      liftIO $ initTracers iomgr networkId socket
-  setBenchTracers tracers
+  liftIO (initTxGenTracers tracerSocket') >>= setBenchTracers
