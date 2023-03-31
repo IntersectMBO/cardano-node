@@ -85,7 +85,6 @@ module Cardano.Api.IPC (
 import           Data.Void (Void)
 
 import           Data.Aeson (ToJSON, object, toJSON, (.=))
-import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict as Map
 
@@ -596,11 +595,11 @@ queryNodeLocalState connctInfo mpoint query = do
         localTxSubmissionClient = Nothing,
         localTxMonitoringClient = Nothing
       }
-    first toAcquiringFailure <$> atomically (takeTMVar resultVar)
+    atomically (takeTMVar resultVar)
   where
     singleQuery
       :: Maybe ChainPoint
-      -> TMVar (Either Net.Query.AcquireFailure result)
+      -> TMVar (Either AcquiringFailure result)
       -> Net.Query.LocalStateQueryClient (BlockInMode mode) ChainPoint
                                          (QueryInMode mode) IO ()
     singleQuery mPointVar' resultVar' =
@@ -618,7 +617,7 @@ queryNodeLocalState connctInfo mpoint query = do
                       pure $ Net.Query.SendMsgDone ()
                   }
           , Net.Query.recvMsgFailure = \failure -> do
-              atomically $ putTMVar resultVar' (Left failure)
+              atomically $ putTMVar resultVar' (Left (toAcquiringFailure failure))
               pure $ Net.Query.SendMsgDone ()
           }
 

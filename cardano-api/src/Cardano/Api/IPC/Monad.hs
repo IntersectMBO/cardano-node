@@ -15,11 +15,9 @@ import           Control.Monad.IO.Class
 import           Control.Monad.Reader
 import           Control.Monad.Trans.Cont
 import           Control.Monad.Trans.Except (ExceptT (..), runExceptT)
-import           Data.Bifunctor (first)
 
 import           Cardano.Ledger.Shelley.Scripts ()
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
-import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Net.Query
 
 import           Cardano.Api.Block
 import           Cardano.Api.Eras
@@ -67,7 +65,7 @@ executeLocalStateQueryExpr connectInfo mpoint f = do
       }
     )
 
-  first toAcquiringFailure <$> atomically waitResult
+  atomically waitResult
 
 -- | Use 'queryExpr' in a do block to construct monadic local state queries.
 setupLocalStateQueryExpr ::
@@ -76,7 +74,7 @@ setupLocalStateQueryExpr ::
      -- Protocols must wait until 'waitDone' returns because premature exit will
      -- cause other incomplete protocols to abort which may lead to deadlock.
   -> Maybe ChainPoint
-  -> TMVar (Either Net.Query.AcquireFailure a)
+  -> TMVar (Either AcquiringFailure a)
   -> NodeToClientVersion
   -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO a
   -> Net.Query.LocalStateQueryClient (BlockInMode mode) ChainPoint (QueryInMode mode) IO ()
@@ -89,7 +87,7 @@ setupLocalStateQueryExpr waitDone mPointVar' resultVar' ntcVersion f =
         pure $ Net.Query.SendMsgRelease $ pure $ Net.Query.SendMsgDone ()
 
     , Net.Query.recvMsgFailure = \failure -> do
-        atomically $ putTMVar resultVar' (Left failure)
+        atomically $ putTMVar resultVar' (Left (toAcquiringFailure failure))
         void $ atomically waitDone -- Wait for all protocols to complete before exiting.
         pure $ Net.Query.SendMsgDone ()
     }
