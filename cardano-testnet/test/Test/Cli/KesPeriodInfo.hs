@@ -51,7 +51,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
     <- H.noteShowM $ mkConf (ProjectBase base) (YamlFilePath configurationTemplate)
                               tempAbsBasePath' Nothing
 
-  let tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath
+  let tempBaseAbsPath = getTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath
       fastTestnetOptions = CardanoOnlyTestnetOptions $ cardanoDefaultTestnetOptions
                              { cardanoNodes = cardanoDefaultTestnetNodeOptions
                              , cardanoEpochLength = 500

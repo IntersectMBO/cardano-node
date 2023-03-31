@@ -23,9 +23,9 @@ module Cardano.Testnet (
   TmpAbsolutePath(..),
   YamlFilePath(..),
   mkConf,
-  makeLogDir,
-  makeSocketDir,
-  makeTmpBaseAbsPath,
+  getLogDir,
+  getSocketDir,
+  getTmpBaseAbsPath,
 
   -- * Processes
   procChairman,

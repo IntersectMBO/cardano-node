@@ -397,7 +397,7 @@ shelleyTestnet testnetOptions H.Conf {H.base, H.tempAbsPath, H.testnetMagic} = d
 
   --------------------------------
   -- Launch cluster of three nodes
-  let logDir = makeLogDir (TmpAbsolutePath tempAbsPath)
+  let logDir = getLogDir (TmpAbsolutePath tempAbsPath)
   H.createDirectoryIfMissing logDir
 
   H.readFile (base </> "configuration/chairman/shelley-only/configuration.yaml")

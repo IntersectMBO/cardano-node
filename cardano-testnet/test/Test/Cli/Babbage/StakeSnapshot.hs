@@ -56,7 +56,7 @@ hprop_stakeSnapshot = H.integrationRetryWorkspace 2 "babbage-stake-snapshot" $ \
   H.createDirectoryIfMissing work
 
   let
-    tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath
+    tempBaseAbsPath = getTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath
     testnetOptions = BabbageOnlyTestnetOptions $ babbageDefaultTestnetOptions
       { babbageNodeLoggingFormat = NodeLoggingFormatAsJson
       }

@@ -167,9 +167,9 @@ testnet testnetOptions H.Conf {H.base, H.tempAbsPath, H.testnetMagic} = do
   let allNodes = fmap (\i -> "node-" <> show @Int i) nodeIndexes
 
   let
-      logDir = TR.makeLogDir (TR.TmpAbsolutePath tempAbsPath)
-      socketDir = TR.makeSocketDir (TR.TmpAbsolutePath tempAbsPath)
-      tempBaseAbsPath = TR.makeTmpBaseAbsPath (TR.TmpAbsolutePath tempAbsPath)
+      logDir = TR.getLogDir (TR.TmpAbsolutePath tempAbsPath)
+      socketDir = TR.getSocketDir (TR.TmpAbsolutePath tempAbsPath)
+      tempBaseAbsPath = TR.getTmpBaseAbsPath (TR.TmpAbsolutePath tempAbsPath)
   H.createDirectoryIfMissing logDir
 
   -- Launch cluster of three nodes in P2P Mode

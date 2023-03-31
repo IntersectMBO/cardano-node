@@ -69,7 +69,7 @@ import qualified Testnet.Util.Process as H
 import           Testnet.Util.Process (execCli_)
 import           Testnet.Util.Runtime as TR (NodeLoggingFormat (..), PaymentKeyPair (..),
                    PoolNode (PoolNode), PoolNodeKeys (..), TestnetRuntime (..),
-                   TmpAbsolutePath (..), makeLogDir, makeSprocket, startNode)
+                   TmpAbsolutePath (..), getLogDir, makeSprocket, startNode)
 
 {- HLINT ignore "Redundant flip" -}
 {- HLINT ignore "Redundant id" -}
@@ -205,7 +205,7 @@ cardanoTestnet testnetOptions H.Conf {H.base, H.tempAbsPath, H.configurationTemp
   nodeToPort <- H.noteShow (M.fromList (L.zip allNodeNames allPorts))
 
   let securityParam = 10
-      logDir = makeLogDir $ TmpAbsolutePath tempAbsPath
+      logDir = getLogDir $ TmpAbsolutePath tempAbsPath
   H.createDirectoryIfMissing logDir
 
   H.readFile configurationTemplate >>= H.writeFile configurationFile

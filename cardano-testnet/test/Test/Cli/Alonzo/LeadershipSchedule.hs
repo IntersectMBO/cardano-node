@@ -59,7 +59,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedu
   conf@Conf { tempAbsPath } <- H.noteShowM $
     mkConf (ProjectBase base) (YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
   let
-    tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath
+    tempBaseAbsPath = getTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath
     fastTestnetOptions = CardanoOnlyTestnetOptions cardanoDefaultTestnetOptions
       { cardanoEpochLength = 500
       , cardanoSlotLength = 0.01

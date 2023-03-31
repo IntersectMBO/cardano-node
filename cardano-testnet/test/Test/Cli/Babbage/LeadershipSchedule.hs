@@ -56,7 +56,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
   H.createDirectoryIfMissing work
 
   let
-    tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath
+    tempBaseAbsPath = getTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath
     testnetOptions = BabbageOnlyTestnetOptions $ babbageDefaultTestnetOptions
       { babbageNodeLoggingFormat = NodeLoggingFormatAsJson
       }

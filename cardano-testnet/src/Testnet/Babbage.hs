@@ -34,7 +34,7 @@ import qualified Testnet.Util.Assert as H
 import           Testnet.Util.Process (execCli_)
 import           Testnet.Util.Runtime (Delegator (..), NodeLoggingFormat (..), PaymentKeyPair (..),
                    PoolNode (PoolNode), PoolNodeKeys (..), StakingKeyPair (..), TestnetRuntime (..),
-                   TmpAbsolutePath (..), makeLogDir, startNode)
+                   TmpAbsolutePath (..), getLogDir, startNode)
 
 
 {- HLINT ignore "Redundant flip" -}
@@ -287,7 +287,7 @@ babbageTestnet testnetOptions H.Conf {H.base, H.configurationTemplate, H.tempAbs
   deadline <- H.noteShow $ DTC.addUTCTime 90 now
 
   forM_ spoNodes $ \node -> do
-    nodeStdoutFile <- H.noteTempFile (makeLogDir $ TmpAbsolutePath tempAbsPath) $ node <> ".stdout.log"
+    nodeStdoutFile <- H.noteTempFile (getLogDir $ TmpAbsolutePath tempAbsPath) $ node <> ".stdout.log"
     H.assertChainExtended deadline (babbageNodeLoggingFormat testnetOptions) nodeStdoutFile
 
   H.noteShowIO_ DTC.getCurrentTime
