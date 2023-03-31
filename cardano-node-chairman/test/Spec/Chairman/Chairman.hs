@@ -22,7 +22,7 @@ import qualified System.Environment as IO
 import qualified System.IO as IO
 import qualified System.Process as IO
 
-import           Cardano.Testnet (TmpAbsolutePath (TmpAbsolutePath), makeLogDir)
+import           Cardano.Testnet (TmpAbsolutePath (TmpAbsolutePath), getLogDir)
 import qualified Cardano.Testnet as H
 
 {- HLINT ignore "Reduce duplication" -}
@@ -35,9 +35,9 @@ mkSprocket tempBaseAbsPath socketDir node = Sprocket tempBaseAbsPath (socketDir 
 chairmanOver :: Int -> Int -> H.Conf -> [String] -> Integration ()
 chairmanOver timeoutSeconds requiredProgress H.Conf {..} allNodes = do
   maybeChairman <- H.evalIO $ IO.lookupEnv "DISABLE_CHAIRMAN"
-  let logDir = makeLogDir $ TmpAbsolutePath tempAbsPath
-      tempBaseAbsPath = H.makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath
-      socketDir = H.makeSocketDir $ TmpAbsolutePath tempAbsPath
+  let logDir = getLogDir $ TmpAbsolutePath tempAbsPath
+      tempBaseAbsPath = H.getTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath
+      socketDir = H.getSocketDir $ TmpAbsolutePath tempAbsPath
   when (maybeChairman /= Just "1") $ do
     nodeStdoutFile <- H.noteTempFile logDir $ "chairman" <> ".stdout.log"
     nodeStderrFile <- H.noteTempFile logDir $ "chairman" <> ".stderr.log"
