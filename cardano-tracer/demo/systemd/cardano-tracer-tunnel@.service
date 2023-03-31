@@ -1,0 +1,21 @@
+[Unit]
+Description=Setup a local socket tunnel to %I
+After=network.target
+
+[Service]
+EnvironmentFile=/etc/default/cardano-tracer-tunnel@%i
+ExecStart=/usr/bin/ssh \
+    -i ${PATH_TO_KEY} -nNT \
+    -o StreamLocalBindUnlink=yes \
+    -o StreamLocalBindMask=0111 \
+    -o ServerAliveInterval=60 \
+    -o ExitOnForwardFailure=yes \
+    -L ${LOCAL_SOCKET}:${REMOTE_SOCKET} \
+    # -L ${LOCAL_SOCKET2}:${REMOTE_SOCKET} \
+    ${REMOTE_USER}@${REMOTE_HOST}
+RestartSec=15
+Restart=always
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target
