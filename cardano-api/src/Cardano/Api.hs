@@ -713,6 +713,9 @@ module Cardano.Api (
     UTxO(..),
     AnyUTxO(..),
     queryNodeLocalState,
+    queryNodeLocalState_,
+    executeQueryCardanoMode,
+
     UnsupportedNtcVersionError(..),
 
     -- *** Local tx monitoring
@@ -799,7 +802,6 @@ module Cardano.Api (
 
     NodeToClientVersion(..),
 
-    -- ** Monadic queries
     -- *** Simple queries (for any era)
     SimpleQueryError(..),
     queryExprSimple,
@@ -811,6 +813,13 @@ module Cardano.Api (
     executeLocalStateQueryExprAnyQuery,
     queryExprAnyQuery,
     queryExprAnyQueryE,
+
+    -- ** Monadic queries
+    LocalStateQueryExpr,
+    executeLocalStateQueryExpr,
+    executeLocalStateQueryExpr_,
+    queryExpr,
+    determineEraExpr,
 
     chainPointToSlotNo,
     chainPointToHeaderHash,
@@ -868,6 +877,7 @@ import           Cardano.Api.InMode
 import           Cardano.Api.IO
 import           Cardano.Api.IPC
 import           Cardano.Api.IPC.AnyQuery
+import           Cardano.Api.IPC.Monad
 import           Cardano.Api.IPC.SimpleQueries
 import           Cardano.Api.IPC.Version
 import           Cardano.Api.Keys.Byron
