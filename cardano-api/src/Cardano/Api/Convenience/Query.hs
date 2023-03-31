@@ -14,7 +14,8 @@ module Cardano.Api.Convenience.Query (
   ) where
 
 import           Control.Monad.Trans.Except (ExceptT (..), except, runExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistMaybe)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistMaybe, left, onLeft,
+                   onNothing)
 import           Data.Bifunctor (first)
 import           Data.Function ((&))
 import           Data.Set (Set)
@@ -34,6 +35,7 @@ import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
 import           Cardano.Api.TxBody
 import           Cardano.Api.Utils
+import           Control.Monad.Trans (MonadTrans (..))
 
 data QueryConvenienceError
   = AcqFailure AcquiringFailure
@@ -123,14 +125,14 @@ executeQueryCardanoMode
 executeQueryCardanoMode era nid q = runExceptT $ do
   SocketPath sockPath <- firstExceptT SockErr . ExceptT $ readEnvSocketPath
 
-  let localConnectInfo =
+  let localNodeConnInfo =
         LocalNodeConnectInfo
           { localConsensusModeParams = CardanoModeParams (EpochSlots 21600)
           , localNodeNetworkId = nid
           , localNodeSocketPath = sockPath
           }
 
-  ExceptT $ executeQueryAnyMode era localConnectInfo q
+  ExceptT $ executeQueryAnyMode era localNodeConnInfo q
 
 -- | Execute a query against the local node in any mode.
 executeQueryAnyMode
@@ -138,24 +140,17 @@ executeQueryAnyMode
   -> LocalNodeConnectInfo mode
   -> QueryInMode mode (Either EraMismatch result)
   -> IO (Either QueryConvenienceError result)
-executeQueryAnyMode era localNodeConnInfo q = do
+executeQueryAnyMode era localNodeConnInfo q = runExceptT $ do
   let cMode = consensusModeOnly $ localConsensusModeParams localNodeConnInfo
-  case toEraInMode era cMode of
-    Just eraInMode ->
-      case eraInMode of
-        ByronEraInByronMode -> return $ Left ByronEraNotSupported
-        _ -> execQuery
-    Nothing -> return $ Left $ EraConsensusModeMismatch
-                                      (AnyConsensusMode CardanoMode)
-                                      (getIsCardanoEraConstraint era $ AnyCardanoEra era)
- where
-  execQuery :: IO (Either QueryConvenienceError result)
-  execQuery = collapse <$> queryNodeLocalState localNodeConnInfo Nothing q
 
-collapse
-  :: Either AcquiringFailure (Either EraMismatch a)
-  -> Either QueryConvenienceError a
-collapse res = do
- innerRes <- first AcqFailure res
- first QueryEraMismatch innerRes
+  eraInMode <- pure (toEraInMode era cMode)
+    & onNothing (left $ EraConsensusModeMismatch
+        (AnyConsensusMode CardanoMode)
+        (getIsCardanoEraConstraint era $ AnyCardanoEra era))
 
+  case eraInMode of
+    ByronEraInByronMode -> left ByronEraNotSupported
+    _ ->
+      lift (queryNodeLocalState localNodeConnInfo Nothing q)
+        & onLeft (left . AcqFailure)
+        & onLeft (left . QueryEraMismatch)
