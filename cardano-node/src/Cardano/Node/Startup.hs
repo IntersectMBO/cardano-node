@@ -40,8 +40,8 @@ import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket,
                    NodeToClientVersion)
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..), NodeToNodeVersion)
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
+import           Ouroboros.Network.PeerSelection.PeerAdvertise (PeerAdvertise)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
-import           Ouroboros.Network.PeerSelection.Types (PeerAdvertise)
 import           Ouroboros.Network.Subscription.Dns (DnsSubscriptionTarget (..))
 import           Ouroboros.Network.Subscription.Ip (IPSubscriptionTarget (..))
 

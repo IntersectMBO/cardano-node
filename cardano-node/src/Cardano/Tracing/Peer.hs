@@ -40,6 +40,7 @@ import qualified Ouroboros.Network.Block as Net
 import qualified Ouroboros.Network.BlockFetch.ClientRegistry as Net
 import           Ouroboros.Network.BlockFetch.ClientState (PeerFetchInFlight (..),
                    PeerFetchStatus (..), readFetchClientState)
+import           Ouroboros.Network.NodeToNode (RemoteAddress)
 
 import           Cardano.Node.Queries
 
@@ -97,7 +98,7 @@ getCurrentPeers nkd = mapNodeKernelDataIO extractPeers nkd
     -> STM.STM IO (Map peer (Net.AnchoredFragment (Header blk)))
   getCandidates var = STM.readTVar var >>= traverse STM.readTVar
 
-  extractPeers :: NodeKernel IO RemoteConnectionId LocalConnectionId blk
+  extractPeers :: NodeKernel IO RemoteAddress LocalConnectionId blk
                 -> IO [Peer blk]
   extractPeers kernel = do
     peerStates <- fmap tuple3pop <$> (   STM.atomically

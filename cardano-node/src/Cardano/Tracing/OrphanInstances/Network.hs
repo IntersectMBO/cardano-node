@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -17,10 +18,10 @@ module Cardano.Tracing.OrphanInstances.Network () where
 
 import           Control.Exception (Exception (..), SomeException (..))
 import           Control.Monad.Class.MonadTime (DiffTime, Time (..))
-import           Data.Aeson (Value (..), FromJSON (..))
+import           Data.Aeson (FromJSON (..), Value (..))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (listValue)
-import           Data.Bifunctor (Bifunctor (..))
+import           Data.Bifunctor (Bifunctor (first))
 import           Data.Data (Proxy (..))
 import           Data.Foldable (Foldable (..))
 import           Data.Functor.Identity (Identity (..))
@@ -67,7 +68,8 @@ import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.InboundGovernor.State (InboundGovernorCounters (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import           Ouroboros.Network.Magic (NetworkMagic (..))
-import           Ouroboros.Network.NodeToClient (NodeToClientVersion (..), NodeToClientVersionData (..))
+import           Ouroboros.Network.NodeToClient (NodeToClientVersion (..),
+                   NodeToClientVersionData (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), NodeToNodeVersion (..),
                    NodeToNodeVersionData (..), RemoteAddress, TraceSendRecv (..), WithAddr (..))
@@ -95,12 +97,13 @@ import           Ouroboros.Network.Protocol.LocalTxMonitor.Type (LocalTxMonitor)
 import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Type as LocalTxMonitor
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (LocalTxSubmission)
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LocalTxSub
+import           Ouroboros.Network.Protocol.PeerSharing.Type (PeerSharingResult (..))
 import           Ouroboros.Network.Protocol.TxSubmission2.Type as TxSubmission2
 import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
 import           Ouroboros.Network.Server2 (ServerTrace (..))
 import qualified Ouroboros.Network.Server2 as Server
-import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
+import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (..),
                    SubscriberError (..), SubscriptionTrace (..), WithDomainName (..),
                    WithIPList (..))
@@ -394,8 +397,9 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TracePublicRootsRequest    {} -> Info
       TracePublicRootsResults    {} -> Info
       TracePublicRootsFailure    {} -> Error
-      TraceGossipRequests        {} -> Debug
-      TraceGossipResults         {} -> Debug
+      TracePeerShareRequests     {} -> Debug
+      TracePeerShareResults      {} -> Debug
+      TracePeerShareResultsFiltered {} -> Debug
       TraceForgetColdPeers       {} -> Info
       TracePromoteColdPeers      {} -> Info
       TracePromoteColdLocalPeers {} -> Info
@@ -1381,7 +1385,7 @@ instance ToJSON IP where
 instance ToObject TracePublicRootPeers where
   toObject _verb (TracePublicRootRelayAccessPoint relays) =
     mconcat [ "kind" .= String "PublicRootRelayAddresses"
-             , "relayAddresses" .= Aeson.toJSONList relays
+             , "relayAddresses" .= Aeson.toJSON relays
              ]
   toObject _verb (TracePublicRootDomains domains) =
     mconcat [ "kind" .= String "PublicRootDomains"
@@ -1453,16 +1457,20 @@ instance ToObject (TracePeerSelection SockAddr) where
              , "group" .= group
              , "diffTime" .= dt
              ]
-  toObject _verb (TraceGossipRequests targetKnown actualKnown aps sps) =
-    mconcat [ "kind" .= String "GossipRequests"
+  toObject _verb (TracePeerShareRequests targetKnown actualKnown aps sps) =
+    mconcat [ "kind" .= String "PeerShareRequests"
              , "targetKnown" .= targetKnown
              , "actualKnown" .= actualKnown
              , "availablePeers" .= Aeson.toJSONList (toList aps)
              , "selectedPeers" .= Aeson.toJSONList (toList sps)
              ]
-  toObject _verb (TraceGossipResults res) =
-    mconcat [ "kind" .= String "GossipResults"
-             , "result" .= Aeson.toJSONList (map ( first show <$> ) res)
+  toObject _verb (TracePeerShareResults res) =
+    mconcat [ "kind" .= String "PeerShareResults"
+             , "results" .= Aeson.toJSONList (map ( first show <$> ) res)
+             ]
+  toObject _verb (TracePeerShareResultsFiltered res) =
+    mconcat [ "kind" .= String "PeerShareResultsFiltered"
+             , "resultsFiltered" .= Aeson.toJSONList res
              ]
   toObject _verb (TraceForgetColdPeers targetKnown actualKnown sp) =
     mconcat [ "kind" .= String "ForgeColdPeers"
@@ -1779,6 +1787,7 @@ instance ToJSON NodeToClientVersion where
   toJSON NodeToClientV_13 = Number 13
   toJSON NodeToClientV_14 = Number 14
   toJSON NodeToClientV_15 = Number 15
+  toJSON NodeToClientV_16 = Number 16
 
 instance FromJSON NodeToClientVersion where
   parseJSON (Number 9) = return NodeToClientV_9
@@ -1792,9 +1801,10 @@ instance FromJSON NodeToClientVersion where
   parseJSON x          = fail ("FromJSON.NodeToClientVersion: error parsing NodeToClientVersion: " ++ show x)
 
 instance ToJSON NodeToNodeVersionData where
-  toJSON (NodeToNodeVersionData (NetworkMagic m) dm) =
+  toJSON (NodeToNodeVersionData (NetworkMagic m) dm ps) =
     Aeson.object [ "networkMagic" .= toJSON m
                  , "diffusionMode" .= show dm
+                 , "peerSharing" .= show ps
                  ]
 
 instance ToJSON NodeToClientVersionData where
@@ -2161,3 +2171,8 @@ instance ToJSON addr
                , "from"    .= toJSON (ConnMgr.fromState tr)
                , "to"      .= toJSON (ConnMgr.toState   tr)
                ]
+
+instance ToJSON peerAddress => ToJSON (PeerSharingResult peerAddress) where
+  toJSON = \case
+    PeerSharingResult ps -> Aeson.object ["result" .= toJSON ps]
+    PeerSharingNotRegisteredYet -> Aeson.object ["result" .= Aeson.String "NotRegisteredYet"]

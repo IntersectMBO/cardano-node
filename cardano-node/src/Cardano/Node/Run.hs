@@ -328,7 +328,7 @@ handleSimpleNode
   -> NetworkP2PMode p2p
   -> Tracers RemoteConnectionId LocalConnectionId blk p2p
   -> NodeConfiguration
-  -> (NodeKernel IO RemoteConnectionId LocalConnectionId blk -> IO ())
+  -> (NodeKernel IO RemoteAddress LocalConnectionId blk -> IO ())
   -- ^ Called on the 'NodeKernel' after creating it, but before the network
   -- layer is initialised.  This implies this function must not block,
   -- otherwise the node won't actually start.
@@ -612,7 +612,7 @@ mkP2PArguments
   -> STM IO [(Int, Map RelayAccessPoint PeerAdvertise)]
      -- ^ non-overlapping local root peers groups; the 'Int' denotes the
      -- valency of its group.
-  -> STM IO [RelayAccessPoint]
+  -> STM IO (Map RelayAccessPoint PeerAdvertise)
   -> STM IO UseLedgerAfter
   -> Diffusion.ExtraArguments 'Diffusion.P2P IO
 mkP2PArguments NodeConfiguration {
