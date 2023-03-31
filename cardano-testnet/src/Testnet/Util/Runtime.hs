@@ -16,6 +16,10 @@ module Testnet.Util.Runtime
   , Delegator(..)
   , allNodes
   , bftSprockets
+  , getLogDir
+  , getSocketDir
+  , getTmpBaseAbsPath
+  , makeSprocket
   , poolSprockets
   , poolNodeStdout
   , readNodeLoggingFormat
@@ -100,22 +104,29 @@ data LeadershipSlot = LeadershipSlot
   , slotTime    :: Text
   } deriving (Eq, Show, Generic, FromJSON)
 
+makeSprocket
+  :: TmpAbsolutePath
+  -> String -- ^ node name
+  -> Sprocket
+makeSprocket tmpAbsPath node
+  = Sprocket (getTmpBaseAbsPath tmpAbsPath) (getSocketDir tmpAbsPath </> node)
+
+getSocketDir :: TmpAbsolutePath -> FilePath
+getSocketDir fp = getTmpRelPath fp </> "socket"
+
 -- Temporary path used at runtime
 newtype TmpAbsolutePath = TmpAbsolutePath
   { unTmpPath :: FilePath
   } deriving (Eq, Show)
 
-makeTmpRelPath :: TmpAbsolutePath -> FilePath
-makeTmpRelPath (TmpAbsolutePath fp) = makeRelative (makeTmpBaseAbsPath (TmpAbsolutePath fp)) fp
+getTmpRelPath :: TmpAbsolutePath -> FilePath
+getTmpRelPath (TmpAbsolutePath fp) = makeRelative (getTmpBaseAbsPath (TmpAbsolutePath fp)) fp
 
-makeSocketDir :: TmpAbsolutePath -> FilePath
-makeSocketDir fp = makeTmpRelPath fp </> "socket"
+getTmpBaseAbsPath :: TmpAbsolutePath -> FilePath
+getTmpBaseAbsPath (TmpAbsolutePath fp) = takeDirectory fp
 
-makeTmpBaseAbsPath :: TmpAbsolutePath -> FilePath
-makeTmpBaseAbsPath (TmpAbsolutePath fp) = takeDirectory fp
-
-makeLogDir :: TmpAbsolutePath -> FilePath
-makeLogDir (TmpAbsolutePath fp) = fp </> "logs"
+getLogDir :: TmpAbsolutePath -> FilePath
+getLogDir (TmpAbsolutePath fp) = fp </> "logs"
 
 poolNodeStdout :: PoolNode -> FilePath
 poolNodeStdout = nodeStdout . poolRuntime
@@ -145,14 +156,14 @@ startNode
   -- ^ The command --socket-path and --port will be added automatically.
   -> H.Integration NodeRuntime
 startNode tp@(TmpAbsolutePath tempAbsPath) node nodeCmd = do
-  let tempBaseAbsPath = makeTmpBaseAbsPath tp
-      socketDir = makeSocketDir tp
-      logDir = makeLogDir tp
+  let tempBaseAbsPath = getTmpBaseAbsPath tp
+      socketDir = getSocketDir tp
+      logDir = getLogDir tp
 
   dbDir <- H.noteShow $ tempAbsPath </> "db/" <> node
   nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
   nodeStderrFile <- H.noteTempFile logDir $ node <> ".stderr.log"
-  sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)
+  sprocket <- H.noteShow $ makeSprocket tp node
 
   H.createDirectoryIfMissing dbDir
   H.createDirectoryIfMissing $ tempBaseAbsPath </> socketDir
