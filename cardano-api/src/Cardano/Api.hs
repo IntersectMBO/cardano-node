@@ -718,8 +718,12 @@ module Cardano.Api (
     QueryUTxOFilter(..),
     UTxO(..),
     queryNodeLocalState,
+    queryNodeLocalState_,
     executeQueryCardanoMode,
+
     UnsupportedNtcVersionError(..),
+
+    AcquireFailure(..),
 
     -- *** Local tx monitoring
     LocalTxMonitorClient(..),
@@ -806,6 +810,7 @@ module Cardano.Api (
     -- ** Monadic queries
     LocalStateQueryExpr,
     executeLocalStateQueryExpr,
+    executeLocalStateQueryExpr_,
     queryExpr,
     determineEraExpr,
 
