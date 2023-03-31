@@ -1,12 +1,16 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 -- | Convenience query functions
 --
 module Cardano.Api.Convenience.Query (
     QueryConvenienceError(..),
     determineEra,
+    determineEra_,
+
     -- * Simplest query related
     executeQueryCardanoMode,
 
@@ -14,6 +18,7 @@ module Cardano.Api.Convenience.Query (
     renderQueryConvenienceError,
   ) where
 
+import           Control.Monad.Oops (CouldBe, Variant, runOopsInEither)
 import           Control.Monad.Trans.Except (ExceptT (..), except, runExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistMaybe, left, onLeft,
                    onNothing)
@@ -118,11 +123,21 @@ determineEra
   -> LocalNodeConnectInfo mode
   -> IO (Either AcquiringFailure AnyCardanoEra)
 determineEra cModeParams localNodeConnInfo =
+  runOopsInEither $ determineEra_ cModeParams localNodeConnInfo
+
+-- | Query the node to determine which era it is in.
+determineEra_
+  :: forall e mode. ()
+  => e `CouldBe` AcquiringFailure
+  => ConsensusModeParams mode
+  -> LocalNodeConnectInfo mode
+  -> ExceptT (Variant e) IO AnyCardanoEra
+determineEra_ cModeParams localNodeConnInfo =
   case consensusModeOnly cModeParams of
-    ByronMode -> return . Right $ AnyCardanoEra ByronEra
-    ShelleyMode -> return . Right $ AnyCardanoEra ShelleyEra
+    ByronMode -> pure $ AnyCardanoEra ByronEra
+    ShelleyMode -> pure $ AnyCardanoEra ShelleyEra
     CardanoMode ->
-      queryNodeLocalState localNodeConnInfo Nothing
+      queryNodeLocalState_ localNodeConnInfo Nothing
         $ QueryCurrentEra CardanoModeIsMultiEra
 
 getSbe :: CardanoEraStyle era -> Either QueryConvenienceError (ShelleyBasedEra era)
