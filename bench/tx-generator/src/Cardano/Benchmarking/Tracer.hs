@@ -157,7 +157,7 @@ initialTraceConfig = TraceConfig {
       tcOptions = Map.fromList
           [ ([], [configSilent])
           , setMaxDetail "benchmark"
-          , setMaxDetail "submitN2N"
+          , (["submitN2N"], [configSilent])
           , setMaxDetail "connect"
           , setMaxDetail "submit"
           ]
