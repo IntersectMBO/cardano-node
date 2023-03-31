@@ -1,0 +1,40 @@
+# Default values for the systemd unit cardano-tracer-tunnel
+# /etc/default/cardano-tracer-tunnel@ct-target
+#
+# This service is meant to be established on the machine
+# running cardano-node, where the node has been
+# configured to be an Initiator of the connection
+# to cardano-tracer.
+# 
+# The 'ct-target' is a mnemonic for the remote host that:
+# * runs cardano-tracer
+# * provides the socket file you want establish the tunnel to
+#
+# THIS IS AN EXAMPLE ONLY.
+# THE FINAL VALUES DEPEND ON YOUR SPECIFIC CONFIGURATION.
+
+
+
+# SSH identity for the tunnel.
+# Please note that for this example, 
+# remote-user@ct-target-host is assumed to accept this identity,
+# e.g. by having added its public key to the remote user's ~/.ssh/authorized_keys
+PATH_TO_KEY=/home/local-user/.ssh/id_rsa
+
+# user to SSH to on the ct-target host
+REMOTE_USER=remote-user
+
+# IP or hostname that resolves to the ct-target host 
+REMOTE_HOST=ct-target-host
+
+# remote socket file on ct-target, as per the config of cardano-tracer
+REMOTE_SOCKET=/path/to/cardano-tracer/socket.sock
+
+# local socket file, as per the config of cardano-node
+LOCAL_SOCKET=/path/to/cardano-node/socket.sock
+
+# If you run another cardano-node or process emitting traces on the same
+# network, you may tunnel more than one socket to cardano-tracer on ct-target,
+# as long as you adjust the systemd unit file accordingly.
+# 
+# LOCAL_SOCKET2=/path/to/another/trace-emitter/socket.sock
