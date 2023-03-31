@@ -734,6 +734,8 @@ module Cardano.Api (
     getSlotForRelativeTime,
 
     -- *** Common queries
+    determineEra,
+    determineEra_,
     getLocalChainTip,
 
     -- * Node operation

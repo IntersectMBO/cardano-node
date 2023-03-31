@@ -1,17 +1,22 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 -- | Convenience query functions
 --
 module Cardano.Api.Convenience.Query (
     QueryConvenienceError(..),
     determineEra,
+    determineEra_,
+
     -- * Simplest query related
     executeQueryCardanoMode,
     queryStateForBalancedTx,
     renderQueryConvenienceError,
   ) where
 
+import           Control.Monad.Oops (CouldBe, Variant, runOopsInEither)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Except (ExceptT (..), runExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left, newExceptT, onLeft,
@@ -115,11 +120,21 @@ determineEra
   -> LocalNodeConnectInfo mode
   -> IO (Either AcquiringFailure AnyCardanoEra)
 determineEra cModeParams localNodeConnInfo =
+  runOopsInEither $ determineEra_ cModeParams localNodeConnInfo
+
+-- | Query the node to determine which era it is in.
+determineEra_
+  :: forall e mode. ()
+  => e `CouldBe` AcquiringFailure
+  => ConsensusModeParams mode
+  -> LocalNodeConnectInfo mode
+  -> ExceptT (Variant e) IO AnyCardanoEra
+determineEra_ cModeParams localNodeConnInfo =
   case consensusModeOnly cModeParams of
-    ByronMode -> return . Right $ AnyCardanoEra ByronEra
-    ShelleyMode -> return . Right $ AnyCardanoEra ShelleyEra
+    ByronMode -> pure $ AnyCardanoEra ByronEra
+    ShelleyMode -> pure $ AnyCardanoEra ShelleyEra
     CardanoMode ->
-      queryNodeLocalState localNodeConnInfo Nothing
+      queryNodeLocalState_ localNodeConnInfo Nothing
         $ QueryCurrentEra CardanoModeIsMultiEra
 
 -- | Execute a query against the local node. The local
