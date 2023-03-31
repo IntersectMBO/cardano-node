@@ -68,7 +68,6 @@ data ShelleyTxCmdError
   | ShelleyTxCmdScriptFileError (FileError ScriptDecodeError)
   | ShelleyTxCmdReadTextViewFileError !(FileError TextEnvelopeError)
   | ShelleyTxCmdReadWitnessSigningDataError !ReadWitnessSigningDataError
-  | ShelleyTxCmdRequiredSignerByronKeyError !SigningKeyFile
   | ShelleyTxCmdWriteFileError !(FileError ())
   | ShelleyTxCmdEraConsensusModeMismatch
       !(Maybe FilePath)
@@ -83,8 +82,6 @@ data ShelleyTxCmdError
   | ShelleyTxCmdTxBodyError !TxBodyError
   | ShelleyTxCmdNotImplemented !Text
   | ShelleyTxCmdWitnessEraMismatch !AnyCardanoEra !AnyCardanoEra !WitnessFile
-  | ShelleyTxCmdScriptLanguageNotSupportedInEra !AnyScriptLanguage !AnyCardanoEra
-  | ShelleyTxCmdReferenceScriptsNotSupportedInEra !AnyCardanoEra
   | ShelleyTxCmdPolicyIdsMissing ![PolicyId]
   | ShelleyTxCmdPolicyIdsExcess  ![PolicyId]
   | ShelleyTxCmdUnsupportedMode !AnyConsensusMode
@@ -133,8 +130,6 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdScriptFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyTxCmdReadWitnessSigningDataError witSignDataErr ->
       renderReadWitnessSigningDataError witSignDataErr
-    ShelleyTxCmdRequiredSignerByronKeyError (SigningKeyFile fp) ->
-      "Byron key witness was used as a required signer: " <> textShow fp
     ShelleyTxCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyTxCmdSocketEnvError envSockErr -> renderEnvSocketError envSockErr
     ShelleyTxCmdTxSubmitError res -> "Error while submitting tx: " <> res
@@ -166,10 +161,6 @@ renderShelleyTxCmdError err =
       "The era of a witness does not match the era of the transaction. " <>
       "The transaction is for the " <> renderEra era <> " era, but the " <>
       "witness in " <> textShow file <> " is for the " <> renderEra era' <> " era."
-
-    ShelleyTxCmdScriptLanguageNotSupportedInEra (AnyScriptLanguage lang) era ->
-      "The script language " <> textShow lang <> " is not supported in the " <>
-      renderEra era <> " era."
 
     ShelleyTxCmdEraConsensusModeMismatch fp mode era ->
        "Submitting " <> renderEra era <> " era transaction (" <> textShow fp <>
@@ -207,8 +198,6 @@ renderShelleyTxCmdError err =
       [ "Execution units not available in the protocol parameters. This is "
       , "likely due to not being in the Alonzo era"
       ]
-    ShelleyTxCmdReferenceScriptsNotSupportedInEra (AnyCardanoEra era) ->
-      "TxCmd: Reference scripts not supported in era: " <> textShow era
     ShelleyTxCmdTxEraCastErr (EraCastError value fromEra toEra) ->
       "Unable to cast era from " <> textShow fromEra <> " to " <> textShow toEra <> " the value " <> textShow value
     ShelleyTxCmdQueryConvenienceError e ->
