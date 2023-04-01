@@ -89,14 +89,23 @@ summariseMultiBlockProp centiles bs@(headline:_) = do
         (d,) <$> cdf2OfCDFs comb (snd <$> xs)
   pure $ BlockProp
     { bpVersion             = bpVersion headline
-    , bpDomainSlots         = concat          $ bs <&> bpDomainSlots
-    , bpDomainBlocks        = concat          $ bs <&> bpDomainBlocks
+    , bpDomainSlots         = slotDomains
+    , bpDomainBlocks        = blockDomains
+    , bpDomainCDFSlots      = slotDomains  &
+                                traverseDataDomain (cdf stdCentiles . fmap unI)
+    , bpDomainCDFBlocks     = blockDomains &
+                                traverseDataDomain (cdf stdCentiles . fmap unI)
     , bpPropagation         = Map.fromList bpPropagation
     , ..
     }
  where
    comb :: forall a. Divisible a => Combine I a
    comb = stdCombine1 centiles
+
+   slotDomains :: [DataDomain I SlotNo]
+   slotDomains = bs <&> bpDomainSlots
+   blockDomains :: [DataDomain I BlockNo]
+   blockDomains = bs <&> bpDomainBlocks
 
 bfePrevBlock :: ForgerEvents a -> Maybe Hash
 bfePrevBlock x = case bfeBlockNo x of
@@ -284,15 +293,15 @@ rebuildChain :: Run -> [ChainFilter] -> [FilterName] -> [(JsonLogfile, MachView)
 rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
   Chain
   { cDomSlots   = DataDomain
-                  (Interval (blk0  & beSlotNo)  (blkL  & beSlotNo))
-                  (mFltDoms <&> fst3)
-                  (beSlotNo blkL - beSlotNo blk0 & fromIntegral . unSlotNo)
-                  (mFltDoms <&> thd3 & fromMaybe 0)
+                  (Interval (blk0  & beSlotNo)  (blkL  & beSlotNo) <&> I)
+                  (mFltDoms <&> fmap I . fst3)
+                  (beSlotNo blkL - beSlotNo blk0 & I . fromIntegral . unSlotNo)
+                  (mFltDoms <&> thd3 & maybe (I 0) I)
   , cDomBlocks  = DataDomain
-                  (Interval (blk0  & beBlockNo) (blkL  & beBlockNo))
-                  (mFltDoms <&> snd3)
-                  (length cMainChain)
-                  (length accepta)
+                  (Interval (blk0  & beBlockNo) (blkL  & beBlockNo) <&> I)
+                  (mFltDoms <&> fmap I . snd3)
+                  (length cMainChain & I)
+                  (length accepta & I)
   , cHostBlockStats = Map.fromList $ machViews <&> (mvHost &&& mvBlockStats)
   , ..
   }
@@ -497,8 +506,10 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
 blockProp :: Run -> Chain -> IO BlockPropOne
 blockProp run@Run{genesis} Chain{..} = do
   pure $ BlockProp
-    { bpDomainSlots      = [cDomSlots]
-    , bpDomainBlocks     = [cDomBlocks]
+    { bpDomainSlots      = cDomSlots
+    , bpDomainBlocks     = cDomBlocks
+    , bpDomainCDFSlots   = cDomSlots   -- At unit-arity..
+    , bpDomainCDFBlocks  = cDomBlocks  -- .. it's just a replica.
     , cdfForgerStart     = forgerCDF   (SJust . bfStarted   . beForge)
     , cdfForgerBlkCtx    = forgerCDF           (bfBlkCtx    . beForge)
     , cdfForgerLgrState  = forgerCDF           (bfLgrState  . beForge)
@@ -525,30 +536,42 @@ blockProp run@Run{genesis} Chain{..} = do
     , cdfBlockBattle         = forgerCDF   (SJust . unCount . beForks)
     , cdfBlockSize           = forgerCDF   (SJust . bfBlockSize . beForge)
     , bpVersion              = getLocliVersion
-    , cdfBlocksPerHost       = cdf stdCentiles (hostBlockStats <&> unCount
-                                                . hbsTotal)
-    , cdfBlocksFilteredRatio = cdf stdCentiles (hostBlockStats <&>
-                                                uncurry ((/) `on`
-                                                         fromIntegral . unCount)
-                                                . (hbsFiltered &&& hbsChained)
+    , cdfBlocksPerHost       = cdf stdCentiles (hostBlockStats
+                                                <&> unCount . hbsTotal)
+    , cdfBlocksFilteredRatio = cdf stdCentiles (hostBlockStats
+                                                <&> uncurry ((/) `on`
+                                                             fromIntegral . unCount)
+                                                 . (hbsFiltered &&& hbsChained)
                                                 & filter (not . isNaN))
-    , cdfBlocksChainedRatio  = cdf stdCentiles (hostBlockStats <&>
-                                                uncurry ((/) `on`
-                                                         fromIntegral . unCount)
-                                                . (hbsChained &&& hbsTotal)
+    , cdfBlocksChainedRatio  = cdf stdCentiles (hostBlockStats
+                                                <&> uncurry ((/) `on`
+                                                             fromIntegral . unCount)
+                                                 . (hbsChained &&& hbsTotal)
                                                 & filter (not . isNaN))
     }
  where
+   ne :: String -> [a] -> [a]
+   ne desc = \case
+     [] -> error desc
+     xs -> xs
+
    hostBlockStats = Map.elems cHostBlockStats
 
    boFetchedCum :: BlockObservation -> NominalDiffTime
    boFetchedCum BlockObservation{..} = boNoticed + boRequested + boFetched
 
    analysisChain :: [BlockEvents]
-   analysisChain = filter (all snd . beAcceptance) cMainChain
+   analysisChain =
+     case filter (all snd . beAcceptance) cMainChain of
+       [] -> error $ mconcat
+         [ "analysisChain:  all blocks filtered out of originally "
+         , show (length cMainChain)
+         ]
+       xs -> xs
 
    forgerCDF :: Divisible a => (BlockEvents -> SMaybe a) -> CDF I a
-   forgerCDF = flip (witherToDistrib (cdf stdCentiles)) analysisChain
+   forgerCDF proj =
+     cdfZ stdCentiles $ mapSMaybe proj analysisChain
 
    each, earliest :: [NominalDiffTime] -> [NominalDiffTime]
    each = identity
@@ -571,15 +594,7 @@ blockProp run@Run{genesis} Chain{..} = do
      -> (BlockEvents -> [a])
      -> CDF I a
    mapChainBlockEventsCDF percs cbes f =
-     cdf percs (concatMap f cbes)
-
-witherToDistrib ::
-     ([b] -> CDF p b)
-  -> (a -> SMaybe b)
-  -> [a]
-  -> CDF p b
-witherToDistrib distrify proj xs =
-  distrify $ mapSMaybe proj xs
+     cdfZ percs $ concatMap f cbes
 
 -- | Given a single machine's log object stream, recover its block map.
 blockEventMapsFromLogObjects :: Run -> (JsonLogfile, [LogObject]) -> MachView

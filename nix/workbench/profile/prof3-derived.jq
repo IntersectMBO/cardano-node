@@ -201,7 +201,7 @@ def add_derived_params:
             (if $n_pools == 0 then []
              else
                [ { tag: "CBlock", contents: { tag: "BMinimumAdoptions"
-                                         , contents: ($n_pools - 1) } }
+                                            , contents: ($n_pools - 1) } }
                ] end))
          }
      })

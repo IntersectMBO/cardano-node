@@ -1,4 +1,4 @@
-#+begin_src gnuplot :file {{ args.deField }}.png
+#+begin_src gnuplot :file png/{{ args.deField }}.png
 load "../../bench/workbench.gnuplot"
 {% if args.deLogScale == "true" %}
 set logscale y

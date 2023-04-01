@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 {- HLINT ignore "Use list literal pattern" -}
@@ -26,6 +27,7 @@ module Cardano.Util
 where
 
 import Prelude                          (String, error, head, last)
+import Text.Show qualified as Show      (Show(..))
 import Cardano.Prelude
 
 #if __GLASGOW_HASKELL__ < 902
@@ -51,7 +53,7 @@ import Data.List                        (span)
 import Data.List.Split                  (chunksOf)
 import Data.Text                        qualified as T
 import Data.SOP.Strict
-import Data.Time.Clock                  (NominalDiffTime, UTCTime (..), diffUTCTime)
+import Data.Time.Clock                  (NominalDiffTime, UTCTime (..), diffUTCTime, addUTCTime)
 import Data.Time.Clock.POSIX
 import Data.Vector                      (Vector)
 import Data.Vector                      qualified as Vec
@@ -214,3 +216,33 @@ utcTimeDeltaSec x y = diffUTCTime x y & round
 foldEmpty :: r -> ([a] -> r) -> [a] -> r
 foldEmpty r _ [] = r
 foldEmpty _ f l = f l
+
+-- | A tweaked version of UTCTime that is able to have more instances.
+--   Structurally equivalent to difftime from zeroUTCTime
+zeroUTCTime :: UTCTime
+zeroUTCTime = posixSecondsToUTCTime $ realToFrac (0 :: Int)
+
+newtype RUTCTime =
+  RUTCTime { unRUTCTime :: NominalDiffTime }
+  deriving newtype (Eq, NFData, Num, Ord, Real)
+
+instance Show.Show RUTCTime where
+  show = show . unsafeNominalToUTC . unRUTCTime
+
+instance ToJSON RUTCTime where
+  toJSON = toJSON . unsafeNominalToUTC . unRUTCTime
+
+instance FromJSON RUTCTime where
+  parseJSON v = RUTCTime . unsafeUTCToNominal <$> parseJSON v
+
+unsafeUTCToNominal :: UTCTime -> NominalDiffTime
+unsafeUTCToNominal = (`diffUTCTime` zeroUTCTime)
+
+unsafeNominalToUTC :: NominalDiffTime -> UTCTime
+unsafeNominalToUTC = flip addUTCTime zeroUTCTime
+
+toRUTCTime :: UTCTime -> RUTCTime
+toRUTCTime =  RUTCTime . unsafeUTCToNominal
+
+fromRUTCTime :: RUTCTime -> UTCTime
+fromRUTCTime =  unsafeNominalToUTC . unRUTCTime

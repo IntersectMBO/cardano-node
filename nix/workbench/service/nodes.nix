@@ -184,7 +184,9 @@ let
             (import ./tracing-legacy.nix
               { inherit nodeSpec;
               })
-            cfg;
+            (removeAttrs cfg
+              [ "setupScribes"
+              ]);
       };
       era_setup_hardforks = {
         shelley =

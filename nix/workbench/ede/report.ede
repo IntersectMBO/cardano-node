@@ -1,7 +1,7 @@
 #+CONSTANTS: {{ summary.dataRef }}={{ summary.orgFile }}{% for sec in analyses %} {{ sec.value.dataRef }}={{ sec.value.orgFile }} {% endfor %}
-#+CONSTANTS: base=../{{ base.meta.tag }}/analysis
+#+CONSTANTS: base=../../{{ base.meta.tag }}/analysis
 {% for run in runs %}
-#+CONSTANTS: run{{ run.index }}=../{{ run.value.meta.tag }}/analysis
+#+CONSTANTS: run{{ run.index }}=../../{{ run.value.meta.tag }}/analysis
 {% endfor %}
 #+LATEX_CLASS: report
 #+LATEX_CLASS_OPTIONS: [a4paper,7pt]

@@ -64,7 +64,14 @@
 
     nix2container.url = "github:nlewo/nix2container";
 
-    cardano-automation.url = "github:input-output-hk/cardano-automation";
+    cardano-automation = {
+      url = "github:input-output-hk/cardano-automation";
+      inputs = {
+        haskellNix.follows = "haskellNix";
+        tullia.follows = "tullia";
+        nixpkgs.follows = "nixpkgs";
+      };
+    };
   };
 
   outputs =

@@ -51,16 +51,13 @@ data Anchor
   = Anchor
   { aRuns    :: [Text]
   , aFilters :: ([FilterName], [ChainFilter])
-  , aSlots   :: Maybe (DataDomain SlotNo)
-  , aBlocks  :: Maybe (DataDomain BlockNo)
+  , aSlots   :: Maybe (DataDomain I SlotNo)
+  , aBlocks  :: Maybe (DataDomain I BlockNo)
   , aVersion :: LocliVersion
   , aWhen    :: UTCTime
   }
 
-runAnchor :: Run -> UTCTime -> ([FilterName], [ChainFilter]) -> Maybe (DataDomain SlotNo) -> Maybe (DataDomain BlockNo) -> Anchor
-runAnchor Run{..} = tagsAnchor [tag metadata]
-
-tagsAnchor :: [Text] -> UTCTime -> ([FilterName], [ChainFilter]) -> Maybe (DataDomain SlotNo) -> Maybe (DataDomain BlockNo) -> Anchor
+tagsAnchor :: [Text] -> UTCTime -> ([FilterName], [ChainFilter]) -> Maybe (DataDomain I SlotNo) -> Maybe (DataDomain I BlockNo) -> Anchor
 tagsAnchor aRuns aWhen aFilters aSlots aBlocks =
   Anchor { aVersion = getLocliVersion, .. }
 
@@ -88,15 +85,15 @@ renderAnchorDomains Anchor{..} = mconcat $
   maybe [] ((:[]) . renderDomain "slot"  (showText . unSlotNo)) aSlots
   <>
   maybe [] ((:[]) . renderDomain "block" (showText . unBlockNo)) aBlocks
- where renderDomain :: Text -> (a -> Text) -> DataDomain a -> Text
+ where renderDomain :: Text -> (a -> Text) -> DataDomain I a -> Text
        renderDomain ty r DataDomain{..} = mconcat
          [ ", ", ty
-         , " range: raw(", renderIntv r ddRaw, ", "
+         , " range: raw(", renderIntv r (fmap unI ddRaw), ", "
          ,                 showText ddRawCount, " total)"
          ,   " filtered(", maybe "none"
-                           (renderIntv r) ddFiltered, ", "
+                           (renderIntv r . fmap unI) ddFiltered, ", "
          ,                 showText ddFilteredCount, " total), "
-         , "filtered ",   T.take 4 . showText $ ((/) @Double `on` fromIntegral)
+         , "filtered ",   T.take 4 . showText $ ((/) @Double `on` (fromIntegral.unI))
                                                  ddFilteredCount  ddRawCount
          ]
 

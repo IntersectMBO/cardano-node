@@ -19,7 +19,7 @@ data GenesisSpec
   { delegators          :: Word64
   , utxo                :: Word64
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Eq, Generic, Show, ToJSON, FromJSON, NFData)
 
 -- | Partial 'Cardano.Ledger.Shelley.Genesis.ShelleyGenesis'
 data Genesis
@@ -34,7 +34,18 @@ data Genesis
   , maxKESEvolutions   :: Word64
   , securityParam      :: Word64
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, NFData)
+
+genesesSameButTimeP :: Genesis -> Genesis -> Bool
+genesesSameButTimeP l r =
+  ((==) `on` activeSlotsCoeff) l r &&
+  ((==) `on` protocolParams) l r &&
+  ((==) `on` networkMagic) l r &&
+  ((==) `on` epochLength) l r &&
+  ((==) `on` slotsPerKESPeriod) l r &&
+  ((==) `on` slotLength) l r &&
+  ((==) `on` maxKESEvolutions) l r &&
+  ((==) `on` securityParam) l r
 
 -- | Partial 'Cardano.Ledger.Shelley.PParams.PParams'
 data PParams
@@ -42,7 +53,7 @@ data PParams
   { maxTxSize         :: Word64
   , maxBlockBodySize  :: Word64
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Eq, Generic, Show, FromJSON, ToJSON, NFData)
 
 data GeneratorProfile
   = GeneratorProfile
@@ -54,11 +65,11 @@ data GeneratorProfile
   , plutusMode       :: Maybe Bool
   , plutusLoopScript :: Maybe FilePath
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Eq, Generic, Show, FromJSON, ToJSON, NFData)
 
-newtype Commit   = Commit  { unCommit  :: Text } deriving newtype (Show, FromJSON, ToJSON)
-newtype Branch   = Branch  { unBranch  :: Text } deriving newtype (Show, FromJSON, ToJSON)
-newtype Version  = Version { unVersion :: Text } deriving newtype (Show, FromJSON, ToJSON)
+newtype Commit   = Commit  { unCommit  :: Text } deriving newtype (Eq, Show, FromJSON, ToJSON, NFData)
+newtype Branch   = Branch  { unBranch  :: Text } deriving newtype (Eq, Show, FromJSON, ToJSON, NFData)
+newtype Version  = Version { unVersion :: Text } deriving newtype (Eq, Show, FromJSON, ToJSON, NFData)
 
 unsafeShortenCommit :: Int -> Commit -> Commit
 unsafeShortenCommit n (Commit c) = Commit (T.take n c)
@@ -76,7 +87,7 @@ data Manifest
     , mBase          :: !Commit
     , mPrelude       :: !Commit
     }
-  deriving (Generic, Show)
+  deriving (Eq, Generic, NFData, Show)
 
 unsafeShortenManifest :: Int -> Manifest -> Manifest
 unsafeShortenManifest n m@Manifest{..} =
@@ -126,4 +137,4 @@ data Metadata
   , era       :: Text
   , manifest  :: Manifest
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, NFData, Show, FromJSON, ToJSON)

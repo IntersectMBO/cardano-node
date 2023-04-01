@@ -27,7 +27,7 @@ module Data.CDF
   , CDFError (..)
   , CDF(..)
   , cdf
-  , cdfRatioCDF
+  , cdfZ
   , cdfAverageVal
   , centilesCDF
   , filterCDF
@@ -38,11 +38,14 @@ module Data.CDF
   , indexCDF
   , CDFIx (..)
   , KnownCDF (..)
+  , CDFList
   , liftCDFVal
   , unliftCDFVal
   , unliftCDFValExtra
+  , arity
   , cdfArity
   , cdfArity'
+  , arityProj
   , mapCDFCentiles
   , Combine (..)
   , stdCombine1
@@ -147,6 +150,8 @@ instance Divisible NominalDiffTime where
   divide x by = x / secondsToNominalDiffTime by
   fromDouble = secondsToNominalDiffTime
 
+deriving newtype instance Divisible RUTCTime
+
 weightedAverage :: forall b. (Divisible b) => [(Int, b)] -> b
 weightedAverage xs =
   (`divide` (fromIntegral . sum $ fst <$> xs)) . sum $
@@ -162,25 +167,12 @@ data CDF p a =
   CDF
   { cdfSize      :: Int
   , cdfAverage   :: p Double
+  , cdfMedian    :: a
   , cdfStddev    :: Double
   , cdfRange     :: Interval a
   , cdfSamples   :: [(Centile, p a)]
   }
   deriving (Functor, Generic)
-
-cdfRatioCDF :: forall a. Fractional a => CDF I a -> CDF I a -> CDF I a
-cdfRatioCDF x y =
-  CDF
-  { cdfSize    = cdfSize x
-  , cdfAverage = I $ ((/) `on` unI . cdfAverage) x y
-  , cdfStddev  = cdfStddev x * cdfStddev y
-  , cdfRange   = Interval (((/) `on` low . cdfRange) x y) (((/) `on` high . cdfRange) x y)
-  , cdfSamples =  (zipWith divCentile `on` cdfSamples) x y
-  }
-  where divCentile :: (Centile, I a) -> (Centile, I a) -> (Centile, I a)
-        divCentile (cx, I x') (cy, I y') =
-          if cx == cy then (cx, I $ x' / y')
-          else error "Centile incoherency: %s vs %s" (show cx) (show cy)
 
 deriving instance (Eq     a, Eq     (p a), Eq     (p Double)) => Eq     (CDF p a)
 deriving instance (Show   a, Show   (p a), Show   (p Double)) => Show   (CDF p a)
@@ -225,6 +217,7 @@ zeroCDF =
   CDF
   { cdfSize    = 0
   , cdfAverage = liftCDFVal 0 cdfIx
+  , cdfMedian  = 0
   , cdfStddev  = 0
   , cdfRange   = Interval 0 0
   , cdfSamples = mempty
@@ -236,6 +229,7 @@ cdf centiles (sort -> sorted) =
   CDF
   { cdfSize        = size
   , cdfAverage     = I . fromDouble $ Stat.mean doubleVec
+  , cdfMedian      = vecCentile vec size (Centile 0.5)
   , cdfStddev      = Stat.stdDev doubleVec
   , cdfRange       = Interval mini maxi
   , cdfSamples =
@@ -253,8 +247,20 @@ cdf centiles (sort -> sorted) =
          then (0,           0)
          else (vec Vec.! 0, Vec.last vec)
 
--- * Singletons
+cdfZ :: forall a. Divisible a => [Centile] -> [a] -> CDF I a
+cdfZ cs [] = zeroCDF { cdfSamples = fmap (,I 0) cs }
+cdfZ cs xs = cdf cs xs
+
+-- * Arity dispatch
 --
+-- Dealing with polymorphism over:
+--  - I
+--  - CDF I
+--  - CDF (CDF I)
+--
+-- This toolkit isn't exhaustive, only covering what's actually used.
+type CDF2 a = CDF (CDF I) a
+
 data CDFIx p where
   CDFI :: CDFIx I
   CDF2 :: CDFIx (CDF I)
@@ -265,11 +271,16 @@ class KnownCDF a where
 instance KnownCDF      I  where cdfIx = CDFI
 instance KnownCDF (CDF I) where cdfIx = CDF2
 
+type family CDFList (f :: Type -> Type) (t :: Type) :: Type where
+  CDFList I       t = t
+  CDFList (CDF I) t = [t]
+
 liftCDFVal :: forall a p. Real a => a -> CDFIx p -> p a
 liftCDFVal x = \case
   CDFI -> I x
   CDF2 -> CDF { cdfSize    = 1
               , cdfAverage = I $ toDouble x
+              , cdfMedian  = x
               , cdfStddev  = 0
               , cdfRange   = point x
               , cdfSamples = []
@@ -277,7 +288,7 @@ liftCDFVal x = \case
 
 unliftCDFVal :: forall a p. Divisible a => CDFIx p -> p a -> a
 unliftCDFVal CDFI (I x) = x
-unliftCDFVal CDF2 CDF{cdfAverage=I cdfAverage} = (1 :: a) `divide` (1 / toDouble cdfAverage)
+unliftCDFVal CDF2 CDF{cdfMedian} = (1 :: a) `divide` (1 / toDouble cdfMedian)
 
 unliftCDFValExtra :: forall a p. Divisible a => CDFIx p -> p a -> [a]
 unliftCDFValExtra CDFI (I x) = [x]
@@ -290,11 +301,17 @@ unliftCDFValExtra i@CDF2 c@CDF{cdfRange=Interval mi ma, ..} = [ mean
  where mean   = unliftCDFVal i c
        stddev = (1 :: a) `divide` (1 / cdfStddev)
 
-cdfArity :: forall p a b. KnownCDF p => (CDF I a -> b) -> (CDF (CDF I) a -> b) -> CDF p a -> b
-cdfArity fi fcdf x =
+arity :: forall p a b. KnownCDF p => (I a -> b) -> (CDF I a -> b) -> p a -> b
+arity fi fcdf x =
   case cdfIx @p of
     CDFI -> fi   x
     CDF2 -> fcdf x
+
+cdfArity :: forall p a b. KnownCDF p => (CDF I a -> b) -> (CDF (CDF I) a -> b) -> CDF p a -> b
+cdfArity fcdf fcdf2 x =
+  case cdfIx @p of
+    CDFI -> fcdf  x
+    CDF2 -> fcdf2 x
 
 cdfArity' :: forall p a. KnownCDF p => (CDF I a -> I a) -> (CDF (CDF I) a -> CDF I a) -> CDF p a -> p a
 cdfArity' fi fcdf x =
@@ -305,7 +322,8 @@ cdfArity' fi fcdf x =
 mapCDFCentiles :: (Centile -> p a -> b) -> CDF p a -> [b]
 mapCDFCentiles f CDF{..} = fmap (uncurry f) cdfSamples
 
-type CDF2 a = CDF (CDF I) a
+arityProj :: forall p a. KnownCDF p => (CDF I a -> a) -> p a -> a
+arityProj f = arity unI f
 
 data CDFError
   = CDFIncoherentSamplingLengths  [Int]
@@ -346,6 +364,7 @@ collapseCDF avg c =
   CDF
   { cdfSize    = cdfSize c
   , cdfAverage = I $ cdfAverageVal c
+  , cdfMedian  = avg [cdfMedian c]
   , cdfRange   = cdfRange c
                  & low &&& high
                  & both (avg . (:[]))
@@ -359,8 +378,11 @@ collapseCDF avg c =
                       . cdfSamples . snd) -- :: [(Centile a)]
   }
 
+listMedian :: Ord a => [a] -> a
+listMedian ms = sort ms !! div (length ms) 2
+
 -- | Collapse basic CDFs.
-collapseCDFs :: forall a. Combine I a -> [CDF I a] -> Either CDFError (CDF I a)
+collapseCDFs :: forall a. Ord a => Combine I a -> [CDF I a] -> Either CDFError (CDF I a)
 collapseCDFs _ [] = Left CDFEmptyDataset
 collapseCDFs Combine{..} xs = do
   unless (all (head lengths ==) lengths) $
@@ -370,6 +392,7 @@ collapseCDFs Combine{..} xs = do
   pure CDF
     { cdfSize    = sum sizes
     , cdfAverage = I . fromDouble . cWeightedAverages $ zip sizes avgs
+    , cdfMedian  = listMedian $ xs <&> cdfMedian
     , cdfRange   = xs <&> cdfRange   & cRanges
     , cdfStddev  = xs <&> cdfStddev  & cStddevs
     , cdfSamples = coherent <&>
@@ -395,7 +418,7 @@ collapseCDFs Combine{..} xs = do
 -- | Polymorphic, but practically speaking, intended for either:
 --    1. given a ([I]     -> CDF I) function, and a list of (CDF I),       produce a CDF (CDF I), or
 --    2. given a ([CDF I] -> CDF I) function, and a list of (CDF (CDF I)), produce a CDF (CDF I)
-cdf2OfCDFs :: forall a p. (KnownCDF p)
+cdf2OfCDFs :: forall a p. (KnownCDF p, Ord a)
            => Combine p a -> [CDF p a] -> Either CDFError (CDF (CDF I) a)
 cdf2OfCDFs _ [] = Left CDFEmptyDataset
 cdf2OfCDFs Combine{..} xs = do
@@ -412,6 +435,7 @@ cdf2OfCDFs Combine{..} xs = do
     , cdfRange   = xs <&> cdfRange   & cRanges
     , cdfStddev  = xs <&> cdfStddev  & cStddevs
     , cdfAverage = cdf (nEquicentiles nCDFs) averages -- XXX: unweighted
+    , cdfMedian  = listMedian $ xs <&> cdfMedian
     , ..
     }
  where

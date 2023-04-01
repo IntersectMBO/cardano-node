@@ -20,13 +20,12 @@
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
 module Cardano.Benchmarking.Tracer
-  ( initTracers
-  , initDefaultTracers
-  , initNullTracers
+  ( initNullTracers
+  , initTxGenTracers
   )
 where
 
-import           "contra-tracer" Control.Tracer (Tracer (..))
+import           "contra-tracer" Control.Tracer (Tracer (..), nullTracer)
 import           GHC.Generics
 
 import           Data.Aeson as A
@@ -34,6 +33,9 @@ import qualified Data.Aeson.KeyMap as KeyMap
 import           Data.Kind
 import qualified Data.Map.Strict as Map
 
+import           Control.Monad (forM, guard)
+import           Data.List (find)
+import           Data.Maybe (fromMaybe)
 import           Data.Proxy
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -68,94 +70,96 @@ generatorTracer tracerName mbTrStdout mbTrForward = do
   tr'  <- withDetailsFromConfig tr
   pure $ withInnerNames $ appendPrefixName tracerName tr'
 
-
 initNullTracers :: BenchTracers
 initNullTracers = BenchTracers
-    { btTxSubmit_    = Tracer ignore
-    , btConnect_     = Tracer ignore
-    , btSubmission2_ = Tracer ignore
-    , btN2N_         = Tracer ignore
-    }
-  where ignore _ = return ()
-
-initDefaultTracers :: IO BenchTracers
-initDefaultTracers = do
-  mbStdoutTracer <- fmap Just standardTracer
-  let mbForwardingTracer = Nothing
-  confState       <- emptyConfigReflection
-  benchTracer <-  generatorTracer "benchmark" mbStdoutTracer mbForwardingTracer
-  configureTracers confState initialTraceConfig [benchTracer]
-  n2nSubmitTracer <- generatorTracer "submitN2N" mbStdoutTracer mbForwardingTracer
-  configureTracers confState initialTraceConfig [n2nSubmitTracer]
-  connectTracer <- generatorTracer "connect" mbStdoutTracer mbForwardingTracer
-  configureTracers confState initialTraceConfig [connectTracer]
-  submitTracer <- generatorTracer "submit" mbStdoutTracer mbForwardingTracer
-  configureTracers confState initialTraceConfig [submitTracer]
-
-  return $ BenchTracers
-    { btTxSubmit_    = Tracer (traceWith benchTracer)
-    , btConnect_     = Tracer (traceWith connectTracer)
-    , btSubmission2_ = Tracer (traceWith submitTracer)
-    , btN2N_         = Tracer (traceWith n2nSubmitTracer)
+    { btTxSubmit_    = nullTracer
+    , btConnect_     = nullTracer
+    , btSubmission2_ = nullTracer
+    , btN2N_         = nullTracer
     }
 
-
-initTracers ::
-     IOManager
-  -> NetworkId
-  -> FilePath
-  -> IO BenchTracers
-initTracers iomgr networkId tracerSocket = do
-  (forwardingTracer :: Trace IO FormattedMessage, dpTracer :: Trace IO DataPoint) <- do
-          (forwardSink :: ForwardSink TraceObject, dpStore) <- initForwarding iomgr initialTraceConfig (toNetworkMagic networkId)
-                                                                 Nothing $ Just (tracerSocket, Initiator)
-          pure (forwardTracer forwardSink, dataPointTracer dpStore)
+-- if the first argument isJust, we assume we have a socket path
+-- and want to use trace-dispatcher, so we'll create a forwarding tracer
+initTxGenTracers :: Maybe (IOManager, NetworkId, FilePath) -> IO BenchTracers
+initTxGenTracers mbForwarding = do
   mbStdoutTracer <- fmap Just standardTracer
-  let mbForwardingTracer = Just forwardingTracer
+  mbForwardingTracer <- prepareForwardingTracer
   confState       <- emptyConfigReflection
-  benchTracer <-  generatorTracer "benchmark" mbStdoutTracer mbForwardingTracer
-  configureTracers confState initialTraceConfig [benchTracer]
-  n2nSubmitTracer <- generatorTracer "submitN2N" mbStdoutTracer mbForwardingTracer
-  configureTracers confState initialTraceConfig [n2nSubmitTracer]
-  connectTracer <- generatorTracer "connect" mbStdoutTracer mbForwardingTracer
-  configureTracers confState initialTraceConfig [connectTracer]
-  submitTracer <- generatorTracer "submit" mbStdoutTracer mbForwardingTracer
-  configureTracers confState initialTraceConfig [submitTracer]
-  -- Now we need to provide "Nodeinfo" DataPoint, to forward generator's name
-  -- to the acceptor application (for example, 'cardano-tracer').
-  nodeInfoTracer <- mkDataPointTracer dpTracer
-  prepareGenInfo >>= traceWith nodeInfoTracer
 
-  traceWith benchTracer $ TraceTxGeneratorVersion Version.txGeneratorVersion
---  traceWith st $ show $ TraceTxGeneratorVersion Version.txGeneratorVersion
+  let
+    mkTracer :: (LogFormatting a, MetaTrace a) => Text -> IO (Tracer IO a)
+    mkTracer namespace
+      | isPrefixSilent namespace = pure nullTracer
+      | otherwise = do
+        tracer <-  generatorTracer namespace mbStdoutTracer mbForwardingTracer
+        configureTracers confState initialTraceConfig [tracer]
+        pure $ Tracer (traceWith tracer)
+
+  benchTracer@(Tracer traceBench) <- mkTracer "benchmark"
+  n2nSubmitTracer <- mkTracer "submitN2N"
+  connectTracer <- mkTracer "connect"
+  submitTracer <- mkTracer "submit"
+
+  traceBench $ TraceTxGeneratorVersion Version.txGeneratorVersion
+
   return $ BenchTracers
-    { btTxSubmit_    = Tracer (traceWith benchTracer)
-    , btConnect_     = Tracer (traceWith connectTracer)
-    , btSubmission2_ = Tracer (traceWith submitTracer)
-    , btN2N_         = Tracer (traceWith n2nSubmitTracer)
+    { btTxSubmit_    = benchTracer
+    , btConnect_     = connectTracer
+    , btSubmission2_ = submitTracer
+    , btN2N_         = n2nSubmitTracer
     }
  where
-  prepareGenInfo = do
-    now <- getCurrentTime
-    return $ NodeInfo
-      { niName            = "TxGenerator"
-      , niProtocol        = "N/A"
-      , niVersion         = _compilerVersion
-      , niCommit          = _gitRev
-      , niStartTime       = now
-      , niSystemStartTime = now
-      }
-  Version{_compilerVersion, _gitRev} = Version.txGeneratorVersion
+  prepareForwardingTracer :: IO (Maybe (Trace IO FormattedMessage))
+  prepareForwardingTracer = forM mbForwarding $
+    \(iomgr, networkId, tracerSocket) -> do
+        (forwardSink :: ForwardSink TraceObject, dpStore) <-
+          initForwarding iomgr initialTraceConfig (toNetworkMagic networkId) Nothing $ Just (tracerSocket, Initiator)
+
+        -- we need to provide NodeInfo DataPoint, to forward generator's name
+        -- to the acceptor application (for example, 'cardano-tracer').
+        let
+          dpt :: Trace IO DataPoint
+          dpt = dataPointTracer dpStore
+        nodeInfoTracer <- mkDataPointTracer dpt
+        prepareGenInfo >>= traceWith nodeInfoTracer
+
+        pure $ forwardTracer forwardSink
+
+  prepareGenInfo :: IO NodeInfo
+  prepareGenInfo =
+    let Version{_compilerVersion, _gitRev} = Version.txGeneratorVersion
+    in do
+      now <- getCurrentTime
+      return $ NodeInfo
+        { niName            = "TxGenerator"
+        , niProtocol        = "N/A"
+        , niVersion         = _compilerVersion
+        , niCommit          = _gitRev
+        , niStartTime       = now
+        , niSystemStartTime = now
+        }
+
+isPrefixSilent :: Text -> Bool
+isPrefixSilent namespace =
+  fromMaybe False $ do
+    guard $ not $ Text.null namespace
+    prefix <- find (any (namespace `Text.isPrefixOf`)) (Map.keys opts)
+    conf <- prefix `Map.lookup` opts
+    pure $ configSilent `elem` conf
+  where
+    TraceConfig{tcOptions = opts} = initialTraceConfig
+
+configSilent :: ConfigOption
+configSilent = ConfSeverity (SeverityF Nothing)
 
 initialTraceConfig :: TraceConfig
 initialTraceConfig = TraceConfig {
       tcOptions = Map.fromList
-          [ ([], [ConfSeverity (SeverityF Nothing)])
-          , initConf "benchmark"
-          , initConf "submitN2N"
-          , initConf "connect"
-          , initConf "submit"
-          , (["llSubmit"], [ConfDetail DMinimal])
+          [ ([], [configSilent])
+          , setMaxDetail "benchmark"
+          , (["submitN2N"], [configSilent])
+          , setMaxDetail "connect"
+          , setMaxDetail "submit"
           ]
     , tcForwarder = defaultForwarder
     , tcNodeName = Nothing
@@ -163,8 +167,8 @@ initialTraceConfig = TraceConfig {
     , tcResourceFrequency = Just 1000 -- Every second
     }
   where
-    initConf :: Text -> ([Text], [ConfigOption])
-    initConf tr = ([tr], [ConfDetail DMaximum])
+    setMaxDetail :: Text -> ([Text], [ConfigOption])
+    setMaxDetail tr = ([tr], [ConfDetail DMaximum])
 
 genericName :: (ConstructorName f, Generic a, Rep a ~ D1 c f) => a -> Text
 genericName x = Text.pack $ constructorName $ unM1 $ from x

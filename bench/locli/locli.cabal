@@ -138,6 +138,7 @@ library
                       , unordered-containers
                       , utf8-string
                       , vector
+                      , witherable
                       , cardano-strict-containers ^>= 0.1
 
 executable locli

@@ -35,8 +35,6 @@ import           Cardano.Logging.Resources.Types
 import           Cardano.Analysis.API.Ground
 import           Cardano.Util
 
-import           Data.Accum (zeroUTCTime)
-
 
 type Text = ShortText
 
