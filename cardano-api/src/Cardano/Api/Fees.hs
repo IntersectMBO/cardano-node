@@ -799,11 +799,6 @@ data TxBodyErrorAutoBalance =
        -- | One or more of the scripts were expected to fail validation, but none did.
      | TxBodyScriptBadScriptValidity
 
-       -- | The balance of the non-ada assets is not zero. The 'Value' here is
-       -- that residual non-zero balance. The 'makeTransactionBodyAutoBalance'
-       -- function only automatically balances ada, not other assets.
-     | TxBodyErrorAssetBalanceWrong Value
-
        -- | There is not enough ada to cover both the outputs and the fees.
        -- The transaction should be changed to provide more input ada, or
        -- otherwise adjusted to need less (e.g. outputs, script etc).
@@ -861,13 +856,6 @@ instance Error TxBodyErrorAutoBalance where
 
   displayError TxBodyScriptBadScriptValidity =
       "One or more of the scripts were expected to fail validation, but none did."
-
-  displayError (TxBodyErrorAssetBalanceWrong _value) =
-      "The transaction does not correctly balance in its non-ada assets. "
-   ++ "The balance between inputs and outputs should sum to zero. "
-   ++ "The actual balance is: "
-   ++ "TODO: move the Value renderer and parser from the CLI into the API and use them here"
-   -- TODO: do this ^^
 
   displayError (TxBodyErrorAdaBalanceNegative lovelace) =
       "The transaction does not balance in its use of ada. The net balance "
@@ -1005,13 +993,30 @@ makeTransactionBodyAutoBalance systemstart history pparams
     -- output and fee. Yes this means this current code will only work for
     -- final fee of less than around 4000 ada (2^32-1 lovelace) and change output
     -- of less than around 18 trillion ada  (2^64-1 lovelace).
+    -- However, since at this point we know how much non-Ada change to give
+    -- we can use the true values for that.
+
+    let outgoingNonAda = mconcat [filterValue isNotAda v | (TxOut _ (TxOutValue _ v) _ _) <- txOuts txbodycontent]
+    let incomingNonAda = mconcat [filterValue isNotAda v | (TxOut _ (TxOutValue _ v) _ _) <- Map.elems $ unUTxO utxo]
+    let mintedNonAda = case txMintValue txbodycontent1 of
+          TxMintNone -> mempty
+          TxMintValue _ v _ -> v
+    let nonAdaChange = mconcat
+          [ incomingNonAda
+          , mintedNonAda
+          , negateValue outgoingNonAda
+          ]
+
+    let changeTxOut = case multiAssetSupportedInEra cardanoEra of
+          Left _ -> lovelaceToTxOutValue $ Lovelace (2^(64 :: Integer)) - 1
+          Right multiAsset -> TxOutValue multiAsset (lovelaceToValue (Lovelace (2^(64 :: Integer)) - 1) <> nonAdaChange)
 
     let (dummyCollRet, dummyTotColl) = maybeDummyTotalCollAndCollReturnOutput txbodycontent changeaddr
     txbody1 <- first TxBodyError $ -- TODO: impossible to fail now
                createAndValidateTransactionBody txbodycontent1 {
                  txFee  = TxFeeExplicit explicitTxFees $ Lovelace (2^(32 :: Integer) - 1),
                  txOuts = TxOut changeaddr
-                                (lovelaceToTxOutValue $ Lovelace (2^(64 :: Integer)) - 1)
+                                changeTxOut
                                 TxOutDatumNone ReferenceScriptNone
                         : txOuts txbodycontent,
                  txReturnCollateral = dummyCollRet,
@@ -1043,13 +1048,7 @@ makeTransactionBodyAutoBalance systemstart history pparams
 
     -- check if the balance is positive or negative
     -- in one case we can produce change, in the other the inputs are insufficient
-    case balance of
-      TxOutAdaOnly _ _ -> balanceCheck balance
-      TxOutValue _ v   ->
-        case valueToLovelace v of
-          Nothing -> Left $ TxBodyErrorNonAdaAssetsUnbalanced v
-          Just _ -> balanceCheck balance
-
+    balanceCheck balance
 
     --TODO: we could add the extra fee for the CBOR encoding of the change,
     -- now that we know the magnitude of the change: i.e. 1-8 bytes extra.
@@ -1177,7 +1176,7 @@ makeTransactionBodyAutoBalance systemstart history pparams
 
    balanceCheck :: TxOutValue era -> Either TxBodyErrorAutoBalance ()
    balanceCheck balance
-    | txOutValueToLovelace balance == 0 = return ()
+    | txOutValueToLovelace balance == 0 && onlyAda (txOutValueToValue balance) = return ()
     | txOutValueToLovelace balance < 0 =
         Left . TxBodyErrorAdaBalanceNegative $ txOutValueToLovelace balance
     | otherwise =
@@ -1186,6 +1185,13 @@ makeTransactionBodyAutoBalance systemstart history pparams
             Left $ TxBodyErrorAdaBalanceTooSmall txOutAny minUTxO (txOutValueToLovelace balance)
           Left err -> Left err
           Right _ -> Right ()
+
+   isNotAda :: AssetId -> Bool
+   isNotAda AdaAssetId = False
+   isNotAda _ = True
+
+   onlyAda :: Value -> Bool
+   onlyAda = null . valueToList . filterValue isNotAda
 
    checkMinUTxOValue
      :: TxOut CtxTx era
