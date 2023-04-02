@@ -663,7 +663,7 @@ if [ "$1" = "alonzo" ]; then
   echo "TestAllegraHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
   echo "TestMaryHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
   echo "TestAlonzoHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
-  echo "TestEnableDevelopmentHardForkEras: True" >> ${ROOT}/configuration.yaml
+  echo "ExperimentalHardForksEnabled: True" >> ${ROOT}/configuration.yaml
   echo "TestEnableDevelopmentNetworkProtocols: True" >> ${ROOT}/configuration.yaml
 
   $SED -i ${ROOT}/configuration.yaml \

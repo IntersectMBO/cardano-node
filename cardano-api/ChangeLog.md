@@ -4,6 +4,8 @@
 
 ### Features
 
+- Rename TestEnableDevelopmentHardForkEras to ExperimentalHardForksEnabled ([PR 4341](https://github.com/input-output-hk/cardano-node/pull/4341))
+
 - Append, not prepend change output when balancing a transaction ([PR 4343](https://github.com/input-output-hk/cardano-node/pull/4343))
 
 - Expose convenience functions `executeQueryCardanoMode`, `determineEra`, `constructBalancedTx` and `queryStateForBalancedTx` ([PR 4446](https://github.com/input-output-hk/cardano-node/pull/4446))
