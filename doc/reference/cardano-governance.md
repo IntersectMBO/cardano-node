@@ -140,7 +140,7 @@ The procedure is as follows:
 
   * if a **quorum** is reached **earlier** than **6k/f** slots before the end epoch, the proposal is set to be adopted at the transition to Epoch N+1.
 
-  * if a **quorum** if achieved **later** than **6k/f** slots before the end of the epoch, the adoption is delayed one epoch, to the transition to Epoch N+2
+  * if a **quorum** is achieved **later** than **6k/f** slots before the end of the epoch, the adoption is delayed one epoch, to the transition to Epoch N+2
 
 4. **Update**: The update is applied at the corresponding epoch transition.
 
