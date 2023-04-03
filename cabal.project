@@ -194,8 +194,16 @@ source-repository-package
     cardano-crypto-class
     cardano-crypto-praos
     cardano-crypto-tests
-    cardano-slotting
     cardano-strict-containers
     heapwords
     measures
     orphans-deriving-via
+
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-base
+  tag: 70a7f0230aaeb23f97069168382383802b5ecfa3
+  --sha256: 1zg023b2sqkpbzd3wd509dvn1yxv8145lj2hca4mm6m509lmki3g
+  subdir:
+    cardano-slotting
