@@ -77,27 +77,43 @@ jobs:
         mkdir ./haddocks
         DRY_RUN=1 ./scripts/haddocs.sh ./haddocks true
 
+    # For users who fork cardano-node and want to define a writable cache, then can set up their own
+    # S3 bucket then define in their forked repository settings the following secrets:
+    #
+    #   CACHE_AWS_ACCESS_KEY_ID
+    #   CACHE_AWS_SECRET_ACCESS_KEY
+    #   CACHE_URI
+    #   CACHE_AWS_REGION
     - name: Cabal cache over S3
       uses: action-works/cabal-cache-s3@v1
       env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
       with:
-        region: us-west-2
+        region: ${{ vars.CACHE_AWS_REGION }}
         dist-dir: dist-newstyle
-        store-path: ${{ steps.cabal-store.outputs.cabal-store }}
-        threads: 16
-        archive-uri: ${{ secrets.BINARY_CACHE_URI }}/${{ env.CABAL_CACHE_VERSION }}/${{ runner.os }}/${{ matrix.cabal }}/${{ matrix.ghc }}
-        skip: "${{ secrets.BINARY_CACHE_URI == '' }}"
+        store-path: ${{ steps.setup-haskell.outputs.cabal-store }}
+        threads: ${{ vars.CACHE_THREADS }}
+        archive-uri: ${{ vars.CACHE_URI }}/${{ env.CABAL_CACHE_VERSION }}/${{ runner.os }}/${{ matrix.cabal }}/${{ matrix.ghc }}
+        skip: "${{ vars.CACHE_URI == '' }}"
 
+    # It's important to ensure that people who fork this repository can not only successfully build in
+    # CI by default, but also have meaning cabal store caching.
+    #
+    # Because syncing with S3 requires credentials, we cannot rely on S3 for this. For this reason a
+    # https fallback is used. The https server mirrors the content of the S3 bucket. The https cabal
+    # store archive is read-only for security reasons.
+    #
+    # Users who fork this repository who want to have a writable cabal store archive are encouraged
+    # to set up their own S3 bucket.
     - name: Cabal cache over HTTPS
       uses: action-works/cabal-cache-s3@v1
       with:
         dist-dir: dist-newstyle
-        store-path: ${{ steps.cabal-store.outputs.cabal-store }}
+        store-path: ${{ steps.setup-haskell.outputs.cabal-store }}
         threads: 16
         archive-uri: https://iohk.cache.haskellworks.io/${{ env.CABAL_CACHE_VERSION }}/${{ runner.os }}/${{ matrix.cabal }}/${{ matrix.ghc }}
-        skip: "${{ secrets.BINARY_CACHE_URI != '' }}"
+        skip: "${{ vars.CACHE_URI != '' }}"
         enable-save: false
 
     - name: Install dependencies
