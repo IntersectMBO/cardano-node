@@ -193,7 +193,7 @@ library gen
                       , base16-bytestring
                       , bytestring
                       , cardano-api
-                      , cardano-binary ^>= 1.6
+                      , cardano-binary >= 1.6 && < 1.8
                       , cardano-crypto-class ^>= 2.1
                       , cardano-crypto-test ^>= 1.5
                       , cardano-ledger-alonzo ^>= 1.1

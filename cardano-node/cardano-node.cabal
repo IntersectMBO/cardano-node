@@ -150,7 +150,7 @@ library
                       , cardano-ledger-shelley
                       , cardano-prelude
                       , cardano-protocol-tpraos ^>= 1.0
-                      , cardano-slotting ^>= 0.1
+                      , cardano-slotting >= 0.1.1 && < 0.2
                       , cborg ^>= 0.2.4
                       , contra-tracer
                       , containers
