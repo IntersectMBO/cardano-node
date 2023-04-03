@@ -20,8 +20,7 @@ import qualified Cardano.Protocol.TPraos.API as Ledger
 import           Cardano.Protocol.TPraos.BHeader (HashHeader (..))
 import qualified Cardano.Protocol.TPraos.Rules.Prtcl as Ledger
 import qualified Cardano.Protocol.TPraos.Rules.Tickn as Ledger
-import qualified Cardano.Slotting.Slot as Cardano
-import           Data.Aeson (FromJSON (..), KeyValue ((.=)), ToJSON (..))
+import           Data.Aeson (KeyValue ((.=)), ToJSON (..))
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Short as SBS
@@ -34,7 +33,7 @@ import           Ouroboros.Consensus.Protocol.TPraos (TPraosState)
 import qualified Ouroboros.Consensus.Protocol.TPraos as Consensus
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyHash (..))
-import           Ouroboros.Network.Block (BlockNo (..), HeaderHash, Tip (..))
+import           Ouroboros.Network.Block (HeaderHash, Tip (..))
 
 instance ToJSON (OneEraHash xs) where
   toJSON = toJSON
@@ -55,9 +54,6 @@ instance ToJSON (HeaderHash blk) => ToJSON (Tip blk) where
       , "headerHash" .= headerHash
       , "blockNo"    .= blockNo
       ]
-
-deriving newtype instance ToJSON BlockNo
-deriving newtype instance FromJSON BlockNo
 
 --
 -- Simple newtype wrappers JSON conversion
@@ -86,9 +82,3 @@ instance ToJSON (PraosState StandardCrypto) where
     , "labNonce" .= Consensus.praosStateLabNonce s
     , "lastEpochBlockNonce" .= Consensus.praosStateLastEpochBlockNonce s
     ]
-
-
-instance ToJSON (Cardano.WithOrigin Cardano.SlotNo) where
-  toJSON = \case
-    Cardano.Origin -> Aeson.String "origin"
-    Cardano.At (Cardano.SlotNo n) -> toJSON n

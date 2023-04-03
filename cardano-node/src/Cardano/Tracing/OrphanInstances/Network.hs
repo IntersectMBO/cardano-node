@@ -372,9 +372,8 @@ instance HasSeverityAnnotation (WithMuxBearer peer MuxTrace) where
     MuxTraceStartEagerly _ _ -> Info
     MuxTraceStartOnDemand _ _ -> Info
     MuxTraceStartedOnDemand _ _ -> Info
+    MuxTraceShutdown -> Debug
     MuxTraceTerminating {} -> Debug
-    MuxTraceStopping -> Debug
-    MuxTraceStopped -> Debug
     MuxTraceTCPInfo {} -> Debug
 
 instance HasPrivacyAnnotation (TraceLocalRootPeers RemoteAddress exception)
@@ -457,6 +456,7 @@ instance HasSeverityAnnotation (ConnectionManagerTrace addr (ConnectionHandlerTr
       TrShutdown                              -> Info
       TrConnectionExists {}                   -> Info
       TrForbiddenConnection {}                -> Info
+      TrImpossibleConnection {}               -> Info
       TrConnectionFailure {}                  -> Info
       TrConnectionNotFound {}                 -> Debug
       TrForbiddenOperation {}                 -> Info
@@ -1899,6 +1899,11 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
       TrForbiddenConnection connId ->
         mconcat
           [ "kind" .= String "ForbiddenConnection"
+          , "connectionId" .= toJSON connId
+          ]
+      TrImpossibleConnection connId ->
+        mconcat
+          [ "kind" .= String "ImpossibleConnection"
           , "connectionId" .= toJSON connId
           ]
       TrConnectionFailure connId ->

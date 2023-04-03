@@ -760,6 +760,11 @@ instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
           [ "kind" .= String "ForbiddenConnection"
           , "connectionId" .= toJSON connId
           ]
+    forMachine _dtal (TrImpossibleConnection connId) =
+        mconcat
+          [ "kind" .= String "ImpossibleConnection"
+          , "connectionId" .= toJSON connId
+          ]
     forMachine _dtal (TrConnectionFailure connId) =
         mconcat
           [ "kind" .= String "ConnectionFailure"
@@ -877,6 +882,7 @@ instance MetaTrace (ConnectionManagerTrace addr
     namespaceFor TrShutdown {}  = Namespace [] ["Shutdown"]
     namespaceFor TrConnectionExists {}  = Namespace [] ["ConnectionExists"]
     namespaceFor TrForbiddenConnection {}  = Namespace [] ["ForbiddenConnection"]
+    namespaceFor TrImpossibleConnection {}  = Namespace [] ["ImpossibleConnection"]
     namespaceFor TrConnectionFailure {}  = Namespace [] ["ConnectionFailure"]
     namespaceFor TrConnectionNotFound {}  = Namespace [] ["ConnectionNotFound"]
     namespaceFor TrForbiddenOperation {}  = Namespace [] ["ForbiddenOperation"]
