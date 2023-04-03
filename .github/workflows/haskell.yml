@@ -162,14 +162,7 @@ jobs:
         skip: "${{ vars.CACHE_URI != '' }}"
         enable-save: false
 
-    - name: Build core components
-      run: |
-        # The tests call out to msys2 commands. We generally do not want to mix toolchains, so
-        # we are very deliberate about only adding msys64 to the path where absolutely necessary.
-        ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;{0}" -f $env:PATH)') || '' }}
-        cabal build cardano-node cardano-cli cardano-node-chairman cardano-submit-api -j1
-
-    - name: Build remaining components
+    - name: Build all
       run: |
         # The tests call out to msys2 commands. We generally do not want to mix toolchains, so
         # we are very deliberate about only adding msys64 to the path where absolutely necessary.
@@ -185,62 +178,7 @@ jobs:
         # The tests call out to msys2 commands. We generally do not want to mix toolchains, so
         # we are very deliberate about only adding msys64 to the path where absolutely necessary.
         ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;{0}" -f $env:PATH)') || '' }}
-        cabal test cardano-testnet cardano-api cardano-node cardano-node-chairman cardano-cli cardano-submit-api
-
-    - name: Tar failed tests workspaces
-      if: ${{ failure() }}
-      env:
-        TMP: ${{ runner.temp }}
-      shell: bash
-      run: |
-        cd $TMP
-        find . -name 'module' -type f -printf '%h\n' | xargs -L1 basename | sort -u | xargs tar -czvf workspaces.tgz
-
-    - name: Upload workspaces on tests failure
-      if: ${{ failure() }}
-      uses: actions/upload-artifact@v3
-      with:
-        name: failed-test-workspaces-${{ matrix.os }}-ghc${{ matrix.ghc }}-cabal${{ matrix.cabal }}.tgz
-        path: ${{ runner.temp }}/workspaces.tgz
-
-    - name: "Tar artifacts"
-      shell: bash
-      run: |
-        mkdir -p artifacts
-
-        for exe in $(cat dist-newstyle/cache/plan.json | jq -r '."install-plan"[] | select(.style == "local" and (."component-name" | startswith("exe:"))) | ."bin-file"'); do
-          if [ -f $exe ]; then
-            echo "Including artifact $exe"
-
-            ( cd artifacts
-              tar -C "$(dirname $exe)" -czf "$(basename $exe).tar.gz" "$(basename $exe)"
-            )
-          else
-            echo "Skipping artifact $exe"
-          fi
-        done
-
-    - name: Save Artifact
-      if: matrix.ghc == '8.10.7'
-      uses: actions/upload-artifact@v1
-      with:
-        name: artifacts-${{ matrix.os }}
-        path: ./artifacts
-
-    - name: Delete socket files in chairman tests in preparation for uploading artifacts
-      if: ${{ always() }}
-      shell: bash
-      run: |
-        if [ -d "${{ runner.temp }}/chairman" ]; then
-          find "${{ runner.temp }}/chairman" -type s -exec rm -f {} \;
-        fi
-
-    - uses: actions/upload-artifact@v2
-      if: ${{ always() }}
-      continue-on-error: true
-      with:
-        name: chairman-test-artifacts-${{ matrix.os }}-${{ matrix.ghc }}
-        path: ${{ runner.temp }}/chairman/
+        cabal test all
 
     # Uncomment the following back in for debugging. Remember to launch a `pwsh` from
     # the tmux session to debug `pwsh` issues. And be reminded that the `/msys2` and
@@ -294,13 +232,3 @@ jobs:
       uses: actions/download-artifact@v1
       with:
         name: artifacts-ubuntu-latest
-
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./artifacts-ubuntu-latest/cardano-submit-api.tar.gz
-        asset_name: cardano-submit-api_${{ steps.create_release_tag.outputs.TAG }}-linux.tar.gz
-        asset_content_type: application/gzip

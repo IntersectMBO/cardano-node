@@ -1,6 +1,5 @@
 # Technical writers
 README.*                                                      @Jimbo4350 @newhoggy @olgahryniuk
-cardano-cli/README.md                                         @Jimbo4350 @newhoggy @olgahryniuk
 
 # Release manager added for notification on dependency updates
 cabal.project                                                 @Jimbo4350 @newhoggy @LaurenceIO
