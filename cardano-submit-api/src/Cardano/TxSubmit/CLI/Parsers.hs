@@ -4,13 +4,14 @@ module Cardano.TxSubmit.CLI.Parsers
   ( opts
   , pTxSubmitNodeParams
   , pConfigFile
-  , pNetworkId
   , pProtocol
   , pSocketPath
   ) where
 
 import           Cardano.Api (AnyConsensusModeParams (..), ConsensusModeParams (..),
-                   EpochSlots (..), NetworkId (..), NetworkMagic (..), SocketPath (..), bounded)
+                   EpochSlots (..), SocketPath (..))
+
+import           Cardano.CLI.Parsers (pNetworkId)
 
 import           Cardano.TxSubmit.CLI.Types (ConfigFile (..), TxSubmitNodeParams (..))
 import           Cardano.TxSubmit.Rest.Parsers (pWebserverConfig)
@@ -43,28 +44,6 @@ pConfigFile = ConfigFile <$> Opt.strOption
   <>  Opt.completer (Opt.bashCompleter "file")
   <>  Opt.metavar "FILEPATH"
   )
-
--- TODO: This was ripped from `cardano-cli` because, unfortunately, it's not
--- exported. Once we export this parser from the appropriate module and update
--- our `cardano-cli` dependency, we should remove this and import the parser
--- from there.
-pNetworkId :: Parser NetworkId
-pNetworkId = pMainnet <|> fmap Testnet pTestnetMagic
-  where
-    pMainnet :: Parser NetworkId
-    pMainnet = Opt.flag' Mainnet
-      (   Opt.long "mainnet"
-      <>  Opt.help "Use the mainnet magic id."
-      )
-
-    pTestnetMagic :: Parser NetworkMagic
-    pTestnetMagic =
-      fmap NetworkMagic $ Opt.option (bounded "TESTNET_MAGIC") $ mconcat
-        [ Opt.long "testnet-magic"
-        , Opt.metavar "TESTNET_MAGIC"
-        , Opt.help "Specify a testnet magic id."
-        ]
-
 
 -- TODO: This was ripped from `cardano-cli` because, unfortunately, it's not
 -- exported. Once we export this parser from the appropriate module and update

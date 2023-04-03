@@ -57,6 +57,8 @@ import           Cardano.Api
 import           Cardano.Api.Shelley
 
 import           Cardano.Chain.Common (BlockCount (BlockCount))
+
+import           Cardano.CLI.Common.Parsers (pNetworkId)
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (PaymentVerifier (..), StakeIdentifier (..),
                    StakeVerifier (..), VerificationKeyOrFile (..), VerificationKeyOrHashOrFile (..),
@@ -2050,25 +2052,6 @@ pKesVerificationKeyFile =
         <> Opt.internal
         )
     )
-
-pNetworkId :: Parser NetworkId
-pNetworkId =
-  pMainnet <|> fmap Testnet pTestnetMagic
- where
-   pMainnet :: Parser NetworkId
-   pMainnet =
-    Opt.flag' Mainnet
-      (  Opt.long "mainnet"
-      <> Opt.help "Use the mainnet magic id."
-      )
-
-pTestnetMagic :: Parser NetworkMagic
-pTestnetMagic =
-  fmap NetworkMagic $ Opt.option (bounded "TESTNET_MAGIC") $ mconcat
-    [ Opt.long "testnet-magic"
-    , Opt.metavar "TESTNET_MAGIC"
-    , Opt.help "Specify a testnet magic id."
-    ]
 
 pTxSubmitFile :: Parser FilePath
 pTxSubmitFile =
