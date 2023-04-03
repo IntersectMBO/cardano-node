@@ -116,17 +116,17 @@ source-repository-package
   tag: 7f6afd7ba652bd20d5aaf31a9450dddda7e2f0bd
   --sha256: 0wlvgiiyqp14xd7d49h9709dg2dv7wk1b44kbdy596mg8g3v93nw
   subdir:
-    monoidal-synchronisation
-    network-mux
+    -- monoidal-synchronisation
+    -- network-mux
     ouroboros-consensus
     ouroboros-consensus-byron
     ouroboros-consensus-cardano
     ouroboros-consensus-protocol
     ouroboros-consensus-shelley
-    ouroboros-network
-    ouroboros-network-framework
-    ouroboros-network-testing
-    ouroboros-network-protocols
+    -- ouroboros-network
+    -- ouroboros-network-framework
+    -- ouroboros-network-testing
+    -- ouroboros-network-protocols
     ouroboros-consensus-cardano-tools
     ouroboros-consensus-diffusion
 
@@ -181,3 +181,21 @@ source-repository-package
     libs/small-steps
     libs/small-steps-test
     libs/vector-map
+
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-base
+  tag: f954aec4fbe11ba96729ddcc5e22c13ab6320b5d
+  --sha256: 0n3w1k30ivdppyidyws9riy1qyx4881gxw8v1v34sixbraj0ng5k
+  subdir:
+    base-deriving-via
+    cardano-binary
+    cardano-crypto-class
+    cardano-crypto-praos
+    cardano-crypto-tests
+    cardano-slotting
+    cardano-strict-containers
+    heapwords
+    measures
+    orphans-deriving-via
