@@ -6,11 +6,12 @@
 module Cardano.CLI.Parsers
   ( opts
   , pref
+  , pConsensusModeParams
   , pNetworkId
   ) where
 
 import           Cardano.CLI.Byron.Parsers (backwardsCompatibilityCommands, parseByronCommands)
-import           Cardano.CLI.Common.Parsers (pNetworkId)
+import           Cardano.CLI.Common.Parsers (pConsensusModeParams, pNetworkId)
 import           Cardano.CLI.Ping (parsePingCmd)
 import           Cardano.CLI.Render (customRenderHelp)
 import           Cardano.CLI.Run (ClientCommand (..))

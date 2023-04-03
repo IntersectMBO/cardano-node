@@ -4,20 +4,17 @@ module Cardano.TxSubmit.CLI.Parsers
   ( opts
   , pTxSubmitNodeParams
   , pConfigFile
-  , pProtocol
   , pSocketPath
   ) where
 
-import           Cardano.Api (AnyConsensusModeParams (..), ConsensusModeParams (..),
-                   EpochSlots (..), SocketPath (..))
+import           Cardano.Api (SocketPath (..))
 
-import           Cardano.CLI.Parsers (pNetworkId)
+import           Cardano.CLI.Parsers (pConsensusModeParams, pNetworkId)
 
 import           Cardano.TxSubmit.CLI.Types (ConfigFile (..), TxSubmitNodeParams (..))
 import           Cardano.TxSubmit.Rest.Parsers (pWebserverConfig)
 
-import           Control.Applicative (Alternative (..), (<**>))
-import           Data.Word (Word64)
+import           Control.Applicative ((<**>))
 import           Options.Applicative (Parser, ParserInfo)
 
 import qualified Options.Applicative as Opt
@@ -31,7 +28,7 @@ opts = Opt.info (pTxSubmitNodeParams <**> Opt.helper)
 pTxSubmitNodeParams :: Parser TxSubmitNodeParams
 pTxSubmitNodeParams = TxSubmitNodeParams
   <$> pConfigFile
-  <*> pProtocol
+  <*> pConsensusModeParams
   <*> pNetworkId
   <*> pSocketPath
   <*> pWebserverConfig 8090
@@ -44,54 +41,6 @@ pConfigFile = ConfigFile <$> Opt.strOption
   <>  Opt.completer (Opt.bashCompleter "file")
   <>  Opt.metavar "FILEPATH"
   )
-
--- TODO: This was ripped from `cardano-cli` because, unfortunately, it's not
--- exported. Once we export this parser from the appropriate module and update
--- our `cardano-cli` dependency, we should remove this and import the parser
--- from there.
-pProtocol :: Parser AnyConsensusModeParams
-pProtocol =
-      ( Opt.flag' ()
-        (   Opt.long "shelley-mode"
-        <>  Opt.help "For talking to a node running in Shelley-only mode."
-        )
-        *> pShelley
-      )
-  <|> ( Opt.flag' ()
-        (   Opt.long "byron-mode"
-        <>  Opt.help "For talking to a node running in Byron-only mode."
-        )
-        *> pByron
-      )
-  <|> ( Opt.flag' ()
-        (   Opt.long "cardano-mode"
-        <>  Opt.help "For talking to a node running in full Cardano mode (default)."
-        )
-        *> pCardano
-      )
-  <|> -- Default to the Cardano protocol.
-      pure (AnyConsensusModeParams (CardanoModeParams (EpochSlots defaultByronEpochSlots)))
-  where
-    pByron :: Parser AnyConsensusModeParams
-    pByron = AnyConsensusModeParams . ByronModeParams <$> pEpochSlots
-
-    pShelley :: Parser AnyConsensusModeParams
-    pShelley = pure (AnyConsensusModeParams ShelleyModeParams)
-
-    pCardano :: Parser AnyConsensusModeParams
-    pCardano = AnyConsensusModeParams . CardanoModeParams <$> pEpochSlots
-
-    pEpochSlots :: Parser EpochSlots
-    pEpochSlots = EpochSlots <$> Opt.option Opt.auto
-      (   Opt.long "epoch-slots"
-      <>  Opt.metavar "NATURAL"
-      <>  Opt.help "The number of slots per epoch for the Byron era."
-      <>  Opt.value defaultByronEpochSlots -- Default to the mainnet value.
-      <>  Opt.showDefault
-      )
-
-    defaultByronEpochSlots :: Word64
-    defaultByronEpochSlots = 21600
 
 pSocketPath :: Parser SocketPath
 pSocketPath = SocketPath <$> Opt.strOption
