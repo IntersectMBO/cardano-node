@@ -101,7 +101,7 @@ instance ConvertTxId ByronBlock where
 
 instance ConvertTxId (ShelleyBlock protocol c) where
   txIdToRawBytes (ShelleyTxId txId) =
-    Crypto.hashToBytes . Ledger.extractHash . Ledger._unTxId $ txId
+    Crypto.hashToBytes . Ledger.extractHash . Ledger.unTxId $ txId
 
 instance All ConvertTxId xs
       => ConvertTxId (HardForkBlock xs) where

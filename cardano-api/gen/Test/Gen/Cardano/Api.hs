@@ -8,8 +8,6 @@ module Test.Gen.Cardano.Api
   , genAlonzoGenesis
   ) where
 
-import           Cardano.Api.Shelley as Api
-
 import qualified Data.Map.Strict as Map
 import           Data.Word (Word64)
 
@@ -63,9 +61,6 @@ genPrice = do
     Nothing -> fail "genPrice: genRational should give us a bounded rational"
     Just p -> pure p
 
-genLanguage :: Gen Alonzo.Language
-genLanguage = return Alonzo.PlutusV1
-
 genPrices :: Gen Alonzo.Prices
 genPrices = do
   prMem'   <- genPrice
@@ -87,15 +82,11 @@ genExUnits = do
 
 genCostModels :: Gen Alonzo.CostModels
 genCostModels = do
-  CostModel cModel <- genCostModel
-  lang <- genLanguage
-  case Alonzo.mkCostModel lang cModel of
-    Left err -> error $ "genCostModels: " <> show err
-    Right alonzoCostModel ->
-      Alonzo.CostModels
-        <$> (conv <$> Gen.list (Range.linear 1 3) (return alonzoCostModel))
-        <*> pure mempty
-        <*> pure mempty
+  alonzoCostModel <- genCostModel
+  Alonzo.CostModels
+    <$> (conv <$> Gen.list (Range.linear 1 3) (return alonzoCostModel))
+    <*> pure mempty
+    <*> pure mempty
  where
   conv :: [Alonzo.CostModel] -> Map.Map Alonzo.Language Alonzo.CostModel
   conv [] = mempty

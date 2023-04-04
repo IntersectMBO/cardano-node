@@ -79,7 +79,7 @@ import           Data.Either.Combinators (maybeToRight)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (isJust)
-import           Data.Maybe.Strict (StrictMaybe(..))
+import           Data.Maybe.Strict (StrictMaybe (..))
 import           Data.String (IsString)
 import           GHC.Generics
 import           Lens.Micro
@@ -323,7 +323,7 @@ instance FromJSON ProtocolParameters where
         <*> o .: "monetaryExpansion"
         <*> o .: "treasuryCut"
         <*> o .:? "utxoCostPerWord"
-        <*> o .:? "costModels" .!= Map.empty
+        <*> (fmap unCostModels <$> o .:? "costModels") .!= Map.empty
         <*> o .:? "executionUnitPrices"
         <*> o .:? "maxTxExecutionUnits"
         <*> o .:? "maxBlockExecutionUnits"
@@ -355,7 +355,7 @@ instance ToJSON ProtocolParameters where
       , "txFeePerByte"        .= protocolParamTxFeePerByte
       -- Alonzo era:
       , "utxoCostPerWord"        .= protocolParamUTxOCostPerWord
-      , "costModels"             .= protocolParamCostModels
+      , "costModels"             .= CostModels protocolParamCostModels
       , "executionUnitPrices"    .= protocolParamPrices
       , "maxTxExecutionUnits"    .= protocolParamMaxTxExUnits
       , "maxBlockExecutionUnits" .= protocolParamMaxBlockExUnits
@@ -776,8 +776,19 @@ fromAlonzoPrices Alonzo.Prices{Alonzo.prSteps, Alonzo.prMem} =
 
 newtype CostModel = CostModel [Integer]
   deriving (Eq, Show)
-  deriving newtype (ToJSON, FromJSON)
   deriving newtype (ToCBOR, FromCBOR)
+
+newtype CostModels = CostModels { unCostModels :: Map AnyPlutusScriptVersion CostModel }
+  deriving (Eq, Show)
+
+instance FromJSON CostModels where
+  parseJSON v = CostModels . fromAlonzoCostModels <$> parseJSON v
+
+instance ToJSON CostModels where
+  toJSON (CostModels costModels) =
+    case toAlonzoCostModels costModels of
+      Left err -> error $ "Invalid cost model was constructed: " ++ err
+      Right ledgerCostModels -> toJSON ledgerCostModels
 
 data InvalidCostModel = InvalidCostModel CostModel Alonzo.CostModelApplyError
   deriving Show

@@ -871,14 +871,14 @@ genUpdateProposal =
                      <*> genProtocolParametersUpdate)
     <*> genEpochNo
 
-genCostModel :: Gen CostModel
+genCostModel :: Gen Alonzo.CostModel
 genCostModel = do
   let costModelParams = Alonzo.getCostModelParams Plutus.testingCostModelV1
   eCostModel <- Alonzo.mkCostModel <$> genPlutusLanguage
                                    <*> mapM (const $ Gen.integral (Range.linear 0 5000)) costModelParams
   case eCostModel of
     Left err -> error $ "genCostModel: " <> show err
-    Right cModel -> return . CostModel $ Alonzo.getCostModelParams cModel
+    Right cModel -> return cModel
 
 genPlutusLanguage :: Gen Language
 genPlutusLanguage = Gen.element [PlutusV1, PlutusV2]
@@ -887,7 +887,7 @@ _genCostModels :: Gen (Map AnyPlutusScriptVersion CostModel)
 _genCostModels =
     Gen.map (Range.linear 0 (length plutusScriptVersions))
             ((,) <$> Gen.element plutusScriptVersions
-                 <*> genCostModel)
+                 <*> (Api.fromAlonzoCostModel <$> genCostModel))
   where
     plutusScriptVersions :: [AnyPlutusScriptVersion]
     plutusScriptVersions = [minBound..maxBound]
