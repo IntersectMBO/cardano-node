@@ -28,7 +28,7 @@ let
       } // optionalAttrs profile.node.tracer {
         tracerSocketPath = "../tracer/tracer.socket";
       } // optionalAttrs backend.useCabalRun {
-        executable     = "cabal run exe:tx-generator --";
+        executable     = "tx-generator";
       });
 
   finaliseGeneratorConfig =
