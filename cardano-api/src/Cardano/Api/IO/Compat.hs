@@ -2,7 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Api.IO.Compat
-  ( writeFileWithOwnerPermissions
+  ( writeLazyByteStringFileWithOwnerPermissions
   ) where
 
 #if !defined(mingw32_HOST_OS)
@@ -29,7 +29,7 @@ import           System.FilePath (splitFileName, (<.>))
 import           System.IO (hClose, openTempFile)
 #endif
 
-writeFileWithOwnerPermissions
+writeLazyByteStringFileWithOwnerPermissions
   :: FilePath
   -> LBS.ByteString
   -> IO (Either (FileError ()) ())
@@ -37,7 +37,7 @@ writeFileWithOwnerPermissions
 -- On a unix based system, we grab a file descriptor and set ourselves as owner.
 -- Since we're holding the file descriptor at this point, we can be sure that
 -- what we're about to write to is owned by us if an error didn't occur.
-writeFileWithOwnerPermissions path a = do
+writeLazyByteStringFileWithOwnerPermissions path a = do
     user <- getRealUserID
     ownedFile <- try $
       -- We only close the FD on error here, otherwise we let it leak out, since
@@ -59,7 +59,7 @@ writeFileWithOwnerPermissions path a = do
 -- On something other than unix, we make a _new_ file, and since we created it,
 -- we must own it. We then place it at the target location. Unfortunately this
 -- won't work correctly with pseudo-files.
-writeFileWithOwnerPermissions targetPath a =
+writeLazyByteStringFileWithOwnerPermissions targetPath a =
     bracketOnError
       (openTempFile targetDir $ targetFile <.> "tmp")
       (\(tmpPath, fHandle) -> do

@@ -14,11 +14,11 @@ module Cardano.Api.IO
   , writeTextFile
   , writeTextOutput
 
-  , writeFileWithOwnerPermissions
+  , writeLazyByteStringFileWithOwnerPermissions
   ) where
 
 import           Cardano.Api.Error (FileError (..))
-import           Cardano.Api.IO.Compat (writeFileWithOwnerPermissions)
+import           Cardano.Api.IO.Compat (writeLazyByteStringFileWithOwnerPermissions)
 
 import           Control.Monad.Except (runExceptT)
 import           Control.Monad.IO.Class (MonadIO (..))

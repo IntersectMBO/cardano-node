@@ -55,7 +55,7 @@ import           Cardano.Binary (DecoderError)
 
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.IO (writeFileWithOwnerPermissions, writeLazyByteStringFile)
+import           Cardano.Api.IO
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.Utils (readFileBlocking)
 
@@ -223,7 +223,7 @@ writeFileTextEnvelopeWithOwnerPermissions
   -> a
   -> IO (Either (FileError ()) ())
 writeFileTextEnvelopeWithOwnerPermissions targetPath mbDescr a =
-  writeFileWithOwnerPermissions targetPath $ textEnvelopeToJSON mbDescr a
+  writeLazyByteStringFileWithOwnerPermissions targetPath $ textEnvelopeToJSON mbDescr a
 
 
 textEnvelopeToJSON :: HasTextEnvelope a =>  Maybe TextEnvelopeDescr -> a -> LBS.ByteString
