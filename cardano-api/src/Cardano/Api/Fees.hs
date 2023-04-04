@@ -61,6 +61,7 @@ import qualified Cardano.Binary as CBOR
 import qualified Cardano.Chain.Common as Byron
 
 import qualified Cardano.Ledger.Coin as Ledger
+import           Cardano.Ledger.Credential as Ledger (Credential)
 import qualified Cardano.Ledger.Crypto as Ledger
 import qualified Cardano.Ledger.Keys as Ledger
 import           Cardano.Ledger.UTxO as Ledger (EraUTxO)
@@ -667,9 +668,15 @@ evaluateTransactionBalance bpp poolids utxo
     isRegPool :: Ledger.KeyHash Ledger.StakePool Ledger.StandardCrypto -> Bool
     isRegPool kh = StakePoolKeyHash kh `Set.member` poolids
 
-    -- FIXME: Add deposit map as an argument and implement a depsit loookup query in
-    -- consensus and cardano-cli
-    lookupDelegDeposit _cred = Nothing
+    -- TODO: Add deposit map as an argument and implement a deposit loookup query in
+    -- consensus and cardano-cli. This is be fixed in a subsequent PR.
+    lookupDelegDeposit ::
+      Ledger.Credential 'Ledger.Staking L.StandardCrypto -> Maybe Ledger.Coin
+    lookupDelegDeposit = const (Just defaultDelegDeposit)
+
+    defaultDelegDeposit =
+      toShelleyLovelace $
+      protocolParamStakeAddressDeposit (unbundleProtocolParams bpp)
 
     evalMultiAsset :: forall ledgerera.
                       ShelleyLedgerEra era ~ ledgerera
