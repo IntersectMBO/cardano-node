@@ -7,6 +7,17 @@
 -- | Shelley CLI option data types and functions for cryptographic keys.
 module Cardano.CLI.Shelley.Key
   ( VerificationKeyOrFile (..)
+  , InputFormat (..)
+  , InputDecodeError (..)
+  , deserialiseInput
+  , deserialiseInputAnyOf
+  , renderInputDecodeError
+
+  , readKeyFileAnyOf
+  , readKeyFileTextEnvelope
+
+  , readSigningKeyFile
+
   , readVerificationKeyOrFile
   , readVerificationKeyOrTextEnvFile
 
@@ -38,6 +49,27 @@ import qualified Data.Text.Encoding as Text
 
 import           Cardano.CLI.Types
 
+------------------------------------------------------------------------------
+-- Signing key deserialisation
+------------------------------------------------------------------------------
+
+-- | Read a signing key from a file.
+--
+-- The contents of the file can either be Bech32-encoded, hex-encoded, or in
+-- the text envelope format.
+readSigningKeyFile
+  :: forall keyrole.
+     ( HasTextEnvelope (SigningKey keyrole)
+     , SerialiseAsBech32 (SigningKey keyrole)
+     )
+  => AsType keyrole
+  -> SigningKeyFile
+  -> IO (Either (FileError InputDecodeError) (SigningKey keyrole))
+readSigningKeyFile asType (SigningKeyFile fp) =
+  readKeyFile
+    (AsSigningKey asType)
+    (NE.fromList [InputFormatBech32, InputFormatHex, InputFormatTextEnvelope])
+    fp
 
 ------------------------------------------------------------------------------
 -- Verification key deserialisation
