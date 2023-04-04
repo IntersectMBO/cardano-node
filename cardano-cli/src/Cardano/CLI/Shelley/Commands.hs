@@ -267,6 +267,8 @@ data ProtocolParamsSourceSpec
     --   'cardano-api' 'ProtocolParameters' data type.
   deriving Show
 
+{-# DEPRECATED ParamsFromFile "Protocol params file is deprecated" #-}
+
 renderTransactionCmd :: TransactionCmd -> Text
 renderTransactionCmd cmd =
   case cmd of
