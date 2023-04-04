@@ -29,7 +29,6 @@ function workbench-prebuild-executables()
     newline
 
     unset NIX_ENFORCE_PURITY
-    cabal update
     for exe in cardano-node cardano-cli cardano-topology cardano-tracer tx-generator locli
     do echo "workbench:    $(blue prebuilding) $(red $exe)"
        cabal $(test -z "${verbose:-}" && echo '-v0') build ${WB_FLAGS_CABAL} -- exe:$exe 2>&1 >/dev/null || return 1
