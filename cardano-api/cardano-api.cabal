@@ -70,7 +70,6 @@ library
                         Cardano.Api.HasTypeProxy
                         Cardano.Api.InMode
                         Cardano.Api.IO
-                        Cardano.Api.IO.Compat
                         Cardano.Api.IPC
                         Cardano.Api.IPC.Monad
                         Cardano.Api.IPC.Version
