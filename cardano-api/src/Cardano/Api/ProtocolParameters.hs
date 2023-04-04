@@ -1524,7 +1524,7 @@ fromAlonzoPParams :: Ledger.Crypto crypto
                   => PParams (Ledger.AlonzoEra crypto)
                   -> ProtocolParameters
 fromAlonzoPParams pp =
-  (fromShelleyCommonPParams pp) {
+  (fromAlonzoCommonPParams pp) {
     protocolParamUTxOCostPerWord = Just . fromShelleyLovelace . unCoinPerWord $
                                      pp ^. ppCoinsPerUTxOWordL
     }
