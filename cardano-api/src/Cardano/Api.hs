@@ -33,6 +33,9 @@ module Cardano.Api (
     cardanoEraStyle,
     shelleyBasedToCardanoEra,
 
+    -- ** IO
+    OutputFile(..),
+
     -- ** Deprecated
     Byron,
     Shelley,
@@ -800,6 +803,7 @@ import           Cardano.Api.GenesisParameters
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.InMode
+import           Cardano.Api.IO
 import           Cardano.Api.IPC
 import           Cardano.Api.IPC.Monad
 import           Cardano.Api.Keys.Byron

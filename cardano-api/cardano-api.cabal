@@ -68,9 +68,10 @@ library
                         Cardano.Api.GenesisParameters
                         Cardano.Api.Hash
                         Cardano.Api.HasTypeProxy
+                        Cardano.Api.InMode
+                        Cardano.Api.IO
                         Cardano.Api.IPC
                         Cardano.Api.IPC.Monad
-                        Cardano.Api.InMode
                         Cardano.Api.IPC.Version
                         Cardano.Api.Json
                         Cardano.Api.Keys.Byron

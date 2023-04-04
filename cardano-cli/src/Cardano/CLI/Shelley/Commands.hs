@@ -514,11 +514,6 @@ data MetadataFile = MetadataFileJSON FilePath
 
   deriving Show
 
-newtype OutputFile = OutputFile
-  { unOutputFile :: FilePath
-  }
-  deriving Show
-
 newtype PoolMetadataFile = PoolMetadataFile
   { unPoolMetadataFile :: FilePath }
   deriving Show
