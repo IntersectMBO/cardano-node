@@ -28,7 +28,6 @@ module Cardano.Api.IO
 #ifdef UNIX
 import           Control.Exception (IOException, bracket, bracketOnError, try)
 import           System.Directory ()
-import           System.IO (hClose)
 import           System.Posix.Files (ownerModes, setFdOwnerAndGroup)
 import           System.Posix.IO (OpenMode (..), closeFd, defaultFileFlags, fdToHandle, openFd)
 import           System.Posix.User (getRealUserID)
@@ -36,7 +35,7 @@ import           System.Posix.User (getRealUserID)
 import           Control.Exception (bracketOnError)
 import           System.Directory (removeFile, renameFile)
 import           System.FilePath (splitFileName, (<.>))
-import           System.IO (hClose, openTempFile)
+import           System.IO (openTempFile)
 #endif
 
 import           Cardano.Api.Error (FileError (..))
@@ -54,7 +53,7 @@ import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text.IO as Text
 import           GHC.Generics (Generic)
-import           System.IO (Handle)
+import           System.IO (Handle, hClose)
 
 handleFileForWritingWithOwnerPermission
   :: FilePath
