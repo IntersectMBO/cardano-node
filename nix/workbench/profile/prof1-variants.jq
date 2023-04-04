@@ -244,6 +244,10 @@ def all_profile_variants:
     ({}
      | .node.shutdown_on_block_synced   = 30
     ) as $for_30blk
+  |
+    ({}
+     | .node.shutdown_on_slot_synced    = 900
+    ) as $for_900slot
   ##
   ### Definition vocabulary:  workload
   ##
@@ -414,6 +418,10 @@ def all_profile_variants:
    ($scenario_fixed_loaded * $hexagon * $torus * $dataset_empty * $for_15blk * $no_filtering *
     { desc: "6 low-footprint nodes in a torus topology, 5 minutes runtime"
     }) as $tracebench_base
+  |
+   ($scenario_fixed_loaded * $doublet * $dataset_empty * $for_900slot * $no_filtering *
+    { desc: "2 low-footprint nodes, 15 minutes runtime"
+    }) as $ep_trans_base
   |
    ($scenario_fixed_loaded * $dataset_small * $for_15ep *
     { node:
@@ -593,6 +601,11 @@ def all_profile_variants:
     }
   , $tracebench_base * $without_tracer *
     { name: "trace-bench-notracer"
+    }
+
+  ## Epoch transition test: 1.5 epochs, 15mins runtime
+  , $ep_trans_base *
+    { name: "epoch-transition"
     }
 
   ## Plutus call variants: 15 epochs, with differences in block budget execution step limit
