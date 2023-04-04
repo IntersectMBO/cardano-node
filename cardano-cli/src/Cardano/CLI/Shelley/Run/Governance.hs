@@ -92,7 +92,7 @@ runGovernanceMIRCertificatePayStakeAddrs mirPot sAddrs rwdAmts (OutputFile oFp) 
 
     firstExceptT ShelleyGovernanceCmdTextEnvWriteError
       . newExceptT
-      $ writeFileTextEnvelope oFp (Just mirCertDesc) mirCert
+      $ writeLazyByteStringFile oFp $ textEnvelopeToJSON (Just mirCertDesc) mirCert
   where
     mirCertDesc :: TextEnvelopeDescr
     mirCertDesc = "Move Instantaneous Rewards Certificate"
@@ -111,7 +111,8 @@ runGovernanceMIRCertificateTransfer ll (OutputFile oFp) direction = do
 
   firstExceptT ShelleyGovernanceCmdTextEnvWriteError
     . newExceptT
-    $ writeFileTextEnvelope oFp (Just $ mirCertDesc direction) mirCert
+    $ writeLazyByteStringFile oFp
+    $ textEnvelopeToJSON (Just $ mirCertDesc direction) mirCert
  where
   mirCertDesc :: TransferDirection -> TextEnvelopeDescr
   mirCertDesc TransferToTreasury = "MIR Certificate Send To Treasury"
@@ -139,7 +140,8 @@ runGovernanceGenesisKeyDelegationCertificate genVkOrHashOrFp
       $ readVerificationKeyOrHashOrFile AsVrfKey vrfVkOrHashOrFp
     firstExceptT ShelleyGovernanceCmdTextEnvWriteError
       . newExceptT
-      $ writeFileTextEnvelope oFp (Just genKeyDelegCertDesc)
+      $ writeLazyByteStringFile oFp
+      $ textEnvelopeToJSON (Just genKeyDelegCertDesc)
       $ makeGenesisKeyDelegationCertificate genesisVkHash genesisDelVkHash vrfVkHash
   where
     genKeyDelegCertDesc :: TextEnvelopeDescr
@@ -175,5 +177,6 @@ runGovernanceUpdateProposal (OutputFile upFile) eNo genVerKeyFiles upPprams mCos
   let genKeyHashes = fmap verificationKeyHash genVKeys
       upProp = makeShelleyUpdateProposal finalUpPprams genKeyHashes eNo
 
-  firstExceptT ShelleyGovernanceCmdTextEnvWriteError . newExceptT $ writeFileTextEnvelope upFile Nothing upProp
+  firstExceptT ShelleyGovernanceCmdTextEnvWriteError . newExceptT
+    $ writeLazyByteStringFile upFile $ textEnvelopeToJSON Nothing upProp
 

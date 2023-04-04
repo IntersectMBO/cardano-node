@@ -91,8 +91,8 @@ writePaymentKeyFiles
   -> ExceptT ShelleyAddressCmdError IO ()
 writePaymentKeyFiles (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) vkey skey = do
   firstExceptT ShelleyAddressCmdWriteFileError $ do
-    newExceptT $ writeFileTextEnvelope skeyPath (Just skeyDesc) skey
-    newExceptT $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
+    newExceptT $ writeLazyByteStringFile skeyPath $ textEnvelopeToJSON (Just skeyDesc) skey
+    newExceptT $ writeLazyByteStringFile vkeyPath $ textEnvelopeToJSON (Just vkeyDesc) vkey
   where
     skeyDesc, vkeyDesc :: TextEnvelopeDescr
     skeyDesc = "Payment Signing Key"

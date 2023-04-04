@@ -120,7 +120,7 @@ runGetVerificationKey skf (VerificationKeyFile vkf) = do
     withSomeSigningKey ssk $ \sk ->
       let vk = getVerificationKey sk in
       firstExceptT ShelleyKeyCmdWriteFileError . newExceptT $
-        writeFileTextEnvelope vkf Nothing vk
+        writeLazyByteStringFile vkf $ textEnvelopeToJSON Nothing vk
 
 
 data SomeSigningKey
@@ -244,8 +244,9 @@ runConvertToNonExtendedKey evkf (VerificationKeyFile vkf) =
   writeToDisk
    :: Key keyrole
    => FilePath -> VerificationKey keyrole -> ExceptT ShelleyKeyCmdError IO ()
-  writeToDisk vkf' vk = firstExceptT ShelleyKeyCmdWriteFileError . newExceptT
-                          $ writeFileTextEnvelope vkf' Nothing vk
+  writeToDisk vkf' vk =
+    firstExceptT ShelleyKeyCmdWriteFileError . newExceptT
+      $ writeLazyByteStringFile vkf' $ textEnvelopeToJSON Nothing vk
 
 
 readExtendedVerificationKeyFile
@@ -364,7 +365,7 @@ convertByronSigningKey mPwd byronFormat convert
         sk' = convert unprotectedSk
 
     firstExceptT ShelleyKeyCmdWriteFileError . newExceptT $
-      writeFileTextEnvelope skeyPathNew Nothing sk'
+      writeLazyByteStringFile skeyPathNew $ textEnvelopeToJSON Nothing sk'
 
 convertByronVerificationKey
   :: forall keyrole.
@@ -384,7 +385,7 @@ convertByronVerificationKey convert
         vk' = convert vk
 
     firstExceptT ShelleyKeyCmdWriteFileError . newExceptT $
-      writeFileTextEnvelope vkeyPathNew Nothing vk'
+      writeLazyByteStringFile vkeyPathNew $ textEnvelopeToJSON Nothing vk'
 
 
 runConvertByronGenesisVerificationKey
@@ -404,7 +405,7 @@ runConvertByronGenesisVerificationKey (VerificationKeyBase64 b64ByronVKey)
         vk' = convert vk
 
     firstExceptT ShelleyKeyCmdWriteFileError . newExceptT $
-      writeFileTextEnvelope vkeyPathNew Nothing vk'
+      writeLazyByteStringFile vkeyPathNew $ textEnvelopeToJSON Nothing vk'
   where
     convert :: Byron.VerificationKey -> VerificationKey GenesisKey
     convert (Byron.VerificationKey xvk) =
@@ -426,7 +427,7 @@ runConvertITNStakeKey (AVerificationKeyFile (VerificationKeyFile vk)) (OutputFil
     . first ShelleyKeyCmdItnKeyConvError
     $ convertITNVerificationKey bech32publicKey
   firstExceptT ShelleyKeyCmdWriteFileError . newExceptT $
-    writeFileTextEnvelope outFile Nothing vkey
+    writeLazyByteStringFile outFile $ textEnvelopeToJSON Nothing vkey
 
 runConvertITNStakeKey (ASigningKeyFile (SigningKeyFile sk)) (OutputFile outFile) = do
   bech32privateKey <- firstExceptT ShelleyKeyCmdItnKeyConvError . newExceptT $
@@ -434,8 +435,9 @@ runConvertITNStakeKey (ASigningKeyFile (SigningKeyFile sk)) (OutputFile outFile)
   skey <- hoistEither
     . first ShelleyKeyCmdItnKeyConvError
     $ convertITNSigningKey bech32privateKey
-  firstExceptT ShelleyKeyCmdWriteFileError . newExceptT $
-    writeFileTextEnvelope outFile Nothing skey
+  firstExceptT ShelleyKeyCmdWriteFileError . newExceptT
+    $ writeLazyByteStringFile outFile
+    $ textEnvelopeToJSON Nothing skey
 
 runConvertITNExtendedToStakeKey :: SomeKeyFile -> OutputFile -> ExceptT ShelleyKeyCmdError IO ()
 runConvertITNExtendedToStakeKey (AVerificationKeyFile _) _ = left ShelleyKeyCmdWrongKeyTypeError
@@ -444,7 +446,8 @@ runConvertITNExtendedToStakeKey (ASigningKeyFile (SigningKeyFile sk)) (OutputFil
   skey <- hoistEither . first ShelleyKeyCmdItnKeyConvError
             $ convertITNExtendedSigningKey bech32privateKey
   firstExceptT ShelleyKeyCmdWriteFileError . newExceptT
-    $ writeFileTextEnvelope outFile Nothing skey
+    $ writeLazyByteStringFile outFile
+    $ textEnvelopeToJSON Nothing skey
 
 runConvertITNBip32ToStakeKey :: SomeKeyFile -> OutputFile -> ExceptT ShelleyKeyCmdError IO ()
 runConvertITNBip32ToStakeKey (AVerificationKeyFile _) _ = left ShelleyKeyCmdWrongKeyTypeError
@@ -453,7 +456,8 @@ runConvertITNBip32ToStakeKey (ASigningKeyFile (SigningKeyFile sk)) (OutputFile o
   skey <- hoistEither . first ShelleyKeyCmdItnKeyConvError
             $ convertITNBIP32SigningKey bech32privateKey
   firstExceptT ShelleyKeyCmdWriteFileError . newExceptT
-    $ writeFileTextEnvelope outFile Nothing skey
+    $ writeLazyByteStringFile outFile
+    $ textEnvelopeToJSON Nothing skey
 
 -- | An error that can occur while converting an Incentivized Testnet (ITN)
 -- key.
@@ -649,8 +653,8 @@ writeSomeCardanoAddressSigningKeyFile
 writeSomeCardanoAddressSigningKeyFile outFile skey =
   case skey of
     ACardanoAddrShelleyPaymentSigningKey sk ->
-      writeFileTextEnvelope outFile Nothing sk
+      writeLazyByteStringFile outFile $ textEnvelopeToJSON Nothing sk
     ACardanoAddrShelleyStakeSigningKey sk ->
-      writeFileTextEnvelope outFile Nothing sk
+      writeLazyByteStringFile outFile $ textEnvelopeToJSON Nothing sk
     ACardanoAddrByronSigningKey sk ->
-      writeFileTextEnvelope outFile Nothing sk
+      writeLazyByteStringFile outFile $ textEnvelopeToJSON Nothing sk

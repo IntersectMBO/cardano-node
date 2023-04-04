@@ -1102,8 +1102,9 @@ runTxSign txOrTxBody witSigningData mnw (TxFile outTxFile) = do
           let shelleyKeyWitnesses = map (makeShelleyKeyWitness txbody) sksShelley
               tx = makeSignedTransaction (byronWitnesses ++ shelleyKeyWitnesses) txbody
 
-          firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
-            writeFileTextEnvelope outTxFile Nothing tx
+          firstExceptT ShelleyTxCmdWriteFileError . newExceptT
+            $ writeLazyByteStringFile outTxFile
+            $ textEnvelopeToJSON Nothing tx
 
 -- ----------------------------------------------------------------------------
 -- Transaction submission
@@ -1392,7 +1393,8 @@ runTxCreateWitness (TxBodyFile txbodyFilePath) witSignData mbNw (OutputFile oFil
             pure $ makeShelleyKeyWitness txbody skShelley
 
       firstExceptT ShelleyTxCmdWriteFileError . newExceptT
-        $ writeFileTextEnvelope oFile Nothing witness
+        $ writeLazyByteStringFile oFile
+        $ textEnvelopeToJSON Nothing witness
 
 runTxSignWitness
   :: TxBodyFile
@@ -1421,7 +1423,8 @@ runTxSignWitness (TxBodyFile txbodyFilePath) witnessFiles (OutputFile oFp) = do
         let tx = makeSignedTransaction witnesses txbody
         firstExceptT ShelleyTxCmdWriteFileError
           . newExceptT
-          $ writeFileTextEnvelope oFp Nothing tx
+          $ writeLazyByteStringFile oFp
+          $ textEnvelopeToJSON Nothing tx
 
       IncompleteCddlFormattedTx (InAnyCardanoEra era anyTx) -> do
         let txbody = getTxBody anyTx
