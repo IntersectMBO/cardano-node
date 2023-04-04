@@ -14,7 +14,7 @@ import           Cardano.Api
 import           Cardano.Api.Shelley
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (VerificationKeyOrFile, readVerificationKeyOrFile)
-import           Cardano.CLI.Types (OutputFormat (..))
+import           Cardano.CLI.Types (PoolIdOutputFormat (..))
 
 import qualified Cardano.Ledger.Slot as Shelley
 import           Control.Monad.IO.Class (MonadIO (..))
@@ -165,7 +165,7 @@ runStakePoolRetirementCert stakePoolVerKeyOrFile retireEpoch (OutputFile outfp) 
 
 runPoolId
   :: VerificationKeyOrFile StakePoolKey
-  -> OutputFormat
+  -> PoolIdOutputFormat
   -> ExceptT ShelleyPoolCmdError IO ()
 runPoolId verKeyOrFile outputFormat = do
     stakePoolVerKey <- firstExceptT ShelleyPoolCmdReadKeyFileError
@@ -173,9 +173,9 @@ runPoolId verKeyOrFile outputFormat = do
       $ readVerificationKeyOrFile AsStakePoolKey verKeyOrFile
     liftIO $
       case outputFormat of
-        OutputFormatHex ->
+        PoolIdOutputFormatHex ->
           BS.putStrLn $ serialiseToRawBytesHex (verificationKeyHash stakePoolVerKey)
-        OutputFormatBech32 ->
+        PoolIdOutputFormatBech32 ->
           Text.putStrLn $ serialiseToBech32 (verificationKeyHash stakePoolVerKey)
 
 runPoolMetadataHash :: PoolMetadataFile -> Maybe OutputFile -> ExceptT ShelleyPoolCmdError IO ()

@@ -17,7 +17,7 @@ module Cardano.CLI.Types
   , OpCertNodeAndOnDiskCounterInformation (..)
   , OpCertNodeStateCounter (..)
   , OpCertStartingKesPeriod (..)
-  , OutputFormat (..)
+  , PoolIdOutputFormat (..)
   , TxBuildOutputOptions(..)
   , ReferenceScriptAnyEra (..)
   , SigningKeyFile (..)
@@ -190,9 +190,9 @@ instance FromJSON GenesisFile where
                            <> "Encountered: " <> show invalid
 
 -- | The desired output format.
-data OutputFormat
-  = OutputFormatHex
-  | OutputFormatBech32
+data PoolIdOutputFormat
+  = PoolIdOutputFormatHex
+  | PoolIdOutputFormatBech32
   deriving (Eq, Show)
 
 data AllOrOnly a = All | Only a deriving (Eq, Show)
