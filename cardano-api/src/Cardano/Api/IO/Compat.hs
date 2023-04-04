@@ -58,7 +58,7 @@ handleFileForWritingWithOwnerPermission path f = do
 -- On something other than unix, we make a _new_ file, and since we created it,
 -- we must own it. We then place it at the target location. Unfortunately this
 -- won't work correctly with pseudo-files.
-handleFileForWritingWithOwnerPermission targetPath a =
+handleFileForWritingWithOwnerPermission targetPath f =
     bracketOnError
       (openTempFile targetDir $ targetFile <.> "tmp")
       (\(tmpPath, fHandle) -> do
