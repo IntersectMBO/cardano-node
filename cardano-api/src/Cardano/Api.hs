@@ -36,6 +36,15 @@ module Cardano.Api (
     -- ** IO
     OutputFile(..),
 
+    writeByteStringFile,
+    writeByteStringOutput,
+
+    writeLazyByteStringFile,
+    writeLazyByteStringOutput,
+
+    writeTextFile,
+    writeTextOutput,
+
     -- ** Deprecated
     Byron,
     Shelley,
