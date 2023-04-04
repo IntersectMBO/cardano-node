@@ -36,12 +36,15 @@ module Cardano.Api (
     -- ** IO
     OutputFile(..),
 
+    writeByteStringFileWithOwnerPermissions,
     writeByteStringFile,
     writeByteStringOutput,
 
+    writeLazyByteStringFileWithOwnerPermissions,
     writeLazyByteStringFile,
     writeLazyByteStringOutput,
 
+    writeTextFileWithOwnerPermissions,
     writeTextFile,
     writeTextOutput,
 

@@ -7,16 +7,18 @@
 module Cardano.Api.IO
   ( OutputFile(..)
 
+  , writeByteStringFileWithOwnerPermissions
   , writeByteStringFile
   , writeByteStringOutput
 
+  , writeLazyByteStringFileWithOwnerPermissions
   , writeLazyByteStringFile
   , writeLazyByteStringOutput
 
+  , writeTextFileWithOwnerPermissions
   , writeTextFile
   , writeTextOutput
 
-  , writeLazyByteStringFileWithOwnerPermissions
   ) where
 
 #if !defined(mingw32_HOST_OS)
@@ -108,6 +110,14 @@ writeByteStringFile :: MonadIO m => FilePath -> ByteString -> m (Either (FileErr
 writeByteStringFile fp bs = runExceptT $
   handleIOExceptT (FileIOError fp) $ BS.writeFile fp bs
 
+writeByteStringFileWithOwnerPermissions
+  :: FilePath
+  -> BS.ByteString
+  -> IO (Either (FileError ()) ())
+writeByteStringFileWithOwnerPermissions fp bs =
+  handleFileForWritingWithOwnerPermission fp $ \h ->
+    BS.hPut h bs
+
 writeByteStringOutput :: MonadIO m => Maybe FilePath -> ByteString -> m (Either (FileError ()) ())
 writeByteStringOutput mOutput bs = runExceptT $
   case mOutput of
@@ -117,6 +127,14 @@ writeByteStringOutput mOutput bs = runExceptT $
 writeLazyByteStringFile :: MonadIO m => FilePath -> LBS.ByteString -> m (Either (FileError ()) ())
 writeLazyByteStringFile fp bs = runExceptT $
   handleIOExceptT (FileIOError fp) $ LBS.writeFile fp bs
+
+writeLazyByteStringFileWithOwnerPermissions
+  :: FilePath
+  -> LBS.ByteString
+  -> IO (Either (FileError ()) ())
+writeLazyByteStringFileWithOwnerPermissions fp lbs =
+  handleFileForWritingWithOwnerPermission fp $ \h ->
+    LBS.hPut h lbs
 
 writeLazyByteStringOutput :: MonadIO m => Maybe FilePath -> LBS.ByteString -> m (Either (FileError ()) ())
 writeLazyByteStringOutput mOutput bs = runExceptT $
@@ -128,16 +146,16 @@ writeTextFile :: MonadIO m => FilePath -> Text -> m (Either (FileError ()) ())
 writeTextFile fp t = runExceptT $
   handleIOExceptT (FileIOError fp) $ Text.writeFile fp t
 
+writeTextFileWithOwnerPermissions
+  :: FilePath
+  -> Text
+  -> IO (Either (FileError ()) ())
+writeTextFileWithOwnerPermissions fp t =
+  handleFileForWritingWithOwnerPermission fp $ \h ->
+    Text.hPutStr h t
+
 writeTextOutput :: MonadIO m => Maybe FilePath -> Text -> m (Either (FileError ()) ())
 writeTextOutput mOutput t = runExceptT $
   case mOutput of
     Just fp -> handleIOExceptT (FileIOError fp) $ Text.writeFile fp t
     Nothing -> liftIO $ Text.putStr t
-
-writeLazyByteStringFileWithOwnerPermissions
-  :: FilePath
-  -> LBS.ByteString
-  -> IO (Either (FileError ()) ())
-writeLazyByteStringFileWithOwnerPermissions fp lbs =
-  handleFileForWritingWithOwnerPermission fp $ \h ->
-    LBS.hPut h lbs
