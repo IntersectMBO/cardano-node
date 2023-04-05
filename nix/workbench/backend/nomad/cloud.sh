@@ -108,15 +108,23 @@ backend_nomadcloud() {
       # test, I repeat, this is not a drill =)
       if test -z "${NOMAD_ADDR:-}"
       then
-        msg $(yellow "WARNING: Nomad namespace \"NOMAD_NAMESPACE\" envar is not set")
-        msg $(blue "INFO: The SRE provided address for \"Performance and Tracing\" is \"https://nomad.world.dev.cardano.org\"")
+        msg $(yellow "WARNING: Nomad address \"NOMAD_ADDR\" envar is not set")
+        export NOMAD_ADDR="https://nomad.world.dev.cardano.org"
+        msg $(blue "INFO: Setting \"NOMAD_ADDR\" to the SRE provided address for \"Performance and Tracing\" (\"${NOMAD_ADDR}\")")
         read -p "Hit enter to continue ..."
+      else
+        if test "${NOMAD_ADDR}" != "https://nomad.world.dev.cardano.org"
+        then
+          msg $(yellow "WARNING: Nomad address \"NOMAD_ADDR\" envar is not \"https://nomad.world.dev.cardano.org\"")
+          read -p "Hit enter to continue ..."
+        fi
       fi
       # The abscence of `NOMAD_NAMESPACE` or `NOMAD_TOKEN` needs confirmation
       if test -z "${NOMAD_NAMESPACE:-}"
       then
         msg $(yellow "WARNING: Nomad namespace \"NOMAD_NAMESPACE\" envar is not set")
-        msg $(blue "INFO: The SRE provided namespace for \"Performance and Tracing\" is \"perf\"")
+        export NOMAD_NAMESPACE="perf"
+        msg $(blue "INFO: Setting \"NOMAD_NAMESPACE\" to the SRE provided namespace for \"Performance and Tracing\" (\"${NOMAD_NAMESPACE}\")")
         read -p "Hit enter to continue ..."
       else
         if test "${NOMAD_NAMESPACE}" != "perf"
@@ -128,23 +136,19 @@ backend_nomadcloud() {
       if test -z "${NOMAD_TOKEN:-}"
       then
         msg $(yellow "WARNING: Nomad token \"NOMAD_TOKEN\" envar is not set")
-        msg $(blue "INFO: Run "\`$(green "vault login -address=\"https://vault.world.dev.cardano.org\" -method=github -path=github-employees; vault read -address=\"https://vault.world.dev.cardano.org\" -field secret_id nomad/creds/perf")$(blue "\` to obtain one"))
-        read -p "Hit enter to continue ..."
+        msg $(blue "INFO: Fetching a \"NOMAD_TOKEN\" from SRE provided Vault for \"Performance and Tracing\"")
+        export NOMAD_TOKEN="$(wb_nomad vault world nomad-token)"
       fi
       # Check all the AWS S3 envars needed for the HTTP PUT request
       # Using same names as the AWS CLI
       # https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html
-      if test -z "${AWS_ACCESS_KEY_ID:-}"
+      if test -z "${AWS_ACCESS_KEY_ID:-}" || test -z "${AWS_SECRET_ACCESS_KEY:-}"
       then
-        msg $(red "ERROR: Amazon S3 \"AWS_ACCESS_KEY_ID\" envar is not set")
-        msg $(blue "INFO: Run "\`$(green "vault read -address=\"https://vault.world.dev.cardano.org\" -field access_key aws/creds/perf")$(blue "\` to obtain one"))
-        fatal "Can't run a cluster in the Nomad cloud without \"AWS_ACCESS_KEY_ID\" envar"
-      fi
-      if test -z "${AWS_SECRET_ACCESS_KEY:-}"
-      then
-        msg $(red "ERROR: Amazon S3 \"AWS_SECRET_ACCESS_KEY\" envar is not set")
-        msg $(blue "INFO: Run "\`$(green "vault read -address=\"https://vault.world.dev.cardano.org\" -field secret_key aws/creds/perf")$(blue "\` to obtain one"))
-        fatal "Can't run a cluster in the Nomad cloud without \"AWS_SECRET_ACCESS_KEY\" envar"
+        msg $(yellow "WARNING: Amazon S3 \"AWS_ACCESS_KEY_ID\" or \"AWS_SECRET_ACCESS_KEY\" envar is not set")
+        msg $(blue "INFO: Fetching \"AWS_ACCESS_KEY_ID\" and \"AWS_SECRET_ACCESS_KEY\" from SRE provided Vault for \"Performance and Tracing\"")
+        local aws_credentials="$(wb_nomad vault world aws-s3-credentials)"
+        export AWS_ACCESS_KEY_ID=$(echo "${aws_credentials}" | jq -r .data.access_key)
+        export AWS_SECRET_ACCESS_KEY=$(echo "${aws_credentials}" | jq -r .data.secret_key)
       fi
       # The Nomad job spec will contain links ("nix_installables" stanza) to
       # the Nix Flake outputs it needs inside the container, these are

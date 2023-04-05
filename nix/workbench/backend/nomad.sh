@@ -1,4 +1,4 @@
-usage_nomad() {
+usage_nomadbackend() {
   usage "nomad" "Backend: manages a Cardano cluster using Nomad" <<EOF
 
     Please see documentation for 'wb backend' for the supported commands.
@@ -65,26 +65,7 @@ EOF
 
 backend_nomad() {
 
-  op=${1:?$(usage_nomad)}; shift
-
-  # Stateful Nomad server and agent(s):
-  # Calling `wb backend XXX` inside a Nix derivation will make everything fail:
-  # "mkdir: cannot create directory '/homeless-shelter': Permission denied"
-  # Better here rather than hidden in a function well below
-  local nomad_agents_dir="$(envjqr 'cacheDir')"/nomad
-  mkdir -p "${nomad_agents_dir}"
-  local nomad_servers_dir="${nomad_agents_dir}"/server
-  mkdir -p "${nomad_servers_dir}"
-  local nomad_clients_dir="${nomad_agents_dir}"/client
-  mkdir -p "${nomad_clients_dir}"
-  local webfs_dir="$(envjqr 'cacheDir')"/webfs
-  mkdir -p "${webfs_dir}"
-  # TODO: Which directory ? State, cache, config ?
-  # local nomad_state_dir=${XDG_STATE_HOME:-$HOME/.local/state}/cardano-workbench/nomad
-  # $XDG_STATE_HOME defines the base directory relative to which user-specific
-  # state files should be stored.
-  # (analogous to /var/lib).
-  # https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+  op=${1:?$(usage_nomadbackend)}; shift
 
   case "$op" in
 
@@ -125,7 +106,7 @@ backend_nomad() {
 
       while test $# -gt 0
       do case "$1" in
-        --* ) msg "FATAL:  unknown flag '$1'"; usage_nomad;;
+        --* ) msg "FATAL:  unknown flag '$1'"; usage_nomadbackend;;
           * ) break;; esac; shift; done
 
       # The "nomad" folder is created by the sub-backends ("podman", "exec",
@@ -899,7 +880,7 @@ backend_nomad() {
 
       while test $# -gt 0
       do case "$1" in
-        --* ) msg "FATAL:  unknown flag '$1'"; usage_nomad;;
+        --* ) msg "FATAL:  unknown flag '$1'"; usage_nomadbackend;;
           * ) break;; esac; shift; done
 
       if ! backend_nomad task-program-start "$dir" node-0 generator
@@ -2273,7 +2254,7 @@ backend_nomad() {
               nomad job stop -global -no-shutdown-delay -purge -yes -verbose "${job_name}"
             ;;
             * )
-              usage_nomad
+              usage_nomadbackend
             ;;
           esac # nomad -> job
         ;;
@@ -2349,7 +2330,7 @@ backend_nomad() {
               backend_nomad nomad server stop "${server_name}" || true
             ;;
             * )
-              usage_nomad
+              usage_nomadbackend
             ;;
           esac # nomad -> agents
         ;;
@@ -2363,6 +2344,7 @@ backend_nomad() {
             state-dir-path )
               local usage="USAGE: wb backend pass $op $agent $subop SERVER-NAME"
               local name=${1:?$usage}; shift
+              local nomad_servers_dir="$(wb_nomad dir-path server)"
               echo "${nomad_servers_dir}"/"${name}"
             ;;
             config-file-path )
@@ -2530,7 +2512,7 @@ backend_nomad() {
               fi
             ;;
             * )
-              usage_nomad
+              usage_nomadbackend
             ;;
           esac # nomad -> server
         ;;
@@ -2544,6 +2526,7 @@ backend_nomad() {
             state-dir-path )
               local usage="USAGE: wb backend pass $op $agent $subop CLIENT-NAME"
               local name=${1:?$usage}; shift
+              local nomad_clients_dir="$(wb_nomad dir-path client)"
               echo "${nomad_clients_dir}"/"${name}"
             ;;
             config-file-path )
@@ -2838,7 +2821,7 @@ backend_nomad() {
             ;;
             # Client specific subcommands here (not available for servers):
             * )
-              usage_nomad
+              usage_nomadbackend
             ;;
           esac # nomad -> client
         ;;
@@ -2880,7 +2863,8 @@ backend_nomad() {
                   echo "${XDG_RUNTIME_DIR:-/run/user/$UID}/workbench-podman.sock"
                 ;;
                 pid-filepath )
-                  echo "${nomad_agents_dir}"/nomad-driver-podman.pid
+                  local plugin_dir="$(wb_nomad dir-path plugin)"
+                  echo "${plugin_dir}"/nomad-driver-podman.pid
                 ;;
                 pid )
                   local pid_file=$(backend_nomad nomad plugin nomad-driver-podman pid-filepath)
@@ -2961,12 +2945,12 @@ backend_nomad() {
                   fi
                 ;;
                 * )
-                  usage_nomad
+                  usage_nomadbackend
                 ;;
               esac  # nomad -> plugin -> nomad-driver-podman
             ;;
             * )
-              usage_nomad
+              usage_nomadbackend
             ;;
           esac # nomad -> plugin
         ;;
@@ -2978,6 +2962,8 @@ backend_nomad() {
           local subop=${1:?$usage}; shift
           case "$subop" in
             nuke )
+              local nomad_servers_dir="$(wb_nomad dir-path server)"
+              local nomad_clients_dir="$(wb_nomad dir-path client)"
               # Nuke all Nomad clients
               for client_name in $(ls "${nomad_clients_dir}"); do
                 if backend_nomad nomad client is-running "${client_name}"
@@ -3004,8 +2990,10 @@ backend_nomad() {
                   backend_nomad nomad server cleanup "${server_name}"
                 fi
               done
-              # Nuke the Nomad .cache dir
-              rm -rf "${nomad_agents_dir}" >/dev/null 2>&1
+              # Nuke the Nomad Agents' .cache dir
+              # Keep top level Nomad cache dir because it includes Vault's dirs.
+              rm -rf "${nomad_servers_dir}" >/dev/null 2>&1
+              rm -rf "${nomad_clients_dir}" >/dev/null 2>&1
               # Bye HTTP server
               if backend_nomad webfs is-running
               then
@@ -3018,7 +3006,7 @@ backend_nomad() {
               # rm -rf ~/.config/containers/podman/
             ;;
             * )
-              usage_nomad
+              usage_nomadbackend
             ;;
           esac # nomad -> all
         ;;
@@ -3026,7 +3014,7 @@ backend_nomad() {
 ################################################################################
 ################################################################################
       * )
-        usage_nomad
+        usage_nomadbackend
       ;;
       esac # nomad
     ;;
@@ -3082,6 +3070,7 @@ EOF
       # Nomad actions
       case "$subop" in
         state-dir-path)
+          local webfs_dir="$(wb_nomad dir-path webfs)"
           echo "${webfs_dir}"
         ;;
         document-root-path )
@@ -3161,7 +3150,7 @@ EOF
 ################################################################################
 
     * )
-      usage_nomad
+      usage_nomadbackend
     ;;
 
   esac
@@ -3445,6 +3434,7 @@ nomad_create_client_config() {
   local config_file=$(backend_nomad nomad client config-file-path "${name}")
   # Look for the running servers to connect to ("wired" in the config file).
   local servers_addresses=""
+  local nomad_servers_dir="$(wb_nomad dir-path server)"
   for server_name in $(ls "${nomad_servers_dir}"); do
     if backend_nomad nomad server is-running "${server_name}"
     then
