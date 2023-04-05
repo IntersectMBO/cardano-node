@@ -34,7 +34,8 @@ import           Test.Golden.Shelley.Node.KeyGenVrf (golden_shelleyNodeKeyGenVrf
 import           Test.Golden.Shelley.StakeAddress.Build (golden_shelleyStakeAddressBuild)
 import           Test.Golden.Shelley.StakeAddress.DeregistrationCertificate
                    (golden_shelleyStakeAddressDeregistrationCertificate)
-import           Test.Golden.Shelley.StakeAddress.KeyGen (golden_shelleyStakeAddressKeyGen)
+import           Test.Golden.Shelley.StakeAddress.KeyGen (golden_shelleyStakeAddressKeyGen,
+                   golden_shelleyStakeAddressKeyGen_bech32, golden_shelleyStakeAddressKeyGen_te)
 import           Test.Golden.Shelley.StakeAddress.RegistrationCertificate
                    (golden_shelleyStakeAddressRegistrationCertificate)
 import           Test.Golden.Shelley.StakePool.RegistrationCertificate
@@ -126,6 +127,8 @@ keyTests =
         , ("golden_shelleyStakeAddressBuild", golden_shelleyStakeAddressBuild)
         , ("golden_shelleyStakeAddressDeregistrationCertificate", golden_shelleyStakeAddressDeregistrationCertificate)
         , ("golden_shelleyStakeAddressKeyGen", golden_shelleyStakeAddressKeyGen)
+        , ("golden_shelleyStakeAddressKeyGen_bech32", golden_shelleyStakeAddressKeyGen_bech32)
+        , ("golden_shelleyStakeAddressKeyGen_te", golden_shelleyStakeAddressKeyGen_te)
         , ("golden_shelleyStakeAddressRegistrationCertificate", golden_shelleyStakeAddressRegistrationCertificate)
         , ("golden_shelleyStakeKeys", golden_shelleyStakeKeys)
         , ("golden_shelleyStakeKeys_bech32", golden_shelleyStakeKeys_bech32)
