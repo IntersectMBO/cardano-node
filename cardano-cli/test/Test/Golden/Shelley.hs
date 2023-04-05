@@ -62,7 +62,8 @@ import           Test.Golden.Shelley.TextEnvelope.Keys.GenesisUTxOKeys
                    (golden_shelleyGenesisUTxOKeys)
 import           Test.Golden.Shelley.TextEnvelope.Keys.KESKeys (golden_shelleyKESKeys)
 import           Test.Golden.Shelley.TextEnvelope.Keys.PaymentKeys (golden_shelleyPaymentKeys)
-import           Test.Golden.Shelley.TextEnvelope.Keys.StakeKeys (golden_shelleyStakeKeys)
+import           Test.Golden.Shelley.TextEnvelope.Keys.StakeKeys (golden_shelleyStakeKeys,
+                   golden_shelleyStakeKeys_bech32, golden_shelleyStakeKeys_te)
 import           Test.Golden.Shelley.TextEnvelope.Keys.VRFKeys (golden_shelleyVRFKeys,
                    golden_shelleyVRFKeys_bech32, golden_shelleyVRFKeys_te)
 import           Test.Golden.Shelley.TextView.DecodeCbor (golden_shelleyTextViewDecodeCbor)
@@ -121,6 +122,8 @@ keyTests =
         , ("golden_shelleyStakeAddressKeyGen", golden_shelleyStakeAddressKeyGen)
         , ("golden_shelleyStakeAddressRegistrationCertificate", golden_shelleyStakeAddressRegistrationCertificate)
         , ("golden_shelleyStakeKeys", golden_shelleyStakeKeys)
+        , ("golden_shelleyStakeKeys_bech32", golden_shelleyStakeKeys_bech32)
+        , ("golden_shelleyStakeKeys_te", golden_shelleyStakeKeys_te)
         , ("golden_shelleyStakePoolRegistrationCertificate", golden_shelleyStakePoolRegistrationCertificate)
         , ("golden_shelleyTextViewDecodeCbor", golden_shelleyTextViewDecodeCbor)
         , ("golden_shelleyTransactionBuild", golden_shelleyTransactionBuild)
