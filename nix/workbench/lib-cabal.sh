@@ -10,7 +10,7 @@ do case "$1" in
 
 export WB_RTSARGS=${WB_PROFILED:+-p}
 export WB_FLAGS_RTS=${WB_RTSARGS:++RTS $WB_RTSARGS -RTS}
-export WB_FLAGS_CABAL=${WB_PROFILED:+--enable-profiling}
+export WB_FLAGS_CABAL=${WB_PROFILED:+--enable-profiling --builddir dist-profiled}
 WB_TIME=(
     time
     -f "{ \"wall_clock_s\":       %e\n, \"user_cpu_s\":         %U\n, \"sys_cpu_s\":          %S\n, \"avg_cpu_pct\":       \"%P\"\n, \"rss_peak_kb\":        %M\n, \"signals_received\":   %k\n, \"ctxsw_involuntary\":  %c\n, \"ctxsw_volunt_waits\": %w\n, \"pageflt_major\":      %F\n, \"pageflt_minor\":      %R\n, \"swaps\":              %W\n, \"io_fs_reads\":        %I\n, \"io_fs_writes\":       %O\n, \"cmdline\":           \"%C\"\n, \"exit_code\":          %x }"
