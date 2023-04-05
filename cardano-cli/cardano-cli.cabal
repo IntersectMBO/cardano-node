@@ -245,6 +245,7 @@ test-suite cardano-cli-golden
                       , filepath
                       , hedgehog ^>= 1.2
                       , hedgehog-extras ^>= 0.4.1
+                      , regex-tdfa
                       , text
                       , time
                       , transformers
