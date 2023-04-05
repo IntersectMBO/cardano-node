@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE GADTSyntax #-}
+{-# LANGUAGE DeriveFunctor #-}
 
 -- | Class of errors used in the Api.
 --
