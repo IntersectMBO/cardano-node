@@ -112,7 +112,7 @@ renderAddressCmd cmd =
     AddressInfo {} -> "address info"
 
 data StakeAddressCmd
-  = StakeAddressKeyGen (VerificationKeyFile Out) (SigningKeyFile Out)
+  = StakeAddressKeyGen KeyOutputFormat (VerificationKeyFile Out) (SigningKeyFile Out)
   | StakeAddressKeyHash (VerificationKeyOrFile StakeKey) (Maybe (File () Out))
   | StakeAddressBuild StakeVerifier NetworkId (Maybe (File () Out))
   | StakeRegistrationCert StakeIdentifier (File () Out)

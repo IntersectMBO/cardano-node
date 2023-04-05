@@ -382,7 +382,8 @@ pStakeAddressCmd envCli =
     pStakeAddressKeyGen :: Parser StakeAddressCmd
     pStakeAddressKeyGen =
       StakeAddressKeyGen
-        <$> pVerificationKeyFileOut
+        <$> pKeyOutputFormat
+        <*> pVerificationKeyFileOut
         <*> pSigningKeyFileOut
 
     pStakeAddressKeyHash :: Parser StakeAddressCmd
