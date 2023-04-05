@@ -144,10 +144,12 @@ pAddressCmd envCli =
      ]
   where
     pAddressKeyGen :: Parser AddressCmd
-    pAddressKeyGen = AddressKeyGen
-      <$> pAddressKeyType
-      <*> pVerificationKeyFileOut
-      <*> pSigningKeyFileOut
+    pAddressKeyGen =
+      AddressKeyGen
+        <$> pKeyOutputFormat
+        <*> pAddressKeyType
+        <*> pVerificationKeyFileOut
+        <*> pSigningKeyFileOut
 
     pAddressKeyHash :: Parser AddressCmd
     pAddressKeyHash =
