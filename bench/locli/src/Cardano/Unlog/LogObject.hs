@@ -32,6 +32,8 @@ import qualified Data.Vector as V
 
 import           Cardano.Logging.Resources.Types
 
+import           Data.Profile
+
 import           Cardano.Analysis.API.Ground
 import           Cardano.Util
 
@@ -47,8 +49,12 @@ data HostLogs a
     , hlRawTraceFreqs  :: Map Text Int
     , hlLogs           :: (JsonLogfile, a)
     , hlFilteredSha256 :: Hash
+    , hlProfile        :: [ProfileEntry I]
     }
-  deriving (Generic, FromJSON, ToJSON)
+  deriving (Generic)
+
+deriving instance FromJSON a => FromJSON (HostLogs a)
+deriving instance   ToJSON a =>   ToJSON (HostLogs a)
 
 hlRawLogObjects :: HostLogs a -> Int
 hlRawLogObjects = sum . Map.elems . hlRawTraceFreqs

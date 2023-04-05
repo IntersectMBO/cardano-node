@@ -349,7 +349,7 @@ case "$op" in
         local args=${op_split[@]:$i}
         progress "analyse" "mapping op $(with_color yellow $op "${op_args[@]}") $(with_color cyan $args) over runs:  $(with_color white ${runs[*]})"
         for r in ${runs[*]}
-        do analyse prepare $r
+        do analyse "${sargs[@]}" prepare $r
            analyse "${sargs[@]}" $op "${op_args[@]}" $r "${args[@]}"
         done
         ;;
@@ -559,6 +559,7 @@ case "$op" in
            grep ${grep_params[*]} ${logfiles[*]} | grep '^{'  > "$out".flt.json       &
            trace_frequencies_json ${logfiles[*]}              > "$out".tracefreq.json &
            { cat ${logfiles[*]} | sha256sum | cut -d' ' -f1 | xargs echo -n;} > "$out".sha256 &
+
            jq_fmutate "$run_logs" '
              .rlHostLogs["'"$mach"'"] =
                { hlRawLogfiles:    ["'"$(echo ${logfiles[*]} | sed 's/ /", "/')"'"]
@@ -567,10 +568,21 @@ case "$op" in
                , hlRawTraceFreqs:  {}
                , hlLogs:           ["'"$adir/logs-$mach.flt.json"'", null]
                , hlFilteredSha256: ""
+               , hlProfile:        []
                }
            | .rlFilterDate = ('$(if test -z "$without_datever_meta"; then echo -n now; else echo -n 0; fi)' | todate)
            | .rlFilterKeys = ($keys | split("\n"))
            ' --rawfile            keys $keyfile
+
+           local ghc_rts_prof=$d/cardano-node.prof
+           if test -f "$ghc_rts_prof"
+           then progress "analyse | profiling" "processing cardano-node.prof for $mach"
+                ghc_rts_minusp_tojson "$ghc_rts_prof"           > "$out".flt.prof.json
+               jq_fmutate "$run_logs" '
+                 .rlHostLogs["'"$mach"'"] += { hlProfile: $profile }
+                 ' --slurpfile profile "$out".flt.prof.json
+           fi
+
         done
         wait
 
@@ -755,4 +767,11 @@ analysis_config_extract_legacy_tracing() {
              }'
     )
     nix eval "${nix_eval_args[@]}" | jq --sort-keys
+}
+
+function ghc_rts_minusp_tojson() {
+    tail -n +10 "$1" | \
+    head -n 40       | \
+    sed 's_^\([^ ]\+\) \+\([^ ]\+\) \+\([^ ]\+\) \+\([^ ]\+\) \+\([^ ]\+\)$_{ "peFunc": "\1", "peModule": "\2", "peSrcLoc": "\3", "peTime": \4, "peAlloc": \5 }_' | \
+    grep '^{.*}$' || true
 }

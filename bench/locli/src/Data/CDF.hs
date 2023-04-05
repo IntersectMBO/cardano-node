@@ -96,7 +96,6 @@ stdCentiles =
   , Centile 1.0
   ]
 
--- | Given a N-large population, produce centiles "pointing" into middle of each each element.
 nEquicentiles :: Int -> [Centile]
 nEquicentiles n =
   if reindices == indices

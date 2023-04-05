@@ -61,6 +61,7 @@ library
   exposed-modules:      Data.Accum
                         Data.CDF
                         Data.DataDomain
+                        Data.Profile
 
                         Cardano.Command
                         Cardano.Report

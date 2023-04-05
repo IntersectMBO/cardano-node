@@ -11,6 +11,7 @@ import Cardano.Prelude                  hiding (head, show)
 
 import Data.Aeson.Text                  (encodeToLazyText)
 import Data.List                        (dropWhileEnd)
+import Data.Map.Strict                  qualified as Map
 import Data.Text                        qualified as T
 import Data.Text.Lazy                   qualified as LT
 import Options.Applicative              qualified as Opt
@@ -147,15 +148,6 @@ renderScalarLim wLim v Field{..} =
     ITime    (($ v)->x) -> packWi $ take  8 $ drop 11 $ show x
     IText    (($ v)->x) -> T.take wi . T.dropWhileEnd (== 's') $ x
 
--- renderFieldCentiles :: a p -> (forall v. Divisible v => CDF p v -> [[v]]) -> Field DSelect p a -> [[Text]]
--- renderFieldCentiles x cdfProj Field{..} =
---   case fSelect of
---     DInt    (cdfProj . ($x) ->ds) -> ds <&> fmap (p.printf "%d")
---     DWord64 (cdfProj . ($x) ->ds) -> ds <&> fmap (p.printf "%d")
---     DFloat  (cdfProj . ($x) ->ds) -> ds <&> fmap (p.printf "%F")
---     DDeltaT (cdfProj . ($x) ->ds) -> ds <&> fmap (justifyData (unsafeUnWidth "renderFieldCentiles/DDeltaT" fWidth).T.dropWhileEnd (== 's').p.show)
---  where p = T.pack
-
 renderFieldCentiles :: a p -> (forall v. Divisible v => CDF p v -> [[v]]) -> Field DSelect p a -> [[Text]]
 renderFieldCentiles x cdfProj Field{..} =
   case fSelect of
@@ -193,8 +185,67 @@ renderSummary rc@RenderConfig{rcFormat=AsReport} a fieldSelr summ =
 renderSummary rc  _ _ _ =
   error $ "renderSummary: RenderConfig not supported:  " <> show rc
 
-renderTimeline :: forall (a :: Type). TimelineFields a => RenderConfig -> Anchor -> (Field ISelect I a -> Bool) -> [TimelineComments a] -> [a] -> [Text]
-renderTimeline rc a flt comments xs =
+renderProfilingData ::
+  RenderConfig -> Anchor -> (ProfileEntry (CDF I) -> Bool) -> ProfilingData (CDF I) -> [Text]
+renderProfilingData rc a flt pd =
+  render $
+  Props
+  { oProps = renderAnchorOrgProperties rc a
+  , oConstants = []
+  , oBody = (:[]) $
+    Table
+    { tColHeaders     = ["time, %", "range", "alloc, %", "source location"]
+    , tExtended       = True
+    , tApexHeader     = Just "Parameter"
+    , tColumns        = [ fieldsTime   <&> renderScalarLim (Just 6) pd
+                        , fieldsRange  <&> renderScalarLim (Just 6) pd
+                        , fieldsAlloc  <&> renderScalarLim (Just 6) pd
+                        , fieldsSrcLoc <&> renderScalarLim (Just 60) pd
+                        ]
+    , tRowHeaders     = pes <&> peFunc
+    , tSummaryHeaders = []
+    , tSummaryValues  = []
+    , tFormula        = []
+    , tConstants      = []
+    }
+  }
+ where
+   pes :: [ProfileEntry (CDF I)]
+   pes = filter flt (pdMap pd & Map.elems)
+         & sortBy (compare `on` Down . unI . cdfAverage . peTime)
+   fieldsTime   = pes <&> mkFi W3  (IFloat . ((unI . cdfAverage . peTime) .))
+   fieldsRange  = pes <&> mkFi W3  (IFloat . ((uncurry (flip (-)) . (low &&& high) .  cdfRange . peTime) .))
+   fieldsAlloc  = pes <&> mkFi W3  (IFloat . ((unI . cdfAverage . peAlloc) .))
+   fieldsSrcLoc = pes <&> mkFi Wno (IText  . (peSrcLoc .))
+
+   mkFi :: f ~ CDF I
+        => Width
+        -> ((ProfilingData f -> ProfileEntry f) -> ISelect I (ProfilingData f))
+        -> ProfileEntry f
+        -> Field ISelect I (ProfilingData f)
+   mkFi w f pe = Field
+     { fId    = peFunc pe
+     , fHead1 = ""
+     , fHead2 = ""
+     , fWidth = w
+     , fUnit  = Pct
+     , fPrecision = P3
+     , fScale = Lin
+     , fRange = Free
+     , fSelect =
+       f
+       $ fromMaybe (error $ "Function '" <> T.unpack (peFunc pe) <> "' missing from ProfileData.")
+       . Map.lookup (peFunc pe)
+       . pdMap
+     , fShortDesc = peFunc pe
+     , fDescription = peSrcLoc pe
+     }
+
+renderTimelineWithClass :: forall (a :: Type). TimelineFields a => (Field ISelect I a -> Bool) -> RenderConfig -> Anchor -> [TimelineComments a] -> [a] -> [Text]
+renderTimelineWithClass flt = renderTimeline (filter flt timelineFields) rtCommentary
+
+renderTimeline :: forall a b. [Field ISelect I a] -> (a -> b -> [Text]) -> RenderConfig -> Anchor -> [b] -> [a] -> [Text]
+renderTimeline fields' commentFn rc a comments xs =
   ("# " <> renderAnchor rc a)
   : concatMap (uncurry fLine) (zip xs [(0 :: Int)..])
  where
@@ -205,13 +256,10 @@ renderTimeline rc a flt comments xs =
      -- 1. actual timeline entry
      <> (entry l
      -- 2. per-entry commentary, if any
-         : concat (fmap (rtCommentary l) comments))
+         : concat (fmap (commentFn l) comments))
 
    entry :: a -> Text
    entry = renderLineDist . renderScalarLim Nothing
-
-   fields' :: [Field ISelect I a]
-   fields' = filter flt timelineFields
 
    head1, head2 :: Maybe Text
    head1 =
