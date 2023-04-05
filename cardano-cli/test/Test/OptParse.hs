@@ -44,7 +44,7 @@ checkTextEnvelopeFormat
   -> FilePath
   -> FilePath
   -> m ()
-checkTextEnvelopeFormat tve reference created = do
+checkTextEnvelopeFormat tve reference created = GHC.withFrozenCallStack $ do
   eRefTextEnvelope <- liftIO $ readTextEnvelopeOfTypeFromFile tve reference
   refTextEnvelope <- handleTextEnvelope eRefTextEnvelope
 
@@ -59,9 +59,9 @@ checkTextEnvelopeFormat tve reference created = do
    handleTextEnvelope (Right refTextEnvelope) = return refTextEnvelope
    handleTextEnvelope (Left fileErr) = failWithCustom GHC.callStack Nothing . displayError $ fileErr
 
-   typeTitleEquivalence :: MonadTest m => TextEnvelope -> TextEnvelope -> m ()
+   typeTitleEquivalence :: (MonadTest m, HasCallStack) => TextEnvelope -> TextEnvelope -> m ()
    typeTitleEquivalence (TextEnvelope refType refTitle _)
-                        (TextEnvelope createdType createdTitle _) = do
+                        (TextEnvelope createdType createdTitle _) = GHC.withFrozenCallStack $ do
      equivalence refType createdType
      equivalence refTitle createdTitle
 
