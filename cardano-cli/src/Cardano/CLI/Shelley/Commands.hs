@@ -95,7 +95,7 @@ renderShelleyCommand sc =
     TextViewCmd cmd -> renderTextViewCmd cmd
 
 data AddressCmd
-  = AddressKeyGen AddressKeyType VerificationKeyFile SigningKeyFile
+  = AddressKeyGen KeyOutputFormat AddressKeyType VerificationKeyFile SigningKeyFile
   | AddressKeyHash VerificationKeyTextOrFile (Maybe OutputFile)
   | AddressBuild
       PaymentVerifier
