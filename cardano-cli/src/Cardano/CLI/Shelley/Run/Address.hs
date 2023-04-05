@@ -22,10 +22,10 @@ import qualified Data.Text.IO as Text
 import           Cardano.Api
 import           Cardano.Api.Shelley
 
-import           Cardano.CLI.Shelley.Key (PaymentVerifier (..), StakeVerifier (..),
-                   VerificationKeyTextOrFile, VerificationKeyTextOrFileError (..), generateKeyPair,
-                   readVerificationKeyOrFile, readVerificationKeyTextOrFileAnyOf,
-                   renderVerificationKeyTextOrFileError)
+import           Cardano.CLI.Shelley.Key (PaymentVerifier (..), StakeIdentifier (..),
+                   StakeVerifier (..), VerificationKeyTextOrFile,
+                   VerificationKeyTextOrFileError (..), generateKeyPair, readVerificationKeyOrFile,
+                   readVerificationKeyTextOrFileAnyOf, renderVerificationKeyTextOrFileError)
 import           Cardano.CLI.Shelley.Parsers (AddressCmd (..), AddressKeyType (..), OutputFile (..))
 import           Cardano.CLI.Shelley.Run.Address.Info (ShelleyAddressInfoError, runAddressInfo)
 import           Cardano.CLI.Shelley.Run.Read
@@ -114,7 +114,7 @@ runAddressKeyHash vkeyTextOrFile mOutputFp = do
 
 
 runAddressBuild :: PaymentVerifier
-                -> Maybe StakeVerifier
+                -> Maybe StakeIdentifier
                 -> NetworkId
                 -> Maybe OutputFile
                 -> ExceptT ShelleyAddressCmdError IO ()
@@ -156,29 +156,31 @@ runAddressBuild paymentVerifier mbStakeVerifier nw mOutFp = do
     Nothing                 -> liftIO $ Text.putStr          outText
 
 makeStakeAddressRef
-  :: StakeVerifier
+  :: StakeIdentifier
   -> ExceptT ShelleyAddressCmdError IO StakeAddressReference
-makeStakeAddressRef stakeVerifier = case stakeVerifier of
-      StakeVerifierKey stkVkeyOrFile -> do
-        stakeVKey <- firstExceptT ShelleyAddressCmdReadKeyFileError $
-          newExceptT $ readVerificationKeyOrFile AsStakeKey stkVkeyOrFile
+makeStakeAddressRef stakeIdentifier =
+  case stakeIdentifier of
+    StakeIdentifierVerifier stakeVerifier ->
+      case stakeVerifier of
+        StakeVerifierKey stkVkeyOrFile -> do
+          stakeVKey <- firstExceptT ShelleyAddressCmdReadKeyFileError $
+            newExceptT $ readVerificationKeyOrFile AsStakeKey stkVkeyOrFile
 
-        return . StakeAddressByValue . StakeCredentialByKey . verificationKeyHash $ stakeVKey
+          return . StakeAddressByValue . StakeCredentialByKey . verificationKeyHash $ stakeVKey
 
-      StakeVerifierScriptFile (ScriptFile fp) -> do
-        ScriptInAnyLang _lang script <-
-          firstExceptT ShelleyAddressCmdReadScriptFileError $
-            readFileScriptInAnyLang fp
+        StakeVerifierScriptFile (ScriptFile fp) -> do
+          ScriptInAnyLang _lang script <-
+            firstExceptT ShelleyAddressCmdReadScriptFileError $
+              readFileScriptInAnyLang fp
 
-        let stakeCred = StakeCredentialByScript (hashScript script)
-        return (StakeAddressByValue stakeCred)
-
-      StakeVerifierAddress stakeAddr ->
+          let stakeCred = StakeCredentialByScript (hashScript script)
+          return (StakeAddressByValue stakeCred)
+    StakeIdentifierAddress stakeAddr ->
         pure $ StakeAddressByValue $ stakeAddressCredential stakeAddr
 
 buildShelleyAddress
   :: VerificationKey PaymentKey
-  -> Maybe StakeVerifier
+  -> Maybe StakeIdentifier
   -> NetworkId
   -> ExceptT ShelleyAddressCmdError IO (Address ShelleyAddr)
 buildShelleyAddress vkey mbStakeVerifier nw =

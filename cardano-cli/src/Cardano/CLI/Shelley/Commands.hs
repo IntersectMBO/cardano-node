@@ -51,8 +51,8 @@ import           Cardano.Api.Shelley
 
 import           Data.Text (Text)
 
-import           Cardano.CLI.Shelley.Key (PaymentVerifier, StakeVerifier, VerificationKeyOrFile,
-                   VerificationKeyOrHashOrFile, VerificationKeyTextOrFile)
+import           Cardano.CLI.Shelley.Key (PaymentVerifier, StakeIdentifier, StakeVerifier,
+                   VerificationKeyOrFile, VerificationKeyOrHashOrFile, VerificationKeyTextOrFile)
 import           Cardano.CLI.Types
 
 import           Cardano.Chain.Common (BlockCount)
@@ -94,7 +94,7 @@ data AddressCmd
   | AddressKeyHash VerificationKeyTextOrFile (Maybe OutputFile)
   | AddressBuild
       PaymentVerifier
-      (Maybe StakeVerifier)
+      (Maybe StakeIdentifier)
       NetworkId
       (Maybe OutputFile)
   | AddressInfo Text (Maybe OutputFile)
@@ -113,12 +113,12 @@ data StakeAddressCmd
   = StakeAddressKeyGen VerificationKeyFile SigningKeyFile
   | StakeAddressKeyHash (VerificationKeyOrFile StakeKey) (Maybe OutputFile)
   | StakeAddressBuild StakeVerifier NetworkId (Maybe OutputFile)
-  | StakeRegistrationCert StakeVerifier OutputFile
+  | StakeRegistrationCert StakeIdentifier OutputFile
   | StakeCredentialDelegationCert
-      StakeVerifier
+      StakeIdentifier
       (VerificationKeyOrHashOrFile StakePoolKey)
       OutputFile
-  | StakeCredentialDeRegistrationCert StakeVerifier OutputFile
+  | StakeCredentialDeRegistrationCert StakeIdentifier OutputFile
   deriving Show
 
 renderStakeAddressCmd :: StakeAddressCmd -> Text

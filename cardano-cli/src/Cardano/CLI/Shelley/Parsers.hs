@@ -58,8 +58,8 @@ import           Cardano.Api.Shelley
 
 import           Cardano.Chain.Common (BlockCount (BlockCount))
 import           Cardano.CLI.Shelley.Commands
-import           Cardano.CLI.Shelley.Key (PaymentVerifier (..), StakeVerifier (..),
-                   VerificationKeyOrFile (..), VerificationKeyOrHashOrFile (..),
+import           Cardano.CLI.Shelley.Key (PaymentVerifier (..), StakeIdentifier (..),
+                   StakeVerifier (..), VerificationKeyOrFile (..), VerificationKeyOrHashOrFile (..),
                    VerificationKeyTextOrFile (..))
 import           Cardano.CLI.Types
 
@@ -158,7 +158,7 @@ pAddressCmd =
     pAddressBuild :: Parser AddressCmd
     pAddressBuild = AddressBuild
       <$> pPaymentVerifier
-      <*> Opt.optional pStakeVerifier
+      <*> Opt.optional pStakeIdentifier
       <*> pNetworkId
       <*> pMaybeOutputFile
 
@@ -172,13 +172,17 @@ pPaymentVerifier =
           pScriptFor "payment-script-file" Nothing
                      "Filepath of the payment script."
 
+pStakeIdentifier :: Parser StakeIdentifier
+pStakeIdentifier = asum
+  [ StakeIdentifierVerifier <$> pStakeVerifier
+  , StakeIdentifierAddress <$> pStakeAddress
+  ]
+
 pStakeVerifier :: Parser StakeVerifier
-pStakeVerifier =
-        StakeVerifierKey <$> pStakeVerificationKeyOrFile
-    <|> StakeVerifierScriptFile <$>
-          pScriptFor "stake-script-file" Nothing
-                     "Filepath of the staking script."
-    <|> StakeVerifierAddress <$> pStakeAddress
+pStakeVerifier = asum
+  [ StakeVerifierKey <$> pStakeVerificationKeyOrFile
+  , StakeVerifierScriptFile <$> pScriptFor "stake-script-file" Nothing "Filepath of the staking script."
+  ]
 
 pPaymentVerificationKeyTextOrFile :: Parser VerificationKeyTextOrFile
 pPaymentVerificationKeyTextOrFile =
@@ -385,25 +389,30 @@ pStakeAddressCmd =
     pStakeAddressKeyHash = StakeAddressKeyHash <$> pStakeVerificationKeyOrFile <*> pMaybeOutputFile
 
     pStakeAddressBuild :: Parser StakeAddressCmd
-    pStakeAddressBuild = StakeAddressBuild <$> pStakeVerifier
-                                           <*> pNetworkId
-                                           <*> pMaybeOutputFile
+    pStakeAddressBuild =
+      StakeAddressBuild
+        <$> pStakeVerifier
+        <*> pNetworkId
+        <*> pMaybeOutputFile
 
     pStakeAddressRegistrationCert :: Parser StakeAddressCmd
-    pStakeAddressRegistrationCert = StakeRegistrationCert
-                                      <$> pStakeVerifier
-                                      <*> pOutputFile
+    pStakeAddressRegistrationCert =
+      StakeRegistrationCert
+        <$> pStakeIdentifier
+        <*> pOutputFile
 
     pStakeAddressDeregistrationCert :: Parser StakeAddressCmd
-    pStakeAddressDeregistrationCert = StakeCredentialDeRegistrationCert
-                                        <$> pStakeVerifier
-                                        <*> pOutputFile
+    pStakeAddressDeregistrationCert =
+      StakeCredentialDeRegistrationCert
+        <$> pStakeIdentifier
+        <*> pOutputFile
 
     pStakeAddressDelegationCert :: Parser StakeAddressCmd
-    pStakeAddressDelegationCert = StakeCredentialDelegationCert
-                                    <$> pStakeVerifier
-                                    <*> pStakePoolVerificationKeyOrHashOrFile
-                                    <*> pOutputFile
+    pStakeAddressDelegationCert =
+      StakeCredentialDelegationCert
+        <$> pStakeIdentifier
+        <*> pStakePoolVerificationKeyOrHashOrFile
+        <*> pOutputFile
 
 pKeyCmd :: Parser KeyCmd
 pKeyCmd =
