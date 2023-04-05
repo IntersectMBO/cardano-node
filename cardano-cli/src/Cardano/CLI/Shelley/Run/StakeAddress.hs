@@ -39,7 +39,7 @@ renderShelleyStakeAddressCmdError err =
     ShelleyStakeAddressCmdReadScriptFileError fileErr -> Text.pack (displayError fileErr)
 
 runStakeAddressCmd :: StakeAddressCmd -> ExceptT ShelleyStakeAddressCmdError IO ()
-runStakeAddressCmd (StakeAddressKeyGen vk sk) = runStakeAddressKeyGenToFile vk sk
+runStakeAddressCmd (StakeAddressKeyGen fmt vk sk) = runStakeAddressKeyGenToFile fmt vk sk
 runStakeAddressCmd (StakeAddressKeyHash vk mOutputFp) = runStakeAddressKeyHash vk mOutputFp
 runStakeAddressCmd (StakeAddressBuild stakeVerifier nw mOutputFp) =
   runStakeAddressBuild stakeVerifier nw mOutputFp
@@ -56,10 +56,11 @@ runStakeAddressCmd (StakeCredentialDeRegistrationCert stakeIdentifier outputFp) 
 --
 
 runStakeAddressKeyGenToFile
-  :: VerificationKeyFile
+  :: KeyOutputFormat
+  -> VerificationKeyFile
   -> SigningKeyFile
   -> ExceptT ShelleyStakeAddressCmdError IO ()
-runStakeAddressKeyGenToFile (VerificationKeyFile vkFp) (SigningKeyFile skFp) = do
+runStakeAddressKeyGenToFile fmt (VerificationKeyFile vkFp) (SigningKeyFile skFp) = do
   let skeyDesc = "Stake Signing Key"
   let vkeyDesc = "Stake Verification Key"
 
@@ -68,8 +69,17 @@ runStakeAddressKeyGenToFile (VerificationKeyFile vkFp) (SigningKeyFile skFp) = d
   let vkey = getVerificationKey skey
 
   firstExceptT ShelleyStakeAddressCmdWriteFileError $ do
-    newExceptT $ writeLazyByteStringFile skFp $ textEnvelopeToJSON (Just skeyDesc) skey
-    newExceptT $ writeLazyByteStringFile vkFp $ textEnvelopeToJSON (Just vkeyDesc) vkey
+    case fmt of
+      KeyOutputFormatTextEnvelope ->
+        newExceptT $ writeLazyByteStringFile skFp $ textEnvelopeToJSON (Just skeyDesc) skey
+      KeyOutputFormatBech32 ->
+        newExceptT $ writeTextFile skFp $ serialiseToBech32 skey
+
+    case fmt of
+      KeyOutputFormatTextEnvelope ->
+        newExceptT $ writeLazyByteStringFile vkFp $ textEnvelopeToJSON (Just vkeyDesc) vkey
+      KeyOutputFormatBech32 ->
+        newExceptT $ writeTextFile vkFp $ serialiseToBech32 vkey
 
 runStakeAddressKeyHash
   :: VerificationKeyOrFile StakeKey

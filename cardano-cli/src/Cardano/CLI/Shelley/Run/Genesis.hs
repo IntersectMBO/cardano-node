@@ -901,6 +901,7 @@ createPoolCredentials fmt dir index = do
         (OutputFile $ dir </> "opcert" ++ strIndex ++ ".cert")
   firstExceptT ShelleyGenesisCmdStakeAddressCmdError $
     runStakeAddressKeyGenToFile
+        fmt
         (VerificationKeyFile $ dir </> "staking-reward" ++ strIndex ++ ".vkey")
         (SigningKeyFile $ dir </> "staking-reward" ++ strIndex ++ ".skey")
  where

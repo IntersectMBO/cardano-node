@@ -52,7 +52,7 @@ import           Prelude
 
 import           Cardano.Api.Shelley
 
-import           Data.String(IsString)
+import           Data.String (IsString)
 import           Data.Text (Text)
 import           GHC.Generics (Generic)
 
@@ -115,7 +115,7 @@ renderAddressCmd cmd =
     AddressInfo {} -> "address info"
 
 data StakeAddressCmd
-  = StakeAddressKeyGen VerificationKeyFile SigningKeyFile
+  = StakeAddressKeyGen KeyOutputFormat VerificationKeyFile SigningKeyFile
   | StakeAddressKeyHash (VerificationKeyOrFile StakeKey) (Maybe OutputFile)
   | StakeAddressBuild StakeVerifier NetworkId (Maybe OutputFile)
   | StakeRegistrationCert StakeIdentifier OutputFile
