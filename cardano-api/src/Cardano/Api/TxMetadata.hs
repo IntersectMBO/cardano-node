@@ -8,6 +8,9 @@ module Cardano.Api.TxMetadata (
     -- * Types
     TxMetadata (TxMetadata),
 
+    -- * Class
+    AsTxMetadata (..),
+
     -- * Constructing metadata
     TxMetadataValue(..),
     makeTransactionMetadata,
@@ -154,6 +157,13 @@ metaBytesChunks =
     TxMetaBytes
     BS.length
     BS.splitAt
+
+-- ----------------------------------------------------------------------------
+-- TxMetadata class
+--
+
+class AsTxMetadata a where
+  asTxMetadata :: a -> TxMetadata
 
 -- ----------------------------------------------------------------------------
 -- Internal conversion functions
