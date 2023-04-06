@@ -398,6 +398,8 @@ module Cardano.Api (
     AnyPlutusScriptVersion(..),
     IsPlutusScriptLanguage(..),
     IsScriptLanguage(..),
+    fromAlonzoScriptLanguage,
+    toAlonzoScriptLanguage,
 
     -- ** Scripts in a specific language
     Script(..),

@@ -83,9 +83,8 @@ genExUnits = do
 genLanguage :: Gen Alonzo.Language
 genLanguage = Gen.element [Alonzo.PlutusV1, Alonzo.PlutusV2]
 
-genCostModels :: Gen Alonzo.CostModels
-genCostModels = do
-  lang <- genLanguage
+genCostModels :: Alonzo.Language -> Gen Alonzo.CostModels
+genCostModels lang = do
   alonzoCostModel <- genCostModel lang
   Alonzo.CostModels
     <$> (conv <$> Gen.list (Range.linear 1 3) (return alonzoCostModel))
@@ -99,8 +98,9 @@ genCostModels = do
 genAlonzoGenesis :: Gen Alonzo.AlonzoGenesis
 genAlonzoGenesis = do
   coinsPerUTxOWord <- genCoin (Range.linear 0 5)
+  lang <- genLanguage
   -- TODO: Babbage: Figure out how to deal with the asymmetric cost model JSON
-  _costmdls' <- genCostModels
+  _costmdls' <- genCostModels lang
   prices' <- genPrices
   maxTxExUnits' <- genExUnits
   maxBlockExUnits' <- genExUnits
