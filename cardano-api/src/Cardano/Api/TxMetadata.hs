@@ -15,6 +15,8 @@ module Cardano.Api.TxMetadata (
     -- * Validating metadata
     validateTxMetadata,
     TxMetadataRangeError (..),
+    txMetadataTextStringMaxByteLength,
+    txMetadataByteStringMaxLength,
 
     -- * Conversion to\/from JSON
     TxMetadataJsonSchema (..),
