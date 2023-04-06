@@ -772,6 +772,6 @@ analysis_config_extract_legacy_tracing() {
 function ghc_rts_minusp_tojson() {
     tail -n +10 "$1" | \
     head -n 40       | \
-    sed 's_^\([^ ]\+\) \+\([^ ]\+\) \+\([^ ]\+\) \+\([^ ]\+\) \+\([^ ]\+\)$_{ "peFunc": "\1", "peModule": "\2", "peSrcLoc": "\3", "peTime": \4, "peAlloc": \5 }_' | \
+    sed 's_\\_\\\\_g; s_^\([^ ]\+\) \+\([^ ]\+\) \+\([^ ]\+\) \+\([^ ]\+\) \+\([^ ]\+\)$_{ "peFunc": "\1", "peModule": "\2", "peSrcLoc": "\3", "peTime": \4, "peAlloc": \5 }_' | \
     grep '^{.*}$' || true
 }
