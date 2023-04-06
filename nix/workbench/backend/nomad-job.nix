@@ -192,101 +192,96 @@ let
     # on the same client (host). All tasks within a group will be
     # placed on the same host.
     # https://developer.hashicorp.com/nomad/docs/job-specification/group
-    group."workbench-cluster-job-group" = groupDefaults // {
+    group = let
+      valueF = (taskName: serviceName: portName: portNum: nodeSpec: (groupDefaults // {
 
-      # Specifies the number of instances that should be running under for this
-      # group. This value must be non-negative. This defaults to the min value
-      # specified in the scaling block, if present; otherwise, this defaults to
-      # 1
-      count = 1;
+        # Specifies the number of instances that should be running under for
+        # this group. This value must be non-negative. This defaults to the min
+        # value specified in the scaling block, if present; otherwise, this
+        # defaults to 1
+        count = 1;
 
-      # The reschedule stanza specifies the group's rescheduling strategy. If
-      # specified at the job level, the configuration will apply to all groups
-      # within the job. If the reschedule stanza is present on both the job and
-      # the group, they are merged with the group stanza taking the highest
-      # precedence and then the job.
-      # To disable rescheduling, set the attempts parameter to zero and unlimited
-      # to false.
-      reschedule = {
-        # Specifies the number of reschedule attempts allowed in the configured
-        # interval. Defaults vary by job type.
-        attempts = 0;
-        # Enables unlimited reschedule attempts. If this is set to true the
-        # attempts and interval fields are not used.
-        unlimited = false;
-      };
+        # The reschedule stanza specifies the group's rescheduling strategy. If
+        # specified at the job level, the configuration will apply to all groups
+        # within the job. If the reschedule stanza is present on both the job
+        # and the group, they are merged with the group stanza taking the highest
+        # precedence and then the job.
+        # To disable rescheduling, set the attempts parameter to zero and
+        # unlimited to false.
+        reschedule = {
+          # Specifies the number of reschedule attempts allowed in the
+          # configured interval. Defaults vary by job type.
+          attempts = 0;
+          # Enables unlimited reschedule attempts. If this is set to true the
+          # attempts and interval fields are not used.
+          unlimited = false;
+        };
 
-      # Specifies the restart policy for all tasks in this group. If omitted, a
-      # default policy exists for each job type, which can be found in the restart
-      # stanza documentation.
-      restart = {
-        attempts = 0;
-        mode = "fail";
-      };
+        # Specifies the restart policy for all tasks in this group. If omitted,
+        # a default policy exists for each job type, which can be found in the
+        # restart stanza documentation.
+        restart = {
+          attempts = 0;
+          mode = "fail";
+        };
 
-      # Specifies a key-value map that annotates with user-defined metadata.
-      # Used as a "template" to generate the envars passed to the container.
-      # This makes it easier to change them using `jq` inside the workbench!
-      meta = null;
+        # Specifies a key-value map that annotates with user-defined metadata.
+        # Used as a "template" to generate the envars passed to the container.
+        # This makes it easier to change them using `jq` inside the workbench!
+        meta = null;
 
-      # The network stanza specifies the networking requirements for the task
-      # group, including the network mode and port allocations.
-      # https://developer.hashicorp.com/nomad/docs/job-specification/network
-      # TODO: Use "bridge" mode and port allocations ?
-      network = {
-        # FIXME: "bridge" right now is not working. Client error is:
-        # {"@level":"error","@message":"prerun failed","@module":"client.alloc_runner","@timestamp":"2023-02-01T13:52:24.948596Z","alloc_id":"03faca46-0fdc-4ba0-01e9-50f67c088f99","error":"pre-run hook \"network\" failed: failed to create network for alloc: mkdir /var/run/netns: permission denied"}
-        # {"@level":"info","@message":"waiting for task to exit","@module":"client.alloc_runner","@timestamp":"2023-02-01T13:52:24.983021Z","alloc_id":"03faca46-0fdc-4ba0-01e9-50f67c088f99","task":"tracer"}
-        # {"@level":"info","@message":"marking allocation for GC","@module":"client.gc","@timestamp":"2023-02-01T13:52:24.983055Z","alloc_id":"03faca46-0fdc-4ba0-01e9-50f67c088f99"}
-        # {"@level":"info","@message":"node registration complete","@module":"client","@timestamp":"2023-02-01T13:52:27.489795Z"}
-        mode = "host";
-        port = lib.listToAttrs (
-          # If not oneTracerPerNode, an individual tracer task is needed (instead
-          # of running a tracer alongside a node with supervisor)
-          lib.optionals (profileNix.value.node.tracer && !oneTracerPerNode) [
-            # TODO: Leave empty or invent one?
-            {name = "tracer"; value = {};}
-          ]
-          ++
-          (lib.mapAttrsToList
-            (_: nodeSpec: {
-              # All names of the form node#, without the "-", instead of node-#
-              name = "node" + (toString nodeSpec.i);
-              value =
-                # The "podman" driver accepts "Mapped Ports", but not the "exec" driver
-                # https://developer.hashicorp.com/nomad/docs/job-specification/network#mapped-ports
-                # If you use a network in bridge mode you can use "Mapped Ports"
-                # https://developer.hashicorp.com/nomad/docs/job-specification/network#bridge-mode
-                if execTaskDriver
-                then {
-                  to     = ''${toString nodeSpec.port}'';
-                  static = ''${toString nodeSpec.port}'';
-                }
-                else {
-                  to     = ''${toString nodeSpec.port}'';
-                };
-            })
-            (profileNix.node-specs.value)
-          )
-        );
-      };
+        # The network stanza specifies the networking requirements for the task
+        # group, including the network mode and port allocations.
+        # https://developer.hashicorp.com/nomad/docs/job-specification/network
+        # TODO: Use "bridge" mode and port allocations ?
+        network = {
+          # FIXME: "bridge" right now is not working. Client error is:
+          # {"@level":"error","@message":"prerun failed","@module":"client.alloc_runner","@timestamp":"2023-02-01T13:52:24.948596Z","alloc_id":"03faca46-0fdc-4ba0-01e9-50f67c088f99","error":"pre-run hook \"network\" failed: failed to create network for alloc: mkdir /var/run/netns: permission denied"}
+          # {"@level":"info","@message":"waiting for task to exit","@module":"client.alloc_runner","@timestamp":"2023-02-01T13:52:24.983021Z","alloc_id":"03faca46-0fdc-4ba0-01e9-50f67c088f99","task":"tracer"}
+          # {"@level":"info","@message":"marking allocation for GC","@module":"client.gc","@timestamp":"2023-02-01T13:52:24.983055Z","alloc_id":"03faca46-0fdc-4ba0-01e9-50f67c088f99"}
+          # {"@level":"info","@message":"node registration complete","@module":"client","@timestamp":"2023-02-01T13:52:27.489795Z"}
+          mode = "host";
+          port = lib.listToAttrs (
+            # If not oneTracerPerNode, an individual tracer task is needed (instead
+            # of running a tracer alongside a node with supervisor)
+            lib.optionals (profileNix.value.node.tracer && !oneTracerPerNode) [
+              # TODO: Leave empty or invent one?
+              {name = "tracer"; value = {};}
+            ]
+            ++
+            [
+              {
+                # All names of the form node#, without the "-", instead of node-#
+                name = portName;
+                value =
+                  # The "podman" driver accepts "Mapped Ports", but not the "exec" driver
+                  # https://developer.hashicorp.com/nomad/docs/job-specification/network#mapped-ports
+                  # If you use a network in bridge mode you can use "Mapped Ports"
+                  # https://developer.hashicorp.com/nomad/docs/job-specification/network#bridge-mode
+                  if execTaskDriver
+                  then {
+                    to     = ''${toString portNum}'';
+                    static = ''${toString portNum}'';
+                  }
+                  else {
+                    to     = ''${toString portNum}'';
+                  };
+              }
+            ]
+          );
+        };
 
-      # TODO:
-      # Specifies the volumes that are required by tasks within the group.
-      # volume
+        # The Consul namespace in which group and task-level services within the
+        # group will be registered. Use of template to access Consul KV will read
+        # from the specified Consul namespace. Specifying namespace takes
+        # precedence over the -consul-namespace command line argument in job run.
+        # namespace = "";
+        # Not available as the documentations says: Extraneous JSON object property; No argument or block type is named "namespace".
 
-      # The Consul namespace in which group and task-level services within the
-      # group will be registered. Use of template to access Consul KV will read
-      # from the specified Consul namespace. Specifying namespace takes
-      # precedence over the -consul-namespace command line argument in job run.
-      # namespace = "";
-      # Not available as the documentations says: Extraneous JSON object property; No argument or block type is named "namespace".
-
-      # The task stanza creates an individual unit of work, such as a Docker
-      # container, web application, or batch processing.
-      # https://developer.hashicorp.com/nomad/docs/job-specification/task
-      task = let
-        valueF = (taskName: serviceName: portName: nodeSpec: (taskDefaults // {
+        # The task stanza creates an individual unit of work, such as a Docker
+        # container, web application, or batch processing.
+        # https://developer.hashicorp.com/nomad/docs/job-specification/task
+        task.${taskName} = taskDefaults // {
 
           # The meta stanza allows for user-defined arbitrary key-value pairs.
           # It is possible to use the meta stanza at the job, group, or task
@@ -572,9 +567,7 @@ let
                 ;
 
               };
-
-            }
-            else {
+            } else {
               driver = "podman";
 
               # Specifies the driver configuration, which is passed directly to the
@@ -636,9 +629,8 @@ let
 
               };
             }
-          )
-        )
-      );
+          );
+      }));
       in lib.listToAttrs (
         # If not oneTracerPerNode, an individual tracer task is needed (instead
         # of running a tracer alongside a node with supervisor)
@@ -646,10 +638,11 @@ let
           {
             name = "tracer";
             value = valueF
-              "tracer"
-              "perf-tracer"
-              "tracer"
-              {};
+              "tracer"                               # taskName
+              "perf-tracer"                          # serviceName
+              "tracer"                               # portName (can't have "-")
+              0                                      # portNum
+              {};                                    # node-specs
           }
         ]
         ++
@@ -664,10 +657,11 @@ let
             */
             name = nodeSpec.name;
             value = valueF
-              nodeSpec.name
-              ("perf-node-" + (toString nodeSpec.i))
-              ("node" + (toString nodeSpec.i))
-              nodeSpec;
+              nodeSpec.name                          # taskName
+              ("perf-node-" + (toString nodeSpec.i)) # serviceName
+              ("node" + (toString nodeSpec.i))       # portName (can't have "-")
+              nodeSpec.port                          # portNum
+              nodeSpec;                              # node-specs
           })
           (profileNix.node-specs.value)
         )
@@ -675,7 +669,7 @@ let
 
     };
 
-  };};
+  };
 
   jobDefaults = {
     ########################################
