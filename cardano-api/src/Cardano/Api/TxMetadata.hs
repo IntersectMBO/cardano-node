@@ -14,14 +14,13 @@ module Cardano.Api.TxMetadata (
     -- * Constructing metadata
     TxMetadataValue(..),
     makeTransactionMetadata,
+    mergeTransactionMetadata,
     metaTextChunks,
     metaBytesChunks,
 
     -- * Validating metadata
     validateTxMetadata,
     TxMetadataRangeError (..),
-    txMetadataTextStringMaxByteLength,
-    txMetadataByteStringMaxLength,
 
     -- * Conversion to\/from JSON
     TxMetadataJsonSchema (..),
@@ -131,6 +130,14 @@ instance SerialiseAsCBOR TxMetadata where
 
 makeTransactionMetadata :: Map Word64 TxMetadataValue -> TxMetadata
 makeTransactionMetadata = TxMetadata
+
+mergeTransactionMetadata
+  :: (TxMetadataValue -> TxMetadataValue -> TxMetadataValue)
+  -> TxMetadata
+  -> TxMetadata
+  -> TxMetadata
+mergeTransactionMetadata merge (TxMetadata m1) (TxMetadata m2) =
+  TxMetadata $ Map.unionWith merge m1 m2
 
 -- | Create a 'TxMetadataValue' from a 'Text' as a list of chunks of an
 -- acceptable size.
