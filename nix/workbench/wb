@@ -11,6 +11,7 @@ global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
 . "$global_basedir"/env.sh
 . "$global_basedir"/chaindb.sh
 . "$global_basedir"/manifest.sh
+. "$global_basedir"/nomad.sh
 . "$global_basedir"/publish.sh
 . "$global_basedir"/run.sh
 . "$global_basedir"/scenario.sh
@@ -23,6 +24,9 @@ global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
 . "$global_basedir"/backend/backend.sh
 . "$global_basedir"/backend/nixops.sh
 . "$global_basedir"/backend/nomad.sh
+. "$global_basedir"/backend/nomad/cloud.sh
+. "$global_basedir"/backend/nomad/exec.sh
+. "$global_basedir"/backend/nomad/podman.sh
 . "$global_basedir"/backend/supervisor.sh
 
 usage_main() {
@@ -39,6 +43,7 @@ usage_main() {
 
     $(red chaindb)      ($(red c))      ChainDB
     $(red genesis)      ($(red g))      Genesis
+    $(red nomad)        ($(red n))      Nomad and Vault
     $(red topology)     ($(red t))      Topology generation
 
   $(white wb) $(blue options):
@@ -294,6 +299,7 @@ main() {
         chaindb      | c )        chaindb             "$@";;
         genesis      | g )        genesis             "$@";;
         manifest     | m )        manifest            "$@";;
+        nomad        | n )        wb_nomad            "$@";;
         topology     | topo | t ) topology            "$@";;
 
         ## 'profile' aliases:

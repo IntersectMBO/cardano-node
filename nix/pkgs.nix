@@ -19,16 +19,16 @@ let
   let
     backendRegistry =
       {
-        nixops      = params:
-          import ./workbench/backend/nixops.nix params;
-        nomad       = params:
-          import ./workbench/backend/nomad.nix (params // {execTaskDriver=false;});
-        nomadexec   = params:
-          import ./workbench/backend/nomad.nix (params // {execTaskDriver=true; });
-        nomadpodman = params:
-          import ./workbench/backend/nomad.nix (params // {execTaskDriver=false;});
-        supervisor  = params:
-          import ./workbench/backend/supervisor.nix params;
+        nixops          = params:
+          import ./workbench/backend/nixops.nix       params;
+        nomadcloud      = params:
+          import ./workbench/backend/nomad/cloud.nix  params;
+        nomadexec       = params:
+          import ./workbench/backend/nomad/exec.nix   params;
+        nomadpodman     = params:
+          import ./workbench/backend/nomad/podman.nix params;
+        supervisor      = params:
+          import ./workbench/backend/supervisor.nix   params;
       }
     ;
   in

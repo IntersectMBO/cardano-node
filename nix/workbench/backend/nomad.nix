@@ -1,92 +1,11 @@
 { pkgs
 , lib
 , stateDir
-, basePort
-## `useCabalRun` not used here unlike `supervisor.nix`.
 # TODO: Fetch this from config services inside materialise-profile !
 , eventlogged ? true
-# The exec driver uses SRE's plugin that allows Nix derivation artifacts!
-, execTaskDriver
 , ...
 }:
 let
-
-  name = "nomad";
-
-  # Unlike the supervisor backend `useCabalRun` is always false here.
-  useCabalRun = false;
-
-  # The versions of Nomad and the Nomad plugins needed are defined here instead
-  # of inside the flake!
-  extraShellPkgs = let
-    nomad = (pkgs.buildGo119Module rec {
-      pname = "nomad";
-      version = "1.4.3"; # Both Nomad versions are using 1.4.3
-      subPackages = [ "." ];
-      doCheck = true;
-      src = pkgs.fetchFromGitHub {
-        owner = "hashicorp";
-        repo = pname;
-        rev = "v${version}";
-        # nix-prefetch-url --unpack https://github.com/hashicorp/nomad/archive/v1.4.3.tar.gz
-        sha256 = "0j2ik501sg6diyabwwfrqnz1wxx485w5pxry4bfkg5smgyp5y18r";
-      };
-      # error: either `vendorHash` or `vendorSha256` is required
-      # https://discourse.nixos.org/t/buildgomodule-how-to-get-vendorsha256/9317
-      vendorSha256 = "sha256-JQRpsQhq5r/QcgFwtnptmvnjBEhdCFrXFrTKkJioL3A=";
-    });
-    # Both Nomad source versions are using 1.4.3 but this one returns:
-    # > nomad --version
-    # Nomad v1.4.4-dev
-    nomad-sre = (pkgs.buildGo119Module rec {
-      pname = "nomad";
-      version = "1.4.3";
-      subPackages = [ "." ];
-      doCheck = true;
-      src = pkgs.fetchFromGitHub { # "github:input-output-hk/nomad/release/1.4.3"
-        owner = "input-output-hk";
-        repo = pname;
-        rev = "2b8a93390"; # Use to be "release/${version}" but it changes.
-        # nix-prefetch-url --unpack https://github.com/input-output-hk/nomad/archive/2b8a93390/1.4.3.tar.gz
-        sha256 = "0l2sfhpg0p5mjdbipib7q63wlsrczr2fkq9xi641vhgxsjmprvwm";
-      };
-      # error: either `vendorHash` or `vendorSha256` is required
-      # https://discourse.nixos.org/t/buildgomodule-how-to-get-vendorsha256/9317
-      vendorSha256 = "sha256-JQRpsQhq5r/QcgFwtnptmvnjBEhdCFrXFrTKkJioL3A=";
-    });
-    # This plugin is defined but only used if `execTaskDriver` is false.
-    nomad-driver-podman = (pkgs.buildGo119Module rec {
-      pname = "nomad-driver-podman";
-      version = "0.4.1";
-      subPackages = [ "." ];
-      doCheck = false; # some tests require a running podman service to pass
-      src = pkgs.fetchFromGitHub {
-        owner = "hashicorp";
-        repo = pname;
-        rev = "v${version}";
-        # nix-prefetch-url --unpack https://github.com/hashicorp/nomad-driver-podman/archive/v0.4.1.tar.gz
-        sha256 = "03856ws02xkqg5374x35zzz5900456rvpsridsjgwvvyqnysn9ls";
-      };
-      # error: either `vendorHash` or `vendorSha256` is required
-      # https://discourse.nixos.org/t/buildgomodule-how-to-get-vendorsha256/9317
-      vendorSha256 = "sha256-AtgxHAkNzzjMQoSqROpuNoSDum/6JR+mLpcHLFL9EIY=";
-    });
-  in
-    (if !execTaskDriver
-      then [ nomad pkgs.podman nomad-driver-podman ]
-      # If we are going to use the `exec` driver we use the SRE patched
-      # version of Nomad that allows to use `nix_installables` as artifacts.
-      else [ nomad-sre ]
-    )
-    ++
-    [
-      # Network tools to be able to use bridge networking and the HTTP server
-      # to upload/download the genesis tar file.
-      pkgs.cni-plugins pkgs.webfs
-      # Amazon S3 HTTP to upload the genesis.
-      pkgs.awscli
-    ]
-  ;
 
   # Backend-specific Nix bits:
   materialise-profile =
@@ -95,11 +14,8 @@ let
         supervisorConf = import ./supervisor-conf.nix
           { inherit profileNix;
             inherit pkgs lib stateDir;
-            unixHttpServerPort = if execTaskDriver
-              # ''{{ env "NOMAD_TASK_DIR" }}/supervisor.sock''
-              then "/tmp/supervisor.sock" # TODO: Is this OK?
-              else "/tmp/supervisor.sock"
-            ;
+            # ''{{ env "NOMAD_TASK_DIR" }}/supervisor.sock''
+            unixHttpServerPort = "/tmp/supervisor.sock";
           }
         ;
         # Intermediate / workbench-adhoc container specifications
@@ -241,7 +157,7 @@ let
             };
           };
         };
-      in pkgs.runCommand "workbench-backend-output-${profileNix.profileName}-${name}"
+      in pkgs.runCommand "workbench-backend-output-${profileNix.profileName}-nomad"
         ({
           containerSpecsJSON = pkgs.writeText "workbench-cluster-container-pkgs.json"
             (lib.generators.toJSON {} containerSpecs);
@@ -251,24 +167,4 @@ let
         ln -s $containerSpecsJSON      $out/container-specs.json
         '';
 
-  overlay =
-    proTopo: self: super:
-    {
-    };
-
-  service-modules = {
-    node = { config, ... }:
-      let selfCfg = config.services.cardano-node;
-          i       = toString selfCfg.nodeId;
-      in {
-          services.cardano-node.stateDir = stateDir + "/node-${i}";
-        }
-    ;
-  };
-
-in
-{
-  name = "nomad";
-
-  inherit extraShellPkgs materialise-profile overlay stateDir basePort useCabalRun service-modules;
-}
+in { inherit materialise-profile; }

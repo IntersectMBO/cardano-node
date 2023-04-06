@@ -13,20 +13,6 @@ usage_publish() {
                      (--port) pointing to the socat|norouter based tunnel,
                      database (--dbname), user (--username) and password
                      (PGPASSWORD=) to what SRE provides.
-    $(helpcmd vault login)
-                     Login with your GitHub token. First copy the token by doing:
-                     Your profile -> Settings -> Developer Settings ->
-                     Tokens (Classic) -> Generate New Token (Classic)
-                     and create a new token with only the "read:org" permission.
-    $(helpcmd vault nomad-token)
-                     Gets the SRE's Nomad token from the local cache or Vault
-                     (WARNING: shows secrets!!!).
-    $(helpcmd vault pg-user)
-                     Gets the SRE's Postgres server username from Vault
-                     (WARNING: shows secrets!!!).
-    $(helpcmd vault pg-pass)
-                     Gets the SRE's Postgres server password from Vault
-                     (WARNING: shows secrets!!!).
     $(helpcmd nomad token)
                      Queries the SRE's Nomad server for your token properties
                      (WARNING: shows secrets!!!).
@@ -109,8 +95,6 @@ publish() {
   local norouter_config_file="$(envjqr 'cacheDir')"/norouter/norouter.yaml
 
   # Publish script global paramaters:
-  ## SRE `Vault` specific cloud parameters:
-  local vault_address="https://vault.ci.iog.io"
   ## SRE `Nomad` specific cloud parameters:
   ### -address=<addr>
   #### The address of the Nomad server.
@@ -175,15 +159,15 @@ publish() {
       # Workbench/SRE paramaters:
       local pg_user pg_pass
       # Call without `local`, needs to fail everything if they fail.
-      pg_user=$(wb publish vault pg-user)
-      pg_pass=$(wb publish vault pg-pass)
+      pg_user=$(wb nomad vault ci pg-user)
+      pg_pass=$(wb nomad vault ci pg-pass)
       # Publish the data
       # TODO: Use of this environment variable is not recommended for security
       # reasons, as some operating systems allow non-root users to see process
       # environment variables via ps; instead consider using a password file.
       msg "Calling 'BENCH_DATA_PASS=\"...\" bench-data-publish -h \"${pg_host}\" -P \"${pg_port}\" -u \"${pg_user}\" --db \"${pg_db}\" $@' ..."
       BENCH_DATA_PASS="${pg_pass}" bench-data-publish -h "${pg_host}" -P "${pg_port}" -u "${pg_user}" --db "${pg_db}" $@
-      ;;
+    ;;
 
     psql-cloud)
       local usage="USAGE: wb publish $op"
@@ -209,8 +193,8 @@ publish() {
       # Workbench/SRE paramaters:
       local pg_user pg_pass
       # Call without `local`, needs to fail everything if they fail.
-      pg_user=$(wb publish vault pg-user)
-      pg_pass=$(wb publish vault pg-pass)
+      pg_user=$(wb nomad vault ci pg-user)
+      pg_pass=$(wb nomad vault ci pg-pass)
       # postgresql://[user[:password]@][netloc][:port][/dbname][?param1=value1&...]
       # TODO: Use of this environment variable is not recommended for security
       # reasons, as some operating systems allow non-root users to see process
@@ -219,104 +203,15 @@ publish() {
       PGPASSWORD="${pg_pass}" psql --host="${pg_host}" --port="${pg_port}" --username="${pg_user}" --dbname="${pg_db}" $@
     ;;
 
-    vault )
-      local usage="USAGE: wb publish $op login|nomad-token|pg-user|pg-pass"
-      local action=${1:?$usage}; shift
-      # Nomad actions
-      case "$action" in
-        # Checks status of the Vault token provided by `wb publish vault login`
-        enabled )
-          local token_lookup_response
-          if token_lookup_response=$(vault token lookup -address="${vault_address}" -format json 2> /dev/null)
-          then
-            # TODO: I need to check the expiration time?
-            # echo "${token_lookup_response}" | jq -r .data.expire_time
-            # 2023-02-19T13:07:26.125306646Z
-            true
-          else
-            fatal "Are you logged in to Vault? Call 'wb publish vault login' with your IOHK GitHub token (classic)"
-          fi
-        ;;
-        login )
-          vault login \
-          -address="${vault_address}" \
-          -method=github -path=github-employees
-        ;;
-# TODO:
-#        renew )
-#          vault token renew \
-#          -address="${vault_address}" \
-#          -format json | jq .
-#        ;;
-#        revoke )
-#          vault token revoke \
-#          -address="${vault_address}" \
-#          -format json | jq .
-#        ;;
-        nomad-token )
-          local nomad_token_file="$(envjqr 'cacheDir')"/nomad/token.json
-          if test -f "${nomad_token_file}"
-          then
-            # TODO: Check if it's expired!
-            jq -r .data.secret_id "${nomad_token_file}"
-          else
-            # Checks Vault to show the 'wb publish vault login' message if
-            # needed.
-            if wb publish vault enabled
-            then
-              local nomad_token_json
-              if nomad_token_json=$(vault read -address="${vault_address}" -non-interactive -format=json nomad/creds/perf)
-              then
-                echo "${nomad_token_json}" >> "${nomad_token_file}"
-                jq -r .data.secret_id "${nomad_token_file}"
-              else
-                fatal "Unable to fetch Nomad token from Vault"
-              fi
-            else
-              # Using the error message of `wb publish vault enabled`
-              false
-            fi
-          fi
-        ;;
-        pg-user )
-          # Checks Vault to show the 'wb publish vault login' message if needed.
-          if wb publish vault enabled
-          then
-            vault kv get \
-            --address="${vault_address}" -non-interactive \
-            -format=json kv/postgrest/perf | jq -r .data.data.postgrestDbUser
-          else
-            # Using the error message of `wb publish vault enabled`
-            false
-          fi
-        ;;
-        pg-pass )
-          # Checks Vault to show the 'wb publish vault login' message if needed.
-          if wb publish vault enabled
-          then
-            vault kv get \
-            --address="${vault_address}" -non-interactive \
-            -format=json kv/postgrest/perf | jq -r .data.data.postgrestDbPass
-          else
-            # Using the error message of `wb publish vault enabled`
-            false
-          fi
-        ;;
-        * )
-          usage_publish
-        ;;
-      esac
-    ;;
-
     nomad )
       local usage="USAGE: wb publish $op desc|job|id|alloc|fs|signal|restart"
       local action=${1:?$usage}; shift
       # Publish script vars
       local nomad_token
       ## Call without `local`, needs to fail everything if it fail.
-      nomad_token=$(wb publish vault nomad-token)
+      nomad_token=$(wb nomad vault ci nomad-token)
       # Nomad actions
-      case "$action" in
+      case "${action}" in
         token )
           NOMAD_ADDR="${nomad_address}" \
           NOMAD_TOKEN="${nomad_token}" \
@@ -433,7 +328,7 @@ publish() {
           # SRE vars
           local nomad_token nomad_alloc_id
           # Call without `local`, needs to fail everything if they fail.
-          nomad_token=$(wb publish vault nomad-token)
+          nomad_token=$(wb nomad vault ci nomad-token)
           nomad_alloc_id=$(wb publish nomad id)
           local nomad_exec_cmd="nomad alloc exec \
             -address=$(echo "${nomad_address}" | sed 's/:/\\:/') \
@@ -600,7 +495,7 @@ EOF
           # SRE vars
           local nomad_token
           # Call without `local`, needs to fail everything if they fail.
-          nomad_token=$(wb publish vault nomad-token)
+          nomad_token=$(wb nomad vault ci nomad-token)
           # Start
           ## Using the nomad token:
           ### The SecretID of an ACL token to use to authenticate API requests with.
