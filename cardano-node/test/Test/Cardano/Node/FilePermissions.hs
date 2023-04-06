@@ -18,21 +18,21 @@ import           System.Directory (removeFile)
 import           Cardano.Api
 import           Cardano.Node.Run (checkVRFFilePermissions)
 import           Control.Exception (bracket)
-import           Control.Monad (Monad(..))
-import           Control.Monad.Except(MonadIO(liftIO), runExceptT )
+import           Control.Monad (Monad (..))
+import           Control.Monad.Except (MonadIO (liftIO), runExceptT)
 import           Data.Bool (Bool, not)
-import           Data.Either (Either(..))
+import           Data.Either (Either (..))
 import           Data.Eq ((==))
 import           Data.Foldable (foldl', length)
-import           Data.Function (($), (.), const)
-import           Data.Maybe (Maybe(..))
-import           Data.Semigroup (Semigroup(..))
+import           Data.Function (const, ($), (.))
 import qualified Data.List as L
+import           Data.Maybe (Maybe (..))
+import           Data.Semigroup (Semigroup (..))
 import           Hedgehog (Property, PropertyT, property, success)
 import qualified Hedgehog
 import           Hedgehog.Internal.Property (Group (..), failWith)
 import           System.IO (FilePath, IO)
-import           Text.Show (Show(..))
+import           Text.Show (Show (..))
 
 #ifdef UNIX
 import           Cardano.Node.Types (VRFPrivateKeyFilePermissionError (..))
@@ -63,7 +63,7 @@ prop_createVRFFileWithOwnerPermissions =
 
 createFileWithOwnerPermissions :: HasTextEnvelope a => FilePath -> a -> PropertyT IO ()
 createFileWithOwnerPermissions targetfp value = do
-  result <- liftIO $ writeFileTextEnvelopeWithOwnerPermissions targetfp Nothing value
+  result <- liftIO $ writeLazyByteStringFileWithOwnerPermissions targetfp $ textEnvelopeToJSON Nothing value
   case result of
     Left err -> failWith Nothing $ displayError err
     Right () -> return ()

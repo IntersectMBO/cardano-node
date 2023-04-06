@@ -18,7 +18,6 @@ module Cardano.Api.SerialiseTextEnvelope
   , deserialiseFromTextEnvelope
   , readFileTextEnvelope
   , writeFileTextEnvelope
-  , writeFileTextEnvelopeWithOwnerPermissions
   , readTextEnvelopeFromFile
   , readTextEnvelopeOfTypeFromFile
   , textEnvelopeToJSON
@@ -214,17 +213,6 @@ writeFileTextEnvelope :: HasTextEnvelope a
                       -> IO (Either (FileError ()) ())
 writeFileTextEnvelope outputFile mbDescr a =
   writeLazyByteStringFile outputFile (textEnvelopeToJSON mbDescr a)
-
-
-writeFileTextEnvelopeWithOwnerPermissions
-  :: HasTextEnvelope a
-  => FilePath
-  -> Maybe TextEnvelopeDescr
-  -> a
-  -> IO (Either (FileError ()) ())
-writeFileTextEnvelopeWithOwnerPermissions targetPath mbDescr a =
-  writeLazyByteStringFileWithOwnerPermissions targetPath $ textEnvelopeToJSON mbDescr a
-
 
 textEnvelopeToJSON :: HasTextEnvelope a =>  Maybe TextEnvelopeDescr -> a -> LBS.ByteString
 textEnvelopeToJSON mbDescr a  =

@@ -129,7 +129,8 @@ runNodeKeyGenVRF (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
     let vkey = getVerificationKey skey
     firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
-      $ writeFileTextEnvelopeWithOwnerPermissions skeyPath (Just skeyDesc) skey
+      $ writeLazyByteStringFileWithOwnerPermissions skeyPath
+      $ textEnvelopeToJSON (Just skeyDesc) skey
     firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
       $ writeLazyByteStringFile vkeyPath
