@@ -56,7 +56,7 @@ let
         inherit pkgs lib cardanoNodePackages;
         inherit batchName profileName backend;
         inherit cardano-node-rev;
-        inherit workbench workbenchDevMode;
+        inherit workbench workbenchDevMode profiled;
       };
 
   # Workbench instantiated by parameters from customConfig:

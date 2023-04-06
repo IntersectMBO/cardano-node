@@ -7,6 +7,7 @@
 
 , backend
 , profile
+, profiled
 , nodeSpecs
 , topologyFiles
 }:
@@ -226,10 +227,12 @@ let
     };
     in
     finaliseNodeService profile nodeSpec
+    ((if profiled
+      then { profiling = "time"; }
+      else { eventlog  = mkForce true; })
+    //
     {
       inherit port;
-
-      eventlog = mkForce true;
 
       ## For the definition of 'nodeConfigBits', please see above.
       ## Meaning:
@@ -263,7 +266,7 @@ let
             ]
             else []
         );
-    };
+    });
 
   ## Given an env config, evaluate it and produce the node service.
   ## Call the given function on this service.
