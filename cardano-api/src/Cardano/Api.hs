@@ -33,6 +33,21 @@ module Cardano.Api (
     cardanoEraStyle,
     shelleyBasedToCardanoEra,
 
+    -- ** IO
+    OutputFile(..),
+
+    writeByteStringFileWithOwnerPermissions,
+    writeByteStringFile,
+    writeByteStringOutput,
+
+    writeLazyByteStringFileWithOwnerPermissions,
+    writeLazyByteStringFile,
+    writeLazyByteStringOutput,
+
+    writeTextFileWithOwnerPermissions,
+    writeTextFile,
+    writeTextOutput,
+
     -- ** Deprecated
     Byron,
     Shelley,
@@ -523,7 +538,6 @@ module Cardano.Api (
     deserialiseFromTextEnvelope,
     readFileTextEnvelope,
     writeFileTextEnvelope,
-    writeFileTextEnvelopeWithOwnerPermissions,
     readTextEnvelopeFromFile,
     readTextEnvelopeOfTypeFromFile,
 
@@ -800,6 +814,7 @@ import           Cardano.Api.GenesisParameters
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.InMode
+import           Cardano.Api.IO
 import           Cardano.Api.IPC
 import           Cardano.Api.IPC.Monad
 import           Cardano.Api.Keys.Byron

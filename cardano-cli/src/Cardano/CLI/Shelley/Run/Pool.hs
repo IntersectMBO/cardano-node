@@ -135,7 +135,8 @@ runStakePoolRegistrationCert
 
     firstExceptT ShelleyPoolCmdWriteFileError
       . newExceptT
-      $ writeFileTextEnvelope outfp (Just registrationCertDesc) registrationCert
+      $ writeLazyByteStringFile outfp
+      $ textEnvelopeToJSON (Just registrationCertDesc) registrationCert
   where
     registrationCertDesc :: TextEnvelopeDescr
     registrationCertDesc = "Stake Pool Registration Certificate"
@@ -156,7 +157,8 @@ runStakePoolRetirementCert stakePoolVerKeyOrFile retireEpoch (OutputFile outfp) 
 
     firstExceptT ShelleyPoolCmdWriteFileError
       . newExceptT
-      $ writeFileTextEnvelope outfp (Just retireCertDesc) retireCert
+      $ writeLazyByteStringFile outfp
+      $ textEnvelopeToJSON (Just retireCertDesc) retireCert
   where
     retireCertDesc :: TextEnvelopeDescr
     retireCertDesc = "Stake Pool Retirement Certificate"

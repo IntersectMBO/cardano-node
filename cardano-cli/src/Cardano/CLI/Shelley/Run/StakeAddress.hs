@@ -68,8 +68,8 @@ runStakeAddressKeyGenToFile (VerificationKeyFile vkFp) (SigningKeyFile skFp) = d
   let vkey = getVerificationKey skey
 
   firstExceptT ShelleyStakeAddressCmdWriteFileError $ do
-    newExceptT $ writeFileTextEnvelope skFp (Just skeyDesc) skey
-    newExceptT $ writeFileTextEnvelope vkFp (Just vkeyDesc) vkey
+    newExceptT $ writeLazyByteStringFile skFp $ textEnvelopeToJSON (Just skeyDesc) skey
+    newExceptT $ writeLazyByteStringFile vkFp $ textEnvelopeToJSON (Just vkeyDesc) vkey
 
 runStakeAddressKeyHash
   :: VerificationKeyOrFile StakeKey
@@ -116,7 +116,8 @@ runStakeCredentialRegistrationCert stakeIdentifier (OutputFile oFp) = do
     let deRegCert = makeStakeAddressRegistrationCertificate sCred
     firstExceptT ShelleyStakeAddressCmdWriteFileError
       . newExceptT
-      $ writeFileTextEnvelope oFp (Just regCertDesc) deRegCert
+      $ writeLazyByteStringFile oFp
+      $ textEnvelopeToJSON (Just regCertDesc) deRegCert
 
   regCertDesc :: TextEnvelopeDescr
   regCertDesc = "Stake Address Registration Certificate"
@@ -147,7 +148,8 @@ runStakeCredentialDelegationCert stakeVerifier poolVKeyOrHashOrFile (OutputFile 
       let delegCert = makeStakeAddressDelegationCertificate sCred poolStakeVKeyHash
       firstExceptT ShelleyStakeAddressCmdWriteFileError
         . newExceptT
-        $ writeFileTextEnvelope outFp (Just delegCertDesc) delegCert
+        $ writeLazyByteStringFile outFp
+        $ textEnvelopeToJSON (Just delegCertDesc) delegCert
 
     delegCertDesc :: TextEnvelopeDescr
     delegCertDesc = "Stake Address Delegation Certificate"
@@ -169,7 +171,8 @@ runStakeCredentialDeRegistrationCert stakeVerifier (OutputFile oFp) = do
       let deRegCert = makeStakeAddressDeregistrationCertificate sCred
       firstExceptT ShelleyStakeAddressCmdWriteFileError
         . newExceptT
-        $ writeFileTextEnvelope oFp (Just deregCertDesc) deRegCert
+        $ writeLazyByteStringFile oFp
+        $ textEnvelopeToJSON (Just deregCertDesc) deRegCert
 
     deregCertDesc :: TextEnvelopeDescr
     deregCertDesc = "Stake Address Deregistration Certificate"

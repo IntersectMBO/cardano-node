@@ -5,7 +5,6 @@ module Cardano.CLI.Shelley.Run.Address.Info
   ) where
 
 import           Cardano.Api
-import           Cardano.CLI.Shelley.Parsers (OutputFile (..))
 
 import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (ExceptT)

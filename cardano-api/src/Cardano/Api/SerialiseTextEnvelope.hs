@@ -1,14 +1,9 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
-
-#if !defined(mingw32_HOST_OS)
-#define UNIX
-#endif
 
 -- | TextEnvelope Serialisation
 --
@@ -23,7 +18,6 @@ module Cardano.Api.SerialiseTextEnvelope
   , deserialiseFromTextEnvelope
   , readFileTextEnvelope
   , writeFileTextEnvelope
-  , writeFileTextEnvelopeWithOwnerPermissions
   , readTextEnvelopeFromFile
   , readTextEnvelopeOfTypeFromFile
   , textEnvelopeToJSON
@@ -60,23 +54,9 @@ import           Cardano.Binary (DecoderError)
 
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.IO
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.Utils (readFileBlocking)
-
-#ifdef UNIX
-import           Control.Exception (IOException, bracket, bracketOnError, try)
-import           System.Directory ()
-import           System.IO (hClose)
-import           System.Posix.Files (ownerModes, setFdOwnerAndGroup)
-import           System.Posix.IO (OpenMode (..), closeFd, defaultFileFlags, fdToHandle, openFd)
-import           System.Posix.User (getRealUserID)
-#else
-import           Control.Exception (bracketOnError)
-import           System.Directory (removeFile, renameFile)
-import           System.FilePath (splitFileName, (<.>))
-import           System.IO (hClose, openTempFile)
-#endif
-
 
 -- ----------------------------------------------------------------------------
 -- Text envelopes
@@ -226,74 +206,13 @@ deserialiseFromTextEnvelopeAnyOf types te =
 
     matching (FromSomeType ttoken _f) = actualType == textEnvelopeType ttoken
 
-writeFileWithOwnerPermissions
-  :: FilePath
-  -> LBS.ByteString
-  -> IO (Either (FileError ()) ())
-#ifdef UNIX
--- On a unix based system, we grab a file descriptor and set ourselves as owner.
--- Since we're holding the file descriptor at this point, we can be sure that
--- what we're about to write to is owned by us if an error didn't occur.
-writeFileWithOwnerPermissions path a = do
-    user <- getRealUserID
-    ownedFile <- try $
-      -- We only close the FD on error here, otherwise we let it leak out, since
-      -- it will be immediately turned into a Handle (which will be closed when
-      -- the Handle is closed)
-      bracketOnError
-        (openFd path WriteOnly (Just ownerModes) defaultFileFlags)
-        closeFd
-        (\fd -> setFdOwnerAndGroup fd user (-1) >> pure fd)
-    case ownedFile of
-      Left (err :: IOException) -> do
-        pure $ Left $ FileIOError path err
-      Right fd -> do
-        bracket
-          (fdToHandle fd)
-          hClose
-          (\handle -> runExceptT $ handleIOExceptT (FileIOError path) $ LBS.hPut handle a)
-#else
--- On something other than unix, we make a _new_ file, and since we created it,
--- we must own it. We then place it at the target location. Unfortunately this
--- won't work correctly with pseudo-files.
-writeFileWithOwnerPermissions targetPath a =
-    bracketOnError
-      (openTempFile targetDir $ targetFile <.> "tmp")
-      (\(tmpPath, fHandle) -> do
-        hClose fHandle >> removeFile tmpPath
-        return . Left $ FileErrorTempFile targetPath tmpPath fHandle)
-      (\(tmpPath, fHandle) -> do
-          LBS.hPut fHandle a
-          hClose fHandle
-          renameFile tmpPath targetPath
-          return $ Right ())
-  where
-    (targetDir, targetFile) = splitFileName targetPath
-#endif
-
 writeFileTextEnvelope :: HasTextEnvelope a
                       => FilePath
                       -> Maybe TextEnvelopeDescr
                       -> a
                       -> IO (Either (FileError ()) ())
-writeFileTextEnvelope path mbDescr a =
-    runExceptT $ do
-      handleIOExceptT (FileIOError path) $ LBS.writeFile path content
-  where
-    content = textEnvelopeToJSON mbDescr a
-
-
-writeFileTextEnvelopeWithOwnerPermissions
-  :: HasTextEnvelope a
-  => FilePath
-  -> Maybe TextEnvelopeDescr
-  -> a
-  -> IO (Either (FileError ()) ())
-writeFileTextEnvelopeWithOwnerPermissions targetPath mbDescr a =
-  writeFileWithOwnerPermissions targetPath content
- where
-  content = textEnvelopeToJSON mbDescr a
-
+writeFileTextEnvelope outputFile mbDescr a =
+  writeLazyByteStringFile outputFile (textEnvelopeToJSON mbDescr a)
 
 textEnvelopeToJSON :: HasTextEnvelope a =>  Maybe TextEnvelopeDescr -> a -> LBS.ByteString
 textEnvelopeToJSON mbDescr a  =

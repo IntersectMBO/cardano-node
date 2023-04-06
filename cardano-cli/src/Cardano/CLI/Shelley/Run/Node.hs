@@ -81,13 +81,16 @@ runNodeKeyGenCold (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath)
     let vkey = getVerificationKey skey
     firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
-      $ writeFileTextEnvelope skeyPath (Just skeyDesc) skey
+      $ writeLazyByteStringFile skeyPath
+      $ textEnvelopeToJSON (Just skeyDesc) skey
     firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
-      $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
+      $ writeLazyByteStringFile vkeyPath
+      $ textEnvelopeToJSON (Just vkeyDesc) vkey
     firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
-      $ writeFileTextEnvelope ocertCtrPath (Just ocertCtrDesc)
+      $ writeLazyByteStringFile ocertCtrPath
+      $ textEnvelopeToJSON (Just ocertCtrDesc)
       $ OperationalCertificateIssueCounter initialCounter vkey
   where
     skeyDesc, vkeyDesc, ocertCtrDesc :: TextEnvelopeDescr
@@ -108,10 +111,12 @@ runNodeKeyGenKES (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
     let vkey = getVerificationKey skey
     firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
-      $ writeFileTextEnvelope skeyPath (Just skeyDesc) skey
+      $ writeLazyByteStringFile skeyPath
+      $ textEnvelopeToJSON (Just skeyDesc) skey
     firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
-      $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
+      $ writeLazyByteStringFile vkeyPath
+      $ textEnvelopeToJSON (Just vkeyDesc) vkey
   where
     skeyDesc, vkeyDesc :: TextEnvelopeDescr
     skeyDesc = "KES Signing Key"
@@ -124,10 +129,12 @@ runNodeKeyGenVRF (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
     let vkey = getVerificationKey skey
     firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
-      $ writeFileTextEnvelopeWithOwnerPermissions skeyPath (Just skeyDesc) skey
+      $ writeLazyByteStringFileWithOwnerPermissions skeyPath
+      $ textEnvelopeToJSON (Just skeyDesc) skey
     firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
-      $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
+      $ writeLazyByteStringFile vkeyPath
+      $ textEnvelopeToJSON (Just vkeyDesc) vkey
   where
     skeyDesc, vkeyDesc :: TextEnvelopeDescr
     skeyDesc = "VRF Signing Key"
@@ -161,8 +168,9 @@ runNodeNewCounter coldVerKeyOrFile counter
     let ocertIssueCounter =
           OperationalCertificateIssueCounter (fromIntegral counter) vkey
 
-    firstExceptT ShelleyNodeCmdWriteFileError . newExceptT $
-      writeFileTextEnvelope ocertCtrPath Nothing ocertIssueCounter
+    firstExceptT ShelleyNodeCmdWriteFileError . newExceptT
+      $ writeLazyByteStringFile ocertCtrPath
+      $ textEnvelopeToJSON Nothing ocertIssueCounter
 
 
 runNodeIssueOpCert :: VerificationKeyOrFile KesKey
@@ -210,14 +218,13 @@ runNodeIssueOpCert kesVerKeyOrFile
     -- a new cert but without updating the counter.
     firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
-      $ writeFileTextEnvelope
-        ocertCtrPath
-        (Just $ ocertCtrDesc $ getCounter nextOcertCtr)
-        nextOcertCtr
+      $ writeLazyByteStringFile ocertCtrPath
+      $ textEnvelopeToJSON (Just $ ocertCtrDesc $ getCounter nextOcertCtr) nextOcertCtr
 
     firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
-      $ writeFileTextEnvelope certFile Nothing ocert
+      $ writeLazyByteStringFile certFile
+      $ textEnvelopeToJSON Nothing ocert
   where
     getCounter :: OperationalCertificateIssueCounter -> Word64
     getCounter (OperationalCertificateIssueCounter n _) = n
