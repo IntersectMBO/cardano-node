@@ -614,7 +614,7 @@ in {
         type = types.listOf types.str;
         default = let commonProfilingArgs = ["--machine-readable" "-tcardano-node.stats" "-pocardano-node"]
           ++ lib.optional (cfg.eventlog) "-l";
-          in if cfg.profiling == "time" then ["-P"] ++ commonProfilingArgs
+          in if cfg.profiling == "time" then ["-p"] ++ commonProfilingArgs
             else if cfg.profiling == "space" then ["-h"] ++ commonProfilingArgs
             else if cfg.profiling == "space-cost" then ["-hc"] ++ commonProfilingArgs
             else if cfg.profiling == "space-module" then ["-hm"] ++ commonProfilingArgs
