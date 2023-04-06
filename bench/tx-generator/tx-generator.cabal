@@ -93,7 +93,7 @@ library
                       , cardano-binary
                       , cardano-cli
                       , cardano-crypto-class
-                      , cardano-crypto-wrapper
+                      , cardano-crypto-wrapper ^>= 1.5
                       , cardano-data
                       , cardano-git-rev
                       , cardano-ledger-alonzo
@@ -109,7 +109,7 @@ library
                       , formatting
                       , generic-monoid
                       , ghc-prim
-                      , io-classes ^>= 0.3
+                      , io-classes ^>= 0.5
                       , mtl
                       , network
                       , network-mux

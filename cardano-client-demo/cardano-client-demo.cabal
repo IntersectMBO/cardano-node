@@ -31,7 +31,7 @@ executable scan-blocks-pipelined
   import:               project-config
   main-is:              ScanBlocksPipelined.hs
   build-depends:        cardano-api
-                      , cardano-ledger-byron ^>= 0.1
+                      , cardano-ledger-byron ^>= 1.0
                       , cardano-slotting ^>= 0.1
                       , filepath
                       , time
@@ -40,7 +40,7 @@ executable chain-sync-client-with-ledger-state
   import:               project-config
   main-is:              ChainSyncClientWithLedgerState.hs
   build-depends:        cardano-api
-                      , cardano-ledger-byron ^>= 0.1
+                      , cardano-ledger-byron ^>= 1.0
                       , cardano-slotting ^>= 0.1
                       , ouroboros-consensus
                       , ouroboros-consensus-cardano

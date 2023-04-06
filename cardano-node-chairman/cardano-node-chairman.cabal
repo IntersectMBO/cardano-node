@@ -47,7 +47,7 @@ executable cardano-node-chairman
                       , cardano-prelude
                       , containers
                       , contra-tracer
-                      , io-classes ^>= 0.3
+                      , io-classes ^>= 0.5
                       , optparse-applicative-fork
                       , ouroboros-consensus
                       , ouroboros-network-api

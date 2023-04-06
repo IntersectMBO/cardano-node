@@ -12,11 +12,11 @@ repository cardano-haskell-packages
 
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
-index-state: 2023-03-18T05:24:58Z
+index-state: 2023-03-29T00:00:00Z
 
 index-state:
-  , hackage.haskell.org 2023-03-18T05:24:58Z
-  , cardano-haskell-packages 2023-03-22T09:20:07Z
+  , hackage.haskell.org 2023-03-29T00:00:00Z
+  , cardano-haskell-packages 2023-04-04T00:00:00Z
 
 packages:
     cardano-api
@@ -104,7 +104,50 @@ allow-newer:
   , ekg:base
   , ekg:time
   , libsystemd-journal:base
+  , libsystemd-journal:unix-bytestring
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-network
+  tag: c8aee55dcc2dd1f043e80efdc09c7cdbf2717d7f
+  subdir:
+    cardano-client
+    cardano-ping
+    monoidal-synchronisation
+    network-mux
+    ntp-client
+    ouroboros-consensus
+    ouroboros-consensus-byron
+    ouroboros-consensus-byron-test
+    ouroboros-consensus-byronspec
+    ouroboros-consensus-cardano
+    ouroboros-consensus-cardano-test
+    ouroboros-consensus-cardano-tools
+    ouroboros-consensus-diffusion
+    ouroboros-consensus-mock
+    ouroboros-consensus-mock-test
+    ouroboros-consensus-protocol
+    ouroboros-consensus-shelley
+    ouroboros-consensus-shelley-test
+    ouroboros-consensus-test
+    ouroboros-consensus-tutorials
+    ouroboros-network
+    ouroboros-network-api
+    ouroboros-network-framework
+    ouroboros-network-mock
+    ouroboros-network-protocols
+    ouroboros-network-testing
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/io-sim
+  tag: af3a08a86d559265b562dbb06a9e070f0f429e20
+  subdir:
+    io-classes
+    strict-stm 
+
+

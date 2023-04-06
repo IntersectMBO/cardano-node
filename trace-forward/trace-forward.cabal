@@ -62,7 +62,7 @@ library
                       , containers
                       , contra-tracer
                       , extra
-                      , io-classes ^>= 0.3
+                      , io-classes ^>= 0.5
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , serialise
@@ -94,7 +94,7 @@ test-suite test
   build-depends:        aeson
                       , bytestring
                       , contra-tracer
-                      , io-classes ^>= 0.3
+                      , io-classes ^>= 0.5
                       , io-sim
                       , ouroboros-network-api
                       , ouroboros-network-framework

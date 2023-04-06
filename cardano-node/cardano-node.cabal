@@ -138,23 +138,23 @@ library
                       , base16-bytestring
                       , bytestring
                       , cardano-api
-                      , cardano-data >= 0.1
+                      , cardano-data ^>= 1.0
                       , cardano-git-rev
                       , cardano-crypto-class
-                      , cardano-crypto-wrapper
-                      , cardano-ledger-core
+                      , cardano-crypto-wrapper ^>= 1.5
+                      , cardano-ledger-core ^>= 1.0
                       , cardano-ledger-byron
                       , cardano-ledger-conway
                       , cardano-ledger-shelley
-                      , cardano-ledger-shelley-ma
+                      , cardano-ledger-shelley-ma ^>= 1.0
                       , cardano-ledger-alonzo
-                      , cardano-ledger-babbage
+                      , cardano-ledger-babbage ^>= 1.0
                       , cardano-ledger-byron
-                      , cardano-ledger-core
+                      , cardano-ledger-core ^>= 1.0
                       , cardano-ledger-shelley
-                      , cardano-ledger-shelley-ma
+                      , cardano-ledger-shelley-ma ^>= 1.0
                       , cardano-prelude
-                      , cardano-protocol-tpraos >= 0.1
+                      , cardano-protocol-tpraos >= 1.0
                       , cardano-slotting >= 0.1
                       , cborg >= 0.2.4
                       , contra-tracer
@@ -169,7 +169,7 @@ library
                       , generic-data
                       , hostname
                       , iproute
-                      , io-classes >= 0.3
+                      , io-classes >= 0.5
                       , iohk-monitoring
                       , iproute
                       , lobemo-backend-aggregation
