@@ -294,6 +294,12 @@ module Cardano.Api (
     scriptDataSupportedInEra,
     totalAndReturnCollateralSupportedInEra,
 
+    -- ** Era-dependent protocol features
+    ProtocolUTxOCostPerByteSupportedInEra(..),
+
+    -- ** Era-dependent protocol feature availability functions
+    protocolUTxOCostPerByteSupportedInEra,
+
     -- ** Fee calculation
     LedgerEpochInfo(..),
     transactionFee,
