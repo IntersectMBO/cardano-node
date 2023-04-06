@@ -11,6 +11,8 @@ module Cardano.Api.TxMetadata (
     -- * Constructing metadata
     TxMetadataValue(..),
     makeTransactionMetadata,
+    metaTextChunks,
+    metaBytesChunks,
 
     -- * Validating metadata
     validateTxMetadata,
@@ -129,6 +131,25 @@ instance SerialiseAsCBOR TxMetadata where
 makeTransactionMetadata :: Map Word64 TxMetadataValue -> TxMetadata
 makeTransactionMetadata = TxMetadata
 
+-- | Create a 'TxMetadataValue' from a 'Text' as a list of chunks of an
+-- acceptable size.
+metaTextChunks :: Text -> TxMetadataValue
+metaTextChunks =
+  TxMetaList . chunks
+    txMetadataTextStringMaxByteLength
+    TxMetaText
+    (BS.length . Text.encodeUtf8)
+    Text.splitAt
+
+-- | Create a 'TxMetadataValue' from a 'ByteString' as a list of chunks of an
+-- accaptable size.
+metaBytesChunks :: ByteString -> TxMetadataValue
+metaBytesChunks =
+  TxMetaList . chunks
+    txMetadataByteStringMaxLength
+    TxMetaBytes
+    BS.length
+    BS.splitAt
 
 -- ----------------------------------------------------------------------------
 -- Internal conversion functions
@@ -162,6 +183,26 @@ fromShelleyMetadatum (Shelley.Map  xs) = TxMetaMap
                                               fromShelleyMetadatum v)
                                            | (k,v) <- xs ]
 
+-- | Transform a string-like structure into chunks with a maximum size; Chunks
+-- are filled from left to right.
+chunks
+  :: Int
+    -- ^ Chunk max size (inclusive)
+  -> (str -> chunk)
+    -- ^ Hoisting
+  -> (str -> Int)
+    -- ^ Measuring
+  -> (Int -> str -> (str, str))
+    -- ^ Splitting
+  -> str
+    -- ^ String
+  -> [chunk]
+chunks maxLength strHoist strLength strSplitAt str
+  | strLength str > maxLength =
+    let (h, t) = strSplitAt maxLength str
+     in strHoist h : chunks maxLength strHoist strLength strSplitAt t
+  | otherwise =
+    [strHoist str]
 
 -- ----------------------------------------------------------------------------
 -- Validate tx metadata
