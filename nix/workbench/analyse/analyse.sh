@@ -457,7 +457,7 @@ case "$op" in
                                   --perf            ${adir}/clusterperf.json \
                                   --prop            ${adir}/blockprop.json
                           done))
-        local run=$(for dir in ${dirs[*]}; do basename $dir; done | sort -r | head -n1 | cut -d. -f1-2)_$suffix
+        local run=$(for dir in ${dirs[*]}; do basename $dir; done | sort -r | head -n1 | cut -c-16)_$suffix
         local rundir=$(run get-rundir)
         local dir=$rundir/$run
         local adir=$dir/analysis
