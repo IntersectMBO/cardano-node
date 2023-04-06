@@ -19,6 +19,9 @@ module Cardano.Api.Shelley
     -- * Hashes
     Hash(..),
 
+    -- * Type Proxies
+    AsType(..),
+
     -- * Payment addresses
     -- | Constructing and inspecting Shelley payment addresses
     Address(ShelleyAddress),
