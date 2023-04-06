@@ -30,7 +30,7 @@
 
 - **Breaking change** - `queryExpr` to return `IO (Either UnsupportedNtcVersionError a)` instead of `IO a`.
   ([PR4788](https://github.com/input-output-hk/cardano-node/pull/4788))
-  
+
 - **Breaking change** - Remove distinction between multisig and timelock scripts([PR4763](https://github.com/input-output-hk/cardano-node/pull/4763))
 
 - **Breaking change** Change return type of `queryNodeLocalState` to new `AcquiringFailure` type.
@@ -41,6 +41,8 @@
   ([PR4903](https://github.com/input-output-hk/cardano-node/pull/4903))
 
 - Auto-balance multi asset transactions ([PR 4450](https://github.com/input-output-hk/cardano-node/pull/4450))
+
+- New 'Governance.Poll' API implementing [CIP-0094](https://github.com/cardano-foundation/CIPs/pull/496) ([PR 5050](https://github.com/input-output-hk/cardano-node/pull/5050))
 
 ### Bugs
 

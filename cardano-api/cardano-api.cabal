@@ -67,6 +67,7 @@ library
                         Cardano.Api.Fees
                         Cardano.Api.Genesis
                         Cardano.Api.GenesisParameters
+                        Cardano.Api.Governance.Poll
                         Cardano.Api.Hash
                         Cardano.Api.HasTypeProxy
                         Cardano.Api.InMode
