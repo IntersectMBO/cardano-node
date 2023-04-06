@@ -112,6 +112,12 @@ runGovernanceCmd (GovernanceGenesisKeyDelegationCertificate genVk genDelegVk vrf
   runGovernanceGenesisKeyDelegationCertificate genVk genDelegVk vrfVk out
 runGovernanceCmd (GovernanceUpdateProposal out eNo genVKeys ppUp mCostModelFp) =
   runGovernanceUpdateProposal out eNo genVKeys ppUp mCostModelFp
+runGovernanceCmd (GovernanceCreatePoll prompt choices nonce out) =
+  runGovernanceCreatePoll prompt choices nonce out
+runGovernanceCmd (GovernanceAnswerPoll poll sk ix) =
+  runGovernanceAnswerPoll poll sk ix
+runGovernanceCmd (GovernanceVerifyPoll poll metadata) =
+  runGovernanceVerifyPoll poll metadata
 
 runGovernanceMIRCertificatePayStakeAddrs
   :: Shelley.MIRPot
