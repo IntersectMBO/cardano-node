@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE GADTSyntax #-}
 
@@ -38,7 +39,7 @@ instance Exception ErrorAsException where
     displayException (ErrorAsException e) = displayError e
 
 
-data FileError e = FileError   FilePath e
+data FileError e = FileError FilePath e
                  | FileErrorTempFile
                      FilePath
                      -- ^ Target path
@@ -46,7 +47,7 @@ data FileError e = FileError   FilePath e
                      -- ^ Temporary path
                      Handle
                  | FileIOError FilePath IOException
-  deriving (Show, Eq)
+  deriving (Show, Eq, Functor)
 
 instance Error e => Error (FileError e) where
   displayError (FileErrorTempFile targetPath tempPath h)=

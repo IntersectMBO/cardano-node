@@ -49,18 +49,7 @@ readKeyFileTextEnvelope
   -> FilePath
   -> IO (Either (FileError InputDecodeError) a)
 readKeyFileTextEnvelope asType fp =
-    first toInputDecodeError <$> readFileTextEnvelope asType fp
-  where
-    toInputDecodeError
-      :: FileError TextEnvelopeError
-      -> FileError InputDecodeError
-    toInputDecodeError err =
-      case err of
-        FileIOError path ex -> FileIOError path ex
-        FileError path textEnvErr ->
-          FileError path (InputTextEnvelopeError textEnvErr)
-        FileErrorTempFile targetP tempP h ->
-          FileErrorTempFile targetP tempP h
+    first (fmap InputTextEnvelopeError) <$> readFileTextEnvelope asType fp
 
 -- | Read a cryptographic key from a file given that it is one of the provided
 -- types.
