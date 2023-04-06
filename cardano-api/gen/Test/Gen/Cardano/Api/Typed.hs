@@ -154,6 +154,7 @@ import           Cardano.Ledger.Alonzo.Language (Language (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import           Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 
+import           Data.Functor (($>))
 import           Test.Cardano.Chain.UTxO.Gen (genVKWitness)
 import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
 import           Test.Gen.Cardano.Api.Metadata (genTxMetadata)
@@ -862,8 +863,8 @@ genProtocolParameters =
     <*> Gen.maybe genNat
     <*> Gen.maybe genLovelace
 
-genProtocolParametersUpdate :: Gen ProtocolParametersUpdate
-genProtocolParametersUpdate = do
+genProtocolParametersUpdate :: CardanoEra era -> Gen ProtocolParametersUpdate
+genProtocolParametersUpdate era = do
   protocolUpdateProtocolVersion     <- Gen.maybe ((,) <$> genNat <*> genNat)
   protocolUpdateDecentralization    <- Gen.maybe genRational
   protocolUpdateExtraPraosEntropy   <- Gen.maybe genMaybePraosNonce
@@ -891,16 +892,18 @@ genProtocolParametersUpdate = do
   protocolUpdateMaxValueSize        <- Gen.maybe genNat
   protocolUpdateCollateralPercent   <- Gen.maybe genNat
   protocolUpdateMaxCollateralInputs <- Gen.maybe genNat
-  protocolUpdateUTxOCostPerByte     <- Gen.maybe genLovelace
+  protocolUpdateUTxOCostPerByte     <- sequence $ protocolUTxOCostPerByteSupportedInEra era $> genLovelace
+
   pure ProtocolParametersUpdate{..}
 
-
 genUpdateProposal :: CardanoEra era -> Gen UpdateProposal
-genUpdateProposal _era = -- TODO Make era specific
+genUpdateProposal era =
   UpdateProposal
     <$> Gen.map (Range.constant 1 3)
-                ((,) <$> genVerificationKeyHash AsGenesisKey
-                     <*> genProtocolParametersUpdate)
+        ( (,)
+          <$> genVerificationKeyHash AsGenesisKey
+          <*> genProtocolParametersUpdate era
+        )
     <*> genEpochNo
 
 genCostModel :: Gen Alonzo.CostModel
