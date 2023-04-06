@@ -139,13 +139,15 @@ import           Cardano.Slotting.Slot (SlotNo)
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Ledger
 
+import qualified Cardano.Ledger.Allegra.Scripts as Timelock
+import           Cardano.Ledger.Core (Era (EraCrypto))
 import qualified Cardano.Ledger.Keys as Shelley
 import qualified Cardano.Ledger.Shelley.Scripts as Shelley
-import qualified Cardano.Ledger.ShelleyMA.Timelocks as Timelock
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+import qualified Cardano.Ledger.Binary as Binary (decCBOR, decodeFullAnnotator)
 
 import qualified PlutusLedgerApi.Test.Examples as Plutus
 
@@ -407,8 +409,9 @@ instance IsScriptLanguage lang => SerialiseAsCBOR (Script lang) where
     deserialiseFromCBOR _ bs =
       case scriptLanguage :: ScriptLanguage lang of
         SimpleScriptLanguage ->
-              SimpleScript . fromAllegraTimelock
-          <$> CBOR.decodeAnnotator "Script" fromCBOR (LBS.fromStrict bs)
+         let version = Ledger.eraProtVerLow @(ShelleyLedgerEra AllegraEra)
+         in SimpleScript . fromAllegraTimelock
+              <$> Binary.decodeFullAnnotator version "Script" Binary.decCBOR (LBS.fromStrict bs)
 
         PlutusScriptLanguage PlutusScriptV1 ->
               PlutusScript PlutusScriptV1
@@ -908,10 +911,12 @@ hashScript :: Script lang -> ScriptHash
 hashScript (SimpleScript s) =
     -- We convert to the Allegra-era version specifically and hash that.
     -- Later ledger eras have to be compatible anyway.
-    ScriptHash
-  . Ledger.hashScript @(ShelleyLedgerEra AllegraEra)
-  . (toAllegraTimelock :: SimpleScript -> Timelock.Timelock StandardCrypto)
-  $ s
+  let s = toAllegraTimelock  s
+  in error ""
+  --  ScriptHash
+  -- $ Ledger.hashScript @(ShelleyLedgerEra AllegraEra)
+
+
 
 hashScript (PlutusScript PlutusScriptV1 (PlutusScriptSerialised script)) =
     -- For Plutus V1, we convert to the Alonzo-era version specifically and
@@ -1131,6 +1136,7 @@ fromShelleyMultiSig = go
 -- | Conversion for the 'Timelock.Timelock' language that is shared between the
 -- Allegra and Mary eras.
 --
+--TODO: Left off here.
 toAllegraTimelock :: SimpleScript -> Timelock.Timelock StandardCrypto
 toAllegraTimelock = go
   where

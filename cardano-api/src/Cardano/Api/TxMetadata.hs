@@ -40,12 +40,6 @@ module Cardano.Api.TxMetadata (
     AsType(..)
   ) where
 
-import           Cardano.Api.Eras
-import           Cardano.Api.Error
-import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.SerialiseCBOR
-import qualified Cardano.Binary as CBOR
-import qualified Cardano.Ledger.Shelley.Metadata as Shelley
 import           Control.Applicative (Alternative (..))
 import           Control.Monad (guard, when)
 import qualified Data.Aeson as Aeson
@@ -71,6 +65,14 @@ import qualified Data.Text.Encoding as Text
 import qualified Data.Text.Lazy as Text.Lazy
 import qualified Data.Vector as Vector
 import           Data.Word
+
+import qualified Cardano.Ledger.Binary as CBOR
+import qualified Cardano.Ledger.Shelley.TxAuxData as Shelley
+
+import           Cardano.Api.Eras
+import           Cardano.Api.Error
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.SerialiseCBOR
 
 {- HLINT ignore "Use lambda-case" -}
 
@@ -106,8 +108,7 @@ instance HasTypeProxy TxMetadata where
 
 instance SerialiseAsCBOR TxMetadata where
     serialiseToCBOR =
-          CBOR.serialize'
-        . (Shelley.Metadata :: Map Word64 Shelley.Metadatum -> Shelley.Metadata ())
+          CBOR.serialize' CBOR.shelleyProtVer
         -- The Shelley (Metadata era) is always polymorphic in era,
         -- so we pick the unit type.
         . toShelleyMetadata
@@ -116,9 +117,8 @@ instance SerialiseAsCBOR TxMetadata where
     deserialiseFromCBOR AsTxMetadata bs =
           TxMetadata
         . fromShelleyMetadata
-        . (\(Shelley.Metadata m) -> m)
-      <$> (CBOR.decodeAnnotator "TxMetadata" fromCBOR (LBS.fromStrict bs)
-           :: Either CBOR.DecoderError (Shelley.Metadata ()))
+      <$> (CBOR.decodeFullDecoder' CBOR.shelleyProtVer "TxMetadata" CBOR.decCBOR bs
+           :: Either CBOR.DecoderError (Map Word64 Shelley.Metadatum))
         -- The Shelley (Metadata era) is always polymorphic in era,
         -- so we pick the unit type.
 

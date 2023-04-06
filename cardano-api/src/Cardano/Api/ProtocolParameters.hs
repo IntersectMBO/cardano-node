@@ -109,8 +109,7 @@ import           Cardano.Ledger.Alonzo.PParams (AlonzoPParams, AlonzoPParamsHKD 
                    AlonzoPParamsUpdate)
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Shelley.API as Ledger hiding (PParams)
-import           Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..),
-                   ShelleyPParamsUpdate)
+import           Cardano.Ledger.Shelley.PParams (HKD (..), ShelleyPParams, ShelleyPParamsUpdate)
 
 import           Text.PrettyBy.Default (display)
 

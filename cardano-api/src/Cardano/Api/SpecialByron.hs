@@ -35,6 +35,9 @@ import           Cardano.Chain.Update (AProposal (aBody, annotation), InstallerH
                    recoverVoteId, signProposal)
 import qualified Cardano.Chain.Update.Vote as ByronVote
 import           Cardano.Crypto (SafeSigner, noPassSafeSigner)
+import qualified Cardano.Ledger.Binary as Binary (Annotated (..), ByteSpan (..), annotation,
+                   annotationBytes, byronProtVer, reAnnotate)
+import qualified Cardano.Ledger.Binary.Decoding as LedgerBinary
 
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import qualified Ouroboros.Consensus.Byron.Ledger.Mempool as Mempool
@@ -60,7 +63,7 @@ instance SerialiseAsRawBytes ByronUpdateProposal where
         Right proposal -> Right (ByronUpdateProposal proposal')
           where
             proposal' :: AProposal ByteString
-            proposal' = Binary.annotationBytes lBs proposal
+            proposal' = LedgerBinary.annotationBytes lBs proposal
 
 makeByronUpdateProposal
   :: NetworkId
@@ -75,8 +78,8 @@ makeByronUpdateProposal nId pVer sVer sysTag insHash
                           bWit paramsToUpdate =
   let nonAnnotatedProposal :: AProposal ()
       nonAnnotatedProposal = signProposal (toByronProtocolMagicId nId) proposalBody noPassSigningKey
-      annotatedPropBody :: Binary.Annotated ProposalBody ByteString
-      annotatedPropBody = Binary.reAnnotate $ aBody nonAnnotatedProposal
+      annotatedPropBody :: LedgerBinary.Annotated ProposalBody ByteString
+      annotatedPropBody = Binary.reAnnotate (Binary.byronProtVer) $ aBody nonAnnotatedProposal
   in ByronUpdateProposal
        $ nonAnnotatedProposal { aBody = annotatedPropBody
                               , annotation = Binary.serialize' nonAnnotatedProposal
@@ -172,8 +175,8 @@ instance SerialiseAsRawBytes ByronVote where
          Left e -> Left $ SerialiseAsRawBytesError $ "Unable to deserialise ByronVote: " <> show e
          Right vote -> Right . ByronVote $ annotateVote vote lBs
    where
-    annotateVote :: ByronVote.AVote Binary.ByteSpan -> LB.ByteString -> ByronVote.AVote ByteString
-    annotateVote vote bs' = Binary.annotationBytes bs' vote
+    annotateVote :: ByronVote.AVote LedgerBinary.ByteSpan -> LB.ByteString -> ByronVote.AVote ByteString
+    annotateVote vote bs' = LedgerBinary.annotationBytes bs' vote
 
 
 makeByronVote
@@ -186,11 +189,11 @@ makeByronVote nId sKey (ByronUpdateProposal proposal) yesOrNo =
   let signingKey = toByronSigningKey sKey
       nonAnnotatedVote :: ByronVote.AVote ()
       nonAnnotatedVote = mkVote (toByronProtocolMagicId nId) signingKey (recoverUpId proposal) yesOrNo
-      annotatedProposalId :: Binary.Annotated UpId ByteString
-      annotatedProposalId = Binary.reAnnotate $ ByronVote.aProposalId nonAnnotatedVote
+      annotatedProposalId :: LedgerBinary.Annotated UpId ByteString
+      annotatedProposalId = Binary.reAnnotate Binary.byronProtVer $ ByronVote.aProposalId nonAnnotatedVote
   in ByronVote
        $ nonAnnotatedVote { ByronVote.aProposalId = annotatedProposalId
-                          , ByronVote.annotation = Binary.annotation annotatedProposalId
+                          , ByronVote.annotation = LedgerBinary.annotation annotatedProposalId
                           }
 
 toByronLedgertoByronVote :: ByronVote -> Mempool.GenTx ByronBlock

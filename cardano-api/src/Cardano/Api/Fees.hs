@@ -72,13 +72,11 @@ import qualified Cardano.Ledger.Crypto as Ledger
 import qualified Cardano.Ledger.Era as Ledger.Era (Crypto)
 import qualified Cardano.Ledger.Keys as Ledger
 
-import           Cardano.Ledger.Mary.Value (MaryValue)
-
 import qualified Cardano.Ledger.Shelley.API as Ledger (CLI)
 import qualified Cardano.Ledger.Shelley.API.Wallet as Ledger (evaluateTransactionBalance,
                    evaluateTransactionFee)
 import qualified Cardano.Ledger.Shelley.API.Wallet as Shelley
-import           Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
+import           Cardano.Ledger.Shelley.PParams (HKD (..))
 import           Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
 
 import qualified Cardano.Ledger.Alonzo as Alonzo
@@ -88,7 +86,7 @@ import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tools as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
-import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
+--import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 
 import qualified Cardano.Ledger.Babbage as Babbage
 import           Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
