@@ -814,10 +814,6 @@ pTransaction =
 
   pProtocolParamsSourceSpec :: Parser ProtocolParamsSourceSpec
   pProtocolParamsSourceSpec =
-    ParamsFromGenesis <$>
-      pGenesisFile
-        "[TESTING] The genesis file to take initial protocol parameters from.  For test clusters only, since the parameters are going to be obsolete for production clusters."
-    <|>
     ParamsFromFile <$> pProtocolParamsFile
 
   pTxHashScriptData :: Parser TransactionCmd

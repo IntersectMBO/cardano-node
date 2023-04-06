@@ -257,17 +257,10 @@ data InputTxBodyOrTxFile = InputTxBodyFile TxBodyFile | InputTxFile TxFile
   deriving Show
 
 data ProtocolParamsSourceSpec
-  = ParamsFromGenesis !GenesisFile
-    -- ^ We allow an appropriately forewarned user to obtain protocol params
-    --   directly from the genesis file, which allows them to avoid running
-    --   the node in case they would like to estimate the fee using the
-    --   blockchain's initial protocol parameters.
-  | ParamsFromFile !ProtocolParamsFile
+  = ParamsFromFile !ProtocolParamsFile
     -- ^ Obtain protocol parameters from a file structured by the
     --   'cardano-api' 'ProtocolParameters' data type.
   deriving Show
-
-{-# DEPRECATED ParamsFromFile "Protocol params file is deprecated" #-}
 
 renderTransactionCmd :: TransactionCmd -> Text
 renderTransactionCmd cmd =

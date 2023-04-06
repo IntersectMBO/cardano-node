@@ -1368,14 +1368,10 @@ renderProtocolParamsError (ProtocolParamsErrorGenesis err) =
 
 readProtocolParametersSourceSpec :: ProtocolParamsSourceSpec
                                  -> ExceptT ProtocolParamsError IO ProtocolParameters
-readProtocolParametersSourceSpec (ParamsFromGenesis (GenesisFile f)) =
-  fromShelleyPParams . sgProtocolParams
-    <$> firstExceptT ProtocolParamsErrorGenesis (readShelleyGenesisWithDefault f id)
 readProtocolParametersSourceSpec (ParamsFromFile f) = readProtocolParameters f
 
 --TODO: eliminate this and get only the necessary params, and get them in a more
 -- helpful way rather than requiring them as a local file.
-{-# DEPRECATED readProtocolParameters "Query the node instead of using a parameters file" #-}
 readProtocolParameters :: ProtocolParamsFile
                        -> ExceptT ProtocolParamsError IO ProtocolParameters
 readProtocolParameters (ProtocolParamsFile fpath) = do
