@@ -1,4 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Hedgehog.Roundtrip.CBOR
   ( roundtrip_CBOR
@@ -6,24 +9,36 @@ module Test.Hedgehog.Roundtrip.CBOR
   ) where
 
 import           Cardano.Api
-import           Hedgehog (Gen, Property)
 
+import           Data.Proxy (Proxy (..))
+import           Data.Typeable (typeRep)
+import           GHC.Stack (HasCallStack)
+import qualified GHC.Stack as GHC
+import           Hedgehog (Gen, Property)
 import qualified Hedgehog as H
+import qualified Hedgehog.Extras.Test.Base as H
 
 {- HLINT ignore "Use camelCase" -}
 
 roundtrip_CBOR
-  :: (SerialiseAsCBOR a, Eq a, Show a)
-  => AsType a -> Gen a -> Property
+  :: forall a. (SerialiseAsCBOR a, Eq a, Show a, HasCallStack)
+  => AsType a
+  -> Gen a
+  -> Property
 roundtrip_CBOR typeProxy gen =
   H.property $ do
+    GHC.withFrozenCallStack $ H.noteShow_ $ typeRep $ Proxy @a
     val <- H.forAll gen
     H.tripping val serialiseToCBOR (deserialiseFromCBOR typeProxy)
 
 
 roundtrip_CDDL_Tx
-  :: IsCardanoEra era => CardanoEra era -> Gen (Tx era) -> Property
+  :: (IsCardanoEra era, HasCallStack)
+  => CardanoEra era
+  -> Gen (Tx era)
+  -> Property
 roundtrip_CDDL_Tx era gen =
   H.property $ do
+    GHC.withFrozenCallStack $ H.noteShow_ era
     val <- H.forAll gen
     H.tripping val serialiseTxLedgerCddl (deserialiseTxLedgerCddl era)
