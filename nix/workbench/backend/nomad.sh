@@ -2356,7 +2356,7 @@ backend_nomad() {
               if test -z "${tasks_array:-}"
               then
                 sleep 1
-                backend_nomad nomad monitor-alloc-tasks \
+                backend_nomad nomad job monitor-alloc-tasks \
                   "${job_file}" "${job_name}" "${alloc_id}" "${msgoff}"
               else
                 # Interate through allocation's tasks
