@@ -416,6 +416,18 @@ data GovernanceCmd
                              [VerificationKeyFile]
                              ProtocolParametersUpdate
                              (Maybe FilePath)
+  | GovernanceCreatePoll
+      Text -- Prompt
+      [Text] -- Choices
+      (Maybe Word) -- Nonce
+      OutputFile
+  | GovernanceAnswerPoll
+      FilePath -- Poll file
+      SigningKeyFile
+      (Maybe Word) -- Answer index
+  | GovernanceVerifyPoll
+      FilePath -- Poll file
+      FilePath -- Metadata JSON file
   deriving Show
 
 renderGovernanceCmd :: GovernanceCmd -> Text
@@ -426,6 +438,9 @@ renderGovernanceCmd cmd =
     GovernanceMIRTransfer _ _ TransferToTreasury -> "governance create-mir-certificate transfer-to-treasury"
     GovernanceMIRTransfer _ _ TransferToReserves -> "governance create-mir-certificate transfer-to-reserves"
     GovernanceUpdateProposal {} -> "governance create-update-proposal"
+    GovernanceCreatePoll{} -> "governance create-poll"
+    GovernanceAnswerPoll{} -> "governance answer-poll"
+    GovernanceVerifyPoll{} -> "governance verify-poll"
 
 data TextViewCmd
   = TextViewInfo !FilePath (Maybe OutputFile)
