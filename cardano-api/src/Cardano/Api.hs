@@ -290,6 +290,7 @@ module Cardano.Api (
     -- ** Constructing metadata
     TxMetadataValue(..),
     makeTransactionMetadata,
+    mergeTransactionMetadata,
 
     -- ** Validating metadata
     validateTxMetadata,
