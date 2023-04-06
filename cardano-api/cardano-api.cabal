@@ -223,11 +223,11 @@ test-suite cardano-api-test
                       , cardano-crypto-test ^>= 1.5
                       , cardano-crypto-tests ^>= 2.1
                       , cardano-data >= 1.0
+                      , cardano-ledger-alonzo >= 1.1
                       , cardano-ledger-api >= 1.1
                       , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.1
                       , cardano-ledger-shelley-test >= 1.1
                       , cardano-slotting ^>= 0.1
-                      , cardano-strict-containers ^>= 0.1
                       , containers
                       , hedgehog
                       , hedgehog-extras ^>= 0.4.1

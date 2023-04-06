@@ -14,13 +14,13 @@ import           Data.Word (Word64)
 --TODO: why do we have this odd split? We can get rid of the old name "typed"
 import           Test.Gen.Cardano.Api.Typed (genCostModel, genRational)
 
+import qualified Cardano.Ledger.Alonzo.Core as Ledger
 import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Coin as Ledger
-import qualified Cardano.Ledger.Alonzo.Core as Ledger
-import           Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData (..), Metadatum (..))
+import           Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
 
 import           Hedgehog (Gen, Range)
 import qualified Hedgehog.Gen as Gen
@@ -80,9 +80,13 @@ genExUnits = do
     , Alonzo.exUnitsSteps = exUnitsSteps'
     }
 
+genLanguage :: Gen Alonzo.Language
+genLanguage = Gen.element [Alonzo.PlutusV1, Alonzo.PlutusV2]
+
 genCostModels :: Gen Alonzo.CostModels
 genCostModels = do
-  alonzoCostModel <- genCostModel
+  lang <- genLanguage
+  alonzoCostModel <- genCostModel lang
   Alonzo.CostModels
     <$> (conv <$> Gen.list (Range.linear 1 3) (return alonzoCostModel))
     <*> pure mempty

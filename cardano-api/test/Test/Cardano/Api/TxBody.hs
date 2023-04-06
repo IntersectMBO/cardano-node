@@ -8,13 +8,10 @@
 
 module Test.Cardano.Api.TxBody (tests) where
 
-import           Control.Monad (when)
 import           Data.Bifunctor (second)
 import           Data.Data ((:~:) (..))
-import           Data.Foldable (toList)
 import           Data.Functor ((<&>))
 import qualified Data.List as List
-import           Data.Maybe.Strict (StrictMaybe (SNothing))
 import           Data.Type.Equality (testEquality)
 import           Hedgehog (Property, PropertyT, evalEither, forAll, property, tripping, (===))
 import qualified Hedgehog.Gen as Gen
@@ -22,16 +19,12 @@ import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testPropertyNamed)
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (ProtocolParameters, TxBody (ShelleyTxBody))
-import           Cardano.Binary (serialize')
-import qualified Cardano.Ledger.Alonzo.Data as Alonzo
-import           Cardano.Ledger.Alonzo.TxBody (adHash)
-import qualified Cardano.Ledger.Core as Ledger
+import           Cardano.Api.Shelley (ProtocolParameters)
+import qualified Cardano.Ledger.Api as L
 
 import           Ouroboros.Consensus.Shelley.Eras as Ledger (StandardAlonzo)
 
 import           Test.Gen.Cardano.Api.Typed (genTxBodyContent)
-
 
 -- * Properties
 
@@ -90,34 +83,35 @@ prop_roundtrip_TxBody_make_get_make = property $ do
 
 
 assertEqBodies :: TxBody era -> TxBody era -> PropertyT IO ()
-assertEqBodies x y =
-  case (x, y) of
-    ( ShelleyTxBody ShelleyBasedEraAlonzo xBody xs xd (Just xAux) xv,
-      ShelleyTxBody ShelleyBasedEraAlonzo yBody ys yd (Just yAux) yv
-      ) -> do
-        -- compare aux data separately from the rest
-        assertEqAuxData xAux yAux
-        x' === y'
-        where
-          xAux' = Nothing
-          yAux' = Nothing
-          xBody' = xBody {adHash = SNothing}
-          yBody' = yBody {adHash = SNothing}
-          x' = ShelleyTxBody ShelleyBasedEraAlonzo xBody' xs xd xAux' xv
-          y' = ShelleyTxBody ShelleyBasedEraAlonzo yBody' ys yd yAux' yv
-    _ -> x === y
+assertEqBodies _x _y = True === False -- TODO
+  -- case (x, y) of
+  --   ( ShelleyTxBody ShelleyBasedEraAlonzo xBody xs xd (Just xAux) xv,
+  --     ShelleyTxBody ShelleyBasedEraAlonzo yBody ys yd (Just yAux) yv
+  --     ) -> do
+  --       -- compare aux data separately from the rest
+  --       assertEqAuxData xAux yAux
+  --       x' === y'
+  --       where
+  --         xAux' = Nothing
+  --         yAux' = Nothing
+  --         xBody' = xBody {adHash = SNothing}
+  --         yBody' = yBody {adHash = SNothing}
+  --         x' = ShelleyTxBody ShelleyBasedEraAlonzo xBody' xs xd xAux' xv
+  --         y' = ShelleyTxBody ShelleyBasedEraAlonzo yBody' ys yd yAux' yv
+  --   _ -> x === y
 
 -- | Compare ignoring scripts order
-assertEqAuxData
-  :: Ledger.AuxiliaryData Ledger.StandardAlonzo
-  -> Ledger.AuxiliaryData Ledger.StandardAlonzo
+_assertEqAuxData
+  :: L.TxAuxData Ledger.StandardAlonzo
+  -> L.TxAuxData Ledger.StandardAlonzo
   -> PropertyT IO ()
-assertEqAuxData
-  (Alonzo.AlonzoAuxiliaryData xMetadata xScripts)
-  (Alonzo.AlonzoAuxiliaryData yMetadata yScripts) = do
-    when (List.sortOn serialize' (toList xScripts) /= List.sortOn serialize' (toList yScripts)) $
-      xScripts === yScripts
-    xMetadata === yMetadata
+_assertEqAuxData _x _y = True === False -- TODO
+-- assertEqAuxData
+--   (L.mkAlonzoTxAuxData xMetadata xScripts)
+--   (L.mkAlonzoTxAuxData yMetadata yScripts) = do
+--     when (List.sortOn serialize' (toList xScripts) /= List.sortOn serialize' (toList yScripts)) $
+--       xScripts === yScripts
+--     xMetadata === yMetadata
 
 
 -- * Normalization
@@ -377,7 +371,7 @@ buildMintValue = \case
 
 
 tests :: TestTree
-tests = testGroup "Test.Cardano.Api.TxBody" $
+tests = testGroup "Test.Cardano.Api.TxBody"
   [ testPropertyNamed "round trip txbody make get"      "round trip txbody make get"      prop_roundtrip_TxBody_make_get
   , testPropertyNamed "round trip txbody make get make" "round trip txbody make get make" prop_roundtrip_TxBody_make_get_make
   ]
