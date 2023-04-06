@@ -84,6 +84,7 @@
 
 - New generators in `gen` sublibrary: `genPositiveLovelace`, `genPositiveQuantity` and
   `genSignedNonZeroQuantity`. ([PR 5013](https://github.com/input-output-hk/cardano-node/pull/5013))
+- New 'Governance.Poll' API implementing [CIP-0094](https://github.com/cardano-foundation/CIPs/pull/496) ([PR 5050](https://github.com/input-output-hk/cardano-node/pull/5050))
 
 ### Bugs
 
