@@ -131,27 +131,25 @@ backend_nomadexec() {
 
       # Add genesis to HTTP cache server
       local nomad_agents_were_already_running=$(envjqr 'nomad_agents_were_already_running')
-      if ! backend_nomad webfs is-running
+      if ! wb_nomad webfs is-running
       then
-        if ! backend_nomad webfs start
+        if ! wb_nomad webfs start
         then
           if test "${nomad_agents_were_already_running}" = "false"
           then
             msg "Startup of webfs failed, cleaning up ..."
-            backend_nomad nomad agents stop \
-              "${server_name}" "${client_name}" "exec"
+            wb_nomad agents stop "${server_name}" "${client_name}" "exec"
             backend_nomad stop-nomad-job "${dir}"
           fi
           fatal "Failed to start HTTP server"
         fi
       fi
-      if ! backend_nomad webfs add-genesis-dir "${dir}"/genesis "${nomad_job_name}"
+      if ! wb_nomad webfs add-genesis-dir "${dir}"/genesis "${nomad_job_name}"
       then
         if test "${nomad_agents_were_already_running}" = "false"
         then
-          msg "Adding genesis to webfs failed, cleaning up ..."
-          backend_nomad nomad agents stop \
-            "${server_name}" "${client_name}" "exec"
+          msg "Startup of webfs failed, cleaning up ..."
+          wb_nomad agents stop "${server_name}" "${client_name}" "exec"
           backend_nomad stop-nomad-job "${dir}"
         fi
         fatal "Failed to add genesis to HTTP server"

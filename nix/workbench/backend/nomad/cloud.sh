@@ -111,12 +111,10 @@ backend_nomadcloud() {
         msg $(yellow "WARNING: Nomad address \"NOMAD_ADDR\" envar is not set")
         export NOMAD_ADDR="https://nomad.world.dev.cardano.org"
         msg $(blue "INFO: Setting \"NOMAD_ADDR\" to the SRE provided address for \"Performance and Tracing\" (\"${NOMAD_ADDR}\")")
-        read -p "Hit enter to continue ..."
       else
         if test "${NOMAD_ADDR}" != "https://nomad.world.dev.cardano.org"
         then
           msg $(yellow "WARNING: Nomad address \"NOMAD_ADDR\" envar is not \"https://nomad.world.dev.cardano.org\"")
-          read -p "Hit enter to continue ..."
         fi
       fi
       # The abscence of `NOMAD_NAMESPACE` or `NOMAD_TOKEN` needs confirmation
@@ -125,12 +123,10 @@ backend_nomadcloud() {
         msg $(yellow "WARNING: Nomad namespace \"NOMAD_NAMESPACE\" envar is not set")
         export NOMAD_NAMESPACE="perf"
         msg $(blue "INFO: Setting \"NOMAD_NAMESPACE\" to the SRE provided namespace for \"Performance and Tracing\" (\"${NOMAD_NAMESPACE}\")")
-        read -p "Hit enter to continue ..."
       else
         if test "${NOMAD_NAMESPACE}" != "perf"
         then
           msg $(yellow "WARNING: Nomad namespace \"NOMAD_NAMESPACE\" envar is not \"perf\"")
-          read -p "Hit enter to continue ..."
         fi
       fi
       if test -z "${NOMAD_TOKEN:-}"
@@ -185,11 +181,12 @@ backend_nomadcloud() {
           local message=$(echo $body | jq -r .commit.message)
           msg $(green "\t${message}\n")
           msg $(green "\n")
-          read -p "Hit enter to continue ..."
         else
           fatal "Could not fetch commit info from GitHub (\`curl\` error)"
         fi
       fi
+      # There are so many assumptions that I like having the user confirm them!
+      read -p "Hit enter to continue ..."
     ;;
 
     allocate-run )
@@ -254,8 +251,7 @@ backend_nomadcloud() {
         local nomad_agents_were_already_running=$(envjqr 'nomad_agents_were_already_running')
         if test "${nomad_agents_were_already_running}" = "false"
         then
-          backend_nomad nomad agents stop \
-            "${server_name}" "${client_name}" "exec"
+          wb_nomad agents stop "${server_name}" "${client_name}" "exec"
         fi
         backend_nomad stop-nomad-job "${dir}"
         fatal "Failed to upload ${genesis_file_name}"
