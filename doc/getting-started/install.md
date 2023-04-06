@@ -47,7 +47,7 @@ sudo apt-get install automake build-essential pkg-config libffi-dev libgmp-dev l
 
 Optional dependencies that may be required: llvm libnuma-dev
 
-If you are using a different flavor of Linux, you will need to use the correct package manager for your platform instead of `yum` or `apt-get`, and the names of the packages you need to install might differ. 
+If you are using a different flavor of Linux, you will need to use the correct package manager for your platform instead of `yum` or `apt-get`, and the names of the packages you need to install might differ.
 
 For MacOS:
 
@@ -138,7 +138,7 @@ export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
 For some distributions you will also need to configure the dynamic linker.  If
 the executable is linked with the right `libsodium.so` file (which you can
 check by running `ldd`), the running binary might still use the wrong library.
-You can check this by running `pldd`. If the `pldd` shows that the running executable 
+You can check this by running `pldd`. If the `pldd` shows that the running executable
 is using the wrong library, run `ldconfig`.
 
 ##### Using the ported `c` code
@@ -208,7 +208,7 @@ Check out the latest version of cardano-node (choose the tag with the highest ve
 
 ```bash
 git fetch --all --recurse-submodules --tags
-git tag
+git tag | sort -V
 git checkout tags/<TAGGED VERSION>
 ```
 
