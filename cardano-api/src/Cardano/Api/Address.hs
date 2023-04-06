@@ -87,7 +87,6 @@ import           Data.Either.Combinators (rightToMaybe)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import           Data.Typeable (Typeable)
 import qualified Text.Parsec as Parsec
 import qualified Text.Parsec.String as Parsec
 
@@ -445,7 +444,7 @@ instance HasTypeProxy era => HasTypeProxy (AddressInEra era) where
     data AsType (AddressInEra era) = AsAddressInEra (AsType era)
     proxyToAsType _ = AsAddressInEra (proxyToAsType (Proxy :: Proxy era))
 
-instance (IsCardanoEra era, Typeable era) => SerialiseAsRawBytes (AddressInEra era) where
+instance IsCardanoEra era => SerialiseAsRawBytes (AddressInEra era) where
 
     serialiseToRawBytes (AddressInEra ByronAddressInAnyEra addr) =
       serialiseToRawBytes addr

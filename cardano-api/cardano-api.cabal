@@ -203,6 +203,7 @@ library gen
                       , cardano-ledger-shelley ^>= 0.1
                       , containers
                       , hedgehog
+                      , hedgehog-extras
                       , text
 
 test-suite cardano-api-test

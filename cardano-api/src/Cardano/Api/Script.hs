@@ -967,15 +967,14 @@ instance HasTypeProxy lang => HasTypeProxy (PlutusScript lang) where
     data AsType (PlutusScript lang) = AsPlutusScript (AsType lang)
     proxyToAsType _ = AsPlutusScript (proxyToAsType (Proxy :: Proxy lang))
 
-instance (HasTypeProxy lang, Typeable lang) => SerialiseAsRawBytes (PlutusScript lang) where
+instance HasTypeProxy lang => SerialiseAsRawBytes (PlutusScript lang) where
     serialiseToRawBytes (PlutusScriptSerialised sbs) = SBS.fromShort sbs
 
     deserialiseFromRawBytes (AsPlutusScript _) bs =
       -- TODO alonzo: validate the script syntax and fail decoding if invalid
       Right (PlutusScriptSerialised (SBS.toShort bs))
 
-instance (IsPlutusScriptLanguage lang, Typeable lang) =>
-         HasTextEnvelope (PlutusScript lang) where
+instance IsPlutusScriptLanguage lang => HasTextEnvelope (PlutusScript lang) where
     textEnvelopeType _ =
       case plutusScriptVersion :: PlutusScriptVersion lang of
         PlutusScriptV1 -> "PlutusScriptV1"
