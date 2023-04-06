@@ -818,9 +818,15 @@ backend_nomad() {
         if test "${nomad_environment}" != "cloud"
         then
           # A link to the alloc must be already created inside the RUN-DIR
-          ln -s "${dir}"/nomad/alloc/"${node}"/local/run/current/"${node}"/stdout           "${dir}"/"${node}"/stdout
-          ln -s "${dir}"/nomad/alloc/"${node}"/local/run/current/"${node}"/stderr           "${dir}"/"${node}"/stderr
-          ln -s "${dir}"/nomad/alloc/"${node}"/local/run/current/supervisor/supervisord.log "${dir}"/supervisor/"${node}"/supervisord.log
+          ln -s                                                                   \
+            ../nomad/alloc/"${node}"/local/run/current/"${node}"/stdout           \
+            "${dir}"/"${node}"/stdout
+          ln -s                                                                   \
+            ../nomad/alloc/"${node}"/local/run/current/"${node}"/stderr           \
+            "${dir}"/"${node}"/stderr
+          ln -s                                                                   \
+            ../nomad/alloc/"${node}"/local/run/current/supervisor/supervisord.log \
+            "${dir}"/supervisor/"${node}"/supervisord.log
         fi
         # Always wait for the node to be ready.
         backend_nomad wait-node "${dir}" "${node}"
@@ -867,8 +873,12 @@ backend_nomad() {
         local nomad_environment=$(envjqr 'nomad_environment')
         if test "${nomad_environment}" != "cloud"
         then
-          ln -s "${dir}"/nomad/alloc/node-0/local/run/current/generator/stdout "${dir}"/generator/stdout
-          ln -s "${dir}"/nomad/alloc/node-0/local/run/current/generator/stderr "${dir}"/generator/stderr
+          ln -s                                                      \
+            ../nomad/alloc/node-0/local/run/current/generator/stdout \
+            "${dir}"/generator/stdout
+          ln -s                                                      \
+            ../nomad/alloc/node-0/local/run/current/generator/stderr \
+            "${dir}"/generator/stderr
         fi
         # It was "intentionally started and should not automagically stop" flag!
         touch "${dir}"/generator/started
@@ -935,14 +945,22 @@ backend_nomad() {
         then
           if test "${one_tracer_per_node}" = "true" || test "${task}" != "tracer"
           then
-            ln -s "${dir}"/nomad/alloc/"${task}"/local/run/current/tracer/stdout           "${dir}"/tracer/"${task}"/stdout
-            ln -s "${dir}"/nomad/alloc/"${task}"/local/run/current/tracer/stderr           "${dir}"/tracer/"${task}"/stderr
+            ln -s                                                         \
+              ../../nomad/alloc/"${task}"/local/run/current/tracer/stdout \
+              "${dir}"/tracer/"${task}"/stdout
+            ln -s                                                         \
+              ../../nomad/alloc/"${task}"/local/run/current/tracer/stderr \
+              "${dir}"/tracer/"${task}"/stderr
           else
             # When "local" and "podman" "tracer" folder is mounted
             if ! test "${nomad_task_driver}" = "podman"
             then
-              ln -s "${dir}"/nomad/alloc/tracer/local/run/current/tracer/stdout            "${dir}"/tracer/stdout
-              ln -s "${dir}"/nomad/alloc/tracer/local/run/current/tracer/stderr            "${dir}"/tracer/stderr
+              ln -s                                                   \
+                ../nomad/alloc/tracer/local/run/current/tracer/stdout \
+                "${dir}"/tracer/stdout
+              ln -s                                                   \
+                ../nomad/alloc/tracer/local/run/current/tracer/stderr \
+                "${dir}"/tracer/stderr
             fi
             ln -s "${dir}"/nomad/alloc/tracer/local/run/current/supervisor/supervisord.log "${dir}"/supervisor/tracer/supervisord.log
           fi
