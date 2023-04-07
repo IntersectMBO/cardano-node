@@ -11,9 +11,11 @@ import           Cardano.Api
 import           Data.Proxy (Proxy (..))
 import           Data.String (IsString (..))
 import           Hedgehog (Property, forAll, property, success, tripping)
+import qualified Hedgehog as H
+import qualified Hedgehog.Gen as Gen
 import           Test.Cardano.Api.Typed.Orphans ()
 import           Test.Gen.Cardano.Api.Typed
-import           Test.Hedgehog.Roundtrip.CBOR (roundtrip_CBOR, roundtrip_CDDL_Tx)
+import           Test.Hedgehog.Roundtrip.CBOR (roundtrip_CBOR)
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testPropertyNamed)
 
@@ -22,12 +24,11 @@ import           Test.Tasty.Hedgehog (testPropertyNamed)
 -- TODO: Need to add PaymentExtendedKey roundtrip tests however
 -- we can't derive an Eq instance for Crypto.HD.XPrv
 
-test_roundtrip_txbody_CBOR :: [TestTree]
-test_roundtrip_txbody_CBOR =
-  [ testPropertyNamed (show era) (fromString (show era)) $
-    roundtrip_CDDL_Tx era (makeSignedTransaction [] <$> genTxBody era)
-  | AnyCardanoEra era <- [minBound..(AnyCardanoEra BabbageEra)]
-  ]
+prop_roundtrip_txbody_CBOR :: Property
+prop_roundtrip_txbody_CBOR = H.property $ do
+  AnyCardanoEra era <- H.forAll $ Gen.element [minBound..AnyCardanoEra BabbageEra]
+  x <- H.forAll $ makeSignedTransaction [] <$> genTxBody era
+  H.tripping x serialiseTxLedgerCddl (deserialiseTxLedgerCddl era)
 
 test_roundtrip_tx_CBOR :: [TestTree]
 test_roundtrip_tx_CBOR =
@@ -221,7 +222,7 @@ tests = testGroup "Test.Cardano.Api.Typed.CBOR"
   , testPropertyNamed "roundtrip script PlutusScriptV2 CBOR"                 "roundtrip script PlutusScriptV2 CBOR"                 prop_roundtrip_script_PlutusScriptV2_CBOR
   , testPropertyNamed "roundtrip UpdateProposal CBOR"                        "roundtrip UpdateProposal CBOR"                        prop_roundtrip_UpdateProposal_CBOR
   , testPropertyNamed "roundtrip ScriptData CBOR"                            "roundtrip ScriptData CBOR"                            prop_roundtrip_ScriptData_CBOR
-  , testGroup "roundtrip txbody CBOR"     test_roundtrip_txbody_CBOR
+  , testPropertyNamed "roundtrip txbody CBOR"                                "roundtrip txbody CBOR"                                prop_roundtrip_txbody_CBOR
   , testGroup "roundtrip tx CBOR"         test_roundtrip_tx_CBOR
   , testGroup "roundtrip Tx Cddl"         test_roundtrip_Tx_Cddl
   , testGroup "roundtrip TxWitness Cddl"  test_roundtrip_TxWitness_Cddl

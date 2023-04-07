@@ -5,7 +5,7 @@
 
 module Test.Hedgehog.Roundtrip.CBOR
   ( roundtrip_CBOR
-  , roundtrip_CDDL_Tx
+  -- , roundtrip_CDDL_Tx
   ) where
 
 import           Cardano.Api
@@ -30,15 +30,3 @@ roundtrip_CBOR typeProxy gen =
     GHC.withFrozenCallStack $ H.noteShow_ $ typeRep $ Proxy @a
     val <- H.forAll gen
     H.tripping val serialiseToCBOR (deserialiseFromCBOR typeProxy)
-
-
-roundtrip_CDDL_Tx
-  :: (IsCardanoEra era, HasCallStack)
-  => CardanoEra era
-  -> Gen (Tx era)
-  -> Property
-roundtrip_CDDL_Tx era gen =
-  H.property $ do
-    GHC.withFrozenCallStack $ H.noteShow_ era
-    val <- H.forAll gen
-    H.tripping val serialiseTxLedgerCddl (deserialiseTxLedgerCddl era)
