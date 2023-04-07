@@ -22,8 +22,8 @@ import           Cardano.TxGenerator.FundQueue
 import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Tx (genTx, sourceToStoreTransaction)
 import           Cardano.TxGenerator.Types (TxEnvironment (..), TxGenError (..), TxGenerator)
-import           Cardano.TxGenerator.UTxO (makeToUTxOList, mkUTxOVariant)
 import           Cardano.TxGenerator.Utils (inputsToOutputsWithFee)
+import           Cardano.TxGenerator.UTxO (makeToUTxOList, mkUTxOVariant)
 
 import           Paths_tx_generator
 
@@ -103,7 +103,7 @@ generateTx TxEnvironment{..}
     TxFeeExplicit _ fee = txEnvFee
 
     generator :: TxGenerator BabbageEra
-    generator = genTx txEnvProtocolParams collateralFunds txEnvFee txEnvMetadata
+    generator = genTx BabbageEra txEnvProtocolParams collateralFunds txEnvFee txEnvMetadata
       where
         -- collateralFunds are needed for Plutus transactions
         collateralFunds :: (TxInsCollateral BabbageEra, [Fund])
@@ -150,7 +150,7 @@ generateTxPure TxEnvironment{..} inQueue
     TxFeeExplicit _ fee = txEnvFee
 
     generator :: TxGenerator BabbageEra
-    generator = genTx txEnvProtocolParams collateralFunds txEnvFee txEnvMetadata
+    generator = genTx BabbageEra txEnvProtocolParams collateralFunds txEnvFee txEnvMetadata
       where
         -- collateralFunds are needed for Plutus transactions
         collateralFunds :: (TxInsCollateral BabbageEra, [Fund])

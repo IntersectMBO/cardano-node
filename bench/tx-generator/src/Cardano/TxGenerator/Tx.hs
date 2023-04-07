@@ -81,13 +81,15 @@ sourceTransactionPreview txGenerator inputFunds valueSplitter toStore =
   split         = valueSplitter $ map getFundLovelace inputFunds
   (outputs, _)  = toStore split
 
-genTx :: forall era. IsShelleyBasedEra era =>
-     ProtocolParameters
+genTx :: forall era. ()
+  => IsShelleyBasedEra era
+  => CardanoEra era
+  -> ProtocolParameters
   -> (TxInsCollateral era, [Fund])
   -> TxFee era
   -> TxMetadataInEra era
   -> TxGenerator era
-genTx protocolParameters (collateral, collFunds) fee metadata inFunds outputs
+genTx _era protocolParameters (collateral, collFunds) fee metadata inFunds outputs
   = bimap
       ApiError
       (\b -> (signShelleyTransaction b $ map WitnessPaymentKey allKeys, getTxId b))

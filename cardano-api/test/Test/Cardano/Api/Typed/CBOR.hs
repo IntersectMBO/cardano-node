@@ -177,8 +177,9 @@ prop_roundtrip_ScriptData_CBOR = H.property $ do
 
 prop_roundtrip_UpdateProposal_CBOR :: Property
 prop_roundtrip_UpdateProposal_CBOR = H.property $ do
-  x <- H.forAll genUpdateProposal
-  H.trippingCbor AsUpdateProposal x
+  AnyCardanoEra era <- H.forAll $ Gen.element [minBound .. maxBound]
+  proposal <- H.forAll $ genUpdateProposal era
+  H.trippingCbor AsUpdateProposal proposal
 
 prop_roundtrip_Tx_Cddl :: Property
 prop_roundtrip_Tx_Cddl = H.property $ do
