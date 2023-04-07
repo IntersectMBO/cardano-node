@@ -122,7 +122,7 @@ import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
 import           Cardano.Api.Shelley (GovernancePoll (..), GovernancePollAnswer (..),
                    GovernancePollWitness (..), Hash (..), KESPeriod (KESPeriod),
                    OperationalCertificateIssueCounter (OperationalCertificateIssueCounter),
-                   PlutusScript (PlutusScriptSerialised), ProtocolParameters (ProtocolParameters),
+                   PlutusScript (PlutusScriptSerialised), ProtocolParameters (..),
                    ReferenceScript (..), ReferenceTxInsScriptsInlineDatumsSupportedInEra (..),
                    StakeCredential (StakeCredentialByKey), StakePoolKey,
                    refInsScriptsAndInlineDatsSupportedInEra)
@@ -165,6 +165,7 @@ import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
 import           Test.Gen.Cardano.Api.Metadata (genTxMetadata)
 
 {- HLINT ignore "Reduce duplication" -}
+{- HLINT ignore "Use let" -}
 
 genAddressByron :: Gen (Address ByronAddr)
 genAddressByron = makeByronAddress <$> genNetworkId
@@ -837,36 +838,37 @@ genMaybePraosNonce :: Gen (Maybe PraosNonce)
 genMaybePraosNonce = Gen.maybe genPraosNonce
 
 genProtocolParameters :: Gen ProtocolParameters
-genProtocolParameters =
-  ProtocolParameters
-    <$> ((,) <$> genNat <*> genNat)
-    <*> Gen.maybe genRational
-    <*> genMaybePraosNonce
-    <*> genNat
-    <*> genNat
-    <*> genNat
-    <*> genLovelace
-    <*> genLovelace
-    <*> Gen.maybe genLovelace
-    <*> genLovelace
-    <*> genLovelace
-    <*> genLovelace
-    <*> genEpochNo
-    <*> genNat
-    <*> genRationalInt64
-    <*> genRational
-    <*> genRational
-    <*> Gen.maybe genLovelace
-    <*> return mempty
-    --TODO: Babbage figure out how to deal with
-    -- asymmetric cost model JSON instances
-    <*> Gen.maybe genExecutionUnitPrices
-    <*> Gen.maybe genExecutionUnits
-    <*> Gen.maybe genExecutionUnits
-    <*> Gen.maybe genNat
-    <*> Gen.maybe genNat
-    <*> Gen.maybe genNat
-    <*> Gen.maybe genLovelace
+genProtocolParameters = do
+  protocolParamProtocolVersion <- (,) <$> genNat <*> genNat
+  protocolParamDecentralization <- Gen.maybe genRational
+  protocolParamExtraPraosEntropy <- genMaybePraosNonce
+  protocolParamMaxBlockHeaderSize <- genNat
+  protocolParamMaxBlockBodySize <- genNat
+  protocolParamMaxTxSize <- genNat
+  protocolParamTxFeeFixed <- genLovelace
+  protocolParamTxFeePerByte <- genLovelace
+  protocolParamMinUTxOValue <- Gen.maybe genLovelace
+  protocolParamStakeAddressDeposit <- genLovelace
+  protocolParamStakePoolDeposit <- genLovelace
+  protocolParamMinPoolCost <- genLovelace
+  protocolParamPoolRetireMaxEpoch <- genEpochNo
+  protocolParamStakePoolTargetNum <- genNat
+  protocolParamPoolPledgeInfluence <- genRationalInt64
+  protocolParamMonetaryExpansion <- genRational
+  protocolParamTreasuryCut <- genRational
+  protocolParamUTxOCostPerWord <- Gen.maybe genLovelace
+  protocolParamCostModels <- pure mempty
+  --TODO: Babbage figure out how to deal with
+  -- asymmetric cost model JSON instances
+  protocolParamPrices <- Gen.maybe genExecutionUnitPrices
+  protocolParamMaxTxExUnits <- Gen.maybe genExecutionUnits
+  protocolParamMaxBlockExUnits <- Gen.maybe genExecutionUnits
+  protocolParamMaxValueSize <- Gen.maybe genNat
+  protocolParamCollateralPercent <- Gen.maybe genNat
+  protocolParamMaxCollateralInputs <- Gen.maybe genNat
+  protocolParamUTxOCostPerByte <- Gen.maybe genLovelace
+
+  pure ProtocolParameters {..}
 
 genProtocolParametersUpdate :: CardanoEra era -> Gen ProtocolParametersUpdate
 genProtocolParametersUpdate era = do
