@@ -35,30 +35,11 @@ prop_roundtrip_tx_CBOR = H.property $ do
   x <- H.forAll $ genTx era
   H.trippingCbor (proxyToAsType Proxy) x
 
-prop_roundtrip_witness_byron_CBOR :: Property
-prop_roundtrip_witness_byron_CBOR = H.property $ do
-  x <- H.forAll genByronKeyWitness
-  H.trippingCbor (AsKeyWitness AsByronEra) x
-
-prop_roundtrip_witness_shelley_CBOR :: Property
-prop_roundtrip_witness_shelley_CBOR = H.property $ do
-  x <- H.forAll $ genShelleyWitness ShelleyEra
-  H.trippingCbor (AsKeyWitness AsShelleyEra) x
-
-prop_roundtrip_witness_allegra_CBOR :: Property
-prop_roundtrip_witness_allegra_CBOR = H.property $ do
-  x <- H.forAll $ genShelleyWitness AllegraEra
-  H.trippingCbor (AsKeyWitness AsAllegraEra) x
-
-prop_roundtrip_witness_mary_CBOR :: Property
-prop_roundtrip_witness_mary_CBOR = H.property $ do
-  x <- H.forAll $ genShelleyWitness MaryEra
-  H.trippingCbor (AsKeyWitness AsMaryEra) x
-
-prop_roundtrip_witness_alonzo_CBOR :: Property
-prop_roundtrip_witness_alonzo_CBOR = H.property $ do
-  x <- H.forAll $ genShelleyWitness AlonzoEra
-  H.trippingCbor (AsKeyWitness AsAlonzoEra) x
+prop_roundtrip_witness_CBOR :: Property
+prop_roundtrip_witness_CBOR = H.property $ do
+  AnyCardanoEra era <- H.forAll $ Gen.element [minBound..maxBound]
+  x <- H.forAll $ genCardanoKeyWitness era
+  H.trippingCbor (AsKeyWitness (proxyToAsType Proxy)) x
 
 prop_roundtrip_operational_certificate_CBOR :: Property
 prop_roundtrip_operational_certificate_CBOR = H.property $ do
@@ -198,11 +179,7 @@ prop_roundtrip_TxWitness_Cddl = H.property $ do
 
 tests :: TestTree
 tests = testGroup "Test.Cardano.Api.Typed.CBOR"
-  [ testPropertyNamed "roundtrip witness byron CBOR"                         "roundtrip witness byron CBOR"                         prop_roundtrip_witness_byron_CBOR
-  , testPropertyNamed "roundtrip witness shelley CBOR"                       "roundtrip witness shelley CBOR"                       prop_roundtrip_witness_shelley_CBOR
-  , testPropertyNamed "roundtrip witness allegra CBOR"                       "roundtrip witness allegra CBOR"                       prop_roundtrip_witness_allegra_CBOR
-  , testPropertyNamed "roundtrip witness mary CBOR"                          "roundtrip witness mary CBOR"                          prop_roundtrip_witness_mary_CBOR
-  , testPropertyNamed "roundtrip witness alonzo CBOR"                        "roundtrip witness alonzo CBOR"                        prop_roundtrip_witness_alonzo_CBOR
+  [ testPropertyNamed "roundtrip witness CBOR"                               "roundtrip witness CBOR"                               prop_roundtrip_witness_CBOR
   , testPropertyNamed "roundtrip operational certificate CBOR"               "roundtrip operational certificate CBOR"               prop_roundtrip_operational_certificate_CBOR
   , testPropertyNamed "roundtrip operational certificate issue counter CBOR" "roundtrip operational certificate issue counter CBOR" prop_roundtrip_operational_certificate_issue_counter_CBOR
   , testPropertyNamed "roundtrip verification key byron CBOR"                "roundtrip verification key byron CBOR"                prop_roundtrip_verification_key_byron_CBOR
