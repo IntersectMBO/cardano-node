@@ -22,7 +22,7 @@ import           Prelude as Haskell (String, (.), (<$>))
 
 scriptName :: Haskell.String
 scriptName
-  = $(LitE . StringL . loc_module <$> qLocation)
+  = prepareScriptName $(LitE . StringL . loc_module <$> qLocation)
 
 script :: PlutusBenchScript
 script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusScriptV2 scriptSerialized))

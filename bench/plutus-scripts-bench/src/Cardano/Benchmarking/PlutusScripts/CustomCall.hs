@@ -28,7 +28,7 @@ script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusS
 
 scriptName :: Haskell.String
 scriptName
-  = $(LitE . StringL . loc_module <$> qLocation)
+  = prepareScriptName $(LitE . StringL . loc_module <$> qLocation)
 
 
 instance Plutus.Eq CustomCallData where

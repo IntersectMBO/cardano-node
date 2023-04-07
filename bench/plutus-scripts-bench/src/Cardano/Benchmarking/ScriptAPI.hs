@@ -5,9 +5,11 @@ module Cardano.Benchmarking.ScriptAPI
   , psName
   , psScript
   , mkPlutusBenchScript
+  , prepareScriptName
   ) where
 
-import           Prelude as Haskell (String)
+import           Prelude as Haskell (String, dropWhile, head, last, map, reverse, (.), (==))
+import           Data.Text (pack, split, unpack)
 import           Cardano.Api (ScriptInAnyLang)
 
 data PlutusBenchScript
@@ -18,3 +20,14 @@ data PlutusBenchScript
 
 mkPlutusBenchScript :: String -> ScriptInAnyLang -> PlutusBenchScript
 mkPlutusBenchScript = PlutusBenchScript
+
+prepareScriptName :: String -> String
+prepareScriptName
+  = head
+  . dropWhile (=="hs")
+  . map unpack
+  . reverse
+  . split (=='.')
+  . last
+  . split (=='/')
+  . pack

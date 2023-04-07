@@ -22,7 +22,7 @@ import           PlutusTx.Prelude hiding (Semigroup (..), unless, (.), (<$>))
 
 scriptName :: String
 scriptName
-  = $(LitE . StringL . loc_module <$> qLocation)
+  = prepareScriptName $(LitE . StringL . loc_module <$> qLocation)
 
 script :: PlutusBenchScript
 script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusScriptV1 scriptSerialized))
