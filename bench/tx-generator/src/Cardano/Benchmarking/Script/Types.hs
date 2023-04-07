@@ -108,7 +108,7 @@ deriving instance Generic ScriptBudget
 
 data ScriptSpec = ScriptSpec
   {
-    scriptSpecFile :: !FilePath
+    scriptSpecFile :: !(Either String FilePath)
   , scriptSpecBudget :: !ScriptBudget
   , scriptSpecPlutusType :: !TxGenPlutusType
   }

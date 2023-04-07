@@ -56,6 +56,7 @@ library
   exposed-modules:
     Cardano.Benchmarking.PlutusScripts
     Cardano.Benchmarking.PlutusScripts.CustomCallTypes
+    Cardano.Benchmarking.ScriptAPI
 
   other-modules:
     Cardano.Benchmarking.PlutusScripts.CustomCall
@@ -76,6 +77,8 @@ library
   -- Non-IOG dependencies
   ------------------------
   build-depends:
+    , text
     , bytestring
     , serialise
     , template-haskell
+    , filepath

@@ -5,7 +5,15 @@ let
       plutus = if (cfg.plutus.type or null) == null then null else
         {
           inherit (cfg.plutus) type;
-          script = "${pkgs.plutus-scripts}/generated-plutus-scripts/${cfg.plutus.script}";
+          ## Basically do something like:
+          ## script = "${pkgs.plutus-scripts}/generated-plutus-scripts/${cfg.plutus.script}";
+          ## except for having to weave the Either through things
+          script = if (cfg.plutus.script?Left)
+                     ## The internal ID doesn't need path qualification.
+                     then { Left = cfg.plutus.script.Left; }
+                     else { Right = pkgs.plutus-scripts
+                                              + "/generated-plutus-scripts/"
+                                              + cfg.plutus.script.Right; };
           redeemer = pkgs.writeText "plutus-redeemer.json" (__toJSON cfg.plutus.redeemer);
           datum    = if cfg.plutus.datum == null then null else
                      pkgs.writeText "plutus-datum.json"    (__toJSON cfg.plutus.datum);
@@ -66,7 +74,7 @@ in pkgs.commonLib.defServiceModule
         ##
         plutus = {
           type                = mayOpt str   "Plutus script type.";
-          script              = mayOpt str   "Name of the Plutus script from plutus-apps, prefixed with either of v1/v2.";
+          script              = mayOpt attrs "Name of the Plutus script from plutus-apps, prefixed with either of v1/v2.";
           limitExecutionMem   = mayOpt int   "Limit for saturation tuning: mem;  null means per-Tx limit from ProtocolParameters.";
           limitExecutionSteps = mayOpt int   "Limit for saturation tuning: steps;  null means per-Tx limit from ProtocolParameters.";
           datum               = mayOpt attrs "Plutus script datum.";

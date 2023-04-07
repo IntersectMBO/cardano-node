@@ -4,16 +4,14 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Benchmarking.PlutusScripts.SchnorrSecp256k1Loop
-  ( scriptName
-  , scriptSerialized
-  ) where
+module Cardano.Benchmarking.PlutusScripts.SchnorrSecp256k1Loop (script) where
 
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax
 
-import           Cardano.Api (PlutusScript, PlutusScriptV2)
-import           Cardano.Api.Shelley (PlutusScript (..))
+import           Cardano.Api (PlutusScript, PlutusScriptV2, Script(..), toScriptInAnyLang)
+import           Cardano.Api.Shelley (PlutusScript (..), PlutusScriptVersion (..))
+import           Cardano.Benchmarking.ScriptAPI
 import qualified Data.ByteString.Short as SBS
 import qualified PlutusLedgerApi.V2 as PlutusV2
 import qualified PlutusTx
@@ -25,6 +23,9 @@ import           Prelude as Haskell (String, (.), (<$>))
 scriptName :: Haskell.String
 scriptName
   = $(LitE . StringL . loc_module <$> qLocation)
+
+script :: BenchScript
+script = mkBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusScriptV2 scriptSerialized))
 
 
 {-# INLINEABLE mkValidator #-}
