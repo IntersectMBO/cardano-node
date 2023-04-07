@@ -23,8 +23,8 @@ import           PlutusTx.Prelude as Plutus hiding (Semigroup (..), (.), (<$>))
 import           Cardano.Benchmarking.ScriptAPI
 import           Cardano.Benchmarking.PlutusScripts.CustomCallTypes
 
-script :: BenchScript
-script = mkBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusScriptV2 scriptSerialized))
+script :: PlutusBenchScript
+script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusScriptV2 scriptSerialized))
 
 scriptName :: Haskell.String
 scriptName

@@ -12,6 +12,7 @@ module Cardano.TxGenerator.Setup.Plutus
 
 import           Data.Bifunctor (bimap)
 import           Data.Map.Strict as Map (lookup, toAscList)
+import           Data.Maybe (fromMaybe)
 
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
@@ -36,9 +37,9 @@ type ProtocolVersion = (Int, Int)
 
 readPlutusScript :: Either String FilePath -> IO (Either TxGenError ScriptInAnyLang)
 readPlutusScript (Left s)
-  = return
-  $ maybe (Left . TxGenError $ "readPlutusScript: " ++ s ++ " not found.")
-            Right (findPlutusScript s)
+  = pure
+  . fromMaybe (Left . TxGenError $ "readPlutusScript: " ++ s ++ " not found.")
+  $ Right <$> findPlutusScript s
 readPlutusScript (Right fp)
   = runExceptT $ do
     script <- firstExceptT ApiError $

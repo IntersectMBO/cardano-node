@@ -24,8 +24,8 @@ scriptName :: String
 scriptName
   = $(LitE . StringL . loc_module <$> qLocation)
 
-script :: BenchScript
-script = mkBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusScriptV1 scriptSerialized))
+script :: PlutusBenchScript
+script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusScriptV1 scriptSerialized))
 
 
 {-# INLINABLE mkValidator #-}

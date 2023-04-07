@@ -30,9 +30,13 @@ import qualified Cardano.Benchmarking.PlutusScripts.SchnorrSecp256k1Loop as Schn
 import           Cardano.Benchmarking.ScriptAPI
 
 
-getAllScripts :: [BenchScript]
+getAllScripts :: [PlutusBenchScript]
 getAllScripts =
-  [ CustomCall.script, ECDSA.script, Loop.script, Schnorr.script ]
+  [ CustomCall.script
+  , ECDSA.script
+  , Loop.script
+  , Schnorr.script
+  ]
 
 listPlutusScripts ::
      [String]
@@ -43,7 +47,9 @@ findPlutusScript ::
      String
   -> Maybe ScriptInAnyLang
 findPlutusScript s
-  = listToMaybe [psScript t | t <- getAllScripts, last (split (=='.') . pack $ psName t) == pack (takeBaseName s)]
+  = listToMaybe [psScript t
+                        | t <- getAllScripts
+                        , last (split (=='.') . pack $ psName t) == pack (takeBaseName s)]
 
 encodePlutusScript ::
      ScriptInAnyLang

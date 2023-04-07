@@ -1,17 +1,20 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Benchmarking.ScriptAPI
-  (BenchScript, psName, psScript, mkBenchScript)
-  where
+  ( PlutusBenchScript
+  , psName
+  , psScript
+  , mkPlutusBenchScript
+  ) where
 
 import           Prelude as Haskell (String)
 import           Cardano.Api (ScriptInAnyLang)
 
-data BenchScript
-  = BenchScript
+data PlutusBenchScript
+  = PlutusBenchScript
     { psName   :: String
     , psScript :: ScriptInAnyLang
     }
 
-mkBenchScript :: String -> ScriptInAnyLang -> BenchScript
-mkBenchScript = BenchScript
+mkPlutusBenchScript :: String -> ScriptInAnyLang -> PlutusBenchScript
+mkPlutusBenchScript = PlutusBenchScript
