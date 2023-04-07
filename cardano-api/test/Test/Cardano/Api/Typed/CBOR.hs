@@ -9,13 +9,12 @@ module Test.Cardano.Api.Typed.CBOR
 import           Cardano.Api
 
 import           Data.Proxy (Proxy (..))
-import           Data.String (IsString (..))
 import           Hedgehog (Property, forAll, tripping)
 import qualified Hedgehog as H
 import qualified Hedgehog.Gen as Gen
 import           Test.Cardano.Api.Typed.Orphans ()
 import           Test.Gen.Cardano.Api.Typed
-import           Test.Hedgehog.Roundtrip.CBOR (roundtrip_CBOR)
+import qualified Test.Hedgehog.Roundtrip.CBOR as H
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testPropertyNamed)
 
@@ -30,131 +29,156 @@ prop_roundtrip_txbody_CBOR = H.property $ do
   x <- H.forAll $ makeSignedTransaction [] <$> genTxBody era
   H.tripping x serialiseTxLedgerCddl (deserialiseTxLedgerCddl era)
 
-test_roundtrip_tx_CBOR :: [TestTree]
-test_roundtrip_tx_CBOR =
-  [ testPropertyNamed (show era) (fromString (show era)) $ roundtrip_CBOR (proxyToAsType Proxy) (genTx era)
-  | AnyCardanoEra era <- [minBound..(AnyCardanoEra BabbageEra)]
-  ]
+prop_roundtrip_tx_CBOR :: Property
+prop_roundtrip_tx_CBOR = H.property $ do
+  AnyCardanoEra era <- H.forAll $ Gen.element [minBound..AnyCardanoEra BabbageEra]
+  x <- H.forAll $ genTx era
+  H.trippingCbor (proxyToAsType Proxy) x
 
 prop_roundtrip_witness_byron_CBOR :: Property
-prop_roundtrip_witness_byron_CBOR =
-  roundtrip_CBOR (AsKeyWitness AsByronEra) genByronKeyWitness
+prop_roundtrip_witness_byron_CBOR = H.property $ do
+  x <- H.forAll genByronKeyWitness
+  H.trippingCbor (AsKeyWitness AsByronEra) x
 
 prop_roundtrip_witness_shelley_CBOR :: Property
-prop_roundtrip_witness_shelley_CBOR =
-  roundtrip_CBOR (AsKeyWitness AsShelleyEra) (genShelleyWitness ShelleyEra)
+prop_roundtrip_witness_shelley_CBOR = H.property $ do
+  x <- H.forAll $ genShelleyWitness ShelleyEra
+  H.trippingCbor (AsKeyWitness AsShelleyEra) x
 
 prop_roundtrip_witness_allegra_CBOR :: Property
-prop_roundtrip_witness_allegra_CBOR =
-  roundtrip_CBOR (AsKeyWitness AsAllegraEra) (genShelleyWitness AllegraEra)
+prop_roundtrip_witness_allegra_CBOR = H.property $ do
+  x <- H.forAll $ genShelleyWitness AllegraEra
+  H.trippingCbor (AsKeyWitness AsAllegraEra) x
 
 prop_roundtrip_witness_mary_CBOR :: Property
-prop_roundtrip_witness_mary_CBOR =
-  roundtrip_CBOR (AsKeyWitness AsMaryEra) (genShelleyWitness MaryEra)
+prop_roundtrip_witness_mary_CBOR = H.property $ do
+  x <- H.forAll $ genShelleyWitness MaryEra
+  H.trippingCbor (AsKeyWitness AsMaryEra) x
 
 prop_roundtrip_witness_alonzo_CBOR :: Property
-prop_roundtrip_witness_alonzo_CBOR =
-  roundtrip_CBOR (AsKeyWitness AsAlonzoEra) (genShelleyWitness AlonzoEra)
+prop_roundtrip_witness_alonzo_CBOR = H.property $ do
+  x <- H.forAll $ genShelleyWitness AlonzoEra
+  H.trippingCbor (AsKeyWitness AsAlonzoEra) x
 
 prop_roundtrip_operational_certificate_CBOR :: Property
-prop_roundtrip_operational_certificate_CBOR =
-  roundtrip_CBOR AsOperationalCertificate genOperationalCertificate
+prop_roundtrip_operational_certificate_CBOR = H.property $ do
+  x <- H.forAll genOperationalCertificate
+  H.trippingCbor AsOperationalCertificate x
 
 prop_roundtrip_operational_certificate_issue_counter_CBOR :: Property
-prop_roundtrip_operational_certificate_issue_counter_CBOR =
-  roundtrip_CBOR AsOperationalCertificateIssueCounter genOperationalCertificateIssueCounter
+prop_roundtrip_operational_certificate_issue_counter_CBOR = H.property $ do
+  x <- H.forAll genOperationalCertificateIssueCounter
+  H.trippingCbor AsOperationalCertificateIssueCounter x
 
 prop_roundtrip_verification_key_byron_CBOR :: Property
-prop_roundtrip_verification_key_byron_CBOR =
-  roundtrip_CBOR (AsVerificationKey AsByronKey) (genVerificationKey AsByronKey)
+prop_roundtrip_verification_key_byron_CBOR = H.property $ do
+  x <- H.forAll $ genVerificationKey AsByronKey
+  H.trippingCbor (AsVerificationKey AsByronKey) x
 
 prop_roundtrip_signing_key_byron_CBOR :: Property
-prop_roundtrip_signing_key_byron_CBOR =
-  roundtrip_CBOR (AsSigningKey AsByronKey) (genSigningKey AsByronKey)
+prop_roundtrip_signing_key_byron_CBOR = H.property $ do
+  x <- H.forAll $ genSigningKey AsByronKey
+  H.trippingCbor (AsSigningKey AsByronKey) x
 
 prop_roundtrip_verification_key_payment_CBOR :: Property
-prop_roundtrip_verification_key_payment_CBOR =
-  roundtrip_CBOR (AsVerificationKey AsPaymentKey) (genVerificationKey AsPaymentKey)
+prop_roundtrip_verification_key_payment_CBOR = H.property $ do
+  x <- H.forAll $ genVerificationKey AsPaymentKey
+  H.trippingCbor (AsVerificationKey AsPaymentKey) x
 
 prop_roundtrip_signing_key_payment_CBOR :: Property
-prop_roundtrip_signing_key_payment_CBOR =
-  roundtrip_CBOR (AsSigningKey AsPaymentKey) (genSigningKey AsPaymentKey)
+prop_roundtrip_signing_key_payment_CBOR = H.property $ do
+  x <- H.forAll $ genSigningKey AsPaymentKey
+  H.trippingCbor (AsSigningKey AsPaymentKey) x
 
 prop_roundtrip_verification_key_stake_CBOR :: Property
-prop_roundtrip_verification_key_stake_CBOR =
-  roundtrip_CBOR (AsVerificationKey AsStakeKey) (genVerificationKey AsStakeKey)
+prop_roundtrip_verification_key_stake_CBOR = H.property $ do
+  x <- H.forAll $ genVerificationKey AsStakeKey
+  H.trippingCbor (AsVerificationKey AsStakeKey) x
 
 prop_roundtrip_signing_key_stake_CBOR :: Property
-prop_roundtrip_signing_key_stake_CBOR =
-  roundtrip_CBOR (AsSigningKey AsStakeKey) (genSigningKey AsStakeKey)
+prop_roundtrip_signing_key_stake_CBOR = H.property $ do
+  x <- H.forAll $ genSigningKey AsStakeKey
+  H.trippingCbor (AsSigningKey AsStakeKey) x
 
 prop_roundtrip_verification_key_genesis_CBOR :: Property
-prop_roundtrip_verification_key_genesis_CBOR =
-  roundtrip_CBOR (AsVerificationKey AsGenesisKey) (genVerificationKey AsGenesisKey)
+prop_roundtrip_verification_key_genesis_CBOR = H.property $ do
+  x <- H.forAll $ genVerificationKey AsGenesisKey
+  H.trippingCbor (AsVerificationKey AsGenesisKey) x
 
 prop_roundtrip_signing_key_genesis_CBOR :: Property
-prop_roundtrip_signing_key_genesis_CBOR =
-  roundtrip_CBOR (AsSigningKey AsGenesisKey) (genSigningKey AsGenesisKey)
+prop_roundtrip_signing_key_genesis_CBOR = H.property $ do
+  x <- H.forAll $ genSigningKey AsGenesisKey
+  H.trippingCbor (AsSigningKey AsGenesisKey) x
 
 prop_roundtrip_verification_key_genesis_delegate_CBOR :: Property
-prop_roundtrip_verification_key_genesis_delegate_CBOR =
-  roundtrip_CBOR (AsVerificationKey AsGenesisDelegateKey) (genVerificationKey AsGenesisDelegateKey)
+prop_roundtrip_verification_key_genesis_delegate_CBOR = H.property $ do
+  x <- H.forAll $ genVerificationKey AsGenesisDelegateKey
+  H.trippingCbor (AsVerificationKey AsGenesisDelegateKey) x
 
 prop_roundtrip_signing_key_genesis_delegate_CBOR :: Property
-prop_roundtrip_signing_key_genesis_delegate_CBOR =
-  roundtrip_CBOR (AsSigningKey AsGenesisDelegateKey) (genSigningKey AsGenesisDelegateKey)
+prop_roundtrip_signing_key_genesis_delegate_CBOR = H.property $ do
+  x <- H.forAll $ genSigningKey AsGenesisDelegateKey
+  H.trippingCbor (AsSigningKey AsGenesisDelegateKey) x
 
 prop_roundtrip_verification_key_stake_pool_CBOR :: Property
-prop_roundtrip_verification_key_stake_pool_CBOR =
-  roundtrip_CBOR (AsVerificationKey AsStakePoolKey) (genVerificationKey AsStakePoolKey)
+prop_roundtrip_verification_key_stake_pool_CBOR = H.property $ do
+  x <- H.forAll $ genVerificationKey AsStakePoolKey
+  H.trippingCbor (AsVerificationKey AsStakePoolKey) x
 
 prop_roundtrip_signing_key_stake_pool_CBOR :: Property
-prop_roundtrip_signing_key_stake_pool_CBOR =
-  roundtrip_CBOR (AsSigningKey AsStakePoolKey) (genSigningKey AsStakePoolKey)
+prop_roundtrip_signing_key_stake_pool_CBOR = H.property $ do
+  x <- H.forAll $ genSigningKey AsStakePoolKey
+  H.trippingCbor (AsSigningKey AsStakePoolKey) x
 
 prop_roundtrip_verification_key_vrf_CBOR :: Property
-prop_roundtrip_verification_key_vrf_CBOR =
-  roundtrip_CBOR (AsVerificationKey AsVrfKey) (genVerificationKey AsVrfKey)
+prop_roundtrip_verification_key_vrf_CBOR = H.property $ do
+  x <- H.forAll $ genVerificationKey AsVrfKey
+  H.trippingCbor (AsVerificationKey AsVrfKey) x
 
 prop_roundtrip_signing_key_vrf_CBOR :: Property
-prop_roundtrip_signing_key_vrf_CBOR =
-  roundtrip_CBOR (AsSigningKey AsVrfKey) (genSigningKey AsVrfKey)
+prop_roundtrip_signing_key_vrf_CBOR = H.property $ do
+  x <- H.forAll $ genSigningKey AsVrfKey
+  H.trippingCbor (AsSigningKey AsVrfKey) x
 
 prop_roundtrip_verification_key_kes_CBOR :: Property
-prop_roundtrip_verification_key_kes_CBOR =
-  roundtrip_CBOR (AsVerificationKey AsKesKey) (genVerificationKey AsKesKey)
+prop_roundtrip_verification_key_kes_CBOR = H.property $ do
+  x <- H.forAll $ genVerificationKey AsKesKey
+  H.trippingCbor (AsVerificationKey AsKesKey) x
 
 prop_roundtrip_signing_key_kes_CBOR :: Property
-prop_roundtrip_signing_key_kes_CBOR =
-  roundtrip_CBOR (AsSigningKey AsKesKey) (genSigningKey AsKesKey)
+prop_roundtrip_signing_key_kes_CBOR = H.property $ do
+  x <- H.forAll $ genSigningKey AsKesKey
+  H.trippingCbor (AsSigningKey AsKesKey) x
 
 prop_roundtrip_script_SimpleScriptV1_CBOR :: Property
-prop_roundtrip_script_SimpleScriptV1_CBOR =
-  roundtrip_CBOR (AsScript AsSimpleScript)
-                 (genScript SimpleScriptLanguage)
+prop_roundtrip_script_SimpleScriptV1_CBOR = H.property $ do
+  x <- H.forAll $ genScript SimpleScriptLanguage
+  H.trippingCbor (AsScript AsSimpleScript) x
 
 prop_roundtrip_script_SimpleScriptV2_CBOR :: Property
-prop_roundtrip_script_SimpleScriptV2_CBOR =
-  roundtrip_CBOR (AsScript AsSimpleScript)
-                 (genScript SimpleScriptLanguage)
+prop_roundtrip_script_SimpleScriptV2_CBOR = H.property $ do
+  x <- H.forAll $ genScript SimpleScriptLanguage
+  H.trippingCbor (AsScript AsSimpleScript) x
 
 prop_roundtrip_script_PlutusScriptV1_CBOR :: Property
-prop_roundtrip_script_PlutusScriptV1_CBOR =
-  roundtrip_CBOR (AsScript AsPlutusScriptV1)
-                 (genScript (PlutusScriptLanguage PlutusScriptV1))
+prop_roundtrip_script_PlutusScriptV1_CBOR = H.property $ do
+  x <- H.forAll $ genScript (PlutusScriptLanguage PlutusScriptV1)
+  H.trippingCbor (AsScript AsPlutusScriptV1) x
 
 prop_roundtrip_script_PlutusScriptV2_CBOR :: Property
-prop_roundtrip_script_PlutusScriptV2_CBOR =
-  roundtrip_CBOR (AsScript AsPlutusScriptV2)
-                 (genScript (PlutusScriptLanguage PlutusScriptV2))
+prop_roundtrip_script_PlutusScriptV2_CBOR = H.property $ do
+  x <- H.forAll $ genScript (PlutusScriptLanguage PlutusScriptV2)
+  H.trippingCbor (AsScript AsPlutusScriptV2) x
 
 prop_roundtrip_ScriptData_CBOR :: Property
-prop_roundtrip_ScriptData_CBOR =
-  roundtrip_CBOR AsHashableScriptData genHashableScriptData
+prop_roundtrip_ScriptData_CBOR = H.property $ do
+  x <- H.forAll genHashableScriptData
+  H.trippingCbor AsHashableScriptData x
 
 prop_roundtrip_UpdateProposal_CBOR :: Property
-prop_roundtrip_UpdateProposal_CBOR =
-  roundtrip_CBOR AsUpdateProposal genUpdateProposal
+prop_roundtrip_UpdateProposal_CBOR = H.property $ do
+  x <- H.forAll genUpdateProposal
+  H.trippingCbor AsUpdateProposal x
 
 prop_roundtrip_Tx_Cddl :: Property
 prop_roundtrip_Tx_Cddl = H.property $ do
@@ -205,5 +229,5 @@ tests = testGroup "Test.Cardano.Api.Typed.CBOR"
   , testPropertyNamed "roundtrip txbody CBOR"                                "roundtrip txbody CBOR"                                prop_roundtrip_txbody_CBOR
   , testPropertyNamed "roundtrip Tx Cddl"                                    "roundtrip Tx Cddl"                                    prop_roundtrip_Tx_Cddl
   , testPropertyNamed "roundtrip TxWitness Cddl"                             "roundtrip TxWitness Cddl"                             prop_roundtrip_TxWitness_Cddl
-  , testGroup "roundtrip tx CBOR"         test_roundtrip_tx_CBOR
+  , testPropertyNamed "roundtrip tx CBOR"                                    "roundtrip tx CBOR"                                    prop_roundtrip_tx_CBOR
   ]
