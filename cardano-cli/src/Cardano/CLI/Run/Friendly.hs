@@ -31,6 +31,7 @@ import           GHC.Unicode (isAlphaNum)
 
 import           Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness))
+import           Cardano.Api.Orphans ()
 import           Cardano.Api.Shelley (Address (ShelleyAddress),
                    KeyWitness (ShelleyBootstrapWitness, ShelleyKeyWitness), StakeAddress (..),
                    StakeCredential (..), StakePoolParameters (..), fromShelleyPaymentCredential,
@@ -339,7 +340,7 @@ friendlyCertificate =
                 "VRF key hash" .= serialiseToRawBytesHexText vrfKeyHash
               ]
       MIRCertificate pot target ->
-        "MIR" .= object ["pot" .= friendlyMirPot pot, friendlyMirTarget target]
+        "MIR" .= object [ "pot" .= pot, friendlyMirTarget target]
 
 friendlyMirTarget :: MIRTarget -> Aeson.Pair
 friendlyMirTarget = \case
@@ -367,11 +368,6 @@ friendlyPaymentCredential = \case
     "payment credential key hash" .= serialiseToRawBytesHexText keyHash
   PaymentCredentialByScript scriptHash ->
     "payment credential script hash" .= serialiseToRawBytesHexText scriptHash
-
-friendlyMirPot :: Shelley.MIRPot -> Aeson.Value
-friendlyMirPot = \case
-  Shelley.ReservesMIR -> "reserves"
-  Shelley.TreasuryMIR -> "treasury"
 
 friendlyStakePoolParameters :: StakePoolParameters -> Aeson.Value
 friendlyStakePoolParameters

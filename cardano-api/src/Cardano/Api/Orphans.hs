@@ -1,12 +1,20 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
+
 module Cardano.Api.Orphans () where
 
 import           Data.Aeson (ToJSON (..), object, pairs, (.=))
 import qualified Data.Aeson as Aeson
+import           Data.Text (Text)
 
 import qualified Cardano.Ledger.Crypto as Crypto
+import           Cardano.Ledger.Shelley.API (MIRPot (..))
+
 import qualified Ouroboros.Consensus.Shelley.Ledger.Query as Consensus
 
 -- Orphan instances involved in the JSON output of the API queries.
@@ -47,3 +55,9 @@ stakeSnapshotToPair Consensus.StakeSnapshot
     , "stakeSet" .= ssSetPool
     , "stakeGo" .= ssGoPool
     ]
+
+instance ToJSON MIRPot where
+  toJSON pot = toJSON @Text $
+    case pot of
+      ReservesMIR -> "reserves"
+      TreasuryMIR -> "treasury"
