@@ -8,8 +8,9 @@ module Cardano.Benchmarking.ScriptAPI
   , prepareScriptName
   ) where
 
-import           Prelude as Haskell (String, dropWhile, head, last, map, reverse, (.), (==))
-import           Data.Text (pack, split, unpack)
+import           Prelude as Haskell (String, Maybe(..))
+import           Data.Char (isUpper)
+import           System.FilePath (splitExtension, stripExtension, takeFileName)
 import           Cardano.Api (ScriptInAnyLang)
 
 data PlutusBenchScript
@@ -21,13 +22,21 @@ data PlutusBenchScript
 mkPlutusBenchScript :: String -> ScriptInAnyLang -> PlutusBenchScript
 mkPlutusBenchScript = PlutusBenchScript
 
+-- This is doing two or three sorts of normalisation at once:
+-- It strips leading / -separated components, drops the ".hs" suffix
+-- if present, then chooses the last . -separated component.
+-- If there is a suffix different from .hs that begins with a capital
+-- letter, that is returned.
+-- e.g. "Data/List/System.FilePath.Text.hs" --> "Text"
+--      "Data/List/System.FilePath.Text"    --> "Text"
 prepareScriptName :: String -> String
-prepareScriptName
-  = head
-  . dropWhile (=="hs")
-  . map unpack
-  . reverse
-  . split (=='.')
-  . last
-  . split (=='/')
-  . pack
+prepareScriptName script
+  = case splitExtension file' of
+      (s, "")                      -> s     -- no dots so take it as-is
+      (_, '.':s@(c:_)) | isUpper c -> s     -- take last dot-separated component
+      _                            -> file' -- shouldn't happen
+  where
+    file  = takeFileName script -- ignore leading directories
+    file' = case stripExtension "hs" file of
+              Just x  -> x
+              Nothing -> file -- no trailing .hs so use filename as-is
