@@ -10,6 +10,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -59,7 +60,7 @@ import           Cardano.Ledger.Mary.Value (MaryValue (..))
 import qualified Cardano.Ledger.Mary.Value as Mary
 import qualified Cardano.Ledger.PoolDistr as Ledger
 import qualified Cardano.Ledger.SafeHash as SafeHash
-import           Cardano.Ledger.Shelley.API (ShelleyTxOut (..))
+import           Cardano.Ledger.Shelley.API (MIRPot (..), ShelleyTxOut (..))
 import qualified Cardano.Ledger.Shelley.API as Shelley
 import           Cardano.Ledger.Val (Val)
 
@@ -723,3 +724,9 @@ stakeSnapshotToPair Consensus.StakeSnapshot
     , "stakeSet" .= ssSetPool
     , "stakeGo" .= ssGoPool
     ]
+
+instance ToJSON MIRPot where
+  toJSON pot = toJSON @Text $
+    case pot of
+      ReservesMIR -> "reserves"
+      TreasuryMIR -> "treasury"
