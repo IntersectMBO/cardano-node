@@ -127,10 +127,19 @@ golden_view_shelley = let
         ["--certificate-file=" <> cert | cert <- certs]
 
     -- View transaction body
-    result <-
-      execCardanoCLI
-        ["transaction", "view", "--tx-body-file", transactionBodyFile]
+    result <- execCardanoCLI
+      [ "transaction", "view"
+      , "--tx-body-file", transactionBodyFile
+      ]
     diffVsGoldenFile result "test/data/golden/shelley/transaction-view.out"
+
+    -- JSON version
+    resultJson <- execCardanoCLI
+      ["transaction", "view"
+      , "--json"
+      , "--tx-body-file", transactionBodyFile
+      ]
+    diffVsGoldenFile resultJson "test/data/golden/shelley/transaction-view.json"
 
 golden_view_allegra :: Property
 golden_view_allegra =
@@ -226,10 +235,19 @@ golden_view_mary =
         ]
 
     -- View transaction body
-    result <-
-      execCardanoCLI
-        ["transaction", "view", "--tx-body-file", transactionBodyFile]
+    result <- execCardanoCLI
+      [ "transaction", "view"
+      , "--tx-body-file", transactionBodyFile
+      ]
     diffVsGoldenFile result "test/data/golden/mary/transaction-view.out"
+
+    -- JSON version
+    resultJson <- execCardanoCLI
+      [ "transaction", "view"
+      , "--json"
+      , "--tx-body-file", transactionBodyFile
+      ]
+    diffVsGoldenFile resultJson "test/data/golden/mary/transaction-view.json"
 
 createAlonzoTxBody :: Maybe FilePath -> FilePath -> Integration ()
 createAlonzoTxBody mUpdateProposalFile transactionBodyFile = do
@@ -312,7 +330,16 @@ golden_view_alonzo_signed =
           ]
 
       -- View transaction body
-      result <-
-        execCardanoCLI
-          ["transaction", "view", "--tx-file", transactionFile]
-      diffVsGoldenFile result (testData </> "signed-transaction-view.out")
+      result <- execCardanoCLI
+        [ "transaction", "view"
+        , "--tx-file", transactionFile
+        ]
+      diffVsGoldenFile result $ testData </> "signed-transaction-view.out"
+
+      -- JSON version
+      resultJson <- execCardanoCLI
+        [ "transaction", "view"
+        , "--json"
+        , "--tx-file", transactionFile
+        ]
+      diffVsGoldenFile resultJson $ testData </> "signed-transaction-view.json"
