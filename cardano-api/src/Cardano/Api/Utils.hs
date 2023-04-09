@@ -14,6 +14,8 @@
 module Cardano.Api.Utils
   ( (?!)
   , (?!.)
+  , (..=)
+  , (..=?)
   , formatParsecError
   , failEither
   , failEitherWith
@@ -54,6 +56,7 @@ import           System.Directory (emptyPermissions, readable, setPermissions)
 #endif
 
 import           Cardano.Api.Eras
+import           Data.Aeson (KeyValue, ToJSON, (.=))
 import           Options.Applicative (ReadM)
 import           Options.Applicative.Builder (eitherReader)
 import qualified Text.Read as Read
@@ -148,3 +151,13 @@ bounded t = eitherReader $ \s -> do
   when (i < fromIntegral (minBound @a)) $ Left $ t <> " must not be less than " <> show (minBound @a)
   when (i > fromIntegral (maxBound @a)) $ Left $ t <> " must not greater than " <> show (maxBound @a)
   pure (fromIntegral i)
+
+-- | A key-value pair difference list for encoding a JSON object.
+(..=) :: (KeyValue kv, ToJSON v) => Aeson.Key -> v -> [kv] -> [kv]
+(..=) n v = (n .= v:)
+
+-- | A key-value pair difference list for encoding a JSON object where Nothing encodes absence of the key-value pair.
+(..=?) :: (KeyValue kv, ToJSON v) => Aeson.Key -> Maybe v -> [kv] -> [kv]
+(..=?) n mv = case mv of
+  Just v -> (n .= v:)
+  Nothing -> id
