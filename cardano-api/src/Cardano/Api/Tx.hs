@@ -430,9 +430,6 @@ instance IsCardanoEra era => SerialiseAsCBOR (KeyWitness era) where
         ConwayEra  -> decodeShelleyBasedWitness ShelleyBasedEraConway bs
 
 
-<<<<<<< HEAD
-encodeShelleyBasedKeyWitness :: CBOR.EncCBOR w => w -> CBOR.Encoding
-=======
 instance ToJSON (KeyWitness era) where
   toJSON a = case a of
     ByronKeyWitness w ->
@@ -451,8 +448,7 @@ instance ToJSON (KeyWitness era) where
         , "witness" .= witness
         ]
 
-encodeShelleyBasedKeyWitness :: ToCBOR w => w -> CBOR.Encoding
->>>>>>> d02481507 (Add ToJSON instance for KeyWitness:)
+encodeShelleyBasedKeyWitness :: CBOR.EncCBOR w =>w -> CBOR.Encoding
 encodeShelleyBasedKeyWitness wit =
     CBOR.encodeListLen 2 <> CBOR.encodeWord 0 <> CBOR.encCBOR wit
 

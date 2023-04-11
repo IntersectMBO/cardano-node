@@ -124,7 +124,7 @@ instance ToJSON Certificate where
           [ "type" .= String "StakeAddressDeregistration"
           , "credential" .= credential
           ]
-      StakeAddressDelegationCertificate credential pool ->
+      StakeAddressPoolDelegationCertificate credential pool ->
         object
           [ "type" .= String "StakeAddressDelegation"
           , "credential" .= credential

@@ -1,0 +1,135 @@
+{
+    "body": {
+        "auxScripts": null,
+        "certificates": [
+            {
+                "genesisDelegateKeyHash": "d52ac434259f2af7fd2a538ece5ef8d80386527aa93e207473acb31c",
+                "genesisKeyHash": "c3db461200fa59c81a4ecc8495446d9e42de27483ff6ee4339c9ab94",
+                "type": "GenesisKeyDelegation",
+                "vrfKeyHash": "1b9de69baec0dff8dde6e81d71f40f8b65fb3df55bb6ece5783aade88b17354d"
+            },
+            {
+                "pot": "reserves",
+                "target": {
+                    "addresses": [
+                        [
+                            {
+                                "stakingKeyHash": "ee475cade27e95faf1093541b0783498016cdcfba0d6441055b2dfcb"
+                            },
+                            1000
+                        ]
+                    ],
+                    "type": "StakeAddresses"
+                },
+                "type": "MIR"
+            },
+            {
+                "credential": {
+                    "stakingKeyHash": "d0efd9836e62225a47baf9bedfeaccbb86ba3f49d9edc4ac0aa26df5"
+                },
+                "type": "StakeAddressDeregistration"
+            },
+            {
+                "credential": {
+                    "stakingKeyHash": "c6ea7e348d300b32798888497290db24a99a36f2238ed9668f602d7a"
+                },
+                "type": "StakeAddressRegistration"
+            },
+            {
+                "epoch": 42,
+                "pool": "pool13lllruv6rd63l70vkpgye2ea856f22k8xhujmf2vvlul5ytw7mx",
+                "type": "StakePoolRetirement"
+            },
+            {
+                "parameters": {
+                    "cost": 1000,
+                    "id": "pool1cxxj569g3x9akwv49vv6u5z8d3l7xrwzh7p2tf2g2ajkce894m3",
+                    "margin": {
+                        "denominator": 10,
+                        "numerator": 1
+                    },
+                    "metadata": null,
+                    "owners": [
+                        "f25fc5c9f341ec3bd785ddea746f76b6a9ac7f38fdd7aef1779bbe81"
+                    ],
+                    "pledge": 5000,
+                    "relays": [],
+                    "rewardAccount": "stake1u8e9l3wf7dq7cw7hshw75ar0w6m2ntrl8r7a0th3w7dmaqgne5h5d",
+                    "vrf": "8d445260282cef45e4c6a862b8a924aeed1b316ccba779dd39f9517220e96407"
+                },
+                "type": "StakePoolRegistration"
+            }
+        ],
+        "extraKeyWits": null,
+        "fee": 32,
+        "ins": [
+            "fe5dd07fb576bff960d6e066eade5b26cdb5afebe29f76ea58d0a098bce5d891#29"
+        ],
+        "insCollateral": null,
+        "insReference": null,
+        "metadata": null,
+        "mintValue": null,
+        "outs": [
+            {
+                "address": "addr_test1vz7w0r9epak6nmnh3mc8e2ypkjyu8zsc3xf7dpct6k577acxmcfyv",
+                "value": 31
+            }
+        ],
+        "returnCollateral": null,
+        "scriptValidity": null,
+        "totalCollateral": null,
+        "updateProposal": {
+            "epoch": 64,
+            "updates": {
+                "1bafa294233a5a7ffbf539ae798da0943aa83d2a19398c2d0e5af114": {
+                    "costModels": {},
+                    "decentralization": {
+                        "denominator": 64,
+                        "numerator": 63
+                    },
+                    "extraPraosEntropy": "88f04f011dcded879039ae4b9b20219d9448e5c7b42c2d1f638fb8740e0ab8be",
+                    "maxBlockBodySize": 72,
+                    "maxBlockHeaderSize": 73,
+                    "maxTxSize": 74,
+                    "minPoolCost": 77,
+                    "minUTxOValue": 78,
+                    "monetaryExpansion": {
+                        "denominator": 80,
+                        "numerator": 79
+                    },
+                    "poolPledgeInfluence": {
+                        "denominator": 83,
+                        "numerator": 82
+                    },
+                    "poolRetireMaxEpoch": 84,
+                    "protocolVersion": [
+                        85,
+                        86
+                    ],
+                    "stakeAddressDeposit": 71,
+                    "stakePoolDeposit": 83,
+                    "stakePoolTargetNum": 80,
+                    "treasuryCut": {
+                        "denominator": 88,
+                        "numerator": 87
+                    },
+                    "txFeeFixed": 75,
+                    "txFeePerByte": 76
+                }
+            }
+        },
+        "validityRange": {
+            "lowerBound": null,
+            "upperBound": {
+                "slot": 33
+            }
+        },
+        "withdrawals": [
+            {
+                "lovelace": 42,
+                "stakeAddress": "stake_test1up00fz9lyqs5sjks82k22eqz7a9srym9vysjgp3h2ua2v2cm522kg"
+            }
+        ]
+    },
+    "era": "Shelley"
+}

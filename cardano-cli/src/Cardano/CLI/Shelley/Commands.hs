@@ -254,7 +254,7 @@ data TransactionCmd
   | TxGetTxId InputTxBodyOrTxFile
   | TxView
       InputTxBodyOrTxFile
-      (Maybe OutputFile)
+      (Maybe (File () Out))
 
 data InputTxBodyOrTxFile = InputTxBodyFile (TxBodyFile In) | InputTxFile (TxFile In)
   deriving Show

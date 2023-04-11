@@ -1,0 +1,37 @@
+{
+    "body": {
+        "auxScripts": null,
+        "certificates": null,
+        "extraKeyWits": [
+            "98717eaba8105a50a2a71831267552e337dfdc893bef5e40b8676d27",
+            "fafaaac8681b5050a8987f95bce4a7f99362f189879258fdbf733fa4"
+        ],
+        "fee": 213,
+        "ins": [
+            "ed7c8f68c194cc763ee65ad22ef0973e26481be058c65005fd39fb93f9c43a20#212"
+        ],
+        "insCollateral": [
+            "c9765d7d0e3955be8920e6d7a38e1f3f2032eac48c7c59b0b9193caa87727e7e#256"
+        ],
+        "insReference": null,
+        "metadata": null,
+        "mintValue": null,
+        "outs": [],
+        "returnCollateral": null,
+        "scriptValidity": "Valid",
+        "totalCollateral": null,
+        "updateProposal": null,
+        "validityRange": {
+            "lowerBound": null,
+            "upperBound": null
+        },
+        "withdrawals": null
+    },
+    "era": "Alonzo",
+    "witnesses": [
+        {
+            "type": "keyWitness",
+            "witness": "820082582084ce03e08b05533685d593c14cd6ca5c7485824156ca11fb303ddac9dd3ef41c5840f6aae8023de4858244c6aac4b1ca7428f669a142731fe7354021059887b5366f24abba49355e14d435dbc7726df66dfeafe269e2752a7a6f752529600d1e9a00"
+        }
+    ]
+}
