@@ -175,19 +175,19 @@ let
       tracing-transform = {
         trace-dispatcher = cfg:
           recursiveUpdate
+            (removeLegacyTracingOptions cfg)
             (import ./tracing.nix
               { inherit nodeSpec;
                 inherit (profile.node) tracer;
-              })
-            (removeLegacyTracingOptions cfg);
+              });
         iohk-monitoring  = cfg:
           recursiveUpdate
-            (import ./tracing-legacy.nix
-              { inherit nodeSpec;
-              })
             (removeAttrs cfg
               [ "setupScribes"
-              ]);
+              ])
+            (import ./tracing-legacy.nix
+              { inherit nodeSpec;
+              });
       };
       era_setup_hardforks = {
         shelley =
@@ -240,15 +240,16 @@ let
       ##   2. apply either the hardforks config, or the preset (typically mainnet)
       ##   3. overlay the tracing config
       nodeConfig =
-        recursiveUpdate
-          (nodeConfigBits.tracing-transform.${profile.node.tracing_backend}
+        (__trace "workbench | nix:  tracing backend:  ${profile.node.tracing_backend}"
+         nodeConfigBits.tracing-transform.${profile.node.tracing_backend})
+          (recursiveUpdate
             (finaliseNodeConfig nodeSpec
               (recursiveUpdate
                 nodeConfigBits.base
                 (if __hasAttr "preset" profile
                  then readJSONMay (./presets + "/${profile.preset}/config.json")
-                 else nodeConfigBits.era_setup_hardforks))))
-          profile.node.verbatim;
+                 else nodeConfigBits.era_setup_hardforks)))
+            profile.node.verbatim);
 
       extraArgs =
         (if nodeSpec.shutdown_on_block_synced != null
