@@ -27,14 +27,20 @@ import           Cardano.Ledger.Alonzo.TxInfo (exBudgetToExUnits)
 import qualified PlutusLedgerApi.V1 as PlutusV1
 import qualified PlutusLedgerApi.V2 as PlutusV2
 
+import           Cardano.Benchmarking.PlutusScripts(findPlutusScript)
 import           Cardano.TxGenerator.Types
 
 
 type ProtocolVersion = (Int, Int)
 
 
-readPlutusScript :: FilePath -> IO (Either TxGenError ScriptInAnyLang)
-readPlutusScript fp
+readPlutusScript :: Either String FilePath -> IO (Either TxGenError ScriptInAnyLang)
+readPlutusScript (Left s)
+  = pure
+  $ maybe (Left . TxGenError $ "readPlutusScript: " ++ s ++ " not found.")
+          Right
+          (findPlutusScript s)
+readPlutusScript (Right fp)
   = runExceptT $ do
     script <- firstExceptT ApiError $
       readFileScriptInAnyLang fp

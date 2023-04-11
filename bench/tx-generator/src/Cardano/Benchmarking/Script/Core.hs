@@ -23,7 +23,6 @@ import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
 import           "contra-tracer" Control.Tracer (nullTracer)
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
-import           Data.List (isSuffixOf)
 import           Data.Ratio ((%))
 
 import           Streaming
@@ -55,7 +54,6 @@ import           Cardano.TxGenerator.Setup.SigningKey
 
 import           Cardano.Benchmarking.OuroborosImports as Core (LocalSubmitTx, SigningKeyFile,
                    makeLocalConnectInfo, protocolToCodecConfig)
-import           Cardano.Benchmarking.PlutusScripts (findPlutusScript)
 
 import           Cardano.Benchmarking.LogTypes as Core (TraceBenchTxSubmit (..), btConnect_, btN2N_,
                    btSubmission2_, btTxSubmit_)
@@ -409,12 +407,7 @@ makePlutusContext :: forall era. IsShelleyBasedEra era
   -> ActionM (Witness WitCtxTxIn era, ScriptInAnyLang, ScriptData, Lovelace)
 makePlutusContext ScriptSpec{..} = do
   protocolParameters <- getProtocolParameters
-  script <- if ".hs" `isSuffixOf` scriptSpecFile
-    then maybe
-          (liftTxGenError $ TxGenError $ "Plutus script not included: " ++ scriptSpecFile)
-          return
-          (findPlutusScript scriptSpecFile)
-    else liftIOSafe $ Plutus.readPlutusScript scriptSpecFile
+  script <- liftIOSafe $ Plutus.readPlutusScript scriptSpecFile
 
   executionUnitPrices <- case protocolParamPrices protocolParameters of
     Just x -> return x
@@ -458,7 +451,7 @@ makePlutusContext ScriptSpec{..} = do
       traceDebug $ "Plutus auto mode : Available budget per Tx: " ++ show perTxBudget
                    ++ " -- split between inputs per Tx: " ++ show txInputs
 
-      case plutusAutoScaleBlockfit protocolParameters scriptSpecFile script autoBudget strategy txInputs of
+      case plutusAutoScaleBlockfit protocolParameters (either ("builtin: "++) ("plutus file: "++) scriptSpecFile) script autoBudget strategy txInputs of
         Left err -> liftTxGenError err
         Right (summary, PlutusAutoBudget{..}, preRun) -> do
           setEnvSummary summary
@@ -466,7 +459,7 @@ makePlutusContext ScriptSpec{..} = do
           return (unsafeHashableScriptData autoBudgetDatum, autoBudgetRedeemer, preRun)
 
   let msg = mconcat [ "Plutus Benchmark :"
-                    , " Script: ", scriptSpecFile
+                    , " Script: ", show scriptSpecFile
                     , ", Datum: ", show scriptData
                     , ", Redeemer: ", show scriptRedeemer
                     , ", StatedBudget: ", show executionUnits

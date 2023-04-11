@@ -4,17 +4,14 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Benchmarking.PlutusScripts.Loop
-  ( scriptName
-  , scriptSerialized
-  ) where
+module Cardano.Benchmarking.PlutusScripts.Loop (script) where
 
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax
 import           Prelude hiding (pred, ($), (&&), (<), (==))
 
-import           Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV1)
-
+import           Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV1, Script(..), toScriptInAnyLang, PlutusScriptVersion(..))
+import           Cardano.Benchmarking.ScriptAPI
 import qualified Data.ByteString.Short as SBS
 
 import qualified PlutusLedgerApi.V2 as PlutusV2
@@ -25,7 +22,10 @@ import           PlutusTx.Prelude hiding (Semigroup (..), unless, (.), (<$>))
 
 scriptName :: String
 scriptName
-  = $(LitE . StringL . loc_module <$> qLocation)
+  = prepareScriptName $(LitE . StringL . loc_module <$> qLocation)
+
+script :: PlutusBenchScript
+script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusScriptV1 scriptSerialized))
 
 
 {-# INLINABLE mkValidator #-}

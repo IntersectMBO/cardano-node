@@ -90,7 +90,7 @@ data TxGenPlutusType
 data TxGenPlutusParams
   = PlutusOn                                    -- ^ Generate Plutus Txs for given script
       { plutusType        :: !TxGenPlutusType
-      , plutusScript      :: !FilePath          -- ^ Path to the Plutus script
+      , plutusScript      :: !(Either String FilePath) -- ^ Path to the Plutus script
       , plutusDatum       :: !(Maybe FilePath)  -- ^ Datum passed to the Plutus script (JSON file in ScriptData schema)
       , plutusRedeemer    :: !(Maybe FilePath)  -- ^ Redeemer passed to the Plutus script (JSON file in ScriptData schema)
       , plutusExecMemory  :: !(Maybe Natural)   -- ^ Max. memory for ExecutionUnits (overriding corresponding protocol parameter)

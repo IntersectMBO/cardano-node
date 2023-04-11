@@ -7,28 +7,28 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Cardano.Benchmarking.PlutusScripts.CustomCall
-  ( scriptName
-  , scriptSerialized
-  ) where
+module Cardano.Benchmarking.PlutusScripts.CustomCall (script) where
 
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax
 import           Prelude as Haskell (String, (.), (<$>))
 
-import           Cardano.Api (PlutusScript, PlutusScriptV2)
-import           Cardano.Api.Shelley (PlutusScript (..))
+import           Cardano.Api (PlutusScriptV2, toScriptInAnyLang, Script(..))
+import           Cardano.Api.Shelley (PlutusScript (..), PlutusScriptVersion (..))
 import qualified Data.ByteString.Short as SBS
 import qualified PlutusLedgerApi.V2 as PlutusV2
 import qualified PlutusTx
 import           PlutusTx.Prelude as Plutus hiding (Semigroup (..), (.), (<$>))
 
+import           Cardano.Benchmarking.ScriptAPI
 import           Cardano.Benchmarking.PlutusScripts.CustomCallTypes
 
+script :: PlutusBenchScript
+script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusScriptV2 scriptSerialized))
 
 scriptName :: Haskell.String
 scriptName
-  = $(LitE . StringL . loc_module <$> qLocation)
+  = prepareScriptName $(LitE . StringL . loc_module <$> qLocation)
 
 
 instance Plutus.Eq CustomCallData where
