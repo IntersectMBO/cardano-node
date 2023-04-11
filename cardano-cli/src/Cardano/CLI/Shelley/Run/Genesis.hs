@@ -26,7 +26,7 @@ module Cardano.CLI.Shelley.Run.Genesis
   -- * Protocol Parameters
   , ProtocolParamsError(..)
   , renderProtocolParamsError
-  , readProtocolParametersSourceSpec
+  , readProtocolParameters
   ) where
 
 import           Control.DeepSeq (NFData, force)
@@ -1356,19 +1356,12 @@ readConwayGenesis fpath = do
 data ProtocolParamsError
   = ProtocolParamsErrorFile (FileError ())
   | ProtocolParamsErrorJSON !FilePath !Text
-  | ProtocolParamsErrorGenesis !ShelleyGenesisCmdError
 
 renderProtocolParamsError :: ProtocolParamsError -> Text
 renderProtocolParamsError (ProtocolParamsErrorFile fileErr) =
   Text.pack $ displayError fileErr
 renderProtocolParamsError (ProtocolParamsErrorJSON fp jsonErr) =
   "Error while decoding the protocol parameters at: " <> Text.pack fp <> " Error: " <> jsonErr
-renderProtocolParamsError (ProtocolParamsErrorGenesis err) =
-  Text.pack $ displayError  err
-
-readProtocolParametersSourceSpec :: ProtocolParamsSourceSpec
-                                 -> ExceptT ProtocolParamsError IO ProtocolParameters
-readProtocolParametersSourceSpec (ParamsFromFile f) = readProtocolParameters f
 
 --TODO: eliminate this and get only the necessary params, and get them in a more
 -- helpful way rather than requiring them as a local file.

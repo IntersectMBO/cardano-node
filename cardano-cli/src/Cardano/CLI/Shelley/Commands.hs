@@ -31,7 +31,6 @@ module Cardano.CLI.Shelley.Commands
   , OpCertCounterFile (..)
   , OutputFile (..)
   , ProtocolParamsFile (..)
-  , ProtocolParamsSourceSpec (..)
   , WitnessFile (..)
   , TxFile (..)
   , InputTxBodyOrTxFile (..)
@@ -186,7 +185,7 @@ data TransactionCmd
       [ScriptFile]
       -- ^ Auxiliary scripts
       [MetadataFile]
-      (Maybe ProtocolParamsSourceSpec)
+      (Maybe ProtocolParamsFile)
       (Maybe UpdateProposalFile)
       TxBodyFile
 
@@ -228,7 +227,7 @@ data TransactionCmd
       [ScriptFile]
       -- ^ Auxiliary scripts
       [MetadataFile]
-      (Maybe ProtocolParamsSourceSpec)
+      (Maybe ProtocolParamsFile)
       (Maybe UpdateProposalFile)
       TxBuildOutputOptions
   | TxSign InputTxBodyOrTxFile [WitnessSigningData] (Maybe NetworkId) TxFile
@@ -239,14 +238,14 @@ data TransactionCmd
   | TxCalculateMinFee
       TxBodyFile
       (Maybe NetworkId)
-      ProtocolParamsSourceSpec
+      ProtocolParamsFile
       TxInCount
       TxOutCount
       TxShelleyWitnessCount
       TxByronWitnessCount
   | TxCalculateMinRequiredUTxO
       AnyCardanoEra
-      ProtocolParamsSourceSpec
+      ProtocolParamsFile
       TxOutAnyEra
   | TxHashScriptData
       ScriptDataOrFile
@@ -254,12 +253,6 @@ data TransactionCmd
   | TxView InputTxBodyOrTxFile
 
 data InputTxBodyOrTxFile = InputTxBodyFile TxBodyFile | InputTxFile TxFile
-  deriving Show
-
-data ProtocolParamsSourceSpec
-  = ParamsFromFile !ProtocolParamsFile
-    -- ^ Obtain protocol parameters from a file structured by the
-    --   'cardano-api' 'ProtocolParameters' data type.
   deriving Show
 
 renderTransactionCmd :: TransactionCmd -> Text
