@@ -157,7 +157,6 @@ library
                       , cardano-protocol-tpraos >= 0.1
                       , cardano-slotting >= 0.1
                       , cborg >= 0.2.4
-                      , contra-tracer
                       , containers
                       , contra-tracer
                       , deepseq
