@@ -1,5 +1,7 @@
 import           Hedgehog.Main (defaultMain)
 
+import           System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
+
 import qualified Test.Golden.Byron.SigningKeys
 import qualified Test.Golden.Byron.Tx
 import qualified Test.Golden.Byron.UpdateProposal
@@ -9,7 +11,9 @@ import qualified Test.Golden.Shelley
 import qualified Test.Golden.TxView
 
 main :: IO ()
-main =
+main = do
+  hSetBuffering stdout LineBuffering
+  hSetEncoding stdout utf8
   defaultMain
     [ Test.Golden.Byron.SigningKeys.tests
     , Test.Golden.Byron.Tx.txTests

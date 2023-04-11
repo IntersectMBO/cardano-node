@@ -8,6 +8,7 @@ import           Data.String (IsString (..))
 import           Prelude
 
 import qualified System.Environment as E
+import           System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
 import qualified Test.Tasty as T
 import qualified Test.Tasty.Hedgehog as H
 import qualified Test.Tasty.Ingredients as T
@@ -35,6 +36,9 @@ ingredients = T.defaultIngredients
 
 main :: IO ()
 main = do
+  hSetBuffering stdout LineBuffering
+  hSetEncoding stdout utf8
+
   args <- E.getArgs
 
   E.withArgs args $ tests >>= T.defaultMainWithIngredients ingredients
