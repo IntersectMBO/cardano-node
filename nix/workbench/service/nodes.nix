@@ -31,7 +31,7 @@ let
       "TraceBlockFetchProtocol"
       "TraceBlockFetchProtocolSerialised"
       "TraceBlockFetchServer"
-      "TraceChainDB"
+      "TraceChainDb"
       "TraceChainSyncClient"
       "TraceChainSyncBlockServer"
       "TraceChainSyncHeaderServer"
