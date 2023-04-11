@@ -4,7 +4,9 @@
 
 ### Features
 
-- Rename TestEnableDevelopmentHardForkEras to ExperimentalHardForksEnabled ([PR 4341](https://github.com/input-output-hk/cardano-node/pull/4341))
+- Rename `TestEnableDevelopmentHardForkEras` to `ExperimentalHardForksEnabled` and
+  `TestEnableDevelopmentNetworkProtocols` to `ExperimentalProtocolsEnabled`
+  ([PR 4341](https://github.com/input-output-hk/cardano-node/pull/4341))
 
 - Append, not prepend change output when balancing a transaction ([PR 4343](https://github.com/input-output-hk/cardano-node/pull/4343))
 

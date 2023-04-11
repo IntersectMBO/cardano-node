@@ -103,12 +103,12 @@ data StartupTrace blk =
   -- | Warn when 'EnableP2P' is set.
   | P2PWarning
 
-  -- | Warn when 'TestEnableDevelopmentNetworkProtocols' is set and affects
+  -- | Warn when 'ExperimentalProtocolsEnabled' is set and affects
   -- node-to-node protocol.
   --
   | WarningDevelopmentNodeToNodeVersions [NodeToNodeVersion]
 
-  -- | Warn when 'TestEnableDevelopmentNetworkProtocols' is set and affects
+  -- | Warn when 'ExperimentalProtocolsEnabled' is set and affects
   -- node-to-client protocol.
   --
   | WarningDevelopmentNodeToClientVersions [NodeToClientVersion]

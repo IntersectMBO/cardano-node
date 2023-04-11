@@ -52,7 +52,7 @@ ApplicationVersion: 1
 
 ##### Enable P2P Mode #####
 EnableP2P: False
-TestEnableDevelopmentNetworkProtocols: True
+ExperimentalProtocolsEnabled: True
 
 ##### Logging configuration #####
 

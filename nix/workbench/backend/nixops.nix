@@ -69,7 +69,7 @@ let
                TurnOnLogMetrics = true;
 
                ExperimentalHardForksEnabled = true;
-               TestEnableDevelopmentNetworkProtocols = true;
+               ExperimentalProtocolsEnabled = true;
 
                inherit TraceBlockFetchProtocol;
 

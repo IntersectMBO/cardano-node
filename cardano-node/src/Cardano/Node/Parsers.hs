@@ -88,7 +88,7 @@ nodeRunParser = do
            , pncDatabaseFile = DbFile <$> dbFp
            , pncDiffusionMode = mempty
            , pncSnapshotInterval = snapshotInterval
-           , pncTestEnableDevelopmentNetworkProtocols = mempty
+           , pncExperimentalProtocolsEnabled = mempty
            , pncProtocolFiles = Last $ Just ProtocolFilepaths
              { byronCertFile
              , byronKeyFile

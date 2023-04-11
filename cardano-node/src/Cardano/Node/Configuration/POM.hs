@@ -116,7 +116,7 @@ data NodeConfiguration
          --
          -- This flag should be set to 'True' when testing the new protocol
          -- versions.
-       , ncTestEnableDevelopmentNetworkProtocols :: !Bool
+       , ncExperimentalProtocolsEnabled :: !Bool
 
          -- BlockFetch configuration
        , ncMaxConcurrencyBulkSync :: !(Maybe MaxConcurrencyBulkSync)
@@ -172,7 +172,7 @@ data PartialNodeConfiguration
          -- Node parameters, not protocol-specific:
        , pncDiffusionMode    :: !(Last DiffusionMode)
        , pncSnapshotInterval :: !(Last SnapshotInterval)
-       , pncTestEnableDevelopmentNetworkProtocols :: !(Last Bool)
+       , pncExperimentalProtocolsEnabled :: !(Last Bool)
 
          -- BlockFetch configuration
        , pncMaxConcurrencyBulkSync :: !(Last MaxConcurrencyBulkSync)
@@ -223,8 +223,11 @@ instance FromJSON PartialNodeConfiguration where
         <- Last . fmap getDiffusionMode <$> v .:? "DiffusionMode"
       pncSnapshotInterval
         <- Last . fmap RequestedSnapshotInterval <$> v .:? "SnapshotInterval"
-      pncTestEnableDevelopmentNetworkProtocols
-        <- Last <$> v .:? "TestEnableDevelopmentNetworkProtocols"
+      pncExperimentalProtocolsEnabled <- fmap Last $ do
+        failOnRemovedField v "TestEnableDevelopmentNetworkProtocols"
+          "TestEnableDevelopmentNetworkProtocols has been renamed to ExperimentalProtocolsEnabled"
+
+        v .:? "ExperimentalProtocolsEnabled"
 
       -- Blockfetch parameters
       pncMaxConcurrencyBulkSync <- Last <$> v .:? "MaxConcurrencyBulkSync"
@@ -288,7 +291,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty pncSocketPath
            , pncDiffusionMode
            , pncSnapshotInterval
-           , pncTestEnableDevelopmentNetworkProtocols
+           , pncExperimentalProtocolsEnabled
            , pncMaxConcurrencyBulkSync
            , pncMaxConcurrencyDeadline
            , pncLoggingSwitch = Last $ Just pncLoggingSwitch'
@@ -452,7 +455,7 @@ defaultPartialNodeConfiguration =
     , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty mempty
     , pncDiffusionMode = Last $ Just InitiatorAndResponderDiffusionMode
     , pncSnapshotInterval = Last $ Just DefaultSnapshotInterval
-    , pncTestEnableDevelopmentNetworkProtocols = Last $ Just False
+    , pncExperimentalProtocolsEnabled = Last $ Just False
     , pncTopologyFile = Last . Just $ TopologyFile "configuration/cardano/mainnet-topology.json"
     , pncProtocolFiles = mempty
     , pncValidateDB = mempty
@@ -525,9 +528,9 @@ makeNodeConfiguration pnc = do
     $ pncEnableP2P pnc
 
   -- TODO: This is not mandatory
-  testEnableDevelopmentNetworkProtocols <-
-    lastToEither "Missing TestEnableDevelopmentNetworkProtocols" $
-      pncTestEnableDevelopmentNetworkProtocols pnc
+  experimentalProtocols <-
+    lastToEither "Missing ExperimentalProtocolsEnabled" $
+      pncExperimentalProtocolsEnabled pnc
   return $ NodeConfiguration
              { ncConfigFile = configFile
              , ncTopologyFile = topologyFile
@@ -545,7 +548,7 @@ makeNodeConfiguration pnc = do
              , ncSocketConfig = socketConfig
              , ncDiffusionMode = diffusionMode
              , ncSnapshotInterval = snapshotInterval
-             , ncTestEnableDevelopmentNetworkProtocols = testEnableDevelopmentNetworkProtocols
+             , ncExperimentalProtocolsEnabled = experimentalProtocols
              , ncMaxConcurrencyBulkSync = getLast $ pncMaxConcurrencyBulkSync pnc
              , ncMaxConcurrencyDeadline = getLast $ pncMaxConcurrencyDeadline pnc
              , ncLoggingSwitch = loggingSwitch
