@@ -161,7 +161,6 @@ library
                       , random
                       , scientific
                       , serialise
-                      , small-steps ^>= 0.1
                       , cardano-ledger-shelley ^>= 0.1
                       , small-steps ^>= 0.1
                       , stm
