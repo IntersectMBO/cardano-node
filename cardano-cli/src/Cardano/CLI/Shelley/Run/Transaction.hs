@@ -22,7 +22,7 @@ import           Control.Monad.Trans (MonadTrans (..))
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, hoistMaybe, left,
                    newExceptT, onLeft, onNothing)
-import           Data.Aeson ((.=))
+import           Data.Aeson (ToJSON (..), (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.Bifunctor (Bifunctor (..))
@@ -284,8 +284,8 @@ runTransactionCmd cmd =
       runTxSign txinfile skfiles network txoutfile
     TxSubmit mNodeSocketPath anyConsensusModeParams network txFp ->
       runTxSubmit mNodeSocketPath anyConsensusModeParams network txFp
-    TxCalculateMinFee txbody nw pParamsFile nInputs nOutputs nShelleyKeyWitnesses nByronKeyWitnesses ->
-      runTxCalculateMinFee txbody nw pParamsFile nInputs nOutputs nShelleyKeyWitnesses nByronKeyWitnesses
+    TxCalculateMinFee txbody nw pParamsFile nInputs nOutputs nShelleyKeyWitnesses nByronKeyWitnesses mOutputFile ->
+      runTxCalculateMinFee txbody nw pParamsFile nInputs nOutputs nShelleyKeyWitnesses nByronKeyWitnesses mOutputFile
     TxCalculateMinRequiredUTxO era pParamsFile txOuts -> runTxCalculateMinRequiredUTxO era pParamsFile txOuts
     TxHashScriptData scriptDataOrFile -> runTxHashScriptData scriptDataOrFile
     TxGetTxId txinfile -> runTxGetTxId txinfile
@@ -1147,12 +1147,13 @@ runTxCalculateMinFee
   -> TxOutCount
   -> TxShelleyWitnessCount
   -> TxByronWitnessCount
+  -> Maybe (File () Out)
   -> ExceptT ShelleyTxCmdError IO ()
 runTxCalculateMinFee (File txbodyFilePath) nw pParamsFile
                      (TxInCount nInputs) (TxOutCount nOutputs)
                      (TxShelleyWitnessCount nShelleyKeyWitnesses)
-                     (TxByronWitnessCount nByronKeyWitnesses) = do
-
+                     (TxByronWitnessCount nByronKeyWitnesses)
+                     mOutputFile = do
     txbodyFile <- liftIO $ fileOrPipe txbodyFilePath
     unwitnessed <- firstExceptT ShelleyTxCmdCddlError . newExceptT
                      $ readFileTxBody txbodyFile
@@ -1171,7 +1172,9 @@ runTxCalculateMinFee (File txbodyFilePath) nw pParamsFile
                              nInputs nOutputs
                              nByronKeyWitnesses nShelleyKeyWitnesses
 
-        liftIO $ putStrLn $ (show fee :: String) <> " Lovelace"
+        case mOutputFile of
+          Just fp -> liftIO $ LBS.writeFile (unFile fp) (Aeson.encode (toJSON fee))
+          Nothing -> liftIO $ putStrLn $ (show fee :: String) <> " Lovelace"
 
       UnwitnessedCliFormattedTxBody anyTxBody -> do
         InAnyShelleyBasedEra _era txbody <-
@@ -1187,7 +1190,9 @@ runTxCalculateMinFee (File txbodyFilePath) nw pParamsFile
                              nInputs nOutputs
                              nByronKeyWitnesses nShelleyKeyWitnesses
 
-        liftIO $ putStrLn $ (show fee :: String) <> " Lovelace"
+        case mOutputFile of
+          Just fp -> liftIO $ LBS.writeFile (unFile fp) (Aeson.encode (toJSON fee))
+          Nothing -> liftIO $ putStrLn $ (show fee :: String) <> " Lovelace"
 
 -- ----------------------------------------------------------------------------
 -- Transaction fee calculation
