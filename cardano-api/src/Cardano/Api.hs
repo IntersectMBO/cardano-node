@@ -266,6 +266,7 @@ module Cardano.Api (
     UpdateProposalSupportedInEra(..),
     TxTotalAndReturnCollateralSupportedInEra(..),
     ProtocolUTxOCostPerByteSupportedInEra(..),
+    ProtocolUTxOCostPerWordSupportedInEra(..),
 
     -- ** Feature availability functions
     collateralSupportedInEra,
@@ -283,6 +284,7 @@ module Cardano.Api (
     scriptDataSupportedInEra,
     totalAndReturnCollateralSupportedInEra,
     protocolUTxOCostPerByteSupportedInEra,
+    protocolUTxOCostPerWordSupportedInEra,
 
 
     -- ** Fee calculation
