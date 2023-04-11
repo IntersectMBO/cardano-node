@@ -433,10 +433,15 @@ case "$op" in
         local analysis_jsons=($(ls $adir/*.json |
                                     fgrep -v -e '.flt.json'             \
                                              -e '.logobjs.json'         \
+                                             -e 'chain.json'            \
                                              -e 'chain-rejecta.json'    \
-                                             -e 'chain.json'
+                                             -e 'log-manifest.json'     \
+                                             -e 'mach-views.json'       \
+                                             -e 'prof.json'             \
+                                             -e 'tracefreq.json'
               ))
         progress "analyse" "prettifying JSON data:  ${#analysis_jsons[*]} files"
+        verbose  "analyse" "prettifying JSON data:  ${analysis_jsons[*]}"
         time json_compact_prettify "${analysis_jsons[@]}"
         progress "output" "run:  $(white $run)  subdir:  $(yellow analysis)"
         ;;
@@ -590,14 +595,31 @@ case "$op" in
         do jq_fmutate "$run_logs" '
              .rlHostLogs[$mach].hlRawSha256      = $raw_sha256
            | .rlHostLogs[$mach].hlRawTraceFreqs  = $freqs[0]
+
+           | ($freqs[0] | keys | map (split(":"))) as $keypairs
+           | .rlHostLogs[$mach].hlMissingTraces  =
+              (($keys | split("\n"))
+               - ($keypairs | map (.[0]))    # new tracing namespace entries
+               - ($keypairs | map (.[1]))    # old tracing .kinds
+               - ["", "unknown0", "unknown1"]
+               | unique)
            | .rlHostLogs[$mach].hlFilteredSha256 = $filtered_sha256
            ' --sort-keys                                                         \
              --arg                mach         $mach                             \
              --rawfile      raw_sha256 "$adir"/logs-$mach.sha256                 \
              --arg     filtered_sha256 $(sha256sum < $adir/logs-$mach.flt.json | \
                                           cut -d' ' -f1 | xargs echo -n)         \
-             --slurpfile         freqs "$adir"/logs-$mach.tracefreq.json
-        done;;
+             --slurpfile         freqs "$adir"/logs-$mach.tracefreq.json         \
+             --rawfile            keys $keyfile
+        done
+
+        jq_fmutate "$run_logs" '
+          .rlMissingTraces =
+             ( .rlHostLogs
+             | map(.hlMissingTraces)
+             | add
+             | unique
+             )';;
 
     trace-frequencies | trace-freq | freq | tf )
         local new_only= sargs=()

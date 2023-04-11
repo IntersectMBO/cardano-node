@@ -35,7 +35,7 @@ data CommandError
 
 renderCommandError :: CommandError -> Text
 renderCommandError (CommandError cmd err) =
-  "While executing chained command '" <> show cmd <> "':  " <> err
+  "ERROR: While executing locli operation:\n\n    '" <> show cmd <> "'\n\n  " <> err
 
 -- | Sub-commands
 newtype Command
@@ -570,11 +570,23 @@ runChainCommand s@State{sRun=Just _run, sSlots=Just slots}
 runChainCommand _ c@TimelineSlots{} = missingCommandData c
   ["run metadata & genesis", "filtered slots"]
 
-runChainCommand s@State{sRun=Just run, sChain=Just chain@Chain{..}}
-  ComputePropagation = do
+runChainCommand s@State{sRun=Just run, sChain=Just chain@Chain{..}, sRunLogs}
+  c@ComputePropagation = do
   progress "block-propagation" $ J (cDomBlocks, cDomSlots)
-  prop <- blockProp run chain & liftIO
+  prop <- pure (blockProp run chain)
+          & newExceptT
+          & firstExceptT liftBlockPropError
   pure s { sBlockProp = Just [prop] }
+ where
+   liftBlockPropError :: BlockPropError -> CommandError
+   liftBlockPropError = \case
+     e@BPEEntireChainFilteredOut{} -> CommandError c $
+       renderBlockPropError e
+       <> maybe "" ((".\n\n  Missing traces in run logs (not all are fatal):\n\n  " <>)
+                    . T.intercalate "\n  "
+                    . fmap toText
+                    . rlMissingTraces)
+                sRunLogs
 runChainCommand _ c@ComputePropagation = missingCommandData c
   ["run metadata & genesis", "chain", "data domains for slots & blocks"]
 
