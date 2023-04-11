@@ -582,8 +582,8 @@ runChainCommand s@State{sRun=Just run, sChain=Just chain@Chain{..}, sRunLogs}
    liftBlockPropError = \case
      e@BPEEntireChainFilteredOut{} -> CommandError c $
        renderBlockPropError e
-       <> maybe "" ((".\n\n  Missing traces in run logs (not all are fatal):\n\n  " <>)
-                    . T.intercalate "\n  "
+       <> maybe "" ((".\n\n  Missing traces in run logs (not all are fatal):\n\n    " <>)
+                    . T.intercalate "\n    "
                     . fmap toText
                     . rlMissingTraces)
                 sRunLogs

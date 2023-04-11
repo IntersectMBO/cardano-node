@@ -508,21 +508,30 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
 
 data BlockPropError
   = BPEEntireChainFilteredOut
-    { bpeChainLen :: Int
+    { bpeChainLen   :: Int
+    , bpeAcceptance :: [(BlockNo, [(ChainFilter, Bool)])]
     }
 
 renderBlockPropError :: BlockPropError -> T.Text
 renderBlockPropError = \case
-  BPEEntireChainFilteredOut chainlen -> mconcat
+  BPEEntireChainFilteredOut chainlen rejs -> mconcat $
     [ "blockProp | analysisChain:  all blocks filtered out of originally "
-    , T.pack $ show chainlen
-    ]
+    , T.pack $ show chainlen, "\n\n"
+    , "  Block pass/fail reasons:\n"
+    ] ++
+    fmap (("\n    " <>)
+          . (\(no, rs) -> T.pack $
+              show no <> ":  " <> show rs))
+         rejs
 
 blockProp :: Run -> Chain -> Either BlockPropError BlockPropOne
 blockProp run@Run{genesis} Chain{..} = do
   (c :: [BlockEvents]) <-
     case filter (all snd . beAcceptance) cMainChain of
-      [] -> Left . BPEEntireChainFilteredOut $ length cMainChain
+      [] -> Left $
+        BPEEntireChainFilteredOut
+          (length cMainChain)
+          ((beBlockNo &&& beAcceptance) <$> cMainChain)
       xs -> pure xs
 
   pure $ BlockProp

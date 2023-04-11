@@ -434,7 +434,6 @@ case "$op" in
                                     fgrep -v -e '.flt.json'             \
                                              -e '.logobjs.json'         \
                                              -e 'chain.json'            \
-                                             -e 'chain-rejecta.json'    \
                                              -e 'log-manifest.json'     \
                                              -e 'mach-views.json'       \
                                              -e 'prof.json'             \
