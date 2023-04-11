@@ -323,7 +323,7 @@ mapCDFCentiles :: (Centile -> p a -> b) -> CDF p a -> [b]
 mapCDFCentiles f CDF{..} = fmap (uncurry f) cdfSamples
 
 arityProj :: forall p a. KnownCDF p => (CDF I a -> a) -> p a -> a
-arityProj f = arity unI f
+arityProj = arity unI
 
 data CDFError
   = CDFIncoherentSamplingLengths  [Int]
