@@ -8,8 +8,9 @@ module Cardano.Benchmarking.ScriptAPI
   , prepareScriptName
   ) where
 
-import           Prelude as Haskell (String, Maybe(..))
+import           Prelude as Haskell (String, ($))
 import           Data.Char (isUpper)
+import           Data.Maybe (fromMaybe)
 import           System.FilePath (splitExtension, stripExtension, takeFileName)
 import           Cardano.Api (ScriptInAnyLang)
 
@@ -37,6 +38,5 @@ prepareScriptName script
       _                            -> file' -- shouldn't happen
   where
     file  = takeFileName script -- ignore leading directories
-    file' = case stripExtension "hs" file of
-              Just x  -> x
-              Nothing -> file -- no trailing .hs so use filename as-is
+    -- no trailing .hs so use filename as-is
+    file' = fromMaybe file $ stripExtension "hs" file
