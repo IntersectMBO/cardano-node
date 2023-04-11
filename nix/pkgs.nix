@@ -79,10 +79,10 @@ in with final;
     index-state = "2023-01-20T05:50:56Z";
   };
 
-  haskell-language-server = haskell-nix.tool compiler-nix-name "haskell-language-server" {
-    # ghcide 1.9.0.0 does not compile on ghc 8.10.7
-    version = {ghc8107 = "1.8.0.0";}.${compiler-nix-name} or "1.9.0.0";
-    index-state = "2023-01-20T05:50:56Z";
+  haskell-language-server = haskell-nix.tool compiler-nix-name "haskell-language-server" rec {
+    src = haskell-nix.sources."hls-1.10";
+    cabalProject = builtins.readFile (src + "/cabal.project");
+    sha256map."https://github.com/pepeiborra/ekg-json"."7a0af7a8fd38045fd15fb13445bdcc7085325460" = "sha256-fVwKxGgM0S4Kv/4egVAAiAjV7QB5PBqMVMCfsv7otIQ=";
   };
 
   haskellBuildUtils = prev.haskellBuildUtils.override {

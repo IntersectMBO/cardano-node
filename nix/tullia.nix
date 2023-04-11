@@ -53,7 +53,7 @@ rec {
             jq -r 'with_entries(select(.value)) | keys | .[]')
           targets=$(for s in $systems; do echo .#legacyPackages."$s".hydraJobs.${jobsAttrs}; done)
           # shellcheck disable=SC2086
-          nix build -L $targets
+          nix build --keep-going $targets || nix build -L $targets
         '';
 
         env.NIX_CONFIG = ''
@@ -70,9 +70,9 @@ rec {
     in
     {
       "ci/pr/required" = mkBulkJobsTask "pr.required";
-      "ci/pr/nonrequired" = mkBulkJobsTask "pr.nonrequired --keep-going";
+      "ci/pr/nonrequired" = mkBulkJobsTask "pr.nonrequired";
       "ci/push/required" = mkBulkJobsTask "required";
-      "ci/push/nonrequired" = mkBulkJobsTask "nonrequired --keep-going";
+      "ci/push/nonrequired" = mkBulkJobsTask "nonrequired";
 
       "ci/cardano-deployment" = { lib, ... } @ args: {
         imports = [ common ];
