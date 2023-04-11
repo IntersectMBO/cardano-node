@@ -856,7 +856,7 @@ genProtocolParameters era = do
   protocolParamPoolPledgeInfluence <- genRationalInt64
   protocolParamMonetaryExpansion <- genRational
   protocolParamTreasuryCut <- genRational
-  protocolParamUTxOCostPerWord <- Gen.maybe genLovelace
+  protocolParamUTxOCostPerWord <- sequence $ protocolUTxOCostPerWordSupportedInEra era $> genLovelace
   protocolParamCostModels <- pure mempty
   --TODO: Babbage figure out how to deal with
   -- asymmetric cost model JSON instances
@@ -889,7 +889,7 @@ genProtocolParametersUpdate era = do
   protocolUpdatePoolPledgeInfluence <- Gen.maybe genRationalInt64
   protocolUpdateMonetaryExpansion   <- Gen.maybe genRational
   protocolUpdateTreasuryCut         <- Gen.maybe genRational
-  protocolUpdateUTxOCostPerWord     <- Gen.maybe genLovelace
+  protocolUpdateUTxOCostPerWord     <- sequence $ protocolUTxOCostPerWordSupportedInEra era $> genLovelace
   let protocolUpdateCostModels = mempty -- genCostModels
   --TODO: Babbage figure out how to deal with
   -- asymmetric cost model JSON instances
