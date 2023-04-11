@@ -43,7 +43,6 @@ import           Data.Coerce (coerce)
 import           Data.List (nub)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import           Data.Sharing (Interns, Share)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.IO as T
@@ -63,7 +62,6 @@ import           Cardano.CLI.Pretty
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (VerificationKeyOrHashOrFile,
                    readVerificationKeyOrHashOrFile)
-import           Cardano.CLI.Shelley.Orphans ()
 import qualified Cardano.CLI.Shelley.Output as O
 import           Cardano.CLI.Shelley.Run.Genesis (ShelleyGenesisCmdError,
                    readAndDecodeShelleyGenesis)
@@ -71,19 +69,13 @@ import           Cardano.CLI.Types
 import           Cardano.Crypto.Hash (hashToBytesAsHex)
 import qualified Cardano.Crypto.Hash.Blake2b as Blake2b
 import qualified Cardano.Crypto.VRF as Crypto
-import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
-import           Cardano.Ledger.BaseTypes (Seed, UnitInterval)
+import           Cardano.Ledger.BaseTypes (Seed)
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Credential as Ledger
 import qualified Cardano.Ledger.Crypto as Crypto
-import qualified Cardano.Ledger.Era as Era
-import qualified Cardano.Ledger.Era as Ledger
 import           Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import           Cardano.Ledger.SafeHash (HashAnnotated)
-import           Cardano.Ledger.Shelley.LedgerState (PState (_fPParams, _pParams, _retiring))
+import           Cardano.Ledger.Shelley.LedgerState (PState (psFutureStakePoolParams, psStakePoolParams, psRetiring))
 import qualified Cardano.Ledger.Shelley.LedgerState as SL
-import qualified Cardano.Ledger.Shelley.PParams as Shelley
-import           Cardano.Ledger.Shelley.Scripts ()
 import           Cardano.Slotting.EpochInfo (EpochInfo (..), epochInfoSlotToUTCTime, hoistEpochInfo)
 
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime (..),
@@ -110,7 +102,6 @@ import           Data.Proxy (Proxy (..))
 import           Data.Set (Set)
 import           Data.Text (Text)
 import           Data.Text.Lazy (toStrict)
-import           GHC.Records (HasField)
 
 {- HLINT ignore "Move brackets to avoid $" -}
 {- HLINT ignore "Redundant flip" -}
@@ -876,7 +867,7 @@ writeLedgerState mOutFile qState@(SerialisedDebugLedgerState serLedgerState) =
 
 writeStakeSnapshots :: forall era ledgerera. ()
   => ShelleyLedgerEra era ~ ledgerera
-  => Era.Crypto ledgerera ~ StandardCrypto
+  => Core.EraCrypto ledgerera ~ StandardCrypto
   => Maybe OutputFile
   -> SerialisedStakeSnapshots era
   -> ExceptT ShelleyQueryCmdError IO ()
@@ -888,27 +879,28 @@ writeStakeSnapshots mOutFile qState = do
   liftIO . maybe LBS.putStrLn (LBS.writeFile . unOutputFile) mOutFile $ encodePretty snapshot
 
 -- | This function obtains the pool parameters, equivalent to the following jq query on the output of query ledger-state
---   .nesEs.esLState._delegationState._pstate._pParams.<pool_id>
+--   .nesEs.esLState.lsDPState.dpsPState.psStakePoolParams.<pool_id>
 writePoolState :: forall era ledgerera. ()
   => ShelleyLedgerEra era ~ ledgerera
-  => Era.Crypto ledgerera ~ StandardCrypto
-  => Ledger.Era ledgerera
+  => Core.EraCrypto ledgerera ~ StandardCrypto
+  => Core.Era ledgerera
   => SerialisedPoolState era
   -> ExceptT ShelleyQueryCmdError IO ()
 writePoolState serialisedCurrentEpochState = do
   PoolState poolState <- pure (decodePoolState serialisedCurrentEpochState)
     & onLeft (left . ShelleyQueryCmdPoolStateDecodeError)
 
-  let hks = Set.toList $ Set.fromList $ Map.keys (_pParams poolState) <> Map.keys (_fPParams poolState) <> Map.keys (_retiring poolState)
+  let hks = Set.toList $ Set.fromList $ Map.keys (psStakePoolParams poolState)
+            <> Map.keys (psFutureStakePoolParams poolState) <> Map.keys (psRetiring poolState)
 
   let poolStates :: Map (KeyHash 'StakePool StandardCrypto) (Params StandardCrypto)
       poolStates = Map.fromList $ hks <&>
         ( \hk ->
           ( hk
           , Params
-            { poolParameters        = Map.lookup hk (SL._pParams  poolState)
-            , futurePoolParameters  = Map.lookup hk (SL._fPParams poolState)
-            , retiringEpoch         = Map.lookup hk (SL._retiring poolState)
+            { poolParameters        = Map.lookup hk (SL.psStakePoolParams  poolState)
+            , futurePoolParameters  = Map.lookup hk (SL.psFutureStakePoolParams poolState)
+            , retiringEpoch         = Map.lookup hk (SL.psRetiring poolState)
             }
           )
         )
@@ -1414,8 +1406,8 @@ obtainLedgerEraClassConstraints
   => Api.ShelleyBasedEra era
   -> (( ToJSON (DebugLedgerState era)
       , FromCBOR (DebugLedgerState era)
-      , Era.Crypto ledgerera ~ StandardCrypto
-      , Ledger.Era (ShelleyLedgerEra era)
+      , Core.EraCrypto ledgerera ~ StandardCrypto
+      , Core.Era (ShelleyLedgerEra era)
       ) => a) -> a
 obtainLedgerEraClassConstraints ShelleyBasedEraShelley f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraAllegra f = f
@@ -1429,13 +1421,11 @@ eligibleLeaderSlotsConstaints
   :: ShelleyLedgerEra era ~ ledgerera
   => ShelleyBasedEra era
   -> (( ShelleyLedgerEra era ~ ledgerera
-      , Ledger.Crypto ledgerera ~ StandardCrypto
+      , Core.EraCrypto ledgerera ~ StandardCrypto
       , Consensus.PraosProtocolSupportsNode (ConsensusProtocol era)
       , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
-      , Era.Era ledgerera
-      , HasField "_d" (Core.PParams (ShelleyLedgerEra era)) UnitInterval
-      , Crypto.Signable (Crypto.VRF (Ledger.Crypto ledgerera)) Seed
-      , Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Ledger.Credential 'Staking StandardCrypto)
+      , Core.Era ledgerera
+      , Crypto.Signable (Crypto.VRF (Core.EraCrypto ledgerera)) Seed
       , Crypto.ADDRHASH (Consensus.PraosProtocolSupportsNodeCrypto (ConsensusProtocol era)) ~ Blake2b.Blake2b_224
       , HashAnnotated
           (Core.TxBody (ShelleyLedgerEra era))

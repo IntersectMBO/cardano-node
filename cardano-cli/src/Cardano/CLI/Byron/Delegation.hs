@@ -21,7 +21,7 @@ import           Formatting (Format, sformat)
 
 import           Cardano.Api.Byron
 
-import           Cardano.Binary (Annotated (..), serialize')
+import           Cardano.Ledger.Binary (Annotated (..), serialize', byronProtVer)
 import qualified Cardano.Chain.Delegation as Dlg
 import           Cardano.Chain.Slotting (EpochNumber)
 import           Cardano.Crypto (ProtocolMagicId)
@@ -103,7 +103,7 @@ checkDlgCert cert magic issuerVK' delegateVK' =
   ]
   where
     magic' :: Annotated ProtocolMagicId ByteString
-    magic' = Annotated magic (serialize' magic)
+    magic' = Annotated magic (serialize' byronProtVer magic)
 
     epoch :: EpochNumber
     epoch = unAnnotated $ Dlg.aEpoch cert
@@ -112,8 +112,8 @@ checkDlgCert cert magic issuerVK' delegateVK' =
     cert' =
       let unannotated = cert { Dlg.aEpoch = Annotated epoch ()
                              , Dlg.annotation = () }
-      in unannotated { Dlg.annotation = serialize' unannotated
-                     , Dlg.aEpoch = Annotated epoch (serialize' epoch) }
+      in unannotated { Dlg.annotation = serialize' byronProtVer unannotated
+                     , Dlg.aEpoch = Annotated epoch (serialize' byronProtVer epoch) }
 
     vkF :: forall r. Format r (Crypto.VerificationKey -> r)
     vkF = Crypto.fullVerificationKeyF

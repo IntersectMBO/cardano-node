@@ -11,7 +11,6 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 import           Data.Aeson (eitherDecode)
 import qualified Data.ByteString.Lazy as LB
 import           Data.Function ((&))
-import qualified Data.List as List
 import           Data.Text (Text)
 import qualified Data.Text as Text
 
@@ -23,7 +22,6 @@ import           Cardano.CLI.Shelley.Key (VerificationKeyOrHashOrFile,
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Types
 
-import           Cardano.Ledger.Alonzo.Scripts (CostModels (..))
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 
 
@@ -164,9 +162,11 @@ runGovernanceUpdateProposal (OutputFile upFile) eNo genVerKeyFiles upPprams mCos
       cModels <- pure (eitherDecode costModelsBs)
         & onLeft (left . ShelleyGovernanceCmdCostModelsJsonDecodeErr fp . Text.pack)
 
-      when (List.null (unCostModels cModels)) $ left (ShelleyGovernanceCmdEmptyCostModel fp)
+      let costModels = fromAlonzoCostModels cModels
 
-      return $ upPprams {protocolUpdateCostModels = fromAlonzoCostModels cModels}
+      when (null costModels) $ left (ShelleyGovernanceCmdEmptyCostModel fp)
+
+      return $ upPprams {protocolUpdateCostModels = costModels}
 
   when (finalUpPprams == mempty) $ left ShelleyGovernanceCmdEmptyUpdateProposalError
 

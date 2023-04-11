@@ -6,10 +6,10 @@ import           Cardano.Api
 import           Cardano.Api.ChainSync.Client
 import qualified Cardano.Chain.Slotting as Byron (EpochSlots (..))
 import           Cardano.Slotting.Slot
+import qualified Data.SOP.Telescope as TSP
 import qualified Ouroboros.Consensus.Cardano.Block as C
 import qualified Ouroboros.Consensus.HardFork.Combinator.Basics as C
 import qualified Ouroboros.Consensus.HardFork.Combinator.State.Types as C
-import qualified Ouroboros.Consensus.HardFork.Combinator.Util.Telescope as TSP
 
 import           Control.Monad (when)
 import           Control.Monad.Trans.Except

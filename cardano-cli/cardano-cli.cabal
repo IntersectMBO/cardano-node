@@ -111,19 +111,19 @@ library
                       , cardano-api
                       , cardano-binary
                       , cardano-crypto
-                      , cardano-crypto-class ^>= 2.0
-                      , cardano-crypto-wrapper ^>= 1.4
-                      , cardano-data ^>= 0.1
+                      , cardano-crypto-class ^>= 2.1
+                      , cardano-crypto-wrapper ^>= 1.5
+                      , cardano-data ^>= 1.0
                       , cardano-git-rev
-                      , cardano-ledger-alonzo ^>= 0.1
-                      , cardano-ledger-byron ^>= 0.1
-                      , cardano-ledger-conway
-                      , cardano-ledger-core ^>= 0.1
-                      , cardano-ledger-shelley ^>= 0.1
-                      , cardano-ledger-shelley-ma ^>= 0.1
+                      , cardano-ledger-alonzo ^>= 1.1
+                      , cardano-ledger-byron ^>= 1.0
+                      , cardano-ledger-binary >= 1.0
+                      , cardano-ledger-core ^>= 1.1
+                      , cardano-ledger-conway ^>= 1.1
+                      , cardano-ledger-shelley ^>= 1.1
                       , cardano-ping
                       , cardano-prelude
-                      , cardano-protocol-tpraos ^>= 0.1
+                      , cardano-protocol-tpraos ^>= 1.0
                       , cardano-slotting ^>= 0.1
                       , cardano-strict-containers ^>= 0.1
                       , cborg >= 0.2.4 && < 0.3
@@ -137,6 +137,7 @@ library
                       , io-classes
                       , iproute
                       , mtl
+                      , microlens
                       , network
                       , optparse-applicative-fork
                       , ouroboros-consensus
@@ -150,7 +151,6 @@ library
                       , prettyprinter
                       , prettyprinter-ansi-terminal
                       , random
-                      , set-algebra ^>= 0.1
                       , split
                       , strict-stm
                       , text
@@ -160,7 +160,6 @@ library
                       , unliftio-core
                       , utf8-string
                       , vector
-                      , vector-map ^>= 0.1
                       , yaml
 
 executable cardano-cli
@@ -171,7 +170,7 @@ executable cardano-cli
   ghc-options:          -threaded -rtsopts "-with-rtsopts=-T"
 
   build-depends:        cardano-cli
-                      , cardano-crypto-class ^>= 2.0
+                      , cardano-crypto-class ^>= 2.1
                       , optparse-applicative-fork
                       , transformers-except
 
@@ -233,8 +232,8 @@ test-suite cardano-cli-golden
                       , bytestring
                       , cardano-api
                       , cardano-cli
-                      , cardano-crypto-wrapper ^>= 1.4
-                      , cardano-ledger-byron ^>= 0.1
+                      , cardano-crypto-wrapper ^>= 1.5.1
+                      , cardano-ledger-byron ^>= 1.0
                       , cardano-prelude
                       , cborg
                       , containers

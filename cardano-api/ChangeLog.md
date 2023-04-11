@@ -8,6 +8,10 @@
   `TestEnableDevelopmentNetworkProtocols` to `ExperimentalProtocolsEnabled`
   ([PR 4341](https://github.com/input-output-hk/cardano-node/pull/4341))
 
+- Changed type of `protocolParamTxFeeFixed`, `protocolParamTxFeePerByte` from `Natural` to
+  `Lovelace` and `protocolUpdateTxFeeFixed` and `protocolUpdateTxFeePerByte` from `Maybe
+  Natural` to `Maybe Lovelace` ([PR 5013](https://github.com/input-output-hk/cardano-node/pull/5013))
+
 - Append, not prepend change output when balancing a transaction ([PR 4343](https://github.com/input-output-hk/cardano-node/pull/4343))
 
 - Expose convenience functions `executeQueryCardanoMode`, `determineEra`, `constructBalancedTx` and `queryStateForBalancedTx` ([PR 4446](https://github.com/input-output-hk/cardano-node/pull/4446))
@@ -30,7 +34,7 @@
 
 - **Breaking change** - `queryExpr` to return `IO (Either UnsupportedNtcVersionError a)` instead of `IO a`.
   ([PR4788](https://github.com/input-output-hk/cardano-node/pull/4788))
-  
+
 - **Breaking change** - Remove distinction between multisig and timelock scripts([PR4763](https://github.com/input-output-hk/cardano-node/pull/4763))
 
 - **Breaking change** Change return type of `queryNodeLocalState` to new `AcquiringFailure` type.
@@ -41,6 +45,36 @@
   ([PR4903](https://github.com/input-output-hk/cardano-node/pull/4903))
 
 - Auto-balance multi asset transactions ([PR 4450](https://github.com/input-output-hk/cardano-node/pull/4450))
+
+- **Breaking change** - Removed `fromShelleyPParams` in favor of
+  `fromLedgerPParams ShelleyBasedEraShelley`
+  ([PR 5013](https://github.com/input-output-hk/cardano-node/pull/5013))
+
+- **Breaking change** - JSON fields have been changed: ([PR 5013](https://github.com/input-output-hk/cardano-node/pull/5013))
+  - For `PState`:
+    - Renamed `"pParams pState"` -> `"pParams"`
+    - Renamed `"fPParams pState"` -> `"fPParams"`
+    - Renamed `"retiring pState"` -> `"retiring"`
+    - Added `"deposits"`
+  - For `DState`:
+    - Removed `"unifiedRewards"`
+    - Added `"unified"`, which contains an object with both rewards and deposits.
+  - For `InstantaneousRewards`:
+    - Addition of `"deltaReserves"` and `"deltaTreasury"` fields
+  - `CostModel` in `AlonzoGenesis` and `PParams` is formatted with a list of values to
+    promote forward compatibility
+
+- Fix a bug where only metadata from TxAuxData was hashed upon
+  transaction body creation with `createTransactionBody` ([PR 5013](https://github.com/input-output-hk/cardano-node/pull/5013))
+
+- **Breaking change** - Change representation of `CostModel`. It is no longer a mapping from
+  param name to values, but instead a list with values, where order of value dictates the
+  mapping to param names of a plutus cost model for a particular plutus version ([PR
+  5013](https://github.com/input-output-hk/cardano-node/pull/5013))
+
+- **Breaking change** - ToJSON instance for CostModel and consequently for
+  ProtocolParameters will now produce a list of values instead of a key value
+  mapping. ([PR 5013](https://github.com/input-output-hk/cardano-node/pull/5013))
 
 ### Bugs
 

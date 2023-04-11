@@ -11,7 +11,7 @@ module Cardano.TxGenerator.Setup.Plutus
        where
 
 import           Data.Bifunctor (bimap)
-import           Data.Map.Strict as Map (lookup, toAscList)
+import           Data.Map.Strict as Map (lookup)
 
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
@@ -176,11 +176,5 @@ preExecutePlutusV2 protocolVersion_ (PlutusScript _ (PlutusScriptSerialised scri
       , PlutusV2.txInfoRedeemers = PlutusV2.fromList []
       }
 
--- The order of the output list is important, but:
---  * This way of flattening it is not guaranteed to always be correct.
---  * There is no way to ensure that the list remains in the correct order.
--- However, we're bound to the type `Cardano.Api.ProtocolParameters.CostModel` which
--- might be changed from a key-value map to something providing stronger guarantees.
 flattenCostModel :: CostModel -> [Integer]
-flattenCostModel (CostModel cm)
-  = snd <$> Map.toAscList cm
+flattenCostModel (CostModel cm) = cm

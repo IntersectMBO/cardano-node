@@ -42,10 +42,8 @@ import           Cardano.Slotting.Slot (EpochNo, SlotNo (..), WithOrigin)
 import           Cardano.Tracing.OrphanInstances.Network ()
 
 instance FromJSON ChunkNo
-instance FromJSON (WithOrigin SlotNo)
 
 instance ToJSON ChunkNo
-instance ToJSON (WithOrigin SlotNo)
 
 data OpeningDbs
   = StartedOpeningImmutableDB

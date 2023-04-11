@@ -41,7 +41,7 @@ import           GHC.Word (Word8)
 import           Options.Applicative
 import qualified Options.Applicative as Opt
 
-import           Cardano.Binary (Annotated (..))
+import           Cardano.Ledger.Binary (Annotated (..))
 
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import           Cardano.Crypto.Hashing (hashRaw)

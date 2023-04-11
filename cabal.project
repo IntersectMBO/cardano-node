@@ -80,7 +80,7 @@ tests: True
 
 test-show-details: direct
 
--- Always write GHC env files, because they are needed by for repl.
+-- Always write GHC env files, because they are needed for ghci.
 write-ghc-environment-files: always
 
 package snap-server

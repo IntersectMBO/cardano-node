@@ -140,19 +140,18 @@ library
                       , cardano-api
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
-                      , cardano-data >= 0.1
                       , cardano-git-rev
                       , cardano-ledger-alonzo
+                      , cardano-ledger-allegra
                       , cardano-ledger-babbage
                       , cardano-ledger-byron
                       , cardano-ledger-conway
                       , cardano-ledger-core
                       , cardano-ledger-shelley
-                      , cardano-ledger-shelley-ma
                       , cardano-prelude
-                      , cardano-protocol-tpraos >= 0.1
-                      , cardano-slotting >= 0.1
-                      , cborg >= 0.2.4
+                      , cardano-protocol-tpraos ^>= 1.0
+                      , cardano-slotting >= 0.1.1 && < 0.2
+                      , cborg ^>= 0.2.4
                       , containers
                       , contra-tracer
                       , deepseq
@@ -172,18 +171,18 @@ library
                       , lobemo-backend-trace-forwarder
                       , mtl
                       , network
-                      , network-mux >= 0.2
+                      , network-mux ^>= 0.3
                       , nothunks
                       , optparse-applicative-fork
-                      , ouroboros-consensus >= 0.2
+                      , ouroboros-consensus ^>= 0.4
                       , ouroboros-consensus-byron
                       , ouroboros-consensus-cardano
                       , ouroboros-consensus-diffusion
                       , ouroboros-consensus-protocol
                       , ouroboros-consensus-shelley
-                      , ouroboros-network >= 0.3
                       , ouroboros-network-api
-                      , ouroboros-network-framework >= 0.3
+                      , ouroboros-network  ^>= 0.4
+                      , ouroboros-network-framework ^>= 0.3
                       , ouroboros-network-protocols
                       , prettyprinter
                       , prettyprinter-ansi-terminal
