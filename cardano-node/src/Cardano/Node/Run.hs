@@ -429,22 +429,26 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
               Nothing
 #endif
         void $
+          let diffusionArgumentsExtra =
+                mkP2PArguments nc
+                  (readTVar localRootsVar)
+                  (readTVar publicRootsVar)
+                  (readTVar useLedgerVar)
+          in
           Node.run
             nodeArgs
             StdRunNodeArgs
-              { srnBfcMaxConcurrencyBulkSync   = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
-              , srnBfcMaxConcurrencyDeadline   = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
-              , srnChainDbValidateOverride     = ncValidateDB nc
-              , srnSnapshotInterval            = ncSnapshotInterval nc
-              , srnDatabasePath                = dbPath
-              , srnDiffusionArguments          = diffusionArguments
-              , srnDiffusionArgumentsExtra     = mkP2PArguments nc (readTVar localRootsVar)
-              (readTVar publicRootsVar)
-              (readTVar useLedgerVar)
-              , srnDiffusionTracers            = diffusionTracers tracers
-              , srnDiffusionTracersExtra       = diffusionTracersExtra tracers
-              , srnEnableInDevelopmentVersions = ncTestEnableDevelopmentNetworkProtocols nc
-              , srnTraceChainDB                = chainDBTracer tracers
+              { srnBfcMaxConcurrencyBulkSync    = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
+              , srnBfcMaxConcurrencyDeadline    = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
+              , srnChainDbValidateOverride      = ncValidateDB nc
+              , srnSnapshotInterval             = ncSnapshotInterval nc
+              , srnDatabasePath                 = dbPath
+              , srnDiffusionArguments           = diffusionArguments
+              , srnDiffusionArgumentsExtra      = diffusionArgumentsExtra
+              , srnDiffusionTracers             = diffusionTracers tracers
+              , srnDiffusionTracersExtra        = diffusionTracersExtra tracers
+              , srnEnableInDevelopmentVersions  = ncExperimentalProtocolsEnabled nc
+              , srnTraceChainDB                 = chainDBTracer tracers
               , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
               }
       DisabledP2PMode -> do
@@ -483,7 +487,7 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
               , srnDiffusionArgumentsExtra     = mkNonP2PArguments ipProducers dnsProducers
               , srnDiffusionTracers            = diffusionTracers tracers
               , srnDiffusionTracersExtra       = diffusionTracersExtra tracers
-              , srnEnableInDevelopmentVersions = ncTestEnableDevelopmentNetworkProtocols nc
+              , srnEnableInDevelopmentVersions = ncExperimentalProtocolsEnabled nc
               , srnTraceChainDB                = chainDBTracer tracers
               , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
               }
@@ -509,13 +513,13 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
                                   $ supportedNodeToClientVersions (Proxy @blk)
             (_, Nothing)         -> Map.keys
                                   $ supportedNodeToClientVersions (Proxy @blk)
-    when (  ncTestEnableDevelopmentNetworkProtocols nc
+    when (  ncExperimentalProtocolsEnabled nc
          && not (null developmentNtnVersions))
        $ traceWith (startupTracer tracers)
                    (WarningDevelopmentNodeToNodeVersions
                      developmentNtnVersions)
 
-    when (  ncTestEnableDevelopmentNetworkProtocols nc
+    when (  ncExperimentalProtocolsEnabled nc
          && not (null developmentNtcVersions))
        $ traceWith (startupTracer tracers)
                    (WarningDevelopmentNodeToClientVersions
@@ -552,7 +556,7 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
     -> Map k v
     -> Map k v
   limitToLatestReleasedVersion prj =
-      if ncTestEnableDevelopmentNetworkProtocols nc then id
+      if ncExperimentalProtocolsEnabled nc then id
       else
       case prj $ latestReleasedNodeVersion (Proxy @blk) of
         Nothing       -> id

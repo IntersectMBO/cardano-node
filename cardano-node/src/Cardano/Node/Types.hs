@@ -198,7 +198,7 @@ data NodeHardForkProtocolConfiguration =
        -- This flag should be set to true for nodes taking part in testnets for
        -- testing the new era.
        --
-       npcTestEnableDevelopmentHardForkEras :: Bool
+       npcExperimentalHardForksEnabled :: Bool
 
        -- | For testing purposes we support specifying that the hard fork
        -- happens at an exact epoch number (ie the first epoch of the new era).

@@ -90,7 +90,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcConwayGenesisFileHash
                            }
                            NodeHardForkProtocolConfiguration {
-                            npcTestEnableDevelopmentHardForkEras,
+                            npcExperimentalHardForksEnabled,
                             -- During testing of the Alonzo era, we conditionally declared that we
                             -- knew about the Alonzo era. We do so only when a config option for
                             -- testing development/unstable eras is used. This lets us include
@@ -234,7 +234,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           -- is in the Babbage era. Since Babbage is currently the last known
           -- protocol version then this is also the Babbage protocol version.
           Praos.conwayProtVer =
-            if npcTestEnableDevelopmentHardForkEras
+            if npcExperimentalHardForksEnabled
               then ProtVer 9 0
               else ProtVer 8 0,
           Praos.conwayMaxTxCapacityOverrides =

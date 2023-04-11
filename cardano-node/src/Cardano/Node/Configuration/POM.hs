@@ -21,9 +21,11 @@ module Cardano.Node.Configuration.POM
   )
 where
 
+import           Control.Monad (when)
 import           Data.Aeson
 import qualified Data.Aeson.Types as Aeson
 import           Data.Bifunctor (Bifunctor (..))
+import           Data.Maybe (isJust)
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -49,6 +51,16 @@ import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode (..))
+
+-- | Parse field that have been removed from the configuration file and
+-- fail if they are present.
+--
+-- This is used to notify users that a field has been removed from the
+-- configuration file.
+failOnRemovedField :: Aeson.Object -> Key -> String -> Aeson.Parser ()
+failOnRemovedField obj removedField errorMessage = do
+  mVal :: Maybe Aeson.Value <- obj .:? removedField
+  when (isJust mVal) $ fail errorMessage
 
 data NetworkP2PMode = EnabledP2PMode | DisabledP2PMode
   deriving (Eq, Show, Generic)
@@ -104,7 +116,7 @@ data NodeConfiguration
          --
          -- This flag should be set to 'True' when testing the new protocol
          -- versions.
-       , ncTestEnableDevelopmentNetworkProtocols :: !Bool
+       , ncExperimentalProtocolsEnabled :: !Bool
 
          -- BlockFetch configuration
        , ncMaxConcurrencyBulkSync :: !(Maybe MaxConcurrencyBulkSync)
@@ -160,7 +172,7 @@ data PartialNodeConfiguration
          -- Node parameters, not protocol-specific:
        , pncDiffusionMode    :: !(Last DiffusionMode)
        , pncSnapshotInterval :: !(Last SnapshotInterval)
-       , pncTestEnableDevelopmentNetworkProtocols :: !(Last Bool)
+       , pncExperimentalProtocolsEnabled :: !(Last Bool)
 
          -- BlockFetch configuration
        , pncMaxConcurrencyBulkSync :: !(Last MaxConcurrencyBulkSync)
@@ -211,8 +223,11 @@ instance FromJSON PartialNodeConfiguration where
         <- Last . fmap getDiffusionMode <$> v .:? "DiffusionMode"
       pncSnapshotInterval
         <- Last . fmap RequestedSnapshotInterval <$> v .:? "SnapshotInterval"
-      pncTestEnableDevelopmentNetworkProtocols
-        <- Last <$> v .:? "TestEnableDevelopmentNetworkProtocols"
+      pncExperimentalProtocolsEnabled <- fmap Last $ do
+        failOnRemovedField v "TestEnableDevelopmentNetworkProtocols"
+          "TestEnableDevelopmentNetworkProtocols has been renamed to ExperimentalProtocolsEnabled"
+
+        v .:? "ExperimentalProtocolsEnabled"
 
       -- Blockfetch parameters
       pncMaxConcurrencyBulkSync <- Last <$> v .:? "MaxConcurrencyBulkSync"
@@ -276,7 +291,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty pncSocketPath
            , pncDiffusionMode
            , pncSnapshotInterval
-           , pncTestEnableDevelopmentNetworkProtocols
+           , pncExperimentalProtocolsEnabled
            , pncMaxConcurrencyBulkSync
            , pncMaxConcurrencyDeadline
            , pncLoggingSwitch = Last $ Just pncLoggingSwitch'
@@ -383,9 +398,12 @@ instance FromJSON PartialNodeConfiguration where
              }
 
       parseHardForkProtocol v = do
-        npcTestEnableDevelopmentHardForkEras
-          <- v .:? "TestEnableDevelopmentHardForkEras"
-               .!= False
+
+        npcExperimentalHardForksEnabled <- do
+          failOnRemovedField v "TestEnableDevelopmentHardForkEras"
+            "TestEnableDevelopmentHardForkEras has been renamed to ExperimentalHardForksEnabled"
+
+          v .:? "ExperimentalHardForksEnabled" .!= False
 
         npcTestShelleyHardForkAtEpoch   <- v .:? "TestShelleyHardForkAtEpoch"
         npcTestShelleyHardForkAtVersion <- v .:? "TestShelleyHardForkAtVersion"
@@ -405,27 +423,27 @@ instance FromJSON PartialNodeConfiguration where
         npcTestConwayHardForkAtEpoch   <- v .:? "TestConwayHardForkAtEpoch"
         npcTestConwayHardForkAtVersion <- v .:? "TestConwayHardForkAtVersion"
 
-        pure NodeHardForkProtocolConfiguration {
-               npcTestEnableDevelopmentHardForkEras,
+        pure NodeHardForkProtocolConfiguration
+          { npcExperimentalHardForksEnabled
 
-               npcTestShelleyHardForkAtEpoch,
-               npcTestShelleyHardForkAtVersion,
+          , npcTestShelleyHardForkAtEpoch
+          , npcTestShelleyHardForkAtVersion
 
-               npcTestAllegraHardForkAtEpoch,
-               npcTestAllegraHardForkAtVersion,
+          , npcTestAllegraHardForkAtEpoch
+          , npcTestAllegraHardForkAtVersion
 
-               npcTestMaryHardForkAtEpoch,
-               npcTestMaryHardForkAtVersion,
+          , npcTestMaryHardForkAtEpoch
+          , npcTestMaryHardForkAtVersion
 
-               npcTestAlonzoHardForkAtEpoch,
-               npcTestAlonzoHardForkAtVersion,
+          , npcTestAlonzoHardForkAtEpoch
+          , npcTestAlonzoHardForkAtVersion
 
-               npcTestBabbageHardForkAtEpoch,
-               npcTestBabbageHardForkAtVersion,
+          , npcTestBabbageHardForkAtEpoch
+          , npcTestBabbageHardForkAtVersion
 
-               npcTestConwayHardForkAtEpoch,
-               npcTestConwayHardForkAtVersion
-             }
+          , npcTestConwayHardForkAtEpoch
+          , npcTestConwayHardForkAtVersion
+          }
 
 -- | Default configuration is mainnet
 defaultPartialNodeConfiguration :: PartialNodeConfiguration
@@ -437,7 +455,7 @@ defaultPartialNodeConfiguration =
     , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty mempty
     , pncDiffusionMode = Last $ Just InitiatorAndResponderDiffusionMode
     , pncSnapshotInterval = Last $ Just DefaultSnapshotInterval
-    , pncTestEnableDevelopmentNetworkProtocols = Last $ Just False
+    , pncExperimentalProtocolsEnabled = Last $ Just False
     , pncTopologyFile = Last . Just $ TopologyFile "configuration/cardano/mainnet-topology.json"
     , pncProtocolFiles = mempty
     , pncValidateDB = mempty
@@ -510,9 +528,9 @@ makeNodeConfiguration pnc = do
     $ pncEnableP2P pnc
 
   -- TODO: This is not mandatory
-  testEnableDevelopmentNetworkProtocols <-
-    lastToEither "Missing TestEnableDevelopmentNetworkProtocols" $
-      pncTestEnableDevelopmentNetworkProtocols pnc
+  experimentalProtocols <-
+    lastToEither "Missing ExperimentalProtocolsEnabled" $
+      pncExperimentalProtocolsEnabled pnc
   return $ NodeConfiguration
              { ncConfigFile = configFile
              , ncTopologyFile = topologyFile
@@ -530,7 +548,7 @@ makeNodeConfiguration pnc = do
              , ncSocketConfig = socketConfig
              , ncDiffusionMode = diffusionMode
              , ncSnapshotInterval = snapshotInterval
-             , ncTestEnableDevelopmentNetworkProtocols = testEnableDevelopmentNetworkProtocols
+             , ncExperimentalProtocolsEnabled = experimentalProtocols
              , ncMaxConcurrencyBulkSync = getLast $ pncMaxConcurrencyBulkSync pnc
              , ncMaxConcurrencyDeadline = getLast $ pncMaxConcurrencyDeadline pnc
              , ncLoggingSwitch = loggingSwitch

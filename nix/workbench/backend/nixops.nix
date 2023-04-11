@@ -68,8 +68,8 @@ let
                minSeverity = "Debug";
                TurnOnLogMetrics = true;
 
-               TestEnableDevelopmentHardForkEras = true;
-               TestEnableDevelopmentNetworkProtocols = true;
+               ExperimentalHardForksEnabled = true;
+               ExperimentalProtocolsEnabled = true;
 
                inherit TraceBlockFetchProtocol;
 
