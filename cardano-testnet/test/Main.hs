@@ -5,6 +5,7 @@ module Main
   ) where
 
 import           Prelude
+import           System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
 import           Test.Tasty (TestTree)
 
 import qualified System.Environment as E
@@ -47,6 +48,8 @@ ingredients = T.defaultIngredients
 
 main :: IO ()
 main = do
+  hSetBuffering stdout LineBuffering
+  hSetEncoding stdout utf8
   args <- E.getArgs
 
   E.withArgs args $ tests >>= T.defaultMainWithIngredients ingredients
