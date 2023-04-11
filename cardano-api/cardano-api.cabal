@@ -132,6 +132,17 @@ library
                       , cardano-ledger-mary >= 1.1
                       , cardano-ledger-shelley >= 1.1.1
                       , cardano-protocol-tpraos >= 1.0.2
+                      -- , cardano-crypto-class ^>= 2.0
+                      -- , cardano-crypto-wrapper ^>= 1.4
+                      -- , cardano-data ^>= 0.1
+                      -- , cardano-ledger-alonzo ^>= 0.1
+                      -- , cardano-ledger-babbage ^>= 0.1
+                      -- , cardano-ledger-conway
+                      -- , cardano-ledger-byron ^>= 0.1
+                      -- , cardano-ledger-core ^>= 0.1
+                      -- , cardano-ledger-shelley ^>= 0.1
+                      -- , cardano-ledger-shelley-ma ^>= 0.1
+                      -- , cardano-protocol-tpraos >= 0.1
                       , cardano-slotting >= 0.1
                       , cardano-strict-containers >= 0.1
                       , cborg
@@ -173,6 +184,7 @@ library
                       , transformers-except ^>= 0.1.3
                       , typed-protocols ^>= 0.1
                       , unordered-containers >= 0.2.11
+                      -- , utf8-string
                       , vector
                       , yaml
 

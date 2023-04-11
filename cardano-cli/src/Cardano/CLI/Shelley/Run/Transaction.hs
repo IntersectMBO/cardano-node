@@ -23,6 +23,7 @@ import           Control.Monad.Trans (MonadTrans (..))
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, hoistMaybe, left,
                    newExceptT, onLeft, onNothing)
+import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.Bifunctor (Bifunctor (..))
 import qualified Data.ByteString.Char8 as BS
@@ -281,8 +282,8 @@ runTransactionCmd cmd =
                metadataSchema scriptFiles metadataFiles mProtocolParamsFile mUpProp out
     TxSign txinfile skfiles network txoutfile ->
       runTxSign txinfile skfiles network txoutfile
-    TxSubmit mNodeSocketPath anyConsensusModeParams network txFp ->
-      runTxSubmit mNodeSocketPath anyConsensusModeParams network txFp
+    TxSubmit mNodeSocketPath anyConsensusModeParams network txFp errorDetailFp ->
+      runTxSubmit mNodeSocketPath anyConsensusModeParams network txFp errorDetailFp
     TxCalculateMinFee txbody nw pParamsFile nInputs nOutputs nShelleyKeyWitnesses nByronKeyWitnesses ->
       runTxCalculateMinFee txbody nw pParamsFile nInputs nOutputs nShelleyKeyWitnesses nByronKeyWitnesses
     TxCalculateMinRequiredUTxO era pParamsFile txOuts -> runTxCalculateMinRequiredUTxO era pParamsFile txOuts
@@ -1111,8 +1112,9 @@ runTxSubmit
   -> AnyConsensusModeParams
   -> NetworkId
   -> FilePath
+  -> Maybe FilePath
   -> ExceptT ShelleyTxCmdError IO ()
-runTxSubmit (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network txFilePath = do
+runTxSubmit (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network txFilePath mErrorDetailFp = do
     txFile <- liftIO $ fileOrPipe txFilePath
     InAnyCardanoEra era tx <- lift (readFileTx txFile) & onLeft (left . ShelleyTxCmdCddlError)
     let cMode = AnyConsensusMode $ consensusModeOnly cModeParams
@@ -1131,7 +1133,12 @@ runTxSubmit (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network t
       Net.Tx.SubmitSuccess -> liftIO $ Text.putStrLn "Transaction successfully submitted."
       Net.Tx.SubmitFail reason ->
         case reason of
-          TxValidationErrorInMode err _eraInMode -> left . ShelleyTxCmdTxSubmitError . Text.pack $ show err
+          TxValidationErrorInMode err _eraInMode -> do
+            let errorAsText = Text.pack $ show err
+            forM_ mErrorDetailFp $ \errorDetailFp ->
+              liftIO $ LBS.writeFile errorDetailFp (Aeson.encode err)
+            left $ ShelleyTxCmdTxSubmitError errorAsText
+
           TxValidationEraMismatch mismatchErr -> left $ ShelleyTxCmdTxSubmitErrorEraMismatch mismatchErr
 
 -- ----------------------------------------------------------------------------

@@ -4,12 +4,10 @@
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -30,36 +28,21 @@ import           Cardano.Api (textShow)
 import qualified Cardano.Api as Api
 import           Cardano.Api.Orphans ()
 import qualified Cardano.Api.Shelley as Api
-import           Cardano.Ledger.Crypto (StandardCrypto)
-
-import           Cardano.Node.Tracing.Tracers.KESInfo ()
-import           Cardano.Slotting.Block (BlockNo (..))
-import           Cardano.Tracing.OrphanInstances.Common
-import           Cardano.Tracing.OrphanInstances.Consensus ()
-import           Cardano.Tracing.Render (renderTxId)
-
-import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
-import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
-import           Ouroboros.Consensus.Util.Condense (condense)
-import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, blockSlot)
-import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
-
-import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
-import qualified Ouroboros.Consensus.Protocol.Praos as Praos
-import           Ouroboros.Consensus.Protocol.TPraos (TPraosCannotForge (..))
-import           Ouroboros.Consensus.Shelley.Ledger hiding (TxId)
-import           Ouroboros.Consensus.Shelley.Ledger.Inspect
-import qualified Ouroboros.Consensus.Shelley.Protocol.Praos as Praos
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import qualified Cardano.Ledger.Allegra.Scripts as Allegra
 import qualified Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo
+import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure (..), AlonzoUtxoPredFailure,
+                   AlonzoUtxosPredFailure, AlonzoUtxowPredFailure (..))
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
+import           Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
+import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import           Cardano.Ledger.BaseTypes (activeSlotLog, strictMaybeToMaybe)
 import           Cardano.Ledger.Chain
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Crypto as Core
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import           Cardano.Protocol.TPraos.BHeader (LastAppliedBlock, labBlockNo)
@@ -73,17 +56,29 @@ import           Cardano.Ledger.Shelley.API
 
 import           Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
-import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure (..), AlonzoUtxoPredFailure,
-                   AlonzoUtxosPredFailure, AlonzoUtxowPredFailure (..))
-import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
-import           Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
-import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import           Cardano.Ledger.Conway.Governance (govActionIdToText)
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import           Cardano.Ledger.Shelley.Rules
+import           Cardano.Node.Tracing.Tracers.KESInfo ()
 import           Cardano.Protocol.TPraos.API (ChainTransitionError (ChainTransitionError))
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod))
 import           Cardano.Protocol.TPraos.Rules.Prtcl
+import           Cardano.Slotting.Block (BlockNo (..))
+import           Cardano.Tracing.OrphanInstances.Common
+import           Cardano.Tracing.OrphanInstances.Consensus ()
+import           Cardano.Tracing.Render (renderTxId)
+
+import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
+import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
+import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
+import qualified Ouroboros.Consensus.Protocol.Praos as Praos
+import           Ouroboros.Consensus.Protocol.TPraos (TPraosCannotForge (..))
+import           Ouroboros.Consensus.Shelley.Ledger hiding (TxId)
+import           Ouroboros.Consensus.Shelley.Ledger.Inspect
+import qualified Ouroboros.Consensus.Shelley.Protocol.Praos as Praos
+import           Ouroboros.Consensus.Util.Condense (condense)
+import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, blockSlot)
+import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
 {- HLINT ignore "Use :" -}
 
@@ -436,16 +431,6 @@ instance ( ShelleyBasedEra era
              , "network" .= network
              , "addrs"   .= addrs
              ]
-
-
-instance ToJSON Allegra.ValidityInterval where
-  toJSON vi =
-    Aeson.object $
-        [ "invalidBefore"    .= x | x <- mbfield (Allegra.invalidBefore    vi) ]
-     ++ [ "invalidHereafter" .= x | x <- mbfield (Allegra.invalidHereafter vi) ]
-    where
-      mbfield SNothing  = []
-      mbfield (SJust x) = [x]
 
 instance ( ShelleyBasedEra era
          , ToObject (PPUPPredFailure era)
@@ -1003,8 +988,6 @@ instance ( ToJSON (Alonzo.CollectError (Ledger.EraCrypto era))
   toObject verb (Alonzo.UpdateFailure pFailure) =
     toObject verb pFailure
 
-deriving newtype instance ToJSON Alonzo.IsValid
-
 instance ToJSON (Alonzo.CollectError StandardCrypto) where
   toJSON cError =
     case cError of
@@ -1053,30 +1036,6 @@ instance ToJSON (Alonzo.CollectError StandardCrypto) where
               Alonzo.TimeTranslationPastHorizon msg ->
                 String $ "Time translation requested past the horizon: " <> textShow msg
           ]
-
-instance ToJSON Alonzo.TagMismatchDescription where
-  toJSON tmd = case tmd of
-    Alonzo.PassedUnexpectedly ->
-      object
-        [ "kind" .= String "TagMismatchDescription"
-        , "error" .= String "PassedUnexpectedly"
-        ]
-    Alonzo.FailedUnexpectedly forReasons ->
-      object
-        [ "kind" .= String "TagMismatchDescription"
-        , "error" .= String "FailedUnexpectedly"
-        , "reconstruction" .= forReasons
-        ]
-
-instance ToJSON Alonzo.FailureDescription where
-  toJSON f = case f of
-    Alonzo.PlutusFailure t _bs ->
-      object
-        [ "kind" .= String "FailureDescription"
-        , "error" .= String "PlutusFailure"
-        , "description" .= t
-        -- , "reconstructionDetail" .= bs
-        ]
 
 instance ( Ledger.Era era
          , Show (PredicateFailure (Ledger.EraRule "LEDGERS" era))

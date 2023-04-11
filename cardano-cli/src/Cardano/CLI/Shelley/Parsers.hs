@@ -802,6 +802,7 @@ pTransaction envCli =
       <*> pConsensusModeParams
       <*> pNetworkId envCli
       <*> pTxSubmitFile
+      <*> optional pErrorDetailJsonFile
 
   pTransactionPolicyId :: Parser TransactionCmd
   pTransactionPolicyId = TxMintedPolicyId <$> pScript
@@ -2158,6 +2159,15 @@ pKesVerificationKeyFile =
       , Opt.internal
       ]
     ]
+
+pErrorDetailJsonFile :: Parser FilePath
+pErrorDetailJsonFile =
+  Opt.strOption
+    (  Opt.long "error-detail-out"
+    <> Opt.metavar "FILE"
+    <> Opt.help "Filepath of output file to which error detail should be written."
+    <> Opt.completer (Opt.bashCompleter "file")
+    )
 
 pTxSubmitFile :: Parser FilePath
 pTxSubmitFile =

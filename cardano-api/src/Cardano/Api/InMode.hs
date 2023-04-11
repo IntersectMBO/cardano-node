@@ -1,8 +1,17 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | Transactions in the context of a consensus mode, and other types used in
 -- the transaction submission protocol.
@@ -24,7 +33,15 @@ module Cardano.Api.InMode (
     fromConsensusApplyTxErr,
   ) where
 
+import           Data.Aeson (ToJSON (..))
+import qualified Data.Aeson as Aeson
 import           Data.SOP.Strict (NS (S, Z))
+
+import           Cardano.Api.Eras (ByronEra, ShelleyBasedEra (..), ShelleyLedgerEra)
+import           Cardano.Api.Modes
+import           Cardano.Api.Orphans ()
+import           Cardano.Api.Tx
+import           Cardano.Api.TxBody
 
 import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
@@ -37,12 +54,6 @@ import qualified Ouroboros.Consensus.Protocol.TPraos as TPraos
 import qualified Ouroboros.Consensus.Shelley.HFEras as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import qualified Ouroboros.Consensus.TypeFamilyWrappers as Consensus
-
-import           Cardano.Api.Eras
-import           Cardano.Api.Modes
-import           Cardano.Api.Tx
-import           Cardano.Api.TxBody
-
 
 -- ----------------------------------------------------------------------------
 -- Transactions in the context of a consensus mode
@@ -300,6 +311,16 @@ instance Show (TxValidationError era) where
         . showsPrec 11 err
         )
 
+instance ToJSON (TxValidationError era) where
+  toJSON txValidationErrorInMode = case txValidationErrorInMode of
+    ByronTxValidationError _applyTxError -> Aeson.Null -- TODO implement
+    ShelleyTxValidationError ShelleyBasedEraShelley (Consensus.ApplyTxError predicateFailures) -> toJSON (fmap toJSON predicateFailures)
+    ShelleyTxValidationError ShelleyBasedEraAllegra (Consensus.ApplyTxError predicateFailures) -> toJSON (fmap toJSON predicateFailures)
+    ShelleyTxValidationError ShelleyBasedEraMary (Consensus.ApplyTxError predicateFailures) -> toJSON (fmap toJSON predicateFailures)
+    ShelleyTxValidationError ShelleyBasedEraAlonzo (Consensus.ApplyTxError predicateFailures) -> toJSON (fmap toJSON predicateFailures)
+    ShelleyTxValidationError ShelleyBasedEraBabbage (Consensus.ApplyTxError _predicateFailures) -> Aeson.Null -- TODO implement
+    ShelleyTxValidationError ShelleyBasedEraConway (Consensus.ApplyTxError _predicateFailures) -> Aeson.Null -- TODO implement
+
 -- | A 'TxValidationError' in one of the eras supported by a given protocol
 -- mode.
 --
@@ -314,7 +335,6 @@ data TxValidationErrorInMode mode where
                              -> TxValidationErrorInMode mode
 
 deriving instance Show (TxValidationErrorInMode mode)
-
 
 fromConsensusApplyTxErr :: ConsensusBlockForMode mode ~ block
                         => Consensus.LedgerSupportsProtocol

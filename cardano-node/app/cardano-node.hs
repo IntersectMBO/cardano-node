@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 
+import           Prelude
+
 import           Options.Applicative
 import qualified Options.Applicative as Opt
 import           Options.Applicative.Help ((<$$>))

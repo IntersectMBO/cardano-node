@@ -1,11 +1,9 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -17,10 +15,11 @@ module Cardano.Node.Tracing.Tracers.KESInfo
    ) where
 
 import           Control.Monad.IO.Class (MonadIO)
-import           Data.Aeson (ToJSON (..), Value (..), (.=))
+import           Data.Aeson (Value (..), (.=))
 import           Data.Proxy (Proxy)
 import qualified Data.Text as Text
 
+import           Cardano.Api.Orphans ()
 import           Cardano.Logging
 import           Cardano.Node.Queries (GetKESInfo (..))
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod))
@@ -54,9 +53,6 @@ traceAsMaybeKESInfo pr (Trace tr) = Trace $
 -- --------------------------------------------------------------------------------
 -- -- KESInfo Tracer
 -- --------------------------------------------------------------------------------
-
-deriving newtype instance ToJSON KESPeriod
-
 
 instance LogFormatting HotKey.KESInfo where
   forMachine _dtal forgeStateInfo =
