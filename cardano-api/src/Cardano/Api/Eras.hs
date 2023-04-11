@@ -4,6 +4,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 
@@ -39,6 +40,7 @@ module Cardano.Api.Eras
 
     -- ** Mapping to era types from the Shelley ledger library
   , ShelleyLedgerEra
+  , eraProtVerLow
 
     -- * Cardano eras, as Byron vs Shelley-based
   , CardanoEraStyle(..)
@@ -56,6 +58,8 @@ import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
 import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 
+import qualified Cardano.Ledger.Api as L
+import qualified Cardano.Ledger.BaseTypes as L
 import           Ouroboros.Consensus.Shelley.Eras as Consensus (StandardAllegra, StandardAlonzo,
                    StandardBabbage, StandardConway, StandardMary, StandardShelley)
 
@@ -506,3 +510,16 @@ type family ShelleyLedgerEra era where
   ShelleyLedgerEra AlonzoEra  = Consensus.StandardAlonzo
   ShelleyLedgerEra BabbageEra = Consensus.StandardBabbage
   ShelleyLedgerEra ConwayEra  = Consensus.StandardConway
+
+
+-- | Lookup the lower major protocol version for the shelley based era. In other words
+-- this is the major protocol version that the era has started in.
+eraProtVerLow :: ShelleyBasedEra era -> L.Version
+eraProtVerLow era =
+  case era of
+    ShelleyBasedEraShelley -> L.eraProtVerLow @L.Shelley
+    ShelleyBasedEraAllegra -> L.eraProtVerLow @L.Allegra
+    ShelleyBasedEraMary    -> L.eraProtVerLow @L.Mary
+    ShelleyBasedEraAlonzo  -> L.eraProtVerLow @L.Alonzo
+    ShelleyBasedEraBabbage -> L.eraProtVerLow @L.Babbage
+    ShelleyBasedEraConway  -> L.eraProtVerLow @L.Conway

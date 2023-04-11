@@ -42,8 +42,8 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
-import           Cardano.Binary (DecoderError)
-import qualified Cardano.Binary as CBOR
+import           Cardano.Ledger.Binary (DecoderError)
+import qualified Cardano.Ledger.Binary as CBOR
 
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
@@ -158,7 +158,7 @@ deserialiseTx
 deserialiseTx era bs =
   case era of
     ByronEra -> ByronTx <$> CBOR.decodeFullAnnotatedBytes
-                              "Byron Tx" fromCBOR (LBS.fromStrict bs)
+                              CBOR.byronProtVer "Byron Tx" CBOR.decCBOR (LBS.fromStrict bs)
     _ -> deserialiseFromCBOR (AsTx ttoken) bs
  where
   ttoken :: AsType era
@@ -173,8 +173,8 @@ serialiseWitnessLedgerCddl sbe kw =
     }
  where
   cddlSerialiseWitness :: KeyWitness era -> ByteString
-  cddlSerialiseWitness (ShelleyBootstrapWitness _ wit) = CBOR.serialize' wit
-  cddlSerialiseWitness (ShelleyKeyWitness _ wit) = CBOR.serialize' wit
+  cddlSerialiseWitness (ShelleyBootstrapWitness era wit) = CBOR.serialize' (eraProtVerLow era) wit
+  cddlSerialiseWitness (ShelleyKeyWitness era wit) = CBOR.serialize' (eraProtVerLow era) wit
   cddlSerialiseWitness ByronKeyWitness{} = case sbe of {}
 
   genDesc :: KeyWitness era -> Text
@@ -201,11 +201,13 @@ deserialiseWitnessLedgerCddl era TextEnvelopeCddl{teCddlRawCBOR,teCddlDescriptio
   case teCddlDescription of
     "Key BootstrapWitness ShelleyEra" -> do
       w <- first TextEnvelopeCddlErrCBORDecodingError
-             $ CBOR.decodeAnnotator "Shelley Witness" fromCBOR (LBS.fromStrict teCddlRawCBOR)
+             $ CBOR.decodeFullAnnotator
+               (eraProtVerLow era) "Shelley Witness" CBOR.decCBOR (LBS.fromStrict teCddlRawCBOR)
       Right $ ShelleyBootstrapWitness era w
     "Key Witness ShelleyEra" -> do
       w <- first TextEnvelopeCddlErrCBORDecodingError
-             $ CBOR.decodeAnnotator"Shelley Witness" fromCBOR (LBS.fromStrict teCddlRawCBOR)
+             $ CBOR.decodeFullAnnotator
+               (eraProtVerLow era) "Shelley Witness" CBOR.decCBOR (LBS.fromStrict teCddlRawCBOR)
       Right $ ShelleyKeyWitness era w
     _ -> Left TextEnvelopeCddlUnknownKeyWitness
 

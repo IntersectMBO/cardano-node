@@ -74,7 +74,8 @@ import qualified Data.Attoparsec.ByteString.Char8 as Atto
 import           Control.Applicative (Alternative (..))
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import qualified Cardano.Ledger.Alonzo.Data as Alonzo
+import           Cardano.Ledger.Core (Era)
+import qualified Cardano.Ledger.Alonzo.Scripts.Data as Alonzo
 import qualified Cardano.Ledger.SafeHash as Ledger
 import           Ouroboros.Consensus.Shelley.Eras (StandardAlonzo, StandardCrypto)
 import qualified PlutusLedgerApi.V1 as Plutus
@@ -194,7 +195,7 @@ newtype ScriptBytesError = ScriptBytesError String deriving Show
 -- data i.e differing script data hashes due to the re-encoding being slightly
 -- different to the original encoding. See: https://github.com/input-output-hk/cardano-ledger/issues/2943
 
-toAlonzoData :: HashableScriptData -> Alonzo.Data ledgerera
+toAlonzoData :: Era ledgerera => HashableScriptData -> Alonzo.Data ledgerera
 toAlonzoData =
   either
   (\ e -> error $ "toAlonzoData: " <> show e)

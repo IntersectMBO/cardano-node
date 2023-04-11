@@ -42,6 +42,7 @@ import           Formatting (sformat, (%))
 import           Cardano.Api
 
 import qualified Cardano.Binary as Binary
+import qualified Cardano.Ledger.Binary.Decoding as LedgerBinary
 
 import qualified Cardano.Chain.Common as Common
 import           Cardano.Chain.Genesis as Genesis
@@ -255,8 +256,8 @@ fromCborTxAux lbs =
       <$> Binary.decodeFullDecoder "Cardano.Chain.UTxO.TxAux.fromCborTxAux"
                                  Binary.fromCBOR lbs
   where
-    annotationBytes :: Functor f => LB.ByteString -> f Binary.ByteSpan -> f B.ByteString
-    annotationBytes bytes = fmap (LB.toStrict . Binary.slice bytes)
+    annotationBytes :: Functor f => LB.ByteString -> f LedgerBinary.ByteSpan -> f B.ByteString
+    annotationBytes bytes = fmap (LB.toStrict . LedgerBinary.slice bytes)
 
 toCborTxAux :: UTxO.ATxAux ByteString -> LB.ByteString
 toCborTxAux = LB.fromStrict . UTxO.aTaAnnotation -- The ByteString anotation is the CBOR encoded version.

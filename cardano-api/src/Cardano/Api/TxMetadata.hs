@@ -43,9 +43,9 @@ module Cardano.Api.TxMetadata (
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.SerialiseCBOR
-import qualified Cardano.Binary as CBOR
-import qualified Cardano.Ledger.Shelley.Metadata as Shelley
+import           Cardano.Api.SerialiseCBOR (SerialiseAsCBOR (..))
+import qualified Cardano.Ledger.Binary as CBOR
+import qualified Cardano.Ledger.Shelley.TxAuxData as Shelley
 import           Control.Applicative (Alternative (..))
 import           Control.Monad (guard, when)
 import qualified Data.Aeson as Aeson
@@ -106,21 +106,27 @@ instance HasTypeProxy TxMetadata where
 
 instance SerialiseAsCBOR TxMetadata where
     serialiseToCBOR =
-          CBOR.serialize'
-        . (Shelley.Metadata :: Map Word64 Shelley.Metadatum -> Shelley.Metadata ())
-        -- The Shelley (Metadata era) is always polymorphic in era,
-        -- so we pick the unit type.
+          -- This is a workaround. There is a tiny chance that serialization could change
+          -- for Metadata in the future, depending on the era it is being used in. For now
+          -- we can pretend like it is the same for all eras starting with Shelley
+          --
+          -- Versioned cbor works only when we have protocol version available during
+          -- [de]serialization. The only two ways to fix this:
+          --
+          -- - Paramterize TxMetadata with era. This would allow us to get protocol version
+          --   from the type level
+          --
+          -- - Change SerialiseAsCBOR interface in such a way that it allows major
+          --   protocol version be supplied as an argument.
+          CBOR.serialize' CBOR.shelleyProtVer
         . toShelleyMetadata
         . (\(TxMetadata m) -> m)
 
     deserialiseFromCBOR AsTxMetadata bs =
           TxMetadata
         . fromShelleyMetadata
-        . (\(Shelley.Metadata m) -> m)
-      <$> (CBOR.decodeAnnotator "TxMetadata" fromCBOR (LBS.fromStrict bs)
-           :: Either CBOR.DecoderError (Shelley.Metadata ()))
-        -- The Shelley (Metadata era) is always polymorphic in era,
-        -- so we pick the unit type.
+      <$> (CBOR.decodeFullDecoder' CBOR.shelleyProtVer "TxMetadata" CBOR.decCBOR bs
+           :: Either CBOR.DecoderError (Map Word64 Shelley.Metadatum))
 
 makeTransactionMetadata :: Map Word64 TxMetadataValue -> TxMetadata
 makeTransactionMetadata = TxMetadata

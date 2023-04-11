@@ -8,8 +8,6 @@ module Test.Gen.Cardano.Api
   , genAlonzoGenesis
   ) where
 
-import           Cardano.Api.Shelley as Api
-
 import qualified Data.Map.Strict as Map
 import           Data.Word (Word64)
 
@@ -21,18 +19,19 @@ import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Coin as Ledger
-import           Cardano.Ledger.Shelley.Metadata (Metadata (..), Metadatum (..))
+import qualified Cardano.Ledger.Alonzo.Core as Ledger
+import           Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData (..), Metadatum (..))
 
 import           Hedgehog (Gen, Range)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Internal.Range as Range
 
-genMetadata :: Gen (Metadata era)
+genMetadata :: Ledger.Era era => Gen (ShelleyTxAuxData era)
 genMetadata = do
   numberOfIndices <- Gen.integral (Range.linear 1 15)
   let indices = map (\i -> fromIntegral i :: Word64) [1..numberOfIndices]
   mData <- Gen.list (Range.singleton numberOfIndices) genMetadatum
-  return . Metadata . Map.fromList $ zip indices mData
+  return . ShelleyTxAuxData . Map.fromList $ zip indices mData
 
 genMetadatum :: Gen Metadatum
 genMetadatum = do
@@ -62,9 +61,6 @@ genPrice = do
     Nothing -> fail "genPrice: genRational should give us a bounded rational"
     Just p -> pure p
 
-genLanguage :: Gen Alonzo.Language
-genLanguage = return Alonzo.PlutusV1
-
 genPrices :: Gen Alonzo.Prices
 genPrices = do
   prMem'   <- genPrice
@@ -86,12 +82,11 @@ genExUnits = do
 
 genCostModels :: Gen Alonzo.CostModels
 genCostModels = do
-  CostModel cModel <- genCostModel
-  lang <- genLanguage
-  case Alonzo.mkCostModel lang cModel of
-    Left err -> error $ "genCostModels: " <> show err
-    Right alonzoCostModel ->
-      Alonzo.CostModels . conv <$> Gen.list (Range.linear 1 3) (return alonzoCostModel)
+  alonzoCostModel <- genCostModel
+  Alonzo.CostModels
+    <$> (conv <$> Gen.list (Range.linear 1 3) (return alonzoCostModel))
+    <*> pure mempty
+    <*> pure mempty
  where
   conv :: [Alonzo.CostModel] -> Map.Map Alonzo.Language Alonzo.CostModel
   conv [] = mempty
@@ -110,12 +105,12 @@ genAlonzoGenesis = do
   maxCollateralInputs' <- Gen.integral (Range.linear 0 10)
 
   return Alonzo.AlonzoGenesis
-    { Alonzo.coinsPerUTxOWord = coinsPerUTxOWord
-    , Alonzo.costmdls = Alonzo.CostModels mempty
-    , Alonzo.prices = prices'
-    , Alonzo.maxTxExUnits = maxTxExUnits'
-    , Alonzo.maxBlockExUnits = maxBlockExUnits'
-    , Alonzo.maxValSize = maxValSize'
-    , Alonzo.collateralPercentage = collateralPercentage'
-    , Alonzo.maxCollateralInputs = maxCollateralInputs'
+    { Alonzo.agCoinsPerUTxOWord = Ledger.CoinPerWord coinsPerUTxOWord
+    , Alonzo.agCostModels = Alonzo.CostModels mempty mempty mempty
+    , Alonzo.agPrices = prices'
+    , Alonzo.agMaxTxExUnits = maxTxExUnits'
+    , Alonzo.agMaxBlockExUnits = maxBlockExUnits'
+    , Alonzo.agMaxValSize = maxValSize'
+    , Alonzo.agCollateralPercentage = collateralPercentage'
+    , Alonzo.agMaxCollateralInputs = maxCollateralInputs'
     }

@@ -463,7 +463,8 @@ module Cardano.Api (
     ExecutionUnits(..),
     ExecutionUnitPrices(..),
     CostModel(..),
-    validateCostModel,
+    toAlonzoCostModel,
+    fromAlonzoCostModel,
 
     -- ** Script addresses
     -- | Making addresses from scripts.

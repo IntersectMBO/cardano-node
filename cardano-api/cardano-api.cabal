@@ -109,7 +109,6 @@ library
 
   build-depends:        aeson             >= 1.5.6.0
                       , aeson-pretty      >= 0.8.5
-                      , array
                       , attoparsec
                       , base16-bytestring >= 1.0
                       , base58-bytestring
@@ -117,17 +116,20 @@ library
                       , bytestring
                       , cardano-binary
                       , cardano-crypto
-                      , cardano-crypto-class ^>= 2.0
-                      , cardano-crypto-wrapper ^>= 1.4
-                      , cardano-data ^>= 0.1
-                      , cardano-ledger-alonzo ^>= 0.1
-                      , cardano-ledger-babbage ^>= 0.1
-                      , cardano-ledger-byron ^>= 0.1
-                      , cardano-ledger-conway
-                      , cardano-ledger-core ^>= 0.1
-                      , cardano-ledger-shelley ^>= 0.1
-                      , cardano-ledger-shelley-ma ^>= 0.1
-                      , cardano-protocol-tpraos >= 0.1
+                      , cardano-crypto-class ^>= 2.1
+                      , cardano-crypto-wrapper ^>= 1.5
+                      , cardano-data ^>= 1.0
+                      , cardano-ledger-alonzo ^>= 1.1
+                      , cardano-ledger-allegra ^>= 1.1
+                      , cardano-ledger-api >= 1.1
+                      , cardano-ledger-babbage ^>= 1.1
+                      , cardano-ledger-binary ^>= 1.1
+                      , cardano-ledger-byron ^>= 1.0
+                      , cardano-ledger-conway ^>= 1.1
+                      , cardano-ledger-core ^>= 1.1
+                      , cardano-ledger-mary ^>= 1.1
+                      , cardano-ledger-shelley ^>= 1.1
+                      , cardano-protocol-tpraos >= 1.0.1
                       , cardano-slotting >= 0.1
                       , cardano-strict-containers ^>= 0.1
                       , cborg
@@ -163,7 +165,7 @@ library
                       , random
                       , scientific
                       , serialise
-                      , small-steps ^>= 0.1
+                      , small-steps ^>= 1.0
                       , stm
                       , text
                       , time
@@ -172,7 +174,6 @@ library
                       , typed-protocols ^>= 0.1
                       , unordered-containers >= 0.2.11
                       , vector
-                      , vector-map ^>= 0.1
                       , yaml
 
 library gen
@@ -193,14 +194,14 @@ library gen
                       , base16-bytestring
                       , bytestring
                       , cardano-api
-                      , cardano-binary
-                      , cardano-crypto-class ^>= 2.0
-                      , cardano-crypto-test ^>= 1.4
-                      , cardano-ledger-alonzo ^>= 0.1
-                      , cardano-ledger-alonzo-test ^>= 0.1
-                      , cardano-ledger-byron-test ^>= 1.4
-                      , cardano-ledger-core ^>= 0.1
-                      , cardano-ledger-shelley ^>= 0.1
+                      , cardano-binary >= 1.6 && < 1.8
+                      , cardano-crypto-class ^>= 2.1
+                      , cardano-crypto-test ^>= 1.5
+                      , cardano-ledger-alonzo ^>= 1.1
+                      , cardano-ledger-alonzo-test
+                      , cardano-ledger-byron-test ^>= 1.5
+                      , cardano-ledger-core ^>= 1.1
+                      , cardano-ledger-shelley ^>= 1.1
                       , containers
                       , hedgehog
                       , hedgehog-extras
@@ -217,20 +218,20 @@ test-suite cardano-api-test
                       , cardano-api
                       , cardano-api:gen
                       , cardano-crypto
-                      , cardano-crypto-class ^>= 2.0
-                      , cardano-crypto-test ^>= 1.4
-                      , cardano-crypto-tests ^>= 2.0
-                      , cardano-data ^>= 0.1
-                      , cardano-ledger-alonzo ^>= 0.1
-                      , cardano-ledger-core ^>= 0.1
-                      , cardano-ledger-shelley ^>= 0.1
-                      , cardano-ledger-shelley-test ^>= 0.1
+                      , cardano-crypto-class ^>= 2.1
+                      , cardano-crypto-test ^>= 1.5
+                      , cardano-crypto-tests ^>= 2.1
+                      , cardano-data ^>= 1.0
+                      , cardano-ledger-api ^>= 1.1
+                      , cardano-ledger-core:{cardano-ledger-core, testlib} ^>= 1.1
+                      , cardano-ledger-shelley-test ^>= 1.1
                       , cardano-slotting ^>= 0.1
                       , containers
                       , hedgehog
                       , hedgehog-extras ^>= 0.4
+                      , hedgehog-quickcheck
                       , mtl
-                      , ouroboros-consensus
+                      , microlens
                       , ouroboros-consensus-shelley
                       , QuickCheck
                       , tasty

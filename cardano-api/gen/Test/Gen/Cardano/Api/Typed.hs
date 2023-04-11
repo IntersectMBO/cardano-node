@@ -812,8 +812,8 @@ genProtocolParameters =
     <*> genNat
     <*> genNat
     <*> genNat
-    <*> genNat
-    <*> genNat
+    <*> genLovelace
+    <*> genLovelace
     <*> Gen.maybe genLovelace
     <*> genLovelace
     <*> genLovelace
@@ -843,8 +843,8 @@ genProtocolParametersUpdate = do
   protocolUpdateMaxBlockHeaderSize  <- Gen.maybe genNat
   protocolUpdateMaxBlockBodySize    <- Gen.maybe genNat
   protocolUpdateMaxTxSize           <- Gen.maybe genNat
-  protocolUpdateTxFeeFixed          <- Gen.maybe genNat
-  protocolUpdateTxFeePerByte        <- Gen.maybe genNat
+  protocolUpdateTxFeeFixed          <- Gen.maybe genLovelace
+  protocolUpdateTxFeePerByte        <- Gen.maybe genLovelace
   protocolUpdateMinUTxOValue        <- Gen.maybe genLovelace
   protocolUpdateStakeAddressDeposit <- Gen.maybe genLovelace
   protocolUpdateStakePoolDeposit    <- Gen.maybe genLovelace
@@ -876,14 +876,14 @@ genUpdateProposal =
                      <*> genProtocolParametersUpdate)
     <*> genEpochNo
 
-genCostModel :: Gen CostModel
+genCostModel :: Gen Alonzo.CostModel
 genCostModel = do
   let costModelParams = Alonzo.getCostModelParams Plutus.testingCostModelV1
   eCostModel <- Alonzo.mkCostModel <$> genPlutusLanguage
                                    <*> mapM (const $ Gen.integral (Range.linear 0 5000)) costModelParams
   case eCostModel of
     Left err -> error $ "genCostModel: " <> show err
-    Right cModel -> return . CostModel $ Alonzo.getCostModelParams cModel
+    Right cModel -> return cModel
 
 genPlutusLanguage :: Gen Language
 genPlutusLanguage = Gen.element [PlutusV1, PlutusV2]
@@ -892,7 +892,7 @@ _genCostModels :: Gen (Map AnyPlutusScriptVersion CostModel)
 _genCostModels =
     Gen.map (Range.linear 0 (length plutusScriptVersions))
             ((,) <$> Gen.element plutusScriptVersions
-                 <*> genCostModel)
+                 <*> (Api.fromAlonzoCostModel <$> genCostModel))
   where
     plutusScriptVersions :: [AnyPlutusScriptVersion]
     plutusScriptVersions = [minBound..maxBound]

@@ -4,7 +4,7 @@
         "poolDeposit": 0,
         "protocolVersion": {
             "minor": 0,
-            "major": 0
+            "major": 2
         },
         "minUTxOValue": 0,
         "decentralisationParam": 1.9e-2,

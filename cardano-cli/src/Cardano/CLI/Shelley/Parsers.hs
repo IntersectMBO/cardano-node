@@ -2957,7 +2957,7 @@ pProtocolParametersUpdate =
     <*> optional pMaxBodySize
     <*> optional pMaxTransactionSize
     <*> optional pMinFeeConstantFactor
-    <*> optional pMinFeeLinearFactor
+    <*> optional pMinFeePerByteFactor
     <*> optional pMinUTxOValue
     <*> optional pKeyRegistDeposit
     <*> optional pPoolDeposit
@@ -2986,17 +2986,17 @@ pCostModels =
     <> Opt.completer (Opt.bashCompleter "file")
     )
 
-pMinFeeLinearFactor :: Parser Natural
-pMinFeeLinearFactor =
-    Opt.option Opt.auto
+pMinFeePerByteFactor :: Parser Lovelace
+pMinFeePerByteFactor =
+    Opt.option (readerFromParsecParser parseLovelace)
       (  Opt.long "min-fee-linear"
-      <> Opt.metavar "NATURAL"
-      <> Opt.help "The linear factor for the minimum fee calculation."
+      <> Opt.metavar "LOVELACE"
+      <> Opt.help "The linear factor per byte for the minimum fee calculation."
       )
 
-pMinFeeConstantFactor :: Parser Natural
+pMinFeeConstantFactor :: Parser Lovelace
 pMinFeeConstantFactor =
-    Opt.option Opt.auto
+    Opt.option (readerFromParsecParser parseLovelace)
       (  Opt.long "min-fee-constant"
       <> Opt.metavar "LOVELACE"
       <> Opt.help "The constant factor for the minimum fee calculation."

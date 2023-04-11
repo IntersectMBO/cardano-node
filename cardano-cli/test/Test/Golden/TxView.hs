@@ -102,7 +102,7 @@ golden_view_shelley = let
         , "--pool-influence", "82/83"
         , "--pool-reg-deposit", "83"
         , "--pool-retirement-epoch-boundary", "84"
-        , "--protocol-major-version", "85"
+        , "--protocol-major-version", "8"
         , "--protocol-minor-version", "86"
         , "--treasury-expansion", "87/88"
         ]

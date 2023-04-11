@@ -63,16 +63,16 @@ import           Data.String (fromString)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
-import           Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, getCurrentTime,
-                   secondsToNominalDiffTime)
+import           Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, getCurrentTime)
 import           Data.Word (Word64)
 import           GHC.Generics (Generic)
+import           Lens.Micro ((^.))
 import qualified System.IO as IO
 import qualified System.Random as Random
 import           System.Random (StdGen)
 import           Text.Read (readMaybe)
 
-import           Cardano.Binary (Annotated (Annotated), ToCBOR (..))
+import           Cardano.Ledger.Binary (Annotated (Annotated), ToCBOR (..))
 
 import qualified Cardano.Crypto as CC
 import           Cardano.Crypto.Hash (HashAlgorithm)
@@ -94,17 +94,16 @@ import           Cardano.Api.Byron (toByronLovelace, toByronProtocolMagicId,
                    toByronRequiresNetworkMagic)
 import           Cardano.Api.Shelley
 
-import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesisStaking (..))
 
 import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.Coin (Coin (..))
-import           Cardano.Ledger.Conway.Genesis ()
 import qualified Cardano.Ledger.Conway.Genesis as Conway
+import           Cardano.Ledger.Core (ppMinUTxOValueL)
 import qualified Cardano.Ledger.Keys as Ledger
 import qualified Cardano.Ledger.Shelley.API as Ledger
-import qualified Cardano.Ledger.Shelley.PParams as Shelley
+import           Cardano.Ledger.Shelley.Genesis (secondsToNominalDiffTimeMicro)
 
 import           Cardano.Ledger.Crypto (ADDRHASH, Crypto, StandardCrypto)
 import           Cardano.Ledger.Era ()
@@ -575,14 +574,14 @@ runGenesisCreateCardano (GenesisDir rootdir)
       , sgEpochLength = EpochSize $ floor $ (fromIntegral (unBlockCount mSecurity) * 10) / mSlotCoeff
       , sgMaxLovelaceSupply = 45000000000000000
       , sgSystemStart = getSystemStart start
-      , sgSlotLength = secondsToNominalDiffTime $ MkFixed (fromIntegral slotLength) * 1000000000
+      , sgSlotLength = secondsToNominalDiffTimeMicro $ MkFixed (fromIntegral slotLength) * 1000
       }
   shelleyGenesisTemplate <- liftIO $ overrideShelleyGenesis . fromRight (error "shelley genesis template not found") <$> readAndDecodeShelleyGenesis shelleyGenesisT
   alonzoGenesis <- readAlonzoGenesis alonzoGenesisT
   conwayGenesis <- readConwayGenesis conwayGenesisT
   (delegateMap, vrfKeys, kesKeys, opCerts) <- liftIO $ generateShelleyNodeSecrets shelleyDelegateKeys shelleyGenesisvkeys
   let
-    shelleyGenesis :: ShelleyGenesis StandardShelley
+    shelleyGenesis :: ShelleyGenesis StandardCrypto
     shelleyGenesis = updateTemplate start delegateMap Nothing [] mempty 0 [] [] shelleyGenesisTemplate
 
   liftIO $ do
@@ -761,8 +760,8 @@ runGenesisCreateStaked (GenesisDir rootdir)
 
   stuffedUtxoAddrs <- liftIO $ Lazy.replicateM (fromIntegral numStuffedUtxo) genStuffedAddress
 
-  let stake = second Ledger._poolId . mkDelegationMapEntry <$> delegations
-      stakePools = [ (Ledger._poolId poolParams', poolParams') | poolParams' <- snd . mkDelegationMapEntry <$> delegations ]
+  let stake = second Ledger.ppId . mkDelegationMapEntry <$> delegations
+      stakePools = [ (Ledger.ppId poolParams', poolParams') | poolParams' <- snd . mkDelegationMapEntry <$> delegations ]
       delegAddrs = dInitialUtxoAddr <$> delegations
       !shelleyGenesis =
         updateCreateStakedOutputTemplate
@@ -925,16 +924,16 @@ buildPoolParams nw dir index specifiedRelays = do
            . newExceptT $ readFileTextEnvelope (AsVerificationKey AsStakeKey) poolRewardVKF
 
     pure Ledger.PoolParams
-      { Ledger._poolId     = Ledger.hashKey poolColdVK
-      , Ledger._poolVrf    = Ledger.hashVerKeyVRF poolVrfVK
-      , Ledger._poolPledge = Ledger.Coin 0
-      , Ledger._poolCost   = Ledger.Coin 0
-      , Ledger._poolMargin = minBound
-      , Ledger._poolRAcnt  =
+      { Ledger.ppId          = Ledger.hashKey poolColdVK
+      , Ledger.ppVrf         = Ledger.hashVerKeyVRF poolVrfVK
+      , Ledger.ppPledge      = Ledger.Coin 0
+      , Ledger.ppCost        = Ledger.Coin 0
+      , Ledger.ppMargin      = minBound
+      , Ledger.ppRewardAcnt  =
           toShelleyStakeAddr $ makeStakeAddress nw $ StakeCredentialByKey (verificationKeyHash rewardsSVK)
-      , Ledger._poolOwners = mempty
-      , Ledger._poolRelays = lookupPoolRelay specifiedRelays
-      , Ledger._poolMD     = Ledger.SNothing
+      , Ledger.ppOwners      = mempty
+      , Ledger.ppRelays      = lookupPoolRelay specifiedRelays
+      , Ledger.ppMetadata    = Ledger.SNothing
       }
  where
    lookupPoolRelay
@@ -1006,8 +1005,8 @@ getCurrentTimePlus30 =
 -- and if not found creates a default Shelley genesis.
 readShelleyGenesisWithDefault
   :: FilePath
-  -> (ShelleyGenesis StandardShelley -> ShelleyGenesis StandardShelley)
-  -> ExceptT ShelleyGenesisCmdError IO (ShelleyGenesis StandardShelley)
+  -> (ShelleyGenesis StandardCrypto -> ShelleyGenesis StandardCrypto)
+  -> ExceptT ShelleyGenesisCmdError IO (ShelleyGenesis StandardCrypto)
 readShelleyGenesisWithDefault fpath adjustDefaults = do
     newExceptT (readAndDecodeShelleyGenesis fpath)
       `catchError` \err ->
@@ -1016,7 +1015,7 @@ readShelleyGenesisWithDefault fpath adjustDefaults = do
             | isDoesNotExistError ioe -> writeDefault
           _                           -> left err
   where
-    defaults :: ShelleyGenesis StandardShelley
+    defaults :: ShelleyGenesis StandardCrypto
     defaults = adjustDefaults shelleyGenesisDefaults
 
     writeDefault = do
@@ -1026,7 +1025,7 @@ readShelleyGenesisWithDefault fpath adjustDefaults = do
 
 readAndDecodeShelleyGenesis
   :: FilePath
-  -> IO (Either ShelleyGenesisCmdError (ShelleyGenesis StandardShelley))
+  -> IO (Either ShelleyGenesisCmdError (ShelleyGenesis StandardCrypto))
 readAndDecodeShelleyGenesis fpath = runExceptT $ do
   lbs <- handleIOExceptT (ShelleyGenesisCmdGenesisFileReadError . FileIOError fpath) $ LBS.readFile fpath
   firstExceptT (ShelleyGenesisCmdGenesisFileDecodeError fpath . Text.pack)
@@ -1041,8 +1040,8 @@ updateTemplate
     -> Lovelace -- ^ Number of UTxO Addresses for delegation
     -> [AddressInEra ShelleyEra] -- ^ UTxO Addresses for delegation
     -> [AddressInEra ShelleyEra] -- ^ Stuffed UTxO addresses
-    -> ShelleyGenesis StandardShelley -- ^ Template from which to build a genesis
-    -> ShelleyGenesis StandardShelley -- ^ Updated genesis
+    -> ShelleyGenesis StandardCrypto -- ^ Template from which to build a genesis
+    -> ShelleyGenesis StandardCrypto -- ^ Updated genesis
 updateTemplate (SystemStart start)
                genDelegMap mAmountNonDeleg utxoAddrsNonDeleg
                poolSpecs (Lovelace amountDeleg) utxoAddrsDeleg stuffedUtxoAddrs
@@ -1062,9 +1061,9 @@ updateTemplate (SystemStart start)
           , sgStaking =
             ShelleyGenesisStaking
               { sgsPools = ListMap.fromList
-                            [ (Ledger._poolId poolParams, poolParams)
+                            [ (Ledger.ppId poolParams, poolParams)
                             | poolParams <- Map.elems poolSpecs ]
-              , sgsStake = ListMap.fromMap $ Ledger._poolId <$> poolSpecs
+              , sgsStake = ListMap.fromMap $ Ledger.ppId <$> poolSpecs
               }
           , sgProtocolParams = pparamsFromTemplate
           }
@@ -1098,7 +1097,7 @@ updateTemplate (SystemStart start)
 
     mkStuffedUtxo :: [AddressInEra ShelleyEra] -> [(AddressInEra ShelleyEra, Lovelace)]
     mkStuffedUtxo xs = (, Lovelace minUtxoVal) <$> xs
-      where Coin minUtxoVal = Shelley._minUTxOValue $ sgProtocolParams template
+      where Coin minUtxoVal = sgProtocolParams template ^. ppMinUTxOValueL
 
     shelleyDelKeys =
       Map.fromList
@@ -1122,8 +1121,8 @@ updateCreateStakedOutputTemplate
     -> Int -- ^ Number of UTxO address for delegationg
     -> [AddressInEra ShelleyEra] -- ^ UTxO address for delegationg
     -> [AddressInEra ShelleyEra] -- ^ Stuffed UTxO addresses
-    -> ShelleyGenesis StandardShelley -- ^ Template from which to build a genesis
-    -> ShelleyGenesis StandardShelley -- ^ Updated genesis
+    -> ShelleyGenesis StandardCrypto -- ^ Template from which to build a genesis
+    -> ShelleyGenesis StandardCrypto -- ^ Updated genesis
 updateCreateStakedOutputTemplate
   (SystemStart start)
   genDelegMap mAmountNonDeleg nUtxoAddrsNonDeleg utxoAddrsNonDeleg pools stake
@@ -1169,7 +1168,7 @@ updateCreateStakedOutputTemplate
 
     mkStuffedUtxo :: [AddressInEra ShelleyEra] -> [(AddressInEra ShelleyEra, Lovelace)]
     mkStuffedUtxo xs = (, Lovelace minUtxoVal) <$> xs
-      where Coin minUtxoVal = Shelley._minUTxOValue $ sgProtocolParams template
+      where Coin minUtxoVal = sgProtocolParams template ^. ppMinUTxOValueL
 
     shelleyDelKeys = Map.fromList
       [ (gh, Ledger.GenDelegPair gdh h)
@@ -1379,7 +1378,7 @@ renderProtocolParamsError (ProtocolParamsErrorGenesis err) =
 readProtocolParametersSourceSpec :: ProtocolParamsSourceSpec
                                  -> ExceptT ProtocolParamsError IO ProtocolParameters
 readProtocolParametersSourceSpec (ParamsFromGenesis (GenesisFile f)) =
-  fromShelleyPParams . sgProtocolParams
+  fromLedgerPParams ShelleyBasedEraShelley . sgProtocolParams
     <$> firstExceptT ProtocolParamsErrorGenesis (readShelleyGenesisWithDefault f id)
 readProtocolParametersSourceSpec (ParamsFromFile f) = readProtocolParameters f
 
