@@ -63,6 +63,7 @@ module Test.Gen.Cardano.Api.Typed
   , genShelleyWitness
   , genShelleyWitnessSigningKey
   , genSignedQuantity
+  , genSignedNonZeroQuantity
   , genSigningKey
   , genSlotNo
   , genStakeAddress
@@ -81,6 +82,7 @@ module Test.Gen.Cardano.Api.Typed
   , genTxMetadataInEra
   , genTxMintValue
   , genLovelace
+  , genPositiveLovelace
   , genValue
   , genValueDefault
   , genVerificationKey
@@ -100,6 +102,7 @@ module Test.Gen.Cardano.Api.Typed
   , genTxValidityUpperBound
   , genTxWithdrawals
   , genUnsignedQuantity
+  , genPositiveQuantity
   , genValueForMinting
   , genValueForTxOut
   , genWitnesses
@@ -178,6 +181,9 @@ genKESPeriod = KESPeriod <$> Gen.word Range.constantBounded
 
 genLovelace :: Gen Lovelace
 genLovelace = Lovelace <$> Gen.integral (Range.linear 0 5000)
+
+genPositiveLovelace :: Gen Lovelace
+genPositiveLovelace = Lovelace <$> Gen.integral (Range.linear 1 5000)
 
 
 ----------------------------------------------------------------------------
@@ -333,8 +339,18 @@ genQuantity range = fromInteger <$> Gen.integral range
 genSignedQuantity :: Gen Quantity
 genSignedQuantity = genQuantity (Range.constantFrom 0 (-2) 2)
 
+-- | Generate a positive or negative, but not zero quantity.
+genSignedNonZeroQuantity :: Gen Quantity
+genSignedNonZeroQuantity =
+  Gen.choice [ genQuantity (Range.constant (-2) (-1))
+             , genQuantity (Range.constant 1 2)
+             ]
+
 genUnsignedQuantity :: Gen Quantity
 genUnsignedQuantity = genQuantity (Range.constant 0 2)
+
+genPositiveQuantity :: Gen Quantity
+genPositiveQuantity = genQuantity (Range.constant 1 2)
 
 genValue :: Gen AssetId -> Gen Quantity -> Gen Value
 genValue genAId genQuant =
@@ -344,12 +360,12 @@ genValue genAId genQuant =
 
 -- | Generate a 'Value' with any asset ID and a positive or negative quantity.
 genValueDefault :: Gen Value
-genValueDefault = genValue genAssetId genSignedQuantity
+genValueDefault = genValue genAssetId genSignedNonZeroQuantity
 
 -- | Generate a 'Value' suitable for minting, i.e. non-ADA asset ID and a
 -- positive or negative quantity.
 genValueForMinting :: Gen Value
-genValueForMinting = genValue genAssetIdNoAda genSignedQuantity
+genValueForMinting = genValue genAssetIdNoAda genSignedNonZeroQuantity
   where
     genAssetIdNoAda :: Gen AssetId
     genAssetIdNoAda = AssetId <$> genPolicyId <*> genAssetName
@@ -357,7 +373,13 @@ genValueForMinting = genValue genAssetIdNoAda genSignedQuantity
 -- | Generate a 'Value' suitable for usage in a transaction output, i.e. any
 -- asset ID and a positive quantity.
 genValueForTxOut :: Gen Value
-genValueForTxOut = genValue genAssetId genUnsignedQuantity
+genValueForTxOut = do
+  -- Generate a potentially empty list with multi assets
+  val <- genValue genAssetId genPositiveQuantity
+  -- Generate at least one positive ADA, without it Value in TxOut makes no sense
+  -- and will fail deserialization starting with ConwayEra
+  ada <- (,) AdaAssetId <$> genPositiveQuantity
+  pure $ valueFromList (ada : valueToList val)
 
 
 -- Note that we expect to sometimes generate duplicate policy id keys since we
@@ -464,7 +486,7 @@ genTxIndex = TxIx . fromIntegral <$> Gen.word16 Range.constantBounded
 genTxOutValue :: CardanoEra era -> Gen (TxOutValue era)
 genTxOutValue era =
   case multiAssetSupportedInEra era of
-    Left adaOnlyInEra     -> TxOutAdaOnly adaOnlyInEra <$> genLovelace
+    Left adaOnlyInEra     -> TxOutAdaOnly adaOnlyInEra <$> genPositiveLovelace
     Right multiAssetInEra -> TxOutValue multiAssetInEra <$> genValueForTxOut
 
 genTxOutTxContext :: CardanoEra era -> Gen (TxOut CtxTx era)
@@ -660,7 +682,7 @@ genTxTotalCollateral era =
   case totalAndReturnCollateralSupportedInEra  era of
     Nothing -> return TxTotalCollateralNone
     Just supp ->
-      TxTotalCollateral supp <$> genLovelace
+      TxTotalCollateral supp <$> genPositiveLovelace
 
 genTxFee :: CardanoEra era -> Gen (TxFee era)
 genTxFee era =

@@ -82,6 +82,9 @@
 - **Breaking change** - `calculateMinimumUTxO` no longer fails, it is a total computation.
   ([PR 5013](https://github.com/input-output-hk/cardano-node/pull/5013))
 
+- New generators in `gen` sublibrary: `genPositiveLovelace`, `genPositiveQuantity` and
+  `genSignedNonZeroQuantity`. ([PR 5013](https://github.com/input-output-hk/cardano-node/pull/5013))
+
 ### Bugs
 
 - Allow reading text envelopes from pipes ([PR 4384](https://github.com/input-output-hk/cardano-node/pull/4384))
