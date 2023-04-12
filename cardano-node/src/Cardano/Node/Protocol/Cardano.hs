@@ -229,7 +229,10 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           -- version that this node will declare that it understands, when it
           -- is in the Babbage era. Since Babbage is currently the last known
           -- protocol version then this is also the Babbage protocol version.
-          Praos.babbageProtVer = ProtVer (natVersion @8) 0,
+          Praos.babbageProtVer =
+            if npcExperimentalHardForksEnabled
+              then ProtVer (natVersion @9) 0
+              else ProtVer (natVersion @8) 0,
           Praos.babbageMaxTxCapacityOverrides =
             TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
@@ -238,10 +241,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           -- version that this node will declare that it understands, when it
           -- is in the Babbage era. Since Babbage is currently the last known
           -- protocol version then this is also the Babbage protocol version.
-          Praos.conwayProtVer =
-            if npcExperimentalHardForksEnabled
-              then ProtVer (natVersion @9) 0
-              else ProtVer (natVersion @8) 0,
+          Praos.conwayProtVer = ProtVer (natVersion @9) 0,
           Praos.conwayMaxTxCapacityOverrides =
             TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
@@ -315,7 +315,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                 Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
 
         }
-        -- Alonzo to Conway hard fork parameters
+        -- Babbage to Conway hard fork parameters
         Consensus.ProtocolTransitionParamsShelleyBased {
           transitionTranslationContext = conwayGenesis,
           transitionTrigger =
