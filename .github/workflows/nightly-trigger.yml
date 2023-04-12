@@ -24,7 +24,7 @@ jobs:
         git push origin nightly --force
 
     - name: Invoke workflow
-      uses: input-output-hk/workflow-dispatch@v1
+      uses: benc-uk/workflow-dispatch@v1.2.2
       with:
         workflow: .github/workflows/haskell.yml
         ref: nightly
