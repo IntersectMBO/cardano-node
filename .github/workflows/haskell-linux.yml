@@ -1,6 +1,7 @@
 name: Haskell Linux CI
 
 on:
+  workflow_dispatch: # This is required for nightly builds
   push:
   merge_group:
 
