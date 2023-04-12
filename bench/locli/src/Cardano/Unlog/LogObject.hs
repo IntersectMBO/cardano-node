@@ -264,7 +264,7 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
             <*> pure 1
 
   -- Ledger snapshots:
-  , (,,,) "TraceSnapshotEvent.TookSnapshot" "LedgerEvent.TookSnapshot" "ChainDB.LedgerEvent.TookSnapshot" $
+  , (,,,) "TraceSnapshotEvent.TookSnapshot" "TraceLedgerEvent.TookSnapshot" "ChainDB.LedgerEvent.TookSnapshot" $
     \_ -> pure LOLedgerTookSnapshot
 
   -- Tx receive path & mempool:
