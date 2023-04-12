@@ -1,9 +1,22 @@
 name: Haskell Linux CI
 
 on:
-  workflow_dispatch: # This is required for nightly builds
   push:
   merge_group:
+
+  # DO NOT DELETE.
+  # This is required for nightly builds and is invoked by nightly-trigger.yml
+  # on a schedule trigger.
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason'
+        required: false
+        default: manual
+      tests:
+        description: 'Tests'
+        required: false
+        default: some
 
 jobs:
   linux_ci:
