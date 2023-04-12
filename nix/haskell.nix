@@ -119,10 +119,6 @@ let
               ];
             in
             {
-              # Packages we wish to ignore version bounds of.
-              # This is similar to jailbreakCabal, however it
-              # does not require any messing with cabal files.
-              packages.katip.doExactConfig = true;
               # split data output for ekg to reduce closure size
               packages.ekg.components.library.enableSeparateDataOutput = true;
               # cardano-cli tests depend on cardano-cli and some config files:
