@@ -52,8 +52,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
   conf@Conf { tempBaseAbsPath, tempAbsPath } <- H.noteShowM $
     mkConf (ProjectBase base) (YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
 
-  work <- H.note $ tempAbsPath </> "work"
-  H.createDirectoryIfMissing work
+  work <- H.createDirectoryIfMissing $ tempAbsPath </> "work"
 
   let
     testnetOptions = BabbageOnlyTestnetOptions $ babbageDefaultTestnetOptions

@@ -165,7 +165,7 @@ testnet testnetOptions H.Conf {..} = do
   let nodeIndexes = [0..numBftNodes testnetOptions - 1]
   let allNodes = fmap (\i -> "node-" <> show @Int i) nodeIndexes
 
-  H.createDirectoryIfMissing logDir
+  H.createDirectoryIfMissing_ logDir
 
   -- Launch cluster of three nodes in P2P Mode
   forM_ nodeIndexes $ \i -> do
@@ -180,8 +180,8 @@ testnet testnetOptions H.Conf {..} = do
     signingKeyFile <- H.noteShow $ tempAbsPath </> "genesis/delegate-keys.00" <> si <> ".key"
     delegationCertificateFile <- H.noteShow $ tempAbsPath </> "genesis/delegation-cert.00" <> si <> ".json"
 
-    H.createDirectoryIfMissing dbDir
-    H.createDirectoryIfMissing $ tempBaseAbsPath </> "" <> socketDir
+    H.createDirectoryIfMissing_ dbDir
+    H.createDirectoryIfMissing_ $ tempBaseAbsPath </> "" <> socketDir
 
     H.lbsWriteFile (tempAbsPath </> "topology-node-" <> si <> ".json") $
       mkTopologyConfig i (numBftNodes testnetOptions) allPorts (enableP2P testnetOptions)

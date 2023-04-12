@@ -207,7 +207,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
 
   let securityParam = 10
 
-  H.createDirectoryIfMissing logDir
+  H.createDirectoryIfMissing_ logDir
 
   H.readFile configurationTemplate >>= H.writeFile configurationFile
 
@@ -269,9 +269,9 @@ cardanoTestnet testnetOptions H.Conf {..} = do
     . forkOptions
 
   forM_ allNodeNames $ \node -> do
-    H.createDirectoryIfMissing $ tempAbsPath </> node
-    H.createDirectoryIfMissing $ tempAbsPath </> node </> "byron"
-    H.createDirectoryIfMissing $ tempAbsPath </> node </> "shelley"
+    H.createDirectoryIfMissing_ $ tempAbsPath </> node
+    H.createDirectoryIfMissing_ $ tempAbsPath </> node </> "byron"
+    H.createDirectoryIfMissing_ $ tempAbsPath </> node </> "shelley"
 
   -- Make topology files
   forM_ allNodeNames $ \node -> do
@@ -379,7 +379,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   H.noteEachM_ . H.listDirectory $ tempAbsPath </> "byron"
 
   -- Set up our template
-  H.createDirectoryIfMissing $ tempAbsPath </> "shelley"
+  H.createDirectoryIfMissing_ $ tempAbsPath </> "shelley"
 
   -- TODO: This is fragile, we should be passing in all necessary
   -- configuration files.
@@ -520,7 +520,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
       addrs = userAddrs <> poolAddrs
 
 
-  H.createDirectoryIfMissing $ tempAbsPath </> "addresses"
+  H.createDirectoryIfMissing_ $ tempAbsPath </> "addresses"
 
   wallets <- forM addrs $ \addr -> do
     let paymentSKey = tempAbsPath </> "addresses/" <> addr <> ".skey"
