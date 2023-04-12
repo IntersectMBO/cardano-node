@@ -133,13 +133,9 @@ startNode
   -- ^ The command --socket-path and --port will be added automatically.
   -> H.Integration NodeRuntime
 startNode tempBaseAbsPath tempAbsPath logDir socketDir node nodeCmd = do
-  dbDir <- H.noteShow $ tempAbsPath </> "db/" <> node
   nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
   nodeStderrFile <- H.noteTempFile logDir $ node <> ".stderr.log"
   sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)
-
-  H.createDirectoryIfMissing_ dbDir
-  H.createDirectoryIfMissing_ $ tempBaseAbsPath </> socketDir
 
   hNodeStdout <- H.openFile nodeStdoutFile IO.WriteMode
   hNodeStderr <- H.openFile nodeStderrFile IO.WriteMode

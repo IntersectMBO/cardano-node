@@ -207,8 +207,6 @@ cardanoTestnet testnetOptions H.Conf {..} = do
 
   let securityParam = 10
 
-  H.createDirectoryIfMissing_ logDir
-
   H.readFile configurationTemplate >>= H.writeFile configurationFile
 
   forkOptions <- pure $ id

@@ -47,8 +47,6 @@ startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
 
 babbageTestnet :: BabbageTestnetOptions -> H.Conf -> H.Integration TestnetRuntime
 babbageTestnet testnetOptions H.Conf {..} = do
-  H.createDirectoryIfMissing_ $ tempAbsPath </> "logs"
-
   H.lbsWriteFile (tempAbsPath </> "byron.genesis.spec.json")
     . encode $ defaultByronGenesisJsonValue
 

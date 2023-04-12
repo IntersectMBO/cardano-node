@@ -216,7 +216,7 @@ shelleyTestnet testnetOptions H.Conf {..} = do
     , "--start-time", DTC.formatIso8601 startTime
     ]
 
-  forM_ allNodes $ \p -> H.createDirectoryIfMissing $ tempAbsPath </> p
+  forM_ allNodes $ \p -> H.createDirectoryIfMissing_ $ tempAbsPath </> p
 
   -- Make the pool operator cold keys
   -- This was done already for the BFT nodes as part of the genesis creation
@@ -387,8 +387,6 @@ shelleyTestnet testnetOptions H.Conf {..} = do
 
   --------------------------------
   -- Launch cluster of three nodes
-
-  H.createDirectoryIfMissing_ logDir
 
   H.readFile (base </> "configuration/chairman/shelley-only/configuration.yaml")
     <&> L.unlines . fmap (rewriteConfiguration (shelleyEnableP2P testnetOptions)) . L.lines

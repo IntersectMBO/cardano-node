@@ -34,6 +34,7 @@ packages:
     trace-dispatcher
     trace-resources
     trace-forward
+    ../hedgehog-extras
 
 extra-packages:
   ouroboros-consensus-cardano-tools
@@ -106,3 +107,8 @@ allow-newer:
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+source-repository-package
+    type: git
+    location: https://github.com/input-output-hk/hedgehog-extras.git
+    tag: e16be6b333c2e921d2f085fdf221c199d617a1d5
