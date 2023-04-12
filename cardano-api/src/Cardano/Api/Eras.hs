@@ -342,12 +342,7 @@ deriving instance Ord  (ShelleyBasedEra era)
 deriving instance Show (ShelleyBasedEra era)
 
 instance ToJSON (ShelleyBasedEra era) where
-   toJSON ShelleyBasedEraShelley = "Shelley"
-   toJSON ShelleyBasedEraAllegra = "Allegra"
-   toJSON ShelleyBasedEraMary    = "Mary"
-   toJSON ShelleyBasedEraAlonzo  = "Alonzo"
-   toJSON ShelleyBasedEraBabbage = "Babbage"
-   toJSON ShelleyBasedEraConway  = "Conway"
+   toJSON = toJSON . shelleyBasedToCardanoEra
 
 instance TestEquality ShelleyBasedEra where
     testEquality ShelleyBasedEraShelley ShelleyBasedEraShelley = Just Refl
@@ -436,7 +431,7 @@ instance FromJSON AnyShelleyBasedEra where
         "Alonzo" -> pure $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
         "Babbage" -> pure $ AnyShelleyBasedEra ShelleyBasedEraBabbage
         "Conway" -> pure $ AnyShelleyBasedEra ShelleyBasedEraConway
-        wrong -> fail $ "Failed to parse unknown era: " <> Text.unpack wrong
+        wrong -> fail $ "Failed to parse unknown shelley-based era: " <> Text.unpack wrong
 
 
 -- | This pairs up some era-dependent type with a 'ShelleyBasedEra' value that

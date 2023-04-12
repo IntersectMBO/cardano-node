@@ -10,7 +10,7 @@ import           Cardano.Api
 
 import           Data.Proxy (Proxy (..))
 import           Data.String (IsString (..))
-import           Hedgehog (Property, forAll, property, success, tripping)
+import           Hedgehog (Property, forAll, tripping)
 import qualified Hedgehog as H
 import qualified Hedgehog.Gen as Gen
 import           Test.Cardano.Api.Typed.Orphans ()
@@ -156,38 +156,18 @@ prop_roundtrip_UpdateProposal_CBOR :: Property
 prop_roundtrip_UpdateProposal_CBOR =
   roundtrip_CBOR AsUpdateProposal genUpdateProposal
 
+prop_roundtrip_Tx_Cddl :: Property
+prop_roundtrip_Tx_Cddl = H.property $ do
+  AnyCardanoEra era <- H.forAll $ Gen.element [minBound..maxBound]
+  x <- forAll $ genTx era
+  H.tripping x serialiseTxLedgerCddl (deserialiseTxLedgerCddl era)
 
-test_roundtrip_Tx_Cddl :: [TestTree]
-test_roundtrip_Tx_Cddl =
-  [ testPropertyNamed (show era) (fromString (show era)) $ roundtrip_Tx_Cddl anyEra
-  | anyEra@(AnyCardanoEra era) <- [minBound..(AnyCardanoEra AlonzoEra)] --TODO: Babbage era
-  ]
+prop_roundtrip_TxWitness_Cddl :: Property
+prop_roundtrip_TxWitness_Cddl = H.property $ do
+  AnyShelleyBasedEra sbe <- H.forAll $ Gen.element [minBound..maxBound]
+  x <- forAll $ genShelleyKeyWitness $ shelleyBasedToCardanoEra sbe
+  tripping x (serialiseWitnessLedgerCddl sbe) (deserialiseWitnessLedgerCddl sbe)
 
-test_roundtrip_TxWitness_Cddl :: [TestTree]
-test_roundtrip_TxWitness_Cddl =
-  [ testPropertyNamed (show era) (fromString (show era)) $ roundtrip_TxWitness_Cddl era
-  | AnyCardanoEra era <- [minBound..(AnyCardanoEra AlonzoEra)] --TODO: Babbage era
-  , AnyCardanoEra era /= AnyCardanoEra ByronEra
-  ]
-
-roundtrip_TxWitness_Cddl :: CardanoEra era -> Property
-roundtrip_TxWitness_Cddl era =
-  property $
-    case cardanoEraStyle era of
-      LegacyByronEra -> success
-      ShelleyBasedEra sbe -> do
-        keyWit <- forAll $ genShelleyKeyWitness era
-        tripping keyWit
-          (serialiseWitnessLedgerCddl sbe)
-          (deserialiseWitnessLedgerCddl sbe)
-
-roundtrip_Tx_Cddl :: AnyCardanoEra -> Property
-roundtrip_Tx_Cddl (AnyCardanoEra era) =
-  property $ do
-   tx <- forAll $ genTx era
-   tripping tx
-     serialiseTxLedgerCddl
-     (deserialiseTxLedgerCddl era)
 
 -- -----------------------------------------------------------------------------
 
@@ -223,7 +203,7 @@ tests = testGroup "Test.Cardano.Api.Typed.CBOR"
   , testPropertyNamed "roundtrip UpdateProposal CBOR"                        "roundtrip UpdateProposal CBOR"                        prop_roundtrip_UpdateProposal_CBOR
   , testPropertyNamed "roundtrip ScriptData CBOR"                            "roundtrip ScriptData CBOR"                            prop_roundtrip_ScriptData_CBOR
   , testPropertyNamed "roundtrip txbody CBOR"                                "roundtrip txbody CBOR"                                prop_roundtrip_txbody_CBOR
+  , testPropertyNamed "roundtrip Tx Cddl"                                    "roundtrip Tx Cddl"                                    prop_roundtrip_Tx_Cddl
+  , testPropertyNamed "roundtrip TxWitness Cddl"                             "roundtrip TxWitness Cddl"                             prop_roundtrip_TxWitness_Cddl
   , testGroup "roundtrip tx CBOR"         test_roundtrip_tx_CBOR
-  , testGroup "roundtrip Tx Cddl"         test_roundtrip_Tx_Cddl
-  , testGroup "roundtrip TxWitness Cddl"  test_roundtrip_TxWitness_Cddl
   ]

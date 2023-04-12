@@ -5,7 +5,6 @@
 
 module Test.Hedgehog.Roundtrip.CBOR
   ( roundtrip_CBOR
-  -- , roundtrip_CDDL_Tx
   ) where
 
 import           Cardano.Api
