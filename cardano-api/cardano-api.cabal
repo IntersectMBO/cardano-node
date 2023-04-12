@@ -65,6 +65,7 @@ library
                         Cardano.Api.Eras
                         Cardano.Api.Error
                         Cardano.Api.Fees
+                        Cardano.Api.Genesis
                         Cardano.Api.GenesisParameters
                         Cardano.Api.Hash
                         Cardano.Api.HasTypeProxy
@@ -84,8 +85,8 @@ library
                         Cardano.Api.Modes
                         Cardano.Api.NetworkId
                         Cardano.Api.OperationalCertificate
-                        Cardano.Api.ProtocolParameters
                         Cardano.Api.Protocol
+                        Cardano.Api.ProtocolParameters
                         Cardano.Api.Query
                         Cardano.Api.Script
                         Cardano.Api.ScriptData
@@ -96,7 +97,6 @@ library
                         Cardano.Api.SerialiseRaw
                         Cardano.Api.SerialiseTextEnvelope
                         Cardano.Api.SerialiseUsing
-                        Cardano.Api.Genesis
                         Cardano.Api.SpecialByron
                         Cardano.Api.StakePoolMetadata
                         Cardano.Api.Tx
@@ -109,8 +109,8 @@ library
 
   build-depends:        aeson             >= 1.5.6.0
                       , aeson-pretty      >= 0.8.5
-                      , attoparsec
                       , array
+                      , attoparsec
                       , base16-bytestring >= 1.0
                       , base58-bytestring
                       , bech32 >= 1.1.0
@@ -122,15 +122,17 @@ library
                       , cardano-data ^>= 0.1
                       , cardano-ledger-alonzo ^>= 0.1
                       , cardano-ledger-babbage ^>= 0.1
-                      , cardano-ledger-conway
                       , cardano-ledger-byron ^>= 0.1
+                      , cardano-ledger-conway
                       , cardano-ledger-core ^>= 0.1
+                      , cardano-ledger-shelley ^>= 0.1
                       , cardano-ledger-shelley-ma ^>= 0.1
                       , cardano-protocol-tpraos >= 0.1
                       , cardano-slotting >= 0.1
+                      , cardano-strict-containers ^>= 0.1
                       , cborg
-                      , contra-tracer
                       , containers
+                      , contra-tracer
                       , cryptonite
                       , deepseq
                       , directory
@@ -162,10 +164,7 @@ library
                       , scientific
                       , serialise
                       , small-steps ^>= 0.1
-                      , cardano-ledger-shelley ^>= 0.1
-                      , small-steps ^>= 0.1
                       , stm
-                      , cardano-strict-containers ^>= 0.1
                       , text
                       , time
                       , transformers
@@ -217,13 +216,15 @@ test-suite cardano-api-test
                       , bytestring
                       , cardano-api
                       , cardano-api:gen
-                      , cardano-data ^>= 0.1
                       , cardano-crypto
                       , cardano-crypto-class ^>= 2.0
                       , cardano-crypto-test ^>= 1.4
                       , cardano-crypto-tests ^>= 2.0
+                      , cardano-data ^>= 0.1
                       , cardano-ledger-alonzo ^>= 0.1
                       , cardano-ledger-core ^>= 0.1
+                      , cardano-ledger-shelley ^>= 0.1
+                      , cardano-ledger-shelley-test ^>= 0.1
                       , cardano-slotting ^>= 0.1
                       , containers
                       , hedgehog
@@ -232,8 +233,6 @@ test-suite cardano-api-test
                       , ouroboros-consensus
                       , ouroboros-consensus-shelley
                       , QuickCheck
-                      , cardano-ledger-shelley ^>= 0.1
-                      , cardano-ledger-shelley-test ^>= 0.1
                       , tasty
                       , tasty-hedgehog
                       , tasty-quickcheck
