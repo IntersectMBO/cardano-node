@@ -216,7 +216,7 @@ shelleyTestnet testnetOptions H.Conf {..} = do
     , "--start-time", DTC.formatIso8601 startTime
     ]
 
-  forM_ allNodes $ \p -> H.createDirectoryIfMissing $ tempAbsPath </> p
+  forM_ allNodes $ \p -> H.createDirectoryIfMissing_ $ tempAbsPath </> p
 
   -- Make the pool operator cold keys
   -- This was done already for the BFT nodes as part of the genesis creation
@@ -266,7 +266,7 @@ shelleyTestnet testnetOptions H.Conf {..} = do
   --                 initial utxo the
   -- pool-owner1..n: will be the owner of the pools and we'll use their reward
   --                 account for pool rewards
-  H.createDirectoryIfMissing $ tempAbsPath </> "addresses"
+  H.createDirectoryIfMissing_ $ tempAbsPath </> "addresses"
 
   forM_ addrs $ \addr -> do
     -- Payment address keys
@@ -388,7 +388,7 @@ shelleyTestnet testnetOptions H.Conf {..} = do
   --------------------------------
   -- Launch cluster of three nodes
 
-  H.createDirectoryIfMissing logDir
+  H.createDirectoryIfMissing_ logDir
 
   H.readFile (base </> "configuration/chairman/shelley-only/configuration.yaml")
     <&> L.unlines . fmap (rewriteConfiguration (shelleyEnableP2P testnetOptions)) . L.lines

@@ -138,8 +138,8 @@ startNode tempBaseAbsPath tempAbsPath logDir socketDir node nodeCmd = do
   nodeStderrFile <- H.noteTempFile logDir $ node <> ".stderr.log"
   sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)
 
-  H.createDirectoryIfMissing dbDir
-  H.createDirectoryIfMissing $ tempBaseAbsPath </> socketDir
+  H.createDirectoryIfMissing_ dbDir
+  H.createDirectoryIfMissing_ $ tempBaseAbsPath </> socketDir
 
   hNodeStdout <- H.openFile nodeStdoutFile IO.WriteMode
   hNodeStderr <- H.openFile nodeStderrFile IO.WriteMode

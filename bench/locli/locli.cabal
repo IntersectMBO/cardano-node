@@ -172,7 +172,7 @@ test-suite test-locli
   build-depends:        cardano-prelude
                       , containers
                       , hedgehog
-                      , hedgehog-extras ^>= 0.4
+                      , hedgehog-extras ^>= 0.4.1
                       , locli
                       , text
 
