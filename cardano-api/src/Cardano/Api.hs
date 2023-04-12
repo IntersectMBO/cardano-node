@@ -518,6 +518,7 @@ module Cardano.Api (
     SerialiseAsRawBytes,
     serialiseToRawBytes,
     deserialiseFromRawBytes,
+    SerialiseAsRawBytesError(..),
     eitherDeserialiseFromRawBytes,
     serialiseToRawBytesHex,
     deserialiseFromRawBytesHex,
