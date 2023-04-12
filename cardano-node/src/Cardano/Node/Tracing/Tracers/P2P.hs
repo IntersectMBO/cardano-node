@@ -269,6 +269,7 @@ namesForPeerSelection TraceDemoteLocalAsynchronous {} = ["DemoteLocalAsynchronou
 namesForPeerSelection TraceGovernorWakeup {}        = ["GovernorWakeup"]
 namesForPeerSelection TraceChurnWait {}             = ["ChurnWait"]
 namesForPeerSelection TraceChurnMode {}             = ["ChurnMode"]
+namesForPeerSelection TraceKnownInboundConnection {} = ["KnownInboundConnection"]
 
 
 severityPeerSelection :: TracePeerSelection peeraddr -> SeverityS
@@ -302,6 +303,7 @@ severityPeerSelection TraceDemoteLocalAsynchronous {} = Info
 severityPeerSelection TraceGovernorWakeup        {} = Info
 severityPeerSelection TraceChurnWait             {} = Info
 severityPeerSelection TraceChurnMode             {} = Info
+severityPeerSelection TraceKnownInboundConnection {} = Info
 
 instance LogFormatting (TracePeerSelection SockAddr) where
   forMachine _dtal (TraceLocalRootPeersChanged lrp lrp') =
@@ -469,6 +471,12 @@ instance LogFormatting (TracePeerSelection SockAddr) where
   forMachine _dtal (TraceChurnMode c) =
     mconcat [ "kind" .= String "ChurnMode"
              , "event" .= show c ]
+
+  forMachine _dtal (TraceKnownInboundConnection addr ps) =
+    mconcat [ "kind" .= String "KnownInboundConnection"
+             , "address" .= show addr
+             , "peerSharing" .= show ps
+            ]
   forHuman = pack . show
 
 docPeerSelection ::  Documented (TracePeerSelection SockAddr)

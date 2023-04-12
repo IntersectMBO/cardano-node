@@ -50,7 +50,7 @@ import           Ouroboros.Consensus.Mempool.API (MempoolCapacityBytes (..),
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode (..))
-import Ouroboros.Network.PeerSelection.PeerSharing.Type (PeerSharing (..))
+import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 
 data NetworkP2PMode = EnabledP2PMode | DisabledP2PMode
   deriving (Eq, Show, Generic)

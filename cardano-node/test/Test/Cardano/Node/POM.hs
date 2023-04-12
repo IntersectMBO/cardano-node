@@ -24,7 +24,7 @@ import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
 import           Hedgehog (Property, discover, withTests, (===))
 import qualified Hedgehog
 import           Hedgehog.Internal.Property (evalEither, failWith)
-import Ouroboros.Network.PeerSelection.PeerSharing.Type (PeerSharing (..))
+import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 
 
 -- This is a simple test to check that the POM technique is working as intended.

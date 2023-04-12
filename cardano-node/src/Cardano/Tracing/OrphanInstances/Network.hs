@@ -413,6 +413,7 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TraceGovernorWakeup        {} -> Info
       TraceChurnWait             {} -> Info
       TraceChurnMode             {} -> Info
+      TraceKnownInboundConnection {} -> Info
 
 instance HasPrivacyAnnotation (DebugPeerSelection addr)
 instance HasSeverityAnnotation (DebugPeerSelection addr) where
@@ -1594,6 +1595,12 @@ instance ToObject (TracePeerSelection SockAddr) where
   toObject _verb (TraceChurnMode c) =
     mconcat [ "kind" .= String "ChurnMode"
              , "event" .= show c ]
+  toObject _verb (TraceKnownInboundConnection addr ps) =
+    mconcat [ "kind" .= String "KnownInboundConnection"
+             , "address" .= show addr
+             , "peerSharing" .= show ps
+            ]
+
 
 -- Connection manager abstract state.  For explanation of each state see
 -- <https://hydra.iohk.io/job/Cardano/ouroboros-network/native.network-docs.x86_64-linux/latest/download/2>
