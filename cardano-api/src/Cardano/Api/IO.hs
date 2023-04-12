@@ -28,7 +28,6 @@ module Cardano.Api.IO
 #ifdef UNIX
 import           Control.Exception (IOException, bracket, bracketOnError, try)
 import           System.Directory ()
-import           System.IO (hClose)
 import           System.Posix.Files (ownerModes, setFdOwnerAndGroup)
 import           System.Posix.IO (OpenMode (..), closeFd, defaultFileFlags, fdToHandle, openFd)
 import           System.Posix.User (getRealUserID)
@@ -36,7 +35,6 @@ import           System.Posix.User (getRealUserID)
 import           Control.Exception (bracketOnError)
 import           System.Directory (removeFile, renameFile)
 import           System.FilePath (splitFileName, (<.>))
-import           System.IO (hClose, openTempFile)
 #endif
 
 import           Cardano.Api.Error (FileError (..))
@@ -54,6 +52,7 @@ import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text.IO as Text
 import           GHC.Generics (Generic)
+import qualified System.IO as IO
 import           System.IO (Handle)
 
 handleFileForWritingWithOwnerPermission
@@ -80,20 +79,20 @@ handleFileForWritingWithOwnerPermission path f = do
     Right fd -> do
       bracket
         (fdToHandle fd)
-        hClose
+        IO.hClose
         (runExceptT . handleIOExceptT (FileIOError path) . f)
 #else
   -- On something other than unix, we make a _new_ file, and since we created it,
   -- we must own it. We then place it at the target location. Unfortunately this
   -- won't work correctly with pseudo-files.
   bracketOnError
-    (openTempFile targetDir $ targetFile <.> "tmp")
+    (IO.openTempFile targetDir $ targetFile <.> "tmp")
     (\(tmpPath, h) -> do
-      hClose h >> removeFile tmpPath
+      IO.hClose h >> removeFile tmpPath
       return . Left $ FileErrorTempFile path tmpPath h)
     (\(tmpPath, h) -> do
         f h
-        hClose h
+        IO.hClose h
         renameFile tmpPath path
         return $ Right ())
   where
