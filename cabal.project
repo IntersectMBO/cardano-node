@@ -89,3 +89,17 @@ package snap-server
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+-- And has the adjustments for the ledger refactor
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-network
+  tag: 81f9d1e4f5b1d3756508414d1c5ed96088773276
+  --sha256: 1lb0f07bix2x38a7zkj8bfjplbvy1rbfnj7b6aip6i6mp5ndnm35
+  subdir:
+    ouroboros-consensus
+    ouroboros-consensus-byron
+    ouroboros-consensus-cardano
+    ouroboros-consensus-protocol
+    ouroboros-consensus-shelley
+    ouroboros-consensus-cardano-tools
