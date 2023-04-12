@@ -28,6 +28,7 @@ module Cardano.Api (
     -- ** Shelley-based eras
     ShelleyBasedEra(..),
     IsShelleyBasedEra(..),
+    AnyShelleyBasedEra(..),
     InAnyShelleyBasedEra(..),
     CardanoEraStyle(..),
     cardanoEraStyle,

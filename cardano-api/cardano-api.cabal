@@ -240,6 +240,7 @@ test-suite cardano-api-test
                       , time
 
   other-modules:        Test.Cardano.Api.Crypto
+                        Test.Cardano.Api.Eras
                         Test.Cardano.Api.Genesis
                         Test.Cardano.Api.Json
                         Test.Cardano.Api.KeysByron

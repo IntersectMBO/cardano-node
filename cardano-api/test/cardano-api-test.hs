@@ -4,6 +4,7 @@ import           Cardano.Crypto.Libsodium (sodiumInit)
 import           Test.Tasty (TestTree, defaultMain, testGroup)
 
 import qualified Test.Cardano.Api.Crypto
+import qualified Test.Cardano.Api.Eras
 import qualified Test.Cardano.Api.Json
 import qualified Test.Cardano.Api.KeysByron
 import qualified Test.Cardano.Api.Ledger
@@ -29,6 +30,7 @@ tests :: TestTree
 tests =
   testGroup "Cardano.Api"
     [ Test.Cardano.Api.Crypto.tests
+    , Test.Cardano.Api.Eras.tests
     , Test.Cardano.Api.Json.tests
     , Test.Cardano.Api.KeysByron.tests
     , Test.Cardano.Api.Ledger.tests
