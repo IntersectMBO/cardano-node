@@ -9,7 +9,7 @@ set ylabel "Time, s"
 
 set style data yerrorlines
 
-rundir = "../"
+rundir = "../.."
 
 cdfI_2(cdf, title, run1ti, run1, run2ti, run2) = \
   "set title '".title."';". \

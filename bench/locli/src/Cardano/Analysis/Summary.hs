@@ -30,6 +30,9 @@ data SummaryError
   | SECDFError                   CDFError
   deriving Show
 
+profilingCentiles :: [Centile]
+profilingCentiles = nEquicentiles 5
+
 summariseMultiSummary ::
      UTCTime
   -> [Centile]
@@ -67,14 +70,22 @@ summariseMultiSummary sumAnalysisTime centiles xs@(headline:xss) = do
                                  (sumGenesis <$> xss)
                             & maybe (Right $ sumGenesis headline)
                               (Left .SEIncoherentRunGeneses .(sumGenesis headline:).(:[]))
-  sumGenesisSpec         <- find (not .(== sumGenesisSpec headline))
+  sumGenesisSpec         <- find (/= sumGenesisSpec headline)
                                  (sumGenesisSpec <$> xss)
                             & maybe (Right $ sumGenesisSpec headline)
                               (Left .SEIncoherentRunGenesisSpecs .(sumGenesisSpec headline:).(:[]))
-  sumWorkload            <- find (not .(== sumWorkload headline))
+  sumWorkload            <- find (/= sumWorkload headline)
                                  (sumWorkload <$> xss)
                             & maybe (Right $ sumWorkload headline)
                               (Left .SEIncoherentRunWorkloads .(sumWorkload headline:).(:[]))
+  sumProfilingData       <- xs <&> sumProfilingData
+                            & catMaybes
+                            & \case
+                                [] -> pure Nothing
+                                pds -> Just <$> (collapseProfilingDataCDF
+                                                 profilingCentiles pds
+                                                 & mapLeft SECDFError)
+
   pure $ Summary
     { ..
     }
@@ -87,7 +98,7 @@ summariseMultiSummary sumAnalysisTime centiles xs@(headline:xss) = do
      manifest <- allEqOrElse (xs <&> manifest) SEIncoherentRunVersions
      -- XXX: magic transformation that happens to match
      --      the logic in 'analyse.sh multi-call' on line with "local run="
-     pure Metadata { tag   =  xs <&> tag & sort & last & Text.take 16 & (<> "_variance")
+     pure Metadata { tag   = maximum (xs <&> tag) & Text.take 16 & (<> "_variance")
                    , batch = batch headline
                    , .. }
 
@@ -167,6 +178,11 @@ computeSummary sumAnalysisTime
       &  concat
       &  foldr' (\k m -> Map.insertWith (+) k 1 m) Map.empty
       &  Map.toList
+
+   profileEntries = Map.elems rlHostLogs <&> hlProfile
+   sumProfilingData = if all null profileEntries then Nothing
+                      else Just $ profilingDataCDF profilingCentiles $
+                           profileEntries <&> mkProfilingData
 
 deriving newtype instance (Num (I Int))
 

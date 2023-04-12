@@ -35,7 +35,7 @@ data CommandError
 
 renderCommandError :: CommandError -> Text
 renderCommandError (CommandError cmd err) =
-  "While executing chained command '" <> show cmd <> "':  " <> err
+  "ERROR: While executing locli operation:\n\n    '" <> show cmd <> "'\n\n  " <> err
 
 -- | Sub-commands
 newtype Command
@@ -500,7 +500,7 @@ runChainCommand _ c@DumpChain{} = missingCommandData c
 runChainCommand s@State{sRun=Just _run, sChain=Just Chain{..}}
   c@(TimelineChain rc f comments) = do
   progress "chain" (Q $ printf "dumping prettyprinted chain: %s" (show rc :: String))
-  dumpText "chain" (renderTimeline rc (sAnchor s) (const True) comments cMainChain) f
+  dumpText "chain" (renderTimelineWithClass (const True) rc (sAnchor s) comments cMainChain) f
     & firstExceptT (CommandError c)
   pure s
 runChainCommand _ c@TimelineChain{} = missingCommandData c
@@ -564,17 +564,29 @@ runChainCommand s@State{sRun=Just _run, sSlots=Just slots}
   c@(TimelineSlots rc comments) = do
   progress "mach" (Q $ printf "dumping %d slot timelines: %s" (length slots) (show rc :: String))
   dumpAssociatedTextStreams "mach"
-    (fmap (fmap $ renderTimeline rc (sAnchor s) (const True) comments) slots)
+    (fmap (fmap $ renderTimelineWithClass (const True) rc (sAnchor s) comments) slots)
     & firstExceptT (CommandError c)
   pure s
 runChainCommand _ c@TimelineSlots{} = missingCommandData c
   ["run metadata & genesis", "filtered slots"]
 
-runChainCommand s@State{sRun=Just run, sChain=Just chain@Chain{..}}
-  ComputePropagation = do
+runChainCommand s@State{sRun=Just run, sChain=Just chain@Chain{..}, sRunLogs}
+  c@ComputePropagation = do
   progress "block-propagation" $ J (cDomBlocks, cDomSlots)
-  prop <- blockProp run chain & liftIO
+  prop <- pure (blockProp run chain)
+          & newExceptT
+          & firstExceptT liftBlockPropError
   pure s { sBlockProp = Just [prop] }
+ where
+   liftBlockPropError :: BlockPropError -> CommandError
+   liftBlockPropError = \case
+     e@BPEEntireChainFilteredOut{} -> CommandError c $
+       renderBlockPropError e
+       <> maybe "" ((".\n\n  Missing traces in run logs (not all are fatal):\n\n    " <>)
+                    . T.intercalate "\n    "
+                    . fmap toText
+                    . rlMissingTraces)
+                sRunLogs
 runChainCommand _ c@ComputePropagation = missingCommandData c
   ["run metadata & genesis", "chain", "data domains for slots & blocks"]
 
@@ -703,10 +715,21 @@ runChainCommand s c@ComputeSummary = do
 
 runChainCommand s@State{sSummaries = Just (summary:_)} c@(RenderSummary rc@RenderConfig{..} f) = do
   progress "summary" (Q "rendering summary")
-  dumpText "summary" body (modeFilename f "" rcFormat)
+  dumpText "summary" bodySummary (modeFilename f "" rcFormat)
     & firstExceptT (CommandError c)
+  forM_ (sumProfilingData summary) $
+    \profData -> do
+      let bodyProfiling =
+            renderProfilingData rc anchor
+              (uncurry (||)
+               . both ((>= 1.0) . unI . cdfAverage)
+               . (peTime &&& peAlloc))
+              profData
+      dumpText "profiling" bodyProfiling (TextOutputFile $ replaceFileName (unTextOutputFile f) "profiling" System.FilePath.<.> "org")
+        & firstExceptT (CommandError c)
   pure s
- where body = renderSummary rc (sAnchor s) (iFields sumFieldsReport) summary
+ where bodySummary = renderSummary rc anchor (iFields sumFieldsReport) summary
+       anchor = sAnchor s
 runChainCommand _ c@RenderSummary{} = missingCommandData c
   ["run summary"]
 
@@ -734,8 +757,19 @@ runChainCommand s@State{sMultiSummary=Just summary}
   progress "multi-summary" (Q "rendering multi-run summary")
   dumpText "multi-summary" body (modeFilename f "" rcFormat)
     & firstExceptT (CommandError c)
+  forM_ (sumProfilingData summary) $
+    \profData -> do
+      let bodyProfiling =
+            renderProfilingData rc anchor
+              (uncurry (||)
+               . both ((>= 1.0) . unI . cdfAverage)
+               . (peTime &&& peAlloc))
+              profData
+      dumpText "multi-profiling" bodyProfiling (TextOutputFile $ replaceFileName (unTextOutputFile f) "profiling" System.FilePath.<.> "org")
+        & firstExceptT (CommandError c)
   pure s
- where body = renderSummary rc (sAnchor s) (iFields sumFieldsReport) summary
+ where body = renderSummary rc anchor (iFields sumFieldsReport) summary
+       anchor = sAnchor s
 runChainCommand _ c@RenderMultiSummary{} = missingCommandData c
   ["multi-run summary"]
 

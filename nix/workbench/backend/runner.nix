@@ -6,9 +6,10 @@
 , profileName
 , backend
 ##
-, cardano-node-rev      ? "0000000000000000000000000000000000000000"
+, cardano-node-rev
 , workbench
-, workbenchDevMode      ? false
+, workbenchDevMode
+, profiled
 ##
 , cacheDir              ? "${__getEnv "HOME"}/.cache/cardano-workbench"
 }:
@@ -18,7 +19,7 @@ let
   inherit (backend) stateDir basePort useCabalRun;
 
   profileNix = workbench.materialise-profile
-    { inherit profileName backend; };
+    { inherit profileName backend profiled; };
   backendNix = backend.materialise-profile
     { inherit profileNix; };
 in

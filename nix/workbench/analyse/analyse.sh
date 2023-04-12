@@ -349,7 +349,7 @@ case "$op" in
         local args=${op_split[@]:$i}
         progress "analyse" "mapping op $(with_color yellow $op "${op_args[@]}") $(with_color cyan $args) over runs:  $(with_color white ${runs[*]})"
         for r in ${runs[*]}
-        do analyse prepare $r
+        do analyse "${sargs[@]}" prepare $r
            analyse "${sargs[@]}" $op "${op_args[@]}" $r "${args[@]}"
         done
         ;;
@@ -433,10 +433,14 @@ case "$op" in
         local analysis_jsons=($(ls $adir/*.json |
                                     fgrep -v -e '.flt.json'             \
                                              -e '.logobjs.json'         \
-                                             -e 'chain-rejecta.json'    \
-                                             -e 'chain.json'
+                                             -e 'chain.json'            \
+                                             -e 'log-manifest.json'     \
+                                             -e 'mach-views.json'       \
+                                             -e 'prof.json'             \
+                                             -e 'tracefreq.json'
               ))
         progress "analyse" "prettifying JSON data:  ${#analysis_jsons[*]} files"
+        verbose  "analyse" "prettifying JSON data:  ${analysis_jsons[*]}"
         time json_compact_prettify "${analysis_jsons[@]}"
         progress "output" "run:  $(white $run)  subdir:  $(yellow analysis)"
         ;;
@@ -457,7 +461,7 @@ case "$op" in
                                   --perf            ${adir}/clusterperf.json \
                                   --prop            ${adir}/blockprop.json
                           done))
-        local run=$(for dir in ${dirs[*]}; do basename $dir; done | sort -r | head -n1 | cut -d. -f1-2)_$suffix
+        local run=$(for dir in ${dirs[*]}; do basename $dir; done | sort -r | head -n1 | cut -c-16)_$suffix
         local rundir=$(run get-rundir)
         local dir=$rundir/$run
         local adir=$dir/analysis
@@ -559,6 +563,7 @@ case "$op" in
            grep ${grep_params[*]} ${logfiles[*]} | grep '^{'  > "$out".flt.json       &
            trace_frequencies_json ${logfiles[*]}              > "$out".tracefreq.json &
            { cat ${logfiles[*]} | sha256sum | cut -d' ' -f1 | xargs echo -n;} > "$out".sha256 &
+
            jq_fmutate "$run_logs" '
              .rlHostLogs["'"$mach"'"] =
                { hlRawLogfiles:    ["'"$(echo ${logfiles[*]} | sed 's/ /", "/')"'"]
@@ -567,10 +572,21 @@ case "$op" in
                , hlRawTraceFreqs:  {}
                , hlLogs:           ["'"$adir/logs-$mach.flt.json"'", null]
                , hlFilteredSha256: ""
+               , hlProfile:        []
                }
            | .rlFilterDate = ('$(if test -z "$without_datever_meta"; then echo -n now; else echo -n 0; fi)' | todate)
            | .rlFilterKeys = ($keys | split("\n"))
            ' --rawfile            keys $keyfile
+
+           local ghc_rts_prof=$d/cardano-node.prof
+           if test -f "$ghc_rts_prof"
+           then progress "analyse | profiling" "processing cardano-node.prof for $mach"
+                ghc_rts_minusp_tojson "$ghc_rts_prof"           > "$out".flt.prof.json
+               jq_fmutate "$run_logs" '
+                 .rlHostLogs["'"$mach"'"] += { hlProfile: $profile }
+                 ' --slurpfile profile "$out".flt.prof.json
+           fi
+
         done
         wait
 
@@ -578,14 +594,31 @@ case "$op" in
         do jq_fmutate "$run_logs" '
              .rlHostLogs[$mach].hlRawSha256      = $raw_sha256
            | .rlHostLogs[$mach].hlRawTraceFreqs  = $freqs[0]
+
+           | ($freqs[0] | keys | map (split(":"))) as $keypairs
+           | .rlHostLogs[$mach].hlMissingTraces  =
+              (($keys | split("\n"))
+               - ($keypairs | map (.[0]))    # new tracing namespace entries
+               - ($keypairs | map (.[1]))    # old tracing .kinds
+               - ["", "unknown0", "unknown1"]
+               | unique)
            | .rlHostLogs[$mach].hlFilteredSha256 = $filtered_sha256
            ' --sort-keys                                                         \
              --arg                mach         $mach                             \
              --rawfile      raw_sha256 "$adir"/logs-$mach.sha256                 \
              --arg     filtered_sha256 $(sha256sum < $adir/logs-$mach.flt.json | \
                                           cut -d' ' -f1 | xargs echo -n)         \
-             --slurpfile         freqs "$adir"/logs-$mach.tracefreq.json
-        done;;
+             --slurpfile         freqs "$adir"/logs-$mach.tracefreq.json         \
+             --rawfile            keys $keyfile
+        done
+
+        jq_fmutate "$run_logs" '
+          .rlMissingTraces =
+             ( .rlHostLogs
+             | map(.hlMissingTraces)
+             | add
+             | unique
+             )';;
 
     trace-frequencies | trace-freq | freq | tf )
         local new_only= sargs=()
@@ -755,4 +788,11 @@ analysis_config_extract_legacy_tracing() {
              }'
     )
     nix eval "${nix_eval_args[@]}" | jq --sort-keys
+}
+
+function ghc_rts_minusp_tojson() {
+    tail -n +10 "$1" | \
+    head -n 40       | \
+    sed 's_\\_\\\\_g; s_^\([^ ]\+\) \+\([^ ]\+\) \+\([^ ]\+\) \+\([^ ]\+\) \+\([^ ]\+\)$_{ "peFunc": "\1", "peModule": "\2", "peSrcLoc": "\3", "peTime": \4, "peAlloc": \5 }_' | \
+    grep '^{.*}$' || true
 }

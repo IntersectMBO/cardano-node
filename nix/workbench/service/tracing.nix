@@ -29,6 +29,8 @@
     "Forge.Loop.BlockContext".severity = "Info";
     "Forge.Loop.LedgerState".severity = "Info";
     "Forge.Loop.LedgerView".severity = "Info";
+    "Forge.Loop.MempoolSnapshot".severity = "Info";
+    "Forge.Loop.TickedLedgerState".severity = "Info";
     "Startup".severity = "Info";
   };
 }

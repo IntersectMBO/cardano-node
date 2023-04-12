@@ -13,6 +13,7 @@ import Data.Text                qualified as T
 import Options.Applicative      qualified as Opt
 
 import Data.CDF
+import Data.Profile
 
 import Cardano.Logging.Resources.Types
 
@@ -47,6 +48,8 @@ data Summary f where
     , sumStopSpread          :: !(DataDomain f RUTCTime)
     , sumDomainSlots         :: !(DataDomain (CDF I) SlotNo)
     , sumDomainBlocks        :: !(DataDomain f BlockNo)
+    , sumProfilingData       :: !(Maybe (ProfilingData (CDF I)))
+
     , cdfLogLinesEmitted     :: !(CDF f Int)
     , cdfLogObjectsEmitted   :: !(CDF f Int)
     , cdfLogObjects          :: !(CDF f Int)
@@ -352,8 +355,6 @@ data RunScalars
 
 -- * MachPerf / ClusterPef
 --
-deriving newtype instance FromJSON a => FromJSON (I a)
-deriving newtype instance ToJSON   a => ToJSON   (I a)
 deriving instance (forall a. FromJSON a => FromJSON (f a), FromJSON (CDFList f (DataDomain I SlotNo))) => FromJSON (MachPerf f)
 deriving instance (forall a.   ToJSON a =>   ToJSON (f a),   ToJSON (CDFList f (DataDomain I SlotNo))) =>   ToJSON (MachPerf f)
 deriving instance (forall a.   NFData a =>   NFData (f a),   NFData (CDFList f (DataDomain I SlotNo))) =>   NFData (MachPerf f)

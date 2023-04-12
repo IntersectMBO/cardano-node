@@ -264,6 +264,16 @@ project.appendOverlays (with haskellLib.projectOverlays; [
           packages.cardano-node.components.exes.cardano-node.enableProfiling = true;
           packages.tx-generator.components.exes.tx-generator.enableProfiling = true;
           packages.locli.components.exes.locli.enableProfiling = true;
+        }
+        {
+          packages = final.pkgs.lib.genAttrs
+            [ "cardano-node"
+              "cardano-tracer"
+              "trace-dispatcher"
+              "trace-forward"
+              "trace-resources"
+            ]
+            (name: { configureFlags = [ "--ghc-option=-fprof-auto" ]; });
         }];
       };
       asserted = final.appendModule {

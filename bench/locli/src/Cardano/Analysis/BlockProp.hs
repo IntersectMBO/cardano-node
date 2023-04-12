@@ -13,7 +13,10 @@ module Cardano.Analysis.BlockProp
   , MachView
   , buildMachViews
   , rebuildChain
-  , blockProp)
+  , blockProp
+  , BlockPropError(..)
+  , renderBlockPropError
+  )
 where
 
 import Prelude                  (String, (!!), error, head, last, id, show, tail, read)
@@ -503,38 +506,64 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
        , " -- missing: ", slotDesc
        ]
 
-blockProp :: Run -> Chain -> IO BlockPropOne
+data BlockPropError
+  = BPEEntireChainFilteredOut
+    { bpeChainLen   :: Int
+    , bpeAcceptance :: [(BlockNo, [(ChainFilter, Bool)])]
+    }
+
+renderBlockPropError :: BlockPropError -> T.Text
+renderBlockPropError = \case
+  BPEEntireChainFilteredOut chainlen rejs -> mconcat $
+    [ "blockProp | analysisChain:  all blocks filtered out of originally "
+    , T.pack $ show chainlen, "\n\n"
+    , "  Block pass/fail reasons:\n"
+    ] ++
+    fmap (("\n    " <>)
+          . (\(no, rs) -> T.pack $
+              show no <> ":  " <> show rs))
+         rejs
+
+blockProp :: Run -> Chain -> Either BlockPropError BlockPropOne
 blockProp run@Run{genesis} Chain{..} = do
+  (c :: [BlockEvents]) <-
+    case filter (all snd . beAcceptance) cMainChain of
+      [] -> Left $
+        BPEEntireChainFilteredOut
+          (length cMainChain)
+          ((beBlockNo &&& beAcceptance) <$> cMainChain)
+      xs -> pure xs
+
   pure $ BlockProp
-    { bpDomainSlots      = cDomSlots
-    , bpDomainBlocks     = cDomBlocks
-    , bpDomainCDFSlots   = cDomSlots   -- At unit-arity..
-    , bpDomainCDFBlocks  = cDomBlocks  -- .. it's just a replica.
-    , cdfForgerStart     = forgerCDF   (SJust . bfStarted   . beForge)
-    , cdfForgerBlkCtx    = forgerCDF           (bfBlkCtx    . beForge)
-    , cdfForgerLgrState  = forgerCDF           (bfLgrState  . beForge)
-    , cdfForgerLgrView   = forgerCDF           (bfLgrView   . beForge)
-    , cdfForgerLead      = forgerCDF   (SJust . bfLeading   . beForge)
-    , cdfForgerTicked    = forgerCDF           (bfTicked    . beForge)
-    , cdfForgerMemSnap   = forgerCDF           (bfMemSnap   . beForge)
-    , cdfForgerForge     = forgerCDF   (SJust . bfForged    . beForge)
-    , cdfForgerAnnounce  = forgerCDF   (SJust . bfAnnounced . beForge)
-    , cdfForgerAnnounceCum = forgerCDF   (SJust . bfAnnouncedCum . beForge)
-    , cdfForgerSend      = forgerCDF   (SJust . bfSending   . beForge)
-    , cdfForgerAdoption  = forgerCDF   (SJust . bfAdopted   . beForge)
-    , cdfPeerNoticeFirst = observerCDF (SJust . boNoticed)    earliest "noticed"
-    , cdfPeerFetchFirst  = observerCDF (SJust . boFetchedCum) earliest "fetched"
-    , cdfPeerRequest     = observerCDF (SJust . boRequested) each "requested"
-    , cdfPeerFetch       = observerCDF (SJust . boFetched)   each "fetched"
-    , cdfPeerAnnounce    = observerCDF boAnnounced           each "announced"
-    , cdfPeerSend        = observerCDF boSending             each "sending"
-    , cdfPeerAdoption    = observerCDF boAdopted             each "adopted"
-    , bpPropagation      = Map.fromList
+    { bpDomainSlots        = cDomSlots
+    , bpDomainBlocks       = cDomBlocks
+    , bpDomainCDFSlots     = cDomSlots   -- At unit-arity..
+    , bpDomainCDFBlocks    = cDomBlocks  -- .. it's just a replica.
+    , cdfForgerStart       = forgerCDF c   (SJust . bfStarted   . beForge)
+    , cdfForgerBlkCtx      = forgerCDF c           (bfBlkCtx    . beForge)
+    , cdfForgerLgrState    = forgerCDF c           (bfLgrState  . beForge)
+    , cdfForgerLgrView     = forgerCDF c           (bfLgrView   . beForge)
+    , cdfForgerLead        = forgerCDF c   (SJust . bfLeading   . beForge)
+    , cdfForgerTicked      = forgerCDF c           (bfTicked    . beForge)
+    , cdfForgerMemSnap     = forgerCDF c           (bfMemSnap   . beForge)
+    , cdfForgerForge       = forgerCDF c   (SJust . bfForged    . beForge)
+    , cdfForgerAnnounce    = forgerCDF c   (SJust . bfAnnounced . beForge)
+    , cdfForgerAnnounceCum = forgerCDF c   (SJust . bfAnnouncedCum . beForge)
+    , cdfForgerSend        = forgerCDF c   (SJust . bfSending   . beForge)
+    , cdfForgerAdoption    = forgerCDF c   (SJust . bfAdopted   . beForge)
+    , cdfPeerNoticeFirst   = observerCDF c (SJust . boNoticed)    earliest "noticed"
+    , cdfPeerFetchFirst    = observerCDF c (SJust . boFetchedCum) earliest "fetched"
+    , cdfPeerRequest       = observerCDF c (SJust . boRequested) each "requested"
+    , cdfPeerFetch         = observerCDF c (SJust . boFetched)   each "fetched"
+    , cdfPeerAnnounce      = observerCDF c boAnnounced           each "announced"
+    , cdfPeerSend          = observerCDF c boSending             each "sending"
+    , cdfPeerAdoption      = observerCDF c boAdopted             each "adopted"
+    , bpPropagation        = Map.fromList
       [ ( T.pack $ printf "cdf%.2f" p'
-        , forgerCDF (SJust . unI . projectCDF' "bePropagation" p . bePropagation))
+        , forgerCDF c (SJust . unI . projectCDF' "bePropagation" p . bePropagation))
       | p@(Centile p') <- adoptionCentiles <> [Centile 1.0] ]
-    , cdfBlockBattle         = forgerCDF   (SJust . unCount . beForks)
-    , cdfBlockSize           = forgerCDF   (SJust . bfBlockSize . beForge)
+    , cdfBlockBattle         = forgerCDF c (SJust . unCount . beForks)
+    , cdfBlockSize           = forgerCDF c (SJust . bfBlockSize . beForge)
     , bpVersion              = getLocliVersion
     , cdfBlocksPerHost       = cdf stdCentiles (hostBlockStats
                                                 <&> unCount . hbsTotal)
@@ -560,28 +589,20 @@ blockProp run@Run{genesis} Chain{..} = do
    boFetchedCum :: BlockObservation -> NominalDiffTime
    boFetchedCum BlockObservation{..} = boNoticed + boRequested + boFetched
 
-   analysisChain :: [BlockEvents]
-   analysisChain =
-     case filter (all snd . beAcceptance) cMainChain of
-       [] -> error $ mconcat
-         [ "analysisChain:  all blocks filtered out of originally "
-         , show (length cMainChain)
-         ]
-       xs -> xs
-
-   forgerCDF :: Divisible a => (BlockEvents -> SMaybe a) -> CDF I a
-   forgerCDF proj =
-     cdfZ stdCentiles $ mapSMaybe proj analysisChain
+   forgerCDF :: Divisible a => [BlockEvents] -> (BlockEvents -> SMaybe a) -> CDF I a
+   forgerCDF chain proj =
+     cdfZ stdCentiles $ mapSMaybe proj chain
 
    each, earliest :: [NominalDiffTime] -> [NominalDiffTime]
    each = identity
    earliest = (:[]) . minimum
 
-   observerCDF :: (BlockObservation -> SMaybe NominalDiffTime)
+   observerCDF :: [BlockEvents]
+               -> (BlockObservation -> SMaybe NominalDiffTime)
                -> ([NominalDiffTime] -> [NominalDiffTime])
                -> String -> CDF I NominalDiffTime
-   observerCDF proj subset _ =
-     mapChainBlockEventsCDF stdCentiles analysisChain (subset . blockObservations)
+   observerCDF chain proj subset _ =
+     mapChainBlockEventsCDF stdCentiles chain (subset . blockObservations)
     where
       blockObservations :: BlockEvents -> [NominalDiffTime]
       blockObservations be =

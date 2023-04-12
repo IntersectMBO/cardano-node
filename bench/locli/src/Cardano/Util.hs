@@ -67,6 +67,9 @@ import Ouroboros.Consensus.Util.Time
 import Cardano.Ledger.BaseTypes         (StrictMaybe (..), fromSMaybe)
 
 
+deriving newtype instance FromJSON a => (FromJSON (I a))
+deriving newtype instance   ToJSON a =>   (ToJSON (I a))
+
 -- * Data.IntervalMap.FingerTree.Interval
 --
 deriving instance FromJSON a => (FromJSON (Interval a))
