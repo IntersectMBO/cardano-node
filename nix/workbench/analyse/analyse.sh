@@ -101,7 +101,7 @@ do case "$1" in
        --filter-slot-expr | -fsex )  sargs+=($1 "$2"); filter_exprs+=('{ "tag":"CSlot" , "contents": '"$2"'}'); shift;;
        --no-filters | --unfiltered | -u )
                                    sargs+=($1);    arg_filters=(); unfiltered='true';;
-       --loany-ok )                sargs+=($1);    locli_args+=(--loany-ok);;
+       --ok-loany )                sargs+=($1);    locli_args+=(--ok-loany);;
        --lodecodeerror-ok )        sargs+=($1);    locli_args+=(--lodecodeerror-ok);;
        --dump-logobjects | -lo )   sargs+=($1);    dump_logobjects='true';;
        --dump-machviews  | -mw )   sargs+=($1);    dump_machviews='true';;

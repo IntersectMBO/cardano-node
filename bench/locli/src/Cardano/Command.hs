@@ -381,16 +381,19 @@ sAnchor State{sTags=[]} = error "sAnchor with no run or multi-summary."
 sAnchor s@State{sTags}
   = stateAnchor sTags s
 
+quote :: T.Text -> T.Text
+quote = (<> "\"") . ("\"" <>)
+
 runChainCommand :: State -> ChainCommand -> ExceptT CommandError IO State
 
 runChainCommand s
   c@(ListLogobjectKeys f) = do
-  dumpText "logobject-keys" (toText <$> logObjectStreamInterpreterKeys) f
+  dumpText "logobject-keys" (quote . toText <$> logObjectStreamInterpreterKeys) f
     & firstExceptT (CommandError c)
   pure s
 runChainCommand s
   c@(ListLogobjectKeysLegacy f) = do
-  dumpText "logobject-keys-legacy" (toText <$> logObjectStreamInterpreterKeysLegacy) f
+  dumpText "logobject-keys-legacy" (quote . toText <$> logObjectStreamInterpreterKeysLegacy) f
     & firstExceptT (CommandError c)
   pure s
 

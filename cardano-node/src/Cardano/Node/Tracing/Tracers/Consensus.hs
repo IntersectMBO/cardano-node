@@ -971,9 +971,9 @@ instance MetaTrace  (ForgeTracerType blk) where
   namespaceFor (Left ev) =
     nsCast (namespaceFor ev)
   namespaceFor (Right _ev) =
-    Namespace [] ["StartLeadershipCheckPlus"]
+    Namespace [] ["StartLeadershipCheck"]
 
-  severityFor (Namespace _ ["StartLeadershipCheckPlus"]) _ = Just
+  severityFor (Namespace _ ["StartLeadershipCheck"]) _ = Just
     Info
   severityFor ns (Just (Left ev')) =
     severityFor (nsCast ns) (Just ev')
@@ -981,7 +981,7 @@ instance MetaTrace  (ForgeTracerType blk) where
     severityFor (nsCast ns :: Namespace (TraceForgeEvent blk)) Nothing
   severityFor _ _ = Nothing
 
-  detailsFor (Namespace _ ["StartLeadershipCheckPlus"]) _ = Just
+  detailsFor (Namespace _ ["StartLeadershipCheck"]) _ = Just
     DNormal
   detailsFor ns (Just (Left ev')) =
     detailsFor (nsCast ns) (Just ev')
@@ -989,7 +989,7 @@ instance MetaTrace  (ForgeTracerType blk) where
     detailsFor (nsCast ns :: Namespace (TraceForgeEvent blk)) Nothing
   detailsFor _ _ = Nothing
 
-  privacyFor (Namespace _ ["StartLeadershipCheckPlus"]) _ = Just
+  privacyFor (Namespace _ ["StartLeadershipCheck"]) _ = Just
     Public
   privacyFor ns (Just (Left ev')) =
     privacyFor (nsCast ns) (Just ev')
@@ -997,14 +997,14 @@ instance MetaTrace  (ForgeTracerType blk) where
     privacyFor (nsCast ns :: Namespace (TraceForgeEvent blk)) Nothing
   privacyFor _ _ = Nothing
 
-  metricsDocFor (Namespace _ ["StartLeadershipCheckPlus"]) =
+  metricsDocFor (Namespace _ ["StartLeadershipCheck"]) =
       [ ("Forge.UtxoSize", "")
       , ("Forge.DelegMapSize", "")
       ]
   metricsDocFor ns =
     metricsDocFor (nsCast ns :: Namespace (TraceForgeEvent blk))
 
-  documentFor (Namespace _ ["StartLeadershipCheckPlus"]) = Just $ mconcat
+  documentFor (Namespace _ ["StartLeadershipCheck"]) = Just $ mconcat
     [ "We adopted the block we produced, we also trace the transactions"
     , "  that were adopted."
     ]
@@ -1012,7 +1012,7 @@ instance MetaTrace  (ForgeTracerType blk) where
     documentFor (nsCast ns :: Namespace (TraceForgeEvent blk))
 
   allNamespaces =
-    Namespace [] ["StartLeadershipCheckPlus"]
+    Namespace [] ["StartLeadershipCheck"]
     : map nsCast (allNamespaces :: [Namespace (TraceForgeEvent blk)])
 
 --------------------------------------------------------------------------------
