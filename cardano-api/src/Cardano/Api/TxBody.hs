@@ -149,14 +149,6 @@ module Cardano.Api.TxBody (
     txScriptValiditySupportedInCardanoEra,
     totalAndReturnCollateralSupportedInEra,
 
-    -- ** Era-dependent protocol features
-    ProtocolUTxOCostPerByteSupportedInEra(..),
-    ProtocolUTxOCostPerWordSupportedInEra(..),
-
-    -- ** Era-dependent protocol feature availability functions
-    protocolUTxOCostPerByteSupportedInEra,
-    protocolUTxOCostPerWordSupportedInEra,
-
     -- * Inspecting 'ScriptWitness'es
     AnyScriptWitness(..),
     ScriptWitnessIndex(..),
@@ -1317,51 +1309,6 @@ updateProposalSupportedInEra MaryEra    = Just UpdateProposalInMaryEra
 updateProposalSupportedInEra AlonzoEra  = Just UpdateProposalInAlonzoEra
 updateProposalSupportedInEra BabbageEra = Just UpdateProposalInBabbageEra
 updateProposalSupportedInEra ConwayEra  = Just UpdateProposalInConwayEra
-
--- | A representation of whether the era supports the 'UTxO Cost Per Word'
--- protocol parameter.
---
--- The Babbage and subsequent eras support such a protocol parameter.
---
-data ProtocolUTxOCostPerWordSupportedInEra era where
-  ProtocolUpdateUTxOCostPerWordInAlonzoEra :: ProtocolUTxOCostPerWordSupportedInEra AlonzoEra
-
-deriving instance Eq   (ProtocolUTxOCostPerWordSupportedInEra era)
-deriving instance Show (ProtocolUTxOCostPerWordSupportedInEra era)
-
-protocolUTxOCostPerWordSupportedInEra
-  :: CardanoEra era
-  -> Maybe (ProtocolUTxOCostPerWordSupportedInEra era)
-protocolUTxOCostPerWordSupportedInEra ByronEra   = Nothing
-protocolUTxOCostPerWordSupportedInEra ShelleyEra = Nothing
-protocolUTxOCostPerWordSupportedInEra AllegraEra = Nothing
-protocolUTxOCostPerWordSupportedInEra MaryEra    = Nothing
-protocolUTxOCostPerWordSupportedInEra AlonzoEra  = Just ProtocolUpdateUTxOCostPerWordInAlonzoEra
-protocolUTxOCostPerWordSupportedInEra BabbageEra = Nothing
-protocolUTxOCostPerWordSupportedInEra ConwayEra  = Nothing
-
--- | A representation of whether the era supports the 'UTxO Cost Per Byte'
--- protocol parameter.
---
--- The Babbage and subsequent eras support such a protocol parameter.
---
-data ProtocolUTxOCostPerByteSupportedInEra era where
-  ProtocolUpdateUTxOCostPerByteInBabbageEra :: ProtocolUTxOCostPerByteSupportedInEra BabbageEra
-  ProtocolUpdateUTxOCostPerByteInConwayEra  :: ProtocolUTxOCostPerByteSupportedInEra ConwayEra
-
-deriving instance Eq   (ProtocolUTxOCostPerByteSupportedInEra era)
-deriving instance Show (ProtocolUTxOCostPerByteSupportedInEra era)
-
-protocolUTxOCostPerByteSupportedInEra
-  :: CardanoEra era
-  -> Maybe (ProtocolUTxOCostPerByteSupportedInEra era)
-protocolUTxOCostPerByteSupportedInEra ByronEra   = Nothing
-protocolUTxOCostPerByteSupportedInEra ShelleyEra = Nothing
-protocolUTxOCostPerByteSupportedInEra AllegraEra = Nothing
-protocolUTxOCostPerByteSupportedInEra MaryEra    = Nothing
-protocolUTxOCostPerByteSupportedInEra AlonzoEra  = Nothing
-protocolUTxOCostPerByteSupportedInEra BabbageEra = Just ProtocolUpdateUTxOCostPerByteInBabbageEra
-protocolUTxOCostPerByteSupportedInEra ConwayEra  = Just ProtocolUpdateUTxOCostPerByteInConwayEra
 
 -- ----------------------------------------------------------------------------
 -- Building vs viewing transactions

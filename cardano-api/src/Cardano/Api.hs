@@ -277,6 +277,8 @@ module Cardano.Api (
     CertificatesSupportedInEra(..),
     UpdateProposalSupportedInEra(..),
     TxTotalAndReturnCollateralSupportedInEra(..),
+    Feature(..),
+    SupportedInEra(..),
 
     -- ** Feature availability functions
     collateralSupportedInEra,
@@ -293,14 +295,7 @@ module Cardano.Api (
     updateProposalSupportedInEra,
     scriptDataSupportedInEra,
     totalAndReturnCollateralSupportedInEra,
-
-    -- ** Era-dependent protocol features
-    ProtocolUTxOCostPerByteSupportedInEra(..),
-    ProtocolUTxOCostPerWordSupportedInEra(..),
-
-    -- ** Era-dependent protocol feature availability functions
-    protocolUTxOCostPerByteSupportedInEra,
-    protocolUTxOCostPerWordSupportedInEra,
+    supportedInEra,
 
     -- ** Fee calculation
     LedgerEpochInfo(..),
@@ -864,6 +859,7 @@ import           Cardano.Api.DeserialiseAnyOf
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
+import           Cardano.Api.Features
 import           Cardano.Api.Fees
 import           Cardano.Api.Genesis
 import           Cardano.Api.GenesisParameters

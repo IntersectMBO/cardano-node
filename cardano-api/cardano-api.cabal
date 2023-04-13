@@ -64,6 +64,7 @@ library
                         Cardano.Api.EraCast
                         Cardano.Api.Eras
                         Cardano.Api.Error
+                        Cardano.Api.Features
                         Cardano.Api.Fees
                         Cardano.Api.Genesis
                         Cardano.Api.GenesisParameters
