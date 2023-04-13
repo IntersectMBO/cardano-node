@@ -81,7 +81,7 @@ renderByronTxError err =
 
 newtype NewTxFile (direction :: FileDirection) = NewTxFile
   { unNewTxFile :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile)
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile, FromJSON, ToJSON)
 
 
 -- | Pretty-print an address in its Base58 form, and also

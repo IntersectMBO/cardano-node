@@ -968,7 +968,7 @@ data ShelleyConfig = ShelleyConfig
 
 newtype GenesisFile (direction :: FileDirection) = GenesisFile
   { unGenesisFile :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile)
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile, FromJSON, ToJSON)
 
 newtype GenesisHashByron = GenesisHashByron
   { unGenesisHashByron :: Text
@@ -996,7 +996,7 @@ newtype NetworkName = NetworkName
 
 newtype NetworkConfigFile (direction :: FileDirection) = NetworkConfigFile
   { _unNetworkConfigFile :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile)
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile, FromJSON, ToJSON)
 
 newtype SocketPath = SocketPath
   { unSocketPath :: FilePath

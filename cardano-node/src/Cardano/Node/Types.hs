@@ -64,11 +64,11 @@ data ConfigError =
 -- (logging, tracing, protocol, slot length etc)
 newtype ConfigYamlFilePath (direction :: FileDirection) = ConfigYamlFilePath
   { unConfigYamlFilePath :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile)
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile, FromJSON, ToJSON)
 
 newtype DbFile (direction :: FileDirection) = DbFile
   { unDbFile :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile)
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile, FromJSON, ToJSON)
 
 newtype GenesisFile = GenesisFile
   { unGenesisFile :: FilePath
@@ -289,7 +289,7 @@ data NodeHardForkProtocolConfiguration =
 
 newtype TopologyFile (direction :: FileDirection) = TopologyFile
   { unTopologyFile :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile)
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile, FromJSON, ToJSON)
 
 instance AdjustFilePaths NodeProtocolConfiguration where
 

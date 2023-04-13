@@ -564,7 +564,7 @@ data CardanoAddressKeyType
 
 newtype OpCertCounterFile (direction :: FileDirection) = OpCertCounterFile
   { unOpCertCounterFile :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile)
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile, FromJSON, ToJSON)
 
 newtype PrivKeyFile
   = PrivKeyFile FilePath
@@ -572,7 +572,7 @@ newtype PrivKeyFile
 
 newtype WitnessFile (direction :: FileDirection) = WitnessFile
   { unWitnessFile :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile)
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile, FromJSON, ToJSON)
 
 -- | A raw verification key given in Base64, and decoded into a ByteString.
 newtype VerificationKeyBase64

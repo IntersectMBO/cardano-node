@@ -9,15 +9,7 @@ import           Data.Aeson
 
 import qualified Ouroboros.Network.Magic as Ouroboros (NetworkMagic (..))
 
-import           Cardano.Api (File (..), NetworkId (..))
-import           Cardano.CLI.Types (SigningKeyFile (..))
-
-
-instance ToJSON (SigningKeyFile direction) where
- toJSON (SigningKeyFile (File a)) = toJSON a
-
-instance FromJSON (SigningKeyFile direction) where
-  parseJSON a = SigningKeyFile . File <$> parseJSON a
+import           Cardano.Api (NetworkId (..))
 
 
 instance ToJSON NetworkId where

@@ -63,11 +63,11 @@ renderByronKeyFailure err =
 
 newtype NewSigningKeyFile (direction :: FileDirection) = NewSigningKeyFile
   { unNewSigningKeyFile :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile)
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile, FromJSON, ToJSON)
 
 newtype NewVerificationKeyFile (direction :: FileDirection) = NewVerificationKeyFile
   { unNewVerificationKeyFile :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile)
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile, FromJSON, ToJSON)
 
 -- | Print some invariant properties of a public key:
 --   its hash and formatted view.

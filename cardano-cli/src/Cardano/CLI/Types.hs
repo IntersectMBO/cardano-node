@@ -80,7 +80,7 @@ data CBORObject = CBORBlockByron Byron.EpochSlots
 -- genesis delegate certificates and MIR certificates.
 newtype CertificateFile (direction :: FileDirection) = CertificateFile
   { unCertificateFile :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile)
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile, FromJSON, ToJSON)
 
 newtype CurrentKesPeriod = CurrentKesPeriod { unCurrentKesPeriod :: Word64 } deriving (Eq, Show)
 
@@ -92,7 +92,7 @@ instance FromJSON CurrentKesPeriod where
 
 newtype GenesisFile (direction :: FileDirection) = GenesisFile
   { unGenesisFile :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile)
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile, ToJSON)
 
 data OpCertNodeAndOnDiskCounterInformation
   -- | The on disk operational certificate has a counter
@@ -225,15 +225,15 @@ instance Crypto.Crypto crypto =>  ToJSON (Params crypto) where
 
 newtype SigningKeyFile (direction :: FileDirection) = SigningKeyFile
   { unSigningKeyFile :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile)
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile, FromJSON, ToJSON)
 
 newtype UpdateProposalFile (direction :: FileDirection) = UpdateProposalFile
   { unUpdateProposalFile :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile)
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile, FromJSON, ToJSON)
 
 newtype VerificationKeyFile (direction :: FileDirection) = VerificationKeyFile
   { unVerificationKeyFile :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile)
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile, FromJSON, ToJSON)
 
 newtype ScriptFile = ScriptFile { unScriptFile :: FilePath }
                      deriving (Eq, Show)
@@ -356,11 +356,11 @@ data EpochLeadershipSchedule
 
 newtype TxBodyFile direction = TxBodyFile
   { unTxBodyFile :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile)
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile, FromJSON, ToJSON)
 
 newtype TxFile direction = TxFile
   { unTxFile :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile)
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode, MapFile, FromJSON, ToJSON)
 
 data TxMempoolQuery =
       TxMempoolQueryTxExists TxId
