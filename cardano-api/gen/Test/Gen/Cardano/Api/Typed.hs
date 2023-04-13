@@ -641,15 +641,12 @@ genTxInsCollateral era =
                           [ pure TxInsCollateralNone
                           , TxInsCollateral supported <$> Gen.list (Range.linear 0 10) genTxIn
                           ]
+
 genTxInsReference :: CardanoEra era -> Gen (TxInsReference BuildTx era)
 genTxInsReference era =
     case refInsScriptsAndInlineDatsSupportedInEra era of
       Nothing        -> pure TxInsReferenceNone
-      Just supported -> Gen.choice
-                          [ pure TxInsReferenceNone
-                          , TxInsReference supported <$> Gen.list (Range.linear 0 10) genTxIn
-                          ]
-
+      Just supported -> TxInsReference supported <$> Gen.list (Range.linear 0 10) genTxIn
 
 genTxReturnCollateral :: CardanoEra era -> Gen (TxReturnCollateral CtxTx era)
 genTxReturnCollateral era =
