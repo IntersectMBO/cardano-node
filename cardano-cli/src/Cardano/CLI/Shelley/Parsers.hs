@@ -1438,7 +1438,7 @@ pGenesisCmd =
 -- Shelley CLI flag parsers
 --
 
-data FileDirection
+data ParserFileDirection
   = Input
   | Output
   deriving (Eq, Show)
@@ -1724,7 +1724,7 @@ pWitnessSigningData =
         <*>
           optional pByronAddress
 
-pSigningKeyFile :: FileDirection -> Parser SigningKeyFile
+pSigningKeyFile :: ParserFileDirection -> Parser SigningKeyFile
 pSigningKeyFile fdir =
   SigningKeyFile <$>
     Opt.strOption
@@ -1867,7 +1867,7 @@ pVerificationKeyOrFile asType =
   VerificationKeyValue <$> pVerificationKey asType
     <|> VerificationKeyFilePath <$> pVerificationKeyFile Input
 
-pVerificationKeyFile :: FileDirection -> Parser VerificationKeyFile
+pVerificationKeyFile :: ParserFileDirection -> Parser VerificationKeyFile
 pVerificationKeyFile fdir =
   VerificationKeyFile <$>
     Opt.strOption
@@ -1877,7 +1877,7 @@ pVerificationKeyFile fdir =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
-pExtendedVerificationKeyFile :: FileDirection -> Parser VerificationKeyFile
+pExtendedVerificationKeyFile :: ParserFileDirection -> Parser VerificationKeyFile
 pExtendedVerificationKeyFile fdir =
   VerificationKeyFile <$>
     Opt.strOption
@@ -2410,7 +2410,7 @@ pWitnessFile =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
-pTxBodyFile :: FileDirection -> Parser TxBodyFile
+pTxBodyFile :: ParserFileDirection -> Parser TxBodyFile
 pTxBodyFile fdir =
     TxBodyFile <$>
       (  Opt.strOption
@@ -2432,7 +2432,7 @@ pTxBodyFile fdir =
         Output -> "out-file"
 
 
-pTxFile :: FileDirection -> Parser TxFile
+pTxFile :: ParserFileDirection -> Parser TxFile
 pTxFile fdir =
     TxFile <$>
       (  Opt.strOption
