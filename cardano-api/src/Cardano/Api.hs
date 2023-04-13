@@ -41,8 +41,6 @@ module Cardano.Api (
     Directory(..),
     FileDirection(..),
 
-    OutputFile(..),
-
     writeByteStringFileWithOwnerPermissions,
     writeByteStringFile,
     writeByteStringOutput,

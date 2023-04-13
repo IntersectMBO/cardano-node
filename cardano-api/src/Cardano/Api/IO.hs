@@ -8,9 +8,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Api.IO
-  ( OutputFile(..)
-
-  , writeByteStringFileWithOwnerPermissions
+  ( writeByteStringFileWithOwnerPermissions
   , writeByteStringFile
   , writeByteStringOutput
 
@@ -58,7 +56,6 @@ import           Data.Kind (Type)
 import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text.IO as Text
-import           GHC.Generics (Generic)
 import qualified System.IO as IO
 import           System.IO (Handle)
 
@@ -82,12 +79,6 @@ newtype File (direction :: FileDirection) = File
 newtype Directory = Directory
   { unDirectory :: FilePath
   } deriving newtype (Eq, Ord, Show, IsString, FromJSON, ToJSON)
-
-newtype OutputFile = OutputFile
-  { unOutputFile :: FilePath
-  }
-  deriving Generic
-  deriving newtype (Eq, Ord, Show, IsString, ToJSON, FromJSON)
 
 handleFileForWritingWithOwnerPermission
   :: File 'Out
