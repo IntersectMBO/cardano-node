@@ -66,6 +66,7 @@ import           Cardano.CLI.Byron.Commands
 import           Cardano.CLI.Byron.Genesis
 import           Cardano.CLI.Byron.Key
 import           Cardano.CLI.Byron.Tx
+import           Cardano.CLI.Common.Parsers (pNetworkId)
 import           Cardano.CLI.Run (ClientCommand (ByronCommand))
 import           Cardano.CLI.Shelley.Commands (ByronKeyFormat (..))
 import           Cardano.CLI.Types
@@ -650,25 +651,6 @@ parseFractionWithDefault optname desc w =
     <> help desc
     <> value w
     )
-
-pNetworkId :: Parser NetworkId
-pNetworkId =
-  pMainnet' <|> fmap Testnet pTestnetMagic
- where
-   pMainnet' :: Parser NetworkId
-   pMainnet' =
-    Opt.flag' Mainnet
-      (  Opt.long "mainnet"
-      <> Opt.help "Use the mainnet magic id."
-      )
-
-pTestnetMagic :: Parser NetworkMagic
-pTestnetMagic =
-  fmap NetworkMagic $ Opt.option (bounded "TESTNET_MAGIC") $ mconcat
-    [ Opt.long "testnet-magic"
-    , Opt.metavar "NATURAL"
-    , Opt.help "Specify a testnet magic id."
-    ]
 
 parseNewSigningKeyFile :: String -> Parser NewSigningKeyFile
 parseNewSigningKeyFile opt =

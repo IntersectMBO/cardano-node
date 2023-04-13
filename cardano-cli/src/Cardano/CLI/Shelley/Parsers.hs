@@ -57,6 +57,8 @@ import           Cardano.Api
 import           Cardano.Api.Shelley
 
 import           Cardano.Chain.Common (BlockCount (BlockCount))
+
+import           Cardano.CLI.Common.Parsers (pConsensusModeParams, pNetworkId)
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (PaymentVerifier (..), StakeIdentifier (..),
                    StakeVerifier (..), VerificationKeyOrFile (..), VerificationKeyOrHashOrFile (..),
@@ -2051,25 +2053,6 @@ pKesVerificationKeyFile =
         )
     )
 
-pNetworkId :: Parser NetworkId
-pNetworkId =
-  pMainnet <|> fmap Testnet pTestnetMagic
- where
-   pMainnet :: Parser NetworkId
-   pMainnet =
-    Opt.flag' Mainnet
-      (  Opt.long "mainnet"
-      <> Opt.help "Use the mainnet magic id."
-      )
-
-pTestnetMagic :: Parser NetworkMagic
-pTestnetMagic =
-  fmap NetworkMagic $ Opt.option (bounded "TESTNET_MAGIC") $ mconcat
-    [ Opt.long "testnet-magic"
-    , Opt.metavar "TESTNET_MAGIC"
-    , Opt.help "Specify a testnet magic id."
-    ]
-
 pTxSubmitFile :: Parser FilePath
 pTxSubmitFile =
   Opt.strOption
@@ -3225,44 +3208,6 @@ pMaxCollateralInputs =
     , "transaction (from Alonzo era)."
     ]
   ]
-
-pConsensusModeParams :: Parser AnyConsensusModeParams
-pConsensusModeParams = asum
-  [ Opt.flag' (AnyConsensusModeParams ShelleyModeParams)
-      (  Opt.long "shelley-mode"
-      <> Opt.help "For talking to a node running in Shelley-only mode."
-      )
-  , Opt.flag' ()
-      (  Opt.long "byron-mode"
-      <> Opt.help "For talking to a node running in Byron-only mode."
-      )
-       *> pByronConsensusMode
-  , Opt.flag' ()
-      (  Opt.long "cardano-mode"
-      <> Opt.help "For talking to a node running in full Cardano mode (default)."
-      )
-       *> pCardanoConsensusMode
-  , -- Default to the Cardano consensus mode.
-    pure . AnyConsensusModeParams . CardanoModeParams $ EpochSlots defaultByronEpochSlots
-  ]
- where
-   pCardanoConsensusMode :: Parser AnyConsensusModeParams
-   pCardanoConsensusMode = AnyConsensusModeParams . CardanoModeParams <$> pEpochSlots
-   pByronConsensusMode :: Parser AnyConsensusModeParams
-   pByronConsensusMode = AnyConsensusModeParams . ByronModeParams <$> pEpochSlots
-
-defaultByronEpochSlots :: Word64
-defaultByronEpochSlots = 21600
-
-pEpochSlots :: Parser EpochSlots
-pEpochSlots =
-  fmap EpochSlots $ Opt.option (bounded "SLOTS") $ mconcat
-    [ Opt.long "epoch-slots"
-    , Opt.metavar "SLOTS"
-    , Opt.help "The number of slots per epoch for the Byron era."
-    , Opt.value defaultByronEpochSlots -- Default to the mainnet value.
-    , Opt.showDefault
-    ]
 
 pProtocolVersion :: Parser (Natural, Natural)
 pProtocolVersion =

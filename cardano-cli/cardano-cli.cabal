@@ -68,6 +68,7 @@ library
                         Cardano.CLI.Byron.UpdateProposal
                         Cardano.CLI.Byron.Vote
 
+                        Cardano.CLI.Common.Parsers
                         Cardano.CLI.Pretty
                         Cardano.CLI.IO.Lazy
 
