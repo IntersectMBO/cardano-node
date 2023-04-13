@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.CLI.Shelley.Run.Node
   ( ShelleyNodeCmdError(ShelleyNodeCmdReadFileError)
@@ -194,7 +195,7 @@ runNodeIssueOpCert kesVerKeyOrFile
 
     ocertIssueCounter <- firstExceptT ShelleyNodeCmdReadFileError
       . newExceptT
-      $ readFileTextEnvelope AsOperationalCertificateIssueCounter (usingIn ocertCtrPath)
+      $ readFileTextEnvelope AsOperationalCertificateIssueCounter (usingIn @File ocertCtrPath)
 
     verKeyKes <- firstExceptT ShelleyNodeCmdReadKeyFileError
       . newExceptT
@@ -220,7 +221,7 @@ runNodeIssueOpCert kesVerKeyOrFile
     -- a new cert but without updating the counter.
     firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
-      $ writeLazyByteStringFile (usingOut ocertCtrPath)
+      $ writeLazyByteStringFile (usingOut @File ocertCtrPath)
       $ textEnvelopeToJSON (Just $ ocertCtrDesc $ getCounter nextOcertCtr) nextOcertCtr
 
     firstExceptT ShelleyNodeCmdWriteFileError
