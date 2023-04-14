@@ -451,6 +451,7 @@ instance HasSeverityAnnotation (ConnectionManagerTrace addr (ConnectionHandlerTr
       TrConnectionHandler _ ev'     ->
         case ev' of
           TrHandshakeSuccess {}               -> Info
+          TrHandshakeQuery {}                 -> Info
           TrHandshakeClientError {}           -> Notice
           TrHandshakeServerError {}           -> Info
           TrConnectionHandlerError _ _ ShutdownNode            -> Critical
@@ -1754,6 +1755,9 @@ instance Show vNumber => ToJSON (HandshakeProtocolError vNumber) where
                  , "versionNumber" .= show vNumber
                  , "reason" .= String (pack $ show t)
                  ]
+  toJSON QueryNotSupported =
+    Aeson.object [ "kind" .= String "QueryNotSupported"
+                 ]
 
 instance Show vNumber => ToJSON (HandshakeException vNumber) where
   toJSON (HandshakeProtocolLimit plf) =
@@ -1802,15 +1806,17 @@ instance FromJSON NodeToClientVersion where
   parseJSON x          = fail ("FromJSON.NodeToClientVersion: error parsing NodeToClientVersion: " ++ show x)
 
 instance ToJSON NodeToNodeVersionData where
-  toJSON (NodeToNodeVersionData (NetworkMagic m) dm ps) =
+  toJSON (NodeToNodeVersionData (NetworkMagic m) dm ps q) =
     Aeson.object [ "networkMagic" .= toJSON m
                  , "diffusionMode" .= show dm
                  , "peerSharing" .= show ps
+                 , "query" .= toJSON q
                  ]
 
 instance ToJSON NodeToClientVersionData where
-  toJSON (NodeToClientVersionData (NetworkMagic m)) =
+  toJSON (NodeToClientVersionData (NetworkMagic m) q) =
     Aeson.object [ "networkMagic" .= toJSON m
+                 , "query" .= toJSON q
                  ]
 
 instance (Show versionNumber, ToJSON versionNumber, ToJSON agreedOptions)
@@ -1820,6 +1826,14 @@ instance (Show versionNumber, ToJSON versionNumber, ToJSON agreedOptions)
       [ "kind" .= String "HandshakeSuccess"
       , "versionNumber" .= toJSON versionNumber
       , "agreedOptions" .= toJSON agreedOptions
+      ]
+  toObject _verb (TrHandshakeQuery vMap) =
+    mconcat
+      [ "kind" .= String "HandshakeQuery"
+      , "versions" .= toJSON ((\(k,v) -> Aeson.object [
+          "versionNumber" .= k
+        , "options" .= v
+        ]) <$> Map.toList vMap)
       ]
   toObject _verb (TrHandshakeClientError err) =
     mconcat

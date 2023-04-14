@@ -50,24 +50,26 @@ maybeUnixSockEndPoint = \case
   UnixSockEndPoint sock -> Just sock
 
 data PingCmd = PingCmd
-  { pingCmdCount    :: !Word32
-  , pingCmdEndPoint :: !EndPoint
-  , pingCmdPort     :: !String
-  , pingCmdMagic    :: !Word32
-  , pingCmdJson     :: !Bool
-  , pingCmdQuiet    :: !Bool
+  { pingCmdCount           :: !Word32
+  , pingCmdEndPoint        :: !EndPoint
+  , pingCmdPort            :: !String
+  , pingCmdMagic           :: !Word32
+  , pingCmdJson            :: !Bool
+  , pingCmdQuiet           :: !Bool
+  , pingOptsHandshakeQuery :: !Bool
   } deriving (Eq, Show)
 
 pingClient :: Tracer IO CNP.LogMsg -> Tracer IO String -> PingCmd -> [CNP.NodeVersion] -> AddrInfo -> IO ()
 pingClient stdout stderr cmd = CNP.pingClient stdout stderr opts
   where opts = CNP.PingOpts
-          { CNP.pingOptsQuiet     = pingCmdQuiet cmd
-          , CNP.pingOptsJson      = pingCmdJson cmd
-          , CNP.pingOptsCount     = pingCmdCount cmd
-          , CNP.pingOptsHost      = maybeHostEndPoint (pingCmdEndPoint cmd)
-          , CNP.pingOptsUnixSock  = maybeUnixSockEndPoint (pingCmdEndPoint cmd)
-          , CNP.pingOptsPort      = pingCmdPort cmd
-          , CNP.pingOptsMagic     = pingCmdMagic cmd
+          { CNP.pingOptsQuiet          = pingCmdQuiet cmd
+          , CNP.pingOptsJson           = pingCmdJson cmd
+          , CNP.pingOptsCount          = pingCmdCount cmd
+          , CNP.pingOptsHost           = maybeHostEndPoint (pingCmdEndPoint cmd)
+          , CNP.pingOptsUnixSock       = maybeUnixSockEndPoint (pingCmdEndPoint cmd)
+          , CNP.pingOptsPort           = pingCmdPort cmd
+          , CNP.pingOptsMagic          = pingCmdMagic cmd
+          , CNP.pingOptsHandshakeQuery = pingOptsHandshakeQuery cmd
           }
 
 runPingCmd :: PingCmd -> ExceptT PingClientCmdError IO ()
@@ -194,5 +196,10 @@ pPing = PingCmd
         [ Opt.long "quiet"
         , Opt.short 'q'
         , Opt.help "Quiet flag, CSV/JSON only output"
+        ]
+      )
+  <*> ( Opt.switch $ mconcat
+        [ Opt.long "query-versions"
+        , Opt.help "Query the supported protocol versions during the handshake and terminate the connection."
         ]
       )

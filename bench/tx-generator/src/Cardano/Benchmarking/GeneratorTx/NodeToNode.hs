@@ -110,6 +110,7 @@ benchmarkConnectTxSubmit ioManager handshakeTracer submissionTracer codecConfig 
        { NtN.networkMagic = networkMagic
        , NtN.diffusionMode = NtN.InitiatorOnlyDiffusionMode
        , NtN.peerSharing = ownPeerSharing
+       , NtN.query = False
        }) $
       mkApp $
       NtN.nodeToNodeProtocols NtN.defaultMiniProtocolParameters ( \them _ ->
