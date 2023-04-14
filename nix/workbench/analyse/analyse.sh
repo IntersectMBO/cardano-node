@@ -75,10 +75,12 @@ usage_analyse() {
 
 EOF
 }
+## When this list is empty,
+## all LOAny's (un-interpretable messages) are simply ignored.
 analysis_allowed_loanys=(
-    'LAFallingEdge'
-    'LANonBlocking'
-    'LARollback'
+    # 'LAFallingEdge'
+    # 'LANonBlocking'
+    # 'LARollback'
 )
 
 analyse_default_op='standard'
