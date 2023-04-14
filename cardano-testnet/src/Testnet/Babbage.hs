@@ -179,8 +179,8 @@ babbageTestnet testnetOptions H.Conf {..} = do
   H.rewriteJsonFile (tempAbsPath </> "genesis/shelley/genesis.json") $ J.rewriteObject
     ( HM.insert "slotLength"             (toJSON @Double 0.1)
     . HM.insert "activeSlotsCoeff"       (toJSON @Double 0.1)
-    . HM.insert "securityParam"          (toJSON @Int 10)     -- TODO: USE config parameter
-    . HM.insert "epochLength"            (toJSON @Int 500)
+    . HM.insert "securityParam"          (toJSON @Int 6)    -- TODO: USE config parameter
+    . HM.insert "epochLength"            (toJSON @Int 600)  -- Should be "10 * k / f" where "k = securityParam, f = activeSlotsCoeff"
     . HM.insert "maxLovelaceSupply"      (toJSON @Int 1000000000000)
     . HM.insert "minFeeA"                (toJSON @Int 44)
     . HM.insert "minFeeB"                (toJSON @Int 155381)
