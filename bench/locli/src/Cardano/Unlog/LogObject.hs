@@ -72,16 +72,16 @@ data RunLogs a
 rlLogs :: RunLogs a -> [(JsonLogfile, a)]
 rlLogs = fmap hlLogs . Map.elems . rlHostLogs
 
-runLiftLogObjects :: RunLogs () -> Bool -> [LOAnyType]
+runLiftLogObjects :: RunLogs () -> Bool -> Maybe [LOAnyType]
                   -> ExceptT LText.Text IO (RunLogs [LogObject])
-runLiftLogObjects rl@RunLogs{..} okDErr anyOks = liftIO $ do
+runLiftLogObjects rl@RunLogs{..} okDErr loAnyLimit = liftIO $ do
   forConcurrently (Map.toList rlHostLogs)
     (uncurry readHostLogs)
     <&> \kvs -> rl { rlHostLogs = Map.fromList kvs }
  where
    readHostLogs :: Host -> HostLogs () -> IO (Host, HostLogs [LogObject])
    readHostLogs h hl@HostLogs{..} =
-     readLogObjectStream (unJsonLogfile $ fst hlLogs) okDErr anyOks
+     readLogObjectStream (unJsonLogfile $ fst hlLogs) okDErr loAnyLimit
      <&> (h,) . setLogs hl . fmap (setLOhost h)
 
    setLogs :: HostLogs a -> b -> HostLogs b
@@ -89,8 +89,8 @@ runLiftLogObjects rl@RunLogs{..} okDErr anyOks = liftIO $ do
    setLOhost :: Host -> LogObject -> LogObject
    setLOhost h lo = lo { loHost = h }
 
-readLogObjectStream :: FilePath -> Bool -> [LOAnyType] -> IO [LogObject]
-readLogObjectStream f okDErr anyOks =
+readLogObjectStream :: FilePath -> Bool -> Maybe [LOAnyType] -> IO [LogObject]
+readLogObjectStream f okDErr loAnyLimit =
   LBS.readFile f
     <&>
     (if okDErr then id else
@@ -99,11 +99,16 @@ readLogObjectStream f okDErr anyOks =
                       (printf "Decode error while parsing %s:\n%s\non input:\n>>>  %s" f (Text.toString err) (Text.toString input))
                     _ -> True)
                . loBody)) .
-    filter ((\case
+    filter ((case loAnyLimit of
+              Nothing -> \case
+                LOAny{} -> False
+                _       -> True
+              Just constraint -> \case
                 LOAny laty obj ->
-                  if elem laty anyOks then True else
+                  if elem laty constraint
+                  then True else
                     error
-                    (printf "Unexpected LOAny while parsing %s -- %s: %s" f (show laty) (show obj))
+                  (printf "Unexpected LOAny while parsing %s -- %s: %s" f (show laty) (show obj))
                 _ -> True)
              . loBody) .
     filter (not . isDecodeError "Error in $: not enough input" . loBody) .
@@ -434,7 +439,7 @@ instance FromJSON LogObject where
                            & fromMaybe kind)                        (snd3 interpreters)
            <|> Map.lookup  kind                                     (fst3 interpreters) of
             Just interp -> interp unwrapped
-            Nothing -> pure $ LOAny LANoInterpreter unwrapped
+            Nothing -> pure $ LOAny LANoInterpreter v
    where
      unwrap :: Text -> Text -> Object -> Parser (Object, Text)
      unwrap wrappedKeyPred unwrapKey v = do
