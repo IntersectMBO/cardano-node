@@ -14,7 +14,6 @@ module Cardano.CLI.Shelley.Run.Transaction
   , renderShelleyTxCmdError
   , runTransactionCmd
   , readFileTx
-  , readProtocolParametersSourceSpec
   , toTxOutInAnyEra
   ) where
 
@@ -271,27 +270,24 @@ runTransactionCmd cmd =
   case cmd of
     TxBuild era consensusModeParams nid mScriptValidity mOverrideWits txins readOnlyRefIns
             reqSigners txinsc mReturnColl mTotCollateral txouts changeAddr mValue mLowBound
-            mUpperBound certs wdrls metadataSchema scriptFiles metadataFiles mPparams
+            mUpperBound certs wdrls metadataSchema scriptFiles metadataFiles mProtocolParamsFile
             mUpProp outputOptions -> do
       runTxBuildCmd era consensusModeParams nid mScriptValidity mOverrideWits txins readOnlyRefIns
             reqSigners txinsc mReturnColl mTotCollateral txouts changeAddr mValue mLowBound
-            mUpperBound certs wdrls metadataSchema scriptFiles metadataFiles mPparams
-            mUpProp outputOptions
+            mUpperBound certs wdrls metadataSchema scriptFiles metadataFiles mProtocolParamsFile mUpProp outputOptions
     TxBuildRaw era mScriptValidity txins readOnlyRefIns txinsc mReturnColl
                mTotColl reqSigners txouts mValue mLowBound mUpperBound fee certs wdrls
-               metadataSchema scriptFiles metadataFiles mpparams mUpProp out -> do
+               metadataSchema scriptFiles metadataFiles mProtocolParamsFile mUpProp out -> do
       runTxBuildRawCmd era mScriptValidity txins readOnlyRefIns txinsc mReturnColl
                mTotColl reqSigners txouts mValue mLowBound mUpperBound fee certs wdrls
-               metadataSchema scriptFiles metadataFiles mpparams mUpProp out
+               metadataSchema scriptFiles metadataFiles mProtocolParamsFile mUpProp out
     TxSign txinfile skfiles network txoutfile ->
       runTxSign txinfile skfiles network txoutfile
     TxSubmit anyConsensusModeParams network txFp ->
       runTxSubmit anyConsensusModeParams network txFp
-    TxCalculateMinFee txbody mnw pGenesisOrParamsFile nInputs nOutputs
-                      nShelleyKeyWitnesses nByronKeyWitnesses ->
-      runTxCalculateMinFee txbody mnw pGenesisOrParamsFile nInputs nOutputs
-                           nShelleyKeyWitnesses nByronKeyWitnesses
-    TxCalculateMinRequiredUTxO era pParamSpec txOuts -> runTxCalculateMinRequiredUTxO era pParamSpec txOuts
+    TxCalculateMinFee txbody mnw pParamsFile nInputs nOutputs nShelleyKeyWitnesses nByronKeyWitnesses ->
+      runTxCalculateMinFee txbody mnw pParamsFile nInputs nOutputs nShelleyKeyWitnesses nByronKeyWitnesses
+    TxCalculateMinRequiredUTxO era pParamsFile txOuts -> runTxCalculateMinRequiredUTxO era pParamsFile txOuts
     TxHashScriptData scriptDataOrFile -> runTxHashScriptData scriptDataOrFile
     TxGetTxId txinfile -> runTxGetTxId txinfile
     TxView txinfile -> runTxView txinfile
@@ -327,14 +323,14 @@ runTxBuildCmd
   -> TxMetadataJsonSchema
   -> [ScriptFile]
   -> [MetadataFile]
-  -> Maybe ProtocolParamsSourceSpec
+  -> Maybe ProtocolParamsFile
   -> Maybe UpdateProposalFile
   -> TxBuildOutputOptions
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuildCmd
   (AnyCardanoEra cEra) consensusModeParams@(AnyConsensusModeParams cModeParams) nid mScriptValidity mOverrideWits txins readOnlyRefIns
   reqSigners txinsc mReturnColl mTotCollateral txouts changeAddr mValue mLowBound
-  mUpperBound certs wdrls metadataSchema scriptFiles metadataFiles mPparams mUpProp outputOptions = do
+  mUpperBound certs wdrls metadataSchema scriptFiles metadataFiles mProtocolParamsFile mUpProp outputOptions = do
   -- The user can specify an era prior to the era that the node is currently in.
   -- We cannot use the user specified era to construct a query against a node because it may differ
   -- from the node's era and this will result in the 'QueryEraMismatch' failure.
@@ -365,8 +361,8 @@ runTxBuildCmd
   scripts <- firstExceptT ShelleyTxCmdScriptFileError $
                      mapM (readFileScriptInAnyLang . unScriptFile) scriptFiles
   txAuxScripts <- hoistEither $ first ShelleyTxCmdAuxScriptsValidationError $ validateTxAuxScripts cEra scripts
-  mpparams <- forM mPparams $ \ppFp ->
-    firstExceptT ShelleyTxCmdProtocolParamsError (readProtocolParametersSourceSpec ppFp)
+  mpparams <- forM mProtocolParamsFile $ \ppf ->
+    firstExceptT ShelleyTxCmdProtocolParamsError (readProtocolParameters ppf)
 
   mProp <- forM mUpProp $ \(UpdateProposalFile upFp) ->
     firstExceptT ShelleyTxCmdReadTextViewFileError (newExceptT $ readFileTextEnvelope AsUpdateProposal upFp)
@@ -462,14 +458,14 @@ runTxBuildRawCmd
   -> TxMetadataJsonSchema
   -> [ScriptFile]
   -> [MetadataFile]
-  -> Maybe ProtocolParamsSourceSpec
+  -> Maybe ProtocolParamsFile
   -> Maybe UpdateProposalFile
   -> TxBodyFile
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuildRawCmd
   (AnyCardanoEra cEra) mScriptValidity txins readOnlyRefIns txinsc mReturnColl
   mTotColl reqSigners txouts mValue mLowBound mUpperBound fee certs wdrls
-  metadataSchema scriptFiles metadataFiles mpparams mUpProp (TxBodyFile out) = do
+  metadataSchema scriptFiles metadataFiles mpParamsFile mUpProp (TxBodyFile out) = do
   inputsAndMaybeScriptWits <- firstExceptT ShelleyTxCmdScriptWitnessError
                                 $ readScriptWitnessFiles cEra txins
   certFilesAndMaybeScriptWits <- firstExceptT ShelleyTxCmdScriptWitnessError
@@ -488,8 +484,8 @@ runTxBuildRawCmd
                      mapM (readFileScriptInAnyLang . unScriptFile) scriptFiles
   txAuxScripts <- hoistEither $ first ShelleyTxCmdAuxScriptsValidationError $ validateTxAuxScripts cEra scripts
 
-  pparams <- forM mpparams $ \ppFp ->
-    firstExceptT ShelleyTxCmdProtocolParamsError (readProtocolParametersSourceSpec ppFp)
+  pparams <- forM mpParamsFile $ \ppf ->
+    firstExceptT ShelleyTxCmdProtocolParamsError (readProtocolParameters ppf)
 
   mProp <- forM mUpProp $ \(UpdateProposalFile upFp) ->
     firstExceptT ShelleyTxCmdReadTextViewFileError (newExceptT $ readFileTextEnvelope AsUpdateProposal upFp)
@@ -1147,13 +1143,13 @@ runTxSubmit (AnyConsensusModeParams cModeParams) network txFilePath = do
 runTxCalculateMinFee
   :: TxBodyFile
   -> Maybe NetworkId
-  -> ProtocolParamsSourceSpec
+  -> ProtocolParamsFile
   -> TxInCount
   -> TxOutCount
   -> TxShelleyWitnessCount
   -> TxByronWitnessCount
   -> ExceptT ShelleyTxCmdError IO ()
-runTxCalculateMinFee (TxBodyFile txbodyFilePath) nw protocolParamsSourceSpec
+runTxCalculateMinFee (TxBodyFile txbodyFilePath) nw pParamsFile
                      (TxInCount nInputs) (TxOutCount nOutputs)
                      (TxShelleyWitnessCount nShelleyKeyWitnesses)
                      (TxByronWitnessCount nByronKeyWitnesses) = do
@@ -1161,8 +1157,7 @@ runTxCalculateMinFee (TxBodyFile txbodyFilePath) nw protocolParamsSourceSpec
     txbodyFile <- liftIO $ fileOrPipe txbodyFilePath
     unwitnessed <- firstExceptT ShelleyTxCmdCddlError . newExceptT
                      $ readFileTxBody txbodyFile
-    pparams <- firstExceptT ShelleyTxCmdProtocolParamsError
-                 $ readProtocolParametersSourceSpec protocolParamsSourceSpec
+    pparams <- firstExceptT ShelleyTxCmdProtocolParamsError $ readProtocolParameters pParamsFile
     case unwitnessed of
       IncompleteCddlFormattedTx anyTx -> do
         InAnyShelleyBasedEra _era unwitTx <-
@@ -1201,12 +1196,11 @@ runTxCalculateMinFee (TxBodyFile txbodyFilePath) nw protocolParamsSourceSpec
 
 runTxCalculateMinRequiredUTxO
   :: AnyCardanoEra
-  -> ProtocolParamsSourceSpec
+  -> ProtocolParamsFile
   -> TxOutAnyEra
   -> ExceptT ShelleyTxCmdError IO ()
-runTxCalculateMinRequiredUTxO (AnyCardanoEra era) protocolParamsSourceSpec txOut = do
-  pp <- firstExceptT ShelleyTxCmdProtocolParamsError
-          $ readProtocolParametersSourceSpec protocolParamsSourceSpec
+runTxCalculateMinRequiredUTxO (AnyCardanoEra era) pParamsFile txOut = do
+  pp <- firstExceptT ShelleyTxCmdProtocolParamsError (readProtocolParameters pParamsFile)
   out <- toTxOutInAnyEra era txOut
   case cardanoEraStyle era of
     LegacyByronEra -> error "runTxCalculateMinRequiredUTxO: Byron era not implemented yet"

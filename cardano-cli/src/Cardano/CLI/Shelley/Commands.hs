@@ -31,7 +31,6 @@ module Cardano.CLI.Shelley.Commands
   , OpCertCounterFile (..)
   , OutputFile (..)
   , ProtocolParamsFile (..)
-  , ProtocolParamsSourceSpec (..)
   , WitnessFile (..)
   , TxFile (..)
   , InputTxBodyOrTxFile (..)
@@ -186,7 +185,7 @@ data TransactionCmd
       [ScriptFile]
       -- ^ Auxiliary scripts
       [MetadataFile]
-      (Maybe ProtocolParamsSourceSpec)
+      (Maybe ProtocolParamsFile)
       (Maybe UpdateProposalFile)
       TxBodyFile
 
@@ -228,7 +227,7 @@ data TransactionCmd
       [ScriptFile]
       -- ^ Auxiliary scripts
       [MetadataFile]
-      (Maybe ProtocolParamsSourceSpec)
+      (Maybe ProtocolParamsFile)
       (Maybe UpdateProposalFile)
       TxBuildOutputOptions
   | TxSign InputTxBodyOrTxFile [WitnessSigningData] (Maybe NetworkId) TxFile
@@ -239,14 +238,14 @@ data TransactionCmd
   | TxCalculateMinFee
       TxBodyFile
       (Maybe NetworkId)
-      ProtocolParamsSourceSpec
+      ProtocolParamsFile
       TxInCount
       TxOutCount
       TxShelleyWitnessCount
       TxByronWitnessCount
   | TxCalculateMinRequiredUTxO
       AnyCardanoEra
-      ProtocolParamsSourceSpec
+      ProtocolParamsFile
       TxOutAnyEra
   | TxHashScriptData
       ScriptDataOrFile
@@ -254,17 +253,6 @@ data TransactionCmd
   | TxView InputTxBodyOrTxFile
 
 data InputTxBodyOrTxFile = InputTxBodyFile TxBodyFile | InputTxFile TxFile
-  deriving Show
-
-data ProtocolParamsSourceSpec
-  = ParamsFromGenesis !GenesisFile
-    -- ^ We allow an appropriately forewarned user to obtain protocol params
-    --   directly from the genesis file, which allows them to avoid running
-    --   the node in case they would like to estimate the fee using the
-    --   blockchain's initial protocol parameters.
-  | ParamsFromFile !ProtocolParamsFile
-    -- ^ Obtain protocol parameters from a file structured by the
-    --   'cardano-api' 'ProtocolParameters' data type.
   deriving Show
 
 renderTransactionCmd :: TransactionCmd -> Text
