@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Test.Cardano.Api.Metadata
   ( tests
@@ -9,8 +10,9 @@ module Test.Cardano.Api.Metadata
 import           Cardano.Api
 
 import           Data.ByteString (ByteString)
+import           Data.Maybe (mapMaybe)
 import           Data.Word (Word64)
-import           Hedgehog (Property, property, (===))
+import           Hedgehog (Gen, Property, property, (===))
 import           Test.Gen.Cardano.Api.Metadata
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testPropertyNamed)
@@ -18,6 +20,8 @@ import           Test.Tasty.Hedgehog (testPropertyNamed)
 import qualified Data.Aeson as Aeson
 import qualified Data.Map.Strict as Map
 import qualified Hedgehog
+import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
 
 -- ----------------------------------------------------------------------------
 -- Golden / unit tests
@@ -118,6 +122,46 @@ prop_metadata_roundtrip_via_schema_json = Hedgehog.property $ do
     Right md === (metadataFromJson TxMetadataJsonDetailedSchema
                 . metadataToJson   TxMetadataJsonDetailedSchema) md
 
+prop_metadata_chunks
+  :: (Show str, Eq str, Monoid str)
+  => Gen str
+  -> (str -> TxMetadataValue)
+  -> (TxMetadataValue -> Maybe str)
+  -> Property
+prop_metadata_chunks genStr toMetadataValue extractChunk = Hedgehog.property $ do
+  str <- Hedgehog.forAll genStr
+  case toMetadataValue str of
+    metadataValue@(TxMetaList chunks) -> do
+      Hedgehog.cover  1  "Empty chunks"   (null chunks)
+      Hedgehog.cover  5  "Single chunks"  (length chunks == 1)
+      Hedgehog.cover 25  "Many chunks"    (length chunks > 1)
+      str === mconcat (mapMaybe extractChunk chunks)
+      Right () === validateTxMetadata metadata
+     where
+      metadata = makeTransactionMetadata (Map.singleton 0 metadataValue)
+    _ ->
+      Hedgehog.failure
+
+prop_metadata_text_chunks :: Property
+prop_metadata_text_chunks =
+  prop_metadata_chunks
+    (Gen.text (Range.linear 0 255) Gen.unicodeAll)
+    metaTextChunks
+    (\case
+      TxMetaText chunk -> Just chunk
+      _ -> Nothing
+    )
+
+prop_metadata_bytes_chunks :: Property
+prop_metadata_bytes_chunks =
+  prop_metadata_chunks
+    (Gen.bytes (Range.linear 0 255))
+    metaBytesChunks
+    (\case
+      TxMetaBytes chunk -> Just chunk
+      _ -> Nothing
+    )
+
 -- ----------------------------------------------------------------------------
 -- Automagically collecting all the tests
 --
@@ -135,4 +179,6 @@ tests = testGroup "Test.Cardano.Api.Metadata"
   , testPropertyNamed "noschema json roundtrip via metadata" "noschema json roundtrip via metadata" prop_noschema_json_roundtrip_via_metadata
   , testPropertyNamed "schema json roundtrip via metadata"   "schema json roundtrip via metadata"   prop_schema_json_roundtrip_via_metadata
   , testPropertyNamed "metadata roundtrip via schema json"   "metadata roundtrip via schema json"   prop_metadata_roundtrip_via_schema_json
+  , testPropertyNamed "valid & rountrip text chunks"         "valid & roundtrip text chunks"        prop_metadata_text_chunks
+  , testPropertyNamed "valid & rountrip bytes chunks"        "valid & roundtrip bytes chunks"       prop_metadata_bytes_chunks
   ]
