@@ -7,7 +7,7 @@
 
 , backend
 , profile
-, profiled
+, profiling
 , nodeSpecs
 , topologyFiles
 }:
@@ -227,8 +227,8 @@ let
     };
     in
     finaliseNodeService profile nodeSpec
-    ((if profiled
-      then { profiling = "time"; }
+    ((if profiling != null
+      then { inherit profiling; }
       else { eventlog  = mkForce true; })
     //
     {

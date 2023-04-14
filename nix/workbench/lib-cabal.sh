@@ -1,16 +1,21 @@
 progress "workbench"  "cabal-inside-nix-shell mode enabled, calling cardano-* via '$(white cabal run)' (instead of using Nix store); $(red lib-cabal.sh) flags: $(yellow $*)"
 
-if test ! -v WB_PROFILED; then export WB_PROFILED= ; fi
+if test ! -v WB_PROFILING; then export WB_PROFILING= ; fi
+if test ! -v WB_RTSARGS;  then export WB_RTSARGS= ; fi
 
 while test $# -gt 0
 do case "$1" in
-       --profiled ) progress "workbench" "enabling $(white profiled) mode"
-                    export WB_PROFILED='true';;
-       * ) break;; esac; shift; done
+       --profiling-time )     export WB_PROFILING='time';           WB_RTSARGS=-p;;
+       --profiling-space )    export WB_PROFILING='space-cost';     WB_RTSARGS=-hc;;
+       --profiling-heap )     export WB_PROFILING='space-heap';     WB_RTSARGS=-hT;;
+       --profiling-module )   export WB_PROFILING='space-module';   WB_RTSARGS=-hm;;
+       --profiling-retainer ) export WB_PROFILING='space-retainer'; WB_RTSARGS=-hr;;
+       * ) break;; esac;
+   progress "workbench" "enabling $(red profiling mode):  $(white $WB_PROFILING)"
+   shift; done
 
-export WB_RTSARGS=${WB_PROFILED:+-p}
 export WB_FLAGS_RTS=${WB_RTSARGS:++RTS $WB_RTSARGS -RTS}
-export WB_FLAGS_CABAL=${WB_PROFILED:+--enable-profiling --builddir dist-profiled}
+export WB_FLAGS_CABAL=${WB_PROFILING:+--enable-profiling --builddir dist-profiled}
 WB_TIME=(
     time
     -f "{ \"wall_clock_s\":       %e\n, \"user_cpu_s\":         %U\n, \"sys_cpu_s\":          %S\n, \"avg_cpu_pct\":       \"%P\"\n, \"rss_peak_kb\":        %M\n, \"signals_received\":   %k\n, \"ctxsw_involuntary\":  %c\n, \"ctxsw_volunt_waits\": %w\n, \"pageflt_major\":      %F\n, \"pageflt_minor\":      %R\n, \"swaps\":              %W\n, \"io_fs_reads\":        %I\n, \"io_fs_writes\":       %O\n, \"cmdline\":           \"%C\"\n, \"exit_code\":          %x }"

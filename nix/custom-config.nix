@@ -1,5 +1,5 @@
 self: {
-  profiled   = false;
+  profiling  = null;
   withHoogle = true;
   localCluster = {
     cacheDir    = "${self.localCluster.stateDir}/.cache";

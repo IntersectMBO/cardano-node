@@ -200,7 +200,7 @@ start()
        esac; shift; done
 
     if test -n "$cabal_mode"
-    then . $(dirname "$0")/lib-cabal.sh ${WB_PROFILED:+--profiled}
+    then . $(dirname "$0")/lib-cabal.sh ${WB_PROFILING}
     fi
 
     backend validate
