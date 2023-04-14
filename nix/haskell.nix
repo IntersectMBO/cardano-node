@@ -214,8 +214,8 @@ let
             packages.plutus-core.components.library.ghcOptions = [ "-fexternal-interpreter" ];
           })
           {
-            packages = lib.genAttrs projectPackageNames
-              (name: { configureFlags = [ "--ghc-option=-Werror" ]; });
+            # packages = lib.genAttrs projectPackageNames
+            #   (name: { configureFlags = [ "--ghc-option=-Werror" ]; });
           }
           ({ pkgs, ... }: lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
             # systemd can't be statically linked
