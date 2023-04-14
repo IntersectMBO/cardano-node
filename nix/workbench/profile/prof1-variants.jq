@@ -115,14 +115,14 @@ def all_profile_variants:
       { n_singular_hosts:               1
       , n_dense_hosts:                  0
       }
-    } as $singleton
+    } as $solo
   |
     { composition:
       { n_singular_hosts:               0
       , n_dense_hosts:                  1
       , dense_pool_density:             10
       }
-    } as $singleton_dense10
+    } as $solo_dense10
   |
     { composition:
       { n_singular_hosts:               2
@@ -197,6 +197,12 @@ def all_profile_variants:
       , parameter_k:                    3
       }
     } as $compressed_timescale
+  |
+    { genesis:
+      { epoch_length:                   1800
+      , parameter_k:                    9
+      }
+    } as $small_timescale
   |
     { genesis:
       { epoch_length:                   8000
@@ -596,7 +602,7 @@ def all_profile_variants:
     }
 
   ## CI variants: test duration, 3 blocks, dense10
-  , $citest_base * $singleton_dense10 *
+  , $citest_base * $solo_dense10 *
     { name: "ci-test-dense10"
     }
 
@@ -703,6 +709,11 @@ def all_profile_variants:
     { name: "forge-stress-large"
     }
 
+  ## Status-quo (huge) dataset, 1 node
+  , $forge_stress_base * $solo *
+    { name: "forge-stress-solo"
+    }
+
   ## Status-quo (huge) dataset, small cluster (2 nodes)
   , $forge_stress_base *
     { name: "forge-stress"
@@ -713,8 +724,8 @@ def all_profile_variants:
   , $forge_stress_base * $plutus_base * $plutus_loop_counter *
     { name: "forge-stress-plutus"
     }
-  , $forge_stress_base * $plutus_base * $plutus_loop_counter * $singleton *
-    { name: "forge-stress-plutus-singleton"
+  , $forge_stress_base * $plutus_base * $plutus_loop_counter * $solo *
+    { name: "forge-stress-plutus-solo"
     }
   , $forge_stress_base * $without_tracer *
     { name: "forge-stress-notracer"
@@ -722,6 +733,9 @@ def all_profile_variants:
 
   , $forge_stress_pre_base *
     { name: "forge-stress-pre"
+    }
+  , $forge_stress_pre_base * $solo *
+    { name: "forge-stress-pre-solo"
     }
   , $forge_stress_pre_base * $plutus_base * $plutus_loop_counter *
     { name: "forge-stress-pre-plutus"
