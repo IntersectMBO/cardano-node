@@ -61,7 +61,7 @@ import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.Aeson.Text as Aeson.Text
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
-import           Data.Bifunctor (first)
+import           Data.Bifunctor (bimap, first)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
@@ -77,6 +77,7 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.Lazy as Text.Lazy
+import qualified Data.Text.Lazy.Builder as Text.Builder
 import qualified Data.Vector as Vector
 import           Data.Word
 
@@ -149,7 +150,40 @@ metaTextChunks =
     txMetadataTextStringMaxByteLength
     TxMetaText
     (BS.length . Text.encodeUtf8)
-    Text.splitAt
+    utf8SplitAt
+ where
+  fromBuilder = Text.Lazy.toStrict . Text.Builder.toLazyText
+
+  -- 'Text.splitAt' is no good here, because our measurement is on UTF-8
+  -- encoded text strings; So a char of size 1 in a text string may be
+  -- encoded over multiple UTF-8 bytes.
+  --
+  -- Thus, no choice than folding over each char and manually implementing
+  -- splitAt that counts utf8 bytes. Using builders for slightly more
+  -- efficiency.
+  utf8SplitAt n =
+    bimap fromBuilder fromBuilder . snd . Text.foldl
+      (\(len, (left, right)) char ->
+        -- NOTE:
+        -- Starting from text >= 2.0.0.0, one can use:
+        --
+        --   Data.Text.Internal.Encoding.Utf8#utf8Length
+        --
+        let sz = BS.length (Text.encodeUtf8 (Text.singleton char)) in
+        if len + sz > n then
+          ( n + 1 -- Higher than 'n' to always trigger the predicate
+          , ( left
+            , right <> Text.Builder.singleton char
+            )
+          )
+        else
+          ( len + sz
+          , ( left <> Text.Builder.singleton char
+            , right
+            )
+          )
+      )
+      (0, (mempty, mempty))
 
 -- | Create a 'TxMetadataValue' from a 'ByteString' as a list of chunks of an
 -- accaptable size.
@@ -219,7 +253,7 @@ chunks maxLength strHoist strLength strSplitAt str
     let (h, t) = strSplitAt maxLength str
      in strHoist h : chunks maxLength strHoist strLength strSplitAt t
   | otherwise =
-    [strHoist str]
+    [strHoist str | strLength str > 0]
 
 -- ----------------------------------------------------------------------------
 -- Validate tx metadata
