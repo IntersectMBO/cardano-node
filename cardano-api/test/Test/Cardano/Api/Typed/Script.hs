@@ -1,9 +1,12 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Test.Cardano.Api.Typed.Script
   ( tests
   ) where
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
+import qualified Cardano.Ledger.Api.Era as L
 import           Data.Aeson
 import           Hedgehog (Property, (===))
 import           Hedgehog.Extras.Aeson
@@ -114,7 +117,7 @@ prop_roundtrip_ScriptData :: Property
 prop_roundtrip_ScriptData =
   H.property $ do
     sData <- H.forAll genHashableScriptData
-    sData === fromAlonzoData (toAlonzoData sData)
+    sData === fromAlonzoData (toAlonzoData @L.Alonzo sData)
 
 prop_roundtrip_HashableScriptData_JSON :: Property
 prop_roundtrip_HashableScriptData_JSON =

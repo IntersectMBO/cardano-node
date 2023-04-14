@@ -90,9 +90,6 @@ data ShutdownTrace
   -- ^ Will terminate upon reaching a ChainDB sync limit
   deriving (Generic, FromJSON, ToJSON)
 
-deriving instance FromJSON BlockNo
-deriving instance ToJSON BlockNo
-
 data AndWithOrigin
   = AndWithOriginBlock (BlockNo, WithOrigin BlockNo)
   | AndWithOriginSlot (SlotNo, WithOrigin SlotNo)

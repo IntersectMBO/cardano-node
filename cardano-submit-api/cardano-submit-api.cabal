@@ -41,8 +41,8 @@ library
                       , cardano-api
                       , cardano-binary
                       , cardano-cli
-                      , cardano-crypto-class ^>= 2.0
-                      , cardano-ledger-byron ^>= 0.1
+                      , cardano-crypto-class ^>= 2.1
+                      , cardano-ledger-byron ^>= 1.0
                       , formatting
                       , http-media
                       , iohk-monitoring

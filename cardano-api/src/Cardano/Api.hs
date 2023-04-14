@@ -292,7 +292,6 @@ module Cardano.Api (
 
     -- ** Minimum required UTxO calculation
     calculateMinimumUTxO,
-    MinimumUTxOError,
 
     -- ** Script execution units
     evaluateTransactionExecutionUnits,
@@ -463,7 +462,8 @@ module Cardano.Api (
     ExecutionUnits(..),
     ExecutionUnitPrices(..),
     CostModel(..),
-    validateCostModel,
+    toAlonzoCostModel,
+    fromAlonzoCostModel,
 
     -- ** Script addresses
     -- | Making addresses from scripts.

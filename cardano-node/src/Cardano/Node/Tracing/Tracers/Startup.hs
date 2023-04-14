@@ -104,6 +104,7 @@ getStartupInfo nc (SomeConsensusProtocol whichP pForInfo) fp = do
             bisEra               = era
           , bisSystemStartTime   = SL.sgSystemStart genesis
           , bisSlotLength        = WCT.getSlotLength . WCT.mkSlotLength
+                                      . SL.fromNominalDiffTimeMicro
                                       $ SL.sgSlotLength genesis
           , bisEpochLength       = unEpochSize . SL.sgEpochLength $ genesis
           , bisSlotsPerKESPeriod = SL.sgSlotsPerKESPeriod genesis

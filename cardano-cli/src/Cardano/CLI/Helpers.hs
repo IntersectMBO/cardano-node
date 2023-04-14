@@ -38,12 +38,13 @@ import           System.Console.ANSI
 import qualified System.Directory as IO
 import qualified System.IO as IO
 
-import           Cardano.Binary (Decoder, fromCBOR)
-import           Cardano.Chain.Block (fromCBORABlockOrBoundary)
+import           Cardano.Chain.Block (decCBORABlockOrBoundary)
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.UTxO as UTxO
 import           Cardano.CLI.Types
+import           Cardano.Ledger.Binary (byronProtVer, toPlainDecoder)
+import           Cardano.Ledger.Binary.Plain (Decoder, fromCBOR)
 
 data HelpersError
   = CBORPrettyPrintError !DeserialiseFailure
@@ -112,7 +113,7 @@ validateCBOR :: CBORObject -> LB.ByteString -> Either HelpersError Text
 validateCBOR cborObject bs =
   case cborObject of
     CBORBlockByron epochSlots -> do
-      void $ decodeCBOR bs (fromCBORABlockOrBoundary epochSlots)
+      void $ decodeCBOR bs (toPlainDecoder byronProtVer (decCBORABlockOrBoundary epochSlots))
       Right "Valid Byron block."
 
     CBORDelegationCertificateByron -> do

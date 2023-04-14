@@ -12,24 +12,24 @@ import           Cardano.Api.Shelley (ShelleyGenesis (..))
 import           Data.ListMap (ListMap (ListMap))
 import qualified Data.Map.Strict as Map
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import           Lens.Micro
 
 import           Cardano.Slotting.Slot (EpochSize (..))
-import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto, StandardShelley)
+import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import           Ouroboros.Consensus.Shelley.Node (emptyGenesisStaking)
-import           Ouroboros.Consensus.Util.Time
 
 import           Cardano.Ledger.Address (Addr (..))
 import           Cardano.Ledger.BaseTypes (Network (..))
 import           Cardano.Ledger.Coin (Coin (..))
+import           Cardano.Ledger.Core
 import           Cardano.Ledger.Credential (Credential (..), PaymentCredential, StakeCredential,
                    StakeReference (..))
 import           Cardano.Ledger.Keys (GenDelegPair (..), Hash, KeyHash (..), KeyRole (..),
                    VerKeyVRF)
-import           Cardano.Ledger.Shelley.PParams (emptyPParams, ShelleyPParamsHKD (..))
 
 import           Test.Cardano.Ledger.Shelley.Utils (unsafeBoundRational)
 
-exampleShelleyGenesis :: ShelleyGenesis StandardShelley
+exampleShelleyGenesis :: ShelleyGenesis StandardCrypto
 exampleShelleyGenesis =
   ShelleyGenesis
     { sgSystemStart = posixSecondsToUTCTime $ realToFrac (1234566789 :: Integer)
@@ -40,14 +40,13 @@ exampleShelleyGenesis =
     , sgEpochLength = EpochSize 1215
     , sgSlotsPerKESPeriod = 8541
     , sgMaxKESEvolutions = 28899
-    , sgSlotLength =  secondsToNominalDiffTime 8
+    , sgSlotLength = 8
     , sgUpdateQuorum = 16991
     , sgMaxLovelaceSupply = 71
     , sgProtocolParams = emptyPParams
-        { _d  = unsafeBoundRational 1.9e-2
-        , _maxBBSize = 239857
-        , _maxBHSize = 217569
-        }
+        & ppDL .~ unsafeBoundRational 1.9e-2
+        & ppMaxBBSizeL .~ 239857
+        & ppMaxBHSizeL .~ 217569
     , sgGenDelegs = Map.fromList
                       [( genesisVerKeyHash
                        , GenDelegPair delegVerKeyHash delegVrfKeyHash)

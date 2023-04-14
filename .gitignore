@@ -66,6 +66,8 @@ logs
 
 .vscode/
 
+# Test artifacts
+cardano-tracer/cardano-tracer-test
+
 # IntellIJ project folder
 .idea/
-

@@ -9,7 +9,7 @@ module Cardano.Analysis.API.Ground
   )
 where
 
-import Prelude                          (fail, show)
+import Prelude                          (show)
 import Cardano.Prelude                  hiding (head)
 import Unsafe.Coerce                    qualified as Unsafe
 
@@ -95,17 +95,6 @@ newtype Host = Host { unHost :: ShortText }
   deriving newtype (IsString, FromJSON, ToJSON)
   deriving anyclass NFData
   deriving Show via Quiet Host
-
-instance FromJSON BlockNo where
-  parseJSON o = case o of
-    Number{}  -> BlockNo <$> parseJSON o
-    Object o' -> BlockNo <$> o' .: "unBlockNo"
-    _         -> fail "illegal type for BlockNo"
-    -- FIXME: this workaround catches a faulty JSON serialisation of BlockNo
-    --   is:         {"unBlockNo":1790}
-    --   should be:  1790
-instance ToJSON BlockNo where
-  toJSON (BlockNo x) = toJSON x
 
 newtype EpochSlot = EpochSlot { unEpochSlot :: Word64 }
   deriving stock (Eq, Generic, Ord, Show)
