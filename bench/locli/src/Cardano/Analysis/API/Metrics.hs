@@ -52,8 +52,8 @@ sumFieldsReport =
   , "ddFiltered.sumStartSpread", "ddFiltered.sumStopSpread"
   , "sumDomainSlots", "sumDomainBlocks", "sumBlocksRejected" ]
 
-instance TimelineFields SummaryOne where
-  data TimelineComments SummaryOne
+instance (KnownCDF f) => TimelineFields (Summary f)  where
+  data TimelineComments (Summary f)
     deriving Show
 
   timelineFields =
@@ -66,8 +66,8 @@ instance TimelineFields SummaryOne where
       "Date of cluster genesis systemStart"
 
    <> fScalar "time.systemStart"       W8  Tim (ITime $ systemStart.sumGenesis)
-      "Cluster system start date"
-      "Date of cluster genesis systemStart"
+      "Cluster system start time"
+      "Time-of-day portion of cluster genesis systemStart"
 
    <> fScalar   "batch"                Wno Id  (IText $                   batch.sumMeta)
       "Run batch"
@@ -109,31 +109,33 @@ instance TimelineFields SummaryOne where
       "Starting UTxO set size"
       "Extra UTxO set size at the beginning of the benchmark"
 
-   <> fScalar "add_tx_size"            W6  B   (IWord64 $      add_tx_size.sumGenerator)
+   <> fScalar "add_tx_size"            W6  B   (IWord64 $      add_tx_size.sumWorkload
+                                                               )
       "Extra tx payload"
       ""
 
-   <> fScalar "inputs_per_tx"          W3  Cnt (IWord64 $    inputs_per_tx.sumGenerator)
+   <> fScalar "inputs_per_tx"          W3  Cnt (IWord64 $    inputs_per_tx.sumWorkload)
       "Tx inputs"
       ""
 
-   <> fScalar "outputs_per_tx"         W3  Cnt (IWord64 $   outputs_per_tx.sumGenerator)
+   <> fScalar "outputs_per_tx"         W3  Cnt (IWord64 $   outputs_per_tx.sumWorkload)
       "Tx Outputs"
       ""
 
-   <> fScalar "tps"                    W7  Hz  (IFloat $               tps.sumGenerator)
+   <> fScalar "tps"                    W7  Hz  (IFloat $               tps.sumWorkload)
       "TPS"
       "Offered load, transactions per second"
 
-   <> fScalar "tx_count"               W12 Cnt (IWord64 $         tx_count.sumGenerator)
+   <> fScalar "tx_count"               W12 Cnt (IWord64 $         tx_count.sumWorkload)
       "Transaction count"
       "Number of transactions prepared for submission, but not necessarily submitted"
 
-   <> fScalar "plutusScript"           Wno Id  (IText  $ T.pack.fromMaybe "---".plutusLoopScript.sumGenerator)
+   <> fScalar "plutusScript"           Wno Id  (IText  $ T.pack.fromMaybe "---".plutusLoopScript.sumWorkload)
       "Plutus script"
       "Name of th Plutus script used for smart contract workload generation, if any"
 
-   <> fScalar "sumHosts"               W4  Cnt (IInt   $   unCount.sumHosts)
+   <> fScalar "sumHosts"               W4  Cnt
+        (IInt $ unCount.arityProj cdfMedian.sumHosts)
       "Machines"
       "Number of machines under analysis"
 
@@ -161,47 +163,47 @@ instance TimelineFields SummaryOne where
       "Host log line rate, Hz"
       ""
 
-   <> fScalar "sumLogObjectsTotal"     W12 Cnt (IInt   $ unCount.sumLogObjectsTotal)
+   <> fScalar "sumLogObjectsTotal"     W12 Cnt (IInt   $ unCount.arityProj cdfMedian.sumLogObjectsTotal)
       "Total log objects analysed"
       ""
 
-   <> fScalar "ddRawCount.sumDomainTime"      W12 Sec (IInt   $       ddRawCount.sumDomainTime)
+   <> fScalar "ddRawCount.sumDomainTime"      W12 Sec (IInt $ arityProj cdfMedian.ddRawCount.sumDomainTime)
       "Run time, s"
       ""
 
-   <> fScalar "ddFilteredCount.sumDomainTime" W12 Sec (IInt   $  ddFilteredCount.sumDomainTime)
+   <> fScalar "ddFilteredCount.sumDomainTime" W12 Sec (IInt $ arityProj cdfMedian.ddFilteredCount.sumDomainTime)
       "Analysed run duration, s"
       ""
 
-   <> fScalar "dataDomainFilterRatio.sumDomainTime" W4 Rto (IFloat $ dataDomainFilterRatio.sumDomainTime)
+   <> fScalar "dataDomainFilterRatio.sumDomainTime" W4 Rto (IFloat $ dataDomainFilterRatio (arityProj cdfMedian).sumDomainTime)
       "Run time efficiency"
       ""
 
-   <> fScalar "ddRaw.sumStartSpread"      W9 Sec (IDeltaT$ intvDurationSec.ddRaw.sumStartSpread)
+   <> fScalar "ddRaw.sumStartSpread"      W9 Sec (IDeltaT$ intvDurationSec.fmap (fromRUTCTime . arityProj cdfMedian).ddRaw.sumStartSpread)
       "Node start spread, s"
       ""
 
-   <> fScalar "ddRaw.sumStopSpread"       W9 Sec (IDeltaT$ intvDurationSec.ddRaw.sumStopSpread)
+   <> fScalar "ddRaw.sumStopSpread"       W9 Sec (IDeltaT$ intvDurationSec.fmap (fromRUTCTime . arityProj cdfMedian).ddRaw.sumStopSpread)
       "Node stop spread, s"
       ""
 
-   <> fScalar "ddFiltered.sumStartSpread" W9 Sec (IDeltaT$ maybe 0 intvDurationSec.ddFiltered.sumStartSpread)
+   <> fScalar "ddFiltered.sumStartSpread" W9 Sec (IDeltaT$ maybe 0 (intvDurationSec.fmap (fromRUTCTime . arityProj cdfMedian)).ddFiltered.sumStartSpread)
       "Perf analysis start spread, s"
       ""
 
-   <> fScalar "ddFiltered.sumStopSpread"  W9 Sec (IDeltaT$ maybe 0 intvDurationSec.ddFiltered.sumStopSpread)
+   <> fScalar "ddFiltered.sumStopSpread"  W9 Sec (IDeltaT$ maybe 0 (intvDurationSec.fmap (fromRUTCTime . arityProj cdfMedian)).ddFiltered.sumStopSpread)
       "Perf analysis stop spread, s"
       ""
 
-   <> fScalar "sumDomainSlots"         W12 Slo (IInt   $ ddFilteredCount.sumDomainSlots)
+   <> fScalar "sumDomainSlots"         W12 Slo (IInt  $ floor.arityProj cdfMedian.cdfAverage.ddFilteredCount.sumDomainSlots)
       "Slots analysed"
       ""
 
-   <> fScalar "sumDomainBlocks"        W10 Blk (IInt  $ ddFilteredCount.sumDomainBlocks)
+   <> fScalar "sumDomainBlocks"        W10 Blk (IInt  $ arityProj cdfMedian.ddFilteredCount.sumDomainBlocks)
       "Blocks analysed"
       ""
 
-   <> fScalar "sumBlocksRejected"      W10 Cnt (IInt  $     unCount . sumBlocksRejected)
+   <> fScalar "sumBlocksRejected"      W10 Cnt (IInt  $ unCount.arityProj cdfMedian.sumBlocksRejected)
       "Blocks rejected"
       ""
   -- fieldJSONOverlay f = (:[]) . tryOverlayFieldDescription f
@@ -632,17 +634,17 @@ instance TimelineFields (SlotStats NominalDiffTime) where
 
 -- * Instances, depending on the metrics' instances:
 --
-instance (ToJSON (f NominalDiffTime), ToJSON (f Int), ToJSON (f Double), ToJSON (f (Count BlockEvents)), ToJSON (f (DataDomain SlotNo)), ToJSON (f (DataDomain BlockNo))) => ToJSON (BlockProp f) where
-  toJSON x = AE.genericToJSON AE.defaultOptions x
-             & \case
-                 Object o -> Object $ processFieldOverlays x o
-                 _ -> error "Heh, serialised BlockProp to a non-Object."
+-- instance (ToJSON (f NominalDiffTime), ToJSON (f Int), ToJSON (f Double), ToJSON (f (Count BlockEvents)), ToJSON (f (DataDomain f SlotNo)), ToJSON (f (DataDomain BlockNo))) => ToJSON (BlockProp f) where
+--   toJSON x = AE.genericToJSON AE.defaultOptions x
+--              & \case
+--                  Object o -> Object $ processFieldOverlays x o
+--                  _ -> error "Heh, serialised BlockProp to a non-Object."
 
-instance (ToJSON (a Double), ToJSON (a Int), ToJSON (a NominalDiffTime), ToJSON (a (DataDomain UTCTime)), ToJSON (a Word64), ToJSON (a (DataDomain SlotNo)), ToJSON (a (DataDomain BlockNo))) => ToJSON (MachPerf a) where
-  toJSON x = AE.genericToJSON AE.defaultOptions x
-             & \case
-                 Object o -> Object $ processFieldOverlays x o
-                 _ -> error "Heh, serialised BlockProp to a non-Object."
+-- instance (ToJSON (a Double), ToJSON (a Int), ToJSON (a NominalDiffTime), ToJSON (a (DataDomain UTCTime)), ToJSON (a Word64), ToJSON (a (DataDomain SlotNo)), ToJSON (a (DataDomain BlockNo))) => ToJSON (MachPerf a) where
+--   toJSON x = AE.genericToJSON AE.defaultOptions x
+--              & \case
+--                  Object o -> Object $ processFieldOverlays x o
+--                  _ -> error "Heh, serialised BlockProp to a non-Object."
 
 deriving newtype instance ToJSON MultiClusterPerf
 

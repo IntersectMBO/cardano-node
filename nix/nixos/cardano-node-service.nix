@@ -24,7 +24,7 @@ let
               TargetNumberOfKnownPeers = cfg.targetNumberOfKnownPeers;
               TargetNumberOfEstablishedPeers = cfg.targetNumberOfEstablishedPeers;
               TargetNumberOfActivePeers = cfg.targetNumberOfActivePeers;
-              TestEnableDevelopmentNetworkProtocols = true;
+              ExperimentalProtocolsEnabled = true;
               MaxConcurrencyBulkSync = 2;
             })) cfg.extraNodeConfig;
         baseInstanceConfig =
@@ -359,6 +359,16 @@ in {
         '';
       };
 
+      socketGroup = mkOption {
+        type = types.str;
+        default = "cardano-node";
+        description = ''
+          systemd socket group owner.
+          Note: only applies to sockets created by systemd
+          (ie. when `systemdSocketActivation` is turned on).
+        '';
+      };
+
       systemdSocketActivation = mkOption {
         type = types.bool;
         default = false;
@@ -604,7 +614,7 @@ in {
         type = types.listOf types.str;
         default = let commonProfilingArgs = ["--machine-readable" "-tcardano-node.stats" "-pocardano-node"]
           ++ lib.optional (cfg.eventlog) "-l";
-          in if cfg.profiling == "time" then ["-P"] ++ commonProfilingArgs
+          in if cfg.profiling == "time" then ["-p"] ++ commonProfilingArgs
             else if cfg.profiling == "space" then ["-h"] ++ commonProfilingArgs
             else if cfg.profiling == "space-cost" then ["-hc"] ++ commonProfilingArgs
             else if cfg.profiling == "space-module" then ["-hm"] ++ commonProfilingArgs
@@ -678,7 +688,7 @@ in {
           ReusePort = "yes";
           SocketMode = "0660";
           SocketUser = "cardano-node";
-          SocketGroup = "cardano-node";
+          SocketGroup = cfg.socketGroup;
           FreeBind = "yes";
         };
       } (cfg.extraSocketConfig i)));

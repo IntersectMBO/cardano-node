@@ -1,6 +1,8 @@
 { pkgs
 , lib
+, stateDir # Not used here, just returned
 , basePort
+## `useCabalRun` not used here unlike `supervisor.nix`.
 , ...
 }:
 with lib; with pkgs.commonLib;
@@ -66,8 +68,8 @@ let
                minSeverity = "Debug";
                TurnOnLogMetrics = true;
 
-               TestEnableDevelopmentHardForkEras = true;
-               TestEnableDevelopmentNetworkProtocols = true;
+               ExperimentalHardForksEnabled = true;
+               ExperimentalProtocolsEnabled = true;
 
                inherit TraceBlockFetchProtocol;
 
@@ -116,6 +118,7 @@ let
       AlonzoGenesisFile  = "${genesis.files}/genesis.alonzo.json";
       ShelleyGenesisFile = "${genesis.files}/genesis-shelley.json";
       ByronGenesisFile   = "${genesis.files}/byron/genesis.json";
+      ConwayGenesisFile  = "${genesis.files}/genesis.conway.json";
     in
     rec {
       profile = profileNix;
@@ -157,12 +160,14 @@ let
           inherit  AlonzoGenesisFile;
           inherit ShelleyGenesisFile;
           inherit   ByronGenesisFile;
+          inherit  ConwayGenesisFile;
         };
         nodeConfig = (removeAttrs envConfigBase.nodeConfig ["AlonzoGenesisHash"]) // {
           Protocol = "Cardano";
           inherit  AlonzoGenesisFile;
           inherit ShelleyGenesisFile;
           inherit   ByronGenesisFile;
+          inherit  ConwayGenesisFile;
         } // {
           shelley =
             { TestShelleyHardForkAtEpoch = 0;
@@ -189,10 +194,18 @@ let
               TestAlonzoHardForkAtEpoch  = 0;
               TestBabbageHardForkAtEpoch = 0;
             };
+          conway =
+            { TestShelleyHardForkAtEpoch = 0;
+              TestAllegraHardForkAtEpoch = 0;
+              TestMaryHardForkAtEpoch    = 0;
+              TestAlonzoHardForkAtEpoch  = 0;
+              TestBabbageHardForkAtEpoch = 0;
+              TestConwayHardForkAtEpoch  = 0;
+            };
         }.${profileNix.value.era};
         txSubmitConfig = {
           inherit (networkConfig) RequiresNetworkMagic;
-          inherit AlonzoGenesisFile ShelleyGenesisFile ByronGenesisFile;
+          inherit ConwayGenesisFile AlonzoGenesisFile ShelleyGenesisFile ByronGenesisFile;
         } // pkgs.iohkNix.cardanoLib.defaultExplorerLogConfig;
 
         ## This is overlaid atop the defaults in the tx-generator service,
@@ -265,7 +278,7 @@ let
     };
 
   materialise-profile =
-    { stateDir, profileNix }:
+    { profileNix }:
       let
       in pkgs.runCommand "workbench-backend-output-${profileNix.profileName}-nixops"
         {}
@@ -307,7 +320,7 @@ in
 {
   name = "nixops";
 
-  inherit extraShellPkgs materialise-profile overlay service-modules basePort;
+  inherit extraShellPkgs materialise-profile overlay service-modules stateDir basePort;
 
   useCabalRun = false;
 }

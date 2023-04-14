@@ -7,6 +7,7 @@
 
 , backend
 , profile
+, profiled
 , nodeSpecs
 , topologyFiles
 }:
@@ -30,7 +31,7 @@ let
       "TraceBlockFetchProtocol"
       "TraceBlockFetchProtocolSerialised"
       "TraceBlockFetchServer"
-      "TraceChainDB"
+      "TraceChainDb"
       "TraceChainSyncClient"
       "TraceChainSyncBlockServer"
       "TraceChainSyncHeaderServer"
@@ -119,6 +120,10 @@ let
         } // optionalAttrs backend.useCabalRun {
           # Allow the shell function to take precedence.
           executable     = "cardano-node";
+        } // optionalAttrs isProducer {
+          operationalCertificate = "../genesis/node-keys/node${toString i}.opcert";
+          kesKey                 = "../genesis/node-keys/node-kes${toString i}.skey";
+          vrfKey                 = "../genesis/node-keys/node-vrf${toString i}.skey";
         } // optionalAttrs profile.node.tracer {
           tracerSocketPathConnect = mkDefault "../tracer/tracer.socket";
         });
@@ -130,6 +135,7 @@ let
           AlonzoGenesisFile    = "../genesis/genesis.alonzo.json";
           ShelleyGenesisFile   = "../genesis/genesis-shelley.json";
           ByronGenesisFile     = "../genesis/byron/genesis.json";
+          ConwayGenesisFile    = "../genesis/genesis.conway.json";
         }
       );
 
@@ -157,27 +163,31 @@ let
           [ "AlonzoGenesisHash"
             "ByronGenesisHash"
             "ShelleyGenesisHash"
+            "ConwayGenesisHash"
           ]
         //
         {
-          TestEnableDevelopmentHardForkEras     = true;
-          TestEnableDevelopmentNetworkProtocols = true;
-          TurnOnLogMetrics                      = true;
+          ExperimentalHardForksEnabled = true;
+          ExperimentalProtocolsEnabled = true;
+          TurnOnLogMetrics             = true;
+          SnapshotFrequency            = 1100;
         };
       tracing-transform = {
         trace-dispatcher = cfg:
           recursiveUpdate
+            (removeLegacyTracingOptions cfg)
             (import ./tracing.nix
               { inherit nodeSpec;
                 inherit (profile.node) tracer;
-              })
-            (removeLegacyTracingOptions cfg);
+              });
         iohk-monitoring  = cfg:
           recursiveUpdate
+            (removeAttrs cfg
+              [ "setupScribes"
+              ])
             (import ./tracing-legacy.nix
               { inherit nodeSpec;
-              })
-            cfg;
+              });
       };
       era_setup_hardforks = {
         shelley =
@@ -205,14 +215,24 @@ let
             TestAlonzoHardForkAtEpoch  = 0;
             TestBabbageHardForkAtEpoch = 0;
           };
+        conway =
+          { TestShelleyHardForkAtEpoch = 0;
+            TestAllegraHardForkAtEpoch = 0;
+            TestMaryHardForkAtEpoch    = 0;
+            TestAlonzoHardForkAtEpoch  = 0;
+            TestBabbageHardForkAtEpoch = 0;
+            TestConwayHardForkAtEpoch  = 0;
+          };
       }.${profile.era};
     };
     in
     finaliseNodeService profile nodeSpec
+    ((if profiled
+      then { profiling = "time"; }
+      else { eventlog  = mkForce true; })
+    //
     {
       inherit port;
-
-      eventlog = mkForce true;
 
       ## For the definition of 'nodeConfigBits', please see above.
       ## Meaning:
@@ -220,15 +240,16 @@ let
       ##   2. apply either the hardforks config, or the preset (typically mainnet)
       ##   3. overlay the tracing config
       nodeConfig =
-        recursiveUpdate
-          (nodeConfigBits.tracing-transform.${profile.node.tracing_backend}
+        (__trace "workbench | nix:  tracing backend:  ${profile.node.tracing_backend}"
+         nodeConfigBits.tracing-transform.${profile.node.tracing_backend})
+          (recursiveUpdate
             (finaliseNodeConfig nodeSpec
               (recursiveUpdate
                 nodeConfigBits.base
                 (if __hasAttr "preset" profile
                  then readJSONMay (./presets + "/${profile.preset}/config.json")
-                 else nodeConfigBits.era_setup_hardforks))))
-          profile.node.verbatim;
+                 else nodeConfigBits.era_setup_hardforks)))
+            profile.node.verbatim);
 
       extraArgs =
         (if nodeSpec.shutdown_on_block_synced != null
@@ -246,7 +267,7 @@ let
             ]
             else []
         );
-    };
+    });
 
   ## Given an env config, evaluate it and produce the node service.
   ## Call the given function on this service.

@@ -9,6 +9,10 @@
 with lib;
 
 let
+  # The prefix for every "[program:X] command=sh start.sh" because `supervisord`
+  # may run in the most unexpected places where we can't asume what is or isn't
+  # included in $PATH. Just make sure pkgs.bashInteractive is in the nix store.
+  sh = "${pkgs.bashInteractive}/bin/sh";
   ##
   ## supervisorConf :: SupervisorConf
   ##
@@ -30,7 +34,7 @@ let
     {
       "program:generator" = {
         directory      = "${stateDir}/generator";
-        command        = "sh start.sh";
+        command        = "${sh} start.sh";
         stdout_logfile = "${stateDir}/generator/stdout";
         stderr_logfile = "${stateDir}/generator/stderr";
         stopasgroup    = false;
@@ -46,7 +50,7 @@ let
     {
       "program:tracer" = {
         directory      = "${stateDir}/tracer";
-        command        = "sh start.sh";
+        command        = "${sh} start.sh";
         stdout_logfile = "${stateDir}/tracer/stdout";
         stderr_logfile = "${stateDir}/tracer/stderr";
         stopasgroup    = true;
@@ -66,7 +70,7 @@ let
             ## Refer to: http://supervisord.org/configuration.html#program-x-section-settings
             ##
             directory      = "${service.value.stateDir 0}";
-            command        = "sh start.sh";
+            command        = "${sh} start.sh";
             stdout_logfile = "${service.value.stateDir 0}/stdout";
             stderr_logfile = "${service.value.stateDir 0}/stderr";
             stopasgroup    = false;

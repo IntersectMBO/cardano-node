@@ -1,6 +1,5 @@
 { pkgs
 , lib, jq, runCommand
-, db-analyser
 , cardanoNodePackages
 }:
 
@@ -43,8 +42,7 @@ let
       procps
       cardano-cli
       cardano-topology
-    ] ++ lib.optional (!pkgs.stdenv.hostPlatform.isDarwin) db-analyser
-      ++ [ locli ]
+    ] ++ [ locli ]
     );
 
   runWorkbench =

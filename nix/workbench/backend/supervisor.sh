@@ -18,10 +18,12 @@ case "$op" in
         echo 'supervisor';;
 
     is-running )
+        local usage="USAGE: wb backend $op RUN-DIR"
+        local dir=${1:?$usage}
         test "$(sleep 0.5s; netstat -pltn 2>/dev/null | grep ':9001 ' | wc -l)" != "0";;
 
     setenv-defaults )
-        local usage="USAGE: wb supervisor $op BACKEND-DIR"
+        local usage="USAGE: wb backend $op BACKEND-DIR"
         local backend_dir=${1:?$usage}
 
         setenvjq    'port_shift_ekg'        100
@@ -31,7 +33,7 @@ case "$op" in
         ;;
 
     allocate-run )
-        local usage="USAGE: wb supervisor $op RUN-DIR"
+        local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}; shift
 
         while test $# -gt 0
@@ -45,8 +47,13 @@ case "$op" in
         cp -f $supervisor_conf "$dir"/supervisor/supervisord.conf
         ;;
 
+    deploy-genesis )
+        local usage="USAGE: wb backend $op RUN-DIR"
+        local dir=${1:?$usage}; shift
+        ;;
+
     describe-run )
-        local usage="USAGE: wb supervisor $op RUN-DIR"
+        local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}
 
         local basePort=$(                   envjq 'basePort')
@@ -62,7 +69,7 @@ EOF
         ;;
 
     start-node )
-        local usage="USAGE: wb supervisor $op RUN-DIR NODE-NAME"
+        local usage="USAGE: wb backend $op RUN-DIR NODE-NAME"
         local dir=${1:?$usage}; shift
         local node=${1:?$usage}; shift
 
@@ -72,7 +79,7 @@ EOF
         ;;
 
     stop-node )
-        local usage="USAGE: wb supervisor $op RUN-DIR NODE-NAME"
+        local usage="USAGE: wb backend $op RUN-DIR NODE-NAME"
         local dir=${1:?$usage}; shift
         local node=${1:?$usage}; shift
 
@@ -80,7 +87,7 @@ EOF
         ;;
 
     wait-node )
-        local usage="USAGE: wb supervisor $op RUN-DIR [NODE-NAME]"
+        local usage="USAGE: wb backend $op RUN-DIR [NODE-NAME]"
         local dir=${1:?$usage}; shift
         local node=${1:-$(dirname $CARDANO_NODE_SOCKET_PATH | xargs basename)}; shift
         local socket=$(backend_supervisor get-node-socket-path "$dir" $node)
@@ -102,7 +109,7 @@ EOF
         ;;
 
     start-nodes )
-        local usage="USAGE: wb supervisor $op RUN-DIR [HONOR_AUTOSTART=]"
+        local usage="USAGE: wb backend $op RUN-DIR [HONOR_AUTOSTART=]"
         local dir=${1:?$usage}; shift
         local honor_autostart=${1:-}
 
@@ -127,7 +134,7 @@ EOF
         ;;
 
     start )
-        local usage="USAGE: wb supervisor $op RUN-DIR"
+        local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}; shift
 
         if ! supervisord --config  "$dir"/supervisor/supervisord.conf $@
@@ -160,7 +167,7 @@ EOF
         fi;;
 
     get-node-socket-path )
-        local usage="USAGE: wb supervisor $op STATE-DIR NODE-NAME"
+        local usage="USAGE: wb backend $op STATE-DIR NODE-NAME"
         local state_dir=${1:?$usage}
         local node_name=${2:?$usage}
 
@@ -168,7 +175,7 @@ EOF
         ;;
 
     start-generator )
-        local usage="USAGE: wb supervisor $op RUN-DIR"
+        local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}; shift
 
         while test $# -gt 0
@@ -190,7 +197,7 @@ EOF
         backend_supervisor save-child-pids "$dir";;
 
     wait-node-stopped )
-        local usage="USAGE: wb supervisor $op RUN-DIR NODE"
+        local usage="USAGE: wb backend $op RUN-DIR NODE"
         local dir=${1:?$usage}; shift
         local node=${1:?$usage}; shift
 
@@ -203,7 +210,7 @@ EOF
         ;;
 
     wait-pools-stopped )
-        local usage="USAGE: wb supervisor $op RUN-DIR"
+        local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}; shift
 
         local i=0 pools=$(jq .composition.n_pool_hosts $dir/profile.json) start_time=$(date +%s)
@@ -224,7 +231,7 @@ EOF
         ;;
 
     stop-cluster )
-        local usage="USAGE: wb supervisor $op RUN-DIR"
+        local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}; shift
 
         supervisorctl stop all || true
@@ -236,7 +243,7 @@ EOF
         ;;
 
     cleanup-cluster )
-        local usage="USAGE: wb supervisor $op RUN-DIR"
+        local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}; shift
 
         msg "supervisor:  resetting cluster state in:  $dir"
@@ -244,7 +251,7 @@ EOF
         rm -fr $dir/node-*/state-cluster/;;
 
     save-child-pids )
-        local usage="USAGE: wb supervisor $op RUN-DIR"
+        local usage="USAGE: wb backend pass $op RUN-DIR"
         local dir=${1:?$usage}; shift
 
         local svpid=$dir/supervisor/supervisord.pid
@@ -258,7 +265,7 @@ EOF
         ;;
 
     save-pid-maps )
-        local usage="USAGE: wb supervisor $op RUN-DIR"
+        local usage="USAGE: wb backend pass $op RUN-DIR"
         local dir=${1:?$usage}; shift
 
         local mapn2p=$dir/supervisor/node2pid.map; echo '{}' > "$mapn2p"

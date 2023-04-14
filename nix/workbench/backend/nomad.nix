@@ -1,117 +1,170 @@
 { pkgs
 , lib
-
-, basePort
-## `useCabalRun` not used here like in `supervisor.nix`.
+, stateDir
+# TODO: Fetch this from config services inside materialise-profile !
+, eventlogged ? true
 , ...
 }:
 let
 
-  name = "nomad";
-
-  # Unlike the supervisor backend `useCabalRun` is always false here.
-  useCabalRun = false;
-
-  extraShellPkgs =
-    let
-      nomad = (pkgs.buildGo119Module rec {
-        pname = "nomad";
-        version = "1.4.3";
-        subPackages = [ "." ];
-        doCheck = true;
-        src = pkgs.fetchFromGitHub {
-          # fetchFromGit:
-          # - url = "https://github.com/hashicorp/${pname}.git";
-          # - rev = "f464aca721d222ae9c1f3df643b3c3aaa20e2da7";
-          owner = "hashicorp";
-          repo = pname;
-          rev = "v${version}";
-          # nix-prefetch-url --unpack https://github.com/hashicorp/nomad/archive/v1.4.3.tar.gz
-          sha256 = "0j2ik501sg6diyabwwfrqnz1wxx485w5pxry4bfkg5smgyp5y18r";
-        };
-        # error: either `vendorHash` or `vendorSha256` is required
-        # https://discourse.nixos.org/t/buildgomodule-how-to-get-vendorsha256/9317
-        vendorSha256 = "sha256-JQRpsQhq5r/QcgFwtnptmvnjBEhdCFrXFrTKkJioL3A=";
-      });
-      nomad-driver-podman = (pkgs.buildGo119Module rec {
-        pname = "nomad-driver-podman";
-        version = "0.4.1";
-        subPackages = [ "." ];
-        doCheck = false; # some tests require a running podman service
-        src = pkgs.fetchFromGitHub {
-          # fetchFromGit:
-          # - url = "https://github.com/hashicorp/${pname}.git";
-          # - rev = "3f8a8c03d26afe73388546b6235152224bafd6c1";
-          owner = "hashicorp";
-          repo = pname;
-          rev = "v${version}";
-          # nix-prefetch-url --unpack https://github.com/hashicorp/nomad-driver-podman/archive/v0.4.1.tar.gz
-          sha256 = "03856ws02xkqg5374x35zzz5900456rvpsridsjgwvvyqnysn9ls";
-        };
-        # error: either `vendorHash` or `vendorSha256` is required
-        # https://discourse.nixos.org/t/buildgomodule-how-to-get-vendorsha256/9317
-        vendorSha256 = "sha256-AtgxHAkNzzjMQoSqROpuNoSDum/6JR+mLpcHLFL9EIY=";
-      });
-    in
-      [
-        nomad
-        nomad-driver-podman
-      ]
-      ++
-      (with pkgs; [
-        # https://docs.podman.io/en/latest/markdown/podman.1.html#rootless-mode
-        podman
-        # Was not needed even thou it says so!
-        # https://docs.podman.io/en/latest/markdown/podman.1.html#note-unsupported-file-systems-in-rootless-mode
-        # fuse-overlayfs
-      ]);
-
   # Backend-specific Nix bits:
   materialise-profile =
-    { stateDir, profileNix }:
+    { profileNix }:
       let
-        ociImages =
-          import ./oci-images.nix
+        supervisorConf = import ./supervisor-conf.nix
+          { inherit profileNix;
+            inherit pkgs lib stateDir;
+            # ''{{ env "NOMAD_TASK_DIR" }}/supervisor.sock''
+            unixHttpServerPort = "/tmp/supervisor.sock";
+          }
+        ;
+        # Intermediate / workbench-adhoc container specifications
+        containerSpecs = rec {
+          #
+          diretories = rec {
+            work = "/local";
+            state = stateDir;
+            run = lib.strings.concatStringsSep "/" [ work state ];
+          };
+          # The actual commit.
+          gitrev = pkgs.gitrev;
+          # Binaries.
+          containerPkgs = {
+            bashInteractive = rec {
+              nix-store-path  = pkgs.bashInteractive;
+              flake-reference = "github:input-output-hk/cardano-node";
+              flake-output = "legacyPackages.x86_64-linux.bashInteractive";
+              installable = "${flake-reference}/${gitrev}#${flake-output}";
+            };
+            coreutils = rec {
+              nix-store-path  = pkgs.coreutils;
+              flake-reference = "github:input-output-hk/cardano-node";
+              flake-output = "legacyPackages.x86_64-linux.coreutils";
+              installable = "${flake-reference}/${gitrev}#${flake-output}";
+            };
+            findutils = rec {
+              nix-store-path  = pkgs.findutils;
+              flake-reference = "github:input-output-hk/cardano-node";
+              flake-output = "legacyPackages.x86_64-linux.findutils";
+              installable = "${flake-reference}/${gitrev}#${flake-output}";
+            };
+            gnutar = rec {
+              nix-store-path  = pkgs.gnutar;
+              flake-reference = "github:input-output-hk/cardano-node";
+              flake-output = "legacyPackages.x86_64-linux.gnutar";
+              installable = "${flake-reference}/${gitrev}#${flake-output}";
+            };
+            zstd = rec {
+              nix-store-path  = pkgs.zstd;
+              flake-reference = "github:input-output-hk/cardano-node";
+              flake-output = "legacyPackages.x86_64-linux.zstd";
+              installable = "${flake-reference}/${gitrev}#${flake-output}";
+            };
+            wget = rec {
+              nix-store-path  = pkgs.wget;
+              flake-reference = "github:input-output-hk/cardano-node";
+              flake-output = "legacyPackages.x86_64-linux.wget";
+              installable = "${flake-reference}/${gitrev}#${flake-output}";
+            };
+            supervisor = rec {
+              nix-store-path  = pkgs.python3Packages.supervisor;
+              flake-reference = "github:input-output-hk/cardano-node";
+              flake-output = "legacyPackages.x86_64-linux.python3Packages.supervisor";
+              installable = "${flake-reference}/${gitrev}#${flake-output}";
+            };
+            # TODO: profileNix.node-services."node-0".serviceConfig.value.eventlog
+            # builtins.trace (builtins.attrNames profileNix.node-services."node-0".serviceConfig.value.eventlog) XXXX
+            cardano-node = rec {
+              nix-store-path  = with pkgs;
+                if eventlogged
+                  then cardanoNodePackages.cardano-node.passthru.eventlogged
+                  else cardanoNodePackages.cardano-node
+              ;
+              flake-reference = "github:input-output-hk/cardano-node";
+              flake-output =
+                if eventlogged
+                  then "cardanoNodePackages.cardano-node.passthru.eventlogged"
+                  else "cardanoNodePackages.cardano-node"
+              ;
+              installable = "${flake-reference}/${gitrev}#${flake-output}";
+            };
+            cardano-tracer = rec {
+              nix-store-path  = pkgs.cardanoNodePackages.cardano-tracer;
+              flake-reference = "github:input-output-hk/cardano-node";
+              flake-output = "cardanoNodePackages.cardano-tracer";
+              installable = "${flake-reference}/${gitrev}#${flake-output}";
+            };
+            tx-generator = rec {
+              nix-store-path  = pkgs.cardanoNodePackages.tx-generator;
+              flake-reference = "github:input-output-hk/cardano-node";
+              flake-output = "cardanoNodePackages.tx-generator";
+              installable = "${flake-reference}/${gitrev}#${flake-output}";
+            };
+          };
+          supervisord = {
+            url = "unix:///tmp/supervisor.sock";
+            conf = lib.strings.concatStringsSep "/"
+              [ diretories.run "supervisor" "supervisord.conf"]
+            ;
+          };
+          ociImage = import ./oci-images.nix
             { inherit pkgs lib;
-              inherit
-                (pkgs.cardanoNodePackages)
-                cardano-node cardano-tracer tx-generator;
-
-              cardano-node-eventlogged = pkgs.cardanoNodePackages.cardano-node.passthru.eventlogged;
+              inherit containerPkgs;
+            }
+          ;
+          nomadJob = {
+            podman = {
+              # TODO: oneTracerPerGroup
+              oneTracerPerCluster = import ./nomad-job.nix
+                { inherit lib stateDir;
+                  inherit profileNix;
+                  inherit containerSpecs;
+                  inherit supervisorConf;
+                  # May evolve to a "cloud" flag!
+                  execTaskDriver = false;
+                  oneTracerPerNode = false;
+                };
+              oneTracerPerNode = import ./nomad-job.nix
+                { inherit lib stateDir;
+                  inherit profileNix;
+                  inherit containerSpecs;
+                  inherit supervisorConf;
+                  # May evolve to a "cloud" flag!
+                  execTaskDriver = false;
+                  oneTracerPerNode = true;
+                };
             };
-        supervisorConf =
-          import ./supervisor-conf.nix
-            { inherit profileNix;
-              inherit pkgs lib stateDir;
-              unixHttpServerPort = "/tmp/supervisor.sock";
+            exec = {
+              # TODO: oneTracerPerGroup
+              oneTracerPerCluster = import ./nomad-job.nix
+                { inherit lib stateDir;
+                  inherit profileNix;
+                  inherit containerSpecs;
+                  inherit supervisorConf;
+                  # May evolve to a "cloud" flag!
+                  execTaskDriver = true;
+                  oneTracerPerNode = false;
+                };
+              oneTracerPerNode = import ./nomad-job.nix
+                { inherit lib stateDir;
+                  inherit profileNix;
+                  inherit containerSpecs;
+                  inherit supervisorConf;
+                  # May evolve to a "cloud" flag!
+                  execTaskDriver = true;
+                  oneTracerPerNode = true;
+                };
             };
-        nomadJobJSON =
-          import ./nomad-job.nix
-            { inherit pkgs lib stateDir;
-              inherit profileNix;
-              inherit ociImages;
-              inherit supervisorConf;
-              # Actually always "false", may evolve to a "cloud" flag!
-              oneTracerPerNode = false;
-            };
+          };
+        };
       in pkgs.runCommand "workbench-backend-output-${profileNix.profileName}-nomad"
         ({
-          ociImagesJSON = ociImages.JSON;
-          inherit nomadJobJSON;
+          containerSpecsJSON = pkgs.writeText "workbench-cluster-container-pkgs.json"
+            (lib.generators.toJSON {} containerSpecs);
         })
         ''
         mkdir $out
-        ln -s $ociImagesJSON                           $out/oci-images.json
-        ln -s $nomadJobJSON                            $out/nomad-job.json
+        ln -s $containerSpecsJSON      $out/container-specs.json
         '';
 
-  overlay =
-    proTopo: self: super:
-    {
-    };
-in
-{
-  name = "nomad";
-
-  inherit extraShellPkgs materialise-profile overlay basePort useCabalRun;
-}
+in { inherit materialise-profile; }

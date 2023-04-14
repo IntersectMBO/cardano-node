@@ -155,6 +155,11 @@ def all_profile_variants:
     } as $tenner
   |
     { composition:
+      { topology:                       "torus"
+      }
+    } as $torus
+  |
+    { composition:
       { n_singular_hosts:               0
       , n_dense_hosts:                  0
       , with_chaindb_server:            true
@@ -239,6 +244,10 @@ def all_profile_variants:
     ({}
      | .node.shutdown_on_block_synced   = 30
     ) as $for_30blk
+  |
+    ({}
+     | .node.shutdown_on_slot_synced    = 900
+    ) as $for_900slot
   ##
   ### Definition vocabulary:  workload
   ##
@@ -271,7 +280,7 @@ def all_profile_variants:
    ({ generator:
       { plutus:
           { type:                       "LimitSaturationLoop"
-          , script:                     "v1/loop.plutus"
+          , script:                     "Loop"
           , redeemer:
             { "int": 1000000 }
           }
@@ -283,7 +292,7 @@ def all_profile_variants:
    ({ generator:
       { plutus:
           { type:                      "LimitTxPerBlock_8"
-          , script:                    "v2/ecdsa-secp256k1-loop.plutus"
+          , script:                    "EcdsaSecp256k1Loop"
           , redeemer:
             { constructor: 0
             , fields:
@@ -306,7 +315,7 @@ def all_profile_variants:
    ({ generator:
       { plutus:
           { type:                       "LimitTxPerBlock_8"
-          , script:                     "v2/schnorr-secp256k1-loop.plutus"
+          , script:                     "SchnorrSecp256k1Loop"
           , redeemer:
             { constructor: 0
             , fields:
@@ -405,6 +414,14 @@ def all_profile_variants:
    ($scenario_fixed_loaded * $doublet * $dataset_miniature * $for_15blk * $no_filtering *
     { desc: "Miniature dataset, CI-friendly duration, bench scale"
     }) as $cibench_base
+  |
+   ($scenario_fixed_loaded * $hexagon * $torus * $dataset_empty * $for_15blk * $no_filtering *
+    { desc: "6 low-footprint nodes in a torus topology, 5 minutes runtime"
+    }) as $tracebench_base
+  |
+   ($scenario_fixed_loaded * $doublet * $dataset_empty * $for_900slot * $no_filtering *
+    { desc: "2 low-footprint nodes, 15 minutes runtime"
+    }) as $ep_trans_base
   |
    ($scenario_fixed_loaded * $dataset_small * $for_15ep *
     { node:
@@ -575,6 +592,22 @@ def all_profile_variants:
     { name: "ci-test-dense10"
     }
 
+  ## CI variants: bench duration, 15 blocks
+  , $tracebench_base *
+    { name: "trace-bench"
+    }
+  , $tracebench_base * $old_tracing *
+    { name: "trace-bench-oldtracing"
+    }
+  , $tracebench_base * $without_tracer *
+    { name: "trace-bench-notracer"
+    }
+
+  ## Epoch transition test: 1.5 epochs, 15mins runtime
+  , $ep_trans_base *
+    { name: "epoch-transition"
+    }
+
   ## Plutus call variants: 15 epochs, with differences in block budget execution step limit
   , $plutus_base * $costmodel_v8_preview * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_counter *
     { name: "plutuscall-loop-plain"
@@ -593,7 +626,7 @@ def all_profile_variants:
     }
   , $plutus_base * $costmodel_v8_preview_stepshalf * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_secp_schnorr *
     { name: "plutuscall-secp-schnorr-half"
-    }    
+    }
   , $plutus_base * $costmodel_v8_preview_doubleb * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_counter *
     { name: "plutuscall-loop-double"
     }

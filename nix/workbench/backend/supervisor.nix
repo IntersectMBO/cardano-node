@@ -1,8 +1,8 @@
 { pkgs
 , lib
 , stateDir
-, useCabalRun
 , basePort
+, useCabalRun
 , ...
 }:
 with lib;
@@ -28,7 +28,7 @@ let
 
   # Backend-specific Nix bits:
   materialise-profile =
-    { stateDir, profileNix }:
+    { profileNix }:
       let supervisorConf = import ./supervisor-conf.nix
         { inherit profileNix;
           inherit pkgs lib stateDir;
@@ -53,22 +53,13 @@ let
           i       = toString selfCfg.nodeId;
       in
       { #_file = ./supervisor.nix;
-
         services.cardano-node.stateDir = stateDir + "/node-${i}";
-        services.cardano-node.operationalCertificate =
-          mkIf (selfCfg.isProducer)
-            "../genesis/node-keys/node${i}.opcert";
-        services.cardano-node.kesKey =
-          mkIf (selfCfg.isProducer)
-            "../genesis/node-keys/node-kes${i}.skey";
-        services.cardano-node.vrfKey =
-          mkIf (selfCfg.isProducer)
-            "../genesis/node-keys/node-vrf${i}.skey";
       };
   };
+
 in
 {
   name = "supervisor";
 
-  inherit extraShellPkgs materialise-profile overlay basePort useCabalRun service-modules;
+  inherit extraShellPkgs materialise-profile overlay stateDir basePort useCabalRun service-modules;
 }

@@ -5,7 +5,12 @@ let
       plutus = if (cfg.plutus.type or null) == null then null else
         {
           inherit (cfg.plutus) type;
-          script = "${pkgs.plutus-scripts}/generated-plutus-scripts/${cfg.plutus.script}";
+          ## Basically do something like:
+          ## script = "${pkgs.plutus-scripts}/generated-plutus-scripts/${cfg.plutus.script}";
+          ## except for having to weave the Either through things
+          ## To refer to a plutus script file, do something like:
+          ## { Right = pkgs.plutus-scripts + "/generated-plutus-scripts/" + cfg.plutus.script; }
+          script = { Left = cfg.plutus.script; };
           redeemer = pkgs.writeText "plutus-redeemer.json" (__toJSON cfg.plutus.redeemer);
           datum    = if cfg.plutus.datum == null then null else
                      pkgs.writeText "plutus-datum.json"    (__toJSON cfg.plutus.datum);
@@ -109,6 +114,7 @@ in pkgs.commonLib.defServiceModule
                                       "mary"
                                       "alonzo"
                                       "babbage"
+                                      "conway"
                                     ])
                               "mary"
                               "Cardano era to generate transactions for.";

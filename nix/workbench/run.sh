@@ -385,7 +385,7 @@ EOF
                * ) break;; esac; shift; done
         local backend_args=("$@")
 
-        ## 1. genesis cache entry
+        ## 1. genesis cache entry:
         progress "run | genesis" "cache entry:  $(if test -n "$genesis_cache_entry"; then echo pre-supplied; else echo preparing a new one..; fi)"
         if test -z "$genesis_cache_entry"
         then genesis_cache_entry=$(
@@ -394,17 +394,15 @@ EOF
                   "$profile_data"/node-specs.json)
         fi
 
-        ## 2. allocate time
-        progress "run | time" "allocating time:"
-        local timing=$(profile allocate-time "$profile_data"/profile.json)
-        profile describe-timing "$timing"
-
-        ## 3. decide the tag:
+        ## 2. decide the tag:
+        ##    Must match `^[a-zA-Z0-9-]{1,128}$)` or it won't be possible to use
+        ##    it as a Nomad Namespace or Nomad Job name.
+        ##    NOTE: The tag time is different from the genesis time
         local hash=$(jq '."cardano-node" | .[:5]' -r <<<$manifest)
-        local run=$(jq '.start_tag' -r <<<$timing)$(if test "$batch" != 'plain'; then echo -n .$batch; fi).$hash.$profile_name.${backend_name::3}
+        local run="$(date --utc +'%Y'-'%m'-'%d'-'%H'-'%M')$(if test "${batch}" != 'plain'; then echo -n -${batch}; fi)-${hash}-${profile_name}-${backend_name::3}"
         progress "run | tag" "allocated run identifier (tag):  $(with_color white $run)"
 
-        ## 4. allocate directory:
+        ## 3. create directory:
         local dir=$(realpath --relative-to "$(pwd)" "$global_rundir/$run")
         local realdir=$(realpath --canonicalize-missing "$dir")
 
@@ -415,7 +413,7 @@ EOF
         mkdir -p "$dir"/flag && test -w "$dir" ||
             fatal "profile | allocate failed to create writable run directory:  $dir"
 
-        ## 5. populate the directory:
+        ## 4. populate the directory with files shared by all backends:
         progress "run | profile" "$(if test -n "$profile_data"; then echo "pre-supplied ($profile_name):  $profile_data"; else echo "computed:  $profile_name"; fi)"
         if test -n "$profile_data"
         then
@@ -427,6 +425,24 @@ EOF
         else
             fail "Mode no longer supported:  operation without profile/ directory."
         fi
+
+        progress "run | topology"  "$(if test -n "$topology"; then echo pre-supplied; else echo computed; fi)"
+        if test -n "$topology"
+        then ln -s "$topology"                    "$dir"/topology
+        else topology make    "$dir"/profile.json "$dir"/topology
+        fi
+
+        if test "${WB_BACKEND:0:5}" != 'nomad' # Doesn't start with "nomad"
+        then run_instantiate_rundir_profile_services "$dir"; fi
+
+        ## 5. populate the directory with backend specifics:
+        backend allocate-run "$dir" "${backend_args[@]}"
+
+        ## 6. allocate genesis time
+        ##    NOTE: The genesis time is different from the tag time.
+        progress "run | time" "allocating time:"
+        local timing=$(profile allocate-time "$profile_data"/profile.json)
+        profile describe-timing "$timing"
 
         local args=(
             --arg       run              "$run"
@@ -448,15 +464,9 @@ EOF
            }
            ' "${args[@]}"
 
-        progress "run | topology"  "$(if test -n "$topology"; then echo pre-supplied; else echo computed; fi)"
-        if test -n "$topology"
-        then ln -s "$topology"                    "$dir"/topology
-        else topology make    "$dir"/profile.json "$dir"/topology
-        fi
-
+        progress "deriving genesis from cache:"
         if      test -z "$genesis_cache_entry"
         then fail "internal error:  no genesis cache entry"
-
         else genesis derive-from-cache      \
                      "$profile_data"        \
                      "$timing"              \
@@ -467,11 +477,8 @@ EOF
         cp "$dir"/genesis/genesis-shelley.json "$dir"/genesis-shelley.json
         cp "$dir"/genesis/genesis.alonzo.json  "$dir"/genesis.alonzo.json
         echo >&2
-
-        if test "$WB_BACKEND" != 'nomad'
-        then run_instantiate_rundir_profile_services "$dir"; fi
-
-        backend allocate-run "$dir" "${backend_args[@]}"
+        progress "run | deploying genesis"
+        backend deploy-genesis "$dir"
 
         progress "run" "allocated $(with_color white $run) @ $dir"
         run     describe "$run"
@@ -970,4 +977,3 @@ run_instantiate_rundir_profile_services() {
     cp $(jq '."config"'                        -r $trac) "$trac_dir"/config.json
     cp $(jq '."start"'                         -r $trac) "$trac_dir"/start.sh
 }
-

@@ -58,18 +58,22 @@ let
   # Layer of tools which aren't going to change much between versions.
   baseImage = dockerTools.buildImage {
     name = "${repoName}-env";
-    contents = [
-      bashInteractive   # Provide the BASH shell
-      cacert            # X.509 certificates of public CA's
-      coreutils         # Basic utilities expected in GNU OS's
-      curl              # CLI tool for transferring files via URLs
-      glibcLocales      # Locale information for the GNU C Library
-      iana-etc          # IANA protocol and port number assignments
-      iproute           # Utilities for controlling TCP/IP networking
-      iputils           # Useful utilities for Linux networking
-      socat             # Utility for bidirectional data transfer
-      utillinux         # System utilities for Linux
-    ];
+    copyToRoot = pkgs.buildEnv {
+      name = "image-root";
+      pathsToLink = ["/"];
+      paths = [
+        bashInteractive   # Provide the BASH shell
+        cacert            # X.509 certificates of public CA's
+        coreutils         # Basic utilities expected in GNU OS's
+        curl              # CLI tool for transferring files via URLs
+        glibcLocales      # Locale information for the GNU C Library
+        iana-etc          # IANA protocol and port number assignments
+        iproute           # Utilities for controlling TCP/IP networking
+        iputils           # Useful utilities for Linux networking
+        socat             # Utility for bidirectional data transfer
+        utillinux         # System utilities for Linux
+      ];
+    };
     # set up /tmp (override with TMPDIR variable)
     extraCommands = ''
       mkdir -m 0777 tmp
@@ -98,7 +102,11 @@ let
     fromImage = baseImage;
     tag = "${gitrev}";
     created = "now";   # Set creation date to build time. Breaks reproducibility
-    contents = [ entry-point ];
+    copyToRoot = pkgs.buildEnv {
+      name = "image-root";
+      pathsToLink = ["/"];
+      paths = [entry-point];
+    };
     config = {
       EntryPoint = [ "${entry-point}/bin/entry-point" ];
       ExposedPorts = {

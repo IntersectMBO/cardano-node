@@ -42,6 +42,7 @@ case "${op}" in
     setenv-defaults )            backend_$WB_BACKEND "$@";;
     allocate-run )               backend_$WB_BACKEND "$@";;
     describe-run )               backend_$WB_BACKEND "$@";;
+    deploy-genesis )             backend_$WB_BACKEND "$@";;
     start )                      backend_$WB_BACKEND "$@";;
     start-nodes )                backend_$WB_BACKEND "$@";;
     start-node )                 backend_$WB_BACKEND "$@";;
@@ -55,7 +56,7 @@ case "${op}" in
     cleanup-cluster )            backend_$WB_BACKEND "$@";;
 
     ## Handle non-generic calls:
-    passthrough | pass )         backend_$WB_BACKEND "$@";;
+    passthrough | pass )         shift; backend_$WB_BACKEND "$@";;
 
     validate )
         local usage="USAGE: wb run $op"

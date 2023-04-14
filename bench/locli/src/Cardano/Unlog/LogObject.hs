@@ -32,10 +32,10 @@ import qualified Data.Vector as V
 
 import           Cardano.Logging.Resources.Types
 
+import           Data.Profile
+
 import           Cardano.Analysis.API.Ground
 import           Cardano.Util
-
-import           Data.Accum (zeroUTCTime)
 
 
 type Text = ShortText
@@ -47,19 +47,25 @@ data HostLogs a
     , hlRawLines       :: Int
     , hlRawSha256      :: Hash
     , hlRawTraceFreqs  :: Map Text Int
+    , hlMissingTraces  :: [Text]
     , hlLogs           :: (JsonLogfile, a)
     , hlFilteredSha256 :: Hash
+    , hlProfile        :: [ProfileEntry I]
     }
-  deriving (Generic, FromJSON, ToJSON)
+  deriving (Generic)
+
+deriving instance FromJSON a => FromJSON (HostLogs a)
+deriving instance   ToJSON a =>   ToJSON (HostLogs a)
 
 hlRawLogObjects :: HostLogs a -> Int
 hlRawLogObjects = sum . Map.elems . hlRawTraceFreqs
 
 data RunLogs a
   = RunLogs
-    { rlHostLogs   :: Map.Map Host (HostLogs a)
-    , rlFilterKeys :: [Text]
-    , rlFilterDate :: UTCTime
+    { rlHostLogs      :: Map.Map Host (HostLogs a)
+    , rlMissingTraces :: [Text]
+    , rlFilterKeys    :: [Text]
+    , rlFilterDate    :: UTCTime
     }
   deriving (Generic, FromJSON, ToJSON)
 
@@ -258,7 +264,7 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
             <*> pure 1
 
   -- Ledger snapshots:
-  , (,,,) "TraceSnapshotEvent.TookSnapshot" "LedgerEvent.TookSnapshot" "ChainDB.LedgerEvent.TookSnapshot" $
+  , (,,,) "TraceSnapshotEvent.TookSnapshot" "TraceLedgerEvent.TookSnapshot" "ChainDB.LedgerEvent.TookSnapshot" $
     \_ -> pure LOLedgerTookSnapshot
 
   -- Tx receive path & mempool:

@@ -53,7 +53,7 @@ rec {
             jq -r 'with_entries(select(.value)) | keys | .[]')
           targets=$(for s in $systems; do echo .#legacyPackages."$s".hydraJobs.${jobsAttrs}; done)
           # shellcheck disable=SC2086
-          nix build -L $targets
+          nix build --keep-going $targets || nix build -L $targets
         '';
 
         env.NIX_CONFIG = ''
@@ -69,10 +69,10 @@ rec {
       };
     in
     {
-      "ci/pr/nix/required" = mkBulkJobsTask "pr.required";
-      "ci/pr/nix/nonrequired" = mkBulkJobsTask "pr.nonrequired --keep-going";
-      "ci/push/nix/required" = mkBulkJobsTask "required";
-      "ci/push/nix/nonrequired" = mkBulkJobsTask "nonrequired --keep-going";
+      "ci/pr/required" = mkBulkJobsTask "pr.required";
+      "ci/pr/nonrequired" = mkBulkJobsTask "pr.nonrequired";
+      "ci/push/required" = mkBulkJobsTask "required";
+      "ci/push/nonrequired" = mkBulkJobsTask "nonrequired";
 
       "ci/cardano-deployment" = { lib, ... } @ args: {
         imports = [ common ];
@@ -81,6 +81,18 @@ rec {
         '';
         memory = 1024 * 16;
         nomad.resources.cpu = 10000;
+      };
+
+      "ci/pr/system-tests" = {lib, ...} @ args: {
+        imports = [common];
+        after = [];
+
+        command.text = ''
+          nix run -L .#system-tests
+        '';
+
+        memory = 1024 * 64;
+        nomad.resources.cpu = 40000;
       };
     };
 
@@ -113,30 +125,33 @@ rec {
       '';
     in
     {
-
-      "cardano-node/ci/push/nix/required" = {
-        task = "ci/push/nix/required";
+      "cardano-node/ci/push/required" = {
+        task = "ci/push/required";
         io = pushIo;
       };
-      "cardano-node/ci/push/nix/nonrequired" = {
-        task = "ci/push/nix/nonrequired";
+      "cardano-node/ci/push/nonrequired" = {
+        task = "ci/push/nonrequired";
         io = pushIo;
       };
       "cardano-node/ci/push/cardano-deployment" = {
         task = "ci/cardano-deployment";
         io = pushIo;
       };
-      "cardano-node/ci/pr/nix/required" = {
-        task = "ci/pr/nix/required";
-        io = prIo;
+      "cardano-node/ci/pr/required" = {
+        task = "ci/pr/required";
+        io = prAndBorsIo;
       };
-      "cardano-node/ci/pr/nix/nonrequired" = {
-        task = "ci/pr/nix/nonrequired";
+      "cardano-node/ci/pr/nonrequired" = {
+        task = "ci/pr/nonrequired";
         io = prIo;
       };
       "cardano-node/ci/pr/cardano-deployment" = {
         task = "ci/cardano-deployment";
-        io = prIo;
+        io = prAndBorsIo;
+      };
+      "cardano-node/ci/pr/system-tests" = {
+        task = "ci/pr/system-tests";
+        io = prAndBorsIo;
       };
     };
 }

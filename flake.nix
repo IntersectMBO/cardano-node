@@ -136,7 +136,7 @@
         in
         project.exes // (with project.hsPkgs; {
           inherit (ouroboros-consensus-byron.components.exes) db-converter;
-          inherit (ouroboros-consensus-cardano-tools.components.exes) db-analyser db-synthesizer;
+          # inherit (ouroboros-consensus-cardano-tools.components.exes) db-analyser db-synthesizer;
           inherit (bech32.components.exes) bech32;
         } // lib.optionalAttrs hostPlatform.isUnix {
           inherit (network-mux.components.exes) cardano-ping;
@@ -394,7 +394,7 @@
           customConfig.haskellNix
         ];
         cardanoNodePackages = mkCardanoNodePackages final.cardanoNodeProject;
-        inherit (final.cardanoNodePackages) cardano-node cardano-cli cardano-submit-api cardano-tracer bech32 locli plutus-example db-analyser;
+        inherit (final.cardanoNodePackages) cardano-node cardano-cli cardano-submit-api cardano-tracer bech32 locli plutus-example;
       };
       nixosModules = {
         cardano-node = { pkgs, lib, ... }: {

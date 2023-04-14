@@ -21,7 +21,7 @@ let
       name = "cardano-node";
       compiler-nix-name = lib.mkDefault "ghc8107";
       # extra-compilers
-      flake.variants = lib.genAttrs ["ghc925"] (x: {compiler-nix-name = x;});
+      flake.variants = lib.genAttrs ["ghc927"] (x: {compiler-nix-name = x;});
       cabalProjectLocal = ''
         allow-newer: terminfo:base
       '' + lib.optionalString pkgs.stdenv.hostPlatform.isWindows ''
@@ -110,13 +110,15 @@ let
                 "configuration/cardano/mainnet-byron-genesis.json"
                 "configuration/cardano/mainnet-shelley-genesis.json"
                 "configuration/cardano/mainnet-alonzo-genesis.json"
+                "configuration/cardano/mainnet-conway-genesis.json"
+              ];
+              goldenConfigFiles = [
+                "configuration/defaults/byron-mainnet"
+                "cardano-cli/test/data/golden/alonzo/genesis.alonzo.spec.json"
+                "cardano-cli/test/data/golden/conway/genesis.conway.spec.json"
               ];
             in
             {
-              # Packages we wish to ignore version bounds of.
-              # This is similar to jailbreakCabal, however it
-              # does not require any messing with cabal files.
-              packages.katip.doExactConfig = true;
               # split data output for ekg to reduce closure size
               packages.ekg.components.library.enableSeparateDataOutput = true;
               # cardano-cli tests depend on cardano-cli and some config files:
@@ -151,10 +153,7 @@ let
               packages.cardano-node-chairman.preCheck =
                 let
                   # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
-                  filteredProjectBase = incl ../. [
-                    "configuration/defaults/byron-mainnet"
-                    "cardano-cli/test/data/golden/alonzo/genesis.alonzo.spec.json"
-                  ];
+                  filteredProjectBase = incl ../. goldenConfigFiles;
                 in
                 ''
                   ${exportCliPath}
@@ -166,11 +165,11 @@ let
               packages.cardano-testnet.preCheck =
                 let
                   # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
-                  filteredProjectBase = incl ../. (mainnetConfigFiles ++ [
+                  filteredProjectBase = incl ../. (mainnetConfigFiles ++ goldenConfigFiles ++ [
                     "configuration/cardano/mainnet-topology.json"
-                    "configuration/defaults/byron-mainnet"
-                    "cardano-cli/test/data/golden/alonzo/genesis.alonzo.spec.json"
+                    "configuration/cardano/mainnet-conway-genesis.json"
                     "scripts/babbage/alonzo-babbage-test-genesis.json"
+                    "scripts/babbage/conway-babbage-test-genesis.json"
                   ]);
                 in
                 ''
@@ -261,6 +260,16 @@ project.appendOverlays (with haskellLib.projectOverlays; [
           packages.cardano-node.components.exes.cardano-node.enableProfiling = true;
           packages.tx-generator.components.exes.tx-generator.enableProfiling = true;
           packages.locli.components.exes.locli.enableProfiling = true;
+        }
+        {
+          packages = final.pkgs.lib.genAttrs
+            [ "cardano-node"
+              "cardano-tracer"
+              "trace-dispatcher"
+              "trace-forward"
+              "trace-resources"
+            ]
+            (name: { configureFlags = [ "--ghc-option=-fprof-auto" ]; });
         }];
       };
       asserted = final.appendModule {

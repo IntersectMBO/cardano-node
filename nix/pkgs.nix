@@ -12,17 +12,26 @@ let
   # A conveniently-parametrisable workbench preset.
   # See https://input-output-hk.github.io/haskell.nix/user-guide/development/
   # The general idea is:
-  # 1. backendName -> useCabalRun -> backend
-  # 2. stateDir -> batchName -> profileName -> backend -> workbench -> runner
+  # 1. backendName -> stateDir -> basePort -> useCabalRun -> backend
+  # 2. batchName -> profileName -> backend -> workbench -> runner
   # * `workbench` is in case a pinned version of the workbench is needed.
   workbench-runner =
-    let backendRegistry =
-        {
-            nixops     = ./workbench/backend/nixops.nix;
-            nomad      = ./workbench/backend/nomad.nix;
-            supervisor = ./workbench/backend/supervisor.nix;
-        };
-    in
+  let
+    backendRegistry =
+      {
+        nixops          = params:
+          import ./workbench/backend/nixops.nix       params;
+        nomadcloud      = params:
+          import ./workbench/backend/nomad/cloud.nix  params;
+        nomadexec       = params:
+          import ./workbench/backend/nomad/exec.nix   params;
+        nomadpodman     = params:
+          import ./workbench/backend/nomad/podman.nix params;
+        supervisor      = params:
+          import ./workbench/backend/supervisor.nix   params;
+      }
+    ;
+  in
     { stateDir           ? customConfig.localCluster.stateDir
     , batchName          ? customConfig.localCluster.batchName
     , profileNix         ? null
@@ -40,14 +49,14 @@ let
         # The `useCabalRun` flag is set in the backend to allow the backend to
         # override its value. The runner uses the value of `useCabalRun` from
         # the backend to prevent a runner using a different value.
-        backend = import (backendRegistry."${backendName}")
+        backend = (backendRegistry."${backendName}")
                    { inherit pkgs lib stateDir basePort useCabalRun; };
     in import ./workbench/backend/runner.nix
       {
         inherit pkgs lib cardanoNodePackages;
-        inherit stateDir batchName profileName backend;
+        inherit batchName profileName backend;
         inherit cardano-node-rev;
-        inherit workbench workbenchDevMode;
+        inherit workbench workbenchDevMode profiled;
       };
 
   # Workbench instantiated by parameters from customConfig:
@@ -70,10 +79,10 @@ in with final;
     index-state = "2023-01-20T05:50:56Z";
   };
 
-  haskell-language-server = haskell-nix.tool compiler-nix-name "haskell-language-server" {
-    # ghcide 1.9.0.0 does not compile on ghc 8.10.7
-    version = {ghc8107 = "1.8.0.0";}.${compiler-nix-name} or "1.9.0.0";
-    index-state = "2023-01-20T05:50:56Z";
+  haskell-language-server = haskell-nix.tool compiler-nix-name "haskell-language-server" rec {
+    src = haskell-nix.sources."hls-1.10";
+    cabalProject = builtins.readFile (src + "/cabal.project");
+    sha256map."https://github.com/pepeiborra/ekg-json"."7a0af7a8fd38045fd15fb13445bdcc7085325460" = "sha256-fVwKxGgM0S4Kv/4egVAAiAjV7QB5PBqMVMCfsv7otIQ=";
   };
 
   haskellBuildUtils = prev.haskellBuildUtils.override {

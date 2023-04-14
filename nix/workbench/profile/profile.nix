@@ -21,13 +21,13 @@ rec {
     import ../genesis/genesis.nix
       { inherit pkgs profileName profileJson nodeSpecsJson; };
 
-  services = { profile, nodeSpecs, topologyFiles, backend }:
+  services = { profile, nodeSpecs, topologyFiles, backend, profiled }:
     rec {
       inherit
         (pkgs.callPackage
           ../service/nodes.nix
           {
-            inherit backend profile;
+            inherit backend profile profiled;
             inherit runJq runWorkbench nodeSpecs topologyFiles;
             baseNodeConfig = cardanoLib.environments.testnet.nodeConfig;
           })
@@ -54,9 +54,7 @@ rec {
     };
 
   ## WARNING:  IFD !!
-  profile = { profileName
-            , basePort, stateDir, useCabalRun
-            , backend }:
+  profile = { profileName, backend, profiled }:
     rec {
       inherit profileName;
 
@@ -84,7 +82,7 @@ rec {
 
       inherit (services
         {
-          inherit backend;
+          inherit backend profiled;
           profile = value;
           nodeSpecs = node-specs.value;
           topologyFiles = topology.files;
@@ -149,11 +147,11 @@ rec {
 
   materialise-profile =
     # `workbench` is the pinned workbench in case there is one.
-    { basePort, stateDir, useCabalRun, profileName, backend }:
+    profileArgs@{ profileName, ... }:
     let
       mkProfileData = profileName:
         profileData {
-          profile = profile { inherit profileName basePort stateDir useCabalRun backend; };
+          profile = profile profileArgs;
         };
       ps = lib.genAttrs profile-names mkProfileData;
     in

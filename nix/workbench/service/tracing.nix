@@ -22,13 +22,15 @@
 
     ## These are benchmarking-specific config deviations from the default.
     ##
-    "BlockFetch".severity = "Info";
+    "BlockFetch".severity = "Debug";
     "BlockFetch.Client.CompletedBlockFetch".maxFrequency = 0;
-    "ChainSync".severity = "Info";
+    "ChainSync".severity = "Debug";
     "ChainSync.Client.DownloadedHeader".maxFrequency = 0;
-    "Forge.Loop.BlockContext".severity = "Info";
-    "Forge.Loop.LedgerState".severity = "Info";
-    "Forge.Loop.LedgerView".severity = "Info";
-    "Startup".severity = "Info";
+    "Forge.Loop.BlockContext".severity = "Debug";
+    "Forge.Loop.LedgerState".severity = "Debug";
+    "Forge.Loop.LedgerView".severity = "Debug";
+    "Forge.Loop.MempoolSnapshot".severity = "Debug";
+    "Forge.Loop.TickedLedgerState".severity = "Debug";
+    "Startup".severity = "Debug";
   };
 }

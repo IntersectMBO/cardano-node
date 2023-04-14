@@ -54,6 +54,7 @@ let
         backend.useCabalRun
         ''
       . nix/workbench/lib-cabal.sh ${optionalString profiled "--profiled"}
+      cabal update
         ''}
 
       export CARDANO_NODE_SOCKET_PATH=run/current/node-0/node.socket
@@ -96,8 +97,6 @@ in project.shellFor {
 
   # These programs will be available inside the nix-shell.
   nativeBuildInputs = with pkgs; with haskellPackages; with cardanoNodePackages; [
-    cardano-ping
-    db-analyser
     pkgs.graphviz
     graphmod
     weeder

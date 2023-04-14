@@ -28,7 +28,7 @@ let
       } // optionalAttrs profile.node.tracer {
         tracerSocketPath = "../tracer/tracer.socket";
       } // optionalAttrs backend.useCabalRun {
-        executable     = "cabal run exe:tx-generator --";
+        executable     = "tx-generator";
       });
 
   finaliseGeneratorConfig =
@@ -37,6 +37,7 @@ let
         AlonzoGenesisFile    = "../genesis/genesis.alonzo.json";
         ShelleyGenesisFile   = "../genesis/genesis-shelley.json";
         ByronGenesisFile     = "../genesis/byron/genesis.json";
+        ConwayGenesisFile    = "../genesis/genesis.conway.json";
       } // optionalAttrs backend.useCabalRun {
         executable           = "tx-generator";
       });
@@ -51,7 +52,11 @@ let
         (__fromJSON (__readFile ../../../bench/tx-generator-config-base.json))
         // { inherit (exemplarNode.nodeConfig.value)
                Protocol
-               ShelleyGenesisFile ByronGenesisFile;
+               ByronGenesisFile
+               ShelleyGenesisFile
+               AlonzoGenesisFile
+               ConwayGenesisFile
+               ;
            };
     in
         finaliseGeneratorService profile
