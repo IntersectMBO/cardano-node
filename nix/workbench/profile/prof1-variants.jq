@@ -446,7 +446,7 @@ def all_profile_variants:
       , genesis:
         { funds_balance:                  20000000000000
         }
-      , desc: "Status-quo dataset, honest 7 epochs duration"
+      , desc: "Status-quo dataset, 7 epochs"
     }) as $model_base
   |
    ($model_base * $plutus_base *
@@ -459,15 +459,23 @@ def all_profile_variants:
     { node:
       { shutdown_on_slot_synced:        2400
       }
-    , desc: "Oct 2021 dataset size, honest four epochs."
+    , desc: "Oct 2021 dataset size, four epochs."
     }) as $forge_stress_pre_base
   |
    ($scenario_fixed_loaded * $triplet * $dataset_current *
     { node:
       { shutdown_on_slot_synced:        2400
       }
-    , desc: "Status-quo dataset size, honest four epochs."
+    , desc: "Status-quo dataset size, four epochs."
     }) as $forge_stress_base
+  |
+   ($forge_stress_base * $hexagon *
+    { analysis:
+      { filters:                        ["epoch3+"] }
+    , node:
+      { shutdown_on_slot_synced:        4800 }
+    , desc: "Status-quo dataset size, eight epochs, six nodes."
+    }) as $forge_stress_large_base
   |
    ($scenario_fixed_loaded * $triplet * $dataset_dish *
     { node:
@@ -688,6 +696,11 @@ def all_profile_variants:
     }
   , $cibench_base * $tenner * $without_tracer *
     { name: "10-notracer"
+    }
+
+  ## Status-quo (huge) dataset, 6 nodes, 8 epochs.
+  , $forge_stress_large_base *
+    { name: "forge-stress-large"
     }
 
   ## Status-quo (huge) dataset, small cluster (2 nodes)
