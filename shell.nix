@@ -8,9 +8,9 @@ in
 , useCabalRun ? true
 , workbenchDevMode ? defaultCustomConfig.localCluster.workbenchDevMode
 # to use profiled build of haskell dependencies:
-, profiled ? false
+, profiling ? null
 , customConfig ? {
-    inherit profiled withHoogle;
+    inherit profiling withHoogle;
     localCluster =  {
       inherit profileName backendName useCabalRun workbenchDevMode;
     };
@@ -24,7 +24,7 @@ let
   inherit (customConfig) withHoogle localCluster;
   inherit (localCluster) profileName workbenchDevMode;
   inherit (pkgs.haskell-nix) haskellLib;
-  project = if profiled then cardanoNodeProject.profiled else cardanoNodeProject;
+  project = if profiling != null then cardanoNodeProject.profiled else cardanoNodeProject;
 
   ## The default shell is defined by flake.nix: (cardanoNodeProject = flake.project.${final.system})
   inherit (project) shell;
@@ -63,9 +63,9 @@ let
           inherit setLocale haveGlibcLocales commandHelp;
           inherit cardano-mainnet-mirror;
           inherit workbenchDevMode;
-          inherit profiled withHoogle;
+          inherit profiling withHoogle;
           workbench-runner = pkgs.workbench-runner
-            { inherit profileName backendName useCabalRun profiled; };
+            { inherit profileName backendName useCabalRun profiling; };
         };
 
   devops =
@@ -79,7 +79,7 @@ let
         devopsShellParams =
           { inherit profileName;
             inherit (workbench-runner) backend;
-            inherit workbenchDevMode profiled;
+            inherit workbenchDevMode profiling;
             withMainnet = false;
           };
         devopsShell = with customConfig.localCluster;
@@ -88,7 +88,7 @@ let
               inherit setLocale haveGlibcLocales commandHelp;
               inherit cardano-mainnet-mirror;
               inherit workbench-runner workbenchDevMode;
-              inherit profiled withHoogle;
+              inherit profiling withHoogle;
             };
     in project.shellFor {
     name = "devops-shell";

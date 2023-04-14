@@ -54,7 +54,7 @@ case "$op" in
         if genesis cache-test "$cache_path"
         then cache_hit=t; cache_hit_desc='hit'
         else cache_hit=;  cache_hit_desc='miss'; fi
-        msg "genesis | cache:  preparing entry $cache_key:  $cache_hit_desc ($cache_path)"
+        progress "genesis | cache"  "preparing entry $cache_key:  $(red $cache_hit_desc) ($cache_path)"
 
         if   test -z "$cache_hit"
         then regenesis_causes+=('cache-miss')
