@@ -17,7 +17,8 @@
 -- CIP-1694 continues.
 module Cardano.Api.Governance.Poll(
     -- * Type Proxies
-    AsType(..),
+    AsType (..),
+    Hash (..),
 
     -- * Types
     GovernancePoll (..),
@@ -117,7 +118,7 @@ data GovernancePoll = GovernancePoll
     , govPollNonce :: Maybe Word
       -- ^ An optional nonce to make the poll unique if needs be.
     }
-  deriving Show
+  deriving (Show, Eq)
 
 instance HasTextEnvelope GovernancePoll where
    textEnvelopeType _ = "GovernancePoll"
@@ -212,7 +213,7 @@ data GovernancePollAnswer = GovernancePollAnswer
     , govAnsChoice :: Word
       -- ^ The (0-based) index of the chosen answer from that poll
     }
-  deriving Show
+  deriving (Show, Eq)
 
 instance HasTypeProxy GovernancePollAnswer where
     data AsType GovernancePollAnswer = AsGovernancePollAnswer
@@ -284,7 +285,7 @@ data GovernancePollWitness
     | GovernancePollWitnessColdKey
         (VKey 'Witness StandardCrypto)
         (SignedDSIGN StandardCrypto GovernancePollAnswer)
-  deriving Show
+  deriving (Show, Eq)
 
 instance HasTypeProxy GovernancePollWitness where
     data AsType GovernancePollWitness = AsGovernancePollWitness

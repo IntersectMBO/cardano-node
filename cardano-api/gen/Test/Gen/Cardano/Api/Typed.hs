@@ -106,6 +106,10 @@ module Test.Gen.Cardano.Api.Typed
   , genWitnessNetworkIdOrByronAddress
 
   , genRational
+
+  , genGovernancePoll
+  , genGovernancePollAnswer
+  , genGovernancePollWitness
   ) where
 
 import           Cardano.Api hiding (txIns)
@@ -113,6 +117,7 @@ import qualified Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
 import           Cardano.Api.Shelley (Hash (..), KESPeriod (KESPeriod),
+                   GovernancePoll (..), GovernancePollAnswer (..), GovernancePollWitness (..),
                    OperationalCertificateIssueCounter (OperationalCertificateIssueCounter),
                    PlutusScript (PlutusScriptSerialised), ProtocolParameters (ProtocolParameters),
                    ReferenceScript (..), ReferenceTxInsScriptsInlineDatumsSupportedInEra (..),
@@ -120,20 +125,24 @@ import           Cardano.Api.Shelley (Hash (..), KESPeriod (KESPeriod),
                    refInsScriptsAndInlineDatsSupportedInEra)
 
 
+import           Control.Applicative (optional)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
 import           Data.Coerce
 import           Data.Int (Int64)
 import           Data.Map.Strict (Map)
+import           Data.Maybe (fromMaybe)
 import           Data.Ratio (Ratio, (%))
 import           Data.String
 import           Data.Word (Word64)
 import           Numeric.Natural (Natural)
 
 import qualified Cardano.Binary as CBOR
+import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
+import qualified Cardano.Crypto.VRF as VRF
 import qualified Cardano.Ledger.Shelley.TxBody as Ledger (EraIndependentTxBody)
 import qualified Test.Cardano.Ledger.Alonzo.PlutusScripts as Plutus
 
@@ -145,6 +154,7 @@ import qualified Cardano.Crypto.Hash.Class as CRYPTO
 import           Cardano.Ledger.Alonzo.Language (Language (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import           Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
+import           Cardano.Ledger.Keys (VKey(..))
 
 import           Test.Cardano.Chain.UTxO.Gen (genVKWitness)
 import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
@@ -957,3 +967,48 @@ genHashScriptData = ScriptDataHash . unsafeMakeSafeHash . mkDummyHash <$> Gen.in
 
 genScriptDataSupportedInAlonzoEra :: Gen (ScriptDataSupportedInEra AlonzoEra)
 genScriptDataSupportedInAlonzoEra = pure ScriptDataInAlonzoEra
+
+genGovernancePoll :: Gen GovernancePoll
+genGovernancePoll =
+  GovernancePoll
+    <$> Gen.text (Range.linear 1 255) Gen.unicodeAll
+    <*> Gen.list (Range.constant 1 10) (Gen.text (Range.linear 1 255) Gen.unicodeAll)
+    <*> optional (Gen.word (Range.constant 0 100))
+
+genGovernancePollAnswer :: Gen GovernancePollAnswer
+genGovernancePollAnswer =
+  GovernancePollAnswer
+    <$> genGovernancePollHash
+    <*> Gen.word (Range.constant 0 10)
+ where
+   genGovernancePollHash =
+     GovernancePollHash . mkDummyHash <$> Gen.int (Range.linear 0 10)
+
+genGovernancePollWitness :: Gen GovernancePollWitness
+genGovernancePollWitness =
+  Gen.choice
+    [ GovernancePollWitnessVRF
+        <$> fmap
+              unsafeDeserialiseVerKeyVRF
+              (Gen.bytes $ Range.singleton 32)
+        <*> fmap
+              unsafeDeserialiseCertVRF
+              (Gen.bytes $ Range.singleton 80)
+    , GovernancePollWitnessColdKey
+        <$> fmap
+              (VKey . unsafeDeserialiseVerKeyDSIGN)
+              (Gen.bytes $ Range.singleton 32)
+        <*> fmap
+              (DSIGN.SignedDSIGN . unsafeDeserialiseSigDSIGN)
+              (Gen.bytes $ Range.singleton 64)
+    ]
+ where
+  unsafeDeserialiseVerKeyVRF =
+    fromMaybe (error "unsafeDeserialiseVerKeyVRF") . VRF.rawDeserialiseVerKeyVRF
+  unsafeDeserialiseCertVRF =
+    fromMaybe (error "unsafeDeserialiseCertVRF") . VRF.rawDeserialiseCertVRF
+
+  unsafeDeserialiseVerKeyDSIGN =
+    fromMaybe (error "unsafeDeserialiseVerKeyDSIGN") . DSIGN.rawDeserialiseVerKeyDSIGN
+  unsafeDeserialiseSigDSIGN =
+    fromMaybe (error "unsafeDeserialiseSigDSIGN") . DSIGN.rawDeserialiseSigDSIGN
