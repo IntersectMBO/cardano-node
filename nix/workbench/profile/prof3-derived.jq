@@ -73,7 +73,7 @@ def add_derived_params:
    else $dataset_measure / 50000
    end | ceil)                               as $dataset_induced_startup_delay_optimistic
 | (if $dataset_measure < 10000 then 10
-   else $dataset_measure / 5000
+   else $dataset_measure / 2500
    end | ceil)                               as $dataset_induced_startup_delay_conservative
 | (.derived.genesis_future_offset //
    "\($dataset_induced_startup_delay_optimistic) seconds")
