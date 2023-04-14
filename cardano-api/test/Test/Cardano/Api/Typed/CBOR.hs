@@ -10,6 +10,8 @@ module Test.Cardano.Api.Typed.CBOR
 
 import           Cardano.Api
 import           Cardano.Prelude
+
+import           Cardano.Api.Shelley (AsType(..))
 import           Data.String (IsString (..))
 import           Gen.Cardano.Api.Typed
 import           Gen.Hedgehog.Roundtrip.CBOR (roundtrip_CBOR, roundtrip_CDDL_Tx)
@@ -186,6 +188,18 @@ roundtrip_Tx_Cddl (AnyCardanoEra era) =
    tripping tx
      serialiseTxLedgerCddl
      (deserialiseTxLedgerCddl era)
+
+prop_roundtrip_GovernancePoll_CBOR :: Property
+prop_roundtrip_GovernancePoll_CBOR =
+  roundtrip_CBOR AsGovernancePoll genGovernancePoll
+
+prop_roundtrip_GovernancePollAnswer_CBOR :: Property
+prop_roundtrip_GovernancePollAnswer_CBOR =
+  roundtrip_CBOR AsGovernancePollAnswer genGovernancePollAnswer
+
+prop_roundtrip_GovernancePollWitness_CBOR :: Property
+prop_roundtrip_GovernancePollWitness_CBOR =
+  roundtrip_CBOR AsGovernancePollWitness genGovernancePollWitness
 
 -- -----------------------------------------------------------------------------
 
