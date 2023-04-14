@@ -50,6 +50,7 @@ import           Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value)
 import           Data.Aeson.Types (Parser, prependFailure, typeMismatch)
 import           Data.SOP.Strict (K (K), NS (S, Z))
 import           Data.Text (Text)
+import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 
 import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
@@ -98,6 +99,12 @@ data AnyConsensusModeParams where
   AnyConsensusModeParams :: ConsensusModeParams mode -> AnyConsensusModeParams
 
 deriving instance Show AnyConsensusModeParams
+instance Eq AnyConsensusModeParams where
+  (AnyConsensusModeParams cmp1) == (AnyConsensusModeParams cmp2) =
+    case testEquality cmp1 cmp2 of
+      Just Refl -> cmp1 == cmp2
+      Nothing -> False
+
 
 -- | This GADT provides a value-level representation of all the consensus modes.
 -- This enables pattern matching on the era to allow them to be treated in a
@@ -298,6 +305,13 @@ data ConsensusModeParams mode where
        -> ConsensusModeParams CardanoMode
 
 deriving instance Show (ConsensusModeParams mode)
+deriving instance Eq (ConsensusModeParams mode)
+
+instance TestEquality ConsensusModeParams where
+  testEquality (ByronModeParams _) (ByronModeParams _)     = Just Refl
+  testEquality ShelleyModeParams ShelleyModeParams         = Just Refl
+  testEquality (CardanoModeParams _) (CardanoModeParams _) = Just Refl
+  testEquality _ _                                         = Nothing
 
 -- ----------------------------------------------------------------------------
 -- Consensus conversion functions

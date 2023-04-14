@@ -24,6 +24,7 @@ module Cardano.CLI.Shelley.Run.Query
   , mergeDelegsAndRewards
   , percentage
   , executeQuery
+  , executeQueryProtocolParameters
   ) where
 
 import           Cardano.Api
@@ -203,12 +204,11 @@ runQueryCmd cmd =
     QueryTxMempool consensusModeParams network op mOutFile ->
       runQueryTxMempool consensusModeParams network op mOutFile
 
-runQueryProtocolParameters
+executeQueryProtocolParameters
   :: AnyConsensusModeParams
   -> NetworkId
-  -> Maybe OutputFile
-  -> ExceptT ShelleyQueryCmdError IO ()
-runQueryProtocolParameters (AnyConsensusModeParams cModeParams) network mOutFile = do
+  -> ExceptT ShelleyQueryCmdError IO ProtocolParameters
+executeQueryProtocolParameters (AnyConsensusModeParams cModeParams) network = do
   SocketPath sockPath <- lift readEnvSocketPath & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
 
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
@@ -229,19 +229,27 @@ runQueryProtocolParameters (AnyConsensusModeParams cModeParams) network mOutFile
           & onLeft (left . ShelleyQueryCmdUnsupportedNtcVersion)
           & onLeft (left . ShelleyQueryCmdEraMismatch)
 
-  writeProtocolParameters mOutFile =<< except (join (first ShelleyQueryCmdAcquireFailure result))
+  except (join (first ShelleyQueryCmdAcquireFailure result))
 
- where
-  writeProtocolParameters
-    :: Maybe OutputFile
-    -> ProtocolParameters
-    -> ExceptT ShelleyQueryCmdError IO ()
-  writeProtocolParameters mOutFile' pparams =
-    case mOutFile' of
-      Nothing -> liftIO $ LBS.putStrLn (encodePretty pparams)
-      Just (OutputFile fpath) ->
-        handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath) $
-          LBS.writeFile fpath (encodePretty pparams)
+runQueryProtocolParameters
+  :: AnyConsensusModeParams
+  -> NetworkId
+  -> Maybe OutputFile
+  -> ExceptT ShelleyQueryCmdError IO ()
+runQueryProtocolParameters cModeParams network mOutFile = do
+  executeQueryProtocolParameters cModeParams network
+    >>= writeProtocolParameters mOutFile
+  where
+   writeProtocolParameters
+     :: Maybe OutputFile
+     -> ProtocolParameters
+     -> ExceptT ShelleyQueryCmdError IO ()
+   writeProtocolParameters mOutFile' pparams =
+     case mOutFile' of
+       Nothing -> liftIO $ LBS.putStrLn (encodePretty pparams)
+       Just (OutputFile fpath) ->
+         handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath) $
+           LBS.writeFile fpath (encodePretty pparams)
 
 -- | Calculate the percentage sync rendered as text.
 percentage

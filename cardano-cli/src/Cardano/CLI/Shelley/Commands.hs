@@ -30,6 +30,7 @@ module Cardano.CLI.Shelley.Commands
   , SomeKeyFile (..)
   , OpCertCounterFile (..)
   , OutputFile (..)
+  , ProtocolParamsSource (..)
   , ProtocolParamsFile (..)
   , WitnessFile (..)
   , TxFile (..)
@@ -185,7 +186,7 @@ data TransactionCmd
       [ScriptFile]
       -- ^ Auxiliary scripts
       [MetadataFile]
-      (Maybe ProtocolParamsFile)
+      (Maybe ProtocolParamsSource)
       (Maybe UpdateProposalFile)
       TxBodyFile
 
@@ -227,7 +228,7 @@ data TransactionCmd
       [ScriptFile]
       -- ^ Auxiliary scripts
       [MetadataFile]
-      (Maybe ProtocolParamsFile)
+      (Maybe ProtocolParamsSource)
       (Maybe UpdateProposalFile)
       TxBuildOutputOptions
   | TxSign InputTxBodyOrTxFile [WitnessSigningData] (Maybe NetworkId) TxFile
@@ -238,14 +239,14 @@ data TransactionCmd
   | TxCalculateMinFee
       TxBodyFile
       (Maybe NetworkId)
-      ProtocolParamsFile
+      ProtocolParamsSource
       TxInCount
       TxOutCount
       TxShelleyWitnessCount
       TxByronWitnessCount
   | TxCalculateMinRequiredUTxO
       AnyCardanoEra
-      ProtocolParamsFile
+      ProtocolParamsSource
       TxOutAnyEra
   | TxHashScriptData
       ScriptDataOrFile
@@ -469,6 +470,11 @@ renderGenesisCmd cmd =
 -- Shelley CLI flag/option data types
 --
 
+data ProtocolParamsSource
+  = ProtocolParamsFromFile !ProtocolParamsFile
+  | ProtocolParamsQueryNode !NetworkId !AnyConsensusModeParams
+  deriving (Show, Eq)
+
 newtype ProtocolParamsFile
   = ProtocolParamsFile FilePath
   deriving (Show, Eq)
@@ -497,8 +503,8 @@ newtype GenesisKeyFile
   = GenesisKeyFile FilePath
   deriving Show
 
-data MetadataFile = MetadataFileJSON FilePath
-                  | MetadataFileCBOR FilePath
+data MetadataFile = MetadataFileJSON !FilePath
+                  | MetadataFileCBOR !FilePath
 
   deriving Show
 
