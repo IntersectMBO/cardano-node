@@ -38,6 +38,7 @@ def era_defaults($era):
     , epoch_length:                   600   # Ought to be at least (10 * k / f).
     , parameter_k:                    3
     , slot_duration:                  1
+    , extra_future_offset:            0
 
     ## Protocol parameters
     , pparamsEpoch:                   300   # See: pparams/epoch-timeline.jq

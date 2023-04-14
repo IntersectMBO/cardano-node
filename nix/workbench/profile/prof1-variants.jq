@@ -775,7 +775,7 @@ def all_profile_variants:
       , parameter_k:           10
       , epoch_length:          1000
       , active_slots_coeff:    0.1
-      , genesis_future_offset: "10 seconds"
+      , extra_future_offset:   10
       , utxo:                  0
 
       , shelley:
