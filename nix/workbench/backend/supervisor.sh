@@ -95,7 +95,7 @@ EOF
         local patience=$(jq '.analysis.cluster_startup_overhead_s | ceil' $dir/profile.json) i=0
         echo -n "workbench:  supervisor:  waiting ${patience}s for socket of $node: " >&2
         while test ! -S $socket
-        do printf "%3d" $i; sleep 1
+        do printf "%4d" $i; sleep 1
            i=$((i+1))
            if test $i -ge $patience
            then echo
@@ -103,7 +103,7 @@ EOF
                 backend_supervisor stop-cluster "$dir"
                 fatal "$node startup did not succeed:  check logs in $(dirname $socket)/stdout & stderr"
            fi
-           echo -ne "\b\b\b"
+           echo -ne "\b\b\b\b"
         done >&2
         echo " $node up (${i}s)" >&2
         ;;
