@@ -160,7 +160,7 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
     \v -> LOResources <$> parsePartialResourceStates (Object v)
 
   -- Leadership:
-  , (,,,) "TraceStartLeadershipCheck" "Forge.StartLeadershipCheck" "Forge.Loop.StartLeadershipCheck" $
+  , (,,,) "TraceStartLeadershipCheck" "Forge.Loop.StartLeadershipCheckPlus" "Forge.Loop.StartLeadershipCheck" $
     \v -> LOTraceStartLeadershipCheck
             <$> v .: "slot"
             <*> (v .:? "utxoSize"     <&> fromMaybe 0)
