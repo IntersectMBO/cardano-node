@@ -390,7 +390,7 @@ EOF
         if test -z "$genesis_cache_entry"
         then genesis_cache_entry=$(
                  genesis prepare-cache-entry \
-                     "$profile_data"/profile.json \
+                  "$profile_data"/profile.json \
                   "$profile_data"/node-specs.json)
         fi
 
@@ -420,7 +420,12 @@ EOF
             test "$(jq -r .name $profile_data/profile.json)" = "$profile_name" ||
                 fatal "profile | allocate incoherence:  --profile-data $profile_data/profile.json mismatches '$profile_name'"
             ln -s "$profile_data"                 "$dir"/profile
-            cp    "$profile_data"/profile.json    "$dir"/profile.json
+            if test -n "$WB_PROFILE_OVERLAY"
+            ## Allow 'wb' pick up the profile overlay in 'profiles.jq':
+            then wb profile
+            else jq . "$profile_data"/profile.json
+            fi > "$dir"/profile.json
+            progress "profile | overlay" "$(white $(jq .overlay "$dir"/profile.json))"
             cp    "$profile_data"/node-specs.json "$dir"/node-specs.json
         else
             fail "Mode no longer supported:  operation without profile/ directory."
@@ -441,7 +446,7 @@ EOF
         ## 6. allocate genesis time
         ##    NOTE: The genesis time is different from the tag time.
         progress "run | time" "allocating time:"
-        local timing=$(profile allocate-time "$profile_data"/profile.json)
+        local timing=$(profile allocate-time "$dir"/profile.json)
         profile describe-timing "$timing"
 
         local args=(
@@ -459,6 +464,7 @@ EOF
              , profile:          $profile_name
              , timing:           $timing
              , manifest:         $manifest
+             , profile_overlay:  $profile_content[0].overlay
              , profile_content:  $profile_content[0]
              }
            }
@@ -468,7 +474,7 @@ EOF
         if      test -z "$genesis_cache_entry"
         then fail "internal error:  no genesis cache entry"
         else genesis derive-from-cache      \
-                     "$profile_data"        \
+                     "$dir"/profile.json    \
                      "$timing"              \
                      "$genesis_cache_entry" \
                      "$dir"/genesis
