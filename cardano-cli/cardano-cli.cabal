@@ -113,17 +113,17 @@ library
                       , cardano-crypto
                       , cardano-crypto-class ^>= 2.1
                       , cardano-crypto-wrapper ^>= 1.5
-                      , cardano-data ^>= 1.0
+                      , cardano-data >= 1.0
                       , cardano-git-rev
-                      , cardano-ledger-alonzo ^>= 1.1
-                      , cardano-ledger-byron ^>= 1.0
+                      , cardano-ledger-alonzo >= 1.1
+                      , cardano-ledger-byron >= 1.0
                       , cardano-ledger-binary >= 1.0
-                      , cardano-ledger-core ^>= 1.1
-                      , cardano-ledger-conway ^>= 1.1
-                      , cardano-ledger-shelley ^>= 1.1
+                      , cardano-ledger-core >= 1.1
+                      , cardano-ledger-conway >= 1.1
+                      , cardano-ledger-shelley >= 1.1
                       , cardano-ping
                       , cardano-prelude
-                      , cardano-protocol-tpraos ^>= 1.0
+                      , cardano-protocol-tpraos >= 1.0
                       , cardano-slotting ^>= 0.1
                       , cardano-strict-containers ^>= 0.1
                       , cborg >= 0.2.4 && < 0.3
