@@ -305,7 +305,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
       let
         fundSource = walletSource wallet 1
         inToOut = Utils.includeChange fee coins
-        txGenerator = genTx protocolParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
+        txGenerator = genTx (cardanoEra @era) protocolParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
         sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut $ mangleWithChange toUTxOChange toUTxO
       return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
@@ -316,7 +316,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
       let
         fundSource = walletSource wallet 1
         inToOut = Utils.inputsToOutputsWithFee fee count
-        txGenerator = genTx protocolParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
+        txGenerator = genTx (cardanoEra @era) protocolParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
         sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
       return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
@@ -328,7 +328,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
       let
         fundSource = walletSource wallet inputs
         inToOut = Utils.inputsToOutputsWithFee fee outputs
-        txGenerator = genTx protocolParameters collaterals feeInEra (toMetadata metadataSize)
+        txGenerator = genTx (cardanoEra @era) protocolParameters collaterals feeInEra (toMetadata metadataSize)
         sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
 
       fundPreview <- liftIO $ walletPreview wallet inputs

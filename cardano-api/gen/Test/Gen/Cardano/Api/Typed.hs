@@ -1,4 +1,5 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -602,7 +603,7 @@ genTxUpdateProposal era =
     Just supported ->
       Gen.choice
         [ pure TxUpdateProposalNone
-        , TxUpdateProposal supported <$> genUpdateProposal
+        , TxUpdateProposal supported <$> genUpdateProposal era
         ]
 
 genTxMintValue :: CardanoEra era -> Gen (TxMintValue BuildTx era)
@@ -890,8 +891,8 @@ genProtocolParametersUpdate = do
   pure ProtocolParametersUpdate{..}
 
 
-genUpdateProposal :: Gen UpdateProposal
-genUpdateProposal =
+genUpdateProposal :: CardanoEra era -> Gen UpdateProposal
+genUpdateProposal _era = -- TODO Make era specific
   UpdateProposal
     <$> Gen.map (Range.constant 1 3)
                 ((,) <$> genVerificationKeyHash AsGenesisKey

@@ -204,7 +204,6 @@ library gen
                       , cardano-ledger-shelley >= 1.1
                       , containers
                       , hedgehog
-                      , hedgehog-extras
                       , text
 
 test-suite cardano-api-test
