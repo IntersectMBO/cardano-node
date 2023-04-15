@@ -507,6 +507,7 @@ module Cardano.Api (
     deserialiseFromBech32,
     deserialiseAnyOfFromBech32,
     Bech32DecodeError(..),
+    UsingBech32(..),
 
     -- ** Addresses
     -- | Address serialisation is (sadly) special
@@ -524,6 +525,8 @@ module Cardano.Api (
     deserialiseFromRawBytesHex,
     serialiseToRawBytesHexText,
     RawBytesHexError(..),
+    UsingRawBytes(..),
+    UsingRawBytesHex(..),
 
     -- ** Text envelope
     -- | Support for a envelope file format with text headers and a hex-encoded
@@ -838,6 +841,7 @@ import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseLedgerCddl
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
