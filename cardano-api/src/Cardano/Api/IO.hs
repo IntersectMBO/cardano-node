@@ -1,7 +1,9 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Api.IO
@@ -19,6 +21,12 @@ module Cardano.Api.IO
   , writeTextFile
   , writeTextOutput
 
+  , File(..)
+  , FileDirection(..)
+
+  , mapFile
+  , onlyIn
+  , onlyOut
   ) where
 
 #if !defined(mingw32_HOST_OS)
@@ -33,16 +41,14 @@ import           System.Posix.IO (OpenMode (..), closeFd, defaultFileFlags, fdTo
 import           System.Posix.User (getRealUserID)
 #else
 import           Control.Exception (bracketOnError)
-import           System.Directory (removeFile, renameFile)
+import qualified System.Directory as IO
 import           System.FilePath (splitFileName, (<.>))
 #endif
-
-import           Cardano.Api.Error (FileError (..))
 
 import           Control.Monad.Except (runExceptT)
 import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except.Extra (handleIOExceptT)
-import           Data.Aeson.Types (FromJSON, ToJSON)
+import           Data.Aeson (FromJSON, ToJSON)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Char8 as BSC
@@ -54,6 +60,28 @@ import qualified Data.Text.IO as Text
 import           GHC.Generics (Generic)
 import qualified System.IO as IO
 import           System.IO (Handle)
+
+import           Cardano.Api.Error (FileError (..))
+
+data FileDirection
+  = In
+  -- ^ Indicate the file is to be used for reading.
+  | Out
+  -- ^ Indicate the file is to be used for writing.
+  | InOut
+  -- ^ Indicate the file is to be used for both reading and writing.
+
+-- | A file path with additional type information to indicate what the file is meant to
+-- contain and whether it is to be used for reading or writing.
+newtype File content (direction :: FileDirection) = File
+  { unFile :: FilePath
+  } deriving newtype (Eq, Ord, Read, Show, IsString, FromJSON, ToJSON)
+
+newtype OutputFile = OutputFile
+  { unOutputFile :: FilePath
+  }
+  deriving Generic
+  deriving newtype (Eq, Ord, Show, IsString, ToJSON, FromJSON)
 
 handleFileForWritingWithOwnerPermission
   :: FilePath
@@ -88,26 +116,20 @@ handleFileForWritingWithOwnerPermission path f = do
   bracketOnError
     (IO.openTempFile targetDir $ targetFile <.> "tmp")
     (\(tmpPath, h) -> do
-      IO.hClose h >> removeFile tmpPath
+      IO.hClose h >> IO.removeFile tmpPath
       return . Left $ FileErrorTempFile path tmpPath h)
     (\(tmpPath, h) -> do
         f h
         IO.hClose h
-        renameFile tmpPath path
+        IO.renameFile tmpPath path
         return $ Right ())
   where
     (targetDir, targetFile) = splitFileName path
 #endif
 
-newtype OutputFile = OutputFile
-  { unOutputFile :: FilePath
-  }
-  deriving Generic
-  deriving newtype (Eq, Ord, Show, IsString, ToJSON, FromJSON)
-
-writeByteStringFile :: MonadIO m => FilePath -> ByteString -> m (Either (FileError ()) ())
+writeByteStringFile :: MonadIO m => File content 'Out -> ByteString -> m (Either (FileError ()) ())
 writeByteStringFile fp bs = runExceptT $
-  handleIOExceptT (FileIOError fp) $ BS.writeFile fp bs
+  handleIOExceptT (FileIOError (unFile fp)) $ BS.writeFile (unFile fp) bs
 
 writeByteStringFileWithOwnerPermissions
   :: FilePath
@@ -158,3 +180,12 @@ writeTextOutput mOutput t = runExceptT $
   case mOutput of
     Just fp -> handleIOExceptT (FileIOError fp) $ Text.writeFile fp t
     Nothing -> liftIO $ Text.putStr t
+
+mapFile :: (FilePath -> FilePath) -> File content direction -> File content direction
+mapFile f = File . f . unFile
+
+onlyIn :: File content InOut -> File content In
+onlyIn = File . unFile
+
+onlyOut :: File content InOut -> File content Out
+onlyOut = File . unFile
