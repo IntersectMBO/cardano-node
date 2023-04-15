@@ -145,22 +145,22 @@ readFileTxMetadata
   -> MetadataFile
   -> ExceptT MetadataError IO TxMetadata
 readFileTxMetadata mapping (MetadataFileJSON fp) = do
-  bs <- handleIOExceptT (MetadataErrorFile . FileIOError fp)
-          $ LBS.readFile fp
-  v <- firstExceptT (MetadataErrorJsonParseError fp)
+  bs <- handleIOExceptT (MetadataErrorFile . FileIOError (unFile fp))
+          $ LBS.readFile (unFile fp)
+  v <- firstExceptT (MetadataErrorJsonParseError (unFile fp))
           $ hoistEither $ Aeson.eitherDecode' bs
-  txMetadata' <- firstExceptT (MetadataErrorConversionError fp)
+  txMetadata' <- firstExceptT (MetadataErrorConversionError (unFile fp))
                   . hoistEither $ metadataFromJson mapping v
-  firstExceptT (MetadataErrorValidationError fp)
+  firstExceptT (MetadataErrorValidationError (unFile fp))
     . hoistEither $ do
       validateTxMetadata txMetadata'
       return txMetadata'
 readFileTxMetadata _ (MetadataFileCBOR fp) = do
-  bs <- handleIOExceptT (MetadataErrorFile . FileIOError fp)
-          $ BS.readFile fp
-  txMetadata' <- firstExceptT (MetadataErrorDecodeError fp)
+  bs <- handleIOExceptT (MetadataErrorFile . FileIOError (unFile fp))
+          $ BS.readFile (unFile fp)
+  txMetadata' <- firstExceptT (MetadataErrorDecodeError (unFile fp))
                   . hoistEither $ deserialiseFromCBOR AsTxMetadata bs
-  firstExceptT (MetadataErrorValidationError fp)
+  firstExceptT (MetadataErrorValidationError (unFile fp))
     . hoistEither $ do
       validateTxMetadata txMetadata'
       return txMetadata'
@@ -639,7 +639,7 @@ renderReadWitnessSigningDataError err =
 readWitnessSigningData
   :: WitnessSigningData
   -> IO (Either ReadWitnessSigningDataError SomeWitness)
-readWitnessSigningData (KeyWitnessSigningData (SigningKeyFile skFile) mbByronAddr) = do
+readWitnessSigningData (KeyWitnessSigningData skFile mbByronAddr) = do
     eRes <- first ReadWitnessSigningDataSigningKeyDecodeError
              <$> readKeyFileAnyOf bech32FileTypes textEnvFileTypes skFile
     return $ do
@@ -694,18 +694,18 @@ readWitnessSigningData (KeyWitnessSigningData (SigningKeyFile skFile) mbByronAdd
 
 data RequiredSignerError
   = RequiredSignerErrorFile (FileError InputDecodeError)
-  | RequiredSignerErrorByronKey SigningKeyFile
+  | RequiredSignerErrorByronKey (SigningKeyFile In)
   deriving Show
 
 instance Error RequiredSignerError where
   displayError (RequiredSignerErrorFile e) = displayError e
-  displayError (RequiredSignerErrorByronKey (SigningKeyFile byronSkeyfile)) =
+  displayError (RequiredSignerErrorByronKey (File byronSkeyfile)) =
     "Byron witnesses cannot be used for required signers: " <> byronSkeyfile
 
 readRequiredSigner :: RequiredSigner -> IO (Either RequiredSignerError (Hash PaymentKey))
 readRequiredSigner (RequiredSignerHash h) = return $ Right h
-readRequiredSigner (RequiredSignerSkeyFile skFile@(SigningKeyFile skFp)) = do
-  eKeyWit <- first RequiredSignerErrorFile <$> readKeyFileAnyOf bech32FileTypes textEnvFileTypes skFp
+readRequiredSigner (RequiredSignerSkeyFile skFile) = do
+  eKeyWit <- first RequiredSignerErrorFile <$> readKeyFileAnyOf bech32FileTypes textEnvFileTypes skFile
   return $ do
     keyWit <- eKeyWit
     case categoriseSomeWitness keyWit of

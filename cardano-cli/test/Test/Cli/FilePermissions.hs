@@ -5,6 +5,7 @@ module Test.Cli.FilePermissions
   ( tests
   ) where
 
+import           Cardano.Api
 import           Cardano.Node.Run (checkVRFFilePermissions)
 
 import           Hedgehog (Property, discover, success)
@@ -33,7 +34,7 @@ prop_createVRFSigningKeyFilePermissions =
       , "--signing-key-file", vrfSignKey
       ]
 
-    result <- liftIO . runExceptT $ checkVRFFilePermissions vrfSignKey
+    result <- liftIO . runExceptT $ checkVRFFilePermissions (File vrfSignKey)
     case result of
       Left err ->
         failWith Nothing

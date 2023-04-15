@@ -17,7 +17,6 @@ import           Cardano.Api.Byron
 import           Cardano.CLI.Byron.Key (readByronSigningKey)
 import           Cardano.CLI.Byron.Legacy (decodeLegacyDelegateKey)
 import           Cardano.CLI.Shelley.Commands
-import           Cardano.CLI.Types (SigningKeyFile (..))
 
 import           Hedgehog (Group (..), Property, checkSequential, property, success)
 import qualified Hedgehog.Extras.Test.Base as H
@@ -90,7 +89,7 @@ prop_migrate_legacy_to_nonlegacy_signingkeys =
      ]
 
     eSignKey <- liftIO . runExceptT . readByronSigningKey NonLegacyByronKeyFormat
-                  $ SigningKeyFile nonLegacyKeyFp
+                  $ File nonLegacyKeyFp
 
     case eSignKey of
       Left err -> failWith Nothing $ show err

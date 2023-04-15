@@ -1,15 +1,12 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Api.IO
-  ( OutputFile(..)
-
-  , writeByteStringFileWithOwnerPermissions
+  ( writeByteStringFileWithOwnerPermissions
   , writeByteStringFile
   , writeByteStringOutput
 
@@ -57,7 +54,6 @@ import qualified Data.ByteString.Lazy as LBSC
 import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text.IO as Text
-import           GHC.Generics (Generic)
 import qualified System.IO as IO
 import           System.IO (Handle)
 
@@ -76,12 +72,6 @@ data FileDirection
 newtype File content (direction :: FileDirection) = File
   { unFile :: FilePath
   } deriving newtype (Eq, Ord, Read, Show, IsString, FromJSON, ToJSON)
-
-newtype OutputFile = OutputFile
-  { unOutputFile :: FilePath
-  }
-  deriving Generic
-  deriving newtype (Eq, Ord, Show, IsString, ToJSON, FromJSON)
 
 handleFileForWritingWithOwnerPermission
   :: FilePath
@@ -127,7 +117,11 @@ handleFileForWritingWithOwnerPermission path f = do
     (targetDir, targetFile) = splitFileName path
 #endif
 
-writeByteStringFile :: MonadIO m => File content 'Out -> ByteString -> m (Either (FileError ()) ())
+writeByteStringFile :: ()
+  => MonadIO m
+  => File content Out
+  -> ByteString
+  -> m (Either (FileError ()) ())
 writeByteStringFile fp bs = runExceptT $
   handleIOExceptT (FileIOError (unFile fp)) $ BS.writeFile (unFile fp) bs
 
@@ -139,46 +133,66 @@ writeByteStringFileWithOwnerPermissions fp bs =
   handleFileForWritingWithOwnerPermission fp $ \h ->
     BS.hPut h bs
 
-writeByteStringOutput :: MonadIO m => Maybe FilePath -> ByteString -> m (Either (FileError ()) ())
+writeByteStringOutput :: ()
+  => MonadIO m
+  => Maybe (File content Out)
+  -> ByteString
+  -> m (Either (FileError ()) ())
 writeByteStringOutput mOutput bs = runExceptT $
   case mOutput of
-    Just fp -> handleIOExceptT (FileIOError fp) $ BS.writeFile fp bs
+    Just fp -> handleIOExceptT (FileIOError (unFile fp)) $ BS.writeFile (unFile fp) bs
     Nothing -> liftIO $ BSC.putStr bs
 
-writeLazyByteStringFile :: MonadIO m => FilePath -> LBS.ByteString -> m (Either (FileError ()) ())
+writeLazyByteStringFile :: ()
+  => MonadIO m
+  => File content Out
+  -> LBS.ByteString
+  -> m (Either (FileError ()) ())
 writeLazyByteStringFile fp bs = runExceptT $
-  handleIOExceptT (FileIOError fp) $ LBS.writeFile fp bs
+  handleIOExceptT (FileIOError (unFile fp)) $ LBS.writeFile (unFile fp) bs
 
 writeLazyByteStringFileWithOwnerPermissions
-  :: FilePath
+  :: File content Out
   -> LBS.ByteString
   -> IO (Either (FileError ()) ())
 writeLazyByteStringFileWithOwnerPermissions fp lbs =
-  handleFileForWritingWithOwnerPermission fp $ \h ->
+  handleFileForWritingWithOwnerPermission (unFile fp) $ \h ->
     LBS.hPut h lbs
 
-writeLazyByteStringOutput :: MonadIO m => Maybe FilePath -> LBS.ByteString -> m (Either (FileError ()) ())
+writeLazyByteStringOutput :: ()
+  => MonadIO m
+  => Maybe (File content Out)
+  -> LBS.ByteString
+  -> m (Either (FileError ()) ())
 writeLazyByteStringOutput mOutput bs = runExceptT $
   case mOutput of
-    Just fp -> handleIOExceptT (FileIOError fp) $ LBS.writeFile fp bs
+    Just fp -> handleIOExceptT (FileIOError (unFile fp)) $ LBS.writeFile (unFile fp) bs
     Nothing -> liftIO $ LBSC.putStr bs
 
-writeTextFile :: MonadIO m => FilePath -> Text -> m (Either (FileError ()) ())
+writeTextFile :: ()
+  => MonadIO m
+  => File content Out
+  -> Text
+  -> m (Either (FileError ()) ())
 writeTextFile fp t = runExceptT $
-  handleIOExceptT (FileIOError fp) $ Text.writeFile fp t
+  handleIOExceptT (FileIOError (unFile fp)) $ Text.writeFile (unFile fp) t
 
 writeTextFileWithOwnerPermissions
-  :: FilePath
+  :: File content Out
   -> Text
   -> IO (Either (FileError ()) ())
 writeTextFileWithOwnerPermissions fp t =
-  handleFileForWritingWithOwnerPermission fp $ \h ->
+  handleFileForWritingWithOwnerPermission (unFile fp) $ \h ->
     Text.hPutStr h t
 
-writeTextOutput :: MonadIO m => Maybe FilePath -> Text -> m (Either (FileError ()) ())
+writeTextOutput :: ()
+  => MonadIO m
+  => Maybe (File content Out)
+  -> Text
+  -> m (Either (FileError ()) ())
 writeTextOutput mOutput t = runExceptT $
   case mOutput of
-    Just fp -> handleIOExceptT (FileIOError fp) $ Text.writeFile fp t
+    Just fp -> handleIOExceptT (FileIOError (unFile fp)) $ Text.writeFile (unFile fp) t
     Nothing -> liftIO $ Text.putStr t
 
 mapFile :: (FilePath -> FilePath) -> File content direction -> File content direction

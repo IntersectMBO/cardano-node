@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+
 module Cardano.CLI.Shelley.Run.Pool
   ( ShelleyPoolCmdError(ShelleyPoolCmdReadFileError)
   , renderShelleyPoolCmdError
@@ -75,7 +77,7 @@ runStakePoolRegistrationCert
   -> Maybe StakePoolMetadataReference
   -- ^ Stake pool metadata.
   -> NetworkId
-  -> OutputFile
+  -> File () Out
   -> ExceptT ShelleyPoolCmdError IO ()
 runStakePoolRegistrationCert
   stakePoolVerKeyOrFile
@@ -88,7 +90,7 @@ runStakePoolRegistrationCert
   relays
   mbMetadata
   network
-  (OutputFile outfp) = do
+  outfp = do
     -- Pool verification key
     stakePoolVerKey <- firstExceptT ShelleyPoolCmdReadKeyFileError
       . newExceptT
@@ -144,9 +146,9 @@ runStakePoolRegistrationCert
 runStakePoolRetirementCert
   :: VerificationKeyOrFile StakePoolKey
   -> Shelley.EpochNo
-  -> OutputFile
+  -> File () Out
   -> ExceptT ShelleyPoolCmdError IO ()
-runStakePoolRetirementCert stakePoolVerKeyOrFile retireEpoch (OutputFile outfp) = do
+runStakePoolRetirementCert stakePoolVerKeyOrFile retireEpoch outfp = do
     -- Pool verification key
     stakePoolVerKey <- firstExceptT ShelleyPoolCmdReadKeyFileError
       . newExceptT
@@ -178,7 +180,7 @@ runPoolId verKeyOrFile outputFormat = do
         OutputFormatBech32 ->
           Text.putStrLn $ serialiseToBech32 (verificationKeyHash stakePoolVerKey)
 
-runPoolMetadataHash :: PoolMetadataFile -> Maybe OutputFile -> ExceptT ShelleyPoolCmdError IO ()
+runPoolMetadataHash :: PoolMetadataFile -> Maybe (File () Out) -> ExceptT ShelleyPoolCmdError IO ()
 runPoolMetadataHash (PoolMetadataFile poolMDPath) mOutFile = do
   metadataBytes <- handleIOExceptT (ShelleyPoolCmdReadFileError . FileIOError poolMDPath) $
     BS.readFile poolMDPath
@@ -188,6 +190,6 @@ runPoolMetadataHash (PoolMetadataFile poolMDPath) mOutFile = do
     $ validateAndHashStakePoolMetadata metadataBytes
   case mOutFile of
     Nothing -> liftIO $ BS.putStrLn (serialiseToRawBytesHex metadataHash)
-    Just (OutputFile fpath) ->
+    Just (File fpath) ->
       handleIOExceptT (ShelleyPoolCmdWriteFileError . FileIOError fpath)
         $ BS.writeFile fpath (serialiseToRawBytesHex metadataHash)

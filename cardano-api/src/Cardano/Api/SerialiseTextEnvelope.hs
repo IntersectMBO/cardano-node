@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -207,7 +208,7 @@ deserialiseFromTextEnvelopeAnyOf types te =
     matching (FromSomeType ttoken _f) = actualType == textEnvelopeType ttoken
 
 writeFileTextEnvelope :: HasTextEnvelope a
-                      => FilePath
+                      => File content Out
                       -> Maybe TextEnvelopeDescr
                       -> a
                       -> IO (Either (FileError ()) ())
@@ -220,23 +221,23 @@ textEnvelopeToJSON mbDescr a  =
 
 readFileTextEnvelope :: HasTextEnvelope a
                      => AsType a
-                     -> FilePath
+                     -> File content In
                      -> IO (Either (FileError TextEnvelopeError) a)
 readFileTextEnvelope ttoken path =
     runExceptT $ do
-      content <- handleIOExceptT (FileIOError path) $ readFileBlocking path
-      firstExceptT (FileError path) $ hoistEither $ do
+      content <- handleIOExceptT (FileIOError (unFile path)) $ readFileBlocking (unFile path)
+      firstExceptT (FileError (unFile path)) $ hoistEither $ do
         te <- first TextEnvelopeAesonDecodeError $ Aeson.eitherDecodeStrict' content
         deserialiseFromTextEnvelope ttoken te
 
 
 readFileTextEnvelopeAnyOf :: [FromSomeType HasTextEnvelope b]
-                          -> FilePath
+                          -> File content In
                           -> IO (Either (FileError TextEnvelopeError) b)
 readFileTextEnvelopeAnyOf types path =
     runExceptT $ do
-      content <- handleIOExceptT (FileIOError path) $ readFileBlocking path
-      firstExceptT (FileError path) $ hoistEither $ do
+      content <- handleIOExceptT (FileIOError (unFile path)) $ readFileBlocking (unFile path)
+      firstExceptT (FileError (unFile path)) $ hoistEither $ do
         te <- first TextEnvelopeAesonDecodeError $ Aeson.eitherDecodeStrict' content
         deserialiseFromTextEnvelopeAnyOf types te
 

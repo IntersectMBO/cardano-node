@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -121,13 +122,13 @@ runGovernanceMIRCertificatePayStakeAddrs
   :: Shelley.MIRPot
   -> [StakeAddress] -- ^ Stake addresses
   -> [Lovelace]     -- ^ Corresponding reward amounts (same length)
-  -> OutputFile
+  -> File () Out
   -> ExceptT ShelleyGovernanceCmdError IO ()
-runGovernanceMIRCertificatePayStakeAddrs mirPot sAddrs rwdAmts (OutputFile oFp) = do
+runGovernanceMIRCertificatePayStakeAddrs mirPot sAddrs rwdAmts oFp = do
 
     unless (length sAddrs == length rwdAmts) $
       left $ ShelleyGovernanceCmdMIRCertificateKeyRewardMistmach
-               oFp (length sAddrs) (length rwdAmts)
+               (unFile oFp) (length sAddrs) (length rwdAmts)
 
     let sCreds  = map stakeAddressCredential sAddrs
         mirCert = makeMIRCertificate mirPot (StakeAddressesMIR $ zip sCreds rwdAmts)
@@ -141,10 +142,10 @@ runGovernanceMIRCertificatePayStakeAddrs mirPot sAddrs rwdAmts (OutputFile oFp) 
 
 runGovernanceMIRCertificateTransfer
   :: Lovelace
-  -> OutputFile
+  -> File () Out
   -> TransferDirection
   -> ExceptT ShelleyGovernanceCmdError IO ()
-runGovernanceMIRCertificateTransfer ll (OutputFile oFp) direction = do
+runGovernanceMIRCertificateTransfer ll oFp direction = do
   mirCert <- case direction of
                  TransferToReserves ->
                    return . makeMIRCertificate Shelley.TreasuryMIR $ SendToReservesMIR ll
@@ -165,12 +166,12 @@ runGovernanceGenesisKeyDelegationCertificate
   :: VerificationKeyOrHashOrFile GenesisKey
   -> VerificationKeyOrHashOrFile GenesisDelegateKey
   -> VerificationKeyOrHashOrFile VrfKey
-  -> OutputFile
+  -> File () Out
   -> ExceptT ShelleyGovernanceCmdError IO ()
 runGovernanceGenesisKeyDelegationCertificate genVkOrHashOrFp
                                              genDelVkOrHashOrFp
                                              vrfVkOrHashOrFp
-                                             (OutputFile oFp) = do
+                                             oFp = do
     genesisVkHash <- firstExceptT ShelleyGovernanceCmdKeyReadError
       . newExceptT
       $ readVerificationKeyOrHashOrTextEnvFile AsGenesisKey genVkOrHashOrFp
@@ -190,14 +191,14 @@ runGovernanceGenesisKeyDelegationCertificate genVkOrHashOrFp
     genKeyDelegCertDesc = "Genesis Key Delegation Certificate"
 
 runGovernanceUpdateProposal
-  :: OutputFile
+  :: File () Out
   -> EpochNo
-  -> [VerificationKeyFile]
+  -> [VerificationKeyFile In]
   -- ^ Genesis verification keys
   -> ProtocolParametersUpdate
   -> Maybe FilePath -- ^ Cost models file path
   -> ExceptT ShelleyGovernanceCmdError IO ()
-runGovernanceUpdateProposal (OutputFile upFile) eNo genVerKeyFiles upPprams mCostModelFp = do
+runGovernanceUpdateProposal upFile eNo genVerKeyFiles upPprams mCostModelFp = do
   finalUpPprams <- case mCostModelFp of
     Nothing -> return upPprams
     Just fp -> do
@@ -216,7 +217,7 @@ runGovernanceUpdateProposal (OutputFile upFile) eNo genVerKeyFiles upPprams mCos
 
   genVKeys <- sequence
     [ firstExceptT ShelleyGovernanceCmdTextEnvReadError . newExceptT $ readFileTextEnvelope (AsVerificationKey AsGenesisKey) vkeyFile
-    | VerificationKeyFile vkeyFile <- genVerKeyFiles
+    | vkeyFile <- genVerKeyFiles
     ]
   let genKeyHashes = fmap verificationKeyHash genVKeys
       upProp = makeShelleyUpdateProposal finalUpPprams genKeyHashes eNo
@@ -228,20 +229,19 @@ runGovernanceCreatePoll
   :: Text
   -> [Text]
   -> Maybe Word
-  -> OutputFile
+  -> File () Out
   -> ExceptT ShelleyGovernanceCmdError IO ()
 runGovernanceCreatePoll govPollQuestion govPollAnswers govPollNonce out = do
   let poll = GovernancePoll{ govPollQuestion, govPollAnswers, govPollNonce }
 
   let description = fromString $ "An on-chain poll for SPOs: " <> Text.unpack govPollQuestion
   firstExceptT ShelleyGovernanceCmdTextEnvWriteError . newExceptT $
-    writeFileTextEnvelope (unOutputFile out) (Just description) poll
+    writeFileTextEnvelope out (Just description) poll
 
   let metadata = asTxMetadata poll
         & metadataToJson TxMetadataJsonDetailedSchema
 
-  let outPath = unOutputFile out
-        & Text.encodeUtf8 . Text.pack
+  let outPath = unFile out & Text.encodeUtf8 . Text.pack
 
   liftIO $ do
     BSC.hPutStrLn stderr $ mconcat
@@ -260,8 +260,8 @@ runGovernanceCreatePoll govPollQuestion govPollAnswers govPollNonce out = do
       ]
 
 runGovernanceAnswerPoll
-  :: FilePath
-  -> SigningKeyFile
+  :: File () In
+  -> SigningKeyFile In
     -- ^ VRF or Ed25519 cold key
   -> Maybe Word
     -- ^ Answer index
@@ -315,7 +315,7 @@ runGovernanceAnswerPoll pollFile skFile maybeChoice = do
       ]
  where
   readVRFOrColdSigningKeyFile
-    :: SigningKeyFile
+    :: SigningKeyFile In
     -> ExceptT
          ShelleyGovernanceCmdError
          IO
@@ -359,8 +359,8 @@ runGovernanceAnswerPoll pollFile skFile maybeChoice = do
         left ShelleyGovernanceCmdPollInvalidChoice
 
 runGovernanceVerifyPoll
-  :: FilePath
-  -> FilePath
+  :: File () In
+  -> File () In
   -> ExceptT ShelleyGovernanceCmdError IO ()
 runGovernanceVerifyPoll pollFile metadataFile = do
   poll <- firstExceptT ShelleyGovernanceCmdTextEnvReadError . newExceptT $

@@ -153,7 +153,7 @@ data ShelleyGenesisCmdError
   | ShelleyGenesisCmdFilesNoIndex [FilePath]
   | ShelleyGenesisCmdFilesDupIndex [FilePath]
   | ShelleyGenesisCmdTextEnvReadFileError !(FileError TextEnvelopeError)
-  | ShelleyGenesisCmdUnexpectedAddressVerificationKey !VerificationKeyFile !Text !SomeAddressVerificationKey
+  | ShelleyGenesisCmdUnexpectedAddressVerificationKey !(VerificationKeyFile In) !Text !SomeAddressVerificationKey
   | ShelleyGenesisCmdTooFewPoolsForBulkCreds !Word !Word !Word
   | ShelleyGenesisCmdAddressCmdError !ShelleyAddressCmdError
   | ShelleyGenesisCmdNodeCmdError !ShelleyNodeCmdError
@@ -184,7 +184,7 @@ instance Error ShelleyGenesisCmdError where
         "The genesis keys files are expected to have a unique numeric index but these do not:\n"
           <> unlines files
       ShelleyGenesisCmdTextEnvReadFileError fileErr -> displayError fileErr
-      ShelleyGenesisCmdUnexpectedAddressVerificationKey (VerificationKeyFile file) expect got -> mconcat
+      ShelleyGenesisCmdUnexpectedAddressVerificationKey (File file) expect got -> mconcat
         [ "Unexpected address verification key type in file ", file
         , ", expected: ", Text.unpack expect, ", got: ", Text.unpack (renderSomeAddressVerificationKey got)
         ]
@@ -228,10 +228,11 @@ runGenesisCmd (GenesisHashFile gf) = runGenesisHashFile gf
 -- Genesis command implementations
 --
 
-runGenesisKeyGenGenesis :: VerificationKeyFile -> SigningKeyFile
-                        -> ExceptT ShelleyGenesisCmdError IO ()
-runGenesisKeyGenGenesis (VerificationKeyFile vkeyPath)
-                        (SigningKeyFile skeyPath) = do
+runGenesisKeyGenGenesis ::
+     VerificationKeyFile Out
+  -> SigningKeyFile Out
+  -> ExceptT ShelleyGenesisCmdError IO ()
+runGenesisKeyGenGenesis vkeyPath skeyPath = do
     skey <- liftIO $ generateSigningKey AsGenesisKey
     let vkey = getVerificationKey skey
     firstExceptT ShelleyGenesisCmdGenesisFileError
@@ -248,13 +249,12 @@ runGenesisKeyGenGenesis (VerificationKeyFile vkeyPath)
     vkeyDesc = "Genesis Verification Key"
 
 
-runGenesisKeyGenDelegate :: VerificationKeyFile
-                         -> SigningKeyFile
-                         -> OpCertCounterFile
-                         -> ExceptT ShelleyGenesisCmdError IO ()
-runGenesisKeyGenDelegate (VerificationKeyFile vkeyPath)
-                         (SigningKeyFile skeyPath)
-                         (OpCertCounterFile ocertCtrPath) = do
+runGenesisKeyGenDelegate ::
+     VerificationKeyFile Out
+  -> SigningKeyFile Out
+  -> OpCertCounterFile Out
+  -> ExceptT ShelleyGenesisCmdError IO ()
+runGenesisKeyGenDelegate vkeyPath skeyPath ocertCtrPath = do
     skey <- liftIO $ generateSigningKey AsGenesisDelegateKey
     let vkey = getVerificationKey skey
     firstExceptT ShelleyGenesisCmdGenesisFileError
@@ -283,10 +283,11 @@ runGenesisKeyGenDelegate (VerificationKeyFile vkeyPath)
     initialCounter = 0
 
 
-runGenesisKeyGenDelegateVRF :: VerificationKeyFile -> SigningKeyFile
-                            -> ExceptT ShelleyGenesisCmdError IO ()
-runGenesisKeyGenDelegateVRF (VerificationKeyFile vkeyPath)
-                            (SigningKeyFile skeyPath) = do
+runGenesisKeyGenDelegateVRF ::
+     VerificationKeyFile Out
+  -> SigningKeyFile Out
+  -> ExceptT ShelleyGenesisCmdError IO ()
+runGenesisKeyGenDelegateVRF vkeyPath skeyPath = do
     skey <- liftIO $ generateSigningKey AsVrfKey
     let vkey = getVerificationKey skey
     firstExceptT ShelleyGenesisCmdGenesisFileError
@@ -303,10 +304,11 @@ runGenesisKeyGenDelegateVRF (VerificationKeyFile vkeyPath)
     vkeyDesc = "VRF Verification Key"
 
 
-runGenesisKeyGenUTxO :: VerificationKeyFile -> SigningKeyFile
-                     -> ExceptT ShelleyGenesisCmdError IO ()
-runGenesisKeyGenUTxO (VerificationKeyFile vkeyPath)
-                     (SigningKeyFile skeyPath) = do
+runGenesisKeyGenUTxO ::
+     VerificationKeyFile Out
+  -> SigningKeyFile Out
+  -> ExceptT ShelleyGenesisCmdError IO ()
+runGenesisKeyGenUTxO vkeyPath skeyPath = do
     skey <- liftIO $ generateSigningKey AsGenesisUTxOKey
     let vkey = getVerificationKey skey
     firstExceptT ShelleyGenesisCmdGenesisFileError
@@ -323,8 +325,8 @@ runGenesisKeyGenUTxO (VerificationKeyFile vkeyPath)
     vkeyDesc = "Genesis Initial UTxO Verification Key"
 
 
-runGenesisKeyHash :: VerificationKeyFile -> ExceptT ShelleyGenesisCmdError IO ()
-runGenesisKeyHash (VerificationKeyFile vkeyPath) = do
+runGenesisKeyHash :: VerificationKeyFile In -> ExceptT ShelleyGenesisCmdError IO ()
+runGenesisKeyHash vkeyPath = do
     vkey <- firstExceptT ShelleyGenesisCmdTextEnvReadFileError . newExceptT $
             readFileTextEnvelopeAnyOf
               [ FromSomeType (AsVerificationKey AsGenesisKey)
@@ -347,9 +349,11 @@ runGenesisKeyHash (VerificationKeyFile vkeyPath) = do
                               . verificationKeyHash
 
 
-runGenesisVerKey :: VerificationKeyFile -> SigningKeyFile
-                 -> ExceptT ShelleyGenesisCmdError IO ()
-runGenesisVerKey (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
+runGenesisVerKey ::
+     VerificationKeyFile Out
+  -> SigningKeyFile In
+  -> ExceptT ShelleyGenesisCmdError IO ()
+runGenesisVerKey vkeyPath skeyPath = do
     skey <- firstExceptT ShelleyGenesisCmdTextEnvReadFileError . newExceptT $
             readFileTextEnvelopeAnyOf
               [ FromSomeType (AsSigningKey AsGenesisKey)
@@ -379,18 +383,24 @@ data SomeGenesisKey f
      | AGenesisUTxOKey     (f GenesisUTxOKey)
 
 
-runGenesisTxIn :: VerificationKeyFile -> NetworkId -> Maybe OutputFile
-               -> ExceptT ShelleyGenesisCmdError IO ()
-runGenesisTxIn (VerificationKeyFile vkeyPath) network mOutFile = do
+runGenesisTxIn ::
+     VerificationKeyFile In
+  -> NetworkId
+  -> Maybe (File () Out)
+  -> ExceptT ShelleyGenesisCmdError IO ()
+runGenesisTxIn vkeyPath network mOutFile = do
     vkey <- firstExceptT ShelleyGenesisCmdTextEnvReadFileError . newExceptT $
             readFileTextEnvelope (AsVerificationKey AsGenesisUTxOKey) vkeyPath
     let txin = genesisUTxOPseudoTxIn network (verificationKeyHash vkey)
     liftIO $ writeOutput mOutFile (renderTxIn txin)
 
 
-runGenesisAddr :: VerificationKeyFile -> NetworkId -> Maybe OutputFile
-               -> ExceptT ShelleyGenesisCmdError IO ()
-runGenesisAddr (VerificationKeyFile vkeyPath) network mOutFile = do
+runGenesisAddr ::
+     VerificationKeyFile In
+  -> NetworkId
+  -> Maybe (File () Out)
+  -> ExceptT ShelleyGenesisCmdError IO ()
+runGenesisAddr vkeyPath network mOutFile = do
     vkey <- firstExceptT ShelleyGenesisCmdTextEnvReadFileError . newExceptT $
             readFileTextEnvelope (AsVerificationKey AsGenesisUTxOKey) vkeyPath
     let vkh  = verificationKeyHash (castVerificationKey vkey)
@@ -398,8 +408,8 @@ runGenesisAddr (VerificationKeyFile vkeyPath) network mOutFile = do
                                   NoStakeAddress
     liftIO $ writeOutput mOutFile (serialiseAddress addr)
 
-writeOutput :: Maybe OutputFile -> Text -> IO ()
-writeOutput (Just (OutputFile fpath)) = Text.writeFile fpath
+writeOutput :: Maybe (File () Out) -> Text -> IO ()
+writeOutput (Just (File fpath)) = Text.writeFile fpath
 writeOutput Nothing                   = Text.putStrLn
 
 
@@ -828,35 +838,35 @@ createDelegateKeys :: FilePath -> Word -> ExceptT ShelleyGenesisCmdError IO ()
 createDelegateKeys dir index = do
   liftIO $ createDirectoryIfMissing False dir
   runGenesisKeyGenDelegate
-        (VerificationKeyFile $ dir </> "delegate" ++ strIndex ++ ".vkey")
-        coldSK
-        opCertCtr
+        (File @OfVerificationKey $ dir </> "delegate" ++ strIndex ++ ".vkey")
+        (onlyOut coldSK)
+        (onlyOut opCertCtr)
   runGenesisKeyGenDelegateVRF
-        (VerificationKeyFile $ dir </> "delegate" ++ strIndex ++ ".vrf.vkey")
-        (SigningKeyFile $ dir </> "delegate" ++ strIndex ++ ".vrf.skey")
+        (File @OfVerificationKey $ dir </> "delegate" ++ strIndex ++ ".vrf.vkey")
+        (File @OfSigningKey $ dir </> "delegate" ++ strIndex ++ ".vrf.skey")
   firstExceptT ShelleyGenesisCmdNodeCmdError $ do
     runNodeKeyGenKES
-        kesVK
-        (SigningKeyFile $ dir </> "delegate" ++ strIndex ++ ".kes.skey")
+        (onlyOut kesVK)
+        (File @OfSigningKey $ dir </> "delegate" ++ strIndex ++ ".kes.skey")
     runNodeIssueOpCert
-        (VerificationKeyFilePath kesVK)
-        coldSK
+        (VerificationKeyFilePath (onlyIn kesVK))
+        (onlyIn coldSK)
         opCertCtr
         (KESPeriod 0)
-        (OutputFile $ dir </> "opcert" ++ strIndex ++ ".cert")
+        (File $ dir </> "opcert" ++ strIndex ++ ".cert")
  where
    strIndex = show index
-   kesVK = VerificationKeyFile $ dir </> "delegate" ++ strIndex ++ ".kes.vkey"
-   coldSK = SigningKeyFile $ dir </> "delegate" ++ strIndex ++ ".skey"
-   opCertCtr = OpCertCounterFile $ dir </> "delegate" ++ strIndex ++ ".counter"
+   kesVK = File @OfVerificationKey $ dir </> "delegate" ++ strIndex ++ ".kes.vkey"
+   coldSK = File @OfSigningKey $ dir </> "delegate" ++ strIndex ++ ".skey"
+   opCertCtr = File $ dir </> "delegate" ++ strIndex ++ ".counter"
 
 createGenesisKeys :: FilePath -> Word -> ExceptT ShelleyGenesisCmdError IO ()
 createGenesisKeys dir index = do
   liftIO $ createDirectoryIfMissing False dir
   let strIndex = show index
   runGenesisKeyGenGenesis
-        (VerificationKeyFile $ dir </> "genesis" ++ strIndex ++ ".vkey")
-        (SigningKeyFile $ dir </> "genesis" ++ strIndex ++ ".skey")
+        (File @OfVerificationKey $ dir </> "genesis" ++ strIndex ++ ".vkey")
+        (File @OfSigningKey $ dir </> "genesis" ++ strIndex ++ ".skey")
 
 
 createUtxoKeys :: FilePath -> Word -> ExceptT ShelleyGenesisCmdError IO ()
@@ -864,38 +874,38 @@ createUtxoKeys dir index = do
   liftIO $ createDirectoryIfMissing False dir
   let strIndex = show index
   runGenesisKeyGenUTxO
-        (VerificationKeyFile $ dir </> "utxo" ++ strIndex ++ ".vkey")
-        (SigningKeyFile $ dir </> "utxo" ++ strIndex ++ ".skey")
+        (File @OfVerificationKey $ dir </> "utxo" ++ strIndex ++ ".vkey")
+        (File @OfSigningKey $ dir </> "utxo" ++ strIndex ++ ".skey")
 
 createPoolCredentials :: FilePath -> Word -> ExceptT ShelleyGenesisCmdError IO ()
 createPoolCredentials dir index = do
   liftIO $ createDirectoryIfMissing False dir
   firstExceptT ShelleyGenesisCmdNodeCmdError $ do
     runNodeKeyGenKES
-        kesVK
-        (SigningKeyFile $ dir </> "kes" ++ strIndex ++ ".skey")
+        (onlyOut kesVK)
+        (File @OfSigningKey $ dir </> "kes" ++ strIndex ++ ".skey")
     runNodeKeyGenVRF
-        (VerificationKeyFile $ dir </> "vrf" ++ strIndex ++ ".vkey")
-        (SigningKeyFile $ dir </> "vrf" ++ strIndex ++ ".skey")
+        (File @OfVerificationKey $ dir </> "vrf" ++ strIndex ++ ".vkey")
+        (File @OfSigningKey $ dir </> "vrf" ++ strIndex ++ ".skey")
     runNodeKeyGenCold
-        (VerificationKeyFile $ dir </> "cold" ++ strIndex ++ ".vkey")
-        coldSK
-        opCertCtr
+        (File @OfVerificationKey $ dir </> "cold" ++ strIndex ++ ".vkey")
+        (onlyOut coldSK)
+        (onlyOut opCertCtr)
     runNodeIssueOpCert
-        (VerificationKeyFilePath kesVK)
-        coldSK
+        (VerificationKeyFilePath (onlyIn kesVK))
+        (onlyIn coldSK)
         opCertCtr
         (KESPeriod 0)
-        (OutputFile $ dir </> "opcert" ++ strIndex ++ ".cert")
+        (File $ dir </> "opcert" ++ strIndex ++ ".cert")
   firstExceptT ShelleyGenesisCmdStakeAddressCmdError $
     runStakeAddressKeyGenToFile
-        (VerificationKeyFile $ dir </> "staking-reward" ++ strIndex ++ ".vkey")
-        (SigningKeyFile $ dir </> "staking-reward" ++ strIndex ++ ".skey")
+        (File @OfVerificationKey $ dir </> "staking-reward" ++ strIndex ++ ".vkey")
+        (File @OfSigningKey $ dir </> "staking-reward" ++ strIndex ++ ".skey")
  where
    strIndex = show index
-   kesVK = VerificationKeyFile $ dir </> "kes" ++ strIndex ++ ".vkey"
-   coldSK = SigningKeyFile $ dir </> "cold" ++ strIndex ++ ".skey"
-   opCertCtr = OpCertCounterFile $ dir </> "opcert" ++ strIndex ++ ".counter"
+   kesVK = File @OfVerificationKey $ dir </> "kes" ++ strIndex ++ ".vkey"
+   coldSK = File @OfSigningKey $ dir </> "cold" ++ strIndex ++ ".skey"
+   opCertCtr = File $ dir </> "opcert" ++ strIndex ++ ".counter"
 
 data Delegation = Delegation
   { dInitialUtxoAddr  :: !(AddressInEra ShelleyEra)
@@ -940,9 +950,9 @@ buildPoolParams nw dir index specifiedRelays = do
    lookupPoolRelay m = maybe mempty Seq.fromList (Map.lookup index m)
 
    strIndex = show index
-   poolColdVKF = dir </> "cold" ++ strIndex ++ ".vkey"
-   poolVrfVKF = dir </> "vrf" ++ strIndex ++ ".vkey"
-   poolRewardVKF = dir </> "staking-reward" ++ strIndex ++ ".vkey"
+   poolColdVKF = File $ dir </> "cold" ++ strIndex ++ ".vkey"
+   poolVrfVKF = File $ dir </> "vrf" ++ strIndex ++ ".vkey"
+   poolRewardVKF = File $ dir </> "staking-reward" ++ strIndex ++ ".vkey"
 
 writeBulkPoolCredentials :: FilePath -> Word -> [Word] -> ExceptT ShelleyGenesisCmdError IO ()
 writeBulkPoolCredentials dir bulkIx poolIxs = do
@@ -1250,7 +1260,7 @@ readGenesisKeys gendir = do
   firstExceptT ShelleyGenesisCmdTextEnvReadFileError $
     Map.fromList <$>
       sequence
-        [ (,) ix <$> readKey file
+        [ (,) ix <$> readKey (File file)
         | (file, ix) <- fileIxs ]
   where
     readKey = newExceptT
@@ -1267,7 +1277,7 @@ readDelegateKeys deldir = do
   firstExceptT ShelleyGenesisCmdTextEnvReadFileError $
     Map.fromList <$>
       sequence
-        [ (,) ix <$> readKey file
+        [ (,) ix <$> readKey (File file)
         | (file, ix) <- fileIxs ]
   where
     readKey = newExceptT
@@ -1283,7 +1293,7 @@ readDelegateVrfKeys deldir = do
   firstExceptT ShelleyGenesisCmdTextEnvReadFileError $
     Map.fromList <$>
       sequence
-        [ (,) ix <$> readKey file
+        [ (,) ix <$> readKey (File file)
         | (file, ix) <- fileIxs ]
   where
     readKey = newExceptT
@@ -1324,7 +1334,7 @@ readInitialFundAddresses utxodir nw = do
                sequence
                  [ newExceptT $
                      readFileTextEnvelope (AsVerificationKey AsGenesisUTxOKey)
-                                          (utxodir </> file)
+                                          (File (utxodir </> file))
                  | file <- files
                  , takeExtension file == ".vkey" ]
     return [ addr | vkey <- vkeys

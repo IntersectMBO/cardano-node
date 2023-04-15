@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -47,7 +48,7 @@ import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (VerificationKeyTextOrFile (..),
                    VerificationKeyTextOrFileError, readVerificationKeyTextOrFileAnyOf,
                    renderVerificationKeyTextOrFileError)
-import           Cardano.CLI.Types (SigningKeyFile (..), VerificationKeyFile (..))
+import           Cardano.CLI.Types (SigningKeyFile, VerificationKeyFile)
 
 
 data ShelleyKeyCmdError
@@ -112,10 +113,10 @@ runKeyCmd cmd =
     KeyConvertCardanoAddressSigningKey keyType skfOld skfNew ->
       runConvertCardanoAddressSigningKey keyType skfOld skfNew
 
-runGetVerificationKey :: SigningKeyFile
-                      -> VerificationKeyFile
+runGetVerificationKey :: SigningKeyFile In
+                      -> VerificationKeyFile Out
                       -> ExceptT ShelleyKeyCmdError IO ()
-runGetVerificationKey skf (VerificationKeyFile vkf) = do
+runGetVerificationKey skf vkf = do
     ssk <- firstExceptT ShelleyKeyCmdReadKeyFileError $
              readSigningKeyFile skf
     withSomeSigningKey ssk $ \sk ->
@@ -161,9 +162,9 @@ withSomeSigningKey ssk f =
       AKesSigningKey             sk -> f sk
 
 readSigningKeyFile
-  :: SigningKeyFile
+  :: SigningKeyFile In
   -> ExceptT (FileError InputDecodeError) IO SomeSigningKey
-readSigningKeyFile (SigningKeyFile skFile) =
+readSigningKeyFile skFile =
     newExceptT $
       readKeyFileAnyOf bech32FileTypes textEnvFileTypes skFile
   where
@@ -215,10 +216,10 @@ readSigningKeyFile (SigningKeyFile skFile) =
 
 
 runConvertToNonExtendedKey
-  :: VerificationKeyFile
-  -> VerificationKeyFile
+  :: VerificationKeyFile In
+  -> VerificationKeyFile Out
   -> ExceptT ShelleyKeyCmdError IO ()
-runConvertToNonExtendedKey evkf (VerificationKeyFile vkf) =
+runConvertToNonExtendedKey evkf vkf =
   writeVerificationKey =<< readExtendedVerificationKeyFile evkf
  where
   -- TODO: Expose a function specifically for this purpose
@@ -244,14 +245,16 @@ runConvertToNonExtendedKey evkf (VerificationKeyFile vkf) =
 
   writeToDisk
    :: Key keyrole
-   => FilePath -> VerificationKey keyrole -> ExceptT ShelleyKeyCmdError IO ()
+   => File content Out
+   -> VerificationKey keyrole
+   -> ExceptT ShelleyKeyCmdError IO ()
   writeToDisk vkf' vk =
     firstExceptT ShelleyKeyCmdWriteFileError . newExceptT
       $ writeLazyByteStringFile vkf' $ textEnvelopeToJSON Nothing vk
 
 
 readExtendedVerificationKeyFile
-  :: VerificationKeyFile
+  :: VerificationKeyFile In
   -> ExceptT ShelleyKeyCmdError IO SomeAddressVerificationKey
 readExtendedVerificationKeyFile evkfile = do
   vKey <- firstExceptT ShelleyKeyCmdVerificationKeyReadError
@@ -269,8 +272,8 @@ readExtendedVerificationKeyFile evkfile = do
 runConvertByronKey
   :: Maybe Text      -- ^ Password (if applicable)
   -> ByronKeyType
-  -> SomeKeyFile     -- ^ Input file: old format
-  -> OutputFile      -- ^ Output file: new format
+  -> SomeKeyFile In  -- ^ Input file: old format
+  -> File () Out     -- ^ Output file: new format
   -> ExceptT ShelleyKeyCmdError IO ()
 runConvertByronKey mPwd (ByronPaymentKey format) (ASigningKeyFile skeyPathOld) =
     convertByronSigningKey mPwd format convert skeyPathOld
@@ -340,14 +343,10 @@ convertByronSigningKey
   => Maybe Text          -- ^ Password (if applicable)
   -> ByronKeyFormat
   -> (Byron.SigningKey -> SigningKey keyrole)
-  -> SigningKeyFile      -- ^ Input file: old format
-  -> OutputFile          -- ^ Output file: new format
+  -> SigningKeyFile In   -- ^ Input file: old format
+  -> File () Out         -- ^ Output file: new format
   -> ExceptT ShelleyKeyCmdError IO ()
-convertByronSigningKey mPwd byronFormat convert
-                       skeyPathOld
-                       (OutputFile skeyPathNew) = do
-
-
+convertByronSigningKey mPwd byronFormat convert skeyPathOld skeyPathNew = do
     sKey <- firstExceptT ShelleyKeyCmdByronKeyFailure
               $ Byron.readByronSigningKey byronFormat skeyPathOld
 
@@ -372,15 +371,13 @@ convertByronVerificationKey
   :: forall keyrole.
      Key keyrole
   => (Byron.VerificationKey -> VerificationKey keyrole)
-  -> VerificationKeyFile -- ^ Input file: old format
-  -> OutputFile          -- ^ Output file: new format
+  -> VerificationKeyFile In -- ^ Input file: old format
+  -> File () Out            -- ^ Output file: new format
   -> ExceptT ShelleyKeyCmdError IO ()
-convertByronVerificationKey convert
-                            (VerificationKeyFile vkeyPathOld)
-                            (OutputFile vkeyPathNew) = do
+convertByronVerificationKey convert vkeyPathOld vkeyPathNew = do
 
     vk <- firstExceptT ShelleyKeyCmdByronKeyFailure $
-            Byron.readPaymentVerificationKey (Byron.VerificationKeyFile vkeyPathOld)
+            Byron.readPaymentVerificationKey vkeyPathOld
 
     let vk' :: VerificationKey keyrole
         vk' = convert vk
@@ -391,10 +388,9 @@ convertByronVerificationKey convert
 
 runConvertByronGenesisVerificationKey
   :: VerificationKeyBase64  -- ^ Input key raw old format
-  -> OutputFile             -- ^ Output file: new format
+  -> File () Out            -- ^ Output file: new format
   -> ExceptT ShelleyKeyCmdError IO ()
-runConvertByronGenesisVerificationKey (VerificationKeyBase64 b64ByronVKey)
-                                      (OutputFile vkeyPathNew) = do
+runConvertByronGenesisVerificationKey (VerificationKeyBase64 b64ByronVKey) vkeyPathNew = do
 
     vk <- firstExceptT (ShelleyKeyCmdByronKeyParseError . textShow)
         . hoistEither
@@ -418,10 +414,10 @@ runConvertByronGenesisVerificationKey (VerificationKeyBase64 b64ByronVKey)
 --------------------------------------------------------------------------------
 
 runConvertITNStakeKey
-  :: SomeKeyFile
-  -> OutputFile
+  :: SomeKeyFile In
+  -> File () Out
   -> ExceptT ShelleyKeyCmdError IO ()
-runConvertITNStakeKey (AVerificationKeyFile (VerificationKeyFile vk)) (OutputFile outFile) = do
+runConvertITNStakeKey (AVerificationKeyFile (File vk)) outFile = do
   bech32publicKey <- firstExceptT ShelleyKeyCmdItnKeyConvError . newExceptT $
                      readFileITNKey vk
   vkey <- hoistEither
@@ -430,7 +426,7 @@ runConvertITNStakeKey (AVerificationKeyFile (VerificationKeyFile vk)) (OutputFil
   firstExceptT ShelleyKeyCmdWriteFileError . newExceptT $
     writeLazyByteStringFile outFile $ textEnvelopeToJSON Nothing vkey
 
-runConvertITNStakeKey (ASigningKeyFile (SigningKeyFile sk)) (OutputFile outFile) = do
+runConvertITNStakeKey (ASigningKeyFile (File sk)) outFile = do
   bech32privateKey <- firstExceptT ShelleyKeyCmdItnKeyConvError . newExceptT $
                       readFileITNKey sk
   skey <- hoistEither
@@ -440,9 +436,9 @@ runConvertITNStakeKey (ASigningKeyFile (SigningKeyFile sk)) (OutputFile outFile)
     $ writeLazyByteStringFile outFile
     $ textEnvelopeToJSON Nothing skey
 
-runConvertITNExtendedToStakeKey :: SomeKeyFile -> OutputFile -> ExceptT ShelleyKeyCmdError IO ()
+runConvertITNExtendedToStakeKey :: SomeKeyFile In -> File () Out -> ExceptT ShelleyKeyCmdError IO ()
 runConvertITNExtendedToStakeKey (AVerificationKeyFile _) _ = left ShelleyKeyCmdWrongKeyTypeError
-runConvertITNExtendedToStakeKey (ASigningKeyFile (SigningKeyFile sk)) (OutputFile outFile) = do
+runConvertITNExtendedToStakeKey (ASigningKeyFile (File sk)) outFile = do
   bech32privateKey <- firstExceptT ShelleyKeyCmdItnKeyConvError . newExceptT $ readFileITNKey sk
   skey <- hoistEither . first ShelleyKeyCmdItnKeyConvError
             $ convertITNExtendedSigningKey bech32privateKey
@@ -450,9 +446,9 @@ runConvertITNExtendedToStakeKey (ASigningKeyFile (SigningKeyFile sk)) (OutputFil
     $ writeLazyByteStringFile outFile
     $ textEnvelopeToJSON Nothing skey
 
-runConvertITNBip32ToStakeKey :: SomeKeyFile -> OutputFile -> ExceptT ShelleyKeyCmdError IO ()
+runConvertITNBip32ToStakeKey :: SomeKeyFile In -> File () Out -> ExceptT ShelleyKeyCmdError IO ()
 runConvertITNBip32ToStakeKey (AVerificationKeyFile _) _ = left ShelleyKeyCmdWrongKeyTypeError
-runConvertITNBip32ToStakeKey (ASigningKeyFile (SigningKeyFile sk)) (OutputFile outFile) = do
+runConvertITNBip32ToStakeKey (ASigningKeyFile (File sk)) outFile = do
   bech32privateKey <- firstExceptT ShelleyKeyCmdItnKeyConvError . newExceptT $ readFileITNKey sk
   skey <- hoistEither . first ShelleyKeyCmdItnKeyConvError
             $ convertITNBIP32SigningKey bech32privateKey
@@ -534,10 +530,10 @@ readFileITNKey fp = do
 
 runConvertCardanoAddressSigningKey
   :: CardanoAddressKeyType
-  -> SigningKeyFile
-  -> OutputFile
+  -> SigningKeyFile In
+  -> File () Out
   -> ExceptT ShelleyKeyCmdError IO ()
-runConvertCardanoAddressSigningKey keyType skFile (OutputFile outFile) = do
+runConvertCardanoAddressSigningKey keyType skFile outFile = do
   sKey <- firstExceptT ShelleyKeyCmdCardanoAddressSigningKeyFileError
     . newExceptT
     $ readSomeCardanoAddressSigningKeyFile keyType skFile
@@ -606,9 +602,9 @@ convertBip32SigningKey signingKeyBs =
 -- | Read a file containing a Bech32-encoded Ed25519 BIP32 extended signing
 -- key.
 readBech32Bip32SigningKeyFile
-  :: SigningKeyFile
+  :: SigningKeyFile In
   -> IO (Either (FileError CardanoAddressSigningKeyConversionError) Crypto.XPrv)
-readBech32Bip32SigningKeyFile (SigningKeyFile fp) = do
+readBech32Bip32SigningKeyFile (File fp) = do
   eStr <- Exception.try $ readFile fp
   case eStr of
     Left e -> pure . Left $ FileIOError fp e
@@ -624,7 +620,7 @@ readBech32Bip32SigningKeyFile (SigningKeyFile fp) = do
 -- signing key.
 readSomeCardanoAddressSigningKeyFile
   :: CardanoAddressKeyType
-  -> SigningKeyFile
+  -> SigningKeyFile In
   -> IO (Either (FileError CardanoAddressSigningKeyConversionError) SomeCardanoAddressSigningKey)
 readSomeCardanoAddressSigningKeyFile keyType skFile = do
     xPrv <- readBech32Bip32SigningKeyFile skFile
@@ -648,7 +644,7 @@ readSomeCardanoAddressSigningKeyFile keyType skFile = do
 -- | Write a text envelope formatted file containing a @cardano-address@
 -- extended signing key, but converted to a format supported by @cardano-cli@.
 writeSomeCardanoAddressSigningKeyFile
-  :: FilePath
+  :: File direction Out
   -> SomeCardanoAddressSigningKey
   -> IO (Either (FileError ()) ())
 writeSomeCardanoAddressSigningKeyFile outFile skey =

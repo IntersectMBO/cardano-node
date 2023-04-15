@@ -1,10 +1,12 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Cardano.CLI.Byron.Tx
   ( ByronTxError(..)
-  , TxFile(..)
+  , OfTx
+  , TxFile
   , NewTxFile(..)
   , prettyAddress
   , readByronTx
@@ -51,7 +53,7 @@ import qualified Cardano.Crypto.Signing as Crypto
 
 import           Cardano.Api.Byron
 import           Cardano.CLI.Byron.Key (byronWitnessToVerKey)
-import           Cardano.CLI.Types (TxFile (..))
+import           Cardano.CLI.Types (OfTx, TxFile)
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock, GenTx (..))
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
@@ -88,8 +90,8 @@ prettyAddress (ByronAddress addr) = sformat
   (Common.addressF % "\n" % Common.addressDetailedF)
   addr addr
 
-readByronTx :: TxFile -> ExceptT ByronTxError IO (UTxO.ATxAux ByteString)
-readByronTx (TxFile fp) = do
+readByronTx :: TxFile In -> ExceptT ByronTxError IO (UTxO.ATxAux ByteString)
+readByronTx (File fp) = do
   txBS <- liftIO $ LB.readFile fp
   case fromCborTxAux txBS of
     Left e -> left $ TxDeserialisationFailed fp e

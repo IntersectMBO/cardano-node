@@ -166,9 +166,9 @@ readLeaderCredentialsSingleton
                       shelleyKESFile = Just kesFile
                     } = do
     vrfSKey <-
-      firstExceptT FileError (newExceptT $ readFileTextEnvelope (AsSigningKey AsVrfKey) vrfFile)
+      firstExceptT FileError (newExceptT $ readFileTextEnvelope (AsSigningKey AsVrfKey) (File vrfFile))
 
-    (opCert, kesSKey) <- opCertKesKeyCheck kesFile opCertFile
+    (opCert, kesSKey) <- opCertKesKeyCheck (File kesFile) (File opCertFile)
 
     return [mkPraosLeaderCredentials opCert vrfSKey kesSKey]
 
@@ -181,9 +181,9 @@ readLeaderCredentialsSingleton ProtocolFilepaths {shelleyKESFile = Nothing} =
      left KESKeyNotSpecified
 
 opCertKesKeyCheck
-  :: FilePath
+  :: File () In
   -- ^ KES key
-  -> FilePath
+  -> File () In
   -- ^ Operational certificate
   -> ExceptT PraosLeaderCredentialsError IO (OperationalCertificate, SigningKey KesKey)
 opCertKesKeyCheck kesFile certFile = do
@@ -196,7 +196,7 @@ opCertKesKeyCheck kesFile certFile = do
   -- Specified KES key in operational certificate should match the one
   -- supplied to the node.
   if suppliedKesKeyHash /= opCertSpecifiedKesKeyhash
-  then left $ MismatchedKesKey kesFile certFile
+  then left $ MismatchedKesKey (unFile kesFile) (unFile certFile)
   else return (opCert, kesSKey)
 
 data ShelleyCredentials

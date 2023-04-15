@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module  Cardano.TxGenerator.Internal.Orphans
@@ -10,15 +11,6 @@ import           Data.Aeson
 import qualified Ouroboros.Network.Magic as Ouroboros (NetworkMagic (..))
 
 import           Cardano.Api (NetworkId (..))
-import           Cardano.CLI.Types (SigningKeyFile (..))
-
-
-instance ToJSON SigningKeyFile where
- toJSON (SigningKeyFile a) = toJSON a
-
-instance FromJSON SigningKeyFile where
-  parseJSON a = SigningKeyFile <$> parseJSON a
-
 
 instance ToJSON NetworkId where
   toJSON Mainnet = "Mainnet"

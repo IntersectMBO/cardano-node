@@ -1,9 +1,10 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 
 module Cardano.CLI.Byron.Commands
   ( ByronCommand (..)
   , NodeCmd (..)
-  , VerificationKeyFile (..)
+  , VerificationKeyFile
   , NewVerificationKeyFile (..)
   , CertificateFile (..)
   , NewCertificateFile (..)
@@ -44,15 +45,15 @@ data ByronCommand =
 
   | ToVerification
         ByronKeyFormat
-        SigningKeyFile
+        (SigningKeyFile In)
         NewVerificationKeyFile
 
   | PrettySigningKeyPublic
         ByronKeyFormat
-        SigningKeyFile
+        (SigningKeyFile In)
 
   | MigrateDelegateKeyFrom
-        SigningKeyFile
+        (SigningKeyFile In)
         -- ^ Old key
         NewSigningKeyFile
         -- ^ New Key
@@ -60,7 +61,7 @@ data ByronCommand =
   | PrintSigningKeyAddress
         ByronKeyFormat
         NetworkId
-        SigningKeyFile
+        (SigningKeyFile In)
 
   | GetLocalNodeTip
         (Maybe SocketPath)
@@ -71,7 +72,7 @@ data ByronCommand =
   | SubmitTx
         (Maybe SocketPath)
         NetworkId
-        TxFile
+        (TxFile In)
         -- ^ Filepath of transaction to submit.
 
   | SpendGenesisUTxO
@@ -80,7 +81,7 @@ data ByronCommand =
         ByronKeyFormat
         NewTxFile
         -- ^ Filepath of the newly created transaction.
-        SigningKeyFile
+        (SigningKeyFile In)
         -- ^ Signing key of genesis UTxO owner.
         (Address ByronAddr)
         -- ^ Genesis UTxO address.
@@ -91,14 +92,14 @@ data ByronCommand =
         ByronKeyFormat
         NewTxFile
         -- ^ Filepath of the newly created transaction.
-        SigningKeyFile
+        (SigningKeyFile In)
         -- ^ Signing key of Tx underwriter.
         [TxIn]
         -- ^ Inputs available for spending to the Tx underwriter's key.
         [TxOut CtxTx ByronEra]
         -- ^ Genesis UTxO output Address.
 
-  | GetTxId TxFile
+  | GetTxId (TxFile In)
 
     --- Misc Commands ---
 
@@ -115,13 +116,13 @@ data ByronCommand =
 data NodeCmd =
     CreateVote
       NetworkId
-      SigningKeyFile
+      (SigningKeyFile In)
       FilePath -- ^ filepath to update proposal
       Bool
       FilePath
   | UpdateProposal
       NetworkId
-      SigningKeyFile
+      (SigningKeyFile In)
       ProtocolVersion
       SoftwareVersion
       SystemTag
@@ -137,7 +138,6 @@ data NodeCmd =
       NetworkId
       FilePath -- ^ Vote filepath.
   deriving Show
-
 
 newtype NewCertificateFile
   = NewCertificateFile { nFp :: FilePath }
