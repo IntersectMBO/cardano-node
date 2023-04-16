@@ -8,7 +8,7 @@ in
 , useCabalRun ? true
 , workbenchDevMode ? defaultCustomConfig.localCluster.workbenchDevMode
 # to use profiled build of haskell dependencies:
-, profiling ? null
+, profiling ? "none"
 , customConfig ? {
     inherit profiling withHoogle;
     localCluster =  {
@@ -24,7 +24,18 @@ let
   inherit (customConfig) withHoogle localCluster;
   inherit (localCluster) profileName workbenchDevMode;
   inherit (pkgs.haskell-nix) haskellLib;
-  project = if profiling != null then cardanoNodeProject.profiled else cardanoNodeProject;
+
+  profilingEff =
+    if    profiling == "none"
+       || profiling == "time"
+       || profiling == "space-cost"
+       || profiling == "space-heap"
+       || profiling == "space-module"
+       || profiling == "space-retainer"
+       || profiling == "space-type"
+    then profiling
+    else throw "FATAL:  WB_PROFILING must be one of:  none, time, space-cost, space-heap, space-module, space-retainer, space-type";
+  project = if profilingEff != "none" then cardanoNodeProject.profiled else cardanoNodeProject;
 
   ## The default shell is defined by flake.nix: (cardanoNodeProject = flake.project.${final.system})
   inherit (project) shell;
@@ -63,9 +74,12 @@ let
           inherit setLocale haveGlibcLocales commandHelp;
           inherit cardano-mainnet-mirror;
           inherit workbenchDevMode;
-          inherit profiling withHoogle;
+          inherit withHoogle;
+          profiling = profilingEff;
           workbench-runner = pkgs.workbench-runner
-            { inherit profileName backendName useCabalRun profiling; };
+            { inherit profileName backendName useCabalRun;
+              profiling = profilingEff;
+            };
         };
 
   devops =
@@ -79,7 +93,8 @@ let
         devopsShellParams =
           { inherit profileName;
             inherit (workbench-runner) backend;
-            inherit workbenchDevMode profiling;
+            inherit workbenchDevMode;
+            profiling = profilingEff;
             withMainnet = false;
           };
         devopsShell = with customConfig.localCluster;
@@ -88,7 +103,8 @@ let
               inherit setLocale haveGlibcLocales commandHelp;
               inherit cardano-mainnet-mirror;
               inherit workbench-runner workbenchDevMode;
-              inherit profiling withHoogle;
+              inherit withHoogle;
+              profiling = profilingEff;
             };
     in project.shellFor {
     name = "devops-shell";

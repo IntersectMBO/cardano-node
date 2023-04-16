@@ -1,7 +1,7 @@
 progress "workbench"  "cabal-inside-nix-shell mode enabled, calling cardano-* via '$(white cabal run)' (instead of using Nix store); $(red lib-cabal.sh) flags: $(yellow $*)"
 
-if test ! -v WB_PROFILING; then export WB_PROFILING= ; fi
-if test ! -v WB_RTSARGS;  then export WB_RTSARGS= ; fi
+if test ! -v WB_PROFILING; then export WB_PROFILING='none'; fi
+if test ! -v WB_RTSARGS;   then export WB_RTSARGS= ; fi
 
 while test $# -gt 0
 do case "$1" in
@@ -10,6 +10,7 @@ do case "$1" in
        --profiling-heap )     export WB_PROFILING='space-heap';     WB_RTSARGS=-hT;;
        --profiling-module )   export WB_PROFILING='space-module';   WB_RTSARGS=-hm;;
        --profiling-retainer ) export WB_PROFILING='space-retainer'; WB_RTSARGS=-hr;;
+       --profiling-type )     export WB_PROFILING='space-type';     WB_RTSARGS=-hy;;
        * ) break;; esac;
    progress "workbench" "enabling $(red profiling mode):  $(white $WB_PROFILING)"
    shift; done

@@ -399,7 +399,10 @@ EOF
         ##    it as a Nomad Namespace or Nomad Job name.
         ##    NOTE: The tag time is different from the genesis time
         local hash=$(jq '."cardano-node" | .[:5]' -r <<<$manifest)
-        local run="$(date --utc +'%Y'-'%m'-'%d'-'%H'-'%M')$(if test "${batch}" != 'plain'; then echo -n -${batch}; fi)-${hash}-${profile_name}-${backend_name::3}"
+        local prof_suf=
+        if test -v "$WB_PROFILING" -a test -n "$WB_PROFILING" -a "$WB_PROFILING" != 'none'
+        then prof_suf="-prof"; fi
+        local run="$(date --utc +'%Y'-'%m'-'%d'-'%H'-'%M')$(if test "${batch}" != 'plain'; then echo -n -${batch}; fi)-${hash}-${profile_name}-${backend_name::3}${prof_suf}"
         progress "run | tag" "allocated run identifier (tag):  $(with_color white $run)"
 
         ## 3. create directory:

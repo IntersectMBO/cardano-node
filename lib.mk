@@ -1,3 +1,4 @@
+
 ## proftgt :: target -> profile -> fullnixmode -> devmode -> autostart -> autostay -> profiled -> backend -> IO ()
 define proftgt
 $(1): shell
@@ -10,7 +11,9 @@ ifeq ($(strip $(4)),true)
 $(1): ARGS += --arg 'workbenchDevMode' true
 endif
 ifeq ($(strip $(7)),true)
-$(1): ARGS += --arg 'profiling' '"${WB_PROFILING_MODE}"'
+$(1): ARGS += --arg 'profiling' '"$(WB_PROFILING)"'
+else
+$(1): ARGS += --arg 'profiling' '"none"'
 endif
 ifeq ($(strip $(5))$(strip $(6)),truetrue)
 $(1): CMD := start-cluster $(if ${ITER},--iterations ${ITER}); return
@@ -25,12 +28,11 @@ endef
 endif
 endef
 
-WB_PROFILING_MODE ?= time
-
 define define_profile_targets
 ##                                           defining this target       profname  nix   dev   auto  stay profiled  backend
 $$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof),                  $$(prof),false, true,false,false, false, supervisor)))
 $$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-prof,             $$(prof),false, true,false,false,  true, supervisor)))
+$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-autoprof,         $$(prof),false, true, true,false,  true, supervisor)))
 $$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-profnix,          $$(prof), true, true,false,false,  true, supervisor)))
 $$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-auto,             $$(prof),false, true, true,false, false, supervisor)))
 $$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-autostay,         $$(prof),false, true, true, true, false, supervisor)))

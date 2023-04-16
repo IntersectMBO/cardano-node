@@ -10,7 +10,7 @@
 , workbench-runner
 , workbenchDevMode ? false
 ##
-, profiling ? null
+, profiling ? "none"
 , withHoogle ? true
 , withMainnet ? true
 }:
@@ -53,7 +53,7 @@ let
       ${optionalString
         backend.useCabalRun
         ''
-      . nix/workbench/lib-cabal.sh ${optionalString profiling "--profiling-${profiling}"}
+      . nix/workbench/lib-cabal.sh ${optionalString (profiling != "none") "--profiling-${profiling}"}
       cabal update
         ''}
 

@@ -227,7 +227,7 @@ let
     };
     in
     finaliseNodeService profile nodeSpec
-    ((if profiling != null
+    ((if profiling != "none"
       then { inherit profiling; }
       else { eventlog  = mkForce true; })
     //
