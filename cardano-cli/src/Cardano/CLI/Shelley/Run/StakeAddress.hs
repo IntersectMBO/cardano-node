@@ -18,8 +18,8 @@ import qualified Data.Text.IO as Text
 import           Cardano.Api
 import           Cardano.Api.Shelley
 
-import           Cardano.CLI.Shelley.Key (StakeIdentifier (..), StakeVerifier (..),
-                   VerificationKeyOrFile, VerificationKeyOrHashOrFile, readVerificationKeyOrFile,
+import           Cardano.CLI.Shelley.Key (DelegationTarget (..), StakeIdentifier (..),
+                   StakeVerifier (..), VerificationKeyOrFile, readVerificationKeyOrFile,
                    readVerificationKeyOrHashOrFile)
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Shelley.Run.Read
@@ -126,18 +126,20 @@ runStakeCredentialRegistrationCert stakeIdentifier (OutputFile oFp) = do
 runStakeCredentialDelegationCert
   :: StakeIdentifier
   -- ^ Delegator stake verification key, verification key file or script file.
-  -> VerificationKeyOrHashOrFile StakePoolKey
+  -> DelegationTarget
   -- ^ Delegatee stake pool verification key or verification key file or
   -- verification key hash.
   -> OutputFile
   -> ExceptT ShelleyStakeAddressCmdError IO ()
-runStakeCredentialDelegationCert stakeVerifier poolVKeyOrHashOrFile (OutputFile outFp) = do
-  poolStakeVKeyHash <-
-    firstExceptT
-      ShelleyStakeAddressCmdReadKeyFileError
-      (newExceptT $ readVerificationKeyOrHashOrFile AsStakePoolKey poolVKeyOrHashOrFile)
-  stakeCred <- getStakeCredentialFromIdentifier stakeVerifier
-  writeDelegationCert stakeCred poolStakeVKeyHash
+runStakeCredentialDelegationCert stakeVerifier delegationTarget (OutputFile outFp) =
+  case delegationTarget of
+    StakePoolDelegationTarget poolVKeyOrHashOrFile -> do
+      poolStakeVKeyHash <-
+        firstExceptT
+          ShelleyStakeAddressCmdReadKeyFileError
+          (newExceptT $ readVerificationKeyOrHashOrFile AsStakePoolKey poolVKeyOrHashOrFile)
+      stakeCred <- getStakeCredentialFromIdentifier stakeVerifier
+      writeDelegationCert stakeCred poolStakeVKeyHash
 
   where
     writeDelegationCert

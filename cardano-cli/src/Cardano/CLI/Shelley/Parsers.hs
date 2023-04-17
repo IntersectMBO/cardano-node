@@ -60,9 +60,9 @@ import           Cardano.Chain.Common (BlockCount (BlockCount))
 
 import           Cardano.CLI.Common.Parsers (pConsensusModeParams, pNetworkId)
 import           Cardano.CLI.Shelley.Commands
-import           Cardano.CLI.Shelley.Key (PaymentVerifier (..), StakeIdentifier (..),
-                   StakeVerifier (..), VerificationKeyOrFile (..), VerificationKeyOrHashOrFile (..),
-                   VerificationKeyTextOrFile (..))
+import           Cardano.CLI.Shelley.Key (DelegationTarget (..), PaymentVerifier (..),
+                   StakeIdentifier (..), StakeVerifier (..), VerificationKeyOrFile (..),
+                   VerificationKeyOrHashOrFile (..), VerificationKeyTextOrFile (..))
 import           Cardano.CLI.Types
 
 {- HLINT ignore "Use <$>" -}
@@ -413,7 +413,7 @@ pStakeAddressCmd =
     pStakeAddressDelegationCert =
       StakeCredentialDelegationCert
         <$> pStakeIdentifier
-        <*> pStakePoolVerificationKeyOrHashOrFile
+        <*> pDelegationTarget
         <*> pOutputFile
 
 pKeyCmd :: Parser KeyCmd
@@ -2655,6 +2655,10 @@ pStakePoolVerificationKeyOrFile
 pStakePoolVerificationKeyOrFile =
   VerificationKeyValue <$> pStakePoolVerificationKey
     <|> VerificationKeyFilePath <$> pStakePoolVerificationKeyFile
+
+pDelegationTarget
+  :: Parser DelegationTarget
+pDelegationTarget = StakePoolDelegationTarget <$> pStakePoolVerificationKeyOrHashOrFile
 
 pStakePoolVerificationKeyOrHashOrFile
   :: Parser (VerificationKeyOrHashOrFile StakePoolKey)
