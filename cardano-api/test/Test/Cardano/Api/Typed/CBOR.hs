@@ -10,12 +10,13 @@ import           Cardano.Api
 
 import           Cardano.Api.Shelley (AsType (..))
 import           Data.Proxy (Proxy (..))
-import           Hedgehog (Property, forAll, tripping)
+import           Hedgehog (Property, forAll, property, tripping)
 import qualified Hedgehog as H
 import qualified Hedgehog.Gen as Gen
 import           Test.Cardano.Api.Typed.Orphans ()
 import           Test.Gen.Cardano.Api.Typed
 import qualified Test.Hedgehog.Roundtrip.CBOR as H
+import           Test.Hedgehog.Roundtrip.CBOR
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testPropertyNamed)
 
@@ -176,16 +177,16 @@ prop_roundtrip_TxWitness_Cddl = H.property $ do
   tripping x (serialiseWitnessLedgerCddl sbe) (deserialiseWitnessLedgerCddl sbe)
 
 prop_roundtrip_GovernancePoll_CBOR :: Property
-prop_roundtrip_GovernancePoll_CBOR =
-  roundtrip_CBOR AsGovernancePoll genGovernancePoll
+prop_roundtrip_GovernancePoll_CBOR = property $ do
+  trippingCbor AsGovernancePoll =<< forAll genGovernancePoll
 
 prop_roundtrip_GovernancePollAnswer_CBOR :: Property
-prop_roundtrip_GovernancePollAnswer_CBOR =
-  roundtrip_CBOR AsGovernancePollAnswer genGovernancePollAnswer
+prop_roundtrip_GovernancePollAnswer_CBOR = property $ do
+  trippingCbor AsGovernancePollAnswer =<< forAll genGovernancePollAnswer
 
 prop_roundtrip_GovernancePollWitness_CBOR :: Property
-prop_roundtrip_GovernancePollWitness_CBOR =
-  roundtrip_CBOR AsGovernancePollWitness genGovernancePollWitness
+prop_roundtrip_GovernancePollWitness_CBOR = property $ do
+  trippingCbor AsGovernancePollWitness =<< forAll genGovernancePollWitness
 
 -- -----------------------------------------------------------------------------
 

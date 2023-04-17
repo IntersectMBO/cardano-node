@@ -21,11 +21,11 @@ module Cardano.Node.Configuration.POM
   )
 where
 
-import           Control.Monad (forM_, when)
+import           Control.Monad (when)
 import           Data.Aeson
 import qualified Data.Aeson.Types as Aeson
 import           Data.Bifunctor (Bifunctor (..))
-import           Data.Maybe (fromMaybe)
+import           Data.Maybe
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
