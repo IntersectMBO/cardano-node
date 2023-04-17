@@ -1,8 +1,5 @@
 progress "workbench"  "cabal-inside-nix-shell mode enabled, calling cardano-* via '$(white cabal run)' (instead of using Nix store); $(red lib-cabal.sh) flags: $(yellow $*)"
 
-if test ! -v WB_PROFILING; then export WB_PROFILING='none'; fi
-if test ! -v WB_RTSARGS;   then export WB_RTSARGS= ; fi
-
 while test $# -gt 0
 do case "$1" in
        --profiling-time )     export WB_PROFILING='time';           WB_RTSARGS=-p;;
@@ -15,8 +12,13 @@ do case "$1" in
    progress "workbench" "enabling $(red profiling mode):  $(white $WB_PROFILING)"
    shift; done
 
+if test ! -v WB_PROFILING || test "$WB_PROFILING" = 'none'
+then export WB_PROFILING='none' WB_FLAGS_CABAL=
+else export WB_FLAGS_CABAL='--enable-profiling --builddir dist-profiled'; fi
+
+if test ! -v WB_RTSARGS;   then export WB_RTSARGS= ; fi
 export WB_FLAGS_RTS=${WB_RTSARGS:++RTS $WB_RTSARGS -RTS}
-export WB_FLAGS_CABAL=${WB_PROFILING:+--enable-profiling --builddir dist-profiled}
+
 WB_TIME=(
     time
     -f "{ \"wall_clock_s\":       %e\n, \"user_cpu_s\":         %U\n, \"sys_cpu_s\":          %S\n, \"avg_cpu_pct\":       \"%P\"\n, \"rss_peak_kb\":        %M\n, \"signals_received\":   %k\n, \"ctxsw_involuntary\":  %c\n, \"ctxsw_volunt_waits\": %w\n, \"pageflt_major\":      %F\n, \"pageflt_minor\":      %R\n, \"swaps\":              %W\n, \"io_fs_reads\":        %I\n, \"io_fs_writes\":       %O\n, \"cmdline\":           \"%C\"\n, \"exit_code\":          %x }"
@@ -36,8 +38,9 @@ function workbench-prebuild-executables()
 
     unset NIX_ENFORCE_PURITY
     for exe in cardano-node cardano-cli cardano-topology cardano-tracer tx-generator locli
-    do echo "workbench:    $(blue prebuilding) $(red $exe)"
-       cabal $(test -z "${verbose:-}" && echo '-v0') build ${WB_FLAGS_CABAL} -- exe:$exe 2>&1 >/dev/null || return 1
+    do echo "workbench:  $(blue prebuilding) $(red $exe)"
+       verbose "exec"                         "cabal build ${WB_FLAGS_CABAL} -- exe:$exe"
+       cabal $(test -z "${verbose:-}" && echo '-v0') build ${WB_FLAGS_CABAL} -- exe:$exe || return 1
     done
     echo
     eval $restore_trace

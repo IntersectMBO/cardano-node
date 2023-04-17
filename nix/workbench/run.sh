@@ -399,10 +399,10 @@ EOF
         ##    it as a Nomad Namespace or Nomad Job name.
         ##    NOTE: The tag time is different from the genesis time
         local hash=$(jq '."cardano-node" | .[:5]' -r <<<$manifest)
-        local prof_suf=
-        if test -v "$WB_PROFILING" -a test -n "$WB_PROFILING" -a "$WB_PROFILING" != 'none'
-        then prof_suf="-prof"; fi
-        local run="$(date --utc +'%Y'-'%m'-'%d'-'%H'-'%M')$(if test "${batch}" != 'plain'; then echo -n -${batch}; fi)-${hash}-${profile_name}-${backend_name::3}${prof_suf}"
+        local date_pref=$(date --utc +'%Y-%m-%d'-'%H-%M')
+        local batch_inf=$(test "${batch}" != 'plain' && echo -n -${batch})
+        local prof_suf=$(test -v "$WB_PROFILING" -a test -n "$WB_PROFILING" -a "$WB_PROFILING" != 'none' && echo '-prof')
+        local run="${date_pref}${batch_inf}-${hash}-${profile_name}-${backend_name::3}${prof_suf}"
         progress "run | tag" "allocated run identifier (tag):  $(with_color white $run)"
 
         ## 3. create directory:
@@ -676,7 +676,14 @@ EOF
         local run=${1:?$usage}
         local dir=$global_rundir/$run
         local genesis="$dir"/genesis-shelley.json
-        local genesis_orig="$genesis".orig
+        local geneses_orig_dir=$global_rundir/.geneses.orig
+        local genesis_orig="$geneses_orig_dir"/$run.orig.json
+
+        if ! run get $run >/dev/null
+        then fail "trim" "missing run: $(white $run)"
+        fi
+
+        mkdir -p "$geneses_orig_dir" "$dir"/genesis/
 
         local size=$(ls -s "$genesis" | cut -d' ' -f1)
         if test "$size" -gt 1000
@@ -685,7 +692,17 @@ EOF
              jq > "$genesis" '
                .initialFunds = {}
              | .staking      = {}
-             ' "$genesis_orig"; fi;;
+             ' "$genesis_orig"; fi
+        cp -f "$dir"/genesis-shelley.json "$dir"/genesis/genesis-shelley.json;;
+
+    package | pack )
+        local usage="USAGE: wb run $op RUN"
+        local run=${1:?$usage}
+
+        run trim "$run"
+        ( cd $global_rundir
+          tar c --zstd --exclude '*/*/*.socket' "$run" > $run.tar.zst
+        );;
 
     compat-meta-fixups | compat-f )
         local usage="USAGE: wb run $op RUN"

@@ -122,7 +122,7 @@ in
             run=$(cd run; ls)
             (cd run; tar c $run --zstd) > archive.tar.zst
             mv       run/$run/*  .
-            rmdir    run/$run    run
+            rm -rf   run/$run    run
 
             cat > $out/nix-support/hydra-build-products <<EOF
             report workbench-log   $out wb-start.log

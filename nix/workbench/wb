@@ -322,6 +322,8 @@ main() {
         | fix-legacy-run-structure | fix-legacy | flrs          \
         | fetch-run                | fetch      | fr            \
         | fetch-analysis           | fa                         \
+        | trim                                                  \
+        | package                  | pack                       \
           )                       run $op             "$@";;
 
         ## 'analyse' aliases:
