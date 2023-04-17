@@ -8,13 +8,17 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Cardano.Node.Tracing.Tracers
   ( mkDispatchTracers
   ) where
 
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Data.Proxy (Proxy (..))
+import           Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, getCurrentTime)
 
+                 
 import           Cardano.Logging
 
 import           Cardano.Node.Tracing.Formatting ()
@@ -42,6 +46,7 @@ import           Cardano.Node.Tracing.Peers
 import qualified Cardano.Node.Tracing.StateRep as SR
 import           "contra-tracer" Control.Tracer (Tracer (..))
 
+import           Ouroboros.Consensus.Block(Header)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent)
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
@@ -86,7 +91,6 @@ mkDispatchTracers
   -> SomeConsensusProtocol
   -> IO (Tracers (ConnectionId RemoteAddress) (ConnectionId LocalAddress) blk p2p)
 mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enableP2P p = do
-
     configReflection <- emptyConfigReflection
 
     nodeInfoDP <- mkDataPointTracer trDataPoint
@@ -196,7 +200,7 @@ mkConsensusTracers :: forall blk.
   -> TraceConfig
   -> NodeKernelData blk
   -> IO (Consensus.Tracers IO (ConnectionId RemoteAddress) (ConnectionId LocalAddress) blk)
-mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConfig nodeKernel = do
+mkConsensusTracers configReflection trBase trForward mbTrEKG trDataPoint trConfig nodeKernel = do
     chainSyncClientTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
                  ["ChainSync", "Client"]
@@ -230,6 +234,11 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["BlockFetch", "Client"]
     configureTracers configReflection trConfig [blockFetchClientTr]
 
+    blockFetchClientDigest <- mkDataPointTracer trDataPoint
+    configureTracers configReflection trConfig [blockFetchClientDigest]
+
+    blockFetchClientDP <- mkDefaultDigestTracer blockFetchClientDigest
+    
     -- Special blockFetch client metrics, send directly to EKG
     blockFetchClientMetricsTr <- do
         tr1 <- foldMTraceM calculateBlockFetchClientMetrics initialClientMetrics
@@ -297,9 +306,15 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["Consensus", "Startup"]
     configureTracers configReflection trConfig [consensusStartupErrorTr]
 
+    chainSyncClientDigest <- mkDataPointTracer trDataPoint
+    configureTracers configReflection trConfig [chainSyncClientDigest]
+
+    chainSyncClientDP <- mkDefaultDigestTracer chainSyncClientDigest
+  
     pure $ Consensus.Tracers
       { Consensus.chainSyncClientTracer = Tracer $
-          traceWith chainSyncClientTr
+             traceWith chainSyncClientTr
+          <> traceWith chainSyncClientDP
       , Consensus.chainSyncServerHeaderTracer = Tracer $
             traceWith chainSyncServerHeaderTr
            <> traceWith chainSyncServerHeaderMetricsTr
@@ -309,7 +324,8 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith blockFetchDecisionTr
       , Consensus.blockFetchClientTracer = Tracer $
           traceWith blockFetchClientTr
-           <> traceWith blockFetchClientMetricsTr
+          <> traceWith blockFetchClientMetricsTr
+          <> traceWith blockFetchClientDP
       , Consensus.blockFetchServerTracer = Tracer $
           traceWith blockFetchServerTr
       , Consensus.forgeStateInfoTracer = Tracer $
@@ -650,3 +666,75 @@ mkDiffusionTracersExtra configReflection trBase trForward mbTrEKG _trDataPoint t
        , NonP2P.dtAcceptPolicyTracer = Tracer $
            traceWith dtAcceptPolicyTr
        }
+
+-- FIXME: a more elegant way to 'name' this datapoint?
+instance MetaTrace
+           [(UTCTime, TraceLabelPeer (ConnectionId RemoteAddress)
+                                     (TraceChainSyncClientEvent blk))]
+  where
+  namespaceFor _ = Namespace [] ["ChainSync","Client"]
+
+  severityFor (Namespace _ ["ChainSync","Client"]) _ = Just Info
+  severityFor _ns                                  _ = Nothing
+
+  documentFor  (Namespace _ ["ChainSync","Client"]) =
+    Just "Digest of the ChainSync.Client tracer"
+  documentFor _ns =
+    Nothing
+
+  allNamespaces = [ Namespace [] ["ChainSync","Client"]]
+
+-- FIXME: a more elegant way to 'name' this datapoint?
+instance MetaTrace
+           [(UTCTime, TraceLabelPeer
+                        (ConnectionId RemoteAddress)
+                        (BlockFetch.TraceFetchClientState
+                           (Header blk)))]
+  where
+  namespaceFor _ = Namespace [] ["BlockFetch","Client"]
+
+  severityFor (Namespace _ ["BlockFetch","Client"]) _ = Just Info
+  severityFor _ns                                   _ = Nothing
+
+  documentFor  (Namespace _ ["BlockFetch","Client"]) =
+    Just "Digest of the BlockFetch.Client tracer"
+  documentFor _ns =
+    Nothing
+
+  allNamespaces = [ Namespace [] ["BlockFetch","Client"] ]
+
+
+----------------------------------------------------------------------
+-- Abstraction over Tracer: A Digest creation tracer.
+
+-- | mkDigestTracer p mx - trace the values over the last time period 'p'
+--   with a maximum of max' values.
+
+mkDigestTracer :: NominalDiffTime
+               -> Int
+               -> Trace IO ([(UTCTime, a)])
+               -> IO (Trace IO a)
+mkDigestTracer period max' tr =
+  do
+  traceWith tr []  -- Want this datapoint to immediately have a value.
+  foldMTraceM f [] (contramap unfold tr)
+  where
+  f as _lc a = do
+      now <- getCurrentTime
+      let cutoffTime = addUTCTime (negate period) now 
+      return $ (now,a)
+             : take (max'-1) (takeWhile ((> cutoffTime) . fst) as)
+
+mkDefaultDigestTracer :: Trace IO ([(UTCTime, a)]) -> IO (Trace IO a)
+mkDefaultDigestTracer = mkDigestTracer digestDefaultTime digestDefaultLen
+
+
+-- FIXME: turn these into configuration parameters.
+-- FIXME: better: have these parameterizable for each digest.
+
+digestDefaultTime :: NominalDiffTime
+digestDefaultTime = 30
+
+digestDefaultLen  :: Int
+digestDefaultLen  = 50
+  

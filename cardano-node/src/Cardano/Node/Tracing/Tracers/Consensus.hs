@@ -241,6 +241,13 @@ instance MetaTrace (TraceChainSyncClientEvent blk) where
     , Namespace [] ["Termination"]
     ]
 
+instance (LogFormatting (TraceChainSyncClientEvent blk))
+         => ToJSON (TraceChainSyncClientEvent blk)
+  where
+  toJSON = Aeson.Object . forMachine DMaximum
+  -- this needed to put TraceChainSyncCLientEvent into a Datapoint.           
+
+
 --------------------------------------------------------------------------------
 -- ChainSyncServer Tracer
 --------------------------------------------------------------------------------
@@ -613,6 +620,12 @@ instance MetaTrace (BlockFetch.TraceFetchClientState header) where
        , Namespace [] ["RejectedFetchBatch"]
        , Namespace [] ["ClientTerminating"]
       ]
+
+instance (LogFormatting (BlockFetch.TraceFetchClientState h))
+         => ToJSON (BlockFetch.TraceFetchClientState h)
+  where
+  toJSON = Aeson.Object . forMachine DMaximum
+  -- this needed to put TraceFetchClientState into a Datapoint.
 
 --------------------------------------------------------------------------------
 -- BlockFetchServerEvent

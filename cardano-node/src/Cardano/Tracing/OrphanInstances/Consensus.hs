@@ -234,6 +234,9 @@ instance (BlockSupportsProtocol blk, Show peer, Show (Header blk))
     => HasTextFormatter (TraceLabelPeer peer (TraceChainSyncClientEvent blk)) where
   formatText a _ = pack $ show a
 
+deriving instance Generic (TraceLabelPeer p b)
+instance (ToJSON p, ToJSON b) => ToJSON (TraceLabelPeer p b)
+
 instance HasPrivacyAnnotation (TraceChainSyncClientEvent blk)
 instance HasSeverityAnnotation (TraceChainSyncClientEvent blk) where
   getSeverityAnnotation (TraceDownloadedHeader _) = Info
