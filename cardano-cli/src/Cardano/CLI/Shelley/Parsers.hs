@@ -1462,15 +1462,24 @@ pAddressKeyType =
   <|>
     pure AddressKeyShelley
 
+pProtocolParamsSource :: Parser ProtocolParamsSource
+pProtocolParamsSource =
+  asum [ pProtocolParamsFile
+       , Opt.flag' ProtocolParamsQueryNode $ mconcat
+         [ Opt.long "protocol-params-node"
+         , Opt.help "Retrieve protocol parameters using local node."
+         ]
+       ]
+
 pProtocolParamsFile :: Parser ProtocolParamsFile
 pProtocolParamsFile =
   ProtocolParamsFile <$>
-    Opt.strOption
-      (  Opt.long "protocol-params-file"
-      <> Opt.metavar "FILE"
-      <> Opt.help "Filepath of the JSON-encoded protocol parameters file"
-      <> Opt.completer (Opt.bashCompleter "file")
-      )
+    (Opt.strOption . mconcat)
+      [ Opt.long "protocol-params-file"
+      , Opt.metavar "FILE"
+      , Opt.help "Filepath of the JSON-encoded protocol parameters file"
+      , Opt.completer (Opt.bashCompleter "file")
+      ]
 
 pCalculatePlutusScriptCost :: Parser TxBuildOutputOptions
 pCalculatePlutusScriptCost =
