@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | Shelley CLI command types
@@ -14,6 +15,7 @@ module Cardano.CLI.Shelley.Commands
   , PoolCmd (..)
   , QueryCmd (..)
   , GovernanceCmd (..)
+  , GovernanceActionCmd (..)
   , GenesisCmd (..)
   , TextViewCmd (..)
   , renderShelleyCommand
@@ -393,7 +395,6 @@ renderQueryCmd cmd =
         TxMempoolQueryNextTx -> "next-tx"
         TxMempoolQueryInfo -> "info"
 
-
 data GovernanceCmd
   = GovernanceMIRPayStakeAddressesCertificate
       MIRPot
@@ -423,6 +424,7 @@ data GovernanceCmd
       (File GovernancePoll In) -- Poll file
       (File (Tx ()) In) -- Tx file
       (Maybe (File () Out)) -- Tx file
+  | GovernanceActionCmd GovernanceActionCmd
   deriving Show
 
 renderGovernanceCmd :: GovernanceCmd -> Text
@@ -436,6 +438,15 @@ renderGovernanceCmd cmd =
     GovernanceCreatePoll{} -> "governance create-poll"
     GovernanceAnswerPoll{} -> "governance answer-poll"
     GovernanceVerifyPoll{} -> "governance verify-poll"
+    GovernanceActionCmd subCmd -> renderGovernmentActionCmd subCmd
+
+data GovernanceActionCmd
+  = GovernanceActionCreate
+  deriving Show
+
+renderGovernmentActionCmd :: GovernanceActionCmd -> Text
+renderGovernmentActionCmd = \case
+  GovernanceActionCreate -> "governance action create"
 
 data TextViewCmd
   = TextViewInfo !FilePath (Maybe (File () Out))
