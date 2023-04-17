@@ -21,11 +21,11 @@ module Cardano.Node.Configuration.POM
   )
 where
 
-import           Control.Monad (when)
+import           Control.Monad (forM_, when)
 import           Data.Aeson
 import qualified Data.Aeson.Types as Aeson
 import           Data.Bifunctor (Bifunctor (..))
-import           Data.Maybe (isJust)
+import           Data.Maybe (fromMaybe)
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -51,16 +51,6 @@ import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode (..))
-
--- | Parse field that have been removed from the configuration file and
--- fail if they are present.
---
--- This is used to notify users that a field has been removed from the
--- configuration file.
-failOnRemovedField :: Aeson.Object -> Key -> String -> Aeson.Parser ()
-failOnRemovedField obj removedField errorMessage = do
-  mVal :: Maybe Aeson.Value <- obj .:? removedField
-  when (isJust mVal) $ fail errorMessage
 
 data NetworkP2PMode = EnabledP2PMode | DisabledP2PMode
   deriving (Eq, Show, Generic)
@@ -224,10 +214,15 @@ instance FromJSON PartialNodeConfiguration where
       pncSnapshotInterval
         <- Last . fmap RequestedSnapshotInterval <$> v .:? "SnapshotInterval"
       pncExperimentalProtocolsEnabled <- fmap Last $ do
-        failOnRemovedField v "TestEnableDevelopmentNetworkProtocols"
-          "TestEnableDevelopmentNetworkProtocols has been renamed to ExperimentalProtocolsEnabled"
+        mValue <- v .:? "ExperimentalProtocolsEnabled"
 
-        v .:? "ExperimentalProtocolsEnabled"
+        mOldValue <- v .:? "TestEnableDevelopmentNetworkProtocols"
+
+        when (isJust mOldValue) $ do
+          when (mOldValue /= mValue) $
+            fail "TestEnableDevelopmentNetworkProtocols has been renamed to ExperimentalProtocolsEnabled in the configuration file"
+
+        pure mValue
 
       -- Blockfetch parameters
       pncMaxConcurrencyBulkSync <- Last <$> v .:? "MaxConcurrencyBulkSync"
@@ -400,10 +395,15 @@ instance FromJSON PartialNodeConfiguration where
       parseHardForkProtocol v = do
 
         npcExperimentalHardForksEnabled <- do
-          failOnRemovedField v "TestEnableDevelopmentHardForkEras"
-            "TestEnableDevelopmentHardForkEras has been renamed to ExperimentalHardForksEnabled"
+          mValue <- v .:? "ExperimentalHardForksEnabled"
 
-          v .:? "ExperimentalHardForksEnabled" .!= False
+          mOldValue <- v .:? "TestEnableDevelopmentHardForkEras"
+
+          when (isJust mOldValue) $ do
+            when (mOldValue /= mValue) $
+              fail "TestEnableDevelopmentHardForkEras has been renamed to ExperimentalHardForksEnabled in the configuration file"
+
+          pure (fromMaybe False mValue)
 
         npcTestShelleyHardForkAtEpoch   <- v .:? "TestShelleyHardForkAtEpoch"
         npcTestShelleyHardForkAtVersion <- v .:? "TestShelleyHardForkAtVersion"
