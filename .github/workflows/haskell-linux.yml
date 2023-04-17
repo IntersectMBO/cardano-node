@@ -28,6 +28,7 @@ jobs:
         ghc: ["8.10.7", "9.2.7"]
         cabal: ["3.10.1.0"]
         os: [ubuntu-latest]
+        n: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
 
     env:
       # Modify this value to "invalidate" the cabal cache.
@@ -38,17 +39,6 @@ jobs:
 
       # current ref from: 27.02.2022
       SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
-    
-    concurrency:
-      group: >
-        a+${{ github.event_name }}
-        b+${{ github.workflow_ref }}
-        c+${{ github.job }}
-        d+${{ matrix.ghc }}
-        e+${{ matrix.cabal }}
-        f+${{ matrix.os }}
-        g+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
-      cancel-in-progress: true
 
     steps:
     - name: Concurrency group
