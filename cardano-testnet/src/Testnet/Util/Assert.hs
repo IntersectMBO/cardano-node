@@ -7,7 +7,7 @@
 module Testnet.Util.Assert
   ( readJsonLines
   , assertChainExtended
-  , getRelevantLeaderSlots
+  , getRelevantSlots
   ) where
 
 import           Prelude hiding (lines)
@@ -71,30 +71,44 @@ newtype Kind = Kind
   { kind :: Text
   } deriving (Eq, Show)
 
-data TraceNodeIsLeader = TraceNodeIsLeader
-  { kind :: Text
-  , slot :: Int
-  } deriving (Eq, Show)
+data TraceNode
+  = TraceNode
+    { isLeader :: !Bool
+    , kind     :: !Text
+    , slot     :: !Int
+    }
+  deriving (Eq, Show)
 
-instance FromJSON TraceNodeIsLeader where
-  parseJSON = Aeson.withObject "TraceNodeIsLeader" $ \v -> do
-    k <- v .: "val" >>= (.: "kind")
-    if k == "TraceNodeIsLeader"
-    then TraceNodeIsLeader k <$> (v .: "val" >>= (.: "slot"))
-    else fail $ "Expected kind was TraceNodeIsLeader, found " <> show k <> "instead"
+instance FromJSON TraceNode where
+  parseJSON = Aeson.withObject "TraceNode" $ \v -> do
+    kind' <- v .: "val" >>= (.: "kind")
+    let slotP = v .: "val" >>= (.: "slot")
+    case kind' of
+      "TraceNodeIsLeader" -> TraceNode True kind' <$> slotP
+      "TraceNodeNotLeader" -> TraceNode False kind' <$> slotP
+      _ -> fail $ "Expected kind was TraceNodeIsLeader, found " <> show kind' <> "instead"
 
 instance FromJSON Kind where
   parseJSON = Aeson.withObject "Kind" $ \v ->
     Kind <$> v .: "kind"
 
-getRelevantLeaderSlots :: FilePath -> Int -> H.PropertyT (ReaderT IntegrationState (ResourceT IO)) [Int]
-getRelevantLeaderSlots poolNodeStdoutFile slotLowerBound = do
+getRelevantSlots :: FilePath -> Int -> H.PropertyT (ReaderT IntegrationState (ResourceT IO)) ([Int], [Int])
+getRelevantSlots poolNodeStdoutFile slotLowerBound = do
   vs <- readJsonLines poolNodeStdoutFile
+  let slots = L.map unLogEntry $ Maybe.mapMaybe (Aeson.parseMaybe Aeson.parseJSON) vs
+
   leaderSlots <- H.noteShow
-    $ L.map (slot . unLogEntry)
-    $ Maybe.mapMaybe (Aeson.parseMaybe (Aeson.parseJSON @(LogEntry TraceNodeIsLeader)))
-    vs
+    $ map slot
+    $ filter isLeader slots
+  notLeaderSlots <- H.noteShow
+    $ map slot
+    $ filter (not . isLeader) slots
+
   relevantLeaderSlots <- H.noteShow
     $ L.filter       (>= slotLowerBound)
     leaderSlots
-  return relevantLeaderSlots
+  relevantNotLeaderSlots <- H.noteShow
+    $ L.filter       (>= slotLowerBound)
+    notLeaderSlots
+
+  pure (relevantLeaderSlots, relevantNotLeaderSlots)
