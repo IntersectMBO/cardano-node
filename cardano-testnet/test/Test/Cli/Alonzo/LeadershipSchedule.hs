@@ -22,6 +22,7 @@ import qualified Data.Map.Strict as Map
 import           Data.Monoid (Last (..))
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Time.Clock as DTC
 import           GHC.Stack (callStack)
@@ -516,7 +517,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedu
   H.noteShow_ notLeaderSlots
 
   -- Double check that we've seen all slots
-  H.annotate "Slots not seen as TraceNodeIsLeader nor TraceNodeNotLeader"
+  H.noteShow_ ("Slots not seen as TraceNodeIsLeader nor TraceNodeNotLeader" :: Text)
   ([minimum expectedLeadershipSlotNumbers .. maxSlotExpected] \\ leaderSlots) \\ notLeaderSlots === []
 
   -- It's possible for some slots to not be assigned in TPraos when BFT nodes are running.

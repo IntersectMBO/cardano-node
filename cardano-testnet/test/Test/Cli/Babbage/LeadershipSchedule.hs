@@ -20,6 +20,7 @@ import           Cardano.CLI.Shelley.Output (QueryTipLocalStateOutput (..))
 import           Control.Monad (void)
 import           Data.List ((\\))
 import           Data.Monoid (Last (..))
+import           Data.Text (Text)
 import           GHC.Stack (callStack)
 import           Hedgehog (Property, (===))
 import           Prelude
@@ -150,7 +151,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
     H.noteShow_ notLeaderSlots
 
     -- Double check that we've seen all slots
-    H.annotate "Slots not seen as TraceNodeIsLeader nor TraceNodeNotLeader"
+    H.noteShow_ ("Slots not seen as TraceNodeIsLeader nor TraceNodeNotLeader" :: Text)
     ([minimum expectedLeadershipSlotNumbers .. maxSlotExpected] \\ leaderSlots) \\ notLeaderSlots === []
 
     -- As there are no BFT nodes, the next leadership schedule should match slots assigned exactly
@@ -197,7 +198,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
     H.noteShow_ notLeaderSlots
 
     -- Double check that we've seen all slots
-    H.annotate "Slots not seen as TraceNodeIsLeader nor TraceNodeNotLeader"
+    H.noteShow_ ("Slots not seen as TraceNodeIsLeader nor TraceNodeNotLeader" :: Text)
     ([minimum expectedLeadershipSlotNumbers .. maxSlotExpected] \\ leaderSlots) \\ notLeaderSlots === []
 
     -- As there are no BFT nodes, the next leadership schedule should match slots assigned exactly
