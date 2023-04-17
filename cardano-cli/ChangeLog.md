@@ -5,6 +5,23 @@
 - Remove cardano-cli address build-script ([PR 4700](https://github.com/input-output-hk/cardano-node/pull/4700))
 - Remove support for reading protocol parameters from Shelley genesis file ([PR 5053](https://github.com/input-output-hk/cardano-node/pull/5053))
 
+- New commands for on-chain SPOs polls under `shelley governance`:
+  - `create-poll`:
+      For the current governing entities, as a means to create new polls.
+
+  - `answer-poll`:
+      For participants who want to answer a given poll.
+
+  - `verify-poll`:
+      For anyone who seek to verify a poll entry (e.g. explorers)
+
+  The commands are built to fit and play nicely within the cardano-cli.
+  The poll and answers structures are based on transaction metadata and
+  require to be embedded in an actual transaction. The added commands
+  however only works from metadata and raw "GovernancePoll" envelopes.
+
+  See [CIP proposal](https://github.com/cardano-foundation/CIPs/pull/496) for details.
+
 ### Features
 
 - Default to the ledger's CDDL format for transaction body creation by removing flags `--cddl-format` and `--cli-format` from `build` and `build-raw` ([PR 4303](https://github.com/input-output-hk/cardano-node/pull/4303))

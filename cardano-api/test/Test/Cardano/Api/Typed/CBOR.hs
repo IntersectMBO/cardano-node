@@ -8,6 +8,7 @@ module Test.Cardano.Api.Typed.CBOR
 
 import           Cardano.Api
 
+import           Cardano.Api.Shelley (AsType (..))
 import           Data.Proxy (Proxy (..))
 import           Hedgehog (Property, forAll, tripping)
 import qualified Hedgehog as H
@@ -174,6 +175,17 @@ prop_roundtrip_TxWitness_Cddl = H.property $ do
   x <- forAll $ genShelleyKeyWitness $ shelleyBasedToCardanoEra sbe
   tripping x (serialiseWitnessLedgerCddl sbe) (deserialiseWitnessLedgerCddl sbe)
 
+prop_roundtrip_GovernancePoll_CBOR :: Property
+prop_roundtrip_GovernancePoll_CBOR =
+  roundtrip_CBOR AsGovernancePoll genGovernancePoll
+
+prop_roundtrip_GovernancePollAnswer_CBOR :: Property
+prop_roundtrip_GovernancePollAnswer_CBOR =
+  roundtrip_CBOR AsGovernancePollAnswer genGovernancePollAnswer
+
+prop_roundtrip_GovernancePollWitness_CBOR :: Property
+prop_roundtrip_GovernancePollWitness_CBOR =
+  roundtrip_CBOR AsGovernancePollWitness genGovernancePollWitness
 
 -- -----------------------------------------------------------------------------
 
@@ -208,4 +220,7 @@ tests = testGroup "Test.Cardano.Api.Typed.CBOR"
   , testPropertyNamed "roundtrip Tx Cddl"                                    "roundtrip Tx Cddl"                                    prop_roundtrip_Tx_Cddl
   , testPropertyNamed "roundtrip TxWitness Cddl"                             "roundtrip TxWitness Cddl"                             prop_roundtrip_TxWitness_Cddl
   , testPropertyNamed "roundtrip tx CBOR"                                    "roundtrip tx CBOR"                                    prop_roundtrip_tx_CBOR
+  , testPropertyNamed "roundtrip GovernancePoll CBOR"                        "roundtrip GovernancePoll CBOR"                        prop_roundtrip_GovernancePoll_CBOR
+  , testPropertyNamed "roundtrip GovernancePollAnswer CBOR"                  "roundtrip GovernancePollAnswer CBOR"                  prop_roundtrip_GovernancePollAnswer_CBOR
+  , testPropertyNamed "roundtrip GovernancePollWitness CBOR"                 "roundtrip GovernancePollWitness CBOR"                 prop_roundtrip_GovernancePollWitness_CBOR
   ]

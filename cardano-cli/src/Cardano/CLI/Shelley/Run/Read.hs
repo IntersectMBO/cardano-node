@@ -100,6 +100,7 @@ data MetadataError
   | MetadataErrorValidationError !FilePath ![(Word64, TxMetadataRangeError)]
   | MetadataErrorDecodeError !FilePath !CBOR.DecoderError
   | MetadataErrorNotAvailableInEra AnyCardanoEra
+  deriving Show
 
 renderMetadataError :: MetadataError -> Text
 renderMetadataError (MetadataErrorFile fileErr) =
