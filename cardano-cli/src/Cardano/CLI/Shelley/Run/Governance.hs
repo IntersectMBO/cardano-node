@@ -16,7 +16,6 @@ import           Data.Aeson (eitherDecode)
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LB
 import           Data.Function ((&))
-import qualified Data.List as List
 import           Data.String (fromString)
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -38,7 +37,6 @@ import           Cardano.CLI.Shelley.Run.Read (MetadataError, readFileTxMetadata
 import           Cardano.CLI.Types
 
 import           Cardano.Binary (DecoderError)
-import           Cardano.Ledger.Alonzo.Scripts (CostModels (..))
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.Keys (SignKeyDSIGN, SignKeyVRF)
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
