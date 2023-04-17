@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -9,12 +10,14 @@ module Cardano.Tracer.Test.Acceptor
 import           Control.Concurrent.STM.TVar (newTVarIO, readTVarIO)
 import           Control.Concurrent.Async.Extra (sequenceConcurrently)
 import           Control.Concurrent.Extra (newLock)
-import           Control.Monad (forever, forM_, void)
+import           Control.Monad (forever, forM_, unless, void)
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Fixed (Pico)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
-import           System.Time.Extra (sleep)
+import           System.IO
+import           System.Time.Extra (sleep,Seconds)
 
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Acceptors.Run
@@ -25,15 +28,18 @@ import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
 import           Trace.Forward.Utils.DataPoint
+import           Trace.Forward.Protocol.DataPoint.Type
 
 data AcceptorsMode = Initiator | Responder
 
+
 launchAcceptorsSimple
   :: AcceptorsMode
-  -> FilePath
-  -> String
+  -> Pico
+  -> [FilePath]
+  -> [(Seconds,[DPName])] -- for each period, a groups of datapoints to query
   -> IO ()
-launchAcceptorsSimple mode localSock dpName = do
+launchAcceptorsSimple mode ekgFreq localSocks dpGroups = do
   protocolsBrake <- initProtocolsBrake
   dpRequestors <- initDataPointRequestors
   connectedNodes <- initConnectedNodes
@@ -52,7 +58,33 @@ launchAcceptorsSimple mode localSock dpName = do
 
   tr <- mkTracerTracer $ SeverityF $ Just Warning
 
-  let tracerEnv =
+  network' <-
+    case mode of
+      Initiator -> return
+                 $ ConnectTo $ NE.fromList $ map LocalSocket localSocks
+      Responder -> do
+                   unless (length localSocks == 1) $
+                     fail "panic: internal error"
+                   return $ AcceptAt (LocalSocket (head localSocks))
+    
+  let mkConfig =
+        TracerConfig
+          { networkMagic   = 764824073
+          , network        = network'
+          , loRequestNum   = Just 1
+          , ekgRequestFreq = Just ekgFreq
+          , hasEKG         = Nothing
+          , hasPrometheus  = Nothing
+          , hasRTView      = Nothing
+          , logging        = NE.fromList
+                               [LoggingParams "/tmp/demo-acceptor" FileMode ForHuman]
+          , rotation       = Nothing
+          , verbosity      = Just Minimum
+          , metricsComp    = Nothing
+          , hasForwarding  = Nothing
+          }
+
+      tracerEnv =
         TracerEnv
           { teConfig              = mkConfig
           , teConnectedNodes      = connectedNodes
@@ -73,42 +105,65 @@ launchAcceptorsSimple mode localSock dpName = do
           }
 
   void . sequenceConcurrently $
-    [ runAcceptors tracerEnv
-    , runDataPointsPrinter dpName dpRequestors
-    ]
- where
-  mkConfig = TracerConfig
-    { networkMagic   = 764824073
-    , network        = case mode of
-                         Initiator -> ConnectTo $ NE.fromList [LocalSocket localSock]
-                         Responder -> AcceptAt (LocalSocket localSock)
-    , loRequestNum   = Just 1
-    , ekgRequestFreq = Just 1.0
-    , hasEKG         = Nothing
-    , hasPrometheus  = Nothing
-    , hasRTView      = Nothing
-    , logging        = NE.fromList [LoggingParams "/tmp/demo-acceptor" FileMode ForHuman]
-    , rotation       = Nothing
-    , verbosity      = Just Minimum
-    , metricsComp    = Nothing
-    , hasForwarding  = Nothing
-    }
+      runAcceptors tracerEnv
+    : [ runDataPointsPrinter dpNames period dpRequestors (length localSocks)
+      | (period,dpNames) <- dpGroups
+      ]
 
--- | To be able to ask any 'DataPoint' by the name without knowing the actual type,
---   we print it out as a raw 'ByteString'.
+----------------------------------------------------------------------   
+-- Datapoint abstractions:
+
+type DPName = String
+              -- FIXME:
+              --  - String because we used getArgs, but elsewhere:
+              --    type DataPointName   = Text
+              --  - is this going to be problematic??
+              
+----------------------------------------------------------------------  
+-- handle datapoints
+
+-- | To be able to ask any 'DataPoint' by the name without knowing the
+--   actual type, we print it out as a raw 'ByteString'.
+--
+-- However, each ByteString *should*
+--  1. be parseable as JSON
+--  2. succeed for parseJSON (in FromJSON class) for the type
+--     that was originally encoded into the datapoint.
+
 runDataPointsPrinter
-  :: String
+  :: [DPName]
+  -> Seconds
   -> DataPointRequestors
+  -> Int
   -> IO ()
-runDataPointsPrinter dpName dpRequestors = forever $ do
-  sleep 1.0
-  dpReqs <- M.toList <$> readTVarIO dpRequestors
-  forM_ dpReqs $ \(_, dpReq) -> do
-    dpValues <- askForDataPoints dpReq [T.pack dpName]
-    forM_ dpValues $ \(dpName', dpValue) ->
-      case dpValue of
-        Nothing -> return ()
-        Just rawDPValue -> do
-          putStr $ "DataPoint, name: " <> T.unpack dpName' <> ", raw value: "
-          LBS.putStr rawDPValue
-          putStrLn ""
+runDataPointsPrinter dpNames wait dpRequestors _lenRequestors =
+  do
+  forever $ do
+    dpReqs <- M.toList <$> readTVarIO dpRequestors
+      -- length should expect to be either 0 or _lenRequestors!
+    putStrLn $ ":DEBUG: dpReqs: " ++ show(length dpReqs)
+    hFlush stdout 
+    forM_ dpReqs $ \(nid, dpReq) -> do
+      dpValues <- askForDataPoints dpReq (map T.pack dpNames)
+      forM_ dpValues $ \(dpName, mValue) ->
+        case mValue of
+          Nothing -> do
+            putStrLn $ ":WARN: no datapoint returned ("
+                       <> T.unpack dpName <> ")"
+            hFlush stdout
+          Just value -> handleDPValue nid dpName value
+
+    sleep wait
+    -- FIXME: the "period" is not exactly 'wait'
+    -- FIXME: The first time through:
+    --   - this will sleep for 'wait' secs
+    --   - as dpRequestors contains Map.empty in this case.
+
+handleDPValue  :: NodeId -> DataPointName -> DataPointValue -> IO ()
+handleDPValue nodeid dpName v = do
+  putStr $ "DataPoint: name: " <> T.unpack dpName
+         <> ", node: " <> show nodeid <> ", raw value: "
+  LBS.putStr v
+  putChar '\n'
+  hFlush stdout
+  

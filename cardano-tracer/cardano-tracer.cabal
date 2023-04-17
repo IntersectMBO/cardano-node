@@ -267,6 +267,8 @@ executable demo-acceptor
   main-is:              acceptor.hs
 
   build-depends:        demo-acceptor-lib
+                      , extra
+                      , optparse-applicative-fork
 
   ghc-options:          -threaded
                         -rtsopts
