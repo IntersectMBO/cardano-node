@@ -147,7 +147,7 @@ runStakeCredentialDelegationCert stakeVerifier delegationTarget (OutputFile outF
       -> Hash StakePoolKey
       -> ExceptT ShelleyStakeAddressCmdError IO ()
     writeDelegationCert sCred poolStakeVKeyHash = do
-      let delegCert = makeStakeAddressDelegationCertificate sCred poolStakeVKeyHash
+      let delegCert = makeStakeAddressPoolDelegationCertificate sCred poolStakeVKeyHash
       firstExceptT ShelleyStakeAddressCmdWriteFileError
         . newExceptT
         $ writeLazyByteStringFile outFp

@@ -315,7 +315,7 @@ friendlyCertificate =
       StakeAddressDeregistrationCertificate credential ->
         "stake address deregistration"
           .= object [friendlyStakeCredential credential]
-      StakeAddressDelegationCertificate credential poolId ->
+      StakeAddressPoolDelegationCertificate credential poolId ->
         "stake address delegation"
           .= object [friendlyStakeCredential credential, "pool" .= poolId]
 

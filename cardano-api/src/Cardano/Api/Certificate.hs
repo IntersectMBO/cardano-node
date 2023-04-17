@@ -12,7 +12,7 @@ module Cardano.Api.Certificate (
     -- * Registering stake address and delegating
     makeStakeAddressRegistrationCertificate,
     makeStakeAddressDeregistrationCertificate,
-    makeStakeAddressDelegationCertificate,
+    makeStakeAddressPoolDelegationCertificate,
     PoolId,
 
     -- * Registering stake pools
@@ -83,7 +83,7 @@ data Certificate =
      -- Stake address certificates
      StakeAddressRegistrationCertificate   StakeCredential
    | StakeAddressDeregistrationCertificate StakeCredential
-   | StakeAddressDelegationCertificate     StakeCredential PoolId
+   | StakeAddressPoolDelegationCertificate StakeCredential PoolId
 
      -- Stake pool certificates
    | StakePoolRegistrationCertificate StakePoolParameters
@@ -113,7 +113,7 @@ instance HasTextEnvelope Certificate where
     textEnvelopeDefaultDescr cert = case cert of
       StakeAddressRegistrationCertificate{}   -> "Stake address registration"
       StakeAddressDeregistrationCertificate{} -> "Stake address de-registration"
-      StakeAddressDelegationCertificate{}     -> "Stake address delegation"
+      StakeAddressPoolDelegationCertificate{} -> "Stake address stake pool delegation"
       StakePoolRegistrationCertificate{}      -> "Pool registration"
       StakePoolRetirementCertificate{}        -> "Pool retirement"
       GenesisKeyDelegationCertificate{}       -> "Genesis key delegation"
@@ -191,8 +191,8 @@ makeStakeAddressRegistrationCertificate = StakeAddressRegistrationCertificate
 makeStakeAddressDeregistrationCertificate :: StakeCredential -> Certificate
 makeStakeAddressDeregistrationCertificate = StakeAddressDeregistrationCertificate
 
-makeStakeAddressDelegationCertificate :: StakeCredential -> PoolId -> Certificate
-makeStakeAddressDelegationCertificate = StakeAddressDelegationCertificate
+makeStakeAddressPoolDelegationCertificate :: StakeCredential -> PoolId -> Certificate
+makeStakeAddressPoolDelegationCertificate = StakeAddressPoolDelegationCertificate
 
 makeStakePoolRegistrationCertificate :: StakePoolParameters -> Certificate
 makeStakePoolRegistrationCertificate = StakePoolRegistrationCertificate
@@ -225,7 +225,7 @@ toShelleyCertificate (StakeAddressDeregistrationCertificate stakecred) =
       Shelley.DeRegKey
         (toShelleyStakeCredential stakecred)
 
-toShelleyCertificate (StakeAddressDelegationCertificate
+toShelleyCertificate (StakeAddressPoolDelegationCertificate
                         stakecred (StakePoolKeyHash poolid)) =
     Shelley.DCertDeleg $
     Shelley.Delegate $
@@ -295,7 +295,7 @@ fromShelleyCertificate (Shelley.DCertDeleg (Shelley.DeRegKey stakecred)) =
 
 fromShelleyCertificate (Shelley.DCertDeleg
                          (Shelley.Delegate (Shelley.Delegation stakecred poolid))) =
-    StakeAddressDelegationCertificate
+    StakeAddressPoolDelegationCertificate
       (fromShelleyStakeCredential stakecred)
       (StakePoolKeyHash poolid)
 

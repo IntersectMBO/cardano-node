@@ -379,7 +379,7 @@ pStakeAddressCmd =
       , subParser "deregistration-certificate"
           (Opt.info pStakeAddressDeregistrationCert $ Opt.progDesc "Create a stake address deregistration certificate")
       , subParser "delegation-certificate"
-          (Opt.info pStakeAddressDelegationCert $ Opt.progDesc "Create a stake address delegation certificate")
+          (Opt.info pStakeAddressPoolDelegationCert $ Opt.progDesc "Create a stake address pool delegation certificate")
       ]
   where
     pStakeAddressKeyGen :: Parser StakeAddressCmd
@@ -409,8 +409,8 @@ pStakeAddressCmd =
         <$> pStakeIdentifier
         <*> pOutputFile
 
-    pStakeAddressDelegationCert :: Parser StakeAddressCmd
-    pStakeAddressDelegationCert =
+    pStakeAddressPoolDelegationCert :: Parser StakeAddressCmd
+    pStakeAddressPoolDelegationCert =
       StakeCredentialDelegationCert
         <$> pStakeIdentifier
         <*> pDelegationTarget
