@@ -1,5 +1,11 @@
 # Changelog for cardano-cli
 
+## 8.0.0
+
+- [Reduce memory usage of create staked command](https://github.com/input-output-hk/cardano-node/pull/4021)
+
+- [Fix help message for `--script-invalid` option of `build`/`build-raw`](https://github.com/input-output-hk/cardano-node/pull/4121)
+
 ## vNext
 
 - Remove cardano-cli address build-script ([PR 4700](https://github.com/input-output-hk/cardano-node/pull/4700))

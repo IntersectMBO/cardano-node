@@ -2,6 +2,18 @@
 
 ## vNext
 
+## 8.0.0
+
+- [Disable development eras configuration flag](https://github.com/input-output-hk/cardano-node/pull/4030)
+
+- [Fix for: metric tracing crashes node](https://github.com/input-output-hk/cardano-node/pull/4108)
+
+- [Update getting-started installation dependencies](https://github.com/input-output-hk/cardano-node/pull/4107)
+
+- [Include UTxO HD installation/usage instructions in READMEs](https://github.com/input-output-hk/cardano-node/pull/4079)
+
+- [Add documentation for total collateral and return collateral.](https://github.com/input-output-hk/cardano-node/pull/4183)
+
 ### node changes
 
 - So far the `AcceptedConnectionLimit`s from the configuration file where

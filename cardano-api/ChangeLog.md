@@ -2,6 +2,10 @@
 
 ## vNext
 
+## 8.0.0
+
+- [Expose Key interface in Cardano.Api.Shelley](https://github.com/input-output-hk/cardano-node/pull/4048)
+
 ### Features
 
 - Rename `TestEnableDevelopmentHardForkEras` to `ExperimentalHardForksEnabled` and
