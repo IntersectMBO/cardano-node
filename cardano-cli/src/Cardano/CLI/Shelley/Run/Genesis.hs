@@ -838,16 +838,16 @@ createDelegateKeys :: FilePath -> Word -> ExceptT ShelleyGenesisCmdError IO ()
 createDelegateKeys dir index = do
   liftIO $ createDirectoryIfMissing False dir
   runGenesisKeyGenDelegate
-        (File @OfVerificationKey $ dir </> "delegate" ++ strIndex ++ ".vkey")
+        (File @(VerificationKey ()) $ dir </> "delegate" ++ strIndex ++ ".vkey")
         (onlyOut coldSK)
         (onlyOut opCertCtr)
   runGenesisKeyGenDelegateVRF
-        (File @OfVerificationKey $ dir </> "delegate" ++ strIndex ++ ".vrf.vkey")
-        (File @OfSigningKey $ dir </> "delegate" ++ strIndex ++ ".vrf.skey")
+        (File @(VerificationKey ()) $ dir </> "delegate" ++ strIndex ++ ".vrf.vkey")
+        (File @(SigningKey ()) $ dir </> "delegate" ++ strIndex ++ ".vrf.skey")
   firstExceptT ShelleyGenesisCmdNodeCmdError $ do
     runNodeKeyGenKES
         (onlyOut kesVK)
-        (File @OfSigningKey $ dir </> "delegate" ++ strIndex ++ ".kes.skey")
+        (File @(SigningKey ()) $ dir </> "delegate" ++ strIndex ++ ".kes.skey")
     runNodeIssueOpCert
         (VerificationKeyFilePath (onlyIn kesVK))
         (onlyIn coldSK)
@@ -856,8 +856,8 @@ createDelegateKeys dir index = do
         (File $ dir </> "opcert" ++ strIndex ++ ".cert")
  where
    strIndex = show index
-   kesVK = File @OfVerificationKey $ dir </> "delegate" ++ strIndex ++ ".kes.vkey"
-   coldSK = File @OfSigningKey $ dir </> "delegate" ++ strIndex ++ ".skey"
+   kesVK = File @(VerificationKey ()) $ dir </> "delegate" ++ strIndex ++ ".kes.vkey"
+   coldSK = File @(SigningKey ()) $ dir </> "delegate" ++ strIndex ++ ".skey"
    opCertCtr = File $ dir </> "delegate" ++ strIndex ++ ".counter"
 
 createGenesisKeys :: FilePath -> Word -> ExceptT ShelleyGenesisCmdError IO ()
@@ -865,8 +865,8 @@ createGenesisKeys dir index = do
   liftIO $ createDirectoryIfMissing False dir
   let strIndex = show index
   runGenesisKeyGenGenesis
-        (File @OfVerificationKey $ dir </> "genesis" ++ strIndex ++ ".vkey")
-        (File @OfSigningKey $ dir </> "genesis" ++ strIndex ++ ".skey")
+        (File @(VerificationKey ()) $ dir </> "genesis" ++ strIndex ++ ".vkey")
+        (File @(SigningKey ()) $ dir </> "genesis" ++ strIndex ++ ".skey")
 
 
 createUtxoKeys :: FilePath -> Word -> ExceptT ShelleyGenesisCmdError IO ()
@@ -874,8 +874,8 @@ createUtxoKeys dir index = do
   liftIO $ createDirectoryIfMissing False dir
   let strIndex = show index
   runGenesisKeyGenUTxO
-        (File @OfVerificationKey $ dir </> "utxo" ++ strIndex ++ ".vkey")
-        (File @OfSigningKey $ dir </> "utxo" ++ strIndex ++ ".skey")
+        (File @(VerificationKey ()) $ dir </> "utxo" ++ strIndex ++ ".vkey")
+        (File @(SigningKey ()) $ dir </> "utxo" ++ strIndex ++ ".skey")
 
 createPoolCredentials :: FilePath -> Word -> ExceptT ShelleyGenesisCmdError IO ()
 createPoolCredentials dir index = do
@@ -883,12 +883,12 @@ createPoolCredentials dir index = do
   firstExceptT ShelleyGenesisCmdNodeCmdError $ do
     runNodeKeyGenKES
         (onlyOut kesVK)
-        (File @OfSigningKey $ dir </> "kes" ++ strIndex ++ ".skey")
+        (File @(SigningKey ()) $ dir </> "kes" ++ strIndex ++ ".skey")
     runNodeKeyGenVRF
-        (File @OfVerificationKey $ dir </> "vrf" ++ strIndex ++ ".vkey")
-        (File @OfSigningKey $ dir </> "vrf" ++ strIndex ++ ".skey")
+        (File @(VerificationKey ()) $ dir </> "vrf" ++ strIndex ++ ".vkey")
+        (File @(SigningKey ()) $ dir </> "vrf" ++ strIndex ++ ".skey")
     runNodeKeyGenCold
-        (File @OfVerificationKey $ dir </> "cold" ++ strIndex ++ ".vkey")
+        (File @(VerificationKey ()) $ dir </> "cold" ++ strIndex ++ ".vkey")
         (onlyOut coldSK)
         (onlyOut opCertCtr)
     runNodeIssueOpCert
@@ -899,12 +899,12 @@ createPoolCredentials dir index = do
         (File $ dir </> "opcert" ++ strIndex ++ ".cert")
   firstExceptT ShelleyGenesisCmdStakeAddressCmdError $
     runStakeAddressKeyGenToFile
-        (File @OfVerificationKey $ dir </> "staking-reward" ++ strIndex ++ ".vkey")
-        (File @OfSigningKey $ dir </> "staking-reward" ++ strIndex ++ ".skey")
+        (File @(VerificationKey ()) $ dir </> "staking-reward" ++ strIndex ++ ".vkey")
+        (File @(SigningKey ()) $ dir </> "staking-reward" ++ strIndex ++ ".skey")
  where
    strIndex = show index
-   kesVK = File @OfVerificationKey $ dir </> "kes" ++ strIndex ++ ".vkey"
-   coldSK = File @OfSigningKey $ dir </> "cold" ++ strIndex ++ ".skey"
+   kesVK = File @(VerificationKey ()) $ dir </> "kes" ++ strIndex ++ ".vkey"
+   coldSK = File @(SigningKey ()) $ dir </> "cold" ++ strIndex ++ ".skey"
    opCertCtr = File $ dir </> "opcert" ++ strIndex ++ ".counter"
 
 data Delegation = Delegation

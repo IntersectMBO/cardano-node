@@ -24,7 +24,7 @@ module Cardano.CLI.Shelley.Commands
   , ByronKeyFormat (..)
   , CardanoAddressKeyType (..)
   , GenesisDir (..)
-  , OfOpCertCounter
+  , OpCertCounter
   , TxInCount (..)
   , TxOutCount (..)
   , TxShelleyWitnessCount (..)
@@ -563,9 +563,9 @@ data CardanoAddressKeyType
   | CardanoAddressByronPaymentKey
   deriving Show
 
-data OfOpCertCounter
+data OpCertCounter
 
-type OpCertCounterFile = File OfOpCertCounter
+type OpCertCounterFile = File OpCertCounter
 
 newtype PrivKeyFile
   = PrivKeyFile FilePath

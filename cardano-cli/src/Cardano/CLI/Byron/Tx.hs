@@ -5,7 +5,7 @@
 
 module Cardano.CLI.Byron.Tx
   ( ByronTxError(..)
-  , OfTx
+  , Tx
   , TxFile
   , NewTxFile(..)
   , prettyAddress
@@ -53,7 +53,7 @@ import qualified Cardano.Crypto.Signing as Crypto
 
 import           Cardano.Api.Byron
 import           Cardano.CLI.Byron.Key (byronWitnessToVerKey)
-import           Cardano.CLI.Types (OfTx, TxFile)
+import           Cardano.CLI.Types (TxFile)
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock, GenTx (..))
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))

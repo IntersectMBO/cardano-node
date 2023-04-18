@@ -12,8 +12,6 @@ module Cardano.CLI.Types
   , CurrentKesPeriod (..)
   , EpochLeadershipSchedule (..)
   , GenesisFile (..)
-  , OfSigningKey
-  , OfVerificationKey
   , OpCertEndingKesPeriod (..)
   , OpCertIntervalInformation (..)
   , OpCertOnDiskCounter (..)
@@ -31,12 +29,10 @@ module Cardano.CLI.Types
   , ScriptDatumOrFile (..)
   , SlotsTillKesKeyExpiry (..)
   , TransferDirection(..)
-  , OfTxBody
   , TxBodyFile
   , TxOutAnyEra (..)
   , TxOutChangeAddress (..)
   , TxOutDatumAnyEra (..)
-  , OfTx
   , TxFile
   , TxMempoolQuery (..)
   , UpdateProposalFile (..)
@@ -57,8 +53,9 @@ import           Data.Word (Word64)
 import qualified Cardano.Chain.Slotting as Byron
 
 import           Cardano.Api (AddressAny, AnyScriptLanguage, EpochNo, ExecutionUnits, File (..),
-                   FileDirection (..), Hash, HashableScriptData, PaymentKey, PolicyId, ScriptData,
-                   SlotNo (SlotNo), TxId, TxIn, Value, WitCtxMint, WitCtxStake, WitCtxTxIn)
+                   FileDirection (..), Hash, HashableScriptData, Key (..), PaymentKey, PolicyId,
+                   ScriptData, SlotNo (SlotNo), Tx, TxBody, TxId, TxIn, Value, WitCtxMint,
+                   WitCtxStake, WitCtxTxIn)
 
 import qualified Cardano.Ledger.Crypto as Crypto
 
@@ -227,16 +224,12 @@ instance Crypto.Crypto crypto =>  ToJSON (Params crypto) where
     , "retiring" .= r
     ]
 
-data OfSigningKey
-
-type SigningKeyFile = File OfSigningKey
+type SigningKeyFile = File (SigningKey ())
 
 newtype UpdateProposalFile = UpdateProposalFile { unUpdateProposalFile :: FilePath }
                              deriving newtype (Eq, Show)
 
-data OfVerificationKey
-
-type VerificationKeyFile = File OfVerificationKey
+type VerificationKeyFile = File (VerificationKey ())
 
 newtype ScriptFile = ScriptFile { unScriptFile :: FilePath }
                      deriving (Eq, Show)
@@ -357,12 +350,9 @@ data EpochLeadershipSchedule
   | NextEpoch
   deriving Show
 
-data OfTxBody
-type TxBodyFile = File OfTxBody
+type TxBodyFile = File (TxBody ())
 
-data OfTx
-
-type TxFile = File OfTx
+type TxFile = File (Tx ())
 
 data TxMempoolQuery =
       TxMempoolQueryTxExists TxId
