@@ -13,16 +13,14 @@ import           Data.Data ((:~:) (..))
 import           Data.Functor ((<&>))
 import qualified Data.List as List
 import           Data.Type.Equality (testEquality)
-import           Hedgehog (Property, PropertyT, evalEither, forAll, property, tripping, (===))
+import           Hedgehog (Property, evalEither, forAll, property, tripping, (===))
 import qualified Hedgehog.Gen as Gen
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testPropertyNamed)
 
 import           Cardano.Api
 import           Cardano.Api.Shelley (ProtocolParameters)
-import qualified Cardano.Ledger.Api as L
 
-import           Ouroboros.Consensus.Shelley.Eras as Ledger (StandardAlonzo)
 
 import           Test.Gen.Cardano.Api.Typed (genTxBodyContent)
 
@@ -79,39 +77,7 @@ prop_roundtrip_TxBody_make_get_make = property $ do
   -- make another TxBody -- roundtrip
   body2 <- evalEither $ createAndValidateTransactionBody content2
 
-  assertEqBodies body1 body2
-
-
-assertEqBodies :: TxBody era -> TxBody era -> PropertyT IO ()
-assertEqBodies _x _y = True === False -- TODO
-  -- case (x, y) of
-  --   ( ShelleyTxBody ShelleyBasedEraAlonzo xBody xs xd (Just xAux) xv,
-  --     ShelleyTxBody ShelleyBasedEraAlonzo yBody ys yd (Just yAux) yv
-  --     ) -> do
-  --       -- compare aux data separately from the rest
-  --       assertEqAuxData xAux yAux
-  --       x' === y'
-  --       where
-  --         xAux' = Nothing
-  --         yAux' = Nothing
-  --         xBody' = xBody {adHash = SNothing}
-  --         yBody' = yBody {adHash = SNothing}
-  --         x' = ShelleyTxBody ShelleyBasedEraAlonzo xBody' xs xd xAux' xv
-  --         y' = ShelleyTxBody ShelleyBasedEraAlonzo yBody' ys yd yAux' yv
-  --   _ -> x === y
-
--- | Compare ignoring scripts order
-_assertEqAuxData
-  :: L.TxAuxData Ledger.StandardAlonzo
-  -> L.TxAuxData Ledger.StandardAlonzo
-  -> PropertyT IO ()
-_assertEqAuxData _x _y = True === False -- TODO
--- assertEqAuxData
---   (L.mkAlonzoTxAuxData xMetadata xScripts)
---   (L.mkAlonzoTxAuxData yMetadata yScripts) = do
---     when (List.sortOn serialize' (toList xScripts) /= List.sortOn serialize' (toList yScripts)) $
---       xScripts === yScripts
---     xMetadata === yMetadata
+  body1 === body2
 
 
 -- * Normalization
