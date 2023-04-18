@@ -60,9 +60,9 @@ import           Cardano.Chain.Common (BlockCount (BlockCount))
 
 import           Cardano.CLI.Common.Parsers (pConsensusModeParams, pNetworkId)
 import           Cardano.CLI.Shelley.Commands
-import           Cardano.CLI.Shelley.Key (PaymentVerifier (..), StakeIdentifier (..),
-                   StakeVerifier (..), VerificationKeyOrFile (..), VerificationKeyOrHashOrFile (..),
-                   VerificationKeyTextOrFile (..))
+import           Cardano.CLI.Shelley.Key (DelegationTarget (..), PaymentVerifier (..),
+                   StakeIdentifier (..), StakeVerifier (..), VerificationKeyOrFile (..),
+                   VerificationKeyOrHashOrFile (..), VerificationKeyTextOrFile (..))
 import           Cardano.CLI.Types
 
 {- HLINT ignore "Use <$>" -}
@@ -379,7 +379,7 @@ pStakeAddressCmd =
       , subParser "deregistration-certificate"
           (Opt.info pStakeAddressDeregistrationCert $ Opt.progDesc "Create a stake address deregistration certificate")
       , subParser "delegation-certificate"
-          (Opt.info pStakeAddressDelegationCert $ Opt.progDesc "Create a stake address delegation certificate")
+          (Opt.info pStakeAddressPoolDelegationCert $ Opt.progDesc "Create a stake address pool delegation certificate")
       ]
   where
     pStakeAddressKeyGen :: Parser StakeAddressCmd
@@ -409,11 +409,11 @@ pStakeAddressCmd =
         <$> pStakeIdentifier
         <*> pOutputFile
 
-    pStakeAddressDelegationCert :: Parser StakeAddressCmd
-    pStakeAddressDelegationCert =
+    pStakeAddressPoolDelegationCert :: Parser StakeAddressCmd
+    pStakeAddressPoolDelegationCert =
       StakeCredentialDelegationCert
         <$> pStakeIdentifier
-        <*> pStakePoolVerificationKeyOrHashOrFile
+        <*> pDelegationTarget
         <*> pOutputFile
 
 pKeyCmd :: Parser KeyCmd
@@ -2736,6 +2736,10 @@ pStakePoolVerificationKeyOrFile
 pStakePoolVerificationKeyOrFile =
   VerificationKeyValue <$> pStakePoolVerificationKey
     <|> VerificationKeyFilePath <$> pStakePoolVerificationKeyFile
+
+pDelegationTarget
+  :: Parser DelegationTarget
+pDelegationTarget = StakePoolDelegationTarget <$> pStakePoolVerificationKeyOrHashOrFile
 
 pStakePoolVerificationKeyOrHashOrFile
   :: Parser (VerificationKeyOrHashOrFile StakePoolKey)

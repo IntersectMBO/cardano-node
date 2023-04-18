@@ -364,7 +364,7 @@ module Cardano.Api (
     -- choice for a stake address.
     makeStakeAddressRegistrationCertificate,
     makeStakeAddressDeregistrationCertificate,
-    makeStakeAddressDelegationCertificate,
+    makeStakeAddressPoolDelegationCertificate,
 
     -- ** Registering stake pools
     -- | Certificates that are embedded in transactions for registering and

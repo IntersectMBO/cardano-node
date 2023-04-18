@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.CLI.Shelley.Run.StakeAddress
   ( ShelleyStakeAddressCmdError(ShelleyStakeAddressCmdReadKeyFileError)
@@ -9,7 +10,7 @@ module Cardano.CLI.Shelley.Run.StakeAddress
 
 import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, left, newExceptT, onLeft)
 import qualified Data.ByteString.Char8 as BS
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -18,12 +19,14 @@ import qualified Data.Text.IO as Text
 import           Cardano.Api
 import           Cardano.Api.Shelley
 
-import           Cardano.CLI.Shelley.Key (StakeIdentifier (..), StakeVerifier (..),
-                   VerificationKeyOrFile, VerificationKeyOrHashOrFile, readVerificationKeyOrFile,
+import           Cardano.CLI.Shelley.Key (DelegationTarget (..), StakeIdentifier (..),
+                   StakeVerifier (..), VerificationKeyOrFile, readVerificationKeyOrFile,
                    readVerificationKeyOrHashOrFile)
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Shelley.Run.Read
 import           Cardano.CLI.Types
+import           Control.Monad.Trans (lift)
+import           Data.Function ((&))
 
 data ShelleyStakeAddressCmdError
   = ShelleyStakeAddressCmdReadKeyFileError !(FileError InputDecodeError)
@@ -126,34 +129,22 @@ runStakeCredentialRegistrationCert stakeIdentifier (OutputFile oFp) = do
 runStakeCredentialDelegationCert
   :: StakeIdentifier
   -- ^ Delegator stake verification key, verification key file or script file.
-  -> VerificationKeyOrHashOrFile StakePoolKey
+  -> DelegationTarget
   -- ^ Delegatee stake pool verification key or verification key file or
   -- verification key hash.
   -> OutputFile
   -> ExceptT ShelleyStakeAddressCmdError IO ()
-runStakeCredentialDelegationCert stakeVerifier poolVKeyOrHashOrFile (OutputFile outFp) = do
-  poolStakeVKeyHash <-
-    firstExceptT
-      ShelleyStakeAddressCmdReadKeyFileError
-      (newExceptT $ readVerificationKeyOrHashOrFile AsStakePoolKey poolVKeyOrHashOrFile)
-  stakeCred <- getStakeCredentialFromIdentifier stakeVerifier
-  writeDelegationCert stakeCred poolStakeVKeyHash
-
-  where
-    writeDelegationCert
-      :: StakeCredential
-      -> Hash StakePoolKey
-      -> ExceptT ShelleyStakeAddressCmdError IO ()
-    writeDelegationCert sCred poolStakeVKeyHash = do
-      let delegCert = makeStakeAddressDelegationCertificate sCred poolStakeVKeyHash
+runStakeCredentialDelegationCert stakeVerifier delegationTarget (OutputFile outFp) =
+  case delegationTarget of
+    StakePoolDelegationTarget poolVKeyOrHashOrFile -> do
+      poolStakeVKeyHash <- lift (readVerificationKeyOrHashOrFile AsStakePoolKey poolVKeyOrHashOrFile)
+        & onLeft (left . ShelleyStakeAddressCmdReadKeyFileError)
+      stakeCred <- getStakeCredentialFromIdentifier stakeVerifier
+      let delegCert = makeStakeAddressPoolDelegationCertificate stakeCred poolStakeVKeyHash
       firstExceptT ShelleyStakeAddressCmdWriteFileError
         . newExceptT
         $ writeLazyByteStringFile outFp
-        $ textEnvelopeToJSON (Just delegCertDesc) delegCert
-
-    delegCertDesc :: TextEnvelopeDescr
-    delegCertDesc = "Stake Address Delegation Certificate"
-
+        $ textEnvelopeToJSON (Just @TextEnvelopeDescr "Stake Address Delegation Certificate") delegCert
 
 runStakeCredentialDeRegistrationCert
   :: StakeIdentifier

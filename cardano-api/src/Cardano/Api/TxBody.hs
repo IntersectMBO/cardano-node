@@ -4208,7 +4208,7 @@ collectTxBodyScriptWitnesses TxBodyContent {
     selectStakeCredential cert =
       case cert of
         StakeAddressDeregistrationCertificate stakecred   -> Just stakecred
-        StakeAddressDelegationCertificate     stakecred _ -> Just stakecred
+        StakeAddressPoolDelegationCertificate stakecred _ -> Just stakecred
         _                                                 -> Nothing
 
     scriptWitnessesMinting

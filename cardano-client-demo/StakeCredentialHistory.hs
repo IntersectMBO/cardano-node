@@ -346,7 +346,7 @@ main = do
       if t == cred then Just (StakeRegistrationEvent epochNo slotNo) else Nothing
     targetedCert t epochNo slotNo (StakeAddressDeregistrationCertificate cred) =
       if t == cred then Just (StakeDeRegistrationEvent epochNo slotNo) else Nothing
-    targetedCert t _epochNo slotNo (StakeAddressDelegationCertificate cred pool) =
+    targetedCert t _epochNo slotNo (StakeAddressPoolDelegationCertificate cred pool) =
       if t == cred then Just (DelegationEvent slotNo pool) else Nothing
     targetedCert t _epochNo slotNo (StakePoolRegistrationCertificate pool)      =
       inPoolCert t slotNo pool
