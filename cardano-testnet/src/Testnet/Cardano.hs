@@ -105,7 +105,7 @@ defaultTestnetOptions = CardanoTestnetOptions
   , cardanoActiveSlotsCoeff = 0.2
   , cardanoMaxSupply = 10020000000
   , cardanoEnableP2P = False
-  , cardanoNodeLoggingFormat = NodeLoggingFormatAsText
+  , cardanoNodeLoggingFormat = NodeLoggingFormatAsJson
   }
 
 -- | Specify a BFT node (Pre-Babbage era only) or an SPO (Shelley era onwards only)
