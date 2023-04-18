@@ -228,7 +228,7 @@ test-suite cardano-api-test
                       , cardano-slotting ^>= 0.1
                       , containers
                       , hedgehog
-                      , hedgehog-extras ^>= 0.4
+                      , hedgehog-extras ^>= 0.4.1
                       , hedgehog-quickcheck
                       , mtl
                       , microlens

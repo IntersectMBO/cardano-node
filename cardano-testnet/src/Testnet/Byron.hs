@@ -165,12 +165,9 @@ testnet testnetOptions H.Conf {..} = do
   let nodeIndexes = [0..numBftNodes testnetOptions - 1]
   let allNodes = fmap (\i -> "node-" <> show @Int i) nodeIndexes
 
-  H.createDirectoryIfMissing logDir
-
   -- Launch cluster of three nodes in P2P Mode
   forM_ nodeIndexes $ \i -> do
     si <- H.noteShow $ show @Int i
-    dbDir <- H.noteShow $ tempAbsPath </> "db/node-" <> si
     nodeStdoutFile <- H.noteTempFile tempAbsPath $ "cardano-node-" <> si <> ".stdout.log"
     nodeStderrFile <- H.noteTempFile tempAbsPath $ "cardano-node-" <> si <> ".stderr.log"
     sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> "node-" <> si)
@@ -180,8 +177,7 @@ testnet testnetOptions H.Conf {..} = do
     signingKeyFile <- H.noteShow $ tempAbsPath </> "genesis/delegate-keys.00" <> si <> ".key"
     delegationCertificateFile <- H.noteShow $ tempAbsPath </> "genesis/delegation-cert.00" <> si <> ".json"
 
-    H.createDirectoryIfMissing dbDir
-    H.createDirectoryIfMissing $ tempBaseAbsPath </> "" <> socketDir
+    dbDir <- H.createDirectoryIfMissing $ tempAbsPath </> "db/node-" <> si
 
     H.lbsWriteFile (tempAbsPath </> "topology-node-" <> si <> ".json") $
       mkTopologyConfig i (numBftNodes testnetOptions) allPorts (enableP2P testnetOptions)

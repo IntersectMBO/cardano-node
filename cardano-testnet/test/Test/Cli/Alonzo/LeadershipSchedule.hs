@@ -133,7 +133,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedu
     ]
 
   -- Stake pool related
-  H.createDirectoryIfMissing $ tempAbsPath </> "addresses"
+  H.createDirectoryIfMissing_ $ tempAbsPath </> "addresses"
   poolownerstakekey <- H.note $ tempAbsPath </> "addresses/pool-owner1-stake.vkey"
   poolownerverkey <- H.note $ tempAbsPath </> "addresses/pool-owner1.vkey"
   poolownerstakeaddr <- filter (/= '\n') <$> execCli

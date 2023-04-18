@@ -43,13 +43,9 @@ hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' ->
 
   [port] <- H.noteShowIO $ IO.allocateRandomPorts 1
 
-  H.createDirectoryIfMissing logDir
-
   sprocket <- H.noteShow $ IO.Sprocket tempBaseAbsPath (socketDir </> "node")
 
   H.diff (L.length (IO.sprocketArgumentName sprocket)) (<=) IO.maxSprocketArgumentNameLength
-
-  H.createDirectoryIfMissing $ tempBaseAbsPath </> socketDir
 
   nodeStdoutFile <- H.noteTempFile logDir "node.stdout.log"
   nodeStderrFile <- H.noteTempFile logDir "node.stderr.log"
