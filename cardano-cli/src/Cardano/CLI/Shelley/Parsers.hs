@@ -59,7 +59,7 @@ import           Cardano.Api.Shelley
 
 import           Cardano.Chain.Common (BlockCount (BlockCount))
 
-import           Cardano.CLI.Common.Parsers (pConsensusModeParams, pNetworkId)
+import           Cardano.CLI.Common.Parsers (pConsensusModeParams, pNetworkId, pSocketPath)
 import           Cardano.CLI.Environment (EnvCli (..))
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (DelegationTarget (..), PaymentVerifier (..),
@@ -1935,19 +1935,6 @@ pOutputFile =
     , Opt.help "The output file."
     , Opt.completer (Opt.bashCompleter "file")
     ]
-
-pSocketPath :: Parser (Maybe SocketPath)
-pSocketPath =
-  optional $ fmap SocketPath $
-    Opt.strOption $ mconcat
-      [ Opt.long "socket-path"
-      , Opt.metavar "SOCKET_PATH"
-      , Opt.help $ mconcat
-        [ "Path to the node socket.  This overrides the CARDANO_NODE_SOCKET_PATH "
-        , "environment variable"
-        ]
-      , Opt.completer (Opt.bashCompleter "file")
-      ]
 
 pColdVerificationKeyOrFile :: Parser ColdVerificationKeyOrFile
 pColdVerificationKeyOrFile =

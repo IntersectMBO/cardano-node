@@ -1,12 +1,14 @@
 module Cardano.CLI.Common.Parsers
   ( pNetworkId
   , pConsensusModeParams
+  , pSocketPath
   ) where
 
 import           Cardano.Api (AnyConsensusModeParams (..), ConsensusModeParams (..),
-                   EpochSlots (..), NetworkId (..), NetworkMagic (..), bounded)
+                   EpochSlots (..), NetworkId (..), NetworkMagic (..), SocketPath (..), bounded)
 import           Cardano.CLI.Environment (EnvCli (envCliNetworkId))
 
+import           Control.Applicative (optional)
 import           Data.Foldable
 import           Data.Maybe (maybeToList)
 import           Data.Word (Word64)
@@ -89,3 +91,16 @@ pEpochSlots =
     , Opt.value defaultByronEpochSlots -- Default to the mainnet value.
     , Opt.showDefault
     ]
+
+pSocketPath :: Parser (Maybe SocketPath)
+pSocketPath =
+  optional $ fmap SocketPath $
+    Opt.strOption $ mconcat
+      [ Opt.long "socket-path"
+      , Opt.metavar "SOCKET_PATH"
+      , Opt.help $ mconcat
+        [ "Path to the node socket.  This overrides the CARDANO_NODE_SOCKET_PATH "
+        , "environment variable"
+        ]
+      , Opt.completer (Opt.bashCompleter "file")
+      ]
