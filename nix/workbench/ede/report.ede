@@ -17,9 +17,16 @@
 #+DATE: {{ report.date }}
 
 #+BEGIN_COMMENT
-Keybindings:
+Hints:
 
-- C-c C-x C-x :: recompute everything: tables & charts
+1. C-c C-x C-x :: recompute everything: tables & gnuplot charts
+2. C-c C-e l o :: export to PDF, and open the result.
+3. C-c C-c :: recompute individual tables & gnuplot charts;  Charts need a C-c C-x C-x for redisplay
+4. Yes, you can edit individual Gnuplot chart definitions and rerender,
+   before exporting to the document.
+5. Finally, if you reanalyse any constituent runs,
+   you'll need to delete all buffers inside this emacs process (M-Shift-Space, then d each buffer, then x),
+   otherwise the reanalysed tables will not propagate to this Org file.
 #+END_COMMENT
 
 *** Manifest
