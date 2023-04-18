@@ -140,17 +140,16 @@ case "$op" in
             local preset=$(profile json "$profile" | jq '.preset' -r)
             local shelley=$(profile preset-get-file "$preset" 'genesis' 'genesis/genesis-shelley.json')
             local start=$(jq '.systemStart | fromdateiso8601' $shelley)
-            local offset="$((start - $(date +%s))) seconds"
+            local offset="$((start - $(date +%s)))"
             local start_tag=$(date --date=@$(date +%s) --utc +'%Y'-'%m'-'%d'-'%H.%M')
         else
             local offset=$(profile json "$profile" |
-                               jq '.derived.genesis_future_offset' --raw-output)
-            local start=$(date '+%s' --date="now + $offset")
+                           jq '.derived.genesis_future_offset' --raw-output)
+            local start=$(date '+%s' --date="now + $offset seconds")
             local start_tag=$(date --date=@$start --utc +'%Y'-'%m'-'%d'-'%H.%M')
         fi
         local args=(
             -L "$global_basedir"
-            --arg 'future_offset'   "$offset"
             --arg 'start'           "$start"
             --arg 'start_human'     "$(date --date=@$start --utc +"%Y-%m-%dT%H:%M:%SZ")"
             --arg 'start_tag'       "$start_tag"
@@ -162,7 +161,6 @@ case "$op" in
 
           . as $prof
           | profile_timing($prof;
-                           $future_offset;
                            $start;
                            $start_human;
                            $start_tag;

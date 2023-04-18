@@ -57,7 +57,7 @@ shell:                                           ## Nix shell, (workbench from /
 	nix-shell -A 'workbench-shell' --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} --argstr backendName ${BACKEND} ${ARGS} ${if ${CMD},--command "${CMD}"} ${if ${RUN},--run "${RUN}"}
 shell-dev shell-prof shell-nix: shell
 shell-nix: ARGS += --arg 'useCabalRun' false ## Nix shell, (workbench from Nix store), vars: PROFILE, CMD, RUN
-shell-prof: ARGS += --arg 'profiled' true        ## Nix shell, everything Haskell built profiled
+shell-prof: ARGS += --arg 'profiling' '"space"'  ## Nix shell, everything Haskell built profiled
 
 analyse: RUN := wb analyse std ${TAG}
 analyse: shell
@@ -85,8 +85,8 @@ PROFILES_PLUTUSCALL   += plutuscall-loop-double plutuscall-secp-ecdsa-double plu
 PROFILES_MODEL		  := model-value model-secp-ecdsa-plain model-secp-ecdsa-half model-secp-ecdsa-double
 PROFILES_MODEL		  += model-value-test
 PROFILES_10           := 10 10-p2p 10-plutus 10-notracer
-PROFILES_FORGE_STRESS := forge-stress forge-stress-p2p forge-stress-plutus forge-stress-plutus-singleton forge-stress-notracer
-PROFILES_FORGE_STRESS_PRE := forge-stress-pre forge-stress-pre-plutus forge-stress-pre-notracer
+PROFILES_FORGE_STRESS := forge-stress forge-stress-p2p forge-stress-plutus forge-stress-plutus-solo forge-stress-notracer forge-stress-large forge-stress-solo
+PROFILES_FORGE_STRESS_PRE := forge-stress-pre forge-stress-pre-plutus forge-stress-pre-notracer forge-stress-pre-solo
 PROFILES_CHAINSYNC    := chainsync-early-byron  chainsync-early-byron-notracer  chainsync-early-byron-oldtracing
 PROFILES_CHAINSYNC    += chainsync-early-alonzo chainsync-early-alonzo-notracer chainsync-early-alonzo-oldtracing chainsync-early-alonzo-p2p
 PROFILES_VENDOR       := dish dish-plutus dish-10M dish-10M-plutus

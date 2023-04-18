@@ -43,7 +43,6 @@ usage_analyse() {
                          Default:  ${analysis_allowed_loanys[*]}
     $(helpopt --lodecodeerror-ok) Allow non-EOF LODecodeError logobjects
     $(helpopt --dump-logobjects)  Dump the intermediate data: lifted log objects
-    $(helpopt --force-prepare)    Logs:  force re-prefiltering & manifest collection
 
   $(blue analysis):
 
@@ -76,10 +75,12 @@ usage_analyse() {
 
 EOF
 }
+## When this list is empty,
+## all LOAny's (un-interpretable messages) are simply ignored.
 analysis_allowed_loanys=(
-    'LAFallingEdge'
-    'LANonBlocking'
-    'LARollback'
+    # 'LAFallingEdge'
+    # 'LANonBlocking'
+    # 'LARollback'
 )
 
 analyse_default_op='standard'
@@ -88,7 +89,7 @@ analyse() {
 local sargs=()
 local arg_filters=() filter_exprs=() unfiltered=
 local dump_logobjects= dump_machviews= dump_chain= dump_slots_raw= dump_slots= without_datever_meta=
-local multi_aspect='--inter-cdf' rtsmode= force_prepare=
+local multi_aspect='--inter-cdf' rtsmode=
 local locli_render=() locli_timeline=()
 locli_args=()
 
@@ -113,7 +114,6 @@ do case "$1" in
        --rtsmode-lomem | --lomem ) sargs+=($1);    rtsmode='lomem';;
        --rtsmode-hipar )           sargs+=($1);    rtsmode='hipar';;
        --perf-omit-host )          sargs+=($1 "$2"); perf_omit_hosts+=($2); shift;;
-       --force-prepare | -fp )     sargs+=($1);    force_prepare='true';;
        --with-filter-reasons )     sargs+=($1);    locli_timeline+=($1);;
        --with-chain-error )        sargs+=($1);    locli_timeline+=($1);;
        --with-logobjects )         sargs+=($1);    locli_timeline+=($1);;
@@ -529,28 +529,8 @@ case "$op" in
         local logdirs=($(ls -d "$dir"/node-*/ 2>/dev/null))
         local logfiles=($(ls "$adir"/logs-node-*.flt.json 2>/dev/null))
         local run_logs=$adir/log-manifest.json
-        local prefilter=$(if   test -z "${logfiles[*]}"
-                          then echo 'prefiltered-logs-not-yet-created'
-                          elif test "$key_new" != "$key_old"
-                          then echo 'prefiltering-keyset-changed'
-                          elif test ! -f "$run_logs"
-                          then echo 'missing '$run_logs
-                          elif test -n "$force_prepare"
-                          then echo '--force-prepare passed on CLI'
-                          else echo 'false'
-                          fi)
-        echo "{ \"prefilter\": \"$prefilter\" }"
-        if test "$prefilter" = "false"
-        then return; fi
 
-        verbose "analyse" "filtering logs:  $(with_color black ${logdirs[@]})"
-        local grep_params=(
-            --binary-files=text
-            --file="$keyfile"
-            --fixed-strings
-            --no-filename
-        )
-
+        progress "analyse" "assembling log manifest"
         echo '{}' > $run_logs
         for d in "${logdirs[@]}"
         do throttle_shell_job_spawns
@@ -560,8 +540,8 @@ case "$op" in
            then msg "no logs in $d, skipping.."; fi
            local mach=$(basename "$d")
            local  out="$adir"/logs-$mach
-           grep ${grep_params[*]} ${logfiles[*]} | grep '^{'  > "$out".flt.json       &
-           trace_frequencies_json ${logfiles[*]}              > "$out".tracefreq.json &
+           cat ${logfiles[*]} | grep '^{'        > "$out".flt.json       &
+           trace_frequencies_json ${logfiles[*]} > "$out".tracefreq.json &
            { cat ${logfiles[*]} | sha256sum | cut -d' ' -f1 | xargs echo -n;} > "$out".sha256 &
 
            jq_fmutate "$run_logs" '
@@ -575,8 +555,8 @@ case "$op" in
                , hlProfile:        []
                }
            | .rlFilterDate = ('$(if test -z "$without_datever_meta"; then echo -n now; else echo -n 0; fi)' | todate)
-           | .rlFilterKeys = ($keys | split("\n"))
-           ' --rawfile            keys $keyfile
+           | .rlFilterKeys = []
+           '
 
            local ghc_rts_prof=$d/cardano-node.prof
            if test -f "$ghc_rts_prof"

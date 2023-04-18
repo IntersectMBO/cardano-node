@@ -54,7 +54,7 @@ case "$op" in
         if genesis cache-test "$cache_path"
         then cache_hit=t; cache_hit_desc='hit'
         else cache_hit=;  cache_hit_desc='miss'; fi
-        msg "genesis | cache:  preparing entry $cache_key:  $cache_hit_desc ($cache_path)"
+        progress "genesis | cache"  "preparing entry $cache_key:  $(red $cache_hit_desc) ($cache_path)"
 
         if   test -z "$cache_hit"
         then regenesis_causes+=('cache-miss')
@@ -246,7 +246,7 @@ case "$op" in
 
         mkdir -p "$outdir"
 
-        local preset=$(profile preset "$profile"/profile.json)
+        local preset=$(profile preset "$profile")
         if test -n "$preset"
         then progress "genesis" "instantiating from preset $(with_color white $preset):  $cache_entry"
              mkdir -p "$outdir"/byron
@@ -259,7 +259,7 @@ case "$op" in
         # ls -l $cache_entry
 
         ( cd $outdir
-          ln -s $profile   ./profile
+          ln -s $profile   ./profile.json
           ln -s $cache_entry cache-entry
           ln -s $cache_entry/cache.key
           ln -s $cache_entry/cache.key.input
@@ -276,7 +276,7 @@ case "$op" in
           cp    $cache_entry/genesis*.json .
           chmod u+w          genesis*.json
         )
-        genesis finalise-cache-entry $profile/profile.json "$timing" $outdir
+        genesis finalise-cache-entry $profile "$timing" $outdir
         # ls -l $outdir/node-keys
         ;;
 

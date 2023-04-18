@@ -41,7 +41,7 @@ let
     , basePort           ? customConfig.localCluster.basePort
     , useCabalRun        ? customConfig.localCluster.useCabalRun
     , workbenchDevMode   ? customConfig.localCluster.workbenchDevMode
-    , profiled           ? customConfig.profiled
+    , profiling          ? customConfig.profiling
     , cardano-node-rev   ? null
     , workbench          ? pkgs.workbench
     }:
@@ -56,7 +56,7 @@ let
         inherit pkgs lib cardanoNodePackages;
         inherit batchName profileName backend;
         inherit cardano-node-rev;
-        inherit workbench workbenchDevMode profiled;
+        inherit workbench workbenchDevMode profiling;
       };
 
   # Workbench instantiated by parameters from customConfig:

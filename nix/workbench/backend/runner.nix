@@ -9,7 +9,7 @@
 , cardano-node-rev
 , workbench
 , workbenchDevMode
-, profiled
+, profiling
 ##
 , cacheDir              ? "${__getEnv "HOME"}/.cache/cardano-workbench"
 }:
@@ -19,7 +19,7 @@ let
   inherit (backend) stateDir basePort useCabalRun;
 
   profileNix = workbench.materialise-profile
-    { inherit profileName backend profiled; };
+    { inherit profileName backend profiling; };
   backendNix = backend.materialise-profile
     { inherit profileNix; };
 in
@@ -122,7 +122,7 @@ in
             run=$(cd run; ls)
             (cd run; tar c $run --zstd) > archive.tar.zst
             mv       run/$run/*  .
-            rmdir    run/$run    run
+            rm -rf   run/$run    run
 
             cat > $out/nix-support/hydra-build-products <<EOF
             report workbench-log   $out wb-start.log

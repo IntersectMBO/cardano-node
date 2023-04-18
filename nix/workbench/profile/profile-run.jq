@@ -1,5 +1,4 @@
 def profile_timing($prof;
-                   $future_offset;
                    $start;
                    $start_human;
                    $start_tag;
@@ -9,13 +8,14 @@ def profile_timing($prof;
                                       // $prof.derived.generator_duration)) as $shutdown_end
 | ( [$shutdown_end, $workload_end]
   | map(select(. != null))
-  | min)                                                                as $earliest_end
+    | min)                                                                as $earliest_end
 |
-{ future_offset:   $future_offset
-, start:           $start
-, shutdown_end:    $shutdown_end
-, workload_end:    $workload_end
-, earliest_end:    $earliest_end
+{ future_offset:         $prof.derived.genesis_future_offset
+, extra_future_offset:   $prof.genesis.extra_future_offset
+, start:                 $start
+, shutdown_end:          $shutdown_end
+, workload_end:          $workload_end
+, earliest_end:          $earliest_end
 
 , start_tag:       $start_tag
 , start_human:     $start_human
@@ -26,11 +26,11 @@ def profile_timing($prof;
 };
 
 def timing_pretty_describe($t):
-  [ "  - future offset:      \($t.future_offset)"
-  , "  - start time:         \($t.systemStart)"
-  , "  - shutdown time:      \($t.shutdownTime[:-1])"
-  , "  - workload end time:  \($t.workloadEndTime[:-1])"
-  , "  - earliest end:       \($t.earliestEndTime[:-1])"
+  [ "  - future offset:         \($t.future_offset) (of which \($t.extra_future_offset) is extra)"
+  , "  - start time:            \($t.systemStart)"
+  , "  - shutdown time:         \($t.shutdownTime[:-1])"
+  , "  - workload end time:     \($t.workloadEndTime[:-1])"
+  , "  - earliest end:          \($t.earliestEndTime[:-1])"
   , ""
   ] | join("\n");
 

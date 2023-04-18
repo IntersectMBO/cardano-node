@@ -10,7 +10,7 @@
 , workbench-runner
 , workbenchDevMode ? false
 ##
-, profiled ? false
+, profiling ? "none"
 , withHoogle ? true
 , withMainnet ? true
 }:
@@ -21,7 +21,7 @@ let
     ## TODO:  globally rename all profileNix occurences to profileData
     inherit (workbench-runner) profileName profileNix backend;
 
-    shellHook = { profileName, backend, profiled, workbenchDevMode, withMainnet }: ''
+    shellHook = { profileName, backend, profiling, workbenchDevMode, withMainnet }: ''
       while test $# -gt 0
       do shift; done       ## Flush argv[]
 
@@ -36,7 +36,7 @@ let
       progress "WB_SHELL_PROFILE_DATA=" $WB_SHELL_PROFILE_DATA
       progress "backend name"           $WB_BACKEND
       progress "deployment name"        $WB_DEPLOYMENT_NAME
-      progress "params"                 'useCabalRun=${toString backend.useCabalRun} workbenchDevMode=${toString workbenchDevMode} profiled=${toString profiled}'
+      progress "params"                 'useCabalRun=${toString backend.useCabalRun} workbenchDevMode=${toString workbenchDevMode} profiling=${toString profiling}'
 
       ${optionalString
         workbenchDevMode
@@ -53,7 +53,7 @@ let
       ${optionalString
         backend.useCabalRun
         ''
-      . nix/workbench/lib-cabal.sh ${optionalString profiled "--profiled"}
+      . nix/workbench/lib-cabal.sh ${optionalString (profiling != "none") "--profiling-${profiling}"}
       cabal update
         ''}
 
@@ -79,7 +79,7 @@ let
 in project.shellFor {
   name = "workbench-shell";
 
-  shellHook = shellHook { inherit profileName backend profiled workbenchDevMode withMainnet; };
+  shellHook = shellHook { inherit profileName backend profiling workbenchDevMode withMainnet; };
 
   inherit withHoogle;
 

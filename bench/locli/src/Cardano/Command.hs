@@ -50,7 +50,7 @@ data ChainCommand
   |        ReadMetaGenesis  (JsonInputFile  RunPartial) (JsonInputFile  Genesis)
   |        WriteMetaGenesis TextOutputFile              TextOutputFile
 
-  |        Unlog            (JsonInputFile (RunLogs ())) Bool [LOAnyType]
+  |        Unlog            (JsonInputFile (RunLogs ())) Bool (Maybe [LOAnyType])
   |        DumpLogObjects
 
   |        BuildMachViews
@@ -122,8 +122,10 @@ parseChainCommand =
        <$> optJsonInputFile    "run-logs"       "Run log manifest (API/Types.hs:RunLogs)"
        <*> Opt.flag False True (Opt.long "lodecodeerror-ok"
                                  <> Opt.help "Allow non-EOF LODecodeError logobjects")
-       <*> many
-           (optLOAnyType      "ok-loany"        "[MULTI] Allow a particular LOAnyType"))
+       <*> optional
+            (some
+             (optLOAnyType      "ok-loany"        "[MULTI] Allow a particular LOAnyType"))
+     )
    , op "dump-logobjects" "Dump lifted log object streams, alongside input files"
      (DumpLogObjects & pure)
    ]) <|>
@@ -415,7 +417,7 @@ runChainCommand _ c@WriteMetaGenesis{} = missingCommandData c
   ["multi objects"]
 
 runChainCommand s
-  c@(Unlog rlf okDErr okAny) = do
+  c@(Unlog rlf okDErr loAnyLimit) = do
   progress "logs" (Q $ printf "reading run log manifest %s" $ unJsonInputFile rlf)
   runLogsBare <- Aeson.eitherDecode @(RunLogs ())
                  <$> LBS.readFile (unJsonInputFile rlf)
@@ -423,7 +425,8 @@ runChainCommand s
                  & firstExceptT (CommandError c . pack)
   progress "logs" (Q $ printf "parsing logs for %d hosts" $
                    Map.size $ rlHostLogs runLogsBare)
-  runLogs <- runLiftLogObjects runLogsBare okDErr okAny
+  progress "logs" (Q $ printf "LOAny constraint:  %s" (show loAnyLimit :: String))
+  runLogs <- runLiftLogObjects runLogsBare okDErr loAnyLimit
              & firstExceptT (CommandError c)
   pure s { sRunLogs = Just runLogs }
 

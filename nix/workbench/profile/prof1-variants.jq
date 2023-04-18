@@ -115,14 +115,14 @@ def all_profile_variants:
       { n_singular_hosts:               1
       , n_dense_hosts:                  0
       }
-    } as $singleton
+    } as $solo
   |
     { composition:
       { n_singular_hosts:               0
       , n_dense_hosts:                  1
       , dense_pool_density:             10
       }
-    } as $singleton_dense10
+    } as $solo_dense10
   |
     { composition:
       { n_singular_hosts:               2
@@ -197,6 +197,12 @@ def all_profile_variants:
       , parameter_k:                    3
       }
     } as $compressed_timescale
+  |
+    { genesis:
+      { epoch_length:                   1800
+      , parameter_k:                    9
+      }
+    } as $small_timescale
   |
     { genesis:
       { epoch_length:                   8000
@@ -446,7 +452,7 @@ def all_profile_variants:
       , genesis:
         { funds_balance:                  20000000000000
         }
-      , desc: "Status-quo dataset, honest 7 epochs duration"
+      , desc: "Status-quo dataset, 7 epochs"
     }) as $model_base
   |
    ($model_base * $plutus_base *
@@ -459,15 +465,23 @@ def all_profile_variants:
     { node:
       { shutdown_on_slot_synced:        2400
       }
-    , desc: "Oct 2021 dataset size, honest four epochs."
+    , desc: "Oct 2021 dataset size, four epochs."
     }) as $forge_stress_pre_base
   |
    ($scenario_fixed_loaded * $triplet * $dataset_current *
     { node:
       { shutdown_on_slot_synced:        2400
       }
-    , desc: "Status-quo dataset size, honest four epochs."
+    , desc: "Status-quo dataset size, four epochs."
     }) as $forge_stress_base
+  |
+   ($forge_stress_base * $hexagon *
+    { analysis:
+      { filters:                        ["epoch3+"] }
+    , node:
+      { shutdown_on_slot_synced:        4800 }
+    , desc: "Status-quo dataset size, eight epochs, six nodes."
+    }) as $forge_stress_large_base
   |
    ($scenario_fixed_loaded * $triplet * $dataset_dish *
     { node:
@@ -588,7 +602,7 @@ def all_profile_variants:
     }
 
   ## CI variants: test duration, 3 blocks, dense10
-  , $citest_base * $singleton_dense10 *
+  , $citest_base * $solo_dense10 *
     { name: "ci-test-dense10"
     }
 
@@ -690,6 +704,16 @@ def all_profile_variants:
     { name: "10-notracer"
     }
 
+  ## Status-quo (huge) dataset, 6 nodes, 8 epochs.
+  , $forge_stress_large_base *
+    { name: "forge-stress-large"
+    }
+
+  ## Status-quo (huge) dataset, 1 node
+  , $forge_stress_base * $solo *
+    { name: "forge-stress-solo"
+    }
+
   ## Status-quo (huge) dataset, small cluster (2 nodes)
   , $forge_stress_base *
     { name: "forge-stress"
@@ -700,8 +724,8 @@ def all_profile_variants:
   , $forge_stress_base * $plutus_base * $plutus_loop_counter *
     { name: "forge-stress-plutus"
     }
-  , $forge_stress_base * $plutus_base * $plutus_loop_counter * $singleton *
-    { name: "forge-stress-plutus-singleton"
+  , $forge_stress_base * $plutus_base * $plutus_loop_counter * $solo *
+    { name: "forge-stress-plutus-solo"
     }
   , $forge_stress_base * $without_tracer *
     { name: "forge-stress-notracer"
@@ -709,6 +733,9 @@ def all_profile_variants:
 
   , $forge_stress_pre_base *
     { name: "forge-stress-pre"
+    }
+  , $forge_stress_pre_base * $solo *
+    { name: "forge-stress-pre-solo"
     }
   , $forge_stress_pre_base * $plutus_base * $plutus_loop_counter *
     { name: "forge-stress-pre-plutus"
@@ -748,7 +775,7 @@ def all_profile_variants:
       , parameter_k:           10
       , epoch_length:          1000
       , active_slots_coeff:    0.1
-      , genesis_future_offset: "10 seconds"
+      , extra_future_offset:   10
       , utxo:                  0
 
       , shelley:

@@ -21,13 +21,13 @@ rec {
     import ../genesis/genesis.nix
       { inherit pkgs profileName profileJson nodeSpecsJson; };
 
-  services = { profile, nodeSpecs, topologyFiles, backend, profiled }:
+  services = { profile, nodeSpecs, topologyFiles, backend, profiling }:
     rec {
       inherit
         (pkgs.callPackage
           ../service/nodes.nix
           {
-            inherit backend profile profiled;
+            inherit backend profile profiling;
             inherit runJq runWorkbench nodeSpecs topologyFiles;
             baseNodeConfig = cardanoLib.environments.testnet.nodeConfig;
           })
@@ -54,7 +54,7 @@ rec {
     };
 
   ## WARNING:  IFD !!
-  profile = { profileName, backend, profiled }:
+  profile = { profileName, backend, profiling }:
     rec {
       inherit profileName;
 
@@ -82,7 +82,7 @@ rec {
 
       inherit (services
         {
-          inherit backend profiled;
+          inherit backend profiling;
           profile = value;
           nodeSpecs = node-specs.value;
           topologyFiles = topology.files;

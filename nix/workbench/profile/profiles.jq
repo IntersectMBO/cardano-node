@@ -102,8 +102,12 @@ def generate_all_era_profiles($era; $mcompo; $topo):
          | ($defaults * $variant)                  as $defandvar
          | pParamsWithOverlays($defandvar.genesis.pparamsEpoch; ## prof2-pparams.jq
                                $defandvar.genesis.pparamsOverlays
-                               )                   as $pparams
-         | $defandvar
+                              )                    as $pparams
+         | ((env.WB_PROFILE_OVERLAY // "{}") | fromjson)
+                                                   as $overlay
+         | ($defandvar
+            * $overlay
+            * { overlay: $overlay })
          | .genesis.shelley.protocolParams = $pparams.shelley
          | .genesis.alonzo                 = $pparams.alonzo
          | .genesis.alonzo.costModels      = $pparams.costModels

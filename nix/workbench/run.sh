@@ -390,7 +390,7 @@ EOF
         if test -z "$genesis_cache_entry"
         then genesis_cache_entry=$(
                  genesis prepare-cache-entry \
-                     "$profile_data"/profile.json \
+                  "$profile_data"/profile.json \
                   "$profile_data"/node-specs.json)
         fi
 
@@ -399,7 +399,10 @@ EOF
         ##    it as a Nomad Namespace or Nomad Job name.
         ##    NOTE: The tag time is different from the genesis time
         local hash=$(jq '."cardano-node" | .[:5]' -r <<<$manifest)
-        local run="$(date --utc +'%Y'-'%m'-'%d'-'%H'-'%M')$(if test "${batch}" != 'plain'; then echo -n -${batch}; fi)-${hash}-${profile_name}-${backend_name::3}"
+        local date_pref=$(date --utc +'%Y-%m-%d'-'%H-%M')
+        local batch_inf=$(test "${batch}" != 'plain' && echo -n -${batch})
+        local prof_suf=$(test -v "$WB_PROFILING" -a test -n "$WB_PROFILING" -a "$WB_PROFILING" != 'none' && echo '-prof')
+        local run="${date_pref}${batch_inf}-${hash}-${profile_name}-${backend_name::3}${prof_suf}"
         progress "run | tag" "allocated run identifier (tag):  $(with_color white $run)"
 
         ## 3. create directory:
@@ -420,7 +423,12 @@ EOF
             test "$(jq -r .name $profile_data/profile.json)" = "$profile_name" ||
                 fatal "profile | allocate incoherence:  --profile-data $profile_data/profile.json mismatches '$profile_name'"
             ln -s "$profile_data"                 "$dir"/profile
-            cp    "$profile_data"/profile.json    "$dir"/profile.json
+            if test -n "${WB_PROFILE_OVERLAY:-}"
+            ## Allow 'wb' pick up the profile overlay in 'profiles.jq':
+            then wb profile
+            else jq . "$profile_data"/profile.json
+            fi > "$dir"/profile.json
+            progress "profile | overlay" "$(white $(jq .overlay "$dir"/profile.json))"
             cp    "$profile_data"/node-specs.json "$dir"/node-specs.json
         else
             fail "Mode no longer supported:  operation without profile/ directory."
@@ -441,7 +449,7 @@ EOF
         ## 6. allocate genesis time
         ##    NOTE: The genesis time is different from the tag time.
         progress "run | time" "allocating time:"
-        local timing=$(profile allocate-time "$profile_data"/profile.json)
+        local timing=$(profile allocate-time "$dir"/profile.json)
         profile describe-timing "$timing"
 
         local args=(
@@ -459,6 +467,7 @@ EOF
              , profile:          $profile_name
              , timing:           $timing
              , manifest:         $manifest
+             , profile_overlay:  $profile_content[0].overlay
              , profile_content:  $profile_content[0]
              }
            }
@@ -468,7 +477,7 @@ EOF
         if      test -z "$genesis_cache_entry"
         then fail "internal error:  no genesis cache entry"
         else genesis derive-from-cache      \
-                     "$profile_data"        \
+                     "$dir"/profile.json    \
                      "$timing"              \
                      "$genesis_cache_entry" \
                      "$dir"/genesis
@@ -667,7 +676,14 @@ EOF
         local run=${1:?$usage}
         local dir=$global_rundir/$run
         local genesis="$dir"/genesis-shelley.json
-        local genesis_orig="$genesis".orig
+        local geneses_orig_dir=$global_rundir/.geneses.orig
+        local genesis_orig="$geneses_orig_dir"/$run.orig.json
+
+        if ! run get $run >/dev/null
+        then fail "trim" "missing run: $(white $run)"
+        fi
+
+        mkdir -p "$geneses_orig_dir" "$dir"/genesis/
 
         local size=$(ls -s "$genesis" | cut -d' ' -f1)
         if test "$size" -gt 1000
@@ -676,7 +692,17 @@ EOF
              jq > "$genesis" '
                .initialFunds = {}
              | .staking      = {}
-             ' "$genesis_orig"; fi;;
+             ' "$genesis_orig"; fi
+        cp -f "$dir"/genesis-shelley.json "$dir"/genesis/genesis-shelley.json;;
+
+    package | pack )
+        local usage="USAGE: wb run $op RUN"
+        local run=${1:?$usage}
+
+        run trim "$run"
+        ( cd $global_rundir
+          tar c --zstd --exclude '*/*/*.socket' "$run" > $run.tar.zst
+        );;
 
     compat-meta-fixups | compat-f )
         local usage="USAGE: wb run $op RUN"

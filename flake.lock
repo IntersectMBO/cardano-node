@@ -306,11 +306,11 @@
     "em": {
       "flake": false,
       "locked": {
-        "lastModified": 1676998710,
-        "narHash": "sha256-JBRDpeZK4zGaV4wZh6vpDdREcFWgLL2uTImYh8xazAM=",
+        "lastModified": 1681835843,
+        "narHash": "sha256-3DAErIv40Wl/PmzazYl+fMo1lMQH20qZbXJtuBbAv/Q=",
         "owner": "deepfire",
         "repo": "em",
-        "rev": "fdeb0111b3d4028b8c1b32ba946ff3f42669e25c",
+        "rev": "04b3add6fc018beaabade9381af707a0af8e0598",
         "type": "github"
       },
       "original": {
