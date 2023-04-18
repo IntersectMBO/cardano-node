@@ -2,9 +2,8 @@
 # https://github.com/ndmitchell/hlint
 ##########################
 
-# This file contains a template configuration file, which is typically
-# placed as .hlint.yaml in the root of your project
-
+- functions:
+  - name: undefined
 
 # Specify additional command line arguments
 #
