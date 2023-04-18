@@ -226,11 +226,12 @@ parseKeyRelatedValues =
 
 parseLocalNodeQueryValues :: Mod CommandFields ByronCommand
 parseLocalNodeQueryValues =
-    mconcat
-        [ command' "get-tip" "Get the tip of your local node's blockchain"
-            $ GetLocalNodeTip
-                <$> pNetworkId
-        ]
+  mconcat
+    [ command' "get-tip" "Get the tip of your local node's blockchain"
+        $ GetLocalNodeTip
+            <$> pNodeSocketPath
+            <*> pNetworkId
+    ]
 
 parseMiscellaneous :: Mod CommandFields ByronCommand
 parseMiscellaneous = mconcat
@@ -325,7 +326,8 @@ parseTxRelatedValues =
         "submit-tx"
         "Submit a raw, signed transaction, in its on-wire representation."
         $ SubmitTx
-            <$> pNetworkId
+            <$> pNodeSocketPath
+            <*> pNetworkId
             <*> parseTxFile "tx"
     , command'
         "issue-genesis-utxo-expenditure"
@@ -394,7 +396,8 @@ parseByronUpdateProposal = do
 parseByronVoteSubmission :: Parser NodeCmd
 parseByronVoteSubmission = do
   SubmitVote
-    <$> pNetworkId
+    <$> pNodeSocketPath
+    <*> pNetworkId
     <*> parseFilePath "filepath" "Filepath of Byron update proposal vote."
 
 
@@ -419,7 +422,8 @@ pByronProtocolParametersUpdate =
 parseByronUpdateProposalSubmission :: Parser NodeCmd
 parseByronUpdateProposalSubmission =
   SubmitUpdateProposal
-    <$> pNetworkId
+    <$> pNodeSocketPath
+    <*> pNetworkId
     <*> parseFilePath "filepath" "Filepath of Byron update proposal."
 
 
@@ -435,6 +439,19 @@ parseByronVote =
 --------------------------------------------------------------------------------
 -- CLI Parsers
 --------------------------------------------------------------------------------
+
+pNodeSocketPath :: Parser (Maybe SocketPath)
+pNodeSocketPath =
+  optional $ fmap SocketPath $
+    Opt.strOption $ mconcat
+      [ Opt.long "socket-path"
+      , Opt.metavar "SOCKET_PATH"
+      , Opt.help $ mconcat
+        [ "Path to the node socket.  This overrides the CARDANO_NODE_SOCKET_PATH "
+        , "environment variable"
+        ]
+      , Opt.completer (Opt.bashCompleter "file")
+      ]
 
 parseScriptVersion :: Parser Word16
 parseScriptVersion =

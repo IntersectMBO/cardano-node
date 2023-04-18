@@ -72,14 +72,15 @@ runVoteCreation nw sKey upPropFp voteBool outputFp = do
     $ serialiseToRawBytes vote
 
 submitByronVote
-  :: NetworkId
+  :: SocketPath
+  -> NetworkId
   -> FilePath
   -> ExceptT ByronVoteError IO ()
-submitByronVote network voteFp = do
-    vote <- readByronVote voteFp
-    let genTx = toByronLedgertoByronVote vote
-    traceWith stdoutTracer ("Vote TxId: " ++ condense (txId genTx))
-    firstExceptT ByronVoteTxSubmissionError $ nodeSubmitTx network genTx
+submitByronVote nodeSocketPath network voteFp = do
+  vote <- readByronVote voteFp
+  let genTx = toByronLedgertoByronVote vote
+  traceWith stdoutTracer ("Vote TxId: " ++ condense (txId genTx))
+  firstExceptT ByronVoteTxSubmissionError $ nodeSubmitTx nodeSocketPath network genTx
 
 readByronVote :: FilePath -> ExceptT ByronVoteError IO ByronVote
 readByronVote fp = do

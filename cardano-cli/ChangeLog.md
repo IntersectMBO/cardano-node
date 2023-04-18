@@ -41,6 +41,8 @@
 
 - Fix minUTxO calculation in `calculate-min-required-utxo`
 
+- Add `--socket-path` CLI option for CLI commands that use `CARDANO_NODE_SOCKET_PATH` ([PR 4910](https://github.com/input-output-hk/cardano-node/pull/4910))
+
 ### Bugs
 
 - Allow reading signing keys from a pipe ([PR 4342](https://github.com/input-output-hk/cardano-node/pull/4342))

@@ -24,7 +24,7 @@ import           Cardano.Chain.Update (InstallerHash (..), ProtocolVersion (..),
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import           Ouroboros.Consensus.Util.Condense (condense)
 
-import           Cardano.Api (NetworkId, SerialiseAsRawBytes (..), textShow)
+import           Cardano.Api (NetworkId, SerialiseAsRawBytes (..), SocketPath, textShow)
 import           Cardano.Api.Byron (AsType (AsByronUpdateProposal), ByronProtocolParametersUpdate,
                    ByronUpdateProposal, makeByronUpdateProposal, toByronLedgerUpdateProposal)
 
@@ -85,13 +85,12 @@ readByronUpdateProposal fp = do
   hoistEither $ first (const (UpdateProposalDecodingError fp)) proposalResult
 
 submitByronUpdateProposal
-  :: NetworkId
+  :: SocketPath
+  -> NetworkId
   -> FilePath
   -> ExceptT ByronUpdateProposalError IO ()
-submitByronUpdateProposal network proposalFp = do
-    proposal  <- readByronUpdateProposal proposalFp
-    let genTx = toByronLedgerUpdateProposal proposal
-    traceWith stdoutTracer $
-      "Update proposal TxId: " ++ condense (txId genTx)
-    firstExceptT ByronUpdateProposalTxError $ nodeSubmitTx network genTx
-
+submitByronUpdateProposal nodeSocketPath network proposalFp = do
+  proposal <- readByronUpdateProposal proposalFp
+  let genTx = toByronLedgerUpdateProposal proposal
+  traceWith stdoutTracer $ "Update proposal TxId: " ++ condense (txId genTx)
+  firstExceptT ByronUpdateProposalTxError $ nodeSubmitTx nodeSocketPath network genTx

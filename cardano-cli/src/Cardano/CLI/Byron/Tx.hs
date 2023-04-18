@@ -24,7 +24,7 @@ where
 
 import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, left, newExceptT)
+import           Control.Monad.Trans.Except.Extra (left)
 import           Data.Bifunctor (Bifunctor (..))
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as B
@@ -227,14 +227,14 @@ fromByronWitness bw nId txBody =
 
 -- | Submit a transaction to a node specified by topology info.
 nodeSubmitTx
-  :: NetworkId
+  :: SocketPath
+  -> NetworkId
   -> GenTx ByronBlock
   -> ExceptT ByronTxError IO ()
-nodeSubmitTx network gentx = do
-    SocketPath socketPath <- firstExceptT EnvSocketError $ newExceptT readEnvSocketPath
+nodeSubmitTx nodeSocketPath network gentx = do
     let connctInfo =
           LocalNodeConnectInfo {
-            localNodeSocketPath = socketPath,
+            localNodeSocketPath = unSocketPath nodeSocketPath,
             localNodeNetworkId = network,
             localConsensusModeParams = CardanoModeParams (EpochSlots 21600)
           }

@@ -12,10 +12,12 @@ module Cardano.CLI.Byron.Query
 import           Cardano.Api
 
 import           Control.Monad.IO.Unlift (MonadIO (..))
+import           Control.Monad.Trans (MonadTrans (..))
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
+import           Control.Monad.Trans.Except.Extra (left, onLeft)
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy as LB
+import           Data.Function ((&))
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.IO as Text
@@ -35,18 +37,22 @@ renderByronQueryError err =
 -- Query local node's chain tip
 --------------------------------------------------------------------------------
 
-runGetLocalNodeTip :: NetworkId -> ExceptT ByronQueryError IO ()
-runGetLocalNodeTip networkId = do
-    SocketPath sockPath <- firstExceptT ByronQueryEnvVarSocketErr
-                             $ newExceptT readEnvSocketPath
-    let connctInfo =
-          LocalNodeConnectInfo {
-            localNodeSocketPath    = sockPath,
-            localNodeNetworkId     = networkId,
-            localConsensusModeParams = ByronModeParams (EpochSlots 21600)
-          }
+runGetLocalNodeTip
+  :: Maybe SocketPath
+  -> NetworkId
+  -> ExceptT ByronQueryError IO ()
+runGetLocalNodeTip mNodeSocketPath networkId = do
+  SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
+    & onLeft (left . ByronQueryEnvVarSocketErr)
 
-    tip <- liftIO $ getLocalChainTip connctInfo
-    liftIO . Text.putStrLn . Text.decodeUtf8 . LB.toStrict $ encodePretty tip
+  let connctInfo =
+        LocalNodeConnectInfo {
+          localNodeSocketPath    = sockPath,
+          localNodeNetworkId     = networkId,
+          localConsensusModeParams = ByronModeParams (EpochSlots 21600)
+        }
+
+  tip <- liftIO $ getLocalChainTip connctInfo
+  liftIO . Text.putStrLn . Text.decodeUtf8 . LB.toStrict $ encodePretty tip
 
 
