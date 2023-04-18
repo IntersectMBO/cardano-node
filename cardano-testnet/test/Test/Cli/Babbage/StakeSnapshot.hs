@@ -52,8 +52,7 @@ hprop_stakeSnapshot = H.integrationRetryWorkspace 2 "babbage-stake-snapshot" $ \
   conf@Conf { tempBaseAbsPath, tempAbsPath } <- H.noteShowM $
     mkConf (ProjectBase base) (YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
 
-  work <- H.note $ tempAbsPath </> "work"
-  H.createDirectoryIfMissing_ work
+  work <- H.createDirectoryIfMissing $ tempAbsPath </> "work"
 
   let
     testnetOptions = BabbageOnlyTestnetOptions $ babbageDefaultTestnetOptions

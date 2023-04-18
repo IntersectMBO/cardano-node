@@ -388,8 +388,6 @@ shelleyTestnet testnetOptions H.Conf {..} = do
   --------------------------------
   -- Launch cluster of three nodes
 
-  H.createDirectoryIfMissing_ logDir
-
   H.readFile (base </> "configuration/chairman/shelley-only/configuration.yaml")
     <&> L.unlines . fmap (rewriteConfiguration (shelleyEnableP2P testnetOptions)) . L.lines
     >>= H.writeFile (tempAbsPath </> "configuration.yaml")

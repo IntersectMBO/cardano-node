@@ -8,9 +8,10 @@ module Testnet.Conf
   , mkConf
   ) where
 
-import           System.FilePath.Posix ((</>))
+import           System.FilePath ((</>))
 
 import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
 import qualified System.FilePath.Posix as FP
 import qualified System.Random as IO
 
@@ -38,7 +39,7 @@ mkConf (ProjectBase base) (YamlFilePath configurationTemplate) tempAbsPath maybe
   testnetMagic <- H.noteShowIO $ maybe (IO.randomRIO (1000, 2000)) return maybeMagic
   tempBaseAbsPath <- H.noteShow $ FP.takeDirectory tempAbsPath
   tempRelPath <- H.noteShow $ FP.makeRelative tempBaseAbsPath tempAbsPath
-  socketDir <- H.noteShow $ tempRelPath </> "socket"
-  logDir <- H.noteTempFile tempAbsPath "logs"
+  socketDir <- H.createSubdirectoryIfMissing tempBaseAbsPath $ tempRelPath </> "socket"
+  logDir <- H.createDirectoryIfMissing $ tempAbsPath </> "logs"
 
   return $ Conf {..}

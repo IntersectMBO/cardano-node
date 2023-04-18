@@ -41,8 +41,6 @@ chairmanOver timeoutSeconds requiredProgress H.Conf {..} allNodes = do
 
     sprockets <- H.noteEach $ fmap (mkSprocket tempBaseAbsPath socketDir) allNodes
 
-    H.createDirectoryIfMissing_ $ tempBaseAbsPath </> socketDir
-
     hNodeStdout <- H.evalIO $ IO.openFile nodeStdoutFile IO.WriteMode
     hNodeStderr <- H.evalIO $ IO.openFile nodeStderrFile IO.WriteMode
 

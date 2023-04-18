@@ -207,8 +207,6 @@ cardanoTestnet testnetOptions H.Conf {..} = do
 
   let securityParam = 10
 
-  H.createDirectoryIfMissing_ logDir
-
   H.readFile configurationTemplate >>= H.writeFile configurationFile
 
   forkOptions <- pure $ id
@@ -379,7 +377,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   H.noteEachM_ . H.listDirectory $ tempAbsPath </> "byron"
 
   -- Set up our template
-  H.createDirectoryIfMissing_ $ tempAbsPath </> "shelley"
+  shelleyDir <- H.createDirectoryIfMissing $ tempAbsPath </> "shelley"
 
   -- TODO: This is fragile, we should be passing in all necessary
   -- configuration files.
@@ -394,7 +392,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   execCli_
     [ "genesis", "create"
     , "--testnet-magic", show @Int testnetMagic
-    , "--genesis-dir", tempAbsPath </> "shelley"
+    , "--genesis-dir", shelleyDir
     , "--start-time", formatIso8601 startTime
     ]
 
@@ -420,7 +418,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   execCli_
     [ "genesis", "create"
     , "--testnet-magic", show @Int testnetMagic
-    , "--genesis-dir", tempAbsPath </> "shelley"
+    , "--genesis-dir", shelleyDir
     , "--gen-genesis-keys", show @Int numBftNodes
     , "--start-time", formatIso8601 startTime
     , "--gen-utxo-keys", show (cardanoNumBftNodes $ cardanoNodes testnetOptions)
