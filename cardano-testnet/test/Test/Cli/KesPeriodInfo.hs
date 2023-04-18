@@ -11,12 +11,10 @@ module Test.Cli.KesPeriodInfo
 import           Cardano.Api
 import           Cardano.Api.Shelley (PoolId)
 import           Control.Monad (void)
-import           Data.Monoid (Last (..))
 import           Data.Set (Set)
 import           GHC.Stack (callStack)
 import           Hedgehog (Property, (===))
 import           Prelude
-import           System.Environment (getEnvironment)
 import           System.FilePath ((</>))
 
 import           Cardano.CLI.Shelley.Output
@@ -27,13 +25,13 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Hedgehog as H
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
 import qualified System.Info as SYS
 import qualified Testnet.Util.Base as H
+import qualified Testnet.Util.Process as H
 
 import           Cardano.Testnet
 import           Test.Misc
@@ -58,18 +56,8 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
                              , cardanoActiveSlotsCoeff = 0.1
                              }
   runTime@TestnetRuntime { testnetMagic } <- testnet fastTestnetOptions conf
-  let sprockets = bftSprockets runTime
-  env <- H.evalIO getEnvironment
 
-  execConfig <- H.noteShow H.ExecConfig
-        { H.execConfigEnv = Last $ Just $
-          [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName (head sprockets))
-          ]
-          -- The environment must be passed onto child process on Windows in order to
-          -- successfully start that process.
-          <> env
-        , H.execConfigCwd = Last $ Just tempBaseAbsPath
-        }
+  execConfig <- H.headM (bftSprockets runTime) >>= H.mkExecConfig tempBaseAbsPath
 
   -- First we note all the relevant files
   work <- H.note tempAbsPath

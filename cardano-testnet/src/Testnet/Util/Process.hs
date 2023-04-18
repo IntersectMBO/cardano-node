@@ -10,6 +10,7 @@ module Testnet.Util.Process
   , procNode
   , procSubmitApi
   , procChairman
+  , mkExecConfig
   ) where
 
 import           Prelude
@@ -25,7 +26,9 @@ import           Hedgehog (MonadTest)
 import           Hedgehog.Extras.Test.Process (ExecConfig)
 import           System.Process (CreateProcess)
 
+import           Data.Monoid (Last (..))
 import qualified GHC.Stack as GHC
+import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import           Hedgehog.Extras.Test.Base
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified Hedgehog.Internal.Property as H
@@ -138,3 +141,22 @@ assertByDeadlineIOCustom str deadline f = GHC.withFrozenCallStack $ do
       else do
         H.annotateShow currentTime
         failMessage GHC.callStack $ "Condition not met by deadline: " <> str
+
+mkExecConfig :: ()
+  => MonadTest m
+  => MonadIO m
+  => FilePath
+  -> IO.Sprocket
+  -> m ExecConfig
+mkExecConfig tempBaseAbsPath sprocket = do
+  env <- H.evalIO IO.getEnvironment
+
+  noteShow H.ExecConfig
+    { H.execConfigEnv = Last $ Just $
+      [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName sprocket)
+      ]
+      -- The environment must be passed onto child process on Windows in order to
+      -- successfully start that process.
+      <> env
+    , H.execConfigCwd = Last $ Just tempBaseAbsPath
+    }
