@@ -7,8 +7,6 @@ unset logscale y
 {% endif %}
 {% if args.deRange != "" %}
 set yrange [{{ args.deRange }}]
-{% else %}
-set yrange [0:*]
 {% endif %}
 {% if args.deShortDesc != "" %}
 set ylabel "{{ args.deShortDesc }}, {{ args.deUnit }}"

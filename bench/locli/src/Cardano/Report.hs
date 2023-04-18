@@ -224,7 +224,12 @@ generate (InputDir ede) mReport (SomeSummary summ, cp, SomeBlockProp bp) rest = 
    fenv = HM.fromList
      []
    onlyKeys :: [Text] -> Map.Map Text DictEntry -> [DictEntry]
-   onlyKeys ks m = [ x | (flip Map.lookup m -> Just x) <- ks ]
+   onlyKeys ks m =
+     ks <&>
+     \case
+       (Nothing, k) -> error $ "Report.generate:  missing metric: " <> show k
+       (Just x, _) -> x
+     . (flip Map.lookup m &&& identity)
    env rc b rs = fromPairs
      [ "report"     .= rc
      , "base"       .= b
@@ -260,11 +265,11 @@ generate (InputDir ede) mReport (SomeSummary summ, cp, SomeBlockProp bp) rest = 
           [ "cdfForgerLead"
           , "cdfForgerTicked"
           , "cdfForgerMemSnap"
-          , "cdfForgerForges"
-          , "cdfForgerAnnounces"
-          , "cdfForgerSends"
-          , "cdfPeerNotices"
-          , "cdfPeerAdoptions"
+          , "cdfForgerForge"
+          , "cdfForgerAnnounce"
+          , "cdfForgerSend"
+          , "cdfPeerNoticeFirst"
+          , "cdfPeerAdoption"
           , "cdf0.50"
           , "cdf0.80"
           , "cdf0.90"
