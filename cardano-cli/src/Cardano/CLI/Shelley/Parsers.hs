@@ -73,44 +73,38 @@ import           Cardano.CLI.Types
 -- Shelley CLI command parsers
 --
 
-parseShelleyCommands :: Parser ShelleyCommand
-parseShelleyCommands =
-  Opt.hsubparser $
-    mconcat
-      [ Opt.metavar "Era based commands"
-      , Opt.commandGroup "Era based commands"
-      , Opt.command "address"
-          (Opt.info (AddressCmd <$> pAddressCmd) $ Opt.progDesc "Payment address commands")
-      , Opt.command "stake-address"
-          (Opt.info (StakeAddressCmd <$> pStakeAddressCmd) $ Opt.progDesc "Stake address commands")
-      , Opt.command "key"
-          (Opt.info (KeyCmd <$> pKeyCmd) $ Opt.progDesc "Key utility commands")
-      , Opt.command "transaction"
-          (Opt.info (TransactionCmd <$> pTransaction) $ Opt.progDesc "Transaction commands")
-      , Opt.command "node"
-          (Opt.info (NodeCmd <$> pNodeCmd) $ Opt.progDesc "Node operation commands")
-      , Opt.command "stake-pool"
-          (Opt.info (PoolCmd <$> pPoolCmd) $ Opt.progDesc "Stake pool commands")
-      , Opt.command "query"
-          (Opt.info (QueryCmd <$> pQueryCmd) . Opt.progDesc $
-             mconcat
-               [ "Node query commands. Will query the local node whose Unix domain socket "
-               , "is obtained from the CARDANO_NODE_SOCKET_PATH environment variable."
-               ]
-            )
-      , Opt.command "genesis"
-          (Opt.info (GenesisCmd <$> pGenesisCmd) $ Opt.progDesc "Genesis block commands")
-      , Opt.command "governance"
-          (Opt.info (GovernanceCmd <$> pGovernanceCmd) $ Opt.progDesc "Governance commands")
-      , Opt.command "text-view"
-          (Opt.info (TextViewCmd <$> pTextViewCmd) . Opt.progDesc $
-             mconcat
-               [ "Commands for dealing with Shelley TextView files. "
-               , "Transactions, addresses etc are stored on disk as TextView files."
-               ]
-            )
-
-      ]
+parseShelleyCommands :: Maybe NetworkId -> Parser ShelleyCommand
+parseShelleyCommands mNetworkId =
+  Opt.hsubparser $ mconcat
+    [ Opt.metavar "Era based commands"
+    , Opt.commandGroup "Era based commands"
+    , Opt.command "address" $
+        Opt.info (AddressCmd <$> pAddressCmd mNetworkId) $ Opt.progDesc "Payment address commands"
+    , Opt.command "stake-address" $
+        Opt.info (StakeAddressCmd <$> pStakeAddressCmd mNetworkId) $ Opt.progDesc "Stake address commands"
+    , Opt.command "key" $
+        Opt.info (KeyCmd <$> pKeyCmd) $ Opt.progDesc "Key utility commands"
+    , Opt.command "transaction" $
+        Opt.info (TransactionCmd <$> pTransaction mNetworkId) $ Opt.progDesc "Transaction commands"
+    , Opt.command "node" $
+        Opt.info (NodeCmd <$> pNodeCmd) $ Opt.progDesc "Node operation commands"
+    , Opt.command "stake-pool" $
+        Opt.info (PoolCmd <$> pPoolCmd mNetworkId) $ Opt.progDesc "Stake pool commands"
+    , Opt.command "query" $
+        Opt.info (QueryCmd <$> pQueryCmd mNetworkId) . Opt.progDesc $ mconcat
+          [ "Node query commands. Will query the local node whose Unix domain socket "
+          , "is obtained from the CARDANO_NODE_SOCKET_PATH environment variable."
+          ]
+    , Opt.command "genesis" $
+        Opt.info (GenesisCmd <$> pGenesisCmd mNetworkId) $ Opt.progDesc "Genesis block commands"
+    , Opt.command "governance" $
+        Opt.info (GovernanceCmd <$> pGovernanceCmd) $ Opt.progDesc "Governance commands"
+    , Opt.command "text-view" $
+        Opt.info (TextViewCmd <$> pTextViewCmd) . Opt.progDesc $ mconcat
+          [ "Commands for dealing with Shelley TextView files. "
+          , "Transactions, addresses etc are stored on disk as TextView files."
+          ]
+    ]
 
 pTextViewCmd :: Parser TextViewCmd
 pTextViewCmd =
@@ -135,8 +129,8 @@ pCBORInFile =
     <> Opt.internal
     )
 
-pAddressCmd :: Parser AddressCmd
-pAddressCmd =
+pAddressCmd :: Maybe NetworkId -> Parser AddressCmd
+pAddressCmd mNetworkId =
    asum
      [ subParser "key-gen"
          (Opt.info pAddressKeyGen $ Opt.progDesc "Create an address key pair.")
@@ -164,7 +158,7 @@ pAddressCmd =
     pAddressBuild = AddressBuild
       <$> pPaymentVerifier
       <*> Opt.optional pStakeIdentifier
-      <*> pNetworkId
+      <*> pNetworkId mNetworkId
       <*> pMaybeOutputFile
 
     pAddressInfo :: Parser AddressCmd
@@ -367,8 +361,8 @@ pScriptDataOrFile dataFlagPrefix helpTextForValue helpTextForFile =
             Left err -> fail (displayError err)
             Right sd -> return sd
 
-pStakeAddressCmd :: Parser StakeAddressCmd
-pStakeAddressCmd =
+pStakeAddressCmd :: Maybe NetworkId -> Parser StakeAddressCmd
+pStakeAddressCmd mNetworkId =
     asum
       [ subParser "key-gen"
           (Opt.info pStakeAddressKeyGen $ Opt.progDesc "Create a stake address key pair")
@@ -397,7 +391,7 @@ pStakeAddressCmd =
     pStakeAddressBuild =
       StakeAddressBuild
         <$> pStakeVerifier
-        <*> pNetworkId
+        <*> pNetworkId mNetworkId
         <*> pMaybeOutputFile
 
     pStakeAddressRegistrationCert :: Parser StakeAddressCmd
@@ -620,8 +614,8 @@ pKeyCmd =
             <> Opt.help "Use a Byron-era extended payment key formatted in the deprecated Byron style."
             )
 
-pTransaction :: Parser TransactionCmd
-pTransaction =
+pTransaction :: Maybe NetworkId -> Parser TransactionCmd
+pTransaction mNetworkId =
   asum
     [ subParser "build-raw"
         $ Opt.info pTransactionBuildRaw $ Opt.progDescDoc $ Just $ mconcat
@@ -717,7 +711,7 @@ pTransaction =
     TxBuild <$> pSocketPath
             <*> pCardanoEra
             <*> pConsensusModeParams
-            <*> pNetworkId
+            <*> pNetworkId mNetworkId
             <*> optional pScriptValidity
             <*> optional pWitnessOverride
             <*> some (pTxIn AutoBalance)
@@ -782,7 +776,7 @@ pTransaction =
     TxSign
       <$> pInputTxOrTxBodyFile
       <*> many pWitnessSigningData
-      <*> optional pNetworkId
+      <*> optional (pNetworkId mNetworkId)
       <*> pTxFileOut
 
   pTransactionCreateWitness :: Parser TransactionCmd
@@ -790,7 +784,7 @@ pTransaction =
     TxCreateWitness
       <$> pTxBodyFileIn
       <*> pWitnessSigningData
-      <*> optional pNetworkId
+      <*> optional (pNetworkId mNetworkId)
       <*> pOutputFile
 
   pTransactionAssembleTxBodyWit :: Parser TransactionCmd
@@ -805,7 +799,7 @@ pTransaction =
     TxSubmit
       <$> pSocketPath
       <*> pConsensusModeParams
-      <*> pNetworkId
+      <*> pNetworkId mNetworkId
       <*> pTxSubmitFile
 
   pTransactionPolicyId :: Parser TransactionCmd
@@ -815,7 +809,7 @@ pTransaction =
   pTransactionCalculateMinFee =
     TxCalculateMinFee
       <$> pTxBodyFileIn
-      <*> optional pNetworkId
+      <*> optional (pNetworkId mNetworkId)
       <*> pProtocolParamsFile
       <*> pTxInCount
       <*> pTxOutCount
@@ -907,19 +901,18 @@ pNodeCmd =
                       <*> pOutputFile
 
 
-pPoolCmd :: Parser PoolCmd
-pPoolCmd =
+pPoolCmd :: Maybe NetworkId -> Parser PoolCmd
+pPoolCmd  mNetworkId =
   asum
-      [ subParser "registration-certificate"
-          (Opt.info pStakePoolRegistrationCert $ Opt.progDesc "Create a stake pool registration certificate")
-      , subParser "deregistration-certificate"
-          (Opt.info pStakePoolRetirementCert $ Opt.progDesc "Create a stake pool deregistration certificate")
-      , subParser "id"
-          (Opt.info pId $
-             Opt.progDesc "Build pool id from the offline key")
-      , subParser "metadata-hash"
-          (Opt.info pPoolMetadataHashSubCmd $ Opt.progDesc "Print the hash of pool metadata.")
-      ]
+    [ subParser "registration-certificate"
+      (Opt.info (pStakePoolRegistrationCert mNetworkId) $ Opt.progDesc "Create a stake pool registration certificate")
+    , subParser "deregistration-certificate"
+      (Opt.info pStakePoolRetirementCert $ Opt.progDesc "Create a stake pool deregistration certificate")
+    , subParser "id"
+      (Opt.info pId $ Opt.progDesc "Build pool id from the offline key")
+    , subParser "metadata-hash"
+      (Opt.info pPoolMetadataHashSubCmd $ Opt.progDesc "Print the hash of pool metadata.")
+    ]
   where
     pId :: Parser PoolCmd
     pId = PoolGetId <$> pStakePoolVerificationKeyOrFile <*> pOutputFormat
@@ -928,8 +921,8 @@ pPoolCmd =
     pPoolMetadataHashSubCmd = PoolMetadataHash <$> pPoolMetadataFile <*> pMaybeOutputFile
 
 
-pQueryCmd :: Parser QueryCmd
-pQueryCmd =
+pQueryCmd :: Maybe NetworkId -> Parser QueryCmd
+pQueryCmd mNetworkId =
   asum
     [ subParser "protocol-parameters"
         (Opt.info pQueryProtocolParameters $ Opt.progDesc "Get the node's current protocol parameters")
@@ -969,7 +962,7 @@ pQueryCmd =
       QueryProtocolParameters'
         <$> pSocketPath
         <*> pConsensusModeParams
-        <*> pNetworkId
+        <*> pNetworkId mNetworkId
         <*> pMaybeOutputFile
 
     pQueryTip :: Parser QueryCmd
@@ -977,7 +970,7 @@ pQueryCmd =
       QueryTip
         <$> pSocketPath
         <*> pConsensusModeParams
-        <*> pNetworkId
+        <*> pNetworkId mNetworkId
         <*> pMaybeOutputFile
 
     pQueryUTxO :: Parser QueryCmd
@@ -986,7 +979,7 @@ pQueryCmd =
         <$> pSocketPath
         <*> pConsensusModeParams
         <*> pQueryUTxOFilter
-        <*> pNetworkId
+        <*> pNetworkId mNetworkId
         <*> pMaybeOutputFile
 
     pQueryStakePools :: Parser QueryCmd
@@ -994,7 +987,7 @@ pQueryCmd =
       QueryStakePools'
         <$> pSocketPath
         <*> pConsensusModeParams
-        <*> pNetworkId
+        <*> pNetworkId mNetworkId
         <*> pMaybeOutputFile
 
     pQueryStakeDistribution :: Parser QueryCmd
@@ -1002,7 +995,7 @@ pQueryCmd =
       QueryStakeDistribution'
         <$> pSocketPath
         <*> pConsensusModeParams
-        <*> pNetworkId
+        <*> pNetworkId mNetworkId
         <*> pMaybeOutputFile
 
     pQueryStakeAddressInfo :: Parser QueryCmd
@@ -1011,7 +1004,7 @@ pQueryCmd =
         <$> pSocketPath
         <*> pConsensusModeParams
         <*> pFilterByStakeAddress
-        <*> pNetworkId
+        <*> pNetworkId mNetworkId
         <*> pMaybeOutputFile
 
     pQueryLedgerState :: Parser QueryCmd
@@ -1019,7 +1012,7 @@ pQueryCmd =
       QueryDebugLedgerState'
         <$> pSocketPath
         <*> pConsensusModeParams
-        <*> pNetworkId
+        <*> pNetworkId mNetworkId
         <*> pMaybeOutputFile
 
     pQueryProtocolState :: Parser QueryCmd
@@ -1027,7 +1020,7 @@ pQueryCmd =
       QueryProtocolState'
         <$> pSocketPath
         <*> pConsensusModeParams
-        <*> pNetworkId
+        <*> pNetworkId mNetworkId
         <*> pMaybeOutputFile
 
     pAllStakePoolsOrOnly :: Parser (AllOrOnly [Hash StakePoolKey])
@@ -1045,7 +1038,7 @@ pQueryCmd =
       QueryStakeSnapshot'
         <$> pSocketPath
         <*> pConsensusModeParams
-        <*> pNetworkId
+        <*> pNetworkId mNetworkId
         <*> pAllStakePoolsOrOnly
         <*> pMaybeOutputFile
 
@@ -1054,7 +1047,7 @@ pQueryCmd =
       QueryPoolState'
         <$> pSocketPath
         <*> pConsensusModeParams
-        <*> pNetworkId
+        <*> pNetworkId mNetworkId
         <*> many pStakePoolVerificationKeyHash
 
     pQueryTxMempool :: Parser QueryCmd
@@ -1062,7 +1055,7 @@ pQueryCmd =
       QueryTxMempool
         <$> pSocketPath
         <*> pConsensusModeParams
-        <*> pNetworkId
+        <*> pNetworkId mNetworkId
         <*> pTxMempoolQuery
         <*> pMaybeOutputFile
       where
@@ -1083,7 +1076,7 @@ pQueryCmd =
       QueryLeadershipSchedule
         <$> pSocketPath
         <*> pConsensusModeParams
-        <*> pNetworkId
+        <*> pNetworkId mNetworkId
         <*> pGenesisFile "Shelley genesis filepath"
         <*> pStakePoolVerificationKeyOrHashOrFile
         <*> pVrfSigningKeyFile
@@ -1095,7 +1088,7 @@ pQueryCmd =
       QueryKesPeriodInfo
         <$> pSocketPath
         <*> pConsensusModeParams
-        <*> pNetworkId
+        <*> pNetworkId mNetworkId
         <*> pOperationalCertificateFile
         <*> pMaybeOutputFile
 
@@ -1269,8 +1262,8 @@ pRewardAmt =
       <> Opt.help "The reward for the relevant reward account."
       )
 
-pGenesisCmd :: Parser GenesisCmd
-pGenesisCmd =
+pGenesisCmd :: Maybe NetworkId -> Parser GenesisCmd
+pGenesisCmd mNetworkId =
   asum
     [ subParser "key-gen-genesis"
         (Opt.info pGenesisKeyGen $
@@ -1339,46 +1332,51 @@ pGenesisCmd =
     pGenesisAddr =
       GenesisAddr
         <$> pVerificationKeyFileIn
-        <*> pNetworkId
+        <*> pNetworkId mNetworkId
         <*> pMaybeOutputFile
 
     pGenesisTxIn :: Parser GenesisCmd
     pGenesisTxIn =
-      GenesisTxIn <$> pVerificationKeyFileIn <*> pNetworkId <*> pMaybeOutputFile
+      GenesisTxIn
+        <$> pVerificationKeyFileIn
+        <*> pNetworkId mNetworkId
+        <*> pMaybeOutputFile
 
     pGenesisCreateCardano :: Parser GenesisCmd
     pGenesisCreateCardano =
-      GenesisCreateCardano <$> pGenesisDir
-                    <*> pGenesisNumGenesisKeys
-                    <*> pGenesisNumUTxOKeys
-                    <*> pMaybeSystemStart
-                    <*> pInitialSupplyNonDelegated
-                    <*> (BlockCount <$> pSecurityParam)
-                    <*> pSlotLength
-                    <*> pSlotCoefficient
-                    <*> pNetworkId
-                    <*> parseFilePath
-                          "byron-template"
-                          "JSON file with genesis defaults for each byron."
-                    <*> parseFilePath
-                          "shelley-template"
-                          "JSON file with genesis defaults for each shelley."
-                    <*> parseFilePath
-                          "alonzo-template"
-                          "JSON file with genesis defaults for alonzo."
-                    <*> parseFilePath
-                          "conway-template"
-                          "JSON file with genesis defaults for conway."
-                    <*> pNodeConfigTemplate
+      GenesisCreateCardano
+        <$> pGenesisDir
+        <*> pGenesisNumGenesisKeys
+        <*> pGenesisNumUTxOKeys
+        <*> pMaybeSystemStart
+        <*> pInitialSupplyNonDelegated
+        <*> (BlockCount <$> pSecurityParam)
+        <*> pSlotLength
+        <*> pSlotCoefficient
+        <*> pNetworkId mNetworkId
+        <*> parseFilePath
+              "byron-template"
+              "JSON file with genesis defaults for each byron."
+        <*> parseFilePath
+              "shelley-template"
+              "JSON file with genesis defaults for each shelley."
+        <*> parseFilePath
+              "alonzo-template"
+              "JSON file with genesis defaults for alonzo."
+        <*> parseFilePath
+              "conway-template"
+              "JSON file with genesis defaults for conway."
+        <*> pNodeConfigTemplate
 
     pGenesisCreate :: Parser GenesisCmd
     pGenesisCreate =
-      GenesisCreate <$> pGenesisDir
-                    <*> pGenesisNumGenesisKeys
-                    <*> pGenesisNumUTxOKeys
-                    <*> pMaybeSystemStart
-                    <*> pInitialSupplyNonDelegated
-                    <*> pNetworkId
+      GenesisCreate
+        <$> pGenesisDir
+        <*> pGenesisNumGenesisKeys
+        <*> pGenesisNumUTxOKeys
+        <*> pMaybeSystemStart
+        <*> pInitialSupplyNonDelegated
+        <*> pNetworkId mNetworkId
 
     pGenesisCreateStaked :: Parser GenesisCmd
     pGenesisCreateStaked =
@@ -1391,7 +1389,7 @@ pGenesisCmd =
         <*> pMaybeSystemStart
         <*> pInitialSupplyNonDelegated
         <*> pInitialSupplyDelegated
-        <*> pNetworkId
+        <*> pNetworkId mNetworkId
         <*> pBulkPoolCredFiles
         <*> pBulkPoolsPerFile
         <*> pStuffedUtxoCount
@@ -3033,8 +3031,8 @@ pStakePoolMetadataHash =
         . deserialiseFromRawBytesHex (AsHash AsStakePoolMetadata)
         . BSC.pack
 
-pStakePoolRegistrationCert :: Parser PoolCmd
-pStakePoolRegistrationCert =
+pStakePoolRegistrationCert :: Maybe NetworkId -> Parser PoolCmd
+pStakePoolRegistrationCert mNetworkId =
   PoolRegistrationCert
     <$> pStakePoolVerificationKeyOrFile
     <*> pVrfVerificationKeyOrFile
@@ -3045,7 +3043,7 @@ pStakePoolRegistrationCert =
     <*> some pPoolOwnerVerificationKeyOrFile
     <*> many pPoolRelay
     <*> pStakePoolMetadataReference
-    <*> pNetworkId
+    <*> pNetworkId mNetworkId
     <*> pOutputFile
 
 pStakePoolRetirementCert :: Parser PoolCmd

@@ -8,6 +8,7 @@
 import           Control.Monad.Trans.Except.Exit (orDie)
 import qualified Options.Applicative as Opt
 
+import           Cardano.CLI.Environment (getEnvNetworkId)
 import           Cardano.CLI.Parsers (opts, pref)
 import           Cardano.CLI.Run (renderClientCommandError, runClientCommand)
 import           Cardano.CLI.TopHandler
@@ -20,12 +21,14 @@ import qualified GHC.IO.Encoding as GHC
 
 main :: IO ()
 main = toplevelExceptionHandler $ do
+  mNetworkId <- getEnvNetworkId
+
   -- TODO: Remove sodiumInit: https://github.com/input-output-hk/cardano-base/issues/175
   Crypto.sodiumInit
   GHC.mkTextEncoding "UTF-8" >>= GHC.setLocaleEncoding
 #ifdef UNIX
   _ <- setFileCreationMask (otherModes `unionFileModes` groupModes)
 #endif
-  co <- Opt.customExecParser pref opts
+  co <- Opt.customExecParser pref (opts mNetworkId)
 
   orDie renderClientCommandError $ runClientCommand co
