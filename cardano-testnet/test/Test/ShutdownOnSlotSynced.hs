@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Test.ShutdownOnSlotSynced
   ( hprop_shutdownOnSlotSynced
@@ -8,23 +7,26 @@ module Test.ShutdownOnSlotSynced
 
 import           Prelude
 
+import           Cardano.Testnet
+
 import           Control.Monad
+import           Data.Aeson
+import           Data.Aeson.Types
+import           Data.ByteString.Lazy.Char8 as LBS (pack)
 import           Data.Either (isRight)
-import           Data.List (find, isInfixOf)
 import           Data.Maybe
 import           GHC.IO.Exception (ExitCode (ExitSuccess))
 import           GHC.Stack (callStack)
 import qualified System.Directory as IO
 import           System.FilePath ((</>))
-import           Text.Read (readMaybe)
 
-import           Hedgehog (Property, assert, (===))
+import           Hedgehog (Property, (===))
+import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified Testnet.Util.Base as H
 
-import           Cardano.Testnet
 import           Testnet.Util.Runtime (TestnetRuntime (..))
 
 hprop_shutdownOnSlotSynced :: Property
@@ -57,15 +59,28 @@ hprop_shutdownOnSlotSynced = H.integrationRetryWorkspace 2 "shutdown-on-slot-syn
     H.cat (nodeStdout node)
     H.cat (nodeStderr node)
   mExitCodeRunning === Right ExitSuccess
+
   logs <- H.readFile (nodeStdout node)
-  slotTip <- case find (isInfixOf "Closed db with immutable tip") (reverse (lines logs)) of
-    Nothing -> H.failMessage callStack "Could not find current tip in node's log."
-    Just line -> case listToMaybe (reverse (words line)) of
-      Nothing -> H.failMessage callStack "Impossible"
-      Just lastWord -> case readMaybe @Integer lastWord of
-        Nothing -> H.failMessage callStack ("Expected a node tip as the last word of the log line, but got: " ++ line)
-        Just slotTip -> H.noteShow slotTip
+  slotTip <- case mapMaybe parseMsg $ reverse $ lines logs of
+    [] -> H.failMessage callStack "Could not find close DB message."
+    (Left err):_ -> H.failMessage callStack err
+    (Right s):_ -> return s
 
   let epsilon = 50
-  assert (maxSlot <= slotTip && slotTip <= maxSlot + epsilon)
-  return ()
+
+  H.assert (maxSlot <= slotTip && slotTip <= maxSlot + epsilon)
+
+  where
+    parseMsg :: String -> Maybe (Either String Integer)
+    parseMsg line = case decode $ LBS.pack line of
+      Nothing -> Just $ Left $ "Expected JSON formated log message, but got: " ++ line
+      Just obj -> Right <$> parseMaybe parseTipSlot obj
+
+    parseTipSlot :: Object -> Parser Integer
+    parseTipSlot obj = do
+      body <- obj .: "data"
+      tip <- body .: "tip"
+      kind <- body .: "kind"
+      if kind == ("TraceOpenEvent.ClosedDB" :: String)
+        then tip .: "slot"
+        else mzero
