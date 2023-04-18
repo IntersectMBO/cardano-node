@@ -1014,6 +1014,9 @@ genGovernancePollWitness =
               unsafeDeserialiseVerKeyVRF
               (Gen.bytes $ Range.singleton 32)
         <*> fmap
+              VRF.OutputVRF
+              (Gen.bytes $ Range.singleton 80)
+        <*> fmap
               unsafeDeserialiseCertVRF
               (Gen.bytes $ Range.singleton 80)
     , GovernancePollWitnessColdKey

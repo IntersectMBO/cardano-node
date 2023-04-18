@@ -40,15 +40,15 @@ import           Control.Monad (foldM, unless, when)
 import           Data.Either.Combinators (maybeToRight)
 import           Data.Function ((&))
 import qualified Data.Map.Strict as Map
-import           Data.String (IsString(..))
+import           Data.String (IsString (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Lazy as Text.Lazy
 import qualified Data.Text.Lazy.Builder as Text.Builder
 import           Data.Word (Word64)
 
-import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
@@ -56,15 +56,15 @@ import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 
-import           Cardano.Binary (DecoderError(..))
+import           Cardano.Binary (DecoderError (..))
 import           Cardano.Ledger.Crypto (HASH, StandardCrypto, VRF)
-import           Cardano.Ledger.Keys (KeyRole(..), SignedDSIGN, SignKeyDSIGN,
-                   SignKeyVRF, VKey(..), VerKeyVRF, signedDSIGN, verifySignedDSIGN)
+import           Cardano.Ledger.Keys (KeyRole (..), SignKeyDSIGN, SignKeyVRF, SignedDSIGN,
+                   VKey (..), VerKeyVRF, signedDSIGN, verifySignedDSIGN)
 
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import           Cardano.Crypto.Hash (hashFromBytes, hashToBytes, hashWith)
 import qualified Cardano.Crypto.Hash as Hash
-import           Cardano.Crypto.Util (SignableRepresentation(..))
+import           Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
 
 -- | Associated metadata label as defined in CIP-0094
@@ -281,6 +281,7 @@ instance SerialiseAsCBOR GovernancePollAnswer where
 data GovernancePollWitness
     = GovernancePollWitnessVRF
         (VerKeyVRF StandardCrypto)
+        (VRF.OutputVRF (VRF StandardCrypto))
         (VRF.CertVRF (VRF StandardCrypto))
     | GovernancePollWitnessColdKey
         (VKey 'Witness StandardCrypto)
@@ -297,12 +298,13 @@ instance AsTxMetadata GovernancePollWitness where
         [ ( pollMetadataLabel
           , TxMetaMap
            [ case witness of
-              GovernancePollWitnessVRF vk proof ->
+              GovernancePollWitnessVRF vk (VRF.OutputVRF output) proof ->
                 ( pollMetadataKeyWitnessVRF
                 , TxMetaList
                     -- NOTE (1): VRF keys are 32-byte long.
                     -- NOTE (2): VRF proofs are 80-byte long.
                     [ TxMetaBytes $ VRF.rawSerialiseVerKeyVRF vk
+                    , metaBytesChunks output
                     , metaBytesChunks (VRF.rawSerialiseCertVRF proof)
                     ]
                 )
@@ -334,9 +336,10 @@ instance SerialiseAsCBOR GovernancePollWitness where
 
        tryWitnessVRF values orElse =
          let k = pollMetadataKeyWitnessVRF in case lookup k values of
-           Just (TxMetaList [TxMetaBytes vk, TxMetaList[TxMetaBytes proofHead, TxMetaBytes proofTail]]) ->
+           Just (TxMetaList [TxMetaBytes vk, TxMetaList[TxMetaBytes output], TxMetaList[TxMetaBytes proofHead, TxMetaBytes proofTail]]) ->
              expectJust (fieldPath lbl k) $ GovernancePollWitnessVRF
                <$> VRF.rawDeserialiseVerKeyVRF vk
+               <*> pure (VRF.OutputVRF output)
                <*> VRF.rawDeserialiseCertVRF (proofHead <> proofTail)
            Just _  ->
              Left $ malformedField (fieldPath lbl k) "List"
@@ -360,9 +363,7 @@ signPollAnswerWith
   -> GovernancePollWitness
 signPollAnswerWith answer =
   either
-    (\sk -> GovernancePollWitnessVRF
-      (VRF.deriveVerKeyVRF sk)
-      (snd $ VRF.evalVRF () answer sk)
+    (\sk -> uncurry (GovernancePollWitnessVRF (VRF.deriveVerKeyVRF sk)) (VRF.evalVRF () answer sk)
     )
     (\sk -> GovernancePollWitnessColdKey
       (VKey (DSIGN.deriveVerKeyDSIGN sk))
@@ -432,8 +433,8 @@ verifyPollAnswer poll answer witness = do
  where
    isValid =
     case witness of
-      GovernancePollWitnessVRF vk proof ->
-        VRF.verifyVRF () vk answer (undefined, proof)
+      GovernancePollWitnessVRF vk output proof ->
+        VRF.verifyVRF () vk answer (output, proof)
       GovernancePollWitnessColdKey vk sig ->
         verifySignedDSIGN vk answer sig
 
