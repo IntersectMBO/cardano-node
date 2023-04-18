@@ -3,6 +3,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeOperators #-}
+
 module Cardano.TxSubmit.Types
   ( TxSubmitApi
   , TxSubmitApiRecord (..)

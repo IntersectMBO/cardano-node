@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 
 module Cardano.CLI.Byron.Vote
@@ -59,7 +60,7 @@ renderByronVoteError bVerr =
 
 runVoteCreation
   :: NetworkId
-  -> SigningKeyFile
+  -> SigningKeyFile In
   -> FilePath
   -> Bool
   -> FilePath

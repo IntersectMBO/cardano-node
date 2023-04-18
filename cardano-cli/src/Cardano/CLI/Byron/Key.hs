@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 
 module Cardano.CLI.Byron.Key
@@ -5,7 +6,7 @@ module Cardano.CLI.Byron.Key
     ByronKeyFailure(..)
   , NewSigningKeyFile(..)
   , NewVerificationKeyFile(..)
-  , VerificationKeyFile(..)
+  , VerificationKeyFile
   , prettyPublicKey
   , readByronSigningKey
   , readPaymentVerificationKey
@@ -81,8 +82,8 @@ byronWitnessToVerKey (AByronSigningKey sKeyNonLeg) = getVerificationKey sKeyNonL
 
 -- TODO:  we need to support password-protected secrets.
 -- | Read signing key from a file.
-readByronSigningKey :: ByronKeyFormat -> SigningKeyFile -> ExceptT ByronKeyFailure IO SomeByronSigningKey
-readByronSigningKey bKeyFormat (SigningKeyFile fp) = do
+readByronSigningKey :: ByronKeyFormat -> SigningKeyFile In -> ExceptT ByronKeyFailure IO SomeByronSigningKey
+readByronSigningKey bKeyFormat (File fp) = do
   sK <- handleIOExceptT (ReadSigningKeyFailure fp . T.pack . displayException) $ SB.readFile fp
   case bKeyFormat of
     LegacyByronKeyFormat ->
@@ -96,8 +97,8 @@ readByronSigningKey bKeyFormat (SigningKeyFile fp) = do
 
 -- | Read verification key from a file.  Throw an error if the file can't be read
 -- or the key fails to deserialise.
-readPaymentVerificationKey :: VerificationKeyFile -> ExceptT ByronKeyFailure IO Crypto.VerificationKey
-readPaymentVerificationKey (VerificationKeyFile fp) = do
+readPaymentVerificationKey :: VerificationKeyFile In -> ExceptT ByronKeyFailure IO Crypto.VerificationKey
+readPaymentVerificationKey (File fp) = do
   vkB <- handleIOExceptT (ReadVerificationKeyFailure fp . T.pack . displayException) (SB.readFile fp)
   -- Verification Key
   let eVk = hoistEither . Crypto.parseFullVerificationKey . fromString $ UTF8.toString vkB

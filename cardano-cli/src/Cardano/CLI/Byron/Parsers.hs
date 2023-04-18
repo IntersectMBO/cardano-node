@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+
 module Cardano.CLI.Byron.Parsers
   ( ByronCommand(..)
   , NodeCmd(..)
@@ -431,7 +433,7 @@ parseByronVote :: Parser NodeCmd
 parseByronVote =
   CreateVote
     <$> pNetworkId
-    <*> (SigningKeyFile <$> parseFilePath "signing-key" "Filepath of signing key.")
+    <*> (File <$> parseFilePath "signing-key" "Filepath of signing key.")
     <*> parseFilePath "proposal-filepath" "Filepath of Byron update proposal."
     <*> parseVoteBool
     <*> parseFilePath "output-filepath" "Byron vote output filepath."
@@ -694,9 +696,9 @@ parseProtocolMagic =
   flip AProtocolMagic RequiresMagic . flip Annotated ()
     <$> parseProtocolMagicId "protocol-magic"
 
-parseTxFile :: String -> Parser TxFile
+parseTxFile :: String -> Parser (TxFile In)
 parseTxFile opt =
-  TxFile
+  File
     <$> parseFilePath opt "File containing the signed transaction."
 
 parseUTCTime :: String -> String -> Parser UTCTime
@@ -745,8 +747,8 @@ readDouble = do
   when (f > 1) $ readerError "fraction must be <= 1"
   return f
 
-parseSigningKeyFile :: String -> String -> Parser SigningKeyFile
-parseSigningKeyFile opt desc = SigningKeyFile <$> parseFilePath opt desc
+parseSigningKeyFile :: String -> String -> Parser (SigningKeyFile In)
+parseSigningKeyFile opt desc = File <$> parseFilePath opt desc
 
 
 parseGenesisFile :: String -> Parser GenesisFile

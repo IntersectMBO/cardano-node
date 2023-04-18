@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | This module provides convenience functions when dealing with signing keys.
@@ -15,7 +16,7 @@ import qualified Data.ByteString as BS (ByteString)
 import           Data.ByteString.Base16 as Base16 (decode)
 
 import           Cardano.Api
-import           Cardano.CLI.Types (SigningKeyFile (..))
+import           Cardano.CLI.Types (SigningKeyFile)
 
 import           Cardano.TxGenerator.Types (TxGenError (..))
 
@@ -37,9 +38,8 @@ parseSigningKeyBase16 k
         , teRawCBOR = addr
         }
 
-readSigningKeyFile :: SigningKeyFile -> IO (Either TxGenError (SigningKey PaymentKey))
-readSigningKeyFile (SigningKeyFile f)
-  = first ApiError <$> readFileTextEnvelopeAnyOf acceptedTypes f
+readSigningKeyFile :: SigningKeyFile In -> IO (Either TxGenError (SigningKey PaymentKey))
+readSigningKeyFile f = first ApiError <$> readFileTextEnvelopeAnyOf acceptedTypes f
 
 acceptedTypes :: [FromSomeType HasTextEnvelope (SigningKey PaymentKey)]
 acceptedTypes =

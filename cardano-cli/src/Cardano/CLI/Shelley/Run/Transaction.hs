@@ -351,7 +351,7 @@ runTxBuildCmd
   certFilesAndMaybeScriptWits <- firstExceptT ShelleyTxCmdScriptWitnessError $ readScriptWitnessFiles cEra certs
   certsAndMaybeScriptWits <- sequence
              [ fmap (,mSwit) (firstExceptT ShelleyTxCmdReadTextViewFileError . newExceptT $
-                 readFileTextEnvelope AsCertificate certFile)
+                 readFileTextEnvelope AsCertificate (File certFile))
              | (CertificateFile certFile, mSwit) <- certFilesAndMaybeScriptWits
              ]
   withdrawalsAndMaybeScriptWits <- firstExceptT ShelleyTxCmdScriptWitnessError
@@ -366,7 +366,7 @@ runTxBuildCmd
     firstExceptT ShelleyTxCmdProtocolParamsError (readProtocolParameters ppf)
 
   mProp <- forM mUpProp $ \(UpdateProposalFile upFp) ->
-    firstExceptT ShelleyTxCmdReadTextViewFileError (newExceptT $ readFileTextEnvelope AsUpdateProposal upFp)
+    firstExceptT ShelleyTxCmdReadTextViewFileError (newExceptT $ readFileTextEnvelope AsUpdateProposal (File upFp))
   requiredSigners  <- mapM (firstExceptT ShelleyTxCmdRequiredSignerError .  newExceptT . readRequiredSigner) reqSigners
   mReturnCollateral <- forM mReturnColl $ toTxOutInAnyEra cEra
 
@@ -432,10 +432,10 @@ runTxBuildCmd
                   executionUnitPrices
                   (collectTxBodyScriptWitnesses txBodycontent)
                   scriptExecUnitsMap
-          liftIO $ LBS.writeFile fp $ encodePretty scriptCostOutput
+          liftIO $ LBS.writeFile (unFile fp) $ encodePretty scriptCostOutput
         _ -> left ShelleyTxCmdPlutusScriptsRequireCardanoMode
 
-    OutputTxBodyOnly (TxBodyFile fpath) ->
+    OutputTxBodyOnly fpath ->
       let noWitTx = makeSignedTransaction [] balancedTxBody
       in  lift (writeTxFileTextEnvelopeCddl fpath noWitTx)
             & onLeft (left . ShelleyTxCmdWriteFileError)
@@ -462,19 +462,19 @@ runTxBuildRawCmd
   -> [MetadataFile]
   -> Maybe ProtocolParamsFile
   -> Maybe UpdateProposalFile
-  -> TxBodyFile
+  -> TxBodyFile Out
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuildRawCmd
   (AnyCardanoEra cEra) mScriptValidity txins readOnlyRefIns txinsc mReturnColl
   mTotColl reqSigners txouts mValue mLowBound mUpperBound fee certs wdrls
-  metadataSchema scriptFiles metadataFiles mpParamsFile mUpProp (TxBodyFile out) = do
+  metadataSchema scriptFiles metadataFiles mpParamsFile mUpProp out = do
   inputsAndMaybeScriptWits <- firstExceptT ShelleyTxCmdScriptWitnessError
                                 $ readScriptWitnessFiles cEra txins
   certFilesAndMaybeScriptWits <- firstExceptT ShelleyTxCmdScriptWitnessError
                                    $ readScriptWitnessFiles cEra certs
   certsAndMaybeScriptWits <- sequence
              [ fmap (,mSwit) (firstExceptT ShelleyTxCmdReadTextViewFileError . newExceptT $
-                 readFileTextEnvelope AsCertificate certFile)
+                 readFileTextEnvelope AsCertificate (File certFile))
              | (CertificateFile certFile, mSwit) <- certFilesAndMaybeScriptWits
              ]
   withdrawalsAndMaybeScriptWits <- firstExceptT ShelleyTxCmdScriptWitnessError
@@ -490,7 +490,7 @@ runTxBuildRawCmd
     firstExceptT ShelleyTxCmdProtocolParamsError (readProtocolParameters ppf)
 
   mProp <- forM mUpProp $ \(UpdateProposalFile upFp) ->
-    firstExceptT ShelleyTxCmdReadTextViewFileError (newExceptT $ readFileTextEnvelope AsUpdateProposal upFp)
+    firstExceptT ShelleyTxCmdReadTextViewFileError (newExceptT $ readFileTextEnvelope AsUpdateProposal (File upFp))
 
   requiredSigners  <- mapM (firstExceptT ShelleyTxCmdRequiredSignerError .  newExceptT . readRequiredSigner) reqSigners
   mReturnCollateral <- forM mReturnColl $ toTxOutInAnyEra cEra
@@ -1036,15 +1036,15 @@ readValueScriptWitnesses era (v, sWitFiles) = do
 runTxSign :: InputTxBodyOrTxFile
           -> [WitnessSigningData]
           -> Maybe NetworkId
-          -> TxFile
+          -> TxFile Out
           -> ExceptT ShelleyTxCmdError IO ()
-runTxSign txOrTxBody witSigningData mnw (TxFile outTxFile) = do
+runTxSign txOrTxBody witSigningData mnw outTxFile = do
   sks <-  mapM (firstExceptT ShelleyTxCmdReadWitnessSigningDataError . newExceptT . readWitnessSigningData) witSigningData
 
   let (sksByron, sksShelley) = partitionSomeWitnesses $ map categoriseSomeWitness sks
 
   case txOrTxBody of
-    InputTxFile (TxFile inputTxFilePath) -> do
+    InputTxFile (File inputTxFilePath) -> do
       inputTxFile <- liftIO $ fileOrPipe inputTxFilePath
       anyTx <- lift (readFileTx inputTxFile) & onLeft (left . ShelleyTxCmdCddlError)
 
@@ -1064,7 +1064,7 @@ runTxSign txOrTxBody witSigningData mnw (TxFile outTxFile) = do
       lift (writeTxFileTextEnvelopeCddl outTxFile signedTx)
         & onLeft (left . ShelleyTxCmdWriteFileError)
 
-    InputTxBodyFile (TxBodyFile txbodyFilePath) -> do
+    InputTxBodyFile (File txbodyFilePath) -> do
       txbodyFile <- liftIO $ fileOrPipe txbodyFilePath
       unwitnessed <- firstExceptT ShelleyTxCmdCddlError . newExceptT
                        $ readFileTxBody txbodyFile
@@ -1145,7 +1145,7 @@ runTxSubmit mNodeSocketPath (AnyConsensusModeParams cModeParams) network txFileP
 --
 
 runTxCalculateMinFee
-  :: TxBodyFile
+  :: TxBodyFile In
   -> Maybe NetworkId
   -> ProtocolParamsFile
   -> TxInCount
@@ -1153,7 +1153,7 @@ runTxCalculateMinFee
   -> TxShelleyWitnessCount
   -> TxByronWitnessCount
   -> ExceptT ShelleyTxCmdError IO ()
-runTxCalculateMinFee (TxBodyFile txbodyFilePath) nw pParamsFile
+runTxCalculateMinFee (File txbodyFilePath) nw pParamsFile
                      (TxInCount nInputs) (TxOutCount nOutputs)
                      (TxShelleyWitnessCount nShelleyKeyWitnesses)
                      (TxByronWitnessCount nByronKeyWitnesses) = do
@@ -1298,7 +1298,7 @@ runTxGetTxId :: InputTxBodyOrTxFile -> ExceptT ShelleyTxCmdError IO ()
 runTxGetTxId txfile = do
     InAnyCardanoEra _era txbody <-
       case txfile of
-        InputTxBodyFile (TxBodyFile txbodyFilePath) -> do
+        InputTxBodyFile (File txbodyFilePath) -> do
           txbodyFile <- liftIO $ fileOrPipe txbodyFilePath
           unwitnessed <- firstExceptT ShelleyTxCmdCddlError . newExceptT
                            $ readFileTxBody txbodyFile
@@ -1307,7 +1307,7 @@ runTxGetTxId txfile = do
             IncompleteCddlFormattedTx (InAnyCardanoEra era tx) ->
               return (InAnyCardanoEra era (getTxBody tx))
 
-        InputTxFile (TxFile txFilePath) -> do
+        InputTxFile (File txFilePath) -> do
           txFile <- liftIO $ fileOrPipe txFilePath
           InAnyCardanoEra era tx <- lift (readFileTx txFile) & onLeft (left . ShelleyTxCmdCddlError)
           return . InAnyCardanoEra era $ getTxBody tx
@@ -1316,7 +1316,7 @@ runTxGetTxId txfile = do
 
 runTxView :: InputTxBodyOrTxFile -> ExceptT ShelleyTxCmdError IO ()
 runTxView = \case
-  InputTxBodyFile (TxBodyFile txbodyFilePath) -> do
+  InputTxBodyFile (File txbodyFilePath) -> do
     txbodyFile <- liftIO $ fileOrPipe txbodyFilePath
     unwitnessed <- firstExceptT ShelleyTxCmdCddlError . newExceptT
                      $ readFileTxBody txbodyFile
@@ -1329,7 +1329,7 @@ runTxView = \case
     -- In the case of a transaction body, we can simply call makeSignedTransaction []
     -- to get a transaction which allows us to reuse friendlyTxBS!
     liftIO $ BS.putStr $ friendlyTxBodyBS era txbody
-  InputTxFile (TxFile txFilePath) -> do
+  InputTxFile (File txFilePath) -> do
     txFile <- liftIO $ fileOrPipe txFilePath
     InAnyCardanoEra era tx <- lift (readFileTx txFile) & onLeft (left . ShelleyTxCmdCddlError)
     liftIO $ BS.putStr $ friendlyTxBS era tx
@@ -1340,12 +1340,12 @@ runTxView = \case
 --
 
 runTxCreateWitness
-  :: TxBodyFile
+  :: TxBodyFile In
   -> WitnessSigningData
   -> Maybe NetworkId
-  -> OutputFile
+  -> File () Out
   -> ExceptT ShelleyTxCmdError IO ()
-runTxCreateWitness (TxBodyFile txbodyFilePath) witSignData mbNw (OutputFile oFile) = do
+runTxCreateWitness (File txbodyFilePath) witSignData mbNw oFile = do
   txbodyFile <- liftIO $ fileOrPipe txbodyFilePath
   unwitnessed <- firstExceptT ShelleyTxCmdCddlError . newExceptT
                    $ readFileTxBody txbodyFile
@@ -1394,11 +1394,11 @@ runTxCreateWitness (TxBodyFile txbodyFilePath) witSignData mbNw (OutputFile oFil
         $ textEnvelopeToJSON Nothing witness
 
 runTxSignWitness
-  :: TxBodyFile
+  :: TxBodyFile In
   -> [WitnessFile]
-  -> OutputFile
+  -> File () Out
   -> ExceptT ShelleyTxCmdError IO ()
-runTxSignWitness (TxBodyFile txbodyFilePath) witnessFiles (OutputFile oFp) = do
+runTxSignWitness (File txbodyFilePath) witnessFiles oFp = do
     txbodyFile <- liftIO $ fileOrPipe txbodyFilePath
     unwitnessed <- firstExceptT ShelleyTxCmdCddlError . newExceptT
                      $ readFileTxBody txbodyFile

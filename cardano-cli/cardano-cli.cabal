@@ -29,6 +29,7 @@ common project-config
                         -Wcompat
                         -Wincomplete-record-updates
                         -Wincomplete-uni-patterns
+                        -Wno-unticked-promoted-constructors
                         -Wpartial-fields
                         -Wredundant-constraints
                         -Wunused-packages

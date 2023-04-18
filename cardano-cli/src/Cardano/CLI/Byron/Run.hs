@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 
 module Cardano.CLI.Byron.Run
@@ -7,9 +8,9 @@ module Cardano.CLI.Byron.Run
   ) where
 
 import           Control.Monad.IO.Class (MonadIO (liftIO))
+import           Control.Monad.Trans (MonadTrans (..))
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, left, onLeft)
-import           Control.Monad.Trans (MonadTrans (..))
 import           Data.Bifunctor (Bifunctor (..))
 import qualified Data.ByteString.Char8 as BS
 import           Data.Function ((&))
@@ -131,17 +132,17 @@ runPrettyPrintCBOR fp = do
   bs <- firstExceptT ByronCmdHelpersError $ readCBOR fp
   firstExceptT ByronCmdHelpersError $ pPrintCBOR bs
 
-runPrettySigningKeyPublic :: ByronKeyFormat -> SigningKeyFile -> ExceptT ByronClientCmdError IO ()
+runPrettySigningKeyPublic :: ByronKeyFormat -> SigningKeyFile In -> ExceptT ByronClientCmdError IO ()
 runPrettySigningKeyPublic bKeyFormat skF = do
   sK <- firstExceptT ByronCmdKeyFailure $ readByronSigningKey bKeyFormat skF
   liftIO . Text.putStrLn . prettyPublicKey $ byronWitnessToVerKey sK
 
 runMigrateDelegateKeyFrom
-  :: SigningKeyFile
+  :: SigningKeyFile In
   -- ^ Legacy Byron signing key
   -> NewSigningKeyFile
   -> ExceptT ByronClientCmdError IO ()
-runMigrateDelegateKeyFrom oldKey@(SigningKeyFile fp) (NewSigningKeyFile newKey) = do
+runMigrateDelegateKeyFrom oldKey@(File fp) (NewSigningKeyFile newKey) = do
   sk <- firstExceptT ByronCmdKeyFailure $ readByronSigningKey LegacyByronKeyFormat oldKey
   migratedWitness <- case sk of
                        AByronSigningKeyLegacy (ByronSigningKeyLegacy sKey) ->
@@ -169,7 +170,7 @@ runPrintGenesisHash genFp = do
 runPrintSigningKeyAddress
   :: ByronKeyFormat
   -> NetworkId
-  -> SigningKeyFile
+  -> SigningKeyFile In
   -> ExceptT ByronClientCmdError IO ()
 runPrintSigningKeyAddress bKeyFormat networkid skF = do
   sK <- firstExceptT ByronCmdKeyFailure $ readByronSigningKey bKeyFormat skF
@@ -181,14 +182,14 @@ runKeygen (NewSigningKeyFile skF)  = do
   sK <- liftIO $ generateSigningKey AsByronKey
   firstExceptT ByronCmdHelpersError . ensureNewFileLBS skF $ serialiseToRawBytes sK
 
-runToVerification :: ByronKeyFormat -> SigningKeyFile -> NewVerificationKeyFile -> ExceptT ByronClientCmdError IO ()
+runToVerification :: ByronKeyFormat -> SigningKeyFile In -> NewVerificationKeyFile -> ExceptT ByronClientCmdError IO ()
 runToVerification bKeyFormat skFp (NewVerificationKeyFile vkFp) = do
   sk <- firstExceptT ByronCmdKeyFailure $ readByronSigningKey bKeyFormat skFp
   let ByronVerificationKey vK = byronWitnessToVerKey sk
   let vKey = Builder.toLazyText $ Crypto.formatFullVerificationKey vK
   firstExceptT ByronCmdHelpersError $ ensureNewFile TL.writeFile vkFp vKey
 
-runSubmitTx :: Maybe SocketPath -> NetworkId -> TxFile -> ExceptT ByronClientCmdError IO ()
+runSubmitTx :: Maybe SocketPath -> NetworkId -> TxFile In -> ExceptT ByronClientCmdError IO ()
 runSubmitTx mNodeSocketPath network fp = do
   nodeSocketPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
     & onLeft (left . ByronCmdTxError . EnvSocketError)
@@ -198,7 +199,7 @@ runSubmitTx mNodeSocketPath network fp = do
   firstExceptT ByronCmdTxError $
     nodeSubmitTx nodeSocketPath network (normalByronTxToGenTx tx)
 
-runGetTxId :: TxFile -> ExceptT ByronClientCmdError IO ()
+runGetTxId :: TxFile In -> ExceptT ByronClientCmdError IO ()
 runGetTxId fp = firstExceptT ByronCmdTxError $ do
     tx <- readByronTx fp
     let txbody = getTxBody (ByronTx tx)
@@ -210,7 +211,7 @@ runSpendGenesisUTxO
   -> NetworkId
   -> ByronKeyFormat
   -> NewTxFile
-  -> SigningKeyFile
+  -> SigningKeyFile In
   -> Address ByronAddr
   -> [TxOut CtxTx ByronEra]
   -> ExceptT ByronClientCmdError IO ()
@@ -225,7 +226,7 @@ runSpendUTxO
   :: NetworkId
   -> ByronKeyFormat
   -> NewTxFile
-  -> SigningKeyFile
+  -> SigningKeyFile In
   -> [TxIn]
   -> [TxOut CtxTx ByronEra]
   -> ExceptT ByronClientCmdError IO ()

@@ -1,5 +1,7 @@
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Use uncurry" -}
+
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -88,7 +90,7 @@ setProtocolParameters s = case s of
     protocolParameters <- liftIO $ readProtocolParametersFile file
     setProtoParamMode $ ProtocolParameterLocal protocolParameters
 
-readSigningKey :: String -> SigningKeyFile -> ActionM ()
+readSigningKey :: String -> SigningKeyFile In -> ActionM ()
 readSigningKey name filePath =
   liftIO (readSigningKeyFile filePath) >>= \case
     Left err -> liftTxGenError err

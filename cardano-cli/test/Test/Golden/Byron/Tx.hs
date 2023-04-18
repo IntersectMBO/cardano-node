@@ -4,6 +4,7 @@ module Test.Golden.Byron.Tx
   ( txTests
   ) where
 
+import           Cardano.Api
 import           Cardano.Chain.UTxO (ATxAux)
 import           Cardano.CLI.Byron.Tx
 
@@ -58,7 +59,7 @@ golden_byronTx = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
 
 getTxByteString :: FilePath -> H.PropertyT IO (ATxAux ByteString)
 getTxByteString txFp = do
-  eATxAuxBS <- liftIO . runExceptT $ readByronTx $ TxFile txFp
+  eATxAuxBS <- liftIO . runExceptT $ readByronTx $ File txFp
   case eATxAuxBS of
     Left err -> failWith Nothing . Text.unpack $ renderByronTxError err
     Right aTxAuxBS -> return aTxAuxBS

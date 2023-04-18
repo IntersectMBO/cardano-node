@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -50,7 +51,7 @@ import           Cardano.CLI.Types
 data VerificationKeyOrFile keyrole
   = VerificationKeyValue !(VerificationKey keyrole)
   -- ^ A verification key.
-  | VerificationKeyFilePath !VerificationKeyFile
+  | VerificationKeyFilePath !(VerificationKeyFile In)
   -- ^ A path to a verification key file.
   -- Note that this file hasn't been validated at all (whether it exists,
   -- contains a key of the correct type, etc.)
@@ -76,7 +77,7 @@ readVerificationKeyOrFile
 readVerificationKeyOrFile asType verKeyOrFile =
   case verKeyOrFile of
     VerificationKeyValue vk -> pure (Right vk)
-    VerificationKeyFilePath (VerificationKeyFile fp) ->
+    VerificationKeyFilePath (File fp) ->
       readKeyFile
         (AsVerificationKey asType)
         (NE.fromList [InputFormatBech32, InputFormatHex, InputFormatTextEnvelope])
@@ -95,8 +96,7 @@ readVerificationKeyOrTextEnvFile
 readVerificationKeyOrTextEnvFile asType verKeyOrFile =
   case verKeyOrFile of
     VerificationKeyValue vk -> pure (Right vk)
-    VerificationKeyFilePath (VerificationKeyFile fp) ->
-      readKeyFileTextEnvelope (AsVerificationKey asType) fp
+    VerificationKeyFilePath fp -> readKeyFileTextEnvelope (AsVerificationKey asType) fp
 
 data PaymentVerifier
   = PaymentVerifierKey VerificationKeyTextOrFile
@@ -123,7 +123,7 @@ newtype DelegationTarget
 -- to a verification key file.
 data VerificationKeyTextOrFile
   = VktofVerificationKeyText !Text
-  | VktofVerificationKeyFile !VerificationKeyFile
+  | VktofVerificationKeyFile !(VerificationKeyFile In)
   deriving (Eq, Show)
 
 -- | An error in deserialising a 'VerificationKeyTextOrFile' to a
@@ -151,7 +151,7 @@ readVerificationKeyTextOrFileAnyOf verKeyTextOrFile =
     VktofVerificationKeyText vkText ->
       pure $ first VerificationKeyTextError $
         deserialiseAnyVerificationKey (Text.encodeUtf8 vkText)
-    VktofVerificationKeyFile (VerificationKeyFile fp) -> do
+    VktofVerificationKeyFile (File fp) -> do
       vkBs <- liftIO $ BS.readFile fp
       pure $ first VerificationKeyTextError $
         deserialiseAnyVerificationKey vkBs

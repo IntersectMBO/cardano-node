@@ -20,6 +20,7 @@ module Cardano.Node.Run
   , checkVRFFilePermissions
   ) where
 
+import           Cardano.Api (File (..), FileDirection (..))
 import qualified Cardano.Api as Api
 
 import           Cardano.Prelude (FatalError (..))
@@ -137,7 +138,7 @@ runNode cmdPc = do
     putStrLn $ "Node configuration: " <> show nc
 
     case shelleyVRFFile $ ncProtocolFiles nc of
-      Just vrfFp -> do vrf <- runExceptT $ checkVRFFilePermissions vrfFp
+      Just vrfFp -> do vrf <- runExceptT $ checkVRFFilePermissions (File vrfFp)
                        case vrf of
                          Left err ->
                            Text.putStrLn (renderVRFPrivateKeyFilePermissionError err) >> exitFailure
@@ -575,9 +576,9 @@ canonDbPath NodeConfiguration{ncDatabaseFile = DbFile dbFp} = do
 
 -- | Make sure the VRF private key file is readable only
 -- by the current process owner the node is running under.
-checkVRFFilePermissions :: FilePath -> ExceptT VRFPrivateKeyFilePermissionError IO ()
+checkVRFFilePermissions :: File content direction -> ExceptT VRFPrivateKeyFilePermissionError IO ()
 #ifdef UNIX
-checkVRFFilePermissions vrfPrivKey = do
+checkVRFFilePermissions (File vrfPrivKey) = do
   fs <- liftIO $ getFileStatus vrfPrivKey
   let fm = fileMode fs
   -- Check the the VRF private key file does not give read/write/exec permissions to others.
@@ -596,7 +597,7 @@ checkVRFFilePermissions vrfPrivKey = do
   hasGroupPermissions :: FileMode -> Bool
   hasGroupPermissions fm' = fm' `hasPermission` groupModes
 #else
-checkVRFFilePermissions vrfPrivKey = do
+checkVRFFilePermissions (File vrfPrivKey) = do
   attribs <- liftIO $ getFileAttributes vrfPrivKey
   -- https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilea
   -- https://docs.microsoft.com/en-us/windows/win32/fileio/file-access-rights-constants

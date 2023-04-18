@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+
 {-# OPTIONS_GHC -freduction-depth=0 #-}
 
 import           Cardano.Api

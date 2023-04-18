@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -9,7 +10,6 @@
 
 -- The Shelley ledger uses promoted data kinds which we have to use, but we do
 -- not export any from this API. We also use them unticked as nature intended.
-{-# LANGUAGE DataKinds #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 -- | Node IPC protocols

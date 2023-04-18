@@ -74,7 +74,8 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as Crypto
 import           Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import           Cardano.Ledger.SafeHash (HashAnnotated)
-import           Cardano.Ledger.Shelley.LedgerState (PState (psFutureStakePoolParams, psStakePoolParams, psRetiring))
+import           Cardano.Ledger.Shelley.LedgerState
+                   (PState (psFutureStakePoolParams, psRetiring, psStakePoolParams))
 import qualified Cardano.Ledger.Shelley.LedgerState as SL
 import           Cardano.Slotting.EpochInfo (EpochInfo (..), epochInfoSlotToUTCTime, hoistEpochInfo)
 
@@ -198,7 +199,7 @@ runQueryProtocolParameters
   :: Maybe SocketPath
   -> AnyConsensusModeParams
   -> NetworkId
-  -> Maybe OutputFile
+  -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryProtocolParameters mNodeSocketPath (AnyConsensusModeParams cModeParams) network mOutFile = do
   SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
@@ -226,13 +227,13 @@ runQueryProtocolParameters mNodeSocketPath (AnyConsensusModeParams cModeParams) 
 
  where
   writeProtocolParameters
-    :: Maybe OutputFile
+    :: Maybe (File () Out)
     -> ProtocolParameters
     -> ExceptT ShelleyQueryCmdError IO ()
   writeProtocolParameters mOutFile' pparams =
     case mOutFile' of
       Nothing -> liftIO $ LBS.putStrLn (encodePretty pparams)
-      Just (OutputFile fpath) ->
+      Just (File fpath) ->
         handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath) $
           LBS.writeFile fpath (encodePretty pparams)
 
@@ -274,7 +275,7 @@ runQueryTip
   :: Maybe SocketPath
   -> AnyConsensusModeParams
   -> NetworkId
-  -> Maybe OutputFile
+  -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryTip mNodeSocketPath (AnyConsensusModeParams cModeParams) network mOutFile = do
   SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
@@ -350,7 +351,7 @@ runQueryTip mNodeSocketPath (AnyConsensusModeParams cModeParams) network mOutFil
               }
 
       case mOutFile of
-        Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath $ encodePretty localStateOutput
+        Just (File fpath) -> liftIO $ LBS.writeFile fpath $ encodePretty localStateOutput
         Nothing                 -> liftIO $ LBS.putStrLn        $ encodePretty localStateOutput
 
     mode -> left (ShelleyQueryCmdUnsupportedMode (AnyConsensusMode mode))
@@ -364,7 +365,7 @@ runQueryUTxO
   -> AnyConsensusModeParams
   -> QueryUTxOFilter
   -> NetworkId
-  -> Maybe OutputFile
+  -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryUTxO mNodeSocketPath (AnyConsensusModeParams cModeParams)
              qfilter network mOutFile = do
@@ -393,8 +394,8 @@ runQueryKesPeriodInfo
   :: Maybe SocketPath
   -> AnyConsensusModeParams
   -> NetworkId
-  -> FilePath
-  -> Maybe OutputFile
+  -> File () In
+  -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryKesPeriodInfo mNodeSocketPath (AnyConsensusModeParams cModeParams) network nodeOpCertFile mOutFile = do
   SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
@@ -444,14 +445,14 @@ runQueryKesPeriodInfo mNodeSocketPath (AnyConsensusModeParams cModeParams) netwo
       let counterInformation = opCertNodeAndOnDiskCounters onDiskC stateC
 
       -- Always render diagnostic information
-      liftIO . putStrLn $ renderOpCertIntervalInformation nodeOpCertFile opCertIntervalInformation
-      liftIO . putStrLn $ renderOpCertNodeAndOnDiskCounterInformation nodeOpCertFile counterInformation
+      liftIO . putStrLn $ renderOpCertIntervalInformation (unFile nodeOpCertFile) opCertIntervalInformation
+      liftIO . putStrLn $ renderOpCertNodeAndOnDiskCounterInformation (unFile nodeOpCertFile) counterInformation
 
       let qKesInfoOutput = createQueryKesPeriodInfoOutput opCertIntervalInformation counterInformation eInfo gParams
           kesPeriodInfoJSON = encodePretty qKesInfoOutput
 
       liftIO $ LBS.putStrLn kesPeriodInfoJSON
-      forM_ mOutFile (\(OutputFile oFp) ->
+      forM_ mOutFile (\(File oFp) ->
         handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError oFp)
           $ LBS.writeFile oFp kesPeriodInfoJSON)
     mode -> left . ShelleyQueryCmdUnsupportedMode $ AnyConsensusMode mode
@@ -689,7 +690,7 @@ runQueryTxMempool
   -> AnyConsensusModeParams
   -> NetworkId
   -> TxMempoolQuery
-  -> Maybe OutputFile
+  -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryTxMempool mNodeSocketPath (AnyConsensusModeParams cModeParams) network query mOutFile = do
   SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
@@ -712,7 +713,7 @@ runQueryTxMempool mNodeSocketPath (AnyConsensusModeParams cModeParams) network q
   let renderedResult = encodePretty result
   case mOutFile of
     Nothing -> liftIO $ LBS.putStrLn renderedResult
-    Just (OutputFile oFp) -> handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError oFp)
+    Just (File oFp) -> handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError oFp)
         $ LBS.writeFile oFp renderedResult
 
 
@@ -724,7 +725,7 @@ runQueryStakeSnapshot
   -> AnyConsensusModeParams
   -> NetworkId
   -> AllOrOnly [Hash StakePoolKey]
-  -> Maybe OutputFile
+  -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryStakeSnapshot mNodeSocketPath (AnyConsensusModeParams cModeParams) network allOrOnlyPoolIds mOutFile = do
   SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
@@ -753,7 +754,7 @@ runQueryLedgerState
   :: Maybe SocketPath
   -> AnyConsensusModeParams
   -> NetworkId
-  -> Maybe OutputFile
+  -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryLedgerState mNodeSocketPath (AnyConsensusModeParams cModeParams) network mOutFile = do
   SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
@@ -780,7 +781,7 @@ runQueryProtocolState
   :: Maybe SocketPath
   -> AnyConsensusModeParams
   -> NetworkId
-  -> Maybe OutputFile
+  -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryProtocolState mNodeSocketPath (AnyConsensusModeParams cModeParams) network mOutFile = do
   SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
@@ -813,7 +814,7 @@ runQueryStakeAddressInfo
   -> AnyConsensusModeParams
   -> StakeAddress
   -> NetworkId
-  -> Maybe OutputFile
+  -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryStakeAddressInfo mNodeSocketPath (AnyConsensusModeParams cModeParams) (StakeAddress _ addr) network mOutFile = do
   SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
@@ -853,13 +854,13 @@ renderLocalStateQueryError lsqErr =
       "A query from a certain era was applied to a ledger from a different era: " <> textShow err
 
 writeStakeAddressInfo
-  :: Maybe OutputFile
+  :: Maybe (File () Out)
   -> DelegationsAndRewards
   -> ExceptT ShelleyQueryCmdError IO ()
 writeStakeAddressInfo mOutFile delegsAndRewards =
   case mOutFile of
     Nothing -> liftIO $ LBS.putStrLn (encodePretty delegsAndRewards)
-    Just (OutputFile fpath) ->
+    Just (File fpath) ->
       handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
         $ LBS.writeFile fpath (encodePretty delegsAndRewards)
 
@@ -867,7 +868,7 @@ writeLedgerState :: forall era ledgerera.
                     ShelleyLedgerEra era ~ ledgerera
                  => ToJSON (DebugLedgerState era)
                  => FromCBOR (DebugLedgerState era)
-                 => Maybe OutputFile
+                 => Maybe (File () Out)
                  -> SerialisedDebugLedgerState era
                  -> ExceptT ShelleyQueryCmdError IO ()
 writeLedgerState mOutFile qState@(SerialisedDebugLedgerState serLedgerState) =
@@ -876,14 +877,14 @@ writeLedgerState mOutFile qState@(SerialisedDebugLedgerState serLedgerState) =
       case decodeDebugLedgerState qState of
         Left bs -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
         Right ledgerState -> liftIO . LBS.putStrLn $ Aeson.encode ledgerState
-    Just (OutputFile fpath) ->
+    Just (File fpath) ->
       handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
         $ LBS.writeFile fpath $ unSerialised serLedgerState
 
 writeStakeSnapshots :: forall era ledgerera. ()
   => ShelleyLedgerEra era ~ ledgerera
   => Core.EraCrypto ledgerera ~ StandardCrypto
-  => Maybe OutputFile
+  => Maybe (File () Out)
   -> SerialisedStakeSnapshots era
   -> ExceptT ShelleyQueryCmdError IO ()
 writeStakeSnapshots mOutFile qState = do
@@ -891,7 +892,7 @@ writeStakeSnapshots mOutFile qState = do
     & onLeft (left . ShelleyQueryCmdStakeSnapshotDecodeError)
 
   -- Calculate the three pool and active stake values for the given pool
-  liftIO . maybe LBS.putStrLn (LBS.writeFile . unOutputFile) mOutFile $ encodePretty snapshot
+  liftIO . maybe LBS.putStrLn (LBS.writeFile . unFile) mOutFile $ encodePretty snapshot
 
 -- | This function obtains the pool parameters, equivalent to the following jq query on the output of query ledger-state
 --   .nesEs.esLState.lsDPState.dpsPState.psStakePoolParams.<pool_id>
@@ -926,7 +927,7 @@ writeProtocolState ::
   ( FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , ToJSON (Consensus.ChainDepState (ConsensusProtocol era))
   )
-  => Maybe OutputFile
+  => Maybe (File () Out)
   -> ProtocolState era
   -> ExceptT ShelleyQueryCmdError IO ()
 writeProtocolState mOutFile ps@(ProtocolState pstate) =
@@ -934,18 +935,18 @@ writeProtocolState mOutFile ps@(ProtocolState pstate) =
     Nothing -> case decodeProtocolState ps of
       Left (bs, _) -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
       Right chainDepstate -> liftIO . LBS.putStrLn $ encodePretty chainDepstate
-    Just (OutputFile fpath) ->
+    Just (File fpath) ->
       handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
         . LBS.writeFile fpath $ unSerialised pstate
 
 writeFilteredUTxOs :: Api.ShelleyBasedEra era
-                   -> Maybe OutputFile
+                   -> Maybe (File () Out)
                    -> UTxO era
                    -> ExceptT ShelleyQueryCmdError IO ()
 writeFilteredUTxOs shelleyBasedEra' mOutFile utxo =
     case mOutFile of
       Nothing -> liftIO $ printFilteredUTxOs shelleyBasedEra' utxo
-      Just (OutputFile fpath) ->
+      Just (File fpath) ->
         case shelleyBasedEra' of
           ShelleyBasedEraShelley -> writeUTxo fpath utxo
           ShelleyBasedEraAllegra -> writeUTxo fpath utxo
@@ -1051,7 +1052,7 @@ runQueryStakePools
   :: Maybe SocketPath
   -> AnyConsensusModeParams
   -> NetworkId
-  -> Maybe OutputFile
+  -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryStakePools mNodeSocketPath (AnyConsensusModeParams cModeParams) network mOutFile = do
   SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
@@ -1084,10 +1085,10 @@ runQueryStakePools mNodeSocketPath (AnyConsensusModeParams cModeParams) network 
   writeStakePools mOutFile poolIds
 
 writeStakePools
-  :: Maybe OutputFile
+  :: Maybe (File () Out)
   -> Set PoolId
   -> ExceptT ShelleyQueryCmdError IO ()
-writeStakePools (Just (OutputFile outFile)) stakePools =
+writeStakePools (Just (File outFile)) stakePools =
   handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError outFile) $
     LBS.writeFile outFile (encodePretty stakePools)
 
@@ -1099,7 +1100,7 @@ runQueryStakeDistribution
   :: Maybe SocketPath
   -> AnyConsensusModeParams
   -> NetworkId
-  -> Maybe OutputFile
+  -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryStakeDistribution mNodeSocketPath (AnyConsensusModeParams cModeParams) network mOutFile = do
   SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
@@ -1123,10 +1124,10 @@ runQueryStakeDistribution mNodeSocketPath (AnyConsensusModeParams cModeParams) n
   writeStakeDistribution mOutFile result
 
 writeStakeDistribution
-  :: Maybe OutputFile
+  :: Maybe (File () Out)
   -> Map PoolId Rational
   -> ExceptT ShelleyQueryCmdError IO ()
-writeStakeDistribution (Just (OutputFile outFile)) stakeDistrib =
+writeStakeDistribution (Just (File outFile)) stakeDistrib =
   handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError outFile) $
     LBS.writeFile outFile (encodePretty stakeDistrib)
 
@@ -1219,13 +1220,13 @@ runQueryLeadershipSchedule
   -> NetworkId
   -> GenesisFile -- ^ Shelley genesis
   -> VerificationKeyOrHashOrFile StakePoolKey
-  -> SigningKeyFile -- ^ VRF signing key
+  -> SigningKeyFile In -- ^ VRF signing key
   -> EpochLeadershipSchedule
-  -> Maybe OutputFile
+  -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryLeadershipSchedule
     mNodeSocketPath (AnyConsensusModeParams cModeParams) network
-    (GenesisFile genFile) coldVerKeyFile (SigningKeyFile vrfSkeyFp)
+    (GenesisFile genFile) coldVerKeyFile vrfSkeyFp
     whichSchedule mJsonOutputFile = do
   SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
     & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
@@ -1299,7 +1300,7 @@ runQueryLeadershipSchedule
 
       case mJsonOutputFile of
         Nothing -> liftIO $ printLeadershipScheduleAsText schedule eInfo (SystemStart $ sgSystemStart shelleyGenesis)
-        Just (OutputFile jsonOutputFile) ->
+        Just (File jsonOutputFile) ->
           liftIO $ LBS.writeFile jsonOutputFile $
             printLeadershipScheduleAsJson schedule eInfo (SystemStart $ sgSystemStart shelleyGenesis)
     mode -> left . ShelleyQueryCmdUnsupportedMode $ AnyConsensusMode mode

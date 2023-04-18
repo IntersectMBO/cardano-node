@@ -35,7 +35,11 @@ module Cardano.Api (
     shelleyBasedToCardanoEra,
 
     -- ** IO
-    OutputFile(..),
+    File(..),
+    FileDirection(..),
+    mapFile,
+    onlyIn,
+    onlyOut,
 
     writeByteStringFileWithOwnerPermissions,
     writeByteStringFile,

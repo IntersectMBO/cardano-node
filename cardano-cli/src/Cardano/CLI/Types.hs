@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
@@ -20,7 +21,7 @@ module Cardano.CLI.Types
   , OutputFormat (..)
   , TxBuildOutputOptions(..)
   , ReferenceScriptAnyEra (..)
-  , SigningKeyFile (..)
+  , SigningKeyFile
   , ScriptFile (..)
   , ScriptDataOrFile (..)
   , ScriptRedeemerOrFile
@@ -28,17 +29,19 @@ module Cardano.CLI.Types
   , ScriptDatumOrFile (..)
   , SlotsTillKesKeyExpiry (..)
   , TransferDirection(..)
-  , TxBodyFile (..)
+  , TxBodyFile
   , TxOutAnyEra (..)
   , TxOutChangeAddress (..)
   , TxOutDatumAnyEra (..)
-  , TxFile (..)
+  , TxFile
   , TxMempoolQuery (..)
   , UpdateProposalFile (..)
-  , VerificationKeyFile (..)
+  , VerificationKeyFile
   , Params (..)
   , RequiredSigner (..)
   , AllOrOnly(..)
+  , File(..)
+  , FileDirection (..)
   ) where
 
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, pairs, (.=))
@@ -49,9 +52,10 @@ import           Data.Word (Word64)
 
 import qualified Cardano.Chain.Slotting as Byron
 
-import           Cardano.Api (AddressAny, AnyScriptLanguage, EpochNo, ExecutionUnits, Hash,
-                   HashableScriptData, PaymentKey, PolicyId, ScriptData, SlotNo (SlotNo), TxId,
-                   TxIn, Value, WitCtxMint, WitCtxStake, WitCtxTxIn)
+import           Cardano.Api (AddressAny, AnyScriptLanguage, EpochNo, ExecutionUnits, File (..),
+                   FileDirection (..), Hash, HashableScriptData, Key (..), PaymentKey, PolicyId,
+                   ScriptData, SlotNo (SlotNo), Tx, TxBody, TxId, TxIn, Value, WitCtxMint,
+                   WitCtxStake, WitCtxTxIn)
 
 import qualified Cardano.Ledger.Crypto as Crypto
 
@@ -59,8 +63,8 @@ import           Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 
 -- | Specify whether to render the script cost as JSON
 -- in the cli's build command.
-data TxBuildOutputOptions = OutputScriptCostOnly FilePath
-                          | OutputTxBodyOnly TxBodyFile
+data TxBuildOutputOptions = OutputScriptCostOnly (File () Out)
+                          | OutputTxBodyOnly (TxBodyFile Out)
                           deriving Show
 
 
@@ -220,17 +224,12 @@ instance Crypto.Crypto crypto =>  ToJSON (Params crypto) where
     , "retiring" .= r
     ]
 
-newtype SigningKeyFile = SigningKeyFile
-  { unSigningKeyFile :: FilePath }
-  deriving stock (Eq, Ord)
-  deriving newtype (IsString, Show)
+type SigningKeyFile = File (SigningKey ())
 
 newtype UpdateProposalFile = UpdateProposalFile { unUpdateProposalFile :: FilePath }
                              deriving newtype (Eq, Show)
 
-newtype VerificationKeyFile
-  = VerificationKeyFile { unVerificationKeyFile :: FilePath }
-  deriving (Eq, Show)
+type VerificationKeyFile = File (VerificationKey ())
 
 newtype ScriptFile = ScriptFile { unScriptFile :: FilePath }
                      deriving (Eq, Show)
@@ -340,7 +339,7 @@ data BalanceTxExecUnits = AutoBalance | ManualBalance
 
 -- | Plutus script required signers
 data RequiredSigner
- = RequiredSignerSkeyFile SigningKeyFile
+ = RequiredSignerSkeyFile (SigningKeyFile In)
  | RequiredSignerHash (Hash PaymentKey)
  deriving Show
 
@@ -351,13 +350,9 @@ data EpochLeadershipSchedule
   | NextEpoch
   deriving Show
 
-newtype TxBodyFile
-  = TxBodyFile FilePath
-  deriving Show
+type TxBodyFile = File (TxBody ())
 
-newtype TxFile
-  = TxFile FilePath
-  deriving Show
+type TxFile = File (Tx ())
 
 data TxMempoolQuery =
       TxMempoolQueryTxExists TxId

@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-partial-fields #-}
+
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}

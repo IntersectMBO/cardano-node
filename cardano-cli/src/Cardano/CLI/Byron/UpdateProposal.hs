@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 
 module Cardano.CLI.Byron.UpdateProposal
@@ -62,7 +63,7 @@ renderByronUpdateProposalError err =
 
 runProposalCreation
   :: NetworkId
-  -> SigningKeyFile
+  -> SigningKeyFile In
   -> ProtocolVersion
   -> SoftwareVersion
   -> SystemTag
@@ -70,7 +71,7 @@ runProposalCreation
   -> FilePath
   -> ByronProtocolParametersUpdate
   -> ExceptT ByronUpdateProposalError IO ()
-runProposalCreation nw sKey@(SigningKeyFile sKeyfp) pVer sVer
+runProposalCreation nw sKey@(File sKeyfp) pVer sVer
                     sysTag insHash outputFp params = do
   sK <- firstExceptT (ReadSigningKeyFailure sKeyfp) $ readByronSigningKey NonLegacyByronKeyFormat sKey
   let proposal = makeByronUpdateProposal nw pVer sVer sysTag insHash sK params
