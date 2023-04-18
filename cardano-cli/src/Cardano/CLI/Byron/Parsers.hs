@@ -68,7 +68,7 @@ import           Cardano.CLI.Byron.Commands
 import           Cardano.CLI.Byron.Genesis
 import           Cardano.CLI.Byron.Key
 import           Cardano.CLI.Byron.Tx
-import           Cardano.CLI.Common.Parsers (pNetworkId)
+import           Cardano.CLI.Common.Parsers (pNetworkId, pSocketPath)
 import           Cardano.CLI.Environment (EnvCli (..))
 import           Cardano.CLI.Run (ClientCommand (ByronCommand))
 import           Cardano.CLI.Shelley.Commands (ByronKeyFormat (..))
@@ -235,7 +235,7 @@ parseLocalNodeQueryValues envCli =
   mconcat
     [ command' "get-tip" "Get the tip of your local node's blockchain"
         $ GetLocalNodeTip
-            <$> pNodeSocketPath
+            <$> pSocketPath
             <*> pNetworkId envCli
     ]
 
@@ -332,7 +332,7 @@ parseTxRelatedValues envCli =
         "submit-tx"
         "Submit a raw, signed transaction, in its on-wire representation."
         $ SubmitTx
-            <$> pNodeSocketPath
+            <$> pSocketPath
             <*> pNetworkId envCli
             <*> parseTxFile "tx"
     , command'
@@ -399,7 +399,7 @@ parseByronUpdateProposal envCli = do
 parseByronVoteSubmission :: EnvCli -> Parser NodeCmd
 parseByronVoteSubmission envCli = do
   SubmitVote
-    <$> pNodeSocketPath
+    <$> pSocketPath
     <*> pNetworkId envCli
     <*> parseFilePath "filepath" "Filepath of Byron update proposal vote."
 
@@ -425,7 +425,7 @@ pByronProtocolParametersUpdate =
 parseByronUpdateProposalSubmission :: EnvCli -> Parser NodeCmd
 parseByronUpdateProposalSubmission envCli =
   SubmitUpdateProposal
-    <$> pNodeSocketPath
+    <$> pSocketPath
     <*> pNetworkId envCli
     <*> parseFilePath "filepath" "Filepath of Byron update proposal."
 
@@ -441,19 +441,6 @@ parseByronVote envCli =
 --------------------------------------------------------------------------------
 -- CLI Parsers
 --------------------------------------------------------------------------------
-
-pNodeSocketPath :: Parser (Maybe SocketPath)
-pNodeSocketPath =
-  optional $ fmap SocketPath $
-    Opt.strOption $ mconcat
-      [ Opt.long "socket-path"
-      , Opt.metavar "SOCKET_PATH"
-      , Opt.help $ mconcat
-        [ "Path to the node socket.  This overrides the CARDANO_NODE_SOCKET_PATH "
-        , "environment variable"
-        ]
-      , Opt.completer (Opt.bashCompleter "file")
-      ]
 
 parseScriptVersion :: Parser Word16
 parseScriptVersion =
