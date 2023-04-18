@@ -540,8 +540,8 @@ case "$op" in
            then msg "no logs in $d, skipping.."; fi
            local mach=$(basename "$d")
            local  out="$adir"/logs-$mach
-           cat ${logfiles[*]} | grep '^{'  > "$out".flt.json       &
-           trace_frequencies_json ${logfiles[*]}              > "$out".tracefreq.json &
+           cat ${logfiles[*]} | grep '^{'        > "$out".flt.json       &
+           trace_frequencies_json ${logfiles[*]} > "$out".tracefreq.json &
            { cat ${logfiles[*]} | sha256sum | cut -d' ' -f1 | xargs echo -n;} > "$out".sha256 &
 
            jq_fmutate "$run_logs" '

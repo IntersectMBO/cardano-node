@@ -153,6 +153,16 @@ loPretty LogObject{..} = mconcat
  where stripS x = fromMaybe x $ LText.stripSuffix " UTC" x
 
 --
+-- Compat wrappers:
+--
+--- Needed becayse Ouroboros.Network.Block.BlockNo(..) imports a newtype instance,
+---  ..whereas node's logs might contain an { unBlockNo :: BlockNo } object.
+newtype BlockNoCompat =
+  BlockNoCompat { unBlockNo :: BlockNo }
+  deriving stock Generic
+  deriving anyclass FromJSON
+
+--
 -- LogObject stream interpretation
 --
 type Threeple t = (t, t, t)
@@ -213,7 +223,10 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
   , (,,,) "ChainSyncClientEvent.TraceDownloadedHeader" "ChainSyncClient.ChainSyncClientEvent.DownloadedHeader" "ChainSync.Client.DownloadedHeader" $
     \v -> LOChainSyncClientSeenHeader
             <$> v .: "slot"
-            <*> v .: "blockNo"
+            <*> ((v .: "blockNo")
+                 <|>
+                 ((v .: "blockNo") <&>
+                  \(BlockNoCompat x) -> x))
             <*> v .: "block"
 
   , (,,,) "SendFetchRequest" "BlockFetchClient.SendFetchRequest" "BlockFetch.Client.SendFetchRequest" $
