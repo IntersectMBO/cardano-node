@@ -27,7 +27,8 @@ import           Cardano.CLI.Shelley.Commands (ByronKeyFormat)
 data ByronCommand =
 
   --- Node Related Commands ---
-    NodeCmd NodeCmd
+    NodeCmd
+        NodeCmd
 
   --- Genesis Related Commands ---
   | Genesis
@@ -62,11 +63,13 @@ data ByronCommand =
         SigningKeyFile
 
   | GetLocalNodeTip
+        (Maybe SocketPath)
         NetworkId
 
     -----------------------------------
 
   | SubmitTx
+        (Maybe SocketPath)
         NetworkId
         TxFile
         -- ^ Filepath of transaction to submit.
@@ -109,30 +112,31 @@ data ByronCommand =
   deriving Show
 
 
-data NodeCmd = CreateVote
-               NetworkId
-               SigningKeyFile
-               FilePath -- filepath to update proposal
-               Bool
-               FilePath
-             | UpdateProposal
-               NetworkId
-               SigningKeyFile
-               ProtocolVersion
-               SoftwareVersion
-               SystemTag
-               InstallerHash
-               FilePath
-               ByronProtocolParametersUpdate
-             | SubmitUpdateProposal
-               NetworkId
-               FilePath
-               -- ^ Update proposal filepath.
-             | SubmitVote
-               NetworkId
-               FilePath
-               -- ^ Vote filepath.
-              deriving Show
+data NodeCmd =
+    CreateVote
+      NetworkId
+      SigningKeyFile
+      FilePath -- ^ filepath to update proposal
+      Bool
+      FilePath
+  | UpdateProposal
+      NetworkId
+      SigningKeyFile
+      ProtocolVersion
+      SoftwareVersion
+      SystemTag
+      InstallerHash
+      FilePath
+      ByronProtocolParametersUpdate
+  | SubmitUpdateProposal
+      (Maybe SocketPath)
+      NetworkId
+      FilePath -- ^ Update proposal filepath.
+  | SubmitVote
+      (Maybe SocketPath)
+      NetworkId
+      FilePath -- ^ Vote filepath.
+  deriving Show
 
 
 newtype NewCertificateFile

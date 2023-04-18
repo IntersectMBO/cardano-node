@@ -8,9 +8,11 @@ module Cardano.CLI.Byron.Run
 
 import           Control.Monad.IO.Class (MonadIO (liftIO))
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, left)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, left, onLeft)
+import           Control.Monad.Trans (MonadTrans (..))
 import           Data.Bifunctor (Bifunctor (..))
 import qualified Data.ByteString.Char8 as BS
+import           Data.Function ((&))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
@@ -74,7 +76,7 @@ runByronClientCommand c =
   case c of
     NodeCmd bc -> runNodeCmd bc
     Genesis outDir params -> runGenesisCommand outDir params
-    GetLocalNodeTip network -> firstExceptT ByronCmdQueryError $ runGetLocalNodeTip network
+    GetLocalNodeTip mNodeSocketPath network -> firstExceptT ByronCmdQueryError $ runGetLocalNodeTip mNodeSocketPath network
     ValidateCBOR cborObject fp -> runValidateCBOR cborObject fp
     PrettyPrintCBOR fp -> runPrettyPrintCBOR fp
     PrettySigningKeyPublic bKeyFormat skF -> runPrettySigningKeyPublic bKeyFormat skF
@@ -84,7 +86,7 @@ runByronClientCommand c =
     PrintSigningKeyAddress bKeyFormat networkid skF -> runPrintSigningKeyAddress bKeyFormat networkid skF
     Keygen nskf -> runKeygen nskf
     ToVerification bKeyFormat skFp nvkFp -> runToVerification bKeyFormat skFp nvkFp
-    SubmitTx network fp -> runSubmitTx network fp
+    SubmitTx mNodeSocketPath network fp -> runSubmitTx mNodeSocketPath network fp
     GetTxId fp -> runGetTxId fp
     SpendGenesisUTxO genFp nw era nftx ctKey genRichAddr outs ->
       runSpendGenesisUTxO genFp nw era nftx ctKey genRichAddr outs
@@ -96,12 +98,18 @@ runNodeCmd :: NodeCmd -> ExceptT ByronClientCmdError IO ()
 runNodeCmd (CreateVote nw sKey upPropFp voteBool outputFp) =
   firstExceptT ByronCmdVoteError $ runVoteCreation nw sKey upPropFp voteBool outputFp
 
-runNodeCmd (SubmitUpdateProposal network proposalFp) =
-    firstExceptT ByronCmdUpdateProposalError
-      $ submitByronUpdateProposal network proposalFp
+runNodeCmd (SubmitUpdateProposal mNodeSocketPath network proposalFp) = do
+  nodeSocketPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
+    & onLeft (left . ByronCmdTxError . EnvSocketError)
 
-runNodeCmd (SubmitVote network voteFp) =
-    firstExceptT ByronCmdVoteError $ submitByronVote network voteFp
+  firstExceptT ByronCmdUpdateProposalError
+    $ submitByronUpdateProposal nodeSocketPath network proposalFp
+
+runNodeCmd (SubmitVote mNodeSocketPath network voteFp) = do
+  nodeSocketPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
+    & onLeft (left . ByronCmdTxError . EnvSocketError)
+
+  firstExceptT ByronCmdVoteError $ submitByronVote nodeSocketPath network voteFp
 
 runNodeCmd (UpdateProposal nw sKey pVer sVer sysTag insHash outputFp params) =
   firstExceptT ByronCmdUpdateProposalError
@@ -180,11 +188,15 @@ runToVerification bKeyFormat skFp (NewVerificationKeyFile vkFp) = do
   let vKey = Builder.toLazyText $ Crypto.formatFullVerificationKey vK
   firstExceptT ByronCmdHelpersError $ ensureNewFile TL.writeFile vkFp vKey
 
-runSubmitTx :: NetworkId -> TxFile -> ExceptT ByronClientCmdError IO ()
-runSubmitTx network fp = do
-    tx <- firstExceptT ByronCmdTxError $ readByronTx fp
-    firstExceptT ByronCmdTxError $
-      nodeSubmitTx network (normalByronTxToGenTx tx)
+runSubmitTx :: Maybe SocketPath -> NetworkId -> TxFile -> ExceptT ByronClientCmdError IO ()
+runSubmitTx mNodeSocketPath network fp = do
+  nodeSocketPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
+    & onLeft (left . ByronCmdTxError . EnvSocketError)
+
+  tx <- firstExceptT ByronCmdTxError $ readByronTx fp
+
+  firstExceptT ByronCmdTxError $
+    nodeSubmitTx nodeSocketPath network (normalByronTxToGenTx tx)
 
 runGetTxId :: TxFile -> ExceptT ByronClientCmdError IO ()
 runGetTxId fp = firstExceptT ByronCmdTxError $ do

@@ -715,7 +715,8 @@ pTransaction =
 
   pTransactionBuild :: Parser TransactionCmd
   pTransactionBuild =
-    TxBuild <$> pCardanoEra
+    TxBuild <$> pSocketPath
+            <*> pCardanoEra
             <*> pConsensusModeParams
             <*> pNetworkId
             <*> optional pScriptValidity
@@ -799,9 +800,12 @@ pTransaction =
                                     <*> pOutputFile
 
   pTransactionSubmit :: Parser TransactionCmd
-  pTransactionSubmit = TxSubmit <$> pConsensusModeParams
-                                <*> pNetworkId
-                                <*> pTxSubmitFile
+  pTransactionSubmit =
+    TxSubmit
+      <$> pSocketPath
+      <*> pConsensusModeParams
+      <*> pNetworkId
+      <*> pTxSubmitFile
 
   pTransactionPolicyId :: Parser TransactionCmd
   pTransactionPolicyId = TxMintedPolicyId <$> pScript
@@ -961,20 +965,24 @@ pQueryCmd =
     pQueryProtocolParameters :: Parser QueryCmd
     pQueryProtocolParameters =
       QueryProtocolParameters'
-        <$> pConsensusModeParams
+        <$> pSocketPath
+        <*> pConsensusModeParams
         <*> pNetworkId
         <*> pMaybeOutputFile
 
     pQueryTip :: Parser QueryCmd
-    pQueryTip = QueryTip
-                  <$> pConsensusModeParams
-                  <*> pNetworkId
-                  <*> pMaybeOutputFile
+    pQueryTip =
+      QueryTip
+        <$> pSocketPath
+        <*> pConsensusModeParams
+        <*> pNetworkId
+        <*> pMaybeOutputFile
 
     pQueryUTxO :: Parser QueryCmd
     pQueryUTxO =
       QueryUTxO'
-        <$> pConsensusModeParams
+        <$> pSocketPath
+        <*> pConsensusModeParams
         <*> pQueryUTxOFilter
         <*> pNetworkId
         <*> pMaybeOutputFile
@@ -982,36 +990,43 @@ pQueryCmd =
     pQueryStakePools :: Parser QueryCmd
     pQueryStakePools =
       QueryStakePools'
-        <$> pConsensusModeParams
+        <$> pSocketPath
+        <*> pConsensusModeParams
         <*> pNetworkId
         <*> pMaybeOutputFile
 
     pQueryStakeDistribution :: Parser QueryCmd
     pQueryStakeDistribution =
       QueryStakeDistribution'
-        <$> pConsensusModeParams
+        <$> pSocketPath
+        <*> pConsensusModeParams
         <*> pNetworkId
         <*> pMaybeOutputFile
 
     pQueryStakeAddressInfo :: Parser QueryCmd
     pQueryStakeAddressInfo =
       QueryStakeAddressInfo
-        <$> pConsensusModeParams
+        <$> pSocketPath
+        <*> pConsensusModeParams
         <*> pFilterByStakeAddress
         <*> pNetworkId
         <*> pMaybeOutputFile
 
     pQueryLedgerState :: Parser QueryCmd
-    pQueryLedgerState = QueryDebugLedgerState'
-                          <$> pConsensusModeParams
-                          <*> pNetworkId
-                          <*> pMaybeOutputFile
+    pQueryLedgerState =
+      QueryDebugLedgerState'
+        <$> pSocketPath
+        <*> pConsensusModeParams
+        <*> pNetworkId
+        <*> pMaybeOutputFile
 
     pQueryProtocolState :: Parser QueryCmd
-    pQueryProtocolState = QueryProtocolState'
-                            <$> pConsensusModeParams
-                            <*> pNetworkId
-                            <*> pMaybeOutputFile
+    pQueryProtocolState =
+      QueryProtocolState'
+        <$> pSocketPath
+        <*> pConsensusModeParams
+        <*> pNetworkId
+        <*> pMaybeOutputFile
 
     pAllStakePoolsOrOnly :: Parser (AllOrOnly [Hash StakePoolKey])
     pAllStakePoolsOrOnly = pAll <|> pOnly
@@ -1024,24 +1039,30 @@ pQueryCmd =
             pOnly = Only <$> many pStakePoolVerificationKeyHash
 
     pQueryStakeSnapshot :: Parser QueryCmd
-    pQueryStakeSnapshot = QueryStakeSnapshot'
-      <$> pConsensusModeParams
-      <*> pNetworkId
-      <*> pAllStakePoolsOrOnly
-      <*> pMaybeOutputFile
+    pQueryStakeSnapshot =
+      QueryStakeSnapshot'
+        <$> pSocketPath
+        <*> pConsensusModeParams
+        <*> pNetworkId
+        <*> pAllStakePoolsOrOnly
+        <*> pMaybeOutputFile
 
     pQueryPoolState :: Parser QueryCmd
-    pQueryPoolState = QueryPoolState'
-      <$> pConsensusModeParams
-      <*> pNetworkId
-      <*> many pStakePoolVerificationKeyHash
+    pQueryPoolState =
+      QueryPoolState'
+        <$> pSocketPath
+        <*> pConsensusModeParams
+        <*> pNetworkId
+        <*> many pStakePoolVerificationKeyHash
 
     pQueryTxMempool :: Parser QueryCmd
-    pQueryTxMempool = QueryTxMempool
-      <$> pConsensusModeParams
-      <*> pNetworkId
-      <*> pTxMempoolQuery
-      <*> pMaybeOutputFile
+    pQueryTxMempool =
+      QueryTxMempool
+        <$> pSocketPath
+        <*> pConsensusModeParams
+        <*> pNetworkId
+        <*> pTxMempoolQuery
+        <*> pMaybeOutputFile
       where
         pTxMempoolQuery :: Parser TxMempoolQuery
         pTxMempoolQuery = asum
@@ -1056,21 +1077,25 @@ pQueryCmd =
               Opt.progDesc "Query if a particular transaction exists in the mempool")
           ]
     pLeadershipSchedule :: Parser QueryCmd
-    pLeadershipSchedule = QueryLeadershipSchedule
-      <$> pConsensusModeParams
-      <*> pNetworkId
-      <*> pGenesisFile "Shelley genesis filepath"
-      <*> pStakePoolVerificationKeyOrHashOrFile
-      <*> pVrfSigningKeyFile
-      <*> pWhichLeadershipSchedule
-      <*> pMaybeOutputFile
+    pLeadershipSchedule =
+      QueryLeadershipSchedule
+        <$> pSocketPath
+        <*> pConsensusModeParams
+        <*> pNetworkId
+        <*> pGenesisFile "Shelley genesis filepath"
+        <*> pStakePoolVerificationKeyOrHashOrFile
+        <*> pVrfSigningKeyFile
+        <*> pWhichLeadershipSchedule
+        <*> pMaybeOutputFile
 
     pKesPeriodInfo :: Parser QueryCmd
-    pKesPeriodInfo = QueryKesPeriodInfo
-      <$> pConsensusModeParams
-      <*> pNetworkId
-      <*> pOperationalCertificateFile
-      <*> pMaybeOutputFile
+    pKesPeriodInfo =
+      QueryKesPeriodInfo
+        <$> pSocketPath
+        <*> pConsensusModeParams
+        <*> pNetworkId
+        <*> pOperationalCertificateFile
+        <*> pMaybeOutputFile
 
 pGovernanceCmd :: Parser GovernanceCmd
 pGovernanceCmd =
@@ -1905,6 +1930,19 @@ pOutputFile =
       <> Opt.help "The output file."
       <> Opt.completer (Opt.bashCompleter "file")
       )
+
+pSocketPath :: Parser (Maybe SocketPath)
+pSocketPath =
+  optional $ fmap SocketPath $
+    Opt.strOption $ mconcat
+      [ Opt.long "socket-path"
+      , Opt.metavar "SOCKET_PATH"
+      , Opt.help $ mconcat
+        [ "Path to the node socket.  This overrides the CARDANO_NODE_SOCKET_PATH "
+        , "environment variable"
+        ]
+      , Opt.completer (Opt.bashCompleter "file")
+      ]
 
 pColdVerificationKeyOrFile :: Parser ColdVerificationKeyOrFile
 pColdVerificationKeyOrFile =

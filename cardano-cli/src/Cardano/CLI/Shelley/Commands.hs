@@ -192,6 +192,7 @@ data TransactionCmd
 
     -- | Like 'TxBuildRaw' but without the fee, and with a change output.
   | TxBuild
+      (Maybe SocketPath)
       AnyCardanoEra
       AnyConsensusModeParams
       NetworkId
@@ -234,7 +235,7 @@ data TransactionCmd
   | TxSign InputTxBodyOrTxFile [WitnessSigningData] (Maybe NetworkId) TxFile
   | TxCreateWitness TxBodyFile WitnessSigningData (Maybe NetworkId) OutputFile
   | TxAssembleTxBodyWitness TxBodyFile [WitnessFile] OutputFile
-  | TxSubmit AnyConsensusModeParams NetworkId FilePath
+  | TxSubmit (Maybe SocketPath) AnyConsensusModeParams NetworkId FilePath
   | TxMintedPolicyId ScriptFile
   | TxCalculateMinFee
       TxBodyFile
@@ -335,6 +336,7 @@ renderPoolCmd cmd =
 
 data QueryCmd =
     QueryLeadershipSchedule
+      (Maybe SocketPath)
       AnyConsensusModeParams
       NetworkId
       GenesisFile
@@ -342,27 +344,29 @@ data QueryCmd =
       SigningKeyFile
       EpochLeadershipSchedule
       (Maybe OutputFile)
-  | QueryProtocolParameters' AnyConsensusModeParams NetworkId (Maybe OutputFile)
-  | QueryTip AnyConsensusModeParams NetworkId (Maybe OutputFile)
-  | QueryStakePools' AnyConsensusModeParams NetworkId (Maybe OutputFile)
-  | QueryStakeDistribution' AnyConsensusModeParams NetworkId (Maybe OutputFile)
-  | QueryStakeAddressInfo AnyConsensusModeParams StakeAddress NetworkId (Maybe OutputFile)
-  | QueryUTxO' AnyConsensusModeParams QueryUTxOFilter NetworkId (Maybe OutputFile)
-  | QueryDebugLedgerState' AnyConsensusModeParams NetworkId (Maybe OutputFile)
-  | QueryProtocolState' AnyConsensusModeParams NetworkId (Maybe OutputFile)
+  | QueryProtocolParameters' (Maybe SocketPath) AnyConsensusModeParams NetworkId (Maybe OutputFile)
+  | QueryTip (Maybe SocketPath) AnyConsensusModeParams NetworkId (Maybe OutputFile)
+  | QueryStakePools' (Maybe SocketPath) AnyConsensusModeParams NetworkId (Maybe OutputFile)
+  | QueryStakeDistribution' (Maybe SocketPath) AnyConsensusModeParams NetworkId (Maybe OutputFile)
+  | QueryStakeAddressInfo (Maybe SocketPath) AnyConsensusModeParams StakeAddress NetworkId (Maybe OutputFile)
+  | QueryUTxO' (Maybe SocketPath) AnyConsensusModeParams QueryUTxOFilter NetworkId (Maybe OutputFile)
+  | QueryDebugLedgerState' (Maybe SocketPath) AnyConsensusModeParams NetworkId (Maybe OutputFile)
+  | QueryProtocolState' (Maybe SocketPath) AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryStakeSnapshot'
+      (Maybe SocketPath)
       AnyConsensusModeParams
       NetworkId
       (AllOrOnly [Hash StakePoolKey])
       (Maybe OutputFile)
   | QueryKesPeriodInfo
+      (Maybe SocketPath)
       AnyConsensusModeParams
       NetworkId
       FilePath
       -- ^ Node operational certificate
       (Maybe OutputFile)
-  | QueryPoolState' AnyConsensusModeParams NetworkId [Hash StakePoolKey]
-  | QueryTxMempool AnyConsensusModeParams NetworkId TxMempoolQuery (Maybe OutputFile)
+  | QueryPoolState' (Maybe SocketPath) AnyConsensusModeParams NetworkId [Hash StakePoolKey]
+  | QueryTxMempool (Maybe SocketPath) AnyConsensusModeParams NetworkId TxMempoolQuery (Maybe OutputFile)
   deriving Show
 
 renderQueryCmd :: QueryCmd -> Text
@@ -380,7 +384,7 @@ renderQueryCmd cmd =
     QueryStakeSnapshot' {} -> "query stake-snapshot"
     QueryKesPeriodInfo {} -> "query kes-period-info"
     QueryPoolState' {} -> "query pool-state"
-    QueryTxMempool _ _ query _ -> "query tx-mempool" <> renderTxMempoolQuery query
+    QueryTxMempool _ _ _ query _ -> "query tx-mempool" <> renderTxMempoolQuery query
   where
     renderTxMempoolQuery query =
       case query of

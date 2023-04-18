@@ -167,40 +167,42 @@ renderShelleyQueryCmdError err =
 runQueryCmd :: QueryCmd -> ExceptT ShelleyQueryCmdError IO ()
 runQueryCmd cmd =
   case cmd of
-    QueryLeadershipSchedule consensusModeParams network shelleyGenFp poolid vrkSkeyFp whichSchedule outputAs ->
-      runQueryLeadershipSchedule consensusModeParams network shelleyGenFp poolid vrkSkeyFp whichSchedule outputAs
-    QueryProtocolParameters' consensusModeParams network mOutFile ->
-      runQueryProtocolParameters consensusModeParams network mOutFile
-    QueryTip consensusModeParams network mOutFile ->
-      runQueryTip consensusModeParams network mOutFile
-    QueryStakePools' consensusModeParams network mOutFile ->
-      runQueryStakePools consensusModeParams network mOutFile
-    QueryStakeDistribution' consensusModeParams network mOutFile ->
-      runQueryStakeDistribution consensusModeParams network mOutFile
-    QueryStakeAddressInfo consensusModeParams addr network mOutFile ->
-      runQueryStakeAddressInfo consensusModeParams addr network mOutFile
-    QueryDebugLedgerState' consensusModeParams network mOutFile ->
-      runQueryLedgerState consensusModeParams network mOutFile
-    QueryStakeSnapshot' consensusModeParams network allOrOnlyPoolIds mOutFile ->
-      runQueryStakeSnapshot consensusModeParams network allOrOnlyPoolIds mOutFile
-    QueryProtocolState' consensusModeParams network mOutFile ->
-      runQueryProtocolState consensusModeParams network mOutFile
-    QueryUTxO' consensusModeParams qFilter networkId mOutFile ->
-      runQueryUTxO consensusModeParams qFilter networkId mOutFile
-    QueryKesPeriodInfo consensusModeParams network nodeOpCert mOutFile ->
-      runQueryKesPeriodInfo consensusModeParams network nodeOpCert mOutFile
-    QueryPoolState' consensusModeParams network poolid ->
-      runQueryPoolState consensusModeParams network poolid
-    QueryTxMempool consensusModeParams network op mOutFile ->
-      runQueryTxMempool consensusModeParams network op mOutFile
+    QueryLeadershipSchedule mNodeSocketPath consensusModeParams network shelleyGenFp poolid vrkSkeyFp whichSchedule outputAs ->
+      runQueryLeadershipSchedule mNodeSocketPath consensusModeParams network shelleyGenFp poolid vrkSkeyFp whichSchedule outputAs
+    QueryProtocolParameters' mNodeSocketPath consensusModeParams network mOutFile ->
+      runQueryProtocolParameters mNodeSocketPath consensusModeParams network mOutFile
+    QueryTip mNodeSocketPath consensusModeParams network mOutFile ->
+      runQueryTip mNodeSocketPath consensusModeParams network mOutFile
+    QueryStakePools' mNodeSocketPath consensusModeParams network mOutFile ->
+      runQueryStakePools mNodeSocketPath consensusModeParams network mOutFile
+    QueryStakeDistribution' mNodeSocketPath consensusModeParams network mOutFile ->
+      runQueryStakeDistribution mNodeSocketPath consensusModeParams network mOutFile
+    QueryStakeAddressInfo mNodeSocketPath consensusModeParams addr network mOutFile ->
+      runQueryStakeAddressInfo mNodeSocketPath consensusModeParams addr network mOutFile
+    QueryDebugLedgerState' mNodeSocketPath consensusModeParams network mOutFile ->
+      runQueryLedgerState mNodeSocketPath consensusModeParams network mOutFile
+    QueryStakeSnapshot' mNodeSocketPath consensusModeParams network allOrOnlyPoolIds mOutFile ->
+      runQueryStakeSnapshot mNodeSocketPath consensusModeParams network allOrOnlyPoolIds mOutFile
+    QueryProtocolState' mNodeSocketPath consensusModeParams network mOutFile ->
+      runQueryProtocolState mNodeSocketPath consensusModeParams network mOutFile
+    QueryUTxO' mNodeSocketPath consensusModeParams qFilter networkId mOutFile ->
+      runQueryUTxO mNodeSocketPath consensusModeParams qFilter networkId mOutFile
+    QueryKesPeriodInfo mNodeSocketPath consensusModeParams network nodeOpCert mOutFile ->
+      runQueryKesPeriodInfo mNodeSocketPath consensusModeParams network nodeOpCert mOutFile
+    QueryPoolState' mNodeSocketPath consensusModeParams network poolid ->
+      runQueryPoolState mNodeSocketPath consensusModeParams network poolid
+    QueryTxMempool mNodeSocketPath consensusModeParams network op mOutFile ->
+      runQueryTxMempool mNodeSocketPath consensusModeParams network op mOutFile
 
 runQueryProtocolParameters
-  :: AnyConsensusModeParams
+  :: Maybe SocketPath
+  -> AnyConsensusModeParams
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryProtocolParameters (AnyConsensusModeParams cModeParams) network mOutFile = do
-  SocketPath sockPath <- lift readEnvSocketPath & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
+runQueryProtocolParameters mNodeSocketPath (AnyConsensusModeParams cModeParams) network mOutFile = do
+  SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
+    & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
 
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
@@ -269,12 +271,14 @@ queryChainTipViaChainSync localNodeConnInfo = do
   liftIO $ getLocalChainTip localNodeConnInfo
 
 runQueryTip
-  :: AnyConsensusModeParams
+  :: Maybe SocketPath
+  -> AnyConsensusModeParams
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
-  SocketPath sockPath <- lift readEnvSocketPath & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
+runQueryTip mNodeSocketPath (AnyConsensusModeParams cModeParams) network mOutFile = do
+  SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
+    & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
 
   case consensusModeOnly cModeParams of
     CardanoMode -> do
@@ -356,14 +360,16 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
 --
 
 runQueryUTxO
-  :: AnyConsensusModeParams
+  :: Maybe SocketPath
+  -> AnyConsensusModeParams
   -> QueryUTxOFilter
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryUTxO (AnyConsensusModeParams cModeParams)
+runQueryUTxO mNodeSocketPath (AnyConsensusModeParams cModeParams)
              qfilter network mOutFile = do
-  SocketPath sockPath <- lift readEnvSocketPath & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
+  SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
+    & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
 
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
@@ -384,18 +390,18 @@ runQueryUTxO (AnyConsensusModeParams cModeParams)
   writeFilteredUTxOs sbe mOutFile result
 
 runQueryKesPeriodInfo
-  :: AnyConsensusModeParams
+  :: Maybe SocketPath
+  -> AnyConsensusModeParams
   -> NetworkId
   -> FilePath
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFile
-                       mOutFile = do
+runQueryKesPeriodInfo mNodeSocketPath (AnyConsensusModeParams cModeParams) network nodeOpCertFile mOutFile = do
+  SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
+    & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
 
   opCert <- lift (readFileTextEnvelope AsOperationalCertificate nodeOpCertFile)
     & onLeft (left . ShelleyQueryCmdOpCertCounterReadError)
-
-  SocketPath sockPath <- lift readEnvSocketPath & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
 
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
@@ -653,12 +659,14 @@ renderOpCertIntervalInformation opCertFile opCertInfo = case opCertInfo of
 -- Any of these may be empty (in which case a null will be displayed).
 --
 runQueryPoolState
-  :: AnyConsensusModeParams
+  :: Maybe SocketPath
+  -> AnyConsensusModeParams
   -> NetworkId
   -> [Hash StakePoolKey]
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryPoolState (AnyConsensusModeParams cModeParams) network poolIds = do
-  SocketPath sockPath <- lift readEnvSocketPath & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
+runQueryPoolState mNodeSocketPath (AnyConsensusModeParams cModeParams) network poolIds = do
+  SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
+    & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
 
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
@@ -677,13 +685,15 @@ runQueryPoolState (AnyConsensusModeParams cModeParams) network poolIds = do
 
 -- | Query the local mempool state
 runQueryTxMempool
-  :: AnyConsensusModeParams
+  :: Maybe SocketPath
+  -> AnyConsensusModeParams
   -> NetworkId
   -> TxMempoolQuery
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryTxMempool (AnyConsensusModeParams cModeParams) network query mOutFile = do
-  SocketPath sockPath <- lift readEnvSocketPath & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
+runQueryTxMempool mNodeSocketPath (AnyConsensusModeParams cModeParams) network query mOutFile = do
+  SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
+    & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
 
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
@@ -710,13 +720,15 @@ runQueryTxMempool (AnyConsensusModeParams cModeParams) network query mOutFile = 
 -- This information can be used for leader slot calculation, for example, and has been requested by SPOs.
 -- Obtaining the information directly is significantly more time and memory efficient than using a full ledger state dump.
 runQueryStakeSnapshot
-  :: AnyConsensusModeParams
+  :: Maybe SocketPath
+  -> AnyConsensusModeParams
   -> NetworkId
   -> AllOrOnly [Hash StakePoolKey]
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryStakeSnapshot (AnyConsensusModeParams cModeParams) network allOrOnlyPoolIds mOutFile = do
-  SocketPath sockPath <- lift readEnvSocketPath & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
+runQueryStakeSnapshot mNodeSocketPath (AnyConsensusModeParams cModeParams) network allOrOnlyPoolIds mOutFile = do
+  SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
+    & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
 
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
@@ -738,13 +750,14 @@ runQueryStakeSnapshot (AnyConsensusModeParams cModeParams) network allOrOnlyPool
 
 
 runQueryLedgerState
-  :: AnyConsensusModeParams
+  :: Maybe SocketPath
+  -> AnyConsensusModeParams
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryLedgerState (AnyConsensusModeParams cModeParams)
-                    network mOutFile = do
-  SocketPath sockPath <- lift readEnvSocketPath & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
+runQueryLedgerState mNodeSocketPath (AnyConsensusModeParams cModeParams) network mOutFile = do
+  SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
+    & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
 
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
@@ -764,13 +777,14 @@ runQueryLedgerState (AnyConsensusModeParams cModeParams)
   obtainLedgerEraClassConstraints sbe (writeLedgerState mOutFile) result
 
 runQueryProtocolState
-  :: AnyConsensusModeParams
+  :: Maybe SocketPath
+  -> AnyConsensusModeParams
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryProtocolState (AnyConsensusModeParams cModeParams)
-                      network mOutFile = do
-  SocketPath sockPath <- lift readEnvSocketPath & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
+runQueryProtocolState mNodeSocketPath (AnyConsensusModeParams cModeParams) network mOutFile = do
+  SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
+    & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
 
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
@@ -795,14 +809,15 @@ runQueryProtocolState (AnyConsensusModeParams cModeParams)
 -- set of addresses, from a Shelley node via the local state query protocol.
 
 runQueryStakeAddressInfo
-  :: AnyConsensusModeParams
+  :: Maybe SocketPath
+  -> AnyConsensusModeParams
   -> StakeAddress
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryStakeAddressInfo (AnyConsensusModeParams cModeParams)
-                         (StakeAddress _ addr) network mOutFile = do
-  SocketPath sockPath <- lift readEnvSocketPath & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
+runQueryStakeAddressInfo mNodeSocketPath (AnyConsensusModeParams cModeParams) (StakeAddress _ addr) network mOutFile = do
+  SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
+    & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
 
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
@@ -1033,13 +1048,14 @@ printUtxo shelleyBasedEra' txInOutTuple =
   printableValue (TxOutAdaOnly _ (Lovelace i)) = Text.pack $ show i
 
 runQueryStakePools
-  :: AnyConsensusModeParams
+  :: Maybe SocketPath
+  -> AnyConsensusModeParams
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryStakePools (AnyConsensusModeParams cModeParams)
-                          network mOutFile = do
-  SocketPath sockPath <- lift readEnvSocketPath & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
+runQueryStakePools mNodeSocketPath (AnyConsensusModeParams cModeParams) network mOutFile = do
+  SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
+    & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
 
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
@@ -1080,13 +1096,14 @@ writeStakePools Nothing stakePools =
     liftIO . putStrLn $ Text.unpack (serialiseToBech32 poolId)
 
 runQueryStakeDistribution
-  :: AnyConsensusModeParams
+  :: Maybe SocketPath
+  -> AnyConsensusModeParams
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryStakeDistribution (AnyConsensusModeParams cModeParams)
-                          network mOutFile = do
-  SocketPath sockPath <- lift readEnvSocketPath & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
+runQueryStakeDistribution mNodeSocketPath (AnyConsensusModeParams cModeParams) network mOutFile = do
+  SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
+    & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
 
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
@@ -1173,31 +1190,32 @@ instance FromJSON DelegationsAndRewards where
     let vals = Vector.toList arr
     decoded <- mapM decodeObject vals
     pure $ zipper decoded
-   where
-     zipper :: [(StakeAddress, Maybe Lovelace, Maybe PoolId)]
-             -> DelegationsAndRewards
-     zipper l = do
-       let maps = [ ( maybe mempty (Map.singleton sa) delegAmt
-                    , maybe mempty (Map.singleton sa) mPool
-                    )
-                  | (sa, delegAmt, mPool) <- l
-                  ]
-       DelegationsAndRewards
-         $ foldl
-             (\(amtA, delegA) (amtB, delegB) -> (amtA <> amtB, delegA <> delegB))
-             (mempty, mempty)
-             maps
+    where
+      zipper :: [(StakeAddress, Maybe Lovelace, Maybe PoolId)]
+              -> DelegationsAndRewards
+      zipper l = do
+        let maps = [ ( maybe mempty (Map.singleton sa) delegAmt
+                     , maybe mempty (Map.singleton sa) mPool
+                     )
+                   | (sa, delegAmt, mPool) <- l
+                   ]
+        DelegationsAndRewards
+          $ foldl
+              (\(amtA, delegA) (amtB, delegB) -> (amtA <> amtB, delegA <> delegB))
+              (mempty, mempty)
+              maps
 
-     decodeObject :: Aeson.Value
-                  -> Aeson.Parser (StakeAddress, Maybe Lovelace, Maybe PoolId)
-     decodeObject  = withObject "DelegationsAndRewards" $ \o -> do
-       address <- o .: "address"
-       delegation <- o .:? "delegation"
-       rewardAccountBalance <- o .:? "rewardAccountBalance"
-       pure (address, rewardAccountBalance, delegation)
+      decodeObject :: Aeson.Value
+                   -> Aeson.Parser (StakeAddress, Maybe Lovelace, Maybe PoolId)
+      decodeObject  = withObject "DelegationsAndRewards" $ \o -> do
+        address <- o .: "address"
+        delegation <- o .:? "delegation"
+        rewardAccountBalance <- o .:? "rewardAccountBalance"
+        pure (address, rewardAccountBalance, delegation)
 
 runQueryLeadershipSchedule
-  :: AnyConsensusModeParams
+  :: Maybe SocketPath
+  -> AnyConsensusModeParams
   -> NetworkId
   -> GenesisFile -- ^ Shelley genesis
   -> VerificationKeyOrHashOrFile StakePoolKey
@@ -1205,10 +1223,12 @@ runQueryLeadershipSchedule
   -> EpochLeadershipSchedule
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryLeadershipSchedule (AnyConsensusModeParams cModeParams) network
-                           (GenesisFile genFile) coldVerKeyFile (SigningKeyFile vrfSkeyFp)
-                           whichSchedule mJsonOutputFile = do
-  SocketPath sockPath <- lift readEnvSocketPath & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
+runQueryLeadershipSchedule
+    mNodeSocketPath (AnyConsensusModeParams cModeParams) network
+    (GenesisFile genFile) coldVerKeyFile (SigningKeyFile vrfSkeyFp)
+    whichSchedule mJsonOutputFile = do
+  SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
+    & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
 
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
