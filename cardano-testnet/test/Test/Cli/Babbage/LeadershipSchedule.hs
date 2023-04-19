@@ -19,12 +19,10 @@ module Test.Cli.Babbage.LeadershipSchedule
 import           Cardano.CLI.Shelley.Output (QueryTipLocalStateOutput (..))
 import           Control.Monad (void)
 import           Data.List ((\\))
-import           Data.Monoid (Last (..))
 import           Data.Text (Text)
 import           GHC.Stack (callStack)
 import           Hedgehog (Property, (===))
 import           Prelude
-import           System.Environment (getEnvironment)
 import           System.FilePath ((</>))
 
 import qualified Data.Aeson as J
@@ -32,7 +30,6 @@ import qualified Data.Aeson.Types as J
 import qualified Data.List as L
 import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
@@ -42,6 +39,7 @@ import qualified Testnet.Util.Base as H
 
 import           Cardano.Testnet
 import           Testnet.Util.Assert
+import qualified Testnet.Util.Process as H
 import           Testnet.Util.Process
 import           Testnet.Util.Runtime
 
@@ -68,19 +66,9 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
 
   poolNode1 <- H.headM poolNodes
 
-  env <- H.evalIO getEnvironment
-
   poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
 
-  execConfig <- H.noteShow H.ExecConfig
-    { H.execConfigEnv = Last $ Just $
-      [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName poolSprocket1)
-      ]
-      -- The environment must be passed onto child process on Windows in order to
-      -- successfully start that process.
-      <> env
-    , H.execConfigCwd = Last $ Just tempBaseAbsPath
-    }
+  execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1
 
   tipDeadline <- H.noteShowM $ DTC.addUTCTime 210 <$> H.noteShowIO DTC.getCurrentTime
 
