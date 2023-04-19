@@ -83,9 +83,9 @@ import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.Utils (failEitherWith)
+import           Cardano.Ledger.Mary.TxOut as Mary (scaledMinDeposit)
 import           Cardano.Ledger.Mary.Value (MaryValue (..))
 import qualified Cardano.Ledger.Mary.Value as Mary
-import           Cardano.Ledger.Mary.TxOut as Mary (scaledMinDeposit)
 
 -- ----------------------------------------------------------------------------
 -- Lovelace

@@ -7,31 +7,31 @@
 module Cardano.Analysis.API.Metrics (module Cardano.Analysis.API.Metrics) where
 
 -- Prelude:
-import Prelude                                       ((!!))
-import Cardano.Prelude
+import           Cardano.Prelude
+import           Prelude ((!!))
 
 -- Global, non-prelude:
-import Data.Aeson
-import Data.Aeson                       qualified as AE
-import Data.ByteString.Lazy.Char8       qualified as LBS
-import Data.Text                        qualified as T
-import Data.Text.Short                  qualified as ST
-import Data.Time.Clock
-import Data.Map.Strict                  qualified as M
+import           Data.Aeson
+import qualified Data.Aeson as AE
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.Map.Strict as M
+import qualified Data.Text as T
+import qualified Data.Text.Short as ST
+import           Data.Time.Clock
 
 -- Repo-local:
-import Cardano.Logging.Resources.Types
+import           Cardano.Logging.Resources.Types
 
 -- Package-local:
-import Data.CDF
+import           Data.CDF
 
-import Cardano.JSON
-import Cardano.Util
-import Cardano.Unlog.LogObject          qualified as LO
-import Cardano.Analysis.API.Context
-import Cardano.Analysis.API.Field
-import Cardano.Analysis.API.Ground
-import Cardano.Analysis.API.Types
+import           Cardano.Analysis.API.Context
+import           Cardano.Analysis.API.Field
+import           Cardano.Analysis.API.Ground
+import           Cardano.Analysis.API.Types
+import           Cardano.JSON
+import qualified Cardano.Unlog.LogObject as LO
+import           Cardano.Util
 
 
 sumFieldsReport :: [FieldName]

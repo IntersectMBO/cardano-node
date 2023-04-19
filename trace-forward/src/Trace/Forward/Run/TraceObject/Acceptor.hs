@@ -10,23 +10,23 @@ module Trace.Forward.Run.TraceObject.Acceptor
 
 import qualified Codec.Serialise as CBOR
 import           Control.Concurrent.Async (race)
-import           Control.Monad.Extra (ifM)
-import           Control.Monad.STM (atomically, check)
 import           Control.Concurrent.STM.TVar (TVar, readTVar, readTVarIO, registerDelay)
 import           Control.Exception (Exception, finally, throwIO)
+import           Control.Monad.Extra (ifM)
+import           Control.Monad.STM (atomically, check)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Typeable (Typeable)
 import           Data.Void (Void)
 
-import           Ouroboros.Network.Mux (MuxMode (..), MuxPeer (..), RunMiniProtocol (..))
 import           Ouroboros.Network.Driver.Simple (runPeer)
-import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
+import           Ouroboros.Network.Mux (MuxMode (..), MuxPeer (..), RunMiniProtocol (..))
+import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
 
+import           Trace.Forward.Configuration.TraceObject (AcceptorConfiguration (..))
 import qualified Trace.Forward.Protocol.TraceObject.Acceptor as Acceptor
 import qualified Trace.Forward.Protocol.TraceObject.Codec as Acceptor
 import           Trace.Forward.Protocol.TraceObject.Type
 import           Trace.Forward.Utils.TraceObject (getTraceObjectsFromReply)
-import           Trace.Forward.Configuration.TraceObject (AcceptorConfiguration (..))
 
 acceptTraceObjectsInit
   :: (CBOR.Serialise lo,

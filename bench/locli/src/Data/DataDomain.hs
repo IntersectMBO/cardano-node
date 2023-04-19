@@ -7,13 +7,13 @@ module Data.DataDomain
   )
 where
 
-import Cardano.Prelude
+import           Cardano.Prelude
 
-import Witherable qualified as Wither
-import Data.List.NonEmpty qualified as NE
+import qualified Data.List.NonEmpty as NE
+import qualified Witherable as Wither
 
-import Cardano.Util
-import Data.CDF
+import           Cardano.Util
+import           Data.CDF
 
 
 -- * DataDomain

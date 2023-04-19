@@ -26,7 +26,7 @@ import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion,
                    simpleSingletonVersions)
 import           Ouroboros.Network.Snocket (LocalAddress, LocalSocket, Snocket,
-                   makeLocalBearer, localAddressFromPath, localSnocket)
+                   localAddressFromPath, localSnocket, makeLocalBearer)
 import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..), ConnectionId (..),
                    SomeResponderApplication (..), cleanNetworkMutableState, newNetworkMutableState,
                    nullNetworkServerTracers, withServerNode)

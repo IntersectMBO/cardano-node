@@ -43,7 +43,7 @@ import           Ouroboros.Network.BlockFetch.ClientState (PeerFetchInFlight (..
 
 import           Cardano.Logging hiding (traceWith)
 import           Cardano.Node.Queries
-import Ouroboros.Network.NodeToNode (RemoteAddress)
+import           Ouroboros.Network.NodeToNode (RemoteAddress)
 
 {- HLINT ignore "Use =<<" -}
 {- HLINT ignore "Use <=<" -}

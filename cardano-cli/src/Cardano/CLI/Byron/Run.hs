@@ -7,9 +7,9 @@ module Cardano.CLI.Byron.Run
   ) where
 
 import           Control.Monad.IO.Class (MonadIO (liftIO))
+import           Control.Monad.Trans (MonadTrans (..))
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, left, onLeft)
-import           Control.Monad.Trans (MonadTrans (..))
 import           Data.Bifunctor (Bifunctor (..))
 import qualified Data.ByteString.Char8 as BS
 import           Data.Function ((&))

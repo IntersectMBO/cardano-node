@@ -5,7 +5,6 @@ module Test.Trace.Forward.Protocol.TraceObject.Codec () where
 
 import           Test.QuickCheck
 
-import           Network.TypedProtocol.Core
 import           Network.TypedProtocol.Codec
 
 import           Trace.Forward.Protocol.TraceObject.Type

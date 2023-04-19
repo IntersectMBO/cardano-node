@@ -46,7 +46,7 @@ import qualified Cardano.Crypto.Seed as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 import qualified Cardano.Crypto.Wallet as Crypto.HD
 
-import           Cardano.Binary (toStrictByteString, cborError)
+import           Cardano.Binary (cborError, toStrictByteString)
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.Hashing as Byron
 import qualified Cardano.Crypto.Signing as Byron

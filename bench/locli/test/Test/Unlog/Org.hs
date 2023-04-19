@@ -2,12 +2,12 @@
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
 module Test.Unlog.Org where
 
-import Cardano.Prelude
+import           Cardano.Prelude
 
-import Hedgehog
+import           Hedgehog
 
-import Cardano.Org
-import Cardano.Util
+import           Cardano.Org
+import           Cardano.Util
 
 
 sho :: Show a => a -> String

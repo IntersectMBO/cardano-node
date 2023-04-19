@@ -16,10 +16,10 @@ module Data.Accum
   , mkAccumTicksShare
   ) where
 
-import Cardano.Prelude
+import           Cardano.Prelude
 
-import Data.Time.Clock (UTCTime, NominalDiffTime, diffUTCTime)
-import Data.Time.Clock.POSIX qualified as Time
+import           Data.Time.Clock (NominalDiffTime, UTCTime, diffUTCTime)
+import qualified Data.Time.Clock.POSIX as Time
 
 data Accum a b
   = Accum

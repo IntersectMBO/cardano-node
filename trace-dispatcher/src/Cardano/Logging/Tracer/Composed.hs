@@ -1,5 +1,5 @@
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 {- HLINT ignore "Monad law, left identity" -}
 
@@ -17,12 +17,12 @@ import           Cardano.Logging.TraceDispatcherMessage
 import           Cardano.Logging.Types
 
 
-import           Data.Maybe (fromMaybe)
-import           Data.Text hiding (map)
 import qualified Control.Tracer as NT
-import qualified Data.List as L
-import qualified Data.Set as Set
 import           Data.IORef
+import qualified Data.List as L
+import           Data.Maybe (fromMaybe)
+import qualified Data.Set as Set
+import           Data.Text hiding (map)
 
 
 traceTracerInfo ::

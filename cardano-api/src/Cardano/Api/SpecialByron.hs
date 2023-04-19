@@ -36,7 +36,7 @@ import           Cardano.Chain.Update (AProposal (aBody, annotation), InstallerH
 import qualified Cardano.Chain.Update.Vote as ByronVote
 import           Cardano.Crypto (SafeSigner, noPassSafeSigner)
 import qualified Cardano.Ledger.Binary as Binary (Annotated (..), ByteSpan (..), annotation,
-                   annotationBytes, reAnnotate, byronProtVer)
+                   annotationBytes, byronProtVer, reAnnotate)
 
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import qualified Ouroboros.Consensus.Byron.Ledger.Mempool as Mempool

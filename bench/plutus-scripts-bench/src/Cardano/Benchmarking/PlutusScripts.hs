@@ -17,9 +17,9 @@ module Cardano.Benchmarking.PlutusScripts
 import           Prelude
 
 import           Data.ByteString.Lazy as LBS (ByteString)
-import           Data.Text(split, pack)
-import           Data.List(find)
-import           System.FilePath(takeBaseName)
+import           Data.List (find)
+import           Data.Text (pack, split)
+import           System.FilePath (takeBaseName)
 
 import           Cardano.Api
 

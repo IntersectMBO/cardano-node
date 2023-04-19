@@ -4,15 +4,15 @@
 
 module Cardano.Analysis.API.Dictionary (module Cardano.Analysis.API.Dictionary) where
 
-import Cardano.Prelude
+import           Cardano.Prelude
 
-import Data.Aeson
-import Data.Map.Strict qualified as M
+import           Data.Aeson
+import qualified Data.Map.Strict as M
 
-import Cardano.Analysis.API.Field
-import Cardano.Analysis.API.Types
-import Cardano.Analysis.API.Metrics ()
-import Cardano.Util (showText)
+import           Cardano.Analysis.API.Field
+import           Cardano.Analysis.API.Metrics ()
+import           Cardano.Analysis.API.Types
+import           Cardano.Util (showText)
 
 
 data DictEntry where

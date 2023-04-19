@@ -23,10 +23,10 @@ module Cardano.Logging.Configuration
   , getBackends
   ) where
 
+import           Control.Monad (unless)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.IO.Unlift (MonadUnliftIO)
-import           Control.Monad (unless)
-import           Data.IORef (IORef, newIORef, readIORef, writeIORef, modifyIORef)
+import           Data.IORef (IORef, modifyIORef, newIORef, readIORef, writeIORef)
 import           Data.List (maximumBy, nub)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe, mapMaybe)

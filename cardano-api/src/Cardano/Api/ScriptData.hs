@@ -74,8 +74,8 @@ import qualified Data.Attoparsec.ByteString.Char8 as Atto
 import           Control.Applicative (Alternative (..))
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import           Cardano.Ledger.Core (Era)
 import qualified Cardano.Ledger.Alonzo.Scripts.Data as Alonzo
+import           Cardano.Ledger.Core (Era)
 import qualified Cardano.Ledger.SafeHash as Ledger
 import           Ouroboros.Consensus.Shelley.Eras (StandardAlonzo, StandardCrypto)
 import qualified PlutusLedgerApi.V1 as Plutus

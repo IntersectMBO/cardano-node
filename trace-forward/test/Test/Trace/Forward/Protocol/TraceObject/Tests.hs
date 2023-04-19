@@ -6,11 +6,11 @@ module Test.Trace.Forward.Protocol.TraceObject.Tests
   ) where
 
 import qualified Codec.Serialise as CBOR
-import           Control.Monad.Class.MonadST
 import           Control.Monad.Class.MonadAsync
+import           Control.Monad.Class.MonadST
 import           Control.Monad.Class.MonadThrow
-import           Control.Monad.ST (runST)
 import           Control.Monad.IOSim (runSimOrThrow)
+import           Control.Monad.ST (runST)
 import           Control.Tracer (nullTracer)
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
@@ -21,8 +21,8 @@ import           Ouroboros.Network.Channel
 import           Ouroboros.Network.Driver.Simple (runConnectedPeers)
 
 import           Trace.Forward.Protocol.TraceObject.Acceptor
-import           Trace.Forward.Protocol.TraceObject.Forwarder
 import           Trace.Forward.Protocol.TraceObject.Codec
+import           Trace.Forward.Protocol.TraceObject.Forwarder
 import           Trace.Forward.Protocol.TraceObject.Type
 
 import           Test.Trace.Forward.Protocol.TraceObject.Codec ()

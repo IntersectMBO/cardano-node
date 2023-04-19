@@ -5,14 +5,14 @@ module Cardano.Tracer.Test.Queue.Tests
   ) where
 
 import           Control.Concurrent.Async (withAsyncBound)
-import           GHC.IO.Handle (hDuplicate, hDuplicateTo)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-import           Test.Tasty
-import           Test.Tasty.QuickCheck
+import           GHC.IO.Handle (hDuplicate, hDuplicateTo)
 import           System.Directory (removeFile)
 import           System.IO
 import           System.Time.Extra (sleep)
+import           Test.Tasty
+import           Test.Tasty.QuickCheck
 
 import           Cardano.Tracer.Test.Forwarder
 import           Cardano.Tracer.Test.TestSetup

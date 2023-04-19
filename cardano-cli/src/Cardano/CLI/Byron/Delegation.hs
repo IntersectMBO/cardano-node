@@ -21,11 +21,11 @@ import           Formatting (Format, sformat)
 
 import           Cardano.Api.Byron
 
-import           Cardano.Ledger.Binary (Annotated (..), serialize', byronProtVer)
 import qualified Cardano.Chain.Delegation as Dlg
 import           Cardano.Chain.Slotting (EpochNumber)
 import           Cardano.Crypto (ProtocolMagicId)
 import qualified Cardano.Crypto as Crypto
+import           Cardano.Ledger.Binary (Annotated (..), byronProtVer, serialize')
 
 import           Cardano.CLI.Byron.Key (ByronKeyFailure, renderByronKeyFailure)
 import           Cardano.CLI.Types (CertificateFile (..))

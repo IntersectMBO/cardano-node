@@ -2,12 +2,12 @@
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
 module Test.Analysis.CDF where
 
-import Cardano.Prelude hiding (handle, head)
+import           Cardano.Prelude hiding (handle, head)
 
-import Hedgehog
+import           Hedgehog
 
-import Data.CDF
-import Cardano.Util
+import           Cardano.Util
+import           Data.CDF
 
 
 handle :: Either CDFError b -> b

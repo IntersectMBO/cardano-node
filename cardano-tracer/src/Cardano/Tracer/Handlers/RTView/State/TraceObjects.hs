@@ -80,7 +80,7 @@ getTraceObjects savedTraceObjects nodeId = atomically $ do
   qForThisNode <- M.lookup nodeId <$> readTVar savedTraceObjects
   maybe (return []) flushTQueue qForThisNode
 
--- | Counters for displayed logs item in "live view window". 
+-- | Counters for displayed logs item in "live view window".
 type LogsLiveViewCounters = TVar (Map NodeId Int)
 
 initLogsLiveViewCounters :: IO LogsLiveViewCounters

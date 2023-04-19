@@ -17,7 +17,7 @@ module Cardano.Tracing.OrphanInstances.Network () where
 
 import           Control.Exception (Exception (..), SomeException (..))
 import           Control.Monad.Class.MonadTime (DiffTime, Time (..))
-import           Data.Aeson (Value (..), FromJSON (..))
+import           Data.Aeson (FromJSON (..), Value (..))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (listValue)
 import           Data.Bifunctor (Bifunctor (..))
@@ -67,7 +67,8 @@ import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.InboundGovernor.State (InboundGovernorCounters (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import           Ouroboros.Network.Magic (NetworkMagic (..))
-import           Ouroboros.Network.NodeToClient (NodeToClientVersion (..), NodeToClientVersionData (..))
+import           Ouroboros.Network.NodeToClient (NodeToClientVersion (..),
+                   NodeToClientVersionData (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), NodeToNodeVersion (..),
                    NodeToNodeVersionData (..), RemoteAddress, TraceSendRecv (..), WithAddr (..))
@@ -99,8 +100,8 @@ import           Ouroboros.Network.Protocol.TxSubmission2.Type as TxSubmission2
 import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
 import           Ouroboros.Network.Server2 (ServerTrace (..))
 import qualified Ouroboros.Network.Server2 as Server
-import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
+import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (..),
                    SubscriberError (..), SubscriptionTrace (..), WithDomainName (..),
                    WithIPList (..))
@@ -109,7 +110,7 @@ import           Ouroboros.Network.TxSubmission.Inbound (ProcessedTxCount (..),
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound (..))
 
 import qualified Ouroboros.Network.Diffusion as ND
-import Ouroboros.Network.Protocol.PeerSharing.Type (PeerSharingResult (..))
+import           Ouroboros.Network.Protocol.PeerSharing.Type (PeerSharingResult (..))
 
 {- HLINT ignore "Use record patterns" -}
 

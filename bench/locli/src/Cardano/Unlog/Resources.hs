@@ -1,5 +1,5 @@
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Unlog.Resources
@@ -13,12 +13,12 @@ module Cardano.Unlog.Resources
   , Resources(..)
   ) where
 
-import Cardano.Prelude
+import           Cardano.Prelude
 
-import Data.Accum
-import Data.CDF
-import Cardano.Util
-import Cardano.Logging.Resources.Types
+import           Cardano.Logging.Resources.Types
+import           Cardano.Util
+import           Data.Accum
+import           Data.CDF
 
 deriving instance Foldable Resources
 deriving instance Traversable Resources

@@ -4,12 +4,12 @@ module Main (
 
 import           Examples.Aggregation
 import           Examples.Configuration
+import           Examples.DataPoint
 import           Examples.Documentation
 import           Examples.EKG
 import           Examples.FrequencyLimiting
 import           Examples.Routing
 import           Examples.Trivial
-import           Examples.DataPoint
 
 
 main :: IO ()

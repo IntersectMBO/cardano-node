@@ -5,14 +5,14 @@ module Cardano.Benchmarking.Wallet
 where
 import           Prelude
 
-import           Streaming
 import           Control.Concurrent.MVar
+import           Streaming
 
 import           Cardano.Api
 
 import           Cardano.TxGenerator.FundQueue as FundQueue
-import           Cardano.TxGenerator.Types
 import           Cardano.TxGenerator.Tx
+import           Cardano.TxGenerator.Types
 import           Cardano.TxGenerator.UTxO
 
 -- All the actual functionality of Wallet / WalletRef has been removed
@@ -70,10 +70,10 @@ mangleWithChange mkChange mkPayment outs = case outs of
   PayWithChange change payments -> mangle (mkChange : repeat mkPayment) (change : payments)
 
 mangle :: Monad m => [ CreateAndStore m era ] -> CreateAndStoreList m era [ Lovelace ]
-mangle fkts values 
+mangle fkts values
   = (outs, \txId -> mapM_ (\f -> f txId) fs)
   where
     (outs, fs) =unzip $ map worker $ zip3 fkts values [TxIx 0 ..]
     worker (toUTxO, value, idx)
       = let (o, f ) = toUTxO value
-         in  (o, f idx) 
+         in  (o, f idx)

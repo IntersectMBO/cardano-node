@@ -12,9 +12,9 @@ import           Ouroboros.Network.Driver.Simple (runPeer)
 import           Ouroboros.Network.Mux (MuxMode (..), MuxPeer (..), RunMiniProtocol (..))
 
 import           Trace.Forward.Configuration.DataPoint (ForwarderConfiguration (..))
-import           Trace.Forward.Utils.DataPoint
-import qualified Trace.Forward.Protocol.DataPoint.Forwarder as Forwarder
 import qualified Trace.Forward.Protocol.DataPoint.Codec as Forwarder
+import qualified Trace.Forward.Protocol.DataPoint.Forwarder as Forwarder
+import           Trace.Forward.Utils.DataPoint
 
 forwardDataPointsInit
   :: ForwarderConfiguration
@@ -34,7 +34,7 @@ runPeerWithDPStore
   :: ForwarderConfiguration
   -> DataPointStore
   -> MuxPeer LBS.ByteString IO ()
-runPeerWithDPStore config dpStore = 
+runPeerWithDPStore config dpStore =
   MuxPeerRaw $ \channel ->
     runPeer
       (forwarderTracer config)

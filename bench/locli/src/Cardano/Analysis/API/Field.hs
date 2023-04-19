@@ -1,16 +1,16 @@
-{-# LANGUAGE TypeInType #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeInType #-}
 module Cardano.Analysis.API.Field (module Cardano.Analysis.API.Field) where
 
-import Cardano.Prelude          hiding (head, show)
+import           Cardano.Prelude hiding (head, show)
 
-import Data.CDF
-import Data.String                     (fromString)
-import Data.Text                       (unpack)
+import           Data.CDF
+import           Data.String (fromString)
+import           Data.Text (unpack)
 
-import Cardano.JSON
-import Cardano.Util
-import Cardano.Analysis.API.Ground
+import           Cardano.Analysis.API.Ground
+import           Cardano.JSON
+import           Cardano.Util
 
 
 data Scale

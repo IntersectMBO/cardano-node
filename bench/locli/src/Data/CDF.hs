@@ -58,14 +58,14 @@ module Data.CDF
   , module Data.SOP.Strict
   ) where
 
-import Prelude ((!!), show)
-import Cardano.Prelude hiding (head, show)
+import           Cardano.Prelude hiding (head, show)
+import           Prelude (show, (!!))
 
-import Data.SOP.Strict
-import Data.Vector qualified as Vec
-import Statistics.Sample qualified as Stat
+import           Data.SOP.Strict
+import qualified Data.Vector as Vec
+import qualified Statistics.Sample as Stat
 
-import Cardano.Util
+import           Cardano.Util
 
 
 -- | Centile specifier: a fractional in range of [0; 1].

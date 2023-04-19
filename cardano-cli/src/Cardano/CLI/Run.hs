@@ -21,7 +21,8 @@ import qualified System.IO as IO
 import           Cardano.CLI.Byron.Commands (ByronCommand)
 import           Cardano.CLI.Byron.Run (ByronClientCmdError, renderByronClientCmdError,
                    runByronClientCommand)
-import           Cardano.CLI.Ping (PingCmd (..), PingClientCmdError (..), renderPingClientCmdError, runPingCmd)
+import           Cardano.CLI.Ping (PingClientCmdError (..), PingCmd (..), renderPingClientCmdError,
+                   runPingCmd)
 import           Cardano.CLI.Shelley.Commands (ShelleyCommand)
 import           Cardano.CLI.Shelley.Run (ShelleyClientCmdError, renderShelleyClientCmdError,
                    runShelleyClientCommand)

@@ -10,7 +10,8 @@ import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax
 import           Prelude hiding (pred, ($), (&&), (<), (==))
 
-import           Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV1, Script(..), toScriptInAnyLang, PlutusScriptVersion(..))
+import           Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV1, PlutusScriptVersion (..),
+                   Script (..), toScriptInAnyLang)
 import           Cardano.Benchmarking.ScriptAPI
 import qualified Data.ByteString.Short as SBS
 

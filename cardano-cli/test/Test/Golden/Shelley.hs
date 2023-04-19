@@ -20,15 +20,12 @@ import           Test.Golden.Shelley.Genesis.KeyGenGenesis (golden_shelleyGenesi
 import           Test.Golden.Shelley.Genesis.KeyGenUtxo (golden_shelleyGenesisKeyGenUtxo)
 import           Test.Golden.Shelley.Genesis.KeyHash (golden_shelleyGenesisKeyHash)
 
-import           Test.Golden.Shelley.Governance.AnswerPoll
-                   (golden_shelleyGovernanceAnswerPollCold,
+import           Test.Golden.Shelley.Governance.AnswerPoll (golden_shelleyGovernanceAnswerPollCold,
                    golden_shelleyGovernanceAnswerPollInvalidAnswer,
                    golden_shelleyGovernanceAnswerPollVrf)
-import           Test.Golden.Shelley.Governance.CreatePoll
-                   (golden_shelleyGovernanceCreatePoll,
-                   golden_shelleyGovernanceCreateLongPoll)
-import           Test.Golden.Shelley.Governance.VerifyPoll
-                   (golden_shelleyGovernanceVerifyPollCold,
+import           Test.Golden.Shelley.Governance.CreatePoll (golden_shelleyGovernanceCreateLongPoll,
+                   golden_shelleyGovernanceCreatePoll)
+import           Test.Golden.Shelley.Governance.VerifyPoll (golden_shelleyGovernanceVerifyPollCold,
                    golden_shelleyGovernanceVerifyPollColdTempered,
                    golden_shelleyGovernanceVerifyPollVrf,
                    golden_shelleyGovernanceVerifyPollVrfTempered)

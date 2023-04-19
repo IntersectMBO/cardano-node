@@ -1,30 +1,30 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE TypeInType #-}
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-name-shadowing -Wno-orphans #-}
 module Cardano.Analysis.API.Types (module Cardano.Analysis.API.Types) where
 
-import Cardano.Prelude          hiding (head)
+import           Cardano.Prelude hiding (head)
 
-import Data.Text                qualified as T
-import Options.Applicative      qualified as Opt
+import qualified Data.Text as T
+import qualified Options.Applicative as Opt
 
-import Data.CDF
-import Data.Profile
+import           Data.CDF
+import           Data.Profile
 
-import Cardano.Logging.Resources.Types
+import           Cardano.Logging.Resources.Types
 
-import Cardano.Unlog.LogObject  hiding (Text)
-import Cardano.Util
+import           Cardano.Unlog.LogObject hiding (Text)
+import           Cardano.Util
 
-import Cardano.Analysis.API.Chain
-import Cardano.Analysis.API.ChainFilter
-import Cardano.Analysis.API.Context
-import Cardano.Analysis.API.Ground
-import Cardano.Analysis.API.LocliVersion
+import           Cardano.Analysis.API.Chain
+import           Cardano.Analysis.API.ChainFilter
+import           Cardano.Analysis.API.Context
+import           Cardano.Analysis.API.Ground
+import           Cardano.Analysis.API.LocliVersion
 
 --
 -- * API types

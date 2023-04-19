@@ -37,8 +37,8 @@ import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId)
 import           Control.Concurrent.Extra (Lock)
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar (modifyTVar', newTVarIO, readTVarIO)
-import           Control.Exception (SomeException, SomeAsyncException (..), finally,
-                   fromException, try, tryJust)
+import           Control.Exception (SomeAsyncException (..), SomeException, finally, fromException,
+                   try, tryJust)
 import           Control.Monad (forM_)
 import           Control.Monad.Extra (whenJustM)
 import           "contra-tracer" Control.Tracer (showTracing, stdoutTracer, traceWith)

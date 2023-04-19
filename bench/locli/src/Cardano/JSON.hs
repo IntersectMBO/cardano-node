@@ -3,14 +3,14 @@ module Cardano.JSON
   , Value(..), Object)
 where
 
-import Prelude                  (error)
-import Cardano.Prelude          hiding (head)
+import           Cardano.Prelude hiding (head)
+import           Prelude (error)
 
-import Data.Aeson               (Value (..))
-import Data.Aeson.Types         (Key, Object)
-import Data.Aeson.KeyMap        qualified as KM
-import Data.Aeson.KeyMap        (fromMapText)
-import Data.Map.Strict          qualified as M
+import           Data.Aeson (Value (..))
+import           Data.Aeson.KeyMap (fromMapText)
+import qualified Data.Aeson.KeyMap as KM
+import           Data.Aeson.Types (Key, Object)
+import qualified Data.Map.Strict as M
 
 
 alterSubObject  :: (Object -> Maybe Object) -> Key -> Object -> Maybe Object

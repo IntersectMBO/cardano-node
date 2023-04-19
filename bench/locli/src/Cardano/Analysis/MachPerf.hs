@@ -1,28 +1,27 @@
-{-# LANGUAGE StrictData #-}
 {-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE StrictData #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing -Wno-orphans #-}
 {- HLINT ignore "Use head" -}
 {- HLINT ignore "Evaluate" -}
 
 module Cardano.Analysis.MachPerf (module Cardano.Analysis.MachPerf) where
 
-import Cardano.Prelude hiding (head)
-import Cardano.Prelude qualified as CP
+import           Cardano.Prelude hiding (head)
+import qualified Cardano.Prelude as CP
 
-import Data.List                        ((!!))
-import Data.Map.Strict qualified as Map
-import Data.Text                        (pack, unpack)
-import Data.Text.Short                  (toText)
-import Data.Vector (Vector)
-import Data.Vector qualified as Vec
+import           Data.List ((!!))
+import qualified Data.Map.Strict as Map
+import           Data.Text (pack, unpack)
+import           Data.Text.Short (toText)
+import           Data.Vector (Vector)
+import qualified Data.Vector as Vec
 
-import Data.Time.Clock qualified as Time
+import qualified Data.Time.Clock as Time
 
-import Data.CDF
-import Cardano.Util
-import Cardano.Analysis.API
-import Cardano.Unlog.LogObject hiding (Text)
-import Cardano.Unlog.Resources
+import           Cardano.Analysis.API
+import           Cardano.Unlog.LogObject hiding (Text)
+import           Cardano.Unlog.Resources
+import           Cardano.Util
 
 
 -- * 1. Collect SlotStats & RunScalars:

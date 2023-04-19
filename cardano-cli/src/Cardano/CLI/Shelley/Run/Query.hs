@@ -74,7 +74,8 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as Crypto
 import           Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import           Cardano.Ledger.SafeHash (HashAnnotated)
-import           Cardano.Ledger.Shelley.LedgerState (PState (psFutureStakePoolParams, psStakePoolParams, psRetiring))
+import           Cardano.Ledger.Shelley.LedgerState
+                   (PState (psFutureStakePoolParams, psRetiring, psStakePoolParams))
 import qualified Cardano.Ledger.Shelley.LedgerState as SL
 import           Cardano.Slotting.EpochInfo (EpochInfo (..), epochInfoSlotToUTCTime, hoistEpochInfo)
 

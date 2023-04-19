@@ -2,32 +2,32 @@
 {-# OPTIONS_GHC -fmax-pmcheck-models=25000 #-}
 module Cardano.Command (module Cardano.Command) where
 
-import Cardano.Prelude          hiding (State)
+import           Cardano.Prelude hiding (State)
 
-import Data.Aeson                       qualified as Aeson
-import Data.Aeson.Text                  qualified as Aeson
-import Data.ByteString                  qualified as BS
-import Data.ByteString.Lazy.Char8       qualified as LBS
-import Data.Map                         qualified as Map
-import Data.Text                        (pack)
-import Data.Text                        qualified as T
-import Data.Text.Lazy                   qualified as LT
-import Data.Text.Short                  (toText)
-import Data.Time.Clock
-import Options.Applicative
-import Options.Applicative              qualified as Opt
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Text as Aeson
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.Map as Map
+import           Data.Text (pack)
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as LT
+import           Data.Text.Short (toText)
+import           Data.Time.Clock
+import           Options.Applicative
+import qualified Options.Applicative as Opt
 
-import System.FilePath
-import System.Posix.Files               qualified as IO
+import           System.FilePath
+import qualified System.Posix.Files as IO
 
-import Cardano.Analysis.API
-import Cardano.Analysis.BlockProp
-import Cardano.Analysis.MachPerf
-import Cardano.Analysis.Summary
-import Cardano.Render
-import Cardano.Report
-import Cardano.Unlog.LogObject  hiding (Text)
-import Cardano.Util             hiding (head)
+import           Cardano.Analysis.API
+import           Cardano.Analysis.BlockProp
+import           Cardano.Analysis.MachPerf
+import           Cardano.Analysis.Summary
+import           Cardano.Render
+import           Cardano.Report
+import           Cardano.Unlog.LogObject hiding (Text)
+import           Cardano.Util hiding (head)
 
 data CommandError
   = CommandError    ChainCommand    Text

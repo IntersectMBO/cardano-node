@@ -40,15 +40,15 @@ import           Control.Monad (foldM, unless, when)
 import           Data.Either.Combinators (maybeToRight)
 import           Data.Function ((&))
 import qualified Data.Map.Strict as Map
-import           Data.String (IsString(..))
+import           Data.String (IsString (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Lazy as Text.Lazy
 import qualified Data.Text.Lazy.Builder as Text.Builder
 import           Data.Word (Word64)
 
-import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
@@ -56,15 +56,15 @@ import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 
-import           Cardano.Binary (DecoderError(..))
+import           Cardano.Binary (DecoderError (..))
 import           Cardano.Ledger.Crypto (HASH, StandardCrypto, VRF)
-import           Cardano.Ledger.Keys (KeyRole(..), SignedDSIGN, SignKeyDSIGN,
-                   SignKeyVRF, VKey(..), VerKeyVRF, signedDSIGN, verifySignedDSIGN)
+import           Cardano.Ledger.Keys (KeyRole (..), SignKeyDSIGN, SignKeyVRF, SignedDSIGN,
+                   VKey (..), VerKeyVRF, signedDSIGN, verifySignedDSIGN)
 
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import           Cardano.Crypto.Hash (hashFromBytes, hashToBytes, hashWith)
 import qualified Cardano.Crypto.Hash as Hash
-import           Cardano.Crypto.Util (SignableRepresentation(..))
+import           Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
 
 -- | Associated metadata label as defined in CIP-0094

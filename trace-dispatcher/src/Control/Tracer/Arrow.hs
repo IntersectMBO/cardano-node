@@ -5,8 +5,8 @@ Licence     : Apache-2.0
 Maintainer  : aovieth@gmail.com
 -}
 
-{-# LANGUAGE GADTs        #-}
-{-# LANGUAGE RankNTypes   #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Control.Tracer.Arrow
   ( TracerA (..)
@@ -18,9 +18,9 @@ module Control.Tracer.Arrow
   , nat
   ) where
 
-import Prelude hiding ((.), id)
-import Control.Arrow
-import Control.Category
+import           Control.Arrow
+import           Control.Category
+import           Prelude hiding (id, (.))
 
 -- | Formal representation of a tracer arrow as a Kleisli arrow over some
 -- monad, but tagged so that we know whether it has any effects which will emit

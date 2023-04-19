@@ -6,21 +6,21 @@
 
 module Cardano.Render (module Cardano.Render) where
 
-import Prelude                          (id, show)
-import Cardano.Prelude                  hiding (head, show)
+import           Cardano.Prelude hiding (head, show)
+import           Prelude (id, show)
 
-import Data.Aeson.Text                  (encodeToLazyText)
-import Data.List                        (dropWhileEnd)
-import Data.Map.Strict                  qualified as Map
-import Data.Text                        qualified as T
-import Data.Text.Lazy                   qualified as LT
-import Options.Applicative              qualified as Opt
+import           Data.Aeson.Text (encodeToLazyText)
+import           Data.List (dropWhileEnd)
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as LT
+import qualified Options.Applicative as Opt
 
-import Data.CDF
+import           Data.CDF
 
-import Cardano.Org
-import Cardano.Util
-import Cardano.Analysis.API
+import           Cardano.Analysis.API
+import           Cardano.Org
+import           Cardano.Util
 
 
 data RenderConfig

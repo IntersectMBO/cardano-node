@@ -59,7 +59,7 @@ readSavedEmailSettings rtvSD = do
   -- decryptJSON = encryptJSON -- Encryption/decryption is symmetric.
 
 incompleteEmailSettings :: EmailSettings -> Bool
-incompleteEmailSettings emailSettings = T.null $ esSMTPHost emailSettings 
+incompleteEmailSettings emailSettings = T.null $ esSMTPHost emailSettings
 
 -- encryptJSON :: BS.ByteString -> Either CryptoError BS.ByteString
 -- encryptJSON plainJSON = ctrCombine

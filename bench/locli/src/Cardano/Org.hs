@@ -2,10 +2,10 @@
 {-# LANGUAGE StrictData #-}
 module Cardano.Org (module Cardano.Org) where
 
-import Cardano.Prelude
-import Data.Text                qualified as T
+import           Cardano.Prelude
+import qualified Data.Text as T
 
-import Cardano.Util
+import           Cardano.Util
 
 
 data Org

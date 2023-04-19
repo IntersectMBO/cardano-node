@@ -14,8 +14,8 @@ module Trace.Forward.Utils.DataPoint
   ) where
 
 import           Control.Concurrent.STM (atomically, check, orElse)
-import           Control.Concurrent.STM.TVar
 import           Control.Concurrent.STM.TMVar
+import           Control.Concurrent.STM.TVar
 import           Data.Aeson
 import qualified Data.Map.Strict as M
 

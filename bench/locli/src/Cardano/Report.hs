@@ -1,29 +1,28 @@
-{-# LANGUAGE TypeInType #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeInType #-}
 module Cardano.Report
   ( module Cardano.Report
   )
 where
 
-import Cardano.Prelude
+import           Cardano.Prelude
 
-import Data.ByteString   qualified as BS
-import Data.HashMap.Lazy qualified as HM
-import Data.Map.Strict   qualified as Map
-import Data.Text         qualified as T
-import Data.Text.Lazy    qualified as LT
-import Data.Time.Clock
-import System.FilePath as FS
-import System.Posix.User
-import System.Environment (lookupEnv)
+import qualified Data.ByteString as BS
+import qualified Data.HashMap.Lazy as HM
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as LT
+import           Data.Time.Clock
+import           System.Environment (lookupEnv)
+import           System.FilePath as FS
+import           System.Posix.User
 
-import Text.EDE hiding (Id)
+import           Text.EDE hiding (Id)
 
-import Data.CDF
-import Cardano.Util
-import Cardano.Analysis.API
+import           Cardano.Analysis.API
+import           Cardano.Util
 
 
 newtype Author   = Author   { unAuthor   :: Text } deriving newtype (FromJSON, ToJSON)

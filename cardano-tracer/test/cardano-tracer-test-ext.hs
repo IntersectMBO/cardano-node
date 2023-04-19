@@ -12,7 +12,7 @@ import qualified Data.List as L
 import           Data.Maybe (fromMaybe)
 import           Data.Monoid
 import qualified System.Directory as Sys
-import           System.Environment (setEnv, unsetEnv, lookupEnv)
+import           System.Environment (lookupEnv, setEnv, unsetEnv)
 import qualified System.IO as Sys
 import           System.PosixCompat.Files (fileExist)
 import qualified System.Process as Sys

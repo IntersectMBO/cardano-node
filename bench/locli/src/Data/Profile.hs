@@ -21,15 +21,15 @@ module Data.Profile
   )
 where
 
-import Cardano.Prelude hiding (Text, head, show)
-import Prelude ()
+import           Cardano.Prelude hiding (Text, head, show)
+import           Prelude ()
 
-import Data.Map.Strict qualified as Map
-import Data.Text qualified as T
-import Data.Set  qualified as Set
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
+import qualified Data.Text as T
 
-import Data.CDF
-import Cardano.Util
+import           Cardano.Util
+import           Data.CDF
 
 
 data ProfileEntry f

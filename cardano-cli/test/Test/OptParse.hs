@@ -17,9 +17,9 @@ import           Cardano.Api
 
 import           Cardano.CLI.Shelley.Run.Read
 
+import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Except (runExceptT)
-import           Control.Monad.IO.Class (MonadIO (..))
 import           Data.Function ((&))
 import           GHC.Stack (CallStack, HasCallStack)
 import qualified Hedgehog as H

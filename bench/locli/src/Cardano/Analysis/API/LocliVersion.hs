@@ -1,14 +1,14 @@
 {-# LANGUAGE DeriveAnyClass #-}
 module Cardano.Analysis.API.LocliVersion (module Cardano.Analysis.API.LocliVersion) where
 
-import Cardano.Prelude (NFData, mconcat)
-import Cardano.Git.Rev qualified (gitRev)
-import Data.Aeson (FromJSON (..), ToJSON (..))
-import Data.Text (Text, pack, take)
-import Data.Version (showVersion)
-import GHC.Generics (Generic)
-import Paths_locli (version)
-import Prelude (Show)
+import qualified Cardano.Git.Rev (gitRev)
+import           Cardano.Prelude (NFData, mconcat)
+import           Data.Aeson (FromJSON (..), ToJSON (..))
+import           Data.Text (Text, pack, take)
+import           Data.Version (showVersion)
+import           GHC.Generics (Generic)
+import           Paths_locli (version)
+import           Prelude (Show)
 
 
 data LocliVersion =

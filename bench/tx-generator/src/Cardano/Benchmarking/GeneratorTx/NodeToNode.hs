@@ -43,16 +43,17 @@ import           Ouroboros.Network.Mux (MuxPeer (..), OuroborosApplication (..),
 import           Ouroboros.Network.NodeToClient (IOManager, chainSyncPeerNull)
 import           Ouroboros.Network.NodeToNode (NetworkConnectTracers (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
+import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..), decodeRemoteAddress,
+                   encodeRemoteAddress)
 import           Ouroboros.Network.Protocol.BlockFetch.Client (BlockFetchClient (..),
                    blockFetchClientPeer)
 import           Ouroboros.Network.Protocol.Handshake.Version (simpleSingletonVersions)
 import           Ouroboros.Network.Protocol.KeepAlive.Client hiding (SendMsgDone)
 import           Ouroboros.Network.Protocol.KeepAlive.Codec
-import           Ouroboros.Network.Protocol.TxSubmission2.Client (TxSubmissionClient,
-                   txSubmissionClientPeer)
-import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..), encodeRemoteAddress, decodeRemoteAddress)
 import           Ouroboros.Network.Protocol.PeerSharing.Client (PeerSharingClient (..),
                    peerSharingClientPeer)
+import           Ouroboros.Network.Protocol.TxSubmission2.Client (TxSubmissionClient,
+                   txSubmissionClientPeer)
 
 import           Ouroboros.Network.Snocket (socketSnocket)
 

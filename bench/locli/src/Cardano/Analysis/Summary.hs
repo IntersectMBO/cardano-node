@@ -6,16 +6,16 @@
 
 module Cardano.Analysis.Summary (module Cardano.Analysis.Summary) where
 
-import Prelude                                      (head, last)
-import Cardano.Prelude
+import           Cardano.Prelude
+import           Prelude (head, last)
 
-import Data.Either.Extra                            (mapLeft)
-import Data.Map.Strict                  qualified as Map
-import Data.Text                        qualified as Text
+import           Data.Either.Extra (mapLeft)
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as Text
 
-import Cardano.Analysis.API
-import Cardano.Unlog.LogObject               hiding (Text)
-import Cardano.Util
+import           Cardano.Analysis.API
+import           Cardano.Unlog.LogObject hiding (Text)
+import           Cardano.Util
 
 
 data SummaryError

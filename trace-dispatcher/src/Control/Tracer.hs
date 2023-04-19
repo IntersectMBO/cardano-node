@@ -73,7 +73,7 @@ module Control.Tracer
     , Contravariant(..)
     ) where
 
-import           Control.Arrow ((|||), (&&&), arr, runKleisli)
+import           Control.Arrow (arr, runKleisli, (&&&), (|||))
 import           Control.Category ((>>>))
 import           Data.Functor.Contravariant (Contravariant (..))
 import           Debug.Trace (traceM)

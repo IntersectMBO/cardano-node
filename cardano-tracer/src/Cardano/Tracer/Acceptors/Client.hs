@@ -23,8 +23,8 @@ import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionData
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion,
                    simpleSingletonVersions)
-import           Ouroboros.Network.Snocket (LocalAddress, LocalSocket, Snocket, makeLocalBearer,
-                   localAddressFromPath, localSnocket)
+import           Ouroboros.Network.Snocket (LocalAddress, LocalSocket, Snocket,
+                   localAddressFromPath, localSnocket, makeLocalBearer)
 import           Ouroboros.Network.Socket (ConnectionId (..), connectToNode,
                    nullNetworkConnectTracers)
 import qualified System.Metrics.Configuration as EKGF

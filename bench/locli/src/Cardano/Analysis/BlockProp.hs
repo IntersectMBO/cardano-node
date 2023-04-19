@@ -19,41 +19,41 @@ module Cardano.Analysis.BlockProp
   )
 where
 
-import Prelude                  (String, (!!), error, head, last, id, show, tail, read)
-import Cardano.Prelude          hiding (head, show)
+import           Cardano.Prelude hiding (head, show)
+import           Prelude (String, error, head, id, last, read, show, tail, (!!))
 
-import Control.Arrow            ((***), (&&&))
-import Data.Aeson               (ToJSON(..), FromJSON(..))
-import Data.Bifunctor
-import Data.Function            (on)
-import Data.List                (dropWhileEnd, intercalate, partition)
-import Data.Map.Strict          (Map)
-import Data.Map.Strict          qualified as Map
-import Data.Maybe               (catMaybes, mapMaybe, isNothing)
-import Data.Set                 (Set)
-import Data.Set                 qualified as Set
-import Data.Text                qualified as T
-import Data.Text.Short          (toText)
-import Data.Tuple               (swap)
-import Data.Vector              (Vector)
-import Data.Vector              qualified as Vec
+import           Control.Arrow ((&&&), (***))
+import           Data.Aeson (FromJSON (..), ToJSON (..))
+import           Data.Bifunctor
+import           Data.Function (on)
+import           Data.List (dropWhileEnd, intercalate, partition)
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import           Data.Maybe (catMaybes, isNothing, mapMaybe)
+import           Data.Set (Set)
+import qualified Data.Set as Set
+import qualified Data.Text as T
+import           Data.Text.Short (toText)
+import           Data.Tuple (swap)
+import           Data.Vector (Vector)
+import qualified Data.Vector as Vec
 
-import Data.Time.Clock          (NominalDiffTime, UTCTime, addUTCTime, diffUTCTime)
+import           Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, diffUTCTime)
 
-import Text.Printf              (printf)
+import           Text.Printf (printf)
 
-import Cardano.Slotting.Slot    (EpochNo(..), SlotNo(..))
-import Ouroboros.Network.Block  (BlockNo(..))
+import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
+import           Ouroboros.Network.Block (BlockNo (..))
 
-import Data.Accum
-import Data.CDF
+import           Data.Accum
+import           Data.CDF
 
-import Cardano.Render
-import Cardano.Unlog.LogObject  hiding (Text)
-import Cardano.Unlog.Resources
-import Cardano.Util
+import           Cardano.Render
+import           Cardano.Unlog.LogObject hiding (Text)
+import           Cardano.Unlog.Resources
+import           Cardano.Util
 
-import Cardano.Analysis.API
+import           Cardano.Analysis.API
 
 
 summariseMultiBlockProp :: [Centile] -> [BlockPropOne] -> Either CDFError MultiBlockProp

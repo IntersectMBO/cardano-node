@@ -26,45 +26,47 @@ module Cardano.Util
   )
 where
 
-import Prelude                          (String, error, head, last)
-import Text.Show qualified as Show      (Show(..))
-import Cardano.Prelude
+import           Cardano.Prelude
+import           Prelude (String, error, head, last)
+import qualified Text.Show as Show (Show (..))
 
 #if __GLASGOW_HASKELL__ < 902
 -- This is a GHC module ...
-import Util
+import           Util
 #else
 -- that moved for the ghc-9.2 release.
-import GHC.Utils.Misc                   as Util
+import           GHC.Utils.Misc as Util
 #endif
-                                 hiding (fst3, snd3, third3, uncurry3, firstM, secondM)
+                 hiding (firstM, fst3, secondM, snd3, third3, uncurry3)
 
-import Data.Aeson                       (FromJSON (..), ToJSON (..), Object, Value (..), (.:), (.:?), withObject, object)
-import Data.Aeson                       qualified as AE
-import Data.Tuple.Extra          hiding ((&&&), (***))
-import Control.Arrow                    ((&&&), (***))
-import Control.Applicative              ((<|>))
-import Control.Concurrent.Async         (forConcurrently, forConcurrently_, mapConcurrently, mapConcurrently_)
-import Control.DeepSeq                  qualified as DS
-import Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
-import Data.ByteString.Lazy.Char8       qualified as LBS
-import Data.IntervalMap.FingerTree      (Interval (..), low, high, point)
-import Data.List                        (span)
-import Data.List.Split                  (chunksOf)
-import Data.Text                        qualified as T
-import Data.SOP.Strict
-import Data.Time.Clock                  (NominalDiffTime, UTCTime (..), diffUTCTime, addUTCTime)
-import Data.Time.Clock.POSIX
-import Data.Vector                      (Vector)
-import Data.Vector                      qualified as Vec
-import GHC.Base                         (build)
-import Text.Printf                      (printf)
+import           Control.Applicative ((<|>))
+import           Control.Arrow ((&&&), (***))
+import           Control.Concurrent.Async (forConcurrently, forConcurrently_, mapConcurrently,
+                   mapConcurrently_)
+import qualified Control.DeepSeq as DS
+import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
+import           Data.Aeson (FromJSON (..), Object, ToJSON (..), Value (..), object, withObject,
+                   (.:), (.:?))
+import qualified Data.Aeson as AE
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.IntervalMap.FingerTree (Interval (..), high, low, point)
+import           Data.List (span)
+import           Data.List.Split (chunksOf)
+import           Data.SOP.Strict
+import qualified Data.Text as T
+import           Data.Time.Clock (NominalDiffTime, UTCTime (..), addUTCTime, diffUTCTime)
+import           Data.Time.Clock.POSIX
+import           Data.Tuple.Extra hiding ((&&&), (***))
+import           Data.Vector (Vector)
+import qualified Data.Vector as Vec
+import           GHC.Base (build)
+import           Text.Printf (printf)
 
-import System.FilePath                  qualified as F
+import qualified System.FilePath as F
 
-import Ouroboros.Consensus.Util.Time
+import           Ouroboros.Consensus.Util.Time
 
-import Cardano.Ledger.BaseTypes         (StrictMaybe (..), fromSMaybe)
+import           Cardano.Ledger.BaseTypes (StrictMaybe (..), fromSMaybe)
 
 
 deriving newtype instance FromJSON a => (FromJSON (I a))

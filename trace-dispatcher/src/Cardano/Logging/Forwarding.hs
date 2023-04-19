@@ -31,7 +31,7 @@ import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionData
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion,
                    simpleSingletonVersions)
-import           Ouroboros.Network.Snocket (Snocket, MakeBearer, localAddressFromPath, localSnocket,
+import           Ouroboros.Network.Snocket (MakeBearer, Snocket, localAddressFromPath, localSnocket,
                    makeLocalBearer)
 import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..),
                    SomeResponderApplication (..), cleanNetworkMutableState, connectToNode,

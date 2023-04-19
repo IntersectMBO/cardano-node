@@ -59,9 +59,9 @@ import qualified Control.Tracer as T
 import           Data.Aeson ((.=))
 import qualified Data.Aeson as AE
 import qualified Data.Aeson.Text as AE
+import qualified Data.HashMap.Strict as HM
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import qualified Data.HashMap.Strict as HM
 
 import           Data.IORef
 import           Data.Map.Strict (Map)

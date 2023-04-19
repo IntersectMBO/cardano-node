@@ -6,8 +6,7 @@ module Cardano.Tracer.Acceptors.Run
   ) where
 
 import           Control.Concurrent.Async (forConcurrently_)
-import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer,
-                   stdoutTracer)
+import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
 import qualified Data.List.NonEmpty as NE
 import           Data.Maybe (fromMaybe)
 import           Data.Time.Clock (secondsToNominalDiffTime)

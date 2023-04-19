@@ -2,17 +2,17 @@
 {-# LANGUAGE StrictData #-}
 module Cardano.Analysis.API.ChainFilter (module Cardano.Analysis.API.ChainFilter) where
 
-import Cardano.Prelude hiding (head)
+import           Cardano.Prelude hiding (head)
 
-import Data.Aeson
-import Data.ByteString.Lazy.Char8       qualified as LBS
-import Data.Text                        qualified as T
-import Options.Applicative
-import Options.Applicative              qualified as Opt
-import System.FilePath.Posix                        (takeBaseName)
+import           Data.Aeson
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.Text as T
+import           Options.Applicative
+import qualified Options.Applicative as Opt
+import           System.FilePath.Posix (takeBaseName)
 
-import Cardano.Util
-import Cardano.Analysis.API.Ground
+import           Cardano.Analysis.API.Ground
+import           Cardano.Util
 
 
 newtype JsonFilterFile

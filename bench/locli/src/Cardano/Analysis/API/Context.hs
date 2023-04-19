@@ -3,11 +3,11 @@
 {-# LANGUAGE StrictData #-}
 module Cardano.Analysis.API.Context (module Cardano.Analysis.API.Context) where
 
-import Cardano.Prelude
+import           Cardano.Prelude
 
-import Data.Aeson (FromJSON (..), ToJSON (..), withObject, object, (.:), (.:?), (.=))
-import Data.Text qualified as T
-import Data.Time.Clock (UTCTime, NominalDiffTime)
+import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.:?), (.=))
+import qualified Data.Text as T
+import           Data.Time.Clock (NominalDiffTime, UTCTime)
 
 
 -- This is difficult: we have two different genesis-related structures:

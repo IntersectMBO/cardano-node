@@ -27,7 +27,7 @@ import           Cardano.Ledger.Alonzo.TxInfo (exBudgetToExUnits)
 import qualified PlutusLedgerApi.V1 as PlutusV1
 import qualified PlutusLedgerApi.V2 as PlutusV2
 
-import           Cardano.Benchmarking.PlutusScripts(findPlutusScript)
+import           Cardano.Benchmarking.PlutusScripts (findPlutusScript)
 import           Cardano.TxGenerator.Types
 
 

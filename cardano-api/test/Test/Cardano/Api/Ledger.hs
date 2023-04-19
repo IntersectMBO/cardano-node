@@ -19,13 +19,13 @@ import           Ouroboros.Consensus.Shelley.Eras (StandardAlonzo)
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Aeson as H
+import           Hedgehog.Gen.QuickCheck (arbitrary)
 import           Hedgehog.Internal.Property
 import           Test.Cardano.Api.Genesis (exampleShelleyGenesis)
 import           Test.Cardano.Ledger.Core.Arbitrary ()
 import           Test.Gen.Cardano.Api.Typed
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testPropertyNamed)
-import           Hedgehog.Gen.QuickCheck (arbitrary)
 
 prop_golden_ShelleyGenesis :: Property
 prop_golden_ShelleyGenesis = H.goldenTestJsonValuePretty exampleShelleyGenesis "test/Golden/ShelleyGenesis"

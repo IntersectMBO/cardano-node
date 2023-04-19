@@ -12,9 +12,9 @@ import           Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVarIO, read
 import           Data.Aeson (decode')
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as M
+import           System.Time.Extra
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
-import           System.Time.Extra
 
 import           Trace.Forward.Protocol.DataPoint.Type
 import           Trace.Forward.Utils.DataPoint (askForDataPoints)
@@ -22,7 +22,7 @@ import           Trace.Forward.Utils.DataPoint (askForDataPoints)
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Run (doRunCardanoTracer)
-import           Cardano.Tracer.Utils (applyBrake, initProtocolsBrake, initDataPointRequestors)
+import           Cardano.Tracer.Utils (applyBrake, initDataPointRequestors, initProtocolsBrake)
 
 import           Cardano.Tracer.Test.Forwarder
 import           Cardano.Tracer.Test.TestSetup
