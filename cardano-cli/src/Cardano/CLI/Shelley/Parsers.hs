@@ -1638,7 +1638,7 @@ pCertificateFile balanceExecUnits =
     , "stake key certificates etc). Optionally specify a script witness."
     ]
 
-pPoolMetadataFile :: Parser (File StakePoolMetadata In)
+pPoolMetadataFile :: Parser (StakePoolMetadataFile In)
 pPoolMetadataFile =
   fmap File $ Opt.strOption $ mconcat
     [ Opt.long "pool-metadata-file"
