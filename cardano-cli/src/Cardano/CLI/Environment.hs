@@ -2,7 +2,9 @@
 
 -- | This module defines constants derived from the environment.
 module Cardano.CLI.Environment
-  ( getEnvNetworkId
+  ( EnvCli(..)
+  , getEnvCli
+  , getEnvNetworkId
   ) where
 
 import           Cardano.Api (NetworkId (..), NetworkMagic (..))
@@ -11,6 +13,13 @@ import           Data.Word (Word32)
 import qualified System.Environment as IO
 import qualified System.IO as IO
 import           Text.Read (readMaybe)
+
+newtype EnvCli = EnvCli
+  { cliEnvNetworkId :: Maybe NetworkId
+  }
+
+getEnvCli :: IO EnvCli
+getEnvCli = EnvCli <$> getEnvNetworkId
 
 -- | If the environment variable @CARDANO_NODE_NETWORK_ID@ is set, then return the network id therein.
 -- Otherwise, return 'Nothing'.
