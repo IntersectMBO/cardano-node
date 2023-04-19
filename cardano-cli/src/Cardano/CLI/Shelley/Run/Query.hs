@@ -20,6 +20,7 @@ module Cardano.CLI.Shelley.Run.Query
   , renderLocalStateQueryError
   , runQueryCmd
   , toEpochInfo
+  , utcTimeToSlotNo
   , determineEra
   , mergeDelegsAndRewards
   , percentage
@@ -32,7 +33,8 @@ import           Cardano.Api.Byron
 import           Cardano.Api.Orphans ()
 import           Cardano.Api.Shelley
 
-import           Control.Monad.Trans.Except (ExceptT (..), except, runExcept, runExceptT)
+import           Control.Monad.Trans.Except (ExceptT (..), except, runExcept, runExceptT,
+                   withExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
                    hoistMaybe, left, onLeft, onNothing)
 import           Data.Aeson as Aeson
@@ -1421,6 +1423,41 @@ toTentativeEpochInfo (EraHistory _ interpreter) =
   Tentative
     $ hoistEpochInfo (first (Text.pack . show) . runExcept)
     $ Consensus.interpreterToEpochInfo (Consensus.unsafeExtendSafeZone interpreter)
+
+
+-- | Get slot number for timestamp, or an error if the UTC timestamp is before 'SystemStart' or after N+1 era
+utcTimeToSlotNo
+  :: SocketPath
+  -> AnyConsensusModeParams
+  -> NetworkId
+  -> UTCTime
+  -> ExceptT ShelleyQueryCmdError IO SlotNo
+utcTimeToSlotNo (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network utcTime = do
+  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
+  case consensusModeOnly cModeParams of
+    CardanoMode -> do
+      (systemStart, eraHistory) <- executeLocalStateQueryExpr' localNodeConnInfo $
+        (,) <$> queryExpr' QuerySystemStart
+            <*> queryExpr' (QueryEraHistory CardanoModeIsMultiEra)
+      let relTime = toRelativeTime systemStart utcTime
+      hoistEither $ Api.getSlotForRelativeTime relTime eraHistory & first ShelleyQueryCmdPastHorizon
+    mode -> left . ShelleyQueryCmdUnsupportedMode $ AnyConsensusMode mode
+  where
+    executeLocalStateQueryExpr'
+      :: LocalNodeConnectInfo mode
+      -> ExceptT ShelleyQueryCmdError (LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO) a
+      -> ExceptT ShelleyQueryCmdError IO a
+    executeLocalStateQueryExpr' localNodeConnInfo =
+      ExceptT
+      . fmap (join . first ShelleyQueryCmdAcquireFailure)
+      . executeLocalStateQueryExpr localNodeConnInfo Nothing
+      . runExceptT
+
+    queryExpr'
+      :: QueryInMode mode a
+      -> ExceptT ShelleyQueryCmdError (LocalStateQueryExpr block point (QueryInMode mode) r IO) a
+    queryExpr' = withExceptT ShelleyQueryCmdUnsupportedNtcVersion . ExceptT . queryExpr
+
 
 obtainLedgerEraClassConstraints
   :: ShelleyLedgerEra era ~ ledgerera

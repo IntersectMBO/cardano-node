@@ -1,6 +1,7 @@
 # Changelog for cardano-api
 
 ## vNext
+- Add `getSlotForRelativeTime` function [PR5130](https://github.com/input-output-hk/cardano-node/pull/5130)
 
 ### Features
 
