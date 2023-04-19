@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     defaults:
       run:
@@ -18,12 +18,13 @@ jobs:
 
     - name: Install dependencies
       run: |
-        sudo apt-get -y install libtinfo5
+        sudo apt-get update
+        sudo apt-get -y install libtinfo6
 
     - name: 'Set up HLint'
       uses: rwe/actions-hlint-setup@v1
       with:
-        version: 3.3
+        version: 3.5
 
     - name: 'Run HLint'
       uses: rwe/actions-hlint-run@v2
