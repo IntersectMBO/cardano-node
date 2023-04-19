@@ -15,7 +15,7 @@ import qualified System.IO as IO
 import           Text.Read (readMaybe)
 
 newtype EnvCli = EnvCli
-  { cliEnvNetworkId :: Maybe NetworkId
+  { envCliNetworkId :: Maybe NetworkId
   }
 
 getEnvCli :: IO EnvCli

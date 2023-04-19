@@ -5,6 +5,7 @@ module Cardano.CLI.Common.Parsers
 
 import           Cardano.Api (AnyConsensusModeParams (..), ConsensusModeParams (..),
                    EpochSlots (..), NetworkId (..), NetworkMagic (..), bounded)
+import           Cardano.CLI.Environment (EnvCli (envCliNetworkId))
 
 import           Data.Foldable
 import           Data.Maybe (maybeToList)
@@ -12,8 +13,8 @@ import           Data.Word (Word64)
 import           Options.Applicative (Parser)
 import qualified Options.Applicative as Opt
 
-pNetworkId :: Maybe NetworkId -> Parser NetworkId
-pNetworkId mNetworkId = asum $ mconcat
+pNetworkId :: EnvCli -> Parser NetworkId
+pNetworkId envCli = asum $ mconcat
   [ [ Opt.flag' Mainnet $ mconcat
       [ Opt.long "mainnet"
       , Opt.help $ mconcat
@@ -31,7 +32,7 @@ pNetworkId mNetworkId = asum $ mconcat
       ]
     ]
   , -- Default to the network id specified by the environment variable if it is available.
-    pure <$> maybeToList mNetworkId
+    pure <$> maybeToList (envCliNetworkId envCli)
   ]
 
 pConsensusModeParams :: Parser AnyConsensusModeParams
