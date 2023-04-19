@@ -150,7 +150,8 @@ in
 in
 {
   inherit profileName profileNix;
+  inherit backend backendNix;
   inherit workbench-profile-run;
 
-  inherit batchName stateDir backend overlay;
+  inherit batchName stateDir overlay;
 }
