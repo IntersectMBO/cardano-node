@@ -177,12 +177,12 @@ library
                       , ouroboros-consensus ^>= 0.4
                       , ouroboros-consensus-byron
                       , ouroboros-consensus-cardano
-                      , ouroboros-consensus-diffusion
+                      , ouroboros-consensus-diffusion ^>= 0.4
                       , ouroboros-consensus-protocol
                       , ouroboros-consensus-shelley
                       , ouroboros-network-api
-                      , ouroboros-network  ^>= 0.4
-                      , ouroboros-network-framework ^>= 0.3
+                      , ouroboros-network  ^>= 0.5
+                      , ouroboros-network-framework ^>= 0.4
                       , ouroboros-network-protocols
                       , prettyprinter
                       , prettyprinter-ansi-terminal

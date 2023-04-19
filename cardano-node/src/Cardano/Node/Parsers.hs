@@ -116,6 +116,7 @@ nodeRunParser = do
            , pncTargetNumberOfEstablishedPeers = mempty
            , pncTargetNumberOfActivePeers = mempty
            , pncEnableP2P = mempty
+           , pncPeerSharing = mempty
            }
 
 parseSocketPath :: Text -> Parser SocketPath

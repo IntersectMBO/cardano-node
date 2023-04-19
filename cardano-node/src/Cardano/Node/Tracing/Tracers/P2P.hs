@@ -141,7 +141,7 @@ instance MetaTrace (TraceLocalRootPeers ntnAddr exception) where
 instance LogFormatting TracePublicRootPeers where
   forMachine _dtal (TracePublicRootRelayAccessPoint relays) =
     mconcat [ "kind" .= String "PublicRootRelayAddresses"
-             , "relayAddresses" .= toJSONList relays
+             , "relayAddresses" .= toJSON relays
              ]
   forMachine _dtal (TracePublicRootDomains domains) =
     mconcat [ "kind" .= String "PublicRootDomains"
@@ -220,16 +220,20 @@ instance LogFormatting (TracePeerSelection SockAddr) where
              , "group" .= group
              , "diffTime" .= dt
              ]
-  forMachine _dtal (TraceGossipRequests targetKnown actualKnown aps sps) =
-    mconcat [ "kind" .= String "GossipRequests"
+  forMachine _dtal (TracePeerShareRequests targetKnown actualKnown aps sps) =
+    mconcat [ "kind" .= String "PeerShareRequests"
              , "targetKnown" .= targetKnown
              , "actualKnown" .= actualKnown
              , "availablePeers" .= toJSONList (toList aps)
              , "selectedPeers" .= toJSONList (toList sps)
              ]
-  forMachine _dtal (TraceGossipResults res) =
-    mconcat [ "kind" .= String "GossipResults"
+  forMachine _dtal (TracePeerShareResults res) =
+    mconcat [ "kind" .= String "PeerShareResults"
              , "result" .= toJSONList (map (first show <$>) res)
+             ]
+  forMachine _dtal (TracePeerShareResultsFiltered res) =
+    mconcat [ "kind" .= String "PeerShareResultsFiltered"
+             , "result" .= toJSONList res
              ]
   forMachine _dtal (TraceForgetColdPeers targetKnown actualKnown sp) =
     mconcat [ "kind" .= String "ForgeColdPeers"
@@ -367,10 +371,12 @@ instance MetaTrace (TracePeerSelection SockAddr) where
       Namespace [] ["PublicRootsResults"]
     namespaceFor TracePublicRootsFailure {}    =
       Namespace [] ["PublicRootsFailure"]
-    namespaceFor TraceGossipRequests {}        =
-      Namespace [] ["GossipRequests"]
-    namespaceFor TraceGossipResults {}         =
-      Namespace [] ["GossipResults"]
+    namespaceFor TracePeerShareRequests {}     =
+      Namespace [] ["PeerShareRequests"]
+    namespaceFor TracePeerShareResults {}      =
+      Namespace [] ["PeerShareResults"]
+    namespaceFor TracePeerShareResultsFiltered {} =
+      Namespace [] ["PeerShareResultsFiltered"]
     namespaceFor TraceForgetColdPeers {}       =
       Namespace [] ["ForgetColdPeers"]
     namespaceFor TracePromoteColdPeers {}      =
@@ -760,11 +766,6 @@ instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
           [ "kind" .= String "ForbiddenConnection"
           , "connectionId" .= toJSON connId
           ]
-    forMachine _dtal (TrImpossibleConnection connId) =
-        mconcat
-          [ "kind" .= String "ImpossibleConnection"
-          , "connectionId" .= toJSON connId
-          ]
     forMachine _dtal (TrConnectionFailure connId) =
         mconcat
           [ "kind" .= String "ConnectionFailure"
@@ -882,7 +883,6 @@ instance MetaTrace (ConnectionManagerTrace addr
     namespaceFor TrShutdown {}  = Namespace [] ["Shutdown"]
     namespaceFor TrConnectionExists {}  = Namespace [] ["ConnectionExists"]
     namespaceFor TrForbiddenConnection {}  = Namespace [] ["ForbiddenConnection"]
-    namespaceFor TrImpossibleConnection {}  = Namespace [] ["ImpossibleConnection"]
     namespaceFor TrConnectionFailure {}  = Namespace [] ["ConnectionFailure"]
     namespaceFor TrConnectionNotFound {}  = Namespace [] ["ConnectionNotFound"]
     namespaceFor TrForbiddenOperation {}  = Namespace [] ["ForbiddenOperation"]
