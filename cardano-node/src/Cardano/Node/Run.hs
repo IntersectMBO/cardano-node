@@ -114,6 +114,7 @@ import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
 import           Cardano.Node.TraceConstraints (TraceConstraints)
 import           Cardano.Tracing.Tracers
+import Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing(..))
 
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
@@ -328,7 +329,7 @@ handleSimpleNode
   -> NetworkP2PMode p2p
   -> Tracers RemoteConnectionId LocalConnectionId blk p2p
   -> NodeConfiguration
-  -> (NodeKernel IO RemoteConnectionId LocalConnectionId blk -> IO ())
+  -> (NodeKernel IO RemoteAddress LocalConnectionId blk -> IO ())
   -- ^ Called on the 'NodeKernel' after creating it, but before the network
   -- layer is initialised.  This implies this function must not block,
   -- otherwise the node won't actually start.
@@ -408,6 +409,7 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
                 (Node.getChainDB nodeKernel)
               onKernel nodeKernel
           , rnEnableP2P      = p2pMode
+          , rnPeerSharing    = ncPeerSharing nc
           }
     in case p2pMode of
       EnabledP2PMode -> do
@@ -528,7 +530,7 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
 #ifdef UNIX
   -- only used when P2P is enabled
   updateTopologyConfiguration :: StrictTVar IO [(Int, Map RelayAccessPoint PeerAdvertise)]
-                              -> StrictTVar IO [RelayAccessPoint]
+                              -> StrictTVar IO (Map RelayAccessPoint PeerAdvertise)
                               -> StrictTVar IO UseLedgerAfter
                               -> Signals.Handler
   updateTopologyConfiguration localRootsVar publicRootsVar useLedgerVar =
@@ -616,7 +618,7 @@ mkP2PArguments
   -> STM IO [(Int, Map RelayAccessPoint PeerAdvertise)]
      -- ^ non-overlapping local root peers groups; the 'Int' denotes the
      -- valency of its group.
-  -> STM IO [RelayAccessPoint]
+  -> STM IO (Map RelayAccessPoint PeerAdvertise)
   -> STM IO UseLedgerAfter
   -> Diffusion.ExtraArguments 'Diffusion.P2P IO
 mkP2PArguments NodeConfiguration {
@@ -625,7 +627,8 @@ mkP2PArguments NodeConfiguration {
                  ncTargetNumberOfEstablishedPeers,
                  ncTargetNumberOfActivePeers,
                  ncProtocolIdleTimeout,
-                 ncTimeWaitTimeout
+                 ncTimeWaitTimeout,
+                 ncPeerSharing
                }
                daReadLocalRootPeers
                daReadPublicRootPeers
@@ -639,6 +642,7 @@ mkP2PArguments NodeConfiguration {
       , P2P.daTimeWaitTimeout       = ncTimeWaitTimeout
       , P2P.daDeadlineChurnInterval = 3300
       , P2P.daBulkChurnInterval     = 300
+      , P2P.daOwnPeerSharing        = ncPeerSharing
       }
   where
     daPeerSelectionTargets = PeerSelectionTargets {
@@ -678,7 +682,7 @@ producerAddressesNonP2P nt =
 
 producerAddresses
   :: NetworkTopology
-  -> ([(Int, Map RelayAccessPoint PeerAdvertise)], [RelayAccessPoint])
+  -> ([(Int, Map RelayAccessPoint PeerAdvertise)], Map RelayAccessPoint PeerAdvertise)
 producerAddresses nt =
   case nt of
     RealNodeTopology lrpg prp _ ->
@@ -688,8 +692,8 @@ producerAddresses nt =
                      )
             )
             (groups lrpg)
-      , concatMap (map fst . rootConfigToRelayAccessPoint)
-                  (map publicRoots prp)
+      , foldMap (Map.fromList . rootConfigToRelayAccessPoint)
+                (map publicRoots prp)
       )
 
 useLedgerAfterSlot

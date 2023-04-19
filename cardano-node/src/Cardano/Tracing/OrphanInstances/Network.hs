@@ -109,6 +109,7 @@ import           Ouroboros.Network.TxSubmission.Inbound (ProcessedTxCount (..),
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound (..))
 
 import qualified Ouroboros.Network.Diffusion as ND
+import Ouroboros.Network.Protocol.PeerSharing.Type (PeerSharingResult (..))
 
 {- HLINT ignore "Use record patterns" -}
 
@@ -393,8 +394,9 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TracePublicRootsRequest    {} -> Info
       TracePublicRootsResults    {} -> Info
       TracePublicRootsFailure    {} -> Error
-      TraceGossipRequests        {} -> Debug
-      TraceGossipResults         {} -> Debug
+      TracePeerShareRequests     {} -> Info
+      TracePeerShareResults      {} -> Info
+      TracePeerShareResultsFiltered {} -> Debug
       TraceForgetColdPeers       {} -> Info
       TracePromoteColdPeers      {} -> Info
       TracePromoteColdLocalPeers {} -> Info
@@ -456,7 +458,6 @@ instance HasSeverityAnnotation (ConnectionManagerTrace addr (ConnectionHandlerTr
       TrShutdown                              -> Info
       TrConnectionExists {}                   -> Info
       TrForbiddenConnection {}                -> Info
-      TrImpossibleConnection {}               -> Info
       TrConnectionFailure {}                  -> Info
       TrConnectionNotFound {}                 -> Debug
       TrForbiddenOperation {}                 -> Info
@@ -1381,7 +1382,7 @@ instance ToJSON IP where
 instance ToObject TracePublicRootPeers where
   toObject _verb (TracePublicRootRelayAccessPoint relays) =
     mconcat [ "kind" .= String "PublicRootRelayAddresses"
-             , "relayAddresses" .= Aeson.toJSONList relays
+             , "relayAddresses" .= toJSON relays
              ]
   toObject _verb (TracePublicRootDomains domains) =
     mconcat [ "kind" .= String "PublicRootDomains"
@@ -1425,6 +1426,10 @@ instance ToJSON PeerSelectionTargets where
 instance ToJSON ReconnectDelay where
   toJSON = toJSON . reconnectDelay
 
+instance ToJSON addr => ToJSON (PeerSharingResult addr) where
+  toJSON (PeerSharingResult addrs) = Aeson.toJSONList addrs
+  toJSON PeerSharingNotRegisteredYet = String "PeerSharingNotRegisteredYet"
+
 instance ToObject (TracePeerSelection SockAddr) where
   toObject _verb (TraceLocalRootPeersChanged lrp lrp') =
     mconcat [ "kind" .= String "LocalRootPeersChanged"
@@ -1453,16 +1458,20 @@ instance ToObject (TracePeerSelection SockAddr) where
              , "group" .= group
              , "diffTime" .= dt
              ]
-  toObject _verb (TraceGossipRequests targetKnown actualKnown aps sps) =
-    mconcat [ "kind" .= String "GossipRequests"
+  toObject _verb (TracePeerShareRequests targetKnown actualKnown aps sps) =
+    mconcat [ "kind" .= String "PeerShareRequests"
              , "targetKnown" .= targetKnown
              , "actualKnown" .= actualKnown
              , "availablePeers" .= Aeson.toJSONList (toList aps)
              , "selectedPeers" .= Aeson.toJSONList (toList sps)
              ]
-  toObject _verb (TraceGossipResults res) =
-    mconcat [ "kind" .= String "GossipResults"
+  toObject _verb (TracePeerShareResults res) =
+    mconcat [ "kind" .= String "PeerShareResults"
              , "result" .= Aeson.toJSONList (map ( first show <$> ) res)
+             ]
+  toObject _verb (TracePeerShareResultsFiltered res) =
+    mconcat [ "kind" .= String "PeerShareResultsFiltered"
+             , "result" .= Aeson.toJSONList res
              ]
   toObject _verb (TraceForgetColdPeers targetKnown actualKnown sp) =
     mconcat [ "kind" .= String "ForgeColdPeers"
@@ -1792,9 +1801,10 @@ instance FromJSON NodeToClientVersion where
   parseJSON x          = fail ("FromJSON.NodeToClientVersion: error parsing NodeToClientVersion: " ++ show x)
 
 instance ToJSON NodeToNodeVersionData where
-  toJSON (NodeToNodeVersionData (NetworkMagic m) dm) =
+  toJSON (NodeToNodeVersionData (NetworkMagic m) dm ps) =
     Aeson.object [ "networkMagic" .= toJSON m
                  , "diffusionMode" .= show dm
+                 , "peerSharing" .= show ps
                  ]
 
 instance ToJSON NodeToClientVersionData where
@@ -1899,11 +1909,6 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
       TrForbiddenConnection connId ->
         mconcat
           [ "kind" .= String "ForbiddenConnection"
-          , "connectionId" .= toJSON connId
-          ]
-      TrImpossibleConnection connId ->
-        mconcat
-          [ "kind" .= String "ImpossibleConnection"
           , "connectionId" .= toJSON connId
           ]
       TrConnectionFailure connId ->

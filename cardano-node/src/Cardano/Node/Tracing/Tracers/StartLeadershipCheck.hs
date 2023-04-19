@@ -22,7 +22,7 @@ import           Data.Word (Word64)
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (BlockNo (..), blockNo, unBlockNo)
 import           Ouroboros.Network.NodeToClient (LocalConnectionId)
-import           Ouroboros.Network.NodeToNode (RemoteConnectionId)
+import           Ouroboros.Network.NodeToNode (RemoteAddress)
 
 import           Ouroboros.Consensus.Block (SlotNo (..))
 import           Ouroboros.Consensus.HardFork.Combinator
@@ -83,7 +83,7 @@ forgeTracerTransform nodeKern (Trace tr) = pure $ Trace $ T.arrow $ T.emit $
 nkQueryLedger ::
      IsLedger (LedgerState blk)
   => (ExtLedgerState blk -> a)
-  -> NodeKernel IO RemoteConnectionId LocalConnectionId blk
+  -> NodeKernel IO RemoteAddress LocalConnectionId blk
   -> IO a
 nkQueryLedger f NodeKernel{getChainDB} =
   f <$> atomically (ChainDB.getCurrentLedger getChainDB)
@@ -115,14 +115,14 @@ fragmentChainDensity frag = calcDensity blockD slotD
 
 nkQueryChain ::
      (AF.AnchoredFragment (Header blk) -> a)
-  -> NodeKernel IO RemoteConnectionId LocalConnectionId blk
+  -> NodeKernel IO RemoteAddress LocalConnectionId blk
   -> IO a
 nkQueryChain f NodeKernel{getChainDB} =
   f <$> atomically (ChainDB.getCurrentChain getChainDB)
 
 
 mapNodeKernelDataIO ::
-  (NodeKernel IO RemoteConnectionId LocalConnectionId blk -> IO a)
+  (NodeKernel IO RemoteAddress LocalConnectionId blk -> IO a)
   -> NodeKernelData blk
   -> IO (StrictMaybe a)
 mapNodeKernelDataIO f (NodeKernelData ref) =

@@ -20,6 +20,7 @@ import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterv
 import           Ouroboros.Network.Block (SlotNo (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
                    DiffusionMode (InitiatorAndResponderDiffusionMode))
+import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 
 import           Hedgehog (Property, discover, withTests, (===))
 import qualified Hedgehog
@@ -77,6 +78,7 @@ testPartialYamlConfig =
     , pncTargetNumberOfEstablishedPeers = mempty
     , pncTargetNumberOfActivePeers = mempty
     , pncEnableP2P = Last (Just DisabledP2PMode)
+    , pncPeerSharing = Last (Just NoPeerSharing)
     }
 
 -- | Example partial configuration theoretically created
@@ -110,6 +112,7 @@ testPartialCliConfig =
     , pncTargetNumberOfEstablishedPeers = mempty
     , pncTargetNumberOfActivePeers = mempty
     , pncEnableP2P = Last (Just DisabledP2PMode)
+    , pncPeerSharing = Last (Just NoPeerSharing)
     }
 
 -- | Expected final NodeConfiguration
@@ -151,6 +154,7 @@ eExpectedConfig = do
     , ncTargetNumberOfEstablishedPeers = 50
     , ncTargetNumberOfActivePeers = 20
     , ncEnableP2P = SomeNetworkP2PMode Consensus.DisabledP2PMode
+    , ncPeerSharing = NoPeerSharing
     }
 
 -- -----------------------------------------------------------------------------

@@ -13,7 +13,7 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2023-04-12T11:22:22Z
+  , hackage.haskell.org 2023-04-18T18:03:53Z
   , cardano-haskell-packages 2023-04-13T17:16:53Z
 
 packages:
@@ -89,3 +89,14 @@ package snap-server
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-network
+  tag: e4a222f8e0f5d55591cc14b062332a8a61e85724
+  --sha256: sha256-LrrtA5KR1mFgSQmUZUWIXAS23bUbEVpnnwH1ehH2oWM=
+  subdir: ouroboros-network
+          ouroboros-network-api
+          ouroboros-network-protocols
+          ouroboros-network-framework
+          ouroboros-consensus-diffusion
+          ouroboros-consensus-byron
