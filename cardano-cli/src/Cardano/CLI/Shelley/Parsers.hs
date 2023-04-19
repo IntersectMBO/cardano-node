@@ -810,7 +810,7 @@ pTransaction envCli =
   pTransactionCalculateMinFee =
     TxCalculateMinFee
       <$> pTxBodyFileIn
-      <*> optional (pNetworkId envCli)
+      <*> pNetworkId envCli
       <*> pProtocolParamsFile
       <*> pTxInCount
       <*> pTxOutCount
