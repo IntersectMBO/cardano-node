@@ -8,7 +8,7 @@ import           Cardano.Api (AnyConsensusModeParams (..), ConsensusModeParams (
                    EpochSlots (..), NetworkId (..), NetworkMagic (..), SocketPath (..), bounded)
 import           Cardano.CLI.Environment (EnvCli (envCliNetworkId))
 
-import           Control.Applicative (optional)
+import           Cardano.CLI.Environment (EnvCli (envCliSocketPath))
 import           Data.Foldable
 import           Data.Maybe (maybeToList)
 import           Data.Word (Word64)
@@ -92,15 +92,20 @@ pEpochSlots =
     , Opt.showDefault
     ]
 
-pSocketPath :: Parser (Maybe SocketPath)
-pSocketPath =
-  optional $ fmap SocketPath $
-    Opt.strOption $ mconcat
-      [ Opt.long "socket-path"
-      , Opt.metavar "SOCKET_PATH"
-      , Opt.help $ mconcat
-        [ "Path to the node socket.  This overrides the CARDANO_NODE_SOCKET_PATH "
-        , "environment variable"
+pSocketPath :: EnvCli -> Parser SocketPath
+pSocketPath envCli =
+  asum $ mconcat
+    [ [ fmap SocketPath $ Opt.strOption $ mconcat
+        [ Opt.long "socket-path"
+        , Opt.metavar "SOCKET_PATH"
+        , Opt.help $ mconcat
+          [ "Path to the node socket.  This overrides the CARDANO_NODE_SOCKET_PATH "
+          , "environment variable.  The argument is optional if CARDANO_NODE_SOCKET_PATH "
+          , "is defined and mandatory otherwise."
+          ]
+        , Opt.completer (Opt.bashCompleter "file")
         ]
-      , Opt.completer (Opt.bashCompleter "file")
       ]
+    , -- Default to the socket path specified by the environment variable if it is available.
+      pure . SocketPath <$> maybeToList (envCliSocketPath envCli)
+    ]

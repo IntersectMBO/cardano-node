@@ -64,13 +64,13 @@ data ByronCommand =
         (SigningKeyFile In)
 
   | GetLocalNodeTip
-        (Maybe SocketPath)
+        SocketPath
         NetworkId
 
     -----------------------------------
 
   | SubmitTx
-        (Maybe SocketPath)
+        SocketPath
         NetworkId
         (TxFile In)
         -- ^ Filepath of transaction to submit.
@@ -130,11 +130,11 @@ data NodeCmd =
       FilePath
       ByronProtocolParametersUpdate
   | SubmitUpdateProposal
-      (Maybe SocketPath)
+      SocketPath
       NetworkId
       FilePath -- ^ Update proposal filepath.
   | SubmitVote
-      (Maybe SocketPath)
+      SocketPath
       NetworkId
       FilePath -- ^ Vote filepath.
   deriving Show

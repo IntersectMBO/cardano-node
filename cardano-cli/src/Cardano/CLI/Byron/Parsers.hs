@@ -235,7 +235,7 @@ parseLocalNodeQueryValues envCli =
   mconcat
     [ command' "get-tip" "Get the tip of your local node's blockchain"
         $ GetLocalNodeTip
-            <$> pSocketPath
+            <$> pSocketPath envCli
             <*> pNetworkId envCli
     ]
 
@@ -332,7 +332,7 @@ parseTxRelatedValues envCli =
         "submit-tx"
         "Submit a raw, signed transaction, in its on-wire representation."
         $ SubmitTx
-            <$> pSocketPath
+            <$> pSocketPath envCli
             <*> pNetworkId envCli
             <*> parseTxFile "tx"
     , command'
@@ -399,7 +399,7 @@ parseByronUpdateProposal envCli = do
 parseByronVoteSubmission :: EnvCli -> Parser NodeCmd
 parseByronVoteSubmission envCli = do
   SubmitVote
-    <$> pSocketPath
+    <$> pSocketPath envCli
     <*> pNetworkId envCli
     <*> parseFilePath "filepath" "Filepath of Byron update proposal vote."
 
@@ -425,7 +425,7 @@ pByronProtocolParametersUpdate =
 parseByronUpdateProposalSubmission :: EnvCli -> Parser NodeCmd
 parseByronUpdateProposalSubmission envCli =
   SubmitUpdateProposal
-    <$> pSocketPath
+    <$> pSocketPath envCli
     <*> pNetworkId envCli
     <*> parseFilePath "filepath" "Filepath of Byron update proposal."
 

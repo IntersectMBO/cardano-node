@@ -709,7 +709,7 @@ pTransaction envCli =
 
   pTransactionBuild :: Parser TransactionCmd
   pTransactionBuild =
-    TxBuild <$> pSocketPath
+    TxBuild <$> pSocketPath envCli
             <*> pCardanoEra
             <*> pConsensusModeParams
             <*> pNetworkId envCli
@@ -798,7 +798,7 @@ pTransaction envCli =
   pTransactionSubmit :: Parser TransactionCmd
   pTransactionSubmit =
     TxSubmit
-      <$> pSocketPath
+      <$> pSocketPath envCli
       <*> pConsensusModeParams
       <*> pNetworkId envCli
       <*> pTxSubmitFile
@@ -960,7 +960,7 @@ pQueryCmd envCli =
     pQueryProtocolParameters :: Parser QueryCmd
     pQueryProtocolParameters =
       QueryProtocolParameters'
-        <$> pSocketPath
+        <$> pSocketPath envCli
         <*> pConsensusModeParams
         <*> pNetworkId envCli
         <*> pMaybeOutputFile
@@ -968,7 +968,7 @@ pQueryCmd envCli =
     pQueryTip :: Parser QueryCmd
     pQueryTip =
       QueryTip
-        <$> pSocketPath
+        <$> pSocketPath envCli
         <*> pConsensusModeParams
         <*> pNetworkId envCli
         <*> pMaybeOutputFile
@@ -976,7 +976,7 @@ pQueryCmd envCli =
     pQueryUTxO :: Parser QueryCmd
     pQueryUTxO =
       QueryUTxO'
-        <$> pSocketPath
+        <$> pSocketPath envCli
         <*> pConsensusModeParams
         <*> pQueryUTxOFilter
         <*> pNetworkId envCli
@@ -985,7 +985,7 @@ pQueryCmd envCli =
     pQueryStakePools :: Parser QueryCmd
     pQueryStakePools =
       QueryStakePools'
-        <$> pSocketPath
+        <$> pSocketPath envCli
         <*> pConsensusModeParams
         <*> pNetworkId envCli
         <*> pMaybeOutputFile
@@ -993,7 +993,7 @@ pQueryCmd envCli =
     pQueryStakeDistribution :: Parser QueryCmd
     pQueryStakeDistribution =
       QueryStakeDistribution'
-        <$> pSocketPath
+        <$> pSocketPath envCli
         <*> pConsensusModeParams
         <*> pNetworkId envCli
         <*> pMaybeOutputFile
@@ -1001,7 +1001,7 @@ pQueryCmd envCli =
     pQueryStakeAddressInfo :: Parser QueryCmd
     pQueryStakeAddressInfo =
       QueryStakeAddressInfo
-        <$> pSocketPath
+        <$> pSocketPath envCli
         <*> pConsensusModeParams
         <*> pFilterByStakeAddress
         <*> pNetworkId envCli
@@ -1010,7 +1010,7 @@ pQueryCmd envCli =
     pQueryLedgerState :: Parser QueryCmd
     pQueryLedgerState =
       QueryDebugLedgerState'
-        <$> pSocketPath
+        <$> pSocketPath envCli
         <*> pConsensusModeParams
         <*> pNetworkId envCli
         <*> pMaybeOutputFile
@@ -1018,7 +1018,7 @@ pQueryCmd envCli =
     pQueryProtocolState :: Parser QueryCmd
     pQueryProtocolState =
       QueryProtocolState'
-        <$> pSocketPath
+        <$> pSocketPath envCli
         <*> pConsensusModeParams
         <*> pNetworkId envCli
         <*> pMaybeOutputFile
@@ -1036,7 +1036,7 @@ pQueryCmd envCli =
     pQueryStakeSnapshot :: Parser QueryCmd
     pQueryStakeSnapshot =
       QueryStakeSnapshot'
-        <$> pSocketPath
+        <$> pSocketPath envCli
         <*> pConsensusModeParams
         <*> pNetworkId envCli
         <*> pAllStakePoolsOrOnly
@@ -1045,7 +1045,7 @@ pQueryCmd envCli =
     pQueryPoolState :: Parser QueryCmd
     pQueryPoolState =
       QueryPoolState'
-        <$> pSocketPath
+        <$> pSocketPath envCli
         <*> pConsensusModeParams
         <*> pNetworkId envCli
         <*> many pStakePoolVerificationKeyHash
@@ -1053,7 +1053,7 @@ pQueryCmd envCli =
     pQueryTxMempool :: Parser QueryCmd
     pQueryTxMempool =
       QueryTxMempool
-        <$> pSocketPath
+        <$> pSocketPath envCli
         <*> pConsensusModeParams
         <*> pNetworkId envCli
         <*> pTxMempoolQuery
@@ -1074,7 +1074,7 @@ pQueryCmd envCli =
     pLeadershipSchedule :: Parser QueryCmd
     pLeadershipSchedule =
       QueryLeadershipSchedule
-        <$> pSocketPath
+        <$> pSocketPath envCli
         <*> pConsensusModeParams
         <*> pNetworkId envCli
         <*> pGenesisFile "Shelley genesis filepath"
@@ -1086,7 +1086,7 @@ pQueryCmd envCli =
     pKesPeriodInfo :: Parser QueryCmd
     pKesPeriodInfo =
       QueryKesPeriodInfo
-        <$> pSocketPath
+        <$> pSocketPath envCli
         <*> pConsensusModeParams
         <*> pNetworkId envCli
         <*> pOperationalCertificateFile

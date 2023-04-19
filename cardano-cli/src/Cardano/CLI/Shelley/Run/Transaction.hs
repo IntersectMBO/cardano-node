@@ -300,7 +300,7 @@ runTransactionCmd cmd =
 --
 
 runTxBuildCmd
-  :: Maybe SocketPath
+  :: SocketPath
   -> AnyCardanoEra
   -> AnyConsensusModeParams
   -> NetworkId
@@ -327,16 +327,13 @@ runTxBuildCmd
   -> TxBuildOutputOptions
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuildCmd
-    mNodeSocketPath (AnyCardanoEra cEra) consensusModeParams@(AnyConsensusModeParams cModeParams)
+    socketPath (AnyCardanoEra cEra) consensusModeParams@(AnyConsensusModeParams cModeParams)
     nid mScriptValidity mOverrideWits txins readOnlyRefIns
     reqSigners txinsc mReturnColl mTotCollateral txouts changeAddr mValue mLowBound
     mUpperBound certs wdrls metadataSchema scriptFiles metadataFiles mProtocolParamsFile mUpProp outputOptions = do
   -- The user can specify an era prior to the era that the node is currently in.
   -- We cannot use the user specified era to construct a query against a node because it may differ
   -- from the node's era and this will result in the 'QueryEraMismatch' failure.
-
-  socketPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
-    & onLeft (left . ShelleyTxCmdSocketEnvError)
 
   let localNodeConnInfo = LocalNodeConnectInfo
                             { localConsensusModeParams = cModeParams
@@ -1110,15 +1107,12 @@ runTxSign txOrTxBody witSigningData mnw outTxFile = do
 
 
 runTxSubmit
-  :: Maybe SocketPath
+  :: SocketPath
   -> AnyConsensusModeParams
   -> NetworkId
   -> FilePath
   -> ExceptT ShelleyTxCmdError IO ()
-runTxSubmit mNodeSocketPath (AnyConsensusModeParams cModeParams) network txFilePath = do
-    SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
-      & onLeft (left . ShelleyTxCmdSocketEnvError)
-
+runTxSubmit (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network txFilePath = do
     txFile <- liftIO $ fileOrPipe txFilePath
     InAnyCardanoEra era tx <- lift (readFileTx txFile) & onLeft (left . ShelleyTxCmdCddlError)
     let cMode = AnyConsensusMode $ consensusModeOnly cModeParams
