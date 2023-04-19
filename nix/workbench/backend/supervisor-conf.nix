@@ -1,7 +1,7 @@
 { pkgs
 , lib
 , stateDir
-, profileNix
+, profileData
 , unixHttpServerPort ? null
 , inetHttpServerPort ? null
 }:
@@ -46,7 +46,7 @@ let
       };
     }
     //
-    lib.attrsets.optionalAttrs (profileNix.value.node.tracer)
+    lib.attrsets.optionalAttrs (profileData.value.node.tracer)
     {
       "program:tracer" = {
         directory      = "${stateDir}/tracer";
@@ -63,7 +63,7 @@ let
     }
     //
     listToAttrs
-      (flip mapAttrsToList profileNix.node-services
+      (flip mapAttrsToList profileData.node-services
         (_: { nodeSpec, service, ... }:
           nameValuePair "program:${nodeSpec.value.name}" {
             ##

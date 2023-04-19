@@ -18,8 +18,8 @@
 with lib;
 
 let
-    ## TODO:  globally rename all profileNix occurences to profileData
-    inherit (workbench-runner) profileName profileNix backend backendNix;
+
+    inherit (workbench-runner) profileName profileData backend backendData;
 
 in project.shellFor {
   name = "workbench-shell";
@@ -31,9 +31,9 @@ in project.shellFor {
     . nix/workbench/lib.sh
 
     export WB_SHELL_PROFILE=${profileName}
-    export WB_SHELL_PROFILE_DATA=${profileNix}
+    export WB_SHELL_PROFILE_DATA=${profileData}
     export WB_BACKEND=${backend.name}
-    export WB_BACKEND_DATA=${backendNix}
+    export WB_BACKEND_DATA=${backendData}
     export WB_DEPLOYMENT_NAME=''${WB_DEPLOYMENT_NAME:-$(basename $(pwd))}
     export NIXOPS_DEPLOYMENT=$WB_DEPLOYMENT_NAME
     progress "profile name"           $WB_SHELL_PROFILE

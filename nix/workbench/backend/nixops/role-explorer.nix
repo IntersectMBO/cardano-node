@@ -1,5 +1,5 @@
 pkgs:
-profileNix:
+profileData:
 { config, name, lib, nodes, resources, ... }:
 with pkgs; with pkgs.lib;
 
@@ -28,7 +28,7 @@ in {
 
   services.tx-generator =
     recursiveUpdate
-      profileNix.generator-service.serviceConfig.value
+      profileData.generator-service.serviceConfig.value
       {
         enable          = true;
       };
@@ -104,7 +104,7 @@ in {
 
   services.cardano-tracer =
     recursiveUpdate
-      profileNix.tracer-service.serviceConfig.value
+      profileData.tracer-service.serviceConfig.value
       {
         enable          = true;
         acceptingSocket = (node-cfg.stateDir 0) + "/tracer.socket";
@@ -115,7 +115,7 @@ in {
 
   services.cardano-node =
     recursiveUpdate
-      profileNix.node-services.${name}.serviceConfig.value
+      profileData.node-services.${name}.serviceConfig.value
       {
         enable         = true;
         stateDir       = "/var/lib/cardano-node";

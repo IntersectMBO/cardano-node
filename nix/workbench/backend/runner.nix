@@ -18,14 +18,14 @@ let
 
   inherit (backend) stateDir basePort useCabalRun;
 
-  profileNix = workbench.materialise-profile
+  profileData = workbench.materialise-profile
     { inherit profileName backend profiling; };
-  backendNix = backend.materialise-profile
-    { inherit profileNix; };
+  backendData = backend.materialise-profile
+    { inherit profileData; };
 in
   let
 
-    inherit (profileNix.value) era composition monetary;
+    inherit (profileData.value) era composition monetary;
 
     path = pkgs.lib.makeBinPath path';
     path' =
@@ -42,8 +42,8 @@ in
 
       wb start \
         --batch-name   ${batchName} \
-        --profile-data ${profileNix} \
-        --backend-data ${backendNix} \
+        --profile-data ${profileData} \
+        --backend-data ${backendData} \
         --cache-dir    ${cacheDir} \
         --base-port    ${toString basePort} \
         ${pkgs.lib.optionalString useCabalRun ''--cabal''} \
@@ -100,10 +100,10 @@ in
               wb
               ${pkgs.lib.optionalString trace "--trace"}
               start
-              --profile-data        ${profileNix}
-              --backend-data        ${backendNix}
-              --topology            ${profileNix.topology.files}
-              --genesis-cache-entry ${profileNix.genesis.files}
+              --profile-data        ${profileData}
+              --backend-data        ${backendData}
+              --topology            ${profileData.topology.files}
+              --genesis-cache-entry ${profileData.genesis.files}
               --batch-name          smoke-test
               --base-port           ${toString basePort}
               --node-source         ${pkgs.cardanoNodeProject.args.src}
@@ -128,7 +128,7 @@ in
             report workbench-log   $out wb-start.log
             report meta            $out meta.json
             ${pkgs.lib.concatStringsSep "\n"
-              (map nodeBuildProduct (__attrNames profileNix.node-specs.value))}
+              (map nodeBuildProduct (__attrNames profileData.node-specs.value))}
             report archive-tar-zst $out archive.tar.zst
             EOF
 
@@ -136,11 +136,11 @@ in
             '';
   in
     run // {
-      analysis = workbench.run-analysis { inherit pkgs workbench profileNix run; };
+      analysis = workbench.run-analysis { inherit pkgs workbench profileData run; };
     };
 
   overlay = self: super:
-    (backend.overlay profileNix self super
+    (backend.overlay profileData self super
     //
     {
       inherit workbench-interactive-start;
@@ -149,8 +149,8 @@ in
     });
 in
 {
-  inherit profileName profileNix;
-  inherit backend backendNix;
+  inherit profileName profileData;
+  inherit backend backendData;
   inherit workbench-profile-run;
 
   inherit batchName stateDir overlay;

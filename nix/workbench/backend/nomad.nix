@@ -9,10 +9,10 @@ let
 
   # Backend-specific Nix bits:
   materialise-profile =
-    { profileNix }:
+    { profileData }:
       let
         supervisorConf = import ./supervisor-conf.nix
-          { inherit profileNix;
+          { inherit profileData;
             inherit pkgs lib stateDir;
             # ''{{ env "NOMAD_TASK_DIR" }}/supervisor.sock''
             unixHttpServerPort = "/tmp/supervisor.sock";
@@ -72,8 +72,8 @@ let
               flake-output = "legacyPackages.x86_64-linux.python3Packages.supervisor";
               installable = "${flake-reference}/${gitrev}#${flake-output}";
             };
-            # TODO: profileNix.node-services."node-0".serviceConfig.value.eventlog
-            # builtins.trace (builtins.attrNames profileNix.node-services."node-0".serviceConfig.value.eventlog) XXXX
+            # TODO: profileData.node-services."node-0".serviceConfig.value.eventlog
+            # builtins.trace (builtins.attrNames profileData.node-services."node-0".serviceConfig.value.eventlog) XXXX
             cardano-node = rec {
               nix-store-path  = with pkgs;
                 if eventlogged
@@ -117,7 +117,7 @@ let
               # TODO: oneTracerPerGroup
               oneTracerPerCluster = import ./nomad-job.nix
                 { inherit lib stateDir;
-                  inherit profileNix;
+                  inherit profileData;
                   inherit containerSpecs;
                   inherit supervisorConf;
                   # May evolve to a "cloud" flag!
@@ -126,7 +126,7 @@ let
                 };
               oneTracerPerNode = import ./nomad-job.nix
                 { inherit lib stateDir;
-                  inherit profileNix;
+                  inherit profileData;
                   inherit containerSpecs;
                   inherit supervisorConf;
                   # May evolve to a "cloud" flag!
@@ -138,7 +138,7 @@ let
               # TODO: oneTracerPerGroup
               oneTracerPerCluster = import ./nomad-job.nix
                 { inherit lib stateDir;
-                  inherit profileNix;
+                  inherit profileData;
                   inherit containerSpecs;
                   inherit supervisorConf;
                   # May evolve to a "cloud" flag!
@@ -147,7 +147,7 @@ let
                 };
               oneTracerPerNode = import ./nomad-job.nix
                 { inherit lib stateDir;
-                  inherit profileNix;
+                  inherit profileData;
                   inherit containerSpecs;
                   inherit supervisorConf;
                   # May evolve to a "cloud" flag!
@@ -157,7 +157,7 @@ let
             };
           };
         };
-      in pkgs.runCommand "workbench-backend-output-${profileNix.profileName}-nomad"
+      in pkgs.runCommand "workbench-backend-output-${profileData.profileName}-nomad"
         ({
           containerSpecsJSON = pkgs.writeText "workbench-cluster-container-pkgs.json"
             (lib.generators.toJSON {} containerSpecs);

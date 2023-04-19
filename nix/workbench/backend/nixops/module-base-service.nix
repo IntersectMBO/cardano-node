@@ -1,9 +1,9 @@
 pkgs:
-profileNix:
+profileData:
 { options, config, name, nodes, resources,  ... }:
 with pkgs; with lib;
 let
-  inherit (profileNix) node-services;
+  inherit (profileData) node-services;
 
   nodeId = config.node.nodeId;
   cfg = config.services.cardano-node;
@@ -112,7 +112,7 @@ in
   config = {
     services.cardano-node =
       recursiveUpdate
-        profileNix.node-services.${name}.serviceConfig.value
+        profileData.node-services.${name}.serviceConfig.value
         {
           enable         = true;
           stateDir       = "/var/lib/cardano-node";
@@ -186,7 +186,7 @@ in
     # }
 
     services.cardano-tracer =
-      profileNix.tracer-service.serviceConfig.value;
+      profileData.tracer-service.serviceConfig.value;
     # {
     #   enable = true;
     #   acceptingSocket = (cfg.stateDir 0) + "/tracer.socket";
