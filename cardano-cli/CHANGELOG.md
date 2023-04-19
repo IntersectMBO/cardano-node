@@ -56,6 +56,18 @@
   ([PR5119](https://github.com/input-output-hk/cardano-node/pull/5119))
   ([PR5119](https://github.com/input-output-hk/cardano-node/pull/5119))
 
+- Add `--out-file` argument to the shelley stake-pool id command.
+  Add `--key-format-output` argument to the following commands:
+  - `address key-gen`
+  - `stake-address key-gen`
+  - `node key-gen`
+  - `node key-gen-KES`
+  - `node key-gen-VRF`
+  - `genesis create-staked`
+  - `genesis create`
+  [PR5058](https://github.com/input-output-hk/cardano-node/pull/5058)
+
+
 ### Features
 
 - The `--socket-path` option is now a required CLI argument for relevant commands if `CARDANO_NODE_SOCKET_PATH` is not supplied.
