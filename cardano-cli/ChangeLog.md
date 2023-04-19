@@ -22,6 +22,11 @@
 
   See [CIP proposal](https://github.com/cardano-foundation/CIPs/pull/496) for details.
 
+- Any command that takes a `--mainnet` flag or a `--testnet-magic` flag can have that setting
+  supplied with the `CARDANO_NODE_NETWORK_ID=mainnet` or `CARDANO_NODE_NETWORK_ID=<number>`
+  instead where `<number>` is the network id.
+  [PR5119](https://github.com/input-output-hk/cardano-node/pull/5119)
+
 ### Features
 
 - Default to the ledger's CDDL format for transaction body creation by removing flags `--cddl-format` and `--cli-format` from `build` and `build-raw` ([PR 4303](https://github.com/input-output-hk/cardano-node/pull/4303))
