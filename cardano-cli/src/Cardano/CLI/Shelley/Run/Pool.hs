@@ -180,10 +180,10 @@ runPoolId verKeyOrFile outputFormat = do
         PoolIdOutputFormatBech32 ->
           Text.putStrLn $ serialiseToBech32 (verificationKeyHash stakePoolVerKey)
 
-runPoolMetadataHash :: PoolMetadataFile -> Maybe (File () Out) -> ExceptT ShelleyPoolCmdError IO ()
-runPoolMetadataHash (PoolMetadataFile poolMDPath) mOutFile = do
-  metadataBytes <- handleIOExceptT (ShelleyPoolCmdReadFileError . FileIOError poolMDPath) $
-    BS.readFile poolMDPath
+runPoolMetadataHash :: StakePoolMetadataFile In -> Maybe (File () Out) -> ExceptT ShelleyPoolCmdError IO ()
+runPoolMetadataHash poolMDPath mOutFile = do
+  metadataBytes <- handleIOExceptT (ShelleyPoolCmdReadFileError . FileIOError (unFile poolMDPath)) $
+    BS.readFile (unFile poolMDPath)
   (_metadata, metadataHash) <-
       firstExceptT ShelleyPoolCmdMetadataValidationError
     . hoistEither

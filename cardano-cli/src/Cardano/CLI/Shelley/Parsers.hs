@@ -1625,9 +1625,9 @@ pCertificateFile balanceExecUnits =
     , "stake key certificates etc). Optionally specify a script witness."
     ]
 
-pPoolMetadataFile :: Parser PoolMetadataFile
+pPoolMetadataFile :: Parser (StakePoolMetadataFile In)
 pPoolMetadataFile =
-  PoolMetadataFile <$>
+  File <$>
     Opt.strOption
       (  Opt.long "pool-metadata-file"
       <> Opt.metavar "FILE"
