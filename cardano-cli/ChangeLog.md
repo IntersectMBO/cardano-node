@@ -33,6 +33,14 @@
   ([PR5119](https://github.com/input-output-hk/cardano-node/pull/5119))
   ([PR5119](https://github.com/input-output-hk/cardano-node/pull/5119))
 
+- New typesafe file types.  Redefines the following types:
+  - `type SigningKeyFile = File (SigningKey ())`
+  - `type VerificationKeyFile = File (VerificationKey ())`
+  - `type TxBodyFile = File (TxBody ())`
+  - `type TxFile = File (Tx ())`
+  Construct values of these types with `File` constructor.
+  [PR 5105](https://github.com/input-output-hk/cardano-node/pull/5105)
+
 ### Features
 
 - The `--socket-path` option is now a required CLI argument for relevant commands if `CARDANO_NODE_SOCKET_PATH` is not supplied.

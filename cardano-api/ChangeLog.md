@@ -164,9 +164,6 @@
 - CIP-1694 make space for DRep certificates
   ([PR 5108](https://github.com/input-output-hk/cardano-node/pull/5108))
 
-- File type to track the content and direction of files
-  ([PR 5105](https://github.com/input-output-hk/cardano-node/pull/5105))
-
 - Expose UsingRawBytes et al types
   ([PR 5086](https://github.com/input-output-hk/cardano-node/pull/5086))
 
@@ -283,6 +280,20 @@
 
 - Export `LocalTxSubmissionClient` data constructor
   ([PR 5096](https://github.com/input-output-hk/cardano-node/pull/5096))
+
+- **Breaking change**
+  New typesafe file types:
+  - New types: `File, FileDirection`
+  - New functions: `mapFile`, `onlyIn`, `onlyOut`
+  - Deleted types: `OutputFile`, use `File () Out` instead.
+  Some function signatures have changed to use `File` as a result:
+  - `writeByteStringFile`
+  - `writeByteStringOutput`
+  - `writeLazyByteStringFile`
+  - `writeLazyByteStringOutput`
+  - `writeTextFile`
+  - `writeTextOutput`
+  [PR 5105](https://github.com/input-output-hk/cardano-node/pull/5105)
 
 ### Bugs
 
