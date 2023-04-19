@@ -90,7 +90,7 @@ import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
 
-import           Control.Monad (forM, forM_, join)
+import           Control.Monad (forM, forM_, join, foldM)
 import           Control.Monad.IO.Class (MonadIO)
 import           Control.Monad.IO.Unlift (MonadIO (..))
 import           Control.Monad.Trans.Class
@@ -1421,6 +1421,44 @@ toTentativeEpochInfo (EraHistory _ interpreter) =
   Tentative
     $ hoistEpochInfo (first (Text.pack . show) . runExcept)
     $ Consensus.interpreterToEpochInfo (Consensus.unsafeExtendSafeZone interpreter)
+
+utcTimeToSlotNo
+  :: Maybe SocketPath -> AnyConsensusModeParams -> NetworkId -> UTCTime -> ExceptT ShelleyQueryCmdError IO SlotNo
+utcTimeToSlotNo mNodeSocketPath (AnyConsensusModeParams cModeParams) network utcTime = do
+  SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
+    & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
+  let cMode = consensusModeOnly cModeParams
+      allEras = [minBound .. maxBound] :: [AnyCardanoEra]
+      localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
+  epochInfos <- case cMode of
+    CardanoMode -> do
+      forM allEras $ \anyE@(AnyCardanoEra era) -> do
+        sbe <- getSbe (cardanoEraStyle era)
+        eInMode <- toEraInMode era cMode
+            & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
+        let pparamsQuery = QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
+            ptclStateQuery = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryProtocolState
+            eraHistoryQuery = QueryEraHistory CardanoModeIsMultiEra
+
+        pparams <- executeQuery era cModeParams localNodeConnInfo pparamsQuery
+        ptclState <- executeQuery era cModeParams localNodeConnInfo ptclStateQuery
+        eraHistory <- lift (queryNodeLocalState localNodeConnInfo Nothing eraHistoryQuery)
+          & onLeft (left . ShelleyQueryCmdAcquireFailure)
+
+        pure $ toEpochInfo eraHistory
+
+    mode -> left . ShelleyQueryCmdUnsupportedMode $ AnyConsensusMode mode
+
+  let systemStart = undefined :: UTCTime -- FIXME: byron genesis block time
+
+  foldl' findSlot (0, SystemStart systemStart)
+    where
+      findSlot (slotNo, lastSlotTime) epochInfo
+        | lastSlotTime > utcTime = slotNo
+        | otherwise = do
+          let (firstSlot, lastSlot) = epochInfoRange epochInfo
+
+
 
 obtainLedgerEraClassConstraints
   :: ShelleyLedgerEra era ~ ledgerera
