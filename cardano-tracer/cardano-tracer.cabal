@@ -32,12 +32,15 @@ common project-config
 
 library
   import:               project-config
+
   hs-source-dirs:       src
 
   exposed-modules:      Cardano.Tracer.Acceptors.Client
                         Cardano.Tracer.Acceptors.Run
                         Cardano.Tracer.Acceptors.Server
                         Cardano.Tracer.Acceptors.Utils
+
+                        Cardano.Tracer.Handlers.Datapoints.Run
 
                         Cardano.Tracer.Handlers.Logs.File
                         Cardano.Tracer.Handlers.Logs.Journal
@@ -143,6 +146,7 @@ library
                       , filepath
                       , mime-mail
                       , optparse-applicative
+                      , ouroboros-network
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , signal

@@ -31,6 +31,8 @@ import           Data.Yaml (decodeFileEither)
 import           GHC.Generics (Generic)
 import           System.Exit (die)
 
+import qualified Cardano.Logging.Types as Log
+
 -- | Only local socket is supported, to avoid unauthorized connections.
 newtype Address = LocalSocket FilePath
   deriving (Eq, Generic, FromJSON, ToJSON, Show)
@@ -90,6 +92,9 @@ data TracerConfig = TracerConfig
   , hasEKG         :: !(Maybe (Endpoint, Endpoint)) -- ^ Endpoint for EKG web-page (list of nodes, monitoring).
   , hasPrometheus  :: !(Maybe Endpoint)             -- ^ Endpoint for Promeheus web-page.
   , hasRTView      :: !(Maybe Endpoint)             -- ^ Endpoint for RTView web-page.
+  , hasForwarding  :: !(Maybe (Network, Log.TraceOptionForwarder))
+                                                    -- ^ Socket for tracer's own forwarding,
+                                                    --   and the forwarder config.
   , logging        :: !(NonEmpty LoggingParams)     -- ^ Logging parameters.
   , rotation       :: !(Maybe RotationParams)       -- ^ Rotation parameters.
   , verbosity      :: !(Maybe Verbosity)            -- ^ Verbosity of the tracer itself.

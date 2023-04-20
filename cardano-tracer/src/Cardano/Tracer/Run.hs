@@ -17,6 +17,7 @@ import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Logs.Rotator
 import           Cardano.Tracer.Handlers.Metrics.Servers
+import           Cardano.Tracer.Handlers.Datapoints.Run
 import           Cardano.Tracer.Handlers.RTView.Run
 import           Cardano.Tracer.Handlers.RTView.State.Historical
 import           Cardano.Tracer.Handlers.RTView.Update.Historical
@@ -99,4 +100,5 @@ doRunCardanoTracer config rtViewStateDir tr protocolsBrake dpRequestors = do
     , runMetricsServers tracerEnv
     , runAcceptors      tracerEnv
     , runRTView         tracerEnv
+    , runDatapoints     config tr
     ]

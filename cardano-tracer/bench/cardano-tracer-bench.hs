@@ -120,6 +120,7 @@ main = do
     , rotation       = Nothing
     , verbosity      = Nothing
     , metricsComp    = Nothing
+    , hasForwarding  = Nothing
     }
 
   generate num = replicate num . mkTraceObject <$> getCurrentTime
