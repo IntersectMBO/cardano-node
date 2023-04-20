@@ -261,16 +261,12 @@ runGovernanceCreatePoll govPollQuestion govPollAnswers govPollNonce out = do
 
 runGovernanceAnswerPoll
   :: File () In
-  -> SigningKeyFile In
-    -- ^ VRF or Ed25519 cold key
   -> Maybe Word
     -- ^ Answer index
   -> ExceptT ShelleyGovernanceCmdError IO ()
-runGovernanceAnswerPoll pollFile skFile maybeChoice = do
+runGovernanceAnswerPoll pollFile maybeChoice = do
   poll <- firstExceptT ShelleyGovernanceCmdTextEnvReadError . newExceptT $
     readFileTextEnvelope AsGovernancePoll pollFile
-
-  credentials <- readVRFOrColdSigningKeyFile skFile
 
   choice <- case maybeChoice of
     Nothing -> do
@@ -288,17 +284,8 @@ runGovernanceAnswerPoll pollFile skFile maybeChoice = do
         { govAnsPoll = hashGovernancePoll poll
         , govAnsChoice = choice
         }
-  let witness = pollAnswer `signPollAnswerWith` credentials
-
   let metadata =
-        mergeTransactionMetadata
-          ( \l r -> case (l, r) of
-              (TxMetaMap xs, TxMetaMap ys) -> TxMetaMap (xs <> ys)
-              _ -> error "unreachable"
-          )
-          (asTxMetadata pollAnswer)
-          (asTxMetadata witness)
-        & metadataToJson TxMetadataJsonDetailedSchema
+        metadataToJson TxMetadataJsonDetailedSchema (asTxMetadata pollAnswer)
 
   liftIO $ do
     BSC.hPutStrLn stderr $ mconcat
@@ -314,26 +301,6 @@ runGovernanceAnswerPoll pollFile skFile maybeChoice = do
       , "file to capture metadata."
       ]
  where
-  readVRFOrColdSigningKeyFile
-    :: SigningKeyFile In
-    -> ExceptT
-         ShelleyGovernanceCmdError
-         IO
-         (Either (SignKeyVRF StandardCrypto) (SignKeyDSIGN StandardCrypto))
-  readVRFOrColdSigningKeyFile filepath = do
-    someSk <- firstExceptT ShelleyGovernanceCmdKeyReadError $
-      readSigningKeyFile filepath
-    case someSk of
-      AVrfSigningKey (VrfSigningKey sk) ->
-        pure (Left sk)
-      AStakePoolSigningKey (StakePoolSigningKey sk) ->
-        pure (Right sk)
-      _anythingElse ->
-        left $ ShelleyGovernanceCmdUnexpectedKeyType
-          [ textEnvelopeType (AsSigningKey AsVrfKey)
-          , textEnvelopeType (AsSigningKey AsStakePoolKey)
-          ]
-
   validateChoice :: GovernancePoll -> Word -> ExceptT ShelleyGovernanceCmdError IO ()
   validateChoice GovernancePoll{govPollAnswers} ix = do
     let maxAnswerIndex = length govPollAnswers - 1

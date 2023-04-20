@@ -23,7 +23,6 @@ module Cardano.Api.Governance.Poll(
     -- * Types
     GovernancePoll (..),
     GovernancePollAnswer (..),
-    GovernancePollWitness (..),
 
     -- * Errors
     GovernancePollError (..),
@@ -31,12 +30,11 @@ module Cardano.Api.Governance.Poll(
 
     -- * Functions
     hashGovernancePoll,
-    signPollAnswerWith,
     verifyPollAnswer,
   ) where
 
 import           Control.Arrow (left)
-import           Control.Monad (foldM, unless, when)
+import           Control.Monad (foldM, when)
 import           Data.Either.Combinators (maybeToRight)
 import           Data.Function ((&))
 import qualified Data.Map.Strict as Map
@@ -57,15 +55,11 @@ import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 
 import           Cardano.Binary (DecoderError(..))
-import           Cardano.Ledger.Crypto (HASH, StandardCrypto, VRF)
-import           Cardano.Ledger.Keys (KeyRole(..), SignedDSIGN, SignKeyDSIGN,
-                   SignKeyVRF, VKey(..), VerKeyVRF, signedDSIGN, verifySignedDSIGN)
+import           Cardano.Ledger.Crypto (HASH, StandardCrypto)
+import           Cardano.Ledger.Keys (KeyHash(..), KeyRole(..))
 
-import qualified Cardano.Crypto.DSIGN as DSIGN
 import           Cardano.Crypto.Hash (hashFromBytes, hashToBytes, hashWith)
 import qualified Cardano.Crypto.Hash as Hash
-import           Cardano.Crypto.Util (SignableRepresentation(..))
-import qualified Cardano.Crypto.VRF as VRF
 
 -- | Associated metadata label as defined in CIP-0094
 pollMetadataLabel :: Word64
@@ -86,14 +80,6 @@ pollMetadataKeyPoll = TxMetaNumber 2
 -- | Key used to identify a chosen answer in a poll metadata object
 pollMetadataKeyChoice :: TxMetadataValue
 pollMetadataKeyChoice = TxMetaNumber 3
-
--- | Key used to identify a VRF proof witness in a poll metadata object
-pollMetadataKeyWitnessVRF :: TxMetadataValue
-pollMetadataKeyWitnessVRF = TxMetaNumber 4
-
--- | Key used to identify a cold key witness in a poll metadata object
-pollMetadataKeyWitnessColdKey :: TxMetadataValue
-pollMetadataKeyWitnessColdKey = TxMetaNumber 5
 
 -- | Key used to identify the optional nonce in a poll metadata object
 pollMetadataKeyNonce :: TxMetadataValue
@@ -219,10 +205,6 @@ instance HasTypeProxy GovernancePollAnswer where
     data AsType GovernancePollAnswer = AsGovernancePollAnswer
     proxyToAsType _ = AsGovernancePollAnswer
 
-instance SignableRepresentation GovernancePollAnswer where
-    getSignableRepresentation =
-      hashToBytes . hashWith @(HASH StandardCrypto) (serialiseToCBOR . asTxMetadata)
-
 instance AsTxMetadata GovernancePollAnswer where
     asTxMetadata GovernancePollAnswer{govAnsPoll, govAnsChoice} =
       makeTransactionMetadata $ Map.fromList
@@ -272,104 +254,6 @@ instance SerialiseAsCBOR GovernancePollAnswer where
 
 
 -- ----------------------------------------------------------------------------
--- Governance Poll Witness
---
-
--- | A governance poll witness, effectively authenticating a
--- 'GovernancePollAnswer' using either a VRF proof or a digital signature from a
--- cold key.
-data GovernancePollWitness
-    = GovernancePollWitnessVRF
-        (VerKeyVRF StandardCrypto)
-        (VRF.CertVRF (VRF StandardCrypto))
-    | GovernancePollWitnessColdKey
-        (VKey 'Witness StandardCrypto)
-        (SignedDSIGN StandardCrypto GovernancePollAnswer)
-  deriving (Show, Eq)
-
-instance HasTypeProxy GovernancePollWitness where
-    data AsType GovernancePollWitness = AsGovernancePollWitness
-    proxyToAsType _ = AsGovernancePollWitness
-
-instance AsTxMetadata GovernancePollWitness where
-    asTxMetadata witness =
-      makeTransactionMetadata $ Map.fromList
-        [ ( pollMetadataLabel
-          , TxMetaMap
-           [ case witness of
-              GovernancePollWitnessVRF vk proof ->
-                ( pollMetadataKeyWitnessVRF
-                , TxMetaList
-                    -- NOTE (1): VRF keys are 32-byte long.
-                    -- NOTE (2): VRF proofs are 80-byte long.
-                    [ TxMetaBytes $ VRF.rawSerialiseVerKeyVRF vk
-                    , metaBytesChunks (VRF.rawSerialiseCertVRF proof)
-                    ]
-                )
-              GovernancePollWitnessColdKey (VKey vk) (DSIGN.SignedDSIGN sig) ->
-                ( pollMetadataKeyWitnessColdKey
-                , TxMetaList
-                    -- NOTE (1): Ed25519 keys are 32-byte long.
-                    -- NOTE (2): Ed25519 signatures are 64-byte long.
-                    [ TxMetaBytes $ DSIGN.rawSerialiseVerKeyDSIGN vk
-                    , TxMetaBytes $ DSIGN.rawSerialiseSigDSIGN sig
-                    ]
-                )
-           ]
-          )
-        ]
-
-instance SerialiseAsCBOR GovernancePollWitness where
-    serialiseToCBOR =
-      serialiseToCBOR . asTxMetadata
-
-    deserialiseFromCBOR AsGovernancePollWitness bs = do
-      metadata <- deserialiseFromCBOR AsTxMetadata bs
-      withNestedMap lbl pollMetadataLabel metadata $ \values ->
-        tryWitnessVRF values $
-          tryColdKey values $
-            Left $ missingField (fieldPath lbl (TxMetaText "{4|5}"))
-     where
-       lbl = "GovernancePollWitness"
-
-       tryWitnessVRF values orElse =
-         let k = pollMetadataKeyWitnessVRF in case lookup k values of
-           Just (TxMetaList [TxMetaBytes vk, TxMetaList[TxMetaBytes proofHead, TxMetaBytes proofTail]]) ->
-             expectJust (fieldPath lbl k) $ GovernancePollWitnessVRF
-               <$> VRF.rawDeserialiseVerKeyVRF vk
-               <*> VRF.rawDeserialiseCertVRF (proofHead <> proofTail)
-           Just _  ->
-             Left $ malformedField (fieldPath lbl k) "List"
-           Nothing ->
-             orElse
-
-       tryColdKey values orElse =
-         let k = pollMetadataKeyWitnessColdKey in case lookup k values of
-           Just (TxMetaList [TxMetaBytes vk, TxMetaBytes sig]) ->
-             expectJust (fieldPath lbl k) $ GovernancePollWitnessColdKey
-               <$> fmap VKey (DSIGN.rawDeserialiseVerKeyDSIGN vk)
-               <*> fmap DSIGN.SignedDSIGN (DSIGN.rawDeserialiseSigDSIGN sig)
-           Just _  ->
-             Left $ malformedField (fieldPath lbl k) "List"
-           Nothing ->
-             orElse
-
-signPollAnswerWith
-  :: GovernancePollAnswer
-  -> Either (SignKeyVRF StandardCrypto) (SignKeyDSIGN StandardCrypto)
-  -> GovernancePollWitness
-signPollAnswerWith answer =
-  either
-    (\sk -> GovernancePollWitnessVRF
-      (VRF.deriveVerKeyVRF sk)
-      (snd $ VRF.evalVRF () answer sk)
-    )
-    (\sk -> GovernancePollWitnessColdKey
-      (VKey (DSIGN.deriveVerKeyDSIGN sk))
-      (signedDSIGN @StandardCrypto sk answer)
-    )
-
--- ----------------------------------------------------------------------------
 -- Governance Poll Verification
 --
 
@@ -412,10 +296,11 @@ renderGovernancePollError err =
 
 verifyPollAnswer
   :: GovernancePoll
-  -> GovernancePollAnswer
-  -> GovernancePollWitness
-  -> Either GovernancePollError ()
-verifyPollAnswer poll answer witness = do
+  -> InAnyCardanoEra Tx
+  -> Either GovernancePollError [KeyHash 'Witness StandardCrypto]
+verifyPollAnswer poll (InAnyCardanoEra _era tx) = do
+  answer <- extractPollAnswer (getTxBody tx)
+
   when (hashGovernancePoll poll /= govAnsPoll answer) $
     Left ErrGovernancePollMismatch
 
@@ -427,15 +312,10 @@ verifyPollAnswer poll answer witness = do
       , invalidAnswerAcceptableAnswers
       }
 
-  unless isValid $
-    Left ErrGovernancePollInvalidWitness
+  pure [ witVKeyHash wit | (ShelleyKeyWitness _ wit) <- getTxWitnesses tx ]
  where
-   isValid =
-    case witness of
-      GovernancePollWitnessVRF vk proof ->
-        VRF.verifyVRF () vk answer (undefined, proof)
-      GovernancePollWitnessColdKey vk sig ->
-        verifySignedDSIGN vk answer sig
+  extractPollAnswer (TxBody body) =
+    undefined
 
 
 -- ----------------------------------------------------------------------------
@@ -458,12 +338,6 @@ withNestedMap lbl topLevelLabel (TxMetadata m) continueWith =
     Just _ ->
       Left $ DecoderErrorCustom lbl
         "malformed data; expected a key:value map"
-
-expectJust :: Text -> Maybe a -> Either DecoderError a
-expectJust lbl =
-  maybe
-    (Left (DecoderErrorCustom lbl "malformed field(s)"))
-    Right
 
 expectTextChunks :: Text -> TxMetadataValue -> Either DecoderError Text
 expectTextChunks lbl value =

@@ -234,11 +234,9 @@ module Cardano.Api.Shelley
     -- ** Governance
     GovernancePoll (..),
     GovernancePollAnswer (..),
-    GovernancePollWitness (..),
     GovernancePollError (..),
     renderGovernancePollError,
     hashGovernancePoll,
-    signPollAnswerWith,
     verifyPollAnswer,
 
     -- ** Various calculations

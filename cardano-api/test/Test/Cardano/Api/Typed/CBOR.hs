@@ -184,10 +184,6 @@ prop_roundtrip_GovernancePollAnswer_CBOR :: Property
 prop_roundtrip_GovernancePollAnswer_CBOR = property $ do
   trippingCbor AsGovernancePollAnswer =<< forAll genGovernancePollAnswer
 
-prop_roundtrip_GovernancePollWitness_CBOR :: Property
-prop_roundtrip_GovernancePollWitness_CBOR = property $ do
-  trippingCbor AsGovernancePollWitness =<< forAll genGovernancePollWitness
-
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
@@ -223,5 +219,4 @@ tests = testGroup "Test.Cardano.Api.Typed.CBOR"
   , testPropertyNamed "roundtrip tx CBOR"                                    "roundtrip tx CBOR"                                    prop_roundtrip_tx_CBOR
   , testPropertyNamed "roundtrip GovernancePoll CBOR"                        "roundtrip GovernancePoll CBOR"                        prop_roundtrip_GovernancePoll_CBOR
   , testPropertyNamed "roundtrip GovernancePollAnswer CBOR"                  "roundtrip GovernancePollAnswer CBOR"                  prop_roundtrip_GovernancePollAnswer_CBOR
-  , testPropertyNamed "roundtrip GovernancePollWitness CBOR"                 "roundtrip GovernancePollWitness CBOR"                 prop_roundtrip_GovernancePollWitness_CBOR
   ]

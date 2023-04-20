@@ -1193,7 +1193,6 @@ pGovernanceCmd =
     pGovernanceAnswerPoll =
       GovernanceAnswerPoll
         <$> pPollFile
-        <*> pSigningKeyFileIn
         <*> optional pPollAnswerIndex
 
     pGovernanceVerifyPoll :: Parser GovernanceCmd
