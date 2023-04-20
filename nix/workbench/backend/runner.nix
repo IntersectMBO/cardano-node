@@ -151,6 +151,7 @@ in
 {
   inherit profileName profileData;
   inherit backend backendData;
+  inherit profiling;
   inherit workbench-profile-run;
 
   inherit batchName stateDir overlay;

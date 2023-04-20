@@ -10,7 +10,6 @@
 , workbench-runner
 , workbenchDevMode ? false
 ##
-, profiling ? "none"
 , withHoogle ? true
 , withMainnet ? true
 }:
@@ -19,7 +18,7 @@ with lib;
 
 let
 
-    inherit (workbench-runner) profileName profileData backend backendData;
+    inherit (workbench-runner) profileName profileData backend backendData profiling;
 
 in project.shellFor {
   name = "workbench-shell";

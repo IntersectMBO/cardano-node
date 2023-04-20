@@ -13,7 +13,7 @@ let
   # See https://input-output-hk.github.io/haskell.nix/user-guide/development/
   # The general idea is:
   # 1. backendName -> stateDir -> basePort -> useCabalRun -> backend
-  # 2. batchName -> profileName -> backend -> workbench -> runner
+  # 2. batchName -> profileName -> profiling -> backend -> workbench -> runner
   # * `workbench` is in case a pinned version of the workbench is needed.
   workbench-runner =
   let

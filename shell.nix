@@ -75,7 +75,6 @@ let
           inherit cardano-mainnet-mirror;
           inherit workbenchDevMode;
           inherit withHoogle;
-          profiling = profilingEff;
           workbench-runner = pkgs.workbench-runner
             { inherit profileName backendName useCabalRun;
               profiling = profilingEff;
@@ -89,6 +88,7 @@ let
             inherit profileName;
             backendName = "supervisor";
             useCabalRun = false;
+            profiling = profilingEff;
           };
         devopsShell = with customConfig.localCluster;
           import ./nix/workbench/shell.nix
@@ -96,7 +96,6 @@ let
               inherit setLocale haveGlibcLocales commandHelp;
               inherit cardano-mainnet-mirror;
               inherit workbench-runner workbenchDevMode;
-              profiling = profilingEff;
               inherit withHoogle;
               withMainnet = false;
             };
