@@ -415,7 +415,7 @@ data GovernanceCmd
       (Maybe Word) -- Answer index
   | GovernanceVerifyPoll
       FilePath -- Poll file
-      FilePath -- Metadata JSON file
+      FilePath -- Tx file
   deriving Show
 
 renderGovernanceCmd :: GovernanceCmd -> Text

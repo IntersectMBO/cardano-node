@@ -30,13 +30,10 @@ import           Cardano.CLI.Shelley.Key (InputDecodeError, VerificationKeyOrHas
                    readVerificationKeyOrHashOrFile, readVerificationKeyOrHashOrTextEnvFile)
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Types
-import           Cardano.CLI.Shelley.Run.Key (SomeSigningKey(..), readSigningKeyFile)
-import           Cardano.CLI.Shelley.Run.Transaction (ShelleyTxCmdError, readFileTxMetadata,
+import           Cardano.CLI.Shelley.Run.Transaction (ShelleyTxCmdError, readFileTx,
                    renderShelleyTxCmdError)
 
 import           Cardano.Binary (DecoderError)
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import           Cardano.Ledger.Keys (SignKeyDSIGN, SignKeyVRF)
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 
 data ShelleyGovernanceCmdError
@@ -59,7 +56,7 @@ data ShelleyGovernanceCmdError
       !Int
       -- ^ Maximum answer index
   | ShelleyGovernanceCmdPollInvalidChoice
-  | ShelleyGovernanceCmdMetadataError !ShelleyTxCmdError
+  | ShelleyGovernanceCmdTxCmdError !ShelleyTxCmdError
   | ShelleyGovernanceCmdDecoderError !DecoderError
   | ShelleyGovernanceCmdVerifyPollError !GovernancePollError
 
@@ -88,8 +85,8 @@ renderShelleyGovernanceError err =
       "Poll answer out of bounds. Choices are between 0 and " <> textShow nMax
     ShelleyGovernanceCmdPollInvalidChoice ->
       "Invalid choice. Please choose from the available answers."
-    ShelleyGovernanceCmdMetadataError metadataError ->
-      renderShelleyTxCmdError metadataError
+    ShelleyGovernanceCmdTxCmdError txCmdErr ->
+      renderShelleyTxCmdError txCmdErr
     ShelleyGovernanceCmdDecoderError decoderError ->
       "Unable to decode metadata: " <> sformat build decoderError
     ShelleyGovernanceCmdVerifyPollError pollError ->
@@ -106,8 +103,8 @@ runGovernanceCmd (GovernanceUpdateProposal out eNo genVKeys ppUp mCostModelFp) =
   runGovernanceUpdateProposal out eNo genVKeys ppUp mCostModelFp
 runGovernanceCmd (GovernanceCreatePoll prompt choices nonce out) =
   runGovernanceCreatePoll prompt choices nonce out
-runGovernanceCmd (GovernanceAnswerPoll poll sk ix) =
-  runGovernanceAnswerPoll poll sk ix
+runGovernanceCmd (GovernanceAnswerPoll poll ix) =
+  runGovernanceAnswerPoll poll ix
 runGovernanceCmd (GovernanceVerifyPoll poll metadata) =
   runGovernanceVerifyPoll poll metadata
 
@@ -323,20 +320,16 @@ runGovernanceVerifyPoll
   :: FilePath
   -> FilePath
   -> ExceptT ShelleyGovernanceCmdError IO ()
-runGovernanceVerifyPoll pollFile metadataFile = do
+runGovernanceVerifyPoll pollFile txFile = do
   poll <- firstExceptT ShelleyGovernanceCmdTextEnvReadError . newExceptT $
     readFileTextEnvelope AsGovernancePoll pollFile
 
-  metadata <- firstExceptT ShelleyGovernanceCmdMetadataError $
-    readFileTxMetadata TxMetadataJsonDetailedSchema (MetadataFileJSON metadataFile)
+  tx <- firstExceptT ShelleyGovernanceCmdTxCmdError $
+    readFileTx txFile
 
-  answer <- firstExceptT ShelleyGovernanceCmdDecoderError . newExceptT $ pure $
-    deserialiseFromCBOR AsGovernancePollAnswer (serialiseToCBOR metadata)
+  signatories <- firstExceptT ShelleyGovernanceCmdVerifyPollError . newExceptT $ pure $
+    verifyPollAnswer poll tx
 
-  witness <- firstExceptT ShelleyGovernanceCmdDecoderError . newExceptT $ pure $
-    deserialiseFromCBOR AsGovernancePollWitness (serialiseToCBOR metadata)
-
-  firstExceptT ShelleyGovernanceCmdVerifyPollError . newExceptT $ pure $
-    verifyPollAnswer poll answer witness
-
-  liftIO $ BSC.hPutStrLn stderr "Ok."
+  liftIO $ do
+    BSC.hPutStrLn stderr "Found valid poll answer, signed by: "
+    BSC.hPutStrLn stdout (prettyPrintJSON signatories)

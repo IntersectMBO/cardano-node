@@ -1,10 +1,13 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- | An API for driving on-chain poll for SPOs.
 --
@@ -35,24 +38,29 @@ module Cardano.Api.Governance.Poll(
 
 import           Cardano.Prelude hiding (poll)
 
+import           Control.Arrow (left)
 import           Data.List (lookup)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import qualified Data.Text.Lazy as Text.Lazy
 import qualified Data.Text.Lazy.Builder as Text.Builder
+import           Formatting (build, sformat)
 
+import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
+import           Cardano.Api.KeysShelley
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.SerialiseUsing
+import           Cardano.Api.Tx
+import           Cardano.Api.TxBody
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 
 import           Cardano.Binary (DecoderError(..))
 import           Cardano.Ledger.Crypto (HASH, StandardCrypto)
-import           Cardano.Ledger.Keys (KeyHash(..), KeyRole(..))
 
 import           Cardano.Crypto.Hash (hashFromBytes, hashToBytes, hashWith)
 import qualified Cardano.Crypto.Hash as Hash
@@ -254,9 +262,11 @@ instance SerialiseAsCBOR GovernancePollAnswer where
 --
 
 data GovernancePollError
-  = ErrGovernancePollMismatch
+  = ErrGovernancePollMismatch GovernancePollMismatchError
+  | ErrGovernancePollNoAnswer
+  | ErrGovernancePollUnauthenticated
+  | ErrGovernancePollMalformedAnswer DecoderError
   | ErrGovernancePollInvalidAnswer GovernancePollInvalidAnswerError
-  | ErrGovernancePollInvalidWitness
   deriving Show
 
 data GovernancePollInvalidAnswerError = GovernancePollInvalidAnswerError
@@ -265,53 +275,92 @@ data GovernancePollInvalidAnswerError = GovernancePollInvalidAnswerError
   }
   deriving Show
 
+data GovernancePollMismatchError = GovernancePollMismatchError
+  { specifiedHashInAnswer :: Hash GovernancePoll
+  , calculatedHashFromPoll :: Hash GovernancePoll
+  }
+  deriving Show
+
 renderGovernancePollError :: GovernancePollError -> Text
 renderGovernancePollError err =
   case err of
-    ErrGovernancePollMismatch ->
-      "Answer's poll doesn't match provided poll (hash mismatch)."
-    ErrGovernancePollInvalidAnswer invalidAnswer ->
-        mconcat
-          [ "Invalid answer ("
-          , textShow (invalidAnswerReceivedAnswer invalidAnswer)
-          , ") not part of the poll."
-          , "\n"
-          , "Accepted answers:"
-          , "\n"
-          , Text.intercalate "\n"
-              [ mconcat
-                  [ textShow ix
-                  , " → "
-                  , answer
-                  ]
-              | (ix, answer) <- invalidAnswerAcceptableAnswers invalidAnswer
+    ErrGovernancePollMismatch mismatchErr -> mconcat
+      [ "Answer's poll doesn't match provided poll (hash mismatch).\n"
+      , "  Hash specified in answer:  " <> textShow (specifiedHashInAnswer mismatchErr)
+      , "\n"
+      , "  Hash calculated from poll: " <> textShow (calculatedHashFromPoll mismatchErr)
+      ]
+    ErrGovernancePollNoAnswer ->
+      "No answer found in the provided transaction's metadata."
+    ErrGovernancePollUnauthenticated -> mconcat
+      [ "No (valid) signatories found for the answer. "
+      , "Signatories MUST be specified as extra signatories on the transaction "
+      , "and cannot be mere payment keys."
+      ]
+    ErrGovernancePollMalformedAnswer decoderErr ->
+      "Malformed metadata; couldn't deserialise answer: " <> sformat build decoderErr
+    ErrGovernancePollInvalidAnswer invalidAnswer -> mconcat
+      [ "Invalid answer ("
+      , textShow (invalidAnswerReceivedAnswer invalidAnswer)
+      , ") not part of the poll."
+      , "\n"
+      , "Accepted answers:"
+      , "\n"
+      , Text.intercalate "\n"
+          [ mconcat
+              [ textShow ix
+              , " → "
+              , answer
               ]
+          | (ix, answer) <- invalidAnswerAcceptableAnswers invalidAnswer
           ]
-    ErrGovernancePollInvalidWitness ->
-      "Invalid witness for the answer: the proof / signature doesn't hold."
+      ]
 
+-- | Verify a poll against a given transaction and returns the signatories
+-- (verification key only) when valid.
+--
+-- Note: signatures aren't checked as it is assumed to have been done externally
+-- (the existence of the transaction in the ledger provides this guarantee).
 verifyPollAnswer
   :: GovernancePoll
   -> InAnyCardanoEra Tx
-  -> Either GovernancePollError [KeyHash 'Witness StandardCrypto]
-verifyPollAnswer poll (InAnyCardanoEra _era tx) = do
-  answer <- extractPollAnswer (getTxBody tx)
-
-  when (hashGovernancePoll poll /= govAnsPoll answer) $
-    Left ErrGovernancePollMismatch
-
-  when (govAnsChoice answer >= fromIntegral (length (govPollAnswers poll))) $ do
-    let invalidAnswerReceivedAnswer = govAnsChoice answer
-    let invalidAnswerAcceptableAnswers = zip [0..] (govPollAnswers poll)
-    Left $ ErrGovernancePollInvalidAnswer $ GovernancePollInvalidAnswerError
-      { invalidAnswerReceivedAnswer
-      , invalidAnswerAcceptableAnswers
-      }
-
-  pure [ witVKeyHash wit | (ShelleyKeyWitness _ wit) <- getTxWitnesses tx ]
+  -> Either GovernancePollError [Hash PaymentKey]
+verifyPollAnswer poll (InAnyCardanoEra _era (getTxBody -> TxBody body)) = do
+  answer <- extractPollAnswer (txMetadata body)
+  answer `hasMatchingHash` hashGovernancePoll poll
+  answer `isAmongAcceptableChoices` govPollAnswers poll
+  extraKeyWitnesses (txExtraKeyWits body)
  where
-  extractPollAnswer (TxBody body) =
-    undefined
+  extractPollAnswer = \case
+      TxMetadataNone ->
+        Left ErrGovernancePollNoAnswer
+      TxMetadataInEra _era metadata ->
+        left ErrGovernancePollMalformedAnswer $
+          deserialiseFromCBOR AsGovernancePollAnswer (serialiseToCBOR metadata)
+
+  hasMatchingHash answer calculatedHashFromPoll = do
+    let specifiedHashInAnswer = govAnsPoll answer
+    when (calculatedHashFromPoll /= specifiedHashInAnswer) $
+      Left $ ErrGovernancePollMismatch $
+        GovernancePollMismatchError
+          { specifiedHashInAnswer
+          , calculatedHashFromPoll
+          }
+
+  isAmongAcceptableChoices answer answers =
+    when (govAnsChoice answer >= fromIntegral (length answers)) $ do
+      let invalidAnswerReceivedAnswer = govAnsChoice answer
+      let invalidAnswerAcceptableAnswers = zip [0..] answers
+      Left $ ErrGovernancePollInvalidAnswer $ GovernancePollInvalidAnswerError
+        { invalidAnswerReceivedAnswer
+        , invalidAnswerAcceptableAnswers
+        }
+
+  extraKeyWitnesses = \case
+    TxExtraKeyWitnesses _era witnesses ->
+      pure witnesses
+    TxExtraKeyWitnessesNone ->
+      Left ErrGovernancePollUnauthenticated
 
 
 -- ----------------------------------------------------------------------------
