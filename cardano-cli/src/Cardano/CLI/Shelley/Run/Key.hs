@@ -12,6 +12,7 @@ module Cardano.CLI.Shelley.Run.Key
 
     -- * Exports for testing
   , decodeBech32
+  , withSomeSigningKey
   ) where
 
 import           Control.Exception (Exception (..), IOException)

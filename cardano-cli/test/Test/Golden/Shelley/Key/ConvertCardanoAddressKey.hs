@@ -5,11 +5,17 @@ module Test.Golden.Shelley.Key.ConvertCardanoAddressKey
   , golden_convertCardanoAddressIcarusSigningKey
   , golden_convertCardanoAddressShelleyPaymentSigningKey
   , golden_convertCardanoAddressShelleyStakeSigningKey
+  , golden_legacyAndBip32ExtendedKeysIndirectEquivalence
   ) where
 
+import           Cardano.Api
+
 import           Control.Monad (void)
+import           Control.Monad.IO.Class (liftIO)
 import           Data.Text (Text)
+
 import           Hedgehog (Property, (===))
+import           Hedgehog.Internal.Property (evalEither)
 import           Test.OptParse
 
 import qualified Hedgehog.Extras.Test.Base as H
@@ -150,7 +156,7 @@ golden_convertCardanoAddressShelleyPaymentSigningKey =
     expectedConvertedSigningKey <-
       H.readFile $
         "test/data/golden/shelley/keys/converted_cardano-address_keys/"
-          <> "shelley_payment_signing_key"
+          <> "shelley_payment_signing_key_bip32"
     expectedConvertedSigningKey === actualConvertedSigningKey
 
 -- | Test that converting a @cardano-address@ Shelley stake signing key yields
@@ -188,5 +194,26 @@ golden_convertCardanoAddressShelleyStakeSigningKey =
     expectedConvertedSigningKey <-
       H.readFile $
         "test/data/golden/shelley/keys/converted_cardano-address_keys/"
-          <> "shelley_stake_signing_key"
+          <> "shelley_stake_signing_key_bip32"
     expectedConvertedSigningKey === actualConvertedSigningKey
+
+-- | Test that confirms whether we deserialize a legacy cardano-crypto/BIP32
+-- extended key we get the same verification key.
+golden_legacyAndBip32ExtendedKeysIndirectEquivalence :: Property
+golden_legacyAndBip32ExtendedKeysIndirectEquivalence =
+  propertyOnce . H.moduleWorkspace "tmp" $ \_ -> do
+    ebip32 <-
+       liftIO . readFileTextEnvelope (AsSigningKey AsPaymentExtendedKey)
+         $ File
+         $ "test/data/golden/shelley/keys/converted_cardano-address_keys/" <>
+           "shelley_payment_signing_key_bip32"
+    elegacy <-
+       liftIO . readFileTextEnvelope (AsSigningKey AsPaymentExtendedKey)
+         $ File
+         $ "test/data/golden/shelley/keys/converted_cardano-address_keys/" <>
+           "shelley_payment_signing_key_legacy"
+
+    bip32 <- evalEither ebip32
+    legacy <- evalEither elegacy
+
+    getVerificationKey bip32 === getVerificationKey legacy

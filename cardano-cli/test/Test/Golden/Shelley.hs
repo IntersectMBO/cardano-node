@@ -37,7 +37,8 @@ import           Test.Golden.Shelley.Key.ConvertCardanoAddressKey
                    (golden_convertCardanoAddressByronSigningKey,
                    golden_convertCardanoAddressIcarusSigningKey,
                    golden_convertCardanoAddressShelleyPaymentSigningKey,
-                   golden_convertCardanoAddressShelleyStakeSigningKey)
+                   golden_convertCardanoAddressShelleyStakeSigningKey,
+                   golden_legacyAndBip32ExtendedKeysIndirectEquivalence)
 import           Test.Golden.Shelley.Node.IssueOpCert (golden_shelleyNodeIssueOpCert)
 import           Test.Golden.Shelley.Node.KeyGen (golden_shelleyNodeKeyGen)
 import           Test.Golden.Shelley.Node.KeyGenKes (golden_shelleyNodeKeyGenKes)
@@ -164,6 +165,7 @@ keyConversionTests =
         , ("golden_convertCardanoAddressIcarusSigningKey", golden_convertCardanoAddressIcarusSigningKey)
         , ("golden_convertCardanoAddressShelleyPaymentSigningKey", golden_convertCardanoAddressShelleyPaymentSigningKey)
         , ("golden_convertCardanoAddressShelleyStakeSigningKey", golden_convertCardanoAddressShelleyStakeSigningKey)
+        , ("golden_legacyAndBip32ExtendedKeysIndirectEquivalence", golden_legacyAndBip32ExtendedKeysIndirectEquivalence)
         ]
 
 metadataTests :: IO Bool
