@@ -286,6 +286,8 @@ runGovernanceAnswerPoll pollFile maybeChoice = do
     BSC.hPutStrLn stderr $ mconcat
       [ "Poll answer created successfully.\n"
       , "Please submit a transaction using the resulting metadata.\n"
+      , "To be valid, the transaction must also be signed using a valid key\n"
+      , "identifying your stake pool (e.g. your cold key).\n"
       ]
     BSC.hPutStrLn stdout (prettyPrintJSON metadata)
     BSC.hPutStrLn stderr $ mconcat
