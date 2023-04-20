@@ -224,7 +224,7 @@ runGovernanceCreatePoll
   :: Text
   -> [Text]
   -> Maybe Word
-  -> File () Out
+  -> File GovernancePoll Out
   -> ExceptT ShelleyGovernanceCmdError IO ()
 runGovernanceCreatePoll govPollQuestion govPollAnswers govPollNonce out = do
   let poll = GovernancePoll{ govPollQuestion, govPollAnswers, govPollNonce }
@@ -255,7 +255,7 @@ runGovernanceCreatePoll govPollQuestion govPollAnswers govPollNonce out = do
       ]
 
 runGovernanceAnswerPoll
-  :: File () In
+  :: File GovernancePoll In
   -> Maybe Word
     -- ^ Answer index
   -> ExceptT ShelleyGovernanceCmdError IO ()
@@ -321,7 +321,7 @@ runGovernanceAnswerPoll pollFile maybeChoice = do
         left ShelleyGovernanceCmdPollInvalidChoice
 
 runGovernanceVerifyPoll
-  :: File () In
+  :: File GovernancePoll In
   -> File (Tx ()) In
   -> ExceptT ShelleyGovernanceCmdError IO ()
 runGovernanceVerifyPoll pollFile txFile = do

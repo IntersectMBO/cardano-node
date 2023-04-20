@@ -1199,7 +1199,7 @@ pGovernanceCmd =
     pGovernanceVerifyPoll =
       GovernanceVerifyPoll
         <$> pPollFile
-        <*> pTxFileIn
+        <*> pPollTxFile
 
 
 pPollQuestion :: Parser Text
@@ -1226,7 +1226,7 @@ pPollAnswerIndex =
     <> Opt.help "The index of the chosen answer in the poll. Optional. Asked interactively if omitted."
     )
 
-pPollFile :: Parser (File () In)
+pPollFile :: Parser (File GovernancePoll In)
 pPollFile =
   Opt.strOption
     (  Opt.long "poll-file"
@@ -1234,6 +1234,15 @@ pPollFile =
     <> Opt.help "Filepath to the ongoing poll."
     <> Opt.completer (Opt.bashCompleter "file")
     )
+
+pPollTxFile :: Parser (TxFile In)
+pPollTxFile =
+  fmap File $ Opt.strOption $ mconcat
+    [ Opt.long "signed-tx-file"
+    , Opt.metavar "FILE"
+    , Opt.help "Filepath to a signed transaction carrying a valid poll answer."
+    , Opt.completer (Opt.bashCompleter "file")
+    ]
 
 pPollNonce :: Parser Word
 pPollNonce =

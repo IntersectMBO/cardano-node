@@ -414,13 +414,12 @@ data GovernanceCmd
       Text -- Prompt
       [Text] -- Choices
       (Maybe Word) -- Nonce
-      (File () Out)
+      (File GovernancePoll Out)
   | GovernanceAnswerPoll
-      (File () In) -- Poll file
-      (SigningKeyFile In)
+      (File GovernancePoll In) -- Poll file
       (Maybe Word) -- Answer index
   | GovernanceVerifyPoll
-      (File () In) -- Poll file
+      (File GovernancePoll In) -- Poll file
       (File (Tx ()) In) -- Tx file
   deriving Show
 
