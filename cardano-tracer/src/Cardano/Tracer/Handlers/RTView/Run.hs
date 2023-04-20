@@ -25,6 +25,7 @@ import           Cardano.Tracer.Handlers.RTView.State.TraceObjects
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.Main
 import           Cardano.Tracer.Handlers.RTView.Update.EraSettings
 import           Cardano.Tracer.Handlers.RTView.Update.Historical
+import           Cardano.Tracer.MetaTrace
 
 -- | RTView is a part of 'cardano-tracer' that provides an ability
 --   to monitor Cardano nodes in a real-time. The core idea is simple:
@@ -35,8 +36,9 @@ import           Cardano.Tracer.Handlers.RTView.Update.Historical
 --   Gitub-version of this library is used, not Hackage-version!
 
 runRTView :: TracerEnv -> IO ()
-runRTView tracerEnv =
+runRTView tracerEnv@TracerEnv{teTracer} =
   whenJust hasRTView $ \(Endpoint host port) -> do
+    traceWith teTracer TracerStartedRTView
     -- Pause to prevent collision between "Listening"-notifications from servers.
     sleep 0.3
     -- Get paths to default SSL files for config.

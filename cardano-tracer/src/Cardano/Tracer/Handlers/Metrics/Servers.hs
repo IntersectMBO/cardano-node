@@ -11,6 +11,7 @@ import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Metrics.Monitoring
 import           Cardano.Tracer.Handlers.Metrics.Prometheus
+import           Cardano.Tracer.MetaTrace
 
 -- | Runs metrics servers if needed:
 --
@@ -18,10 +19,12 @@ import           Cardano.Tracer.Handlers.Metrics.Prometheus
 --   2. EKG monitoring web-page.
 --
 runMetricsServers :: TracerEnv -> IO ()
-runMetricsServers tracerEnv@TracerEnv{teConfig} =
+runMetricsServers tracerEnv@TracerEnv{teConfig, teTracer} =
   case (hasEKG teConfig, hasPrometheus teConfig) of
     (Nothing,  Nothing)   -> return ()
-    (Nothing,  Just prom) -> runPrometheusServer tracerEnv prom
+    (Nothing,  Just prom) -> do
+      traceWith teTracer TracerStartedPrometheus
+      runPrometheusServer tracerEnv prom
     (Just ekg, Nothing)   -> runMonitoringServer tracerEnv ekg
     (Just ekg, Just prom) -> void . sequenceConcurrently $
                                [ runPrometheusServer tracerEnv prom

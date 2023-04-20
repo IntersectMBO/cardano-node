@@ -45,6 +45,11 @@ data TracerTrace
   | TracerInitStarted
   | TracerInitEventQueues
   | TracerInitDone
+  | TracerStartedLogRotator
+  | TracerStartedPrometheus
+  | TracerStartedAcceptors
+    { ttAcceptorsAddr        :: !Network }
+  | TracerStartedRTView
   | TracerSockListen
     { ttListenAt             :: !FilePath }
   | TracerSockIncoming
@@ -91,6 +96,10 @@ instance MetaTrace TracerTrace where
     namespaceFor TracerInitStarted = Namespace [] ["InitStart"]
     namespaceFor TracerInitEventQueues = Namespace [] ["EventQueues"]
     namespaceFor TracerInitDone = Namespace [] ["InitDone"]
+    namespaceFor TracerStartedLogRotator = Namespace [] ["StartedLogRotator"]
+    namespaceFor TracerStartedPrometheus = Namespace [] ["StartedPrometheus"]
+    namespaceFor TracerStartedAcceptors {} = Namespace [] ["StartedAcceptors"]
+    namespaceFor TracerStartedRTView = Namespace [] ["StartedRTView"]
     namespaceFor TracerSockListen {} = Namespace [] ["SockListen"]
     namespaceFor TracerSockIncoming {} = Namespace [] ["SockIncoming"]
     namespaceFor TracerSockConnecting {} = Namespace [] ["SockConnecting"]
@@ -105,6 +114,10 @@ instance MetaTrace TracerTrace where
     severityFor (Namespace _ ["InitStart"]) _ = Just Info
     severityFor (Namespace _ ["EventQueues"]) _ = Just Info
     severityFor (Namespace _ ["InitDone"]) _ = Just Info
+    severityFor (Namespace _ ["StartedLogRotator"]) _ = Just Info
+    severityFor (Namespace _ ["StartedPrometheus"]) _ = Just Info
+    severityFor (Namespace _ ["StartedAcceptors"]) _ = Just Info
+    severityFor (Namespace _ ["StartedRTView"]) _ = Just Info
     severityFor (Namespace _ ["SockListen"]) _ = Just Info
     severityFor (Namespace _ ["SockIncoming"]) _ = Just Info
     severityFor (Namespace _ ["SockConnecting"]) _ = Just Info
@@ -123,6 +136,10 @@ instance MetaTrace TracerTrace where
       , Namespace [] ["InitStart"]
       , Namespace [] ["EventQueues"]
       , Namespace [] ["InitDone"]
+      , Namespace [] ["StartedLogRotator"]
+      , Namespace [] ["StartedPrometheus"]
+      , Namespace [] ["StartedAcceptors"]
+      , Namespace [] ["StartedRTView"]
       , Namespace [] ["SockListen"]
       , Namespace [] ["SockIncoming"]
       , Namespace [] ["SockConnecting"]
