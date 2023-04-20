@@ -404,6 +404,7 @@ runChainCommand s
   progress "run" (Q $ printf "reading run metadata & Shelley genesis")
   run <- readRun shelleyGenesis runMeta
          & firstExceptT (fromAnalysisError c)
+  progress "run" (Q $ printf "identifier: %s" (ident $ metadata run))
   pure s { sRun = Just run }
 
 runChainCommand s@State{sMultiSummary=Just summ@Summary{..}}

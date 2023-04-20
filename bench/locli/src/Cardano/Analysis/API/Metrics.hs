@@ -38,6 +38,7 @@ sumFieldsReport :: [FieldName]
 sumFieldsReport =
   [ "date.systemStart", "time.systemStart", "sumAnalysisTime"
   , "batch"
+  , "ident"
   , "cardano-node", "ouroboros-network" , "cardano-ledger", "plutus", "cardano-crypto", "cardano-base"
   , "era"
   , "delegators", "utxo"
@@ -69,8 +70,12 @@ instance (KnownCDF f) => TimelineFields (Summary f)  where
       "Cluster system start time"
       "Time-of-day portion of cluster genesis systemStart"
 
-   <> fScalar   "batch"                Wno Id  (IText $                   batch.sumMeta)
+   <> fScalar   "batch"                Wno Id  (IText $  batch.sumMeta)
       "Run batch"
+      ""
+
+   <> fScalar   "ident"                Wno Id  (IText $ ident.sumMeta)
+      "Identifier"
       ""
 
    <> fScalar "cardano-node"           W5  Ver (IText $ unCommit.mNode.manifest.sumMeta)

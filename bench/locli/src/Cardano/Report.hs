@@ -148,7 +148,7 @@ instance ToJSON TmplRun where
       [ "meta"       .= trMeta
       , "workload"   .= trWorkload
       , "branch"     .= mNodeBranch
-      , "ver"        .= mNodeApproxVer
+      , "ver"        .= ident trMeta
       , "rev"        .=
         object
         [ "node"         .= mNode

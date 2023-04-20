@@ -48,6 +48,8 @@ instance FromJSON RunPartial where
     tag       <- meta .: "tag"
     profile   <- meta .: "profile"
     batch     <- meta .: "batch"
+    ident     <- (meta .:? "ident")
+                 <&> fromMaybe batch
     manifest  <- meta .: "manifest"
 
     eraGtor   <- generator       .:? "era"

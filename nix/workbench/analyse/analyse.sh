@@ -130,6 +130,9 @@ verbose "analyse" "sargs: $(yellow ${sargs[*]})"
 case "$op" in
     # 'read-mach-views' "${logs[@]/#/--log }"
 
+    report )
+        emn run/$1/analysis/report-*.org;;
+
     compare | cmp )
         local runs=($(expand_runspecs $*))
         local baseline=${runs[0]}
@@ -355,7 +358,7 @@ case "$op" in
         ;;
 
     call )
-        local usage="USAGE: wb analyse $op [--host HOST] RUN-NAME OPS.."
+        local usage="USAGE: wb analyse $op [--host HOST] [IDENT:]RUN-NAME OPS.."
 
         local host=
         while test $# -gt 0
@@ -366,7 +369,7 @@ case "$op" in
         local run=${1:?$usage}; shift
         local dir=$(run get "$run")
         local adir=$dir/analysis
-        test -n "$dir" -a -d "$adir" || fail "malformed run: $run"
+        test -n "$dir" -a -d "$adir" || fail "run malformed or unprepared: $run"
 
         local logfiles=(
             $(if test -z "$host"
@@ -441,8 +444,8 @@ case "$op" in
               ))
         progress "analyse" "prettifying JSON data:  ${#analysis_jsons[*]} files"
         verbose  "analyse" "prettifying JSON data:  ${analysis_jsons[*]}"
-        time json_compact_prettify "${analysis_jsons[@]}"
-        progress "output" "run:  $(white $run)  subdir:  $(yellow analysis)"
+        json_compact_prettify "${analysis_jsons[@]}"
+        progress "output" "run:  $(white $run)  ident:  $(blue $(jq -r .meta.ident "$dir"/meta.json))  subdir:  $(yellow analysis)"
         ;;
 
     multi-call )
@@ -502,15 +505,28 @@ case "$op" in
         ;;
 
     prepare | prep )
-        local usage="USAGE: wb analyse $op [RUN-NAME=current].."
+        local usage="USAGE: wb analyse $op [[IDENT:]RUN-NAME=current].."
 
-        local name=${1:-current}; if test $# != 0; then shift; fi
-        local dir=$(run get "$name")
-        test -n "$dir" || fail "malformed run: $name"
+        local runspec=${1:-current}; if test $# != 0; then shift; fi
 
-        run trim "$name"
+        ## Parse 'runspec' into either IDENT:RUN or RUN
+        local precomma=$(cut -d: -f1 <<<$runspec) run= ident=
+        if   test "${runspec::1}" = "/" -o \
+                  "${runspec::1}" = "." -o \
+                  "$precomma" = "$runspec"
+        then ident="";        run=$runspec
+        else ident=$precomma; run=$(cut -d: -f2 <<<$runspec)
+        fi
 
-        progress "analyse" "preparing run for analysis:  $(with_color white $name)"
+        local dir=$(run get "$run")
+        test -n "$dir" || fail "malformed run: $run"
+
+        if test -n "$ident"
+        then run set-identifier "$run" "$ident"
+        fi
+        progress "analyse" "preparing run for analysis:  $(white $run), identified as $(white $(jq -r .meta.ident "$dir"/meta.json))"
+
+        run trim "$run"
         local adir=$dir/analysis
         mkdir -p "$adir"/{cdf,png}
 

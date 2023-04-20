@@ -26,6 +26,7 @@ data SummaryError
   | SEIncoherentRunProfiles      [Text]
   | SEIncoherentRunEras          [Text]
   | SEIncoherentRunVersions      [Manifest]
+  | SEIncoherentRunIdents        [Text]
   | SEIncoherentRunFilters       [([FilterName], [ChainFilter])]
   | SECDFError                   CDFError
   deriving Show
@@ -96,10 +97,12 @@ summariseMultiSummary sumAnalysisTime centiles xs@(headline:xss) = do
      profile  <- allEqOrElse (xs <&> profile)  SEIncoherentRunProfiles
      era      <- allEqOrElse (xs <&> era)      SEIncoherentRunEras
      manifest <- allEqOrElse (xs <&> manifest) SEIncoherentRunVersions
+     ident'   <- allEqOrElse (xs <&> ident)    SEIncoherentRunIdents
      -- XXX: magic transformation that happens to match
      --      the logic in 'analyse.sh multi-call' on line with "local run="
      pure Metadata { tag   = maximum (xs <&> tag) & Text.take 16 & (<> "_variance")
                    , batch = batch headline
+                   , ident = ident'
                    , .. }
 
    allEqOrElse :: Eq a => [a] -> ([a] -> SummaryError) -> Either SummaryError a

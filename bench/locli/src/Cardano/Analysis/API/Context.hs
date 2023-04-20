@@ -133,8 +133,23 @@ data Metadata
   = Metadata
   { tag       :: Text
   , batch     :: Text
+  , ident     :: Text
   , profile   :: Text
   , era       :: Text
   , manifest  :: Manifest
   }
-  deriving (Generic, NFData, Show, FromJSON, ToJSON)
+  deriving (Generic, NFData, Show, ToJSON)
+
+instance FromJSON Metadata where
+  parseJSON =
+    withObject "Metadata" $ \v -> do
+
+      tag      <- v .:  "tag"
+      batch    <- v .:  "batch"
+      ident    <- (v .:? "ident")
+                  <&> fromMaybe batch
+      profile  <- v .:  "profile"
+      era      <- v .:  "era"
+      manifest <- v .:  "manifest"
+
+      pure Metadata{..}
