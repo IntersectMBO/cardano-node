@@ -136,10 +136,10 @@ case "${op}" in
           ;
 
         def package_color($repo):
-          { "cardano-node":      "yellow"
-          , "ouroboros-network": "white"
-          , "cardano-ledger":    "red"
-          , "plutus":            "cyan"
+          { "node":    "yellow"
+          , "network": "white"
+          , "ledger":  "red"
+          , "plutus":  "cyan"
           }[$repo] // "off";
 
         def package_colorly($repo; $hash):
