@@ -20,6 +20,7 @@ import           Test.OptParse
 
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
+import           Test.Utilities (diffFileVsGoldenFile)
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -46,13 +47,11 @@ exampleShelleySigningKey =
 golden_convertCardanoAddressByronSigningKey :: Property
 golden_convertCardanoAddressByronSigningKey =
   propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
-
     -- `cardano-address` signing key filepath
     signingKeyFp <- noteTempFile tempDir "cardano-address-byron.skey"
 
     -- Converted signing key filepath
-    convertedSigningKeyFp <-
-      noteTempFile tempDir "converted-cardano-address-byron.skey"
+    actualConvertedSigningKeyFp <- noteTempFile tempDir "converted-cardano-address-byron.skey"
 
     -- Write `cardano-address` signing key to disk
     H.textWriteFile signingKeyFp exampleByronSigningKey
@@ -63,31 +62,27 @@ golden_convertCardanoAddressByronSigningKey =
       [ "key","convert-cardano-address-key"
       , "--byron-payment-key"
       , "--signing-key-file", signingKeyFp
-      , "--out-file", convertedSigningKeyFp
+      , "--out-file", actualConvertedSigningKeyFp
       ]
 
     -- Check for existence of the converted signing key file
-    H.assertFilesExist [convertedSigningKeyFp]
+    H.assertFilesExist [actualConvertedSigningKeyFp]
 
-    -- Check that the contents of the converted signing key file match that of
-    -- the golden file.
-    actualConvertedSigningKey <- H.readFile convertedSigningKeyFp
-    expectedConvertedSigningKey <-
-      H.readFile "test/data/golden/shelley/keys/converted_cardano-address_keys/byron_signing_key"
-    expectedConvertedSigningKey === actualConvertedSigningKey
+    let expectedConvertedSigningKeyFp =
+          "test/data/golden/shelley/keys/converted_cardano-address_keys/byron_signing_key"
+
+    diffFileVsGoldenFile actualConvertedSigningKeyFp expectedConvertedSigningKeyFp
 
 -- | Test that converting a @cardano-address@ Icarus signing key yields the
 -- expected result.
 golden_convertCardanoAddressIcarusSigningKey :: Property
 golden_convertCardanoAddressIcarusSigningKey =
   propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
-
     -- `cardano-address` signing key filepath
     signingKeyFp <- H.noteTempFile tempDir "cardano-address-icarus.skey"
 
     -- Converted signing key filepath
-    convertedSigningKeyFp <-
-      noteTempFile tempDir "converted-cardano-address-icarus.skey"
+    actualConvertedSigningKeyFp <- noteTempFile tempDir "converted-cardano-address-icarus.skey"
 
     -- Write `cardano-address` signing key to disk
     H.textWriteFile signingKeyFp exampleIcarusSigningKey
@@ -98,18 +93,16 @@ golden_convertCardanoAddressIcarusSigningKey =
       [ "key","convert-cardano-address-key"
       , "--icarus-payment-key"
       , "--signing-key-file", signingKeyFp
-      , "--out-file", convertedSigningKeyFp
+      , "--out-file", actualConvertedSigningKeyFp
       ]
 
     -- Check for existence of the converted signing key file
-    H.assertFilesExist [convertedSigningKeyFp]
+    H.assertFilesExist [actualConvertedSigningKeyFp]
 
-    -- Check that the contents of the converted signing key file match that of
-    -- the golden file.
-    actualConvertedSigningKey <- H.readFile convertedSigningKeyFp
-    expectedConvertedSigningKey <-
-      H.readFile "test/data/golden/shelley/keys/converted_cardano-address_keys/icarus_signing_key"
-    expectedConvertedSigningKey === actualConvertedSigningKey
+    let expectedConvertedSigningKeyFp =
+          "test/data/golden/shelley/keys/converted_cardano-address_keys/icarus_signing_key"
+
+    diffFileVsGoldenFile actualConvertedSigningKeyFp expectedConvertedSigningKeyFp
 
 -- | Test that converting a @cardano-address@ Shelley payment signing key
 -- yields the expected result.
@@ -118,12 +111,10 @@ golden_convertCardanoAddressShelleyPaymentSigningKey =
   propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
 
     -- `cardano-address` signing key filepath
-    signingKeyFp <-
-      noteTempFile tempDir "cardano-address-shelley-payment.skey"
+    signingKeyFp <- noteTempFile tempDir "cardano-address-shelley-payment.skey"
 
     -- Converted signing key filepath
-    convertedSigningKeyFp <-
-      noteTempFile tempDir "converted-cardano-address-shelley-payment.skey"
+    actualConvertedSigningKeyFp <- noteTempFile tempDir "converted-cardano-address-shelley-payment.skey"
 
     -- Write `cardano-address` signing key to disk
     H.textWriteFile signingKeyFp exampleShelleySigningKey
@@ -134,18 +125,17 @@ golden_convertCardanoAddressShelleyPaymentSigningKey =
       [ "key","convert-cardano-address-key"
       , "--shelley-payment-key"
       , "--signing-key-file", signingKeyFp
-      , "--out-file", convertedSigningKeyFp
+      , "--out-file", actualConvertedSigningKeyFp
       ]
 
     -- Check for existence of the converted signing key file
-    H.assertFilesExist [convertedSigningKeyFp]
+    H.assertFilesExist [actualConvertedSigningKeyFp]
 
-    -- Check that the contents of the converted signing key file match that of
-    -- the golden file.
-    actualConvertedSigningKey <- H.readFile convertedSigningKeyFp
-    expectedConvertedSigningKey <-
-      H.readFile "test/data/golden/shelley/keys/converted_cardano-address_keys/shelley_payment_signing_key_bip32"
-    expectedConvertedSigningKey === actualConvertedSigningKey
+    let expectedConvertedSigningKeyFp =
+          "test/data/golden/shelley/keys/converted_cardano-address_keys/shelley_payment_signing_key_bip32"
+
+    diffFileVsGoldenFile actualConvertedSigningKeyFp expectedConvertedSigningKeyFp
+
 
 -- | Test that converting a @cardano-address@ Shelley stake signing key yields
 -- the expected result.
@@ -158,30 +148,28 @@ golden_convertCardanoAddressShelleyStakeSigningKey =
       noteTempFile tempDir "cardano-address-shelley-stake.skey"
 
     -- Converted signing key filepath
-    convertedSigningKeyFp <-
+    actualConvertedSigningKeyFile <-
       H.noteTempFile tempDir "converted-cardano-address-shelley-stake.skey"
 
     -- Write `cardano-address` signing key to disk
     H.textWriteFile signingKeyFp exampleShelleySigningKey
     H.assertFilesExist [signingKeyFp]
 
+    let expectedConvertedSigningKeyFile =
+          "test/data/golden/shelley/keys/converted_cardano-address_keys/shelley_stake_signing_key_bip32"
+
     -- Convert the `cardano-address` signing key
     void $ execCardanoCLI
       [ "key","convert-cardano-address-key"
       , "--shelley-stake-key"
       , "--signing-key-file", signingKeyFp
-      , "--out-file", convertedSigningKeyFp
+      , "--out-file", actualConvertedSigningKeyFile
       ]
 
     -- Check for existence of the converted signing key file
-    H.assertFilesExist [convertedSigningKeyFp]
+    H.assertFilesExist [actualConvertedSigningKeyFile]
 
-    -- Check that the contents of the converted signing key file match that of
-    -- the golden file.
-    actualConvertedSigningKey <- H.readFile convertedSigningKeyFp
-    expectedConvertedSigningKey <-
-      H.readFile "test/data/golden/shelley/keys/converted_cardano-address_keys/shelley_stake_signing_key_bip32"
-    expectedConvertedSigningKey === actualConvertedSigningKey
+    diffFileVsGoldenFile actualConvertedSigningKeyFile expectedConvertedSigningKeyFile
 
 -- | Test that confirms whether we deserialize a legacy cardano-crypto/BIP32
 -- extended key we get the same verification key.
