@@ -71,6 +71,7 @@ module Cardano.Api.Query (
     LedgerState(..),
 
     getProgress,
+    getSlotForRelativeTime,
 
     -- * Internal conversion functions
     toLedgerUTxO,
@@ -95,6 +96,8 @@ import           Data.SOP.Strict (SListI)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Typeable
+import           Data.Word (Word64)
+import qualified Data.Aeson.KeyMap as KeyMap
 
 import           Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
 
@@ -142,9 +145,7 @@ import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.TxBody
 import           Cardano.Api.Value
-import           Data.Word (Word64)
 
-import qualified Data.Aeson.KeyMap as KeyMap
 
 -- ----------------------------------------------------------------------------
 -- Queries
@@ -192,6 +193,10 @@ data EraHistory mode where
 getProgress :: SlotNo -> EraHistory mode -> Either Qry.PastHorizonException (RelativeTime, SlotLength)
 getProgress slotNo (EraHistory _ interpreter) = Qry.interpretQuery interpreter (Qry.slotToWallclock slotNo)
 
+getSlotForRelativeTime :: RelativeTime -> EraHistory mode -> Either Qry.PastHorizonException SlotNo
+getSlotForRelativeTime relTime (EraHistory _ interpreter) = do
+  (slotNo, _, _) <- Qry.interpretQuery interpreter $ Qry.wallclockToSlot relTime
+  pure slotNo
 
 newtype LedgerEpochInfo = LedgerEpochInfo { unLedgerEpochInfo :: Consensus.EpochInfo (Either Text) }
 

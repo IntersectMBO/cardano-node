@@ -20,6 +20,7 @@ module Cardano.CLI.Shelley.Run.Query
   , renderLocalStateQueryError
   , runQueryCmd
   , toEpochInfo
+  , utcTimeToSlotNo
   , determineEra
   , mergeDelegsAndRewards
   , percentage
@@ -32,7 +33,7 @@ import           Cardano.Api.Byron
 import           Cardano.Api.Orphans ()
 import           Cardano.Api.Shelley
 
-import           Control.Monad.Trans.Except (ExceptT (..), except, runExcept, runExceptT)
+import           Control.Monad.Trans.Except (ExceptT (..), except, runExcept, runExceptT, withExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
                    hoistMaybe, left, onLeft, onNothing)
 import           Data.Aeson as Aeson
@@ -90,7 +91,7 @@ import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
 
-import           Control.Monad (forM, forM_, join, foldM)
+import           Control.Monad (forM, forM_, join)
 import           Control.Monad.IO.Class (MonadIO)
 import           Control.Monad.IO.Unlift (MonadIO (..))
 import           Control.Monad.Trans.Class
@@ -1423,41 +1424,25 @@ toTentativeEpochInfo (EraHistory _ interpreter) =
     $ Consensus.interpreterToEpochInfo (Consensus.unsafeExtendSafeZone interpreter)
 
 utcTimeToSlotNo
-  :: Maybe SocketPath -> AnyConsensusModeParams -> NetworkId -> UTCTime -> ExceptT ShelleyQueryCmdError IO SlotNo
+  :: Maybe SocketPath
+  -> AnyConsensusModeParams
+  -> NetworkId
+  -> UTCTime
+  -> ExceptT ShelleyQueryCmdError IO SlotNo
 utcTimeToSlotNo mNodeSocketPath (AnyConsensusModeParams cModeParams) network utcTime = do
   SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
     & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
-  let cMode = consensusModeOnly cModeParams
-      allEras = [minBound .. maxBound] :: [AnyCardanoEra]
-      localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
-  epochInfos <- case cMode of
+  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
+  case consensusModeOnly cModeParams of
     CardanoMode -> do
-      forM allEras $ \anyE@(AnyCardanoEra era) -> do
-        sbe <- getSbe (cardanoEraStyle era)
-        eInMode <- toEraInMode era cMode
-            & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
-        let pparamsQuery = QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
-            ptclStateQuery = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryProtocolState
-            eraHistoryQuery = QueryEraHistory CardanoModeIsMultiEra
+      (systemStart, eraHistory) <- withExceptT ShelleyQueryCmdAcquireFailure $
+        (,) <$> (ExceptT $ queryNodeLocalState localNodeConnInfo Nothing QuerySystemStart)
+            <*> (ExceptT $ queryNodeLocalState localNodeConnInfo Nothing (QueryEraHistory CardanoModeIsMultiEra))
 
-        pparams <- executeQuery era cModeParams localNodeConnInfo pparamsQuery
-        ptclState <- executeQuery era cModeParams localNodeConnInfo ptclStateQuery
-        eraHistory <- lift (queryNodeLocalState localNodeConnInfo Nothing eraHistoryQuery)
-          & onLeft (left . ShelleyQueryCmdAcquireFailure)
-
-        pure $ toEpochInfo eraHistory
+      let relTime = toRelativeTime systemStart utcTime
+      hoistEither $ Api.getSlotForRelativeTime relTime eraHistory & first ShelleyQueryCmdPastHorizon
 
     mode -> left . ShelleyQueryCmdUnsupportedMode $ AnyConsensusMode mode
-
-  let systemStart = undefined :: UTCTime -- FIXME: byron genesis block time
-
-  foldl' findSlot (0, SystemStart systemStart)
-    where
-      findSlot (slotNo, lastSlotTime) epochInfo
-        | lastSlotTime > utcTime = slotNo
-        | otherwise = do
-          let (firstSlot, lastSlot) = epochInfoRange epochInfo
-
 
 
 obtainLedgerEraClassConstraints
