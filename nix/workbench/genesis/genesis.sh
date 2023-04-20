@@ -290,7 +290,7 @@ case "$op" in
         then return; fi
 
         ## Decide start time:
-        genesis_byron "$(jq '.start' -r <<<$timing)" "$dir"
+        genesis_byron "$(jq '.start' -r <<<$timing)" "$dir" "$profile_json"
 
         jq ' . * ($prof[0].genesis.shelley // {})
            | . * { systemStart: $timing.systemStart }
@@ -414,6 +414,7 @@ genesis_byron()
 {
     local system_start_epoch=$1
     local dir=$2
+    local prof_json=$3
 
     jq '
       { heavyDelThd:       "300000"
@@ -444,8 +445,8 @@ genesis_byron()
         --genesis-output-dir         "$dir"/byron
         --protocol-parameters-file   "$dir"/byron-protocol-params.json
         --start-time                 $system_start_epoch
-        --k                          2160
-        --protocol-magic             42
+        --k                          $(jq '.genesis.parameter_k'   "$prof_json")
+        --protocol-magic             $(jq '.genesis.network_magic' "$prof_json")
         --n-poor-addresses           1
         --n-delegate-addresses       1
         --total-balance              300000
