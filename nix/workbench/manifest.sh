@@ -56,6 +56,12 @@ case "${op}" in
         #, "cardano-node-package-localisations": (. | split("\n") | unique | map(select(. != "")))
         # where . is the output of manifest_cabal_package_localisations "$dir"
 
+        # If we don't have a local plan, it will just use the one that nix would build.
+        local local_plan_path="$real_dir/dist-newstyle/cache/plan.json"
+        if [[ ! -f "$local_plan_path" ]]; then
+          local_plan_path=$WB_NIX_PLAN
+        fi
+
         jq '
         def pkg_id:
           ."pkg-name" + "-" + ."pkg-version"
@@ -103,7 +109,7 @@ case "${op}" in
           --arg     node_rev      "$node_rev"                                \
           --arg     node_branch   $(manifest_local_repo_branch       "$dir") \
           --arg     node_status   $(manifest_git_checkout_state_desc "$dir") \
-          --argfile plan          $WB_NIX_PLAN                               \
+          --argfile plan          $local_plan_path                           \
           --argfile chap          $WB_CHAP_PACKAGES
         ;;
 
