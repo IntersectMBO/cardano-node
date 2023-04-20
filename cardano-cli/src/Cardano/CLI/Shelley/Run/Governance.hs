@@ -32,18 +32,15 @@ import           Cardano.Api.Shelley
 import           Cardano.CLI.Shelley.Key (VerificationKeyOrHashOrFile,
                    readVerificationKeyOrHashOrFile, readVerificationKeyOrHashOrTextEnvFile)
 import           Cardano.CLI.Shelley.Parsers
-import           Cardano.CLI.Shelley.Run.Key (SomeSigningKey (..), readSigningKeyFile)
-import           Cardano.CLI.Shelley.Run.Read (MetadataError, readFileTxMetadata,
-                   renderMetadataError)
+import           Cardano.CLI.Shelley.Run.Read (CddlError, fileOrPipe, readFileTx)
 import           Cardano.CLI.Types
 
 import           Cardano.Binary (DecoderError)
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import           Cardano.Ledger.Keys (SignKeyDSIGN, SignKeyVRF)
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 
 data ShelleyGovernanceCmdError
   = ShelleyGovernanceCmdTextEnvReadError !(FileError TextEnvelopeError)
+  | ShelleyGovernanceCmdCddlError !CddlError
   | ShelleyGovernanceCmdKeyReadError !(FileError InputDecodeError)
   | ShelleyGovernanceCmdCostModelReadError !(FileError ())
   | ShelleyGovernanceCmdTextEnvWriteError !(FileError ())
@@ -63,7 +60,6 @@ data ShelleyGovernanceCmdError
       !Int
       -- ^ Maximum answer index
   | ShelleyGovernanceCmdPollInvalidChoice
-  | ShelleyGovernanceCmdMetadataError !MetadataError
   | ShelleyGovernanceCmdDecoderError !DecoderError
   | ShelleyGovernanceCmdVerifyPollError !GovernancePollError
   deriving Show
@@ -72,6 +68,7 @@ renderShelleyGovernanceError :: ShelleyGovernanceCmdError -> Text
 renderShelleyGovernanceError err =
   case err of
     ShelleyGovernanceCmdTextEnvReadError fileErr -> Text.pack (displayError fileErr)
+    ShelleyGovernanceCmdCddlError cddlErr -> Text.pack (displayError cddlErr)
     ShelleyGovernanceCmdKeyReadError fileErr -> Text.pack (displayError fileErr)
     ShelleyGovernanceCmdTextEnvWriteError fileErr -> Text.pack (displayError fileErr)
     -- TODO: The equality check is still not working for empty update proposals.
@@ -95,8 +92,6 @@ renderShelleyGovernanceError err =
       "Poll answer out of bounds. Choices are between 0 and " <> textShow nMax
     ShelleyGovernanceCmdPollInvalidChoice ->
       "Invalid choice. Please choose from the available answers."
-    ShelleyGovernanceCmdMetadataError metadataError ->
-      renderMetadataError metadataError
     ShelleyGovernanceCmdDecoderError decoderError ->
       "Unable to decode metadata: " <> sformat build decoderError
     ShelleyGovernanceCmdVerifyPollError pollError ->
@@ -113,8 +108,8 @@ runGovernanceCmd (GovernanceUpdateProposal out eNo genVKeys ppUp mCostModelFp) =
   runGovernanceUpdateProposal out eNo genVKeys ppUp mCostModelFp
 runGovernanceCmd (GovernanceCreatePoll prompt choices nonce out) =
   runGovernanceCreatePoll prompt choices nonce out
-runGovernanceCmd (GovernanceAnswerPoll poll sk ix) =
-  runGovernanceAnswerPoll poll sk ix
+runGovernanceCmd (GovernanceAnswerPoll poll ix) =
+  runGovernanceAnswerPoll poll ix
 runGovernanceCmd (GovernanceVerifyPoll poll metadata) =
   runGovernanceVerifyPoll poll metadata
 
@@ -327,22 +322,19 @@ runGovernanceAnswerPoll pollFile maybeChoice = do
 
 runGovernanceVerifyPoll
   :: File () In
-  -> File () In
+  -> File (Tx ()) In
   -> ExceptT ShelleyGovernanceCmdError IO ()
-runGovernanceVerifyPoll pollFile metadataFile = do
+runGovernanceVerifyPoll pollFile txFile = do
   poll <- firstExceptT ShelleyGovernanceCmdTextEnvReadError . newExceptT $
     readFileTextEnvelope AsGovernancePoll pollFile
 
-  metadata <- firstExceptT ShelleyGovernanceCmdMetadataError $
-    readFileTxMetadata TxMetadataJsonDetailedSchema (MetadataFileJSON metadataFile)
+  txFileOrPipe <- liftIO $ fileOrPipe (unFile txFile)
+  tx <- firstExceptT ShelleyGovernanceCmdCddlError . newExceptT $
+    readFileTx txFileOrPipe
 
-  answer <- firstExceptT ShelleyGovernanceCmdDecoderError . newExceptT $ pure $
-    deserialiseFromCBOR AsGovernancePollAnswer (serialiseToCBOR metadata)
+  signatories <- firstExceptT ShelleyGovernanceCmdVerifyPollError . newExceptT $ pure $
+    verifyPollAnswer poll tx
 
-  witness <- firstExceptT ShelleyGovernanceCmdDecoderError . newExceptT $ pure $
-    deserialiseFromCBOR AsGovernancePollWitness (serialiseToCBOR metadata)
-
-  firstExceptT ShelleyGovernanceCmdVerifyPollError . newExceptT $ pure $
-    verifyPollAnswer poll answer witness
-
-  liftIO $ BSC.hPutStrLn stderr "Ok."
+  liftIO $ do
+    BSC.hPutStrLn stderr "Found valid poll answer, signed by: "
+    BSC.hPutStrLn stdout (prettyPrintJSON signatories)

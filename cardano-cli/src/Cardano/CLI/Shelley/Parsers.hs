@@ -1199,7 +1199,7 @@ pGovernanceCmd =
     pGovernanceVerifyPoll =
       GovernanceVerifyPoll
         <$> pPollFile
-        <*> pPollMetadataFile
+        <*> pTxFileIn
 
 
 pPollQuestion :: Parser Text
@@ -1241,15 +1241,6 @@ pPollNonce =
     (  Opt.long "nonce"
     <> Opt.metavar "UINT"
     <> Opt.help "An (optional) nonce for non-replayability."
-    )
-
-pPollMetadataFile :: Parser (File () In)
-pPollMetadataFile =
-  Opt.strOption
-    (  Opt.long "metadata-file"
-    <> Opt.metavar "FILE"
-    <> Opt.help "Filepath of the metadata file, in (detailed) JSON format."
-    <> Opt.completer (Opt.bashCompleter "file")
     )
 
 pTransferAmt :: Parser Lovelace
