@@ -19,7 +19,7 @@ with lib;
 let
 
     # recover CHaP location from cardano's project
-    chapPackages = "${project.pkg-set.config.inputMap."https://input-output-hk.github.io/cardano-haskell-packages"}/foliage/packages.json";
+    chapPackages = "${project.args.inputMap."https://input-output-hk.github.io/cardano-haskell-packages"}/foliage/packages.json";
 
     # build plan as computed by nix
     nixPlanJson = project.plan-nix.json;
