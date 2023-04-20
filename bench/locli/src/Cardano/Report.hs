@@ -150,7 +150,7 @@ instance ToJSON TmplRun where
     object
       [ "meta"       .= trMeta
       , "workload"   .= trWorkload
-      , "branch"     .= mNodeBranch
+      , "branch"     .= ciBranch mNode
       , "ver"        .= ident trMeta
       , "rev"        .=
         object
@@ -159,7 +159,6 @@ instance ToJSON TmplRun where
         , "ledger"       .= mLedger
         , "plutus"       .= mPlutus
         , "crypto"       .= mCrypto
-        , "base"         .= mBase
         , "prelude"      .= mPrelude
         ]
       ]
@@ -213,7 +212,7 @@ generate :: InputDir -> Maybe TextInputFile
          -> (SomeSummary, ClusterPerf, SomeBlockProp) -> [(SomeSummary, ClusterPerf, SomeBlockProp)]
          -> IO (ByteString, ByteString, Text)
 generate (InputDir ede) mReport (SomeSummary summ, cp, SomeBlockProp bp) rest = do
-  ctx  <- getReport (last restTmpls & trManifest & mNodeApproxVer) Nothing
+  ctx  <- getReport (last restTmpls & trManifest & mNode & ciVersion) Nothing
   tmplRaw <- BS.readFile (maybe defaultReportPath unTextInputFile mReport)
   tmpl <- parseWith defaultSyntax (includeFile ede) "report" tmplRaw
   let tmplEnv           = mkTmplEnv ctx baseTmpl restTmpls

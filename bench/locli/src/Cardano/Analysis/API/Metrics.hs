@@ -39,7 +39,7 @@ sumFieldsReport =
   [ "date.systemStart", "time.systemStart", "sumAnalysisTime"
   , "batch"
   , "ident"
-  , "cardano-node", "ouroboros-network" , "cardano-ledger", "plutus", "cardano-crypto", "cardano-base"
+  , "cardano-node", "ouroboros-network" , "cardano-ledger", "plutus", "cardano-crypto"
   , "era"
   , "delegators", "utxo"
   , "add_tx_size", "inputs_per_tx", "outputs_per_tx" , "tps", "tx_count"
@@ -70,7 +70,7 @@ instance (KnownCDF f) => TimelineFields (Summary f)  where
       "Cluster system start time"
       "Time-of-day portion of cluster genesis systemStart"
 
-   <> fScalar   "batch"                Wno Id  (IText $  batch.sumMeta)
+   <> fScalar   "batch"                Wno Id  (IText $ batch.sumMeta)
       "Run batch"
       ""
 
@@ -78,28 +78,28 @@ instance (KnownCDF f) => TimelineFields (Summary f)  where
       "Identifier"
       ""
 
+   <> fScalar "cardano-node"           W10 Ver (IText $ unCommit.ciCommit.mNode.manifest.sumMeta)
+      "cardano-node"
+      ""
+
    <> fScalar "cardano-node"           W5  Ver (IText $ unCommit.mNode.manifest.sumMeta)
       "cardano-node version"
       ""
 
-   <> fScalar "ouroboros-network"      W5  Ver (IText $ unCommit.mNetwork.manifest.sumMeta)
-      "ouroboros-network version"
+   <> fScalar "ouroboros-network"      W10 Ver (IText $ componentSummary.mNetwork.manifest.sumMeta)
+      "ouroboros-network"
       ""
 
-   <> fScalar "cardano-ledger"         W5  Ver (IText $ unCommit.mLedger.manifest.sumMeta)
-      "cardano-ledger version"
+   <> fScalar "cardano-ledger"         W10 Ver (IText $ componentSummary.mLedger.manifest.sumMeta)
+      "cardano-ledger"
       ""
 
-   <> fScalar "plutus"                 W5  Ver (IText $ unCommit.mPlutus.manifest.sumMeta)
-      "plutus version"
+   <> fScalar "plutus"                 W10 Ver (IText $ componentSummary.mPlutus.manifest.sumMeta)
+      "plutus"
       ""
 
-   <> fScalar "cardano-crypto"         W5  Ver (IText $ unCommit.mCrypto.manifest.sumMeta)
-      "cardano-crypto version"
-      ""
-
-   <> fScalar "cardano-base"           W5  Ver (IText $ unCommit.mBase.manifest.sumMeta)
-      "cardano-base version"
+   <> fScalar "cardano-crypto"         W10 Ver (IText $ componentSummary.mCrypto.manifest.sumMeta)
+      "cardano-crypto"
       ""
 
    <> fScalar "era"                    Wno Era (IText $                     era.sumMeta)

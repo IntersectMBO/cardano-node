@@ -74,59 +74,79 @@ newtype Version  = Version { unVersion :: Text } deriving newtype (Eq, Show, Fro
 unsafeShortenCommit :: Int -> Commit -> Commit
 unsafeShortenCommit n (Commit c) = Commit (T.take n c)
 
+data ComponentInfo
+  = ComponentInfo
+    { ciName    :: !Text
+    , ciCommit  :: !Commit
+    , ciBranch  :: !(Maybe Branch)
+    , ciStatus  :: !(Maybe Text)
+    , ciVersion :: !Version
+    }
+  deriving (Eq, Generic, NFData, Show)
+
+componentSummary :: ComponentInfo -> Text
+componentSummary ComponentInfo{..} =
+ T.unwords [ unCommit ciCommit, "(" <> unVersion ciVersion <> ")" ]
+
+instance FromJSON ComponentInfo where
+  parseJSON = withObject "Component" $ \v -> do
+    ciName    <- v .: "name"
+    ciCommit  <- v .: "commit"
+    ciBranch  <- v .:? "branch"
+    ciStatus  <- v .:? "status"
+    ciVersion <- v .: "version"
+    pure ComponentInfo{..}
+
+instance ToJSON ComponentInfo where
+  toJSON ComponentInfo{..} =
+    object
+      [ "name"    .= ciName
+      , "commit"  .= ciCommit
+      , "branch"  .= ciBranch
+      , "status"  .= ciStatus
+      , "version" .= ciVersion
+      ]
+
 data Manifest
   = Manifest
-    { mNode          :: !Commit
-    , mNodeApproxVer :: !Version
-    , mNodeBranch    :: !Branch
-    , mNodeStatus    :: !Text
-    , mNetwork       :: !Commit
-    , mLedger        :: !Commit
-    , mPlutus        :: !Commit
-    , mCrypto        :: !Commit
-    , mBase          :: !Commit
-    , mPrelude       :: !Commit
+    { mNode          :: !ComponentInfo
+    , mNetwork       :: !ComponentInfo
+    , mLedger        :: !ComponentInfo
+    , mPlutus        :: !ComponentInfo
+    , mCrypto        :: !ComponentInfo
+    , mPrelude       :: !ComponentInfo
     }
   deriving (Eq, Generic, NFData, Show)
 
 unsafeShortenManifest :: Int -> Manifest -> Manifest
 unsafeShortenManifest n m@Manifest{..} =
-  m { mNode    = unsafeShortenCommit n mNode
-    , mNetwork = unsafeShortenCommit n mNetwork
-    , mLedger  = unsafeShortenCommit n mLedger
-    , mPlutus  = unsafeShortenCommit n mPlutus
-    , mCrypto  = unsafeShortenCommit n mCrypto
-    , mBase    = unsafeShortenCommit n mBase
-    , mPrelude = unsafeShortenCommit n mPrelude
+  m { mNode    = mNode    { ciCommit = unsafeShortenCommit n (ciCommit mNode)    }
+    , mNetwork = mNetwork { ciCommit = unsafeShortenCommit n (ciCommit mNetwork) }
+    , mLedger  = mLedger  { ciCommit = unsafeShortenCommit n (ciCommit mLedger)  }
+    , mPlutus  = mPlutus  { ciCommit = unsafeShortenCommit n (ciCommit mPlutus)  }
+    , mCrypto  = mCrypto  { ciCommit = unsafeShortenCommit n (ciCommit mCrypto)  }
+    , mPrelude = mPrelude { ciCommit = unsafeShortenCommit n (ciCommit mPrelude) }
     }
 
 instance FromJSON Manifest where
   parseJSON = withObject "Manifest" $ \v -> do
-    mNode          <- v .: "cardano-node"
-    mNodeBranch    <- v .:? "cardano-node-branch"  <&> fromMaybe (Branch "unknown")
-    mNodeApproxVer <- v .:? "cardano-node-version" <&> fromMaybe (Version "unknown")
-    mNodeStatus    <- v .: "cardano-node-status"
-    mNetwork       <- v .: "ouroboros-network"
-    mLedger        <- v .: "cardano-ledger"
-    mPlutus        <- v .: "plutus"
-    mCrypto        <- v .: "cardano-crypto"
-    mBase          <- v .: "cardano-base"
-    mPrelude       <- v .: "cardano-prelude"
+    mNode    <- v .: "node"
+    mNetwork <- v .: "network"
+    mLedger  <- v .: "ledger"
+    mPlutus  <- v .: "plutus"
+    mCrypto  <- v .: "crypto"
+    mPrelude <- v .: "prelude"
     pure Manifest{..}
 
 instance ToJSON Manifest where
   toJSON Manifest{..} =
     object
-      [ "cardano-node"         .= mNode
-      , "cardano-node-branch"  .= mNodeBranch
-      , "cardano-node-version" .= mNodeApproxVer
-      , "cardano-node-status"  .= mNodeStatus
-      , "ouroboros-network"    .= mNetwork
-      , "cardano-ledger"       .= mLedger
-      , "plutus"               .= mPlutus
-      , "cardano-crypto"       .= mCrypto
-      , "cardano-base"         .= mBase
-      , "cardano-prelude"      .= mPrelude
+      [ "node"    .= mNode
+      , "network" .= mNetwork
+      , "ledger"  .= mLedger
+      , "plutus"  .= mPlutus
+      , "crypto"  .= mCrypto
+      , "prelude" .= mPrelude
       ]
 
 data Metadata
