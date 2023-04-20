@@ -20,7 +20,7 @@ case "${op}" in
             (.url |  split("?")[0] | split("/")) as $url_parts
           | { pkg_id: pkg_id
             , repository: $url_parts[0:2] | join("/")
-            , hash: $url_parts[2]
+            , commit: $url_parts[2]
             }
           ;
 
@@ -28,7 +28,7 @@ case "${op}" in
             group_by(.repository)
           | map({
             repository: .[0].repository,
-            contributions: map({key: .pkg_id, value: .hash}) | from_entries
+            contributions: map({key: .pkg_id, value: .commit}) | from_entries
           })
           ;
 
@@ -66,7 +66,7 @@ case "${op}" in
           | { name: ."pkg-name"
             , version: ."pkg-version"
             , repository: $url_parts[1]
-            , hash: $url_parts[2]
+            , commit: $url_parts[2]
             }
           ;
 
@@ -165,7 +165,7 @@ case "${op}" in
           , ( $manifest.dependencies[]
             | [ .name
               , .version
-              , repo_colorly(.repository; .hash)
+              , repo_colorly(.repository; .commit)
               , repo_comment($manifest; .repository)
               ]
             )
