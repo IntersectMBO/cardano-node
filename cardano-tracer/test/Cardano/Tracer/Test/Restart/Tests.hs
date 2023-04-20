@@ -99,4 +99,5 @@ mkConfig TestSetup{..} rootDir p = TracerConfig
   , rotation       = Nothing
   , verbosity      = Just Minimum
   , metricsComp    = Nothing
+  , hasForwarding  = Nothing
   }

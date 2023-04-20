@@ -128,5 +128,5 @@ getExternalTracerState TestSetup{..} ref = do
        -- For simplicity, we are always 'Initiator',
        -- so 'cardano-tracer' is always a 'Responder'.
        let tracerSocketMode = Just (unI tsSockExternal, Initiator)
-       initForwarding iomgr simpleTestConfig (unI tsNetworkMagic) Nothing tracerSocketMode
+       initForwarding iomgr (tcForwarder simpleTestConfig) (unI tsNetworkMagic) Nothing tracerSocketMode
      pure (externalTracerHdl, forwardTracer forwardSink)
