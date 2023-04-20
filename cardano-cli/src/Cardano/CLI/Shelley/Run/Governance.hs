@@ -252,6 +252,7 @@ runGovernanceCreatePoll govPollQuestion govPollAnswers govPollNonce (OutputFile 
 
 runGovernanceAnswerPoll
   :: FilePath
+    -- ^ Poll file
   -> Maybe Word
     -- ^ Answer index
   -> ExceptT ShelleyGovernanceCmdError IO ()
@@ -318,9 +319,11 @@ runGovernanceAnswerPoll pollFile maybeChoice = do
 
 runGovernanceVerifyPoll
   :: FilePath
-  -> FilePath
+    -- ^ Poll file
+  -> TxFile
+    -- ^ Signed transaction (answer) file
   -> ExceptT ShelleyGovernanceCmdError IO ()
-runGovernanceVerifyPoll pollFile txFile = do
+runGovernanceVerifyPoll pollFile (TxFile txFile) = do
   poll <- firstExceptT ShelleyGovernanceCmdTextEnvReadError . newExceptT $
     readFileTextEnvelope AsGovernancePoll pollFile
 
