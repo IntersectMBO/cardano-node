@@ -61,48 +61,43 @@ case "${op}" in
           ."pkg-name" + "-" + ."pkg-version"
           ;
 
-        def distill_package_data:
-            (.url |  split("?")[0] | split("/")) as $url_parts
-          | { name: ."pkg-name"
-            , version: ."pkg-version"
-            , repository: $url_parts[1]
-            , commit: $url_parts[2]
-            }
-          ;
-
-        def is_interesting:
-          # change this list to add more packages
-          # you can also change the logic of choosing what is 
-          ( "ouroboros-consensus"
-          , "ouroboros-network"
-          , "cardano-ledger-core"
-          , "cardano-ledger-conway"
-          , "plutus-core"
-          ) as $representative_packages
-          # you can also change the logic here, so far we select intersting
-          # packages by their name
-          | . as $input
-          | any($representative_packages; . == $input."pkg-name")
+        def pkg_commit:
+          .url |  split("?")[0] | split("/")[2]
           ;
 
         # key chap packages by package id, so we can match them easily in the next step
           $chap
-        | map({ key: pkg_id, value: distill_package_data })
+        | map({ key: pkg_id, value: pkg_commit })
+        | from_entries as $chap_data
+
+        # map each package in the plan to chap data (if present)
+        | $plan."install-plan"
+        | map({ key: ."pkg-name"
+              , value: { name: ."pkg-name"
+                       , version: ."pkg-version"
+                       , commit: $chap_data[pkg_id]
+                       }
+              })
         | from_entries as $package_data
 
-        | $plan."install-plan"
-        # select the interesting parts (see logic above)
-        | map(select(is_interesting))
-        # deduplicate the list per package-id (in a per-component build, the same
-        # package id can appear multiple times in an install-plan)
-        | unique_by(pkg_id)
-        # get package data from chap
-        | map($package_data[pkg_id]) as $dependencies
-
-        | { "cardano-node":        $node_rev
-          , "cardano-node-branch": $node_branch
-          , "cardano-node-status": $node_status
-          , "dependencies":        $dependencies
+        # assemble the manifest
+        # NOTE: The keys where are "components" and are hardcoded in the
+        #       reporting framework. What we do here is mapping each component
+        #       to a particular package, representative of that component.
+        # NOTE: The node component is a bit ad-hoc here since it does not come
+        #       from a package. Nevertheless we use the same schema for all
+        #       components so we can keep the reporting framework simple.
+        | { "node":      { name: "cardano-node"
+                         , commit: $node_rev
+                         , branch: $node_branch
+                         , status: $node_status
+                         , version: $package_data["cardano-node"].version
+                         }
+          , "network":   $package_data["ouroboros-network"]
+          , "ledger":    $package_data["cardano-ledger-core"]
+          , "plutus":    $package_data["plutus-core"]
+          , "crypto":    $package_data["cardano-crypto"]
+          , "prelude":   $package_data["cardano-prelude"]
           }
         ' --null-input                                                       \
           --arg     node_rev      "$node_rev"                                \
@@ -134,42 +129,33 @@ case "${op}" in
             | unlines
           ;
 
-        def repo_color($repo):
+        def package_color($repo):
           { "cardano-node":      "yellow"
           , "ouroboros-network": "white"
           , "cardano-ledger":    "red"
           , "plutus":            "cyan"
           }[$repo] // "off";
 
-        def repo_colorly($repo; $hash):
-          colorly(repo_color($repo); $hash[:5]) + $hash[5:];
+        def package_colorly($repo; $hash):
+          colorly(package_color($repo); $hash[:5]) + $hash[5:];
 
-        def repo_status($status):
+        def status_colorly($status):
           { modified:   colorly("red";  $status)
           , clean:      colorly("cyan"; $status)
           }[$status];
 
-        def repo_comment($manifest; $repo):
-          { "cardano-node":
-              "(branch \(colorly("yellow"; $manifest."cardano-node-branch")) - \(repo_status($manifest."cardano-node-status")))"
-          }[$repo] // "";
+        # FIXME put this back
+        # (."cardano-node-package-localisations") as $localisations
 
-          (."cardano-node-package-localisations") as $localisations
-
-        | . as $manifest
-        | [ [ "cardano-node"
-            , ""
-            , repo_colorly("cardano-node"; $manifest."cardano-node")
-            , repo_comment($manifest; "cardano-node")
-            ]
-          , ( $manifest.dependencies[]
-            | [ .name
-              , .version
-              , repo_colorly(.repository; .commit)
-              , repo_comment($manifest; .repository)
-              ]
-            )
+        to_entries
+        | map(
+          [ .key
+          , .value.version
+          , package_colorly(.key; .value.commit)
+          , (.value | select(.branch) | colorly("yellow"; .branch))
+          , (.value | select(.status) | status_colorly(.status))
           ]
+          )
         | leftpad(2)
         | align
         ' --raw-output -L$global_basedir <<<$json
