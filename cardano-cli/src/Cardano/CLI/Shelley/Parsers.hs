@@ -109,8 +109,26 @@ parseShelleyCommands =
                , "Transactions, addresses etc are stored on disk as TextView files."
                ]
             )
-
+      , Opt.command "calculateslottime"
+          (Opt.info (CalculateSlotTimeCmd <$> pCalculateSlotTimeCmd) $ Opt.progDesc  "calculateslottime")
       ]
+
+pCalculateSlotTimeCmd :: Parser CalculateSlotTimeCmd
+pCalculateSlotTimeCmd =
+  CalculateSlotTimeCmd'
+    <$> pSocketPath
+    <*> pConsensusModeParams
+    <*> pNetworkId
+    <*> pUTCTime
+      where
+        pUTCTime :: Parser UTCTime
+        pUTCTime = do
+          convertTime <$> Opt.strOption (Opt.long "utc-time")
+
+        convertTime :: String -> UTCTime
+        convertTime =
+          parseTimeOrError False defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ"
+
 
 pTextViewCmd :: Parser TextViewCmd
 pTextViewCmd =

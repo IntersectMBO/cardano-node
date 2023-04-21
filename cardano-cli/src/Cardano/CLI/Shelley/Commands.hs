@@ -16,6 +16,7 @@ module Cardano.CLI.Shelley.Commands
   , GovernanceCmd (..)
   , GenesisCmd (..)
   , TextViewCmd (..)
+  , CalculateSlotTimeCmd (..)
   , renderShelleyCommand
 
     -- * CLI flag types
@@ -50,6 +51,7 @@ import           Prelude
 import           Cardano.Api.Shelley
 
 import           Data.Text (Text)
+import           Data.Time.Clock
 
 import           Cardano.CLI.Shelley.Key (DelegationTarget, PaymentVerifier, StakeIdentifier,
                    StakeVerifier, VerificationKeyOrFile, VerificationKeyOrHashOrFile,
@@ -75,6 +77,7 @@ data ShelleyCommand
   | GovernanceCmd   GovernanceCmd
   | GenesisCmd      GenesisCmd
   | TextViewCmd     TextViewCmd
+  | CalculateSlotTimeCmd CalculateSlotTimeCmd
 
 renderShelleyCommand :: ShelleyCommand -> Text
 renderShelleyCommand sc =
@@ -89,6 +92,7 @@ renderShelleyCommand sc =
     GovernanceCmd cmd -> renderGovernanceCmd cmd
     GenesisCmd cmd -> renderGenesisCmd cmd
     TextViewCmd cmd -> renderTextViewCmd cmd
+    CalculateSlotTimeCmd cmd -> renderCalculateSlotTimeCmd cmd
 
 data AddressCmd
   = AddressKeyGen AddressKeyType (VerificationKeyFile Out) (SigningKeyFile Out)
@@ -443,6 +447,14 @@ data TextViewCmd
 
 renderTextViewCmd :: TextViewCmd -> Text
 renderTextViewCmd (TextViewInfo _ _) = "text-view decode-cbor"
+
+data CalculateSlotTimeCmd =
+  CalculateSlotTimeCmd' (Maybe SocketPath) AnyConsensusModeParams NetworkId UTCTime
+  deriving Show
+
+renderCalculateSlotTimeCmd :: CalculateSlotTimeCmd -> Text
+renderCalculateSlotTimeCmd _ = "calculateslottime"
+
 
 data GenesisCmd
   = GenesisCreate GenesisDir Word Word (Maybe SystemStart) (Maybe Lovelace) NetworkId

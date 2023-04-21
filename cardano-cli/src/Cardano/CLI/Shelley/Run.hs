@@ -10,9 +10,10 @@ import           Data.Text (Text)
 import           Cardano.Api
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
+import Control.Monad.IO.Class
 import qualified Data.Text as Text
 
-import           Cardano.CLI.Shelley.Parsers
+import           Cardano.CLI.Shelley.Commands
 
 import           Cardano.CLI.Shelley.Run.Address
 import           Cardano.CLI.Shelley.Run.Governance
@@ -37,6 +38,7 @@ data ShelleyClientCmdError
   | ShelleyCmdTransactionError !ShelleyTxCmdError
   | ShelleyCmdQueryError !ShelleyQueryCmdError
   | ShelleyCmdKeyError !ShelleyKeyCmdError
+  | ShelleyCmdCalculateSlotTimeError !Text
 
 renderShelleyClientCmdError :: ShelleyCommand -> ShelleyClientCmdError -> Text
 renderShelleyClientCmdError cmd err =
@@ -61,6 +63,8 @@ renderShelleyClientCmdError cmd err =
        renderError cmd renderShelleyQueryCmdError queryErr
     ShelleyCmdKeyError keyErr ->
        renderError cmd renderShelleyKeyCmdError keyErr
+    ShelleyCmdCalculateSlotTimeError txt ->
+       renderError cmd id txt
  where
    renderError :: ShelleyCommand -> (a -> Text) -> a -> Text
    renderError shelleyCmd renderer shelCliCmdErr =
@@ -86,3 +90,12 @@ runShelleyClientCommand (QueryCmd        cmd) = firstExceptT ShelleyCmdQueryErro
 runShelleyClientCommand (GovernanceCmd   cmd) = firstExceptT ShelleyCmdGovernanceError $ runGovernanceCmd cmd
 runShelleyClientCommand (GenesisCmd      cmd) = firstExceptT ShelleyCmdGenesisError $ runGenesisCmd cmd
 runShelleyClientCommand (TextViewCmd     cmd) = firstExceptT ShelleyCmdTextViewError $ runTextViewCmd cmd
+runShelleyClientCommand (CalculateSlotTimeCmd cmd) = firstExceptT ShelleyCmdCalculateSlotTimeError $ runCalculateSlotTime cmd
+
+
+runCalculateSlotTime :: CalculateSlotTimeCmd -> ExceptT Text IO ()
+runCalculateSlotTime cstc@(CalculateSlotTimeCmd' mSocketPath acm nid utcTime) = firstExceptT (Text.pack . show) $ do
+  liftIO $ print cstc
+  slot <- utcTimeToSlotNo mSocketPath acm nid utcTime
+  liftIO $ putStrLn "SLOTNO"
+  liftIO $ print slot
