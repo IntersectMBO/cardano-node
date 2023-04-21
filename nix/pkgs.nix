@@ -97,8 +97,6 @@ in with final;
 
   clusterTests = import ./workbench/tests { inherit pkgs; };
 
-  plutus-scripts = callPackage ./plutus-scripts.nix { plutus-builder = plutus-example; };
-
   dockerImage =
     let
       defaultConfig = {

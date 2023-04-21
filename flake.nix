@@ -130,19 +130,12 @@
       ] ++ (import ops-lib.outPath {}).overlays;
 
       collectExes = project:
-        let
-          inherit (project.pkgs.stdenv) hostPlatform;
-          inherit ((import plutus-apps {
-            inherit (project.pkgs) system;
-          }).plutus-apps.haskell.packages.plutus-example.components.exes) plutus-example;
-
-        in
-        project.exes // (with project.hsPkgs; {
+        let inherit (project.pkgs.stdenv) hostPlatform;
+        in project.exes // (with project.hsPkgs; {
           inherit (ouroboros-consensus-byron.components.exes) db-converter;
           inherit (ouroboros-consensus-cardano-tools.components.exes) db-analyser db-synthesizer;
           inherit (bech32.components.exes) bech32;
         } // lib.optionalAttrs hostPlatform.isUnix {
-          inherit plutus-example;
         });
 
       mkCardanoNodePackages = project: (collectExes project) // {
@@ -415,7 +408,7 @@
           customConfig.haskellNix
         ];
         cardanoNodePackages = mkCardanoNodePackages final.cardanoNodeProject;
-        inherit (final.cardanoNodePackages) cardano-node cardano-cli cardano-submit-api cardano-tracer bech32 locli plutus-example db-analyser;
+        inherit (final.cardanoNodePackages) cardano-node cardano-cli cardano-submit-api cardano-tracer bech32 locli db-analyser;
       };
       nixosModules = {
         cardano-node = { pkgs, lib, ... }: {
