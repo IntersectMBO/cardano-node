@@ -236,6 +236,15 @@ backend_nomad() {
       done
     ;;
 
+    allocate-run-nomad-job-patch-constraints )
+      local usage="USAGE: wb backend $op RUN-DIR CONSTRAINTS-JSON-ARRAY"
+      local dir=${1:?$usage}; shift
+      local constraints_array=${1:?$usage}; shift
+      local nomad_environment=$(envjqr 'nomad_environment')
+      local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
+      jq ".[\"job\"][\"${nomad_job_name}\"][\"constraint\"] = \$constraints_array" --argjson constraints_array "${constraints_array}" "${dir}"/nomad/nomad-job.json | sponge "${dir}"/nomad/nomad-job.json
+    ;;
+
     deploy-genesis-wget )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
@@ -2154,6 +2163,10 @@ client {
   # Specifies the interval at which Nomad attempts to garbage collect terminal
   # allocation directories.
   gc_interval = "2s"
+
+  # Specifies an arbitrary string used to logically group client nodes by
+  # user-defined class. This can be used during job placement as a filter.
+  node_class = "qa" # Using the "world.dev.cardano.org" testing class for "perf".
 
   # "artifact" parameters (fail fast!!!)
   ######################################

@@ -207,8 +207,22 @@ backend_nomadcloud() {
         "${dir}"/container-specs.json              \
       > "${dir}"/nomad/nomad-job.json
       # The job file is "slightly" modified (jq) to suit the running environment.
-      backend_nomad allocate-run-nomad-job-patch-namespace "${dir}" "${NOMAD_NAMESPACE}"
-      backend_nomad allocate-run-nomad-job-patch-nix       "${dir}"
+      backend_nomad allocate-run-nomad-job-patch-namespace   "${dir}" "${NOMAD_NAMESPACE}"
+      backend_nomad allocate-run-nomad-job-patch-nix         "${dir}"
+      # Right now only testing, using "qa" class distinct nodes!
+      backend_nomad allocate-run-nomad-job-patch-constraints "${dir}" \
+        "[                                                    \
+              {                                               \
+                  \"operator\":  \"=\"                        \
+                , \"attribute\": \"\${node.class}\"           \
+                , \"value\":     \"qa\"                       \
+              }                                               \
+            , {                                               \
+                  \"operator\":  \"distinct_property\"        \
+                , \"attribute\": \"\${attr.unique.hostname}\" \
+                , \"value\":     1                            \
+              }                                               \
+         ]"
 
       backend_nomad allocate-run "${dir}"
     ;;
