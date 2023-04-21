@@ -2,11 +2,17 @@
 , lib, jq, runCommand
 , db-analyser
 , cardanoNodePackages
+, cardanoNodeProject
 }:
 
 with lib;
 
 let
+  # recover CHaP location from cardano's project
+  chapPackages = "${cardanoNodeProject.args.inputMap."https://input-output-hk.github.io/cardano-haskell-packages"}/foliage/packages.json";
+  # build plan as computed by nix
+  nixPlanJson = cardanoNodeProject.plan-nix.json;
+
   workbench' = tools:
     pkgs.stdenv.mkDerivation {
       pname = "workbench";
@@ -22,7 +28,11 @@ let
       '';
 
       postFixup = ''
-        wrapProgram "$out/bin/wb" --argv0 wb --prefix PATH ":" ${makeBinPath tools}
+        wrapProgram "$out/bin/wb"                \
+          --argv0 wb                             \
+          --prefix PATH ":" ${makeBinPath tools} \
+          --set WB_CHAP_PACKAGES ${chapPackages} \
+          --set WB_NIX_PLAN      ${nixPlanJson}
       '';
 
       installPhase = ''

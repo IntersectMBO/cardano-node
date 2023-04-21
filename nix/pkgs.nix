@@ -3,7 +3,7 @@ final: prev:
 
 let
   inherit (prev) customConfig;
-  inherit (final) pkgs cardanoNodePackages;
+  inherit (final) pkgs cardanoNodePackages cardanoNodeProject;
   inherit (prev.pkgs) lib;
 
   # A generic, fully parameteric version of the workbench development environment.
