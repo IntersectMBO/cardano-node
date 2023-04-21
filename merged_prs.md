@@ -407,33 +407,36 @@
 [Fix `TraceNodeIsLeader` JSON parser](https://github.com/input-output-hk/cardano-node/pull/4187)
 [New query pool-state command](https://github.com/input-output-hk/cardano-node/pull/4170)
 [Rework Windows CI to use MSYS2](https://github.com/input-output-hk/cardano-node/pull/4184)
-[UTxO-HD: Rework Windows CI to use MSYS2](https://github.com/input-output-hk/cardano-node/pull/4178)
-[Add documentation for total collateral and return collateral.](https://github.com/input-output-hk/cardano-node/pull/4183)
-[Fix help message for `--script-invalid` option of `build`/`build-raw`](https://github.com/input-output-hk/cardano-node/pull/4121)
-[RTView: a link from tracer's README, quick start](https://github.com/input-output-hk/cardano-node/pull/4175)
-[Expose Key interface in Cardano.Api.Shelley](https://github.com/input-output-hk/cardano-node/pull/4048)
-[tx-generator: remove mutable state](https://github.com/input-output-hk/cardano-node/pull/3815)
-[CAD-4728  Change the units for the LMDB `mapsize` option to GB and let the parameter be a number](https://github.com/input-output-hk/cardano-node/pull/4155)
+
+
+
+
+## Consensus team needs to provide more context for the following PRS:
 [CAD-4727 Change the default UTxO HD backend to `InMemory`.](https://github.com/input-output-hk/cardano-node/pull/4156)
-[Reduce memory usage of create staked command](https://github.com/input-output-hk/cardano-node/pull/4021)
+
+[CAD-4728  Change the units for the LMDB `mapsize` option to GB and let the parameter be a number](https://github.com/input-output-hk/cardano-node/pull/4155)
+
+[UTxO-HD: Rework Windows CI to use MSYS2](https://github.com/input-output-hk/cardano-node/pull/4178)
+## Node team needs to provide more context for the following PRs
+
+[Fix leadership schedule for current on babbage](https://github.com/input-output-hk/cardano-node/pull/4106)
+
+## For benchmarking team's changelog
+
+[RTView: a link from tracer's README, quick start](https://github.com/input-output-hk/cardano-node/pull/4175)
+
+## Benching marking needs to provide a little more context for the following PRs if they want them to be included in the changelog.
+
+[tx-generator: remove mutable state](https://github.com/input-output-hk/cardano-node/pull/3815)
 [Fix unresolved conflicts in traces_doc_generated.md](https://github.com/input-output-hk/cardano-node/pull/4161)
 [RTView: fix end date of epoch.](https://github.com/input-output-hk/cardano-node/pull/4159)
 [RTView: fix Mem metric name.](https://github.com/input-output-hk/cardano-node/pull/4158)
 [RTView: MVP](https://github.com/input-output-hk/cardano-node/pull/4105)
-[Restructure the namespace](https://github.com/input-output-hk/cardano-node/pull/4117)
-[Added changelogs and updated cabal files for 1.35.1](https://github.com/input-output-hk/cardano-node/pull/4153)
-[Fix leadership schedule for current on babbage](https://github.com/input-output-hk/cardano-node/pull/4106)
-[Update ledger to tip of release/1.0.0](https://github.com/input-output-hk/cardano-node/pull/4146)
-[Adding changelogs for 1.35.0](https://github.com/input-output-hk/cardano-node/pull/4136)
-[workbench:  fixes](https://github.com/input-output-hk/cardano-node/pull/4147)
-[[CAD-4406] UTxO-HD: Make CI pass again](https://github.com/input-output-hk/cardano-node/pull/4150)
-[CAD-4437 Include UTxO HD installation/usage instructions in READMEs](https://github.com/input-output-hk/cardano-node/pull/4079)
-[Give myself and John permission to merge any PR](https://github.com/input-output-hk/cardano-node/pull/4137)
-[Update cardano-ledger and ouroboros-network dependencies](https://github.com/input-output-hk/cardano-node/pull/4118)
-[Update index state to 2022-07-01T00:00:00Z](https://github.com/input-output-hk/cardano-node/pull/3862)
-[workbench: fixes](https://github.com/input-output-hk/cardano-node/pull/4113)
-[workbench:  direct CDF dumps for gnuplot consumption](https://github.com/input-output-hk/cardano-node/pull/4056)
-[Update getting-started installation dependencies](https://github.com/input-output-hk/cardano-node/pull/4107)
-[Fix for: metric tracing crashes node #4076](https://github.com/input-output-hk/cardano-node/pull/4108)
-[Fix query protocol-state](https://github.com/input-output-hk/cardano-node/pull/4102)
-[Disable development eras configuration flag ](https://github.com/input-output-hk/cardano-node/pull/4030)
+
+- [Restructure the namespace](https://github.com/input-output-hk/cardano-node/pull/4117)
+- [workbench:  direct CDF dumps for gnuplot consumption](https://github.com/input-output-hk/cardano-node/pull/4056)
+
+- [workbench: fixes](https://github.com/input-output-hk/cardano-node/pull/4113)
+
+
+
