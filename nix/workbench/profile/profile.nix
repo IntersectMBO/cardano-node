@@ -15,7 +15,7 @@ rec {
 
   nodeSpecsJson = { profileName, profileJson }:
     runWorkbenchJqOnly "node-specs-${profileName}.json"
-                       "profile node-specs ${profileJson}";
+                       "profile node-specs ${profileJson} ${topologyFiles {inherit profileName profileJson;}}";
 
   genesisFiles = { profileName, profileJson, nodeSpecsJson }:
     import ../genesis/genesis.nix
