@@ -281,6 +281,8 @@ import           Cardano.Api.Utils
 import           Cardano.Api.Value
 import           Cardano.Api.ValueParser
 
+-- import           Cardano.Chain.UTxO (Tx (..))
+
 -- | Indicates whether a script is expected to fail or pass validation.
 data ScriptValidity
   = ScriptInvalid -- ^ Script is expected to fail validation.
@@ -3007,7 +3009,7 @@ fromLedgerTxValidityRange era body =
           SJust s  -> TxValidityUpperBound   ValidityUpperBoundInAllegraEra s
       )
       where
-        L.ValidityInterval{invalidBefore, invalidHereafter} = body ^. L.vldtTxBodyL
+        L.ValidityInterval{L.invalidBefore, L.invalidHereafter} = body ^. L.vldtTxBodyL
 
     ShelleyBasedEraMary ->
       ( case invalidBefore of
@@ -3018,7 +3020,7 @@ fromLedgerTxValidityRange era body =
           SJust s  -> TxValidityUpperBound   ValidityUpperBoundInMaryEra s
       )
       where
-        L.ValidityInterval{invalidBefore, invalidHereafter} = body ^. L.vldtTxBodyL
+        L.ValidityInterval{L.invalidBefore, L.invalidHereafter} = body ^. L.vldtTxBodyL
 
     ShelleyBasedEraAlonzo ->
       ( case invalidBefore of
@@ -3029,7 +3031,7 @@ fromLedgerTxValidityRange era body =
           SJust s  -> TxValidityUpperBound   ValidityUpperBoundInAlonzoEra s
       )
       where
-        L.ValidityInterval{invalidBefore, invalidHereafter} = body ^. L.vldtTxBodyL
+        L.ValidityInterval{L.invalidBefore, L.invalidHereafter} = body ^. L.vldtTxBodyL
 
     ShelleyBasedEraBabbage ->
       ( case invalidBefore of
@@ -3040,7 +3042,7 @@ fromLedgerTxValidityRange era body =
           SJust s  -> TxValidityUpperBound   ValidityUpperBoundInBabbageEra s
       )
       where
-        L.ValidityInterval{invalidBefore, invalidHereafter} = body ^. L.vldtTxBodyL
+        L.ValidityInterval{L.invalidBefore, L.invalidHereafter} = body ^. L.vldtTxBodyL
 
     ShelleyBasedEraConway ->
       ( case invalidBefore of
@@ -3051,7 +3053,7 @@ fromLedgerTxValidityRange era body =
           SJust s  -> TxValidityUpperBound   ValidityUpperBoundInConwayEra s
       )
       where
-        L.ValidityInterval{invalidBefore, invalidHereafter} = body ^. L.vldtTxBodyL
+        L.ValidityInterval{L.invalidBefore, L.invalidHereafter} = body ^. L.vldtTxBodyL
 
 fromLedgerAuxiliaryData
   :: ShelleyBasedEra era
@@ -3392,7 +3394,7 @@ makeByronTransactionBody TxBodyContent { txIns, txOuts } = do
 
 getByronTxBodyContent :: Annotated Byron.Tx ByteString
                       -> TxBodyContent ViewTx ByronEra
-getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
+getByronTxBodyContent (Annotated Byron.UnsafeTx{Byron.txInputs, Byron.txOutputs} _) =
   TxBodyContent
   { txIns              = [(fromByronTxIn input, ViewTx) | input <- toList txInputs]
   , txInsCollateral    = TxInsCollateralNone
@@ -3481,10 +3483,10 @@ convValidityInterval
   -> L.ValidityInterval
 convValidityInterval (lowerBound, upperBound) =
   L.ValidityInterval
-    { invalidBefore = case lowerBound of
+    { L.invalidBefore = case lowerBound of
                         TxValidityNoLowerBound   -> SNothing
                         TxValidityLowerBound _ s -> SJust s
-    , invalidHereafter = case upperBound of
+    , L.invalidHereafter = case upperBound of
                            TxValidityNoUpperBound _ -> SNothing
                            TxValidityUpperBound _ s -> SJust s
     }
