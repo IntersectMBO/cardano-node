@@ -5,6 +5,17 @@
 
 ### Features
 
+- Expose node config reading functionality: `NodeConfig`, `NodeConfigFile` and `readNodeConfig`
+
+- Expose genesis file reading functionality:
+  - All eras: `GenesisConfig` and `readCardanoGenesisConfig`
+  - Byron: `readByronGenesisConfig`
+  - Shelley: `ShelleyConfig`, `GenesisHashShelley`, `readShelleyGenesisConfig` and `shelleyPraosNonce`
+  - Alonzo: `GenesisHashAlonzo` and `readAlonzoGenesisConfig`
+  - Conway: `GenesisHashConway` and `readConwayGenesisConfig`
+
+- Expose envirnment construction functionality: `mkProtocolInfoCardano` and `genesisConfigToEnv`
+
 - Rename `TestEnableDevelopmentHardForkEras` to `ExperimentalHardForksEnabled` and
   `TestEnableDevelopmentNetworkProtocols` to `ExperimentalProtocolsEnabled`
   ([PR 4341](https://github.com/input-output-hk/cardano-node/pull/4341))
