@@ -55,11 +55,12 @@ module Cardano.Api.LedgerState
   -- * Node Config
   , NodeConfig(..)
   -- ** Network Config
-  , NetworkConfigFile (..)
-  , readNetworkConfig
+  , NodeConfigFile (..)
+  , readNodeConfig
   -- ** Genesis Config
   , GenesisConfig (..)
   , readCardanoGenesisConfig
+  , mkProtocolInfoCardano
   -- *** Byron Genesis Config
   , readByronGenesisConfig
   -- *** Shelley Genesis Config
@@ -254,7 +255,7 @@ initialLedgerState networkConfigFile = do
   -- can remove the networkConfigFile argument and much of the code in this
   -- module.
   config <- withExceptT ILSEConfigFile
-                  (readNetworkConfig (NetworkConfigFile networkConfigFile))
+                  (readNodeConfig (NodeConfigFile networkConfigFile))
   genesisConfig <- withExceptT ILSEGenesisFile (readCardanoGenesisConfig config)
   env <- withExceptT ILSELedgerConsensusConfig (except (genesisConfigToEnv genesisConfig))
   let ledgerState = initLedgerStateVar genesisConfig
@@ -773,8 +774,8 @@ genesisConfigToEnv
                   , envProtocolConfig = Consensus.topLevelConfigProtocol topLevelConfig
                   }
 
-readNetworkConfig :: NetworkConfigFile -> ExceptT Text IO NodeConfig
-readNetworkConfig (NetworkConfigFile ncf) = do
+readNodeConfig :: NodeConfigFile -> ExceptT Text IO NodeConfig
+readNodeConfig (NodeConfigFile ncf) = do
     ncfg <- (except . parseNodeConfig) =<< readByteString ncf "node"
     return ncfg
       { ncByronGenesisFile = adjustGenesisFilePath (mkAdjustPath ncf) (ncByronGenesisFile ncfg)
@@ -1015,8 +1016,8 @@ newtype NetworkName = NetworkName
   { unNetworkName :: Text
   } deriving Show
 
-newtype NetworkConfigFile = NetworkConfigFile
-  { unNetworkConfigFile :: FilePath
+newtype NodeConfigFile = NodeConfigFile
+  { unNodeConfigFile :: FilePath
   } deriving Show
 
 newtype SocketPath = SocketPath
