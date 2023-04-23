@@ -1140,18 +1140,6 @@ renderGenesisConfigError ne =
         , "   ", err
         ]
 
-data LookupFail
-  = DbLookupBlockHash !ByteString
-  | DbLookupBlockId !Word64
-  | DbLookupMessage !Text
-  | DbLookupTxHash !ByteString
-  | DbLookupTxOutPair !ByteString !Word16
-  | DbLookupEpochNo !Word64
-  | DbLookupSlotNo !Word64
-  | DbMetaEmpty
-  | DbMetaMultipleRows
-  deriving (Eq, Show)
-
 readByronGenesisConfig
         :: NodeConfig
         -> ExceptT GenesisConfigError IO Cardano.Chain.Genesis.Config
