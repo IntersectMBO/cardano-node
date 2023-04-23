@@ -181,6 +181,7 @@ make
 make check
 sudo make install
 ```
+For some distribution (eg. Mint) you will need to configure the dynamic linker with `ldconfig`
 
 #### Downloading the source code for cardano-node
 
