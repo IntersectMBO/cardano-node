@@ -1,0 +1,1800 @@
+- title: Update CHaP to get latest ledger with performance fix
+  author: Alexey Kuleshevich
+  url: https://github.com/input-output-hk/cardano-node/pull/5157
+  number: 5157
+  mergedAt: "2023-04-30T11:53:14Z"
+  include: undecided
+  files:
+    - .github/workflows/haskell-linux.yml
+    - .github/workflows/haskell.yml
+    - bench/tx-generator/tx-generator.cabal
+    - cabal.project
+    - cardano-api/cardano-api.cabal
+    - cardano-api/test/Test/Cardano/Api/Genesis.hs
+    - cardano-api/test/Test/Cardano/Api/Ledger.hs
+    - cardano-cli/cardano-cli.cabal
+    - cardano-client-demo/StakeCredentialHistory.hs
+    - cardano-client-demo/cardano-client-demo.cabal
+    - cardano-node-chairman/app/Cardano/Chairman.hs
+    - cardano-node-chairman/app/Cardano/Chairman/Commands/Run.hs
+    - cardano-node-chairman/cardano-node-chairman.cabal
+    - cardano-node/cardano-node.cabal
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Consensus.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Diffusion.hs
+    - cardano-node/src/Cardano/Tracing/OrphanInstances/Network.hs
+    - flake.lock
+    - flake.nix
+    - nix/haskell.nix
+    - trace-forward/trace-forward.cabal
+- title: Bench refactoring
+  author: Federico Mastellone
+  url: https://github.com/input-output-hk/cardano-node/pull/5154
+  number: 5154
+  mergedAt: "2023-04-26T15:35:59Z"
+  include: undecided
+  files:
+    - default.nix
+    - nix/pkgs.nix
+    - nix/workbench/analyse/analyse.nix
+    - nix/workbench/backend/nixops.nix
+    - nix/workbench/backend/nixops/module-base-service.nix
+    - nix/workbench/backend/nixops/role-explorer.nix
+    - nix/workbench/backend/nomad-job.nix
+    - nix/workbench/backend/nomad.nix
+    - nix/workbench/backend/runner.nix
+    - nix/workbench/backend/supervisor-conf.nix
+    - nix/workbench/backend/supervisor.nix
+    - nix/workbench/doc.org
+    - nix/workbench/shell.nix
+    - shell.nix
+- title: Remove dependency on plutus-example.
+  author: Nadia Yvette Chambers
+  url: https://github.com/input-output-hk/cardano-node/pull/5147
+  number: 5147
+  mergedAt: "2023-04-26T15:29:18Z"
+  include: undecided
+  files:
+    - flake.lock
+    - flake.nix
+    - nix/pkgs.nix
+    - nix/plutus-scripts.nix
+- title: 'workbench:  updates'
+  author: Kosyrev Serge
+  url: https://github.com/input-output-hk/cardano-node/pull/5134
+  number: 5134
+  mergedAt: "2023-04-24T07:13:35Z"
+  include: undecided
+  files:
+    - bench/locli/src/Cardano/Analysis/API/Context.hs
+    - bench/locli/src/Cardano/Analysis/API/Metrics.hs
+    - bench/locli/src/Cardano/Analysis/API/Run.hs
+    - bench/locli/src/Cardano/Analysis/Summary.hs
+    - bench/locli/src/Cardano/Command.hs
+    - bench/locli/src/Cardano/Report.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Tracer.hs
+    - cardano-node/src/Cardano/Node/Tracing/API.hs
+    - cardano-tracer/bench/cardano-tracer-bench.hs
+    - cardano-tracer/cardano-tracer.cabal
+    - cardano-tracer/src/Cardano/Tracer/Acceptors/Run.hs
+    - cardano-tracer/src/Cardano/Tracer/Configuration.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/Datapoints/Run.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/Logs/Rotator.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/Metrics/Servers.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/Run.hs
+    - cardano-tracer/src/Cardano/Tracer/MetaTrace.hs
+    - cardano-tracer/src/Cardano/Tracer/Run.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/Acceptor.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/DataPoint/Tests.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/ForwardingStressTest/Script.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/Logs/Tests.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/Restart/Tests.hs
+    - cardano-tracer/test/cardano-tracer-test-ext.hs
+    - nix/workbench/analyse/analyse.sh
+    - nix/workbench/genesis/genesis.sh
+    - nix/workbench/run.sh
+    - nix/workbench/wb
+    - trace-dispatcher/src/Cardano/Logging/Forwarding.hs
+    - trace-dispatcher/src/Cardano/Logging/Types.hs
+- title: New workbench manifest
+  author: Andrea Bedini
+  url: https://github.com/input-output-hk/cardano-node/pull/5133
+  number: 5133
+  mergedAt: "2023-04-26T19:13:32Z"
+  include: undecided
+  files:
+    - Makefile
+    - bench/locli/src/Cardano/Analysis/API/Context.hs
+    - bench/locli/src/Cardano/Analysis/API/Metrics.hs
+    - bench/locli/src/Cardano/Analysis/API/Run.hs
+    - bench/locli/src/Cardano/Analysis/Summary.hs
+    - bench/locli/src/Cardano/Report.hs
+    - flake.nix
+    - lib.mk
+    - nix/haskell.nix
+    - nix/nixos/cardano-tracer-service.nix
+    - nix/pkgs.nix
+    - nix/workbench/default.nix
+    - nix/workbench/ede/chart.ede
+    - nix/workbench/lib-cabal.sh
+    - nix/workbench/manifest.sh
+    - nix/workbench/profile/prof0-defaults.jq
+    - nix/workbench/profile/prof1-variants.jq
+    - nix/workbench/run.sh
+    - nix/workbench/service/tracer.nix
+    - nix/workbench/shell.nix
+    - nix/workbench/wb
+- title: 'workbench:  updates'
+  author: Kosyrev Serge
+  url: https://github.com/input-output-hk/cardano-node/pull/5097
+  number: 5097
+  mergedAt: "2023-04-18T20:06:47Z"
+  include: undecided
+  files:
+    - Makefile
+    - bench/locli/src/Cardano/Command.hs
+    - bench/locli/src/Cardano/Report.hs
+    - bench/locli/src/Cardano/Unlog/LogObject.hs
+    - flake.lock
+    - lib.mk
+    - nix/custom-config.nix
+    - nix/pkgs.nix
+    - nix/workbench/analyse/analyse.sh
+    - nix/workbench/backend/runner.nix
+    - nix/workbench/backend/supervisor.sh
+    - nix/workbench/ede/chart.ede
+    - nix/workbench/ede/report.ede
+    - nix/workbench/genesis/genesis.sh
+    - nix/workbench/lib-cabal.sh
+    - nix/workbench/profile/prof0-defaults.jq
+    - nix/workbench/profile/prof1-variants.jq
+    - nix/workbench/profile/prof3-derived.jq
+    - nix/workbench/profile/profile-run.jq
+    - nix/workbench/profile/profile.nix
+    - nix/workbench/profile/profile.sh
+    - nix/workbench/profile/profiles.jq
+    - nix/workbench/run.sh
+    - nix/workbench/service/nodes.nix
+    - nix/workbench/shell.nix
+    - nix/workbench/wb
+    - shell.nix
+- title: 'workbench: updates'
+  author: Kosyrev Serge
+  url: https://github.com/input-output-hk/cardano-node/pull/5091
+  number: 5091
+  mergedAt: "2023-04-13T08:11:09Z"
+  include: undecided
+  files:
+    - bench/locli/src/Cardano/Command.hs
+    - bench/locli/src/Cardano/Unlog/LogObject.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Consensus.hs
+    - nix/workbench/analyse/analyse.sh
+    - nix/workbench/service/tracing.nix
+- title: 'workbench: distributed nomad cloud'
+  author: Federico Mastellone
+  url: https://github.com/input-output-hk/cardano-node/pull/5068
+  number: 5068
+  mergedAt: "2023-04-17T12:43:09Z"
+  include: undecided
+  files:
+    - nix/workbench/backend/nomad-job.nix
+- title: 'workbench:  updates'
+  author: Kosyrev Serge
+  url: https://github.com/input-output-hk/cardano-node/pull/5065
+  number: 5065
+  mergedAt: "2023-04-12T00:59:51Z"
+  include: undecided
+  files:
+    - .gitignore
+    - Makefile
+    - bench/locli/locli.cabal
+    - bench/locli/src/Cardano/Analysis/API.hs
+    - bench/locli/src/Cardano/Analysis/API/Types.hs
+    - bench/locli/src/Cardano/Analysis/BlockProp.hs
+    - bench/locli/src/Cardano/Analysis/Summary.hs
+    - bench/locli/src/Cardano/Command.hs
+    - bench/locli/src/Cardano/Render.hs
+    - bench/locli/src/Cardano/Unlog/LogObject.hs
+    - bench/locli/src/Cardano/Util.hs
+    - bench/locli/src/Data/CDF.hs
+    - bench/locli/src/Data/Profile.hs
+    - bench/workbench.gnuplot
+    - configuration/cardano/membench-config-new.yaml
+    - lib.mk
+    - nix/haskell.nix
+    - nix/nixos/cardano-node-service.nix
+    - nix/pkgs.nix
+    - nix/workbench/analyse/analyse.sh
+    - nix/workbench/backend/runner.nix
+    - nix/workbench/ede/chart.ede
+    - nix/workbench/lib-cabal.sh
+    - nix/workbench/profile/prof1-variants.jq
+    - nix/workbench/profile/profile-run.jq
+    - nix/workbench/profile/profile.nix
+    - nix/workbench/service/generator.nix
+    - nix/workbench/service/nodes.nix
+    - nix/workbench/service/tracing.nix
+    - nix/workbench/shell.nix
+    - nix/workbench/wb
+- title: use TH-generated plutus scripts
+  author: Nadia Yvette Chambers
+  url: https://github.com/input-output-hk/cardano-node/pull/5048
+  number: 5048
+  mergedAt: "2023-04-11T16:24:00Z"
+  include: undecided
+  files:
+    - bench/locli/src/Cardano/Analysis/Summary.hs
+    - bench/locli/src/Data/CDF.hs
+    - bench/plutus-scripts-bench/plutus-scripts-bench.cabal
+    - bench/plutus-scripts-bench/src/Cardano/Benchmarking/PlutusScripts.hs
+    - bench/plutus-scripts-bench/src/Cardano/Benchmarking/PlutusScripts/CustomCall.hs
+    - bench/plutus-scripts-bench/src/Cardano/Benchmarking/PlutusScripts/EcdsaSecp256k1Loop.hs
+    - bench/plutus-scripts-bench/src/Cardano/Benchmarking/PlutusScripts/Loop.hs
+    - bench/plutus-scripts-bench/src/Cardano/Benchmarking/PlutusScripts/SchnorrSecp256k1Loop.hs
+    - bench/plutus-scripts-bench/src/Cardano/Benchmarking/ScriptAPI.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Script/Core.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Script/Types.hs
+    - bench/tx-generator/src/Cardano/TxGenerator/Setup/Plutus.hs
+    - bench/tx-generator/src/Cardano/TxGenerator/Types.hs
+    - bench/tx-generator/test/ApiTest.hs
+    - nix/nixos/tx-generator-service.nix
+    - nix/workbench/profile/prof1-variants.jq
+- title: Remove last remaining allow-newers
+  author: Michael Peyton Jones
+  url: https://github.com/input-output-hk/cardano-node/pull/5043
+  number: 5043
+  mergedAt: "2023-04-12T15:19:41Z"
+  include: undecided
+  files:
+    - cabal.project
+    - flake.lock
+    - nix/haskell.nix
+- title: 'bench:  analysis improvements'
+  author: Kosyrev Serge
+  url: https://github.com/input-output-hk/cardano-node/pull/5039
+  number: 5039
+  mergedAt: "2023-04-01T09:37:39Z"
+  include: undecided
+  files:
+    - Makefile
+    - bench/locli/locli.cabal
+    - bench/locli/src/Cardano/Analysis/API/Context.hs
+    - bench/locli/src/Cardano/Analysis/API/Ground.hs
+    - bench/locli/src/Cardano/Analysis/API/Metrics.hs
+    - bench/locli/src/Cardano/Analysis/API/Run.hs
+    - bench/locli/src/Cardano/Analysis/API/Types.hs
+    - bench/locli/src/Cardano/Analysis/BlockProp.hs
+    - bench/locli/src/Cardano/Analysis/MachPerf.hs
+    - bench/locli/src/Cardano/Analysis/Summary.hs
+    - bench/locli/src/Cardano/Command.hs
+    - bench/locli/src/Cardano/Render.hs
+    - bench/locli/src/Cardano/Report.hs
+    - bench/locli/src/Cardano/Unlog/LogObject.hs
+    - bench/locli/src/Cardano/Util.hs
+    - bench/locli/src/Data/Accum.hs
+    - bench/locli/src/Data/CDF.hs
+    - bench/locli/src/Data/DataDomain.hs
+    - bench/locli/test/Test/Analysis/CDF.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Script.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Script/Action.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Tracer.hs
+    - flake.lock
+    - flake.nix
+    - nix/workbench/analyse/analyse.sh
+    - nix/workbench/ede/chart.ede
+    - nix/workbench/ede/report.ede
+    - nix/workbench/ede/tablevars-delta-pct.ede
+    - nix/workbench/ede/tablevars-delta.ede
+    - nix/workbench/profile/prof1-variants.jq
+    - nix/workbench/profile/prof3-derived.jq
+    - nix/workbench/publish.sh
+    - nix/workbench/service/nodes.nix
+- title: Bench nomad sub-backends
+  author: Federico Mastellone
+  url: https://github.com/input-output-hk/cardano-node/pull/5037
+  number: 5037
+  mergedAt: "2023-04-06T19:54:34Z"
+  include: undecided
+  files:
+    - lib.mk
+    - nix/pkgs.nix
+    - nix/workbench/backend/nomad.nix
+    - nix/workbench/backend/nomad.sh
+    - nix/workbench/backend/nomad/cloud.nix
+    - nix/workbench/backend/nomad/cloud.sh
+    - nix/workbench/backend/nomad/exec.nix
+    - nix/workbench/backend/nomad/exec.sh
+    - nix/workbench/backend/nomad/podman.nix
+    - nix/workbench/backend/nomad/podman.sh
+    - nix/workbench/nomad.sh
+    - nix/workbench/publish.sh
+    - nix/workbench/run.sh
+    - nix/workbench/wb
+- title: Remove dup of index-state, no longer needed with latest haskell.nix
+  author: Jean-Baptiste G.
+  url: https://github.com/input-output-hk/cardano-node/pull/5026
+  number: 5026
+  mergedAt: "2023-04-11T10:39:38Z"
+  include: undecided
+  files:
+    - cabal.project
+    - flake.lock
+    - nix/pkgs.nix
+    - nix/tullia.nix
+- title: fix CI not running on bors branches
+  author: Robin Stumm
+  url: https://github.com/input-output-hk/cardano-node/pull/5023
+  number: 5023
+  mergedAt: "2023-03-27T17:04:30Z"
+  include: undecided
+  files:
+    - nix/tullia.nix
+- title: Use ouroboros-network-0.3.0.2 and ouroboros-network-framework-0.2.0.1
+  author: Marcin Szamotulski
+  url: https://github.com/input-output-hk/cardano-node/pull/5018
+  number: 5018
+  mergedAt: "2023-03-28T18:46:51Z"
+  include: undecided
+  files:
+    - cabal.project
+    - cardano-api/cardano-api.cabal
+    - cardano-cli/cardano-cli.cabal
+    - cardano-node-chairman/cardano-node-chairman.cabal
+    - cardano-node/ChangeLog.md
+    - cardano-node/cardano-node.cabal
+    - cardano-testnet/cardano-testnet.cabal
+    - flake.lock
+    - flake.nix
+    - nix/pkgs.nix
+    - shell.nix
+- title: 'nix: fix deprecation warning for docker images'
+  author: Jean-Baptiste G.
+  url: https://github.com/input-output-hk/cardano-node/pull/4999
+  number: 4999
+  mergedAt: "2023-03-19T20:43:42Z"
+  include: undecided
+  files:
+    - nix/docker/default.nix
+    - nix/docker/submit-api.nix
+- title: 'nix: switch to ghc 9.2.7'
+  author: Jean-Baptiste G.
+  url: https://github.com/input-output-hk/cardano-node/pull/4998
+  number: 4998
+  mergedAt: "2023-03-27T14:06:18Z"
+  include: undecided
+  files:
+    - flake.lock
+    - nix/haskell.nix
+- title: 'workbench: Distribute genesis using an intermediate storage service'
+  author: Federico Mastellone
+  url: https://github.com/input-output-hk/cardano-node/pull/4995
+  number: 4995
+  mergedAt: "2023-03-27T13:55:47Z"
+  include: undecided
+  files:
+    - nix/workbench/backend/backend.sh
+    - nix/workbench/backend/nomad-job.nix
+    - nix/workbench/backend/nomad.nix
+    - nix/workbench/backend/nomad.sh
+    - nix/workbench/backend/supervisor.sh
+    - nix/workbench/run.sh
+- title: 'workbench: support Conway'
+  author: Kosyrev Serge
+  url: https://github.com/input-output-hk/cardano-node/pull/4987
+  number: 4987
+  mergedAt: "2023-03-17T07:19:25Z"
+  include: undecided
+  files:
+    - flake.nix
+    - nix/nixos/tx-generator-service.nix
+    - nix/workbench/backend/nixops.nix
+    - nix/workbench/chaindb.sh
+    - nix/workbench/genesis/genesis.sh
+    - nix/workbench/profile/profile.sh
+    - nix/workbench/service/generator.nix
+    - nix/workbench/service/nodes.nix
+- title: Add socketGroup option to cardano-node-service
+  author: John Ky
+  url: https://github.com/input-output-hk/cardano-node/pull/4969
+  number: 4969
+  mergedAt: "2023-03-14T01:00:34Z"
+  include: undecided
+  files:
+    - nix/nixos/cardano-node-service.nix
+- title: Fix flake (again)
+  author: Andrea Bedini
+  url: https://github.com/input-output-hk/cardano-node/pull/4965
+  number: 4965
+  mergedAt: "2023-03-14T22:58:58Z"
+  include: undecided
+  files:
+    - flake.lock
+    - flake.nix
+    - nix/haskell.nix
+    - nix/nixos/tests/cardano-node-edge.nix
+- title: Fix flake setup
+  author: Andrea Bedini
+  url: https://github.com/input-output-hk/cardano-node/pull/4963
+  number: 4963
+  mergedAt: "2023-03-10T07:44:14Z"
+  include: undecided
+  files:
+    - cabal.project
+    - flake.nix
+    - nix/workbench/backend/nixops/cluster.nix
+    - nix/workbench/shell.nix
+    - shell.nix
+- title: '[nix] ghc925 -> ghc927'
+  author: Moritz Angermann
+  url: https://github.com/input-output-hk/cardano-node/pull/4962
+  number: 4962
+  mergedAt: "2023-03-10T08:14:42Z"
+  include: undecided
+  files:
+    - nix/haskell.nix
+- title: Backward compatibility for Prometheus metrics names
+  author: Jürgen Nicklisch
+  url: https://github.com/input-output-hk/cardano-node/pull/4955
+  number: 4955
+  mergedAt: "2023-03-22T06:54:26Z"
+  include: undecided
+  files:
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/ChainDB.hs
+    - cardano-tracer/bench/cardano-tracer-bench.hs
+    - cardano-tracer/src/Cardano/Tracer/Configuration.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/Metrics/Prometheus.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/Acceptor.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/DataPoint/Tests.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/Logs/Tests.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/Restart/Tests.hs
+    - nix/nixos/cardano-tracer-service.nix
+- title: 'workbench:  analysis updates'
+  author: Kosyrev Serge
+  url: https://github.com/input-output-hk/cardano-node/pull/4936
+  number: 4936
+  mergedAt: "2023-03-09T17:50:30Z"
+  include: undecided
+  files:
+    - bench/locli/src/Cardano/Analysis/API/Metrics.hs
+    - bench/locli/src/Cardano/Analysis/API/Types.hs
+    - bench/locli/src/Cardano/Analysis/BlockProp.hs
+    - bench/locli/src/Cardano/Analysis/MachPerf.hs
+    - bench/locli/src/Cardano/Command.hs
+    - bench/locli/src/Cardano/Render.hs
+    - bench/locli/src/Cardano/Report.hs
+    - bench/locli/src/Cardano/Unlog/LogObject.hs
+    - nix/workbench/analyse/analyse.sh
+    - nix/workbench/backend/backend.sh
+    - nix/workbench/backend/nixops.sh
+    - nix/workbench/cluster.sh
+    - nix/workbench/forall.sh
+    - nix/workbench/lib-cabal.sh
+    - nix/workbench/lib.sh
+    - nix/workbench/profile/profile.sh
+    - nix/workbench/run.sh
+    - nix/workbench/shell.nix
+    - nix/workbench/wb
+- title: Reduce number of GitHub status notif related to nix builds
+  author: Jean-Baptiste G.
+  url: https://github.com/input-output-hk/cardano-node/pull/4930
+  number: 4930
+  mergedAt: "2023-03-06T10:26:56Z"
+  include: undecided
+  files:
+    - flake.nix
+    - nix/tullia.nix
+- title: 'hydra: only build pr jobset to avoid duplicates builds'
+  author: Jean-Baptiste G.
+  url: https://github.com/input-output-hk/cardano-node/pull/4925
+  number: 4925
+  mergedAt: "2023-03-01T18:12:31Z"
+  include: undecided
+  files:
+    - flake.nix
+    - nix/tullia.nix
+- title: 'workbench | tx-generator: SECP benchmarking'
+  author: Michael Karg
+  url: https://github.com/input-output-hk/cardano-node/pull/4907
+  number: 4907
+  mergedAt: "2023-02-23T16:42:36Z"
+  include: undecided
+  files:
+    - Makefile
+    - bench/plutus-scripts-bench/plutus-scripts-bench.cabal
+    - bench/tx-generator/src/Cardano/Benchmarking/Command.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Compiler.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/GeneratorTx.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/LogTypes.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Script/Core.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Script/Env.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Script/Types.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Tracer.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Wallet.hs
+    - bench/tx-generator/src/Cardano/TxGenerator/PlutusContext.hs
+    - bench/tx-generator/src/Cardano/TxGenerator/Setup/Plutus.hs
+    - bench/tx-generator/src/Cardano/TxGenerator/Tx.hs
+    - bench/tx-generator/src/Cardano/TxGenerator/Types.hs
+    - bench/tx-generator/src/Cardano/TxGenerator/Utils.hs
+    - bench/tx-generator/test/ApiTest.hs
+    - bench/tx-generator/tx-generator.cabal
+    - bors.toml
+    - nix/workbench/analyse/chain-filters/size-moderate.json
+    - nix/workbench/profile/pparams/delta-blockbudget.jq
+    - nix/workbench/profile/pparams/delta-v8-preview.jq
+    - nix/workbench/profile/prof1-variants.jq
+    - nix/workbench/profile/prof2-pparams.jq
+- title: 'workbench:  updates'
+  author: Kosyrev Serge
+  url: https://github.com/input-output-hk/cardano-node/pull/4904
+  number: 4904
+  mergedAt: "2023-02-21T17:24:40Z"
+  include: undecided
+  files:
+    - Makefile
+    - bench/cardano-topology/cardano-topology.hs
+    - bench/locli/src/Cardano/Analysis/API/Dictionary.hs
+    - bench/locli/src/Cardano/Analysis/API/Field.hs
+    - bench/locli/src/Cardano/Analysis/API/Metrics.hs
+    - bench/locli/src/Cardano/Analysis/API/Types.hs
+    - bench/locli/src/Cardano/Analysis/BlockProp.hs
+    - bench/locli/src/Cardano/Analysis/MachPerf.hs
+    - bench/locli/src/Cardano/Render.hs
+    - bench/locli/src/Cardano/Report.hs
+    - bench/locli/src/Cardano/Unlog/LogObject.hs
+    - bench/workbench.gnuplot
+    - default.nix
+    - flake.lock
+    - flake.nix
+    - lib.mk
+    - nix/custom-config.nix
+    - nix/nixos/cardano-node-service.nix
+    - nix/pkgs.nix
+    - nix/svclib.nix
+    - nix/workbench/analyse/analyse.nix
+    - nix/workbench/analyse/analyse.sh
+    - nix/workbench/analyse/chain-filters/adopt-10.json
+    - nix/workbench/analyse/chain-filters/epoch3+.json
+    - nix/workbench/analyse/chain-filters/model.json
+    - nix/workbench/analyse/chain-filters/no-ebnd.json
+    - nix/workbench/analyse/chain-filters/no-rewards.json
+    - nix/workbench/analyse/chain-filters/nonnegative.json
+    - nix/workbench/analyse/chain-filters/rewards.json
+    - nix/workbench/analyse/chain-filters/size-full.json
+    - nix/workbench/analyse/chain-filters/size-small.json
+    - nix/workbench/analyse/chain-filters/unitary.json
+    - nix/workbench/backend/backend.sh
+    - nix/workbench/backend/nixops.nix
+    - nix/workbench/backend/nixops.sh
+    - nix/workbench/backend/nixops/cluster.nix
+    - nix/workbench/backend/nixops/module-base-service.nix
+    - nix/workbench/backend/nixops/module-common.nix
+    - nix/workbench/backend/nixops/physical-aws.nix
+    - nix/workbench/backend/nixops/physical-libvirtd.nix
+    - nix/workbench/backend/nixops/role-explorer.nix
+    - nix/workbench/backend/nixops/role-pool.nix
+    - nix/workbench/backend/nixops/role-relay.nix
+    - nix/workbench/backend/nixops/sg-allow-explorer-gw.nix
+    - nix/workbench/backend/nixops/sg-allow-peers.nix
+    - nix/workbench/backend/nixops/sg-allow-public.nix
+    - nix/workbench/backend/nixops/sources.json
+    - nix/workbench/backend/nixops/sources.nix
+    - nix/workbench/backend/nomad.nix
+    - nix/workbench/backend/nomad.sh
+    - nix/workbench/backend/oci-images.nix
+    - nix/workbench/backend/runner.nix
+    - nix/workbench/backend/supervisor-conf.nix
+    - nix/workbench/backend/supervisor.nix
+    - nix/workbench/backend/supervisor.sh
+    - nix/workbench/chaindb.sh
+    - nix/workbench/default.nix
+    - nix/workbench/doc.org
+    - nix/workbench/ede/chart.ede
+    - nix/workbench/ede/report.ede
+    - nix/workbench/ede/table.ede
+    - nix/workbench/ede/tablevars-delta-pct.ede
+    - nix/workbench/ede/tablevars-delta.ede
+    - nix/workbench/explain-mode.sh
+    - nix/workbench/genesis/genesis-utxo.skey
+    - nix/workbench/genesis/genesis-utxo.vkey
+    - nix/workbench/genesis/genesis.jq
+    - nix/workbench/genesis/genesis.nix
+    - nix/workbench/genesis/genesis.sh
+    - nix/workbench/manifest.sh
+    - nix/workbench/membench/membench-batch-process.nix
+    - nix/workbench/membench/membench-batch-report.nix
+    - nix/workbench/membench/membench-batch.nix
+    - nix/workbench/membench/membench-overlay.nix
+    - nix/workbench/membench/membench-run.nix
+    - nix/workbench/profile.nix
+    - nix/workbench/profile/pparams/api-pparams-to-genesis.jq
+    - nix/workbench/profile/pparams/apiPparamsImport.sh
+    - nix/workbench/profile/pparams/delta-v8-preview.jq
+    - nix/workbench/profile/pparams/diffLatest.sh
+    - nix/workbench/profile/pparams/diffLatestWithOverlay.sh
+    - nix/workbench/profile/pparams/epoch-timeline.jq
+    - nix/workbench/profile/pparams/orig/v8-preview.json
+    - nix/workbench/profile/pparams/pparamsEpoch.sh
+    - nix/workbench/profile/pparams/pparamsLastWithOverlay.sh
+    - nix/workbench/profile/presets/mainnet/config.json
+    - nix/workbench/profile/presets/mainnet/genesis/byron/genesis.json
+    - nix/workbench/profile/presets/mainnet/genesis/genesis-shelley.json
+    - nix/workbench/profile/presets/mainnet/genesis/genesis.alonzo.json
+    - nix/workbench/profile/presets/mainnet/overlay.json
+    - nix/workbench/profile/presets/mainnet/topology-proxy.json
+    - nix/workbench/profile/prof0-defaults.jq
+    - nix/workbench/profile/prof1-variants.jq
+    - nix/workbench/profile/prof2-pparams.jq
+    - nix/workbench/profile/prof3-derived.jq
+    - nix/workbench/profile/profile-run.jq
+    - nix/workbench/profile/profile.nix
+    - nix/workbench/profile/profile.sh
+    - nix/workbench/profile/profiles.jq
+    - nix/workbench/profiles/default.nix
+- title: 'workbench:  drop cabalWrapped'
+  author: Kosyrev Serge
+  url: https://github.com/input-output-hk/cardano-node/pull/4873
+  number: 4873
+  mergedAt: "2023-02-09T07:52:21Z"
+  include: undecided
+  files:
+    - nix/workbench/backend/supervisor.nix
+    - nix/workbench/lib-cabal.sh
+- title: Nix improvements backports for 1.35
+  author: Jean-Baptiste G.
+  url: https://github.com/input-output-hk/cardano-node/pull/4868
+  number: 4868
+  mergedAt: "2023-02-23T17:08:01Z"
+  include: undecided
+  files:
+    - flake.lock
+    - flake.nix
+    - nix/README.md
+    - nix/haskell.nix
+    - nix/update-haskellNix.sh
+    - nix/update-iohkNix.sh
+    - nix/workbench/analyse.nix
+    - nix/workbench/backend/supervisor-run.nix
+    - nix/workbench/supervisor-run.nix
+    - shell.nix
+- title: Remove usage of nixWrapped.
+  author: Jean-Baptiste G.
+  url: https://github.com/input-output-hk/cardano-node/pull/4866
+  number: 4866
+  mergedAt: "2023-02-18T10:21:08Z"
+  include: undecided
+  files:
+    - nix/README.md
+    - nix/update-haskellNix.sh
+    - nix/update-iohkNix.sh
+    - nix/workbench/analyse.nix
+    - nix/workbench/backend/runner.nix
+    - nix/workbench/shell.nix
+    - shell.nix
+- title: 'workbench:  restore the default trace config'
+  author: Kosyrev Serge
+  url: https://github.com/input-output-hk/cardano-node/pull/4859
+  number: 4859
+  mergedAt: "2023-01-31T17:02:40Z"
+  include: undecided
+  files:
+    - nix/workbench/profiles/tracing.nix
+- title: Bench nomad exec
+  author: Federico Mastellone
+  url: https://github.com/input-output-hk/cardano-node/pull/4852
+  number: 4852
+  mergedAt: "2023-03-14T14:07:29Z"
+  include: undecided
+  files:
+    - Makefile
+    - lib.mk
+    - nix/pkgs.nix
+    - nix/workbench/backend/backend.sh
+    - nix/workbench/backend/nixops.nix
+    - nix/workbench/backend/nomad-job.nix
+    - nix/workbench/backend/nomad.nix
+    - nix/workbench/backend/nomad.sh
+    - nix/workbench/backend/oci-images.nix
+    - nix/workbench/backend/runner.nix
+    - nix/workbench/backend/supervisor-conf.nix
+    - nix/workbench/backend/supervisor.nix
+    - nix/workbench/backend/supervisor.sh
+    - nix/workbench/env.sh
+    - nix/workbench/profile/profile.nix
+    - nix/workbench/publish.sh
+    - nix/workbench/service/nodes.nix
+- title: 'tullia jobs: use generic gitrev for PRs'
+  author: Jean-Baptiste G.
+  url: https://github.com/input-output-hk/cardano-node/pull/4844
+  number: 4844
+  mergedAt: "2023-01-26T12:33:37Z"
+  include: undecided
+  files:
+    - bors.toml
+    - flake.lock
+    - flake.nix
+    - nix/haskell.nix
+    - nix/pkgs.nix
+    - nix/tullia.nix
+- title: Remove reconfigure-hlint.sh script
+  author: John Ky
+  url: https://github.com/input-output-hk/cardano-node/pull/4838
+  number: 4838
+  mergedAt: "2023-01-26T19:02:00Z"
+  include: undecided
+  files:
+    - .gitignore
+    - .hlint.yaml
+    - CONTRIBUTING.rst
+    - README.rst
+    - bench/cardano-topology/cardano-topology.hs
+    - bench/locli/src/Cardano/Analysis/API/Dictionary.hs
+    - bench/locli/src/Cardano/Analysis/API/Ground.hs
+    - bench/locli/src/Cardano/Analysis/BlockProp.hs
+    - bench/locli/src/Cardano/Analysis/MachPerf.hs
+    - bench/locli/src/Cardano/Analysis/Summary.hs
+    - bench/locli/src/Cardano/Render.hs
+    - bench/locli/src/Cardano/Unlog/LogObject.hs
+    - bench/locli/src/Data/CDF.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/GeneratorTx.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/GeneratorTx/Submission.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Script.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Script/Core.hs
+    - bench/tx-generator/src/Cardano/TxGenerator/Genesis.hs
+    - bench/tx-generator/test/ApiTest.hs
+    - cardano-api/src/Cardano/Api/Error.hs
+    - cardano-api/src/Cardano/Api/LedgerState.hs
+    - cardano-api/src/Cardano/Api/ProtocolParameters.hs
+    - cardano-cli/src/Cardano/CLI/Byron/Genesis.hs
+    - cardano-cli/src/Cardano/CLI/Byron/Tx.hs
+    - cardano-cli/src/Cardano/CLI/Helpers.hs
+    - cardano-cli/src/Cardano/CLI/Parsers.hs
+    - cardano-cli/src/Cardano/CLI/Render.hs
+    - cardano-cli/src/Cardano/CLI/Shelley/Parsers.hs
+    - cardano-cli/src/Cardano/CLI/Shelley/Run/Genesis.hs
+    - cardano-cli/src/Cardano/CLI/Shelley/Run/Query.hs
+    - cardano-cli/src/Cardano/CLI/Shelley/Run/Transaction.hs
+    - cardano-cli/test/Test/Golden/Shelley/Genesis/Create.hs
+    - cardano-node-chairman/app/Cardano/Chairman.hs
+    - cardano-node/src/Cardano/Node/Configuration/POM.hs
+    - cardano-node/src/Cardano/Node/Configuration/Socket.hs
+    - cardano-node/src/Cardano/Node/Run.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/P2P.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Peer.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Resources.hs
+    - cardano-node/src/Cardano/Tracing/Config.hs
+    - cardano-node/src/Cardano/Tracing/OrphanInstances/Consensus.hs
+    - cardano-node/src/Cardano/Tracing/OrphanInstances/Network.hs
+    - cardano-node/src/Cardano/Tracing/Peer.hs
+    - cardano-node/src/Cardano/Tracing/Tracers.hs
+    - cardano-submit-api/src/Cardano/TxSubmit/Config.hs
+    - cardano-submit-api/src/Cardano/TxSubmit/Tracing/ToObjectOrphans.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/Logs/Rotator.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/Notifications/Utils.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/Run.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/UI/HTML/Body.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/Update/Historical.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/Update/Resources.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/Logs/Tests.hs
+    - nix/pkgs.nix
+    - scripts/reconfigure-hlint.sh
+    - trace-dispatcher/src/Cardano/Logging/DocuGenerator.hs
+    - trace-forward/src/Trace/Forward/Utils/TraceObject.hs
+    - trace-forward/test/Test/Trace/Forward/Protocol/DataPoint/Examples.hs
+- title: Optimized trace-dispatcher and tracing system
+  author: Jürgen Nicklisch
+  url: https://github.com/input-output-hk/cardano-node/pull/4811
+  number: 4811
+  mergedAt: "2023-01-31T10:24:25Z"
+  include: undecided
+  files:
+    - bench/tx-generator/src/Cardano/Benchmarking/Tracer.hs
+    - cabal.project
+    - cardano-node/src/Cardano/Node/Configuration/Topology.hs
+    - cardano-node/src/Cardano/Node/Configuration/TopologyP2P.hs
+    - cardano-node/src/Cardano/Node/Startup.hs
+    - cardano-node/src/Cardano/Node/TraceConstraints.hs
+    - cardano-node/src/Cardano/Node/Tracing.hs
+    - cardano-node/src/Cardano/Node/Tracing/DefaultTraceConfig.hs
+    - cardano-node/src/Cardano/Node/Tracing/Documentation.hs
+    - cardano-node/src/Cardano/Node/Tracing/Era/Shelley.hs
+    - cardano-node/src/Cardano/Node/Tracing/Peers.hs
+    - cardano-node/src/Cardano/Node/Tracing/StateRep.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/BlockReplayProgress.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/ChainDB.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Consensus.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/ConsensusStartupException.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Diffusion.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/ForgingThreadStats.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/KESInfo.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/NodeToClient.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/NodeToNode.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/NonP2P.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/P2P.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Peer.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Resources.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Shutdown.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Startup.hs
+    - cardano-node/src/Cardano/Tracing/OrphanInstances/Consensus.hs
+    - cardano-node/src/Cardano/Tracing/OrphanInstances/Shelley.hs
+    - cardano-node/src/Cardano/Tracing/Shutdown.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/Logs/File.hs
+    - cardano-tracer/src/Cardano/Tracer/MetaTrace.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/ForwardingStressTest/Config.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/ForwardingStressTest/Messages.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/ForwardingStressTest/Script.hs
+    - cardano-tracer/test/cardano-tracer-test-ext.hs
+    - cardano-tracer/test/config.yaml
+    - doc/New Tracing Quickstart.md
+    - doc/new-tracing/tracers_doc_generated.md
+    - nix/workbench/profiles/tracing.nix
+    - trace-dispatcher/bench/trace-dispatcher-bench.hs
+    - trace-dispatcher/doc/trace-dispatcher.md
+    - trace-dispatcher/examples/Examples/Aggregation.hs
+    - trace-dispatcher/examples/Examples/Configuration.hs
+    - trace-dispatcher/examples/Examples/DataPoint.hs
+    - trace-dispatcher/examples/Examples/Documentation.hs
+    - trace-dispatcher/examples/Examples/EKG.hs
+    - trace-dispatcher/examples/Examples/FrequencyLimiting.hs
+    - trace-dispatcher/examples/Examples/Routing.hs
+    - trace-dispatcher/examples/Examples/TestObjects.hs
+    - trace-dispatcher/examples/Examples/Trivial.hs
+    - trace-dispatcher/examples/Main.hs
+    - trace-dispatcher/src/Cardano/Logging.hs
+    - trace-dispatcher/src/Cardano/Logging/Configuration.hs
+    - trace-dispatcher/src/Cardano/Logging/ConfigurationParser.hs
+    - trace-dispatcher/src/Cardano/Logging/DocuGenerator.hs
+    - trace-dispatcher/src/Cardano/Logging/Formatter.hs
+    - trace-dispatcher/src/Cardano/Logging/FrequencyLimiter.hs
+    - trace-dispatcher/src/Cardano/Logging/Trace.hs
+    - trace-dispatcher/src/Cardano/Logging/TraceDispatcherMessage.hs
+    - trace-dispatcher/src/Cardano/Logging/Tracer/Composed.hs
+    - trace-dispatcher/src/Cardano/Logging/Tracer/DataPoint.hs
+    - trace-dispatcher/src/Cardano/Logging/Tracer/EKG.hs
+    - trace-dispatcher/src/Cardano/Logging/Tracer/Forward.hs
+    - trace-dispatcher/src/Cardano/Logging/Tracer/Standard.hs
+    - trace-dispatcher/src/Cardano/Logging/Types.hs
+    - trace-dispatcher/src/Cardano/Logging/Utils.hs
+    - trace-dispatcher/src/Cardano/Logging/Version.hs
+    - trace-dispatcher/test/Cardano/Logging/Test/Config.hs
+    - trace-dispatcher/test/Cardano/Logging/Test/Messages.hs
+    - trace-dispatcher/test/Cardano/Logging/Test/Oracles.hs
+    - trace-dispatcher/test/Cardano/Logging/Test/Script.hs
+    - trace-dispatcher/test/Cardano/Logging/Test/Types.hs
+    - trace-dispatcher/test/trace-dispatcher-test.hs
+    - trace-dispatcher/trace-dispatcher.cabal
+    - trace-resources/src/Cardano/Logging/Resources/Types.hs
+    - trace-resources/test/trace-resources-test.hs
+- title: Nix fixes - 1.35
+  author: Jean-Baptiste G.
+  url: https://github.com/input-output-hk/cardano-node/pull/4778
+  number: 4778
+  mergedAt: "2023-01-24T20:43:10Z"
+  include: undecided
+  files:
+    - .github/workflows/check-mainnet-config.yml
+    - .github/workflows/check-nix-config.yml
+    - bors.toml
+    - cabal.project
+    - cardano-testnet/test/Spec/Cli/Babbage/LeadershipSchedule.hs
+    - flake.lock
+    - flake.nix
+    - nix/binary-release.nix
+    - nix/haskell.nix
+    - nix/nixos/cardano-node-service.nix
+    - nix/pkgs.nix
+    - nix/project-packages-exes.nix
+    - nix/regenerate.sh
+    - nix/workbench/backend/supervisor-run.nix
+- title: 'workbench: publish analysis'
+  author: Federico Mastellone
+  url: https://github.com/input-output-hk/cardano-node/pull/4772
+  number: 4772
+  mergedAt: "2023-01-26T17:14:51Z"
+  include: undecided
+  files:
+    - flake.lock
+    - flake.nix
+    - nix/workbench/publish.sh
+    - nix/workbench/shell.nix
+    - nix/workbench/wb
+- title: Fix hedgehog-extras sha hash
+  author: John Ky
+  url: https://github.com/input-output-hk/cardano-node/pull/4762
+  number: 4762
+  mergedAt: "2023-01-09T23:09:47Z"
+  include: undecided
+  files:
+    - cabal.project
+    - nix/workbench/shell.nix
+- title: 'workbench:  towards a cloud nomad backend'
+  author: Federico Mastellone
+  url: https://github.com/input-output-hk/cardano-node/pull/4760
+  number: 4760
+  mergedAt: "2023-01-12T07:13:34Z"
+  include: undecided
+  files:
+    - bench/tx-generator/src/Cardano/Benchmarking/Script/Core.hs
+    - nix/workbench/backend/nomad-job.nix
+    - nix/workbench/backend/nomad.nix
+    - nix/workbench/backend/nomad.sh
+    - nix/workbench/backend/oci-images.nix
+    - nix/workbench/backend/runner.nix
+    - nix/workbench/backend/supervisor-conf.nix
+    - nix/workbench/backend/supervisor.nix
+    - nix/workbench/backend/supervisor.sh
+    - nix/workbench/profile.nix
+    - nix/workbench/profiles/generator-service.nix
+    - nix/workbench/profiles/node-services.nix
+    - nix/workbench/profiles/services-config.nix
+    - nix/workbench/profiles/tracer-service.nix
+    - nix/workbench/run.sh
+    - nix/workbench/scenario.sh
+- title: 'nix: optimize caching by delaying setGitRev and other nix fixes'
+  author: Jean-Baptiste G.
+  url: https://github.com/input-output-hk/cardano-node/pull/4748
+  number: 4748
+  mergedAt: "2023-01-18T22:57:15Z"
+  include: undecided
+  files:
+    - Makefile
+    - bors.toml
+    - cabal.project
+    - cardano-cli/src/Cardano/CLI/Shelley/Run/Query.hs
+    - flake.lock
+    - flake.nix
+    - nix.mk
+    - nix/binary-release.nix
+    - nix/haskell.nix
+    - nix/nixos/cardano-node-service.nix
+    - nix/pkgs.nix
+    - nix/project-packages-exes.nix
+    - nix/regenerate.sh
+    - nix/tullia.nix
+    - nix/workbench/backend/runner.nix
+- title: Add tulia task that run system tests on PRs
+  author: Jean-Baptiste G.
+  url: https://github.com/input-output-hk/cardano-node/pull/4705
+  number: 4705
+  mergedAt: "2023-03-13T12:11:26Z"
+  include: undecided
+  files:
+    - flake.nix
+    - nix/tullia.nix
+- title: Add support for ghc-9.2 and partial support for CHaP
+  author: Erik de Castro Lopo
+  url: https://github.com/input-output-hk/cardano-node/pull/4701
+  number: 4701
+  mergedAt: "2023-02-06T04:06:48Z"
+  include: undecided
+  files:
+    - .github/workflows/haskell.yml
+    - .github/workflows/stylish-haskell.yml
+    - bench/cardano-topology/cardano-topology.cabal
+    - bench/locli/app/locli.hs
+    - bench/locli/locli.cabal
+    - bench/locli/src/Cardano/Analysis/API/Field.hs
+    - bench/locli/src/Cardano/Render.hs
+    - bench/locli/src/Cardano/Util.hs
+    - bench/plutus-scripts-bench/plutus-scripts-bench.cabal
+    - bench/plutus-scripts-bench/src/Cardano/Benchmarking/PlutusScripts/CustomCall.hs
+    - bench/plutus-scripts-bench/src/Cardano/Benchmarking/PlutusScripts/EcdsaSecp256k1Loop.hs
+    - bench/plutus-scripts-bench/src/Cardano/Benchmarking/PlutusScripts/Loop.hs
+    - bench/plutus-scripts-bench/src/Cardano/Benchmarking/PlutusScripts/SchnorrSecp256k1Loop.hs
+    - bench/trace-analyzer/trace-analyzer.cabal
+    - bench/tx-generator/src/Cardano/TxGenerator/Setup/Plutus.hs
+    - bench/tx-generator/test/ApiTest.hs
+    - bench/tx-generator/tx-generator.cabal
+    - cabal.project
+    - cardano-api/cardano-api.cabal
+    - cardano-api/gen/Test/Gen/Cardano/Api/Typed.hs
+    - cardano-api/src/Cardano/Api/Address.hs
+    - cardano-api/src/Cardano/Api/Fees.hs
+    - cardano-api/src/Cardano/Api/Genesis.hs
+    - cardano-api/src/Cardano/Api/InMode.hs
+    - cardano-api/src/Cardano/Api/LedgerEvent.hs
+    - cardano-api/src/Cardano/Api/LedgerState.hs
+    - cardano-api/src/Cardano/Api/Orphans.hs
+    - cardano-api/src/Cardano/Api/ProtocolParameters.hs
+    - cardano-api/src/Cardano/Api/Script.hs
+    - cardano-api/src/Cardano/Api/ScriptData.hs
+    - cardano-api/src/Cardano/Api/SerialiseUsing.hs
+    - cardano-api/src/Cardano/Api/Tx.hs
+    - cardano-api/src/Cardano/Api/TxBody.hs
+    - cardano-api/src/Cardano/Api/Value.hs
+    - cardano-api/test/Test/Cardano/Api/Genesis.hs
+    - cardano-cli/cardano-cli.cabal
+    - cardano-cli/src/Cardano/CLI/Byron/Legacy.hs
+    - cardano-cli/src/Cardano/CLI/Shelley/Parsers.hs
+    - cardano-cli/src/Cardano/CLI/Shelley/Run/Read.hs
+    - cardano-cli/src/Cardano/CLI/Shelley/Run/Transaction.hs
+    - cardano-client-demo/cardano-client-demo.cabal
+    - cardano-git-rev/cardano-git-rev.cabal
+    - cardano-node-chairman/cardano-node-chairman.cabal
+    - cardano-node/ChangeLog.md
+    - cardano-node/cardano-node.cabal
+    - cardano-node/src/Cardano/Node/Run.hs
+    - cardano-node/src/Cardano/Node/Tracing/Era/Shelley.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/ChainDB.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/NodeToClient.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/NodeToNode.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Resources.hs
+    - cardano-node/src/Cardano/Tracing/OrphanInstances/Consensus.hs
+    - cardano-node/src/Cardano/Tracing/OrphanInstances/Network.hs
+    - cardano-node/src/Cardano/Tracing/OrphanInstances/Shelley.hs
+    - cardano-node/src/Cardano/Tracing/Startup.hs
+    - cardano-node/test/Test/Cardano/Node/FilePermissions.hs
+    - cardano-submit-api/cardano-submit-api.cabal
+    - cardano-testnet/cardano-testnet.cabal
+    - cardano-tracer/cardano-tracer.cabal
+    - cardano-tracer/src/Cardano/Tracer/Acceptors/Client.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/Metrics/Monitoring.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/Run.hs
+    - cardano-tracer/test/cardano-tracer-test-ext.hs
+    - flake.lock
+    - flake.nix
+    - nix/haskell.nix
+    - nix/workbench/profiles/generator-service.nix
+    - nix/workbench/profiles/node-services.nix
+    - nix/workbench/profiles/tracer-service.nix
+    - trace-dispatcher/src/Cardano/Logging/Tracer/Composed.hs
+    - trace-forward/trace-forward.cabal
+- title: 'workbench: get rid of some unnecessary complications'
+  author: Federico Mastellone
+  url: https://github.com/input-output-hk/cardano-node/pull/4694
+  number: 4694
+  mergedAt: "2022-12-09T11:38:33Z"
+  include: undecided
+  files:
+    - Makefile
+    - bench/locli/src/Cardano/Analysis/API/Ground.hs
+    - bench/locli/src/Cardano/Analysis/API/Metrics.hs
+    - bench/locli/src/Cardano/Analysis/API/Types.hs
+    - bench/locli/src/Cardano/Analysis/Summary.hs
+    - bench/locli/src/Cardano/Command.hs
+    - bench/locli/src/Cardano/Unlog/LogObject.hs
+    - bench/locli/src/Data/CDF.hs
+    - flake.nix
+    - lib.mk
+    - nix/custom-config.nix
+    - nix/pkgs.nix
+    - nix/workbench/analyse.sh
+    - nix/workbench/backend/nomad-conf.nix
+    - nix/workbench/backend/nomad.nix
+    - nix/workbench/backend/runner.nix
+    - nix/workbench/backend/supervisor-conf.nix
+    - nix/workbench/backend/supervisor-run.nix
+    - nix/workbench/backend/supervisor.nix
+    - nix/workbench/default.nix
+    - nix/workbench/profile.nix
+    - nix/workbench/profiles/default.nix
+    - nix/workbench/profiles/prof0-defaults.jq
+    - nix/workbench/profiles/services-config.nix
+    - nix/workbench/run.sh
+    - nix/workbench/shell.nix
+    - nix/workbench/tests/default.nix
+    - nix/workbench/wb
+    - shell.nix
+- title: 'tx-generator: add capability for PlutusV2 scripts'
+  author: Michael Karg
+  url: https://github.com/input-output-hk/cardano-node/pull/4667
+  number: 4667
+  mergedAt: "2023-01-10T21:23:01Z"
+  include: undecided
+  files:
+    - Makefile
+    - bench/locli/src/Cardano/Report.hs
+    - bench/plutus-scripts-bench/LICENSE
+    - bench/plutus-scripts-bench/plutus-scripts-bench.cabal
+    - bench/plutus-scripts-bench/src/Cardano/Benchmarking/PlutusScripts.hs
+    - bench/plutus-scripts-bench/src/Cardano/Benchmarking/PlutusScripts/CustomCall.hs
+    - bench/plutus-scripts-bench/src/Cardano/Benchmarking/PlutusScripts/CustomCallTypes.hs
+    - bench/plutus-scripts-bench/src/Cardano/Benchmarking/PlutusScripts/EcdsaSecp256k1Loop.hs
+    - bench/plutus-scripts-bench/src/Cardano/Benchmarking/PlutusScripts/Loop.hs
+    - bench/plutus-scripts-bench/src/Cardano/Benchmarking/PlutusScripts/SchnorrSecp256k1Loop.hs
+    - bench/tx-generator/data/ecdsa-secp256k1-loop.redeemer.json
+    - bench/tx-generator/data/loop.redeemer.json
+    - bench/tx-generator/data/protocol-parameters-v8.json
+    - bench/tx-generator/data/protocol-parameters.json
+    - bench/tx-generator/data/schnorr-secp256k1-loop.redeemer.json
+    - bench/tx-generator/src/Cardano/Benchmarking/Compiler.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/OuroborosImports.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/PlutusExample.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Script/Action.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Script/Aeson.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Script/Core.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Script/Env.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Script/NodeConfig.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Script/Types.hs
+    - bench/tx-generator/src/Cardano/TxGenerator/PlutusContext.hs
+    - bench/tx-generator/src/Cardano/TxGenerator/Setup/NixService.hs
+    - bench/tx-generator/src/Cardano/TxGenerator/Setup/Plutus.hs
+    - bench/tx-generator/src/Cardano/TxGenerator/Types.hs
+    - bench/tx-generator/src/Cardano/TxGenerator/UTxO.hs
+    - bench/tx-generator/test/ApiTest.hs
+    - bench/tx-generator/tx-generator.cabal
+    - cabal.project
+    - flake.lock
+    - nix/nixos/tx-generator-service.nix
+    - nix/project-packages-exes.nix
+    - nix/workbench/genesis.sh
+    - nix/workbench/manifest.sh
+    - nix/workbench/profile.sh
+    - nix/workbench/profiles/pparams/api-pparams-to-genesis.jq
+    - nix/workbench/profiles/pparams/apiPparamsImport.sh
+    - nix/workbench/profiles/pparams/delta-v8-preview.jq
+    - nix/workbench/profiles/pparams/diffLatest.sh
+    - nix/workbench/profiles/pparams/diffLatestWithOverlay.sh
+    - nix/workbench/profiles/pparams/epoch-timeline.jq
+    - nix/workbench/profiles/pparams/orig/v8-preview.json
+    - nix/workbench/profiles/pparams/pparamsEpoch.sh
+    - nix/workbench/profiles/pparams/pparamsLastWithOverlay.sh
+    - nix/workbench/profiles/prof0-defaults.jq
+    - nix/workbench/profiles/prof1-variants.jq
+    - nix/workbench/profiles/prof2-pparams.jq
+    - nix/workbench/profiles/prof3-derived.jq
+    - nix/workbench/profiles/profiles.jq
+    - nix/workbench/run.sh
+- title: 'workbench: small fixes & UX improvements'
+  author: Kosyrev Serge
+  url: https://github.com/input-output-hk/cardano-node/pull/4665
+  number: 4665
+  mergedAt: "2022-11-25T15:43:28Z"
+  include: undecided
+  files:
+    - nix/workbench/analyse.sh
+    - nix/workbench/profile.sh
+    - nix/workbench/profiles/prof1-variants.jq
+    - nix/workbench/run.sh
+    - nix/workbench/wb
+- title: modernize CI
+  author: Robin Stumm
+  url: https://github.com/input-output-hk/cardano-node/pull/4652
+  number: 4652
+  mergedAt: "2023-01-17T13:06:10Z"
+  include: undecided
+  files:
+    - flake.lock
+    - flake.nix
+    - nix/tullia.nix
+- title: Bench nomad
+  author: Federico Mastellone
+  url: https://github.com/input-output-hk/cardano-node/pull/4606
+  number: 4606
+  mergedAt: "2022-11-25T17:03:14Z"
+  include: undecided
+  files:
+    - Makefile
+    - flake.lock
+    - flake.nix
+    - nix/custom-config.nix
+    - nix/pkgs.nix
+    - nix/workbench/backend/nomad-conf.nix
+    - nix/workbench/backend/nomad-run.nix
+    - nix/workbench/backend/nomad.nix
+    - nix/workbench/backend/nomad.sh
+    - nix/workbench/backend/supervisor-conf.nix
+    - nix/workbench/backend/supervisor-run.nix
+    - nix/workbench/backend/supervisor.nix
+    - nix/workbench/default.nix
+    - nix/workbench/run.sh
+    - nix/workbench/shell.nix
+    - nix/workbench/wb
+    - shell.nix
+- title: 'workbench & analysis: assorted fixes'
+  author: Kosyrev Serge
+  url: https://github.com/input-output-hk/cardano-node/pull/4582
+  number: 4582
+  mergedAt: "2022-11-25T10:22:50Z"
+  include: undecided
+  files:
+    - bench/locli/locli.cabal
+    - bench/locli/src/Cardano/Analysis/API.hs
+    - bench/locli/src/Cardano/Analysis/API/Chain.hs
+    - bench/locli/src/Cardano/Analysis/API/ChainFilter.hs
+    - bench/locli/src/Cardano/Analysis/API/Context.hs
+    - bench/locli/src/Cardano/Analysis/API/Dictionary.hs
+    - bench/locli/src/Cardano/Analysis/API/Field.hs
+    - bench/locli/src/Cardano/Analysis/API/Ground.hs
+    - bench/locli/src/Cardano/Analysis/API/LocliVersion.hs
+    - bench/locli/src/Cardano/Analysis/API/Metrics.hs
+    - bench/locli/src/Cardano/Analysis/API/Run.hs
+    - bench/locli/src/Cardano/Analysis/API/Types.hs
+    - bench/locli/src/Cardano/Analysis/BlockProp.hs
+    - bench/locli/src/Cardano/Analysis/MachPerf.hs
+    - bench/locli/src/Cardano/Analysis/Run.hs
+    - bench/locli/src/Cardano/Analysis/Summary.hs
+    - bench/locli/src/Cardano/Command.hs
+    - bench/locli/src/Cardano/JSON.hs
+    - bench/locli/src/Cardano/Org.hs
+    - bench/locli/src/Cardano/Render.hs
+    - bench/locli/src/Cardano/Report.hs
+    - bench/locli/src/Cardano/Unlog/LogObject.hs
+    - bench/locli/src/Cardano/Unlog/Resources.hs
+    - bench/locli/src/Cardano/Util.hs
+    - bench/locli/src/Data/CDF.hs
+    - bench/locli/src/Data/DataDomain.hs
+    - bench/locli/test/Test/Analysis/CDF.hs
+    - bench/locli/test/Test/Unlog/Org.hs
+    - bench/workbench.gnuplot
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/UI/JS/.gitignore
+    - nix/nixos/tx-generator-service.nix
+    - nix/workbench/analyse.sh
+    - nix/workbench/chain-filters/adopt-10.json
+    - nix/workbench/chain-filters/model.json
+    - nix/workbench/chain-filters/nonnegative.json
+    - nix/workbench/ede/chart.ede
+    - nix/workbench/ede/report.ede
+    - nix/workbench/ede/table.ede
+    - nix/workbench/ede/tablevars-delta-pct.ede
+    - nix/workbench/ede/tablevars-delta.ede
+    - nix/workbench/lib-cabal.sh
+    - nix/workbench/lib.sh
+    - nix/workbench/profiles/prof1-variants.jq
+    - nix/workbench/profiles/prof2-derived.jq
+    - nix/workbench/profiles/tracing.nix
+    - nix/workbench/run.sh
+    - nix/workbench/wb
+    - trace-resources/src/Cardano/Logging/Resources/Darwin.hsc
+    - trace-resources/src/Cardano/Logging/Resources/Dummy.hs
+    - trace-resources/src/Cardano/Logging/Resources/Linux.hs
+    - trace-resources/src/Cardano/Logging/Resources/Types.hs
+    - trace-resources/src/Cardano/Logging/Resources/Windows.hsc
+- title: Fix missing trace-forward messages
+  author: Jürgen Nicklisch
+  url: https://github.com/input-output-hk/cardano-node/pull/4581
+  number: 4581
+  mergedAt: "2022-11-10T16:15:57Z"
+  include: undecided
+  files:
+    - .gitignore
+    - Makefile
+    - bench/tx-generator/tx-generator.cabal
+    - cardano-node-chairman/cardano-node-chairman.cabal
+    - cardano-node/src/Cardano/Node/Tracing/Documentation.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Consensus.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/ForgingThreadStats.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/StartLeadershipCheck.hs
+    - cardano-tracer/bench/cardano-tracer-bench.hs
+    - cardano-tracer/cardano-tracer.cabal
+    - cardano-tracer/demo/ssh/forwarder.hs
+    - cardano-tracer/src/Cardano/Tracer/Acceptors/Client.hs
+    - cardano-tracer/src/Cardano/Tracer/Acceptors/Server.hs
+    - cardano-tracer/src/Cardano/Tracer/CLI.hs
+    - cardano-tracer/src/Cardano/Tracer/Configuration.hs
+    - cardano-tracer/src/Cardano/Tracer/Environment.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/Notifications/Send.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/Notifications/Utils.hs
+    - cardano-tracer/src/Cardano/Tracer/MetaTrace.hs
+    - cardano-tracer/src/Cardano/Tracer/Run.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/Acceptor.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/DataPoint/Tests.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/Forwarder.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/ForwardingStressTest/Config.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/ForwardingStressTest/Messages.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/ForwardingStressTest/Script.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/ForwardingStressTest/Types.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/Logs/Tests.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/Queue/Tests.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/Restart/Tests.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/TestSetup.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/Utils.hs
+    - cardano-tracer/test/cardano-tracer-test-ext.hs
+    - cardano-tracer/test/cardano-tracer-test.hs
+    - doc/new-tracing/tracers_doc_generated.md
+    - flake.nix
+    - nix/haskell.nix
+    - nix/workbench/profiles/prof1-variants.jq
+    - nix/workbench/scenario.sh
+    - trace-dispatcher/bench/trace-dispatcher-bench.hs
+    - trace-dispatcher/src/Cardano/Logging/Tracer/Composed.hs
+    - trace-dispatcher/src/Cardano/Logging/Tracer/Forward.hs
+    - trace-dispatcher/src/Cardano/Logging/Types.hs
+    - trace-dispatcher/test/Cardano/Logging/Test/Oracles.hs
+    - trace-dispatcher/test/Cardano/Logging/Test/Script.hs
+    - trace-dispatcher/test/Cardano/Logging/Test/Types.hs
+    - trace-dispatcher/test/trace-dispatcher-test.hs
+    - trace-dispatcher/trace-dispatcher.cabal
+    - trace-forward/src/Trace/Forward/Utils/TraceObject.hs
+- title: Switch to internal haskell package repository
+  author: Samuel Leathers
+  url: https://github.com/input-output-hk/cardano-node/pull/4540
+  number: 4540
+  mergedAt: "2022-10-20T06:59:11Z"
+  include: undecided
+  files:
+    - CONTRIBUTING.rst
+    - README.rst
+    - cabal.project
+    - flake.lock
+    - flake.nix
+    - nix/haskell.nix
+    - nix/nixos/tx-generator-service.nix
+    - nix/workbench/backend/services-config.nix
+    - nix/workbench/backend/supervisor-conf.nix
+    - nix/workbench/backend/supervisor-run.nix
+    - nix/workbench/backend/supervisor.nix
+    - nix/workbench/backend/supervisor.sh
+    - nix/workbench/chain-filters/epoch3+.json
+    - nix/workbench/chain-filters/model.json
+    - nix/workbench/chain-filters/unitary.json
+    - nix/workbench/ede/chart.ede
+    - nix/workbench/ede/manifest.ede
+    - nix/workbench/ede/report.ede
+    - nix/workbench/ede/table.ede
+    - nix/workbench/profiles/prof0-defaults.jq
+    - nix/workbench/profiles/prof1-variants.jq
+    - nix/workbench/profiles/prof2-derived.jq
+    - shell.nix
+    - trace-dispatcher/trace-dispatcher.cabal
+- title: Fix the workbench shell
+  author: Michael Peyton Jones
+  url: https://github.com/input-output-hk/cardano-node/pull/4522
+  number: 4522
+  mergedAt: "2022-10-11T19:29:00Z"
+  include: undecided
+  files:
+    - nix/workbench/shell.nix
+- title: Bump CHaP and remove `ekg-json` s-r-p
+  author: Michael Peyton Jones
+  url: https://github.com/input-output-hk/cardano-node/pull/4519
+  number: 4519
+  mergedAt: "2022-10-17T16:34:57Z"
+  include: undecided
+  files:
+    - cabal.project
+    - flake.lock
+    - nix/haskell.nix
+    - trace-dispatcher/trace-dispatcher.cabal
+- title: fix nix impurity
+  author: Robin Stumm
+  url: https://github.com/input-output-hk/cardano-node/pull/4518
+  number: 4518
+  mergedAt: "2022-11-10T16:33:49Z"
+  include: undecided
+  files:
+    - nix/default.nix
+    - nix/nixos/cardano-node-service.nix
+- title: tx-generator trace forwarding
+  author: Marc Fontaine
+  url: https://github.com/input-output-hk/cardano-node/pull/4511
+  number: 4511
+  mergedAt: "2022-10-06T19:35:18Z"
+  include: undecided
+  files:
+    - bench/tx-generator/src/Cardano/Benchmarking/Command.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Compiler.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/NixOptions.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Script/Action.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Script/NodeConfig.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Script/Types.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Tracer.hs
+    - bench/tx-generator/tx-generator.cabal
+    - nix/nixos/tx-generator-service.nix
+    - nix/workbench/backend/services-config.nix
+    - nix/workbench/profiles/generator-service.nix
+- title: 'cardano-tracer-service:  more configuration control'
+  author: Kosyrev Serge
+  url: https://github.com/input-output-hk/cardano-node/pull/4510
+  number: 4510
+  mergedAt: "2022-10-06T10:03:14Z"
+  include: undecided
+  files:
+    - nix/nixos/cardano-tracer-service.nix
+- title: 'bench:  nixos service fixes & analysis improvements'
+  author: Kosyrev Serge
+  url: https://github.com/input-output-hk/cardano-node/pull/4509
+  number: 4509
+  mergedAt: "2022-10-05T23:01:20Z"
+  include: undecided
+  files:
+    - bench/locli/src/Cardano/Analysis/API.hs
+    - bench/locli/src/Cardano/Analysis/MachPerf.hs
+    - bench/locli/src/Cardano/Render.hs
+    - bench/locli/src/Cardano/Util.hs
+    - nix/nixos/cardano-node-service.nix
+    - nix/nixos/cardano-tracer-service.nix
+    - nix/nixos/tx-generator-service.nix
+    - nix/svclib.nix
+- title: add cicero CI actions
+  author: Robin Stumm
+  url: https://github.com/input-output-hk/cardano-node/pull/4489
+  number: 4489
+  mergedAt: "2022-11-02T02:27:05Z"
+  include: undecided
+  files:
+    - flake.lock
+    - flake.nix
+    - nix/tullia.nix
+- title: 'workbench: changes needed to support a new backend'
+  author: Federico Mastellone
+  url: https://github.com/input-output-hk/cardano-node/pull/4457
+  number: 4457
+  mergedAt: "2022-09-22T12:47:53Z"
+  include: undecided
+  files:
+    - nix/workbench/backend/services-config.nix
+    - nix/workbench/profile-run.jq
+    - nix/workbench/profiles/node-services.nix
+    - nix/workbench/run.sh
+    - nix/workbench/shell.nix
+- title: Switch to Cardano haskell package repository
+  author: Andrea Bedini
+  url: https://github.com/input-output-hk/cardano-node/pull/4411
+  number: 4411
+  mergedAt: "2022-10-10T10:14:37Z"
+  include: undecided
+  files:
+    - CONTRIBUTING.rst
+    - README.rst
+    - cabal.project
+    - flake.lock
+    - flake.nix
+    - nix/haskell.nix
+    - nix/workbench/manifest.sh
+    - nix/workbench/run.sh
+    - nix/workbench/shell.nix
+    - shell.nix
+- title: 'README:  document package localisation'
+  author: Kosyrev Serge
+  url: https://github.com/input-output-hk/cardano-node/pull/4377
+  number: 4377
+  mergedAt: "2022-08-24T11:34:34Z"
+  include: undecided
+  files:
+    - README.rst
+    - nix/workbench/shell.nix
+    - trace-resources/src/Cardano/Logging/Resources/Darwin.hsc
+- title: Minimise config
+  author: Jürgen Nicklisch
+  url: https://github.com/input-output-hk/cardano-node/pull/4351
+  number: 4351
+  mergedAt: "2022-09-21T21:14:30Z"
+  include: undecided
+  files:
+    - Makefile
+    - README.rst
+    - bench/locli/doc/Block propagation analysis data flow.graphml
+    - bench/locli/doc/Machine performance analysis data flow.graphml
+    - bench/locli/locli.cabal
+    - bench/locli/src/Cardano/Analysis/API.hs
+    - bench/locli/src/Cardano/Analysis/BlockProp.hs
+    - bench/locli/src/Cardano/Analysis/ChainFilter.hs
+    - bench/locli/src/Cardano/Analysis/Ground.hs
+    - bench/locli/src/Cardano/Analysis/MachPerf.hs
+    - bench/locli/src/Cardano/Analysis/Run.hs
+    - bench/locli/src/Cardano/Command.hs
+    - bench/locli/src/Cardano/Org.hs
+    - bench/locli/src/Cardano/Render.hs
+    - bench/locli/src/Cardano/Unlog/LogObject.hs
+    - bench/locli/src/Cardano/Unlog/Resources.hs
+    - bench/locli/src/Cardano/Util.hs
+    - bench/locli/src/Data/CDF.hs
+    - bench/locli/src/Data/DataDomain.hs
+    - bench/locli/test/Test/Analysis/CDF.hs
+    - bench/locli/test/Test/Unlog/Org.hs
+    - bench/workbench.gnuplot
+    - cardano-node/cardano-node.cabal
+    - cardano-node/src/Cardano/Node/Tracing/API.hs
+    - cardano-node/src/Cardano/Node/Tracing/DefaultTraceConfig.hs
+    - cardano-node/src/Cardano/Node/Tracing/Documentation.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Consensus.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/UI/Charts.hs
+    - configuration/cardano/mainnet-config-new-tracing.yaml
+    - doc/New Tracing Quickstart.md
+    - doc/new-tracing/tracers_doc_generated.md
+    - nix/workbench/analyse.sh
+    - nix/workbench/backend/supervisor-run.nix
+    - nix/workbench/chain-filters/base-k10.json
+    - nix/workbench/chain-filters/base.json
+    - nix/workbench/chain-filters/epoch3+.json
+    - nix/workbench/chain-filters/model.json
+    - nix/workbench/chain-filters/size-0.6.json
+    - nix/workbench/chain-filters/size-mid.json
+    - nix/workbench/chain-filters/unitary.json
+    - nix/workbench/chaindb.sh
+    - nix/workbench/genesis.sh
+    - nix/workbench/lib-cabal.sh
+    - nix/workbench/lib.sh
+    - nix/workbench/manifest.sh
+    - nix/workbench/profile.sh
+    - nix/workbench/profiles/node-services.nix
+    - nix/workbench/profiles/prof0-defaults.jq
+    - nix/workbench/profiles/prof1-variants.jq
+    - nix/workbench/profiles/prof2-derived.jq
+    - nix/workbench/profiles/tracing-legacy.nix
+    - nix/workbench/profiles/tracing.nix
+    - nix/workbench/run.sh
+    - nix/workbench/scenario.sh
+    - nix/workbench/topology.sh
+    - nix/workbench/wb
+    - scripts/benchmarking/lib-node.sh
+    - scripts/benchmarking/lib.sh
+    - trace-dispatcher/doc/trace-dispatcher.md
+    - trace-dispatcher/src/Cardano/Logging/ConfigurationParser.hs
+    - trace-dispatcher/src/Cardano/Logging/Types.hs
+- title: Rename TestEnableDevelopmentHardForkEras and TestEnableDevelopmentNetworkProtocols
+  author: Robert 'Probie' Offner
+  url: https://github.com/input-output-hk/cardano-node/pull/4341
+  number: 4341
+  mergedAt: "2023-04-11T06:51:26Z"
+  include: undecided
+  files:
+    - cardano-api/ChangeLog.md
+    - cardano-node/src/Cardano/Node/Configuration/POM.hs
+    - cardano-node/src/Cardano/Node/Parsers.hs
+    - cardano-node/src/Cardano/Node/Protocol/Cardano.hs
+    - cardano-node/src/Cardano/Node/Run.hs
+    - cardano-node/src/Cardano/Node/Startup.hs
+    - cardano-node/src/Cardano/Node/Types.hs
+    - cardano-node/test/Test/Cardano/Node/POM.hs
+    - cardano-testnet/src/Testnet/Babbage.hs
+    - cardano-testnet/src/Testnet/Cardano.hs
+    - configuration/chairman/byron-shelley/configuration.yaml
+    - nix/nixos/cardano-node-service.nix
+    - nix/workbench/backend/nixops.nix
+    - nix/workbench/backend/nixops/role-explorer.nix
+    - nix/workbench/service/nodes.nix
+    - scripts/babbage/mkfiles.sh
+    - scripts/byron-to-alonzo/mkfiles.sh
+- title: Bench nix refactoring 2
+  author: Federico Mastellone
+  url: https://github.com/input-output-hk/cardano-node/pull/4324
+  number: 4324
+  mergedAt: "2022-08-22T13:21:14Z"
+  include: undecided
+  files:
+    - nix/workbench/backend/services-config.nix
+    - nix/workbench/backend/supervisor-conf.nix
+    - nix/workbench/backend/supervisor.nix
+    - nix/workbench/backend/supervisor.sh
+    - nix/workbench/default.nix
+    - nix/workbench/profiles/generator-service.nix
+    - nix/workbench/wb
+- title: Bench nix refactoring
+  author: Federico Mastellone
+  url: https://github.com/input-output-hk/cardano-node/pull/4285
+  number: 4285
+  mergedAt: "2022-08-11T03:48:08Z"
+  include: undecided
+  files:
+    - nix/custom-config.nix
+    - nix/pkgs.nix
+    - nix/workbench/backend/services-config.nix
+    - nix/workbench/backend/supervisor-conf.nix
+    - nix/workbench/backend/supervisor-run.nix
+    - nix/workbench/backend/supervisor.nix
+    - nix/workbench/default.nix
+    - nix/workbench/genesis.nix
+    - nix/workbench/profile.nix
+    - nix/workbench/profiles/default.nix
+    - nix/workbench/profiles/generator-service.nix
+    - nix/workbench/profiles/node-services.nix
+    - nix/workbench/profiles/tracer-service.nix
+    - nix/workbench/supervisor-run.nix
+    - nix/workbench/topology.nix
+- title: Update create-staked with the ability to specify relays for all created stake pools
+  author: Jordan Millar
+  url: https://github.com/input-output-hk/cardano-node/pull/4234
+  number: 4234
+  mergedAt: "2022-08-12T02:33:59Z"
+  include: undecided
+  files:
+    - cardano-api/src/Cardano/Api/Shelley.hs
+    - cardano-cli/src/Cardano/CLI/Shelley/Commands.hs
+    - cardano-cli/src/Cardano/CLI/Shelley/Parsers.hs
+    - cardano-cli/src/Cardano/CLI/Shelley/Run/Genesis.hs
+    - nix/workbench/genesis.sh
+- title: 'workbench:  template-based benchmark reporting & fixes'
+  author: Kosyrev Serge
+  url: https://github.com/input-output-hk/cardano-node/pull/4208
+  number: 4208
+  mergedAt: "2022-08-04T15:58:08Z"
+  include: undecided
+  files:
+    - Makefile
+    - bench/locli/locli.cabal
+    - bench/locli/src/Cardano/Analysis/API.hs
+    - bench/locli/src/Cardano/Analysis/Context.hs
+    - bench/locli/src/Cardano/Analysis/Ground.hs
+    - bench/locli/src/Cardano/Analysis/Run.hs
+    - bench/locli/src/Cardano/Command.hs
+    - bench/locli/src/Cardano/Report.hs
+    - bench/locli/src/Cardano/Util.hs
+    - nix/haskell.nix
+    - nix/workbench/analyse.sh
+    - nix/workbench/ede/chart.ede
+    - nix/workbench/ede/manifest.ede
+    - nix/workbench/ede/report.ede
+    - nix/workbench/ede/table.ede
+    - nix/workbench/lib.sh
+    - nix/workbench/profiles/prof1-variants.jq
+    - nix/workbench/run.sh
+- title: Abstract some options to multiple instances
+  author: Armando Santos
+  url: https://github.com/input-output-hk/cardano-node/pull/4196
+  number: 4196
+  mergedAt: "2022-09-12T10:39:58Z"
+  include: undecided
+  files:
+    - nix/nixos/cardano-node-service.nix
+    - nix/nixos/tests/cardano-node-edge.nix
+    - nix/scripts.nix
+    - nix/workbench/backend/supervisor-conf.nix
+- title: 'workbench:  fixes'
+  author: Kosyrev Serge
+  url: https://github.com/input-output-hk/cardano-node/pull/4147
+  number: 4147
+  mergedAt: "2022-07-07T18:04:13Z"
+  include: undecided
+  files:
+    - CODEOWNERS
+    - Makefile
+    - lib.mk
+    - nix.mk
+    - nix/workbench/analyse.sh
+    - nix/workbench/genesis.sh
+    - nix/workbench/lib-cabal.sh
+    - nix/workbench/profiles/prof1-variants.jq
+    - nix/workbench/run.sh
+    - nix/workbench/topology.sh
+    - nix/workbench/wb
+- title: Add aarch64-darwin to nix-shell
+  author: John Ky
+  url: https://github.com/input-output-hk/cardano-node/pull/4125
+  number: 4125
+  mergedAt: "2022-12-22T05:22:44Z"
+  include: undecided
+  files:
+    - nix/supported-systems.nix
+- title: Restructure the namespace
+  author: Jürgen Nicklisch
+  url: https://github.com/input-output-hk/cardano-node/pull/4117
+  number: 4117
+  mergedAt: "2022-07-08T13:56:16Z"
+  include: undecided
+  files:
+    - bench/locli/locli.cabal
+    - bench/locli/src/Cardano/Analysis/Run.hs
+    - bench/locli/src/Cardano/Unlog/LogObject.hs
+    - cardano-node/src/Cardano/Node/Tracing/Documentation.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/BlockReplayProgress.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/ChainDB.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Consensus.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Diffusion.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/ForgingThreadStats.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/NodeToClient.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/NodeToNode.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/NonP2P.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/P2P.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Peer.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Shutdown.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Startup.hs
+    - doc/new-tracing/tracers_doc_generated.md
+    - nix/workbench/analyse.sh
+    - nix/workbench/profiles/tracing.nix
+    - trace-dispatcher/bench/trace-dispatcher-bench.hs
+    - trace-dispatcher/doc/trace-dispatcher.md
+    - trace-dispatcher/src/Cardano/Logging/DocuGenerator.hs
+    - trace-dispatcher/src/Cardano/Logging/Trace.hs
+    - trace-dispatcher/src/Cardano/Logging/Tracer/Composed.hs
+    - trace-dispatcher/test/Cardano/Logging/Test/Script.hs
+    - trace-resources/src/Cardano/Logging/Resources/Types.hs
+    - trace-resources/test/trace-resources-test.hs
+- title: 'workbench: fixes'
+  author: Kosyrev Serge
+  url: https://github.com/input-output-hk/cardano-node/pull/4113
+  number: 4113
+  mergedAt: "2022-06-29T22:58:24Z"
+  include: undecided
+  files:
+    - Makefile
+    - bench/locli/locli.cabal
+    - flake.nix
+    - nix.mk
+    - nix/workbench/profile.sh
+    - nix/workbench/profiles/adhoc.jq
+    - nix/workbench/profiles/prof0-defaults.jq
+    - nix/workbench/profiles/prof1-variants.jq
+    - nix/workbench/profiles/prof2-derived.jq
+    - nix/workbench/profiles/profiles.jq
+    - nix/workbench/profiles/topology.jq
+    - nix/workbench/supervisor-run.nix
+- title: 'workbench:  direct CDF dumps for gnuplot consumption'
+  author: Kosyrev Serge
+  url: https://github.com/input-output-hk/cardano-node/pull/4056
+  number: 4056
+  mergedAt: "2022-06-28T18:57:56Z"
+  include: undecided
+  files:
+    - Makefile
+    - bench/locli/locli.cabal
+    - bench/locli/src/Cardano/Analysis/API.hs
+    - bench/locli/src/Cardano/Analysis/BlockProp.hs
+    - bench/locli/src/Cardano/Analysis/Ground.hs
+    - bench/locli/src/Cardano/Analysis/MachPerf.hs
+    - bench/locli/src/Cardano/Analysis/Run.hs
+    - bench/locli/src/Cardano/Command.hs
+    - bench/locli/src/Cardano/Unlog/LogObject.hs
+    - bench/locli/src/Cardano/Unlog/Org.hs
+    - bench/locli/src/Cardano/Unlog/Render.hs
+    - bench/locli/src/Cardano/Util.hs
+    - bench/locli/src/Data/CDF.hs
+    - bench/locli/src/Data/DataDomain.hs
+    - bench/locli/test/Test/Analysis/CDF.hs
+    - bench/locli/test/Test/Unlog/Org.hs
+    - bench/locli/test/test-locli.hs
+    - bench/org-id-find-plus.el
+    - bench/tx-generator/src/Cardano/Benchmarking/Command.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/LogTypes.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Script.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Script/Core.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Script/NodeConfig.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Tracer.hs
+    - bench/tx-generator/src/Cardano/Benchmarking/Version.hs
+    - bench/tx-generator/tx-generator.cabal
+    - bench/workbench.gnuplot
+    - flake.nix
+    - legacy.mk
+    - nix.mk
+    - nix/nixos/cardano-node-service.nix
+    - nix/pkgs.nix
+    - nix/workbench/analyse.nix
+    - nix/workbench/analyse.sh
+    - nix/workbench/backend.sh
+    - nix/workbench/default.nix
+    - nix/workbench/env.sh
+    - nix/workbench/genesis.nix
+    - nix/workbench/genesis.sh
+    - nix/workbench/lib-cabal.sh
+    - nix/workbench/lib.sh
+    - nix/workbench/manifest.sh
+    - nix/workbench/profile.nix
+    - nix/workbench/profile.sh
+    - nix/workbench/profiles/adhoc.jq
+    - nix/workbench/profiles/default.nix
+    - nix/workbench/profiles/defaults.jq
+    - nix/workbench/profiles/derived.jq
+    - nix/workbench/profiles/variants.jq
+    - nix/workbench/run.sh
+    - nix/workbench/scenario.sh
+    - nix/workbench/shell.nix
+    - nix/workbench/supervisor-run.nix
+    - nix/workbench/supervisor.nix
+    - nix/workbench/supervisor.sh
+    - nix/workbench/topology.sh
+    - nix/workbench/wb
+    - shell.nix
+- title: Update index state to 2022-07-01T00:00:00Z
+  author: John Ky
+  url: https://github.com/input-output-hk/cardano-node/pull/3862
+  number: 3862
+  mergedAt: "2022-07-05T12:13:13Z"
+  include: undecided
+  files:
+    - bench/locli/src/Cardano/Analysis/Chain.hs
+    - bench/locli/src/Cardano/Analysis/ChainFilter.hs
+    - cabal.project
+    - cardano-api/cardano-api.cabal
+    - cardano-api/test/Test/Cardano/Api/Json.hs
+    - cardano-api/test/Test/Cardano/Api/KeysByron.hs
+    - cardano-api/test/Test/Cardano/Api/Ledger.hs
+    - cardano-api/test/Test/Cardano/Api/Metadata.hs
+    - cardano-api/test/Test/Cardano/Api/Typed/Address.hs
+    - cardano-api/test/Test/Cardano/Api/Typed/Bech32.hs
+    - cardano-api/test/Test/Cardano/Api/Typed/CBOR.hs
+    - cardano-api/test/Test/Cardano/Api/Typed/Envelope.hs
+    - cardano-api/test/Test/Cardano/Api/Typed/JSON.hs
+    - cardano-api/test/Test/Cardano/Api/Typed/Ord.hs
+    - cardano-api/test/Test/Cardano/Api/Typed/RawBytes.hs
+    - cardano-api/test/Test/Cardano/Api/Typed/Script.hs
+    - cardano-api/test/Test/Cardano/Api/Typed/TxBody.hs
+    - cardano-api/test/Test/Cardano/Api/Typed/Value.hs
+    - cardano-node-chairman/test/Main.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/KESInfo.hs
+    - cardano-testnet/test/Main.hs
+    - cardano-testnet/test/Test/Util.hs
+    - flake.lock
+    - nix/haskell.nix

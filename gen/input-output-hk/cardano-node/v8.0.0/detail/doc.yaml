@@ -1,0 +1,818 @@
+- title: Update 7_KES_period.md
+  author: 'Carlos LopezDeLara '
+  url: https://github.com/input-output-hk/cardano-node/pull/5131
+  number: 5131
+  mergedAt: "2023-04-28T18:11:43Z"
+  include: undecided
+  files:
+    - doc/stake-pool-operations/7_KES_period.md
+- title: Small build docs improvements
+  author: Mateusz Gałażyn
+  url: https://github.com/input-output-hk/cardano-node/pull/5051
+  number: 5051
+  mergedAt: "2023-04-06T14:14:57Z"
+  include: undecided
+  files:
+    - doc/getting-started/install.md
+- title: Update cardano-governance.md
+  author: NetWalker108
+  url: https://github.com/input-output-hk/cardano-node/pull/5045
+  number: 5045
+  mergedAt: "2023-04-17T12:58:28Z"
+  include: undecided
+  files:
+    - doc/reference/cardano-governance.md
+- title: stakeKey registration stake.skey witness not needed
+  author: John Ky
+  url: https://github.com/input-output-hk/cardano-node/pull/4975
+  number: 4975
+  mergedAt: "2023-03-17T23:37:18Z"
+  include: undecided
+  files:
+    - doc/stake-pool-operations/5_register_key.md
+- title: Document how to convert between hex and bech32
+  author: John Ky
+  url: https://github.com/input-output-hk/cardano-node/pull/4974
+  number: 4974
+  mergedAt: "2023-03-14T00:59:49Z"
+  include: undecided
+  files:
+    - doc/reference/shelley-genesis.md
+- title: Fix typos
+  author: John Ky
+  url: https://github.com/input-output-hk/cardano-node/pull/4964
+  number: 4964
+  mergedAt: "2023-03-10T07:04:34Z"
+  include: undecided
+  files:
+    - CONTRIBUTING.rst
+    - doc/reference/cardano-node-cli-reference.md
+- title: Update getting started to include MacOS
+  author: Vincent Orr
+  url: https://github.com/input-output-hk/cardano-node/pull/4952
+  number: 4952
+  mergedAt: "2023-03-11T13:12:26Z"
+  include: undecided
+  files:
+    - doc/getting-started/install.md
+- title: Add event.type to concurrency group
+  author: John Ky
+  url: https://github.com/input-output-hk/cardano-node/pull/4947
+  number: 4947
+  mergedAt: "2023-03-07T04:16:35Z"
+  include: undecided
+  files:
+    - .github/workflows/check-cabal-files.yml
+    - .github/workflows/check-git-dependencies.yml
+    - .github/workflows/check-mainnet-config.yml
+    - .github/workflows/check-nix-config.yml
+    - .github/workflows/haskell-linux.yml
+    - .github/workflows/haskell.yml
+    - .github/workflows/markdown-links-ci-check.yml
+    - .github/workflows/stylish-haskell.yml
+    - bench/locli/locli.cabal
+    - cabal.project
+    - cardano-api/cardano-api.cabal
+    - cardano-cli/cardano-cli.cabal
+    - cardano-node-chairman/cardano-node-chairman.cabal
+    - cardano-node-chairman/test/Spec/Chairman/Cardano.hs
+    - cardano-node-chairman/testnet/Testnet/Run.hs
+    - cardano-testnet/cardano-testnet.cabal
+    - cardano-testnet/src/Testnet/Run.hs
+    - cardano-testnet/src/Testnet/Shelley.hs
+    - cardano-testnet/src/Testnet/Util/Base.hs
+    - cardano-testnet/test/Test/Cli/Alonzo/LeadershipSchedule.hs
+    - cardano-testnet/test/Test/Cli/Babbage/LeadershipSchedule.hs
+    - cardano-testnet/test/Test/Cli/Babbage/StakeSnapshot.hs
+    - cardano-testnet/test/Test/Cli/KesPeriodInfo.hs
+    - cardano-testnet/test/Test/FoldBlocks.hs
+    - cardano-testnet/test/Test/Node/Shutdown.hs
+    - cardano-testnet/test/Test/ShutdownOnSlotSynced.hs
+    - doc/getting-started/launching-a-testnet.md
+    - flake.lock
+- title: Update docs for simple transaction
+  author: John Ky
+  url: https://github.com/input-output-hk/cardano-node/pull/4916
+  number: 4916
+  mergedAt: "2023-02-24T16:19:01Z"
+  include: undecided
+  files:
+    - doc/reference/building-and-signing-tx.md
+    - doc/reference/shelley-genesis.md
+    - doc/stake-pool-operations/12_retire_stakepool.md
+    - doc/stake-pool-operations/4_simple_transaction.md
+- title: Added features to tracing
+  author: Jürgen Nicklisch
+  url: https://github.com/input-output-hk/cardano-node/pull/4908
+  number: 4908
+  mergedAt: "2023-03-01T04:06:26Z"
+  include: undecided
+  files:
+    - bench/tx-generator/src/Cardano/Benchmarking/Tracer.hs
+    - cardano-node/src/Cardano/Node/Tracing/Documentation.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers.hs
+    - cardano-tracer/src/Cardano/Tracer/MetaTrace.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/ForwardingStressTest/Script.hs
+    - doc/new-tracing/tracers_doc_generated.md
+    - trace-dispatcher/bench/trace-dispatcher-bench.hs
+    - trace-dispatcher/examples/Examples/Aggregation.hs
+    - trace-dispatcher/examples/Examples/Configuration.hs
+    - trace-dispatcher/examples/Examples/Documentation.hs
+    - trace-dispatcher/examples/Examples/EKG.hs
+    - trace-dispatcher/examples/Examples/FrequencyLimiting.hs
+    - trace-dispatcher/examples/Examples/Routing.hs
+    - trace-dispatcher/examples/Examples/Trivial.hs
+    - trace-dispatcher/src/Cardano/Logging/Configuration.hs
+    - trace-dispatcher/src/Cardano/Logging/ConfigurationParser.hs
+    - trace-dispatcher/src/Cardano/Logging/DocuGenerator.hs
+    - trace-dispatcher/src/Cardano/Logging/Trace.hs
+    - trace-dispatcher/src/Cardano/Logging/TraceDispatcherMessage.hs
+    - trace-dispatcher/src/Cardano/Logging/Tracer/Composed.hs
+    - trace-dispatcher/src/Cardano/Logging/Types.hs
+    - trace-dispatcher/test/Cardano/Logging/Test/Script.hs
+    - trace-dispatcher/trace-dispatcher.cabal
+    - trace-resources/test/trace-resources-test.hs
+- title: Fix some markdown links
+  author: John Ky
+  url: https://github.com/input-output-hk/cardano-node/pull/4882
+  number: 4882
+  mergedAt: "2023-02-23T23:43:36Z"
+  include: undecided
+  files:
+    - cardano-node/ChangeLog.md
+    - cardano-tracer/docs/cardano-rtview.md
+    - cardano-tracer/docs/cardano-tracer.md
+    - doc/New Tracing Quickstart.md
+    - doc/getting-started/understanding-config-files.md
+    - doc/reference/byron-genesis.md
+    - doc/reference/native-tokens/01-multi-assets.md
+    - doc/reference/plutus/babbage-script-example.md
+    - doc/reference/plutus/plutus-minting-script-example.md
+    - doc/reference/plutus/plutus-spending-script-example.md
+    - doc/reference/tx-metadata.md
+    - doc/stake-pool-operations/8_register_stakepool.md
+    - mlc_config.json
+    - scripts/benchmarking/README.md
+    - trace-forward/README.md
+- title: Clarify the valency setting's description
+  author: James Kelley
+  url: https://github.com/input-output-hk/cardano-node/pull/4849
+  number: 4849
+  mergedAt: "2023-03-13T01:43:57Z"
+  include: undecided
+  files:
+    - doc/getting-started/understanding-config-files.md
+- title: Optimized trace-dispatcher and tracing system
+  author: Jürgen Nicklisch
+  url: https://github.com/input-output-hk/cardano-node/pull/4811
+  number: 4811
+  mergedAt: "2023-01-31T10:24:25Z"
+  include: undecided
+  files:
+    - bench/tx-generator/src/Cardano/Benchmarking/Tracer.hs
+    - cabal.project
+    - cardano-node/src/Cardano/Node/Configuration/Topology.hs
+    - cardano-node/src/Cardano/Node/Configuration/TopologyP2P.hs
+    - cardano-node/src/Cardano/Node/Startup.hs
+    - cardano-node/src/Cardano/Node/TraceConstraints.hs
+    - cardano-node/src/Cardano/Node/Tracing.hs
+    - cardano-node/src/Cardano/Node/Tracing/DefaultTraceConfig.hs
+    - cardano-node/src/Cardano/Node/Tracing/Documentation.hs
+    - cardano-node/src/Cardano/Node/Tracing/Era/Shelley.hs
+    - cardano-node/src/Cardano/Node/Tracing/Peers.hs
+    - cardano-node/src/Cardano/Node/Tracing/StateRep.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/BlockReplayProgress.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/ChainDB.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Consensus.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/ConsensusStartupException.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Diffusion.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/ForgingThreadStats.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/KESInfo.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/NodeToClient.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/NodeToNode.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/NonP2P.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/P2P.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Peer.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Resources.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Shutdown.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Startup.hs
+    - cardano-node/src/Cardano/Tracing/OrphanInstances/Consensus.hs
+    - cardano-node/src/Cardano/Tracing/OrphanInstances/Shelley.hs
+    - cardano-node/src/Cardano/Tracing/Shutdown.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/Logs/File.hs
+    - cardano-tracer/src/Cardano/Tracer/MetaTrace.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/ForwardingStressTest/Config.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/ForwardingStressTest/Messages.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/ForwardingStressTest/Script.hs
+    - cardano-tracer/test/cardano-tracer-test-ext.hs
+    - cardano-tracer/test/config.yaml
+    - doc/New Tracing Quickstart.md
+    - doc/new-tracing/tracers_doc_generated.md
+    - nix/workbench/profiles/tracing.nix
+    - trace-dispatcher/bench/trace-dispatcher-bench.hs
+    - trace-dispatcher/doc/trace-dispatcher.md
+    - trace-dispatcher/examples/Examples/Aggregation.hs
+    - trace-dispatcher/examples/Examples/Configuration.hs
+    - trace-dispatcher/examples/Examples/DataPoint.hs
+    - trace-dispatcher/examples/Examples/Documentation.hs
+    - trace-dispatcher/examples/Examples/EKG.hs
+    - trace-dispatcher/examples/Examples/FrequencyLimiting.hs
+    - trace-dispatcher/examples/Examples/Routing.hs
+    - trace-dispatcher/examples/Examples/TestObjects.hs
+    - trace-dispatcher/examples/Examples/Trivial.hs
+    - trace-dispatcher/examples/Main.hs
+    - trace-dispatcher/src/Cardano/Logging.hs
+    - trace-dispatcher/src/Cardano/Logging/Configuration.hs
+    - trace-dispatcher/src/Cardano/Logging/ConfigurationParser.hs
+    - trace-dispatcher/src/Cardano/Logging/DocuGenerator.hs
+    - trace-dispatcher/src/Cardano/Logging/Formatter.hs
+    - trace-dispatcher/src/Cardano/Logging/FrequencyLimiter.hs
+    - trace-dispatcher/src/Cardano/Logging/Trace.hs
+    - trace-dispatcher/src/Cardano/Logging/TraceDispatcherMessage.hs
+    - trace-dispatcher/src/Cardano/Logging/Tracer/Composed.hs
+    - trace-dispatcher/src/Cardano/Logging/Tracer/DataPoint.hs
+    - trace-dispatcher/src/Cardano/Logging/Tracer/EKG.hs
+    - trace-dispatcher/src/Cardano/Logging/Tracer/Forward.hs
+    - trace-dispatcher/src/Cardano/Logging/Tracer/Standard.hs
+    - trace-dispatcher/src/Cardano/Logging/Types.hs
+    - trace-dispatcher/src/Cardano/Logging/Utils.hs
+    - trace-dispatcher/src/Cardano/Logging/Version.hs
+    - trace-dispatcher/test/Cardano/Logging/Test/Config.hs
+    - trace-dispatcher/test/Cardano/Logging/Test/Messages.hs
+    - trace-dispatcher/test/Cardano/Logging/Test/Oracles.hs
+    - trace-dispatcher/test/Cardano/Logging/Test/Script.hs
+    - trace-dispatcher/test/Cardano/Logging/Test/Types.hs
+    - trace-dispatcher/test/trace-dispatcher-test.hs
+    - trace-dispatcher/trace-dispatcher.cabal
+    - trace-resources/src/Cardano/Logging/Resources/Types.hs
+    - trace-resources/test/trace-resources-test.hs
+- title: Bump future from 0.18.2 to 0.18.3 in /doc/.sphinx
+  author: null
+  url: https://github.com/input-output-hk/cardano-node/pull/4797
+  number: 4797
+  mergedAt: "2023-03-01T06:27:24Z"
+  include: undecided
+  files:
+    - doc/.sphinx/requirements.txt
+- title: Update install.md
+  author: 'Carlos LopezDeLara '
+  url: https://github.com/input-output-hk/cardano-node/pull/4786
+  number: 4786
+  mergedAt: "2023-01-16T18:47:44Z"
+  include: undecided
+  files:
+    - doc/getting-started/install.md
+- title: small amendment in stake snapshot docs
+  author: 'Carlos LopezDeLara '
+  url: https://github.com/input-output-hk/cardano-node/pull/4783
+  number: 4783
+  mergedAt: "2023-03-13T01:44:49Z"
+  include: undecided
+  files:
+    - doc/stake-pool-operations/10_query_stakepool.md
+- title: Update cardano-governance.md
+  author: 'Carlos LopezDeLara '
+  url: https://github.com/input-output-hk/cardano-node/pull/4768
+  number: 4768
+  mergedAt: "2023-01-11T14:29:03Z"
+  include: undecided
+  files:
+    - doc/reference/cardano-governance.md
+- title: Docs for create-cardano
+  author: 'Carlos LopezDeLara '
+  url: https://github.com/input-output-hk/cardano-node/pull/4767
+  number: 4767
+  mergedAt: "2023-03-11T22:35:12Z"
+  include: undecided
+  files:
+    - doc/reference/create-cardano.md
+- title: Cardano governance documentation
+  author: 'Carlos LopezDeLara '
+  url: https://github.com/input-output-hk/cardano-node/pull/4719
+  number: 4719
+  mergedAt: "2022-12-21T20:04:47Z"
+  include: undecided
+  files:
+    - doc/reference/cardano-governance.md
+    - doc/reference/images/upbyron.png
+    - doc/reference/images/upshelley.png
+- title: Remove cardano-cli address build-script
+  author: Jordan Millar
+  url: https://github.com/input-output-hk/cardano-node/pull/4700
+  number: 4700
+  mergedAt: "2022-12-19T16:56:12Z"
+  include: undecided
+  files:
+    - cardano-cli/ChangeLog.md
+    - cardano-cli/src/Cardano/CLI/Shelley/Commands.hs
+    - cardano-cli/src/Cardano/CLI/Shelley/Parsers.hs
+    - cardano-cli/src/Cardano/CLI/Shelley/Run/Address.hs
+    - cardano-cli/test/Test/Golden/Shelley/MultiSig/Address.hs
+    - doc/reference/cardano-node-cli-reference.md
+    - doc/reference/simple-scripts.md
+- title: 'build(deps): bump certifi from 2020.4.5.2 to 2022.12.7 in /doc/.sphinx'
+  author: null
+  url: https://github.com/input-output-hk/cardano-node/pull/4699
+  number: 4699
+  mergedAt: "2022-12-20T18:46:53Z"
+  include: undecided
+  files:
+    - doc/.sphinx/requirements.txt
+- title: Use JSON instances for NodeToNodeVersion & NodeToClientVersion
+  author: Marcin Szamotulski
+  url: https://github.com/input-output-hk/cardano-node/pull/4691
+  number: 4691
+  mergedAt: "2023-03-26T09:16:13Z"
+  include: undecided
+  files:
+    - cardano-node/ChangeLog.md
+    - cardano-node/src/Cardano/Node/Run.hs
+    - cardano-node/src/Cardano/Node/Startup.hs
+    - cardano-node/src/Cardano/Node/Tracing/StateRep.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Startup.hs
+    - cardano-node/src/Cardano/Tracing/OrphanInstances/Network.hs
+    - cardano-node/src/Cardano/Tracing/Startup.hs
+    - doc/getting-started/understanding-config-files.md
+- title: Update building-the-node-using-nix.md
+  author: 'Carlos LopezDeLara '
+  url: https://github.com/input-output-hk/cardano-node/pull/4613
+  number: 4613
+  mergedAt: "2022-11-08T13:42:32Z"
+  include: undecided
+  files:
+    - doc/getting-started/building-the-node-using-nix.md
+- title: Cardano Node 1.35.6 aka Single Relay P2P release
+  author: Marcin Szamotulski
+  url: https://github.com/input-output-hk/cardano-node/pull/4612
+  number: 4612
+  mergedAt: "2023-02-04T16:16:41Z"
+  include: undecided
+  files:
+    - bench/cardano-topology/cardano-topology.cabal
+    - bench/tx-generator/src/Cardano/Benchmarking/GeneratorTx/NodeToNode.hs
+    - cabal.project
+    - cardano-api/cardano-api.cabal
+    - cardano-cli/cardano-cli.cabal
+    - cardano-node-chairman/app/Cardano/Chairman.hs
+    - cardano-node-chairman/cardano-node-chairman.cabal
+    - cardano-node/ChangeLog.md
+    - cardano-node/cardano-node.cabal
+    - cardano-node/src/Cardano/Node/Configuration/TopologyP2P.hs
+    - cardano-node/src/Cardano/Node/Run.hs
+    - cardano-node/src/Cardano/Node/Startup.hs
+    - cardano-node/src/Cardano/Node/Tracing.hs
+    - cardano-node/src/Cardano/Node/Tracing/Documentation.hs
+    - cardano-node/src/Cardano/Node/Tracing/StateRep.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Consensus.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/ConsensusStartupException.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Diffusion.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/P2P.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Peer.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Startup.hs
+    - cardano-node/src/Cardano/Tracing/OrphanInstances/Consensus.hs
+    - cardano-node/src/Cardano/Tracing/OrphanInstances/Network.hs
+    - cardano-node/src/Cardano/Tracing/Peer.hs
+    - cardano-node/src/Cardano/Tracing/Startup.hs
+    - cardano-node/src/Cardano/Tracing/Tracers.hs
+    - cardano-node/test/Test/Cardano/Node/Gen.hs
+    - cardano-node/test/Test/Cardano/Node/Json.hs
+    - cardano-submit-api/cardano-submit-api.cabal
+    - cardano-testnet/cardano-testnet.cabal
+    - cardano-tracer/cardano-tracer.cabal
+    - cardano-tracer/src/Cardano/Tracer/Acceptors/Client.hs
+    - cardano-tracer/src/Cardano/Tracer/Acceptors/Server.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/Forwarder.hs
+    - doc/getting-started/install.md
+    - doc/getting-started/understanding-config-files.md
+    - docker-compose.yml
+    - trace-dispatcher/src/Cardano/Logging/Forwarding.hs
+    - trace-dispatcher/trace-dispatcher.cabal
+- title: Fix missing trace-forward messages
+  author: Jürgen Nicklisch
+  url: https://github.com/input-output-hk/cardano-node/pull/4581
+  number: 4581
+  mergedAt: "2022-11-10T16:15:57Z"
+  include: undecided
+  files:
+    - .gitignore
+    - Makefile
+    - bench/tx-generator/tx-generator.cabal
+    - cardano-node-chairman/cardano-node-chairman.cabal
+    - cardano-node/src/Cardano/Node/Tracing/Documentation.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Consensus.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/ForgingThreadStats.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/StartLeadershipCheck.hs
+    - cardano-tracer/bench/cardano-tracer-bench.hs
+    - cardano-tracer/cardano-tracer.cabal
+    - cardano-tracer/demo/ssh/forwarder.hs
+    - cardano-tracer/src/Cardano/Tracer/Acceptors/Client.hs
+    - cardano-tracer/src/Cardano/Tracer/Acceptors/Server.hs
+    - cardano-tracer/src/Cardano/Tracer/CLI.hs
+    - cardano-tracer/src/Cardano/Tracer/Configuration.hs
+    - cardano-tracer/src/Cardano/Tracer/Environment.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/Notifications/Send.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/Notifications/Utils.hs
+    - cardano-tracer/src/Cardano/Tracer/MetaTrace.hs
+    - cardano-tracer/src/Cardano/Tracer/Run.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/Acceptor.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/DataPoint/Tests.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/Forwarder.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/ForwardingStressTest/Config.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/ForwardingStressTest/Messages.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/ForwardingStressTest/Script.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/ForwardingStressTest/Types.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/Logs/Tests.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/Queue/Tests.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/Restart/Tests.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/TestSetup.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/Utils.hs
+    - cardano-tracer/test/cardano-tracer-test-ext.hs
+    - cardano-tracer/test/cardano-tracer-test.hs
+    - doc/new-tracing/tracers_doc_generated.md
+    - flake.nix
+    - nix/haskell.nix
+    - nix/workbench/profiles/prof1-variants.jq
+    - nix/workbench/scenario.sh
+    - trace-dispatcher/bench/trace-dispatcher-bench.hs
+    - trace-dispatcher/src/Cardano/Logging/Tracer/Composed.hs
+    - trace-dispatcher/src/Cardano/Logging/Tracer/Forward.hs
+    - trace-dispatcher/src/Cardano/Logging/Types.hs
+    - trace-dispatcher/test/Cardano/Logging/Test/Oracles.hs
+    - trace-dispatcher/test/Cardano/Logging/Test/Script.hs
+    - trace-dispatcher/test/Cardano/Logging/Test/Types.hs
+    - trace-dispatcher/test/trace-dispatcher-test.hs
+    - trace-dispatcher/trace-dispatcher.cabal
+    - trace-forward/src/Trace/Forward/Utils/TraceObject.hs
+- title: Community contributions 2022-10-27
+  author: Jordan Millar
+  url: https://github.com/input-output-hk/cardano-node/pull/4567
+  number: 4567
+  mergedAt: "2022-11-02T17:20:13Z"
+  include: undecided
+  files:
+    - cardano-cli/src/Cardano/CLI/Shelley/Run/Transaction.hs
+    - doc/getting-started/install.md
+    - doc/reference/simple-scripts.md
+- title: New p2p topology file format
+  author: Marcin Szamotulski
+  url: https://github.com/input-output-hk/cardano-node/pull/4563
+  number: 4563
+  mergedAt: "2022-11-08T18:20:27Z"
+  include: undecided
+  files:
+    - cardano-node/ChangeLog.md
+    - cardano-node/cardano-node.cabal
+    - cardano-node/src/Cardano/Node/Configuration/TopologyP2P.hs
+    - cardano-node/src/Cardano/Node/Run.hs
+    - cardano-node/src/Cardano/Node/Startup.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Startup.hs
+    - cardano-node/test/Test/Cardano/Node/Gen.hs
+    - cardano-node/test/Test/Cardano/Node/Json.hs
+    - doc/getting-started/install.md
+    - doc/getting-started/understanding-config-files.md
+- title: Add a native tokens tutorial and exercises to a newly created MA folder
+  author: ""
+  url: https://github.com/input-output-hk/cardano-node/pull/4562
+  number: 4562
+  mergedAt: "2022-11-16T13:26:17Z"
+  include: undecided
+  files:
+    - README.rst
+    - doc/reference/multi-assets.md
+    - doc/reference/native-tokens/01-multi-assets.md
+    - doc/reference/native-tokens/02-getting-started.md
+    - doc/reference/native-tokens/03-exercises.md
+    - doc/reference/native-tokens/04-exchange-scenarios.md
+- title: link to explorer.cardano.org/relays/topology.json
+  author: 'Carlos LopezDeLara '
+  url: https://github.com/input-output-hk/cardano-node/pull/4545
+  number: 4545
+  mergedAt: "2023-03-19T03:34:16Z"
+  include: undecided
+  files:
+    - doc/getting-started/understanding-config-files.md
+- title: Update docs
+  author: 'Carlos LopezDeLara '
+  url: https://github.com/input-output-hk/cardano-node/pull/4382
+  number: 4382
+  mergedAt: "2022-08-25T03:31:07Z"
+  include: undecided
+  files:
+    - configuration/readme.md
+    - doc/getting-started/cli.md
+    - doc/logging-monitoring/logging.md
+    - doc/stake-pool-operations/0_core_relay.md
+    - doc/stake-pool-operations/10_query_stakepool.md
+    - doc/stake-pool-operations/11_withdraw-rewards.md
+    - doc/stake-pool-operations/12_retire_stakepool.md
+    - doc/stake-pool-operations/1_getConfigFiles_AND_Connect.md
+    - doc/stake-pool-operations/2_start_your_nodes.md
+    - doc/stake-pool-operations/3_keys_and_addresses.md
+    - doc/stake-pool-operations/4_simple_transaction.md
+    - doc/stake-pool-operations/5_register_key.md
+    - doc/stake-pool-operations/6_node_keys.md
+    - doc/stake-pool-operations/7_KES_period.md
+    - doc/stake-pool-operations/8_register_stakepool.md
+    - doc/stake-pool-operations/9_leadership_schedule.md
+- title: Minimise config
+  author: Jürgen Nicklisch
+  url: https://github.com/input-output-hk/cardano-node/pull/4351
+  number: 4351
+  mergedAt: "2022-09-21T21:14:30Z"
+  include: undecided
+  files:
+    - Makefile
+    - README.rst
+    - bench/locli/doc/Block propagation analysis data flow.graphml
+    - bench/locli/doc/Machine performance analysis data flow.graphml
+    - bench/locli/locli.cabal
+    - bench/locli/src/Cardano/Analysis/API.hs
+    - bench/locli/src/Cardano/Analysis/BlockProp.hs
+    - bench/locli/src/Cardano/Analysis/ChainFilter.hs
+    - bench/locli/src/Cardano/Analysis/Ground.hs
+    - bench/locli/src/Cardano/Analysis/MachPerf.hs
+    - bench/locli/src/Cardano/Analysis/Run.hs
+    - bench/locli/src/Cardano/Command.hs
+    - bench/locli/src/Cardano/Org.hs
+    - bench/locli/src/Cardano/Render.hs
+    - bench/locli/src/Cardano/Unlog/LogObject.hs
+    - bench/locli/src/Cardano/Unlog/Resources.hs
+    - bench/locli/src/Cardano/Util.hs
+    - bench/locli/src/Data/CDF.hs
+    - bench/locli/src/Data/DataDomain.hs
+    - bench/locli/test/Test/Analysis/CDF.hs
+    - bench/locli/test/Test/Unlog/Org.hs
+    - bench/workbench.gnuplot
+    - cardano-node/cardano-node.cabal
+    - cardano-node/src/Cardano/Node/Tracing/API.hs
+    - cardano-node/src/Cardano/Node/Tracing/DefaultTraceConfig.hs
+    - cardano-node/src/Cardano/Node/Tracing/Documentation.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Consensus.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/UI/Charts.hs
+    - configuration/cardano/mainnet-config-new-tracing.yaml
+    - doc/New Tracing Quickstart.md
+    - doc/new-tracing/tracers_doc_generated.md
+    - nix/workbench/analyse.sh
+    - nix/workbench/backend/supervisor-run.nix
+    - nix/workbench/chain-filters/base-k10.json
+    - nix/workbench/chain-filters/base.json
+    - nix/workbench/chain-filters/epoch3+.json
+    - nix/workbench/chain-filters/model.json
+    - nix/workbench/chain-filters/size-0.6.json
+    - nix/workbench/chain-filters/size-mid.json
+    - nix/workbench/chain-filters/unitary.json
+    - nix/workbench/chaindb.sh
+    - nix/workbench/genesis.sh
+    - nix/workbench/lib-cabal.sh
+    - nix/workbench/lib.sh
+    - nix/workbench/manifest.sh
+    - nix/workbench/profile.sh
+    - nix/workbench/profiles/node-services.nix
+    - nix/workbench/profiles/prof0-defaults.jq
+    - nix/workbench/profiles/prof1-variants.jq
+    - nix/workbench/profiles/prof2-derived.jq
+    - nix/workbench/profiles/tracing-legacy.nix
+    - nix/workbench/profiles/tracing.nix
+    - nix/workbench/run.sh
+    - nix/workbench/scenario.sh
+    - nix/workbench/topology.sh
+    - nix/workbench/wb
+    - scripts/benchmarking/lib-node.sh
+    - scripts/benchmarking/lib.sh
+    - trace-dispatcher/doc/trace-dispatcher.md
+    - trace-dispatcher/src/Cardano/Logging/ConfigurationParser.hs
+    - trace-dispatcher/src/Cardano/Logging/Types.hs
+- title: 'Multiple pools support in query stake snapshot '
+  author: John Ky
+  url: https://github.com/input-output-hk/cardano-node/pull/4279
+  number: 4279
+  mergedAt: "2023-01-17T23:35:11Z"
+  include: undecided
+  files:
+    - cardano-api/src/Cardano/Api/Orphans.hs
+    - cardano-api/src/Cardano/Api/Query.hs
+    - cardano-cli/src/Cardano/CLI/Shelley/Commands.hs
+    - cardano-cli/src/Cardano/CLI/Shelley/Parsers.hs
+    - cardano-cli/src/Cardano/CLI/Shelley/Run/Query.hs
+    - cardano-cli/src/Cardano/CLI/Types.hs
+    - doc/stake-pool-operations/10_query_stakepool.md
+- title: Add tx-mempool command to CLI
+  author: Robert 'Probie' Offner
+  url: https://github.com/input-output-hk/cardano-node/pull/4276
+  number: 4276
+  mergedAt: "2022-10-24T08:38:08Z"
+  include: undecided
+  files:
+    - cardano-api/src/Cardano/Api.hs
+    - cardano-api/src/Cardano/Api/IPC.hs
+    - cardano-cli/ChangeLog.md
+    - cardano-cli/src/Cardano/CLI/Shelley/Commands.hs
+    - cardano-cli/src/Cardano/CLI/Shelley/Parsers.hs
+    - cardano-cli/src/Cardano/CLI/Shelley/Run/Query.hs
+    - cardano-cli/src/Cardano/CLI/Types.hs
+    - doc/reference/cardano-node-cli-reference.md
+    - scripts/babbage/example-babbage-script-usage.sh
+    - scripts/babbage/mkfiles.sh
+- title: Use pkg-config for LMDB
+  author: Javier Sagredo
+  url: https://github.com/input-output-hk/cardano-node/pull/4217
+  number: 4217
+  mergedAt: "2022-07-22T10:38:52Z"
+  include: undecided
+  files:
+    - .github/workflows/cabal.project.local.ci
+    - cabal.project
+    - doc/getting-started/building-the-node-on-windows.md
+- title: Document how to disable ledger peers
+  author: Marcin Szamotulski
+  url: https://github.com/input-output-hk/cardano-node/pull/4209
+  number: 4209
+  mergedAt: "2022-11-08T12:07:07Z"
+  include: undecided
+  files:
+    - doc/getting-started/understanding-config-files.md
+- title: Add documentation for total collateral and return collateral.
+  author: Jordan Millar
+  url: https://github.com/input-output-hk/cardano-node/pull/4183
+  number: 4183
+  mergedAt: "2022-07-18T21:48:24Z"
+  include: undecided
+  files:
+    - cardano-api/src/Cardano/Api/TxBody.hs
+    - doc/reference/plutus/babbage-script-example.md
+    - scripts/babbage/example-babbage-script-usage.sh
+    - scripts/babbage/mkfiles.sh
+- title: Fix unresolved conflicts in traces_doc_generated.md
+  author: John Ky
+  url: https://github.com/input-output-hk/cardano-node/pull/4161
+  number: 4161
+  mergedAt: "2022-07-11T03:33:44Z"
+  include: undecided
+  files:
+    - doc/new-tracing/tracers_doc_generated.md
+- title: CAD-4728  Change the units for the LMDB `mapsize` option to GB and let the parameter be a number
+  author: Joris Dral
+  url: https://github.com/input-output-hk/cardano-node/pull/4155
+  number: 4155
+  mergedAt: "2022-07-11T12:49:03Z"
+  include: undecided
+  files:
+    - README.rst
+    - cardano-node/cardano-node.cabal
+    - cardano-node/src/Cardano/Node/Configuration/LedgerDB.hs
+    - cardano-node/src/Cardano/Node/Configuration/POM.hs
+    - cardano-node/src/Cardano/Node/Parsers.hs
+    - cardano-node/src/Cardano/Node/Run.hs
+    - doc/getting-started/understanding-config-files.md
+- title: Restructure the namespace
+  author: Jürgen Nicklisch
+  url: https://github.com/input-output-hk/cardano-node/pull/4117
+  number: 4117
+  mergedAt: "2022-07-08T13:56:16Z"
+  include: undecided
+  files:
+    - bench/locli/locli.cabal
+    - bench/locli/src/Cardano/Analysis/Run.hs
+    - bench/locli/src/Cardano/Unlog/LogObject.hs
+    - cardano-node/src/Cardano/Node/Tracing/Documentation.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/BlockReplayProgress.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/ChainDB.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Consensus.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Diffusion.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/ForgingThreadStats.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/NodeToClient.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/NodeToNode.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/NonP2P.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/P2P.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Peer.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Shutdown.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers/Startup.hs
+    - doc/new-tracing/tracers_doc_generated.md
+    - nix/workbench/analyse.sh
+    - nix/workbench/profiles/tracing.nix
+    - trace-dispatcher/bench/trace-dispatcher-bench.hs
+    - trace-dispatcher/doc/trace-dispatcher.md
+    - trace-dispatcher/src/Cardano/Logging/DocuGenerator.hs
+    - trace-dispatcher/src/Cardano/Logging/Trace.hs
+    - trace-dispatcher/src/Cardano/Logging/Tracer/Composed.hs
+    - trace-dispatcher/test/Cardano/Logging/Test/Script.hs
+    - trace-resources/src/Cardano/Logging/Resources/Types.hs
+    - trace-resources/test/trace-resources-test.hs
+- title: Document cold.counter breaking changes for babbage
+  author: 'Carlos LopezDeLara '
+  url: https://github.com/input-output-hk/cardano-node/pull/4116
+  number: 4116
+  mergedAt: "2022-07-22T01:11:01Z"
+  include: undecided
+  files:
+    - doc/stake-pool-operations/KES_period.md
+- title: Update getting-started installation dependencies
+  author: James
+  url: https://github.com/input-output-hk/cardano-node/pull/4107
+  number: 4107
+  mergedAt: "2022-06-28T13:09:13Z"
+  include: undecided
+  files:
+    - doc/getting-started/install.md
+- title: 'RTView: MVP'
+  author: Denis Shevchenko
+  url: https://github.com/input-output-hk/cardano-node/pull/4105
+  number: 4105
+  mergedAt: "2022-07-08T22:32:30Z"
+  include: undecided
+  files:
+    - cardano-node/src/Cardano/Node/Run.hs
+    - cardano-node/src/Cardano/Node/Startup.hs
+    - cardano-node/src/Cardano/Node/Tracing.hs
+    - cardano-node/src/Cardano/Node/Tracing/Documentation.hs
+    - cardano-node/src/Cardano/Node/Tracing/Tracers.hs
+    - cardano-node/src/Cardano/Tracing/Tracers.hs
+    - cardano-tracer/configuration/complete-example.json
+    - cardano-tracer/configuration/complete-example.yaml
+    - cardano-tracer/configuration/minimal-example.json
+    - cardano-tracer/configuration/minimal-example.yaml
+    - cardano-tracer/docs/cardano-rtview.md
+    - cardano-tracer/docs/cardano-tracer.md
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/Notifications/Send.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/Notifications/Utils.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/Run.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/State/Displayed.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/UI/CSS/Own.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/UI/HTML/About.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/UI/HTML/Body.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/UI/HTML/Main.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/UI/HTML/NoNodes.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/UI/HTML/Node/Column.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/UI/Img/Icons.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/Update/Chain.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/Update/EraSettings.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/Update/KES.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/Update/Leadership.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/Update/NodeInfo.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/Update/NodeState.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/Update/Nodes.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/Update/Peers.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/Update/Reload.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/Update/Resources.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/Update/Transactions.hs
+    - cardano-tracer/src/Cardano/Tracer/Handlers/RTView/Update/Utils.hs
+    - cardano-tracer/src/Cardano/Tracer/Run.hs
+    - cardano-tracer/test/Cardano/Tracer/Test/Acceptor.hs
+    - doc/new-tracing/tracers_doc_generated.md
+- title: adding a "make check" to the libsodium and secp256k1 install process
+  author: Martin Lang
+  url: https://github.com/input-output-hk/cardano-node/pull/4104
+  number: 4104
+  mergedAt: "2023-02-28T11:11:38Z"
+  include: undecided
+  files:
+    - doc/getting-started/install.md
+- title: CAD-4437 Include UTxO HD installation/usage instructions in READMEs
+  author: Joris Dral
+  url: https://github.com/input-output-hk/cardano-node/pull/4079
+  number: 4079
+  mergedAt: "2022-07-06T15:10:41Z"
+  include: undecided
+  files:
+    - README.rst
+    - cardano-node/src/Cardano/Node/Configuration/LedgerDB.hs
+    - cardano-node/src/Cardano/Node/Configuration/POM.hs
+    - cardano-node/src/Cardano/Node/Parsers.hs
+    - doc/getting-started/building-the-node-on-windows.md
+    - doc/getting-started/install.md
+    - doc/getting-started/understanding-config-files.md
+- title: Reduce memory usage of create staked command
+  author: John Ky
+  url: https://github.com/input-output-hk/cardano-node/pull/4021
+  number: 4021
+  mergedAt: "2022-07-11T03:33:45Z"
+  include: undecided
+  files:
+    - cabal.project
+    - cardano-api/cardano-api.cabal
+    - cardano-api/src/Cardano/Api.hs
+    - cardano-api/src/Cardano/Api/Address.hs
+    - cardano-api/src/Cardano/Api/Eras.hs
+    - cardano-api/src/Cardano/Api/Key.hs
+    - cardano-api/src/Cardano/Api/KeysShelley.hs
+    - cardano-api/src/Cardano/Api/TxBody.hs
+    - cardano-cli/cardano-cli.cabal
+    - cardano-cli/src/Cardano/CLI/IO/Lazy.hs
+    - cardano-cli/src/Cardano/CLI/Shelley/Key.hs
+    - cardano-cli/src/Cardano/CLI/Shelley/Run/Address.hs
+    - cardano-cli/src/Cardano/CLI/Shelley/Run/Genesis.hs
+    - cardano-cli/src/Cardano/CLI/Shelley/Run/StakeAddress.hs
+    - doc/new-tracing/tracers_doc_generated.md
+- title: CAD-3928 minor polish
+  author: ""
+  url: https://github.com/input-output-hk/cardano-node/pull/3701
+  number: 3701
+  mergedAt: "2023-03-11T14:01:57Z"
+  include: undecided
+  files:
+    - doc/reference/cardano-node-cli-reference.md
