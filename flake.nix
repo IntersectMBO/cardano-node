@@ -37,10 +37,6 @@
       url = "github:input-output-hk/flake-compat/fixes";
       flake = false;
     };
-    plutus-apps = {
-      url = "github:input-output-hk/plutus-apps";
-      flake = false;
-    };
     em = {
       url = "github:deepfire/em";
       flake = false;
@@ -83,7 +79,6 @@
     , CHaP
     , iohkNix
     , ops-lib
-    , plutus-apps
     , cardano-mainnet-mirror
     , tullia
     , std
