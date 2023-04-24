@@ -608,7 +608,7 @@ provided by the node is structured using the same namespace as metrics and log m
 But otherwise DataPoints work independent of tracing, but are written in a local store,
 so the latest value of a particular DataPoint can be queried on demand.
 
-Also, [there is a document](https://github.com/input-output-hk/cardano-node/wiki/cardano-node-and-DataPoints:-demo)
+Also, [there is a document](https://github.com/input-output-hk/cardano-node-wiki/wiki/cardano-node-and-DataPoints:-demo)
 describing how to accept DataPoints from an external process.
 
 [`demo-acceptor`](https://github.com/input-output-hk/cardano-node/blob/master/cardano-tracer/demo/acceptor.hs)
@@ -628,7 +628,7 @@ mkDataPointTracer trDataPoint namesFor = do
     pure $ withNamesAppended namesFor tr
 ```
 
-Also, [there is a document](https://github.com/input-output-hk/cardano-node/wiki/cardano-node-and-DataPoints:-demo)
+Also, [there is a document](https://github.com/input-output-hk/cardano-node-wiki/wiki/cardano-node-and-DataPoints:-demo)
 describing how to accept DataPoints from an external process. [`demo-acceptor`](https://github.com/input-output-hk/cardano-node/blob/master/cardano-tracer/demo/acceptor.hs) application allows to ask for particular DataPoint by its name and display its value.
 
 # Integration and implementation in the node
@@ -784,7 +784,7 @@ This document describes a separate service for logging and monitoring Cardano no
 
 This document describes how to accept DataPoints from an external process:
 
-[cardano node and DataPoints: demo](https://github.com/input-output-hk/cardano-node/wiki/cardano-node-and-DataPoints:-demo)
+[cardano node and DataPoints: demo](https://github.com/input-output-hk/cardano-node-wiki/wiki/cardano-node-and-DataPoints:-demo)
 
 
 ## Future work

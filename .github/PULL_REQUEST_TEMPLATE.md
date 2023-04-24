@@ -12,7 +12,7 @@ to the issue.
   - property tests
   - roundtrip tests
   - integration tests
-  See [Runnings tests](https://github.com/input-output-hk/cardano-node/wiki/Running-tests) for more details
+  See [Runnings tests](https://github.com/input-output-hk/cardano-node-wiki/wiki/Running-tests) for more details
 - [ ] Any changes are noted in the `CHANGELOG.md` for affected package
 - [ ] The version bounds in `.cabal` files are updated
 - [ ] Code is linted with `hlint`.  See `.github/workflows/check-hlint.yml` for to get the `hlint` version

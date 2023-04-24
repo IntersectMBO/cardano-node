@@ -456,13 +456,13 @@ Please note that you may need to use any ``source-repository-package`` stanzas d
 Style guide
 ****
 
-The `style guide <https://github.com/input-output-hk/cardano-node/wiki/Style-guide>` for can be found
-on the `cardano-node repository's wiki <https://github.com/input-output-hk/cardano-node/wiki>`.
+The `style guide <https://github.com/input-output-hk/cardano-node-wiki/wiki/Style-guide>` for can be found
+on the `cardano-node repository's wiki <https://github.com/input-output-hk/cardano-node-wiki/wiki>`.
 
 ****
 Troubleshooting ``cardano-node`` issues
 ****
 
 For some troubleshooting help with building or running ``cardano-node``, the wiki has a
-`troubleshooting page <https://github.com/input-output-hk/cardano-node/wiki/Troubleshooting>`_
+`troubleshooting page <https://github.com/input-output-hk/cardano-node-wiki/wiki/Troubleshooting>`_
 that documents some common gotchas.
