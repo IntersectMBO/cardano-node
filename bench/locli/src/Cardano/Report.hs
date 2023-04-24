@@ -1,7 +1,9 @@
-{-# LANGUAGE TypeInType #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeInType #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 module Cardano.Report
   ( module Cardano.Report
   )
@@ -9,11 +11,12 @@ where
 
 import Cardano.Prelude
 
-import Data.ByteString   qualified as BS
-import Data.HashMap.Lazy qualified as HM
-import Data.Map.Strict   qualified as Map
-import Data.Text         qualified as T
-import Data.Text.Lazy    qualified as LT
+import Data.Aeson.Encode.Pretty qualified as AEP
+import Data.ByteString      qualified as BS
+import Data.ByteString.Lazy qualified as LBS
+import Data.Map.Strict      qualified as Map
+import Data.Text            qualified as T
+import Data.Text.Lazy       qualified as LT
 import Data.Time.Clock
 import System.FilePath as FS
 import System.Posix.User
@@ -208,29 +211,25 @@ instance ToJSON TmplSection where
 
 generate :: InputDir -> Maybe TextInputFile
          -> (SomeSummary, ClusterPerf, SomeBlockProp) -> [(SomeSummary, ClusterPerf, SomeBlockProp)]
-         -> IO (ByteString, Text)
+         -> IO (ByteString, ByteString, Text)
 generate (InputDir ede) mReport (SomeSummary summ, cp, SomeBlockProp bp) rest = do
   ctx  <- getReport (last restTmpls & trManifest & mNodeApproxVer) Nothing
   tmplRaw <- BS.readFile (maybe defaultReportPath unTextInputFile mReport)
   tmpl <- parseWith defaultSyntax (includeFile ede) "report" tmplRaw
-  result (error . show) (pure . (tmplRaw,) . LT.toStrict) $ tmpl >>=
+  let tmplEnv           = mkTmplEnv ctx baseTmpl restTmpls
+      tmplEnvSerialised = AEP.encodePretty tmplEnv
+  Text.EDE.result
+    (error . show)
+    (pure . (tmplRaw, LBS.toStrict tmplEnvSerialised,) . LT.toStrict) $ tmpl >>=
     \x ->
-      renderWith fenv x (env ctx baseTmpl restTmpls)
+      renderWith mempty x tmplEnv
  where
-   baseTmpl  =       liftTmplRun        summ
+   defaultReportPath = ede <> "/report.ede"
+
+   baseTmpl  = liftTmplRun summ
    restTmpls = fmap ((\(SomeSummary ss) -> liftTmplRun ss). fst3) rest
 
-   defaultReportPath = ede <> "/report.ede"
-   fenv = HM.fromList
-     []
-   onlyKeys :: [Text] -> Map.Map Text DictEntry -> [DictEntry]
-   onlyKeys ks m =
-     ks <&>
-     \case
-       (Nothing, k) -> error $ "Report.generate:  missing metric: " <> show k
-       (Just x, _) -> x
-     . (flip Map.lookup m &&& identity)
-   env rc b rs = fromPairs
+   mkTmplEnv rc b rs = fromPairs
      [ "report"     .= rc
      , "base"       .= b
      , "runs"       .= rs
@@ -276,3 +275,11 @@ generate (InputDir ede) mReport (SomeSummary summ, cp, SomeBlockProp bp) rest = 
           , "cdf0.96"
           ]))
      ]
+
+   onlyKeys :: [Text] -> Map.Map Text DictEntry -> [DictEntry]
+   onlyKeys ks m =
+     ks <&>
+     \case
+       (Nothing, k) -> error $ "Report.generate:  missing metric: " <> show k
+       (Just x, _) -> x
+     . (flip Map.lookup m &&& identity)
