@@ -1,0 +1,4 @@
+- [Check cabal files in CI](https://github.com/input-output-hk/cardano-node/pull/4766) by John Ky
+- [Date ranges for copyright](https://github.com/input-output-hk/cardano-node/pull/4755) by John Ky
+- [Cleaned cabal files](https://github.com/input-output-hk/cardano-node/pull/4710) by Marcin Szamotulski
+- [Add support for ghc-9.2 and partial support for CHaP](https://github.com/input-output-hk/cardano-node/pull/4701) by Erik de Castro Lopo

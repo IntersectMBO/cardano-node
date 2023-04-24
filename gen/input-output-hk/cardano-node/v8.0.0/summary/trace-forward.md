@@ -1,0 +1,11 @@
+- [Update CHaP to get latest ledger with performance fix](https://github.com/input-output-hk/cardano-node/pull/5157) by Alexey Kuleshevich
+- [Take all dependencies from Hackage or CHaP](https://github.com/input-output-hk/cardano-node/pull/4921) by Erik de Castro Lopo
+- [Fix some markdown links](https://github.com/input-output-hk/cardano-node/pull/4882) by John Ky
+- [Remove reconfigure-hlint.sh script](https://github.com/input-output-hk/cardano-node/pull/4838) by John Ky
+- [Fix hlint warnings](https://github.com/input-output-hk/cardano-node/pull/4837) by John Ky
+- [Check cabal files in CI](https://github.com/input-output-hk/cardano-node/pull/4766) by John Ky
+- [Date ranges for copyright](https://github.com/input-output-hk/cardano-node/pull/4755) by John Ky
+- [Cleaned cabal files](https://github.com/input-output-hk/cardano-node/pull/4710) by Marcin Szamotulski
+- [Add support for ghc-9.2 and partial support for CHaP](https://github.com/input-output-hk/cardano-node/pull/4701) by Erik de Castro Lopo
+- [Update ouroboros-network and cardano-ledger dependencies](https://github.com/input-output-hk/cardano-node/pull/4608) by Joosep Jääger
+- [Fix missing trace-forward messages](https://github.com/input-output-hk/cardano-node/pull/4581) by Jürgen Nicklisch

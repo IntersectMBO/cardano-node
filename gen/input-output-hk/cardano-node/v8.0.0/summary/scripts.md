@@ -1,0 +1,25 @@
+- [Add git hook for code style and linting](https://github.com/input-output-hk/cardano-node/pull/5166) by Mateusz Gałażyn
+- [File type to track the content and direction of files](https://github.com/input-output-hk/cardano-node/pull/5105) by John Ky
+- [Remove unused script](https://github.com/input-output-hk/cardano-node/pull/5081) by John Ky
+- [Integrate latest ledger dependencies](https://github.com/input-output-hk/cardano-node/pull/5013) by Alexey Kuleshevich
+- [In merge summary construct correct pr link](https://github.com/input-output-hk/cardano-node/pull/4991) by John Ky
+- [Script to generate merge summary](https://github.com/input-output-hk/cardano-node/pull/4983) by John Ky
+- [Fix byron-to-alonzo/mkfiles.sh script for conway](https://github.com/input-output-hk/cardano-node/pull/4972) by John Ky
+- [Fix path to mkfiles.sh script in documentation](https://github.com/input-output-hk/cardano-node/pull/4949) by John Ky
+- [scripts:  drop legacy benchmarking scripts](https://github.com/input-output-hk/cardano-node/pull/4934) by Kosyrev Serge
+- [Preserve ScriptData bytes fix](https://github.com/input-output-hk/cardano-node/pull/4926) by Jordan Millar
+- [Take all dependencies from Hackage or CHaP](https://github.com/input-output-hk/cardano-node/pull/4921) by Erik de Castro Lopo
+- [Fix some markdown links](https://github.com/input-output-hk/cardano-node/pull/4882) by John Ky
+- [Remove reconfigure-hlint.sh script](https://github.com/input-output-hk/cardano-node/pull/4838) by John Ky
+- [Check cabal files in CI](https://github.com/input-output-hk/cardano-node/pull/4766) by John Ky
+- [Delete obsolete scripts](https://github.com/input-output-hk/cardano-node/pull/4742) by John Ky
+- [Minimise config](https://github.com/input-output-hk/cardano-node/pull/4351) by Jürgen Nicklisch
+- [Rename TestEnableDevelopmentHardForkEras and TestEnableDevelopmentNetworkProtocols](https://github.com/input-output-hk/cardano-node/pull/4341) by Robert 'Probie' Offner
+- [Deprecate intermediate txbody format](https://github.com/input-output-hk/cardano-node/pull/4303) by Jordan Millar
+- [Add tx-mempool command to CLI](https://github.com/input-output-hk/cardano-node/pull/4276) by Robert 'Probie' Offner
+- [Fix byron-to-alonzo.sh](https://github.com/input-output-hk/cardano-node/pull/4240) by Jordan Millar
+- [Add V2 script context equivalence test shell scripts](https://github.com/input-output-hk/cardano-node/pull/4238) by Jordan Millar
+- [Fix register-and-delegate-script-staking-address.sh](https://github.com/input-output-hk/cardano-node/pull/4206) by Jordan Millar
+- [Update build command to automatically calculate the total and return collateral values](https://github.com/input-output-hk/cardano-node/pull/4198) by Jordan Millar
+- [Add documentation for total collateral and return collateral.](https://github.com/input-output-hk/cardano-node/pull/4183) by Jordan Millar
+- [Disable development eras configuration flag ](https://github.com/input-output-hk/cardano-node/pull/4030) by Jordan Millar

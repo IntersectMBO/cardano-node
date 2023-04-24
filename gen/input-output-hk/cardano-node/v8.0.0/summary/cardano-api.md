@@ -1,0 +1,137 @@
+- [Update CHaP to get latest ledger with performance fix](https://github.com/input-output-hk/cardano-node/pull/5157) by Alexey Kuleshevich
+- [SPO on-chain poll commands adjustments](https://github.com/input-output-hk/cardano-node/pull/5132) by Matthias Benkort
+- [UTC Time to slots conversion function](https://github.com/input-output-hk/cardano-node/pull/5130) by Mateusz Gałażyn
+- [Master build failure fixes](https://github.com/input-output-hk/cardano-node/pull/5115) by Jordan Millar
+- [Add new interim governance commands: {create, answer, verify}-poll](https://github.com/input-output-hk/cardano-node/pull/5112) by Jordan Millar
+- [CIP-1694 make space for DRep certificates](https://github.com/input-output-hk/cardano-node/pull/5108) by John Ky
+- [File type to track the content and direction of files](https://github.com/input-output-hk/cardano-node/pull/5105) by John Ky
+- [Fix import warning](https://github.com/input-output-hk/cardano-node/pull/5087) by John Ky
+- [Expose UsingRawBytes et al types](https://github.com/input-output-hk/cardano-node/pull/5086) by Sebastian Nagel
+- [Expose SerialiseAsRawBytesError in Cardano.Api](https://github.com/input-output-hk/cardano-node/pull/5085) by Sebastian Nagel
+- [Delete duplicate packages sort packages and imports](https://github.com/input-output-hk/cardano-node/pull/5084) by John Ky
+- [Ergonomic directory creation code in tests](https://github.com/input-output-hk/cardano-node/pull/5083) by John Ky
+- [Introduce new AnyShelleyBasedEra type and simplify CDDL tests.](https://github.com/input-output-hk/cardano-node/pull/5072) by John Ky
+- [New genCardanoKeyWitness function](https://github.com/input-output-hk/cardano-node/pull/5071) by John Ky
+- [Replace roundtripCBOR with trippingCbor](https://github.com/input-output-hk/cardano-node/pull/5069) by John Ky
+- [Remove non-round-trippable value TxInsReferenceNone for babbage onwards in generator](https://github.com/input-output-hk/cardano-node/pull/5064) by John Ky
+- [Improve roundtrip functions to report annotations on callsite](https://github.com/input-output-hk/cardano-node/pull/5063) by John Ky
+- [Define Functor instance for FileError](https://github.com/input-output-hk/cardano-node/pull/5057) by John Ky
+- [Split serialisation from IO](https://github.com/input-output-hk/cardano-node/pull/5049) by John Ky
+- [Remove use of AcquireFailure type](https://github.com/input-output-hk/cardano-node/pull/5040) by John Ky
+- [Simplify implementation of executeQueryAnyMode](https://github.com/input-output-hk/cardano-node/pull/5038) by John Ky
+- [Use ouroboros-network-0.3.0.2 and ouroboros-network-framework-0.2.0.1](https://github.com/input-output-hk/cardano-node/pull/5018) by Marcin Szamotulski
+- [Integrate latest ledger dependencies](https://github.com/input-output-hk/cardano-node/pull/5013) by Alexey Kuleshevich
+- [Bump CHaP and remove most constraints from the cabal file](https://github.com/input-output-hk/cardano-node/pull/5012) by Michael Peyton Jones
+- [Add missing imports](https://github.com/input-output-hk/cardano-node/pull/5003) by John Ky
+- [Script data serialisation](https://github.com/input-output-hk/cardano-node/pull/5002) by John Ky
+- [Add LedgerStateBabbage and LedgerStateConway pattern synonyms](https://github.com/input-output-hk/cardano-node/pull/5001) by John Ky
+- [Conway hard forks on prot-ver 9](https://github.com/input-output-hk/cardano-node/pull/4988) by John Ky
+- [Remove unnecessary functions](https://github.com/input-output-hk/cardano-node/pull/4967) by Jordan Millar
+- [Guard against overflows in Shelley TxIns](https://github.com/input-output-hk/cardano-node/pull/4956) by John Ky
+- [Remove duplicate scripts when building transaction body for Mary, Alonzo and Babbage](https://github.com/input-output-hk/cardano-node/pull/4953) by John Ky
+- [Add event.type to concurrency group](https://github.com/input-output-hk/cardano-node/pull/4947) by John Ky
+- [Combinators for TxBodyContent and related types](https://github.com/input-output-hk/cardano-node/pull/4941) by John Ky
+- [Preserve ScriptData bytes fix](https://github.com/input-output-hk/cardano-node/pull/4926) by Jordan Millar
+- [Take all dependencies from Hackage or CHaP](https://github.com/input-output-hk/cardano-node/pull/4921) by Erik de Castro Lopo
+- [Check CLI argument bounds](https://github.com/input-output-hk/cardano-node/pull/4919) by John Ky
+- [Fix key non extended key for StakeExtendedVerificationKeyShelley_ed25519_bip32 envelope](https://github.com/input-output-hk/cardano-node/pull/4918) by John Ky
+- [Reduce number of calls to toLedgerPParams](https://github.com/input-output-hk/cardano-node/pull/4903) by John Ky
+- [Re-add support for decoding GenesisExtendedKey text envelope](https://github.com/input-output-hk/cardano-node/pull/4894) by John Ky
+- [Remove use of multiline literals](https://github.com/input-output-hk/cardano-node/pull/4889) by John Ky
+- [Preserve `ScriptData` bytes with `HashableScriptData`](https://github.com/input-output-hk/cardano-node/pull/4886) by Jordan Millar
+- [Disallow empty cost model for create update proposal](https://github.com/input-output-hk/cardano-node/pull/4885) by John Ky
+- [Update changelog with PR4788 changes](https://github.com/input-output-hk/cardano-node/pull/4881) by John Ky
+- [Detect invalid counter and certificate](https://github.com/input-output-hk/cardano-node/pull/4880) by John Ky
+- [Simplify SerialiseAsRawBytes type class](https://github.com/input-output-hk/cardano-node/pull/4876) by John Ky
+- [Modify constructBalancedTx to take LedgerEpochInfo](https://github.com/input-output-hk/cardano-node/pull/4858) by Jordan Millar
+- [Remove NoImplicitPrelude](https://github.com/input-output-hk/cardano-node/pull/4857) by John Ky
+- [Node 1.35.5](https://github.com/input-output-hk/cardano-node/pull/4851) by Samuel Leathers
+- [Fix Data.Aeson.Types import](https://github.com/input-output-hk/cardano-node/pull/4841) by Erik de Castro Lopo
+- [Remove reconfigure-hlint.sh script](https://github.com/input-output-hk/cardano-node/pull/4838) by John Ky
+- [Implement ADR-2: Restructure modules for generators](https://github.com/input-output-hk/cardano-node/pull/4833) by John Ky
+- [Remove NoImplicitPrelude from cardano-api](https://github.com/input-output-hk/cardano-node/pull/4832) by John Ky
+- [Add ReaderT of NodeToClientVersion to LocalStateQueryExpr](https://github.com/input-output-hk/cardano-node/pull/4809) by John Ky
+- [Use hoistMaybe](https://github.com/input-output-hk/cardano-node/pull/4808) by John Ky
+- [Better error message for query utxo without oops](https://github.com/input-output-hk/cardano-node/pull/4788) by John Ky
+- [New NodeToClientVersionOf typeclass](https://github.com/input-output-hk/cardano-node/pull/4787) by John Ky
+- [Straight line error handling](https://github.com/input-output-hk/cardano-node/pull/4785) by John Ky
+- [Implement signArbitraryBytesKes for use in Mithril](https://github.com/input-output-hk/cardano-node/pull/4779) by Jordan Millar
+- [Check cabal files in CI](https://github.com/input-output-hk/cardano-node/pull/4766) by John Ky
+- [Remove simple script distinction](https://github.com/input-output-hk/cardano-node/pull/4763) by Jordan Millar
+- [Date ranges for copyright](https://github.com/input-output-hk/cardano-node/pull/4755) by John Ky
+- [Optimise query stake-snapshot command](https://github.com/input-output-hk/cardano-node/pull/4754) by John Ky
+- [Export SubmitResult from Cardano.Api](https://github.com/input-output-hk/cardano-node/pull/4753) by Marc Fontaine
+- [Cleaned cabal files](https://github.com/input-output-hk/cardano-node/pull/4710) by Marcin Szamotulski
+- [Add support for ghc-9.2 and partial support for CHaP](https://github.com/input-output-hk/cardano-node/pull/4701) by Erik de Castro Lopo
+- [Move signing key reading to cardano-api](https://github.com/input-output-hk/cardano-node/pull/4698) by Jordan Millar
+- [Append tx output in cli transaction build command](https://github.com/input-output-hk/cardano-node/pull/4696) by Jordan Millar
+- [[cardano-api] Add ToJSON/FromJSON instances for ChainPoint](https://github.com/input-output-hk/cardano-node/pull/4686) by Sebastian Nagel
+- [[cardano-api] Add an Ord ChainPoint instance](https://github.com/input-output-hk/cardano-node/pull/4685) by Sebastian Nagel
+- [[cardano-api] Derive Eq instance for AcquiringFailure](https://github.com/input-output-hk/cardano-node/pull/4683) by Sebastian Nagel
+- [Export `fromShelleyBasedScript` from Cardano.Api](https://github.com/input-output-hk/cardano-node/pull/4682) by Markus Läll
+- [Replace Data.Map with Data.Map.Strict](https://github.com/input-output-hk/cardano-node/pull/4675) by Jordan Millar
+- [Implement Cardano.Api.DeserialiseAnyOf](https://github.com/input-output-hk/cardano-node/pull/4639) by Jordan Millar
+- [Expose TextEnvelopeCddl from Cardano.Api](https://github.com/input-output-hk/cardano-node/pull/4635) by Jordan Millar
+- [Expose txScriptValidityToScriptValidity in Cardano.Api](https://github.com/input-output-hk/cardano-node/pull/4628) by Jordan Millar
+- [Improved error message for failed asset name decode](https://github.com/input-output-hk/cardano-node/pull/4626) by John Ky
+- [Handle pipes](https://github.com/input-output-hk/cardano-node/pull/4625) by Robert 'Probie' Offner
+- [Cardano Node 1.35.6 aka Single Relay P2P release](https://github.com/input-output-hk/cardano-node/pull/4612) by Marcin Szamotulski
+- [Update ouroboros-network and cardano-ledger dependencies](https://github.com/input-output-hk/cardano-node/pull/4608) by Joosep Jääger
+- [export RawBytesHexError](https://github.com/input-output-hk/cardano-node/pull/4599) by Marc Fontaine
+- [cardano-api module reshuffle](https://github.com/input-output-hk/cardano-node/pull/4593) by Jordan Millar
+- [Add Ord instance for AddressInEra](https://github.com/input-output-hk/cardano-node/pull/4587) by Jordan Millar
+- [Add ToJSON and FromJSON instances for Address](https://github.com/input-output-hk/cardano-node/pull/4568) by Marc Fontaine
+- [Export TxIns type alias](https://github.com/input-output-hk/cardano-node/pull/4565) by Marc Fontaine
+- [export IsPlutusScriptLanguage](https://github.com/input-output-hk/cardano-node/pull/4554) by Marc Fontaine
+- [Reduce exposed modules in cardano-api](https://github.com/input-output-hk/cardano-node/pull/4546) by Jordan Millar
+- [cardano-api: Export more generators](https://github.com/input-output-hk/cardano-node/pull/4534) by Marc Fontaine
+- [Condense Read and Validation modules in cardano-cli](https://github.com/input-output-hk/cardano-node/pull/4516) by Jordan Millar
+- [Release 1.35.4](https://github.com/input-output-hk/cardano-node/pull/4508) by Jordan Millar
+- [GHC 9.2.4 preparations](https://github.com/input-output-hk/cardano-node/pull/4504) by John Ky
+- [Fix 4493 bug - TxWitness text envelope format does not roundtrip in Shelley era](https://github.com/input-output-hk/cardano-node/pull/4501) by Jordan Millar
+- [Export TxTotalAndReturnCollateralSupportedInEra from Cardano.Api](https://github.com/input-output-hk/cardano-node/pull/4496) by Sjoerd Visscher
+- [Separate IO from txBuild and txBuildRaw functions](https://github.com/input-output-hk/cardano-node/pull/4491) by Jordan Millar
+- [Update error message for incorrectly witnessed collateral inputs](https://github.com/input-output-hk/cardano-node/pull/4484) by Jordan Millar
+- [Return `Lovelace` for `calculateMinimumUTxO`](https://github.com/input-output-hk/cardano-node/pull/4482) by Robert 'Probie' Offner
+- [Separate validation and creation of transaction bodies](https://github.com/input-output-hk/cardano-node/pull/4468) by Jordan Millar
+- [Added changelogs for releases between 1.34.0 and 1.35.3](https://github.com/input-output-hk/cardano-node/pull/4466) by 
+- [Auto-balance multiasset transactions](https://github.com/input-output-hk/cardano-node/pull/4450) by Robert 'Probie' Offner
+- [Refactor transaction build command](https://github.com/input-output-hk/cardano-node/pull/4446) by Jordan Millar
+- [Updating cabal version on master to 1.36.0](https://github.com/input-output-hk/cardano-node/pull/4391) by 
+- [Allow reading/writing text envelopes from pipes](https://github.com/input-output-hk/cardano-node/pull/4384) by Robert 'Probie' Offner
+- [Remove unnecessary validation of Data](https://github.com/input-output-hk/cardano-node/pull/4344) by Michael Peyton Jones
+- [Append change instead of prepending it](https://github.com/input-output-hk/cardano-node/pull/4343) by Robert 'Probie' Offner
+- [Rename TestEnableDevelopmentHardForkEras and TestEnableDevelopmentNetworkProtocols](https://github.com/input-output-hk/cardano-node/pull/4341) by Robert 'Probie' Offner
+- [Deprecate intermediate txbody format](https://github.com/input-output-hk/cardano-node/pull/4303) by Jordan Millar
+- [Multiple pools support in query stake snapshot ](https://github.com/input-output-hk/cardano-node/pull/4279) by John Ky
+- [Add tx-mempool command to CLI](https://github.com/input-output-hk/cardano-node/pull/4276) by Robert 'Probie' Offner
+- [Update changelogs with 1.35.3](https://github.com/input-output-hk/cardano-node/pull/4269) by 
+- [Optimise query leadership schedule command](https://github.com/input-output-hk/cardano-node/pull/4250) by John Ky
+- [Added FromJSON instance for 'EraInMode BabbageEra CardanoMode'](https://github.com/input-output-hk/cardano-node/pull/4249) by 
+- [update ledger to the tip of release/1.0.0](https://github.com/input-output-hk/cardano-node/pull/4242) by Jared Corduan
+- [Add V2 script context equivalence test shell scripts](https://github.com/input-output-hk/cardano-node/pull/4238) by Jordan Millar
+- [Update create-staked with the ability to specify relays for all created stake pools](https://github.com/input-output-hk/cardano-node/pull/4234) by Jordan Millar
+- [Script ToJSON instances serialises the full script](https://github.com/input-output-hk/cardano-node/pull/4223) by Sebastian Nagel
+- [Release 1.35.2](https://github.com/input-output-hk/cardano-node/pull/4220) by Jordan Millar
+- [More memory efficient query ledger-state command](https://github.com/input-output-hk/cardano-node/pull/4205) by John Ky
+- [Expose AcquireFailure and SystemStart from Cardano.Api.Shelley](https://github.com/input-output-hk/cardano-node/pull/4199) by Jordan Millar
+- [Update build command to automatically calculate the total and return collateral values](https://github.com/input-output-hk/cardano-node/pull/4198) by Jordan Millar
+- [Add documentation for total collateral and return collateral.](https://github.com/input-output-hk/cardano-node/pull/4183) by Jordan Millar
+- [Optimise query stake snapshot command](https://github.com/input-output-hk/cardano-node/pull/4179) by John Ky
+- [New query pool-state command](https://github.com/input-output-hk/cardano-node/pull/4170) by John Ky
+- [Fix building of Alonzo transaction in Babbage era.](https://github.com/input-output-hk/cardano-node/pull/4166) by John Ky
+- [Added changelogs and updated cabal files for 1.35.1](https://github.com/input-output-hk/cardano-node/pull/4153) by 
+- [Add utxoCostPerByte protocol parameter](https://github.com/input-output-hk/cardano-node/pull/4141) by John Ky
+- [Adding changelogs for 1.35.0](https://github.com/input-output-hk/cardano-node/pull/4136) by 
+- [Transaction build in any alonzo era when on babbage testnet](https://github.com/input-output-hk/cardano-node/pull/4135) by John Ky
+- [Update cardano-ledger and ouroboros-network dependencies](https://github.com/input-output-hk/cardano-node/pull/4118) by John Ky
+- [Fix leadership schedule for current on babbage](https://github.com/input-output-hk/cardano-node/pull/4106) by John Ky
+- [Expose Key interface in Cardano.Api.Shelley](https://github.com/input-output-hk/cardano-node/pull/4048) by Sebastian Nagel
+- [Disable development eras configuration flag ](https://github.com/input-output-hk/cardano-node/pull/4030) by Jordan Millar
+- [Reduce memory usage of create staked command](https://github.com/input-output-hk/cardano-node/pull/4021) by John Ky
+- [PLT-106: Add encoder and decoder for `LedgerState`](https://github.com/input-output-hk/cardano-node/pull/3993) by Ziyang Liu
+- [Add script evaluation events to LedgerEvent](https://github.com/input-output-hk/cardano-node/pull/3984) by Ziyang Liu
+- [Fix error messages in Cardano.Api.ProtocolParameters](https://github.com/input-output-hk/cardano-node/pull/3894) by Jordan Millar
+- [Update index state to 2022-07-01T00:00:00Z](https://github.com/input-output-hk/cardano-node/pull/3862) by John Ky
+- [Remove hint of "string" support for ScriptData](https://github.com/input-output-hk/cardano-node/pull/3775) by James
+- [Add 'IsScriptWitnessInCtx'](https://github.com/input-output-hk/cardano-node/pull/3441) by Matthias Benkort

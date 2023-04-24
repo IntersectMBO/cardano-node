@@ -1,0 +1,6 @@
+- [workbench:  updates](https://github.com/input-output-hk/cardano-node/pull/5065) by Kosyrev Serge
+- [Fix byron-to-alonzo/mkfiles.sh script for conway](https://github.com/input-output-hk/cardano-node/pull/4972) by John Ky
+- [Take all dependencies from Hackage or CHaP](https://github.com/input-output-hk/cardano-node/pull/4921) by Erik de Castro Lopo
+- [Update docs](https://github.com/input-output-hk/cardano-node/pull/4382) by Carlos LopezDeLara 
+- [Minimise config](https://github.com/input-output-hk/cardano-node/pull/4351) by Jürgen Nicklisch
+- [Rename TestEnableDevelopmentHardForkEras and TestEnableDevelopmentNetworkProtocols](https://github.com/input-output-hk/cardano-node/pull/4341) by Robert 'Probie' Offner

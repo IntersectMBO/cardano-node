@@ -1,0 +1,51 @@
+- [Additional check for not-leader slots in LeadershipSchedule tests](https://github.com/input-output-hk/cardano-node/pull/5110) by Mateusz Gałażyn
+- [Fix epochLength and securityParam to conform to the formula 10 * k / f](https://github.com/input-output-hk/cardano-node/pull/5099) by John Ky
+- [Ergonomic directory creation code in tests](https://github.com/input-output-hk/cardano-node/pull/5083) by John Ky
+- [Default Cardano.Testnet to NodeLoggingFormatAsJson](https://github.com/input-output-hk/cardano-node/pull/5036) by Marc Fontaine
+- [Use ouroboros-network-0.3.0.2 and ouroboros-network-framework-0.2.0.1](https://github.com/input-output-hk/cardano-node/pull/5018) by Marcin Szamotulski
+- [Integrate latest ledger dependencies](https://github.com/input-output-hk/cardano-node/pull/5013) by Alexey Kuleshevich
+- [Use Haskell variables for passing values.](https://github.com/input-output-hk/cardano-node/pull/5011) by Marc Fontaine
+- [New mkExecConfig function](https://github.com/input-output-hk/cardano-node/pull/4986) by John Ky
+- [Add event.type to concurrency group](https://github.com/input-output-hk/cardano-node/pull/4947) by John Ky
+- [Take all dependencies from Hackage or CHaP](https://github.com/input-output-hk/cardano-node/pull/4921) by Erik de Castro Lopo
+- [Remove use of multiline literals](https://github.com/input-output-hk/cardano-node/pull/4889) by John Ky
+- [Detect invalid counter and certificate](https://github.com/input-output-hk/cardano-node/pull/4880) by John Ky
+- [Re-enable kes-period-info test.](https://github.com/input-output-hk/cardano-node/pull/4879) by John Ky
+- [Node 1.35.5](https://github.com/input-output-hk/cardano-node/pull/4851) by Samuel Leathers
+- [Refactor `genesis create` command usage in  cardano testnet](https://github.com/input-output-hk/cardano-node/pull/4831) by Jordan Millar
+- [Small Byron genesis refactor in cardano-testnet](https://github.com/input-output-hk/cardano-node/pull/4818) by Jordan Millar
+- [Add `cardanoMaxSupply :: Word64` field to CardanoTestnetOptions](https://github.com/input-output-hk/cardano-node/pull/4817) by Jordan Millar
+- [Consolidate two fields of CardanoTestnetOptions](https://github.com/input-output-hk/cardano-node/pull/4806) by Jordan Millar
+- [New query stake-snapshot integration test](https://github.com/input-output-hk/cardano-node/pull/4805) by John Ky
+- [Nix fixes - 1.35](https://github.com/input-output-hk/cardano-node/pull/4778) by Jean-Baptiste G.
+- [backport to 1.35: add flake outputs that cicero expects](https://github.com/input-output-hk/cardano-node/pull/4769) by Robin Stumm
+- [Check cabal files in CI](https://github.com/input-output-hk/cardano-node/pull/4766) by John Ky
+- [Date ranges for copyright](https://github.com/input-output-hk/cardano-node/pull/4755) by John Ky
+- [fix cardano-testnet Babbage genesis.json](https://github.com/input-output-hk/cardano-node/pull/4729) by James
+- [Update index state and hedgehog-extras.](https://github.com/input-output-hk/cardano-node/pull/4714) by John Ky
+- [Cleaned cabal files](https://github.com/input-output-hk/cardano-node/pull/4710) by Marcin Szamotulski
+- [Add support for ghc-9.2 and partial support for CHaP](https://github.com/input-output-hk/cardano-node/pull/4701) by Erik de Castro Lopo
+- [Add fix and test for `foldBlocks`](https://github.com/input-output-hk/cardano-node/pull/4679) by Markus Läll
+- [Replace Data.Map with Data.Map.Strict](https://github.com/input-output-hk/cardano-node/pull/4675) by Jordan Millar
+- [Make leadership-schedule test less flaky](https://github.com/input-output-hk/cardano-node/pull/4671) by John Ky
+- [Export cardano-testnet API from Cardano.Testnet](https://github.com/input-output-hk/cardano-node/pull/4636) by Marc Fontaine
+- [Handle pipes](https://github.com/input-output-hk/cardano-node/pull/4625) by Robert 'Probie' Offner
+- [Restore --cddl-format](https://github.com/input-output-hk/cardano-node/pull/4617) by John Ky
+- [Cardano Node 1.35.6 aka Single Relay P2P release](https://github.com/input-output-hk/cardano-node/pull/4612) by Marcin Szamotulski
+- [Disable Alonzo leadership schedule test](https://github.com/input-output-hk/cardano-node/pull/4605) by Jordan Millar
+- [Reorder module hierarchy](https://github.com/input-output-hk/cardano-node/pull/4595) by Marc Fontaine
+- [Remove testnet subdir](https://github.com/input-output-hk/cardano-node/pull/4580) by Marc Fontaine
+- [Improve test output](https://github.com/input-output-hk/cardano-node/pull/4575) by John Ky
+- [cardano-testnet: add single entrypoint for starting testnets](https://github.com/input-output-hk/cardano-node/pull/4544) by Marc Fontaine
+- [GHC 9.2.4 preparations](https://github.com/input-output-hk/cardano-node/pull/4504) by John Ky
+- [Updating cabal version on master to 1.36.0](https://github.com/input-output-hk/cardano-node/pull/4391) by 
+- [Rename TestEnableDevelopmentHardForkEras and TestEnableDevelopmentNetworkProtocols](https://github.com/input-output-hk/cardano-node/pull/4341) by Robert 'Probie' Offner
+- [update ledger to the tip of release/1.0.0](https://github.com/input-output-hk/cardano-node/pull/4242) by Jared Corduan
+- [Release 1.35.2](https://github.com/input-output-hk/cardano-node/pull/4220) by Jordan Millar
+- [Improve json fail message for TraceNodeIsLeader](https://github.com/input-output-hk/cardano-node/pull/4216) by Javier Sagredo
+- [Use patched aeson from hackage](https://github.com/input-output-hk/cardano-node/pull/4200) by John Ky
+- [Fix `TraceNodeIsLeader` JSON parser](https://github.com/input-output-hk/cardano-node/pull/4187) by Javier Sagredo
+- [Added changelogs and updated cabal files for 1.35.1](https://github.com/input-output-hk/cardano-node/pull/4153) by 
+- [[CAD-4406] UTxO-HD: Make CI pass again](https://github.com/input-output-hk/cardano-node/pull/4150) by Javier Sagredo
+- [Fix leadership schedule for current on babbage](https://github.com/input-output-hk/cardano-node/pull/4106) by John Ky
+- [Update index state to 2022-07-01T00:00:00Z](https://github.com/input-output-hk/cardano-node/pull/3862) by John Ky

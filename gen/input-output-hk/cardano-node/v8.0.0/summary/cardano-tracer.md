@@ -1,0 +1,39 @@
+- [workbench:  updates](https://github.com/input-output-hk/cardano-node/pull/5134) by Kosyrev Serge
+- [File type to track the content and direction of files](https://github.com/input-output-hk/cardano-node/pull/5105) by John Ky
+- [Bump CHaP and remove most constraints from the cabal file](https://github.com/input-output-hk/cardano-node/pull/5012) by Michael Peyton Jones
+- [Backward compatibility for Prometheus metrics names](https://github.com/input-output-hk/cardano-node/pull/4955) by Jürgen Nicklisch
+- [Take all dependencies from Hackage or CHaP](https://github.com/input-output-hk/cardano-node/pull/4921) by Erik de Castro Lopo
+- [Added features to tracing](https://github.com/input-output-hk/cardano-node/pull/4908) by Jürgen Nicklisch
+- [Fix some markdown links](https://github.com/input-output-hk/cardano-node/pull/4882) by John Ky
+- [Node 1.35.5](https://github.com/input-output-hk/cardano-node/pull/4851) by Samuel Leathers
+- [Remove reconfigure-hlint.sh script](https://github.com/input-output-hk/cardano-node/pull/4838) by John Ky
+- [Fix hlint warnings](https://github.com/input-output-hk/cardano-node/pull/4837) by John Ky
+- [Optimized trace-dispatcher and tracing system](https://github.com/input-output-hk/cardano-node/pull/4811) by Jürgen Nicklisch
+- [Check cabal files in CI](https://github.com/input-output-hk/cardano-node/pull/4766) by John Ky
+- [Date ranges for copyright](https://github.com/input-output-hk/cardano-node/pull/4755) by John Ky
+- [hlint: fix failures](https://github.com/input-output-hk/cardano-node/pull/4733) by Samuel Leathers
+- [Cleaned cabal files](https://github.com/input-output-hk/cardano-node/pull/4710) by Marcin Szamotulski
+- [Add support for ghc-9.2 and partial support for CHaP](https://github.com/input-output-hk/cardano-node/pull/4701) by Erik de Castro Lopo
+- [Replace Data.Map with Data.Map.Strict](https://github.com/input-output-hk/cardano-node/pull/4675) by Jordan Millar
+- [Cardano Node 1.35.6 aka Single Relay P2P release](https://github.com/input-output-hk/cardano-node/pull/4612) by Marcin Szamotulski
+- [Update ouroboros-network and cardano-ledger dependencies](https://github.com/input-output-hk/cardano-node/pull/4608) by Joosep Jääger
+- [workbench & analysis: assorted fixes](https://github.com/input-output-hk/cardano-node/pull/4582) by Kosyrev Serge
+- [Fix missing trace-forward messages](https://github.com/input-output-hk/cardano-node/pull/4581) by Jürgen Nicklisch
+- [cardano-tracer: RTView logs live view](https://github.com/input-output-hk/cardano-node/pull/4531) by Denis Shevchenko
+- [cardano-tracer: optional state dir for RTView](https://github.com/input-output-hk/cardano-node/pull/4524) by Denis Shevchenko
+- [GHC 9.2.4 preparations](https://github.com/input-output-hk/cardano-node/pull/4504) by John Ky
+- [RTView: fix nodes columns markup](https://github.com/input-output-hk/cardano-node/pull/4420) by Denis Shevchenko
+- [Minimise config](https://github.com/input-output-hk/cardano-node/pull/4351) by Jürgen Nicklisch
+- [RTView: node type.](https://github.com/input-output-hk/cardano-node/pull/4323) by Denis Shevchenko
+- [RTView: extended epoch info.](https://github.com/input-output-hk/cardano-node/pull/4293) by Denis Shevchenko
+- [cardano-tracer: more strictness.](https://github.com/input-output-hk/cardano-node/pull/4283) by Denis Shevchenko
+- [RTView: improve UI.](https://github.com/input-output-hk/cardano-node/pull/4278) by Denis Shevchenko
+- [RTView: important fixes](https://github.com/input-output-hk/cardano-node/pull/4259) by Denis Shevchenko
+- [cardano-tracer: refactoring](https://github.com/input-output-hk/cardano-node/pull/4233) by Denis Shevchenko
+- [RTView: fix logs buttons.](https://github.com/input-output-hk/cardano-node/pull/4210) by Denis Shevchenko
+- [cardano-tracer: improve documentation](https://github.com/input-output-hk/cardano-node/pull/4207) by Denis Shevchenko
+- [RTView: history backup, MVP](https://github.com/input-output-hk/cardano-node/pull/4192) by Denis Shevchenko
+- [RTView: a link from tracer's README, quick start](https://github.com/input-output-hk/cardano-node/pull/4175) by Denis Shevchenko
+- [RTView: fix end date of epoch.](https://github.com/input-output-hk/cardano-node/pull/4159) by Denis Shevchenko
+- [RTView: fix Mem metric name.](https://github.com/input-output-hk/cardano-node/pull/4158) by Denis Shevchenko
+- [RTView: MVP](https://github.com/input-output-hk/cardano-node/pull/4105) by Denis Shevchenko

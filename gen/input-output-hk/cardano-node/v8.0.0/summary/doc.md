@@ -1,0 +1,46 @@
+- [Update 7_KES_period.md](https://github.com/input-output-hk/cardano-node/pull/5131) by Carlos LopezDeLara 
+- [Small build docs improvements](https://github.com/input-output-hk/cardano-node/pull/5051) by Mateusz Gałażyn
+- [Update cardano-governance.md](https://github.com/input-output-hk/cardano-node/pull/5045) by NetWalker108
+- [stakeKey registration stake.skey witness not needed](https://github.com/input-output-hk/cardano-node/pull/4975) by John Ky
+- [Document how to convert between hex and bech32](https://github.com/input-output-hk/cardano-node/pull/4974) by John Ky
+- [Fix typos](https://github.com/input-output-hk/cardano-node/pull/4964) by John Ky
+- [Update getting started to include MacOS](https://github.com/input-output-hk/cardano-node/pull/4952) by Vincent Orr
+- [Add event.type to concurrency group](https://github.com/input-output-hk/cardano-node/pull/4947) by John Ky
+- [Update docs for simple transaction](https://github.com/input-output-hk/cardano-node/pull/4916) by John Ky
+- [Added features to tracing](https://github.com/input-output-hk/cardano-node/pull/4908) by Jürgen Nicklisch
+- [Fix some markdown links](https://github.com/input-output-hk/cardano-node/pull/4882) by John Ky
+- [Clarify the valency setting's description](https://github.com/input-output-hk/cardano-node/pull/4849) by James Kelley
+- [Optimized trace-dispatcher and tracing system](https://github.com/input-output-hk/cardano-node/pull/4811) by Jürgen Nicklisch
+- [Bump future from 0.18.2 to 0.18.3 in /doc/.sphinx](https://github.com/input-output-hk/cardano-node/pull/4797) by null
+- [Update install.md](https://github.com/input-output-hk/cardano-node/pull/4786) by Carlos LopezDeLara 
+- [small amendment in stake snapshot docs](https://github.com/input-output-hk/cardano-node/pull/4783) by Carlos LopezDeLara 
+- [Update cardano-governance.md](https://github.com/input-output-hk/cardano-node/pull/4768) by Carlos LopezDeLara 
+- [Docs for create-cardano](https://github.com/input-output-hk/cardano-node/pull/4767) by Carlos LopezDeLara 
+- [Cardano governance documentation](https://github.com/input-output-hk/cardano-node/pull/4719) by Carlos LopezDeLara 
+- [Remove cardano-cli address build-script](https://github.com/input-output-hk/cardano-node/pull/4700) by Jordan Millar
+- [build(deps): bump certifi from 2020.4.5.2 to 2022.12.7 in /doc/.sphinx](https://github.com/input-output-hk/cardano-node/pull/4699) by null
+- [Use JSON instances for NodeToNodeVersion & NodeToClientVersion](https://github.com/input-output-hk/cardano-node/pull/4691) by Marcin Szamotulski
+- [Update building-the-node-using-nix.md](https://github.com/input-output-hk/cardano-node/pull/4613) by Carlos LopezDeLara 
+- [Cardano Node 1.35.6 aka Single Relay P2P release](https://github.com/input-output-hk/cardano-node/pull/4612) by Marcin Szamotulski
+- [Fix missing trace-forward messages](https://github.com/input-output-hk/cardano-node/pull/4581) by Jürgen Nicklisch
+- [Community contributions 2022-10-27](https://github.com/input-output-hk/cardano-node/pull/4567) by Jordan Millar
+- [New p2p topology file format](https://github.com/input-output-hk/cardano-node/pull/4563) by Marcin Szamotulski
+- [Add a native tokens tutorial and exercises to a newly created MA folder](https://github.com/input-output-hk/cardano-node/pull/4562) by 
+- [link to explorer.cardano.org/relays/topology.json](https://github.com/input-output-hk/cardano-node/pull/4545) by Carlos LopezDeLara 
+- [Update docs](https://github.com/input-output-hk/cardano-node/pull/4382) by Carlos LopezDeLara 
+- [Minimise config](https://github.com/input-output-hk/cardano-node/pull/4351) by Jürgen Nicklisch
+- [Multiple pools support in query stake snapshot ](https://github.com/input-output-hk/cardano-node/pull/4279) by John Ky
+- [Add tx-mempool command to CLI](https://github.com/input-output-hk/cardano-node/pull/4276) by Robert 'Probie' Offner
+- [Use pkg-config for LMDB](https://github.com/input-output-hk/cardano-node/pull/4217) by Javier Sagredo
+- [Document how to disable ledger peers](https://github.com/input-output-hk/cardano-node/pull/4209) by Marcin Szamotulski
+- [Add documentation for total collateral and return collateral.](https://github.com/input-output-hk/cardano-node/pull/4183) by Jordan Millar
+- [Fix unresolved conflicts in traces_doc_generated.md](https://github.com/input-output-hk/cardano-node/pull/4161) by John Ky
+- [CAD-4728  Change the units for the LMDB `mapsize` option to GB and let the parameter be a number](https://github.com/input-output-hk/cardano-node/pull/4155) by Joris Dral
+- [Restructure the namespace](https://github.com/input-output-hk/cardano-node/pull/4117) by Jürgen Nicklisch
+- [Document cold.counter breaking changes for babbage](https://github.com/input-output-hk/cardano-node/pull/4116) by Carlos LopezDeLara 
+- [Update getting-started installation dependencies](https://github.com/input-output-hk/cardano-node/pull/4107) by James
+- [RTView: MVP](https://github.com/input-output-hk/cardano-node/pull/4105) by Denis Shevchenko
+- [adding a "make check" to the libsodium and secp256k1 install process](https://github.com/input-output-hk/cardano-node/pull/4104) by Martin Lang
+- [CAD-4437 Include UTxO HD installation/usage instructions in READMEs](https://github.com/input-output-hk/cardano-node/pull/4079) by Joris Dral
+- [Reduce memory usage of create staked command](https://github.com/input-output-hk/cardano-node/pull/4021) by John Ky
+- [CAD-3928 minor polish](https://github.com/input-output-hk/cardano-node/pull/3701) by 

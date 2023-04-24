@@ -1,0 +1,132 @@
+- [Use -Werror for all sub-projects](https://github.com/input-output-hk/cardano-node/pull/5160) by John Ky
+- [Update CHaP to get latest ledger with performance fix](https://github.com/input-output-hk/cardano-node/pull/5157) by Alexey Kuleshevich
+- [Bench refactoring](https://github.com/input-output-hk/cardano-node/pull/5154) by Federico Mastellone
+- [Remove dependency on plutus-example.](https://github.com/input-output-hk/cardano-node/pull/5147) by Nadia Yvette Chambers
+- [Switch to docs to refer to cardano-node-wiki](https://github.com/input-output-hk/cardano-node/pull/5146) by John Ky
+- [New workbench manifest](https://github.com/input-output-hk/cardano-node/pull/5133) by Andrea Bedini
+- [Update hackage.nix](https://github.com/input-output-hk/cardano-node/pull/5127) by John Ky
+- [File type to track the content and direction of files](https://github.com/input-output-hk/cardano-node/pull/5105) by John Ky
+- [workbench:  updates](https://github.com/input-output-hk/cardano-node/pull/5097) by Kosyrev Serge
+- [Ergonomic directory creation code in tests](https://github.com/input-output-hk/cardano-node/pull/5083) by John Ky
+- [workbench:  updates](https://github.com/input-output-hk/cardano-node/pull/5065) by Kosyrev Serge
+- [Remove last remaining allow-newers](https://github.com/input-output-hk/cardano-node/pull/5043) by Michael Peyton Jones
+- [bench:  analysis improvements](https://github.com/input-output-hk/cardano-node/pull/5039) by Kosyrev Serge
+- [Bench nomad sub-backends](https://github.com/input-output-hk/cardano-node/pull/5037) by Federico Mastellone
+- [Ignore IntelliJ folder and cabal.project.local*](https://github.com/input-output-hk/cardano-node/pull/5035) by John Ky
+- [Remove dup of index-state, no longer needed with latest haskell.nix](https://github.com/input-output-hk/cardano-node/pull/5026) by Jean-Baptiste G.
+- [Use ouroboros-network-0.3.0.2 and ouroboros-network-framework-0.2.0.1](https://github.com/input-output-hk/cardano-node/pull/5018) by Marcin Szamotulski
+- [Integrate latest ledger dependencies](https://github.com/input-output-hk/cardano-node/pull/5013) by Alexey Kuleshevich
+- [Bump CHaP and remove most constraints from the cabal file](https://github.com/input-output-hk/cardano-node/pull/5012) by Michael Peyton Jones
+- [nix: switch to ghc 9.2.7](https://github.com/input-output-hk/cardano-node/pull/4998) by Jean-Baptiste G.
+- [workbench: support Conway](https://github.com/input-output-hk/cardano-node/pull/4987) by Kosyrev Serge
+- [Workaround http2 haddock issue by restricting problematic version](https://github.com/input-output-hk/cardano-node/pull/4976) by Alexey Kuleshevich
+- [Reinstate -Werror for cardano-node and fix errors](https://github.com/input-output-hk/cardano-node/pull/4968) by Erik de Castro Lopo
+- [Fix flake (again)](https://github.com/input-output-hk/cardano-node/pull/4965) by Andrea Bedini
+- [Fix typos](https://github.com/input-output-hk/cardano-node/pull/4964) by John Ky
+- [Fix flake setup](https://github.com/input-output-hk/cardano-node/pull/4963) by Andrea Bedini
+- [Add event.type to concurrency group](https://github.com/input-output-hk/cardano-node/pull/4947) by John Ky
+- [bump hackage.nix](https://github.com/input-output-hk/cardano-node/pull/4944) by Moritz Angermann
+- [Benchmarking:  drop membench & related inputs](https://github.com/input-output-hk/cardano-node/pull/4933) by Kosyrev Serge
+- [Reduce number of GitHub status notif related to nix builds](https://github.com/input-output-hk/cardano-node/pull/4930) by Jean-Baptiste G.
+- [hydra: only build pr jobset to avoid duplicates builds](https://github.com/input-output-hk/cardano-node/pull/4925) by Jean-Baptiste G.
+- [Remove ci/pr/required-check from bors.toml](https://github.com/input-output-hk/cardano-node/pull/4923) by John Ky
+- [Take all dependencies from Hackage or CHaP](https://github.com/input-output-hk/cardano-node/pull/4921) by Erik de Castro Lopo
+- [workbench | tx-generator: SECP benchmarking](https://github.com/input-output-hk/cardano-node/pull/4907) by Michael Karg
+- [workbench:  updates](https://github.com/input-output-hk/cardano-node/pull/4904) by Kosyrev Serge
+- [devops shell: don't include build tools for all hasPkgs](https://github.com/input-output-hk/cardano-node/pull/4896) by Jean-Baptiste G.
+- [coot/ouroboros network 0.3.0.1](https://github.com/input-output-hk/cardano-node/pull/4891) by Marcin Szamotulski
+- [Fix some markdown links](https://github.com/input-output-hk/cardano-node/pull/4882) by John Ky
+- [workbench:  `make shell-nix` use Nix-built binaries](https://github.com/input-output-hk/cardano-node/pull/4872) by Kosyrev Serge
+- [Bump haskell.nix](https://github.com/input-output-hk/cardano-node/pull/4871) by Andrea Bedini
+- [Nix improvements backports for 1.35](https://github.com/input-output-hk/cardano-node/pull/4868) by Jean-Baptiste G.
+- [Remove usage of nixWrapped.](https://github.com/input-output-hk/cardano-node/pull/4866) by Jean-Baptiste G.
+- [Fix recursion in flake inputs.](https://github.com/input-output-hk/cardano-node/pull/4865) by Andrea Bedini
+- [Integration with Peer Sharing](https://github.com/input-output-hk/cardano-node/pull/4854) by Armando Santos
+- [Bench nomad exec](https://github.com/input-output-hk/cardano-node/pull/4852) by Federico Mastellone
+- [Node 1.35.5](https://github.com/input-output-hk/cardano-node/pull/4851) by Samuel Leathers
+- [update tullia to get fix in cue lib](https://github.com/input-output-hk/cardano-node/pull/4850) by Robin Stumm
+- [Remove hlint from nix required CI](https://github.com/input-output-hk/cardano-node/pull/4848) by John Ky
+- [tullia jobs: use generic gitrev for PRs](https://github.com/input-output-hk/cardano-node/pull/4844) by Jean-Baptiste G.
+- [UTxO-HD: Make devops-shell compile again and fix cli parser](https://github.com/input-output-hk/cardano-node/pull/4843) by Javier Sagredo
+- [Filter out duplicate collateral inputs in transaction build commands](https://github.com/input-output-hk/cardano-node/pull/4839) by Jordan Millar
+- [Remove reconfigure-hlint.sh script](https://github.com/input-output-hk/cardano-node/pull/4838) by John Ky
+- [Fix hlint warnings](https://github.com/input-output-hk/cardano-node/pull/4837) by John Ky
+- [bump hackage.nix for the new index-state](https://github.com/input-output-hk/cardano-node/pull/4835) by Moritz Angermann
+- [Remove Robert from CODEOWNERS](https://github.com/input-output-hk/cardano-node/pull/4830) by Jordan Millar
+- [Optimized trace-dispatcher and tracing system](https://github.com/input-output-hk/cardano-node/pull/4811) by Jürgen Nicklisch
+- [Better error message for query utxo without oops](https://github.com/input-output-hk/cardano-node/pull/4788) by John Ky
+- [Nix fixes - 1.35](https://github.com/input-output-hk/cardano-node/pull/4778) by Jean-Baptiste G.
+- [workbench: publish analysis](https://github.com/input-output-hk/cardano-node/pull/4772) by Federico Mastellone
+- [backport to 1.35: add flake outputs that cicero expects](https://github.com/input-output-hk/cardano-node/pull/4769) by Robin Stumm
+- [Check cabal files in CI](https://github.com/input-output-hk/cardano-node/pull/4766) by John Ky
+- [Fix hedgehog-extras sha hash](https://github.com/input-output-hk/cardano-node/pull/4762) by John Ky
+- [Update hegehog-extras bounds](https://github.com/input-output-hk/cardano-node/pull/4759) by John Ky
+- [Date ranges for copyright](https://github.com/input-output-hk/cardano-node/pull/4755) by John Ky
+- [nix: optimize caching by delaying setGitRev and other nix fixes](https://github.com/input-output-hk/cardano-node/pull/4748) by Jean-Baptiste G.
+- [Use SECURITY.md published in Cardano Engineering Handbook](https://github.com/input-output-hk/cardano-node/pull/4746) by Marcin Szamotulski
+- [Update cabal.project](https://github.com/input-output-hk/cardano-node/pull/4724) by Carlos LopezDeLara 
+- [Update index state and hedgehog-extras.](https://github.com/input-output-hk/cardano-node/pull/4714) by John Ky
+- [Cleaned cabal files](https://github.com/input-output-hk/cardano-node/pull/4710) by Marcin Szamotulski
+- [Open Source Readiness ](https://github.com/input-output-hk/cardano-node/pull/4709) by Marcin Szamotulski
+- [Add tulia task that run system tests on PRs](https://github.com/input-output-hk/cardano-node/pull/4705) by Jean-Baptiste G.
+- [Move style guide to wiki](https://github.com/input-output-hk/cardano-node/pull/4703) by John Ky
+- [Add support for ghc-9.2 and partial support for CHaP](https://github.com/input-output-hk/cardano-node/pull/4701) by Erik de Castro Lopo
+- [remove hydra.iohk.io as substituter](https://github.com/input-output-hk/cardano-node/pull/4695) by Samuel Leathers
+- [workbench: get rid of some unnecessary complications](https://github.com/input-output-hk/cardano-node/pull/4694) by Federico Mastellone
+- [Replace Data.Map with Data.Map.Strict](https://github.com/input-output-hk/cardano-node/pull/4675) by Jordan Millar
+- [tx-generator: add capability for PlutusV2 scripts](https://github.com/input-output-hk/cardano-node/pull/4667) by Michael Karg
+- [New cardano-cli ping command.](https://github.com/input-output-hk/cardano-node/pull/4664) by John Ky
+- [fix pure nix evaluation](https://github.com/input-output-hk/cardano-node/pull/4661) by Robin Stumm
+- [flake.nix:  make cardano-tracer-test non-mandatory on Windows](https://github.com/input-output-hk/cardano-node/pull/4656) by Kosyrev Serge
+- [modernize CI](https://github.com/input-output-hk/cardano-node/pull/4652) by Robin Stumm
+- [Update plutus-apps](https://github.com/input-output-hk/cardano-node/pull/4629) by Jean-Baptiste G.
+- [Cardano Node 1.35.6 aka Single Relay P2P release](https://github.com/input-output-hk/cardano-node/pull/4612) by Marcin Szamotulski
+- [Create CODE-OF-CONDUCT.md](https://github.com/input-output-hk/cardano-node/pull/4609) by 
+- [Update ouroboros-network and cardano-ledger dependencies](https://github.com/input-output-hk/cardano-node/pull/4608) by Joosep Jääger
+- [Bench nomad](https://github.com/input-output-hk/cardano-node/pull/4606) by Federico Mastellone
+- [Refactor CODEOWNERS file](https://github.com/input-output-hk/cardano-node/pull/4596) by Jordan Millar
+- [Fix missing trace-forward messages](https://github.com/input-output-hk/cardano-node/pull/4581) by Jürgen Nicklisch
+- [Add a native tokens tutorial and exercises to a newly created MA folder](https://github.com/input-output-hk/cardano-node/pull/4562) by 
+- [Add link to troubleshooting page in the wiki](https://github.com/input-output-hk/cardano-node/pull/4557) by John Ky
+- [Upgrade to cabal-3.8.1.0](https://github.com/input-output-hk/cardano-node/pull/4549) by John Ky
+- [Fix team patterns in CODEOWNERS](https://github.com/input-output-hk/cardano-node/pull/4543) by Michael Peyton Jones
+- [Bump CHaP again, account for re-release of existing packages](https://github.com/input-output-hk/cardano-node/pull/4542) by Michael Peyton Jones
+- [Switch to internal haskell package repository](https://github.com/input-output-hk/cardano-node/pull/4540) by Samuel Leathers
+- [Bump CHaP and remove `ekg-json` s-r-p](https://github.com/input-output-hk/cardano-node/pull/4519) by Michael Peyton Jones
+- [Release 1.35.4](https://github.com/input-output-hk/cardano-node/pull/4508) by Jordan Millar
+- [trace-dispatcher: optional EKG.Store.](https://github.com/input-output-hk/cardano-node/pull/4499) by Denis Shevchenko
+- [Fix CODEOWNERS errors](https://github.com/input-output-hk/cardano-node/pull/4490) by Jordan Millar
+- [add cicero CI actions](https://github.com/input-output-hk/cardano-node/pull/4489) by Robin Stumm
+- [Add Carlos to CODEOWNERS](https://github.com/input-output-hk/cardano-node/pull/4487) by Jordan Millar
+- [Add Robert to CODEOWNERS](https://github.com/input-output-hk/cardano-node/pull/4473) by Jordan Millar
+- [Switch to Cardano haskell package repository](https://github.com/input-output-hk/cardano-node/pull/4411) by Andrea Bedini
+- [Update README.rst](https://github.com/input-output-hk/cardano-node/pull/4397) by Carlos LopezDeLara 
+- [Updating cabal version on master to 1.36.0](https://github.com/input-output-hk/cardano-node/pull/4391) by 
+- [iohkNix: add new environments](https://github.com/input-output-hk/cardano-node/pull/4389) by Samuel Leathers
+- [Update docker-compose.yml](https://github.com/input-output-hk/cardano-node/pull/4388) by 
+- [README:  document package localisation](https://github.com/input-output-hk/cardano-node/pull/4377) by Kosyrev Serge
+- [CODEOWNERS:  restore status quo for Nix and workbench code ownership](https://github.com/input-output-hk/cardano-node/pull/4374) by Kosyrev Serge
+- [Update link to environments config files](https://github.com/input-output-hk/cardano-node/pull/4372) by Carlos LopezDeLara 
+- [Minimise config](https://github.com/input-output-hk/cardano-node/pull/4351) by Jürgen Nicklisch
+- [update ledger to the tip of release/1.0.0](https://github.com/input-output-hk/cardano-node/pull/4242) by Jared Corduan
+- [Release 1.35.2](https://github.com/input-output-hk/cardano-node/pull/4220) by Jordan Millar
+- [Use pkg-config for LMDB](https://github.com/input-output-hk/cardano-node/pull/4217) by Javier Sagredo
+- [workbench:  template-based benchmark reporting & fixes](https://github.com/input-output-hk/cardano-node/pull/4208) by Kosyrev Serge
+- [More memory efficient query ledger-state command](https://github.com/input-output-hk/cardano-node/pull/4205) by John Ky
+- [Use patched aeson from hackage](https://github.com/input-output-hk/cardano-node/pull/4200) by John Ky
+- [UTxO-HD: Rework Windows CI to use MSYS2](https://github.com/input-output-hk/cardano-node/pull/4178) by Javier Sagredo
+- [New query pool-state command](https://github.com/input-output-hk/cardano-node/pull/4170) by John Ky
+- [CAD-4727 Change the default UTxO HD backend to `InMemory`.](https://github.com/input-output-hk/cardano-node/pull/4156) by Joris Dral
+- [CAD-4728  Change the units for the LMDB `mapsize` option to GB and let the parameter be a number](https://github.com/input-output-hk/cardano-node/pull/4155) by Joris Dral
+- [Added changelogs and updated cabal files for 1.35.1](https://github.com/input-output-hk/cardano-node/pull/4153) by 
+- [workbench:  fixes](https://github.com/input-output-hk/cardano-node/pull/4147) by Kosyrev Serge
+- [Update ledger to tip of release/1.0.0](https://github.com/input-output-hk/cardano-node/pull/4146) by Jared Corduan
+- [Add utxoCostPerByte protocol parameter](https://github.com/input-output-hk/cardano-node/pull/4141) by John Ky
+- [Give myself and John permission to merge any PR](https://github.com/input-output-hk/cardano-node/pull/4137) by Jordan Millar
+- [Update cardano-ledger and ouroboros-network dependencies](https://github.com/input-output-hk/cardano-node/pull/4118) by John Ky
+- [workbench: fixes](https://github.com/input-output-hk/cardano-node/pull/4113) by Kosyrev Serge
+- [Fix leadership schedule for current on babbage](https://github.com/input-output-hk/cardano-node/pull/4106) by John Ky
+- [CAD-4437 Include UTxO HD installation/usage instructions in READMEs](https://github.com/input-output-hk/cardano-node/pull/4079) by Joris Dral
+- [workbench:  direct CDF dumps for gnuplot consumption](https://github.com/input-output-hk/cardano-node/pull/4056) by Kosyrev Serge
+- [Reduce memory usage of create staked command](https://github.com/input-output-hk/cardano-node/pull/4021) by John Ky
+- [Update index state to 2022-07-01T00:00:00Z](https://github.com/input-output-hk/cardano-node/pull/3862) by John Ky

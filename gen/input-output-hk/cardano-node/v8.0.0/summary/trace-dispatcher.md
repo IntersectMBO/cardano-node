@@ -1,0 +1,25 @@
+- [Switch to docs to refer to cardano-node-wiki](https://github.com/input-output-hk/cardano-node/pull/5146) by John Ky
+- [workbench:  updates](https://github.com/input-output-hk/cardano-node/pull/5134) by Kosyrev Serge
+- [Take all dependencies from Hackage or CHaP](https://github.com/input-output-hk/cardano-node/pull/4921) by Erik de Castro Lopo
+- [Added features to tracing](https://github.com/input-output-hk/cardano-node/pull/4908) by Jürgen Nicklisch
+- [Remove use of multiline literals](https://github.com/input-output-hk/cardano-node/pull/4889) by John Ky
+- [Remove reconfigure-hlint.sh script](https://github.com/input-output-hk/cardano-node/pull/4838) by John Ky
+- [Fix hlint warnings](https://github.com/input-output-hk/cardano-node/pull/4837) by John Ky
+- [Refactor code using onLeft and onNothing](https://github.com/input-output-hk/cardano-node/pull/4815) by John Ky
+- [Optimized trace-dispatcher and tracing system](https://github.com/input-output-hk/cardano-node/pull/4811) by Jürgen Nicklisch
+- [Check cabal files in CI](https://github.com/input-output-hk/cardano-node/pull/4766) by John Ky
+- [Date ranges for copyright](https://github.com/input-output-hk/cardano-node/pull/4755) by John Ky
+- [Cleaned cabal files](https://github.com/input-output-hk/cardano-node/pull/4710) by Marcin Szamotulski
+- [Add support for ghc-9.2 and partial support for CHaP](https://github.com/input-output-hk/cardano-node/pull/4701) by Erik de Castro Lopo
+- [Replace Data.Map with Data.Map.Strict](https://github.com/input-output-hk/cardano-node/pull/4675) by Jordan Millar
+- [Cardano Node 1.35.6 aka Single Relay P2P release](https://github.com/input-output-hk/cardano-node/pull/4612) by Marcin Szamotulski
+- [Update ouroboros-network and cardano-ledger dependencies](https://github.com/input-output-hk/cardano-node/pull/4608) by Joosep Jääger
+- [Fix missing trace-forward messages](https://github.com/input-output-hk/cardano-node/pull/4581) by Jürgen Nicklisch
+- [Switch to internal haskell package repository](https://github.com/input-output-hk/cardano-node/pull/4540) by Samuel Leathers
+- [Bump CHaP and remove `ekg-json` s-r-p](https://github.com/input-output-hk/cardano-node/pull/4519) by Michael Peyton Jones
+- [GHC 9.2.4 preparations](https://github.com/input-output-hk/cardano-node/pull/4504) by John Ky
+- [trace-dispatcher: optional EKG.Store.](https://github.com/input-output-hk/cardano-node/pull/4499) by Denis Shevchenko
+- [Minimise config](https://github.com/input-output-hk/cardano-node/pull/4351) by Jürgen Nicklisch
+- [Use patched aeson from hackage](https://github.com/input-output-hk/cardano-node/pull/4200) by John Ky
+- [Restructure the namespace](https://github.com/input-output-hk/cardano-node/pull/4117) by Jürgen Nicklisch
+- [Fix for: metric tracing crashes node #4076](https://github.com/input-output-hk/cardano-node/pull/4108) by Jürgen Nicklisch

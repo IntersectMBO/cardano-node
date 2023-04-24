@@ -1,0 +1,25 @@
+- [New environment variable CARDANO_NODE_NETWORK_ID](https://github.com/input-output-hk/cardano-node/pull/5119) by John Ky
+- [File type to track the content and direction of files](https://github.com/input-output-hk/cardano-node/pull/5105) by John Ky
+- [Move parsers to reusable location](https://github.com/input-output-hk/cardano-node/pull/5046) by John Ky
+- [Integrate latest ledger dependencies](https://github.com/input-output-hk/cardano-node/pull/5013) by Alexey Kuleshevich
+- [Remove protolude from cardano-submit-api](https://github.com/input-output-hk/cardano-node/pull/4951) by Jordan Millar
+- [Take all dependencies from Hackage or CHaP](https://github.com/input-output-hk/cardano-node/pull/4921) by Erik de Castro Lopo
+- [Check CLI argument bounds](https://github.com/input-output-hk/cardano-node/pull/4919) by John Ky
+- [coot/ouroboros network 0.3.0.1](https://github.com/input-output-hk/cardano-node/pull/4891) by Marcin Szamotulski
+- [Remove reconfigure-hlint.sh script](https://github.com/input-output-hk/cardano-node/pull/4838) by John Ky
+- [Check cabal files in CI](https://github.com/input-output-hk/cardano-node/pull/4766) by John Ky
+- [Date ranges for copyright](https://github.com/input-output-hk/cardano-node/pull/4755) by John Ky
+- [Cleaned cabal files](https://github.com/input-output-hk/cardano-node/pull/4710) by Marcin Szamotulski
+- [Add support for ghc-9.2 and partial support for CHaP](https://github.com/input-output-hk/cardano-node/pull/4701) by Erik de Castro Lopo
+- [Cardano Node 1.35.6 aka Single Relay P2P release](https://github.com/input-output-hk/cardano-node/pull/4612) by Marcin Szamotulski
+- [Update ouroboros-network and cardano-ledger dependencies](https://github.com/input-output-hk/cardano-node/pull/4608) by Joosep Jääger
+- [submit-api: add tx_submit_fail_count metric](https://github.com/input-output-hk/cardano-node/pull/4566) by John Ky
+- [GHC 9.2.4 preparations](https://github.com/input-output-hk/cardano-node/pull/4504) by John Ky
+- [Added changelogs for releases between 1.34.0 and 1.35.3](https://github.com/input-output-hk/cardano-node/pull/4466) by 
+- [Refactor transaction build command](https://github.com/input-output-hk/cardano-node/pull/4446) by Jordan Millar
+- [Configurable metrics port in submit-api](https://github.com/input-output-hk/cardano-node/pull/4281) by John Ky
+- [update ledger to the tip of release/1.0.0](https://github.com/input-output-hk/cardano-node/pull/4242) by Jared Corduan
+- [Release 1.35.2](https://github.com/input-output-hk/cardano-node/pull/4220) by Jordan Millar
+- [Use patched aeson from hackage](https://github.com/input-output-hk/cardano-node/pull/4200) by John Ky
+- [Added changelogs and updated cabal files for 1.35.1](https://github.com/input-output-hk/cardano-node/pull/4153) by 
+- [Adding changelogs for 1.35.0](https://github.com/input-output-hk/cardano-node/pull/4136) by 

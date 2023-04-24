@@ -1,0 +1,30 @@
+- [Update CHaP to get latest ledger with performance fix](https://github.com/input-output-hk/cardano-node/pull/5157) by Alexey Kuleshevich
+- [Ergonomic directory creation code in tests](https://github.com/input-output-hk/cardano-node/pull/5083) by John Ky
+- [Use ouroboros-network-0.3.0.2 and ouroboros-network-framework-0.2.0.1](https://github.com/input-output-hk/cardano-node/pull/5018) by Marcin Szamotulski
+- [Integrate latest ledger dependencies](https://github.com/input-output-hk/cardano-node/pull/5013) by Alexey Kuleshevich
+- [Add event.type to concurrency group](https://github.com/input-output-hk/cardano-node/pull/4947) by John Ky
+- [Take all dependencies from Hackage or CHaP](https://github.com/input-output-hk/cardano-node/pull/4921) by Erik de Castro Lopo
+- [Node 1.35.5](https://github.com/input-output-hk/cardano-node/pull/4851) by Samuel Leathers
+- [Remove reconfigure-hlint.sh script](https://github.com/input-output-hk/cardano-node/pull/4838) by John Ky
+- [backport to 1.35: add flake outputs that cicero expects](https://github.com/input-output-hk/cardano-node/pull/4769) by Robin Stumm
+- [Check cabal files in CI](https://github.com/input-output-hk/cardano-node/pull/4766) by John Ky
+- [Update hegehog-extras bounds](https://github.com/input-output-hk/cardano-node/pull/4759) by John Ky
+- [Date ranges for copyright](https://github.com/input-output-hk/cardano-node/pull/4755) by John Ky
+- [Only run chairman test on latest era](https://github.com/input-output-hk/cardano-node/pull/4712) by Jordan Millar
+- [Cleaned cabal files](https://github.com/input-output-hk/cardano-node/pull/4710) by Marcin Szamotulski
+- [Add support for ghc-9.2 and partial support for CHaP](https://github.com/input-output-hk/cardano-node/pull/4701) by Erik de Castro Lopo
+- [Export cardano-testnet API from Cardano.Testnet](https://github.com/input-output-hk/cardano-node/pull/4636) by Marc Fontaine
+- [Cardano Node 1.35.6 aka Single Relay P2P release](https://github.com/input-output-hk/cardano-node/pull/4612) by Marcin Szamotulski
+- [Update ouroboros-network and cardano-ledger dependencies](https://github.com/input-output-hk/cardano-node/pull/4608) by Joosep Jääger
+- [Reorder module hierarchy](https://github.com/input-output-hk/cardano-node/pull/4595) by Marc Fontaine
+- [Fix missing trace-forward messages](https://github.com/input-output-hk/cardano-node/pull/4581) by Jürgen Nicklisch
+- [Reduce exposed modules in cardano-api](https://github.com/input-output-hk/cardano-node/pull/4546) by Jordan Millar
+- [cardano-testnet: add single entrypoint for starting testnets](https://github.com/input-output-hk/cardano-node/pull/4544) by Marc Fontaine
+- [Release 1.35.4](https://github.com/input-output-hk/cardano-node/pull/4508) by Jordan Millar
+- [GHC 9.2.4 preparations](https://github.com/input-output-hk/cardano-node/pull/4504) by John Ky
+- [Refactor transaction build command](https://github.com/input-output-hk/cardano-node/pull/4446) by Jordan Millar
+- [Updating cabal version on master to 1.36.0](https://github.com/input-output-hk/cardano-node/pull/4391) by 
+- [update ledger to the tip of release/1.0.0](https://github.com/input-output-hk/cardano-node/pull/4242) by Jared Corduan
+- [Release 1.35.2](https://github.com/input-output-hk/cardano-node/pull/4220) by Jordan Millar
+- [Added changelogs and updated cabal files for 1.35.1](https://github.com/input-output-hk/cardano-node/pull/4153) by 
+- [Update index state to 2022-07-01T00:00:00Z](https://github.com/input-output-hk/cardano-node/pull/3862) by John Ky
