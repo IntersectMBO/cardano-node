@@ -39,7 +39,7 @@ sumFieldsReport =
   [ "date.systemStart", "time.systemStart", "sumAnalysisTime"
   , "batch"
   , "ident"
-  , "cardano-node", "ouroboros-network" , "cardano-ledger", "plutus", "cardano-crypto"
+  , "cardano-node", "ouroboros-consensus", "ouroboros-network" , "cardano-ledger", "plutus", "cardano-crypto"
   , "era"
   , "delegators", "utxo"
   , "add_tx_size", "inputs_per_tx", "outputs_per_tx" , "tps", "tx_count"
@@ -78,12 +78,12 @@ instance (KnownCDF f) => TimelineFields (Summary f)  where
       "Identifier"
       ""
 
-   <> fScalar "cardano-node"           W10 Ver (IText $ unCommit.ciCommit.mNode.manifest.sumMeta)
-      "cardano-node"
+   <> fScalar "cardano-node"           W5  Ver (IText $ componentSummary.mNode.manifest.sumMeta)
+      "cardano-node version"
       ""
 
-   <> fScalar "cardano-node"           W5  Ver (IText $ unCommit.mNode.manifest.sumMeta)
-      "cardano-node version"
+   <> fScalar "ouroboros-consensus"    W10 Ver (IText $ componentSummary.mConsensus.manifest.sumMeta)
+      "ouroboros-consensus version"
       ""
 
    <> fScalar "ouroboros-network"      W10 Ver (IText $ componentSummary.mNetwork.manifest.sumMeta)

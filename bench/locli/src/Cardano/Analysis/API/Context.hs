@@ -109,44 +109,48 @@ instance ToJSON ComponentInfo where
 
 data Manifest
   = Manifest
-    { mNode          :: !ComponentInfo
-    , mNetwork       :: !ComponentInfo
-    , mLedger        :: !ComponentInfo
-    , mPlutus        :: !ComponentInfo
-    , mCrypto        :: !ComponentInfo
-    , mPrelude       :: !ComponentInfo
+    { mNode      :: !ComponentInfo
+    , mConsensus :: !ComponentInfo
+    , mNetwork   :: !ComponentInfo
+    , mLedger    :: !ComponentInfo
+    , mPlutus    :: !ComponentInfo
+    , mCrypto    :: !ComponentInfo
+    , mPrelude   :: !ComponentInfo
     }
   deriving (Eq, Generic, NFData, Show)
 
 unsafeShortenManifest :: Int -> Manifest -> Manifest
 unsafeShortenManifest n m@Manifest{..} =
-  m { mNode    = mNode    { ciCommit = unsafeShortenCommit n (ciCommit mNode)    }
-    , mNetwork = mNetwork { ciCommit = unsafeShortenCommit n (ciCommit mNetwork) }
-    , mLedger  = mLedger  { ciCommit = unsafeShortenCommit n (ciCommit mLedger)  }
-    , mPlutus  = mPlutus  { ciCommit = unsafeShortenCommit n (ciCommit mPlutus)  }
-    , mCrypto  = mCrypto  { ciCommit = unsafeShortenCommit n (ciCommit mCrypto)  }
-    , mPrelude = mPrelude { ciCommit = unsafeShortenCommit n (ciCommit mPrelude) }
+  m { mNode      = mNode      { ciCommit = unsafeShortenCommit n (ciCommit mNode)      }
+    , mConsensus = mConsensus { ciCommit = unsafeShortenCommit n (ciCommit mConsensus) }
+    , mNetwork   = mNetwork   { ciCommit = unsafeShortenCommit n (ciCommit mNetwork)   }
+    , mLedger    = mLedger    { ciCommit = unsafeShortenCommit n (ciCommit mLedger)    }
+    , mPlutus    = mPlutus    { ciCommit = unsafeShortenCommit n (ciCommit mPlutus)    }
+    , mCrypto    = mCrypto    { ciCommit = unsafeShortenCommit n (ciCommit mCrypto)    }
+    , mPrelude   = mPrelude   { ciCommit = unsafeShortenCommit n (ciCommit mPrelude)   }
     }
 
 instance FromJSON Manifest where
   parseJSON = withObject "Manifest" $ \v -> do
-    mNode    <- v .: "node"
-    mNetwork <- v .: "network"
-    mLedger  <- v .: "ledger"
-    mPlutus  <- v .: "plutus"
-    mCrypto  <- v .: "crypto"
-    mPrelude <- v .: "prelude"
+    mNode      <- v .: "node"
+    mConsensus <- v .: "consensus"
+    mNetwork   <- v .: "network"
+    mLedger    <- v .: "ledger"
+    mPlutus    <- v .: "plutus"
+    mCrypto    <- v .: "crypto"
+    mPrelude   <- v .: "prelude"
     pure Manifest{..}
 
 instance ToJSON Manifest where
   toJSON Manifest{..} =
     object
-      [ "node"    .= mNode
-      , "network" .= mNetwork
-      , "ledger"  .= mLedger
-      , "plutus"  .= mPlutus
-      , "crypto"  .= mCrypto
-      , "prelude" .= mPrelude
+      [ "node"      .= mNode
+      , "consensus" .= mNetwork
+      , "network"   .= mNetwork
+      , "ledger"    .= mLedger
+      , "plutus"    .= mPlutus
+      , "crypto"    .= mCrypto
+      , "prelude"   .= mPrelude
       ]
 
 data Metadata

@@ -99,6 +99,7 @@ case "${op}" in
                          , status: $node_status
                          , version: $package_data["cardano-node"].version
                          }
+          , "consensus": $package_data["ouroboros-consensus"]
           , "network":   $package_data["ouroboros-network"]
           , "ledger":    $package_data["cardano-ledger-core"]
           , "plutus":    $package_data["plutus-core"]
