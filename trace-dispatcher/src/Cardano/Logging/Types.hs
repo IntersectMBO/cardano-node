@@ -392,7 +392,7 @@ data Verbosity =
     Maximum
     -- | Minimum verbosity, the forwarding will work as silently as possible.
   | Minimum
-  deriving (Eq, Ord, Show, Generic)
+  deriving (Eq, Ord, Show, Generic, AE.ToJSON)
 
 instance AE.FromJSON Verbosity where
   parseJSON (AE.String "Maximum") = pure Maximum
@@ -404,7 +404,7 @@ data TraceOptionForwarder = TraceOptionForwarder {
     tofConnQueueSize    :: Word
   , tofDisconnQueueSize :: Word
   , tofVerbosity        :: Verbosity
-} deriving (Eq, Ord, Show)
+} deriving (Eq, Generic, Ord, Show, AE.ToJSON)
 
 instance AE.FromJSON TraceOptionForwarder where
     parseJSON (AE.Object obj) =

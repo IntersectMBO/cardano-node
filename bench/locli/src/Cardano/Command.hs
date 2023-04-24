@@ -8,6 +8,7 @@ import Data.Aeson                       qualified as Aeson
 import Data.Aeson.Text                  qualified as Aeson
 import Data.ByteString                  qualified as BS
 import Data.ByteString.Lazy.Char8       qualified as LBS
+import Data.ByteString.Char8            qualified as BS8
 import Data.Map                         qualified as Map
 import Data.Text                        (pack)
 import Data.Text                        qualified as T
@@ -404,6 +405,7 @@ runChainCommand s
   progress "run" (Q $ printf "reading run metadata & Shelley genesis")
   run <- readRun shelleyGenesis runMeta
          & firstExceptT (fromAnalysisError c)
+  progress "run" (Q $ printf "identifier: %s" (ident $ metadata run))
   pure s { sRun = Just run }
 
 runChainCommand s@State{sMultiSummary=Just summ@Summary{..}}
@@ -787,11 +789,14 @@ runChainCommand s c@(Compare ede mTmpl outf@(TextOutputFile outfp) runs) = do
       <$> readJsonData sumf (CommandError c)
       <*> readJsonData cpf  (CommandError c)
       <*> readJsonData bpf  (CommandError c)
-  (tmpl, orgReport) <- case xs of
-    baseline:deltas@(_:_) -> liftIO $
+  (tmpl, tmplEnv, orgReport) <- case xs of
+    baseline:deltas@(_:_) -> liftIO $ do
       Cardano.Report.generate ede mTmpl baseline deltas
     _ -> throwE $ CommandError c $ mconcat
          [ "At least two runs required for comparison." ]
+  liftIO $
+    withFile (outfp `System.FilePath.replaceExtension` "env.json") WriteMode $
+      \hnd -> BS8.hPutStrLn hnd tmplEnv
   dumpText "report" [orgReport] outf
     & firstExceptT (CommandError c)
 

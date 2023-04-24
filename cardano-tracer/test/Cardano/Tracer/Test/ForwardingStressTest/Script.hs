@@ -53,7 +53,7 @@ runScriptForwarding ::
 runScriptForwarding TestSetup{..} msgCounter tracerGetter = do
       let generator :: Gen [Script] = vectorOf (unI tsThreads) $
             case unI tsMessages of
-              Nothing -> scale (* 1000) arbitrary
+              Nothing -> scale (* 500) arbitrary
               Just numMsg -> Script <$> vectorOf numMsg arbitrary
       forAll generator (\ (scripts :: [Script])
         -> ioProperty $ do

@@ -54,7 +54,7 @@ import           Cardano.Logging.Version
 
 initForwarding :: forall m. (MonadIO m)
   => IOManager
-  -> TraceConfig
+  -> TraceOptionForwarder
   -> NetworkMagic
   -> Maybe EKG.Store
   -> Maybe (FilePath, ForwarderMode)
@@ -75,9 +75,9 @@ initForwarding iomgr config magic ekgStore tracerSocketMode = liftIO $ do
   pure (forwardSink, dpStore)
  where
   p = maybe "" fst tracerSocketMode
-  connSize = tofConnQueueSize $ tcForwarder config
-  disconnSize = tofDisconnQueueSize $ tcForwarder config
-  verbosity = tofVerbosity $ tcForwarder config
+  connSize = tofConnQueueSize config
+  disconnSize = tofDisconnQueueSize config
+  verbosity = tofVerbosity config
 
   ekgConfig :: EKGF.ForwarderConfiguration
   ekgConfig =

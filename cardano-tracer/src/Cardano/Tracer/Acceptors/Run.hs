@@ -23,6 +23,7 @@ import           Cardano.Tracer.Acceptors.Client
 import           Cardano.Tracer.Acceptors.Server
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
+import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Utils
 
 -- | Run acceptors for all supported protocols.
@@ -31,7 +32,8 @@ import           Cardano.Tracer.Utils
 --   1. Server mode, when the tracer accepts connections from any number of nodes.
 --   2. Client mode, when the tracer initiates connections to specified number of nodes.
 runAcceptors :: TracerEnv -> IO ()
-runAcceptors tracerEnv =
+runAcceptors tracerEnv@TracerEnv{teTracer} = do
+  traceWith teTracer $ TracerStartedAcceptors network
   case network of
     AcceptAt (LocalSocket p) ->
       -- Run one server that accepts connections from the nodes.

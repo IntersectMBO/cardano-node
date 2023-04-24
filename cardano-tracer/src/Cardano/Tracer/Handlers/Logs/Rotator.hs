@@ -24,12 +24,14 @@ import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Logs.Utils (createEmptyLogRotation, getTimeStampFromLog,
                    isItLog)
+import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Utils (showProblemIfAny)
 
 -- | Runs rotation mechanism for the log files.
 runLogsRotator :: TracerEnv -> IO ()
-runLogsRotator TracerEnv{teConfig, teCurrentLogLock} =
-  whenJust (rotation teConfig) $ \rotParams ->
+runLogsRotator TracerEnv{teConfig, teCurrentLogLock, teTracer} =
+  whenJust (rotation teConfig) $ \rotParams -> do
+    traceWith teTracer TracerStartedLogRotator
     launchRotator loggingParamsForFiles rotParams (verbosity teConfig) teCurrentLogLock
  where
   loggingParamsForFiles = nub . NE.filter filesOnly $ logging teConfig

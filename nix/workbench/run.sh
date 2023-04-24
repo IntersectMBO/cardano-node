@@ -114,7 +114,7 @@ case "$op" in
 
     list-verbose | verb | lsrv )
         local usage="USAGE: wb run $op [--remote | -r] [--limit [N=10] | -n N]"
-        local on_remote= limit=10
+        local on_remote= limit=20
         while test $# -gt 0
         do case "$1" in
                --remote | -r ) on_remote='true';;
@@ -331,14 +331,44 @@ EOF
         while test $# -gt 0
         do case "$1" in
                --try | --query ) check_args+=($1);;
-               --* ) msg "FATAL:  run-or-set, unknown flag '$1'"; usage_run;;
+               --* ) msg "FATAL:  get-path, unknown flag '$1'"; usage_run;;
                * ) break;; esac; shift; done
 
-        local run=${1:?$usage}
+        local runspec=${1:?$usage}
+        local precomma=$(cut -d: -f1 <<<$runspec) run= ident=
+
+        if   test "${runspec::1}" = "/" -o \
+                  "${runspec::1}" = "." -o \
+                  "$precomma" = "$runspec"
+        then ident="";        run=$runspec
+        else ident=$precomma; run=$(cut -d: -f2 <<<$runspec)
+        fi
+
         if   run check "${check_args[@]}" "$run"
         then run compute-path             "$run"
         else return 1
         fi;;
+
+    set-identifier | setid )
+        local usage="USAGE: wb run $op [RUN IDENT]*"
+
+        while test $# -gt 0
+        do local run=${1:?$usage}
+           local ident=${2:?$usage}
+
+           local dir=$(run get "$run")
+           test -n "$dir" || fail "malformed run: $run"
+
+           progress "analyse" "setting run identifier to:  $(white $ident), was $(blue $(jq -r .meta.ident "$dir"/meta.json))"
+
+           ## XXX: ugly duplication.
+           jq_fmutate "$dir"/meta.json \
+             '.meta.ident = $ident' --arg ident "$ident"
+           jq_fmutate "$dir"/analysis/summary.json \
+             '.sumMeta.ident = $ident' --arg ident "$ident"
+
+           shift 2
+        done;;
 
     show-meta | show | meta | s )
         local usage="USAGE: wb run $op RUN"
@@ -954,14 +984,18 @@ run_ls_tabulated_cmd() {
           cut -c3- |
           sort |
           tail -n'$limit' |
-          while read lst_tag; test -n "$lst_tag";
-          do printf_args=(
+          {
+            printf "%16s  %-75s %7s %-20s %-15s %10s\n" \
+                 timestamp "profile name" "gitrev" "identifier" "node version" "node branch"
+            while read lst_tag; test -n "$lst_tag";
+            do printf_args=(
                $(jq ".meta | .manifest as \$manif |
-                      \"\\(.profile) \\(\$manif.\"cardano-node\" | .[:7]) \\(.batch) \\(\$manif.\"cardano-node-version\") \\(\$manif.\"cardano-node-branch\")\"
+                      \"\\(.profile) \\(\$manif.\"cardano-node\" | .[:7]) \\(.ident) \\(\$manif.\"cardano-node-version\") \\(\$manif.\"cardano-node-branch\")\"
                     " -r <$lst_tag/meta.json))
               printf "%16s  %-75s %7s %-20s %-15s %10s\n" \
                     $(echo $lst_tag |cut -c -16) ${printf_args[*]}
-          done || true'
+            done || true
+          }'
 }
 
 run_ls_sets_cmd() {

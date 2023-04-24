@@ -113,7 +113,7 @@ initTxGenTracers mbForwarding = do
   prepareForwardingTracer = forM mbForwarding $
     \(iomgr, networkId, tracerSocket) -> do
         (forwardSink :: ForwardSink TraceObject, dpStore) <-
-          initForwarding iomgr initialTraceConfig (toNetworkMagic networkId) Nothing $ Just (tracerSocket, Initiator)
+          initForwarding iomgr (tcForwarder initialTraceConfig) (toNetworkMagic networkId) Nothing $ Just (tracerSocket, Initiator)
 
         -- we need to provide NodeInfo DataPoint, to forward generator's name
         -- to the acceptor application (for example, 'cardano-tracer').
