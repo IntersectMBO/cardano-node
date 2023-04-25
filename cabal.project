@@ -117,7 +117,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/GaloisInc/ouroboros-network
-  tag: 0dc3e4dd1778a692976d1c33a29016540560887b
+  tag: 49ded9707ca78c31132e8a7f6ea443fb15f63b04
   subdir:
     cardano-ping
 
