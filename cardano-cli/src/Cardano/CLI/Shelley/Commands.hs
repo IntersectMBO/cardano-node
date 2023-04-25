@@ -412,11 +412,10 @@ data GovernanceCmd
       OutputFile
   | GovernanceAnswerPoll
       FilePath -- Poll file
-      SigningKeyFile
       (Maybe Word) -- Answer index
   | GovernanceVerifyPoll
       FilePath -- Poll file
-      FilePath -- Metadata JSON file
+      TxFile -- Tx file
   deriving Show
 
 renderGovernanceCmd :: GovernanceCmd -> Text

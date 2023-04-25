@@ -30,7 +30,7 @@ golden_shelleyGovernanceCreatePoll =
       ]
 
     void $ H.readFile pollFile
-    noteInputFile "test/data/golden/shelley/governance/create.json"
+    noteInputFile "test/data/golden/shelley/governance/create/basic.json"
       >>= H.readFile
       >>= (H.===) stdout
     H.assertFileOccurences 1 "GovernancePoll" pollFile
@@ -50,7 +50,7 @@ golden_shelleyGovernanceCreateLongPoll =
       ]
 
     void $ H.readFile pollFile
-    noteInputFile "test/data/golden/shelley/governance/create-long.json"
+    noteInputFile "test/data/golden/shelley/governance/create/long-text.json"
       >>= H.readFile
       >>= (H.===) stdout
     H.assertFileOccurences 1 "GovernancePoll" pollFile

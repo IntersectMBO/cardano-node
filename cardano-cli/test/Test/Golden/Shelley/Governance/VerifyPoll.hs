@@ -1,65 +1,98 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Test.Golden.Shelley.Governance.VerifyPoll
-  ( golden_shelleyGovernanceVerifyPollVrf
-  , golden_shelleyGovernanceVerifyPollVrfTempered
-  , golden_shelleyGovernanceVerifyPollCold
-  , golden_shelleyGovernanceVerifyPollColdTempered
+  ( golden_shelleyGovernanceVerifyPoll
+  , golden_shelleyGovernanceVerifyPollMismatch
+  , golden_shelleyGovernanceVerifyPollNoAnswer
+  , golden_shelleyGovernanceVerifyPollMalformedAnswer
+  , golden_shelleyGovernanceVerifyPollInvalidAnswer
   ) where
 
-import           Cardano.Prelude
+import           Cardano.Prelude hiding (stdout)
 
 import           Hedgehog (Property)
 import           Test.OptParse
 
+import           Cardano.Api
+import           Cardano.CLI.Types (VerificationKeyFile (..))
+import           Cardano.CLI.Shelley.Key (VerificationKeyOrFile (..),
+                   readVerificationKeyOrTextEnvFile)
+
 import qualified Hedgehog as H
+import qualified Hedgehog.Internal.Property as H
+import qualified Data.ByteString.Char8 as BSC
 
 {- HLINT ignore "Use camelCase" -}
 
-golden_shelleyGovernanceVerifyPollVrf :: Property
-golden_shelleyGovernanceVerifyPollVrf = propertyOnce $ do
-  pollFile <- noteInputFile "test/data/golden/shelley/governance/poll.json"
-  metadataFile <- noteInputFile "test/data/golden/shelley/governance/answer-vrf.json"
+golden_shelleyGovernanceVerifyPoll :: Property
+golden_shelleyGovernanceVerifyPoll = propertyOnce $ do
+  pollFile <- noteInputFile "test/data/golden/shelley/governance/polls/basic.json"
+  txFile <- noteInputFile "test/data/golden/shelley/governance/verify/valid"
+  vkFile <- VerificationKeyFilePath . VerificationKeyFile <$>
+    noteInputFile "test/data/golden/shelley/governance/cold.vk"
 
-  void $ execCardanoCLI
+  stdout <- BSC.pack <$> execCardanoCLI
     [ "governance", "verify-poll"
     , "--poll-file", pollFile
-    , "--metadata-file", metadataFile
+    , "--signed-tx-file", txFile
     ]
 
-golden_shelleyGovernanceVerifyPollCold :: Property
-golden_shelleyGovernanceVerifyPollCold = propertyOnce $ do
-  pollFile <- noteInputFile "test/data/golden/shelley/governance/poll.json"
-  metadataFile <- noteInputFile "test/data/golden/shelley/governance/answer-cold.json"
+  liftIO (readVerificationKeyOrTextEnvFile AsStakePoolKey vkFile) >>= \case
+    Left e ->
+      H.failWith Nothing (displayError e)
+    Right vk -> do
+      let expected = prettyPrintJSON $ serialiseToRawBytesHexText <$> [verificationKeyHash vk]
+      H.assert $ expected `BSC.isInfixOf` stdout
 
-  void $ execCardanoCLI
-    [ "governance", "verify-poll"
-    , "--poll-file", pollFile
-    , "--metadata-file", metadataFile
-    ]
-
-golden_shelleyGovernanceVerifyPollVrfTempered :: Property
-golden_shelleyGovernanceVerifyPollVrfTempered = propertyOnce $ do
-  pollFile <- noteInputFile "test/data/golden/shelley/governance/poll.json"
-  metadataFile <- noteInputFile "test/data/golden/shelley/governance/answer-vrf-tempered.json"
+golden_shelleyGovernanceVerifyPollMismatch :: Property
+golden_shelleyGovernanceVerifyPollMismatch = propertyOnce $ do
+  pollFile <- noteInputFile "test/data/golden/shelley/governance/polls/basic.json"
+  txFile <- noteInputFile "test/data/golden/shelley/governance/verify/mismatch"
 
   result <- tryExecCardanoCLI
     [ "governance", "verify-poll"
     , "--poll-file", pollFile
-    , "--metadata-file", metadataFile
+    , "--signed-tx-file", txFile
     ]
 
-  either (const H.success) (const H.failure) result
+  either (const H.success) (H.failWith Nothing) result
 
-golden_shelleyGovernanceVerifyPollColdTempered :: Property
-golden_shelleyGovernanceVerifyPollColdTempered = propertyOnce $ do
-  pollFile <- noteInputFile "test/data/golden/shelley/governance/poll.json"
-  metadataFile <- noteInputFile "test/data/golden/shelley/governance/answer-cold-tempered.json"
+golden_shelleyGovernanceVerifyPollNoAnswer :: Property
+golden_shelleyGovernanceVerifyPollNoAnswer = propertyOnce $ do
+  pollFile <- noteInputFile "test/data/golden/shelley/governance/polls/basic.json"
+  txFile <- noteInputFile "test/data/golden/shelley/governance/verify/none"
 
   result <- tryExecCardanoCLI
     [ "governance", "verify-poll"
     , "--poll-file", pollFile
-    , "--metadata-file", metadataFile
+    , "--signed-tx-file", txFile
     ]
 
-  either (const H.success) (const H.failure) result
+  either (const H.success) (H.failWith Nothing) result
+
+golden_shelleyGovernanceVerifyPollMalformedAnswer :: Property
+golden_shelleyGovernanceVerifyPollMalformedAnswer = propertyOnce $ do
+  pollFile <- noteInputFile "test/data/golden/shelley/governance/polls/basic.json"
+  txFile <- noteInputFile "test/data/golden/shelley/governance/verify/malformed"
+
+  result <- tryExecCardanoCLI
+    [ "governance", "verify-poll"
+    , "--poll-file", pollFile
+    , "--signed-tx-file", txFile
+    ]
+
+  either (const H.success) (H.failWith Nothing) result
+
+golden_shelleyGovernanceVerifyPollInvalidAnswer :: Property
+golden_shelleyGovernanceVerifyPollInvalidAnswer = propertyOnce $ do
+  pollFile <- noteInputFile "test/data/golden/shelley/governance/polls/basic.json"
+  txFile <- noteInputFile "test/data/golden/shelley/governance/verify/invalid"
+
+  result <- tryExecCardanoCLI
+    [ "governance", "verify-poll"
+    , "--poll-file", pollFile
+    , "--signed-tx-file", txFile
+    ]
+
+  either (const H.success) (H.failWith Nothing) result

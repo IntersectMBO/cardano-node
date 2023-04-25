@@ -197,10 +197,6 @@ prop_roundtrip_GovernancePollAnswer_CBOR :: Property
 prop_roundtrip_GovernancePollAnswer_CBOR =
   roundtrip_CBOR AsGovernancePollAnswer genGovernancePollAnswer
 
-prop_roundtrip_GovernancePollWitness_CBOR :: Property
-prop_roundtrip_GovernancePollWitness_CBOR =
-  roundtrip_CBOR AsGovernancePollWitness genGovernancePollWitness
-
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
