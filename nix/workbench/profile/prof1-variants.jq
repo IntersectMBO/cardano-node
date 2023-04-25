@@ -475,6 +475,13 @@ def all_profile_variants:
     , desc: "Status-quo dataset size, four epochs."
     }) as $forge_stress_base
   |
+   ($scenario_fixed_loaded * $triplet * $dataset_oct2021 *
+    { node:
+      { shutdown_on_slot_synced:        2400
+      }
+    , desc: "Status-quo dataset size, four epochs, smaller UTxO/delegation."
+    }) as $forge_stress_light_base
+  |
    ($forge_stress_base * $hexagon *
     { analysis:
       { filters:                        ["epoch3+"] }
@@ -717,6 +724,9 @@ def all_profile_variants:
   ## Status-quo (huge) dataset, small cluster (2 nodes)
   , $forge_stress_base *
     { name: "forge-stress"
+    }
+  , $forge_stress_light_base *
+    { name: "forge-stress-light"
     }
   , $forge_stress_base * $plutus_base * $plutus_loop_counter *
     { name: "forge-stress-p2p"
