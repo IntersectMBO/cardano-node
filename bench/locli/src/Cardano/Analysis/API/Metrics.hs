@@ -500,15 +500,15 @@ instance CDFFields MachPerf p where
       "Chain density"
       "Block/slot ratio, for the last 'k' slots"
 
-   <> fPct  "CentiCpu"            "CPU" (Z1 200) (DWord64 (rCentiCpu.mpResourceCDFs))
+   <> fPct  "CentiCpu"            "CPU" Free (DWord64 (rCentiCpu.mpResourceCDFs))
       "Process CPU usage"
       "Kernel-reported CPU process usage, % of a single core"
 
-   <> fPct  "CentiGC"              "GC" (Z1 200) (DWord64 (rCentiGC .mpResourceCDFs))
+   <> fPct  "CentiGC"              "GC" Free (DWord64 (rCentiGC .mpResourceCDFs))
       "RTS GC CPU usage"
       "RTS-reported GC CPU usage, % of a single core"
 
-   <> fPct  "CentiMut"            "MUT" (Z1 200) (DWord64 (rCentiMut.mpResourceCDFs))
+   <> fPct  "CentiMut"            "MUT" Free (DWord64 (rCentiMut.mpResourceCDFs))
       "RTS Mutator CPU usage"
       "RTS-reported mutator CPU usage, % of a single core"
    <> fW64 "GcsMajor"        "GC" "Maj" W3 Ev    (DWord64 (rGcsMajor.mpResourceCDFs))
@@ -532,7 +532,7 @@ instance CDFFields MachPerf p where
       "RTS live GC dateset"
       "RTS-reported GC live data size, MB"
     ]
-   <> fBoth "Alloc"  "Alloc" "MB/s"     W5 MBs P0 Lin (Z0 5000) (DWord64 (rAlloc.mpResourceCDFs))
+   <> fBoth "Alloc"  "Alloc" "MB/s"     W5 MBs P0 Lin Free (DWord64 (rAlloc.mpResourceCDFs))
       "RTS alloc rate"
       "RTS-reported allocation rate, MB/sec"
 
