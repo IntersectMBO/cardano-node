@@ -7,6 +7,10 @@
 }:
 let
 
+  validateNodeSpecs = { nodeSpecsValue }:
+    true
+  ;
+
   # Backend-specific Nix bits:
   materialise-profile =
     { profileData }:

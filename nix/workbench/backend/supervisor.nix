@@ -26,6 +26,14 @@ let
       tx-generator
     ]);
 
+  validateNodeSpecs = { nodeSpecsValue }:
+    builtins.all (r: r == "loopback")
+      (lib.attrsets.mapAttrsToList
+        (name: value: value.region)
+        nodeSpecsValue
+      )
+  ;
+
   # Backend-specific Nix bits:
   materialise-profile =
     { profileData }:
@@ -61,5 +69,10 @@ in
 {
   name = "supervisor";
 
-  inherit extraShellPkgs materialise-profile overlay stateDir basePort useCabalRun service-modules;
+  inherit extraShellPkgs;
+  inherit validateNodeSpecs materialise-profile;
+  inherit overlay service-modules;
+  inherit stateDir basePort;
+
+  inherit useCabalRun;
 }

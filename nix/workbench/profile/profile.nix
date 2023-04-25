@@ -70,8 +70,15 @@ rec {
             { inherit profileName;
               profileJson = JSON;
             };
-          value = __fromJSON (__readFile node-specs.JSON);          ## IFD !!
+          value =                                                   ## IFD !!
+            let nodeSpecsValue = __fromJSON (__readFile node-specs.JSON);
+            in if backend.validateNodeSpecs { inherit nodeSpecsValue; }
+              then nodeSpecsValue
+              else builtins.throw "Incompatible backend for the current profile"
+          ;
         };
+
+      # validateNodeSpecs
 
       genesis.files =
         genesisFiles

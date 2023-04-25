@@ -23,6 +23,19 @@ let
     ]
   ;
 
+  validateNodeSpecs = { nodeSpecsValue }:
+    let
+      # SRE is using these 3 Nomad "datacenters" (how they are called in Nomad)
+      datacenters = [ "eu-central-1" "eu-west-1" "us-east-2" ];
+      regions = lib.attrsets.mapAttrsToList
+        (name: value: value.region)
+        nodeSpecsValue
+      ;
+    in if builtins.all (r: builtins.elem r datacenters) regions
+       then true
+       else builtins.throw "The only compatible regions for Nomad cloud are \"${toString datacenters}\""
+  ;
+
   # Nomad-generic "container-specs.json"
   # Build a Nomad Job specification for each available Nomad "sub-backend".
   materialise-profile =
@@ -47,5 +60,12 @@ let
 
 in
 {
-  inherit name extraShellPkgs materialise-profile overlay service-modules stateDir basePort useCabalRun;
+  inherit name;
+
+  inherit extraShellPkgs;
+  inherit validateNodeSpecs materialise-profile;
+  inherit overlay service-modules;
+  inherit stateDir basePort;
+
+  inherit useCabalRun;
 }
