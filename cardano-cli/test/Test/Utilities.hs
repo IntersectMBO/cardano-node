@@ -16,6 +16,7 @@ import           Hedgehog.Extras.Test.Base (failMessage)
 import qualified Hedgehog.Internal.Property as H
 import qualified System.Directory as IO
 import qualified System.Environment as IO
+import           System.FilePath (takeDirectory)
 import qualified System.IO.Unsafe as IO
 
 -- | Whether the test should create the golden files if the file does ont exist.
@@ -57,6 +58,7 @@ diffVsGoldenFile actualContent referenceFile = GHC.withFrozenCallStack $ do
         -- CREATE_GOLDEN_FILES is set, so we create any golden files that don't
         -- already exist.
         H.note_ $ "Creating golden file " <> referenceFile
+        H.createDirectoryIfMissing_ (takeDirectory referenceFile)
         H.writeFile referenceFile actualContent
       else do
         H.note_ $ mconcat
