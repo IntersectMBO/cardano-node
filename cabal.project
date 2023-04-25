@@ -89,3 +89,23 @@ package snap-server
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-base
+  tag: 5ad7607a831c0709015f32050d01ad08a9c06f03
+  --sha256: 1z2cyc4xs6iidfzsvs2ccv3syzjlsjcyy687xc31vwm10ga36qrx
+  subdir:
+    cardano-crypto-class
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-ledger
+  tag: 2fff432d24908620024bbcef006cc954ba0f0ec4
+  --sha256: 1klf9m5zx05y7b4njkz311mfpwn5j5mly6417i1van4migqq11zc
+  subdir:
+    eras/alonzo/impl
+    eras/babbage/impl
+    eras/shelley/impl
+    libs/cardano-ledger-binary
+    libs/cardano-ledger-core
