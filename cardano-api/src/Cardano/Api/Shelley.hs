@@ -210,6 +210,15 @@ module Cardano.Api.Shelley
     AcquiringFailure(..),
     SystemStart(..),
 
+    -- ** Governance
+    GovernancePoll (..),
+    GovernancePollAnswer (..),
+    GovernancePollWitness (..),
+    GovernancePollError (..),
+    renderGovernancePollError,
+    hashGovernancePoll,
+    signPollAnswerWith,
+    verifyPollAnswer,
 
     -- ** Various calculations
     LeadershipError(..),
@@ -231,6 +240,7 @@ import           Cardano.Api.Address
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
+import           Cardano.Api.Governance.Poll
 import           Cardano.Api.IPC
 import           Cardano.Api.InMode
 import           Cardano.Api.KeysPraos
