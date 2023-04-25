@@ -283,8 +283,8 @@ runTransactionCmd cmd =
       runTxSign txinfile skfiles network txoutfile
     TxSubmit mNodeSocketPath anyConsensusModeParams network txFp ->
       runTxSubmit mNodeSocketPath anyConsensusModeParams network txFp
-    TxCalculateMinFee txbody mnw pParamsFile nInputs nOutputs nShelleyKeyWitnesses nByronKeyWitnesses ->
-      runTxCalculateMinFee txbody mnw pParamsFile nInputs nOutputs nShelleyKeyWitnesses nByronKeyWitnesses
+    TxCalculateMinFee txbody nw pParamsFile nInputs nOutputs nShelleyKeyWitnesses nByronKeyWitnesses ->
+      runTxCalculateMinFee txbody nw pParamsFile nInputs nOutputs nShelleyKeyWitnesses nByronKeyWitnesses
     TxCalculateMinRequiredUTxO era pParamsFile txOuts -> runTxCalculateMinRequiredUTxO era pParamsFile txOuts
     TxHashScriptData scriptDataOrFile -> runTxHashScriptData scriptDataOrFile
     TxGetTxId txinfile -> runTxGetTxId txinfile
@@ -1146,7 +1146,7 @@ runTxSubmit mNodeSocketPath (AnyConsensusModeParams cModeParams) network txFileP
 
 runTxCalculateMinFee
   :: TxBodyFile In
-  -> Maybe NetworkId
+  -> NetworkId
   -> ProtocolParamsFile
   -> TxInCount
   -> TxOutCount
@@ -1169,7 +1169,7 @@ runTxCalculateMinFee (File txbodyFilePath) nw pParamsFile
         let txbody =  getTxBody unwitTx
         let tx = makeSignedTransaction [] txbody
             Lovelace fee = estimateTransactionFee
-                             (fromMaybe Mainnet nw)
+                             nw
                              (protocolParamTxFeeFixed pparams)
                              (protocolParamTxFeePerByte pparams)
                              tx
@@ -1185,7 +1185,7 @@ runTxCalculateMinFee (File txbodyFilePath) nw pParamsFile
 
         let tx = makeSignedTransaction [] txbody
             Lovelace fee = estimateTransactionFee
-                             (fromMaybe Mainnet nw)
+                             nw
                              (protocolParamTxFeeFixed pparams)
                              (protocolParamTxFeePerByte pparams)
                              tx

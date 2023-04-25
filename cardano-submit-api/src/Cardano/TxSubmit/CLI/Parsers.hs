@@ -9,6 +9,7 @@ module Cardano.TxSubmit.CLI.Parsers
 
 import           Cardano.Api (SocketPath (..))
 
+import           Cardano.CLI.Environment (EnvCli (..))
 import           Cardano.CLI.Parsers (pConsensusModeParams, pNetworkId)
 
 import           Cardano.TxSubmit.CLI.Types (ConfigFile (..), TxSubmitNodeParams (..))
@@ -19,17 +20,18 @@ import           Options.Applicative (Parser, ParserInfo)
 
 import qualified Options.Applicative as Opt
 
-opts :: ParserInfo TxSubmitNodeParams
-opts = Opt.info (pTxSubmitNodeParams <**> Opt.helper)
-  (   Opt.fullDesc
-  <>  Opt.progDesc "Cardano transaction submission web API."
-  )
+opts :: EnvCli -> ParserInfo TxSubmitNodeParams
+opts envCli =
+  Opt.info (pTxSubmitNodeParams envCli <**> Opt.helper) $ mconcat
+    [ Opt.fullDesc
+    , Opt.progDesc "Cardano transaction submission web API."
+    ]
 
-pTxSubmitNodeParams :: Parser TxSubmitNodeParams
-pTxSubmitNodeParams = TxSubmitNodeParams
+pTxSubmitNodeParams :: EnvCli -> Parser TxSubmitNodeParams
+pTxSubmitNodeParams envCli = TxSubmitNodeParams
   <$> pConfigFile
   <*> pConsensusModeParams
-  <*> pNetworkId
+  <*> pNetworkId envCli
   <*> pSocketPath
   <*> pWebserverConfig 8090
   <*> pMetricsPort 8081

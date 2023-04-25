@@ -12,6 +12,7 @@ module Cardano.CLI.Parsers
 
 import           Cardano.CLI.Byron.Parsers (backwardsCompatibilityCommands, parseByronCommands)
 import           Cardano.CLI.Common.Parsers (pConsensusModeParams, pNetworkId)
+import           Cardano.CLI.Environment (EnvCli)
 import           Cardano.CLI.Ping (parsePingCmd)
 import           Cardano.CLI.Render (customRenderHelp)
 import           Cardano.CLI.Run (ClientCommand (..))
@@ -27,18 +28,16 @@ command' c descr p =
     command c $ info (p <**> helper)
               $ mconcat [ progDesc descr ]
 
-opts :: ParserInfo ClientCommand
-opts =
-  Opt.info (parseClientCommand <**> Opt.helper)
-    ( mconcat
-      [ Opt.fullDesc
-      , Opt.header $ mconcat
-        [ "cardano-cli - General purpose command-line utility to interact with cardano-node."
-        , " Provides specific commands to manage keys, addresses, build & submit transactions,"
-        , " certificates, etc."
-        ]
+opts :: EnvCli -> ParserInfo ClientCommand
+opts envCli =
+  Opt.info (parseClientCommand envCli <**> Opt.helper) $ mconcat
+    [ Opt.fullDesc
+    , Opt.header $ mconcat
+      [ "cardano-cli - General purpose command-line utility to interact with cardano-node."
+      , " Provides specific commands to manage keys, addresses, build & submit transactions,"
+      , " certificates, etc."
       ]
-    )
+    ]
 
 pref :: ParserPrefs
 pref = Opt.prefs $ mempty
@@ -46,53 +45,50 @@ pref = Opt.prefs $ mempty
   <> helpHangUsageOverflow 10
   <> helpRenderHelp customRenderHelp
 
-parseClientCommand :: Parser ClientCommand
-parseClientCommand =
+parseClientCommand :: EnvCli -> Parser ClientCommand
+parseClientCommand envCli =
   asum
     -- There are name clashes between Shelley commands and the Byron backwards
     -- compat commands (e.g. "genesis"), and we need to prefer the Shelley ones
     -- so we list it first.
-    [ parseShelley
-    , parseByron
+    [ parseShelley envCli
+    , parseByron envCli
     , parsePing
-    , parseDeprecatedShelleySubcommand
-    , backwardsCompatibilityCommands
-    , parseDisplayVersion opts
+    , parseDeprecatedShelleySubcommand envCli
+    , backwardsCompatibilityCommands envCli
+    , parseDisplayVersion (opts envCli)
     ]
 
-parseByron :: Parser ClientCommand
-parseByron =
+parseByron :: EnvCli -> Parser ClientCommand
+parseByron mNetworkId =
   fmap ByronCommand $
   subparser $ mconcat
     [ commandGroup "Byron specific commands"
     , metavar "Byron specific commands"
-    , command'
-        "byron"
-        "Byron specific commands"
-         parseByronCommands
+    , command' "byron" "Byron specific commands" $ parseByronCommands mNetworkId
     ]
 
 parsePing :: Parser ClientCommand
 parsePing = CliPingCommand <$> parsePingCmd
 
 -- | Parse Shelley-related commands at the top level of the CLI.
-parseShelley :: Parser ClientCommand
-parseShelley = ShelleyCommand <$> parseShelleyCommands
+parseShelley :: EnvCli -> Parser ClientCommand
+parseShelley envCli = ShelleyCommand <$> parseShelleyCommands envCli
 
 -- | Parse Shelley-related commands under the now-deprecated \"shelley\"
 -- subcommand.
 --
 -- Note that this subcommand is 'internal' and is therefore hidden from the
 -- help text.
-parseDeprecatedShelleySubcommand :: Parser ClientCommand
-parseDeprecatedShelleySubcommand =
+parseDeprecatedShelleySubcommand :: EnvCli -> Parser ClientCommand
+parseDeprecatedShelleySubcommand mNetworkId =
   subparser $ mconcat
     [ commandGroup "Shelley specific commands (deprecated)"
     , metavar "Shelley specific commands"
     , command'
         "shelley"
         "Shelley specific commands (deprecated)"
-        (DeprecatedShelleySubcommand <$> parseShelleyCommands)
+        (DeprecatedShelleySubcommand <$> parseShelleyCommands mNetworkId)
     , internal
     ]
 

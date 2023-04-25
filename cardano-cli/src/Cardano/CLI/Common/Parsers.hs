@@ -5,23 +5,34 @@ module Cardano.CLI.Common.Parsers
 
 import           Cardano.Api (AnyConsensusModeParams (..), ConsensusModeParams (..),
                    EpochSlots (..), NetworkId (..), NetworkMagic (..), bounded)
+import           Cardano.CLI.Environment (EnvCli (envCliNetworkId))
 
 import           Data.Foldable
+import           Data.Maybe (maybeToList)
 import           Data.Word (Word64)
 import           Options.Applicative (Parser)
 import qualified Options.Applicative as Opt
 
-pNetworkId :: Parser NetworkId
-pNetworkId = asum
-  [ Opt.flag' Mainnet $ mconcat
-    [ Opt.long "mainnet"
-    , Opt.help "Use the mainnet magic id."
+pNetworkId :: EnvCli -> Parser NetworkId
+pNetworkId envCli = asum $ mconcat
+  [ [ Opt.flag' Mainnet $ mconcat
+      [ Opt.long "mainnet"
+      , Opt.help $ mconcat
+        [ "Use the mainnet magic id. This overrides the CARDANO_NODE_NETWORK_ID "
+        , "environment variable"
+        ]
+      ]
+    , fmap (Testnet . NetworkMagic) $ Opt.option (bounded "TESTNET_MAGIC") $ mconcat
+      [ Opt.long "testnet-magic"
+      , Opt.metavar "NATURAL"
+      , Opt.help $ mconcat
+        [ "Specify a testnet magic id. This overrides the CARDANO_NODE_NETWORK_ID "
+        , "environment variable"
+        ]
+      ]
     ]
-  , fmap (Testnet . NetworkMagic) $ Opt.option (bounded "TESTNET_MAGIC") $ mconcat
-    [ Opt.long "testnet-magic"
-    , Opt.metavar "NATURAL"
-    , Opt.help "Specify a testnet magic id."
-    ]
+  , -- Default to the network id specified by the environment variable if it is available.
+    pure <$> maybeToList (envCliNetworkId envCli)
   ]
 
 pConsensusModeParams :: Parser AnyConsensusModeParams

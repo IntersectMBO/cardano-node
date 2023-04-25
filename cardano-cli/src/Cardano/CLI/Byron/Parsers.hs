@@ -69,6 +69,7 @@ import           Cardano.CLI.Byron.Genesis
 import           Cardano.CLI.Byron.Key
 import           Cardano.CLI.Byron.Tx
 import           Cardano.CLI.Common.Parsers (pNetworkId)
+import           Cardano.CLI.Environment (EnvCli (..))
 import           Cardano.CLI.Run (ClientCommand (ByronCommand))
 import           Cardano.CLI.Shelley.Commands (ByronKeyFormat (..))
 import           Cardano.CLI.Types
@@ -78,45 +79,48 @@ command' c descr p =
     command c $ info (p <**> helper)
               $ mconcat [ progDesc descr ]
 
-backwardsCompatibilityCommands :: Parser ClientCommand
-backwardsCompatibilityCommands =
+backwardsCompatibilityCommands :: EnvCli -> Parser ClientCommand
+backwardsCompatibilityCommands envCli =
   asum hiddenCmds
- where
-  convertToByronCommand :: Mod CommandFields ByronCommand -> Parser ClientCommand
-  convertToByronCommand p = ByronCommand <$> Opt.subparser (p <> Opt.internal)
 
-  hiddenCmds :: [Parser ClientCommand]
-  hiddenCmds = map convertToByronCommand [ parseGenesisRelatedValues
-                                         , parseKeyRelatedValues
-                                         , parseTxRelatedValues
-                                         , parseLocalNodeQueryValues
-                                         , parseMiscellaneous
-                                         ]
+  where
+    convertToByronCommand :: Mod CommandFields ByronCommand -> Parser ClientCommand
+    convertToByronCommand p = ByronCommand <$> Opt.subparser (p <> Opt.internal)
+
+    hiddenCmds :: [Parser ClientCommand]
+    hiddenCmds =
+      map convertToByronCommand
+        [ parseGenesisRelatedValues
+        , parseKeyRelatedValues envCli
+        , parseTxRelatedValues envCli
+        , parseLocalNodeQueryValues envCli
+        , parseMiscellaneous
+        ]
 
 -- Implemented with asum so all commands don't get hidden when trying to hide
 -- the 'pNodeCmdBackwardCompatible' parser.
-parseByronCommands :: Parser ByronCommand
-parseByronCommands = asum
-  [ subParser "key" (Opt.info (Opt.subparser parseKeyRelatedValues)
+parseByronCommands :: EnvCli -> Parser ByronCommand
+parseByronCommands envCli = asum
+  [ subParser "key" (Opt.info (Opt.subparser (parseKeyRelatedValues envCli))
       $ Opt.progDesc "Byron key utility commands")
-  , subParser "transaction" (Opt.info (Opt.subparser parseTxRelatedValues)
+  , subParser "transaction" (Opt.info (Opt.subparser (parseTxRelatedValues envCli))
       $ Opt.progDesc "Byron transaction commands")
-  , subParser "query" (Opt.info (Opt.subparser parseLocalNodeQueryValues)
+  , subParser "query" (Opt.info (Opt.subparser (parseLocalNodeQueryValues envCli))
       $ Opt.progDesc "Byron node query commands.")
   , subParser "genesis" (Opt.info (Opt.subparser parseGenesisRelatedValues)
       $ Opt.progDesc "Byron genesis block commands")
-  , subParser "governance" (Opt.info (NodeCmd <$> Opt.subparser pNodeCmd)
+  , subParser "governance" (Opt.info (NodeCmd <$> Opt.subparser (pNodeCmd envCli))
       $ Opt.progDesc "Byron governance commands")
   , subParser "miscellaneous" (Opt.info (Opt.subparser parseMiscellaneous)
       $ Opt.progDesc "Byron miscellaneous commands")
-  , NodeCmd <$> pNodeCmdBackwardCompatible
+  , NodeCmd <$> pNodeCmdBackwardCompatible envCli
   ]
  where
    subParser :: String -> ParserInfo ByronCommand -> Parser ByronCommand
    subParser name pInfo = Opt.subparser $ Opt.command name pInfo <> Opt.metavar name
 
-pNodeCmdBackwardCompatible :: Parser NodeCmd
-pNodeCmdBackwardCompatible = Opt.subparser $ pNodeCmd <> Opt.internal
+pNodeCmdBackwardCompatible :: EnvCli -> Parser NodeCmd
+pNodeCmdBackwardCompatible envCli = Opt.subparser $ pNodeCmd envCli <> Opt.internal
 
 parseCBORObject :: Parser CBORObject
 parseCBORObject = asum
@@ -186,53 +190,53 @@ parseGenesisRelatedValues =
 
 -- | Values required to create keys and perform
 -- transformation on keys.
-parseKeyRelatedValues :: Mod CommandFields ByronCommand
-parseKeyRelatedValues =
-    mconcat
-        [ command' "keygen" "Generate a signing key."
-            $ Keygen
-                <$> parseNewSigningKeyFile "secret"
-        , command'
-            "to-verification"
-            "Extract a verification key in its base64 form."
-            $ ToVerification
-                <$> parseByronKeyFormat
-                <*> parseSigningKeyFile
-                      "secret"
-                      "Signing key file to extract the verification part from."
-                <*> parseNewVerificationKeyFile "to"
-        , command'
-            "signing-key-public"
-            "Pretty-print a signing key's verification key (not a secret)."
-            $ PrettySigningKeyPublic
-                <$> parseByronKeyFormat
-                <*> parseSigningKeyFile
-                      "secret"
-                      "Signing key to pretty-print."
-        , command'
-            "signing-key-address"
-            "Print address of a signing key."
-            $ PrintSigningKeyAddress
-                <$> parseByronKeyFormat
-                <*> pNetworkId
-                <*> parseSigningKeyFile
-                      "secret"
-                      "Signing key, whose address is to be printed."
-        , command'
-            "migrate-delegate-key-from"
-            "Migrate a delegate key from an older version."
-            $ MigrateDelegateKeyFrom
-                <$> parseSigningKeyFile "from" "Legacy signing key file to migrate."
-                <*> parseNewSigningKeyFile "to"
-        ]
+parseKeyRelatedValues :: EnvCli -> Mod CommandFields ByronCommand
+parseKeyRelatedValues envCli =
+  mconcat
+    [ command' "keygen" "Generate a signing key."
+        $ Keygen
+            <$> parseNewSigningKeyFile "secret"
+    , command'
+        "to-verification"
+        "Extract a verification key in its base64 form."
+        $ ToVerification
+            <$> parseByronKeyFormat
+            <*> parseSigningKeyFile
+                  "secret"
+                  "Signing key file to extract the verification part from."
+            <*> parseNewVerificationKeyFile "to"
+    , command'
+        "signing-key-public"
+        "Pretty-print a signing key's verification key (not a secret)."
+        $ PrettySigningKeyPublic
+            <$> parseByronKeyFormat
+            <*> parseSigningKeyFile
+                  "secret"
+                  "Signing key to pretty-print."
+    , command'
+        "signing-key-address"
+        "Print address of a signing key."
+        $ PrintSigningKeyAddress
+            <$> parseByronKeyFormat
+            <*> pNetworkId envCli
+            <*> parseSigningKeyFile
+                  "secret"
+                  "Signing key, whose address is to be printed."
+    , command'
+        "migrate-delegate-key-from"
+        "Migrate a delegate key from an older version."
+        $ MigrateDelegateKeyFrom
+            <$> parseSigningKeyFile "from" "Legacy signing key file to migrate."
+            <*> parseNewSigningKeyFile "to"
+    ]
 
-parseLocalNodeQueryValues :: Mod CommandFields ByronCommand
-parseLocalNodeQueryValues =
+parseLocalNodeQueryValues :: EnvCli -> Mod CommandFields ByronCommand
+parseLocalNodeQueryValues envCli =
   mconcat
     [ command' "get-tip" "Get the tip of your local node's blockchain"
         $ GetLocalNodeTip
             <$> pNodeSocketPath
-            <*> pNetworkId
+            <*> pNetworkId envCli
     ]
 
 parseMiscellaneous :: Mod CommandFields ByronCommand
@@ -321,22 +325,22 @@ readerFromAttoParser :: Atto.Parser a -> Opt.ReadM a
 readerFromAttoParser p =
   Opt.eitherReader (Atto.parseOnly (p <* Atto.endOfInput) . BSC.pack)
 
-parseTxRelatedValues :: Mod CommandFields ByronCommand
-parseTxRelatedValues =
+parseTxRelatedValues :: EnvCli -> Mod CommandFields ByronCommand
+parseTxRelatedValues envCli =
   mconcat
     [ command'
         "submit-tx"
         "Submit a raw, signed transaction, in its on-wire representation."
         $ SubmitTx
             <$> pNodeSocketPath
-            <*> pNetworkId
+            <*> pNetworkId envCli
             <*> parseTxFile "tx"
     , command'
         "issue-genesis-utxo-expenditure"
         "Write a file with a signed transaction, spending genesis UTxO."
         $ SpendGenesisUTxO
             <$> parseGenesisFile "genesis-json"
-            <*> pNetworkId
+            <*> pNetworkId envCli
             <*> parseByronKeyFormat
             <*> parseNewTxFile "tx"
             <*> parseSigningKeyFile
@@ -351,7 +355,7 @@ parseTxRelatedValues =
         "issue-utxo-expenditure"
         "Write a file with a signed transaction, spending normal UTxO."
         $ SpendUTxO
-            <$> pNetworkId
+            <$> pNetworkId envCli
             <*> parseByronKeyFormat
             <*> parseNewTxFile "tx"
             <*> parseSigningKeyFile
@@ -367,26 +371,23 @@ parseTxRelatedValues =
             <$> parseTxFile "tx"
     ]
 
-pNodeCmd :: Mod CommandFields NodeCmd
-pNodeCmd =
-    mconcat
-      [ Opt.command "create-update-proposal"
-          (Opt.info parseByronUpdateProposal $ Opt.progDesc  "Create an update proposal.")
+pNodeCmd :: EnvCli -> Mod CommandFields NodeCmd
+pNodeCmd envCli =
+  mconcat
+    [ Opt.command "create-update-proposal" $
+        Opt.info (parseByronUpdateProposal envCli) $ Opt.progDesc  "Create an update proposal."
+    , Opt.command "create-proposal-vote" $
+        Opt.info (parseByronVote envCli) $ Opt.progDesc "Create an update proposal vote."
+    , Opt.command "submit-update-proposal" $
+        Opt.info (parseByronUpdateProposalSubmission envCli) $ Opt.progDesc "Submit an update proposal."
+    , Opt.command "submit-proposal-vote" $
+        Opt.info (parseByronVoteSubmission envCli) $ Opt.progDesc "Submit a proposal vote."
+    ]
 
-      , Opt.command "create-proposal-vote"
-          (Opt.info parseByronVote $ Opt.progDesc "Create an update proposal vote.")
-
-      , Opt.command "submit-update-proposal"
-          (Opt.info parseByronUpdateProposalSubmission $ Opt.progDesc "Submit an update proposal.")
-
-      , Opt.command "submit-proposal-vote"
-          (Opt.info parseByronVoteSubmission $ Opt.progDesc "Submit a proposal vote.")
-      ]
-
-parseByronUpdateProposal :: Parser NodeCmd
-parseByronUpdateProposal = do
+parseByronUpdateProposal :: EnvCli -> Parser NodeCmd
+parseByronUpdateProposal envCli = do
   UpdateProposal
-    <$> pNetworkId
+    <$> pNetworkId envCli
     <*> parseSigningKeyFile "signing-key" "Path to signing key."
     <*> parseProtocolVersion
     <*> parseSoftwareVersion
@@ -395,11 +396,11 @@ parseByronUpdateProposal = do
     <*> parseFilePath "filepath" "Byron proposal output filepath."
     <*> pByronProtocolParametersUpdate
 
-parseByronVoteSubmission :: Parser NodeCmd
-parseByronVoteSubmission = do
+parseByronVoteSubmission :: EnvCli -> Parser NodeCmd
+parseByronVoteSubmission envCli = do
   SubmitVote
     <$> pNodeSocketPath
-    <*> pNetworkId
+    <*> pNetworkId envCli
     <*> parseFilePath "filepath" "Filepath of Byron update proposal vote."
 
 
@@ -421,18 +422,17 @@ pByronProtocolParametersUpdate =
     <*> optional parseTxFeePolicy
     <*> optional parseUnlockStakeEpoch
 
-parseByronUpdateProposalSubmission :: Parser NodeCmd
-parseByronUpdateProposalSubmission =
+parseByronUpdateProposalSubmission :: EnvCli -> Parser NodeCmd
+parseByronUpdateProposalSubmission envCli =
   SubmitUpdateProposal
     <$> pNodeSocketPath
-    <*> pNetworkId
+    <*> pNetworkId envCli
     <*> parseFilePath "filepath" "Filepath of Byron update proposal."
 
-
-parseByronVote :: Parser NodeCmd
-parseByronVote =
+parseByronVote :: EnvCli -> Parser NodeCmd
+parseByronVote envCli =
   CreateVote
-    <$> pNetworkId
+    <$> pNetworkId envCli
     <*> (File <$> parseFilePath "signing-key" "Filepath of signing key.")
     <*> parseFilePath "proposal-filepath" "Filepath of Byron update proposal."
     <*> parseVoteBool

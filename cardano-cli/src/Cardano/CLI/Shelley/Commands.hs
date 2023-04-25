@@ -240,7 +240,7 @@ data TransactionCmd
   | TxMintedPolicyId ScriptFile
   | TxCalculateMinFee
       (TxBodyFile In)
-      (Maybe NetworkId)
+      NetworkId
       ProtocolParamsFile
       TxInCount
       TxOutCount
