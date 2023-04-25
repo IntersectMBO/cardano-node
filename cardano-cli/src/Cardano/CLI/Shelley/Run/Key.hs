@@ -4,9 +4,10 @@
 module Cardano.CLI.Shelley.Run.Key
   ( ShelleyKeyCmdError
   , SomeSigningKey(..)
+  , SomeExtendedVerificationKey(..)
   , renderShelleyKeyCmdError
   , runKeyCmd
-  , SomeExtendedVerificationKey(..)
+  , readSigningKeyFile
 
     -- * Exports for testing
   , decodeBech32
