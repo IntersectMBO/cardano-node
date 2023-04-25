@@ -11,6 +11,33 @@
 
 ### network changes
 
+- Added `PeerSharing` option in the configuration file which enables an
+  experimental feature.  By default peer sharing is disabled. Please note that
+  until genesis & eclipse evasion are available this feauture can expose a node
+  to eclipse attacks.
+
+- The `TracePeerSelection` have new trace points which log peer sharing request
+  and results.
+
+- `TrImpossibleConnection` trace point of the `connection-manager` was removed.
+
+## 1.35.7 -- March 2023
+
+### consensus changes
+
+None
+
+### ledger changes
+
+None
+
+### network changes
+
+- Fixed interoperability bug in non-p2p networking code base which was exposed
+  by p2p nodes. (issue [ouroboros-network#4465])
+
+[ouroboros-network#4465]: https://github.com/input-output-hk/ouroboros-network/issues/4465
+
 ## 1.35.6 -- March 2023
 
 ### consensus changes
