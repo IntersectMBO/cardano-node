@@ -472,6 +472,7 @@ will be "guarded" by the script.
 cardano-cli transaction build-raw \
     --invalid-hereafter 1000 \
     --fee 0 \
+    --tx-in-script-file allMultiSigScript \
     --tx-in (txin of script address)
     --tx-out yourspecifiedtxout \
     --out-file spendScriptTxBody
@@ -483,12 +484,6 @@ To construct the script witness and three key witnesses required by the example
 `all` script, run the following commands:
 
 ```bash
-cardano-cli transaction witness \
-  --tx-body-file spendScriptTxBody \
-  --script-file allMultiSigScript \
-  --testnet-magic 42 \
-  --out-file scriptWitness
-
 cardano-cli transaction witness \
   --tx-body-file spendScriptTxBody \
   --signing-key-file paySignKey1 \
@@ -516,7 +511,6 @@ witness and all the other required key witnesses.
 ```bash
 cardano-cli transaction assemble \
   --tx-body-file spendScriptTxBody \
-  --witness-file scriptWitness \
   --witness-file key1witness \
   --witness-file key2witness \
   --witness-file key3witness \
@@ -601,6 +595,7 @@ above this means >= 1000.
 cardano-cli transaction build-raw \
     --invalid-before 1000 \
     --fee 0 \
+    --tx-in-script-file allMultiSigScript \
     --tx-in (txin of script address)
     --tx-out yourspecifiedtxout \
     --out-file spendScriptTxBody
@@ -635,6 +630,7 @@ above this means <= 3000:
 cardano-cli transaction build-raw \
     --invalid-hereafter 3000\
     --fee 0 \
+    --tx-in-script-file allMultiSigScript \
     --tx-in (txin of script address)
     --tx-out yourspecifiedtxout \
     --out-file spendScriptTxBody
