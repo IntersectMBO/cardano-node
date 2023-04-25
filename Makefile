@@ -75,9 +75,9 @@ ps:                                              ## Plain-text list of profiles
 ##
 PROFILES_BASE         := default plutus plutus-secp-ecdsa plutus-secp-schnorr oldtracing idle tracer-only
 PROFILES_STARTSTOP    := startstop startstop-p2p startstop-plutus startstop-notracer startstop-oldtracing
-PROFILES_CI_TEST      := ci-test ci-test-p2p ci-test-plutus ci-test-notracer ci-test-dense10 aws-test
-PROFILES_CI_BENCH     := ci-bench ci-bench-p2p ci-bench-plutus ci-bench-plutus-secp-ecdsa ci-bench-plutus-secp-schnorr ci-bench-notracer
-PROFILES_TRACE_BENCH  := trace-bench trace-bench-notracer trace-bench-oldtracing
+PROFILES_CI_TEST      := ci-test ci-test-p2p ci-test-plutus ci-test-notracer ci-test-rtview ci-test-dense10 aws-test
+PROFILES_CI_BENCH     := ci-bench ci-bench-p2p ci-bench-plutus ci-bench-plutus-secp-ecdsa ci-bench-plutus-secp-schnorr ci-bench-notracer ci-bench-rtview
+PROFILES_TRACE_BENCH  := trace-bench trace-bench-notracer trace-bench-oldtracing trace-bench-rtview
 PROFILES_EPOCHTRANS   := epoch-transition
 PROFILES_PLUTUSCALL   := plutuscall-loop-plain plutuscall-secp-ecdsa-plain plutuscall-secp-schnorr-plain
 PROFILES_PLUTUSCALL   += plutuscall-loop-half plutuscall-secp-ecdsa-half plutuscall-secp-schnorr-half

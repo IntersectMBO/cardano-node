@@ -28,10 +28,6 @@ let serviceConfigToJSON =
           rpMaxAgeHours   = 24;
         } // (cfg.rotation or {});
 
-        hasRTView = {
-          epHost    = "127.0.0.1";
-          epPort    = 3300;
-        } // (cfg.RTView or {});
         hasEKG = [
           { epHost  = "127.0.0.1"; epPort  = cfg.ekgPortBase;     }
           { epHost  = "127.0.0.1"; epPort  = cfg.ekgPortBase + 1; }
@@ -49,6 +45,9 @@ let serviceConfigToJSON =
         #     "Mempool.TxsInMempool" = "Mempool.TxsInMempool.Mapped";
         #     "ChainDB.SlotNum" = "ChainDB.SlotNum.Mapped";
         # };
+      } // pkgs.lib.optionalAttrs ((cfg.RTView or {}) != {})
+      {
+        hasRTView = cfg.RTView;
       };
 in pkgs.commonLib.defServiceModule
   (lib: with lib;
