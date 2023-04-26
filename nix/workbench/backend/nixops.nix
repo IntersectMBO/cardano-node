@@ -24,9 +24,9 @@ let
   extraShellPkgs = [ nixopsAlaCardanoOps ];
 
   mkGlobals =
-    profileNix: pkgs: _:
+    profileData: pkgs: _:
     let
-      inherit (profileNix) topology genesis;
+      inherit (profileData) topology genesis;
       inherit (pkgs) globals;
 
       ## WARNING: IFD
@@ -47,9 +47,9 @@ let
             rtsArgs =
               mkForce ([ "-N2" "-A16m" "-qg" "-qb" "-scardano-node.gcstats" ]
                        ++
-                       (profileNix.value.node.rts_flags_override or []));
-            useNewTopology = profileNix.value.node.p2p or false;
-            usePeersFromLedgerAfterSlot = if profileNix.value.node.useLedgerPeers then 0 else -1;
+                       (profileData.value.node.rts_flags_override or []));
+            useNewTopology = profileData.value.node.p2p or false;
+            usePeersFromLedgerAfterSlot = if profileData.value.node.useLedgerPeers then 0 else -1;
           };
         } machineOverlay;
 
@@ -80,7 +80,7 @@ let
                TraceChainSyncHeaderServer = true;
                TraceChainSyncClient       = true;
             } //
-            (profileNix.value.node.extra_config or {})));
+            (profileData.value.node.extra_config or {})));
 
       benchmarkingLogConfig = name: {
         defaultScribes = [
@@ -121,10 +121,10 @@ let
       ConwayGenesisFile  = "${genesis.files}/genesis.conway.json";
     in
     rec {
-      profile = profileNix;
+      profile = profileData;
 
       deploymentName = builtins.getEnv "WB_DEPLOYMENT_NAME";
-      networkName = "Workbench cluster ${deploymentName}, ${toString (__length topologyNix.coreNodes)} block producers, ${toString (__length topologyNix.relayNodes)} relays, profile ${profileNix.profileName}";
+      networkName = "Workbench cluster ${deploymentName}, ${toString (__length topologyNix.coreNodes)} block producers, ${toString (__length topologyNix.relayNodes)} relays, profile ${profileData.profileName}";
 
       withMonitoring = false;
       withExplorer = false;
@@ -148,7 +148,7 @@ let
       nodeDbDiskAllocationSize = 15;
       nbInstancesPerRelay = 1;
 
-      environmentName = "bench-${profileNix.profileName}";
+      environmentName = "bench-${profileData.profileName}";
       environmentVariables = {};
       environmentConfig = rec {
         relays = "relays.${globals.domain}";
@@ -202,7 +202,7 @@ let
               TestBabbageHardForkAtEpoch = 0;
               TestConwayHardForkAtEpoch  = 0;
             };
-        }.${profileNix.value.era};
+        }.${profileData.value.era};
         txSubmitConfig = {
           inherit (networkConfig) RequiresNetworkMagic;
           inherit ConwayGenesisFile AlonzoGenesisFile ShelleyGenesisFile ByronGenesisFile;
@@ -210,7 +210,7 @@ let
 
         ## This is overlaid atop the defaults in the tx-generator service,
         ## as specified in the 'cardano-node' repository.
-        generatorConfig = profileNix.value.generator;
+        generatorConfig = profileData.value.generator;
       };
 
       topology = {
@@ -230,10 +230,10 @@ let
         #         systemd.services.dump-registered-relays-topology.enable = mkForce false;
         #         services.cardano-node.systemdSocketActivation = mkForce false;
         #         services.cardano-node.tracerSocketPathConnect = mkForce
-        #           (if profileNix.value.node.tracing_backend == "iohk-monitoring" then null
+        #           (if profileData.value.node.tracing_backend == "iohk-monitoring" then null
         #            else "/var/lib/cardano-node/tracer.socket");
         #         services.cardano-tracer.networkMagic =
-        #           mkForce profileNix.value.genesis.protocol_magic;
+        #           mkForce profileData.value.genesis.protocol_magic;
         #         ## Generator can only use new tracing:
         #         services.tx-generator.tracerSocketPath =
         #           mkForce "/var/lib/cardano-node/tracer.socket";
@@ -252,9 +252,9 @@ let
                 stakePool = true;
                 services.cardano-node.systemdSocketActivation = mkForce false;
                 services.cardano-node.tracerSocketPathConnect = mkForce
-                  (if profileNix.value.node.tracing_backend == "iohk-monitoring" then null
+                  (if profileData.value.node.tracing_backend == "iohk-monitoring" then null
                    else "/var/lib/cardano-node/tracer.socket");
-                services.cardano-tracer.networkMagic = mkForce profileNix.value.genesis.protocol_magic;
+                services.cardano-tracer.networkMagic = mkForce profileData.value.genesis.protocol_magic;
               }
               ## 2. cardano-node service config overlay
               {
@@ -278,26 +278,26 @@ let
     };
 
   materialise-profile =
-    { profileNix }:
+    { profileData }:
       let
-      in pkgs.runCommand "workbench-backend-output-${profileNix.profileName}-nixops"
+      in pkgs.runCommand "workbench-backend-output-${profileData.profileName}-nixops"
         {}
         ''
         mkdir $out
         touch $out/empty
         '';
 
-  overlay = profileNix: self: super:
+  overlay = profileData: self: super:
     {
-      globals = mkGlobals profileNix self super;
+      globals = mkGlobals profileData self super;
       cardano-ops = {
         modules = {
-          base-service = import ./nixops/module-base-service.nix self profileNix;
+          base-service = import ./nixops/module-base-service.nix self profileData;
           common       = import ./nixops/module-common.nix       self;
         };
         roles = {
           pool         = import ./nixops/role-pool.nix         self;
-          explorer     = import ./nixops/role-explorer.nix     self profileNix;
+          explorer     = import ./nixops/role-explorer.nix     self profileData;
           relay        = import ./nixops/role-relay.nix        self;
         };
       };

@@ -13,7 +13,7 @@ let
   # See https://input-output-hk.github.io/haskell.nix/user-guide/development/
   # The general idea is:
   # 1. backendName -> stateDir -> basePort -> useCabalRun -> backend
-  # 2. batchName -> profileName -> backend -> workbench -> runner
+  # 2. batchName -> profileName -> profiling -> backend -> workbench -> runner
   # * `workbench` is in case a pinned version of the workbench is needed.
   workbench-runner =
   let
@@ -34,9 +34,7 @@ let
   in
     { stateDir           ? customConfig.localCluster.stateDir
     , batchName          ? customConfig.localCluster.batchName
-    , profileNix         ? null
-    , profileName        ? if profileNix != null then profileNix.profileName
-                           else customConfig.localCluster.profileName
+    , profileName        ? customConfig.localCluster.profileName
     , backendName        ? customConfig.localCluster.backendName
     , basePort           ? customConfig.localCluster.basePort
     , useCabalRun        ? customConfig.localCluster.useCabalRun

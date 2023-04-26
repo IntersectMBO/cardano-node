@@ -10,7 +10,6 @@
 , workbench-runner
 , workbenchDevMode ? false
 ##
-, profiling ? "none"
 , withHoogle ? true
 , withMainnet ? true
 }:
@@ -18,68 +17,68 @@
 with lib;
 
 let
-    ## TODO:  globally rename all profileNix occurences to profileData
-    inherit (workbench-runner) profileName profileNix backend;
 
-    shellHook = { profileName, backend, profiling, workbenchDevMode, withMainnet }: ''
-      while test $# -gt 0
-      do shift; done       ## Flush argv[]
-
-      . nix/workbench/lib.sh
-
-      export WB_SHELL_PROFILE=${profileName}
-      export WB_SHELL_PROFILE_DATA=${profileNix}
-      export WB_BACKEND=${backend.name}
-      export WB_DEPLOYMENT_NAME=''${WB_DEPLOYMENT_NAME:-$(basename $(pwd))}
-      export NIXOPS_DEPLOYMENT=$WB_DEPLOYMENT_NAME
-      progress "profile name"           $WB_SHELL_PROFILE
-      progress "WB_SHELL_PROFILE_DATA=" $WB_SHELL_PROFILE_DATA
-      progress "backend name"           $WB_BACKEND
-      progress "deployment name"        $WB_DEPLOYMENT_NAME
-      progress "params"                 'useCabalRun=${toString backend.useCabalRun} workbenchDevMode=${toString workbenchDevMode} profiling=${toString profiling}'
-
-      ${optionalString
-        workbenchDevMode
-        ''
-      export WB_CARDANO_NODE_REPO_ROOT=$(git rev-parse --show-toplevel)
-      export WB_EXTRA_FLAGS=
-
-      function wb() {
-        $WB_CARDANO_NODE_REPO_ROOT/nix/workbench/wb $WB_EXTRA_FLAGS "$@"
-      }
-      export -f wb
-        ''}
-
-      ${optionalString
-        backend.useCabalRun
-        ''
-      . nix/workbench/lib-cabal.sh ${optionalString (profiling != "none") "--profiling-${profiling}"}
-      cabal update
-        ''}
-
-      export CARDANO_NODE_SOCKET_PATH=run/current/node-0/node.socket
-
-      function workbench_atexit() {
-          if wb backend is-running run/current
-          then stop-cluster
-          fi
-      }
-      trap workbench_atexit EXIT
-
-      ${optionalString
-        withMainnet
-        ''
-      export CARDANO_MAINNET_MIRROR=${cardano-mainnet-mirror.outputs.defaultPackage.x86_64-linux.outPath}
-        ''}
-
-      ${setLocale}
-      ${commandHelp}
-      '';
+    inherit (workbench-runner) profileName profileData backend backendData profiling;
 
 in project.shellFor {
   name = "workbench-shell";
 
-  shellHook = shellHook { inherit profileName backend profiling workbenchDevMode withMainnet; };
+  shellHook = ''
+    while test $# -gt 0
+    do shift; done       ## Flush argv[]
+
+    . nix/workbench/lib.sh
+
+    export WB_SHELL_PROFILE=${profileName}
+    export WB_SHELL_PROFILE_DATA=${profileData}
+    export WB_BACKEND=${backend.name}
+    export WB_BACKEND_DATA=${backendData}
+    export WB_DEPLOYMENT_NAME=''${WB_DEPLOYMENT_NAME:-$(basename $(pwd))}
+    export NIXOPS_DEPLOYMENT=$WB_DEPLOYMENT_NAME
+    progress "profile name"           $WB_SHELL_PROFILE
+    progress "WB_SHELL_PROFILE_DATA=" $WB_SHELL_PROFILE_DATA
+    progress "backend name"           $WB_BACKEND
+    progress "WB_BACKEND_DATA="       $WB_BACKEND_DATA
+    progress "deployment name"        $WB_DEPLOYMENT_NAME
+    progress "params"                 'useCabalRun=${toString backend.useCabalRun} workbenchDevMode=${toString workbenchDevMode} profiling=${toString profiling}'
+
+    ${optionalString
+      workbenchDevMode
+      ''
+    export WB_CARDANO_NODE_REPO_ROOT=$(git rev-parse --show-toplevel)
+    export WB_EXTRA_FLAGS=
+
+    function wb() {
+      $WB_CARDANO_NODE_REPO_ROOT/nix/workbench/wb $WB_EXTRA_FLAGS "$@"
+    }
+    export -f wb
+      ''}
+
+    ${optionalString
+      backend.useCabalRun
+      ''
+    . nix/workbench/lib-cabal.sh ${optionalString (profiling != "none") "--profiling-${profiling}"}
+    cabal update
+      ''}
+
+    export CARDANO_NODE_SOCKET_PATH=run/current/node-0/node.socket
+
+    function workbench_atexit() {
+        if wb backend is-running run/current
+        then stop-cluster
+        fi
+    }
+    trap workbench_atexit EXIT
+
+    ${optionalString
+      withMainnet
+      ''
+    export CARDANO_MAINNET_MIRROR=${cardano-mainnet-mirror.outputs.defaultPackage.x86_64-linux.outPath}
+      ''}
+
+    ${setLocale}
+    ${commandHelp}
+  '';
 
   inherit withHoogle;
 
@@ -133,6 +132,4 @@ in project.shellFor {
   ++ lib.optionals (!backend.useCabalRun) [ cardano-topology cardano-cli locli ]
   ++ lib.optionals (!workbenchDevMode) [ workbench.workbench ]
   ;
-
-} // { inherit shellHook;
-     }
+}

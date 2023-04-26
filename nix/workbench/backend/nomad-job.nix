@@ -5,7 +5,7 @@
 ################################################################################
 { lib
 , stateDir
-, profileNix
+, profileData
 , containerSpecs
 # Needs unix_http_server.file
 , supervisorConf
@@ -244,7 +244,7 @@ let
           port = lib.listToAttrs (
             # If not oneTracerPerNode, an individual tracer task is needed (instead
             # of running a tracer alongside a node with supervisor)
-            lib.optionals (profileNix.value.node.tracer && !oneTracerPerNode) [
+            lib.optionals (profileData.value.node.tracer && !oneTracerPerNode) [
               # TODO: Leave empty or invent one?
               {name = "tracer"; value = {};}
             ]
@@ -422,7 +422,7 @@ let
               env = false;
               destination = "${task_statedir}/generator/start.sh";
               data = escapeTemplate
-                profileNix.generator-service.startupScript.value;
+                profileData.generator-service.startupScript.value;
               change_mode = "noop";
               error_on_missing_key = true;
             }
@@ -431,7 +431,7 @@ let
               env = false;
               destination = "${task_statedir}/generator/run-script.json";
               data = escapeTemplate (__readFile
-                profileNix.generator-service.runScript.JSON.outPath);
+                profileData.generator-service.runScript.JSON.outPath);
               change_mode = "noop";
               error_on_missing_key = true;
             }
@@ -441,13 +441,13 @@ let
           ## If using oneTracerPerNode no "tracer volumes" need to be mounted
           ## (because of no socket sharing between tasks), and tracer files are
           ## created using templates.
-          (lib.optionals (profileNix.value.node.tracer && oneTracerPerNode) [
+          (lib.optionals (profileData.value.node.tracer && oneTracerPerNode) [
             ## Tracer start.sh script.
             {
               env = false;
               destination = "${task_statedir}/tracer/start.sh";
               data = escapeTemplate
-                profileNix.tracer-service.startupScript.value;
+                profileData.tracer-service.startupScript.value;
               change_mode = "noop";
               error_on_missing_key = true;
             }
@@ -461,14 +461,14 @@ let
                   # When running locally every tracer has a 127.0.0.1 address
                   # and EKG and prometheus ports clash!
                   (builtins.removeAttrs
-                    profileNix.tracer-service.config.value
+                    profileData.tracer-service.config.value
                     [ "hasEKG" "hasPrometheus" "hasRTView" ]
                   )
                   # Make it easier to download every log
                   {
                       logging = builtins.map
                         (value: value // { logRoot="./logRoot"; })
-                        profileNix.tracer-service.config.value.logging
+                        profileData.tracer-service.config.value.logging
                       ;
                   }
                 )
@@ -486,7 +486,7 @@ let
                 env = false;
                 destination = "${task_statedir}/${nodeSpec.name}/start.sh";
                 data = escapeTemplate (
-                  let scriptValue = profileNix.node-services."${nodeSpec.name}".startupScript.value;
+                  let scriptValue = profileData.node-services."${nodeSpec.name}".startupScript.value;
                   in if execTaskDriver
                     then (startScriptToGoTemplate
                       nodeSpec.name
@@ -505,7 +505,7 @@ let
                 env = false;
                 destination = "${task_statedir}/${nodeSpec.name}/config.json";
                 data = escapeTemplate (lib.generators.toJSON {}
-                  profileNix.node-services."${nodeSpec.name}".nodeConfig.value);
+                  profileData.node-services."${nodeSpec.name}".nodeConfig.value);
                 change_mode = "noop";
                 error_on_missing_key = true;
               }
@@ -514,7 +514,7 @@ let
                 env = false;
                 destination = "${task_statedir}/${nodeSpec.name}/topology.json";
                 data = escapeTemplate (
-                  let topology = profileNix.node-services."${nodeSpec.name}".topology;
+                  let topology = profileData.node-services."${nodeSpec.name}".topology;
                   in if execTaskDriver
                     then (topologyToGoTemplate topology.value)
                     else (__readFile           topology.JSON )
@@ -523,7 +523,7 @@ let
                 error_on_missing_key = true;
               }
             ])
-            profileNix.node-specs.value
+            profileData.node-specs.value
           ))
           ;
 
@@ -634,7 +634,7 @@ let
       in lib.listToAttrs (
         # If not oneTracerPerNode, an individual tracer task is needed (instead
         # of running a tracer alongside a node with supervisor)
-        lib.optionals (profileNix.value.node.tracer && !oneTracerPerNode) [
+        lib.optionals (profileData.value.node.tracer && !oneTracerPerNode) [
           {
             name = "tracer";
             value = valueF
@@ -663,7 +663,7 @@ let
               nodeSpec.port                          # portNum
               nodeSpec;                              # node-specs
           })
-          (profileNix.node-specs.value)
+          (profileData.node-specs.value)
         )
       );
 
@@ -912,7 +912,7 @@ let
         # Address string from
         ''--host-addr 127.0.0.1''
         # Port string from
-        ''--port ${toString profileNix.node-specs.value."${nodeSpec.name}".port}''
+        ''--port ${toString profileData.node-specs.value."${nodeSpec.name}".port}''
       ]
       [
         # Address string to
@@ -956,7 +956,7 @@ let
   #     "shutdown_on_block_synced": 3
   #   }
   # }
-  # Input is a profileNix.node-services."${nodeSpec.name}".topology.value
+  # Input is a profileData.node-services."${nodeSpec.name}".topology.value
   topologyToGoTemplate =
     let
 #            "addr": "127.0.0.1"
@@ -999,7 +999,7 @@ let
           (nodeSpec: nodeSpec.port == port)
           (lib.attrsets.mapAttrsToList
             (nodeName: nodeSpec: nodeSpec)
-            profileNix.node-specs.value
+            profileData.node-specs.value
           )
         )
     );

@@ -28,13 +28,13 @@ let
 
   # Backend-specific Nix bits:
   materialise-profile =
-    { profileNix }:
+    { profileData }:
       let supervisorConf = import ./supervisor-conf.nix
-        { inherit profileNix;
+        { inherit profileData;
           inherit pkgs lib stateDir;
           inetHttpServerPort = "127.0.0.1:9001";
         };
-      in pkgs.runCommand "workbench-backend-output-${profileNix.profileName}-supervisor"
+      in pkgs.runCommand "workbench-backend-output-${profileData.profileName}-supervisor"
         {supervisorConfPath = supervisorConf.INI;}
         ''
         mkdir $out

@@ -75,7 +75,6 @@ let
           inherit cardano-mainnet-mirror;
           inherit workbenchDevMode;
           inherit withHoogle;
-          profiling = profilingEff;
           workbench-runner = pkgs.workbench-runner
             { inherit profileName backendName useCabalRun;
               profiling = profilingEff;
@@ -89,13 +88,7 @@ let
             inherit profileName;
             backendName = "supervisor";
             useCabalRun = false;
-          };
-        devopsShellParams =
-          { inherit profileName;
-            inherit (workbench-runner) backend;
-            inherit workbenchDevMode;
             profiling = profilingEff;
-            withMainnet = false;
           };
         devopsShell = with customConfig.localCluster;
           import ./nix/workbench/shell.nix
@@ -104,7 +97,7 @@ let
               inherit cardano-mainnet-mirror;
               inherit workbench-runner workbenchDevMode;
               inherit withHoogle;
-              profiling = profilingEff;
+              withMainnet = false;
             };
     in project.shellFor {
     name = "devops-shell";
@@ -140,7 +133,7 @@ let
       | ${figlet}/bin/figlet -f banner -c \
       | ${lolcat}/bin/lolcat
 
-      ${devopsShell.shellHook devopsShellParams}
+      ${devopsShell.shellHook}
 
       # Socket path default to first node launched by "start-cluster":
       export CARDANO_NODE_SOCKET_PATH=$(wb backend get-node-socket-path ${workbench-runner.stateDir} 'node-0')

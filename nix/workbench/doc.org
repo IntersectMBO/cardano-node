@@ -14,10 +14,10 @@
         - nomad.nix      [[file:backend/nomad.nix::name = "nomad";]]
         - supervisor.nix [[file:backend/supervisor.nix::name = "supervisor";]]
         - workbench-interactive-start [[file:backend/runner.nix::workbench-interactive-start = pkgs.writeScriptBin "start-cluster" '']]
-      - profileNix [[file:shell.nix::inherit (workbench-runner) profileName profileNix backend;]]
+      - profileData [[file:shell.nix::inherit (workbench-runner) profileName profileData backend;]]
         - materialise-profile [[file:profile/profile.nix::materialise-profile =]]
       - shellHook [[file:shell.nix::shellHook = { profileName, backend, profiled, workbenchDevMode, withMainnet }: '']]
-*** =workbench.materialise-profile= /aka profileNix/
+*** =workbench.materialise-profile= /aka profileData/
     - materialise-profile [[file:profile/profile.nix::materialise-profile =]]
       - profile [[file:profile/profile.nix::profile = { profileName]]
       - profileData [[file:profile/profile.nix::profileData = { profile }:]]
@@ -25,7 +25,7 @@
     - =make workbench-ci-test= [[file:~/cardano-node/nix.mk::nix build --out-link result-ci-test '.#hydraJobs.native.workbench-ci-test' --cores 0]]
       - workbench-ci-test [[file:~/cardano-node/flake.nix::workbench-ci-test =]]
         - workbench-profile-run [[file:backend/runner.nix::workbench-profile-run =]]
-          - profileNix [[file:backend/runner.nix::profileNix = workbench.materialise-profile]]
+          - profileData [[file:backend/runner.nix::profileData = workbench.materialise-profile]]
           - backendNix [[file:backend/runner.nix::backendNix = backend.materialise-profile]]
 * Backends
 *** Nixops
@@ -56,8 +56,8 @@
             - options :: [[file:backend/nixops/module-base-service.nix::options = {]]
             - config :: [[file:backend/nixops/module-base-service.nix::config = {]]
               - random stuff: disk, socket, firewall, users, networking
-              - svcs.c-t = profileNix.tracer-service.serviceConfig.value
-              - svcs.c-n = profileNix.node-services.${name}.serviceConfig.value
+              - svcs.c-t = profileData.tracer-service.serviceConfig.value
+              - svcs.c-n = profileData.node-services.${name}.serviceConfig.value
             - modules.common :: [[file:backend/nixops/module-base-service.nix::cardano-ops.modules.common]]
               - iohk-ops-lib.modules.common
               - options :: [[file:backend/nixops/module-common.nix::options = {]]

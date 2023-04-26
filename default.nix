@@ -5,8 +5,8 @@ in
 {
   # override scripts with custom configuration
   withHoogle ? defaultCustomConfig.withHoogle
-, profileNix ? null
-, profileName ? if profileNix != null then profileNix.profileName
+, profileData ? null
+, profileName ? if profileData != null then profileData.profileName
                 else defaultCustomConfig.localCluster.profileName;
 , workbenchDevMode ? defaultCustomConfig.localCluster.workbenchDevMode
 , customConfig ? {
