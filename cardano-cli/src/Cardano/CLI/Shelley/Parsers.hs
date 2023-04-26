@@ -1186,14 +1186,13 @@ pGovernanceCmd =
     pGovernanceAnswerPoll =
       GovernanceAnswerPoll
         <$> pPollFile
-        <*> pSigningKeyFileIn
         <*> optional pPollAnswerIndex
 
     pGovernanceVerifyPoll :: Parser GovernanceCmd
     pGovernanceVerifyPoll =
       GovernanceVerifyPoll
         <$> pPollFile
-        <*> pPollMetadataFile
+        <*> pPollTxFile
 
 
 pPollQuestion :: Parser Text
@@ -1220,7 +1219,7 @@ pPollAnswerIndex =
     <> Opt.help "The index of the chosen answer in the poll. Optional. Asked interactively if omitted."
     )
 
-pPollFile :: Parser (File () In)
+pPollFile :: Parser (File GovernancePoll In)
 pPollFile =
   Opt.strOption
     (  Opt.long "poll-file"
@@ -1229,21 +1228,21 @@ pPollFile =
     <> Opt.completer (Opt.bashCompleter "file")
     )
 
+pPollTxFile :: Parser (TxFile In)
+pPollTxFile =
+  fmap File $ Opt.strOption $ mconcat
+    [ Opt.long "signed-tx-file"
+    , Opt.metavar "FILE"
+    , Opt.help "Filepath to a signed transaction carrying a valid poll answer."
+    , Opt.completer (Opt.bashCompleter "file")
+    ]
+
 pPollNonce :: Parser Word
 pPollNonce =
   Opt.option auto
     (  Opt.long "nonce"
     <> Opt.metavar "UINT"
     <> Opt.help "An (optional) nonce for non-replayability."
-    )
-
-pPollMetadataFile :: Parser (File () In)
-pPollMetadataFile =
-  Opt.strOption
-    (  Opt.long "metadata-file"
-    <> Opt.metavar "FILE"
-    <> Opt.help "Filepath of the metadata file, in (detailed) JSON format."
-    <> Opt.completer (Opt.bashCompleter "file")
     )
 
 pTransferAmt :: Parser Lovelace

@@ -716,8 +716,8 @@ readRequiredSigner (RequiredSignerSkeyFile skFile) = do
  where
    textEnvFileTypes =
      [ FromSomeType (AsSigningKey AsPaymentKey) APaymentSigningKey
-     , FromSomeType (AsSigningKey AsPaymentExtendedKey)
-                          APaymentExtendedSigningKey
+     , FromSomeType (AsSigningKey AsPaymentExtendedKey) APaymentExtendedSigningKey
+     , FromSomeType (AsSigningKey AsStakePoolKey) AStakePoolSigningKey
      ]
    bech32FileTypes = []
 

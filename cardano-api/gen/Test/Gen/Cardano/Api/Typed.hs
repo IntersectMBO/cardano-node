@@ -112,7 +112,6 @@ module Test.Gen.Cardano.Api.Typed
 
   , genGovernancePoll
   , genGovernancePollAnswer
-  , genGovernancePollWitness
   ) where
 
 import           Cardano.Api hiding (txIns)
@@ -120,7 +119,7 @@ import qualified Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
 import           Cardano.Api.Shelley (GovernancePoll (..), GovernancePollAnswer (..),
-                   GovernancePollWitness (..), Hash (..), KESPeriod (KESPeriod),
+                   Hash (..), KESPeriod (KESPeriod),
                    OperationalCertificateIssueCounter (OperationalCertificateIssueCounter),
                    PlutusScript (PlutusScriptSerialised), ProtocolParameters (ProtocolParameters),
                    ReferenceScript (..), ReferenceTxInsScriptsInlineDatumsSupportedInEra (..),
@@ -135,17 +134,14 @@ import qualified Data.ByteString.Short as SBS
 import           Data.Coerce
 import           Data.Int (Int64)
 import           Data.Map.Strict (Map)
-import           Data.Maybe (fromMaybe)
 import           Data.Ratio (Ratio, (%))
 import           Data.String
 import           Data.Word (Word64)
 import           Numeric.Natural (Natural)
 
 import qualified Cardano.Binary as CBOR
-import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
-import qualified Cardano.Crypto.VRF as VRF
 import qualified Cardano.Ledger.Shelley.TxBody as Ledger (EraIndependentTxBody)
 import qualified Test.Cardano.Ledger.Alonzo.PlutusScripts as Plutus
 
@@ -156,7 +152,6 @@ import qualified Hedgehog.Range as Range
 import qualified Cardano.Crypto.Hash.Class as CRYPTO
 import           Cardano.Ledger.Alonzo.Language (Language (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
-import           Cardano.Ledger.Keys (VKey (..))
 import           Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 
 import           Test.Cardano.Chain.UTxO.Gen (genVKWitness)
@@ -1005,32 +1000,3 @@ genGovernancePollAnswer =
  where
    genGovernancePollHash =
      GovernancePollHash . mkDummyHash <$> Gen.int (Range.linear 0 10)
-
-genGovernancePollWitness :: Gen GovernancePollWitness
-genGovernancePollWitness =
-  Gen.choice
-    [ GovernancePollWitnessVRF
-        <$> fmap
-              unsafeDeserialiseVerKeyVRF
-              (Gen.bytes $ Range.singleton 32)
-        <*> fmap
-              unsafeDeserialiseCertVRF
-              (Gen.bytes $ Range.singleton 80)
-    , GovernancePollWitnessColdKey
-        <$> fmap
-              (VKey . unsafeDeserialiseVerKeyDSIGN)
-              (Gen.bytes $ Range.singleton 32)
-        <*> fmap
-              (DSIGN.SignedDSIGN . unsafeDeserialiseSigDSIGN)
-              (Gen.bytes $ Range.singleton 64)
-    ]
- where
-  unsafeDeserialiseVerKeyVRF =
-    fromMaybe (error "unsafeDeserialiseVerKeyVRF") . VRF.rawDeserialiseVerKeyVRF
-  unsafeDeserialiseCertVRF =
-    fromMaybe (error "unsafeDeserialiseCertVRF") . VRF.rawDeserialiseCertVRF
-
-  unsafeDeserialiseVerKeyDSIGN =
-    fromMaybe (error "unsafeDeserialiseVerKeyDSIGN") . DSIGN.rawDeserialiseVerKeyDSIGN
-  unsafeDeserialiseSigDSIGN =
-    fromMaybe (error "unsafeDeserialiseSigDSIGN") . DSIGN.rawDeserialiseSigDSIGN

@@ -146,6 +146,7 @@ newtype instance Hash PaymentKey =
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash PaymentKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash PaymentKey)
+  deriving (ToJSONKey, ToJSON, FromJSON) via UsingRawBytesHex (Hash PaymentKey)
   deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash PaymentKey) where

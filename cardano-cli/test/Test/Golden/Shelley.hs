@@ -21,17 +21,17 @@ import           Test.Golden.Shelley.Genesis.KeyGenUtxo (golden_shelleyGenesisKe
 import           Test.Golden.Shelley.Genesis.KeyHash (golden_shelleyGenesisKeyHash)
 
 import           Test.Golden.Shelley.Governance.AnswerPoll
-                   (golden_shelleyGovernanceAnswerPollCold,
-                   golden_shelleyGovernanceAnswerPollInvalidAnswer,
-                   golden_shelleyGovernanceAnswerPollVrf)
+                   (golden_shelleyGovernanceAnswerPoll,
+                   golden_shelleyGovernanceAnswerPollInvalidAnswer)
 import           Test.Golden.Shelley.Governance.CreatePoll
                    (golden_shelleyGovernanceCreatePoll,
                    golden_shelleyGovernanceCreateLongPoll)
 import           Test.Golden.Shelley.Governance.VerifyPoll
-                   (golden_shelleyGovernanceVerifyPollCold,
-                   golden_shelleyGovernanceVerifyPollColdTempered,
-                   golden_shelleyGovernanceVerifyPollVrf,
-                   golden_shelleyGovernanceVerifyPollVrfTempered)
+                   (golden_shelleyGovernanceVerifyPoll,
+                   golden_shelleyGovernanceVerifyPollMismatch,
+                   golden_shelleyGovernanceVerifyPollNoAnswer,
+                   golden_shelleyGovernanceVerifyPollMalformedAnswer,
+                   golden_shelleyGovernanceVerifyPollInvalidAnswer)
 
 import           Test.Golden.Shelley.Key.ConvertCardanoAddressKey
                    (golden_convertCardanoAddressByronSigningKey,
@@ -190,12 +190,12 @@ governancePollTests =
     $ H.Group "Governance Poll Goldens"
         [ ("golden_shelleyGovernanceCreatePoll", golden_shelleyGovernanceCreatePoll)
         , ("golden_shelleyGovernanceCreateLongPoll", golden_shelleyGovernanceCreateLongPoll)
-        , ("golden_shelleyGovernanceAnswerPoll(VRF)", golden_shelleyGovernanceAnswerPollVrf)
-        , ("golden_shelleyGovernanceAnswerPoll(Cold key)", golden_shelleyGovernanceAnswerPollCold)
-        , ("golden_shelleyGovernanceAnswerPoll(Invalid)", golden_shelleyGovernanceAnswerPollInvalidAnswer)
-        , ("golden_shelleyGovernanceVerifyPoll(VRF)", golden_shelleyGovernanceVerifyPollVrf)
-        , ("golden_shelleyGovernanceVerifyPoll(VRF, tempered)", golden_shelleyGovernanceVerifyPollVrfTempered)
-        , ("golden_shelleyGovernanceVerifyPoll(Cold Key)", golden_shelleyGovernanceVerifyPollCold)
-        , ("golden_shelleyGovernanceVerifyPoll(Cold Key, tempered)", golden_shelleyGovernanceVerifyPollColdTempered)
+        , ("golden_shelleyGovernanceAnswerPoll", golden_shelleyGovernanceAnswerPoll)
+        , ("golden_shelleyGovernanceAnswerPoll (invalid)", golden_shelleyGovernanceAnswerPollInvalidAnswer)
+        , ("golden_shelleyGovernanceVerifyPoll", golden_shelleyGovernanceVerifyPoll)
+        , ("golden_shelleyGovernanceVerifyPoll (mismatch)", golden_shelleyGovernanceVerifyPollMismatch)
+        , ("golden_shelleyGovernanceVerifyPoll (no answer)", golden_shelleyGovernanceVerifyPollNoAnswer)
+        , ("golden_shelleyGovernanceVerifyPoll (malformed)", golden_shelleyGovernanceVerifyPollMalformedAnswer)
+        , ("golden_shelleyGovernanceVerifyPoll (invalid)", golden_shelleyGovernanceVerifyPollInvalidAnswer)
         ]
 
