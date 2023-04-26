@@ -126,7 +126,7 @@ in project.shellFor {
     workbench-interactive-restart
   ]
   # Backend packages take precendence.
-  ++ backend.extraShellPkgs
+  ++ workbench-runner.backend.extraShellPkgs
   ++ [
       # Publish
       bench-data-publish
@@ -138,7 +138,7 @@ in project.shellFor {
       em
   ]
   ++ lib.optional haveGlibcLocales pkgs.glibcLocales
-  ++ lib.optionals (!backend.useCabalRun) [ cardano-topology cardano-cli locli ]
+  ++ lib.optionals (!workbench-runner.backend.useCabalRun) [ cardano-topology cardano-cli locli ]
   ++ lib.optionals (!workbenchDevMode) [ workbench.workbench ]
   ;
 }
