@@ -118,10 +118,10 @@ library
                       , bytestring
                       , cardano-binary
                       , cardano-crypto
-                      , cardano-crypto-class ^>= 2.1
+                      , cardano-crypto-class >= 2.1.1
                       , cardano-crypto-wrapper ^>= 1.5
                       , cardano-data >= 1.0
-                      , cardano-ledger-alonzo >= 1.1
+                      , cardano-ledger-alonzo >= 1.1.1
                       , cardano-ledger-allegra >= 1.1
                       , cardano-ledger-api >= 1.1
                       , cardano-ledger-babbage >= 1.1
@@ -130,8 +130,8 @@ library
                       , cardano-ledger-conway >= 1.1
                       , cardano-ledger-core >= 1.1
                       , cardano-ledger-mary >= 1.1
-                      , cardano-ledger-shelley >= 1.1
-                      , cardano-protocol-tpraos >= 1.0.1
+                      , cardano-ledger-shelley >= 1.1.1
+                      , cardano-protocol-tpraos >= 1.0.2
                       , cardano-slotting >= 0.1
                       , cardano-strict-containers >= 0.1
                       , cborg
@@ -150,12 +150,10 @@ library
                       , network
                       , nothunks
                       , optparse-applicative-fork
-                      , ouroboros-consensus
-                      , ouroboros-consensus-byron
-                      , ouroboros-consensus-cardano
-                      , ouroboros-consensus-diffusion
-                      , ouroboros-consensus-protocol
-                      , ouroboros-consensus-shelley
+                      , ouroboros-consensus >= 0.6
+                      , ouroboros-consensus-cardano >= 0.5
+                      , ouroboros-consensus-diffusion >= 0.5.1
+                      , ouroboros-consensus-protocol >= 0.5
                       , ouroboros-network
                       , ouroboros-network-api
                       , ouroboros-network-framework
@@ -233,7 +231,7 @@ test-suite cardano-api-test
                       , hedgehog-quickcheck
                       , mtl
                       , microlens
-                      , ouroboros-consensus-shelley
+                      , ouroboros-consensus
                       , QuickCheck
                       , tasty
                       , tasty-hedgehog

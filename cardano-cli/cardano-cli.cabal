@@ -113,16 +113,16 @@ library
                       , cardano-api
                       , cardano-binary
                       , cardano-crypto
-                      , cardano-crypto-class ^>= 2.1
+                      , cardano-crypto-class >= 2.1.1
                       , cardano-crypto-wrapper ^>= 1.5
                       , cardano-data >= 1.0
                       , cardano-git-rev
-                      , cardano-ledger-alonzo >= 1.1
+                      , cardano-ledger-alonzo >= 1.1.1
                       , cardano-ledger-byron >= 1.0
                       , cardano-ledger-binary >= 1.0
                       , cardano-ledger-core >= 1.1
                       , cardano-ledger-conway >= 1.1
-                      , cardano-ledger-shelley >= 1.1
+                      , cardano-ledger-shelley >= 1.1.1
                       , cardano-ping
                       , cardano-prelude
                       , cardano-protocol-tpraos >= 1.0
@@ -142,11 +142,9 @@ library
                       , microlens
                       , network
                       , optparse-applicative-fork
-                      , ouroboros-consensus
-                      , ouroboros-consensus-byron
-                      , ouroboros-consensus-cardano
-                      , ouroboros-consensus-protocol
-                      , ouroboros-consensus-shelley
+                      , ouroboros-consensus >= 0.6
+                      , ouroboros-consensus-cardano >= 0.5
+                      , ouroboros-consensus-protocol >= 0.5
                       , ouroboros-network-api
                       , ouroboros-network-protocols
                       , parsec

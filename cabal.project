@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2023-04-18T18:03:53Z
-  , cardano-haskell-packages 2023-04-24T15:34:01Z
+  , hackage.haskell.org 2023-04-29T00:00:00Z
+  , cardano-haskell-packages 2023-04-30T00:28:07Z
 
 packages:
     cardano-api
@@ -34,9 +34,6 @@ packages:
     trace-dispatcher
     trace-resources
     trace-forward
-
-extra-packages:
-  ouroboros-consensus-cardano-tools
 
 package cardano-api
   ghc-options: -Werror

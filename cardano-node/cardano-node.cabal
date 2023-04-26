@@ -149,8 +149,8 @@ library
                       , cardano-ledger-core
                       , cardano-ledger-shelley
                       , cardano-prelude
-                      , cardano-protocol-tpraos ^>= 1.0
-                      , cardano-slotting >= 0.1.1 && < 0.2
+                      , cardano-protocol-tpraos >= 1.0.2
+                      , cardano-slotting >= 0.1.1
                       , cborg ^>= 0.2.4
                       , containers
                       , contra-tracer
@@ -171,18 +171,16 @@ library
                       , lobemo-backend-trace-forwarder
                       , mtl
                       , network
-                      , network-mux ^>= 0.3
+                      , network-mux >= 0.4
                       , nothunks
                       , optparse-applicative-fork
-                      , ouroboros-consensus ^>= 0.4
-                      , ouroboros-consensus-byron
-                      , ouroboros-consensus-cardano
-                      , ouroboros-consensus-diffusion ^>= 0.4
-                      , ouroboros-consensus-protocol
-                      , ouroboros-consensus-shelley
+                      , ouroboros-consensus >= 0.6
+                      , ouroboros-consensus-cardano >= 0.5
+                      , ouroboros-consensus-diffusion >= 0.5.1
+                      , ouroboros-consensus-protocol >= 0.5
                       , ouroboros-network-api
-                      , ouroboros-network  ^>= 0.5
-                      , ouroboros-network-framework ^>= 0.4
+                      , ouroboros-network  >= 0.6
+                      , ouroboros-network-framework >= 0.5
                       , ouroboros-network-protocols
                       , prettyprinter
                       , prettyprinter-ansi-terminal

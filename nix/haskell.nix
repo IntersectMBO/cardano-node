@@ -281,9 +281,6 @@ project.appendOverlays (with haskellLib.projectOverlays; [
           packages = lib.genAttrs [
             "ouroboros-consensus"
             "ouroboros-consensus-cardano"
-            "ouroboros-consensus-cardano-tools"
-            "ouroboros-consensus-byron"
-            "ouroboros-consensus-shelley"
             "ouroboros-network"
             "network-mux"
           ]

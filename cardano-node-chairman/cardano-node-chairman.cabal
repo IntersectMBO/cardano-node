@@ -47,11 +47,11 @@ executable cardano-node-chairman
                       , cardano-prelude
                       , containers
                       , contra-tracer
-                      , io-classes ^>= 0.3
+                      , io-classes
                       , optparse-applicative-fork
-                      , ouroboros-consensus
-                      , ouroboros-network-api
-                      , ouroboros-network-protocols
+                      , ouroboros-consensus >= 0.6
+                      , ouroboros-network-api >= 0.3
+                      , ouroboros-network-protocols >= 0.5
                       , strict-stm
                       , text
                       , time

@@ -110,16 +110,14 @@ library
                       , formatting
                       , generic-monoid
                       , ghc-prim
-                      , io-classes ^>= 0.3
+                      , io-classes
                       , mtl
                       , network
                       , network-mux
                       , optparse-applicative-fork
-                      , ouroboros-consensus
-                      , ouroboros-consensus-byron
-                      , ouroboros-consensus-cardano
-                      , ouroboros-consensus-diffusion
-                      , ouroboros-consensus-shelley
+                      , ouroboros-consensus >= 0.6
+                      , ouroboros-consensus-cardano >= 0.5
+                      , ouroboros-consensus-diffusion >= 0.5.1
                       , ouroboros-network
                       , ouroboros-network-api
                       , ouroboros-network-framework
