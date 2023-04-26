@@ -95,4 +95,6 @@ executable gen-plutus
 
   build-depends:        base >=4.12 && <5
                       , bytestring
+                      , filepath
+                      , optparse-applicative
                       , plutus-scripts-bench
