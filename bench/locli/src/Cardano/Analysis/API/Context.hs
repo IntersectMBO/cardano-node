@@ -10,7 +10,9 @@ import Control.Monad (fail)
 
 import Data.Aeson ( FromJSON (..), ToJSON (..), Value
                   , withObject, object, (.:), (.:?), (.=))
+import Data.Aeson.Key qualified as AE
 import Data.Aeson.KeyMap qualified as AE
+import Data.Aeson.Types qualified as AE
 import Data.Map.Strict qualified as Map
 import Data.Text qualified as T
 import Data.Time.Clock (UTCTime, NominalDiffTime)
@@ -172,7 +174,8 @@ instance FromJSON Metadata where
 
       tag             <- v .: "tag"
       batch           <- v .: "batch"
-      manifest        <- v .: "manifest"
+      manifest        <- (v .: "manifest")
+                         <|> compatParseManifest v
       profile         <- v .: "profile"
       profile_content <- v .: "profile_content"
 
@@ -186,3 +189,33 @@ instance FromJSON Metadata where
         Nothing -> fail "While parsing run metafile:  missing era specification"
 
       pure Metadata{..}
+   where
+     compatParseManifest v' = do
+       -- Map legacy into hot newness.
+       v <- v' .: "manifest"
+       node      <- commitToCI v "cardano-node"
+       network   <- commitToCI v "ouroboros-network"
+       ledger    <- commitToCI v "cardano-ledger"
+       plutus    <- commitToCI v "plutus"
+       crypto    <- commitToCI v "cardano-crypto"
+       base      <- commitToCI v "cardano-base"
+       prelude   <- commitToCI v "cardano-prelude"
+       let kvs = Map.fromList
+             [ ("cardano-node",        node)
+             , ("ouroboros-consensus", network)
+             , ("ouroboros-network",   network)
+             , ("cardano-ledger-core", ledger)
+             , ("plutus-core",         plutus)
+             , ("cardano-crypto",      crypto)
+             , ("cardano-base",        base)
+             , ("cardano-prelude",     prelude)
+             ]
+       pure (Manifest kvs)
+      where
+        commitToCI :: AE.KeyMap Value -> Text -> AE.Parser ComponentInfo
+        commitToCI v ciName = do
+          ciCommit <- v .: AE.fromText ciName
+          pure ComponentInfo{ ciVersion = Version "unknown"
+                            , ciBranch = Nothing
+                            , ciStatus = Nothing
+                            , ..}
