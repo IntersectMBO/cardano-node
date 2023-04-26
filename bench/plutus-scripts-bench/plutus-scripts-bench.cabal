@@ -82,3 +82,17 @@ library
     , serialise
     , template-haskell
     , text
+
+executable gen-plutus
+  import:               project-config
+  hs-source-dirs:       app
+  main-is:              gen-plutus.hs
+  default-language:     Haskell2010
+  ghc-options:          -threaded
+                        -Wall
+                        -rtsopts
+                        "-with-rtsopts=-T"
+
+  build-depends:        base >=4.12 && <5
+                      , bytestring
+                      , plutus-scripts-bench
