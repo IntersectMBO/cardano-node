@@ -5,11 +5,24 @@ usage_manifest() {
 EOF
 }
 
+## WARNING:  Keep in sync with Cardano.Analysis.API.Context.manifestPackages.
+##    Better yet, move manifest collection _into_ locli.
+##    ..but since the manifest is part of meta.json, that'll cause more thinking.
+WB_MANIFEST_PACKAGES=(
+    'cardano-node'
+    'ouroboros-consensus'
+    'ouroboros-network'
+    'cardano-ledger-core'
+    'plutus-core'
+    'cardano-crypto'
+    'cardano-prelude'
+)
+
 manifest() {
 local op=${1:-collect-from-checkout}; if test $# -ge 1; then shift; fi
 
 case "${op}" in
-      contributions-by-repository)
+      contributions-by-repository | byrepo | by )
         local usage="USAGE: wb manifest $0"
 
         jq '
@@ -46,11 +59,15 @@ case "${op}" in
           --argfile plan          $WB_NIX_PLAN      \
           --argfile chap          $WB_CHAP_PACKAGES
         ;;
-    collect-from-checkout )
-        local usage="USAGE: wb manifest $0 CARDANO-NODE-CHECKOUT"
-        local dir=${1:-.}; if test $# -ge 1; then shift; fi
-        local node_rev=${1:-$(manifest_git_head_commit "$dir")}
+    collect-from-checkout | collect | c )
+        local usage="USAGE: wb manifest $0 CARDANO-NODE-CHECKOUT NODE-REV [PACKAGE...]"
+        local dir=${1:?$usage}; shift
+        local node_rev=${1:-}; shift || true
         local real_dir=$(realpath "$dir")
+        local pkgnames=($*)
+
+        if test -z "$node_rev"
+        then node_rev=$(manifest_git_head_commit "$dir"); fi
 
         # TODO put this back
         #, "cardano-node-package-localisations": (. | split("\n") | unique | map(select(. != "")))
@@ -62,7 +79,8 @@ case "${op}" in
           local_plan_path=$WB_NIX_PLAN
         fi
 
-        jq '
+        for pkg in ${pkgnames[*]}; do echo \"$pkg\"; done |
+        jq --slurp '
         def pkg_id:
           ."pkg-name" + "-" + ."pkg-version"
           ;
@@ -72,7 +90,10 @@ case "${op}" in
           ;
 
         # key chap packages by package id, so we can match them easily in the next step
-          $chap
+        .
+        # | debug
+        | (map({ key: ., value: true }) | from_entries) as $pkgs
+        | $chap
         | map({ key: pkg_id, value: pkg_commit })
         | from_entries as $chap_data
 
@@ -84,32 +105,20 @@ case "${op}" in
                        , commit: $chap_data[pkg_id]
                        }
               })
-        | from_entries as $package_data
+        | from_entries as $full_package_data
+        | $full_package_data
+        | map_values (select(.name | in($pkgs))) as $package_data
 
         # assemble the manifest
-        # NOTE: The keys where are "components" and are hardcoded in the
-        #       reporting framework. What we do here is mapping each component
-        #       to a particular package, representative of that component.
-        # NOTE: The node component is a bit ad-hoc here since it does not come
-        #       from a package. Nevertheless we use the same schema for all
-        #       components so we can keep the reporting framework simple.
-        | { "node":      { name: "cardano-node"
-                         , commit: $node_rev
-                         , branch: $node_branch
-                         , status: $node_status
-                         , version: $package_data["cardano-node"].version
-                         }
-          , "consensus": $package_data["ouroboros-consensus"]
-          , "network":   $package_data["ouroboros-network"]
-          , "ledger":    $package_data["cardano-ledger-core"]
-          , "plutus":    $package_data["plutus-core"]
-          , "crypto":    $package_data["cardano-crypto"]
-          , "prelude":   $package_data["cardano-prelude"]
-          }
-        ' --null-input                                                       \
-          --arg     node_rev      "$node_rev"                                \
+        | $package_data *
+          { "cardano-node": { commit: $node_rev
+                            , branch: $node_branch
+                            , status: $node_status
+                            } }
+        ' --arg     node_rev      $node_rev                                  \
           --arg     node_branch   $(manifest_local_repo_branch       "$dir") \
           --arg     node_status   $(manifest_git_checkout_state_desc "$dir") \
+          --arg     pkgs          $(manifest_git_checkout_state_desc "$dir") \
           --argfile plan          $local_plan_path                           \
           --argfile chap          $WB_CHAP_PACKAGES
         ;;
@@ -165,6 +174,7 @@ case "${op}" in
           )
         | leftpad(2)
         | align
+        | . + "\n"
         ' --raw-output -L$global_basedir <<<$json
         ;;
 

@@ -9,6 +9,7 @@ module Cardano.Analysis.Summary (module Cardano.Analysis.Summary) where
 import Prelude                                      (head, last)
 import Cardano.Prelude
 
+import Data.Aeson.KeyMap                qualified
 import Data.Either.Extra                            (mapLeft)
 import Data.Map.Strict                  qualified as Map
 import Data.Text                        qualified as Text
@@ -23,7 +24,8 @@ data SummaryError
   | SEIncoherentRunGeneses       [Genesis]
   | SEIncoherentRunGenesisSpecs  [GenesisSpec]
   | SEIncoherentRunWorkloads     [GeneratorProfile]
-  | SEIncoherentRunProfiles      [Text]
+  | SEIncoherentRunProfileNames  [Text]
+  | SEIncoherentRunProfiles      [Data.Aeson.KeyMap.KeyMap Value]
   | SEIncoherentRunEras          [Text]
   | SEIncoherentRunVersions      [Manifest]
   | SEIncoherentRunIdents        [Text]
@@ -94,15 +96,15 @@ summariseMultiSummary sumAnalysisTime centiles xs@(headline:xss) = do
    summariseMetadata :: [Metadata] -> Either SummaryError Metadata
    summariseMetadata [] = Left SEEmptyDataset
    summariseMetadata xs@(headline:_) = do
-     profile  <- allEqOrElse (xs <&> profile)  SEIncoherentRunProfiles
-     era      <- allEqOrElse (xs <&> era)      SEIncoherentRunEras
-     manifest <- allEqOrElse (xs <&> manifest) SEIncoherentRunVersions
-     ident'   <- allEqOrElse (xs <&> ident)    SEIncoherentRunIdents
+     profile         <- allEqOrElse (xs <&> profile)         SEIncoherentRunProfileNames
+     era             <- allEqOrElse (xs <&> era)             SEIncoherentRunEras
+     manifest        <- allEqOrElse (xs <&> manifest)        SEIncoherentRunVersions
+     ident           <- allEqOrElse (xs <&> ident)           SEIncoherentRunIdents
+     profile_content <- allEqOrElse (xs <&> profile_content) SEIncoherentRunProfiles
      -- XXX: magic transformation that happens to match
      --      the logic in 'analyse.sh multi-call' on line with "local run="
      pure Metadata { tag   = maximum (xs <&> tag) & Text.take 16 & (<> "_variance")
                    , batch = batch headline
-                   , ident = ident'
                    , .. }
 
    allEqOrElse :: Eq a => [a] -> ([a] -> SummaryError) -> Either SummaryError a

@@ -214,7 +214,11 @@ start()
     for ((top_i=0; top_i<$iterations; top_i++))
     do newline
        progress "manifest" "component versions:"
-       local manifest=$(manifest collect-from-checkout "$node_source" $node_rev)
+       local manifest=$(manifest collect-from-checkout  \
+                            "$node_source"              \
+                            "$node_rev"                 \
+                            ${WB_MANIFEST_PACKAGES[*]}
+                       )
        manifest report "$manifest"
 
        if test -n "$cabal_mode" -a -z "$prebuild_done"

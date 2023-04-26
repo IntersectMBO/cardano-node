@@ -146,21 +146,13 @@ data TmplRun
     }
 
 instance ToJSON TmplRun where
-  toJSON TmplRun{trManifest=Manifest{..},..} =
+  toJSON TmplRun{..} =
     object
       [ "meta"       .= trMeta
       , "workload"   .= trWorkload
-      , "branch"     .= ciBranch mNode
+      , "branch"     .= componentBranch (getComponent "cardano-node" trManifest)
       , "ver"        .= ident trMeta
-      , "rev"        .=
-        object
-        [ "node"         .= mNode
-        , "network"      .= mNetwork
-        , "ledger"       .= mLedger
-        , "plutus"       .= mPlutus
-        , "crypto"       .= mCrypto
-        , "prelude"      .= mPrelude
-        ]
+      , "rev"        .= unManifest trManifest
       ]
 
 liftTmplSection :: Section -> TmplSection
@@ -212,7 +204,7 @@ generate :: InputDir -> Maybe TextInputFile
          -> (SomeSummary, ClusterPerf, SomeBlockProp) -> [(SomeSummary, ClusterPerf, SomeBlockProp)]
          -> IO (ByteString, ByteString, Text)
 generate (InputDir ede) mReport (SomeSummary summ, cp, SomeBlockProp bp) rest = do
-  ctx  <- getReport (last restTmpls & trManifest & mNode & ciVersion) Nothing
+  ctx  <- getReport (last restTmpls & trManifest & getComponent "cardano-node" & ciVersion) Nothing
   tmplRaw <- BS.readFile (maybe defaultReportPath unTextInputFile mReport)
   tmpl <- parseWith defaultSyntax (includeFile ede) "report" tmplRaw
   let tmplEnv           = mkTmplEnv ctx baseTmpl restTmpls

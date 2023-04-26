@@ -428,10 +428,10 @@ EOF
         ##    Must match `^[a-zA-Z0-9-]{1,128}$)` or it won't be possible to use
         ##    it as a Nomad Namespace or Nomad Job name.
         ##    NOTE: The tag time is different from the genesis time
-        local hash=$(jq '."cardano-node" | .[:5]' -r <<<$manifest)
+        local hash=$(jq '."cardano-node".commit | .[:5]' -r <<<$manifest)
         local date_pref=$(date --utc +'%Y-%m-%d'-'%H-%M')
         local batch_inf=$(test "${batch}" != 'plain' && echo -n -${batch})
-        local prof_suf=$(test -v "$WB_PROFILING" -a test -n "$WB_PROFILING" -a "$WB_PROFILING" != 'none' && echo '-prof')
+        local prof_suf=$(test -v "$WB_PROFILING" -a -n "$WB_PROFILING" -a "$WB_PROFILING" != 'none' && echo '-prof')
         local run="${date_pref}${batch_inf}-${hash}-${profile_name}-${backend_name::3}${prof_suf}"
         progress "run | tag" "allocated run identifier (tag):  $(with_color white $run)"
 

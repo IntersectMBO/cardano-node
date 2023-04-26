@@ -37,10 +37,10 @@ import Cardano.Analysis.API.Types
 sumFieldsReport :: [FieldName]
 sumFieldsReport =
   [ "date.systemStart", "time.systemStart", "sumAnalysisTime"
-  , "batch"
   , "ident"
-  , "cardano-node", "ouroboros-consensus", "ouroboros-network" , "cardano-ledger", "plutus", "cardano-crypto"
-  , "era"
+  , "batch"
+  ] ++ (FieldName <$> manifestPackages) ++
+  [ "era"
   , "delegators", "utxo"
   , "add_tx_size", "inputs_per_tx", "outputs_per_tx" , "tps", "tx_count"
   , "plutusScript"
@@ -51,7 +51,7 @@ sumFieldsReport =
   , "ddRawCount.sumDomainTime", "ddFilteredCount.sumDomainTime", "dataDomainFilterRatio.sumDomainTime"
   , "ddRaw.sumStartSpread", "ddRaw.sumStopSpread"
   , "ddFiltered.sumStartSpread", "ddFiltered.sumStopSpread"
-  , "sumDomainSlots", "sumDomainBlocks", "sumBlocksRejected" ]
+  , "sumDomainSlots", "sumDomainBlocks", "sumBlocksRejected"]
 
 instance (KnownCDF f) => TimelineFields (Summary f)  where
   data TimelineComments (Summary f)
@@ -70,37 +70,15 @@ instance (KnownCDF f) => TimelineFields (Summary f)  where
       "Cluster system start time"
       "Time-of-day portion of cluster genesis systemStart"
 
-   <> fScalar   "batch"                Wno Id  (IText $ batch.sumMeta)
-      "Run batch"
-      ""
-
    <> fScalar   "ident"                Wno Id  (IText $ ident.sumMeta)
       "Identifier"
       ""
 
-   <> fScalar "cardano-node"           W5  Ver (IText $ componentSummary.mNode.manifest.sumMeta)
-      "cardano-node version"
+   <> fScalar   "batch"                Wno Id  (IText $ batch.sumMeta)
+      "Run batch"
       ""
 
-   <> fScalar "ouroboros-consensus"    W10 Ver (IText $ componentSummary.mConsensus.manifest.sumMeta)
-      "ouroboros-consensus version"
-      ""
-
-   <> fScalar "ouroboros-network"      W10 Ver (IText $ componentSummary.mNetwork.manifest.sumMeta)
-      "ouroboros-network"
-      ""
-
-   <> fScalar "cardano-ledger"         W10 Ver (IText $ componentSummary.mLedger.manifest.sumMeta)
-      "cardano-ledger"
-      ""
-
-   <> fScalar "plutus"                 W10 Ver (IText $ componentSummary.mPlutus.manifest.sumMeta)
-      "plutus"
-      ""
-
-   <> fScalar "cardano-crypto"         W10 Ver (IText $ componentSummary.mCrypto.manifest.sumMeta)
-      "cardano-crypto"
-      ""
+   <> manifestFields
 
    <> fScalar "era"                    Wno Era (IText $                     era.sumMeta)
       "Era"
@@ -211,7 +189,20 @@ instance (KnownCDF f) => TimelineFields (Summary f)  where
    <> fScalar "sumBlocksRejected"      W10 Cnt (IInt  $ unCount.arityProj cdfMedian.sumBlocksRejected)
       "Blocks rejected"
       ""
-  -- fieldJSONOverlay f = (:[]) . tryOverlayFieldDescription f
+   where
+     pkgCommit pkg = fScalar pkg W7  Ver
+                     (IText $ unCommit.ciCommit.getComponent pkg.manifest.sumMeta)
+                     (pkg <> " git") ""
+     pkgVersion pkg = fScalar pkg W12  Ver
+                     (IText $ unVersion.ciVersion.getComponent pkg.manifest.sumMeta)
+                     (pkg <> " version") ""
+     manifestFields = mconcat . mconcat $
+                       [ manifestPackages <&> pkgVersion
+                       , manifestPackages <&> pkgCommit
+                       ]
+
+
+-- fieldJSONOverlay f = (:[]) . tryOverlayFieldDescription f
 
 propSubsetFn :: PropSubset -> (Field DSelect p a -> Bool)
 propSubsetFn = \case
