@@ -1373,22 +1373,6 @@
         "type": "github"
       }
     },
-    "plutus-apps": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1675109201,
-        "narHash": "sha256-uS/9cicIpb3fCTL3R/7Y0gX0zF4QfRx/MWJ1m1hACIM=",
-        "owner": "input-output-hk",
-        "repo": "plutus-apps",
-        "rev": "15467f28b19a12284f1fd086240181e62d934f0c",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "plutus-apps",
-        "type": "github"
-      }
-    },
     "root": {
       "inputs": {
         "CHaP": "CHaP",
@@ -1410,7 +1394,6 @@
           "nixpkgs-unstable"
         ],
         "ops-lib": "ops-lib",
-        "plutus-apps": "plutus-apps",
         "std": [
           "tullia",
           "std"
