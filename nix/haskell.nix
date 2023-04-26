@@ -3,6 +3,7 @@
 ############################################################################
 { haskell-nix
 , incl
+, CHaP
 }:
 let
 
@@ -29,6 +30,9 @@ let
         package plutus-tx-plugin
           flags: +use-ghc-stub
       '';
+      inputMap = {
+        "https://input-output-hk.github.io/cardano-haskell-packages" = CHaP;
+      };
       shell = {
         name = "cabal-dev-shell";
 

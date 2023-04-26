@@ -16,6 +16,11 @@ let
         logRoot        = ".";
       } // optionalAttrs backend.useCabalRun {
         executable     = "cardano-tracer";
+      } // optionalAttrs profile.node.rtview {
+        RTView         = {
+          epHost = "127.0.0.1";
+          epPort = 3300;
+        };
       });
 
   ##

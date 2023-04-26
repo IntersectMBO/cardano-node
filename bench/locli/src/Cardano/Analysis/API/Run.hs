@@ -5,7 +5,6 @@ module Cardano.Analysis.API.Run (module Cardano.Analysis.API.Run) where
 
 import Cardano.Prelude
 
-import Control.Monad (fail)
 import Data.Aeson qualified as Aeson
 import Data.Aeson ((.=))
 
@@ -38,28 +37,13 @@ type Run        = ARunWith Genesis
 
 instance FromJSON RunPartial where
   parseJSON = withObject "Run" $ \v -> do
-    meta :: Object <- v .: "meta"
-    profile_content <- meta .: "profile_content"
-    generator <- profile_content .: "generator"
+    metadata         <- v .: "meta"
+    generator        <- profile_content metadata .: "generator"
     --
-    genesisSpec      <- profile_content .: "genesis"
+    genesisSpec      <- profile_content metadata .: "genesis"
     generatorProfile <- parseJSON $ Aeson.Object generator
     --
-    tag       <- meta .: "tag"
-    profile   <- meta .: "profile"
-    batch     <- meta .: "batch"
-    ident     <- (meta .:? "ident")
-                 <&> fromMaybe batch
-    manifest  <- meta .: "manifest"
-
-    eraGtor   <- generator       .:? "era"
-    eraTop    <- profile_content .:? "era"
-    era <- case eraGtor <|> eraTop of
-      Just x -> pure x
-      Nothing -> fail "While parsing run metafile:  missing era specification"
-    --
-    let metadata = Metadata{..}
-        genesis  = ()
+    let genesis  = ()
     pure Run{..}
 
 -- | Given a Summary object,

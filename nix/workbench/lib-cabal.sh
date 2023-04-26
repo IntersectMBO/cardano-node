@@ -66,7 +66,7 @@ function locli() {
     cabal -v0 build ${WB_FLAGS_CABAL} exe:locli
     set-git-rev \
         $(git rev-parse HEAD) \
-        $(find ./dist-newstyle/build/ -type f -name locli) || true
+        $(cabal list-bin locli) || true
                           cabal -v0 exec  ${WB_FLAGS_CABAL}     locli            -- ${WB_FLAGS_RTS} "$@"
 }
 

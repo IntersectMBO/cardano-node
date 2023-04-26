@@ -1,11 +1,19 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE StrictData #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Cardano.Analysis.API.Context (module Cardano.Analysis.API.Context) where
 
 import Cardano.Prelude
 
-import Data.Aeson (FromJSON (..), ToJSON (..), withObject, object, (.:), (.:?), (.=))
+import Control.Monad (fail)
+
+import Data.Aeson ( FromJSON (..), ToJSON (..), Value
+                  , withObject, object, (.:), (.:?), (.=))
+import Data.Aeson.Key qualified as AE
+import Data.Aeson.KeyMap qualified as AE
+import Data.Aeson.Types qualified as AE
+import Data.Map.Strict qualified as Map
 import Data.Text qualified as T
 import Data.Time.Clock (UTCTime, NominalDiffTime)
 
@@ -74,69 +82,89 @@ newtype Version  = Version { unVersion :: Text } deriving newtype (Eq, Show, Fro
 unsafeShortenCommit :: Int -> Commit -> Commit
 unsafeShortenCommit n (Commit c) = Commit (T.take n c)
 
-data Manifest
-  = Manifest
-    { mNode          :: !Commit
-    , mNodeApproxVer :: !Version
-    , mNodeBranch    :: !Branch
-    , mNodeStatus    :: !Text
-    , mNetwork       :: !Commit
-    , mLedger        :: !Commit
-    , mPlutus        :: !Commit
-    , mCrypto        :: !Commit
-    , mBase          :: !Commit
-    , mPrelude       :: !Commit
+data ComponentInfo
+  = ComponentInfo
+    { ciName    :: !Text
+    , ciCommit  :: !Commit
+    , ciBranch  :: !(Maybe Branch)
+    , ciStatus  :: !(Maybe Text)
+    , ciVersion :: !Version
     }
   deriving (Eq, Generic, NFData, Show)
 
-unsafeShortenManifest :: Int -> Manifest -> Manifest
-unsafeShortenManifest n m@Manifest{..} =
-  m { mNode    = unsafeShortenCommit n mNode
-    , mNetwork = unsafeShortenCommit n mNetwork
-    , mLedger  = unsafeShortenCommit n mLedger
-    , mPlutus  = unsafeShortenCommit n mPlutus
-    , mCrypto  = unsafeShortenCommit n mCrypto
-    , mBase    = unsafeShortenCommit n mBase
-    , mPrelude = unsafeShortenCommit n mPrelude
-    }
+componentSummary :: ComponentInfo -> Text
+componentSummary ComponentInfo{..} =
+ T.unwords [ unCommit ciCommit, "(" <> unVersion ciVersion <> ")" ]
 
-instance FromJSON Manifest where
-  parseJSON = withObject "Manifest" $ \v -> do
-    mNode          <- v .: "cardano-node"
-    mNodeBranch    <- v .:? "cardano-node-branch"  <&> fromMaybe (Branch "unknown")
-    mNodeApproxVer <- v .:? "cardano-node-version" <&> fromMaybe (Version "unknown")
-    mNodeStatus    <- v .: "cardano-node-status"
-    mNetwork       <- v .: "ouroboros-network"
-    mLedger        <- v .: "cardano-ledger"
-    mPlutus        <- v .: "plutus"
-    mCrypto        <- v .: "cardano-crypto"
-    mBase          <- v .: "cardano-base"
-    mPrelude       <- v .: "cardano-prelude"
-    pure Manifest{..}
+unknownComponent :: Text -> ComponentInfo
+unknownComponent ciName = ComponentInfo
+  { ciCommit  = Commit "unknown"
+  , ciBranch  = Nothing
+  , ciStatus  = Nothing
+  , ciVersion = Version "unknown"
+  , ..
+  }
 
-instance ToJSON Manifest where
-  toJSON Manifest{..} =
+instance FromJSON ComponentInfo where
+  parseJSON = withObject "Component" $ \v -> do
+    ciName    <- v .: "name"
+    ciCommit  <- v .: "commit"
+    ciBranch  <- v .:? "branch"
+    ciStatus  <- v .:? "status"
+    ciVersion <- v .: "version"
+    pure ComponentInfo{..}
+
+instance ToJSON ComponentInfo where
+  toJSON ComponentInfo{..} =
     object
-      [ "cardano-node"         .= mNode
-      , "cardano-node-branch"  .= mNodeBranch
-      , "cardano-node-version" .= mNodeApproxVer
-      , "cardano-node-status"  .= mNodeStatus
-      , "ouroboros-network"    .= mNetwork
-      , "cardano-ledger"       .= mLedger
-      , "plutus"               .= mPlutus
-      , "cardano-crypto"       .= mCrypto
-      , "cardano-base"         .= mBase
-      , "cardano-prelude"      .= mPrelude
+      [ "name"    .= ciName
+      , "commit"  .= ciCommit
+      , "branch"  .= ciBranch
+      , "status"  .= ciStatus
+      , "version" .= ciVersion
       ]
+
+newtype Manifest = Manifest { unManifest :: Map.Map Text ComponentInfo }
+  deriving stock (Generic)
+  deriving newtype (Eq, NFData, Show, FromJSON, ToJSON)
+
+getComponent :: Text -> Manifest -> ComponentInfo
+getComponent k = fromMaybe (unknownComponent k) . Map.lookup k . unManifest
+
+componentBranch :: ComponentInfo -> Branch
+componentBranch = fromMaybe (Branch "unknown") . ciBranch
+
+unsafeShortenManifest :: Int -> Manifest -> Manifest
+unsafeShortenManifest n m =
+  m { unManifest = shortenComponentInfo <$> unManifest m }
+ where
+   shortenComponentInfo c@ComponentInfo{..} =
+     c { ciCommit = unsafeShortenCommit n ciCommit }
+
+-- WARNING:  Keep in sync with workbench/manifest.sh:WB_MANIFEST_PACKAGES
+--    Better yet, move manifest collection _into_ locli.
+--    ..but since the manifest is part of meta.json, that'll cause more thinking.
+manifestPackages :: [Text]
+manifestPackages =
+  -- In the order of integration:
+  [ "cardano-node"
+  , "ouroboros-consensus"
+  , "ouroboros-network"
+  , "cardano-ledger-core"
+  , "plutus-core"
+  , "cardano-crypto"
+  , "cardano-prelude"
+  ]
 
 data Metadata
   = Metadata
-  { tag       :: Text
-  , batch     :: Text
-  , ident     :: Text
-  , profile   :: Text
-  , era       :: Text
-  , manifest  :: Manifest
+  { tag             :: Text
+  , batch           :: Text
+  , ident           :: Text
+  , profile         :: Text
+  , era             :: Text
+  , manifest        :: Manifest
+  , profile_content :: AE.KeyMap Value
   }
   deriving (Generic, NFData, Show, ToJSON)
 
@@ -144,12 +172,50 @@ instance FromJSON Metadata where
   parseJSON =
     withObject "Metadata" $ \v -> do
 
-      tag      <- v .:  "tag"
-      batch    <- v .:  "batch"
-      ident    <- (v .:? "ident")
-                  <&> fromMaybe batch
-      profile  <- v .:  "profile"
-      era      <- v .:  "era"
-      manifest <- v .:  "manifest"
+      tag             <- v .: "tag"
+      batch           <- v .: "batch"
+      manifest        <- (v .: "manifest")
+                         <|> compatParseManifest v
+      profile         <- v .: "profile"
+      profile_content <- v .: "profile_content"
+
+      ident           <- (v .:? "ident")
+                          <&> fromMaybe (unVersion . ciVersion $
+                                         getComponent "cardano-node" manifest)
+      eraDirect       <- v .:?  "era"
+      eraProfile      <- profile_content .: "era"
+      era <- case eraDirect <|> eraProfile of
+        Just x -> pure x
+        Nothing -> fail "While parsing run metafile:  missing era specification"
 
       pure Metadata{..}
+   where
+     compatParseManifest v' = do
+       -- Map legacy into hot newness.
+       v <- v' .: "manifest"
+       node      <- commitToCI v "cardano-node"
+       network   <- commitToCI v "ouroboros-network"
+       ledger    <- commitToCI v "cardano-ledger"
+       plutus    <- commitToCI v "plutus"
+       crypto    <- commitToCI v "cardano-crypto"
+       base      <- commitToCI v "cardano-base"
+       prelude   <- commitToCI v "cardano-prelude"
+       let kvs = Map.fromList
+             [ ("cardano-node",        node)
+             , ("ouroboros-consensus", network)
+             , ("ouroboros-network",   network)
+             , ("cardano-ledger-core", ledger)
+             , ("plutus-core",         plutus)
+             , ("cardano-crypto",      crypto)
+             , ("cardano-base",        base)
+             , ("cardano-prelude",     prelude)
+             ]
+       pure (Manifest kvs)
+      where
+        commitToCI :: AE.KeyMap Value -> Text -> AE.Parser ComponentInfo
+        commitToCI v ciName = do
+          ciCommit <- v .: AE.fromText ciName
+          pure ComponentInfo{ ciVersion = Version "unknown"
+                            , ciBranch = Nothing
+                            , ciStatus = Nothing
+                            , ..}

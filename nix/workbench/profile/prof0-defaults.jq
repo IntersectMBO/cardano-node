@@ -66,6 +66,7 @@ def era_defaults($era):
     , tracing_backend:                "trace-dispatcher"  ## or "iohk-monitoring"
     , ekg:                            false
     , tracer:                         true
+    , rtview:                         false
     , verbatim:
       {
       }

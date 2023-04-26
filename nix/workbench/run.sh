@@ -428,10 +428,10 @@ EOF
         ##    Must match `^[a-zA-Z0-9-]{1,128}$)` or it won't be possible to use
         ##    it as a Nomad Namespace or Nomad Job name.
         ##    NOTE: The tag time is different from the genesis time
-        local hash=$(jq '."cardano-node" | .[:5]' -r <<<$manifest)
+        local hash=$(jq '."cardano-node".commit | .[:5]' -r <<<$manifest)
         local date_pref=$(date --utc +'%Y-%m-%d'-'%H-%M')
         local batch_inf=$(test "${batch}" != 'plain' && echo -n -${batch})
-        local prof_suf=$(test -v "$WB_PROFILING" -a test -n "$WB_PROFILING" -a "$WB_PROFILING" != 'none' && echo '-prof')
+        local prof_suf=$(test -v "WB_PROFILING" && test -n "$WB_PROFILING" -a "$WB_PROFILING" != 'none' && echo '-prof')
         local run="${date_pref}${batch_inf}-${hash}-${profile_name}-${backend_name::3}${prof_suf}"
         progress "run | tag" "allocated run identifier (tag):  $(with_color white $run)"
 
@@ -985,15 +985,15 @@ run_ls_tabulated_cmd() {
           sort |
           tail -n'$limit' |
           {
-            printf "%16s  %-75s %7s %-20s %-15s %10s\n" \
-                 timestamp "profile name" "gitrev" "identifier" "node version" "node branch"
+            printf "%-60s %-12s %7s %-15s %10s\n" \
+                 "run tag" "identifier" "gitrev" "node version" "node branch"
             while read lst_tag; test -n "$lst_tag";
             do printf_args=(
                $(jq ".meta | .manifest as \$manif |
-                      \"\\(.profile) \\(\$manif.\"cardano-node\" | .[:7]) \\(.ident) \\(\$manif.\"cardano-node-version\") \\(\$manif.\"cardano-node-branch\")\"
+                      \"\\(.ident) \\(\$manif.\"cardano-node\" | .[:7]) \\(\$manif.\"cardano-node-version\") \\(\$manif.\"cardano-node-branch\")\"
                     " -r <$lst_tag/meta.json))
-              printf "%16s  %-75s %7s %-20s %-15s %10s\n" \
-                    $(echo $lst_tag |cut -c -16) ${printf_args[*]}
+              printf "%-60s %-12s %7s %-15s %10s\n" \
+                    $lst_tag ${printf_args[*]}
             done || true
           }'
 }

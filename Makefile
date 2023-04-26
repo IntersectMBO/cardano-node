@@ -75,9 +75,9 @@ ps:                                              ## Plain-text list of profiles
 ##
 PROFILES_BASE         := default plutus plutus-secp-ecdsa plutus-secp-schnorr oldtracing idle tracer-only
 PROFILES_STARTSTOP    := startstop startstop-p2p startstop-plutus startstop-notracer startstop-oldtracing
-PROFILES_CI_TEST      := ci-test ci-test-p2p ci-test-plutus ci-test-notracer ci-test-dense10 aws-test
-PROFILES_CI_BENCH     := ci-bench ci-bench-p2p ci-bench-plutus ci-bench-plutus-secp-ecdsa ci-bench-plutus-secp-schnorr ci-bench-notracer
-PROFILES_TRACE_BENCH  := trace-bench trace-bench-notracer trace-bench-oldtracing
+PROFILES_CI_TEST      := ci-test ci-test-p2p ci-test-plutus ci-test-notracer ci-test-rtview ci-test-dense10 aws-test
+PROFILES_CI_BENCH     := ci-bench ci-bench-p2p ci-bench-plutus ci-bench-plutus-secp-ecdsa ci-bench-plutus-secp-schnorr ci-bench-notracer ci-bench-rtview
+PROFILES_TRACE_BENCH  := trace-bench trace-bench-notracer trace-bench-oldtracing trace-bench-rtview
 PROFILES_EPOCHTRANS   := epoch-transition
 PROFILES_PLUTUSCALL   := plutuscall-loop-plain plutuscall-secp-ecdsa-plain plutuscall-secp-schnorr-plain
 PROFILES_PLUTUSCALL   += plutuscall-loop-half plutuscall-secp-ecdsa-half plutuscall-secp-schnorr-half
@@ -85,7 +85,7 @@ PROFILES_PLUTUSCALL   += plutuscall-loop-double plutuscall-secp-ecdsa-double plu
 PROFILES_MODEL		  := model-value model-secp-ecdsa-plain model-secp-ecdsa-half model-secp-ecdsa-double
 PROFILES_MODEL		  += model-value-test
 PROFILES_10           := 10 10-p2p 10-plutus 10-notracer
-PROFILES_FORGE_STRESS := forge-stress forge-stress-p2p forge-stress-plutus forge-stress-plutus-solo forge-stress-notracer forge-stress-large forge-stress-solo
+PROFILES_FORGE_STRESS := forge-stress forge-stress-p2p forge-stress-plutus forge-stress-plutus-solo forge-stress-notracer forge-stress-large forge-stress-solo forge-stress-light
 PROFILES_FORGE_STRESS_PRE := forge-stress-pre forge-stress-pre-plutus forge-stress-pre-notracer forge-stress-pre-solo
 PROFILES_CHAINSYNC    := chainsync-early-byron  chainsync-early-byron-notracer  chainsync-early-byron-oldtracing
 PROFILES_CHAINSYNC    += chainsync-early-alonzo chainsync-early-alonzo-notracer chainsync-early-alonzo-oldtracing chainsync-early-alonzo-p2p

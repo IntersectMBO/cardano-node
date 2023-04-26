@@ -18,12 +18,19 @@ with lib;
 
 let
 
-    inherit (workbench-runner) profileName profileData backend backendData profiling;
+    # recover CHaP location from cardano's project
+    chapPackages = "${project.args.inputMap."https://input-output-hk.github.io/cardano-haskell-packages"}/foliage/packages.json";
+
+    # build plan as computed by nix
+    nixPlanJson = project.plan-nix.json;
 
 in project.shellFor {
   name = "workbench-shell";
 
-  shellHook = ''
+  shellHook =
+    let inherit (workbench-runner) profileName profileData backend backendData profiling;
+    in
+    ''
     while test $# -gt 0
     do shift; done       ## Flush argv[]
 
@@ -46,6 +53,8 @@ in project.shellFor {
       workbenchDevMode
       ''
     export WB_CARDANO_NODE_REPO_ROOT=$(git rev-parse --show-toplevel)
+    export WB_CHAP_PACKAGES=${chapPackages}
+    export WB_NIX_PLAN=${nixPlanJson}
     export WB_EXTRA_FLAGS=
 
     function wb() {
@@ -117,7 +126,7 @@ in project.shellFor {
     workbench-interactive-restart
   ]
   # Backend packages take precendence.
-  ++ backend.extraShellPkgs
+  ++ workbench-runner.backend.extraShellPkgs
   ++ [
       # Publish
       bench-data-publish
@@ -129,7 +138,7 @@ in project.shellFor {
       em
   ]
   ++ lib.optional haveGlibcLocales pkgs.glibcLocales
-  ++ lib.optionals (!backend.useCabalRun) [ cardano-topology cardano-cli locli ]
+  ++ lib.optionals (!workbench-runner.backend.useCabalRun) [ cardano-topology cardano-cli locli ]
   ++ lib.optionals (!workbenchDevMode) [ workbench.workbench ]
   ;
 }

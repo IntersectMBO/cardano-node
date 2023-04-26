@@ -37,10 +37,10 @@ import Cardano.Analysis.API.Types
 sumFieldsReport :: [FieldName]
 sumFieldsReport =
   [ "date.systemStart", "time.systemStart", "sumAnalysisTime"
-  , "batch"
   , "ident"
-  , "cardano-node", "ouroboros-network" , "cardano-ledger", "plutus", "cardano-crypto", "cardano-base"
-  , "era"
+  , "batch"
+  ] ++ (FieldName <$> manifestPackages) ++
+  [ "era"
   , "delegators", "utxo"
   , "add_tx_size", "inputs_per_tx", "outputs_per_tx" , "tps", "tx_count"
   , "plutusScript"
@@ -51,7 +51,7 @@ sumFieldsReport =
   , "ddRawCount.sumDomainTime", "ddFilteredCount.sumDomainTime", "dataDomainFilterRatio.sumDomainTime"
   , "ddRaw.sumStartSpread", "ddRaw.sumStopSpread"
   , "ddFiltered.sumStartSpread", "ddFiltered.sumStopSpread"
-  , "sumDomainSlots", "sumDomainBlocks", "sumBlocksRejected" ]
+  , "sumDomainSlots", "sumDomainBlocks", "sumBlocksRejected"]
 
 instance (KnownCDF f) => TimelineFields (Summary f)  where
   data TimelineComments (Summary f)
@@ -70,37 +70,15 @@ instance (KnownCDF f) => TimelineFields (Summary f)  where
       "Cluster system start time"
       "Time-of-day portion of cluster genesis systemStart"
 
-   <> fScalar   "batch"                Wno Id  (IText $  batch.sumMeta)
-      "Run batch"
-      ""
-
    <> fScalar   "ident"                Wno Id  (IText $ ident.sumMeta)
       "Identifier"
       ""
 
-   <> fScalar "cardano-node"           W5  Ver (IText $ unCommit.mNode.manifest.sumMeta)
-      "cardano-node version"
+   <> fScalar   "batch"                Wno Id  (IText $ batch.sumMeta)
+      "Run batch"
       ""
 
-   <> fScalar "ouroboros-network"      W5  Ver (IText $ unCommit.mNetwork.manifest.sumMeta)
-      "ouroboros-network version"
-      ""
-
-   <> fScalar "cardano-ledger"         W5  Ver (IText $ unCommit.mLedger.manifest.sumMeta)
-      "cardano-ledger version"
-      ""
-
-   <> fScalar "plutus"                 W5  Ver (IText $ unCommit.mPlutus.manifest.sumMeta)
-      "plutus version"
-      ""
-
-   <> fScalar "cardano-crypto"         W5  Ver (IText $ unCommit.mCrypto.manifest.sumMeta)
-      "cardano-crypto version"
-      ""
-
-   <> fScalar "cardano-base"           W5  Ver (IText $ unCommit.mBase.manifest.sumMeta)
-      "cardano-base version"
-      ""
+   <> manifestFields
 
    <> fScalar "era"                    Wno Era (IText $                     era.sumMeta)
       "Era"
@@ -211,7 +189,20 @@ instance (KnownCDF f) => TimelineFields (Summary f)  where
    <> fScalar "sumBlocksRejected"      W10 Cnt (IInt  $ unCount.arityProj cdfMedian.sumBlocksRejected)
       "Blocks rejected"
       ""
-  -- fieldJSONOverlay f = (:[]) . tryOverlayFieldDescription f
+   where
+     pkgCommit pkg = fScalar pkg W7  Ver
+                     (IText $ unCommit.ciCommit.getComponent pkg.manifest.sumMeta)
+                     (pkg <> " git") ""
+     pkgVersion pkg = fScalar pkg W12  Ver
+                     (IText $ unVersion.ciVersion.getComponent pkg.manifest.sumMeta)
+                     (pkg <> " version") ""
+     manifestFields = mconcat . mconcat $
+                       [ manifestPackages <&> pkgVersion
+                       , manifestPackages <&> pkgCommit
+                       ]
+
+
+-- fieldJSONOverlay f = (:[]) . tryOverlayFieldDescription f
 
 propSubsetFn :: PropSubset -> (Field DSelect p a -> Bool)
 propSubsetFn = \case
@@ -500,15 +491,15 @@ instance CDFFields MachPerf p where
       "Chain density"
       "Block/slot ratio, for the last 'k' slots"
 
-   <> fPct  "CentiCpu"            "CPU" (Z1 200) (DWord64 (rCentiCpu.mpResourceCDFs))
+   <> fPct  "CentiCpu"            "CPU" Free (DWord64 (rCentiCpu.mpResourceCDFs))
       "Process CPU usage"
       "Kernel-reported CPU process usage, % of a single core"
 
-   <> fPct  "CentiGC"              "GC" (Z1 200) (DWord64 (rCentiGC .mpResourceCDFs))
+   <> fPct  "CentiGC"              "GC" Free (DWord64 (rCentiGC .mpResourceCDFs))
       "RTS GC CPU usage"
       "RTS-reported GC CPU usage, % of a single core"
 
-   <> fPct  "CentiMut"            "MUT" (Z1 200) (DWord64 (rCentiMut.mpResourceCDFs))
+   <> fPct  "CentiMut"            "MUT" Free (DWord64 (rCentiMut.mpResourceCDFs))
       "RTS Mutator CPU usage"
       "RTS-reported mutator CPU usage, % of a single core"
    <> fW64 "GcsMajor"        "GC" "Maj" W3 Ev    (DWord64 (rGcsMajor.mpResourceCDFs))
@@ -532,7 +523,7 @@ instance CDFFields MachPerf p where
       "RTS live GC dateset"
       "RTS-reported GC live data size, MB"
     ]
-   <> fBoth "Alloc"  "Alloc" "MB/s"     W5 MBs P0 Lin (Z0 5000) (DWord64 (rAlloc.mpResourceCDFs))
+   <> fBoth "Alloc"  "Alloc" "MB/s"     W5 MBs P0 Lin Free (DWord64 (rAlloc.mpResourceCDFs))
       "RTS alloc rate"
       "RTS-reported allocation rate, MB/sec"
 

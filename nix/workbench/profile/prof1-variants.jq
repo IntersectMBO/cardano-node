@@ -363,13 +363,19 @@ def all_profile_variants:
   ##
   |
     ({ extra_desc:                     "without cardano-tracer"
-     , suffix:                         "notracer"
+     , suffix:                         "notrc"
      }|
      .node.tracer                     = false
     ) as $without_tracer
   |
+    ({ extra_desc:                     "with RTView"
+     , suffix:                         "rtvw"
+     }|
+     .node.rtview                     = true
+    ) as $with_rtview
+  |
     ({ extra_desc:                     "with legacy iohk-monitoring"
-     , suffix:                         "oldtracing"
+     , suffix:                         "iomf"
      }|
      .node.tracing_backend           = "iohk-monitoring"
     ) as $old_tracing
@@ -475,6 +481,13 @@ def all_profile_variants:
     , desc: "Status-quo dataset size, four epochs."
     }) as $forge_stress_base
   |
+   ($scenario_fixed_loaded * $triplet * $dataset_oct2021 *
+    { node:
+      { shutdown_on_slot_synced:        2400
+      }
+    , desc: "Status-quo dataset size, four epochs, smaller UTxO/delegation."
+    }) as $forge_stress_light_base
+  |
    ($forge_stress_base * $hexagon *
     { analysis:
       { filters:                        ["epoch3+"] }
@@ -577,6 +590,9 @@ def all_profile_variants:
   , $citest_base * $without_tracer *
     { name: "ci-test-notracer"
     }
+  , $citest_base * $with_rtview *
+    { name: "ci-test-rtview"
+    }
   , $citest_base * $aws_eu_only *
     { name: "aws-test"
     }
@@ -600,6 +616,9 @@ def all_profile_variants:
   , $cibench_base * $without_tracer *
     { name: "ci-bench-notracer"
     }
+  , $cibench_base * $with_rtview *
+    { name: "ci-bench-rtview"
+    }
 
   ## CI variants: test duration, 3 blocks, dense10
   , $citest_base * $solo_dense10 *
@@ -615,6 +634,9 @@ def all_profile_variants:
     }
   , $tracebench_base * $without_tracer *
     { name: "trace-bench-notracer"
+    }
+  , $tracebench_base * $with_rtview *
+    { name: "trace-bench-rtview"
     }
 
   ## Epoch transition test: 1.5 epochs, 15mins runtime
@@ -717,6 +739,9 @@ def all_profile_variants:
   ## Status-quo (huge) dataset, small cluster (2 nodes)
   , $forge_stress_base *
     { name: "forge-stress"
+    }
+  , $forge_stress_light_base *
+    { name: "forge-stress-light"
     }
   , $forge_stress_base * $plutus_base * $plutus_loop_counter *
     { name: "forge-stress-p2p"
