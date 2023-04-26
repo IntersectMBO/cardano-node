@@ -112,7 +112,11 @@ fromShelleyTxId (Ledger.TxId h) =
 --
 
 data TxIn = TxIn TxId TxIx
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Show)
+  -- We rely on the TxId Ord instance being consistent with the
+  -- Ledger.TxId Ord instance via the toShelleyTxId conversion
+  -- This is checked by prop_ord_distributive_TxId
+  deriving Ord
 
 instance ToJSON TxIn where
   toJSON txIn = Aeson.String $ renderTxIn txIn
