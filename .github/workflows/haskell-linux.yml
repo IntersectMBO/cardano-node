@@ -169,7 +169,7 @@ jobs:
       if: matrix.ghc == '8.10.7'
       uses: actions/upload-artifact@v1
       with:
-        name: artifacts-${{ matrix.os }}
+        name: artifacts-${{ matrix.os }}-${{ matrix.n }}
         path: ./artifacts
 
     - name: Delete socket files in chairman tests in preparation for uploading artifacts
@@ -184,7 +184,7 @@ jobs:
       if: ${{ always() }}
       continue-on-error: true
       with:
-        name: chairman-test-artifacts-${{ matrix.os }}-${{ matrix.ghc }}
+        name: chairman-test-artifacts-${{ matrix.os }}-${{ matrix.ghc }}-${{ matrix.n }}
         path: ${{ runner.temp }}/chairman/
 
     # Uncomment the following back in for debugging. Remember to launch a `pwsh` from
