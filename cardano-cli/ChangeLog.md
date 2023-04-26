@@ -48,6 +48,8 @@
 
 - Add `--socket-path` CLI option for CLI commands that use `CARDANO_NODE_SOCKET_PATH` ([PR 4910](https://github.com/input-output-hk/cardano-node/pull/4910))
 
+- Add `utcTimeToSlotNo` function to support UTC -> slot number conversion ([PR 5130](https://github.com/input-output-hk/cardano-node/pull/5130))
+
 ### Bugs
 
 - Allow reading signing keys from a pipe ([PR 4342](https://github.com/input-output-hk/cardano-node/pull/4342))

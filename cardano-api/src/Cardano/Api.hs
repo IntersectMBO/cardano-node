@@ -695,6 +695,7 @@ module Cardano.Api (
 
     EraHistory(..),
     getProgress,
+    getSlotForRelativeTime,
 
     -- *** Common queries
     determineEra,
