@@ -21,7 +21,7 @@ import qualified Testnet.Conf as H
 import qualified Testnet.Util.Base as H
 
 testnetProperty :: Maybe Int -> (H.Conf -> H.Integration ()) -> H.Property
-testnetProperty maybeTestnetMagic tn = H.integrationRetryWorkspace 2 "testnet" $ \tempAbsPath' -> do
+testnetProperty maybeTestnetMagic tn = H.integrationRetryWorkspace 0 "testnet" $ \tempAbsPath' -> do
   base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
   conf <- H.mkConf (H.ProjectBase base) (H.YamlFilePath configurationTemplate) tempAbsPath' maybeTestnetMagic
