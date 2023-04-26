@@ -985,15 +985,15 @@ run_ls_tabulated_cmd() {
           sort |
           tail -n'$limit' |
           {
-            printf "%16s  %-75s %7s %-20s %-15s %10s\n" \
-                 timestamp "profile name" "gitrev" "identifier" "node version" "node branch"
+            printf "%-60s %-12s %7s %-15s %10s\n" \
+                 "run tag" "identifier" "gitrev" "node version" "node branch"
             while read lst_tag; test -n "$lst_tag";
             do printf_args=(
                $(jq ".meta | .manifest as \$manif |
-                      \"\\(.profile) \\(\$manif.\"cardano-node\" | .[:7]) \\(.ident) \\(\$manif.\"cardano-node-version\") \\(\$manif.\"cardano-node-branch\")\"
+                      \"\\(.ident) \\(\$manif.\"cardano-node\" | .[:7]) \\(\$manif.\"cardano-node-version\") \\(\$manif.\"cardano-node-branch\")\"
                     " -r <$lst_tag/meta.json))
-              printf "%16s  %-75s %7s %-20s %-15s %10s\n" \
-                    $(echo $lst_tag |cut -c -16) ${printf_args[*]}
+              printf "%-60s %-12s %7s %-15s %10s\n" \
+                    $lst_tag ${printf_args[*]}
             done || true
           }'
 }
