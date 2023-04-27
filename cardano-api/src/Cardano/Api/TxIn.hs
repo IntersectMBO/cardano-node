@@ -35,6 +35,10 @@ module Cardano.Api.TxIn (
     toShelleyTxIn,
     fromShelleyTxIn,
     renderTxIn,
+    fromSetOfShelleyTxIn,
+    fromMapOfShelleyTxIn,
+    toSetOfShelleyTxIn,
+    toMapOfShelleyTxIn,
   ) where
 
 import           Control.Applicative (some)
@@ -43,6 +47,8 @@ import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 
 import qualified Data.ByteString.Char8 as BSC
+import           Data.Map (Map)
+import           Data.Set (Set)
 import           Data.String
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -51,6 +57,7 @@ import           Text.Parsec ((<?>))
 import qualified Text.Parsec.Language as Parsec
 import qualified Text.Parsec.String as Parsec
 import qualified Text.Parsec.Token as Parsec
+import           Unsafe.Coerce (unsafeCoerce)
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 
@@ -209,3 +216,15 @@ toShelleyTxIn = unwrappedTxIn
 
 fromShelleyTxIn :: Ledger.TxIn StandardCrypto -> TxIn
 fromShelleyTxIn = WrappedTxIn
+
+fromSetOfShelleyTxIn :: Set (Ledger.TxIn StandardCrypto) -> Set TxIn
+fromSetOfShelleyTxIn = unsafeCoerce -- This is safe because TxIn is a newtype with the same Ord instance
+
+fromMapOfShelleyTxIn :: Map (Ledger.TxIn StandardCrypto) v -> Map TxIn v
+fromMapOfShelleyTxIn = unsafeCoerce -- This is safe because TxIn is a newtype with the same Ord instance
+
+toSetOfShelleyTxIn :: Set TxIn -> Set (Ledger.TxIn StandardCrypto)
+toSetOfShelleyTxIn = unsafeCoerce -- This is safe because TxIn is a newtype with the same Ord instance
+
+toMapOfShelleyTxIn :: Map TxIn v -> Map (Ledger.TxIn StandardCrypto) v
+toMapOfShelleyTxIn = unsafeCoerce -- This is safe because TxIn is a newtype with the same Ord instance
