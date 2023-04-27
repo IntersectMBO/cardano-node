@@ -158,6 +158,22 @@ jobs:
         KEEP_WORKSPACE: 1
       run: cabal test cardano-testnet cardano-api cardano-node cardano-node-chairman cardano-cli cardano-submit-api
 
+    - name: Tar failed tests workspaces
+      if: ${{ failure() }}
+      env:
+        TMP: ${{ runner.temp }}
+      shell: bash
+      run: |
+        cd $TMP
+        find . -name 'module' -type f -printf '%h\n' | xargs -L1 basename | sort -u | xargs tar -czvf workspaces.tgz
+
+    - name: Upload workspaces on tests failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: failed-test-workspaces-${{ matrix.os }}-ghc${{ matrix.ghc }}-cabal${{ matrix.cabal }}.tgz
+        path: ${{ runner.temp }}/workspaces.tgz
+
     - name: "Tar artifacts"
       shell: bash
       run: |
