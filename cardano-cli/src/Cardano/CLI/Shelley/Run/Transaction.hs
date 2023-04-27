@@ -556,7 +556,7 @@ runTxBuildRaw era
                                readOnlyRefIns
 
     validatedCollateralTxIns <- validateTxInsCollateral era txinsc
-    validatedRefInputs <- validateTxInsReference era allReferenceInputs
+    validatedRefInputs <- validateTxInsReference era (Set.fromList allReferenceInputs)
     validatedTotCollateral
       <- first ShelleyTxCmdTotalCollateralValidationError $ validateTxTotalCollateral era mTotCollateral
     validatedRetCol
@@ -663,7 +663,7 @@ runTxBuild
                              withdrawals readOnlyRefIns
 
   validatedCollateralTxIns <- hoistEither $ validateTxInsCollateral era txinsc
-  validatedRefInputs <- hoistEither $ validateTxInsReference era allReferenceInputs
+  validatedRefInputs <- hoistEither $ validateTxInsReference era (Set.fromList allReferenceInputs)
   validatedTotCollateral
     <- hoistEither $ first ShelleyTxCmdTotalCollateralValidationError $ validateTxTotalCollateral era mTotCollateral
   validatedRetCol
@@ -819,13 +819,14 @@ validateTxInsCollateral era txins =
 
 validateTxInsReference
   :: CardanoEra era
-  -> [TxIn]
+  -> Set TxIn
   -> Either ShelleyTxCmdError (TxInsReference BuildTx era)
-validateTxInsReference _ []  = return TxInsReferenceNone
 validateTxInsReference era allRefIns =
-  case refInsScriptsAndInlineDatsSupportedInEra era of
-    Nothing -> txFeatureMismatchPure era TxFeatureReferenceInputs
-    Just supp -> return $ TxInsReference supp allRefIns
+  if Set.null allRefIns
+    then return TxInsReferenceNone
+    else case refInsScriptsAndInlineDatsSupportedInEra era of
+      Nothing -> txFeatureMismatchPure era TxFeatureReferenceInputs
+      Just supp -> return $ TxInsReference supp allRefIns
 
 
 getAllReferenceInputs

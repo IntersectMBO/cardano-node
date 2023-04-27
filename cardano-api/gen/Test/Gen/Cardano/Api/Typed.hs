@@ -118,8 +118,8 @@ import           Cardano.Api hiding (txIns)
 import qualified Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
-import           Cardano.Api.Shelley (GovernancePoll (..), GovernancePollAnswer (..),
-                   Hash (..), KESPeriod (KESPeriod),
+import           Cardano.Api.Shelley (GovernancePoll (..), GovernancePollAnswer (..), Hash (..),
+                   KESPeriod (KESPeriod),
                    OperationalCertificateIssueCounter (OperationalCertificateIssueCounter),
                    PlutusScript (PlutusScriptSerialised), ProtocolParameters (ProtocolParameters),
                    ReferenceScript (..), ReferenceTxInsScriptsInlineDatumsSupportedInEra (..),
@@ -673,7 +673,7 @@ genTxInsReference :: CardanoEra era -> Gen (TxInsReference BuildTx era)
 genTxInsReference era =
     case refInsScriptsAndInlineDatsSupportedInEra era of
       Nothing        -> pure TxInsReferenceNone
-      Just supported -> TxInsReference supported <$> Gen.list (Range.linear 0 10) genTxIn
+      Just supported -> TxInsReference supported <$> Gen.set (Range.linear 0 10) genTxIn
 
 genTxReturnCollateral :: CardanoEra era -> Gen (TxReturnCollateral CtxTx era)
 genTxReturnCollateral era =

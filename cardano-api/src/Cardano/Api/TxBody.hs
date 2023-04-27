@@ -1350,7 +1350,7 @@ data TxInsReference build era where
      TxInsReferenceNone :: TxInsReference build era
 
      TxInsReference     :: ReferenceTxInsScriptsInlineDatumsSupportedInEra era
-                        -> [TxIn]
+                        -> Set TxIn
                         -> TxInsReference build era
 
 deriving instance Eq   (TxInsReference build era)
@@ -2791,8 +2791,7 @@ fromLedgerTxInsReference era txBody =
     Just suppInEra ->
       let ledgerRefInputs =
             obtainReferenceInputsHasFieldConstraint suppInEra $ txBody ^. L.referenceInputsTxBodyL
-      in TxInsReference suppInEra
-           $ map fromShelleyTxIn . Set.toList $ ledgerRefInputs
+      in TxInsReference suppInEra $ fromSetOfShelleyTxIn ledgerRefInputs
  where
   obtainReferenceInputsHasFieldConstraint
     :: ReferenceTxInsScriptsInlineDatumsSupportedInEra era
@@ -3591,7 +3590,7 @@ convReferenceInputs :: TxInsReference build era -> Set (Ledger.TxIn StandardCryp
 convReferenceInputs txInsReference =
   case txInsReference of
     TxInsReferenceNone -> mempty
-    TxInsReference _ refTxins -> Set.fromList $ map toShelleyTxIn refTxins
+    TxInsReference _ refTxins -> toSetOfShelleyTxIn refTxins
 
 getCBORConstraint
   :: ShelleyBasedEra era
