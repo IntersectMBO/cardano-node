@@ -5,16 +5,18 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ViewPatterns #-}
 
 
 -- | Transaction bodies
 --
 module Cardano.Api.TxIn (
     -- * Transaction inputs
-    TxIn(..),
+    TxIn(TxIn),
     TxIx(..),
 
     -- * Transaction Ids
@@ -111,8 +113,44 @@ fromShelleyTxId (Ledger.TxId h) =
 -- Transaction inputs
 --
 
-data TxIn = TxIn TxId TxIx
-  deriving (Eq, Ord, Show)
+-- | An transaction input.  It logically consists of a transaction id and a
+-- transaction index within that transaction, but it is a newtype wrapper
+-- around 'Ledger.TxIn' so that it preserves the same 'Ord' instance and
+-- also to minimise overhead of handling values of this type in collections.
+newtype TxIn = WrappedTxIn
+  { unwrappedTxIn :: Ledger.TxIn StandardCrypto
+  }
+  deriving (Eq, Ord)
+
+mkTxIn :: TxId -> TxIx -> TxIn
+mkTxIn txId (TxIx txIx) =
+  WrappedTxIn $ Ledger.TxIn (toShelleyTxId txId) (Ledger.TxIx $ fromIntegral txIx)
+
+unTxIn :: TxIn -> (TxId, TxIx)
+unTxIn (WrappedTxIn (Ledger.TxIn txId (Ledger.TxIx txIx))) =
+  (fromShelleyTxId txId, TxIx (fromIntegral txIx))
+
+-- | Manual instance of Show because we want to maintain the illusion TxIn is
+-- a data type with a constructor of two arguments as if it were defined like
+-- this:
+--
+-- @
+--   data TxIn = TxIn TxId TxIx
+-- @
+instance Show TxIn where
+  showsPrec d (TxIn txId txIx) =
+    showParen (d > 10) $
+      showString "TxIn " . showsPrec 11 txId . showChar ' ' . showsPrec 11 txIx
+
+-- | A pattern synonym that makes 'TxIn' have a interface like:
+--
+-- @
+--   data TxIn = TxIn TxId TxIx
+-- @
+pattern TxIn :: TxId -> TxIx -> TxIn
+pattern TxIn txId txIx <- (unTxIn -> (txId, txIx))
+  where TxIn txId txIx = mkTxIn txId txIx
+{-# COMPLETE TxIn #-}
 
 instance ToJSON TxIn where
   toJSON txIn = Aeson.String $ renderTxIn txIn
@@ -147,7 +185,6 @@ renderTxIn :: TxIn -> Text
 renderTxIn (TxIn txId (TxIx ix)) =
   serialiseToRawBytesHexText txId <> "#" <> Text.pack (show ix)
 
-
 newtype TxIx = TxIx Word
   deriving stock (Eq, Ord, Show)
   deriving newtype (Enum)
@@ -168,9 +205,7 @@ toByronTxIn (TxIn txid (TxIx txix)) =
 -- | This function may overflow on the transaction index. Call sites must ensure
 -- that all uses of this function are appropriately guarded.
 toShelleyTxIn :: TxIn -> Ledger.TxIn StandardCrypto
-toShelleyTxIn (TxIn txid (TxIx txix)) =
-    Ledger.TxIn (toShelleyTxId txid) (Ledger.TxIx $ fromIntegral txix)
+toShelleyTxIn = unwrappedTxIn
 
 fromShelleyTxIn :: Ledger.TxIn StandardCrypto -> TxIn
-fromShelleyTxIn (Ledger.TxIn txid (Ledger.TxIx txix)) =
-    TxIn (fromShelleyTxId txid) (TxIx (fromIntegral txix))
+fromShelleyTxIn = WrappedTxIn
