@@ -3,6 +3,7 @@
 import Cardano.Benchmarking.PlutusScripts (findPlutusScript, encodePlutusScript)
 import qualified Data.ByteString.Lazy as LBS (hPut)
 import Options.Applicative
+import System.Exit (die)
 import System.IO (IOMode(..), openFile, stdout)
 
 data Options = Options
@@ -30,7 +31,9 @@ main :: IO ()
 main =
   do
     Options {..} <- execParser (info opts fullDesc)
-    let Just s = findPlutusScript optMod
+    s <- case findPlutusScript optMod of
+           Just s' -> pure s'
+           Nothing -> die $ "module " ++ optMod ++ " not found"
     h <- case optOut of
            Just file -> openFile file WriteMode
            Nothing   -> pure stdout
