@@ -84,7 +84,8 @@ library
     , text
 
 executable gen-plutus
-  import:               project-config
+  import:               common-definitions
+                      , project-config
   hs-source-dirs:       app
   main-is:              gen-plutus.hs
   default-language:     Haskell2010
