@@ -268,7 +268,10 @@
                     inherit pkgs;
                     inherit (exes.cardano-node.identifier) version;
                     platform = "linux";
-                    exes = lib.collect lib.isDerivation projectExes;
+                    exes = lib.collect lib.isDerivation (
+                      # FIXME: restore tx-generator and gen-plutus once plutus-scripts-bench is fixed for musl:
+                      removeAttrs projectExes [ "tx-generator" "gen-plutus" ]
+                    );
                   };
                   internal.roots.project = muslProject.roots;
                   variants = mapAttrs (_: v: removeAttrs v.musl ["variants"]) ciJobsVariants;
@@ -286,8 +289,8 @@
                     inherit (exes.cardano-node.identifier) version;
                     platform = "win64";
                     exes = lib.collect lib.isDerivation (
-                      # FIXME: restore tx-generator once plutus-scripts-bench is fixed for windows:
-                      removeAttrs projectExes [ "tx-generator" ]
+                      # FIXME: restore tx-generator and gen-plutus once plutus-scripts-bench is fixed for windows:
+                      removeAttrs projectExes [ "tx-generator" "gen-plutus" ]
                     );
                   };
                   internal.roots.project = windowsProject.roots;
