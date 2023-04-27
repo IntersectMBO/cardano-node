@@ -44,31 +44,52 @@ package cardano-api
 package cardano-cli
   ghc-options: -Werror
 
+package cardano-client-demo
+  ghc-options: -Werror
+
 package cardano-git-rev
   ghc-options: -Werror
 
-package cardano-node
+package cardano-node-capi
   ghc-options: -Werror
 
 package cardano-node-chairman
   ghc-options: -Werror
 
+package cardano-node
+  ghc-options: -Werror
+
+package cardano-submit-api
+  ghc-options: -Werror
+
 package cardano-testnet
   ghc-options: -Werror
 
-package tx-generator
-  ghc-options: -Werror
-
-package trace-dispatcher
-  ghc-options: -Werror
-
-package trace-resources
+package cardano-topology
   ghc-options: -Werror
 
 package cardano-tracer
   ghc-options: -Werror
 
-package submit-api
+package locli
+  ghc-options: -Werror
+
+package plutus-scripts-bench
+  ghc-options: -Werror
+
+package trace-analyzer
+  ghc-options: -Werror
+
+package trace-dispatcher
+  ghc-options: -Werror
+
+package trace-forward
+  ghc-options: -Werror
+
+package trace-resources
+  ghc-options: -Werror
+
+package tx-generator
   ghc-options: -Werror
 
 package cryptonite
