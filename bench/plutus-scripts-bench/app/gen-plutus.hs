@@ -1,9 +1,11 @@
 {-# LANGUAGE RecordWildCards #-}
 
-import Cardano.Benchmarking.PlutusScripts (findPlutusScript, encodePlutusScript)
+import           Prelude
+
+import           Cardano.Benchmarking.PlutusScripts (encodePlutusScript, findPlutusScript)
 import qualified Data.ByteString.Lazy as LBS (hPut)
-import Options.Applicative
-import System.IO (IOMode(..), openFile, stdout)
+import           Options.Applicative
+import           System.IO (IOMode (..), openFile, stdout)
 
 data Options = Options
    { optOut :: Maybe FilePath
@@ -30,8 +32,10 @@ main :: IO ()
 main =
   do
     Options {..} <- execParser (info opts fullDesc)
-    let Just s = findPlutusScript optMod
-    h <- case optOut of
-           Just file -> openFile file WriteMode
-           Nothing   -> pure stdout
-    LBS.hPut h $ encodePlutusScript s
+    case findPlutusScript optMod of
+      Nothing -> putStrLn $ "script not found in library: " ++ optMod
+      Just s -> do
+        h <- case optOut of
+          Just file -> openFile file WriteMode
+          Nothing   -> pure stdout
+        LBS.hPut h $ encodePlutusScript s
