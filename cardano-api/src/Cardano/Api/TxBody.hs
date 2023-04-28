@@ -29,6 +29,7 @@ module Cardano.Api.TxBody (
     createTransactionBody,
     createAndValidateTransactionBody,
     TxBodyContent(..),
+    getTxBodyContent,
     -- ** Transaction body builders
     defaultTxBodyContent,
     defaultTxFee,

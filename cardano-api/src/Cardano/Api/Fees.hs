@@ -366,11 +366,11 @@ data ScriptExecutionError =
 
        -- | An attempt was made to spend a key witnessed tx input
        -- with a script witness.
-     | ScriptErrorNotPlutusWitnessedTxIn ScriptWitnessIndex ScriptHash
+     | ScriptErrorNotPlutusWitnessedTxIn ScriptWitnessIndex ScriptHash ScriptWitnessIndexContext
 
        -- | The redeemer pointer points to a script hash that does not exist
        -- in the transaction nor in the UTxO as a reference script"
-     | ScriptErrorRedeemerPointsToUnknownScriptHash ScriptWitnessIndex
+     | ScriptErrorRedeemerPointsToUnknownScriptHash ScriptWitnessIndex ScriptWitnessIndexContext
 
        -- | A redeemer pointer points to a script that does not exist.
      | ScriptErrorMissingScript
@@ -380,6 +380,12 @@ data ScriptExecutionError =
        -- | A cost model was missing for a language which was used.
      | ScriptErrorMissingCostModel Alonzo.Language
   deriving Show
+
+newtype ScriptWitnessIndexContext = ScriptWitnessIndexContext
+  { scriptWitnessIndexContextTxInsReference :: Set TxIn
+  }
+
+deriving instance Show ScriptWitnessIndexContext
 
 instance Error ScriptExecutionError where
   displayError (ScriptErrorMissingTxIn txin) =
@@ -409,12 +415,12 @@ instance Error ScriptExecutionError where
    ++ "impossible. So this probably indicates a chain configuration problem, "
    ++ "perhaps with the values in the cost model."
 
-  displayError (ScriptErrorNotPlutusWitnessedTxIn scriptWitness scriptHash) =
+  displayError (ScriptErrorNotPlutusWitnessedTxIn scriptWitness scriptHash _context) =
       renderScriptWitnessIndex scriptWitness <> " is not a Plutus script "
       <> "witnessed tx input and cannot be spent using a Plutus script witness."
       <> "The script hash is " <> show scriptHash <> "."
 
-  displayError (ScriptErrorRedeemerPointsToUnknownScriptHash scriptWitness) =
+  displayError (ScriptErrorRedeemerPointsToUnknownScriptHash scriptWitness _context) =
       renderScriptWitnessIndex scriptWitness <> " points to a script hash "
       <> "that is not known."
 
@@ -603,14 +609,28 @@ evaluateTransactionExecutionUnits systemstart epochInfo bpp utxo txbody =
           ScriptErrorNotPlutusWitnessedTxIn
             (fromAlonzoRdmrPtr rdmrPtr)
             (fromShelleyScriptHash scriptHash)
+            scriptWitnessIndexContext
         L.RedeemerPointsToUnknownScriptHash rdmrPtr ->
-          ScriptErrorRedeemerPointsToUnknownScriptHash $ fromAlonzoRdmrPtr rdmrPtr
+          ScriptErrorRedeemerPointsToUnknownScriptHash
+            (fromAlonzoRdmrPtr rdmrPtr)
+            scriptWitnessIndexContext
         -- This should not occur while using cardano-cli because we zip together
         -- the Plutus script and the use site (txin, certificate etc). Therefore
         -- the redeemer pointer will always point to a Plutus script.
         L.MissingScript rdmrPtr resolveable -> ScriptErrorMissingScript rdmrPtr resolveable
 
         L.NoCostModelInLedgerState l -> ScriptErrorMissingCostModel l
+
+    txBodyContent = getTxBodyContent txbody
+
+    scriptWitnessIndexContext :: ScriptWitnessIndexContext
+    scriptWitnessIndexContext =
+      ScriptWitnessIndexContext
+      { scriptWitnessIndexContextTxInsReference =
+          case txInsReference txBodyContent of
+            TxInsReferenceNone -> Set.empty
+            TxInsReference _ txins -> txins
+      }
 
 
     obtainBabbageEraPParams
