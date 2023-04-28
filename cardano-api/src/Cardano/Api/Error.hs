@@ -15,7 +15,7 @@ import           Control.Exception (Exception (..), IOException, throwIO)
 import           System.IO (Handle)
 
 
-class Show e => Error e where
+class Error e where
 
     displayError :: e -> String
 
@@ -33,7 +33,7 @@ data ErrorAsException where
      ErrorAsException :: Error e => e -> ErrorAsException
 
 instance Show ErrorAsException where
-    show (ErrorAsException e) = show e
+    show (ErrorAsException e) = displayError e
 
 instance Exception ErrorAsException where
     displayException (ErrorAsException e) = displayError e

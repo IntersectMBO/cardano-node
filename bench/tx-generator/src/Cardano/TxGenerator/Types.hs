@@ -121,8 +121,8 @@ data PlutusAutoBudget
     deriving (Show, Eq)
 
 data TxGenError where
-  ApiError        :: Cardano.Api.Error e => !e -> TxGenError
-  ProtocolError   :: Cardano.Api.Error e => !e -> TxGenError
+  ApiError        :: (Cardano.Api.Error e, Show e) => !e -> TxGenError
+  ProtocolError   :: (Cardano.Api.Error e, Show e) => !e -> TxGenError
   PlutusError     :: Show e => !e -> TxGenError
   TxGenError      :: !String -> TxGenError
 
