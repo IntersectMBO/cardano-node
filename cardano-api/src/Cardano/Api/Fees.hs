@@ -415,14 +415,20 @@ instance Error ScriptExecutionError where
    ++ "impossible. So this probably indicates a chain configuration problem, "
    ++ "perhaps with the values in the cost model."
 
-  displayError (ScriptErrorNotPlutusWitnessedTxIn scriptWitness scriptHash _context) =
-      renderScriptWitnessIndex scriptWitness <> " is not a Plutus script "
-      <> "witnessed tx input and cannot be spent using a Plutus script witness."
-      <> "The script hash is " <> show scriptHash <> "."
+  displayError (ScriptErrorNotPlutusWitnessedTxIn scriptWitness scriptHash context) =
+    mconcat
+      [ renderScriptWitnessIndex scriptWitness <> " is not a Plutus script "
+      , "witnessed tx input and cannot be spent using a Plutus script witness. "
+      , "The script hash is " <> show scriptHash <> ". "
+      , "Txin references: " <> show (Set.toList (scriptWitnessIndexContextTxInsReference context))
+      ]
 
-  displayError (ScriptErrorRedeemerPointsToUnknownScriptHash scriptWitness _context) =
-      renderScriptWitnessIndex scriptWitness <> " points to a script hash "
-      <> "that is not known."
+  displayError (ScriptErrorRedeemerPointsToUnknownScriptHash scriptWitness context) =
+    mconcat
+      [ renderScriptWitnessIndex scriptWitness <> " points to a script hash "
+      , "that is not known."
+      , "Txin references: " <> show (Set.toList (scriptWitnessIndexContextTxInsReference context))
+      ]
 
   displayError (ScriptErrorMissingScript rdmrPtr resolveable) =
      "The redeemer pointer: " <> show rdmrPtr <> " points to a Plutus "
