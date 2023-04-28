@@ -46,10 +46,13 @@ import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.Protocol.BlockFetch.Client (BlockFetchClient (..),
                    blockFetchClientPeer)
 import           Ouroboros.Network.Protocol.Handshake.Version (simpleSingletonVersions)
-import           Ouroboros.Network.Protocol.KeepAlive.Client
+import           Ouroboros.Network.Protocol.KeepAlive.Client hiding (SendMsgDone)
 import           Ouroboros.Network.Protocol.KeepAlive.Codec
 import           Ouroboros.Network.Protocol.TxSubmission2.Client (TxSubmissionClient,
                    txSubmissionClientPeer)
+import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..), encodeRemoteAddress, decodeRemoteAddress)
+import           Ouroboros.Network.Protocol.PeerSharing.Client (PeerSharingClient (..),
+                   peerSharingClientPeer)
 
 import           Ouroboros.Network.Snocket (socketSnocket)
 
@@ -82,6 +85,7 @@ benchmarkConnectTxSubmit ioManager handshakeTracer submissionTracer codecConfig 
     (addrAddress <$> Nothing)
     (addrAddress remoteAddr)
  where
+  ownPeerSharing = NoPeerSharing
   mkApp :: OuroborosBundle      mode addr bs m a b
         -> OuroborosApplication mode addr bs m a b
   mkApp bundle =
@@ -94,15 +98,17 @@ benchmarkConnectTxSubmit ioManager handshakeTracer submissionTracer codecConfig 
   blkN2nVer = supportedVers Map.! n2nVer
   supportedVers :: Map.Map NodeToNodeVersion (BlockNodeToNodeVersion blk)
   supportedVers = supportedNodeToNodeVersions (Proxy @blk)
-  myCodecs :: Codecs blk DeserialiseFailure IO
+  myCodecs :: Codecs blk NtN.RemoteAddress DeserialiseFailure IO
                 ByteString ByteString ByteString ByteString ByteString ByteString
-  myCodecs  = defaultCodecs codecConfig blkN2nVer n2nVer
+                ByteString
+  myCodecs  = defaultCodecs codecConfig blkN2nVer encodeRemoteAddress decodeRemoteAddress n2nVer
   peerMultiplex =
     simpleSingletonVersions
       n2nVer
       (NtN.NodeToNodeVersionData
        { NtN.networkMagic = networkMagic
        , NtN.diffusionMode = NtN.InitiatorOnlyDiffusionMode
+       , NtN.peerSharing = ownPeerSharing
        }) $
       mkApp $
       NtN.nodeToNodeProtocols NtN.defaultMiniProtocolParameters ( \them _ ->
@@ -125,8 +131,14 @@ benchmarkConnectTxSubmit ioManager handshakeTracer submissionTracer codecConfig 
                                            submissionTracer
                                            (cTxSubmission2Codec myCodecs)
                                            (txSubmissionClientPeer myTxSubClient)
+          , NtN.peerSharingProtocol = InitiatorProtocolOnly $
+                                         MuxPeer
+                                           nullTracer
+                                           (cPeerSharingCodec myCodecs)
+                                           (peerSharingClientPeer peerSharingClientNull)
           } )
         n2nVer
+        ownPeerSharing
   -- Stolen from: Ouroboros/Consensus/Network/NodeToNode.hs
   kaClient
     :: Ord remotePeer
@@ -156,3 +168,9 @@ blockFetchClientNull
   => BlockFetchClient block point m a
 blockFetchClientNull
   = BlockFetchClient $ forever $ threadDelay (24 * 60 * 60) {- one day in seconds -}
+
+-- the null peer sharing client
+peerSharingClientNull
+  :: forall addr m a. MonadTimer m
+  => PeerSharingClient addr m a
+peerSharingClientNull = SendMsgDone $ forever $ threadDelay (24 * 60 * 60) {- one day in seconds -}
