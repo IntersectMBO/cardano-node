@@ -811,25 +811,29 @@ instance Error TxBodyErrorAutoBalance where
   displayError (TxBodyError err) = displayError err
 
   displayError (TxBodyScriptExecutionError failures) =
-      "The following scripts have execution failures:\n"
-   <> PP.vsep [ "the script for " <> renderScriptWitnessIndex index
-                <> " failed with: " <> "\n" <> displayError failure
-              | (index, failure) <- failures ]
+    mconcat
+      [ "The following scripts have execution failures:\n"
+      , PP.vsep
+        [ "the script for " <> renderScriptWitnessIndex index
+          <> " failed with: \n" <> displayError failure
+        | (index, failure) <- failures
+        ]
+      ]
 
   displayError TxBodyScriptBadScriptValidity =
       "One or more of the scripts were expected to fail validation, but none did."
 
   displayError (TxBodyErrorAdaBalanceNegative lovelace) =
       "The transaction does not balance in its use of ada. The net balance "
-   <> "of the transaction is negative: " <> pretty (show lovelace) <> " lovelace. "
+   <> "of the transaction is negative: " <> pretty lovelace <> " lovelace. "
    <> "The usual solution is to provide more inputs, or inputs with more ada."
 
   displayError (TxBodyErrorAdaBalanceTooSmall changeOutput minUTxO balance) =
       "The transaction does balance in its use of ada, however the net "
    <> "balance does not meet the minimum UTxO threshold. \n"
-   <> "Balance: " <> pretty (show balance) <> "\n"
+   <> "Balance: " <> pretty balance <> "\n"
    <> "Offending output (change output): " <> pretty (prettyRenderTxOut changeOutput) <> "\n"
-   <> "Minimum UTxO threshold: " <> pretty (show minUTxO) <> "\n"
+   <> "Minimum UTxO threshold: " <> pretty minUTxO <> "\n"
    <> "The usual solution is to provide more inputs, or inputs with more ada to "
    <> "meet the minimum UTxO threshold"
 
@@ -844,7 +848,7 @@ instance Error TxBodyErrorAutoBalance where
 
   displayError (TxBodyErrorMinUTxONotMet txout minUTxO) =
       "Minimum UTxO threshold not met for tx output: " <> pretty (prettyRenderTxOut txout) <> "\n"
-   <> "Minimum required UTxO: " <> pretty (show minUTxO)
+   <> "Minimum required UTxO: " <> pretty minUTxO
 
   displayError (TxBodyErrorNonAdaAssetsUnbalanced val) =
       "Non-Ada assets are unbalanced: " <> pretty (renderValue val)

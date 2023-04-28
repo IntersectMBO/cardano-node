@@ -214,7 +214,6 @@ import           Data.Word (Word16, Word32, Word64)
 import           GHC.Generics
 import           Lens.Micro hiding (ix)
 import           Lens.Micro.Extras (view)
-import           Prettyprinter (Pretty (..))
 import qualified Text.Parsec as Parsec
 import           Text.Parsec ((<?>))
 import qualified Text.Parsec.String as Parsec
@@ -269,7 +268,7 @@ import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Byron
 import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.NetworkId
-import           Cardano.Api.Pretty (Ann, Doc, InstanceShow (..), renderStringDefault)
+import           Cardano.Api.Pretty
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Script
 import           Cardano.Api.ScriptData
@@ -4133,6 +4132,7 @@ data ScriptWitnessIndex =
      -- | The n'th withdrawal, in the order of the 'StakeAddress's.
    | ScriptWitnessIndexWithdrawal !Word
   deriving (Eq, Ord, Show)
+  deriving Pretty via InstanceShow ScriptWitnessIndex
 
 instance ToJSON ScriptWitnessIndex where
   toJSON = \case

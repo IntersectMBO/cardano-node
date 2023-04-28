@@ -78,7 +78,7 @@ import           Cardano.Ledger.Crypto (StandardCrypto)
 
 import           Cardano.Api.Error (displayError)
 import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.Pretty (renderStringDefault)
+import           Cardano.Api.Pretty (InstanceShow (..), Pretty (..), renderStringDefault)
 import           Cardano.Api.Script
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
@@ -95,6 +95,7 @@ import qualified Cardano.Ledger.Mary.Value as Mary
 newtype Lovelace = Lovelace Integer
   deriving stock (Eq, Ord, Show)
   deriving newtype (Enum, Real, Integral, Num, ToJSON, FromJSON, ToCBOR, FromCBOR)
+  deriving Pretty via (InstanceShow Lovelace)
 
 instance Semigroup Lovelace where
   Lovelace a <> Lovelace b = Lovelace (a + b)

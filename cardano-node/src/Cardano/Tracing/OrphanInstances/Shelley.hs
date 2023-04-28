@@ -308,6 +308,18 @@ instance ( ShelleyBasedEra era
       , "rdmrs" .= map Api.fromAlonzoRdmrPtr rdmrs
       ]
 
+
+-- renderScriptWitnessIndex :: ScriptWitnessIndex -> Doc Ann
+-- renderScriptWitnessIndex (ScriptWitnessIndexTxIn index) =
+--   "transaction input " <> pretty index <> " (in the order of the TxIds)"
+-- renderScriptWitnessIndex (ScriptWitnessIndexMint index) =
+--   "policyId " <> pretty index <> " (in the order of the PolicyIds)"
+-- renderScriptWitnessIndex (ScriptWitnessIndexCertificate index) =
+--   "certificate " <> pretty index <> " (in the list order of the certificates)"
+-- renderScriptWitnessIndex (ScriptWitnessIndexWithdrawal index) =
+--   "withdrawal " <> pretty index <> " (in the order of the StakeAddresses)"
+
+
 renderScriptIntegrityHash :: Maybe (Alonzo.ScriptIntegrityHash StandardCrypto) -> Aeson.Value
 renderScriptIntegrityHash (Just witPPDataHash) =
   Aeson.String . Crypto.hashToTextAsHex $ SafeHash.extractHash witPPDataHash
