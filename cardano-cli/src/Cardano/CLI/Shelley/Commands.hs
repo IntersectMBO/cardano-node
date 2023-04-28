@@ -418,6 +418,7 @@ data GovernanceCmd
   | GovernanceAnswerPoll
       (File GovernancePoll In) -- Poll file
       (Maybe Word) -- Answer index
+      (Maybe (File () Out)) -- Tx file
   | GovernanceVerifyPoll
       (File GovernancePoll In) -- Poll file
       (File (Tx ()) In) -- Tx file

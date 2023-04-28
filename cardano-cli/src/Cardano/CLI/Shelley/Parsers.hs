@@ -1187,6 +1187,7 @@ pGovernanceCmd =
       GovernanceAnswerPoll
         <$> pPollFile
         <*> optional pPollAnswerIndex
+        <*> optional pOutputFile
 
     pGovernanceVerifyPoll :: Parser GovernanceCmd
     pGovernanceVerifyPoll =
