@@ -50,6 +50,18 @@
 
 - Add `utcTimeToSlotNo` function to support UTC -> slot number conversion ([PR 5130](https://github.com/input-output-hk/cardano-node/pull/5130))
 
+- Optimise `query stake-snapshot` command
+  ([PR 4179](https://github.com/input-output-hk/cardano-node/pull/4179))
+
+- Optimise `query leadership-schedule` command
+  ([PR 4250](https://github.com/input-output-hk/cardano-node/pull/4250))
+
+- New `query pool-state` command, obsoletes `query pool-params` command
+  ([PR 4170](https://github.com/input-output-hk/cardano-node/pull/4170))
+
+- More memory efficient `query ledger-state` command.
+  ([PR 4205](https://github.com/input-output-hk/cardano-node/pull/4205))
+
 ### Bugs
 
 - Allow reading signing keys from a pipe ([PR 4342](https://github.com/input-output-hk/cardano-node/pull/4342))
