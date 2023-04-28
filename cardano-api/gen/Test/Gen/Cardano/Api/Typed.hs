@@ -666,7 +666,7 @@ genTxInsCollateral era =
       Nothing        -> pure TxInsCollateralNone
       Just supported -> Gen.choice
                           [ pure TxInsCollateralNone
-                          , TxInsCollateral supported <$> Gen.list (Range.linear 0 10) genTxIn
+                          , TxInsCollateral supported <$> Gen.set (Range.linear 0 10) genTxIn
                           ]
 
 genTxInsReference :: CardanoEra era -> Gen (TxInsReference BuildTx era)

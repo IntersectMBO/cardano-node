@@ -1339,7 +1339,7 @@ data TxInsCollateral era where
      TxInsCollateralNone :: TxInsCollateral era
 
      TxInsCollateral     :: CollateralSupportedInEra era
-                         -> [TxIn] -- Only key witnesses, no scripts.
+                         -> Set TxIn -- Only key witnesses, no scripts.
                          -> TxInsCollateral era
 
 deriving instance Eq   (TxInsCollateral era)
@@ -2639,7 +2639,7 @@ validateTxInsCollateral txInsCollateral languages =
     TxInsCollateralNone ->
       unless (Set.null languages) (Left TxBodyEmptyTxInsCollateral)
     TxInsCollateral _ collateralTxIns ->
-      guardShelleyTxInsOverflow collateralTxIns
+      guardShelleyTxInsOverflow (Set.toList collateralTxIns)
 
 validateTxOuts :: ShelleyBasedEra era -> [TxOut CtxTx era] -> Either TxBodyError ()
 validateTxOuts era txOuts =
@@ -2772,7 +2772,7 @@ fromLedgerTxInsCollateral era body =
     case collateralSupportedInEra (shelleyBasedToCardanoEra era) of
       Nothing        -> TxInsCollateralNone
       Just supported ->
-        TxInsCollateral supported $ map fromShelleyTxIn collateral_
+        TxInsCollateral supported $ Set.fromList $ map fromShelleyTxIn collateral_
   where
     collateral_ :: [Ledger.TxIn StandardCrypto]
     collateral_ = case era of
@@ -3418,7 +3418,7 @@ convCollateralTxIns :: TxInsCollateral era -> Set (Ledger.TxIn StandardCrypto)
 convCollateralTxIns txInsCollateral =
   case txInsCollateral of
     TxInsCollateralNone -> Set.empty
-    TxInsCollateral _ txins -> Set.fromList (map toShelleyTxIn txins)
+    TxInsCollateral _ txins -> toSetOfShelleyTxIn txins
 
 convReturnCollateral
   :: ShelleyBasedEra era
@@ -3872,7 +3872,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraBabbage
            & L.collateralInputsTxBodyL .~
                case txInsCollateral of
                 TxInsCollateralNone     -> Set.empty
-                TxInsCollateral _ txins -> Set.fromList (map toShelleyTxIn txins)
+                TxInsCollateral _ txins -> toSetOfShelleyTxIn txins
            & L.referenceInputsTxBodyL     .~ convReferenceInputs txInsReference
            & L.collateralReturnTxBodyL    .~ convReturnCollateral era txReturnCollateral
            & L.totalCollateralTxBodyL     .~ convTotalCollateral txTotalCollateral
@@ -3971,7 +3971,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraConway
            & L.collateralInputsTxBodyL .~
                case txInsCollateral of
                 TxInsCollateralNone     -> Set.empty
-                TxInsCollateral _ txins -> Set.fromList (map toShelleyTxIn txins)
+                TxInsCollateral _ txins -> toSetOfShelleyTxIn txins
            & L.referenceInputsTxBodyL     .~ convReferenceInputs txInsReference
            & L.collateralReturnTxBodyL    .~ convReturnCollateral era txReturnCollateral
            & L.totalCollateralTxBodyL     .~ convTotalCollateral txTotalCollateral

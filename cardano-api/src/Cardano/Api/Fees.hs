@@ -47,7 +47,7 @@ import           Data.ByteString.Short (ShortByteString)
 import           Data.Function ((&))
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (catMaybes, fromMaybe, maybeToList)
+import           Data.Maybe (fromMaybe, maybeToList)
 import           Data.Ratio
 import           Data.Set (Set)
 import qualified Data.Set as Set
@@ -1086,7 +1086,7 @@ makeTransactionBodyAutoBalance systemstart history pparams
             -- We must first figure out how much lovelace we have committed
             -- as collateral and we must determine if we have enough lovelace at our
             -- collateral tx inputs to cover the tx
-            let txOuts = catMaybes [ Map.lookup txin utxo' | txin <- collIns]
+            let txOuts = Map.elems $ Map.restrictKeys utxo' collIns
                 totalCollateralLovelace = mconcat $ map (\(TxOut _ txOutVal _ _) -> txOutValueToLovelace txOutVal) txOuts
                 requiredCollateral@(Lovelace reqAmt) = fromIntegral colPerc * fee
                 totalCollateral = TxTotalCollateral retColSup . fromShelleyLovelace

@@ -370,7 +370,7 @@ runTxBuildCmd
   txOuts <- mapM (toTxOutInAnyEra cEra) txouts
 
   -- the same collateral input can be used for several plutus scripts
-  let filteredTxinsc = Set.toList $ Set.fromList txinsc
+  let filteredTxinsc = Set.fromList txinsc
 
   -- We need to construct the txBodycontent outside of runTxBuild
   BalancedTxBody txBodycontent balancedTxBody _ _ <-
@@ -388,7 +388,7 @@ runTxBuildCmd
                              readOnlyRefIns
 
   let inputsThatRequireWitnessing = [input | (input,_) <- inputsAndMaybeScriptWits]
-      allTxInputs = inputsThatRequireWitnessing ++ allReferenceInputs ++ filteredTxinsc
+      allTxInputs = inputsThatRequireWitnessing ++ allReferenceInputs ++ Set.toList filteredTxinsc
 
   -- TODO: Calculating the script cost should live as a different command.
   -- Why? Because then we can simply read a txbody and figure out
@@ -494,7 +494,7 @@ runTxBuildRawCmd
   txOuts <- mapM (toTxOutInAnyEra cEra) txouts
 
     -- the same collateral input can be used for several plutus scripts
-  let filteredTxinsc = Set.toList $ Set.fromList txinsc
+  let filteredTxinsc = Set.fromList txinsc
 
   txBody <- hoistEither $ runTxBuildRaw cEra mScriptValidity inputsAndMaybeScriptWits readOnlyRefIns filteredTxinsc
                           mReturnCollateral mTotColl txOuts mLowBound mUpperBound fee valuesWithScriptWits
@@ -514,7 +514,7 @@ runTxBuildRaw
   -- ^ TxIn with potential script witness
   -> [TxIn]
   -- ^ Read only reference inputs
-  -> [TxIn]
+  -> Set TxIn
   -- ^ TxIn for collateral
   -> Maybe (TxOut CtxTx era)
   -- ^ Return collateral
@@ -613,7 +613,7 @@ runTxBuild
   -- ^ Read only reference inputs
   -> [TxIn]
   -- ^ TxIn with potential script witness
-  -> [TxIn]
+  -> Set TxIn
   -- ^ TxIn for collateral
   -> Maybe (TxOut CtxTx era)
   -- ^ Return collateral
@@ -684,7 +684,7 @@ runTxBuild
         & onNothing (left (ShelleyTxCmdEraConsensusModeMismatchTxBalance outputOptions
                             (AnyConsensusMode CardanoMode) (AnyCardanoEra era)))
 
-      let allTxInputs = inputsThatRequireWitnessing ++ allReferenceInputs ++ txinsc
+      let allTxInputs = inputsThatRequireWitnessing ++ allReferenceInputs ++ Set.toList txinsc
           localNodeConnInfo = LocalNodeConnectInfo
                                      { localConsensusModeParams = CardanoModeParams $ EpochSlots 21600
                                      , localNodeNetworkId = networkId
@@ -809,11 +809,12 @@ validateTxIns = map convert
 
 
 validateTxInsCollateral :: CardanoEra era
-                        -> [TxIn]
+                        -> Set TxIn
                         -> Either ShelleyTxCmdError (TxInsCollateral era)
-validateTxInsCollateral _   []    = return TxInsCollateralNone
 validateTxInsCollateral era txins =
-    case collateralSupportedInEra era of
+  if Set.null txins
+    then return TxInsCollateralNone
+    else case collateralSupportedInEra era of
       Nothing -> txFeatureMismatchPure era TxFeatureCollateral
       Just supported -> return (TxInsCollateral supported txins)
 

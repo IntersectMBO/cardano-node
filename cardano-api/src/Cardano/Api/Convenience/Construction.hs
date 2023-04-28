@@ -16,7 +16,6 @@ module Cardano.Api.Convenience.Construction (
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
-import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as Text
 
@@ -86,9 +85,9 @@ renderNotScriptLockedTxInsError (ScriptLockedTxIns txins) =
   "The followings tx inputs were expected to be key witnessed but are actually script witnessed: " <>
   textShow (map renderTxIn txins)
 
-notScriptLockedTxIns :: [TxIn] -> UTxO era -> Either ScriptLockedTxInsError ()
+notScriptLockedTxIns :: Set TxIn -> UTxO era -> Either ScriptLockedTxInsError ()
 notScriptLockedTxIns collTxIns (UTxO utxo) = do
-  let onlyCollateralUTxOs = Map.restrictKeys utxo $ Set.fromList collTxIns
+  let onlyCollateralUTxOs = Map.restrictKeys utxo collTxIns
       scriptLockedTxIns =
         filter (\(_, TxOut aInEra _ _ _) -> not $ isKeyAddress aInEra ) $ Map.assocs onlyCollateralUTxOs
   if null scriptLockedTxIns

@@ -26,6 +26,7 @@ import           Control.Monad.Trans.Except.Extra
 import           "contra-tracer" Control.Tracer (nullTracer)
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
 import           Data.Ratio ((%))
+import qualified Data.Set as Set
 
 import           Streaming
 import qualified Streaming.Prelude as Streaming
@@ -376,7 +377,7 @@ selectCollateralFunds (Just walletName) = do
     l -> return l
   case collateralSupportedInEra (cardanoEra @era) of
       Nothing -> throwE $ WalletError $ "selectCollateralFunds: collateral: era not supported :" ++ show (cardanoEra @era)
-      Just p -> return (TxInsCollateral p $  map getFundTxIn collateralFunds, collateralFunds)
+      Just p -> return (TxInsCollateral p $ Set.fromList $ map getFundTxIn collateralFunds, collateralFunds)
 
 dumpToFile :: FilePath -> TxInMode CardanoMode -> ActionM ()
 dumpToFile filePath tx = liftIO $ dumpToFileIO filePath tx
