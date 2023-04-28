@@ -30,7 +30,7 @@ backend_nomad() {
     # - setenv-defaults                        BACKEND-DIR
     # - setenv-nomad                           CONTAINER-SPECS-FILE (Nomad only)
     # - allocate-run                           RUN-DIR
-    # - allocate-run-directory-nomad-nodes     RUN-DIR              (Nomad only)
+    # - allocate-run-directory-nomad           RUN-DIR              (Nomad only)
     # - allocate-run-directory-supervisor      RUN-DIR              (Nomad only)
     # - allocate-run-directory-nodes           RUN-DIR              (Nomad only)
     # - allocate-run-directory-generator       RUN-DIR              (Nomad only)
@@ -43,6 +43,9 @@ backend_nomad() {
     ############################################################################
     # * Functions in the backend "interface" must use `fatal` when errors!
 
+    # After `allocate-run` the Nomad is running waiting for the genesis to be
+    # deployed and tracer/cardano-nodes/generator to be started.
+    #
     # "generator", "tracer" and "node" folders contents (start.sh, config files,
     # etc) are included in the Nomad Job spec file as "template" stanzas and are
     # materialized inside the container when the job is started. This is how it
@@ -65,17 +68,14 @@ backend_nomad() {
         --* ) msg "FATAL:  unknown flag '$1'"; usage_nomadbackend;;
           * ) break;; esac; shift; done
 
-      # The "nomad" folder is created by the sub-backends ("podman", "exec",
-      # "cloud") and filled with the Nomad job spec file to use.
-
       # Create the dispatcher's local directories hierarchy.
-      backend_nomad allocate-run-directory-nomad-nodes       "${dir}"
-      backend_nomad allocate-run-directory-supervisor        "${dir}"
-      backend_nomad allocate-run-directory-nodes             "${dir}"
-      backend_nomad allocate-run-directory-generator         "${dir}"
-      backend_nomad allocate-run-directory-tracers           "${dir}"
+      backend_nomad allocate-run-directory-nomad      "${dir}"
+      backend_nomad allocate-run-directory-supervisor "${dir}"
+      backend_nomad allocate-run-directory-nodes      "${dir}"
+      backend_nomad allocate-run-directory-generator  "${dir}"
+      backend_nomad allocate-run-directory-tracers    "${dir}"
 
-      # These ones need to be decided at "setenv-defaults" of each sub-backend.
+      # These ones are decided at "setenv-defaults" of each sub-backend.
       local nomad_environment=$(envjqr 'nomad_environment')
       local nomad_task_driver=$(envjqr 'nomad_task_driver')
       # TODO: Store them on disk for later subcommands run from a different shell.
@@ -86,19 +86,21 @@ backend_nomad() {
       ### Must match `^[a-zA-Z0-9-]{1,128}$)` or it won't be possible to use it
       ### as namespace.: "invalid name "2023-02-10-06.34.f178b.ci-test-bage.nom"".
       local nomad_job_name=$(basename "${dir}")
-      backend_nomad allocate-run-nomad-job-patch-name        "${dir}" \
-        "${nomad_job_name}"
+      backend_nomad allocate-run-nomad-job-patch-name "${dir}" "${nomad_job_name}"
 
       backend_nomad start-nomad-job "${dir}"
     ;;
 
-    allocate-run-directory-nomad-nodes )
+    allocate-run-directory-nomad )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
       local nomad_task_driver=$(envjqr   'nomad_task_driver')
       local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
-      # Nomad specific folders to download the entrypoints scripts and its logs
-      # for every Nomad Task.
+      # Creates Nomad specific folders to download the entrypoints scripts and
+      # its logs for every Nomad Task.
+      # The top level "nomad" folder is created at "allocate-run" of each
+      # sub-backend. ("podman", "exec", "cloud") and filled with the Nomad job
+      # spec file to use.
       local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
       for node in ${nodes[*]}
       do
@@ -312,13 +314,9 @@ backend_nomad() {
     ;;
 
     ############################################################################
-    # Start/stop cluster functions:
+    # Start/stop Nomad job functions:
     # - start-nomad-job RUN-DIR                                     (Nomad only)
     # - stop-nomad-job  RUN-DIR                                     (Nomad only)
-    # - is-running      RUN-DIR
-    # - start           RUN-DIR
-    # - stop-cluster    RUN-DIR
-    # - cleanup-cluster RUN-DIR
     ############################################################################
     # * Functions in the backend "interface" must use `fatal` when errors!
 
@@ -362,18 +360,18 @@ backend_nomad() {
       if test "${nomad_environment}" != "cloud"
       then
         # Links to Nomad agents logs.
-        ln -s "${server_state_dir}"/nomad.log "$dir"/nomad/server-"${server_name}".log
-        ln -s "${server_state_dir}"/stdout "$dir"/nomad/server-"${server_name}".stdout
-        ln -s "${server_state_dir}"/stderr "$dir"/nomad/server-"${server_name}".stderr
-        ln -s "${client_state_dir}"/nomad.log "$dir"/nomad/client-"${client_name}".log
-        ln -s "${client_state_dir}"/stdout "$dir"/nomad/client-"${client_name}".stdout
-        ln -s "${client_state_dir}"/stderr "$dir"/nomad/client-"${client_name}".stderr
+        ln -s "${server_state_dir}"/nomad.log "${dir}"/nomad/server-"${server_name}".log
+        ln -s "${server_state_dir}"/stdout    "${dir}"/nomad/server-"${server_name}".stdout
+        ln -s "${server_state_dir}"/stderr    "${dir}"/nomad/server-"${server_name}".stderr
+        ln -s "${client_state_dir}"/nomad.log "${dir}"/nomad/client-"${client_name}".log
+        ln -s "${client_state_dir}"/stdout    "${dir}"/nomad/client-"${client_name}".stdout
+        ln -s "${client_state_dir}"/stderr    "${dir}"/nomad/client-"${client_name}".stderr
       fi
 
       msg "Starting nomad job ..."
       if ! wb_nomad job start "$dir/nomad/nomad-job.json" "${nomad_job_name}"
       then
-        if test "$nomad_agents_were_already_running" = "false"
+        if test "${nomad_agents_were_already_running}" = "false"
         then
           wb_nomad agents stop \
             "${server_name}" "${client_name}" "${nomad_task_driver}"
@@ -412,6 +410,7 @@ backend_nomad() {
       fi
     ;;
 
+    # Download all Nomad dynamically generated files, the "template" stanzas.
     start-download )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
@@ -536,6 +535,15 @@ backend_nomad() {
       fi
     ;;
 
+    ############################################################################
+    # Start/stop Cardano cluster functions:
+    # - is-running      RUN-DIR
+    # - start           RUN-DIR
+    # - stop-cluster    RUN-DIR
+    # - cleanup-cluster RUN-DIR
+    ############################################################################
+    # * Functions in the backend "interface" must use `fatal` when errors!
+
     is-running )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
@@ -615,7 +623,7 @@ backend_nomad() {
           # the generator just after it quits automatically.
           backend_nomad task-program-stop "$dir" node-0 generator || true
         else
-          msg "Program \"generator\" inside Task \"node-0\" was not running, should it?"
+          msg "$(yellow "Program \"generator\" inside Task \"node-0\" was not running, should it?")"
         fi
       fi
       # Stop node(s).
@@ -991,11 +999,9 @@ backend_nomad() {
       local dir=${1:?$usage}; shift
       local node=${1:-$(dirname $CARDANO_NODE_SOCKET_PATH | xargs basename)}; shift
 
-      # TODO: Get socket path from node's config
       local socket=$(backend_nomad get-node-socket-path "${dir}" ${node})
-
-      local patience=$(jq '.analysis.cluster_startup_overhead_s | ceil' ${dir}/profile.json)
       local socket_path_absolute=/"${node}"/local/run/current/"${node}"/node.socket
+      local patience=$(jq '.analysis.cluster_startup_overhead_s | ceil' ${dir}/profile.json)
       msg "Waiting ${patience}s for socket of Nomad Task \"${node}\" program \"${node}\" ..."
       local i=0
       local node_alloc_id
@@ -1197,6 +1203,7 @@ backend_nomad() {
       local dir=${1:?$usage};  shift
       local node=${1:?$usage}; shift
 
+      # TODO: Get socket path from node's config ?
       echo -n "$dir"/"${node}"/node.socket
     ;;
 

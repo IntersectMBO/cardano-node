@@ -11,8 +11,8 @@ backend_nomadpodman() {
 
     name )
       # Can be:
-      # nomadpodman       (Using podman task driver in the cloud is not planned)
-      # nomadexec    (Starts Nomad agents supporting the nix_installable stanza)
+      # nomadpodman       (Using podman Task Driver in the cloud is not planned)
+      # nomadexec  (Starts Nomad Agents supporting the "nix_installable" stanza)
       # nomadcloud  (IOG Nomad Agents and Amazon S3 with credentials from Vault)
       echo 'nomadpodman'
     ;;
@@ -76,7 +76,8 @@ backend_nomadpodman() {
     ;;
 
     # Sets jq envars "profile_container_specs_file" ,"nomad_environment",
-    # "nomad_task_driver" and "one_tracer_per_node"
+    # "nomad_task_driver" and "one_tracer_per_node".
+    # It "overrides" completely `backend_nomad`'s `setenv-defaults`.
     setenv-defaults )
       local usage="USAGE: wb backend $op BACKEND-DIR"
       local backend_dir=${1:?$usage}; shift
@@ -98,6 +99,7 @@ backend_nomadpodman() {
       setenvjqstr 'one_tracer_per_node' "false"
     ;;
 
+    # Sub-backend specific allocs and calls `backend_nomad`'s `allocate-run`.
     allocate-run )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
@@ -116,7 +118,7 @@ backend_nomadpodman() {
         "${dir}"/container-specs.json              \
       > "${dir}"/nomad/nomad-job.json
       # The job file is "slightly" modified (jq) to suit the running environment.
-      backend_nomad       allocate-run-nomad-job-patch-namespace "${dir}" "default"
+      backend_nomad allocate-run-nomad-job-patch-namespace "${dir}" "default"
       podman_create_image "${dir}"
       # Make sure the "genesis-volume" dir is present when the Nomad job is
       # started because with the podman task driver (always local, not used for
@@ -130,12 +132,13 @@ backend_nomadpodman() {
       backend_nomad allocate-run   "${dir}"
     ;;
 
+    # It "overrides" completely `backend_nomad`'s `deploy-genesis`.
     deploy-genesis )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
       # The "$dir/genesis-volume" folder is mounted to "run/local/genesis"
       # inside the container that for security reasons does not follow symlinks,
-      # so everything is copied from the generated/pathed genesis in
+      # so everything is copied from the generated/patched genesis in
       # "$dir/genesis" to "$dir/genesis-volume"
       mkdir "${dir}"/genesis-volume/byron
       mkdir "${dir}"/genesis-volume/utxo-keys
@@ -166,8 +169,6 @@ backend_nomadpodman() {
     ;;
 
     * )
-      # TODO: Replace with `usage_nomadpodman` and make the nomad helper commands
-      # use a new top level sub-command `wb nomad`
       backend_nomad "${op}" "$@"
     ;;
 

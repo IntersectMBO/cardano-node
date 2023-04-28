@@ -11,8 +11,8 @@ backend_nomadcloud() {
 
     name )
       # Can be:
-      # nomadpodman       (Using podman task driver in the cloud is not planned)
-      # nomadexec    (Starts Nomad agents supporting the nix_installable stanza)
+      # nomadpodman       (Using podman Task Driver in the cloud is not planned)
+      # nomadexec  (Starts Nomad Agents supporting the "nix_installable" stanza)
       # nomadcloud  (IOG Nomad Agents and Amazon S3 with credentials from Vault)
       echo 'nomadcloud'
     ;;
@@ -76,7 +76,8 @@ backend_nomadcloud() {
     ;;
 
     # Sets jq envars "profile_container_specs_file" ,"nomad_environment",
-    # "nomad_task_driver" and "one_tracer_per_node"
+    # "nomad_task_driver" and "one_tracer_per_node".
+    # It "overrides" completely `backend_nomad`'s `setenv-defaults`.
     setenv-defaults )
       local usage="USAGE: wb backend $op BACKEND-DIR"
       local backend_dir=${1:?$usage}; shift
@@ -189,6 +190,7 @@ backend_nomadcloud() {
       read -p "Hit enter to continue ..."
     ;;
 
+    # Sub-backend specific allocs and calls `backend_nomad`'s `allocate-run`.
     allocate-run )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
@@ -227,6 +229,7 @@ backend_nomadcloud() {
       backend_nomad allocate-run "${dir}"
     ;;
 
+    # It "overrides" completely `backend_nomad`'s `deploy-genesis`.
     deploy-genesis )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
@@ -275,8 +278,6 @@ backend_nomadcloud() {
     ;;
 
     * )
-      # TODO: Replace with `usage_nomadcloud` and make the nomad helper commands
-      # use a new top level sub-command `wb nomad`
       backend_nomad "${op}" "$@"
     ;;
 
