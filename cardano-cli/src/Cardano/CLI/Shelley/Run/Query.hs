@@ -31,6 +31,7 @@ import           Cardano.Api
 import qualified Cardano.Api as Api
 import           Cardano.Api.Byron
 import           Cardano.Api.Orphans ()
+import           Cardano.Api.Pretty
 import           Cardano.Api.Shelley
 
 import           Control.Monad.Trans.Except (ExceptT (..), except, runExcept, runExceptT,
@@ -60,7 +61,6 @@ import           Text.Printf (printf)
 
 import           Cardano.Binary (DecoderError)
 import           Cardano.CLI.Helpers (HelpersError (..), hushM, pPrintCBOR, renderHelpersError)
-import           Cardano.CLI.Pretty
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (VerificationKeyOrHashOrFile,
                    readVerificationKeyOrHashOrFile)

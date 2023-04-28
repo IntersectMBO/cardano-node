@@ -1,4 +1,4 @@
-module Cardano.Node.Pretty
+module Cardano.Api.Pretty
   ( Ann,
     putLn,
     hPutLn,

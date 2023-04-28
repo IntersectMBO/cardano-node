@@ -46,6 +46,7 @@ library
                         Cardano.Api.ChainSync.Client
                         Cardano.Api.ChainSync.ClientPipelined
                         Cardano.Api.Crypto.Ed25519Bip32
+                        Cardano.Api.Pretty
                         Cardano.Api.Shelley
                         -- TODO: Eliminate in the future when
                         -- we create wrapper types for the ledger types
@@ -161,6 +162,7 @@ library
                       , parsec
                       , plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.1
                       , prettyprinter
+                      , prettyprinter-ansi-terminal ^>= 1.1.3
                       , prettyprinter-configurable ^>= 1.1
                       , random
                       , scientific

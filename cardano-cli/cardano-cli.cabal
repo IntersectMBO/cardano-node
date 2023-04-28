@@ -71,7 +71,6 @@ library
                         Cardano.CLI.Byron.Vote
 
                         Cardano.CLI.Common.Parsers
-                        Cardano.CLI.Pretty
                         Cardano.CLI.IO.Lazy
 
                         Cardano.CLI.Shelley.Commands
@@ -149,7 +148,6 @@ library
                       , ouroboros-network-protocols
                       , parsec
                       , prettyprinter
-                      , prettyprinter-ansi-terminal
                       , random
                       , split
                       , strict-stm

@@ -71,7 +71,6 @@ library
                         Cardano.Node.Handlers.TopLevel
                         Cardano.Node.Orphans
                         Cardano.Node.Parsers
-                        Cardano.Node.Pretty
                         Cardano.Node.Protocol
                         Cardano.Node.Protocol.Alonzo
                         Cardano.Node.Protocol.Byron
@@ -183,7 +182,6 @@ library
                       , ouroboros-network-framework >= 0.5
                       , ouroboros-network-protocols
                       , prettyprinter
-                      , prettyprinter-ansi-terminal
                       , psqueues
                       , safe-exceptions
                       , scientific
