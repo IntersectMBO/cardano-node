@@ -175,7 +175,6 @@ module Cardano.Api.TxBody (
     -- * Misc helpers
     calculateExecutionUnitsLovelace,
     orderStakeAddrs,
-    orderTxIns,
 
     -- * Data family instances
     AsType(AsTxId, AsTxBody, AsByronTxBody, AsShelleyTxBody, AsMaryTxBody),
@@ -4173,7 +4172,7 @@ collectTxBodyScriptWitnesses TxBodyContent {
         [ (ScriptWitnessIndexTxIn ix, AnyScriptWitness witness)
           -- The tx ins are indexed in the map order by txid
         | (ix, (_, BuildTxWith (ScriptWitness _ witness)))
-            <- zip [0..] (Map.toList txins) -- previously used orderTxIns
+            <- zip [0..] (Map.toList txins)
         ]
 
     scriptWitnessesWithdrawals
@@ -4217,12 +4216,6 @@ collectTxBodyScriptWitnesses TxBodyContent {
         , (ix, ValueNestedBundle policyid _) <- zip [0..] bundle
         , witness <- maybeToList (Map.lookup policyid witnesses)
         ]
-
--- This relies on the TxId Ord instance being consistent with the
--- Ledger.TxId Ord instance via the toShelleyTxId conversion
--- This is checked by prop_ord_distributive_TxId
-orderTxIns :: [(TxIn, v)] -> [(TxIn, v)]
-orderTxIns = sortBy (compare `on` fst)
 
 -- This relies on the StakeAddress Ord instance being consistent with the
 -- Shelley.RewardAcnt Ord instance via the toShelleyStakeAddr conversion
