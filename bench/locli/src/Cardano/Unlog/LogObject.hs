@@ -12,7 +12,21 @@
 {- HLINT ignore "Redundant if" -}
 {- HLINT ignore "Use infix" -}
 
-module Cardano.Unlog.LogObject (module Cardano.Unlog.LogObject) where
+module Cardano.Unlog.LogObject
+  ( HostLogs (..)
+  , hlRawLogObjects
+  , RunLogs (..)
+  , rlLogs
+  , runLiftLogObjects
+  , LogObject (..)
+  , loPretty
+  --
+  , logObjectStreamInterpreterKeysLegacy
+  , logObjectStreamInterpreterKeys
+  , LOBody (..)
+  , LOAnyType (..)
+  )
+where
 
 import           Cardano.Prelude hiding (Text, show)
 import           Prelude (id, show, unzip3)
@@ -466,10 +480,6 @@ instance FromJSON LogObject where
          (Nothing, Just _, Just x) -> (,) <$> pure x <*> (fromText <$> x .: "kind")
          (Just kind0, _, _) -> pure (v, kind0)
          _ -> fail $ "Unexpected LogObject .data: " <> show v
-
-extendObject :: Text -> Value -> Value -> Value
-extendObject k v (Object hm) = Object $ hm <> KeyMap.singleton (Aeson.fromText $ toText k) v
-extendObject k _ _ = error . Text.unpack $ "Summary key '" <> k <> "' does not serialise to an Object."
 
 parsePartialResourceStates :: Value -> Parser (Resources Word64)
 parsePartialResourceStates =

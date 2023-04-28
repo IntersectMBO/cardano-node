@@ -15,7 +15,7 @@ import Data.Map.Strict                  qualified as Map
 import Data.Text                        qualified as Text
 
 import Cardano.Analysis.API
-import Cardano.Unlog.LogObject               hiding (Text)
+import Cardano.Unlog.LogObject
 import Cardano.Util
 
 

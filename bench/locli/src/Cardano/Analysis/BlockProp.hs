@@ -49,7 +49,7 @@ import Data.Accum
 import Data.CDF
 
 import Cardano.Render
-import Cardano.Unlog.LogObject  hiding (Text)
+import Cardano.Unlog.LogObject
 import Cardano.Unlog.Resources
 import Cardano.Util
 
