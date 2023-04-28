@@ -22,6 +22,7 @@ import           Data.Bifunctor (bimap, second)
 import           Data.Function ((&))
 import           Data.List (find)
 import qualified Data.ListMap as ListMap (toList)
+import qualified Data.Map as Map
 
 import           Cardano.Api
 import           Cardano.Api.Shelley (ReferenceScript (..), fromShelleyLovelace,
@@ -126,7 +127,7 @@ mkGenesisTransaction key ttl fee txins txouts
       (createAndValidateTransactionBody txBodyContent)
  where
   txBodyContent = defaultTxBodyContent
-    & setTxIns (zip txins $ repeat $ BuildTxWith $ KeyWitness KeyWitnessForSpending)
+    & setTxIns (Map.fromList $ zip txins $ repeat $ BuildTxWith $ KeyWitness KeyWitnessForSpending)
     & setTxOuts txouts
     & setTxFee (mkTxFee fee)
     & setTxValidityRange (TxValidityNoLowerBound, mkTxValidityUpperBound ttl)

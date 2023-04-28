@@ -375,7 +375,8 @@ runTxBuildCmd
   -- We need to construct the txBodycontent outside of runTxBuild
   BalancedTxBody txBodycontent balancedTxBody _ _ <-
     runTxBuild
-      socketPath cEra consensusModeParams nid mScriptValidity inputsAndMaybeScriptWits readOnlyRefIns filteredTxinsc
+      socketPath cEra consensusModeParams nid mScriptValidity (Map.fromList inputsAndMaybeScriptWits)
+      readOnlyRefIns filteredTxinsc
       mReturnCollateral mTotCollateral txOuts changeAddr valuesWithScriptWits mLowBound
       mUpperBound certsAndMaybeScriptWits withdrawalsAndMaybeScriptWits
       requiredSigners txAuxScripts txMetadata mpparams mProp mOverrideWits outputOptions
@@ -496,7 +497,7 @@ runTxBuildRawCmd
     -- the same collateral input can be used for several plutus scripts
   let filteredTxinsc = Set.fromList txinsc
 
-  txBody <- hoistEither $ runTxBuildRaw cEra mScriptValidity inputsAndMaybeScriptWits readOnlyRefIns filteredTxinsc
+  txBody <- hoistEither $ runTxBuildRaw cEra mScriptValidity (Map.fromList inputsAndMaybeScriptWits) readOnlyRefIns filteredTxinsc
                           mReturnCollateral mTotColl txOuts mLowBound mUpperBound fee valuesWithScriptWits
                           certsAndMaybeScriptWits withdrawalsAndMaybeScriptWits requiredSigners txAuxScripts
                           txMetadata pparams mProp
@@ -510,7 +511,7 @@ runTxBuildRaw
   :: CardanoEra era
   -> Maybe ScriptValidity
   -- ^ Mark script as expected to pass or fail validation
-  -> [(TxIn, Maybe (ScriptWitness WitCtxTxIn era))]
+  -> Map TxIn (Maybe (ScriptWitness WitCtxTxIn era))
   -- ^ TxIn with potential script witness
   -> [TxIn]
   -- ^ Read only reference inputs
@@ -549,7 +550,7 @@ runTxBuildRaw era
               txAuxScripts txMetadata mpparams mUpdateProp = do
 
     let allReferenceInputs = getAllReferenceInputs
-                               inputsAndMaybeScriptWits
+                               (Map.toList inputsAndMaybeScriptWits)
                                (snd valuesWithScriptWits)
                                certsAndMaybeSriptWits
                                withdrawals
@@ -609,7 +610,7 @@ runTxBuild
   -> NetworkId
   -> Maybe ScriptValidity
   -- ^ Mark script as expected to pass or fail validation
-  -> [(TxIn, Maybe (ScriptWitness WitCtxTxIn era))]
+  -> Map TxIn (Maybe (ScriptWitness WitCtxTxIn era))
   -- ^ Read only reference inputs
   -> [TxIn]
   -- ^ TxIn with potential script witness
@@ -653,11 +654,11 @@ runTxBuild
 
   let consensusMode = consensusModeOnly cModeParams
       dummyFee = Just $ Lovelace 0
-      inputsThatRequireWitnessing = [input | (input,_) <- inputsAndMaybeScriptWits]
+      inputsThatRequireWitnessing = Map.keys inputsAndMaybeScriptWits
 
   -- Pure
   let allReferenceInputs = getAllReferenceInputs
-                             inputsAndMaybeScriptWits
+                             (Map.toList inputsAndMaybeScriptWits)
                              (snd valuesWithScriptWits)
                              certsAndMaybeScriptWits
                              withdrawals readOnlyRefIns
@@ -793,19 +794,17 @@ txFeatureMismatchPure era feature =
 
 
 validateTxIns
-  :: [(TxIn, Maybe (ScriptWitness WitCtxTxIn era))]
-  -> [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
-validateTxIns = map convert
+  :: Map TxIn (Maybe (ScriptWitness WitCtxTxIn era))
+  -> Map TxIn (BuildTxWith BuildTx (Witness WitCtxTxIn era))
+validateTxIns = Map.map convert
  where
    convert
-     :: (TxIn, Maybe (ScriptWitness WitCtxTxIn era))
-     -> (TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))
-   convert (txin, mScriptWitness) =
+     :: Maybe (ScriptWitness WitCtxTxIn era)
+     -> BuildTxWith BuildTx (Witness WitCtxTxIn era)
+   convert mScriptWitness =
      case mScriptWitness of
-       Just sWit ->
-         (txin , BuildTxWith $ ScriptWitness ScriptWitnessForSpending sWit)
-       Nothing ->
-         (txin, BuildTxWith $ KeyWitness KeyWitnessForSpending)
+       Just sWit -> BuildTxWith $ ScriptWitness ScriptWitnessForSpending sWit
+       Nothing -> BuildTxWith $ KeyWitness KeyWitnessForSpending
 
 
 validateTxInsCollateral :: CardanoEra era

@@ -116,10 +116,9 @@ dummyTxSizeInEra metadata = case createAndValidateTransactionBody dummyTx of
   dummyTx :: TxBodyContent BuildTx era
   dummyTx = defaultTxBodyContent
     & setTxIns
-      [ ( TxIn "dbaff4e270cfb55612d9e2ac4658a27c79da4a5271c6f90853042d1403733810" (TxIx 0)
-        , BuildTxWith $ KeyWitness KeyWitnessForSpending
-        )
-      ]
+      (Map.singleton
+        (TxIn "dbaff4e270cfb55612d9e2ac4658a27c79da4a5271c6f90853042d1403733810" (TxIx 0))
+        (BuildTxWith $ KeyWitness KeyWitnessForSpending))
     & setTxFee (mkTxFee 0)
     & setTxValidityRange (TxValidityNoLowerBound, mkTxValidityUpperBound 0)
     & setTxMetadata metadata

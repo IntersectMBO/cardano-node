@@ -12,6 +12,8 @@ import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, left)
 import           Data.Bifunctor (Bifunctor (..))
 import qualified Data.ByteString.Char8 as BS
+import           Data.Set (Set)
+import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
@@ -90,7 +92,7 @@ runByronClientCommand c =
     SpendGenesisUTxO genFp nw era nftx ctKey genRichAddr outs ->
       runSpendGenesisUTxO genFp nw era nftx ctKey genRichAddr outs
     SpendUTxO nw era nftx ctKey ins outs ->
-      runSpendUTxO nw era nftx ctKey ins outs
+      runSpendUTxO nw era nftx ctKey (Set.fromList ins) outs
 
 
 runNodeCmd :: NodeCmd -> ExceptT ByronClientCmdError IO ()
@@ -216,7 +218,7 @@ runSpendUTxO
   -> ByronKeyFormat
   -> NewTxFile
   -> SigningKeyFile In
-  -> [TxIn]
+  -> Set TxIn
   -> [TxOut CtxTx ByronEra]
   -> ExceptT ByronClientCmdError IO ()
 runSpendUTxO nw bKeyFormat (NewTxFile ctTx) ctKey ins outs = do

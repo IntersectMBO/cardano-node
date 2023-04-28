@@ -284,7 +284,7 @@ estimateTransactionKeyWitnessCount TxBodyContent {
                                      txUpdateProposal
                                    } =
   fromIntegral $
-    length [ () | (_txin, BuildTxWith KeyWitness{}) <- txIns ]
+    length [ () | (_txin, BuildTxWith KeyWitness{}) <- Map.toList txIns ]
 
   + case txInsCollateral of
       TxInsCollateral _ txins
@@ -1212,8 +1212,8 @@ mapTxScriptWitnesses f txbodycontent@TxBodyContent {
 
   where
     mapScriptWitnessesTxIns
-      :: [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
-      -> Either TxBodyErrorAutoBalance [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
+      :: Map TxIn (BuildTxWith BuildTx (Witness WitCtxTxIn era))
+      -> Either TxBodyErrorAutoBalance (Map TxIn (BuildTxWith BuildTx (Witness WitCtxTxIn era)))
     mapScriptWitnessesTxIns txins  =
       let mappedScriptWitnesses
             :: [ ( TxIn
@@ -1223,14 +1223,14 @@ mapTxScriptWitnesses f txbodycontent@TxBodyContent {
           mappedScriptWitnesses =
             [ (txin, BuildTxWith <$> wit')
               -- The tx ins are indexed in the map order by txid
-            | (ix, (txin, BuildTxWith wit)) <- zip [0..] (orderTxIns txins)
+            | (ix, (txin, BuildTxWith wit)) <- zip [0..] (Map.toList txins)
             , let wit' = case wit of
                            KeyWitness{}              -> Right wit
                            ScriptWitness ctx witness -> ScriptWitness ctx <$> witness'
                              where
                                witness' = f (ScriptWitnessIndexTxIn ix) witness
             ]
-      in traverse ( \(txIn, eWitness) ->
+      in Map.fromList <$> traverse ( \(txIn, eWitness) ->
                       case eWitness of
                         Left e -> Left e
                         Right wit -> Right (txIn, wit)

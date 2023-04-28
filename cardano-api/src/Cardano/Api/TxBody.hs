@@ -236,7 +236,6 @@ import qualified Cardano.Ledger.Credential as Shelley
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Keys as Shelley
 import qualified Cardano.Ledger.SafeHash as SafeHash
-import qualified Cardano.Ledger.TxIn as L
 import           Cardano.Ledger.Val as L (isZero)
 
 import qualified Cardano.Ledger.Shelley.API as Ledger
@@ -1332,7 +1331,7 @@ deriving instance Show a => Show (BuildTxWith build a)
 -- Transaction input values (era-dependent)
 --
 
-type TxIns build era = [(TxIn, BuildTxWith build (Witness WitCtxTxIn era))]
+type TxIns build era = Map TxIn (BuildTxWith build (Witness WitCtxTxIn era))
 
 data TxInsCollateral era where
 
@@ -1763,7 +1762,7 @@ data TxBodyContent build era =
 
 defaultTxBodyContent :: IsCardanoEra era => TxBodyContent BuildTx era
 defaultTxBodyContent = TxBodyContent
-    { txIns = []
+    { txIns = mempty
     , txInsCollateral = TxInsCollateralNone
     , txInsReference = TxInsReferenceNone
     , txOuts = []
@@ -1789,7 +1788,7 @@ modTxIns :: (TxIns build era -> TxIns build era) -> TxBodyContent build era -> T
 modTxIns f txBodyContent = txBodyContent { txIns = f (txIns txBodyContent) }
 
 addTxIn :: (TxIn, BuildTxWith build (Witness WitCtxTxIn era)) -> TxBodyContent build era -> TxBodyContent build era
-addTxIn txIn = modTxIns (txIn:)
+addTxIn (txIn, value) = modTxIns (Map.insert txIn value)
 
 setTxInsCollateral :: TxInsCollateral era -> TxBodyContent build era -> TxBodyContent build era
 setTxInsCollateral v txBodyContent = txBodyContent { txInsCollateral = v }
@@ -2570,23 +2569,23 @@ validateTxBodyContent era txBodContent@TxBodyContent {
   in case era of
        ShelleyBasedEraShelley -> do
          validateTxIns txIns
-         guardShelleyTxInsOverflow (map fst txIns)
+         guardShelleyTxInsOverflow (Map.keysSet txIns)
          validateTxOuts era txOuts
          validateMetadata txMetadata
        ShelleyBasedEraAllegra -> do
          validateTxIns txIns
-         guardShelleyTxInsOverflow (map fst txIns)
+         guardShelleyTxInsOverflow (Map.keysSet txIns)
          validateTxOuts era txOuts
          validateMetadata txMetadata
        ShelleyBasedEraMary -> do
          validateTxIns txIns
-         guardShelleyTxInsOverflow (map fst txIns)
+         guardShelleyTxInsOverflow (Map.keysSet txIns)
          validateTxOuts era txOuts
          validateMetadata txMetadata
          validateMintValue txMintValue
        ShelleyBasedEraAlonzo -> do
          validateTxIns txIns
-         guardShelleyTxInsOverflow (map fst txIns)
+         guardShelleyTxInsOverflow (Map.keysSet txIns)
          validateTxOuts era txOuts
          validateMetadata txMetadata
          validateMintValue txMintValue
@@ -2594,7 +2593,7 @@ validateTxBodyContent era txBodContent@TxBodyContent {
          validateProtocolParameters txProtocolParams languages
        ShelleyBasedEraBabbage -> do
          validateTxIns txIns
-         guardShelleyTxInsOverflow (map fst txIns)
+         guardShelleyTxInsOverflow (Map.keysSet txIns)
          validateTxOuts era txOuts
          validateMetadata txMetadata
          validateMintValue txMintValue
@@ -2626,11 +2625,10 @@ validateProtocolParameters txProtocolParams languages =
                      --             All the necessary params must be provided.
 
 
-validateTxIns :: [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))] -> Either TxBodyError ()
-validateTxIns txIns =
-  sequence_ [ inputIndexDoesNotExceedMax txIns
-            , txBodyContentHasTxIns txIns
-            ]
+validateTxIns :: Map TxIn (BuildTxWith BuildTx (Witness WitCtxTxIn era)) -> Either TxBodyError ()
+validateTxIns txIns = do
+  inputIndexDoesNotExceedMax txIns
+  txBodyContentHasTxIns txIns
 
 validateTxInsCollateral
   :: TxInsCollateral era -> Set Alonzo.Language -> Either TxBodyError ()
@@ -2639,7 +2637,7 @@ validateTxInsCollateral txInsCollateral languages =
     TxInsCollateralNone ->
       unless (Set.null languages) (Left TxBodyEmptyTxInsCollateral)
     TxInsCollateral _ collateralTxIns ->
-      guardShelleyTxInsOverflow (Set.toList collateralTxIns)
+      guardShelleyTxInsOverflow collateralTxIns
 
 validateTxOuts :: ShelleyBasedEra era -> [TxOut CtxTx era] -> Either TxBodyError ()
 validateTxOuts era txOuts =
@@ -2656,10 +2654,10 @@ validateMintValue txMintValue =
     TxMintValue _ v _ -> guard (selectLovelace v == 0) ?! TxBodyMintAdaError
 
 
-inputIndexDoesNotExceedMax :: [(TxIn, a)] -> Either TxBodyError ()
+inputIndexDoesNotExceedMax :: Map TxIn a -> Either TxBodyError ()
 inputIndexDoesNotExceedMax txIns =
-   for_ txIns $ \(txin@(TxIn _ (TxIx txix)), _) ->
-                guard (fromIntegral txix <= maxShelleyTxInIx) ?! TxBodyInIxOverflow txin
+  for_ (Map.keysSet txIns) $ \txin@(TxIn _ (TxIx txix)) ->
+    guard (fromIntegral txix <= maxShelleyTxInIx) ?! TxBodyInIxOverflow txin
 
 outputDoesNotExceedMax
   :: IsCardanoEra era => Value -> TxOut CtxTx era -> Either TxBodyError ()
@@ -2747,8 +2745,9 @@ fromLedgerTxIns
   :: forall era.
      ShelleyBasedEra era
   -> Ledger.TxBody (ShelleyLedgerEra era)
-  -> [(TxIn,BuildTxWith ViewTx (Witness WitCtxTxIn era))]
+  -> Map TxIn (BuildTxWith ViewTx (Witness WitCtxTxIn era))
 fromLedgerTxIns era body =
+  Map.fromList
     [ (fromShelleyTxIn input, ViewTx)
     | input <- Set.toList (inputs_ era body) ]
   where
@@ -3352,7 +3351,7 @@ fromLedgerTxMintValue era body =
 makeByronTransactionBody :: TxBodyContent BuildTx ByronEra
                          -> Either TxBodyError (TxBody ByronEra)
 makeByronTransactionBody TxBodyContent { txIns, txOuts } = do
-    ins' <- NonEmpty.nonEmpty (map fst txIns) ?! TxBodyEmptyTxIns
+    ins' <- NonEmpty.nonEmpty (Set.toList (Map.keysSet txIns)) ?! TxBodyEmptyTxIns
     for_ ins' $ \txin@(TxIn _ (TxIx txix)) ->
       guard (fromIntegral txix <= maxByronTxInIx) ?! TxBodyInIxOverflow txin
     let ins'' = fmap toByronTxIn ins'
@@ -3392,7 +3391,7 @@ getByronTxBodyContent :: Annotated Byron.Tx ByteString
                       -> TxBodyContent ViewTx ByronEra
 getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
   TxBodyContent
-  { txIns              = [(fromByronTxIn input, ViewTx) | input <- toList txInputs]
+  { txIns              = Map.fromList [(fromByronTxIn input, ViewTx) | input <- toList txInputs]
   , txInsCollateral    = TxInsCollateralNone
   , txInsReference     = TxInsReferenceNone
   , txOuts             = fromByronTxOut <$> toList txOutputs
@@ -3410,9 +3409,6 @@ getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
   , txMintValue        = TxMintNone
   , txScriptValidity   = TxScriptValidityNone
   }
-
-convTxIns :: TxIns BuildTx era -> Set (L.TxIn StandardCrypto)
-convTxIns txIns = Set.fromList (map (toShelleyTxIn . fst) txIns)
 
 convCollateralTxIns :: TxInsCollateral era -> Set (Ledger.TxIn StandardCrypto)
 convCollateralTxIns txInsCollateral =
@@ -3614,7 +3610,7 @@ getLedgerEraConstraint ShelleyBasedEraAlonzo f = f
 getLedgerEraConstraint ShelleyBasedEraBabbage f = f
 getLedgerEraConstraint ShelleyBasedEraConway f = f
 
-guardShelleyTxInsOverflow :: [TxIn] -> Either TxBodyError ()
+guardShelleyTxInsOverflow :: Set TxIn -> Either TxBodyError ()
 guardShelleyTxInsOverflow txIns = do
     for_ txIns $ \txin@(TxIn _ (TxIx txix)) ->
       guard (txix <= maxShelleyTxInIx) ?! TxBodyInIxOverflow txin
@@ -3635,7 +3631,7 @@ mkCommonTxBody ::
   -> L.TxBody (ShelleyLedgerEra era)
 mkCommonTxBody era txIns txOuts txFee txWithdrawals txAuxData =
   L.mkBasicTxBody
-  & L.inputsTxBodyL .~ convTxIns txIns
+  & L.inputsTxBodyL .~ toSetOfShelleyTxIn (Map.keysSet txIns)
   & L.outputsTxBodyL .~ convTxOuts era txOuts
   & L.feeTxBodyL .~ convTransactionFee era txFee
   & L.withdrawalsTxBodyL .~ convWithdrawals txWithdrawals
@@ -4171,13 +4167,13 @@ collectTxBodyScriptWitnesses TxBodyContent {
       ]
   where
     scriptWitnessesTxIns
-      :: [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
+      :: Map TxIn (BuildTxWith BuildTx (Witness WitCtxTxIn era))
       -> [(ScriptWitnessIndex, AnyScriptWitness era)]
     scriptWitnessesTxIns txins =
         [ (ScriptWitnessIndexTxIn ix, AnyScriptWitness witness)
           -- The tx ins are indexed in the map order by txid
         | (ix, (_, BuildTxWith (ScriptWitness _ witness)))
-            <- zip [0..] (orderTxIns txins)
+            <- zip [0..] (Map.toList txins) -- previously used orderTxIns
         ]
 
     scriptWitnessesWithdrawals

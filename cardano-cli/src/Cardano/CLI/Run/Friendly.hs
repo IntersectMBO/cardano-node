@@ -89,7 +89,7 @@ friendlyTxBody
     , "collateral inputs" .= friendlyCollateralInputs txInsCollateral
     , "era" .= era
     , "fee" .= friendlyFee txFee
-    , "inputs" .= friendlyInputs txIns
+    , "inputs" .= Map.keys txIns
     , "metadata" .= friendlyMetadata txMetadata
     , "mint" .= friendlyMintValue txMintValue
     , "outputs" .= map friendlyTxOut txOuts
@@ -478,9 +478,6 @@ friendlyAuxScripts = \case
 friendlyReferenceInputs :: TxInsReference build era -> Aeson.Value
 friendlyReferenceInputs TxInsReferenceNone = Null
 friendlyReferenceInputs (TxInsReference _ txins) = toJSON txins
-
-friendlyInputs :: [(TxIn, build)] -> Aeson.Value
-friendlyInputs = toJSON . map fst
 
 friendlyCollateralInputs :: TxInsCollateral era -> Aeson.Value
 friendlyCollateralInputs = \case

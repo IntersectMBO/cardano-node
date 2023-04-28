@@ -35,6 +35,7 @@ import qualified Data.List as List
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe, mapMaybe)
+import           Data.Set (Set)
 import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -153,9 +154,10 @@ txSpendGenesisUTxOByronPBFT
 txSpendGenesisUTxOByronPBFT gc nId sk (ByronAddress bAddr) outs = do
     let txBodyCont =
           TxBodyContent
-            [ (fromByronTxIn txIn
-              , BuildTxWith (KeyWitness KeyWitnessForSpending))
-            ]
+            (Map.singleton
+              (fromByronTxIn txIn)
+              (BuildTxWith (KeyWitness KeyWitnessForSpending))
+            )
             TxInsCollateralNone
             TxInsReferenceNone
             outs
@@ -189,15 +191,12 @@ txSpendGenesisUTxOByronPBFT gc nId sk (ByronAddress bAddr) outs = do
 txSpendUTxOByronPBFT
   :: NetworkId
   -> SomeByronSigningKey
-  -> [TxIn]
+  -> Set TxIn
   -> [TxOut CtxTx ByronEra]
   -> Tx ByronEra
 txSpendUTxOByronPBFT nId sk txIns outs = do
   let txBodyCont = TxBodyContent
-                     [ ( txIn
-                       , BuildTxWith (KeyWitness KeyWitnessForSpending)
-                       ) | txIn <- txIns
-                     ]
+                     (Map.fromSet (const (BuildTxWith (KeyWitness KeyWitnessForSpending))) txIns)
                      TxInsCollateralNone
                      TxInsReferenceNone
                      outs

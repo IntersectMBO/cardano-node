@@ -10,6 +10,7 @@ module  Cardano.TxGenerator.Tx
 import           Data.Bifunctor (bimap, second)
 import qualified Data.ByteString as BS (length)
 import           Data.Function ((&))
+import qualified Data.Map as Map
 import           Data.Maybe (mapMaybe)
 
 import           Cardano.Api
@@ -97,7 +98,7 @@ genTx _era protocolParameters (collateral, collFunds) fee metadata inFunds outpu
  where
   allKeys = mapMaybe getFundKey $ inFunds ++ collFunds
   txBodyContent = defaultTxBodyContent
-    & setTxIns (map (\f -> (getFundTxIn f, BuildTxWith $ getFundWitness f)) inFunds)
+    & setTxIns (Map.fromList (map (\f -> (getFundTxIn f, BuildTxWith $ getFundWitness f)) inFunds))
     & setTxInsCollateral collateral
     & setTxOuts outputs
     & setTxFee fee

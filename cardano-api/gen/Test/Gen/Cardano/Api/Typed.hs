@@ -134,6 +134,7 @@ import qualified Data.ByteString.Short as SBS
 import           Data.Coerce
 import           Data.Int (Int64)
 import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import           Data.Ratio (Ratio, (%))
 import           Data.String
 import           Data.Word (Word64)
@@ -622,7 +623,7 @@ genTxMintValue era =
 
 genTxBodyContent :: CardanoEra era -> Gen (TxBodyContent BuildTx era)
 genTxBodyContent era = do
-  txIns <- map (, BuildTxWith (KeyWitness KeyWitnessForSpending)) <$> Gen.list (Range.constant 1 10) genTxIn
+  txIns <- Map.fromList . map (, BuildTxWith (KeyWitness KeyWitnessForSpending)) <$> Gen.list (Range.constant 1 10) genTxIn
   txInsCollateral <- genTxInsCollateral era
   txInsReference <- genTxInsReference era
   txOuts <- Gen.list (Range.constant 1 10) (genTxOutTxContext era)
