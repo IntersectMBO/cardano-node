@@ -58,7 +58,3 @@ instance Error e => Error (FileError e) where
     path ++ ": " ++ displayException ioe
   displayError (FileError path e) =
     path ++ ": " ++ displayError e
-
-instance Error IOException where
-  displayError = show
-

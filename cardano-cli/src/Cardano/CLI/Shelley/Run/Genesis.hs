@@ -201,7 +201,7 @@ instance Error ShelleyGenesisCmdError where
       ShelleyGenesisCmdGenesisFileDecodeError fp e ->
        "Error while decoding Shelley genesis at: " <> fp <>
        " Error: " <>  Text.unpack e
-      ShelleyGenesisCmdGenesisFileReadError e -> displayError e
+      ShelleyGenesisCmdGenesisFileReadError e -> show e
       ShelleyGenesisCmdByronError e -> show e
       ShelleyGenesisStakePoolRelayFileError fp e ->
         "Error occurred while reading the stake pool relay specification file: " <> fp <>
