@@ -127,7 +127,6 @@
       collectExes = project:
         let inherit (project.pkgs.stdenv) hostPlatform;
         in project.exes // (with project.hsPkgs; {
-          inherit (ouroboros-consensus.components.exes) db-converter;
           inherit (ouroboros-consensus-cardano.components.exes) db-analyser db-synthesizer;
           inherit (bech32.components.exes) bech32;
         } // lib.optionalAttrs hostPlatform.isUnix {
