@@ -30,7 +30,7 @@ import qualified Testnet.Util.Base as H
 import           Testnet.Util.Runtime (TestnetRuntime (..))
 
 hprop_shutdownOnSlotSynced :: Property
-hprop_shutdownOnSlotSynced = H.integrationRetryWorkspace 2 "shutdown-on-slot-synced" $ \tempAbsBasePath' -> do
+hprop_shutdownOnSlotSynced = H.integrationRetryWorkspace 0 "shutdown-on-slot-synced" $ \tempAbsBasePath' -> do
   -- Start a local test net
   baseDir <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   configTemplate <- H.noteShow $ baseDir </> "configuration/defaults/byron-mainnet/configuration.yaml"

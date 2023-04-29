@@ -34,7 +34,7 @@ instance Show FoldBlocksException where
 -- events and block, and on reception writes this to the `lock` `MVar`
 -- that main thread blocks on.
 prop_foldBlocks :: H.Property
-prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath' -> do
+prop_foldBlocks = H.integrationRetryWorkspace 0 "foldblocks" $ \tempAbsBasePath' -> do
 
   -- Start testnet
   base <- HE.noteM $ liftIO . IO.canonicalizePath =<< HE.getProjectBase
