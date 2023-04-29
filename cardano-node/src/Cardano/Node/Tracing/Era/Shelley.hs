@@ -69,12 +69,12 @@ import           Cardano.Ledger.Shelley.Rules
 
 import           Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
-import           Cardano.Ledger.Conway.Governance (govActionIdToText)
 import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure, AlonzoUtxoPredFailure,
                    AlonzoUtxosPredFailure, AlonzoUtxowPredFailure (..))
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import           Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
+import           Cardano.Ledger.Conway.Governance (govActionIdToText)
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import           Cardano.Protocol.TPraos.API (ChainTransitionError (ChainTransitionError))
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod))
@@ -295,7 +295,7 @@ instance ( ShelleyBasedEra era
              ]
   forMachine _ (ExtraRedeemers rdmrs) =
     mconcat [ "kind" .= String "ExtraRedeemers"
-             , "rdmrs" .= map (Api.renderScriptWitnessIndex . Api.fromAlonzoRdmrPtr) rdmrs
+             , "rdmrs" .= map Api.fromAlonzoRdmrPtr rdmrs
              ]
 
 

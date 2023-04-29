@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
@@ -4128,6 +4129,29 @@ data ScriptWitnessIndex =
      -- | The n'th withdrawal, in the order of the 'StakeAddress's.
    | ScriptWitnessIndexWithdrawal !Word
   deriving (Eq, Ord, Show)
+
+instance ToJSON ScriptWitnessIndex where
+  toJSON = \case
+    ScriptWitnessIndexTxIn n ->
+      object
+      [ "kind" .= Aeson.String "ScriptWitnessIndexTxIn"
+      , "value" .= n
+      ]
+    ScriptWitnessIndexMint n ->
+      object
+      [ "kind" .= Aeson.String "ScriptWitnessIndexMint"
+      , "value" .= n
+      ]
+    ScriptWitnessIndexCertificate n ->
+      object
+      [ "kind" .= Aeson.String "ScriptWitnessIndexCertificate"
+      , "value" .= n
+      ]
+    ScriptWitnessIndexWithdrawal n ->
+      object
+      [ "kind" .= Aeson.String "ScriptWitnessIndexWithdrawal"
+      , "value" .= n
+      ]
 
 renderScriptWitnessIndex :: ScriptWitnessIndex -> String
 renderScriptWitnessIndex (ScriptWitnessIndexTxIn index) =

@@ -3,6 +3,10 @@
 ## vNext
 - Add `getSlotForRelativeTime` function ([PR 5130](https://github.com/input-output-hk/cardano-node/pull/5130))
 
+- New `ToJSON ScriptWitnessIndex` instance that produces machine readable output.
+  Any `JSON` output uses this instance.
+  [PR 5168](https://github.com/input-output-hk/cardano-node/pull/5168)
+
 ### Features
 
 - Expose node config reading functionality: `NodeConfig`, `NodeConfigFile` and `readNodeConfig`
