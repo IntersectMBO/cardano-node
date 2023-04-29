@@ -1692,6 +1692,12 @@ EOF
               then
                 "${msgoff}" || msg "$(red "FATAL: A Nomad Task failed while waiting for its Allocation")"
                 "${msgoff}" || msg "${tasks_output}"
+                msg "$(yellow "INFO: Nomad Allocation \"${alloc_id}\" entrypoint stdout:")"
+                nomad alloc logs -verbose         "${alloc_id}" > "${job_file}.run/allocation.${alloc_id}.stdout"
+                cat "${job_file}.run/allocation.${alloc_id}.stdout"
+                msg "$(yellow "INFO: Nomad Allocation \"${alloc_id}\" entrypoint stderr:")"
+                nomad alloc logs -verbose -stderr "${alloc_id}" > "${job_file}.run/allocation.${alloc_id}.stderr"
+                cat "${job_file}.run/allocation.${alloc_id}.stderr"
                 return 1
               fi
             fi
@@ -1708,8 +1714,14 @@ EOF
               echo "${status_response}" > "${job_file}.run/allocation.${alloc_id}.error.json"
               red "FATAL: Nomad allocation \"${alloc_id}\" failed\n"
               # Don't show the Job spec, too big!
-              # FIXME: It want the output to keep `jq`'s default formatting!
+              # FIXME: I want the output to keep `jq`'s default formatting!
               msg $(echo "${status_response}" | jq 'del(.Job)')
+              msg "$(yellow "INFO: Nomad allocation \"${alloc_id}\" entrypoint stdout:")"
+              nomad alloc logs -verbose         "${alloc_id}" > "${job_file}.run/allocation.${alloc_id}.stdout"
+              cat "${job_file}.run/allocation.${alloc_id}.stdout"
+              msg "$(yellow "INFO: Nomad allocation \"${alloc_id}\" entrypoint stderr:")"
+              nomad alloc logs -verbose -stderr "${alloc_id}" > "${job_file}.run/allocation.${alloc_id}.stderr"
+              cat "${job_file}.run/allocation.${alloc_id}.stderr"
               return 1
             fi
           else
