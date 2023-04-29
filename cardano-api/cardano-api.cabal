@@ -223,6 +223,7 @@ test-suite cardano-api-test
                       , cardano-data >= 1.0
                       , cardano-ledger-api >= 1.1
                       , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.1
+                      , cardano-ledger-shelley
                       , cardano-ledger-shelley-test >= 1.1
                       , cardano-slotting ^>= 0.1
                       , containers
@@ -231,7 +232,6 @@ test-suite cardano-api-test
                       , hedgehog-quickcheck
                       , mtl
                       , microlens
-                      , ouroboros-consensus
                       , QuickCheck
                       , tasty
                       , tasty-hedgehog

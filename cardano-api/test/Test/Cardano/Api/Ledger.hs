@@ -15,8 +15,6 @@ import qualified Cardano.Ledger.Api as L
 import           Cardano.Ledger.Crypto
 import           Cardano.Ledger.SafeHash
 
-import           Ouroboros.Consensus.Shelley.Eras (StandardAlonzo)
-
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Aeson as H
 import           Hedgehog.Internal.Property
@@ -53,7 +51,7 @@ prop_original_scriptdata_bytes_preserved = H.property $ do
     Left e -> failWith Nothing $ show e
     Right hScriptData -> do
       let ScriptDataHash apiHash = hashScriptDataBytes hScriptData
-          ledgerAlonzoData = toAlonzoData hScriptData :: L.Data StandardAlonzo
+          ledgerAlonzoData = toAlonzoData hScriptData :: L.Data L.Alonzo
       -- We check that our hashScriptDataBytes is equivalent to `L.hashData`
       -- This test will let us know if our 'hashScriptDataBytes' is ever broken
       L.hashData ledgerAlonzoData === apiHash

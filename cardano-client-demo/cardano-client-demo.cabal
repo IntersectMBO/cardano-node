@@ -103,7 +103,7 @@ executable stake-credential-history
                         FailT,
                         microlens,
                         optparse-applicative,
-                        ouroboros-consensus,
+                        ouroboros-consensus-cardano,
                         text,
                         transformers,
                         vector-map,

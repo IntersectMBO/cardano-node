@@ -21,7 +21,7 @@ module Cardano.Node.Tracing.Tracers.Consensus
   ) where
 
 
-import           Control.Monad.Class.MonadTime (Time (..))
+import           Control.Monad.Class.MonadTime.SI (Time (..))
 import           Data.Aeson (ToJSON, Value (Number, String), toJSON, (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Foldable (Foldable (..))

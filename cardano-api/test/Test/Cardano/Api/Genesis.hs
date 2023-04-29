@@ -15,8 +15,6 @@ import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import           Lens.Micro
 
 import           Cardano.Slotting.Slot (EpochSize (..))
-import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
-import           Ouroboros.Consensus.Shelley.Node (emptyGenesisStaking)
 
 import           Cardano.Ledger.Address (Addr (..))
 import           Cardano.Ledger.BaseTypes (Network (..))
@@ -24,8 +22,10 @@ import           Cardano.Ledger.Coin (Coin (..))
 import           Cardano.Ledger.Core
 import           Cardano.Ledger.Credential (Credential (..), PaymentCredential, StakeCredential,
                    StakeReference (..))
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.Keys (GenDelegPair (..), Hash, KeyHash (..), KeyRole (..),
                    VerKeyVRF)
+import           Cardano.Ledger.Shelley.Genesis (emptyGenesisStaking)
 
 import           Test.Cardano.Ledger.Shelley.Utils (unsafeBoundRational)
 

@@ -53,6 +53,7 @@ executable cardano-node-chairman
                       , ouroboros-network-api >= 0.3
                       , ouroboros-network-protocols >= 0.5
                       , strict-stm
+                      , si-timers
                       , text
                       , time
                       , transformers

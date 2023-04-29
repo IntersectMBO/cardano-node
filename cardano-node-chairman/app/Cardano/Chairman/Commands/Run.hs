@@ -11,7 +11,7 @@ import           Cardano.Prelude (ConvertText (..))
 
 import qualified Cardano.Api as Api
 
-import           Control.Monad.Class.MonadTime (DiffTime)
+import           Control.Monad.Class.MonadTime.SI (DiffTime)
 import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (runExceptT)
 import           Control.Tracer (Tracer (..), stdoutTracer)

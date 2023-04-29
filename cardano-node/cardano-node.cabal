@@ -187,6 +187,7 @@ library
                       , psqueues
                       , safe-exceptions
                       , scientific
+                      , si-timers
                       , stm
                       , strict-stm
                       , text

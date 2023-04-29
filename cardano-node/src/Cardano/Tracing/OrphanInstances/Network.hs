@@ -16,7 +16,7 @@
 module Cardano.Tracing.OrphanInstances.Network () where
 
 import           Control.Exception (Exception (..), SomeException (..))
-import           Control.Monad.Class.MonadTime (DiffTime, Time (..))
+import           Control.Monad.Class.MonadTime.SI (DiffTime, Time (..))
 import           Data.Aeson (Value (..), FromJSON (..))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (listValue)
@@ -373,8 +373,9 @@ instance HasSeverityAnnotation (WithMuxBearer peer MuxTrace) where
     MuxTraceStartEagerly _ _ -> Info
     MuxTraceStartOnDemand _ _ -> Info
     MuxTraceStartedOnDemand _ _ -> Info
-    MuxTraceShutdown -> Debug
     MuxTraceTerminating {} -> Debug
+    MuxTraceStopping -> Debug
+    MuxTraceStopped -> Debug
     MuxTraceTCPInfo {} -> Debug
 
 instance HasPrivacyAnnotation (TraceLocalRootPeers RemoteAddress exception)
