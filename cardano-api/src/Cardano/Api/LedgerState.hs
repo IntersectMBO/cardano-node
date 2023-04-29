@@ -147,7 +147,7 @@ import qualified Cardano.Crypto.ProtocolMagic
 import qualified Cardano.Crypto.VRF as Crypto
 import qualified Cardano.Crypto.VRF.Class as VRF
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
-import           Cardano.Ledger.BaseTypes (Globals (..), Nonce, (⭒))
+import           Cardano.Ledger.BaseTypes (Globals (..), Nonce, ProtVer (..), natVersion, (⭒))
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.BHeaderView as Ledger
 import           Cardano.Ledger.Binary (DecoderError, FromCBOR)
@@ -1050,27 +1050,27 @@ mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesis alonzoGene
             , Consensus.shelleyBasedLeaderCredentials = []
             }
           Consensus.ProtocolParamsShelley
-            { Consensus.shelleyProtVer = shelleyProtVer dnc
+            { Consensus.shelleyProtVer = ProtVer (natVersion @3) 0
             , Consensus.shelleyMaxTxCapacityOverrides = TxLimits.mkOverrides TxLimits.noOverridesMeasure
             }
           Consensus.ProtocolParamsAllegra
-            { Consensus.allegraProtVer = shelleyProtVer dnc
+            { Consensus.allegraProtVer = ProtVer (natVersion @4) 0
             , Consensus.allegraMaxTxCapacityOverrides = TxLimits.mkOverrides TxLimits.noOverridesMeasure
             }
           Consensus.ProtocolParamsMary
-            { Consensus.maryProtVer = shelleyProtVer dnc
+            { Consensus.maryProtVer = ProtVer (natVersion @5) 0
             , Consensus.maryMaxTxCapacityOverrides = TxLimits.mkOverrides TxLimits.noOverridesMeasure
             }
           Consensus.ProtocolParamsAlonzo
-            { Consensus.alonzoProtVer = shelleyProtVer dnc
+            { Consensus.alonzoProtVer = ProtVer (natVersion @7) 0
             , Consensus.alonzoMaxTxCapacityOverrides  = TxLimits.mkOverrides TxLimits.noOverridesMeasure
             }
           Consensus.ProtocolParamsBabbage
-            { Consensus.babbageProtVer = shelleyProtVer dnc
+            { Consensus.babbageProtVer = ProtVer (natVersion @9) 0
             , Consensus.babbageMaxTxCapacityOverrides = TxLimits.mkOverrides TxLimits.noOverridesMeasure
             }
           Consensus.ProtocolParamsConway
-            { Consensus.conwayProtVer = shelleyProtVer dnc
+            { Consensus.conwayProtVer = ProtVer (natVersion @10) 0
             , Consensus.conwayMaxTxCapacityOverrides = TxLimits.mkOverrides TxLimits.noOverridesMeasure
             }
           (ncByronToShelley dnc)
@@ -1084,14 +1084,6 @@ mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesis alonzoGene
 shelleyPraosNonce :: ShelleyConfig -> Ledger.Nonce
 shelleyPraosNonce sCfg =
   Ledger.Nonce (Cardano.Crypto.Hash.Class.castHash . unGenesisHashShelley $ scGenesisHash sCfg)
-
-shelleyProtVer :: NodeConfig -> Ledger.ProtVer
-shelleyProtVer dnc =
-  let bver = ncByronProtocolVersion dnc
-      majVer = Cardano.Chain.Update.pvMajor bver
-  in Ledger.ProtVer
-       (fromMaybe (error $ "Invalid major version: " ++ show majVer) $ mkVersion majVer)
-       (fromIntegral $ Cardano.Chain.Update.pvMinor bver)
 
 readCardanoGenesisConfig
         :: NodeConfig
