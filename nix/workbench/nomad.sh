@@ -165,15 +165,21 @@ wb_nomad() {
             enabled )
               if test -f "${login_file}"
               then
+                # Fetch token info from vault
                 local client_token
                 client_token=$(jq -r '.auth.client_token' "${login_file}")
                 local token_lookup_response
                 if token_lookup_response=$(VAULT_TOKEN="${client_token}" vault token lookup -address="${vault_address}" -namespace=perf -format=json)
                 then
-                  # TODO: I need to check the expiration time?
-                  # echo "${token_lookup_response}" | jq -r .data.expire_time
-                  # 2023-02-19T13:07:26.125306646Z
-                  true
+                  local expire_time
+                  expire_time=$(echo "${token_lookup_response}" | jq -r .data.expire_time)
+                  if test "$(date -u -d "${expire_time}" "+%s")" -ge "$(date -u "+%s")"
+                  then
+                    true
+                  else
+                    rm "${login_file}"
+                    false
+                  fi
                 else
                   fatal "Are you logged in to Vault? Call 'wb nomad vault ${entity} login' with your IOHK GitHub token (classic)"
                 fi
