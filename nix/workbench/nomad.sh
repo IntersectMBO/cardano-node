@@ -1096,8 +1096,9 @@ EOF
           local document_root=$(wb_nomad webfs document-root-path)
           mkdir -p "${document_root}"
           # Don't include "./" files and prefix (as "./genesis.alonzo.json")
-          find "${genesis_dir}" -type f -printf "%P\n"         \
+          find -L "${genesis_dir}" -type f -printf "%P\n"      \
             | tar --create --zstd                              \
+              --dereference --hard-dereference                 \
               --file="${document_root}"/"${run_tag}".tar.zst   \
               --owner=65534 --group=65534 --mode="u=rwx"       \
               --directory="${genesis_dir}" --files-from=-

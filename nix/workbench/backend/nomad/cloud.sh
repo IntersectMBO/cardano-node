@@ -236,8 +236,12 @@ backend_nomadcloud() {
       local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
 
       local genesis_file_name="${nomad_job_name}.tar.zst"
-      find "${dir}"/genesis -type f -printf "%P\n"    \
+      # TODO: These files are link to file that don't exist!
+      rm "${dir}"/genesis/profile.json
+      rm "${dir}"/genesis/stake-delegator-keys
+      find -L "${dir}"/genesis -printf "%P\n"         \
         | tar --create --zstd                         \
+          --dereference --hard-dereference            \
           --file="${dir}"/"${genesis_file_name}"      \
           --owner=65534 --group=65534 --mode="u=rwx"  \
           --directory="${dir}"/genesis --files-from=-
