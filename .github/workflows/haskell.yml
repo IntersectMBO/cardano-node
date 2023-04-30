@@ -31,7 +31,7 @@ jobs:
 
     env:
       # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2022-12-30"
+      CABAL_CACHE_VERSION: "2023-04-30"
 
       # Modify this value to "invalidate" the secp cache.
       SECP_CACHE_VERSION: "2022-12-30"

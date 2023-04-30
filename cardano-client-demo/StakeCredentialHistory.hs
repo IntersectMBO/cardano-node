@@ -12,11 +12,11 @@ import           Cardano.Ledger.Address (decodeRewardAcnt)
 import qualified Cardano.Ledger.BaseTypes as L
 import           Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Core as LC
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Shelley.API as L
 import qualified Cardano.Ledger.Shelley.Rewards as L
 import qualified Cardano.Ledger.Shelley.RewardUpdate as L
 import qualified Cardano.Ledger.UMapCompact as UM
-import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import qualified Ouroboros.Consensus.Shelley.Ledger as Shelley
 
 import qualified Codec.Binary.Bech32 as Bech32

@@ -15,7 +15,7 @@ import           Control.Concurrent.Class.MonadSTM.Strict
 import           Control.Monad (void)
 import           Control.Monad.Class.MonadAsync
 import           Control.Monad.Class.MonadThrow
-import           Control.Monad.Class.MonadTimer
+import           Control.Monad.Class.MonadTimer.SI
 import           Control.Tracer
 import           Data.Coerce (coerce)
 import qualified Data.List as List

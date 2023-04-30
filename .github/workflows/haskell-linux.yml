@@ -31,14 +31,14 @@ jobs:
 
     env:
       # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2022-12-30"
+      CABAL_CACHE_VERSION: "2023-04-30"
 
       # Modify this value to "invalidate" the secp cache.
       SECP_CACHE_VERSION: "2022-12-30"
 
       # current ref from: 27.02.2022
       SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
-    
+
     concurrency:
       group: >
         a+${{ github.event_name }}
