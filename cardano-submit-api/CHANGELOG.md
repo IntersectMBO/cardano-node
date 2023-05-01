@@ -1,5 +1,10 @@
 # Changelog for Cardano-submit-api
 
+## vNext
+
+- [Add tx_submit_fail_count metric](https://github.com/input-output-hk/cardano-node/pull/4566)
+- [Configurable metrics port in submit-api](https://github.com/input-output-hk/cardano-node/pull/4281)
+
 ## 1.35.3 -- July 2022
 
 None
