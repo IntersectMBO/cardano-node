@@ -3,7 +3,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4766
   number: 4766
   mergedAt: "2023-01-12T02:39:32Z"
-  include: undecided
+  include: false
   files:
     - .github/workflows/check-cabal-files.yml
     - bench/cardano-topology/cardano-topology.cabal
@@ -32,7 +32,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4755
   number: 4755
   mergedAt: "2023-02-12T06:40:23Z"
-  include: undecided
+  include: false
   files:
     - LICENSE
     - NOTICE
@@ -99,7 +99,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4710
   number: 4710
   mergedAt: "2022-12-30T07:56:18Z"
-  include: undecided
+  include: false
   files:
     - LICENSE
     - NOTICE
@@ -161,7 +161,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4200
   number: 4200
   mergedAt: "2022-07-22T11:13:09Z"
-  include: undecided
+  include: false
   files:
     - cabal.project
     - cardano-node-capi/cardano-node-capi.cabal

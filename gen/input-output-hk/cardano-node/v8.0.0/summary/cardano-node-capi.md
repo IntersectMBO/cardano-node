@@ -1,4 +1,0 @@
-- [Check cabal files in CI](https://github.com/input-output-hk/cardano-node/pull/4766) by John Ky
-- [Date ranges for copyright](https://github.com/input-output-hk/cardano-node/pull/4755) by John Ky
-- [Cleaned cabal files](https://github.com/input-output-hk/cardano-node/pull/4710) by Marcin Szamotulski
-- [Use patched aeson from hackage](https://github.com/input-output-hk/cardano-node/pull/4200) by John Ky

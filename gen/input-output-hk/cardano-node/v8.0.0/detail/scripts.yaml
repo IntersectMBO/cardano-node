@@ -71,7 +71,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/5081
   number: 5081
   mergedAt: "2023-04-12T07:18:10Z"
-  include: undecided
+  include: true
   files:
     - scripts/project.sh
 - title: Integrate latest ledger dependencies
@@ -165,7 +165,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4991
   number: 4991
   mergedAt: "2023-03-17T04:51:50Z"
-  include: undecided
+  include: true
   files:
     - scripts/gen-merge-summary.sh
 - title: Script to generate merge summary
@@ -173,7 +173,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4983
   number: 4983
   mergedAt: "2023-03-15T23:39:35Z"
-  include: undecided
+  include: true
   files:
     - scripts/gen-merge-summary.sh
 - title: Fix byron-to-alonzo/mkfiles.sh script for conway
@@ -181,7 +181,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4972
   number: 4972
   mergedAt: "2023-03-13T11:28:13Z"
-  include: undecided
+  include: true
   files:
     - configuration/cardano/shelley_qa-conway-genesis.json
     - scripts/byron-to-alonzo/mkfiles.sh
@@ -190,7 +190,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4949
   number: 4949
   mergedAt: "2023-03-08T04:05:42Z"
-  include: undecided
+  include: true
   files:
     - scripts/README.md
 - title: 'scripts:  drop legacy benchmarking scripts'
@@ -198,7 +198,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4934
   number: 4934
   mergedAt: "2023-03-06T07:58:34Z"
-  include: undecided
+  include: true
   files:
     - scripts/README.md
     - scripts/benchmarking/README.md
@@ -226,7 +226,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4926
   number: 4926
   mergedAt: "2023-03-06T18:24:45Z"
-  include: undecided
+  include: true
   files:
     - cardano-api/src/Cardano/Api/ScriptData.hs
     - cardano-cli/src/Cardano/CLI/Shelley/Run/Read.hs
@@ -236,7 +236,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4921
   number: 4921
   mergedAt: "2023-03-10T00:20:06Z"
-  include: undecided
+  include: true
   files:
     - .gitattributes
     - .github/workflows/check-mainnet-config.yml
@@ -334,7 +334,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4882
   number: 4882
   mergedAt: "2023-02-23T23:43:36Z"
-  include: undecided
+  include: true
   files:
     - cardano-node/ChangeLog.md
     - cardano-tracer/docs/cardano-rtview.md
@@ -356,7 +356,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4838
   number: 4838
   mergedAt: "2023-01-26T19:02:00Z"
-  include: undecided
+  include: true
   files:
     - .gitignore
     - .hlint.yaml
@@ -421,7 +421,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4766
   number: 4766
   mergedAt: "2023-01-12T02:39:32Z"
-  include: undecided
+  include: true
   files:
     - .github/workflows/check-cabal-files.yml
     - bench/cardano-topology/cardano-topology.cabal
@@ -450,7 +450,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4742
   number: 4742
   mergedAt: "2023-01-03T16:20:59Z"
-  include: undecided
+  include: true
   files:
     - scripts/byron-to-shelley/mkfiles.sh
     - scripts/shelley-from-scratch/mkfiles.sh
@@ -459,7 +459,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4351
   number: 4351
   mergedAt: "2022-09-21T21:14:30Z"
-  include: undecided
+  include: true
   files:
     - Makefile
     - README.rst
@@ -528,7 +528,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4341
   number: 4341
   mergedAt: "2023-04-11T06:51:26Z"
-  include: undecided
+  include: true
   files:
     - cardano-api/ChangeLog.md
     - cardano-node/src/Cardano/Node/Configuration/POM.hs
@@ -552,7 +552,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4303
   number: 4303
   mergedAt: "2022-09-27T10:49:53Z"
-  include: undecided
+  include: true
   files:
     - cardano-api/gen/Gen/Hedgehog/Roundtrip/CBOR.hs
     - cardano-api/src/Cardano/Api/Error.hs
@@ -584,7 +584,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4276
   number: 4276
   mergedAt: "2022-10-24T08:38:08Z"
-  include: undecided
+  include: true
   files:
     - cardano-api/src/Cardano/Api.hs
     - cardano-api/src/Cardano/Api/IPC.hs
@@ -601,7 +601,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4240
   number: 4240
   mergedAt: "2022-09-01T15:14:28Z"
-  include: undecided
+  include: true
   files:
     - scripts/byron-to-alonzo/mkfiles.sh
 - title: Add V2 script context equivalence test shell scripts
@@ -609,7 +609,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4238
   number: 4238
   mergedAt: "2022-09-01T16:02:27Z"
-  include: undecided
+  include: true
   files:
     - cardano-api/src/Cardano/Api.hs
     - cardano-api/src/Cardano/Api/Fees.hs
@@ -629,7 +629,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4206
   number: 4206
   mergedAt: "2022-07-21T21:55:41Z"
-  include: undecided
+  include: true
   files:
     - scripts/babbage/staking-example/register-and-delegate-script-staking-address.sh
 - title: Update build command to automatically calculate the total and return collateral values
@@ -637,7 +637,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4198
   number: 4198
   mergedAt: "2022-08-05T15:57:23Z"
-  include: undecided
+  include: true
   files:
     - cardano-api/src/Cardano/Api/Fees.hs
     - cardano-cli/src/Cardano/CLI/Run/Friendly.hs
@@ -654,7 +654,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4183
   number: 4183
   mergedAt: "2022-07-18T21:48:24Z"
-  include: undecided
+  include: true
   files:
     - cardano-api/src/Cardano/Api/TxBody.hs
     - doc/reference/plutus/babbage-script-example.md
@@ -665,7 +665,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4030
   number: 4030
   mergedAt: "2022-06-25T13:08:21Z"
-  include: undecided
+  include: true
   files:
     - cardano-api/src/Cardano/Api/Script.hs
     - cardano-node/src/Cardano/Node/Protocol/Cardano.hs

@@ -54,7 +54,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/5018
   number: 5018
   mergedAt: "2023-03-28T18:46:51Z"
-  include: undecided
+  include: false
   files:
     - cabal.project
     - cardano-api/cardano-api.cabal
@@ -72,7 +72,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/5013
   number: 5013
   mergedAt: "2023-04-14T20:01:36Z"
-  include: undecided
+  include: false
   files:
     - .gitignore
     - bench/cardano-topology/cardano-topology.cabal
@@ -158,7 +158,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4947
   number: 4947
   mergedAt: "2023-03-07T04:16:35Z"
-  include: undecided
+  include: false
   files:
     - .github/workflows/check-cabal-files.yml
     - .github/workflows/check-git-dependencies.yml
@@ -193,7 +193,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4921
   number: 4921
   mergedAt: "2023-03-10T00:20:06Z"
-  include: undecided
+  include: false
   files:
     - .gitattributes
     - .github/workflows/check-mainnet-config.yml
@@ -291,7 +291,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4851
   number: 4851
   mergedAt: "2023-01-27T03:10:33Z"
-  include: undecided
+  include: false
   files:
     - bench/cardano-topology/cardano-topology.cabal
     - cabal.project
@@ -308,7 +308,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4838
   number: 4838
   mergedAt: "2023-01-26T19:02:00Z"
-  include: undecided
+  include: false
   files:
     - .gitignore
     - .hlint.yaml
@@ -373,7 +373,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4769
   number: 4769
   mergedAt: "2023-01-17T13:44:22Z"
-  include: undecided
+  include: false
   files:
     - bench/tx-generator/src/Cardano/Benchmarking/Script/Setters.hs
     - bench/tx-generator/src/Cardano/Benchmarking/Script/Store.hs
@@ -385,7 +385,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4766
   number: 4766
   mergedAt: "2023-01-12T02:39:32Z"
-  include: undecided
+  include: false
   files:
     - .github/workflows/check-cabal-files.yml
     - bench/cardano-topology/cardano-topology.cabal
@@ -414,7 +414,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4759
   number: 4759
   mergedAt: "2023-01-09T08:05:12Z"
-  include: undecided
+  include: false
   files:
     - cabal.project
     - cardano-node-chairman/test/Spec/Network.hs
@@ -423,7 +423,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4755
   number: 4755
   mergedAt: "2023-02-12T06:40:23Z"
-  include: undecided
+  include: false
   files:
     - LICENSE
     - NOTICE
@@ -490,7 +490,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4712
   number: 4712
   mergedAt: "2022-12-19T12:50:49Z"
-  include: undecided
+  include: true
   files:
     - cardano-node-chairman/cardano-node-chairman.cabal
     - cardano-node-chairman/test/Main.hs
@@ -501,7 +501,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4710
   number: 4710
   mergedAt: "2022-12-30T07:56:18Z"
-  include: undecided
+  include: false
   files:
     - LICENSE
     - NOTICE
@@ -563,7 +563,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4701
   number: 4701
   mergedAt: "2023-02-06T04:06:48Z"
-  include: undecided
+  include: false
   files:
     - .github/workflows/haskell.yml
     - .github/workflows/stylish-haskell.yml
@@ -641,7 +641,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4636
   number: 4636
   mergedAt: "2023-01-12T17:53:47Z"
-  include: undecided
+  include: false
   files:
     - cardano-node-chairman/test/Spec/Chairman/Cardano.hs
     - cardano-node-chairman/test/Spec/Chairman/Chairman.hs
@@ -676,7 +676,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4612
   number: 4612
   mergedAt: "2023-02-04T16:16:41Z"
-  include: undecided
+  include: false
   files:
     - bench/cardano-topology/cardano-topology.cabal
     - bench/tx-generator/src/Cardano/Benchmarking/GeneratorTx/NodeToNode.hs
@@ -723,7 +723,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4608
   number: 4608
   mergedAt: "2022-12-07T14:10:53Z"
-  include: undecided
+  include: false
   files:
     - bench/locli/locli.cabal
     - bench/tx-generator/src/Cardano/Benchmarking/GeneratorTx/NodeToNode.hs
@@ -782,7 +782,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4595
   number: 4595
   mergedAt: "2022-11-03T19:31:02Z"
-  include: undecided
+  include: false
   files:
     - cardano-node-chairman/test/Spec/Chairman/Byron.hs
     - cardano-node-chairman/test/Spec/Chairman/Cardano.hs
@@ -816,7 +816,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4581
   number: 4581
   mergedAt: "2022-11-10T16:15:57Z"
-  include: undecided
+  include: false
   files:
     - .gitignore
     - Makefile
@@ -873,7 +873,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4546
   number: 4546
   mergedAt: "2022-11-02T08:27:42Z"
-  include: undecided
+  include: false
   files:
     - bench/tx-generator/src/Cardano/Benchmarking/OuroborosImports.hs
     - cardano-api/ChangeLog.md
@@ -895,7 +895,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4544
   number: 4544
   mergedAt: "2022-10-31T19:09:19Z"
-  include: undecided
+  include: false
   files:
     - cardano-node-chairman/test/Spec/Chairman/Cardano.hs
     - cardano-node-chairman/test/Spec/Chairman/Shelley.hs
@@ -920,7 +920,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4508
   number: 4508
   mergedAt: "2022-10-26T19:02:12Z"
-  include: undecided
+  include: false
   files:
     - bench/cardano-topology/cardano-topology.cabal
     - bench/locli/doc/Block propagation analysis data flow.graphml
@@ -1027,7 +1027,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4504
   number: 4504
   mergedAt: "2022-10-12T14:01:29Z"
-  include: undecided
+  include: false
   files:
     - bench/tx-generator/src/Cardano/Benchmarking/GeneratorTx/SizedMetadata.hs
     - bench/tx-generator/src/Cardano/Benchmarking/GeneratorTx/SubmissionClient.hs
@@ -1076,7 +1076,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4446
   number: 4446
   mergedAt: "2022-09-23T12:11:56Z"
-  include: undecided
+  include: false
   files:
     - cardano-api/ChangeLog.md
     - cardano-api/cardano-api.cabal
@@ -1126,7 +1126,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4391
   number: 4391
   mergedAt: "2022-08-30T06:17:21Z"
-  include: undecided
+  include: false
   files:
     - bench/cardano-topology/cardano-topology.cabal
     - cardano-api/cardano-api.cabal
@@ -1140,7 +1140,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4242
   number: 4242
   mergedAt: "2022-08-01T12:25:47Z"
-  include: undecided
+  include: false
   files:
     - bench/cardano-topology/cardano-topology.cabal
     - cabal.project
@@ -1159,7 +1159,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4220
   number: 4220
   mergedAt: "2022-07-23T15:14:40Z"
-  include: undecided
+  include: false
   files:
     - bench/cardano-topology/cardano-topology.cabal
     - cabal.project
@@ -1178,7 +1178,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4153
   number: 4153
   mergedAt: "2022-07-08T08:48:57Z"
-  include: undecided
+  include: false
   files:
     - bench/cardano-topology/cardano-topology.cabal
     - cardano-api/ChangeLog.md
@@ -1196,7 +1196,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/3862
   number: 3862
   mergedAt: "2022-07-05T12:13:13Z"
-  include: undecided
+  include: false
   files:
     - bench/locli/src/Cardano/Analysis/Chain.hs
     - bench/locli/src/Cardano/Analysis/ChainFilter.hs

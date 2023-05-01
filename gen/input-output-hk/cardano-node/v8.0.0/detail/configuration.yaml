@@ -41,7 +41,8 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4972
   number: 4972
   mergedAt: "2023-03-13T11:28:13Z"
-  include: undecided
+  notes: Add conwaya genesis script
+  include: true
   files:
     - configuration/cardano/shelley_qa-conway-genesis.json
     - scripts/byron-to-alonzo/mkfiles.sh
@@ -50,7 +51,8 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4921
   number: 4921
   mergedAt: "2023-03-10T00:20:06Z"
-  include: undecided
+  notes: Add conway related configuration files
+  include: true
   files:
     - .gitattributes
     - .github/workflows/check-mainnet-config.yml
@@ -148,7 +150,8 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4382
   number: 4382
   mergedAt: "2022-08-25T03:31:07Z"
-  include: undecided
+  notes: Update README for where to download configurations from
+  include: true
   files:
     - configuration/readme.md
     - doc/getting-started/cli.md
@@ -171,7 +174,8 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4351
   number: 4351
   mergedAt: "2022-09-21T21:14:30Z"
-  include: undecided
+  notes: Edit trace options in configuration
+  include: true
   files:
     - Makefile
     - README.rst
@@ -240,7 +244,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/4341
   number: 4341
   mergedAt: "2023-04-11T06:51:26Z"
-  include: undecided
+  include: true
   files:
     - cardano-api/ChangeLog.md
     - cardano-node/src/Cardano/Node/Configuration/POM.hs
