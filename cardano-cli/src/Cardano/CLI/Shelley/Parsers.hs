@@ -1194,7 +1194,7 @@ pGovernanceCmd =
       GovernanceVerifyPoll
         <$> pPollFile
         <*> pPollTxFile
-
+        <*> optional pOutputFile
 
 pPollQuestion :: Parser Text
 pPollQuestion =

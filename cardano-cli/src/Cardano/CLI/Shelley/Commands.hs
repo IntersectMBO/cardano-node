@@ -422,6 +422,7 @@ data GovernanceCmd
   | GovernanceVerifyPoll
       (File GovernancePoll In) -- Poll file
       (File (Tx ()) In) -- Tx file
+      (Maybe (File () Out)) -- Tx file
   deriving Show
 
 renderGovernanceCmd :: GovernanceCmd -> Text

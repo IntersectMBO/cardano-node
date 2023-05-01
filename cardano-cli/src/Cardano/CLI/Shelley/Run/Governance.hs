@@ -25,6 +25,7 @@ import qualified Data.Text.Encoding as Text
 import qualified Data.Text.IO as Text
 import qualified Data.Text.Read as Text
 import           Formatting (build, sformat)
+import qualified System.IO as IO
 import           System.IO (stderr, stdin, stdout)
 
 import           Cardano.Api
@@ -113,8 +114,8 @@ runGovernanceCmd (GovernanceCreatePoll prompt choices nonce out) =
   runGovernanceCreatePoll prompt choices nonce out
 runGovernanceCmd (GovernanceAnswerPoll poll ix mOutFile) =
   runGovernanceAnswerPoll poll ix mOutFile
-runGovernanceCmd (GovernanceVerifyPoll poll metadata) =
-  runGovernanceVerifyPoll poll metadata
+runGovernanceCmd (GovernanceVerifyPoll poll metadata mOutFile) =
+  runGovernanceVerifyPoll poll metadata mOutFile
 
 runGovernanceMIRCertificatePayStakeAddrs
   :: Shelley.MIRPot
@@ -330,8 +331,9 @@ runGovernanceAnswerPoll pollFile maybeChoice mOutFile = do
 runGovernanceVerifyPoll
   :: File GovernancePoll In
   -> File (Tx ()) In
+  -> Maybe (File () Out) -- ^ Output file
   -> ExceptT ShelleyGovernanceCmdError IO ()
-runGovernanceVerifyPoll pollFile txFile = do
+runGovernanceVerifyPoll pollFile txFile mOutFile = do
   poll <- firstExceptT ShelleyGovernanceCmdTextEnvReadError . newExceptT $
     readFileTextEnvelope AsGovernancePoll pollFile
 
@@ -342,6 +344,7 @@ runGovernanceVerifyPoll pollFile txFile = do
   signatories <- firstExceptT ShelleyGovernanceCmdVerifyPollError . newExceptT $ pure $
     verifyPollAnswer poll tx
 
-  liftIO $ do
-    BSC.hPutStrLn stderr "Found valid poll answer, signed by: "
-    BSC.hPutStrLn stdout (prettyPrintJSON signatories)
+  liftIO $ IO.hPutStrLn stderr $ "Found valid poll answer with " <> show (length signatories) <> " signatories"
+
+  lift (writeByteStringOutput mOutFile (prettyPrintJSON signatories))
+    & onLeft (left . ShelleyGovernanceCmdWriteFileError)
