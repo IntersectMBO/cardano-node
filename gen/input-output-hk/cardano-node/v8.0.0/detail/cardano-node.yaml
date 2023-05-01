@@ -3,7 +3,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/5157
   number: 5157
   mergedAt: "2023-04-30T11:53:14Z"
-  include: undecided
+  include: true
   files:
     - .github/workflows/haskell-linux.yml
     - .github/workflows/haskell.yml
@@ -87,7 +87,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/5105
   number: 5105
   mergedAt: "2023-04-18T23:24:37Z"
-  include: undecided
+  include: false
   files:
     - bench/tx-generator/src/Cardano/Benchmarking/Script/Core.hs
     - bench/tx-generator/src/Cardano/Benchmarking/Script/Types.hs

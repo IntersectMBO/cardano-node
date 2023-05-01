@@ -3,7 +3,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/5157
   number: 5157
   mergedAt: "2023-04-30T11:53:14Z"
-  include: undecided
+  include: false
   files:
     - .github/workflows/haskell-linux.yml
     - .github/workflows/haskell.yml
@@ -27,11 +27,12 @@
     - nix/haskell.nix
     - trace-forward/trace-forward.cabal
 - title: SPO on-chain poll commands adjustments
+  alt-tile: Delete GovernancePollWitness type and signPollAnswerWith function
   author: Matthias Benkort
   url: https://github.com/input-output-hk/cardano-node/pull/5132
   number: 5132
   mergedAt: "2023-04-27T00:17:30Z"
-  include: undecided
+  include: true
   files:
     - cardano-api/gen/Test/Gen/Cardano/Api/Typed.hs
     - cardano-api/src/Cardano/Api/Governance/Poll.hs
@@ -67,7 +68,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/5130
   number: 5130
   mergedAt: "2023-04-26T14:00:42Z"
-  include: undecided
+  include: true
   files:
     - cardano-api/ChangeLog.md
     - cardano-api/src/Cardano/Api.hs
@@ -127,11 +128,17 @@
     - cardano-cli/test/data/golden/shelley/governance/vrf.sk
     - cardano-cli/test/data/golden/shelley/governance/vrf.vk
 - title: CIP-1694 make space for DRep certificates
+  alt-title: >
+    **breaking changes**
+    New makeStakeAddressPoolDelegationCertificate function.
+    Rename StakeAddressDelegationCertificate to StakeAddressPoolDelegationCertificate".
+    Change StakeCredentialDelegationCert constuctor argument types.
+    New type DelegationTarget
   author: John Ky
   url: https://github.com/input-output-hk/cardano-node/pull/5108
   number: 5108
   mergedAt: "2023-04-18T02:02:57Z"
-  include: undecided
+  include: true
   files:
     - cardano-api/gen/Test/Gen/Cardano/Api/Typed.hs
     - cardano-api/src/Cardano/Api.hs
@@ -146,11 +153,15 @@
     - cardano-cli/src/Cardano/CLI/Shelley/Run/Validate.hs
     - cardano-client-demo/StakeCredentialHistory.hs
 - title: File type to track the content and direction of files
+  alt-title: >
+    ** breaking changes **
+    New FileDireciton and File types.
+    Modify various IO functions to use these types instead.
   author: John Ky
   url: https://github.com/input-output-hk/cardano-node/pull/5105
   number: 5105
   mergedAt: "2023-04-18T23:24:37Z"
-  include: undecided
+  include: true
   files:
     - bench/tx-generator/src/Cardano/Benchmarking/Script/Core.hs
     - bench/tx-generator/src/Cardano/Benchmarking/Script/Types.hs
@@ -243,7 +254,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/5083
   number: 5083
   mergedAt: "2023-04-18T09:01:10Z"
-  include: undecided
+  include: false
   files:
     - cabal.project
     - cardano-api/cardano-api.cabal

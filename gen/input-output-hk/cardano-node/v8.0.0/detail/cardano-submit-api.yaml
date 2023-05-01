@@ -3,7 +3,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/5119
   number: 5119
   mergedAt: "2023-04-25T03:06:55Z"
-  include: undecided
+  include: true
   files:
     - cardano-cli/ChangeLog.md
     - cardano-cli/app/cardano-cli.hs
@@ -23,7 +23,7 @@
   url: https://github.com/input-output-hk/cardano-node/pull/5105
   number: 5105
   mergedAt: "2023-04-18T23:24:37Z"
-  include: undecided
+  include: false
   files:
     - bench/tx-generator/src/Cardano/Benchmarking/Script/Core.hs
     - bench/tx-generator/src/Cardano/Benchmarking/Script/Types.hs
