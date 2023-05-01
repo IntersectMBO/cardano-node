@@ -10,6 +10,7 @@ module Cardano.CLI.Shelley.Run.Governance
 
 import           Control.Monad (unless, when)
 import           Control.Monad.IO.Class (liftIO)
+import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, left, newExceptT,
                    onLeft)
@@ -24,6 +25,7 @@ import qualified Data.Text.Encoding as Text
 import qualified Data.Text.IO as Text
 import qualified Data.Text.Read as Text
 import           Formatting (build, sformat)
+import qualified System.IO as IO
 import           System.IO (stderr, stdin, stdout)
 
 import           Cardano.Api
@@ -62,6 +64,7 @@ data ShelleyGovernanceCmdError
   | ShelleyGovernanceCmdPollInvalidChoice
   | ShelleyGovernanceCmdDecoderError !DecoderError
   | ShelleyGovernanceCmdVerifyPollError !GovernancePollError
+  | ShelleyGovernanceCmdWriteFileError !(FileError ())
   deriving Show
 
 renderShelleyGovernanceError :: ShelleyGovernanceCmdError -> Text
@@ -96,6 +99,7 @@ renderShelleyGovernanceError err =
       "Unable to decode metadata: " <> sformat build decoderError
     ShelleyGovernanceCmdVerifyPollError pollError ->
       renderGovernancePollError pollError
+    ShelleyGovernanceCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
 
 runGovernanceCmd :: GovernanceCmd -> ExceptT ShelleyGovernanceCmdError IO ()
 runGovernanceCmd (GovernanceMIRPayStakeAddressesCertificate mirpot vKeys rewards out) =
@@ -108,10 +112,10 @@ runGovernanceCmd (GovernanceUpdateProposal out eNo genVKeys ppUp mCostModelFp) =
   runGovernanceUpdateProposal out eNo genVKeys ppUp mCostModelFp
 runGovernanceCmd (GovernanceCreatePoll prompt choices nonce out) =
   runGovernanceCreatePoll prompt choices nonce out
-runGovernanceCmd (GovernanceAnswerPoll poll ix) =
-  runGovernanceAnswerPoll poll ix
-runGovernanceCmd (GovernanceVerifyPoll poll metadata) =
-  runGovernanceVerifyPoll poll metadata
+runGovernanceCmd (GovernanceAnswerPoll poll ix mOutFile) =
+  runGovernanceAnswerPoll poll ix mOutFile
+runGovernanceCmd (GovernanceVerifyPoll poll metadata mOutFile) =
+  runGovernanceVerifyPoll poll metadata mOutFile
 
 runGovernanceMIRCertificatePayStakeAddrs
   :: Shelley.MIRPot
@@ -256,10 +260,10 @@ runGovernanceCreatePoll govPollQuestion govPollAnswers govPollNonce out = do
 
 runGovernanceAnswerPoll
   :: File GovernancePoll In
-  -> Maybe Word
-    -- ^ Answer index
+  -> Maybe Word -- ^ Answer index
+  -> Maybe (File () Out) -- ^ Output file
   -> ExceptT ShelleyGovernanceCmdError IO ()
-runGovernanceAnswerPoll pollFile maybeChoice = do
+runGovernanceAnswerPoll pollFile maybeChoice mOutFile = do
   poll <- firstExceptT ShelleyGovernanceCmdTextEnvReadError . newExceptT $
     readFileTextEnvelope AsGovernancePoll pollFile
 
@@ -282,15 +286,17 @@ runGovernanceAnswerPoll pollFile maybeChoice = do
   let metadata =
         metadataToJson TxMetadataJsonDetailedSchema (asTxMetadata pollAnswer)
 
-  liftIO $ do
-    BSC.hPutStrLn stderr $ mconcat
+  liftIO $ BSC.hPutStrLn stderr $ mconcat
       [ "Poll answer created successfully.\n"
       , "Please submit a transaction using the resulting metadata.\n"
       , "To be valid, the transaction must also be signed using a valid key\n"
       , "identifying your stake pool (e.g. your cold key).\n"
       ]
-    BSC.hPutStrLn stdout (prettyPrintJSON metadata)
-    BSC.hPutStrLn stderr $ mconcat
+
+  lift (writeByteStringOutput mOutFile (prettyPrintJSON metadata))
+    & onLeft (left . ShelleyGovernanceCmdWriteFileError)
+
+  liftIO $ BSC.hPutStrLn stderr $ mconcat
       [ "\n"
       , "Hint (1): Use '--json-metadata-detailed-schema' and '--metadata-json-file' "
       , "from the build or build-raw commands.\n"
@@ -325,8 +331,9 @@ runGovernanceAnswerPoll pollFile maybeChoice = do
 runGovernanceVerifyPoll
   :: File GovernancePoll In
   -> File (Tx ()) In
+  -> Maybe (File () Out) -- ^ Output file
   -> ExceptT ShelleyGovernanceCmdError IO ()
-runGovernanceVerifyPoll pollFile txFile = do
+runGovernanceVerifyPoll pollFile txFile mOutFile = do
   poll <- firstExceptT ShelleyGovernanceCmdTextEnvReadError . newExceptT $
     readFileTextEnvelope AsGovernancePoll pollFile
 
@@ -337,6 +344,7 @@ runGovernanceVerifyPoll pollFile txFile = do
   signatories <- firstExceptT ShelleyGovernanceCmdVerifyPollError . newExceptT $ pure $
     verifyPollAnswer poll tx
 
-  liftIO $ do
-    BSC.hPutStrLn stderr "Found valid poll answer, signed by: "
-    BSC.hPutStrLn stdout (prettyPrintJSON signatories)
+  liftIO $ IO.hPutStrLn stderr $ "Found valid poll answer with " <> show (length signatories) <> " signatories"
+
+  lift (writeByteStringOutput mOutFile (prettyPrintJSON signatories))
+    & onLeft (left . ShelleyGovernanceCmdWriteFileError)
