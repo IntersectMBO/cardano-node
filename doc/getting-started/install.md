@@ -120,7 +120,7 @@ Download and install libsodium:
 ```bash
 git clone https://github.com/input-output-hk/libsodium
 cd libsodium
-git checkout 66f017f1
+git checkout a5baeccc
 ./autogen.sh
 ./configure
 make
@@ -140,25 +140,6 @@ the executable is linked with the right `libsodium.so` file (which you can
 check by running `ldd`), the running binary might still use the wrong library.
 You can check this by running `pldd`. If the `pldd` shows that the running executable
 is using the wrong library, run `ldconfig`.
-
-##### Using the ported `c` code
-
-In order to avoid having to install the custom version, `cardano-crypto-praos`
-defines a `cabal` flag that makes use of C code located
-[here](https://github.com/input-output-hk/cardano-base/tree/master/cardano-crypto-praos/cbits).
-To enable this code, one has to add the following code in the
-`cabal.project.local` file:
-
-```bash
-package cardano-crypto-praos
-  flags: -external-libsodium-vrf
-```
-
-For this to work, `libsodium` has to be in the system. For Ubuntu, this is achieved by:
-
-```bash
-sudo apt install libsodium-dev
-```
 
 #### Installing Secp256k1
 
