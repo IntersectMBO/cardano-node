@@ -120,7 +120,7 @@ Download and install libsodium:
 ```bash
 git clone https://github.com/input-output-hk/libsodium
 cd libsodium
-git checkout 66f017f1
+git checkout a5baeccc
 ./autogen.sh
 ./configure
 make
