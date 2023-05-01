@@ -152,6 +152,135 @@
 - New `generateInsecureSigningKey` function
   ([PR 4021](https://github.com/input-output-hk/cardano-node/pull/4021))
 
+- SPO on-chain poll commands adjustments
+  [PR 5132](https://github.com/input-output-hk/cardano-node/pull/5132)
+
+- UTC Time to slots conversion function
+  [PR 5130](https://github.com/input-output-hk/cardano-node/pull/5130)
+
+- Add new interim governance commands: {create, answer, verify}-poll
+  [PR 5112](https://github.com/input-output-hk/cardano-node/pull/5112)
+
+- CIP-1694 make space for DRep certificates
+  [PR 5108](https://github.com/input-output-hk/cardano-node/pull/5108)
+
+- File type to track the content and direction of files
+  [PR 5105](https://github.com/input-output-hk/cardano-node/pull/5105)
+
+- Expose UsingRawBytes et al types
+  [PR 5086](https://github.com/input-output-hk/cardano-node/pull/5086)
+
+- Expose SerialiseAsRawBytesError in Cardano.Api
+  [PR 5085](https://github.com/input-output-hk/cardano-node/pull/5085)
+
+- New genCardanoKeyWitness function
+  [PR 5071](https://github.com/input-output-hk/cardano-node/pull/5071)
+
+- Replace roundtripCBOR with trippingCbor
+  [PR 5069](https://github.com/input-output-hk/cardano-node/pull/5069)
+
+- Remove non-round-trippable value TxInsReferenceNone for babbage onwards in generator
+  [PR 5064](https://github.com/input-output-hk/cardano-node/pull/5064)
+
+- Improve roundtrip functions to report annotations on callsite
+  [PR 5063](https://github.com/input-output-hk/cardano-node/pull/5063)
+
+- Define Functor instance for FileError
+  [PR 5057](https://github.com/input-output-hk/cardano-node/pull/5057)
+
+- Script data serialisation
+  [PR 5002](https://github.com/input-output-hk/cardano-node/pull/5002)
+
+- Add LedgerStateBabbage and LedgerStateConway pattern synonyms
+  [PR 5001](https://github.com/input-output-hk/cardano-node/pull/5001)
+
+- Conway hard forks on prot-ver 9
+  [PR 4988](https://github.com/input-output-hk/cardano-node/pull/4988)
+
+- Guard against overflows in Shelley TxIns
+  [PR 4956](https://github.com/input-output-hk/cardano-node/pull/4956)
+
+- Remove duplicate scripts when building transaction body for Mary, Alonzo and Babbage
+  [PR 4953](https://github.com/input-output-hk/cardano-node/pull/4953)
+
+- Combinators for TxBodyContent and related types
+  [PR 4941](https://github.com/input-output-hk/cardano-node/pull/4941)
+
+- Preserve ScriptData bytes fix
+  [PR 4926](https://github.com/input-output-hk/cardano-node/pull/4926)
+
+- Detect invalid counter and certificate
+  [PR 4880](https://github.com/input-output-hk/cardano-node/pull/4880)
+
+- Implement ADR-2: Restructure modules for generators
+  [PR 4833](https://github.com/input-output-hk/cardano-node/pull/4833)
+
+- New NodeToClientVersionOf typeclass
+  [PR 4787](https://github.com/input-output-hk/cardano-node/pull/4787)
+
+- Implement signArbitraryBytesKes for use in Mithril
+  [PR 4779](https://github.com/input-output-hk/cardano-node/pull/4779)
+
+- Export SubmitResult from Cardano.Api
+  [PR 4753](https://github.com/input-output-hk/cardano-node/pull/4753)
+
+- Add support for ghc-9.2 and partial support for CHaP](https:
+  [PR Eri]/github.com/input-output-hk/cardano-node/pull/4701) by Erik
+
+- Append tx output in cli transaction build command
+  [PR 4696](https://github.com/input-output-hk/cardano-node/pull/4696)
+
+- Add ToJSON/FromJSON instances for ChainPoint
+  [PR 4686](https://github.com/input-output-hk/cardano-node/pull/4686)
+
+- Add an Ord ChainPoint instance
+  [PR 4685](https://github.com/input-output-hk/cardano-node/pull/4685)
+
+- Derive Eq instance for AcquiringFailure
+  [PR 4683](https://github.com/input-output-hk/cardano-node/pull/4683)
+
+- Export `fromShelleyBasedScript` from Cardano.Api
+  [PR 4682](https://github.com/input-output-hk/cardano-node/pull/4682)
+
+- Expose TextEnvelopeCddl from Cardano.Api
+  [PR 4635](https://github.com/input-output-hk/cardano-node/pull/4635)
+
+- Expose txScriptValidityToScriptValidity in Cardano.Api
+  [PR 4628](https://github.com/input-output-hk/cardano-node/pull/4628)
+
+- Cardano Node 1.35.6 aka Single Relay P2P release
+  [PR 4612](https://github.com/input-output-hk/cardano-node/pull/4612)
+
+- Update ouroboros-network and cardano-ledger dependencies
+  [PR 4608](https://github.com/input-output-hk/cardano-node/pull/4608)
+
+- export RawBytesHexError
+  [PR 4599](https://github.com/input-output-hk/cardano-node/pull/4599)
+
+- Module reshuffle
+  [PR 4593](https://github.com/input-output-hk/cardano-node/pull/4593)
+
+- Add Ord instance for AddressInEra
+  [PR 4587](https://github.com/input-output-hk/cardano-node/pull/4587)
+
+- Add ToJSON and FromJSON instances for Address
+  [PR 4568](https://github.com/input-output-hk/cardano-node/pull/4568)
+
+- Export TxIns type alias
+  [PR 4565](https://github.com/input-output-hk/cardano-node/pull/4565)
+
+- Export IsPlutusScriptLanguage
+  [PR 4554](https://github.com/input-output-hk/cardano-node/pull/4554)
+
+- Export more generators
+  [PR 4534](https://github.com/input-output-hk/cardano-node/pull/4534)
+
+- Condense Read and Validation modules in cardano-cli
+  [PR 4516](https://github.com/input-output-hk/cardano-node/pull/4516)
+
+- Export TxTotalAndReturnCollateralSupportedInEra from Cardano.Api
+  [PR 4496](https://github.com/input-output-hk/cardano-node/pull/4496)
+
 ### Bugs
 
 - Fix: Add `AStakeExtendedVerificationKey` back into `deserialiseAnyVerificationKeyTextEnvelope`

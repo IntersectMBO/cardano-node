@@ -22,11 +22,14 @@
 
   See [CIP proposal](https://github.com/cardano-foundation/CIPs/pull/496) for details.
 
-  ([PR 5132](https://github.com/input-output-hk/cardano-node/pull/5132))
+  - ([PR 5132](https://github.com/input-output-hk/cardano-node/pull/5132))
+  - ([PR 5112](https://github.com/input-output-hk/cardano-node/pull/5112))
+  - ([PR 5172](https://github.com/input-output-hk/cardano-node/pull/5172))
 
 - Any command that takes a `--mainnet` flag or a `--testnet-magic` flag can have that setting
   supplied with the `CARDANO_NODE_NETWORK_ID=mainnet` or `CARDANO_NODE_NETWORK_ID=<number>`
   instead where `<number>` is the network id.
+  ([PR5119](https://github.com/input-output-hk/cardano-node/pull/5119))
   ([PR5119](https://github.com/input-output-hk/cardano-node/pull/5119))
 
 ### Features
@@ -154,6 +157,60 @@
 
 - Reduce memory usage of create staked command
   ([PR 4021](https://github.com/input-output-hk/cardano-node/pull/4021))
+
+- Add new interim governance commands: {create, answer, verify}-poll
+  ([PR 5112](https://github.com/input-output-hk/cardano-node/pull/5112))
+
+- Frozen callstack for checkTextEnvelopeFormat function
+  ([PR 5059](https://github.com/input-output-hk/cardano-node/pull/5059))
+
+- Split serialisation from IO
+  ([PR 5049](https://github.com/input-output-hk/cardano-node/pull/5049))
+
+- Move parsers to reusable location
+  ([PR 5046](https://github.com/input-output-hk/cardano-node/pull/5046))
+
+- Remove unused error constructors
+  ([PR 5041](https://github.com/input-output-hk/cardano-node/pull/5041))
+
+- Integrate latest ledger dependencies
+  ([PR 5013](https://github.com/input-output-hk/cardano-node/pull/5013))
+
+- Remove error calls in Cardano.CLI.Shelley.Run.Transaction
+  ([PR 4958](https://github.com/input-output-hk/cardano-node/pull/4958))
+
+- Preserve ScriptData bytes fix
+  ([PR 4926](https://github.com/input-output-hk/cardano-node/pull/4926))
+
+- Reduce number of calls to toLedgerPParams
+  ([PR 4903](https://github.com/input-output-hk/cardano-node/pull/4903))
+
+- Simplify SerialiseAsRawBytes type class
+  ([PR 4876](https://github.com/input-output-hk/cardano-node/pull/4876))
+
+- Modify constructBalancedTx to take LedgerEpochInfo
+  ([PR 4858](https://github.com/input-output-hk/cardano-node/pull/4858))
+
+- Node 1.35.5
+  ([PR 4851](https://github.com/input-output-hk/cardano-node/pull/4851))
+
+- UTxO-HD: Make devops-shell compile again and fix cli parser
+  ([PR 4843](https://github.com/input-output-hk/cardano-node/pull/4843))
+
+- Add ReaderT of NodeToClientVersion to LocalStateQueryExpr
+  ([PR 4809](https://github.com/input-output-hk/cardano-node/pull/4809))
+
+- Move signing key reading to cardano-api
+  ([PR 4698](https://github.com/input-output-hk/cardano-node/pull/4698))
+
+- Replace Data.Map with Data.Map.Strict
+  ([PR 4675](https://github.com/input-output-hk/cardano-node/pull/4675))
+
+- Move implementation inside `runTransactionCmd` to toplevel definitions
+  ([PR 4673]](https://github.com/input-output-hk/cardano-node/pull/4673))
+
+- Remove error calls in renderShelleyTxCmdError
+  ([PR 4644](https://github.com/input-output-hk/cardano-node/pull/4644))
 
 ### Bugs
 
