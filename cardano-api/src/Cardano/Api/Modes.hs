@@ -132,14 +132,16 @@ deriving instance Show (ConsensusModeIsMultiEra mode)
 
 toEraInMode :: CardanoEra era -> ConsensusMode mode -> Maybe (EraInMode era mode)
 toEraInMode ByronEra   ByronMode   = Just ByronEraInByronMode
+toEraInMode _          ByronMode   = Nothing
 toEraInMode ShelleyEra ShelleyMode = Just ShelleyEraInShelleyMode
+toEraInMode _          ShelleyMode = Nothing
 toEraInMode ByronEra   CardanoMode = Just ByronEraInCardanoMode
 toEraInMode ShelleyEra CardanoMode = Just ShelleyEraInCardanoMode
 toEraInMode AllegraEra CardanoMode = Just AllegraEraInCardanoMode
 toEraInMode MaryEra    CardanoMode = Just MaryEraInCardanoMode
 toEraInMode AlonzoEra  CardanoMode = Just AlonzoEraInCardanoMode
 toEraInMode BabbageEra CardanoMode = Just BabbageEraInCardanoMode
-toEraInMode _ _                    = Nothing
+toEraInMode ConwayEra  CardanoMode = Just ConwayEraInCardanoMode
 
 -- | A representation of which 'CardanoEra's are included in each
 -- 'ConsensusMode'.
