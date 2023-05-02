@@ -22,10 +22,15 @@
 
   See [CIP proposal](https://github.com/cardano-foundation/CIPs/pull/496) for details.
 
+  - ([PR 5132](https://github.com/input-output-hk/cardano-node/pull/5132))
+  - ([PR 5112](https://github.com/input-output-hk/cardano-node/pull/5112))
+  - ([PR 5172](https://github.com/input-output-hk/cardano-node/pull/5172))
+
 - Any command that takes a `--mainnet` flag or a `--testnet-magic` flag can have that setting
   supplied with the `CARDANO_NODE_NETWORK_ID=mainnet` or `CARDANO_NODE_NETWORK_ID=<number>`
   instead where `<number>` is the network id.
-  [PR5119](https://github.com/input-output-hk/cardano-node/pull/5119)
+  ([PR5119](https://github.com/input-output-hk/cardano-node/pull/5119))
+  ([PR5119](https://github.com/input-output-hk/cardano-node/pull/5119))
 
 ### Features
 
@@ -44,11 +49,168 @@
   - stake-address delegation-certificate
   - stake-address deregistration-certificate
 
-- Fix minUTxO calculation in `calculate-min-required-utxo`
-
 - Add `--socket-path` CLI option for CLI commands that use `CARDANO_NODE_SOCKET_PATH` ([PR 4910](https://github.com/input-output-hk/cardano-node/pull/4910))
 
 - Add `utcTimeToSlotNo` function to support UTC -> slot number conversion ([PR 5130](https://github.com/input-output-hk/cardano-node/pull/5130))
+
+- Remove `--stake-address` option from `stake-address build`
+  ([PR 5061](https://github.com/input-output-hk/cardano-node/pull/5061))
+
+- The bounds of many CLI arguments are now checked
+  ([PR 4919](https://github.com/input-output-hk/cardano-node/pull/4919))
+
+- Re-add support for decoding `GenesisExtendedKey` text envelope
+  ([PR 4894](https://github.com/input-output-hk/cardano-node/pull/4894))
+
+- Preserve `ScriptData` bytes with `HashableScriptData`
+  ([PR 4886](https://github.com/input-output-hk/cardano-node/pull/4886))
+
+- Disallow empty cost model for create update proposal
+  ([PR 4885](https://github.com/input-output-hk/cardano-node/pull/4885))
+
+- Detect invalid counter and certificate
+  ([PR 4880](https://github.com/input-output-hk/cardano-node/pull/4880))
+
+- Filter out duplicate collateral inputs in transaction build commands
+  ([PR 4839](https://github.com/input-output-hk/cardano-node/pull/4839))
+
+- Update cardano-cli banner
+  ([PR 4816](https://github.com/input-output-hk/cardano-node/pull/4816))
+
+- Better error message for `query utxo` command
+  ([PR 4788](https://github.com/input-output-hk/cardano-node/pull/4788))
+
+- Remove simple script distinction
+  ([PR 4763](https://github.com/input-output-hk/cardano-node/pull/4763))
+
+- Optimise `query stake-snapshot` command
+  ([PR 4654](https://github.com/input-output-hk/cardano-node/pull/4754))
+
+- Filter out duplicate collateral inputs in `transaction build` and `transaction build-raw` comands
+  ([PR 4649](https://github.com/input-output-hk/cardano-node/pull/4749))
+
+- Add support for `ghc-9.2` and partial support for `CHaP`
+  ([PR 4701](https://github.com/input-output-hk/cardano-node/pull/4701))
+
+- Update cli's help to indicate that Babbage is the default era
+  ([PR 4674](https://github.com/input-output-hk/cardano-node/pull/4674))
+
+- New `cardano-cli ping` command
+  ([PR 4664](https://github.com/input-output-hk/cardano-node/pull/4664))
+
+- Improved error message for failed asset name decode
+  ([PR 4626](https://github.com/input-output-hk/cardano-node/pull/4626))
+
+- Better pipe handling
+  ([PR 4625](https://github.com/input-output-hk/cardano-node/pull/4625))
+
+- Restore `--cddl-format`
+  ([PR 4617](https://github.com/input-output-hk/cardano-node/pull/4617))
+
+- Switch default era to Babbage
+  ([PR 4485](https://github.com/input-output-hk/cardano-node/pull/4485))
+
+- Update error message for incorrectly witnessed collateral inputs
+  ([PR 4484](https://github.com/input-output-hk/cardano-node/pull/4484))
+
+- Return `Lovelace` for `calculateMinimumUTxO`
+  ([PR 4482](https://github.com/input-output-hk/cardano-node/pull/4482))
+
+- Infer protocol params in `transaction build` command
+  ([PR 4431](https://github.com/input-output-hk/cardano-node/pull/4431))
+
+- Use `openFileBlocking` for reading signing keys
+  ([PR 4342](https://github.com/input-output-hk/cardano-node/pull/4342))
+
+- Multiple pools support in `query stake-snapshot`
+  ([PR 4279](https://github.com/input-output-hk/cardano-node/pull/4279))
+
+- Optimise `query leadership-schedule` command
+  ([PR 4250](https://github.com/input-output-hk/cardano-node/pull/4250))
+
+- Update `create-staked` with the ability to specify relays for all created stake pools
+  ([PR 4234](https://github.com/input-output-hk/cardano-node/pull/4234))
+
+- More memory efficient `query ledger-state` command
+  ([PR 4205](https://github.com/input-output-hk/cardano-node/pull/4205))
+
+- Render reference script hashes when using `--calculate-plutus-script-cost` option
+  ([PR 4204](https://github.com/input-output-hk/cardano-node/pull/4204))
+
+- Update build command to automatically calculate the total and return collateral values
+  ([PR 4198](https://github.com/input-output-hk/cardano-node/pull/4198))
+
+- Optimise `query stake-snapshot` command
+  ([PR 4179](https://github.com/input-output-hk/cardano-node/pull/4179))
+
+- New `query pool-state` command
+  ([PR 4170](https://github.com/input-output-hk/cardano-node/pull/4170))
+
+- Add `utxoCostPerByte` protocol parameter
+  ([PR 4141](https://github.com/input-output-hk/cardano-node/pull/4141))
+
+- Transaction build in any alonzo era when on babbage testnet
+  ([PR 4135](https://github.com/input-output-hk/cardano-node/pull/4135))
+
+- Expose Key interface in Cardano.Api.Shelley
+  ([PR 4048](https://github.com/input-output-hk/cardano-node/pull/4048))
+
+- Reduce memory usage of create staked command
+  ([PR 4021](https://github.com/input-output-hk/cardano-node/pull/4021))
+
+- Add new interim governance commands: {create, answer, verify}-poll
+  ([PR 5112](https://github.com/input-output-hk/cardano-node/pull/5112))
+
+- Frozen callstack for checkTextEnvelopeFormat function
+  ([PR 5059](https://github.com/input-output-hk/cardano-node/pull/5059))
+
+- Split serialisation from IO
+  ([PR 5049](https://github.com/input-output-hk/cardano-node/pull/5049))
+
+- Move parsers to reusable location
+  ([PR 5046](https://github.com/input-output-hk/cardano-node/pull/5046))
+
+- Remove unused error constructors
+  ([PR 5041](https://github.com/input-output-hk/cardano-node/pull/5041))
+
+- Integrate latest ledger dependencies
+  ([PR 5013](https://github.com/input-output-hk/cardano-node/pull/5013))
+
+- Remove error calls in Cardano.CLI.Shelley.Run.Transaction
+  ([PR 4958](https://github.com/input-output-hk/cardano-node/pull/4958))
+
+- Preserve ScriptData bytes fix
+  ([PR 4926](https://github.com/input-output-hk/cardano-node/pull/4926))
+
+- Reduce number of calls to toLedgerPParams
+  ([PR 4903](https://github.com/input-output-hk/cardano-node/pull/4903))
+
+- Simplify SerialiseAsRawBytes type class
+  ([PR 4876](https://github.com/input-output-hk/cardano-node/pull/4876))
+
+- Modify constructBalancedTx to take LedgerEpochInfo
+  ([PR 4858](https://github.com/input-output-hk/cardano-node/pull/4858))
+
+- Node 1.35.5
+  ([PR 4851](https://github.com/input-output-hk/cardano-node/pull/4851))
+
+- UTxO-HD: Make devops-shell compile again and fix cli parser
+  ([PR 4843](https://github.com/input-output-hk/cardano-node/pull/4843))
+
+- Add ReaderT of NodeToClientVersion to LocalStateQueryExpr
+  ([PR 4809](https://github.com/input-output-hk/cardano-node/pull/4809))
+
+- Move signing key reading to cardano-api
+  ([PR 4698](https://github.com/input-output-hk/cardano-node/pull/4698))
+
+- Replace Data.Map with Data.Map.Strict
+  ([PR 4675](https://github.com/input-output-hk/cardano-node/pull/4675))
+
+- Move implementation inside `runTransactionCmd` to toplevel definitions
+  ([PR 4673]](https://github.com/input-output-hk/cardano-node/pull/4673))
+
+- Remove error calls in renderShelleyTxCmdError
+  ([PR 4644](https://github.com/input-output-hk/cardano-node/pull/4644))
 
 ### Bugs
 
@@ -57,6 +219,35 @@
 - Query protocol parameters from the node in the `transaction build` command ([PR 4431](https://github.com/input-output-hk/cardano-node/pull/4431))
 
 - Fix `qKesKesKeyExpiry` in `kes-period-info` ([PR 4909](https://github.com/input-output-hk/cardano-node/pull/4909))
+
+- Fix query era mismatch bug in transaction build command when using flag `--calculate-plutus-script-cost`
+  ([PR 4538](https://github.com/input-output-hk/cardano-node/pull/4538))
+
+- Fix bug - TxWitness text envelope format does not roundtrip in Shelley era
+  ([PR 4501](https://github.com/input-output-hk/cardano-node/pull/4501))
+
+- Fix query protocol-state
+  ([PR 4102](https://github.com/input-output-hk/cardano-node/pull/4102))
+
+- Fix help message for `--script-invalid` option of `build`/`build-raw`
+  ([PR 4121](https://github.com/input-output-hk/cardano-node/pull/4121))
+
+- Fix transaction build command era backwards incompatibility
+  ([PR 4483](https://github.com/input-output-hk/cardano-node/pull/4483))
+
+- Fix minUTxO calculation in `calculate-min-required-utxo`
+
+- Fix key non extended key for `StakeExtendedVerificationKeyShelley_ed25519_bip32` envelope
+  ([PR 4918](https://github.com/input-output-hk/cardano-node/pull/4918))
+
+- Fix `qKesKesKeyExpiry` to not always be `null`
+  ([PR 4909](https://github.com/input-output-hk/cardano-node/pull/4909))
+
+- `create-staked` command: Fix UTxO size distribution
+  ([PR 4765](https://github.com/input-output-hk/cardano-node/pull/4765))
+
+- Fix bug in hash computation in `genesis create-cardano` command
+  ([PR 4761](https://github.com/input-output-hk/cardano-node/pull/4761))
 
 ## 1.35.3 -- August 2022
 
