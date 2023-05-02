@@ -46,7 +46,7 @@ Run the following command:
 ```bash
 cabal install cardano-cli
 cabal install cardano-node
-./scripts/byron-to-alonzo/mkfiles.sh alonzo
+./scripts/cardano/mkfiles.sh alonzo
 ```
 
 Follow the instructions displayed in the terminal to start your Alonzo cluster.
@@ -115,5 +115,5 @@ cardano-cli transaction sign \
 
 If there is ADA at `$dummyaddress` then the Plutus script was successfully executed.
 
-You can use the [example-txin-locking-plutus-script.sh](../../../scripts/plutus/example-txin-locking-plutus-script.sh) in conjunction with [mkfiles.sh alonzo](../../../scripts/byron-to-alonzo/mkfiles.sh) script to automagically run the `AlwaysSucceeds` script.
+You can use the [example-txin-locking-plutus-script.sh](../../../scripts/plutus/example-txin-locking-plutus-script.sh) in conjunction with [mkfiles.sh alonzo](../../../scripts/cardano/mkfiles.sh) script to automagically run the `AlwaysSucceeds` script.
 

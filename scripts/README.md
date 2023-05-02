@@ -17,16 +17,16 @@ Contains scripts that can start various clusters and intended to be as simple as
 #### shelley-from-scratch
 Contains a script that creates all the necessary keys etc to create a shelley cluster from scratch.
 
-#### byron-to-alonzo
-Contains a script that creates all the necessary keys and configuration files to create an alonzo cluster from scratch.
+#### cardano
+Contains a script that creates all the necessary keys and configuration files to create an babbage cluster from scratch.
 
-It can either be used to start cluster in Byron and then gradually transition to Alonzo, or can jumpstart straight into selected era, eg.:
+It can either be used to start cluster in Byron and then gradually transition to Babbage, or can jumpstart straight into selected era, eg.:
 
 ```bash
-./scripts/byron-to-alonzo/mkfiles.sh alonzo
+./scripts/cardano/mkfiles.sh babbage
 ```
 
-will start the cluster in Alonzo era from epoch 0.
+will start the cluster in Babbage era from epoch 0.
 
 #### plutus
 

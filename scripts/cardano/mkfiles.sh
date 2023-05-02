@@ -672,6 +672,20 @@ if [ "$1" = "babbage" ]; then
   echo "ExperimentalHardForksEnabled: True" >> "${ROOT}/configuration.yaml"
   echo "ExperimentalProtocolsEnabled: True" >> "${ROOT}/configuration.yaml"
 
+  $SED -i ${ROOT}/configuration.yaml \
+      -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 7/'
+
+  # Copy the cost model
+  echo "Nodes will start in Alonzo era from epoch 0"
+
+elif [ "$1" = "alonzo" ]; then
+  echo "TestShelleyHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
+  echo "TestAllegraHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
+  echo "TestMaryHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
+  echo "TestAlonzoHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
+  echo "ExperimentalHardForksEnabled: True" >> "${ROOT}/configuration.yaml"
+  echo "ExperimentalProtocolsEnabled: True" >> "${ROOT}/configuration.yaml"
+
   $SED -i "${ROOT}/configuration.yaml" \
       -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 7/'
 
