@@ -54,7 +54,7 @@ import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Lens.Micro ((^.))
 import           Prettyprinter
-import           Prettyprinter.Render.String
+import qualified Prettyprinter as PP
 
 import qualified Cardano.Binary as CBOR
 
@@ -383,48 +383,43 @@ data ScriptExecutionError =
 
 instance Error ScriptExecutionError where
   displayError (ScriptErrorMissingTxIn txin) =
-      "The supplied UTxO is missing the txin " ++ Text.unpack (renderTxIn txin)
+      "The supplied UTxO is missing the txin " <> pretty (renderTxIn txin)
 
   displayError (ScriptErrorTxInWithoutDatum txin) =
       "The Plutus script witness for the txin does not have a script datum "
-   ++ "(according to the UTxO). The txin in question is "
-   ++ Text.unpack (renderTxIn txin)
+   <> "(according to the UTxO). The txin in question is "
+   <> pretty (renderTxIn txin)
 
   displayError (ScriptErrorWrongDatum dh) =
       "The Plutus script witness has the wrong datum (according to the UTxO). "
-   ++ "The expected datum value has hash " ++ show dh
+   <> "The expected datum value has hash " <> pretty (show dh)
 
   displayError (ScriptErrorEvaluationFailed evalErr logs) =
-      "The Plutus script evaluation failed: " ++ pp evalErr ++
-      "\nScript debugging logs: " <> mconcat (map (\t -> Text.unpack $ t `Text.append` "\n") logs)
-    where
-      pp :: Pretty p => p -> String
-      pp = renderString
-         . layoutPretty defaultLayoutOptions
-         . pretty
+      "The Plutus script evaluation failed: " <> pretty evalErr <>
+      "\nScript debugging logs: " <> mconcat (map (\t -> pretty $ t `Text.append` "\n") logs)
 
   displayError ScriptErrorExecutionUnitsOverflow =
       "The execution units required by this Plutus script overflows a 64bit "
-   ++ "word. In a properly configured chain this should be practically "
-   ++ "impossible. So this probably indicates a chain configuration problem, "
-   ++ "perhaps with the values in the cost model."
+   <> "word. In a properly configured chain this should be practically "
+   <> "impossible. So this probably indicates a chain configuration problem, "
+   <> "perhaps with the values in the cost model."
 
   displayError (ScriptErrorNotPlutusWitnessedTxIn scriptWitness scriptHash) =
       renderScriptWitnessIndex scriptWitness <> " is not a Plutus script "
       <> "witnessed tx input and cannot be spent using a Plutus script witness."
-      <> "The script hash is " <> show scriptHash <> "."
+      <> "The script hash is " <> pretty (show scriptHash) <> "."
 
   displayError (ScriptErrorRedeemerPointsToUnknownScriptHash scriptWitness) =
       renderScriptWitnessIndex scriptWitness <> " points to a script hash "
       <> "that is not known."
 
   displayError (ScriptErrorMissingScript rdmrPtr resolveable) =
-     "The redeemer pointer: " <> show rdmrPtr <> " points to a Plutus "
+     "The redeemer pointer: " <> pretty (show rdmrPtr) <> " points to a Plutus "
      <> "script that does not exist.\n" <>
-     "The pointers that can be resolved are: " <> show resolveable
+     "The pointers that can be resolved are: " <> pretty (show resolveable)
 
   displayError (ScriptErrorMissingCostModel language) =
-      "No cost model was found for language " <> show language
+      "No cost model was found for language " <> pretty (show language)
 
 data TransactionValidityError =
     -- | The transaction validity interval is too far into the future.
@@ -454,12 +449,12 @@ deriving instance Show TransactionValidityError
 instance Error TransactionValidityError where
   displayError (TransactionValidityIntervalError pastTimeHorizon) =
       "The transaction validity interval is too far in the future. "
-   ++ "For this network it must not be more than "
-   ++ show (timeHorizonSlots pastTimeHorizon)
-   ++ "slots ahead of the current time slot. "
-   ++ "(Transactions with Plutus scripts must have validity intervals that "
-   ++ "are close enough in the future that we can reliably turn the slot "
-   ++ "numbers into UTC wall clock times.)"
+   <> "For this network it must not be more than "
+   <> pretty (timeHorizonSlots pastTimeHorizon)
+   <> "slots ahead of the current time slot. "
+   <> "(Transactions with Plutus scripts must have validity intervals that "
+   <> "are close enough in the future that we can reliably turn the slot "
+   <> "numbers into UTC wall clock times.)"
     where
       timeHorizonSlots :: Consensus.PastHorizonException -> Word
       timeHorizonSlots Consensus.PastHorizon{Consensus.pastHorizonSummary}
@@ -471,12 +466,12 @@ instance Error TransactionValidityError where
         | otherwise
         = 0 -- This should be impossible.
   displayError (TransactionValidityTranslationError errmsg) =
-    "Error translating the transaction context: " <> show errmsg
+    "Error translating the transaction context: " <> pretty (show errmsg)
 
   displayError (TransactionValidityCostModelError cModels err) =
     "An error occurred while converting from the cardano-api cost" <>
-    " models to the cardano-ledger cost models. Error: " <> err <>
-    " Cost models: " <> show cModels
+    " models to the cardano-ledger cost models. Error: " <> pretty err <>
+    " Cost models: " <> pretty (show cModels)
 
 -- | Compute the 'ExecutionUnits' needed for each script in the transaction.
 --
@@ -817,8 +812,8 @@ instance Error TxBodyErrorAutoBalance where
 
   displayError (TxBodyScriptExecutionError failures) =
       "The following scripts have execution failures:\n"
-   ++ unlines [ "the script for " ++ renderScriptWitnessIndex index
-                ++ " failed with: " ++ "\n" ++ displayError failure
+   <> PP.vsep [ "the script for " <> renderScriptWitnessIndex index
+                <> " failed with: " <> "\n" <> displayError failure
               | (index, failure) <- failures ]
 
   displayError TxBodyScriptBadScriptValidity =
@@ -826,17 +821,17 @@ instance Error TxBodyErrorAutoBalance where
 
   displayError (TxBodyErrorAdaBalanceNegative lovelace) =
       "The transaction does not balance in its use of ada. The net balance "
-   ++ "of the transaction is negative: " ++ show lovelace ++ " lovelace. "
-   ++ "The usual solution is to provide more inputs, or inputs with more ada."
+   <> "of the transaction is negative: " <> pretty (show lovelace) <> " lovelace. "
+   <> "The usual solution is to provide more inputs, or inputs with more ada."
 
   displayError (TxBodyErrorAdaBalanceTooSmall changeOutput minUTxO balance) =
       "The transaction does balance in its use of ada, however the net "
-   ++ "balance does not meet the minimum UTxO threshold. \n"
-   ++ "Balance: " ++ show balance ++ "\n"
-   ++ "Offending output (change output): " ++ Text.unpack (prettyRenderTxOut changeOutput) ++ "\n"
-   ++ "Minimum UTxO threshold: " ++ show minUTxO ++ "\n"
-   ++ "The usual solution is to provide more inputs, or inputs with more ada to "
-   ++ "meet the minimum UTxO threshold"
+   <> "balance does not meet the minimum UTxO threshold. \n"
+   <> "Balance: " <> pretty (show balance) <> "\n"
+   <> "Offending output (change output): " <> pretty (prettyRenderTxOut changeOutput) <> "\n"
+   <> "Minimum UTxO threshold: " <> pretty (show minUTxO) <> "\n"
+   <> "The usual solution is to provide more inputs, or inputs with more ada to "
+   <> "meet the minimum UTxO threshold"
 
   displayError TxBodyErrorByronEraNotSupported =
       "The Byron era is not yet supported by makeTransactionBodyAutoBalance"
@@ -848,15 +843,15 @@ instance Error TxBodyErrorAutoBalance where
       displayError err
 
   displayError (TxBodyErrorMinUTxONotMet txout minUTxO) =
-      "Minimum UTxO threshold not met for tx output: " <> Text.unpack (prettyRenderTxOut txout) <> "\n"
-   <> "Minimum required UTxO: " <> show minUTxO
+      "Minimum UTxO threshold not met for tx output: " <> pretty (prettyRenderTxOut txout) <> "\n"
+   <> "Minimum required UTxO: " <> pretty (show minUTxO)
 
   displayError (TxBodyErrorNonAdaAssetsUnbalanced val) =
-      "Non-Ada assets are unbalanced: " <> Text.unpack (renderValue val)
+      "Non-Ada assets are unbalanced: " <> pretty (renderValue val)
 
   displayError (TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap sIndex eUnitsMap) =
-    "ScriptWitnessIndex (redeemer pointer): " <> show sIndex <> " is missing from the execution "
-    ++ "units (redeemer pointer) map: " <> show eUnitsMap
+    "ScriptWitnessIndex (redeemer pointer): " <> renderScriptWitnessIndex sIndex <> " is missing from the execution "
+    <> "units (redeemer pointer) map: " <> pretty (show eUnitsMap)
 
 handleExUnitsErrors ::
      ScriptValidity -- ^ Mark script as expected to pass or fail validation

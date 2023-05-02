@@ -4,10 +4,11 @@ module Test.Golden.Byron.UpdateProposal
   ( updateProposalTest
   ) where
 
+import           Cardano.Api.Pretty
+
 import           Control.Monad (void)
 import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (runExceptT)
-import qualified Data.Text as Text
 
 import           Cardano.CLI.Byron.UpdateProposal
 
@@ -41,12 +42,12 @@ golden_byron_update_proposal = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir
 
   eGolden <- liftIO . runExceptT $ readByronUpdateProposal goldenUpdateProposal
   golden <- case eGolden of
-              Left err -> failWith Nothing . Text.unpack $ renderByronUpdateProposalError err
+              Left err -> failWith Nothing . renderStringDefault $ renderByronUpdateProposalError err
               Right prop -> return prop
 
   eCreated <- liftIO . runExceptT $ readByronUpdateProposal createdUpdateProposal
   created <- case eCreated of
-               Left err -> failWith Nothing . Text.unpack $ renderByronUpdateProposalError err
+               Left err -> failWith Nothing . renderStringDefault $ renderByronUpdateProposalError err
                Right prop -> return prop
 
   golden === created

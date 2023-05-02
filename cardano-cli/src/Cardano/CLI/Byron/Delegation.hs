@@ -20,12 +20,13 @@ import qualified Data.ByteString.Lazy as LB
 import           Formatting (Format, sformat)
 
 import           Cardano.Api.Byron
+import           Cardano.Api.Pretty
 
-import           Cardano.Ledger.Binary (Annotated (..), serialize', byronProtVer)
 import qualified Cardano.Chain.Delegation as Dlg
 import           Cardano.Chain.Slotting (EpochNumber)
 import           Cardano.Crypto (ProtocolMagicId)
 import qualified Cardano.Crypto as Crypto
+import           Cardano.Ledger.Binary (Annotated (..), byronProtVer, serialize')
 
 import           Cardano.CLI.Byron.Key (ByronKeyFailure, renderByronKeyFailure)
 import           Cardano.CLI.Types (CertificateFile (..))
@@ -42,13 +43,13 @@ data ByronDelegationError
   | ByronDelegationKeyError !ByronKeyFailure
   deriving Show
 
-renderByronDelegationError :: ByronDelegationError -> Text
+renderByronDelegationError :: ByronDelegationError -> Doc Ann
 renderByronDelegationError err =
   case err of
     CertificateValidationErrors certFp errs ->
-      "Certificate validation error(s) at: " <> textShow certFp <> " Errors: " <> textShow errs
+      "Certificate validation error(s) at: " <> pretty certFp <> " Errors: " <> pretty errs
     DlgCertificateDeserialisationFailed certFp deSererr ->
-      "Certificate deserialisation error at: " <> textShow certFp <> " Error: " <> textShow deSererr
+      "Certificate deserialisation error at: " <> pretty certFp <> " Error: " <> pretty deSererr
     ByronDelegationKeyError kerr -> renderByronKeyFailure kerr
 
 -- TODO:  we need to support password-protected secrets.

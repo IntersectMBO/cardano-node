@@ -40,10 +40,12 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import           Data.Type.Equality (TestEquality (..))
+import qualified Prettyprinter as PP
 import qualified System.IO as IO
 
 import           Cardano.Api
 import           Cardano.Api.Byron hiding (SomeByronSigningKey (..))
+import           Cardano.Api.Pretty
 import           Cardano.Api.Shelley
 
 import           Cardano.CLI.Helpers (printWarning)
@@ -121,82 +123,86 @@ data ShelleyTxCmdError
   | ShelleyTxCmdTxUpdateProposalValidationError TxUpdateProposalValidationError
   | ShelleyTxCmdScriptValidityValidationError TxScriptValidityValidationError
 
-renderShelleyTxCmdError :: ShelleyTxCmdError -> Text
+renderShelleyTxCmdError :: ShelleyTxCmdError -> Doc Ann
 renderShelleyTxCmdError err =
   case err of
-    ShelleyTxCmdReadTextViewFileError fileErr -> Text.pack (displayError fileErr)
-    ShelleyTxCmdScriptFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyTxCmdReadTextViewFileError fileErr -> displayError fileErr
+    ShelleyTxCmdScriptFileError fileErr -> displayError fileErr
     ShelleyTxCmdReadWitnessSigningDataError witSignDataErr ->
       renderReadWitnessSigningDataError witSignDataErr
-    ShelleyTxCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyTxCmdWriteFileError fileErr -> displayError fileErr
     ShelleyTxCmdSocketEnvError envSockErr -> renderEnvSocketError envSockErr
-    ShelleyTxCmdTxSubmitError res -> "Error while submitting tx: " <> res
+    ShelleyTxCmdTxSubmitError res -> "Error while submitting tx: " <> pretty res
     ShelleyTxCmdTxSubmitErrorEraMismatch EraMismatch{ledgerEraName, otherEraName} ->
       "The era of the node and the tx do not match. " <>
-      "The node is running in the " <> ledgerEraName <>
-      " era, but the transaction is for the " <> otherEraName <> " era."
+      "The node is running in the " <> pretty ledgerEraName <>
+      " era, but the transaction is for the " <> pretty otherEraName <> " era."
     ShelleyTxCmdBootstrapWitnessError sbwErr ->
       renderShelleyBootstrapWitnessError sbwErr
     ShelleyTxCmdTxFeatureMismatch era TxFeatureImplicitFees ->
       "An explicit transaction fee must be specified for " <>
-      renderEra era <> " era transactions."
+      pretty era <> " era transactions."
 
     ShelleyTxCmdTxFeatureMismatch (AnyCardanoEra ShelleyEra)
                                   TxFeatureValidityNoUpperBound ->
       "A TTL must be specified for Shelley era transactions."
 
     ShelleyTxCmdTxFeatureMismatch era feature ->
-      renderFeature feature <> " cannot be used for " <> renderEra era <>
+      renderFeature feature <> " cannot be used for " <> pretty era <>
       " era transactions."
 
     ShelleyTxCmdTxBodyError err' ->
-      "Transaction validaton error: " <> Text.pack (displayError err')
+      "Transaction validaton error: " <> displayError err'
 
     ShelleyTxCmdNotImplemented msg ->
-      "Feature not yet implemented: " <> msg
+      "Feature not yet implemented: " <> pretty msg
 
     ShelleyTxCmdWitnessEraMismatch era era' (WitnessFile file) ->
       "The era of a witness does not match the era of the transaction. " <>
-      "The transaction is for the " <> renderEra era <> " era, but the " <>
-      "witness in " <> textShow file <> " is for the " <> renderEra era' <> " era."
+      "The transaction is for the " <> pretty era <> " era, but the " <>
+      "witness in " <> pretty file <> " is for the " <> pretty era' <> " era."
 
     ShelleyTxCmdEraConsensusModeMismatch fp mode era ->
-       "Submitting " <> renderEra era <> " era transaction (" <> textShow fp <>
-       ") is not supported in the " <> renderMode mode <> " consensus mode."
-    ShelleyTxCmdPolicyIdsMissing policyids -> mconcat
+       "Submitting " <> pretty era <> " era transaction (" <> pretty fp <>
+       ") is not supported in the " <> pretty mode <> " consensus mode."
+    ShelleyTxCmdPolicyIdsMissing policyids ->
+      mconcat
       [ "The \"--mint\" flag specifies an asset with a policy Id, but no "
       , "corresponding monetary policy script has been provided as a witness "
       , "(via the \"--mint-script-file\" flag). The policy Id in question is: "
-      , Text.intercalate ", " (map serialiseToRawBytesHexText policyids)
+      , PP.prettyList (map serialiseToRawBytesHexText policyids)
       ]
 
-    ShelleyTxCmdPolicyIdsExcess policyids -> mconcat
-      [ "A script provided to witness minting does not correspond to the policy "
-      , "id of any asset specified in the \"--mint\" field. The script hash is: "
-      , Text.intercalate ", " (map serialiseToRawBytesHexText policyids)
+    ShelleyTxCmdPolicyIdsExcess policyids ->
+      PP.vsep
+      [ mconcat
+        [ "A script provided to witness minting does not correspond to the policy "
+        , "id of any asset specified in the \"--mint\" field. The script hash is: "
+        ]
+      , PP.prettyList $ map serialiseToRawBytesHexText policyids
       ]
-    ShelleyTxCmdUnsupportedMode mode -> "Unsupported mode: " <> renderMode mode
+    ShelleyTxCmdUnsupportedMode mode -> "Unsupported mode: " <> pretty mode
     ShelleyTxCmdByronEra -> "This query cannot be used for the Byron era"
-    ShelleyTxCmdEraConsensusModeMismatchTxBalance fp mode era ->
-       "Cannot balance " <> renderEra era <> " era transaction body (" <> textShow fp <>
-       ") because is not supported in the " <> renderMode mode <> " consensus mode."
-    ShelleyTxCmdBalanceTxBody err' -> Text.pack $ displayError err'
+    ShelleyTxCmdEraConsensusModeMismatchTxBalance buildOutputOptions mode era ->
+       "Cannot balance " <> pretty era <> " era transaction body (" <> pretty (show buildOutputOptions) <>
+       ") because is not supported in the " <> pretty mode <> " consensus mode."
+    ShelleyTxCmdBalanceTxBody err' -> displayError err'
     ShelleyTxCmdTxInsDoNotExist e ->
       renderTxInsExistError e
-    ShelleyTxCmdPParamsErr err' -> Text.pack $ displayError err'
+    ShelleyTxCmdPParamsErr err' -> displayError err'
     ShelleyTxCmdTextEnvCddlError textEnvErr cddlErr -> mconcat
       [ "Failed to decode neither the cli's serialisation format nor the ledger's "
-      , "CDDL serialisation format. TextEnvelope error: " <> Text.pack (displayError textEnvErr) <> "\n"
-      , "TextEnvelopeCddl error: " <> Text.pack (displayError cddlErr)
+      , "CDDL serialisation format. TextEnvelope error: " <> displayError textEnvErr <> "\n"
+      , "TextEnvelopeCddl error: " <> displayError cddlErr
       ]
-    ShelleyTxCmdTxExecUnitsErr err' ->  Text.pack $ displayError err'
-    ShelleyTxCmdPlutusScriptCostErr err'-> Text.pack $ displayError err'
+    ShelleyTxCmdTxExecUnitsErr err' ->  displayError err'
+    ShelleyTxCmdPlutusScriptCostErr err'-> displayError err'
     ShelleyTxCmdPParamExecutionUnitsNotAvailable -> mconcat
       [ "Execution units not available in the protocol parameters. This is "
       , "likely due to not being in the Alonzo era"
       ]
     ShelleyTxCmdTxEraCastErr (EraCastError value fromEra toEra) ->
-      "Unable to cast era from " <> textShow fromEra <> " to " <> textShow toEra <> " the value " <> textShow value
+      "Unable to cast era from " <> pretty fromEra <> " to " <> pretty toEra <> " the value " <> pretty (show value)
     ShelleyTxCmdQueryConvenienceError e ->
       renderQueryConvenienceError e
     ShelleyTxCmdQueryNotScriptLocked e ->
@@ -209,36 +215,24 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdScriptWitnessError e -> renderScriptWitnessError e
     ShelleyTxCmdScriptDataError e -> renderScriptDataError e
     ShelleyTxCmdProtocolParamsError e -> renderProtocolParamsError e
-    ShelleyTxCmdCddlError e -> Text.pack $ displayError e
-    ShelleyTxCmdCddlWitnessError e -> Text.pack $ displayError e
-    ShelleyTxCmdRequiredSignerError e -> Text.pack $ displayError e
+    ShelleyTxCmdCddlError e -> displayError e
+    ShelleyTxCmdCddlWitnessError e -> displayError e
+    ShelleyTxCmdRequiredSignerError e -> displayError e
     -- Validation errors
-    ShelleyTxCmdAuxScriptsValidationError e ->
-      Text.pack $ displayError e
-    ShelleyTxCmdTotalCollateralValidationError e ->
-      Text.pack $ displayError e
-    ShelleyTxCmdReturnCollateralValidationError e ->
-      Text.pack $ displayError e
-    ShelleyTxCmdTxFeeValidationError e ->
-      Text.pack $ displayError e
-    ShelleyTxCmdTxValidityLowerBoundValidationError e ->
-      Text.pack $ displayError e
-    ShelleyTxCmdTxValidityUpperBoundValidationError e ->
-      Text.pack $ displayError e
-    ShelleyTxCmdRequiredSignersValidationError e ->
-      Text.pack $ displayError e
-    ShelleyTxCmdProtocolParametersValidationError e ->
-      Text.pack $ displayError e
-    ShelleyTxCmdTxWithdrawalsValidationError e ->
-      Text.pack $ displayError e
-    ShelleyTxCmdTxCertificatesValidationError e ->
-      Text.pack $ displayError e
-    ShelleyTxCmdTxUpdateProposalValidationError e ->
-      Text.pack $ displayError e
-    ShelleyTxCmdScriptValidityValidationError e ->
-      Text.pack $ displayError e
+    ShelleyTxCmdAuxScriptsValidationError e -> displayError e
+    ShelleyTxCmdTotalCollateralValidationError e -> displayError e
+    ShelleyTxCmdReturnCollateralValidationError e -> displayError e
+    ShelleyTxCmdTxFeeValidationError e -> displayError e
+    ShelleyTxCmdTxValidityLowerBoundValidationError e -> displayError e
+    ShelleyTxCmdTxValidityUpperBoundValidationError e -> displayError e
+    ShelleyTxCmdRequiredSignersValidationError e -> displayError e
+    ShelleyTxCmdProtocolParametersValidationError e -> displayError e
+    ShelleyTxCmdTxWithdrawalsValidationError e -> displayError e
+    ShelleyTxCmdTxCertificatesValidationError e -> displayError e
+    ShelleyTxCmdTxUpdateProposalValidationError e -> displayError e
+    ShelleyTxCmdScriptValidityValidationError e -> displayError e
 
-renderFeature :: TxFeature -> Text
+renderFeature :: TxFeature -> Doc Ann
 renderFeature TxFeatureShelleyAddresses     = "Shelley addresses"
 renderFeature TxFeatureExplicitFees         = "Explicit fees"
 renderFeature TxFeatureImplicitFees         = "Implicit fees"
@@ -1245,7 +1239,7 @@ data ShelleyBootstrapWitnessError
   deriving Show
 
 -- | Render an error message for a 'ShelleyBootstrapWitnessError'.
-renderShelleyBootstrapWitnessError :: ShelleyBootstrapWitnessError -> Text
+renderShelleyBootstrapWitnessError :: ShelleyBootstrapWitnessError -> Doc Ann
 renderShelleyBootstrapWitnessError MissingNetworkIdOrByronAddressError =
   "Transactions witnessed by a Byron signing key must be accompanied by a "
     <> "network ID. Either provide a network ID or provide a Byron "

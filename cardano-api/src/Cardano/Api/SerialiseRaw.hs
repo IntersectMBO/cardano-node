@@ -24,6 +24,7 @@ import           Data.Typeable (TypeRep, Typeable)
 
 import           Cardano.Api.Error (Error, displayError)
 import           Cardano.Api.HasTypeProxy
+import           Prettyprinter (Pretty (..))
 
 newtype SerialiseAsRawBytesError = SerialiseAsRawBytesError
   -- TODO We can do better than use String to carry the error message
@@ -61,12 +62,13 @@ data RawBytesHexError
 instance Error RawBytesHexError where
   displayError = \case
     RawBytesHexErrorBase16DecodeFail input message ->
-      "Expected Base16-encoded bytestring, but got " ++ pretty input ++ "; "
-      ++ message
+      "Expected Base16-encoded bytestring, but got " <> pretty (textOf input) <> "; "
+      <> pretty message
     RawBytesHexErrorRawBytesDecodeFail input asType (SerialiseAsRawBytesError e) ->
-      "Failed to deserialise " ++ pretty input ++ " as " ++ show asType ++ ". " ++ e
+      "Failed to deserialise " <> pretty (textOf input) <> " as " <> pretty (show asType)
+      <> ". " <> pretty e
     where
-      pretty bs = case Text.decodeUtf8' bs of
+      textOf bs = case Text.decodeUtf8' bs of
         Right t -> Text.unpack t
         Left _ -> show bs
 

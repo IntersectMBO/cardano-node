@@ -22,6 +22,7 @@ import           Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
+import           Prettyprinter (Pretty (..))
 
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
@@ -31,7 +32,7 @@ newtype JsonDecodeError = JsonDecodeError String
   deriving (Eq, Show)
 
 instance Error JsonDecodeError where
-  displayError (JsonDecodeError err) = err
+  displayError (JsonDecodeError err) = pretty err
 
 
 serialiseToJSON :: ToJSON a => a -> ByteString

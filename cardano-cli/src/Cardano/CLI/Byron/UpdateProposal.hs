@@ -25,9 +25,10 @@ import           Cardano.Chain.Update (InstallerHash (..), ProtocolVersion (..),
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import           Ouroboros.Consensus.Util.Condense (condense)
 
-import           Cardano.Api (NetworkId, SerialiseAsRawBytes (..), SocketPath, textShow)
+import           Cardano.Api (NetworkId, SerialiseAsRawBytes (..), SocketPath)
 import           Cardano.Api.Byron (AsType (AsByronUpdateProposal), ByronProtocolParametersUpdate,
                    ByronUpdateProposal, makeByronUpdateProposal, toByronLedgerUpdateProposal)
+import           Cardano.Api.Pretty
 
 import           Cardano.CLI.Byron.Genesis (ByronGenesisError)
 import           Cardano.CLI.Byron.Key (ByronKeyFailure, readByronSigningKey)
@@ -45,21 +46,21 @@ data ByronUpdateProposalError
   | UpdateProposalDecodingError !FilePath
   deriving Show
 
-renderByronUpdateProposalError :: ByronUpdateProposalError -> Text
+renderByronUpdateProposalError :: ByronUpdateProposalError -> Doc Ann
 renderByronUpdateProposalError err =
   case err of
     ByronReadUpdateProposalFileFailure fp rErr ->
-      "Error reading update proposal at " <> textShow fp <> " Error: " <> textShow rErr
+      "Error reading update proposal at " <> pretty fp <> " Error: " <> pretty rErr
     ByronUpdateProposalWriteError hErr ->
       "Error writing update proposal: " <> renderHelpersError hErr
     ByronUpdateProposalGenesisReadError fp rErr ->
-      "Error reading update proposal at: " <> textShow fp <> " Error: " <> textShow rErr
+      "Error reading update proposal at: " <> pretty fp <> " Error: " <> pretty (show rErr)
     ByronUpdateProposalTxError txErr ->
-      "Error submitting update proposal: " <> textShow txErr
+      "Error submitting update proposal: " <> pretty (show txErr)
     ReadSigningKeyFailure fp rErr ->
-      "Error reading signing key at: " <> textShow fp <> " Error: " <> textShow rErr
+      "Error reading signing key at: " <> pretty fp <> " Error: " <> pretty (show rErr)
     UpdateProposalDecodingError fp ->
-      "Error decoding update proposal at: " <> textShow fp
+      "Error decoding update proposal at: " <> pretty fp
 
 runProposalCreation
   :: NetworkId

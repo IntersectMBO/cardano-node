@@ -14,6 +14,7 @@ import           Control.Monad.Catch
 import qualified GHC.Stack as GHC
 
 import           Cardano.Api
+import           Cardano.Api.Pretty
 
 import           Cardano.CLI.Shelley.Run.Read
 
@@ -75,7 +76,7 @@ checkTextEnvelopeFormat tve reference created = GHC.withFrozenCallStack $ do
                       => Either (FileError TextEnvelopeError) TextEnvelope
                       -> m TextEnvelope
    handleTextEnvelope (Right refTextEnvelope) = return refTextEnvelope
-   handleTextEnvelope (Left fileErr) = failWithCustom GHC.callStack Nothing . displayError $ fileErr
+   handleTextEnvelope (Left fileErr) = failWithCustom GHC.callStack Nothing . renderStringDefault . displayError $ fileErr
 
    typeTitleEquivalence :: (MonadTest m, HasCallStack) => TextEnvelope -> TextEnvelope -> m ()
    typeTitleEquivalence (TextEnvelope refType refTitle _)

@@ -5,12 +5,10 @@ module Cardano.CLI.Shelley.Run
   ) where
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Data.Text (Text)
+import           Control.Monad.Trans.Except.Extra (firstExceptT)
 
 import           Cardano.Api
-
-import           Control.Monad.Trans.Except.Extra (firstExceptT)
-import qualified Data.Text as Text
+import           Cardano.Api.Pretty
 
 import           Cardano.CLI.Shelley.Parsers
 
@@ -38,13 +36,13 @@ data ShelleyClientCmdError
   | ShelleyCmdQueryError !ShelleyQueryCmdError
   | ShelleyCmdKeyError !ShelleyKeyCmdError
 
-renderShelleyClientCmdError :: ShelleyCommand -> ShelleyClientCmdError -> Text
+renderShelleyClientCmdError :: ShelleyCommand -> ShelleyClientCmdError -> Doc Ann
 renderShelleyClientCmdError cmd err =
   case err of
     ShelleyCmdAddressError addrCmdErr ->
        renderError cmd renderShelleyAddressCmdError addrCmdErr
     ShelleyCmdGenesisError genesisCmdErr ->
-       renderError cmd (Text.pack . displayError) genesisCmdErr
+       renderError cmd displayError genesisCmdErr
     ShelleyCmdGovernanceError govCmdErr ->
        renderError cmd renderShelleyGovernanceError govCmdErr
     ShelleyCmdNodeError nodeCmdErr ->
@@ -62,7 +60,7 @@ renderShelleyClientCmdError cmd err =
     ShelleyCmdKeyError keyErr ->
        renderError cmd renderShelleyKeyCmdError keyErr
  where
-   renderError :: ShelleyCommand -> (a -> Text) -> a -> Text
+   renderError :: ShelleyCommand -> (a -> Doc Ann) -> a -> Doc Ann
    renderError shelleyCmd renderer shelCliCmdErr =
       mconcat [ "Command failed: "
               , renderShelleyCommand shelleyCmd

@@ -168,6 +168,7 @@ executable cardano-cli
   ghc-options:          -threaded -rtsopts "-with-rtsopts=-T"
 
   build-depends:        cardano-cli
+                      , cardano-api
                       , cardano-crypto-class ^>= 2.1
                       , optparse-applicative-fork
                       , transformers-except

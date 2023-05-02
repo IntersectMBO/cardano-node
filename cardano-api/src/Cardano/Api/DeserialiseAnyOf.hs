@@ -26,7 +26,6 @@ import           Data.Char (toLower)
 import           Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
 import           Data.Text (Text)
-import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Formatting (build, sformat, (%))
 
@@ -34,6 +33,7 @@ import qualified Cardano.Chain.Common as Common
 import qualified Cardano.Crypto.Signing as Crypto
 
 import           Cardano.Api.Error
+import           Cardano.Api.Pretty
 import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
@@ -76,16 +76,14 @@ data InputDecodeError
   -- type.
   deriving (Eq, Show)
 instance Error InputDecodeError where
-  displayError = Text.unpack . renderInputDecodeError
+  displayError = renderInputDecodeError
 
 -- | Render an error message for a 'InputDecodeError'.
-renderInputDecodeError :: InputDecodeError -> Text
+renderInputDecodeError :: InputDecodeError -> Doc Ann
 renderInputDecodeError err =
   case err of
-    InputTextEnvelopeError textEnvErr ->
-      Text.pack (displayError textEnvErr)
-    InputBech32DecodeError decodeErr ->
-      Text.pack (displayError decodeErr)
+    InputTextEnvelopeError textEnvErr -> displayError textEnvErr
+    InputBech32DecodeError decodeErr -> displayError decodeErr
     InputInvalidError -> "Invalid key."
 
 -- | The result of a deserialisation function.
@@ -242,6 +240,9 @@ data SomeAddressVerificationKey
   | AStakeVerificationKey           (VerificationKey StakeKey)
   | AStakeExtendedVerificationKey   (VerificationKey StakeExtendedKey)
   deriving (Show)
+
+instance Pretty SomeAddressVerificationKey where
+  pretty = pretty . show
 
 renderSomeAddressVerificationKey :: SomeAddressVerificationKey -> Text
 renderSomeAddressVerificationKey (AByronVerificationKey vk) =  prettyByronVerificationKey vk

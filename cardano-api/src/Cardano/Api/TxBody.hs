@@ -196,7 +196,7 @@ import qualified Data.ByteString.Lazy as LBS
 import           Data.Foldable (for_, toList)
 import           Data.Function (on)
 import           Data.Functor (($>))
-import           Data.List (intercalate, sortBy)
+import           Data.List (sortBy)
 import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Map.Strict (Map)
@@ -214,6 +214,7 @@ import           Data.Word (Word16, Word32, Word64)
 import           GHC.Generics
 import           Lens.Micro hiding (ix)
 import           Lens.Micro.Extras (view)
+import           Prettyprinter (Pretty (..))
 import qualified Text.Parsec as Parsec
 import           Text.Parsec ((<?>))
 import qualified Text.Parsec.String as Parsec
@@ -268,6 +269,7 @@ import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Byron
 import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.NetworkId
+import           Cardano.Api.Pretty (Ann, Doc, InstanceShow (..), renderStringDefault)
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Script
 import           Cardano.Api.ScriptData
@@ -392,6 +394,8 @@ data TxOutInAnyEra where
 
 deriving instance Show TxOutInAnyEra
 
+deriving via InstanceShow TxOutInAnyEra instance Pretty TxOutInAnyEra
+
 instance Eq TxOutInAnyEra where
   TxOutInAnyEra era1 out1 == TxOutInAnyEra era2 out2 =
     case testEquality era1 era2 of
@@ -511,7 +515,7 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
                 (Just dVal, Just h) -> do
                   case scriptDataJsonToHashable ScriptDataJsonDetailedSchema dVal of
                     Left err ->
-                      fail $ "Error parsing TxOut JSON: " <> displayError err
+                      fail $ renderStringDefault $ "Error parsing TxOut JSON: " <> displayError err
                     Right hashableData -> do
                       if hashScriptDataBytes hashableData /= h
                       then fail "Inline datum not equivalent to inline datum hash"
@@ -534,7 +538,7 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
                 (Just dVal, Just h) ->
                   case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
                     Left err ->
-                      fail $ "Error parsing TxOut JSON: " <> displayError err
+                      fail $ renderStringDefault $ "Error parsing TxOut JSON: " <> displayError err
                     Right sData ->
                       if hashScriptDataBytes sData /= h
                       then fail "Inline datum not equivalent to inline datum hash"
@@ -644,7 +648,7 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxUTxO era) where
                 (Just dVal, Just h) -> do
                      case scriptDataJsonToHashable ScriptDataJsonDetailedSchema dVal of
                         Left err ->
-                          fail $ "Error parsing TxOut JSON: " <> displayError err
+                          fail $ renderStringDefault $ "Error parsing TxOut JSON: " <> displayError err
                         Right hashableData -> do
                           if hashScriptDataBytes hashableData /= h
                           then fail "Inline datum not equivalent to inline datum hash"
@@ -668,7 +672,7 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxUTxO era) where
                 (Just dVal, Just h) ->
                   case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
                     Left err ->
-                      fail $ "Error parsing TxOut JSON: " <> displayError err
+                      fail $ renderStringDefault $ "Error parsing TxOut JSON: " <> displayError err
                     Right sData ->
                       if hashScriptDataBytes sData /= h
                       then fail "Inline datum not equivalent to inline datum hash"
@@ -1559,7 +1563,7 @@ pattern TxOutDatumInTx s d <- TxOutDatumInTx' s _ d
 parseHash :: SerialiseAsRawBytes (Hash a) => AsType (Hash a) -> Parsec.Parser (Hash a)
 parseHash asType = do
   str <- some Parsec.hexDigit <?> "hash"
-  failEitherWith (\e -> "Failed to parse hash: " ++ displayError e) $
+  failEitherWith (\e -> renderStringDefault $ "Failed to parse hash: " <> displayError e) $
     deserialiseFromRawBytesHex asType (BSC.pack str)
 
 -- ----------------------------------------------------------------------------
@@ -2338,27 +2342,27 @@ instance Error TxBodyError where
       "Transaction body has no collateral inputs, but uses Plutus scripts"
     displayError TxBodyEmptyTxOuts = "Transaction body has no outputs"
     displayError (TxBodyOutputNegative (Quantity q) txout) =
-      "Negative quantity (" ++ show q ++ ") in transaction output: " ++
-      show txout
+      "Negative quantity (" <> pretty q <> ") in transaction output: " <>
+      pretty txout
     displayError (TxBodyOutputOverflow (Quantity q) txout) =
-      "Quantity too large (" ++ show q ++ " >= 2^64) in transaction output: " ++
-      show txout
+      "Quantity too large (" <> pretty q <> " >= 2^64) in transaction output: " <>
+      pretty txout
     displayError (TxBodyMetadataError [(k, err)]) =
-      "Error in metadata entry " ++ show k ++ ": " ++ displayError err
+      "Error in metadata entry " <> pretty k <> ": " <> displayError err
     displayError (TxBodyMetadataError errs) =
-      "Error in metadata entries: " ++
-      intercalate "; "
-        [ show k ++ ": " ++ displayError err
-        | (k, err) <- errs ]
+      "Error in metadata entries: " <>
+      mconcat (List.intersperse "; "
+        [ pretty k <> ": " <> displayError err
+        | (k, err) <- errs ])
     displayError TxBodyMintAdaError =
       "Transaction cannot mint ada, only non-ada assets"
     displayError TxBodyMissingProtocolParams =
-      "Transaction uses Plutus scripts but does not provide the protocol " ++
+      "Transaction uses Plutus scripts but does not provide the protocol " <>
       "parameters to hash"
     displayError (TxBodyInIxOverflow txin) =
-      "Transaction input index is too big, " ++
-      "acceptable value is up to 2^32-1, " ++
-      "in input " ++ show txin
+      "Transaction input index is too big, " <>
+      "acceptable value is up to 2^32-1, " <>
+      "in input " <> pretty txin
 
 createTransactionBody
   :: ShelleyBasedEra era
@@ -4153,15 +4157,15 @@ instance ToJSON ScriptWitnessIndex where
       , "value" .= n
       ]
 
-renderScriptWitnessIndex :: ScriptWitnessIndex -> String
+renderScriptWitnessIndex :: ScriptWitnessIndex -> Doc Ann
 renderScriptWitnessIndex (ScriptWitnessIndexTxIn index) =
-  "transaction input " <> show index <> " (in the order of the TxIds)"
+  "transaction input " <> pretty index <> " (in the order of the TxIds)"
 renderScriptWitnessIndex (ScriptWitnessIndexMint index) =
-  "policyId " <> show index <> " (in the order of the PolicyIds)"
+  "policyId " <> pretty index <> " (in the order of the PolicyIds)"
 renderScriptWitnessIndex (ScriptWitnessIndexCertificate index) =
-  "certificate " <> show index <> " (in the list order of the certificates)"
+  "certificate " <> pretty index <> " (in the list order of the certificates)"
 renderScriptWitnessIndex (ScriptWitnessIndexWithdrawal index) =
-  "withdrawal " <> show index <> " (in the order of the StakeAddresses)"
+  "withdrawal " <> pretty index <> " (in the order of the StakeAddresses)"
 
 toAlonzoRdmrPtr :: ScriptWitnessIndex -> Alonzo.RdmrPtr
 toAlonzoRdmrPtr widx =

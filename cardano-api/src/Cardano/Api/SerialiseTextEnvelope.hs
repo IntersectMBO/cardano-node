@@ -3,6 +3,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -41,6 +42,7 @@ import           Data.Maybe (fromMaybe)
 import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
+import           Prettyprinter (Pretty (..))
 
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
 import qualified Data.Aeson as Aeson
@@ -132,17 +134,17 @@ instance Error TextEnvelopeError where
       TextEnvelopeTypeError [TextEnvelopeType expType]
                             (TextEnvelopeType actType) ->
           "TextEnvelope type error: "
-       <> " Expected: " <> expType
-       <> " Actual: " <> actType
+       <> " Expected: " <> pretty expType
+       <> " Actual: " <> pretty actType
 
       TextEnvelopeTypeError expTypes (TextEnvelopeType actType) ->
           "TextEnvelope type error: "
        <> " Expected one of: "
-       <> List.intercalate ", "
-            [ expType | TextEnvelopeType expType <- expTypes ]
-       <> " Actual: " <> actType
-      TextEnvelopeAesonDecodeError decErr -> "TextEnvelope aeson decode error: " <> decErr
-      TextEnvelopeDecodeError decErr -> "TextEnvelope decode error: " <> show decErr
+       <> pretty
+          (List.intercalate ", " [ expType | TextEnvelopeType expType <- expTypes ])
+       <> " Actual: " <> pretty actType
+      TextEnvelopeAesonDecodeError decErr -> "TextEnvelope aeson decode error: " <> pretty decErr
+      TextEnvelopeDecodeError decErr -> "TextEnvelope decode error: " <> pretty (show decErr)
 
 
 -- | Check that the \"type\" of the 'TextEnvelope' is as expected.

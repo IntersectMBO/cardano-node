@@ -14,7 +14,6 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither)
 import           Control.Tracer (stdoutTracer, traceWith)
 import qualified Data.ByteString as BS
 import           Data.Text (Text)
-import qualified Data.Text as Text
 
 import qualified Cardano.Binary as Binary
 import           Cardano.CLI.Byron.UpdateProposal (ByronUpdateProposalError,
@@ -23,6 +22,7 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import           Ouroboros.Consensus.Util.Condense (condense)
 
 import           Cardano.Api.Byron
+import           Cardano.Api.Pretty
 
 import           Cardano.CLI.Byron.Genesis (ByronGenesisError)
 import           Cardano.CLI.Byron.Key (ByronKeyFailure, readByronSigningKey)
@@ -45,17 +45,17 @@ data ByronVoteError
   | ByronVoteUpdateHelperError !HelpersError
   deriving Show
 
-renderByronVoteError :: ByronVoteError -> Text
+renderByronVoteError :: ByronVoteError -> Doc Ann
 renderByronVoteError bVerr =
   case bVerr of
-    ByronVoteDecodingError fp -> "Error decoding Byron vote at " <>  Text.pack fp
-    ByronVoteGenesisReadError genErr -> "Error reading the genesis file:" <> Text.pack (show genErr)
-    ByronVoteReadFileFailure fp err -> "Error reading Byron vote at " <> Text.pack fp <> " Error: " <> err
-    ByronVoteTxSubmissionError txErr -> "Error submitting the transaction: " <> Text.pack (show txErr)
-    ByronVoteUpdateProposalDecodingError err -> "Error decoding Byron update proposal: " <> Text.pack (show err)
-    ByronVoteUpdateProposalFailure err -> "Error reading the update proposal: " <> Text.pack (show err)
-    ByronVoteUpdateHelperError err ->"Error creating the vote: " <> Text.pack (show err)
-    ByronVoteKeyReadFailure err -> "Error reading the signing key: " <> Text.pack (show err)
+    ByronVoteDecodingError fp -> "Error decoding Byron vote at " <>  pretty fp
+    ByronVoteGenesisReadError genErr -> "Error reading the genesis file:" <> pretty (show genErr)
+    ByronVoteReadFileFailure fp err -> "Error reading Byron vote at " <> pretty fp <> " Error: " <> pretty err
+    ByronVoteTxSubmissionError txErr -> "Error submitting the transaction: " <> pretty (show txErr)
+    ByronVoteUpdateProposalDecodingError err -> "Error decoding Byron update proposal: " <> pretty (show err)
+    ByronVoteUpdateProposalFailure err -> "Error reading the update proposal: " <> pretty (show err)
+    ByronVoteUpdateHelperError err ->"Error creating the vote: " <> pretty (show err)
+    ByronVoteKeyReadFailure err -> "Error reading the signing key: " <> pretty (show err)
 
 
 runVoteCreation

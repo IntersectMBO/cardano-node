@@ -18,10 +18,13 @@ import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import qualified System.IO as IO
 
+import           Cardano.Api.Pretty
+
 import           Cardano.CLI.Byron.Commands (ByronCommand)
 import           Cardano.CLI.Byron.Run (ByronClientCmdError, renderByronClientCmdError,
                    runByronClientCommand)
-import           Cardano.CLI.Ping (PingCmd (..), PingClientCmdError (..), renderPingClientCmdError, runPingCmd)
+import           Cardano.CLI.Ping (PingClientCmdError (..), PingCmd (..), renderPingClientCmdError,
+                   runPingCmd)
 import           Cardano.CLI.Shelley.Commands (ShelleyCommand)
 import           Cardano.CLI.Shelley.Run (ShelleyClientCmdError, renderShelleyClientCmdError,
                    runShelleyClientCommand)
@@ -70,7 +73,7 @@ runClientCommand (DeprecatedShelleySubcommand c) =
 runClientCommand (Help pprefs allParserInfo) = runHelp pprefs allParserInfo
 runClientCommand DisplayVersion = runDisplayVersion
 
-renderClientCommandError :: ClientCommandErrors -> Text
+renderClientCommandError :: ClientCommandErrors -> Doc Ann
 renderClientCommandError (ByronClientError err) =
   renderByronClientCmdError err
 renderClientCommandError (ShelleyClientError cmd err) =

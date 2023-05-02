@@ -41,6 +41,7 @@ import qualified Cardano.Ledger.Keys as Shelley
 import           Cardano.Api
 import qualified Cardano.Api.Byron as ByronApi
 import           Cardano.Api.Crypto.Ed25519Bip32 (xPrvFromBytes)
+import           Cardano.Api.Pretty
 import           Cardano.Api.Shelley
 
 import qualified Cardano.CLI.Byron.Key as Byron
@@ -69,24 +70,23 @@ data ShelleyKeyCmdError
   | ShelleyKeyCmdVerificationKeyReadError VerificationKeyTextOrFileError
   deriving Show
 
-renderShelleyKeyCmdError :: ShelleyKeyCmdError -> Text
+renderShelleyKeyCmdError :: ShelleyKeyCmdError -> Doc Ann
 renderShelleyKeyCmdError err =
   case err of
-    ShelleyKeyCmdReadFileError fileErr -> Text.pack (displayError fileErr)
-    ShelleyKeyCmdReadKeyFileError fileErr -> Text.pack (displayError fileErr)
-    ShelleyKeyCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
-    ShelleyKeyCmdByronKeyFailure e -> Byron.renderByronKeyFailure e
-    ShelleyKeyCmdByronKeyParseError errTxt -> errTxt
+    ShelleyKeyCmdReadFileError fileErr -> displayError fileErr
+    ShelleyKeyCmdReadKeyFileError fileErr -> displayError fileErr
+    ShelleyKeyCmdWriteFileError fileErr -> displayError fileErr
+    ShelleyKeyCmdByronKeyFailure e -> pretty (show (Byron.renderByronKeyFailure e))
+    ShelleyKeyCmdByronKeyParseError errTxt -> pretty errTxt
     ShelleyKeyCmdItnKeyConvError convErr -> renderConversionError convErr
     ShelleyKeyCmdWrongKeyTypeError ->
-      Text.pack "Please use a signing key file when converting ITN BIP32 or Extended keys"
-    ShelleyKeyCmdCardanoAddressSigningKeyFileError fileErr ->
-      Text.pack (displayError fileErr)
+      "Please use a signing key file when converting ITN BIP32 or Extended keys"
+    ShelleyKeyCmdCardanoAddressSigningKeyFileError fileErr -> displayError fileErr
     ShelleyKeyCmdNonLegacyKey fp ->
-      "Signing key at: " <> Text.pack fp <> " is not a legacy Byron signing key and should not need to be converted."
+      "Signing key at: " <> pretty fp <> " is not a legacy Byron signing key and should not need to be converted."
     ShelleyKeyCmdVerificationKeyReadError e -> renderVerificationKeyTextOrFileError e
     ShelleyKeyCmdExpectedExtendedVerificationKey someVerKey ->
-      "Expected an extended verification key but got: " <> renderSomeAddressVerificationKey someVerKey
+      "Expected an extended verification key but got: " <> pretty someVerKey
 
 runKeyCmd :: KeyCmd -> ExceptT ShelleyKeyCmdError IO ()
 runKeyCmd cmd =
@@ -466,20 +466,20 @@ data ItnKeyConversionError
   deriving Show
 
 -- | Render an error message for an 'ItnKeyConversionError'.
-renderConversionError :: ItnKeyConversionError -> Text
+renderConversionError :: ItnKeyConversionError -> Doc Ann
 renderConversionError err =
   case err of
     ItnKeyBech32DecodeError decErr ->
-      "Error decoding Bech32 key: " <> Text.pack (displayError decErr)
+      "Error decoding Bech32 key: " <> displayError decErr
     ItnReadBech32FileError fp readErr ->
-      "Error reading Bech32 key at: " <> textShow fp
-                        <> " Error: " <> Text.pack (displayException readErr)
+      "Error reading Bech32 key at: " <> pretty fp
+                        <> " Error: " <> pretty (displayException readErr)
     ItnSigningKeyDeserialisationError _sKey ->
       -- Sensitive data, such as the signing key, is purposely not included in
       -- the error message.
       "Error deserialising signing key."
     ItnVerificationKeyDeserialisationError vKey ->
-      "Error deserialising verification key: " <> textShow (BSC.unpack vKey)
+      "Error deserialising verification key: " <> pretty (BSC.unpack vKey)
 
 -- | Convert public ed25519 key to a Shelley stake verification key
 convertITNVerificationKey :: Text -> Either ItnKeyConversionError (VerificationKey StakeKey)
@@ -558,16 +558,15 @@ data CardanoAddressSigningKeyConversionError
   deriving (Show, Eq)
 
 instance Error CardanoAddressSigningKeyConversionError where
-  displayError = Text.unpack . renderCardanoAddressSigningKeyConversionError
+  displayError = renderCardanoAddressSigningKeyConversionError
 
 -- | Render an error message for a 'CardanoAddressSigningKeyConversionError'.
 renderCardanoAddressSigningKeyConversionError
   :: CardanoAddressSigningKeyConversionError
-  -> Text
+  -> Doc Ann
 renderCardanoAddressSigningKeyConversionError err =
   case err of
-    CardanoAddressSigningKeyBech32DecodeError decErr ->
-      Text.pack (displayError decErr)
+    CardanoAddressSigningKeyBech32DecodeError decErr -> displayError decErr
     CardanoAddressSigningKeyDeserialisationError _bs ->
       -- Sensitive data, such as the signing key, is purposely not included in
       -- the error message.

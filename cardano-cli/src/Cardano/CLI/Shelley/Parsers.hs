@@ -42,7 +42,7 @@ import           Network.Socket (PortNumber)
 import           Options.Applicative hiding (help, str)
 import qualified Options.Applicative as Opt
 import qualified Options.Applicative.Help as H
-import           Prettyprinter (line, pretty)
+import           Prettyprinter (line)
 import qualified Text.Parsec as Parsec
 import           Text.Parsec ((<?>))
 import qualified Text.Parsec.Error as Parsec
@@ -55,6 +55,7 @@ import qualified Cardano.Ledger.BaseTypes as Shelley
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 
 import           Cardano.Api
+import           Cardano.Api.Pretty
 import           Cardano.Api.Shelley
 
 import           Cardano.Chain.Common (BlockCount (BlockCount))
@@ -359,7 +360,7 @@ pScriptDataOrFile dataFlagPrefix helpTextForValue helpTextForFile =
         Left e -> fail $ "readerScriptData: " <> e
         Right sDataValue ->
           case scriptDataJsonToHashable ScriptDataJsonNoSchema sDataValue of
-            Left err -> fail (displayError err)
+            Left err -> fail $ renderStringDefault $ displayError err
             Right sd -> return sd
 
 pStakeAddressCmd :: EnvCli -> Parser StakeAddressCmd
@@ -2026,7 +2027,7 @@ pGenesisVerificationKeyHash =
   where
     deserialiseFromHex :: String -> Either String (Hash GenesisKey)
     deserialiseFromHex =
-      first (\e -> "Invalid genesis verification key hash: " ++ displayError e)
+      first (\e -> renderStringDefault $ "Invalid genesis verification key hash: " <> displayError e)
         . deserialiseFromRawBytesHex (AsHash AsGenesisKey)
         . BSC.pack
 
@@ -2041,7 +2042,7 @@ pGenesisVerificationKey =
   where
     deserialiseFromHex :: String -> Either String (VerificationKey GenesisKey)
     deserialiseFromHex =
-      first (\e -> "Invalid genesis verification key: " ++ displayError e)
+      first (\e -> "Invalid genesis verification key: " <> renderStringDefault (displayError e))
         . deserialiseFromRawBytesHex (AsVerificationKey AsGenesisKey)
         . BSC.pack
 
@@ -2077,7 +2078,7 @@ pGenesisDelegateVerificationKeyHash =
     deserialiseFromHex =
       first
         (\e ->
-          "Invalid genesis delegate verification key hash: " ++ displayError e)
+          renderStringDefault $ "Invalid genesis delegate verification key hash: " <> displayError e)
         . deserialiseFromRawBytesHex (AsHash AsGenesisDelegateKey)
         . BSC.pack
 
@@ -2095,7 +2096,7 @@ pGenesisDelegateVerificationKey =
       -> Either String (VerificationKey GenesisDelegateKey)
     deserialiseFromHex =
       first
-        (\e -> "Invalid genesis delegate verification key: " ++ displayError e)
+        (\e -> renderStringDefault $ "Invalid genesis delegate verification key: " <> displayError e)
         . deserialiseFromRawBytesHex (AsVerificationKey AsGenesisDelegateKey)
         . BSC.pack
 
@@ -2134,15 +2135,15 @@ pKesVerificationKey =
         Right res -> Right res
 
         -- The input was valid Bech32, but some other error occurred.
-        Left err@(Bech32UnexpectedPrefix _ _) -> Left (displayError err)
-        Left err@(Bech32DataPartToBytesError _) -> Left (displayError err)
-        Left err@(Bech32DeserialiseFromBytesError _) -> Left (displayError err)
-        Left err@(Bech32WrongPrefix _ _) -> Left (displayError err)
+        Left err@(Bech32UnexpectedPrefix _ _) -> Left (renderStringDefault $ displayError err)
+        Left err@(Bech32DataPartToBytesError _) -> Left (renderStringDefault $ displayError err)
+        Left err@(Bech32DeserialiseFromBytesError _) -> Left (renderStringDefault $ displayError err)
+        Left err@(Bech32WrongPrefix _ _) -> Left (renderStringDefault $ displayError err)
 
         -- The input was not valid Bech32. Attempt to deserialise it as hex.
         Left (Bech32DecodingError _) ->
           first
-            (\e -> "Invalid stake pool verification key: " ++ displayError e) $
+            (\e -> renderStringDefault $ "Invalid stake pool verification key: " <> displayError e) $
           deserialiseFromRawBytesHex asType (BSC.pack str)
 
 pKesVerificationKeyFile :: Parser (VerificationKeyFile In)
@@ -2306,7 +2307,7 @@ parseTxId = do
   str <- some Parsec.hexDigit <?> "transaction id (hexadecimal)"
   case deserialiseFromRawBytesHex AsTxId (BSC.pack str) of
     Right addr -> return addr
-    Left e -> fail $ "Incorrect transaction id format: " ++ displayError e
+    Left e -> fail $ renderStringDefault $ "Incorrect transaction id format: " <> displayError e
 
 parseTxIx :: Parsec.Parser TxIx
 parseTxIx = TxIx . fromIntegral <$> decimal
@@ -2749,14 +2750,14 @@ pStakePoolVerificationKeyHash =
     pHexStakePoolId :: ReadM (Hash StakePoolKey)
     pHexStakePoolId =
       Opt.eitherReader $
-        first displayError
+        first (renderStringDefault . displayError)
           . deserialiseFromRawBytesHex (AsHash AsStakePoolKey)
           . BSC.pack
 
     pBech32StakePoolId :: ReadM (Hash StakePoolKey)
     pBech32StakePoolId =
       Opt.eitherReader $
-        first displayError
+        first (renderStringDefault . displayError)
         . deserialiseFromBech32 (AsHash AsStakePoolKey)
         . Text.pack
 
@@ -2805,7 +2806,7 @@ pVrfVerificationKeyHash =
   where
     deserialiseFromHex :: String -> Either String (Hash VrfKey)
     deserialiseFromHex =
-      first (\e -> "Invalid VRF verification key hash: " ++ displayError e)
+      first (\e -> "Invalid VRF verification key hash: " <> renderStringDefault (displayError e))
         . deserialiseFromRawBytesHex (AsHash AsVrfKey)
         . BSC.pack
 
@@ -3014,7 +3015,7 @@ pStakePoolMetadataHash =
   where
     metadataHash :: String -> Either String (Hash StakePoolMetadata)
     metadataHash =
-      first displayError
+      first (renderStringDefault . displayError)
         . deserialiseFromRawBytesHex (AsHash AsStakePoolMetadata)
         . BSC.pack
 
@@ -3392,7 +3393,7 @@ readVerificationKey asType =
       :: String
       -> Either String (VerificationKey keyrole)
     deserialiseFromBech32OrHex str =
-      first (Text.unpack . renderInputDecodeError) $
+      first (renderStringDefault . renderInputDecodeError) $
         deserialiseInput (AsVerificationKey asType) keyFormats (BSC.pack str)
 
 readOutputFormat :: Opt.ReadM OutputFormat

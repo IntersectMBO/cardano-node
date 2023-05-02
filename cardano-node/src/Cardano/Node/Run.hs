@@ -22,6 +22,7 @@ module Cardano.Node.Run
 
 import           Cardano.Api (File (..), FileDirection (..))
 import qualified Cardano.Api as Api
+import           Cardano.Api.Pretty
 
 import           Cardano.Prelude (FatalError (..))
 
@@ -115,7 +116,7 @@ import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
 import           Cardano.Node.TraceConstraints (TraceConstraints)
 import           Cardano.Tracing.Tracers
-import Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing(..))
+import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
@@ -155,7 +156,7 @@ runNode cmdPc = do
 
     p :: SomeConsensusProtocol <-
       case eitherSomeProtocol of
-        Left err -> putStrLn (Api.displayError err) >> exitFailure
+        Left err -> putStrLn (renderStringDefault (Api.displayError err)) >> exitFailure
         Right p  -> pure p
 
     let networkMagic :: Api.NetworkMagic =

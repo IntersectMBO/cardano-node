@@ -41,18 +41,20 @@ import           Control.Monad (foldM, when)
 import           Data.Either.Combinators (maybeToRight)
 import           Data.Function ((&))
 import qualified Data.Map.Strict as Map
-import           Data.String (IsString(..))
+import           Data.String (IsString (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Lazy as Text.Lazy
 import qualified Data.Text.Lazy.Builder as Text.Builder
 import           Data.Word (Word64)
 import           Formatting (build, sformat)
+import qualified Prettyprinter as PP
 
 import           Cardano.Api.Eras
-import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.Pretty
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
@@ -62,7 +64,7 @@ import           Cardano.Api.TxBody
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 
-import           Cardano.Binary (DecoderError(..))
+import           Cardano.Binary (DecoderError (..))
 import           Cardano.Ledger.Crypto (HASH, StandardCrypto)
 
 import           Cardano.Crypto.Hash (hashFromBytes, hashToBytes, hashWith)
@@ -284,14 +286,16 @@ data GovernancePollMismatchError = GovernancePollMismatchError
   }
   deriving Show
 
-renderGovernancePollError :: GovernancePollError -> Text
+renderGovernancePollError :: GovernancePollError -> Doc Ann
 renderGovernancePollError err =
   case err of
-    ErrGovernancePollMismatch mismatchErr -> mconcat
-      [ "Answer's poll doesn't match provided poll (hash mismatch).\n"
-      , "  Hash specified in answer:  " <> textShow (specifiedHashInAnswer mismatchErr)
-      , "\n"
-      , "  Hash calculated from poll: " <> textShow (calculatedHashFromPoll mismatchErr)
+    ErrGovernancePollMismatch mismatchErr ->
+      PP.vsep
+      [ "Answer's poll doesn't match provided poll (hash mismatch)."
+      , PP.indent 2 $ PP.vsep
+        [ "Hash specified in answer:  " <> pretty (show (specifiedHashInAnswer mismatchErr))
+        , "Hash calculated from poll: " <> pretty (show (calculatedHashFromPoll mismatchErr))
+        ]
       ]
     ErrGovernancePollNoAnswer ->
       "No answer found in the provided transaction's metadata."
@@ -301,24 +305,20 @@ renderGovernancePollError err =
       , "and cannot be mere payment keys."
       ]
     ErrGovernancePollMalformedAnswer decoderErr ->
-      "Malformed metadata; couldn't deserialise answer: " <> sformat build decoderErr
+      "Malformed metadata; couldn't deserialise answer: " <> pretty (sformat build decoderErr)
     ErrGovernancePollInvalidAnswer invalidAnswer ->
-        mconcat
+      PP.vsep
+        [ mconcat
           [ "Invalid answer ("
-          , textShow (invalidAnswerReceivedAnswer invalidAnswer)
+          , pretty (invalidAnswerReceivedAnswer invalidAnswer)
           , ") not part of the poll."
-          , "\n"
-          , "Accepted answers:"
-          , "\n"
-          , Text.intercalate "\n"
-              [ mconcat
-                  [ textShow ix
-                  , " → "
-                  , answer
-                  ]
-              | (ix, answer) <- invalidAnswerAcceptableAnswers invalidAnswer
-              ]
           ]
+        , "Accepted answers:"
+        , PP.vsep
+          [ pretty ix <> " → " <> pretty answer
+          | (ix, answer) <- invalidAnswerAcceptableAnswers invalidAnswer
+          ]
+        ]
 
 -- | Verify a poll against a given transaction and returns the signatories
 -- (verification key only) when valid.

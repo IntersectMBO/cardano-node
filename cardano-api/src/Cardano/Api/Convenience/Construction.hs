@@ -17,18 +17,17 @@ import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.Text (Text)
-import qualified Data.Text as Text
+import qualified Prettyprinter as PP
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.Fees
+import           Cardano.Api.Pretty
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
-import           Cardano.Api.Utils
 
 -- | Construct a balanced transaction.
 -- See Cardano.Api.Convenience.Query.queryStateForBalancedTx for a
@@ -61,13 +60,14 @@ data TxInsExistError
   = TxInsDoNotExist [TxIn]
   | EmptyUTxO
 
-renderTxInsExistError :: TxInsExistError -> Text
+renderTxInsExistError :: TxInsExistError -> Doc Ann
 renderTxInsExistError EmptyUTxO =
   "The UTxO is empty"
 renderTxInsExistError (TxInsDoNotExist txins) =
-  "The following tx input(s) were not present in the UTxO: " <>
-  Text.singleton '\n' <>
-  Text.intercalate (Text.singleton '\n') (map renderTxIn txins)
+  PP.vsep
+    [ "The following tx input(s) were not present in the UTxO:"
+    , PP.indent 2 $ PP.vsep $ map pretty txins
+    ]
 
 txInsExistInUTxO :: [TxIn] -> UTxO era -> Either TxInsExistError ()
 txInsExistInUTxO ins (UTxO utxo)
@@ -81,10 +81,10 @@ txInsExistInUTxO ins (UTxO utxo)
 
 newtype ScriptLockedTxInsError = ScriptLockedTxIns [TxIn]
 
-renderNotScriptLockedTxInsError :: ScriptLockedTxInsError -> Text
+renderNotScriptLockedTxInsError :: ScriptLockedTxInsError -> Doc Ann
 renderNotScriptLockedTxInsError (ScriptLockedTxIns txins) =
   "The followings tx inputs were expected to be key witnessed but are actually script witnessed: " <>
-  textShow (map renderTxIn txins)
+  PP.prettyList (map renderTxIn txins)
 
 notScriptLockedTxIns :: [TxIn] -> UTxO era -> Either ScriptLockedTxInsError ()
 notScriptLockedTxIns collTxIns (UTxO utxo) = do

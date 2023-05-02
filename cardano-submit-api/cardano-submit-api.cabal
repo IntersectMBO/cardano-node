@@ -52,6 +52,7 @@ library
                       , ouroboros-consensus-cardano
                       , ouroboros-network
                       , ouroboros-network-protocols
+                      , prettyprinter
                       , prometheus
                       , servant
                       , servant-server

@@ -65,10 +65,12 @@ import qualified Cardano.Ledger.TxIn as Ledger
 
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Pretty (renderStringDefault)
 import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.Utils
+import           Prettyprinter (Pretty (..))
 
 {- HLINT ignore "Redundant flip" -}
 {- HLINT ignore "Use section" -}
@@ -114,6 +116,9 @@ fromShelleyTxId (Ledger.TxId h) =
 data TxIn = TxIn TxId TxIx
   deriving (Eq, Ord, Show)
 
+instance Pretty TxIn where
+  pretty = pretty . renderTxIn
+
 instance ToJSON TxIn where
   toJSON txIn = Aeson.String $ renderTxIn txIn
 
@@ -130,7 +135,7 @@ parseTxId :: Parsec.Parser TxId
 parseTxId = do
   str <- some Parsec.hexDigit <?> "transaction id (hexadecimal)"
   failEitherWith
-    (\e -> "Incorrect transaction id format: " ++ displayError e) $
+    (\e -> "Incorrect transaction id format: " <> renderStringDefault (displayError e)) $
     deserialiseFromRawBytesHex AsTxId $ BSC.pack str
 
 parseTxIn :: Parsec.Parser TxIn

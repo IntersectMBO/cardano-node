@@ -37,12 +37,12 @@ module Cardano.CLI.Shelley.Run.Validate
 import           Prelude
 
 import           Cardano.Api
+import           Cardano.Api.Pretty
 import           Cardano.Api.Shelley
 
 import           Data.Bifunctor (first)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
-import qualified Data.Text as Text
 
 data ScriptLanguageValidationError
   = ScriptLanguageValidationError AnyScriptLanguage AnyCardanoEra
@@ -50,8 +50,8 @@ data ScriptLanguageValidationError
 
 instance Error ScriptLanguageValidationError where
   displayError (ScriptLanguageValidationError lang era) =
-    "The script language " <> show lang <> " is not supported in the " <>
-    Text.unpack (renderEra era) <> " era."
+    "The script language " <> pretty (show lang) <> " is not supported in the " <>
+    pretty (renderEra era) <> " era."
 
 validateScriptSupportedInEra
   :: CardanoEra era
@@ -71,9 +71,9 @@ data TxFeeValidationError
 
 instance Error TxFeeValidationError where
   displayError (TxFeatureImplicitFeesE era) =
-    "Implicit transaction fee not supported in " <> Text.unpack (renderEra era)
+    "Implicit transaction fee not supported in " <> pretty (renderEra era)
   displayError (TxFeatureExplicitFeesE era) =
-    "Explicit transaction fee not supported in " <> Text.unpack (renderEra era)
+    "Explicit transaction fee not supported in " <> pretty (renderEra era)
 
 validateTxFee :: CardanoEra era
               -> Maybe Lovelace
@@ -96,7 +96,7 @@ newtype TxTotalCollateralValidationError
 
 instance Error TxTotalCollateralValidationError where
   displayError (TxTotalCollateralNotSupported era) =
-    "Transaction collateral not supported in " <> Text.unpack (renderEra era)
+    "Transaction collateral not supported in " <> pretty (renderEra era)
 
 validateTxTotalCollateral :: CardanoEra era
                           -> Maybe Lovelace
@@ -115,7 +115,7 @@ newtype TxReturnCollateralValidationError
 
 instance Error TxReturnCollateralValidationError where
   displayError (TxReturnCollateralNotSupported era) =
-    "Transaction return collateral not supported in " <> Text.unpack (renderEra era)
+    "Transaction return collateral not supported in " <> pretty (renderEra era)
 
 validateTxReturnCollateral :: CardanoEra era
                            -> Maybe (TxOut CtxTx era)
@@ -134,7 +134,7 @@ newtype TxValidityLowerBoundValidationError
 
 instance Error TxValidityLowerBoundValidationError where
   displayError (TxValidityLowerBoundNotSupported era) =
-    "Transaction validity lower bound not supported in " <> Text.unpack (renderEra era)
+    "Transaction validity lower bound not supported in " <> pretty (renderEra era)
 
 
 validateTxValidityLowerBound :: CardanoEra era
@@ -154,7 +154,7 @@ newtype TxValidityUpperBoundValidationError
 
 instance Error TxValidityUpperBoundValidationError where
   displayError (TxValidityUpperBoundNotSupported era) =
-    "Transaction validity upper bound must be specified in " <> Text.unpack (renderEra era)
+    "Transaction validity upper bound must be specified in " <> pretty (renderEra era)
 
 validateTxValidityUpperBound
   :: CardanoEra era
@@ -180,7 +180,7 @@ data TxAuxScriptsValidationError
 
 instance Error TxAuxScriptsValidationError where
   displayError (TxAuxScriptsNotSupportedInEra era) =
-    "Transaction auxiliary scripts are not supported in " <> Text.unpack (renderEra era)
+    "Transaction auxiliary scripts are not supported in " <> pretty (renderEra era)
   displayError (TxAuxScriptsLanguageError e) =
     "Transaction auxiliary scripts error: " <> displayError e
 
@@ -204,7 +204,7 @@ newtype TxRequiredSignersValidationError
 
 instance Error TxRequiredSignersValidationError where
   displayError (TxRequiredSignersValidationError e) =
-    "Transaction required signers are not supported in " <> Text.unpack (renderEra e)
+    "Transaction required signers are not supported in " <> pretty (renderEra e)
 
 validateRequiredSigners
   :: CardanoEra era
@@ -224,7 +224,7 @@ newtype TxWithdrawalsValidationError
 
 instance Error TxWithdrawalsValidationError where
   displayError (TxWithdrawalsNotSupported e) =
-    "Transaction withdrawals are not supported in " <> Text.unpack (renderEra e)
+    "Transaction withdrawals are not supported in " <> pretty (renderEra e)
 
 validateTxWithdrawals
   :: forall era.
@@ -256,7 +256,7 @@ newtype TxCertificatesValidationError
 
 instance Error TxCertificatesValidationError where
   displayError (TxCertificatesValidationNotSupported e) =
-    "Transaction certificates are not supported in " <> Text.unpack (renderEra e)
+    "Transaction certificates are not supported in " <> pretty (renderEra e)
 
 validateTxCertificates
   :: forall era.
@@ -304,7 +304,7 @@ newtype TxProtocolParametersValidationError
 
 instance Error TxProtocolParametersValidationError where
   displayError (ProtocolParametersNotSupported e) =
-    "Transaction protocol parameters are not supported in " <> Text.unpack (renderEra e)
+    "Transaction protocol parameters are not supported in " <> pretty (renderEra e)
 
 validateProtocolParameters
   :: CardanoEra era
@@ -324,7 +324,7 @@ newtype TxUpdateProposalValidationError
 
 instance Error TxUpdateProposalValidationError where
   displayError (TxUpdateProposalNotSupported e) =
-    "Transaction update proposal is not supported in " <> Text.unpack (renderEra e)
+    "Transaction update proposal is not supported in " <> pretty (renderEra e)
 
 validateTxUpdateProposal
   :: CardanoEra era
@@ -344,7 +344,7 @@ newtype TxScriptValidityValidationError
 
 instance Error TxScriptValidityValidationError where
   displayError (ScriptValidityNotSupported e) =
-    "Transaction script validity is not supported in " <> Text.unpack (renderEra e)
+    "Transaction script validity is not supported in " <> pretty (renderEra e)
 
 validateTxScriptValidity
   :: CardanoEra era

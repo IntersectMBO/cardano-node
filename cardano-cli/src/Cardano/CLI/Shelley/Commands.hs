@@ -47,6 +47,7 @@ module Cardano.CLI.Shelley.Commands
 
 import           Prelude
 
+import           Cardano.Api.Pretty
 import           Cardano.Api.Shelley
 
 import           Data.Text (Text)
@@ -76,7 +77,7 @@ data ShelleyCommand
   | GenesisCmd      GenesisCmd
   | TextViewCmd     TextViewCmd
 
-renderShelleyCommand :: ShelleyCommand -> Text
+renderShelleyCommand :: ShelleyCommand -> Doc Ann
 renderShelleyCommand sc =
   case sc of
     AddressCmd cmd -> renderAddressCmd cmd
@@ -102,7 +103,7 @@ data AddressCmd
   deriving Show
 
 
-renderAddressCmd :: AddressCmd -> Text
+renderAddressCmd :: AddressCmd -> Doc Ann
 renderAddressCmd cmd =
   case cmd of
     AddressKeyGen {} -> "address key-gen"
@@ -122,7 +123,7 @@ data StakeAddressCmd
   | StakeCredentialDeRegistrationCert StakeIdentifier (File () Out)
   deriving Show
 
-renderStakeAddressCmd :: StakeAddressCmd -> Text
+renderStakeAddressCmd :: StakeAddressCmd -> Doc Ann
 renderStakeAddressCmd cmd =
   case cmd of
     StakeAddressKeyGen {} -> "stake-address key-gen"
@@ -143,7 +144,7 @@ data KeyCmd
   | KeyConvertCardanoAddressSigningKey CardanoAddressKeyType (SigningKeyFile In) (File () Out)
   deriving Show
 
-renderKeyCmd :: KeyCmd -> Text
+renderKeyCmd :: KeyCmd -> Doc Ann
 renderKeyCmd cmd =
   case cmd of
     KeyGetVerificationKey {} -> "key verification-key"
@@ -258,7 +259,7 @@ data TransactionCmd
 data InputTxBodyOrTxFile = InputTxBodyFile (TxBodyFile In) | InputTxFile (TxFile In)
   deriving Show
 
-renderTransactionCmd :: TransactionCmd -> Text
+renderTransactionCmd :: TransactionCmd -> Doc Ann
 renderTransactionCmd cmd =
   case cmd of
     TxBuild {} -> "transaction build"
@@ -284,7 +285,7 @@ data NodeCmd
                     KESPeriod (File () Out)
   deriving Show
 
-renderNodeCmd :: NodeCmd -> Text
+renderNodeCmd :: NodeCmd -> Doc Ann
 renderNodeCmd cmd = do
   case cmd of
     NodeKeyGenCold {} -> "node key-gen"
@@ -327,7 +328,7 @@ data PoolCmd
   | PoolMetadataHash PoolMetadataFile (Maybe (File () Out))
   deriving Show
 
-renderPoolCmd :: PoolCmd -> Text
+renderPoolCmd :: PoolCmd -> Doc Ann
 renderPoolCmd cmd =
   case cmd of
     PoolRegistrationCert {} -> "stake-pool registration-certificate"
@@ -370,7 +371,7 @@ data QueryCmd =
   | QueryTxMempool SocketPath AnyConsensusModeParams NetworkId TxMempoolQuery (Maybe (File () Out))
   deriving Show
 
-renderQueryCmd :: QueryCmd -> Text
+renderQueryCmd :: QueryCmd -> Doc Ann
 renderQueryCmd cmd =
   case cmd of
     QueryLeadershipSchedule {} -> "query leadership-schedule"
@@ -389,7 +390,7 @@ renderQueryCmd cmd =
   where
     renderTxMempoolQuery query =
       case query of
-        TxMempoolQueryTxExists tx -> "tx-exists " <> serialiseToRawBytesHexText tx
+        TxMempoolQueryTxExists tx -> "tx-exists " <> pretty (serialiseToRawBytesHexText tx)
         TxMempoolQueryNextTx -> "next-tx"
         TxMempoolQueryInfo -> "info"
 
@@ -425,7 +426,7 @@ data GovernanceCmd
       (Maybe (File () Out)) -- Tx file
   deriving Show
 
-renderGovernanceCmd :: GovernanceCmd -> Text
+renderGovernanceCmd :: GovernanceCmd -> Doc Ann
 renderGovernanceCmd cmd =
   case cmd of
     GovernanceGenesisKeyDelegationCertificate {} -> "governance create-genesis-key-delegation-certificate"
@@ -442,7 +443,7 @@ data TextViewCmd
   deriving Show
 
 
-renderTextViewCmd :: TextViewCmd -> Text
+renderTextViewCmd :: TextViewCmd -> Doc Ann
 renderTextViewCmd (TextViewInfo _ _) = "text-view decode-cbor"
 
 data GenesisCmd
@@ -472,7 +473,7 @@ data GenesisCmd
   | GenesisHashFile GenesisFile
   deriving Show
 
-renderGenesisCmd :: GenesisCmd -> Text
+renderGenesisCmd :: GenesisCmd -> Doc Ann
 renderGenesisCmd cmd =
   case cmd of
     GenesisCreate {} -> "genesis create"

@@ -14,6 +14,7 @@ module Cardano.CLI.Shelley.Output
 import           Prelude
 
 import           Cardano.Api
+import           Cardano.Api.Pretty
 import           Cardano.Api.Shelley
 import           Data.Aeson
 import qualified Data.Aeson.Key as Aeson
@@ -21,7 +22,6 @@ import qualified Data.List as List
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
-import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime)
 import           Data.Word
 
@@ -267,17 +267,17 @@ data PlutusScriptCostError
 
 instance Error PlutusScriptCostError where
   displayError (PlutusScriptCostErrPlutusScriptNotFound sWitIndex) =
-    "No Plutus script was found at: " <> show sWitIndex
+    "No Plutus script was found at: " <> renderScriptWitnessIndex sWitIndex
   displayError (PlutusScriptCostErrExecError sWitIndex sHash sExecErro) =
-    "Plutus script at: " <> show sWitIndex <> " with hash: " <> show sHash <>
+    "Plutus script at: " <> renderScriptWitnessIndex sWitIndex <> " with hash: " <> pretty (show sHash) <>
     " errored with: " <> displayError sExecErro
   displayError (PlutusScriptCostErrRationalExceedsBound eUnitPrices eUnits) =
-    "Either the execution unit prices: " <> show eUnitPrices <> " or the execution units: " <>
-    show eUnits <> " or both are either too precise or not within bounds"
+    "Either the execution unit prices: " <> pretty (show eUnitPrices) <> " or the execution units: " <>
+    pretty (show eUnits) <> " or both are either too precise or not within bounds"
   displayError (PlutusScriptCostErrRefInputNoScript txin) =
-    "No reference script found at input: " <> Text.unpack (renderTxIn txin)
+    "No reference script found at input: " <> pretty (renderTxIn txin)
   displayError (PlutusScriptCostErrRefInputNotInUTxO txin) =
-    "Reference input was not found in utxo: " <> Text.unpack (renderTxIn txin)
+    "Reference input was not found in utxo: " <> pretty (renderTxIn txin)
 
 renderScriptCosts
   :: UTxO era

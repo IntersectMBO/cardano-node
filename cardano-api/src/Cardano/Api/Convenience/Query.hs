@@ -19,7 +19,6 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistMaybe, lef
 import           Data.Function ((&))
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.Text (Text)
 
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..))
 
@@ -30,10 +29,10 @@ import           Cardano.Api.Eras
 import           Cardano.Api.IPC
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
+import           Cardano.Api.Pretty
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
 import           Cardano.Api.TxBody
-import           Cardano.Api.Utils
 import           Control.Monad.Trans (MonadTrans (..))
 
 data QueryConvenienceError
@@ -43,20 +42,20 @@ data QueryConvenienceError
   | ByronEraNotSupported
   | EraConsensusModeMismatch !AnyConsensusMode !AnyCardanoEra
 
-renderQueryConvenienceError :: QueryConvenienceError -> Text
+renderQueryConvenienceError :: QueryConvenienceError -> Doc Ann
 renderQueryConvenienceError (AcqFailure e) =
-  "Acquiring failure: " <> textShow e
+  "Acquiring failure: " <> pretty (show e)
 renderQueryConvenienceError (SockErr e) =
   renderEnvSocketError e
 renderQueryConvenienceError (QueryEraMismatch (EraMismatch ledgerEraName' otherEraName')) =
   "The era of the node and the tx do not match. " <>
-  "The node is running in the " <> ledgerEraName' <>
-  " era, but the transaction is for the " <> otherEraName' <> " era."
+  "The node is running in the " <> pretty ledgerEraName' <>
+  " era, but the transaction is for the " <> pretty otherEraName' <> " era."
 renderQueryConvenienceError ByronEraNotSupported =
   "Byron era not supported"
 renderQueryConvenienceError (EraConsensusModeMismatch cMode anyCEra) =
-  "Consensus mode and era mismatch. Consensus mode: " <> textShow cMode <>
-  " Era: " <> textShow anyCEra
+  "Consensus mode and era mismatch. Consensus mode: " <> pretty cMode <>
+  " Era: " <> pretty anyCEra
 
 -- | A convenience function to query the relevant information, from
 -- the local node, for Cardano.Api.Convenience.Construction.constructBalancedTx

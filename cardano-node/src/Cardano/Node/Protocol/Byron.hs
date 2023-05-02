@@ -12,15 +12,15 @@ module Cardano.Node.Protocol.Byron
   , readLeaderCredentials
   ) where
 
-import           Cardano.Prelude (ConvertText (..), canonicalDecodePretty)
+import           Cardano.Prelude (canonicalDecodePretty)
 
 import           Control.Monad.Except (throwError)
 import           Control.Monad.Trans.Except.Extra (bimapExceptT, firstExceptT, hoistEither, left)
 import qualified Data.ByteString.Lazy as LB
 import           Data.Maybe (fromMaybe)
-import qualified Data.Text as Text
 
 import           Cardano.Api.Byron
+import           Cardano.Api.Pretty
 
 import qualified Cardano.Crypto.Hash as Crypto
 
@@ -191,25 +191,25 @@ data ByronProtocolInstantiationError =
 
 instance Error ByronProtocolInstantiationError where
   displayError (CanonicalDecodeFailure fp failure) =
-        "Canonical decode failure in " <> fp
-     <> " Canonical failure: " <> Text.unpack failure
+        "Canonical decode failure in " <> pretty fp
+     <> " Canonical failure: " <> pretty failure
   displayError (GenesisHashMismatch actual expected) =
-        "Wrong Byron genesis file: the actual hash is " <> show actual
+        "Wrong Byron genesis file: the actual hash is " <> pretty actual
      <> ", but the expected Byron genesis hash given in the node configuration "
-     <> "file is " <> show expected
+     <> "file is " <> pretty expected
   displayError DelegationCertificateFilepathNotSpecified =
         "Delegation certificate filepath not specified"
     --TODO: Implement configuration error render function in cardano-ledger
   displayError (GenesisConfigurationError fp genesisConfigError) =
-        "Genesis configuration error in: " <> toS fp
-     <> " Error: " <> show genesisConfigError
+        "Genesis configuration error in: " <> pretty fp
+     <> " Error: " <> pretty (show genesisConfigError)
   displayError (GenesisReadError fp err) =
-        "There was an error parsing the genesis file: " <> toS fp
-     <> " Error: " <> show err
+        "There was an error parsing the genesis file: " <> pretty fp
+     <> " Error: " <> pretty (show err)
     -- TODO: Implement ByronLeaderCredentialsError render function in ouroboros-network
   displayError (CredentialsError byronLeaderCredentialsError) =
-        "Byron leader credentials error: " <> show byronLeaderCredentialsError
+        "Byron leader credentials error: " <> pretty (show byronLeaderCredentialsError)
   displayError (SigningKeyDeserialiseFailure fp) =
-        "Signing key deserialisation error in: " <> toS fp
+        "Signing key deserialisation error in: " <> pretty fp
   displayError SigningKeyFilepathNotSpecified =
         "Signing key filepath not specified"

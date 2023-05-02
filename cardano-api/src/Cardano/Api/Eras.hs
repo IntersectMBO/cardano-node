@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -6,6 +7,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+
 
 
 -- | Cardano eras, sometimes we have to distinguish them.
@@ -57,7 +59,9 @@ import           Control.DeepSeq
 import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
 import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
+import           Prettyprinter (Pretty (..))
 
+import           Cardano.Api.Pretty (InstanceShow (..))
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.BaseTypes as L
 import           Ouroboros.Consensus.Shelley.Eras as Consensus (StandardAllegra, StandardAlonzo,
@@ -177,9 +181,11 @@ data CardanoEra era where
      ConwayEra  :: CardanoEra ConwayEra
      -- when you add era here, change `instance Bounded AnyCardanoEra`
 
-deriving instance Eq   (CardanoEra era)
-deriving instance Ord  (CardanoEra era)
-deriving instance Show (CardanoEra era)
+deriving instance Eq     (CardanoEra era)
+deriving instance Ord    (CardanoEra era)
+deriving instance Show   (CardanoEra era)
+
+deriving via InstanceShow (CardanoEra era) instance Pretty (CardanoEra era)
 
 instance ToJSON (CardanoEra era) where
    toJSON ByronEra   = "Byron"
@@ -235,6 +241,7 @@ data AnyCardanoEra where
                    -> AnyCardanoEra
 
 deriving instance Show AnyCardanoEra
+deriving via (InstanceShow AnyCardanoEra) instance Pretty AnyCardanoEra
 
 instance Eq AnyCardanoEra where
     AnyCardanoEra era == AnyCardanoEra era' =

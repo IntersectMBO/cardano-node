@@ -66,6 +66,7 @@ import           Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, getCurre
 import           Data.Word (Word64)
 import           GHC.Generics (Generic)
 import           Lens.Micro ((^.))
+import qualified Prettyprinter as PP
 import qualified System.IO as IO
 import qualified System.Random as Random
 import           System.Random (StdGen)
@@ -91,6 +92,7 @@ import qualified Cardano.Crypto.Hash as Crypto
 import           Cardano.Api
 import           Cardano.Api.Byron (toByronLovelace, toByronProtocolMagicId,
                    toByronRequiresNetworkMagic)
+import           Cardano.Api.Pretty
 import           Cardano.Api.Shelley
 
 import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesisStaking (..))
@@ -169,46 +171,54 @@ instance Error ShelleyGenesisCmdError where
   displayError err =
     case err of
       ShelleyGenesisCmdAesonDecodeError fp decErr ->
-        "Error while decoding Shelley genesis at: " <> fp <> " Error: " <> Text.unpack decErr
+        "Error while decoding Shelley genesis at: " <> pretty fp <> " Error: " <> pretty decErr
       ShelleyGenesisCmdGenesisFileError fe -> displayError fe
       ShelleyGenesisCmdFileError fe -> displayError fe
       ShelleyGenesisCmdMismatchedGenesisKeyFiles gfiles dfiles vfiles ->
-        "Mismatch between the files found:\n"
-          <> "Genesis key file indexes:      " <> show gfiles <> "\n"
-          <> "Delegate key file indexes:     " <> show dfiles <> "\n"
-          <> "Delegate VRF key file indexes: " <> show vfiles
+        PP.vsep
+        [ "Mismatch between the files found"
+        , "Genesis key file indexes:      " <> pretty gfiles
+        , "Delegate key file indexes:     " <> pretty dfiles
+        , "Delegate VRF key file indexes: " <> pretty vfiles
+        ]
       ShelleyGenesisCmdFilesNoIndex files ->
-        "The genesis keys files are expected to have a numeric index but these do not:\n"
-          <> unlines files
+        PP.vsep
+        [ "The genesis keys files are expected to have a numeric index but these do not:"
+        , PP.indent 2 $ PP.vsep (pretty <$> files)
+        ]
       ShelleyGenesisCmdFilesDupIndex files ->
-        "The genesis keys files are expected to have a unique numeric index but these do not:\n"
-          <> unlines files
+        PP.vsep
+        [ "The genesis keys files are expected to have a unique numeric index but these do not:"
+        , PP.indent 2 $ PP.vsep (pretty <$> files)
+        ]
       ShelleyGenesisCmdTextEnvReadFileError fileErr -> displayError fileErr
-      ShelleyGenesisCmdUnexpectedAddressVerificationKey (File file) expect got -> mconcat
-        [ "Unexpected address verification key type in file ", file
-        , ", expected: ", Text.unpack expect, ", got: ", Text.unpack (renderSomeAddressVerificationKey got)
+      ShelleyGenesisCmdUnexpectedAddressVerificationKey (File file) expect got ->
+        mconcat
+        [ "Unexpected address verification key type in file ", pretty file
+        , ", expected: ", pretty expect, ", got: ", pretty got
         ]
-      ShelleyGenesisCmdTooFewPoolsForBulkCreds pools files perPool -> mconcat
-        [ "Number of pools requested for generation (", show pools
-        , ") is insufficient to fill ", show files
-        , " bulk files, with ", show perPool, " pools per file."
+      ShelleyGenesisCmdTooFewPoolsForBulkCreds pools files perPool ->
+        mconcat
+        [ "Number of pools requested for generation (", pretty pools
+        , ") is insufficient to fill ", pretty files
+        , " bulk files, with ", pretty perPool, " pools per file."
         ]
-      ShelleyGenesisCmdAddressCmdError e -> Text.unpack $ renderShelleyAddressCmdError e
-      ShelleyGenesisCmdNodeCmdError e -> Text.unpack $ renderShelleyNodeCmdError e
-      ShelleyGenesisCmdPoolCmdError e -> Text.unpack $ renderShelleyPoolCmdError e
-      ShelleyGenesisCmdStakeAddressCmdError e -> Text.unpack $ renderShelleyStakeAddressCmdError e
-      ShelleyGenesisCmdCostModelsError fp -> "Cost model is invalid: " <> fp
+      ShelleyGenesisCmdAddressCmdError e -> renderShelleyAddressCmdError e
+      ShelleyGenesisCmdNodeCmdError e -> renderShelleyNodeCmdError e
+      ShelleyGenesisCmdPoolCmdError e -> renderShelleyPoolCmdError e
+      ShelleyGenesisCmdStakeAddressCmdError e -> renderShelleyStakeAddressCmdError e
+      ShelleyGenesisCmdCostModelsError fp -> "Cost model is invalid: " <> pretty fp
       ShelleyGenesisCmdGenesisFileDecodeError fp e ->
-       "Error while decoding Shelley genesis at: " <> fp <>
-       " Error: " <>  Text.unpack e
-      ShelleyGenesisCmdGenesisFileReadError e -> show e
-      ShelleyGenesisCmdByronError e -> show e
+       "Error while decoding Shelley genesis at: " <> pretty fp <>
+       " Error: " <> pretty e
+      ShelleyGenesisCmdGenesisFileReadError e -> pretty (show e)
+      ShelleyGenesisCmdByronError e -> pretty (show e)
       ShelleyGenesisStakePoolRelayFileError fp e ->
-        "Error occurred while reading the stake pool relay specification file: " <> fp <>
-        " Error: " <> show e
+        "Error occurred while reading the stake pool relay specification file: " <> pretty fp <>
+        " Error: " <> pretty (show e)
       ShelleyGenesisStakePoolRelayJsonDecodeError fp e ->
-        "Error occurred while decoding the stake pool relay specification file: " <> fp <>
-        " Error: " <>  e
+        "Error occurred while decoding the stake pool relay specification file: " <> pretty fp <>
+        " Error: " <> pretty e
 
 runGenesisCmd :: GenesisCmd -> ExceptT ShelleyGenesisCmdError IO ()
 runGenesisCmd (GenesisKeyGenGenesis vk sk) = runGenesisKeyGenGenesis vk sk
@@ -1375,11 +1385,10 @@ data ProtocolParamsError
   = ProtocolParamsErrorFile (FileError ())
   | ProtocolParamsErrorJSON !FilePath !Text
 
-renderProtocolParamsError :: ProtocolParamsError -> Text
-renderProtocolParamsError (ProtocolParamsErrorFile fileErr) =
-  Text.pack $ displayError fileErr
+renderProtocolParamsError :: ProtocolParamsError -> Doc Ann
+renderProtocolParamsError (ProtocolParamsErrorFile fileErr) = displayError fileErr
 renderProtocolParamsError (ProtocolParamsErrorJSON fp jsonErr) =
-  "Error while decoding the protocol parameters at: " <> Text.pack fp <> " Error: " <> jsonErr
+  "Error while decoding the protocol parameters at: " <> pretty fp <> " Error: " <> pretty jsonErr
 
 --TODO: eliminate this and get only the necessary params, and get them in a more
 -- helpful way rather than requiring them as a local file.

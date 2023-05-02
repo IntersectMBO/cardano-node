@@ -13,11 +13,10 @@ import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left, newExceptT, onLeft)
 import qualified Data.ByteString.Char8 as BS
-import           Data.Text (Text)
-import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 
 import           Cardano.Api
+import           Cardano.Api.Pretty
 import           Cardano.Api.Shelley
 
 import           Cardano.CLI.Shelley.Key (DelegationTarget (..), StakeIdentifier (..),
@@ -35,12 +34,12 @@ data ShelleyStakeAddressCmdError
   | ShelleyStakeAddressCmdWriteFileError !(FileError ())
   deriving Show
 
-renderShelleyStakeAddressCmdError :: ShelleyStakeAddressCmdError -> Text
+renderShelleyStakeAddressCmdError :: ShelleyStakeAddressCmdError -> Doc Ann
 renderShelleyStakeAddressCmdError err =
   case err of
-    ShelleyStakeAddressCmdReadKeyFileError fileErr -> Text.pack (displayError fileErr)
-    ShelleyStakeAddressCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
-    ShelleyStakeAddressCmdReadScriptFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyStakeAddressCmdReadKeyFileError fileErr -> displayError fileErr
+    ShelleyStakeAddressCmdWriteFileError fileErr -> displayError fileErr
+    ShelleyStakeAddressCmdReadScriptFileError fileErr -> displayError fileErr
 
 runStakeAddressCmd :: StakeAddressCmd -> ExceptT ShelleyStakeAddressCmdError IO ()
 runStakeAddressCmd (StakeAddressKeyGen vk sk) = runStakeAddressKeyGenToFile vk sk

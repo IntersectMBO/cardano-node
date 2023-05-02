@@ -16,11 +16,10 @@ import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, newExceptT)
 import qualified Data.ByteString.Char8 as BS
 import           Data.String (fromString)
-import           Data.Text (Text)
-import qualified Data.Text as Text
 import           Data.Word (Word64)
 
 import           Cardano.Api
+import           Cardano.Api.Pretty
 import           Cardano.Api.Shelley
 
 import           Cardano.CLI.Shelley.Commands
@@ -41,21 +40,16 @@ data ShelleyNodeCmdError
       -- ^ Temp path
   deriving Show
 
-renderShelleyNodeCmdError :: ShelleyNodeCmdError -> Text
+renderShelleyNodeCmdError :: ShelleyNodeCmdError -> Doc Ann
 renderShelleyNodeCmdError err =
   case err of
     ShelleyNodeCmdVrfSigningKeyCreationError targetPath tempPath ->
-      Text.pack $ "Error creating VRF signing key file. Target path: " <> targetPath
-      <> " Temporary path: " <> tempPath
-
-    ShelleyNodeCmdReadFileError fileErr -> Text.pack (displayError fileErr)
-
-    ShelleyNodeCmdReadKeyFileError fileErr -> Text.pack (displayError fileErr)
-
-    ShelleyNodeCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
-
-    ShelleyNodeCmdOperationalCertificateIssueError issueErr ->
-      Text.pack (displayError issueErr)
+       "Error creating VRF signing key file. Target path: " <> pretty targetPath
+      <> " Temporary path: " <> pretty tempPath
+    ShelleyNodeCmdReadFileError fileErr -> displayError fileErr
+    ShelleyNodeCmdReadKeyFileError fileErr -> displayError fileErr
+    ShelleyNodeCmdWriteFileError fileErr -> displayError fileErr
+    ShelleyNodeCmdOperationalCertificateIssueError issueErr -> displayError issueErr
 
 
 runNodeCmd :: NodeCmd -> ExceptT ShelleyNodeCmdError IO ()

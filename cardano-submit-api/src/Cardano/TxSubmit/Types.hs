@@ -17,6 +17,8 @@ module Cardano.TxSubmit.Types
   ) where
 
 import           Cardano.Api (AnyCardanoEra, AnyConsensusMode (..), Error (..), TxId, textShow)
+import           Cardano.Api.Pretty
+
 import           Cardano.Binary (DecoderError)
 import           Data.Aeson (ToJSON (..), Value (..))
 import           Data.ByteString.Char8 (ByteString)
@@ -30,7 +32,7 @@ import           Servant (Accept (..), JSON, MimeRender (..), MimeUnrender (..),
 import           Servant.API.Generic (ToServantApi, (:-))
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import qualified Data.List as L
+import qualified Prettyprinter as PP
 
 newtype TxSubmitPort = TxSubmitPort Int
 
@@ -40,7 +42,11 @@ newtype RawCborDecodeError = RawCborDecodeError [DecoderError]
   deriving (Eq, Show)
 
 instance Error RawCborDecodeError where
-  displayError (RawCborDecodeError decodeErrors) = "RawCborDecodeError decode error: \n" <> L.intercalate "  \n" (fmap show decodeErrors)
+  displayError (RawCborDecodeError decodeErrors) =
+    PP.vsep
+    [ "RawCborDecodeError decode error:"
+    , PP.indent 2 $ PP.vsep $ fmap (pretty . show) decodeErrors
+    ]
 
 -- | An error that can occur in the transaction submission web API.
 data TxSubmitWebApiError

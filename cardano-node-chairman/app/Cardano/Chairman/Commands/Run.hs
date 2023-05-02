@@ -35,6 +35,7 @@ import           Ouroboros.Consensus.Node.ProtocolInfo
 
 
 import           Cardano.Api
+import           Cardano.Api.Pretty
 import           Cardano.Chairman (chairmanTest)
 
 data RunOpts = RunOpts
@@ -115,7 +116,7 @@ run RunOpts
 
   p :: SomeConsensusProtocol <-
     case eitherSomeProtocol of
-      Left err -> putStrLn (displayError err) >> exitFailure
+      Left err -> putStrLn (renderStringDefault (displayError err)) >> exitFailure
       Right p  -> pure p
 
   let (k , nId) = case p of

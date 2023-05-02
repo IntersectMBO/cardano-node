@@ -1,4 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE MonoLocalBinds #-}
@@ -39,6 +39,7 @@ import qualified Data.Text as Text
 import           Data.Word (Word16, Word8)
 
 import           Cardano.Api
+import           Cardano.Api.Pretty
 import qualified Cardano.Chain.Update as Byron
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import qualified Cardano.Crypto.Hash as Crypto
@@ -118,6 +119,7 @@ data ProtocolFilepaths =
 
 newtype GenesisHash = GenesisHash (Crypto.Hash Crypto.Blake2b_256 ByteString)
   deriving newtype (Eq, Show, ToJSON, FromJSON)
+  deriving Pretty via InstanceShow GenesisHash
 
 data NodeProtocolConfiguration =
        NodeProtocolConfigurationByron   NodeByronProtocolConfiguration

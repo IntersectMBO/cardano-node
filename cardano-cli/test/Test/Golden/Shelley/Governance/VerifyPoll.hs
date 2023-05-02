@@ -14,6 +14,8 @@ import           Hedgehog (Property)
 import           Test.OptParse
 
 import           Cardano.Api
+import           Cardano.Api.Pretty
+
 import           Cardano.CLI.Shelley.Key (VerificationKeyOrFile (..),
                    readVerificationKeyOrTextEnvFile)
 
@@ -38,7 +40,7 @@ golden_shelleyGovernanceVerifyPoll = propertyOnce $ do
 
   liftIO (readVerificationKeyOrTextEnvFile AsStakePoolKey vkFile) >>= \case
     Left e ->
-      H.failWith Nothing (displayError e)
+      H.failWith Nothing $ renderStringDefault $ displayError e
     Right vk -> do
       let expected = prettyPrintJSON $ serialiseToRawBytesHexText <$> [verificationKeyHash vk]
       H.assert $ expected `BSC.isInfixOf` stdout

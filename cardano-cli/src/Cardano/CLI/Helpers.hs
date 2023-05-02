@@ -31,13 +31,13 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LB
 import           Data.Functor (void)
 import           Data.Text (Text)
-import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import qualified System.Console.ANSI as ANSI
 import           System.Console.ANSI
 import qualified System.Directory as IO
 import qualified System.IO as IO
 
+import           Cardano.Api.Pretty
 import           Cardano.Chain.Block (decCBORABlockOrBoundary)
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Update as Update
@@ -54,14 +54,14 @@ data HelpersError
   | ReadCBORFileFailure !FilePath !Text
   deriving Show
 
-renderHelpersError :: HelpersError -> Text
+renderHelpersError :: HelpersError -> Doc Ann
 renderHelpersError err =
   case err of
-    OutputMustNotAlreadyExist fp -> "Output file/directory must not already exist: " <> Text.pack fp
-    ReadCBORFileFailure fp err' -> "CBOR read failure at: " <> Text.pack fp <> Text.pack (show err')
-    CBORPrettyPrintError err' -> "Error with CBOR decoding: " <> Text.pack (show err')
-    CBORDecodingError err' -> "Error with CBOR decoding: " <> Text.pack (show err')
-    IOError' fp ioE -> "Error at: " <> Text.pack fp <> " Error: " <> Text.pack (show ioE)
+    OutputMustNotAlreadyExist fp -> "Output file/directory must not already exist: " <> pretty fp
+    ReadCBORFileFailure fp err' -> "CBOR read failure at: " <> pretty fp <> pretty (show err')
+    CBORPrettyPrintError err' -> "Error with CBOR decoding: " <> pretty (show err')
+    CBORDecodingError err' -> "Error with CBOR decoding: " <> pretty (show err')
+    IOError' fp ioE -> "Error at: " <> pretty fp <> " Error: " <> pretty (show ioE)
 
 decodeCBOR
   :: LB.ByteString

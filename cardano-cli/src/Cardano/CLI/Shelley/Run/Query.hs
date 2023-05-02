@@ -104,7 +104,6 @@ import           Data.Map.Strict (Map)
 import           Data.Proxy (Proxy (..))
 import           Data.Set (Set)
 import           Data.Text (Text)
-import           Data.Text.Lazy (toStrict)
 
 {- HLINT ignore "Move brackets to avoid $" -}
 {- HLINT ignore "Redundant flip" -}
@@ -133,38 +132,43 @@ data ShelleyQueryCmdError
 
   deriving Show
 
-renderShelleyQueryCmdError :: ShelleyQueryCmdError -> Text
+renderShelleyQueryCmdError :: ShelleyQueryCmdError -> Doc Ann
 renderShelleyQueryCmdError err =
   case err of
     ShelleyQueryCmdEnvVarSocketErr envSockErr -> renderEnvSocketError envSockErr
     ShelleyQueryCmdLocalStateQueryError lsqErr -> renderLocalStateQueryError lsqErr
-    ShelleyQueryCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyQueryCmdWriteFileError fileErr -> displayError fileErr
     ShelleyQueryCmdHelpersError helpersErr -> renderHelpersError helpersErr
-    ShelleyQueryCmdAcquireFailure acquireFail -> Text.pack $ show acquireFail
+    ShelleyQueryCmdAcquireFailure acquireFail -> pretty $ show acquireFail
     ShelleyQueryCmdByronEra -> "This query cannot be used for the Byron era"
-    ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) (AnyCardanoEra era) ->
-      "Consensus mode and era mismatch. Consensus mode: " <> textShow cMode <>
-      " Era: " <> textShow era
+    ShelleyQueryCmdEraConsensusModeMismatch anyMode anyEra ->
+      "Consensus mode and era mismatch. Consensus mode: " <> pretty anyMode <>
+      " Era: " <> pretty anyEra
     ShelleyQueryCmdEraMismatch (EraMismatch ledgerEra queryEra) ->
-      "\nAn error mismatch occurred." <> "\nSpecified query era: " <> queryEra <>
-      "\nCurrent ledger era: " <> ledgerEra
-    ShelleyQueryCmdUnsupportedMode mode -> "Unsupported mode: " <> renderMode mode
-    ShelleyQueryCmdPastHorizon e -> "Past horizon: " <> textShow e
+      vsep
+      [ "An error mismatch occurred: "
+      , indent 2 $ vsep
+        [ "Specified query era: " <> pretty queryEra
+        , "Current ledger era: " <> pretty ledgerEra
+        ]
+      ]
+    ShelleyQueryCmdUnsupportedMode mode -> "Unsupported mode: " <> pretty mode
+    ShelleyQueryCmdPastHorizon e -> "Past horizon: " <> pretty (show e)
     ShelleyQueryCmdSystemStartUnavailable -> "System start unavailable"
-    ShelleyQueryCmdGenesisReadError err' -> Text.pack $ displayError err'
-    ShelleyQueryCmdLeaderShipError e -> Text.pack $ displayError e
-    ShelleyQueryCmdTextEnvelopeReadError e -> Text.pack $ displayError e
-    ShelleyQueryCmdTextReadError e -> Text.pack $ displayError e
-    ShelleyQueryCmdOpCertCounterReadError e -> Text.pack $ displayError e
+    ShelleyQueryCmdGenesisReadError err' -> displayError err'
+    ShelleyQueryCmdLeaderShipError e -> displayError e
+    ShelleyQueryCmdTextEnvelopeReadError e -> displayError e
+    ShelleyQueryCmdTextReadError e -> displayError e
+    ShelleyQueryCmdOpCertCounterReadError e -> displayError e
     ShelleyQueryCmdProtocolStateDecodeFailure (_, decErr) ->
-      "Failed to decode the protocol state: " <> toStrict (toLazyText $ build decErr)
+      "Failed to decode the protocol state: " <> pretty (toLazyText $ build decErr)
     ShelleyQueryCmdPoolStateDecodeError decoderError ->
-      "Failed to decode PoolState.  Error: " <> Text.pack (show decoderError)
+      "Failed to decode PoolState.  Error: " <> pretty (show decoderError)
     ShelleyQueryCmdStakeSnapshotDecodeError decoderError ->
-      "Failed to decode StakeSnapshot.  Error: " <> Text.pack (show decoderError)
+      "Failed to decode StakeSnapshot.  Error: " <> pretty (show decoderError)
     ShelleyQueryCmdUnsupportedNtcVersion (UnsupportedNtcVersionError minNtcVersion ntcVersion) ->
       "Unsupported feature for the node-to-client protocol version.\n" <>
-      "This query requires at least " <> textShow minNtcVersion <> " but the node negotiated " <> textShow ntcVersion <> ".\n" <>
+      "This query requires at least " <> pretty (show minNtcVersion) <> " but the node negotiated " <> pretty (show ntcVersion) <> ".\n" <>
       "Later node versions support later protocol versions (but development protocol versions are not enabled in the node by default)."
 
 runQueryCmd :: QueryCmd -> ExceptT ShelleyQueryCmdError IO ()
@@ -297,7 +301,7 @@ runQueryTip (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network m
             }
 
       mLocalState <- hushM (first ShelleyQueryCmdAcquireFailure eLocalState) $ \e ->
-        liftIO . T.hPutStrLn IO.stderr $ "Warning: Local state unavailable: " <> renderShelleyQueryCmdError e
+        liftIO . T.hPutStrLn IO.stderr $ renderDefault $ "Warning: Local state unavailable: " <> renderShelleyQueryCmdError e
 
       chainTip <- pure (mLocalState >>= O.mChainTip)
         -- The chain tip is unavailable via local state query because we are connecting with an older
@@ -313,7 +317,7 @@ runQueryTip (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network m
       localStateOutput <- forM mLocalState $ \localState -> do
         case slotToEpoch tipSlotNo (O.eraHistory localState) of
           Left e -> do
-            liftIO . T.hPutStrLn IO.stderr $
+            liftIO . T.hPutStrLn IO.stderr $ renderDefault $
               "Warning: Epoch unavailable: " <> renderShelleyQueryCmdError (ShelleyQueryCmdPastHorizon e)
             return $ O.QueryTipLocalStateOutput
               { O.localStateChainTip = chainTip
@@ -335,7 +339,7 @@ runQueryTip (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network m
               return $ flip (percentage tolerance) nowSeconds tipTimeResult
 
             mSyncProgress <- hushM syncProgressResult $ \e -> do
-              liftIO . T.hPutStrLn IO.stderr $ "Warning: Sync progress unavailable: " <> renderShelleyQueryCmdError e
+              liftIO . T.hPutStrLn IO.stderr $ renderDefault $ "Warning: Sync progress unavailable: " <> renderShelleyQueryCmdError e
 
             return $ O.QueryTipLocalStateOutput
               { O.localStateChainTip = chainTip
@@ -819,11 +823,11 @@ newtype ShelleyQueryCmdLocalStateQueryError
   -- era.
   deriving (Eq, Show)
 
-renderLocalStateQueryError :: ShelleyQueryCmdLocalStateQueryError -> Text
+renderLocalStateQueryError :: ShelleyQueryCmdLocalStateQueryError -> Doc Ann
 renderLocalStateQueryError lsqErr =
   case lsqErr of
     EraMismatchError err ->
-      "A query from a certain era was applied to a ledger from a different era: " <> textShow err
+      "A query from a certain era was applied to a ledger from a different era: " <> pretty (show err)
 
 writeStakeAddressInfo
   :: Maybe (File () Out)

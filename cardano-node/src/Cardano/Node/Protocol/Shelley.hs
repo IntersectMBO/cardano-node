@@ -21,15 +21,15 @@ module Cardano.Node.Protocol.Shelley
   , validateGenesis
   ) where
 
-import           Cardano.Prelude (ConvertText (..))
 import           Control.Exception (IOException)
 import           Control.Monad.Except (ExceptT, MonadError (..))
+import qualified Prettyprinter as PP
 
 import qualified Cardano.Api as Api
+import           Cardano.Api.Pretty
 
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
-import qualified Data.Text as T
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, left,
                    newExceptT)
@@ -295,16 +295,16 @@ data GenesisReadError =
 instance Error GenesisReadError where
   displayError (GenesisReadFileError fp err) =
         "There was an error reading the genesis file: "
-     <> toS fp <> " Error: " <> show err
+     <> pretty fp <> " Error: " <> pretty (show err)
 
   displayError (GenesisHashMismatch actual expected) =
-        "Wrong genesis file: the actual hash is " <> show actual
+        "Wrong genesis file: the actual hash is " <> pretty (show actual)
      <> ", but the expected genesis hash given in the node "
-     <> "configuration file is " <> show expected
+     <> "configuration file is " <> pretty expected
 
   displayError (GenesisDecodeError fp err) =
         "There was an error parsing the genesis file: "
-     <> toS fp <> " Error: " <> show err
+     <> pretty fp <> " Error: " <> pretty err
 
 
 newtype GenesisValidationError = GenesisValidationErrors [Shelley.ValidationErr]
@@ -312,7 +312,7 @@ newtype GenesisValidationError = GenesisValidationErrors [Shelley.ValidationErr]
 
 instance Error GenesisValidationError where
   displayError (GenesisValidationErrors vErrs) =
-    T.unpack (T.unlines (map Shelley.describeValidationErr vErrs))
+    PP.prettyList $ map (show . Shelley.describeValidationErr) vErrs
 
 
 data PraosLeaderCredentialsError =
@@ -334,20 +334,20 @@ data PraosLeaderCredentialsError =
 instance Error PraosLeaderCredentialsError where
   displayError (CredentialsReadError fp err) =
         "There was an error reading a credentials file: "
-     <> toS fp <> " Error: " <> show err
+     <> pretty fp <> " Error: " <> pretty (show err)
 
   displayError (EnvelopeParseError fp err) =
         "There was an error parsing a credentials envelope: "
-     <> toS fp <> " Error: " <> show err
+     <> pretty fp <> " Error: " <> pretty (show err)
 
   displayError (FileError fileErr) = displayError fileErr
   displayError (MismatchedKesKey kesFp certFp) =
-       "The KES key provided at: " <> show kesFp
-    <> " does not match the KES key specified in the operational certificate at: " <> show certFp
+       "The KES key provided at: " <> pretty kesFp
+    <> " does not match the KES key specified in the operational certificate at: " <> pretty certFp
   displayError OCertNotSpecified  = missingFlagMessage "shelley-operational-certificate"
   displayError VRFKeyNotSpecified = missingFlagMessage "shelley-vrf-key"
   displayError KESKeyNotSpecified = missingFlagMessage "shelley-kes-key"
 
-missingFlagMessage :: String -> String
+missingFlagMessage :: String -> Doc Ann
 missingFlagMessage flag =
-  "To create blocks, the --" <> flag <> " must also be specified"
+  "To create blocks, the --" <> pretty flag <> " must also be specified"

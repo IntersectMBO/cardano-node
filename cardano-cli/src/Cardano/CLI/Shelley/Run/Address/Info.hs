@@ -7,6 +7,7 @@ module Cardano.CLI.Shelley.Run.Address.Info
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.Pretty
 
 import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (ExceptT)
@@ -22,7 +23,7 @@ newtype ShelleyAddressInfoError = ShelleyAddressInvalid Text
 
 instance Error ShelleyAddressInfoError where
   displayError (ShelleyAddressInvalid addrTxt) =
-    "Invalid address: " <> show addrTxt
+    "Invalid address: " <> pretty addrTxt
 
 data AddressInfo = AddressInfo
   { aiType :: !Text

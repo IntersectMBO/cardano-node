@@ -16,6 +16,7 @@ import           Data.Text (Text)
 import qualified Data.List as List
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import           Prettyprinter (Pretty (..))
 
 import           Control.Monad (guard)
 
@@ -148,12 +149,12 @@ data Bech32DecodeError =
 
 instance Error Bech32DecodeError where
   displayError err = case err of
-    Bech32DecodingError decErr -> show decErr -- TODO
+    Bech32DecodingError decErr -> pretty (show decErr) -- TODO
 
     Bech32UnexpectedPrefix actual permitted ->
-        "Unexpected Bech32 prefix: the actual prefix is " <> show actual
+        "Unexpected Bech32 prefix: the actual prefix is " <> pretty actual
      <> ", but it was expected to be "
-     <> List.intercalate " or " (map show (Set.toList permitted))
+     <> pretty (List.intercalate " or " (map show (Set.toList permitted)))
 
     Bech32DataPartToBytesError _dataPart -> mconcat
       [ "There was an error in extracting the bytes from the data part of the "
@@ -166,6 +167,6 @@ instance Error Bech32DecodeError where
       ]
 
     Bech32WrongPrefix actual expected -> mconcat
-      [ "Mismatch in the Bech32 prefix: the actual prefix is " <> show actual
-      , ", but the prefix for this payload value should be " <> show expected
+      [ "Mismatch in the Bech32 prefix: the actual prefix is " <> pretty actual
+      , ", but the prefix for this payload value should be " <> pretty expected
       ]

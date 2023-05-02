@@ -62,6 +62,7 @@ import           Cardano.Chain.Update (ApplicationName (..), InstallerHash (..),
 import           Cardano.Api hiding (GenesisParameters, UpdateProposal)
 import           Cardano.Api.Byron (Address (..), ByronProtocolParametersUpdate (..),
                    toByronLovelace)
+import           Cardano.Api.Pretty
 
 import           Cardano.Api.Shelley (ReferenceScript (ReferenceScriptNone))
 import           Cardano.CLI.Byron.Commands
@@ -291,7 +292,7 @@ parseTxIdAtto = (<?> "Transaction ID (hexadecimal)") $ do
   bstr <- Atto.takeWhile1 Char.isHexDigit
   case deserialiseFromRawBytesHex AsTxId bstr of
     Right addr -> return addr
-    Left e -> fail $ "Incorrect transaction id format: " ++ displayError e
+    Left e -> fail $ renderStringDefault $ "Incorrect transaction id format: " <> displayError e
 
 parseTxIxAtto :: Atto.Parser TxIx
 parseTxIxAtto = toEnum <$> Atto.decimal

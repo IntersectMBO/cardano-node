@@ -78,6 +78,7 @@ import qualified Data.Text.Lazy as Text.Lazy
 import qualified Data.Text.Lazy.Builder as Text.Builder
 import qualified Data.Vector as Vector
 import           Data.Word
+import           Prettyprinter (Pretty (..))
 
 {- HLINT ignore "Use lambda-case" -}
 
@@ -331,19 +332,19 @@ data TxMetadataRangeError =
 instance Error TxMetadataRangeError where
   displayError (TxMetadataNumberOutOfRange n) =
       "Numeric metadata value "
-        <> show n
+        <> pretty n
         <> " is outside the range -(2^64-1) .. 2^64-1."
   displayError (TxMetadataTextTooLong actualLen) =
       "Text string metadata value must consist of at most "
-        <> show txMetadataTextStringMaxByteLength
+        <> pretty txMetadataTextStringMaxByteLength
         <> " UTF8 bytes, but it consists of "
-        <> show actualLen
+        <> pretty actualLen
         <> " bytes."
   displayError (TxMetadataBytesTooLong actualLen) =
       "Byte string metadata value must consist of at most "
-        <> show txMetadataByteStringMaxLength
+        <> pretty txMetadataByteStringMaxLength
         <> " bytes, but it consists of "
-        <> show actualLen
+        <> pretty actualLen
         <> " bytes."
 
 
@@ -673,16 +674,16 @@ data TxMetadataJsonSchemaError =
 instance Error TxMetadataJsonError where
     displayError TxMetadataJsonToplevelNotMap =
         "The JSON metadata top level must be a map (JSON object) from word to "
-     ++ "value."
+     <> "value."
     displayError (TxMetadataJsonToplevelBadKey k) =
         "The JSON metadata top level must be a map (JSON object) with unsigned "
-     ++ "integer keys.\nInvalid key: " ++ show k
+     <> "integer keys.\nInvalid key: " <> pretty k
     displayError (TxMetadataJsonSchemaError k v detail) =
-        "JSON schema error within the metadata item " ++ show k ++ ": "
-     ++ LBS.unpack (Aeson.encode v) ++ "\n" ++ displayError detail
+        "JSON schema error within the metadata item " <> pretty k <> ": "
+     <> pretty (LBS.unpack (Aeson.encode v)) <> "\n" <> displayError detail
     displayError (TxMetadataRangeError k v detail) =
-        "Value out of range within the metadata item " ++ show k ++ ": "
-     ++ LBS.unpack (Aeson.encode v) ++ "\n" ++ displayError detail
+        "Value out of range within the metadata item " <> pretty k <> ": "
+     <> pretty (LBS.unpack (Aeson.encode v)) <> "\n" <> displayError detail
 
 instance Error TxMetadataJsonSchemaError where
     displayError TxMetadataJsonNullNotAllowed =
@@ -690,22 +691,22 @@ instance Error TxMetadataJsonSchemaError where
     displayError TxMetadataJsonBoolNotAllowed =
         "JSON bool values are not supported."
     displayError (TxMetadataJsonNumberNotInteger d) =
-        "JSON numbers must be integers. Unexpected value: " ++ show d
+        "JSON numbers must be integers. Unexpected value: " <> pretty d
     displayError (TxMetadataJsonNotObject v) =
         "JSON object expected. Unexpected value: "
-     ++ LBS.unpack (Aeson.encode v)
+     <> pretty (LBS.unpack (Aeson.encode v))
     displayError (TxMetadataJsonBadObject v) =
         "JSON object does not match the schema.\nExpected a single field named "
-     ++ "\"int\", \"bytes\", \"string\", \"list\" or \"map\".\n"
-     ++ "Unexpected object field(s): "
-     ++ LBS.unpack (Aeson.encode (Aeson.object $ first Aeson.fromText <$> v))
+     <> "\"int\", \"bytes\", \"string\", \"list\" or \"map\".\n"
+     <> "Unexpected object field(s): "
+     <> pretty (LBS.unpack (Aeson.encode (Aeson.object $ first Aeson.fromText <$> v)))
     displayError (TxMetadataJsonBadMapPair v) =
         "Expected a list of key/value pair { \"k\": ..., \"v\": ... } objects."
-     ++ "\nUnexpected value: " ++ LBS.unpack (Aeson.encode v)
+     <> "\nUnexpected value: " <> pretty (LBS.unpack (Aeson.encode v))
     displayError (TxMetadataJsonTypeMismatch k v) =
-        "The value in the field " ++ show k ++ " does not have the type "
-     ++ "required by the schema.\nUnexpected value: "
-     ++ LBS.unpack (Aeson.encode v)
+        "The value in the field " <> pretty k <> " does not have the type "
+     <> "required by the schema.\nUnexpected value: "
+     <> pretty (LBS.unpack (Aeson.encode v))
 
 
 -- ----------------------------------------------------------------------------

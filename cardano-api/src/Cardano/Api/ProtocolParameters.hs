@@ -7,6 +7,8 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 {- HLINT ignore "Redundant ==" -}
@@ -87,8 +89,8 @@ import           Data.String (IsString)
 import           GHC.Generics
 import           Lens.Micro
 import           Numeric.Natural
+import           Prettyprinter (Pretty (..))
 
-import           Cardano.Api.Json (toRationalJSON)
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Slotting.Slot (EpochNo)
@@ -116,8 +118,10 @@ import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Json (toRationalJSON)
 import           Cardano.Api.Keys.Byron
 import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.Pretty (InstanceShow (..), renderStringDefault)
 import           Cardano.Api.Script
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
@@ -780,6 +784,8 @@ newtype CostModel = CostModel [Integer]
   deriving (Eq, Show)
   deriving newtype (ToCBOR, FromCBOR)
 
+deriving via (InstanceShow CostModel) instance Pretty CostModel
+
 newtype CostModels = CostModels { unCostModels :: Map AnyPlutusScriptVersion CostModel }
   deriving (Eq, Show)
 
@@ -797,8 +803,7 @@ data InvalidCostModel = InvalidCostModel CostModel Alonzo.CostModelApplyError
 
 instance Error InvalidCostModel where
   displayError (InvalidCostModel cm err) =
-    "Invalid cost model: " ++ display err ++
-    " Cost model: " ++ show cm
+    "Invalid cost model: " <> pretty @String (display err) <> " Cost model: " <> pretty cm
 
 
 toAlonzoCostModels
@@ -811,7 +816,9 @@ toAlonzoCostModels m = do
   conv :: (AnyPlutusScriptVersion, CostModel) -> Either String (Alonzo.Language, Alonzo.CostModel)
   conv (anySVer, cModel) = do
     -- TODO: Propagate InvalidCostModel further
-    alonzoCostModel <- first displayError $ toAlonzoCostModel cModel (toAlonzoScriptLanguage anySVer)
+    alonzoCostModel <-
+      first (renderStringDefault . displayError) $
+        toAlonzoCostModel cModel (toAlonzoScriptLanguage anySVer)
     Right (toAlonzoScriptLanguage anySVer, alonzoCostModel)
 
 fromAlonzoCostModels
@@ -1552,8 +1559,8 @@ data ProtocolParametersError =
 
 instance Error ProtocolParametersError where
   displayError (PParamsErrorMissingMinUTxoValue (AnyCardanoEra era)) = mconcat
-    [ "The " <> show era <> " protocol parameters value is missing the following "
-    , "field: MinUTxoValue. Did you intend to use a " <> show era <> " protocol "
+    [ "The " <> pretty era <> " protocol parameters value is missing the following "
+    , "field: MinUTxoValue. Did you intend to use a " <> pretty era <> " protocol "
     , " parameters value?"
     ]
   displayError PParamsErrorMissingAlonzoProtocolParameter = mconcat

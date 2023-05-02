@@ -12,6 +12,7 @@ import           Data.List (foldl')
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Word (Word64)
+import           Prettyprinter (Pretty (..))
 import           Text.Parsec as Parsec (notFollowedBy, try, (<?>))
 import           Text.Parsec.Char (alphaNum, char, digit, hexDigit, space, spaces, string)
 import           Text.Parsec.Expr (Assoc (..), Operator (..), buildExpressionParser)
@@ -19,6 +20,7 @@ import           Text.Parsec.String (Parser)
 import           Text.ParserCombinators.Parsec.Combinator (many1)
 
 import           Cardano.Api.Error (displayError)
+import           Cardano.Api.Pretty (renderStringDefault)
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.Utils (failEitherWith)
 import           Cardano.Api.Value
@@ -116,7 +118,7 @@ assetName :: Parser AssetName
 assetName = do
   hexText <- many hexDigit
   failEitherWith
-    (\e -> "AssetName deserisalisation failed: " ++ displayError e) $
+    (\e -> renderStringDefault ("AssetName deserisalisation failed: " <> displayError e)) $
     deserialiseFromRawBytesHex AsAssetName $ BSC.pack hexText
 
 -- | Policy ID parser.
@@ -125,9 +127,9 @@ policyId = do
   hexText <- many1 hexDigit
   failEitherWith
     ( \e ->
-        fail $
+        fail $ renderStringDefault $
           "expecting a 56-hex-digit policy ID, but found "
-            ++ show (length hexText) ++ " hex digits; " ++ displayError e
+            <> pretty (length hexText) <> " hex digits; " <> displayError e
     )
     (textToPolicyId hexText)
   where

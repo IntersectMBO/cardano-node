@@ -9,6 +9,7 @@ module Cardano.Node.Protocol.Conway
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.Pretty
 
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 
@@ -47,11 +48,11 @@ data ConwayProtocolInstantiationError
 
 instance Error ConwayProtocolInstantiationError where
   displayError (InvalidCostModelError fp) =
-    "Invalid cost model: " <> show fp
+    "Invalid cost model: " <> pretty fp
   displayError (CostModelExtractionError fp) =
-    "Error extracting the cost model at: " <> show fp
+    "Error extracting the cost model at: " <> pretty fp
   displayError (ConwayCostModelFileError err) =
     displayError err
   displayError (ConwayCostModelDecodeError fp err) =
-    "Error decoding cost model at: " <> show fp <> " Error: " <> err
+    "Error decoding cost model at: " <> pretty fp <> " Error: " <> pretty err
 

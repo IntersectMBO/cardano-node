@@ -20,6 +20,7 @@ import qualified Data.ByteString as BS
 import           Data.Either.Combinators (maybeToRight)
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import           Prettyprinter (Pretty (..))
 
 import           Data.Aeson ((.:))
 import qualified Data.Aeson as Aeson
@@ -146,12 +147,12 @@ data StakePoolMetadataValidationError
   deriving Show
 
 instance Error StakePoolMetadataValidationError where
-    displayError (StakePoolMetadataJsonDecodeError errStr) = errStr
+    displayError (StakePoolMetadataJsonDecodeError errStr) = pretty errStr
     displayError (StakePoolMetadataInvalidLengthError maxLen actualLen) =
          "Stake pool metadata must consist of at most "
-      <> show maxLen
+      <> pretty maxLen
       <> " bytes, but it consists of "
-      <> show actualLen
+      <> pretty actualLen
       <> " bytes."
 
 -- | Decode and validate the provided JSON-encoded bytes as 'StakePoolMetadata'.

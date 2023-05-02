@@ -25,10 +25,12 @@ import qualified Data.Text.Encoding as Text
 import qualified Data.Text.IO as Text
 import qualified Data.Text.Read as Text
 import           Formatting (build, sformat)
+import qualified Prettyprinter as PP
 import qualified System.IO as IO
 import           System.IO (stderr, stdin, stdout)
 
 import           Cardano.Api
+import           Cardano.Api.Pretty
 import           Cardano.Api.Shelley
 
 import           Cardano.CLI.Shelley.Key (VerificationKeyOrHashOrFile,
@@ -67,39 +69,38 @@ data ShelleyGovernanceCmdError
   | ShelleyGovernanceCmdWriteFileError !(FileError ())
   deriving Show
 
-renderShelleyGovernanceError :: ShelleyGovernanceCmdError -> Text
+renderShelleyGovernanceError :: ShelleyGovernanceCmdError -> Doc Ann
 renderShelleyGovernanceError err =
   case err of
-    ShelleyGovernanceCmdTextEnvReadError fileErr -> Text.pack (displayError fileErr)
-    ShelleyGovernanceCmdCddlError cddlErr -> Text.pack (displayError cddlErr)
-    ShelleyGovernanceCmdKeyReadError fileErr -> Text.pack (displayError fileErr)
-    ShelleyGovernanceCmdTextEnvWriteError fileErr -> Text.pack (displayError fileErr)
+    ShelleyGovernanceCmdTextEnvReadError fileErr -> displayError fileErr
+    ShelleyGovernanceCmdCddlError cddlErr -> displayError cddlErr
+    ShelleyGovernanceCmdKeyReadError fileErr -> displayError fileErr
+    ShelleyGovernanceCmdTextEnvWriteError fileErr -> displayError fileErr
     -- TODO: The equality check is still not working for empty update proposals.
     ShelleyGovernanceCmdEmptyUpdateProposalError ->
       "Empty update proposals are not allowed"
     ShelleyGovernanceCmdMIRCertificateKeyRewardMistmach fp numVKeys numRwdAmts ->
-       "Error creating the MIR certificate at: " <> textShow fp
-       <> " The number of staking keys: " <> textShow numVKeys
-       <> " and the number of reward amounts: " <> textShow numRwdAmts
+       "Error creating the MIR certificate at: " <> pretty fp
+       <> " The number of staking keys: " <> pretty numVKeys
+       <> " and the number of reward amounts: " <> pretty numRwdAmts
        <> " are not equivalent."
     ShelleyGovernanceCmdCostModelsJsonDecodeErr fp err' ->
-      "Error decoding cost model: " <> err' <> " at: " <> Text.pack fp
+      "Error decoding cost model: " <> pretty err' <> " at: " <> pretty fp
     ShelleyGovernanceCmdEmptyCostModel fp ->
-      "The decoded cost model was empty at: " <> Text.pack fp
+      "The decoded cost model was empty at: " <> pretty fp
     ShelleyGovernanceCmdCostModelReadError err' ->
-      "Error reading the cost model: " <> Text.pack (displayError err')
+      "Error reading the cost model: " <> displayError err'
     ShelleyGovernanceCmdUnexpectedKeyType expected ->
-      "Unexpected poll key type; expected one of: "
-      <> Text.intercalate ", " (textShow <$> expected)
+      "Unexpected poll key type; expected one of: " <> PP.prettyList (show <$> expected)
     ShelleyGovernanceCmdPollOutOfBoundAnswer nMax ->
-      "Poll answer out of bounds. Choices are between 0 and " <> textShow nMax
+      "Poll answer out of bounds. Choices are between 0 and " <> pretty nMax
     ShelleyGovernanceCmdPollInvalidChoice ->
       "Invalid choice. Please choose from the available answers."
     ShelleyGovernanceCmdDecoderError decoderError ->
-      "Unable to decode metadata: " <> sformat build decoderError
+      "Unable to decode metadata: " <> pretty (sformat build decoderError)
     ShelleyGovernanceCmdVerifyPollError pollError ->
       renderGovernancePollError pollError
-    ShelleyGovernanceCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyGovernanceCmdWriteFileError fileErr -> displayError fileErr
 
 runGovernanceCmd :: GovernanceCmd -> ExceptT ShelleyGovernanceCmdError IO ()
 runGovernanceCmd (GovernanceMIRPayStakeAddressesCertificate mirpot vKeys rewards out) =

@@ -9,8 +9,9 @@ module Cardano.Api.Environment
 
 import           Data.Aeson
 import           Data.Text (Text)
+import qualified Prettyprinter as PP
 
-import           Cardano.Api.Utils (textShow)
+import           Cardano.Api.Pretty
 
 newtype SocketPath
   = SocketPath { unSocketPath :: FilePath }
@@ -18,8 +19,11 @@ newtype SocketPath
 
 newtype EnvSocketError = CliEnvVarLookup Text deriving Show
 
-renderEnvSocketError :: EnvSocketError -> Text
+renderEnvSocketError :: EnvSocketError -> Doc Ann
 renderEnvSocketError err =
   case err of
     CliEnvVarLookup txt ->
-      "Error while looking up environment variable: CARDANO_NODE_SOCKET_PATH " <> " Error: " <> textShow txt
+      PP.vsep
+        [ "Error while looking up environment variable: CARDANO_NODE_SOCKET_PATH.  Error: "
+        , PP.indent 2 $ pretty txt
+        ]

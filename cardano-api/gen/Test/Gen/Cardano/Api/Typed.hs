@@ -118,8 +118,9 @@ import           Cardano.Api hiding (txIns)
 import qualified Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
-import           Cardano.Api.Shelley (GovernancePoll (..), GovernancePollAnswer (..),
-                   Hash (..), KESPeriod (KESPeriod),
+import           Cardano.Api.Pretty
+import           Cardano.Api.Shelley (GovernancePoll (..), GovernancePollAnswer (..), Hash (..),
+                   KESPeriod (KESPeriod),
                    OperationalCertificateIssueCounter (OperationalCertificateIssueCounter),
                    PlutusScript (PlutusScriptSerialised), ProtocolParameters (ProtocolParameters),
                    ReferenceScript (..), ReferenceTxInsScriptsInlineDatumsSupportedInEra (..),
@@ -430,7 +431,7 @@ genOperationalCertificateWithCounter = do
     case issueOperationalCertificate kesVKey stkPoolOrGenDelExtSign kesP iCounter of
       -- This case should be impossible as we clearly derive the verification
       -- key from the generated signing key.
-      Left err -> fail $ displayError err
+      Left err -> fail $ renderStringDefault $ displayError err
       Right pair -> return pair
   where
     convert :: VerificationKey GenesisDelegateExtendedKey
@@ -699,7 +700,7 @@ genTxBody :: IsCardanoEra era => CardanoEra era -> Gen (TxBody era)
 genTxBody era = do
   res <- Api.createAndValidateTransactionBody <$> genTxBodyContent era
   case res of
-    Left err -> fail (displayError err)
+    Left err -> fail $ renderStringDefault (displayError err)
     Right txBody -> pure txBody
 
 genTxScriptValidity :: CardanoEra era -> Gen (TxScriptValidity era)

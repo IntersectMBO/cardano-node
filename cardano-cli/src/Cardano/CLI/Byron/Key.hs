@@ -27,6 +27,7 @@ import qualified Data.Text as T
 import           Formatting (build, sformat, (%))
 
 import           Cardano.Api.Byron
+import           Cardano.Api.Pretty
 
 import qualified Cardano.Chain.Common as Common
 import           Cardano.CLI.Shelley.Commands (ByronKeyFormat (..))
@@ -43,21 +44,21 @@ data ByronKeyFailure
   | CannotMigrateFromNonLegacySigningKey !FilePath
   deriving Show
 
-renderByronKeyFailure :: ByronKeyFailure -> Text
+renderByronKeyFailure :: ByronKeyFailure -> Doc Ann
 renderByronKeyFailure err =
   case err of
     CannotMigrateFromNonLegacySigningKey fp ->
-      "Migrate from non-legacy Byron key unnecessary: " <> textShow fp
+      "Migrate from non-legacy Byron key unnecessary: " <> pretty fp
     ReadSigningKeyFailure sKeyFp readErr ->
-      "Error reading signing key at: " <> textShow sKeyFp <> " Error: " <> textShow readErr
+      "Error reading signing key at: " <> pretty sKeyFp <> " Error: " <> pretty readErr
     ReadVerificationKeyFailure vKeyFp readErr ->
-      "Error reading verification key at: " <> textShow vKeyFp <> " Error: " <> textShow readErr
+      "Error reading verification key at: " <> pretty vKeyFp <> " Error: " <> pretty readErr
     LegacySigningKeyDeserialisationFailed fp ->
-      "Error attempting to deserialise a legacy signing key at: " <> textShow fp
+      "Error attempting to deserialise a legacy signing key at: " <> pretty fp
     SigningKeyDeserialisationFailed sKeyFp  ->
-      "Error deserialising signing key at: " <> textShow sKeyFp
+      "Error deserialising signing key at: " <> pretty sKeyFp
     VerificationKeyDeserialisationFailed vKeyFp deSerError ->
-      "Error deserialising verification key at: " <> textShow vKeyFp <> " Error: " <> textShow deSerError
+      "Error deserialising verification key at: " <> pretty vKeyFp <> " Error: " <> pretty deSerError
 
 newtype NewSigningKeyFile =
   NewSigningKeyFile FilePath

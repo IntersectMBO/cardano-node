@@ -8,6 +8,8 @@
 import           Control.Monad.Trans.Except.Exit (orDie)
 import qualified Options.Applicative as Opt
 
+import           Cardano.Api.Pretty
+
 import           Cardano.CLI.Environment (getEnvCli)
 import           Cardano.CLI.Parsers (opts, pref)
 import           Cardano.CLI.Run (renderClientCommandError, runClientCommand)
@@ -31,4 +33,4 @@ main = toplevelExceptionHandler $ do
 #endif
   co <- Opt.customExecParser pref (opts envCli)
 
-  orDie renderClientCommandError $ runClientCommand co
+  orDie (renderDefault . renderClientCommandError) $ runClientCommand co

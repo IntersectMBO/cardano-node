@@ -57,6 +57,7 @@ import           Cardano.Api.Error
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Class
+import           Cardano.Api.Pretty (renderStringDefault)
 import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
@@ -1247,7 +1248,7 @@ instance FromJSON (Hash StakePoolKey) where
     case deserialiseFromBech32 (AsHash AsStakePoolKey) str of
       Left err ->
         fail $ "Error deserialising Hash StakePoolKey: " <> Text.unpack str <>
-               " Error: " <> displayError err
+               " Error: " <> renderStringDefault (displayError err)
       Right h -> pure h
 
 instance HasTextEnvelope (VerificationKey StakePoolKey) where

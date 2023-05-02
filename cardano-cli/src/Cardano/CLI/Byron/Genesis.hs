@@ -31,7 +31,8 @@ import           Data.Text.Lazy.Builder (toLazyText)
 import           Data.Time (UTCTime)
 import           Formatting.Buildable
 
-import           Cardano.Api (Key (..), NetworkId, textShow, writeSecrets)
+import           Cardano.Api (Key (..), NetworkId, writeSecrets)
+import           Cardano.Api.Pretty
 
 import           Cardano.Api.Byron (ByronKey, SerialiseAsRawBytes (..), SigningKey (..),
                    toByronRequiresNetworkMagic)
@@ -63,29 +64,29 @@ data ByronGenesisError
 
   deriving Show
 
-renderByronGenesisError :: ByronGenesisError -> Text
+renderByronGenesisError :: ByronGenesisError -> Doc Ann
 renderByronGenesisError err =
   case err of
     ProtocolParametersParseFailed pParamFp parseError ->
-      "Protocol parameters parse failed at: " <> textShow pParamFp <> " Error: " <> parseError
+      "Protocol parameters parse failed at: " <> pretty pParamFp <> " Error: " <> pretty parseError
     ByronDelegationCertSerializationError bDelegSerErr ->
-      "Error while serializing the delegation certificate: " <> textShow bDelegSerErr
+      "Error while serializing the delegation certificate: " <> pretty (show bDelegSerErr)
     ByronDelegationKeySerializationError bKeySerErr ->
-      "Error while serializing the delegation key: " <> textShow bKeySerErr
+      "Error while serializing the delegation key: " <> pretty (show bKeySerErr)
     PoorKeyFailure bKeyFailure ->
-      "Error creating poor keys: " <> textShow bKeyFailure
+      "Error creating poor keys: " <> pretty (show bKeyFailure)
     MakeGenesisDelegationError genDelegError ->
-      "Error creating genesis delegation: " <> textShow genDelegError
+      "Error creating genesis delegation: " <> pretty (show genDelegError)
     GenesisGenerationError genDataGenError ->
-      "Error generating genesis: " <> textShow genDataGenError
+      "Error generating genesis: " <> pretty (show genDataGenError)
     GenesisOutputDirAlreadyExists genOutDir ->
-      "Genesis output directory already exists: " <> textShow genOutDir
+      "Genesis output directory already exists: " <> pretty genOutDir
     GenesisReadError genFp genDataError ->
-      "Error while reading genesis file at: " <> textShow genFp <> " Error: " <> textShow genDataError
+      "Error while reading genesis file at: " <> pretty genFp <> " Error: " <> pretty (show genDataError)
     GenesisSpecError genSpecError ->
-      "Error while creating genesis spec" <> textShow genSpecError
+      "Error while creating genesis spec" <> pretty genSpecError
     NoGenesisDelegationForKey verKey ->
-      "Error while creating genesis, no delegation certificate for this verification key:" <> textShow verKey
+      "Error while creating genesis, no delegation certificate for this verification key:" <> pretty verKey
 
 newtype NewDirectory =
   NewDirectory FilePath

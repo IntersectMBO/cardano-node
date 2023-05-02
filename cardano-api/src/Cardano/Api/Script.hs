@@ -157,6 +157,7 @@ import           Cardano.Api.Error
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.Pretty (renderStringDefault)
 import           Cardano.Api.ScriptData
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
@@ -473,7 +474,7 @@ instance FromJSON ScriptInAnyLang where
   parseJSON = Aeson.withObject "ScriptInAnyLang" $ \o -> do
     textEnvelopeScript <- o .: "script"
     case textEnvelopeToScript textEnvelopeScript of
-      Left textEnvErr -> fail $ displayError textEnvErr
+      Left textEnvErr -> fail $ renderStringDefault (displayError textEnvErr)
       Right (ScriptInAnyLang l s) -> pure $ ScriptInAnyLang l s
 
 -- | Convert a script in a specific statically-known language to a
@@ -1288,7 +1289,7 @@ parseScriptAfter =
 parsePaymentKeyHash :: Text -> Aeson.Parser (Hash PaymentKey)
 parsePaymentKeyHash =
   failEitherWith
-    (\e -> "Error deserialising payment key hash: " ++ displayError e)
+    (\e -> "Error deserialising payment key hash: " ++ renderStringDefault (displayError e))
   . deserialiseFromRawBytesHex (AsHash AsPaymentKey)
   . Text.encodeUtf8
 

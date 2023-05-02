@@ -64,6 +64,7 @@ module Cardano.CLI.Shelley.Run.Read
 import           Prelude
 
 import           Cardano.Api
+import           Cardano.Api.Pretty
 import           Cardano.Api.Shelley
 
 import           Control.Exception (bracket)
@@ -77,16 +78,14 @@ import qualified Data.ByteString.Builder as Builder
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
-import qualified Data.List as List
-import qualified Data.Text as Text
 import           Data.Word
 import           GHC.IO.Handle (hClose, hIsSeekable)
 import           GHC.IO.Handle.FD (openFileBlocking)
+import qualified Prettyprinter as PP
 import           System.IO (IOMode (ReadMode))
 
 --TODO: do this nicely via the API too:
 import qualified Cardano.Binary as CBOR
-import           Data.Text (Text)
 
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Types
@@ -102,25 +101,32 @@ data MetadataError
   | MetadataErrorNotAvailableInEra AnyCardanoEra
   deriving Show
 
-renderMetadataError :: MetadataError -> Text
+renderMetadataError :: MetadataError -> Doc Ann
 renderMetadataError (MetadataErrorFile fileErr) =
-  Text.pack $ displayError fileErr
+  displayError fileErr
 renderMetadataError (MetadataErrorJsonParseError fp jsonErr) =
-  Text.pack $ "Invalid JSON format in file: " <> show fp <>
-              "\nJSON parse error: " <> jsonErr
+  PP.vsep
+    [ "Invalid JSON format in file: " <> pretty fp
+    , "JSON parse error: " <> pretty jsonErr
+    ]
 renderMetadataError (MetadataErrorConversionError fp metadataErr) =
-  Text.pack $ "Error reading metadata at: " <> show fp <>
-              "\n" <> displayError metadataErr
+  PP.vsep
+    [ "Error reading metadata at: " <> pretty fp
+    , displayError metadataErr
+    ]
 renderMetadataError (MetadataErrorValidationError fp errs) =
-  Text.pack $ "Error validating transaction metadata at: " <> fp <> "\n" <>
-      List.intercalate "\n"
-        [ "key " <> show k <> ":" <> displayError valErr
-        | (k, valErr) <- errs ]
+  PP.vsep
+    [ "Error validating transaction metadata at: " <> pretty fp
+    , PP.vsep
+        [ "key " <> pretty k <> ":" <> displayError valErr
+        | (k, valErr) <- errs
+        ]
+    ]
+
 renderMetadataError (MetadataErrorDecodeError fp metadataErr) =
-  Text.pack $ "Error decoding CBOR metadata at: " <> show fp <>
-              " Error: " <> show metadataErr
+  "Error decoding CBOR metadata at: " <> pretty fp <> " Error: " <> pretty (show metadataErr)
 renderMetadataError (MetadataErrorNotAvailableInEra e) =
-  "Transaction metadata not supported in " <> renderEra e
+  "Transaction metadata not supported in " <> pretty (renderEra e)
 
 readTxMetadata :: CardanoEra era
                -> TxMetadataJsonSchema
@@ -175,22 +181,22 @@ data ScriptWitnessError
   | ScriptWitnessErrorReferenceScriptsNotSupportedInEra !AnyCardanoEra
   | ScriptWitnessErrorScriptData ScriptDataError
 
-renderScriptWitnessError :: ScriptWitnessError -> Text
+renderScriptWitnessError :: ScriptWitnessError -> Doc Ann
 renderScriptWitnessError (ScriptWitnessErrorFile err) =
-  Text.pack $ displayError err
+  displayError err
 renderScriptWitnessError (ScriptWitnessErrorScriptLanguageNotSupportedInEra (AnyScriptLanguage lang) anyEra) =
-  "The script language " <> Text.pack (show lang) <> " is not supported in the " <>
-  renderEra anyEra <> " era."
+  "The script language " <> pretty (show lang) <> " is not supported in the " <>
+  pretty (renderEra anyEra) <> " era."
 renderScriptWitnessError (ScriptWitnessErrorExpectedSimple file (AnyScriptLanguage lang)) =
-  Text.pack $ file <> ": expected a script in the simple script language, " <>
-  "but it is actually using " <> show lang <> ". Alternatively, to use " <>
+  pretty file <> ": expected a script in the simple script language, " <>
+  "but it is actually using " <> pretty (show lang) <> ". Alternatively, to use " <>
   "a Plutus script, you must also specify the redeemer " <>
   "(datum if appropriate) and script execution units."
 renderScriptWitnessError (ScriptWitnessErrorExpectedPlutus file (AnyScriptLanguage lang)) =
-  Text.pack $ file <> ": expected a script in the Plutus script language, " <>
-  "but it is actually using " <> show lang <> "."
+  pretty file <> ": expected a script in the Plutus script language, " <>
+  "but it is actually using " <> pretty (show lang) <> "."
 renderScriptWitnessError (ScriptWitnessErrorReferenceScriptsNotSupportedInEra anyEra) =
-  "Reference scripts not supported in era': " <> renderEra anyEra
+  "Reference scripts not supported in era': " <> pretty (renderEra anyEra)
 renderScriptWitnessError (ScriptWitnessErrorScriptData sDataError) =
   renderScriptDataError sDataError
 
@@ -325,23 +331,31 @@ data ScriptDataError =
   | ScriptDataErrorMetadataDecode !FilePath !CBOR.DecoderError
   | ScriptDataErrorJsonBytes !ScriptDataJsonBytesError
 
-renderScriptDataError :: ScriptDataError -> Text
+renderScriptDataError :: ScriptDataError -> Doc Ann
 renderScriptDataError (ScriptDataErrorFile err) =
-  Text.pack $ displayError err
+  displayError err
 renderScriptDataError (ScriptDataErrorJsonParse fp jsonErr) =
-  Text.pack $ "Invalid JSON format in file: " <> show fp <>
-              "\nJSON parse error: " <> jsonErr
+  PP.vsep
+    [ "Invalid JSON format in file: " <> pretty fp
+    , "JSON parse error: " <> pretty jsonErr
+    ]
 renderScriptDataError (ScriptDataErrorConversion fp sDataJsonErr) =
-  Text.pack $ "Error reading metadata at: " <> show fp <>
-              "\n" <> displayError sDataJsonErr
+  PP.vsep
+    [ "Error reading metadata at: " <> pretty fp
+    , displayError sDataJsonErr
+    ]
 renderScriptDataError (ScriptDataErrorValidation fp sDataRangeErr) =
-  Text.pack $ "Error validating script data at: " <> show fp <> ":\n" <>
-              displayError sDataRangeErr
+  PP.vsep
+    [ "Error validating script data at: " <> pretty fp <> ":"
+    , displayError sDataRangeErr
+    ]
 renderScriptDataError (ScriptDataErrorMetadataDecode fp decoderErr) =
-  Text.pack $ "Error decoding CBOR metadata at: " <> show fp <>
-              " Error: " <> show decoderErr
+  PP.vsep
+    [ "Error decoding CBOR metadata at: " <> pretty fp <> ":"
+    , pretty (show decoderErr)
+    ]
 renderScriptDataError (ScriptDataErrorJsonBytes e) =
-  Text.pack $ displayError e
+  displayError e
 
 
 readScriptDatumOrFile :: ScriptDatumOrFile witctx
@@ -386,9 +400,9 @@ data ScriptDecodeError =
 
 instance Error ScriptDecodeError where
   displayError (ScriptDecodeTextEnvelopeError err) =
-    "Error decoding script: " ++ displayError err
+    "Error decoding script: " <> displayError err
   displayError (ScriptDecodeSimpleScriptError err) =
-    "Syntax error in script: " ++ displayError err
+    "Syntax error in script: " <> displayError err
 
 
 -- | Read a script file. The file can either be in the text envelope format
@@ -626,13 +640,13 @@ data ReadWitnessSigningDataError
   deriving Show
 
 -- | Render an error message for a 'ReadWitnessSigningDataError'.
-renderReadWitnessSigningDataError :: ReadWitnessSigningDataError -> Text
+renderReadWitnessSigningDataError :: ReadWitnessSigningDataError -> Doc Ann
 renderReadWitnessSigningDataError err =
   case err of
     ReadWitnessSigningDataSigningKeyDecodeError fileErr ->
-      "Error reading signing key: " <> Text.pack (displayError fileErr)
+      "Error reading signing key: " <> displayError fileErr
     ReadWitnessSigningDataScriptError fileErr ->
-      "Error reading script: " <> Text.pack (displayError fileErr)
+      "Error reading script: " <> displayError fileErr
     ReadWitnessSigningDataSigningKeyAndAddressMismatch ->
       "Only a Byron signing key may be accompanied by a Byron address."
 
@@ -700,7 +714,7 @@ data RequiredSignerError
 instance Error RequiredSignerError where
   displayError (RequiredSignerErrorFile e) = displayError e
   displayError (RequiredSignerErrorByronKey (File byronSkeyfile)) =
-    "Byron witnesses cannot be used for required signers: " <> byronSkeyfile
+    "Byron witnesses cannot be used for required signers: " <> pretty byronSkeyfile
 
 readRequiredSigner :: RequiredSigner -> IO (Either RequiredSignerError (Hash PaymentKey))
 readRequiredSigner (RequiredSignerHash h) = return $ Right h

@@ -78,14 +78,15 @@ import           Cardano.Ledger.Crypto (StandardCrypto)
 
 import           Cardano.Api.Error (displayError)
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Pretty (renderStringDefault)
 import           Cardano.Api.Script
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.Utils (failEitherWith)
+import           Cardano.Ledger.Mary.TxOut as Mary (scaledMinDeposit)
 import           Cardano.Ledger.Mary.Value (MaryValue (..))
 import qualified Cardano.Ledger.Mary.Value as Mary
-import           Cardano.Ledger.Mary.TxOut as Mary (scaledMinDeposit)
 
 -- ----------------------------------------------------------------------------
 -- Lovelace
@@ -360,7 +361,7 @@ instance FromJSON ValueNestedRep where
       parsePid (Aeson.toText -> pid, quantityBundleJson) = do
         sHash <-
           failEitherWith
-            (\e -> "Failure when deserialising PolicyId: " ++ displayError e) $
+            (\e -> renderStringDefault ("Failure when deserialising PolicyId: " <> displayError e)) $
           deserialiseFromRawBytesHex AsScriptHash $ Text.encodeUtf8 pid
         ValueNestedBundle (PolicyId sHash) <$> parseJSON quantityBundleJson
 

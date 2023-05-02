@@ -5,6 +5,8 @@ module Test.Golden.Byron.Tx
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.Pretty
+
 import           Cardano.Chain.UTxO (ATxAux)
 import           Cardano.CLI.Byron.Tx
 
@@ -12,7 +14,6 @@ import           Control.Monad (void)
 import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad.Trans.Except (runExceptT)
 import           Data.ByteString (ByteString)
-import qualified Data.Text as Text
 
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
@@ -61,7 +62,7 @@ getTxByteString :: FilePath -> H.PropertyT IO (ATxAux ByteString)
 getTxByteString txFp = do
   eATxAuxBS <- liftIO . runExceptT $ readByronTx $ File txFp
   case eATxAuxBS of
-    Left err -> failWith Nothing . Text.unpack $ renderByronTxError err
+    Left err -> failWith Nothing . renderStringDefault $ renderByronTxError err
     Right aTxAuxBS -> return aTxAuxBS
 
 compareByronTxs :: FilePath -> FilePath -> H.PropertyT IO ()

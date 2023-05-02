@@ -110,13 +110,13 @@ import           Data.SOP.Strict (K (..), NP (..), fn, (:.:) (Comp))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import qualified Data.Text.Lazy as LT
 import           Data.Text.Lazy.Builder (toLazyText)
 import           Data.Word
 import qualified Data.Yaml as Yaml
 import           Formatting.Buildable (build)
 import           Lens.Micro ((^.))
 import           Network.TypedProtocol.Pipelined (Nat (..))
+import           Prettyprinter (Pretty (..))
 import           System.FilePath
 
 import           Cardano.Api.Block
@@ -1447,21 +1447,21 @@ instance Error LeadershipError where
   displayError LeaderErrDecodeLedgerStateFailure =
     "Failed to successfully decode ledger state"
   displayError (LeaderErrDecodeProtocolStateFailure (_, decErr)) =
-    "Failed to successfully decode protocol state: " <> Text.unpack (LT.toStrict . toLazyText $ build decErr)
+    "Failed to successfully decode protocol state: " <> pretty (toLazyText $ build decErr)
   displayError LeaderErrGenesisSlot =
     "Leadership schedule currently cannot be calculated from genesis"
   displayError (LeaderErrStakePoolHasNoStake poolId) =
-    "The stake pool: " <> show poolId <> " has no stake"
+    "The stake pool: " <> pretty (show poolId) <> " has no stake"
   displayError (LeaderErrDecodeProtocolEpochStateFailure decoderError) =
-    "Failed to successfully decode the current epoch state: " <> show decoderError
+    "Failed to successfully decode the current epoch state: " <> pretty (show decoderError)
   displayError (LeaderErrStakeDistribUnstable curSlot stableAfterSlot stabWindow predictedLastSlot) =
     "The current stake distribution is currently unstable and therefore we cannot predict " <>
-    "the following epoch's leadership schedule. Please wait until : " <> show stableAfterSlot <>
-    " before running the leadership-schedule command again. \nCurrent slot: " <> show curSlot <>
-    " \nStability window: " <> show stabWindow <>
-    " \nCalculated last slot of current epoch: " <> show predictedLastSlot
+    "the following epoch's leadership schedule. Please wait until : " <> pretty (show stableAfterSlot) <>
+    " before running the leadership-schedule command again. \nCurrent slot: " <> pretty (show curSlot) <>
+    " \nStability window: " <> pretty (show stabWindow) <>
+    " \nCalculated last slot of current epoch: " <> pretty (show predictedLastSlot)
   displayError (LeaderErrSlotRangeCalculationFailure e) =
-    "Error while calculating the slot range: " <> Text.unpack e
+    "Error while calculating the slot range: " <> pretty e
   displayError LeaderErrCandidateNonceStillEvolving = "Candidate nonce is still evolving"
 
 nextEpochEligibleLeadershipSlots

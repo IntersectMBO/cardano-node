@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -44,6 +45,7 @@ module Cardano.Api.Modes (
   ) where
 
 import           Cardano.Api.Eras
+import           Cardano.Api.Pretty
 import           Cardano.Ledger.Crypto (StandardCrypto)
 
 import           Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value)
@@ -115,6 +117,7 @@ data AnyConsensusMode where
   AnyConsensusMode :: ConsensusMode mode -> AnyConsensusMode
 
 deriving instance Show AnyConsensusMode
+deriving via (InstanceShow AnyConsensusMode) instance Pretty AnyConsensusMode
 
 renderMode :: AnyConsensusMode -> Text
 renderMode (AnyConsensusMode ByronMode) = "ByronMode"

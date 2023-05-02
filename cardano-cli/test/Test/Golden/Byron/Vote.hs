@@ -4,12 +4,13 @@ module Test.Golden.Byron.Vote
   ( voteTests
   ) where
 
+import           Cardano.Api.Pretty
+
 import           Cardano.CLI.Byron.Vote
 
 import           Control.Monad (void)
 import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (runExceptT)
-import qualified Data.Text as Text
 import qualified Hedgehog.Extras.Test.Base as H
 
 import           Hedgehog (Property, (===))
@@ -36,12 +37,12 @@ golden_byron_yes_vote = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
 
   eGolden <- liftIO . runExceptT $ readByronVote goldenYesVote
   golden <- case eGolden of
-              Left err -> failWith Nothing . Text.unpack $ renderByronVoteError err
+              Left err -> failWith Nothing . renderStringDefault $ renderByronVoteError err
               Right prop -> return prop
 
   eCreated <- liftIO . runExceptT $ readByronVote createdYesVote
   created <- case eCreated of
-               Left err -> failWith Nothing . Text.unpack $ renderByronVoteError err
+               Left err -> failWith Nothing . renderStringDefault $ renderByronVoteError err
                Right prop -> return prop
 
   golden === created
@@ -63,12 +64,12 @@ golden_byron_no_vote = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
 
   eGolden <- liftIO . runExceptT $ readByronVote goldenNoVote
   golden <- case eGolden of
-              Left err -> failWith Nothing . Text.unpack $ renderByronVoteError err
+              Left err -> failWith Nothing . renderStringDefault $ renderByronVoteError err
               Right prop -> return prop
 
   eCreated <- liftIO . runExceptT $ readByronVote createdNoVote
   created <- case eCreated of
-               Left err -> failWith Nothing . Text.unpack $ renderByronVoteError err
+               Left err -> failWith Nothing . renderStringDefault $ renderByronVoteError err
                Right prop -> return prop
 
   golden === created

@@ -16,11 +16,10 @@ import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left, newExceptT)
 import qualified Data.ByteString.Char8 as BS
-import           Data.Text (Text)
-import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 
 import           Cardano.Api
+import           Cardano.Api.Pretty
 import           Cardano.Api.Shelley
 
 import           Cardano.CLI.Shelley.Key (PaymentVerifier (..), StakeIdentifier (..),
@@ -41,20 +40,20 @@ data ShelleyAddressCmdError
   | ShelleyAddressCmdExpectedPaymentVerificationKey SomeAddressVerificationKey
   deriving Show
 
-renderShelleyAddressCmdError :: ShelleyAddressCmdError -> Text
+renderShelleyAddressCmdError :: ShelleyAddressCmdError -> Doc Ann
 renderShelleyAddressCmdError err =
   case err of
     ShelleyAddressCmdAddressInfoError addrInfoErr ->
-      Text.pack (displayError addrInfoErr)
+      displayError addrInfoErr
     ShelleyAddressCmdReadKeyFileError fileErr ->
-      Text.pack (displayError fileErr)
+      displayError fileErr
     ShelleyAddressCmdVerificationKeyTextOrFileError vkTextOrFileErr ->
       renderVerificationKeyTextOrFileError vkTextOrFileErr
     ShelleyAddressCmdReadScriptFileError fileErr ->
-      Text.pack (displayError fileErr)
-    ShelleyAddressCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
+      displayError fileErr
+    ShelleyAddressCmdWriteFileError fileErr -> displayError fileErr
     ShelleyAddressCmdExpectedPaymentVerificationKey someAddress ->
-      "Expected payment verification key but got: " <> renderSomeAddressVerificationKey someAddress
+      "Expected payment verification key but got: " <> pretty someAddress
 
 runAddressCmd :: AddressCmd -> ExceptT ShelleyAddressCmdError IO ()
 runAddressCmd cmd =

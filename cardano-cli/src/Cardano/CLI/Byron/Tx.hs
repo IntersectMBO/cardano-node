@@ -52,6 +52,8 @@ import qualified Cardano.Chain.UTxO as UTxO
 import qualified Cardano.Crypto.Signing as Crypto
 
 import           Cardano.Api.Byron
+import           Cardano.Api.Pretty
+
 import           Cardano.CLI.Byron.Key (byronWitnessToVerKey)
 import           Cardano.CLI.Types (TxFile)
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock, GenTx (..))
@@ -66,16 +68,16 @@ data ByronTxError
   | EnvSocketError !EnvSocketError
   deriving Show
 
-renderByronTxError :: ByronTxError -> Text
+renderByronTxError :: ByronTxError -> Doc Ann
 renderByronTxError err =
   case err of
-    ByronTxSubmitError res -> "Error while submitting tx: " <> res
+    ByronTxSubmitError res -> "Error while submitting tx: " <> pretty res
     ByronTxSubmitErrorEraMismatch EraMismatch{ledgerEraName, otherEraName} ->
       "The era of the node and the tx do not match. " <>
-      "The node is running in the " <> ledgerEraName <>
-      " era, but the transaction is for the " <> otherEraName <> " era."
+      "The node is running in the " <> pretty ledgerEraName <>
+      " era, but the transaction is for the " <> pretty otherEraName <> " era."
     TxDeserialisationFailed txFp decErr ->
-      "Transaction deserialisation failed at " <> textShow txFp <> " Error: " <> textShow decErr
+      "Transaction deserialisation failed at " <> pretty txFp <> " Error: " <> pretty (show decErr)
     EnvSocketError envSockErr -> renderEnvSocketError envSockErr
 
 newtype NewTxFile =

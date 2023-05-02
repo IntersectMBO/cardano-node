@@ -19,6 +19,7 @@ import           Data.Typeable (tyConName, typeRep, typeRepTyCon)
 
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Pretty (renderStringDefault)
 import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
@@ -112,7 +113,7 @@ instance SerialiseAsBech32 a => IsString (UsingBech32 a) where
     fromString str =
       case deserialiseFromBech32 ttoken (Text.pack str) of
         Right x  -> UsingBech32 x
-        Left  e -> error ("fromString: " ++ show str ++ ": " ++ displayError e)
+        Left  e -> error ("fromString: " <> show str <> ": " <> renderStringDefault (displayError e))
       where
         ttoken :: AsType a
         ttoken = proxyToAsType Proxy
@@ -125,7 +126,7 @@ instance SerialiseAsBech32 a => FromJSON (UsingBech32 a) where
       Aeson.withText tname $ \str ->
         case deserialiseFromBech32 ttoken str of
           Right x -> return (UsingBech32 x)
-          Left  e -> fail (show str ++ ": " ++ displayError e)
+          Left  e -> fail (show str <> ": " <> renderStringDefault (displayError e))
       where
         ttoken = proxyToAsType (Proxy :: Proxy a)
         tname  = (tyConName . typeRepTyCon . typeRep) (Proxy :: Proxy a)

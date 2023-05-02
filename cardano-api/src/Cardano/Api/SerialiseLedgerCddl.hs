@@ -53,6 +53,7 @@ import           Cardano.Api.IO
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.Tx
 import           Cardano.Api.Utils
+import           Prettyprinter (Pretty (..))
 
 
 -- Why have we gone this route? The serialization format of `TxBody era`
@@ -105,18 +106,18 @@ data TextEnvelopeCddlError
 
 instance Error TextEnvelopeCddlError where
   displayError (TextEnvelopeCddlErrCBORDecodingError decoderError) =
-    "TextEnvelopeCDDL CBOR decoding error: " <> show decoderError
+    "TextEnvelopeCDDL CBOR decoding error: " <> pretty (show decoderError)
   displayError (TextEnvelopeCddlAesonDecodeError fp aesonErr) =
-    "Could not JSON decode TextEnvelopeCddl file at: " <> fp <> " Error: " <> aesonErr
+    "Could not JSON decode TextEnvelopeCddl file at: " <> pretty fp <> " Error: " <> pretty aesonErr
   displayError TextEnvelopeCddlUnknownKeyWitness =
     "Unknown key witness specified"
   displayError (TextEnvelopeCddlTypeError expTypes actType) =
     "TextEnvelopeCddl type error: "
        <> " Expected one of: "
-       <> List.intercalate ", " (map Text.unpack expTypes)
-       <> " Actual: " <> Text.unpack actType
+       <> mconcat (List.intersperse ", " (map (pretty . Text.unpack) expTypes))
+       <> " Actual: " <> pretty (Text.unpack actType)
   displayError (TextEnvelopeCddlErrUnknownType unknownType) =
-    "Unknown TextEnvelopeCddl type: " <> Text.unpack unknownType
+    "Unknown TextEnvelopeCddl type: " <> pretty (Text.unpack unknownType)
   displayError TextEnvelopeCddlErrByronKeyWitnessUnsupported =
     "TextEnvelopeCddl error: Byron key witnesses are currently unsupported."
 

@@ -11,13 +11,16 @@ module Cardano.Api.Error
   , FileError(..)
   ) where
 
+import           Cardano.Api.Pretty (Ann, renderStringDefault)
 import           Control.Exception (Exception (..), IOException, throwIO)
+import           Prettyprinter (Doc)
 import           System.IO (Handle)
+import           Text.Pretty (Pretty (..))
 
 
 class Error e where
 
-    displayError :: e -> String
+    displayError :: e -> Doc Ann
 
 instance Error () where
     displayError () = ""
@@ -33,10 +36,10 @@ data ErrorAsException where
      ErrorAsException :: Error e => e -> ErrorAsException
 
 instance Show ErrorAsException where
-    show (ErrorAsException e) = displayError e
+    show (ErrorAsException e) = renderStringDefault (displayError e)
 
 instance Exception ErrorAsException where
-    displayException (ErrorAsException e) = displayError e
+    displayException (ErrorAsException e) = renderStringDefault (displayError e)
 
 
 data FileError e = FileError FilePath e
@@ -51,10 +54,10 @@ data FileError e = FileError FilePath e
 
 instance Error e => Error (FileError e) where
   displayError (FileErrorTempFile targetPath tempPath h)=
-    "Error creating temporary file at: " ++ tempPath ++
-    "/n" ++ "Target path: " ++ targetPath ++
-    "/n" ++ "Handle: " ++ show h
+    "Error creating temporary file at: " <> pretty tempPath <>
+    "/n" <> "Target path: " <> pretty targetPath <>
+    "/n" <> "Handle: " <> pretty (show h)
   displayError (FileIOError path ioe) =
-    path ++ ": " ++ displayException ioe
+    pretty path <> ": " <> pretty (displayException ioe)
   displayError (FileError path e) =
-    path ++ ": " ++ displayError e
+    pretty path <> ": " <> displayError e
