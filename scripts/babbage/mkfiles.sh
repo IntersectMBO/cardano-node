@@ -79,11 +79,6 @@ $CARDANO_CLI byron genesis genesis \
   --protocol-parameters-file "${ROOT}/byron.genesis.spec.json" \
   --genesis-output-dir "${ROOT}/byron-gen-command"
 
-# Because in Babbage the overlay schedule and decentralization parameter
-# are deprecated, we must use the "create-staked" cli command to create
-# SPOs in the ShelleyGenesis
-
-
 cp scripts/babbage/alonzo-babbage-test-genesis.json "${ROOT}/genesis.alonzo.spec.json"
 cp scripts/babbage/conway-babbage-test-genesis.json "${ROOT}/genesis.conway.spec.json"
 
@@ -108,9 +103,9 @@ $SED -i "${ROOT}/configuration.yaml" \
   echo "TestConwayHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
   echo "ExperimentalProtocolsEnabled: True" >> "${ROOT}/configuration.yaml"
 
-# Copy the cost model
-
-
+# Because in Babbage the overlay schedule and decentralization parameter
+# are deprecated, we must use the "create-staked" cli command to create
+# SPOs in the ShelleyGenesis
 $CARDANO_CLI genesis create-staked --genesis-dir "${ROOT}" \
   --testnet-magic "${NETWORK_MAGIC}" \
   --gen-pools 3 \
