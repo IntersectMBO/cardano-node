@@ -241,7 +241,9 @@ data AnyCardanoEra where
                    -> AnyCardanoEra
 
 deriving instance Show AnyCardanoEra
-deriving via (InstanceShow AnyCardanoEra) instance Pretty AnyCardanoEra
+
+instance Pretty AnyCardanoEra where
+  pretty (AnyCardanoEra cEra) = pretty cEra
 
 instance Eq AnyCardanoEra where
     AnyCardanoEra era == AnyCardanoEra era' =

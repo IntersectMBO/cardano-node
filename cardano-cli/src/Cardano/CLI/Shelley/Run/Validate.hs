@@ -50,8 +50,8 @@ data ScriptLanguageValidationError
 
 instance Error ScriptLanguageValidationError where
   displayError (ScriptLanguageValidationError lang era) =
-    "The script language " <> pretty (show lang) <> " is not supported in the " <>
-    pretty (renderEra era) <> " era."
+    "The script language " <> pretty lang <> " is not supported in the " <>
+    pretty era <> " era."
 
 validateScriptSupportedInEra
   :: CardanoEra era

@@ -126,6 +126,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vector
+import           Prettyprinter (Pretty (..))
 
 import           Control.Applicative
 import           Control.Monad
@@ -227,6 +228,11 @@ data ScriptLanguage lang where
 deriving instance (Eq   (ScriptLanguage lang))
 deriving instance (Show (ScriptLanguage lang))
 
+instance Pretty (ScriptLanguage lang) where
+  pretty = \case
+    SimpleScriptLanguage -> "SimpleScriptLanguage"
+    PlutusScriptLanguage pv -> pretty pv
+
 instance TestEquality ScriptLanguage where
     testEquality SimpleScriptLanguage SimpleScriptLanguage = Just Refl
 
@@ -248,11 +254,17 @@ instance TestEquality PlutusScriptVersion where
     testEquality PlutusScriptV2 PlutusScriptV2 = Just Refl
     testEquality _ _ = Nothing
 
+instance Pretty (PlutusScriptVersion lang) where
+  pretty PlutusScriptV1 = "PlutusScriptV1"
+  pretty PlutusScriptV2 = "PlutusScriptV2"
 
 data AnyScriptLanguage where
      AnyScriptLanguage :: ScriptLanguage lang -> AnyScriptLanguage
 
 deriving instance (Show AnyScriptLanguage)
+
+instance Pretty AnyScriptLanguage where
+  pretty (AnyScriptLanguage lang) = pretty lang
 
 instance Eq AnyScriptLanguage where
     a == b = fromEnum a == fromEnum b
