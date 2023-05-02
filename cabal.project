@@ -111,7 +111,7 @@ package snap-server
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 07ccbfbe316e8559d30175b620ef1d070e3f3ee9
-  --sha256: 1przkfbmzrk0wq233j3rm696qy8bbjbbx82v7mzsqk7vf8h5xbq8
+  tag: 1854ccf641b28466a5bcdacb9416a13a2f0fdde2
+  --sha256: 0wirnn44rwk541gkyldp8222fpvxr3783izid8753xi9brk6m19s
   subdir:
     cardano-crypto-class
