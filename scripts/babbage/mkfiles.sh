@@ -108,7 +108,7 @@ $SED -i "${ROOT}/configuration.yaml" \
   echo "TestConwayHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
   echo "ExperimentalProtocolsEnabled: True" >> "${ROOT}/configuration.yaml"
 
-# Copy the cost mode
+# Copy the cost model
 
 
 $CARDANO_CLI genesis create-staked --genesis-dir "${ROOT}" \
