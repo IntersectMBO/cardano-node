@@ -1232,9 +1232,9 @@ pPollFile =
 pPollTxFile :: Parser (TxFile In)
 pPollTxFile =
   fmap File $ Opt.strOption $ mconcat
-    [ Opt.long "signed-tx-file"
+    [ Opt.long "tx-file"
     , Opt.metavar "FILE"
-    , Opt.help "Filepath to a signed transaction carrying a valid poll answer."
+    , Opt.help "Filepath to the JSON TxBody or JSON Tx carrying a valid poll answer."
     , Opt.completer (Opt.bashCompleter "file")
     ]
 
