@@ -25,6 +25,7 @@ import           Data.String (IsString, fromString)
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Formatting (build, sformat, (%))
+import qualified Prettyprinter as PP
 
 import           Cardano.Api.Byron
 import           Cardano.Api.Pretty
@@ -48,17 +49,26 @@ renderByronKeyFailure :: ByronKeyFailure -> Doc Ann
 renderByronKeyFailure err =
   case err of
     CannotMigrateFromNonLegacySigningKey fp ->
-      "Migrate from non-legacy Byron key unnecessary: " <> pretty fp
+      reflow $ "Migrate from non-legacy Byron key unnecessary:" <+> pretty fp
     ReadSigningKeyFailure sKeyFp readErr ->
-      "Error reading signing key at: " <> pretty sKeyFp <> " Error: " <> pretty readErr
+      PP.vsep
+      [ reflow $ "Error reading signing key at:" <+> pretty sKeyFp <> ", with error:"
+      , PP.indent 2 $ pretty readErr
+      ]
     ReadVerificationKeyFailure vKeyFp readErr ->
-      "Error reading verification key at: " <> pretty vKeyFp <> " Error: " <> pretty readErr
+      PP.vsep
+      [ reflow $ "Error reading verification key at:" <+> pretty vKeyFp <> ", with error:"
+      , PP.indent 2 $ pretty readErr
+      ]
     LegacySigningKeyDeserialisationFailed fp ->
-      "Error attempting to deserialise a legacy signing key at: " <> pretty fp
+      reflow $ "Error attempting to deserialise a legacy signing key at:" <+> pretty fp
     SigningKeyDeserialisationFailed sKeyFp  ->
-      "Error deserialising signing key at: " <> pretty sKeyFp
+      reflow $ "Error deserialising signing key at:" <+> pretty sKeyFp
     VerificationKeyDeserialisationFailed vKeyFp deSerError ->
-      "Error deserialising verification key at: " <> pretty vKeyFp <> " Error: " <> pretty deSerError
+      PP.vsep
+      [ reflow $ "Error deserialising verification key at:" <+> pretty vKeyFp <> ", with error:"
+      , PP.indent 2 $ pretty deSerError
+      ]
 
 newtype NewSigningKeyFile =
   NewSigningKeyFile FilePath

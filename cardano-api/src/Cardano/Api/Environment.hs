@@ -24,6 +24,6 @@ renderEnvSocketError err =
   case err of
     CliEnvVarLookup txt ->
       PP.vsep
-        [ "Error while looking up environment variable: CARDANO_NODE_SOCKET_PATH.  Error: "
+        [ reflow "Error while looking up environment variable: CARDANO_NODE_SOCKET_PATH.  Error: "
         , PP.indent 2 $ pretty txt
         ]

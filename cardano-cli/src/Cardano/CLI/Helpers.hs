@@ -32,6 +32,7 @@ import qualified Data.ByteString.Lazy as LB
 import           Data.Functor (void)
 import           Data.Text (Text)
 import qualified Data.Text.IO as Text
+import qualified Prettyprinter as PP
 import qualified System.Console.ANSI as ANSI
 import           System.Console.ANSI
 import qualified System.Directory as IO
@@ -57,11 +58,28 @@ data HelpersError
 renderHelpersError :: HelpersError -> Doc Ann
 renderHelpersError err =
   case err of
-    OutputMustNotAlreadyExist fp -> "Output file/directory must not already exist: " <> pretty fp
-    ReadCBORFileFailure fp err' -> "CBOR read failure at: " <> pretty fp <> pretty (show err')
-    CBORPrettyPrintError err' -> "Error with CBOR decoding: " <> pretty (show err')
-    CBORDecodingError err' -> "Error with CBOR decoding: " <> pretty (show err')
-    IOError' fp ioE -> "Error at: " <> pretty fp <> " Error: " <> pretty (show ioE)
+    OutputMustNotAlreadyExist fp ->
+      reflow $ "Output file/directory must not already exist:" <+> pretty fp
+    ReadCBORFileFailure fp err' ->
+      PP.vsep
+      [ reflow $ "CBOR read failure at:" <+> pretty fp <> ", with error:"
+      , PP.indent 2 $ pretty (show err')
+      ]
+    CBORPrettyPrintError err' ->
+      PP.vsep
+      [ reflow "Error with CBOR decoding:"
+      , PP.indent 2 $ pretty (show err')
+      ]
+    CBORDecodingError err' ->
+      PP.vsep
+      [ "Error with CBOR decoding:"
+      , PP.indent 2 $ pretty (show err')
+      ]
+    IOError' fp ioE ->
+      PP.vsep
+      [ "Error at: " <+> pretty fp <> ", with error:"
+      , PP.indent 2 $ pretty (show ioE)
+      ]
 
 decodeCBOR
   :: LB.ByteString

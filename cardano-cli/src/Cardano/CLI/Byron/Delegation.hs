@@ -31,11 +31,13 @@ import           Cardano.Ledger.Binary (Annotated (..), byronProtVer, serialize'
 import           Cardano.CLI.Byron.Key (ByronKeyFailure, renderByronKeyFailure)
 import           Cardano.CLI.Types (CertificateFile (..))
 import           Cardano.Prelude (canonicalDecodePretty, canonicalEncodePretty)
+
 import           Control.Monad (unless)
 import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (ExceptT)
 import           Data.ByteString (ByteString)
 import           Data.Text (Text)
+import qualified Prettyprinter as PP
 
 data ByronDelegationError
   = CertificateValidationErrors !FilePath ![Text]
@@ -47,9 +49,15 @@ renderByronDelegationError :: ByronDelegationError -> Doc Ann
 renderByronDelegationError err =
   case err of
     CertificateValidationErrors certFp errs ->
-      "Certificate validation error(s) at: " <> pretty certFp <> " Errors: " <> pretty errs
+      PP.vsep
+      [ reflow $ "Certificate validation error(s) at:" <+> pretty certFp <> ", with error:"
+      , PP.indent 2 $ pretty errs
+      ]
     DlgCertificateDeserialisationFailed certFp deSererr ->
-      "Certificate deserialisation error at: " <> pretty certFp <> " Error: " <> pretty deSererr
+      PP.vsep
+      [ reflow $ "Certificate deserialisation error at:" <+> pretty certFp <> ", with errorr:"
+      , PP.indent 2 $ pretty deSererr
+      ]
     ByronDelegationKeyError kerr -> renderByronKeyFailure kerr
 
 -- TODO:  we need to support password-protected secrets.

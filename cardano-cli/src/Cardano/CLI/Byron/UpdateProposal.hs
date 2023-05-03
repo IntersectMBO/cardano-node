@@ -18,6 +18,7 @@ import           Control.Tracer (stdoutTracer, traceWith)
 import           Data.Bifunctor (Bifunctor (..))
 import qualified Data.ByteString as BS
 import           Data.Text (Text)
+import qualified Prettyprinter as PP
 
 import           Cardano.Chain.Update (InstallerHash (..), ProtocolVersion (..),
                    SoftwareVersion (..), SystemTag (..))
@@ -50,17 +51,32 @@ renderByronUpdateProposalError :: ByronUpdateProposalError -> Doc Ann
 renderByronUpdateProposalError err =
   case err of
     ByronReadUpdateProposalFileFailure fp rErr ->
-      "Error reading update proposal at " <> pretty fp <> " Error: " <> pretty rErr
+      PP.vsep
+      [ reflow $ "Error reading update proposal at" <+> pretty fp <> ", error:"
+      , PP.indent 2 $ pretty rErr
+      ]
     ByronUpdateProposalWriteError hErr ->
-      "Error writing update proposal: " <> renderHelpersError hErr
+      PP.vsep
+      [ reflow "Error writing update proposal:"
+      , PP.indent 2 $ renderHelpersError hErr
+      ]
     ByronUpdateProposalGenesisReadError fp rErr ->
-      "Error reading update proposal at: " <> pretty fp <> " Error: " <> pretty (show rErr)
+      PP.vsep
+      [ reflow $ "Error reading update proposal at:" <+> pretty fp <> ", with error:"
+      , PP.indent 2 $ pretty (show rErr)
+      ]
     ByronUpdateProposalTxError txErr ->
-      "Error submitting update proposal: " <> pretty (show txErr)
+      PP.vsep
+      [ reflow "Error submitting update proposal:"
+      , PP.indent 2 $ pretty (show txErr)
+      ]
     ReadSigningKeyFailure fp rErr ->
-      "Error reading signing key at: " <> pretty fp <> " Error: " <> pretty (show rErr)
+      PP.vsep
+      [ reflow $ "Error reading signing key at:" <+> pretty fp <> ", with error: "
+      , PP.indent 2 $ pretty (show rErr)
+      ]
     UpdateProposalDecodingError fp ->
-      "Error decoding update proposal at: " <> pretty fp
+      reflow $ "Error decoding update proposal at:" <+> pretty fp
 
 runProposalCreation
   :: NetworkId

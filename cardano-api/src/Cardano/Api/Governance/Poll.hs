@@ -291,27 +291,28 @@ renderGovernancePollError err =
   case err of
     ErrGovernancePollMismatch mismatchErr ->
       PP.vsep
-      [ "Answer's poll doesn't match provided poll (hash mismatch)."
+      [ reflow "Answer's poll doesn't match provided poll (hash mismatch)."
       , PP.indent 2 $ PP.vsep
-        [ "Hash specified in answer:  " <> pretty (show (specifiedHashInAnswer mismatchErr))
-        , "Hash calculated from poll: " <> pretty (show (calculatedHashFromPoll mismatchErr))
+        [ reflow $ "Hash specified in answer:  " <> pretty (show (specifiedHashInAnswer mismatchErr))
+        , reflow $ "Hash calculated from poll: " <> pretty (show (calculatedHashFromPoll mismatchErr))
         ]
       ]
     ErrGovernancePollNoAnswer ->
-      "No answer found in the provided transaction's metadata."
-    ErrGovernancePollUnauthenticated -> mconcat
-      [ "No (valid) signatories found for the answer. "
-      , "Signatories MUST be specified as extra signatories on the transaction "
-      , "and cannot be mere payment keys."
-      ]
+      reflow "No answer found in the provided transaction's metadata."
+    ErrGovernancePollUnauthenticated ->
+      reflow $ PP.hsep
+        [ "No (valid) signatories found for the answer."
+        , "Signatories MUST be specified as extra signatories on the transaction"
+        , "and cannot be mere payment keys."
+        ]
     ErrGovernancePollMalformedAnswer decoderErr ->
-      "Malformed metadata; couldn't deserialise answer: " <> pretty (sformat build decoderErr)
+      reflow $ "Malformed metadata; couldn't deserialise answer: " <> pretty (sformat build decoderErr)
     ErrGovernancePollInvalidAnswer invalidAnswer ->
       PP.vsep
-        [ mconcat
-          [ "Invalid answer ("
-          , pretty (invalidAnswerReceivedAnswer invalidAnswer)
-          , ") not part of the poll."
+        [ PP.hsep
+          [ "Invalid answer"
+          , "(" <> pretty @Word (invalidAnswerReceivedAnswer invalidAnswer) <> ")"
+          , "not part of the poll."
           ]
         , "Accepted answers:"
         , PP.vsep

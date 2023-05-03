@@ -1,5 +1,6 @@
 module Cardano.Api.Pretty
   ( Pretty(..),
+    (<+>),
     (<+/>),
     Doc,
     Ann,

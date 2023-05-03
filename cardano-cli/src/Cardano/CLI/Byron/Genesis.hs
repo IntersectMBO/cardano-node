@@ -30,6 +30,7 @@ import           Data.Text.Lazy (toStrict)
 import           Data.Text.Lazy.Builder (toLazyText)
 import           Data.Time (UTCTime)
 import           Formatting.Buildable
+import qualified Prettyprinter as PP
 
 import           Cardano.Api (Key (..), NetworkId, writeSecrets)
 import           Cardano.Api.Pretty
@@ -68,25 +69,55 @@ renderByronGenesisError :: ByronGenesisError -> Doc Ann
 renderByronGenesisError err =
   case err of
     ProtocolParametersParseFailed pParamFp parseError ->
-      "Protocol parameters parse failed at: " <> pretty pParamFp <> " Error: " <> pretty parseError
+      PP.vsep
+      [ reflow $ "Protocol parameters parse failed at:" <+> pretty pParamFp <> " Error: "
+      , PP.indent 2 $ pretty parseError
+      ]
     ByronDelegationCertSerializationError bDelegSerErr ->
-      "Error while serializing the delegation certificate: " <> pretty (show bDelegSerErr)
+      PP.vsep
+      [ reflow "Error while serializing the delegation certificate:"
+      , PP.indent 2 $ pretty (show bDelegSerErr)
+      ]
     ByronDelegationKeySerializationError bKeySerErr ->
-      "Error while serializing the delegation key: " <> pretty (show bKeySerErr)
+      PP.vsep
+      [ reflow "Error while serializing the delegation key:"
+      , PP.indent 2 $ pretty (show bKeySerErr)
+      ]
     PoorKeyFailure bKeyFailure ->
-      "Error creating poor keys: " <> pretty (show bKeyFailure)
+      PP.vsep
+      [ reflow "Error creating poor keys:"
+      , PP.indent 2 $ pretty (show bKeyFailure)
+      ]
     MakeGenesisDelegationError genDelegError ->
-      "Error creating genesis delegation: " <> pretty (show genDelegError)
+      PP.vsep
+      [ reflow "Error creating genesis delegation:"
+      , PP.indent 2 $ pretty (show genDelegError)
+      ]
     GenesisGenerationError genDataGenError ->
-      "Error generating genesis: " <> pretty (show genDataGenError)
+      PP.vsep
+      [ reflow "Error generating genesis:"
+      , PP.indent 2 $ pretty (show genDataGenError)
+      ]
     GenesisOutputDirAlreadyExists genOutDir ->
-      "Genesis output directory already exists: " <> pretty genOutDir
+      PP.vsep
+      [ reflow "Genesis output directory already exists:"
+      , PP.indent 2 $ pretty genOutDir
+      ]
     GenesisReadError genFp genDataError ->
-      "Error while reading genesis file at: " <> pretty genFp <> " Error: " <> pretty (show genDataError)
+      PP.vsep
+      [ reflow $ "Error while reading genesis file at:" <+> pretty genFp <> ", with error:"
+      , PP.indent 2 $ pretty (show genDataError)
+      ]
     GenesisSpecError genSpecError ->
-      "Error while creating genesis spec" <> pretty genSpecError
+      PP.vsep
+      [ reflow "Error while creating genesis spec"
+      , PP.indent 2 $ pretty genSpecError
+      ]
     NoGenesisDelegationForKey verKey ->
-      "Error while creating genesis, no delegation certificate for this verification key:" <> pretty verKey
+      PP.vsep
+      [ reflow "Error while creating genesis, no delegation certificate for this verification key:"
+      , PP.indent 2 $ pretty verKey
+      ]
 
 newtype NewDirectory =
   NewDirectory FilePath

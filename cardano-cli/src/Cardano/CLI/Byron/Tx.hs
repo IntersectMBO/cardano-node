@@ -40,6 +40,7 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import           Formatting (sformat, (%))
+import qualified Prettyprinter as PP
 
 import           Cardano.Api
 
@@ -71,13 +72,22 @@ data ByronTxError
 renderByronTxError :: ByronTxError -> Doc Ann
 renderByronTxError err =
   case err of
-    ByronTxSubmitError res -> "Error while submitting tx: " <> pretty res
+    ByronTxSubmitError res ->
+      PP.vsep
+      [ reflow "Error while submitting tx:"
+      , PP.indent 2 $ pretty res
+      ]
     ByronTxSubmitErrorEraMismatch EraMismatch{ledgerEraName, otherEraName} ->
-      "The era of the node and the tx do not match. " <>
-      "The node is running in the " <> pretty ledgerEraName <>
-      " era, but the transaction is for the " <> pretty otherEraName <> " era."
+      reflow $ PP.hsep
+      [ "The era of the node and the tx do not match."
+      , "The node is running in the" <+> pretty ledgerEraName <+> "era,"
+      , "but the transaction is for the" <+> pretty otherEraName <+> "era."
+      ]
     TxDeserialisationFailed txFp decErr ->
-      "Transaction deserialisation failed at " <> pretty txFp <> " Error: " <> pretty (show decErr)
+      reflow $ PP.hsep
+      [ "Transaction deserialisation failed at" <+> pretty txFp <> ", with error:"
+      , PP.indent 2 $ pretty (show decErr)
+      ]
     EnvSocketError envSockErr -> renderEnvSocketError envSockErr
 
 newtype NewTxFile =

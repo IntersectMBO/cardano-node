@@ -19,6 +19,7 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistMaybe, lef
 import           Data.Function ((&))
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Prettyprinter as PP
 
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..))
 
@@ -44,18 +45,23 @@ data QueryConvenienceError
 
 renderQueryConvenienceError :: QueryConvenienceError -> Doc Ann
 renderQueryConvenienceError (AcqFailure e) =
-  "Acquiring failure: " <> pretty (show e)
+  reflow $ "Acquiring failure: " <> pretty (show e)
 renderQueryConvenienceError (SockErr e) =
   renderEnvSocketError e
 renderQueryConvenienceError (QueryEraMismatch (EraMismatch ledgerEraName' otherEraName')) =
-  "The era of the node and the tx do not match. " <>
-  "The node is running in the " <> pretty ledgerEraName' <>
-  " era, but the transaction is for the " <> pretty otherEraName' <> " era."
+  reflow $ PP.hsep
+    [ "The era of the node and the query do not match."
+    , "The node is running in the" <+> pretty ledgerEraName' <+> "era,"
+    , "but the query is for the" <+> pretty otherEraName' <+> "era."
+    ]
 renderQueryConvenienceError ByronEraNotSupported =
-  "Byron era not supported"
+  reflow "Byron era not supported"
 renderQueryConvenienceError (EraConsensusModeMismatch cMode anyCEra) =
-  "Consensus mode and era mismatch. Consensus mode: " <> pretty cMode <>
-  " Era: " <> pretty anyCEra
+  reflow $ PP.hsep
+    [ "Consensus mode and era mismatch."
+    , "Consensus mode:" <+> pretty cMode <+> ","
+    , "Era:" <+> pretty anyCEra
+    ]
 
 -- | A convenience function to query the relevant information, from
 -- the local node, for Cardano.Api.Convenience.Construction.constructBalancedTx

@@ -65,7 +65,7 @@ renderTxInsExistError EmptyUTxO =
   "The UTxO is empty"
 renderTxInsExistError (TxInsDoNotExist txins) =
   PP.vsep
-    [ "The following tx input(s) were not present in the UTxO:"
+    [ reflow "The following tx input(s) were not present in the UTxO:"
     , PP.indent 2 $ PP.vsep $ map pretty txins
     ]
 
@@ -83,8 +83,10 @@ newtype ScriptLockedTxInsError = ScriptLockedTxIns [TxIn]
 
 renderNotScriptLockedTxInsError :: ScriptLockedTxInsError -> Doc Ann
 renderNotScriptLockedTxInsError (ScriptLockedTxIns txins) =
-  "The followings tx inputs were expected to be key witnessed but are actually script witnessed: " <>
-  PP.prettyList (map renderTxIn txins)
+  PP.vsep
+    [ reflow "The followings tx inputs were expected to be key witnessed but are actually script witnessed:"
+    , PP.indent 2 $ PP.vsep (map (pretty . renderTxIn) txins)
+    ]
 
 notScriptLockedTxIns :: [TxIn] -> UTxO era -> Either ScriptLockedTxInsError ()
 notScriptLockedTxIns collTxIns (UTxO utxo) = do

@@ -17,6 +17,7 @@ import qualified Data.Text.IO as Text
 import qualified Data.Text.Lazy.Builder as Builder
 import qualified Data.Text.Lazy.IO as TL
 import qualified Formatting as F
+import qualified Prettyprinter as PP
 
 import qualified Cardano.Chain.Genesis as Genesis
 
@@ -66,7 +67,10 @@ renderByronClientCmdError err =
     ByronCmdQueryError e -> renderByronQueryError e
     ByronCmdTxError e -> renderByronTxError e
     ByronCmdTxSubmitError e ->
-      "Error while submitting Byron tx: " <> pretty (show e)
+      PP.vsep
+      [ reflow "Error while submitting Byron tx:"
+      , PP.indent 2 $ pretty (show e)
+      ]
     ByronCmdUpdateProposalError e -> renderByronUpdateProposalError e
     ByronCmdVoteError e -> renderByronVoteError e
 
