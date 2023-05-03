@@ -98,15 +98,7 @@ and it should return a path of this shape: `/home/<user>/.ghcup/bin/cabal`.
 Cardano uses a custom fork of `libsodium` which exposes some internal functions
 and adds some other new functions. This fork lives in
 [https://github.com/input-output-hk/libsodium](https://github.com/input-output-hk/libsodium).
-Users can choose to either install that custom version of `libsodium` or
-otherwise tell `cabal` to use a ported version included in Cardano crypto
-libraries.
-
-The C code is merely a port of the bits missing in a normal `libsodium`
-installation, so it should be as performant as installing the custom `libsodium`
-fork.
-
-##### Installing the custom libsodium
+Users need to install that custom version of `libsodium` with the following steps.
 
 Create a working directory for your builds:
 
@@ -140,25 +132,6 @@ the executable is linked with the right `libsodium.so` file (which you can
 check by running `ldd`), the running binary might still use the wrong library.
 You can check this by running `pldd`. If the `pldd` shows that the running executable
 is using the wrong library, run `ldconfig`.
-
-##### Using the ported `c` code
-
-In order to avoid having to install the custom version, `cardano-crypto-praos`
-defines a `cabal` flag that makes use of C code located
-[here](https://github.com/input-output-hk/cardano-base/tree/master/cardano-crypto-praos/cbits).
-To enable this code, one has to add the following code in the
-`cabal.project.local` file:
-
-```bash
-package cardano-crypto-praos
-  flags: -external-libsodium-vrf
-```
-
-For this to work, `libsodium` has to be in the system. For Ubuntu, this is achieved by:
-
-```bash
-sudo apt install libsodium-dev
-```
 
 #### Installing Secp256k1
 
