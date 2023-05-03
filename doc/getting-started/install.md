@@ -140,7 +140,9 @@ used for development purposes.
 In order to avoid having to install the custom version of libsodium for development
 purposes, `cardano-crypto-praos` defines a `cabal` flag that makes use of C code located
 [here](https://github.com/input-output-hk/cardano-base/tree/master/cardano-crypto-praos/cbits).
-To enable this code, one has to add the following code in the
+
+The C code is merely a port of the bits missing in a normal `libsodium`
+installation. To enable this code, one has to add the following code in the
 `cabal.project.local` file:
 
 ```bash
