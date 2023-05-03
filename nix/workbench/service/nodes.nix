@@ -170,7 +170,7 @@ let
           ExperimentalHardForksEnabled = true;
           ExperimentalProtocolsEnabled = true;
           TurnOnLogMetrics             = true;
-          SnapshotInterval             = 1100;
+          SnapshotInterval             = 4230;
         };
       tracing-transform = {
         trace-dispatcher = cfg:
