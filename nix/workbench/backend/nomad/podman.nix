@@ -61,6 +61,14 @@ let
     ]
   ;
 
+  validateNodeSpecs = { nodeSpecsValue }:
+    builtins.all (r: r == "loopback")
+      (lib.attrsets.mapAttrsToList
+        (name: value: value.region)
+        nodeSpecsValue
+      )
+  ;
+
   # Nomad-generic "container-specs.json"
   # Build a Nomad Job specification for each available Nomad "sub-backend".
   materialise-profile =
@@ -85,5 +93,12 @@ let
 
 in
 {
-  inherit name extraShellPkgs materialise-profile overlay service-modules stateDir basePort useCabalRun;
+  inherit name;
+
+  inherit extraShellPkgs;
+  inherit validateNodeSpecs materialise-profile;
+  inherit overlay service-modules;
+  inherit stateDir basePort;
+
+  inherit useCabalRun;
 }

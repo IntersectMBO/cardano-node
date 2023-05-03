@@ -277,6 +277,10 @@ let
         };
     };
 
+  validateNodeSpecs = { nodeSpecsValue }:
+    true
+  ;
+
   materialise-profile =
     { profileData }:
       let
@@ -320,7 +324,10 @@ in
 {
   name = "nixops";
 
-  inherit extraShellPkgs materialise-profile overlay service-modules stateDir basePort;
+  inherit extraShellPkgs;
+  inherit validateNodeSpecs materialise-profile;
+  inherit overlay service-modules;
+  inherit stateDir basePort;
 
   useCabalRun = false;
 }

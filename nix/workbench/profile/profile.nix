@@ -15,7 +15,7 @@ rec {
 
   nodeSpecsJson = { profileName, profileJson }:
     runWorkbenchJqOnly "node-specs-${profileName}.json"
-                       "profile node-specs ${profileJson}";
+                       "profile node-specs ${profileJson} ${topologyFiles {inherit profileName profileJson;}}";
 
   genesisFiles = { profileName, profileJson, nodeSpecsJson }:
     import ../genesis/genesis.nix
@@ -70,8 +70,15 @@ rec {
             { inherit profileName;
               profileJson = JSON;
             };
-          value = __fromJSON (__readFile node-specs.JSON);          ## IFD !!
+          value =                                                   ## IFD !!
+            let nodeSpecsValue = __fromJSON (__readFile node-specs.JSON);
+            in if backend.validateNodeSpecs { inherit nodeSpecsValue; }
+              then nodeSpecsValue
+              else builtins.throw "Incompatible backend for the current profile"
+          ;
         };
+
+      # validateNodeSpecs
 
       genesis.files =
         genesisFiles

@@ -34,7 +34,7 @@ def timing_pretty_describe($t):
   , ""
   ] | join("\n");
 
-def profile_node_specs($env; $prof):
+def profile_node_specs($env; $prof; $topology):
   $prof.composition.n_bft_hosts      as $n_bfts
 | $prof.composition.n_pool_hosts     as $n_pools
 | $prof.composition.n_singular_hosts as $n_singular_pools
@@ -100,6 +100,13 @@ def profile_node_specs($env; $prof):
             then $env.basePort + .i
             else $env.basePort
             end)
+         , region:
+           ( .i as $i
+             |
+            $topology[ 0 ].coreNodes
+             |
+             map( select( .nodeId == $i ) )[0] | .region
+           )
          }))
   +
 ## For each explorer node spec:
@@ -112,6 +119,13 @@ def profile_node_specs($env; $prof):
             then $env.basePort + .i
             else $env.basePort
             end)
+         , region:
+           ( .i as $i
+             |
+            $topology[ 0 ].relayNodes
+             |
+             map( select( .nodeId == $i ) )[0] | .region
+           )
          }))
 ## For each node spec:
 | map(. +

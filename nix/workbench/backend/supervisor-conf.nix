@@ -69,10 +69,10 @@ let
             ##
             ## Refer to: http://supervisord.org/configuration.html#program-x-section-settings
             ##
-            directory      = "${service.value.stateDir 0}";
+            directory      = "${stateDir}/${nodeSpec.value.name}";
             command        = "${sh} start.sh";
-            stdout_logfile = "${service.value.stateDir 0}/stdout";
-            stderr_logfile = "${service.value.stateDir 0}/stderr";
+            stdout_logfile = "${stateDir}/${nodeSpec.value.name}/stdout";
+            stderr_logfile = "${stateDir}/${nodeSpec.value.name}/stderr";
             stopasgroup    = false;
             killasgroup    = false;
             autostart      = false;

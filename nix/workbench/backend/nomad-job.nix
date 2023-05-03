@@ -149,15 +149,32 @@ let
 
     # The namespace in which to execute the job. Prior to Nomad 1.0 namespaces
     # were Enterprise-only.
-    namespace = "default";
+    # This is also set with `NOMAD_NAMESPACE="perf"` when using Nomad's cli.
+    # "When using commands that operate on objects that are namespaced, the
+    # namespace can be specified either with the flag -namespace or read from
+    # the NOMAD_NAMESPACE environment variable."
+    # https://developer.hashicorp.com/nomad/tutorials/manage-clusters/namespaces
+    namespace = "perf";
 
     # The region in which to execute the job.
     region = "global"; # SRE: They are actually using global.
 
     #  A list of datacenters in the region which are eligible for task
     # placement. This must be provided, and does not have a default.
-    # SRE: 3 Nomad datacenters exist actually
+    # SRE: Only 3 Nomad datacenters exist actually.
     datacenters = [ "eu-central-1" "eu-west-1" "us-east-2" ];
+
+    # This can be provided multiple times to define additional constraints. See
+    # the Nomad constraint reference for more details.
+    # https://developer.hashicorp.com/nomad/docs/job-specification/constraint
+    constraint = {
+      attribute = "\${node.class}";
+      operator = "=";
+      # For testing best to avoid using "infra" node class as HA jobs runs
+      # there, for benchmarking dedicated static machines are need and this
+      # should be updated accordingly.
+      value = "qa";
+    };
 
     # The reschedule stanza specifies the group's rescheduling strategy. If
     # specified at the job level, the configuration will apply to all groups
@@ -229,6 +246,20 @@ let
         # Used as a "template" to generate the envars passed to the container.
         # This makes it easier to change them using `jq` inside the workbench!
         meta = null;
+
+        # The affinity block allows operators to express placement preference
+        # for a set of nodes. Affinities may be expressed on attributes or
+        # client metadata. Additionally affinities may be specified at the
+        # job, group, or task levels for ultimate flexibility.
+        affinity =
+          let region = nodeSpec.region;
+          in if region == null || region == "loopback"
+            then null
+            else
+              { attribute = "\${node.datacenter}";
+                value     = region;
+              }
+        ;
 
         # The network stanza specifies the networking requirements for the task
         # group, including the network mode and port allocations.
@@ -642,7 +673,8 @@ let
               "perf-tracer"                          # serviceName
               "tracer"                               # portName (can't have "-")
               0                                      # portNum
-              {};                                    # node-specs
+              # TODO: Which region?
+              {region=null;};                        # node-specs
           }
         ]
         ++
@@ -700,11 +732,6 @@ let
     # for each task group, must be placed atomically. This should only be used
     # for special circumstances.
     all_at_once = false;
-
-    # This can be provided multiple times to define additional constraints. See
-    # the Nomad constraint reference for more details.
-    # https://developer.hashicorp.com/nomad/docs/job-specification/constraint
-    constraint = null;
 
     # This can be provided multiple times to define preferred placement
     # criteria. See the Nomad affinity reference for more details.
