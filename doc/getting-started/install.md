@@ -133,6 +133,27 @@ check by running `ldd`), the running binary might still use the wrong library.
 You can check this by running `pldd`. If the `pldd` shows that the running executable
 is using the wrong library, run `ldconfig`.
 
+##### Using the ported `c` code for development
+**Note:** the ported `c` code should not be used to run the node, and should only be
+used for development purposes. 
+
+In order to avoid having to install the custom version of libsodium for development
+purposes, `cardano-crypto-praos` defines a `cabal` flag that makes use of C code located
+[here](https://github.com/input-output-hk/cardano-base/tree/master/cardano-crypto-praos/cbits).
+To enable this code, one has to add the following code in the
+`cabal.project.local` file:
+
+```bash
+package cardano-crypto-praos
+  flags: -external-libsodium-vrf
+```
+
+For this to work, `libsodium` has to be in the system. For Ubuntu, this is achieved by:
+
+```bash
+sudo apt install libsodium-dev
+```
+
 #### Installing Secp256k1
 
 Create a working directory for your builds:
