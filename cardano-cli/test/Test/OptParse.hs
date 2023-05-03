@@ -3,6 +3,7 @@ module Test.OptParse
   , checkTextEnvelopeFormat
   , equivalence
   , execCardanoCLI
+  , tryExecCardanoCLI
   , propertyOnce
   , withSnd
   , noteInputFile
@@ -38,6 +39,20 @@ execCardanoCLI
   -> m String
   -- ^ Captured stdout
 execCardanoCLI = GHC.withFrozenCallStack $ H.execFlex "cardano-cli" "CARDANO_CLI"
+
+tryExecCardanoCLI
+  :: [String]
+  -- ^ Arguments to the CLI command
+  -> H.PropertyT IO (Either H.Failure String)
+  -- ^ Captured stdout, or error in case of failures
+tryExecCardanoCLI args =
+  GHC.withFrozenCallStack (H.execFlex "cardano-cli" "CARDANO_CLI") args
+    & H.unPropertyT
+    & H.unTest
+    & runExceptT
+    & lift
+    & H.TestT
+    & H.PropertyT
 
 -- | Checks that the 'tvType' and 'tvDescription' are equivalent between two files.
 checkTextEnvelopeFormat

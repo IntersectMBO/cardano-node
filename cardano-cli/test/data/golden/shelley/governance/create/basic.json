@@ -1,0 +1,41 @@
+{
+    "94": {
+        "map": [
+            {
+                "k": {
+                    "int": 0
+                },
+                "v": {
+                    "list": [
+                        {
+                            "string": "Pineapples on pizza?"
+                        }
+                    ]
+                }
+            },
+            {
+                "k": {
+                    "int": 1
+                },
+                "v": {
+                    "list": [
+                        {
+                            "list": [
+                                {
+                                    "string": "yes"
+                                }
+                            ]
+                        },
+                        {
+                            "list": [
+                                {
+                                    "string": "no"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}

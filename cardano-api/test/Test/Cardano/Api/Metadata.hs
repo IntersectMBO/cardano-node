@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE LambdaCase #-}
+
 module Test.Cardano.Api.Metadata
   ( tests
   , genTxMetadata
@@ -10,8 +12,10 @@ import           Cardano.Prelude
 
 import qualified Data.Aeson as Aeson
 import qualified Data.Map.Strict as Map
-import           Hedgehog (Property, property, (===))
+import           Hedgehog (Gen, Property, property, (===))
 import qualified Hedgehog
+import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
 import           Test.Tasty (TestTree)
 import           Test.Tasty.Hedgehog (testProperty)
 import           Test.Tasty.TH (testGroupGenerator)
@@ -117,6 +121,46 @@ prop_metadata_roundtrip_via_schema_json = Hedgehog.property $ do
     md <- Hedgehog.forAll genTxMetadata
     Right md === (metadataFromJson TxMetadataJsonDetailedSchema
                 . metadataToJson   TxMetadataJsonDetailedSchema) md
+
+mkPropMetadataChunks
+  :: (Show str, Eq str, Monoid str)
+  => Gen str
+  -> (str -> TxMetadataValue)
+  -> (TxMetadataValue -> Maybe str)
+  -> Property
+mkPropMetadataChunks genStr toMetadataValue extractChunk = Hedgehog.property $ do
+  str <- Hedgehog.forAll genStr
+  case toMetadataValue str of
+    metadataValue@(TxMetaList chunks) -> do
+      Hedgehog.cover  1  "Empty chunks"   (null chunks)
+      Hedgehog.cover  5  "Single chunks"  (length chunks == 1)
+      Hedgehog.cover 25  "Many chunks"    (length chunks > 1)
+      str === mconcat (mapMaybe extractChunk chunks)
+      Right () === validateTxMetadata metadata
+     where
+      metadata = makeTransactionMetadata (Map.singleton 0 metadataValue)
+    _ ->
+      Hedgehog.failure
+
+prop_metadata_text_chunks :: Property
+prop_metadata_text_chunks =
+  mkPropMetadataChunks
+    (Gen.text (Range.linear 0 255) Gen.unicodeAll)
+    metaTextChunks
+    (\case
+      TxMetaText chunk -> Just chunk
+      _ -> Nothing
+    )
+
+prop_metadata_bytes_chunks :: Property
+prop_metadata_bytes_chunks =
+  mkPropMetadataChunks
+    (Gen.bytes (Range.linear 0 255))
+    metaBytesChunks
+    (\case
+      TxMetaBytes chunk -> Just chunk
+      _ -> Nothing
+    )
 
 -- ----------------------------------------------------------------------------
 -- Automagically collecting all the tests

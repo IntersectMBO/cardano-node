@@ -62,6 +62,7 @@ library
                         Cardano.Api.Error
                         Cardano.Api.Fees
                         Cardano.Api.GenesisParameters
+                        Cardano.Api.Governance.Poll
                         Cardano.Api.Hash
                         Cardano.Api.HasTypeProxy
                         Cardano.Api.IPC

@@ -1,9 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Test.Golden.Shelley
-  ( keyTests
+  ( keyConversionTests
+  , keyTests
   , certificateTests
-  , keyConversionTests
+  , governancePollTests
   , metadataTests
   , multiSigTests
   , txTests
@@ -20,6 +21,20 @@ import           Test.Golden.Shelley.Genesis.KeyGenDelegate (golden_shelleyGenes
 import           Test.Golden.Shelley.Genesis.KeyGenGenesis (golden_shelleyGenesisKeyGenGenesis)
 import           Test.Golden.Shelley.Genesis.KeyGenUtxo (golden_shelleyGenesisKeyGenUtxo)
 import           Test.Golden.Shelley.Genesis.KeyHash (golden_shelleyGenesisKeyHash)
+
+import           Test.Golden.Shelley.Governance.AnswerPoll
+                   (golden_shelleyGovernanceAnswerPoll,
+                   golden_shelleyGovernanceAnswerPollInvalidAnswer)
+import           Test.Golden.Shelley.Governance.CreatePoll
+                   (golden_shelleyGovernanceCreatePoll,
+                   golden_shelleyGovernanceCreateLongPoll)
+import           Test.Golden.Shelley.Governance.VerifyPoll
+                   (golden_shelleyGovernanceVerifyPoll,
+                   golden_shelleyGovernanceVerifyPollMismatch,
+                   golden_shelleyGovernanceVerifyPollNoAnswer,
+                   golden_shelleyGovernanceVerifyPollMalformedAnswer,
+                   golden_shelleyGovernanceVerifyPollInvalidAnswer)
+
 import           Test.Golden.Shelley.Key.ConvertCardanoAddressKey
                    (golden_convertCardanoAddressByronSigningKey,
                    golden_convertCardanoAddressIcarusSigningKey,
@@ -170,3 +185,19 @@ multiSigTests =
         , ("golden_shelleyTransactionAssembleWitness_SigningKey", golden_shelleyTransactionAssembleWitness_SigningKey)
         , ("golden_shelleyTransactionSigningKeyWitness", golden_shelleyTransactionSigningKeyWitness)
         ]
+
+governancePollTests :: IO Bool
+governancePollTests =
+  H.checkSequential
+    $ H.Group "Governance Poll Goldens"
+        [ ("golden_shelleyGovernanceCreatePoll", golden_shelleyGovernanceCreatePoll)
+        , ("golden_shelleyGovernanceCreateLongPoll", golden_shelleyGovernanceCreateLongPoll)
+        , ("golden_shelleyGovernanceAnswerPoll", golden_shelleyGovernanceAnswerPoll)
+        , ("golden_shelleyGovernanceAnswerPoll (invalid)", golden_shelleyGovernanceAnswerPollInvalidAnswer)
+        , ("golden_shelleyGovernanceVerifyPoll", golden_shelleyGovernanceVerifyPoll)
+        , ("golden_shelleyGovernanceVerifyPoll (mismatch)", golden_shelleyGovernanceVerifyPollMismatch)
+        , ("golden_shelleyGovernanceVerifyPoll (no answer)", golden_shelleyGovernanceVerifyPollNoAnswer)
+        , ("golden_shelleyGovernanceVerifyPoll (malformed)", golden_shelleyGovernanceVerifyPollMalformedAnswer)
+        , ("golden_shelleyGovernanceVerifyPoll (invalid)", golden_shelleyGovernanceVerifyPollInvalidAnswer)
+        ]
+

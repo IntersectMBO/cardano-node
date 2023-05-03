@@ -1037,7 +1037,16 @@ pGovernanceCmd =
    , subParser "create-update-proposal"
        (Opt.info pUpdateProposal $
          Opt.progDesc "Create an update proposal")
-   ]
+    , subParser "create-poll"
+        (Opt.info pGovernanceCreatePoll $
+          Opt.progDesc "Create an SPO poll")
+    , subParser "answer-poll"
+        (Opt.info pGovernanceAnswerPoll $
+          Opt.progDesc "Answer an SPO poll")
+    , subParser "verify-poll"
+        (Opt.info pGovernanceVerifyPoll $
+          Opt.progDesc "Verify an answer to a given SPO poll")
+    ]
   where
     mirCertParsers :: Parser GovernanceCmd
     mirCertParsers = asum
@@ -1096,6 +1105,77 @@ pGovernanceCmd =
                         <*> some pGenesisVerificationKeyFile
                         <*> pProtocolParametersUpdate
                         <*> optional pCostModels
+
+    pGovernanceCreatePoll :: Parser GovernanceCmd
+    pGovernanceCreatePoll =
+      GovernanceCreatePoll
+        <$> pPollQuestion
+        <*> some pPollAnswer
+        <*> optional pPollNonce
+        <*> pOutputFile
+
+    pGovernanceAnswerPoll :: Parser GovernanceCmd
+    pGovernanceAnswerPoll =
+      GovernanceAnswerPoll
+        <$> pPollFile
+        <*> optional pPollAnswerIndex
+
+    pGovernanceVerifyPoll :: Parser GovernanceCmd
+    pGovernanceVerifyPoll =
+      GovernanceVerifyPoll
+        <$> pPollFile
+        <*> pPollTxFile
+
+
+pPollQuestion :: Parser Text
+pPollQuestion =
+  Opt.strOption
+    (  Opt.long "question"
+    <> Opt.metavar "STRING"
+    <> Opt.help "The question for the poll."
+    )
+
+pPollAnswer :: Parser Text
+pPollAnswer =
+  Opt.strOption
+    (  Opt.long "answer"
+    <> Opt.metavar "STRING"
+    <> Opt.help "A possible choice for the poll. The option is repeatable."
+    )
+
+pPollAnswerIndex :: Parser Word
+pPollAnswerIndex =
+  Opt.option auto
+    (  Opt.long "answer"
+    <> Opt.metavar "INT"
+    <> Opt.help "The index of the chosen answer in the poll. Optional. Asked interactively if omitted."
+    )
+
+pPollFile :: Parser FilePath
+pPollFile =
+  Opt.strOption
+    (  Opt.long "poll-file"
+    <> Opt.metavar "FILE"
+    <> Opt.help "Filepath to the ongoing poll."
+    <> Opt.completer (Opt.bashCompleter "file")
+    )
+
+pPollTxFile :: Parser TxFile
+pPollTxFile =
+  fmap TxFile $ Opt.strOption $ mconcat
+    [ Opt.long "signed-tx-file"
+    , Opt.metavar "FILE"
+    , Opt.help "Filepath to a signed transaction carrying a valid poll answer."
+    , Opt.completer (Opt.bashCompleter "file")
+    ]
+
+pPollNonce :: Parser Word
+pPollNonce =
+  Opt.option auto
+    (  Opt.long "nonce"
+    <> Opt.metavar "UINT"
+    <> Opt.help "An (optional) nonce for non-replayability."
+    )
 
 pTransferAmt :: Parser Lovelace
 pTransferAmt =

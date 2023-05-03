@@ -22,5 +22,6 @@ main =
     , Test.Golden.Shelley.metadataTests
     , Test.Golden.Shelley.multiSigTests
     , Test.Golden.Shelley.txTests
+    , Test.Golden.Shelley.governancePollTests
     , Test.Golden.TxView.txViewTests
     ]

@@ -1,5 +1,24 @@
 # Changelog for cardano-cli
 
+## vNext
+
+- New commands for on-chain SPOs polls under `shelley governance`:
+  - `create-poll`:
+      For the current governing entities, as a means to create new polls.
+
+  - `answer-poll`:
+      For participants who want to answer a given poll.
+
+  - `verify-poll`:
+      For anyone who seek to verify a poll entry (e.g. explorers)
+
+  The commands are built to fit and play nicely within the cardano-cli.
+  The poll and answers structures are based on transaction metadata and
+  require to be embedded in an actual transaction. The added commands
+  however only works from metadata and raw "GovernancePoll" envelopes.
+
+  See [CIP proposal](https://github.com/cardano-foundation/CIPs/pull/496) for details.
+
 ## 1.35.4 -- October 2022
 
 - Improve memory efficiency of query ledger-state command ([PR4205](https://github.com/input-output-hk/cardano-node/pull/4205))

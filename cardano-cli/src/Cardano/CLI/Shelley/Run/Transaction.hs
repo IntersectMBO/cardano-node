@@ -14,6 +14,7 @@ module Cardano.CLI.Shelley.Run.Transaction
   , runTransactionCmd
   , readCddlTx
   , readFileTx
+  , readFileTxMetadata
   , readProtocolParametersSourceSpec
   , toTxOutInAnyEra
   ) where

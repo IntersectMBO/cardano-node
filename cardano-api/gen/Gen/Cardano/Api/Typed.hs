@@ -60,13 +60,17 @@ module Gen.Cardano.Api.Typed
   , genValueForMinting
 
   , genRational
+
+  , genGovernancePoll
+  , genGovernancePollAnswer
   ) where
 
 import           Cardano.Api hiding (txIns)
 import qualified Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
-import           Cardano.Api.Shelley (Hash (ScriptDataHash), KESPeriod (KESPeriod),
+import           Cardano.Api.Shelley (Hash (..), KESPeriod (KESPeriod),
+                   GovernancePoll (..), GovernancePollAnswer (..),
                    OperationalCertificateIssueCounter (OperationalCertificateIssueCounter),
                    PlutusScript (PlutusScriptSerialised), ProtocolParameters (ProtocolParameters),
                    ReferenceScript (..), ReferenceTxInsScriptsInlineDatumsSupportedInEra (..),
@@ -879,3 +883,19 @@ genHashScriptData = ScriptDataHash . unsafeMakeSafeHash . mkDummyHash <$> Gen.in
 
 genScriptDataSupportedInAlonzoEra :: Gen (ScriptDataSupportedInEra AlonzoEra)
 genScriptDataSupportedInAlonzoEra = pure ScriptDataInAlonzoEra
+
+genGovernancePoll :: Gen GovernancePoll
+genGovernancePoll =
+  GovernancePoll
+    <$> Gen.text (Range.linear 1 255) Gen.unicodeAll
+    <*> Gen.list (Range.constant 1 10) (Gen.text (Range.linear 1 255) Gen.unicodeAll)
+    <*> optional (Gen.word (Range.constant 0 100))
+
+genGovernancePollAnswer :: Gen GovernancePollAnswer
+genGovernancePollAnswer =
+  GovernancePollAnswer
+    <$> genGovernancePollHash
+    <*> Gen.word (Range.constant 0 10)
+ where
+   genGovernancePollHash =
+     GovernancePollHash . mkDummyHash <$> Gen.int (Range.linear 0 10)

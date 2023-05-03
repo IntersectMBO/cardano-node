@@ -248,6 +248,9 @@ test-suite cardano-cli-golden
                         Test.Golden.Shelley.Genesis.KeyGenGenesis
                         Test.Golden.Shelley.Genesis.KeyGenUtxo
                         Test.Golden.Shelley.Genesis.KeyHash
+                        Test.Golden.Shelley.Governance.AnswerPoll
+                        Test.Golden.Shelley.Governance.CreatePoll
+                        Test.Golden.Shelley.Governance.VerifyPoll
                         Test.Golden.Shelley.Key.ConvertCardanoAddressKey
                         Test.Golden.Shelley.Metadata.StakePoolMetadata
                         Test.Golden.Shelley.MultiSig.Address

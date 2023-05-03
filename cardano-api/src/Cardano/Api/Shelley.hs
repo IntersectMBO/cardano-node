@@ -19,6 +19,9 @@ module Cardano.Api.Shelley
     -- * Hashes
     Hash(..),
 
+    -- * Type Proxies
+    AsType(..),
+
     -- * Payment addresses
     -- | Constructing and inspecting Shelley payment addresses
     Address(ShelleyAddress),
@@ -210,6 +213,13 @@ module Cardano.Api.Shelley
     AcquiringFailure(..),
     SystemStart(..),
 
+    -- ** Governance
+    GovernancePoll (..),
+    GovernancePollAnswer (..),
+    GovernancePollError (..),
+    renderGovernancePollError,
+    hashGovernancePoll,
+    verifyPollAnswer,
 
     -- ** Various calculations
     LeadershipError(..),
@@ -231,6 +241,7 @@ import           Cardano.Api.Address
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
+import           Cardano.Api.Governance.Poll
 import           Cardano.Api.IPC
 import           Cardano.Api.InMode
 import           Cardano.Api.KeysPraos
