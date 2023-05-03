@@ -1,5 +1,8 @@
 module Cardano.Api.Pretty
-  ( Ann,
+  ( Pretty(..),
+    (<+/>),
+    Doc,
+    Ann,
     putLn,
     hPutLn,
     renderDefault,
@@ -70,3 +73,6 @@ cyan = annotate (color Cyan)
 
 white :: Doc AnsiStyle -> Doc AnsiStyle
 white = annotate (color White)
+
+(<+/>) :: Doc ann -> Doc ann -> Doc ann
+(<+/>) a b = a <> softline <> b
