@@ -551,7 +551,7 @@ wb_nomad() {
             msg "Killing Nomad server \"${name}\" process PID ${pid_number} ..."
             if ! kill -SIGINT "${pid_number}" >/dev/null 2>&1
             then
-              msg "Killing PID ${pid_number} failed"
+              msg "$(red "Killing PID ${pid_number} failed")"
             else
               # Wait 15 seconds for the process to fully exit or kill it.
               msg "Wait up to 15 seconds for PID ${pid_number} to exit"
