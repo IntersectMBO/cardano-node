@@ -275,7 +275,7 @@ import           Cardano.Api.LedgerState
 import           Cardano.Api.NetworkId
 import           Cardano.Api.OperationalCertificate
 import           Cardano.Api.ProtocolParameters
-import           Cardano.Api.Query
+import           Cardano.Api.Query.ShelleyBased
 import           Cardano.Api.Script
 import           Cardano.Api.ScriptData
 import           Cardano.Api.StakePoolMetadata

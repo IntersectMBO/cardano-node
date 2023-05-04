@@ -88,6 +88,7 @@ import           Cardano.Api.Error
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
+import           Cardano.Api.Query.ShelleyBased
 import           Cardano.Api.Script
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody

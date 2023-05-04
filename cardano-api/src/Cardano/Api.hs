@@ -740,7 +740,6 @@ module Cardano.Api (
     getSlotForRelativeTime,
 
     -- *** Common queries
-    determineEra,
     getLocalChainTip,
 
     -- * Node operation
@@ -878,6 +877,7 @@ import           Cardano.Api.IO
 import           Cardano.Api.IPC
 import           Cardano.Api.IPC.AnyQuery
 import           Cardano.Api.IPC.SimpleQueries
+import           Cardano.Api.IPC.Version
 import           Cardano.Api.Keys.Byron
 import           Cardano.Api.Keys.Class
 import           Cardano.Api.Keys.Read

@@ -135,9 +135,10 @@ import           Cardano.Api.Modes (CardanoMode, EpochSlots (..))
 import qualified Cardano.Api.Modes as Api
 import           Cardano.Api.NetworkId (NetworkId (..), NetworkMagic (NetworkMagic))
 import           Cardano.Api.ProtocolParameters
-import           Cardano.Api.Query (CurrentEpochState (..), PoolDistribution (unPoolDistr),
-                   ProtocolState, SerialisedCurrentEpochState (..), SerialisedPoolDistribution,
-                   decodeCurrentEpochState, decodePoolDistribution, decodeProtocolState)
+import           Cardano.Api.Query.ShelleyBased (CurrentEpochState (..),
+                   PoolDistribution (unPoolDistr), ProtocolState, SerialisedCurrentEpochState (..),
+                   SerialisedPoolDistribution, decodeCurrentEpochState, decodePoolDistribution,
+                   decodeProtocolState)
 import           Cardano.Api.Utils (textShow)
 import qualified Cardano.Chain.Genesis
 import qualified Cardano.Chain.Update
