@@ -463,7 +463,7 @@ module Cardano.Api (
     scriptDataToJson,
     ScriptDataJsonError (..),
     ScriptDataJsonSchemaError (..),
-    ScriptDataJsonBytesError,
+    ScriptDataJsonBytesError(..),
     scriptDataJsonToHashable,
 
     -- ** Script execution units
