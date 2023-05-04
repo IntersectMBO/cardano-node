@@ -8,7 +8,7 @@ module Cardano.CLI.Environment
   , getEnvSocketPath
   ) where
 
-import           Cardano.Api (NetworkId (..), NetworkMagic (..))
+import           Cardano.Api (NetworkId (..), NetworkMagic (..), SocketPath (..))
 
 import           Data.Word (Word32)
 import qualified System.Environment as IO
@@ -17,7 +17,7 @@ import           Text.Read (readMaybe)
 
 data EnvCli = EnvCli
   { envCliNetworkId :: Maybe NetworkId
-  , envCliSocketPath :: Maybe FilePath
+  , envCliSocketPath :: Maybe SocketPath
   }
 
 getEnvCli :: IO EnvCli
@@ -27,7 +27,7 @@ getEnvCli = do
 
   pure EnvCli
     { envCliNetworkId = mNetworkId
-    , envCliSocketPath = mSocketPath
+    , envCliSocketPath = SocketPath <$> mSocketPath
     }
 
 -- | If the environment variable @CARDANO_NODE_NETWORK_ID@ is set, then return the network id therein.

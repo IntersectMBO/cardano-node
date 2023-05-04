@@ -676,6 +676,7 @@ module Cardano.Api (
     ConsensusBlockForEra,
     EraInMode(..),
     toEraInMode,
+    toEraInCardanoMode,
     LocalNodeClientProtocols(..),
     LocalNodeClientParams(..),
     mkLocalNodeClientParams,
@@ -706,14 +707,18 @@ module Cardano.Api (
 
     -- *** Local state query
     LocalStateQueryClient(..),
+    AnyQuery(..),
+    AllQueryErrors(..),
     QueryInMode(..),
+    QueryInShelleyBasedEra(..),
+    QueryShelleyBasedEra(..),
+    ShelleyBasedQueryError(..),
     SystemStart(..),
     QueryInEra(..),
-    QueryInShelleyBasedEra(..),
     QueryUTxOFilter(..),
     UTxO(..),
+    AnyUTxO(..),
     queryNodeLocalState,
-    executeQueryCardanoMode,
     UnsupportedNtcVersionError(..),
 
     -- *** Local tx monitoring
@@ -730,7 +735,6 @@ module Cardano.Api (
     getSlotForRelativeTime,
 
     -- *** Common queries
-    determineEra,
     getLocalChainTip,
 
     -- * Node operation
@@ -801,10 +805,17 @@ module Cardano.Api (
     NodeToClientVersion(..),
 
     -- ** Monadic queries
-    LocalStateQueryExpr,
-    executeLocalStateQueryExpr,
-    queryExpr,
-    determineEraExpr,
+    -- *** Simple queries (for any era)
+    SimpleQueryError(..),
+    queryExprSimple,
+    executeLocalStateQueryExprSimple,
+
+    -- *** Any query (for shelley based eras only)
+    determineEraInModeAnyQuery,
+    determineEraExprAnyQuery,
+    executeLocalStateQueryExprAnyQuery,
+    queryExprAnyQuery,
+    queryExprAnyQueryE,
 
     chainPointToSlotNo,
     chainPointToHeaderHash,
@@ -861,7 +872,9 @@ import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.InMode
 import           Cardano.Api.IO
 import           Cardano.Api.IPC
-import           Cardano.Api.IPC.Monad
+import           Cardano.Api.IPC.AnyQuery
+import           Cardano.Api.IPC.SimpleQueries
+import           Cardano.Api.IPC.Version
 import           Cardano.Api.Keys.Byron
 import           Cardano.Api.Keys.Class
 import           Cardano.Api.Keys.Read
@@ -874,6 +887,7 @@ import           Cardano.Api.OperationalCertificate
 import           Cardano.Api.Protocol
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query hiding (LedgerState (..))
+import           Cardano.Api.Query.ShelleyBased
 import           Cardano.Api.Script
 import           Cardano.Api.ScriptData
 import           Cardano.Api.SerialiseBech32

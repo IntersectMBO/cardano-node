@@ -38,15 +38,13 @@ runGetLocalNodeTip
   :: SocketPath
   -> NetworkId
   -> ExceptT ByronQueryError IO ()
-runGetLocalNodeTip (SocketPath sockPath) networkId = do
+runGetLocalNodeTip socketPath networkId = do
   let connctInfo =
         LocalNodeConnectInfo {
-          localNodeSocketPath    = sockPath,
+          localNodeSocketPath    = socketPath,
           localNodeNetworkId     = networkId,
           localConsensusModeParams = ByronModeParams (EpochSlots 21600)
         }
 
   tip <- liftIO $ getLocalChainTip connctInfo
   liftIO . Text.putStrLn . Text.decodeUtf8 . LB.toStrict $ encodePretty tip
-
-

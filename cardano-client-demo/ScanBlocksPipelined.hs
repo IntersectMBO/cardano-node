@@ -42,10 +42,10 @@ main = do
   -- Connect to the node.
   putStrLn $ "Connecting to socket: " <> socketPath
   connectToLocalNode
-    (connectInfo socketPath)
+    (connectInfo (SocketPath socketPath))
     protocols
   where
-  connectInfo :: FilePath -> LocalNodeConnectInfo CardanoMode
+  connectInfo :: SocketPath -> LocalNodeConnectInfo CardanoMode
   connectInfo socketPath =
       LocalNodeConnectInfo {
         localConsensusModeParams = CardanoModeParams (Byron.EpochSlots 21600),

@@ -81,7 +81,7 @@ main = do
       LocalNodeConnectInfo {
         localConsensusModeParams = CardanoModeParams (Byron.EpochSlots 21600),
         localNodeNetworkId       = Mainnet,
-        localNodeSocketPath      = socketPath
+        localNodeSocketPath      = SocketPath socketPath
       }
 
 -- | Defines the client side of the chain sync protocol.

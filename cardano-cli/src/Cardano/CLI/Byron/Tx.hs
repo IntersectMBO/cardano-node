@@ -236,7 +236,7 @@ nodeSubmitTx
 nodeSubmitTx nodeSocketPath network gentx = do
     let connctInfo =
           LocalNodeConnectInfo {
-            localNodeSocketPath = unSocketPath nodeSocketPath,
+            localNodeSocketPath = nodeSocketPath,
             localNodeNetworkId = network,
             localConsensusModeParams = CardanoModeParams (EpochSlots 21600)
           }

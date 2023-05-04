@@ -121,6 +121,7 @@ import           System.FilePath
 
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
+import           Cardano.Api.Environment
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.IPC (ConsensusModeParams (..),
@@ -133,9 +134,8 @@ import           Cardano.Api.Modes (CardanoMode, EpochSlots (..))
 import qualified Cardano.Api.Modes as Api
 import           Cardano.Api.NetworkId (NetworkId (..), NetworkMagic (NetworkMagic))
 import           Cardano.Api.ProtocolParameters
-import           Cardano.Api.Query (CurrentEpochState (..), PoolDistribution (unPoolDistr),
-                   ProtocolState, SerialisedCurrentEpochState (..), SerialisedPoolDistribution,
-                   decodeCurrentEpochState, decodePoolDistribution, decodeProtocolState)
+import           Cardano.Api.Query.Common
+import           Cardano.Api.Query.ShelleyBased
 import           Cardano.Api.Utils (textShow)
 import qualified Cardano.Chain.Genesis
 import qualified Cardano.Chain.Update
@@ -410,7 +410,7 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
           LocalNodeConnectInfo {
             localConsensusModeParams = cardanoModeParams,
             localNodeNetworkId       = networkId',
-            localNodeSocketPath      = socketPath
+            localNodeSocketPath      = SocketPath socketPath
           }
 
   lift $ connectToLocalNode
@@ -1022,10 +1022,6 @@ newtype NetworkName = NetworkName
 
 newtype NodeConfigFile = NodeConfigFile
   { unNodeConfigFile :: FilePath
-  } deriving Show
-
-newtype SocketPath = SocketPath
-  { unSocketPath :: FilePath
   } deriving Show
 
 mkProtocolInfoCardano ::

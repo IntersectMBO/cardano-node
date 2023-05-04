@@ -59,6 +59,7 @@ library
                         Cardano.Api.Certificate
                         Cardano.Api.Convenience.Constraints
                         Cardano.Api.Convenience.Construction
+                        Cardano.Api.Convenience.Error
                         Cardano.Api.Convenience.Query
                         Cardano.Api.DeserialiseAnyOf
                         Cardano.Api.Environment
@@ -74,7 +75,11 @@ library
                         Cardano.Api.InMode
                         Cardano.Api.IO
                         Cardano.Api.IPC
+                        Cardano.Api.IPC.AnyQuery
+                        Cardano.Api.IPC.Error
                         Cardano.Api.IPC.Monad
+                        Cardano.Api.IPC.SimpleQueries
+                        Cardano.Api.IPC.Types
                         Cardano.Api.IPC.Version
                         Cardano.Api.Json
                         Cardano.Api.Keys.Byron
@@ -90,6 +95,10 @@ library
                         Cardano.Api.Protocol
                         Cardano.Api.ProtocolParameters
                         Cardano.Api.Query
+                        Cardano.Api.Query.Common
+                        Cardano.Api.Query.Error
+                        Cardano.Api.Query.InMode
+                        Cardano.Api.Query.ShelleyBased
                         Cardano.Api.Script
                         Cardano.Api.ScriptData
                         Cardano.Api.SerialiseBech32

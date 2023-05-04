@@ -22,6 +22,8 @@ module Cardano.Api.InMode (
     TxValidationError(..),
     TxValidationErrorInMode(..),
     fromConsensusApplyTxErr,
+
+    SimpleQueryError(..),
   ) where
 
 import           Data.SOP.Strict (NS (S, Z))
@@ -40,9 +42,9 @@ import qualified Ouroboros.Consensus.TypeFamilyWrappers as Consensus
 
 import           Cardano.Api.Eras
 import           Cardano.Api.Modes
+import           Cardano.Api.Query.Error
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
-
 
 -- ----------------------------------------------------------------------------
 -- Transactions in the context of a consensus mode

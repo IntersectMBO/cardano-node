@@ -335,15 +335,6 @@ runTxBuildCmd
   -- We cannot use the user specified era to construct a query against a node because it may differ
   -- from the node's era and this will result in the 'QueryEraMismatch' failure.
 
-  let localNodeConnInfo = LocalNodeConnectInfo
-                            { localConsensusModeParams = cModeParams
-                            , localNodeNetworkId = nid
-                            , localNodeSocketPath = unSocketPath socketPath
-                            }
-
-  AnyCardanoEra nodeEra <- lift (determineEra cModeParams localNodeConnInfo)
-    & onLeft (left . ShelleyTxCmdQueryConvenienceError . AcqFailure)
-
   inputsAndMaybeScriptWits <- firstExceptT ShelleyTxCmdScriptWitnessError $ readScriptWitnessFiles cEra txins
   certFilesAndMaybeScriptWits <- firstExceptT ShelleyTxCmdScriptWitnessError $ readScriptWitnessFiles cEra certs
   certsAndMaybeScriptWits <- sequence
@@ -407,8 +398,8 @@ runTxBuildCmd
 
       case consensusMode of
         CardanoMode -> do
-          (nodeEraUTxO, _, eraHistory, systemStart, _) <-
-            lift (queryStateForBalancedTx socketPath nodeEra nid allTxInputs)
+          (AnyUTxO _ nodeEraUTxO, _, eraHistory, systemStart, _) <-
+            lift (queryStateForBalancedTx socketPath nid allTxInputs)
               & onLeft (left . ShelleyTxCmdQueryConvenienceError)
 
           -- Why do we cast the era? The user can specify an era prior to the era that the node is currently in.
@@ -685,17 +676,17 @@ runTxBuild
                             (AnyConsensusMode CardanoMode) (AnyCardanoEra era)))
 
       let allTxInputs = inputsThatRequireWitnessing ++ allReferenceInputs ++ txinsc
-          localNodeConnInfo = LocalNodeConnectInfo
-                                     { localConsensusModeParams = CardanoModeParams $ EpochSlots 21600
-                                     , localNodeNetworkId = networkId
-                                     , localNodeSocketPath = unSocketPath socketPath
-                                     }
-      AnyCardanoEra nodeEra <- lift (determineEra cModeParams localNodeConnInfo)
-        & onLeft (left . ShelleyTxCmdQueryConvenienceError . AcqFailure)
+          -- localNodeConnInfo = LocalNodeConnectInfo
+          --                            { localConsensusModeParams = CardanoModeParams $ EpochSlots 21600
+          --                            , localNodeNetworkId = networkId
+          --                            , localNodeSocketPath = unSocketPath socketPath
+          --                            }
+      -- AnyCardanoEra nodeEra <- lift (determineEra cModeParams localNodeConnInfo)
+      --   & onLeft (left . ShelleyTxCmdQueryConvenienceError . AcqFailure)
 
-      (nodeEraUTxO, pparams, eraHistory, systemStart, stakePools) <-
+      (AnyUTxO _ nodeEraUTxO, pparams, eraHistory, systemStart, stakePools) <-
         firstExceptT ShelleyTxCmdQueryConvenienceError . newExceptT
-          $ queryStateForBalancedTx socketPath nodeEra networkId allTxInputs
+          $ queryStateForBalancedTx socketPath networkId allTxInputs
 
       validatedPParams <- hoistEither $ first ShelleyTxCmdProtocolParametersValidationError
                                       $ validateProtocolParameters era (Just pparams)
@@ -1112,7 +1103,7 @@ runTxSubmit
   -> NetworkId
   -> FilePath
   -> ExceptT ShelleyTxCmdError IO ()
-runTxSubmit (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network txFilePath = do
+runTxSubmit socketPath (AnyConsensusModeParams cModeParams) network txFilePath = do
     txFile <- liftIO $ fileOrPipe txFilePath
     InAnyCardanoEra era tx <- lift (readFileTx txFile) & onLeft (left . ShelleyTxCmdCddlError)
     let cMode = AnyConsensusMode $ consensusModeOnly cModeParams
@@ -1123,7 +1114,7 @@ runTxSubmit (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network t
         localNodeConnInfo = LocalNodeConnectInfo
                               { localConsensusModeParams = cModeParams
                               , localNodeNetworkId = network
-                              , localNodeSocketPath = sockPath
+                              , localNodeSocketPath = socketPath
                               }
 
     res <- liftIO $ submitTxToNodeLocal localNodeConnInfo txInMode

@@ -107,5 +107,5 @@ pSocketPath envCli =
         ]
       ]
     , -- Default to the socket path specified by the environment variable if it is available.
-      pure . SocketPath <$> maybeToList (envCliSocketPath envCli)
+      pure <$> maybeToList (envCliSocketPath envCli)
     ]
