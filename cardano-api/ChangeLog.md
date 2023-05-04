@@ -2,12 +2,21 @@
 
 ## 8.1.0
 
+### Features
+
+- New error exports:
+  - `TxOutInAnyEra(..)`
+  - `txOutInAnyEra`
+  - `StakePoolMetadataValidationError(..)`
+  - `ScriptHash(..)`
+  ([PR 5188](https://github.com/input-output-hk/cardano-node/pull/5188))
+
 ### Bugfix
 
 - Fix `toEraInMode` for Conway
   ([PR 5175](https://github.com/input-output-hk/cardano-node/pull/5175))
 
-## 8.0.0 -- May 2023
+### 8.0.0 -- May 2023
 
 - Add `getSlotForRelativeTime` function ([PR 5130](https://github.com/input-output-hk/cardano-node/pull/5130))
 
