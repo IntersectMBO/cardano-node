@@ -470,6 +470,7 @@ module Cardano.Api (
     ExecutionUnits(..),
     ExecutionUnitPrices(..),
     CostModel(..),
+    InvalidCostModel(..),
     toAlonzoCostModel,
     fromAlonzoCostModel,
 

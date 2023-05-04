@@ -32,6 +32,9 @@ module Cardano.Api.ProtocolParameters (
     -- * Updates to the protocol parameters
     ProtocolParametersUpdate(..),
 
+    -- * Errors
+    InvalidCostModel(..),
+
     -- * PraosNonce
     PraosNonce,
     makePraosNonce,
