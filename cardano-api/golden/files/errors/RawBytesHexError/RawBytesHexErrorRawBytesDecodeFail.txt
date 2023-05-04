@@ -1,0 +1,1 @@
+Failed to deserialise <bytestring> as VerificationKey GenesisKey. <string>

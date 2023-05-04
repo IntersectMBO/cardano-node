@@ -1,0 +1,1 @@
+Byte string metadata value must consist of at most 64 bytes, but it consists of 0 bytes.

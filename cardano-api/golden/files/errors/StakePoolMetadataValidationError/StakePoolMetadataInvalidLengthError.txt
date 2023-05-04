@@ -1,0 +1,1 @@
+Stake pool metadata must consist of at most 0 bytes, but it consists of 1 bytes.

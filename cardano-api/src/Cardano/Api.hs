@@ -223,6 +223,8 @@ module Cardano.Api (
     CtxTx, CtxUTxO,
     TxOut(TxOut),
     TxOutValue(..),
+    TxOutInAnyEra(..),
+    txOutInAnyEra,
     txOutValueToLovelace,
     txOutValueToValue,
     lovelaceToTxOutValue,
@@ -382,7 +384,7 @@ module Cardano.Api (
     -- * Stake pool off-chain metadata
     StakePoolMetadata,
     validateAndHashStakePoolMetadata,
-    StakePoolMetadataValidationError,
+    StakePoolMetadataValidationError(..),
 
     -- * Scripts
     -- | Both 'PaymentCredential's and 'StakeCredential's can use scripts.
@@ -476,7 +478,7 @@ module Cardano.Api (
 
     -- ** Script addresses
     -- | Making addresses from scripts.
-    ScriptHash,
+    ScriptHash(..),
     hashScript,
 
     -- * Serialisation

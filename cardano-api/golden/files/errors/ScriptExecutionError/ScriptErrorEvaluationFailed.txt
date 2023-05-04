@@ -1,0 +1,6 @@
+The Plutus script evaluation failed: Cost model parameters were not as we expected
+Script debugging logs: <text>
+<text>
+<text>
+<text>
+<text>

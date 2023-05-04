@@ -1,0 +1,1 @@
+JSON bool values are not supported.
