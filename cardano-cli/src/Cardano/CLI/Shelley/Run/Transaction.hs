@@ -335,15 +335,6 @@ runTxBuildCmd
   -- We cannot use the user specified era to construct a query against a node because it may differ
   -- from the node's era and this will result in the 'QueryEraMismatch' failure.
 
-  let localNodeConnInfo = LocalNodeConnectInfo
-                            { localConsensusModeParams = cModeParams
-                            , localNodeNetworkId = nid
-                            , localNodeSocketPath = unSocketPath socketPath
-                            }
-
-  AnyCardanoEra nodeEra <- lift (determineEra cModeParams localNodeConnInfo)
-    & onLeft (left . ShelleyTxCmdQueryConvenienceError . AcqFailure)
-
   inputsAndMaybeScriptWits <- firstExceptT ShelleyTxCmdScriptWitnessError $ readScriptWitnessFiles cEra txins
   certFilesAndMaybeScriptWits <- firstExceptT ShelleyTxCmdScriptWitnessError $ readScriptWitnessFiles cEra certs
   certsAndMaybeScriptWits <- sequence
@@ -407,8 +398,8 @@ runTxBuildCmd
 
       case consensusMode of
         CardanoMode -> do
-          (nodeEraUTxO, _, eraHistory, systemStart, _) <-
-            lift (queryStateForBalancedTx nodeEra nid allTxInputs)
+          (AnyUTxO _ nodeEraUTxO, _, eraHistory, systemStart, _) <-
+            lift (queryStateForBalancedTx nid allTxInputs)
               & onLeft (left . ShelleyTxCmdQueryConvenienceError)
 
           -- Why do we cast the era? The user can specify an era prior to the era that the node is currently in.
@@ -642,7 +633,7 @@ runTxBuild
   -> TxBuildOutputOptions
   -> ExceptT ShelleyTxCmdError IO (BalancedTxBody era)
 runTxBuild
-    (SocketPath sockPath) era (AnyConsensusModeParams cModeParams) networkId mScriptValidity
+    (SocketPath _sockPath) era (AnyConsensusModeParams cModeParams) networkId mScriptValidity
     inputsAndMaybeScriptWits readOnlyRefIns txinsc mReturnCollateral mTotCollateral txouts
     (TxOutChangeAddress changeAddr) valuesWithScriptWits mLowerBound mUpperBound
     certsAndMaybeScriptWits withdrawals reqSigners txAuxScripts txMetadata mpparams
@@ -685,17 +676,10 @@ runTxBuild
                             (AnyConsensusMode CardanoMode) (AnyCardanoEra era)))
 
       let allTxInputs = inputsThatRequireWitnessing ++ allReferenceInputs ++ txinsc
-          localNodeConnInfo = LocalNodeConnectInfo
-                                     { localConsensusModeParams = CardanoModeParams $ EpochSlots 21600
-                                     , localNodeNetworkId = networkId
-                                     , localNodeSocketPath = sockPath
-                                     }
-      AnyCardanoEra nodeEra <- lift (determineEra cModeParams localNodeConnInfo)
-        & onLeft (left . ShelleyTxCmdQueryConvenienceError . AcqFailure)
 
-      (nodeEraUTxO, pparams, eraHistory, systemStart, stakePools) <-
+      (AnyUTxO _ nodeEraUTxO, pparams, eraHistory, systemStart, stakePools) <-
         firstExceptT ShelleyTxCmdQueryConvenienceError . newExceptT
-          $ queryStateForBalancedTx nodeEra networkId allTxInputs
+          $ queryStateForBalancedTx networkId allTxInputs
 
       validatedPParams <- hoistEither $ first ShelleyTxCmdProtocolParametersValidationError
                                       $ validateProtocolParameters era (Just pparams)

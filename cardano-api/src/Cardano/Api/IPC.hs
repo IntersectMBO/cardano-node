@@ -21,11 +21,11 @@ module Cardano.Api.IPC (
     connectToLocalNodeWithVersion,
     LocalNodeConnectInfo(..),
     localConsensusMode,
-    LocalNodeClientParams(..),
     mkLocalNodeClientParams,
     LocalNodeClientProtocols(..),
     LocalChainSyncClient(..),
     LocalNodeClientProtocolsInMode,
+
 
     -- ** Modes
     -- | TODO move to Cardano.Api
@@ -53,9 +53,10 @@ module Cardano.Api.IPC (
     -- *** Local state query
     LocalStateQueryClient(..),
     AcquiringFailure(..),
+    NodeToClientVersion(..),
     QueryInMode(..),
     QueryInEra(..),
-    QueryInShelleyBasedEra(..),
+    QueryShelleyBasedEra(..),
     queryNodeLocalState,
 
     -- *** Local tx monitoring
@@ -77,9 +78,15 @@ module Cardano.Api.IPC (
     consensusModeOnly,
     toAcquiringFailure,
 
-    NodeToClientVersion(..),
 
-    UnsupportedNtcVersionError(..),
+    -- *** Internals
+    LocalNodeClientProtocolsForBlock(..),
+    LocalNodeClientParams(..),
+    convLocalChainSyncClientPipelined,
+    convLocalChainSyncClient,
+    convLocalTxSubmissionClient,
+    convLocalTxMonitoringClient,
+
   ) where
 
 import           Data.Void (Void)
@@ -104,8 +111,6 @@ import           Ouroboros.Network.Protocol.ChainSync.Client as Net.Sync
 import           Ouroboros.Network.Protocol.ChainSync.ClientPipelined as Net.SyncP
 import           Ouroboros.Network.Protocol.LocalStateQuery.Client (LocalStateQueryClient (..))
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
-import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
-import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Net.Query
 import           Ouroboros.Network.Protocol.LocalTxMonitor.Client (LocalTxMonitorClient (..),
                    localTxMonitorClientPeer)
 import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Client as CTxMon
@@ -129,11 +134,12 @@ import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Consensus
 import           Cardano.Api.Block
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.InMode
-import           Cardano.Api.IPC.Version
+import           Cardano.Api.IPC.Error
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.Protocol
 import           Cardano.Api.Query
+import           Cardano.Api.Query.ShelleyBased
 import           Cardano.Api.Tx (getTxBody)
 import           Cardano.Api.TxBody
 
@@ -397,7 +403,6 @@ data LocalNodeClientProtocolsForBlock block =
                                         SlotNo IO ())
      }
 
-
 -- | Convert from the mode-parametrised style to the block-parametrised style.
 --
 mkLocalNodeClientParams :: forall mode block.
@@ -527,7 +532,6 @@ convLocalStateQueryClient mode =
       toConsensusQuery
       fromConsensusQueryResult
 
-
 --TODO: Move to consensus
 mapLocalTxMonitoringClient
   :: forall txid txid' tx tx' m a. Functor m
@@ -571,15 +575,6 @@ mapLocalTxMonitoringClient convTxid convTx ltxmc =
 -- | Establish a connection to a node and execute a single query using the
 -- local state query protocol.
 --
-
-data AcquiringFailure = AFPointTooOld
-                      | AFPointNotOnChain
-                      deriving (Eq, Show)
-
-toAcquiringFailure :: Net.Query.AcquireFailure -> AcquiringFailure
-toAcquiringFailure AcquireFailurePointTooOld = AFPointTooOld
-toAcquiringFailure AcquireFailurePointNotOnChain = AFPointNotOnChain
-
 queryNodeLocalState :: forall mode result.
                        LocalNodeConnectInfo mode
                     -> Maybe ChainPoint
