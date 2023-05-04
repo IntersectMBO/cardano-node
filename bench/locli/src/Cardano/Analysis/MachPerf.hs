@@ -21,7 +21,7 @@ import Data.Time.Clock qualified as Time
 import Data.CDF
 import Cardano.Util
 import Cardano.Analysis.API
-import Cardano.Unlog.LogObject hiding (Text)
+import Cardano.Unlog.LogObject
 import Cardano.Unlog.Resources
 
 

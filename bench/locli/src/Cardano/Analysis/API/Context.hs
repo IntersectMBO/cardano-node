@@ -178,13 +178,15 @@ instance FromJSON Metadata where
                          <|> compatParseManifest v
       profile         <- v .: "profile"
       profile_content <- v .: "profile_content"
+      generator       <- profile_content .: "generator"
 
       ident           <- (v .:? "ident")
                           <&> fromMaybe (unVersion . ciVersion $
                                          getComponent "cardano-node" manifest)
       eraDirect       <- v .:?  "era"
-      eraProfile      <- profile_content .: "era"
-      era <- case eraDirect <|> eraProfile of
+      eraProfile      <- profile_content .:? "era"
+      eraGenerator    <- generator .:? "era"
+      era <- case eraDirect <|> eraProfile <|> eraGenerator of
         Just x -> pure x
         Nothing -> fail "While parsing run metafile:  missing era specification"
 

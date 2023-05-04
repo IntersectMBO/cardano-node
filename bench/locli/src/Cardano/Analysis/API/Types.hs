@@ -17,7 +17,7 @@ import Data.Profile
 
 import Cardano.Logging.Resources.Types
 
-import Cardano.Unlog.LogObject  hiding (Text)
+import Cardano.Unlog.LogObject
 import Cardano.Util
 
 import Cardano.Analysis.API.Chain

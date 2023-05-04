@@ -27,7 +27,7 @@ import Cardano.Analysis.MachPerf
 import Cardano.Analysis.Summary
 import Cardano.Render
 import Cardano.Report
-import Cardano.Unlog.LogObject  hiding (Text)
+import Cardano.Unlog.LogObject
 import Cardano.Util             hiding (head)
 
 data CommandError

@@ -219,7 +219,7 @@ start()
                             "$node_rev"                 \
                             ${WB_MANIFEST_PACKAGES[*]}
                        )
-       manifest report "$manifest"
+       manifest render "$manifest"
 
        if test -n "$cabal_mode" -a -z "$prebuild_done"
        then workbench-prebuild-executables

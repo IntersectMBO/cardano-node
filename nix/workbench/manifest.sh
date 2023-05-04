@@ -1,6 +1,10 @@
 usage_manifest() {
-     usage "manifest" "Manifest" <<EOF
-    collect-from-checkout Collect software manifest from the current 'cardano-node' checkout
+    usage "manifest" "Manifest" <<EOF
+    $(helpcmd collect-from-checkout DIR [NODE_REV=HEAD] [PKGS_TO_MENTION..])
+      $(blk c collect)           Collect software manifest from the current 'cardano-node' checkout
+    $(helpcmd contributions-by-repository)
+      $(blk by byrepo)           Show per-repository list of git hashes involved.
+    $(helpcmd render JSON)            Render the JSON manifest.
 
 EOF
 }
@@ -60,7 +64,7 @@ case "${op}" in
           --argfile chap          $WB_CHAP_PACKAGES
         ;;
     collect-from-checkout | collect | c )
-        local usage="USAGE: wb manifest $0 CARDANO-NODE-CHECKOUT NODE-REV [PACKAGE...]"
+        local usage="USAGE: wb manifest $op CARDANO-NODE-CHECKOUT NODE-REV [PACKAGE...]"
         local dir=${1:?$usage}; shift
         local node_rev=${1:-}; shift || true
         local real_dir=$(realpath "$dir")
@@ -123,7 +127,7 @@ case "${op}" in
           --argfile chap          $WB_CHAP_PACKAGES
         ;;
 
-    report )
+    render )
         local usage="USAGE: wb manifest $0 MANIFEST-JSON-VALUE"
         local json=${1:?$usage}
 
@@ -182,7 +186,7 @@ case "${op}" in
         local usage="USAGE: wb manifest $0 CARDANO-NODE-CHECKOUT"
         local dir=${1:-.}; if test $# -ge 1; then shift; fi
 
-        manifest report "$(manifest collect-from-checkout "$dir")";;
+        manifest render "$(manifest collect-from-checkout "$dir")";;
 
     * ) usage_manifest;; esac
 }
