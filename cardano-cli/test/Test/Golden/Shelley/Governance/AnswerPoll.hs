@@ -14,7 +14,7 @@ import           Control.Monad (void)
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
-import qualified Test.Utilities as H
+import qualified Hedgehog.Extras.Test.Golden as H
 
 {- HLINT ignore "Use camelCase" -}
 

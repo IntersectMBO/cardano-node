@@ -6,10 +6,10 @@ import           Control.Monad (void)
 
 import           Hedgehog (Group (..), Property, checkSequential)
 import           Hedgehog.Extras (Integration, moduleWorkspace, note_, propertyOnce)
+import           Hedgehog.Extras.Test.Golden (diffVsGoldenFile)
 import           System.FilePath ((</>))
 
 import           Test.OptParse (execCardanoCLI, noteTempFile)
-import           Test.Utilities (diffVsGoldenFile)
 
 {- HLINT ignore "Use camelCase" -}
 

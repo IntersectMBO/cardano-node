@@ -195,7 +195,7 @@ test-suite cardano-cli-test
                       , exceptions
                       , filepath
                       , hedgehog
-                      , hedgehog-extras ^>= 0.4.2
+                      , hedgehog-extras ^>= 0.4.3
                       , parsec
                       , text
                       , time
@@ -234,15 +234,12 @@ test-suite cardano-cli-golden
                       , cardano-cli
                       , cardano-crypto-wrapper ^>= 1.5.1
                       , cardano-ledger-byron ^>= 1.0
-                      , cardano-prelude
                       , cborg
                       , containers
-                      , Diff
-                      , directory
                       , exceptions
                       , filepath
                       , hedgehog ^>= 1.2
-                      , hedgehog-extras ^>= 0.4.2
+                      , hedgehog-extras ^>= 0.4.3
                       , text
                       , time
                       , transformers
@@ -307,6 +304,5 @@ test-suite cardano-cli-golden
                         Test.Golden.TxView
                         Test.Golden.Version
                         Test.OptParse
-                        Test.Utilities
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
