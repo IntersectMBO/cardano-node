@@ -322,6 +322,7 @@ data BPError
 
 data Phase
   = Notice
+  | BlockContext
   | Request
   | Fetch
   | Forge

@@ -30,6 +30,8 @@ import Data.List                (dropWhileEnd, intercalate, partition)
 import Data.Map.Strict          (Map)
 import Data.Map.Strict          qualified as Map
 import Data.Maybe               (catMaybes, mapMaybe, isNothing)
+import Data.Sequence            (Seq(..))
+import Data.Sequence            qualified as Seq
 import Data.Set                 (Set)
 import Data.Set                 qualified as Set
 import Data.Text                qualified as T
@@ -157,13 +159,13 @@ data MachBlockEvents a
   = MFE (ForgerEvents a)
   | MOE (ObserverEvents a)
   | MBE  BPError
-  deriving (Generic, NFData, FromJSON, ToJSON)
+  deriving (Generic, NFData, FromJSON, Show, ToJSON)
 
-mbeForgP, mbeObsvP :: MachBlockEvents a -> Bool
-mbeForgP = \case
+mbeForgeP, mbeObservP :: MachBlockEvents a -> Bool
+mbeForgeP = \case
   MFE{} -> True
   _ -> False
-mbeObsvP = \case
+mbeObservP = \case
   MOE{} -> True
   _ -> False
 
@@ -227,11 +229,11 @@ ordBlockEv :: MachBlockEvents a -> MachBlockEvents a -> Ordering
 ordBlockEv l r
   | (on (>) $ mapMbe bfeBlockNo boeBlockNo (const 0)) l r = GT
   | (on (>) $ mapMbe bfeBlockNo boeBlockNo (const 0)) r l = LT
-  | mbeForgP l = GT
-  | mbeForgP r = LT
-  | mbeObsvP l = GT
-  | mbeObsvP r = LT
-  | otherwise  = EQ
+  | mbeForgeP  l = GT
+  | mbeForgeP  r = LT
+  | mbeObservP l = GT
+  | mbeObservP r = LT
+  | otherwise    = EQ
 
 mbeNoticed, mbeRequested, mbeAcquired, mbeAnnounced, mbeSending, mbeAdopted :: MachBlockEvents a -> SMaybe a
 mbeNoticed   = mapMbe (const SNothing) boeNoticed   (const SNothing)
@@ -257,11 +259,85 @@ mbeBlockNo = mapMbe bfeBlockNo boeBlockNo (const (-1))
 type MachHashBlockEvents a
   =  Map.Map Hash (MachBlockEvents a)
 
+-- | Machine's private view of the chain:
+--   the top level list maps BlockNo to sublists,
+--   which account for height/slot battles.
+type MachHeightBlockEvents a
+  = Seq.Seq [MachBlockEvents a]
+
+_mhbHeight :: MachHeightBlockEvents a -> Int
+_mhbHeight = Seq.length
+
+mhbAdd :: Show a => MachBlockEvents a -> MachHeightBlockEvents a -> MachHeightBlockEvents a
+-- We define height to be BlockNo + 1, so height (WithOrigin (BlockNo 0)) is 1.
+mhbAdd mbe mhb =
+  -- trace (mconcat $ intersperse "\n" $ fmap mconcat
+  --         [ [ "mhbAdd of ", show mbe]
+  --         , [ "fstHeight ", show fstHeight ]
+  --         , [ "curLen    ", show curLen ]
+  --         , [ "curExtend ", show curExtend ]
+  --         , [ "curHeight ", show curHeight ]
+  --         , [ "blkHeight ", show blkHeight ]
+  --         , [ "blkIndex  ", show blkIndex ]
+  --         , [ "tipOffset ", show tipOffset ]
+  --         , [ "current:" ]
+  --         ] ++ (toList mhb <&> ("------------" : ) . fmap show & mconcat))
+  case (tipOffset, mhb) of
+    (,) _ Seq.Empty ->
+      -- trace @Text "decision:  INSERT AS FIRST\n==================" $
+      Seq.singleton [mbe]
+    -- (,) wto Seq.Empty ->
+    --   error $ "invariant failed: wrong tip offset during first insert: " <> show wto
+    (,) (-1) _ ->
+      -- trace @Text "decision:  EXTEND 1\n==================" $
+      mhb :|> [mbe]
+    (,) 0 (chain :|> tips) ->
+      -- Don't store repeated observations for the same block:
+      if mbeForgeP mbe
+      then
+           -- trace @Text "decision:  ADD FORGE AT TIP\n==================" $
+           chain :|> (mbe:filter (((/=) `on` mbeBlock) mbe) tips)
+      else if any (((==) `on` mbeBlock) mbe) tips
+           then -- trace @Text "decision:  IGNORE\n==================" $
+                mhb
+           else -- trace @Text
+                -- (mconcat $ intersperse "\n" $ fmap mconcat $
+                --  [ [ "current tips:" ]
+                --  ] ++ (tips <&> (:[]) . T.pack . show . mbeBlock)
+                --  ++ [ [ "decision:  ADD AT TIP" ]
+                --     , ["=================="] ]) $
+                chain :|> (mbe:tips)
+    (,) 1 (chain :|> tips :|> h0) ->
+      -- Don't store repeated observations for the same block:
+      if any (((==) `on` mbeBlock) mbe) tips
+      then -- trace @Text "decision:  IGNORE\n==================" $
+           mhb
+      else -- trace @Text "decision:  ADD AT PRE-TIP\n==================" $
+           chain :|> (mbe:tips) :|> h0
+    _ -> error $
+         mconcat $ intersperse "\n" $ fmap mconcat
+         [ [ "Unhandled mhbAdd case:", show mbe ]
+         ]
+ where
+   fstHeight, curLen, curExtend, curHeight, blkHeight, blkIndex, tipOffset :: Int
+   fstHeight = case mhb of
+                 Seq.Empty -> (-1) -- The logic doesn't work for insertion of the
+                                   -- very first block.
+                 [first] Seq.:<| _ ->
+                   (+ 1) . fromIntegral . unBlockNo . mbeBlockNo $ first
+   curLen    = Seq.length mhb
+   curExtend = curLen - 1
+   curHeight = fstHeight + curExtend
+   blkHeight = (+ 1) . fromIntegral . unBlockNo . mbeBlockNo $ mbe
+   blkIndex  = blkHeight - fstHeight
+   tipOffset = curExtend - blkIndex
+
 -- An accumulator for: tip-block-events & the set of all blocks events
 data MachView
   = MachView
   { mvHost         :: !Host
   , mvHashBlocks   :: !(MachHashBlockEvents UTCTime)
+  , mvHeightBlocks :: !(MachHeightBlockEvents UTCTime)
   , mvStarted      :: !(SMaybe UTCTime)
   , mvBlkCtx       :: !(SMaybe UTCTime)
   , mvLgrState     :: !(SMaybe UTCTime)
@@ -277,7 +353,9 @@ mvForges = mapMaybe (mbeForge . snd) . Map.toList . mvHashBlocks
 
 machViewMaxBlock :: MachView -> MachBlockEvents UTCTime
 machViewMaxBlock MachView{..} =
-  Map.elems mvHashBlocks
+  mvHashBlocks
+  & Map.delete (Hash "genesis (origin)")
+  & Map.elems
   & \case
        [] -> MBE $ BPError { eHost=mvHost, eBlock=Hash "Genesis", eLO=Nothing, eDesc=BPENoBlocks }
        xs -> maximumBy ordBlockEv xs
@@ -349,16 +427,23 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
       step prevForge x@(beForgedAt -> at) =
         (at, x { beForge = (beForge x) { bfBlockGap = at `diffUTCTime` prevForge } })
 
-   rewindChain :: [MachHashBlockEvents a] -> Int -> Hash -> Hash
-   rewindChain eventMaps count tip = go tip count
+   rewindChain :: HasCallStack => [MachHashBlockEvents a] -> Int -> Hash -> Hash
+   rewindChain eventMaps count tip =
+     trace
+     (mconcat $ intersperse "\n" $ fmap mconcat $
+                 [ [ "rewindChain:" ]
+                 , [ "count: ", show count ]
+                 , [ "tip: ",   show tip ]
+                 ]) $
+     go tip count
     where go tip = \case
             0 -> tip
             n -> go (bfeBlockPrev $ getBlockForge eventMaps tip) (n - 1)
 
-   getBlockForge :: [MachHashBlockEvents a] -> Hash -> ForgerEvents a
+   getBlockForge :: HasCallStack => [MachHashBlockEvents a] -> Hash -> ForgerEvents a
    getBlockForge xs h =
      mapMaybe (Map.lookup h) xs
-     & find mbeForgP
+     & find mbeForgeP
      & fromMaybe
         (error $ mconcat
          [ "Invariant failed: couldn't find a forge for hash ", show h
@@ -388,7 +473,7 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
 
    doRebuildChain :: [MachHashBlockEvents NominalDiffTime] -> Hash -> [BlockEvents]
    doRebuildChain machBlockMaps chainTipHash = go (Just chainTipHash) []
-    where go Nothing  acc = acc
+    where go  Nothing    acc = acc
           go (Just hash) acc =
             case partitionMbes $ mapMaybe (Map.lookup hash) machBlockMaps of
               ([], _, ers) -> error $ mconcat
@@ -494,7 +579,7 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
           (error $ "Unknown host for block " <> show hash)
           (mapMbe id (error "Invariant failed") (error "Invariant failed"))
           (mapMaybe (Map.lookup hash) eventMaps
-           & find mbeForgP)
+           & find mbeForgeP)
 
       fail' :: Host -> Hash -> BPErrorKind -> BPError
       fail' host hash desc = BPError host hash Nothing desc
@@ -628,6 +713,7 @@ blockEventMapsFromLogObjects run (f@(unJsonLogfile -> fp), xs@(x:_)) =
      MachView
      { mvHost         = loHost x
      , mvHashBlocks   = mempty
+     , mvHeightBlocks = mempty
      , mvStarted      = SNothing
      , mvBlkCtx       = SNothing
      , mvLgrState     = SNothing
@@ -656,6 +742,25 @@ blockPropMachEventsStep run@Run{genesis} (JsonLogfile fp) mv@MachView{..} lo = c
          SNothing 0                   -- Adopted & chain delta
          [] [])
       & doInsert loBlock
+  -- 0. Notice, Genesis.
+  -- XXX: how does this look when we start from a non-empty chain?
+  LogObject{loAt, loHost, loBody=LOBlockContext{loSlotNo, loBlockNo, loBlock}} ->
+    let mbe0 = getBlock loBlock
+    in if isJust mbe0 then mv else
+      (MOE
+       (ObserverEvents
+         loHost
+         loBlock loBlockNo loSlotNo
+         (slotStart genesis loSlotNo) -- t+0:  slot start
+         (SJust loAt)                 -- Noticed
+         SNothing                     -- Requested
+         SNothing                     -- Fetched
+         SNothing                     -- Announced
+         SNothing                     -- Sending
+         SNothing 0                   -- Adopted & chain delta
+         [] [])
+      & doInsert loBlock)
+      { mvBlkCtx = SJust loAt }
   -- 1. Request (observer only)
   LogObject{loAt, loHost, loBody=LOBlockFetchClientRequested{loBlock,loLength}} ->
     let mbe0 = getBlock loBlock
@@ -750,8 +855,6 @@ blockPropMachEventsStep run@Run{genesis} (JsonLogfile fp) mv@MachView{..} lo = c
       & doInsert loBlock
   LogObject{loAt, loBody=LOTraceStartLeadershipCheck{}} ->
     mv { mvStarted = SJust loAt }
-  LogObject{loAt, loBody=LOBlockContext{}} ->
-    mv { mvBlkCtx = SJust loAt }
   LogObject{loAt, loBody=LOLedgerState{}} ->
     mv { mvLgrState = SJust loAt }
   LogObject{loAt, loBody=LOLedgerView{}} ->
@@ -775,7 +878,9 @@ blockPropMachEventsStep run@Run{genesis} (JsonLogfile fp) mv@MachView{..} lo = c
    getBlock k = Map.lookup k mvHashBlocks
 
    doInsert :: Hash -> MachBlockEvents UTCTime -> MachView
-   doInsert k x = mv { mvHashBlocks = Map.insert k x mvHashBlocks }
+   doInsert k x = mv { mvHashBlocks = Map.insert k x mvHashBlocks
+                     , mvHeightBlocks = mhbAdd x mvHeightBlocks
+                     }
 
 deltifyEvents :: MachBlockEvents UTCTime -> MachBlockEvents NominalDiffTime
 deltifyEvents (MBE e) = MBE e
