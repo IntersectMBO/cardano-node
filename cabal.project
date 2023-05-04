@@ -68,8 +68,8 @@ package cardano-topology
 package cardano-tracer
   ghc-options: -Werror
 
-package locli
-  ghc-options: -Werror
+-- package locli
+--   ghc-options: -Werror
 
 package plutus-scripts-bench
   ghc-options: -Werror
