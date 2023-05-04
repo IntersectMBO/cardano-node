@@ -16,6 +16,13 @@
 
 - Expose envirnment construction functionality: `mkProtocolInfoCardano` and `genesisConfigToEnv`
 
+- New error exports:
+  - `TxOutInAnyEra(..)`
+  - `txOutInAnyEra`
+  - `StakePoolMetadataValidationError(..)`
+  - `ScriptHash(..)`
+  ([PR 5188](https://github.com/input-output-hk/cardano-node/pull/5188))
+
 - Rename `TestEnableDevelopmentHardForkEras` to `ExperimentalHardForksEnabled` and
   `TestEnableDevelopmentNetworkProtocols` to `ExperimentalProtocolsEnabled`
   ([PR 4341](https://github.com/input-output-hk/cardano-node/pull/4341))
