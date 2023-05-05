@@ -38,7 +38,6 @@ module Cardano.CLI.Shelley.Commands
   , VerificationKeyBase64 (..)
   , GenesisKeyFile (..)
   , MetadataFile (..)
-  , PoolMetadataFile (..)
   , PrivKeyFile (..)
   , BlockId (..)
   , WitnessSigningData (..)
@@ -322,9 +321,9 @@ data PoolCmd
       -- ^ Stake pool verification key.
       EpochNo
       -- ^ Epoch in which to retire the stake pool.
-      (File () Out)
+      (File Certificate Out)
   | PoolGetId (VerificationKeyOrFile StakePoolKey) OutputFormat
-  | PoolMetadataHash PoolMetadataFile (Maybe (File () Out))
+  | PoolMetadataHash (File StakePoolMetadata In) (Maybe (File () Out))
   deriving Show
 
 renderPoolCmd :: PoolCmd -> Text
@@ -522,10 +521,6 @@ newtype GenesisKeyFile
 data MetadataFile = MetadataFileJSON (File () In)
                   | MetadataFileCBOR (File () In)
 
-  deriving Show
-
-newtype PoolMetadataFile = PoolMetadataFile
-  { unPoolMetadataFile :: FilePath }
   deriving Show
 
 newtype GenesisDir
