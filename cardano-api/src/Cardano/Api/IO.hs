@@ -6,7 +6,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Api.IO
-  ( writeByteStringFileWithOwnerPermissions
+  ( readByteStringFile
+  , readLazyByteStringFile
+  , readTextFile
+
+  , writeByteStringFileWithOwnerPermissions
   , writeByteStringFile
   , writeByteStringOutput
 
@@ -118,6 +122,27 @@ handleFileForWritingWithOwnerPermission path f = do
   where
     (targetDir, targetFile) = splitFileName path
 #endif
+
+readByteStringFile :: ()
+  => MonadIO m
+  => File content In
+  -> m (Either (FileError e) ByteString)
+readByteStringFile fp = runExceptT $
+  handleIOExceptT (FileIOError (unFile fp)) $ BS.readFile (unFile fp)
+
+readLazyByteStringFile :: ()
+  => MonadIO m
+  => File content In
+  -> m (Either (FileError e) LBS.ByteString)
+readLazyByteStringFile fp = runExceptT $
+  handleIOExceptT (FileIOError (unFile fp)) $ LBS.readFile (unFile fp)
+
+readTextFile :: ()
+  => MonadIO m
+  => File content In
+  -> m (Either (FileError e) Text)
+readTextFile fp = runExceptT $
+  handleIOExceptT (FileIOError (unFile fp)) $ Text.readFile (unFile fp)
 
 writeByteStringFile :: ()
   => MonadIO m
