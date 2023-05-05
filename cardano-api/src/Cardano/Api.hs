@@ -43,6 +43,10 @@ module Cardano.Api (
     onlyOut,
     intoFile,
 
+    readByteStringFile,
+    readLazyByteStringFile,
+    readTextFile,
+
     writeByteStringFileWithOwnerPermissions,
     writeByteStringFile,
     writeByteStringOutput,
