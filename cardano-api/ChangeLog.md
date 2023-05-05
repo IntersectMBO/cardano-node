@@ -16,6 +16,10 @@
 
 - Expose envirnment construction functionality: `mkProtocolInfoCardano` and `genesisConfigToEnv`
 
+- New functions: `intoFile`, `readByteStringFile`, `readLazyByteStringFile`, `readTextFile`.
+  Modify functions in `Cardano.Api.IO` to use unspecified content type rather than `()`.
+  ([PR 5194](https://github.com/input-output-hk/cardano-node/pull/5194))
+
 - Rename `TestEnableDevelopmentHardForkEras` to `ExperimentalHardForksEnabled` and
   `TestEnableDevelopmentNetworkProtocols` to `ExperimentalProtocolsEnabled`
   ([PR 4341](https://github.com/input-output-hk/cardano-node/pull/4341))
