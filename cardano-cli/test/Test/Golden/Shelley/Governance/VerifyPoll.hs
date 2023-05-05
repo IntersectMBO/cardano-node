@@ -14,13 +14,12 @@ import           Hedgehog (Property)
 import           Test.OptParse
 
 import           Cardano.Api
-import           Cardano.CLI.Shelley.Key
-                   (VerificationKeyOrFile (..),
+import           Cardano.CLI.Shelley.Key (VerificationKeyOrFile (..),
                    readVerificationKeyOrTextEnvFile)
 
+import qualified Data.ByteString.Char8 as BSC
 import qualified Hedgehog as H
 import qualified Hedgehog.Internal.Property as H
-import qualified Data.ByteString.Char8 as BSC
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -34,7 +33,7 @@ golden_shelleyGovernanceVerifyPoll = propertyOnce $ do
   stdout <- BSC.pack <$> execCardanoCLI
     [ "governance", "verify-poll"
     , "--poll-file", pollFile
-    , "--signed-tx-file", txFile
+    , "--tx-file", txFile
     ]
 
   liftIO (readVerificationKeyOrTextEnvFile AsStakePoolKey vkFile) >>= \case
@@ -52,7 +51,7 @@ golden_shelleyGovernanceVerifyPollMismatch = propertyOnce $ do
   result <- tryExecCardanoCLI
     [ "governance", "verify-poll"
     , "--poll-file", pollFile
-    , "--signed-tx-file", txFile
+    , "--tx-file", txFile
     ]
 
   either (const H.success) (H.failWith Nothing) result
@@ -65,7 +64,7 @@ golden_shelleyGovernanceVerifyPollNoAnswer = propertyOnce $ do
   result <- tryExecCardanoCLI
     [ "governance", "verify-poll"
     , "--poll-file", pollFile
-    , "--signed-tx-file", txFile
+    , "--tx-file", txFile
     ]
 
   either (const H.success) (H.failWith Nothing) result
@@ -78,7 +77,7 @@ golden_shelleyGovernanceVerifyPollMalformedAnswer = propertyOnce $ do
   result <- tryExecCardanoCLI
     [ "governance", "verify-poll"
     , "--poll-file", pollFile
-    , "--signed-tx-file", txFile
+    , "--tx-file", txFile
     ]
 
   either (const H.success) (H.failWith Nothing) result
@@ -91,7 +90,7 @@ golden_shelleyGovernanceVerifyPollInvalidAnswer = propertyOnce $ do
   result <- tryExecCardanoCLI
     [ "governance", "verify-poll"
     , "--poll-file", pollFile
-    , "--signed-tx-file", txFile
+    , "--tx-file", txFile
     ]
 
   either (const H.success) (H.failWith Nothing) result

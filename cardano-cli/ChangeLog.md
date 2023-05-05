@@ -25,6 +25,7 @@
   - ([PR 5132](https://github.com/input-output-hk/cardano-node/pull/5132))
   - ([PR 5112](https://github.com/input-output-hk/cardano-node/pull/5112))
   - ([PR 5172](https://github.com/input-output-hk/cardano-node/pull/5172))
+  - ([PR 5184](https://github.com/input-output-hk/cardano-node/pull/5184))
 
 - Any command that takes a `--mainnet` flag or a `--testnet-magic` flag can have that setting
   supplied with the `CARDANO_NODE_NETWORK_ID=mainnet` or `CARDANO_NODE_NETWORK_ID=<number>`
