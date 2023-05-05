@@ -78,7 +78,7 @@ newtype File content (direction :: FileDirection) = File
 handleFileForWritingWithOwnerPermission
   :: FilePath
   -> (Handle -> IO ())
-  -> IO (Either (FileError ()) ())
+  -> IO (Either (FileError e) ())
 handleFileForWritingWithOwnerPermission path f = do
 #ifdef UNIX
   -- On a unix based system, we grab a file descriptor and set ourselves as owner.
@@ -123,14 +123,14 @@ writeByteStringFile :: ()
   => MonadIO m
   => File content Out
   -> ByteString
-  -> m (Either (FileError ()) ())
+  -> m (Either (FileError e) ())
 writeByteStringFile fp bs = runExceptT $
   handleIOExceptT (FileIOError (unFile fp)) $ BS.writeFile (unFile fp) bs
 
 writeByteStringFileWithOwnerPermissions
   :: FilePath
   -> BS.ByteString
-  -> IO (Either (FileError ()) ())
+  -> IO (Either (FileError e) ())
 writeByteStringFileWithOwnerPermissions fp bs =
   handleFileForWritingWithOwnerPermission fp $ \h ->
     BS.hPut h bs
@@ -139,7 +139,7 @@ writeByteStringOutput :: ()
   => MonadIO m
   => Maybe (File content Out)
   -> ByteString
-  -> m (Either (FileError ()) ())
+  -> m (Either (FileError e) ())
 writeByteStringOutput mOutput bs = runExceptT $
   case mOutput of
     Just fp -> handleIOExceptT (FileIOError (unFile fp)) $ BS.writeFile (unFile fp) bs
@@ -149,14 +149,14 @@ writeLazyByteStringFile :: ()
   => MonadIO m
   => File content Out
   -> LBS.ByteString
-  -> m (Either (FileError ()) ())
+  -> m (Either (FileError e) ())
 writeLazyByteStringFile fp bs = runExceptT $
   handleIOExceptT (FileIOError (unFile fp)) $ LBS.writeFile (unFile fp) bs
 
 writeLazyByteStringFileWithOwnerPermissions
   :: File content Out
   -> LBS.ByteString
-  -> IO (Either (FileError ()) ())
+  -> IO (Either (FileError e) ())
 writeLazyByteStringFileWithOwnerPermissions fp lbs =
   handleFileForWritingWithOwnerPermission (unFile fp) $ \h ->
     LBS.hPut h lbs
@@ -165,7 +165,7 @@ writeLazyByteStringOutput :: ()
   => MonadIO m
   => Maybe (File content Out)
   -> LBS.ByteString
-  -> m (Either (FileError ()) ())
+  -> m (Either (FileError e) ())
 writeLazyByteStringOutput mOutput bs = runExceptT $
   case mOutput of
     Just fp -> handleIOExceptT (FileIOError (unFile fp)) $ LBS.writeFile (unFile fp) bs
@@ -175,14 +175,14 @@ writeTextFile :: ()
   => MonadIO m
   => File content Out
   -> Text
-  -> m (Either (FileError ()) ())
+  -> m (Either (FileError e) ())
 writeTextFile fp t = runExceptT $
   handleIOExceptT (FileIOError (unFile fp)) $ Text.writeFile (unFile fp) t
 
 writeTextFileWithOwnerPermissions
   :: File content Out
   -> Text
-  -> IO (Either (FileError ()) ())
+  -> IO (Either (FileError e) ())
 writeTextFileWithOwnerPermissions fp t =
   handleFileForWritingWithOwnerPermission (unFile fp) $ \h ->
     Text.hPutStr h t
@@ -191,7 +191,7 @@ writeTextOutput :: ()
   => MonadIO m
   => Maybe (File content Out)
   -> Text
-  -> m (Either (FileError ()) ())
+  -> m (Either (FileError e) ())
 writeTextOutput mOutput t = runExceptT $
   case mOutput of
     Just fp -> handleIOExceptT (FileIOError (unFile fp)) $ Text.writeFile (unFile fp) t
