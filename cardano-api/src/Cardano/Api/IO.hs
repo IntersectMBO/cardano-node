@@ -24,6 +24,8 @@ module Cardano.Api.IO
   , mapFile
   , onlyIn
   , onlyOut
+
+  , intoFile
   ) where
 
 #if !defined(mingw32_HOST_OS)
@@ -203,3 +205,20 @@ onlyIn = File . unFile
 
 onlyOut :: File content InOut -> File content Out
 onlyOut = File . unFile
+
+-- | Given a way to serialise a value and a way to write the stream to a file, serialise
+-- a value into a stream, and write it to a file.
+--
+-- Whilst it is possible to call the serialisation and writing functions separately,
+-- doing so means the compiler is unable to match the content type of the file with
+-- the type of the content being serialised.
+--
+-- Using this function ensures that the content type of the file always matches with the
+-- content value and prevents any type mismatches.
+intoFile :: ()
+  => File content 'Out
+  -> content
+  -> (File content 'Out -> stream -> result)
+  -> (content -> stream)
+  -> result
+intoFile fp content write serialise = write fp (serialise content)
