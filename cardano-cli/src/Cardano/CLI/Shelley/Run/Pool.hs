@@ -6,9 +6,14 @@ module Cardano.CLI.Shelley.Run.Pool
   , runPoolCmd
   ) where
 
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
-                   newExceptT)
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans (lift)
+import           Control.Monad.Trans.Except (ExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, left,
+                   newExceptT, onLeft)
 import qualified Data.ByteString.Char8 as BS
+import           Data.Function ((&))
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 
@@ -19,9 +24,6 @@ import           Cardano.CLI.Shelley.Key (VerificationKeyOrFile, readVerificatio
 import           Cardano.CLI.Types (OutputFormat (..))
 
 import qualified Cardano.Ledger.Slot as Shelley
-import           Control.Monad.IO.Class (MonadIO (..))
-import           Control.Monad.Trans.Except (ExceptT)
-import           Data.Text (Text)
 
 data ShelleyPoolCmdError
   = ShelleyPoolCmdReadFileError !(FileError TextEnvelopeError)
@@ -146,7 +148,7 @@ runStakePoolRegistrationCert
 runStakePoolRetirementCert
   :: VerificationKeyOrFile StakePoolKey
   -> Shelley.EpochNo
-  -> File () Out
+  -> File Certificate Out
   -> ExceptT ShelleyPoolCmdError IO ()
 runStakePoolRetirementCert stakePoolVerKeyOrFile retireEpoch outfp = do
     -- Pool verification key
@@ -159,8 +161,8 @@ runStakePoolRetirementCert stakePoolVerKeyOrFile retireEpoch outfp = do
 
     firstExceptT ShelleyPoolCmdWriteFileError
       . newExceptT
-      $ writeLazyByteStringFile outfp
-      $ textEnvelopeToJSON (Just retireCertDesc) retireCert
+      $ intoFile outfp retireCert writeLazyByteStringFile
+      $ textEnvelopeToJSON (Just retireCertDesc)
   where
     retireCertDesc :: TextEnvelopeDescr
     retireCertDesc = "Stake Pool Retirement Certificate"
@@ -180,10 +182,11 @@ runPoolId verKeyOrFile outputFormat = do
         OutputFormatBech32 ->
           Text.putStrLn $ serialiseToBech32 (verificationKeyHash stakePoolVerKey)
 
-runPoolMetadataHash :: PoolMetadataFile -> Maybe (File () Out) -> ExceptT ShelleyPoolCmdError IO ()
-runPoolMetadataHash (PoolMetadataFile poolMDPath) mOutFile = do
-  metadataBytes <- handleIOExceptT (ShelleyPoolCmdReadFileError . FileIOError poolMDPath) $
-    BS.readFile poolMDPath
+runPoolMetadataHash :: File StakePoolMetadata In -> Maybe (File () Out) -> ExceptT ShelleyPoolCmdError IO ()
+runPoolMetadataHash poolMDPath mOutFile = do
+  metadataBytes <- lift (readByteStringFile poolMDPath)
+    & onLeft (left . ShelleyPoolCmdReadFileError)
+
   (_metadata, metadataHash) <-
       firstExceptT ShelleyPoolCmdMetadataValidationError
     . hoistEither
