@@ -37,9 +37,11 @@ module Cardano.Api (
     -- ** IO
     File(..),
     FileDirection(..),
+
     mapFile,
     onlyIn,
     onlyOut,
+    intoFile,
 
     writeByteStringFileWithOwnerPermissions,
     writeByteStringFile,
