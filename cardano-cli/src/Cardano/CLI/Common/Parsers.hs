@@ -1,12 +1,14 @@
 module Cardano.CLI.Common.Parsers
   ( pNetworkId
   , pConsensusModeParams
+  , pSocketPath
   ) where
 
 import           Cardano.Api (AnyConsensusModeParams (..), ConsensusModeParams (..),
-                   EpochSlots (..), NetworkId (..), NetworkMagic (..), bounded)
+                   EpochSlots (..), NetworkId (..), NetworkMagic (..), SocketPath (..), bounded)
 import           Cardano.CLI.Environment (EnvCli (envCliNetworkId))
 
+import           Cardano.CLI.Environment (EnvCli (envCliSocketPath))
 import           Data.Foldable
 import           Data.Maybe (maybeToList)
 import           Data.Word (Word64)
@@ -88,4 +90,22 @@ pEpochSlots =
     , Opt.help "The number of slots per epoch for the Byron era."
     , Opt.value defaultByronEpochSlots -- Default to the mainnet value.
     , Opt.showDefault
+    ]
+
+pSocketPath :: EnvCli -> Parser SocketPath
+pSocketPath envCli =
+  asum $ mconcat
+    [ [ fmap SocketPath $ Opt.strOption $ mconcat
+        [ Opt.long "socket-path"
+        , Opt.metavar "SOCKET_PATH"
+        , Opt.help $ mconcat
+          [ "Path to the node socket.  This overrides the CARDANO_NODE_SOCKET_PATH "
+          , "environment variable.  The argument is optional if CARDANO_NODE_SOCKET_PATH "
+          , "is defined and mandatory otherwise."
+          ]
+        , Opt.completer (Opt.bashCompleter "file")
+        ]
+      ]
+    , -- Default to the socket path specified by the environment variable if it is available.
+      pure . SocketPath <$> maybeToList (envCliSocketPath envCli)
     ]

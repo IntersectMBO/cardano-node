@@ -12,12 +12,9 @@ module Cardano.CLI.Byron.Query
 import           Cardano.Api
 
 import           Control.Monad.IO.Unlift (MonadIO (..))
-import           Control.Monad.Trans (MonadTrans (..))
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (left, onLeft)
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy as LB
-import           Data.Function ((&))
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.IO as Text
@@ -38,13 +35,10 @@ renderByronQueryError err =
 --------------------------------------------------------------------------------
 
 runGetLocalNodeTip
-  :: Maybe SocketPath
+  :: SocketPath
   -> NetworkId
   -> ExceptT ByronQueryError IO ()
-runGetLocalNodeTip mNodeSocketPath networkId = do
-  SocketPath sockPath <- maybe (lift readEnvSocketPath) (pure . Right) mNodeSocketPath
-    & onLeft (left . ByronQueryEnvVarSocketErr)
-
+runGetLocalNodeTip (SocketPath sockPath) networkId = do
   let connctInfo =
         LocalNodeConnectInfo {
           localNodeSocketPath    = sockPath,

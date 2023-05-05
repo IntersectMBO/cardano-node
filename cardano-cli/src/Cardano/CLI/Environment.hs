@@ -5,6 +5,7 @@ module Cardano.CLI.Environment
   ( EnvCli(..)
   , getEnvCli
   , getEnvNetworkId
+  , getEnvSocketPath
   ) where
 
 import           Cardano.Api (NetworkId (..), NetworkMagic (..))
@@ -14,12 +15,20 @@ import qualified System.Environment as IO
 import qualified System.IO as IO
 import           Text.Read (readMaybe)
 
-newtype EnvCli = EnvCli
+data EnvCli = EnvCli
   { envCliNetworkId :: Maybe NetworkId
+  , envCliSocketPath :: Maybe FilePath
   }
 
 getEnvCli :: IO EnvCli
-getEnvCli = EnvCli <$> getEnvNetworkId
+getEnvCli = do
+  mNetworkId <- getEnvNetworkId
+  mSocketPath <- getEnvSocketPath
+
+  pure EnvCli
+    { envCliNetworkId = mNetworkId
+    , envCliSocketPath = mSocketPath
+    }
 
 -- | If the environment variable @CARDANO_NODE_NETWORK_ID@ is set, then return the network id therein.
 -- Otherwise, return 'Nothing'.
@@ -41,3 +50,8 @@ getEnvNetworkId = do
                 , " It should be either 'mainnet' or a number."
                 ]
               pure Nothing
+
+-- | If the environment variable @CARDANO_NODE_SOCKET_PATH@ is set, then return the set value.
+-- Otherwise, return 'Nothing'.
+getEnvSocketPath :: IO (Maybe FilePath)
+getEnvSocketPath = IO.lookupEnv "CARDANO_NODE_SOCKET_PATH"
