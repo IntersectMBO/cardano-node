@@ -34,6 +34,9 @@
 
 ### Features
 
+- The `--socket-path` option is now a required CLI argument for relevant commands if `CARDANO_NODE_SOCKET_PATH` is not supplied.
+  ([PR 5120](https://github.com/input-output-hk/cardano-node/pull/5120))
+
 - Default to the ledger's CDDL format for transaction body creation by removing flags `--cddl-format` and `--cli-format` from `build` and `build-raw` ([PR 4303](https://github.com/input-output-hk/cardano-node/pull/4303))
 
 - Add `query tx-mempool` ([PR 4276](https://github.com/input-output-hk/cardano-node/pull/4276))
