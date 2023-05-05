@@ -718,6 +718,7 @@ readRequiredSigner (RequiredSignerSkeyFile skFile) = do
      [ FromSomeType (AsSigningKey AsPaymentKey) APaymentSigningKey
      , FromSomeType (AsSigningKey AsPaymentExtendedKey) APaymentExtendedSigningKey
      , FromSomeType (AsSigningKey AsStakePoolKey) AStakePoolSigningKey
+     , FromSomeType (AsSigningKey AsGenesisDelegateKey) AGenesisDelegateSigningKey
      ]
    bech32FileTypes = []
 
