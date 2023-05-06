@@ -98,15 +98,7 @@ and it should return a path of this shape: `/home/<user>/.ghcup/bin/cabal`.
 Cardano uses a custom fork of `libsodium` which exposes some internal functions
 and adds some other new functions. This fork lives in
 [https://github.com/input-output-hk/libsodium](https://github.com/input-output-hk/libsodium).
-Users can choose to either install that custom version of `libsodium` or
-otherwise tell `cabal` to use a ported version included in Cardano crypto
-libraries.
-
-The C code is merely a port of the bits missing in a normal `libsodium`
-installation, so it should be as performant as installing the custom `libsodium`
-fork.
-
-##### Installing the custom libsodium
+Users need to install that custom version of `libsodium` with the following steps.
 
 Create a working directory for your builds:
 
@@ -120,7 +112,7 @@ Download and install libsodium:
 ```bash
 git clone https://github.com/input-output-hk/libsodium
 cd libsodium
-git checkout 66f017f1
+git checkout dbb48cc
 ./autogen.sh
 ./configure
 make
@@ -141,12 +133,16 @@ check by running `ldd`), the running binary might still use the wrong library.
 You can check this by running `pldd`. If the `pldd` shows that the running executable
 is using the wrong library, run `ldconfig`.
 
-##### Using the ported `c` code
+##### Using the ported `c` code for development
+**Note:** the ported `c` code should not be used to run the node, and should only be
+used for development purposes. 
 
-In order to avoid having to install the custom version, `cardano-crypto-praos`
-defines a `cabal` flag that makes use of C code located
+In order to avoid having to install the custom version of libsodium for development
+purposes, `cardano-crypto-praos` defines a `cabal` flag that makes use of C code located
 [here](https://github.com/input-output-hk/cardano-base/tree/master/cardano-crypto-praos/cbits).
-To enable this code, one has to add the following code in the
+
+The C code is merely a port of the bits missing in a normal `libsodium`
+installation. To enable this code, one has to add the following code in the
 `cabal.project.local` file:
 
 ```bash
