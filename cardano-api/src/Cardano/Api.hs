@@ -665,11 +665,10 @@ module Cardano.Api (
     LocalNodeClientProtocolsInMode,
 
     -- *** Local tx submission
-    LocalTxSubmissionClient,
+    LocalTxSubmissionClient(..),
     TxInMode(..),
     TxValidationErrorInMode(..),
     SubmitResult(..),
-    runLocalTxSubmissionClient,
     submitTxToNodeLocal,
 
     -- *** Local state query
