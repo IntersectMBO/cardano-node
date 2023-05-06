@@ -10,8 +10,8 @@ import           Hedgehog (Property)
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import           System.FilePath ((</>))
+import           Test.Hedgehog.Golden (diffFileVsGoldenFile)
 import           Test.OptParse (execCardanoCLI, propertyOnce)
-import           Test.Utilities (diffFileVsGoldenFile)
 
 {- HLINT ignore "Use camelCase" -}
 

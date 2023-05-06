@@ -1,14 +1,12 @@
-module Test.Utilities
+module Test.Hedgehog.Golden
   ( diffVsGoldenFile,
     diffFileVsGoldenFile,
   ) where
 
-import           Cardano.Prelude (ConvertText (..), HasCallStack)
-
 import           Control.Monad.IO.Class (MonadIO)
 import           Data.Algorithm.Diff (PolyDiff (Both), getGroupedDiff)
 import           Data.Algorithm.DiffOutput (ppDiff)
-import           GHC.Stack (callStack)
+import           GHC.Stack (HasCallStack, callStack)
 import qualified GHC.Stack as GHC
 import           Hedgehog (MonadTest)
 import qualified Hedgehog.Extras.Test as H
@@ -49,7 +47,7 @@ diffVsGoldenFile actualContent referenceFile = GHC.withFrozenCallStack $ do
 
   if fileExists
     then do
-      referenceLines <- map toS . lines <$> H.readFile referenceFile
+      referenceLines <- lines <$> H.readFile referenceFile
       let difference = getGroupedDiff actualLines referenceLines
       case difference of
         [Both{}] -> pure ()

@@ -174,6 +174,17 @@ executable cardano-cli
                       , optparse-applicative-fork
                       , transformers-except
 
+library test-lib
+  import:               project-config
+  hs-source-dirs:       test-lib
+  exposed-modules:      Test.OptParse
+  build-depends:        cardano-api
+                      , cardano-cli
+                      , exceptions
+                      , hedgehog
+                      , hedgehog-extras ^>= 0.4.2
+                      , transformers
+
 test-suite cardano-cli-test
   import:               project-config, maybe-unix, maybe-bytestring
 
@@ -188,11 +199,11 @@ test-suite cardano-cli-test
                       , cardano-api
                       , cardano-api:gen
                       , cardano-cli
+                      , cardano-cli:test-lib
                       , cardano-node
                       , cardano-slotting ^>= 0.1
                       , containers
                       , directory
-                      , exceptions
                       , filepath
                       , hedgehog
                       , hedgehog-extras ^>= 0.4.2
@@ -216,7 +227,6 @@ test-suite cardano-cli-test
                         Test.Cli.Pioneers.Exercise6
                         Test.Cli.Pipes
                         Test.Cli.Shelley.Run.Query
-                        Test.OptParse
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
@@ -231,15 +241,13 @@ test-suite cardano-cli-golden
                       , base16-bytestring
                       , bytestring
                       , cardano-api
+                      , cardano-api:gen
                       , cardano-cli
+                      , cardano-cli:test-lib
                       , cardano-crypto-wrapper ^>= 1.5.1
                       , cardano-ledger-byron ^>= 1.0
-                      , cardano-prelude
                       , cborg
                       , containers
-                      , Diff
-                      , directory
-                      , exceptions
                       , filepath
                       , hedgehog ^>= 1.2
                       , hedgehog-extras ^>= 0.4.2
@@ -306,7 +314,5 @@ test-suite cardano-cli-golden
                         Test.Golden.Shelley.Transaction.Sign
                         Test.Golden.TxView
                         Test.Golden.Version
-                        Test.OptParse
-                        Test.Utilities
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
