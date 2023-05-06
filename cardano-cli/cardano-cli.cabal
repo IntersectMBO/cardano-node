@@ -186,7 +186,7 @@ library test-lib
                       , transformers
 
 test-suite cardano-cli-test
-  import:               project-config, maybe-unix, maybe-bytestring
+  import:               project-config, maybe-unix
 
   hs-source-dirs:       test
   main-is:              cardano-cli-test.hs
@@ -194,8 +194,8 @@ test-suite cardano-cli-test
 
   build-depends:        aeson
                       , base16-bytestring
+                      , bech32 >= 1.1.0
                       , bytestring
-                      , bech32            >= 1.1.0
                       , cardano-api ^>= 8.1.0.1
                       , cardano-api-gen ^>= 8.1.0.2
                       , cardano-cli
@@ -233,11 +233,11 @@ test-suite cardano-cli-test
 test-suite cardano-cli-golden
   import:               project-config
 
-  hs-source-dirs:       test
+  hs-source-dirs:       golden
   main-is:              cardano-cli-golden.hs
   type:                 exitcode-stdio-1.0
 
-  build-depends:        aeson             >= 1.5.6.0
+  build-depends:        aeson >= 1.5.6.0
                       , base16-bytestring
                       , bytestring
                       , cardano-api ^>= 8.1.0.1
