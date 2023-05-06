@@ -48,7 +48,7 @@ data DataPointForward where
 
   -- | Both acceptor and forwarder are in idle state. The acceptor can send a
   -- request  for a list of 'DataPoint's ('MsgDataPointsRequest');
-  -- the forwarder is waiting for a request, it will replay with 'MsgDataPointsReply'.
+  -- the forwarder is waiting for a request, it will reply with 'MsgDataPointsReply'.
   StIdle :: DataPointForward
 
   -- | The acceptor has sent a next request for 'DataPoint's. The acceptor is
