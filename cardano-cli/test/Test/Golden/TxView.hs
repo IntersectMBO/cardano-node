@@ -6,9 +6,8 @@ import           Control.Monad (void)
 
 import           Hedgehog (Group (..), Property, checkSequential)
 import           Hedgehog.Extras (Integration, moduleWorkspace, note_, propertyOnce)
-import           Hedgehog.Extras.Test.Golden (diffVsGoldenFile)
+import qualified Hedgehog.Extras.Test.Golden as H
 import           System.FilePath ((</>))
-
 import           Test.OptParse (execCardanoCLI, noteTempFile)
 
 {- HLINT ignore "Use camelCase" -}
@@ -47,7 +46,7 @@ golden_view_byron =
     result <-
       execCardanoCLI
         ["transaction", "view", "--tx-body-file", transactionBodyFile]
-    diffVsGoldenFile result "test/data/golden/byron/transaction-view.out"
+    H.diffVsGoldenFile result "test/data/golden/byron/transaction-view.out"
 
 golden_view_shelley :: Property
 golden_view_shelley = let
@@ -130,7 +129,7 @@ golden_view_shelley = let
     result <-
       execCardanoCLI
         ["transaction", "view", "--tx-body-file", transactionBodyFile]
-    diffVsGoldenFile result "test/data/golden/shelley/transaction-view.out"
+    H.diffVsGoldenFile result "test/data/golden/shelley/transaction-view.out"
 
 golden_view_allegra :: Property
 golden_view_allegra =
@@ -161,7 +160,7 @@ golden_view_allegra =
     result <-
       execCardanoCLI
         ["transaction", "view", "--tx-body-file", transactionBodyFile]
-    diffVsGoldenFile result "test/data/golden/allegra/transaction-view.out"
+    H.diffVsGoldenFile result "test/data/golden/allegra/transaction-view.out"
 
 golden_view_mary :: Property
 golden_view_mary =
@@ -229,7 +228,7 @@ golden_view_mary =
     result <-
       execCardanoCLI
         ["transaction", "view", "--tx-body-file", transactionBodyFile]
-    diffVsGoldenFile result "test/data/golden/mary/transaction-view.out"
+    H.diffVsGoldenFile result "test/data/golden/mary/transaction-view.out"
 
 createAlonzoTxBody :: Maybe FilePath -> FilePath -> Integration ()
 createAlonzoTxBody mUpdateProposalFile transactionBodyFile = do
@@ -289,7 +288,7 @@ golden_view_alonzo =
       result <-
         execCardanoCLI
           ["transaction", "view", "--tx-body-file", transactionBodyFile]
-      diffVsGoldenFile result "test/data/golden/alonzo/transaction-view.out"
+      H.diffVsGoldenFile result "test/data/golden/alonzo/transaction-view.out"
 
 golden_view_alonzo_signed :: Property
 golden_view_alonzo_signed =
@@ -315,4 +314,4 @@ golden_view_alonzo_signed =
       result <-
         execCardanoCLI
           ["transaction", "view", "--tx-file", transactionFile]
-      diffVsGoldenFile result (testData </> "signed-transaction-view.out")
+      H.diffVsGoldenFile result (testData </> "signed-transaction-view.out")
