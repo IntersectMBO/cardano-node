@@ -354,7 +354,7 @@ wb_nomad() {
           if ! wb_nomad client configure "${client_name}" 14646 14647 14648 "${task_driver}"
           then
             wb_nomad server stop "${server_name}" || true
-            fatal "Failed to configure Nomad client"
+            fatal "Failed to configure Nomad client \"${client_name}\""
           fi
           # Only the exec driver must be run as root.
           if test "${task_driver}" = "exec"
@@ -431,7 +431,7 @@ wb_nomad() {
           # can represent an abnormal exit / uknown state!
           if wb_nomad server is-running "${name}"
           then
-            red "FATAL: Nomad server \"${name}\" is already running or in an uknown state, call 'wb nomad server stop ${name}' or 'wb nomad nuke' first\n"
+            msg "$(red "FATAL: Nomad server \"${name}\" is already running or in an uknown state, call 'wb nomad server stop ${name}' or 'wb nomad nuke' first")"
             return 1
           else
             local state_dir=$(wb_nomad server state-dir-path "${name}")
@@ -503,7 +503,7 @@ wb_nomad() {
           # Checks
           if wb_nomad server is-running "${name}"
           then
-            red "FATAL: Nomad server \"${name}\" is already running or in an uknown state, call 'wb nomad server stop ${name}' or 'wb nomad nuke' first\n"
+            msg "$(red "FATAL: Nomad server \"${name}\" is already running or in an uknown state, call 'wb nomad server stop ${name}' or 'wb nomad nuke' first")"
             return 1
           fi
           # Start `nomad` server".
@@ -511,9 +511,9 @@ wb_nomad() {
           local config_file=$(wb_nomad server config-file-path "${name}")
           local pid_file=$(wb_nomad server pid-filepath "${name}")
           local pid_number
-          nomad agent \
-            -config="${config_file}" \
-            >> "${state_dir}"/stdout \
+          nomad agent                 \
+            -config="${config_file}"  \
+            >> "${state_dir}"/stdout  \
             2>> "${state_dir}"/stderr \
             &
           pid_number="$!"
@@ -526,14 +526,15 @@ wb_nomad() {
           until curl -Isf 127.0.0.1:"${http_port}" 2>&1 | head --lines=1 | grep --quiet "HTTP/1.1"
           do printf "%3d" $i; sleep 1
             i=$((i+1))
-            if test $i -ge $patience
+            if test $i -ge ${patience}
             then echo
+              # Not using `fatal` here, let the caller decide!
+              msg "$(red "FATAL: Nomad server startup did not succeed")"
+              msg "$(yellow "port \"127.0.0.1:${http_port}\" not ready")"
+              msg "$(yellow "Check logs (${state_dir})")"
               # Let the "stop" subcommand clean everything!
               wb_nomad server stop "${name}"
-              fatal \
-                "Nomad server startup did not succeed, \
-                port \"127.0.0.1:${http_port}\" not ready. \
-                Check logs (${state_dir})"
+              return 1
             fi
             echo -ne "\b\b\b"
           done >&2
@@ -629,7 +630,7 @@ wb_nomad() {
           then
             # When reusing, remember to check that client is running with
             # the needed task driver!
-            red "FATAL: Nomad client \"${name}\" is already running or in an uknown state, call 'wb nomad client stop ${name}' or 'wb nomad nuke' first\n"
+            msg "$(red "FATAL: Nomad client \"${name}\" is already running or in an uknown state, call 'wb nomad client stop ${name}' or 'wb nomad nuke' first")"
             return 1
           else
             local state_dir=$(wb_nomad client state-dir-path "${name}")
@@ -732,7 +733,7 @@ wb_nomad() {
           # Checks
           if wb_nomad client is-running "${name}"
           then
-            red "FATAL: Nomad client \"${name}\" is already running or in an uknown state, call 'wb nomad client stop ${name}' or 'wb nomad nuke' first\n"
+            msg "$(red "FATAL: Nomad client \"${name}\" is already running or in an uknown state, call 'wb nomad client stop ${name}' or 'wb nomad nuke' first")"
             return 1
           fi
           # Start `nomad` client".
@@ -755,13 +756,12 @@ wb_nomad() {
           until curl -Isf 127.0.0.1:"${http_port}" 2>&1 | head --lines=1 | grep --quiet "HTTP/1.1"
           do printf "%3d" $i; sleep 1
             i=$((i+1))
-            if test $i -ge $patience
+            if test $i -ge ${patience}
             then echo
-              # Not using `fatal` to allow stopping the server!
-              msg  "FATAL: \
-                Nomad client startup did not succeed, \
-                port \"127.0.0.1:${http_port}\" not ready. \
-                Check logs (${state_dir})"
+              # Not using `fatal` here, let the caller decide!
+              msg "$(red "FATAL: Nomad client startup did not succeed")"
+              msg "$(yellow "port \"127.0.0.1:${http_port}\" not ready")"
+              msg "$(yellow "Check logs (${state_dir})")"
               # Let the "stop" subcommand clean everything!
               wb_nomad client stop "${name}"
               return 1
@@ -779,8 +779,10 @@ wb_nomad() {
             if test $i -ge $patience
             then echo
               tail "${state_dir}"/stderr
-              # Not using `fatal` to allow stopping the server!
-              msg  "FATAL: nomad client startup did not succeed:  Check logs (${state_dir})"
+              # Not using `fatal` here, let the caller decide!
+              msg "$(red "FATAL: Nomad client startup did not succeed")"
+              msg "$(yellow "Nomad client not connected to Nomad server")"
+              msg "$(yellow "Check logs (${state_dir})")"
               # Let the "stop" subcommand clean everything!
               wb_nomad client stop "${name}"
               return 1
@@ -799,28 +801,28 @@ wb_nomad() {
             # Look for "Drivers":{"exec":  {"Detected":true,"Healthy":true}}
             if ! test $(nomad node status -filter "\"workbench-nomad-client-${name}\" in Name" -json | jq '.[0].Drivers.exec.Detected') = "true"
             then
-              # Not using `fatal` to allow stopping the server!
-              red "FATAL: Task driver \"exec\" was not detected\n"
+              # Not using `fatal` here, let the caller decide!
+              msg "$(red "FATAL: Task driver \"exec\" was not detected")"
               return 1
             fi
             if ! test $(nomad node status -filter "\"workbench-nomad-client-${name}\" in Name" -json | jq '.[0].Drivers.exec.Healthy') = "true"
             then
-              # Not using `fatal` to allow stopping the server!
-              red "FATAL: Task driver \"exec\" is not healthy\n"
+              # Not using `fatal` here, let the caller decide!
+              msg "$(red "FATAL: Task driver \"exec\" is not healthy")"
               return 1
             fi
           else
             # Look for "Drivers":{"podman":{"Detected":true,"Healthy":true}}
             if ! test $(nomad node status -filter "\"workbench-nomad-client-${name}\" in Name" -json | jq '.[0].Drivers.podman.Detected') = "true"
             then
-              # Not using `fatal` to allow stopping the server!
-              red "FATAL: Task driver \"podman\" was not detected\n"
+              # Not using `fatal` here, let the caller decide!
+              msg "$(red "FATAL: Task driver \"podman\" was not detected")"
               return 1
             fi
             if ! test $(nomad node status -filter "\"workbench-nomad-client-${name}\" in Name" -json | jq '.[0].Drivers.podman.Healthy') = "true"
             then
-              # Not using `fatal` to allow stopping the server!
-              red "FATAL: Task driver \"podman\" is not healthy\n"
+              # Not using `fatal` here, let the caller decide!
+              msg "$(red "FATAL: Task driver \"podman\" is not healthy")"
               return 1
             fi
           fi
@@ -1228,8 +1230,8 @@ EOF
           local job_run_output
           if ! job_run_output=$(nomad job run -detach "${job_file}")
           then
-            red "FATAL: Failed to post job (\"${job_file}\") to Nomad server\n"
-            yellow "Try \`wb nomad nuke\` if not using cloud Nomad\n"
+            msg "$(red "FATAL: Failed to post job (\"${job_file}\") to Nomad server")"
+            msg "$(yellow "Try \`wb nomad nuke\` if not using cloud Nomad")"
             return 1
           fi
           # Grab the "evaluation" ID from stdout and start monitoring.
@@ -1575,8 +1577,6 @@ EOF
                 # is already considered failed.
                 "${msgoff}" || msg "$(yellow "WARNING: A Nomad Deployment failed while waiting for its Evaluation")"
                 "${msgoff}" || msg "${deploy_output}"
-              else
-                "${msgoff}" || msg "${deploy_output}"
               fi
             fi
           done
@@ -1713,7 +1713,7 @@ EOF
               touch "${job_file}.run/job.error"
               # Store the error response that ended the loop!
               echo "${status_response}" > "${job_file}.run/allocation.${alloc_id}.error.json"
-              red "FATAL: Nomad allocation \"${alloc_id}\" failed\n"
+              msg "$(red "FATAL: Nomad allocation \"${alloc_id}\" failed")"
               # Don't show the Job spec, too big!
               # FIXME: I want the output to keep `jq`'s default formatting!
               msg $(echo "${status_response}" | jq 'del(.Job)')
@@ -1759,7 +1759,8 @@ EOF
               return 1
             fi
             status="$(echo "${status_response}" | jq -r .TaskStates.\"${task_name}\".State)"
-            echo "${status_response}" > "${job_file}.run/task.${task_name}.$(date +%Y-%m-%d-%H-%M-%S-%N).json"
+            # Remove the entire Job (mayus!!!) description from the Task's log.
+            echo "${status_response}" | jq '.Job = null' > "${job_file}.run/task.${task_name}.$(date +%Y-%m-%d-%H-%M-%S-%N).json"
             sleep 1
           done
           # Check response that ended the loop!

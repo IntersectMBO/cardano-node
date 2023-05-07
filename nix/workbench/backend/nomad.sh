@@ -630,7 +630,7 @@ backend_nomad() {
         if ! backend_nomad task-program-stop "${dir}" node-0 generator
         then
           # Do not fail here, because nobody will be able to stop the cluster!
-          msg "$(red "FATAL: \"generator\" quit (un)expectedly\n")"
+          msg "$(red "FATAL: \"generator\" quit (un)expectedly")"
         fi
       else
         if backend_nomad is-task-program-running "${dir}" node-0 generator
@@ -654,7 +654,7 @@ backend_nomad() {
           if ! backend_nomad task-program-stop "${dir}" "${node}" "${node}"
           then
             # Do not fail here, because nobody will be able to stop the cluster!
-            msg "$(red "FATAL: \"${node}\" quit unexpectedly\n")"
+            msg "$(red "FATAL: \"${node}\" quit unexpectedly")"
           fi
         else
           if backend_nomad is-task-program-running "${dir}" "${node}" "${node}"
@@ -682,7 +682,7 @@ backend_nomad() {
             then
               backend_nomad task-program-stop "${dir}" "${node}" tracer || true
             else
-              msg "$(red "FATAL: \"${node}\"'s \"tracer\" quit unexpectedly\n")"
+              msg "$(red "FATAL: \"${node}\"'s \"tracer\" quit unexpectedly")"
             fi
           done
         else
@@ -691,7 +691,7 @@ backend_nomad() {
           then
             backend_nomad task-program-stop "$dir" tracer tracer || true
           else
-            msg "$(red "FATAL: \"tracer\" quit unexpectedly\n")"
+            msg "$(red "FATAL: \"tracer\" quit unexpectedly")"
           fi
         fi
       fi
@@ -831,7 +831,7 @@ backend_nomad() {
 
       if ! backend_nomad task-program-start "$dir" $node $node
       then
-        red "FATAL: Program \"${node}\" (always inside \"${node}\") startup failed\n"
+        msg "$(red "FATAL: Program \"${node}\" (always inside \"${node}\") startup failed")"
         backend_nomad download-logs-node "${dir}" "${node}"
         # Should show the output/log of `supervisord` (runs as "entrypoint").
         msg "$(yellow "${dir}/nomad/${node}/stdout:")"
@@ -889,7 +889,7 @@ backend_nomad() {
 
       if ! backend_nomad task-program-start "$dir" node-0 generator
       then
-        red "FATAL: Program \"generator\" (always inside \"node-0\") startup failed\n"
+        msg "$(red "FATAL: Program \"generator\" (always inside \"node-0\") startup failed")"
         backend_nomad download-logs-generator "${dir}"
         # Should show the output/log of `supervisord` (runs as "entrypoint").
         msg "$(yellow "${dir}/nomad/node-0/stdout:")"
@@ -1470,7 +1470,7 @@ backend_nomad() {
               --directory="${dir}"/"${node}"/ --file=-              \
               --no-same-owner --no-same-permissions                 \
       ||                                                            \
-        red "Failed to download \"${node}\" logs\n"
+        msg "$(red "Failed to download \"${node}\" logs")"
     ;;
 
     download-zstd-tracer )
@@ -1493,7 +1493,7 @@ backend_nomad() {
                     --directory="${dir}"/tracer/ --file=-                 \
                     --no-same-owner --no-same-permissions                 \
             ||                                                            \
-              red "Failed to download \"tracer\" logs from \"${task}\"\n"
+              msg "$(red "Failed to download \"tracer\" logs from \"${task}\"")"
           fi
         else
           # When "local" and "podman" "tracer" folder is mounted
@@ -1511,7 +1511,7 @@ backend_nomad() {
                       --directory="${dir}"/tracer/ --file=-                 \
                       --no-same-owner --no-same-permissions                 \
               ||                                                            \
-                red "Failed to download \"tracer\" logs from \"tracer\"\n"
+                msg "$(red "Failed to download \"tracer\" logs from \"tracer\"")"
             fi
           fi
         fi
