@@ -5,7 +5,7 @@ module Test.Utilities
 
 import           Cardano.Prelude (ConvertText (..), HasCallStack)
 
-import           Control.Monad.IO.Class (MonadIO (liftIO))
+import           Control.Monad.IO.Class (MonadIO)
 import           Data.Algorithm.Diff (PolyDiff (Both), getGroupedDiff)
 import           Data.Algorithm.DiffOutput (ppDiff)
 import           GHC.Stack (callStack)
@@ -39,12 +39,13 @@ createFiles = IO.unsafePerformIO $ do
 -- each input.
 diffVsGoldenFile
   :: HasCallStack
-  => (MonadIO m, MonadTest m)
+  => MonadTest m
+  => MonadIO m
   => String   -- ^ Actual content
   -> FilePath -- ^ Reference file
   -> m ()
 diffVsGoldenFile actualContent referenceFile = GHC.withFrozenCallStack $ do
-  fileExists <- liftIO $ IO.doesFileExist referenceFile
+  fileExists <- H.evalIO $ IO.doesFileExist referenceFile
 
   if fileExists
     then do
@@ -80,7 +81,8 @@ diffVsGoldenFile actualContent referenceFile = GHC.withFrozenCallStack $ do
 -- files are never overwritten.
 diffFileVsGoldenFile
   :: HasCallStack
-  => (MonadIO m, MonadTest m)
+  => MonadIO m
+  => MonadTest m
   => FilePath -- ^ Actual file
   -> FilePath -- ^ Reference file
   -> m ()

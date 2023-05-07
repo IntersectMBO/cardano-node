@@ -6,7 +6,6 @@ module Test.Golden.Byron.SigningKeys
 
 import           Codec.CBOR.Read (deserialiseFromBytes)
 import           Control.Monad (void)
-import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (runExceptT)
 import qualified Data.ByteString.Lazy as LB
 
@@ -19,20 +18,21 @@ import           Cardano.CLI.Byron.Legacy (decodeLegacyDelegateKey)
 import           Cardano.CLI.Shelley.Commands
 
 import           Hedgehog (Group (..), Property, checkSequential, property, success)
+import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import           Hedgehog.Internal.Property (failWith)
 import           Test.OptParse
 
 prop_deserialise_legacy_signing_Key :: Property
 prop_deserialise_legacy_signing_Key = propertyOnce $ do
-  legSkeyBs <- liftIO $ LB.readFile "test/data/golden/byron/keys/legacy.skey"
+  legSkeyBs <- H.evalIO $ LB.readFile "test/data/golden/byron/keys/legacy.skey"
   case deserialiseFromBytes decodeLegacyDelegateKey legSkeyBs of
     Left deSerFail -> failWith Nothing $ show deSerFail
     Right _ -> success
 
 prop_deserialise_nonLegacy_signing_Key :: Property
 prop_deserialise_nonLegacy_signing_Key = propertyOnce $ do
-  skeyBs <- liftIO $ LB.readFile "test/data/golden/byron/keys/byron.skey"
+  skeyBs <- H.evalIO $ LB.readFile "test/data/golden/byron/keys/byron.skey"
   case deserialiseFromBytes Crypto.fromCBORXPrv skeyBs of
     Left deSerFail -> failWith Nothing $ show deSerFail
     Right _ -> success
@@ -71,7 +71,7 @@ prop_print_nonLegacy_signing_key_address = propertyOnce $ do
 
 prop_generate_and_read_nonlegacy_signingkeys :: Property
 prop_generate_and_read_nonlegacy_signingkeys = property $ do
-  byronSkey <- liftIO $ generateSigningKey AsByronKey
+  byronSkey <- H.evalIO $ generateSigningKey AsByronKey
   case deserialiseFromRawBytes (AsSigningKey AsByronKey) (serialiseToRawBytes byronSkey) of
     Left _ -> failWith Nothing "Failed to deserialise non-legacy Byron signing key. "
     Right _ -> success
@@ -88,7 +88,7 @@ prop_migrate_legacy_to_nonlegacy_signingkeys =
      , "--to", nonLegacyKeyFp
      ]
 
-    eSignKey <- liftIO . runExceptT . readByronSigningKey NonLegacyByronKeyFormat
+    eSignKey <- H.evalIO . runExceptT . readByronSigningKey NonLegacyByronKeyFormat
                   $ File nonLegacyKeyFp
 
     case eSignKey of
@@ -97,14 +97,14 @@ prop_migrate_legacy_to_nonlegacy_signingkeys =
 
 prop_deserialise_NonLegacy_Signing_Key_API :: Property
 prop_deserialise_NonLegacy_Signing_Key_API = propertyOnce $ do
-  eFailOrWit <- liftIO . runExceptT $ readByronSigningKey NonLegacyByronKeyFormat "test/data/golden/byron/keys/byron.skey"
+  eFailOrWit <- H.evalIO . runExceptT $ readByronSigningKey NonLegacyByronKeyFormat "test/data/golden/byron/keys/byron.skey"
   case eFailOrWit of
     Left keyFailure -> failWith Nothing $ show keyFailure
     Right _ -> success
 
 prop_deserialiseLegacy_Signing_Key_API :: Property
 prop_deserialiseLegacy_Signing_Key_API = propertyOnce $ do
-  eFailOrWit <- liftIO . runExceptT $ readByronSigningKey LegacyByronKeyFormat "test/data/golden/byron/keys/legacy.skey"
+  eFailOrWit <- H.evalIO . runExceptT $ readByronSigningKey LegacyByronKeyFormat "test/data/golden/byron/keys/legacy.skey"
   case eFailOrWit of
     Left keyFailure -> failWith Nothing $ show keyFailure
     Right _ -> success

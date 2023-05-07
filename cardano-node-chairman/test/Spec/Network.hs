@@ -12,7 +12,6 @@ module Spec.Network
 
 import           Control.Exception (IOException)
 import           Control.Monad
-import           Control.Monad.IO.Class (liftIO)
 import           Data.Bool
 import           Data.Either
 import           Data.Function
@@ -47,7 +46,7 @@ hprop_isPortOpen_True = H.propertyOnce . H.workspace "temp-network" $ \_ -> do
   -- Multiple random ports are checked because there is a remote possibility a random
   -- port is actually open by another program
   ports <- H.evalIO $ fmap (L.take 10 . IO.randomRs @Int (5000, 9000)) IO.getStdGen
-  (socket, port) <- liftIO $ openOnePortFrom ports
+  (socket, port) <- H.evalIO $ openOnePortFrom ports
   void $ IO.register $ IO.close socket
   result <- H.isPortOpen port
   result === True
@@ -55,7 +54,7 @@ hprop_isPortOpen_True = H.propertyOnce . H.workspace "temp-network" $ \_ -> do
         openOnePortFrom ports = case ports of
           [] -> error "Could not open any ports"
           (n:ns) -> do
-            socketResult <- IO.try . liftIO $ IO.listenOn n
+            socketResult <- IO.try $ IO.listenOn n
             case socketResult of
               Right socket -> return (socket, n)
               Left (_ :: IOException) -> openOnePortFrom ns

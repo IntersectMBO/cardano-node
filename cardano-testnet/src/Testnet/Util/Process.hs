@@ -131,12 +131,12 @@ assertByDeadlineIOCustom
   :: (MonadTest m, MonadIO m, HasCallStack)
   => String -> UTCTime -> IO Bool -> m ()
 assertByDeadlineIOCustom str deadline f = GHC.withFrozenCallStack $ do
-  success <- liftIO f
+  success <- H.evalIO f
   unless success $ do
-    currentTime <- liftIO DTC.getCurrentTime
+    currentTime <- H.evalIO DTC.getCurrentTime
     if currentTime < deadline
       then do
-        liftIO $ IO.threadDelay 1000000
+        H.evalIO $ IO.threadDelay 1000000
         assertByDeadlineIOCustom str deadline f
       else do
         H.annotateShow currentTime

@@ -13,7 +13,6 @@ module Test.Cli.Pipes
 import           Prelude
 
 #ifdef UNIX
-import           Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
 import           System.IO (hClose, hFlush, hPutStr)
@@ -50,8 +49,8 @@ prop_readFromPipe = H.withTests 10 . H.property . H.moduleWorkspace "tmp" $ \ws 
 
   -- We first test that we can read a filepath
   testFp <- noteInputFile testFile
-  testFileOrPipe <- liftIO $ fileOrPipe testFp
-  testBs <- liftIO $ readFileOrPipe testFileOrPipe
+  testFileOrPipe <- H.evalIO $ fileOrPipe testFp
+  testBs <- H.evalIO $ readFileOrPipe testFileOrPipe
 
   if LBS.null testBs
   then failWith Nothing
@@ -59,13 +58,13 @@ prop_readFromPipe = H.withTests 10 . H.property . H.moduleWorkspace "tmp" $ \ws 
   else do
     -- We now test that we can read from a pipe.
     -- We first check that the IORef has Nothing
-    mContents <- liftIO $ fileOrPipeCache testFileOrPipe
+    mContents <- H.evalIO $ fileOrPipeCache testFileOrPipe
     case mContents of
       Just{} -> failWith Nothing "readFileOrPipe has incorrectly populated its IORef with contents read from a filepath."
       Nothing -> do
         -- We can reuse testFileOrPipe because we know the cache (IORef) is empty
         let txBodyStr = BSC.unpack $ LBS.toStrict testBs
-        fromPipeBs <- liftIO $ withPipe txBodyStr
+        fromPipeBs <- H.evalIO $ withPipe txBodyStr
         if LBS.null fromPipeBs
         then failWith Nothing "readFileOrPipe failed to read from a pipe"
         else testBs === fromPipeBs

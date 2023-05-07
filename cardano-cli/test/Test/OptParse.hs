@@ -17,9 +17,9 @@ import           Cardano.Api
 
 import           Cardano.CLI.Shelley.Run.Read
 
+import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Except (runExceptT)
-import           Control.Monad.IO.Class (MonadIO (..))
 import           Data.Function ((&))
 import           GHC.Stack (CallStack, HasCallStack)
 import qualified Hedgehog as H
@@ -63,10 +63,10 @@ checkTextEnvelopeFormat
   -> FilePath
   -> m ()
 checkTextEnvelopeFormat tve reference created = GHC.withFrozenCallStack $ do
-  eRefTextEnvelope <- liftIO $ readTextEnvelopeOfTypeFromFile tve reference
+  eRefTextEnvelope <- H.evalIO $ readTextEnvelopeOfTypeFromFile tve reference
   refTextEnvelope <- handleTextEnvelope eRefTextEnvelope
 
-  eCreatedTextEnvelope <- liftIO $ readTextEnvelopeOfTypeFromFile tve created
+  eCreatedTextEnvelope <- H.evalIO $ readTextEnvelopeOfTypeFromFile tve created
   createdTextEnvelope <- handleTextEnvelope eCreatedTextEnvelope
 
   typeTitleEquivalence refTextEnvelope createdTextEnvelope
@@ -89,10 +89,10 @@ checkTxCddlFormat
   -> FilePath -- ^ Newly created file
   -> m ()
 checkTxCddlFormat referencePath createdPath = do
-  reference <- liftIO $ fileOrPipe referencePath
-  created <- liftIO $ fileOrPipe createdPath
-  r <- liftIO $ readCddlTx reference
-  c <- liftIO $ readCddlTx created
+  reference <- H.evalIO $ fileOrPipe referencePath
+  created <- H.evalIO $ fileOrPipe createdPath
+  r <- H.evalIO $ readCddlTx reference
+  c <- H.evalIO $ readCddlTx created
   r H.=== c
 
 

@@ -8,7 +8,6 @@ import           Cardano.CLI.Shelley.Run.Key (decodeBech32)
 
 import qualified Codec.Binary.Bech32 as Bech32
 import           Control.Monad (void)
-import           Control.Monad.IO.Class (MonadIO (..))
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as Base16
 import           Data.Text (Text)
@@ -42,8 +41,8 @@ prop_convertITNKeys = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   outputHaskellSignKeyFp <- noteTempFile tempDir "haskell-signing-key.key"
 
   -- Write ITN keys to disk
-  liftIO $ Text.writeFile itnVerKeyFp itnVerKey
-  liftIO $ Text.writeFile itnSignKeyFp itnSignKey
+  H.evalIO $ Text.writeFile itnVerKeyFp itnVerKey
+  H.evalIO $ Text.writeFile itnSignKeyFp itnSignKey
   H.assertFilesExist [itnVerKeyFp, itnSignKeyFp]
 
   -- Generate haskell stake verification key
@@ -77,7 +76,7 @@ prop_convertITNExtendedSigningKey = propertyOnce . H.moduleWorkspace "tmp" $ \te
   outputHaskellSignKeyFp <- noteTempFile tempDir "stake-signing.key"
 
   -- Write ITN keys to disk
-  liftIO $ writeFile itnSignKeyFp itnExtendedSignKey
+  H.evalIO $ writeFile itnSignKeyFp itnExtendedSignKey
   H.assertFilesExist [itnSignKeyFp]
 
   -- Generate haskell signing key
@@ -106,7 +105,7 @@ prop_convertITNBIP32SigningKey = propertyOnce . H.moduleWorkspace "tmp" $ \tempD
   outputHaskellSignKeyFp <- noteTempFile tempDir "stake-signing.key"
 
   -- Write ITN keys to disk
-  liftIO $ writeFile itnSignKeyFp itnExtendedSignKey
+  H.evalIO $ writeFile itnSignKeyFp itnExtendedSignKey
 
   H.assertFilesExist [itnSignKeyFp]
 

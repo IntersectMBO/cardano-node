@@ -24,7 +24,7 @@ module Testnet.Cardano
 import           Prelude
 
 import           Control.Monad
-import           Control.Monad.IO.Class (MonadIO, liftIO)
+import           Control.Monad.IO.Class (MonadIO)
 import           Control.Monad.Trans.Except
 import qualified Data.Aeson as J
 import qualified Data.ByteString as BS
@@ -777,6 +777,6 @@ getByronGenesisHash path = do
 
 getShelleyGenesisHash :: (H.MonadTest m, MonadIO m) => FilePath -> m J.Value
 getShelleyGenesisHash path = do
-  content <- liftIO $ BS.readFile path
+  content <- H.evalIO $ BS.readFile path
   let genesisHash = Cardano.Crypto.Hash.Class.hashWith id content :: Cardano.Crypto.Hash.Class.Hash Cardano.Crypto.Hash.Blake2b.Blake2b_256 BS.ByteString
   pure $ J.toJSON genesisHash

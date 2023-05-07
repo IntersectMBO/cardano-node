@@ -435,7 +435,7 @@ hprop_testnet = H.integrationRetryWorkspace 2 "shelley-testnet" $ \tempAbsPath' 
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
   conf <- H.mkConf (H.ProjectBase base) (H.YamlFilePath configurationTemplate) tempAbsPath' Nothing
 
-  void . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000
+  void . H.evalM . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000
 
   void $ shelleyTestnet defaultTestnetOptions conf
 
@@ -443,4 +443,4 @@ hprop_testnet = H.integrationRetryWorkspace 2 "shelley-testnet" $ \tempAbsPath' 
 
 hprop_testnet_pause :: H.Property
 hprop_testnet_pause = H.integration $ do
-  void . forever . liftIO $ IO.threadDelay 10000000
+  void . forever . H.evalIO $ IO.threadDelay 10000000
