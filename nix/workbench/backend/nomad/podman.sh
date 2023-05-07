@@ -215,7 +215,6 @@ nomad_job_file_create_mounts() {
   local dir=$1
   local absolute_dir=$(realpath "${dir}")
   local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
-  local nomad_job_group_name=$(jq -r ". [\"job\"][\"${nomad_job_name}\"][\"group\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
   local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
   # If CARDANO_MAINNET_MIRROR is present generate a list of needed volumes.
   if test -n "${CARDANO_MAINNET_MIRROR}"
@@ -258,7 +257,7 @@ nomad_job_file_create_mounts() {
       \$mainnet_mirror_volumes
     "
     local podman_volumes=$(jq "${jq_filter}" --argjson one_tracer_per_node "${one_tracer_per_node}" --argjson mainnet_mirror_volumes "${mainnet_mirror_volumes}" "${dir}"/profile/node-specs.json)
-    jq ".job[\"${nomad_job_name}\"][\"group\"][\"${nomad_job_group_name}\"][\"task\"][\"${node}\"][\"config\"][\"volumes\"] = \$podman_volumes" --argjson podman_volumes "${podman_volumes}" "${dir}"/nomad/nomad-job.json | sponge "${dir}"/nomad/nomad-job.json
+    jq ".job[\"${nomad_job_name}\"][\"group\"][\"${node}\"][\"task\"][\"${node}\"][\"config\"][\"volumes\"] = \$podman_volumes" --argjson podman_volumes "${podman_volumes}" "${dir}"/nomad/nomad-job.json | sponge "${dir}"/nomad/nomad-job.json
   done
   # Tracer
   if jqtest ".node.tracer" "${dir}"/profile.json && ! test "${one_tracer_per_node}" = "true"
@@ -271,6 +270,6 @@ nomad_job_file_create_mounts() {
       ]
     "
     local podman_volumes_t=$(jq "${jq_filter_t}" "${dir}"/profile/node-specs.json)
-    jq ".job[\"${nomad_job_name}\"][\"group\"][\"${nomad_job_group_name}\"][\"task\"][\"tracer\"][\"config\"][\"volumes\"] = \$podman_volumes_t" --argjson podman_volumes_t "${podman_volumes_t}" "${dir}"/nomad/nomad-job.json | sponge "${dir}"/nomad/nomad-job.json
+    jq ".job[\"${nomad_job_name}\"][\"group\"][\"tracer\"][\"task\"][\"tracer\"][\"config\"][\"volumes\"] = \$podman_volumes_t" --argjson podman_volumes_t "${podman_volumes_t}" "${dir}"/nomad/nomad-job.json | sponge "${dir}"/nomad/nomad-job.json
   fi
 }

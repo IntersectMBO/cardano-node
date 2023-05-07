@@ -38,19 +38,20 @@ let
     # This plugin is defined but only used if `execTaskDriver` is false.
     nomad-driver-podman = (pkgs.buildGo119Module rec {
       pname = "nomad-driver-podman";
-      version = "0.4.1";
+      version = "0.4.2";
       subPackages = [ "." ];
       doCheck = false; # some tests require a running podman service to pass
       src = pkgs.fetchFromGitHub {
         owner = "hashicorp";
         repo = pname;
         rev = "v${version}";
-        # nix-prefetch-url --unpack https://github.com/hashicorp/nomad-driver-podman/archive/v0.4.1.tar.gz
-        sha256 = "03856ws02xkqg5374x35zzz5900456rvpsridsjgwvvyqnysn9ls";
+        # nix-prefetch-url --unpack https://github.com/hashicorp/nomad-driver-podman/archive/v0.4.2.tar.gz
+        # sha256 = "03856ws02xkqg5374x35zzz5900456rvpsridsjgwvvyqnysn9ls";
+        sha256 = "1wz3pqv0ib52g378sgq3ahhp3p4fm6xm41c53lliavrxcy6msy58";
       };
       # error: either `vendorHash` or `vendorSha256` is required
       # https://discourse.nixos.org/t/buildgomodule-how-to-get-vendorsha256/9317
-      vendorSha256 = "sha256-AtgxHAkNzzjMQoSqROpuNoSDum/6JR+mLpcHLFL9EIY=";
+      vendorSha256 = "sha256-UIUavFdBuSiaUsNaibPjRMURMLLK5UjNHVoyNSIRNQ4=";
     });
   in
     [
