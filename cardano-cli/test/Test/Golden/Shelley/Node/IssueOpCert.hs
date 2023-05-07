@@ -5,13 +5,11 @@ module Test.Golden.Shelley.Node.IssueOpCert
   ) where
 
 import           Control.Monad (void)
-import           Control.Monad.IO.Class (MonadIO (..))
 import           Hedgehog (Property)
 import           Test.OptParse
 
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
-import qualified System.Directory as IO
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -23,7 +21,7 @@ golden_shelleyNodeIssueOpCert = propertyOnce . H.moduleWorkspace "tmp" $ \tempDi
   operationalCertificateIssueCounterFile <- noteTempFile tempDir "delegate-op-cert.counter"
   operationalCertFile <- noteTempFile tempDir "operational.cert"
 
-  void . liftIO $ IO.copyFile originalOperationalCertificateIssueCounterFile operationalCertificateIssueCounterFile
+  H.copyFile originalOperationalCertificateIssueCounterFile operationalCertificateIssueCounterFile
 
   -- We could generate the required keys here, but then if the KES generation fails this
   -- test would also fail which is misleading.

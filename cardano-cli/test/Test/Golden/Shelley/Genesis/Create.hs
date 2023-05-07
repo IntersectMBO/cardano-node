@@ -78,9 +78,9 @@ golden_shelleyGenesisCreate = propertyOnce $ do
     alonzoSpecFile <- noteTempFile tempDir "genesis.alonzo.spec.json"
     conwaySpecFile <- noteTempFile tempDir "genesis.conway.spec.json"
 
-    liftIO $ IO.copyFile sourceGenesisSpecFile genesisSpecFile
-    liftIO $ IO.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
-    liftIO $ IO.copyFile sourceConwayGenesisSpecFile conwaySpecFile
+    H.copyFile sourceGenesisSpecFile genesisSpecFile
+    H.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
+    H.copyFile sourceConwayGenesisSpecFile conwaySpecFile
 
     let genesisFile = tempDir <> "/genesis.json"
 
@@ -164,11 +164,11 @@ golden_shelleyGenesisCreate = propertyOnce $ do
 
     sourceAlonzoGenesisSpecFile <- noteInputFile "test/data/golden/alonzo/genesis.alonzo.spec.json"
     alonzoSpecFile <- noteTempFile tempDir "genesis.alonzo.spec.json"
-    liftIO $ IO.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
+    H.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
 
     sourceConwayGenesisSpecFile <- noteInputFile "test/data/golden/conway/genesis.conway.spec.json"
     conwaySpecFile <- noteTempFile tempDir "genesis.conway.spec.json"
-    liftIO $ IO.copyFile sourceConwayGenesisSpecFile conwaySpecFile
+    H.copyFile sourceConwayGenesisSpecFile conwaySpecFile
 
     -- Create the genesis json file and required keys
     void $ execCardanoCLI

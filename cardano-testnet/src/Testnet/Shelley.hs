@@ -182,11 +182,11 @@ shelleyTestnet testnetOptions H.Conf {..} = do
   -- configuration files.
   let sourceAlonzoGenesisSpecFile = base </> "cardano-cli/test/data/golden/alonzo/genesis.alonzo.spec.json"
   alonzoSpecFile <- H.noteTempFile tempAbsPath "genesis.alonzo.spec.json"
-  liftIO $ IO.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
+  H.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
 
   let sourceConwayGenesisSpecFile = base </> "cardano-cli/test/data/golden/conway/genesis.conway.spec.json"
   conwaySpecFile <- H.noteTempFile tempAbsPath "genesis.conway.spec.json"
-  liftIO $ IO.copyFile sourceConwayGenesisSpecFile conwaySpecFile
+  H.copyFile sourceConwayGenesisSpecFile conwaySpecFile
 
   -- Set up our template
   execCli_
