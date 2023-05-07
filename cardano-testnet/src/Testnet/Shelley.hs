@@ -180,11 +180,11 @@ shelleyTestnet testnetOptions H.Conf {..} = do
 
   -- TODO: This is fragile, we should be passing in all necessary
   -- configuration files.
-  let sourceAlonzoGenesisSpecFile = base </> "cardano-cli/test/data/golden/alonzo/genesis.alonzo.spec.json"
+  let sourceAlonzoGenesisSpecFile = base </> "cardano-testnet/test/data/alonzo/genesis.alonzo.spec.json"
   alonzoSpecFile <- H.noteTempFile tempAbsPath "genesis.alonzo.spec.json"
   H.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
 
-  let sourceConwayGenesisSpecFile = base </> "cardano-cli/test/data/golden/conway/genesis.conway.spec.json"
+  let sourceConwayGenesisSpecFile = base </> "cardano-testnet/test/data/conway/genesis.conway.spec.json"
   conwaySpecFile <- H.noteTempFile tempAbsPath "genesis.conway.spec.json"
   H.copyFile sourceConwayGenesisSpecFile conwaySpecFile
 
