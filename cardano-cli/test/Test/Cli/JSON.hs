@@ -1,3 +1,4 @@
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -10,7 +11,7 @@ import           Test.Gen.Cardano.Api.Typed (genLovelace, genSlotNo, genStakeAdd
 import           Data.Aeson
 import qualified Data.Map.Strict as Map
 import           Data.Time
-import           Data.Time.Clock.System
+import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import           Data.Word (Word64)
 
 import           Cardano.CLI.Shelley.Output (QueryKesPeriodInfoOutput (..),
@@ -54,10 +55,9 @@ genWord64 :: Gen Word64
 genWord64 = Gen.word64 Range.constantBounded
 
 genUTCTime :: Gen UTCTime
-genUTCTime =
- systemToUTCTime <$>
-   (MkSystemTime <$> Gen.int64 Range.constantBounded
-                 <*> Gen.word32 Range.constantBounded)
+genUTCTime = do
+  t <- Gen.int64 Range.constantBounded
+  pure . posixSecondsToUTCTime $ fromIntegral t / 1_000_000
 
 genKesPeriodInfoOutput :: Gen QueryKesPeriodInfoOutput
 genKesPeriodInfoOutput =
