@@ -14,8 +14,7 @@
 
 module Cardano.Api.LedgerState
   ( -- * Initialization / Accumulation
-    Env(..)
-  , envSecurityParam
+    envSecurityParam
   , LedgerState
       ( ..
       , LedgerStateByron
@@ -53,6 +52,31 @@ module Cardano.Api.LedgerState
   , constructGlobals
   , currentEpochEligibleLeadershipSlots
   , nextEpochEligibleLeadershipSlots
+  -- * Node Config
+  , NodeConfig(..)
+  -- ** Network Config
+  , NodeConfigFile (..)
+  , readNodeConfig
+  -- ** Genesis Config
+  , GenesisConfig (..)
+  , readCardanoGenesisConfig
+  , mkProtocolInfoCardano
+  -- *** Byron Genesis Config
+  , readByronGenesisConfig
+  -- *** Shelley Genesis Config
+  , ShelleyConfig (..)
+  , GenesisHashShelley (..)
+  , readShelleyGenesisConfig
+  , shelleyPraosNonce
+  -- *** Alonzo Genesis Config
+  , GenesisHashAlonzo (..)
+  , readAlonzoGenesisConfig
+  -- *** Conway Genesis Config
+  , GenesisHashConway (..)
+  , readConwayGenesisConfig
+  -- ** Environment
+  , Env(..)
+  , genesisConfigToEnv
   )
   where
 
@@ -76,7 +100,7 @@ import           Data.Foldable
 import           Data.IORef
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromMaybe, mapMaybe)
+import           Data.Maybe (mapMaybe)
 import           Data.Proxy (Proxy (Proxy))
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
@@ -123,10 +147,10 @@ import qualified Cardano.Crypto.ProtocolMagic
 import qualified Cardano.Crypto.VRF as Crypto
 import qualified Cardano.Crypto.VRF.Class as VRF
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
-import           Cardano.Ledger.BaseTypes (Globals (..), Nonce, (⭒))
+import           Cardano.Ledger.BaseTypes (Globals (..), Nonce, ProtVer (..), natVersion, (⭒))
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.BHeaderView as Ledger
-import           Cardano.Ledger.Binary (DecoderError, FromCBOR, mkVersion)
+import           Cardano.Ledger.Binary (DecoderError, FromCBOR)
 import           Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import qualified Cardano.Ledger.Credential as Ledger
 import qualified Cardano.Ledger.Keys as Ledger
@@ -183,6 +207,9 @@ data InitialLedgerStateError
   -- ^ Failed to read or parse a genesis file linked from the network config file.
   | ILSELedgerConsensusConfig GenesisConfigError
   -- ^ Failed to derive the Ledger or Consensus config.
+  deriving Show
+
+instance Exception InitialLedgerStateError
 
 renderInitialLedgerStateError :: InitialLedgerStateError -> Text
 renderInitialLedgerStateError ilse = case ilse of
@@ -208,6 +235,9 @@ data LedgerStateError
       ChainPoint -- ^ Rollback was attempted to this point.
   deriving (Show)
 
+instance Exception LedgerStateError
+
+
 renderLedgerStateError :: LedgerStateError -> Text
 renderLedgerStateError = \case
   ApplyBlockHashMismatch err -> "Applying a block did not result in the expected block hash: " <> err
@@ -229,7 +259,7 @@ initialLedgerState networkConfigFile = do
   -- can remove the networkConfigFile argument and much of the code in this
   -- module.
   config <- withExceptT ILSEConfigFile
-                  (readNetworkConfig (NetworkConfigFile networkConfigFile))
+                  (readNodeConfig (NodeConfigFile networkConfigFile))
   genesisConfig <- withExceptT ILSEGenesisFile (readCardanoGenesisConfig config)
   env <- withExceptT ILSELedgerConsensusConfig (except (genesisConfigToEnv genesisConfig))
   let ledgerState = initLedgerStateVar genesisConfig
@@ -748,8 +778,8 @@ genesisConfigToEnv
                   , envProtocolConfig = Consensus.topLevelConfigProtocol topLevelConfig
                   }
 
-readNetworkConfig :: NetworkConfigFile -> ExceptT Text IO NodeConfig
-readNetworkConfig (NetworkConfigFile ncf) = do
+readNodeConfig :: NodeConfigFile -> ExceptT Text IO NodeConfig
+readNodeConfig (NodeConfigFile ncf) = do
     ncfg <- (except . parseNodeConfig) =<< readByteString ncf "node"
     return ncfg
       { ncByronGenesisFile = adjustGenesisFilePath (mkAdjustPath ncf) (ncByronGenesisFile ncfg)
@@ -990,8 +1020,8 @@ newtype NetworkName = NetworkName
   { unNetworkName :: Text
   } deriving Show
 
-newtype NetworkConfigFile = NetworkConfigFile
-  { unNetworkConfigFile :: FilePath
+newtype NodeConfigFile = NodeConfigFile
+  { unNodeConfigFile :: FilePath
   } deriving Show
 
 newtype SocketPath = SocketPath
@@ -1020,27 +1050,27 @@ mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesis alonzoGene
             , Consensus.shelleyBasedLeaderCredentials = []
             }
           Consensus.ProtocolParamsShelley
-            { Consensus.shelleyProtVer = shelleyProtVer dnc
+            { Consensus.shelleyProtVer = ProtVer (natVersion @3) 0
             , Consensus.shelleyMaxTxCapacityOverrides = TxLimits.mkOverrides TxLimits.noOverridesMeasure
             }
           Consensus.ProtocolParamsAllegra
-            { Consensus.allegraProtVer = shelleyProtVer dnc
+            { Consensus.allegraProtVer = ProtVer (natVersion @4) 0
             , Consensus.allegraMaxTxCapacityOverrides = TxLimits.mkOverrides TxLimits.noOverridesMeasure
             }
           Consensus.ProtocolParamsMary
-            { Consensus.maryProtVer = shelleyProtVer dnc
+            { Consensus.maryProtVer = ProtVer (natVersion @5) 0
             , Consensus.maryMaxTxCapacityOverrides = TxLimits.mkOverrides TxLimits.noOverridesMeasure
             }
           Consensus.ProtocolParamsAlonzo
-            { Consensus.alonzoProtVer = shelleyProtVer dnc
+            { Consensus.alonzoProtVer = ProtVer (natVersion @7) 0
             , Consensus.alonzoMaxTxCapacityOverrides  = TxLimits.mkOverrides TxLimits.noOverridesMeasure
             }
           Consensus.ProtocolParamsBabbage
-            { Consensus.babbageProtVer = shelleyProtVer dnc
+            { Consensus.babbageProtVer = ProtVer (natVersion @9) 0
             , Consensus.babbageMaxTxCapacityOverrides = TxLimits.mkOverrides TxLimits.noOverridesMeasure
             }
           Consensus.ProtocolParamsConway
-            { Consensus.conwayProtVer = shelleyProtVer dnc
+            { Consensus.conwayProtVer = ProtVer (natVersion @10) 0
             , Consensus.conwayMaxTxCapacityOverrides = TxLimits.mkOverrides TxLimits.noOverridesMeasure
             }
           (ncByronToShelley dnc)
@@ -1050,16 +1080,10 @@ mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesis alonzoGene
           (Consensus.ProtocolTransitionParamsShelleyBased () (ncAlonzoToBabbage dnc))
           (Consensus.ProtocolTransitionParamsShelleyBased conwayGenesis (ncBabbageToConway dnc))
 
+-- | Compute the Nonce from the ShelleyGenesis file.
 shelleyPraosNonce :: ShelleyConfig -> Ledger.Nonce
-shelleyPraosNonce sCfg = Ledger.Nonce (Cardano.Crypto.Hash.Class.castHash . unGenesisHashShelley $ scGenesisHash sCfg)
-
-shelleyProtVer :: NodeConfig -> Ledger.ProtVer
-shelleyProtVer dnc =
-  let bver = ncByronProtocolVersion dnc
-      majVer = Cardano.Chain.Update.pvMajor bver
-  in Ledger.ProtVer
-       (fromMaybe (error $ "Invalid major version: " ++ show majVer) $ mkVersion majVer)
-       (fromIntegral $ Cardano.Chain.Update.pvMinor bver)
+shelleyPraosNonce sCfg =
+  Ledger.Nonce (Cardano.Crypto.Hash.Class.castHash . unGenesisHashShelley $ scGenesisHash sCfg)
 
 readCardanoGenesisConfig
         :: NodeConfig
@@ -1078,6 +1102,9 @@ data GenesisConfigError
   | NEAlonzoConfig !FilePath !Text
   | NEConwayConfig !FilePath !Text
   | NECardanoConfig !Text
+  deriving Show
+
+instance Exception GenesisConfigError
 
 renderGenesisConfigError :: GenesisConfigError -> Text
 renderGenesisConfigError ne =
@@ -1104,18 +1131,6 @@ renderGenesisConfigError ne =
         [ "With Cardano protocol, Byron/Shelley config mismatch:\n"
         , "   ", err
         ]
-
-data LookupFail
-  = DbLookupBlockHash !ByteString
-  | DbLookupBlockId !Word64
-  | DbLookupMessage !Text
-  | DbLookupTxHash !ByteString
-  | DbLookupTxOutPair !ByteString !Word16
-  | DbLookupEpochNo !Word64
-  | DbLookupSlotNo !Word64
-  | DbMetaEmpty
-  | DbMetaMultipleRows
-  deriving (Eq, Show)
 
 readByronGenesisConfig
         :: NodeConfig
@@ -1175,6 +1190,8 @@ data ShelleyGenesisError
      | ShelleyGenesisDecodeError !FilePath !Text
      deriving Show
 
+instance Exception ShelleyGenesisError
+
 renderShelleyGenesisError :: ShelleyGenesisError -> Text
 renderShelleyGenesisError sge =
     case sge of
@@ -1219,6 +1236,8 @@ data AlonzoGenesisError
      | AlonzoGenesisDecodeError !FilePath !Text
      deriving Show
 
+instance Exception AlonzoGenesisError
+
 renderAlonzoGenesisError :: AlonzoGenesisError -> Text
 renderAlonzoGenesisError sge =
     case sge of
@@ -1262,6 +1281,8 @@ data ConwayGenesisError
      | ConwayGenesisHashMismatch !GenesisHashConway !GenesisHashConway -- actual, expected
      | ConwayGenesisDecodeError !FilePath !Text
      deriving Show
+
+instance Exception ConwayGenesisError
 
 renderConwayGenesisError :: ConwayGenesisError -> Text
 renderConwayGenesisError sge =
