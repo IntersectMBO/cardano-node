@@ -9,7 +9,7 @@
 #+latex_header: \usepackage{setspace}
 #+latex_header: \onehalfspacing
 #+LATEX_COMPILER: xelatex
-#+EXPORT_FILE_NAME: {{ report.target }}.{{ base.workload }}.pdf
+#+EXPORT_FILE_NAME: {{ report.tag }}.{{ base.workload }}.pdf
 #+TITLE: {{ report.target }} against {{ base.ver }}
 #+SUBTITLE: {{ base.workload }} workload
 #+SUBTITLE: \break\small{revision} ={{ report.revision }}=

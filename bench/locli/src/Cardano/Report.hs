@@ -26,19 +26,22 @@ import Text.EDE hiding (Id)
 import Data.CDF
 import Cardano.Util
 import Cardano.Analysis.API
+import Cardano.Analysis.Summary
 
 
 newtype Author   = Author   { unAuthor   :: Text } deriving newtype (FromJSON, ToJSON)
 newtype Revision = Revision { unRevision :: Int }  deriving newtype (FromJSON, ToJSON)
 newtype ShortId  = ShortId  { unShortId  :: Text } deriving newtype (FromJSON, ToJSON)
+newtype Tag      = Tag      { unTag      :: Text } deriving newtype (FromJSON, ToJSON)
 
 data ReportMeta
   = ReportMeta
     { rmAuthor       :: !Author
-    , rmDate         :: !UTCTime
+    , rmDate         :: !Text
     , rmRevision     :: !Revision
     , rmLocliVersion :: !LocliVersion
     , rmTarget       :: !Version
+    , rmTag          :: !Tag
     }
 instance ToJSON ReportMeta where
   toJSON ReportMeta{..} = object
@@ -47,17 +50,20 @@ instance ToJSON ReportMeta where
     , "revision"   .= rmRevision
     , "locli"      .= rmLocliVersion
     , "target"     .= rmTarget
+    , "tag"        .= rmTag
     ]
 
-getReport :: Version -> Maybe Revision -> IO ReportMeta
-getReport rmTarget mrev = do
+getReport :: [Metadata] -> Version -> Maybe Revision -> IO ReportMeta
+getReport metas _ver mrev = do
   rmAuthor <- getGecosFullUsername
               `catch`
               \(_ :: SomeException) ->
                  getFallbackUserId
-  rmDate <- getCurrentTime
+  rmDate <- getCurrentTime <&> T.take 16 . show
   let rmRevision = fromMaybe (Revision 1) mrev
       rmLocliVersion = getLocliVersion
+      rmTarget = Version $ ident $ last metas
+      rmTag = Tag $ multiRunTag Nothing metas
   pure ReportMeta{..}
  where
    getGecosFullUsername, getFallbackUserId :: IO Author
@@ -203,7 +209,7 @@ generate :: InputDir -> Maybe TextInputFile
          -> (SomeSummary, ClusterPerf, SomeBlockProp) -> [(SomeSummary, ClusterPerf, SomeBlockProp)]
          -> IO (ByteString, ByteString, Text)
 generate (InputDir ede) mReport (SomeSummary summ, cp, SomeBlockProp bp) rest = do
-  ctx  <- getReport (last restTmpls & trManifest & getComponent "cardano-node" & ciVersion) Nothing
+  ctx  <- getReport metas (last restTmpls & trManifest & getComponent "cardano-node" & ciVersion) Nothing
   tmplRaw <- BS.readFile (maybe defaultReportPath unTextInputFile mReport)
   tmpl <- parseWith defaultSyntax (includeFile ede) "report" tmplRaw
   let tmplEnv           = mkTmplEnv ctx baseTmpl restTmpls
@@ -214,6 +220,8 @@ generate (InputDir ede) mReport (SomeSummary summ, cp, SomeBlockProp bp) rest = 
     \x ->
       renderWith mempty x tmplEnv
  where
+   metas = sumMeta summ : fmap (\(SomeSummary ss, _, _) -> sumMeta ss) rest
+
    defaultReportPath = ede <> "/report.ede"
 
    baseTmpl  = liftTmplRun summ

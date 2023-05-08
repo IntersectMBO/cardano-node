@@ -16,10 +16,10 @@ else
 $(1): ARGS += --arg 'profiling' '"none"'
 endif
 ifeq ($(strip $(5))$(strip $(6)),truetrue)
-$(1): CMD := start-cluster $(if ${ITER},--iterations ${ITER}); return
+$(1): CMD := start-cluster $(if ${ITER},--iterations ${ITER}) $(if ${ID},--ident ${ID}); return
 endif
 ifeq ($(strip $(5))$(strip $(6)),truefalse)
-$(1): RUN := start-cluster $(if ${ITER},--iterations ${ITER})
+$(1): RUN := start-cluster $(if ${ITER},--iterations ${ITER}) $(if ${ID},--ident ${ID})
 endif
 ifeq ($(strip $(3))$(strip $(4))$(strip $(5))$(strip $(6)),falsetruefalsefalse)
 define EXTRA_HELP +=
@@ -29,6 +29,7 @@ endif
 endef
 
 define define_profile_targets
+ID ?= $(shell git symbolic-ref HEAD | sed 's_/_\n_g' | tail -n1)
 ##                                           defining this target       profname  nix   dev   auto  stay profiled  backend
 $$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof),                  $$(prof),false, true,false,false, false, supervisor)))
 $$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-prof,             $$(prof),false, true,false,false,  true, supervisor)))

@@ -143,6 +143,7 @@ start()
     local backend_data=
     local node_source=.
     local node_rev=
+    local ident=${ID:-}
     local cabal_mode=
     local skip_prebuild=
     local prebuild_done=
@@ -161,6 +162,7 @@ start()
     while test $# -gt 0
     do case "$1" in
         --batch-name )                   batch_name=$2;   shift;;
+        --ident )                        ident=$2; shift;;
         --iterations | --times | --iter | -n ) iterations=$2; no_retry_failed_runs=; shift;;
         --cache-dir )                    setenvjqstr 'cacheDir' $2; shift;;
         --base-port )                    setenvjq    'basePort' $2; shift;;
@@ -226,7 +228,7 @@ start()
             prebuild_done=t
        fi
 
-       progress "top-level" "profile $(with_color 'yellow' $profile_name), iteration $(with_color 'white' $((top_i+1))) of $(with_color 'yellow' $iterations)"
+       progress "top-level" "profile $(with_color 'yellow' $profile_name), iteration $(with_color 'white' $((top_i+1))) of $(with_color 'yellow' $iterations), identified as:  $(if test -n "$ident"; then echo $(white $ident); else echo $(red UNIDENTIFIED); fi)"
 
        local allocate_args=(
            $batch_name
@@ -247,10 +249,12 @@ start()
        if test -n "$no_analysis" -o $analysis_type = null; then continue; fi
 
        progress "top-level | analysis" "analysis type $(with_color yellow $analysis_type) on $(with_color white $run)"
-       analyse ${analyse_args[@]} $analysis_type $run &&
-           progress "run | analysis" "done" ||
+
+       local runspec=$(test -n "$ident" && echo $ident:)$run
+       analyse ${analyse_args[@]} $analysis_type $runspec &&
+           progress "run | analysis" "done for $(white $runspec)" ||
            if test -n "$analysis_can_fail" -a -z "$no_retry_failed_runs"
-           then progress "run | analysis" "log processing failed, but --analysis-can-fail prevents failure:  $(with_color red $run)"
+           then progress "run | analysis" "log processing failed, but --analysis-can-fail prevents failure:  $(with_color red $runspec)"
                 iterations=$((iterations + 1))
            else fail "analysis failed:  $run"
                 false; fi

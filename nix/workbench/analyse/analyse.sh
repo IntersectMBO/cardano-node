@@ -134,14 +134,14 @@ case "$op" in
         emn run/$1/analysis/report-*.org;;
 
     compare | cmp )
-        local runs=($(expand_runspecs $*))
+        local runs=($(expand_runsets $*))
         local baseline=${runs[0]}
         progress "analyse" "$(white comparing) $(colorise ${runs[*]:1}) $(plain against baseline) $(white $baseline)"
         analyse "${sargs[@]}" multi-call 'compare' "${runs[*]}" 'compare'
         ;;
 
     recompare | recmp )
-        local runs=($(expand_runspecs $*))
+        local runs=($(expand_runsets $*))
         local baseline=${runs[0]}
         progress "analyse" "$(white regenerating comparison) of $(colorise ${runs[*]:1}) $(plain against baseline) $(white $baseline)"
         analyse "${sargs[@]}" multi-call 'compare' "${runs[*]}" 'update'
@@ -175,7 +175,8 @@ case "$op" in
         analyse "${sargs[@]}" multi-call 'variance' "$*" ${script[*]}
 
         ## Ugly patching for compat reasons.
-        jq '.meta.profile_content' "$(run get-rundir)"/current/meta.json > "$(run get-rundir)"/current/profile.json
+        local runs=$(run get-global-rundir)
+        jq '.meta.profile_content' "$runs"/current/meta.json > "$runs"/current/profile.json
         ;;
 
     rerender | render )
@@ -328,7 +329,7 @@ case "$op" in
         ## Meaning: map OP over RUNS, optionally giving flags/options to OP
 
         local preop=${1:?$usage}; shift
-        local runs=($(expand_runspecs $*))
+        local runs=($(expand_runsets $*))
 
         local op_split=($preop)
         local op=${op_split[0]}
@@ -366,8 +367,14 @@ case "$op" in
                --host ) host=$2; shift;;
                * ) break;; esac; shift; done
 
-        local run=${1:?$usage}; shift
+        local runspec=${1:?$usage}; shift
+
+        ## Parse 'runspec' into either IDENT:RUN or RUN
+        local nrun=$(runspec_normalise $runspec)
+        local run=$(runspec_run $nrun)  ident=$(runspec_id $nrun)
         local dir=$(run get "$run")
+        test -n "$dir" || fail "malformed run: $run"
+
         local adir=$dir/analysis
         test -n "$dir" -a -d "$adir" || fail "run malformed or unprepared: $run"
 
@@ -445,14 +452,18 @@ case "$op" in
         progress "analyse" "prettifying JSON data:  ${#analysis_jsons[*]} files"
         verbose  "analyse" "prettifying JSON data:  ${analysis_jsons[*]}"
         json_compact_prettify "${analysis_jsons[@]}"
-        progress "output" "run:  $(white $run)  ident:  $(blue $(jq -r .meta.ident "$dir"/meta.json))  subdir:  $(yellow analysis)"
+
+        if test -n "$ident"
+        then run set-identifier "$run" "$ident"
+        fi
+        progress "output" "run:  $(white $run)  ident:  $ident  subdir:  $(yellow analysis)"
         ;;
 
     multi-call )
         local usage="USAGE: wb analyse $op SUFFIX \"RUN-NAMES..\" OPS.."
 
         local suffix=${1:?$usage}; shift
-        local runs=($(expand_runspecs ${1:?$usage})); shift
+        local runs=($(expand_runsets ${1:?$usage})); shift
 
         local dirs=(  $(for run  in ${runs[*]};  do run get "$run"; echo; done))
         local adirs=( $(for dir  in ${dirs[*]};  do echo $dir/analysis; done))
@@ -464,17 +475,21 @@ case "$op" in
                                   --perf            ${adir}/clusterperf.json \
                                   --prop            ${adir}/blockprop.json
                           done))
-        local run=$(analysis_multi_run_name \
-                        22                  \
-                        $suffix             \
+        local idents=($(for run  in ${runs[*]};  do run decide-identifier "$run"; done))
+        local idents_uniq=($(for i in ${idents[*]}; do echo $i; done |
+                             sort -u))
+        local idents_suf=$(for i in ${idents_uniq[*]}; do echo -n "_$i"; done)
+        local run=$(analysis_multi_run_tag      \
+                        22                       \
+                        "${suffix}${idents_suf}" \
                         $(for dir in ${dirs[*]}; do basename $dir; done))
-        local rundir=$(run get-rundir)
-        local dir=$rundir/$run
+        local runs=$(run get-global-rundir)
+        local dir=$runs/$run
         local adir=$dir/analysis
 
         mkdir -p "$adir"/{cdf,png}
-        rm -f         "$rundir/current"
-        ln -sf "$run" "$rundir/current"
+        rm -f         "$runs/current"
+        ln -sf "$run" "$runs/current"
         progress "analysis | multi-call" "output $(yellow $run), inputs: $(white ${runs[*]})"
 
         local v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 va vb vc vd ve vf vg vh vi vj vk vl vm vn vo
@@ -504,7 +519,10 @@ case "$op" in
 
         call_locli "$rtsmode" "${ops_final[@]}"
 
-        progress "output" "run:  $(white $run)"
+        if test ${#idents_uniq[*]} = 1
+        then run setid $run ${idents_uniq[0]}
+        fi
+        progress "output" "run:  $(white $run)  $(blue ident:)  $(white ${idents_uniq[*]})"
         ;;
 
     prepare | prep )
@@ -513,21 +531,12 @@ case "$op" in
         local runspec=${1:-current}; if test $# != 0; then shift; fi
 
         ## Parse 'runspec' into either IDENT:RUN or RUN
-        local precomma=$(cut -d: -f1 <<<$runspec) run= ident=
-        if   test "${runspec::1}" = "/" -o \
-                  "${runspec::1}" = "." -o \
-                  "$precomma" = "$runspec"
-        then ident="";        run=$runspec
-        else ident=$precomma; run=$(cut -d: -f2 <<<$runspec)
-        fi
-
+        local nrun=$(runspec_normalise $runspec)
+        local run=$(runspec_run $nrun)
         local dir=$(run get "$run")
         test -n "$dir" || fail "malformed run: $run"
 
-        if test -n "$ident"
-        then run set-identifier "$run" "$ident"
-        fi
-        progress "analyse" "preparing run for analysis:  $(white $run), identified as $(white $(jq -r .meta.ident "$dir"/meta.json))"
+        progress "analyse" "preparing run for analysis:  $(white $run)"
 
         run trim "$run"
         local adir=$dir/analysis
@@ -551,6 +560,7 @@ case "$op" in
 
         progress "analyse" "assembling log manifest"
         echo '{}' > $run_logs
+        time {
         for d in "${logdirs[@]}"
         do throttle_shell_job_spawns
            local logfiles=($(ls --reverse -t "$d"stdout* "$d"node-[0-9]*.json \
@@ -588,6 +598,7 @@ case "$op" in
 
         done
         wait
+        }
 
         for mach in $(jq_tolist '.rlHostLogs | keys' $run_logs)
         do jq_fmutate "$run_logs" '
@@ -796,15 +807,18 @@ function ghc_rts_minusp_tojson() {
     grep '^{.*}$' || true
 }
 
-function analysis_multi_run_name() {
+## Keep in sync with: locli/src/Cardano/Analysis/Summary.hs::multiRunTag
+function analysis_multi_run_tag() {
     local prefix_len=$1; shift
     local suffix=$1;     shift
     local run_tags=($*) t
+    progress "run | multi name" "${run_tags[*]}"
 
     sed <<<${run_tags[*]} \
-        's/$/\n/g'     |
-    sort -r            |
-    head -n1           |
-    cut -c-$prefix_len |
+      's/ /\n/g'        |
+    grep -v "^$"        |
+    sort -r             |
+    head -n1            |
+    cut -c-$prefix_len  |
     echo "$(cat)_$suffix"
 }
