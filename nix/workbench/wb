@@ -210,7 +210,7 @@ start()
     profile_name=$(jq '.name' -r $profile_data/profile.json)
     analysis_type=$(jq '.analysis.type' -r $profile_data/profile.json)
 
-    local top_i
+    local top_i runs=()
     for ((top_i=0; top_i<$iterations; top_i++))
     do newline
        progress "manifest" "component versions:"
@@ -237,6 +237,7 @@ start()
        )
        run "${run_args[@]}" allocate "${allocate_args[@]}"
        local run=$(run current-tag)
+       runs+=($run)
 
        current_run_path=$(run current-path)
        mkdir -p "$current_run_path"
@@ -254,6 +255,10 @@ start()
            else fail "analysis failed:  $run"
                 false; fi
     done
+
+    if test -z "$no_analysis" -a $analysis_type != null -a $iterations -gt 1
+    then analyse variance ${runs[*]}
+    fi
 }
 
 finish()

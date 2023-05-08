@@ -464,7 +464,10 @@ case "$op" in
                                   --perf            ${adir}/clusterperf.json \
                                   --prop            ${adir}/blockprop.json
                           done))
-        local run=$(for dir in ${dirs[*]}; do basename $dir; done | sort -r | head -n1 | cut -c-16)_$suffix
+        local run=$(analysis_multi_run_name \
+                        22                  \
+                        $suffix             \
+                        $(for dir in ${dirs[*]}; do basename $dir; done))
         local rundir=$(run get-rundir)
         local dir=$rundir/$run
         local adir=$dir/analysis
@@ -791,4 +794,17 @@ function ghc_rts_minusp_tojson() {
     head -n 40       | \
     sed 's_\\_\\\\_g; s_^\([^ ]\+\) \+\([^ ]\+\) \+\([^ ]\+\) \+\([^ ]\+\) \+\([^ ]\+\)$_{ "peFunc": "\1", "peModule": "\2", "peSrcLoc": "\3", "peTime": \4, "peAlloc": \5 }_' | \
     grep '^{.*}$' || true
+}
+
+function analysis_multi_run_name() {
+    local prefix_len=$1; shift
+    local suffix=$1;     shift
+    local run_tags=($*) t
+
+    sed <<<${run_tags[*]} \
+        's/$/\n/g'     |
+    sort -r            |
+    head -n1           |
+    cut -c-$prefix_len |
+    echo "$(cat)_$suffix"
 }
