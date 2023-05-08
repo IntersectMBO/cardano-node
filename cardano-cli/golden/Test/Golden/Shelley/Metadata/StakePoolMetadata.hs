@@ -18,7 +18,7 @@ import qualified Hedgehog.Extras.Test.File as H
 
 golden_stakePoolMetadataHash :: Property
 golden_stakePoolMetadataHash = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
-  referenceStakePoolMetadata <- noteInputFile "test/data/golden/shelley/metadata/stake_pool_metadata_hash"
+  referenceStakePoolMetadata <- noteInputFile "golden/files/golden/shelley/metadata/stake_pool_metadata_hash"
 
   stakePoolMetadataFile <- noteTempFile tempDir "stake-pool-metadata.json"
   outputStakePoolMetadataHashFp <- noteTempFile tempDir "stake-pool-metadata-hash.txt"

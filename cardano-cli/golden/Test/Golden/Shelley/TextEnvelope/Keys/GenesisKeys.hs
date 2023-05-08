@@ -19,8 +19,8 @@ import qualified Hedgehog.Extras.Test.Base as H
 golden_shelleyGenesisKeys :: Property
 golden_shelleyGenesisKeys = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   -- Reference keys
-  referenceVerKey <- noteInputFile "test/data/golden/shelley/keys/genesis_keys/verification_key"
-  referenceSignKey <- noteInputFile "test/data/golden/shelley/keys/genesis_keys/signing_key"
+  referenceVerKey <- noteInputFile "golden/files/golden/shelley/keys/genesis_keys/verification_key"
+  referenceSignKey <- noteInputFile "golden/files/golden/shelley/keys/genesis_keys/signing_key"
 
   -- Key filepaths
   verKey <- noteTempFile tempDir "genesis-verification-key-file"

@@ -19,10 +19,10 @@ import qualified Hedgehog.Extras.Test.Base as H
 golden_shelleyTx :: Property
 golden_shelleyTx = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   -- Reference keys
-  let referenceTx = "test/data/golden/alonzo/tx"
+  let referenceTx = "golden/files/golden/alonzo/tx"
 
   -- Key filepaths
-  paymentSignKey <- noteInputFile "test/data/golden/shelley/transaction-sign/utxo.skey"
+  paymentSignKey <- noteInputFile "golden/files/golden/shelley/transaction-sign/utxo.skey"
   transactionFile <- noteTempFile tempDir "tx-file"
   transactionBodyFile <- noteTempFile tempDir "tx-body-file"
 

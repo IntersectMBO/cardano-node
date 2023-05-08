@@ -19,9 +19,9 @@ import qualified Hedgehog.Extras.Test.Base as H
 golden_shelleyGenesisDelegateKeys :: Property
 golden_shelleyGenesisDelegateKeys = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   -- Reference keys
-  referenceVerKey <- noteInputFile "test/data/golden/shelley/keys/genesis_delegate_keys/verification_key"
-  referenceSignKey <- noteInputFile "test/data/golden/shelley/keys/genesis_delegate_keys/signing_key"
-  referenceOpCertCounter <- noteInputFile "test/data/golden/shelley/keys/genesis_delegate_keys/operational_certificate_counter"
+  referenceVerKey <- noteInputFile "golden/files/golden/shelley/keys/genesis_delegate_keys/verification_key"
+  referenceSignKey <- noteInputFile "golden/files/golden/shelley/keys/genesis_delegate_keys/signing_key"
+  referenceOpCertCounter <- noteInputFile "golden/files/golden/shelley/keys/genesis_delegate_keys/operational_certificate_counter"
 
   -- Key filepaths
   verKey <- noteTempFile tempDir "genesis-delegate-verification-key-file"

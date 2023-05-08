@@ -25,21 +25,21 @@ import           Test.OptParse
 
 prop_deserialise_legacy_signing_Key :: Property
 prop_deserialise_legacy_signing_Key = propertyOnce $ do
-  legSkeyBs <- H.evalIO $ LB.readFile "test/data/golden/byron/keys/legacy.skey"
+  legSkeyBs <- H.evalIO $ LB.readFile "golden/files/golden/byron/keys/legacy.skey"
   case deserialiseFromBytes decodeLegacyDelegateKey legSkeyBs of
     Left deSerFail -> failWith Nothing $ show deSerFail
     Right _ -> success
 
 prop_deserialise_nonLegacy_signing_Key :: Property
 prop_deserialise_nonLegacy_signing_Key = propertyOnce $ do
-  skeyBs <- H.evalIO $ LB.readFile "test/data/golden/byron/keys/byron.skey"
+  skeyBs <- H.evalIO $ LB.readFile "golden/files/golden/byron/keys/byron.skey"
   case deserialiseFromBytes Crypto.fromCBORXPrv skeyBs of
     Left deSerFail -> failWith Nothing $ show deSerFail
     Right _ -> success
 
 prop_print_legacy_signing_key_address :: Property
 prop_print_legacy_signing_key_address = propertyOnce $ do
-  let legKeyFp = "test/data/golden/byron/keys/legacy.skey"
+  let legKeyFp = "golden/files/golden/byron/keys/legacy.skey"
 
   void $ execCardanoCLI
    [ "signing-key-address", "--byron-legacy-formats"
@@ -55,7 +55,7 @@ prop_print_legacy_signing_key_address = propertyOnce $ do
 
 prop_print_nonLegacy_signing_key_address :: Property
 prop_print_nonLegacy_signing_key_address = propertyOnce $ do
-  let nonLegKeyFp = "test/data/golden/byron/keys/byron.skey"
+  let nonLegKeyFp = "golden/files/golden/byron/keys/byron.skey"
 
   void $ execCardanoCLI
    [ "signing-key-address", "--byron-formats"
@@ -79,7 +79,7 @@ prop_generate_and_read_nonlegacy_signingkeys = property $ do
 prop_migrate_legacy_to_nonlegacy_signingkeys :: Property
 prop_migrate_legacy_to_nonlegacy_signingkeys =
   propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
-    let legKeyFp = "test/data/golden/byron/keys/legacy.skey"
+    let legKeyFp = "golden/files/golden/byron/keys/legacy.skey"
     nonLegacyKeyFp <- noteTempFile tempDir "nonlegacy.skey"
 
     void $ execCardanoCLI
@@ -97,14 +97,14 @@ prop_migrate_legacy_to_nonlegacy_signingkeys =
 
 prop_deserialise_NonLegacy_Signing_Key_API :: Property
 prop_deserialise_NonLegacy_Signing_Key_API = propertyOnce $ do
-  eFailOrWit <- H.evalIO . runExceptT $ readByronSigningKey NonLegacyByronKeyFormat "test/data/golden/byron/keys/byron.skey"
+  eFailOrWit <- H.evalIO . runExceptT $ readByronSigningKey NonLegacyByronKeyFormat "golden/files/golden/byron/keys/byron.skey"
   case eFailOrWit of
     Left keyFailure -> failWith Nothing $ show keyFailure
     Right _ -> success
 
 prop_deserialiseLegacy_Signing_Key_API :: Property
 prop_deserialiseLegacy_Signing_Key_API = propertyOnce $ do
-  eFailOrWit <- H.evalIO . runExceptT $ readByronSigningKey LegacyByronKeyFormat "test/data/golden/byron/keys/legacy.skey"
+  eFailOrWit <- H.evalIO . runExceptT $ readByronSigningKey LegacyByronKeyFormat "golden/files/golden/byron/keys/legacy.skey"
   case eFailOrWit of
     Left keyFailure -> failWith Nothing $ show keyFailure
     Right _ -> success

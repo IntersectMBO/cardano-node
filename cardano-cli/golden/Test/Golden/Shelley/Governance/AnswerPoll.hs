@@ -20,7 +20,7 @@ import qualified Test.Hedgehog.Golden as H
 
 golden_shelleyGovernanceAnswerPollNeg1Invalid :: Property
 golden_shelleyGovernanceAnswerPollNeg1Invalid = propertyOnce . H.moduleWorkspace "governance-answer-poll" $ \tempDir -> do
-  pollFile <- noteInputFile "test/data/golden/shelley/governance/polls/basic.json"
+  pollFile <- noteInputFile "golden/files/golden/shelley/governance/polls/basic.json"
   outFile <- H.noteTempFile tempDir "answer-file.json"
 
   result <- tryExecCardanoCLI
@@ -36,8 +36,8 @@ golden_shelleyGovernanceAnswerPollNeg1Invalid = propertyOnce . H.moduleWorkspace
 
 golden_shelleyGovernanceAnswerPoll0 :: Property
 golden_shelleyGovernanceAnswerPoll0 = propertyOnce . H.moduleWorkspace "governance-answer-poll" $ \tempDir -> do
-  pollFile <- noteInputFile "test/data/golden/shelley/governance/polls/basic.json"
-  expectedAnswerFile <- noteInputFile "test/data/golden/shelley/governance/polls/basic.answer.0.json"
+  pollFile <- noteInputFile "golden/files/golden/shelley/governance/polls/basic.json"
+  expectedAnswerFile <- noteInputFile "golden/files/golden/shelley/governance/polls/basic.answer.0.json"
   outFile <- H.noteTempFile tempDir "answer-file.json"
 
   void $ execCardanoCLI
@@ -51,8 +51,8 @@ golden_shelleyGovernanceAnswerPoll0 = propertyOnce . H.moduleWorkspace "governan
 
 golden_shelleyGovernanceAnswerPollPos1 :: Property
 golden_shelleyGovernanceAnswerPollPos1 = propertyOnce . H.moduleWorkspace "governance-answer-poll" $ \tempDir -> do
-  pollFile <- noteInputFile "test/data/golden/shelley/governance/polls/basic.json"
-  expectedAnswerFile <- noteInputFile "test/data/golden/shelley/governance/polls/basic.answer.1.json"
+  pollFile <- noteInputFile "golden/files/golden/shelley/governance/polls/basic.json"
+  expectedAnswerFile <- noteInputFile "golden/files/golden/shelley/governance/polls/basic.answer.1.json"
   outFile <- H.noteTempFile tempDir "answer-file.json"
 
   void $ execCardanoCLI
@@ -66,7 +66,7 @@ golden_shelleyGovernanceAnswerPollPos1 = propertyOnce . H.moduleWorkspace "gover
 
 golden_shelleyGovernanceAnswerPollPos2Invalid :: Property
 golden_shelleyGovernanceAnswerPollPos2Invalid = propertyOnce . H.moduleWorkspace "governance-answer-poll" $ \tempDir -> do
-  pollFile <- noteInputFile "test/data/golden/shelley/governance/polls/basic.json"
+  pollFile <- noteInputFile "golden/files/golden/shelley/governance/polls/basic.json"
   outFile <- H.noteTempFile tempDir "answer-file.json"
 
   result <- tryExecCardanoCLI

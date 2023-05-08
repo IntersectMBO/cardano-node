@@ -20,7 +20,7 @@ import qualified Hedgehog.Extras.Test.File as H
 golden_shelleyMIRCertificate :: Property
 golden_shelleyMIRCertificate = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   -- Reference keys
-  referenceMIRCertificate <- noteInputFile "test/data/golden/shelley/certificates/mir_certificate"
+  referenceMIRCertificate <- noteInputFile "golden/files/golden/shelley/certificates/mir_certificate"
 
   -- Key filepaths
   verKey <- noteTempFile tempDir "stake-verification-key-file"

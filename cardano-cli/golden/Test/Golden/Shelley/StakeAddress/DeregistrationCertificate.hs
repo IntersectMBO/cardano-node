@@ -19,7 +19,7 @@ golden_shelleyStakeAddressDeregistrationCertificate :: Property
 golden_shelleyStakeAddressDeregistrationCertificate = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   base <- H.getProjectBase
 
-  verificationKeyFile <- noteInputFile "test/data/golden/shelley/keys/stake_keys/verification_key"
+  verificationKeyFile <- noteInputFile "golden/files/golden/shelley/keys/stake_keys/verification_key"
   deregistrationCertFile <- noteTempFile tempDir "deregistrationCertFile"
   scriptDeregistrationCertFile <- noteTempFile tempDir "scripDeregistrationCertFile"
   exampleScript <- noteInputFile $ base </> "scripts/plutus/scripts/v1/custom-guess-42-datum-42.plutus"

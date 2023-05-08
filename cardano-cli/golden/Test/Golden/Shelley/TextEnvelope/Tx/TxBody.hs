@@ -17,7 +17,7 @@ import qualified Hedgehog.Extras.Test.Base as H
 golden_shelleyTxBody :: Property
 golden_shelleyTxBody = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   -- Reference keys
-  referenceTxBody <- noteInputFile "test/data/golden/shelley/tx/txbody"
+  referenceTxBody <- noteInputFile "golden/files/golden/shelley/tx/txbody"
 
   -- Key filepaths
   transactionBodyFile <- noteTempFile tempDir "transaction-body-file"

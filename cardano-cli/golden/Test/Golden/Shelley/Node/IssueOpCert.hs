@@ -15,9 +15,9 @@ import qualified Hedgehog.Extras.Test.File as H
 
 golden_shelleyNodeIssueOpCert :: Property
 golden_shelleyNodeIssueOpCert = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
-  hotKesVerificationKeyFile <- noteInputFile "test/data/golden/shelley/keys/kes_keys/verification_key"
-  coldSigningKeyFile <- noteInputFile "test/data/golden/shelley/keys/genesis_delegate_keys/signing_key"
-  originalOperationalCertificateIssueCounterFile <- noteInputFile "test/data/golden/shelley/keys/genesis_delegate_keys/operational_certificate_counter"
+  hotKesVerificationKeyFile <- noteInputFile "golden/files/golden/shelley/keys/kes_keys/verification_key"
+  coldSigningKeyFile <- noteInputFile "golden/files/golden/shelley/keys/genesis_delegate_keys/signing_key"
+  originalOperationalCertificateIssueCounterFile <- noteInputFile "golden/files/golden/shelley/keys/genesis_delegate_keys/operational_certificate_counter"
   operationalCertificateIssueCounterFile <- noteTempFile tempDir "delegate-op-cert.counter"
   operationalCertFile <- noteTempFile tempDir "operational.cert"
 

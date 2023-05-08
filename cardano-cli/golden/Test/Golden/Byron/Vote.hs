@@ -21,9 +21,9 @@ import           Test.OptParse
 
 golden_byron_yes_vote :: Property
 golden_byron_yes_vote = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
-  goldenYesVote <- noteInputFile "test/data/golden/byron/votes/vote-yes"
-  proposal <- noteInputFile "test/data/golden/byron/update-proposal"
-  signingKey <- noteInputFile "test/data/golden/byron/keys/byron.skey"
+  goldenYesVote <- noteInputFile "golden/files/golden/byron/votes/vote-yes"
+  proposal <- noteInputFile "golden/files/golden/byron/update-proposal"
+  signingKey <- noteInputFile "golden/files/golden/byron/keys/byron.skey"
   createdYesVote <- noteTempFile tempDir "byron-yes-vote"
   void $ execCardanoCLI
     [ "byron","governance","create-proposal-vote"
@@ -48,9 +48,9 @@ golden_byron_yes_vote = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
 
 golden_byron_no_vote :: Property
 golden_byron_no_vote = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
-  goldenNoVote <- noteInputFile "test/data/golden/byron/votes/vote-no"
-  proposal <- noteInputFile "test/data/golden/byron/update-proposal"
-  signingKey <- noteInputFile "test/data/golden/byron/keys/byron.skey"
+  goldenNoVote <- noteInputFile "golden/files/golden/byron/votes/vote-no"
+  proposal <- noteInputFile "golden/files/golden/byron/update-proposal"
+  signingKey <- noteInputFile "golden/files/golden/byron/keys/byron.skey"
   createdNoVote <- noteTempFile tempDir "byron-no-vote"
   void $ execCardanoCLI
     [ "byron","governance","create-proposal-vote"

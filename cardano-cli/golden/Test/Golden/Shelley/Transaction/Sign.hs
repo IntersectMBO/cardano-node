@@ -15,11 +15,11 @@ import qualified Hedgehog.Extras.Test.File as H
 
 golden_shelleyTransactionSign :: Property
 golden_shelleyTransactionSign = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
-  txBodyFile <- noteInputFile "test/data/golden/shelley/tx/txbody"
-  initialUtxo1SigningKeyFile <- noteInputFile "test/data/golden/shelley/keys/payment_keys/signing_key"
-  utxoSigningKeyFile <- noteInputFile "test/data/golden/shelley/transaction-sign/utxo.skey"
-  stakeSigningKeyFile <- noteInputFile "test/data/golden/shelley/transaction-sign/stake.skey"
-  nodeColdSigningKeyFile <- noteInputFile "test/data/golden/shelley/transaction-sign/node-cold.skey"
+  txBodyFile <- noteInputFile "golden/files/golden/shelley/tx/txbody"
+  initialUtxo1SigningKeyFile <- noteInputFile "golden/files/golden/shelley/keys/payment_keys/signing_key"
+  utxoSigningKeyFile <- noteInputFile "golden/files/golden/shelley/transaction-sign/utxo.skey"
+  stakeSigningKeyFile <- noteInputFile "golden/files/golden/shelley/transaction-sign/stake.skey"
+  nodeColdSigningKeyFile <- noteInputFile "golden/files/golden/shelley/transaction-sign/node-cold.skey"
   signedTransactionFile <- noteTempFile tempDir "signed.tx"
   transactionPoolRegSignedFile <- noteTempFile tempDir "tx-pool-reg.signed"
 

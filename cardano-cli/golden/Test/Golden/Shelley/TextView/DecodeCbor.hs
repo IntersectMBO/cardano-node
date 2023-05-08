@@ -14,7 +14,7 @@ import qualified Hedgehog.Extras.Test.File as H
 
 golden_shelleyTextViewDecodeCbor :: Property
 golden_shelleyTextViewDecodeCbor = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
-  unsignedTxFile <- noteInputFile "test/data/golden/shelley/tx/unsigned.tx"
+  unsignedTxFile <- noteInputFile "golden/files/golden/shelley/tx/unsigned.tx"
   decodedTxtFile <- noteTempFile tempDir "decoded.txt"
 
   -- Defaults to signing a Mainnet transaction.

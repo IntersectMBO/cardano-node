@@ -68,9 +68,9 @@ parseTotalSupply = J.withObject "Object" $ \ o -> do
 golden_shelleyGenesisCreate :: Property
 golden_shelleyGenesisCreate = propertyOnce $ do
   H.moduleWorkspace "tmp" $ \tempDir -> do
-    sourceGenesisSpecFile <- noteInputFile "test/data/golden/shelley/genesis/genesis.spec.json"
-    sourceAlonzoGenesisSpecFile <- noteInputFile "test/data/golden/alonzo/genesis.alonzo.spec.json"
-    sourceConwayGenesisSpecFile <- noteInputFile "test/data/golden/conway/genesis.conway.spec.json"
+    sourceGenesisSpecFile <- noteInputFile "golden/files/golden/shelley/genesis/genesis.spec.json"
+    sourceAlonzoGenesisSpecFile <- noteInputFile "golden/files/golden/alonzo/genesis.alonzo.spec.json"
+    sourceConwayGenesisSpecFile <- noteInputFile "golden/files/golden/conway/genesis.conway.spec.json"
 
     genesisSpecFile <- noteTempFile tempDir "genesis.spec.json"
     alonzoSpecFile <- noteTempFile tempDir "genesis.alonzo.spec.json"
@@ -160,11 +160,11 @@ golden_shelleyGenesisCreate = propertyOnce $ do
     (delegateCount, fmtDelegateCount) <- fmap (OP.withSnd show) $ forAll $ G.int (R.linear 4 19)
     (utxoCount, fmtUtxoCount) <- fmap (OP.withSnd show) $ forAll $ G.int (R.linear 4 19)
 
-    sourceAlonzoGenesisSpecFile <- noteInputFile "test/data/golden/alonzo/genesis.alonzo.spec.json"
+    sourceAlonzoGenesisSpecFile <- noteInputFile "golden/files/golden/alonzo/genesis.alonzo.spec.json"
     alonzoSpecFile <- noteTempFile tempDir "genesis.alonzo.spec.json"
     H.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
 
-    sourceConwayGenesisSpecFile <- noteInputFile "test/data/golden/conway/genesis.conway.spec.json"
+    sourceConwayGenesisSpecFile <- noteInputFile "golden/files/golden/conway/genesis.conway.spec.json"
     conwaySpecFile <- noteTempFile tempDir "genesis.conway.spec.json"
     H.copyFile sourceConwayGenesisSpecFile conwaySpecFile
 
