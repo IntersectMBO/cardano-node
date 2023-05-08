@@ -511,7 +511,9 @@ wb_nomad() {
           local config_file=$(wb_nomad server config-file-path "${name}")
           local pid_file=$(wb_nomad server pid-filepath "${name}")
           local pid_number
-          nomad agent                 \
+          # Start the agent on a new session (`setsid`) so it does not receive
+          # CTRL+C. It must be properly ended by the workbench's exit trap.
+          setsid nomad agent          \
             -config="${config_file}"  \
             >> "${state_dir}"/stdout  \
             2>> "${state_dir}"/stderr \
@@ -742,10 +744,12 @@ wb_nomad() {
           local pid_file=$(wb_nomad client pid-filepath "${name}")
           local pid_number
           local cmd_array=("${root_prefix}" "bash" "-c")
-          pid_number=$(${cmd_array[@]} "nomad agent \
-            -config="${config_file}"                \
-            >> "${state_dir}"/stdout                \
-            2>> "${state_dir}"/stderr               \
+          # Start the agent on a new session (`setsid`) so it does not receive
+          # CTRL+C. It must be properly ended by the workbench's exit trap.
+          pid_number=$(${cmd_array[@]} "setsid nomad agent \
+            -config="${config_file}"                       \
+            >> "${state_dir}"/stdout                       \
+            2>> "${state_dir}"/stderr                      \
             & echo \"\$!\"")
           echo "${pid_number}" > "${pid_file}"
           msg "Nomad client \"${name}\" started with PID ${pid_number}"
