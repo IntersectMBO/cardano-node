@@ -20,7 +20,7 @@ golden_shelleyGenesisKeyDelegationCertificate =
     -- Reference certificate
     referenceCertificateFilePath <-
       noteInputFile $
-        "test/data/golden/shelley/certificates/"
+        "golden/files/golden/shelley/certificates/"
           <> "genesis_key_delegation_certificate"
 
     -- Verification key and certificate filepaths

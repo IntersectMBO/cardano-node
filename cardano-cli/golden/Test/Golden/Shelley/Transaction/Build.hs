@@ -48,8 +48,8 @@ golden_shelleyTransactionBuild =
 golden_shelleyTransactionBuild_CertificateScriptWitnessed :: Property
 golden_shelleyTransactionBuild_CertificateScriptWitnessed =
   propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
-    let deregcert = "test/data/golden/shelley/certificates/stake_address_deregistration_certificate"
-        scriptWit = "test/data/golden/shelley/multisig/scripts/any"
+    let deregcert = "golden/files/golden/shelley/certificates/stake_address_deregistration_certificate"
+        scriptWit = "golden/files/golden/shelley/multisig/scripts/any"
 
     txBodyOutFile <- noteTempFile tempDir "tx-body-out"
 
@@ -70,7 +70,7 @@ golden_shelleyTransactionBuild_CertificateScriptWitnessed =
 golden_shelleyTransactionBuild_Minting :: Property
 golden_shelleyTransactionBuild_Minting =
   propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
-    let scriptWit = "test/data/golden/shelley/multisig/scripts/any"
+    let scriptWit = "golden/files/golden/shelley/multisig/scripts/any"
 
     polid <- execCardanoCLI
                [ "transaction"
@@ -104,10 +104,10 @@ golden_shelleyTransactionBuild_WithdrawalScriptWitnessed =
   propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
     txBodyOutFile <- noteTempFile tempDir "tx-body-out"
 
-    stakeAddress <- H.readFile "test/data/golden/shelley/keys/stake_keys/reward_address"
+    stakeAddress <- H.readFile "golden/files/golden/shelley/keys/stake_keys/reward_address"
 
     let withdrawal = filter (/= '\n') $ stakeAddress <> "+100"
-        scriptWit = "test/data/golden/shelley/multisig/scripts/any"
+        scriptWit = "golden/files/golden/shelley/multisig/scripts/any"
 
     void $ execCardanoCLI
       [ "transaction","build-raw"
@@ -126,7 +126,7 @@ golden_shelleyTransactionBuild_WithdrawalScriptWitnessed =
 golden_shelleyTransactionBuild_TxInScriptWitnessed :: Property
 golden_shelleyTransactionBuild_TxInScriptWitnessed =
   propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
-    let scriptWit = "test/data/golden/shelley/multisig/scripts/any"
+    let scriptWit = "golden/files/golden/shelley/multisig/scripts/any"
 
     txBodyOutFile <- noteTempFile tempDir "tx-body-out"
 

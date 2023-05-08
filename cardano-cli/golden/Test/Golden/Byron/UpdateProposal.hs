@@ -22,8 +22,8 @@ import qualified Hedgehog.Extras.Test.Base as H
 
 golden_byron_update_proposal :: Property
 golden_byron_update_proposal = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
-  goldenUpdateProposal <- noteInputFile "test/data/golden/byron/update-proposal"
-  signingKey <- noteInputFile "test/data/golden/byron/keys/byron.skey"
+  goldenUpdateProposal <- noteInputFile "golden/files/golden/byron/update-proposal"
+  signingKey <- noteInputFile "golden/files/golden/byron/keys/byron.skey"
   createdUpdateProposal <- noteTempFile tempDir "byron-update-proposal"
   void $ execCardanoCLI
     [ "byron","governance","create-update-proposal"

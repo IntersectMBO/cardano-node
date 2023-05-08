@@ -25,8 +25,8 @@ import qualified Hedgehog.Extras.Test.Base as H
 
 golden_byronTx_legacy :: Property
 golden_byronTx_legacy = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
-  signingKey <- noteInputFile "test/data/golden/byron/keys/legacy.skey"
-  goldenTx <- noteInputFile "test/data/golden/byron/tx/legacy.tx"
+  signingKey <- noteInputFile "golden/files/golden/byron/keys/legacy.skey"
+  goldenTx <- noteInputFile "golden/files/golden/byron/tx/legacy.tx"
   createdTx <- noteTempFile tempDir "tx"
   void $ execCardanoCLI
     [ "byron","transaction","issue-utxo-expenditure"
@@ -42,8 +42,8 @@ golden_byronTx_legacy = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
 
 golden_byronTx :: Property
 golden_byronTx = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
-  signingKey <- noteInputFile "test/data/golden/byron/keys/byron.skey"
-  goldenTx <- noteInputFile "test/data/golden/byron/tx/normal.tx"
+  signingKey <- noteInputFile "golden/files/golden/byron/keys/byron.skey"
+  goldenTx <- noteInputFile "golden/files/golden/byron/tx/normal.tx"
   createdTx <- noteTempFile tempDir "tx"
   void $ execCardanoCLI
     [ "byron","transaction","issue-utxo-expenditure"

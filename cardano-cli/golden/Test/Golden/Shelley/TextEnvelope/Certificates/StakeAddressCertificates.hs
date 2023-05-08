@@ -20,8 +20,8 @@ import qualified Hedgehog.Extras.Test.File as H
 golden_shelleyStakeAddressCertificates :: Property
 golden_shelleyStakeAddressCertificates = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   -- Reference files
-  referenceRegistrationCertificate <- noteInputFile "test/data/golden/shelley/certificates/stake_address_registration_certificate"
-  referenceDeregistrationCertificate <- noteInputFile "test/data/golden/shelley/certificates/stake_address_deregistration_certificate"
+  referenceRegistrationCertificate <- noteInputFile "golden/files/golden/shelley/certificates/stake_address_registration_certificate"
+  referenceDeregistrationCertificate <- noteInputFile "golden/files/golden/shelley/certificates/stake_address_deregistration_certificate"
 
   -- Key filepaths
   verKey <- noteTempFile tempDir "stake-verification-key-file"

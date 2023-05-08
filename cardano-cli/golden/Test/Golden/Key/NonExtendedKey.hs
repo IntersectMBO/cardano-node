@@ -20,8 +20,8 @@ import           Test.OptParse (execCardanoCLI, propertyOnce)
 golden_KeyNonExtendedKey_GenesisExtendedVerificationKey :: Property
 golden_KeyNonExtendedKey_GenesisExtendedVerificationKey =
   propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
-    genesisVKeyFp <- H.note "test/data/golden/key/non-extended-keys/shelley.000.vkey"
-    nonExtendedFp <-  H.note "test/data/golden/key/non-extended-keys/non-extended-shelley.000.vkey"
+    genesisVKeyFp <- H.note "golden/files/golden/key/non-extended-keys/shelley.000.vkey"
+    nonExtendedFp <-  H.note "golden/files/golden/key/non-extended-keys/non-extended-shelley.000.vkey"
     outFp <- H.note $ tempDir </> "non-extended-shelley.000.vkey"
 
     H.assertFilesExist [genesisVKeyFp]
@@ -43,8 +43,8 @@ golden_KeyNonExtendedKey_GenesisExtendedVerificationKey =
 golden_KeyNonExtendedKey_StakeExtendedVerificationKeyShelley :: Property
 golden_KeyNonExtendedKey_StakeExtendedVerificationKeyShelley =
   propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
-    genesisVKeyFp <- H.note "test/data/golden/key/non-extended-keys/stake.000.vkey"
-    nonExtendedFp <-  H.note "test/data/golden/key/non-extended-keys/non-extended-stake.000.vkey"
+    genesisVKeyFp <- H.note "golden/files/golden/key/non-extended-keys/stake.000.vkey"
+    nonExtendedFp <-  H.note "golden/files/golden/key/non-extended-keys/non-extended-stake.000.vkey"
     outFp <- H.note $ tempDir </> "non-extended-stake.000.vkey"
 
     H.assertFilesExist [genesisVKeyFp]

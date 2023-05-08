@@ -19,8 +19,8 @@ import qualified Hedgehog.Extras.Test.File as H
 golden_shelleyTransactionAssembleWitness_SigningKey :: Property
 golden_shelleyTransactionAssembleWitness_SigningKey = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
   witnessTx <- noteTempFile tempDir "single-signing-key-witness-tx"
-  txBodyFile <- noteInputFile "test/data/golden/shelley/tx/txbody"
-  signingKeyWitnessFile <- noteInputFile "test/data/golden/shelley/witnesses/singleSigningKeyWitness"
+  txBodyFile <- noteInputFile "golden/files/golden/shelley/tx/txbody"
+  signingKeyWitnessFile <- noteInputFile "golden/files/golden/shelley/witnesses/singleSigningKeyWitness"
   void $ execCardanoCLI
     [ "transaction","sign-witness"
     , "--tx-body-file", txBodyFile

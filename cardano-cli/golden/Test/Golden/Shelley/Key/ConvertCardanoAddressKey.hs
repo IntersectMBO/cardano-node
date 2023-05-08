@@ -74,7 +74,7 @@ golden_convertCardanoAddressByronSigningKey =
     actualConvertedSigningKey <- H.readFile convertedSigningKeyFp
     expectedConvertedSigningKey <-
       H.readFile $
-        "test/data/golden/shelley/keys/converted_cardano-address_keys/"
+        "golden/files/golden/shelley/keys/converted_cardano-address_keys/"
           <> "byron_signing_key"
     expectedConvertedSigningKey === actualConvertedSigningKey
 
@@ -111,7 +111,7 @@ golden_convertCardanoAddressIcarusSigningKey =
     actualConvertedSigningKey <- H.readFile convertedSigningKeyFp
     expectedConvertedSigningKey <-
       H.readFile $
-        "test/data/golden/shelley/keys/converted_cardano-address_keys/"
+        "golden/files/golden/shelley/keys/converted_cardano-address_keys/"
           <> "icarus_signing_key"
     expectedConvertedSigningKey === actualConvertedSigningKey
 
@@ -149,7 +149,7 @@ golden_convertCardanoAddressShelleyPaymentSigningKey =
     actualConvertedSigningKey <- H.readFile convertedSigningKeyFp
     expectedConvertedSigningKey <-
       H.readFile $
-        "test/data/golden/shelley/keys/converted_cardano-address_keys/"
+        "golden/files/golden/shelley/keys/converted_cardano-address_keys/"
           <> "shelley_payment_signing_key"
     expectedConvertedSigningKey === actualConvertedSigningKey
 
@@ -187,6 +187,6 @@ golden_convertCardanoAddressShelleyStakeSigningKey =
     actualConvertedSigningKey <- H.readFile convertedSigningKeyFp
     expectedConvertedSigningKey <-
       H.readFile $
-        "test/data/golden/shelley/keys/converted_cardano-address_keys/"
+        "golden/files/golden/shelley/keys/converted_cardano-address_keys/"
           <> "shelley_stake_signing_key"
     expectedConvertedSigningKey === actualConvertedSigningKey

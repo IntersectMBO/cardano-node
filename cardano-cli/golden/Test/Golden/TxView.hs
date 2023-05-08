@@ -46,11 +46,11 @@ golden_view_byron =
     result <-
       execCardanoCLI
         ["transaction", "view", "--tx-body-file", transactionBodyFile]
-    H.diffVsGoldenFile result "test/data/golden/byron/transaction-view.out"
+    H.diffVsGoldenFile result "golden/files/golden/byron/transaction-view.out"
 
 golden_view_shelley :: Property
 golden_view_shelley = let
-  certDir = "test/data/golden/shelley/certificates"
+  certDir = "golden/files/golden/shelley/certificates"
   certs =
     (certDir </>) <$>
     [ "genesis_key_delegation_certificate"
@@ -86,7 +86,7 @@ golden_view_shelley = let
         , "--epoch", "64"
         , "--extra-entropy", extraEntropySeed
         , "--genesis-verification-key-file"
-        ,   "test/data/golden/shelley/keys/genesis_keys/verification_key"
+        ,   "golden/files/golden/shelley/keys/genesis_keys/verification_key"
         , "--key-reg-deposit-amt", "71"
         , "--max-block-body-size", "72"
         , "--max-block-header-size", "73"
@@ -129,7 +129,7 @@ golden_view_shelley = let
     result <-
       execCardanoCLI
         ["transaction", "view", "--tx-body-file", transactionBodyFile]
-    H.diffVsGoldenFile result "test/data/golden/shelley/transaction-view.out"
+    H.diffVsGoldenFile result "golden/files/golden/shelley/transaction-view.out"
 
 golden_view_allegra :: Property
 golden_view_allegra =
@@ -160,7 +160,7 @@ golden_view_allegra =
     result <-
       execCardanoCLI
         ["transaction", "view", "--tx-body-file", transactionBodyFile]
-    H.diffVsGoldenFile result "test/data/golden/allegra/transaction-view.out"
+    H.diffVsGoldenFile result "golden/files/golden/allegra/transaction-view.out"
 
 golden_view_mary :: Property
 golden_view_mary =
@@ -219,8 +219,8 @@ golden_view_mary =
             ,   " a06ee5ffdd7f9b5bd992eb9543f44418323f81229526b77b0e4be067"
             ,   ".736b79"
             ]
-        , "--mint-script-file", "test/data/golden/mary/scripts/mint.all"
-        , "--mint-script-file", "test/data/golden/mary/scripts/mint.sig"
+        , "--mint-script-file", "golden/files/golden/mary/scripts/mint.all"
+        , "--mint-script-file", "golden/files/golden/mary/scripts/mint.sig"
         , "--out-file", transactionBodyFile
         ]
 
@@ -228,7 +228,7 @@ golden_view_mary =
     result <-
       execCardanoCLI
         ["transaction", "view", "--tx-body-file", transactionBodyFile]
-    H.diffVsGoldenFile result "test/data/golden/mary/transaction-view.out"
+    H.diffVsGoldenFile result "golden/files/golden/mary/transaction-view.out"
 
 createAlonzoTxBody :: Maybe FilePath -> FilePath -> Integration ()
 createAlonzoTxBody mUpdateProposalFile transactionBodyFile = do
@@ -270,7 +270,7 @@ golden_view_alonzo =
           [ "governance", "create-update-proposal"
           , "--epoch", "190"
           , "--genesis-verification-key-file"
-          ,   "test/data/golden/shelley/keys/genesis_keys/verification_key"
+          ,   "golden/files/golden/shelley/keys/genesis_keys/verification_key"
           , "--utxo-cost-per-word", "194"
           , "--price-execution-steps", "195/196"
           , "--price-execution-memory", "196/197"
@@ -288,11 +288,11 @@ golden_view_alonzo =
       result <-
         execCardanoCLI
           ["transaction", "view", "--tx-body-file", transactionBodyFile]
-      H.diffVsGoldenFile result "test/data/golden/alonzo/transaction-view.out"
+      H.diffVsGoldenFile result "golden/files/golden/alonzo/transaction-view.out"
 
 golden_view_alonzo_signed :: Property
 golden_view_alonzo_signed =
-  let testData = "test/data/golden/alonzo"
+  let testData = "golden/files/golden/alonzo"
   in
   propertyOnce $
     moduleWorkspace "tmp" $ \tempDir -> do

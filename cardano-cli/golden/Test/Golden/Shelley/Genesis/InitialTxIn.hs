@@ -14,8 +14,8 @@ import qualified Hedgehog.Extras.Test.File as H
 
 golden_shelleyGenesisInitialTxIn :: Property
 golden_shelleyGenesisInitialTxIn = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
-  verificationKeyFile <- noteInputFile "test/data/golden/shelley/keys/genesis_verification_keys/genesis-utxo.vkey"
-  goldenUtxoHashFile <- noteInputFile "test/data/golden/shelley/keys/genesis_utxo_hashes/utxo_hash"
+  verificationKeyFile <- noteInputFile "golden/files/golden/shelley/keys/genesis_verification_keys/genesis-utxo.vkey"
+  goldenUtxoHashFile <- noteInputFile "golden/files/golden/shelley/keys/genesis_utxo_hashes/utxo_hash"
   utxoHashFile <- noteTempFile tempDir "utxo_hash"
 
   utxoHash <- execCardanoCLI

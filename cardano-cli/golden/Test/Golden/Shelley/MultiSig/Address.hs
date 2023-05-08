@@ -16,7 +16,7 @@ import qualified Hedgehog.Extras.Test.File as H
 
 golden_shelleyAllMultiSigAddressBuild :: Property
 golden_shelleyAllMultiSigAddressBuild = propertyOnce . H.moduleWorkspace "tmp" $ \_ -> do
-  allMultiSigFp <- noteInputFile "test/data/golden/shelley/multisig/scripts/all"
+  allMultiSigFp <- noteInputFile "golden/files/golden/shelley/multisig/scripts/all"
 
   allMultiSigAddress <- execCardanoCLI
     [ "address", "build"
@@ -24,7 +24,7 @@ golden_shelleyAllMultiSigAddressBuild = propertyOnce . H.moduleWorkspace "tmp" $
     , "--mainnet"
     ]
 
-  goldenAllMultiSigAddrFp <- noteInputFile "test/data/golden/shelley/multisig/addresses/all"
+  goldenAllMultiSigAddrFp <- noteInputFile "golden/files/golden/shelley/multisig/addresses/all"
 
   goldenAllMs <- H.readFile goldenAllMultiSigAddrFp
 
@@ -32,7 +32,7 @@ golden_shelleyAllMultiSigAddressBuild = propertyOnce . H.moduleWorkspace "tmp" $
 
 golden_shelleyAnyMultiSigAddressBuild :: Property
 golden_shelleyAnyMultiSigAddressBuild = propertyOnce . H.moduleWorkspace "tmp" $ \_ -> do
-  anyMultiSigFp <- noteInputFile "test/data/golden/shelley/multisig/scripts/any"
+  anyMultiSigFp <- noteInputFile "golden/files/golden/shelley/multisig/scripts/any"
 
   anyMultiSigAddress <- execCardanoCLI
     [ "address", "build"
@@ -40,7 +40,7 @@ golden_shelleyAnyMultiSigAddressBuild = propertyOnce . H.moduleWorkspace "tmp" $
     , "--mainnet"
     ]
 
-  goldenAnyMultiSigAddrFp <- noteInputFile "test/data/golden/shelley/multisig/addresses/any"
+  goldenAnyMultiSigAddrFp <- noteInputFile "golden/files/golden/shelley/multisig/addresses/any"
 
   goldenAnyMs <- H.readFile goldenAnyMultiSigAddrFp
 
@@ -48,7 +48,7 @@ golden_shelleyAnyMultiSigAddressBuild = propertyOnce . H.moduleWorkspace "tmp" $
 
 golden_shelleyAtLeastMultiSigAddressBuild :: Property
 golden_shelleyAtLeastMultiSigAddressBuild = propertyOnce . H.moduleWorkspace "tmp" $ \_ -> do
-  atLeastMultiSigFp <- noteInputFile "test/data/golden/shelley/multisig/scripts/atleast"
+  atLeastMultiSigFp <- noteInputFile "golden/files/golden/shelley/multisig/scripts/atleast"
 
   atLeastMultiSigAddress <- execCardanoCLI
     [ "address", "build"
@@ -56,7 +56,7 @@ golden_shelleyAtLeastMultiSigAddressBuild = propertyOnce . H.moduleWorkspace "tm
     , "--mainnet"
     ]
 
-  goldenAtLeastMultiSigAddrFp <- noteInputFile "test/data/golden/shelley/multisig/addresses/atleast"
+  goldenAtLeastMultiSigAddrFp <- noteInputFile "golden/files/golden/shelley/multisig/addresses/atleast"
 
   goldenAtLeastMs <- H.readFile goldenAtLeastMultiSigAddrFp
 

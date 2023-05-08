@@ -15,10 +15,10 @@ import qualified Hedgehog.Extras.Test.File as H
 
 golden_shelleyAddressBuild :: Property
 golden_shelleyAddressBuild = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
-  addressVKeyFile <- noteInputFile "test/data/golden/shelley/keys/payment_keys/verification_key"
-  addressSKeyFile <- noteInputFile "test/data/golden/shelley/keys/stake_keys/verification_key"
-  goldenStakingAddressHexFile <- noteInputFile "test/data/golden/shelley/addresses/staking-address.hex"
-  goldenEnterpriseAddressHexFile <- noteInputFile "test/data/golden/shelley/addresses/enterprise-address.hex"
+  addressVKeyFile <- noteInputFile "golden/files/golden/shelley/keys/payment_keys/verification_key"
+  addressSKeyFile <- noteInputFile "golden/files/golden/shelley/keys/stake_keys/verification_key"
+  goldenStakingAddressHexFile <- noteInputFile "golden/files/golden/shelley/addresses/staking-address.hex"
+  goldenEnterpriseAddressHexFile <- noteInputFile "golden/files/golden/shelley/addresses/enterprise-address.hex"
   stakingAddressHexFile <- noteTempFile tempDir "staking-address.hex"
   enterpriseAddressHexFile <- noteTempFile tempDir "enterprise-address.hex"
 
