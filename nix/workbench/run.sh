@@ -718,7 +718,8 @@ EOF
         local size=$(ls -s "$genesis" | cut -d' ' -f1)
         if test "$size" -gt 1000
         then progress "run" "genesis size: ${size}k, trimming.."
-             mv   "$genesis" "$genesis_orig"
+             mv    "$genesis" "$genesis_orig"
+             ln -s "$(realpath $genesis_orig)" "$genesis".orig
              jq > "$genesis" '
                .initialFunds = {}
              | .staking      = {}
