@@ -718,6 +718,25 @@ wb_nomad() {
           test -f "${pid_file}" || test $(pgrep --count --full "nomad.*${config_file}.*") -gt 0
         ;;
 ####### client -> start )#######################################################
+        # Agent is started with `-network-interface lo` if not without a proper
+        # network connection it fails with the message shown below.
+        # (Fix added while on a 13:25 hour long non-stop flight)
+        # {
+        #   "@level": "error",
+        #   "@message": "error starting agent",
+        #   "@module": "agent",
+        #   "@timestamp": "2023-05-07T15:12:34.631345Z",
+        #   "error": "client setup failed: fingerprinting failed: Error while detecting network interface  during fingerprinting: No default interface found"
+        # }
+        # {
+        #   "@level": "error",
+        #   "@message": "Error starting agent: client setup failed: fingerprinting failed: Error while detecting network interface  during fingerprinting: No default interface found",
+        #   "@module": "agent",
+        #   "@timestamp": "2023-05-07T15:12:34.631378Z"
+        # }
+        # TODO: Look for a default route first? (same logic Nomad uses)
+        #       ip route list default | head --lines=1 | cut -d " " -f 3
+        #       See also Client config "fingerprint.network.disallow_link_local"
         start )
           local usage="USAGE: wb nomad ${op} ${subop} CLIENT-NAME [ROOT-PREFIX]"
           local name=${1:?$usage}; shift
@@ -748,6 +767,7 @@ wb_nomad() {
           # CTRL+C. It must be properly ended by the workbench's exit trap.
           pid_number=$(${cmd_array[@]} "setsid nomad agent \
             -config="${config_file}"                       \
+            -network-interface lo                          \
             >> "${state_dir}"/stdout                       \
             2>> "${state_dir}"/stderr                      \
             & echo \"\$!\"")
