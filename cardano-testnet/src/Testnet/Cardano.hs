@@ -14,7 +14,6 @@ module Testnet.Cardano
   , TestnetNodeOptions(..)
   , cardanoDefaultTestnetNodeOptions
 
-  , Era(..)
   , TestnetRuntime (..)
   , PaymentKeyPair(..)
 
@@ -22,6 +21,8 @@ module Testnet.Cardano
   ) where
 
 import           Prelude
+
+import           Cardano.Api
 
 import           Control.Monad
 import           Control.Monad.IO.Class (MonadIO)
@@ -86,13 +87,11 @@ data ForkPoint
   | AtEpoch Int
   deriving (Show, Eq, Read)
 
-data Era = Byron | Shelley | Allegra | Mary | Alonzo deriving (Eq, Enum, Bounded, Read, Show)
-
 data CardanoTestnetOptions = CardanoTestnetOptions
   { -- | List of node options. Each option will result in a single node being
     -- created.
     cardanoNodes :: [TestnetNodeOptions]
-  , cardanoEra :: Era
+  , cardanoEra :: AnyCardanoEra
   , cardanoEpochLength :: Int
   , cardanoSlotLength :: Double
   , cardanoActiveSlotsCoeff :: Double
@@ -104,7 +103,7 @@ data CardanoTestnetOptions = CardanoTestnetOptions
 defaultTestnetOptions :: CardanoTestnetOptions
 defaultTestnetOptions = CardanoTestnetOptions
   { cardanoNodes = cardanoDefaultTestnetNodeOptions
-  , cardanoEra = Alonzo
+  , cardanoEra = AnyCardanoEra AlonzoEra
   , cardanoEpochLength = 1500
   , cardanoSlotLength = 0.2
   , cardanoActiveSlotsCoeff = 0.2

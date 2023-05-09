@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Parsers.Cardano
   ( CardanoOptions(..)
   , cmdCardano
@@ -11,7 +9,8 @@ import           Prelude
 import qualified Data.List as L
 import           Options.Applicative
 import qualified Options.Applicative as OA
-import           Text.Read
+
+import           Cardano.CLI.Common.Parsers
 
 import           Testnet
 import           Testnet.Cardano
@@ -27,13 +26,7 @@ data CardanoOptions = CardanoOptions
 optsTestnet :: Parser CardanoTestnetOptions
 optsTestnet = CardanoTestnetOptions
   <$> pNumBftAndSpoNodes
-  <*> OA.option (OA.eitherReader readEither)
-      (   OA.long "era"
-      <>  OA.help ("Era to upgrade to.  " <> show @[Era] [minBound .. maxBound])
-      <>  OA.metavar "ERA"
-      <>  OA.showDefault
-      <>  OA.value (cardanoEra defaultTestnetOptions)
-      )
+  <*> pCardanoEra
   <*> OA.option auto
       (   OA.long "epoch-length"
       <>  OA.help "Epoch length"
