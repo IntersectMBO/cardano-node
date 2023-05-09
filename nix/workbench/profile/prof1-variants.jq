@@ -417,7 +417,7 @@ def all_profile_variants:
   ##
    ($scenario_fixed_loaded * $doublet * $dataset_empty * $for_1blk * $no_filtering *
     { desc: "Stop as soon as we've seen a single block"
-    }) as $startstop_base
+    }) as $fast_base
   |
    ($scenario_fixed_loaded * $doublet * $dataset_empty * $for_3blk * $no_filtering *
     { desc: "Miniature dataset, CI-friendly duration, test scale"
@@ -560,21 +560,21 @@ def all_profile_variants:
     , desc: "Idle scenario:  start only the tracer & detach from tty;  no termination"
     }
 
-  ## Fastest -- start-stop
-  , $startstop_base *
-    { name: "startstop"
+  ## Fastest profile to pass analysis: just 1 block
+  , $fast_base *
+    { name: "fast"
     }
-  , $startstop_base * $p2p *
-    { name: "startstop-p2p"
+  , $fast_base * $p2p *
+    { name: "fast-p2p"
     }
-  , $startstop_base * $plutus_base * $plutus_loop_counter *
-    { name: "startstop-plutus"
+  , $fast_base * $plutus_base * $plutus_loop_counter *
+    { name: "fast-plutus"
     }
-  , $startstop_base * $without_tracer *
-    { name: "startstop-notracer"
+  , $fast_base * $without_tracer *
+    { name: "fast-notracer"
     }
-  , $startstop_base * $old_tracing *
-    { name: "startstop-oldtracing"
+  , $fast_base * $old_tracing *
+    { name: "fast-oldtracing"
     }
 
   ## CI variants: test duration, 3 blocks
