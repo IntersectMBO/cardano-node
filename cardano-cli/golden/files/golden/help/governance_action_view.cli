@@ -1,0 +1,7 @@
+Usage: cardano-cli governance action view --action-file FILE
+
+  View an action
+
+Available options:
+  --action-file FILE       Input filepath of the governance action.
+  -h,--help                Show this help text

@@ -1,6 +1,8 @@
 Usage: cardano-cli shelley drep registration-certificate 
             (--mainnet | --testnet-magic NATURAL)
-            (--drep-verification-key STRING | --cold-verification-key-file FILE)
+            ( --drep-verification-key STRING
+            | --drep-cold-verification-key-file FILE
+            )
             (--vrf-verification-key STRING | --vrf-verification-key-file FILE)
             [--metadata-url URL --metadata-hash HASH]
             --out-file FILE
@@ -14,7 +16,7 @@ Available options:
                            CARDANO_NODE_NETWORK_ID environment variable
   --drep-verification-key STRING
                            DRep verification key (Bech32 or hex-encoded).
-  --cold-verification-key-file FILE
+  --drep-cold-verification-key-file FILE
                            Filepath of the drep verification key.
   --vrf-verification-key STRING
                            VRF verification key (Bech32 or hex-encoded).

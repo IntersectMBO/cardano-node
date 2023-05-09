@@ -1,5 +1,7 @@
 Usage: cardano-cli shelley drep deregistration-certificate 
-            (--drep-verification-key STRING | --cold-verification-key-file FILE)
+            ( --drep-verification-key STRING
+            | --drep-cold-verification-key-file FILE
+            )
             --epoch NATURAL
             --out-file FILE
 
@@ -8,7 +10,7 @@ Usage: cardano-cli shelley drep deregistration-certificate
 Available options:
   --drep-verification-key STRING
                            DRep verification key (Bech32 or hex-encoded).
-  --cold-verification-key-file FILE
+  --drep-cold-verification-key-file FILE
                            Filepath of the drep verification key.
   --epoch NATURAL          The epoch number.
   --out-file FILE          The output file.

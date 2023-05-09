@@ -1,0 +1,15 @@
+Usage: cardano-cli governance action create-new-committee --epoch EPOCH
+            --drep-cold-verification-key-file FILE
+            [--cost-model-file FILE]
+            --out-file FILE
+
+  Create a new-committee action
+
+Available options:
+  --epoch EPOCH            The epoch number in which the update proposal is
+                           valid.
+  --drep-cold-verification-key-file FILE
+                           Filepath of the drep verification key.
+  --cost-model-file FILE   Filepath of the JSON formatted cost model
+  --out-file FILE          The output file.
+  -h,--help                Show this help text

@@ -1,5 +1,7 @@
 Usage: cardano-cli shelley drep id 
-            (--drep-verification-key STRING | --cold-verification-key-file FILE)
+            ( --drep-verification-key STRING
+            | --drep-cold-verification-key-file FILE
+            )
             [--output-format STRING]
 
   Build DRep id from the offline key
@@ -7,7 +9,7 @@ Usage: cardano-cli shelley drep id
 Available options:
   --drep-verification-key STRING
                            DRep verification key (Bech32 or hex-encoded).
-  --cold-verification-key-file FILE
+  --drep-cold-verification-key-file FILE
                            Filepath of the drep verification key.
   --output-format STRING   Optional output format. Accepted output formats are
                            "hex" and "bech32" (default is "bech32").

@@ -62,9 +62,10 @@ import           Cardano.Chain.Common (BlockCount (BlockCount))
 import           Cardano.CLI.Common.Parsers (pConsensusModeParams, pNetworkId, pSocketPath)
 import           Cardano.CLI.Environment (EnvCli (..))
 import           Cardano.CLI.Shelley.Commands
-import           Cardano.CLI.Shelley.Key (PaymentVerifier (..), PoolDelegationTarget (..),
-                   StakeIdentifier (..), StakeVerifier (..), VerificationKeyOrFile (..),
-                   VerificationKeyOrHashOrFile (..), VerificationKeyTextOrFile (..))
+import           Cardano.CLI.Shelley.Key (DRepDelegationTarget (..), PaymentVerifier (..),
+                   PoolDelegationTarget (..), StakeIdentifier (..), StakeVerifier (..),
+                   VerificationKeyOrFile (..), VerificationKeyOrHashOrFile (..),
+                   VerificationKeyTextOrFile (..))
 import           Cardano.CLI.Types
 
 {- HLINT ignore "Use <$>" -}
@@ -101,7 +102,7 @@ parseShelleyCommands envCli =
     , Opt.command "genesis" $
         Opt.info (GenesisCmd <$> pGenesisCmd envCli) $ Opt.progDesc "Genesis block commands"
     , Opt.command "governance" $
-        Opt.info (GovernanceCmd <$> pGovernanceCmd) $ Opt.progDesc "Governance commands"
+        Opt.info (GovernanceCmd <$> pGovernanceCmd envCli) $ Opt.progDesc "Governance commands"
     , Opt.command "text-view" $
         Opt.info (TextViewCmd <$> pTextViewCmd) . Opt.progDesc $ mconcat
           [ "Commands for dealing with Shelley TextView files. "
@@ -377,8 +378,10 @@ pStakeAddressCmd envCli =
           (Opt.info pStakeAddressRegistrationCert $ Opt.progDesc "Create a stake address registration certificate")
       , subParser "deregistration-certificate"
           (Opt.info pStakeAddressDeregistrationCert $ Opt.progDesc "Create a stake address deregistration certificate")
-      , subParser "delegation-certificate"
+      , subParser "pool-delegation-certificate"
           (Opt.info pStakeAddressPoolDelegationCert $ Opt.progDesc "Create a stake address pool delegation certificate")
+      , subParser "drep-delegation-certificate"
+          (Opt.info pStakeAddressDRepDelegationCert $ Opt.progDesc "Create a stake address drep delegation certificate")
       ]
   where
     pStakeAddressKeyGen :: Parser StakeAddressCmd
@@ -414,6 +417,13 @@ pStakeAddressCmd envCli =
       StakeCredentialPoolDelegationCert
         <$> pStakeIdentifier
         <*> pPoolDelegationTarget
+        <*> pOutputFile
+
+    pStakeAddressDRepDelegationCert :: Parser StakeAddressCmd
+    pStakeAddressDRepDelegationCert =
+      StakeCredentialDRepDelegationCert
+        <$> pStakeIdentifier
+        <*> pDRepDelegationTarget
         <*> pOutputFile
 
 pKeyCmd :: Parser KeyCmd
@@ -1113,8 +1123,223 @@ pQueryCmd envCli =
         <*> pOperationalCertificateFile
         <*> pMaybeOutputFile
 
-pGovernanceCmd :: Parser GovernanceCmd
-pGovernanceCmd =
+pGovernanceVoteCmd :: EnvCli -> Parser GovernanceVoteCmd
+pGovernanceVoteCmd envCli =
+  asum
+    [ subParser "create"
+      $ Opt.info pVoteCreate
+      $ Opt.progDesc "Create a vote"
+    , subParser "view"
+      $ Opt.info pVoteView
+      $ Opt.progDesc "View a vote"
+    , subParser "submit"
+      $ Opt.info pVoteSubmit
+      $ Opt.progDesc "Submit a vote"
+    ]
+  where
+    pVoteCreate :: Parser GovernanceVoteCmd
+    pVoteCreate =
+      GovernanceVoteCreate
+        <$> pSigningKeyFileIn
+        <*> pActionFileIn
+        <*> pVote
+        <*> pOutputFile
+
+    pVoteView :: Parser GovernanceVoteCmd
+    pVoteView =
+      GovernanceVoteView
+        <$> pVoteFileIn
+
+    pVoteSubmit :: Parser GovernanceVoteCmd
+    pVoteSubmit =
+      GovernanceVoteSubmit
+        <$> pSocketPath envCli
+        <*> pNetworkId envCli
+        <*> pVoteFileIn
+
+    pVote :: Parser Vote
+    pVote =
+      asum
+        [ Opt.flag' VoteYes $ mconcat
+            [ Opt.long "vote-yes"
+            , Opt.help "Specify the Byron era"
+            ]
+        , Opt.flag' VoteNo $ mconcat
+            [ Opt.long "vote-no"
+            , Opt.help "Specify the Byron era"
+            ]
+        , Opt.flag' VoteAbstain $ mconcat
+            [ Opt.long "vote-abstain"
+            , Opt.help "Specify the Byron era"
+            ]
+        ]
+
+pActionFileIn :: Parser (File GovernanceAction In)
+pActionFileIn =
+  fmap File $ Opt.strOption $ mconcat
+    [ Opt.long "action-file"
+    , Opt.metavar "FILE"
+    , Opt.help "Input filepath of the governance action."
+    , Opt.completer (Opt.bashCompleter "file")
+    ]
+
+pVoteFileIn :: Parser (File GovernanceVote In)
+pVoteFileIn =
+  fmap File $ Opt.strOption $ mconcat
+    [ Opt.long "vote-file"
+    , Opt.metavar "FILE"
+    , Opt.help "Input filepath of the governance vote."
+    , Opt.completer (Opt.bashCompleter "file")
+    ]
+
+pGovernanceActionCmd :: EnvCli -> Parser GovernanceActionCmd
+pGovernanceActionCmd envCli =
+  asum
+    [ subParser "create-no-confidence-motion"
+      $ Opt.info pActionCreateNoConfidenceMotion
+      $ Opt.progDesc "Create a no-confidence motion action"
+    , subParser "create-new-committee"
+      $ Opt.info pActionCreateNewCommittee
+      $ Opt.progDesc "Create a new-committee action"
+    , subParser "create-constitution-update"
+      $ Opt.info pActionCreateConstitutionUpdate
+      $ Opt.progDesc "Create a constitution-update action"
+    , subParser "create-hard-fork-initiation"
+      $ Opt.info pActionCreateHardForkInitiation
+      $ Opt.progDesc "Create a hard-fork-initiation action"
+    , subParser "create-protocol-parameter-update"
+      $ Opt.info pActionCreateProtocolParameterUpdate
+      $ Opt.progDesc "Create an protocol-parameter-update action"
+    , subParser "create-treasury-withdrawal"
+      $ Opt.info pActionCreateTreasuryWithdrawal
+      $ Opt.progDesc "Create an treasury-withdrawal action"
+    , subParser "create-info"
+      $ Opt.info pActionCreateInfo
+      $ Opt.progDesc "Create an info action"
+    , subParser "view"
+      $ Opt.info pActionView
+      $ Opt.progDesc "View an action"
+    , subParser "query"
+      $ Opt.info pActionQuery
+      $ Opt.progDesc "Query an on-chain action"
+    , subParser "submit"
+      $ Opt.info pActionSubmit
+      $ Opt.progDesc "Submit an action"
+    ]
+  where
+    pActionCreateNoConfidenceMotion :: Parser GovernanceActionCmd
+    pActionCreateNoConfidenceMotion =
+      GovernanceActionCreate
+        <$> pEpochNoUpdateProp
+        <*> some pDRepVerificationKeyFile
+        <*> pure GovernanceActionOfNoConfidenceMotion
+        <*> optional pCostModels
+        <*> pOutputFile
+
+    pActionCreateNewCommittee :: Parser GovernanceActionCmd
+    pActionCreateNewCommittee =
+      GovernanceActionCreate
+        <$> pEpochNoUpdateProp
+        <*> some pDRepVerificationKeyFile
+        <*> pure GovernanceActionOfNewCommittee
+        <*> optional pCostModels
+        <*> pOutputFile
+
+    pActionCreateConstitutionUpdate :: Parser GovernanceActionCmd
+    pActionCreateConstitutionUpdate =
+      GovernanceActionCreate
+        <$> pEpochNoUpdateProp
+        <*> some pDRepVerificationKeyFile
+        <*> pure GovernanceActionOfConstitutionUpdate
+        <*> optional pCostModels
+        <*> pOutputFile
+
+    pActionCreateHardForkInitiation :: Parser GovernanceActionCmd
+    pActionCreateHardForkInitiation =
+      GovernanceActionCreate
+        <$> pEpochNoUpdateProp
+        <*> some pDRepVerificationKeyFile
+        <*> pure GovernanceActionOfHardForkInitiation
+        <*> optional pCostModels
+        <*> pOutputFile
+
+    pActionCreateProtocolParameterUpdate :: Parser GovernanceActionCmd
+    pActionCreateProtocolParameterUpdate =
+      GovernanceActionCreate
+        <$> pEpochNoUpdateProp
+        <*> some pDRepVerificationKeyFile
+        <*> (GovernanceActionOfProtocolParameterUpdate <$> pProtocolParametersUpdate)
+        <*> optional pCostModels
+        <*> pOutputFile
+
+    pActionCreateTreasuryWithdrawal :: Parser GovernanceActionCmd
+    pActionCreateTreasuryWithdrawal =
+      GovernanceActionCreate
+        <$> pEpochNoUpdateProp
+        <*> some pDRepVerificationKeyFile
+        <*> pure GovernanceActionOfTreasuryWithdrawal
+        <*> optional pCostModels
+        <*> pOutputFile
+
+    pActionCreateInfo :: Parser GovernanceActionCmd
+    pActionCreateInfo =
+      GovernanceActionCreate
+        <$> pEpochNoUpdateProp
+        <*> some pDRepVerificationKeyFile
+        <*> pure GovernanceActionOfInfo
+        <*> optional pCostModels
+        <*> pOutputFile
+
+    pActionView :: Parser GovernanceActionCmd
+    pActionView =
+      GovernanceActionView
+        <$> pActionFileIn
+
+    pActionQuery :: Parser GovernanceActionCmd
+    pActionQuery =
+      GovernanceActionQuery
+        <$> pSocketPath envCli
+        <*> pNetworkId envCli
+        <*> pGovernanceActionId
+        <*> optional pGovernanceActionQueryResultOut
+
+    pActionSubmit :: Parser GovernanceActionCmd
+    pActionSubmit =
+      GovernanceActionSubmit
+        <$> pSocketPath envCli
+        <*> pNetworkId envCli
+        <*> pActionFileIn
+        <*> optional pGovernanceActionReceiptOut
+
+    pGovernanceActionId :: Parser GovernanceActionId
+    pGovernanceActionId =
+      fmap (const GovernanceActionId) $
+        Opt.strOption @String $ mconcat
+          [ Opt.long "action-id"
+          , Opt.metavar "STRING"
+          , Opt.help "The governance action id."
+          ]
+
+    pGovernanceActionReceiptOut :: Parser (File GovernanceActionReceipt Out)
+    pGovernanceActionReceiptOut =
+      fmap File $ Opt.strOption $ mconcat
+        [ Opt.long "out-file"
+        , Opt.metavar "FILE"
+        , Opt.help "Output filepath of the governance action receipt."
+        , Opt.completer (Opt.bashCompleter "file")
+        ]
+
+    pGovernanceActionQueryResultOut :: Parser (File GovernanceActionQueryResult Out)
+    pGovernanceActionQueryResultOut =
+      fmap File $ Opt.strOption $ mconcat
+        [ Opt.long "out-file"
+        , Opt.metavar "FILE"
+        , Opt.help "Output filepath of the governance action receipt."
+        , Opt.completer (Opt.bashCompleter "file")
+        ]
+
+pGovernanceCmd :: EnvCli -> Parser GovernanceCmd
+pGovernanceCmd envCli =
   asum
     [ subParser "create-mir-certificate"
       $ Opt.info (pMIRPayStakeAddresses <|> mirCertParsers)
@@ -1122,6 +1347,12 @@ pGovernanceCmd =
     , subParser "create-genesis-key-delegation-certificate"
       $ Opt.info pGovernanceGenesisKeyDelegationCertificate
       $ Opt.progDesc "Create a genesis key delegation certificate"
+    , subParser "action"
+      $ Opt.info pActionCmd
+      $ Opt.progDesc "Commands related to governance actions"
+    , subParser "vote"
+      $ Opt.info pVoteCmd
+      $ Opt.progDesc "Commands related to governance votes"
     , subParser "create-update-proposal"
       $ Opt.info pUpdateProposal
       $ Opt.progDesc "Create an update proposal"
@@ -1186,6 +1417,12 @@ pGovernanceCmd =
             (  Opt.long "treasury"
             <> Opt.help "Use the treasury pot."
             )
+
+    pActionCmd :: Parser GovernanceCmd
+    pActionCmd = GovernanceActionCmd <$> pGovernanceActionCmd envCli
+
+    pVoteCmd :: Parser GovernanceCmd
+    pVoteCmd = GovernanceVoteCmd <$> pGovernanceVoteCmd envCli
 
     pUpdateProposal :: Parser GovernanceCmd
     pUpdateProposal = GovernanceUpdateProposal
@@ -2808,7 +3045,7 @@ pDRepVerificationKeyFile :: Parser (VerificationKeyFile In)
 pDRepVerificationKeyFile =
   fmap File $ asum
     [ Opt.strOption $ mconcat
-      [ Opt.long "cold-verification-key-file"
+      [ Opt.long "drep-cold-verification-key-file"
       , Opt.metavar "FILE"
       , Opt.help "Filepath of the drep verification key."
       , Opt.completer (Opt.bashCompleter "file")
@@ -2843,6 +3080,42 @@ pStakePoolVerificationKeyOrHashOrFile
 pStakePoolVerificationKeyOrHashOrFile =
   VerificationKeyOrFile <$> pStakePoolVerificationKeyOrFile
     <|> VerificationKeyHash <$> pStakePoolVerificationKeyHash
+
+pDRepDelegationTarget
+  :: Parser DRepDelegationTarget
+pDRepDelegationTarget = DRepDelegationTarget <$> pDRepVerificationKeyOrHashOrFile
+
+pDRepVerificationKeyOrHashOrFile
+  :: Parser (VerificationKeyOrHashOrFile DRepKey)
+pDRepVerificationKeyOrHashOrFile =
+  VerificationKeyOrFile <$> pDRepVerificationKeyOrFile
+    <|> VerificationKeyHash <$> pDRepVerificationKeyHash
+
+pDRepVerificationKeyHash :: Parser (Hash DRepKey)
+pDRepVerificationKeyHash =
+    Opt.option
+      (pBech32DRepId <|> pHexDRepId)
+        (   Opt.long "stake-pool-id"
+        <>  Opt.metavar "STAKE_POOL_ID"
+        <>  Opt.help
+            (   "Stake pool ID/verification key hash (either Bech32-encoded or hex-encoded).  "
+            <>  "Zero or more occurences of this option is allowed."
+            )
+        )
+  where
+    pHexDRepId :: ReadM (Hash DRepKey)
+    pHexDRepId =
+      Opt.eitherReader $
+        first displayError
+          . deserialiseFromRawBytesHex (AsHash AsDRepKey)
+          . BSC.pack
+
+    pBech32DRepId :: ReadM (Hash DRepKey)
+    pBech32DRepId =
+      Opt.eitherReader $
+        first displayError
+          . deserialiseFromBech32 (AsHash AsDRepKey)
+          . Text.pack
 
 pVrfVerificationKeyFile :: Parser (VerificationKeyFile In)
 pVrfVerificationKeyFile =
