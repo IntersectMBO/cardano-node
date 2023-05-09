@@ -117,7 +117,7 @@ data StakeAddressCmd
   | StakeCredentialPoolDelegationCert
       StakeIdentifier
       PoolDelegationTarget
-      (File () Out)
+      (File Certificate Out)
   | StakeCredentialDeRegistrationCert StakeIdentifier (File () Out)
   deriving Show
 

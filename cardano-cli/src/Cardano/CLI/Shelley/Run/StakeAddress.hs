@@ -133,7 +133,7 @@ runStakeCredentialPoolDelegationCert
   -> PoolDelegationTarget
   -- ^ Delegatee stake pool verification key or verification key file or
   -- verification key hash.
-  -> File () Out
+  -> File Certificate Out
   -> ExceptT ShelleyStakeAddressCmdError IO ()
 runStakeCredentialPoolDelegationCert stakeVerifier delegationTarget outFp =
   case delegationTarget of
