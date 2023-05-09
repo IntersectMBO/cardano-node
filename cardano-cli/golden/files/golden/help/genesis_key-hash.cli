@@ -1,0 +1,8 @@
+Usage: cardano-cli genesis key-hash --verification-key-file FILE
+
+  Print the identifier (hash) of a public key
+
+Available options:
+  --verification-key-file FILE
+                           Input filepath of the verification key.
+  -h,--help                Show this help text

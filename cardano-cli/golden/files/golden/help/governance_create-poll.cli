@@ -1,0 +1,14 @@
+Usage: cardano-cli governance create-poll --question STRING
+            (--answer STRING)
+            [--nonce UINT]
+            --out-file FILE
+
+  Create an SPO poll
+
+Available options:
+  --question STRING        The question for the poll.
+  --answer STRING          A possible choice for the poll. The option is
+                           repeatable.
+  --nonce UINT             An (optional) nonce for non-replayability.
+  --out-file FILE          The output file.
+  -h,--help                Show this help text

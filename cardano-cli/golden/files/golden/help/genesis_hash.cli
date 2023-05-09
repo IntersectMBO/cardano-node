@@ -1,0 +1,7 @@
+Usage: cardano-cli genesis hash --genesis FILE
+
+  Compute the hash of a genesis file
+
+Available options:
+  --genesis FILE           The genesis file.
+  -h,--help                Show this help text

@@ -1,0 +1,13 @@
+Usage: cardano-cli address (key-gen | key-hash | build | info)
+
+  Payment address commands
+
+Available options:
+  -h,--help                Show this help text
+
+Available commands:
+  key-gen                  Create an address key pair.
+  key-hash                 Print the hash of an address key.
+  build                    Build a Shelley payment address, with optional
+                           delegation to a stake address.
+  info                     Print information about an address.

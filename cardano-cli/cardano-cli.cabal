@@ -183,6 +183,7 @@ library test-lib
                       , exceptions
                       , hedgehog
                       , hedgehog-extras ^>= 0.4.2
+                      , process
                       , transformers
 
 test-suite cardano-cli-test

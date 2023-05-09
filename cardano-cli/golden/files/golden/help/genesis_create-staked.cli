@@ -1,0 +1,50 @@
+Usage: cardano-cli genesis create-staked --genesis-dir DIR
+            [--gen-genesis-keys INT]
+            [--gen-utxo-keys INT]
+            [--gen-pools INT]
+            [--gen-stake-delegs INT]
+            [--start-time UTC-TIME]
+            [--supply LOVELACE]
+            [--supply-delegated LOVELACE]
+            (--mainnet | --testnet-magic NATURAL)
+            [--bulk-pool-cred-files INT]
+            [--bulk-pools-per-file INT]
+            [--num-stuffed-utxo INT]
+            [--relay-specification-file FILE]
+
+  Create a staked Shelley genesis file from a genesis template and
+  genesis/delegation/spending keys.
+
+Available options:
+  --genesis-dir DIR        The genesis directory containing the genesis template
+                           and required genesis/delegation/spending keys.
+  --gen-genesis-keys INT   The number of genesis keys to make [default is 3].
+  --gen-utxo-keys INT      The number of UTxO keys to make [default is 0].
+  --gen-pools INT          The number of stake pool credential sets to make
+                           [default is 0].
+  --gen-stake-delegs INT   The number of stake delegator credential sets to make
+                           [default is 0].
+  --start-time UTC-TIME    The genesis start time in YYYY-MM-DDThh:mm:ssZ
+                           format. If unspecified, will be the current time +30
+                           seconds.
+  --supply LOVELACE        The initial coin supply in Lovelace which will be
+                           evenly distributed across initial, non-delegating
+                           stake holders.
+  --supply-delegated LOVELACE
+                           The initial coin supply in Lovelace which will be
+                           evenly distributed across initial, delegating stake
+                           holders.
+  --mainnet                Use the mainnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --testnet-magic NATURAL  Specify a testnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --bulk-pool-cred-files INT
+                           Generate bulk pool credential files [default is 0].
+  --bulk-pools-per-file INT
+                           Each bulk pool to contain this many pool credential
+                           sets [default is 0].
+  --num-stuffed-utxo INT   The number of fake UTxO entries to generate [default
+                           is 0].
+  --relay-specification-file FILE
+                           JSON file specified the relays of each stake pool.
+  -h,--help                Show this help text

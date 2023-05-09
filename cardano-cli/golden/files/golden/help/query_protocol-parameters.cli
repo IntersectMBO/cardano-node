@@ -1,0 +1,30 @@
+Usage: cardano-cli query protocol-parameters --socket-path SOCKET_PATH
+            [ --shelley-mode
+            | --byron-mode [--epoch-slots SLOTS]
+            | --cardano-mode [--epoch-slots SLOTS]
+            ]
+            (--mainnet | --testnet-magic NATURAL)
+            [--out-file FILE]
+
+  Get the node's current protocol parameters
+
+Available options:
+  --socket-path SOCKET_PATH
+                           Path to the node socket. This overrides the
+                           CARDANO_NODE_SOCKET_PATH environment variable. The
+                           argument is optional if CARDANO_NODE_SOCKET_PATH is
+                           defined and mandatory otherwise.
+  --shelley-mode           For talking to a node running in Shelley-only mode.
+  --byron-mode             For talking to a node running in Byron-only mode.
+  --epoch-slots SLOTS      The number of slots per epoch for the Byron era.
+                           (default: 21600)
+  --cardano-mode           For talking to a node running in full Cardano mode
+                           (default).
+  --epoch-slots SLOTS      The number of slots per epoch for the Byron era.
+                           (default: 21600)
+  --mainnet                Use the mainnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --testnet-magic NATURAL  Specify a testnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --out-file FILE          Optional output file. Default is to write to stdout.
+  -h,--help                Show this help text

@@ -1,0 +1,5 @@
+Invalid argument `COMMAND'
+
+Usage: cardano-cli byron miscellaneous COMMAND
+
+  Byron miscellaneous commands

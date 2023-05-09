@@ -1,0 +1,108 @@
+Usage: cardano-cli governance create-update-proposal --out-file FILE
+            --epoch EPOCH
+            (--genesis-verification-key-file FILE)
+            [--protocol-major-version NATURAL --protocol-minor-version NATURAL]
+            [--decentralization-parameter RATIONAL]
+            [--extra-entropy HEX | --reset-extra-entropy]
+            [--max-block-header-size NATURAL]
+            [--max-block-body-size NATURAL]
+            [--max-tx-size NATURAL]
+            [--min-fee-constant LOVELACE]
+            [--min-fee-linear LOVELACE]
+            [--min-utxo-value NATURAL]
+            [--key-reg-deposit-amt NATURAL]
+            [--pool-reg-deposit NATURAL]
+            [--min-pool-cost NATURAL]
+            [--pool-retirement-epoch-boundary EPOCH_BOUNDARY]
+            [--number-of-pools NATURAL]
+            [--pool-influence RATIONAL]
+            [--monetary-expansion RATIONAL]
+            [--treasury-expansion RATIONAL]
+            [--utxo-cost-per-word LOVELACE]
+            [--price-execution-steps RATIONAL --price-execution-memory RATIONAL]
+            [--max-tx-execution-units (INT, INT)]
+            [--max-block-execution-units (INT, INT)]
+            [--max-value-size INT]
+            [--collateral-percent INT]
+            [--max-collateral-inputs INT]
+            [--utxo-cost-per-byte LOVELACE]
+            [--cost-model-file FILE]
+
+  Create an update proposal
+
+Available options:
+  --out-file FILE          The output file.
+  --epoch EPOCH            The epoch number in which the update proposal is
+                           valid.
+  --genesis-verification-key-file FILE
+                           Filepath of the genesis verification key.
+  --protocol-major-version NATURAL
+                           Major protocol version. An increase indicates a hard
+                           fork.
+  --protocol-minor-version NATURAL
+                           Minor protocol version. An increase indicates a soft
+                           fork (old software canvalidate but not produce new
+                           blocks).
+  --decentralization-parameter RATIONAL
+                           Decentralization parameter.
+  --extra-entropy HEX      Praos extra entropy seed, as a hex byte string.
+  --reset-extra-entropy    Reset the Praos extra entropy to none.
+  --max-block-header-size NATURAL
+                           Maximum block header size.
+  --max-block-body-size NATURAL
+                           Maximal block body size.
+  --max-tx-size NATURAL    Maximum transaction size.
+  --min-fee-constant LOVELACE
+                           The constant factor for the minimum fee calculation.
+  --min-fee-linear LOVELACE
+                           The linear factor per byte for the minimum fee
+                           calculation.
+  --min-utxo-value NATURAL The minimum allowed UTxO value (Shelley to Mary
+                           eras).
+  --key-reg-deposit-amt NATURAL
+                           Key registration deposit amount.
+  --pool-reg-deposit NATURAL
+                           The amount of a pool registration deposit.
+  --min-pool-cost NATURAL  The minimum allowed cost parameter for stake pools.
+  --pool-retirement-epoch-boundary EPOCH_BOUNDARY
+                           Epoch bound on pool retirement.
+  --number-of-pools NATURAL
+                           Desired number of pools.
+  --pool-influence RATIONAL
+                           Pool influence.
+  --monetary-expansion RATIONAL
+                           Monetary expansion.
+  --treasury-expansion RATIONAL
+                           Treasury expansion.
+  --utxo-cost-per-word LOVELACE
+                           Cost in lovelace per unit of UTxO storage (from
+                           Alonzo era).
+  --price-execution-steps RATIONAL
+                           Step price of execution units for script languages
+                           that use them (from Alonzo era). (Examples: '1.1',
+                           '11/10')
+  --price-execution-memory RATIONAL
+                           Memory price of execution units for script languages
+                           that use them (from Alonzo era). (Examples: '1.1',
+                           '11/10')
+  --max-tx-execution-units (INT, INT)
+                           Max total script execution resources units allowed
+                           per tx (from Alonzo era). They are denominated as
+                           follows (steps, memory).
+  --max-block-execution-units (INT, INT)
+                           Max total script execution resources units allowed
+                           per block (from Alonzo era). They are denominated as
+                           follows (steps, memory).
+  --max-value-size INT     Max size of a multi-asset value in a tx output (from
+                           Alonzo era).
+  --collateral-percent INT The percentage of the script contribution to the
+                           txfee that must be provided as collateral inputs when
+                           including Plutus scripts (from Alonzo era).
+  --max-collateral-inputs INT
+                           The maximum number of collateral inputs allowed in a
+                           transaction (from Alonzo era).
+  --utxo-cost-per-byte LOVELACE
+                           Cost in lovelace per unit of UTxO storage (from
+                           Babbage era).
+  --cost-model-file FILE   Filepath of the JSON formatted cost model
+  -h,--help                Show this help text
