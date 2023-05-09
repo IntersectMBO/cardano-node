@@ -70,7 +70,6 @@ in
       "report ${name}-log $out ${name}/stdout";
 
     workbench-profile-run =
-      { trace ? false }:
       let
         run = pkgs.runCommand "workbench-run-${backendName}-${profileName}"
           { requiredSystemFeatures = [ "benchmark" ];
@@ -100,7 +99,6 @@ in
 
             cmd=(
               wb
-              ${pkgs.lib.optionalString trace "--trace"}
               start
               --profile-data        ${profileData}
               --backend-data        ${backendData}

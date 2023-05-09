@@ -216,6 +216,10 @@
             workbench-ci-test =
               workbenchTest { profileName        = "ci-test-bage";
                             };
+            workbench-ci-test-trace =
+              workbenchTest { profileName        = "ci-test-bage";
+                              workbenchStartArgs = [ "--trace" ];
+                            };
 
             inherit (pkgs) all-profiles-json;
 
