@@ -32,10 +32,10 @@ local op=${1:-$profile_default_op}; test $# -gt 0 && shift
 
 case "$op" in
     profile-names | names | list | lsp )
-        profile generate-all | jq 'keys'
+        profile all-profiles | jq 'keys'
         ;;
 
-    all-profiles | generate-all | all )
+    all-profiles | all )
         with_era_profiles '
           map (generate_all_era_profiles(.; null; null))
           | add
@@ -57,7 +57,7 @@ case "$op" in
     compose )
         local profile_names="$@"
 
-        profile generate-all |
+        profile all-profiles |
         jq --argjson profile_names "$(to_jsonlist ${profile_names[*]})" '
           . as $profiles
           | $profile_names | debug
@@ -71,7 +71,7 @@ case "$op" in
 
         local json=$(if test -f  "$name"
                      then jq '.' "$name"
-                     else profile generate-all |
+                     else profile all-profiles |
                              jq '.["'$name'"]'
                      fi)
 

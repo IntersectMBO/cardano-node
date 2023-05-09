@@ -198,7 +198,7 @@ start()
 
         --help )                         usage_start
                                          exit 1;;
-        * ) fatal "while parsing remaining 'wb start' args:  $*";;
+        * ) fatal "while parsing remaining '$(blue wb start)$(red \' args):  $(white $*)";;
        esac; shift; done
 
     if test -n "$cabal_mode"

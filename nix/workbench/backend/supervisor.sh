@@ -99,9 +99,9 @@ EOF
            i=$((i+1))
            if test $i -ge $patience
            then echo
-                progress "supervisor" "$(red FATAL):  workbench:  supervisor:  patience ran out for $(white $node) after ${patience}s, socket $socket"
+                progress "supervisor" "$(red FATAL):  workbench:  supervisor:  patience ran out for $(white $node) after ${patience}s, $(blue socket) $(red $socket)"
                 backend_supervisor stop-cluster "$dir"
-                fatal "$node startup did not succeed:  check logs in $(dirname $socket)/stdout & stderr"
+                fatal "$node startup did not succeed:  check logs in $(white $(dirname $socket)/stdout) $(red \&) $(white stderr)"
            fi
            echo -ne "\b\b\b\b"
         done >&2
@@ -236,7 +236,8 @@ EOF
 
         supervisorctl stop all || true
 
-        if test -f "${dir}/supervisor/supervisord.pid"
+        if test -f ${dir}/supervisor/supervisord.pid -a \
+                -f ${dir}/supervisor/child.pids
         then kill $(<${dir}/supervisor/supervisord.pid) $(<${dir}/supervisor/child.pids) 2>/dev/null
         else pkill supervisord
         fi

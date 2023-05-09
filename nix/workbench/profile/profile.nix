@@ -104,7 +104,7 @@ rec {
     in
     pkgs.runCommand "workbench-profile-${profileName}"
       { buildInputs = [];
-        profileConfigJsonPath = profile.JSON;
+        profileJsonPath = profile.JSON;
         nodeSpecsJsonPath = profile.node-specs.JSON;
         nodeServices =
           __toJSON
@@ -134,11 +134,16 @@ rec {
             config               = config.JSON;
             start                = startupScript.JSON;
           };
-        passAsFile = [ "nodeServices" "generatorService" "tracerService" ];
+        passAsFile =
+          [
+            "nodeServices"
+            "generatorService"
+            "tracerService"
+          ];
       }
       ''
       mkdir $out
-      cp    $profileConfigJsonPath        $out/profile.json
+      cp    $profileJsonPath              $out/profile.json
       cp    $nodeSpecsJsonPath            $out/node-specs.json
       cp    $nodeServicesPath             $out/node-services.json
       cp    $generatorServicePath         $out/generator-service.json

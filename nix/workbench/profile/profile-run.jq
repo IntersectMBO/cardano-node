@@ -102,10 +102,9 @@ def profile_node_specs($env; $prof; $topology):
             end)
          , region:
            ( .i as $i
-             |
-            $topology[ 0 ].coreNodes
-             |
-             map( select( .nodeId == $i ) )[0] | .region
+             | $topology[ 0 ].coreNodes
+             | map( select( .nodeId == $i ) )[0]
+             | .region
            )
          }))
   +
@@ -121,10 +120,9 @@ def profile_node_specs($env; $prof; $topology):
             end)
          , region:
            ( .i as $i
-             |
-            $topology[ 0 ].relayNodes
-             |
-             map( select( .nodeId == $i ) )[0] | .region
+             | $topology[ 0 ].relayNodes
+             | map( select( .nodeId == $i ) )[0]
+             | .region
            )
          }))
 ## For each node spec:

@@ -155,4 +155,8 @@ in
   inherit workbench-profile-run;
 
   inherit batchName stateDir overlay;
+
+  inherit workbench-interactive-start;
+  inherit workbench-interactive-stop;
+  inherit workbench-interactive-restart;
 }
