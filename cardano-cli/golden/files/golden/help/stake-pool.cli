@@ -1,0 +1,18 @@
+Usage: cardano-cli stake-pool 
+            ( registration-certificate
+            | deregistration-certificate
+            | id
+            | metadata-hash
+            )
+
+  Stake pool commands
+
+Available options:
+  -h,--help                Show this help text
+
+Available commands:
+  registration-certificate Create a stake pool registration certificate
+  deregistration-certificate
+                           Create a stake pool deregistration certificate
+  id                       Build pool id from the offline key
+  metadata-hash            Print the hash of pool metadata.

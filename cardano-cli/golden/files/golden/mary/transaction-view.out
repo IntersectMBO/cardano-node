@@ -1,0 +1,44 @@
+auxiliary scripts: null
+certificates: null
+collateral inputs: null
+era: Mary
+fee: 139 Lovelace
+inputs:
+- fe5dd07fb576bff960d6e066eade5b26cdb5afebe29f76ea58d0a098bce5d891#135
+metadata: null
+mint:
+  policy a06ee5ffdd7f9b5bd992eb9543f44418323f81229526b77b0e4be067:
+    asset 736b79 (sky): 142
+    asset cafe: 132
+    asset dead: 136
+  policy d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf:
+    asset 736e6f77 (snow): 138
+    asset f00d: 134
+    default asset: 130
+outputs:
+- address: addr_test1qrefnr4k09pvge6dq83v6s67ruter8sftmky8qrmkqqsxy7q5psgn8tgqmupq4r79jmxlyk4eqt6z6hj5g8jd8393msqaw47f4
+  address era: Shelley
+  amount:
+    lovelace: 138
+    policy a06ee5ffdd7f9b5bd992eb9543f44418323f81229526b77b0e4be067:
+      asset 736b79 (sky): 142
+      asset cafe: 132
+      asset dead: 136
+    policy d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf:
+      asset 736e6f77 (snow): 138
+      asset f00d: 134
+      default asset: 130
+  network: Testnet
+  payment credential key hash: f2998eb67942c4674d01e2cd435e1f17919e095eec43807bb0010313
+  reference script: null
+  stake reference:
+    stake credential key hash: c0a060899d6806f810547e2cb66f92d5c817a16af2a20f269e258ee0
+reference inputs: null
+required signers (payment key hashes needed for scripts): null
+return collateral: null
+total collateral: null
+update proposal: null
+validity range:
+  lower bound: 140
+  upper bound: null
+withdrawals: null

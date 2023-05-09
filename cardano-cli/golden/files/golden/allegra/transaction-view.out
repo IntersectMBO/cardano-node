@@ -1,0 +1,27 @@
+auxiliary scripts: null
+certificates: null
+collateral inputs: null
+era: Allegra
+fee: 100 Lovelace
+inputs:
+- fe5dd07fb576bff960d6e066eade5b26cdb5afebe29f76ea58d0a098bce5d891#94
+metadata: null
+mint: null
+outputs:
+- address: addr_test1qrefnr4k09pvge6dq83v6s67ruter8sftmky8qrmkqqsxy7q5psgn8tgqmupq4r79jmxlyk4eqt6z6hj5g8jd8393msqaw47f4
+  address era: Shelley
+  amount: 99 Lovelace
+  network: Testnet
+  payment credential key hash: f2998eb67942c4674d01e2cd435e1f17919e095eec43807bb0010313
+  reference script: null
+  stake reference:
+    stake credential key hash: c0a060899d6806f810547e2cb66f92d5c817a16af2a20f269e258ee0
+reference inputs: null
+required signers (payment key hashes needed for scripts): null
+return collateral: null
+total collateral: null
+update proposal: null
+validity range:
+  lower bound: null
+  upper bound: 101
+withdrawals: null

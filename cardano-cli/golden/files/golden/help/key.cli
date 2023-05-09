@@ -1,0 +1,40 @@
+Usage: cardano-cli key 
+            ( verification-key
+            | non-extended-key
+            | convert-byron-key
+            | convert-byron-genesis-vkey
+            | convert-itn-key
+            | convert-itn-extended-key
+            | convert-itn-bip32-key
+            | convert-cardano-address-key
+            )
+
+  Key utility commands
+
+Available options:
+  -h,--help                Show this help text
+
+Available commands:
+  verification-key         Get a verification key from a signing key. This
+                           supports all key types.
+  non-extended-key         Get a non-extended verification key from an extended
+                           verification key. This supports all extended key
+                           types.
+  convert-byron-key        Convert a Byron payment, genesis or genesis delegate
+                           key (signing or verification) to a corresponding
+                           Shelley-format key.
+  convert-byron-genesis-vkey
+                           Convert a Base64-encoded Byron genesis verification
+                           key to a Shelley genesis verification key
+  convert-itn-key          Convert an Incentivized Testnet (ITN) non-extended
+                           (Ed25519) signing or verification key to a
+                           corresponding Shelley stake key
+  convert-itn-extended-key Convert an Incentivized Testnet (ITN) extended
+                           (Ed25519Extended) signing key to a corresponding
+                           Shelley stake signing key
+  convert-itn-bip32-key    Convert an Incentivized Testnet (ITN) BIP32
+                           (Ed25519Bip32) signing key to a corresponding Shelley
+                           stake signing key
+  convert-cardano-address-key
+                           Convert a cardano-address extended signing key to a
+                           corresponding Shelley-format key.

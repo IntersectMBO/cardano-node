@@ -1,0 +1,16 @@
+Usage: cardano-cli signing-key-address 
+            [--byron-legacy-formats | --byron-formats]
+            (--mainnet | --testnet-magic NATURAL)
+            --secret FILEPATH
+
+  Print address of a signing key.
+
+Available options:
+  --byron-legacy-formats   Byron/cardano-sl formats and compatibility
+  --byron-formats          Byron era formats and compatibility
+  --mainnet                Use the mainnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --testnet-magic NATURAL  Specify a testnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --secret FILEPATH        Signing key, whose address is to be printed.
+  -h,--help                Show this help text

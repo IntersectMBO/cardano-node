@@ -1,0 +1,389 @@
+Usage: cardano-cli transaction build --socket-path SOCKET_PATH
+            [ --byron-era
+            | --shelley-era
+            | --allegra-era
+            | --mary-era
+            | --alonzo-era
+            | --babbage-era
+            ]
+            [ --shelley-mode
+            | --byron-mode [--epoch-slots SLOTS]
+            | --cardano-mode [--epoch-slots SLOTS]
+            ]
+            (--mainnet | --testnet-magic NATURAL)
+            [--script-valid | --script-invalid]
+            [--witness-override WORD]
+            (--tx-in TX-IN
+              [ --spending-tx-in-reference TX-IN
+                --spending-plutus-script-v2
+                ( --spending-reference-tx-in-datum-cbor-file CBOR FILE
+                | --spending-reference-tx-in-datum-file JSON FILE
+                | --spending-reference-tx-in-datum-value JSON VALUE
+                | --spending-reference-tx-in-inline-datum-present
+                )
+                ( --spending-reference-tx-in-redeemer-cbor-file CBOR FILE
+                | --spending-reference-tx-in-redeemer-file JSON FILE
+                | --spending-reference-tx-in-redeemer-value JSON VALUE
+                )
+              | --simple-script-tx-in-reference TX-IN
+              | --tx-in-script-file FILE
+                [
+                  ( --tx-in-datum-cbor-file CBOR FILE
+                  | --tx-in-datum-file JSON FILE
+                  | --tx-in-datum-value JSON VALUE
+                  | --tx-in-inline-datum-present
+                  )
+                  ( --tx-in-redeemer-cbor-file CBOR FILE
+                  | --tx-in-redeemer-file JSON FILE
+                  | --tx-in-redeemer-value JSON VALUE
+                  )]
+              ])
+            [--read-only-tx-in-reference TX-IN]
+            [--required-signer FILE | --required-signer-hash HASH]
+            [--tx-in-collateral TX-IN]
+            [--tx-out-return-collateral ADDRESS VALUE]
+            [--tx-total-collateral INTEGER]
+            [--tx-out ADDRESS VALUE
+              [ --tx-out-datum-hash HASH
+              | --tx-out-datum-hash-cbor-file CBOR FILE
+              | --tx-out-datum-hash-file JSON FILE
+              | --tx-out-datum-hash-value JSON VALUE
+              | --tx-out-datum-embed-cbor-file CBOR FILE
+              | --tx-out-datum-embed-file JSON FILE
+              | --tx-out-datum-embed-value JSON VALUE
+              | --tx-out-inline-datum-cbor-file CBOR FILE
+              | --tx-out-inline-datum-file JSON FILE
+              | --tx-out-inline-datum-value JSON VALUE
+              ]
+              [--tx-out-reference-script-file FILE]]
+            --change-address ADDRESS
+            [--mint VALUE
+              ( --mint-script-file FILE
+                [ --mint-redeemer-cbor-file CBOR FILE
+                | --mint-redeemer-file JSON FILE
+                | --mint-redeemer-value JSON VALUE
+                ]
+              | --simple-minting-script-tx-in-reference TX-IN --policy-id HASH
+              | --mint-tx-in-reference TX-IN
+                --mint-plutus-script-v2
+                ( --mint-reference-tx-in-redeemer-cbor-file CBOR FILE
+                | --mint-reference-tx-in-redeemer-file JSON FILE
+                | --mint-reference-tx-in-redeemer-value JSON VALUE
+                )
+                --policy-id HASH
+              )]
+            [--invalid-before SLOT]
+            [--invalid-hereafter SLOT]
+            [--certificate-file CERTIFICATEFILE
+              [ --certificate-script-file FILE
+                [ --certificate-redeemer-cbor-file CBOR FILE
+                | --certificate-redeemer-file JSON FILE
+                | --certificate-redeemer-value JSON VALUE
+                ]
+              | --certificate-tx-in-reference TX-IN
+                --certificate-plutus-script-v2
+                ( --certificate-reference-tx-in-redeemer-cbor-file CBOR FILE
+                | --certificate-reference-tx-in-redeemer-file JSON FILE
+                | --certificate-reference-tx-in-redeemer-value JSON VALUE
+                )
+              ]]
+            [--withdrawal WITHDRAWAL
+              [ --withdrawal-script-file FILE
+                [ --withdrawal-redeemer-cbor-file CBOR FILE
+                | --withdrawal-redeemer-file JSON FILE
+                | --withdrawal-redeemer-value JSON VALUE
+                ]
+              | --withdrawal-tx-in-reference TX-IN
+                --withdrawal-plutus-script-v2
+                ( --withdrawal-reference-tx-in-redeemer-cbor-file CBOR FILE
+                | --withdrawal-reference-tx-in-redeemer-file JSON FILE
+                | --withdrawal-reference-tx-in-redeemer-value JSON VALUE
+                )
+              ]]
+            [--json-metadata-no-schema | --json-metadata-detailed-schema]
+            [--auxiliary-script-file FILE]
+            [--metadata-json-file FILE | --metadata-cbor-file FILE]
+            [--protocol-params-file FILE]
+            [--update-proposal-file FILE]
+            (--out-file FILE | --calculate-plutus-script-cost FILE)
+
+  Build a balanced transaction (automatically calculates fees)
+
+  Please note the order[93;22;23;24m of some cmd options is crucial. If used incorrectly may produce undesired tx body. See nested [] notation above for details.[0;22;23;24m
+
+Available options:
+  --socket-path SOCKET_PATH
+                           Path to the node socket. This overrides the
+                           CARDANO_NODE_SOCKET_PATH environment variable. The
+                           argument is optional if CARDANO_NODE_SOCKET_PATH is
+                           defined and mandatory otherwise.
+  --byron-era              Specify the Byron era
+  --shelley-era            Specify the Shelley era
+  --allegra-era            Specify the Allegra era
+  --mary-era               Specify the Mary era
+  --alonzo-era             Specify the Alonzo era
+  --babbage-era            Specify the Babbage era (default)
+  --shelley-mode           For talking to a node running in Shelley-only mode.
+  --byron-mode             For talking to a node running in Byron-only mode.
+  --epoch-slots SLOTS      The number of slots per epoch for the Byron era.
+                           (default: 21600)
+  --cardano-mode           For talking to a node running in full Cardano mode
+                           (default).
+  --epoch-slots SLOTS      The number of slots per epoch for the Byron era.
+                           (default: 21600)
+  --mainnet                Use the mainnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --testnet-magic NATURAL  Specify a testnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --script-valid           Assertion that the script is valid. (default)
+  --script-invalid         Assertion that the script is invalid. If a
+                           transaction is submitted with such a script, the
+                           script will fail and the collateral will be taken.
+  --witness-override WORD  Specify and override the number of witnesses the
+                           transaction requires.
+  --tx-in TX-IN            TxId#TxIx
+  --spending-tx-in-reference TX-IN
+                           TxId#TxIx - Specify a reference input. The reference
+                           input must have a plutus reference script attached.
+  --spending-plutus-script-v2
+                           Specify a plutus script v2 reference script.
+  --spending-reference-tx-in-datum-cbor-file CBOR FILE
+                           The script datum, in the given JSON file. The file
+                           must follow the special JSON schema for script data.
+  --spending-reference-tx-in-datum-file JSON FILE
+                           The script datum, in the given JSON file. The file
+                           must follow the special JSON schema for script data.
+  --spending-reference-tx-in-datum-value JSON VALUE
+                           The script datum, in JSON syntax. There is no schema:
+                           (almost) any JSON value is supported, including
+                           top-level strings and numbers.
+  --spending-reference-tx-in-inline-datum-present
+                           Inline datum present at transaction input.
+  --spending-reference-tx-in-redeemer-cbor-file CBOR FILE
+                           The script redeemer, in the given JSON file. The file
+                           must follow the special JSON schema for script data.
+  --spending-reference-tx-in-redeemer-file JSON FILE
+                           The script redeemer, in the given JSON file. The file
+                           must follow the special JSON schema for script data.
+  --spending-reference-tx-in-redeemer-value JSON VALUE
+                           The script redeemer, in JSON syntax. There is no
+                           schema: (almost) any JSON value is supported,
+                           including top-level strings and numbers.
+  --simple-script-tx-in-reference TX-IN
+                           TxId#TxIx - Specify a reference input. The reference
+                           input must have a simple reference script attached.
+  --tx-in-script-file FILE The file containing the script to witness the
+                           spending of the transaction input.
+  --tx-in-datum-cbor-file CBOR FILE
+                           The script datum, in the given JSON file. The file
+                           must follow the special JSON schema for script data.
+  --tx-in-datum-file JSON FILE
+                           The script datum, in the given JSON file. The file
+                           must follow the special JSON schema for script data.
+  --tx-in-datum-value JSON VALUE
+                           The script datum, in JSON syntax. There is no schema:
+                           (almost) any JSON value is supported, including
+                           top-level strings and numbers.
+  --tx-in-inline-datum-present
+                           Inline datum present at transaction input.
+  --tx-in-redeemer-cbor-file CBOR FILE
+                           The script redeemer, in the given JSON file. The file
+                           must follow the special JSON schema for script data.
+  --tx-in-redeemer-file JSON FILE
+                           The script redeemer, in the given JSON file. The file
+                           must follow the special JSON schema for script data.
+  --tx-in-redeemer-value JSON VALUE
+                           The script redeemer, in JSON syntax. There is no
+                           schema: (almost) any JSON value is supported,
+                           including top-level strings and numbers.
+  --read-only-tx-in-reference TX-IN
+                           Specify a read only reference input. This reference
+                           input is not witnessing anything it is simply
+                           provided in the plutus script context.
+  --required-signer FILE   Input filepath of the signing key (zero or more)
+                           whose signature is required.
+  --required-signer-hash HASH
+                           Hash of the verification key (zero or more) whose
+                           signature is required.
+  --tx-in-collateral TX-IN TxId#TxIx
+  --tx-out-return-collateral ADDRESS VALUE
+                           The transaction output as ADDRESS VALUE where ADDRESS
+                           is the Bech32-encoded address followed by the value
+                           in Lovelace. In the situation where your collateral
+                           txin over collateralizes the transaction, you can
+                           optionally specify a tx out of your choosing to
+                           return the excess Lovelace.
+  --tx-total-collateral INTEGER
+                           The total amount of collateral that will be collected
+                           as fees in the event of a Plutus script failure. Must
+                           be used in conjuction with
+                           "--tx-out-return-collateral".
+  --tx-out ADDRESS VALUE   The transaction output as ADDRESS VALUE where ADDRESS
+                           is the Bech32-encoded address followed by the value
+                           in the multi-asset syntax (including simply
+                           Lovelace).
+  --tx-out-datum-hash HASH The script datum hash for this tx output, as the raw
+                           datum hash (in hex).
+  --tx-out-datum-hash-cbor-file CBOR FILE
+                           The script datum hash for this tx output, by hashing
+                           the script datum in the given JSON file. The file
+                           must follow the special JSON schema for script data.
+  --tx-out-datum-hash-file JSON FILE
+                           The script datum hash for this tx output, by hashing
+                           the script datum in the given JSON file. The file
+                           must follow the special JSON schema for script data.
+  --tx-out-datum-hash-value JSON VALUE
+                           The script datum hash for this tx output, by hashing
+                           the script datum given here in JSON syntax. There is
+                           no schema: (almost) any JSON value is supported,
+                           including top-level strings and numbers.
+  --tx-out-datum-embed-cbor-file CBOR FILE
+                           The script datum to embed in the tx for this output,
+                           in the given JSON file. The file must follow the
+                           special JSON schema for script data.
+  --tx-out-datum-embed-file JSON FILE
+                           The script datum to embed in the tx for this output,
+                           in the given JSON file. The file must follow the
+                           special JSON schema for script data.
+  --tx-out-datum-embed-value JSON VALUE
+                           The script datum to embed in the tx for this output,
+                           given here in JSON syntax. There is no schema:
+                           (almost) any JSON value is supported, including
+                           top-level strings and numbers.
+  --tx-out-inline-datum-cbor-file CBOR FILE
+                           The script datum to embed in the tx output as an
+                           inline datum, in the given JSON file. The file must
+                           follow the special JSON schema for script data.
+  --tx-out-inline-datum-file JSON FILE
+                           The script datum to embed in the tx output as an
+                           inline datum, in the given JSON file. The file must
+                           follow the special JSON schema for script data.
+  --tx-out-inline-datum-value JSON VALUE
+                           The script datum to embed in the tx output as an
+                           inline datum, given here in JSON syntax. There is no
+                           schema: (almost) any JSON value is supported,
+                           including top-level strings and numbers.
+  --tx-out-reference-script-file FILE
+                           Reference script input file.
+  --change-address ADDRESS Address where ADA in excess of the tx fee will go to.
+  --mint VALUE             Mint multi-asset value(s) with the multi-asset cli
+                           syntax. You must specify a script witness.
+  --mint-script-file FILE  The file containing the script to witness the minting
+                           of assets for a particular policy Id.
+  --mint-redeemer-cbor-file CBOR FILE
+                           The script redeemer, in the given JSON file. The file
+                           must follow the special JSON schema for script data.
+  --mint-redeemer-file JSON FILE
+                           The script redeemer, in the given JSON file. The file
+                           must follow the special JSON schema for script data.
+  --mint-redeemer-value JSON VALUE
+                           The script redeemer, in JSON syntax. There is no
+                           schema: (almost) any JSON value is supported,
+                           including top-level strings and numbers.
+  --simple-minting-script-tx-in-reference TX-IN
+                           TxId#TxIx - Specify a reference input. The reference
+                           input must have a simple reference script attached.
+  --policy-id HASH         Policy id of minting script.
+  --mint-tx-in-reference TX-IN
+                           TxId#TxIx - Specify a reference input. The reference
+                           input must have a plutus reference script attached.
+  --mint-plutus-script-v2  Specify a plutus script v2 reference script.
+  --mint-reference-tx-in-redeemer-cbor-file CBOR FILE
+                           The script redeemer, in the given JSON file. The file
+                           must follow the special JSON schema for script data.
+  --mint-reference-tx-in-redeemer-file JSON FILE
+                           The script redeemer, in the given JSON file. The file
+                           must follow the special JSON schema for script data.
+  --mint-reference-tx-in-redeemer-value JSON VALUE
+                           The script redeemer, in JSON syntax. There is no
+                           schema: (almost) any JSON value is supported,
+                           including top-level strings and numbers.
+  --policy-id HASH         Policy id of minting script.
+  --invalid-before SLOT    Time that transaction is valid from (in slots).
+  --invalid-hereafter SLOT Time that transaction is valid until (in slots).
+  --certificate-file CERTIFICATEFILE
+                           Filepath of the certificate. This encompasses all
+                           types of certificates (stake pool certificates, stake
+                           key certificates etc). Optionally specify a script
+                           witness.
+  --certificate-script-file FILE
+                           The file containing the script to witness the use of
+                           the certificate.
+  --certificate-redeemer-cbor-file CBOR FILE
+                           The script redeemer, in the given JSON file. The file
+                           must follow the special JSON schema for script data.
+  --certificate-redeemer-file JSON FILE
+                           The script redeemer, in the given JSON file. The file
+                           must follow the special JSON schema for script data.
+  --certificate-redeemer-value JSON VALUE
+                           The script redeemer, in JSON syntax. There is no
+                           schema: (almost) any JSON value is supported,
+                           including top-level strings and numbers.
+  --certificate-tx-in-reference TX-IN
+                           TxId#TxIx - Specify a reference input. The reference
+                           input must have a plutus reference script attached.
+  --certificate-plutus-script-v2
+                           Specify a plutus script v2 reference script.
+  --certificate-reference-tx-in-redeemer-cbor-file CBOR FILE
+                           The script redeemer, in the given JSON file. The file
+                           must follow the special JSON schema for script data.
+  --certificate-reference-tx-in-redeemer-file JSON FILE
+                           The script redeemer, in the given JSON file. The file
+                           must follow the special JSON schema for script data.
+  --certificate-reference-tx-in-redeemer-value JSON VALUE
+                           The script redeemer, in JSON syntax. There is no
+                           schema: (almost) any JSON value is supported,
+                           including top-level strings and numbers.
+  --withdrawal WITHDRAWAL  The reward withdrawal as StakeAddress+Lovelace where
+                           StakeAddress is the Bech32-encoded stake address
+                           followed by the amount in Lovelace. Optionally
+                           specify a script witness.
+  --withdrawal-script-file FILE
+                           The file containing the script to witness the
+                           withdrawal of rewards.
+  --withdrawal-redeemer-cbor-file CBOR FILE
+                           The script redeemer, in the given JSON file. The file
+                           must follow the special JSON schema for script data.
+  --withdrawal-redeemer-file JSON FILE
+                           The script redeemer, in the given JSON file. The file
+                           must follow the special JSON schema for script data.
+  --withdrawal-redeemer-value JSON VALUE
+                           The script redeemer, in JSON syntax. There is no
+                           schema: (almost) any JSON value is supported,
+                           including top-level strings and numbers.
+  --withdrawal-tx-in-reference TX-IN
+                           TxId#TxIx - Specify a reference input. The reference
+                           input must have a plutus reference script attached.
+  --withdrawal-plutus-script-v2
+                           Specify a plutus script v2 reference script.
+  --withdrawal-reference-tx-in-redeemer-cbor-file CBOR FILE
+                           The script redeemer, in the given JSON file. The file
+                           must follow the special JSON schema for script data.
+  --withdrawal-reference-tx-in-redeemer-file JSON FILE
+                           The script redeemer, in the given JSON file. The file
+                           must follow the special JSON schema for script data.
+  --withdrawal-reference-tx-in-redeemer-value JSON VALUE
+                           The script redeemer, in JSON syntax. There is no
+                           schema: (almost) any JSON value is supported,
+                           including top-level strings and numbers.
+  --json-metadata-no-schema
+                           Use the "no schema" conversion from JSON to tx
+                           metadata.
+  --json-metadata-detailed-schema
+                           Use the "detailed schema" conversion from JSON to tx
+                           metadata.
+  --auxiliary-script-file FILE
+                           Filepath of auxiliary script(s)
+  --metadata-json-file FILE
+                           Filepath of the metadata file, in JSON format.
+  --metadata-cbor-file FILE
+                           Filepath of the metadata, in raw CBOR format.
+  --protocol-params-file FILE
+                           Filepath of the JSON-encoded protocol parameters file
+  --update-proposal-file FILE
+                           Filepath of the update proposal.
+  --out-file FILE          Output filepath of the JSON TxBody.
+  --calculate-plutus-script-cost FILE
+                           (File () Out) filepath of the script cost
+                           information.
+  -h,--help                Show this help text

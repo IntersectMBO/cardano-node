@@ -1,0 +1,7 @@
+Usage: cardano-cli print-genesis-hash --genesis-json FILEPATH
+
+  Compute hash of a genesis file.
+
+Available options:
+  --genesis-json FILEPATH  Genesis JSON file.
+  -h,--help                Show this help text
