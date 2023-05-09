@@ -622,61 +622,61 @@ backend_nomad() {
 
       # Stop generator.
       #################
-      # If the node quits (due to `--shutdown_on_slot_synced X` or
-      # `--shutdown_on_block_synced X`) the generator also quits.
-      local generator_can_quit=$(jq ".\"node-0\".shutdown_on_slot_synced or .\"node-0\".shutdown_on_block_synced" "${dir}"/node-specs.json)
-      if test "${generator_can_quit}" = "false"
+      if test -f "${dir}"/generator/started
       then
-        if ! backend_nomad task-program-stop "${dir}" node-0 generator
-        then
-          # Do not fail here, because nobody will be able to stop the cluster!
-          msg "$(red "FATAL: \"generator\" quit (un)expectedly")"
-        fi
-      else
         if backend_nomad is-task-program-running "${dir}" node-0 generator
         then
-          # The `|| true` is to avoid a race condition were we try to stop
-          # the generator just after it quits automatically.
+          # The `|| true` is to avoid a race condition were we try to stop the
+          # generator just after it quits automatically.
           backend_nomad task-program-stop "${dir}" node-0 generator || true
         else
-          msg "$(yellow "Program \"generator\" inside Task \"node-0\" was not running, should it?")"
+          # If the node quits (due to `--shutdown_on_slot_synced X` or
+          # `--shutdown_on_block_synced X`) the generator also quits.
+          local generator_can_quit=$(jq ".\"node-0\".shutdown_on_slot_synced or .\"node-0\".shutdown_on_block_synced" "${dir}"/node-specs.json)
+          if test "${generator_can_quit}" = "false"
+          then
+            # Do not fail here, because nobody will be able to stop the cluster!
+            msg "$(red "FATAL: \"generator\" quit unexpectedly")"
+          else
+            msg "$(yellow "Program \"generator\" inside Task \"node-0\" was not running, should it?")"
+          fi
         fi
       fi
       # Stop node(s).
       ###############
       for node in $(jq_tolist 'keys' "${dir}"/node-specs.json)
       do
-        # Node may have already quit (due to --shutdown_on_slot_synced X or
-        # --shutdown_on_block_synced X).
-        local node_can_quit=$(jq ".\"${node}\".shutdown_on_slot_synced or .\"${node}\".shutdown_on_block_synced" "${dir}"/node-specs.json)
-        if test "${node_can_quit}" = "false"
+        if test -f "${dir}"/"${node}"/started
         then
-          if ! backend_nomad task-program-stop "${dir}" "${node}" "${node}"
-          then
-            # Do not fail here, because nobody will be able to stop the cluster!
-            msg "$(red "FATAL: \"${node}\" quit unexpectedly")"
-          fi
-        else
           if backend_nomad is-task-program-running "${dir}" "${node}" "${node}"
           then
             # The `|| true` is to avoid a race condition were we try to stop
             # the node just after it quits automatically.
             backend_nomad task-program-stop "${dir}" "${node}" "${node}" || true
           else
-            msg "$(yellow "Program \"${node}\" inside Task \"${node}\" was not running, should it?")"
+            # Node may have already quit (due to --shutdown_on_slot_synced X or
+            # --shutdown_on_block_synced X).
+            local node_can_quit=$(jq ".\"${node}\".shutdown_on_slot_synced or .\"${node}\".shutdown_on_block_synced" "${dir}"/node-specs.json)
+            if test "${node_can_quit}" = "false"
+            then
+              # Do not fail here, because nobody will be able to stop the cluster!
+              msg "$(red "FATAL: \"${node}\" quit unexpectedly")"
+            else
+              msg "$(yellow "Program \"${node}\" inside Task \"${node}\" was not running, should it?")"
+            fi
           fi
         fi
       done
       # Stop tracer(s).
       #################
       local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
-      if jqtest ".node.tracer" "${dir}"/profile.json
+      if test "${one_tracer_per_node}" = "true"
       then
-        if test "${one_tracer_per_node}" = "true"
-        then
-          local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
-          for node in ${nodes[*]}
-          do
+        local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
+        for node in ${nodes[*]}
+        do
+          if test -f "${dir}"/tracer/"${node}"/started
+          then
             # Tracers that receive connections should never quit by itself.
             if backend_nomad is-task-program-running "${dir}" "${node}" tracer
             then
@@ -684,8 +684,11 @@ backend_nomad() {
             else
               msg "$(red "FATAL: \"${node}\"'s \"tracer\" quit unexpectedly")"
             fi
-          done
-        else
+          fi
+        done
+      else
+        if test -f "${dir}"/tracer/started
+        then
           # Tracers that receive connections should never quit by itself.
           if backend_nomad is-task-program-running "$dir" "$node" tracer
           then
@@ -1033,14 +1036,16 @@ backend_nomad() {
       local socket=$(backend_nomad get-node-socket-path "${dir}" ${node})
       local socket_path_absolute=/"${node}"/local/run/current/"${node}"/node.socket
       local patience=$(jq '.analysis.cluster_startup_overhead_s | ceil' ${dir}/profile.json)
-      msg "Waiting ${patience}s for socket of Nomad Task \"${node}\" program \"${node}\" ..."
+      msg "$(blue Waiting) ${patience}s for socket of supervisord $(yellow "program \"${node}\"") inside Nomad $(yellow "Task \"${node}\"") ..."
       local i=0
       local node_alloc_id
       node_alloc_id=$(wb_nomad job task-name-allocation-id \
         "$dir/nomad/nomad-job.json"                                   \
         "${node}")
       while ! nomad alloc fs -stat -H "${node_alloc_id}" "${socket_path_absolute}" 2>/dev/null | grep --quiet "application/octet-stream"
-      do printf "%3d" $i; sleep 1
+      # TODO: Add the "timer" `printf "%3d" $i;` but for concurrent processes!
+      do
+        sleep 1
         i=$((i+1))
         if test "${i}" -ge "${patience}"
         then
@@ -1050,7 +1055,7 @@ backend_nomad() {
           return 1
         fi
       done
-      msg "$(green "Nomad Task \"${node}\" program \"node\" up (${i}s)!")"
+      msg "$(green "Nomad Task \"${node}\" supervisord program \"${node}\" up (${i}s)!")"
       return 0
     ;;
 
@@ -1077,7 +1082,9 @@ backend_nomad() {
         msg "Waiting ${patience}s for socket of Nomad Task \"${task}\" program \"tracer\" ..."
         local i=0
         while ! test -S "${socket_path_absolute}"
-        do printf "%3d" $i; sleep 1
+        # TODO: Add the "timer" `printf "%3d" $i;` but for concurrent processes!
+        do
+          sleep 1
           i=$((i+1))
           if test "${i}" -ge "${patience}"
           then
@@ -1122,7 +1129,7 @@ backend_nomad() {
           fi
         done
       fi
-      msg "$(green "Task \"${task}\" program \"tracer\" up (${i}s)!")"
+      msg "$(green "Nomad Task \"${task}\" supervisord program \"tracer\" up (${i}s)!")"
       return 0
     ;;
 
