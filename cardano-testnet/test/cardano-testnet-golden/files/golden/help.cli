@@ -411,6 +411,42 @@ Usage: cardano-cli query tx-mempool tx-exists TX_ID
 
   Query if a particular transaction exists in the mempool
 
+Usage: cardano-cli drep 
+            ( registration-certificate
+            | deregistration-certificate
+            | id
+            | metadata-hash
+            )
+
+  DRep commands
+
+Usage: cardano-cli drep registration-certificate 
+            (--mainnet | --testnet-magic NATURAL)
+            (--drep-verification-key STRING | --cold-verification-key-file FILE)
+            (--vrf-verification-key STRING | --vrf-verification-key-file FILE)
+            [--metadata-url URL --metadata-hash HASH]
+            --out-file FILE
+
+  Create a DRep registration certificate
+
+Usage: cardano-cli drep deregistration-certificate 
+            (--drep-verification-key STRING | --cold-verification-key-file FILE)
+            --epoch NATURAL
+            --out-file FILE
+
+  Create a DRep deregistration certificate
+
+Usage: cardano-cli drep id 
+            (--drep-verification-key STRING | --cold-verification-key-file FILE)
+            [--output-format STRING]
+
+  Build DRep id from the offline key
+
+Usage: cardano-cli drep metadata-hash --drep-metadata-file FILE
+            [--out-file FILE]
+
+  Print the hash of DRep metadata.
+
 Usage: cardano-cli stake-pool 
             ( registration-certificate
             | deregistration-certificate
