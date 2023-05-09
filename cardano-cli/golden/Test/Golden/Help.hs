@@ -73,6 +73,7 @@ golden_HelpCmds =
 
     forM_ usages $ \usage -> do
       H.noteShow_ usage
+
       let expectedCmdHelpFp = "golden/files/golden/help" </> Text.unpack (Text.intercalate "_" usage) <> ".cli"
 
       cmdHelp <- filterAnsi . third <$> H.execDetailCardanoCli (fmap Text.unpack usage)
