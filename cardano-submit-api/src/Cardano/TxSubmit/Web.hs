@@ -97,16 +97,6 @@ txSubmitApp trace metrics connectInfo networkId socketPath =
       { _txSubmitPost = txSubmitPost trace metrics connectInfo networkId socketPath
       }
 
--- | Read the node socket path from the environment.
--- Fails if the environment variable is not set.
-readEnvSocketPath :: ExceptT EnvSocketError IO SocketPath
-readEnvSocketPath =
-    maybe (left $ CliEnvVarLookup (T.pack envName)) (pure . SocketPath)
-      =<< liftIO (lookupEnv envName)
-  where
-    envName :: String
-    envName = "CARDANO_NODE_SOCKET_PATH"
-
 deserialiseOne :: forall b. ()
   => FromSomeType SerialiseAsCBOR b
   -> ByteString

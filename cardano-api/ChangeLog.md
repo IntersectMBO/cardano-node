@@ -9,6 +9,9 @@
 
 ### Features
 
+- Delete `readEnvSocketPath` function.
+  ([PR 5207](https://github.com/input-output-hk/cardano-node/pull/5207))
+
 - Expose node config reading functionality: `NodeConfig`, `NodeConfigFile` and `readNodeConfig`
 
 - Expose genesis file reading functionality:
@@ -32,8 +35,8 @@
   ([PR 4341](https://github.com/input-output-hk/cardano-node/pull/4341))
 
 - Changed type of `protocolParamTxFeeFixed`, `protocolParamTxFeePerByte` from `Natural` to
-  `Lovelace` and `protocolUpdateTxFeeFixed` and `protocolUpdateTxFeePerByte` from `Maybe
-  Natural` to `Maybe Lovelace` ([PR 5013](https://github.com/input-output-hk/cardano-node/pull/5013))
+  `Lovelace` and `protocolUpdateTxFeeFixed` and `protocolUpdateTxFeePerByte` from `Maybe Natural`
+  to `Maybe Lovelace` ([PR 5013](https://github.com/input-output-hk/cardano-node/pull/5013))
 
 - Append, not prepend change output when balancing a transaction ([PR 4343](https://github.com/input-output-hk/cardano-node/pull/4343))
 
