@@ -301,7 +301,7 @@ EOF
     fix-systemstart )
         local usage="USAGE: wb run $op RUN [MACH=node-1]"
         local run=${1:?$usage}
-        local mach=${2:-node-1}
+        local mach=${2:-node-0}
         local dir=$(run compute-path "$run")
         local nodelog=$(ls $dir/logs/$mach/node-*.json | head -n1)
         local genesis=$dir/genesis-shelley.json

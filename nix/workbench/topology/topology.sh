@@ -3,7 +3,7 @@ usage_topology() {
     The workbench generates topologies with the following properties:
       - all node names are of the form "node-N", where N is a 0-based natural
       - the BFT producer, is always present and is node-0;  inactived by d=0
-      - a non-dense, regular pool producer is always present, and is always node-1
+      - a non-dense, regular pool producer is always present, and is always node-0
       - further nodes are dense pools (so potentially configurable to densities >1)
       - there is an optional explorer as the last node
 
