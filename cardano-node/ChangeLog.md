@@ -4,7 +4,7 @@
 
 -
 
-## 8.0.0 - May 2023
+## 8.0.0 -- May 2023
 
 - In JSON logging, `"ExtraRedeemers"` object contents are machine readable rather than
   difficult-to-parse user-friendly-string.
