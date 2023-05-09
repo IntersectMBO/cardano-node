@@ -5,7 +5,7 @@ module Cardano.CLI.Common.Parsers
   , pSocketPath
   ) where
 
-import           Cardano.Api (AnyCardanoEra (..), AnyConsensusModeParams (..),
+import           Cardano.Api (AnyCardanoEra (..), AnyConsensusModeParams (..), CardanoEra (..),
                    ConsensusModeParams (..), EpochSlots (..), File (..), NetworkId (..),
                    NetworkMagic (..), SocketPath, bounded)
 import           Cardano.CLI.Environment (EnvCli (..))

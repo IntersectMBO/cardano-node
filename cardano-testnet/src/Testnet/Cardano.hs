@@ -22,7 +22,7 @@ module Testnet.Cardano
 
 import           Prelude
 
-import           Cardano.Api
+import           Cardano.Api hiding (cardanoEra)
 
 import           Control.Monad
 import           Control.Monad.IO.Class (MonadIO)
@@ -655,12 +655,17 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   alonzoGenesisHash <- getShelleyGenesisHash (tempAbsPath </> "shelley/genesis.alonzo.json") "AlonzoGenesisHash"
   conwayGenesisHash <- getShelleyGenesisHash (tempAbsPath </> "shelley/genesis.conway.json") "ConwayGenesisHash"
 
-  -- TODO: We default to defaultYamlConfig however to enable forking to the appropriate era, we need
+  -- TODO: We default to defaultYamlHardforkViaConfig however to enable forking to the appropriate era, we need
   -- to be able to create the appropriate default config value, based on the era.
   -- i.e defaultConfigValue :: CardanoEra era -> Aeson.Value. Do this in a separate PR.
 
   let finalYamlConfig :: LBS.ByteString
-      finalYamlConfig = J.encode $ J.Object $ mconcat [byronGenesisHash, shelleyGenesisHash, alonzoGenesisHash, conwayGenesisHash, defaultYamlConfig]
+      finalYamlConfig = J.encode . J.Object
+                                 $ mconcat [ byronGenesisHash
+                                           , shelleyGenesisHash
+                                           , alonzoGenesisHash
+                                           , conwayGenesisHash
+                                           , defaultYamlHardforkViaConfig $ cardanoEra testnetOptions]
 
   H.evalIO $ LBS.writeFile (tempAbsPath </> "configuration.yaml") finalYamlConfig
 
