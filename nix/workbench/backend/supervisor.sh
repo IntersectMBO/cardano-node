@@ -119,14 +119,16 @@ EOF
     start-nodes )
         local usage="USAGE: wb backend $op RUN-DIR [HONOR_AUTOSTART=]"
         local dir=${1:?$usage}; shift
-        local honor_autostart=${1:-}
+        local honor_autostart=${1:-yes-please}
 
         local nodes=($(jq_tolist keys "$dir"/node-specs.json))
 
         if test -n "$honor_autostart"
         then for node in ${nodes[*]}
              do jqtest ".\"$node\".autostart" "$dir"/node-specs.json &&
-                     supervisorctl start $node; done;
+                     supervisorctl start $node &
+             done
+             wait
         else supervisorctl start ${nodes[*]}; fi
 
         for node in ${nodes[*]}
