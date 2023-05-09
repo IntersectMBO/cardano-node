@@ -251,6 +251,7 @@ test-suite cardano-cli-golden
                       , filepath
                       , hedgehog ^>= 1.2
                       , hedgehog-extras ^>= 0.4.2
+                      , regex-compat
                       , text
                       , time
                       , transformers
@@ -263,6 +264,7 @@ test-suite cardano-cli-golden
                         Test.Golden.Byron.UpdateProposal
                         Test.Golden.Byron.Vote
                         Test.Golden.Byron.Witness
+                        Test.Golden.Help
                         Test.Golden.Key
                         Test.Golden.Key.NonExtendedKey
                         Test.Golden.Shelley
