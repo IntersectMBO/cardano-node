@@ -465,6 +465,8 @@ instance HasSeverityAnnotation (ConnectionManagerTrace addr (ConnectionHandlerTr
       TrConnectionManagerCounters {}          -> Info
       TrState {}                              -> Info
       ConnMgr.TrUnexpectedlyFalseAssertion {} -> Error
+      TrWrittenToOutboundGovernorChannel      -> Debug
+
 
 instance HasPrivacyAnnotation (ConnMgr.AbstractTransitionTrace addr)
 instance HasSeverityAnnotation (ConnMgr.AbstractTransitionTrace addr) where
@@ -1951,6 +1953,10 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
         mconcat
           [ "kind" .= String "UnexpectedlyFalseAssertion"
           , "info" .= String (pack . show $ info)
+          ]
+      TrWrittenToOutboundGovernorChannel ->
+        mconcat
+          [ "kind" .= String "WrittenToOutboundGovernorChannel"
           ]
 
 instance ToJSON state => ToJSON (ConnMgr.MaybeUnknown state) where

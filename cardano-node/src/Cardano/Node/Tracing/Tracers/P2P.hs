@@ -303,7 +303,7 @@ severityPeerSelection TraceDemoteLocalAsynchronous {} = Info
 severityPeerSelection TraceGovernorWakeup        {} = Info
 severityPeerSelection TraceChurnWait             {} = Info
 severityPeerSelection TraceChurnMode             {} = Info
-severityPeerSelection TraceKnownInboundConnection {} = Info
+severityPeerSelection TraceKnownInboundConnection {} = Debug
 
 instance LogFormatting (TracePeerSelection SockAddr) where
   forMachine _dtal (TraceLocalRootPeersChanged lrp lrp') =
@@ -598,6 +598,10 @@ docPeerSelection' = Documented [
       ["ChurnMode"]
       []
       ""
+  , DocMsg
+      ["KnownInboundConnection"]
+      []
+      ""
   ]
 
 peerSelectionTargetsToObject :: PeerSelectionTargets -> Value
@@ -779,6 +783,7 @@ namesForConnectionManager TrConnectionManagerCounters {} = ["ConnectionManagerCo
 namesForConnectionManager TrState {} = ["State"]
 namesForConnectionManager ConnectionManager.TrUnexpectedlyFalseAssertion {} =
                             ["UnexpectedlyFalseAssertion"]
+namesForConnectionManager TrWrittenToOutboundGovernorChannel = ["WrittenToOutboundGovernorChannel"]
 
 severityConnectionManager ::
   ConnectionManagerTrace addr
@@ -813,6 +818,7 @@ severityConnectionManager TrConnectionManagerCounters {}          = Info
 severityConnectionManager TrState {}                              = Info
 severityConnectionManager ConnectionManager.TrUnexpectedlyFalseAssertion {} =
                             Error
+severityConnectionManager TrWrittenToOutboundGovernorChannel      = Debug
 
 instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
           ToJSON addr, ToJSON versionNumber, ToJSON agreedOptions)
@@ -948,6 +954,10 @@ instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
         mconcat
           [ "kind" .= String "UnexpectedlyFalseAssertion"
           , "info" .= String (pack . show $ info)
+          ]
+    forMachine _dtal TrWrittenToOutboundGovernorChannel =
+        mconcat
+          [ "kind" .= String "WrittenToOutboundGovernorChannel"
           ]
     forHuman = pack . show
     asMetrics (TrConnectionManagerCounters ConnectionManagerCounters {..}) =
