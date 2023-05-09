@@ -194,22 +194,28 @@
         packages =
           exes
           # Linux only packages:
-          // optionalAttrs (system == "x86_64-linux") rec {
+          // optionalAttrs (system == "x86_64-linux")
+          (let workbenchTest =
+                { profileName, workbenchStartArgs ? [] }:
+                (pkgs.workbench-runner
+                  {
+                    inherit profileName workbenchStartArgs;
+                    backendName = "supervisor";
+                    useCabalRun = false;
+                    cardano-node-rev =
+                      if __hasAttr "rev" self
+                      then pkgs.gitrev
+                      else throw "Cannot get git revision of 'cardano-node', unclean checkout?";
+                  }).workbench-profile-run;
+          in
+          rec {
             "dockerImage/node" = pkgs.dockerImage;
             "dockerImage/submit-api" = pkgs.submitApiDockerImage;
 
             ## This is a very light profile, no caching&pinning needed.
             workbench-ci-test =
-              (pkgs.workbench-runner
-                {
-                  profileName = "ci-test-bage";
-                  backendName = "supervisor";
-                  useCabalRun = false;
-                  cardano-node-rev =
-                    if __hasAttr "rev" self
-                    then pkgs.gitrev
-                    else throw "Cannot get git revision of 'cardano-node', unclean checkout?";
-                }).workbench-profile-run { };
+              workbenchTest { profileName        = "ci-test-bage";
+                            };
 
             inherit (pkgs) all-profiles-json;
 
@@ -229,7 +235,7 @@
                   nix develop --accept-flake-config .#base -c ./.github/regression.sh 2>&1
               '';
             };
-          }
+          })
           # Add checks to be able to build them individually
           // (prefixNamesWith "checks/" checks);
 

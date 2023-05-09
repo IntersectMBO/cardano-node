@@ -7,12 +7,13 @@ in
 , backendName ? defaultCustomConfig.localCluster.backendName
 , useCabalRun ? true
 , workbenchDevMode ? defaultCustomConfig.localCluster.workbenchDevMode
+, workbenchStartArgs ? defaultCustomConfig.localCluster.workbenchStartArgs
 # to use profiled build of haskell dependencies:
 , profiling ? "none"
 , customConfig ? {
     inherit profiling withHoogle;
     localCluster =  {
-      inherit profileName backendName useCabalRun workbenchDevMode;
+      inherit profileName backendName useCabalRun workbenchDevMode workbenchStartArgs;
     };
   }
 , pkgs ? import ./nix customConfig
@@ -22,7 +23,7 @@ with pkgs;
 let
   inherit (pkgs) customConfig;
   inherit (customConfig) withHoogle localCluster;
-  inherit (localCluster) profileName workbenchDevMode;
+  inherit (localCluster) profileName workbenchDevMode workbenchStartArgs;
   inherit (pkgs.haskell-nix) haskellLib;
 
   profilingEff =

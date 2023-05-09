@@ -9,6 +9,7 @@
 , cardano-node-rev
 , workbench
 , workbenchDevMode
+, workbenchStartArgs
 , profiling
 ##
 , cacheDir              ? "${__getEnv "HOME"}/.cache/cardano-workbench"
@@ -47,6 +48,7 @@ in
         --cache-dir    ${cacheDir} \
         --base-port    ${toString basePort} \
         ${pkgs.lib.optionalString useCabalRun ''--cabal''} \
+        ${__concatStringsSep " " workbenchStartArgs} \
         "$@"
     '';
 
@@ -109,6 +111,7 @@ in
               --node-source         ${pkgs.cardanoNodeProject.args.src}
               --node-rev            ${cardano-node-rev}
               --cache-dir           ./cache
+             ${__concatStringsSep " " workbenchStartArgs}
             )
             echo "''${cmd[*]}" > $out/wb-start.sh
 

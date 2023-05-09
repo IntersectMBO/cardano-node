@@ -9,6 +9,7 @@ self: {
     backendName = "supervisor";
     basePort    = 30000;
     workbenchDevMode = true;
+    workbenchStartArgs = [];
     extraBackendConfig = {};
     useCabalRun = true;
   };
