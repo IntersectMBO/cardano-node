@@ -1,6 +1,8 @@
 # Changelog for cardano-cli
 
-## vNext
+## 8.1.0
+
+-
 
 ## 8.0.0 - May 2023
 
