@@ -17,6 +17,7 @@
 module Cardano.Api.Keys.Shelley (
 
     -- * Key types
+    DRepKey,
     PaymentKey,
     PaymentExtendedKey,
     StakeKey,
@@ -1264,3 +1265,121 @@ instance HasTextEnvelope (SigningKey StakePoolKey) where
         proxy :: Proxy (Shelley.DSIGN StandardCrypto)
         proxy = Proxy
 
+--
+-- DRep keys
+--
+
+data DRepKey
+
+instance HasTypeProxy DRepKey where
+    data AsType DRepKey = AsDRepKey
+    proxyToAsType _ = AsDRepKey
+
+instance Key DRepKey where
+
+    newtype VerificationKey DRepKey =
+        DRepVerificationKey (Shelley.VKey {- TODO cip-1694: replace with Shelley.DRep -} Shelley.StakePool StandardCrypto)
+      deriving stock (Eq)
+      deriving (Show, IsString) via UsingRawBytesHex (VerificationKey DRepKey)
+      deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
+
+    newtype SigningKey DRepKey =
+        DRepSigningKey (Shelley.SignKeyDSIGN StandardCrypto)
+      deriving (Show, IsString) via UsingRawBytesHex (SigningKey DRepKey)
+      deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
+
+    deterministicSigningKey :: AsType DRepKey -> Crypto.Seed -> SigningKey DRepKey
+    deterministicSigningKey AsDRepKey seed =
+        DRepSigningKey (Crypto.genKeyDSIGN seed)
+
+    deterministicSigningKeySeedSize :: AsType DRepKey -> Word
+    deterministicSigningKeySeedSize AsDRepKey =
+        Crypto.seedSizeDSIGN proxy
+      where
+        proxy :: Proxy (Shelley.DSIGN StandardCrypto)
+        proxy = Proxy
+
+    getVerificationKey :: SigningKey DRepKey -> VerificationKey DRepKey
+    getVerificationKey (DRepSigningKey sk) =
+        DRepVerificationKey (Shelley.VKey (Crypto.deriveVerKeyDSIGN sk))
+
+    verificationKeyHash :: VerificationKey DRepKey -> Hash DRepKey
+    verificationKeyHash (DRepVerificationKey vkey) =
+        DRepKeyHash (Shelley.hashKey vkey)
+
+instance SerialiseAsRawBytes (VerificationKey DRepKey) where
+    serialiseToRawBytes (DRepVerificationKey (Shelley.VKey vk)) =
+      Crypto.rawSerialiseVerKeyDSIGN vk
+
+    deserialiseFromRawBytes (AsVerificationKey AsDRepKey) bs =
+      maybeToRight (SerialiseAsRawBytesError "Unable to deserialise VerificationKey DRepKey") $
+        DRepVerificationKey . Shelley.VKey <$>
+          Crypto.rawDeserialiseVerKeyDSIGN bs
+
+instance SerialiseAsRawBytes (SigningKey DRepKey) where
+    serialiseToRawBytes (DRepSigningKey sk) =
+      Crypto.rawSerialiseSignKeyDSIGN sk
+
+    deserialiseFromRawBytes (AsSigningKey AsDRepKey) bs =
+      maybe
+        (Left (SerialiseAsRawBytesError "Unable to deserialise SigningKey DRepKey"))
+        (Right . DRepSigningKey)
+        (Crypto.rawDeserialiseSignKeyDSIGN bs)
+
+instance SerialiseAsBech32 (VerificationKey DRepKey) where
+    bech32PrefixFor         _ =  "drep_vk"
+    bech32PrefixesPermitted _ = ["drep_vk"]
+
+instance SerialiseAsBech32 (SigningKey DRepKey) where
+    bech32PrefixFor         _ =  "drep_sk"
+    bech32PrefixesPermitted _ = ["drep_sk"]
+
+newtype instance Hash DRepKey =
+    DRepKeyHash { unDRepKeyHash :: Shelley.KeyHash {- TODO cip-1694: replace with Shelley.DRep -} Shelley.StakePool StandardCrypto }
+  deriving stock (Eq, Ord)
+  deriving (Show, IsString) via UsingRawBytesHex (Hash DRepKey)
+  deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash DRepKey)
+  deriving anyclass SerialiseAsCBOR
+
+instance SerialiseAsRawBytes (Hash DRepKey) where
+    serialiseToRawBytes (DRepKeyHash (Shelley.KeyHash vkh)) =
+      Crypto.hashToBytes vkh
+
+    deserialiseFromRawBytes (AsHash AsDRepKey) bs =
+      maybeToRight
+        (SerialiseAsRawBytesError "Unable to deserialise Hash DRepKey")
+        (DRepKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs)
+
+instance SerialiseAsBech32 (Hash DRepKey) where
+    bech32PrefixFor         _ =  "drep"
+    bech32PrefixesPermitted _ = ["drep"]
+
+instance ToJSON (Hash DRepKey) where
+    toJSON = toJSON . serialiseToBech32
+
+instance ToJSONKey (Hash DRepKey) where
+  toJSONKey = toJSONKeyText serialiseToBech32
+
+instance FromJSON (Hash DRepKey) where
+  parseJSON = withText "DRepId" $ \str ->
+    case deserialiseFromBech32 (AsHash AsDRepKey) str of
+      Left err ->
+        fail $ "Error deserialising Hash DRepKey: " <> Text.unpack str <>
+               " Error: " <> displayError err
+      Right h -> pure h
+
+instance HasTextEnvelope (VerificationKey DRepKey) where
+    textEnvelopeType _ = "DRepVerificationKey_"
+                      <> fromString (Crypto.algorithmNameDSIGN proxy)
+      where
+        proxy :: Proxy (Shelley.DSIGN StandardCrypto)
+        proxy = Proxy
+
+instance HasTextEnvelope (SigningKey DRepKey) where
+    textEnvelopeType _ = "DRepSigningKey_"
+                      <> fromString (Crypto.algorithmNameDSIGN proxy)
+      where
+        proxy :: Proxy (Shelley.DSIGN StandardCrypto)
+        proxy = Proxy

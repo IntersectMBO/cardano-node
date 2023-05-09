@@ -1,0 +1,26 @@
+Usage: cardano-cli drep registration-certificate 
+            (--mainnet | --testnet-magic NATURAL)
+            (--drep-verification-key STRING | --cold-verification-key-file FILE)
+            (--vrf-verification-key STRING | --vrf-verification-key-file FILE)
+            [--metadata-url URL --metadata-hash HASH]
+            --out-file FILE
+
+  Create a DRep registration certificate
+
+Available options:
+  --mainnet                Use the mainnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --testnet-magic NATURAL  Specify a testnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --drep-verification-key STRING
+                           DRep verification key (Bech32 or hex-encoded).
+  --cold-verification-key-file FILE
+                           Filepath of the drep verification key.
+  --vrf-verification-key STRING
+                           VRF verification key (Bech32 or hex-encoded).
+  --vrf-verification-key-file FILE
+                           Filepath of the VRF verification key.
+  --metadata-url URL       Pool metadata URL (maximum length of 64 characters).
+  --metadata-hash HASH     Pool metadata hash.
+  --out-file FILE          The output file.
+  -h,--help                Show this help text

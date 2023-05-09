@@ -22,6 +22,9 @@ module Cardano.Api.Certificate (
     StakePoolRelay(..),
     StakePoolMetadataReference(..),
 
+    -- * Registering DReps
+    DRepMetadataReference(..),
+
     -- * Special certificates
     makeMIRCertificate,
     makeGenesisKeyDelegationCertificate,
@@ -63,9 +66,8 @@ import           Cardano.Ledger.Shelley.TxBody (MIRPot (..))
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 
 import           Cardano.Api.Address
-import           Cardano.Api.Hash
+import           Cardano.Api.DRepMetadata
 import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.Keys.Byron
 import           Cardano.Api.Keys.Praos
 import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.SerialiseCBOR
@@ -177,6 +179,13 @@ data StakePoolMetadataReference =
      StakePoolMetadataReference {
        stakePoolMetadataURL  :: Text,
        stakePoolMetadataHash :: Hash StakePoolMetadata
+     }
+  deriving (Eq, Show)
+
+data DRepMetadataReference =
+     DRepMetadataReference {
+       drepMetadataURL  :: Text,
+       drepMetadataHash :: Hash DRepMetadata
      }
   deriving (Eq, Show)
 

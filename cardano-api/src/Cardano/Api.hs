@@ -390,6 +390,14 @@ module Cardano.Api (
     validateAndHashStakePoolMetadata,
     StakePoolMetadataValidationError,
 
+    -- ** Registering DReps
+    DRepMetadataReference,
+
+    -- * DRep off-chain metadata
+    DRepMetadata,
+    validateAndHashDRepMetadata,
+    DRepMetadataValidationError,
+
     -- * Scripts
     -- | Both 'PaymentCredential's and 'StakeCredential's can use scripts.
 
@@ -839,6 +847,9 @@ module Cardano.Api (
 
     -- ** CLI option parsing
     bounded,
+
+    -- ** Governance
+    DRepKey,
   ) where
 
 import           Cardano.Api.Address
@@ -848,6 +859,7 @@ import           Cardano.Api.Convenience.Constraints
 import           Cardano.Api.Convenience.Construction
 import           Cardano.Api.Convenience.Query
 import           Cardano.Api.DeserialiseAnyOf
+import           Cardano.Api.DRepMetadata
 import           Cardano.Api.Environment
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras

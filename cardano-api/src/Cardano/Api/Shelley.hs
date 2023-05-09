@@ -181,6 +181,10 @@ module Cardano.Api.Shelley
       ),
     EpochNo(..),
 
+    -- * DRep
+    DRepMetadata(DRepMetadata),
+    DRepMetadataReference(DRepMetadataReference),
+
     -- ** Stake pool operator's keys
     StakePoolKey,
     PoolId,
@@ -257,12 +261,12 @@ import           Cardano.Api
 import           Cardano.Api.Address
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
+import           Cardano.Api.DRepMetadata
 import           Cardano.Api.Eras
 import           Cardano.Api.Genesis
 import           Cardano.Api.Governance.Poll
 import           Cardano.Api.InMode
 import           Cardano.Api.IPC
-import           Cardano.Api.Keys.Byron
 import           Cardano.Api.Keys.Praos
 import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.LedgerState
