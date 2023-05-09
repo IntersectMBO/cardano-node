@@ -182,11 +182,11 @@ shelleyTestnet testnetOptions H.Conf {..} = do
   -- configuration files.
   let sourceAlonzoGenesisSpecFile = base </> "cardano-cli/test/data/golden/alonzo/genesis.alonzo.spec.json"
   alonzoSpecFile <- H.noteTempFile tempAbsPath "genesis.alonzo.spec.json"
-  liftIO $ IO.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
+  H.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
 
   let sourceConwayGenesisSpecFile = base </> "cardano-cli/test/data/golden/conway/genesis.conway.spec.json"
   conwaySpecFile <- H.noteTempFile tempAbsPath "genesis.conway.spec.json"
-  liftIO $ IO.copyFile sourceConwayGenesisSpecFile conwaySpecFile
+  H.copyFile sourceConwayGenesisSpecFile conwaySpecFile
 
   -- Set up our template
   execCli_
@@ -435,7 +435,7 @@ hprop_testnet = H.integrationRetryWorkspace 2 "shelley-testnet" $ \tempAbsPath' 
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
   conf <- H.mkConf (H.ProjectBase base) (H.YamlFilePath configurationTemplate) tempAbsPath' Nothing
 
-  void . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000
+  void . H.evalM . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000
 
   void $ shelleyTestnet defaultTestnetOptions conf
 
@@ -443,4 +443,4 @@ hprop_testnet = H.integrationRetryWorkspace 2 "shelley-testnet" $ \tempAbsPath' 
 
 hprop_testnet_pause :: H.Property
 hprop_testnet_pause = H.integration $ do
-  void . forever . liftIO $ IO.threadDelay 10000000
+  void . forever . H.evalIO $ IO.threadDelay 10000000

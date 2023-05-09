@@ -6,7 +6,6 @@ module Test.Golden.Shelley.Genesis.Create
   ) where
 
 import           Control.Monad (void)
-import           Control.Monad.IO.Class (MonadIO (..))
 import           Data.Bifunctor (Bifunctor (..))
 import           Data.Foldable (for_)
 
@@ -27,7 +26,6 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Gen as G
 import qualified Hedgehog.Range as R
-import qualified System.Directory as IO
 
 {- HLINT ignore "Use <$>" -}
 {- HLINT ignore "Use camelCase" -}
@@ -78,13 +76,13 @@ golden_shelleyGenesisCreate = propertyOnce $ do
     alonzoSpecFile <- noteTempFile tempDir "genesis.alonzo.spec.json"
     conwaySpecFile <- noteTempFile tempDir "genesis.conway.spec.json"
 
-    liftIO $ IO.copyFile sourceGenesisSpecFile genesisSpecFile
-    liftIO $ IO.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
-    liftIO $ IO.copyFile sourceConwayGenesisSpecFile conwaySpecFile
+    H.copyFile sourceGenesisSpecFile genesisSpecFile
+    H.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
+    H.copyFile sourceConwayGenesisSpecFile conwaySpecFile
 
     let genesisFile = tempDir <> "/genesis.json"
 
-    fmtStartTime <- fmap H.formatIso8601 $ liftIO DT.getCurrentTime
+    fmtStartTime <- fmap H.formatIso8601 $ H.evalIO DT.getCurrentTime
 
     (supply, fmtSupply) <- fmap (OP.withSnd show) $ forAll $ G.int (R.linear 10000000 4000000000)
     (delegateCount, fmtDelegateCount) <- fmap (OP.withSnd show) $ forAll $ G.int (R.linear 4 19)
@@ -103,7 +101,7 @@ golden_shelleyGenesisCreate = propertyOnce $ do
 
     H.assertFilesExist [genesisFile]
 
-    genesisContents <- liftIO $ LBS.readFile genesisFile
+    genesisContents <- H.evalIO $ LBS.readFile genesisFile
 
     actualJson <- H.evalEither $ J.eitherDecode genesisContents
     actualSupply <- H.evalEither $ J.parseEither parseMaxLovelaceSupply actualJson
@@ -156,7 +154,7 @@ golden_shelleyGenesisCreate = propertyOnce $ do
   H.moduleWorkspace "tmp" $ \tempDir -> do
     let genesisFile = tempDir <> "/genesis.json"
 
-    fmtStartTime <- fmap H.formatIso8601 $ liftIO DT.getCurrentTime
+    fmtStartTime <- fmap H.formatIso8601 $ H.evalIO DT.getCurrentTime
 
     (supply, fmtSupply) <- fmap (OP.withSnd show) $ forAll $ G.int (R.linear 10000000 4000000000)
     (delegateCount, fmtDelegateCount) <- fmap (OP.withSnd show) $ forAll $ G.int (R.linear 4 19)
@@ -164,11 +162,11 @@ golden_shelleyGenesisCreate = propertyOnce $ do
 
     sourceAlonzoGenesisSpecFile <- noteInputFile "test/data/golden/alonzo/genesis.alonzo.spec.json"
     alonzoSpecFile <- noteTempFile tempDir "genesis.alonzo.spec.json"
-    liftIO $ IO.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
+    H.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
 
     sourceConwayGenesisSpecFile <- noteInputFile "test/data/golden/conway/genesis.conway.spec.json"
     conwaySpecFile <- noteTempFile tempDir "genesis.conway.spec.json"
-    liftIO $ IO.copyFile sourceConwayGenesisSpecFile conwaySpecFile
+    H.copyFile sourceConwayGenesisSpecFile conwaySpecFile
 
     -- Create the genesis json file and required keys
     void $ execCardanoCLI
@@ -183,7 +181,7 @@ golden_shelleyGenesisCreate = propertyOnce $ do
 
     H.assertFilesExist [genesisFile]
 
-    genesisContents <- liftIO $ LBS.readFile genesisFile
+    genesisContents <- H.evalIO $ LBS.readFile genesisFile
 
     actualJson <- H.evalEither $ J.eitherDecode genesisContents
     actualSupply <- H.evalEither $ J.parseEither parseMaxLovelaceSupply actualJson

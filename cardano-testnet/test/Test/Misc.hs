@@ -2,7 +2,6 @@ module Test.Misc where
 
 import           Prelude
 
-import           Control.Monad.IO.Class
 import           Data.List (isInfixOf)
 import qualified GHC.Stack as GHC
 
@@ -11,6 +10,7 @@ import           Cardano.CLI.Shelley.Run.Query
 import           Cardano.CLI.Types
 
 import           Hedgehog (success)
+import qualified Hedgehog as H
 import           Hedgehog.Extras.Test.Base (Integration, failMessage, note_)
 
 -- | This property checks that a given operational certificate has a valid specified KES starting period.
@@ -37,7 +37,7 @@ prop_op_cert_valid_kes_period opCertFp output =
 -- the node has minted blocks at any time in the past.
 prop_node_minted_block :: GHC.HasCallStack => FilePath -> Integration ()
 prop_node_minted_block nodeLogFp  = do
-  logs <- liftIO $ readFile nodeLogFp
+  logs <- H.evalIO $ readFile nodeLogFp
   -- TODO: Ideally we would parse the node's json logging file via the FromJSON LogObject
   -- instance. This will require all properties that depend on parsing the node's logs to
   -- only parse the JSON logs and not the plain text logs.

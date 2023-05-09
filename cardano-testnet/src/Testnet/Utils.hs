@@ -14,7 +14,6 @@ import           Cardano.Api
 import           Prelude
 
 import           Cardano.CLI.Shelley.Output
-import           Control.Concurrent (threadDelay)
 import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad
 import           Control.Monad.IO.Class
@@ -24,11 +23,13 @@ import           GHC.Stack
 import           Options.Applicative
 import           System.Directory (doesFileExist, removeFile)
 
+import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import           Hedgehog.Extras.Test.Process (ExecConfig)
 import           Hedgehog.Internal.Property (MonadTest)
 
+import qualified Hedgehog.Extras.Test.Concurrent as H
 import           Testnet.Cardano (CardanoTestnetOptions (..), defaultTestnetOptions)
 import qualified Testnet.Util.Process as H
 
@@ -44,8 +45,8 @@ waitUntilEpoch
   -- ^ Desired epoch
   -> m EpochNo
 waitUntilEpoch fp testnetMagic execConfig desiredEpoch = do
-  exists <- liftIO $ doesFileExist fp
-  when exists $ liftIO $ removeFile fp
+  exists <- H.evalIO $ doesFileExist fp
+  when exists $ H.evalIO $ removeFile fp
 
   void $ H.execCli' execConfig
     [ "query",  "tip"
@@ -62,7 +63,7 @@ waitUntilEpoch fp testnetMagic execConfig desiredEpoch = do
     Just currEpoch ->
       if currEpoch >= desiredEpoch
       then return currEpoch
-      else do liftIO $ threadDelay 10_000_000
+      else do H.threadDelay 10_000_000
               waitUntilEpoch fp testnetMagic execConfig desiredEpoch
 
 queryTip
@@ -74,8 +75,8 @@ queryTip
   -> ExecConfig
   -> m QueryTipLocalStateOutput
 queryTip (QueryTipOutput fp) testnetMag execConfig = do
-  exists <- liftIO $ doesFileExist fp
-  when exists $ liftIO $ removeFile fp
+  exists <- H.evalIO $ doesFileExist fp
+  when exists $ H.evalIO $ removeFile fp
 
   void $ H.execCli' execConfig
     [ "query",  "tip"

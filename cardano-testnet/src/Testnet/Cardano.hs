@@ -24,7 +24,7 @@ module Testnet.Cardano
 import           Prelude
 
 import           Control.Monad
-import           Control.Monad.IO.Class (MonadIO, liftIO)
+import           Control.Monad.IO.Class (MonadIO)
 import           Control.Monad.Trans.Except
 import qualified Data.Aeson as J
 import qualified Data.ByteString as BS
@@ -383,11 +383,11 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   -- configuration files.
   let sourceAlonzoGenesisSpecFile = base </> "cardano-cli/test/data/golden/alonzo/genesis.alonzo.spec.json"
   alonzoSpecFile <- H.noteTempFile tempAbsPath "shelley/genesis.alonzo.spec.json"
-  liftIO $ IO.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
+  H.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
 
   let sourceConwayGenesisSpecFile = base </> "cardano-cli/test/data/golden/conway/genesis.conway.spec.json"
   conwaySpecFile <- H.noteTempFile tempAbsPath "shelley/genesis.conway.spec.json"
-  liftIO $ IO.copyFile sourceConwayGenesisSpecFile conwaySpecFile
+  H.copyFile sourceConwayGenesisSpecFile conwaySpecFile
 
   execCli_
     [ "genesis", "create"
@@ -777,6 +777,6 @@ getByronGenesisHash path = do
 
 getShelleyGenesisHash :: (H.MonadTest m, MonadIO m) => FilePath -> m J.Value
 getShelleyGenesisHash path = do
-  content <- liftIO $ BS.readFile path
+  content <- H.evalIO $ BS.readFile path
   let genesisHash = Cardano.Crypto.Hash.Class.hashWith id content :: Cardano.Crypto.Hash.Class.Hash Cardano.Crypto.Hash.Blake2b.Blake2b_256 BS.ByteString
   pure $ J.toJSON genesisHash

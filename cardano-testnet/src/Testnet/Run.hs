@@ -27,7 +27,7 @@ testnetProperty maybeTestnetMagic tn = H.integrationRetryWorkspace 2 "testnet" $
   conf <- H.mkConf (H.ProjectBase base) (H.YamlFilePath configurationTemplate) tempAbsPath' maybeTestnetMagic
 
   -- Fork a thread to keep alive indefinitely any resources allocated by testnet.
-  void . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000
+  void . H.evalM . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000
 
   void $ tn conf
 

@@ -6,7 +6,6 @@ import qualified Control.Concurrent as IO
 import           Control.Concurrent.Async (async, link)
 import           Control.Exception (Exception, throw)
 import           Control.Monad (forever)
-import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad.Trans.Except (runExceptT)
 import qualified Data.Text as TS
 import           Prelude
@@ -37,7 +36,7 @@ prop_foldBlocks :: H.Property
 prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath' -> do
 
   -- Start testnet
-  base <- HE.noteM $ liftIO . IO.canonicalizePath =<< HE.getProjectBase
+  base <- HE.noteM $ H.evalIO . IO.canonicalizePath =<< HE.getProjectBase
   configTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
   conf <- HE.noteShowM $
     TN.mkConf (TN.ProjectBase base) (TN.YamlFilePath configTemplate)
@@ -56,13 +55,13 @@ prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath'
   -- Get socketPath
   socketPathAbs <- do
     socketPath' <- HE.sprocketArgumentName <$> HE.headM (nodeSprocket <$> bftNodes runtime)
-    H.note =<< liftIO (IO.canonicalizePath $ tempAbsPath conf </> socketPath')
+    H.noteIO (IO.canonicalizePath $ tempAbsPath conf </> socketPath')
 
   configFile <- H.noteShow $ tempAbsPath conf </> "configuration.yaml"
 
   -- Start foldBlocks in a separate thread
-  lock <- liftIO IO.newEmptyMVar
-  liftIO $ do
+  lock <- H.evalIO IO.newEmptyMVar
+  H.evalIO $ do
     a <- async $
       -- The `forever` is here because `foldBlocks` drains blocks
       -- until current slot and then quits -- even if there are no
@@ -78,5 +77,5 @@ prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath'
   -- tests that `foldBlocks` receives ledger state; once that happens,
   -- handler is called, which then writes to the `lock` and allows the
   -- test to finish.
-  _ <- liftIO $ IO.readMVar lock
+  _ <- H.evalIO $ IO.readMVar lock
   H.assert True
