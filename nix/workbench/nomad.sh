@@ -1326,7 +1326,8 @@ EOF
             "${job_file}" "${job_name}" "false" \
             &
           jobs_array+=("$!")
-          wait "${jobs_array[@]}"
+          # Wait for all processes to finish or kill them if at least one fails!
+          wait_fail_any "${jobs_array[@]}"
           # Any failed evaluations?
           if test -f "${job_file}.run/evaluations.error"
           then
@@ -1401,8 +1402,8 @@ EOF
                 jobs_array+=("$!")
               fi
             done
-            # Wait
-            if ! wait "${jobs_array[@]}" || test -f "${job_file}.run/evaluations.error"
+            # Wait for all processes to finish or kill them if at least one fails!
+            if ! wait_fail_any "${jobs_array[@]}" || test -f "${job_file}.run/evaluations.error"
             then
               touch "${job_file}.run/job.error"
               "${msgoff}" || msg "$(red "FATAL: One or more Nomad Evaluations failed")"
@@ -1462,8 +1463,8 @@ EOF
                 jobs_array+=("$!")
               fi
             done
-            # Wait
-            if ! wait "${jobs_array[@]}" || test -f "${job_file}.run/allocations.error"
+            # Wait for all processes to finish or kill them if at least one fails!
+            if ! wait_fail_any "${jobs_array[@]}" || test -f "${job_file}.run/allocations.error"
             then
               touch "${job_file}.run/job.error"
               "${msgoff}" || msg "$(red "FATAL: One or more Nomad Allocations failed")"
@@ -1524,8 +1525,8 @@ EOF
                 jobs_array+=("$!")
               fi
             done
-            # Wait
-            if ! wait "${jobs_array[@]}" || test -f "${job_file}.run/tasks.${alloc_id}.error"
+            # Wait for all processes to finish or kill them if at least one fails!
+            if ! wait_fail_any "${jobs_array[@]}" || test -f "${job_file}.run/tasks.${alloc_id}.error"
             then
               touch "${job_file}.run/job.error"
               "${msgoff}" || msg "$(red "One or more Nomad Tasks failed")"

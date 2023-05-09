@@ -270,7 +270,7 @@ backend_nomad() {
       # Wait and check!
       if test -n "${uploads_array}"
       then
-        if ! wait "${uploads_array[@]}"
+        if ! wait_fail_any "${uploads_array[@]}"
         then
           fatal "Failed to upload some genesis files"
         else
@@ -297,7 +297,7 @@ backend_nomad() {
           # Wait and check!
           if test -n "${unpacks_array}"
           then
-            if ! wait "${unpacks_array[@]}"
+            if ! wait_fail_any "${unpacks_array[@]}"
             then
               fatal "Failed to unpack some genesis files"
             fi
@@ -1161,7 +1161,7 @@ backend_nomad() {
       # Wait and check!
       if test -n "${jobs_array}"
       then
-        if ! wait "${jobs_array[@]}"
+        if ! wait_fail_any "${jobs_array[@]}"
         then
           fatal "Failed to start node(s)"
         else
@@ -1211,7 +1211,7 @@ backend_nomad() {
         # Wait and check!
         if test -n "${jobs_array}"
         then
-          if ! wait "${jobs_array[@]}"
+          if ! wait_fail_any "${jobs_array[@]}"
           then
             # Don't use fatal here, let `start` decide!
             msg "$(red "Failed to start tracer(s)")"
