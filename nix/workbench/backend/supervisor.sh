@@ -20,7 +20,15 @@ case "$op" in
     is-running )
         local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}
-        test "$(sleep 0.5s; netstat -pltn 2>/dev/null | grep ':9001 ' | wc -l)" != "0";;
+        test "$(sleep 0.5s
+                netstat -pltn 2>/dev/null |
+                grep ':9001 '             |
+                wc -l)" = "0" ||
+            echo 'supervisord'
+        for exe in 'cardano-node' 'tx-generator' 'cardano-tracer'
+        do test $(pgrep --exact --count $exe)   = 0 || echo $exe
+        done
+        ;;
 
     setenv-defaults )
         local usage="USAGE: wb backend $op BACKEND-DIR"

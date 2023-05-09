@@ -796,8 +796,9 @@ EOF
         local run=${1:-current}
         local dir=$(run get "$run")
 
-        if backend is-running "$dir"
-        then progress "run" "terminating.."
+        local running_components=($(backend is-running "$dir"))
+        if test ${#running_components[*]} -gt 0
+        then progress "run" "terminating backend components ($(red ${running_components[*]})).."
              backend stop-cluster "$dir"
              progress "run" "cluster stopped"
         fi
