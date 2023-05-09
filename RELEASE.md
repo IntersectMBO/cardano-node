@@ -54,7 +54,7 @@ The node uses a "pseudo semantic versioning" that takes into account breaking ch
 standard within the node is supported as of `8.0.0` release. The first part of the version always references the max protocol version allowed
 on a stable network with no additional experimental override flags. This first part will remain `8` referencing Babbage era until the next era (Conway)
 is finalized. The second digit is a new release incremented counter. Every release based off the master trunk will increment this number by one. The final
-part should always be `0` *unless* an emergeency hard fork is necessary that cannot wait until the next major release. This should be a rare occurrence going
+part should always be `0` *unless* an emergency bug fix is necessary that cannot wait until the next major release. This should be a rare occurrence going
 forward and is used for forking a new version off a previous release and backporting fixes.
 
 Not all releases are declared stable. Releases that aren't stable will be released as *pre-releases* and will append a `-pre` tag indicating it is not ready
