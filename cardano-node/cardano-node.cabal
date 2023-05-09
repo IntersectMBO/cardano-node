@@ -192,9 +192,9 @@ library
                       , strict-stm
                       , text
                       , time
-                      , trace-dispatcher
-                      , trace-forward
-                      , trace-resources
+                      , trace-dispatcher ^>= 2.0
+                      , trace-forward ^>= 2.0
+                      , trace-resources ^>= 0.2
                       , tracer-transformers
                       , transformers
                       , transformers-except
