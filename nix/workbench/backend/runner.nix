@@ -115,6 +115,18 @@ in
 
             time "''${cmd[@]}" 2>&1 |
               tee $out/wb-start.log
+            status=$?
+            if test $status != 0
+            then echo "wb start failed"
+                 cd run/current
+                 echo "==========  txgen  stdout:"; cat generator/stdout || true
+                 echo "==========  txgen  stderr:"; cat generator/stderr || true
+                 echo "==========  node-0 stdout:"; cat node-0/stdout || true
+                 echo "==========  node-0 stderr:"; cat node-0/stderr || true
+                 echo "==========  node-1 stdout:"; cat node-1/stdout || true
+                 echo "==========  node-1 stderr:"; cat node-1/stderr || true
+                 wb call fail "wb start failed"
+           fi
 
             ## Convert structure from $out/run/RUN-ID/* to $out/*:
             rm -rf cache
