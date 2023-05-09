@@ -408,7 +408,7 @@ runTxBuildCmd
       case consensusMode of
         CardanoMode -> do
           (nodeEraUTxO, _, eraHistory, systemStart, _) <-
-            lift (queryStateForBalancedTx nodeEra nid allTxInputs)
+            lift (queryStateForBalancedTx socketPath nodeEra nid allTxInputs)
               & onLeft (left . ShelleyTxCmdQueryConvenienceError)
 
           -- Why do we cast the era? The user can specify an era prior to the era that the node is currently in.
@@ -642,7 +642,7 @@ runTxBuild
   -> TxBuildOutputOptions
   -> ExceptT ShelleyTxCmdError IO (BalancedTxBody era)
 runTxBuild
-    (SocketPath sockPath) era (AnyConsensusModeParams cModeParams) networkId mScriptValidity
+    socketPath era (AnyConsensusModeParams cModeParams) networkId mScriptValidity
     inputsAndMaybeScriptWits readOnlyRefIns txinsc mReturnCollateral mTotCollateral txouts
     (TxOutChangeAddress changeAddr) valuesWithScriptWits mLowerBound mUpperBound
     certsAndMaybeScriptWits withdrawals reqSigners txAuxScripts txMetadata mpparams
@@ -688,14 +688,14 @@ runTxBuild
           localNodeConnInfo = LocalNodeConnectInfo
                                      { localConsensusModeParams = CardanoModeParams $ EpochSlots 21600
                                      , localNodeNetworkId = networkId
-                                     , localNodeSocketPath = sockPath
+                                     , localNodeSocketPath = unSocketPath socketPath
                                      }
       AnyCardanoEra nodeEra <- lift (determineEra cModeParams localNodeConnInfo)
         & onLeft (left . ShelleyTxCmdQueryConvenienceError . AcqFailure)
 
       (nodeEraUTxO, pparams, eraHistory, systemStart, stakePools) <-
         firstExceptT ShelleyTxCmdQueryConvenienceError . newExceptT
-          $ queryStateForBalancedTx nodeEra networkId allTxInputs
+          $ queryStateForBalancedTx socketPath nodeEra networkId allTxInputs
 
       validatedPParams <- hoistEither $ first ShelleyTxCmdProtocolParametersValidationError
                                       $ validateProtocolParameters era (Just pparams)

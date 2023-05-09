@@ -787,7 +787,6 @@ module Cardano.Api (
     -- * Node socket related
     EnvSocketError(..),
     SocketPath(..),
-    readEnvSocketPath,
     renderEnvSocketError,
 
     NodeToClientVersion(..),
