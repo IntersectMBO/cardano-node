@@ -18,7 +18,7 @@ based off of a previously released version as a hotfix
 4. A release candidate will be deployed to preview/preprod by SRE
 5. Community will be notified of release candidate and given a few days to provide feedback
 6. Release Squad Lead will draft Release notes
-7. Head of Engineering will meet with release team and identify if release should be published as stable or beta (pre-release) in GitHub. stable releases can go all the way to mainnet, beta should only go to preprod and wait for that release to be relabeled as stable or a new stable release to be cut.
+7. Head of Engineering will meet with release team and identify if release should be published as stable or beta (pre-release) in GitHub. Stable releases can go all the way to mainnet, beta should only go to preprod and wait for that release to be relabeled as stable or a new stable release to be cut.
 8. Release is published
 
 # Rotating Release Engineer Role
