@@ -409,7 +409,7 @@ pStakeAddressCmd envCli =
 
     pStakeAddressPoolDelegationCert :: Parser StakeAddressCmd
     pStakeAddressPoolDelegationCert =
-      StakeCredentialDelegationCert
+      StakeCredentialPoolDelegationCert
         <$> pStakeIdentifier
         <*> pPoolDelegationTarget
         <*> pOutputFile

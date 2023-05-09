@@ -49,8 +49,8 @@ runStakeAddressCmd (StakeAddressBuild stakeVerifier nw mOutputFp) =
   runStakeAddressBuild stakeVerifier nw mOutputFp
 runStakeAddressCmd (StakeRegistrationCert stakeIdentifier outputFp) =
   runStakeCredentialRegistrationCert stakeIdentifier outputFp
-runStakeAddressCmd (StakeCredentialDelegationCert stakeIdentifier stkPoolVerKeyHashOrFp outputFp) =
-  runStakeCredentialDelegationCert stakeIdentifier stkPoolVerKeyHashOrFp outputFp
+runStakeAddressCmd (StakeCredentialPoolDelegationCert stakeIdentifier stkPoolVerKeyHashOrFp outputFp) =
+  runStakeCredentialPoolDelegationCert stakeIdentifier stkPoolVerKeyHashOrFp outputFp
 runStakeAddressCmd (StakeCredentialDeRegistrationCert stakeIdentifier outputFp) =
   runStakeCredentialDeRegistrationCert stakeIdentifier outputFp
 
@@ -127,7 +127,7 @@ runStakeCredentialRegistrationCert stakeIdentifier oFp = do
   regCertDesc = "Stake Address Registration Certificate"
 
 
-runStakeCredentialDelegationCert
+runStakeCredentialPoolDelegationCert
   :: StakeIdentifier
   -- ^ Delegator stake verification key, verification key file or script file.
   -> PoolDelegationTarget
@@ -135,7 +135,7 @@ runStakeCredentialDelegationCert
   -- verification key hash.
   -> File () Out
   -> ExceptT ShelleyStakeAddressCmdError IO ()
-runStakeCredentialDelegationCert stakeVerifier delegationTarget outFp =
+runStakeCredentialPoolDelegationCert stakeVerifier delegationTarget outFp =
   case delegationTarget of
     StakePoolDelegationTarget poolVKeyOrHashOrFile -> do
       poolStakeVKeyHash <- lift (readVerificationKeyOrHashOrFile AsStakePoolKey poolVKeyOrHashOrFile)
