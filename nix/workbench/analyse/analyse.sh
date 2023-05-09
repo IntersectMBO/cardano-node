@@ -555,8 +555,10 @@ case "$op" in
 
         ## 1. unless already done, filter logs according to locli's requirements
         local logdirs=($(ls -d "$dir"/node-*/ 2>/dev/null))
-        local logfiles=($(ls "$adir"/logs-node-*.flt.json 2>/dev/null))
         local run_logs=$adir/log-manifest.json
+
+        test ${#logdirs[*]} -gt 0 ||
+            fail "Missing node-* subdirs in:  $dir"
 
         progress "analyse" "assembling log manifest"
         echo '{}' > $run_logs
