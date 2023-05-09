@@ -2,12 +2,18 @@
 
 ## 8.1.0
 
-### Bugfix
+### Features
+
+- New functions: `intoFile`, `readByteStringFile`, `readLazyByteStringFile`, `readTextFile`.
+  Modify functions in `Cardano.Api.IO` to use unspecified content type rather than `()`.
+  ([PR 5194](https://github.com/input-output-hk/cardano-node/pull/5194))
+
+### Bugs
 
 - Fix `toEraInMode` for Conway
   ([PR 5175](https://github.com/input-output-hk/cardano-node/pull/5175))
 
-## 8.0.0 -- May 2023
+### 8.0.0 -- May 2023
 
 - Add `getSlotForRelativeTime` function ([PR 5130](https://github.com/input-output-hk/cardano-node/pull/5130))
 
