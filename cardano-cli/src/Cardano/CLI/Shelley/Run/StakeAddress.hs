@@ -20,7 +20,7 @@ import qualified Data.Text.IO as Text
 import           Cardano.Api
 import           Cardano.Api.Shelley
 
-import           Cardano.CLI.Shelley.Key (DelegationTarget (..), StakeIdentifier (..),
+import           Cardano.CLI.Shelley.Key (PoolDelegationTarget (..), StakeIdentifier (..),
                    StakeVerifier (..), VerificationKeyOrFile, readVerificationKeyOrFile,
                    readVerificationKeyOrHashOrFile)
 import           Cardano.CLI.Shelley.Parsers
@@ -130,7 +130,7 @@ runStakeCredentialRegistrationCert stakeIdentifier oFp = do
 runStakeCredentialDelegationCert
   :: StakeIdentifier
   -- ^ Delegator stake verification key, verification key file or script file.
-  -> DelegationTarget
+  -> PoolDelegationTarget
   -- ^ Delegatee stake pool verification key or verification key file or
   -- verification key hash.
   -> File () Out

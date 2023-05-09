@@ -50,7 +50,7 @@ import           Cardano.Api.Shelley
 
 import           Data.Text (Text)
 
-import           Cardano.CLI.Shelley.Key (DelegationTarget, PaymentVerifier, StakeIdentifier,
+import           Cardano.CLI.Shelley.Key (PaymentVerifier, PoolDelegationTarget, StakeIdentifier,
                    StakeVerifier, VerificationKeyOrFile, VerificationKeyOrHashOrFile,
                    VerificationKeyTextOrFile)
 import           Cardano.CLI.Types
@@ -116,7 +116,7 @@ data StakeAddressCmd
   | StakeRegistrationCert StakeIdentifier (File () Out)
   | StakeCredentialDelegationCert
       StakeIdentifier
-      DelegationTarget
+      PoolDelegationTarget
       (File () Out)
   | StakeCredentialDeRegistrationCert StakeIdentifier (File () Out)
   deriving Show
