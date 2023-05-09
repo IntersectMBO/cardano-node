@@ -560,47 +560,64 @@ case "$op" in
         test ${#logdirs[*]} -gt 0 ||
             fail "Missing node-* subdirs in:  $dir"
 
-        progress "analyse" "assembling log manifest"
-        echo '{}' > $run_logs
-        time {
-        for d in "${logdirs[@]}"
-        do throttle_shell_job_spawns
-           local logfiles=($(ls --reverse -t "$d"stdout* "$d"node-[0-9]*.json \
-                                2>/dev/null))
-           if test -z "${logfiles[*]}"
-           then msg "no logs in $d, skipping.."; fi
-           local mach=$(basename "$d")
-           local  out="$adir"/logs-$mach
-           cat ${logfiles[*]} | grep '^{'        > "$out".flt.json       &
-           trace_frequencies_json ${logfiles[*]} > "$out".tracefreq.json &
-           { cat ${logfiles[*]} | sha256sum | cut -d' ' -f1 | xargs echo -n;} > "$out".sha256 &
+        local remanifest_reasons=()
+        if   test -f "$run_logs"
+        then remanifest_reasons+=('missing')
+        elif test "$(ls --sort=time $dir/node-*/*.json analysis/log-manifest.json | head -n1)" = "$run_logs"
+        then remanifest_reasons+=('not-up-to-date')
+        fi
 
-           jq_fmutate "$run_logs" '
-             .rlHostLogs["'"$mach"'"] =
-               { hlRawLogfiles:    ["'"$(echo ${logfiles[*]} | sed 's/ /", "/')"'"]
-               , hlRawLines:       '"$(cat ${logfiles[*]} | wc -l)"'
-               , hlRawSha256:      ""
-               , hlRawTraceFreqs:  {}
-               , hlLogs:           ["'"$adir/logs-$mach.flt.json"'", null]
-               , hlFilteredSha256: ""
-               , hlProfile:        []
-               }
-           | .rlFilterDate = ('$(if test -z "$without_datever_meta"; then echo -n now; else echo -n 0; fi)' | todate)
-           | .rlFilterKeys = []
-           '
+        if test ${#remanifest_reasons[*]} = 0
+        then progress "analyse" "log manifest exist and is up to date"
+        else progress "analyse" "assembling log manifest:  ${remanifest_reasons[*]}"
+             echo '{}' > $run_logs
+             time {
+                 for d in "${logdirs[@]}"
+                 do throttle_shell_job_spawns
+                    local logfiles=($(ls --reverse -t "$d"stdout* "$d"node-[0-9]*.json \
+                                         2>/dev/null))
+                    if test -z "${logfiles[*]}"
+                    then msg "no logs in $d, skipping.."; fi
+                    local mach=$(basename "$d")
+                    local  out="$adir"/logs-$mach
+                    cat ${logfiles[*]} | grep '^{'        > "$out".flt.json       &
+                    trace_frequencies_json ${logfiles[*]} > "$out".tracefreq.json &
+                    { cat ${logfiles[*]} |
+                      sha256sum |
+                      cut -d' ' -f1 |
+                      xargs echo -n
+                    } > "$out".sha256 &
 
-           local ghc_rts_prof=$d/cardano-node.prof
-           if test -f "$ghc_rts_prof"
-           then progress "analyse | profiling" "processing cardano-node.prof for $mach"
-                ghc_rts_minusp_tojson "$ghc_rts_prof"           > "$out".flt.prof.json
-               jq_fmutate "$run_logs" '
-                 .rlHostLogs["'"$mach"'"] += { hlProfile: $profile }
-                 ' --slurpfile profile "$out".flt.prof.json
-           fi
+                    jq_fmutate "$run_logs" '
+                      .rlHostLogs["'"$mach"'"] =
+                        { hlRawLogfiles:    ["'"$(echo ${logfiles[*]} |
+                                                  sed 's/ /", "/')"'"]
+                        , hlRawLines:       '"$(cat ${logfiles[*]} | wc -l)"'
+                        , hlRawSha256:      ""
+                        , hlRawTraceFreqs:  {}
+                        , hlLogs:           ["'"$adir/logs-$mach.flt.json"'", null]
+                        , hlFilteredSha256: ""
+                        , hlProfile:        []
+                        }
+                     | .rlFilterDate = ('$(if test -z "$without_datever_meta"
+                                           then echo -n now
+                                           else echo -n 0; fi)' | todate)
+                     | .rlFilterKeys = []
+                     '
 
-        done
-        wait
-        }
+                    local ghc_rts_prof=$d/cardano-node.prof
+                    if test -f "$ghc_rts_prof"
+                    then progress "analyse | profiling" "processing cardano-node.prof for $mach"
+                         ghc_rts_minusp_tojson "$ghc_rts_prof"           > "$out".flt.prof.json
+                         jq_fmutate "$run_logs" '
+                           .rlHostLogs["'"$mach"'"] += { hlProfile: $profile }
+                         ' --slurpfile profile "$out".flt.prof.json
+                    fi
+
+                 done
+                 wait
+             }
+        fi
 
         for mach in $(jq_tolist '.rlHostLogs | keys' $run_logs)
         do jq_fmutate "$run_logs" '
