@@ -1,0 +1,5 @@
+The transaction does balance in its use of ada, however the net balance does not meet the minimum UTxO threshold. 
+Balance: Lovelace 1
+Offending output (change output): addr1vyjse2p4zsv3l882enhzave8d4ddje8p0np35pnkj8sye2qu9km4v + 1 lovelace
+Minimum UTxO threshold: Lovelace 0
+The usual solution is to provide more inputs, or inputs with more ada to meet the minimum UTxO threshold

@@ -71,7 +71,7 @@ test-suite chairman-tests
                       , directory
                       , filepath
                       , hedgehog
-                      , hedgehog-extras ^>= 0.4.2
+                      , hedgehog-extras ^>= 0.4.3
                       , network
                       , process
                       , random

@@ -1,6 +1,10 @@
 # Changelog for cardano-api
 
 ## vNext
+
+
+## 8.0.0 - May 2023
+
 - Add `getSlotForRelativeTime` function ([PR 5130](https://github.com/input-output-hk/cardano-node/pull/5130))
 
 ### Features
@@ -15,6 +19,13 @@
   - Conway: `GenesisHashConway` and `readConwayGenesisConfig`
 
 - Expose envirnment construction functionality: `mkProtocolInfoCardano` and `genesisConfigToEnv`
+
+- New error exports:
+  - `TxOutInAnyEra(..)`
+  - `txOutInAnyEra`
+  - `StakePoolMetadataValidationError(..)`
+  - `ScriptHash(..)`
+  ([PR 5188](https://github.com/input-output-hk/cardano-node/pull/5188))
 
 - Rename `TestEnableDevelopmentHardForkEras` to `ExperimentalHardForksEnabled` and
   `TestEnableDevelopmentNetworkProtocols` to `ExperimentalProtocolsEnabled`

@@ -228,7 +228,7 @@ test-suite cardano-api-test
                       , cardano-slotting ^>= 0.1
                       , containers
                       , hedgehog
-                      , hedgehog-extras ^>= 0.4.2
+                      , hedgehog-extras ^>= 0.4.3
                       , hedgehog-quickcheck
                       , mtl
                       , microlens
@@ -258,3 +258,32 @@ test-suite cardano-api-test
                         Test.Cardano.Api.Typed.Value
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+
+test-suite cardano-api-golden
+  import:               project-config
+
+  hs-source-dirs:       golden
+  main-is:              cardano-api-golden.hs
+  type:                 exitcode-stdio-1.0
+
+  build-depends:        aeson
+                      , bech32 >= 1.1.0
+                      , bytestring
+                      , cardano-api
+                      , cardano-binary
+                      , cardano-crypto-class
+                      , cardano-ledger-alonzo
+                      , containers
+                      , hedgehog-extras >= 0.4.3.0
+                      , hspec
+                      , hw-hspec-hedgehog
+                      , plutus-core ^>= 1.1
+                      , plutus-ledger-api ^>= 1.1
+                      , text
+
+  ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+
+  build-tool-depends:   hspec-discover:hspec-discover
+
+  other-modules:        Test.Golden.ErrorsSpec
+  

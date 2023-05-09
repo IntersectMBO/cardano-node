@@ -1,0 +1,1 @@
+Mismatch in the Bech32 prefix: the actual prefix is "<text>", but the prefix for this payload value should be "<text>"

@@ -1,0 +1,2 @@
+Minimum UTxO threshold not met for tx output: addr1vyjse2p4zsv3l882enhzave8d4ddje8p0np35pnkj8sye2qu9km4v + 1 lovelace
+Minimum required UTxO: Lovelace 1

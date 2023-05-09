@@ -9,9 +9,9 @@ import           Control.Monad (void)
 import           Hedgehog (Property)
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
+import qualified Hedgehog.Extras.Test.Golden as H
 import           System.FilePath ((</>))
 import           Test.OptParse (execCardanoCLI, propertyOnce)
-import           Test.Utilities (diffFileVsGoldenFile)
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -36,7 +36,7 @@ golden_KeyNonExtendedKey_GenesisExtendedVerificationKey =
     -- Check for existence of the converted signing key file
     H.assertFilesExist [outFp]
 
-    diffFileVsGoldenFile outFp nonExtendedFp
+    H.diffFileVsGoldenFile outFp nonExtendedFp
 
 -- | Test that converting a @cardano-address@ Byron signing key yields the
 -- expected result.
@@ -59,4 +59,4 @@ golden_KeyNonExtendedKey_StakeExtendedVerificationKeyShelley =
     -- Check for existence of the converted signing key file
     H.assertFilesExist [outFp]
 
-    diffFileVsGoldenFile outFp nonExtendedFp
+    H.diffFileVsGoldenFile outFp nonExtendedFp

@@ -1,0 +1,1 @@
+Transaction body has no collateral inputs, but uses Plutus scripts

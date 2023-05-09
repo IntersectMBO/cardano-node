@@ -1,0 +1,1 @@
+The transaction does not balance in its use of ada. The net balance of the transaction is negative: Lovelace 1 lovelace. The usual solution is to provide more inputs, or inputs with more ada.
