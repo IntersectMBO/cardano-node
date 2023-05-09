@@ -42,11 +42,9 @@ hprop_kes_period_info :: Property
 hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
   base <- H.note =<< H.evalIO . IO.canonicalizePath =<< H.getProjectBase
-  configurationTemplate
-    <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
-
   conf@Conf { tempBaseAbsPath, tempAbsPath }
-    <- H.noteShowM $ mkConf (ProjectBase base) (YamlFilePath configurationTemplate)
+    -- TODO: Move yaml filepath specification into individual node options
+    <- H.noteShowM $ mkConf (ProjectBase base) Nothing
                               tempAbsBasePath' Nothing
 
   let fastTestnetOptions = CardanoOnlyTestnetOptions $ cardanoDefaultTestnetOptions

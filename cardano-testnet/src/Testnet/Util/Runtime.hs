@@ -144,21 +144,30 @@ startNode tempBaseAbsPath tempAbsPath logDir socketDir node nodeCmd = do
 
   portString <- fmap S.strip . H.readFile $ tempAbsPath </> node </> "port"
 
-  (Just stdIn, _, _, hProcess, _) <- H.createProcess
-    . (\ cp
-         -> cp
-              {IO.std_in = IO.CreatePipe, IO.std_out = IO.UseHandle hNodeStdout,
-               IO.std_err = IO.UseHandle hNodeStderr,
-               IO.cwd = Just tempBaseAbsPath})
-    =<<
-      H.procNode
-        (nodeCmd
-           <>
-             [ "--socket-path", IO.sprocketArgumentName sprocket
-             , "--port", portString
-             ])
+
+  createProcessNode
+    <- H.procNode $ mconcat
+                    [ nodeCmd
+                    , [ "--socket-path", IO.sprocketArgumentName sprocket
+                      , "--port", portString
+                      ]
+                    ]
+
+
+  (Just stdIn, _, _, hProcess, _)
+    <- H.createProcess
+         $ createProcessNode
+            { IO.std_in = IO.CreatePipe, IO.std_out = IO.UseHandle hNodeStdout
+            , IO.std_err = IO.UseHandle hNodeStderr
+            , IO.cwd = Just tempBaseAbsPath
+            }
 
   H.noteShowM_ $ H.getPid hProcess
+
+  -- The node process can fail on startup, e.g while
+  -- parsing the configuration yaml file. If we don't fail
+  -- when stderr is populated, we end up having to wait for the
+  -- timeout to expire before we can see the error.
 
   when (OS.os `L.elem` ["darwin", "linux"]) $ do
     H.onFailure . H.noteIO_ $ IO.readProcess "lsof" ["-iTCP:" <> portString, "-sTCP:LISTEN", "-n", "-P"] ""

@@ -23,7 +23,7 @@ hprop_chairman :: H.Property
 hprop_chairman = H.integrationRetryWorkspace 2 "cardano-chairman" $ \tempAbsPath' -> do
   base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
-  conf <- H.mkConf (H.ProjectBase base) (H.YamlFilePath configurationTemplate) tempAbsPath' Nothing
+  conf <- H.mkConf (H.ProjectBase base) (Just $ H.YamlFilePath configurationTemplate) tempAbsPath' Nothing
 
   allNodes <- fmap H.nodeName . H.allNodes <$> H.testnet (H.CardanoOnlyTestnetOptions H.cardanoDefaultTestnetOptions) conf
 

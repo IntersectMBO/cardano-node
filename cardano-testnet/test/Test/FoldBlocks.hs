@@ -39,7 +39,7 @@ prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath'
   base <- HE.noteM $ H.evalIO . IO.canonicalizePath =<< HE.getProjectBase
   configTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
   conf <- HE.noteShowM $
-    TN.mkConf (TN.ProjectBase base) (TN.YamlFilePath configTemplate)
+    TN.mkConf (TN.ProjectBase base) (Just $ TN.YamlFilePath configTemplate)
       (tempAbsBasePath' <> "/")
       Nothing
 

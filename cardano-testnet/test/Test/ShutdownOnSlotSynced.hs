@@ -18,7 +18,6 @@ import           Data.Maybe
 import           GHC.IO.Exception (ExitCode (ExitSuccess))
 import           GHC.Stack (callStack)
 import qualified System.Directory as IO
-import           System.FilePath ((</>))
 
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
@@ -33,9 +32,9 @@ hprop_shutdownOnSlotSynced :: Property
 hprop_shutdownOnSlotSynced = H.integrationRetryWorkspace 2 "shutdown-on-slot-synced" $ \tempAbsBasePath' -> do
   -- Start a local test net
   baseDir <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
-  configTemplate <- H.noteShow $ baseDir </> "configuration/defaults/byron-mainnet/configuration.yaml"
   conf <- H.noteShowM $
-    mkConf (ProjectBase baseDir) (YamlFilePath configTemplate) tempAbsBasePath' Nothing
+    -- TODO: Move yaml filepath specification into individual node options
+    mkConf (ProjectBase baseDir) Nothing tempAbsBasePath' Nothing
   let maxSlot = 1500
       slotLen = 0.01
   let fastTestnetOptions = CardanoOnlyTestnetOptions $ cardanoDefaultTestnetOptions

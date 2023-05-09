@@ -17,9 +17,60 @@ module Cardano.Tracing.Config
   , lastToEither
 
   -- * Trace symbols
+  , TraceAcceptPolicy
+  , TraceBlockchainTime
+  , TraceBlockFetchClient
+  , TraceBlockFetchDecisions
+  , TraceBlockFetchProtocol
+  , TraceBlockFetchProtocolSerialised
+  , TraceBlockFetchServer
+  , TraceChainDB
+  , TraceChainSyncClient
+  , TraceChainSyncBlockServer
+  , TraceChainSyncHeaderServer
+  , TraceChainSyncProtocol
+  , TraceConnectionManager
   , TraceConnectionManagerCounters
+  , TraceConnectionManagerTransitions
+  , DebugPeerSelectionInitiator
+  , DebugPeerSelectionInitiatorResponder
+  , TraceDiffusionInitialization
+  , TraceDnsResolver
+  , TraceDnsSubscription
+  , TraceErrorPolicy
+  , TraceForge
+  , TraceForgeStateInfo
+  , TraceHandshake
+  , TraceIpSubscription
+  , TraceKeepAliveClient
+  , TraceLedgerPeers
+  , TraceLocalChainSyncProtocol
+  , TraceLocalConnectionManager
+  , TraceLocalErrorPolicy
+  , TraceLocalHandshake
+  , TraceLocalInboundGovernor
+  , TraceLocalRootPeers
+  , TraceLocalServer
+  , TraceLocalStateQueryProtocol
+  , TraceLocalTxMonitorProtocol
+  , TraceLocalTxSubmissionProtocol
+  , TraceLocalTxSubmissionServer
+  , TraceMempool
+  , TraceMux
+  , TraceLocalMux
+  , TracePeerSelection
   , TracePeerSelectionCounters
+  , TracePeerSelectionActions
+  , TracePublicRootPeers
+  , TraceServer
+  , TraceInboundGovernor
   , TraceInboundGovernorCounters
+  , TraceInboundGovernorTransitions
+  , TraceTxInbound
+  , TraceTxOutbound
+  , TraceTxSubmissionProtocol
+  , TraceTxSubmission2Protocol
+  , proxyName
   ) where
 
 import           Control.Monad (MonadPlus (..))
