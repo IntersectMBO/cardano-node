@@ -61,6 +61,7 @@ library
                         Cardano.Api.Convenience.Construction
                         Cardano.Api.Convenience.Query
                         Cardano.Api.DeserialiseAnyOf
+                        Cardano.Api.DRepMetadata
                         Cardano.Api.Environment
                         Cardano.Api.EraCast
                         Cardano.Api.Eras
@@ -206,7 +207,6 @@ library gen
                       , containers
                       , Diff
                       , directory
-                      , exceptions
                       , filepath
                       , hedgehog
                       , hedgehog
