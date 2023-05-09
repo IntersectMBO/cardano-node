@@ -113,7 +113,6 @@ do case "$1" in
        --rtsmode-serial )          sargs+=($1);    rtsmode='serial';;
        --rtsmode-lomem | --lomem ) sargs+=($1);    rtsmode='lomem';;
        --rtsmode-hipar )           sargs+=($1);    rtsmode='hipar';;
-       --perf-omit-host )          sargs+=($1 "$2"); perf_omit_hosts+=($2); shift;;
        --with-filter-reasons )     sargs+=($1);    locli_timeline+=($1);;
        --with-chain-error )        sargs+=($1);    locli_timeline+=($1);;
        --with-logobjects )         sargs+=($1);    locli_timeline+=($1);;
@@ -378,17 +377,6 @@ case "$op" in
         local adir=$dir/analysis
         test -n "$dir" -a -d "$adir" || fail "run malformed or unprepared: $run"
 
-        local logfiles=(
-            $(if test -z "$host"
-              then ls "$adir"/logs-*.flt.json
-              else ls "$adir"/logs-$host.flt.json; fi))
-        test ${#logfiles[*]} -gt 0 ||
-            fail "no files match $adir"'/logs-*.flt.json'
-
-        local minus_logfiles=(
-            $(for host in ${perf_omit_hosts[*]}
-              do ls "$adir"/logs-$host.flt.json; done))
-
         local filters=("${arg_filters[@]}")
         if test -z "$unfiltered"
         then local filter_names=$(jq '(.analysis.filters // [])
@@ -413,7 +401,7 @@ case "$op" in
         v5=("${v4[@]/#rebuild-chain/        'rebuild-chain'                  ${filters[@]}}")
         v6=("${v5[@]/#dump-chain/           'dump-chain'         --chain \"$adir\"/chain.json --chain-rejecta \"$adir\"/chain-rejecta.json }")
         v7=("${v6[@]/#chain-timeline/       'timeline-chain'     --timeline \"$adir\"/chain.txt                ${locli_render[*]} ${locli_timeline[*]} }")
-        v8=("${v7[@]/#collect-slots/        'collect-slots'           ${minus_logfiles[*]/#/--ignore-log }}")
+        v8=("${v7[@]/#collect-slots/        'collect-slots'}")
         v9=("${v8[@]/#filter-slots/         'filter-slots'                   ${filters[@]}}")
         va=("${v9[@]/#timeline-slots/       'timeline-slots'                                                   ${locli_render[*]} ${locli_timeline[*]} }")
         vb=("${va[@]/#propagation-json/     'render-propagation'       --json \"$adir\"/blockprop.json                                  --full }")
@@ -561,10 +549,12 @@ case "$op" in
             fail "Missing node-* subdirs in:  $dir"
 
         local remanifest_reasons=()
-        if   test -f "$run_logs"
-        then remanifest_reasons+=('missing')
-        elif test "$(ls --sort=time $dir/node-*/*.json analysis/log-manifest.json | head -n1)" = "$run_logs"
-        then remanifest_reasons+=('not-up-to-date')
+        if   test -z "$(ls 2>/dev/null $dir/node-*/*.json)"
+        then remanifest_reasons+=("$(blue consolidated logs missing)")
+        elif test ! -f "$run_logs"
+        then remanifest_reasons+=("$(green logs-modified-after-manifest)")
+        elif test "$(ls 2>/dev/null --sort=time $dir/node-*/*.json analysis/log-manifest.json | head -n1)" != "$run_logs"
+        then remanifest_reasons+=("$(red logs-modified-after-manifest)")
         fi
 
         if test ${#remanifest_reasons[*]} = 0
