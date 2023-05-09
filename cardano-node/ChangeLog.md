@@ -2,6 +2,8 @@
 
 ## vNext
 
+## 8.0.0 - May 2023
+
 ### node changes
 
 - So far the `AcceptedConnectionLimit`s from the configuration file where

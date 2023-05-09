@@ -2,6 +2,8 @@
 
 ## vNext
 
+## 8.0.0 - May 2023
+
 - Remove cardano-cli address build-script ([PR 4700](https://github.com/input-output-hk/cardano-node/pull/4700))
 - Remove support for reading protocol parameters from Shelley genesis file ([PR 5053](https://github.com/input-output-hk/cardano-node/pull/5053))
 
