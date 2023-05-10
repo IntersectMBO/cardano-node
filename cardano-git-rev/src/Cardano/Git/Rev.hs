@@ -22,7 +22,7 @@ gitRev | gitRevEmbed /= zeroRev = gitRevEmbed
   -- Data.FileEmbed.injectWith. If nothing has been injected,
   -- this will be filled with 0 characters.
   gitRevEmbed :: Text
-  gitRevEmbed = decodeUtf8 $(dummySpaceWith "gitrev" 40)
+  gitRevEmbed = decodeUtf8 $(dummySpaceWith "gitrev" 45)
 
   -- Git revision found during compilation by running git. If
   -- git could not be run, then this will be empty.
