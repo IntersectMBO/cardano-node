@@ -52,7 +52,7 @@ case "${op}" in
         ## 0. Generate:
         #
         mkdir -p                 "$outdir"
-        args=( --topology-output "$outdir"/topology-nixops.json
+        args=( --topology-output "$outdir"/topology.json
                --dot-output      "$outdir"/topology.dot
                $(jq '.composition.topology
                     ' --raw-output "$profile_json")
@@ -92,8 +92,8 @@ case "${op}" in
               };
 
            nixops_topology_set_pool_density(.; $prof[0].dense_pool_density)
-           '   "$outdir"/topology-nixops.json |
-        sponge "$outdir"/topology-nixops.json
+           '   "$outdir"/topology.json |
+        sponge "$outdir"/topology.json
         ;;
 
     density-map )
@@ -124,7 +124,7 @@ case "${op}" in
         case "$role" in
         local-bft | local-pool )
             args=(-L$global_basedir
-                  --slurpfile topology "$topo_dir"/topology-nixops.json
+                  --slurpfile topology "$topo_dir"/topology.json
                   --argjson   basePort $basePort
                   --argjson   i        $i
                   --null-input

@@ -532,7 +532,7 @@ case "$op" in
 
         ## 0. ask locli what it cares about
         local keyfile="$adir"/substring-keys
-        local key_old=$(sha256sum "$keyfile" | cut -d' ' -f1)
+        local key_old=$(sha256sum 2>/dev/null "$keyfile" | cut -d' ' -f1)
         local tracing_backend=$(jq '.node.tracing_backend // "iohk-monitoring"' --raw-output $dir/profile.json)
         case "$tracing_backend" in
              trace-dispatcher ) locli 'list-logobject-keys'        --keys        "$keyfile";;

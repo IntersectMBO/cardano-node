@@ -148,7 +148,6 @@ start()
     local skip_prebuild=
     local prebuild_done=
     local genesis_cache_entry_dir=
-    local topology_dir=
     local manifest="{}"
     local iterations=1
     local no_retry_failed_runs=t
@@ -175,7 +174,6 @@ start()
 
         ## Allocate
         --genesis-cache-entry )          run_allocate_args+=($1 $2); shift;;
-        --topology )                     run_allocate_args+=($1 $2); shift;;
         --profile-data )                 run_allocate_args+=($1 $2); profile_data=$2; shift;;
         -- )                             shift ## Bulk-pass:
                                          run_allocate_args+=("$@")

@@ -106,8 +106,8 @@ rec {
       { buildInputs = [];
         profileJsonPath = profile.JSON;
         nodeSpecsJsonPath = profile.node-specs.JSON;
-        topologyNixops =
-          __readFile "${profile.topology.files}/topology-nixops.json";
+        topologyJsonPath = "${profile.topology.files}/topology.json";
+        topologyDotPath  = "${profile.topology.files}/topology.dot";
         nodeServices =
           __toJSON
           (lib.flip lib.mapAttrs profile.node-services
@@ -141,14 +141,16 @@ rec {
             "nodeServices"
             "generatorService"
             "tracerService"
-            "topologyNixops"
+            "topologyJson"
+            "topologyDot"
           ];
       }
       ''
       mkdir $out
       cp    $profileJsonPath              $out/profile.json
       cp    $nodeSpecsJsonPath            $out/node-specs.json
-      cp    $topologyNixopsPath           $out/topology-nixops.json
+      cp    $topologyJsonPath             $out/topology.json
+      cp    $topologyDotPath              $out/topology.dot
       cp    $nodeServicesPath             $out/node-services.json
       cp    $generatorServicePath         $out/generator-service.json
       cp    $tracerServicePath            $out/tracer-service.json

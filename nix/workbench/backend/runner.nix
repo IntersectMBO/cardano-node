@@ -102,7 +102,6 @@ in
               start
               --profile-data        ${profileData}
               --backend-data        ${backendData}
-              --topology            ${profileData.topology.files}
               --genesis-cache-entry ${profileData.genesis.files}
               --batch-name          smoke-test
               --base-port           ${toString basePort}
