@@ -2,6 +2,7 @@ include "prof0-defaults";
 include "genesis";
 include "lib";
 
+## XXX:  this is corruption at the highest levels, pure and simple.
 def default_value_tx_size_estimate:
   381;
 
@@ -69,10 +70,10 @@ def profile_name_era_suffix($era):
 
 def add_derived_params:
   (.genesis.utxo + .genesis.delegators)      as $dataset_measure
-| (if $dataset_measure < 10000 then 10
+| (if $dataset_measure < 10000 then .analysis.cluster_base_startup_overhead_s
    else $dataset_measure / 50000
    end | ceil)                               as $dataset_induced_startup_delay_optimistic
-| (if $dataset_measure < 10000 then 10
+| (if $dataset_measure < 10000 then .analysis.cluster_base_startup_overhead_s
    else $dataset_measure / 2500
    end | ceil)                               as $dataset_induced_startup_delay_conservative
 | ($dataset_induced_startup_delay_optimistic

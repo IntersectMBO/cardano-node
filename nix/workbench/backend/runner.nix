@@ -9,6 +9,7 @@
 , cardano-node-rev
 , workbench
 , workbenchDevMode
+, workbenchStartArgs
 , profiling
 ##
 , cacheDir              ? "${__getEnv "HOME"}/.cache/cardano-workbench"
@@ -47,6 +48,7 @@ in
         --cache-dir    ${cacheDir} \
         --base-port    ${toString basePort} \
         ${pkgs.lib.optionalString useCabalRun ''--cabal''} \
+        ${__concatStringsSep " " workbenchStartArgs} \
         "$@"
     '';
 
@@ -68,7 +70,6 @@ in
       "report ${name}-log $out ${name}/stdout";
 
     workbench-profile-run =
-      { trace ? false }:
       let
         run = pkgs.runCommand "workbench-run-${backendName}-${profileName}"
           { requiredSystemFeatures = [ "benchmark" ];
@@ -98,7 +99,6 @@ in
 
             cmd=(
               wb
-              ${pkgs.lib.optionalString trace "--trace"}
               start
               --profile-data        ${profileData}
               --backend-data        ${backendData}
@@ -109,11 +109,24 @@ in
               --node-source         ${pkgs.cardanoNodeProject.args.src}
               --node-rev            ${cardano-node-rev}
               --cache-dir           ./cache
+             ${__concatStringsSep " " workbenchStartArgs}
             )
             echo "''${cmd[*]}" > $out/wb-start.sh
 
             time "''${cmd[@]}" 2>&1 |
               tee $out/wb-start.log
+            status=$?
+            if test $status != 0
+            then echo "wb start failed"
+                 cd run/current
+                 echo "==========  txgen  stdout:"; cat generator/stdout || true
+                 echo "==========  txgen  stderr:"; cat generator/stderr || true
+                 echo "==========  node-0 stdout:"; cat node-0/stdout || true
+                 echo "==========  node-0 stderr:"; cat node-0/stderr || true
+                 echo "==========  node-1 stdout:"; cat node-1/stdout || true
+                 echo "==========  node-1 stderr:"; cat node-1/stderr || true
+                 wb call fail "wb start failed"
+           fi
 
             ## Convert structure from $out/run/RUN-ID/* to $out/*:
             rm -rf cache
@@ -155,4 +168,8 @@ in
   inherit workbench-profile-run;
 
   inherit batchName stateDir overlay;
+
+  inherit workbench-interactive-start;
+  inherit workbench-interactive-stop;
+  inherit workbench-interactive-restart;
 }

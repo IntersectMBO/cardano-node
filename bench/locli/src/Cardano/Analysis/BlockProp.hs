@@ -336,9 +336,10 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
    eventMaps      = machViews <&> mvHashBlocks
 
    finalBlockEv   = maximumBy ordBlockEv $ machViewMaxBlock <$> machViews
+   finalBlockNo   = mbeBlockNo finalBlockEv
 
-   tipHash        = rewindChain eventMaps 1 (mbeBlock finalBlockEv)
-   tipBlock       = getBlockForge eventMaps tipHash
+   tipHash        = rewindChain eventMaps finalBlockNo 1 (mbeBlock finalBlockEv)
+   tipBlock       = getBlockForge eventMaps finalBlockNo tipHash
 
    computeChainBlockGaps :: [BlockEvents] -> [BlockEvents]
    computeChainBlockGaps [] = error "computeChainBlockGaps on an empty chain"
@@ -349,19 +350,21 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
       step prevForge x@(beForgedAt -> at) =
         (at, x { beForge = (beForge x) { bfBlockGap = at `diffUTCTime` prevForge } })
 
-   rewindChain :: [MachHashBlockEvents a] -> Int -> Hash -> Hash
-   rewindChain eventMaps count tip = go tip count
-    where go tip = \case
+   rewindChain :: [MachHashBlockEvents a] -> BlockNo -> Int -> Hash -> Hash
+   rewindChain eventMaps nr0 count tip = go tip nr0 count
+    where go tip nr = \case
             0 -> tip
-            n -> go (bfeBlockPrev $ getBlockForge eventMaps tip) (n - 1)
+            n -> go (bfeBlockPrev $ getBlockForge eventMaps nr tip)
+                    (nr - 1) (n - 1)
 
-   getBlockForge :: [MachHashBlockEvents a] -> Hash -> ForgerEvents a
-   getBlockForge xs h =
+   getBlockForge :: [MachHashBlockEvents a] -> BlockNo -> Hash -> ForgerEvents a
+   getBlockForge xs (BlockNo nr) h =
      mapMaybe (Map.lookup h) xs
      & find mbeForgP
      & fromMaybe
         (error $ mconcat
          [ "Invariant failed: couldn't find a forge for hash ", show h
+         , " BlockNo ", show nr
          , "\nErrors:\n", show (intercalate "\n" $ fmap show $ errorMbes $ mapMaybe (Map.lookup h) xs)
          ])
      & mapMbe id (error "Silly invariant failed.") (error "Silly invariant failed.")

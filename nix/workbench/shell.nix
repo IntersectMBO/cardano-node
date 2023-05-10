@@ -73,7 +73,7 @@ in project.shellFor {
     export CARDANO_NODE_SOCKET_PATH=run/current/node-0/node.socket
 
     function workbench_atexit() {
-        if wb backend is-running run/current
+        if test -n "$(wb backend is-running run/current)"
         then stop-cluster
         fi
     }

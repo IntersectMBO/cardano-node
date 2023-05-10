@@ -90,7 +90,7 @@ do case "$1" in
 local op=${1:-$run_default_op}; test $# -gt 0 && shift
 
 case "$op" in
-    get-rundir )
+    get-global-rundir )
         realpath --relative-to "$(pwd)" "$global_rundir";;
 
     list-runs | runs | lsr )
@@ -335,14 +335,8 @@ EOF
                * ) break;; esac; shift; done
 
         local runspec=${1:?$usage}
-        local precomma=$(cut -d: -f1 <<<$runspec) run= ident=
-
-        if   test "${runspec::1}" = "/" -o \
-                  "${runspec::1}" = "." -o \
-                  "$precomma" = "$runspec"
-        then ident="";        run=$runspec
-        else ident=$precomma; run=$(cut -d: -f2 <<<$runspec)
-        fi
+        local nrun=$(runspec_normalise $runspec)
+        local run=$(runspec_run $nrun)
 
         if   run check "${check_args[@]}" "$run"
         then run compute-path             "$run"
@@ -356,7 +350,7 @@ EOF
         do local run=${1:?$usage}
            local ident=${2:?$usage}
 
-           local dir=$(run get "$run")
+           local dir=$(run compute-path "$run")
            test -n "$dir" || fail "malformed run: $run"
 
            progress "analyse" "setting run identifier to:  $(white $ident), was $(blue $(jq -r .meta.ident "$dir"/meta.json))"
@@ -369,6 +363,19 @@ EOF
 
            shift 2
         done;;
+
+    ## It's quite messy, semantically: set(when-specified)-and-get,
+    decide-identifier | decid )
+        local usage="USAGE: wb run $op (RUN | ID:RUN)"
+        local runspec=${1:?$usage}
+        local nrun=$(runspec_normalise $runspec)
+        local run=$(runspec_run $nrun)  ident=$(runspec_id $nrun)
+        local dir=$(run compute-path "$run")
+        if   test          -n "$ident"
+        then run setid "$run" "$ident"
+             echo              $ident
+        else jq -r .meta.ident "$dir"/meta.json
+        fi;;
 
     show-meta | show | meta | s )
         local usage="USAGE: wb run $op RUN"
@@ -432,7 +439,7 @@ EOF
         local date_pref=$(date --utc +'%Y-%m-%d'-'%H-%M')
         local batch_inf=$(test "${batch}" != 'plain' && echo -n -${batch})
         local prof_suf=$(test -v "WB_PROFILING" && test -n "$WB_PROFILING" -a "$WB_PROFILING" != 'none' && echo '-prof')
-        local run="${date_pref}${batch_inf}-${hash}-${profile_name}-${backend_name::3}${prof_suf}"
+        local run="${date_pref}-${hash}-${profile_name}-${backend_name::3}${prof_suf}"
         progress "run | tag" "allocated run identifier (tag):  $(with_color white $run)"
 
         ## 3. create directory:
@@ -718,7 +725,8 @@ EOF
         local size=$(ls -s "$genesis" | cut -d' ' -f1)
         if test "$size" -gt 1000
         then progress "run" "genesis size: ${size}k, trimming.."
-             mv   "$genesis" "$genesis_orig"
+             mv    "$genesis" "$genesis_orig"
+             ln -s "$(realpath $genesis_orig)" "$genesis".orig
              jq > "$genesis" '
                .initialFunds = {}
              | .staking      = {}
@@ -788,8 +796,9 @@ EOF
         local run=${1:-current}
         local dir=$(run get "$run")
 
-        if backend is-running "$dir"
-        then progress "run" "terminating.."
+        local running_components=($(backend is-running "$dir"))
+        if test ${#running_components[*]} -gt 0
+        then progress "run" "terminating backend components ($(red ${running_components[*]})).."
              backend stop-cluster "$dir"
              progress "run" "cluster stopped"
         fi
@@ -953,7 +962,7 @@ legacy_run_timing() {
   }' $dir/meta.json "${args[@]}"
 }
 
-expand_runspecs() {
+expand_runsets() {
     local runs=() rs
 
     if test $# = 0
@@ -963,6 +972,28 @@ expand_runspecs() {
          done
     fi
     echo ${runs[*]}
+}
+
+runspec_normalise() {
+    local runspec=${1:?$usage}
+    local precomma=$(cut -d: -f1 <<<$runspec) run= ident=
+
+    if   test "${runspec::1}" = "/" -o \
+              "${runspec::1}" = "." -o \
+              "$precomma" = "$runspec"
+    then ident="";        run=$runspec
+    else ident=$precomma; run=$(cut -d: -f2 <<<$runspec)
+    fi
+
+    echo "$ident:$run"
+}
+
+runspec_id() {
+    cut -d: -f1 <<<$1
+}
+
+runspec_run() {
+    cut -d: -f2 <<<$1
 }
 
 run_ls_cmd() {

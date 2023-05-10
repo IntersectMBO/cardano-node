@@ -7,6 +7,7 @@ let
         backendName = "nixops";
         useCabalRun = false;
         workbenchDevMode = true;
+        workbenchStartArgs = [];
       };
       withHoogle = false;
     };

@@ -252,6 +252,8 @@ let
             profile.node.verbatim);
 
       extraArgs =
+        [ "+RTS" "-scardano-node.gcstats" "-RTS" ]
+        ++
         (if nodeSpec.shutdown_on_block_synced != null
           then [
             "--shutdown-on-block-synced"

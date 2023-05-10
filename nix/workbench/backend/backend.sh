@@ -1,8 +1,8 @@
 usage_backend() {
      usage "backend" "Abstract over cluster backend operations" <<EOF
     is-running RUNDIR
-                     Test if the cluster specified by the run directory
-                       is currently running
+                     Print every active components of the backend.
+                       If nothing is printed, the backend is considered stopped.
 
     setenv-defaults BACKEND-DATA-DIR
                      Setup the global environment in env.jq,
@@ -70,8 +70,9 @@ case "${op}" in
         true;;
 
     assert-stopped )
-        backend is-running run/current &&
-          fatal "backend reports that cluster is already running. Please stop it first:  $(yellow stop-cluster)" ||
+        local running_components=($(backend is-running "run/current"))
+        test ${#running_components[*]} -gt 0 &&
+          fatal "backend reports running components ($(blue ${running_components[*]}))$(red . Please stop first:)  $(yellow stop-cluster)" ||
           true
         ;;
 

@@ -12,6 +12,7 @@ import Cardano.Prelude
 import Data.Aeson.KeyMap                qualified
 import Data.Either.Extra                            (mapLeft)
 import Data.Map.Strict                  qualified as Map
+import Data.List                                    (nub)
 import Data.Text                        qualified as Text
 
 import Cardano.Analysis.API
@@ -103,7 +104,7 @@ summariseMultiSummary sumAnalysisTime centiles xs@(headline:xss) = do
      profile_content <- allEqOrElse (xs <&> profile_content) SEIncoherentRunProfiles
      -- XXX: magic transformation that happens to match
      --      the logic in 'analyse.sh multi-call' on line with "local run="
-     pure Metadata { tag   = maximum (xs <&> tag) & Text.take 16 & (<> "_variance")
+     pure Metadata { tag   = multiRunTag (Just "variance") xs
                    , batch = batch headline
                    , .. }
 
@@ -118,6 +119,19 @@ summariseMultiSummary sumAnalysisTime centiles xs@(headline:xss) = do
 
    -- comb :: forall a. Divisible a => Combine I a
    -- comb = stdCombine1 centiles
+
+-- Keep in sync with: analysis.sh::multi-call & analysis_multi_run_tag()
+multiRunTag :: Maybe Text -> [Metadata] -> Text
+multiRunTag inf xs =
+  maximum
+  (xs <&> tag)
+  & Text.take 22
+  & case inf of
+      Nothing -> identity
+      Just x  -> (<> ("_" <> x))
+  & (:[])
+  & (<> nub (fmap ident xs))
+  & Text.intercalate "_"
 
 computeSummary ::
      UTCTime

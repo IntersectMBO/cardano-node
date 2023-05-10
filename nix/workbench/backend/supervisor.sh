@@ -20,7 +20,15 @@ case "$op" in
     is-running )
         local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}
-        test "$(sleep 0.5s; netstat -pltn 2>/dev/null | grep ':9001 ' | wc -l)" != "0";;
+        test "$(sleep 0.5s
+                netstat -pltn 2>/dev/null |
+                grep ':9001 '             |
+                wc -l)" = "0" ||
+            echo 'supervisord'
+        for exe in 'cardano-node' 'tx-generator' 'cardano-tracer'
+        do test $(pgrep --exact --count $exe)   = 0 || echo $exe
+        done
+        ;;
 
     setenv-defaults )
         local usage="USAGE: wb backend $op BACKEND-DIR"
@@ -99,9 +107,9 @@ EOF
            i=$((i+1))
            if test $i -ge $patience
            then echo
-                progress "supervisor" "$(red FATAL):  workbench:  supervisor:  patience ran out for $(white $node) after ${patience}s, socket $socket"
+                progress "supervisor" "$(red FATAL):  workbench:  supervisor:  patience ran out for $(white $node) after ${patience}s, $(blue socket) $(red $socket)"
                 backend_supervisor stop-cluster "$dir"
-                fatal "$node startup did not succeed:  check logs in $(dirname $socket)/stdout & stderr"
+                fatal "$node startup did not succeed:  check logs in $(white $(dirname $socket)/stdout) $(red \&) $(white stderr)"
            fi
            echo -ne "\b\b\b\b"
         done >&2
@@ -111,14 +119,16 @@ EOF
     start-nodes )
         local usage="USAGE: wb backend $op RUN-DIR [HONOR_AUTOSTART=]"
         local dir=${1:?$usage}; shift
-        local honor_autostart=${1:-}
+        local honor_autostart=${1:-yes-please}
 
         local nodes=($(jq_tolist keys "$dir"/node-specs.json))
 
         if test -n "$honor_autostart"
         then for node in ${nodes[*]}
              do jqtest ".\"$node\".autostart" "$dir"/node-specs.json &&
-                     supervisorctl start $node; done;
+                     supervisorctl start $node &
+             done
+             wait
         else supervisorctl start ${nodes[*]}; fi
 
         for node in ${nodes[*]}
@@ -236,7 +246,8 @@ EOF
 
         supervisorctl stop all || true
 
-        if test -f "${dir}/supervisor/supervisord.pid"
+        if test -f ${dir}/supervisor/supervisord.pid -a \
+                -f ${dir}/supervisor/child.pids
         then kill $(<${dir}/supervisor/supervisord.pid) $(<${dir}/supervisor/child.pids) 2>/dev/null
         else pkill supervisord
         fi

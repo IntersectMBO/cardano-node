@@ -9,10 +9,11 @@ in
 , profileName ? if profileData != null then profileData.profileName
                 else defaultCustomConfig.localCluster.profileName;
 , workbenchDevMode ? defaultCustomConfig.localCluster.workbenchDevMode
+, workbenchStartArgs ? defaultCustomConfig.localCluster.workbenchStartArgs
 , customConfig ? {
     inherit withHoogle;
     localCluster = {
-      inherit profileName workbenchDevMode;
+      inherit profileName workbenchDevMode workbenchStartArgs;
     };
   }
 , system ? builtins.currentSystem

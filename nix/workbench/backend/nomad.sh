@@ -557,37 +557,32 @@ backend_nomad() {
     is-running )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
+
+      ## Our contract is to print all running component names.
+      ##
       if test -f "${dir}"/nomad/nomad-job.json
       then
         local nomad_job_name=$(jq -r ". [\"job\"]? | keys[0]?" "${dir}"/nomad/nomad-job.json)
-        if test -n "${nomad_job_name}" || test "${nomad_job_name}" = "null"
+        if test -z "${nomad_job_name}" && test "${nomad_job_name}" != "null"
         then
-          return 1
-        else
-          if ! nomad job status >/dev/null 2>&1
+          if nomad job status >/dev/null 2>&1
           then
-            msg "Can't access the Nomad Server, assuming not running"
-            msg "(Remember: assumption it the mother/father of all f*** ups!)"
-            return 1
-          else
             for allocation_file in "${dir}"/"${nomad_job_name}".run/allocation.*.final; do
               local allocation_id=$(jq .ID "${allocation_file}")
               local alloc_response=$(nomad alloc status -json "${allocation_id}")
               # With only one allocation running we return true (zero return code)
               if test $(echo "${alloc_status}" | jq .State) = "running"
-              then
-                return 0
+              then echo "nomad-allocation-$allocation_id"
               fi
             done
+          else
+            msg "Can't access the Nomad server, assuming not running"
+            msg "(Remember: assumption is the mother/father of all f*** ups!)"
           fi
           # Use the hack for the local, non-cloud, cluster?
           # Hack: Look for node-0's default port!
           # test "$(sleep 0.5s; netstat -pltn 2>/dev/null | grep ':30000 ' | wc -l)" != "0"
         fi
-        # No not "running" allocation found, so it's running!
-        return 0
-      else
-        return 1
       fi
     ;;
 

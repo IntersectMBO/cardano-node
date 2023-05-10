@@ -104,8 +104,10 @@ rec {
     in
     pkgs.runCommand "workbench-profile-${profileName}"
       { buildInputs = [];
-        profileConfigJsonPath = profile.JSON;
+        profileJsonPath = profile.JSON;
         nodeSpecsJsonPath = profile.node-specs.JSON;
+        topologyNixops =
+          __readFile "${profile.topology.files}/topology-nixops.json";
         nodeServices =
           __toJSON
           (lib.flip lib.mapAttrs profile.node-services
@@ -134,12 +136,19 @@ rec {
             config               = config.JSON;
             start                = startupScript.JSON;
           };
-        passAsFile = [ "nodeServices" "generatorService" "tracerService" ];
+        passAsFile =
+          [
+            "nodeServices"
+            "generatorService"
+            "tracerService"
+            "topologyNixops"
+          ];
       }
       ''
       mkdir $out
-      cp    $profileConfigJsonPath        $out/profile.json
+      cp    $profileJsonPath              $out/profile.json
       cp    $nodeSpecsJsonPath            $out/node-specs.json
+      cp    $topologyNixopsPath           $out/topology-nixops.json
       cp    $nodeServicesPath             $out/node-services.json
       cp    $generatorServicePath         $out/generator-service.json
       cp    $tracerServicePath            $out/tracer-service.json

@@ -113,7 +113,6 @@ do case "$1" in
        --rtsmode-serial )          sargs+=($1);    rtsmode='serial';;
        --rtsmode-lomem | --lomem ) sargs+=($1);    rtsmode='lomem';;
        --rtsmode-hipar )           sargs+=($1);    rtsmode='hipar';;
-       --perf-omit-host )          sargs+=($1 "$2"); perf_omit_hosts+=($2); shift;;
        --with-filter-reasons )     sargs+=($1);    locli_timeline+=($1);;
        --with-chain-error )        sargs+=($1);    locli_timeline+=($1);;
        --with-logobjects )         sargs+=($1);    locli_timeline+=($1);;
@@ -134,14 +133,14 @@ case "$op" in
         emn run/$1/analysis/report-*.org;;
 
     compare | cmp )
-        local runs=($(expand_runspecs $*))
+        local runs=($(expand_runsets $*))
         local baseline=${runs[0]}
         progress "analyse" "$(white comparing) $(colorise ${runs[*]:1}) $(plain against baseline) $(white $baseline)"
         analyse "${sargs[@]}" multi-call 'compare' "${runs[*]}" 'compare'
         ;;
 
     recompare | recmp )
-        local runs=($(expand_runspecs $*))
+        local runs=($(expand_runsets $*))
         local baseline=${runs[0]}
         progress "analyse" "$(white regenerating comparison) of $(colorise ${runs[*]:1}) $(plain against baseline) $(white $baseline)"
         analyse "${sargs[@]}" multi-call 'compare' "${runs[*]}" 'update'
@@ -175,7 +174,8 @@ case "$op" in
         analyse "${sargs[@]}" multi-call 'variance' "$*" ${script[*]}
 
         ## Ugly patching for compat reasons.
-        jq '.meta.profile_content' "$(run get-rundir)"/current/meta.json > "$(run get-rundir)"/current/profile.json
+        local runs=$(run get-global-rundir)
+        jq '.meta.profile_content' "$runs"/current/meta.json > "$runs"/current/profile.json
         ;;
 
     rerender | render )
@@ -328,7 +328,7 @@ case "$op" in
         ## Meaning: map OP over RUNS, optionally giving flags/options to OP
 
         local preop=${1:?$usage}; shift
-        local runs=($(expand_runspecs $*))
+        local runs=($(expand_runsets $*))
 
         local op_split=($preop)
         local op=${op_split[0]}
@@ -366,21 +366,16 @@ case "$op" in
                --host ) host=$2; shift;;
                * ) break;; esac; shift; done
 
-        local run=${1:?$usage}; shift
+        local runspec=${1:?$usage}; shift
+
+        ## Parse 'runspec' into either IDENT:RUN or RUN
+        local nrun=$(runspec_normalise $runspec)
+        local run=$(runspec_run $nrun)  ident=$(runspec_id $nrun)
         local dir=$(run get "$run")
+        test -n "$dir" || fail "malformed run: $run"
+
         local adir=$dir/analysis
         test -n "$dir" -a -d "$adir" || fail "run malformed or unprepared: $run"
-
-        local logfiles=(
-            $(if test -z "$host"
-              then ls "$adir"/logs-*.flt.json
-              else ls "$adir"/logs-$host.flt.json; fi))
-        test ${#logfiles[*]} -gt 0 ||
-            fail "no files match $adir"'/logs-*.flt.json'
-
-        local minus_logfiles=(
-            $(for host in ${perf_omit_hosts[*]}
-              do ls "$adir"/logs-$host.flt.json; done))
 
         local filters=("${arg_filters[@]}")
         if test -z "$unfiltered"
@@ -406,7 +401,7 @@ case "$op" in
         v5=("${v4[@]/#rebuild-chain/        'rebuild-chain'                  ${filters[@]}}")
         v6=("${v5[@]/#dump-chain/           'dump-chain'         --chain \"$adir\"/chain.json --chain-rejecta \"$adir\"/chain-rejecta.json }")
         v7=("${v6[@]/#chain-timeline/       'timeline-chain'     --timeline \"$adir\"/chain.txt                ${locli_render[*]} ${locli_timeline[*]} }")
-        v8=("${v7[@]/#collect-slots/        'collect-slots'           ${minus_logfiles[*]/#/--ignore-log }}")
+        v8=("${v7[@]/#collect-slots/        'collect-slots'}")
         v9=("${v8[@]/#filter-slots/         'filter-slots'                   ${filters[@]}}")
         va=("${v9[@]/#timeline-slots/       'timeline-slots'                                                   ${locli_render[*]} ${locli_timeline[*]} }")
         vb=("${va[@]/#propagation-json/     'render-propagation'       --json \"$adir\"/blockprop.json                                  --full }")
@@ -445,14 +440,18 @@ case "$op" in
         progress "analyse" "prettifying JSON data:  ${#analysis_jsons[*]} files"
         verbose  "analyse" "prettifying JSON data:  ${analysis_jsons[*]}"
         json_compact_prettify "${analysis_jsons[@]}"
-        progress "output" "run:  $(white $run)  ident:  $(blue $(jq -r .meta.ident "$dir"/meta.json))  subdir:  $(yellow analysis)"
+
+        if test -n "$ident"
+        then run set-identifier "$run" "$ident"
+        fi
+        progress "output" "run:  $(white $run)  ident:  $ident  subdir:  $(yellow analysis)"
         ;;
 
     multi-call )
         local usage="USAGE: wb analyse $op SUFFIX \"RUN-NAMES..\" OPS.."
 
         local suffix=${1:?$usage}; shift
-        local runs=($(expand_runspecs ${1:?$usage})); shift
+        local runs=($(expand_runsets ${1:?$usage})); shift
 
         local dirs=(  $(for run  in ${runs[*]};  do run get "$run"; echo; done))
         local adirs=( $(for dir  in ${dirs[*]};  do echo $dir/analysis; done))
@@ -464,14 +463,21 @@ case "$op" in
                                   --perf            ${adir}/clusterperf.json \
                                   --prop            ${adir}/blockprop.json
                           done))
-        local run=$(for dir in ${dirs[*]}; do basename $dir; done | sort -r | head -n1 | cut -c-16)_$suffix
-        local rundir=$(run get-rundir)
-        local dir=$rundir/$run
+        local idents=($(for run  in ${runs[*]};  do run decide-identifier "$run"; done))
+        local idents_uniq=($(for i in ${idents[*]}; do echo $i; done |
+                             sort -u))
+        local idents_suf=$(for i in ${idents_uniq[*]}; do echo -n "_$i"; done)
+        local run=$(analysis_multi_run_tag      \
+                        22                       \
+                        "${suffix}${idents_suf}" \
+                        $(for dir in ${dirs[*]}; do basename $dir; done))
+        local runs=$(run get-global-rundir)
+        local dir=$runs/$run
         local adir=$dir/analysis
 
         mkdir -p "$adir"/{cdf,png}
-        rm -f         "$rundir/current"
-        ln -sf "$run" "$rundir/current"
+        rm -f         "$runs/current"
+        ln -sf "$run" "$runs/current"
         progress "analysis | multi-call" "output $(yellow $run), inputs: $(white ${runs[*]})"
 
         local v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 va vb vc vd ve vf vg vh vi vj vk vl vm vn vo
@@ -501,7 +507,10 @@ case "$op" in
 
         call_locli "$rtsmode" "${ops_final[@]}"
 
-        progress "output" "run:  $(white $run)"
+        if test ${#idents_uniq[*]} = 1
+        then run setid $run ${idents_uniq[0]}
+        fi
+        progress "output" "run:  $(white $run)  $(blue ident:)  $(white ${idents_uniq[*]})"
         ;;
 
     prepare | prep )
@@ -510,21 +519,12 @@ case "$op" in
         local runspec=${1:-current}; if test $# != 0; then shift; fi
 
         ## Parse 'runspec' into either IDENT:RUN or RUN
-        local precomma=$(cut -d: -f1 <<<$runspec) run= ident=
-        if   test "${runspec::1}" = "/" -o \
-                  "${runspec::1}" = "." -o \
-                  "$precomma" = "$runspec"
-        then ident="";        run=$runspec
-        else ident=$precomma; run=$(cut -d: -f2 <<<$runspec)
-        fi
-
+        local nrun=$(runspec_normalise $runspec)
+        local run=$(runspec_run $nrun)
         local dir=$(run get "$run")
         test -n "$dir" || fail "malformed run: $run"
 
-        if test -n "$ident"
-        then run set-identifier "$run" "$ident"
-        fi
-        progress "analyse" "preparing run for analysis:  $(white $run), identified as $(white $(jq -r .meta.ident "$dir"/meta.json))"
+        progress "analyse" "preparing run for analysis:  $(white $run)"
 
         run trim "$run"
         local adir=$dir/analysis
@@ -543,48 +543,71 @@ case "$op" in
 
         ## 1. unless already done, filter logs according to locli's requirements
         local logdirs=($(ls -d "$dir"/node-*/ 2>/dev/null))
-        local logfiles=($(ls "$adir"/logs-node-*.flt.json 2>/dev/null))
         local run_logs=$adir/log-manifest.json
 
-        progress "analyse" "assembling log manifest"
-        echo '{}' > $run_logs
-        for d in "${logdirs[@]}"
-        do throttle_shell_job_spawns
-           local logfiles=($(ls --reverse -t "$d"stdout* "$d"node-[0-9]*.json \
-                                2>/dev/null))
-           if test -z "${logfiles[*]}"
-           then msg "no logs in $d, skipping.."; fi
-           local mach=$(basename "$d")
-           local  out="$adir"/logs-$mach
-           cat ${logfiles[*]} | grep '^{'        > "$out".flt.json       &
-           trace_frequencies_json ${logfiles[*]} > "$out".tracefreq.json &
-           { cat ${logfiles[*]} | sha256sum | cut -d' ' -f1 | xargs echo -n;} > "$out".sha256 &
+        test ${#logdirs[*]} -gt 0 ||
+            fail "Missing node-* subdirs in:  $dir"
 
-           jq_fmutate "$run_logs" '
-             .rlHostLogs["'"$mach"'"] =
-               { hlRawLogfiles:    ["'"$(echo ${logfiles[*]} | sed 's/ /", "/')"'"]
-               , hlRawLines:       '"$(cat ${logfiles[*]} | wc -l)"'
-               , hlRawSha256:      ""
-               , hlRawTraceFreqs:  {}
-               , hlLogs:           ["'"$adir/logs-$mach.flt.json"'", null]
-               , hlFilteredSha256: ""
-               , hlProfile:        []
-               }
-           | .rlFilterDate = ('$(if test -z "$without_datever_meta"; then echo -n now; else echo -n 0; fi)' | todate)
-           | .rlFilterKeys = []
-           '
+        local remanifest_reasons=()
+        if   test -z "$(ls 2>/dev/null $dir/node-*/*.json)"
+        then remanifest_reasons+=("$(blue consolidated logs missing)")
+        elif test ! -f "$run_logs"
+        then remanifest_reasons+=("$(green logs-modified-after-manifest)")
+        elif test "$(ls 2>/dev/null --sort=time $dir/node-*/*.json analysis/log-manifest.json | head -n1)" != "$run_logs"
+        then remanifest_reasons+=("$(red logs-modified-after-manifest)")
+        fi
 
-           local ghc_rts_prof=$d/cardano-node.prof
-           if test -f "$ghc_rts_prof"
-           then progress "analyse | profiling" "processing cardano-node.prof for $mach"
-                ghc_rts_minusp_tojson "$ghc_rts_prof"           > "$out".flt.prof.json
-               jq_fmutate "$run_logs" '
-                 .rlHostLogs["'"$mach"'"] += { hlProfile: $profile }
-                 ' --slurpfile profile "$out".flt.prof.json
-           fi
+        if test ${#remanifest_reasons[*]} = 0
+        then progress "analyse" "log manifest exist and is up to date"
+        else progress "analyse" "assembling log manifest:  ${remanifest_reasons[*]}"
+             echo '{}' > $run_logs
+             time {
+                 for d in "${logdirs[@]}"
+                 do throttle_shell_job_spawns
+                    local logfiles=($(ls --reverse -t "$d"stdout* "$d"node-[0-9]*.json \
+                                         2>/dev/null))
+                    if test -z "${logfiles[*]}"
+                    then msg "no logs in $d, skipping.."; fi
+                    local mach=$(basename "$d")
+                    local  out="$adir"/logs-$mach
+                    cat ${logfiles[*]} | grep '^{'        > "$out".flt.json       &
+                    trace_frequencies_json ${logfiles[*]} > "$out".tracefreq.json &
+                    { cat ${logfiles[*]} |
+                      sha256sum |
+                      cut -d' ' -f1 |
+                      xargs echo -n
+                    } > "$out".sha256 &
 
-        done
-        wait
+                    jq_fmutate "$run_logs" '
+                      .rlHostLogs["'"$mach"'"] =
+                        { hlRawLogfiles:    ["'"$(echo ${logfiles[*]} |
+                                                  sed 's/ /", "/')"'"]
+                        , hlRawLines:       '"$(cat ${logfiles[*]} | wc -l)"'
+                        , hlRawSha256:      ""
+                        , hlRawTraceFreqs:  {}
+                        , hlLogs:           ["'"$adir/logs-$mach.flt.json"'", null]
+                        , hlFilteredSha256: ""
+                        , hlProfile:        []
+                        }
+                     | .rlFilterDate = ('$(if test -z "$without_datever_meta"
+                                           then echo -n now
+                                           else echo -n 0; fi)' | todate)
+                     | .rlFilterKeys = []
+                     '
+
+                    local ghc_rts_prof=$d/cardano-node.prof
+                    if test -f "$ghc_rts_prof"
+                    then progress "analyse | profiling" "processing cardano-node.prof for $mach"
+                         ghc_rts_minusp_tojson "$ghc_rts_prof"           > "$out".flt.prof.json
+                         jq_fmutate "$run_logs" '
+                           .rlHostLogs["'"$mach"'"] += { hlProfile: $profile }
+                         ' --slurpfile profile "$out".flt.prof.json
+                    fi
+
+                 done
+                 wait
+             }
+        fi
 
         for mach in $(jq_tolist '.rlHostLogs | keys' $run_logs)
         do jq_fmutate "$run_logs" '
@@ -791,4 +814,20 @@ function ghc_rts_minusp_tojson() {
     head -n 40       | \
     sed 's_\\_\\\\_g; s_^\([^ ]\+\) \+\([^ ]\+\) \+\([^ ]\+\) \+\([^ ]\+\) \+\([^ ]\+\)$_{ "peFunc": "\1", "peModule": "\2", "peSrcLoc": "\3", "peTime": \4, "peAlloc": \5 }_' | \
     grep '^{.*}$' || true
+}
+
+## Keep in sync with: locli/src/Cardano/Analysis/Summary.hs::multiRunTag
+function analysis_multi_run_tag() {
+    local prefix_len=$1; shift
+    local suffix=$1;     shift
+    local run_tags=($*) t
+    progress "run | multi name" "${run_tags[*]}"
+
+    sed <<<${run_tags[*]} \
+      's/ /\n/g'        |
+    grep -v "^$"        |
+    sort -r             |
+    head -n1            |
+    cut -c-$prefix_len  |
+    echo "$(cat)_$suffix"
 }
