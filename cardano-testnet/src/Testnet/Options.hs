@@ -15,7 +15,9 @@ import           Testnet.Util.Runtime (NodeLoggingFormat (..))
 {- HLINT ignore "Redundant flip" -}
 
 data BabbageTestnetOptions = BabbageTestnetOptions
-  { babbageNumSpoNodes :: Int
+  { babbageProtocolVersion :: Int
+  , babbageEpochLength :: Int
+  , babbageNumSpoNodes :: Int
   , babbageSlotDuration :: Int
   , babbageSecurityParam :: Int
   , babbageTotalBalance :: Int
@@ -24,7 +26,9 @@ data BabbageTestnetOptions = BabbageTestnetOptions
 
 defaultTestnetOptions :: BabbageTestnetOptions
 defaultTestnetOptions = BabbageTestnetOptions
-  { babbageNumSpoNodes = 3
+  { babbageProtocolVersion = 8
+  , babbageEpochLength = 500
+  , babbageNumSpoNodes = 3
   , babbageSlotDuration = 200
   , babbageSecurityParam = 10
   , babbageTotalBalance = 10020000000

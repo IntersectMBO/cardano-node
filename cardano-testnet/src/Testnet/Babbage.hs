@@ -6,6 +6,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-unused-local-binds -Wno-unused-matches #-}
+{-# LANGUAGE NumericUnderscores #-}
 
 module Testnet.Babbage
   ( TestnetRuntime (..)
@@ -28,6 +29,14 @@ import qualified Hedgehog.Extras.Test.File as H
 import           System.FilePath.Posix ((</>))
 import qualified System.Info as OS
 
+import           Control.Concurrent (threadDelay)
+import qualified Control.Exception as IO
+import           Control.Monad.IO.Class (MonadIO (liftIO))
+import           Data.Functor (($>))
+import           Hedgehog (MonadTest)
+import qualified Hedgehog as H
+import           Hedgehog.Extras.Stock (allocateRandomPorts)
+import qualified Network.Socket as IO
 import           Testnet.Commands.Genesis
 import qualified Testnet.Conf as H
 import           Testnet.Options
@@ -44,6 +53,37 @@ import           Testnet.Util.Runtime (Delegator (..), NodeLoggingFormat (..), P
 -- MacOS.  We need to allow a lot more time to set up a testnet.
 startTimeOffsetSeconds :: DTC.NominalDiffTime
 startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
+
+
+-- | Check if a TCP port is open
+isPortOpen :: Int -> IO Bool
+isPortOpen port = do
+  socketAddressInfos <- IO.getAddrInfo Nothing (Just "127.0.0.1") (Just (show port))
+  case socketAddressInfos of
+    socketAddressInfo:_ -> canConnect (IO.addrAddress socketAddressInfo) $> True
+    []                  -> return False
+
+-- | Check if it is possible to connect to a socket address
+-- TODO: upstream fix to Hedgehog Extras
+canConnect :: IO.SockAddr -> IO Bool
+canConnect sockAddr = IO.bracket (IO.socket IO.AF_INET IO.Stream 6) IO.close' $ \sock -> do
+  res <- IO.try $ IO.connect sock sockAddr
+  case res of
+    Left (_ :: IO.IOException) -> return False
+    Right _                    -> return True
+
+-- | Get random list of open ports. Timeout after 60seconds if unsuccessful.
+getOpenPorts :: (MonadTest m, MonadIO m) => Int -> Int -> m [Int]
+getOpenPorts n numberOfPorts = do
+  when (n == 0) $ do
+   error "getOpenPorts timeout"
+  ports <- liftIO $ allocateRandomPorts numberOfPorts
+  allOpen <- liftIO $ mapM isPortOpen ports
+  unless (and allOpen) $ do
+    H.annotate "Some ports are not open, trying again..."
+    liftIO $ threadDelay 1_000_000 -- wait 1 sec
+    void $ getOpenPorts (pred n) numberOfPorts
+  pure ports
 
 babbageTestnet :: BabbageTestnetOptions -> H.Conf -> H.Integration TestnetRuntime
 babbageTestnet testnetOptions H.Conf {..} = do
@@ -179,8 +219,8 @@ babbageTestnet testnetOptions H.Conf {..} = do
   H.rewriteJsonFile (tempAbsPath </> "genesis/shelley/genesis.json") $ J.rewriteObject
     ( HM.insert "slotLength"             (toJSON @Double 0.1)
     . HM.insert "activeSlotsCoeff"       (toJSON @Double 0.1)
-    . HM.insert "securityParam"          (toJSON @Int 10)     -- TODO: USE config parameter
-    . HM.insert "epochLength"            (toJSON @Int 500)
+    . HM.insert "securityParam"          (toJSON @Int $ babbageSecurityParam testnetOptions)
+    . HM.insert "epochLength"            (toJSON @Int $ babbageEpochLength testnetOptions)
     . HM.insert "maxLovelaceSupply"      (toJSON @Int 1000000000000)
     . HM.insert "minFeeA"                (toJSON @Int 44)
     . HM.insert "minFeeB"                (toJSON @Int 155381)
@@ -189,7 +229,7 @@ babbageTestnet testnetOptions H.Conf {..} = do
     . flip HM.adjust "protocolParams"
       ( J.rewriteObject
         ( flip HM.adjust "protocolVersion"
-          ( J.rewriteObject ( HM.insert "major" (toJSON @Int 8)))
+          ( J.rewriteObject ( HM.insert "major" (toJSON @Int $ babbageProtocolVersion testnetOptions)))
         )
       )
     . HM.insert "rho"                    (toJSON @Double 0.1)
@@ -219,9 +259,11 @@ babbageTestnet testnetOptions H.Conf {..} = do
   H.renameFile (tempAbsPath </> "byron-gen-command/delegation-cert.001.json") (tempAbsPath </> "node-spo2/byron-delegation.cert")
   H.renameFile (tempAbsPath </> "byron-gen-command/delegation-cert.002.json") (tempAbsPath </> "node-spo3/byron-delegation.cert")
 
-  H.writeFile (tempAbsPath </> "node-spo1/port") "3001"
-  H.writeFile (tempAbsPath </> "node-spo2/port") "3002"
-  H.writeFile (tempAbsPath </> "node-spo3/port") "3003"
+  [port1, port2, port3] <- getOpenPorts 60 $ babbageNumSpoNodes testnetOptions
+
+  H.writeFile (tempAbsPath </> "node-spo1/port") (show port1)
+  H.writeFile (tempAbsPath </> "node-spo2/port") (show port2)
+  H.writeFile (tempAbsPath </> "node-spo3/port") (show port3)
 
 
   -- Make topology files
@@ -232,12 +274,12 @@ babbageTestnet testnetOptions H.Conf {..} = do
     [ "Producers" .= toJSON
       [ object
         [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3002
+        , "port"    .= toJSON @Int port2
         , "valency" .= toJSON @Int 1
         ]
       , object
         [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3003
+        , "port"    .= toJSON @Int port3
         , "valency" .= toJSON @Int 1
         ]
       ]
@@ -248,12 +290,12 @@ babbageTestnet testnetOptions H.Conf {..} = do
     [ "Producers" .= toJSON
       [ object
         [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3001
+        , "port"    .= toJSON @Int port1
         , "valency" .= toJSON @Int 1
         ]
       , object
         [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3003
+        , "port"    .= toJSON @Int port3
         , "valency" .= toJSON @Int 1
         ]
       ]
@@ -264,12 +306,12 @@ babbageTestnet testnetOptions H.Conf {..} = do
     [ "Producers" .= toJSON
       [ object
         [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3001
+        , "port"    .= toJSON @Int port1
         , "valency" .= toJSON @Int 1
         ]
       , object
         [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3002
+        , "port"    .= toJSON @Int port2
         , "valency" .= toJSON @Int 1
         ]
       ]
