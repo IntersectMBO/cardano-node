@@ -1,3 +1,3 @@
 The following scripts have execution failures:
-the script for transaction input 1 (in the order of the TxIds) failed with: 
+the script for transaction input 1 (in ascending order of the TxIds) failed with: 
 The execution units required by this Plutus script overflows a 64bit word. In a properly configured chain this should be practically impossible. So this probably indicates a chain configuration problem, perhaps with the values in the cost model.
