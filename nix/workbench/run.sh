@@ -439,7 +439,7 @@ EOF
         local date_pref=$(date --utc +'%Y-%m-%d'-'%H-%M')
         local batch_inf=$(test "${batch}" != 'plain' && echo -n -${batch})
         local prof_suf=$(test -v "WB_PROFILING" && test -n "$WB_PROFILING" -a "$WB_PROFILING" != 'none' && echo '-prof')
-        local run="${date_pref}${batch_inf}-${hash}-${profile_name}-${backend_name::3}${prof_suf}"
+        local run="${date_pref}-${hash}-${profile_name}-${backend_name::3}${prof_suf}"
         progress "run | tag" "allocated run identifier (tag):  $(with_color white $run)"
 
         ## 3. create directory:
