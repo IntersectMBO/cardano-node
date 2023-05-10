@@ -347,7 +347,7 @@ main() {
         | performance-host         | perf-host                  \
         | trace-frequencies        | trace-freq | freq | tf     \
         | chain-rejecta-reasons    | chain-rejecta | rejecta    \
-        | report                                                \
+        | render-comparison-pdf    | render-pdf | pdf           \
           )                       analyse $op         "$@";;
 
         ## Internals:
