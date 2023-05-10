@@ -998,8 +998,11 @@ run_ls_cmd() {
     local rundir=$1
 
     echo 'cd '$rundir' && \
-          find . -mindepth 2 -maxdepth 2 -type f -name meta.json -exec dirname \{\} \; |
-          grep -v "current\$\|deploy-logs\$" |
+          { find . -mindepth 2 -maxdepth 2 -type f -name meta.json -exec dirname \{\} \; |
+            grep -v "current\$\|deploy-logs\$" &&
+            find . -mindepth 3 -maxdepth 3 -type f -name *.ede -exec dirname \{\} \; |
+            xargs dirname
+          } |
           cut -c3- |
           sort || true'
 }
