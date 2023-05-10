@@ -407,8 +407,8 @@ runTxBuildCmd
 
       case consensusMode of
         CardanoMode -> do
-          (nodeEraUTxO, _, eraHistory, systemStart, _) <-
-            lift (queryStateForBalancedTx socketPath nodeEra nid allTxInputs)
+          (nodeEraUTxO, _, eraHistory, systemStart, _, _) <-
+            lift (queryStateForBalancedTx socketPath nodeEra nid allTxInputs [])
               & onLeft (left . ShelleyTxCmdQueryConvenienceError)
 
           -- Why do we cast the era? The user can specify an era prior to the era that the node is currently in.
@@ -693,9 +693,14 @@ runTxBuild
       AnyCardanoEra nodeEra <- lift (determineEra cModeParams localNodeConnInfo)
         & onLeft (left . ShelleyTxCmdQueryConvenienceError . AcqFailure)
 
-      (nodeEraUTxO, pparams, eraHistory, systemStart, stakePools) <-
+      let certs =
+            case validatedTxCerts of
+              TxCertificates _ cs _ -> cs
+              _ -> []
+
+      (nodeEraUTxO, pparams, eraHistory, systemStart, stakePools, stakeDelegDeposits) <-
         firstExceptT ShelleyTxCmdQueryConvenienceError . newExceptT
-          $ queryStateForBalancedTx socketPath nodeEra networkId allTxInputs
+          $ queryStateForBalancedTx socketPath nodeEra networkId allTxInputs certs
 
       validatedPParams <- hoistEither $ first ShelleyTxCmdProtocolParametersValidationError
                                       $ validateProtocolParameters era (Just pparams)
@@ -736,8 +741,8 @@ runTxBuild
         firstExceptT ShelleyTxCmdBalanceTxBody
           . hoistEither
           $ makeTransactionBodyAutoBalance systemStart (toLedgerEpochInfo eraHistory)
-                                           pparams stakePools txEraUtxo txBodyContent
-                                           cAddr mOverrideWits
+                                           pparams stakePools stakeDelegDeposits txEraUtxo
+                                           txBodyContent cAddr mOverrideWits
 
       liftIO $ putStrLn $ "Estimated transaction fee: " <> (show fee :: String)
 

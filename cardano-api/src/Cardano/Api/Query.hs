@@ -127,6 +127,7 @@ import qualified Cardano.Chain.Update.Validation.Interface as Byron.Update
 
 import           Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
+import qualified Cardano.Ledger.Credential as Shelley
 import           Cardano.Ledger.Crypto (Crypto)
 import qualified Cardano.Ledger.Shelley.API as Shelley
 import qualified Cardano.Ledger.Shelley.Core as Core
@@ -294,6 +295,10 @@ data QueryInShelleyBasedEra era result where
     :: Maybe (Set PoolId)
     -> QueryInShelleyBasedEra era (SerialisedStakeSnapshots era)
 
+  QueryStakeDelegDeposits
+    :: Set StakeCredential
+    -> QueryInShelleyBasedEra era (Map StakeCredential Lovelace)
+
 instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
   nodeToClientVersionOf QueryEpoch = NodeToClientV_9
   nodeToClientVersionOf QueryGenesisParameters = NodeToClientV_9
@@ -310,6 +315,7 @@ instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
   nodeToClientVersionOf (QueryPoolState _) = NodeToClientV_14
   nodeToClientVersionOf (QueryPoolDistribution _) = NodeToClientV_14
   nodeToClientVersionOf (QueryStakeSnapshot _) = NodeToClientV_14
+  nodeToClientVersionOf (QueryStakeDelegDeposits _) = NodeToClientV_15
 
 deriving instance Show (QueryInShelleyBasedEra era result)
 
@@ -685,6 +691,11 @@ toConsensusQueryShelleyBased erainmode (QueryPoolDistribution poolIds) =
   where
     getPoolIds :: Set PoolId -> Set (Shelley.KeyHash Shelley.StakePool Consensus.StandardCrypto)
     getPoolIds = Set.map (\(StakePoolKeyHash kh) -> kh)
+toConsensusQueryShelleyBased erainmode (QueryStakeDelegDeposits stakeCreds) =
+    Some (consensusQueryInEraInMode erainmode (Consensus.GetStakeDelegDeposits stakeCreds'))
+  where
+    stakeCreds' :: Set (Shelley.StakeCredential Consensus.StandardCrypto)
+    stakeCreds' = Set.map toShelleyStakeCredential stakeCreds
 
 consensusQueryInEraInMode
   :: forall era mode erablock modeblock result result' xs.
@@ -941,6 +952,13 @@ fromConsensusQueryResultShelleyBased _ QueryStakeSnapshot{} q' r' =
   case q' of
     Consensus.GetCBOR Consensus.GetStakeSnapshots {} -> SerialisedStakeSnapshots r'
     _                                                -> fromConsensusQueryResultMismatch
+
+fromConsensusQueryResultShelleyBased _ QueryStakeDelegDeposits{} q' stakeCreds' =
+    case q' of
+      Consensus.GetStakeDelegDeposits{} -> Map.map fromShelleyLovelace
+                                         . Map.mapKeysMonotonic fromShelleyStakeCredential
+                                         $ stakeCreds'
+      _                                 -> fromConsensusQueryResultMismatch
 
 -- | This should /only/ happen if we messed up the mapping in 'toConsensusQuery'
 -- and 'fromConsensusQueryResult' so they are inconsistent with each other.

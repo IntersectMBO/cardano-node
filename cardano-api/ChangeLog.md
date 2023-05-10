@@ -2,6 +2,17 @@
 
 ## 8.1.0
 
+- Addition of `QueryStakeDelegDeposits` ledger state query.
+
+- **Breaking change** - `evaluateTransactionBalance`, `makeTransactionBodyAutoBalance` and
+  `constructBalancedTx` requires a mapping from `StakeCredential` to a deposit for every
+  unregistration certificate present in the transaction
+
+- **Breaking change** - `queryStateForBalancedTx` now requires a list of certificates and
+  produces a Map with `StakeCredential` to a deposit for every deregistration certificate
+  in the supplied list
+
+
 ### Features
 
 - New functions: `intoFile`, `readByteStringFile`, `readLazyByteStringFile`, `readTextFile`.
