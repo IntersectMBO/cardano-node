@@ -3,6 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 {-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# LANGUAGE TypeApplications #-}
 
 #if !defined(mingw32_HOST_OS)
 #define UNIX
@@ -66,7 +67,7 @@ createFileWithOwnerPermissions :: HasTextEnvelope a => File () Out -> a -> Prope
 createFileWithOwnerPermissions targetfp value = do
   result <- liftIO $ writeLazyByteStringFileWithOwnerPermissions targetfp $ textEnvelopeToJSON Nothing value
   case result of
-    Left err -> failWith Nothing $ displayError err
+    Left err -> failWith Nothing $ displayError @(FileError ()) err
     Right () -> return ()
 
 #ifdef UNIX
