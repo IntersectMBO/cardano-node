@@ -208,6 +208,10 @@ fromAlonzoData d =
     (Ledger.originalBytes d)
     (fromPlutusData $ Alonzo.getPlutusData d)
 
+-- | Convert from  `ScriptData` to Plutus `Data`.
+-- If you have a custom type converted to `IsData` with `PlutusTx.mkIsDataIndexed` or `PlutusTx.unstableMakeIsData`,
+--  you can use  use `Plutus.V2.Ledger.Api.fromData` to convert it to your custom type after `Plutus.Data` is obtained
+
 toPlutusData :: ScriptData -> Plutus.Data
 toPlutusData (ScriptDataConstructor int xs)
                                   = Plutus.Constr int
@@ -220,6 +224,10 @@ toPlutusData (ScriptDataList  xs) = Plutus.List
 toPlutusData (ScriptDataNumber n) = Plutus.I n
 toPlutusData (ScriptDataBytes bs) = Plutus.B bs
 
+
+-- | Convert from Plutus `Data` to `ScriptData`.
+-- If you have a custom type converted to `IsData` with `PlutusTx.mkIsDataIndexed` or `PlutusTx.unstableMakeIsData`,
+--  use `Plutus.V2.Ledger.Api.toData` to convert it to `Plutus.Data` before using `fromPlutusData` function
 
 fromPlutusData :: Plutus.Data -> ScriptData
 fromPlutusData (Plutus.Constr int xs)
