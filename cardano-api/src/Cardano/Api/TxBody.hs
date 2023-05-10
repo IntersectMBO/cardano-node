@@ -4155,13 +4155,13 @@ instance ToJSON ScriptWitnessIndex where
 
 renderScriptWitnessIndex :: ScriptWitnessIndex -> String
 renderScriptWitnessIndex (ScriptWitnessIndexTxIn index) =
-  "transaction input " <> show index <> " (in the order of the TxIds)"
+  "transaction input " <> show index <> " (in ascending order of the TxIds)"
 renderScriptWitnessIndex (ScriptWitnessIndexMint index) =
-  "policyId " <> show index <> " (in the order of the PolicyIds)"
+  "policyId " <> show index <> " (in ascending order of the PolicyIds)"
 renderScriptWitnessIndex (ScriptWitnessIndexCertificate index) =
   "certificate " <> show index <> " (in the list order of the certificates)"
 renderScriptWitnessIndex (ScriptWitnessIndexWithdrawal index) =
-  "withdrawal " <> show index <> " (in the order of the StakeAddresses)"
+  "withdrawal " <> show index <> " (in ascending order of the StakeAddresses)"
 
 toAlonzoRdmrPtr :: ScriptWitnessIndex -> Alonzo.RdmrPtr
 toAlonzoRdmrPtr widx =
