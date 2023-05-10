@@ -602,7 +602,7 @@ module Cardano.Api (
 
     -- ** Node Config
     NodeConfig (..),
-    NodeConfigFile (..),
+    NodeConfigFile,
     readNodeConfig,
     -- *** Genesis Config
     GenesisConfig (..),

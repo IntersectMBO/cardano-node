@@ -54,7 +54,7 @@ main = do
           return l
 
   -- Use 'chainSyncClientWithLedgerState' to support ledger state.
-  Right (env, initialLedgerState) <- runExceptT $ initialLedgerState configFilePath
+  Right (env, initialLedgerState) <- runExceptT $ initialLedgerState (File configFilePath)
   let client = chainSyncClientWithLedgerState
         env
         initialLedgerState

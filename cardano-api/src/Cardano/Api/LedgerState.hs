@@ -55,7 +55,7 @@ module Cardano.Api.LedgerState
   -- * Node Config
   , NodeConfig(..)
   -- ** Network Config
-  , NodeConfigFile (..)
+  , NodeConfigFile
   , readNodeConfig
   -- ** Genesis Config
   , GenesisConfig (..)
@@ -251,16 +251,15 @@ renderLedgerStateError = \case
 
 -- | Get the environment and initial ledger state.
 initialLedgerState
-  :: FilePath
+  :: NodeConfigFile 'In
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
-  ->  ExceptT InitialLedgerStateError IO (Env, LedgerState)
+  -> ExceptT InitialLedgerStateError IO (Env, LedgerState)
   -- ^ The environment and initial ledger state
-initialLedgerState networkConfigFile = do
+initialLedgerState nodeConfigFile = do
   -- TODO Once support for querying the ledger config is added to the node, we
-  -- can remove the networkConfigFile argument and much of the code in this
+  -- can remove the nodeConfigFile argument and much of the code in this
   -- module.
-  config <- withExceptT ILSEConfigFile
-                  (readNodeConfig (NodeConfigFile networkConfigFile))
+  config <- withExceptT ILSEConfigFile (readNodeConfig nodeConfigFile)
   genesisConfig <- withExceptT ILSEGenesisFile (readCardanoGenesisConfig config)
   env <- withExceptT ILSELedgerConsensusConfig (except (genesisConfigToEnv genesisConfig))
   let ledgerState = initLedgerStateVar genesisConfig
@@ -344,7 +343,7 @@ renderFoldBlocksError fbe = case fbe of
 -- the node's tip where @k@ is the security parameter.
 foldBlocks
   :: forall a. ()
-  => FilePath
+  => NodeConfigFile 'In
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
   -> SocketPath
   -- ^ Path to local cardano-node socket. This is the path specified by the @--socket-path@ command line option when running the node.
@@ -377,8 +376,7 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
   --  * Non-pipelined: 1h  0m  19s
   --  * Pipelined:        46m  23s
 
-  (env, ledgerState) <- withExceptT FoldBlocksInitialLedgerStateError
-                            (initialLedgerState nodeConfigFilePath)
+  (env, ledgerState) <- withExceptT FoldBlocksInitialLedgerStateError $ initialLedgerState nodeConfigFilePath
 
   -- Place to store the accumulated state
   -- This is a bit ugly, but easy.
@@ -779,8 +777,8 @@ genesisConfigToEnv
                   , envProtocolConfig = Consensus.topLevelConfigProtocol topLevelConfig
                   }
 
-readNodeConfig :: NodeConfigFile -> ExceptT Text IO NodeConfig
-readNodeConfig (NodeConfigFile ncf) = do
+readNodeConfig :: NodeConfigFile 'In -> ExceptT Text IO NodeConfig
+readNodeConfig (File ncf) = do
     ncfg <- (except . parseNodeConfig) =<< readByteString ncf "node"
     return ncfg
       { ncByronGenesisFile = adjustGenesisFilePath (mkAdjustPath ncf) (ncByronGenesisFile ncfg)
@@ -1021,9 +1019,7 @@ newtype NetworkName = NetworkName
   { unNetworkName :: Text
   } deriving Show
 
-newtype NodeConfigFile = NodeConfigFile
-  { unNodeConfigFile :: FilePath
-  } deriving Show
+type NodeConfigFile = File NodeConfig
 
 mkProtocolInfoCardano ::
   GenesisConfig ->
