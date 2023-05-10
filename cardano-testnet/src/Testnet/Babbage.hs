@@ -17,27 +17,25 @@ module Testnet.Babbage
 
 import           Prelude
 
+import           Control.Concurrent (threadDelay)
+import qualified Control.Exception as IO
 import           Control.Monad
+import           Control.Monad.IO.Class (MonadIO (liftIO))
 import           Data.Aeson (encode, object, toJSON, (.=))
+import           Data.Functor (($>))
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
 import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
+import qualified Hedgehog.Extras.Stock as H
 import qualified Hedgehog.Extras.Stock.Aeson as J
 import qualified Hedgehog.Extras.Stock.OS as OS
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
+import qualified Network.Socket as IO
 import           System.FilePath.Posix ((</>))
 import qualified System.Info as OS
 
-import           Control.Concurrent (threadDelay)
-import qualified Control.Exception as IO
-import           Control.Monad.IO.Class (MonadIO (liftIO))
-import           Data.Functor (($>))
-import           Hedgehog (MonadTest)
-import qualified Hedgehog as H
-import           Hedgehog.Extras.Stock (allocateRandomPorts)
-import qualified Network.Socket as IO
 import           Testnet.Commands.Genesis
 import qualified Testnet.Conf as H
 import           Testnet.Options
@@ -74,11 +72,11 @@ canConnect sockAddr = IO.bracket (IO.socket IO.AF_INET IO.Stream 6) IO.close' $ 
     Right _                    -> return True
 
 -- | Get random list of open ports. Timeout after 60seconds if unsuccessful.
-getOpenPorts :: (MonadTest m, MonadIO m) => Int -> Int -> m [Int]
+getOpenPorts :: (H.MonadTest m, MonadIO m) => Int -> Int -> m [Int]
 getOpenPorts n numberOfPorts = do
   when (n == 0) $ do
    error "getOpenPorts timeout"
-  ports <- liftIO $ allocateRandomPorts numberOfPorts
+  ports <- liftIO $ H.allocateRandomPorts numberOfPorts
   allOpen <- liftIO $ mapM isPortOpen ports
   unless (and allOpen) $ do
     H.annotate "Some ports are not open, trying again..."

@@ -39,10 +39,10 @@ data BabbageTestnetOptions = BabbageTestnetOptions
 defaultTestnetOptions :: BabbageTestnetOptions
 defaultTestnetOptions = BabbageTestnetOptions
   { babbageProtocolVersion = 8
-  , babbageEpochLength = 500
+  , babbageEpochLength = 600 -- Should be "10 * k / f" where "k = securityParam, f = activeSlotsCoeff"
   , babbageNumSpoNodes = 3
   , babbageSlotDuration = 200
-  , babbageSecurityParam = 10
+  , babbageSecurityParam = 6
   , babbageTotalBalance = 10020000000
   , babbageNodeLoggingFormat = NodeLoggingFormatAsJson
   }
