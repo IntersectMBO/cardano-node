@@ -1,0 +1,39 @@
+name: Post Release Upload
+
+on:
+  release:
+    types:
+      - published
+  push:
+    tags:
+      - '**'
+
+jobs:
+  upload:
+    name: "Upload Artifacts"
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - linux
+          - win64
+          - macos
+
+    runs-on: ${{ matrix.platform == 'macos' && 'macos-latest' || 'ubuntu-latest' }}
+    steps:
+      - name: Install Nix with good defaults
+        uses: cachix/install-nix-action@v20
+        with:
+          extra_nix_config: |
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= loony-tools:pr9m4BkM/5/eSTZlkQyRt57Jz7OMBxNSUiMC4FkcNfk=
+            substituters = https://cache.iog.io/ https://cache.zw3rk.com/ https://cache.nixos.org/
+          nix_path: nixpkgs=channel:nixos-unstable
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Build
+        run: nix build .#hydraJobs.${{ matrix.platform == 'macos' && 'native' || matrix.platform == 'win64' && 'windows' || 'musl' }}.cardano-node-${{matrix.platform}}
+      - name: Upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: cardano-node-${{matrix.platform}}
+          path: result/cardano-node-*
