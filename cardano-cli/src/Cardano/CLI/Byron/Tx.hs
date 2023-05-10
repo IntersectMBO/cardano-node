@@ -42,6 +42,7 @@ import qualified Data.Text.IO as Text
 import           Formatting (sformat, (%))
 
 import           Cardano.Api
+import           Cardano.Api.Byron
 
 import qualified Cardano.Binary as Binary
 import qualified Cardano.Ledger.Binary.Decoding as LedgerBinary
@@ -51,9 +52,9 @@ import           Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.UTxO as UTxO
 import qualified Cardano.Crypto.Signing as Crypto
 
-import           Cardano.Api.Byron
 import           Cardano.CLI.Byron.Key (byronWitnessToVerKey)
 import           Cardano.CLI.Types (TxFile)
+
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock, GenTx (..))
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
@@ -63,7 +64,6 @@ data ByronTxError
   = TxDeserialisationFailed !FilePath !Binary.DecoderError
   | ByronTxSubmitError !Text
   | ByronTxSubmitErrorEraMismatch !EraMismatch
-  | EnvSocketError !EnvSocketError
   deriving Show
 
 renderByronTxError :: ByronTxError -> Text
@@ -76,7 +76,6 @@ renderByronTxError err =
       " era, but the transaction is for the " <> otherEraName <> " era."
     TxDeserialisationFailed txFp decErr ->
       "Transaction deserialisation failed at " <> textShow txFp <> " Error: " <> textShow decErr
-    EnvSocketError envSockErr -> renderEnvSocketError envSockErr
 
 newtype NewTxFile =
   NewTxFile FilePath

@@ -43,7 +43,6 @@ import           Control.Monad.Trans (MonadTrans (..))
 
 data QueryConvenienceError
   = AcqFailure AcquiringFailure
-  | SockErr EnvSocketError
   | QueryEraMismatch EraMismatch
   | ByronEraNotSupported
   | EraConsensusModeMismatch !AnyConsensusMode !AnyCardanoEra
@@ -51,8 +50,6 @@ data QueryConvenienceError
 renderQueryConvenienceError :: QueryConvenienceError -> Text
 renderQueryConvenienceError (AcqFailure e) =
   "Acquiring failure: " <> textShow e
-renderQueryConvenienceError (SockErr e) =
-  renderEnvSocketError e
 renderQueryConvenienceError (QueryEraMismatch (EraMismatch ledgerEraName' otherEraName')) =
   "The era of the node and the tx do not match. " <>
   "The node is running in the " <> ledgerEraName' <>

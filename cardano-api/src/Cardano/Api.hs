@@ -794,9 +794,7 @@ module Cardano.Api (
     slotToEpoch,
 
     -- * Node socket related
-    EnvSocketError(..),
     SocketPath(..),
-    renderEnvSocketError,
 
     NodeToClientVersion(..),
 

@@ -74,7 +74,6 @@ data ShelleyTxCmdError
       !AnyCardanoEra
       -- ^ Era
   | ShelleyTxCmdBootstrapWitnessError !ShelleyBootstrapWitnessError
-  | ShelleyTxCmdSocketEnvError !EnvSocketError
   | ShelleyTxCmdTxSubmitError !Text
   | ShelleyTxCmdTxSubmitErrorEraMismatch !EraMismatch
   | ShelleyTxCmdTxFeatureMismatch !AnyCardanoEra !TxFeature
@@ -129,7 +128,6 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdReadWitnessSigningDataError witSignDataErr ->
       renderReadWitnessSigningDataError witSignDataErr
     ShelleyTxCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
-    ShelleyTxCmdSocketEnvError envSockErr -> renderEnvSocketError envSockErr
     ShelleyTxCmdTxSubmitError res -> "Error while submitting tx: " <> res
     ShelleyTxCmdTxSubmitErrorEraMismatch EraMismatch{ledgerEraName, otherEraName} ->
       "The era of the node and the tx do not match. " <>

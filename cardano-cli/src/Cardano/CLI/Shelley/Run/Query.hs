@@ -110,8 +110,7 @@ import           Data.Text.Lazy (toStrict)
 {- HLINT ignore "Redundant flip" -}
 
 data ShelleyQueryCmdError
-  = ShelleyQueryCmdEnvVarSocketErr !EnvSocketError
-  | ShelleyQueryCmdLocalStateQueryError !ShelleyQueryCmdLocalStateQueryError
+  = ShelleyQueryCmdLocalStateQueryError !ShelleyQueryCmdLocalStateQueryError
   | ShelleyQueryCmdWriteFileError !(FileError ())
   | ShelleyQueryCmdHelpersError !HelpersError
   | ShelleyQueryCmdAcquireFailure !AcquiringFailure
@@ -136,7 +135,6 @@ data ShelleyQueryCmdError
 renderShelleyQueryCmdError :: ShelleyQueryCmdError -> Text
 renderShelleyQueryCmdError err =
   case err of
-    ShelleyQueryCmdEnvVarSocketErr envSockErr -> renderEnvSocketError envSockErr
     ShelleyQueryCmdLocalStateQueryError lsqErr -> renderLocalStateQueryError lsqErr
     ShelleyQueryCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyQueryCmdHelpersError helpersErr -> renderHelpersError helpersErr
