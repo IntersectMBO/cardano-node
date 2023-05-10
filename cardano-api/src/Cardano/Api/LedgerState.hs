@@ -77,6 +77,15 @@ module Cardano.Api.LedgerState
   -- ** Environment
   , Env(..)
   , genesisConfigToEnv
+
+  , ByronGenesisConfig
+  , ShelleyGenesisConfig
+  , AlonzoGenesisConfig
+  , ConwayGenesisConfig
+  , ByronGenesisFile
+  , ShelleyGenesisFile
+  , AlonzoGenesisFile
+  , ConwayGenesisFile
   )
   where
 
@@ -781,21 +790,31 @@ readNodeConfig :: NodeConfigFile 'In -> ExceptT Text IO NodeConfig
 readNodeConfig (File ncf) = do
     ncfg <- (except . parseNodeConfig) =<< readByteString ncf "node"
     return ncfg
-      { ncByronGenesisFile = adjustGenesisFilePath (mkAdjustPath ncf) (ncByronGenesisFile ncfg)
-      , ncShelleyGenesisFile = adjustGenesisFilePath (mkAdjustPath ncf) (ncShelleyGenesisFile ncfg)
-      , ncAlonzoGenesisFile = adjustGenesisFilePath (mkAdjustPath ncf) (ncAlonzoGenesisFile ncfg)
-      , ncConwayGenesisFile = adjustGenesisFilePath (mkAdjustPath ncf) (ncConwayGenesisFile ncfg)
+      { ncByronGenesisFile = mapFile (mkAdjustPath ncf) (ncByronGenesisFile ncfg)
+      , ncShelleyGenesisFile = mapFile (mkAdjustPath ncf) (ncShelleyGenesisFile ncfg)
+      , ncAlonzoGenesisFile = mapFile (mkAdjustPath ncf) (ncAlonzoGenesisFile ncfg)
+      , ncConwayGenesisFile = mapFile (mkAdjustPath ncf) (ncConwayGenesisFile ncfg)
       }
+
+type ByronGenesisConfig = Cardano.Chain.Genesis.Config
+type ShelleyGenesisConfig = ShelleyConfig
+type AlonzoGenesisConfig = AlonzoGenesis
+type ConwayGenesisConfig = ConwayGenesis Shelley.StandardCrypto
+
+type ByronGenesisFile = File ByronGenesisConfig
+type ShelleyGenesisFile = File ShelleyGenesisConfig
+type AlonzoGenesisFile = File AlonzoGenesisConfig
+type ConwayGenesisFile = File ConwayGenesisConfig
 
 data NodeConfig = NodeConfig
   { ncPBftSignatureThreshold :: !(Maybe Double)
-  , ncByronGenesisFile :: !GenesisFile
+  , ncByronGenesisFile :: !(File ByronGenesisConfig 'In)
   , ncByronGenesisHash :: !GenesisHashByron
-  , ncShelleyGenesisFile :: !GenesisFile
+  , ncShelleyGenesisFile :: !(File ShelleyGenesisConfig 'In)
   , ncShelleyGenesisHash :: !GenesisHashShelley
-  , ncAlonzoGenesisFile :: !GenesisFile
+  , ncAlonzoGenesisFile :: !(File AlonzoGenesis 'In)
   , ncAlonzoGenesisHash :: !GenesisHashAlonzo
-  , ncConwayGenesisFile :: !GenesisFile
+  , ncConwayGenesisFile :: !(File ConwayGenesisConfig 'In)
   , ncConwayGenesisHash :: !GenesisHashConway
   , ncRequiresNetworkMagic :: !Cardano.Crypto.RequiresNetworkMagic
   , ncByronSoftwareVersion :: !Cardano.Chain.Update.SoftwareVersion
@@ -821,13 +840,13 @@ instance FromJSON NodeConfig where
       parse o =
         NodeConfig
           <$> o .:? "PBftSignatureThreshold"
-          <*> fmap GenesisFile (o .: "ByronGenesisFile")
+          <*> fmap File (o .: "ByronGenesisFile")
           <*> fmap GenesisHashByron (o .: "ByronGenesisHash")
-          <*> fmap GenesisFile (o .: "ShelleyGenesisFile")
+          <*> fmap File (o .: "ShelleyGenesisFile")
           <*> fmap GenesisHashShelley (o .: "ShelleyGenesisHash")
-          <*> fmap GenesisFile (o .: "AlonzoGenesisFile")
+          <*> fmap File (o .: "AlonzoGenesisFile")
           <*> fmap GenesisHashAlonzo (o .: "AlonzoGenesisHash")
-          <*> fmap GenesisFile (o .: "ConwayGenesisFile")
+          <*> fmap File (o .: "ConwayGenesisFile")
           <*> fmap GenesisHashConway (o .: "ConwayGenesisHash")
           <*> o .: "RequiresNetworkMagic"
           <*> parseByronSoftwareVersion o
@@ -906,9 +925,6 @@ parseNodeConfig bs =
   case Yaml.decodeEither' bs of
     Left err -> Left $ "Error parsing node config: " <> textShow err
     Right nc -> Right nc
-
-adjustGenesisFilePath :: (FilePath -> FilePath) -> GenesisFile -> GenesisFile
-adjustGenesisFilePath f (GenesisFile p) = GenesisFile (f p)
 
 mkAdjustPath :: FilePath -> (FilePath -> FilePath)
 mkAdjustPath nodeConfigFilePath fp = takeDirectory nodeConfigFilePath </> fp
@@ -990,10 +1006,6 @@ data ShelleyConfig = ShelleyConfig
   { scConfig :: !(Ledger.ShelleyGenesis Shelley.StandardCrypto)
   , scGenesisHash :: !GenesisHashShelley
   }
-
-newtype GenesisFile = GenesisFile
-  { unGenesisFile :: FilePath
-  } deriving Show
 
 newtype GenesisHashByron = GenesisHashByron
   { unGenesisHashByron :: Text
@@ -1129,7 +1141,7 @@ readByronGenesisConfig
         :: NodeConfig
         -> ExceptT GenesisConfigError IO Cardano.Chain.Genesis.Config
 readByronGenesisConfig enc = do
-  let file = unGenesisFile $ ncByronGenesisFile enc
+  let file = unFile $ ncByronGenesisFile enc
   genHash <- firstExceptT NEError
                 . hoistEither
                 $ Cardano.Crypto.Hashing.decodeAbstractHash (unGenesisHashByron $ ncByronGenesisHash enc)
@@ -1140,30 +1152,31 @@ readShelleyGenesisConfig
     :: NodeConfig
     -> ExceptT GenesisConfigError IO ShelleyConfig
 readShelleyGenesisConfig enc = do
-  let file = unGenesisFile $ ncShelleyGenesisFile enc
-  firstExceptT (NEShelleyConfig file . renderShelleyGenesisError)
-    $ readShelleyGenesis (GenesisFile file) (ncShelleyGenesisHash enc)
+  let file = ncShelleyGenesisFile enc
+  firstExceptT (NEShelleyConfig (unFile file) . renderShelleyGenesisError)
+    $ readShelleyGenesis file (ncShelleyGenesisHash enc)
 
 readAlonzoGenesisConfig
     :: NodeConfig
     -> ExceptT GenesisConfigError IO AlonzoGenesis
 readAlonzoGenesisConfig enc = do
-  let file = unGenesisFile $ ncAlonzoGenesisFile enc
-  firstExceptT (NEAlonzoConfig file . renderAlonzoGenesisError)
-    $ readAlonzoGenesis (GenesisFile file) (ncAlonzoGenesisHash enc)
+  let file = ncAlonzoGenesisFile enc
+  firstExceptT (NEAlonzoConfig (unFile file) . renderAlonzoGenesisError)
+    $ readAlonzoGenesis file (ncAlonzoGenesisHash enc)
 
 readConwayGenesisConfig
     :: NodeConfig
     -> ExceptT GenesisConfigError IO (ConwayGenesis Shelley.StandardCrypto)
 readConwayGenesisConfig enc = do
-  let file = unGenesisFile $ ncConwayGenesisFile enc
-  firstExceptT (NEConwayConfig file . renderConwayGenesisError)
-    $ readConwayGenesis (GenesisFile file) (ncConwayGenesisHash enc)
+  let file = ncConwayGenesisFile enc
+  firstExceptT (NEConwayConfig (unFile file) . renderConwayGenesisError)
+    $ readConwayGenesis file (ncConwayGenesisHash enc)
 
 readShelleyGenesis
-    :: GenesisFile -> GenesisHashShelley
+    :: ShelleyGenesisFile 'In
+    -> GenesisHashShelley
     -> ExceptT ShelleyGenesisError IO ShelleyConfig
-readShelleyGenesis (GenesisFile file) expectedGenesisHash = do
+readShelleyGenesis (File file) expectedGenesisHash = do
     content <- handleIOExceptT (ShelleyGenesisReadError file . textShow) $ BS.readFile file
     let genesisHash = GenesisHashShelley (Cardano.Crypto.Hash.Class.hashWith id content)
     checkExpectedGenesisHash genesisHash
@@ -1208,9 +1221,10 @@ renderShelleyGenesisError sge =
           ]
 
 readAlonzoGenesis
-    :: GenesisFile -> GenesisHashAlonzo
+    :: File AlonzoGenesis 'In
+    -> GenesisHashAlonzo
     -> ExceptT AlonzoGenesisError IO AlonzoGenesis
-readAlonzoGenesis (GenesisFile file) expectedGenesisHash = do
+readAlonzoGenesis (File file) expectedGenesisHash = do
     content <- handleIOExceptT (AlonzoGenesisReadError file . textShow) $ BS.readFile file
     let genesisHash = GenesisHashAlonzo (Cardano.Crypto.Hash.Class.hashWith id content)
     checkExpectedGenesisHash genesisHash
@@ -1254,9 +1268,10 @@ renderAlonzoGenesisError sge =
           ]
 
 readConwayGenesis
-    :: GenesisFile -> GenesisHashConway
+    :: ConwayGenesisFile 'In
+    -> GenesisHashConway
     -> ExceptT ConwayGenesisError IO (ConwayGenesis Shelley.StandardCrypto)
-readConwayGenesis (GenesisFile file) expectedGenesisHash = do
+readConwayGenesis (File file) expectedGenesisHash = do
     content <- handleIOExceptT (ConwayGenesisReadError file . textShow) $ BS.readFile file
     let genesisHash = GenesisHashConway (Cardano.Crypto.Hash.Class.hashWith id content)
     checkExpectedGenesisHash genesisHash
