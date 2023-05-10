@@ -588,6 +588,7 @@ module Cardano.Api (
 
     -- * Errors
     Error(..),
+    displayErrorString,
     throwErrorAsException,
     FileError(..),
 

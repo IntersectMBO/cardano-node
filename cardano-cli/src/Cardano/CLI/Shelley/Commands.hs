@@ -386,7 +386,7 @@ renderQueryCmd cmd =
     QueryStakeSnapshot' {} -> "query stake-snapshot"
     QueryKesPeriodInfo {} -> "query kes-period-info"
     QueryPoolState' {} -> "query pool-state"
-    QueryTxMempool _ _ _ query _ -> "query tx-mempool" <> renderTxMempoolQuery query
+    QueryTxMempool _ _ _ query _ -> "query tx-mempool" <+> renderTxMempoolQuery query
   where
     renderTxMempoolQuery query =
       case query of

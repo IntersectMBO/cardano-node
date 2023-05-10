@@ -6,6 +6,7 @@
 --
 module Cardano.Api.Error
   ( Error(..)
+  , displayErrorString
   , throwErrorAsException
   , ErrorAsException(..)
   , FileError(..)
@@ -13,14 +14,17 @@ module Cardano.Api.Error
 
 import           Cardano.Api.Pretty (Ann, renderStringDefault)
 import           Control.Exception (Exception (..), IOException, throwIO)
+
 import           Prettyprinter (Doc)
 import           System.IO (Handle)
 import           Text.Pretty (Pretty (..))
 
-
 class Error e where
 
     displayError :: e -> Doc Ann
+
+displayErrorString :: Error e => e -> String
+displayErrorString = renderStringDefault . displayError
 
 instance Error () where
     displayError () = ""
