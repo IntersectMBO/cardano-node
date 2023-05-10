@@ -41,4 +41,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: cardano-node-${{matrix.platform}}
-          path: cardano-node-*-${{matrix.platform}}.${{ matrix.platform == 'linux' && 'tar.gz' || 'zip' }}
+          path: cardano-node-*-${{matrix.platform}}.${{ matrix.platform == 'win64' && 'zip' || 'tar.gz' }}
