@@ -31,12 +31,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Build
-        run: nix build .#${{
-             matrix.platform == 'macos' && 'legacyPackages.x86_64-darwin.hydraJobs.native'
-          || matrix.platform == 'win64' && 'hydraJobs.windows'
-          || 'hydraJobs.musl' }}.cardano-node-${{matrix.platform}}
+        run: |
+          nix build .#${{
+               matrix.platform == 'macos' && 'legacyPackages.x86_64-darwin.hydraJobs.native'
+            || matrix.platform == 'win64' && 'hydraJobs.windows'
+            || 'hydraJobs.musl' }}.cardano-node-${{matrix.platform}}
+          cp result/cardano-node-* .
       - name: Upload
         uses: actions/upload-artifact@v3
         with:
           name: cardano-node-${{matrix.platform}}
-          path: result/cardano-node-*
+          path: cardano-node-*-${{matrix.platform}}.${{ matrix.platform == 'linux' && 'tar.gz' || 'zip' }}
