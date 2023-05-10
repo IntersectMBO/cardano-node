@@ -19,7 +19,7 @@ on:
         default: some
 
 jobs:
-  linux_ci:
+  build:
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -231,14 +231,21 @@ jobs:
     #     limit-access-to-actor: true
 
   build-complete:
-    needs: [linux_ci]
+    needs: [build]
     runs-on: ubuntu-latest
+    if: ${{ always() }}
     steps:
-    - name: Build complete
-      run: echo 'Build complete'
+    - name: Builds jobs complete
+      run: |
+        if ${{ needs.build.result }}; then
+          echo 'Linux CI job passed'
+        else
+          echo 'Linux CI job failed'
+          exit 1
+        fi
 
   release:
-    needs: [linux_ci]
+    needs: [build]
     if: ${{ startsWith(github.ref, 'refs/tags') }}
     runs-on: ubuntu-latest
     steps:

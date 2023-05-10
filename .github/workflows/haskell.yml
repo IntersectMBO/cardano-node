@@ -262,9 +262,16 @@ jobs:
   build-complete:
     needs: [build]
     runs-on: ubuntu-latest
+    if: ${{ always() }}
     steps:
-    - name: Build complete
-      run: echo 'Build complete'
+    - name: Builds jobs complete
+      run: |
+        if ${{ needs.linux_ci.result }}; then
+          echo 'Linux CI job passed'
+        else
+          echo 'Linux CI job failed'
+          exit 1
+        fi
 
   release:
     needs: [build]
