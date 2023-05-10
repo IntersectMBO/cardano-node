@@ -794,7 +794,7 @@ module Cardano.Api (
     slotToEpoch,
 
     -- * Node socket related
-    SocketPath(..),
+    SocketPath,
 
     NodeToClientVersion(..),
 
@@ -848,7 +848,6 @@ import           Cardano.Api.Convenience.Constraints
 import           Cardano.Api.Convenience.Construction
 import           Cardano.Api.Convenience.Query
 import           Cardano.Api.DeserialiseAnyOf
-import           Cardano.Api.Environment
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error

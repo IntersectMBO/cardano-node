@@ -7,7 +7,7 @@ module Cardano.TxSubmit.CLI.Parsers
   , pSocketPath
   ) where
 
-import           Cardano.Api (SocketPath (..))
+import           Cardano.Api (File (..), SocketPath)
 
 import           Cardano.CLI.Environment (EnvCli (..))
 import           Cardano.CLI.Parsers (pConsensusModeParams, pNetworkId)
@@ -45,12 +45,13 @@ pConfigFile = ConfigFile <$> Opt.strOption
   )
 
 pSocketPath :: Parser SocketPath
-pSocketPath = SocketPath <$> Opt.strOption
-  (   Opt.long "socket-path"
-  <>  Opt.help "Path to a cardano-node socket"
-  <>  Opt.completer (Opt.bashCompleter "file")
-  <>  Opt.metavar "FILEPATH"
-  )
+pSocketPath =
+  fmap File $ Opt.strOption $ mconcat
+    [ Opt.long "socket-path"
+    , Opt.help "Path to a cardano-node socket"
+    , Opt.completer (Opt.bashCompleter "file")
+    , Opt.metavar "FILEPATH"
+    ]
 
 pMetricsPort :: Int -> Parser Int
 pMetricsPort defaultValue = Opt.option Opt.auto

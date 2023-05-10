@@ -26,13 +26,13 @@ runGetLocalNodeTip
   :: SocketPath
   -> NetworkId
   -> IO ()
-runGetLocalNodeTip (SocketPath sockPath) networkId = do
+runGetLocalNodeTip socketPath networkId = do
   let connctInfo =
-        LocalNodeConnectInfo {
-          localNodeSocketPath    = sockPath,
-          localNodeNetworkId     = networkId,
-          localConsensusModeParams = ByronModeParams (EpochSlots 21600)
-        }
+        LocalNodeConnectInfo
+          { localNodeSocketPath = socketPath
+          , localNodeNetworkId = networkId
+          , localConsensusModeParams = ByronModeParams (EpochSlots 21600)
+          }
 
   tip <- getLocalChainTip connctInfo
   Text.putStrLn . Text.decodeUtf8 . LB.toStrict $ encodePretty tip

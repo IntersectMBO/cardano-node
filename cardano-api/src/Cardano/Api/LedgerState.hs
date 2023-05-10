@@ -123,6 +123,7 @@ import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
+import           Cardano.Api.IO
 import           Cardano.Api.IPC (ConsensusModeParams (..),
                    LocalChainSyncClient (LocalChainSyncClientPipelined),
                    LocalNodeClientProtocols (..), LocalNodeClientProtocolsInMode,
@@ -342,10 +343,10 @@ renderFoldBlocksError fbe = case fbe of
 -- | Monadic fold over all blocks and ledger states. Stopping @k@ blocks before
 -- the node's tip where @k@ is the security parameter.
 foldBlocks
-  :: forall a.
-  FilePath
+  :: forall a. ()
+  => FilePath
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
-  -> FilePath
+  -> SocketPath
   -- ^ Path to local cardano-node socket. This is the path specified by the @--socket-path@ command line option when running the node.
   -> ValidationMode
   -> a
@@ -1022,10 +1023,6 @@ newtype NetworkName = NetworkName
 
 newtype NodeConfigFile = NodeConfigFile
   { unNodeConfigFile :: FilePath
-  } deriving Show
-
-newtype SocketPath = SocketPath
-  { unSocketPath :: FilePath
   } deriving Show
 
 mkProtocolInfoCardano ::

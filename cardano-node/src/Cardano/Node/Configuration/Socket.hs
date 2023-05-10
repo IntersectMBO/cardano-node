@@ -63,7 +63,7 @@ data SocketConfigError
     | ClashingPublicIpv4SocketGiven
     | ClashingPublicIpv6SocketGiven
     | ClashingLocalSocketGiven
-    | LocalSocketError FilePath IOException
+    | LocalSocketError SocketPath IOException
     | GetAddrInfoError (Maybe NodeHostIPAddress) (Maybe PortNumber) IOException
   deriving Show
 
@@ -95,7 +95,7 @@ renderSocketConfigError ClashingLocalSocketGiven =
 
 renderSocketConfigError (LocalSocketError fp ex) =
     "Failure while attempting to remove the stale local socket: "
- <> fp <> " : " <> displayException ex
+ <> unFile fp <> " : " <> displayException ex
 
 renderSocketConfigError (GetAddrInfoError addr port ex) =
     "Failure while getting address information for the public listening "
@@ -196,9 +196,9 @@ gatherConfiguredSockets SocketConfig { ncNodeIPv4Addr,
       (Nothing, Nothing)    -> return Nothing
       (Just _, Just _)      -> throwError ClashingLocalSocketGiven
       (Nothing, Just sock)  -> return . Just $ ActualSocket sock
-      (Just (SocketPath path), Nothing)
-                            -> removeStaleLocalSocket path
-                            $> Just (SocketInfo (LocalAddress path))
+      (Just socketPath, Nothing)
+                            -> removeStaleLocalSocket socketPath
+                            $> Just (SocketInfo (LocalAddress (unFile socketPath)))
 
     return (ipv4', ipv6', local)
 
@@ -206,14 +206,14 @@ gatherConfiguredSockets SocketConfig { ncNodeIPv4Addr,
 -- | Binding a local unix domain socket always expects to create it, and fails
 -- if it exists already. So we delete it first if it exists. But only on unix.
 --
-removeStaleLocalSocket :: FilePath -> ExceptT SocketConfigError IO ()
+removeStaleLocalSocket :: SocketPath -> ExceptT SocketConfigError IO ()
 #if defined(mingw32_HOST_OS)
 removeStaleLocalSocket _ =
     return ()
 #else
 removeStaleLocalSocket path =
     handleIOExceptT (LocalSocketError path) $
-      removeFile path `catch` \e ->
+      removeFile (unFile path) `catch` \e ->
         if isDoesNotExistError e then return ()
                                  else throwIO e
 #endif

@@ -201,8 +201,8 @@ runQueryProtocolParameters
   -> NetworkId
   -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryProtocolParameters (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network mOutFile = do
-  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
+runQueryProtocolParameters socketPath (AnyConsensusModeParams cModeParams) network mOutFile = do
+  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
 
   result <- liftIO $ executeLocalStateQueryExpr localNodeConnInfo Nothing $ runExceptT $ do
     anyE@(AnyCardanoEra era) <- lift (determineEraExpr cModeParams)
@@ -274,10 +274,10 @@ runQueryTip
   -> NetworkId
   -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryTip (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network mOutFile = do
+runQueryTip socketPath (AnyConsensusModeParams cModeParams) network mOutFile = do
   case consensusModeOnly cModeParams of
     CardanoMode -> do
-      let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
+      let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
 
       eLocalState <- ExceptT $ fmap sequence $
         executeLocalStateQueryExpr localNodeConnInfo Nothing $ runExceptT $ do
@@ -361,9 +361,9 @@ runQueryUTxO
   -> NetworkId
   -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryUTxO (SocketPath sockPath) (AnyConsensusModeParams cModeParams)
+runQueryUTxO socketPath (AnyConsensusModeParams cModeParams)
              qfilter network mOutFile = do
-  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
+  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
 
   anyE@(AnyCardanoEra era) <- lift (determineEra cModeParams localNodeConnInfo)
     & onLeft (left . ShelleyQueryCmdAcquireFailure)
@@ -388,11 +388,11 @@ runQueryKesPeriodInfo
   -> File () In
   -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryKesPeriodInfo (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network nodeOpCertFile mOutFile = do
+runQueryKesPeriodInfo socketPath (AnyConsensusModeParams cModeParams) network nodeOpCertFile mOutFile = do
   opCert <- lift (readFileTextEnvelope AsOperationalCertificate nodeOpCertFile)
     & onLeft (left . ShelleyQueryCmdOpCertCounterReadError)
 
-  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
+  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
 
   anyE@(AnyCardanoEra era) <- lift (determineEra cModeParams localNodeConnInfo)
     & onLeft (left . ShelleyQueryCmdAcquireFailure)
@@ -653,8 +653,8 @@ runQueryPoolState
   -> NetworkId
   -> [Hash StakePoolKey]
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryPoolState (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network poolIds = do
-  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
+runQueryPoolState socketPath (AnyConsensusModeParams cModeParams) network poolIds = do
+  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
 
   anyE@(AnyCardanoEra era) <- lift (determineEra cModeParams localNodeConnInfo)
     & onLeft (left . ShelleyQueryCmdAcquireFailure)
@@ -677,8 +677,8 @@ runQueryTxMempool
   -> TxMempoolQuery
   -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryTxMempool (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network query mOutFile = do
-  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
+runQueryTxMempool socketPath (AnyConsensusModeParams cModeParams) network query mOutFile = do
+  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
 
   localQuery <- case query of
       TxMempoolQueryTxExists tx -> do
@@ -709,8 +709,8 @@ runQueryStakeSnapshot
   -> AllOrOnly [Hash StakePoolKey]
   -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryStakeSnapshot (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network allOrOnlyPoolIds mOutFile = do
-  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
+runQueryStakeSnapshot socketPath (AnyConsensusModeParams cModeParams) network allOrOnlyPoolIds mOutFile = do
+  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
 
   anyE@(AnyCardanoEra era) <- lift (determineEra cModeParams localNodeConnInfo)
     & onLeft (left . ShelleyQueryCmdAcquireFailure)
@@ -735,8 +735,8 @@ runQueryLedgerState
   -> NetworkId
   -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryLedgerState (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network mOutFile = do
-  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
+runQueryLedgerState socketPath (AnyConsensusModeParams cModeParams) network mOutFile = do
+  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
 
   anyE@(AnyCardanoEra era) <- lift (determineEra cModeParams localNodeConnInfo)
     & onLeft (left . ShelleyQueryCmdAcquireFailure)
@@ -759,8 +759,8 @@ runQueryProtocolState
   -> NetworkId
   -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryProtocolState (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network mOutFile = do
-  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
+runQueryProtocolState socketPath (AnyConsensusModeParams cModeParams) network mOutFile = do
+  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
 
   anyE@(AnyCardanoEra era) <- lift (determineEra cModeParams localNodeConnInfo)
     & onLeft (left . ShelleyQueryCmdAcquireFailure)
@@ -789,8 +789,8 @@ runQueryStakeAddressInfo
   -> NetworkId
   -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryStakeAddressInfo (SocketPath sockPath) (AnyConsensusModeParams cModeParams) (StakeAddress _ addr) network mOutFile = do
-  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
+runQueryStakeAddressInfo socketPath (AnyConsensusModeParams cModeParams) (StakeAddress _ addr) network mOutFile = do
+  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
 
   anyE@(AnyCardanoEra era) <- lift (determineEra cModeParams localNodeConnInfo)
     & onLeft (left . ShelleyQueryCmdAcquireFailure)
@@ -1024,8 +1024,8 @@ runQueryStakePools
   -> NetworkId
   -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryStakePools (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network mOutFile = do
-  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
+runQueryStakePools socketPath (AnyConsensusModeParams cModeParams) network mOutFile = do
+  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
 
   poolIds <-
     ( lift $ executeLocalStateQueryExpr localNodeConnInfo Nothing $ runExceptT @ShelleyQueryCmdError $ do
@@ -1069,8 +1069,8 @@ runQueryStakeDistribution
   -> NetworkId
   -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryStakeDistribution (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network mOutFile = do
-  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
+runQueryStakeDistribution socketPath (AnyConsensusModeParams cModeParams) network mOutFile = do
+  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
 
   anyE@(AnyCardanoEra era) <- lift (determineEra cModeParams localNodeConnInfo)
     & onLeft (left . ShelleyQueryCmdAcquireFailure)
@@ -1189,10 +1189,10 @@ runQueryLeadershipSchedule
   -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryLeadershipSchedule
-    (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network
+    socketPath (AnyConsensusModeParams cModeParams) network
     (GenesisFile genFile) coldVerKeyFile vrfSkeyFp
     whichSchedule mJsonOutputFile = do
-  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
+  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
 
   anyE@(AnyCardanoEra era) <- lift (determineEra cModeParams localNodeConnInfo)
     & onLeft (left . ShelleyQueryCmdAcquireFailure)
@@ -1391,8 +1391,8 @@ utcTimeToSlotNo
   -> NetworkId
   -> UTCTime
   -> ExceptT ShelleyQueryCmdError IO SlotNo
-utcTimeToSlotNo (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network utcTime = do
-  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
+utcTimeToSlotNo socketPath (AnyConsensusModeParams cModeParams) network utcTime = do
+  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
   case consensusModeOnly cModeParams of
     CardanoMode -> do
       (systemStart, eraHistory) <- executeLocalStateQueryExpr' localNodeConnInfo $

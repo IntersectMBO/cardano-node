@@ -5,8 +5,9 @@ module Cardano.CLI.Common.Parsers
   ) where
 
 import           Cardano.Api (AnyConsensusModeParams (..), ConsensusModeParams (..),
-                   EpochSlots (..), NetworkId (..), NetworkMagic (..), SocketPath (..), bounded)
-import           Cardano.CLI.Environment (EnvCli (envCliNetworkId, envCliSocketPath))
+                   EpochSlots (..), File (..), NetworkId (..), NetworkMagic (..), SocketPath,
+                   bounded)
+import           Cardano.CLI.Environment (EnvCli (..))
 
 import           Data.Foldable
 import           Data.Maybe (maybeToList)
@@ -94,7 +95,7 @@ pEpochSlots =
 pSocketPath :: EnvCli -> Parser SocketPath
 pSocketPath envCli =
   asum $ mconcat
-    [ [ fmap SocketPath $ Opt.strOption $ mconcat
+    [ [ fmap File $ Opt.strOption $ mconcat
         [ Opt.long "socket-path"
         , Opt.metavar "SOCKET_PATH"
         , Opt.help $ mconcat
@@ -106,5 +107,5 @@ pSocketPath envCli =
         ]
       ]
     , -- Default to the socket path specified by the environment variable if it is available.
-      pure . SocketPath <$> maybeToList (envCliSocketPath envCli)
+      pure . File <$> maybeToList (envCliSocketPath envCli)
     ]

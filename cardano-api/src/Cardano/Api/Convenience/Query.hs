@@ -29,8 +29,8 @@ import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Convenience.Constraints
-import           Cardano.Api.Environment
 import           Cardano.Api.Eras
+import           Cardano.Api.IO
 import           Cardano.Api.IPC
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
@@ -78,7 +78,7 @@ queryStateForBalancedTx
         )
 queryStateForBalancedTx socketPath era networkId allTxIns certs = runExceptT $ do
   let cModeParams = CardanoModeParams $ EpochSlots 21600
-      localNodeConnInfo = LocalNodeConnectInfo cModeParams networkId (unSocketPath socketPath)
+      localNodeConnInfo = LocalNodeConnectInfo cModeParams networkId socketPath
 
   qSbe <- except $ getSbe $ cardanoEraStyle era
 
@@ -142,7 +142,7 @@ executeQueryCardanoMode socketPath era nid q = runExceptT $ do
         LocalNodeConnectInfo
           { localConsensusModeParams = CardanoModeParams (EpochSlots 21600)
           , localNodeNetworkId = nid
-          , localNodeSocketPath = unSocketPath socketPath
+          , localNodeSocketPath = socketPath
           }
 
   ExceptT $ executeQueryAnyMode era localNodeConnInfo q

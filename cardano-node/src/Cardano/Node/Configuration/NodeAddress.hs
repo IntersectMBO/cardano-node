@@ -26,7 +26,8 @@ module Cardano.Node.Configuration.NodeAddress
   , NodeHostDnsAddress (..)
   , nodeHostDnsAddressToDomain
   , PortNumber
-  , SocketPath(..)
+  , SocketPath
+  , File(..)
   ) where
 
 import           Cardano.Api

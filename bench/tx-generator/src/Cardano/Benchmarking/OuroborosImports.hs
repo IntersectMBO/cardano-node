@@ -38,8 +38,8 @@ import           Cardano.Api.Shelley (CardanoMode)
 import           Cardano.CLI.Types (SigningKeyFile)
 
 import           Cardano.Api (BlockType (..), ConsensusModeParams (..), EpochSlots (..),
-                   LocalNodeConnectInfo (..), NetworkId (..), PaymentKey, SigningKey, TxInMode,
-                   TxValidationErrorInMode, protocolInfo, submitTxToNodeLocal)
+                   LocalNodeConnectInfo (..), NetworkId (..), PaymentKey, SigningKey, SocketPath,
+                   TxInMode, TxValidationErrorInMode, protocolInfo, submitTxToNodeLocal)
 import           Cardano.Ledger.Shelley.Genesis (ShelleyGenesis)
 
 type CardanoBlock = Consensus.CardanoBlock StandardCrypto
@@ -60,11 +60,8 @@ protocolToNetworkId :: SomeConsensusProtocol -> NetworkId
 protocolToNetworkId ptcl
   = Testnet $ getNetworkMagic $ configBlock $ protocolToTopLevelConfig ptcl
 
-makeLocalConnectInfo :: NetworkId -> FilePath -> LocalNodeConnectInfo CardanoMode
-makeLocalConnectInfo networkId sock
-  = LocalNodeConnectInfo
-      (CardanoModeParams (EpochSlots 21600))
-      networkId
-      sock
+makeLocalConnectInfo :: NetworkId -> SocketPath -> LocalNodeConnectInfo CardanoMode
+makeLocalConnectInfo networkId socketPath
+  = LocalNodeConnectInfo (CardanoModeParams (EpochSlots 21600)) networkId socketPath
 
 type LocalSubmitTx = (TxInMode CardanoMode -> IO (SubmitResult (TxValidationErrorInMode CardanoMode)))
