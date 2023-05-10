@@ -303,9 +303,10 @@ instance ( ShelleyBasedEra era
              , "acceptable" .= Set.toList acceptable
              ]
   toObject _ (ExtraRedeemers rdmrs) =
-    mconcat [ "kind" .= String "ExtraRedeemers"
-             , "rdmrs" .= map (Api.renderScriptWitnessIndex . Api.fromAlonzoRdmrPtr) rdmrs
-             ]
+    mconcat
+      [ "kind" .= String "ExtraRedeemers"
+      , "rdmrs" .= map Api.fromAlonzoRdmrPtr rdmrs
+      ]
 
 renderScriptIntegrityHash :: Maybe (Alonzo.ScriptIntegrityHash StandardCrypto) -> Aeson.Value
 renderScriptIntegrityHash (Just witPPDataHash) =
@@ -1039,7 +1040,7 @@ instance ToJSON (Alonzo.CollectError StandardCrypto) where
               Alonzo.RdmrPtrPointsToNothing ptr ->
                 object
                   [ "kind" .= String "RedeemerPointerPointsToNothing"
-                  , "ptr" .= (Api.renderScriptWitnessIndex . Api.fromAlonzoRdmrPtr) ptr
+                  , "ptr" .= Api.fromAlonzoRdmrPtr ptr
                   ]
               Alonzo.LanguageNotSupported lang ->
                 String $ "Language not supported: " <> textShow lang

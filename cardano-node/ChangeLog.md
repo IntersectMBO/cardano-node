@@ -6,6 +6,10 @@
 
 ## 8.0.0 - May 2023
 
+- In JSON logging, `"ExtraRedeemers"` object contents are machine readable rather than
+  difficult-to-parse user-friendly-string.
+  [PR 5168](https://github.com/input-output-hk/cardano-node/pull/5168)
+
 ### node changes
 
 - So far the `AcceptedConnectionLimit`s from the configuration file where
