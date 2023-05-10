@@ -4,8 +4,8 @@ usage_analyse() {
      $(blk cmp)                     run directory.  A builtin $(blue .ede) template will be used and dumped,
                              so a later $(red analyse) $(yellow recompare) can use it as basis.
 
-    $(helpcmd recompare RUN_NAME..)   Update an existing comparative analysis between specified runs,
-     $(blk recmp)                   using its $(blue .ede) template as basis.
+    $(helpcmd render-comparison-pdf RUN_NAME)
+     $(blk render-pdf pdf)        Render a comparative .org report into PDF
 
     $(helpcmd variance RUN-NAME..)
      $(blk var)                   Variance analyses on a set of runs
@@ -72,6 +72,7 @@ usage_analyse() {
                        Omit run metadata from all output (diff friendliness)
     $(helpopt --without-datever-meta)
                        Omit run date/version from all output (diff friendliness)
+    $(helpopt --pdf)              Multirun:  auto-render comparisons into PDF
 
 EOF
 }
@@ -88,7 +89,7 @@ analyse_default_op='standard'
 analyse() {
 local sargs=()
 local arg_filters=() filter_exprs=() unfiltered=
-local dump_logobjects= dump_machviews= dump_chain= dump_slots_raw= dump_slots= without_datever_meta=
+local dump_logobjects= dump_machviews= dump_chain= dump_slots_raw= dump_slots= without_datever_meta= pdf=
 local multi_aspect='--inter-cdf' rtsmode=
 local locli_render=() locli_timeline=()
 locli_args=()
@@ -110,6 +111,7 @@ do case "$1" in
        --dump-slots      | -s )    sargs+=($1);    dump_slots='true';;
        --multi-overall )           sargs+=($1);    multi_aspect='--overall';;
        --multi-inter-cdf )         sargs+=($1);    multi_aspect='--inter-cdf';;
+       --pdf )                     sargs+=($1);    pdf='yes-please';;
        --rtsmode-serial )          sargs+=($1);    rtsmode='serial';;
        --rtsmode-lomem | --lomem ) sargs+=($1);    rtsmode='lomem';;
        --rtsmode-hipar )           sargs+=($1);    rtsmode='hipar';;
@@ -129,9 +131,6 @@ verbose "analyse" "sargs: $(yellow ${sargs[*]})"
 case "$op" in
     # 'read-mach-views' "${logs[@]/#/--log }"
 
-    report )
-        emn run/$1/analysis/report-*.org;;
-
     compare | cmp )
         local runs=($(expand_runsets $*))
         local baseline=${runs[0]}
@@ -139,12 +138,54 @@ case "$op" in
         analyse "${sargs[@]}" multi-call 'compare' "${runs[*]}" 'compare'
         ;;
 
-    recompare | recmp )
-        local runs=($(expand_runsets $*))
-        local baseline=${runs[0]}
-        progress "analyse" "$(white regenerating comparison) of $(colorise ${runs[*]:1}) $(plain against baseline) $(white $baseline)"
-        analyse "${sargs[@]}" multi-call 'compare' "${runs[*]}" 'update'
-        ;;
+    render-comparison-pdf | render-pdf | pdf )
+        local usage="USAGE: wb analyse $op RUN"
+        local run=${1:?$usage}; shift
+        local dir=$(run compute-path "$run")
+
+        progress "analyse | report" "rendering report:  $(white $run)"
+        local emacs_args=(
+            --batch
+            "$dir"/analysis/*.org
+            --eval
+            '(progn
+               (org-table-recalculate-buffer-tables)
+               (org-table-recalculate-buffer-tables)
+               (org-babel-execute-buffer)
+               (org-redisplay-inline-images)
+               (org-latex-export-to-pdf))
+            '
+        )
+        if em "${emacs_args[@]}"
+        then cat <<EOF
+
+Seeing $(red PDF file produced with errors) just above?  If not, just ignore this message.
+
+Most likely some $(yellow Gnuplot scripts) failed to produce images.
+
+To see $(yellow which ones failed) and how, you'll need to:
+
+  1. run $(white em) directly:  $(white em "$dir"/analysis/*.org)
+  2. run the export command interactively:  $(white C-c C-x C-x)
+  3. look into the $(yellow '*gnuplot*') buffer for errors, like:
+
+     $(red all points y value undefined)
+
+Either $(green fix these scripts), or remove them entirely, then $(blue retry export).
+
+EOF
+        else cat <<EOF
+
+$(red ERROR: report generation failed)
+
+Quick error with short output and this line?
+
+    $(red 'Debugger entered--Lisp error: (error "Cannot resolve lock conflict in batch mode"')
+
+  You have the report $(blue .org) file open in Emacs -- close it first.
+
+EOF
+        fi;;
 
     variance | var )
         local script=(
@@ -176,32 +217,6 @@ case "$op" in
         ## Ugly patching for compat reasons.
         local runs=$(run get-global-rundir)
         jq '.meta.profile_content' "$runs"/current/meta.json > "$runs"/current/profile.json
-        ;;
-
-    rerender | render )
-        local script=(
-            read-context
-
-            read-propagations
-            propagation-json
-            propagation-org
-            propagation-{control,forger,peers,endtoend}
-            propagation-gnuplot
-            propagation-full
-
-            read-clusterperfs
-            clusterperf-json
-            clusterperf-gnuplot
-            clusterperf-org
-            clusterperf-report
-            clusterperf-full
-
-            read-summaries
-            summary-json
-            summary-report
-         )
-        verbose "analyse" "$(white full), calling script:  $(colorise ${script[*]})"
-        analyse "${sargs[@]}" map "call ${script[*]}" "$@"
         ;;
 
     standard | full | std )
@@ -241,6 +256,13 @@ case "$op" in
          )
         verbose "analyse" "$(white full), calling script:  $(colorise ${script[*]})"
         analyse "${sargs[@]}" map "call ${script[*]}" "$@"
+
+        newline
+        progress "hint" "$(plain Want nice) run identifiers in reports?  Then either:"
+        progress "hint" "  1. Directly prefix the run tags with $(blue \$ID)$(white :), where $(blue \$ID) is short, like e.g. $(yellow baseline)"
+        progress "hint" "     $(green wb std baseline:$1)"
+        progress "hint" "  2. Set the run ID post-hoc:"
+        progress "hint" "     $(green wb setid $1 baseline)"
         ;;
 
     block-propagation | blockprop | bp )
@@ -262,23 +284,6 @@ case "$op" in
          )
         verbose "analyse" "$(white full), calling script:  $(colorise ${script[*]})"
         analyse map "call ${script[*]}" "$@"
-        ;;
-
-    re-block-propagation | reblockprop | rebp )
-        fail "re-block-propagation is broken:  read-chain not implemented"
-        local script=(
-            read-chain
-            chain-timeline
-
-            compute-propagation
-            propagation-json
-            propagation-org
-            propagation-{control,forger,peers,endtoend}
-            propagation-gnuplot
-            propagation-full
-         )
-        verbose "analyse" "$(white full), calling script:  $(colorise ${script[*]})"
-        analyse "${sargs[@]}" map "call ${script[*]}" "$@"
         ;;
 
     performance | perf )
@@ -510,7 +515,14 @@ case "$op" in
         if test ${#idents_uniq[*]} = 1
         then run setid $run ${idents_uniq[0]}
         fi
-        progress "output" "run:  $(white $run)  $(blue ident:)  $(white ${idents_uniq[*]})"
+        progress "report | output" "run:  $(white $run)  $(blue ident:)  $(white ${idents_uniq[*]})"
+
+        if test -n "$pdf"
+        then progress "report | pdf" "PDF output requested, running 'em'.."
+             analyse pdf $run
+        else progress "report | hint" "did you want to pass $(white --pdf) to $(white wb analyse)?"
+             progress "report | hint" "you still can feed this run into $(white wb pdf).."
+        fi
         ;;
 
     prepare | prep )
@@ -532,7 +544,7 @@ case "$op" in
 
         ## 0. ask locli what it cares about
         local keyfile="$adir"/substring-keys
-        local key_old=$(sha256sum "$keyfile" | cut -d' ' -f1)
+        local key_old=$(sha256sum 2>/dev/null "$keyfile" | cut -d' ' -f1)
         local tracing_backend=$(jq '.node.tracing_backend // "iohk-monitoring"' --raw-output $dir/profile.json)
         case "$tracing_backend" in
              trace-dispatcher ) locli 'list-logobject-keys'        --keys        "$keyfile";;

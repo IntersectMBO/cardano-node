@@ -30,7 +30,7 @@ let
       inherit (pkgs) globals;
 
       ## WARNING: IFD
-      topologyNix = __fromJSON (__readFile "${topology.files}/topology-nixops.json");
+      topologyNix = __fromJSON (__readFile "${topology.files}/topology.json");
 
       mkNodeOverlay =
         machineOverlay: nodeConfigOverlay:

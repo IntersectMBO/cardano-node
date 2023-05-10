@@ -301,7 +301,7 @@ EOF
     fix-systemstart )
         local usage="USAGE: wb run $op RUN [MACH=node-1]"
         local run=${1:?$usage}
-        local mach=${2:-node-1}
+        local mach=${2:-node-0}
         local dir=$(run compute-path "$run")
         local nodelog=$(ls $dir/logs/$mach/node-*.json | head -n1)
         local genesis=$dir/genesis-shelley.json
@@ -410,12 +410,11 @@ EOF
         local profile_name=${1:?$usage}; shift
         local backend_name=${1:?$usage}; shift
 
-        local profile_data= topology= genesis_cache_entry= manifest=
+        local profile_data= genesis_cache_entry= manifest=
         while test $# -gt 0
         do case "$1" in
                --manifest )            manifest=$2; shift;;
                --profile-data )        profile_data=$2; shift;;
-               --topology )            topology=$2; shift;;
                --genesis-cache-entry ) genesis_cache_entry=$2; shift;;
                -- ) shift; break;;
                --* ) msg "FATAL:  unknown flag '$1'"; usage_run;;
@@ -471,11 +470,10 @@ EOF
             fail "Mode no longer supported:  operation without profile/ directory."
         fi
 
-        progress "run | topology"  "$(if test -n "$topology"; then echo pre-supplied; else echo computed; fi)"
-        if test -n "$topology"
-        then ln -s "$topology"                    "$dir"/topology
-        else topology make    "$dir"/profile.json "$dir"/topology
-        fi
+        progress "run | topology" \
+                 "$(white $(jq -r .composition.topology "$dir"/profile.json))"
+        ln -s "$profile_data"/topology.json        "$dir"
+        ln -s "$profile_data"/topology.dot         "$dir"
 
         if test "${WB_BACKEND:0:5}" != 'nomad' # Doesn't start with "nomad"
         then run_instantiate_rundir_profile_services "$dir"; fi
@@ -510,8 +508,8 @@ EOF
            }
            ' "${args[@]}"
 
-        progress "deriving genesis from cache:"
-        if      test -z "$genesis_cache_entry"
+        progress "run | genesis" "deriving from cache"
+        if test -z "$genesis_cache_entry"
         then fail "internal error:  no genesis cache entry"
         else genesis derive-from-cache      \
                      "$dir"/profile.json    \
@@ -523,7 +521,7 @@ EOF
         cp "$dir"/genesis/genesis-shelley.json "$dir"/genesis-shelley.json
         cp "$dir"/genesis/genesis.alonzo.json  "$dir"/genesis.alonzo.json
         echo >&2
-        progress "run | deploying genesis"
+        progress "run | genesis" "deploying.."
         backend deploy-genesis "$dir"
 
         progress "run" "allocated $(with_color white $run) @ $dir"
@@ -1000,8 +998,11 @@ run_ls_cmd() {
     local rundir=$1
 
     echo 'cd '$rundir' && \
-          find . -mindepth 2 -maxdepth 2 -type f -name meta.json -exec dirname \{\} \; |
-          grep -v "current\$\|deploy-logs\$" |
+          { find . -mindepth 2 -maxdepth 2 -type f -name meta.json -exec dirname \{\} \; |
+            grep -v "current\$\|deploy-logs\$" &&
+            find . -mindepth 3 -maxdepth 3 -type f -name *.ede -exec dirname \{\} \; |
+            xargs dirname
+          } |
           cut -c3- |
           sort || true'
 }

@@ -3,7 +3,7 @@ usage_topology() {
     The workbench generates topologies with the following properties:
       - all node names are of the form "node-N", where N is a 0-based natural
       - the BFT producer, is always present and is node-0;  inactived by d=0
-      - a non-dense, regular pool producer is always present, and is always node-1
+      - a non-dense, regular pool producer is always present, and is always node-0
       - further nodes are dense pools (so potentially configurable to densities >1)
       - there is an optional explorer as the last node
 
@@ -52,7 +52,7 @@ case "${op}" in
         ## 0. Generate:
         #
         mkdir -p                 "$outdir"
-        args=( --topology-output "$outdir"/topology-nixops.json
+        args=( --topology-output "$outdir"/topology.json
                --dot-output      "$outdir"/topology.dot
                $(jq '.composition.topology
                     ' --raw-output "$profile_json")
@@ -92,8 +92,8 @@ case "${op}" in
               };
 
            nixops_topology_set_pool_density(.; $prof[0].dense_pool_density)
-           '   "$outdir"/topology-nixops.json |
-        sponge "$outdir"/topology-nixops.json
+           '   "$outdir"/topology.json |
+        sponge "$outdir"/topology.json
         ;;
 
     density-map )
@@ -124,7 +124,7 @@ case "${op}" in
         case "$role" in
         local-bft | local-pool )
             args=(-L$global_basedir
-                  --slurpfile topology "$topo_dir"/topology-nixops.json
+                  --slurpfile topology "$topo_dir"/topology.json
                   --argjson   basePort $basePort
                   --argjson   i        $i
                   --null-input

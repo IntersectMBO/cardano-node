@@ -102,7 +102,6 @@ in
               start
               --profile-data        ${profileData}
               --backend-data        ${backendData}
-              --topology            ${profileData.topology.files}
               --genesis-cache-entry ${profileData.genesis.files}
               --batch-name          smoke-test
               --base-port           ${toString basePort}
@@ -123,8 +122,6 @@ in
                  echo "==========  txgen  stderr:"; cat generator/stderr || true
                  echo "==========  node-0 stdout:"; cat node-0/stdout || true
                  echo "==========  node-0 stderr:"; cat node-0/stderr || true
-                 echo "==========  node-1 stdout:"; cat node-1/stdout || true
-                 echo "==========  node-1 stderr:"; cat node-1/stderr || true
                  wb call fail "wb start failed"
            fi
 

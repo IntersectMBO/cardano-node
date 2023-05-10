@@ -193,14 +193,15 @@ EOF
                --* ) msg "FATAL:  unknown flag '$1'"; usage_supervisor;;
                * ) break;; esac; shift; done
 
+        ls -l $dir/{tracer/tracer,node-{0,1}/node}.socket || true
         if ! supervisorctl start generator
         then progress "supervisor" "$(red fatal: failed to start) $(white generator)"
              echo "$(red generator.json) ------------------------------" >&2
-             cat "$dir"/tracer/tracer-config.json
-             echo "$(red tracer stdout) -----------------------------------" >&2
-             cat "$dir"/tracer/stdout
-             echo "$(red tracer stderr) -----------------------------------" >&2
-             cat "$dir"/tracer/stderr
+             cat "$dir"/generator/service-config.json
+             echo "$(red generator stdout) -----------------------------------" >&2
+             cat "$dir"/generator/stdout
+             echo "$(red generator stderr) -----------------------------------" >&2
+             cat "$dir"/generator/stderr
              echo "$(white -------------------------------------------------)" >&2
              fatal "could not start $(white supervisord)"
         fi
