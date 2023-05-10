@@ -2,9 +2,12 @@
 
 ## 8.1.0
 
--
+### Bugfix
 
-## 8.0.0 - May 2023
+- Fix `toEraInMode` for Conway
+  ([PR 5175](https://github.com/input-output-hk/cardano-node/pull/5175))
+
+## 8.0.0 -- May 2023
 
 - Add `getSlotForRelativeTime` function ([PR 5130](https://github.com/input-output-hk/cardano-node/pull/5130))
 

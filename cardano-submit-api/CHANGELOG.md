@@ -2,7 +2,7 @@
 
 ## vNext
 
-## 8.0.0 - May 2023
+## 8.0.0 -- May 2023
 
 - [Add tx_submit_fail_count metric](https://github.com/input-output-hk/cardano-node/pull/4566)
 - [Configurable metrics port in submit-api](https://github.com/input-output-hk/cardano-node/pull/4281)
