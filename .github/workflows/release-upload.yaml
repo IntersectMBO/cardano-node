@@ -19,7 +19,7 @@ jobs:
           - win64
           - macos
 
-    runs-on: ${{ matrix.platform == 'macos' && 'macos-latest' || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     steps:
       - name: Install Nix with good defaults
         uses: cachix/install-nix-action@v20
@@ -31,11 +31,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Build
-        run: |
-          nix build .#hydraJobs.${{ matrix.platform == 'macos' && 'native' || matrix.platform == 'win64' && 'windows' || 'musl' }}.cardano-node-${{matrix.platform}}
-          cp result/cardano-node-* .
+        run: nix build .#${{
+             matrix.platform == 'macos' && 'legacyPackages.x86_64-darwin.hydraJobs.native'
+          || matrix.platform == 'win64' && 'hydraJobs.windows'
+          || 'hydraJobs.musl' }}.cardano-node-${{matrix.platform}}
       - name: Upload
         uses: actions/upload-artifact@v3
         with:
           name: cardano-node-${{matrix.platform}}
-          path: cardano-node-8.1.0-${{matrix.platform}}.${{ matrix.platform == 'linux' && 'tar.gz' || 'zip' }}
+          path: result/cardano-node-*
