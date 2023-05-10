@@ -24,6 +24,7 @@ module Cardano.Api.IO
 
   , File(..)
   , FileDirection(..)
+  , SocketPath
 
   , mapFile
   , onlyIn
@@ -247,3 +248,7 @@ intoFile :: ()
   -> (content -> stream)
   -> result
 intoFile fp content write serialise = write fp (serialise content)
+
+data Socket
+
+type SocketPath = File Socket 'InOut

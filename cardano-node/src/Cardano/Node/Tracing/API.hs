@@ -29,7 +29,7 @@ import           Ouroboros.Network.Magic (NetworkMagic)
 import           Ouroboros.Network.NodeToClient (withIOManager)
 import           Ouroboros.Network.NodeToNode (RemoteAddress)
 
-import           Cardano.Node.Configuration.NodeAddress (SocketPath (..))
+import           Cardano.Node.Configuration.NodeAddress (File (..))
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
@@ -95,7 +95,7 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
         then do
           -- TODO: check if this is the correct way to use withIOManager
           (forwardSink, dpStore) <- withIOManager $ \iomgr -> do
-            let tracerSocketMode = Just . first unSocketPath =<< ncTraceForwardSocket nc
+            let tracerSocketMode = Just . first unFile =<< ncTraceForwardSocket nc
             initForwarding iomgr (tcForwarder trConfig) networkMagic (Just ekgStore) tracerSocketMode
           pure (forwardTracer forwardSink, dataPointTracer dpStore)
         else

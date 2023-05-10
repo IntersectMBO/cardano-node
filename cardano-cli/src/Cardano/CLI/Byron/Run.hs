@@ -49,7 +49,6 @@ data ByronClientCmdError
   | ByronCmdGenesisError !ByronGenesisError
   | ByronCmdHelpersError !HelpersError
   | ByronCmdKeyFailure !ByronKeyFailure
-  | ByronCmdQueryError !ByronQueryError
   | ByronCmdTxError !ByronTxError
   | ByronCmdTxSubmitError !(ApplyTxErr ByronBlock)
   | ByronCmdUpdateProposalError !ByronUpdateProposalError
@@ -63,7 +62,6 @@ renderByronClientCmdError err =
     ByronCmdGenesisError e -> renderByronGenesisError e
     ByronCmdHelpersError e -> renderHelpersError e
     ByronCmdKeyFailure e -> renderByronKeyFailure e
-    ByronCmdQueryError e -> renderByronQueryError e
     ByronCmdTxError e -> renderByronTxError e
     ByronCmdTxSubmitError e ->
       "Error while submitting Byron tx: " <> Text.pack (show e)
@@ -75,7 +73,7 @@ runByronClientCommand c =
   case c of
     NodeCmd bc -> runNodeCmd bc
     Genesis outDir params -> runGenesisCommand outDir params
-    GetLocalNodeTip mNodeSocketPath network -> firstExceptT ByronCmdQueryError $ runGetLocalNodeTip mNodeSocketPath network
+    GetLocalNodeTip mNodeSocketPath network -> liftIO $ runGetLocalNodeTip mNodeSocketPath network
     ValidateCBOR cborObject fp -> runValidateCBOR cborObject fp
     PrettyPrintCBOR fp -> runPrettyPrintCBOR fp
     PrettySigningKeyPublic bKeyFormat skF -> runPrettySigningKeyPublic bKeyFormat skF

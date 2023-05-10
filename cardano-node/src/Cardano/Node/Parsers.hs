@@ -13,6 +13,7 @@ module Cardano.Node.Parsers
 
 import           Cardano.Prelude (ConvertText (..))
 
+import           Data.Foldable (asum)
 import           Data.Maybe (fromMaybe)
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
@@ -29,8 +30,9 @@ import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
 
 import           Cardano.Logging.Types
-import           Cardano.Node.Configuration.NodeAddress (NodeHostIPv4Address (NodeHostIPv4Address),
-                   NodeHostIPv6Address (NodeHostIPv6Address), PortNumber, SocketPath (SocketPath))
+import           Cardano.Node.Configuration.NodeAddress (File (..),
+                   NodeHostIPv4Address (NodeHostIPv4Address),
+                   NodeHostIPv6Address (NodeHostIPv6Address), PortNumber, SocketPath)
 import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..), lastOption)
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Handlers.Shutdown
@@ -121,28 +123,29 @@ nodeRunParser = do
 
 parseSocketPath :: Text -> Parser SocketPath
 parseSocketPath helpMessage =
-  SocketPath <$> strOption
-    ( long "socket-path"
-        <> help (toS helpMessage)
-        <> completer (bashCompleter "file")
-        <> metavar "FILEPATH"
-    )
+  fmap File $ strOption $ mconcat
+    [ long "socket-path"
+    , help (toS helpMessage)
+    , completer (bashCompleter "file")
+    , metavar "FILEPATH"
+    ]
 
 parseTracerSocketMode :: Parser (SocketPath, ForwarderMode)
 parseTracerSocketMode =
-  ((, Responder) . SocketPath <$> strOption
-   ( long "tracer-socket-path-accept"
-       <> help "Accept incoming cardano-tracer connection at local socket"
-       <> completer (bashCompleter "file")
-       <> metavar "FILEPATH"
-    ))
-  <|>
-  ((, Initiator) . SocketPath <$> strOption
-   ( long "tracer-socket-path-connect"
-       <> help "Connect to cardano-tracer listening on a local socket"
-       <> completer (bashCompleter "file")
-       <> metavar "FILEPATH"
-    ))
+  asum
+    [ fmap ((, Responder) . File) $ strOption $ mconcat
+      [ long "tracer-socket-path-accept"
+      , help "Accept incoming cardano-tracer connection at local socket"
+      , completer (bashCompleter "file")
+      , metavar "FILEPATH"
+      ]
+    , fmap ((, Initiator) . File) $ strOption $ mconcat
+      [ long "tracer-socket-path-connect"
+      , help "Connect to cardano-tracer listening on a local socket"
+      , completer (bashCompleter "file")
+      , metavar "FILEPATH"
+      ]
+    ]
 
 parseHostIPv4Addr :: Parser NodeHostIPv4Address
 parseHostIPv4Addr =

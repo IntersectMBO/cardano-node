@@ -60,12 +60,12 @@ parseConfigFile =
 
 parseSocketPath :: Text -> Parser SocketPath
 parseSocketPath helpMessage =
-  SocketPath <$> strOption
-    ( long "socket-path"
-    <> help (toS helpMessage)
-    <> completer (bashCompleter "file")
-    <> metavar "FILEPATH"
-    )
+  fmap Api.File $ strOption $ mconcat
+    [ long "socket-path"
+    , help (toS helpMessage)
+    , completer (bashCompleter "file")
+    , metavar "FILEPATH"
+    ]
 
 parseRunningTime :: Parser DiffTime
 parseRunningTime =

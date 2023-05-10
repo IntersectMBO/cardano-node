@@ -272,13 +272,14 @@ runChairman tracer networkId runningTime socketPaths cModeParams secParam = do
     chainsVar <- newTVarIO initialChains
 
     void $ timeout runningTime $
-        forConcurrently_ socketPaths $ \sockPath ->
+        forConcurrently_ socketPaths $ \socketPath ->
           let localConnInfo = LocalNodeConnectInfo
                           { localConsensusModeParams = cModeParams
                           , localNodeNetworkId = networkId
-                          , localNodeSocketPath = unSocketPath sockPath
+                          , localNodeSocketPath = socketPath
                           }
-              chairmanChainSyncClient = LocalChainSyncClient $ chainSyncClient (showTracing tracer) sockPath chainsVar cModeParams secParam
+              chairmanChainSyncClient = LocalChainSyncClient $
+                chainSyncClient (showTracing tracer) socketPath chainsVar cModeParams secParam
               protocolsInMode = LocalNodeClientProtocols
                 { localChainSyncClient = chairmanChainSyncClient
                 , localTxSubmissionClient = Nothing

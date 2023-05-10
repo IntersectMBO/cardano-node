@@ -245,7 +245,7 @@ main = do
       f = either (error . T.unpack . renderFoldBlocksError) id
   !_ <- fmap f $ runExceptT $ foldBlocks
          (conf args)
-         (socket args)
+         (File (socket args))
          QuickValidation
          startingState
          (\_env

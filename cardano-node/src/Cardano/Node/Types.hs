@@ -328,10 +328,7 @@ instance AdjustFilePaths NodeConwayProtocolConfiguration where
 
 instance AdjustFilePaths SocketConfig where
   adjustFilePaths f x@SocketConfig{ncSocketPath} =
-    x { ncSocketPath = adjustFilePaths f ncSocketPath }
-
-instance AdjustFilePaths SocketPath where
-  adjustFilePaths f (SocketPath p) = SocketPath (f p)
+    x { ncSocketPath = fmap (mapFile f) ncSocketPath }
 
 instance AdjustFilePaths GenesisFile where
   adjustFilePaths f (GenesisFile p) = GenesisFile (f p)

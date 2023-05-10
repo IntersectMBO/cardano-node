@@ -54,6 +54,8 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           Prelude
 
+import           Cardano.Api (File (..), SocketPath)
+
 import           Cardano.Benchmarking.GeneratorTx
 import qualified Cardano.Benchmarking.LogTypes as Tracer
 import           Cardano.Benchmarking.OuroborosImports (NetworkId, PaymentKey, ShelleyGenesis,
@@ -181,8 +183,8 @@ getEnvNetworkId = getEnvVal envNetworkId "Genesis"
 getEnvProtocol :: ActionM SomeConsensusProtocol
 getEnvProtocol = getEnvVal envProtocol "Protocol"
 
-getEnvSocketPath :: ActionM FilePath
-getEnvSocketPath = getEnvVal envSocketPath "SocketPath"
+getEnvSocketPath :: ActionM SocketPath
+getEnvSocketPath = File <$> getEnvVal envSocketPath "SocketPath"
 
 getEnvThreads :: String -> ActionM AsyncBenchmarkControl
 getEnvThreads = getEnvMap envThreads

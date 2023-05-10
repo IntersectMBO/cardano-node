@@ -74,7 +74,6 @@ data ShelleyTxCmdError
       !AnyCardanoEra
       -- ^ Era
   | ShelleyTxCmdBootstrapWitnessError !ShelleyBootstrapWitnessError
-  | ShelleyTxCmdSocketEnvError !EnvSocketError
   | ShelleyTxCmdTxSubmitError !Text
   | ShelleyTxCmdTxSubmitErrorEraMismatch !EraMismatch
   | ShelleyTxCmdTxFeatureMismatch !AnyCardanoEra !TxFeature
@@ -129,7 +128,6 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdReadWitnessSigningDataError witSignDataErr ->
       renderReadWitnessSigningDataError witSignDataErr
     ShelleyTxCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
-    ShelleyTxCmdSocketEnvError envSockErr -> renderEnvSocketError envSockErr
     ShelleyTxCmdTxSubmitError res -> "Error while submitting tx: " <> res
     ShelleyTxCmdTxSubmitErrorEraMismatch EraMismatch{ledgerEraName, otherEraName} ->
       "The era of the node and the tx do not match. " <>
@@ -338,7 +336,7 @@ runTxBuildCmd
   let localNodeConnInfo = LocalNodeConnectInfo
                             { localConsensusModeParams = cModeParams
                             , localNodeNetworkId = nid
-                            , localNodeSocketPath = unSocketPath socketPath
+                            , localNodeSocketPath = socketPath
                             }
 
   AnyCardanoEra nodeEra <- lift (determineEra cModeParams localNodeConnInfo)
@@ -688,7 +686,7 @@ runTxBuild
           localNodeConnInfo = LocalNodeConnectInfo
                                      { localConsensusModeParams = CardanoModeParams $ EpochSlots 21600
                                      , localNodeNetworkId = networkId
-                                     , localNodeSocketPath = unSocketPath socketPath
+                                     , localNodeSocketPath = socketPath
                                      }
       AnyCardanoEra nodeEra <- lift (determineEra cModeParams localNodeConnInfo)
         & onLeft (left . ShelleyTxCmdQueryConvenienceError . AcqFailure)
@@ -1117,7 +1115,7 @@ runTxSubmit
   -> NetworkId
   -> FilePath
   -> ExceptT ShelleyTxCmdError IO ()
-runTxSubmit (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network txFilePath = do
+runTxSubmit socketPath (AnyConsensusModeParams cModeParams) network txFilePath = do
     txFile <- liftIO $ fileOrPipe txFilePath
     InAnyCardanoEra era tx <- lift (readFileTx txFile) & onLeft (left . ShelleyTxCmdCddlError)
     let cMode = AnyConsensusMode $ consensusModeOnly cModeParams
@@ -1128,7 +1126,7 @@ runTxSubmit (SocketPath sockPath) (AnyConsensusModeParams cModeParams) network t
         localNodeConnInfo = LocalNodeConnectInfo
                               { localConsensusModeParams = cModeParams
                               , localNodeNetworkId = network
-                              , localNodeSocketPath = sockPath
+                              , localNodeSocketPath = socketPath
                               }
 
     res <- liftIO $ submitTxToNodeLocal localNodeConnInfo txInMode
