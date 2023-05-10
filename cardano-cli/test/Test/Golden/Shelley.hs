@@ -83,7 +83,8 @@ import           Test.Golden.Shelley.Transaction.Build (golden_shelleyTransactio
                    golden_shelleyTransactionBuild_TxInScriptWitnessed,
                    golden_shelleyTransactionBuild_WithdrawalScriptWitnessed)
 import           Test.Golden.Shelley.Transaction.CalculateMinFee
-                   (golden_shelleyTransactionCalculateMinFee)
+                   (golden_shelleyTransactionCalculateMinFee,
+                   golden_shelleyTransactionCalculateMinFee_outFile)
 import           Test.Golden.Shelley.Transaction.CreateWitness
                    (golden_shelleyTransactionSigningKeyWitness)
 import           Test.Golden.Shelley.Transaction.Sign (golden_shelleyTransactionSign)
@@ -131,6 +132,7 @@ keyTests =
         , ("golden_shelleyTransactionBuild_CertificateScriptWitnessed", golden_shelleyTransactionBuild_CertificateScriptWitnessed)
         , ("golden_shelleyTransactionBuild_WithdrawalScriptWitnessed", golden_shelleyTransactionBuild_WithdrawalScriptWitnessed)
         , ("golden_shelleyTransactionCalculateMinFee", golden_shelleyTransactionCalculateMinFee)
+        , ("golden_shelleyTransactionCalculateMinFee_outFile", golden_shelleyTransactionCalculateMinFee_outFile)
         , ("golden_shelleyTransactionSign", golden_shelleyTransactionSign)
         , ("golden_shelleyVRFKeys", golden_shelleyVRFKeys)
         , ("golden_version", golden_version)
