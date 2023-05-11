@@ -41,7 +41,6 @@ in project.shellFor {
     export WB_BACKEND=${backend.name}
     export WB_BACKEND_DATA=${backendData}
     export WB_DEPLOYMENT_NAME=''${WB_DEPLOYMENT_NAME:-$(basename $(pwd))}
-    export NIXOPS_DEPLOYMENT=$WB_DEPLOYMENT_NAME
     progress "profile name"           $WB_SHELL_PROFILE
     progress "WB_SHELL_PROFILE_DATA=" $WB_SHELL_PROFILE_DATA
     progress "backend name"           $WB_BACKEND

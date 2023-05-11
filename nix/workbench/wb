@@ -22,7 +22,6 @@ global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
 . "$global_basedir"/topology/topology.sh
 
 . "$global_basedir"/backend/backend.sh
-. "$global_basedir"/backend/nixops.sh
 . "$global_basedir"/backend/nomad.sh
 . "$global_basedir"/backend/nomad/cloud.sh
 . "$global_basedir"/backend/nomad/exec.sh
@@ -276,7 +275,6 @@ finish()
 
 while test $# -gt 0
 do case "$1" in
-       --nixops     | --backend-nixops )     export WB_BACKEND=nixops;;
        --nomad      | --backend-nomad )      export WB_BACKEND=nomad;;
        --supervisor | --backend-supervisor ) export WB_BACKEND=supervisor;;
 

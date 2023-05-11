@@ -19,8 +19,6 @@ let
   let
     backendRegistry =
       {
-        nixops          = params:
-          import ./workbench/backend/nixops.nix       params;
         nomadcloud      = params:
           import ./workbench/backend/nomad/cloud.nix  params;
         nomadexec       = params:
