@@ -12,6 +12,8 @@ name: Post Release Upload
 #
 # Even though the artifacts themselves are compressed (.tar.gz and .zip files),
 # the action/uppload-artifact puts each in its own .zip.
+#
+# The artifacts are then downloaded and uploaded to as release assets
 on:
   release:
     types:
@@ -21,8 +23,8 @@ on:
       - '**'
 
 jobs:
-  upload:
-    name: "Upload Artifacts"
+  build:
+    name: "Build Artifacts"
     strategy:
       fail-fast: false
       matrix:
@@ -57,3 +59,24 @@ jobs:
         with:
           name: cardano-node-${{matrix.platform}}
           path: cardano-node-*-${{matrix.platform}}.${{ matrix.platform == 'win64' && 'zip' || 'tar.gz' }}
+  upload:
+    name: "Upload Assets"
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download win64
+        uses: actions/download-artifact@v3
+        with:
+          name: cardano-node-win64
+      - name: Download macos
+        uses: actions/download-artifact@v3
+        with:
+          name: cardano-node-macos
+      - name: Download linux
+        uses: actions/download-artifact@v3
+        with:
+          name: cardano-node-linux
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: cardano-node-*
