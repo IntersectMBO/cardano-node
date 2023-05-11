@@ -35,6 +35,11 @@ packages:
     trace-resources
     trace-forward
 
+-- Need this as part of the migration from using `contra-tracer` to using
+-- `iog-contra-tracer` (both in the iohk-monitoring-framework` repo.
+constraints:
+  , iohk-monitoring-framework <= 0.1.11.1
+
 package cardano-api
   ghc-options: -Werror
 
