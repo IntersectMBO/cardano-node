@@ -25,7 +25,8 @@ import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Network.Block (blockHash, blockNo, blockSlot)
 
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..),
-                   ByronOtherHeaderEnvelopeError (..), TxId (..), byronHeaderRaw)
+                   ByronOtherHeaderEnvelopeError (..), TxId (..), byronHeaderRaw,
+                   ByronNodeToClientVersion (..), ByronNodeToNodeVersion (..))
 import           Ouroboros.Consensus.Byron.Ledger.Inspect (ByronLedgerUpdate (..),
                    ProtocolUpdate (..), UpdateState (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, txId)
@@ -213,3 +214,10 @@ instance ToObject ByronOtherHeaderEnvelopeError where
       [ "kind" .= String "UnexpectedEBBInSlot"
       , "slot" .= slot
       ]
+
+instance ToJSON ByronNodeToClientVersion where
+  toJSON ByronNodeToClientVersion1 = String "ByronNodeToClientVersion1"
+
+instance ToJSON ByronNodeToNodeVersion where
+  toJSON ByronNodeToNodeVersion1 = String "ByronNodeToNodeVersion1"
+  toJSON ByronNodeToNodeVersion2 = String "ByronNodeToNodeVersion2"
