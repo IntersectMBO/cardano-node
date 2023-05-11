@@ -1,5 +1,10 @@
 name: Post Release Upload
-# Uploads the macOS, win64 and linux binary packages as github artifacts
+# This makes it easy to get download release binaries built using
+# a github action for any tagged commit.
+#
+# This workflow builds and uploads the macOS, win64 and linux
+# binary packages as github artifacts.
+#
 # These can be accessed by:
 # * Going to https://github.com/input-output-hk/cardano-node/actions/workflows/release-upload.yaml
 # * Selecting a run
