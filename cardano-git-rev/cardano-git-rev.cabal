@@ -31,11 +31,11 @@ library
   import:               project-config
 
   hs-source-dirs:       src
+  c-sources:            cbits/rev.c
 
   exposed-modules:      Cardano.Git.Rev
                         Cardano.Git.RevFromGit
 
-  build-depends:        file-embed
-                      , process
+  build-depends:        process
                       , template-haskell
                       , text
