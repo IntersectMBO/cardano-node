@@ -68,16 +68,12 @@ import           Cardano.CLI.Byron.Commands
 import           Cardano.CLI.Byron.Genesis
 import           Cardano.CLI.Byron.Key
 import           Cardano.CLI.Byron.Tx
-import           Cardano.CLI.Common.Parsers (pNetworkId, pSocketPath)
+import           Cardano.CLI.Common.Parsers
 import           Cardano.CLI.Environment (EnvCli (..))
 import           Cardano.CLI.Run (ClientCommand (ByronCommand))
 import           Cardano.CLI.Shelley.Commands (ByronKeyFormat (..))
 import           Cardano.CLI.Types
 
-command' :: String -> String -> Parser a -> Mod CommandFields a
-command' c descr p =
-    command c $ info (p <**> helper)
-              $ mconcat [ progDesc descr ]
 
 backwardsCompatibilityCommands :: EnvCli -> Parser ClientCommand
 backwardsCompatibilityCommands envCli =
