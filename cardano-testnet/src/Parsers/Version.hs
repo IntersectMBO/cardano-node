@@ -5,15 +5,20 @@ module Parsers.Version
   ) where
 
 import           Cardano.Git.Rev (gitRev)
+import qualified Data.Text as T
 import           Data.Version (showVersion)
 import           Options.Applicative
 import           Paths_cardano_testnet (version)
 import           System.Info (arch, compilerName, compilerVersion, os)
-
-import qualified Data.Text as T
 import qualified System.IO as IO
 
-data VersionOptions = VersionOptions deriving (Eq, Show)
+import           Cardano.CLI.Common.Parsers
+
+
+data VersionOptions = VersionOptions
+  deriving (Eq, Show)
+
+
 
 optsVersion :: Parser VersionOptions
 optsVersion = pure VersionOptions
@@ -27,5 +32,5 @@ runVersionOptions VersionOptions = do
     , "\ngit rev ", T.unpack gitRev
     ]
 
-cmdVersion :: Mod CommandFields (IO ())
-cmdVersion = command "version" $ flip info idm $ runVersionOptions <$> optsVersion
+cmdVersion :: Mod CommandFields VersionOptions
+cmdVersion = command' "version" "Show cardano-testnet version" optsVersion

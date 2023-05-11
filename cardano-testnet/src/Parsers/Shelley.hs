@@ -9,6 +9,8 @@ import           Prelude
 import           Options.Applicative
 import qualified Options.Applicative as OA
 
+import           Cardano.CLI.Common.Parsers
+
 import           Testnet
 import           Testnet.Run (runTestnet)
 import           Testnet.Shelley
@@ -88,5 +90,5 @@ runShelleyOptions :: ShelleyOptions -> IO ()
 runShelleyOptions options = runTestnet (maybeTestnetMagic options) $
   Testnet.testnet (ShelleyOnlyTestnetOptions $ testnetOptions options)
 
-cmdShelley :: Mod CommandFields (IO ())
-cmdShelley = command "shelley"  $ flip info idm $ runShelleyOptions <$> optsShelley
+cmdShelley :: Mod CommandFields ShelleyOptions
+cmdShelley = command' "shelley" "Start a Shelley testnet" optsShelley

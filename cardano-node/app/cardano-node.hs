@@ -94,5 +94,7 @@ runVersionCommand =
 
 command' :: String -> String -> Parser a -> Mod CommandFields a
 command' c descr p =
-    command c $ info (p <**> helper)
-              $ mconcat [ progDesc descr ]
+  mconcat
+    [ command c (info (p <**> helper) $ mconcat [ progDesc descr ])
+    , metavar c
+    ]

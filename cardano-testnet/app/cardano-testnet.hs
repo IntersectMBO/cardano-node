@@ -1,10 +1,11 @@
 module Main where
 
-import           Control.Monad
 import           Options.Applicative
-import           Testnet.Parsers (commands)
+import           Testnet.Parsers
 
 main :: IO ()
-main = join $ customExecParser
-  (prefs $ showHelpOnEmpty <> showHelpOnError)
-  (info (commands <**> helper) idm)
+main = do
+  tNetCmd <- customExecParser
+               (prefs $ showHelpOnEmpty <> showHelpOnError)
+               (info (commands <**> helper) idm)
+  runTestnetCmd tNetCmd
