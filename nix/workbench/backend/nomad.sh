@@ -368,7 +368,7 @@ backend_nomad() {
         ln -s "${client_state_dir}"/stderr    "${dir}"/nomad/client-"${client_name}".stderr
       fi
 
-      msg "Starting nomad job ..."
+      msg "$(blue Starting) Nomad $(yellow "Job \"${nomad_job_name}\"")..."
       if ! wb_nomad job start "$dir/nomad/nomad-job.json" "${nomad_job_name}"
       then
         if test "${nomad_agents_were_already_running}" = "false"
@@ -638,7 +638,7 @@ backend_nomad() {
             # Do not fail here, because nobody will be able to stop the cluster!
             msg "$(red "FATAL: \"generator\" quit unexpectedly")"
           else
-            msg "$(yellow "Program \"generator\" inside Task \"node-0\" was not running, should it?")"
+            msg "$(yellow "WARNING: Program \"generator\" inside Task \"node-0\" was not running, should it?")"
           fi
         fi
       fi
@@ -662,7 +662,7 @@ backend_nomad() {
               # Do not fail here, because nobody will be able to stop the cluster!
               msg "$(red "FATAL: \"${node}\" quit unexpectedly")"
             else
-              msg "$(yellow "Program \"${node}\" inside Task \"${node}\" was not running, should it?")"
+              msg "$(yellow "WARNING: Program \"${node}\" inside Task \"${node}\" was not running, should it?")"
             fi
           fi
         fi
@@ -702,7 +702,7 @@ backend_nomad() {
       # Download logs!
       backend_nomad stop-cluster-download "${dir}"
 
-      msg "Stopping nomad job ..."
+      msg "$(blue Stopping) Nomad $(yellow "Job \"${nomad_job_name}\"")..."
       # TODO: Show output or do something if it fails?
       wb_nomad job stop "${dir}/nomad/nomad-job.json" "${nomad_job_name}" > "$dir/nomad/job.stop.stdout" 2> "$dir/nomad/job.stop.stderr" || true
 
@@ -732,6 +732,7 @@ backend_nomad() {
       local nomad_task_driver=$(envjqr   'nomad_task_driver')
       local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
 
+      # TODO: Make it in parallel ?
       msg "Fetch logs ..."
 
       # Download generator logs.
@@ -1055,7 +1056,7 @@ backend_nomad() {
           return 1
         fi
       done
-      msg "$(green "Nomad Task \"${node}\" supervisord program \"${node}\" up (${i}s)!")"
+      msg "$(green "supervisord program \"${node}\" inside Nomad Task \"${node}\" up (${i}s)!")"
       return 0
     ;;
 
@@ -1079,7 +1080,7 @@ backend_nomad() {
         local socket_path_absolute="${dir}"/tracer/"${socket_path_relative}"
         # Wait for tracer socket
         #local socket_path_absolute="$dir/tracer/$node/$socket_path_relative"
-        msg "Waiting ${patience}s for socket of Nomad Task \"${task}\" program \"tracer\" ..."
+        msg "$(blue Waiting) ${patience}s for socket of supervisord $(yellow "program \"tracer\"") inside Nomad $(yellow "Task \"${task}\"") ..."
         local i=0
         while ! test -S "${socket_path_absolute}"
         # TODO: Add the "timer" `printf "%3d" $i;` but for concurrent processes!
@@ -1105,7 +1106,7 @@ backend_nomad() {
         fi
         # Wait for tracer socket
         #local socket_path_absolute="$dir/tracer/$node/$socket_path_relative"
-        msg "Waiting ${patience}s for socket of Nomad Task \"${task}\" program \"tracer\" ..."
+        msg "$(blue Waiting) ${patience}s for socket of supervisord $(yellow "program \"tracer\"") inside Nomad $(yellow "Task \"${task}\"") ..."
         local i=0
         # while test ! -S "$socket_path_absolute"
         local task_alloc_id
@@ -1129,7 +1130,7 @@ backend_nomad() {
           fi
         done
       fi
-      msg "$(green "Nomad Task \"${task}\" supervisord program \"tracer\" up (${i}s)!")"
+      msg "$(green "supervisord program \"tracer\" inside Nomad Task \"${task}\" up (${i}s)!")"
       return 0
     ;;
 
@@ -1262,7 +1263,7 @@ backend_nomad() {
       local dir=${1:?$usage};  shift
       local node=${1:?$usage}; shift
 
-      progress_ne "nomad" "waiting until ${node} stops:  ....."
+      progress_ne "nomad" "$(blue Waiting) until ${node} stops:  ....."
       local i=0
       while backend_nomad is-task-program-running "${dir}" "${node}" "${node}" > /dev/null
       do
@@ -1284,7 +1285,7 @@ backend_nomad() {
       local dir=${1:?$usage}; shift
 
       local i=0 pools=$(jq .composition.n_pool_hosts $dir/profile.json) start_time=$(date +%s)
-      msg_ne "nomad:  waiting until all pool nodes are stopped: 000000"
+      msg_ne "nomad: $(blue Waiting) until all pool nodes are stopped: 000000"
       touch $dir/flag/cluster-termination
 
       for ((pool_ix=0; pool_ix < $pools; pool_ix++))
@@ -1351,26 +1352,26 @@ backend_nomad() {
       local usage="USAGE: wb backend pass $op RUN-DIR"
       local dir=${1:?$usage}; shift
       # Should show the output/log of `supervisord` (runs as "entrypoint").
-      msg "Fetching entrypoint's stdout and stderr of Nomad Task \"node-0\" ..."
+      msg "$(blue Fetching) $(yellow "entrypoint's stdout and stderr") of Nomad $(yellow "Task \"node-0\"") ..."
       backend_nomad task-entrypoint-stdout "${dir}" "node-0" \
       > "${dir}"/nomad/"node-0"/stdout
       backend_nomad task-entrypoint-stderr "${dir}" "node-0" \
       > "${dir}"/nomad/"node-0"/stderr
       2>/dev/null || true # Ignore errors!
       # If the entrypoint was ran till the end, this file should be available!
-      msg "Fetching supervisord.log of Nomad Task \"node-0\" ..."
+      msg "$(blue Fetching) $(yellow supervisord.log) of Nomad $(yellow "Task \"node-0\"") ..."
       backend_nomad task-file-contents "${dir}" "node-0"     \
         /local/run/current/supervisor/supervisord.log        \
       > "${dir}"/supervisor/node-0/supervisord.log           \
       2>/dev/null || true # Ignore errors!
       # Depending on when the start command failed, logs may not be available!
-      msg "Fetching stdout of program \"generator\" inside Nomad Task \"node-0\" ..."
+      msg "$(blue Fetching) $(yellow stdout) of $(yellow "program \"generator\"") inside Nomad $(yellow "Task \"node-0\"") ..."
       backend_nomad task-file-contents "${dir}" "node-0"    \
         /local/run/current/generator/stdout                 \
       > "${dir}"/generator/stdout                           \
       2>/dev/null || true # Ignore errors!
       # Depending on when the start command failed, logs may not be available!
-      msg "Fetching stderr of program \"generator\" inside Nomad Task \"node-0\" ..."
+      msg "$(blue Fetching) $(yellow stderr) of $(yellow "program \"generator\"") inside Nomad $(yellow "Task \"node-0\"") ..."
       backend_nomad task-file-contents "${dir}" "node-0"    \
       /local/run/current/generator/stderr                   \
       > "${dir}"/generator/stderr                           \
@@ -1383,25 +1384,25 @@ backend_nomad() {
       local dir=${1:?$usage}; shift
       local node=${1:?$usage}; shift
       # Should show the output/log of `supervisord` (runs as "entrypoint").
-      msg "Fetching entrypoint's stdout and stderr of Nomad Task \"${node}\" ..."
+      msg "$(blue Fetching) $(yellow "entrypoint's stdout and stderr") of Nomad $(yellow "Task \"${node}\"") ..."
       backend_nomad task-entrypoint-stdout "${dir}" "${node}" \
       > "${dir}"/nomad/"${node}"/stdout
       backend_nomad task-entrypoint-stderr "${dir}" "${node}" \
       > "${dir}"/nomad/"${node}"/stderr
       # If the entrypoint was ran till the end, this file should be available!
-      msg "Fetching supervisord.log of Nomad Task \"${node}\" ..."
+      msg "$(blue Fetching) $(yellow supervisord.log) of Nomad $(yellow "Task \"${node}\"") ..."
       backend_nomad task-file-contents "${dir}" "${node}" \
         /local/run/current/supervisor/supervisord.log     \
       > "${dir}"/supervisor/"${node}"/supervisord.log     \
       2>/dev/null || true # Ignore errors!
       # Depending on when the start command failed, logs may not be available!
-      msg "Fetching stdout of program \"${node}\" inside Nomad Task \"${node}\" ..."
+      msg "$(blue Fetching) $(yellow stdout) of supervisord $(yellow "program \"${node}\"") inside Nomad $(yellow "Task \"${node}\"") ..."
       backend_nomad task-file-contents "${dir}" "${node}" \
         /local/run/current/"${node}"/stdout               \
       > "${dir}"/"${node}"/stdout                         \
       2>/dev/null || true # Ignore errors!
       # Depending on when the start command failed, logs may not be available!
-      msg "Fetching stderr of program \"${node}\" inside Nomad Task \"${node}\" ..."
+      msg "$(blue Fetching) $(yellow stderr) of supervisord $(yellow "program \"${node}\"") inside Nomad $(yellow "Task \"${node}\"") ..."
       backend_nomad task-file-contents "${dir}" "${node}" \
         /local/run/current/"${node}"/stderr               \
       > "${dir}"/"${node}"/stderr                         \
@@ -1419,12 +1420,12 @@ backend_nomad() {
         if test "${one_tracer_per_node}" = "true" || test "${task}" != "tracer"
         then
           # Depending on when the start command failed, logs may not be available!
-          msg "Fetching stdout of program \"tracer\" inside Nomad Task \"${task}\" ..."
+          msg "$(blue Fetching) $(yellow stdout) of supervisord $(yellow "program \"tracer\"") inside Nomad $(yellow "Task \"${task}\"") ..."
           backend_nomad task-file-contents "${dir}" "${task}" \
             /local/run/current/tracer/stdout                  \
           > "${dir}"/tracer/"${task}"/stdout
           2>/dev/null || true # Ignore errors!
-          msg "Fetching stderr of program \"tracer\" inside Nomad Task \"${task}\" ..."
+          msg "$(blue Fetching) $(yellow stderr) of supervisord $(yellow "program \"tracer\"") inside Nomad $(yellow "Task \"${task}\"") ..."
           # Depending on when the start command failed, logs may not be available!
           backend_nomad task-file-contents "${dir}" "${task}" \
             /local/run/current/tracer/stderr                  \
@@ -1432,13 +1433,13 @@ backend_nomad() {
           2>/dev/null || true # Ignore errors!
         else
           # Should show the output/log of `supervisord` (runs as "entrypoint").
-          msg "Fetching entrypoint's stdout and stderr of Nomad Task \"tracer\" ..."
+          msg "$(blue Fetching) $(yellow "entrypoint's stdout and stderr") of Nomad $(yellow "Task \"tracer\"") ..."
           backend_nomad task-entrypoint-stdout "${dir}" "tracer" \
           > "${dir}"/nomad/tracer/stdout
           backend_nomad task-entrypoint-stderr "${dir}" "tracer" \
           > "${dir}"/nomad/tracer/stderr
           # If the entrypoint was ran till the end, this file should be available!
-          msg "Fetching supervisord.log of Nomad Task \"tracer\" ..."
+          msg "$(blue Fetching) $(yellow supervisord.log) of Nomad $(yellow "Task \"tracer\"") ..."
           backend_nomad task-file-contents "${dir}" "tracer" \
             /local/run/current/supervisor/supervisord.log    \
           > "${dir}"/supervisor/tracer/supervisord.log       \
@@ -1447,13 +1448,13 @@ backend_nomad() {
           local nomad_task_driver=$(envjqr 'nomad_task_driver')
           if ! test "${nomad_task_driver}" = "podman"
           then
-            msg "Fetching stdout of program \"tracer\" inside Nomad Task \"tracer\" ..."
+            msg "$(blue Fetching) $(yellow stdout) of supervisord $(yellow "program \"tracer\"") inside Nomad $(yellow "Task \"tracer\"") ..."
             # Depending on when the start command failed, logs may not be available!
             backend_nomad task-file-contents "${dir}" "tracer" \
               /local/run/current/tracer/stdout                 \
             > "${dir}"/tracer/stdout                           \
             2>/dev/null || true # Ignore errors!
-            msg "Fetching stderr of program \"tracer\" inside Nomad Task \"tracer\" ..."
+            msg "$(blue Fetching) $(yellow stderr) of supervisord $(yellow "program \"tracer\"") inside Nomad $(yellow "Task \"tracer\"") ..."
             # Depending on when the start command failed, logs may not be available!
             backend_nomad task-file-contents "${dir}" "tracer" \
               /local/run/current/tracer/stderr                 \
@@ -1469,7 +1470,7 @@ backend_nomad() {
       local dir=${1:?$usage}; shift
       local node=${1:?$usage}; shift
 
-      msg "Fetching node's \"${node}\" log files from Nomad Task \"${node}\" ..."
+      msg "$(blue Fetching) node's $(yellow "\"${node}\"") log files from Nomad $(yellow "Task \"${node}\"") ..."
       # TODO: Add compression, either "--zstd" or "--xz"
           backend_nomad task-exec-node-files-tar-zstd               \
           "${dir}" "${node}"                                        \
@@ -1492,7 +1493,7 @@ backend_nomad() {
           # Logs will only be available if the tracer was started at least once!
           if test -f "${dir}"/tracer/${task}/started
           then
-            msg "Fetching \"tracer\" log files from Nomad Task \"${task}\" ..."
+            msg "$(blue Fetching) $(yellow "\"tracer\"") log files from Nomad $(yellow "Task \"${task}\"") ..."
             # TODO: Add compression, either "--zstd" or "--xz"
                 backend_nomad task-exec-tracer-folders-tar-zstd           \
                 "${dir}" "${task}"                                        \
@@ -1510,7 +1511,7 @@ backend_nomad() {
             # Logs will only be available if the tracer was started at least once!
             if test -f "${dir}"/tracer/started
             then
-              msg "Fetching \"tracer\" log files from Nomad Task \"tracer\" ..."
+              msg "$(blue Fetching) $(yellow "\"tracer\"") log files from Nomad $(yellow "Task \"tracer\"") ..."
               # TODO: Add compression, either "--zstd" or "--xz"
                   backend_nomad task-exec-tracer-folders-tar-zstd           \
                   "${dir}" "${node}"                                        \
@@ -1625,8 +1626,8 @@ backend_nomad() {
       local task=${1:?$usage}; shift
       local program=${1:?$usage}; shift
 
-      msg "Starting supervisord program \"$program\" inside Nomad task \"$task\" ..."
-      backend_nomad task-supervisorctl "$dir" "$task" start "$program" > /dev/null
+      msg "$(blue Starting) supervisord $(yellow "program \"${program}\"") inside Nomad $(yellow "Task \"${task}\"") ..."
+      backend_nomad task-supervisorctl "${dir}" "${task}" start "${program}" > /dev/null
     ;;
 
     task-program-stop )
@@ -1635,8 +1636,8 @@ backend_nomad() {
       local task=${1:?$usage}; shift
       local program=${1:?$usage}; shift
 
-      msg "Stopping supervisord program \"$program\" inside Nomad task \"$task\" ..."
-      backend_nomad task-supervisorctl "$dir" "$task" stop "$program" > /dev/null
+      msg "$(blue Stopping) supervisord $(yellow "program \"${program}\"") inside Nomad $(yellow "Task \"${task}\"") ..."
+      backend_nomad task-supervisorctl "${dir}" "${task}" stop "${program}" > /dev/null
     ;;
 
     is-task-program-running )

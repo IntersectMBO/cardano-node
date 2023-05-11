@@ -507,7 +507,7 @@ wb_nomad() {
             return 1
           fi
           # Start `nomad` server".
-          msg "Starting nomad server \"${name}\" ..."
+          msg "$(blue Starting) Nomad $(yellow "server \"${name}\"") ..."
           local config_file=$(wb_nomad server config-file-path "${name}")
           local pid_file=$(wb_nomad server pid-filepath "${name}")
           local pid_number
@@ -520,11 +520,11 @@ wb_nomad() {
             &
           pid_number="$!"
           echo "${pid_number}" > "${pid_file}"
-          msg "Nomad server \"${name}\" started with PID ${pid_number}"
+          msg "$(green "Nomad server \"${name}\" started with PID ${pid_number}")"
           # Even if Nomad server was already running, try to connect to it!
           local i=0 patience=25
           local http_port=$(wb_nomad server port http "${name}")
-          msg "Trying/waiting for the listening HTTP server (${patience}s) ..."
+          msg "$(blue Waiting) for the listening HTTP server (${patience}s) ..."
           until curl -Isf 127.0.0.1:"${http_port}" 2>&1 | head --lines=1 | grep --quiet "HTTP/1.1"
           do printf "%3d" $i; sleep 1
             i=$((i+1))
@@ -551,17 +551,17 @@ wb_nomad() {
           local pids=$(wb_nomad server pids-array "${name}")
           for pid_number in ${pids[@]}
           do
-            msg "Killing Nomad server \"${name}\" process PID ${pid_number} ..."
+            msg "$(blue Stopping) Nomad $(yellow "server \"${name}\"") process PID ${pid_number} ..."
             if ! kill -SIGINT "${pid_number}" >/dev/null 2>&1
             then
               msg "$(red "Killing PID ${pid_number} failed")"
             else
               # Wait 15 seconds for the process to fully exit or kill it.
-              msg "Wait up to 15 seconds for PID ${pid_number} to exit"
+              msg "$(blue Wait) up to 15 seconds for PID ${pid_number} to exit"
               timeout 15 tail --pid="${pid_number}" -f /dev/null || true
               if kill -0 "${pid_number}" >/dev/null 2>&1
               then
-                msg "Timeout killing PID ${pid_number}, trying SIGKILL"
+                msg "$(yellow "Timeout killing PID ${pid_number}, trying SIGKILL")"
                 kill -SIGKILL "${pid_number}" >/dev/null 2>&1 || true
               fi
             fi
@@ -758,7 +758,7 @@ wb_nomad() {
             return 1
           fi
           # Start `nomad` client".
-          msg "Starting nomad client \"${name}\" ..."
+          msg "$(blue Starting) Nomad $(yellow "client \"${name}\"") ..."
           local config_file=$(wb_nomad client config-file-path "${name}")
           local pid_file=$(wb_nomad client pid-filepath "${name}")
           local pid_number
@@ -772,11 +772,11 @@ wb_nomad() {
             2>> "${state_dir}"/stderr                      \
             & echo \"\$!\"")
           echo "${pid_number}" > "${pid_file}"
-          msg "Nomad client \"${name}\" started with PID ${pid_number}"
+          msg "$(green "Nomad client \"${name}\" started with PID ${pid_number}")"
           # Even if Nomad server was already running, try to connect to it!
           local i=0 patience=25
           local http_port=$(wb_nomad client port http "${name}")
-          msg "Trying/waiting for the listening HTTP server (${patience}s) ..."
+          msg "$(blue Waiting) for the listening HTTP server (${patience}s) ..."
           until curl -Isf 127.0.0.1:"${http_port}" 2>&1 | head --lines=1 | grep --quiet "HTTP/1.1"
           do printf "%3d" $i; sleep 1
             i=$((i+1))
@@ -795,12 +795,12 @@ wb_nomad() {
           # Now check that the server and client are connected and the
           # client as eligible
           local i=0 patience=25
-          msg "Waiting until the Nomad server sees the client (${patience}s) ..."
+          msg "$(blue Waiting) until the Nomad server sees the client (${patience}s) ..."
           local ans=""
           until nomad node status -filter "\"workbench-nomad-client-${name}\" in Name" -json | jq -r '.[0].Status' | grep --quiet "^ready"
           do printf "%3d" $i; sleep 1
             i=$((i+1))
-            if test $i -ge $patience
+            if test $i -ge ${patience}
             then echo
               tail "${state_dir}"/stderr
               # Not using `fatal` here, let the caller decide!
@@ -872,19 +872,19 @@ wb_nomad() {
           local pids=$(wb_nomad client pids-array "${name}")
           for pid_number in ${pids[@]}
           do
-            msg "Killing Nomad client \"${name}\" process PID ${pid_number} ..."
+            msg "$(blue Stopping) Nomad $(yellow "client \"${name}\"") process PID ${pid_number} ..."
             local cmd_array=("${root_prefix}" "bash" "-c")
             if ! ${cmd_array[@]} "kill -SIGINT ${pid_number}" >/dev/null 2>&1
             then
               msg "Killing PID ${pid_number} failed"
             else
               # Wait 15 seconds for the process to fully exit or kill it.
-              msg "Wait up to 30 seconds for PID ${pid_number} to exit"
+              msg "$(blue Wait) up to 30 seconds for PID ${pid_number} to exit"
               timeout 30 tail --pid="${pid_number}" -f /dev/null || true
               local cmd_array=("${root_prefix}" "bash" "-c")
               if ${cmd_array[@]} "kill -0 ${pid_number}" >/dev/null 2>&1
               then
-                msg "Timeout killing PID ${pid_number}, trying SIGKILL"
+                msg "$(yellow "Timeout killing PID ${pid_number}, trying SIGKILL")"
                 local cmd_array=("${root_prefix}" "bash" "-c")
                 ${cmd_array[@]} "kill -SIGKILL ${pid_number}" >/dev/null 2>&1 || true
               fi
@@ -1392,7 +1392,7 @@ EOF
           else
             # Iterate through evaluations
             local jobs_array=()
-            "${msgoff}" || msg "Entering monitor of Nomad Evaluations: [${evals_array[@]}]"
+            "${msgoff}" || msg "Entering monitor of Nomad $(yellow "Evaluations: [${evals_array[@]}]")"
             for eval_id in ${evals_array[*]}
             do
               # Create file "evaluations.error" is any evaluation fails
@@ -1409,14 +1409,14 @@ EOF
             then
               # Fatal job error!
               touch "${job_file}.run/job.error"
-              "${msgoff}" || msg "$(yellow "Exiting monitor of Nomad Evaluations [${evals_array[@]}] due to errors")"
+              "${msgoff}" || msg "$(red "Exiting monitor of Nomad Evaluations [${evals_array[@]}] due to errors")"
               return 1
             else
               # If nobody else failed!
               if ! test -f "${job_file}.run/job.error"
               then
                 touch "${job_file}.run/evaluations.ok"
-                "${msgoff}" || msg "$(green "Nomad Evaluations [${evals_array[@]}] succeeded")"
+                "${msgoff}" || msg "Exiting monitor of Nomad Evaluations"
               fi
             fi
           fi
@@ -1453,7 +1453,7 @@ EOF
           else
             # Iterate through allocations
             local jobs_array=()
-            "${msgoff}" || msg "Entering monitor of Nomad Allocations: [${allocs_array[@]}]"
+            "${msgoff}" || msg "Entering monitor of Nomad $(yellow "Allocations: [${allocs_array[@]}]")"
             for alloc_id in ${allocs_array[*]}
             do
               # Create file "allocations.error" is any allocation fails
@@ -1470,14 +1470,14 @@ EOF
             then
               # Fatal job error!
               touch "${job_file}.run/job.error"
-              "${msgoff}" || msg "$(yellow "Exiting monitor of Nomad Allocations [${allocs_array[@]}] due to errors")"
+              "${msgoff}" || msg "$(red "Exiting monitor of Nomad Allocations [${allocs_array[@]}] due to errors")"
               return 1
             else
               # If nobody else failed!
               if ! test -f "${job_file}.run/job.error"
               then
                 touch "${job_file}.run/allocations.ok"
-                "${msgoff}" || msg "$(green "Nomad Allocations [${allocs_array[@]}] succeeded")"
+                "${msgoff}" || msg "Exiting monitor of Nomad Allocations"
               fi
             fi
           fi
@@ -1515,7 +1515,7 @@ EOF
           else
             # Iterate through allocation's tasks
             local jobs_array=()
-            "${msgoff}" || msg "Entering monitor of Nomad Tasks: [${tasks_array[@]}]"
+            "${msgoff}" || msg "Entering monitor of Nomad $(yellow "Tasks: [${tasks_array[@]}]")"
             for task_name in ${tasks_array[*]}
             do
               # Create file "tasks.ALLOC_ID.error" is any task fails
@@ -1532,14 +1532,14 @@ EOF
             then
               # Fatal job error!
               touch "${job_file}.run/job.error"
-              "${msgoff}" || msg "$(yellow "Exiting monitor of Nomad Tasks [${tasks_array[@]}] due to errors")"
+              "${msgoff}" || msg "$(red "Exiting monitor of Nomad Tasks [${tasks_array[@]}] due to errors")"
               return 1
             else
               # If nobody else failed!
               if ! test -f "${job_file}.run/job.error"
               then
                 touch "${job_file}.run/tasks.${alloc_id}.ok"
-                "${msgoff}" || msg "$(green "Nomad Tasks [${tasks_array[@]}] succeeded")"
+                "${msgoff}" || msg "Exiting monitor of Nomad Tasks"
               fi
             fi
           fi
@@ -1551,7 +1551,7 @@ EOF
           local job_name=${1:?$usage}; shift
           local eval_id=${1:?$usage}; shift
           local msgoff=${1:?$usage}; shift
-          "${msgoff}" || msg "Checking for \"Placement Failures\" in Nomad Evaluation with ID \"${eval_id}\" ..."
+          "${msgoff}" || msg "$(blue Checking) for \"Placement Failures\" in Nomad $(blue Evaluation) $(yellow "\"${eval_id}\"") ..."
           local status_response
           if ! status_response=$(nomad eval status "${eval_id}")
           then
@@ -1576,7 +1576,7 @@ EOF
           local job_name=${1:?$usage}; shift
           local eval_id=${1:?$usage}; shift
           local msgoff=${1:?$usage}; shift
-          "${msgoff}" || msg "Waiting for status of Nomad Evaluation with ID \"${eval_id}\" to be \"complete\" ..."
+          "${msgoff}" || msg "$(blue Waiting) for Nomad $(yellow "Evaluation \"${eval_id}\"") to be \"complete\" ..."
           local status
           local status_response
           while ! test -f "${job_file}.run/job.error" && ( test "${status:-pending}" = "pending" || test "${status:-running}" = "running" )
@@ -1618,7 +1618,7 @@ EOF
               touch "${job_file}.run/job.error"
               # Store the error response that ended the loop!
               echo "${status_response}" > "${job_file}.run/evaluation.${eval_id}.error.json"
-              "${msgoff}" || msg "$(red "FATAL: Nomad Evaluation with ID \"${eval_id}\" failed")"
+              "${msgoff}" || msg "$(red "FATAL: Nomad Evaluation \"${eval_id}\" failed")"
               "${msgoff}" || msg "${status_response}"
               return 1
             fi
@@ -1636,7 +1636,7 @@ EOF
             else
               # Store the response that made it final!
               echo "${status_response}" > "${job_file}.run/evaluation.${eval_id}.final.json"
-              "${msgoff}" || msg "$(green "Nomad Evaluation with ID \"${eval_id}\" is \"complete\"")"
+              "${msgoff}" || msg "$(green "Nomad Evaluation \"${eval_id}\" is \"complete\"")"
             fi
           fi
         ;;
@@ -1647,7 +1647,7 @@ EOF
           local job_name=${1:?$usage}; shift
           local deploy_id=${1:?$usage}; shift
           local msgoff=${1:?$usage}; shift
-          "${msgoff}" || msg "Waiting for status of Nomad Deployment with ID \"${deploy_id}\" to be \"successful\" ..."
+          "${msgoff}" || msg "$(blue Waiting) for Nomad $(yellow "Deployment \"${deploy_id}\"") to be \"successful\" ..."
           local status
           local status_response
           while ! test -f "${job_file}.run/job.error" && ! test -f "${job_file}.run/allocations.ok" && ( test "${status:-pending}" = "pending" || test "${status:-running}" = "running" )
@@ -1672,7 +1672,7 @@ EOF
             then
               # Store the error response that ended the loop!
               echo "${status_response}" > "${job_file}.run/deployment.${deploy_id}.error.json"
-              "${msgoff}" || msg "$(yellow "WARNING: Nomad Deployment with ID \"${deploy_id}\" failed")"
+              "${msgoff}" || msg "$(yellow "WARNING: Nomad Deployment \"${deploy_id}\" failed")"
               "${msgoff}" || msg "${status_response}"
               # Deployment failures are not considered fatal!
             else
@@ -1684,7 +1684,7 @@ EOF
           else
             # Store the response that made it final!
             echo "${status_response}" > "${job_file}.run/deployment.${deploy_id}.final.json"
-            "${msgoff}" || msg "$(green "Nomad Deployment with ID \"${deploy_id}\" is \"successful\"")"
+            "${msgoff}" || msg "$(green "Nomad Deployment \"${deploy_id}\" is \"successful\"")"
           fi
         ;;
 ####### job -> monitor-alloc-id )###############################################
@@ -1694,7 +1694,7 @@ EOF
           local job_name=${1:?$usage}; shift
           local alloc_id=${1:?$usage}; shift
           local msgoff=${1:?$usage}; shift
-          "${msgoff}" || msg "Waiting for status of Nomad Allocation with ID \"${alloc_id}\" to be \"running\" ..."
+          "${msgoff}" || msg "$(blue Waiting) for Nomad $(yellow "Allocation \"${alloc_id}\"") to be \"running\" ..."
           local status
           local status_response
           while ! test -f "${job_file}.run/job.error" && test "${status:-pending}" = "pending"
@@ -1752,7 +1752,7 @@ EOF
           else
             # Store the response that made it final!
             echo "${status_response}" > "${job_file}.run/allocation.${alloc_id}.final.json"
-            "${msgoff}" || msg "$(green "Nomad Allocation with ID \"${alloc_id}\" is \"running\"")"
+            "${msgoff}" || msg "$(green "Nomad Allocation \"${alloc_id}\" is \"running\"")"
           fi
           # - Job (The variable interpolated job?)
           # echo "${alloc_result}" | jq ".Job"                                > "${job_file}".allocated || true
@@ -1769,7 +1769,7 @@ EOF
           local alloc_id=${1:?$usage}; shift
           local task_name=${1:?$usage}; shift
           local msgoff=${1:?$usage}; shift
-          "${msgoff}" || msg "Waiting for Nomad Task with name \"${task_name}\" to be \"running\" ..."
+          "${msgoff}" || msg "$(blue Waiting) for Nomad $(yellow "Task \"${task_name}\"") to be \"running\" ..."
           local status
           local status_response
           while ! test -f "${job_file}.run/job.error" && test "${status:-pending}" = "pending"
@@ -1796,8 +1796,9 @@ EOF
               # Fatal job error!
               touch "${job_file}.run/job.error"
               # Store the error response that ended the loop!
-              echo "${status_response}" > "${job_file}.run/task.${task_name}.error.json"
-              "${msgoff}" || msg "$(red "FATAL: Nomad Task with name \"${task_name}\" failed")"
+              # Remove the entire Job (mayus!!!) description from the Task's log.
+              echo "${status_response}" | jq '.Job = null' > "${job_file}.run/task.${task_name}.error.json"
+              "${msgoff}" || msg "$(red "FATAL: Nomad Task \"${task_name}\" failed")"
               "${msgoff}" || msg "$(echo ${status_response} | jq .TaskStates.\"${task_name}\")"
               return 1
             fi
