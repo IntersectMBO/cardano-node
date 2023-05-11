@@ -1,5 +1,12 @@
 name: Post Release Upload
-
+# Uploads the macOS, win64 and linux binary packages as github artifacts
+# These can be accessed by:
+# * Going to https://github.com/input-output-hk/cardano-node/actions/workflows/release-upload.yaml
+# * Selecting a run
+# The Artifacts should be listed at the bottom.
+#
+# Even though the artifacts themselves are compressed (.tar.gz and .zip files),
+# the action/uppload-artifact puts each in its own .zip.
 on:
   release:
     types:
@@ -30,6 +37,9 @@ jobs:
           nix_path: nixpkgs=channel:nixos-unstable
       - name: Checkout repository
         uses: actions/checkout@v3
+      # We copy the file out of `result/` as `upload-artifact` does
+      # not like to upload files from links (complains that `result`
+      # is not a directory).
       - name: Build
         run: |
           nix build .#hydraJobs.${{
