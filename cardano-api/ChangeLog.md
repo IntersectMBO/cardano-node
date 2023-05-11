@@ -20,9 +20,15 @@
   ([PR 5194](https://github.com/input-output-hk/cardano-node/pull/5194))
 
 - **Breaking change**
-  Delete `Cardano.Api.Environment` module.  Merge two `SocketPath` type definitions to the one defined in `Cardano.Api.IO`
+
+- Delete `Cardano.Api.Environment` module.  Merge two `SocketPath` type definitions to the one defined in `Cardano.Api.IO`
   Delete `EnvSocketError` and associated functions and types.
   ([PR 5215](https://github.com/input-output-hk/cardano-node/pull/5215))
+
+- `NodeConfigFile` newtype replaced with `NodeConfigFile` type alias.
+  `GenesisConfigFile` newtype replaced with `ByronGenesisFile`, `ShelleyGenesisFile`, `AlonzoGenesisFile`, `ConwayGenesisFile` type aliases.
+  New `ByronGenesisConfig`, `ShelleyGenesisConfig`, `AlonzoGenesisConfig`, `ConwayGenesisConfig` type aliases.
+  ([PR 5217](https://github.com/input-output-hk/cardano-node/pull/5217))
 
 ### Bugs
 

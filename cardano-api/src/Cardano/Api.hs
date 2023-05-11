@@ -602,8 +602,13 @@ module Cardano.Api (
 
     -- ** Node Config
     NodeConfig (..),
-    NodeConfigFile (..),
+    NodeConfigFile,
     readNodeConfig,
+    -- ** Genesis Files
+    ByronGenesisFile,
+    ShelleyGenesisFile,
+    AlonzoGenesisFile,
+    ConwayGenesisFile,
     -- *** Genesis Config
     GenesisConfig (..),
     readCardanoGenesisConfig,
@@ -852,6 +857,7 @@ import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.Fees
+import           Cardano.Api.Genesis
 import           Cardano.Api.GenesisParameters
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy

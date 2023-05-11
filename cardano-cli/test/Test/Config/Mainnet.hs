@@ -6,7 +6,7 @@ module Test.Config.Mainnet
   ( tests
   ) where
 
-import           Cardano.Api (initialLedgerState, renderInitialLedgerStateError)
+import           Cardano.Api (File (..), initialLedgerState, renderInitialLedgerStateError)
 import           Control.Monad.Trans.Except
 import           Hedgehog (Property, (===))
 import           System.FilePath ((</>))
@@ -23,7 +23,7 @@ import qualified System.Directory as IO
 hprop_configMainnetHash :: Property
 hprop_configMainnetHash = H.propertyOnce $ do
   base <- H.note =<< H.evalIO . IO.canonicalizePath =<< H.getProjectBase
-  result <- H.evalIO $ runExceptT $ initialLedgerState $ base </> "configuration/cardano/mainnet-config.json"
+  result <- H.evalIO $ runExceptT $ initialLedgerState $ File $ base </> "configuration/cardano/mainnet-config.json"
   case result of
     Right (_, _) -> return ()
     Left e -> H.failWithCustom GHC.callStack Nothing (T.unpack (renderInitialLedgerStateError e))

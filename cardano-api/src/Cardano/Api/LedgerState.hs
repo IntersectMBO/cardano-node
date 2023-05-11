@@ -2,7 +2,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -55,7 +54,7 @@ module Cardano.Api.LedgerState
   -- * Node Config
   , NodeConfig(..)
   -- ** Network Config
-  , NodeConfigFile (..)
+  , NodeConfigFile
   , readNodeConfig
   -- ** Genesis Config
   , GenesisConfig (..)
@@ -77,6 +76,7 @@ module Cardano.Api.LedgerState
   -- ** Environment
   , Env(..)
   , genesisConfigToEnv
+
   )
   where
 
@@ -123,6 +123,7 @@ import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
+import           Cardano.Api.Genesis
 import           Cardano.Api.IO
 import           Cardano.Api.IPC (ConsensusModeParams (..),
                    LocalChainSyncClient (LocalChainSyncClientPipelined),
@@ -193,7 +194,6 @@ import qualified Ouroboros.Consensus.Protocol.TPraos as TPraos
 import qualified Ouroboros.Consensus.Shelley.Eras as Shelley
 import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Shelley
 import qualified Ouroboros.Consensus.Shelley.Ledger.Ledger as Shelley
-import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesis (..))
 import qualified Ouroboros.Consensus.Shelley.Node.Praos as Consensus
 import           Ouroboros.Consensus.TypeFamilyWrappers (WrapLedgerEvent (WrapLedgerEvent))
 import qualified Ouroboros.Network.Block
@@ -251,16 +251,15 @@ renderLedgerStateError = \case
 
 -- | Get the environment and initial ledger state.
 initialLedgerState
-  :: FilePath
+  :: NodeConfigFile 'In
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
-  ->  ExceptT InitialLedgerStateError IO (Env, LedgerState)
+  -> ExceptT InitialLedgerStateError IO (Env, LedgerState)
   -- ^ The environment and initial ledger state
-initialLedgerState networkConfigFile = do
+initialLedgerState nodeConfigFile = do
   -- TODO Once support for querying the ledger config is added to the node, we
-  -- can remove the networkConfigFile argument and much of the code in this
+  -- can remove the nodeConfigFile argument and much of the code in this
   -- module.
-  config <- withExceptT ILSEConfigFile
-                  (readNodeConfig (NodeConfigFile networkConfigFile))
+  config <- withExceptT ILSEConfigFile (readNodeConfig nodeConfigFile)
   genesisConfig <- withExceptT ILSEGenesisFile (readCardanoGenesisConfig config)
   env <- withExceptT ILSELedgerConsensusConfig (except (genesisConfigToEnv genesisConfig))
   let ledgerState = initLedgerStateVar genesisConfig
@@ -344,7 +343,7 @@ renderFoldBlocksError fbe = case fbe of
 -- the node's tip where @k@ is the security parameter.
 foldBlocks
   :: forall a. ()
-  => FilePath
+  => NodeConfigFile 'In
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
   -> SocketPath
   -- ^ Path to local cardano-node socket. This is the path specified by the @--socket-path@ command line option when running the node.
@@ -377,8 +376,7 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
   --  * Non-pipelined: 1h  0m  19s
   --  * Pipelined:        46m  23s
 
-  (env, ledgerState) <- withExceptT FoldBlocksInitialLedgerStateError
-                            (initialLedgerState nodeConfigFilePath)
+  (env, ledgerState) <- withExceptT FoldBlocksInitialLedgerStateError $ initialLedgerState nodeConfigFilePath
 
   -- Place to store the accumulated state
   -- This is a bit ugly, but easy.
@@ -779,25 +777,25 @@ genesisConfigToEnv
                   , envProtocolConfig = Consensus.topLevelConfigProtocol topLevelConfig
                   }
 
-readNodeConfig :: NodeConfigFile -> ExceptT Text IO NodeConfig
-readNodeConfig (NodeConfigFile ncf) = do
+readNodeConfig :: NodeConfigFile 'In -> ExceptT Text IO NodeConfig
+readNodeConfig (File ncf) = do
     ncfg <- (except . parseNodeConfig) =<< readByteString ncf "node"
     return ncfg
-      { ncByronGenesisFile = adjustGenesisFilePath (mkAdjustPath ncf) (ncByronGenesisFile ncfg)
-      , ncShelleyGenesisFile = adjustGenesisFilePath (mkAdjustPath ncf) (ncShelleyGenesisFile ncfg)
-      , ncAlonzoGenesisFile = adjustGenesisFilePath (mkAdjustPath ncf) (ncAlonzoGenesisFile ncfg)
-      , ncConwayGenesisFile = adjustGenesisFilePath (mkAdjustPath ncf) (ncConwayGenesisFile ncfg)
+      { ncByronGenesisFile = mapFile (mkAdjustPath ncf) (ncByronGenesisFile ncfg)
+      , ncShelleyGenesisFile = mapFile (mkAdjustPath ncf) (ncShelleyGenesisFile ncfg)
+      , ncAlonzoGenesisFile = mapFile (mkAdjustPath ncf) (ncAlonzoGenesisFile ncfg)
+      , ncConwayGenesisFile = mapFile (mkAdjustPath ncf) (ncConwayGenesisFile ncfg)
       }
 
 data NodeConfig = NodeConfig
   { ncPBftSignatureThreshold :: !(Maybe Double)
-  , ncByronGenesisFile :: !GenesisFile
+  , ncByronGenesisFile :: !(File ByronGenesisConfig 'In)
   , ncByronGenesisHash :: !GenesisHashByron
-  , ncShelleyGenesisFile :: !GenesisFile
+  , ncShelleyGenesisFile :: !(File ShelleyGenesisConfig 'In)
   , ncShelleyGenesisHash :: !GenesisHashShelley
-  , ncAlonzoGenesisFile :: !GenesisFile
+  , ncAlonzoGenesisFile :: !(File AlonzoGenesis 'In)
   , ncAlonzoGenesisHash :: !GenesisHashAlonzo
-  , ncConwayGenesisFile :: !GenesisFile
+  , ncConwayGenesisFile :: !(File ConwayGenesisConfig 'In)
   , ncConwayGenesisHash :: !GenesisHashConway
   , ncRequiresNetworkMagic :: !Cardano.Crypto.RequiresNetworkMagic
   , ncByronSoftwareVersion :: !Cardano.Chain.Update.SoftwareVersion
@@ -823,13 +821,13 @@ instance FromJSON NodeConfig where
       parse o =
         NodeConfig
           <$> o .:? "PBftSignatureThreshold"
-          <*> fmap GenesisFile (o .: "ByronGenesisFile")
+          <*> fmap File (o .: "ByronGenesisFile")
           <*> fmap GenesisHashByron (o .: "ByronGenesisHash")
-          <*> fmap GenesisFile (o .: "ShelleyGenesisFile")
+          <*> fmap File (o .: "ShelleyGenesisFile")
           <*> fmap GenesisHashShelley (o .: "ShelleyGenesisHash")
-          <*> fmap GenesisFile (o .: "AlonzoGenesisFile")
+          <*> fmap File (o .: "AlonzoGenesisFile")
           <*> fmap GenesisHashAlonzo (o .: "AlonzoGenesisHash")
-          <*> fmap GenesisFile (o .: "ConwayGenesisFile")
+          <*> fmap File (o .: "ConwayGenesisFile")
           <*> fmap GenesisHashConway (o .: "ConwayGenesisHash")
           <*> o .: "RequiresNetworkMagic"
           <*> parseByronSoftwareVersion o
@@ -909,9 +907,6 @@ parseNodeConfig bs =
     Left err -> Left $ "Error parsing node config: " <> textShow err
     Right nc -> Right nc
 
-adjustGenesisFilePath :: (FilePath -> FilePath) -> GenesisFile -> GenesisFile
-adjustGenesisFilePath f (GenesisFile p) = GenesisFile (f p)
-
 mkAdjustPath :: FilePath -> (FilePath -> FilePath)
 mkAdjustPath nodeConfigFilePath fp = takeDirectory nodeConfigFilePath </> fp
 
@@ -988,31 +983,6 @@ data GenesisConfig
       !AlonzoGenesis
       !(ConwayGenesis Shelley.StandardCrypto)
 
-data ShelleyConfig = ShelleyConfig
-  { scConfig :: !(Ledger.ShelleyGenesis Shelley.StandardCrypto)
-  , scGenesisHash :: !GenesisHashShelley
-  }
-
-newtype GenesisFile = GenesisFile
-  { unGenesisFile :: FilePath
-  } deriving Show
-
-newtype GenesisHashByron = GenesisHashByron
-  { unGenesisHashByron :: Text
-  } deriving newtype (Eq, Show)
-
-newtype GenesisHashShelley = GenesisHashShelley
-  { unGenesisHashShelley :: Cardano.Crypto.Hash.Class.Hash Cardano.Crypto.Hash.Blake2b.Blake2b_256 ByteString
-  } deriving newtype (Eq, Show)
-
-newtype GenesisHashAlonzo = GenesisHashAlonzo
-  { unGenesisHashAlonzo :: Cardano.Crypto.Hash.Class.Hash Cardano.Crypto.Hash.Blake2b.Blake2b_256 ByteString
-  } deriving newtype (Eq, Show)
-
-newtype GenesisHashConway = GenesisHashConway
-  { unGenesisHashConway :: Cardano.Crypto.Hash.Class.Hash Cardano.Crypto.Hash.Blake2b.Blake2b_256 ByteString
-  } deriving newtype (Eq, Show)
-
 newtype LedgerStateDir = LedgerStateDir
   {  unLedgerStateDir :: FilePath
   } deriving Show
@@ -1021,9 +991,7 @@ newtype NetworkName = NetworkName
   { unNetworkName :: Text
   } deriving Show
 
-newtype NodeConfigFile = NodeConfigFile
-  { unNodeConfigFile :: FilePath
-  } deriving Show
+type NodeConfigFile = File NodeConfig
 
 mkProtocolInfoCardano ::
   GenesisConfig ->
@@ -1133,7 +1101,7 @@ readByronGenesisConfig
         :: NodeConfig
         -> ExceptT GenesisConfigError IO Cardano.Chain.Genesis.Config
 readByronGenesisConfig enc = do
-  let file = unGenesisFile $ ncByronGenesisFile enc
+  let file = unFile $ ncByronGenesisFile enc
   genHash <- firstExceptT NEError
                 . hoistEither
                 $ Cardano.Crypto.Hashing.decodeAbstractHash (unGenesisHashByron $ ncByronGenesisHash enc)
@@ -1144,30 +1112,31 @@ readShelleyGenesisConfig
     :: NodeConfig
     -> ExceptT GenesisConfigError IO ShelleyConfig
 readShelleyGenesisConfig enc = do
-  let file = unGenesisFile $ ncShelleyGenesisFile enc
-  firstExceptT (NEShelleyConfig file . renderShelleyGenesisError)
-    $ readShelleyGenesis (GenesisFile file) (ncShelleyGenesisHash enc)
+  let file = ncShelleyGenesisFile enc
+  firstExceptT (NEShelleyConfig (unFile file) . renderShelleyGenesisError)
+    $ readShelleyGenesis file (ncShelleyGenesisHash enc)
 
 readAlonzoGenesisConfig
     :: NodeConfig
     -> ExceptT GenesisConfigError IO AlonzoGenesis
 readAlonzoGenesisConfig enc = do
-  let file = unGenesisFile $ ncAlonzoGenesisFile enc
-  firstExceptT (NEAlonzoConfig file . renderAlonzoGenesisError)
-    $ readAlonzoGenesis (GenesisFile file) (ncAlonzoGenesisHash enc)
+  let file = ncAlonzoGenesisFile enc
+  firstExceptT (NEAlonzoConfig (unFile file) . renderAlonzoGenesisError)
+    $ readAlonzoGenesis file (ncAlonzoGenesisHash enc)
 
 readConwayGenesisConfig
     :: NodeConfig
     -> ExceptT GenesisConfigError IO (ConwayGenesis Shelley.StandardCrypto)
 readConwayGenesisConfig enc = do
-  let file = unGenesisFile $ ncConwayGenesisFile enc
-  firstExceptT (NEConwayConfig file . renderConwayGenesisError)
-    $ readConwayGenesis (GenesisFile file) (ncConwayGenesisHash enc)
+  let file = ncConwayGenesisFile enc
+  firstExceptT (NEConwayConfig (unFile file) . renderConwayGenesisError)
+    $ readConwayGenesis file (ncConwayGenesisHash enc)
 
 readShelleyGenesis
-    :: GenesisFile -> GenesisHashShelley
+    :: ShelleyGenesisFile 'In
+    -> GenesisHashShelley
     -> ExceptT ShelleyGenesisError IO ShelleyConfig
-readShelleyGenesis (GenesisFile file) expectedGenesisHash = do
+readShelleyGenesis (File file) expectedGenesisHash = do
     content <- handleIOExceptT (ShelleyGenesisReadError file . textShow) $ BS.readFile file
     let genesisHash = GenesisHashShelley (Cardano.Crypto.Hash.Class.hashWith id content)
     checkExpectedGenesisHash genesisHash
@@ -1212,9 +1181,10 @@ renderShelleyGenesisError sge =
           ]
 
 readAlonzoGenesis
-    :: GenesisFile -> GenesisHashAlonzo
+    :: File AlonzoGenesis 'In
+    -> GenesisHashAlonzo
     -> ExceptT AlonzoGenesisError IO AlonzoGenesis
-readAlonzoGenesis (GenesisFile file) expectedGenesisHash = do
+readAlonzoGenesis (File file) expectedGenesisHash = do
     content <- handleIOExceptT (AlonzoGenesisReadError file . textShow) $ BS.readFile file
     let genesisHash = GenesisHashAlonzo (Cardano.Crypto.Hash.Class.hashWith id content)
     checkExpectedGenesisHash genesisHash
@@ -1258,9 +1228,10 @@ renderAlonzoGenesisError sge =
           ]
 
 readConwayGenesis
-    :: GenesisFile -> GenesisHashConway
+    :: ConwayGenesisFile 'In
+    -> GenesisHashConway
     -> ExceptT ConwayGenesisError IO (ConwayGenesis Shelley.StandardCrypto)
-readConwayGenesis (GenesisFile file) expectedGenesisHash = do
+readConwayGenesis (File file) expectedGenesisHash = do
     content <- handleIOExceptT (ConwayGenesisReadError file . textShow) $ BS.readFile file
     let genesisHash = GenesisHashConway (Cardano.Crypto.Hash.Class.hashWith id content)
     checkExpectedGenesisHash genesisHash
