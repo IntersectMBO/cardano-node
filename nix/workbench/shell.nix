@@ -104,7 +104,7 @@ in project.shellFor {
   };
 
   # These programs will be available inside the nix-shell.
-  nativeBuildInputs = with pkgs; with haskellPackages; with cardanoNodePackages; [
+  nativeBuildInputs = with pkgs; with haskellPackages; [
     db-analyser
     pkgs.graphviz
     graphmod
@@ -116,17 +116,34 @@ in project.shellFor {
     ghc-prof-flamegraph
     sqlite-interactive
     tmux
+    pkgs.cacert
     pkgs.git
     pkgs.hlint
-    pkgs.moreutils
-    pkgs.pstree
-    pkgs.time
     workbench-interactive-start
     workbench-interactive-stop
     workbench-interactive-restart
   ]
+  # Basic commands not expected on a `--pure` Nix shell
+  ++ [
+    pkgs.which
+    pkgs.moreutils # things like `sponge`
+    pkgs.procps # `ps`, `kill`, `pgrep`, `pkill`, etc
+    pkgs.pstree
+    pkgs.time
+    pkgs.curl
+  ]
+  # Packages build inside the shell by `lib-cabal.sh` when useCabalRun=true
+  ++ lib.optionals (!workbench-runner.backend.useCabalRun) (with cardanoNodePackages; [
+    cardano-cli
+    cardano-node
+    cardano-topology
+    cardano-tracer
+    locli
+    tx-generator
+  ])
   # Backend packages take precendence.
   ++ workbench-runner.backend.extraShellPkgs
+  # Packages that may overlap with some backend specific packages
   ++ [
       # Publish
       bench-data-publish
@@ -138,7 +155,6 @@ in project.shellFor {
       em
   ]
   ++ lib.optional haveGlibcLocales pkgs.glibcLocales
-  ++ lib.optionals (!workbench-runner.backend.useCabalRun) [ cardano-topology cardano-cli locli ]
   ++ lib.optionals (!workbenchDevMode) [ workbench.workbench ]
   ;
 }

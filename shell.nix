@@ -5,7 +5,7 @@ in
 { withHoogle ? defaultCustomConfig.withHoogle
 , profileName ? defaultCustomConfig.localCluster.profileName
 , backendName ? defaultCustomConfig.localCluster.backendName
-, useCabalRun ? true
+, useCabalRun ? false
 , workbenchDevMode ? defaultCustomConfig.localCluster.workbenchDevMode
 , workbenchStartArgs ? defaultCustomConfig.localCluster.workbenchStartArgs
 # to use profiled build of haskell dependencies:
