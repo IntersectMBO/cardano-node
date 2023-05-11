@@ -2,7 +2,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -78,14 +77,6 @@ module Cardano.Api.LedgerState
   , Env(..)
   , genesisConfigToEnv
 
-  , ByronGenesisConfig
-  , ShelleyGenesisConfig
-  , AlonzoGenesisConfig
-  , ConwayGenesisConfig
-  , ByronGenesisFile
-  , ShelleyGenesisFile
-  , AlonzoGenesisFile
-  , ConwayGenesisFile
   )
   where
 
@@ -132,6 +123,7 @@ import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
+import           Cardano.Api.Genesis
 import           Cardano.Api.IO
 import           Cardano.Api.IPC (ConsensusModeParams (..),
                    LocalChainSyncClient (LocalChainSyncClientPipelined),
@@ -202,7 +194,6 @@ import qualified Ouroboros.Consensus.Protocol.TPraos as TPraos
 import qualified Ouroboros.Consensus.Shelley.Eras as Shelley
 import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Shelley
 import qualified Ouroboros.Consensus.Shelley.Ledger.Ledger as Shelley
-import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesis (..))
 import qualified Ouroboros.Consensus.Shelley.Node.Praos as Consensus
 import           Ouroboros.Consensus.TypeFamilyWrappers (WrapLedgerEvent (WrapLedgerEvent))
 import qualified Ouroboros.Network.Block
@@ -796,16 +787,6 @@ readNodeConfig (File ncf) = do
       , ncConwayGenesisFile = mapFile (mkAdjustPath ncf) (ncConwayGenesisFile ncfg)
       }
 
-type ByronGenesisConfig = Cardano.Chain.Genesis.Config
-type ShelleyGenesisConfig = ShelleyConfig
-type AlonzoGenesisConfig = AlonzoGenesis
-type ConwayGenesisConfig = ConwayGenesis Shelley.StandardCrypto
-
-type ByronGenesisFile = File ByronGenesisConfig
-type ShelleyGenesisFile = File ShelleyGenesisConfig
-type AlonzoGenesisFile = File AlonzoGenesisConfig
-type ConwayGenesisFile = File ConwayGenesisConfig
-
 data NodeConfig = NodeConfig
   { ncPBftSignatureThreshold :: !(Maybe Double)
   , ncByronGenesisFile :: !(File ByronGenesisConfig 'In)
@@ -1001,27 +982,6 @@ data GenesisConfig
       !ShelleyConfig
       !AlonzoGenesis
       !(ConwayGenesis Shelley.StandardCrypto)
-
-data ShelleyConfig = ShelleyConfig
-  { scConfig :: !(Ledger.ShelleyGenesis Shelley.StandardCrypto)
-  , scGenesisHash :: !GenesisHashShelley
-  }
-
-newtype GenesisHashByron = GenesisHashByron
-  { unGenesisHashByron :: Text
-  } deriving newtype (Eq, Show)
-
-newtype GenesisHashShelley = GenesisHashShelley
-  { unGenesisHashShelley :: Cardano.Crypto.Hash.Class.Hash Cardano.Crypto.Hash.Blake2b.Blake2b_256 ByteString
-  } deriving newtype (Eq, Show)
-
-newtype GenesisHashAlonzo = GenesisHashAlonzo
-  { unGenesisHashAlonzo :: Cardano.Crypto.Hash.Class.Hash Cardano.Crypto.Hash.Blake2b.Blake2b_256 ByteString
-  } deriving newtype (Eq, Show)
-
-newtype GenesisHashConway = GenesisHashConway
-  { unGenesisHashConway :: Cardano.Crypto.Hash.Class.Hash Cardano.Crypto.Hash.Blake2b.Blake2b_256 ByteString
-  } deriving newtype (Eq, Show)
 
 newtype LedgerStateDir = LedgerStateDir
   {  unLedgerStateDir :: FilePath

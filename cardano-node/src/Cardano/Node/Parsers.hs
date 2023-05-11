@@ -13,7 +13,7 @@ module Cardano.Node.Parsers
 
 import           Cardano.Prelude (ConvertText (..))
 
-import           Data.Foldable (asum)
+import           Data.Foldable
 import           Data.Maybe (fromMaybe)
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
