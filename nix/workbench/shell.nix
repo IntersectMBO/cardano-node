@@ -116,7 +116,6 @@ in project.shellFor {
     ghc-prof-flamegraph
     sqlite-interactive
     tmux
-    pkgs.cacert
     pkgs.git
     pkgs.hlint
     workbench-interactive-start
@@ -131,6 +130,7 @@ in project.shellFor {
     pkgs.pstree
     pkgs.time
     pkgs.curl
+    pkgs.cacert
   ]
   # Packages build inside the shell by `lib-cabal.sh` when useCabalRun=true
   ++ lib.optionals (!workbench-runner.backend.useCabalRun) (with cardanoNodePackages; [
