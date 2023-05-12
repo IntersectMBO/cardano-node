@@ -46,6 +46,4 @@ $$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nomadexec,        $$(prof)
 $$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nomadexec-auto,   $$(prof), true,false, true,false, false, nomadexec)))
 $$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nomadpodman,      $$(prof), true,false,false,false, false, nomadpodman)))
 $$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nomadpodman-auto, $$(prof), true,false, true,false, false, nomadpodman)))
-$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nixops,           $$(prof), true, true,false,false, false, nixops)))
-$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-autonixops,       $$(prof), true, true, true, true, false, nixops)))
 endef

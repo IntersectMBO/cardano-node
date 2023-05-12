@@ -356,12 +356,7 @@
 
       flake = eachSystem supportedSystems (system:
         let
-          config = recursiveUpdate haskellNix.config
-            {
-              permittedInsecurePackages = [
-                "python2.7-pyjwt-1.7.1" ## for 'nixops'
-              ];
-            };
+          inherit (haskellNix) config;
           pkgs = import nixpkgs {
             inherit config system overlays;
           };
