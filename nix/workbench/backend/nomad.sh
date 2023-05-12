@@ -1094,9 +1094,13 @@ backend_nomad() {
       local i=0
       local node_alloc_id
       node_alloc_id=$(wb_nomad job task-name-allocation-id \
-        "$dir/nomad/nomad-job.json"                                   \
+        "$dir/nomad/nomad-job.json"                        \
         "${node}")
-      while ! nomad alloc fs -stat -H "${node_alloc_id}" "${socket_path_absolute}" 2>/dev/null | grep --quiet "application/octet-stream"
+      # Always keep checking that the supervisord program is still running!
+      while \
+            backend_nomad is-task-program-running "${dir}" "${node}" "${node}"                                                         \
+        &&                                                                                                                             \
+          ! nomad alloc fs -stat -H "${node_alloc_id}" "${socket_path_absolute}" 2>/dev/null | grep --quiet "application/octet-stream"
       # TODO: Add the "timer" `printf "%3d" $i;` but for concurrent processes!
       do
         sleep 1
@@ -1164,9 +1168,13 @@ backend_nomad() {
         # while test ! -S "$socket_path_absolute"
         local task_alloc_id
         task_alloc_id=$(wb_nomad job task-name-allocation-id \
-          "${dir}/nomad/nomad-job.json"                                 \
+          "${dir}/nomad/nomad-job.json"                      \
           "${task}")
-        while ! nomad alloc fs -stat -H "${task_alloc_id}" "${socket_path_absolute}" | grep --quiet "application/octet-stream"
+        # Always keep checking that the supervisord program is still running!
+        while \
+              backend_nomad is-task-program-running "${dir}" "${task}" tracer                                                \
+          &&                                                                                                                 \
+            ! nomad alloc fs -stat -H "${task_alloc_id}" "${socket_path_absolute}" | grep --quiet "application/octet-stream"
         do printf "%3d" $i; sleep 1
           i=$((i+1))
           if test "${i}" -ge "${patience}"

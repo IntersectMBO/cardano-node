@@ -41,7 +41,9 @@ let
         killasgroup    = false;
         autostart      = false;
         autorestart    = false;
-        startretries   = 1;
+        # Don't attempt any restart!
+        startretries   = 0;
+        # Seconds it needs to stay running to consider the start successful
         startsecs      = 5;
       };
     }
@@ -57,8 +59,10 @@ let
         killasgroup    = true;
         autostart      = false;
         autorestart    = false;
-        startretries   = 1;
-        startsecs      = 1;
+        # Don't attempt any restart!
+        startretries   = 0;
+        # Seconds it needs to stay running to consider the start successful
+        startsecs      = 5;
       };
     }
     //
@@ -77,8 +81,10 @@ let
             killasgroup    = false;
             autostart      = false;
             autorestart    = false;
-            startretries   = 1;
-            startsecs      = 1;
+            # Don't attempt any restart!
+            startretries   = 0;
+            # Seconds it needs to stay running to consider the start successful
+            startsecs      = 5;
           })
         )
     //
