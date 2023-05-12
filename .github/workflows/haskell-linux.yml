@@ -121,12 +121,12 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       with:
-        region: ${{ secrets.BINARY_CACHE_REGION }}
+        region: ${{ vars.BINARY_CACHE_REGION }}
         dist-dir: dist-newstyle
         store-path: ${{ steps.setup-haskell.outputs.cabal-store }}
-        threads: 16
-        archive-uri: ${{ secrets.BINARY_CACHE_URI }}/${{ env.CABAL_CACHE_VERSION }}/${{ runner.os }}/${{ matrix.cabal }}/${{ matrix.ghc }}
-        skip: "${{ secrets.BINARY_CACHE_URI == '' }}"
+        threads: ${{ vars.BINARY_CACHE_THREADS }}
+        archive-uri: ${{ vars.BINARY_CACHE_URI }}/${{ env.CABAL_CACHE_VERSION }}/${{ runner.os }}/${{ matrix.cabal }}/${{ matrix.ghc }}
+        skip: "${{ vars.BINARY_CACHE_URI == '' }}"
 
     # It's important to ensure that people who fork this repository can not only successfully build in
     # CI by default, but also have meaningful cabal store caching.
@@ -142,9 +142,9 @@ jobs:
       with:
         dist-dir: dist-newstyle
         store-path: ${{ steps.setup-haskell.outputs.cabal-store }}
-        threads: 16
+        threads: ${{ vars.BINARY_CACHE_THREADS }}
         archive-uri: https://iohk.cache.haskellworks.io/${{ env.CABAL_CACHE_VERSION }}/${{ runner.os }}/${{ matrix.cabal }}/${{ matrix.ghc }}
-        skip: "${{ secrets.BINARY_CACHE_URI != '' }}"
+        skip: "${{ vars.BINARY_CACHE_URI != '' }}"
         enable-save: false
 
 
