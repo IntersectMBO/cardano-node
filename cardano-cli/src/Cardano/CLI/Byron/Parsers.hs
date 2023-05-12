@@ -32,7 +32,7 @@ import           Data.Attoparsec.Combinator ((<?>))
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy.Char8 as C8
 import qualified Data.Char as Char
-import           Data.Foldable (asum)
+import           Data.Foldable
 import           Data.Text (Text)
 import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)

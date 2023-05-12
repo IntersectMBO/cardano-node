@@ -191,7 +191,8 @@ Usage: cardano-cli genesis create-cardano --genesis-dir DIR
   Create a Byron and Shelley genesis file from a genesis template and
   genesis/delegation/spending keys.
 
-Usage: cardano-cli genesis create --genesis-dir DIR
+Usage: cardano-cli genesis create [--key-output-format STRING]
+            --genesis-dir DIR
             [--gen-genesis-keys INT]
             [--gen-utxo-keys INT]
             [--start-time UTC-TIME]
@@ -201,7 +202,8 @@ Usage: cardano-cli genesis create --genesis-dir DIR
   Create a Shelley genesis file from a genesis template and
   genesis/delegation/spending keys.
 
-Usage: cardano-cli genesis create-staked --genesis-dir DIR
+Usage: cardano-cli genesis create-staked [--key-output-format STRING]
+            --genesis-dir DIR
             [--gen-genesis-keys INT]
             [--gen-utxo-keys INT]
             [--gen-pools INT]
@@ -471,6 +473,7 @@ Usage: cardano-cli stake-pool id
             | --cold-verification-key-file FILE
             )
             [--output-format STRING]
+            [--out-file FILE]
 
   Build pool id from the offline key
 
@@ -490,19 +493,22 @@ Usage: cardano-cli node
 
   Node operation commands
 
-Usage: cardano-cli node key-gen --cold-verification-key-file FILE
+Usage: cardano-cli node key-gen [--key-output-format STRING]
+            --cold-verification-key-file FILE
             --cold-signing-key-file FILE
             --operational-certificate-issue-counter-file FILE
 
   Create a key pair for a node operator's offline key and a new certificate
   issue counter
 
-Usage: cardano-cli node key-gen-KES --verification-key-file FILE
+Usage: cardano-cli node key-gen-KES [--key-output-format STRING]
+            --verification-key-file FILE
             --signing-key-file FILE
 
   Create a key pair for a node KES operational key
 
-Usage: cardano-cli node key-gen-VRF --verification-key-file FILE
+Usage: cardano-cli node key-gen-VRF [--key-output-format STRING]
+            --verification-key-file FILE
             --signing-key-file FILE
 
   Create a key pair for a node VRF operational key
@@ -984,7 +990,8 @@ Usage: cardano-cli stake-address
 
   Stake address commands
 
-Usage: cardano-cli stake-address key-gen --verification-key-file FILE
+Usage: cardano-cli stake-address key-gen [--key-output-format STRING]
+            --verification-key-file FILE
             --signing-key-file FILE
 
   Create a stake address key pair
@@ -1045,7 +1052,8 @@ Usage: cardano-cli address (key-gen | key-hash | build | info)
 
   Payment address commands
 
-Usage: cardano-cli address key-gen [--normal-key | --extended-key | --byron-key]
+Usage: cardano-cli address key-gen [--key-output-format STRING]
+            [--normal-key | --extended-key | --byron-key]
             --verification-key-file FILE
             --signing-key-file FILE
 

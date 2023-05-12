@@ -34,8 +34,6 @@ Block-producing nodes use a protocol version number as part of the system for th
 
 The update parameters section might look like this:
 ```
-  "ApplicationName": "cardano-sl",
-  "ApplicationVersion": 0,
   "LastKnownBlockVersion-Alt": 0,
   "LastKnownBlockVersion-Major": 2,
   "LastKnownBlockVersion-Minor": 0,

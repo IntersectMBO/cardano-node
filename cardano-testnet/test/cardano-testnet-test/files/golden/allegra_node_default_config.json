@@ -1,7 +1,5 @@
 {
     "AlonzoGenesisFile": "shelley/genesis.alonzo.json",
-    "ApplicationName": "cardano-sl",
-    "ApplicationVersion": 1,
     "ByronGenesisFile": "byron/genesis.json",
     "ConwayGenesisFile": "shelley/genesis.conway.json",
     "EnableLogMetrics": false,
