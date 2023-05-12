@@ -273,32 +273,32 @@ let
           # {"@level":"info","@message":"node registration complete","@module":"client","@timestamp":"2023-02-01T13:52:27.489795Z"}
           mode = "host";
           port = lib.listToAttrs (
-            # If not oneTracerPerNode, an individual tracer task is needed (instead
-            # of running a tracer alongside a node with supervisor)
-            lib.optionals (profileData.value.node.tracer && !oneTracerPerNode) [
-              # TODO: Leave empty or invent one?
-              {name = "tracer"; value = {};}
-            ]
-            ++
-            [
-              {
-                # All names of the form node#, without the "-", instead of node-#
-                name = portName;
-                value =
-                  # The "podman" driver accepts "Mapped Ports", but not the "exec" driver
-                  # https://developer.hashicorp.com/nomad/docs/job-specification/network#mapped-ports
-                  # If you use a network in bridge mode you can use "Mapped Ports"
-                  # https://developer.hashicorp.com/nomad/docs/job-specification/network#bridge-mode
-                  if execTaskDriver
-                  then {
-                    to     = ''${toString portNum}'';
-                    static = ''${toString portNum}'';
-                  }
-                  else {
-                    to     = ''${toString portNum}'';
-                  };
-              }
-            ]
+            if portNum != 0
+            then
+              [
+                {
+                  # All names of the form node#, without the "-", instead of node-#
+                  name = portName;
+                  value =
+                    # The "podman" driver accepts "Mapped Ports", but not the "exec" driver
+                    # https://developer.hashicorp.com/nomad/docs/job-specification/network#mapped-ports
+                    # If you use a network in bridge mode you can use "Mapped Ports"
+                    # https://developer.hashicorp.com/nomad/docs/job-specification/network#bridge-mode
+                    if execTaskDriver
+                    then
+                      {
+                        to     = ''${toString portNum}'';
+                        static = ''${toString portNum}'';
+                      }
+                    else
+                      {
+                        to     = ''${toString portNum}'';
+                      }
+                    ;
+                }
+              ]
+            else
+              [{name = portName; value ={};}]
           );
         };
 
@@ -324,6 +324,14 @@ let
           # process.
           # `null` because we are using a "template" (see below).
           env = {};
+
+#          resources = {
+#            # Task can only ask for 'cpu' or 'cores' resource, not both.
+#            #cpu = 512;
+#            cores = 5;
+#            memory = 20000;
+#            memory_max = 32768;
+#          };
 
           # https://developer.hashicorp.com/nomad/docs/job-specification/service
           service = {

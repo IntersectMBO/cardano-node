@@ -242,3 +242,41 @@ git_repo_commit_description() {
         git -C "$repo" diff --exit-code --quiet || echo '-modified'
     } || echo "unknown-not-a-git-repo"
 }
+
+# Wait for any job to fail or all to be OK!
+wait_fail_any () {
+  local processes=("$@")
+  # There are any processes left?
+  if test -n "${processes[*]}"
+  then
+    local wait_exit_status
+    local exited_process
+    wait -n -p exited_process "${processes[@]}"
+    wait_exit_status=$?
+    # New array without the exited process
+    local processes_p=()
+    for p in "${processes[@]}"
+    do
+      if test "${p}" != "${exited_process}"
+      then
+        processes_p+=("${p}")
+      fi
+    done
+    # Something else to wait for?
+    if test -n "${processes_p[*]}"
+    then
+      # Keep waiting or kill 'em all ?'
+      if test "${wait_exit_status}" -eq 0
+      then
+        wait_fail_any "${processes_p[@]}"
+      else
+        kill "${processes_p[@]}" 2>/dev/null || true
+        return "${wait_exit_status}"
+      fi
+    else
+      return "${wait_exit_status}"
+    fi
+  else
+    return 0
+  fi
+}
