@@ -25,13 +25,7 @@ import           Prelude
 import           Cardano.Api hiding (cardanoEra)
 
 import           Control.Monad
-import           Control.Monad.IO.Class (MonadIO)
-import           Control.Monad.Trans.Except
 import qualified Data.Aeson as J
-import qualified Data.Aeson.Key as Key
-import           Data.Aeson.KeyMap (KeyMap)
-import qualified Data.Aeson.KeyMap as Aeson
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Lazy as HM
 import           Data.List ((\\))
@@ -39,16 +33,12 @@ import qualified Data.List as L
 import qualified Data.Map.Strict as M
 import           Data.Maybe
 import           Data.String
-import           Data.Text (Text)
 import qualified Data.Time.Clock as DTC
 import           Data.Word
 import qualified System.Directory as IO
 import           System.FilePath.Posix ((</>))
 import qualified System.Info as OS
 
-import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesisData)
-import qualified Cardano.Crypto.Hash.Blake2b
-import qualified Cardano.Crypto.Hash.Class
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 
@@ -77,6 +67,7 @@ import qualified Testnet.Util.Process as H
 import           Testnet.Util.Process (execCli_)
 import           Testnet.Util.Runtime as TR (NodeLoggingFormat (..), PaymentKeyPair (..),
                    PoolNode (PoolNode), PoolNodeKeys (..), TestnetRuntime (..), startNode)
+import           Testnet.Utils
 
 {- HLINT ignore "Redundant flip" -}
 {- HLINT ignore "Redundant id" -}
@@ -725,17 +716,3 @@ cardanoTestnet testnetOptions H.Conf {..} = do
     , delegators = [] -- TODO this should be populated
     }
 
--- * Generate hashes for genesis.json files
-
-getByronGenesisHash :: (H.MonadTest m, MonadIO m) => FilePath -> m (KeyMap J.Value)
-getByronGenesisHash path = do
-  e <- runExceptT $ readGenesisData path
-  (_, genesisHash) <- H.leftFail e
-  let genesisHash' = unGenesisHash genesisHash
-  pure . Aeson.singleton "ByronGenesisHash" $ J.toJSON genesisHash'
-
-getShelleyGenesisHash :: (H.MonadTest m, MonadIO m) => FilePath -> Text -> m (KeyMap J.Value)
-getShelleyGenesisHash path key = do
-  content <- H.evalIO  $ BS.readFile path
-  let genesisHash = Cardano.Crypto.Hash.Class.hashWith id content :: Cardano.Crypto.Hash.Class.Hash Cardano.Crypto.Hash.Blake2b.Blake2b_256 BS.ByteString
-  pure . Aeson.singleton (Key.fromText key) $ J.toJSON genesisHash

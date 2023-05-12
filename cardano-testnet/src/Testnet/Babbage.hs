@@ -14,10 +14,12 @@ module Testnet.Babbage
   , babbageTestnet
   ) where
 
+import           Cardano.Api
 import           Prelude
 
 import           Control.Monad
-import           Data.Aeson (encode, object, toJSON, (.=))
+import           Data.Aeson (Value (..), encode, object, toJSON, (.=))
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
 import qualified Data.Time.Clock as DTC
@@ -33,11 +35,13 @@ import qualified System.Info as OS
 import           Testnet.Commands.Genesis
 import qualified Testnet.Conf as H
 import           Testnet.Options
+                   (BabbageTestnetOptions (babbageNodeLoggingFormat, babbageNumSpoNodes),
+                   defaultYamlHardforkViaConfig)
 import qualified Testnet.Util.Assert as H
 import           Testnet.Util.Process (execCli_)
-import           Testnet.Util.Runtime (Delegator (..), NodeLoggingFormat (..), PaymentKeyPair (..),
-                   PoolNode (PoolNode), PoolNodeKeys (..), StakingKeyPair (..), TestnetRuntime (..),
-                   startNode)
+import           Testnet.Util.Runtime (Delegator (..), PaymentKeyPair (..), PoolNode (PoolNode),
+                   PoolNodeKeys (..), StakingKeyPair (..), TestnetRuntime (..), startNode)
+import           Testnet.Utils
 
 
 {- HLINT ignore "Redundant flip" -}
@@ -77,39 +81,6 @@ babbageTestnet testnetOptions H.Conf {..} = do
   H.copyFile conwayBabbageTestGenesisJsonSourceFile conwayBabbageTestGenesisJsonTargetFile
 
   configurationFile <- H.noteShow $ tempAbsPath </> "configuration.yaml"
-
-  case configurationTemplate of
-    Just template -> H.readFile template >>= H.writeFile configurationFile
-    Nothing ->
-      -- TODO: We want to use a default value for the yaml file in this case.
-      H.note "No configuration yaml template provided" >> H.failure
-
-  H.rewriteYamlFile (tempAbsPath </> "configuration.yaml") . J.rewriteObject
-    $ HM.delete "GenesisFile"
-    . HM.insert "Protocol" (toJSON @String "Cardano")
-    . HM.insert "PBftSignatureThreshold" (toJSON @Double 0.6)
-    . HM.insert "minSeverity" (toJSON @String "Debug")
-    . HM.insert "ByronGenesisFile" (toJSON @String "genesis/byron/genesis.json")
-    . HM.insert "ShelleyGenesisFile" (toJSON @String "genesis/shelley/genesis.json")
-    . HM.insert "AlonzoGenesisFile" (toJSON @String "genesis/shelley/genesis.alonzo.json")
-    . HM.insert "ConwayGenesisFile" (toJSON @String "genesis/shelley/genesis.conway.json")
-    . HM.insert "RequiresNetworkMagic" (toJSON @String "RequiresMagic")
-    . HM.insert "LastKnownBlockVersion-Major" (toJSON @Int 6)
-    . HM.insert "LastKnownBlockVersion-Minor" (toJSON @Int 0)
-    . HM.insert "TestShelleyHardForkAtEpoch" (toJSON @Int 0)
-    . HM.insert "TestAllegraHardForkAtEpoch" (toJSON @Int 0)
-    . HM.insert "TestMaryHardForkAtEpoch" (toJSON @Int 0)
-    . HM.insert "TestAlonzoHardForkAtEpoch" (toJSON @Int 0)
-    . HM.insert "TestBabbageHardForkAtEpoch" (toJSON @Int 0)
-    . HM.insert "ExperimentalHardForksEnabled" (toJSON True)
-    . flip HM.alter "setupScribes"
-        ( fmap
-          . J.rewriteArrayElements
-            . J.rewriteObject
-              . HM.insert "scFormat"
-                $ case babbageNodeLoggingFormat testnetOptions of
-                    NodeLoggingFormatAsJson -> "ScJson"
-                    NodeLoggingFormatAsText -> "ScText")
 
   let numPoolNodes = 3 :: Int
 
@@ -164,8 +135,8 @@ babbageTestnet testnetOptions H.Conf {..} = do
 
   -- Move all genesis related files
 
-  genesisByronDir <- H.createDirectoryIfMissing $ tempAbsPath </> "genesis/byron"
-  genesisShelleyDir <- H.createDirectoryIfMissing $ tempAbsPath </> "genesis/shelley"
+  genesisByronDir <- H.createDirectoryIfMissing $ tempAbsPath </> "byron"
+  genesisShelleyDir <- H.createDirectoryIfMissing $ tempAbsPath </> "shelley"
 
   files <- H.listDirectory tempAbsPath
   forM_ files $ \file -> do
@@ -179,6 +150,7 @@ babbageTestnet testnetOptions H.Conf {..} = do
   H.rewriteJsonFile (genesisByronDir </> "genesis.json") $ J.rewriteObject
     $ flip HM.adjust "protocolConsts"
       ( J.rewriteObject ( HM.insert "protocolMagic" (toJSON @Int testnetMagic)))
+
 
   H.rewriteJsonFile (genesisShelleyDir </> "genesis.json") $ J.rewriteObject
     ( HM.insert "slotLength"             (toJSON @Double 0.1)
@@ -200,6 +172,29 @@ babbageTestnet testnetOptions H.Conf {..} = do
     . HM.insert "tau"                    (toJSON @Double 0.1)
     . HM.insert "updateQuorum"           (toJSON @Int 2)
     )
+
+
+  -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
+  -- TODO: These genesis filepaths should not be hardcoded. Using the cli as a library
+  -- rather as an executable will allow us to get the genesis files paths in a more
+  -- direct fashion.
+
+  byronGenesisHash <- getByronGenesisHash $ tempAbsPath </> "byron/genesis.json"
+  shelleyGenesisHash <- getShelleyGenesisHash (tempAbsPath </> "shelley/genesis.json") "ShelleyGenesisHash"
+  alonzoGenesisHash <- getShelleyGenesisHash (tempAbsPath </> "shelley/genesis.alonzo.json") "AlonzoGenesisHash"
+  conwayGenesisHash <- getShelleyGenesisHash (tempAbsPath </> "shelley/genesis.conway.json") "ConwayGenesisHash"
+
+
+  let finalYamlConfig :: LBS.ByteString
+      finalYamlConfig = encode . Object
+                                 $ mconcat [ byronGenesisHash
+                                           , shelleyGenesisHash
+                                           , alonzoGenesisHash
+                                           , conwayGenesisHash
+                                           , defaultYamlHardforkViaConfig (AnyCardanoEra BabbageEra)]
+
+  H.evalIO $ LBS.writeFile (tempAbsPath </> "configuration.yaml") finalYamlConfig
+
 
   H.renameFile (tempAbsPath </> "pools/vrf1.skey") (tempAbsPath </> "node-spo1/vrf.skey")
   H.renameFile (tempAbsPath </> "pools/vrf2.skey") (tempAbsPath </> "node-spo2/vrf.skey")
