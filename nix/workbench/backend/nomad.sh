@@ -839,20 +839,32 @@ backend_nomad() {
         backend_nomad download-logs-node "${dir}" "${node}"
         # Should show the output/log of `supervisord` (runs as "entrypoint").
         msg "$(yellow "${dir}/nomad/${node}/stdout:")"
-        cat "${dir}"/nomad/"${node}"/stdout
+        cat                                                             \
+          <(echo "-------------------- log start --------------------") \
+          "${dir}"/nomad/"${node}"/stdout                               \
+          <(echo "-------------------- log end   --------------------")
         msg "$(yellow "${dir}/nomad/${node}/stderr:")"
-        cat "${dir}"/nomad/"${node}"/stderr
+        cat                                                             \
+          <(echo "-------------------- log start --------------------") \
+          "${dir}"/nomad/"${node}"/stderr                               \
+          <(echo "-------------------- log end   --------------------")
         # Depending on when the start command failed, logs may not be available!
         if test -f "${dir}"/"${node}"/stdout
         then
           msg "$(yellow "${dir}/${node}/stdout:")"
-          cat "$dir"/"$node"/stdout
+          cat                                                             \
+            <(echo "-------------------- log start --------------------") \
+            "$dir"/"$node"/stdout                                         \
+            <(echo "-------------------- log end   --------------------")
         fi
         # Depending on when the start command failed, logs may not be available!
         if test -f "${dir}"/"${node}"/stderr
         then
           msg "$(yellow "${dir}/${node}/stderr:")"
-          cat "${dir}"/"${node}"/stderr
+          cat                                                             \
+            <(echo "-------------------- log start --------------------") \
+            "${dir}"/"${node}"/stderr                                     \
+            <(echo "-------------------- log end   --------------------")
         fi
         fatal "Failed to start program \"${node}\""
       else
@@ -861,11 +873,11 @@ backend_nomad() {
         if test "${nomad_environment}" != "cloud"
         then
           # A link to the alloc must be already created inside the RUN-DIR
-          ln -s                                                                   \
-            ../nomad/alloc/"${node}"/local/run/current/"${node}"/stdout           \
+          ln -s                                                         \
+            ../nomad/alloc/"${node}"/local/run/current/"${node}"/stdout \
             "${dir}"/"${node}"/stdout
-          ln -s                                                                   \
-            ../nomad/alloc/"${node}"/local/run/current/"${node}"/stderr           \
+          ln -s                                                         \
+            ../nomad/alloc/"${node}"/local/run/current/"${node}"/stderr \
             "${dir}"/"${node}"/stderr
         fi
         # Always wait for the node to be ready.
@@ -897,20 +909,32 @@ backend_nomad() {
         backend_nomad download-logs-generator "${dir}"
         # Should show the output/log of `supervisord` (runs as "entrypoint").
         msg "$(yellow "${dir}/nomad/node-0/stdout:")"
-        cat "${dir}"/nomad/node-0/stdout
+        cat                                                             \
+          <(echo "-------------------- log start --------------------") \
+          "${dir}"/nomad/node-0/stdout                                  \
+          <(echo "-------------------- log end   --------------------")
         msg "$(yellow "${dir}/nomad/node-0/stderr:")"
-        cat "${dir}"/nomad/node-0/stderr
+        cat                                                             \
+          <(echo "-------------------- log start --------------------") \
+          "${dir}"/nomad/node-0/stderr                                  \
+          <(echo "-------------------- log end   --------------------")
         # Depending on when the start command failed, logs may not be available!
         if test -f "${dir}"/generator/stdout
         then
           msg "$(yellow "${dir}/generator/stdout:")"
-          cat "$dir"/generator/stdout
+          cat                                                           \
+          <(echo "-------------------- log start --------------------") \
+          "$dir"/generator/stdout                                       \
+          <(echo "-------------------- log end   --------------------")
         fi
         # Depending on when the start command failed, logs may not be available!
         if test -f "${dir}"/generator/stderr
         then
           msg "$(yellow "${dir}/generator/stderr:")"
-          cat "${dir}"/generator/stderr
+          cat                                                             \
+            <(echo "-------------------- log start --------------------") \
+            "${dir}"/generator/stderr                                     \
+            <(echo "-------------------- log end   --------------------")
         fi
         fatal "Failed to start program \"generator\""
       else
@@ -945,38 +969,62 @@ backend_nomad() {
         then
           # Should show the output/log of `supervisord` (runs as "entrypoint").
           msg "$(yellow "${dir}/nomad/${task}/stdout:")"
-          cat "${dir}"/nomad/"${task}"/stdout
+          cat                                                             \
+            <(echo "-------------------- log start --------------------") \
+            "${dir}"/nomad/"${task}"/stdout                               \
+            <(echo "-------------------- log end   --------------------")
           msg "$(yellow "${dir}/nomad/${task}/stderr:")"
-          cat "${dir}"/nomad/"${task}"/stderr
+          cat                                                             \
+            <(echo "-------------------- log start --------------------") \
+            "${dir}"/nomad/"${task}"/stderr                               \
+            <(echo "-------------------- log end   --------------------")
           # Depending on when the start command failed, logs may not be available!
           if test -f "${dir}"/tracer/"${task}"/stdout
           then
             msg "$(yellow "${dir}/tracer/${task}/stdout:")"
-            cat "${dir}"/tracer/"${task}"/stdout
+            cat                                                             \
+              <(echo "-------------------- log start --------------------") \
+              "${dir}"/tracer/"${task}"/stdout                              \
+              <(echo "-------------------- log end   --------------------")
           fi
           # Depending on when the start command failed, logs may not be available!
           if test -f "${dir}"/tracer/"${task}"/stderr
           then
             msg "$(yellow "${dir}/tracer/${task}/stderr:")"
-            cat "${dir}"/tracer/"${task}"/stderr
+            cat                                                             \
+              <(echo "-------------------- log start --------------------") \
+              "${dir}"/tracer/"${task}"/stderr                              \
+              <(echo "-------------------- log end   --------------------")
           fi
         else
           # Should show the output/log of `supervisord` (runs as "entrypoint").
           msg "$(yellow "${dir}/nomad/tracer/stdout:")"
-          cat "${dir}"/nomad/tracer/stdout
+          cat                                                             \
+            <(echo "-------------------- log start --------------------") \
+            "${dir}"/nomad/tracer/stdout                                  \
+            <(echo "-------------------- log end   --------------------")
           msg "$(yellow "${dir}/nomad/tracer/stderr:")"
-          cat "${dir}"/nomad/tracer/stderr
+          cat                                                             \
+            <(echo "-------------------- log start --------------------") \
+            "${dir}"/nomad/tracer/stderr                                  \
+            <(echo "-------------------- log end   --------------------")
           # Depending on when the start command failed, logs may not be available!
           if test -f "${dir}"/tracer/stdout
           then
             msg "$(yellow "${dir}/tracer/stdout:")"
-            cat "$dir"/tracer/stdout
+            cat                                                             \
+              <(echo "-------------------- log start --------------------") \
+              "$dir"/tracer/stdout                                          \
+              <(echo "-------------------- log end   --------------------")
           fi
           # Depending on when the start command failed, logs may not be available!
           if test -f "${dir}"/tracer/stderr
           then
             msg "$(yellow "${dir}/tracer/stderr:")"
-            cat "${dir}"/tracer/stderr
+            cat                                                             \
+              <(echo "-------------------- log start --------------------") \
+              "${dir}"/tracer/stderr                                        \
+              <(echo "-------------------- log end   --------------------")
           fi
         fi
         # Let "start" parse the response code and handle the cleanup!
