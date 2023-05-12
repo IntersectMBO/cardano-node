@@ -40,10 +40,14 @@ $$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-auto,             $$(prof)
 $$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-autostay,         $$(prof),false, true, true, true, false, supervisor)))
 $$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nix,              $$(prof), true,false,false,false, false, supervisor)))
 $$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-autonix,          $$(prof), true,false, true,false, false, supervisor)))
-$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nomadcloud,       $$(prof), true,false,false,false, false, nomadcloud)))
-$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nomadcloud-auto,  $$(prof), true,false, true,false, false, nomadcloud)))
 $$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nomadexec,        $$(prof), true,false,false,false, false, nomadexec)))
 $$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nomadexec-auto,   $$(prof), true,false, true,false, false, nomadexec)))
 $$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nomadpodman,      $$(prof), true,false,false,false, false, nomadpodman)))
 $$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-nomadpodman-auto, $$(prof), true,false, true,false, false, nomadpodman)))
+endef
+
+define define_profile_targets_nomadcloud
+##                                           defining this target       profname  nix   dev   auto  stay profiled  backend
+$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof),                  $$(prof), true,false,false,false, false, nomadcloud)))
+$$(foreach prof,$(1),$$(eval $$(call proftgt,$$(prof)-auto,             $$(prof), true,false, true,false, false, nomadcloud)))
 endef

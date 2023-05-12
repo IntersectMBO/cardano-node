@@ -366,7 +366,7 @@ locationRegion :: Location -> String
 locationRegion = \case
   EU -> "eu-central-1"
   AP -> "ap-southeast-2"
-  US -> "us-east-1"
+  US -> "us-east-2"
   LO -> "loopback"
 
 locationColor :: Location -> G.Color
