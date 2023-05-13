@@ -1,0 +1,43 @@
+cabal-version: 3.0
+
+name:                   cardano-api-gen
+version:                8.1.0.1
+synopsis:               Generators for the cardano api
+description:            Generators for the cardano api.
+category:               Cardano,
+                        API,
+                        Test,
+copyright:              2020-2023 Input Output Global Inc (IOG).
+author:                 IOHK
+maintainer:             operations@iohk.io
+license:                Apache-2.0
+license-files:          LICENSE
+                        NOTICE
+build-type:             Simple
+extra-source-files:     README.md, ChangeLog.md
+
+common project-config
+  default-language:     Haskell2010
+  default-extensions:   OverloadedStrings
+  build-depends:        base >= 4.14 && < 4.17
+
+  ghc-options:          -Wall
+                        -Wcompat
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wpartial-fields
+                        -Wredundant-constraints
+                        -Wunused-packages
+
+library
+  import:               project-config
+
+  build-depends:        cardano-api:gen
+
+  -- These modules should match those in cardano-api:gen
+  reexported-modules:   Test.Gen.Cardano.Api,
+                        Test.Gen.Cardano.Api.Metadata,
+                        Test.Gen.Cardano.Api.Typed,
+                        Test.Gen.Cardano.Crypto.Seed,
+                        Test.Hedgehog.Roundtrip.Bech32,
+                        Test.Hedgehog.Roundtrip.CBOR,
