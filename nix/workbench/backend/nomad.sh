@@ -745,7 +745,7 @@ backend_nomad() {
       # Remove "live" symlinks and download the "originals"
       if test "${nomad_environment}" != "cloud"
       then
-        rm -f "${dir}"/generator/{stdout,stderr}
+        rm -f "${dir}"/generator/{stdout,stderr,exit_code}
         rm -f "${dir}"/supervisor/node-0/supervisord.log
       fi
       backend_nomad download-logs-generator "${dir}"
@@ -756,7 +756,7 @@ backend_nomad() {
         # Remove "live" symlinks and download the "originals"
         if test "${nomad_environment}" != "cloud"
         then
-          rm -f "${dir}"/"${node}"/{stdout,stderr}
+          rm -f "${dir}"/"${node}"/{stdout,stderr,exit_code}
           rm -f "${dir}"/nomad/"${node}"/{stdout,stderr}
           rm -f "${dir}"/supervisor/"${node}"/supervisord.log
         fi
@@ -774,13 +774,13 @@ backend_nomad() {
           then
             for node in $(jq_tolist 'keys' "${dir}"/node-specs.json)
             do
-              rm -f "${dir}"/tracer/"${node}"/{stdout,stderr}
+              rm -f "${dir}"/tracer/"${node}"/{stdout,stderr,exit_code}
             done
           else
             # When "local" and "podman" "tracer" folder is mounted
             if ! test "${nomad_task_driver}" = "podman"
             then
-              rm -f "${dir}"/tracer/{stdout,stderr}
+              rm -f "${dir}"/tracer/{stdout,stderr,exit_code}
             fi
             rm -f "${dir}"/supervisor/tracer/supervisord.log
           fi
@@ -807,7 +807,8 @@ backend_nomad() {
 
       msg "nomad:  resetting cluster state in:  ${dir}"
       # Generic stuff
-      rm -f  "${dir}"/*/std{out,err} "${dir}"/node-*/*.socket "${dir}"/*/logs/* 2>/dev/null || true
+      rm -f  "${dir}"/*/std{out,err}  "${dir}"/*/exit_code 2>/dev/null || true
+      rm -f  "${dir}"/node-*/*.socket "${dir}"/*/logs/*    2>/dev/null || true
       rm -fr "${dir}"/node-*/state-cluster/
       # Nomad stuff
       rm -f  "${dir}"/nomad/{server,client}.{log,stdout,stderr}
@@ -878,12 +879,15 @@ backend_nomad() {
         if test "${nomad_environment}" != "cloud"
         then
           # A link to the alloc must be already created inside the RUN-DIR
-          ln -s                                                         \
-            ../nomad/alloc/"${node}"/local/run/current/"${node}"/stdout \
+          ln -s                                                            \
+            ../nomad/alloc/"${node}"/local/run/current/"${node}"/stdout    \
             "${dir}"/"${node}"/stdout
-          ln -s                                                         \
-            ../nomad/alloc/"${node}"/local/run/current/"${node}"/stderr \
+          ln -s                                                            \
+            ../nomad/alloc/"${node}"/local/run/current/"${node}"/stderr    \
             "${dir}"/"${node}"/stderr
+          ln -s                                                            \
+            ../nomad/alloc/"${node}"/local/run/current/"${node}"/exit_code \
+            "${dir}"/"${node}"/exit_code
         fi
         # Always wait for the node to be ready.
         if backend_nomad wait-node "${dir}" "${node}"
@@ -947,12 +951,15 @@ backend_nomad() {
         local nomad_environment=$(envjqr 'nomad_environment')
         if test "${nomad_environment}" != "cloud"
         then
-          ln -s                                                      \
-            ../nomad/alloc/node-0/local/run/current/generator/stdout \
+          ln -s                                                         \
+            ../nomad/alloc/node-0/local/run/current/generator/stdout    \
             "${dir}"/generator/stdout
-          ln -s                                                      \
-            ../nomad/alloc/node-0/local/run/current/generator/stderr \
+          ln -s                                                         \
+            ../nomad/alloc/node-0/local/run/current/generator/stderr    \
             "${dir}"/generator/stderr
+          ln -s                                                         \
+            ../nomad/alloc/node-0/local/run/current/generator/exit_code \
+            "${dir}"/generator/exit_code
         fi
         # It was "intentionally started and should not automagically stop" flag!
         touch "${dir}"/generator/started
@@ -1043,22 +1050,28 @@ backend_nomad() {
         then
           if test "${one_tracer_per_node}" = "true" || test "${task}" != "tracer"
           then
-            ln -s                                                         \
-              ../../nomad/alloc/"${task}"/local/run/current/tracer/stdout \
+            ln -s                                                            \
+              ../../nomad/alloc/"${task}"/local/run/current/tracer/stdout    \
               "${dir}"/tracer/"${task}"/stdout
-            ln -s                                                         \
-              ../../nomad/alloc/"${task}"/local/run/current/tracer/stderr \
+            ln -s                                                            \
+              ../../nomad/alloc/"${task}"/local/run/current/tracer/stderr    \
               "${dir}"/tracer/"${task}"/stderr
+            ln -s                                                            \
+              ../../nomad/alloc/"${task}"/local/run/current/tracer/exit_code \
+              "${dir}"/tracer/"${task}"/exit_code
           else
             # When "local" and "podman" "tracer" folder is mounted
             if ! test "${nomad_task_driver}" = "podman"
             then
-              ln -s                                                   \
-                ../nomad/alloc/tracer/local/run/current/tracer/stdout \
+              ln -s                                                            \
+                ../nomad/alloc/tracer/local/run/current/tracer/stdout          \
                 "${dir}"/tracer/stdout
-              ln -s                                                   \
-                ../nomad/alloc/tracer/local/run/current/tracer/stderr \
+              ln -s                                                            \
+                ../nomad/alloc/tracer/local/run/current/tracer/stderr          \
                 "${dir}"/tracer/stderr
+              ln -s                                                            \
+                ../../nomad/alloc/"${task}"/local/run/current/tracer/exit_code \
+                "${dir}"/tracer/"${task}"/exit_code
             fi
           fi
         fi
@@ -1425,6 +1438,12 @@ backend_nomad() {
         /local/run/current/supervisor/supervisord.log        \
       > "${dir}"/supervisor/node-0/supervisord.log           \
       2>/dev/null || true # Ignore errors!
+      # Depending on when the start command failed, this file may be empty!
+      msg "$(blue Fetching) $(yellow exit_code) of $(yellow "program \"generator\"") inside Nomad $(yellow "Task \"node-0\"") ..."
+      backend_nomad task-file-contents "${dir}" "node-0"    \
+        /local/run/current/generator/exit_code              \
+      > "${dir}"/generator/exit_code                        \
+      2>/dev/null || true # Ignore errors!
       # Depending on when the start command failed, logs may not be available!
       msg "$(blue Fetching) $(yellow stdout) of $(yellow "program \"generator\"") inside Nomad $(yellow "Task \"node-0\"") ..."
       backend_nomad task-file-contents "${dir}" "node-0"    \
@@ -1456,6 +1475,12 @@ backend_nomad() {
         /local/run/current/supervisor/supervisord.log     \
       > "${dir}"/supervisor/"${node}"/supervisord.log     \
       2>/dev/null || true # Ignore errors!
+      # Depending on when the start command failed, this file may be empty!
+      msg "$(blue Fetching) $(yellow exit_code) of supervisord $(yellow "program \"${node}\"") inside Nomad $(yellow "Task \"${node}\"") ..."
+      backend_nomad task-file-contents "${dir}" "${node}" \
+        /local/run/current/"${node}"/exit_code            \
+      > "${dir}"/"${node}"/exit_code                      \
+      2>/dev/null || true # Ignore errors!
       # Depending on when the start command failed, logs may not be available!
       msg "$(blue Fetching) $(yellow stdout) of supervisord $(yellow "program \"${node}\"") inside Nomad $(yellow "Task \"${node}\"") ..."
       backend_nomad task-file-contents "${dir}" "${node}" \
@@ -1480,6 +1505,12 @@ backend_nomad() {
         local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
         if test "${one_tracer_per_node}" = "true" || test "${task}" != "tracer"
         then
+          # Depending on when the start command failed, this file may be empty!
+          msg "$(blue Fetching) $(yellow exit_code) of supervisord $(yellow "program \"tracer\"") inside Nomad $(yellow "Task \"${task}\"") ..."
+          backend_nomad task-file-contents "${dir}" "${task}" \
+            /local/run/current/tracer/exit_code               \
+          > "${dir}"/tracer/"${task}"/exit_code
+          2>/dev/null || true # Ignore errors!
           # Depending on when the start command failed, logs may not be available!
           msg "$(blue Fetching) $(yellow stdout) of supervisord $(yellow "program \"tracer\"") inside Nomad $(yellow "Task \"${task}\"") ..."
           backend_nomad task-file-contents "${dir}" "${task}" \
@@ -1509,6 +1540,12 @@ backend_nomad() {
           local nomad_task_driver=$(envjqr 'nomad_task_driver')
           if ! test "${nomad_task_driver}" = "podman"
           then
+            msg "$(blue Fetching) $(yellow exit_code) of supervisord $(yellow "program \"tracer\"") inside Nomad $(yellow "Task \"tracer\"") ..."
+            # Depending on when the start command failed, this file may be empty!
+            backend_nomad task-file-contents "${dir}" "tracer" \
+              /local/run/current/tracer/exit_code              \
+            > "${dir}"/tracer/exit_code                        \
+            2>/dev/null || true # Ignore errors!
             msg "$(blue Fetching) $(yellow stdout) of supervisord $(yellow "program \"tracer\"") inside Nomad $(yellow "Task \"tracer\"") ..."
             # Depending on when the start command failed, logs may not be available!
             backend_nomad task-file-contents "${dir}" "tracer" \

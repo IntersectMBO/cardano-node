@@ -466,6 +466,7 @@ let
                 profileData.generator-service.startupScript.value;
               change_mode = "noop";
               error_on_missing_key = true;
+              perms = "744"; # Only for every "start.sh" script. Default: "644"
             }
             ## Generator configuration file.
             {
@@ -491,6 +492,7 @@ let
                 profileData.tracer-service.startupScript.value;
               change_mode = "noop";
               error_on_missing_key = true;
+              perms = "744"; # Only for every "start.sh" script. Default: "644"
             }
             ## Tracer configuration file.
             {
@@ -540,6 +542,7 @@ let
                 );
                 change_mode = "noop";
                 error_on_missing_key = true;
+                perms = "744"; # Only for every "start.sh" script. Default: "644"
               }
               ## Node configuration file.
               {
