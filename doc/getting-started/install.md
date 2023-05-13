@@ -35,7 +35,7 @@ In Redhat, Fedora, and Centos:
 ```bash
 sudo yum update -y
 sudo yum install git gcc gcc-c++ tmux gmp-devel make tar xz wget zlib-devel libtool autoconf -y
-sudo install systemd-devel ncurses-devel ncurses-compat-libs which jq openssl-devel lmdb-devel -y
+sudo yum install systemd-devel ncurses-devel ncurses-compat-libs which jq openssl-devel lmdb-devel -y
 ```
 
 For Debian/Ubuntu:
