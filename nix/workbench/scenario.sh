@@ -130,13 +130,21 @@ scenario_cleanup_exit_trap() {
 
 __scenario_watcher_pid=
 scenario_watcher() {
-    while test $__scenario_watcher_end_time -ge $(date +%s)
-    do sleep 1; done
-    echo >&2
-    msg "scenario:  $(yellow end of time reached) for:  $(red $(jq '.meta.tag' -r $__scenario_exit_trap_dir/meta.json))"
-    rm -f $dir/flag/cluster-termination
-    msg "scenario:  $(red signalled termination)"
-    progress "scenario" "now:  $(yellow $(date))"
+    while \
+          test -f "${dir}"/flag/cluster-termination         \
+        &&                                                  \
+          test "${__scenario_watcher_end_time}" -ge $(date +%s)
+    do
+      sleep 1
+    done
+    if test -f "${dir}"/flag/cluster-termination
+    then
+        echo >&2
+        msg "scenario:  $(yellow end of time reached) for:  $(red $(jq '.meta.tag' -r ${__scenario_exit_trap_dir}/meta.json))"
+        rm -f "${dir}"/flag/cluster-termination
+        msg "scenario:  $(red signalled termination)"
+        progress "scenario" "now:  $(yellow $(date))"
+    fi
 }
 
 scenario_setup_workload_termination() {

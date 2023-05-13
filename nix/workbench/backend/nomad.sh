@@ -635,13 +635,18 @@ backend_nomad() {
           # generator just after it quits automatically.
           backend_nomad task-program-stop "${dir}" node-0 generator || true
         else
-          # If the node quits (due to `--shutdown_on_slot_synced X` or
-          # `--shutdown_on_block_synced X`) the generator also quits.
-          local generator_can_quit=$(jq ".\"node-0\".shutdown_on_slot_synced or .\"node-0\".shutdown_on_block_synced" "${dir}"/node-specs.json)
-          if test "${generator_can_quit}" = "false"
+          if backend_nomad is-task-program-failed "${dir}" node-0 generator
           then
-            # Do not fail here, because nobody will be able to stop the cluster!
-            msg "$(red "FATAL: \"generator\" quit unexpectedly")"
+            # If the node quits (due to `--shutdown_on_slot_synced X` or
+            # `--shutdown_on_block_synced X`) the generator quits with an error.
+            local generator_can_fail=$(jq ".\"node-0\".shutdown_on_slot_synced or .\"node-0\".shutdown_on_block_synced" "${dir}"/node-specs.json)
+            if test "${generator_can_fail}" = "false" || backend_nomad is-task-program-running "${dir}" node-0 node-0
+            then
+              # Do not fail here, because nobody will be able to stop the cluster!
+              msg "$(red "FATAL: \"generator\" quit unexpectedly")"
+            else
+              msg "$(yellow "INFO: Program \"generator\" inside Task \"node-0\" failed, but expected when \"node-0\" automatically exits first")"
+            fi
           else
             msg "$(yellow "WARNING: Program \"generator\" inside Task \"node-0\" was not running, should it?")"
           fi
@@ -1358,14 +1363,52 @@ backend_nomad() {
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
 
-      local i=0 pools=$(jq .composition.n_pool_hosts $dir/profile.json) start_time=$(date +%s)
+      local i=0
+      local start_time=$(date +%s)
+      local pools=$(jq .composition.n_pool_hosts "${dir}"/profile.json)
       msg_ne "nomad: $(blue Waiting) until all pool nodes are stopped: 000000"
-      touch $dir/flag/cluster-termination
-
+      touch "${dir}"/flag/cluster-termination
       for ((pool_ix=0; pool_ix < $pools; pool_ix++))
       do
-        while backend_nomad is-task-program-running "$dir" "node-${pool_ix}" "node-${pool_ix}" > /dev/null && test -f $dir/flag/cluster-termination
+        while \
+            backend_nomad is-task-program-running "${dir}" "node-${pool_ix}" "node-${pool_ix}" > /dev/null \
+          &&                                                                                               \
+            test -f "${dir}"/flag/cluster-termination
         do
+          # Always check that a started generator has not FAILED!
+          if \
+                test -f "${dir}"/generator/started                              \
+            &&                                                                  \
+              ! test -f "${dir}"/generator/quit                                 \
+            &&                                                                  \
+              ! backend_nomad is-task-program-running "${dir}" node-0 generator
+          then
+            if backend_nomad is-task-program-failed   "${dir}" node-0 generator
+            then
+              # If node-0 quits generators fails with:
+              # tx-generator: MuxError MuxBearerClosed "<socket: 12> closed when reading data, waiting on next header True"
+              # Service binary 'tx-generator' returned status: 1
+              if backend_nomad is-task-program-running "${dir}" node-0 node-0
+              then
+                # This was not expected!
+                # But check it wasn't a race condition of a stopping cluster!
+                if ! test -f "${dir}"/flag/cluster-stopping
+                then
+                  touch "${dir}"/flag/cluster-stopping
+                  fatal "Generator quit unexpectedly!!!"
+                fi
+              else
+                # The whole cluster is about to finish!
+                touch "${dir}"/generator/quit
+              fi
+            else
+              touch "${dir}"/generator/quit
+              # Show the warning and continue with the counter
+              echo -e "\n"
+              msg "$(yellow "WARNING: supervisord program \"generator\" (always inside Nomad Task \"node-0\" quit with a non-error exit code")"
+              msg_ne "nomad: $(blue Waiting) until all pool nodes are stopped: 000000"
+            fi
+          fi
           echo -ne "\b\b\b\b\b\b"
           printf "%6d" $((i + 1))
           i=$((i+1))
@@ -1374,10 +1417,14 @@ backend_nomad() {
         echo -ne "\b\b\b\b\b\b"; echo -n "node-${pool_ix} 000000"
       done >&2
       echo -ne "\b\b\b\b\b\b"
+
       local elapsed=$(($(date +%s) - start_time))
-      if test -f $dir/flag/cluster-termination
-      then echo " All nodes exited -- after $(yellow $elapsed)s" >&2
-      else echo " Termination requested -- after $(yellow $elapsed)s" >&2; fi
+      if test -f "${dir}"/flag/cluster-termination
+      then
+        echo " All nodes exited      -- after $(yellow ${elapsed})s" >&2
+      else
+        echo " Termination requested -- after $(yellow ${elapsed})s" >&2;
+      fi
     ;;
 
     cluster-exited-programs )
@@ -1765,6 +1812,24 @@ backend_nomad() {
       #> supervisorctl status node-0 >/dev/null; echo $?
       # 3
       backend_nomad task-supervisorctl "$dir" "$task" status "$program" > /dev/null
+    ;;
+
+    is-task-program-failed )
+      local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME SUPERVISOR-PROGRAM"
+      local dir=${1:?$usage}; shift
+      local task=${1:?$usage}; shift
+      local program=${1:?$usage}; shift
+      # As we are not using any "autorestart" supervisord programs are run as:
+      # command=sh -c "./start.sh; echo "$?" > ./exit_code"
+      # because we can't obtain the exit codes using `supervisrctl`
+      local exit_code
+      if exit_code=$(backend_nomad task-file-contents "${dir}" "${task}" \
+        /local/run/current/"${program}"/exit_code 2>/dev/null)
+      then
+        test "${exit_code}" != "0"
+      else
+        return 0
+      fi
     ;;
 
     task-supervisorctl )
