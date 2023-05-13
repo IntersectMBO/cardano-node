@@ -235,7 +235,9 @@ backend_nomadcloud() {
       local dir=${1:?$usage}; shift
       local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
 
+      # Create genesis tar file
       local genesis_file_name="${nomad_job_name}.tar.zst"
+      msg "$(blue Creating) $(yellow "\"${genesis_file_name}\"") ..."
       # TODO: These files are link to file that don't exist!
       rm "${dir}"/genesis/profile.json
       rm "${dir}"/genesis/stake-delegator-keys
@@ -246,6 +248,7 @@ backend_nomadcloud() {
           --owner=65534 --group=65534 --mode="u=rwx"  \
           --directory="${dir}"/genesis --files-from=-
 
+      # Upload genesis tar file
       local s3_region="eu-central-1"
       local s3_host="s3.${s3_region}.amazonaws.com";
       local s3_bucket_name="iog-cardano-perf";
@@ -253,32 +256,51 @@ backend_nomadcloud() {
       local s3_access_key_secret="${AWS_SECRET_ACCESS_KEY}"
       local s3_storage_class="STANDARD"
       local return_code=0
+      msg "$(blue Uploading) $(yellow "\"${genesis_file_name}\"") to $(yellow "\"s3://${s3_bucket_name}/\"") ..."
       aws s3 cp                                                               \
         "${dir}"/"${genesis_file_name}"                                       \
         s3://"${s3_bucket_name}"                                              \
         --content-type "application/zstd"                                     \
         --region "${s3_region}"                                               \
         --expected-size "$(stat --printf=%s "${dir}"/"${genesis_file_name}")" \
-      >/dev/null                                                              \
       || return_code="$?"
       # https://docs.aws.amazon.com/cli/latest/userguide/cli-services-s3-commands.html#using-s3-commands-managing-objects-copy
       # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3/cp.html
       if test "${return_code}" = "0"
       then
         # A server response was obtained.
-        msg "File \"${genesis_file_name}\" uploaded"
+        msg "$(green "File \"${genesis_file_name}\" uploaded successfully")"
       else
-        msg "Upload to Amazon S3 failed, cleaning up ..."
+        msg "$(red "FATAL: Upload to Amazon S3 failed")"
         local nomad_agents_were_already_running=$(envjqr 'nomad_agents_were_already_running')
         if test "${nomad_agents_were_already_running}" = "false"
         then
           wb_nomad agents stop "${server_name}" "${client_name}" "exec"
         fi
         backend_nomad stop-nomad-job "${dir}"
-        fatal "Failed to upload ${genesis_file_name}"
+        fatal "Failed to upload genesis"
       fi
-      backend_nomad deploy-genesis-wget "${dir}" \
-        "https://${s3_bucket_name}.${s3_host}/${genesis_file_name}"
+
+      # Generic download from every node.
+      local uri="https://${s3_bucket_name}.${s3_host}/${genesis_file_name}"
+      if ! backend_nomad deploy-genesis-wget "${dir}" "${uri}"
+      then
+        # File kept for debugging!
+        fatal "Deploy of genesis \"${uri}\" failed"
+      else
+        msg "$(green "Genesis \"${uri}\" deployed successfully")"
+        # Don't keep the file once ready, it's not free!
+        msg "$(blue Removing) genesis file from $(yellow "\"s3://${s3_bucket_name}\"") ..."
+        aws s3 rm                                         \
+          s3://"${s3_bucket_name}"/"${genesis_file_name}" \
+          --region "${s3_region}"                         \
+        || true
+        # Reminder to remove old files.
+        msg "Still avaiable files at $(yellow "\"s3://${s3_bucket_name}\""):"
+        aws s3 ls                   \
+          s3://"${s3_bucket_name}"/ \
+          --region "${s3_region}"
+      fi
     ;;
 
     * )

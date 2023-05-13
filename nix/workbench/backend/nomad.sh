@@ -247,6 +247,7 @@ backend_nomad() {
       jq ".[\"job\"][\"${nomad_job_name}\"][\"constraint\"] = \$constraints_array" --argjson constraints_array "${constraints_array}" "${dir}"/nomad/nomad-job.json | sponge "${dir}"/nomad/nomad-job.json
     ;;
 
+    # Called by the sub-backends, don't use `fatal` and let them do the cleaning
     deploy-genesis-wget )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
@@ -259,10 +260,12 @@ backend_nomad() {
       local uploads_array=()
       for node in ${nodes[*]}
       do
+        msg "$(blue Downloading) $(yellow "\"${uri}\"") from $(yellow "node \"${node}\"") ..."
         backend_nomad task-exec "${dir}" "${node}"               \
           "${wget_path}"/bin/wget                                \
             --output-document=/local/run/current/genesis.tar.zst \
             "${uri}"                                             \
+            --no-verbose                                         \
         > /dev/null                                              \
         &
         uploads_array+=("$!")
@@ -272,7 +275,8 @@ backend_nomad() {
       then
         if ! wait_fail_any "${uploads_array[@]}"
         then
-          fatal "Failed to upload some genesis files"
+          msg "$(red "Failed to upload some genesis files")"
+          return 1
         else
           # Unpack!
           local coreutils_path="$(jq -r ".containerPkgs.coreutils.\"nix-store-path\"" "${dir}"/container-specs.json)"
@@ -299,7 +303,8 @@ backend_nomad() {
           then
             if ! wait_fail_any "${unpacks_array[@]}"
             then
-              fatal "Failed to unpack some genesis files"
+              msg "$(red "Failed to unpack some genesis files")"
+              return 1
             fi
           fi
         fi

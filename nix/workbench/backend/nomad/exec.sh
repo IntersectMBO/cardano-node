@@ -136,29 +136,41 @@ backend_nomadexec() {
       local nomad_agents_were_already_running=$(envjqr 'nomad_agents_were_already_running')
       if ! wb_nomad webfs is-running
       then
+        msg "$(blue Starting) a local $(yellow "HTTP server")"
         if ! wb_nomad webfs start
         then
           if test "${nomad_agents_were_already_running}" = "false"
           then
-            msg "Startup of webfs failed, cleaning up ..."
+            msg "$(red "Startup of webfs failed, cleaning up ...")"
             wb_nomad agents stop "${server_name}" "${client_name}" "exec"
             backend_nomad stop-nomad-job "${dir}"
           fi
-          fatal "Failed to start HTTP server"
+          fatal "Failed to start a local HTTP server"
         fi
+      else
+        msg "$(blue Reusing) already running local $(yellow "HTTP server")"
       fi
+      msg "$(blue Creating) $(yellow "\"${nomad_job_name}.tar.zst\"") ..."
       if ! wb_nomad webfs add-genesis-dir "${dir}"/genesis "${nomad_job_name}"
       then
         if test "${nomad_agents_were_already_running}" = "false"
         then
-          msg "Startup of webfs failed, cleaning up ..."
+          msg "$(red "Startup of webfs failed, cleaning up ...")"
           wb_nomad agents stop "${server_name}" "${client_name}" "exec"
           backend_nomad stop-nomad-job "${dir}"
         fi
-        fatal "Failed to add genesis to HTTP server"
+        fatal "Failed to add genesis file to local HTTP server"
+      else
+        msg "$(green "File \"${nomad_job_name}.tar.zst\" created successfully and ready to deploy")"
       fi
-      backend_nomad deploy-genesis-wget "${dir}" \
-        "http://127.0.0.1:12000/${nomad_job_name}.tar.zst"
+      # Generic download from every node.
+      local uri="http://127.0.0.1:12000/${nomad_job_name}.tar.zst"
+      if ! backend_nomad deploy-genesis-wget "${dir}" "${uri}"
+      then
+        fatal "Deploy of genesis \"${uri}\" failed"
+      else
+        msg "$(green "Genesis \"${uri}\" deployed successfully")"
+      fi
     ;;
 
     * )
