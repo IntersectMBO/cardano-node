@@ -1,2 +1,0 @@
-JSON schema error within the script data: "<JSON>"
-JSON null values are not supported.

@@ -1,2 +1,0 @@
-The redeemer pointer: RdmrPtr Mint 0 points to a Plutus script that does not exist.
-The pointers that can be resolved are: fromList []

@@ -1,1 +1,0 @@
-ScriptWitnessIndex (redeemer pointer): ScriptWitnessIndexTxIn 1 is missing from the execution units (redeemer pointer) map: fromList [(ScriptWitnessIndexTxIn 2,ExecutionUnits {executionSteps = 1, executionMemory = 1})]

@@ -1,1 +1,0 @@
-Quantity too large (1 >= 2^64) in transaction output: TxOutInAnyEra AllegraEra (TxOut (AddressInEra (ShelleyAddressInEra ShelleyBasedEraAllegra) (ShelleyAddress Mainnet (KeyHashObj (KeyHash "250ca83514191f9ceaccee2eb3276d5ad964e17cc31a067691e04ca8")) StakeRefNull)) (TxOutAdaOnly AdaOnlyInAllegraEra (Lovelace 1)) TxOutDatumNone ReferenceScriptNone)

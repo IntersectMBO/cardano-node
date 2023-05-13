@@ -1,2 +1,0 @@
-JSON schema error within the metadata item 0: "<JSON>"
-JSON null values are not supported.

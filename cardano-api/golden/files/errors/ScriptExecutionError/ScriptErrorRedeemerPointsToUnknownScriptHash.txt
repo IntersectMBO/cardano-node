@@ -1,1 +1,0 @@
-transaction input 0 (in ascending order of the TxIds) points to a script hash that is not known.

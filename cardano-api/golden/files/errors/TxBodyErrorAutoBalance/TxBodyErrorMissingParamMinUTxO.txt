@@ -1,1 +1,0 @@
-The minUTxOValue protocol parameter is required but missing

@@ -14,10 +14,9 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2023-05-03T00:00:00Z
-  , cardano-haskell-packages 2023-04-30T00:28:07Z
+  , cardano-haskell-packages 2023-05-13T07:08:44Z
 
 packages:
-    cardano-api
     cardano-cli
     cardano-client-demo
     cardano-git-rev

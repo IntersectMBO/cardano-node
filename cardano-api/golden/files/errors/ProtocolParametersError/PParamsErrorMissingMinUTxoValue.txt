@@ -1,1 +1,0 @@
-The ConwayEra protocol parameters value is missing the following field: MinUTxoValue. Did you intend to use a ConwayEra protocol  parameters value?

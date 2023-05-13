@@ -34,7 +34,6 @@ jobs:
       STYLISH_HASKELL_PATHS: >
         cardano-testnet
         cardano-git-rev
-        cardano-api
         cardano-node
         cardano-client-demo
         cardano-node-chairman

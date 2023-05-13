@@ -1,1 +1,0 @@
-Expected Base16-encoded bytestring, but got <bytestring>; <string>

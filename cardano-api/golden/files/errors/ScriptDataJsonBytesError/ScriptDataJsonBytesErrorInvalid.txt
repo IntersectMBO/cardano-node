@@ -1,1 +1,0 @@
-ScriptData is invalid: Constructor numbers in script data value 0 is outside the range 0 .. 2^64-1.

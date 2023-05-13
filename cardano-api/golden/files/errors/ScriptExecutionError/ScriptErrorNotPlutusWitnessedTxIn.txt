@@ -1,1 +1,0 @@
-transaction input 0 (in ascending order of the TxIds) is not a Plutus script witnessed tx input and cannot be spent using a Plutus script witness.The script hash is "a0d442ce189bc932515c85be74ac939df19ea8450c03030234790921".

@@ -1,3 +1,0 @@
-JSON object does not match the schema.
-Expected a single field named "int", "bytes", "list" or "map".
-Unexpected object field(s): {"<text>":"<JSON>"}

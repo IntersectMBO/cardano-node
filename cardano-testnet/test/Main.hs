@@ -22,6 +22,8 @@ import qualified Test.ShutdownOnSlotSynced
 
 import           Testnet.Util.Ignore as H
 
+import           Test.Gen.Cardano.Api.Empty ()
+
 tests :: IO TestTree
 tests = pure $ T.testGroup "test/Spec.hs"
   [ T.testGroup "Spec"

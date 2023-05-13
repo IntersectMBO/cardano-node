@@ -1,4 +1,0 @@
-The current stake distribution is currently unstable and therefore we cannot predict the following epoch's leadership schedule. Please wait until : SlotNo 2 before running the leadership-schedule command again. 
-Current slot: SlotNo 1 
-Stability window: SlotNo 3 
-Calculated last slot of current epoch: SlotNo 4

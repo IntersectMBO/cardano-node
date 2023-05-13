@@ -1,1 +1,0 @@
-There was an error in extracting the bytes from the data part of the Bech32-encoded string.
