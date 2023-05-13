@@ -34,7 +34,9 @@ library
 
   build-depends:        cardano-api:gen
 
+  hs-source-dirs:       src
   -- These modules should match those in cardano-api:gen
+  exposed-modules:      Test.Gen.Cardano.Api.Empty
   reexported-modules:   Test.Gen.Cardano.Api,
                         Test.Gen.Cardano.Api.Metadata,
                         Test.Gen.Cardano.Api.Typed,
