@@ -35,18 +35,17 @@ import           Options.Applicative
 import           System.Directory (doesFileExist, removeFile)
 
 import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesisData)
-
 import qualified Cardano.Crypto.Hash.Blake2b as Crypto
 import qualified Cardano.Crypto.Hash.Class as Crypto
 
+import qualified Testnet.Util.Process as H
+
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
 import           Hedgehog.Extras.Test.Process (ExecConfig)
 import           Hedgehog.Internal.Property (MonadTest)
-
-import qualified Hedgehog.Extras.Test.Concurrent as H
-import qualified Testnet.Util.Process as H
 
 -- | Submit the desired epoch to wait to.
 waitUntilEpoch

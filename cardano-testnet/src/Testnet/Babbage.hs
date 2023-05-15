@@ -14,7 +14,6 @@ module Testnet.Babbage
   , babbageTestnet
   ) where
 
-import           Cardano.Api
 import           Prelude
 
 import           Control.Monad
@@ -23,14 +22,10 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
 import qualified Data.Time.Clock as DTC
-import qualified Hedgehog as H
-import qualified Hedgehog.Extras.Stock.Aeson as J
-import qualified Hedgehog.Extras.Stock.OS as OS
-import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.File as H
 import           System.FilePath.Posix ((</>))
 import qualified System.Info as OS
 
+import           Cardano.Api
 
 import           Testnet.Commands.Genesis
 import qualified Testnet.Conf as H
@@ -43,6 +38,11 @@ import           Testnet.Util.Runtime (Delegator (..), PaymentKeyPair (..), Pool
                    PoolNodeKeys (..), StakingKeyPair (..), TestnetRuntime (..), startNode)
 import           Testnet.Utils
 
+import qualified Hedgehog as H
+import qualified Hedgehog.Extras.Stock.Aeson as J
+import qualified Hedgehog.Extras.Stock.OS as OS
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
 
 {- HLINT ignore "Redundant flip" -}
 
