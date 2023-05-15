@@ -14,7 +14,6 @@ module Testnet.Cardano
   , TestnetNodeOptions(..)
   , cardanoDefaultTestnetNodeOptions
 
-  , Era(..)
   , TestnetRuntime (..)
   , PaymentKeyPair(..)
 
@@ -22,6 +21,8 @@ module Testnet.Cardano
   ) where
 
 import           Prelude
+
+import           Cardano.Api hiding (cardanoEra)
 
 import           Control.Monad
 import           Control.Monad.IO.Class (MonadIO)
@@ -86,13 +87,11 @@ data ForkPoint
   | AtEpoch Int
   deriving (Show, Eq, Read)
 
-data Era = Byron | Shelley | Allegra | Mary | Alonzo deriving (Eq, Enum, Bounded, Read, Show)
-
 data CardanoTestnetOptions = CardanoTestnetOptions
   { -- | List of node options. Each option will result in a single node being
     -- created.
     cardanoNodes :: [TestnetNodeOptions]
-  , cardanoEra :: Era
+  , cardanoEra :: AnyCardanoEra
   , cardanoEpochLength :: Int
   , cardanoSlotLength :: Double
   , cardanoActiveSlotsCoeff :: Double
@@ -104,7 +103,7 @@ data CardanoTestnetOptions = CardanoTestnetOptions
 defaultTestnetOptions :: CardanoTestnetOptions
 defaultTestnetOptions = CardanoTestnetOptions
   { cardanoNodes = cardanoDefaultTestnetNodeOptions
-  , cardanoEra = Alonzo
+  , cardanoEra = AnyCardanoEra AlonzoEra
   , cardanoEpochLength = 1500
   , cardanoSlotLength = 0.2
   , cardanoActiveSlotsCoeff = 0.2
@@ -656,12 +655,17 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   alonzoGenesisHash <- getShelleyGenesisHash (tempAbsPath </> "shelley/genesis.alonzo.json") "AlonzoGenesisHash"
   conwayGenesisHash <- getShelleyGenesisHash (tempAbsPath </> "shelley/genesis.conway.json") "ConwayGenesisHash"
 
-  -- TODO: We default to defaultYamlConfig however to enable forking to the appropriate era, we need
+  -- TODO: We default to defaultYamlHardforkViaConfig however to enable forking to the appropriate era, we need
   -- to be able to create the appropriate default config value, based on the era.
   -- i.e defaultConfigValue :: CardanoEra era -> Aeson.Value. Do this in a separate PR.
 
   let finalYamlConfig :: LBS.ByteString
-      finalYamlConfig = J.encode $ J.Object $ mconcat [byronGenesisHash, shelleyGenesisHash, alonzoGenesisHash, conwayGenesisHash, defaultYamlConfig]
+      finalYamlConfig = J.encode . J.Object
+                                 $ mconcat [ byronGenesisHash
+                                           , shelleyGenesisHash
+                                           , alonzoGenesisHash
+                                           , conwayGenesisHash
+                                           , defaultYamlHardforkViaConfig $ cardanoEra testnetOptions]
 
   H.evalIO $ LBS.writeFile (tempAbsPath </> "configuration.yaml") finalYamlConfig
 

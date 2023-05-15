@@ -59,7 +59,7 @@ import           Cardano.Api.Shelley
 
 import           Cardano.Chain.Common (BlockCount (BlockCount))
 
-import           Cardano.CLI.Common.Parsers (pConsensusModeParams, pNetworkId, pSocketPath)
+import           Cardano.CLI.Common.Parsers
 import           Cardano.CLI.Environment (EnvCli (..))
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (DelegationTarget (..), PaymentVerifier (..),
@@ -2167,36 +2167,6 @@ pTxSubmitFile =
     <> Opt.help "Filepath of the transaction you intend to submit."
     <> Opt.completer (Opt.bashCompleter "file")
     )
-
-pCardanoEra :: Parser AnyCardanoEra
-pCardanoEra = asum
-  [ Opt.flag' (AnyCardanoEra ByronEra)
-      (  Opt.long "byron-era"
-      <> Opt.help "Specify the Byron era"
-      )
-  , Opt.flag' (AnyCardanoEra ShelleyEra)
-      (  Opt.long "shelley-era"
-      <> Opt.help "Specify the Shelley era"
-      )
-  , Opt.flag' (AnyCardanoEra AllegraEra)
-      (  Opt.long "allegra-era"
-      <> Opt.help "Specify the Allegra era"
-      )
-  , Opt.flag' (AnyCardanoEra MaryEra)
-      (  Opt.long "mary-era"
-      <> Opt.help "Specify the Mary era"
-      )
-  , Opt.flag' (AnyCardanoEra AlonzoEra)
-      (  Opt.long "alonzo-era"
-      <> Opt.help "Specify the Alonzo era"
-      )
-  , Opt.flag' (AnyCardanoEra BabbageEra)
-      (  Opt.long "babbage-era"
-      <> Opt.help "Specify the Babbage era (default)"
-      )
-    -- Default for now:
-  , pure (AnyCardanoEra BabbageEra)
-  ]
 
 pTxIn :: BalanceTxExecUnits
       -> Parser (TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))

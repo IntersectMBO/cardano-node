@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -8,9 +8,10 @@
 module Testnet.Options
   ( BabbageTestnetOptions(..)
   , defaultTestnetOptions
-  , defaultYamlConfig
+  , defaultYamlHardforkViaConfig
   ) where
 
+import           Cardano.Api
 import           Prelude
 
 import qualified Data.Aeson as Aeson
@@ -43,9 +44,10 @@ defaultTestnetOptions = BabbageTestnetOptions
   , babbageNodeLoggingFormat = NodeLoggingFormatAsJson
   }
 
-
-defaultYamlConfig :: KeyMapAeson.KeyMap Aeson.Value
-defaultYamlConfig =
+-- | Configuration value that allows you to hardfork to any Cardano era
+-- at epoch 0.
+defaultYamlHardforkViaConfig :: AnyCardanoEra -> KeyMapAeson.KeyMap Aeson.Value
+defaultYamlHardforkViaConfig era =
   mconcat $ map (uncurry KeyMapAeson.singleton)
     [
     -- TODO: Remnants from the Byron era that we can actually eliminate
@@ -84,21 +86,6 @@ defaultYamlConfig =
     -- See: https://github.com/input-output-hk/cardano-ledger/blob/master/eras/byron/ledger/impl/doc/network-magic.md
     , ("RequiresNetworkMagic", "RequiresMagic")
 
-    -- Thhe protocol version number gets used by block producing nodes as part
-    -- of the system for agreeing on and synchronising protocol updates.
-    , ("LastKnownBlockVersion-Major", Aeson.Number 6)
-    , ("LastKnownBlockVersion-Minor", Aeson.Number 0)
-    , ("LastKnownBlockVersion-Alt", Aeson.Number 0)
-
-    -- Allows a direct hardfork to an era of your choice via the configuration.
-    -- This removes the usual requirement for submitting an update proposal,
-    -- waiting for the protocol to change and then restarting the nodes.
-    , ("ExperimentalHardForksEnabled", Aeson.Bool True)
-    , ("TestShelleyHardForkAtEpoch", Aeson.Number 0)
-    , ("TestAllegraHardForkAtEpoch", Aeson.Number 0)
-    , ("TestMaryHardForkAtEpoch", Aeson.Number 0)
-    , ("TestAlonzoHardForkAtEpoch", Aeson.Number 0)
-
     -- Enable peer to peer discovery
     , ("EnableP2P", Aeson.Bool False)
 
@@ -109,9 +96,116 @@ defaultYamlConfig =
     , ("setupBackends", Aeson.Array $ Vector.fromList ["KatipBK"])
     , ("defaultBackends", Aeson.Array $ Vector.fromList ["KatipBK"])
     , ("options", Aeson.object mempty)
-    ] ++ tracers
+    ] ++ tracers ++ protocolVersions era ++ hardforkViaConfig era
+
  where
+  -- The protocol version number gets used by block producing nodes as part
+  -- of the system for agreeing on and synchronising protocol updates.
+  -- NB: We follow the mainnet protocol versions and assume the latest
+  -- protocol version for a given era that has had an intraera hardfork.
+  protocolVersions :: AnyCardanoEra -> [KeyMapAeson.KeyMap Aeson.Value]
+  protocolVersions (AnyCardanoEra era') =
+    case era' of
+      ByronEra ->
+        map (uncurry KeyMapAeson.singleton)
+          -- We assume Byron with Ouroboros permissive BFT
+          [ ("LastKnownBlockVersion-Major", Aeson.Number 1)
+          , ("LastKnownBlockVersion-Minor", Aeson.Number 0)
+          , ("LastKnownBlockVersion-Alt", Aeson.Number 0)
+          ]
+      ShelleyEra ->
+        map (uncurry KeyMapAeson.singleton)
+          [ ("LastKnownBlockVersion-Major", Aeson.Number 2)
+          , ("LastKnownBlockVersion-Minor", Aeson.Number 0)
+          , ("LastKnownBlockVersion-Alt", Aeson.Number 0)
+          ]
+      AllegraEra ->
+        map (uncurry KeyMapAeson.singleton)
+          [ ("LastKnownBlockVersion-Major", Aeson.Number 3)
+          , ("LastKnownBlockVersion-Minor", Aeson.Number 0)
+          , ("LastKnownBlockVersion-Alt", Aeson.Number 0)
+          ]
+      MaryEra ->
+        map (uncurry KeyMapAeson.singleton)
+          [ ("LastKnownBlockVersion-Major", Aeson.Number 4)
+          , ("LastKnownBlockVersion-Minor", Aeson.Number 0)
+          , ("LastKnownBlockVersion-Alt", Aeson.Number 0)
+          ]
+      AlonzoEra ->
+        map (uncurry KeyMapAeson.singleton)
+          [ ("LastKnownBlockVersion-Major", Aeson.Number 5)
+          , ("LastKnownBlockVersion-Minor", Aeson.Number 0)
+          , ("LastKnownBlockVersion-Alt", Aeson.Number 0)
+          ]
+      BabbageEra ->
+        map (uncurry KeyMapAeson.singleton)
+          [ ("LastKnownBlockVersion-Major", Aeson.Number 8)
+          , ("LastKnownBlockVersion-Minor", Aeson.Number 0)
+          , ("LastKnownBlockVersion-Alt", Aeson.Number 0)
+          ]
+      ConwayEra ->
+        map (uncurry KeyMapAeson.singleton)
+          [ ("LastKnownBlockVersion-Major", Aeson.Number 9)
+          , ("LastKnownBlockVersion-Minor", Aeson.Number 0)
+          , ("LastKnownBlockVersion-Alt", Aeson.Number 0)
+          ]
+
+  -- Allows a direct hardfork to an era of your choice via the configuration.
+  -- This removes the usual requirement for submitting an update proposal,
+  -- waiting for the protocol to change and then restarting the nodes.
+  hardforkViaConfig :: AnyCardanoEra -> [KeyMapAeson.KeyMap Aeson.Value]
+  hardforkViaConfig (AnyCardanoEra era') =
+    case era' of
+      ByronEra -> []
+      ShelleyEra ->
+        map (uncurry KeyMapAeson.singleton)
+          [ ("ExperimentalHardForksEnabled", Aeson.Bool True)
+          , ("TestShelleyHardForkAtEpoch", Aeson.Number 0)
+          ]
+      AllegraEra ->
+        map (uncurry KeyMapAeson.singleton)
+          [ ("ExperimentalHardForksEnabled", Aeson.Bool True)
+          , ("TestShelleyHardForkAtEpoch", Aeson.Number 0)
+          , ("TestAllegraHardForkAtEpoch", Aeson.Number 0)
+          ]
+      MaryEra ->
+        map (uncurry KeyMapAeson.singleton)
+          [ ("ExperimentalHardForksEnabled", Aeson.Bool True)
+          , ("TestShelleyHardForkAtEpoch", Aeson.Number 0)
+          , ("TestAllegraHardForkAtEpoch", Aeson.Number 0)
+          , ("TestMaryHardForkAtEpoch", Aeson.Number 0)
+          ]
+      AlonzoEra ->
+        map (uncurry KeyMapAeson.singleton)
+          [ ("ExperimentalHardForksEnabled", Aeson.Bool True)
+          , ("TestShelleyHardForkAtEpoch", Aeson.Number 0)
+          , ("TestAllegraHardForkAtEpoch", Aeson.Number 0)
+          , ("TestMaryHardForkAtEpoch", Aeson.Number 0)
+          , ("TestAlonzoHardForkAtEpoch", Aeson.Number 0)
+          ]
+      BabbageEra ->
+        map (uncurry KeyMapAeson.singleton)
+          [ ("ExperimentalHardForksEnabled", Aeson.Bool True)
+          , ("TestShelleyHardForkAtEpoch", Aeson.Number 0)
+          , ("TestAllegraHardForkAtEpoch", Aeson.Number 0)
+          , ("TestMaryHardForkAtEpoch", Aeson.Number 0)
+          , ("TestAlonzoHardForkAtEpoch", Aeson.Number 0)
+          , ("TestBabbageHardForkAtEpoch", Aeson.Number 0)
+          ]
+      ConwayEra ->
+        map (uncurry KeyMapAeson.singleton)
+          [ ("ExperimentalHardForksEnabled", Aeson.Bool True)
+          , ("TestShelleyHardForkAtEpoch", Aeson.Number 0)
+          , ("TestAllegraHardForkAtEpoch", Aeson.Number 0)
+          , ("TestMaryHardForkAtEpoch", Aeson.Number 0)
+          , ("TestAlonzoHardForkAtEpoch", Aeson.Number 0)
+          , ("TestBabbageHardForkAtEpoch", Aeson.Number 0)
+          , ("TestConwayHardForkAtEpoch", Aeson.Number 0)
+          ]
+
+
   -- | Various tracers we can turn on or off
+  tracers :: [KeyMapAeson.KeyMap Aeson.Value]
   tracers = map (\(k,v) -> KeyMapAeson.singleton (Key.fromText k) v)
     [ (proxyName (Proxy @TraceBlockFetchClient), Aeson.Bool False)
     , (proxyName (Proxy @TraceBlockFetchDecisions), Aeson.Bool False)

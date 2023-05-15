@@ -1,12 +1,13 @@
 module Cardano.CLI.Common.Parsers
-  ( pNetworkId
+  ( pCardanoEra
+  , pNetworkId
   , pConsensusModeParams
   , pSocketPath
   ) where
 
-import           Cardano.Api (AnyConsensusModeParams (..), ConsensusModeParams (..),
-                   EpochSlots (..), File (..), NetworkId (..), NetworkMagic (..), SocketPath,
-                   bounded)
+import           Cardano.Api (AnyCardanoEra (..), AnyConsensusModeParams (..), CardanoEra (..),
+                   ConsensusModeParams (..), EpochSlots (..), File (..), NetworkId (..),
+                   NetworkMagic (..), SocketPath, bounded)
 import           Cardano.CLI.Environment (EnvCli (..))
 
 import           Data.Foldable
@@ -14,6 +15,36 @@ import           Data.Maybe (maybeToList)
 import           Data.Word (Word64)
 import           Options.Applicative (Parser)
 import qualified Options.Applicative as Opt
+
+pCardanoEra :: Parser AnyCardanoEra
+pCardanoEra = asum
+  [ Opt.flag' (AnyCardanoEra ByronEra)
+      (  Opt.long "byron-era"
+      <> Opt.help "Specify the Byron era"
+      )
+  , Opt.flag' (AnyCardanoEra ShelleyEra)
+      (  Opt.long "shelley-era"
+      <> Opt.help "Specify the Shelley era"
+      )
+  , Opt.flag' (AnyCardanoEra AllegraEra)
+      (  Opt.long "allegra-era"
+      <> Opt.help "Specify the Allegra era"
+      )
+  , Opt.flag' (AnyCardanoEra MaryEra)
+      (  Opt.long "mary-era"
+      <> Opt.help "Specify the Mary era"
+      )
+  , Opt.flag' (AnyCardanoEra AlonzoEra)
+      (  Opt.long "alonzo-era"
+      <> Opt.help "Specify the Alonzo era"
+      )
+  , Opt.flag' (AnyCardanoEra BabbageEra)
+      (  Opt.long "babbage-era"
+      <> Opt.help "Specify the Babbage era (default)"
+      )
+    -- Default for now:
+  , pure (AnyCardanoEra BabbageEra)
+  ]
 
 pNetworkId :: EnvCli -> Parser NetworkId
 pNetworkId envCli = asum $ mconcat

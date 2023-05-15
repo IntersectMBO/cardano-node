@@ -9,8 +9,8 @@ module Cardano.TxSubmit.CLI.Parsers
 
 import           Cardano.Api (File (..), SocketPath)
 
+import           Cardano.CLI.Common.Parsers
 import           Cardano.CLI.Environment (EnvCli (..))
-import           Cardano.CLI.Parsers (pConsensusModeParams, pNetworkId)
 
 import           Cardano.TxSubmit.CLI.Types (ConfigFile (..), TxSubmitNodeParams (..))
 import           Cardano.TxSubmit.Rest.Parsers (pWebserverConfig)
@@ -32,7 +32,7 @@ pTxSubmitNodeParams envCli = TxSubmitNodeParams
   <$> pConfigFile
   <*> pConsensusModeParams
   <*> pNetworkId envCli
-  <*> pSocketPath
+  <*> pSocketPath'
   <*> pWebserverConfig 8090
   <*> pMetricsPort 8081
 
@@ -44,8 +44,8 @@ pConfigFile = ConfigFile <$> Opt.strOption
   <>  Opt.metavar "FILEPATH"
   )
 
-pSocketPath :: Parser SocketPath
-pSocketPath =
+pSocketPath' :: Parser SocketPath
+pSocketPath' =
   fmap File $ Opt.strOption $ mconcat
     [ Opt.long "socket-path"
     , Opt.help "Path to a cardano-node socket"
