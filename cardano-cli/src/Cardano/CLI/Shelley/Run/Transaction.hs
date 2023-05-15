@@ -100,7 +100,7 @@ data ShelleyTxCmdError
   | ShelleyTxCmdPlutusScriptsRequireCardanoMode
   | ShelleyTxCmdProtocolParametersNotPresentInTxBody
   | ShelleyTxCmdTxEraCastErr EraCastError
-  | ShelleyTxCmdQueryConvenienceError !QueryConvenienceError
+  | ShelleyTxCmdQueryConvenienceError !AllQueryErrors
   | ShelleyTxCmdQueryNotScriptLocked !ScriptLockedTxInsError
   | ShelleyTxCmdScriptDataError !ScriptDataError
   | ShelleyTxCmdCddlError CddlError
@@ -195,8 +195,7 @@ renderShelleyTxCmdError err =
       ]
     ShelleyTxCmdTxEraCastErr (EraCastError value fromEra toEra) ->
       "Unable to cast era from " <> textShow fromEra <> " to " <> textShow toEra <> " the value " <> textShow value
-    ShelleyTxCmdQueryConvenienceError e ->
-      renderQueryConvenienceError e
+    ShelleyTxCmdQueryConvenienceError e -> Text.pack $ show e
     ShelleyTxCmdQueryNotScriptLocked e ->
       renderNotScriptLockedTxInsError e
     ShelleyTxCmdPlutusScriptsRequireCardanoMode ->
