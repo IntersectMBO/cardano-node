@@ -67,7 +67,7 @@ data QueryConvenienceError
   = AcqFailure AcquiringFailure
   | QueryEraMismatch EraMismatch
   | ByronEraNotSupported
-  | EraConsensusModeMismatch !AnyConsensusMode !AnyCardanoEra
+  | EraConsensusModeMismatch !InvalidEraInMode
   | QueryConvenienceUnsupportedNodeToClientVersion !UnsupportedNtcVersionError
 
 renderQueryConvenienceError :: QueryConvenienceError -> Text
@@ -79,7 +79,7 @@ renderQueryConvenienceError (QueryEraMismatch (EraMismatch ledgerEraName' otherE
   " era, but the transaction is for the " <> otherEraName' <> " era."
 renderQueryConvenienceError ByronEraNotSupported =
   "Byron era not supported"
-renderQueryConvenienceError (EraConsensusModeMismatch cMode anyCEra) =
+renderQueryConvenienceError (EraConsensusModeMismatch (InvalidEraInMode anyCEra cMode)) =
   "Consensus mode and era mismatch. Consensus mode: " <> textShow cMode <>
   " Era: " <> textShow anyCEra
 renderQueryConvenienceError (QueryConvenienceUnsupportedNodeToClientVersion
@@ -101,12 +101,13 @@ requireShelleyBasedEra_ = \case
 handleQueryConvenienceErrors_ :: ()
   => Monad m
   => e `CouldBe` QueryConvenienceError
-  => ExceptT (Variant (EraMismatch : AcquiringFailure : UnsupportedNtcVersionError : e)) m a
+  => ExceptT (Variant (EraMismatch : AcquiringFailure : UnsupportedNtcVersionError : InvalidEraInMode : e)) m a
   -> ExceptT (Variant e) m a
 handleQueryConvenienceErrors_ f = f
   & OO.catch @EraMismatch (OO.throw . QueryEraMismatch)
   & OO.catch @AcquiringFailure (OO.throw . AcqFailure)
   & OO.catch @UnsupportedNtcVersionError (OO.throw . QueryConvenienceUnsupportedNodeToClientVersion)
+  & OO.catch @InvalidEraInMode (OO.throw . EraConsensusModeMismatch)
 
 queryUtxo_ :: ()
   => e `CouldBe` UnsupportedNtcVersionError
@@ -198,6 +199,7 @@ queryStateForBalancedTx socketPath era networkId allTxIns certs = runExceptT $ O
     & OO.catch @EraMismatch (OO.throw . QueryEraMismatch)
     & OO.catch @AcquiringFailure (OO.throw . AcqFailure)
     & OO.catch @UnsupportedNtcVersionError (OO.throw . QueryConvenienceUnsupportedNodeToClientVersion)
+    & OO.catch @InvalidEraInMode (OO.throw . EraConsensusModeMismatch)
 
 -- | A convenience function to query the relevant information, from
 -- the local node, for Cardano.Api.Convenience.Construction.constructBalancedTx
@@ -206,6 +208,7 @@ queryStateForBalancedTx_ :: ()
   => e `CouldBe` AcquiringFailure
   => e `CouldBe` UnsupportedNtcVersionError
   => e `CouldBe` EraMismatch
+  => e `CouldBe` InvalidEraInMode
   => SocketPath
   -> CardanoEra era
   -> NetworkId
@@ -226,8 +229,7 @@ queryStateForBalancedTx_ socketPath era networkId allTxIns certs = do
 
   qSbe <- getSbe (cardanoEraStyle era) & OO.hoistEither
 
-  qeInMode <- toEraInMode era CardanoMode
-    & OO.hoistMaybe (EraConsensusModeMismatch (AnyConsensusMode CardanoMode) (getIsCardanoEraConstraint era $ AnyCardanoEra era))
+  qeInMode <- toEraInMode_ era CardanoMode
 
   let stakeCreds = Set.fromList $ flip mapMaybe certs $ \case
         StakeAddressDeregistrationCertificate cred -> Just cred
@@ -299,9 +301,9 @@ executeQueryAnyMode era localNodeConnInfo q = runExceptT $ do
   let cMode = consensusModeOnly $ localConsensusModeParams localNodeConnInfo
 
   eraInMode <- pure (toEraInMode era cMode)
-    & onNothing (left $ EraConsensusModeMismatch
-        (AnyConsensusMode CardanoMode)
-        (getIsCardanoEraConstraint era $ AnyCardanoEra era))
+    & onNothing (left $ EraConsensusModeMismatch $ InvalidEraInMode
+        (getIsCardanoEraConstraint era $ AnyCardanoEra era)
+        (AnyConsensusMode CardanoMode))
 
   case eraInMode of
     ByronEraInByronMode -> left ByronEraNotSupported

@@ -116,7 +116,7 @@ data ShelleyQueryCmdError
   | ShelleyQueryCmdWriteFileError !(FileError ())
   | ShelleyQueryCmdHelpersError !HelpersError
   | ShelleyQueryCmdAcquireFailure !AcquiringFailure
-  | ShelleyQueryCmdEraConsensusModeMismatch !AnyConsensusMode !AnyCardanoEra
+  | ShelleyQueryCmdEraConsensusModeMismatch !InvalidEraInMode
   | ShelleyQueryCmdByronEra
   | ShelleyQueryCmdEraMismatch !EraMismatch
   | ShelleyQueryCmdUnsupportedMode !AnyConsensusMode
@@ -142,7 +142,7 @@ renderShelleyQueryCmdError err =
     ShelleyQueryCmdHelpersError helpersErr -> renderHelpersError helpersErr
     ShelleyQueryCmdAcquireFailure acquireFail -> Text.pack $ show acquireFail
     ShelleyQueryCmdByronEra -> "This query cannot be used for the Byron era"
-    ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) (AnyCardanoEra era) ->
+    ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode (AnyCardanoEra era) (AnyConsensusMode cMode)) ->
       "Consensus mode and era mismatch. Consensus mode: " <> textShow cMode <>
       " Era: " <> textShow era
     ShelleyQueryCmdEraMismatch (EraMismatch ledgerEra queryEra) ->
@@ -211,14 +211,13 @@ runQueryProtocolParameters socketPath (AnyConsensusModeParams cModeParams) netwo
   result <- runOopsInExceptT @ShelleyQueryCmdError $ do
     executeLocalStateQueryExpr_ localNodeConnInfo Nothing
       (do
-          anyE@(AnyCardanoEra era) <- determineEraExpr_ cModeParams
+          AnyCardanoEra era <- determineEraExpr_ cModeParams
 
           sbe <- requireShelleyBasedEra_ (cardanoEraStyle era)
 
           let cMode = consensusModeOnly cModeParams
 
-          eInMode <- toEraInMode era cMode
-            & OO.hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
+          eInMode <- toEraInMode_ era cMode
 
           queryExpr_ (QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters)
             & OO.onLeft (OO.throw . ShelleyQueryCmdEraMismatch))
@@ -226,6 +225,7 @@ runQueryProtocolParameters socketPath (AnyConsensusModeParams cModeParams) netwo
       & OO.catch @RequireShelleyBasedEra (OO.throw . ShelleyQueryCmdRequireShelleyBasedEra)
       & OO.catch @AcquiringFailure (OO.throw . ShelleyQueryCmdAcquireFailure)
       & OO.catch @UnsupportedNtcVersionError (OO.throw . ShelleyQueryCmdUnsupportedNtcVersion)
+      & OO.catch @InvalidEraInMode (OO.throw . ShelleyQueryCmdEraConsensusModeMismatch)
 
 
   writeProtocolParameters mOutFile result
@@ -383,7 +383,7 @@ runQueryUTxO socketPath (AnyConsensusModeParams cModeParams)
   sbe <- getSbe $ cardanoEraStyle era
 
   eInMode <- pure (toEraInMode era cMode)
-    & onNothing (left (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE))
+    & onNothing (left (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode anyE (AnyConsensusMode cMode))))
 
   let query   = QueryInShelleyBasedEra sbe (QueryUTxO qfilter)
       qInMode = QueryInEra eInMode query
@@ -413,7 +413,7 @@ runQueryKesPeriodInfo socketPath (AnyConsensusModeParams cModeParams) network no
   case cMode of
     CardanoMode -> do
       eInMode <- toEraInMode era cMode
-        & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
+        & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode anyE (AnyConsensusMode cMode)))
 
       -- We check that the KES period specified in the operational certificate is correct
       -- based on the KES period defined in the genesis parameters and the current slot number
@@ -675,7 +675,7 @@ runQueryPoolState socketPath (AnyConsensusModeParams cModeParams) network poolId
   sbe <- getSbe $ cardanoEraStyle era
 
   eInMode <- toEraInMode era cMode
-    & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
+    & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode anyE (AnyConsensusMode cMode)))
 
   let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryPoolState $ Just $ Set.fromList poolIds
   result <- executeQuery era cModeParams localNodeConnInfo qInMode
@@ -698,7 +698,7 @@ runQueryTxMempool socketPath (AnyConsensusModeParams cModeParams) network query 
           & onLeft (left . ShelleyQueryCmdAcquireFailure)
         let cMode = consensusModeOnly cModeParams
         eInMode <- toEraInMode era cMode
-          & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
+          & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode anyE (AnyConsensusMode cMode)))
         pure $ LocalTxMonitoringQueryTx $ TxIdInMode tx eInMode
       TxMempoolQueryNextTx -> pure LocalTxMonitoringSendNextTx
       TxMempoolQueryInfo -> pure LocalTxMonitoringMempoolInformation
@@ -731,7 +731,7 @@ runQueryStakeSnapshot socketPath (AnyConsensusModeParams cModeParams) network al
   sbe <- getSbe $ cardanoEraStyle era
 
   eInMode <- toEraInMode era cMode
-    & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
+    & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode anyE (AnyConsensusMode cMode)))
 
   let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryStakeSnapshot $ case allOrOnlyPoolIds of
         All -> Nothing
@@ -757,7 +757,7 @@ runQueryLedgerState socketPath (AnyConsensusModeParams cModeParams) network mOut
   sbe <- getSbe $ cardanoEraStyle era
 
   eInMode <- pure (toEraInMode era cMode)
-    & onNothing (left (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE))
+    & onNothing (left (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode anyE (AnyConsensusMode cMode))))
 
   let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryDebugLedgerState
 
@@ -781,7 +781,7 @@ runQueryProtocolState socketPath (AnyConsensusModeParams cModeParams) network mO
   sbe <- getSbe $ cardanoEraStyle era
 
   eInMode <- pure (toEraInMode era cMode)
-    & onNothing (left (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE))
+    & onNothing (left (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode anyE (AnyConsensusMode cMode))))
 
   let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryProtocolState
 
@@ -811,7 +811,7 @@ runQueryStakeAddressInfo socketPath (AnyConsensusModeParams cModeParams) (StakeA
   sbe <- getSbe $ cardanoEraStyle era
 
   eInMode <- pure (toEraInMode era cMode)
-    & onNothing (left (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE))
+    & onNothing (left (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode anyE (AnyConsensusMode cMode))))
 
   let stakeAddr = Set.singleton $ fromShelleyStakeCredential addr
       query = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryStakeAddresses stakeAddr network
@@ -1049,7 +1049,7 @@ runQueryStakePools socketPath (AnyConsensusModeParams cModeParams) network mOutF
         let cMode = consensusModeOnly cModeParams
 
         eInMode <- toEraInMode era cMode
-          & OO.hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
+          & OO.hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode anyE (AnyConsensusMode cMode)))
 
         sbe <- getSbeInQuery_ $ cardanoEraStyle era
 
@@ -1090,7 +1090,7 @@ runQueryStakeDistribution socketPath (AnyConsensusModeParams cModeParams) networ
   sbe <- getSbe $ cardanoEraStyle era
 
   eInMode <- pure (toEraInMode era cMode)
-    & onNothing (left (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE))
+    & onNothing (left (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode anyE (AnyConsensusMode cMode))))
 
   let query = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryStakeDistribution
 
@@ -1224,7 +1224,7 @@ runQueryLeadershipSchedule
   case cMode of
     CardanoMode -> do
       eInMode <- toEraInMode era cMode
-          & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
+        & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode anyE (AnyConsensusMode cMode)))
 
       let pparamsQuery = QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
           ptclStateQuery = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryProtocolState
@@ -1345,7 +1345,7 @@ calcEraInMode
   -> ExceptT ShelleyQueryCmdError IO (EraInMode era mode)
 calcEraInMode era mode =
   pure (toEraInMode era mode)
-    & onNothing (left (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode mode) (anyCardanoEra era)))
+    & onNothing (left (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode (anyCardanoEra era) (AnyConsensusMode mode))))
 
 executeQuery
   :: forall result era mode. CardanoEra era

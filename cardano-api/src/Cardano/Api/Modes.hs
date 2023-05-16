@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -25,6 +26,10 @@ module Cardano.Api.Modes (
     anyEraInModeToAnyEra,
     AnyEraInMode(..),
     toEraInMode,
+    toEraInMode_,
+
+    -- * Errors
+    InvalidEraInMode(..),
 
     -- * The protocols supported in each era
     ConsensusProtocol,
@@ -43,11 +48,16 @@ module Cardano.Api.Modes (
     fromConsensusEraIndex,
   ) where
 
+import           Cardano.Api.Convenience.Constraints
 import           Cardano.Api.Eras
 import           Cardano.Ledger.Crypto (StandardCrypto)
 
+import           Control.Monad.Except (ExceptT)
+import           Control.Monad.Oops (CouldBe, Variant)
+import qualified Control.Monad.Oops as OO
 import           Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value)
 import           Data.Aeson.Types (Parser, prependFailure, typeMismatch)
+import           Data.Function ((&))
 import           Data.SOP.Strict (K (K), NS (S, Z))
 import           Data.Text (Text)
 
@@ -142,6 +152,20 @@ toEraInMode MaryEra    CardanoMode = Just MaryEraInCardanoMode
 toEraInMode AlonzoEra  CardanoMode = Just AlonzoEraInCardanoMode
 toEraInMode BabbageEra CardanoMode = Just BabbageEraInCardanoMode
 toEraInMode ConwayEra  CardanoMode = Just ConwayEraInCardanoMode
+
+data InvalidEraInMode = InvalidEraInMode !AnyCardanoEra !AnyConsensusMode
+  deriving Show
+
+toEraInMode_ :: ()
+  => Monad m
+  => e `CouldBe` InvalidEraInMode
+  => CardanoEra era
+  -> ConsensusMode mode
+  -> ExceptT (Variant e) m (EraInMode era mode)
+toEraInMode_ cEra cMode =
+  getIsCardanoEraConstraint cEra $
+    toEraInMode cEra cMode
+      & OO.hoistMaybe (InvalidEraInMode (AnyCardanoEra cEra) (AnyConsensusMode cMode))
 
 -- | A representation of which 'CardanoEra's are included in each
 -- 'ConsensusMode'.
