@@ -25,7 +25,6 @@ module Cardano.CLI.Shelley.Run.Query
   , determineEra
   , mergeDelegsAndRewards
   , percentage
-  , executeQuery
   ) where
 
 import           Cardano.Api
@@ -43,8 +42,8 @@ import           Control.Monad.Oops (CouldBe, Variant, runOopsInEither, runOopsI
 import qualified Control.Monad.Oops as OO
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Except (ExceptT (..), except, runExcept, runExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
-                   hoistMaybe, left, onLeft, onNothing)
+import           Control.Monad.Trans.Except.Extra (handleIOExceptT, hoistEither, hoistMaybe, left,
+                   onLeft, onNothing)
 import           Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.Aeson.Types as Aeson
@@ -1179,70 +1178,56 @@ runQueryLeadershipSchedule
   shelleyGenesis <- lift (readAndDecodeShelleyGenesis genFile)
     & onLeft (left . ShelleyQueryCmdGenesisReadError)
 
-  let cMode = consensusModeOnly cModeParams
+  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
 
-  case cMode of
+  tip <- liftIO $ getLocalChainTip localNodeConnInfo
+
+  case consensusModeOnly cModeParams of
     CardanoMode -> do
-      let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
-
-      anyE@(AnyCardanoEra era) <- lift (determineEra cModeParams localNodeConnInfo)
-        & onLeft (left . ShelleyQueryCmdAcquireFailure)
-
-      sbe <- getSbe (cardanoEraStyle era)
-
-      eInMode <- toEraInMode era cMode
-        & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode anyE (AnyConsensusMode cMode)))
-
-      (pparams, ptclState, eraHistory) <- runOopsInExceptT @ShelleyQueryCmdError $
-        executeLocalStateQueryExpr_ localNodeConnInfo Nothing
-          ( do  pparams <- queryProtocolParameters_ eInMode sbe
+      runOopsInExceptT @ShelleyQueryCmdError $ do
+        (eInfo, schedule) <- executeLocalStateQueryExpr_ localNodeConnInfo Nothing
+          ( do  ShelleyBasedEraWithEraInMode sbe eInMode <- determineShelleyBasedEraWithEraInMode_ cModeParams
+                let era = shelleyBasedToCardanoEra sbe
+                pparams <- queryProtocolParameters_ eInMode sbe
                 ptclState <- queryProtocolState_ eInMode sbe
                 eraHistory <- queryEraHistory_ CardanoModeIsMultiEra
-                pure (pparams, ptclState, eraHistory)
+                let eInfo = toEpochInfo eraHistory
+                currentEpoch <- queryEpoch_ eInMode sbe
+                let bpp = bundleProtocolParams era pparams
+
+                scheduleResult <- case whichSchedule of
+                  CurrentEpoch -> do
+                    serCurrentEpochState <- queryPoolDistribution_ eInMode sbe $ Just $ Set.singleton poolid
+
+                    pure
+                      $ eligibleLeaderSlotsConstaints sbe
+                      $ currentEpochEligibleLeadershipSlots
+                          sbe shelleyGenesis eInfo bpp ptclState poolid
+                          vrkSkey serCurrentEpochState currentEpoch
+
+                  NextEpoch -> do
+                    serCurrentEpochState <- queryCurrentEpochState_ eInMode sbe
+
+                    pure
+                      $ eligibleLeaderSlotsConstaints sbe
+                      $ nextEpochEligibleLeadershipSlots
+                          sbe shelleyGenesis serCurrentEpochState ptclState poolid
+                          vrkSkey bpp eInfo (tip, currentEpoch)
+
+                schedule <- pure scheduleResult & OO.onLeft (OO.throw . ShelleyQueryCmdLeaderShipError)
+
+                pure (eInfo, schedule)
           ) & OO.catch @AcquiringFailure (OO.throw . ShelleyQueryCmdAcquireFailure)
             & OO.catch @EraMismatch (OO.throw . ShelleyQueryCmdEraMismatch)
+            & OO.catch @InvalidEraInMode (OO.throw . ShelleyQueryCmdEraConsensusModeMismatch)
+            & OO.catch @RequireShelleyBasedEra (OO.throw . ShelleyQueryCmdRequireShelleyBasedEra)
             & OO.catch @UnsupportedNtcVersionError (OO.throw . ShelleyQueryCmdUnsupportedNtcVersion)
 
-      let eInfo = toEpochInfo eraHistory
-      let currentEpochQuery = QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryEpoch
-      curentEpoch <- executeQuery era cModeParams localNodeConnInfo currentEpochQuery
-
-      let bpp = bundleProtocolParams era pparams
-
-      schedule <- case whichSchedule of
-        CurrentEpoch -> do
-          serCurrentEpochState <- executeQuery era cModeParams localNodeConnInfo $
-            QueryInEra eInMode $ QueryInShelleyBasedEra sbe (QueryPoolDistribution (Just (Set.singleton poolid)))
-          firstExceptT ShelleyQueryCmdLeaderShipError $ hoistEither
-            $ eligibleLeaderSlotsConstaints sbe
-            $ currentEpochEligibleLeadershipSlots
-              sbe
-              shelleyGenesis
-              eInfo
-              bpp
-              ptclState
-              poolid
-              vrkSkey
-              serCurrentEpochState
-              curentEpoch
-
-        NextEpoch -> do
-          let currentEpochStateQuery = QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryCurrentEpochState
-
-          tip <- liftIO $ getLocalChainTip localNodeConnInfo
-          serCurrentEpochState <- executeQuery era cModeParams localNodeConnInfo currentEpochStateQuery
-
-          firstExceptT ShelleyQueryCmdLeaderShipError $ hoistEither
-            $ eligibleLeaderSlotsConstaints sbe
-            $ nextEpochEligibleLeadershipSlots sbe shelleyGenesis
-              serCurrentEpochState ptclState poolid vrkSkey bpp
-              eInfo (tip, curentEpoch)
-
-      case mJsonOutputFile of
-        Nothing -> liftIO $ printLeadershipScheduleAsText schedule eInfo (SystemStart $ sgSystemStart shelleyGenesis)
-        Just (File jsonOutputFile) ->
-          liftIO $ LBS.writeFile jsonOutputFile $
-            printLeadershipScheduleAsJson schedule eInfo (SystemStart $ sgSystemStart shelleyGenesis)
+        case mJsonOutputFile of
+          Nothing -> liftIO $ printLeadershipScheduleAsText schedule eInfo (SystemStart $ sgSystemStart shelleyGenesis)
+          Just (File jsonOutputFile) ->
+            liftIO $ LBS.writeFile jsonOutputFile $
+              printLeadershipScheduleAsJson schedule eInfo (SystemStart $ sgSystemStart shelleyGenesis)
     mode -> left $ ShelleyQueryCmdUnsupportedMode $ InvalidConsensusMode $ AnyConsensusMode mode
  where
   printLeadershipScheduleAsText
@@ -1306,37 +1291,6 @@ runQueryLeadershipSchedule
 
 
 -- Helpers
-
-calcEraInMode
-  :: CardanoEra era
-  -> ConsensusMode mode
-  -> ExceptT ShelleyQueryCmdError IO (EraInMode era mode)
-calcEraInMode era mode =
-  pure (toEraInMode era mode)
-    & onNothing (left (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode (anyCardanoEra era) (AnyConsensusMode mode))))
-
-executeQuery
-  :: forall result era mode. CardanoEra era
-  -> ConsensusModeParams mode
-  -> LocalNodeConnectInfo mode
-  -> QueryInMode mode (Either EraMismatch result)
-  -> ExceptT ShelleyQueryCmdError IO result
-executeQuery era cModeP localNodeConnInfo q = do
-  eraInMode <- calcEraInMode era $ consensusModeOnly cModeP
-  case eraInMode of
-    ByronEraInByronMode -> left ShelleyQueryCmdByronEra
-    _ -> runOopsInExceptT @ShelleyQueryCmdError $
-      OO.catch @AcquiringFailure (OO.throw . ShelleyQueryCmdAcquireFailure) $
-      OO.catch @UnsupportedNtcVersionError (OO.throw . ShelleyQueryCmdUnsupportedNtcVersion) $
-      executeLocalStateQueryExpr_ localNodeConnInfo Nothing $ do
-            result <- queryExpr_ q
-            case result of
-              Right a -> return a
-              Left e -> OO.throw (ShelleyQueryCmdLocalStateQueryError $ EraMismatchError e)
-
-getSbe :: Monad m => CardanoEraStyle era -> ExceptT ShelleyQueryCmdError m (Api.ShelleyBasedEra era)
-getSbe LegacyByronEra = left ShelleyQueryCmdByronEra
-getSbe (Api.ShelleyBasedEra sbe) = return sbe
 
 toEpochInfo :: EraHistory CardanoMode -> EpochInfo (Either Text)
 toEpochInfo (EraHistory _ interpreter) =

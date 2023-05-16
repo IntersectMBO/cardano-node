@@ -846,10 +846,13 @@ module Cardano.Api (
     -- ** Oops-enabled queries
     queryChainBlockNo_,
     queryChainPoint_,
+    queryCurrentEpochState_,
     queryCurrentEra_,
     queryDebugLedgerState_,
+    queryEpoch_,
     queryEraHistory_,
     queryGenesisParameters_,
+    queryPoolDistribution_,
     queryPoolState_,
     queryProtocolParameters_,
     queryProtocolState_,

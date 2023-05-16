@@ -20,10 +20,13 @@ module Cardano.Api.Convenience.Query (
 
     queryChainBlockNo_,
     queryChainPoint_,
+    queryCurrentEpochState_,
     queryCurrentEra_,
     queryDebugLedgerState_,
+    queryEpoch_,
     queryEraHistory_,
     queryGenesisParameters_,
+    queryPoolDistribution_,
     queryPoolState_,
     queryProtocolParameters_,
     queryProtocolState_,
@@ -208,6 +211,17 @@ queryStakeSnapshot_ eInMode sbe mPoolIds = do
 
   queryExpr_ query & OO.onLeft @EraMismatch OO.throw
 
+queryCurrentEpochState_ :: ()
+  => e `CouldBe` EraMismatch
+  => e `CouldBe` UnsupportedNtcVersionError
+  => EraInMode era mode
+  -> ShelleyBasedEra era
+  -> ExceptT (Variant e) (LocalStateQueryExpr block point (QueryInMode mode) r IO) (SerialisedCurrentEpochState era)
+queryCurrentEpochState_ eInMode sbe = do
+  let query = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryCurrentEpochState
+
+  queryExpr_ query & OO.onLeft @EraMismatch OO.throw
+
 queryDebugLedgerState_ :: ()
   => e `CouldBe` EraMismatch
   => e `CouldBe` UnsupportedNtcVersionError
@@ -219,6 +233,17 @@ queryDebugLedgerState_ eInMode sbe = do
 
   queryExpr_ query & OO.onLeft @EraMismatch OO.throw
 
+queryEpoch_ :: ()
+  => e `CouldBe` UnsupportedNtcVersionError
+  => e `CouldBe` EraMismatch
+  => EraInMode era mode
+  -> ShelleyBasedEra era
+  -> ExceptT (Variant e) (LocalStateQueryExpr block point (QueryInMode mode) r IO) EpochNo
+queryEpoch_ eInMode sbe = do
+  let query = QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryEpoch
+
+  queryExpr_ query & OO.onLeft @EraMismatch OO.throw
+
 queryGenesisParameters_ :: ()
   => e `CouldBe` UnsupportedNtcVersionError
   => e `CouldBe` EraMismatch
@@ -227,6 +252,18 @@ queryGenesisParameters_ :: ()
   -> ExceptT (Variant e) (LocalStateQueryExpr block point (QueryInMode mode) r IO) GenesisParameters
 queryGenesisParameters_ eInMode sbe = do
   let query = QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryGenesisParameters
+
+  queryExpr_ query & OO.onLeft @EraMismatch OO.throw
+
+queryPoolDistribution_ :: ()
+  => e `CouldBe` UnsupportedNtcVersionError
+  => e `CouldBe` EraMismatch
+  => EraInMode era mode
+  -> ShelleyBasedEra era
+  -> Maybe (Set PoolId)
+  -> ExceptT (Variant e) (LocalStateQueryExpr block point (QueryInMode mode) r IO) (SerialisedPoolDistribution era)
+queryPoolDistribution_ qeInMode qSbe mPoolIds = do
+  let query = QueryInEra qeInMode $ QueryInShelleyBasedEra qSbe $ QueryPoolDistribution mPoolIds
 
   queryExpr_ query & OO.onLeft @EraMismatch OO.throw
 
