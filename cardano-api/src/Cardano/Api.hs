@@ -849,6 +849,7 @@ module Cardano.Api (
     queryChainPoint_,
     queryStateForBalancedTx_,
     queryUtxo_,
+    queryPoolState_,
     queryProtocolState_,
     queryGenesisParameters_,
     queryProtocolParams_,

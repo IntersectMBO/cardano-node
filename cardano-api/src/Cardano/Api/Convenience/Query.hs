@@ -23,6 +23,7 @@ module Cardano.Api.Convenience.Query (
     queryChainPoint_,
     queryStateForBalancedTx_,
     queryUtxo_,
+    queryPoolState_,
     queryProtocolState_,
     queryGenesisParameters_,
     queryProtocolParams_,
@@ -152,6 +153,20 @@ queryProtocolState_ eInMode sbe = do
   let query = QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolState
 
   queryExpr_ query & OO.onLeft @EraMismatch OO.throw
+
+queryPoolState_ :: ()
+  => e `CouldBe` EraMismatch
+  => e `CouldBe` UnsupportedNtcVersionError
+  => EraInMode era mode
+  -> ShelleyBasedEra era
+  -> Maybe (Set PoolId)
+  -> ExceptT (Variant e) (LocalStateQueryExpr block point (QueryInMode mode) r IO) (SerialisedPoolState era)
+queryPoolState_ eInMode sbe mPoolIds = do
+  let query = QueryInEra eInMode $ QueryInShelleyBasedEra sbe $ QueryPoolState mPoolIds
+
+  queryExpr_ query & OO.onLeft @EraMismatch OO.throw
+
+-- QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryPoolState
 
 queryGenesisParameters_ :: ()
   => e `CouldBe` UnsupportedNtcVersionError

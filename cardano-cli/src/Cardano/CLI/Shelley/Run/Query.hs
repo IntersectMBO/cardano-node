@@ -650,21 +650,20 @@ runQueryPoolState
   -> NetworkId
   -> [Hash StakePoolKey]
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryPoolState socketPath (AnyConsensusModeParams cModeParams) network poolIds = do
-  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
+runQueryPoolState socketPath (AnyConsensusModeParams cModeParams) network poolIds =
+  runOopsInExceptT @ShelleyQueryCmdError $
+    ( do  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
 
-  anyE@(AnyCardanoEra era) <- lift (determineEra cModeParams localNodeConnInfo)
-    & onLeft (left . ShelleyQueryCmdAcquireFailure)
+          ShelleyBasedEraWith sbe result <- executeLocalStateQueryExpr_ localNodeConnInfo Nothing $ do
+            ShelleyBasedEraWithEraInMode sbe eInMode <- determineShelleyBasedEraWithEraInMode_ cModeParams
+            ShelleyBasedEraWith sbe <$> queryPoolState_ eInMode sbe (Just (Set.fromList poolIds))
 
-  let cMode = consensusModeOnly cModeParams
-  sbe <- getSbe $ cardanoEraStyle era
-
-  eInMode <- toEraInMode era cMode
-    & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode anyE (AnyConsensusMode cMode)))
-
-  let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryPoolState $ Just $ Set.fromList poolIds
-  result <- executeQuery era cModeParams localNodeConnInfo qInMode
-  obtainLedgerEraClassConstraints sbe writePoolState result
+          obtainLedgerEraClassConstraints sbe $ writePoolState result
+    ) & OO.catch @AcquiringFailure (OO.throw . ShelleyQueryCmdAcquireFailure)
+      & OO.catch @EraMismatch (OO.throw . ShelleyQueryCmdEraMismatch)
+      & OO.catch @InvalidEraInMode (OO.throw . ShelleyQueryCmdEraConsensusModeMismatch)
+      & OO.catch @RequireShelleyBasedEra (OO.throw . ShelleyQueryCmdRequireShelleyBasedEra)
+      & OO.catch @UnsupportedNtcVersionError (OO.throw . ShelleyQueryCmdUnsupportedNtcVersion)
 
 -- | Query the local mempool state
 runQueryTxMempool
@@ -863,15 +862,16 @@ writeStakeSnapshots mOutFile qState = do
 
 -- | This function obtains the pool parameters, equivalent to the following jq query on the output of query ledger-state
 --   .nesEs.esLState.lsDPState.dpsPState.psStakePoolParams.<pool_id>
-writePoolState :: forall era ledgerera. ()
+writePoolState :: forall era ledgerera e. ()
   => ShelleyLedgerEra era ~ ledgerera
   => Core.EraCrypto ledgerera ~ StandardCrypto
   => Core.Era ledgerera
+  => e `CouldBe` ShelleyQueryCmdError
   => SerialisedPoolState era
-  -> ExceptT ShelleyQueryCmdError IO ()
+  -> ExceptT (Variant e) IO ()
 writePoolState serialisedCurrentEpochState = do
   PoolState poolState <- pure (decodePoolState serialisedCurrentEpochState)
-    & onLeft (left . ShelleyQueryCmdPoolStateDecodeError)
+    & OO.onLeft (OO.throw . ShelleyQueryCmdPoolStateDecodeError)
 
   let hks = Set.toList $ Set.fromList $ Map.keys (psStakePoolParams poolState)
             <> Map.keys (psFutureStakePoolParams poolState) <> Map.keys (psRetiring poolState)
@@ -1039,7 +1039,7 @@ runQueryStakePools socketPath (AnyConsensusModeParams cModeParams) network mOutF
           eInMode <- toEraInMode era cMode
             & OO.hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode anyE (AnyConsensusMode cMode)))
 
-          sbe <- getSbeInQuery_ $ cardanoEraStyle era
+          sbe <- getSbe_ $ cardanoEraStyle era
 
           (queryExpr_ $ QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryStakePools)
             & OO.onLeft (OO.throw . ShelleyQueryCmdEraMismatch)
@@ -1358,13 +1358,13 @@ getSbe :: Monad m => CardanoEraStyle era -> ExceptT ShelleyQueryCmdError m (Api.
 getSbe LegacyByronEra = left ShelleyQueryCmdByronEra
 getSbe (Api.ShelleyBasedEra sbe) = return sbe
 
-getSbeInQuery_ :: ()
+getSbe_ :: ()
   => Monad m
   => e `CouldBe` ShelleyQueryCmdError
   => CardanoEraStyle era
   -> ExceptT (Variant e) m (ShelleyBasedEra era)
-getSbeInQuery_ LegacyByronEra = OO.throw ShelleyQueryCmdByronEra
-getSbeInQuery_ (ShelleyBasedEra sbe) = return sbe
+getSbe_ LegacyByronEra = OO.throw ShelleyQueryCmdByronEra
+getSbe_ (ShelleyBasedEra sbe) = return sbe
 
 toEpochInfo :: EraHistory CardanoMode -> EpochInfo (Either Text)
 toEpochInfo (EraHistory _ interpreter) =
