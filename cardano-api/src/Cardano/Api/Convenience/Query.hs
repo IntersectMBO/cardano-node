@@ -23,6 +23,8 @@ module Cardano.Api.Convenience.Query (
     queryChainPoint_,
     queryStateForBalancedTx_,
     queryUtxo_,
+    queryProtocolState_,
+    queryGenesisParameters_,
     queryProtocolParams_,
     queryEraHistory_,
     queryStakePools_,
@@ -58,6 +60,7 @@ import           Cardano.Api.Block (ChainPoint)
 import           Cardano.Api.Certificate
 import           Cardano.Api.Convenience.Constraints
 import           Cardano.Api.Eras
+import           Cardano.Api.GenesisParameters (GenesisParameters)
 import           Cardano.Api.IO
 import           Cardano.Api.IPC
 import           Cardano.Api.IPC.Monad (LocalStateQueryExpr, executeLocalStateQueryExpr_,
@@ -136,6 +139,28 @@ queryUtxo_ :: ()
   -> ExceptT (Variant e) (LocalStateQueryExpr block point (QueryInMode mode) r IO) (UTxO era)
 queryUtxo_ qeInMode qSbe qFilter = do
   let query = QueryInEra qeInMode $ QueryInShelleyBasedEra qSbe $ QueryUTxO qFilter
+
+  queryExpr_ query & OO.onLeft @EraMismatch OO.throw
+
+queryProtocolState_ :: ()
+  => e `CouldBe` UnsupportedNtcVersionError
+  => e `CouldBe` EraMismatch
+  => EraInMode era mode
+  -> ShelleyBasedEra era
+  -> ExceptT (Variant e) (LocalStateQueryExpr block point (QueryInMode mode) r IO) (ProtocolState era)
+queryProtocolState_ eInMode sbe = do
+  let query = QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolState
+
+  queryExpr_ query & OO.onLeft @EraMismatch OO.throw
+
+queryGenesisParameters_ :: ()
+  => e `CouldBe` UnsupportedNtcVersionError
+  => e `CouldBe` EraMismatch
+  => EraInMode era mode
+  -> ShelleyBasedEra era
+  -> ExceptT (Variant e) (LocalStateQueryExpr block point (QueryInMode mode) r IO) GenesisParameters
+queryGenesisParameters_ eInMode sbe = do
+  let query = QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryGenesisParameters
 
   queryExpr_ query & OO.onLeft @EraMismatch OO.throw
 

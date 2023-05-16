@@ -34,6 +34,7 @@ import           Cardano.Api.Byron
 import           Cardano.Api.Orphans ()
 import           Cardano.Api.Shelley
 
+import           Control.Exception (IOException)
 import           Control.Monad (forM, forM_, join)
 import           Control.Monad.Except (withExceptT)
 import           Control.Monad.IO.Class (MonadIO)
@@ -373,7 +374,6 @@ runQueryUTxO socketPath (AnyConsensusModeParams cModeParams)
   ShelleyBasedEraWith sbe result <- runOopsInExceptT @ShelleyQueryCmdError $ do
     executeLocalStateQueryExpr_ localNodeConnInfo Nothing
       ( do  ShelleyBasedEraWithEraInMode sbe eInMode <- determineShelleyBasedEraWithEraInMode_ cModeParams
-            -- let qInMode = QueryInEra eInMode $ QueryInShelleyBasedEra sbe (QueryUTxO qfilter)
             ShelleyBasedEraWith sbe <$> queryUtxo_ eInMode sbe qfilter
       ) & OO.catch @AcquiringFailure (OO.throw . ShelleyQueryCmdAcquireFailure)
         & OO.catch @InvalidEraInMode (OO.throw . ShelleyQueryCmdEraConsensusModeMismatch)
@@ -396,57 +396,50 @@ runQueryKesPeriodInfo socketPath (AnyConsensusModeParams cModeParams) network no
 
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
 
-  anyE@(AnyCardanoEra era) <- lift (determineEra cModeParams localNodeConnInfo)
-    & onLeft (left . ShelleyQueryCmdAcquireFailure)
+  runOopsInExceptT @ShelleyQueryCmdError $ do
+    let cMode = consensusModeOnly cModeParams
+    case cMode of
+      CardanoMode -> do
+        chainTip <- liftIO $ getLocalChainTip localNodeConnInfo
 
-  let cMode = consensusModeOnly cModeParams
-  sbe <- getSbe $ cardanoEraStyle era
-  case cMode of
-    CardanoMode -> do
-      eInMode <- toEraInMode era cMode
-        & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode anyE (AnyConsensusMode cMode)))
+        (ShelleyBasedEraWith sbe ptclState, eraHistory, gParams) <- executeLocalStateQueryExpr_ localNodeConnInfo Nothing
+          ( do  ShelleyBasedEraWithEraInMode sbe eInMode <- determineShelleyBasedEraWithEraInMode_ cModeParams
+                -- We check that the KES period specified in the operational certificate is correct
+                -- based on the KES period defined in the genesis parameters and the current slot number
+                gParams <- queryGenesisParameters_ eInMode sbe
+                eraHistory <- queryEraHistory_ CardanoModeIsMultiEra
+                ptclState <- queryProtocolState_ eInMode sbe
+                pure (ShelleyBasedEraWith sbe ptclState, eraHistory, gParams)
+          ) & OO.catch @AcquiringFailure (OO.throw . ShelleyQueryCmdAcquireFailure)
+            & OO.catch @InvalidEraInMode (OO.throw . ShelleyQueryCmdEraConsensusModeMismatch)
+            & OO.catch @RequireShelleyBasedEra (OO.throw . ShelleyQueryCmdRequireShelleyBasedEra)
+            & OO.catch @UnsupportedNtcVersionError (OO.throw . ShelleyQueryCmdUnsupportedNtcVersion)
+            & OO.catch @EraMismatch (OO.throw . ShelleyQueryCmdEraMismatch)
 
-      -- We check that the KES period specified in the operational certificate is correct
-      -- based on the KES period defined in the genesis parameters and the current slot number
-      let genesisQinMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryGenesisParameters
-          eraHistoryQuery = QueryEraHistory CardanoModeIsMultiEra
-      gParams <- executeQuery era cModeParams localNodeConnInfo genesisQinMode
+        let curKesPeriod = currentKesPeriod chainTip gParams
+            oCertStartKesPeriod = opCertStartingKesPeriod opCert
+            oCertEndKesPeriod = opCertEndKesPeriod gParams opCert
+            opCertIntervalInformation = opCertIntervalInfo gParams chainTip curKesPeriod oCertStartKesPeriod oCertEndKesPeriod
 
-      chainTip <- liftIO $ getLocalChainTip localNodeConnInfo
+        let eInfo = toTentativeEpochInfo eraHistory
 
-      let curKesPeriod = currentKesPeriod chainTip gParams
-          oCertStartKesPeriod = opCertStartingKesPeriod opCert
-          oCertEndKesPeriod = opCertEndKesPeriod gParams opCert
-          opCertIntervalInformation = opCertIntervalInfo gParams chainTip curKesPeriod oCertStartKesPeriod oCertEndKesPeriod
+        -- We get the operational certificate counter from the protocol state and check that
+        -- it is equivalent to what we have on disk.
+        (onDiskC, stateC) <- eligibleLeaderSlotsConstaints sbe $ opCertOnDiskAndStateCounters ptclState opCert
+        let counterInformation = opCertNodeAndOnDiskCounters onDiskC stateC
 
-      eraHistory <- runOopsInExceptT $ do
-        queryNodeLocalState_ localNodeConnInfo Nothing eraHistoryQuery
-          & OO.catch @AcquiringFailure (OO.throw . ShelleyQueryCmdAcquireFailure)
+        -- Always render diagnostic information
+        liftIO . putStrLn $ renderOpCertIntervalInformation (unFile nodeOpCertFile) opCertIntervalInformation
+        liftIO . putStrLn $ renderOpCertNodeAndOnDiskCounterInformation (unFile nodeOpCertFile) counterInformation
 
-      let eInfo = toTentativeEpochInfo eraHistory
+        let qKesInfoOutput = createQueryKesPeriodInfoOutput opCertIntervalInformation counterInformation eInfo gParams
+            kesPeriodInfoJSON = encodePretty qKesInfoOutput
 
-
-      -- We get the operational certificate counter from the protocol state and check that
-      -- it is equivalent to what we have on disk.
-
-      let ptclStateQinMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryProtocolState
-      ptclState <- executeQuery era cModeParams localNodeConnInfo ptclStateQinMode
-
-      (onDiskC, stateC) <- eligibleLeaderSlotsConstaints sbe $ opCertOnDiskAndStateCounters ptclState opCert
-      let counterInformation = opCertNodeAndOnDiskCounters onDiskC stateC
-
-      -- Always render diagnostic information
-      liftIO . putStrLn $ renderOpCertIntervalInformation (unFile nodeOpCertFile) opCertIntervalInformation
-      liftIO . putStrLn $ renderOpCertNodeAndOnDiskCounterInformation (unFile nodeOpCertFile) counterInformation
-
-      let qKesInfoOutput = createQueryKesPeriodInfoOutput opCertIntervalInformation counterInformation eInfo gParams
-          kesPeriodInfoJSON = encodePretty qKesInfoOutput
-
-      liftIO $ LBS.putStrLn kesPeriodInfoJSON
-      forM_ mOutFile (\(File oFp) ->
-        handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError oFp)
-          $ LBS.writeFile oFp kesPeriodInfoJSON)
-    mode -> left . ShelleyQueryCmdUnsupportedMode $ AnyConsensusMode mode
+        liftIO $ LBS.putStrLn kesPeriodInfoJSON
+        forM_ mOutFile $ \(File oFp) ->
+          lift (LBS.writeFile oFp kesPeriodInfoJSON)
+            & OO.onException @IOException (OO.throw . ShelleyQueryCmdWriteFileError . FileIOError oFp)
+      mode -> OO.throw $ ShelleyQueryCmdUnsupportedMode $ AnyConsensusMode mode
  where
    currentKesPeriod :: ChainTip -> GenesisParameters -> CurrentKesPeriod
    currentKesPeriod ChainTipAtGenesis _ = CurrentKesPeriod 0
@@ -581,18 +574,19 @@ runQueryKesPeriodInfo socketPath (AnyConsensusModeParams cModeParams) network no
 
    -- We get the operational certificate counter from the protocol state and check that
    -- it is equivalent to what we have on disk.
-   opCertOnDiskAndStateCounters :: forall era . ()
+   opCertOnDiskAndStateCounters :: forall era e. ()
+      => e `CouldBe` ShelleyQueryCmdError
       => Consensus.PraosProtocolSupportsNode (ConsensusProtocol era)
       => FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
       => Crypto.ADDRHASH (Consensus.PraosProtocolSupportsNodeCrypto (ConsensusProtocol era)) ~ Blake2b.Blake2b_224
       => ProtocolState era
       -> OperationalCertificate
-      -> ExceptT ShelleyQueryCmdError IO (OpCertOnDiskCounter, Maybe OpCertNodeStateCounter)
+      -> ExceptT (Variant e) IO (OpCertOnDiskCounter, Maybe OpCertNodeStateCounter)
    opCertOnDiskAndStateCounters ptclState opCert@(OperationalCertificate _ stakePoolVKey) = do
     let onDiskOpCertCount = fromIntegral $ getOpCertCount opCert
 
     chainDepState <- pure (decodeProtocolState ptclState)
-      & onLeft (left . ShelleyQueryCmdProtocolStateDecodeFailure)
+      & OO.onLeft (OO.throw . ShelleyQueryCmdProtocolStateDecodeFailure)
 
     -- We need the stake pool id to determine what the counter of our SPO
     -- should be.
