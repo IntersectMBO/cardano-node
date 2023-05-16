@@ -132,11 +132,10 @@ queryUtxo_ :: ()
   => e `CouldBe` EraMismatch
   => EraInMode era mode
   -> ShelleyBasedEra era
-  -> [TxIn]
+  -> QueryUTxOFilter
   -> ExceptT (Variant e) (LocalStateQueryExpr block point (QueryInMode mode) r IO) (UTxO era)
-queryUtxo_ qeInMode qSbe allTxIns = do
-  let query = QueryInEra qeInMode $ QueryInShelleyBasedEra qSbe $
-        QueryUTxO (QueryUTxOByTxIn (Set.fromList allTxIns))
+queryUtxo_ qeInMode qSbe qFilter = do
+  let query = QueryInEra qeInMode $ QueryInShelleyBasedEra qSbe $ QueryUTxO qFilter
 
   queryExpr_ query & OO.onLeft @EraMismatch OO.throw
 
@@ -246,7 +245,7 @@ queryStateForBalancedTx_ socketPath era networkId allTxIns certs = do
 
   -- Query execution
   executeLocalStateQueryExpr_ localNodeConnInfo Nothing $ do
-    utxo <- queryUtxo_ qeInMode qSbe allTxIns
+    utxo <- queryUtxo_ qeInMode qSbe $ QueryUTxOByTxIn $ Set.fromList allTxIns
     pparams <- queryProtocolParams_ qeInMode qSbe
     eraHistory <- queryEraHistory_ CardanoModeIsMultiEra
     systemStart <- querySystemStart_

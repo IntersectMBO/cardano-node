@@ -370,19 +370,16 @@ runQueryUTxO socketPath (AnyConsensusModeParams cModeParams)
              qfilter network mOutFile = do
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
 
-  anyE@(AnyCardanoEra era) <- lift (determineEra cModeParams localNodeConnInfo)
-    & onLeft (left . ShelleyQueryCmdAcquireFailure)
-
-  let cMode = consensusModeOnly cModeParams
-  sbe <- getSbe $ cardanoEraStyle era
-
-  eInMode <- pure (toEraInMode era cMode)
-    & onNothing (left (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode anyE (AnyConsensusMode cMode))))
-
-  let query   = QueryInShelleyBasedEra sbe (QueryUTxO qfilter)
-      qInMode = QueryInEra eInMode query
-
-  result <- executeQuery era cModeParams localNodeConnInfo qInMode
+  ShelleyBasedEraWith sbe result <- runOopsInExceptT @ShelleyQueryCmdError $ do
+    executeLocalStateQueryExpr_ localNodeConnInfo Nothing
+      ( do  ShelleyBasedEraWithEraInMode sbe eInMode <- determineShelleyBasedEraWithEraInMode_ cModeParams
+            -- let qInMode = QueryInEra eInMode $ QueryInShelleyBasedEra sbe (QueryUTxO qfilter)
+            ShelleyBasedEraWith sbe <$> queryUtxo_ eInMode sbe qfilter
+      ) & OO.catch @AcquiringFailure (OO.throw . ShelleyQueryCmdAcquireFailure)
+        & OO.catch @InvalidEraInMode (OO.throw . ShelleyQueryCmdEraConsensusModeMismatch)
+        & OO.catch @RequireShelleyBasedEra (OO.throw . ShelleyQueryCmdRequireShelleyBasedEra)
+        & OO.catch @UnsupportedNtcVersionError (OO.throw . ShelleyQueryCmdUnsupportedNtcVersion)
+        & OO.catch @EraMismatch (OO.throw . ShelleyQueryCmdEraMismatch)
 
   writeFilteredUTxOs sbe mOutFile result
 

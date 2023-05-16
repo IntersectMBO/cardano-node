@@ -19,6 +19,7 @@ module Cardano.Api.IPC.Monad
   , NodeToClientVersionOf (..)
 
   , ShelleyBasedEraWithEraInMode(..)
+  , ShelleyBasedEraWith(..)
   ) where
 
 import           Control.Concurrent.STM
@@ -164,6 +165,9 @@ determineEraExpr_ cModeParams =
 
 data ShelleyBasedEraWithEraInMode mode where
   ShelleyBasedEraWithEraInMode :: ShelleyBasedEra era -> EraInMode era mode -> ShelleyBasedEraWithEraInMode mode
+
+data ShelleyBasedEraWith f where
+  ShelleyBasedEraWith :: ShelleyBasedEra era -> f era -> ShelleyBasedEraWith f
 
 determineShelleyBasedEraWithEraInMode_ :: ()
   => e `CouldBe` InvalidEraInMode
