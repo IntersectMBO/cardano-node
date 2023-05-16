@@ -27,6 +27,10 @@ common project-config
   if os(windows)
     buildable: False
 
+  if impl(ghc < 9)
+    buildable: False
+
+
 common common-definitions
   build-depends:      base >= 4.14 && < 4.17
   default-language:   Haskell2010
