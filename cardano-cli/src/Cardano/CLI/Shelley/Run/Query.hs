@@ -131,6 +131,7 @@ data ShelleyQueryCmdError
   | ShelleyQueryCmdPoolStateDecodeError DecoderError
   | ShelleyQueryCmdStakeSnapshotDecodeError DecoderError
   | ShelleyQueryCmdUnsupportedNtcVersion !UnsupportedNtcVersionError
+  | ShelleyQueryCmdRequireShelleyBasedEra !RequireShelleyBasedEra
   deriving Show
 
 renderShelleyQueryCmdError :: ShelleyQueryCmdError -> Text
@@ -165,6 +166,8 @@ renderShelleyQueryCmdError err =
       "Unsupported feature for the node-to-client protocol version.\n" <>
       "This query requires at least " <> textShow minNtcVersion <> " but the node negotiated " <> textShow ntcVersion <> ".\n" <>
       "Later node versions support later protocol versions (but development protocol versions are not enabled in the node by default)."
+    ShelleyQueryCmdRequireShelleyBasedEra (RequireShelleyBasedEra cEra) ->
+      "This query requires Shelley Based era and is not valid in " <> Text.pack (show cEra) <> "."
 
 runQueryCmd :: QueryCmd -> ExceptT ShelleyQueryCmdError IO ()
 runQueryCmd cmd =
@@ -210,17 +213,17 @@ runQueryProtocolParameters socketPath (AnyConsensusModeParams cModeParams) netwo
       (do
           anyE@(AnyCardanoEra era) <- determineEraExpr_ cModeParams
 
-          case cardanoEraStyle era of
-            LegacyByronEra -> OO.throw ShelleyQueryCmdByronEra
-            ShelleyBasedEra sbe -> do
-              let cMode = consensusModeOnly cModeParams
+          sbe <- requireShelleyBasedEra_ (cardanoEraStyle era)
 
-              eInMode <- toEraInMode era cMode
-                & OO.hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
+          let cMode = consensusModeOnly cModeParams
 
-              queryExpr_ (QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters)
-                & OO.onLeft (OO.throw . ShelleyQueryCmdEraMismatch))
+          eInMode <- toEraInMode era cMode
+            & OO.hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
 
+          queryExpr_ (QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters)
+            & OO.onLeft (OO.throw . ShelleyQueryCmdEraMismatch))
+
+      & OO.catch @RequireShelleyBasedEra (OO.throw . ShelleyQueryCmdRequireShelleyBasedEra)
       & OO.catch @AcquiringFailure (OO.throw . ShelleyQueryCmdAcquireFailure)
       & OO.catch @UnsupportedNtcVersionError (OO.throw . ShelleyQueryCmdUnsupportedNtcVersion)
 
