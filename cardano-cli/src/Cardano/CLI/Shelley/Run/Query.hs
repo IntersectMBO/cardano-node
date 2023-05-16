@@ -780,10 +780,10 @@ runQueryStakeAddressInfo socketPath (AnyConsensusModeParams cModeParams) (StakeA
   runOopsInExceptT @ShelleyQueryCmdError $
       ( do  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
 
-            ShelleyBasedEraWith sbe result <- executeLocalStateQueryExpr_ localNodeConnInfo Nothing $ do
+            result <- executeLocalStateQueryExpr_ localNodeConnInfo Nothing $ do
               ShelleyBasedEraWithEraInMode sbe eInMode <- determineShelleyBasedEraWithEraInMode_ cModeParams
               let stakeAddr = Set.singleton $ fromShelleyStakeCredential addr
-              ShelleyBasedEraWith sbe <$> queryStakeAddresses_ eInMode sbe stakeAddr network
+              queryStakeAddresses_ eInMode sbe stakeAddr network
 
             writeStakeAddressInfo mOutFile $ DelegationsAndRewards result
     ) & OO.catch @AcquiringFailure (OO.throw . ShelleyQueryCmdAcquireFailure)
@@ -808,15 +808,16 @@ renderLocalStateQueryError lsqErr =
       "A query from a certain era was applied to a ledger from a different era: " <> textShow err
 
 writeStakeAddressInfo
-  :: Maybe (File () Out)
+  :: e `CouldBe` ShelleyQueryCmdError
+  => Maybe (File () Out)
   -> DelegationsAndRewards
-  -> ExceptT ShelleyQueryCmdError IO ()
+  -> ExceptT (Variant e) IO ()
 writeStakeAddressInfo mOutFile delegsAndRewards =
   case mOutFile of
     Nothing -> liftIO $ LBS.putStrLn (encodePretty delegsAndRewards)
     Just (File fpath) ->
-      handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
-        $ LBS.writeFile fpath (encodePretty delegsAndRewards)
+      lift (LBS.writeFile fpath (encodePretty delegsAndRewards))
+        & OO.onException @IOException (OO.throw . ShelleyQueryCmdWriteFileError . FileIOError fpath)
 
 writeLedgerState :: forall era ledgerera e. ()
   => e `CouldBe` ShelleyQueryCmdError
@@ -1018,23 +1019,13 @@ runQueryStakePools socketPath (AnyConsensusModeParams cModeParams) network mOutF
     let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
 
     result <- executeLocalStateQueryExpr_ localNodeConnInfo Nothing
-      ( do
-          anyE@(AnyCardanoEra era) <- case consensusModeOnly cModeParams of
-            ByronMode -> pure $ AnyCardanoEra ByronEra
-            ShelleyMode -> pure $ AnyCardanoEra ShelleyEra
-            CardanoMode -> queryExpr_ $ QueryCurrentEra CardanoModeIsMultiEra
-
-          let cMode = consensusModeOnly cModeParams
-
-          eInMode <- toEraInMode era cMode
-            & OO.hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode anyE (AnyConsensusMode cMode)))
-
-          sbe <- getSbe_ $ cardanoEraStyle era
-
-          (queryExpr_ $ QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryStakePools)
-            & OO.onLeft (OO.throw . ShelleyQueryCmdEraMismatch)
+      ( do  ShelleyBasedEraWithEraInMode sbe eInMode <- determineShelleyBasedEraWithEraInMode_ cModeParams
+            queryStakePools_ eInMode sbe
       )
       & OO.catch @AcquiringFailure (OO.throw . ShelleyQueryCmdAcquireFailure)
+      & OO.catch @EraMismatch (OO.throw . ShelleyQueryCmdEraMismatch)
+      & OO.catch @InvalidEraInMode (OO.throw . ShelleyQueryCmdEraConsensusModeMismatch)
+      & OO.catch @RequireShelleyBasedEra (OO.throw . ShelleyQueryCmdRequireShelleyBasedEra)
       & OO.catch @UnsupportedNtcVersionError (OO.throw . ShelleyQueryCmdUnsupportedNtcVersion)
 
     writeStakePools_ mOutFile result
@@ -1347,14 +1338,6 @@ executeQuery era cModeP localNodeConnInfo q = do
 getSbe :: Monad m => CardanoEraStyle era -> ExceptT ShelleyQueryCmdError m (Api.ShelleyBasedEra era)
 getSbe LegacyByronEra = left ShelleyQueryCmdByronEra
 getSbe (Api.ShelleyBasedEra sbe) = return sbe
-
-getSbe_ :: ()
-  => Monad m
-  => e `CouldBe` ShelleyQueryCmdError
-  => CardanoEraStyle era
-  -> ExceptT (Variant e) m (ShelleyBasedEra era)
-getSbe_ LegacyByronEra = OO.throw ShelleyQueryCmdByronEra
-getSbe_ (ShelleyBasedEra sbe) = return sbe
 
 toEpochInfo :: EraHistory CardanoMode -> EpochInfo (Either Text)
 toEpochInfo (EraHistory _ interpreter) =
