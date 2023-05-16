@@ -243,14 +243,14 @@ queryProtocolParams_ qeInMode qSbe = do
 
 queryStakePools_ :: ()
   => e `CouldBe` UnsupportedNtcVersionError
-  => e `CouldBe` QueryConvenienceError
+  => e `CouldBe` EraMismatch
   => EraInMode era mode
   -> ShelleyBasedEra era
   -> ExceptT (Variant e) (LocalStateQueryExpr block point (QueryInMode mode) r IO) (Set PoolId)
 queryStakePools_ qeInMode qSbe = do
   let query = QueryInEra qeInMode . QueryInShelleyBasedEra qSbe $ QueryStakePools
 
-  queryExpr_ query & OO.onLeft @EraMismatch (OO.throw . QueryEraMismatch)
+  queryExpr_ query & OO.onLeft @EraMismatch OO.throw
 
 querySystemStart_ :: ()
   => e `CouldBe` UnsupportedNtcVersionError
