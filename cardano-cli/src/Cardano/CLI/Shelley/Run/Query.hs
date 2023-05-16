@@ -1049,32 +1049,30 @@ runQueryStakeDistribution
   -> NetworkId
   -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryStakeDistribution socketPath (AnyConsensusModeParams cModeParams) network mOutFile = do
-  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
+runQueryStakeDistribution socketPath (AnyConsensusModeParams cModeParams) network mOutFile =
+  runOopsInExceptT @ShelleyQueryCmdError $ do
+    let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
 
-  anyE@(AnyCardanoEra era) <- lift (determineEra cModeParams localNodeConnInfo)
-    & onLeft (left . ShelleyQueryCmdAcquireFailure)
+    result <- executeLocalStateQueryExpr_ localNodeConnInfo Nothing
+      ( do  ShelleyBasedEraWithEraInMode sbe eInMode <- determineShelleyBasedEraWithEraInMode_ cModeParams
+            queryStakeDistribution_ eInMode sbe
+      )
+      & OO.catch @AcquiringFailure (OO.throw . ShelleyQueryCmdAcquireFailure)
+      & OO.catch @EraMismatch (OO.throw . ShelleyQueryCmdEraMismatch)
+      & OO.catch @InvalidEraInMode (OO.throw . ShelleyQueryCmdEraConsensusModeMismatch)
+      & OO.catch @RequireShelleyBasedEra (OO.throw . ShelleyQueryCmdRequireShelleyBasedEra)
+      & OO.catch @UnsupportedNtcVersionError (OO.throw . ShelleyQueryCmdUnsupportedNtcVersion)
 
-  let cMode = consensusModeOnly cModeParams
-  sbe <- getSbe $ cardanoEraStyle era
+    writeStakeDistribution mOutFile result
 
-  eInMode <- pure (toEraInMode era cMode)
-    & onNothing (left (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode anyE (AnyConsensusMode cMode))))
-
-  let query = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryStakeDistribution
-
-  result <- executeQuery era cModeParams localNodeConnInfo query
-
-  writeStakeDistribution mOutFile result
-
-writeStakeDistribution
-  :: Maybe (File () Out)
+writeStakeDistribution :: ()
+  => e `CouldBe` ShelleyQueryCmdError
+  => Maybe (File () Out)
   -> Map PoolId Rational
-  -> ExceptT ShelleyQueryCmdError IO ()
+  -> ExceptT (Variant e) IO ()
 writeStakeDistribution (Just (File outFile)) stakeDistrib =
-  handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError outFile) $
-    LBS.writeFile outFile (encodePretty stakeDistrib)
-
+  lift (LBS.writeFile outFile (encodePretty stakeDistrib))
+    & OO.onException @IOException (OO.throw . ShelleyQueryCmdWriteFileError . FileIOError outFile)
 writeStakeDistribution Nothing stakeDistrib =
   liftIO $ printStakeDistribution stakeDistrib
 
