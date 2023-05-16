@@ -1363,7 +1363,6 @@ backend_nomad() {
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
 
-      local i=0
       local start_time=$(date +%s)
       local pools=$(jq .composition.n_pool_hosts "${dir}"/profile.json)
       msg_ne "nomad: $(blue Waiting) until all pool nodes are stopped: 000000"
@@ -1409,9 +1408,9 @@ backend_nomad() {
               msg_ne "nomad: $(blue Waiting) until all pool nodes are stopped: 000000"
             fi
           fi
+          local elapsed="$(($(date +%s) - start_time))"
           echo -ne "\b\b\b\b\b\b"
-          printf "%6d" $((i + 1))
-          i=$((i+1))
+          printf "%6d" "${elapsed}"
           sleep 1
         done
         echo -ne "\b\b\b\b\b\b"; echo -n "node-${pool_ix} 000000"
