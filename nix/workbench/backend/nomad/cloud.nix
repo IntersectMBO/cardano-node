@@ -33,7 +33,9 @@ let
       ;
     in if builtins.all (r: builtins.elem r datacenters) regions
        then true
-       else builtins.throw "The only compatible regions for Nomad cloud are \"${toString datacenters}\""
+       else builtins.throw (
+         "The only compatible regions for Nomad cloud are \"${toString datacenters}\" but found \"${toString regions}\""
+       )
   ;
 
   # Nomad-generic "container-specs.json"

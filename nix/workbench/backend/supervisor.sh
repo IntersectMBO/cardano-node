@@ -224,21 +224,35 @@ EOF
         local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}; shift
 
-        local i=0 pools=$(jq .composition.n_pool_hosts $dir/profile.json) start_time=$(date +%s)
+        local pools=$(jq .composition.n_pool_hosts "${dir}"/profile.json)
+        local start_time=$(date +%s)
         msg_ne "supervisor:  waiting until all pool nodes are stopped: 000000"
-        touch $dir/flag/cluster-termination
-
-        for ((pool_ix=0; pool_ix < $pools; pool_ix++))
-        do while supervisorctl status node-${pool_ix} > /dev/null &&
-                   test -f $dir/flag/cluster-termination
-           do echo -ne "\b\b\b\b\b\b"; printf "%6d" $((i + 1)); i=$((i+1)); sleep 1; done
-              echo -ne "\b\b\b\b\b\b"; echo -n "node-${pool_ix} 000000"
+        for ((pool_ix=0; pool_ix < ${pools}; pool_ix++))
+        do
+            while \
+                ! test -f "${dir}"/flag/cluster-stopping \
+                && \
+                supervisorctl status "node-${pool_ix}" > /dev/null
+            do
+                echo -ne "\b\b\b\b\b\b"
+                printf "%6d" "$(($(date +%s) - start_time))"
+                sleep 1
+            done
+            if ! test -f "${dir}"/flag/cluster-stopping
+            then
+                echo -ne "\b\b\b\b\b\b"
+                echo -n "node-${pool_ix} 000000"
+            fi
         done >&2
         echo -ne "\b\b\b\b\b\b"
         local elapsed=$(($(date +%s) - start_time))
-        if test -f $dir/flag/cluster-termination
-        then echo " All nodes exited -- after $(yellow $elapsed)s" >&2
-        else echo " Termination requested -- after $(yellow $elapsed)s" >&2; fi
+        if test -f "${dir}"/flag/cluster-stopping
+        then
+            echo " Termination requested -- after $(yellow ${elapsed})s" >&2
+        else
+            touch "${dir}"/flag/cluster-stopping
+            echo " All nodes exited      -- after $(yellow ${elapsed})s" >&2
+        fi
         ;;
 
     stop-cluster )

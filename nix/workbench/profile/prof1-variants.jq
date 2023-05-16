@@ -167,19 +167,13 @@ def all_profile_variants:
       }
     } as $chainsync_cluster
   |
+    # Uses: ["eu-west-1", "eu-central-1", "us-east-2"]
     { composition:
-      { locations:                      ["EU", "AP", "US"]
+      { locations:                      ["EU", "US"]
       , topology:                       "torus"
       , with_explorer:                  true
       }
-    } as $aws
-  |
-    { composition:
-      { locations:                      ["EU"]
-      , topology:                       "torus"
-      , with_explorer:                  true
-      }
-    } as $aws_eu_only
+    } as $cardano_world_qa
   |
   ##
   ### Definition vocabulary:  filtering
@@ -559,6 +553,10 @@ def all_profile_variants:
     { name: "tracer-only"
     , desc: "Idle scenario:  start only the tracer & detach from tty;  no termination"
     }
+  , $cardano_world_qa *
+    { name: "cardano-world-qa"
+    , desc: "Default, as per nix/workbench/profile/prof0-defaults.jq"
+    }
 
   ## Fastest profile to pass analysis: just 1 block
   , $fast_base *
@@ -593,8 +591,8 @@ def all_profile_variants:
   , $citest_base * $with_rtview *
     { name: "ci-test-rtview"
     }
-  , $citest_base * $aws_eu_only *
-    { name: "aws-test"
+  , $citest_base * $cardano_world_qa *
+    { name: "cardano-world-qa-test"
     }
 
   ## CI variants: bench duration, 15 blocks
@@ -618,6 +616,9 @@ def all_profile_variants:
     }
   , $cibench_base * $with_rtview *
     { name: "ci-bench-rtview"
+    }
+  , $cibench_base * $cardano_world_qa *
+    { name: "cardano-world-qa-bench"
     }
 
   ## CI variants: test duration, 3 blocks, dense10

@@ -130,13 +130,22 @@ scenario_cleanup_exit_trap() {
 
 __scenario_watcher_pid=
 scenario_watcher() {
-    while test $__scenario_watcher_end_time -ge $(date +%s)
-    do sleep 1; done
+  local run_dir=$1
+  while \
+      ! test -f "${run_dir}"/flag/cluster-stopping            \
+    &&                                                        \
+        test "${__scenario_watcher_end_time}" -ge $(date +%s)
+  do
+    sleep 1
+  done
+  if ! test -f "${run_dir}"/flag/cluster-stopping
+  then
     echo >&2
-    msg "scenario:  $(yellow end of time reached) for:  $(red $(jq '.meta.tag' -r $__scenario_exit_trap_dir/meta.json))"
-    rm -f $dir/flag/cluster-termination
-    msg "scenario:  $(red signalled termination)"
+    touch "${run_dir}"/flag/cluster-stopping
+    msg "scenario:  $(yellow end of time reached) for:  $(red $(jq '.meta.tag' -r ${__scenario_exit_trap_dir}/meta.json))"
+    msg      "scenario:  $(red signalled termination)"
     progress "scenario" "now:  $(yellow $(date))"
+  fi
 }
 
 scenario_setup_workload_termination() {
@@ -153,8 +162,8 @@ scenario_setup_workload_termination() {
     progress "scenario" "until end:  workload $(yellow $till_workload), $(blue shutdown) $(yellow $till_shutdown), $(blue earliest) $(yellow $till_earliest)"
     progress "scenario" "shutdown tolerance:  $(yellow $termination_tolerance_s) s"
     # progress "scenario" "until end: workload $(yellow $(date --date=@$__scenario_watcher_end_time))"
-    progress "scenario" "force-termination in $(white $((till_earliest + termination_tolerance_s))) seconds.."
-    scenario_watcher &
+    progress "scenario" "force-termination in $(white $((till_earliest + termination_tolerance_s))) seconds at $(yellow $(date --date=@$__scenario_watcher_end_time))"
+    scenario_watcher "${run_dir}" &
     __scenario_watcher_pid=$!
 }
 

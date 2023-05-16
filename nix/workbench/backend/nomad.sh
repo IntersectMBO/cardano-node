@@ -247,6 +247,7 @@ backend_nomad() {
       jq ".[\"job\"][\"${nomad_job_name}\"][\"constraint\"] = \$constraints_array" --argjson constraints_array "${constraints_array}" "${dir}"/nomad/nomad-job.json | sponge "${dir}"/nomad/nomad-job.json
     ;;
 
+    # Called by the sub-backends, don't use `fatal` and let them do the cleaning
     deploy-genesis-wget )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
@@ -259,10 +260,12 @@ backend_nomad() {
       local uploads_array=()
       for node in ${nodes[*]}
       do
+        msg "$(blue Downloading) $(yellow "\"${uri}\"") from $(yellow "node \"${node}\"") ..."
         backend_nomad task-exec "${dir}" "${node}"               \
           "${wget_path}"/bin/wget                                \
             --output-document=/local/run/current/genesis.tar.zst \
             "${uri}"                                             \
+            --no-verbose                                         \
         > /dev/null                                              \
         &
         uploads_array+=("$!")
@@ -272,7 +275,8 @@ backend_nomad() {
       then
         if ! wait_fail_any "${uploads_array[@]}"
         then
-          fatal "Failed to upload some genesis files"
+          msg "$(red "Failed to upload some genesis files")"
+          return 1
         else
           # Unpack!
           local coreutils_path="$(jq -r ".containerPkgs.coreutils.\"nix-store-path\"" "${dir}"/container-specs.json)"
@@ -299,7 +303,8 @@ backend_nomad() {
           then
             if ! wait_fail_any "${unpacks_array[@]}"
             then
-              fatal "Failed to unpack some genesis files"
+              msg "$(red "Failed to unpack some genesis files")"
+              return 1
             fi
           fi
         fi
@@ -630,13 +635,18 @@ backend_nomad() {
           # generator just after it quits automatically.
           backend_nomad task-program-stop "${dir}" node-0 generator || true
         else
-          # If the node quits (due to `--shutdown_on_slot_synced X` or
-          # `--shutdown_on_block_synced X`) the generator also quits.
-          local generator_can_quit=$(jq ".\"node-0\".shutdown_on_slot_synced or .\"node-0\".shutdown_on_block_synced" "${dir}"/node-specs.json)
-          if test "${generator_can_quit}" = "false"
+          if backend_nomad is-task-program-failed "${dir}" node-0 generator
           then
-            # Do not fail here, because nobody will be able to stop the cluster!
-            msg "$(red "FATAL: \"generator\" quit unexpectedly")"
+            # If the node quits (due to `--shutdown_on_slot_synced X` or
+            # `--shutdown_on_block_synced X`) the generator quits with an error.
+            local generator_can_fail=$(jq ".\"node-0\".shutdown_on_slot_synced or .\"node-0\".shutdown_on_block_synced" "${dir}"/node-specs.json)
+            if test "${generator_can_fail}" = "false" || backend_nomad is-task-program-running "${dir}" node-0 node-0
+            then
+              # Do not fail here, because nobody will be able to stop the cluster!
+              msg "$(red "FATAL: \"generator\" quit unexpectedly")"
+            else
+              msg "$(yellow "INFO: Program \"generator\" inside Task \"node-0\" failed, but expected when \"node-0\" automatically exits first")"
+            fi
           else
             msg "$(yellow "WARNING: Program \"generator\" inside Task \"node-0\" was not running, should it?")"
           fi
@@ -740,7 +750,7 @@ backend_nomad() {
       # Remove "live" symlinks and download the "originals"
       if test "${nomad_environment}" != "cloud"
       then
-        rm -f "${dir}"/generator/{stdout,stderr}
+        rm -f "${dir}"/generator/{stdout,stderr,exit_code}
         rm -f "${dir}"/supervisor/node-0/supervisord.log
       fi
       backend_nomad download-logs-generator "${dir}"
@@ -751,7 +761,7 @@ backend_nomad() {
         # Remove "live" symlinks and download the "originals"
         if test "${nomad_environment}" != "cloud"
         then
-          rm -f "${dir}"/"${node}"/{stdout,stderr}
+          rm -f "${dir}"/"${node}"/{stdout,stderr,exit_code}
           rm -f "${dir}"/nomad/"${node}"/{stdout,stderr}
           rm -f "${dir}"/supervisor/"${node}"/supervisord.log
         fi
@@ -769,13 +779,13 @@ backend_nomad() {
           then
             for node in $(jq_tolist 'keys' "${dir}"/node-specs.json)
             do
-              rm -f "${dir}"/tracer/"${node}"/{stdout,stderr}
+              rm -f "${dir}"/tracer/"${node}"/{stdout,stderr,exit_code}
             done
           else
             # When "local" and "podman" "tracer" folder is mounted
             if ! test "${nomad_task_driver}" = "podman"
             then
-              rm -f "${dir}"/tracer/{stdout,stderr}
+              rm -f "${dir}"/tracer/{stdout,stderr,exit_code}
             fi
             rm -f "${dir}"/supervisor/tracer/supervisord.log
           fi
@@ -802,7 +812,8 @@ backend_nomad() {
 
       msg "nomad:  resetting cluster state in:  ${dir}"
       # Generic stuff
-      rm -f  "${dir}"/*/std{out,err} "${dir}"/node-*/*.socket "${dir}"/*/logs/* 2>/dev/null || true
+      rm -f  "${dir}"/*/std{out,err}  "${dir}"/*/exit_code 2>/dev/null || true
+      rm -f  "${dir}"/node-*/*.socket "${dir}"/*/logs/*    2>/dev/null || true
       rm -fr "${dir}"/node-*/state-cluster/
       # Nomad stuff
       rm -f  "${dir}"/nomad/{server,client}.{log,stdout,stderr}
@@ -839,20 +850,32 @@ backend_nomad() {
         backend_nomad download-logs-node "${dir}" "${node}"
         # Should show the output/log of `supervisord` (runs as "entrypoint").
         msg "$(yellow "${dir}/nomad/${node}/stdout:")"
-        cat "${dir}"/nomad/"${node}"/stdout
+        cat                                                             \
+          <(echo "-------------------- log start --------------------") \
+          "${dir}"/nomad/"${node}"/stdout                               \
+          <(echo "-------------------- log end   --------------------")
         msg "$(yellow "${dir}/nomad/${node}/stderr:")"
-        cat "${dir}"/nomad/"${node}"/stderr
+        cat                                                             \
+          <(echo "-------------------- log start --------------------") \
+          "${dir}"/nomad/"${node}"/stderr                               \
+          <(echo "-------------------- log end   --------------------")
         # Depending on when the start command failed, logs may not be available!
         if test -f "${dir}"/"${node}"/stdout
         then
           msg "$(yellow "${dir}/${node}/stdout:")"
-          cat "$dir"/"$node"/stdout
+          cat                                                             \
+            <(echo "-------------------- log start --------------------") \
+            "$dir"/"$node"/stdout                                         \
+            <(echo "-------------------- log end   --------------------")
         fi
         # Depending on when the start command failed, logs may not be available!
         if test -f "${dir}"/"${node}"/stderr
         then
           msg "$(yellow "${dir}/${node}/stderr:")"
-          cat "${dir}"/"${node}"/stderr
+          cat                                                             \
+            <(echo "-------------------- log start --------------------") \
+            "${dir}"/"${node}"/stderr                                     \
+            <(echo "-------------------- log end   --------------------")
         fi
         fatal "Failed to start program \"${node}\""
       else
@@ -861,12 +884,15 @@ backend_nomad() {
         if test "${nomad_environment}" != "cloud"
         then
           # A link to the alloc must be already created inside the RUN-DIR
-          ln -s                                                                   \
-            ../nomad/alloc/"${node}"/local/run/current/"${node}"/stdout           \
+          ln -s                                                            \
+            ../nomad/alloc/"${node}"/local/run/current/"${node}"/stdout    \
             "${dir}"/"${node}"/stdout
-          ln -s                                                                   \
-            ../nomad/alloc/"${node}"/local/run/current/"${node}"/stderr           \
+          ln -s                                                            \
+            ../nomad/alloc/"${node}"/local/run/current/"${node}"/stderr    \
             "${dir}"/"${node}"/stderr
+          ln -s                                                            \
+            ../nomad/alloc/"${node}"/local/run/current/"${node}"/exit_code \
+            "${dir}"/"${node}"/exit_code
         fi
         # Always wait for the node to be ready.
         if backend_nomad wait-node "${dir}" "${node}"
@@ -897,20 +923,32 @@ backend_nomad() {
         backend_nomad download-logs-generator "${dir}"
         # Should show the output/log of `supervisord` (runs as "entrypoint").
         msg "$(yellow "${dir}/nomad/node-0/stdout:")"
-        cat "${dir}"/nomad/node-0/stdout
+        cat                                                             \
+          <(echo "-------------------- log start --------------------") \
+          "${dir}"/nomad/node-0/stdout                                  \
+          <(echo "-------------------- log end   --------------------")
         msg "$(yellow "${dir}/nomad/node-0/stderr:")"
-        cat "${dir}"/nomad/node-0/stderr
+        cat                                                             \
+          <(echo "-------------------- log start --------------------") \
+          "${dir}"/nomad/node-0/stderr                                  \
+          <(echo "-------------------- log end   --------------------")
         # Depending on when the start command failed, logs may not be available!
         if test -f "${dir}"/generator/stdout
         then
           msg "$(yellow "${dir}/generator/stdout:")"
-          cat "$dir"/generator/stdout
+          cat                                                           \
+          <(echo "-------------------- log start --------------------") \
+          "$dir"/generator/stdout                                       \
+          <(echo "-------------------- log end   --------------------")
         fi
         # Depending on when the start command failed, logs may not be available!
         if test -f "${dir}"/generator/stderr
         then
           msg "$(yellow "${dir}/generator/stderr:")"
-          cat "${dir}"/generator/stderr
+          cat                                                             \
+            <(echo "-------------------- log start --------------------") \
+            "${dir}"/generator/stderr                                     \
+            <(echo "-------------------- log end   --------------------")
         fi
         fatal "Failed to start program \"generator\""
       else
@@ -918,12 +956,15 @@ backend_nomad() {
         local nomad_environment=$(envjqr 'nomad_environment')
         if test "${nomad_environment}" != "cloud"
         then
-          ln -s                                                      \
-            ../nomad/alloc/node-0/local/run/current/generator/stdout \
+          ln -s                                                         \
+            ../nomad/alloc/node-0/local/run/current/generator/stdout    \
             "${dir}"/generator/stdout
-          ln -s                                                      \
-            ../nomad/alloc/node-0/local/run/current/generator/stderr \
+          ln -s                                                         \
+            ../nomad/alloc/node-0/local/run/current/generator/stderr    \
             "${dir}"/generator/stderr
+          ln -s                                                         \
+            ../nomad/alloc/node-0/local/run/current/generator/exit_code \
+            "${dir}"/generator/exit_code
         fi
         # It was "intentionally started and should not automagically stop" flag!
         touch "${dir}"/generator/started
@@ -945,38 +986,62 @@ backend_nomad() {
         then
           # Should show the output/log of `supervisord` (runs as "entrypoint").
           msg "$(yellow "${dir}/nomad/${task}/stdout:")"
-          cat "${dir}"/nomad/"${task}"/stdout
+          cat                                                             \
+            <(echo "-------------------- log start --------------------") \
+            "${dir}"/nomad/"${task}"/stdout                               \
+            <(echo "-------------------- log end   --------------------")
           msg "$(yellow "${dir}/nomad/${task}/stderr:")"
-          cat "${dir}"/nomad/"${task}"/stderr
+          cat                                                             \
+            <(echo "-------------------- log start --------------------") \
+            "${dir}"/nomad/"${task}"/stderr                               \
+            <(echo "-------------------- log end   --------------------")
           # Depending on when the start command failed, logs may not be available!
           if test -f "${dir}"/tracer/"${task}"/stdout
           then
             msg "$(yellow "${dir}/tracer/${task}/stdout:")"
-            cat "${dir}"/tracer/"${task}"/stdout
+            cat                                                             \
+              <(echo "-------------------- log start --------------------") \
+              "${dir}"/tracer/"${task}"/stdout                              \
+              <(echo "-------------------- log end   --------------------")
           fi
           # Depending on when the start command failed, logs may not be available!
           if test -f "${dir}"/tracer/"${task}"/stderr
           then
             msg "$(yellow "${dir}/tracer/${task}/stderr:")"
-            cat "${dir}"/tracer/"${task}"/stderr
+            cat                                                             \
+              <(echo "-------------------- log start --------------------") \
+              "${dir}"/tracer/"${task}"/stderr                              \
+              <(echo "-------------------- log end   --------------------")
           fi
         else
           # Should show the output/log of `supervisord` (runs as "entrypoint").
           msg "$(yellow "${dir}/nomad/tracer/stdout:")"
-          cat "${dir}"/nomad/tracer/stdout
+          cat                                                             \
+            <(echo "-------------------- log start --------------------") \
+            "${dir}"/nomad/tracer/stdout                                  \
+            <(echo "-------------------- log end   --------------------")
           msg "$(yellow "${dir}/nomad/tracer/stderr:")"
-          cat "${dir}"/nomad/tracer/stderr
+          cat                                                             \
+            <(echo "-------------------- log start --------------------") \
+            "${dir}"/nomad/tracer/stderr                                  \
+            <(echo "-------------------- log end   --------------------")
           # Depending on when the start command failed, logs may not be available!
           if test -f "${dir}"/tracer/stdout
           then
             msg "$(yellow "${dir}/tracer/stdout:")"
-            cat "$dir"/tracer/stdout
+            cat                                                             \
+              <(echo "-------------------- log start --------------------") \
+              "$dir"/tracer/stdout                                          \
+              <(echo "-------------------- log end   --------------------")
           fi
           # Depending on when the start command failed, logs may not be available!
           if test -f "${dir}"/tracer/stderr
           then
             msg "$(yellow "${dir}/tracer/stderr:")"
-            cat "${dir}"/tracer/stderr
+            cat                                                             \
+              <(echo "-------------------- log start --------------------") \
+              "${dir}"/tracer/stderr                                        \
+              <(echo "-------------------- log end   --------------------")
           fi
         fi
         # Let "start" parse the response code and handle the cleanup!
@@ -990,22 +1055,28 @@ backend_nomad() {
         then
           if test "${one_tracer_per_node}" = "true" || test "${task}" != "tracer"
           then
-            ln -s                                                         \
-              ../../nomad/alloc/"${task}"/local/run/current/tracer/stdout \
+            ln -s                                                            \
+              ../../nomad/alloc/"${task}"/local/run/current/tracer/stdout    \
               "${dir}"/tracer/"${task}"/stdout
-            ln -s                                                         \
-              ../../nomad/alloc/"${task}"/local/run/current/tracer/stderr \
+            ln -s                                                            \
+              ../../nomad/alloc/"${task}"/local/run/current/tracer/stderr    \
               "${dir}"/tracer/"${task}"/stderr
+            ln -s                                                            \
+              ../../nomad/alloc/"${task}"/local/run/current/tracer/exit_code \
+              "${dir}"/tracer/"${task}"/exit_code
           else
             # When "local" and "podman" "tracer" folder is mounted
             if ! test "${nomad_task_driver}" = "podman"
             then
-              ln -s                                                   \
-                ../nomad/alloc/tracer/local/run/current/tracer/stdout \
+              ln -s                                                            \
+                ../nomad/alloc/tracer/local/run/current/tracer/stdout          \
                 "${dir}"/tracer/stdout
-              ln -s                                                   \
-                ../nomad/alloc/tracer/local/run/current/tracer/stderr \
+              ln -s                                                            \
+                ../nomad/alloc/tracer/local/run/current/tracer/stderr          \
                 "${dir}"/tracer/stderr
+              ln -s                                                            \
+                ../../nomad/alloc/"${task}"/local/run/current/tracer/exit_code \
+                "${dir}"/tracer/"${task}"/exit_code
             fi
           fi
         fi
@@ -1041,9 +1112,13 @@ backend_nomad() {
       local i=0
       local node_alloc_id
       node_alloc_id=$(wb_nomad job task-name-allocation-id \
-        "$dir/nomad/nomad-job.json"                                   \
+        "$dir/nomad/nomad-job.json"                        \
         "${node}")
-      while ! nomad alloc fs -stat -H "${node_alloc_id}" "${socket_path_absolute}" 2>/dev/null | grep --quiet "application/octet-stream"
+      # Always keep checking that the supervisord program is still running!
+      while \
+            backend_nomad is-task-program-running "${dir}" "${node}" "${node}"                                                         \
+        &&                                                                                                                             \
+          ! nomad alloc fs -stat -H "${node_alloc_id}" "${socket_path_absolute}" 2>/dev/null | grep --quiet "application/octet-stream"
       # TODO: Add the "timer" `printf "%3d" $i;` but for concurrent processes!
       do
         sleep 1
@@ -1111,9 +1186,13 @@ backend_nomad() {
         # while test ! -S "$socket_path_absolute"
         local task_alloc_id
         task_alloc_id=$(wb_nomad job task-name-allocation-id \
-          "${dir}/nomad/nomad-job.json"                                 \
+          "${dir}/nomad/nomad-job.json"                      \
           "${task}")
-        while ! nomad alloc fs -stat -H "${task_alloc_id}" "${socket_path_absolute}" | grep --quiet "application/octet-stream"
+        # Always keep checking that the supervisord program is still running!
+        while \
+              backend_nomad is-task-program-running "${dir}" "${task}" tracer                                                \
+          &&                                                                                                                 \
+            ! nomad alloc fs -stat -H "${task_alloc_id}" "${socket_path_absolute}" | grep --quiet "application/octet-stream"
         do printf "%3d" $i; sleep 1
           i=$((i+1))
           if test "${i}" -ge "${patience}"
@@ -1284,26 +1363,71 @@ backend_nomad() {
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
 
-      local i=0 pools=$(jq .composition.n_pool_hosts $dir/profile.json) start_time=$(date +%s)
+      local start_time=$(date +%s)
+      local pools=$(jq .composition.n_pool_hosts "${dir}"/profile.json)
       msg_ne "nomad: $(blue Waiting) until all pool nodes are stopped: 000000"
-      touch $dir/flag/cluster-termination
-
-      for ((pool_ix=0; pool_ix < $pools; pool_ix++))
+      for ((pool_ix=0; pool_ix < ${pools}; pool_ix++))
       do
-        while backend_nomad is-task-program-running "$dir" "node-${pool_ix}" "node-${pool_ix}" > /dev/null && test -f $dir/flag/cluster-termination
+        while \
+            ! test -f "${dir}"/flag/cluster-stopping \
+          && \
+            backend_nomad is-task-program-running "${dir}" "node-${pool_ix}" "node-${pool_ix}" > /dev/null
         do
+          # Always check that a started generator has not FAILED!
+          if \
+                test -f "${dir}"/generator/started                              \
+            &&                                                                  \
+              ! test -f "${dir}"/generator/quit                                 \
+            &&                                                                  \
+              ! backend_nomad is-task-program-running "${dir}" node-0 generator
+          then
+            if backend_nomad is-task-program-failed   "${dir}" node-0 generator
+            then
+              # If node-0 quits generators fails with:
+              # tx-generator: MuxError MuxBearerClosed "<socket: 12> closed when reading data, waiting on next header True"
+              # Service binary 'tx-generator' returned status: 1
+              if backend_nomad is-task-program-running "${dir}" node-0 node-0
+              then
+                # This was not expected!
+                # But check it wasn't a race condition of a stopping cluster!
+                if ! test -f "${dir}"/flag/cluster-stopping
+                then
+                  touch "${dir}"/flag/cluster-stopping
+                  fatal "Generator quit unexpectedly!!!"
+                fi
+              else
+                # The whole cluster is about to finish!
+                touch "${dir}"/generator/quit
+              fi
+            else
+              touch "${dir}"/generator/quit
+              # Show the warning and continue with the counter
+              echo -e "\n"
+              msg "$(yellow "WARNING: supervisord program \"generator\" (always inside Nomad Task \"node-0\" quit with a non-error exit code")"
+              msg_ne "nomad: $(blue Waiting) until all pool nodes are stopped: 000000"
+            fi
+          fi
+          local elapsed="$(($(date +%s) - start_time))"
           echo -ne "\b\b\b\b\b\b"
-          printf "%6d" $((i + 1))
-          i=$((i+1))
+          printf "%6d" "${elapsed}"
           sleep 1
-        done
-        echo -ne "\b\b\b\b\b\b"; echo -n "node-${pool_ix} 000000"
-      done >&2
+        done   # While
+        if ! test -f "${dir}"/flag/cluster-stopping
+        then
+            echo -ne "\b\b\b\b\b\b"
+            echo -n "node-${pool_ix} 000000"
+        fi
+      done >&2 # For
       echo -ne "\b\b\b\b\b\b"
+
       local elapsed=$(($(date +%s) - start_time))
-      if test -f $dir/flag/cluster-termination
-      then echo " All nodes exited -- after $(yellow $elapsed)s" >&2
-      else echo " Termination requested -- after $(yellow $elapsed)s" >&2; fi
+      if test -f "${dir}"/flag/cluster-stopping
+      then
+        echo " Termination requested -- after $(yellow ${elapsed})s" >&2;
+      else
+        touch "${dir}"/flag/cluster-stopping
+        echo " All nodes exited      -- after $(yellow ${elapsed})s" >&2
+      fi
     ;;
 
     cluster-exited-programs )
@@ -1364,6 +1488,12 @@ backend_nomad() {
         /local/run/current/supervisor/supervisord.log        \
       > "${dir}"/supervisor/node-0/supervisord.log           \
       2>/dev/null || true # Ignore errors!
+      # Depending on when the start command failed, this file may be empty!
+      msg "$(blue Fetching) $(yellow exit_code) of $(yellow "program \"generator\"") inside Nomad $(yellow "Task \"node-0\"") ..."
+      backend_nomad task-file-contents "${dir}" "node-0"    \
+        /local/run/current/generator/exit_code              \
+      > "${dir}"/generator/exit_code                        \
+      2>/dev/null || true # Ignore errors!
       # Depending on when the start command failed, logs may not be available!
       msg "$(blue Fetching) $(yellow stdout) of $(yellow "program \"generator\"") inside Nomad $(yellow "Task \"node-0\"") ..."
       backend_nomad task-file-contents "${dir}" "node-0"    \
@@ -1395,6 +1525,12 @@ backend_nomad() {
         /local/run/current/supervisor/supervisord.log     \
       > "${dir}"/supervisor/"${node}"/supervisord.log     \
       2>/dev/null || true # Ignore errors!
+      # Depending on when the start command failed, this file may be empty!
+      msg "$(blue Fetching) $(yellow exit_code) of supervisord $(yellow "program \"${node}\"") inside Nomad $(yellow "Task \"${node}\"") ..."
+      backend_nomad task-file-contents "${dir}" "${node}" \
+        /local/run/current/"${node}"/exit_code            \
+      > "${dir}"/"${node}"/exit_code                      \
+      2>/dev/null || true # Ignore errors!
       # Depending on when the start command failed, logs may not be available!
       msg "$(blue Fetching) $(yellow stdout) of supervisord $(yellow "program \"${node}\"") inside Nomad $(yellow "Task \"${node}\"") ..."
       backend_nomad task-file-contents "${dir}" "${node}" \
@@ -1419,6 +1555,12 @@ backend_nomad() {
         local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
         if test "${one_tracer_per_node}" = "true" || test "${task}" != "tracer"
         then
+          # Depending on when the start command failed, this file may be empty!
+          msg "$(blue Fetching) $(yellow exit_code) of supervisord $(yellow "program \"tracer\"") inside Nomad $(yellow "Task \"${task}\"") ..."
+          backend_nomad task-file-contents "${dir}" "${task}" \
+            /local/run/current/tracer/exit_code               \
+          > "${dir}"/tracer/"${task}"/exit_code
+          2>/dev/null || true # Ignore errors!
           # Depending on when the start command failed, logs may not be available!
           msg "$(blue Fetching) $(yellow stdout) of supervisord $(yellow "program \"tracer\"") inside Nomad $(yellow "Task \"${task}\"") ..."
           backend_nomad task-file-contents "${dir}" "${task}" \
@@ -1448,6 +1590,12 @@ backend_nomad() {
           local nomad_task_driver=$(envjqr 'nomad_task_driver')
           if ! test "${nomad_task_driver}" = "podman"
           then
+            msg "$(blue Fetching) $(yellow exit_code) of supervisord $(yellow "program \"tracer\"") inside Nomad $(yellow "Task \"tracer\"") ..."
+            # Depending on when the start command failed, this file may be empty!
+            backend_nomad task-file-contents "${dir}" "tracer" \
+              /local/run/current/tracer/exit_code              \
+            > "${dir}"/tracer/exit_code                        \
+            2>/dev/null || true # Ignore errors!
             msg "$(blue Fetching) $(yellow stdout) of supervisord $(yellow "program \"tracer\"") inside Nomad $(yellow "Task \"tracer\"") ..."
             # Depending on when the start command failed, logs may not be available!
             backend_nomad task-file-contents "${dir}" "tracer" \
@@ -1667,6 +1815,24 @@ backend_nomad() {
       #> supervisorctl status node-0 >/dev/null; echo $?
       # 3
       backend_nomad task-supervisorctl "$dir" "$task" status "$program" > /dev/null
+    ;;
+
+    is-task-program-failed )
+      local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME SUPERVISOR-PROGRAM"
+      local dir=${1:?$usage}; shift
+      local task=${1:?$usage}; shift
+      local program=${1:?$usage}; shift
+      # As we are not using any "autorestart" supervisord programs are run as:
+      # command=sh -c "./start.sh; echo "$?" > ./exit_code"
+      # because we can't obtain the exit codes using `supervisrctl`
+      local exit_code
+      if exit_code=$(backend_nomad task-file-contents "${dir}" "${task}" \
+        /local/run/current/"${program}"/exit_code 2>/dev/null)
+      then
+        test "${exit_code}" != "0"
+      else
+        return 0
+      fi
     ;;
 
     task-supervisorctl )
