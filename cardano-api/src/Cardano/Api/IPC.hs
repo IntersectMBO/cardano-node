@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -86,6 +87,10 @@ module Cardano.Api.IPC (
 
     -- ** Error types
     AcquireFailure(..),
+
+    InvalidConsensusMode(..),
+    CardanoConsensusModeParams(..),
+    requireCardanoConsensusModeParams_,
   ) where
 
 import           Control.Concurrent.STM (TMVar, atomically, newEmptyTMVarIO, putTMVar, takeTMVar,
@@ -208,6 +213,36 @@ consensusModeOnly ByronModeParams{}   = ByronMode
 consensusModeOnly ShelleyModeParams{} = ShelleyMode
 consensusModeOnly CardanoModeParams{} = CardanoMode
 
+newtype InvalidConsensusMode = InvalidConsensusMode AnyConsensusMode
+  deriving Show
+
+data CardanoConsensusModeParams mode where
+  CardanoConsensusModeParams :: CardanoMode ~ mode => ConsensusModeParams mode -> CardanoConsensusModeParams mode
+
+requireCardanoConsensusModeParams_ :: ()
+  => Monad m
+  => e `CouldBe` InvalidConsensusMode
+  => ConsensusModeParams mode
+  -> ExceptT (Variant e) m (ConsensusModeParams CardanoMode)
+requireCardanoConsensusModeParams_ cModeParams =
+  case cModeParams of
+    ByronModeParams{} -> OO.throw $ InvalidConsensusMode $ AnyConsensusMode ByronMode
+    ShelleyModeParams{} -> OO.throw $ InvalidConsensusMode $ AnyConsensusMode ShelleyMode
+    CardanoModeParams{} -> pure cModeParams
+
+-- data ConsensusMode mode where
+--      ByronMode   :: ConsensusMode ByronMode
+--      ShelleyMode :: ConsensusMode ShelleyMode
+--      CardanoMode :: ConsensusMode CardanoMode
+
+-- getIsCardanoEraConstraint :: CardanoEra era -> (IsCardanoEra era => a) -> a
+-- getIsCardanoEraConstraint ByronEra f = f
+-- getIsCardanoEraConstraint ShelleyEra f = f
+-- getIsCardanoEraConstraint AllegraEra f = f
+-- getIsCardanoEraConstraint MaryEra f = f
+-- getIsCardanoEraConstraint AlonzoEra f = f
+-- getIsCardanoEraConstraint BabbageEra f = f
+-- getIsCardanoEraConstraint ConwayEra f = f
 
 -- ----------------------------------------------------------------------------
 -- Actually connect to the node

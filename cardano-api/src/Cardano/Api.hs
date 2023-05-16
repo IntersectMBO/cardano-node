@@ -875,6 +875,10 @@ module Cardano.Api (
 
     -- ** CLI option parsing
     bounded,
+
+    InvalidConsensusMode(..),
+    CardanoConsensusModeParams(..),
+    requireCardanoConsensusModeParams_,
   ) where
 
 import           Cardano.Api.Address
