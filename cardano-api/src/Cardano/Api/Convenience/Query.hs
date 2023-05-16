@@ -27,6 +27,7 @@ module Cardano.Api.Convenience.Query (
     queryPoolState_,
     queryProtocolParams_,
     queryProtocolState_,
+    queryStakeAddresses_,
     queryStakeDistribution_,
     queryStakePools_,
     queryStakeSnapshot_,
@@ -156,6 +157,19 @@ queryProtocolState_ :: ()
   -> ExceptT (Variant e) (LocalStateQueryExpr block point (QueryInMode mode) r IO) (ProtocolState era)
 queryProtocolState_ eInMode sbe = do
   let query = QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolState
+
+  queryExpr_ query & OO.onLeft @EraMismatch OO.throw
+
+queryStakeAddresses_ :: ()
+  => e `CouldBe` UnsupportedNtcVersionError
+  => e `CouldBe` EraMismatch
+  => EraInMode era mode
+  -> ShelleyBasedEra era
+  -> Set StakeCredential
+  -> NetworkId
+  -> ExceptT (Variant e) (LocalStateQueryExpr block point (QueryInMode mode) r IO) (Map StakeAddress Lovelace, Map StakeAddress PoolId)
+queryStakeAddresses_ eInMode sbe stakeAddr network = do
+  let query = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryStakeAddresses stakeAddr network
 
   queryExpr_ query & OO.onLeft @EraMismatch OO.throw
 

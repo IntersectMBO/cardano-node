@@ -853,6 +853,7 @@ module Cardano.Api (
     queryPoolState_,
     queryProtocolParams_,
     queryProtocolState_,
+    queryStakeAddresses_,
     queryStakeDistribution_,
     queryStakePools_,
     queryStakeSnapshot_,
