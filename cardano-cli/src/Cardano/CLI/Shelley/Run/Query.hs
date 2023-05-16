@@ -206,11 +206,11 @@ runQueryProtocolParameters
   -> NetworkId
   -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryProtocolParameters socketPath (AnyConsensusModeParams cModeParams) network mOutFile = do
-  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
+runQueryProtocolParameters socketPath (AnyConsensusModeParams cModeParams) network mOutFile =
+  runOopsInExceptT @ShelleyQueryCmdError $ do
+    let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
 
-  result <- runOopsInExceptT @ShelleyQueryCmdError $ do
-    executeLocalStateQueryExpr_ localNodeConnInfo Nothing
+    result <- executeLocalStateQueryExpr_ localNodeConnInfo Nothing
       (do
           ShelleyBasedEraWithEraInMode sbe eInMode <- determineShelleyBasedEraWithEraInMode_ cModeParams
 
@@ -222,19 +222,20 @@ runQueryProtocolParameters socketPath (AnyConsensusModeParams cModeParams) netwo
       & OO.catch @UnsupportedNtcVersionError (OO.throw . ShelleyQueryCmdUnsupportedNtcVersion)
       & OO.catch @InvalidEraInMode (OO.throw . ShelleyQueryCmdEraConsensusModeMismatch)
 
-
-  writeProtocolParameters mOutFile result
+    writeProtocolParameters mOutFile result
  where
-  writeProtocolParameters
-    :: Maybe (File () Out)
+  writeProtocolParameters :: ()
+    => e `CouldBe` ShelleyQueryCmdError
+    => Maybe (File () Out)
     -> ProtocolParameters
-    -> ExceptT ShelleyQueryCmdError IO ()
+    -> ExceptT (Variant e) IO ()
   writeProtocolParameters mOutFile' pparams =
     case mOutFile' of
-      Nothing -> liftIO $ LBS.putStrLn (encodePretty pparams)
+      Nothing -> lift $ LBS.putStrLn (encodePretty pparams)
       Just (File fpath) ->
-        handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath) $
-          LBS.writeFile fpath (encodePretty pparams)
+        lift (LBS.writeFile fpath (encodePretty pparams))
+          & OO.onException (OO.throw . ShelleyQueryCmdWriteFileError . FileIOError fpath)
+
 
 -- | Calculate the percentage sync rendered as text.
 percentage
@@ -368,11 +369,11 @@ runQueryUTxO
   -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryUTxO socketPath (AnyConsensusModeParams cModeParams)
-             qfilter network mOutFile = do
-  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
+             qfilter network mOutFile =
+  runOopsInExceptT @ShelleyQueryCmdError $ do
+    let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
 
-  ShelleyBasedEraWith sbe result <- runOopsInExceptT @ShelleyQueryCmdError $ do
-    executeLocalStateQueryExpr_ localNodeConnInfo Nothing
+    ShelleyBasedEraWith sbe result <- executeLocalStateQueryExpr_ localNodeConnInfo Nothing
       ( do  ShelleyBasedEraWithEraInMode sbe eInMode <- determineShelleyBasedEraWithEraInMode_ cModeParams
             ShelleyBasedEraWith sbe <$> queryUtxo_ eInMode sbe qfilter
       ) & OO.catch @AcquiringFailure (OO.throw . ShelleyQueryCmdAcquireFailure)
@@ -381,7 +382,7 @@ runQueryUTxO socketPath (AnyConsensusModeParams cModeParams)
         & OO.catch @UnsupportedNtcVersionError (OO.throw . ShelleyQueryCmdUnsupportedNtcVersion)
         & OO.catch @EraMismatch (OO.throw . ShelleyQueryCmdEraMismatch)
 
-  writeFilteredUTxOs sbe mOutFile result
+    writeFilteredUTxOs sbe mOutFile result
 
 runQueryKesPeriodInfo
   :: SocketPath
@@ -390,7 +391,7 @@ runQueryKesPeriodInfo
   -> File () In
   -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryKesPeriodInfo socketPath (AnyConsensusModeParams cModeParamsTop) network nodeOpCertFile mOutFile = do
+runQueryKesPeriodInfo socketPath (AnyConsensusModeParams cModeParamsTop) network nodeOpCertFile mOutFile =
   runOopsInExceptT @ShelleyQueryCmdError $ do
     cModeParams <- requireCardanoConsensusModeParams_ cModeParamsTop
       & OO.catch (OO.throw . ShelleyQueryCmdUnsupportedMode)
@@ -905,13 +906,15 @@ writeProtocolState mOutFile ps@(ProtocolState pstate) =
       handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
         . LBS.writeFile fpath $ unSerialised pstate
 
-writeFilteredUTxOs :: Api.ShelleyBasedEra era
-                   -> Maybe (File () Out)
-                   -> UTxO era
-                   -> ExceptT ShelleyQueryCmdError IO ()
+writeFilteredUTxOs :: ()
+  => e `CouldBe` ShelleyQueryCmdError
+  => Api.ShelleyBasedEra era
+  -> Maybe (File () Out)
+  -> UTxO era
+  -> ExceptT (Variant e) IO ()
 writeFilteredUTxOs shelleyBasedEra' mOutFile utxo =
     case mOutFile of
-      Nothing -> liftIO $ printFilteredUTxOs shelleyBasedEra' utxo
+      Nothing -> lift (printFilteredUTxOs shelleyBasedEra' utxo)
       Just (File fpath) ->
         case shelleyBasedEra' of
           ShelleyBasedEraShelley -> writeUTxo fpath utxo
@@ -920,10 +923,10 @@ writeFilteredUTxOs shelleyBasedEra' mOutFile utxo =
           ShelleyBasedEraAlonzo -> writeUTxo fpath utxo
           ShelleyBasedEraBabbage -> writeUTxo fpath utxo
           ShelleyBasedEraConway -> writeUTxo fpath utxo
- where
-   writeUTxo fpath utxo' =
-     handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
-       $ LBS.writeFile fpath (encodePretty utxo')
+  where
+    writeUTxo fpath utxo' =
+      lift (LBS.writeFile fpath (encodePretty utxo'))
+        & OO.onException (OO.throw . ShelleyQueryCmdWriteFileError . FileIOError fpath)
 
 printFilteredUTxOs :: Api.ShelleyBasedEra era -> UTxO era -> IO ()
 printFilteredUTxOs shelleyBasedEra' (UTxO utxo) = do
@@ -1020,30 +1023,31 @@ runQueryStakePools
   -> NetworkId
   -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryStakePools socketPath (AnyConsensusModeParams cModeParams) network mOutFile = runOopsInExceptT @ShelleyQueryCmdError $ do
-  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
+runQueryStakePools socketPath (AnyConsensusModeParams cModeParams) network mOutFile =
+  runOopsInExceptT @ShelleyQueryCmdError $ do
+    let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
 
-  result <- executeLocalStateQueryExpr_ localNodeConnInfo Nothing
-    ( do
-        anyE@(AnyCardanoEra era) <- case consensusModeOnly cModeParams of
-          ByronMode -> pure $ AnyCardanoEra ByronEra
-          ShelleyMode -> pure $ AnyCardanoEra ShelleyEra
-          CardanoMode -> queryExpr_ $ QueryCurrentEra CardanoModeIsMultiEra
+    result <- executeLocalStateQueryExpr_ localNodeConnInfo Nothing
+      ( do
+          anyE@(AnyCardanoEra era) <- case consensusModeOnly cModeParams of
+            ByronMode -> pure $ AnyCardanoEra ByronEra
+            ShelleyMode -> pure $ AnyCardanoEra ShelleyEra
+            CardanoMode -> queryExpr_ $ QueryCurrentEra CardanoModeIsMultiEra
 
-        let cMode = consensusModeOnly cModeParams
+          let cMode = consensusModeOnly cModeParams
 
-        eInMode <- toEraInMode era cMode
-          & OO.hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode anyE (AnyConsensusMode cMode)))
+          eInMode <- toEraInMode era cMode
+            & OO.hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode anyE (AnyConsensusMode cMode)))
 
-        sbe <- getSbeInQuery_ $ cardanoEraStyle era
+          sbe <- getSbeInQuery_ $ cardanoEraStyle era
 
-        (queryExpr_ $ QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryStakePools)
-          & OO.onLeft (OO.throw . ShelleyQueryCmdEraMismatch)
-    )
-    & OO.catch @AcquiringFailure (OO.throw . ShelleyQueryCmdAcquireFailure)
-    & OO.catch @UnsupportedNtcVersionError (OO.throw . ShelleyQueryCmdUnsupportedNtcVersion)
+          (queryExpr_ $ QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryStakePools)
+            & OO.onLeft (OO.throw . ShelleyQueryCmdEraMismatch)
+      )
+      & OO.catch @AcquiringFailure (OO.throw . ShelleyQueryCmdAcquireFailure)
+      & OO.catch @UnsupportedNtcVersionError (OO.throw . ShelleyQueryCmdUnsupportedNtcVersion)
 
-  writeStakePools_ mOutFile result
+    writeStakePools_ mOutFile result
 
 writeStakePools_ :: ()
   => e `CouldBe` ShelleyQueryCmdError
