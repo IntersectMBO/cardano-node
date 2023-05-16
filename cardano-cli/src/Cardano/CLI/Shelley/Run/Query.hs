@@ -1170,15 +1170,6 @@ runQueryLeadershipSchedule
     socketPath (AnyConsensusModeParams cModeParams) network
     (GenesisFile genFile) coldVerKeyFile vrfSkeyFp
     whichSchedule mJsonOutputFile = do
-  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
-
-  anyE@(AnyCardanoEra era) <- lift (determineEra cModeParams localNodeConnInfo)
-    & onLeft (left . ShelleyQueryCmdAcquireFailure)
-
-  sbe <- getSbe (cardanoEraStyle era)
-
-  let cMode = consensusModeOnly cModeParams
-
   poolid <- lift (readVerificationKeyOrHashOrFile AsStakePoolKey coldVerKeyFile)
     & onLeft (left . ShelleyQueryCmdTextReadError)
 
@@ -1188,8 +1179,17 @@ runQueryLeadershipSchedule
   shelleyGenesis <- lift (readAndDecodeShelleyGenesis genFile)
     & onLeft (left . ShelleyQueryCmdGenesisReadError)
 
+  let cMode = consensusModeOnly cModeParams
+
   case cMode of
     CardanoMode -> do
+      let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
+
+      anyE@(AnyCardanoEra era) <- lift (determineEra cModeParams localNodeConnInfo)
+        & onLeft (left . ShelleyQueryCmdAcquireFailure)
+
+      sbe <- getSbe (cardanoEraStyle era)
+
       eInMode <- toEraInMode era cMode
         & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode anyE (AnyConsensusMode cMode)))
 
