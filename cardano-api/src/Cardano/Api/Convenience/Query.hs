@@ -25,7 +25,7 @@ module Cardano.Api.Convenience.Query (
     queryEraHistory_,
     queryGenesisParameters_,
     queryPoolState_,
-    queryProtocolParams_,
+    queryProtocolParameters_,
     queryProtocolState_,
     queryStakeAddresses_,
     queryStakeDistribution_,
@@ -230,13 +230,13 @@ queryGenesisParameters_ eInMode sbe = do
 
   queryExpr_ query & OO.onLeft @EraMismatch OO.throw
 
-queryProtocolParams_ :: ()
+queryProtocolParameters_ :: ()
   => e `CouldBe` UnsupportedNtcVersionError
   => e `CouldBe` EraMismatch
   => EraInMode era mode
   -> ShelleyBasedEra era
   -> ExceptT (Variant e) (LocalStateQueryExpr block point (QueryInMode mode) r IO) ProtocolParameters
-queryProtocolParams_ qeInMode qSbe = do
+queryProtocolParameters_ qeInMode qSbe = do
   let query = QueryInEra qeInMode $ QueryInShelleyBasedEra qSbe QueryProtocolParameters
 
   queryExpr_ query & OO.onLeft @EraMismatch OO.throw
@@ -337,7 +337,7 @@ queryStateForBalancedTx_ socketPath era networkId allTxIns certs = do
   -- Query execution
   executeLocalStateQueryExpr_ localNodeConnInfo Nothing $ do
     utxo <- queryUtxo_ qeInMode qSbe $ QueryUTxOByTxIn $ Set.fromList allTxIns
-    pparams <- queryProtocolParams_ qeInMode qSbe
+    pparams <- queryProtocolParameters_ qeInMode qSbe
     eraHistory <- queryEraHistory_ CardanoModeIsMultiEra
     systemStart <- querySystemStart_
     stakePools <- queryStakePools_ qeInMode qSbe

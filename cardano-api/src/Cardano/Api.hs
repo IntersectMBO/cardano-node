@@ -851,7 +851,7 @@ module Cardano.Api (
     queryEraHistory_,
     queryGenesisParameters_,
     queryPoolState_,
-    queryProtocolParams_,
+    queryProtocolParameters_,
     queryProtocolState_,
     queryStakeAddresses_,
     queryStakeDistribution_,

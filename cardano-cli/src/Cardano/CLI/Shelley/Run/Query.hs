@@ -1193,15 +1193,16 @@ runQueryLeadershipSchedule
       eInMode <- toEraInMode era cMode
         & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode anyE (AnyConsensusMode cMode)))
 
-      let pparamsQuery = QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
-          ptclStateQuery = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryProtocolState
-          eraHistoryQuery = QueryEraHistory CardanoModeIsMultiEra
+      (pparams, ptclState, eraHistory) <- runOopsInExceptT @ShelleyQueryCmdError $
+        executeLocalStateQueryExpr_ localNodeConnInfo Nothing
+          ( do  pparams <- queryProtocolParameters_ eInMode sbe
+                ptclState <- queryProtocolState_ eInMode sbe
+                eraHistory <- queryEraHistory_ CardanoModeIsMultiEra
+                pure (pparams, ptclState, eraHistory)
+          ) & OO.catch @AcquiringFailure (OO.throw . ShelleyQueryCmdAcquireFailure)
+            & OO.catch @EraMismatch (OO.throw . ShelleyQueryCmdEraMismatch)
+            & OO.catch @UnsupportedNtcVersionError (OO.throw . ShelleyQueryCmdUnsupportedNtcVersion)
 
-      pparams <- executeQuery era cModeParams localNodeConnInfo pparamsQuery
-      ptclState <- executeQuery era cModeParams localNodeConnInfo ptclStateQuery
-      eraHistory <- runOopsInExceptT @ShelleyQueryCmdError $ do
-        queryNodeLocalState_ localNodeConnInfo Nothing eraHistoryQuery
-          & OO.catch @AcquiringFailure (OO.throw . ShelleyQueryCmdAcquireFailure)
       let eInfo = toEpochInfo eraHistory
       let currentEpochQuery = QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryEpoch
       curentEpoch <- executeQuery era cModeParams localNodeConnInfo currentEpochQuery
