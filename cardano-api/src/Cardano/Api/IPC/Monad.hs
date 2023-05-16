@@ -14,8 +14,11 @@ module Cardano.Api.IPC.Monad
   , queryExpr_
   , determineEraExpr
   , determineEraExpr_
+  , determineShelleyBasedEraWithEraInMode_
 
   , NodeToClientVersionOf (..)
+
+  , ShelleyBasedEraWithEraInMode(..)
   ) where
 
 import           Control.Concurrent.STM
@@ -158,3 +161,19 @@ determineEraExpr_ cModeParams =
     ByronMode -> return $ AnyCardanoEra ByronEra
     ShelleyMode -> return $ AnyCardanoEra ShelleyEra
     CardanoMode -> queryExpr_ $ QueryCurrentEra CardanoModeIsMultiEra
+
+data ShelleyBasedEraWithEraInMode mode where
+  ShelleyBasedEraWithEraInMode :: ShelleyBasedEra era -> EraInMode era mode -> ShelleyBasedEraWithEraInMode mode
+
+determineShelleyBasedEraWithEraInMode_ :: ()
+  => e `CouldBe` InvalidEraInMode
+  => e `CouldBe` RequireShelleyBasedEra
+  => e `CouldBe` UnsupportedNtcVersionError
+  => ConsensusModeParams mode
+  -> ExceptT (Variant e) (LocalStateQueryExpr block point (QueryInMode mode) r IO) (ShelleyBasedEraWithEraInMode mode)
+determineShelleyBasedEraWithEraInMode_ cModeParams = do
+  AnyCardanoEra era <- determineEraExpr_ cModeParams
+  sbe <- requireShelleyBasedEra_ (cardanoEraStyle era)
+  eInMode <- toEraInMode_ era $ consensusModeOnly cModeParams
+
+  pure (ShelleyBasedEraWithEraInMode sbe eInMode)

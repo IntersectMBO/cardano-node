@@ -211,13 +211,7 @@ runQueryProtocolParameters socketPath (AnyConsensusModeParams cModeParams) netwo
   result <- runOopsInExceptT @ShelleyQueryCmdError $ do
     executeLocalStateQueryExpr_ localNodeConnInfo Nothing
       (do
-          AnyCardanoEra era <- determineEraExpr_ cModeParams
-
-          sbe <- requireShelleyBasedEra_ (cardanoEraStyle era)
-
-          let cMode = consensusModeOnly cModeParams
-
-          eInMode <- toEraInMode_ era cMode
+          ShelleyBasedEraWithEraInMode sbe eInMode <- determineShelleyBasedEraWithEraInMode_ cModeParams
 
           queryExpr_ (QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters)
             & OO.onLeft (OO.throw . ShelleyQueryCmdEraMismatch))

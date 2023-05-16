@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -6,7 +7,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-
+{-# LANGUAGE TypeOperators #-}
 
 -- | Cardano eras, sometimes we have to distinguish them.
 --
@@ -49,11 +50,17 @@ module Cardano.Api.Eras
     -- * Data family instances
   , AsType(AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra,
            AsByron,    AsShelley,    AsAllegra,    AsMary,    AsAlonzo,    AsBabbage, AsConway)
+
+  , RequireShelleyBasedEra(..)
+  , requireShelleyBasedEra_
   ) where
 
 import           Cardano.Api.HasTypeProxy
 
 import           Control.DeepSeq
+import           Control.Monad.Except (ExceptT)
+import           Control.Monad.Oops (CouldBe, Variant)
+import qualified Control.Monad.Oops as OO
 import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
 import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
@@ -523,3 +530,15 @@ eraProtVerLow era =
     ShelleyBasedEraAlonzo  -> L.eraProtVerLow @L.Alonzo
     ShelleyBasedEraBabbage -> L.eraProtVerLow @L.Babbage
     ShelleyBasedEraConway  -> L.eraProtVerLow @L.Conway
+
+newtype RequireShelleyBasedEra = RequireShelleyBasedEra AnyCardanoEra
+  deriving Show
+
+requireShelleyBasedEra_ :: ()
+  => Monad m
+  => e `CouldBe` RequireShelleyBasedEra
+  => CardanoEraStyle era
+  -> ExceptT (Variant e) m (ShelleyBasedEra era)
+requireShelleyBasedEra_ = \case
+  LegacyByronEra -> OO.throw $ RequireShelleyBasedEra $ AnyCardanoEra ByronEra
+  ShelleyBasedEra sbe -> pure sbe

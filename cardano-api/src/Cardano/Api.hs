@@ -819,6 +819,8 @@ module Cardano.Api (
     queryExpr_,
     determineEraExpr,
     determineEraExpr_,
+    determineShelleyBasedEraWithEraInMode_,
+    ShelleyBasedEraWithEraInMode(..),
 
     chainPointToSlotNo,
     chainPointToHeaderHash,

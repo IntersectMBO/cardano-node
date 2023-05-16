@@ -86,18 +86,6 @@ renderQueryConvenienceError (QueryConvenienceUnsupportedNodeToClientVersion
   (UnsupportedNtcVersionError minNodeToClientVersion nodeToClientVersion)) =
   "Unsupported Node to Client version: " <> textShow minNodeToClientVersion <> " " <> textShow nodeToClientVersion
 
-newtype RequireShelleyBasedEra = RequireShelleyBasedEra AnyCardanoEra
-  deriving Show
-
-requireShelleyBasedEra_ :: ()
-  => Monad m
-  => e `CouldBe` RequireShelleyBasedEra
-  => CardanoEraStyle era
-  -> ExceptT (Variant e) m (ShelleyBasedEra era)
-requireShelleyBasedEra_ = \case
-  LegacyByronEra -> OO.throw $ RequireShelleyBasedEra $ AnyCardanoEra ByronEra
-  ShelleyBasedEra sbe -> pure sbe
-
 handleQueryConvenienceErrors_ :: ()
   => Monad m
   => e `CouldBe` QueryConvenienceError
