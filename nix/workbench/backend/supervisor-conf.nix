@@ -29,12 +29,45 @@ let
   ## Refer to:
   ## - http://supervisord.org/configuration.html
   supervisorConf =
+    ##
+    ## [unix_http_server] Section Settings
+    ##
+    ## Refer to:
+    ## - http://supervisord.org/configuration.html#unix-http-server-section-settings
+    lib.attrsets.optionalAttrs (unixHttpServerPort != null) {
+      unix_http_server = {
+        file = unixHttpServerPort;
+        chmod = "0777";
+      };
+    }
+    ##
+    ## [inet_http_server] Section Settings
+    ##
+    ## Refer to:
+    ## - http://supervisord.org/configuration.html#inet-http-server-section-settings
+    //
+    lib.attrsets.optionalAttrs (inetHttpServerPort != null) {
+      inet_http_server = {
+        port = inetHttpServerPort;
+      };
+    }
+    //
     {
+      ##
+      ## [supervisord] Section Settings
+      ##
+      ## Refer to:
+      ## http://supervisord.org/configuration.html#supervisord-section-settings
       supervisord = {
         logfile = "${stateDir}/supervisor/supervisord.log";
         pidfile = "${stateDir}/supervisor/supervisord.pid";
         strip_ansi = true;
       };
+      ##
+      ## [supervisorctl] Section Settings
+      ##
+      ## Refer to:
+      ## http://supervisord.org/configuration.html#supervisorctl-section-settings
       supervisorctl = {};
       "rpcinterface:supervisor" = {
         "supervisor.rpcinterface_factory" = "supervisor.rpcinterface:make_main_rpcinterface";
@@ -45,24 +78,6 @@ let
     ##
     ## Refer to:
     ## - http://supervisord.org/configuration.html#program-x-section-settings
-    //
-    {
-      "program:generator" = {
-        # "command" below assumes "directory" is set accordingly.
-        directory      = "${stateDir}/generator";
-        command        = "${command}";
-        stdout_logfile = "${stateDir}/generator/stdout";
-        stderr_logfile = "${stateDir}/generator/stderr";
-        stopasgroup    = false;
-        killasgroup    = false;
-        autostart      = false;
-        autorestart    = false;
-        # Don't attempt any restart!
-        startretries   = 0;
-        # Seconds it needs to stay running to consider the start successful
-        startsecs      = 5;
-      };
-    }
     //
     lib.attrsets.optionalAttrs withTracer
     {
@@ -106,23 +121,24 @@ let
     ## Refer to:
     ## - http://supervisord.org/configuration.html#unix-http-server-section-settings
     //
-    lib.attrsets.optionalAttrs (unixHttpServerPort != null) {
-      unix_http_server = {
-        file = unixHttpServerPort;
-        chmod = "0777";
+    {
+      "program:generator" = {
+        # "command" below assumes "directory" is set accordingly.
+        directory      = "${stateDir}/generator";
+        command        = "${command}";
+        stdout_logfile = "${stateDir}/generator/stdout";
+        stderr_logfile = "${stateDir}/generator/stderr";
+        stopasgroup    = false;
+        killasgroup    = false;
+        autostart      = false;
+        autorestart    = false;
+        # Don't attempt any restart!
+        startretries   = 0;
+        # Seconds it needs to stay running to consider the start successful
+        startsecs      = 5;
       };
     }
-    ##
-    ## [inet_http_server] Section Settings
-    ##
-    ## Refer to:
-    ## - http://supervisord.org/configuration.html#inet-http-server-section-settings
-    //
-    lib.attrsets.optionalAttrs (inetHttpServerPort != null) {
-      inet_http_server = {
-        port = inetHttpServerPort;
-      };
-    };
+    ;
 
 in {
   value = supervisorConf;
