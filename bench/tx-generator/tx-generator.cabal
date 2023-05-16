@@ -19,13 +19,21 @@ data-files:             data/protocol-parameters.json
                         data/loop.redeemer.json
                         data/ecdsa-secp256k1-loop.redeemer.json
                         data/schnorr-secp256k1-loop.redeemer.json
+                        scripts-fallback/*.plutus
 
 common project-config
   if os(windows)
     buildable: False
 
+common with-library
+  if impl(ghc >= 9)
+    build-depends:      plutus-scripts-bench
+    cpp-options:        -DWITH_LIBRARY
+
+
 library
-  import:               project-config
+  import:               project-config, with-library
+
   hs-source-dirs:       src
   ghc-options:          -Wall
                         -Wcompat
@@ -123,7 +131,6 @@ library
                       , ouroboros-network-framework
                       , ouroboros-network-protocols
                       , plutus-ledger-api
-                      , plutus-scripts-bench
                       , plutus-tx
                       , random
                       , serialise
@@ -170,7 +177,8 @@ executable tx-generator
                       , tx-generator
 
 test-suite tx-generator-apitest
-  import:               project-config
+  import:               project-config, with-library
+
   hs-source-dirs:       test
   main-is:              ApiTest.hs
   type:                 exitcode-stdio-1.0
@@ -188,7 +196,6 @@ test-suite tx-generator-apitest
                       , cardano-api ^>= 8.1.0.1
                       , cardano-cli
                       , cardano-node
-                      , plutus-scripts-bench
                       , plutus-tx
                       , transformers
                       , transformers-except
