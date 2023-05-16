@@ -1366,13 +1366,12 @@ backend_nomad() {
       local start_time=$(date +%s)
       local pools=$(jq .composition.n_pool_hosts "${dir}"/profile.json)
       msg_ne "nomad: $(blue Waiting) until all pool nodes are stopped: 000000"
-      touch "${dir}"/flag/cluster-termination
-      for ((pool_ix=0; pool_ix < $pools; pool_ix++))
+      for ((pool_ix=0; pool_ix < ${pools}; pool_ix++))
       do
         while \
-            backend_nomad is-task-program-running "${dir}" "node-${pool_ix}" "node-${pool_ix}" > /dev/null \
-          &&                                                                                               \
-            test -f "${dir}"/flag/cluster-termination
+            ! test -f "${dir}"/flag/cluster-stopping \
+          && \
+            backend_nomad is-task-program-running "${dir}" "node-${pool_ix}" "node-${pool_ix}" > /dev/null
         do
           # Always check that a started generator has not FAILED!
           if \
@@ -1412,17 +1411,22 @@ backend_nomad() {
           echo -ne "\b\b\b\b\b\b"
           printf "%6d" "${elapsed}"
           sleep 1
-        done
-        echo -ne "\b\b\b\b\b\b"; echo -n "node-${pool_ix} 000000"
-      done >&2
+        done   # While
+        if ! test -f "${dir}"/flag/cluster-stopping
+        then
+            echo -ne "\b\b\b\b\b\b"
+            echo -n "node-${pool_ix} 000000"
+        fi
+      done >&2 # For
       echo -ne "\b\b\b\b\b\b"
 
       local elapsed=$(($(date +%s) - start_time))
-      if test -f "${dir}"/flag/cluster-termination
+      if test -f "${dir}"/flag/cluster-stopping
       then
-        echo " All nodes exited      -- after $(yellow ${elapsed})s" >&2
-      else
         echo " Termination requested -- after $(yellow ${elapsed})s" >&2;
+      else
+        touch "${dir}"/flag/cluster-stopping
+        echo " All nodes exited      -- after $(yellow ${elapsed})s" >&2
       fi
     ;;
 
