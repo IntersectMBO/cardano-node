@@ -358,6 +358,10 @@ instance LogFormatting (TracePeerSelection SockAddr) where
   forMachine _dtal (TraceChurnMode c) =
     mconcat [ "kind" .= String "ChurnMode"
              , "event" .= show c ]
+  forMachine _dtal (TraceKnownInboundConnection addr ps) =
+    mconcat [ "kind" .= String "KnownInboundConnection"
+             , "peer" .= show addr
+             , "peerSharing" .= show ps ]
   forHuman = pack . show
 
 instance MetaTrace (TracePeerSelection SockAddr) where
@@ -421,6 +425,8 @@ instance MetaTrace (TracePeerSelection SockAddr) where
       Namespace [] ["ChurnWait"]
     namespaceFor TraceChurnMode {}             =
       Namespace [] ["ChurnMode"]
+    namespaceFor TraceKnownInboundConnection {}             =
+      Namespace [] ["KnownInboundConnection"]
 
     severityFor (Namespace [] ["LocalRootPeersChanged"]) _ = Just Notice
     severityFor (Namespace [] ["TargetsChanged"]) _ = Just Notice

@@ -107,3 +107,11 @@ package snap-server
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-network
+  tag: ff0d7c452038314303669921f2d1a8b57dfd448f
+  --sha256: sha256-/Vl8TcP105UPt1kLK5U/Ud3BRtkQpmtjCKldFDZlAh8=
+  subdir: ouroboros-network
+          ouroboros-network-framework
+          ouroboros-network-api
