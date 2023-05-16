@@ -750,24 +750,21 @@ runQueryProtocolState
   -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryProtocolState socketPath (AnyConsensusModeParams cModeParams) network mOutFile = do
-  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
+  runOopsInExceptT @ShelleyQueryCmdError $
+      ( do  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
 
-  anyE@(AnyCardanoEra era) <- lift (determineEra cModeParams localNodeConnInfo)
-    & onLeft (left . ShelleyQueryCmdAcquireFailure)
+            ShelleyBasedEraWith sbe result <- executeLocalStateQueryExpr_ localNodeConnInfo Nothing $ do
+              ShelleyBasedEraWithEraInMode sbe eInMode <- determineShelleyBasedEraWithEraInMode_ cModeParams
+              ShelleyBasedEraWith sbe <$> queryProtocolState_ eInMode sbe
 
-  let cMode = consensusModeOnly cModeParams
-  sbe <- getSbe $ cardanoEraStyle era
-
-  eInMode <- pure (toEraInMode era cMode)
-    & onNothing (left (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode anyE (AnyConsensusMode cMode))))
-
-  let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryProtocolState
-
-  result <- executeQuery era cModeParams localNodeConnInfo qInMode
-
-  case cMode of
-    CardanoMode -> eligibleWriteProtocolStateConstaints sbe $ writeProtocolState mOutFile result
-    mode -> left . ShelleyQueryCmdUnsupportedMode $ InvalidConsensusMode $ AnyConsensusMode mode
+            case consensusModeOnly cModeParams of
+              CardanoMode -> eligibleWriteProtocolStateConstaints sbe $ writeProtocolState mOutFile result
+              mode -> OO.throw $ ShelleyQueryCmdUnsupportedMode $ InvalidConsensusMode $ AnyConsensusMode mode
+    ) & OO.catch @AcquiringFailure (OO.throw . ShelleyQueryCmdAcquireFailure)
+      & OO.catch @EraMismatch (OO.throw . ShelleyQueryCmdEraMismatch)
+      & OO.catch @InvalidEraInMode (OO.throw . ShelleyQueryCmdEraConsensusModeMismatch)
+      & OO.catch @RequireShelleyBasedEra (OO.throw . ShelleyQueryCmdRequireShelleyBasedEra)
+      & OO.catch @UnsupportedNtcVersionError (OO.throw . ShelleyQueryCmdUnsupportedNtcVersion)
 
 -- | Query the current delegations and reward accounts, filtered by a given
 -- set of addresses, from a Shelley node via the local state query protocol.
@@ -886,21 +883,21 @@ writePoolState serialisedCurrentEpochState = do
 
   liftIO . LBS.putStrLn $ encodePretty poolStates
 
-writeProtocolState ::
-  ( FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
-  , ToJSON (Consensus.ChainDepState (ConsensusProtocol era))
-  )
+writeProtocolState :: ()
+  => e `CouldBe` ShelleyQueryCmdError
+  => FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
+  => ToJSON (Consensus.ChainDepState (ConsensusProtocol era))
   => Maybe (File () Out)
   -> ProtocolState era
-  -> ExceptT ShelleyQueryCmdError IO ()
+  -> ExceptT (Variant e) IO ()
 writeProtocolState mOutFile ps@(ProtocolState pstate) =
   case mOutFile of
     Nothing -> case decodeProtocolState ps of
-      Left (bs, _) -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
+      Left (bs, _) -> lift (runExceptT (pPrintCBOR bs)) & OO.onLeft (OO.throw . ShelleyQueryCmdHelpersError)
       Right chainDepstate -> liftIO . LBS.putStrLn $ encodePretty chainDepstate
     Just (File fpath) ->
-      handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
-        . LBS.writeFile fpath $ unSerialised pstate
+      lift (LBS.writeFile fpath $ unSerialised pstate)
+        & OO.onException @IOException (OO.throw . ShelleyQueryCmdWriteFileError . FileIOError fpath)
 
 writeFilteredUTxOs :: ()
   => e `CouldBe` ShelleyQueryCmdError
