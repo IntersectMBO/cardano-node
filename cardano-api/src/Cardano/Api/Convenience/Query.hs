@@ -167,12 +167,15 @@ queryStakeDelegDeposits_ :: ()
       (Variant e)
       (LocalStateQueryExpr block point (QueryInMode mode) r IO)
       (Map StakeCredential Lovelace)
-queryStakeDelegDeposits_ qeInMode qSbe stakeCredentials = do
-  let query = QueryInEra qeInMode
-        $ QueryInShelleyBasedEra qSbe
-        $ QueryStakeDelegDeposits stakeCredentials
+queryStakeDelegDeposits_ qeInMode qSbe stakeCredentials =
+  if null stakeCredentials
+    then pure mempty
+    else do
+      let query = QueryInEra qeInMode
+            $ QueryInShelleyBasedEra qSbe
+            $ QueryStakeDelegDeposits stakeCredentials
 
-  queryExpr_ query & OO.onLeft @EraMismatch (OO.throw . QueryEraMismatch)
+      queryExpr_ query & OO.onLeft @EraMismatch (OO.throw . QueryEraMismatch)
 
 -- | A convenience function to query the relevant information, from
 -- the local node, for Cardano.Api.Convenience.Construction.constructBalancedTx
@@ -237,11 +240,7 @@ queryStateForBalancedTx_ socketPath era networkId allTxIns certs = do
     eraHistory <- queryEraHistory_
     systemStart <- querySystemStart_
     stakePools <- queryStakePools_ qeInMode qSbe
-    stakeDelegDeposits <-
-      if null stakeCreds
-        then pure mempty
-        else
-          queryStakeDelegDeposits_ qeInMode qSbe stakeCreds
+    stakeDelegDeposits <- queryStakeDelegDeposits_ qeInMode qSbe stakeCreds
 
     pure (utxo, pparams, eraHistory, systemStart, stakePools, stakeDelegDeposits)
 
