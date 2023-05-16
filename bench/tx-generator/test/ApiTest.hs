@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -44,8 +45,10 @@ import           Cardano.Benchmarking.Script.Aeson (prettyPrint, prettyPrintOrde
 import           Cardano.Benchmarking.Script.Selftest (testScript)
 import           Cardano.Benchmarking.Script.Types (SubmitMode (..))
 
+#ifdef WITH_LIBRARY
 import           Cardano.Benchmarking.PlutusScripts
 import           Cardano.Benchmarking.PlutusScripts.CustomCallTypes
+#endif
 
 import           Cardano.Node.Protocol.Types
 
@@ -121,6 +124,10 @@ checkFund = genesisInitialFundForKey Mainnet
 
 checkPlutusBuiltin ::
      IO ()
+#ifndef WITH_LIBRARY
+checkPlutusBuiltin
+  = putStrLn "* checkPlutusBuiltin: skipped - no library available"
+#else
 checkPlutusBuiltin
   = do
     let script = case findPlutusScript "CustomCall.hs" of
@@ -149,6 +156,7 @@ checkPlutusBuiltin
 
     toApiData :: CustomCallArg -> ScriptData
     toApiData = fromPlutusData . PlutusTx.toData
+#endif
 
 checkPlutusLoop ::
      Maybe TxGenPlutusParams

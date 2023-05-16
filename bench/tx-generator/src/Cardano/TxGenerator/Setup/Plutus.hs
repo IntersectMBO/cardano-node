@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
@@ -10,7 +11,7 @@ module Cardano.TxGenerator.Setup.Plutus
        )
        where
 
-import           Data.Bifunctor (bimap)
+import           Data.Bifunctor
 import           Data.Map.Strict as Map (lookup)
 
 import           Control.Monad.Trans.Except
@@ -27,19 +28,31 @@ import           Cardano.Ledger.Alonzo.TxInfo (exBudgetToExUnits)
 import qualified PlutusLedgerApi.V1 as PlutusV1
 import qualified PlutusLedgerApi.V2 as PlutusV2
 
-import           Cardano.Benchmarking.PlutusScripts(findPlutusScript)
 import           Cardano.TxGenerator.Types
 
+#ifdef WITH_LIBRARY
+import           Cardano.Benchmarking.PlutusScripts (findPlutusScript)
+#else
+import           Control.Exception (SomeException(..), try)
+import           Paths_tx_generator
+#endif
 
 type ProtocolVersion = (Int, Int)
 
 
 readPlutusScript :: Either String FilePath -> IO (Either TxGenError ScriptInAnyLang)
 readPlutusScript (Left s)
+#ifdef WITH_LIBRARY
   = pure
   $ maybe (Left . TxGenError $ "readPlutusScript: " ++ s ++ " not found.")
           Right
           (findPlutusScript s)
+#else
+  = try (getDataFileName $ "scripts-fallback/" ++ s ++ ".plutus") >>= either
+      (\(SomeException e) -> pure $ Left $ TxGenError $ show e)
+      (readPlutusScript . Right)
+#endif
+
 readPlutusScript (Right fp)
   = runExceptT $ do
     script <- firstExceptT ApiError $
