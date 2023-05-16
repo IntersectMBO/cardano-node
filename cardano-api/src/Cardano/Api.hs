@@ -843,6 +843,9 @@ module Cardano.Api (
     renderQueryConvenienceError,
 
     -- ** Oops-enabled queries
+    queryCurrentEra_,
+    queryChainBlockNo_,
+    queryChainPoint_,
     queryStateForBalancedTx_,
     queryUtxo_,
     queryProtocolParams_,

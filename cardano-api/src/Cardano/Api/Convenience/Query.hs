@@ -18,6 +18,9 @@ module Cardano.Api.Convenience.Query (
 
     queryStateForBalancedTx,
 
+    queryCurrentEra_,
+    queryChainBlockNo_,
+    queryChainPoint_,
     queryStateForBalancedTx_,
     queryUtxo_,
     queryProtocolParams_,
@@ -47,7 +50,11 @@ import           Data.Text (Text)
 
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..))
 
+import           Cardano.Slotting.Block (BlockNo)
+import           Cardano.Slotting.Slot (WithOrigin)
+
 import           Cardano.Api.Address
+import           Cardano.Api.Block (ChainPoint)
 import           Cardano.Api.Certificate
 import           Cardano.Api.Convenience.Constraints
 import           Cardano.Api.Eras
@@ -97,6 +104,29 @@ handleQueryConvenienceErrors_ f = f
   & OO.catch @UnsupportedNtcVersionError (OO.throw . QueryConvenienceUnsupportedNodeToClientVersion)
   & OO.catch @InvalidEraInMode (OO.throw . EraConsensusModeMismatch)
 
+queryCurrentEra_ :: ()
+  => e `CouldBe` UnsupportedNtcVersionError
+  => ConsensusModeIsMultiEra mode
+  -> ExceptT (Variant e) (LocalStateQueryExpr block point (QueryInMode mode) r IO) AnyCardanoEra
+queryCurrentEra_ cMode = queryExpr_ $ QueryCurrentEra cMode
+
+queryChainBlockNo_ :: ()
+  => e `CouldBe` UnsupportedNtcVersionError
+  => ExceptT (Variant e) (LocalStateQueryExpr block point (QueryInMode mode) r IO) (WithOrigin BlockNo)
+queryChainBlockNo_ = queryExpr_ QueryChainBlockNo
+
+queryEraHistory_ :: ()
+  => e `CouldBe` UnsupportedNtcVersionError
+  => ConsensusModeIsMultiEra mode
+  -> ExceptT (Variant e) (LocalStateQueryExpr block point (QueryInMode mode) r IO) (EraHistory mode)
+queryEraHistory_ cMode = queryExpr_ $ QueryEraHistory cMode
+
+queryChainPoint_ :: ()
+  => e `CouldBe` UnsupportedNtcVersionError
+  => ConsensusMode mode
+  -> ExceptT (Variant e) (LocalStateQueryExpr block point (QueryInMode mode) r IO) ChainPoint
+queryChainPoint_ mode = queryExpr_ (QueryChainPoint mode)
+
 queryUtxo_ :: ()
   => e `CouldBe` UnsupportedNtcVersionError
   => e `CouldBe` EraMismatch
@@ -121,14 +151,6 @@ queryProtocolParams_ qeInMode qSbe = do
 
   queryExpr_ query & OO.onLeft @EraMismatch OO.throw
 
-queryEraHistory_ :: ()
-  => e `CouldBe` UnsupportedNtcVersionError
-  => ExceptT (Variant e) (LocalStateQueryExpr block point (QueryInMode CardanoMode) r IO) (EraHistory CardanoMode)
-queryEraHistory_ = do
-  let query = QueryEraHistory CardanoModeIsMultiEra
-
-  queryExpr_ query
-
 queryStakePools_ :: ()
   => e `CouldBe` UnsupportedNtcVersionError
   => e `CouldBe` QueryConvenienceError
@@ -144,7 +166,6 @@ querySystemStart_ :: ()
   => e `CouldBe` UnsupportedNtcVersionError
   => ExceptT (Variant e) (LocalStateQueryExpr block point (QueryInMode mode) r IO) SystemStart
 querySystemStart_ = queryExpr_ QuerySystemStart
-
 
 queryStakeDelegDeposits_ :: ()
   => e `CouldBe` UnsupportedNtcVersionError
@@ -227,7 +248,7 @@ queryStateForBalancedTx_ socketPath era networkId allTxIns certs = do
   executeLocalStateQueryExpr_ localNodeConnInfo Nothing $ do
     utxo <- queryUtxo_ qeInMode qSbe allTxIns
     pparams <- queryProtocolParams_ qeInMode qSbe
-    eraHistory <- queryEraHistory_
+    eraHistory <- queryEraHistory_ CardanoModeIsMultiEra
     systemStart <- querySystemStart_
     stakePools <- queryStakePools_ qeInMode qSbe
     stakeDelegDeposits <- queryStakeDelegDeposits_ qeInMode qSbe stakeCreds

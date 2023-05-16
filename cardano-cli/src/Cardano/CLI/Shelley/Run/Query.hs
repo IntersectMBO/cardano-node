@@ -283,11 +283,11 @@ runQueryTip socketPath (AnyConsensusModeParams cModeParams) network mOutFile = d
       eLocalState <- liftIO $ runOopsInEither @ShelleyQueryCmdError $ do
         executeLocalStateQueryExpr_ localNodeConnInfo Nothing
           (do
-              era <- queryExpr_ (QueryCurrentEra CardanoModeIsMultiEra)
-              eraHistory <- queryExpr_ (QueryEraHistory CardanoModeIsMultiEra)
-              mChainBlockNo <- queryExpr_ QueryChainBlockNo & OO.catchAsNothing @UnsupportedNtcVersionError
-              mChainPoint <- queryExpr_ (QueryChainPoint CardanoMode) & OO.catchAsNothing @UnsupportedNtcVersionError
-              mSystemStart <- queryExpr_ QuerySystemStart & OO.catchAsNothing @UnsupportedNtcVersionError
+              era <- queryCurrentEra_ CardanoModeIsMultiEra
+              eraHistory <- queryEraHistory_ CardanoModeIsMultiEra
+              mChainBlockNo <- queryChainBlockNo_ & OO.catchAsNothing @UnsupportedNtcVersionError
+              mChainPoint <- queryChainPoint_ CardanoMode & OO.catchAsNothing @UnsupportedNtcVersionError
+              mSystemStart <- querySystemStart_ & OO.catchAsNothing @UnsupportedNtcVersionError
 
               return O.QueryTipLocalState
                 { O.era = era
