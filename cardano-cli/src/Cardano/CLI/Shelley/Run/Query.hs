@@ -705,25 +705,22 @@ runQueryStakeSnapshot
   -> AllOrOnly [Hash StakePoolKey]
   -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryStakeSnapshot socketPath (AnyConsensusModeParams cModeParams) network allOrOnlyPoolIds mOutFile = do
-  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
+runQueryStakeSnapshot socketPath (AnyConsensusModeParams cModeParams) network allOrOnlyPoolIds mOutFile =
+  runOopsInExceptT @ShelleyQueryCmdError $
+    ( do  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
 
-  anyE@(AnyCardanoEra era) <- lift (determineEra cModeParams localNodeConnInfo)
-    & onLeft (left . ShelleyQueryCmdAcquireFailure)
+          ShelleyBasedEraWith sbe result <- executeLocalStateQueryExpr_ localNodeConnInfo Nothing $ do
+            ShelleyBasedEraWithEraInMode sbe eInMode <- determineShelleyBasedEraWithEraInMode_ cModeParams
+            fmap (ShelleyBasedEraWith sbe) $ queryStakeSnapshot_ eInMode sbe $ case allOrOnlyPoolIds of
+              All -> Nothing
+              Only poolIds -> Just $ Set.fromList poolIds
 
-  let cMode = consensusModeOnly cModeParams
-  sbe <- getSbe $ cardanoEraStyle era
-
-  eInMode <- toEraInMode era cMode
-    & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode anyE (AnyConsensusMode cMode)))
-
-  let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryStakeSnapshot $ case allOrOnlyPoolIds of
-        All -> Nothing
-        Only poolIds -> Just $ Set.fromList poolIds
-
-  result <- executeQuery era cModeParams localNodeConnInfo qInMode
-  obtainLedgerEraClassConstraints sbe (writeStakeSnapshots mOutFile) result
-
+          obtainLedgerEraClassConstraints sbe (writeStakeSnapshots mOutFile) result
+    ) & OO.catch @AcquiringFailure (OO.throw . ShelleyQueryCmdAcquireFailure)
+      & OO.catch @EraMismatch (OO.throw . ShelleyQueryCmdEraMismatch)
+      & OO.catch @InvalidEraInMode (OO.throw . ShelleyQueryCmdEraConsensusModeMismatch)
+      & OO.catch @RequireShelleyBasedEra (OO.throw . ShelleyQueryCmdRequireShelleyBasedEra)
+      & OO.catch @UnsupportedNtcVersionError (OO.throw . ShelleyQueryCmdUnsupportedNtcVersion)
 
 runQueryLedgerState
   :: SocketPath
@@ -847,15 +844,16 @@ writeLedgerState mOutFile qState@(SerialisedDebugLedgerState serLedgerState) =
       handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
         $ LBS.writeFile fpath $ unSerialised serLedgerState
 
-writeStakeSnapshots :: forall era ledgerera. ()
+writeStakeSnapshots :: forall era ledgerera e. ()
+  => e `CouldBe` ShelleyQueryCmdError
   => ShelleyLedgerEra era ~ ledgerera
   => Core.EraCrypto ledgerera ~ StandardCrypto
   => Maybe (File () Out)
   -> SerialisedStakeSnapshots era
-  -> ExceptT ShelleyQueryCmdError IO ()
+  -> ExceptT (Variant e) IO ()
 writeStakeSnapshots mOutFile qState = do
   StakeSnapshot snapshot <- pure (decodeStakeSnapshot qState)
-    & onLeft (left . ShelleyQueryCmdStakeSnapshotDecodeError)
+    & OO.onLeft (OO.throw . ShelleyQueryCmdStakeSnapshotDecodeError)
 
   -- Calculate the three pool and active stake values for the given pool
   liftIO . maybe LBS.putStrLn (LBS.writeFile . unFile) mOutFile $ encodePretty snapshot

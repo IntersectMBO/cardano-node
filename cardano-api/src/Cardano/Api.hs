@@ -850,12 +850,14 @@ module Cardano.Api (
     queryStateForBalancedTx_,
     queryUtxo_,
     queryPoolState_,
+    queryStakeSnapshot_,
     queryProtocolState_,
     queryGenesisParameters_,
     queryProtocolParams_,
     queryEraHistory_,
     queryStakePools_,
     querySystemStart_,
+
     handleQueryConvenienceErrors_,
     requireShelleyBasedEra_,
 
