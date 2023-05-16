@@ -1,13 +1,13 @@
 ---
 description: >-
-  On cardano-node 8.0.0 we introduced a new subset of commands to conduct polls
+  cardano-node v.8.0.0 introduced a new subset of commands to conduct polls
   among stake pool operators. A poll is official when it is signed by a genesis
   delegate key.
 ---
 
 # Polls
 
-## Create a poll
+## Creating a poll
 
 ```
 cardano-cli governance create-poll \
@@ -19,11 +19,11 @@ cardano-cli governance create-poll \
 --out-file poll.cbor > poll.json
 ```
 
-`--nonce` is an optional, yet a recommended option. It takes a UINT,  it is used as a unique identifier so that the same question can be asked at different times.
+`--nonce`  is an optional but highly recommended option. It takes a UINT (used as a unique identifier) allowing the same question to be asked multiple times at different time.
 
-`--out-file` creates the serialized version of the poll sutiable to be distributed among stake pool operators to answer the poll
+`--out-file` creates a serialized version of the poll that is suitable for distribution among stake pool operators for answering the poll.
 
-`>` redirect the output to a file to save the metadata in json. This is the file to  to be included in a transaction.
+`>` redirects the output to a file to save the metadata in JSON. This file will be included in a transaction.
 
 ```
 Poll created successfully.
@@ -33,9 +33,10 @@ Hint (1): Use '--json-metadata-detailed-schema' and '--metadata-json-file' from 
 Hint (2): You can redirect the standard output of this command to a JSON file to capture metadata.
 
 Note: A serialized version of the poll suitable for sharing with participants has been generated at 'poll.cbor'.
+
 ```
 
-Let's take a look to both files:
+Let's take a look at both files:
 
 ```
 cat poll.cbor
@@ -108,11 +109,11 @@ cat poll.json
 ```
 
 
-Participants (SPO's) will use `poll.cbor` file to create and submit their responses.
+Participants (SPOs) will use the `poll.cbor` file to create and submit their responses.
 
-The _Delegate-key-holder_ proposing the poll will use `poll.json` to publish the poll in a transaction.
+The _delegate-key-holder_ who proposes the poll will use `poll.json` to publish the poll in a transaction.
 
-To build such transaction we do:
+To build such a transaction, run:
 
 ```
 cardano-cli transaction build \
@@ -126,16 +127,16 @@ cardano-cli transaction build \
 --out-file question.tx
 ```
 
-**Note** When building the transaction we can use `--required-signer-hash` or `--required-signer`. In our example we used `--required-signer-hash` because on a real world scenario, the delegate signing keys are on cold storage and build command requires access to a live node. 
+**Note**: When building the transaction, we can use `--required-signer-hash` or `--required-signer`. In our example we used `--required-signer-hash` because, in a real-world scenario, the delegate signing keys are stored in cold storage, and the build command requires access to a live node.. 
 
-To get the hash of a delegate key we run:
+To get the hash of a delegate key, run:
 
 ```
 cardano-cli genesis key-hash --verification-key-file delegate.vkey
 0f455663bd57b2145bcea12302664a842bd4b8e69a1e05bb9f8e45ed
 ```
 
-Sign the transaction with the delegate signing key and with a payment signing key to pay for the transaction fees.
+Sign the transaction with the delegate signing key and with a payment signing key to pay for the transaction fees:
 
 ```
 cardano-cli transaction sign \
@@ -146,13 +147,13 @@ cardano-cli transaction sign \
 --out-file question.tx.signed
 ```
 
-When we inspect the transaction (question.tx.signed)
+When inspecting the transaction (question.tx.signed), run:
 
 ```
 cardano-cli transaction view --tx-file question.tx.signed
 ```
 
-we should see something like this:
+You should see something like this:
 
 ```
 auxiliary scripts: null
@@ -199,9 +200,9 @@ witnesses:
 - key: VKey (VerKeyEd25519DSIGN "4127bc46ea0d36bea6ff6b2ad8f6f533158851a3550318b7d445b6b6d26bdcff")
   signature: SignedDSIGN (SigEd25519DSIGN "02e465c0f9e16f0d32a073cc8d7938f1fbc792150d2f4e1b4f8f98e8eb8aa0a9381e04136b39c8bacfb9d16e403952d7ac2a41a4904805691ab02ce372fa4109")
 ```
-Note that **required signers** includes the hash of our the delegate key; and **witnesses** includes the delegate and payment keys data. 
+Note that **required signers** include the hash of the delegate key; and **witnesses** include the delegate and payment keys' data. 
 
-Finally, we submit the transaction as usual:
+Finally, submit the transaction as usual:
 
 ```
 cardano-cli transaction submit \
@@ -209,7 +210,7 @@ cardano-cli transaction submit \
 --tx-file question.tx.signed
 ```
 
-We can use _**dbsync**_ to check how it was registered online:
+You can use _**DB Sync**_ to check how the transaction was registered online:
 
 ```
 cexplorer=# SELECT * FROM tx_metadata WHERE key = 94;
@@ -234,15 +235,15 @@ cexplorer=# SELECT * FROM extra_key_witness;
 (1 row)
 ```
 
-Of course, the hash matches the hash of the delegate key. This way, when SPOs see a poll signed with any of the delegate keys (verified by the delegate key hashes) they know this is an official poll.
+Of course, the hash matches the hash of the delegate key. This ensures that when SPOs encounter a poll signed with any of the delegate keys (verified by the delegate key hashes), they know that it is an official poll.
 
 ## Answering the poll
 
-Use `answer-poll` to create a response. You can use the `--answer`option to record your answer right away by providing the index of your response, or omit it to access the interactive method.
+Use `answer-poll` to create a response, you can use the `--answer` option to promptly record your response by specifying its index, or you can omit it to access the interactive method.
 
-Note that in any case we are redirecting the output to `poll-answer.json`
+Note that in either case, the output is being redirected to `poll-answer.json`.
 
-The proponents of the poll will have distributed the `poll.cbor` file from above. As an SPO, you will need it to answer the poll. Again, it will look like this:
+The proponents of the poll will have distributed the `poll.cbor` file from above. As an SPO, you will need it to answer the poll. It will look like this:
 
 ```
 cat poll.cbor
@@ -255,7 +256,7 @@ cat poll.cbor
 ```
 ### Responding interactively
 
-As before, we will use **>** to redirect the output to a file, let's name it `poll-answer.json`
+As before, we will use **>** to redirect the output to a file, let's name it `poll-answer.json`:
 
 ```
 cardano-cli governance answer-poll \
@@ -268,13 +269,13 @@ Question to ask
 Please indicate an answer (by index): 0 
 ```
 
-Once you select your response, in our case **Option A**  which corresponds to **index 0**, we get:
+Once you select your response, in our case **Option A**  which corresponds to **index 0**, you get:
 
 ```
 Poll answer created successfully.
 Please submit a transaction using the resulting metadata.
 To be valid, the transaction must also be signed using a valid key
-identifying your stake pool (e.g. your cold key).
+identifying your stake pool (eg, your cold key).
 
 
 Hint (1): Use '--json-metadata-detailed-schema' and '--metadata-json-file' from the build or build-raw commands.
@@ -283,14 +284,14 @@ Hint (2): You can redirect the standard output of this command to a JSON file to
 
 ### Using --answer
 
-We can skip the interactive screen providing our response right away with the flag `--answer <Index>`. For example, if we vote for **Option A** which corresponds to index [0]: 
+We have the option to bypass the interactive screen by providing our response directly using the `--answer <Index>` flag. For instance, if we vote for **Option A**, which corresponds to index [0], we can use the following command: 
 
 ```
 cardano-cli governance answer-poll \
 --poll-file poll.cbor \
 --answer 0 > poll-answer.json
 ```
-which immediately outputs
+which immediately outputs:
 
 ```
 Question to ask
@@ -306,7 +307,7 @@ Hint (1): Use '--json-metadata-detailed-schema' and '--metadata-json-file' from 
 Hint (2): You can redirect the standard output of this command to a JSON file to capture metadata.
 ```
 
-### Submit the response in a transaction
+### Submitting the response in a transaction
 
 ```
 cardano-cli transaction build \
@@ -329,7 +330,7 @@ cardano-cli transaction sign \
 --out-file answer.tx.signed
 ```
 
-When we inspect the signed transaction,we can see that  **required signers** contains our cold key hash (the pool id), and **witnesses** contains both the cold and payment key data:
+When we inspect the signed transaction, we can see that **required signers** contain our cold key hash (the pool ID), and **witnesses** contain both the cold and payment key data:
 
 ```
 cardano-cli transaction view --tx-file answer.tx.signed
@@ -383,7 +384,7 @@ cardano-cli transaction submit \
 --tx-file answer.tx.signed
 ```
 
-We can use _**dbsync**_ again to track responses:
+We can use _**DB Sync**_ again to track responses:
 
 ```
 SELECT * FROM tx_metadata WHERE key = 94;
@@ -409,14 +410,14 @@ SELECT * FROM extra_key_witness;
 (2 rows)
 ```
 
-### Verifying Answers <a href="#verifying-answers" id="verifying-answers"></a>
+### Verifying answers <a href="#verifying-answers" id="verifying-answers"></a>
 
-Finally, it’s possible to verify answers seen on-chain using the `governance verify-poll` command. What ‘verify’ means here is two-folds:
+Finally, it is possible to verify the answers observed on-chain by using the `governance verify-poll` command. The term 'verify' in this context is two-folds:
 
 * It checks that an answer is valid within the context of a given survey
 * It returns the list of signatories key hashes found in the transaction;\
   in the case of a valid submission, one key hash will correspond to a known\
-  stake pool id.
+  stake pool ID.
 
 ```
 cardano-cli governance verify-poll \
