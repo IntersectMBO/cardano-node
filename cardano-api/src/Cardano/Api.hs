@@ -847,6 +847,7 @@ module Cardano.Api (
     queryCurrentEra_,
     queryChainBlockNo_,
     queryChainPoint_,
+    queryDebugLedgerState_,
     queryStateForBalancedTx_,
     queryUtxo_,
     queryPoolState_,

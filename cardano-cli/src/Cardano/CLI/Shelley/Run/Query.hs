@@ -728,23 +728,20 @@ runQueryLedgerState
   -> NetworkId
   -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryLedgerState socketPath (AnyConsensusModeParams cModeParams) network mOutFile = do
-  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
+runQueryLedgerState socketPath (AnyConsensusModeParams cModeParams) network mOutFile =
+  runOopsInExceptT @ShelleyQueryCmdError $
+      ( do  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
 
-  anyE@(AnyCardanoEra era) <- lift (determineEra cModeParams localNodeConnInfo)
-    & onLeft (left . ShelleyQueryCmdAcquireFailure)
+            ShelleyBasedEraWith sbe result <- executeLocalStateQueryExpr_ localNodeConnInfo Nothing $ do
+              ShelleyBasedEraWithEraInMode sbe eInMode <- determineShelleyBasedEraWithEraInMode_ cModeParams
+              ShelleyBasedEraWith sbe <$> queryDebugLedgerState_ eInMode sbe
 
-  let cMode = consensusModeOnly cModeParams
-  sbe <- getSbe $ cardanoEraStyle era
-
-  eInMode <- pure (toEraInMode era cMode)
-    & onNothing (left (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode anyE (AnyConsensusMode cMode))))
-
-  let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryDebugLedgerState
-
-  result <- executeQuery era cModeParams localNodeConnInfo qInMode
-
-  obtainLedgerEraClassConstraints sbe (writeLedgerState mOutFile) result
+            obtainLedgerEraClassConstraints sbe (writeLedgerState mOutFile) result
+    ) & OO.catch @AcquiringFailure (OO.throw . ShelleyQueryCmdAcquireFailure)
+      & OO.catch @EraMismatch (OO.throw . ShelleyQueryCmdEraMismatch)
+      & OO.catch @InvalidEraInMode (OO.throw . ShelleyQueryCmdEraConsensusModeMismatch)
+      & OO.catch @RequireShelleyBasedEra (OO.throw . ShelleyQueryCmdRequireShelleyBasedEra)
+      & OO.catch @UnsupportedNtcVersionError (OO.throw . ShelleyQueryCmdUnsupportedNtcVersion)
 
 runQueryProtocolState
   :: SocketPath
@@ -827,22 +824,23 @@ writeStakeAddressInfo mOutFile delegsAndRewards =
       handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
         $ LBS.writeFile fpath (encodePretty delegsAndRewards)
 
-writeLedgerState :: forall era ledgerera.
-                    ShelleyLedgerEra era ~ ledgerera
-                 => ToJSON (DebugLedgerState era)
-                 => FromCBOR (DebugLedgerState era)
-                 => Maybe (File () Out)
-                 -> SerialisedDebugLedgerState era
-                 -> ExceptT ShelleyQueryCmdError IO ()
+writeLedgerState :: forall era ledgerera e. ()
+  => e `CouldBe` ShelleyQueryCmdError
+  => ShelleyLedgerEra era ~ ledgerera
+  => ToJSON (DebugLedgerState era)
+  => FromCBOR (DebugLedgerState era)
+  => Maybe (File () Out)
+  -> SerialisedDebugLedgerState era
+  -> ExceptT (Variant e) IO ()
 writeLedgerState mOutFile qState@(SerialisedDebugLedgerState serLedgerState) =
   case mOutFile of
     Nothing ->
       case decodeDebugLedgerState qState of
-        Left bs -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
+        Left bs -> lift (runExceptT (pPrintCBOR bs)) & OO.onLeft (OO.throw . ShelleyQueryCmdHelpersError)
         Right ledgerState -> liftIO . LBS.putStrLn $ Aeson.encode ledgerState
     Just (File fpath) ->
-      handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
-        $ LBS.writeFile fpath $ unSerialised serLedgerState
+      lift (LBS.writeFile fpath $ unSerialised serLedgerState)
+        & OO.onException @IOException (OO.throw . ShelleyQueryCmdWriteFileError . FileIOError fpath)
 
 writeStakeSnapshots :: forall era ledgerera e. ()
   => e `CouldBe` ShelleyQueryCmdError
