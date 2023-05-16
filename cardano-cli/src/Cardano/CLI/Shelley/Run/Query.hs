@@ -776,24 +776,21 @@ runQueryStakeAddressInfo
   -> NetworkId
   -> Maybe (File () Out)
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryStakeAddressInfo socketPath (AnyConsensusModeParams cModeParams) (StakeAddress _ addr) network mOutFile = do
-  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
+runQueryStakeAddressInfo socketPath (AnyConsensusModeParams cModeParams) (StakeAddress _ addr) network mOutFile =
+  runOopsInExceptT @ShelleyQueryCmdError $
+      ( do  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network socketPath
 
-  anyE@(AnyCardanoEra era) <- lift (determineEra cModeParams localNodeConnInfo)
-    & onLeft (left . ShelleyQueryCmdAcquireFailure)
+            ShelleyBasedEraWith sbe result <- executeLocalStateQueryExpr_ localNodeConnInfo Nothing $ do
+              ShelleyBasedEraWithEraInMode sbe eInMode <- determineShelleyBasedEraWithEraInMode_ cModeParams
+              let stakeAddr = Set.singleton $ fromShelleyStakeCredential addr
+              ShelleyBasedEraWith sbe <$> queryStakeAddresses_ eInMode sbe stakeAddr network
 
-  let cMode = consensusModeOnly cModeParams
-  sbe <- getSbe $ cardanoEraStyle era
-
-  eInMode <- pure (toEraInMode era cMode)
-    & onNothing (left (ShelleyQueryCmdEraConsensusModeMismatch (InvalidEraInMode anyE (AnyConsensusMode cMode))))
-
-  let stakeAddr = Set.singleton $ fromShelleyStakeCredential addr
-      query = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryStakeAddresses stakeAddr network
-
-  result <- executeQuery era cModeParams localNodeConnInfo query
-
-  writeStakeAddressInfo mOutFile $ DelegationsAndRewards result
+            writeStakeAddressInfo mOutFile $ DelegationsAndRewards result
+    ) & OO.catch @AcquiringFailure (OO.throw . ShelleyQueryCmdAcquireFailure)
+      & OO.catch @EraMismatch (OO.throw . ShelleyQueryCmdEraMismatch)
+      & OO.catch @InvalidEraInMode (OO.throw . ShelleyQueryCmdEraConsensusModeMismatch)
+      & OO.catch @RequireShelleyBasedEra (OO.throw . ShelleyQueryCmdRequireShelleyBasedEra)
+      & OO.catch @UnsupportedNtcVersionError (OO.throw . ShelleyQueryCmdUnsupportedNtcVersion)
 
 -- -------------------------------------------------------------------------------------------------
 
