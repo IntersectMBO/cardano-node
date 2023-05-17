@@ -90,7 +90,8 @@ PROFILES_FORGE_STRESS_PRE := forge-stress-pre forge-stress-pre-plutus forge-stre
 PROFILES_CHAINSYNC        := chainsync-early-byron  chainsync-early-byron-notracer  chainsync-early-byron-oldtracing
 PROFILES_CHAINSYNC        += chainsync-early-alonzo chainsync-early-alonzo-notracer chainsync-early-alonzo-oldtracing chainsync-early-alonzo-p2p
 PROFILES_VENDOR           := dish dish-plutus dish-10M dish-10M-plutus
-PROFILES_CARDANO_WORLD_QA := cardano-world-qa cardano-world-qa-test cardano-world-qa-bench
+PROFILES_CARDANO_WORLD_QA := cwqa-default cwqa-ci-test cwqa-ci-bench
+PROFILES_CARDANO_WORLD_QA += cwqa-value
 
 SHELL_PROFILES       += $(PROFILES_BASE)
 SHELL_PROFILES       += $(PROFILES_FAST)
