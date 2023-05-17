@@ -30,10 +30,10 @@ import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionData
                    codecHandshake, noTimeLimitsHandshake)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion,
-                   simpleSingletonVersions)
+                   queryVersion, simpleSingletonVersions)
 import           Ouroboros.Network.Snocket (Snocket, MakeBearer, localAddressFromPath, localSnocket,
                    makeLocalBearer)
-import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..),
+import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..), HandshakeCallbacks (..),
                    SomeResponderApplication (..), cleanNetworkMutableState, connectToNode,
                    newNetworkMutableState, nullNetworkConnectTracers, nullNetworkServerTracers,
                    withServerNode)
@@ -187,7 +187,7 @@ doConnectToAcceptor magic snocket makeBearer configureSocket address timeLimits
     timeLimits
     (cborTermVersionDataCodec forwardingCodecCBORTerm)
     nullNetworkConnectTracers
-    acceptableVersion
+    (HandshakeCallbacks acceptableVersion queryVersion)
     (simpleSingletonVersions
        ForwardingV_1
        (ForwardingVersionData magic)
@@ -248,7 +248,7 @@ doListenToAcceptor magic snocket makeBearer configureSocket address timeLimits
             (codecHandshake forwardingVersionCodec)
             timeLimits
             (cborTermVersionDataCodec forwardingCodecCBORTerm)
-            acceptableVersion
+            (HandshakeCallbacks acceptableVersion queryVersion)
             (simpleSingletonVersions
                ForwardingV_1
                (ForwardingVersionData magic)

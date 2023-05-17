@@ -249,6 +249,8 @@ instance MetaTrace (AnyMessageAndAgency (HS.Handshake nt term)) where
       Namespace [] ["ProposeVersions"]
     namespaceFor (AnyMessageAndAgency _stok HS.MsgReplyVersions {})   =
       Namespace [] ["ReplyVersions"]
+    namespaceFor (AnyMessageAndAgency _stok HS.MsgQueryReply {})   =
+      Namespace [] ["MsgQueryReply"]
     namespaceFor (AnyMessageAndAgency _stok HS.MsgAcceptVersion {})   =
       Namespace [] ["AcceptVersion"]
     namespaceFor (AnyMessageAndAgency _stok HS.MsgRefuse {})          =
@@ -256,6 +258,7 @@ instance MetaTrace (AnyMessageAndAgency (HS.Handshake nt term)) where
 
     severityFor (Namespace _ ["ProposeVersions"]) _ = Just Info
     severityFor (Namespace _ ["ReplyVersions"]) _ = Just Info
+    severityFor (Namespace _ ["MsgQueryReply"]) _ = Just Info
     severityFor (Namespace _ ["AcceptVersion"]) _ = Just Info
     severityFor (Namespace _ ["Refuse"]) _ = Just Info
     severityFor _ _ = Nothing
@@ -270,6 +273,10 @@ instance MetaTrace (AnyMessageAndAgency (HS.Handshake nt term)) where
       , " received as a copy of 'MsgProposeVersions' in a simultaneous open"
       , " scenario."
       ]
+    documentFor (Namespace _ ["MsgQueryReply"]) = Just $ mconcat
+      [ "`MsgQueryReply` received as a response to a handshake query in "
+      , " 'MsgProposeVersions' and lists the supported versions."
+      ]
     documentFor (Namespace _ ["AcceptVersion"]) = Just $ mconcat
       [ "The remote end decides which version to use and sends chosen version."
       , "The server is allowed to modify version parameters."
@@ -281,6 +288,7 @@ instance MetaTrace (AnyMessageAndAgency (HS.Handshake nt term)) where
     allNamespaces = [
         Namespace [] ["ProposeVersions"]
       , Namespace [] ["ReplyVersions"]
+      , Namespace [] ["MsgQueryReply"]
       , Namespace [] ["AcceptVersion"]
       , Namespace [] ["Refuse"]
       ]

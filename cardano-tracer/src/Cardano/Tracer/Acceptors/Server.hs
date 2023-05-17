@@ -24,12 +24,12 @@ import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionData
                    codecHandshake, noTimeLimitsHandshake)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion,
-                   simpleSingletonVersions)
+                   queryVersion, simpleSingletonVersions)
 import           Ouroboros.Network.Snocket (LocalAddress, LocalSocket, Snocket,
                    makeLocalBearer, localAddressFromPath, localSnocket)
 import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..), ConnectionId (..),
-                   SomeResponderApplication (..), cleanNetworkMutableState, newNetworkMutableState,
-                   nullNetworkServerTracers, withServerNode)
+                   HandshakeCallbacks (..), SomeResponderApplication (..), cleanNetworkMutableState,
+                   newNetworkMutableState, nullNetworkServerTracers, withServerNode)
 import qualified System.Metrics.Configuration as EKGF
 import           System.Metrics.Network.Acceptor (acceptEKGMetricsResp)
 
@@ -103,7 +103,7 @@ doListenToForwarder snocket address netMagic timeLimits app = do
             (codecHandshake forwardingVersionCodec)
             timeLimits
             (cborTermVersionDataCodec forwardingCodecCBORTerm)
-            acceptableVersion
+            (HandshakeCallbacks acceptableVersion queryVersion)
             (simpleSingletonVersions
               ForwardingV_1
               (ForwardingVersionData $ NetworkMagic netMagic)
