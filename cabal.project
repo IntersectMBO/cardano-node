@@ -107,3 +107,41 @@ package snap-server
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+source-repository-package
+  type: git
+  location: https://github.com/GaloisInc/ekg-forward
+  tag: 9c58cef6b476cbf6b86e656eb2fc8f96301f4df9
+
+source-repository-package
+  type: git
+  location: https://github.com/GaloisInc/ouroboros-network
+  tag: dcec13c6d23bd47c1238751c921d2a2fe86ae5c6
+  --sha256: sha256-LrrtA5KR1mFgSQmUZUWIXAS23bUbEVpnnwH1ehH2oWM=
+  subdir: ouroboros-network
+          ouroboros-network-api
+          ouroboros-network-protocols
+          ouroboros-network-framework
+          ouroboros-consensus-diffusion
+          ouroboros-consensus-byron
+
+source-repository-package
+  type: git
+  location: https://github.com/GaloisInc/ouroboros-network
+  tag: 64f8e70f682c35098710d9ec458383f75f2dcd2f
+  subdir:
+    ouroboros-consensus-cardano
+    ouroboros-consensus-shelley
+
+source-repository-package
+  type: git
+  location: https://github.com/GaloisInc/ouroboros-network
+  tag: 49ded9707ca78c31132e8a7f6ea443fb15f63b04
+  subdir:
+    cardano-ping
+
+source-repository-package
+  type: git
+  location: https://github.com/GaloisInc/ouroboros-network
+  tag: 8a3e8297ba139492610152108b241c4b760050cc
+  subdir:
+    cardano-client

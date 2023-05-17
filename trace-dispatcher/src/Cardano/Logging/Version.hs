@@ -16,7 +16,7 @@ import qualified Codec.CBOR.Term as CBOR
 
 import           Ouroboros.Network.CodecCBORTerm
 import           Ouroboros.Network.Magic
-import           Ouroboros.Network.Protocol.Handshake.Version (Accept (..), Acceptable (..))
+import           Ouroboros.Network.Protocol.Handshake.Version (Accept (..), Acceptable (..), Queryable (..))
 
 data ForwardingVersion
   = ForwardingV_1
@@ -48,6 +48,9 @@ instance Acceptable ForwardingVersionData where
     | otherwise       = Refuse $ T.pack $ "ForwardingVersionData mismatch: "
                                  ++ show local
                                  ++ " /= " ++ show remote
+
+instance Queryable ForwardingVersionData where
+    queryVersion _ = False
 
 forwardingCodecCBORTerm :: ForwardingVersion -> CodecCBORTerm Text ForwardingVersionData
 forwardingCodecCBORTerm _ = CodecCBORTerm { encodeTerm, decodeTerm }

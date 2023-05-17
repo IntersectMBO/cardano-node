@@ -269,6 +269,7 @@ mkVersionedProtocols networkid ptcl unversionedClients =
             ptclVersion
             NodeToClientVersionData {
               networkMagic = toNetworkMagic networkid
+            , query = False
             }
             (\_connid _ctl -> protocols (unversionedClients ptclVersion) ptclBlockVersion ptclVersion))
       (Map.toList (Consensus.supportedNodeToClientVersions proxy))
