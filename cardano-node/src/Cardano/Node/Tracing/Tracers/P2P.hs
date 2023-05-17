@@ -853,6 +853,14 @@ instance (Show versionNumber, ToJSON versionNumber, ToJSON agreedOptions)
         , "versionNumber" .= toJSON versionNumber
         , "agreedOptions" .= toJSON agreedOptions
         ]
+    forMachine _dtal (TrHandshakeQuery vMap) =
+      mconcat
+        [ "kind" .= String "HandshakeQuery"
+        , "versions" .= toJSON ((\(k,v) -> object [
+            "versionNumber" .= k
+          , "options" .= v
+          ]) <$> Map.toList vMap)
+        ]
     forMachine _dtal (TrHandshakeClientError err) =
       mconcat
         [ "kind" .= String "HandshakeClientError"
@@ -905,6 +913,7 @@ instance MetaTrace (ConnectionManagerTrace addr
       (Just (TrConnectionHandler _ ev')) = Just $
         case ev' of
           TrHandshakeSuccess {}     -> Info
+          TrHandshakeQuery {}       -> Info
           TrHandshakeClientError {} -> Notice
           TrHandshakeServerError {} -> Info
           TrConnectionHandlerError _ _ ShutdownNode  -> Critical

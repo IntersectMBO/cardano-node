@@ -50,26 +50,24 @@ maybeUnixSockEndPoint = \case
   UnixSockEndPoint sock -> Just sock
 
 data PingCmd = PingCmd
-  { pingCmdCount    :: !Word32
-  , pingCmdEndPoint :: !EndPoint
-  , pingCmdPort     :: !String
-  , pingCmdMagic    :: !Word32
-  , pingCmdJson     :: !Bool
-  , pingCmdQuiet    :: !Bool
-  , pingCmdQuery    :: !Bool
+  { pingCmdCount           :: !Word32
+  , pingCmdEndPoint        :: !EndPoint
+  , pingCmdPort            :: !String
+  , pingCmdMagic           :: !Word32
+  , pingCmdJson            :: !Bool
+  , pingCmdQuiet           :: !Bool
   } deriving (Eq, Show)
 
 pingClient :: Tracer IO CNP.LogMsg -> Tracer IO String -> PingCmd -> [CNP.NodeVersion] -> AddrInfo -> IO ()
 pingClient stdout stderr cmd = CNP.pingClient stdout stderr opts
   where opts = CNP.PingOpts
-          { CNP.pingOptsQuiet           = pingCmdQuiet cmd
-          , CNP.pingOptsJson            = pingCmdJson cmd
-          , CNP.pingOptsCount           = pingCmdCount cmd
-          , CNP.pingOptsHost            = maybeHostEndPoint (pingCmdEndPoint cmd)
-          , CNP.pingOptsUnixSock        = maybeUnixSockEndPoint (pingCmdEndPoint cmd)
-          , CNP.pingOptsPort            = pingCmdPort cmd
-          , CNP.pingOptsMagic           = pingCmdMagic cmd
-          , CNP.pingOptsHandshakeQuery  = pingCmdQuery cmd
+          { CNP.pingOptsQuiet    = pingCmdQuiet cmd
+          , CNP.pingOptsJson     = pingCmdJson cmd
+          , CNP.pingOptsCount    = pingCmdCount cmd
+          , CNP.pingOptsHost     = maybeHostEndPoint (pingCmdEndPoint cmd)
+          , CNP.pingOptsUnixSock = maybeUnixSockEndPoint (pingCmdEndPoint cmd)
+          , CNP.pingOptsPort     = pingCmdPort cmd
+          , CNP.pingOptsMagic    = pingCmdMagic cmd
           }
 
 runPingCmd :: PingCmd -> ExceptT PingClientCmdError IO ()
@@ -91,7 +89,7 @@ runPingCmd options = do
       return ([addr], CNP.supportedNodeToClientVersions $ pingCmdMagic options)
 
   -- Logger async thread handle
-  laid <- liftIO . async $ CNP.logger msgQueue (pingCmdJson options) (pingCmdQuery options)
+  laid <- liftIO . async $ CNP.logger msgQueue (pingCmdJson options)
   -- Ping client thread handles
   caids <- forM addresses $ liftIO . async . pingClient (Tracer $ doLog msgQueue) (Tracer doErrLog) options versions
   res <- L.zip addresses <$> mapM (liftIO . waitCatch) caids
@@ -196,11 +194,5 @@ pPing = PingCmd
         [ Opt.long "quiet"
         , Opt.short 'q'
         , Opt.help "Quiet flag, CSV/JSON only output"
-        ]
-      )
-  <*> ( Opt.switch $ mconcat
-        [ Opt.long "query"
-        , Opt.short 'q'
-        , Opt.help "Query flag."
         ]
       )

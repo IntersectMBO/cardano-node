@@ -40,10 +40,10 @@ import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionData
                    codecHandshake, noTimeLimitsHandshake)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion,
-                   simpleSingletonVersions)
+                   queryVersion, simpleSingletonVersions)
 import           Ouroboros.Network.Snocket (MakeBearer, Snocket, makeLocalBearer,
                    localAddressFromPath, localSnocket)
-import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..),
+import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..), HandshakeCallbacks (..),
                    SomeResponderApplication (..), cleanNetworkMutableState, connectToNode,
                    newNetworkMutableState, nullNetworkConnectTracers, nullNetworkServerTracers,
                    withServerNode)
@@ -165,7 +165,7 @@ doConnectToAcceptor TestSetup{..} snocket muxBearer address timeLimits (ekgConfi
       timeLimits
       (cborTermVersionDataCodec forwardingCodecCBORTerm)
       nullNetworkConnectTracers
-      acceptableVersion
+      (HandshakeCallbacks acceptableVersion queryVersion)
       (simpleSingletonVersions
          ForwardingV_1
          (ForwardingVersionData $ unI tsNetworkMagic)
@@ -225,7 +225,7 @@ doListenToAcceptor TestSetup{..}
               (codecHandshake forwardingVersionCodec)
               timeLimits
               (cborTermVersionDataCodec forwardingCodecCBORTerm)
-              acceptableVersion
+              (HandshakeCallbacks acceptableVersion queryVersion)
               (simpleSingletonVersions
                  ForwardingV_1
                  (ForwardingVersionData $ unI tsNetworkMagic) -- Taken from mainnet shelley genesis file.
