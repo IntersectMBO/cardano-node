@@ -33,28 +33,15 @@ common maybe-unix
   if !os(windows)
      build-depends:    unix
 
-library
+library internal
   import:               project-config, maybe-unix
 
-  hs-source-dirs:       src
+  hs-source-dirs:       internal
 
   -- Do not expose any additional modules. The correct way
   -- to expose new functionality is via Cardano.Api or
   -- Cardano.Api.Shelley
-  exposed-modules:      Cardano.Api
-                        Cardano.Api.Byron
-                        Cardano.Api.ChainSync.Client
-                        Cardano.Api.ChainSync.ClientPipelined
-                        Cardano.Api.Crypto.Ed25519Bip32
-                        Cardano.Api.Shelley
-                        -- TODO: Eliminate in the future when
-                        -- we create wrapper types for the ledger types
-                        -- in this module
-                        Cardano.Api.Orphans
-
-  other-modules:
-                        -- Splitting up the big Typed module:
-                        Cardano.Api.Address
+  exposed-modules:      Cardano.Api.Address
                         Cardano.Api.Block
                         Cardano.Api.Certificate
                         Cardano.Api.Convenience.Constraints
@@ -136,7 +123,6 @@ library
                       , cborg
                       , containers
                       , contra-tracer
-                      , cryptonite
                       , deepseq
                       , directory
                       , either
@@ -147,7 +133,6 @@ library
                       , microlens
                       , mtl
                       , network
-                      , nothunks
                       , optparse-applicative-fork
                       , ouroboros-consensus >= 0.6
                       , ouroboros-consensus-cardano >= 0.5
@@ -174,6 +159,68 @@ library
                       , unordered-containers >= 0.2.11
                       , vector
                       , yaml
+
+library
+  import:               project-config
+
+  hs-source-dirs:       src
+
+  -- Do not expose any additional modules. The correct way
+  -- to expose new functionality is via Cardano.Api or
+  -- Cardano.Api.Shelley
+  exposed-modules:      Cardano.Api
+                        Cardano.Api.Byron
+                        Cardano.Api.ChainSync.Client
+                        Cardano.Api.ChainSync.ClientPipelined
+                        Cardano.Api.Crypto.Ed25519Bip32
+                        Cardano.Api.Shelley
+                        -- TODO: Eliminate in the future when
+                        -- we create wrapper types for the ledger types
+                        -- in this module
+                        Cardano.Api.Orphans
+
+  build-depends:        aeson             >= 1.5.6.0
+                      , aeson-pretty      >= 0.8.5
+                      , attoparsec
+                      , base16-bytestring >= 1.0
+                      , base58-bytestring
+                      , bech32 >= 1.1.0
+                      , bytestring
+                      , cardano-api:internal
+                      , cardano-binary
+                      , cardano-crypto
+                      , cardano-crypto-class >= 2.1.1
+                      , cardano-crypto-wrapper ^>= 1.5
+                      , cardano-data >= 1.0
+                      , cardano-ledger-alonzo >= 1.1.1
+                      , cardano-ledger-allegra >= 1.1
+                      , cardano-ledger-api >= 1.1
+                      , cardano-ledger-babbage >= 1.1
+                      , cardano-ledger-binary >= 1.1
+                      , cardano-ledger-byron >= 1.0
+                      , cardano-ledger-conway >= 1.1
+                      , cardano-ledger-core >= 1.1
+                      , cardano-ledger-mary >= 1.1
+                      , cardano-ledger-shelley >= 1.1.1
+                      , cardano-protocol-tpraos >= 1.0.2
+                      , cardano-slotting >= 0.1
+                      , cardano-strict-containers >= 0.1
+                      , cborg
+                      , containers
+                      , contra-tracer
+                      , cryptonite
+                      , deepseq
+                      , directory
+                      , either
+                      , filepath
+                      , formatting
+                      , iproute
+                      , memory
+                      , microlens
+                      , nothunks
+                      , ouroboros-consensus-cardano >= 0.5
+                      , ouroboros-network-protocols
+                      , typed-protocols ^>= 0.1
 
 library gen
   import:               project-config
