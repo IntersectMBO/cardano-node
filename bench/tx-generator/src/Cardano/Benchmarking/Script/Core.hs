@@ -169,28 +169,24 @@ queryEra = do
 queryRemoteProtocolParameters :: ActionM ProtocolParameters
 queryRemoteProtocolParameters = do
   localNodeConnectInfo <- getLocalConnectInfo
+  let cModeParams = localConsensusModeParams localNodeConnectInfo
   chainTip  <- liftIO $ getLocalChainTip localNodeConnectInfo
-  era <- queryEra
-  let
-    callQuery :: forall a. Show a => QueryInMode CardanoMode (Either a ProtocolParameters) -> ActionM ProtocolParameters
-    callQuery query = do
-      res <- liftIO $ queryNodeLocalState localNodeConnectInfo (Just $ chainTipToChainPoint chainTip) query
-      case res of
-        Right (Right pp) -> do
-          let pparamsFile = "protocol-parameters-queried.json"
-          liftIO $ BSL.writeFile pparamsFile $ prettyPrintOrdered pp
-          traceDebug $ "queryRemoteProtocolParameters : query result saved in: " ++ pparamsFile
-          return pp
-        Right (Left err) -> liftTxGenError $ TxGenError $ show err
-        Left err -> liftTxGenError $ TxGenError $ show err
-  case era of
-    AnyCardanoEra ByronEra   -> liftTxGenError $ TxGenError "queryRemoteProtocolParameters Byron not supported"
-    AnyCardanoEra ShelleyEra -> callQuery $ QueryInEra ShelleyEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraShelley QueryProtocolParameters
-    AnyCardanoEra AllegraEra -> callQuery $ QueryInEra AllegraEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraAllegra QueryProtocolParameters
-    AnyCardanoEra MaryEra    -> callQuery $ QueryInEra    MaryEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraMary    QueryProtocolParameters
-    AnyCardanoEra AlonzoEra  -> callQuery $ QueryInEra  AlonzoEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraAlonzo QueryProtocolParameters
-    AnyCardanoEra BabbageEra -> callQuery $ QueryInEra BabbageEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraBabbage QueryProtocolParameters
-    AnyCardanoEra ConwayEra  -> callQuery $ QueryInEra  ConwayEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraConway QueryProtocolParameters
+  res <- liftIO $ executeLocalStateQueryExprAnyQuery localNodeConnectInfo (Just $ chainTipToChainPoint chainTip) $ do
+           AnyCardanoEra era <- determineEraExprAnyQuery cModeParams
+           eInMode <- determineEraInModeAnyQuery era cModeParams
+           case cardanoEraStyle era of
+             LegacyByronEra -> left AllQueryEraExpectedSbe
+             ShelleyBasedEra sbe -> do
+               let q = AnyQuerySbe eInMode sbe QueryProtocolParameters
+               queryExprAnyQueryE q
+
+  case res of
+    Right pp -> do
+       let pparamsFile = "protocol-parameters-queried.json"
+       liftIO $ BSL.writeFile pparamsFile $ prettyPrintOrdered pp
+       traceDebug $ "queryRemoteProtocolParameters : query result saved in: " ++ pparamsFile
+       return pp
+    Left err -> liftTxGenError $ TxGenError $ show err
 
 getProtocolParameters :: ActionM ProtocolParameters
 getProtocolParameters = do

@@ -26,6 +26,7 @@ import           Cardano.Api.Eras
 import           Cardano.Api.Fees
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
+import           Cardano.Api.Query.ShelleyBased
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
 import           Cardano.Api.Utils

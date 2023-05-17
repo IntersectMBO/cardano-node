@@ -23,8 +23,8 @@ module Cardano.Api.Modes (
     EraInMode(..),
     eraInModeToEra,
     anyEraInModeToAnyEra,
-    AnyEraInMode(..),
     toEraInMode,
+    toEraInCardanoMode,
 
     -- * The protocols supported in each era
     ConsensusProtocol,
@@ -142,6 +142,15 @@ toEraInMode MaryEra    CardanoMode = Just MaryEraInCardanoMode
 toEraInMode AlonzoEra  CardanoMode = Just AlonzoEraInCardanoMode
 toEraInMode BabbageEra CardanoMode = Just BabbageEraInCardanoMode
 toEraInMode ConwayEra  CardanoMode = Just ConwayEraInCardanoMode
+
+toEraInCardanoMode :: CardanoEra era -> EraInMode era CardanoMode
+toEraInCardanoMode ByronEra    = ByronEraInCardanoMode
+toEraInCardanoMode ShelleyEra  = ShelleyEraInCardanoMode
+toEraInCardanoMode AllegraEra  = AllegraEraInCardanoMode
+toEraInCardanoMode MaryEra     = MaryEraInCardanoMode
+toEraInCardanoMode AlonzoEra   = AlonzoEraInCardanoMode
+toEraInCardanoMode BabbageEra  = BabbageEraInCardanoMode
+toEraInCardanoMode ConwayEra   = ConwayEraInCardanoMode
 
 -- | A representation of which 'CardanoEra's are included in each
 -- 'ConsensusMode'.
