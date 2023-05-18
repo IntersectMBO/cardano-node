@@ -205,7 +205,11 @@ EOF
              echo "$(white -------------------------------------------------)" >&2
              fatal "could not start $(white supervisord)"
         fi
-        backend_supervisor save-child-pids "$dir";;
+        backend_supervisor save-child-pids "$dir"
+        if ! supervisorctl start healthcheck
+        then
+          msg "$(red "supervisorctl start healthcheck failed")"
+        fi;;
 
     wait-node-stopped )
         local usage="USAGE: wb backend $op RUN-DIR NODE"

@@ -51,6 +51,15 @@ rec {
             inherit runJq nodeSpecs;
           })
         tracer-service;
+
+      inherit
+        (pkgs.callPackage
+          ../service/healthcheck.nix
+          {
+            inherit backend profile;
+            inherit runJq nodeSpecs;
+          })
+        healthcheck-service;
     };
 
   ## WARNING:  IFD !!
@@ -96,7 +105,8 @@ rec {
         })
         node-services
         generator-service
-        tracer-service;
+        tracer-service
+        healthcheck-service;
     };
 
   profileData = { profile }:
@@ -136,11 +146,18 @@ rec {
             config               = config.JSON;
             start                = startupScript.JSON;
           };
+        healthcheckService =
+          with profile.healthcheck-service;
+          __toJSON
+          { name                 = "healthcheck";
+            start                = startupScript.JSON;
+          };
         passAsFile =
           [
             "nodeServices"
             "generatorService"
             "tracerService"
+            "healthcheckService"
             "topologyJson"
             "topologyDot"
           ];
@@ -154,6 +171,7 @@ rec {
       cp    $nodeServicesPath             $out/node-services.json
       cp    $generatorServicePath         $out/generator-service.json
       cp    $tracerServicePath            $out/tracer-service.json
+      cp    $healthcheckServicePath       $out/healthcheck-service.json
       ''
   // profile;
 

@@ -136,6 +136,24 @@ let
         startsecs      = 5;
       };
     }
+    //
+    {
+      "program:healthcheck" = {
+        # "command" below assumes "directory" is set accordingly.
+        directory      = "${stateDir}/healthcheck";
+        command        = "${command}";
+        stdout_logfile = "${stateDir}/healthcheck/stdout";
+        stderr_logfile = "${stateDir}/healthcheck/stderr";
+        stopasgroup    = false;
+        killasgroup    = false;
+        autostart      = false;
+        autorestart    = false;
+        # Don't attempt any restart!
+        startretries   = 0;
+        # Seconds it needs to stay running to consider the start successful
+        startsecs      = 5;
+      };
+    }
     ;
 
 in {

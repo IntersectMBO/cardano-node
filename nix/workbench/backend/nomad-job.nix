@@ -370,9 +370,11 @@ let
             # - host: Advertise the host port for this service. port must match
             # a port label specified in the network block.
             port = portName;
-            # TODO: Use it to heartbeat with cardano-ping!!!
+            # Checks of type "script" need "consul" instead of "nomad" as
+            # service provider. As healthcheck we are using a supervisord
+            # "program".
             # https://developer.hashicorp.com/nomad/docs/job-specification/check
-            # check = {};
+            check = null;
           };
 
           # Specifies the set of templates to render for the task. Templates can
@@ -402,6 +404,24 @@ let
               # the template to the specified destination. The following
               # possible values describe Nomad's action after writing the
               # template to disk.
+              change_mode = "noop";
+              error_on_missing_key = true;
+            }
+            ## Make the profile.json file available (mainly for healthchecks)
+            {
+              env = false;
+              destination = "${task_statedir}/profile.json";
+              data = escapeTemplate (__readFile
+                profileData.JSON.outPath);
+              change_mode = "noop";
+              error_on_missing_key = true;
+            }
+            ## Make the node-specs.json file available (mainly for healthchecks)
+            {
+              env = false;
+              destination = "${task_statedir}/node-specs.json";
+              data = escapeTemplate (__readFile
+                profileData.node-specs.JSON.outPath);
               change_mode = "noop";
               error_on_missing_key = true;
             }
@@ -587,6 +607,20 @@ let
               error_on_missing_key = true;
             }
           ])
+          ++
+          # healthcheck
+          [
+            ## healthcheck start.sh script.
+            {
+              env = false;
+              destination = "${task_statedir}/healthcheck/start.sh";
+              data = escapeTemplate
+                profileData.healthcheck-service.startupScript.value;
+              change_mode = "noop";
+              error_on_missing_key = true;
+              perms = "744"; # Only for every "start.sh" script. Default: "644"
+            }
+          ]
           ;
 
           # Specifies logging configuration for the stdout and stderr of the

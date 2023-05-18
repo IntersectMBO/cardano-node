@@ -1045,6 +1045,7 @@ run_instantiate_rundir_profile_services() {
     local svcs=$dir/profile/node-services.json
     local gtor=$dir/profile/generator-service.json
     local trac=$dir/profile/tracer-service.json
+    local hche=$dir/profile/healthcheck-service.json
 
     for node in $(jq_tolist 'keys' "$dir"/node-specs.json)
     do local node_dir="$dir"/$node
@@ -1068,4 +1069,8 @@ run_instantiate_rundir_profile_services() {
     cp $(jq '."service-config"'                -r $trac) "$trac_dir"/service-config.json
     cp $(jq '."config"'                        -r $trac) "$trac_dir"/config.json
     cp $(jq '."start"'                         -r $trac) "$trac_dir"/start.sh
+
+    local hche_dir="$dir"/healthcheck
+    mkdir -p                                    "$hche_dir"
+    cp $(jq '."start"'                         -r $hche) "$hche_dir"/start.sh
 }

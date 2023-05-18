@@ -69,11 +69,12 @@ backend_nomad() {
           * ) break;; esac; shift; done
 
       # Create the dispatcher's local directories hierarchy.
-      backend_nomad allocate-run-directory-nomad      "${dir}"
-      backend_nomad allocate-run-directory-supervisor "${dir}"
-      backend_nomad allocate-run-directory-nodes      "${dir}"
-      backend_nomad allocate-run-directory-generator  "${dir}"
-      backend_nomad allocate-run-directory-tracers    "${dir}"
+      backend_nomad allocate-run-directory-nomad       "${dir}"
+      backend_nomad allocate-run-directory-supervisor  "${dir}"
+      backend_nomad allocate-run-directory-nodes       "${dir}"
+      backend_nomad allocate-run-directory-generator   "${dir}"
+      backend_nomad allocate-run-directory-tracers     "${dir}"
+      backend_nomad allocate-run-directory-healthcheck "${dir}"
 
       # These ones are decided at "setenv-defaults" of each sub-backend.
       local nomad_environment=$(envjqr 'nomad_environment')
@@ -187,10 +188,26 @@ backend_nomad() {
           # FIXME: Looks like I'm not using these ones!!!
          #cp $(jq '."tracer-config"'  -r ${dir}/profile/tracer-service.json) "${dir}"/tracer/tracer-config.json
          #cp $(jq '."service-config"' -r ${dir}/profile/tracer-service.json) "${dir}"/tracer/service-config.json
-          cp $(jq '."config"'         -r ${dir}/profile/tracer-service.json) "${dir}"/tracer/config.json
-          cp $(jq '."start"'          -r ${dir}/profile/tracer-service.json) "${dir}"/tracer/start.sh
+          cp $(jq '."config"' -r ${dir}/profile/tracer-service.json) "${dir}"/tracer/config.json
+          cp $(jq '."start"'  -r ${dir}/profile/tracer-service.json) "${dir}"/tracer/start.sh
         fi
       fi
+    ;;
+
+    allocate-run-directory-healthcheck )
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+      mkdir "${dir}"/healthcheck
+      # For every node ...
+      local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
+      for node in ${nodes[*]}
+      do
+        # Files "start.sh" and "topology.sh" that usually go in here are copied
+        # from the Task/container once it's started because the contents are
+        # created or patched using Nomad's "template" stanza in the job spec
+        # and we want to hold a copy of what was actually run.
+        mkdir "${dir}"/healthcheck/"${node}"
+      done
     ;;
 
     # Change the Nomad job name to the current run tag. This allows to run
@@ -447,7 +464,14 @@ backend_nomad() {
         backend_nomad download-config-tracer   "${dir}" "tracer" &
         jobs_array+=("$!")
       fi
-
+      # For every node ...
+      local nodes=($(jq_tolist keys "$dir"/node-specs.json))
+      for node in ${nodes[*]}
+      do
+        # Only used for debugging!
+        backend_nomad download-config-healthcheck "${dir}" "${node}" &
+        jobs_array+=("$!")
+      done
       # Wait and check!
       if test -n "${jobs_array}"
       then
@@ -803,6 +827,19 @@ backend_nomad() {
       # TODO: Make it in parallel ?
       msg "Fetch logs ..."
 
+      # Download healthcheck(s) logs.
+      ###############################
+      # Remove "live" symlinks before downloading the "originals"
+      if test "${nomad_environment}" != "cloud"
+      then
+        rm -f "${dir}"/healthcheck/{stdout,stderr,exit_code}
+      fi
+      # Download retry "infinite" loop.
+      while ! backend_nomad download-logs-healthcheck "${dir}" "node-0"
+      do
+        msg "Retrying \"healthcheck\" logs download"
+      done
+      msg "$(green "Finished downloading \"healthcheck\" logs")"
       # Download generator logs.
       ##########################
       # Remove "live" symlinks before downloading the "originals"
@@ -1198,6 +1235,12 @@ backend_nomad() {
         # It was "intentionally started and should not automagically stop" flag!
         touch "${dir}"/generator/started
       fi
+
+      # TODO ########################################
+      # Still need to be decided who starts the healthchecks
+      # My best are on `scenario.sh`
+      backend_nomad start-healthcheck "${dir}" node-0
+      ###############################################
     ;;
 
     # Called by "start" that has no exit trap, don't use fatal here!
@@ -1325,6 +1368,34 @@ backend_nomad() {
           # Don't use fatal here, let `start-tracers` decide!
           msg "$(red "Task \"${task}\"'s tracer startup did not succeed")"
           return 1
+        fi
+      fi
+    ;;
+
+    # TODO #################################################
+    # Called by ... ??? ####################################
+    ########################################################
+    start-healthcheck ) # Nomad backend specific subcommands
+      local usage="USAGE: wb backend $op RUN-DIR TASK"
+      local dir=${1:?$usage};  shift
+      local task=${1:?$usage}; shift
+
+      if ! backend_nomad task-program-start "${dir}" "${task}" healthcheck
+      then
+        msg "$(yellow "healthcheck of \"${task}\" startup failed!")"
+      else
+        local nomad_environment=$(envjqr 'nomad_environment')
+        if test "${nomad_environment}" != "cloud"
+        then
+          ln -s                                                                 \
+            ../../nomad/alloc/"${task}"/local/run/current/healthcheck/stdout    \
+            "${dir}"/healthcheck/"${task}"/stdout
+          ln -s                                                                 \
+            ../../nomad/alloc/"${task}"/local/run/current/healthcheck/stderr    \
+            "${dir}"/healthcheck/"${task}"/stderr
+          ln -s                                                                 \
+            ../../nomad/alloc/"${task}"/local/run/current/healthcheck/exit_code \
+            "${dir}"/healthcheck/"${task}"/exit_code
         fi
       fi
     ;;
@@ -1709,6 +1780,34 @@ backend_nomad() {
     ;;
 
     # For debugging when something fails, downloads and prints details!
+    download-logs-healthcheck )
+      local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME"
+      local dir=${1:?$usage}; shift
+      local task=${1:?$usage}; shift
+      local download_ok="true"
+      # Should show the output/log of `supervisord` (runs as "entrypoint").
+      msg "$(blue Fetching) $(yellow "entrypoint's stdout and stderr") of Nomad $(yellow "Task \"${task}\"") ..."
+      backend_nomad task-entrypoint-stdout "${dir}" "${task}" \
+      > "${dir}"/nomad/"${task}"/stdout                       \
+      || download_ok="false"
+      backend_nomad task-entrypoint-stderr "${dir}" "${task}" \
+      > "${dir}"/nomad/"${task}"/stderr                       \
+      || download_ok="false"
+      # Downloads "exit_code", "stdout", "stderr" and GHC files.
+      # Depending on when the start command failed, logs may not be available!
+      backend_nomad download-zstd-healthcheck "${dir}" "${task}" \
+      || download_ok="false"
+      # Return
+      if test "${download_ok}" = "false"
+      then
+        msg "$(red "Failed to download \"healthcheck\" run files from \"${task}\"")"
+        return 1
+      else
+        return 0
+      fi
+    ;;
+
+    # For debugging when something fails, downloads and prints details!
     download-logs-generator )
       local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME"
       local dir=${1:?$usage}; shift
@@ -1859,6 +1958,20 @@ backend_nomad() {
           return 0
         fi
       fi
+    ;;
+
+    download-zstd-healthcheck )
+      local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME"
+      local dir=${1:?$usage}; shift
+      local task=${1:?$usage}; shift
+
+      msg "$(blue Fetching) $(yellow "\"healthcheck\"") run files from Nomad $(yellow "Task \"${task}\"") ..."
+      # TODO: Add compression, either "--zstd" or "--xz"
+        backend_nomad task-exec-program-run-files-tar-zstd        \
+          "${dir}" "${task}" "healthcheck"                        \
+      | tar --extract                                             \
+          --directory="${dir}"/healthcheck/ --file=-              \
+          --no-same-owner --no-same-permissions
     ;;
 
     download-zstd-generator )
@@ -2054,6 +2167,15 @@ backend_nomad() {
           > "${dir}"/nomad/tracer/networking.json
         fi
       fi
+    ;;
+
+    download-config-healthcheck )
+      local usage="USAGE: wb backend pass $op RUN-DIR NODE-NAME"
+      local dir=${1:?$usage}; shift
+      local node=${1:?$usage}; shift
+      backend_nomad task-file-contents "${dir}" "${node}" \
+        /local/run/current/healthcheck/start.sh           \
+      > "${dir}"/healthcheck/"${node}"/start.sh
     ;;
 
     ## Nomad job tasks supervisord queries
