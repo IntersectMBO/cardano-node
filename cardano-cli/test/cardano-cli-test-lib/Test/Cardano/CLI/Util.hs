@@ -11,12 +11,11 @@ module Test.Cardano.CLI.Util
   , noteTempFile
   ) where
 
-import           Control.Monad.Catch
-
 import           Cardano.Api
 
 import           Cardano.CLI.Shelley.Run.Read
 
+import           Control.Monad.Catch
 import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Except (runExceptT)
