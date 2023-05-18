@@ -67,6 +67,7 @@ library
   hs-source-dirs:       src
   exposed-modules:      Cardano.Testnet
                         Testnet.Byron
+                        Testnet.Options
                         Testnet.Util.Assert
                         Testnet.Util.Base
                         Testnet.Util.Cli
@@ -86,7 +87,6 @@ library
                         Testnet.Conf
                         Testnet.Commands.Genesis
                         Testnet.Commands.Governance
-                        Testnet.Options
                         Testnet.Run
                         Testnet.Shelley
                         Testnet.Utils
@@ -118,6 +118,7 @@ test-suite cardano-testnet-tests
                         Test.Cli.Babbage.StakeSnapshot
                         Test.Cli.KesPeriodInfo
                         Test.FoldBlocks
+                        Test.Golden.All
                         Test.Misc
                         Test.Node.Shutdown
                         Test.ShutdownOnSlotSynced
@@ -125,6 +126,7 @@ test-suite cardano-testnet-tests
   type:                 exitcode-stdio-1.0
 
   build-depends:        aeson
+                      , aeson-pretty
                       , async
                       , bytestring
                       , cardano-api ^>= 8.1.0.1
