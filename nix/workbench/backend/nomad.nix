@@ -74,7 +74,22 @@ let
               flake-output = "legacyPackages.x86_64-linux.python3Packages.supervisor";
               installable = "${flake-reference}/${gitrev}#${flake-output}";
             };
-            # TODO: profileData.node-services."node-0".serviceConfig.value.eventlog
+            gnugrep = rec {
+              nix-store-path  = pkgs.gnugrep;
+              flake-reference = "github:input-output-hk/cardano-node";
+              flake-output = "legacyPackages.x86_64-linux.gnugrep";
+              installable = "${flake-reference}/${gitrev}#${flake-output}";
+            };
+            jq = rec {
+              nix-store-path  = pkgs.jq;
+              flake-reference = "github:input-output-hk/cardano-node";
+              flake-output = "legacyPackages.x86_64-linux.jq";
+              installable = "${flake-reference}/${gitrev}#${flake-output}";
+            };
+            # TODO: - cardano-node.passthru.profiled
+            #       - cardano-node.passthru.eventlogged
+            #       - cardano-node.passthru.asserted
+            # profileData.node-services."node-0".serviceConfig.value.eventlog
             # builtins.trace (builtins.attrNames profileData.node-services."node-0".serviceConfig.value.eventlog) XXXX
             cardano-node = rec {
               nix-store-path  = with pkgs;
@@ -88,6 +103,12 @@ let
                   then "cardanoNodePackages.cardano-node.passthru.eventlogged"
                   else "cardanoNodePackages.cardano-node"
               ;
+              installable = "${flake-reference}/${gitrev}#${flake-output}";
+            };
+            cardano-cli = rec {
+              nix-store-path  = pkgs.cardanoNodePackages.cardano-cli;
+              flake-reference = "github:input-output-hk/cardano-cli";
+              flake-output = "cardanoNodePackages.cardano-cli";
               installable = "${flake-reference}/${gitrev}#${flake-output}";
             };
             cardano-tracer = rec {

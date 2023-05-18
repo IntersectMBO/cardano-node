@@ -51,6 +51,7 @@ case "${op}" in
     wait-node-stopped )          backend_$WB_BACKEND "$@";;
     get-node-socket-path )       backend_$WB_BACKEND "$@";;
     start-generator )            backend_$WB_BACKEND "$@";;
+    start-healthchecks )         backend_$WB_BACKEND "$@";;
     wait-pools-stopped )         backend_$WB_BACKEND "$@";;
     stop-cluster )               backend_$WB_BACKEND "$@";;
     cleanup-cluster )            backend_$WB_BACKEND "$@";;

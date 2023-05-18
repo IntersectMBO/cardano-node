@@ -47,6 +47,10 @@ backend_nomadcloud() {
       backend_nomad stop-node            "$@"
     ;;
 
+    start-healthchecks )
+      backend_nomad start-healthchecks   "$@"
+    ;;
+
     start-generator )
       backend_nomad start-generator      "$@"
     ;;

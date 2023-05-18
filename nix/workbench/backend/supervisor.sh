@@ -186,6 +186,27 @@ EOF
         echo -n $state_dir/$node_name/node.socket
         ;;
 
+    start-healthchecks )
+        local usage="USAGE: wb backend $op RUN-DIR"
+        local dir=${1:?$usage}; shift
+
+        while test $# -gt 0
+        do case "$1" in
+               --* ) msg "FATAL:  unknown flag '$1'"; usage_supervisor;;
+               * ) break;; esac; shift; done
+
+        ls -l $dir/{tracer/tracer,node-{0,1}/node}.socket || true
+        if ! supervisorctl start healthcheck
+        then progress "supervisor" "$(red fatal: failed to start) $(white healthcheck)"
+             echo "$(red healthcheck stdout) -----------------------------------" >&2
+             cat "$dir"/healthcheck/stdout
+             echo "$(red healthcheck stderr) -----------------------------------" >&2
+             cat "$dir"/healthcheck/stderr
+             echo "$(white -------------------------------------------------)" >&2
+             fatal "could not start $(white supervisord)"
+        fi
+        backend_supervisor save-child-pids "$dir";;
+
     start-generator )
         local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}; shift
@@ -275,7 +296,7 @@ EOF
         local dir=${1:?$usage}; shift
 
         msg "supervisor:  resetting cluster state in:  $dir"
-        rm -f $dir/*/std{out,err} $dir/node-*/*.socket $dir/*/logs/* 2>/dev/null || true
+        rm -f $dir/*/std{out,err} $dir/*/exit_code $dir/node-*/*.socket $dir/*/logs/* 2>/dev/null || true
         rm -fr $dir/node-*/state-cluster/;;
 
     save-child-pids )
