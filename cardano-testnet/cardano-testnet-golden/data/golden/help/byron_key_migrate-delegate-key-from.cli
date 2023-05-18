@@ -1,0 +1,9 @@
+Usage: cardano-cli byron key migrate-delegate-key-from --from FILEPATH
+            --to FILEPATH
+
+  Migrate a delegate key from an older version.
+
+Available options:
+  --from FILEPATH          Legacy signing key file to migrate.
+  --to FILEPATH            Non-existent file to write the signing key to.
+  -h,--help                Show this help text

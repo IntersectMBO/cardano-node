@@ -1,0 +1,10 @@
+Usage: cardano-cli genesis get-ver-key --verification-key-file FILE
+            --signing-key-file FILE
+
+  Derive the verification key from a signing key
+
+Available options:
+  --verification-key-file FILE
+                           Output filepath of the verification key.
+  --signing-key-file FILE  Input filepath of the signing key.
+  -h,--help                Show this help text

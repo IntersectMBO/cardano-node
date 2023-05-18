@@ -1,0 +1,14 @@
+Usage: cardano-cli key convert-itn-key 
+            (--itn-signing-key-file FILE | --itn-verification-key-file FILE)
+            --out-file FILE
+
+  Convert an Incentivized Testnet (ITN) non-extended (Ed25519) signing or
+  verification key to a corresponding Shelley stake key
+
+Available options:
+  --itn-signing-key-file FILE
+                           Filepath of the ITN signing key.
+  --itn-verification-key-file FILE
+                           Filepath of the ITN verification key.
+  --out-file FILE          The output file.
+  -h,--help                Show this help text

@@ -1,0 +1,22 @@
+Usage: cardano-cli stake-address 
+            ( key-gen
+            | build
+            | key-hash
+            | registration-certificate
+            | deregistration-certificate
+            | delegation-certificate
+            )
+
+  Stake address commands
+
+Available options:
+  -h,--help                Show this help text
+
+Available commands:
+  key-gen                  Create a stake address key pair
+  build                    Build a stake address
+  key-hash                 Print the hash of a stake address key.
+  registration-certificate Create a stake address registration certificate
+  deregistration-certificate
+                           Create a stake address deregistration certificate
+  delegation-certificate   Create a stake address pool delegation certificate

@@ -1,0 +1,12 @@
+Missing: --socket-path SOCKET_PATH (--mainnet | --testnet-magic NATURAL)
+
+Usage: cardano-cli query tx-mempool --socket-path SOCKET_PATH
+            [ --shelley-mode
+            | --byron-mode [--epoch-slots SLOTS]
+            | --cardano-mode [--epoch-slots SLOTS]
+            ]
+            (--mainnet | --testnet-magic NATURAL)
+            (info | next-tx | tx-exists)
+            [--out-file FILE]
+
+  Local Mempool info

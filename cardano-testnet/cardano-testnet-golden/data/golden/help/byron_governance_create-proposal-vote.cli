@@ -1,0 +1,21 @@
+Usage: cardano-cli byron governance create-proposal-vote 
+            (--mainnet | --testnet-magic NATURAL)
+            --signing-key FILEPATH
+            --proposal-filepath FILEPATH
+            (--vote-yes | --vote-no)
+            --output-filepath FILEPATH
+
+  Create an update proposal vote.
+
+Available options:
+  --mainnet                Use the mainnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --testnet-magic NATURAL  Specify a testnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --signing-key FILEPATH   Filepath of signing key.
+  --proposal-filepath FILEPATH
+                           Filepath of Byron update proposal.
+  --vote-yes               Vote yes with respect to an update proposal.
+  --vote-no                Vote no with respect to an update proposal.
+  --output-filepath FILEPATH
+                           Byron vote output filepath.

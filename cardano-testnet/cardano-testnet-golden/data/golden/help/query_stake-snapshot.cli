@@ -1,0 +1,37 @@
+Usage: cardano-cli query stake-snapshot --socket-path SOCKET_PATH
+            [ --shelley-mode
+            | --byron-mode [--epoch-slots SLOTS]
+            | --cardano-mode [--epoch-slots SLOTS]
+            ]
+            (--mainnet | --testnet-magic NATURAL)
+            [--all-stake-pools | [--stake-pool-id STAKE_POOL_ID]]
+            [--out-file FILE]
+
+  Obtain the three stake snapshots for a pool, plus the total active stake
+  (advanced command)
+
+Available options:
+  --socket-path SOCKET_PATH
+                           Path to the node socket. This overrides the
+                           CARDANO_NODE_SOCKET_PATH environment variable. The
+                           argument is optional if CARDANO_NODE_SOCKET_PATH is
+                           defined and mandatory otherwise.
+  --shelley-mode           For talking to a node running in Shelley-only mode.
+  --byron-mode             For talking to a node running in Byron-only mode.
+  --epoch-slots SLOTS      The number of slots per epoch for the Byron era.
+                           (default: 21600)
+  --cardano-mode           For talking to a node running in full Cardano mode
+                           (default).
+  --epoch-slots SLOTS      The number of slots per epoch for the Byron era.
+                           (default: 21600)
+  --mainnet                Use the mainnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --testnet-magic NATURAL  Specify a testnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --all-stake-pools        Query for all stake pools
+  --stake-pool-id STAKE_POOL_ID
+                           Stake pool ID/verification key hash (either
+                           Bech32-encoded or hex-encoded). Zero or more
+                           occurences of this option is allowed.
+  --out-file FILE          Optional output file. Default is to write to stdout.
+  -h,--help                Show this help text

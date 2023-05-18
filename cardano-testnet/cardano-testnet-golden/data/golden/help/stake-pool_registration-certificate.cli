@@ -1,0 +1,67 @@
+Usage: cardano-cli stake-pool registration-certificate 
+            ( --stake-pool-verification-key STRING
+            | --cold-verification-key-file FILE
+            )
+            (--vrf-verification-key STRING | --vrf-verification-key-file FILE)
+            --pool-pledge LOVELACE
+            --pool-cost LOVELACE
+            --pool-margin RATIONAL
+            ( --pool-reward-account-verification-key STRING
+            | --pool-reward-account-verification-key-file FILE
+            )
+            ( --pool-owner-verification-key STRING
+            | --pool-owner-stake-verification-key-file FILE
+            )
+            [ [--pool-relay-ipv4 STRING]
+              [--pool-relay-ipv6 STRING]
+              --pool-relay-port INT
+            | --single-host-pool-relay STRING [--pool-relay-port INT]
+            | --multi-host-pool-relay STRING
+            ]
+            [--metadata-url URL --metadata-hash HASH]
+            (--mainnet | --testnet-magic NATURAL)
+            --out-file FILE
+
+  Create a stake pool registration certificate
+
+Available options:
+  --stake-pool-verification-key STRING
+                           Stake pool verification key (Bech32 or hex-encoded).
+  --cold-verification-key-file FILE
+                           Filepath of the stake pool verification key.
+  --vrf-verification-key STRING
+                           VRF verification key (Bech32 or hex-encoded).
+  --vrf-verification-key-file FILE
+                           Filepath of the VRF verification key.
+  --pool-pledge LOVELACE   The stake pool's pledge.
+  --pool-cost LOVELACE     The stake pool's cost.
+  --pool-margin RATIONAL   The stake pool's margin.
+  --pool-reward-account-verification-key STRING
+                           Reward account stake verification key (Bech32 or
+                           hex-encoded).
+  --pool-reward-account-verification-key-file FILE
+                           Filepath of the reward account stake verification
+                           key.
+  --pool-owner-verification-key STRING
+                           Pool owner stake verification key (Bech32 or
+                           hex-encoded).
+  --pool-owner-stake-verification-key-file FILE
+                           Filepath of the pool owner stake verification key.
+  --pool-relay-ipv4 STRING The stake pool relay's IPv4 address
+  --pool-relay-ipv6 STRING The stake pool relay's IPv6 address
+  --pool-relay-port INT    The stake pool relay's port
+  --single-host-pool-relay STRING
+                           The stake pool relay's DNS name that corresponds to
+                           an A or AAAA DNS record
+  --pool-relay-port INT    The stake pool relay's port
+  --multi-host-pool-relay STRING
+                           The stake pool relay's DNS name that corresponds to
+                           an SRV DNS record
+  --metadata-url URL       Pool metadata URL (maximum length of 64 characters).
+  --metadata-hash HASH     Pool metadata hash.
+  --mainnet                Use the mainnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --testnet-magic NATURAL  Specify a testnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --out-file FILE          The output file.
+  -h,--help                Show this help text

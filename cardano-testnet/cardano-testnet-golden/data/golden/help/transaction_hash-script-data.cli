@@ -1,0 +1,20 @@
+Usage: cardano-cli transaction hash-script-data 
+            ( --script-data-cbor-file CBOR FILE
+            | --script-data-file JSON FILE
+            | --script-data-value JSON VALUE
+            )
+
+  Calculate the hash of script data.
+
+Available options:
+  --script-data-cbor-file CBOR FILE
+                           The script data, in the given JSON file. The file
+                           must follow the special JSON schema for script data.
+  --script-data-file JSON FILE
+                           The script data, in the given JSON file. The file
+                           must follow the special JSON schema for script data.
+  --script-data-value JSON VALUE
+                           The script data, in JSON syntax. There is no schema:
+                           (almost) any JSON value is supported, including
+                           top-level strings and numbers.
+  -h,--help                Show this help text

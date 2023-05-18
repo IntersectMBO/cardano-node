@@ -1,0 +1,7 @@
+Usage: cardano-cli byron key keygen --secret FILEPATH
+
+  Generate a signing key.
+
+Available options:
+  --secret FILEPATH        Non-existent file to write the signing key to.
+  -h,--help                Show this help text

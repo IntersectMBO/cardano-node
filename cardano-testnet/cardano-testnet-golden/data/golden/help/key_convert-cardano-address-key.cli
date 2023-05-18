@@ -1,0 +1,22 @@
+Usage: cardano-cli key convert-cardano-address-key 
+            ( --shelley-payment-key
+            | --shelley-stake-key
+            | --icarus-payment-key
+            | --byron-payment-key
+            )
+            --signing-key-file FILE
+            --out-file FILE
+
+  Convert a cardano-address extended signing key to a corresponding
+  Shelley-format key.
+
+Available options:
+  --shelley-payment-key    Use a Shelley-era extended payment key.
+  --shelley-stake-key      Use a Shelley-era extended stake key.
+  --icarus-payment-key     Use a Byron-era extended payment key formatted in the
+                           Icarus style.
+  --byron-payment-key      Use a Byron-era extended payment key formatted in the
+                           deprecated Byron style.
+  --signing-key-file FILE  Input filepath of the signing key.
+  --out-file FILE          The output file.
+  -h,--help                Show this help text

@@ -1,0 +1,81 @@
+Usage: cardano-cli byron governance create-update-proposal 
+            (--mainnet | --testnet-magic NATURAL)
+            --signing-key FILEPATH
+            --protocol-version-major WORD16
+            --protocol-version-minor WORD16
+            --protocol-version-alt WORD8
+            --application-name STRING
+            --software-version-num WORD32
+            --system-tag STRING
+            --installer-hash HASH
+            --filepath FILEPATH
+            [--script-version WORD16]
+            [--slot-duration NATURAL]
+            [--max-block-size NATURAL]
+            [--max-header-size NATURAL]
+            [--max-tx-size NATURAL]
+            [--max-proposal-size NATURAL]
+            [--max-mpc-thd DOUBLE]
+            [--heavy-del-thd DOUBLE]
+            [--update-vote-thd DOUBLE]
+            [--update-proposal-thd DOUBLE]
+            [--time-to-live WORD64]
+            [--softfork-init-thd DOUBLE
+              --softfork-min-thd DOUBLE
+              --softfork-thd-dec DOUBLE]
+            [--tx-fee-a-constant INT --tx-fee-b-constant DOUBLE]
+            [--unlock-stake-epoch WORD64]
+
+  Create an update proposal.
+
+Available options:
+  --mainnet                Use the mainnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --testnet-magic NATURAL  Specify a testnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --signing-key FILEPATH   Path to signing key.
+  --protocol-version-major WORD16
+                           Protocol version major.
+  --protocol-version-minor WORD16
+                           Protocol version minor.
+  --protocol-version-alt WORD8
+                           Protocol version alt.
+  --application-name STRING
+                           The name of the application.
+  --software-version-num WORD32
+                           Numeric software version associated with application
+                           name.
+  --system-tag STRING      Identify which system (linux, win64, etc) the update
+                           proposal is for.
+  --installer-hash HASH    Software hash.
+  --filepath FILEPATH      Byron proposal output filepath.
+  --script-version WORD16  Proposed script version.
+  --slot-duration NATURAL  Proposed slot duration.
+  --max-block-size NATURAL Proposed max block size.
+  --max-header-size NATURAL
+                           Proposed max block header size.
+  --max-tx-size NATURAL    Proposed max transaction size.
+  --max-proposal-size NATURAL
+                           Proposed max update proposal size.
+  --max-mpc-thd DOUBLE     Proposed max mpc threshold.
+  --heavy-del-thd DOUBLE   Proposed heavy delegation threshold.
+  --update-vote-thd DOUBLE Propose update vote threshold.
+  --update-proposal-thd DOUBLE
+                           Propose update proposal threshold.
+  --time-to-live WORD64    Proposed time for an update proposal to live.
+  --softfork-init-thd DOUBLE
+                           Propose initial threshold (right after proposal is
+                           confirmed).
+  --softfork-min-thd DOUBLE
+                           Propose minimum threshold (threshold can't be less
+                           than this).
+  --softfork-thd-dec DOUBLE
+                           Propose threshold decrement (threshold will decrease
+                           by this amount after each epoch).
+  --tx-fee-a-constant INT  Propose the constant a for txfee = a + b*s where s is
+                           the size.
+  --tx-fee-b-constant DOUBLE
+                           Propose the constant b for txfee = a + b*s where s is
+                           the size.
+  --unlock-stake-epoch WORD64
+                           Proposed epoch to unlock all stake.

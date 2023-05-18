@@ -1,0 +1,10 @@
+Usage: cardano-cli stake-pool metadata-hash --pool-metadata-file FILE
+            [--out-file FILE]
+
+  Print the hash of pool metadata.
+
+Available options:
+  --pool-metadata-file FILE
+                           Filepath of the pool metadata.
+  --out-file FILE          Optional output file. Default is to write to stdout.
+  -h,--help                Show this help text

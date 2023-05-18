@@ -1,0 +1,38 @@
+Usage: cardano-cli governance create-genesis-key-delegation-certificate 
+            ( --genesis-verification-key STRING
+            | --genesis-verification-key-file FILE
+            | --genesis-verification-key-hash STRING
+            )
+            ( --genesis-delegate-verification-key STRING
+            | --genesis-delegate-verification-key-file FILE
+            | --genesis-delegate-verification-key-hash STRING
+            )
+            ( --vrf-verification-key STRING
+            | --vrf-verification-key-file FILE
+            | --vrf-verification-key-hash STRING
+            )
+            --out-file FILE
+
+  Create a genesis key delegation certificate
+
+Available options:
+  --genesis-verification-key STRING
+                           Genesis verification key (hex-encoded).
+  --genesis-verification-key-file FILE
+                           Filepath of the genesis verification key.
+  --genesis-verification-key-hash STRING
+                           Genesis verification key hash (hex-encoded).
+  --genesis-delegate-verification-key STRING
+                           Genesis delegate verification key (hex-encoded).
+  --genesis-delegate-verification-key-file FILE
+                           Filepath of the genesis delegate verification key.
+  --genesis-delegate-verification-key-hash STRING
+                           Genesis delegate verification key hash (hex-encoded).
+  --vrf-verification-key STRING
+                           VRF verification key (Bech32 or hex-encoded).
+  --vrf-verification-key-file FILE
+                           Filepath of the VRF verification key.
+  --vrf-verification-key-hash STRING
+                           VRF verification key hash (hex-encoded).
+  --out-file FILE          The output file.
+  -h,--help                Show this help text

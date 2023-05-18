@@ -1,0 +1,20 @@
+Usage: cardano-cli ping [-c|--count COUNT]
+            ((-h|--host HOST) | (-u|--unixsock SOCKET))
+            [-p|--port PORT]
+            [-m|--magic MAGIC]
+            [-j|--json]
+            [-q|--quiet]
+
+  Ping a cardano node either using node-to-node or node-to-client protocol. It negotiates a handshake and keeps sending keep alive messages.
+
+Available options:
+  -c,--count COUNT         Stop after sending count requests and receiving count
+                           responses. If this option is not specified, ping will
+                           operate until interrupted.
+  -h,--host HOST           Hostname/IP, e.g. relay.iohk.example.
+  -u,--unixsock SOCKET     Unix socket, e.g. file.socket.
+  -p,--port PORT           Port number, e.g. 1234.
+  -m,--magic MAGIC         Network magic.
+  -j,--json                JSON output flag.
+  -q,--quiet               Quiet flag, CSV/JSON only output
+  -h,--help                Show this help text

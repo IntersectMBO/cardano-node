@@ -1,0 +1,8 @@
+Usage: cardano-cli transaction txid (--tx-body-file FILE | --tx-file FILE)
+
+  Print a transaction identifier.
+
+Available options:
+  --tx-body-file FILE      Input filepath of the JSON TxBody.
+  --tx-file FILE           Input filepath of the JSON Tx.
+  -h,--help                Show this help text

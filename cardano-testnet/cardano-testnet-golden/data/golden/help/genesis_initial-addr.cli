@@ -1,0 +1,15 @@
+Usage: cardano-cli genesis initial-addr --verification-key-file FILE
+            (--mainnet | --testnet-magic NATURAL)
+            [--out-file FILE]
+
+  Get the address for an initial UTxO based on the verification key
+
+Available options:
+  --verification-key-file FILE
+                           Input filepath of the verification key.
+  --mainnet                Use the mainnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --testnet-magic NATURAL  Specify a testnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --out-file FILE          Optional output file. Default is to write to stdout.
+  -h,--help                Show this help text

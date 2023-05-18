@@ -1,0 +1,8 @@
+Usage: cardano-cli text-view decode-cbor --in-file FILE [--out-file FILE]
+
+  Print a TextView file as decoded CBOR.
+
+Available options:
+  --in-file FILE           CBOR input file.
+  --out-file FILE          Optional output file. Default is to write to stdout.
+  -h,--help                Show this help text
