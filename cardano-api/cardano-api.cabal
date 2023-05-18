@@ -180,43 +180,15 @@ library
                         Cardano.Api.Orphans
 
   build-depends:        aeson             >= 1.5.6.0
-                      , aeson-pretty      >= 0.8.5
-                      , attoparsec
-                      , base16-bytestring >= 1.0
-                      , base58-bytestring
-                      , bech32 >= 1.1.0
                       , bytestring
                       , cardano-api:internal
                       , cardano-binary
                       , cardano-crypto
                       , cardano-crypto-class >= 2.1.1
-                      , cardano-crypto-wrapper ^>= 1.5
-                      , cardano-data >= 1.0
-                      , cardano-ledger-alonzo >= 1.1.1
-                      , cardano-ledger-allegra >= 1.1
-                      , cardano-ledger-api >= 1.1
-                      , cardano-ledger-babbage >= 1.1
-                      , cardano-ledger-binary >= 1.1
-                      , cardano-ledger-byron >= 1.0
-                      , cardano-ledger-conway >= 1.1
                       , cardano-ledger-core >= 1.1
-                      , cardano-ledger-mary >= 1.1
-                      , cardano-ledger-shelley >= 1.1.1
-                      , cardano-protocol-tpraos >= 1.0.2
-                      , cardano-slotting >= 0.1
-                      , cardano-strict-containers >= 0.1
-                      , cborg
-                      , containers
-                      , contra-tracer
                       , cryptonite
                       , deepseq
-                      , directory
-                      , either
-                      , filepath
-                      , formatting
-                      , iproute
                       , memory
-                      , microlens
                       , nothunks
                       , ouroboros-consensus-cardano >= 0.5
                       , ouroboros-network-protocols
