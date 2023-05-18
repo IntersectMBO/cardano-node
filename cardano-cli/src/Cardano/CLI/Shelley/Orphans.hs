@@ -13,7 +13,6 @@
 
 module Cardano.CLI.Shelley.Orphans () where
 
-import           Cardano.Api.Orphans ()
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import qualified Cardano.Protocol.TPraos.API as Ledger
 import           Cardano.Protocol.TPraos.BHeader (HashHeader (..))

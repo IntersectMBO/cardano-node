@@ -6,7 +6,7 @@
 
 module Cardano.Node.Orphans () where
 
-import           Cardano.Api.Orphans ()
+import           Cardano.Api ()
 
 import           Data.Aeson.Types
 import qualified Data.Text as Text

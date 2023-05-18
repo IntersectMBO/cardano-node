@@ -28,7 +28,6 @@ import qualified Data.Text as Text
 
 import           Cardano.Api (textShow)
 import qualified Cardano.Api as Api
-import           Cardano.Api.Orphans ()
 import qualified Cardano.Api.Shelley as Api
 import           Cardano.Ledger.Crypto (StandardCrypto)
 
