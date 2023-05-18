@@ -14,15 +14,13 @@ let
   # may run in the most unexpected places where we can't asume what is or isn't
   # included in $PATH. Just make sure pkgs.bashInteractive is in the nix store.
   sh = "${pkgs.bashInteractive}/bin/sh";
-  # Same as above for `sh` applies for pkgs.coreutils.
-  touch = "${pkgs.coreutils}/bin/touch";
   # We can't obtain the exit codes using `supervisorctl status`, it returns zero
   # when RUNNING and non-zero for STOPPED, EXITED, FATAL, and UNKNOWN, so as we
   # are not using any "autorestart" like functionality supervisord programs are
   # echoing their exit code after the script to a file named `exit_code` that is
-  # created empty just before starting the script.
+  # created and/or emptied before every script run.
   # Warning: This command assumes the "directory" is set correctly.
-  command = "${sh} -c \"${touch} ./exit_code; ./start.sh; echo \"$?\" > ./exit_code\"";
+  command = "${sh} -c \":> ./exit_code; ./start.sh; echo \"$?\" > ./exit_code\"";
   ##
   ## supervisorConf :: SupervisorConf
   ##
