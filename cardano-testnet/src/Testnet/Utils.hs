@@ -1,4 +1,5 @@
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Testnet.Utils
@@ -8,6 +9,10 @@ module Testnet.Utils
 
   -- ** Parsers
   , pMaxLovelaceSupply
+
+  -- ** Genesis
+  , getByronGenesisHash
+  , getShelleyGenesisHash
   ) where
 
 import           Cardano.Api
@@ -17,21 +22,30 @@ import           Cardano.CLI.Shelley.Output
 import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad
 import           Control.Monad.IO.Class
+import           Control.Monad.Trans.Except (runExceptT)
 import           Data.Aeson
+import qualified Data.Aeson as Aeson
+import           Data.Aeson.Key
+import           Data.Aeson.KeyMap
+import qualified Data.ByteString as BS
+import           Data.Text (Text)
 import           Data.Word
 import           GHC.Stack
 import           Options.Applicative
 import           System.Directory (doesFileExist, removeFile)
 
+import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesisData)
+import qualified Cardano.Crypto.Hash.Blake2b as Crypto
+import qualified Cardano.Crypto.Hash.Class as Crypto
+
+import qualified Testnet.Util.Process as H
+
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
 import           Hedgehog.Extras.Test.Process (ExecConfig)
 import           Hedgehog.Internal.Property (MonadTest)
-
-import qualified Hedgehog.Extras.Test.Concurrent as H
-import           Testnet.Cardano (CardanoTestnetOptions (..), defaultTestnetOptions)
-import qualified Testnet.Util.Process as H
 
 -- | Submit the desired epoch to wait to.
 waitUntilEpoch
@@ -99,5 +113,20 @@ pMaxLovelaceSupply =
       <>  help "Max lovelace supply that your testnet starts with."
       <>  metavar "WORD64"
       <>  showDefault
-      <>  value (cardanoMaxSupply defaultTestnetOptions)
+      <>  value 10_020_000_000
       )
+
+-- * Generate hashes for genesis.json files
+
+getByronGenesisHash :: (H.MonadTest m, MonadIO m) => FilePath -> m (KeyMap Aeson.Value)
+getByronGenesisHash path = do
+  e <- runExceptT $ readGenesisData path
+  (_, genesisHash) <- H.leftFail e
+  let genesisHash' = unGenesisHash genesisHash
+  pure . singleton "ByronGenesisHash" $ toJSON genesisHash'
+
+getShelleyGenesisHash :: (H.MonadTest m, MonadIO m) => FilePath -> Text -> m (KeyMap Aeson.Value)
+getShelleyGenesisHash path key = do
+  content <- H.evalIO  $ BS.readFile path
+  let genesisHash = Crypto.hashWith id content :: Crypto.Hash Crypto.Blake2b_256 BS.ByteString
+  pure . singleton (fromText key) $ toJSON genesisHash

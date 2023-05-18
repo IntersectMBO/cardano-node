@@ -54,9 +54,8 @@ hprop_leadershipSchedule :: Property
 hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedule" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
   base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
-  configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
   conf@Conf { tempBaseAbsPath, tempAbsPath } <- H.noteShowM $
-    mkConf (ProjectBase base) (Just $ YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
+    mkConf (ProjectBase base) Nothing tempAbsBasePath' Nothing
   let
     fastTestnetOptions = CardanoOnlyTestnetOptions cardanoDefaultTestnetOptions
       { cardanoEpochLength = 500

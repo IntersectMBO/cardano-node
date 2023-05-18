@@ -17,6 +17,7 @@ import qualified Test.Cli.Babbage.LeadershipSchedule
 import qualified Test.Cli.Babbage.StakeSnapshot
 import qualified Test.Cli.KesPeriodInfo
 import qualified Test.FoldBlocks
+import qualified Test.Golden.All
 import qualified Test.Node.Shutdown
 import qualified Test.ShutdownOnSlotSynced
 
@@ -26,7 +27,9 @@ import           Test.Gen.Cardano.Api.Empty ()
 
 tests :: IO TestTree
 tests = pure $ T.testGroup "test/Spec.hs"
-  [ T.testGroup "Spec"
+  [ T.testGroup "Golden"
+    [ H.ignoreOnWindows "Default JSON node configuration" Test.Golden.All.goldenDefaultConfigYaml ]
+  , T.testGroup "Spec"
     [ H.ignoreOnWindows "Shutdown" Test.Node.Shutdown.hprop_shutdown
     , H.ignoreOnWindows "ShutdownOnSlotSynced" Test.ShutdownOnSlotSynced.hprop_shutdownOnSlotSynced
     -- TODO: This is failing. Disabling until we can figure out why

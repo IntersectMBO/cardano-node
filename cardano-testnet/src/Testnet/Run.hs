@@ -6,7 +6,6 @@ import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Resource
 import           System.Console.ANSI (Color (..), ColorIntensity (..), ConsoleLayer (..), SGR (..))
-import           System.FilePath ((</>))
 
 import qualified Control.Concurrent as IO
 import qualified Control.Concurrent.STM as STM
@@ -23,8 +22,7 @@ import qualified Testnet.Util.Base as H
 testnetProperty :: Maybe Int -> (H.Conf -> H.Integration ()) -> H.Property
 testnetProperty maybeTestnetMagic tn = H.integrationRetryWorkspace 2 "testnet" $ \tempAbsPath' -> do
   base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
-  configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
-  conf <- H.mkConf (H.ProjectBase base) (Just $ H.YamlFilePath configurationTemplate) tempAbsPath' maybeTestnetMagic
+  conf <- H.mkConf (H.ProjectBase base) Nothing tempAbsPath' maybeTestnetMagic
 
   -- Fork a thread to keep alive indefinitely any resources allocated by testnet.
   void . H.evalM . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000
