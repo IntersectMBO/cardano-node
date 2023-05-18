@@ -5,10 +5,12 @@ module Parsers.Byron
   ) where
 
 import           Options.Applicative
+import qualified Options.Applicative as OA
+
+import           Cardano.CLI.Common.Parsers
+
 import           Testnet.Byron
 import           Testnet.Run (runTestnet)
-
-import qualified Options.Applicative as OA
 
 data ByronOptions = ByronOptions
   { maybeTestnetMagic :: Maybe Int
@@ -74,5 +76,5 @@ optsTestnet = TestnetOptions
 runByronOptions :: ByronOptions -> IO ()
 runByronOptions opts = runTestnet (maybeTestnetMagic opts) (Testnet.Byron.testnet (testnetOptions opts))
 
-cmdByron :: Mod CommandFields (IO ())
-cmdByron = command "byron" $ flip info idm $ runByronOptions <$> optsByron
+cmdByron :: Mod CommandFields ByronOptions
+cmdByron = command' "byron" "Start a Byron testnet" optsByron

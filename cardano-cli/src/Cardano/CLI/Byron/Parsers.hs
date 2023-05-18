@@ -23,15 +23,16 @@ module Cardano.CLI.Byron.Parsers
   , parseUpdateVoteThd
   ) where
 
+
 import           Cardano.Prelude (ConvertText (..))
 
+import           Control.Applicative
 import           Control.Monad (when)
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
 import           Data.Attoparsec.Combinator ((<?>))
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy.Char8 as C8
 import qualified Data.Char as Char
-import           Data.Foldable
 import           Data.Text (Text)
 import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -68,16 +69,12 @@ import           Cardano.CLI.Byron.Commands
 import           Cardano.CLI.Byron.Genesis
 import           Cardano.CLI.Byron.Key
 import           Cardano.CLI.Byron.Tx
-import           Cardano.CLI.Common.Parsers (pNetworkId, pSocketPath)
+import           Cardano.CLI.Common.Parsers
 import           Cardano.CLI.Environment (EnvCli (..))
 import           Cardano.CLI.Run (ClientCommand (ByronCommand))
 import           Cardano.CLI.Shelley.Commands (ByronKeyFormat (..))
 import           Cardano.CLI.Types
 
-command' :: String -> String -> Parser a -> Mod CommandFields a
-command' c descr p =
-    command c $ info (p <**> helper)
-              $ mconcat [ progDesc descr ]
 
 backwardsCompatibilityCommands :: EnvCli -> Parser ClientCommand
 backwardsCompatibilityCommands envCli =
@@ -89,29 +86,29 @@ backwardsCompatibilityCommands envCli =
 
     hiddenCmds :: [Parser ClientCommand]
     hiddenCmds =
-      map convertToByronCommand
-        [ parseGenesisRelatedValues
-        , parseKeyRelatedValues envCli
-        , parseTxRelatedValues envCli
-        , parseLocalNodeQueryValues envCli
-        , parseMiscellaneous
-        ]
+     concatMap (fmap convertToByronCommand)
+          [ parseGenesisRelatedValues
+          , parseKeyRelatedValues envCli
+          , parseTxRelatedValues envCli
+          , return (parseLocalNodeQueryValues envCli)
+          , parseMiscellaneous
+          ]
 
 -- Implemented with asum so all commands don't get hidden when trying to hide
 -- the 'pNodeCmdBackwardCompatible' parser.
 parseByronCommands :: EnvCli -> Parser ByronCommand
 parseByronCommands envCli = asum
-  [ subParser "key" (Opt.info (Opt.subparser (parseKeyRelatedValues envCli))
+  [ subParser "key" (Opt.info (asum $ map Opt.subparser (parseKeyRelatedValues envCli))
       $ Opt.progDesc "Byron key utility commands")
-  , subParser "transaction" (Opt.info (Opt.subparser (parseTxRelatedValues envCli))
+  , subParser "transaction" (Opt.info (asum $ map Opt.subparser (parseTxRelatedValues envCli))
       $ Opt.progDesc "Byron transaction commands")
   , subParser "query" (Opt.info (Opt.subparser (parseLocalNodeQueryValues envCli))
       $ Opt.progDesc "Byron node query commands.")
-  , subParser "genesis" (Opt.info (Opt.subparser parseGenesisRelatedValues)
+  , subParser "genesis" (Opt.info (asum $ map Opt.subparser parseGenesisRelatedValues)
       $ Opt.progDesc "Byron genesis block commands")
   , subParser "governance" (Opt.info (NodeCmd <$> Opt.subparser (pNodeCmd envCli))
       $ Opt.progDesc "Byron governance commands")
-  , subParser "miscellaneous" (Opt.info (Opt.subparser parseMiscellaneous)
+  , subParser "miscellaneous" (Opt.info (asum $ map Opt.subparser parseMiscellaneous)
       $ Opt.progDesc "Byron miscellaneous commands")
   , NodeCmd <$> pNodeCmdBackwardCompatible envCli
   ]
@@ -174,9 +171,8 @@ parseGenesisParameters =
             "Optionally specify the seed of generation."
         )
 
-parseGenesisRelatedValues :: Mod CommandFields ByronCommand
+parseGenesisRelatedValues :: [Mod CommandFields ByronCommand]
 parseGenesisRelatedValues =
-  mconcat
     [ command' "genesis" "Create genesis."
       $ Genesis
           <$> parseNewDirectory
@@ -190,9 +186,8 @@ parseGenesisRelatedValues =
 
 -- | Values required to create keys and perform
 -- transformation on keys.
-parseKeyRelatedValues :: EnvCli -> Mod CommandFields ByronCommand
+parseKeyRelatedValues :: EnvCli -> [Mod CommandFields ByronCommand]
 parseKeyRelatedValues envCli =
-  mconcat
     [ command' "keygen" "Generate a signing key."
         $ Keygen
             <$> parseNewSigningKeyFile "secret"
@@ -232,15 +227,14 @@ parseKeyRelatedValues envCli =
 
 parseLocalNodeQueryValues :: EnvCli -> Mod CommandFields ByronCommand
 parseLocalNodeQueryValues envCli =
-  mconcat
-    [ command' "get-tip" "Get the tip of your local node's blockchain"
-        $ GetLocalNodeTip
-            <$> pSocketPath envCli
-            <*> pNetworkId envCli
-    ]
+  command' "get-tip" "Get the tip of your local node's blockchain"
+    $ GetLocalNodeTip
+        <$> pSocketPath envCli
+        <*> pNetworkId envCli
 
-parseMiscellaneous :: Mod CommandFields ByronCommand
-parseMiscellaneous = mconcat
+
+parseMiscellaneous :: [Mod CommandFields ByronCommand]
+parseMiscellaneous =
   [ command'
       "validate-cbor"
       "Validate a CBOR blockchain object."
@@ -325,9 +319,8 @@ readerFromAttoParser :: Atto.Parser a -> Opt.ReadM a
 readerFromAttoParser p =
   Opt.eitherReader (Atto.parseOnly (p <* Atto.endOfInput) . BSC.pack)
 
-parseTxRelatedValues :: EnvCli -> Mod CommandFields ByronCommand
+parseTxRelatedValues :: EnvCli -> [Mod CommandFields ByronCommand]
 parseTxRelatedValues envCli =
-  mconcat
     [ command'
         "submit-tx"
         "Submit a raw, signed transaction, in its on-wire representation."

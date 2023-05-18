@@ -9,6 +9,7 @@ module Cardano.CLI.Parsers
   ) where
 
 import           Cardano.CLI.Byron.Parsers (backwardsCompatibilityCommands, parseByronCommands)
+import           Cardano.CLI.Common.Parsers
 import           Cardano.CLI.Environment (EnvCli)
 import           Cardano.CLI.Ping (parsePingCmd)
 import           Cardano.CLI.Render (customRenderHelp)
@@ -20,10 +21,6 @@ import           Options.Applicative
 
 import qualified Options.Applicative as Opt
 
-command' :: String -> String -> Parser a -> Mod CommandFields a
-command' c descr p =
-    command c $ info (p <**> helper)
-              $ mconcat [ progDesc descr ]
 
 opts :: EnvCli -> ParserInfo ClientCommand
 opts envCli =
@@ -37,10 +34,11 @@ opts envCli =
     ]
 
 pref :: ParserPrefs
-pref = Opt.prefs $ mempty
-  <> showHelpOnEmpty
-  <> helpHangUsageOverflow 10
-  <> helpRenderHelp customRenderHelp
+pref = Opt.prefs $ mconcat
+         [ showHelpOnEmpty
+         , helpHangUsageOverflow 10
+         , helpRenderHelp customRenderHelp
+         ]
 
 parseClientCommand :: EnvCli -> Parser ClientCommand
 parseClientCommand envCli =

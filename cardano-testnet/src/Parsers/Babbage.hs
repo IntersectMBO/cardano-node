@@ -4,9 +4,12 @@ module Parsers.Babbage
   , runBabbageOptions
   ) where
 
+import           Prelude
+
 import           Options.Applicative
 import qualified Options.Applicative as OA
-import           Prelude
+
+import           Cardano.CLI.Common.Parsers
 
 import           Testnet
 import           Testnet.Options
@@ -71,5 +74,5 @@ runBabbageOptions :: BabbageOptions -> IO ()
 runBabbageOptions options = runTestnet (maybeTestnetMagic options) $
   Testnet.testnet (BabbageOnlyTestnetOptions $ testnetOptions options)
 
-cmdBabbage :: Mod CommandFields (IO ())
-cmdBabbage = command "babbage"  $ flip info idm $ runBabbageOptions <$> optsBabbage
+cmdBabbage :: Mod CommandFields BabbageOptions
+cmdBabbage = command' "babbage" "Start a babbage testnet " optsBabbage
