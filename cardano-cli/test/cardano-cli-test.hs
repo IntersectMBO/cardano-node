@@ -18,6 +18,8 @@ import qualified Test.Config.Mainnet
 import           Hedgehog.Extras.Stock.OS (isWin32)
 import           Hedgehog.Main (defaultMain)
 
+import           Test.Gen.Cardano.Api.Empty ()
+
 main :: IO ()
 main = do
   hSetBuffering stdout LineBuffering

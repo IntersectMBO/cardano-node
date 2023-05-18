@@ -1,1 +1,0 @@
-The Plutus script witness has the wrong datum (according to the UTxO). The expected datum value has hash "ee155ace9c40292074cb6aff8c9ccdd273c81648ff1149ef36bcea6ebb8a3e25"

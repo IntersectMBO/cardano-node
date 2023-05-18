@@ -137,7 +137,7 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api
+                      , cardano-api ^>= 8.1.0.1
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev
@@ -232,7 +232,7 @@ test-suite cardano-node-test
   build-depends:        base >= 4.14 && < 4.17
                       , aeson >= 1.5.6.0
                       , bytestring
-                      , cardano-api
+                      , cardano-api ^>= 8.1.0.1
                       , cardano-ledger-core
                       , cardano-node
                       , cardano-slotting >= 0.1

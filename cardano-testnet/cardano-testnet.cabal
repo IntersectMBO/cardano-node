@@ -34,7 +34,7 @@ library
   build-depends:        aeson
                       , ansi-terminal
                       , bytestring
-                      , cardano-api
+                      , cardano-api ^>= 8.1.0.1
                       , cardano-cli
                       , cardano-crypto-class
                       , cardano-git-rev
@@ -127,7 +127,8 @@ test-suite cardano-testnet-tests
   build-depends:        aeson
                       , async
                       , bytestring
-                      , cardano-api
+                      , cardano-api ^>= 8.1.0.1
+                      , cardano-api-gen ^>= 8.1.0.2
                       , cardano-cli
                       , cardano-testnet
                       , containers

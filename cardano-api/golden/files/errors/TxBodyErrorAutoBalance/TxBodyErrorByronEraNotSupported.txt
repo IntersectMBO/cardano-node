@@ -1,1 +1,0 @@
-The Byron era is not yet supported by makeTransactionBodyAutoBalance

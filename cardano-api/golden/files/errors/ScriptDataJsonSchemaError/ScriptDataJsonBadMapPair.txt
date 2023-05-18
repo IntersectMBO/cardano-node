@@ -1,2 +1,0 @@
-Expected a list of key/value pair { "k": ..., "v": ... } objects.
-Unexpected value: "<JSON>"

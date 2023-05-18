@@ -1,1 +1,0 @@
-There was an error in deserialising the data part of the Bech32-encoded string into a value of the expected type.

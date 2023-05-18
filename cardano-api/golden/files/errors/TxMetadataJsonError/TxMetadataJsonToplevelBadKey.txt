@@ -1,2 +1,0 @@
-The JSON metadata top level must be a map (JSON object) with unsigned integer keys.
-Invalid key: "<text>"

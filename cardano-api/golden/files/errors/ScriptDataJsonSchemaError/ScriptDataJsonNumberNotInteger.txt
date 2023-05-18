@@ -1,1 +1,0 @@
-JSON numbers must be integers. Unexpected value: 0.0

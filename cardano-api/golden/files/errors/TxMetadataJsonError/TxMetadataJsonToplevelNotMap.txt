@@ -1,1 +1,0 @@
-The JSON metadata top level must be a map (JSON object) from word to value.

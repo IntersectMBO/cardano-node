@@ -1,1 +1,0 @@
-Transaction cannot mint ada, only non-ada assets

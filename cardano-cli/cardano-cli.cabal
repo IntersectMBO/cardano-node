@@ -110,7 +110,7 @@ library
                       , binary
                       , bytestring
                       , canonical-json
-                      , cardano-api
+                      , cardano-api ^>= 8.1.0.1
                       , cardano-binary
                       , cardano-crypto
                       , cardano-crypto-class >= 2.1.1
@@ -123,7 +123,7 @@ library
                       , cardano-ledger-core >= 1.1
                       , cardano-ledger-conway >= 1.1
                       , cardano-ledger-shelley >= 1.1.1
-                      , cardano-ping
+                      , cardano-ping ^>= 0.1.0.1
                       , cardano-prelude
                       , cardano-protocol-tpraos >= 1.0
                       , cardano-slotting ^>= 0.1
@@ -185,8 +185,8 @@ test-suite cardano-cli-test
                       , base16-bytestring
                       , bytestring
                       , bech32            >= 1.1.0
-                      , cardano-api
-                      , cardano-api:gen
+                      , cardano-api ^>= 8.1.0.1
+                      , cardano-api-gen ^>= 8.1.0.2
                       , cardano-cli
                       , cardano-node
                       , cardano-slotting ^>= 0.1
@@ -230,7 +230,7 @@ test-suite cardano-cli-golden
   build-depends:        aeson             >= 1.5.6.0
                       , base16-bytestring
                       , bytestring
-                      , cardano-api
+                      , cardano-api ^>= 8.1.0.1
                       , cardano-cli
                       , cardano-crypto-wrapper ^>= 1.5.1
                       , cardano-ledger-byron ^>= 1.0

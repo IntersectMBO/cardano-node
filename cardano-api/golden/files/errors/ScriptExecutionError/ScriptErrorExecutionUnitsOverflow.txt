@@ -1,1 +1,0 @@
-The execution units required by this Plutus script overflows a 64bit word. In a properly configured chain this should be practically impossible. So this probably indicates a chain configuration problem, perhaps with the values in the cost model.

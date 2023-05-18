@@ -1,1 +1,0 @@
-TextEnvelopeCddl error: Byron key witnesses are currently unsupported.

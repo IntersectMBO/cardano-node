@@ -1,1 +1,0 @@
-Transaction uses Plutus scripts but does not provide the protocol parameters to hash

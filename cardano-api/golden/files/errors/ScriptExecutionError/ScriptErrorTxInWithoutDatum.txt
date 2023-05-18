@@ -1,1 +1,0 @@
-The Plutus script witness for the txin does not have a script datum (according to the UTxO). The txin in question is 210c0a4bb6391baf606843e67863d1474cc462374ab12c42d55f78a0b55b56e0#1
