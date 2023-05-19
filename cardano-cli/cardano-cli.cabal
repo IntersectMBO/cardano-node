@@ -233,7 +233,7 @@ test-suite cardano-cli-test
 test-suite cardano-cli-golden
   import:               project-config
 
-  hs-source-dirs:       cardano-cli-golden
+  hs-source-dirs:       test/cardano-cli-golden
   main-is:              cardano-cli-golden.hs
   type:                 exitcode-stdio-1.0
 
