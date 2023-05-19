@@ -1,4 +1,4 @@
-module Test.OptParse
+module Test.Cardano.CLI.Util
   ( checkTxCddlFormat
   , checkTextEnvelopeFormat
   , equivalence
