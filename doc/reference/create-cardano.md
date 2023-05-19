@@ -1,4 +1,4 @@
-# Creating Cardano testnets 
+# Creating Cardano testnets
 
 In [Shelley genesis](shelley-genesis.md) we discussed how to manually create a Shelley blockchain
 and how to create a testnet semi-automatically using the `cardano-cli genesis create` command. That explainer
@@ -17,7 +17,7 @@ generates the configuration file for the node.
 The `create-cardano` command also requires us to provide template files for the node configuration file,
 Byron genesis, Shelley genesis and Alonzo genesis. These template files contain the parameters needed for
 the testnet, all eras, and the configuration file for the nodes. You can find template files in the
-[cardano-world repository](https://github.com/input-output-hk/cardano-world/tree/master/nix/cardano/environments/testnet-template)
+[iohk-nix repository](https://github.com/input-output-hk/iohk-nix/tree/master/cardano-lib/testnet-template)
 and adjust them to your needs.
 
 By calling help for `create-cardano`, you will see the needed parameters:
@@ -73,7 +73,7 @@ $ cardano-cli genesis create-cardano \
 --slot-length 100 \
 --slot-coefficient 5/100 \
 --testnet-magic 42 \
---byron-template byron.json \     
+--byron-template byron.json \
 --shelley-template shelley.json \
 --alonzo-template alonzo.json \
 --node-config-template config.json
@@ -91,7 +91,7 @@ This creates the following:
 * Three operational certificates and operational certificate counters
 * Three cold, KES, and VRF keys
 * Two Byron era non-delegated UTXO keys
-* Two Shelley era UTXO keys (converted from Byron keys)  
+* Two Shelley era UTXO keys (converted from Byron keys)
 
 ```bash
 $ tree cluster/
@@ -184,6 +184,6 @@ $ cardano-node run \
 --port 3000 \
 --delegation-certificate delegate-keys/byron.000.cert.json \
 --signing-key delegate-keys/byron.000.key
-```  
+```
 
 Updating the testnet to later eras can be done using update proposals, please refer to [Cardano governance](./cardano-governance.md) to learn how to do it.
