@@ -1,0 +1,25 @@
+Usage: cardano-cli issue-utxo-expenditure (--mainnet | --testnet-magic NATURAL)
+            [--byron-legacy-formats | --byron-formats]
+            --tx FILEPATH
+            --wallet-key FILEPATH
+            (--txin (TXID,INDEX))
+            (--txout '("ADDR", LOVELACE)')
+
+  Write a file with a signed transaction, spending normal UTxO.
+
+Available options:
+  --mainnet                Use the mainnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --testnet-magic NATURAL  Specify a testnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --byron-legacy-formats   Byron/cardano-sl formats and compatibility
+  --byron-formats          Byron era formats and compatibility
+  --tx FILEPATH            Non-existent file to write the signed transaction to.
+  --wallet-key FILEPATH    Key that has access to all mentioned genesis UTxO
+                           inputs.
+  --txin (TXID,INDEX)      Transaction input is a pair of an UTxO TxId and a
+                           zero-based output index.
+  --txout '("ADDR", LOVELACE)'
+                           Specify a transaction output, as a pair of an address
+                           and lovelace.
+  -h,--help                Show this help text

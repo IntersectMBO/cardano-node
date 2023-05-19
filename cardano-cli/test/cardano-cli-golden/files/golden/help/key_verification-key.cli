@@ -1,0 +1,10 @@
+Usage: cardano-cli key verification-key --signing-key-file FILE
+            --verification-key-file FILE
+
+  Get a verification key from a signing key. This supports all key types.
+
+Available options:
+  --signing-key-file FILE  Input filepath of the signing key.
+  --verification-key-file FILE
+                           Output filepath of the verification key.
+  -h,--help                Show this help text

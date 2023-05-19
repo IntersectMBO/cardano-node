@@ -1,0 +1,8 @@
+Usage: cardano-cli transaction view (--tx-body-file FILE | --tx-file FILE)
+
+  Print a transaction.
+
+Available options:
+  --tx-body-file FILE      Input filepath of the JSON TxBody.
+  --tx-file FILE           Input filepath of the JSON Tx.
+  -h,--help                Show this help text

@@ -1,0 +1,22 @@
+Usage: cardano-cli node new-counter 
+            ( --stake-pool-verification-key STRING
+            | --genesis-delegate-verification-key STRING
+            | --cold-verification-key-file FILE
+            )
+            --counter-value INT
+            --operational-certificate-issue-counter-file FILE
+
+  Create a new certificate issue counter
+
+Available options:
+  --stake-pool-verification-key STRING
+                           Stake pool verification key (Bech32 or hex-encoded).
+  --genesis-delegate-verification-key STRING
+                           Genesis delegate verification key (hex-encoded).
+  --cold-verification-key-file FILE
+                           Filepath of the cold verification key.
+  --counter-value INT      The next certificate issue counter value to use.
+  --operational-certificate-issue-counter-file FILE
+                           The file with the issue counter for the operational
+                           certificate.
+  -h,--help                Show this help text

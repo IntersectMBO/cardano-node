@@ -6,6 +6,7 @@ import qualified Test.Golden.Byron.SigningKeys
 import qualified Test.Golden.Byron.Tx
 import qualified Test.Golden.Byron.UpdateProposal
 import qualified Test.Golden.Byron.Vote
+import qualified Test.Golden.Help
 import qualified Test.Golden.Key
 import qualified Test.Golden.Shelley
 import qualified Test.Golden.TxView
@@ -19,6 +20,7 @@ main = do
     , Test.Golden.Byron.Tx.txTests
     , Test.Golden.Byron.UpdateProposal.updateProposalTest
     , Test.Golden.Byron.Vote.voteTests
+    , Test.Golden.Help.helpTests
     , Test.Golden.Key.keyTests
     , Test.Golden.Shelley.keyTests
     , Test.Golden.Shelley.certificateTests

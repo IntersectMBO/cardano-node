@@ -1,0 +1,7 @@
+Usage: cardano-cli transaction policyid --script-file FILE
+
+  Calculate the PolicyId from the monetary policy script.
+
+Available options:
+  --script-file FILE       Filepath of the script.
+  -h,--help                Show this help text

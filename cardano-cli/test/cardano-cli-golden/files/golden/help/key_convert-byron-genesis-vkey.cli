@@ -1,0 +1,11 @@
+Usage: cardano-cli key convert-byron-genesis-vkey --byron-genesis-verification-key BASE64
+            --out-file FILE
+
+  Convert a Base64-encoded Byron genesis verification key to a Shelley genesis
+  verification key
+
+Available options:
+  --byron-genesis-verification-key BASE64
+                           Base64 string for the Byron genesis verification key.
+  --out-file FILE          The output file.
+  -h,--help                Show this help text

@@ -1,0 +1,13 @@
+Usage: cardano-cli to-verification [--byron-legacy-formats | --byron-formats]
+            --secret FILEPATH
+            --to FILEPATH
+
+  Extract a verification key in its base64 form.
+
+Available options:
+  --byron-legacy-formats   Byron/cardano-sl formats and compatibility
+  --byron-formats          Byron era formats and compatibility
+  --secret FILEPATH        Signing key file to extract the verification part
+                           from.
+  --to FILEPATH            Non-existent file to write the verification key to.
+  -h,--help                Show this help text

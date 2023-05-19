@@ -1,0 +1,13 @@
+Usage: cardano-cli node key-hash-VRF 
+            (--verification-key STRING | --verification-key-file FILE)
+            [--out-file FILE]
+
+  Print hash of a node's operational VRF key.
+
+Available options:
+  --verification-key STRING
+                           Verification key (Bech32 or hex-encoded).
+  --verification-key-file FILE
+                           Input filepath of the verification key.
+  --out-file FILE          Optional output file. Default is to write to stdout.
+  -h,--help                Show this help text

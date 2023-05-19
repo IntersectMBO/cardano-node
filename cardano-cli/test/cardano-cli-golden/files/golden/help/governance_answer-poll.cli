@@ -1,0 +1,12 @@
+Usage: cardano-cli governance answer-poll --poll-file FILE
+            [--answer INT]
+            [--out-file FILE]
+
+  Answer an SPO poll
+
+Available options:
+  --poll-file FILE         Filepath to the ongoing poll.
+  --answer INT             The index of the chosen answer in the poll. Optional.
+                           Asked interactively if omitted.
+  --out-file FILE          The output file.
+  -h,--help                Show this help text

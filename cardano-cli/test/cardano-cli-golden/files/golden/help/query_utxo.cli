@@ -1,0 +1,35 @@
+Usage: cardano-cli query utxo --socket-path SOCKET_PATH
+            [ --shelley-mode
+            | --byron-mode [--epoch-slots SLOTS]
+            | --cardano-mode [--epoch-slots SLOTS]
+            ]
+            (--whole-utxo | (--address ADDRESS) | (--tx-in TX-IN))
+            (--mainnet | --testnet-magic NATURAL)
+            [--out-file FILE]
+
+  Get a portion of the current UTxO: by tx in, by address or the whole.
+
+Available options:
+  --socket-path SOCKET_PATH
+                           Path to the node socket. This overrides the
+                           CARDANO_NODE_SOCKET_PATH environment variable. The
+                           argument is optional if CARDANO_NODE_SOCKET_PATH is
+                           defined and mandatory otherwise.
+  --shelley-mode           For talking to a node running in Shelley-only mode.
+  --byron-mode             For talking to a node running in Byron-only mode.
+  --epoch-slots SLOTS      The number of slots per epoch for the Byron era.
+                           (default: 21600)
+  --cardano-mode           For talking to a node running in full Cardano mode
+                           (default).
+  --epoch-slots SLOTS      The number of slots per epoch for the Byron era.
+                           (default: 21600)
+  --whole-utxo             Return the whole UTxO (only appropriate on small
+                           testnets).
+  --address ADDRESS        Filter by Cardano address(es) (Bech32-encoded).
+  --tx-in TX-IN            Filter by transaction input (TxId#TxIx).
+  --mainnet                Use the mainnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --testnet-magic NATURAL  Specify a testnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --out-file FILE          Optional output file. Default is to write to stdout.
+  -h,--help                Show this help text

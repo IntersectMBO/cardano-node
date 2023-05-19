@@ -1,0 +1,47 @@
+Usage: cardano-cli query 
+            ( protocol-parameters
+            | tip
+            | stake-pools
+            | stake-distribution
+            | stake-address-info
+            | utxo
+            | ledger-state
+            | protocol-state
+            | stake-snapshot
+            | leadership-schedule
+            | kes-period-info
+            | pool-state
+            | tx-mempool
+            )
+
+  Node query commands. Will query the local node whose Unix domain socket is
+  obtained from the CARDANO_NODE_SOCKET_PATH environment variable.
+
+Available options:
+  -h,--help                Show this help text
+
+Available commands:
+  protocol-parameters      Get the node's current protocol parameters
+  tip                      Get the node's current tip (slot no, hash, block no)
+  stake-pools              Get the node's current set of stake pool ids
+  stake-distribution       Get the node's current aggregated stake distribution
+  stake-address-info       Get the current delegations and reward accounts
+                           filtered by stake address.
+  utxo                     Get a portion of the current UTxO: by tx in, by
+                           address or the whole.
+  ledger-state             Dump the current ledger state of the node
+                           (Ledger.NewEpochState -- advanced command)
+  protocol-state           Dump the current protocol state of the node
+                           (Ledger.ChainDepState -- advanced command)
+  stake-snapshot           Obtain the three stake snapshots for a pool, plus the
+                           total active stake (advanced command)
+  pool-params              DEPRECATED. Use query pool-state instead. Dump the
+                           pool parameters
+                           (Ledger.NewEpochState.esLState._delegationState._pState._pParams
+                           -- advanced command)
+  leadership-schedule      Get the slots the node is expected to mint a block in
+                           (advanced command)
+  kes-period-info          Get information about the current KES period and your
+                           node's operational certificate.
+  pool-state               Dump the pool state
+  tx-mempool               Local Mempool info

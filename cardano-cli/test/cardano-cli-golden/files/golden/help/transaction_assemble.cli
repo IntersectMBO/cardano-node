@@ -1,0 +1,11 @@
+Usage: cardano-cli transaction assemble --tx-body-file FILE
+            [--witness-file FILE]
+            --out-file FILE
+
+  Assemble a tx body and witness(es) to form a transaction
+
+Available options:
+  --tx-body-file FILE      Input filepath of the JSON TxBody.
+  --witness-file FILE      Filepath of the witness
+  --out-file FILE          The output file.
+  -h,--help                Show this help text

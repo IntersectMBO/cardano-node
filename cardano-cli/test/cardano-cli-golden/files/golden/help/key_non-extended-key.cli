@@ -1,0 +1,12 @@
+Usage: cardano-cli key non-extended-key --extended-verification-key-file FILE
+            --verification-key-file FILE
+
+  Get a non-extended verification key from an extended verification key. This
+  supports all extended key types.
+
+Available options:
+  --extended-verification-key-file FILE
+                           Input filepath of the ed25519-bip32 verification key.
+  --verification-key-file FILE
+                           Output filepath of the verification key.
+  -h,--help                Show this help text
