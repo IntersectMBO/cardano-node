@@ -174,9 +174,9 @@ executable cardano-cli
                       , optparse-applicative-fork
                       , transformers-except
 
-library test-lib
+library cardano-cli-test-lib
   import:               project-config
-  hs-source-dirs:       test-lib
+  hs-source-dirs:       test/cardano-cli-test-lib
   exposed-modules:      Test.OptParse
   build-depends:        cardano-api
                       , cardano-cli
@@ -199,7 +199,7 @@ test-suite cardano-cli-test
                       , cardano-api ^>= 8.1.0.1
                       , cardano-api-gen ^>= 8.1.0.2
                       , cardano-cli
-                      , cardano-cli:test-lib
+                      , cardano-cli:cardano-cli-test-lib
                       , cardano-node
                       , cardano-slotting ^>= 0.1
                       , containers
@@ -242,7 +242,7 @@ test-suite cardano-cli-golden
                       , bytestring
                       , cardano-api ^>= 8.1.0.1
                       , cardano-cli
-                      , cardano-cli:test-lib
+                      , cardano-cli:cardano-cli-test-lib
                       , cardano-crypto-wrapper ^>= 1.5.1
                       , cardano-ledger-byron ^>= 1.0
                       , cborg
