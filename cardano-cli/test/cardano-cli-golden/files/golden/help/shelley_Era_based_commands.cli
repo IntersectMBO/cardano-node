@@ -1,0 +1,5 @@
+Invalid argument `Era'
+
+Usage: cardano-cli shelley Era based commands
+
+  Shelley specific commands (deprecated)

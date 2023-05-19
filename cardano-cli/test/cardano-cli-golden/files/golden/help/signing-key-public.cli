@@ -1,0 +1,10 @@
+Usage: cardano-cli signing-key-public [--byron-legacy-formats | --byron-formats]
+            --secret FILEPATH
+
+  Pretty-print a signing key's verification key (not a secret).
+
+Available options:
+  --byron-legacy-formats   Byron/cardano-sl formats and compatibility
+  --byron-formats          Byron era formats and compatibility
+  --secret FILEPATH        Signing key to pretty-print.
+  -h,--help                Show this help text

@@ -3,6 +3,7 @@ module Test.Cardano.CLI.Util
   , checkTextEnvelopeFormat
   , equivalence
   , execCardanoCLI
+  , execDetailCardanoCli
   , tryExecCardanoCLI
   , propertyOnce
   , withSnd
@@ -11,7 +12,6 @@ module Test.Cardano.CLI.Util
   ) where
 
 import           Control.Monad.Catch
-import qualified GHC.Stack as GHC
 
 import           Cardano.Api
 
@@ -22,13 +22,21 @@ import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Except (runExceptT)
 import           Data.Function ((&))
 import           GHC.Stack (CallStack, HasCallStack)
-import qualified Hedgehog as H
-import qualified Hedgehog.Extras.Test.Process as H
+import           Hedgehog.Extras (ExecConfig)
 import           Hedgehog.Internal.Property (Diff, MonadTest, liftTest, mkTest)
-import qualified Hedgehog.Internal.Property as H
 import           Hedgehog.Internal.Show (ValueDiff (ValueSame), mkValue, showPretty, valueDiff)
 import           Hedgehog.Internal.Source (getCaller)
 
+import qualified Data.List as List
+import           Data.Monoid (Last (..))
+import qualified GHC.Stack as GHC
+import qualified Hedgehog as H
+import qualified Hedgehog.Extras as H
+import           Hedgehog.Extras.Test (ExecConfig (..))
+import qualified Hedgehog.Internal.Property as H
+import qualified System.Exit as IO
+import qualified System.Process as IO
+import           System.Process (CreateProcess)
 
 -- | Execute cardano-cli via the command line.
 --
@@ -40,6 +48,49 @@ execCardanoCLI
   -> m String
   -- ^ Captured stdout
 execCardanoCLI = GHC.withFrozenCallStack $ H.execFlex "cardano-cli" "CARDANO_CLI"
+
+-- | Execute cardano-cli via the command line, expecting it to fail.
+--
+-- Waits for the process to finish and returns the exit code, stdout and stderr.
+execDetailCardanoCli
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  => [String]
+  -- ^ Arguments to the CLI command
+  -> m (IO.ExitCode, String, String)
+  -- ^ Captured stdout
+execDetailCardanoCli = GHC.withFrozenCallStack $ execDetailFlex H.defaultExecConfig "cardano-cli" "CARDANO_CLI"
+
+procFlex'
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  => ExecConfig
+  -> String
+  -- ^ Cabal package name corresponding to the executable
+  -> String
+  -- ^ Environment variable pointing to the binary to run
+  -> [String]
+  -- ^ Arguments to the CLI command
+  -> m CreateProcess
+  -- ^ Captured stdout
+procFlex' execConfig pkg binaryEnv arguments = GHC.withFrozenCallStack . H.evalM $ do
+  bin <- H.binFlex pkg binaryEnv
+  return (IO.proc bin arguments)
+    { IO.env = getLast $ execConfigEnv execConfig
+    , IO.cwd = getLast $ execConfigCwd execConfig
+    }
+
+execDetailFlex
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  => ExecConfig
+  -> String
+  -> String
+  -> [String]
+  -> m (IO.ExitCode, String, String)
+execDetailFlex execConfig pkgBin envBin arguments = GHC.withFrozenCallStack $ do
+  cp <- procFlex' execConfig pkgBin envBin arguments
+  H.annotate . ("Command: " <>) $ case IO.cmdspec cp of
+    IO.ShellCommand cmd -> cmd
+    IO.RawCommand cmd args -> cmd <> " " <> List.unwords args
+  H.evalIO $ IO.readCreateProcessWithExitCode cp ""
 
 tryExecCardanoCLI
   :: [String]

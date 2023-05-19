@@ -1,0 +1,14 @@
+Usage: cardano-cli address key-gen [--normal-key | --extended-key | --byron-key]
+            --verification-key-file FILE
+            --signing-key-file FILE
+
+  Create an address key pair.
+
+Available options:
+  --normal-key             Use a normal Shelley-era key (default).
+  --extended-key           Use an extended ed25519 Shelley-era key.
+  --byron-key              Use a Byron-era key.
+  --verification-key-file FILE
+                           Output filepath of the verification key.
+  --signing-key-file FILE  Output filepath of the signing key.
+  -h,--help                Show this help text

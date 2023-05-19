@@ -1,0 +1,49 @@
+Usage: cardano-cli genesis create-cardano --genesis-dir DIR
+            [--gen-genesis-keys INT]
+            [--gen-utxo-keys INT]
+            [--start-time UTC-TIME]
+            [--supply LOVELACE]
+            [--security-param INT]
+            [--slot-length INT]
+            [--slot-coefficient RATIONAL]
+            (--mainnet | --testnet-magic NATURAL)
+            --byron-template FILEPATH
+            --shelley-template FILEPATH
+            --alonzo-template FILEPATH
+            --conway-template FILEPATH
+            [--node-config-template FILEPATH]
+
+  Create a Byron and Shelley genesis file from a genesis template and
+  genesis/delegation/spending keys.
+
+Available options:
+  --genesis-dir DIR        The genesis directory containing the genesis template
+                           and required genesis/delegation/spending keys.
+  --gen-genesis-keys INT   The number of genesis keys to make [default is 3].
+  --gen-utxo-keys INT      The number of UTxO keys to make [default is 0].
+  --start-time UTC-TIME    The genesis start time in YYYY-MM-DDThh:mm:ssZ
+                           format. If unspecified, will be the current time +30
+                           seconds.
+  --supply LOVELACE        The initial coin supply in Lovelace which will be
+                           evenly distributed across initial, non-delegating
+                           stake holders.
+  --security-param INT     Security parameter for genesis file [default is 108].
+  --slot-length INT        slot length (ms) parameter for genesis file [default
+                           is 1000].
+  --slot-coefficient RATIONAL
+                           Slot Coefficient for genesis file [default is .05].
+  --mainnet                Use the mainnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --testnet-magic NATURAL  Specify a testnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --byron-template FILEPATH
+                           JSON file with genesis defaults for each byron.
+  --shelley-template FILEPATH
+                           JSON file with genesis defaults for each shelley.
+  --alonzo-template FILEPATH
+                           JSON file with genesis defaults for alonzo.
+  --conway-template FILEPATH
+                           JSON file with genesis defaults for conway.
+  --node-config-template FILEPATH
+                           the node config template
+  -h,--help                Show this help text

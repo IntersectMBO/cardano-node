@@ -1,0 +1,15 @@
+Usage: cardano-cli governance create-mir-certificate stake-addresses 
+            (--reserves | --treasury)
+            (--stake-address ADDRESS)
+            (--reward LOVELACE)
+            --out-file FILE
+
+  Create an MIR certificate to pay stake addresses
+
+Available options:
+  --reserves               Use the reserves pot.
+  --treasury               Use the treasury pot.
+  --stake-address ADDRESS  Target stake address (bech32 format).
+  --reward LOVELACE        The reward for the relevant reward account.
+  --out-file FILE          The output file.
+  -h,--help                Show this help text

@@ -1,0 +1,15 @@
+Usage: cardano-cli address key-hash 
+            ( --payment-verification-key STRING
+            | --payment-verification-key-file FILE
+            )
+            [--out-file FILE]
+
+  Print the hash of an address key.
+
+Available options:
+  --payment-verification-key STRING
+                           Payment verification key (Bech32-encoded)
+  --payment-verification-key-file FILE
+                           Filepath of the payment verification key.
+  --out-file FILE          Optional output file. Default is to write to stdout.
+  -h,--help                Show this help text

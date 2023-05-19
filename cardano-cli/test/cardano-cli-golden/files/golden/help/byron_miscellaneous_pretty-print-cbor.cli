@@ -1,0 +1,7 @@
+Usage: cardano-cli byron miscellaneous pretty-print-cbor --filepath FILEPATH
+
+  Pretty print a CBOR file.
+
+Available options:
+  --filepath FILEPATH      Filepath of CBOR file.
+  -h,--help                Show this help text

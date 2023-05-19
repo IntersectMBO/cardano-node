@@ -1,0 +1,33 @@
+Usage: cardano-cli key convert-byron-key [--password TEXT]
+            ( --byron-payment-key-type
+            | --legacy-byron-payment-key-type
+            | --byron-genesis-key-type
+            | --legacy-byron-genesis-key-type
+            | --byron-genesis-delegate-key-type
+            | --legacy-byron-genesis-delegate-key-type
+            )
+            (--byron-signing-key-file FILE | --byron-verification-key-file FILE)
+            --out-file FILE
+
+  Convert a Byron payment, genesis or genesis delegate key (signing or
+  verification) to a corresponding Shelley-format key.
+
+Available options:
+  --password TEXT          Password for signing key (if applicable).
+  --byron-payment-key-type Use a Byron-era payment key.
+  --legacy-byron-payment-key-type
+                           Use a Byron-era payment key, in legacy SL format.
+  --byron-genesis-key-type Use a Byron-era genesis key.
+  --legacy-byron-genesis-key-type
+                           Use a Byron-era genesis key, in legacy SL format.
+  --byron-genesis-delegate-key-type
+                           Use a Byron-era genesis delegate key.
+  --legacy-byron-genesis-delegate-key-type
+                           Use a Byron-era genesis delegate key, in legacy SL
+                           format.
+  --byron-signing-key-file FILE
+                           Input filepath of the Byron-format signing key.
+  --byron-verification-key-file FILE
+                           Input filepath of the Byron-format verification key.
+  --out-file FILE          The output file.
+  -h,--help                Show this help text

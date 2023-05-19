@@ -1,0 +1,50 @@
+Usage: cardano-cli query leadership-schedule --socket-path SOCKET_PATH
+            [ --shelley-mode
+            | --byron-mode [--epoch-slots SLOTS]
+            | --cardano-mode [--epoch-slots SLOTS]
+            ]
+            (--mainnet | --testnet-magic NATURAL)
+            --genesis FILE
+            ( --stake-pool-verification-key STRING
+            | --cold-verification-key-file FILE
+            | --stake-pool-id STAKE_POOL_ID
+            )
+            --vrf-signing-key-file FILE
+            (--current | --next)
+            [--out-file FILE]
+
+  Get the slots the node is expected to mint a block in (advanced command)
+
+Available options:
+  --socket-path SOCKET_PATH
+                           Path to the node socket. This overrides the
+                           CARDANO_NODE_SOCKET_PATH environment variable. The
+                           argument is optional if CARDANO_NODE_SOCKET_PATH is
+                           defined and mandatory otherwise.
+  --shelley-mode           For talking to a node running in Shelley-only mode.
+  --byron-mode             For talking to a node running in Byron-only mode.
+  --epoch-slots SLOTS      The number of slots per epoch for the Byron era.
+                           (default: 21600)
+  --cardano-mode           For talking to a node running in full Cardano mode
+                           (default).
+  --epoch-slots SLOTS      The number of slots per epoch for the Byron era.
+                           (default: 21600)
+  --mainnet                Use the mainnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --testnet-magic NATURAL  Specify a testnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --genesis FILE           Shelley genesis filepath
+  --stake-pool-verification-key STRING
+                           Stake pool verification key (Bech32 or hex-encoded).
+  --cold-verification-key-file FILE
+                           Filepath of the stake pool verification key.
+  --stake-pool-id STAKE_POOL_ID
+                           Stake pool ID/verification key hash (either
+                           Bech32-encoded or hex-encoded). Zero or more
+                           occurences of this option is allowed.
+  --vrf-signing-key-file FILE
+                           Input filepath of the VRF signing key.
+  --current                Get the leadership schedule for the current epoch.
+  --next                   Get the leadership schedule for the following epoch.
+  --out-file FILE          Optional output file. Default is to write to stdout.
+  -h,--help                Show this help text
