@@ -7,7 +7,7 @@ module Test.Golden.Shelley.Address.Info
 import           Control.Monad (when)
 
 import           Hedgehog (Property)
-import           Test.OptParse
+import           Test.Cardano.CLI.Util
 
 import qualified Data.List as L
 import qualified Hedgehog as H

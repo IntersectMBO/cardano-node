@@ -6,7 +6,7 @@ module Test.Golden.Shelley.TextEnvelope.Tx.Tx
 
 import           Control.Monad (void)
 import           Hedgehog (Property)
-import           Test.OptParse
+import           Test.Cardano.CLI.Util
 
 import qualified Hedgehog.Extras.Test.Base as H
 

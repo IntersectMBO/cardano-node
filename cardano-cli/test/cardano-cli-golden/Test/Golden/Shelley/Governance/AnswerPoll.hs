@@ -8,7 +8,7 @@ module Test.Golden.Shelley.Governance.AnswerPoll
   ) where
 
 import           Hedgehog (Property)
-import           Test.OptParse
+import           Test.Cardano.CLI.Util
 
 import           Control.Monad (void)
 import qualified Hedgehog as H

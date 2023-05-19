@@ -21,7 +21,7 @@ import           Hedgehog (Group (..), Property, checkSequential, property, succ
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import           Hedgehog.Internal.Property (failWith)
-import           Test.OptParse
+import           Test.Cardano.CLI.Util
 
 prop_deserialise_legacy_signing_Key :: Property
 prop_deserialise_legacy_signing_Key = propertyOnce $ do

@@ -5,7 +5,7 @@ module Test.Golden.Shelley.Genesis.InitialTxIn
   ) where
 
 import           Hedgehog (Property)
-import           Test.OptParse
+import           Test.Cardano.CLI.Util
 
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H

@@ -14,7 +14,7 @@ import           Cardano.CLI.Byron.UpdateProposal
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
 import           Hedgehog.Internal.Property (failWith)
-import           Test.OptParse
+import           Test.Cardano.CLI.Util
 
 import qualified Hedgehog.Extras.Test.Base as H
 

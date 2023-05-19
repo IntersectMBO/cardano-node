@@ -26,7 +26,6 @@ module Cardano.CLI.Byron.Parsers
 
 import           Cardano.Prelude (ConvertText (..))
 
-import           Control.Applicative
 import           Control.Monad (when)
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
 import           Data.Attoparsec.Combinator ((<?>))

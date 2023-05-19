@@ -5,7 +5,7 @@ module Test.Golden.Shelley.StakeAddress.Build
   ) where
 
 import           Hedgehog (Property)
-import           Test.OptParse as OP
+import           Test.Cardano.CLI.Util as OP
 
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H

@@ -8,7 +8,7 @@ module Test.Cli.CliIntermediateFormat
 import           Control.Monad (void)
 
 import           Hedgehog (Property, discover)
-import           Test.OptParse
+import           Test.Cardano.CLI.Util
 
 import qualified Hedgehog
 import qualified Hedgehog.Extras.Test.Base as H

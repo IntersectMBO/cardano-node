@@ -5,7 +5,7 @@ module Test.Golden.Shelley.StakeAddress.KeyGen
   ) where
 
 import           Hedgehog (Property)
-import           Test.OptParse
+import           Test.Cardano.CLI.Util
 
 import           Control.Monad (void)
 import qualified Hedgehog.Extras.Test.Base as H

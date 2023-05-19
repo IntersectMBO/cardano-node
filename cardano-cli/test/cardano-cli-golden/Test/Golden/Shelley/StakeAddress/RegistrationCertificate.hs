@@ -7,7 +7,7 @@ module Test.Golden.Shelley.StakeAddress.RegistrationCertificate
 import           Control.Monad (void)
 import           Hedgehog (Property)
 import           System.FilePath ((</>))
-import           Test.OptParse
+import           Test.Cardano.CLI.Util
 
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H

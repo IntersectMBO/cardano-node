@@ -16,7 +16,7 @@ import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
-import           Test.OptParse
+import           Test.Cardano.CLI.Util
 
 {- HLINT ignore "Reduce duplication" -}
 

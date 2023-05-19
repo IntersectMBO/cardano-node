@@ -10,7 +10,7 @@ import           Data.Bifunctor (Bifunctor (..))
 import           Data.Foldable (for_)
 
 import           Hedgehog (Property, forAll, (===))
-import           Test.OptParse as OP
+import           Test.Cardano.CLI.Util as OP
 
 import qualified Data.Aeson as J
 import qualified Data.Aeson.Key as J

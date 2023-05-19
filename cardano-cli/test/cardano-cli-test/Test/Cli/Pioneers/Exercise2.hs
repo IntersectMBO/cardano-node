@@ -6,7 +6,7 @@ module Test.Cli.Pioneers.Exercise2
 
 import           Control.Monad (void)
 import           Hedgehog (Property)
-import           Test.OptParse
+import           Test.Cardano.CLI.Util
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H

@@ -7,7 +7,7 @@ module Test.Golden.Shelley.TextEnvelope.Keys.StakeKeys
 import           Cardano.Api (AsType (..), HasTextEnvelope (..))
 import           Control.Monad (void)
 import           Hedgehog (Property)
-import           Test.OptParse
+import           Test.Cardano.CLI.Util
 
 import qualified Hedgehog.Extras.Test.Base as H
 

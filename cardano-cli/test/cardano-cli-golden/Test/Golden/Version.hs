@@ -7,7 +7,7 @@ module Test.Golden.Version
 import           Control.Monad (void)
 
 import           Hedgehog (Property)
-import           Test.OptParse
+import           Test.Cardano.CLI.Util
 
 {- HLINT ignore "Use camelCase" -}
 

@@ -19,7 +19,7 @@ import           System.IO (hClose, hFlush, hPutStr)
 import           System.Posix.IO (closeFd, createPipe, fdToHandle)
 
 import           Cardano.CLI.Shelley.Run.Read
-import           Test.OptParse
+import           Test.Cardano.CLI.Util
 
 import           Hedgehog (Property, discover, forAll, (===))
 import qualified Hedgehog.Extras.Test.Base as H

@@ -11,7 +11,7 @@ module Test.Golden.Shelley.Governance.VerifyPoll
 
 import           Control.Monad.IO.Class (liftIO)
 import           Hedgehog (Property)
-import           Test.OptParse
+import           Test.Cardano.CLI.Util
 
 import           Cardano.Api
 import           Cardano.CLI.Shelley.Key (VerificationKeyOrFile (..),
