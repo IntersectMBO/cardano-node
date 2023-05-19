@@ -176,6 +176,7 @@ executable cardano-cli
 
 library cardano-cli-test-lib
   import:               project-config
+  visibility:           public
   hs-source-dirs:       test/cardano-cli-test-lib
   exposed-modules:      Test.Cardano.CLI.Util
   build-depends:        cardano-api

@@ -1,9 +1,4 @@
-Usage: cardano-cli 
-            ( Era based commands
-            | Byron specific commands
-            | ping
-            | Miscellaneous commands
-            )
+Usage: cardano-cli (Era based commands | byron | ping | version)
 
 Usage: cardano-cli text-view decode-cbor
 
@@ -1077,27 +1072,19 @@ Usage: cardano-cli byron
 
   Byron specific commands
 
-Usage: cardano-cli byron key COMMAND
+Usage: cardano-cli byron key 
+          ( keygen
+          | to-verification
+          | signing-key-public
+          | signing-key-address
+          | migrate-delegate-key-from
+          )
 
   Byron key utility commands
 
-Usage: cardano-cli byron key migrate-delegate-key-from --from FILEPATH
-            --to FILEPATH
+Usage: cardano-cli byron key keygen --secret FILEPATH
 
-  Migrate a delegate key from an older version.
-
-Usage: cardano-cli byron key signing-key-address 
-            [--byron-legacy-formats | --byron-formats]
-            (--mainnet | --testnet-magic NATURAL)
-            --secret FILEPATH
-
-  Print address of a signing key.
-
-Usage: cardano-cli byron key signing-key-public 
-            [--byron-legacy-formats | --byron-formats]
-            --secret FILEPATH
-
-  Pretty-print a signing key's verification key (not a secret).
+  Generate a signing key.
 
 Usage: cardano-cli byron key to-verification 
             [--byron-legacy-formats | --byron-formats]
@@ -1106,27 +1093,38 @@ Usage: cardano-cli byron key to-verification
 
   Extract a verification key in its base64 form.
 
-Usage: cardano-cli byron key keygen --secret FILEPATH
+Usage: cardano-cli byron key signing-key-public 
+            [--byron-legacy-formats | --byron-formats]
+            --secret FILEPATH
 
-  Generate a signing key.
+  Pretty-print a signing key's verification key (not a secret).
 
-Usage: cardano-cli byron transaction COMMAND
+Usage: cardano-cli byron key signing-key-address 
+            [--byron-legacy-formats | --byron-formats]
+            (--mainnet | --testnet-magic NATURAL)
+            --secret FILEPATH
+
+  Print address of a signing key.
+
+Usage: cardano-cli byron key migrate-delegate-key-from --from FILEPATH
+            --to FILEPATH
+
+  Migrate a delegate key from an older version.
+
+Usage: cardano-cli byron transaction 
+          ( submit-tx
+          | issue-genesis-utxo-expenditure
+          | issue-utxo-expenditure
+          | txid
+          )
 
   Byron transaction commands
 
-Usage: cardano-cli byron transaction txid --tx FILEPATH
-
-  Print the txid of a raw, signed transaction.
-
-Usage: cardano-cli byron transaction issue-utxo-expenditure 
+Usage: cardano-cli byron transaction submit-tx --socket-path SOCKET_PATH
             (--mainnet | --testnet-magic NATURAL)
-            [--byron-legacy-formats | --byron-formats]
             --tx FILEPATH
-            --wallet-key FILEPATH
-            (--txin (TXID,INDEX))
-            (--txout '("ADDR", LOVELACE)')
 
-  Write a file with a signed transaction, spending normal UTxO.
+  Submit a raw, signed transaction, in its on-wire representation.
 
 Usage: cardano-cli byron transaction issue-genesis-utxo-expenditure --genesis-json FILEPATH
             (--mainnet | --testnet-magic NATURAL)
@@ -1138,13 +1136,21 @@ Usage: cardano-cli byron transaction issue-genesis-utxo-expenditure --genesis-js
 
   Write a file with a signed transaction, spending genesis UTxO.
 
-Usage: cardano-cli byron transaction submit-tx --socket-path SOCKET_PATH
+Usage: cardano-cli byron transaction issue-utxo-expenditure 
             (--mainnet | --testnet-magic NATURAL)
+            [--byron-legacy-formats | --byron-formats]
             --tx FILEPATH
+            --wallet-key FILEPATH
+            (--txin (TXID,INDEX))
+            (--txout '("ADDR", LOVELACE)')
 
-  Submit a raw, signed transaction, in its on-wire representation.
+  Write a file with a signed transaction, spending normal UTxO.
 
-Usage: cardano-cli byron query COMMAND
+Usage: cardano-cli byron transaction txid --tx FILEPATH
+
+  Print the txid of a raw, signed transaction.
+
+Usage: cardano-cli byron query get-tip
 
   Byron node query commands.
 
@@ -1153,13 +1159,9 @@ Usage: cardano-cli byron query get-tip --socket-path SOCKET_PATH
 
   Get the tip of your local node's blockchain
 
-Usage: cardano-cli byron genesis COMMAND
+Usage: cardano-cli byron genesis (genesis | print-genesis-hash)
 
   Byron genesis block commands
-
-Usage: cardano-cli byron genesis print-genesis-hash --genesis-json FILEPATH
-
-  Compute hash of a genesis file.
 
 Usage: cardano-cli byron genesis genesis --genesis-output-dir FILEPATH
             --start-time POSIXSECONDS
@@ -1176,6 +1178,10 @@ Usage: cardano-cli byron genesis genesis --genesis-output-dir FILEPATH
             [--secret-seed INT]
 
   Create genesis.
+
+Usage: cardano-cli byron genesis print-genesis-hash --genesis-json FILEPATH
+
+  Compute hash of a genesis file.
 
 Usage: cardano-cli byron governance COMMAND
 
@@ -1234,13 +1240,9 @@ Usage: cardano-cli byron governance create-update-proposal
 
   Create an update proposal.
 
-Usage: cardano-cli byron miscellaneous COMMAND
+Usage: cardano-cli byron miscellaneous (validate-cbor | pretty-print-cbor)
 
   Byron miscellaneous commands
-
-Usage: cardano-cli byron miscellaneous pretty-print-cbor --filepath FILEPATH
-
-  Pretty print a CBOR file.
 
 Usage: cardano-cli byron miscellaneous validate-cbor 
             [ --byron-block INT
@@ -1252,6 +1254,10 @@ Usage: cardano-cli byron miscellaneous validate-cbor
             --filepath FILEPATH
 
   Validate a CBOR blockchain object.
+
+Usage: cardano-cli byron miscellaneous pretty-print-cbor --filepath FILEPATH
+
+  Pretty print a CBOR file.
 
 Usage: cardano-cli byron submit-proposal-vote --socket-path SOCKET_PATH
             (--mainnet | --testnet-magic NATURAL)
@@ -2389,10 +2395,6 @@ Usage: cardano-cli shelley address info --address ADDRESS [--out-file FILE]
 
   Print information about an address.
 
-Usage: cardano-cli print-genesis-hash --genesis-json FILEPATH
-
-  Compute hash of a genesis file.
-
 Usage: cardano-cli genesis --genesis-output-dir FILEPATH
             --start-time POSIXSECONDS
             --protocol-parameters-file FILEPATH
@@ -2409,9 +2411,24 @@ Usage: cardano-cli genesis --genesis-output-dir FILEPATH
 
   Create genesis.
 
-Usage: cardano-cli migrate-delegate-key-from --from FILEPATH --to FILEPATH
+Usage: cardano-cli print-genesis-hash --genesis-json FILEPATH
 
-  Migrate a delegate key from an older version.
+  Compute hash of a genesis file.
+
+Usage: cardano-cli keygen --secret FILEPATH
+
+  Generate a signing key.
+
+Usage: cardano-cli to-verification [--byron-legacy-formats | --byron-formats]
+            --secret FILEPATH
+            --to FILEPATH
+
+  Extract a verification key in its base64 form.
+
+Usage: cardano-cli signing-key-public [--byron-legacy-formats | --byron-formats]
+            --secret FILEPATH
+
+  Pretty-print a signing key's verification key (not a secret).
 
 Usage: cardano-cli signing-key-address 
             [--byron-legacy-formats | --byron-formats]
@@ -2420,33 +2437,15 @@ Usage: cardano-cli signing-key-address
 
   Print address of a signing key.
 
-Usage: cardano-cli signing-key-public [--byron-legacy-formats | --byron-formats]
-            --secret FILEPATH
+Usage: cardano-cli migrate-delegate-key-from --from FILEPATH --to FILEPATH
 
-  Pretty-print a signing key's verification key (not a secret).
+  Migrate a delegate key from an older version.
 
-Usage: cardano-cli to-verification [--byron-legacy-formats | --byron-formats]
-            --secret FILEPATH
-            --to FILEPATH
-
-  Extract a verification key in its base64 form.
-
-Usage: cardano-cli keygen --secret FILEPATH
-
-  Generate a signing key.
-
-Usage: cardano-cli txid --tx FILEPATH
-
-  Print the txid of a raw, signed transaction.
-
-Usage: cardano-cli issue-utxo-expenditure (--mainnet | --testnet-magic NATURAL)
-            [--byron-legacy-formats | --byron-formats]
+Usage: cardano-cli submit-tx --socket-path SOCKET_PATH
+            (--mainnet | --testnet-magic NATURAL)
             --tx FILEPATH
-            --wallet-key FILEPATH
-            (--txin (TXID,INDEX))
-            (--txout '("ADDR", LOVELACE)')
 
-  Write a file with a signed transaction, spending normal UTxO.
+  Submit a raw, signed transaction, in its on-wire representation.
 
 Usage: cardano-cli issue-genesis-utxo-expenditure --genesis-json FILEPATH
             (--mainnet | --testnet-magic NATURAL)
@@ -2458,20 +2457,23 @@ Usage: cardano-cli issue-genesis-utxo-expenditure --genesis-json FILEPATH
 
   Write a file with a signed transaction, spending genesis UTxO.
 
-Usage: cardano-cli submit-tx --socket-path SOCKET_PATH
-            (--mainnet | --testnet-magic NATURAL)
+Usage: cardano-cli issue-utxo-expenditure (--mainnet | --testnet-magic NATURAL)
+            [--byron-legacy-formats | --byron-formats]
             --tx FILEPATH
+            --wallet-key FILEPATH
+            (--txin (TXID,INDEX))
+            (--txout '("ADDR", LOVELACE)')
 
-  Submit a raw, signed transaction, in its on-wire representation.
+  Write a file with a signed transaction, spending normal UTxO.
+
+Usage: cardano-cli txid --tx FILEPATH
+
+  Print the txid of a raw, signed transaction.
 
 Usage: cardano-cli get-tip --socket-path SOCKET_PATH
             (--mainnet | --testnet-magic NATURAL)
 
   Get the tip of your local node's blockchain
-
-Usage: cardano-cli pretty-print-cbor --filepath FILEPATH
-
-  Pretty print a CBOR file.
 
 Usage: cardano-cli validate-cbor 
             [ --byron-block INT
@@ -2483,6 +2485,10 @@ Usage: cardano-cli validate-cbor
             --filepath FILEPATH
 
   Validate a CBOR blockchain object.
+
+Usage: cardano-cli pretty-print-cbor --filepath FILEPATH
+
+  Pretty print a CBOR file.
 
 Usage: cardano-cli version 
 
