@@ -188,7 +188,7 @@ library test-lib
 test-suite cardano-cli-test
   import:               project-config, maybe-unix
 
-  hs-source-dirs:       test
+  hs-source-dirs:       test/cardano-cli-test
   main-is:              cardano-cli-test.hs
   type:                 exitcode-stdio-1.0
 
