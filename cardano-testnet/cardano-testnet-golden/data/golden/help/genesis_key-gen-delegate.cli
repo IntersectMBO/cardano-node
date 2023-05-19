@@ -1,0 +1,14 @@
+Usage: cardano-cli genesis key-gen-delegate --verification-key-file FILE
+            --signing-key-file FILE
+            --operational-certificate-issue-counter-file FILE
+
+  Create a Shelley genesis delegate key pair
+
+Available options:
+  --verification-key-file FILE
+                           Output filepath of the verification key.
+  --signing-key-file FILE  Output filepath of the signing key.
+  --operational-certificate-issue-counter-file FILE
+                           The file with the issue counter for the operational
+                           certificate.
+  -h,--help                Show this help text

@@ -3,6 +3,7 @@ module Testnet.Parsers
   , runTestnetCmd
   ) where
 
+import           Data.Foldable
 import           Options.Applicative
 import           Parsers.Babbage
 import           Parsers.Byron

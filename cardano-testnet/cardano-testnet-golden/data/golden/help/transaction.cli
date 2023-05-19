@@ -1,0 +1,43 @@
+Usage: cardano-cli transaction 
+            ( build-raw
+            | build
+            | sign
+            | witness
+            | assemble
+            | submit
+            | policyid
+            | calculate-min-fee
+            | calculate-min-required-utxo
+            | hash-script-data
+            | txid
+            | view
+            )
+
+  Transaction commands
+
+Available options:
+  -h,--help                Show this help text
+
+Available commands:
+  build-raw                Build a transaction (low-level, inconvenient)
+
+                           Please note the order of some cmd options is crucial. If used incorrectly may produce undesired tx body. See nested [] notation above for details.[0;22;23;24m
+  build                    Build a balanced transaction (automatically calculates fees)
+
+                           Please note the order[93;22;23;24m of some cmd options is crucial. If used incorrectly may produce undesired tx body. See nested [] notation above for details.[0;22;23;24m
+  sign                     Sign a transaction
+  witness                  Create a transaction witness
+  assemble                 Assemble a tx body and witness(es) to form a
+                           transaction
+  submit                   Submit a transaction to the local node whose Unix
+                           domain socket is obtained from the
+                           CARDANO_NODE_SOCKET_PATH environment variable.
+  policyid                 Calculate the PolicyId from the monetary policy
+                           script.
+  calculate-min-fee        Calculate the minimum fee for a transaction.
+  calculate-min-required-utxo
+                           Calculate the minimum required UTxO for a transaction
+                           output.
+  hash-script-data         Calculate the hash of script data.
+  txid                     Print a transaction identifier.
+  view                     Print a transaction.

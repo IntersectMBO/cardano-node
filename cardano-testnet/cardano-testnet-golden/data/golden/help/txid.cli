@@ -1,0 +1,7 @@
+Usage: cardano-cli txid --tx FILEPATH
+
+  Print the txid of a raw, signed transaction.
+
+Available options:
+  --tx FILEPATH            File containing the signed transaction.
+  -h,--help                Show this help text

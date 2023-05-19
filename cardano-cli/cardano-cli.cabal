@@ -174,28 +174,39 @@ executable cardano-cli
                       , optparse-applicative-fork
                       , transformers-except
 
-test-suite cardano-cli-test
-  import:               project-config, maybe-unix, maybe-bytestring
+library cardano-cli-test-lib
+  import:               project-config
+  hs-source-dirs:       test/cardano-cli-test-lib
+  exposed-modules:      Test.Cardano.CLI.Util
+  build-depends:        cardano-api
+                      , cardano-cli
+                      , exceptions
+                      , hedgehog
+                      , hedgehog-extras ^>= 0.4.2
+                      , transformers
 
-  hs-source-dirs:       test
+test-suite cardano-cli-test
+  import:               project-config, maybe-unix
+
+  hs-source-dirs:       test/cardano-cli-test
   main-is:              cardano-cli-test.hs
   type:                 exitcode-stdio-1.0
 
   build-depends:        aeson
                       , base16-bytestring
+                      , bech32 >= 1.1.0
                       , bytestring
-                      , bech32            >= 1.1.0
                       , cardano-api ^>= 8.1.0.1
                       , cardano-api-gen ^>= 8.1.0.2
                       , cardano-cli
+                      , cardano-cli:cardano-cli-test-lib
                       , cardano-node
                       , cardano-slotting ^>= 0.1
                       , containers
                       , directory
-                      , exceptions
                       , filepath
                       , hedgehog
-                      , hedgehog-extras ^>= 0.4.3
+                      , hedgehog-extras ^>= 0.4.5.1
                       , parsec
                       , text
                       , time
@@ -216,30 +227,29 @@ test-suite cardano-cli-test
                         Test.Cli.Pioneers.Exercise6
                         Test.Cli.Pipes
                         Test.Cli.Shelley.Run.Query
-                        Test.OptParse
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
 test-suite cardano-cli-golden
   import:               project-config
 
-  hs-source-dirs:       test
+  hs-source-dirs:       test/cardano-cli-golden
   main-is:              cardano-cli-golden.hs
   type:                 exitcode-stdio-1.0
 
-  build-depends:        aeson             >= 1.5.6.0
+  build-depends:        aeson >= 1.5.6.0
                       , base16-bytestring
                       , bytestring
                       , cardano-api ^>= 8.1.0.1
                       , cardano-cli
+                      , cardano-cli:cardano-cli-test-lib
                       , cardano-crypto-wrapper ^>= 1.5.1
                       , cardano-ledger-byron ^>= 1.0
                       , cborg
                       , containers
-                      , exceptions
                       , filepath
                       , hedgehog ^>= 1.2
-                      , hedgehog-extras ^>= 0.4.3
+                      , hedgehog-extras ^>= 0.4.5.1
                       , text
                       , time
                       , transformers
@@ -303,6 +313,5 @@ test-suite cardano-cli-golden
                         Test.Golden.Shelley.Transaction.Sign
                         Test.Golden.TxView
                         Test.Golden.Version
-                        Test.OptParse
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T

@@ -1,0 +1,37 @@
+Usage: cardano-cli genesis 
+            ( key-gen-genesis
+            | key-gen-delegate
+            | key-gen-utxo
+            | key-hash
+            | get-ver-key
+            | initial-addr
+            | initial-txin
+            | create-cardano
+            | create
+            | create-staked
+            | hash
+            )
+
+  Genesis block commands
+
+Available options:
+  -h,--help                Show this help text
+
+Available commands:
+  key-gen-genesis          Create a Shelley genesis key pair
+  key-gen-delegate         Create a Shelley genesis delegate key pair
+  key-gen-utxo             Create a Shelley genesis UTxO key pair
+  key-hash                 Print the identifier (hash) of a public key
+  get-ver-key              Derive the verification key from a signing key
+  initial-addr             Get the address for an initial UTxO based on the
+                           verification key
+  initial-txin             Get the TxIn for an initial UTxO based on the
+                           verification key
+  create-cardano           Create a Byron and Shelley genesis file from a
+                           genesis template and genesis/delegation/spending
+                           keys.
+  create                   Create a Shelley genesis file from a genesis template
+                           and genesis/delegation/spending keys.
+  create-staked            Create a staked Shelley genesis file from a genesis
+                           template and genesis/delegation/spending keys.
+  hash                     Compute the hash of a genesis file

@@ -118,8 +118,8 @@ let
               ];
               goldenConfigFiles = [
                 "configuration/defaults/byron-mainnet"
-                "cardano-cli/test/data/golden/alonzo/genesis.alonzo.spec.json"
-                "cardano-cli/test/data/golden/conway/genesis.conway.spec.json"
+                "cardano-cli/test/cardano-cli-test/files/golden/alonzo/genesis.alonzo.spec.json"
+                "cardano-cli/test/cardano-cli-test/files/golden/conway/genesis.conway.spec.json"
               ];
             in
             {

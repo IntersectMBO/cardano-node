@@ -1,0 +1,22 @@
+Usage: cardano-cli node 
+            ( key-gen
+            | key-gen-KES
+            | key-gen-VRF
+            | key-hash-VRF
+            | new-counter
+            | issue-op-cert
+            )
+
+  Node operation commands
+
+Available options:
+  -h,--help                Show this help text
+
+Available commands:
+  key-gen                  Create a key pair for a node operator's offline key
+                           and a new certificate issue counter
+  key-gen-KES              Create a key pair for a node KES operational key
+  key-gen-VRF              Create a key pair for a node VRF operational key
+  key-hash-VRF             Print hash of a node's operational VRF key.
+  new-counter              Create a new certificate issue counter
+  issue-op-cert            Issue a node operational certificate

@@ -88,7 +88,7 @@ cardano-cli transaction build \
   --script-invalid \
   --invalid-before 5 \
   --invalid-hereafter 500 \
-  --required-signer "cardano-cli/test/data/golden/shelley/keys/payment_keys/signing_key" \
+  --required-signer "cardano-cli/test/cardano-cli-test/files/golden/shelley/keys/payment_keys/signing_key" \
   --change-address "$utxoaddr" \
   --tx-in "$scriptownertxin" \
   --tx-in-collateral "$scriptownerCollateral" \
@@ -103,7 +103,7 @@ cardano-cli transaction sign \
   --tx-body-file "$work/plutusmint.body" \
   --testnet-magic 42 \
   --signing-key-file "$targetskey" \
-  --signing-key-file "cardano-cli/test/data/golden/shelley/keys/payment_keys/signing_key" \
+  --signing-key-file "cardano-cli/test/cardano-cli-test/files/golden/shelley/keys/payment_keys/signing_key" \
   --out-file "$work/plutusmint.tx"
 
 # Generate the "real" redeeemer!
@@ -123,7 +123,7 @@ cardano-cli transaction build \
   --script-valid \
   --invalid-before 5 \
   --invalid-hereafter 500 \
-  --required-signer "cardano-cli/test/data/golden/shelley/keys/payment_keys/signing_key" \
+  --required-signer "cardano-cli/test/cardano-cli-test/files/golden/shelley/keys/payment_keys/signing_key" \
   --change-address "$utxoaddr" \
   --tx-in "$scriptownertxin" \
   --tx-in-collateral "$scriptownerCollateral" \
@@ -138,7 +138,7 @@ cardano-cli transaction sign \
   --tx-body-file "$work/plutusmint-final.body" \
   --testnet-magic 42 \
   --signing-key-file "$targetskey" \
-  --signing-key-file "cardano-cli/test/data/golden/shelley/keys/payment_keys/signing_key" \
+  --signing-key-file "cardano-cli/test/cardano-cli-test/files/golden/shelley/keys/payment_keys/signing_key" \
   --out-file "$work/plutusmint-final.tx"
 
 # SUBMIT

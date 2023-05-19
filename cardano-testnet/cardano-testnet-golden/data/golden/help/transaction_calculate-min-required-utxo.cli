@@ -1,0 +1,82 @@
+Usage: cardano-cli transaction calculate-min-required-utxo 
+            [ --byron-era
+            | --shelley-era
+            | --allegra-era
+            | --mary-era
+            | --alonzo-era
+            | --babbage-era
+            ]
+            --protocol-params-file FILE
+            --tx-out ADDRESS VALUE
+            [ --tx-out-datum-hash HASH
+            | --tx-out-datum-hash-cbor-file CBOR FILE
+            | --tx-out-datum-hash-file JSON FILE
+            | --tx-out-datum-hash-value JSON VALUE
+            | --tx-out-datum-embed-cbor-file CBOR FILE
+            | --tx-out-datum-embed-file JSON FILE
+            | --tx-out-datum-embed-value JSON VALUE
+            | --tx-out-inline-datum-cbor-file CBOR FILE
+            | --tx-out-inline-datum-file JSON FILE
+            | --tx-out-inline-datum-value JSON VALUE
+            ]
+            [--tx-out-reference-script-file FILE]
+
+  Calculate the minimum required UTxO for a transaction output.
+
+Available options:
+  --byron-era              Specify the Byron era
+  --shelley-era            Specify the Shelley era
+  --allegra-era            Specify the Allegra era
+  --mary-era               Specify the Mary era
+  --alonzo-era             Specify the Alonzo era
+  --babbage-era            Specify the Babbage era (default)
+  --protocol-params-file FILE
+                           Filepath of the JSON-encoded protocol parameters file
+  --tx-out ADDRESS VALUE   The transaction output as ADDRESS VALUE where ADDRESS
+                           is the Bech32-encoded address followed by the value
+                           in the multi-asset syntax (including simply
+                           Lovelace).
+  --tx-out-datum-hash HASH The script datum hash for this tx output, as the raw
+                           datum hash (in hex).
+  --tx-out-datum-hash-cbor-file CBOR FILE
+                           The script datum hash for this tx output, by hashing
+                           the script datum in the given JSON file. The file
+                           must follow the special JSON schema for script data.
+  --tx-out-datum-hash-file JSON FILE
+                           The script datum hash for this tx output, by hashing
+                           the script datum in the given JSON file. The file
+                           must follow the special JSON schema for script data.
+  --tx-out-datum-hash-value JSON VALUE
+                           The script datum hash for this tx output, by hashing
+                           the script datum given here in JSON syntax. There is
+                           no schema: (almost) any JSON value is supported,
+                           including top-level strings and numbers.
+  --tx-out-datum-embed-cbor-file CBOR FILE
+                           The script datum to embed in the tx for this output,
+                           in the given JSON file. The file must follow the
+                           special JSON schema for script data.
+  --tx-out-datum-embed-file JSON FILE
+                           The script datum to embed in the tx for this output,
+                           in the given JSON file. The file must follow the
+                           special JSON schema for script data.
+  --tx-out-datum-embed-value JSON VALUE
+                           The script datum to embed in the tx for this output,
+                           given here in JSON syntax. There is no schema:
+                           (almost) any JSON value is supported, including
+                           top-level strings and numbers.
+  --tx-out-inline-datum-cbor-file CBOR FILE
+                           The script datum to embed in the tx output as an
+                           inline datum, in the given JSON file. The file must
+                           follow the special JSON schema for script data.
+  --tx-out-inline-datum-file JSON FILE
+                           The script datum to embed in the tx output as an
+                           inline datum, in the given JSON file. The file must
+                           follow the special JSON schema for script data.
+  --tx-out-inline-datum-value JSON VALUE
+                           The script datum to embed in the tx output as an
+                           inline datum, given here in JSON syntax. There is no
+                           schema: (almost) any JSON value is supported,
+                           including top-level strings and numbers.
+  --tx-out-reference-script-file FILE
+                           Reference script input file.
+  -h,--help                Show this help text

@@ -1,0 +1,18 @@
+Usage: cardano-cli transaction witness --tx-body-file FILE
+            --signing-key-file FILE
+            [--address STRING]
+            [--mainnet | --testnet-magic NATURAL]
+            --out-file FILE
+
+  Create a transaction witness
+
+Available options:
+  --tx-body-file FILE      Input filepath of the JSON TxBody.
+  --signing-key-file FILE  Input filepath of the signing key (one or more).
+  --address STRING         Byron address (Base58-encoded).
+  --mainnet                Use the mainnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --testnet-magic NATURAL  Specify a testnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --out-file FILE          The output file.
+  -h,--help                Show this help text

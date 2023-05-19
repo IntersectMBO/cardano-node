@@ -1,0 +1,18 @@
+Usage: cardano-cli byron governance submit-update-proposal 
+            --socket-path SOCKET_PATH
+            (--mainnet | --testnet-magic NATURAL)
+            --filepath FILEPATH
+
+  Submit an update proposal.
+
+Available options:
+  --socket-path SOCKET_PATH
+                           Path to the node socket. This overrides the
+                           CARDANO_NODE_SOCKET_PATH environment variable. The
+                           argument is optional if CARDANO_NODE_SOCKET_PATH is
+                           defined and mandatory otherwise.
+  --mainnet                Use the mainnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --testnet-magic NATURAL  Specify a testnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --filepath FILEPATH      Filepath of Byron update proposal.

@@ -26,13 +26,13 @@ module Cardano.CLI.Byron.Parsers
 
 import           Cardano.Prelude (ConvertText (..))
 
-import           Control.Applicative
 import           Control.Monad (when)
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
 import           Data.Attoparsec.Combinator ((<?>))
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy.Char8 as C8
 import qualified Data.Char as Char
+import           Data.Foldable
 import           Data.Text (Text)
 import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)

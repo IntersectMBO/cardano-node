@@ -1,0 +1,11 @@
+Usage: cardano-cli key convert-itn-bip32-key --itn-signing-key-file FILE
+            --out-file FILE
+
+  Convert an Incentivized Testnet (ITN) BIP32 (Ed25519Bip32) signing key to a
+  corresponding Shelley stake signing key
+
+Available options:
+  --itn-signing-key-file FILE
+                           Filepath of the ITN signing key.
+  --out-file FILE          The output file.
+  -h,--help                Show this help text

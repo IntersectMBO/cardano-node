@@ -1,0 +1,21 @@
+Usage: cardano-cli byron miscellaneous validate-cbor 
+            [ --byron-block INT
+            | --byron-delegation-certificate
+            | --byron-tx
+            | --byron-update-proposal
+            | --byron-vote
+            ]
+            --filepath FILEPATH
+
+  Validate a CBOR blockchain object.
+
+Available options:
+  --byron-block INT        The CBOR file is a byron era block. Enter the number
+                           of slots in an epoch. The default value is 21600
+  --byron-delegation-certificate
+                           The CBOR file is a byron era delegation certificate
+  --byron-tx               The CBOR file is a byron era tx
+  --byron-update-proposal  The CBOR file is a byron era update proposal
+  --byron-vote             The CBOR file is a byron era vote
+  --filepath FILEPATH      Filepath of CBOR file.
+  -h,--help                Show this help text
