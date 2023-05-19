@@ -26,7 +26,7 @@ import           Test.Tasty.Hedgehog (testPropertyNamed)
 import           Hedgehog.Gen.QuickCheck (arbitrary)
 
 prop_golden_ShelleyGenesis :: Property
-prop_golden_ShelleyGenesis = H.goldenTestJsonValuePretty exampleShelleyGenesis "test/Golden/ShelleyGenesis"
+prop_golden_ShelleyGenesis = H.goldenTestJsonValuePretty exampleShelleyGenesis "test/golden/ShelleyGenesis"
 
 -- Keep this here to make sure serialiseAddr/deserialiseAddr are working.
 -- They are defined in the Shelley executable spec and have been wrong at

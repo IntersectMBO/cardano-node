@@ -79,32 +79,32 @@ exampleSimpleScriptV2_MofN =
 prop_golden_SimpleScriptV1_All :: Property
 prop_golden_SimpleScriptV1_All =
   goldenTestJsonValuePretty exampleSimpleScriptV1_All
-                            "test/Golden/Script/SimpleV1/all"
+                            "test/golden/Script/SimpleV1/all"
 
 prop_golden_SimpleScriptV1_Any :: Property
 prop_golden_SimpleScriptV1_Any =
   goldenTestJsonValuePretty exampleSimpleScriptV1_Any
-                            "test/Golden/Script/SimpleV1/any"
+                            "test/golden/Script/SimpleV1/any"
 
 prop_golden_SimpleScriptV1_MofN :: Property
 prop_golden_SimpleScriptV1_MofN =
   goldenTestJsonValuePretty exampleSimpleScriptV1_MofN
-                            "test/Golden/Script/SimpleV1/atleast"
+                            "test/golden/Script/SimpleV1/atleast"
 
 prop_golden_SimpleScriptV2_All :: Property
 prop_golden_SimpleScriptV2_All =
   goldenTestJsonValuePretty exampleSimpleScriptV2_All
-                            "test/Golden/Script/SimpleV2/all"
+                            "test/golden/Script/SimpleV2/all"
 
 prop_golden_SimpleScriptV2_Any :: Property
 prop_golden_SimpleScriptV2_Any =
   goldenTestJsonValuePretty exampleSimpleScriptV2_Any
-                            "test/Golden/Script/SimpleV2/any"
+                            "test/golden/Script/SimpleV2/any"
 
 prop_golden_SimpleScriptV2_MofN :: Property
 prop_golden_SimpleScriptV2_MofN =
   goldenTestJsonValuePretty exampleSimpleScriptV2_MofN
-                            "test/Golden/Script/SimpleV2/atleast"
+                            "test/golden/Script/SimpleV2/atleast"
 
 
 prop_roundtrip_SimpleScript_JSON :: Property
