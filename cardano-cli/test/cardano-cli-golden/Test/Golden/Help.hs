@@ -8,7 +8,7 @@ module Test.Golden.Help
 
 import           Prelude hiding (lines)
 
-import           Control.Monad (forM_, unless)
+import           Control.Monad (forM_, unless, (<=<))
 import           Data.Maybe (maybeToList)
 import           Data.Text (Text)
 import           Hedgehog (Property)
@@ -72,6 +72,15 @@ selectAndDropPrefix prefix text =
     then Just $ Text.drop (Text.length prefix) text
     else Nothing
 
+deselectSuffix :: Text -> Text -> Maybe Text
+deselectSuffix suffix text =
+  if Text.isSuffixOf suffix text
+    then Nothing
+    else Just text
+
+selectCmd :: Text -> Maybe Text
+selectCmd = selectAndDropPrefix "Usage: cardano-cli " <=< deselectSuffix " COMMAND"
+
 golden_HelpCmds :: Property
 golden_HelpCmds =
   propertyOnce . H.moduleWorkspace "help-commands" $ \_ -> do
@@ -84,7 +93,7 @@ golden_HelpCmds =
         ]
 
       let lines = Text.lines $ Text.pack help
-      let usages = List.filter (not . null) $ fmap extractCmd $ maybeToList . selectAndDropPrefix "Usage: cardano-cli " =<< lines
+      let usages = List.filter (not . null) $ fmap extractCmd $ maybeToList . selectCmd =<< lines
 
       forM_ usages $ \usage -> do
         H.noteShow_ usage
