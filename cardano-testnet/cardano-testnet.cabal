@@ -106,19 +106,50 @@ executable cardano-testnet
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
-test-suite cardano-testnet-tests
+test-suite cardano-testnet-golden
   import:               project-config
 
-  hs-source-dirs:       test
+  hs-source-dirs:       test/cardano-testnet-golden
 
-  main-is:              Main.hs
+  main-is:              cardano-testnet-golden.hs
+
+  other-modules:        Test.Golden.Testnet.Config
+                        Test.Golden.Testnet.Help
+
+  type:                 exitcode-stdio-1.0
+
+  build-depends:        aeson
+                      , aeson-pretty
+                      , bytestring
+                      , cardano-api
+                      , cardano-cli:cardano-cli-test-lib
+                      , cardano-testnet
+                      , filepath
+                      , hedgehog
+                      , hedgehog-extras ^>= 0.4.5.1
+                      , regex-compat
+                      , tasty
+                      , tasty-hedgehog
+                      , text
+
+  ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+
+  build-tool-depends:   cardano-node:cardano-node
+                      , cardano-cli:cardano-cli
+                      , cardano-submit-api:cardano-submit-api
+
+test-suite cardano-testnet-test
+  import:               project-config
+
+  hs-source-dirs:       test/cardano-testnet-test
+
+  main-is:              cardano-testnet-test.hs
 
   other-modules:        Test.Cli.Alonzo.LeadershipSchedule
                         Test.Cli.Babbage.LeadershipSchedule
                         Test.Cli.Babbage.StakeSnapshot
                         Test.Cli.KesPeriodInfo
                         Test.FoldBlocks
-                        Test.Golden.All
                         Test.Misc
                         Test.Node.Shutdown
                         Test.ShutdownOnSlotSynced
@@ -126,7 +157,6 @@ test-suite cardano-testnet-tests
   type:                 exitcode-stdio-1.0
 
   build-depends:        aeson
-                      , aeson-pretty
                       , async
                       , bytestring
                       , cardano-api ^>= 8.1.0.1
@@ -143,9 +173,6 @@ test-suite cardano-testnet-tests
                       , text
                       , time
                       , transformers
-
-
-  other-modules:
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 

@@ -1,0 +1,18 @@
+Usage: cardano-cli byron key 
+          ( keygen
+          | to-verification
+          | signing-key-public
+          | signing-key-address
+          | migrate-delegate-key-from
+          )
+
+  Byron key utility commands
+
+Available commands:
+  keygen                   Generate a signing key.
+  to-verification          Extract a verification key in its base64 form.
+  signing-key-public       Pretty-print a signing key's verification key (not a
+                           secret).
+  signing-key-address      Print address of a signing key.
+  migrate-delegate-key-from
+                           Migrate a delegate key from an older version.

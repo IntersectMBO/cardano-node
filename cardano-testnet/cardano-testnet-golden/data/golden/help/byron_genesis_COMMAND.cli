@@ -1,5 +1,0 @@
-Invalid argument `COMMAND'
-
-Usage: cardano-cli byron genesis COMMAND
-
-  Byron genesis block commands

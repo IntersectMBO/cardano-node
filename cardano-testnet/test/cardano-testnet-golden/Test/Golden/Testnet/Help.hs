@@ -2,8 +2,9 @@
 
 {- HLINT ignore "Redundant id" -}
 
-module Test.Golden.Help
-  ( helpTests
+module Test.Golden.Testnet.Help
+  ( golden_HelpAll
+  , golden_HelpCmds
   ) where
 
 import           Prelude hiding (lines)
@@ -14,16 +15,14 @@ import           Data.Text (Text)
 import           Hedgehog (Property)
 import           Hedgehog.Extras.Stock.OS (isWin32)
 import           System.FilePath ((</>))
-import           Test.Cardano.CLI.Util (execCardanoCLI, propertyOnce)
+import           Test.Cardano.CLI.Util
 import           Text.Regex (Regex, mkRegex, subRegex)
 
 import qualified Data.Char as Char
 import qualified Data.List as List
 import qualified Data.Text as Text
-import qualified Hedgehog as H
-import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Extras.Test.Golden as H
-import qualified Test.Cardano.CLI.Util as H
 
 ansiRegex :: Regex
 ansiRegex = mkRegex "\\[[0-9]+m"
@@ -49,12 +48,12 @@ extractCmd = id
 -- expected result.
 golden_HelpAll :: Property
 golden_HelpAll =
-  propertyOnce . H.moduleWorkspace "help" $ \_ -> do
+  H.propertyOnce . H.moduleWorkspace "help" $ \_ -> do
     -- These tests are not run on Windows because the cardano-cli usage
     -- output is slightly different on Windows.  For example it uses
     -- "cardano-cli.exe" instead of "cardano-cli".
     unless isWin32 $ do
-      helpFp <- H.note "test/cardano-cli-golden/files/golden/help.cli"
+      helpFp <- H.note "test/cardano-testnet-golden/files/golden/help.cli"
 
       help <- filterAnsi <$> execCardanoCLI
         [ "help"
@@ -83,7 +82,7 @@ selectCmd = selectAndDropPrefix "Usage: cardano-cli " <=< deselectSuffix " COMMA
 
 golden_HelpCmds :: Property
 golden_HelpCmds =
-  propertyOnce . H.moduleWorkspace "help-commands" $ \_ -> do
+  H.propertyOnce . H.moduleWorkspace "help-commands" $ \_ -> do
     -- These tests are not run on Windows because the cardano-cli usage
     -- output is slightly different on Windows.  For example it uses
     -- "cardano-cli.exe" instead of "cardano-cli".
@@ -97,19 +96,8 @@ golden_HelpCmds =
 
       forM_ usages $ \usage -> do
         H.noteShow_ usage
-        let expectedCmdHelpFp = "test/cardano-cli-golden/files/golden/help" </> Text.unpack (Text.intercalate "_" usage) <> ".cli"
+        let expectedCmdHelpFp = "test/cardano-testnet-golden/files/golden/help" </> Text.unpack (Text.intercalate "_" usage) <> ".cli"
 
-        cmdHelp <- filterAnsi . third <$> H.execDetailCardanoCli (fmap Text.unpack usage)
+        cmdHelp <- filterAnsi . third <$> execDetailCardanoCli (fmap Text.unpack usage)
 
         H.diffVsGoldenFile cmdHelp expectedCmdHelpFp
-
-helpTests :: IO Bool
-helpTests =
-  H.checkSequential $ H.Group "Help"
-    [ ( "golden_HelpAll"
-      , Test.Golden.Help.golden_HelpAll
-      )
-    , ( "golden_HelpCmds"
-      , Test.Golden.Help.golden_HelpCmds
-      )
-    ]

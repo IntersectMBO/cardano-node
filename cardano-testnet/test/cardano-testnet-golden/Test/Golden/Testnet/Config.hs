@@ -1,6 +1,6 @@
 {-# LANGUAGE GADTs #-}
 
-module Test.Golden.All where
+module Test.Golden.Testnet.Config where
 
 import           Prelude
 
@@ -32,19 +32,19 @@ goldenDefaultConfigYaml = propertyOnce $ do
 
   createGoldenFilePath :: AnyCardanoEra -> FilePath
   createGoldenFilePath (AnyCardanoEra ByronEra) =
-    "test/Test/Golden/files/byron_node_default_config.json"
+    "test/cardano-testnet-test/files/golden/byron_node_default_config.json"
   createGoldenFilePath (AnyCardanoEra ShelleyEra) =
-    "test/Test/Golden/files/shelley_node_default_config.json"
+    "test/cardano-testnet-test/files/golden/shelley_node_default_config.json"
   createGoldenFilePath (AnyCardanoEra AllegraEra) =
-    "test/Test/Golden/files/allegra_node_default_config.json"
+    "test/cardano-testnet-test/files/golden/allegra_node_default_config.json"
   createGoldenFilePath (AnyCardanoEra MaryEra) =
-    "test/Test/Golden/files/mary_node_default_config.json"
+    "test/cardano-testnet-test/files/golden/mary_node_default_config.json"
   createGoldenFilePath (AnyCardanoEra AlonzoEra) =
-    "test/Test/Golden/files/alonzo_node_default_config.json"
+    "test/cardano-testnet-test/files/golden/alonzo_node_default_config.json"
   createGoldenFilePath (AnyCardanoEra BabbageEra) =
-    "test/Test/Golden/files/babbage_node_default_config.json"
+    "test/cardano-testnet-test/files/golden/babbage_node_default_config.json"
   createGoldenFilePath (AnyCardanoEra ConwayEra) =
-    "test/Test/Golden/files/conway_node_default_config.json"
+    "test/cardano-testnet-test/files/golden/conway_node_default_config.json"
 
   createConfigYamlString :: AnyCardanoEra -> String
   createConfigYamlString era =
