@@ -106,3 +106,11 @@ package snap-server
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+source-repository-package
+    type: git
+    location: git@github.com:input-output-hk/cardano-api.git
+    tag: 9b7c5f730a050c8c75c1f35752f287e07412abd7
+    subdir:
+      cardano-api
+      cardano-api-gen
