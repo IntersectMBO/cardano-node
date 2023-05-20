@@ -1,0 +1,34 @@
+Usage: cardano-cli shelley governance action 
+            ( create-no-confidence-motion
+            | create-new-committee
+            | create-constitution-update
+            | create-hard-fork-initiation
+            | create-protocol-parameter-update
+            | create-treasury-withdrawal
+            | create-info
+            | view
+            | query
+            | submit
+            )
+
+  Commands related to governance actions
+
+Available options:
+  -h,--help                Show this help text
+
+Available commands:
+  create-no-confidence-motion
+                           Create a no-confidence motion action
+  create-new-committee     Create a new-committee action
+  create-constitution-update
+                           Create a constitution-update action
+  create-hard-fork-initiation
+                           Create a hard-fork-initiation action
+  create-protocol-parameter-update
+                           Create an protocol-parameter-update action
+  create-treasury-withdrawal
+                           Create an treasury-withdrawal action
+  create-info              Create an info action
+  view                     View an action
+  query                    Query an on-chain action
+  submit                   Submit an action

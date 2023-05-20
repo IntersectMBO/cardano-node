@@ -1,0 +1,17 @@
+Usage: cardano-cli shelley governance action create-hard-fork-initiation 
+            ( --stake-verification-key STRING
+            | --stake-verification-key-file FILE
+            | --stake-script-file FILE
+            )
+            --out-file FILE
+
+  Create a hard-fork-initiation action
+
+Available options:
+  --stake-verification-key STRING
+                           Stake verification key (Bech32 or hex-encoded).
+  --stake-verification-key-file FILE
+                           Filepath of the staking verification key.
+  --stake-script-file FILE Filepath of the staking script.
+  --out-file FILE          The output file.
+  -h,--help                Show this help text

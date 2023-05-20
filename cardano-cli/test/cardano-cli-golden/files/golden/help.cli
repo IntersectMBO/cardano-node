@@ -12,6 +12,8 @@ Usage: cardano-cli text-view decode-cbor --in-file FILE [--out-file FILE]
 Usage: cardano-cli governance 
             ( create-mir-certificate
             | create-genesis-key-delegation-certificate
+            | action
+            | vote
             | create-update-proposal
             | create-poll
             | answer-poll
@@ -68,6 +70,149 @@ Usage: cardano-cli governance create-genesis-key-delegation-certificate
             --out-file FILE
 
   Create a genesis key delegation certificate
+
+Usage: cardano-cli governance action 
+            ( create-no-confidence-motion
+            | create-new-committee
+            | create-constitution-update
+            | create-hard-fork-initiation
+            | create-protocol-parameter-update
+            | create-treasury-withdrawal
+            | create-info
+            | view
+            | query
+            | submit
+            )
+
+  Commands related to governance actions
+
+Usage: cardano-cli governance action create-no-confidence-motion 
+            ( --stake-verification-key STRING
+            | --stake-verification-key-file FILE
+            | --stake-script-file FILE
+            )
+            --out-file FILE
+
+  Create a no-confidence motion action
+
+Usage: cardano-cli governance action create-new-committee 
+            ( --stake-verification-key STRING
+            | --stake-verification-key-file FILE
+            | --stake-script-file FILE
+            )
+            --out-file FILE
+
+  Create a new-committee action
+
+Usage: cardano-cli governance action create-constitution-update 
+            ( --stake-verification-key STRING
+            | --stake-verification-key-file FILE
+            | --stake-script-file FILE
+            )
+            --out-file FILE
+
+  Create a constitution-update action
+
+Usage: cardano-cli governance action create-hard-fork-initiation 
+            ( --stake-verification-key STRING
+            | --stake-verification-key-file FILE
+            | --stake-script-file FILE
+            )
+            --out-file FILE
+
+  Create a hard-fork-initiation action
+
+Usage: cardano-cli governance action create-protocol-parameter-update 
+            ( --stake-verification-key STRING
+            | --stake-verification-key-file FILE
+            | --stake-script-file FILE
+            )
+            [--protocol-major-version NATURAL --protocol-minor-version NATURAL]
+            [--decentralization-parameter RATIONAL]
+            [--extra-entropy HEX | --reset-extra-entropy]
+            [--max-block-header-size NATURAL]
+            [--max-block-body-size NATURAL]
+            [--max-tx-size NATURAL]
+            [--min-fee-constant LOVELACE]
+            [--min-fee-linear LOVELACE]
+            [--min-utxo-value NATURAL]
+            [--key-reg-deposit-amt NATURAL]
+            [--pool-reg-deposit NATURAL]
+            [--min-pool-cost NATURAL]
+            [--pool-retirement-epoch-boundary EPOCH_BOUNDARY]
+            [--number-of-pools NATURAL]
+            [--pool-influence RATIONAL]
+            [--monetary-expansion RATIONAL]
+            [--treasury-expansion RATIONAL]
+            [--utxo-cost-per-word LOVELACE]
+            [--price-execution-steps RATIONAL --price-execution-memory RATIONAL]
+            [--max-tx-execution-units (INT, INT)]
+            [--max-block-execution-units (INT, INT)]
+            [--max-value-size INT]
+            [--collateral-percent INT]
+            [--max-collateral-inputs INT]
+            [--utxo-cost-per-byte LOVELACE]
+            --out-file FILE
+
+  Create an protocol-parameter-update action
+
+Usage: cardano-cli governance action create-treasury-withdrawal 
+            ( --stake-verification-key STRING
+            | --stake-verification-key-file FILE
+            | --stake-script-file FILE
+            )
+            --out-file FILE
+
+  Create an treasury-withdrawal action
+
+Usage: cardano-cli governance action create-info 
+            ( --stake-verification-key STRING
+            | --stake-verification-key-file FILE
+            | --stake-script-file FILE
+            )
+            (--metadata-url URL | --metadata-file FILE)
+            --out-file FILE
+
+  Create an info action
+
+Usage: cardano-cli governance action view --action-file FILE
+
+  View an action
+
+Usage: cardano-cli governance action query --socket-path SOCKET_PATH
+            (--mainnet | --testnet-magic NATURAL)
+            --action-id STRING
+            [--out-file FILE]
+
+  Query an on-chain action
+
+Usage: cardano-cli governance action submit --socket-path SOCKET_PATH
+            (--mainnet | --testnet-magic NATURAL)
+            --action-file FILE
+            [--out-file FILE]
+
+  Submit an action
+
+Usage: cardano-cli governance vote (create | view | submit)
+
+  Commands related to governance votes
+
+Usage: cardano-cli governance vote create --signing-key-file FILE
+            --action-file FILE
+            (--vote-yes | --vote-no | --vote-abstain)
+            --out-file FILE
+
+  Create a vote
+
+Usage: cardano-cli governance vote view --vote-file FILE
+
+  View a vote
+
+Usage: cardano-cli governance vote submit --socket-path SOCKET_PATH
+            (--mainnet | --testnet-magic NATURAL)
+            --vote-file FILE
+
+  Submit a vote
 
 Usage: cardano-cli governance create-update-proposal --out-file FILE
             --epoch EPOCH
@@ -410,6 +555,47 @@ Usage: cardano-cli query tx-mempool next-tx
 Usage: cardano-cli query tx-mempool tx-exists TX_ID
 
   Query if a particular transaction exists in the mempool
+
+Usage: cardano-cli drep 
+            ( registration-certificate
+            | deregistration-certificate
+            | id
+            | metadata-hash
+            )
+
+  DRep commands
+
+Usage: cardano-cli drep registration-certificate 
+            (--mainnet | --testnet-magic NATURAL)
+            ( --drep-verification-key STRING
+            | --drep-cold-verification-key-file FILE
+            )
+            [--metadata-url URL --metadata-hash HASH]
+            --out-file FILE
+
+  Create a DRep registration certificate
+
+Usage: cardano-cli drep deregistration-certificate 
+            ( --drep-verification-key STRING
+            | --drep-cold-verification-key-file FILE
+            )
+            --epoch NATURAL
+            --out-file FILE
+
+  Create a DRep deregistration certificate
+
+Usage: cardano-cli drep id 
+            ( --drep-verification-key STRING
+            | --drep-cold-verification-key-file FILE
+            )
+            [--output-format STRING]
+
+  Build DRep id from the offline key
+
+Usage: cardano-cli drep metadata-hash --drep-metadata-file FILE
+            [--out-file FILE]
+
+  Print the hash of DRep metadata.
 
 Usage: cardano-cli stake-pool 
             ( registration-certificate
@@ -968,7 +1154,8 @@ Usage: cardano-cli stake-address
             | key-hash
             | registration-certificate
             | deregistration-certificate
-            | delegation-certificate
+            | pool-delegation-certificate
+            | drep-delegation-certificate
             )
 
   Stake address commands
@@ -1016,7 +1203,7 @@ Usage: cardano-cli stake-address deregistration-certificate
 
   Create a stake address deregistration certificate
 
-Usage: cardano-cli stake-address delegation-certificate 
+Usage: cardano-cli stake-address pool-delegation-certificate 
             ( --stake-verification-key STRING
             | --stake-verification-key-file FILE
             | --stake-script-file FILE
@@ -1029,6 +1216,20 @@ Usage: cardano-cli stake-address delegation-certificate
             --out-file FILE
 
   Create a stake address pool delegation certificate
+
+Usage: cardano-cli stake-address drep-delegation-certificate 
+            ( --stake-verification-key STRING
+            | --stake-verification-key-file FILE
+            | --stake-script-file FILE
+            | --stake-address ADDRESS
+            )
+            [ --drep-verification-key STRING
+            | --drep-cold-verification-key-file FILE
+            | --drep-id DREP_ID
+            ]
+            --out-file FILE
+
+  Create a stake address drep delegation certificate
 
 Usage: cardano-cli address (key-gen | key-hash | build | info)
 
@@ -1336,6 +1537,8 @@ Usage: cardano-cli shelley text-view decode-cbor --in-file FILE
 Usage: cardano-cli shelley governance 
             ( create-mir-certificate
             | create-genesis-key-delegation-certificate
+            | action
+            | vote
             | create-update-proposal
             | create-poll
             | answer-poll
@@ -1392,6 +1595,149 @@ Usage: cardano-cli shelley governance create-genesis-key-delegation-certificate
             --out-file FILE
 
   Create a genesis key delegation certificate
+
+Usage: cardano-cli shelley governance action 
+            ( create-no-confidence-motion
+            | create-new-committee
+            | create-constitution-update
+            | create-hard-fork-initiation
+            | create-protocol-parameter-update
+            | create-treasury-withdrawal
+            | create-info
+            | view
+            | query
+            | submit
+            )
+
+  Commands related to governance actions
+
+Usage: cardano-cli shelley governance action create-no-confidence-motion 
+            ( --stake-verification-key STRING
+            | --stake-verification-key-file FILE
+            | --stake-script-file FILE
+            )
+            --out-file FILE
+
+  Create a no-confidence motion action
+
+Usage: cardano-cli shelley governance action create-new-committee 
+            ( --stake-verification-key STRING
+            | --stake-verification-key-file FILE
+            | --stake-script-file FILE
+            )
+            --out-file FILE
+
+  Create a new-committee action
+
+Usage: cardano-cli shelley governance action create-constitution-update 
+            ( --stake-verification-key STRING
+            | --stake-verification-key-file FILE
+            | --stake-script-file FILE
+            )
+            --out-file FILE
+
+  Create a constitution-update action
+
+Usage: cardano-cli shelley governance action create-hard-fork-initiation 
+            ( --stake-verification-key STRING
+            | --stake-verification-key-file FILE
+            | --stake-script-file FILE
+            )
+            --out-file FILE
+
+  Create a hard-fork-initiation action
+
+Usage: cardano-cli shelley governance action create-protocol-parameter-update 
+            ( --stake-verification-key STRING
+            | --stake-verification-key-file FILE
+            | --stake-script-file FILE
+            )
+            [--protocol-major-version NATURAL --protocol-minor-version NATURAL]
+            [--decentralization-parameter RATIONAL]
+            [--extra-entropy HEX | --reset-extra-entropy]
+            [--max-block-header-size NATURAL]
+            [--max-block-body-size NATURAL]
+            [--max-tx-size NATURAL]
+            [--min-fee-constant LOVELACE]
+            [--min-fee-linear LOVELACE]
+            [--min-utxo-value NATURAL]
+            [--key-reg-deposit-amt NATURAL]
+            [--pool-reg-deposit NATURAL]
+            [--min-pool-cost NATURAL]
+            [--pool-retirement-epoch-boundary EPOCH_BOUNDARY]
+            [--number-of-pools NATURAL]
+            [--pool-influence RATIONAL]
+            [--monetary-expansion RATIONAL]
+            [--treasury-expansion RATIONAL]
+            [--utxo-cost-per-word LOVELACE]
+            [--price-execution-steps RATIONAL --price-execution-memory RATIONAL]
+            [--max-tx-execution-units (INT, INT)]
+            [--max-block-execution-units (INT, INT)]
+            [--max-value-size INT]
+            [--collateral-percent INT]
+            [--max-collateral-inputs INT]
+            [--utxo-cost-per-byte LOVELACE]
+            --out-file FILE
+
+  Create an protocol-parameter-update action
+
+Usage: cardano-cli shelley governance action create-treasury-withdrawal 
+            ( --stake-verification-key STRING
+            | --stake-verification-key-file FILE
+            | --stake-script-file FILE
+            )
+            --out-file FILE
+
+  Create an treasury-withdrawal action
+
+Usage: cardano-cli shelley governance action create-info 
+            ( --stake-verification-key STRING
+            | --stake-verification-key-file FILE
+            | --stake-script-file FILE
+            )
+            (--metadata-url URL | --metadata-file FILE)
+            --out-file FILE
+
+  Create an info action
+
+Usage: cardano-cli shelley governance action view --action-file FILE
+
+  View an action
+
+Usage: cardano-cli shelley governance action query --socket-path SOCKET_PATH
+            (--mainnet | --testnet-magic NATURAL)
+            --action-id STRING
+            [--out-file FILE]
+
+  Query an on-chain action
+
+Usage: cardano-cli shelley governance action submit --socket-path SOCKET_PATH
+            (--mainnet | --testnet-magic NATURAL)
+            --action-file FILE
+            [--out-file FILE]
+
+  Submit an action
+
+Usage: cardano-cli shelley governance vote (create | view | submit)
+
+  Commands related to governance votes
+
+Usage: cardano-cli shelley governance vote create --signing-key-file FILE
+            --action-file FILE
+            (--vote-yes | --vote-no | --vote-abstain)
+            --out-file FILE
+
+  Create a vote
+
+Usage: cardano-cli shelley governance vote view --vote-file FILE
+
+  View a vote
+
+Usage: cardano-cli shelley governance vote submit --socket-path SOCKET_PATH
+            (--mainnet | --testnet-magic NATURAL)
+            --vote-file FILE
+
+  Submit a vote
 
 Usage: cardano-cli shelley governance create-update-proposal --out-file FILE
             --epoch EPOCH
@@ -1734,6 +2080,47 @@ Usage: cardano-cli shelley query tx-mempool next-tx
 Usage: cardano-cli shelley query tx-mempool tx-exists TX_ID
 
   Query if a particular transaction exists in the mempool
+
+Usage: cardano-cli shelley drep 
+            ( registration-certificate
+            | deregistration-certificate
+            | id
+            | metadata-hash
+            )
+
+  DRep commands
+
+Usage: cardano-cli shelley drep registration-certificate 
+            (--mainnet | --testnet-magic NATURAL)
+            ( --drep-verification-key STRING
+            | --drep-cold-verification-key-file FILE
+            )
+            [--metadata-url URL --metadata-hash HASH]
+            --out-file FILE
+
+  Create a DRep registration certificate
+
+Usage: cardano-cli shelley drep deregistration-certificate 
+            ( --drep-verification-key STRING
+            | --drep-cold-verification-key-file FILE
+            )
+            --epoch NATURAL
+            --out-file FILE
+
+  Create a DRep deregistration certificate
+
+Usage: cardano-cli shelley drep id 
+            ( --drep-verification-key STRING
+            | --drep-cold-verification-key-file FILE
+            )
+            [--output-format STRING]
+
+  Build DRep id from the offline key
+
+Usage: cardano-cli shelley drep metadata-hash --drep-metadata-file FILE
+            [--out-file FILE]
+
+  Print the hash of DRep metadata.
 
 Usage: cardano-cli shelley stake-pool 
             ( registration-certificate
@@ -2295,7 +2682,8 @@ Usage: cardano-cli shelley stake-address
             | key-hash
             | registration-certificate
             | deregistration-certificate
-            | delegation-certificate
+            | pool-delegation-certificate
+            | drep-delegation-certificate
             )
 
   Stake address commands
@@ -2343,7 +2731,7 @@ Usage: cardano-cli shelley stake-address deregistration-certificate
 
   Create a stake address deregistration certificate
 
-Usage: cardano-cli shelley stake-address delegation-certificate 
+Usage: cardano-cli shelley stake-address pool-delegation-certificate 
             ( --stake-verification-key STRING
             | --stake-verification-key-file FILE
             | --stake-script-file FILE
@@ -2356,6 +2744,20 @@ Usage: cardano-cli shelley stake-address delegation-certificate
             --out-file FILE
 
   Create a stake address pool delegation certificate
+
+Usage: cardano-cli shelley stake-address drep-delegation-certificate 
+            ( --stake-verification-key STRING
+            | --stake-verification-key-file FILE
+            | --stake-script-file FILE
+            | --stake-address ADDRESS
+            )
+            [ --drep-verification-key STRING
+            | --drep-cold-verification-key-file FILE
+            | --drep-id DREP_ID
+            ]
+            --out-file FILE
+
+  Create a stake address drep delegation certificate
 
 Usage: cardano-cli shelley address (key-gen | key-hash | build | info)
 

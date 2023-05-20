@@ -1,0 +1,20 @@
+Usage: cardano-cli governance action submit --socket-path SOCKET_PATH
+            (--mainnet | --testnet-magic NATURAL)
+            --action-file FILE
+            [--out-file FILE]
+
+  Submit an action
+
+Available options:
+  --socket-path SOCKET_PATH
+                           Path to the node socket. This overrides the
+                           CARDANO_NODE_SOCKET_PATH environment variable. The
+                           argument is optional if CARDANO_NODE_SOCKET_PATH is
+                           defined and mandatory otherwise.
+  --mainnet                Use the mainnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --testnet-magic NATURAL  Specify a testnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --action-file FILE       Input filepath of the governance action.
+  --out-file FILE          Output filepath of the governance action receipt.
+  -h,--help                Show this help text

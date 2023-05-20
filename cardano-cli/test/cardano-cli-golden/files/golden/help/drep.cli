@@ -1,0 +1,18 @@
+Usage: cardano-cli drep 
+            ( registration-certificate
+            | deregistration-certificate
+            | id
+            | metadata-hash
+            )
+
+  DRep commands
+
+Available options:
+  -h,--help                Show this help text
+
+Available commands:
+  registration-certificate Create a DRep registration certificate
+  deregistration-certificate
+                           Create a DRep deregistration certificate
+  id                       Build DRep id from the offline key
+  metadata-hash            Print the hash of DRep metadata.
