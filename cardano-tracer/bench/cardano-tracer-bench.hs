@@ -121,6 +121,7 @@ main = do
     , verbosity      = Nothing
     , metricsComp    = Nothing
     , hasForwarding  = Nothing
+    , hasCnsaSink    = Nothing
     }
 
   generate num = replicate num . mkTraceObject <$> getCurrentTime

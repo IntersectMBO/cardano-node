@@ -100,4 +100,5 @@ mkConfig TestSetup{..} rootDir p = TracerConfig
   , verbosity      = Just Minimum
   , metricsComp    = Nothing
   , hasForwarding  = Nothing
+  , hasCnsaSink    = Nothing
   }

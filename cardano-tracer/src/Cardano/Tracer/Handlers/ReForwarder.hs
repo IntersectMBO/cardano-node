@@ -23,8 +23,12 @@ module Cardano.Tracer.Handlers.ReForwarder
 import           Control.Monad(when)
 import           Data.Aeson
 import           Data.List (isPrefixOf)
+import           Data.Functor.Contravariant
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
+import           Data.Time.Clock (UTCTime)
 import           GHC.Generics
+import           Network.HostName (HostName)
 
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToClient (withIOManager)
@@ -49,7 +53,7 @@ initReForwarder :: TracerConfig
                 -> IO ( [Log.TraceObject] -> IO ()
                       , Trace IO DataPoint
                       )
-initReForwarder TracerConfig{networkMagic, hasForwarding}
+initReForwarder TracerConfig{networkMagic, hasForwarding, hasCnsaSink}
                 teTracer = do
   mForwarding <- case hasForwarding of
       Nothing -> pure Nothing
@@ -76,10 +80,17 @@ initReForwarder TracerConfig{networkMagic, hasForwarding}
   traceWith modeDP $ RM "running"
     -- Note: currently the only trace for this datapoint
 
+  cnsaSinkTracer :: Trace IO Log.TraceObject
+    <- case hasCnsaSink of
+         Just True -> mkCnsaSink traceDP
+         _         -> return mempty
+
   let writesToSink' =
         case mForwarding of
           Just (writeToSink',_) ->
-            mapM_ writeToSink'
+            mapM_ $ \os-> do
+                       writeToSink' os
+                       traceWith cnsaSinkTracer os
           _ ->
             const $ return ()
     
@@ -115,5 +126,58 @@ instance Log.MetaTrace ReforwarderMode
   severityFor _ _ = Just Info
   documentFor _   = Just "the mode of the reforwarder"
   allNamespaces   = [ Log.namespaceFor (undefined :: ReforwarderMode) ]
+
+------------------------------------------------------------------------------
+-- Code for CNSA Sink Analysis
+--
+
+mkCnsaSink :: Trace IO DataPoint -> IO (Trace IO Log.TraceObject)
+mkCnsaSink traceDP =
+  do
+  bfccbfDP :: Trace IO CompletedBlockFetchTimes
+    <- mkDataPointTracer traceDP
+
+  let hostTimesTr :: Trace IO HostTimes
+      hostTimesTr = contramap CompletedBlockFetchTimes bfccbfDP
+  
+  mkLastHostTimeOf
+    ["BlockFetch","Client","CompletedBlockFetch"]
+    hostTimesTr
+
+mkLastHostTimeOf :: [Text.Text]
+                 -> Trace IO HostTimes
+                 -> IO (Trace IO Log.TraceObject)
+mkLastHostTimeOf ns tr =
+  do
+  traceWith tr Map.empty  -- Cause this datapoint to immediately have a value.
+  foldTraceM compute Map.empty (contramap Log.unfold tr)
+
+  where
+  compute m _c to' =
+    if ns == Log.toNamespace to' then
+      Map.insert (Log.toHostname to') (Log.toTimestamp to') m
+    else
+      m
+
+------------------------------------------------------------------------------
+-- CompletedBlockFetchTimes datapoint: type and boilerplate
+--
+
+-- | map 'HostName' to a 'UTCTime'
+type HostTimes = Map.Map Network.HostName.HostName UTCTime
+
+-- Create a datapoint
+
+-- | CompletedBlockFetchTimes - for tracking ["BlockFetch","Client","CompletedBlockFetch"] times
+newtype CompletedBlockFetchTimes = CompletedBlockFetchTimes HostTimes
+                                   deriving (Eq,Ord,Read,Show,Generic)
+deriving instance ToJSON CompletedBlockFetchTimes
+
+instance Log.MetaTrace CompletedBlockFetchTimes
+  where
+  namespaceFor _  = Log.Namespace [] ["BlockFetch","LastCompletedTimes"]
+  severityFor _ _ = Just Info
+  documentFor _   = Just "map of most recent CompletedBlockFetch times for all connected nodes"
+  allNamespaces   = [Log.namespaceFor (undefined :: CompletedBlockFetchTimes)]
 
 

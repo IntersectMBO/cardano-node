@@ -144,6 +144,7 @@ library
                       , ekg-forward ^>= 0.3
                       , extra
                       , filepath
+                      , hostname
                       , mime-mail
                       , optparse-applicative
                       , ouroboros-network

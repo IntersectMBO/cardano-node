@@ -82,6 +82,7 @@ propLogs ts@TestSetup{..} format rootDir localSock = do
     , verbosity      = Just Minimum
     , metricsComp    = Nothing
     , hasForwarding  = Nothing
+    , hasCnsaSink    = Nothing
     }
 
 propMultiInit :: TestSetup Identity -> LogFormat -> FilePath -> FilePath -> FilePath -> IO Property
@@ -111,6 +112,7 @@ propMultiInit ts@TestSetup{..} format rootDir localSock1 localSock2 = do
     , verbosity      = Just Minimum
     , metricsComp    = Nothing
     , hasForwarding  = Nothing
+    , hasCnsaSink    = Nothing
     }
 
 propMultiResp :: TestSetup Identity -> LogFormat -> FilePath -> FilePath -> IO Property
@@ -140,6 +142,7 @@ propMultiResp ts@TestSetup{..} format rootDir localSock = do
     , verbosity      = Just Minimum
     , metricsComp    = Nothing
     , hasForwarding  = Nothing
+    , hasCnsaSink    = Nothing
     }
 
 checkMultiResults :: FilePath -> IO Property

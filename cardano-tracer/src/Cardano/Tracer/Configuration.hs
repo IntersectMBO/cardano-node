@@ -92,6 +92,7 @@ data TracerConfig = TracerConfig
   , hasEKG         :: !(Maybe (Endpoint, Endpoint)) -- ^ Endpoint for EKG web-page (list of nodes, monitoring).
   , hasPrometheus  :: !(Maybe Endpoint)             -- ^ Endpoint for Prometheus web-page.
   , hasRTView      :: !(Maybe Endpoint)             -- ^ Endpoint for RTView web-page.
+  , hasCnsaSink    :: !(Maybe Bool)                 -- ^ Turn on CNSA analysis
   , hasForwarding  :: !(Maybe ( Network             -- ^ Socket for tracer's to reforward on,
                               , Maybe [[Text]]      -- ^ Reforward logs with these prefixes
                               , Log.TraceOptionForwarder -- ^ The forwarder config.
