@@ -40,8 +40,6 @@ library
                         Cardano.Tracer.Acceptors.Server
                         Cardano.Tracer.Acceptors.Utils
 
-                        Cardano.Tracer.Handlers.Datapoints.Run
-
                         Cardano.Tracer.Handlers.Logs.File
                         Cardano.Tracer.Handlers.Logs.Journal
                         Cardano.Tracer.Handlers.Logs.Rotator
@@ -52,6 +50,8 @@ library
                         Cardano.Tracer.Handlers.Metrics.Prometheus
                         Cardano.Tracer.Handlers.Metrics.Servers
                         Cardano.Tracer.Handlers.Metrics.Utils
+
+                        Cardano.Tracer.Handlers.ReForwarder
 
                         Cardano.Tracer.Handlers.RTView.Notifications.Check
                         Cardano.Tracer.Handlers.RTView.Notifications.Email
