@@ -1,9 +1,4 @@
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE PackageImports #-}
 
 -- | This top-level module is used by 'cardano-tracer' app.
 module Cardano.Tracer.Run
