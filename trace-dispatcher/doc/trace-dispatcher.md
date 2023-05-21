@@ -772,7 +772,7 @@ A periodically generated documentation of the tracers can be found in the cardan
 This is a document which is regenerated periodically and documents all trace-messages,  metrics and data-points in cardano-node. It as well displays the handling of these
 messages with the current default configuration:
 
-[Gernerated Cardano Trace Documentation](https://github.com/input-output-hk/cardano-node/blob/master/doc/new-tracing/tracers_doc_generated.md)
+[Generated Cardano Trace Documentation](https://github.com/input-output-hk/cardano-node/blob/master/doc/new-tracing/tracers_doc_generated.md)
 
 For a quick start into new tracing see the document:
 

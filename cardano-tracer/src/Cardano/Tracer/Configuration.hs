@@ -90,11 +90,12 @@ data TracerConfig = TracerConfig
   , loRequestNum   :: !(Maybe Word16)               -- ^ How many 'TraceObject's will be asked in each request.
   , ekgRequestFreq :: !(Maybe Pico)                 -- ^ How often to request for EKG-metrics, in seconds.
   , hasEKG         :: !(Maybe (Endpoint, Endpoint)) -- ^ Endpoint for EKG web-page (list of nodes, monitoring).
-  , hasPrometheus  :: !(Maybe Endpoint)             -- ^ Endpoint for Promeheus web-page.
+  , hasPrometheus  :: !(Maybe Endpoint)             -- ^ Endpoint for Prometheus web-page.
   , hasRTView      :: !(Maybe Endpoint)             -- ^ Endpoint for RTView web-page.
-  , hasForwarding  :: !(Maybe (Network, Log.TraceOptionForwarder))
-                                                    -- ^ Socket for tracer's own forwarding,
-                                                    --   and the forwarder config.
+  , hasForwarding  :: !(Maybe ( Network             -- ^ Socket for tracer's to reforward on,
+                              , Maybe [[Text]]      -- ^ Reforward logs with these prefixes
+                              , Log.TraceOptionForwarder -- ^ The forwarder config.
+                              ))
   , logging        :: !(NonEmpty LoggingParams)     -- ^ Logging parameters.
   , rotation       :: !(Maybe RotationParams)       -- ^ Rotation parameters.
   , verbosity      :: !(Maybe Verbosity)            -- ^ Verbosity of the tracer itself.
