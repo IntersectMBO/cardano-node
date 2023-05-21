@@ -1,3 +1,6 @@
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
+
 module Testnet.Parsers
   ( commands
   , runTestnetCmd
@@ -11,13 +14,14 @@ import qualified Options.Applicative as Opt
 import           Parsers.Babbage
 import           Parsers.Byron
 import           Parsers.Cardano
+import           Parsers.Help
 import           Parsers.Shelley
 import           Parsers.Version
 
 pref :: ParserPrefs
 pref = Opt.prefs $ showHelpOnEmpty <> showHelpOnError
 
-opts :: ParserInfo Testnet.Parsers.CardanoTestnetCommands
+opts :: ParserInfo CardanoTestnetCommands
 opts = Opt.info (commands <**> helper) idm
 
 -- TODO: Remove StartBabbageTestnet and StartShelleyTestnet
@@ -29,19 +33,24 @@ data CardanoTestnetCommands
   | StartCardanoTestnet CardanoOptions
   | StartShelleyTestnet ShelleyOptions
   | GetVersion VersionOptions
+  | forall a. Help ParserPrefs (ParserInfo a) HelpOptions
 
 commands :: Parser CardanoTestnetCommands
 commands =
-  asum [ fmap StartCardanoTestnet (subparser cmdCardano)
-       , fmap StartByrontestnet (subparser cmdByron)
-       , fmap StartShelleyTestnet (subparser cmdShelley)
-       , fmap StartBabbageTestnet (subparser cmdBabbage)
-       , fmap GetVersion (subparser cmdVersion)
-       ]
+  asum
+    [ fmap StartCardanoTestnet (subparser cmdCardano)
+    , fmap StartByrontestnet (subparser cmdByron)
+    , fmap StartShelleyTestnet (subparser cmdShelley)
+    , fmap StartBabbageTestnet (subparser cmdBabbage)
+    , fmap GetVersion (subparser cmdVersion)
+    , fmap (Help pref opts) (subparser cmdHelp)
+    ]
 
 runTestnetCmd :: CardanoTestnetCommands -> IO ()
-runTestnetCmd (StartBabbageTestnet cmdOpts) = runBabbageOptions cmdOpts
-runTestnetCmd (StartByrontestnet cmdOpts) = runByronOptions cmdOpts
-runTestnetCmd (StartCardanoTestnet cmdOpts) = runCardanoOptions cmdOpts
-runTestnetCmd (StartShelleyTestnet cmdOpts) = runShelleyOptions cmdOpts
-runTestnetCmd (GetVersion cmdOpts) = runVersionOptions cmdOpts
+runTestnetCmd = \case
+  StartBabbageTestnet cmdOpts -> runBabbageOptions cmdOpts
+  StartByrontestnet cmdOpts -> runByronOptions cmdOpts
+  StartCardanoTestnet cmdOpts -> runCardanoOptions cmdOpts
+  StartShelleyTestnet cmdOpts -> runShelleyOptions cmdOpts
+  GetVersion cmdOpts -> runVersionOptions cmdOpts
+  Help pPrefs pInfo cmdOpts -> runHelpOptions pPrefs pInfo cmdOpts

@@ -84,6 +84,7 @@ library
   other-modules:        Parsers.Babbage
                         Parsers.Byron
                         Parsers.Cardano
+                        Parsers.Help
                         Parsers.Shelley
                         Parsers.Version
                         Testnet
