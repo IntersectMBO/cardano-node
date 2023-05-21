@@ -1,15 +1,24 @@
 module Testnet.Parsers
   ( commands
   , runTestnetCmd
+  , pref
+  , opts
   ) where
 
 import           Data.Foldable
 import           Options.Applicative
+import qualified Options.Applicative as Opt
 import           Parsers.Babbage
 import           Parsers.Byron
 import           Parsers.Cardano
 import           Parsers.Shelley
 import           Parsers.Version
+
+pref :: ParserPrefs
+pref = Opt.prefs $ showHelpOnEmpty <> showHelpOnError
+
+opts :: ParserInfo Testnet.Parsers.CardanoTestnetCommands
+opts = Opt.info (commands <**> helper) idm
 
 -- TODO: Remove StartBabbageTestnet and StartShelleyTestnet
 -- by allowing the user to start testnets in any era (excluding Byron)
@@ -31,8 +40,8 @@ commands =
        ]
 
 runTestnetCmd :: CardanoTestnetCommands -> IO ()
-runTestnetCmd (StartBabbageTestnet opts) = runBabbageOptions opts
-runTestnetCmd (StartByrontestnet opts) = runByronOptions opts
-runTestnetCmd (StartCardanoTestnet opts) = runCardanoOptions opts
-runTestnetCmd (StartShelleyTestnet opts) = runShelleyOptions opts
-runTestnetCmd (GetVersion opts) = runVersionOptions opts
+runTestnetCmd (StartBabbageTestnet cmdOpts) = runBabbageOptions cmdOpts
+runTestnetCmd (StartByrontestnet cmdOpts) = runByronOptions cmdOpts
+runTestnetCmd (StartCardanoTestnet cmdOpts) = runCardanoOptions cmdOpts
+runTestnetCmd (StartShelleyTestnet cmdOpts) = runShelleyOptions cmdOpts
+runTestnetCmd (GetVersion cmdOpts) = runVersionOptions cmdOpts
