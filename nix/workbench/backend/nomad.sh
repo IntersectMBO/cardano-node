@@ -238,13 +238,13 @@ backend_nomad() {
       done
     ;;
 
-    allocate-run-nomad-job-patch-constraints )
+    allocate-run-nomad-job-patch-group-constraints )
       local usage="USAGE: wb backend $op RUN-DIR CONSTRAINTS-JSON-ARRAY"
       local dir=${1:?$usage}; shift
       local constraints_array=${1:?$usage}; shift
       local nomad_environment=$(envjqr 'nomad_environment')
       local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
-      jq ".[\"job\"][\"${nomad_job_name}\"][\"constraint\"] = \$constraints_array" --argjson constraints_array "${constraints_array}" "${dir}"/nomad/nomad-job.json | sponge "${dir}"/nomad/nomad-job.json
+      jq ".[\"job\"][\"${nomad_job_name}\"][\"group\"] |= with_entries(.value.constraint = \$constraints_array)" --argjson constraints_array "${constraints_array}" "${dir}"/nomad/nomad-job.json | sponge "${dir}"/nomad/nomad-job.json
     ;;
 
     # Called by the sub-backends, don't use `fatal` and let them do the cleaning
