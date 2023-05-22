@@ -45,21 +45,60 @@ import           Cardano.TxGenerator.Types
 instance Eq (SigningKey PaymentKey) where
   (==) = (==) `on` serialiseToTextEnvelope Nothing
 
+-- | 'Action' represents the individual actions to be executed by the
+-- tx-generator. It gets translated to
+-- 'Cardano.Benchmarking.Script.ActionM' using 'Env' as the
+-- state, 'IOManager' as the reader, and 'IO' as the monad, and further
+-- wrapped in an 'ExceptT' with an 'Error' as the exception.
 data Action where
+  -- | 'SetNetworkId' only entails changing a state variable in an 'Env'.
   SetNetworkId       :: !NetworkId -> Action
+  -- | 'SetSocketPath' likewise only entails a state variable change.
   SetSocketPath      :: !FilePath -> Action
+  -- | 'InitWallet' just uses the name in a state variable and creates a
+  -- fresh 'MVar' with an empty 'FundQueue' in it.
   InitWallet         :: !String -> Action
+  -- | 'StartProtocol' sets state variables for protocol and genesis,
+  -- but via 'mkNodeConfig' and 'mkConsensusProtocol' from the
+  -- "Cardano.Node" part of the module hierarchy beneath the
+  -- @cardano-node@ directory in the @cardano-node@ repo.
   StartProtocol      :: !FilePath -> !(Maybe FilePath) -> Action
+  -- | 'Delay' translates to 'threadDelay' via 'delay' in
+  -- "Cardano.Benchmarking.Script.Core".
   Delay              :: !Double -> Action
+  -- | 'ReadSigningKey' translates to a 'readFileTextEnvelopeAnyOf' from
+  -- "Cardano.Api.SerialiseTextEnvelope" on the signing key file and then
+  -- drops it into a state variable via 'setEnvKeys'.
   ReadSigningKey     :: !String -> !(SigningKeyFile In) -> Action
+  -- | 'DefineSigningKey' is just a 'Map.insert' on the state variable.
   DefineSigningKey   :: !String -> !(SigningKey PaymentKey) -> Action
+  -- | 'AddFund' is mostly a wrapper around 'walletRefInsertFund' from
+  -- "Cardano.Benchmarking.Wallet" which in turn is just 'modifyMVar'
+  -- around insertion using "Cardano.TxGenerator.FundQueue" ops.
   AddFund            :: !AnyCardanoEra -> !String -> !TxIn -> !Lovelace -> !String -> Action
+  -- | 'WaitBenchmark' signifies a 'waitCatch' on the
+  -- 'AsyncBenchmarkControl' associated with the ID and also folds
+  -- tracers into the completion. 
   WaitBenchmark      :: !String -> Action
+  -- | 'Submit' mostly wraps 'benchmarkTxStream' from
+  -- "Cardano.Benchmarking.Script.Core" which in turn wraps
+  -- 'walletBenchmark' from "Cardano.Benchmarking.GeneratorTx" which
+  -- in turn wraps 'txSubmissionClient' from
+  -- "Cardano.Benchmarking.GeneratorTx.SubmissionClient", and
+  -- functions local to that like 'requestTxs'.
   Submit             :: !AnyCardanoEra -> !SubmitMode -> !TxGenTxParams -> !Generator -> Action
+  -- | 'CancelBenchmark' wraps a callback from the 
+  -- 'AsyncBenchmarkControl' type, which is a shutdown action.
   CancelBenchmark    :: !String -> Action
+  -- | 'Reserved' just emits an error and is a placeholder that helps
+  -- with testing and quick fixes.
   Reserved           :: [String] -> Action
+  -- 'WaitForEra' loops doing delays/sleeps until the current era matches.
   WaitForEra         :: !AnyCardanoEra -> Action
+  -- | 'SetProtocolParameters' has one option to read from a file and
+  -- another to pass directly and just sets a state variable.
   SetProtocolParameters :: ProtocolParametersSource -> Action
+  -- | 'LogMsg' logs its message calling 'traceDebug' i.e. via the tracer.
   LogMsg             :: !Text -> Action
   deriving (Show, Eq)
 deriving instance Generic Action
