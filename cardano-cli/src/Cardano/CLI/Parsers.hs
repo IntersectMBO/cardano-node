@@ -49,7 +49,6 @@ parseClientCommand envCli =
     [ parseShelley envCli
     , parseByron envCli
     , parsePing
-    , parseDeprecatedShelleySubcommand envCli
     , backwardsCompatibilityCommands envCli
     , parseDisplayVersion (opts envCli)
     ]
@@ -69,23 +68,6 @@ parsePing = CliPingCommand <$> parsePingCmd
 -- | Parse Shelley-related commands at the top level of the CLI.
 parseShelley :: EnvCli -> Parser ClientCommand
 parseShelley envCli = ShelleyCommand <$> parseShelleyCommands envCli
-
--- | Parse Shelley-related commands under the now-deprecated \"shelley\"
--- subcommand.
---
--- Note that this subcommand is 'internal' and is therefore hidden from the
--- help text.
-parseDeprecatedShelleySubcommand :: EnvCli -> Parser ClientCommand
-parseDeprecatedShelleySubcommand mNetworkId =
-  subparser $ mconcat
-    [ commandGroup "Shelley specific commands (deprecated)"
-    , metavar "Shelley specific commands"
-    , command'
-        "shelley"
-        "Shelley specific commands (deprecated)"
-        (DeprecatedShelleySubcommand <$> parseShelleyCommands mNetworkId)
-    , internal
-    ]
 
 -- Yes! A --version flag or version command. Either guess is right!
 parseDisplayVersion :: ParserInfo a -> Parser ClientCommand
