@@ -250,11 +250,11 @@
     "em": {
       "flake": false,
       "locked": {
-        "lastModified": 1684271538,
-        "narHash": "sha256-rQN8OKDNrVswL3TAVLt/P2eVrfw6SwgQUzUM3LZozLw=",
+        "lastModified": 1684791668,
+        "narHash": "sha256-JyPm0RiWCfy/8rs7wd/IRSWIz+bTkD78uxIMnKktU2g=",
         "owner": "deepfire",
         "repo": "em",
-        "rev": "7e473e81a304888b41bf6eae6b161f21717598ab",
+        "rev": "302cdf6d654fb18baff0213bdfa41a653774585a",
         "type": "github"
       },
       "original": {
