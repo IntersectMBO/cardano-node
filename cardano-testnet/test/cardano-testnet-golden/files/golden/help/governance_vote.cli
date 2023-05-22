@@ -1,0 +1,11 @@
+Usage: cardano-cli governance vote (create | view | submit)
+
+  Commands related to governance votes
+
+Available options:
+  -h,--help                Show this help text
+
+Available commands:
+  create                   Create a vote
+  view                     View a vote
+  submit                   Submit a vote

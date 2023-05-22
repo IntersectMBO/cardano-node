@@ -18,7 +18,6 @@ import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 
 import           Cardano.Api
-import           Cardano.Api.Shelley hiding (DRepMetadataHash)
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (VerificationKeyOrFile, readVerificationKeyOrFile)
 import           Cardano.CLI.Types (OutputFormat (..))
@@ -44,8 +43,8 @@ renderShelleyDRepCmdError err =
 
 
 runDRepCmd :: DRepCmd -> ExceptT ShelleyDRepCmdError IO ()
-runDRepCmd (DRepRegistrationCert network sPvkey vrfVkey mbMetadata outfp) =
-  runDRepRegistrationCert network sPvkey vrfVkey mbMetadata outfp
+runDRepCmd (DRepRegistrationCert network sPvkey mbMetadata outfp) =
+  runDRepRegistrationCert network sPvkey mbMetadata outfp
 runDRepCmd (DRepRetirementCert sPvkeyFp retireEpoch outfp) =
   runDRepRetirementCert sPvkeyFp retireEpoch outfp
 runDRepCmd (DRepGetId sPvkey outputFormat) = runDRepId sPvkey outputFormat
@@ -63,15 +62,12 @@ runDRepRegistrationCert
   -- ^ Network ID.
   -> VerificationKeyOrFile DRepKey
   -- ^ DRep verification key.
-  -> VerificationKeyOrFile VrfKey
-  -- ^ VRF Verification key.
   -> Maybe DRepMetadataReference
   -- ^ DRep metadata.
   -> File () Out
   -> ExceptT ShelleyDRepCmdError IO ()
 runDRepRegistrationCert
   _drepVerKeyOrFile
-  _vrfVerKeyOrFile
   _mbMetadata
   _network
   _outfp = error "Not implemented"

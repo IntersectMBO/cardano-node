@@ -27,6 +27,7 @@ module Cardano.CLI.Shelley.Key
   , generateKeyPair
 
   , PoolDelegationTarget(..)
+  , DRepDelegationTarget(..)
   ) where
 
 import           Cardano.Api
@@ -113,10 +114,15 @@ data StakeIdentifier
   | StakeIdentifierAddress StakeAddress
   deriving (Eq, Show)
 
--- | A resource that identifies the delegation target.  At the moment a delegation
+-- | A resource that identifies the pool delegation target.  At the moment a delegation
 -- target can only be a stake pool.
 newtype PoolDelegationTarget
   = StakePoolDelegationTarget (VerificationKeyOrHashOrFile StakePoolKey)
+  deriving Show
+
+-- | A resource that identifies the drep delegation target.
+newtype DRepDelegationTarget
+  = DRepDelegationTarget (VerificationKeyOrHashOrFile DRepKey)
   deriving Show
 
 -- | Either an unvalidated text representation of a verification key or a path

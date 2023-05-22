@@ -1,4 +1,4 @@
-Usage: cardano-cli stake-address delegation-certificate 
+Usage: cardano-cli stake-address pool-delegation-certificate 
             ( --stake-verification-key STRING
             | --stake-verification-key-file FILE
             | --stake-script-file FILE

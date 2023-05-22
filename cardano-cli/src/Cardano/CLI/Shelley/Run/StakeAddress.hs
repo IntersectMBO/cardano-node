@@ -20,9 +20,9 @@ import qualified Data.Text.IO as Text
 import           Cardano.Api
 import           Cardano.Api.Shelley
 
-import           Cardano.CLI.Shelley.Key (PoolDelegationTarget (..), StakeIdentifier (..),
-                   StakeVerifier (..), VerificationKeyOrFile, readVerificationKeyOrFile,
-                   readVerificationKeyOrHashOrFile)
+import           Cardano.CLI.Shelley.Key (DRepDelegationTarget (..), PoolDelegationTarget (..),
+                   StakeIdentifier (..), StakeVerifier (..), VerificationKeyOrFile,
+                   readVerificationKeyOrFile, readVerificationKeyOrHashOrFile)
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Shelley.Run.Read
 import           Cardano.CLI.Types
@@ -51,6 +51,8 @@ runStakeAddressCmd (StakeRegistrationCert stakeIdentifier outputFp) =
   runStakeCredentialRegistrationCert stakeIdentifier outputFp
 runStakeAddressCmd (StakeCredentialPoolDelegationCert stakeIdentifier stkPoolVerKeyHashOrFp outputFp) =
   runStakeCredentialPoolDelegationCert stakeIdentifier stkPoolVerKeyHashOrFp outputFp
+runStakeAddressCmd (StakeCredentialDRepDelegationCert stakeIdentifier stkPoolVerKeyHashOrFp outputFp) =
+  runStakeCredentialDRepDelegationCert stakeIdentifier stkPoolVerKeyHashOrFp outputFp
 runStakeAddressCmd (StakeCredentialDeRegistrationCert stakeIdentifier outputFp) =
   runStakeCredentialDeRegistrationCert stakeIdentifier outputFp
 
@@ -146,6 +148,17 @@ runStakeCredentialPoolDelegationCert stakeVerifier delegationTarget outFp =
         . newExceptT
         $ writeLazyByteStringFile outFp
         $ textEnvelopeToJSON (Just @TextEnvelopeDescr "Stake Address Delegation Certificate") delegCert
+
+runStakeCredentialDRepDelegationCert
+  :: StakeIdentifier
+  -- ^ Delegator stake verification key, verification key file or script file.
+  -> DRepDelegationTarget
+  -- ^ Delegatee drep verification key or verification key file or
+  -- verification key hash.
+  -> File Certificate Out
+  -> ExceptT ShelleyStakeAddressCmdError IO ()
+runStakeCredentialDRepDelegationCert _stakeVerifier _delegationTarget _outFp =
+  error "TODO CIP-1694 Not implemented"
 
 runStakeCredentialDeRegistrationCert
   :: StakeIdentifier

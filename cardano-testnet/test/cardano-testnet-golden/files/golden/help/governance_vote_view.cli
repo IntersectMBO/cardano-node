@@ -1,0 +1,7 @@
+Usage: cardano-cli governance vote view --vote-file FILE
+
+  View a vote
+
+Available options:
+  --vote-file FILE         Input filepath of the governance vote.
+  -h,--help                Show this help text

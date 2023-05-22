@@ -1,0 +1,18 @@
+Usage: cardano-cli governance vote submit --socket-path SOCKET_PATH
+            (--mainnet | --testnet-magic NATURAL)
+            --vote-file FILE
+
+  Submit a vote
+
+Available options:
+  --socket-path SOCKET_PATH
+                           Path to the node socket. This overrides the
+                           CARDANO_NODE_SOCKET_PATH environment variable. The
+                           argument is optional if CARDANO_NODE_SOCKET_PATH is
+                           defined and mandatory otherwise.
+  --mainnet                Use the mainnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --testnet-magic NATURAL  Specify a testnet magic id. This overrides the
+                           CARDANO_NODE_NETWORK_ID environment variable
+  --vote-file FILE         Input filepath of the governance vote.
+  -h,--help                Show this help text

@@ -1,0 +1,15 @@
+Usage: cardano-cli governance vote create --signing-key-file FILE
+            --action-file FILE
+            (--vote-yes | --vote-no | --vote-abstain)
+            --out-file FILE
+
+  Create a vote
+
+Available options:
+  --signing-key-file FILE  Input filepath of the signing key.
+  --action-file FILE       Input filepath of the governance action.
+  --vote-yes               Specify the Byron era
+  --vote-no                Specify the Byron era
+  --vote-abstain           Specify the Byron era
+  --out-file FILE          The output file.
+  -h,--help                Show this help text

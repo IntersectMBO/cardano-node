@@ -1,0 +1,30 @@
+Usage: cardano-cli stake-address drep-delegation-certificate 
+            ( --stake-verification-key STRING
+            | --stake-verification-key-file FILE
+            | --stake-script-file FILE
+            | --stake-address ADDRESS
+            )
+            [ --drep-verification-key STRING
+            | --drep-cold-verification-key-file FILE
+            | --drep-id DREP_ID
+            ]
+            --out-file FILE
+
+  Create a stake address drep delegation certificate
+
+Available options:
+  --stake-verification-key STRING
+                           Stake verification key (Bech32 or hex-encoded).
+  --stake-verification-key-file FILE
+                           Filepath of the staking verification key.
+  --stake-script-file FILE Filepath of the staking script.
+  --stake-address ADDRESS  Target stake address (bech32 format).
+  --drep-verification-key STRING
+                           DRep verification key (Bech32 or hex-encoded).
+  --drep-cold-verification-key-file FILE
+                           Filepath of the drep verification key.
+  --drep-id DREP_ID        DRep ID/verification key hash (either Bech32-encoded
+                           or hex-encoded). Zero or more occurences of this
+                           option is allowed.
+  --out-file FILE          The output file.
+  -h,--help                Show this help text
