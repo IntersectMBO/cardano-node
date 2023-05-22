@@ -10,6 +10,21 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+{-|
+Module      : Cardano.Benchmarking.Script.Env
+Description : State type for 'ActionM' monad stack and its accessors.
+
+The 'Env' type is the ADT for the state component of the 'ActionM'
+monad stack. Its actual definition isn't exported in part because of a
+transition from an earlier very generic and polymorphic definition.
+In a number of respects, this module covers more of the 'ActionM'
+like 'runActionM' and 'liftTxGenError', but the only significant
+structure is 'Env' for state. The accessors could likely be removed
+in favour of just using the record syntax to trim a few lines of
+code at the cost of exposing the structure's internals. Some of the
+naming related to the fact that "Cardano.Benchmarking.Script.Action"
+ran into circular dependency issues during the above transition.
+ -}
 module Cardano.Benchmarking.Script.Env (
         ActionM
         , Error(..)
@@ -72,7 +87,13 @@ import           Cardano.TxGenerator.PlutusContext (PlutusBudgetSummary)
 import           Cardano.TxGenerator.Types (TxGenError (..))
 
 
-data Env = Env { protoParams :: Maybe ProtocolParameterMode
+-- | The 'Env' type represents the state maintained while executing
+-- a series of actions. The 'Maybe' types are largely to represent
+-- as-of-yet unset values.
+data Env = Env { -- | 'Cardano.Api.ProtocolParameters' is ultimately
+                 -- wrapped by 'ProtocolParameterMode' which itself is
+                 -- a sort of custom 'Maybe'.
+                 protoParams :: Maybe ProtocolParameterMode
                , benchTracers :: Maybe Tracer.BenchTracers
                , envGenesis :: Maybe (ShelleyGenesis StandardCrypto)
                , envProtocol :: Maybe SomeConsensusProtocol
@@ -105,6 +126,16 @@ runActionM = runActionMEnv emptyEnv
 runActionMEnv :: Env -> ActionM ret -> IOManager -> IO (Either Error ret, Env, ())
 runActionMEnv env action iom = RWS.runRWST (runExceptT action) iom env
 
+-- | 'Error' adds two cases to 'Cardano.TxGenerator.Types.TxGenError' 
+-- which in turn wraps 'Cardano.Api.Error' implicit contexts to a
+-- couple of its constructors. These represent errors that might arise
+-- in the execution of a transaction with some distinctions as to the
+-- layers where the errors could arise. At this highest level, invalid
+-- users and wallets are potentially encountered. Plutus, protocol, API
+-- and some arbitrary errors are potentially encountered at the next
+-- layer. The layers correspond to "Cardano.Benchmarking.Script.Core"
+-- for the outermost and "Cardano.Benchmarking.Set.Plutus" for the
+-- middle, and the innermost to "Cardano.Api.Error".
 data Error where
   TxGenError  :: !TxGenError -> Error
   UserError   :: !String     -> Error

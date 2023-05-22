@@ -52,6 +52,9 @@ inputsToOutputsWithFee fee count inputs =
     Quantity totalAvailable = lovelaceToQuantity $ total - fee
     (out, rest) = divMod totalAvailable (fromIntegral count)
 
+-- | 'includeChange' gets use made of it as a value splitter in
+-- 'Cardano.TxGenerator.Tx.sourceToStoreTransactionNew' by
+-- 'Cardano.Benchmarking.Script.Core.evalGenerator'.
 includeChange :: Lovelace -> [Lovelace] -> [Lovelace] -> PayWithChange
 includeChange fee spend have = case compare changeValue 0 of
   GT -> PayWithChange changeValue spend

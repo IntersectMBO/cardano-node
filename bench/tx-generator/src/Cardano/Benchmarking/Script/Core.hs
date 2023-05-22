@@ -298,6 +298,11 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
           return $ Right tx
       return $ Streaming.effect (Streaming.yield <$> gen)
 
+    -- 'Split' combines regular payments and payments for change.
+    -- There are lists of payments buried in the 'PayWithChange'
+    -- type conditionally sent back by 'Utils.includeChange', to
+    -- then be used while partially applied as the @valueSplitter@
+    -- in 'sourceToStoreTransactionNew'.
     Split walletName payMode payModeChange coins -> do
       wallet <- getEnvWallets walletName
       (toUTxO, addressOut) <- interpretPayMode payMode
@@ -311,6 +316,11 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
       sourceToStore <- withTxGenError . sourceToStoreTransactionNew txGenerator inputFunds inToOut $ mangleWithChange (liftIOCreateAndStore toUTxOChange) (liftIOCreateAndStore toUTxO)
       return . Streaming.effect . pure . Streaming.yield $ Right sourceToStore
 
+    -- The 'SplitN' case's call chain is somewhat elaborate.
+    -- The division is done in 'Utils.inputsToOutputsWithFee' 
+    -- but things are threaded through
+    -- 'Cardano.Benchmarking.Wallet.mangle' and packed into
+    -- the transaction assembled by 'sourceToStoreTransactionNew'.
     SplitN walletName payMode count -> do
       wallet <- getEnvWallets walletName
       (toUTxO, addressOut) <- interpretPayMode payMode
