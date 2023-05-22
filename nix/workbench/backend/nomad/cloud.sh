@@ -209,22 +209,45 @@ backend_nomadcloud() {
         "${dir}"/container-specs.json              \
       > "${dir}"/nomad/nomad-job.json
       # The job file is "slightly" modified (jq) to suit the running environment.
-      backend_nomad allocate-run-nomad-job-patch-namespace   "${dir}" "${NOMAD_NAMESPACE}"
-      backend_nomad allocate-run-nomad-job-patch-nix         "${dir}"
-      # Right now only testing, using "qa" class distinct nodes!
-      backend_nomad allocate-run-nomad-job-patch-constraints "${dir}" \
-        "[                                                    \
-              {                                               \
+      backend_nomad allocate-run-nomad-job-patch-namespace         "${dir}" "${NOMAD_NAMESPACE}"
+      backend_nomad allocate-run-nomad-job-patch-nix               "${dir}"
+      if test -z "${WB_SHELL_PROFILE}"
+      then
+        fatal "Envar \"WB_SHELL_PROFILE\" is empty!"
+      else
+        if test "${WB_SHELL_PROFILE:0:6}" != 'cw-perf'
+        then
+          # Right now only "live" is using "perf" class distinct nodes!
+          backend_nomad allocate-run-nomad-job-patch-group-constraints "${dir}" \
+            "[                                                \
+                {                                             \
                   \"operator\":  \"=\"                        \
                 , \"attribute\": \"\${node.class}\"           \
-                , \"value\":     \"qa\"                       \
-              }                                               \
-            , {                                               \
+                , \"value\":     \"perf\"                     \
+                }                                             \
+              , {                                             \
                   \"operator\":  \"distinct_property\"        \
                 , \"attribute\": \"\${attr.unique.hostname}\" \
                 , \"value\":     1                            \
-              }                                               \
-         ]"
+                }                                             \
+            ]"
+        else
+          # Right now only testing, using "qa" class distinct nodes!
+          backend_nomad allocate-run-nomad-job-patch-group-constraints "${dir}" \
+            "[                                                \
+                {                                             \
+                  \"operator\":  \"=\"                        \
+                , \"attribute\": \"\${node.class}\"           \
+                , \"value\":     \"qa\"                       \
+                }                                             \
+              , {                                             \
+                  \"operator\":  \"distinct_property\"        \
+                , \"attribute\": \"\${attr.unique.hostname}\" \
+                , \"value\":     1                            \
+                }                                             \
+            ]"
+        fi
+      fi
 
       backend_nomad allocate-run "${dir}"
     ;;

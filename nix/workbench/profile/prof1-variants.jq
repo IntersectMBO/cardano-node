@@ -173,13 +173,21 @@ def all_profile_variants:
       }
     } as $chainsync_cluster
   |
-    # Uses: ["eu-west-1", "eu-central-1", "us-east-2"]
+    # "qa" class Nomad Nodes in ["eu-central-1", "us-east-2"] datacenters
     { composition:
       { locations:                      ["EU", "US"]
       , topology:                       "torus"
       , with_explorer:                  true
       }
     } as $cardano_world_qa
+  |
+    # "perf" class Nomad Nodes in ["eu-central-1", "us-east-2", "ap-southeast-2"] datacenters
+    { composition:
+      { locations:                      ["EU", "US", "AP"]
+      , topology:                       "torus"
+      , with_explorer:                  true
+      }
+    } as $cardano_world_perf
   |
   ##
   ### Definition vocabulary:  filtering
@@ -262,7 +270,7 @@ def all_profile_variants:
     ) as $current_tps_saturation_value
   | ({}|
      .generator.tps                   = 12
-    ) as $cwqa_tps_saturation_value
+    ) as $cw_perf_tps_saturation_value
   | ({}|
      .generator.tps                   = 9
     ) as $model_tps_saturation_value
@@ -405,9 +413,9 @@ def all_profile_variants:
     { scenario:                        "fixed-loaded"
     }) as $scenario_fixed_loaded
   |
-   ($model_timescale * $cwqa_tps_saturation_value *
+   ($model_timescale * $cw_perf_tps_saturation_value *
     { scenario:                        "fixed-loaded"
-    }) as $scenario_cwqa
+    }) as $scenario_cw_perf
   |
    ($model_timescale * $model_tps_saturation_value *
     { scenario:                        "fixed-loaded"
@@ -452,7 +460,7 @@ def all_profile_variants:
       , desc: "Small dataset, honest 15 epochs duration"
     }) as $plutuscall_base
   |
-   ($scenario_cwqa * $compose_fiftytwo * $dataset_oct2021 * $for_7ep *
+   ($scenario_cw_perf * $compose_fiftytwo * $dataset_oct2021 * $for_7ep *
     { node:
         { shutdown_on_slot_synced:        56000
         }
@@ -467,7 +475,7 @@ def all_profile_variants:
         , max_block_size:                 88000
         }
       , desc: "AWS c5-2xlarge cluster dataset, 7 epochs"
-    }) as $cwqa_base
+    }) as $cw_perf_base
   |
    ($scenario_model * $quadruplet * $dataset_current * $for_7ep *
     { node:
@@ -584,7 +592,7 @@ def all_profile_variants:
     , desc: "Idle scenario:  start only the tracer & detach from tty;  no termination"
     }
   , $cardano_world_qa *
-    { name: "cwqa-default"
+    { name: "cw-qa-default"
     , desc: "Default, but on Cardano World QA"
     }
 
@@ -622,7 +630,8 @@ def all_profile_variants:
     { name: "ci-test-rtview"
     }
   , $citest_base * $cardano_world_qa *
-    { name: "cwqa-ci-test"
+    { name: "cw-qa-ci-test"
+    , desc: "ci-test, but on Cardano World QA"
     }
 
   ## CI variants: bench duration, 15 blocks
@@ -648,7 +657,8 @@ def all_profile_variants:
     { name: "ci-bench-rtview"
     }
   , $cibench_base * $cardano_world_qa *
-    { name: "cwqa-ci-bench"
+    { name: "cw-qa-ci-bench"
+    , desc: "ci-bench but on Cardano World QA"
     }
 
   ## CI variants: test duration, 3 blocks, dense10
@@ -704,9 +714,9 @@ def all_profile_variants:
     { name: "plutuscall-secp-schnorr-double"
     }
 
-## Cardano World QA cluster: 52 nodes, 2 regions, value variant
-  , $cwqa_base * $cardano_world_qa *
-    { name: "cwqa-value"
+## Cardano World QA cluster: 52 nodes, 3 regions, value variant
+  , $cw_perf_base * $cardano_world_perf *
+    { name: "cw-perf-value"
     }
 
 ## Model value variant: 7 epochs (128GB RAM needed; 16GB for testing locally)

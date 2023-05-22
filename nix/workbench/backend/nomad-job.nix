@@ -162,19 +162,7 @@ let
     #  A list of datacenters in the region which are eligible for task
     # placement. This must be provided, and does not have a default.
     # SRE: Only 3 Nomad datacenters exist actually.
-    datacenters = [ "eu-central-1" "eu-west-1" "us-east-2" ];
-
-    # This can be provided multiple times to define additional constraints. See
-    # the Nomad constraint reference for more details.
-    # https://developer.hashicorp.com/nomad/docs/job-specification/constraint
-    constraint = {
-      attribute = "\${node.class}";
-      operator = "=";
-      # For testing best to avoid using "infra" node class as HA jobs runs
-      # there, for benchmarking dedicated static machines are need and this
-      # should be updated accordingly.
-      value = "qa";
-    };
+    datacenters = [ "eu-central-1" "us-east-2" "ap-southeast-2" ];
 
     # The reschedule stanza specifies the group's rescheduling strategy. If
     # specified at the job level, the configuration will apply to all groups
@@ -260,6 +248,18 @@ let
                 value     = region;
               }
         ;
+
+        # This can be provided multiple times to define additional constraints.
+        # See the Nomad constraint reference for more details.
+        # https://developer.hashicorp.com/nomad/docs/job-specification/constraint
+        constraint = {
+          attribute = "\${node.class}";
+          operator = "=";
+          # For testing best to avoid using "infra" node class as HA jobs runs
+          # there, for benchmarking dedicated static machines in the "perf"
+          # class are used and this value should be updated accordingly.
+          value = "qa";
+        };
 
         # The network stanza specifies the networking requirements for the task
         # group, including the network mode and port allocations.
