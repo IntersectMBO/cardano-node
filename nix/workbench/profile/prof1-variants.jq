@@ -155,6 +155,12 @@ def all_profile_variants:
     } as $tenner
   |
     { composition:
+      { n_singular_hosts:               52
+      , n_dense_hosts:                  0
+      }
+    } as $compose_fiftytwo
+  |
+    { composition:
       { topology:                       "torus"
       }
     } as $torus
@@ -254,6 +260,9 @@ def all_profile_variants:
   | ({}|
      .generator.tps                   = 15
     ) as $current_tps_saturation_value
+  | ({}|
+     .generator.tps                   = 12
+    ) as $cwqa_tps_saturation_value
   | ({}|
      .generator.tps                   = 9
     ) as $model_tps_saturation_value
@@ -396,6 +405,10 @@ def all_profile_variants:
     { scenario:                        "fixed-loaded"
     }) as $scenario_fixed_loaded
   |
+   ($model_timescale * $cwqa_tps_saturation_value *
+    { scenario:                        "fixed-loaded"
+    }) as $scenario_cwqa
+  |
    ($model_timescale * $model_tps_saturation_value *
     { scenario:                        "fixed-loaded"
     }) as $scenario_model
@@ -438,6 +451,23 @@ def all_profile_variants:
         }
       , desc: "Small dataset, honest 15 epochs duration"
     }) as $plutuscall_base
+  |
+   ($scenario_cwqa * $compose_fiftytwo * $dataset_oct2021 * $for_7ep *
+    { node:
+        { shutdown_on_slot_synced:        56000
+        }
+      , analysis:
+        { filters:                        ["epoch3+", "size-full"]
+        }
+      , generator:
+        { init_cooldown:                  45
+        }
+      , genesis:
+        { funds_balance:                  20000000000000
+        , max_block_size:                 88000
+        }
+      , desc: "AWS c5-2xlarge cluster dataset, 7 epochs"
+    }) as $cwqa_base
   |
    ($scenario_model * $quadruplet * $dataset_current * $for_7ep *
     { node:
@@ -554,8 +584,8 @@ def all_profile_variants:
     , desc: "Idle scenario:  start only the tracer & detach from tty;  no termination"
     }
   , $cardano_world_qa *
-    { name: "cardano-world-qa"
-    , desc: "Default, as per nix/workbench/profile/prof0-defaults.jq"
+    { name: "cwqa-default"
+    , desc: "Default, but on Cardano World QA"
     }
 
   ## Fastest profile to pass analysis: just 1 block
@@ -592,7 +622,7 @@ def all_profile_variants:
     { name: "ci-test-rtview"
     }
   , $citest_base * $cardano_world_qa *
-    { name: "cardano-world-qa-test"
+    { name: "cwqa-ci-test"
     }
 
   ## CI variants: bench duration, 15 blocks
@@ -618,7 +648,7 @@ def all_profile_variants:
     { name: "ci-bench-rtview"
     }
   , $cibench_base * $cardano_world_qa *
-    { name: "cardano-world-qa-bench"
+    { name: "cwqa-ci-bench"
     }
 
   ## CI variants: test duration, 3 blocks, dense10
@@ -672,6 +702,11 @@ def all_profile_variants:
     }
   , $plutus_base * $costmodel_v8_preview_doubleb * $plutuscall_base * $double_tps_saturation_plutus * $plutus_loop_secp_schnorr *
     { name: "plutuscall-secp-schnorr-double"
+    }
+
+## Cardano World QA cluster: 52 nodes, 2 regions, value variant
+  , $cwqa_base * $cardano_world_qa *
+    { name: "cwqa-value"
     }
 
 ## Model value variant: 7 epochs (128GB RAM needed; 16GB for testing locally)
