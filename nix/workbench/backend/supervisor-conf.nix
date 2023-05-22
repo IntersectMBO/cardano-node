@@ -1,7 +1,8 @@
 { pkgs
 , lib
 , stateDir
-, profileData
+, nodeSpecs
+, withTracer
 , unixHttpServerPort ? null
 , inetHttpServerPort ? null
 }:
@@ -63,7 +64,7 @@ let
       };
     }
     //
-    lib.attrsets.optionalAttrs (profileData.value.node.tracer)
+    lib.attrsets.optionalAttrs withTracer
     {
       "program:tracer" = {
         # "command" below assumes "directory" is set accordingly.
@@ -82,25 +83,23 @@ let
       };
     }
     //
-    listToAttrs
-      (flip mapAttrsToList profileData.node-services
-        (_: { nodeSpec, service, ... }:
-          nameValuePair "program:${nodeSpec.value.name}" {
-            # "command" below assumes "directory" is set accordingly.
-            directory      = "${stateDir}/${nodeSpec.value.name}";
-            command        = "${command}";
-            stdout_logfile = "${stateDir}/${nodeSpec.value.name}/stdout";
-            stderr_logfile = "${stateDir}/${nodeSpec.value.name}/stderr";
-            stopasgroup    = false;
-            killasgroup    = false;
-            autostart      = false;
-            autorestart    = false;
-            # Don't attempt any restart!
-            startretries   = 0;
-            # Seconds it needs to stay running to consider the start successful
-            startsecs      = 5;
-          })
-        )
+    (builtins.listToAttrs (lib.mapAttrsToList (nodeName: nodeSpec:
+      lib.attrsets.nameValuePair "program:${nodeName}" {
+        # "command" below assumes "directory" is set accordingly.
+        directory      = "${stateDir}/${nodeName}";
+        command        = "${command}";
+        stdout_logfile = "${stateDir}/${nodeName}/stdout";
+        stderr_logfile = "${stateDir}/${nodeName}/stderr";
+        stopasgroup    = false;
+        killasgroup    = false;
+        autostart      = false;
+        autorestart    = false;
+        # Don't attempt any restart!
+        startretries   = 0;
+        # Seconds it needs to stay running to consider the start successful
+        startsecs      = 5;
+      })
+    nodeSpecs))
     ##
     ## [unix_http_server] Section Settings
     ##

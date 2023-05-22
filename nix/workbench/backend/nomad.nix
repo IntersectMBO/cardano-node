@@ -15,13 +15,6 @@ let
   materialise-profile =
     { profileData }:
       let
-        supervisorConf = import ./supervisor-conf.nix
-          { inherit profileData;
-            inherit pkgs lib stateDir;
-            # ''{{ env "NOMAD_TASK_DIR" }}/supervisor.sock''
-            unixHttpServerPort = "/tmp/supervisor.sock";
-          }
-        ;
         # Intermediate / workbench-adhoc container specifications
         containerSpecs = rec {
           #
@@ -120,19 +113,17 @@ let
             podman = {
               # TODO: oneTracerPerGroup
               oneTracerPerCluster = import ./nomad-job.nix
-                { inherit lib stateDir;
+                { inherit pkgs lib stateDir;
                   inherit profileData;
                   inherit containerSpecs;
-                  inherit supervisorConf;
                   # May evolve to a "cloud" flag!
                   execTaskDriver = false;
                   oneTracerPerNode = false;
                 };
               oneTracerPerNode = import ./nomad-job.nix
-                { inherit lib stateDir;
+                { inherit pkgs lib stateDir;
                   inherit profileData;
                   inherit containerSpecs;
-                  inherit supervisorConf;
                   # May evolve to a "cloud" flag!
                   execTaskDriver = false;
                   oneTracerPerNode = true;
@@ -141,19 +132,17 @@ let
             exec = {
               # TODO: oneTracerPerGroup
               oneTracerPerCluster = import ./nomad-job.nix
-                { inherit lib stateDir;
+                { inherit pkgs lib stateDir;
                   inherit profileData;
                   inherit containerSpecs;
-                  inherit supervisorConf;
                   # May evolve to a "cloud" flag!
                   execTaskDriver = true;
                   oneTracerPerNode = false;
                 };
               oneTracerPerNode = import ./nomad-job.nix
-                { inherit lib stateDir;
+                { inherit pkgs lib stateDir;
                   inherit profileData;
                   inherit containerSpecs;
-                  inherit supervisorConf;
                   # May evolve to a "cloud" flag!
                   execTaskDriver = true;
                   oneTracerPerNode = true;
