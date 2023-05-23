@@ -1577,7 +1577,7 @@ EOF
           local eval_id=${1:?$usage}; shift
           local msgoff=${1:?$usage}; shift
           "${msgoff}" || msg "$(blue Waiting) for Nomad $(yellow "Evaluation \"${eval_id}\"") to be \"complete\" ..."
-          local status
+          local status=""
           local status_response
           while ! test -f "${job_file}.run/job.error" && ( test "${status:-pending}" = "pending" || test "${status:-running}" = "running" )
           do
@@ -1648,7 +1648,7 @@ EOF
           local deploy_id=${1:?$usage}; shift
           local msgoff=${1:?$usage}; shift
           "${msgoff}" || msg "$(blue Waiting) for Nomad $(yellow "Deployment \"${deploy_id}\"") to be \"successful\" ..."
-          local status
+          local status=""
           local status_response
           while ! test -f "${job_file}.run/job.error" && ! test -f "${job_file}.run/allocations.ok" && ( test "${status:-pending}" = "pending" || test "${status:-running}" = "running" )
           do
@@ -1695,7 +1695,7 @@ EOF
           local alloc_id=${1:?$usage}; shift
           local msgoff=${1:?$usage}; shift
           "${msgoff}" || msg "$(blue Waiting) for Nomad $(yellow "Allocation \"${alloc_id}\"") to be \"running\" ..."
-          local status
+          local status=""
           local status_response
           while ! test -f "${job_file}.run/job.error" && test "${status:-pending}" = "pending"
           do
@@ -1770,7 +1770,7 @@ EOF
           local task_name=${1:?$usage}; shift
           local msgoff=${1:?$usage}; shift
           "${msgoff}" || msg "$(blue Waiting) for Nomad $(yellow "Task \"${task_name}\"") to be \"running\" ..."
-          local status
+          local status=""
           local status_response
           while ! test -f "${job_file}.run/job.error" && test "${status:-pending}" = "pending"
           do
