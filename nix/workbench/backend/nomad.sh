@@ -431,14 +431,17 @@ backend_nomad() {
       local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
 
       msg "Fetch Nomad generated files ..."
+      local jobs_array=()
       # Only used for debugging!
       backend_nomad download-config-generator "${dir}" &
+      jobs_array+=("$!")
       # For every node ...
       local nodes=($(jq_tolist keys "$dir"/node-specs.json))
       for node in ${nodes[*]}
       do
         # Only used for debugging!
         backend_nomad download-config-node "${dir}" "${node}" &
+        jobs_array+=("$!")
       done
       # This same script looks for the socket path inside the tracer config
       if test "${one_tracer_per_node}" = "true"
@@ -446,13 +449,25 @@ backend_nomad() {
         local nodes=($(jq_tolist keys "$dir"/node-specs.json))
         for node in ${nodes[*]}
         do
-          backend_nomad download-config-tracer "${dir}" "${node}"
+          backend_nomad download-config-tracer "${dir}" "${node}" &
+          jobs_array+=("$!")
         done
       else
-        backend_nomad download-config-tracer   "${dir}" "tracer"
+        backend_nomad download-config-tracer   "${dir}" "tracer" &
+        jobs_array+=("$!")
       fi
 
-      msg "Finished fetching Nomad generated files"
+      # Wait and check!
+      if test -n "${jobs_array}"
+      then
+        if ! wait_fail_any "${jobs_array[@]}"
+        then
+          backend_nomad stop-nomad-job "${dir}"
+          fatal "Downloads failed!"
+        else
+          msg "Finished fetching Nomad generated files"
+        fi
+      fi
     ;;
 
     nomad-agents-topology )
