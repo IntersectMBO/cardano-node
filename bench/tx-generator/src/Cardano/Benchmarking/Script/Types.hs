@@ -10,6 +10,19 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
+{-|
+Module      : Cardano.Benchmarking.Script.Types
+Description : Types used within transaction generator scripts.
+
+'Action' is likely the most impactful type exported, as it represents
+the individual steps to be executed by the transaction generator at
+the system level; however, 'Generator' is much more of what one thinks
+of transactions themselves being. The 'Generator' has to do with
+combining streams of the transactions one typically might think of
+doing with a wallet, where the 'Action' level largely sees those
+transactions as interchangeable, and focuses more on the variety of
+things one might do with the connexion.
+ -}
 module Cardano.Benchmarking.Script.Types (
           Action(..)
         , Generator(Cycle, NtoM, OneOf, RoundRobin, SecureGenesis,
@@ -48,47 +61,56 @@ instance Eq (SigningKey PaymentKey) where
 -- | 'Action' represents the individual actions to be executed by the
 -- tx-generator. It gets translated to
 -- 'Cardano.Benchmarking.Script.ActionM' using 'Env' as the
--- state, 'IOManager' as the reader, and 'IO' as the monad, and further
--- wrapped in an 'ExceptT' with an 'Error' as the exception.
+-- state, 'Ouroboros.Network.IOManager' as the reader, and 'IO' as the
+-- monad, and further wrapped in an 'Control.Monad.Except.ExceptT' with
+-- an 'Cardano.Benchmarking.Env.Error' as the exception.
 data Action where
   -- | 'SetNetworkId' only entails changing a state variable in an 'Env'.
   SetNetworkId       :: !NetworkId -> Action
   -- | 'SetSocketPath' likewise only entails a state variable change.
   SetSocketPath      :: !FilePath -> Action
   -- | 'InitWallet' just uses the name in a state variable and creates a
-  -- fresh 'MVar' with an empty 'FundQueue' in it.
+  -- fresh 'Control.Concurrent.MVar' with an empty
+  -- 'Cardano.TxGenerator.FundQueue.FundQueue' in it.
   InitWallet         :: !String -> Action
   -- | 'StartProtocol' sets state variables for protocol and genesis,
-  -- but via 'mkNodeConfig' and 'mkConsensusProtocol' from the
-  -- "Cardano.Node" part of the module hierarchy beneath the
-  -- @cardano-node@ directory in the @cardano-node@ repo.
+  -- but via 'Cardano.TxGenerator.Setup.NodeConfig.mkNodeConfig' and
+  -- 'Cardano.Node.Protocol.mkConsensusProtocol'. The first unravels
+  -- to reading wide a variety of config files in
+  -- 'Cardano.Node.Configuration.POM.makeNodeConfiguration' and The
+  -- second unravels to reading genesis content in helper functions
+  -- spread across eras.
   StartProtocol      :: !FilePath -> !(Maybe FilePath) -> Action
-  -- | 'Delay' translates to 'threadDelay' via 'delay' in
-  -- "Cardano.Benchmarking.Script.Core".
+  -- | 'Delay' translates to 'Control.Concurrent.threadDelay' via
+  -- 'Cardano.Benchmarking.Script.delay'.
   Delay              :: !Double -> Action
   -- | 'ReadSigningKey' translates to a 'readFileTextEnvelopeAnyOf' from
   -- "Cardano.Api.SerialiseTextEnvelope" on the signing key file and then
-  -- drops it into a state variable via 'setEnvKeys'.
+  -- drops it into a state variable via
+  -- 'Cardano.Benchmarking.Script.Env.setEnvKeys'.
   ReadSigningKey     :: !String -> !(SigningKeyFile In) -> Action
   -- | 'DefineSigningKey' is just a 'Map.insert' on the state variable.
   DefineSigningKey   :: !String -> !(SigningKey PaymentKey) -> Action
-  -- | 'AddFund' is mostly a wrapper around 'walletRefInsertFund' from
-  -- "Cardano.Benchmarking.Wallet" which in turn is just 'modifyMVar'
-  -- around insertion using "Cardano.TxGenerator.FundQueue" ops.
+  -- | 'AddFund' is mostly a wrapper around
+  -- 'Cardano.Benchmarking.Wallet.walletRefInsertFund' which in turn
+  -- is just 'Control.Concurrent.modifyMVar' around
+  -- 'Cardano.TxGenerator.FundQueue.insert'.
   AddFund            :: !AnyCardanoEra -> !String -> !TxIn -> !Lovelace -> !String -> Action
-  -- | 'WaitBenchmark' signifies a 'waitCatch' on the
-  -- 'AsyncBenchmarkControl' associated with the ID and also folds
-  -- tracers into the completion. 
+  -- | 'WaitBenchmark' signifies a 'Control.Concurrent.Async.waitCatch'
+  -- on the 'Cardano.Benchmarking.GeneratorTx.AsyncBenchmarkControl'
+  -- associated with the ID and also folds tracers into the completion. 
   WaitBenchmark      :: !String -> Action
-  -- | 'Submit' mostly wraps 'benchmarkTxStream' from
-  -- "Cardano.Benchmarking.Script.Core" which in turn wraps
-  -- 'walletBenchmark' from "Cardano.Benchmarking.GeneratorTx" which
-  -- in turn wraps 'txSubmissionClient' from
-  -- "Cardano.Benchmarking.GeneratorTx.SubmissionClient", and
-  -- functions local to that like 'requestTxs'.
+  -- | 'Submit' mostly wraps
+  -- 'Cardano.Benchamrking.Script.Core.benchmarkTxStream'
+  -- which in turn wraps
+  -- 'Cardano.Benchmarking.GeneratorTx.walletBenchmark' which
+  -- in turn wraps
+  -- 'Cardano.Benchmarking.GeneratorTx.SubmissionClient.txSubmissionClient'
+  -- and functions local to that like @requestTxs@.
   Submit             :: !AnyCardanoEra -> !SubmitMode -> !TxGenTxParams -> !Generator -> Action
   -- | 'CancelBenchmark' wraps a callback from the 
-  -- 'AsyncBenchmarkControl' type, which is a shutdown action.
+  -- 'Cardano.Benchmarking.GeneratorTx.AsyncBenchmarkControl' type,
+  -- which is a shutdown action.
   CancelBenchmark    :: !String -> Action
   -- | 'Reserved' just emits an error and is a placeholder that helps
   -- with testing and quick fixes.
@@ -96,9 +118,11 @@ data Action where
   -- 'WaitForEra' loops doing delays/sleeps until the current era matches.
   WaitForEra         :: !AnyCardanoEra -> Action
   -- | 'SetProtocolParameters' has one option to read from a file and
-  -- another to pass directly and just sets a state variable.
+  -- another to pass directly and just sets a state variable for
+  -- the @protoParams@ field of 'Cardano.Benchmarking.Script.Env.Env'.
   SetProtocolParameters :: ProtocolParametersSource -> Action
-  -- | 'LogMsg' logs its message calling 'traceDebug' i.e. via the tracer.
+  -- | 'LogMsg' logs its message calling
+  -- 'Cardano.Benchmarking.GeneratorTx.traceDebug' i.e. via the tracer.
   LogMsg             :: !Text -> Action
   deriving (Show, Eq)
 deriving instance Generic Action
