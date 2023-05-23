@@ -24,7 +24,7 @@ jsonref==0.2
 MarkupSafe==1.1.1
 Pygments==2.7.4
 pytz==2020.1
-requests==2.24.0
+requests==2.31.0
 six==1.15.0
 snowballstemmer==2.0.0
 sphinxcontrib-websupport==1.2.2
