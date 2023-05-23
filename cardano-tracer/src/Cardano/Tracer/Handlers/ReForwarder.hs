@@ -3,28 +3,22 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveAnyClass #-}
 
 -- | This  module initializes a reforwarding service for use by
 --   cardano-tracer.  It could [re-] serve the three miniprotocols on
 --   a new local socket.  Currently,
---     - it creates a new Datapoint store: this has a single datapoint
---       empty but datapoints could be added here.
 --     - it reforwards trace messages to the new socket, optionally
 --       filtering trace messages.
 --     - it does not (currently) reforward EKG to the new socket.
+--     - it creates a new Datapoint store, but the datapoint store is empty.
 
 module Cardano.Tracer.Handlers.ReForwarder
   ( initReForwarder
   ) where
 
 import           Control.Monad(when)
-import           Data.Aeson
 import           Data.List (isPrefixOf)
 import qualified Data.Text as Text
-import           GHC.Generics
 
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToClient (withIOManager)
