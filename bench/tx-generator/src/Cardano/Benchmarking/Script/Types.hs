@@ -127,16 +127,43 @@ data Action where
   deriving (Show, Eq)
 deriving instance Generic Action
 
+-- | 'Generator' is interpreted by
+-- 'Cardano.Bencmarking.Script.Core.evalGenerator' as a series of
+-- transactions, albeit in the form of precursors to UTxO's.
 data Generator where
+  -- | 'SecureGenesis' gets funds from a genesis via
+  -- 'Cardano.TxGenerator.Genesis.genesisSecureInitialFundForKey'.
+  -- This is where streams of transactions start.
   SecureGenesis :: !String -> !String -> !String -> Generator -- 0 to N
+  -- 'Split' is difficult to interpret as a particular kind of
+  -- transaction, but appears limited to 3 participants.
   Split :: !String -> !PayMode -> !PayMode -> [ Lovelace ] -> Generator
+  -- 'SplitN' seems to infinitely 'repeat' the operation but
+  -- it's less clear where the fee came from or other things.
   SplitN :: !String -> !PayMode -> !Int -> Generator            -- 1 to N
+  -- 'NtoM' seems like it should issue a single N-to-M transaction,
+  -- but it's difficult to tell what it's doing.
   NtoM  :: !String -> !PayMode -> !NumberOfInputsPerTx -> !NumberOfOutputsPerTx
         -> !(Maybe Int) -> Maybe String -> Generator
+  -- | 'Sequence' represents sequentially issuing a series in the form
+  -- of a list of transaction series represented by 'Generator' itself,
+  -- but the nesting is done by first translating to
+  -- 'Cardano.Benchmarking.Script.ActionM', then a difficult-to-understand
+  -- part follows in the form of 'Streaming.Prelude.for' around
+  -- 'Streaming.Prelude.each' @gList@ and is hard to interpret.
   Sequence :: [Generator] -> Generator
+  -- | 'Cycle' infinitely repeats the series of transactions in
+  -- its argument, through 'Cardano.Benchmarking.Script.Core.evalGenerator'
+  -- as per 'Streaming.Prelude.cycle'.
   Cycle :: !Generator -> Generator
+  -- | 'Take' is easily interpreted via 'Streaming.Prelude.take'.
   Take :: !Int -> !Generator -> Generator
+  -- | 'RoundRobin' wants 'Streaming.interleaves' but
+  -- just errors out unimplemented.
   RoundRobin :: [Generator] -> Generator
+  -- 'OneOf' is also unimplemented. The intended effect at a
+  -- practical level is unclear, though its name suggests something
+  -- tough to reconcile with the constructor type.
   OneOf :: [(Generator, Double)] -> Generator
   deriving (Show, Eq)
 deriving instance Generic Generator
