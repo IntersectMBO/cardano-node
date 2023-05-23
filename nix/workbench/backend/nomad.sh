@@ -642,86 +642,37 @@ backend_nomad() {
 
       # Stop generator.
       #################
-      if test -f "${dir}"/generator/started
-      then
-        if backend_nomad is-task-program-running "${dir}" node-0 generator
-        then
-          # The `|| true` is to avoid a race condition were we try to stop the
-          # generator just after it quits automatically.
-          backend_nomad task-program-stop "${dir}" node-0 generator || true
-        else
-          if backend_nomad is-task-program-failed "${dir}" node-0 generator
-          then
-            # If the node quits (due to `--shutdown_on_slot_synced X` or
-            # `--shutdown_on_block_synced X`) the generator quits with an error.
-            local generator_can_fail=$(jq ".\"node-0\".shutdown_on_slot_synced or .\"node-0\".shutdown_on_block_synced" "${dir}"/node-specs.json)
-            if test "${generator_can_fail}" = "false" || backend_nomad is-task-program-running "${dir}" node-0 node-0
-            then
-              # Do not fail here, because nobody will be able to stop the cluster!
-              msg "$(red "FATAL: \"generator\" quit unexpectedly")"
-            else
-              msg "$(yellow "INFO: Program \"generator\" inside Task \"node-0\" failed, but expected when \"node-0\" automatically exits first")"
-            fi
-          else
-            msg "$(yellow "WARNING: Program \"generator\" inside Task \"node-0\" was not running, should it?")"
-          fi
-        fi
-      fi
+      backend_nomad stop-cluster-generator "${dir}" "node-0"
       # Stop node(s).
       ###############
+      local jobs_nodes_array=()
       for node in $(jq_tolist 'keys' "${dir}"/node-specs.json)
       do
-        if test -f "${dir}"/"${node}"/started
-        then
-          if backend_nomad is-task-program-running "${dir}" "${node}" "${node}"
-          then
-            # The `|| true` is to avoid a race condition were we try to stop
-            # the node just after it quits automatically.
-            backend_nomad task-program-stop "${dir}" "${node}" "${node}" || true
-          else
-            # Node may have already quit (due to --shutdown_on_slot_synced X or
-            # --shutdown_on_block_synced X).
-            local node_can_quit=$(jq ".\"${node}\".shutdown_on_slot_synced or .\"${node}\".shutdown_on_block_synced" "${dir}"/node-specs.json)
-            if test "${node_can_quit}" = "false"
-            then
-              # Do not fail here, because nobody will be able to stop the cluster!
-              msg "$(red "FATAL: \"${node}\" quit unexpectedly")"
-            else
-              msg "$(yellow "WARNING: Program \"${node}\" inside Task \"${node}\" was not running, should it?")"
-            fi
-          fi
-        fi
+        backend_nomad stop-cluster-node "${dir}" "${node}" &
+        jobs_nodes_array+=("$!")
       done
+      if ! wait_fail_any "${jobs_nodes_array[@]}"
+      then
+        fatal "Failed to stop node(s)"
+      fi
       # Stop tracer(s).
       #################
       local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
       if test "${one_tracer_per_node}" = "true"
       then
+        local jobs_tracers_array=()
         local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
         for node in ${nodes[*]}
         do
-          if test -f "${dir}"/tracer/"${node}"/started
-          then
-            # Tracers that receive connections should never quit by itself.
-            if backend_nomad is-task-program-running "${dir}" "${node}" tracer
-            then
-              backend_nomad task-program-stop "${dir}" "${node}" tracer || true
-            else
-              msg "$(red "FATAL: \"${node}\"'s \"tracer\" quit unexpectedly")"
-            fi
-          fi
+          backend_nomad stop-cluster-tracer "${dir}" "${node}" &
+          jobs_tracers_array+=("$!")
         done
-      else
-        if test -f "${dir}"/tracer/started
+        if ! wait_fail_any "${jobs_tracers_array[@]}"
         then
-          # Tracers that receive connections should never quit by itself.
-          if backend_nomad is-task-program-running "$dir" "$node" tracer
-          then
-            backend_nomad task-program-stop "$dir" tracer tracer || true
-          else
-            msg "$(red "FATAL: \"tracer\" quit unexpectedly")"
-          fi
+          fatal "Failed to stop tracer(s)"
         fi
+      else
+        backend_nomad stop-cluster-node "${dir}" "tracer"
       fi
 
       # Download logs!
@@ -748,6 +699,107 @@ backend_nomad() {
       #TODO: Remove it?
 
       rm "${dir}"/stopping; touch "${dir}"/stopped
+    ;;
+
+    stop-cluster-generator )
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+      local task=${1:?$usage}; shift
+      if test -f "${dir}"/generator/started && !(test -f "${dir}"/"${node}"/stopped || test -f "${dir}"/"${node}"/quit)
+      then
+        if backend_nomad is-task-program-running "${dir}" "${task}" generator
+        then
+          if ! backend_nomad task-program-stop "${dir}" "${task}" generator
+          then
+            # A race condition were we try to stop the generator just after it
+            # quits automatically can happen.
+            msg "$(yellow "WARNING: Program \"generator\" inside Task \"${task}\" failed to stop")"
+          else
+            touch "${dir}"/generator/stopped
+            msg "$(green "supervisord program \"generator\" inside Nomad Task \"${task}\" down!")"
+          fi
+        else
+          touch "${dir}"/generator/quit
+          if backend_nomad is-task-program-failed "${dir}" "${task}" generator
+          then
+            # If the node quits (due to `--shutdown_on_slot_synced X` or
+            # `--shutdown_on_block_synced X`) the generator quits with an error.
+            local generator_can_fail=$(jq ".\"${task}\".shutdown_on_slot_synced or .\"${task}\".shutdown_on_block_synced" "${dir}"/node-specs.json)
+            if test "${generator_can_fail}" = "false" || backend_nomad is-task-program-running "${dir}" "${task}" "${task}"
+            then
+              # Do not fail here, because nobody will be able to stop the cluster!
+              msg "$(red "FATAL: \"generator\" quit unexpectedly")"
+            else
+              msg "$(yellow "INFO: Program \"generator\" inside Task \"${task}\" failed, but expected when \"${task}\" automatically exits first")"
+            fi
+          else
+            msg "$(yellow "WARNING: Program \"generator\" inside Task \"${task}\" was not running, should it?")"
+          fi
+        fi
+      fi
+    ;;
+
+    stop-cluster-node )
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+      local node=${1:?$usage}; shift
+      if test -f "${dir}"/"${node}"/started && !(test -f "${dir}"/"${node}"/stopped || test -f "${dir}"/"${node}"/quit)
+      then
+        if backend_nomad is-task-program-running "${dir}" "${node}" "${node}"
+        then
+          # The `|| true` is to avoid a race condition were we try to stop
+          # the node just after it quits automatically.
+          if ! backend_nomad task-program-stop "${dir}" "${node}" "${node}"
+          then
+            msg "$(yellow "WARNING: Program \"${node}\" inside Task \"${node}\" failed to stop")"
+          else
+            touch "${dir}"/"${node}"/stopped
+            msg "$(green "supervisord program \"${node}\" inside Nomad Task \"${node}\" down!")"
+          fi
+        else
+          touch "${dir}"/"${node}"/quit
+          # Node may have already quit (due to --shutdown_on_slot_synced X or
+          # --shutdown_on_block_synced X).
+          local node_can_quit=$(jq ".\"${node}\".shutdown_on_slot_synced or .\"${node}\".shutdown_on_block_synced" "${dir}"/node-specs.json)
+          if test "${node_can_quit}" = "false"
+          then
+            # Do not fail here, because nobody will be able to stop the cluster!
+            msg "$(red "FATAL: \"${node}\" quit unexpectedly")"
+          else
+            msg "$(yellow "WARNING: Program \"${node}\" inside Task \"${node}\" was not running, should it?")"
+          fi
+        fi
+      fi
+    ;;
+
+    stop-cluster-tracer )
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+      local task=${1:?$usage}; shift
+      local task_dir
+      if test "${task}" = "tracer"
+      then
+        task_dir="${dir}"/tracer
+      else
+        task_dir="${dir}"/tracer/"${task}"
+      fi
+      if test -f "${task_dir}"/started && !(test -f "${task_dir}"/stopped || test -f "${task_dir}"/quit)
+      then
+        # Tracers that receive connections should never quit by itself.
+        if backend_nomad is-task-program-running "${dir}" "${task}" tracer
+        then
+          if ! backend_nomad task-program-stop "${dir}" "${task}" tracer
+          then
+            msg "$(yellow "WARNING: Program \"tracer\" inside Task \"${task}\" failed to stop")"
+          else
+            touch "${task_dir}"/stopped
+            msg "$(green "supervisord program \"tracer\" inside Nomad Task \"${task}\" down!")"
+          fi
+        else
+          touch "${task_dir}"/quit
+          msg "$(red "FATAL: \"${task}\"'s \"tracer\" quit unexpectedly")"
+        fi
+      fi
     ;;
 
     stop-cluster-download )
@@ -1693,6 +1745,7 @@ backend_nomad() {
       local usage="USAGE: wb backend pass $op RUN-DIR"
       local dir=${1:?$usage}; shift
       # Generator runs inside task/supervisord "node-0"
+      # Node files that may suffer interpolation/sed replace.
       backend_nomad task-file-contents "${dir}" "node-0" \
         /local/run/current/generator/start.sh            \
       > "${dir}"/generator/start.sh
@@ -1705,6 +1758,7 @@ backend_nomad() {
       local usage="USAGE: wb backend pass $op RUN-DIR NODE-NAME"
       local dir=${1:?$usage}; shift
       local node=${1:?$usage}; shift
+      # Node files that may suffer interpolation/sed replace.
       backend_nomad task-file-contents "${dir}" "${node}" \
         /local/run/current/"${node}"/start.sh             \
       > "${dir}"/"${node}"/start.sh
@@ -1741,6 +1795,7 @@ backend_nomad() {
         local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
         if test "${one_tracer_per_node}" = "true" || test "${task}" != "tracer"
         then
+          # Node files that may suffer interpolation/sed replace.
           backend_nomad task-file-contents "${dir}" "${task}" \
             /local/run/current/tracer/start.sh                \
           > "${dir}"/tracer/"${task}"/start.sh
@@ -1753,6 +1808,7 @@ backend_nomad() {
           # created locally by the workbench (obtained from the profile services).
           if ! test "${nomad_task_driver}" = "podman"
           then
+            # Node files that may suffer interpolation/sed replace.
             backend_nomad task-file-contents "${dir}" "tracer" \
               /local/run/current/tracer/start.sh               \
             > "${dir}"/tracer/start.sh
