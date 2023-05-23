@@ -63,7 +63,9 @@ initReForwarder TracerConfig{networkMagic, hasForwarding}
                                  (NetworkMagic networkMagic)
                                  Nothing
                                  (Just (socket, Log.Responder))
-          pure $ Just ( filteredWriteToSink fwdsink mFwdNames
+          pure $ Just ( filteredWriteToSink
+                          (traceObjectHasPrefixIn mFwdNames)
+                          fwdsink
                       , dataPointTracer @IO dpStore
                       )
   
@@ -71,11 +73,6 @@ initReForwarder TracerConfig{networkMagic, hasForwarding}
                   Just (_,tr) -> tr
                   Nothing     -> mempty
                  
-  modeDP :: Trace IO ReforwarderMode
-    <- mkDataPointTracer traceDP
-  traceWith modeDP $ RM "running"
-    -- Note: currently the only trace for this datapoint
-
   let writesToSink' =
         case mForwarding of
           Just (writeToSink',_) ->
@@ -85,35 +82,17 @@ initReForwarder TracerConfig{networkMagic, hasForwarding}
     
   return (writesToSink', traceDP)
 
-filteredWriteToSink :: ForwardSink Log.TraceObject
-                    -> Maybe [[Text.Text]]
-                    -> Log.TraceObject -> IO ()
-filteredWriteToSink fwdsink mFwdNames =
+
+traceObjectHasPrefixIn :: Maybe [[Text.Text]] -> Log.TraceObject -> Bool
+traceObjectHasPrefixIn mFwdNames logObj =
   case mFwdNames of
-    Nothing ->
-       writeToSink fwdsink
-       
-    Just fwdNames ->
-       \logObj->
-         when (any (`isPrefixOf` Log.toNamespace logObj) fwdNames) $
-           writeToSink fwdsink logObj
-
-------------------------------------------------------------------------------
--- ReforwarderMode datapoint: type and boilerplate
---
-
--- | Mode of the reforwarder
-newtype ReforwarderMode = RM String
-                          deriving (Eq,Ord,Read,Show,Generic)
- 
-deriving instance ToJSON ReforwarderMode
-
--- | give the 'ReforwarderMode' type a place in the Datapoint Namespace:
-instance Log.MetaTrace ReforwarderMode
-  where
-  namespaceFor _  = Log.Namespace [] ["Reforwarder","Mode"]
-  severityFor _ _ = Just Info
-  documentFor _   = Just "the mode of the reforwarder"
-  allNamespaces   = [ Log.namespaceFor (undefined :: ReforwarderMode) ]
+    Nothing       -> True -- forward everything in this case
+    Just fwdNames -> any (`isPrefixOf` Log.toNamespace logObj) fwdNames
 
 
+filteredWriteToSink :: (Log.TraceObject -> Bool)
+                    -> ForwardSink Log.TraceObject
+                    -> Log.TraceObject -> IO ()
+filteredWriteToSink p fwdsink logObj =
+  when (p logObj) $ writeToSink fwdsink logObj
+           
