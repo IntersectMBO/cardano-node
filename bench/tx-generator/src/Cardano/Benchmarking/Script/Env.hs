@@ -70,7 +70,13 @@ import           Cardano.TxGenerator.PlutusContext (PlutusBudgetSummary)
 import           Cardano.TxGenerator.Types (TxGenError (..))
 
 
-data Env = Env { protoParams :: Maybe ProtocolParameterMode
+-- | The 'Env' type represents the state maintained while executing
+-- a series of actions. The 'Maybe' types are largely to represent
+-- as-of-yet unset values.
+data Env = Env { -- | 'Cardano.Api.ProtocolParameters' is ultimately
+                 -- wrapped by 'ProtocolParameterMode' which itself is
+                 -- a sort of custom 'Maybe'.
+                 protoParams :: Maybe ProtocolParameterMode
                , benchTracers :: Maybe Tracer.BenchTracers
                , envGenesis :: Maybe (ShelleyGenesis StandardCrypto)
                , envProtocol :: Maybe SomeConsensusProtocol
