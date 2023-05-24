@@ -823,6 +823,7 @@ backend_nomad() {
       backend_nomad download-logs-generator "${dir}" "node-0"
       # Download node(s) logs.
       ########################
+      local download_nodes_array=()
       for node in $(jq_tolist 'keys' "$dir"/node-specs.json)
       do
         # Remove "live" symlinks and download the "originals"
@@ -832,8 +833,18 @@ backend_nomad() {
           rm -f "${dir}"/nomad/"${node}"/{stdout,stderr}
           rm -f "${dir}"/supervisor/"${node}"/supervisord.log
         fi
-        backend_nomad download-logs-node "${dir}" "${node}"
+        backend_nomad download-logs-node "${dir}" "${node}" &
+        download_nodes_array+=("$!")
       done
+      if test -n "${download_nodes_array}"
+      then
+        if ! wait_fail_any "${download_nodes_array[@]}"
+        then
+          msg "$(red "Failed to download some node(s) logs")"
+        else
+          msg "$(green "Finished downloading node(s) logs")"
+        fi
+      fi
       # Download tracer(s) logs.
       ##########################
       if jqtest ".node.tracer" "${dir}"/profile.json
@@ -858,15 +869,26 @@ backend_nomad() {
         fi
         if test "${one_tracer_per_node}" = "true"
         then
+          local download_tracers_array=()
           for node in $(jq_tolist 'keys' "${dir}"/node-specs.json)
           do
-            backend_nomad download-logs-tracer           "${dir}" "${node}"
+            backend_nomad download-logs-tracer           "${dir}" "${node}" &
+            download_tracers_array+=("$!")
             # TODO: These files are needed at all?
             if test -n "${NOMAD_DEBUG:-}"
             then
               backend_nomad download-zstd-tracer-logRoot "${dir}" "${node}"
             fi
           done
+          if test -n "${download_tracers_array}"
+          then
+            if ! wait_fail_any "${download_tracers_array[@]}"
+            then
+              msg "$(red "Failed to download some tracer(s) logs")"
+            else
+              msg "$(green "Finished downloading tracer(s) logs")"
+            fi
+          fi
         else
           backend_nomad download-logs-tracer           "${dir}" "tracer"
           # TODO: These files are needed at all?
@@ -878,9 +900,10 @@ backend_nomad() {
       fi
 
       # TODO: Check downloads
-      # ls run/current/{node-{0..51},explorer}/exit_code || msg ""
-      # ls run/current/{node-{0..51},explorer}/stdout    || msg ""
-      # ls run/current/{node-{0..51},explorer}/stderr    || msg ""
+      # ls run/current/nomad/{node-{0..51},explorer}/{stdout,stderr}            || msg ""
+      # ls run/current/{node-{0..51},explorer}/{exit_code,stdout,stderr}        || msg ""
+      # ls run/current/{node-{0..51},explorer}/{exit_code,stdout,stderr}        || msg ""
+      # ls run/current/tracer/{node-{0..51},explorer}/{exit_code,stdout,stderr} || msg ""
 
       msg "Finished fetching logs"
     ;;
