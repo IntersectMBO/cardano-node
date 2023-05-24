@@ -164,6 +164,12 @@ let
     # SRE: Only 3 Nomad datacenters exist actually.
     datacenters = [ "eu-central-1" "us-east-2" "ap-southeast-2" ];
 
+    # Specifies user-defined constraints on the task. This can be provided
+    # multiple times to define additional constraints.
+    # Cloud runs set the distinct hosts constraint here but local runs can't
+    # because we are only starting one Nomad client.
+    constraint = null;
+
     # The reschedule stanza specifies the group's rescheduling strategy. If
     # specified at the job level, the configuration will apply to all groups
     # within the job. If the reschedule stanza is present on both the job and
@@ -193,11 +199,11 @@ let
       ONE_TRACER_PER_NODE = oneTracerPerNode;
     };
 
-    # A group defines a series of tasks that should be co-located
-    # on the same client (host). All tasks within a group will be
-    # placed on the same host.
+    # A group defines a series of tasks that should be co-located on the same
+    # client (host). All tasks within a group will be placed on the same host.
     # https://developer.hashicorp.com/nomad/docs/job-specification/group
     group = let
+      # For each node-specs.json object
       valueF = (taskName: serviceName: portName: portNum: nodeSpec: (groupDefaults // {
 
         # Specifies the number of instances that should be running under for
@@ -255,8 +261,8 @@ let
         constraint = {
           attribute = "\${node.class}";
           operator = "=";
-          # For testing best to avoid using "infra" node class as HA jobs runs
-          # there, for benchmarking dedicated static machines in the "perf"
+          # For testing we avoid using "infra" node class as HA jobs runs there
+          # For benchmarking dedicated static machines in the "perf"
           # class are used and this value should be updated accordingly.
           value = "qa";
         };
@@ -327,6 +333,8 @@ let
 
           # Sensible defaults to run cloud version of "default", "ci-test" and
           # "ci-bench" in cardano-world qa class Nomad nodes.
+          # For benchmarking dedicated static machines in the "perf" class are
+          # used and this value should be updated accordingly.
           resources = {
             # Task can only ask for 'cpu' or 'cores' resource, not both.
             #cpu = 512;
