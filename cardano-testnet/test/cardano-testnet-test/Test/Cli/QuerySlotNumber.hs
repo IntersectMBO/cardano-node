@@ -42,7 +42,7 @@ hprop_querySlotNumber = H.integrationRetryWorkspace 2 "query-slot-number" $ \tem
   base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
   conf@Conf { tempBaseAbsPath } <- H.noteShowM $
-    mkConf (ProjectBase base) (Just $ YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
+    mkConf (Just $ YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
 
   let
     testnetOptions = BabbageOnlyTestnetOptions $ babbageDefaultTestnetOptions

@@ -31,9 +31,7 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
-import qualified Hedgehog.Extras.Test.Process as H
 import           Prelude
-import qualified System.Directory as IO
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
 import qualified Testnet.Util.Process as H
@@ -53,9 +51,8 @@ import           Testnet.Util.Runtime
 hprop_leadershipSchedule :: Property
 hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedule" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
-  base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   conf@Conf { tempBaseAbsPath, tempAbsPath } <- H.noteShowM $
-    mkConf (ProjectBase base) Nothing tempAbsBasePath' Nothing
+    mkConf Nothing tempAbsBasePath' Nothing
   let
     fastTestnetOptions = CardanoOnlyTestnetOptions cardanoDefaultTestnetOptions
       { cardanoEpochLength = 500
@@ -73,7 +70,6 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedu
   execConfig <- H.headM (bftSprockets tr) >>= H.mkExecConfig tempBaseAbsPath
 
   -- First we note all the relevant files
-  H.note_ base
   work <- H.note tempAbsPath
 
   -- We get our UTxOs from here

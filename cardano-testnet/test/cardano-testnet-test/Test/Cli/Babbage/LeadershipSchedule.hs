@@ -32,8 +32,6 @@ import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
-import qualified Hedgehog.Extras.Test.Process as H
-import qualified System.Directory as IO
 import qualified System.Info as SYS
 import qualified Testnet.Util.Base as H
 
@@ -46,9 +44,8 @@ import           Testnet.Util.Runtime
 hprop_leadershipSchedule :: Property
 hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-schedule" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
-  base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   conf@Conf { tempBaseAbsPath, tempAbsPath } <- H.noteShowM $
-    mkConf (ProjectBase base) Nothing tempAbsBasePath' Nothing
+    mkConf Nothing tempAbsBasePath' Nothing
 
   work <- H.createDirectoryIfMissing $ tempAbsPath </> "work"
 

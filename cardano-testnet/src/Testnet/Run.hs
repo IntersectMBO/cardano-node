@@ -11,18 +11,15 @@ import qualified Control.Concurrent as IO
 import qualified Control.Concurrent.STM as STM
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Console.ANSI as ANSI
-import qualified System.Directory as IO
 import qualified System.Exit as IO
 import qualified System.IO as IO
 import qualified Testnet.Conf as H
 import qualified Testnet.Util.Base as H
 
 testnetProperty :: Maybe Int -> (H.Conf -> H.Integration ()) -> H.Property
-testnetProperty maybeTestnetMagic tn = H.integrationRetryWorkspace 2 "testnet" $ \tempAbsPath' -> do
-  base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
-  conf <- H.mkConf (H.ProjectBase base) Nothing tempAbsPath' maybeTestnetMagic
+testnetProperty maybeTestnetMagic tn = H.integrationRetryWorkspace 2 "testnet" $ \workspaceDir -> do
+  conf <- H.mkConf Nothing workspaceDir maybeTestnetMagic
 
   -- Fork a thread to keep alive indefinitely any resources allocated by testnet.
   void . H.evalM . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000
