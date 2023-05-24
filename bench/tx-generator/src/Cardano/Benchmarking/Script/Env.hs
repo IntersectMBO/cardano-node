@@ -124,6 +124,16 @@ runActionM = runActionMEnv emptyEnv
 runActionMEnv :: Env -> ActionM ret -> IOManager -> IO (Either Error ret, Env, ())
 runActionMEnv env action iom = RWS.runRWST (runExceptT action) iom env
 
+-- | 'Error' adds two cases to 'Cardano.TxGenerator.Types.TxGenError' 
+-- which in turn wraps 'Cardano.Api.Error' implicit contexts to a
+-- couple of its constructors. These represent errors that might arise
+-- in the execution of a transaction with some distinctions as to the
+-- layers where the errors could arise. At this highest level, invalid
+-- users and wallets are potentially encountered. Plutus, protocol, API
+-- and some arbitrary errors are potentially encountered at the next
+-- layer. The layers correspond to "Cardano.Benchmarking.Script.Core"
+-- for the outermost and "Cardano.Benchmarking.Set.Plutus" for the
+-- middle, and the innermost to "Cardano.Api.Error".
 data Error where
   TxGenError  :: !TxGenError -> Error
   UserError   :: !String     -> Error
