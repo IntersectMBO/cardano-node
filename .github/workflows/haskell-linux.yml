@@ -165,7 +165,7 @@ jobs:
       shell: bash
       run: |
         cd $TMP
-        find . -name 'module' -type f -printf '%h\n' | xargs -L1 basename | sort -u | xargs tar -czvf workspaces.tgz
+        find . -name 'module' -type f -exec dirname {} \; | xargs -L1 basename | sort -u | xargs tar -czvf workspaces.tgz
 
     - name: Upload workspaces on tests failure
       if: ${{ failure() }}
