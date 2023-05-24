@@ -10,6 +10,21 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+{-|
+Module      : Cardano.Benchmarking.Script.Env
+Description : State type for 'ActionM' monad stack and its accessors.
+
+The 'Env' type is the ADT for the state component of the 'ActionM'
+monad stack. Its actual definition isn't exported in part because of a
+transition from an earlier very generic and polymorphic definition.
+In a number of respects, this module covers more of the 'ActionM'
+like 'runActionM' and 'liftTxGenError', but the only significant
+structure is 'Env' for state. The accessors could likely be removed
+in favour of just using the record syntax to trim a few lines of
+code at the cost of exposing the structure's internals. Some of the
+naming related to the fact that "Cardano.Benchmarking.Script.Action"
+ran into circular dependency issues during the above transition.
+ -}
 module Cardano.Benchmarking.Script.Env (
         ActionM
         , Error(..)
