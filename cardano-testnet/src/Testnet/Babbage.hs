@@ -54,7 +54,7 @@ startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
 babbageTestnet :: BabbageTestnetOptions -> H.Conf -> H.Integration TestnetRuntime
 babbageTestnet testnetOptions H.Conf {..} = do
   H.lbsWriteFile (tempAbsPath </> "byron.genesis.spec.json")
-    . encode $ defaultByronGenesisJsonValue
+    . encode $ defaultByronProtocolParamsJsonValue
 
   void $ H.note OS.os
   currentTime <- H.noteShowIO DTC.getCurrentTime
@@ -72,13 +72,13 @@ babbageTestnet testnetOptions H.Conf {..} = do
   -- are deprecated, we must use the "create-staked" cli command to create
   -- SPOs in the ShelleyGenesis
 
-  alonzoBabbageTestGenesisJsonSourceFile <- H.noteShow $ base </> "scripts/babbage/alonzo-babbage-test-genesis.json"
   alonzoBabbageTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath </> "genesis.alonzo.spec.json"
-  H.copyFile alonzoBabbageTestGenesisJsonSourceFile alonzoBabbageTestGenesisJsonTargetFile
+  case defaultAlonzoGenesis of
+    Left e -> H.onFailure . H.noteIO_ . return $ displayError e
+    Right gen -> H.evalIO $ LBS.writeFile alonzoBabbageTestGenesisJsonTargetFile $ encode gen
 
-  conwayBabbageTestGenesisJsonSourceFile <- H.noteShow $ base </> "scripts/babbage/conway-babbage-test-genesis.json"
   conwayBabbageTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath </> "genesis.conway.spec.json"
-  H.copyFile conwayBabbageTestGenesisJsonSourceFile conwayBabbageTestGenesisJsonTargetFile
+  H.evalIO $ LBS.writeFile conwayBabbageTestGenesisJsonTargetFile $ encode defaultConwayGenesis
 
   configurationFile <- H.noteShow $ tempAbsPath </> "configuration.yaml"
 
