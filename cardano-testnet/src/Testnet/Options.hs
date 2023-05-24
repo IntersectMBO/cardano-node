@@ -7,6 +7,7 @@
 
 module Testnet.Options
   ( BabbageTestnetOptions(..)
+  , defaultShelleyOnlyYamlConfig
   , defaultTestnetOptions
   , defaultYamlHardforkViaConfig
   ) where
@@ -44,11 +45,10 @@ defaultTestnetOptions = BabbageTestnetOptions
   , babbageNodeLoggingFormat = NodeLoggingFormatAsJson
   }
 
--- | Configuration value that allows you to hardfork to any Cardano era
--- at epoch 0.
-defaultYamlHardforkViaConfig :: AnyCardanoEra -> KeyMapAeson.KeyMap Aeson.Value
-defaultYamlHardforkViaConfig era =
-  mconcat $ map (uncurry KeyMapAeson.singleton)
+
+defaultYamlConfig :: [KeyMapAeson.KeyMap Aeson.Value]
+defaultYamlConfig =
+  map (uncurry KeyMapAeson.singleton)
     [
     -- The consensus protocol to use
       ("Protocol", "Cardano")
@@ -91,7 +91,29 @@ defaultYamlHardforkViaConfig era =
     , ("setupBackends", Aeson.Array $ Vector.fromList ["KatipBK"])
     , ("defaultBackends", Aeson.Array $ Vector.fromList ["KatipBK"])
     , ("options", Aeson.object mempty)
-    ] ++ tracers ++ protocolVersions era ++ hardforkViaConfig era
+    ]
+
+
+defaultShelleyOnlyYamlConfig :: KeyMapAeson.KeyMap Aeson.Value
+defaultShelleyOnlyYamlConfig =
+   let shelleyOnly = mconcat $ map (uncurry KeyMapAeson.singleton)
+          [ ("LastKnownBlockVersion-Major", Aeson.Number 2)
+          , ("LastKnownBlockVersion-Minor", Aeson.Number 0)
+          , ("LastKnownBlockVersion-Alt", Aeson.Number 0)
+          , ("Protocol", "TPraos")
+          ]
+   in shelleyOnly <> mconcat defaultYamlConfig
+
+-- | Configuration value that allows you to hardfork to any Cardano era
+-- at epoch 0.
+defaultYamlHardforkViaConfig :: AnyCardanoEra -> KeyMapAeson.KeyMap Aeson.Value
+defaultYamlHardforkViaConfig era =
+  mconcat $ concat
+    [ defaultYamlConfig
+    , tracers
+    , protocolVersions era
+    , hardforkViaConfig era
+    ]
 
  where
   -- The protocol version number gets used by block producing nodes as part
@@ -240,33 +262,34 @@ defaultYamlHardforkViaConfig era =
     , (proxyName (Proxy @TraceTxSubmissionProtocol), Aeson.Bool False)
     ]
 
-  defaultScribes :: Aeson.Value
-  defaultScribes =
-    Aeson.Array $ Vector.fromList
-      [ Aeson.Array $ Vector.fromList ["FileSK","logs/mainnet.log"]
-      , Aeson.Array $ Vector.fromList ["StdoutSK","stdout"]
+defaultScribes :: Aeson.Value
+defaultScribes =
+  Aeson.Array $ Vector.fromList
+    [ Aeson.Array $ Vector.fromList ["FileSK","logs/mainnet.log"]
+    , Aeson.Array $ Vector.fromList ["StdoutSK","stdout"]
+    ]
+
+
+rotationObject :: Aeson.Value
+rotationObject =
+  Aeson.Object $
+    mconcat $ map (uncurry KeyMapAeson.singleton)
+      [ ("rpLogLimitBytes", Aeson.Number 5000000)
+      , ("rpKeepFilesNum", Aeson.Number 3)
+      , ("rpMaxAgeHours", Aeson.Number 24)
       ]
 
-
-  rotationObject :: Aeson.Value
-  rotationObject =
-    Aeson.Object $
-      mconcat $ map (uncurry KeyMapAeson.singleton)
-        [ ("rpLogLimitBytes", Aeson.Number 5000000)
-        , ("rpKeepFilesNum", Aeson.Number 3)
-        , ("rpMaxAgeHours", Aeson.Number 24)
+setupScribes :: Aeson.Value
+setupScribes =
+  Aeson.Array $ Vector.fromList
+    [ Aeson.Object $ mconcat $ map (uncurry KeyMapAeson.singleton)
+        [ ("scKind", "FileSK")
+        , ("scName", "logs/node.log")
+        , ("scFormat", "ScJson")
         ]
-  setupScribes :: Aeson.Value
-  setupScribes =
-    Aeson.Array $ Vector.fromList
-      [ Aeson.Object $ mconcat $ map (uncurry KeyMapAeson.singleton)
-          [ ("scKind", "FileSK")
-          , ("scName", "logs/node.log")
-          , ("scFormat", "ScJson")
-          ]
-      , Aeson.Object $ mconcat $ map (uncurry KeyMapAeson.singleton)
-          [ ("scKind", "StdoutSK")
-          , ("scName", "stdout")
-          , ("scFormat", "ScJson")
-          ]
-      ]
+    , Aeson.Object $ mconcat $ map (uncurry KeyMapAeson.singleton)
+        [ ("scKind", "StdoutSK")
+        , ("scName", "stdout")
+        , ("scFormat", "ScJson")
+        ]
+    ]
