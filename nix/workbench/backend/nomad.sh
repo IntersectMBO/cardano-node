@@ -820,7 +820,7 @@ backend_nomad() {
         rm -f "${dir}"/generator/{stdout,stderr,exit_code}
         rm -f "${dir}"/supervisor/node-0/supervisord.log
       fi
-      backend_nomad download-logs-generator "${dir}"
+      backend_nomad download-logs-generator "${dir}" "node-0"
       # Download node(s) logs.
       ########################
       for node in $(jq_tolist 'keys' "$dir"/node-specs.json)
@@ -833,7 +833,6 @@ backend_nomad() {
           rm -f "${dir}"/supervisor/"${node}"/supervisord.log
         fi
         backend_nomad download-logs-node "${dir}" "${node}"
-        backend_nomad download-zstd-node "${dir}" "${node}"
       done
       # Download tracer(s) logs.
       ##########################
@@ -861,14 +860,27 @@ backend_nomad() {
         then
           for node in $(jq_tolist 'keys' "${dir}"/node-specs.json)
           do
-            backend_nomad download-logs-tracer "${dir}" "${node}"
-            backend_nomad download-zstd-tracer "${dir}" "${node}"
+            backend_nomad download-logs-tracer           "${dir}" "${node}"
+            # TODO: These files are needed at all?
+            if test -n "${NOMAD_DEBUG:-}"
+            then
+              backend_nomad download-zstd-tracer-logRoot "${dir}" "${node}"
+            fi
           done
         else
-          backend_nomad download-logs-tracer "${dir}" "tracer"
-          backend_nomad download-zstd-tracer "${dir}" "tracer"
+          backend_nomad download-logs-tracer           "${dir}" "tracer"
+          # TODO: These files are needed at all?
+          if test -n "${NOMAD_DEBUG:-}"
+          then
+            backend_nomad download-zstd-tracer-logRoot "${dir}" "tracer"
+          fi
         fi
       fi
+
+      # TODO: Check downloads
+      # ls run/current/{node-{0..51},explorer}/exit_code || msg ""
+      # ls run/current/{node-{0..51},explorer}/stdout    || msg ""
+      # ls run/current/{node-{0..51},explorer}/stderr    || msg ""
 
       msg "Finished fetching logs"
     ;;
@@ -987,7 +999,7 @@ backend_nomad() {
       if ! backend_nomad task-program-start "$dir" node-0 generator
       then
         msg "$(red "FATAL: Program \"generator\" (always inside \"node-0\") startup failed")"
-        backend_nomad download-logs-generator "${dir}"
+        backend_nomad download-logs-generator "${dir}" "node-0"
         # Should show the output/log of `supervisord` (runs as "entrypoint").
         msg "$(yellow "${dir}/nomad/node-0/stdout:")"
         cat                                                             \
@@ -1540,39 +1552,25 @@ backend_nomad() {
 
     # For debugging when something fails, downloads and prints details!
     download-logs-generator )
-      local usage="USAGE: wb backend pass $op RUN-DIR"
+      local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME"
       local dir=${1:?$usage}; shift
+      local task=${1:?$usage}; shift
       # Should show the output/log of `supervisord` (runs as "entrypoint").
-      msg "$(blue Fetching) $(yellow "entrypoint's stdout and stderr") of Nomad $(yellow "Task \"node-0\"") ..."
-      backend_nomad task-entrypoint-stdout "${dir}" "node-0" \
-      > "${dir}"/nomad/"node-0"/stdout
-      backend_nomad task-entrypoint-stderr "${dir}" "node-0" \
-      > "${dir}"/nomad/"node-0"/stderr
+      msg "$(blue Fetching) $(yellow "entrypoint's stdout and stderr") of Nomad $(yellow "Task \"${task}\"") ..."
+      backend_nomad task-entrypoint-stdout "${dir}" "${task}" \
+      > "${dir}"/nomad/"${task}"/stdout
+      backend_nomad task-entrypoint-stderr "${dir}" "${task}" \
+      > "${dir}"/nomad/"${task}"/stderr
       2>/dev/null || true # Ignore errors!
       # If the entrypoint was ran till the end, this file should be available!
-      msg "$(blue Fetching) $(yellow supervisord.log) of Nomad $(yellow "Task \"node-0\"") ..."
-      backend_nomad task-file-contents "${dir}" "node-0"     \
+      msg "$(blue Fetching) $(yellow supervisord.log) of Nomad $(yellow "Task \"${task}\"") ..."
+      backend_nomad task-file-contents "${dir}" "${task}"    \
         /local/run/current/supervisor/supervisord.log        \
-      > "${dir}"/supervisor/node-0/supervisord.log           \
+      > "${dir}"/supervisor/"${task}"/supervisord.log        \
       2>/dev/null || true # Ignore errors!
-      # Depending on when the start command failed, this file may be empty!
-      msg "$(blue Fetching) $(yellow exit_code) of $(yellow "program \"generator\"") inside Nomad $(yellow "Task \"node-0\"") ..."
-      backend_nomad task-file-contents "${dir}" "node-0"    \
-        /local/run/current/generator/exit_code              \
-      > "${dir}"/generator/exit_code                        \
-      2>/dev/null || true # Ignore errors!
+      # Downloads "exit_code", "stdout", "stderr" and GHC files.
       # Depending on when the start command failed, logs may not be available!
-      msg "$(blue Fetching) $(yellow stdout) of $(yellow "program \"generator\"") inside Nomad $(yellow "Task \"node-0\"") ..."
-      backend_nomad task-file-contents "${dir}" "node-0"    \
-        /local/run/current/generator/stdout                 \
-      > "${dir}"/generator/stdout                           \
-      2>/dev/null || true # Ignore errors!
-      # Depending on when the start command failed, logs may not be available!
-      msg "$(blue Fetching) $(yellow stderr) of $(yellow "program \"generator\"") inside Nomad $(yellow "Task \"node-0\"") ..."
-      backend_nomad task-file-contents "${dir}" "node-0"    \
-      /local/run/current/generator/stderr                   \
-      > "${dir}"/generator/stderr                           \
-      2>/dev/null || true # Ignore errors!
+      backend_nomad download-zstd-generator "${dir}" "${task}"
     ;;
 
     # For debugging when something fails, downloads and prints details!
@@ -1592,92 +1590,63 @@ backend_nomad() {
         /local/run/current/supervisor/supervisord.log     \
       > "${dir}"/supervisor/"${node}"/supervisord.log     \
       2>/dev/null || true # Ignore errors!
-      # Depending on when the start command failed, this file may be empty!
-      msg "$(blue Fetching) $(yellow exit_code) of supervisord $(yellow "program \"${node}\"") inside Nomad $(yellow "Task \"${node}\"") ..."
-      backend_nomad task-file-contents "${dir}" "${node}" \
-        /local/run/current/"${node}"/exit_code            \
-      > "${dir}"/"${node}"/exit_code                      \
-      2>/dev/null || true # Ignore errors!
+      # Downloads "exit_code", "stdout", "stderr" and GHC files.
       # Depending on when the start command failed, logs may not be available!
-      msg "$(blue Fetching) $(yellow stdout) of supervisord $(yellow "program \"${node}\"") inside Nomad $(yellow "Task \"${node}\"") ..."
-      backend_nomad task-file-contents "${dir}" "${node}" \
-        /local/run/current/"${node}"/stdout               \
-      > "${dir}"/"${node}"/stdout                         \
-      2>/dev/null || true # Ignore errors!
-      # Depending on when the start command failed, logs may not be available!
-      msg "$(blue Fetching) $(yellow stderr) of supervisord $(yellow "program \"${node}\"") inside Nomad $(yellow "Task \"${node}\"") ..."
-      backend_nomad task-file-contents "${dir}" "${node}" \
-        /local/run/current/"${node}"/stderr               \
-      > "${dir}"/"${node}"/stderr                         \
-      2>/dev/null || true # Ignore errors!
+      backend_nomad download-zstd-node "${dir}" "${node}"
     ;;
 
     # For debugging when something fails, downloads and prints details!
     download-logs-tracer )
-      local usage="USAGE: wb backend pass $op RUN-DIR NODE-NAME"
+      local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME"
       local dir=${1:?$usage}; shift
       local task=${1:?$usage}; shift
-      if jqtest ".node.tracer" "$dir"/profile.json
+      # If the tracer is not a "dedicated" Nomad Task it is just one more
+      # supervisord program and no entrypoints' logs are downloaded here
+      # because they should be downloaded by the main supervisord program.
+      local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
+      if test "${one_tracer_per_node}" = "true" || test "${task}" != "tracer"
       then
-        local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
-        if test "${one_tracer_per_node}" = "true" || test "${task}" != "tracer"
+        # Downloads "exit_code", "stdout", "stderr" and GHC files.
+        # Depending on when the start command failed, logs may not be available!
+        backend_nomad download-zstd-tracer "${dir}" "${task}"
+      else
+        # Should show the output/log of `supervisord` (runs as "entrypoint").
+        msg "$(blue Fetching) $(yellow "entrypoint's stdout and stderr") of Nomad $(yellow "Task \"tracer\"") ..."
+        backend_nomad task-entrypoint-stdout "${dir}" "tracer" \
+        > "${dir}"/nomad/tracer/stdout
+        backend_nomad task-entrypoint-stderr "${dir}" "tracer" \
+        > "${dir}"/nomad/tracer/stderr
+        # If the entrypoint was ran till the end, this file should be available!
+        msg "$(blue Fetching) $(yellow supervisord.log) of Nomad $(yellow "Task \"tracer\"") ..."
+        backend_nomad task-file-contents "${dir}" "tracer" \
+          /local/run/current/supervisor/supervisord.log    \
+        > "${dir}"/supervisor/tracer/supervisord.log       \
+        2>/dev/null || true # Ignore errors!
+        # When "local" and "podman" "tracer" folder is mounted
+        local nomad_task_driver=$(envjqr 'nomad_task_driver')
+        if ! test "${nomad_task_driver}" = "podman"
         then
-          # Depending on when the start command failed, this file may be empty!
-          msg "$(blue Fetching) $(yellow exit_code) of supervisord $(yellow "program \"tracer\"") inside Nomad $(yellow "Task \"${task}\"") ..."
-          backend_nomad task-file-contents "${dir}" "${task}" \
-            /local/run/current/tracer/exit_code               \
-          > "${dir}"/tracer/"${task}"/exit_code
-          2>/dev/null || true # Ignore errors!
+          # Downloads "exit_code", "stdout", "stderr" and GHC files.
           # Depending on when the start command failed, logs may not be available!
-          msg "$(blue Fetching) $(yellow stdout) of supervisord $(yellow "program \"tracer\"") inside Nomad $(yellow "Task \"${task}\"") ..."
-          backend_nomad task-file-contents "${dir}" "${task}" \
-            /local/run/current/tracer/stdout                  \
-          > "${dir}"/tracer/"${task}"/stdout
-          2>/dev/null || true # Ignore errors!
-          msg "$(blue Fetching) $(yellow stderr) of supervisord $(yellow "program \"tracer\"") inside Nomad $(yellow "Task \"${task}\"") ..."
-          # Depending on when the start command failed, logs may not be available!
-          backend_nomad task-file-contents "${dir}" "${task}" \
-            /local/run/current/tracer/stderr                  \
-          > "${dir}"/tracer/"${task}"/stderr
-          2>/dev/null || true # Ignore errors!
-        else
-          # Should show the output/log of `supervisord` (runs as "entrypoint").
-          msg "$(blue Fetching) $(yellow "entrypoint's stdout and stderr") of Nomad $(yellow "Task \"tracer\"") ..."
-          backend_nomad task-entrypoint-stdout "${dir}" "tracer" \
-          > "${dir}"/nomad/tracer/stdout
-          backend_nomad task-entrypoint-stderr "${dir}" "tracer" \
-          > "${dir}"/nomad/tracer/stderr
-          # If the entrypoint was ran till the end, this file should be available!
-          msg "$(blue Fetching) $(yellow supervisord.log) of Nomad $(yellow "Task \"tracer\"") ..."
-          backend_nomad task-file-contents "${dir}" "tracer" \
-            /local/run/current/supervisor/supervisord.log    \
-          > "${dir}"/supervisor/tracer/supervisord.log       \
-          2>/dev/null || true # Ignore errors!
-          # When "local" and "podman" "tracer" folder is mounted
-          local nomad_task_driver=$(envjqr 'nomad_task_driver')
-          if ! test "${nomad_task_driver}" = "podman"
-          then
-            msg "$(blue Fetching) $(yellow exit_code) of supervisord $(yellow "program \"tracer\"") inside Nomad $(yellow "Task \"tracer\"") ..."
-            # Depending on when the start command failed, this file may be empty!
-            backend_nomad task-file-contents "${dir}" "tracer" \
-              /local/run/current/tracer/exit_code              \
-            > "${dir}"/tracer/exit_code                        \
-            2>/dev/null || true # Ignore errors!
-            msg "$(blue Fetching) $(yellow stdout) of supervisord $(yellow "program \"tracer\"") inside Nomad $(yellow "Task \"tracer\"") ..."
-            # Depending on when the start command failed, logs may not be available!
-            backend_nomad task-file-contents "${dir}" "tracer" \
-              /local/run/current/tracer/stdout                 \
-            > "${dir}"/tracer/stdout                           \
-            2>/dev/null || true # Ignore errors!
-            msg "$(blue Fetching) $(yellow stderr) of supervisord $(yellow "program \"tracer\"") inside Nomad $(yellow "Task \"tracer\"") ..."
-            # Depending on when the start command failed, logs may not be available!
-            backend_nomad task-file-contents "${dir}" "tracer" \
-              /local/run/current/tracer/stderr                 \
-            > "${dir}"/tracer/stderr                           \
-            2>/dev/null || true # Ignore errors!
-          fi
+          backend_nomad download-zstd-tracer "${dir}" "tracer"
         fi
       fi
+    ;;
+
+    download-zstd-generator )
+      local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME"
+      local dir=${1:?$usage}; shift
+      local task=${1:?$usage}; shift
+
+      msg "$(blue Fetching) $(yellow "\"generator\"") run files from Nomad $(yellow "Task \"${task}\"") ..."
+      # TODO: Add compression, either "--zstd" or "--xz"
+          backend_nomad task-exec-program-run-files-tar-zstd        \
+            "${dir}" "${task}" "generator"                          \
+        | tar --extract                                             \
+            --directory="${dir}"/generator/ --file=-                \
+            --no-same-owner --no-same-permissions                   \
+      ||                                                            \
+        msg "$(red "Failed to download \"generator\" run files from \"${task}\"")"
     ;;
 
     download-zstd-node )
@@ -1685,18 +1654,53 @@ backend_nomad() {
       local dir=${1:?$usage}; shift
       local node=${1:?$usage}; shift
 
-      msg "$(blue Fetching) node's $(yellow "\"${node}\"") log files from Nomad $(yellow "Task \"${node}\"") ..."
+      msg "$(blue Fetching) node's $(yellow "\"${node}\"") run files from Nomad $(yellow "Task \"${node}\"") ..."
       # TODO: Add compression, either "--zstd" or "--xz"
-          backend_nomad task-exec-node-files-tar-zstd               \
-          "${dir}" "${node}"                                        \
+          backend_nomad task-exec-program-run-files-tar-zstd        \
+            "${dir}" "${node}" "${node}"                            \
         | tar --extract                                             \
-              --directory="${dir}"/"${node}"/ --file=-              \
-              --no-same-owner --no-same-permissions                 \
+            --directory="${dir}"/"${node}"/ --file=-                \
+            --no-same-owner --no-same-permissions                   \
       ||                                                            \
-        msg "$(red "Failed to download \"${node}\" logs")"
+        msg "$(red "Failed to download \"${node}\" run files from \"${node}\"")"
     ;;
 
     download-zstd-tracer )
+      local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME"
+      local dir=${1:?$usage}; shift
+      local task=${1:?$usage}; shift
+
+      local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
+      if test "${one_tracer_per_node}" = "true" || test "${task}" != "tracer"
+      then
+        msg "$(blue Fetching) $(yellow "\"tracer\"") run files from Nomad $(yellow "Task \"${task}\"") ..."
+        # TODO: Add compression, either "--zstd" or "--xz"
+            backend_nomad task-exec-program-run-files-tar-zstd    \
+              "${dir}" "${task}" "tracer"                         \
+          | tar --extract                                         \
+              --directory="${dir}"/tracer/"${task}" --file=-      \
+              --no-same-owner --no-same-permissions               \
+        ||                                                        \
+          msg "$(red "Failed to download \"tracer\" run files from \"${task}\"")"
+      else
+        # When "local" and "podman" "tracer" folder is mounted
+        local nomad_task_driver=$(envjqr 'nomad_task_driver')
+        if ! test "${nomad_task_driver}" = "podman"
+        then
+          msg "$(blue Fetching) $(yellow "\"tracer\"") run files from Nomad $(yellow "Task \"tracer\"") ..."
+          # TODO: Add compression, either "--zstd" or "--xz"
+              backend_nomad task-exec-program-run-files-tar-zstd  \
+                "${dir}" "tracer" "tracer"                        \
+            | tar --extract                                       \
+                --directory="${dir}"/tracer/ --file=-             \
+                --no-same-owner --no-same-permissions             \
+          ||                                                      \
+            msg "$(red "Failed to download \"tracer\" run files from \"tracer\"")"
+        fi
+      fi
+    ;;
+
+    download-zstd-tracer-logRoot )
       local usage="USAGE: wb backend pass $op RUN-DIR NODE-NAME"
       local dir=${1:?$usage}; shift
       local task=${1:?$usage}; shift
@@ -1708,7 +1712,7 @@ backend_nomad() {
           # Logs will only be available if the tracer was started at least once!
           if test -f "${dir}"/tracer/${task}/started
           then
-            msg "$(blue Fetching) $(yellow "\"tracer\"") log files from Nomad $(yellow "Task \"${task}\"") ..."
+            msg "$(blue Fetching) $(yellow "\"tracer\"") run files from Nomad $(yellow "Task \"${task}\"") ..."
             # TODO: Add compression, either "--zstd" or "--xz"
                 backend_nomad task-exec-tracer-folders-tar-zstd           \
                 "${dir}" "${task}"                                        \
@@ -1716,7 +1720,7 @@ backend_nomad() {
                     --directory="${dir}"/tracer/ --file=-                 \
                     --no-same-owner --no-same-permissions                 \
             ||                                                            \
-              msg "$(red "Failed to download \"tracer\" logs from \"${task}\"")"
+              msg "$(red "Failed to download \"tracer\" run files from \"${task}\"")"
           fi
         else
           # When "local" and "podman" "tracer" folder is mounted
@@ -1726,7 +1730,7 @@ backend_nomad() {
             # Logs will only be available if the tracer was started at least once!
             if test -f "${dir}"/tracer/started
             then
-              msg "$(blue Fetching) $(yellow "\"tracer\"") log files from Nomad $(yellow "Task \"tracer\"") ..."
+              msg "$(blue Fetching) $(yellow "\"tracer\"") run files from Nomad $(yellow "Task \"tracer\"") ..."
               # TODO: Add compression, either "--zstd" or "--xz"
                   backend_nomad task-exec-tracer-folders-tar-zstd           \
                   "${dir}" "${node}"                                        \
@@ -1734,7 +1738,7 @@ backend_nomad() {
                       --directory="${dir}"/tracer/ --file=-                 \
                       --no-same-owner --no-same-permissions                 \
               ||                                                            \
-                msg "$(red "Failed to download \"tracer\" logs from \"tracer\"")"
+                msg "$(red "Failed to download \"tracer\" run files from \"tracer\"")"
             fi
           fi
         fi
@@ -1952,16 +1956,17 @@ backend_nomad() {
         "$@"
     ;;
 
-    task-exec-node-files-tar-zstd )
+    task-exec-program-run-files-tar-zstd )
       local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME"
       local dir=${1:?$usage}; shift
       local task=${1:?$usage}; shift
+      local program=${1:?$usage}; shift
 
       local bash_path="$(jq -r ".containerPkgs.bashInteractive.\"nix-store-path\"" "${dir}"/container-specs.json)"/bin/bash
       local find_path="$(jq -r ".containerPkgs.findutils.\"nix-store-path\""       "${dir}"/container-specs.json)"/bin/find
       local tar_path="$(jq  -r ".containerPkgs.gnutar.\"nix-store-path\""          "${dir}"/container-specs.json)"/bin/tar
       local cat_path="$(jq  -r ".containerPkgs.coreutils.\"nix-store-path\""       "${dir}"/container-specs.json)"/bin/cat
-      local node_dir=/local/run/current/"${task}"/
+      local prog_dir=/local/run/current/"${program}"/
       # TODO: Add compression, either "--zstd" or "--xz"
       # tar (child): zstd: Cannot exec: No such file or directory
       # tar (child): Error is not recoverable: exiting now
@@ -1971,10 +1976,11 @@ backend_nomad() {
       backend_nomad task-exec "${dir}" "${task}"         \
         "${bash_path}" -c                                \
         "                                                \
-          \"${find_path}\" \"${node_dir}\"               \
+          \"${find_path}\" \"${prog_dir}\"               \
             -mindepth 1 -maxdepth 1 -type f              \
             \(                                           \
-                 -name "stdout"                          \
+                 -name "exit_code"                       \
+              -o -name "stdout"                          \
               -o -name "stderr"                          \
               -o -name "*.prof"                          \
               -o -name "*.eventlog"                      \
@@ -1984,7 +1990,7 @@ backend_nomad() {
             -printf \"%P\\n\"                            \
         |                                                \
           \"${tar_path}\" --create                       \
-            --directory=\"${node_dir}\" --files-from=-   \
+            --directory=\"${prog_dir}\" --files-from=-   \
         |                                                \
           \"${cat_path}\"                                \
         "
