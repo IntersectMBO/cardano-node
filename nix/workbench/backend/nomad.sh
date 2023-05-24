@@ -1628,24 +1628,29 @@ backend_nomad() {
               else
                 # The whole cluster is about to finish!
                 touch "${dir}"/generator/quit
+                # Show the warning and continue with the counter
+                echo -ne "\n"
+                msg "$(yellow "WARNING: supervisord program \"generator\" (always inside Nomad Task \"node-0\" quit with an error exit code")"
+                msg_ne "nomad: $(blue Waiting) until all pool nodes are stopped: 000000"
               fi
             else
               touch "${dir}"/generator/quit
               # Show the warning and continue with the counter
-              echo -e "\n"
+              echo -ne "\n"
               msg "$(yellow "WARNING: supervisord program \"generator\" (always inside Nomad Task \"node-0\" quit with a non-error exit code")"
               msg_ne "nomad: $(blue Waiting) until all pool nodes are stopped: 000000"
             fi
-          fi
+          fi # Finish generator checks.
           local elapsed="$(($(date +%s) - start_time))"
           echo -ne "\b\b\b\b\b\b"
           printf "%6d" "${elapsed}"
           sleep 1
-        done   # While
+        done # While
         if ! test -f "${dir}"/flag/cluster-stopping
         then
-            echo -ne "\b\b\b\b\b\b"
-            echo -n "node-${pool_ix} 000000"
+          echo -ne "\n"
+          msg "$(yellow "supervisord program \"node-${pool_ix}\" stopped")"
+          msg_ne "nomad: $(blue Waiting) until all pool nodes are stopped: 000000"
         fi
       done >&2 # For
       echo -ne "\b\b\b\b\b\b"
@@ -1653,10 +1658,12 @@ backend_nomad() {
       local elapsed=$(($(date +%s) - start_time))
       if test -f "${dir}"/flag/cluster-stopping
       then
-        echo " Termination requested -- after $(yellow ${elapsed})s" >&2;
+        echo -ne "\n"
+        msg "Termination requested -- after $(yellow ${elapsed})s"
       else
         touch "${dir}"/flag/cluster-stopping
-        echo " All nodes exited      -- after $(yellow ${elapsed})s" >&2
+        echo -ne "\n"
+        msg "All nodes exited      -- after $(yellow ${elapsed})s"
       fi
     ;;
 
