@@ -92,7 +92,6 @@ instance (  LogFormatting (Header blk)
   forHuman (ChainDB.TraceLedgerReplayEvent v)      = forHuman v
   forHuman (ChainDB.TraceImmutableDBEvent v)       = forHuman v
   forHuman (ChainDB.TraceVolatileDBEvent v)        = forHuman v
-  forHuman (ChainDB.TraceLedgerEvent v)            = forHuman v
 
   forMachine details (ChainDB.TraceAddBlockEvent v) =
     forMachine details v
@@ -116,8 +115,6 @@ instance (  LogFormatting (Header blk)
     forMachine details v
   forMachine details (ChainDB.TraceVolatileDBEvent v) =
     forMachine details v
-  forMachine details (ChainDB.TraceLedgerEvent v) =
-    forMachine details v
 
   asMetrics (ChainDB.TraceAddBlockEvent v)          = asMetrics v
   asMetrics (ChainDB.TraceFollowerEvent v)          = asMetrics v
@@ -130,7 +127,6 @@ instance (  LogFormatting (Header blk)
   asMetrics (ChainDB.TraceLedgerReplayEvent v)      = asMetrics v
   asMetrics (ChainDB.TraceImmutableDBEvent v)       = asMetrics v
   asMetrics (ChainDB.TraceVolatileDBEvent v)        = asMetrics v
-  asMetrics (ChainDB.TraceLedgerEvent v)            = asMetrics v
 
 
 instance MetaTrace  (ChainDB.TraceEvent blk) where
@@ -156,8 +152,6 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     nsPrependInner "ImmDbEvent" (namespaceFor ev)
   namespaceFor (ChainDB.TraceVolatileDBEvent ev) =
      nsPrependInner "VolatileDbEvent" (namespaceFor ev)
-  namespaceFor (ChainDB.TraceLedgerEvent ev) =
-     nsPrependInner "TraceLedgerEvent" (namespaceFor ev)
 
   severityFor (Namespace out ("AddBlockEvent" : tl)) (Just (ChainDB.TraceAddBlockEvent ev')) =
     severityFor (Namespace out tl) (Just ev')
