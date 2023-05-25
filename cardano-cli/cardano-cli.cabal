@@ -110,7 +110,7 @@ library
                       , binary
                       , bytestring
                       , canonical-json
-                      , cardano-api ^>= 8.1.0.1
+                      , cardano-api ^>= 8.2
                       , cardano-binary
                       , cardano-crypto
                       , cardano-crypto-class >= 2.1.1
@@ -120,7 +120,7 @@ library
                       , cardano-ledger-alonzo >= 1.1.1
                       , cardano-ledger-byron >= 1.0
                       , cardano-ledger-binary >= 1.0
-                      , cardano-ledger-core >= 1.1
+                      , cardano-ledger-core >= 1.2
                       , cardano-ledger-conway >= 1.1
                       , cardano-ledger-shelley >= 1.1.1
                       , cardano-ping ^>= 0.1.0.1
@@ -142,8 +142,8 @@ library
                       , microlens
                       , network
                       , optparse-applicative-fork
-                      , ouroboros-consensus >= 0.6
-                      , ouroboros-consensus-cardano >= 0.5
+                      , ouroboros-consensus >= 0.7
+                      , ouroboros-consensus-cardano >= 0.6
                       , ouroboros-consensus-protocol >= 0.5
                       , ouroboros-network-api
                       , ouroboros-network-protocols
@@ -198,7 +198,7 @@ test-suite cardano-cli-test
                       , base16-bytestring
                       , bech32 >= 1.1.0
                       , bytestring
-                      , cardano-api ^>= 8.1.0.1
+                      , cardano-api ^>= 8.2
                       , cardano-api-gen ^>= 8.1.0.2
                       , cardano-cli
                       , cardano-cli:cardano-cli-test-lib
@@ -242,7 +242,7 @@ test-suite cardano-cli-golden
   build-depends:        aeson >= 1.5.6.0
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 8.1.0.1
+                      , cardano-api ^>= 8.2
                       , cardano-cli
                       , cardano-cli:cardano-cli-test-lib
                       , cardano-crypto-wrapper ^>= 1.5.1

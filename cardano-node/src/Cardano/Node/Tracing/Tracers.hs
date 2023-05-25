@@ -330,7 +330,7 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith blockchainTimeTr
       , Consensus.keepAliveClientTracer = Tracer $
           traceWith keepAliveClientTr
-      , Consensus.consensusStartupErrorTracer = Tracer $
+      , Consensus.consensusErrorTracer = Tracer $
           traceWith consensusStartupErrorTr . ConsensusStartupException
       }
 
