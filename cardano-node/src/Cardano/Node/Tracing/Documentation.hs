@@ -112,8 +112,6 @@ import           Ouroboros.Network.Subscription.Worker (SubscriptionTrace (..))
 import           Ouroboros.Network.TxSubmission.Inbound (TraceTxSubmissionInbound)
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
 
-import           Cardano.Api.Orphans ()
-
 data TraceDocumentationCmd
   = TraceDocumentationCmd
     { tdcConfigFile :: FilePath

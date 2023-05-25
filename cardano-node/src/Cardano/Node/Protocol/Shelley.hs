@@ -26,6 +26,7 @@ import           Control.Exception (IOException)
 import           Control.Monad.Except (ExceptT, MonadError (..))
 
 import qualified Cardano.Api as Api
+import           Cardano.Api.Shelley hiding (FileError)
 
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
@@ -47,8 +48,6 @@ import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParamsShe
 import           Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley
 
-import           Cardano.Api.Orphans ()
-import           Cardano.Api.Shelley hiding (FileError)
 
 import           Cardano.Node.Types
 

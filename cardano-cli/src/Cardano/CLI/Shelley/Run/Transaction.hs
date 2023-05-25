@@ -397,11 +397,11 @@ runTxBuildCmd
 
       pparams <- pure mTxProtocolParams & onNothing (left ShelleyTxCmdProtocolParametersNotPresentInTxBody)
 
-
       executionUnitPrices <- pure (protocolParamPrices pparams) & onNothing (left ShelleyTxCmdPParamExecutionUnitsNotAvailable)
 
       let consensusMode = consensusModeOnly cModeParams
-          bpp = bundleProtocolParams cEra pparams
+      bpp <- hoistEither . first (ShelleyTxCmdTxBodyError . TxBodyProtocolParamsConversionError) $
+        bundleProtocolParams cEra pparams
 
       case consensusMode of
         CardanoMode -> do
@@ -1208,7 +1208,9 @@ runTxCalculateMinRequiredUTxO (AnyCardanoEra era) pParamsFile txOut = do
     ShelleyBasedEra sbe -> do
       firstExceptT ShelleyTxCmdPParamsErr . hoistEither
         $ checkProtocolParameters sbe pp
-      let minValue = calculateMinimumUTxO sbe out (bundleProtocolParams era pp)
+      bpparams <- hoistEither . first (ShelleyTxCmdTxBodyError . TxBodyProtocolParamsConversionError) $
+        bundleProtocolParams era pp
+      let minValue = calculateMinimumUTxO sbe out bpparams
       liftIO . IO.print $ minValue
 
 runTxCreatePolicyId :: ScriptFile -> ExceptT ShelleyTxCmdError IO ()

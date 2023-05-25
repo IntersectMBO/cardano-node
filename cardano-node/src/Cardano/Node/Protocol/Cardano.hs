@@ -32,7 +32,6 @@ import           Ouroboros.Consensus.Cardano.Condense ()
 import qualified Ouroboros.Consensus.Mempool.Capacity as TxLimits
 
 import           Cardano.Api
-import           Cardano.Api.Orphans ()
 import           Cardano.Node.Types
 
 import           Cardano.Tracing.OrphanInstances.Byron ()

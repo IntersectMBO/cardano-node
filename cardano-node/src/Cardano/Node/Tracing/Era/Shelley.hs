@@ -25,7 +25,6 @@ import           Data.Text (Text)
 
 import           Cardano.Api (textShow)
 import qualified Cardano.Api as Api
-import           Cardano.Api.Orphans ()
 import qualified Cardano.Api.Shelley as Api
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Ledger.Crypto (StandardCrypto)
