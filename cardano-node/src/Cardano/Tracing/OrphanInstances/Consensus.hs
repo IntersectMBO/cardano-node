@@ -120,7 +120,6 @@ instance ConvertRawHash blk => ConvertRawHash (Header blk) where
 
 instance HasPrivacyAnnotation (ChainDB.TraceEvent blk)
 instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
-  getSeverityAnnotation (ChainDB.TraceLedgerEvent _ev) = Debug
   getSeverityAnnotation (ChainDB.TraceAddBlockEvent ev) = case ev of
     ChainDB.IgnoreBlockOlderThanK {} -> Info
     ChainDB.IgnoreBlockAlreadyInVolatileDB {} -> Info
@@ -466,7 +465,6 @@ instance ( ConvertRawHash blk
          , InspectLedger blk)
       => HasTextFormatter (ChainDB.TraceEvent blk) where
     formatText tev _obj = case tev of
-      ChainDB.TraceLedgerEvent _ev -> "TraceLedgerEvent"
       ChainDB.TraceAddBlockEvent ev -> case ev of
         ChainDB.IgnoreBlockOlderThanK pt ->
           "Ignoring block older than K: " <> renderRealPointAsPhrase pt
@@ -970,9 +968,6 @@ instance ( ConvertRawHash blk
          Nothing -> [] -- No sense to do validation here.
      chainLengthΔ :: AF.AnchoredFragment (Header blk) -> AF.AnchoredFragment (Header blk) -> Int
      chainLengthΔ = on (-) (fromWithOrigin (-1) . fmap (fromIntegral . unBlockNo) . AF.headBlockNo)
-
-  toObject _verb (ChainDB.TraceLedgerEvent _ev) =
-      mconcat [ "kind" .= String "TraceLedgerEvent" ]
 
   toObject MinimalVerbosity (ChainDB.TraceLedgerReplayEvent _ev) = mempty -- no output
   toObject verb (ChainDB.TraceLedgerReplayEvent ev) = case ev of

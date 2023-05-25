@@ -1776,6 +1776,7 @@ instance ToJSON NodeToNodeVersion where
   toJSON NodeToNodeV_9  = Number 9
   toJSON NodeToNodeV_10 = Number 10
   toJSON NodeToNodeV_11  = Number 11
+  toJSON NodeToNodeV_12  = Number 12
 
 instance FromJSON NodeToNodeVersion where
   parseJSON (Number 7) = return NodeToNodeV_7
@@ -1794,6 +1795,7 @@ instance ToJSON NodeToClientVersion where
   toJSON NodeToClientV_13 = Number 13
   toJSON NodeToClientV_14 = Number 14
   toJSON NodeToClientV_15 = Number 15
+  toJSON NodeToClientV_16 = Number 16
 
 instance FromJSON NodeToClientVersion where
   parseJSON (Number 9) = return NodeToClientV_9
