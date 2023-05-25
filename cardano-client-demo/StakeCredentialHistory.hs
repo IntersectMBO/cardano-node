@@ -16,7 +16,7 @@ import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Shelley.API as L
 import qualified Cardano.Ledger.Shelley.Rewards as L
 import qualified Cardano.Ledger.Shelley.RewardUpdate as L
-import qualified Cardano.Ledger.UMapCompact as UM
+import qualified Cardano.Ledger.UMap as UM
 import qualified Ouroboros.Consensus.Shelley.Ledger as Shelley
 
 import qualified Codec.Binary.Bech32 as Bech32
@@ -258,8 +258,8 @@ main = do
              let getGoSnapshot = L.unStake . L.ssStake . L.ssStakeGo . L.esSnapshots . L.nesEs
                  getBalances = UM.rewView
                              . L.dsUnified
-                             . L.dpsDState
-                             . L.lsDPState
+                             . L.certDState
+                             . L.lsCertState
                              . L.esLState
                              . L.nesEs
                  getPV :: LC.EraPParams era => L.NewEpochState era -> L.ProtVer

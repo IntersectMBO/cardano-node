@@ -55,7 +55,7 @@ import qualified Cardano.Ledger.SafeHash as Ledger
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import qualified Cardano.Ledger.Shelley.UTxO as Shelley
 import qualified Cardano.Ledger.TxIn as Ledger
-import qualified Cardano.Ledger.UMapCompact as UM
+import qualified Cardano.Ledger.UMap as UM
 
 import           Ouroboros.Consensus.Block (ForgeStateInfo, ForgeStateUpdateError)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
@@ -251,8 +251,8 @@ instance LedgerQueries (Shelley.ShelleyBlock protocol era) where
       UM.size
     . UM.Delegations
     . Shelley.dsUnified
-    . Shelley.dpsDState
-    . Shelley.lsDPState
+    . Shelley.certDState
+    . Shelley.lsCertState
     . Shelley.esLState
     . Shelley.nesEs
     . Shelley.shelleyLedgerState
