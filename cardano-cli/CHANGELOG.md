@@ -2,7 +2,8 @@
 
 ## 8.1.0
 
--
+- Updated ledger dependency bounds
+- Support for query flag in `Ping` parser
 
 ## 8.0.0 -- May 2023
 
