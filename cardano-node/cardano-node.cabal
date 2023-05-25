@@ -137,7 +137,7 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 8.1.0.1
+                      , cardano-api ^>= 8.2
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev
@@ -180,7 +180,7 @@ library
                       , ouroboros-consensus-protocol >= 0.5
                       , ouroboros-network-api
                       , ouroboros-network  >= 0.6
-                      , ouroboros-network-framework >= 0.5
+                      , ouroboros-network-framework >= 0.6
                       , ouroboros-network-protocols
                       , prettyprinter
                       , prettyprinter-ansi-terminal
@@ -233,8 +233,8 @@ test-suite cardano-node-test
   build-depends:        base >= 4.14 && < 4.17
                       , aeson >= 1.5.6.0
                       , bytestring
-                      , cardano-api ^>= 8.1.0.1
                       , cardano-crypto-class
+                      , cardano-api ^>= 8.2
                       , cardano-ledger-core
                       , cardano-node
                       , cardano-slotting >= 0.1

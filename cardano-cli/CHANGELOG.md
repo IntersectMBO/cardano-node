@@ -22,6 +22,8 @@
 - Fix `toEraInMode` for conway.  This means for example that `query utxo`
   works in Conway.
   ([PR5175](https://github.com/input-output-hk/cardano-node/pull/5175))
+- Updated ledger dependency bounds
+- Support for query flag in `Ping` parser
 
 ## 8.0.0 -- May 2023
 

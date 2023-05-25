@@ -97,7 +97,7 @@ library
                       , attoparsec
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 8.1.0.1
+                      , cardano-api ^>= 8.2
                       , cardano-binary
                       , cardano-cli
                       , cardano-crypto-class
@@ -193,7 +193,7 @@ test-suite tx-generator-apitest
                       , bytestring
                       , filepath
                       , optparse-applicative-fork
-                      , cardano-api ^>= 8.1.0.1
+                      , cardano-api ^>= 8.2
                       , cardano-cli
                       , cardano-node
                       , plutus-tx
@@ -209,7 +209,7 @@ test-suite tx-generator-apitest
                      , bytestring
                      , filepath
                      , optparse-applicative-fork
-                     , cardano-api ^>= 8.1.0.1
+                     , cardano-api ^>= 8.2
                      , cardano-cli
                      , cardano-node
                      , transformers

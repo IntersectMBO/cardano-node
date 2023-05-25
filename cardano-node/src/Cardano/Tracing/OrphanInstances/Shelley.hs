@@ -266,6 +266,20 @@ instance ( ShelleyBasedEra era
             ]
 
 instance ( ShelleyBasedEra era
+         , ToObject (PredicateFailure (Ledger.EraRule "CERT" era))
+         ) => ToObject (Conway.ConwayDelegsPredFailure era) where
+  toObject _ (Conway.DelegateeNotRegisteredDELEG poolID) =
+    mconcat [ "kind" .= String "DelegateeNotRegisteredDELEG"
+             , "poolID" .= String (textShow poolID)
+            ]
+  toObject _ (Conway.WithdrawalsNotInRewardsDELEGS rs) =
+    mconcat [ "kind" .= String "WithdrawalsNotInRewardsDELEGS"
+             , "rewardAccounts" .= rs
+            ]
+  toObject v (Conway.CertFailure certFailure) =
+    toObject v certFailure
+
+instance ( ShelleyBasedEra era
          , ToObject (PPUPPredFailure era)
          , ToObject (PredicateFailure (Ledger.EraRule "UTXO" era))
          , Ledger.EraCrypto era ~ StandardCrypto

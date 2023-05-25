@@ -1040,6 +1040,20 @@ instance ( ShelleyBasedEra era
             , "govActionId" .= govActionIdToText govActionId
             ]
 
+instance ( ShelleyBasedEra era
+         , LogFormatting (PredicateFailure (Ledger.EraRule "CERT" era))
+         ) => LogFormatting (Conway.ConwayDelegsPredFailure era) where
+  forMachine _ (Conway.DelegateeNotRegisteredDELEG poolID) =
+    mconcat [ "kind" .= String "DelegateeNotRegisteredDELEG"
+            , "poolID" .= String (textShow poolID)
+            ]
+  forMachine _ (Conway.WithdrawalsNotInRewardsDELEGS rs) =
+    mconcat [ "kind" .= String "WithdrawalsNotInRewardsDELEGS"
+             , "rewardAccounts" .= rs
+            ]
+  forMachine dtal (Conway.CertFailure certFailure) =
+    forMachine dtal certFailure
+
 
 instance Core.Crypto crypto => LogFormatting (Praos.PraosValidationErr crypto) where
   forMachine _ err' =
