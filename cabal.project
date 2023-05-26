@@ -16,6 +16,13 @@ index-state:
   , hackage.haskell.org 2023-04-29T00:00:00Z
   , cardano-haskell-packages 2023-04-30T00:28:07Z
 
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-network
+  tag: cf6cde9097f94c7ff5fa8faa8febe5723b1b2eb9
+  subdir: ouroboros-network
+
+
 packages:
     cardano-api
     cardano-cli
