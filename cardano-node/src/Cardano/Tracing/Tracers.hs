@@ -697,38 +697,41 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
   pure Consensus.Tracers
     { Consensus.chainSyncClientTracer = tracerOnOff (traceChainSyncClient trSel) verb "ChainSyncClient" tr
     , Consensus.chainSyncServerHeaderTracer =
-      Tracer $ \ev -> do
-        traceWith (annotateSeverity . toLogObject' verb $ appendName "ChainSyncHeaderServer"
-                    (tracerOnOff' (traceChainSyncHeaderServer trSel) tr)) ev
-        traceServedCount mbEKGDirect ev
+        contramap (\(TraceLabelPeer _peer a) -> a) $
+          Tracer $ \ev -> do
+            traceWith (annotateSeverity . toLogObject' verb $ appendName "ChainSyncHeaderServer"
+                        (tracerOnOff' (traceChainSyncHeaderServer trSel) tr)) ev
+            traceServedCount mbEKGDirect ev
     , Consensus.chainSyncServerBlockTracer = tracerOnOff (traceChainSyncBlockServer trSel) verb "ChainSyncBlockServer" tr
     , Consensus.blockFetchDecisionTracer = tracerOnOff' (traceBlockFetchDecisions trSel) $
         annotateSeverity $ teeTraceBlockFetchDecision verb elidedFetchDecision tr
     , Consensus.blockFetchClientTracer = traceBlockFetchClientMetrics mbEKGDirect tBlockDelayM
         tBlockDelayCDF1s tBlockDelayCDF3s tBlockDelayCDF5s $
             tracerOnOff (traceBlockFetchClient trSel) verb "BlockFetchClient" tr
-    , Consensus.blockFetchServerTracer = traceBlockFetchServerMetrics trmet meta tBlocksServed
-        tLocalUp tMaxSlotNo $ tracerOnOff (traceBlockFetchServer trSel) verb "BlockFetchServer" tr
+    , Consensus.blockFetchServerTracer =
+        contramap (\(TraceLabelPeer _peer a) -> a) $
+          traceBlockFetchServerMetrics trmet meta tBlocksServed
+            tLocalUp tMaxSlotNo $ tracerOnOff (traceBlockFetchServer trSel) verb "BlockFetchServer" tr
     , Consensus.keepAliveClientTracer = tracerOnOff (traceKeepAliveClient trSel) verb "KeepAliveClient" tr
     , Consensus.forgeStateInfoTracer = tracerOnOff' (traceForgeStateInfo trSel) $
         forgeStateInfoTracer (Proxy @blk) trSel tr
     , Consensus.txInboundTracer = tracerOnOff' (traceTxInbound trSel) $
-        Tracer $ \ev -> do
-          traceWith (annotateSeverity . toLogObject' verb $ appendName "TxInbound" tr) ev
-          case ev of
-            TraceLabelPeer _ (TraceTxSubmissionCollected collected) ->
-              traceI trmet meta "submissions.submitted.count" =<<
-                STM.modifyReadTVarIO tSubmissionsCollected (+ collected)
+          Tracer $ \ev -> do
+            traceWith (annotateSeverity . toLogObject' verb $ appendName "TxInbound" tr) ev
+            case ev of
+              TraceLabelPeer _ (TraceTxSubmissionCollected collected) ->
+                traceI trmet meta "submissions.submitted.count" =<<
+                  STM.modifyReadTVarIO tSubmissionsCollected (+ collected)
 
-            TraceLabelPeer _ (TraceTxSubmissionProcessed processed) -> do
-              traceI trmet meta "submissions.accepted.count" =<<
-                STM.modifyReadTVarIO tSubmissionsAccepted (+ ptxcAccepted processed)
-              traceI trmet meta "submissions.rejected.count" =<<
-                STM.modifyReadTVarIO tSubmissionsRejected (+ ptxcRejected processed)
+              TraceLabelPeer _ (TraceTxSubmissionProcessed processed) -> do
+                traceI trmet meta "submissions.accepted.count" =<<
+                  STM.modifyReadTVarIO tSubmissionsAccepted (+ ptxcAccepted processed)
+                traceI trmet meta "submissions.rejected.count" =<<
+                  STM.modifyReadTVarIO tSubmissionsRejected (+ ptxcRejected processed)
 
-            TraceLabelPeer _ TraceTxInboundTerminated -> return ()
-            TraceLabelPeer _ (TraceTxInboundCanRequestMoreTxs _) -> return ()
-            TraceLabelPeer _ (TraceTxInboundCannotRequestMoreTxs _) -> return ()
+              TraceLabelPeer _ TraceTxInboundTerminated -> return ()
+              TraceLabelPeer _ (TraceTxInboundCanRequestMoreTxs _) -> return ()
+              TraceLabelPeer _ (TraceTxInboundCannotRequestMoreTxs _) -> return ()
 
     , Consensus.txOutboundTracer = tracerOnOff (traceTxOutbound trSel) verb "TxOutbound" tr
     , Consensus.localTxSubmissionServerTracer = tracerOnOff (traceLocalTxSubmissionServer trSel) verb "LocalTxSubmissionServer" tr
