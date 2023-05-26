@@ -697,11 +697,9 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
   pure Consensus.Tracers
     { Consensus.chainSyncClientTracer = tracerOnOff (traceChainSyncClient trSel) verb "ChainSyncClient" tr
     , Consensus.chainSyncServerHeaderTracer =
-        contramap (\(TraceLabelPeer _peer a) -> a) $
-          Tracer $ \ev -> do
-            traceWith (annotateSeverity . toLogObject' verb $ appendName "ChainSyncHeaderServer"
-                        (tracerOnOff' (traceChainSyncHeaderServer trSel) tr)) ev
-            traceServedCount mbEKGDirect ev
+           tracerOnOff' (traceChainSyncHeaderServer trSel)
+                        (annotateSeverity . toLogObject' verb $ appendName "ChainSyncHeaderServer" tr)
+        <> (\(TraceLabelPeer _ ev) -> ev) `contramap` Tracer (traceServedCount mbEKGDirect)
     , Consensus.chainSyncServerBlockTracer = tracerOnOff (traceChainSyncBlockServer trSel) verb "ChainSyncBlockServer" tr
     , Consensus.blockFetchDecisionTracer = tracerOnOff' (traceBlockFetchDecisions trSel) $
         annotateSeverity $ teeTraceBlockFetchDecision verb elidedFetchDecision tr
