@@ -21,11 +21,10 @@ import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (.
 import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
                    codecHandshake, noTimeLimitsHandshake)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
-import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion,
-                   queryVersion, simpleSingletonVersions)
+import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion, queryVersion,
                    simpleSingletonVersions)
-import           Ouroboros.Network.Snocket (LocalAddress, LocalSocket, Snocket, makeLocalBearer,
-                   localAddressFromPath, localSnocket)
+import           Ouroboros.Network.Snocket (LocalAddress, LocalSocket, Snocket,
+                   localAddressFromPath, localSnocket, makeLocalBearer)
 import           Ouroboros.Network.Socket (ConnectionId (..), HandshakeCallbacks (..),
                    connectToNode, nullNetworkConnectTracers)
 import qualified System.Metrics.Configuration as EKGF

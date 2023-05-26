@@ -300,12 +300,12 @@ instance (LedgerSupportsProtocol blk)
   formatText _ = pack . show . toList
 
 
-instance ConvertRawHash blk
-      => Transformable Text IO (TraceBlockFetchServerEvent blk) where
+instance (ToObject peer, ConvertRawHash blk)
+      => Transformable Text IO (TraceLabelPeer peer (TraceBlockFetchServerEvent blk)) where
   trTransformer = trStructuredText
 
 
-instance HasTextFormatter (TraceBlockFetchServerEvent blk) where
+instance HasTextFormatter (TraceLabelPeer peer (TraceBlockFetchServerEvent blk)) where
   formatText _ = pack . show . toList
 
 
@@ -317,6 +317,13 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
 instance ConvertRawHash blk
       => Transformable Text IO (TraceChainSyncServerEvent blk) where
   trTransformer = trStructured
+
+instance (ToObject peer, ToObject (TraceChainSyncServerEvent blk))
+    => Transformable Text IO (TraceLabelPeer peer (TraceChainSyncServerEvent blk)) where
+  trTransformer = trStructured
+instance (StandardHash blk, Show peer)
+    => HasTextFormatter (TraceLabelPeer peer (TraceChainSyncServerEvent blk)) where
+  formatText a _ = pack $ show a
 
 
 instance ( ToObject (ApplyTxErr blk), ToObject (GenTx blk),
