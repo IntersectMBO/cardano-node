@@ -49,6 +49,7 @@ import           Prelude
 import           Cardano.Api.Shelley
 
 import           Data.Text (Text)
+import           Data.Time.Clock
 
 import           Cardano.CLI.Shelley.Key (DelegationTarget, PaymentVerifier, StakeIdentifier,
                    StakeVerifier, VerificationKeyOrFile, VerificationKeyOrHashOrFile,
@@ -367,6 +368,7 @@ data QueryCmd =
       (Maybe (File () Out))
   | QueryPoolState' SocketPath AnyConsensusModeParams NetworkId [Hash StakePoolKey]
   | QueryTxMempool SocketPath AnyConsensusModeParams NetworkId TxMempoolQuery (Maybe (File () Out))
+  | QuerySlotNumber SocketPath AnyConsensusModeParams NetworkId UTCTime
   deriving Show
 
 renderQueryCmd :: QueryCmd -> Text
@@ -385,6 +387,7 @@ renderQueryCmd cmd =
     QueryKesPeriodInfo {} -> "query kes-period-info"
     QueryPoolState' {} -> "query pool-state"
     QueryTxMempool _ _ _ query _ -> "query tx-mempool" <> renderTxMempoolQuery query
+    QuerySlotNumber {} -> "query slot-number"
   where
     renderTxMempoolQuery query =
       case query of

@@ -955,6 +955,8 @@ pQueryCmd envCli =
         (Opt.info pQueryPoolState $ Opt.progDesc "Dump the pool state")
     , subParser "tx-mempool"
         (Opt.info pQueryTxMempool $ Opt.progDesc "Local Mempool info")
+    , subParser "slot-number"
+        (Opt.info pQuerySlotNumber $ Opt.progDesc "Query slot number for UTC timestamp")
     ]
   where
     pQueryProtocolParameters :: Parser QueryCmd
@@ -1091,6 +1093,20 @@ pQueryCmd envCli =
         <*> pNetworkId envCli
         <*> pOperationalCertificateFile
         <*> pMaybeOutputFile
+
+    pQuerySlotNumber :: Parser QueryCmd
+    pQuerySlotNumber =
+      QuerySlotNumber
+        <$> pSocketPath envCli
+        <*> pConsensusModeParams
+        <*> pNetworkId envCli
+        <*> pUtcTimestamp
+          where
+            pUtcTimestamp =
+              convertTime <$> (Opt.strArgument . mconcat)
+                [ Opt.metavar "TIMESTAMP"
+                , Opt.help "UTC timestamp in YYYY-MM-DDThh:mm:ssZ format"
+                ]
 
 pGovernanceCmd :: Parser GovernanceCmd
 pGovernanceCmd =
@@ -1475,10 +1491,6 @@ pGenesisCmd envCli =
         <> Opt.completer (Opt.bashCompleter "file")
         )
 
-    convertTime :: String -> UTCTime
-    convertTime =
-      parseTimeOrError False defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ"
-
     pInitialSupplyNonDelegated :: Parser (Maybe Lovelace)
     pInitialSupplyNonDelegated =
       Opt.optional $
@@ -1653,6 +1665,10 @@ pTxMetadataJsonSchema =
   <|>
     -- Default to the no-schema conversion.
     pure TxMetadataJsonNoSchema
+
+convertTime :: String -> UTCTime
+convertTime =
+  parseTimeOrError False defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ"
 
 pMetadataFile :: Parser MetadataFile
 pMetadataFile =
