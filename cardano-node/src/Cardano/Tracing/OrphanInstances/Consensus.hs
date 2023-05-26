@@ -318,6 +318,13 @@ instance ConvertRawHash blk
       => Transformable Text IO (TraceChainSyncServerEvent blk) where
   trTransformer = trStructured
 
+instance (ToObject peer, ToObject (TraceChainSyncServerEvent blk))
+    => Transformable Text IO (TraceLabelPeer peer (TraceChainSyncServerEvent blk)) where
+  trTransformer = trStructured
+instance (StandardHash blk, Show peer)
+    => HasTextFormatter (TraceLabelPeer peer (TraceChainSyncServerEvent blk)) where
+  formatText a _ = pack $ show a
+
 
 instance ( ToObject (ApplyTxErr blk), ToObject (GenTx blk),
            ToJSON (GenTxId blk), LedgerSupportsMempool blk)
