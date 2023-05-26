@@ -43,7 +43,6 @@ import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (.
                    TracePeerSelection (..))
 import qualified Ouroboros.Network.PeerSelection.KnownPeers as KnownPeers
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
-import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
 import           Ouroboros.Network.PeerSelection.RootPeersDNS (TraceLocalRootPeers (..),
                    TracePublicRootPeers (..))
 import           Ouroboros.Network.PeerSelection.Types ()
@@ -57,7 +56,7 @@ import           Ouroboros.Network.Snocket (LocalAddress (..))
 -- LocalRootPeers Tracer
 --------------------------------------------------------------------------------
 
-instance (ToJSONKey ntnAddr, ToJSONKey RelayAccessPoint, Show ntnAddr, Show exception) =>
+instance (ToJSONKey ntnAddr, ToJSON ntnAddr, Show ntnAddr, Show exception) =>
     LogFormatting (TraceLocalRootPeers ntnAddr exception) where
   forMachine _dtal (TraceLocalRootDomains groups) =
     mconcat [ "kind" .= String "LocalRootDomains"
@@ -87,11 +86,15 @@ instance (ToJSONKey ntnAddr, ToJSONKey RelayAccessPoint, Show ntnAddr, Show exce
              , "domainAddress" .= toJSON d
              , "reason" .= show exception
              ]
-  forMachine _dtal (TraceLocalRootReconfigured d exception) =
+  forMachine _dtal (TraceLocalRootReconfigured old new) =
     mconcat [ "kind" .= String "LocalRootReconfigured"
-             , "domainAddress" .= toJSON d
-             , "reason" .= show exception
+             , "old" .= toJSON old
+             , "new" .= toJSON new
              ]
+  forMachine _dtal (TraceLocalRootDNSMap domainMap) =
+    mconcat [ "kind" .= String "LocalRootDNSMap"
+            , "result" .= toJSON domainMap
+            ]
   forHuman = pack . show
 
 instance MetaTrace (TraceLocalRootPeers ntnAddr exception) where
@@ -102,6 +105,7 @@ instance MetaTrace (TraceLocalRootPeers ntnAddr exception) where
   namespaceFor TraceLocalRootFailure {} = Namespace [] ["LocalRootFailure"]
   namespaceFor TraceLocalRootError {} = Namespace [] ["LocalRootError"]
   namespaceFor TraceLocalRootReconfigured {} = Namespace [] ["LocalRootReconfigured"]
+  namespaceFor TraceLocalRootDNSMap {} = Namespace [] ["LocalRootDNSMap"]
 
   severityFor (Namespace [] ["LocalRootDomains"]) _ = Just Info
   severityFor (Namespace [] ["LocalRootWaiting"]) _ = Just Info

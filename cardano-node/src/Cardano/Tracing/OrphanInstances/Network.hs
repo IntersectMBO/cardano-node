@@ -1343,6 +1343,7 @@ instance ToObject peer => ToObject (WithMuxBearer peer MuxTrace) where
              , "event" .= show ev ]
 
 instance Aeson.ToJSONKey RelayAccessPoint where
+instance Aeson.ToJSONKey DomainAccessPoint where
 
 instance Show exception => ToObject (TraceLocalRootPeers RemoteAddress exception) where
   toObject _verb (TraceLocalRootDomains groups) =
@@ -1373,9 +1374,15 @@ instance Show exception => ToObject (TraceLocalRootPeers RemoteAddress exception
              , "domainAddress" .= toJSON d
              , "reason" .= show dexception
              ]
-  toObject _verb (TraceLocalRootReconfigured _ _) =
+  toObject _verb (TraceLocalRootReconfigured old new) =
     mconcat [ "kind" .= String "LocalRootReconfigured"
-             ]
+            , "old" .= toJSON old
+            , "new" .= toJSON new
+            ]
+  toObject _verb (TraceLocalRootDNSMap domainMap) =
+    mconcat [ "kind" .= String "LocalRootDNSMap"
+            , "result" .= toJSON domainMap
+            ]
 
 instance ToJSON IP where
   toJSON ip = String (pack . show $ ip)
