@@ -12,7 +12,6 @@ Usage: cardano-cli query
             | kes-period-info
             | pool-state
             | tx-mempool
-            | slot-number
             )
 
   Node query commands. Will query the local node whose Unix domain socket is
@@ -46,4 +45,3 @@ Available commands:
                            node's operational certificate.
   pool-state               Dump the pool state
   tx-mempool               Local Mempool info
-  slot-number              Query slot number for UTC timestamp

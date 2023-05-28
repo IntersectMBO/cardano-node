@@ -236,7 +236,6 @@ Usage: cardano-cli query
             | kes-period-info
             | pool-state
             | tx-mempool
-            | slot-number
             )
 
   Node query commands. Will query the local node whose Unix domain socket is
@@ -411,16 +410,6 @@ Usage: cardano-cli query tx-mempool next-tx
 Usage: cardano-cli query tx-mempool tx-exists TX_ID
 
   Query if a particular transaction exists in the mempool
-
-Usage: cardano-cli query slot-number --socket-path SOCKET_PATH
-            [ --shelley-mode
-            | --byron-mode [--epoch-slots SLOTS]
-            | --cardano-mode [--epoch-slots SLOTS]
-            ]
-            (--mainnet | --testnet-magic NATURAL)
-            TIMESTAMP
-
-  Query slot number for UTC timestamp
 
 Usage: cardano-cli stake-pool 
             ( registration-certificate

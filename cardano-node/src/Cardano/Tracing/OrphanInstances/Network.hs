@@ -185,6 +185,7 @@ instance HasSeverityAnnotation [TraceLabelPeer peer (FetchDecision [Point header
           Left FetchDeclineBytesInFlightLimit {} -> Info
           Left FetchDeclinePeerBusy {}           -> Info
           Left FetchDeclineConcurrencyLimit {}   -> Info
+          Left FetchDeclinePeerStarting {}       -> Info
           Right _                                -> Info
 
 
@@ -1377,6 +1378,9 @@ instance Show exception => ToObject (TraceLocalRootPeers RemoteAddress exception
              ]
   toObject _verb (TraceLocalRootReconfigured _ _) =
     mconcat [ "kind" .= String "LocalRootReconfigured"
+             ]
+  toObject _verb (TraceLocalRootDNSMap _) = -- TODO use constructor argument
+    mconcat [ "kind" .= String "LocalRootDNSMap"
              ]
 
 instance ToJSON IP where

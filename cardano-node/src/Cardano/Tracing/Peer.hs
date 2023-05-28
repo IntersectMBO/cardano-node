@@ -83,6 +83,7 @@ ppStatus PeerFetchStatusShutdown = "shutdown"
 ppStatus PeerFetchStatusAberrant = "aberrant"
 ppStatus PeerFetchStatusBusy     = "fetching"
 ppStatus PeerFetchStatusReady {} = "ready"
+ppStatus PeerFetchStatusStarting {} = "starting"
 
 getCurrentPeers
   :: NodeKernelData blk

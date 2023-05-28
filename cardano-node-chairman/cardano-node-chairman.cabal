@@ -87,5 +87,5 @@ test-suite chairman-tests
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
   build-tool-depends:   cardano-node:cardano-node
-                      , cardano-cli:cardano-cli
+                      , cardano-cli:cardano-cli >= 7.1.1.0
                       , cardano-node-chairman:cardano-node-chairman
