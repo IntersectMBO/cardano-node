@@ -120,6 +120,13 @@ let
                 "configuration/defaults/byron-mainnet"
                 "cardano-cli/test/cardano-cli-golden/files/golden/alonzo/genesis.alonzo.spec.json"
                 "cardano-cli/test/cardano-cli-golden/files/golden/conway/genesis.conway.spec.json"
+                "cardano-testnet/test/cardano-testnet-test/files/golden/allegra_node_default_config.json"
+                "cardano-testnet/test/cardano-testnet-test/files/golden/alonzo_node_default_config.json"
+                "cardano-testnet/test/cardano-testnet-test/files/golden/babbage_node_default_config.json"
+                "cardano-testnet/test/cardano-testnet-test/files/golden/byron_node_default_config.json"
+                "cardano-testnet/test/cardano-testnet-test/files/golden/conway_node_default_config.json"
+                "cardano-testnet/test/cardano-testnet-test/files/golden/mary_node_default_config.json"
+                "cardano-testnet/test/cardano-testnet-test/files/golden/shelley_node_default_config.json"
               ];
             in
             {
