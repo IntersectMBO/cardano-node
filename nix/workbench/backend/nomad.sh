@@ -878,7 +878,6 @@ backend_nomad() {
       local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
       local generator_task=$(envjqr 'generator_task_name')
 
-      # TODO: Make it in parallel ?
       msg "Fetch logs ..."
 
       # Download healthcheck(s) logs. ##########################################
@@ -1918,6 +1917,9 @@ backend_nomad() {
           msg "$(yellow "supervisord program \"node-${pool_ix}\" stopped")"
           msg_ne "nomad: $(blue Waiting) until all pool nodes are stopped: 000000"
         fi
+        local elapsed="$(($(date +%s) - start_time))"
+        echo -ne "\b\b\b\b\b\b"
+        printf "%6d" "${elapsed}"
       done >&2 # For
       echo -ne "\b\b\b\b\b\b"
 
