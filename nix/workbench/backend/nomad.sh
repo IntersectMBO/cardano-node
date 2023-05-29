@@ -824,7 +824,6 @@ backend_nomad() {
       local nomad_task_driver=$(envjqr   'nomad_task_driver')
       local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
 
-      # TODO: Make it in parallel ?
       msg "Fetch logs ..."
 
       # Download healthcheck(s) logs.
