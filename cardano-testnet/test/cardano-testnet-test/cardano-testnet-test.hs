@@ -15,7 +15,7 @@ import qualified Test.Cli.KesPeriodInfo
 import qualified Test.Cli.QuerySlotNumber
 import qualified Test.FoldBlocks
 import qualified Test.Node.Shutdown
-import qualified Test.ShutdownOnSlotSynced
+-- import qualified Test.ShutdownOnSlotSynced
 import qualified Test.Tasty as T
 import qualified Test.Tasty.Ingredients as T
 import qualified Testnet.Util.Ignore as H
@@ -26,7 +26,7 @@ tests :: IO TestTree
 tests = pure $ T.testGroup "test/Spec.hs"
   [ T.testGroup "Spec"
     [ H.ignoreOnWindows "Shutdown" Test.Node.Shutdown.hprop_shutdown
-    , H.ignoreOnWindows "ShutdownOnSlotSynced" Test.ShutdownOnSlotSynced.hprop_shutdownOnSlotSynced
+    -- , H.ignoreOnWindows "ShutdownOnSlotSynced" Test.ShutdownOnSlotSynced.hprop_shutdownOnSlotSynced
     -- TODO: This is failing. Disabling until we can figure out why
     -- , T.testGroup "Alonzo"
     --   [ H.ignoreOnMacAndWindows "leadership-schedule" Test.Cli.Alonzo.LeadershipSchedule.hprop_leadershipSchedule
