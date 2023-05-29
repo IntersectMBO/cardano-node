@@ -1,0 +1,44 @@
+Usage: cardano-testnet cardano [--testnet-magic INT]
+                                 [--num-bft-nodes COUNT]
+                                 [--num-pool-nodes COUNT]
+                                 [ --byron-era
+                                 | --shelley-era
+                                 | --allegra-era
+                                 | --mary-era
+                                 | --alonzo-era
+                                 | --babbage-era
+                                 ]
+                                 [--epoch-length MILLISECONDS]
+                                 [--slot-length SECONDS]
+                                 [--active-slots-coeff DOUBLE]
+                                 [--max-lovelace-supply WORD64]
+                                 [--enable-p2p BOOL]
+                                 [--nodeLoggingFormat LOGGING_FORMAT]
+
+  Start a testnet in any era
+
+Available options:
+  --testnet-magic INT      Testnet magic
+  --num-bft-nodes COUNT    Number of BFT nodes
+                           (default: [BftTestnetNodeOptions [],BftTestnetNodeOptions [],SpoTestnetNodeOptions])
+  --num-pool-nodes COUNT   Number of pool nodes
+                           (default: [BftTestnetNodeOptions [],BftTestnetNodeOptions [],SpoTestnetNodeOptions])
+  --byron-era              Specify the Byron era
+  --shelley-era            Specify the Shelley era
+  --allegra-era            Specify the Allegra era
+  --mary-era               Specify the Mary era
+  --alonzo-era             Specify the Alonzo era
+  --babbage-era            Specify the Babbage era (default)
+  --epoch-length MILLISECONDS
+                           Epoch length (default: 1500)
+  --slot-length SECONDS    Slot length (default: 0.2)
+  --active-slots-coeff DOUBLE
+                           Active slots co-efficient (default: 0.2)
+  --max-lovelace-supply WORD64
+                           Max lovelace supply that your testnet starts with.
+                           (default: 10020000000)
+  --enable-p2p BOOL        Enable P2P (default: False)
+  --nodeLoggingFormat LOGGING_FORMAT
+                           Node logging format (json|text)
+                           (default: NodeLoggingFormatAsJson)
+  -h,--help                Show this help text

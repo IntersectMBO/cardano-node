@@ -1,0 +1,20 @@
+Usage: cardano-testnet babbage [--testnet-magic INT]
+                                 [--num-spo-nodes COUNT]
+                                 [--slot-duration MILLISECONDS]
+                                 [--security-param INT]
+                                 [--total-balance INT]
+                                 [--nodeLoggingFormat LOGGING_FORMAT]
+
+  Start a babbage testnet
+
+Available options:
+  --testnet-magic INT      Testnet magic
+  --num-spo-nodes COUNT    Number of SPO nodes (default: 3)
+  --slot-duration MILLISECONDS
+                           Slot duration (default: 200)
+  --security-param INT     Security parameter (default: 10)
+  --total-balance INT      Total balance (default: 10020000000)
+  --nodeLoggingFormat LOGGING_FORMAT
+                           Node logging format (json|text)
+                           (default: NodeLoggingFormatAsJson)
+  -h,--help                Show this help text

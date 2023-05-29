@@ -99,6 +99,8 @@ library
 
   autogen-modules:      Paths_cardano_testnet
 
+
+
 executable cardano-testnet
   import:               project-config
 
@@ -121,6 +123,7 @@ test-suite cardano-testnet-golden
 
   other-modules:        Test.Golden.Testnet.Config
                         Test.Golden.Testnet.Help
+                        Test.Golden.Testnet.Util
 
   type:                 exitcode-stdio-1.0
 
@@ -128,16 +131,18 @@ test-suite cardano-testnet-golden
                       , aeson-pretty
                       , bytestring
                       , cardano-api
-                      , cardano-cli:cardano-cli-test-lib
                       , cardano-crypto-class
                       , cardano-testnet
+                      , exceptions
                       , filepath
                       , hedgehog
                       , hedgehog-extras ^>= 0.4.5.1
+                      , process
                       , regex-compat
                       , tasty
                       , tasty-hedgehog
                       , text
+                      , transformers
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 

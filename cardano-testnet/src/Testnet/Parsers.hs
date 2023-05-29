@@ -33,7 +33,7 @@ data CardanoTestnetCommands
   | StartCardanoTestnet CardanoOptions
   | StartShelleyTestnet ShelleyOptions
   | GetVersion VersionOptions
-  | forall a. Help ParserPrefs (ParserInfo a) HelpOptions
+  | Help ParserPrefs (ParserInfo CardanoTestnetCommands) HelpOptions
 
 commands :: Parser CardanoTestnetCommands
 commands =
