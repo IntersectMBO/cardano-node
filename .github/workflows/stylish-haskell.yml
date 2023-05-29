@@ -42,7 +42,6 @@ jobs:
         cardano-node-capi
         trace-dispatcher
         trace-forward
-        cardano-cli
         cardano-submit-api
 
     steps:
