@@ -32,6 +32,7 @@ import           System.FilePath ((</>))
 #else
 
 import           Hedgehog (Property, discover, property, success)
+import           System.FilePath ()
 #endif
 
 import qualified Hedgehog as H

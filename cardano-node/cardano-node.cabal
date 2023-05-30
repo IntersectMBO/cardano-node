@@ -237,6 +237,7 @@ test-suite cardano-node-test
                       , cardano-node
                       , cardano-slotting >= 0.1
                       , directory
+                      , filepath
                       , hedgehog
                       , hedgehog-corpus
                       , hedgehog-extras
@@ -249,9 +250,12 @@ test-suite cardano-node-test
                       , ouroboros-network-api
                       , text
                       , time
+                      , transformers
                       , vector
+                      , yaml
 
-  other-modules:        Test.Cardano.Node.FilePermissions
+  other-modules:        Test.Cardano.Config.Mainnet
+                        Test.Cardano.Node.FilePermissions
                         Test.Cardano.Node.Gen
                         Test.Cardano.Node.Json
                         Test.Cardano.Node.POM
