@@ -73,17 +73,17 @@ import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), NodeToNodeVersion (..),
                    NodeToNodeVersionData (..), RemoteAddress, TraceSendRecv (..), WithAddr (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
-import qualified Ouroboros.Network.PeerSelection.EstablishedPeers as EstablishedPeers
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
                    PeerSelectionCounters (..), PeerSelectionState (..), PeerSelectionTargets (..),
                    TracePeerSelection (..))
-import qualified Ouroboros.Network.PeerSelection.KnownPeers as KnownPeers
 import           Ouroboros.Network.PeerSelection.LedgerPeers
-import           Ouroboros.Network.PeerSelection.LocalRootPeers (LocalRootPeers)
-import qualified Ouroboros.Network.PeerSelection.LocalRootPeers as LocalRootPeers
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS (TraceLocalRootPeers (..),
                    TracePublicRootPeers (..))
+import qualified Ouroboros.Network.PeerSelection.State.EstablishedPeers as EstablishedPeers
+import qualified Ouroboros.Network.PeerSelection.State.KnownPeers as KnownPeers
+import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (LocalRootPeers)
+import qualified Ouroboros.Network.PeerSelection.State.LocalRootPeers as LocalRootPeers
 import           Ouroboros.Network.PeerSelection.Types (PeerStatus (..))
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch, Message (..))
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
@@ -211,8 +211,10 @@ instance HasPrivacyAnnotation TraceLedgerPeers
 instance HasSeverityAnnotation TraceLedgerPeers where
   getSeverityAnnotation ev =
     case ev of
-      PickedPeer {}                  -> Debug
-      PickedPeers {}                 -> Info
+      PickedLedgerPeer {}            -> Debug
+      PickedLedgerPeers {}           -> Info
+      PickedBigLedgerPeer {}         -> Info
+      PickedBigLedgerPeers {}        -> Info
       FetchingNewLedgerState {}      -> Info
       DisabledLedgerPeers {}         -> Info
       TraceUseLedgerAfter {}         -> Info
@@ -421,6 +423,31 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TraceGovernorWakeup        {} -> Info
       TraceChurnWait             {} -> Info
       TraceChurnMode             {} -> Info
+
+      TraceForgetBigLedgerPeers  {} -> Info
+
+      TraceBigLedgerPeersRequest {} -> Info
+      TraceBigLedgerPeersResults {} -> Info
+      TraceBigLedgerPeersFailure {} -> Error
+
+      TracePromoteColdBigLedgerPeers {}      -> Info
+      TracePromoteColdBigLedgerPeerFailed {} -> Info
+      TracePromoteColdBigLedgerPeerDone {}   -> Info
+
+      TracePromoteWarmBigLedgerPeers {}       -> Info
+      TracePromoteWarmBigLedgerPeerFailed {}  -> Error
+      TracePromoteWarmBigLedgerPeerDone {}    -> Info
+      TracePromoteWarmBigLedgerPeerAborted {} -> Error
+
+      TraceDemoteWarmBigLedgerPeers {}      -> Info
+      TraceDemoteWarmBigLedgerPeerFailed {} -> Info
+      TraceDemoteWarmBigLedgerPeerDone {}   -> Info
+
+      TraceDemoteHotBigLedgerPeers {}      -> Info
+      TraceDemoteHotBigLedgerPeerFailed {} -> Info
+      TraceDemoteHotBigLedgerPeerDone {}   -> Info
+
+      TraceDemoteBigLedgerPeersAsynchronous {} -> Warning
 
 instance HasPrivacyAnnotation (DebugPeerSelection addr)
 instance HasSeverityAnnotation (DebugPeerSelection addr) where
@@ -1261,23 +1288,37 @@ instance Show remotePeer => ToObject (TraceKeepAliveClient remotePeer) where
 
 
 instance ToObject TraceLedgerPeers where
-  toObject _verb (PickedPeer addr _ackStake stake) =
+  toObject _verb (PickedBigLedgerPeer addr _ackStake stake) =
     mconcat
-      [ "kind" .= String "PickedPeer"
+      [ "kind" .= String "PickedBigLedgerPeer"
       , "address" .= show addr
       , "relativeStake" .= (realToFrac (unPoolStake stake) :: Double)
       ]
-  toObject _verb (PickedPeers (NumberOfPeers n) addrs) =
+  toObject _verb (PickedBigLedgerPeers (NumberOfPeers n) addrs) =
     mconcat
-      [ "kind" .= String "PickedPeers"
+      [ "kind" .= String "PickedBigLedgerPeers"
       , "desiredCount" .= n
       , "count" .= length addrs
       , "addresses" .= show addrs
       ]
-  toObject _verb (FetchingNewLedgerState cnt) =
+  toObject _verb (PickedLedgerPeer addr _ackStake stake) =
+    mconcat
+      [ "kind" .= String "PickedLedgerPeer"
+      , "address" .= show addr
+      , "relativeStake" .= (realToFrac (unPoolStake stake) :: Double)
+      ]
+  toObject _verb (PickedLedgerPeers (NumberOfPeers n) addrs) =
+    mconcat
+      [ "kind" .= String "PickedLedgerPeers"
+      , "desiredCount" .= n
+      , "count" .= length addrs
+      , "addresses" .= show addrs
+      ]
+  toObject _verb (FetchingNewLedgerState cnt bigCnt) =
     mconcat
       [ "kind" .= String "FetchingNewLedgerState"
-      , "numberOfPools" .= cnt
+      , "numberOfLedgerPeers" .= cnt
+      , "numberOfBigLedgerPeers" .= bigCnt
       ]
   toObject _verb DisabledLedgerPeers =
     mconcat
@@ -1414,16 +1455,23 @@ instance (Aeson.ToJSONKey peerAddr, ToJSON peerAddr, Ord peerAddr, Show peerAddr
 
 instance ToJSON PeerSelectionTargets where
   toJSON (PeerSelectionTargets
-            nRootPeers
-            nKnownPeers
-            nEstablishedPeers
-            nActivePeers
+            nRootLedgerPeers
+            nKnownLedgerPeers
+            nEstablishedLedgerPeers
+            nActiveLedgerPeers
+            nKnownBigLedgerPeers
+            nEstablishedBigLedgerPeers
+            nActiveBigLedgerPeers
          ) =
     Aeson.object [ "kind" .= String "PeerSelectionTargets"
-                 , "targetRootPeers" .= nRootPeers
-                 , "targetKnownPeers" .= nKnownPeers
-                 , "targetEstablishedPeers" .= nEstablishedPeers
-                 , "targetActivePeers" .= nActivePeers
+                 , "targetRootLedgerPeers" .= nRootLedgerPeers
+                 , "targetKnownLedgerPeers" .= nKnownLedgerPeers
+                 , "targetEstablishedLedgerPeers" .= nEstablishedLedgerPeers
+                 , "targetActiveLedgerPeers" .= nActiveLedgerPeers
+
+                 , "targetKnownBigLedgerPeers" .= nKnownBigLedgerPeers
+                 , "targetEstablishedBigLedgerPeers" .= nEstablishedBigLedgerPeers
+                 , "targetActiveBigLedgerPeers" .= nActiveBigLedgerPeers
                  ]
 
 instance ToJSON ReconnectDelay where
@@ -1461,6 +1509,29 @@ instance ToObject (TracePeerSelection SockAddr) where
              , "group" .= group
              , "diffTime" .= dt
              ]
+  toObject _verb (TraceBigLedgerPeersRequest tBigLedgerPeers nBigLedgerPeers) =
+    mconcat [ "kind" .= String "BigLedgerPeersRequest"
+             , "targetNumberOfBigLedgerPeers" .= tBigLedgerPeers
+             , "numberOfBigLedgerPeers" .= nBigLedgerPeers
+             ]
+  toObject _verb (TraceBigLedgerPeersResults res group dt) =
+    mconcat [ "kind" .= String "BigLedgerPeersResults"
+             , "result" .= Aeson.toJSONList (toList res)
+             , "group" .= group
+             , "diffTime" .= dt
+             ]
+  toObject _verb (TraceBigLedgerPeersFailure err group dt) =
+    mconcat [ "kind" .= String "BigLedgerPeersFailure"
+             , "reason" .= show err
+             , "group" .= group
+             , "diffTime" .= dt
+             ]
+  toObject _verb (TraceForgetBigLedgerPeers targetKnown actualKnown sp) =
+    mconcat [ "kind" .= String "ForgetBigLedgerPeers"
+             , "targetKnown" .= targetKnown
+             , "actualKnown" .= actualKnown
+             , "selectedPeers" .= Aeson.toJSONList (toList sp)
+             ]
   toObject _verb (TracePeerShareRequests targetKnown actualKnown aps sps) =
     mconcat [ "kind" .= String "PeerShareRequests"
              , "targetKnown" .= targetKnown
@@ -1477,7 +1548,7 @@ instance ToObject (TracePeerSelection SockAddr) where
              , "result" .= Aeson.toJSONList res
              ]
   toObject _verb (TraceForgetColdPeers targetKnown actualKnown sp) =
-    mconcat [ "kind" .= String "ForgeColdPeers"
+    mconcat [ "kind" .= String "ForgetColdPeers"
              , "targetKnown" .= targetKnown
              , "actualKnown" .= actualKnown
              , "selectedPeers" .= Aeson.toJSONList (toList sp)
@@ -1504,6 +1575,26 @@ instance ToObject (TracePeerSelection SockAddr) where
              ]
   toObject _verb (TracePromoteColdDone tEst aEst p) =
     mconcat [ "kind" .= String "PromoteColdDone"
+             , "targetEstablished" .= tEst
+             , "actualEstablished" .= aEst
+             , "peer" .= toJSON p
+             ]
+  toObject _verb (TracePromoteColdBigLedgerPeers targetKnown actualKnown sp) =
+    mconcat [ "kind" .= String "PromoteColdBigLedgerPeers"
+             , "targetEstablished" .= targetKnown
+             , "actualEstablished" .= actualKnown
+             , "selectedPeers" .= Aeson.toJSONList (toList sp)
+             ]
+  toObject _verb (TracePromoteColdBigLedgerPeerFailed tEst aEst p d err) =
+    mconcat [ "kind" .= String "PromoteColdBigLedgerPeerFailed"
+             , "targetEstablished" .= tEst
+             , "actualEstablished" .= aEst
+             , "peer" .= toJSON p
+             , "delay" .= toJSON d
+             , "reason" .= show err
+             ]
+  toObject _verb (TracePromoteColdBigLedgerPeerDone tEst aEst p) =
+    mconcat [ "kind" .= String "PromoteColdBigLedgerPeerDone"
              , "targetEstablished" .= tEst
              , "actualEstablished" .= aEst
              , "peer" .= toJSON p
@@ -1538,6 +1629,31 @@ instance ToObject (TracePeerSelection SockAddr) where
              , "actualActive" .= aActive
              , "peer" .= toJSON p
              ]
+  toObject _verb (TracePromoteWarmBigLedgerPeers tActive aActive sp) =
+    mconcat [ "kind" .= String "PromoteWarmBigLedgerPeers"
+             , "targetActive" .= tActive
+             , "actualActive" .= aActive
+             , "selectedPeers" .= Aeson.toJSONList (toList sp)
+             ]
+  toObject _verb (TracePromoteWarmBigLedgerPeerFailed tActive aActive p err) =
+    mconcat [ "kind" .= String "PromoteWarmBigLedgerPeerFailed"
+             , "targetActive" .= tActive
+             , "actualActive" .= aActive
+             , "peer" .= toJSON p
+             , "reason" .= show err
+             ]
+  toObject _verb (TracePromoteWarmBigLedgerPeerDone tActive aActive p) =
+    mconcat [ "kind" .= String "PromoteWarmBigLedgerPeerDone"
+             , "targetActive" .= tActive
+             , "actualActive" .= aActive
+             , "peer" .= toJSON p
+             ]
+  toObject _verb (TracePromoteWarmBigLedgerPeerAborted tActive aActive p) =
+    mconcat [ "kind" .= String "PromoteWarmBigLedgerPeerAborted"
+             , "targetActive" .= tActive
+             , "actualActive" .= aActive
+             , "peer" .= toJSON p
+             ]
   toObject _verb (TraceDemoteWarmPeers tEst aEst sp) =
     mconcat [ "kind" .= String "DemoteWarmPeers"
              , "targetEstablished" .= tEst
@@ -1553,6 +1669,25 @@ instance ToObject (TracePeerSelection SockAddr) where
              ]
   toObject _verb (TraceDemoteWarmDone tEst aEst p) =
     mconcat [ "kind" .= String "DemoteWarmDone"
+             , "targetEstablished" .= tEst
+             , "actualEstablished" .= aEst
+             , "peer" .= toJSON p
+             ]
+  toObject _verb (TraceDemoteWarmBigLedgerPeers tEst aEst sp) =
+    mconcat [ "kind" .= String "DemoteWarmBigLedgerPeers"
+             , "targetEstablished" .= tEst
+             , "actualEstablished" .= aEst
+             , "selectedPeers" .= Aeson.toJSONList (toList sp)
+             ]
+  toObject _verb (TraceDemoteWarmBigLedgerPeerFailed tEst aEst p err) =
+    mconcat [ "kind" .= String "DemoteWarmBigLedgerPeerFailed"
+             , "targetEstablished" .= tEst
+             , "actualEstablished" .= aEst
+             , "peer" .= toJSON p
+             , "reason" .= show err
+             ]
+  toObject _verb (TraceDemoteWarmBigLedgerPeerDone tEst aEst p) =
+    mconcat [ "kind" .= String "DemoteWarmBigLedgerPeerDone"
              , "targetEstablished" .= tEst
              , "actualEstablished" .= aEst
              , "peer" .= toJSON p
@@ -1581,6 +1716,25 @@ instance ToObject (TracePeerSelection SockAddr) where
              , "actualActive" .= aActive
              , "peer" .= toJSON p
              ]
+  toObject _verb (TraceDemoteHotBigLedgerPeers tActive aActive sp) =
+    mconcat [ "kind" .= String "DemoteHotBigLedgerPeers"
+             , "targetActive" .= tActive
+             , "actualActive" .= aActive
+             , "selectedPeers" .= Aeson.toJSONList (toList sp)
+             ]
+  toObject _verb (TraceDemoteHotBigLedgerPeerFailed tActive aActive p err) =
+    mconcat [ "kind" .= String "DemoteHotBigLedgerPeerFailed"
+             , "targetActive" .= tActive
+             , "actualActive" .= aActive
+             , "peer" .= toJSON p
+             , "reason" .= show err
+             ]
+  toObject _verb (TraceDemoteHotBigLedgerPeerDone tActive aActive p) =
+    mconcat [ "kind" .= String "DemoteHotBigLedgerPeerDone"
+             , "targetActive" .= tActive
+             , "actualActive" .= aActive
+             , "peer" .= toJSON p
+             ]
   toObject _verb (TraceDemoteAsynchronous msp) =
     mconcat [ "kind" .= String "DemoteAsynchronous"
              , "state" .= toJSON msp
@@ -1589,6 +1743,10 @@ instance ToObject (TracePeerSelection SockAddr) where
     mconcat [ "kind" .= String "DemoteLocalAsynchronous"
              , "state" .= toJSON msp
              ]
+  toObject _verb (TraceDemoteBigLedgerPeersAsynchronous msp) =
+    mconcat [ "kind" .= String "DemoteBigLedgerPeersAsynchronous"
+            , "state" .= toJSON msp
+            ]
   toObject _verb TraceGovernorWakeup =
     mconcat [ "kind" .= String "GovernorWakeup"
              ]
@@ -1654,7 +1812,7 @@ peerSelectionTargetsToObject
 
 instance ToObject (DebugPeerSelection SockAddr) where
   toObject verb (TraceGovernorState blockedAt wakeupAfter
-                   PeerSelectionState { targets, knownPeers, establishedPeers, activePeers })
+                   PeerSelectionState { targets, knownPeers, establishedPeers, activePeers, bigLedgerPeers })
       | verb <= NormalVerbosity =
     mconcat [ "kind" .= String "DebugPeerSelection"
              , "blockedAt" .= String (pack $ show blockedAt)
@@ -1665,6 +1823,12 @@ instance ToObject (DebugPeerSelection SockAddr) where
                                   , "established" .= EstablishedPeers.size establishedPeers
                                   , "active" .= Set.size activePeers
                                   ])
+             , "numberOfBigLedgerPeers" .=
+                 Object (mconcat [ "known" .= Set.size (KnownPeers.toSet knownPeers `Set.intersection` bigLedgerPeers)
+                                 , "established" .= Set.size (EstablishedPeers.toSet establishedPeers `Set.intersection` bigLedgerPeers)
+                                 , "active" .= Set.size (activePeers `Set.intersection` bigLedgerPeers)
+                                 ])
+
              ]
   toObject _ (TraceGovernorState blockedAt wakeupAfter ev) =
     mconcat [ "kind" .= String "DebugPeerSelection"
@@ -1702,6 +1866,9 @@ instance ToObject PeerSelectionCounters where
              , "coldPeers" .= coldPeers ev
              , "warmPeers" .= warmPeers ev
              , "hotPeers" .= hotPeers ev
+             , "coldBigLedgerPeers" .= coldBigLedgerPeers ev
+             , "warmBigLedgerPeers" .= warmBigLedgerPeers ev
+             , "hotBigLedgerPeers" .= hotBigLedgerPeers ev
              ]
 
 instance (Show (ClientHasAgency st), Show (ServerHasAgency st))

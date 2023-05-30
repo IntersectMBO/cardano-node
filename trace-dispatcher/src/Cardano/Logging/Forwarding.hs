@@ -201,10 +201,10 @@ doConnectToAcceptor magic snocket makeBearer configureSocket address timeLimits
     address
  where
   forwarderApp
-    :: [(RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void, Word16)]
-    -> OuroborosApplication 'InitiatorMode addr LBS.ByteString IO () Void
+    :: [(RunMiniProtocol 'InitiatorMode initiatorCtx responderCtx LBS.ByteString IO () Void, Word16)]
+    -> OuroborosApplication 'InitiatorMode initiatorCtx responderCtx LBS.ByteString IO () Void
   forwarderApp protocols =
-    OuroborosApplication $ \_connectionId _shouldStopSTM ->
+    OuroborosApplication
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
          , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
@@ -264,10 +264,10 @@ doListenToAcceptor magic snocket makeBearer configureSocket address timeLimits
               wait serverAsync -- Block until async exception.
  where
   forwarderApp
-    :: [(RunMiniProtocol 'ResponderMode LBS.ByteString IO Void (), Word16)]
-    -> OuroborosApplication 'ResponderMode addr LBS.ByteString IO Void ()
+    :: [(RunMiniProtocol 'ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void (), Word16)]
+    -> OuroborosApplication 'ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void ()
   forwarderApp protocols =
-    OuroborosApplication $ \_connectionId _shouldStopSTM ->
+    OuroborosApplication
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
          , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }

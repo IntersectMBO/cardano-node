@@ -77,6 +77,9 @@ testPartialYamlConfig =
     , pncTargetNumberOfKnownPeers = mempty
     , pncTargetNumberOfEstablishedPeers = mempty
     , pncTargetNumberOfActivePeers = mempty
+    , pncTargetNumberOfKnownBigLedgerPeers = mempty
+    , pncTargetNumberOfEstablishedBigLedgerPeers = mempty
+    , pncTargetNumberOfActiveBigLedgerPeers = mempty
     , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just NoPeerSharing)
     }
@@ -111,6 +114,9 @@ testPartialCliConfig =
     , pncTargetNumberOfKnownPeers = mempty
     , pncTargetNumberOfEstablishedPeers = mempty
     , pncTargetNumberOfActivePeers = mempty
+    , pncTargetNumberOfKnownBigLedgerPeers = mempty
+    , pncTargetNumberOfEstablishedBigLedgerPeers = mempty
+    , pncTargetNumberOfActiveBigLedgerPeers = mempty
     , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just NoPeerSharing)
     }
@@ -149,10 +155,13 @@ eExpectedConfig = do
           , acceptedConnectionsSoftLimit = 384
           , acceptedConnectionsDelay     = 5
           }
-    , ncTargetNumberOfRootPeers = 100
-    , ncTargetNumberOfKnownPeers = 100
-    , ncTargetNumberOfEstablishedPeers = 50
-    , ncTargetNumberOfActivePeers = 20
+    , ncTargetNumberOfRootPeers = 85
+    , ncTargetNumberOfKnownPeers = 85
+    , ncTargetNumberOfEstablishedPeers = 40
+    , ncTargetNumberOfActivePeers = 15
+    , ncTargetNumberOfKnownBigLedgerPeers = 15
+    , ncTargetNumberOfEstablishedBigLedgerPeers = 10
+    , ncTargetNumberOfActiveBigLedgerPeers = 5
     , ncEnableP2P = SomeNetworkP2PMode Consensus.DisabledP2PMode
     , ncPeerSharing = NoPeerSharing
     }

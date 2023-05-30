@@ -18,7 +18,7 @@ import qualified Data.ByteString.Lazy as LBS
 import           Data.Typeable (Typeable)
 import           Data.Void (Void)
 
-import           Ouroboros.Network.Mux (MuxMode (..), MuxPeer (..), RunMiniProtocol (..))
+import           Ouroboros.Network.Mux (MiniProtocolCb (..), MuxMode (..), RunMiniProtocol (..))
 import           Ouroboros.Network.Driver.Simple (runPeer)
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
 
@@ -33,9 +33,9 @@ acceptTraceObjectsInit
       ShowProxy lo,
       Typeable lo)
   => AcceptorConfiguration lo -- ^ Acceptor's configuration.
-  -> ([lo] -> IO ())          -- ^ The handler for accepted 'TraceObject's.
-  -> IO ()                    -- ^ The handler for exceptions from 'runPeer'.
-  -> RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void
+  -> (initiatorCtx -> [lo] -> IO ()) -- ^ The handler for accepted 'TraceObject's.
+  -> (initiatorCtx -> IO ())         -- ^ The handler for exceptions from 'runPeer'.
+  -> RunMiniProtocol 'InitiatorMode initiatorCtx responderCtx LBS.ByteString IO () Void
 acceptTraceObjectsInit config loHandler peerErrorHandler =
   InitiatorProtocolOnly $ runPeerWithHandler config loHandler peerErrorHandler
 
@@ -44,9 +44,9 @@ acceptTraceObjectsResp
       ShowProxy lo,
       Typeable lo)
   => AcceptorConfiguration lo -- ^ Acceptor's configuration.
-  -> ([lo] -> IO ())          -- ^ The handler for accepted 'TraceObject's.
-  -> IO ()                    -- ^ The handler for exceptions from 'runPeer'.
-  -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
+  -> (responderCtx -> [lo] -> IO ()) -- ^ The handler for accepted 'TraceObject's.
+  -> (responderCtx -> IO ())         -- ^ The handler for exceptions from 'runPeer'.
+  -> RunMiniProtocol 'ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void ()
 acceptTraceObjectsResp config loHandler peerErrorHandler =
   ResponderProtocolOnly $ runPeerWithHandler config loHandler peerErrorHandler
 
@@ -55,11 +55,11 @@ runPeerWithHandler
       ShowProxy lo,
       Typeable lo)
   => AcceptorConfiguration lo
-  -> ([lo] -> IO ())
-  -> IO ()
-  -> MuxPeer LBS.ByteString IO ()
+  -> (ctx -> [lo] -> IO ())
+  -> (ctx -> IO ())
+  -> MiniProtocolCb ctx LBS.ByteString IO ()
 runPeerWithHandler config@AcceptorConfiguration{acceptorTracer, shouldWeStop} loHandler peerErrorHandler =
-  MuxPeerRaw $ \channel ->
+  MiniProtocolCb $ \ctx channel ->
     timeoutWhenStopped
       shouldWeStop
       15_000 -- 15sec
@@ -68,8 +68,8 @@ runPeerWithHandler config@AcceptorConfiguration{acceptorTracer, shouldWeStop} lo
           (Acceptor.codecTraceObjectForward CBOR.encode CBOR.decode
                                             CBOR.encode CBOR.decode)
           channel
-          (Acceptor.traceObjectAcceptorPeer $ acceptorActions config loHandler)
-        `finally` peerErrorHandler
+          (Acceptor.traceObjectAcceptorPeer $ acceptorActions config (loHandler ctx))
+        `finally` peerErrorHandler ctx
 
 acceptorActions
   :: (CBOR.Serialise lo,

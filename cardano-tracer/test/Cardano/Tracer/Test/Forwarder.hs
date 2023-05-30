@@ -179,10 +179,10 @@ doConnectToAcceptor TestSetup{..} snocket muxBearer address timeLimits (ekgConfi
       address
  where
   forwarderApp
-    :: [(RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void, Word16)]
-    -> OuroborosApplication 'InitiatorMode addr LBS.ByteString IO () Void
+    :: [(RunMiniProtocol 'InitiatorMode initCtx respCtx LBS.ByteString IO () Void, Word16)]
+    -> OuroborosApplication 'InitiatorMode initCtx respCtx LBS.ByteString IO () Void
   forwarderApp protocols =
-    OuroborosApplication $ \_connectionId _shouldStopSTM ->
+    OuroborosApplication
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
          , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
@@ -240,10 +240,10 @@ doListenToAcceptor TestSetup{..}
               $ \_ serverAsync -> wait serverAsync -- Block until async exception.
  where
   forwarderApp
-    :: [(RunMiniProtocol 'ResponderMode LBS.ByteString IO Void (), Word16)]
-    -> OuroborosApplication 'ResponderMode addr LBS.ByteString IO Void ()
+    :: [(RunMiniProtocol 'ResponderMode initCtx respCtx LBS.ByteString IO Void (), Word16)]
+    -> OuroborosApplication 'ResponderMode initCtx respCtx LBS.ByteString IO Void ()
   forwarderApp protocols =
-    OuroborosApplication $ \_connectionId _shouldStopSTM ->
+    OuroborosApplication
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
          , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }

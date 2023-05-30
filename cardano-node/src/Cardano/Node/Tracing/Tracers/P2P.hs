@@ -37,16 +37,16 @@ import           Ouroboros.Network.InboundGovernor (InboundGovernorTrace (..))
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.InboundGovernor.State (InboundGovernorCounters (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
-import qualified Ouroboros.Network.PeerSelection.EstablishedPeers as EstablishedPeers
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
                    PeerSelectionCounters (..), PeerSelectionState (..), PeerSelectionTargets (..),
                    TracePeerSelection (..))
-import qualified Ouroboros.Network.PeerSelection.KnownPeers as KnownPeers
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
 import           Ouroboros.Network.PeerSelection.RootPeersDNS (TraceLocalRootPeers (..),
                    TracePublicRootPeers (..))
 import           Ouroboros.Network.PeerSelection.Types ()
+import qualified Ouroboros.Network.PeerSelection.State.EstablishedPeers as EstablishedPeers
+import qualified Ouroboros.Network.PeerSelection.State.KnownPeers as KnownPeers
 import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
 import           Ouroboros.Network.Server2 (ServerTrace (..))
 import           Ouroboros.Network.Snocket (LocalAddress (..))
@@ -220,6 +220,35 @@ instance LogFormatting (TracePeerSelection SockAddr) where
              , "group" .= group
              , "diffTime" .= dt
              ]
+  forMachine _dtal (TraceForgetColdPeers targetKnown actualKnown sp) =
+    mconcat [ "kind" .= String "ForgetColdPeers"
+             , "targetKnown" .= targetKnown
+             , "actualKnown" .= actualKnown
+             , "selectedPeers" .= toJSONList (toList sp)
+             ]
+  forMachine _dtal (TraceBigLedgerPeersRequest tRootPeers nRootPeers) =
+    mconcat [ "kind" .= String "BigLedgerPeersRequest"
+             , "targetNumberOfBigLedgerPeers" .= tRootPeers
+             , "numberOfBigLedgerPeers" .= nRootPeers
+             ]
+  forMachine _dtal (TraceBigLedgerPeersResults res group dt) =
+    mconcat [ "kind" .= String "BigLedgerPeersResults"
+             , "result" .= toJSONList (toList res)
+             , "group" .= group
+             , "diffTime" .= dt
+             ]
+  forMachine _dtal (TraceBigLedgerPeersFailure err group dt) =
+    mconcat [ "kind" .= String "BigLedgerPeersFailure"
+             , "reason" .= show err
+             , "group" .= group
+             , "diffTime" .= dt
+             ]
+  forMachine _dtal (TraceForgetBigLedgerPeers targetKnown actualKnown sp) =
+    mconcat [ "kind" .= String "ForgetColdBigLedgerPeers"
+             , "targetKnown" .= targetKnown
+             , "actualKnown" .= actualKnown
+             , "selectedPeers" .= toJSONList (toList sp)
+             ]
   forMachine _dtal (TracePeerShareRequests targetKnown actualKnown aps sps) =
     mconcat [ "kind" .= String "PeerShareRequests"
              , "targetKnown" .= targetKnown
@@ -234,12 +263,6 @@ instance LogFormatting (TracePeerSelection SockAddr) where
   forMachine _dtal (TracePeerShareResultsFiltered res) =
     mconcat [ "kind" .= String "PeerShareResultsFiltered"
              , "result" .= toJSONList res
-             ]
-  forMachine _dtal (TraceForgetColdPeers targetKnown actualKnown sp) =
-    mconcat [ "kind" .= String "ForgeColdPeers"
-             , "targetKnown" .= targetKnown
-             , "actualKnown" .= actualKnown
-             , "selectedPeers" .= toJSONList (toList sp)
              ]
   forMachine _dtal (TracePromoteColdPeers targetKnown actualKnown sp) =
     mconcat [ "kind" .= String "PromoteColdPeers"
@@ -263,6 +286,26 @@ instance LogFormatting (TracePeerSelection SockAddr) where
              ]
   forMachine _dtal (TracePromoteColdDone tEst aEst p) =
     mconcat [ "kind" .= String "PromoteColdDone"
+             , "targetEstablished" .= tEst
+             , "actualEstablished" .= aEst
+             , "peer" .= toJSON p
+             ]
+  forMachine _dtal (TracePromoteColdBigLedgerPeers targetKnown actualKnown sp) =
+    mconcat [ "kind" .= String "PromoteColdBigLedgerPeers"
+             , "targetEstablished" .= targetKnown
+             , "actualEstablished" .= actualKnown
+             , "selectedPeers" .= toJSONList (toList sp)
+             ]
+  forMachine _dtal (TracePromoteColdBigLedgerPeerFailed tEst aEst p d err) =
+    mconcat [ "kind" .= String "PromoteColdBigLedgerPeerFailed"
+             , "targetEstablished" .= tEst
+             , "actualEstablished" .= aEst
+             , "peer" .= toJSON p
+             , "delay" .= toJSON d
+             , "reason" .= show err
+             ]
+  forMachine _dtal (TracePromoteColdBigLedgerPeerDone tEst aEst p) =
+    mconcat [ "kind" .= String "PromoteColdBigLedgerPeerDone"
              , "targetEstablished" .= tEst
              , "actualEstablished" .= aEst
              , "peer" .= toJSON p
@@ -297,6 +340,31 @@ instance LogFormatting (TracePeerSelection SockAddr) where
              , "actualActive" .= aActive
              , "peer" .= toJSON p
              ]
+  forMachine _dtal (TracePromoteWarmBigLedgerPeers tActive aActive sp) =
+    mconcat [ "kind" .= String "PromoteWarmBigLedgerPeers"
+             , "targetActive" .= tActive
+             , "actualActive" .= aActive
+             , "selectedPeers" .= toJSONList (toList sp)
+             ]
+  forMachine _dtal (TracePromoteWarmBigLedgerPeerFailed tActive aActive p err) =
+    mconcat [ "kind" .= String "PromoteWarmBigLedgerPeerFailed"
+             , "targetActive" .= tActive
+             , "actualActive" .= aActive
+             , "peer" .= toJSON p
+             , "reason" .= show err
+             ]
+  forMachine _dtal (TracePromoteWarmBigLedgerPeerDone tActive aActive p) =
+    mconcat [ "kind" .= String "PromoteWarmBigLedgerPeerDone"
+             , "targetActive" .= tActive
+             , "actualActive" .= aActive
+             , "peer" .= toJSON p
+             ]
+  forMachine _dtal (TracePromoteWarmBigLedgerPeerAborted tActive aActive p) =
+    mconcat [ "kind" .= String "PromoteWarmBigLedgerPeerAborted"
+             , "targetActive" .= tActive
+             , "actualActive" .= aActive
+             , "peer" .= toJSON p
+             ]
   forMachine _dtal (TraceDemoteWarmPeers tEst aEst sp) =
     mconcat [ "kind" .= String "DemoteWarmPeers"
              , "targetEstablished" .= tEst
@@ -312,6 +380,25 @@ instance LogFormatting (TracePeerSelection SockAddr) where
              ]
   forMachine _dtal (TraceDemoteWarmDone tEst aEst p) =
     mconcat [ "kind" .= String "DemoteWarmDone"
+             , "targetEstablished" .= tEst
+             , "actualEstablished" .= aEst
+             , "peer" .= toJSON p
+             ]
+  forMachine _dtal (TraceDemoteWarmBigLedgerPeers tEst aEst sp) =
+    mconcat [ "kind" .= String "DemoteWarmBigLedgerPeers"
+             , "targetEstablished" .= tEst
+             , "actualEstablished" .= aEst
+             , "selectedPeers" .= toJSONList (toList sp)
+             ]
+  forMachine _dtal (TraceDemoteWarmBigLedgerPeerFailed tEst aEst p err) =
+    mconcat [ "kind" .= String "DemoteWarmBigLedgerPeerFailed"
+             , "targetEstablished" .= tEst
+             , "actualEstablished" .= aEst
+             , "peer" .= toJSON p
+             , "reason" .= show err
+             ]
+  forMachine _dtal (TraceDemoteWarmBigLedgerPeerDone tEst aEst p) =
+    mconcat [ "kind" .= String "DemoteWarmBigLedgerPeerDone"
              , "targetEstablished" .= tEst
              , "actualEstablished" .= aEst
              , "peer" .= toJSON p
@@ -340,12 +427,35 @@ instance LogFormatting (TracePeerSelection SockAddr) where
              , "actualActive" .= aActive
              , "peer" .= toJSON p
              ]
+  forMachine _dtal (TraceDemoteHotBigLedgerPeers tActive aActive sp) =
+    mconcat [ "kind" .= String "DemoteHotBigLedgerPeers"
+             , "targetActive" .= tActive
+             , "actualActive" .= aActive
+             , "selectedPeers" .= toJSONList (toList sp)
+             ]
+  forMachine _dtal (TraceDemoteHotBigLedgerPeerFailed tActive aActive p err) =
+    mconcat [ "kind" .= String "DemoteHotBigLedgerPeerFailed"
+             , "targetActive" .= tActive
+             , "actualActive" .= aActive
+             , "peer" .= toJSON p
+             , "reason" .= show err
+             ]
+  forMachine _dtal (TraceDemoteHotBigLedgerPeerDone tActive aActive p) =
+    mconcat [ "kind" .= String "DemoteHotBigLedgerPeerDone"
+             , "targetActive" .= tActive
+             , "actualActive" .= aActive
+             , "peer" .= toJSON p
+             ]
   forMachine _dtal (TraceDemoteAsynchronous msp) =
     mconcat [ "kind" .= String "DemoteAsynchronous"
              , "state" .= toJSON msp
              ]
   forMachine _dtal (TraceDemoteLocalAsynchronous msp) =
     mconcat [ "kind" .= String "DemoteLocalAsynchronous"
+             , "state" .= toJSON msp
+             ]
+  forMachine _dtal (TraceDemoteBigLedgerPeersAsynchronous msp) =
+    mconcat [ "kind" .= String "DemoteBigLedgerPeerAsynchronous"
              , "state" .= toJSON msp
              ]
   forMachine _dtal TraceGovernorWakeup =
@@ -371,14 +481,22 @@ instance MetaTrace (TracePeerSelection SockAddr) where
       Namespace [] ["PublicRootsResults"]
     namespaceFor TracePublicRootsFailure {}    =
       Namespace [] ["PublicRootsFailure"]
+    namespaceFor TraceForgetColdPeers {}       =
+      Namespace [] ["ForgetColdPeers"]
+    namespaceFor TraceBigLedgerPeersRequest {}    =
+      Namespace [] ["BigLedgerPeersRequest"]
+    namespaceFor TraceBigLedgerPeersResults {}    =
+      Namespace [] ["BigLedgerPeersResults"]
+    namespaceFor TraceBigLedgerPeersFailure {}    =
+      Namespace [] ["BigLedgerPeersFailure"]
+    namespaceFor TraceForgetBigLedgerPeers {}       =
+      Namespace [] ["ForgetBigLedgerPeers"]
     namespaceFor TracePeerShareRequests {}     =
       Namespace [] ["PeerShareRequests"]
     namespaceFor TracePeerShareResults {}      =
       Namespace [] ["PeerShareResults"]
     namespaceFor TracePeerShareResultsFiltered {} =
       Namespace [] ["PeerShareResultsFiltered"]
-    namespaceFor TraceForgetColdPeers {}       =
-      Namespace [] ["ForgetColdPeers"]
     namespaceFor TracePromoteColdPeers {}      =
       Namespace [] ["PromoteColdPeers"]
     namespaceFor TracePromoteColdLocalPeers {} =
@@ -387,6 +505,12 @@ instance MetaTrace (TracePeerSelection SockAddr) where
       Namespace [] ["PromoteColdFailed"]
     namespaceFor TracePromoteColdDone {}       =
       Namespace [] ["PromoteColdDone"]
+    namespaceFor TracePromoteColdBigLedgerPeers {}      =
+      Namespace [] ["PromoteColdBigLedgerPeers"]
+    namespaceFor TracePromoteColdBigLedgerPeerFailed {}     =
+      Namespace [] ["PromoteColdBigLedgerPeerFailed"]
+    namespaceFor TracePromoteColdBigLedgerPeerDone {}       =
+      Namespace [] ["PromoteColdBigLedgerPeerDone"]
     namespaceFor TracePromoteWarmPeers {}      =
       Namespace [] ["PromoteWarmPeers"]
     namespaceFor TracePromoteWarmLocalPeers {} =
@@ -397,12 +521,26 @@ instance MetaTrace (TracePeerSelection SockAddr) where
       Namespace [] ["PromoteWarmDone"]
     namespaceFor TracePromoteWarmAborted {}    =
       Namespace [] ["PromoteWarmAborted"]
+    namespaceFor TracePromoteWarmBigLedgerPeers {}      =
+      Namespace [] ["PromoteWarmPBigLedgereers"]
+    namespaceFor TracePromoteWarmBigLedgerPeerFailed {}     =
+      Namespace [] ["PromoteWarmBigLedgerPeerFailed"]
+    namespaceFor TracePromoteWarmBigLedgerPeerDone {}       =
+      Namespace [] ["PromoteWarmBigLedgerPeerDone"]
+    namespaceFor TracePromoteWarmBigLedgerPeerAborted {}    =
+      Namespace [] ["PromoteWarmBigLedgerPeerAborted"]
     namespaceFor TraceDemoteWarmPeers {}       =
       Namespace [] ["DemoteWarmPeers"]
     namespaceFor TraceDemoteWarmFailed {}      =
       Namespace [] ["DemoteWarmFailed"]
     namespaceFor TraceDemoteWarmDone {}        =
       Namespace [] ["DemoteWarmDone"]
+    namespaceFor TraceDemoteWarmBigLedgerPeers {}       =
+      Namespace [] ["DemoteWarmBigLedgerPeers"]
+    namespaceFor TraceDemoteWarmBigLedgerPeerFailed {}      =
+      Namespace [] ["DemoteWarmBigLedgerPeerFailed"]
+    namespaceFor TraceDemoteWarmBigLedgerPeerDone {}        =
+      Namespace [] ["DemoteWarmBigLedgerPeerDone"]
     namespaceFor TraceDemoteHotPeers {}        =
       Namespace [] ["DemoteHotPeers"]
     namespaceFor TraceDemoteLocalHotPeers {}   =
@@ -411,10 +549,18 @@ instance MetaTrace (TracePeerSelection SockAddr) where
       Namespace [] ["DemoteHotFailed"]
     namespaceFor TraceDemoteHotDone {}         =
       Namespace [] ["DemoteHotDone"]
+    namespaceFor TraceDemoteHotBigLedgerPeers {}        =
+      Namespace [] ["DemoteHotBigLedgerPeers"]
+    namespaceFor TraceDemoteHotBigLedgerPeerFailed {}       =
+      Namespace [] ["DemoteHotBigLedgerPeerFailed"]
+    namespaceFor TraceDemoteHotBigLedgerPeerDone {}         =
+      Namespace [] ["DemoteHotBigLedgerPeerDone"]
     namespaceFor TraceDemoteAsynchronous {}    =
       Namespace [] ["DemoteAsynchronous"]
     namespaceFor TraceDemoteLocalAsynchronous {} =
       Namespace [] ["DemoteLocalAsynchronous"]
+    namespaceFor TraceDemoteBigLedgerPeersAsynchronous {} =
+      Namespace [] ["DemoteBigLedgerPeersAsynchronous"]
     namespaceFor TraceGovernorWakeup {}        =
       Namespace [] ["GovernorWakeup"]
     namespaceFor TraceChurnWait {}             =
@@ -596,10 +742,14 @@ instance MetaTrace (DebugPeerSelection SockAddr) where
 instance LogFormatting PeerSelectionCounters where
   forMachine _dtal ev =
     mconcat [ "kind" .= String "PeerSelectionCounters"
-             , "coldPeers" .= coldPeers ev
-             , "warmPeers" .= warmPeers ev
-             , "hotPeers" .= hotPeers ev
-             ]
+            , "coldPeers" .= coldPeers ev
+            , "warmPeers" .= warmPeers ev
+            , "hotPeers" .= hotPeers ev
+            , "coldBigLedgerPeers" .= coldBigLedgerPeers ev
+            , "warmBigLedgerPeers" .= warmBigLedgerPeers ev
+            , "hotBigLedgerPeers" .= hotBigLedgerPeers ev
+            , "localRoots" .= toJSON (localRoots ev)
+            ]
   forHuman = pack . show
   asMetrics PeerSelectionCounters {..} =
     [ IntM
@@ -611,7 +761,22 @@ instance LogFormatting PeerSelectionCounters where
     , IntM
         "Net.PeerSelection.Hot"
         (fromIntegral hotPeers)
-      ]
+    , IntM
+        "Net.PeerSelection.ColdBigLedgerPeers"
+        (fromIntegral coldBigLedgerPeers)
+    , IntM
+        "Net.PeerSelection.WarmBigLedgerPeers"
+        (fromIntegral warmBigLedgerPeers)
+    , IntM
+        "Net.PeerSelection.HotBigLedgerPeers"
+        (fromIntegral hotBigLedgerPeers)
+    , IntM
+        "Net.PeerSelection.WarmLocalRoots"
+        (fromIntegral $ foldl' (\a (b, _) -> a + b) 0 localRoots)
+    , IntM
+        "Net.PeerSelection.HotLocalRoots"
+        (fromIntegral $ foldl' (\a (_, b) -> a + b) 0 localRoots)
+    ]
 
 instance MetaTrace PeerSelectionCounters where
     namespaceFor PeerSelectionCounters {} = Namespace [] ["Counters"]
@@ -625,8 +790,13 @@ instance MetaTrace PeerSelectionCounters where
 
     metricsDocFor (Namespace _ ["Counters"]) =
      [ ("Net.PeerSelection.Cold", "Number of cold peers")
-      , ("Net.PeerSelection.Warm", "Number of warm peers")
-      , ("Net.PeerSelection.Hot", "Number of hot peers") ]
+     , ("Net.PeerSelection.Warm", "Number of warm peers")
+     , ("Net.PeerSelection.Hot", "Number of hot peers")
+     , ("Net.PeerSelection.ColdBigLedgerPeers", "Number of cold big ledger peers")
+     , ("Net.PeerSelection.WarmBigLedgerPeers", "Number of warm big ledger peers")
+     , ("Net.PeerSelection.HotBigLedgerPeers", "Number of hot big ledger peers")
+     , ("Net.PeerSelection.LocalRoots", "Numbers of warm & hot local roots")
+     ]
     metricsDocFor _ = []
 
     allNamespaces =[
