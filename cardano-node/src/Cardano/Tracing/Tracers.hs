@@ -697,18 +697,19 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
   pure Consensus.Tracers
     { Consensus.chainSyncClientTracer = tracerOnOff (traceChainSyncClient trSel) verb "ChainSyncClient" tr
     , Consensus.chainSyncServerHeaderTracer =
-      Tracer $ \ct@(TraceLabelPeer _p ev) -> do
-        traceWith (annotateSeverity . toLogObject' verb $ appendName "ChainSyncHeaderServer"
-                    (tracerOnOff' (traceChainSyncHeaderServer trSel) tr)) ct
-        traceServedCount mbEKGDirect ev
+           tracerOnOff' (traceChainSyncHeaderServer trSel)
+                        (annotateSeverity . toLogObject' verb $ appendName "ChainSyncHeaderServer" tr)
+        <> (\(TraceLabelPeer _ ev) -> ev) `contramap` Tracer (traceServedCount mbEKGDirect)
     , Consensus.chainSyncServerBlockTracer = tracerOnOff (traceChainSyncBlockServer trSel) verb "ChainSyncBlockServer" tr
     , Consensus.blockFetchDecisionTracer = tracerOnOff' (traceBlockFetchDecisions trSel) $
         annotateSeverity $ teeTraceBlockFetchDecision verb elidedFetchDecision tr
     , Consensus.blockFetchClientTracer = traceBlockFetchClientMetrics mbEKGDirect tBlockDelayM
         tBlockDelayCDF1s tBlockDelayCDF3s tBlockDelayCDF5s $
             tracerOnOff (traceBlockFetchClient trSel) verb "BlockFetchClient" tr
-    , Consensus.blockFetchServerTracer = traceBlockFetchServerMetrics trmet meta tBlocksServed
-        tLocalUp tMaxSlotNo $ tracerOnOff (traceBlockFetchServer trSel) verb "BlockFetchServer" tr
+    , Consensus.blockFetchServerTracer =
+        contramap (\(TraceLabelPeer _peer a) -> a) $
+          traceBlockFetchServerMetrics trmet meta tBlocksServed
+            tLocalUp tMaxSlotNo $ tracerOnOff (traceBlockFetchServer trSel) verb "BlockFetchServer" tr
     , Consensus.keepAliveClientTracer = tracerOnOff (traceKeepAliveClient trSel) verb "KeepAliveClient" tr
     , Consensus.forgeStateInfoTracer = tracerOnOff' (traceForgeStateInfo trSel) $
         forgeStateInfoTracer (Proxy @blk) trSel tr

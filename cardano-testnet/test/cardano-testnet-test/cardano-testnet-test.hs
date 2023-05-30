@@ -12,6 +12,7 @@ import qualified System.Environment as E
 import qualified Test.Cli.Babbage.LeadershipSchedule
 import qualified Test.Cli.Babbage.StakeSnapshot
 import qualified Test.Cli.KesPeriodInfo
+import qualified Test.Cli.QuerySlotNumber
 import qualified Test.FoldBlocks
 import qualified Test.Node.Shutdown
 import qualified Test.ShutdownOnSlotSynced
@@ -38,6 +39,7 @@ tests = pure $ T.testGroup "test/Spec.hs"
       -- as a result of the kes-period-info output to stdout.
       -- TODO: Babbage temporarily ignored due to broken protocol-state query
     , H.ignoreOnWindows "kes-period-info" Test.Cli.KesPeriodInfo.hprop_kes_period_info
+    , H.ignoreOnWindows "query-slot-number" Test.Cli.QuerySlotNumber.hprop_querySlotNumber
     ]
   , H.ignoreOnWindows "foldBlocks receives ledger state" Test.FoldBlocks.prop_foldBlocks
   ]

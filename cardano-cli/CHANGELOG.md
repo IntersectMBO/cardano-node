@@ -62,6 +62,8 @@
 
 - Add `utcTimeToSlotNo` function to support UTC -> slot number conversion ([PR 5130](https://github.com/input-output-hk/cardano-node/pull/5130))
 
+- Add `query slot-number` command line option to support UTC -> slot number conversion ([PR 5149](https://github.com/input-output-hk/cardano-node/pull/5149))
+
 - Remove `--stake-address` option from `stake-address build`
   ([PR 5061](https://github.com/input-output-hk/cardano-node/pull/5061))
 
