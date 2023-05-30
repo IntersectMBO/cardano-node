@@ -12,6 +12,8 @@ import           Data.Word (Word32)
 import           Cardano.Logging (TraceObject)
 import           Cardano.Logging.Version (ForwardingVersion (..), ForwardingVersionData (..),
                    forwardingCodecCBORTerm, forwardingVersionCodec)
+import           Ouroboros.Network.Context (MinimalInitiatorContext (..),
+                   ResponderContext (..))
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
 import           Ouroboros.Network.IOManager (withIOManager)
 import           Ouroboros.Network.Magic (NetworkMagic (..))
@@ -67,11 +69,11 @@ runAcceptorsClient tracerEnv p (ekgConfig, tfConfig, dpfConfig) = withIOManager 
       ]
  where
   appInitiator protocolsWithNums =
-    OuroborosApplication $ \connectionId _shouldStopSTM ->
+    OuroborosApplication
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
          , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
-         , miniProtocolRun    = protocol connectionId
+         , miniProtocolRun    = protocol
          }
       | (protocol, num) <- protocolsWithNums
       ]
@@ -84,7 +86,10 @@ doConnectToForwarder
   -> LocalAddress
   -> Word32
   -> ProtocolTimeLimits (Handshake ForwardingVersion Term)
-  -> OuroborosApplication 'InitiatorMode LocalAddress LBS.ByteString IO () Void
+  -> OuroborosApplication 'InitiatorMode
+                          (MinimalInitiatorContext LocalAddress)
+                          (ResponderContext LocalAddress)
+                          LBS.ByteString IO () Void
   -> IO ()
 doConnectToForwarder snocket address netMagic timeLimits app =
   connectToNode
@@ -108,34 +113,40 @@ runEKGAcceptorInit
   :: TracerEnv
   -> EKGF.AcceptorConfiguration
   -> (ConnectionId LocalAddress -> IO ())
-  -> ConnectionId LocalAddress
-  -> RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void
-runEKGAcceptorInit tracerEnv ekgConfig errorHandler connId =
+  -> RunMiniProtocol 'InitiatorMode
+                     (MinimalInitiatorContext LocalAddress)
+                     respoinderCtx
+                     LBS.ByteString IO () Void
+runEKGAcceptorInit tracerEnv ekgConfig errorHandler =
   acceptEKGMetricsInit
     ekgConfig
-    (prepareMetricsStores tracerEnv connId)
-    (errorHandler connId)
+    (prepareMetricsStores tracerEnv . micConnectionId)
+    (errorHandler . micConnectionId)
 
 runTraceObjectsAcceptorInit
   :: TracerEnv
   -> TF.AcceptorConfiguration TraceObject
   -> (ConnectionId LocalAddress -> IO ())
-  -> ConnectionId LocalAddress
-  -> RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void
-runTraceObjectsAcceptorInit tracerEnv tfConfig errorHandler connId =
+  -> RunMiniProtocol 'InitiatorMode
+                     (MinimalInitiatorContext LocalAddress)
+                     responderCtx
+                     LBS.ByteString IO () Void
+runTraceObjectsAcceptorInit tracerEnv tfConfig errorHandler =
   acceptTraceObjectsInit
     tfConfig
-    (traceObjectsHandler tracerEnv $ connIdToNodeId connId)
-    (errorHandler connId)
+    (traceObjectsHandler tracerEnv . connIdToNodeId . micConnectionId)
+    (errorHandler . micConnectionId)
 
 runDataPointsAcceptorInit
   :: TracerEnv
   -> DPF.AcceptorConfiguration
   -> (ConnectionId LocalAddress -> IO ())
-  -> ConnectionId LocalAddress
-  -> RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void
-runDataPointsAcceptorInit tracerEnv dpfConfig errorHandler connId =
+  -> RunMiniProtocol 'InitiatorMode
+                     (MinimalInitiatorContext LocalAddress)
+                     responderCtx
+                     LBS.ByteString IO () Void
+runDataPointsAcceptorInit tracerEnv dpfConfig errorHandler =
   acceptDataPointsInit
     dpfConfig
-    (prepareDataPointRequestor tracerEnv connId)
-    (errorHandler connId)
+    (prepareDataPointRequestor tracerEnv . micConnectionId)
+    (errorHandler . micConnectionId)

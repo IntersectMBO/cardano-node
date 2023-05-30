@@ -479,23 +479,37 @@ instance MetaTrace (ND.DiffusionTracer ntnAddr ntcAddr) where
 --------------------------------------------------------------------------------
 
 instance LogFormatting TraceLedgerPeers where
-  forMachine _dtal (PickedPeer addr _ackStake stake) =
+  forMachine _dtal (PickedLedgerPeer addr _ackStake stake) =
     mconcat
-      [ "kind" .= String "PickedPeer"
+      [ "kind" .= String "PickedLedgerPeer"
       , "address" .= show addr
       , "relativeStake" .= (realToFrac (unPoolStake stake) :: Double)
       ]
-  forMachine _dtal (PickedPeers (NumberOfPeers n) addrs) =
+  forMachine _dtal (PickedLedgerPeers (NumberOfPeers n) addrs) =
     mconcat
-      [ "kind" .= String "PickedPeers"
+      [ "kind" .= String "PickedLedgerPeers"
       , "desiredCount" .= n
       , "count" .= List.length addrs
       , "addresses" .= show addrs
       ]
-  forMachine _dtal (FetchingNewLedgerState cnt) =
+  forMachine _dtal (PickedBigLedgerPeer addr _ackStake stake) =
+    mconcat
+      [ "kind" .= String "PickedBigLedgerPeer"
+      , "address" .= show addr
+      , "relativeStake" .= (realToFrac (unPoolStake stake) :: Double)
+      ]
+  forMachine _dtal (PickedBigLedgerPeers (NumberOfPeers n) addrs) =
+    mconcat
+      [ "kind" .= String "PickedBigLedgerPeers"
+      , "desiredCount" .= n
+      , "count" .= List.length addrs
+      , "addresses" .= show addrs
+      ]
+  forMachine _dtal (FetchingNewLedgerState cnt bigCnt) =
     mconcat
       [ "kind" .= String "FetchingNewLedgerState"
-      , "numberOfPools" .= cnt
+      , "numberOfLedgerPeers" .= cnt
+      , "numberOfBigLedgerPeers" .= bigCnt
       ]
   forMachine _dtal DisabledLedgerPeers =
     mconcat
@@ -527,10 +541,14 @@ instance LogFormatting TraceLedgerPeers where
       ]
 
 instance MetaTrace TraceLedgerPeers where
-    namespaceFor PickedPeer {} =
-      Namespace [] ["PickedPeer"]
-    namespaceFor PickedPeers {} =
-      Namespace [] ["PickedPeers"]
+    namespaceFor PickedLedgerPeer {} =
+      Namespace [] ["PickedLedgerPeer"]
+    namespaceFor PickedLedgerPeers {} =
+      Namespace [] ["PickedLedgerPeers"]
+    namespaceFor PickedBigLedgerPeer {} =
+      Namespace [] ["PickedBigLedgerPeer"]
+    namespaceFor PickedBigLedgerPeers {} =
+      Namespace [] ["PickedBigLedgerPeers"]
     namespaceFor FetchingNewLedgerState {} =
       Namespace [] ["FetchingNewLedgerState"]
     namespaceFor DisabledLedgerPeers {} =

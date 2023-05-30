@@ -1,4 +1,5 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -17,9 +18,11 @@ import           Prelude
 import           Codec.Serialise (DeserialiseFailure)
 import           Control.Concurrent.Class.MonadSTM.Strict (newTVarIO)
 import           Control.Monad.Class.MonadTimer (MonadTimer, threadDelay)
+import           Data.Foldable (fold)
 import           Data.ByteString.Lazy (ByteString)
 import qualified Data.Map.Strict as Map
 import           Data.Proxy (Proxy (..))
+import           Data.Void (Void)
 import           Network.Socket (AddrInfo (..))
 import           System.Random (newStdGen)
 
@@ -33,14 +36,15 @@ import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 
+import           Ouroboros.Network.Context
 import           Ouroboros.Network.Channel (Channel (..))
 import           Ouroboros.Network.ControlMessage (continueForever)
 import           Ouroboros.Network.DeltaQ (defaultGSV)
-import           Ouroboros.Network.Driver (runPeerWithLimits)
+import           Ouroboros.Network.Driver (runPeer, runPeerWithLimits)
 import           Ouroboros.Network.KeepAlive
 import           Ouroboros.Network.Magic
-import           Ouroboros.Network.Mux (MuxPeer (..), OuroborosApplication (..), OuroborosBundle,
-                   RunMiniProtocol (..))
+import           Ouroboros.Network.Mux (MiniProtocolCb (..), OuroborosApplication (..), OuroborosBundle,
+                   RunMiniProtocol (..), MuxMode (..))
 import           Ouroboros.Network.NodeToClient (IOManager, chainSyncPeerNull)
 import           Ouroboros.Network.NodeToNode (NetworkConnectTracers (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
@@ -87,11 +91,10 @@ benchmarkConnectTxSubmit ioManager handshakeTracer submissionTracer codecConfig 
     (addrAddress remoteAddr)
  where
   ownPeerSharing = NoPeerSharing
-  mkApp :: OuroborosBundle      mode addr bs m a b
-        -> OuroborosApplication mode addr bs m a b
+  mkApp :: OuroborosBundle      mode initiatorCtx responderCtx bs m a b
+        -> OuroborosApplication mode initiatorCtx responderCtx bs m a b
   mkApp bundle =
-    OuroborosApplication $ \connId controlMessageSTM ->
-      foldMap (\p -> p connId controlMessageSTM) bundle
+    OuroborosApplication $ fold bundle
 
   n2nVer :: NodeToNodeVersion
   n2nVer = NodeToNodeV_10
@@ -103,6 +106,13 @@ benchmarkConnectTxSubmit ioManager handshakeTracer submissionTracer codecConfig 
                 ByteString ByteString ByteString ByteString ByteString ByteString
                 ByteString
   myCodecs  = defaultCodecs codecConfig blkN2nVer encodeRemoteAddress decodeRemoteAddress n2nVer
+  peerMultiplex :: NtN.Versions NodeToNodeVersion
+                                NtN.NodeToNodeVersionData
+                                (OuroborosApplication
+                                  'InitiatorMode
+                                  (MinimalInitiatorContext NtN.RemoteAddress)
+                                  (ResponderContext NtN.RemoteAddress)
+                                  ByteString IO () Void)
   peerMultiplex =
     simpleSingletonVersions
       n2nVer
@@ -113,32 +123,35 @@ benchmarkConnectTxSubmit ioManager handshakeTracer submissionTracer codecConfig 
        , NtN.query = False
        }) $
       mkApp $
-      NtN.nodeToNodeProtocols NtN.defaultMiniProtocolParameters ( \them _ ->
+      NtN.nodeToNodeProtocols NtN.defaultMiniProtocolParameters
         NtN.NodeToNodeProtocols
-          { NtN.chainSyncProtocol = InitiatorProtocolOnly $
-                                      MuxPeer
+          { NtN.chainSyncProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx channel ->
+                                      runPeer
                                         nullTracer
                                         (cChainSyncCodec myCodecs)
+                                        channel
                                         chainSyncPeerNull
-          , NtN.blockFetchProtocol = InitiatorProtocolOnly $
-                                       MuxPeer
+          , NtN.blockFetchProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx channel ->
+                                       runPeer
                                          nullTracer
                                          (cBlockFetchCodec myCodecs)
+                                         channel
                                          (blockFetchClientPeer blockFetchClientNull)
-          , NtN.keepAliveProtocol = InitiatorProtocolOnly $
-                                      MuxPeerRaw
-                                        (kaClient n2nVer them)
-          , NtN.txSubmissionProtocol = InitiatorProtocolOnly $
-                                         MuxPeer
+          , NtN.keepAliveProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \ctx channel ->
+                                        kaClient n2nVer (remoteAddress $ micConnectionId ctx) channel
+          , NtN.txSubmissionProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx channel ->
+                                        runPeer
                                            submissionTracer
                                            (cTxSubmission2Codec myCodecs)
+                                           channel
                                            (txSubmissionClientPeer myTxSubClient)
-          , NtN.peerSharingProtocol = InitiatorProtocolOnly $
-                                         MuxPeer
+          , NtN.peerSharingProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx channel ->
+                                        runPeer
                                            nullTracer
                                            (cPeerSharingCodec myCodecs)
+                                           channel
                                            (peerSharingClientPeer peerSharingClientNull)
-          } )
+          }
         n2nVer
         ownPeerSharing
   -- Stolen from: Ouroboros/Consensus/Network/NodeToNode.hs

@@ -167,3 +167,9 @@ source-repository-package
   tag: c508c17d67935c2dbe15a8585331615c8902bda3
   subdir:
       cardano-cli
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ekg-forward
+  tag: 61d6e739ce7015a44cf8acecb64528cd87a962ad
+  --sha256: caae341a02e1908454b2f0f5c86a07774550cd3912a0fd2e6f2bb64bfac46fa9

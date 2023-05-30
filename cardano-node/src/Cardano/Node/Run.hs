@@ -759,6 +759,9 @@ mkP2PArguments NodeConfiguration {
                  ncTargetNumberOfKnownPeers,
                  ncTargetNumberOfEstablishedPeers,
                  ncTargetNumberOfActivePeers,
+                 ncTargetNumberOfKnownBigLedgerPeers,
+                 ncTargetNumberOfEstablishedBigLedgerPeers,
+                 ncTargetNumberOfActiveBigLedgerPeers,
                  ncProtocolIdleTimeout,
                  ncTimeWaitTimeout,
                  ncPeerSharing
@@ -782,7 +785,10 @@ mkP2PArguments NodeConfiguration {
         targetNumberOfRootPeers        = ncTargetNumberOfRootPeers,
         targetNumberOfKnownPeers       = ncTargetNumberOfKnownPeers,
         targetNumberOfEstablishedPeers = ncTargetNumberOfEstablishedPeers,
-        targetNumberOfActivePeers      = ncTargetNumberOfActivePeers
+        targetNumberOfActivePeers      = ncTargetNumberOfActivePeers,
+        targetNumberOfKnownBigLedgerPeers       = ncTargetNumberOfKnownBigLedgerPeers,
+        targetNumberOfEstablishedBigLedgerPeers = ncTargetNumberOfEstablishedBigLedgerPeers,
+        targetNumberOfActiveBigLedgerPeers      = ncTargetNumberOfActiveBigLedgerPeers
     }
 
 mkNonP2PArguments

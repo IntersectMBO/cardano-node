@@ -1459,10 +1459,13 @@ tracePeerSelectionCountersMetrics (OnOff False) _                = nullTracer
 tracePeerSelectionCountersMetrics (OnOff True)  (Just ekgDirect) = pscTracer
   where
     pscTracer :: Tracer IO PeerSelectionCounters
-    pscTracer = Tracer $ \(PeerSelectionCounters cold warm hot _) -> do
+    pscTracer = Tracer $ \(PeerSelectionCounters cold warm hot coldBigLedgerPeers warmBigLedgerPeers hotBigLedgerPeers _) -> do
       sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.cold" cold
       sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.warm" warm
       sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.hot"  hot
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.coldBigLedgerPeers" coldBigLedgerPeers
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.warmBigLedgerPeers" warmBigLedgerPeers
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.hotBigLedgerPeers" hotBigLedgerPeers
 
 
 traceInboundGovernorCountersMetrics
