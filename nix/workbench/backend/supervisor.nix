@@ -38,8 +38,10 @@ let
   materialise-profile =
     { profileData }:
       let supervisorConf = import ./supervisor-conf.nix
-        { inherit profileData;
-          inherit pkgs lib stateDir;
+        { inherit pkgs lib stateDir;
+          # Create a `supervisord.conf`
+          nodeSpecs = profileData.node-specs.value;
+          withTracer = profileData.value.node.tracer;
           inetHttpServerPort = "127.0.0.1:9001";
         };
       in pkgs.runCommand "workbench-backend-output-${profileData.profileName}-supervisor"

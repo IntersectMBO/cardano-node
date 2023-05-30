@@ -90,28 +90,32 @@ PROFILES_FORGE_STRESS_PRE := forge-stress-pre forge-stress-pre-plutus forge-stre
 PROFILES_CHAINSYNC        := chainsync-early-byron  chainsync-early-byron-notracer  chainsync-early-byron-oldtracing
 PROFILES_CHAINSYNC        += chainsync-early-alonzo chainsync-early-alonzo-notracer chainsync-early-alonzo-oldtracing chainsync-early-alonzo-p2p
 PROFILES_VENDOR           := dish dish-plutus dish-10M dish-10M-plutus
-PROFILES_CARDANO_WORLD_QA := cwqa-default cwqa-ci-test cwqa-ci-bench
-PROFILES_CARDANO_WORLD_QA += cwqa-value
+# "qa" and "perf" namespaces for cardano world (world.dev.cardano.org) Nomad
+# Not all local profiles are compatible (yet) with a cloud run
+# Cloud version of "default", "ci-test" and "ci-bench"
+PROFILES_CW_QA            := cw-qa-default cw-qa-ci-test cw-qa-ci-bench
+# The 52+explorer profile
+PROFILES_CW_PERF          := cw-perf-value
 
-SHELL_PROFILES       += $(PROFILES_BASE)
-SHELL_PROFILES       += $(PROFILES_FAST)
-SHELL_PROFILES       += $(PROFILES_CI_TEST)
-SHELL_PROFILES       += $(PROFILES_CI_BENCH)
-SHELL_PROFILES       += $(PROFILES_TRACE_BENCH)
-SHELL_PROFILES       += $(PROFILES_EPOCHTRANS)
-SHELL_PROFILES       += $(PROFILES_PLUTUSCALL)
-SHELL_PROFILES       += $(PROFILES_MODEL)
-SHELL_PROFILES       += $(PROFILES_10)
-SHELL_PROFILES       += $(PROFILES_FORGE_STRESS)
-SHELL_PROFILES       += $(PROFILES_FORGE_STRESS_PRE)
-SHELL_PROFILES       += $(PROFILES_CHAINSYNC)
-SHELL_PROFILES       += $(PROFILES_VENDOR)
-SHELL_PROFILES_CLOUD += $(PROFILES_CARDANO_WORLD_QA)
+LOCAL_PROFILES += $(PROFILES_BASE)
+LOCAL_PROFILES += $(PROFILES_FAST)
+LOCAL_PROFILES += $(PROFILES_CI_TEST)
+LOCAL_PROFILES += $(PROFILES_CI_BENCH)
+LOCAL_PROFILES += $(PROFILES_TRACE_BENCH)
+LOCAL_PROFILES += $(PROFILES_EPOCHTRANS)
+LOCAL_PROFILES += $(PROFILES_PLUTUSCALL)
+LOCAL_PROFILES += $(PROFILES_MODEL)
+LOCAL_PROFILES += $(PROFILES_10)
+LOCAL_PROFILES += $(PROFILES_FORGE_STRESS)
+LOCAL_PROFILES += $(PROFILES_FORGE_STRESS_PRE)
+LOCAL_PROFILES += $(PROFILES_CHAINSYNC)
+LOCAL_PROFILES += $(PROFILES_VENDOR)
+CLOUD_PROFILES += $(PROFILES_CW_QA) $(PROFILES_CW_PERF)
 
 ## Note:  to enable a shell for a profile, just add its name (one of names from 'make ps') to SHELL_PROFILES
 
-$(eval $(call define_profile_targets,           $(SHELL_PROFILES)))
-$(eval $(call define_profile_targets_nomadcloud,$(SHELL_PROFILES_CLOUD)))
+$(eval $(call define_profile_targets,           $(LOCAL_PROFILES)))
+$(eval $(call define_profile_targets_nomadcloud,$(CLOUD_PROFILES)))
 
 ###
 ### Misc
@@ -128,4 +132,4 @@ full-clean: clean
 cls:
 	echo -en "\ec"
 
-.PHONY: cabal-hashes clean cli cls cluster-profiles help node run-test shell shell-dev stylish-haskell $(SHELL_PROFILES) workbench-ci-test
+.PHONY: cabal-hashes clean cli cls cluster-profiles help node run-test shell shell-dev stylish-haskell $(LOCAL_PROFILES) workbench-ci-test

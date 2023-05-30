@@ -26,7 +26,7 @@ let
   validateNodeSpecs = { nodeSpecsValue }:
     let
       # SRE is using these 3 Nomad "datacenters" (how they are called in Nomad)
-      datacenters = [ "eu-central-1" "eu-west-1" "us-east-2" ];
+      datacenters = [ "eu-central-1" "us-east-2" "ap-southeast-2" ];
       regions = lib.attrsets.mapAttrsToList
         (name: value: value.region)
         nodeSpecsValue

@@ -209,22 +209,148 @@ backend_nomadcloud() {
         "${dir}"/container-specs.json              \
       > "${dir}"/nomad/nomad-job.json
       # The job file is "slightly" modified (jq) to suit the running environment.
-      backend_nomad allocate-run-nomad-job-patch-namespace   "${dir}" "${NOMAD_NAMESPACE}"
-      backend_nomad allocate-run-nomad-job-patch-nix         "${dir}"
-      # Right now only testing, using "qa" class distinct nodes!
-      backend_nomad allocate-run-nomad-job-patch-constraints "${dir}" \
-        "[                                                    \
-              {                                               \
-                  \"operator\":  \"=\"                        \
-                , \"attribute\": \"\${node.class}\"           \
-                , \"value\":     \"qa\"                       \
-              }                                               \
-            , {                                               \
-                  \"operator\":  \"distinct_property\"        \
-                , \"attribute\": \"\${attr.unique.hostname}\" \
-                , \"value\":     1                            \
-              }                                               \
-         ]"
+      backend_nomad allocate-run-nomad-job-patch-namespace         "${dir}" "${NOMAD_NAMESPACE}"
+      backend_nomad allocate-run-nomad-job-patch-nix               "${dir}"
+
+      # Set the placement info and resources accordingly
+      local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
+      if test -z "${WB_SHELL_PROFILE}"
+      then
+        fatal "Envar \"WB_SHELL_PROFILE\" is empty!"
+      else
+        # Placement:
+        ############
+        ## "distinct_hosts": Instructs the scheduler to not co-locate any groups
+        ## on the same machine. When specified as a job constraint, it applies
+        ## to all groups in the job. When specified as a group constraint, the
+        ## effect is constrained to that group. This constraint can not be
+        ## specified at the task level. Note that the attribute parameter should
+        ## be omitted when using this constraint.
+        ## https://developer.hashicorp.com/nomad/docs/job-specification/constraint#distinct_hosts
+        local job_constraints_array
+        job_constraints_array='
+          [
+            {
+              "operator":  "distinct_hosts"
+            , "value":     "true"
+            }
+          ]
+        '
+          jq \
+            --argjson job_constraints_array "${job_constraints_array}" \
+            ".[\"job\"][\"${nomad_job_name}\"].constraint |= \$job_constraints_array" \
+            "${dir}"/nomad/nomad-job.json \
+        | \
+          sponge "${dir}"/nomad/nomad-job.json
+        # Resources:
+        ############
+        local group_constraints_array
+        # "perf" profiles run on the "perf" class
+        if test "${WB_SHELL_PROFILE:0:7}" = 'cw-perf'
+        then
+          # Right now only "live" is using "perf" class distinct nodes!
+          group_constraints_array='
+            [
+              {
+                "operator":  "="
+              , "attribute": "${node.class}"
+              , "value":     "perf"
+              }
+            ]
+          '
+          # Set the resources, only for perf!
+          # AWS:
+          ## c5.2xlarge: 8 vCPU and 16 Memory (GiB)
+          ## https://aws.amazon.com/ec2/instance-types/c5/
+          # Nomad:
+          ## - cpu.reservablecores  = 8
+          ## - cpu.arch:            = amd64
+          ## - cpu.frequency:       = 3400
+          ## - cpu.modelname:       = Intel(R) Xeon(R) Platinum 8275CL CPU @ 3.00GHz
+          ## - cpu.numcores:        = 8
+          ## - cpu.reservablecores: = 8
+          ## - cpu.totalcompute:    = 27200
+          ## - memory.totalbytes    = 16300142592
+          ## Pesimistic: 1,798 MiB / 15,545 MiB Total
+          ## Optimistic: 1,396 MiB / 15,545 MiB Total
+          local resources='{
+              "cores":      8
+            , "memory":     12000
+            , "memory_max": 15000
+          }'
+            jq \
+              --argjson resources "${resources}" \
+              ".[\"job\"][\"${nomad_job_name}\"][\"group\"] |= with_entries(.value.task |= with_entries( .value.resources = \$resources ) )" \
+              "${dir}"/nomad/nomad-job.json \
+          | \
+            sponge "${dir}"/nomad/nomad-job.json
+          # Fix for region mismatches
+          ###########################
+          # There are USx16 and APx18 and we need USx17 and APx17
+            jq \
+              ".[\"job\"][\"${nomad_job_name}\"][\"group\"][\"node-49\"][\"affinity\"][\"value\"] = \"ap-southeast-2\"" \
+              "${dir}"/nomad/nomad-job.json \
+          | \
+            sponge "${dir}"/nomad/nomad-job.json
+          # We use "us-east-2" and they use "us-east-1"
+            jq \
+              ".[\"job\"][\"${nomad_job_name}\"][\"datacenters\"] |= [\"eu-central-1\", \"us-east-1\", \"ap-southeast-2\"]" \
+              "${dir}"/nomad/nomad-job.json \
+            | \
+              sponge "${dir}"/nomad/nomad-job.json
+            jq \
+              ".[\"job\"][\"${nomad_job_name}\"][\"group\"] |= with_entries( if (.value.affinity.value == \"us-east-2\") then (.value.affinity.value |= \"us-east-1\") else (.) end )" \
+              "${dir}"/nomad/nomad-job.json \
+            | \
+              sponge "${dir}"/nomad/nomad-job.json
+        # Non "perf" profiles run on the "qa" class
+        else
+          # Right now only testing, using "qa" class distinct nodes!
+          group_constraints_array='
+            [
+              {
+                "operator":  "="
+              , "attribute": "${node.class}"
+              , "value":     "qa"
+              }
+            ]
+          '
+        fi
+          jq \
+            --argjson group_constraints_array "${group_constraints_array}" \
+            ".[\"job\"][\"${nomad_job_name}\"][\"group\"] |= with_entries(.value.constraint = \$group_constraints_array)" \
+            "${dir}"/nomad/nomad-job.json \
+        | \
+          sponge "${dir}"/nomad/nomad-job.json
+      fi
+
+      # Store a summary of the job.
+      jq \
+        '{
+            "namespace":   ( .job["workbench-cluster-job"].namespace   )
+          , "datacenters": ( .job["workbench-cluster-job"].datacenters )
+          , "constraint":  ( .job["workbench-cluster-job"].constraint  )
+          , "groups":      (
+                .job["workbench-cluster-job"].group
+              | with_entries(
+                  .value |= {
+                      "constraint": .constraint
+                    , "affinity":   .affinity
+                    , "tasks":      (
+                        .task | with_entries(
+                          .value |= {
+                              "resources":          .resources
+                            , "nix_installables":   .config.nix_installables
+                            , "templates":        ( .template | map(.destination) )
+                          }
+                        )
+                      )
+                  }
+                )
+            )
+        }' \
+        "${dir}"/nomad/nomad-job.json \
+      > "${dir}"/nomad/nomad-job.summary.json
 
       backend_nomad allocate-run "${dir}"
     ;;
@@ -296,7 +422,7 @@ backend_nomadcloud() {
           --region "${s3_region}"                         \
         || true
         # Reminder to remove old files.
-        msg "Still avaiable files at $(yellow "\"s3://${s3_bucket_name}\""):"
+        msg "Still available files at $(yellow "\"s3://${s3_bucket_name}\""):"
         aws s3 ls                   \
           s3://"${s3_bucket_name}"/ \
           --region "${s3_region}"

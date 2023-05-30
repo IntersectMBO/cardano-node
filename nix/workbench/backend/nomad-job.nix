@@ -3,12 +3,11 @@
 # clusters and SRE infrastructure used for long-running cloud benchmarks. Why?
 # To make it easier to improve and debug the almighty workbench!
 ################################################################################
-{ lib
+{ pkgs
+, lib
 , stateDir
 , profileData
 , containerSpecs
-# Needs unix_http_server.file
-, supervisorConf
 , execTaskDriver
 , oneTracerPerNode ? false
 }:
@@ -58,7 +57,8 @@ let
   # the container I get (from journald):
   # Nov 02 11:44:36 hostname cluster-18f3852f-e067-6394-8159-66a7b8da2ecc[1088457]: Error: Cannot open an HTTP server: socket.error reported -2
   # Nov 02 11:44:36 hostname cluster-18f3852f-e067-6394-8159-66a7b8da2ecc[1088457]: For help, use /nix/store/izqhlj5i1x9ldyn43d02kcy4mafmj3ci-python3.9-supervisor-4.2.4/bin/supervisord -h
-  task_supervisord_url = "unix://${supervisorConf.value.unix_http_server.file}";
+  unixHttpServerPort = "/tmp/supervisor.sock";
+  task_supervisord_url = "unix://${unixHttpServerPort}";
   # Location of the supervisord config file inside the container.
   # This file can be mounted as a volume or created as a template.
   task_supervisord_conf = "${task_statedir}/supervisor/supervisord.conf";
@@ -162,19 +162,13 @@ let
     #  A list of datacenters in the region which are eligible for task
     # placement. This must be provided, and does not have a default.
     # SRE: Only 3 Nomad datacenters exist actually.
-    datacenters = [ "eu-central-1" "eu-west-1" "us-east-2" ];
+    datacenters = [ "eu-central-1" "us-east-2" "ap-southeast-2" ];
 
-    # This can be provided multiple times to define additional constraints. See
-    # the Nomad constraint reference for more details.
-    # https://developer.hashicorp.com/nomad/docs/job-specification/constraint
-    constraint = {
-      attribute = "\${node.class}";
-      operator = "=";
-      # For testing best to avoid using "infra" node class as HA jobs runs
-      # there, for benchmarking dedicated static machines are need and this
-      # should be updated accordingly.
-      value = "qa";
-    };
+    # Specifies user-defined constraints on the task. This can be provided
+    # multiple times to define additional constraints.
+    # Cloud runs set the distinct hosts constraint here but local runs can't
+    # because we are only starting one Nomad client.
+    constraint = null;
 
     # The reschedule stanza specifies the group's rescheduling strategy. If
     # specified at the job level, the configuration will apply to all groups
@@ -205,11 +199,11 @@ let
       ONE_TRACER_PER_NODE = oneTracerPerNode;
     };
 
-    # A group defines a series of tasks that should be co-located
-    # on the same client (host). All tasks within a group will be
-    # placed on the same host.
+    # A group defines a series of tasks that should be co-located on the same
+    # client (host). All tasks within a group will be placed on the same host.
     # https://developer.hashicorp.com/nomad/docs/job-specification/group
     group = let
+      # For each node-specs.json object
       valueF = (taskName: serviceName: portName: portNum: nodeSpec: (groupDefaults // {
 
         # Specifies the number of instances that should be running under for
@@ -260,6 +254,18 @@ let
                 value     = region;
               }
         ;
+
+        # This can be provided multiple times to define additional constraints.
+        # See the Nomad constraint reference for more details.
+        # https://developer.hashicorp.com/nomad/docs/job-specification/constraint
+        constraint = {
+          attribute = "\${node.class}";
+          operator = "=";
+          # For testing we avoid using "infra" node class as HA jobs runs there
+          # For benchmarking dedicated static machines in the "perf"
+          # class are used and this value should be updated accordingly.
+          value = "qa";
+        };
 
         # The network stanza specifies the networking requirements for the task
         # group, including the network mode and port allocations.
@@ -327,6 +333,8 @@ let
 
           # Sensible defaults to run cloud version of "default", "ci-test" and
           # "ci-bench" in cardano-world qa class Nomad nodes.
+          # For benchmarking dedicated static machines in the "perf" class are
+          # used and this value should be updated accordingly.
           resources = {
             # Task can only ask for 'cpu' or 'cores' resource, not both.
             #cpu = 512;
@@ -452,8 +460,21 @@ let
             {
               env = false;
               destination = "${task_supervisord_conf}";
-              data = escapeTemplate (__readFile
-                supervisorConf.INI);
+              data = escapeTemplate (__readFile (
+                let supervisorConf = import ./supervisor-conf.nix
+                  { inherit pkgs lib stateDir;
+                    # Include only this taks' node
+                    nodeSpecs = if taskName == "tracer"
+                      then {}
+                      else {"${nodeSpec.name}"=nodeSpec;}
+                    ;
+                    # Only for the tracer task or also nodes if oneTracerPerNode
+                    withTracer = oneTracerPerNode || taskName == "tracer";
+                    # ''{{ env "NOMAD_TASK_DIR" }}/supervisor.sock''
+                    inherit unixHttpServerPort;
+                  };
+                in supervisorConf.INI
+              ));
               change_mode = "noop";
               error_on_missing_key = true;
             }
@@ -521,54 +542,51 @@ let
             }
           ])
           ++
-          # Node(s)
-          (lib.lists.flatten (lib.mapAttrsToList
-            (_: nodeSpec: [
-              ## Node start.sh script.
-              {
-                env = false;
-                destination = "${task_statedir}/${nodeSpec.name}/start.sh";
-                data = escapeTemplate (
-                  let scriptValue = profileData.node-services."${nodeSpec.name}".startupScript.value;
-                  in if execTaskDriver
-                    then (startScriptToGoTemplate
-                      nodeSpec.name
-                      ("perf-" + nodeSpec.name)
-                      ("node" + (toString nodeSpec.i))
-                      nodeSpec
-                      scriptValue
-                    )
-                    else scriptValue
-                );
-                change_mode = "noop";
-                error_on_missing_key = true;
-                perms = "744"; # Only for every "start.sh" script. Default: "644"
-              }
-              ## Node configuration file.
-              {
-                env = false;
-                destination = "${task_statedir}/${nodeSpec.name}/config.json";
-                data = escapeTemplate (lib.generators.toJSON {}
-                  profileData.node-services."${nodeSpec.name}".nodeConfig.value);
-                change_mode = "noop";
-                error_on_missing_key = true;
-              }
-              ## Node topology file.
-              {
-                env = false;
-                destination = "${task_statedir}/${nodeSpec.name}/topology.json";
-                data = escapeTemplate (
-                  let topology = profileData.node-services."${nodeSpec.name}".topology;
-                  in if execTaskDriver
-                    then (topologyToGoTemplate topology.value)
-                    else (__readFile           topology.JSON )
-                );
-                change_mode = "noop";
-                error_on_missing_key = true;
-              }
-            ])
-            profileData.node-specs.value
-          ))
+          # Node
+          (lib.optionals (taskName != "tracer") [
+            ## Node start.sh script.
+            {
+              env = false;
+              destination = "${task_statedir}/${nodeSpec.name}/start.sh";
+              data = escapeTemplate (
+                let scriptValue = profileData.node-services."${nodeSpec.name}".startupScript.value;
+                in if execTaskDriver
+                  then (startScriptToGoTemplate
+                    taskName                         # taskName
+                    serviceName                      # serviceName
+                    portName                         # portName (can't have "-")
+                    nodeSpec                         # nodeSpec
+                    scriptValue                      # startScript
+                  )
+                  else scriptValue
+              );
+              change_mode = "noop";
+              error_on_missing_key = true;
+              perms = "744"; # Only for every "start.sh" script. Default: "644"
+            }
+            ## Node configuration file.
+            {
+              env = false;
+              destination = "${task_statedir}/${nodeSpec.name}/config.json";
+              data = escapeTemplate (lib.generators.toJSON {}
+                profileData.node-services."${nodeSpec.name}".nodeConfig.value);
+              change_mode = "noop";
+              error_on_missing_key = true;
+            }
+            ## Node topology file.
+            {
+              env = false;
+              destination = "${task_statedir}/${nodeSpec.name}/topology.json";
+              data = escapeTemplate (
+                let topology = profileData.node-services."${nodeSpec.name}".topology;
+                in if execTaskDriver
+                  then (topologyToGoTemplate topology.value)
+                  else (__readFile           topology.JSON )
+              );
+              change_mode = "noop";
+              error_on_missing_key = true;
+            }
+          ])
           ;
 
           # Specifies logging configuration for the stdout and stderr of the
@@ -687,7 +705,7 @@ let
               "tracer"                               # portName (can't have "-")
               0                                      # portNum
               # TODO: Which region?
-              {region=null;};                        # node-specs
+              {region=null;};                        # node-spec
           }
         ]
         ++
@@ -706,7 +724,7 @@ let
               ("perf-node-" + (toString nodeSpec.i)) # serviceName
               ("node" + (toString nodeSpec.i))       # portName (can't have "-")
               nodeSpec.port                          # portNum
-              nodeSpec;                              # node-specs
+              nodeSpec;                              # node-spec
           })
           (profileData.node-specs.value)
         )
