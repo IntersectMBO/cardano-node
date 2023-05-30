@@ -43,8 +43,9 @@ let
   };
 
   iohk-monitoring =
-    removeAttrs cfg
-      [ "setupScribes" ]
+    recursiveUpdate
+    (removeAttrs cfg
+      [ "setupScribes" ])
   {
     defaultScribes = [
       [ "StdoutSK" "stdout" ]
