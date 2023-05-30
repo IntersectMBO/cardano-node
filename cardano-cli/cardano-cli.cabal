@@ -205,7 +205,6 @@ test-suite cardano-cli-test
                       , cardano-node
                       , cardano-slotting ^>= 0.1
                       , containers
-                      , directory
                       , filepath
                       , hedgehog
                       , hedgehog-extras ^>= 0.4.5.1
@@ -213,10 +212,8 @@ test-suite cardano-cli-test
                       , text
                       , time
                       , transformers
-                      , yaml
 
-  other-modules:        Test.Config.Mainnet
-                        Test.Cli.CliIntermediateFormat
+  other-modules:        Test.Cli.CliIntermediateFormat
                         Test.Cli.FilePermissions
                         Test.Cli.ITN
                         Test.Cli.JSON

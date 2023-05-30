@@ -7,6 +7,7 @@
 import           Hedgehog.Main (defaultMain)
 import           System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
 
+import qualified Test.Cardano.Config.Mainnet
 #ifdef UNIX
 import qualified Test.Cardano.Node.FilePermissions
 #endif
@@ -25,7 +26,8 @@ main = do
       [ Test.Cardano.Node.FilePermissions.tests
       ] <>
 #endif
-      [ Test.Cardano.Node.Json.tests
+      [ Test.Cardano.Config.Mainnet.tests
+      , Test.Cardano.Node.Json.tests
       , Test.Cardano.Node.POM.tests
       , Test.Cardano.Tracing.OrphanInstances.HardFork.tests
       ]

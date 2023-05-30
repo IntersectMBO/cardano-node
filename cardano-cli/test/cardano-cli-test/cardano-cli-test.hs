@@ -13,7 +13,6 @@ import qualified Test.Cli.Pioneers.Exercise3
 import qualified Test.Cli.Pioneers.Exercise4
 import qualified Test.Cli.Pipes
 import qualified Test.Cli.Shelley.Run.Query
-import qualified Test.Config.Mainnet
 
 import           Hedgehog.Extras.Stock.OS (isWin32)
 import           Hedgehog.Main (defaultMain)
@@ -36,7 +35,6 @@ main = do
     , Test.Cli.Pioneers.Exercise3.tests
     , Test.Cli.Pioneers.Exercise4.tests
     , Test.Cli.Shelley.Run.Query.tests
-    , Test.Config.Mainnet.tests
     ]
 
 ignoreOnWindows :: IO Bool -> IO Bool

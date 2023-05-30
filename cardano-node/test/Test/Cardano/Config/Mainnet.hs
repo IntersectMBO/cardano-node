@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Test.Config.Mainnet
+module Test.Cardano.Config.Mainnet
   ( tests
   ) where
 
