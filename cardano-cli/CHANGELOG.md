@@ -2,7 +2,26 @@
 
 ## 8.1.0
 
--
+- Delete deprecated shelley command group
+  ([PR5264](https://github.com/input-output-hk/cardano-node/pull/5264))
+
+- Use cardano-api from CHaP
+  ([PR5047](https://github.com/input-output-hk/cardano-node/pull/5047))
+
+- Implement deposit handling when balancing transactions
+  ([PR5218](https://github.com/input-output-hk/cardano-node/pull/5218))
+
+- Make `renderScriptWitnessIndex` output more explicit.  This means
+  slightly improved error messages for failed script execution
+  errors.
+  ([PR5221](https://github.com/input-output-hk/cardano-node/pull/5221))
+
+- `--socket-path` option works across all commands
+  ([PR5207](https://github.com/input-output-hk/cardano-node/pull/5207))
+
+- Fix `toEraInMode` for conway.  This means for example that `query utxo`
+  works in Conway.
+  ([PR5175](https://github.com/input-output-hk/cardano-node/pull/5175))
 
 ## 8.0.0 -- May 2023
 
