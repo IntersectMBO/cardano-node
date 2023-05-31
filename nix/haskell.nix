@@ -173,6 +173,14 @@ let
                   export CARDANO_NODE_SRC=${filteredProjectBase}
                 '';
               # cardano-testnet depends on cardano-node, cardano-cli, cardano-submit-api and some config files
+              packages.cardano-node.components.tests.cardano-node-test.preCheck =
+                let
+                  # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
+                  filteredProjectBase = incl ../. mainnetConfigFiles;
+                in
+                ''
+                  export CARDANO_NODE_SRC=${filteredProjectBase}
+                '';
               packages.cardano-testnet.preCheck =
                 let
                   # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
