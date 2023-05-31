@@ -8,6 +8,9 @@ import           System.IO (IO)
 import           Testnet.Commands
 
 main :: IO ()
-main = join $ customExecParser
-  (prefs $ showHelpOnEmpty <> showHelpOnError)
-  (info (commands <**> helper) idm)
+main = do
+  Crypto.cryptoInit
+
+  join $ customExecParser
+    (prefs $ showHelpOnEmpty <> showHelpOnError)
+    (info (commands <**> helper) idm)

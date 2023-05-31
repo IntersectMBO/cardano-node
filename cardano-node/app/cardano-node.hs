@@ -20,9 +20,13 @@ import           Cardano.Node.Run (runNode)
 import           Cardano.Node.Tracing.Documentation (TraceDocumentationCmd (..),
                    parseTraceDocumentationCmd, runTraceDocumentationCmd)
 
-main :: IO ()
-main = toplevelExceptionHandler $ do
+import qualified Cardano.Crypto.Init as Crypto
 
+main :: IO ()
+main = do
+  Crypto.cryptoInit
+
+  toplevelExceptionHandler $ do
     cmd <- Opt.customExecParser p opts
 
     case cmd of

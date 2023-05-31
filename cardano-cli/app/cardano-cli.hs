@@ -12,7 +12,7 @@ import           Cardano.CLI.Environment (getEnvCli)
 import           Cardano.CLI.Parsers (opts, pref)
 import           Cardano.CLI.Run (renderClientCommandError, runClientCommand)
 import           Cardano.CLI.TopHandler
-import qualified Cardano.Crypto.Libsodium as Crypto
+import qualified Cardano.Crypto.Init as Crypto
 #ifdef UNIX
 import           System.Posix.Files
 #endif
@@ -21,10 +21,10 @@ import qualified GHC.IO.Encoding as GHC
 
 main :: IO ()
 main = toplevelExceptionHandler $ do
+  Crypto.cryptoInit
+
   envCli <- getEnvCli
 
-  -- TODO: Remove sodiumInit: https://github.com/input-output-hk/cardano-base/issues/175
-  Crypto.sodiumInit
   GHC.mkTextEncoding "UTF-8" >>= GHC.setLocaleEncoding
 #ifdef UNIX
   _ <- setFileCreationMask (otherModes `unionFileModes` groupModes)

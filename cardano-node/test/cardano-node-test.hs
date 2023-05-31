@@ -15,8 +15,12 @@ import qualified Test.Cardano.Node.Json
 import qualified Test.Cardano.Node.POM
 import qualified Test.Cardano.Tracing.OrphanInstances.HardFork
 
+import qualified Cardano.Crypto.Init as Crypto
+
 main :: IO ()
 main = do
+  Crypto.cryptoInit
+
   hSetBuffering stdout LineBuffering
   hSetEncoding stdout utf8
   runTests

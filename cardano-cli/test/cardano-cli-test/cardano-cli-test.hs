@@ -19,8 +19,12 @@ import           Hedgehog.Main (defaultMain)
 
 import           Test.Gen.Cardano.Api.Empty ()
 
+import qualified Cardano.Crypto.Init as Crypto
+
 main :: IO ()
 main = do
+  Crypto.cryptoInit
+
   hSetBuffering stdout LineBuffering
   hSetEncoding stdout utf8
   defaultMain

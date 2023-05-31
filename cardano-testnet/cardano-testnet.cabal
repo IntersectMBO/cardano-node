@@ -106,6 +106,7 @@ executable cardano-testnet
   main-is:              cardano-testnet.hs
 
   build-depends:        cardano-testnet
+                      , cardano-crypto-class
                       , optparse-applicative-fork
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
@@ -127,6 +128,7 @@ test-suite cardano-testnet-golden
                       , bytestring
                       , cardano-api
                       , cardano-cli:cardano-cli-test-lib
+                      , cardano-crypto-class
                       , cardano-testnet
                       , filepath
                       , hedgehog
@@ -167,6 +169,7 @@ test-suite cardano-testnet-test
                       , cardano-api ^>= 8.1.0.1
                       , cardano-api-gen ^>= 8.1.0.2
                       , cardano-cli
+                      , cardano-crypto-class
                       , cardano-testnet
                       , containers
                       , directory
