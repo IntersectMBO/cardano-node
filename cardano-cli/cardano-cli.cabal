@@ -202,6 +202,7 @@ test-suite cardano-cli-test
                       , cardano-api-gen ^>= 8.1.0.2
                       , cardano-cli
                       , cardano-cli:cardano-cli-test-lib
+                      , cardano-crypto-class ^>= 2.1
                       , cardano-node
                       , cardano-slotting ^>= 0.1
                       , containers
@@ -242,6 +243,7 @@ test-suite cardano-cli-golden
                       , cardano-api ^>= 8.1.0.1
                       , cardano-cli
                       , cardano-cli:cardano-cli-test-lib
+                      , cardano-crypto-class ^>= 2.1
                       , cardano-crypto-wrapper ^>= 1.5.1
                       , cardano-ledger-byron ^>= 1.0
                       , cborg

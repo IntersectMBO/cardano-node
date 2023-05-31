@@ -22,6 +22,8 @@ import qualified Testnet.Util.Ignore as H
 
 import           Test.Gen.Cardano.Api.Empty ()
 
+import qualified Cardano.Crypto.Init as Crypto
+
 tests :: IO TestTree
 tests = pure $ T.testGroup "test/Spec.hs"
   [ T.testGroup "Spec"
@@ -49,6 +51,8 @@ ingredients = T.defaultIngredients
 
 main :: IO ()
 main = do
+  Crypto.cryptoInit
+
   hSetBuffering stdout LineBuffering
   hSetEncoding stdout utf8
   args <- E.getArgs

@@ -70,7 +70,7 @@ import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
 import           Paths_cardano_node (version)
 
-import qualified Cardano.Crypto.Libsodium as Crypto
+import qualified Cardano.Crypto.Init as Crypto
 
 import           Cardano.Node.Configuration.Logging (LoggingLayer (..), createLoggingLayer,
                    nodeBasicInfo, shutdownLoggingLayer)
@@ -115,7 +115,7 @@ import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
 import           Cardano.Node.TraceConstraints (TraceConstraints)
 import           Cardano.Tracing.Tracers
-import Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing(..))
+import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
@@ -127,8 +127,7 @@ runNode
 runNode cmdPc = do
     installSigTermHandler
 
-    -- TODO: Remove sodiumInit: https://github.com/input-output-hk/cardano-base/issues/175
-    Crypto.sodiumInit
+    Crypto.cryptoInit
 
     configYamlPc <- parseNodeConfigurationFP . getLast $ pncConfigFile cmdPc
 

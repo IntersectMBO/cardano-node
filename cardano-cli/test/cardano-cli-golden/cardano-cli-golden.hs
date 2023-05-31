@@ -11,8 +11,12 @@ import qualified Test.Golden.Key
 import qualified Test.Golden.Shelley
 import qualified Test.Golden.TxView
 
+import qualified Cardano.Crypto.Init as Crypto
+
 main :: IO ()
 main = do
+  Crypto.cryptoInit
+
   hSetBuffering stdout LineBuffering
   hSetEncoding stdout utf8
   defaultMain

@@ -16,6 +16,7 @@ category:               Cardano,
                         Web,
 build-type:             Simple
 extra-source-files:     CHANGELOG.md
+
 common project-config
   default-language:     Haskell2010
   build-depends:        base >= 4.14 && < 4.17
@@ -86,6 +87,7 @@ executable cardano-submit-api
   build-depends:        base >= 4.14 && < 4.17
                       , optparse-applicative-fork >= 0.16.1.0
                       , cardano-cli
+                      , cardano-crypto-class ^>= 2.1
                       , cardano-submit-api
 
 test-suite unit
@@ -94,3 +96,4 @@ test-suite unit
   main-is:              test.hs
   hs-source-dirs:       test
   build-depends:        base >= 4.14 && < 4.17
+                      , cardano-crypto-class ^>= 2.1
