@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Tracing.Peer
@@ -79,10 +80,12 @@ ppMaxSlotNo Net.NoMaxSlotNo = "???"
 ppMaxSlotNo (Net.MaxSlotNo x) = show (unSlotNo x)
 
 ppStatus :: PeerFetchStatus header -> String
-ppStatus PeerFetchStatusShutdown = "shutdown"
-ppStatus PeerFetchStatusAberrant = "aberrant"
-ppStatus PeerFetchStatusBusy     = "fetching"
-ppStatus PeerFetchStatusReady {} = "ready"
+ppStatus = \case
+  PeerFetchStatusShutdown -> "shutdown"
+  PeerFetchStatusAberrant -> "aberrant"
+  PeerFetchStatusBusy     -> "fetching"
+  PeerFetchStatusReady {} -> "ready"
+  PeerFetchStatusStarting -> "starting"
 
 getCurrentPeers
   :: NodeKernelData blk

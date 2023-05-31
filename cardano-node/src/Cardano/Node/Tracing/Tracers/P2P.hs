@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -57,8 +58,13 @@ import           Ouroboros.Network.Snocket (LocalAddress (..))
 -- LocalRootPeers Tracer
 --------------------------------------------------------------------------------
 
-instance (ToJSONKey ntnAddr, ToJSONKey RelayAccessPoint, Show ntnAddr, Show exception) =>
-    LogFormatting (TraceLocalRootPeers ntnAddr exception) where
+instance
+  ( ToJSONKey ntnAddr
+  , ToJSON ntnAddr
+  , ToJSONKey RelayAccessPoint
+  , Show ntnAddr
+  , Show exception
+  ) => LogFormatting (TraceLocalRootPeers ntnAddr exception) where
   forMachine _dtal (TraceLocalRootDomains groups) =
     mconcat [ "kind" .= String "LocalRootDomains"
              , "localRootDomains" .= toJSON groups
@@ -92,16 +98,23 @@ instance (ToJSONKey ntnAddr, ToJSONKey RelayAccessPoint, Show ntnAddr, Show exce
              , "domainAddress" .= toJSON d
              , "reason" .= show exception
              ]
+  forMachine _dtal (TraceLocalRootDNSMap dnsMap) =
+    mconcat
+      [ "kind" .= String "TraceLocalRootDNSMap"
+      , "dnsMap" .= dnsMap
+      ]
   forHuman = pack . show
 
 instance MetaTrace (TraceLocalRootPeers ntnAddr exception) where
-  namespaceFor TraceLocalRootDomains {} = Namespace [] ["LocalRootDomains"]
-  namespaceFor TraceLocalRootWaiting {} = Namespace [] ["LocalRootWaiting"]
-  namespaceFor TraceLocalRootResult {} = Namespace [] ["LocalRootResult"]
-  namespaceFor TraceLocalRootGroups {} = Namespace [] ["LocalRootGroups"]
-  namespaceFor TraceLocalRootFailure {} = Namespace [] ["LocalRootFailure"]
-  namespaceFor TraceLocalRootError {} = Namespace [] ["LocalRootError"]
-  namespaceFor TraceLocalRootReconfigured {} = Namespace [] ["LocalRootReconfigured"]
+  namespaceFor = \case
+    TraceLocalRootDomains {}      -> Namespace [] ["LocalRootDomains"]
+    TraceLocalRootWaiting {}      -> Namespace [] ["LocalRootWaiting"]
+    TraceLocalRootResult {}       -> Namespace [] ["LocalRootResult"]
+    TraceLocalRootGroups {}       -> Namespace [] ["LocalRootGroups"]
+    TraceLocalRootFailure {}      -> Namespace [] ["LocalRootFailure"]
+    TraceLocalRootError {}        -> Namespace [] ["LocalRootError"]
+    TraceLocalRootReconfigured {} -> Namespace [] ["LocalRootReconfigured"]
+    TraceLocalRootDNSMap {}       -> Namespace [] ["LocalRootDNSMap"]
 
   severityFor (Namespace [] ["LocalRootDomains"]) _ = Just Info
   severityFor (Namespace [] ["LocalRootWaiting"]) _ = Just Info
@@ -109,6 +122,8 @@ instance MetaTrace (TraceLocalRootPeers ntnAddr exception) where
   severityFor (Namespace [] ["LocalRootGroups"]) _ = Just Info
   severityFor (Namespace [] ["LocalRootFailure"]) _ = Just Info
   severityFor (Namespace [] ["LocalRootError"]) _ = Just Info
+  severityFor (Namespace [] ["LocalRootReconfigured"]) _ = Just Info
+  severityFor (Namespace [] ["LocalRootDNSMap"]) _ = Just Info
   severityFor _ _ = Nothing
 
   documentFor (Namespace [] ["LocalRootDomains"]) = Just
@@ -123,6 +138,10 @@ instance MetaTrace (TraceLocalRootPeers ntnAddr exception) where
     ""
   documentFor (Namespace [] ["LocalRootError"]) = Just
     ""
+  documentFor (Namespace [] ["LocalRootReconfigured"]) = Just
+    ""
+  documentFor (Namespace [] ["LocalRootDNSMap"]) = Just
+    ""
   documentFor _ = Nothing
 
   allNamespaces =
@@ -132,6 +151,8 @@ instance MetaTrace (TraceLocalRootPeers ntnAddr exception) where
     , Namespace [] ["LocalRootGroups"]
     , Namespace [] ["LocalRootFailure"]
     , Namespace [] ["LocalRootError"]
+    , Namespace [] ["LocalRootReconfigured"]
+    , Namespace [] ["LocalRootDNSMap"]
     ]
 
 --------------------------------------------------------------------------------

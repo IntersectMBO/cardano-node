@@ -20,6 +20,7 @@ import           Control.Monad.Class.MonadTime.SI (DiffTime, Time (..))
 import           Data.Aeson (FromJSON (..), Value (..))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (listValue)
+import qualified Data.Aeson.Types as Aeson
 import           Data.Bifunctor (Bifunctor (first))
 import           Data.Data (Proxy (..))
 import           Data.Foldable (Foldable (..))
@@ -28,6 +29,8 @@ import qualified Data.IP as IP
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Data.Text (Text, pack)
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 
 import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
 import           Network.TypedProtocol.Core (PeerHasAgency (..))
@@ -180,6 +183,7 @@ instance HasSeverityAnnotation [TraceLabelPeer peer (FetchDecision [Point header
           Left FetchDeclineInFlightThisPeer      -> Debug
           Left FetchDeclineInFlightOtherPeer     -> Debug
           Left FetchDeclinePeerShutdown          -> Info
+          Left FetchDeclinePeerStarting          -> Info
           Left FetchDeclinePeerSlow              -> Info
           Left FetchDeclineReqsInFlightLimit {}  -> Info
           Left FetchDeclineBytesInFlightLimit {} -> Info
@@ -1378,6 +1382,20 @@ instance Show exception => ToObject (TraceLocalRootPeers RemoteAddress exception
   toObject _verb (TraceLocalRootReconfigured _ _) =
     mconcat [ "kind" .= String "LocalRootReconfigured"
              ]
+  toObject _verb (TraceLocalRootDNSMap dnsMap) =
+    mconcat
+      [ "kind" .= String "TraceLocalRootDNSMap"
+      , "dnsMap" .= dnsMap
+      ]
+
+instance Aeson.ToJSONKey DomainAccessPoint where
+  toJSONKey = Aeson.toJSONKeyText render
+    where
+      render da = mconcat
+        [ Text.decodeUtf8 (dapDomain da)
+        , ":"
+        , Text.pack $ show @Int (fromIntegral (dapPortNumber da))
+        ]
 
 instance ToJSON IP where
   toJSON ip = String (pack . show $ ip)
