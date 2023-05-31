@@ -1,13 +1,13 @@
 # Technical writers
-README.*                                                      @Jimbo4350 @newhoggy @olgahryniuk
-cardano-cli/README.md                                         @Jimbo4350 @newhoggy @olgahryniuk
+README.*                                                      @Jimbo4350 @newhoggy @carbolymer @olgahryniuk
+cardano-cli/README.md                                         @Jimbo4350 @newhoggy @carbolymer @olgahryniuk
 
 # Release manager added for notification on dependency updates
-cabal.project                                                 @Jimbo4350 @newhoggy @LaurenceIO
+cabal.project                                                 @Jimbo4350 @newhoggy @carbolymer @LaurenceIO
 
 # General reviewers per PR
 #                        Duncan   Jordan     Erik   John      Jared         Carlos
-*                        @dcoutts @Jimbo4350 @erikd @newhoggy @JaredCorduan @CarlosLopezDeLara
+*                        @dcoutts @Jimbo4350 @erikd @newhoggy @carbolymer @JaredCorduan @CarlosLopezDeLara
 
 # Specific reviewers for code pieces
 # NB - The last matching pattern takes precedence
@@ -32,11 +32,11 @@ nix/                                                          @input-output-hk/d
 *.nix                                                         @input-output-hk/devx-core-tech @input-output-hk/devops @deepfire @mgmeier @fmaste
 flake.lock                                                    @input-output-hk/devx-core-tech @input-output-hk/devops @deepfire @mgmeier @fmaste
 
-.buildkite                                                    @Jimbo4350 @newhoggy @input-output-hk/devx-core-tech @input-output-hk/devops
-.github                                                       @Jimbo4350 @newhoggy @input-output-hk/devx-core-tech @input-output-hk/devops
-ci/                                                           @Jimbo4350 @newhoggy @input-output-hk/devx-core-tech @input-output-hk/devops
-configuration/                                                @Jimbo4350 @newhoggy @input-output-hk/devx-core-tech @input-output-hk/devops
-bors.toml                                                     @Jimbo4350 @newhoggy @input-output-hk/devx-core-tech @input-output-hk/devops
-docker-compose.yml                                            @Jimbo4350 @newhoggy @input-output-hk/devx-core-tech @input-output-hk/devops
-cardano-node/src/Cardano/Node/Tracing/                        @Jimbo4350 @newhoggy @deepfire @jutaro @coot
-cardano-node/src/Cardano/Tracing/OrphanInstances/             @Jimbo4350 @newhoggy @input-output-hk/devops @coot
+.buildkite                                                    @Jimbo4350 @newhoggy @carbolymer @input-output-hk/devx-core-tech @input-output-hk/devops
+.github                                                       @Jimbo4350 @newhoggy @carbolymer @input-output-hk/devx-core-tech @input-output-hk/devops
+ci/                                                           @Jimbo4350 @newhoggy @carbolymer @input-output-hk/devx-core-tech @input-output-hk/devops
+configuration/                                                @Jimbo4350 @newhoggy @carbolymer @input-output-hk/devx-core-tech @input-output-hk/devops
+bors.toml                                                     @Jimbo4350 @newhoggy @carbolymer @input-output-hk/devx-core-tech @input-output-hk/devops
+docker-compose.yml                                            @Jimbo4350 @newhoggy @carbolymer @input-output-hk/devx-core-tech @input-output-hk/devops
+cardano-node/src/Cardano/Node/Tracing/                        @Jimbo4350 @newhoggy @carbolymer @deepfire @jutaro @coot
+cardano-node/src/Cardano/Tracing/OrphanInstances/             @Jimbo4350 @newhoggy @carbolymer @input-output-hk/devops @coot
