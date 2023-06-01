@@ -127,6 +127,8 @@ let
                 "cardano-testnet/test/cardano-testnet-test/files/golden/conway_node_default_config.json"
                 "cardano-testnet/test/cardano-testnet-test/files/golden/mary_node_default_config.json"
                 "cardano-testnet/test/cardano-testnet-test/files/golden/shelley_node_default_config.json"
+                "cardano-testnet/files/data/alonzo/genesis.alonzo.spec.json"
+                "cardano-testnet/files/data/conway/genesis.conway.spec.json"
               ];
             in
             {
