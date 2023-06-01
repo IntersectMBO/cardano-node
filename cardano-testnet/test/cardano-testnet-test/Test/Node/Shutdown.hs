@@ -10,6 +10,7 @@ module Test.Node.Shutdown
 import           Cardano.Api
 import           Control.Monad
 import           Data.Aeson
+import           Data.Bifunctor
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Functor ((<&>))
 import qualified Data.List as L
@@ -80,9 +81,8 @@ hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' ->
 
   -- 2. Create Alonzo genesis
   alonzoBabbageTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath' </> shelleyDir </> "genesis.alonzo.spec.json"
-  case defaultAlonzoGenesis of
-    Left e -> H.onFailure . H.noteIO_ . return $ displayError e
-    Right gen -> H.evalIO $ LBS.writeFile alonzoBabbageTestGenesisJsonTargetFile $ encode gen
+  gen <- H.evalEither $ first displayError defaultAlonzoGenesis
+  H.evalIO $ LBS.writeFile alonzoBabbageTestGenesisJsonTargetFile $ encode gen
 
   -- 2. Create Conway genesis
   conwayBabbageTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath' </> shelleyDir </> "genesis.conway.spec.json"

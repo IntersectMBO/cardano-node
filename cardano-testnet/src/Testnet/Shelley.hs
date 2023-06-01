@@ -19,6 +19,7 @@ import           Control.Monad
 import           Control.Monad.IO.Class (MonadIO (liftIO))
 import           Control.Monad.Trans.Resource (MonadResource (liftResourceT), resourceForkIO)
 import           Data.Aeson (ToJSON (toJSON), Value)
+import           Data.Bifunctor
 import           Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.List ((\\))
@@ -172,9 +173,8 @@ shelleyTestnet testnetOptions H.Conf {..} = do
   let addrs = userAddrs <> poolAddrs
 
   alonzoSpecFile <- H.noteTempFile tempAbsPath "genesis.alonzo.spec.json"
-  case defaultAlonzoGenesis of
-    Left e -> H.onFailure . H.noteIO_ . return $ displayError e
-    Right gen -> H.evalIO $ LBS.writeFile alonzoSpecFile $ J.encode gen
+  gen <- H.evalEither $ first displayError defaultAlonzoGenesis
+  H.evalIO $ LBS.writeFile alonzoSpecFile $ J.encode gen
 
 
   conwaySpecFile <- H.noteTempFile tempAbsPath "genesis.conway.spec.json"

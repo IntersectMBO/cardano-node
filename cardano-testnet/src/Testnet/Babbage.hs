@@ -18,6 +18,7 @@ import           Prelude
 
 import           Control.Monad
 import           Data.Aeson (Value (..), encode, object, toJSON, (.=))
+import           Data.Bifunctor
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
@@ -73,9 +74,8 @@ babbageTestnet testnetOptions H.Conf {..} = do
   -- SPOs in the ShelleyGenesis
 
   alonzoBabbageTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath </> "genesis.alonzo.spec.json"
-  case defaultAlonzoGenesis of
-    Left e -> H.onFailure . H.noteIO_ . return $ displayError e
-    Right gen -> H.evalIO $ LBS.writeFile alonzoBabbageTestGenesisJsonTargetFile $ encode gen
+  gen <- H.evalEither $ first displayError defaultAlonzoGenesis
+  H.evalIO $ LBS.writeFile alonzoBabbageTestGenesisJsonTargetFile $ encode gen
 
   conwayBabbageTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath </> "genesis.conway.spec.json"
   H.evalIO $ LBS.writeFile conwayBabbageTestGenesisJsonTargetFile $ encode defaultConwayGenesis

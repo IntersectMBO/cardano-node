@@ -26,6 +26,7 @@ import           Cardano.Api hiding (cardanoEra)
 
 import           Control.Monad
 import qualified Data.Aeson as J
+import           Data.Bifunctor
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Lazy as HM
 import           Data.List ((\\))
@@ -318,9 +319,8 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   shelleyDir <- H.createDirectoryIfMissing $ tempAbsPath </> "shelley"
 
   alonzoSpecFile <- H.noteTempFile tempAbsPath "shelley/genesis.alonzo.spec.json"
-  case defaultAlonzoGenesis of
-    Left e -> H.onFailure . H.noteIO_ . return $ displayError e
-    Right gen -> H.evalIO $ LBS.writeFile alonzoSpecFile $ J.encode gen
+  gen <- H.evalEither $ first displayError defaultAlonzoGenesis
+  H.evalIO $ LBS.writeFile alonzoSpecFile $ J.encode gen
 
 
   conwaySpecFile <- H.noteTempFile tempAbsPath "shelley/genesis.conway.spec.json"
