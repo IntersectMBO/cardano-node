@@ -111,13 +111,13 @@ defaultByronProtocolParamsJsonValue =
 
 instance Api.Error AlonzoGenesisError where
   displayError (AlonzoGenErrCostModels e) =
-    "Error in Alonzo genesis cost models: " <> e
+    "Error in Alonzo genesis cost models: " <> show e
   displayError (AlonzoGenErrTooMuchPrecision r) =
     "Too much precision for bounded rational in Alonzo genesis: " ++ show r
 
 data AlonzoGenesisError
   = AlonzoGenErrTooMuchPrecision Rational
-  | AlonzoGenErrCostModels String
+  | AlonzoGenErrCostModels Api.ProtocolParametersConversionError
   deriving Show
 
 defaultAlonzoGenesis :: Either AlonzoGenesisError AlonzoGenesis
