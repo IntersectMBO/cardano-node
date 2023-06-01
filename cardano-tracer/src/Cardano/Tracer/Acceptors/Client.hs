@@ -21,12 +21,12 @@ import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (.
 import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
                    codecHandshake, noTimeLimitsHandshake)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
-import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion,
+import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion, queryVersion,
                    simpleSingletonVersions)
-import           Ouroboros.Network.Snocket (LocalAddress, LocalSocket, Snocket, makeLocalBearer,
-                   localAddressFromPath, localSnocket)
-import           Ouroboros.Network.Socket (ConnectionId (..), connectToNode,
-                   nullNetworkConnectTracers)
+import           Ouroboros.Network.Snocket (LocalAddress, LocalSocket, Snocket,
+                   localAddressFromPath, localSnocket, makeLocalBearer)
+import           Ouroboros.Network.Socket (ConnectionId (..), HandshakeCallbacks (..),
+                   connectToNode, nullNetworkConnectTracers)
 import qualified System.Metrics.Configuration as EKGF
 import           System.Metrics.Network.Acceptor (acceptEKGMetricsInit)
 
@@ -95,7 +95,7 @@ doConnectToForwarder snocket address netMagic timeLimits app =
     timeLimits
     (cborTermVersionDataCodec forwardingCodecCBORTerm)
     nullNetworkConnectTracers
-    acceptableVersion
+    (HandshakeCallbacks acceptableVersion queryVersion)
     (simpleSingletonVersions
        ForwardingV_1
        (ForwardingVersionData $ NetworkMagic netMagic)

@@ -39,7 +39,7 @@ library
                       , aeson
                       , async
                       , bytestring
-                      , cardano-api ^>= 8.1.0.1
+                      , cardano-api ^>= 8.2
                       , cardano-binary
                       , cardano-cli
                       , cardano-crypto-class ^>= 2.1
@@ -51,7 +51,7 @@ library
                       , network
                       , optparse-applicative-fork
                       , ouroboros-consensus-cardano
-                      , ouroboros-network
+                      , ouroboros-network ^>= 0.8.1.0
                       , ouroboros-network-protocols
                       , prometheus
                       , servant

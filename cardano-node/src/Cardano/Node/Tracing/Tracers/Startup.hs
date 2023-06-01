@@ -406,6 +406,7 @@ nodeToClientVersionToInt = \case
   NodeToClientV_13 -> 13
   NodeToClientV_14 -> 14
   NodeToClientV_15 -> 15
+  NodeToClientV_16 -> 16
 
 nodeToNodeVersionToInt :: NodeToNodeVersion -> Int
 nodeToNodeVersionToInt = \case
@@ -414,6 +415,7 @@ nodeToNodeVersionToInt = \case
   NodeToNodeV_9 -> 9
   NodeToNodeV_10 -> 10
   NodeToNodeV_11 -> 11
+  NodeToNodeV_12 -> 12
 
 -- | Pretty print 'StartupInfoTrace'
 --

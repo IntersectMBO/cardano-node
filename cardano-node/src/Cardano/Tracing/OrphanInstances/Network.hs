@@ -20,6 +20,7 @@ import           Control.Monad.Class.MonadTime.SI (DiffTime, Time (..))
 import           Data.Aeson (FromJSON (..), Value (..))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (listValue)
+import qualified Data.Aeson.Types as Aeson
 import           Data.Bifunctor (Bifunctor (first))
 import           Data.Data (Proxy (..))
 import           Data.Foldable (Foldable (..))
@@ -28,6 +29,8 @@ import qualified Data.IP as IP
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Data.Text (Text, pack)
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 
 import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
 import           Network.TypedProtocol.Core (PeerHasAgency (..))
@@ -180,6 +183,7 @@ instance HasSeverityAnnotation [TraceLabelPeer peer (FetchDecision [Point header
           Left FetchDeclineInFlightThisPeer      -> Debug
           Left FetchDeclineInFlightOtherPeer     -> Debug
           Left FetchDeclinePeerShutdown          -> Info
+          Left FetchDeclinePeerStarting          -> Info
           Left FetchDeclinePeerSlow              -> Info
           Left FetchDeclineReqsInFlightLimit {}  -> Info
           Left FetchDeclineBytesInFlightLimit {} -> Info
@@ -452,6 +456,7 @@ instance HasSeverityAnnotation (ConnectionManagerTrace addr (ConnectionHandlerTr
       TrConnectionHandler _ ev'     ->
         case ev' of
           TrHandshakeSuccess {}               -> Info
+          TrHandshakeQuery {}                 -> Info
           TrHandshakeClientError {}           -> Notice
           TrHandshakeServerError {}           -> Info
           TrConnectionHandlerError _ _ ShutdownNode            -> Critical
@@ -1377,6 +1382,20 @@ instance Show exception => ToObject (TraceLocalRootPeers RemoteAddress exception
   toObject _verb (TraceLocalRootReconfigured _ _) =
     mconcat [ "kind" .= String "LocalRootReconfigured"
              ]
+  toObject _verb (TraceLocalRootDNSMap dnsMap) =
+    mconcat
+      [ "kind" .= String "TraceLocalRootDNSMap"
+      , "dnsMap" .= dnsMap
+      ]
+
+instance Aeson.ToJSONKey DomainAccessPoint where
+  toJSONKey = Aeson.toJSONKeyText render
+    where
+      render da = mconcat
+        [ Text.decodeUtf8 (dapDomain da)
+        , ":"
+        , Text.pack $ show @Int (fromIntegral (dapPortNumber da))
+        ]
 
 instance ToJSON IP where
   toJSON ip = String (pack . show $ ip)
@@ -1755,6 +1774,9 @@ instance Show vNumber => ToJSON (HandshakeProtocolError vNumber) where
                  , "versionNumber" .= show vNumber
                  , "reason" .= String (pack $ show t)
                  ]
+  toJSON QueryNotSupported =
+    Aeson.object [ "kind" .= String "QueryNotSupported"
+                 ]
 
 instance Show vNumber => ToJSON (HandshakeException vNumber) where
   toJSON (HandshakeProtocolLimit plf) =
@@ -1772,6 +1794,7 @@ instance ToJSON NodeToNodeVersion where
   toJSON NodeToNodeV_9  = Number 9
   toJSON NodeToNodeV_10 = Number 10
   toJSON NodeToNodeV_11  = Number 11
+  toJSON NodeToNodeV_12  = Number 12
 
 instance FromJSON NodeToNodeVersion where
   parseJSON (Number 7) = return NodeToNodeV_7
@@ -1790,6 +1813,7 @@ instance ToJSON NodeToClientVersion where
   toJSON NodeToClientV_13 = Number 13
   toJSON NodeToClientV_14 = Number 14
   toJSON NodeToClientV_15 = Number 15
+  toJSON NodeToClientV_16 = Number 16
 
 instance FromJSON NodeToClientVersion where
   parseJSON (Number 9) = return NodeToClientV_9
@@ -1803,15 +1827,17 @@ instance FromJSON NodeToClientVersion where
   parseJSON x          = fail ("FromJSON.NodeToClientVersion: error parsing NodeToClientVersion: " ++ show x)
 
 instance ToJSON NodeToNodeVersionData where
-  toJSON (NodeToNodeVersionData (NetworkMagic m) dm ps) =
+  toJSON (NodeToNodeVersionData (NetworkMagic m) dm ps q) =
     Aeson.object [ "networkMagic" .= toJSON m
                  , "diffusionMode" .= show dm
                  , "peerSharing" .= show ps
+                 , "query" .= toJSON q
                  ]
 
 instance ToJSON NodeToClientVersionData where
-  toJSON (NodeToClientVersionData (NetworkMagic m)) =
+  toJSON (NodeToClientVersionData (NetworkMagic m) q) =
     Aeson.object [ "networkMagic" .= toJSON m
+                 , "query" .= toJSON q
                  ]
 
 instance (Show versionNumber, ToJSON versionNumber, ToJSON agreedOptions)
@@ -1821,6 +1847,14 @@ instance (Show versionNumber, ToJSON versionNumber, ToJSON agreedOptions)
       [ "kind" .= String "HandshakeSuccess"
       , "versionNumber" .= toJSON versionNumber
       , "agreedOptions" .= toJSON agreedOptions
+      ]
+  toObject _verb (TrHandshakeQuery vMap) =
+    mconcat
+      [ "kind" .= String "HandshakeQuery"
+      , "versions" .= toJSON ((\(k,v) -> Aeson.object [
+          "versionNumber" .= k
+        , "options" .= v
+        ]) <$> Map.toList vMap)
       ]
   toObject _verb (TrHandshakeClientError err) =
     mconcat

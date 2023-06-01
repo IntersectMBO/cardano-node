@@ -466,7 +466,7 @@ mkTracers _ _ _ _ _ enableP2P =
       , Consensus.mempoolTracer = nullTracer
       , Consensus.forgeTracer = nullTracer
       , Consensus.blockchainTimeTracer = nullTracer
-      , Consensus.consensusStartupErrorTracer = nullTracer
+      , Consensus.consensusErrorTracer = nullTracer
       }
     , nodeToClientTracers = NodeToClient.Tracers
       { NodeToClient.tChainSyncTracer = nullTracer
@@ -697,10 +697,9 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
   pure Consensus.Tracers
     { Consensus.chainSyncClientTracer = tracerOnOff (traceChainSyncClient trSel) verb "ChainSyncClient" tr
     , Consensus.chainSyncServerHeaderTracer =
-      Tracer $ \ev -> do
-        traceWith (annotateSeverity . toLogObject' verb $ appendName "ChainSyncHeaderServer"
-                    (tracerOnOff' (traceChainSyncHeaderServer trSel) tr)) ev
-        traceServedCount mbEKGDirect ev
+           tracerOnOff' (traceChainSyncHeaderServer trSel)
+                        (annotateSeverity . toLogObject' verb $ appendName "ChainSyncHeaderServer" tr)
+        <> (\(TraceLabelPeer _ ev) -> ev) `contramap` Tracer (traceServedCount mbEKGDirect)
     , Consensus.chainSyncServerBlockTracer = tracerOnOff (traceChainSyncBlockServer trSel) verb "ChainSyncBlockServer" tr
     , Consensus.blockFetchDecisionTracer = tracerOnOff' (traceBlockFetchDecisions trSel) $
         annotateSeverity $ teeTraceBlockFetchDecision verb elidedFetchDecision tr
@@ -713,22 +712,22 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
     , Consensus.forgeStateInfoTracer = tracerOnOff' (traceForgeStateInfo trSel) $
         forgeStateInfoTracer (Proxy @blk) trSel tr
     , Consensus.txInboundTracer = tracerOnOff' (traceTxInbound trSel) $
-        Tracer $ \ev -> do
-          traceWith (annotateSeverity . toLogObject' verb $ appendName "TxInbound" tr) ev
-          case ev of
-            TraceLabelPeer _ (TraceTxSubmissionCollected collected) ->
-              traceI trmet meta "submissions.submitted.count" =<<
-                STM.modifyReadTVarIO tSubmissionsCollected (+ collected)
+          Tracer $ \ev -> do
+            traceWith (annotateSeverity . toLogObject' verb $ appendName "TxInbound" tr) ev
+            case ev of
+              TraceLabelPeer _ (TraceTxSubmissionCollected collected) ->
+                traceI trmet meta "submissions.submitted.count" =<<
+                  STM.modifyReadTVarIO tSubmissionsCollected (+ collected)
 
-            TraceLabelPeer _ (TraceTxSubmissionProcessed processed) -> do
-              traceI trmet meta "submissions.accepted.count" =<<
-                STM.modifyReadTVarIO tSubmissionsAccepted (+ ptxcAccepted processed)
-              traceI trmet meta "submissions.rejected.count" =<<
-                STM.modifyReadTVarIO tSubmissionsRejected (+ ptxcRejected processed)
+              TraceLabelPeer _ (TraceTxSubmissionProcessed processed) -> do
+                traceI trmet meta "submissions.accepted.count" =<<
+                  STM.modifyReadTVarIO tSubmissionsAccepted (+ ptxcAccepted processed)
+                traceI trmet meta "submissions.rejected.count" =<<
+                  STM.modifyReadTVarIO tSubmissionsRejected (+ ptxcRejected processed)
 
-            TraceLabelPeer _ TraceTxInboundTerminated -> return ()
-            TraceLabelPeer _ (TraceTxInboundCanRequestMoreTxs _) -> return ()
-            TraceLabelPeer _ (TraceTxInboundCannotRequestMoreTxs _) -> return ()
+              TraceLabelPeer _ TraceTxInboundTerminated -> return ()
+              TraceLabelPeer _ (TraceTxInboundCanRequestMoreTxs _) -> return ()
+              TraceLabelPeer _ (TraceTxInboundCannotRequestMoreTxs _) -> return ()
 
     , Consensus.txOutboundTracer = tracerOnOff (traceTxOutbound trSel) verb "TxOutbound" tr
     , Consensus.localTxSubmissionServerTracer = tracerOnOff (traceLocalTxSubmissionServer trSel) verb "LocalTxSubmissionServer" tr
@@ -742,7 +741,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
     , Consensus.blockchainTimeTracer = tracerOnOff' (traceBlockchainTime trSel) $
         Tracer $ \ev ->
           traceWith (toLogObject tr) (readableTraceBlockchainTimeEvent ev)
-    , Consensus.consensusStartupErrorTracer =
+    , Consensus.consensusErrorTracer =
         Tracer $ \err -> traceWith (toLogObject tr) (ConsensusStartupException err)
     }
  where
@@ -774,19 +773,19 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
 
 
 traceBlockFetchServerMetrics
-  :: forall blk. ()
+  :: forall blk peer. ()
   => Tracer IO (LoggerName, LogObject Text)
   -> LOMeta
   -> STM.TVar Int64
   -> STM.TVar Int64
   -> STM.TVar SlotNo
-  -> Tracer IO (TraceBlockFetchServerEvent blk)
-  -> Tracer IO (TraceBlockFetchServerEvent blk)
+  -> Tracer IO (TraceLabelPeer peer (TraceBlockFetchServerEvent blk))
+  -> Tracer IO (TraceLabelPeer peer (TraceBlockFetchServerEvent blk))
 traceBlockFetchServerMetrics trMeta meta tBlocksServed tLocalUp tMaxSlotNo tracer = Tracer bsTracer
 
   where
-    bsTracer :: TraceBlockFetchServerEvent blk -> IO ()
-    bsTracer e@(TraceBlockFetchServerSendBlock p) = do
+    bsTracer :: TraceLabelPeer peer (TraceBlockFetchServerEvent blk) -> IO ()
+    bsTracer e@(TraceLabelPeer _p (TraceBlockFetchServerSendBlock p)) = do
       traceWith tracer e
 
       (served, mbLocalUpstreamyness) <- atomically $ do

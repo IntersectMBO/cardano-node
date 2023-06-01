@@ -27,6 +27,10 @@ common project-config
   if os(windows)
     buildable: False
 
+  if impl(ghc < 9)
+    buildable: False
+
+
 common common-definitions
   build-depends:      base >= 4.14 && < 4.17
   default-language:   Haskell2010
@@ -68,7 +72,7 @@ library
   -- IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api ^>= 8.1.0.1
+    , cardano-api ^>= 8.2
     , plutus-ledger-api       >=1.0.0
     , plutus-tx               >=1.0.0
     , plutus-tx-plugin        >=1.0.0
