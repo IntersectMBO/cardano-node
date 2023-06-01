@@ -615,8 +615,12 @@ let
             {
               env = false;
               destination = "${task_statedir}/generator/run-script.json";
-              data = escapeTemplate (__readFile
-                profileData.generator-service.runScript.JSON.outPath);
+              data = escapeTemplate (
+                let runScript = profileData.generator-service.runScript;
+                in if execTaskDriver
+                  then (runScriptToGoTemplate runScript.value)
+                  else (__readFile            runScript.JSON )
+              );
               change_mode = "noop";
               error_on_missing_key = true;
             }
@@ -1090,14 +1094,56 @@ let
             ${builtins.concatStringsSep "," (
                 builtins.map
                   mergedNodeSpecToStr
-                  (insertNodeSpecsInProducers topology).Producers
+                  (insertNodeSpecsInAddressesArray topology).Producers
             )}
           ]
         }
       ''
   ;
+
+  # Input is a profileData.node-services."${nodeSpec.name}".topology.value
+  runScriptToGoTemplate =
+    let
+      mergedNodeSpecToStr = mergedNodeSpecs: ''
+        {
+            "addr": "{{range nomadService "${"perf-node-" + (toString mergedNodeSpecs.i)}"}}{{.Address}}{{end}}"
+          , "port":  {{range nomadService "${"perf-node-" + (toString mergedNodeSpecs.i)}"}}{{.Port}}{{end}}
+        }
+      '';
+    in
+      runScript: builtins.replaceStrings
+        # builtins.toJSON {a=null;} => "{\"a\":null}"
+        ["\"targetNodes\":null"]
+        [''
+          "targetNodes": [
+            ${builtins.concatStringsSep "," (
+              builtins.map
+                mergedNodeSpecToStr
+                (insertNodeSpecsInAddressesArray runScript).targetNodes
+            )}
+          ]
+        '']
+        (lib.generators.toJSON {} (runScript // {targetNodes=null;}))
+  ;
+
+  # Topology.Producers are like:
+  # "Producers": [
+  #   {
+  #     "addr": "127.0.0.1",
+  #     "port": 30001,
+  #     "valency": 1
+  #   }
+  # ]
+  # Tracer.targetNodes are like:
+  # "targetNodes": [
+  #   {
+  #     "addr": "127.0.0.1",
+  #     "port": 30000
+  #   }
+  # ]
+
   # builtins.concatStringsSep
-  insertNodeSpecsInProducers =
+  insertNodeSpecsInAddressesArray =
     let fromPortToNodeSpec = port: (
       builtins.head # Must exist!
         # Returns
@@ -1109,10 +1155,10 @@ let
           )
         )
     );
-# lib.debug.traceVal
-    in topology: builtins.mapAttrs
+    # lib.debug.traceVal
+    in addressesArray: builtins.mapAttrs
       (key: value:
-        if key == "Producers"
+        if key == "Producers" || key == "targetNodes"
         then builtins.map
           (remoteAddress:
             remoteAddress // (fromPortToNodeSpec remoteAddress.port)
@@ -1120,7 +1166,7 @@ let
           value
         else value # Error!
       )
-      topology
+      addressesArray
   ;
 
 in lib.generators.toJSON {} clusterJob

@@ -152,10 +152,11 @@ let
                 (__toJSON service.nodeConfig);
       };
 
-      runScript = {
+      runScript = rec {
         # TODO / FIXME
         # the string '...' is not allowed to refer to a store path (such as '')
         # value = service.decideRunScript service;
+        value = __fromJSON (__readFile JSON);
         JSON  = jsonFilePretty "generator-run-script.json"
                 (service.decideRunScript service);
       };
