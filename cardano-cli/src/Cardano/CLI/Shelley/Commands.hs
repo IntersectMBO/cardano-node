@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -38,6 +39,7 @@ module Cardano.CLI.Shelley.Commands
   , VerificationKeyBase64 (..)
   , GenesisKeyFile (..)
   , MetadataFile (..)
+  , StakePoolMetadataFile
   , PrivKeyFile (..)
   , BlockId (..)
   , WitnessSigningData (..)
@@ -91,7 +93,7 @@ renderShelleyCommand sc =
     TextViewCmd cmd -> renderTextViewCmd cmd
 
 data AddressCmd
-  = AddressKeyGen AddressKeyType (VerificationKeyFile Out) (SigningKeyFile Out)
+  = AddressKeyGen KeyOutputFormat AddressKeyType (VerificationKeyFile Out) (SigningKeyFile Out)
   | AddressKeyHash VerificationKeyTextOrFile (Maybe (File () Out))
   | AddressBuild
       PaymentVerifier
@@ -111,7 +113,7 @@ renderAddressCmd cmd =
     AddressInfo {} -> "address info"
 
 data StakeAddressCmd
-  = StakeAddressKeyGen (VerificationKeyFile Out) (SigningKeyFile Out)
+  = StakeAddressKeyGen KeyOutputFormat (VerificationKeyFile Out) (SigningKeyFile Out)
   | StakeAddressKeyHash (VerificationKeyOrFile StakeKey) (Maybe (File () Out))
   | StakeAddressBuild StakeVerifier NetworkId (Maybe (File () Out))
   | StakeRegistrationCert StakeIdentifier (File () Out)
@@ -275,9 +277,9 @@ renderTransactionCmd cmd =
     TxView {} -> "transaction view"
 
 data NodeCmd
-  = NodeKeyGenCold (VerificationKeyFile Out) (SigningKeyFile Out) (OpCertCounterFile Out)
-  | NodeKeyGenKES  (VerificationKeyFile Out) (SigningKeyFile Out)
-  | NodeKeyGenVRF  (VerificationKeyFile Out) (SigningKeyFile Out)
+  = NodeKeyGenCold KeyOutputFormat (VerificationKeyFile Out) (SigningKeyFile Out) (OpCertCounterFile Out)
+  | NodeKeyGenKES  KeyOutputFormat (VerificationKeyFile Out) (SigningKeyFile Out)
+  | NodeKeyGenVRF  KeyOutputFormat (VerificationKeyFile Out) (SigningKeyFile Out)
   | NodeKeyHashVRF  (VerificationKeyOrFile VrfKey) (Maybe (File () Out))
   | NodeNewCounter ColdVerificationKeyOrFile Word (OpCertCounterFile InOut)
   | NodeIssueOpCert (VerificationKeyOrFile KesKey) (SigningKeyFile In) (OpCertCounterFile InOut)
@@ -323,8 +325,8 @@ data PoolCmd
       EpochNo
       -- ^ Epoch in which to retire the stake pool.
       (File Certificate Out)
-  | PoolGetId (VerificationKeyOrFile StakePoolKey) OutputFormat
-  | PoolMetadataHash (File StakePoolMetadata In) (Maybe (File () Out))
+  | PoolGetId (VerificationKeyOrFile StakePoolKey) PoolIdOutputFormat (Maybe (File () Out))
+  | PoolMetadataHash (StakePoolMetadataFile In) (Maybe (File () Out))
   deriving Show
 
 renderPoolCmd :: PoolCmd -> Text
@@ -448,9 +450,17 @@ renderTextViewCmd :: TextViewCmd -> Text
 renderTextViewCmd (TextViewInfo _ _) = "text-view decode-cbor"
 
 data GenesisCmd
-  = GenesisCreate GenesisDir Word Word (Maybe SystemStart) (Maybe Lovelace) NetworkId
+  = GenesisCreate
+      KeyOutputFormat
+      GenesisDir
+      Word
+      Word
+      (Maybe SystemStart)
+      (Maybe Lovelace)
+      NetworkId
   | GenesisCreateCardano GenesisDir Word Word (Maybe SystemStart) (Maybe Lovelace) BlockCount Word Rational NetworkId FilePath FilePath FilePath FilePath (Maybe FilePath)
   | GenesisCreateStaked
+      KeyOutputFormat
       GenesisDir
       Word
       Word
@@ -525,6 +535,8 @@ data MetadataFile = MetadataFileJSON (File () In)
                   | MetadataFileCBOR (File () In)
 
   deriving Show
+
+type StakePoolMetadataFile = File StakePoolMetadata
 
 newtype GenesisDir
   = GenesisDir FilePath

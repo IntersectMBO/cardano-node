@@ -12,7 +12,8 @@ module Test.Golden.Shelley
 
 import           Test.Golden.Shelley.Address.Build (golden_shelleyAddressBuild)
 import           Test.Golden.Shelley.Address.Info (golden_shelleyAddressInfo)
-import           Test.Golden.Shelley.Address.KeyGen (golden_shelleyAddressKeyGen)
+import           Test.Golden.Shelley.Address.KeyGen (golden_shelleyAddressExtendedKeyGen,
+                   golden_shelleyAddressKeyGen)
 import           Test.Golden.Shelley.Genesis.Create (golden_shelleyGenesisCreate)
 import           Test.Golden.Shelley.Genesis.InitialTxIn (golden_shelleyGenesisInitialTxIn)
 import           Test.Golden.Shelley.Genesis.KeyGenDelegate (golden_shelleyGenesisKeyGenDelegate)
@@ -38,9 +39,12 @@ import           Test.Golden.Shelley.Key.ConvertCardanoAddressKey
                    golden_convertCardanoAddressShelleyPaymentSigningKey,
                    golden_convertCardanoAddressShelleyStakeSigningKey)
 import           Test.Golden.Shelley.Node.IssueOpCert (golden_shelleyNodeIssueOpCert)
-import           Test.Golden.Shelley.Node.KeyGen (golden_shelleyNodeKeyGen)
-import           Test.Golden.Shelley.Node.KeyGenKes (golden_shelleyNodeKeyGenKes)
-import           Test.Golden.Shelley.Node.KeyGenVrf (golden_shelleyNodeKeyGenVrf)
+import           Test.Golden.Shelley.Node.KeyGen (golden_shelleyNodeKeyGen,
+                   golden_shelleyNodeKeyGen_bech32, golden_shelleyNodeKeyGen_te)
+import           Test.Golden.Shelley.Node.KeyGenKes (golden_shelleyNodeKeyGenKes,
+                   golden_shelleyNodeKeyGenKes_bech32, golden_shelleyNodeKeyGenKes_te)
+import           Test.Golden.Shelley.Node.KeyGenVrf (golden_shelleyNodeKeyGenVrf,
+                   golden_shelleyNodeKeyGenVrf_bech32, golden_shelleyNodeKeyGenVrf_te)
 import           Test.Golden.Shelley.StakeAddress.Build (golden_shelleyStakeAddressBuild)
 import           Test.Golden.Shelley.StakeAddress.DeregistrationCertificate
                    (golden_shelleyStakeAddressDeregistrationCertificate)
@@ -64,16 +68,20 @@ import           Test.Golden.Shelley.Metadata.StakePoolMetadata (golden_stakePoo
 import           Test.Golden.Shelley.MultiSig.Address (golden_shelleyAllMultiSigAddressBuild,
                    golden_shelleyAnyMultiSigAddressBuild, golden_shelleyAtLeastMultiSigAddressBuild)
 import           Test.Golden.Shelley.TextEnvelope.Keys.ExtendedPaymentKeys
-                   (golden_shelleyExtendedPaymentKeys)
+                   (golden_shelleyExtendedPaymentKeys, golden_shelleyExtendedPaymentKeys_bech32,
+                   golden_shelleyExtendedPaymentKeys_te)
 import           Test.Golden.Shelley.TextEnvelope.Keys.GenesisDelegateKeys
                    (golden_shelleyGenesisDelegateKeys)
 import           Test.Golden.Shelley.TextEnvelope.Keys.GenesisKeys (golden_shelleyGenesisKeys)
 import           Test.Golden.Shelley.TextEnvelope.Keys.GenesisUTxOKeys
                    (golden_shelleyGenesisUTxOKeys)
 import           Test.Golden.Shelley.TextEnvelope.Keys.KESKeys (golden_shelleyKESKeys)
-import           Test.Golden.Shelley.TextEnvelope.Keys.PaymentKeys (golden_shelleyPaymentKeys)
-import           Test.Golden.Shelley.TextEnvelope.Keys.StakeKeys (golden_shelleyStakeKeys)
-import           Test.Golden.Shelley.TextEnvelope.Keys.VRFKeys (golden_shelleyVRFKeys)
+import           Test.Golden.Shelley.TextEnvelope.Keys.PaymentKeys (golden_shelleyPaymentKeys,
+                   golden_shelleyPaymentKeys_bech32, golden_shelleyPaymentKeys_te)
+import           Test.Golden.Shelley.TextEnvelope.Keys.StakeKeys (golden_shelleyStakeKeys,
+                   golden_shelleyStakeKeys_bech32, golden_shelleyStakeKeys_te)
+import           Test.Golden.Shelley.TextEnvelope.Keys.VRFKeys (golden_shelleyVRFKeys,
+                   golden_shelleyVRFKeys_bech32, golden_shelleyVRFKeys_te)
 import           Test.Golden.Shelley.TextView.DecodeCbor (golden_shelleyTextViewDecodeCbor)
 import           Test.Golden.Shelley.Transaction.Assemble
                    (golden_shelleyTransactionAssembleWitness_SigningKey)
@@ -101,8 +109,11 @@ keyTests =
     $ H.Group "TextEnvelope Key Goldens"
         [ ("golden_shelleyAddressInfo", golden_shelleyAddressInfo)
         , ("golden_shelleyAddressKeyGen", golden_shelleyAddressKeyGen)
+        , ("golden_shelleyAddressExtendedKeyGen", golden_shelleyAddressExtendedKeyGen)
         , ("golden_shelleyAddressBuild", golden_shelleyAddressBuild)
         , ("golden_shelleyExtendedPaymentKeys", golden_shelleyExtendedPaymentKeys)
+        , ("golden_shelleyExtendedPaymentKeys_bech32", golden_shelleyExtendedPaymentKeys_bech32)
+        , ("golden_shelleyExtendedPaymentKeys_te", golden_shelleyExtendedPaymentKeys_te)
         , ("golden_shelleyGenesisCreate", golden_shelleyGenesisCreate)
         , ("golden_shelleyGenesisDelegateKeys", golden_shelleyGenesisDelegateKeys)
         , ("golden_shelleyGenesisInitialTxIn", golden_shelleyGenesisInitialTxIn)
@@ -115,14 +126,24 @@ keyTests =
         , ("golden_shelleyKESKeys", golden_shelleyKESKeys)
         , ("golden_shelleyNodeIssueOpCert", golden_shelleyNodeIssueOpCert)
         , ("golden_shelleyNodeKeyGen", golden_shelleyNodeKeyGen)
+        , ("golden_shelleyNodeKeyGen_bech32", golden_shelleyNodeKeyGen_bech32)
+        , ("golden_shelleyNodeKeyGen_te", golden_shelleyNodeKeyGen_te)
         , ("golden_shelleyNodeKeyGenKes", golden_shelleyNodeKeyGenKes)
+        , ("golden_shelleyNodeKeyGenKes_bech32", golden_shelleyNodeKeyGenKes_bech32)
+        , ("golden_shelleyNodeKeyGenKes_te", golden_shelleyNodeKeyGenKes_te)
         , ("golden_shelleyNodeKeyGenVrf", golden_shelleyNodeKeyGenVrf)
+        , ("golden_shelleyNodeKeyGenVrf_bech32", golden_shelleyNodeKeyGenVrf_bech32)
+        , ("golden_shelleyNodeKeyGenVrf_te", golden_shelleyNodeKeyGenVrf_te)
         , ("golden_shelleyPaymentKeys", golden_shelleyPaymentKeys)
+        , ("golden_shelleyPaymentKeys_bech32", golden_shelleyPaymentKeys_bech32)
+        , ("golden_shelleyPaymentKeys_te", golden_shelleyPaymentKeys_te)
         , ("golden_shelleyStakeAddressBuild", golden_shelleyStakeAddressBuild)
         , ("golden_shelleyStakeAddressDeregistrationCertificate", golden_shelleyStakeAddressDeregistrationCertificate)
         , ("golden_shelleyStakeAddressKeyGen", golden_shelleyStakeAddressKeyGen)
         , ("golden_shelleyStakeAddressRegistrationCertificate", golden_shelleyStakeAddressRegistrationCertificate)
         , ("golden_shelleyStakeKeys", golden_shelleyStakeKeys)
+        , ("golden_shelleyStakeKeys_bech32", golden_shelleyStakeKeys_bech32)
+        , ("golden_shelleyStakeKeys_te", golden_shelleyStakeKeys_te)
         , ("golden_shelleyStakePoolRegistrationCertificate", golden_shelleyStakePoolRegistrationCertificate)
         , ("golden_shelleyTextViewDecodeCbor", golden_shelleyTextViewDecodeCbor)
         , ("golden_shelleyTransactionBuild", golden_shelleyTransactionBuild)
@@ -133,6 +154,8 @@ keyTests =
         , ("golden_shelleyTransactionCalculateMinFee", golden_shelleyTransactionCalculateMinFee)
         , ("golden_shelleyTransactionSign", golden_shelleyTransactionSign)
         , ("golden_shelleyVRFKeys", golden_shelleyVRFKeys)
+        , ("golden_shelleyVRFKeys_bech32", golden_shelleyVRFKeys_bech32)
+        , ("golden_shelleyVRFKeys_te", golden_shelleyVRFKeys_te)
         , ("golden_version", golden_version)
         ]
 

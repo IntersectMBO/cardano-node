@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -59,39 +60,90 @@ renderShelleyAddressCmdError err =
 runAddressCmd :: AddressCmd -> ExceptT ShelleyAddressCmdError IO ()
 runAddressCmd cmd =
   case cmd of
-    AddressKeyGen kt vkf skf -> runAddressKeyGenToFile kt vkf skf
+    AddressKeyGen fmt kt vkf skf -> runAddressKeyGenToFile fmt kt vkf skf
     AddressKeyHash vkf mOFp -> runAddressKeyHash vkf mOFp
     AddressBuild paymentVerifier mbStakeVerifier nw mOutFp -> runAddressBuild paymentVerifier mbStakeVerifier nw mOutFp
     AddressInfo txt mOFp -> firstExceptT ShelleyAddressCmdAddressInfoError $ runAddressInfo txt mOFp
 
 runAddressKeyGenToFile
-  :: AddressKeyType
+  :: KeyOutputFormat
+  -> AddressKeyType
   -> VerificationKeyFile Out
   -> SigningKeyFile Out
   -> ExceptT ShelleyAddressCmdError IO ()
-runAddressKeyGenToFile kt vkf skf = case kt of
-  AddressKeyShelley         -> generateAndWriteKeyFiles AsPaymentKey          vkf skf
-  AddressKeyShelleyExtended -> generateAndWriteKeyFiles AsPaymentExtendedKey  vkf skf
-  AddressKeyByron           -> generateAndWriteKeyFiles AsByronKey            vkf skf
+runAddressKeyGenToFile fmt kt vkf skf = case kt of
+  AddressKeyShelley         -> generateAndWriteKeyFiles fmt  AsPaymentKey          vkf skf
+  AddressKeyShelleyExtended -> generateAndWriteKeyFiles fmt  AsPaymentExtendedKey  vkf skf
+  AddressKeyByron           -> generateAndWriteByronKeyFiles AsByronKey            vkf skf
 
-generateAndWriteKeyFiles
+generateAndWriteByronKeyFiles
   :: Key keyrole
   => AsType keyrole
   -> VerificationKeyFile Out
   -> SigningKeyFile Out
   -> ExceptT ShelleyAddressCmdError IO ()
-generateAndWriteKeyFiles asType vkf skf = do
-  uncurry (writePaymentKeyFiles vkf skf) =<< liftIO (generateKeyPair asType)
+generateAndWriteByronKeyFiles asType vkf skf = do
+  uncurry (writeByronPaymentKeyFiles vkf skf) =<< liftIO (generateKeyPair asType)
+
+generateAndWriteKeyFiles
+  :: Key keyrole
+  => SerialiseAsBech32 (SigningKey keyrole)
+  => SerialiseAsBech32 (VerificationKey keyrole)
+  => KeyOutputFormat
+  -> AsType keyrole
+  -> VerificationKeyFile Out
+  -> SigningKeyFile Out
+  -> ExceptT ShelleyAddressCmdError IO ()
+generateAndWriteKeyFiles fmt asType vkf skf = do
+  uncurry (writePaymentKeyFiles fmt vkf skf) =<< liftIO (generateKeyPair asType)
 
 writePaymentKeyFiles
   :: Key keyrole
-  => VerificationKeyFile Out
+  => SerialiseAsBech32 (SigningKey keyrole)
+  => SerialiseAsBech32 (VerificationKey keyrole)
+  => KeyOutputFormat
+  -> VerificationKeyFile Out
   -> SigningKeyFile Out
   -> VerificationKey keyrole
   -> SigningKey keyrole
   -> ExceptT ShelleyAddressCmdError IO ()
-writePaymentKeyFiles vkeyPath skeyPath vkey skey = do
+writePaymentKeyFiles fmt vkeyPath skeyPath vkey skey = do
   firstExceptT ShelleyAddressCmdWriteFileError $ do
+    case fmt of
+      KeyOutputFormatTextEnvelope ->
+        newExceptT
+          $ writeLazyByteStringFile skeyPath
+          $ textEnvelopeToJSON (Just skeyDesc) skey
+      KeyOutputFormatBech32 ->
+        newExceptT
+          $ writeTextFile skeyPath
+          $ serialiseToBech32 skey
+
+    case fmt of
+      KeyOutputFormatTextEnvelope ->
+        newExceptT
+          $ writeLazyByteStringFile vkeyPath
+          $ textEnvelopeToJSON (Just vkeyDesc) vkey
+      KeyOutputFormatBech32 ->
+        newExceptT
+          $ writeTextFile vkeyPath
+          $ serialiseToBech32 vkey
+
+  where
+    skeyDesc, vkeyDesc :: TextEnvelopeDescr
+    skeyDesc = "Payment Signing Key"
+    vkeyDesc = "Payment Verification Key"
+
+writeByronPaymentKeyFiles
+   :: Key keyrole
+   => VerificationKeyFile Out
+   -> SigningKeyFile Out
+   -> VerificationKey keyrole
+   -> SigningKey keyrole
+   -> ExceptT ShelleyAddressCmdError IO ()
+writeByronPaymentKeyFiles vkeyPath skeyPath vkey skey = do
+  firstExceptT ShelleyAddressCmdWriteFileError $ do
+    -- No bech32 encoding for Byron keys
     newExceptT $ writeLazyByteStringFile skeyPath $ textEnvelopeToJSON (Just skeyDesc) skey
     newExceptT $ writeLazyByteStringFile vkeyPath $ textEnvelopeToJSON (Just vkeyDesc) vkey
   where

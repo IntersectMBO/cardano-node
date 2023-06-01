@@ -15,13 +15,12 @@ import qualified Data.ByteString.Char8 as BS
 import           Data.Function ((&))
 import           Data.Text (Text)
 import qualified Data.Text as Text
-import qualified Data.Text.IO as Text
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (VerificationKeyOrFile, readVerificationKeyOrFile)
-import           Cardano.CLI.Types (OutputFormat (..))
+import           Cardano.CLI.Types (PoolIdOutputFormat (..))
 
 import qualified Cardano.Ledger.Slot as Shelley
 
@@ -48,7 +47,7 @@ runPoolCmd (PoolRegistrationCert sPvkey vrfVkey pldg pCost pMrgn rwdVerFp ownerV
   runStakePoolRegistrationCert sPvkey vrfVkey pldg pCost pMrgn rwdVerFp ownerVerFps relays mbMetadata network outfp
 runPoolCmd (PoolRetirementCert sPvkeyFp retireEpoch outfp) =
   runStakePoolRetirementCert sPvkeyFp retireEpoch outfp
-runPoolCmd (PoolGetId sPvkey outputFormat) = runPoolId sPvkey outputFormat
+runPoolCmd (PoolGetId sPvkey outputFormat mOutFile) = runPoolId sPvkey outputFormat mOutFile
 runPoolCmd (PoolMetadataHash poolMdFile mOutFile) = runPoolMetadataHash poolMdFile mOutFile
 
 
@@ -169,20 +168,27 @@ runStakePoolRetirementCert stakePoolVerKeyOrFile retireEpoch outfp = do
 
 runPoolId
   :: VerificationKeyOrFile StakePoolKey
-  -> OutputFormat
+  -> PoolIdOutputFormat
+  -> Maybe (File () Out)
   -> ExceptT ShelleyPoolCmdError IO ()
-runPoolId verKeyOrFile outputFormat = do
-    stakePoolVerKey <- firstExceptT ShelleyPoolCmdReadKeyFileError
-      . newExceptT
-      $ readVerificationKeyOrFile AsStakePoolKey verKeyOrFile
-    liftIO $
-      case outputFormat of
-        OutputFormatHex ->
-          BS.putStrLn $ serialiseToRawBytesHex (verificationKeyHash stakePoolVerKey)
-        OutputFormatBech32 ->
-          Text.putStrLn $ serialiseToBech32 (verificationKeyHash stakePoolVerKey)
+runPoolId verKeyOrFile outputFormat mOutFile = do
+  stakePoolVerKey <- firstExceptT ShelleyPoolCmdReadKeyFileError
+    . newExceptT
+    $ readVerificationKeyOrFile AsStakePoolKey verKeyOrFile
 
-runPoolMetadataHash :: File StakePoolMetadata In -> Maybe (File () Out) -> ExceptT ShelleyPoolCmdError IO ()
+  case outputFormat of
+    PoolIdOutputFormatHex ->
+      firstExceptT ShelleyPoolCmdWriteFileError
+        . newExceptT
+        $ writeByteStringOutput mOutFile
+        $ serialiseToRawBytesHex (verificationKeyHash stakePoolVerKey)
+    PoolIdOutputFormatBech32 ->
+      firstExceptT ShelleyPoolCmdWriteFileError
+        . newExceptT
+        $ writeTextOutput mOutFile
+        $ serialiseToBech32 (verificationKeyHash stakePoolVerKey)
+
+runPoolMetadataHash :: StakePoolMetadataFile In -> Maybe (File () Out) -> ExceptT ShelleyPoolCmdError IO ()
 runPoolMetadataHash poolMDPath mOutFile = do
   metadataBytes <- lift (readByteStringFile poolMDPath)
     & onLeft (left . ShelleyPoolCmdReadFileError)

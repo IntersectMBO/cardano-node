@@ -144,10 +144,12 @@ pAddressCmd envCli =
      ]
   where
     pAddressKeyGen :: Parser AddressCmd
-    pAddressKeyGen = AddressKeyGen
-      <$> pAddressKeyType
-      <*> pVerificationKeyFileOut
-      <*> pSigningKeyFileOut
+    pAddressKeyGen =
+      AddressKeyGen
+        <$> pKeyOutputFormat
+        <*> pAddressKeyType
+        <*> pVerificationKeyFileOut
+        <*> pSigningKeyFileOut
 
     pAddressKeyHash :: Parser AddressCmd
     pAddressKeyHash =
@@ -382,7 +384,8 @@ pStakeAddressCmd envCli =
     pStakeAddressKeyGen :: Parser StakeAddressCmd
     pStakeAddressKeyGen =
       StakeAddressKeyGen
-        <$> pVerificationKeyFileOut
+        <$> pKeyOutputFormat
+        <*> pVerificationKeyFileOut
         <*> pSigningKeyFileOut
 
     pStakeAddressKeyHash :: Parser StakeAddressCmd
@@ -863,17 +866,24 @@ pNodeCmd =
     pKeyGenOperator :: Parser NodeCmd
     pKeyGenOperator =
       NodeKeyGenCold
-        <$> pColdVerificationKeyFile
+        <$> pKeyOutputFormat
+        <*> pColdVerificationKeyFile
         <*> pColdSigningKeyFile
         <*> pOperatorCertIssueCounterFile
 
     pKeyGenKES :: Parser NodeCmd
     pKeyGenKES =
-      NodeKeyGenKES <$> pVerificationKeyFileOut <*> pSigningKeyFileOut
+      NodeKeyGenKES
+        <$> pKeyOutputFormat
+        <*> pVerificationKeyFileOut
+        <*> pSigningKeyFileOut
 
     pKeyGenVRF :: Parser NodeCmd
     pKeyGenVRF =
-      NodeKeyGenVRF <$> pVerificationKeyFileOut <*> pSigningKeyFileOut
+      NodeKeyGenVRF
+        <$> pKeyOutputFormat
+        <*> pVerificationKeyFileOut
+        <*> pSigningKeyFileOut
 
     pKeyHashVRF :: Parser NodeCmd
     pKeyHashVRF =
@@ -916,7 +926,7 @@ pPoolCmd  envCli =
     ]
   where
     pId :: Parser PoolCmd
-    pId = PoolGetId <$> pStakePoolVerificationKeyOrFile <*> pOutputFormat
+    pId = PoolGetId <$> pStakePoolVerificationKeyOrFile <*> pPoolIdOutputFormat <*> pMaybeOutputFile
 
     pPoolMetadataHashSubCmd :: Parser PoolCmd
     pPoolMetadataHashSubCmd = PoolMetadataHash <$> pPoolMetadataFile <*> pMaybeOutputFile
@@ -1387,7 +1397,8 @@ pGenesisCmd envCli =
     pGenesisCreate :: Parser GenesisCmd
     pGenesisCreate =
       GenesisCreate
-        <$> pGenesisDir
+        <$> pKeyOutputFormat
+        <*> pGenesisDir
         <*> pGenesisNumGenesisKeys
         <*> pGenesisNumUTxOKeys
         <*> pMaybeSystemStart
@@ -1397,7 +1408,8 @@ pGenesisCmd envCli =
     pGenesisCreateStaked :: Parser GenesisCmd
     pGenesisCreateStaked =
       GenesisCreateStaked
-        <$> pGenesisDir
+        <$> pKeyOutputFormat
+        <*> pGenesisDir
         <*> pGenesisNumGenesisKeys
         <*> pGenesisNumUTxOKeys
         <*> pGenesisNumPools
@@ -1638,7 +1650,7 @@ pCertificateFile balanceExecUnits =
     , "stake key certificates etc). Optionally specify a script witness."
     ]
 
-pPoolMetadataFile :: Parser (File StakePoolMetadata In)
+pPoolMetadataFile :: Parser (StakePoolMetadataFile In)
 pPoolMetadataFile =
   fmap File $ Opt.strOption $ mconcat
     [ Opt.long "pool-metadata-file"
@@ -1923,15 +1935,29 @@ pOperationalCertificateFile =
     <> Opt.completer (Opt.bashCompleter "file")
     )
 
-pOutputFormat :: Parser OutputFormat
-pOutputFormat =
-  Opt.option readOutputFormat
-    (  Opt.long "output-format"
-    <> Opt.metavar "STRING"
-    <> Opt.help "Optional output format. Accepted output formats are \"hex\" \
-                \and \"bech32\" (default is \"bech32\")."
-    <> Opt.value OutputFormatBech32
-    )
+pKeyOutputFormat :: Parser KeyOutputFormat
+pKeyOutputFormat =
+  Opt.option readKeyOutputFormat $ mconcat
+    [ Opt.long "key-output-format"
+    , Opt.metavar "STRING"
+    , Opt.help $ mconcat
+      [ "Optional key output format. Accepted output formats are \"text-envelope\" "
+      , "and \"bech32\" (default is \"bech32\")."
+      ]
+    , Opt.value KeyOutputFormatTextEnvelope
+    ]
+
+pPoolIdOutputFormat :: Parser PoolIdOutputFormat
+pPoolIdOutputFormat =
+  Opt.option readPoolIdOutputFormat $ mconcat
+    [ Opt.long "output-format"
+    , Opt.metavar "STRING"
+    , Opt.help $ mconcat
+      [ "Optional pool id output format. Accepted output formats are \"hex\" "
+      , "and \"bech32\" (default is \"bech32\")."
+      ]
+    , Opt.value PoolIdOutputFormatBech32
+    ]
 
 pMaybeOutputFile :: Parser (Maybe (File content Out))
 pMaybeOutputFile =
@@ -3380,16 +3406,29 @@ readVerificationKey asType =
       first (Text.unpack . renderInputDecodeError) $
         deserialiseInput (AsVerificationKey asType) keyFormats (BSC.pack str)
 
-readOutputFormat :: Opt.ReadM OutputFormat
-readOutputFormat = do
-  s <- Opt.str
+readPoolIdOutputFormat :: Opt.ReadM PoolIdOutputFormat
+readPoolIdOutputFormat = do
+  s <- Opt.str @String
   case s of
-    "hex" -> pure OutputFormatHex
-    "bech32" -> pure OutputFormatBech32
+    "hex" -> pure PoolIdOutputFormatHex
+    "bech32" -> pure PoolIdOutputFormatBech32
     _ ->
-      fail $ "Invalid output format: \""
-        <> s
-        <> "\". Accepted output formats are \"hex\" and \"bech32\"."
+      fail $ mconcat
+        [ "Invalid output format: " <> show s
+        , ". Accepted output formats are \"hex\" and \"bech32\"."
+        ]
+
+readKeyOutputFormat :: Opt.ReadM KeyOutputFormat
+readKeyOutputFormat = do
+  s <- Opt.str @String
+  case s of
+    "text-envelope" -> pure KeyOutputFormatTextEnvelope
+    "bech32" -> pure KeyOutputFormatBech32
+    _ ->
+      fail $ mconcat
+        [ "Invalid key output format: " <> show s
+        , ". Accepted output formats are \"text-envelope\" and \"bech32\"."
+        ]
 
 readURIOfMaxLength :: Int -> Opt.ReadM Text
 readURIOfMaxLength maxLen =

@@ -252,6 +252,7 @@ test-suite cardano-cli-golden
                       , hedgehog ^>= 1.2
                       , hedgehog-extras ^>= 0.4.5.1
                       , regex-compat
+                      , regex-tdfa
                       , text
                       , time
                       , transformers
