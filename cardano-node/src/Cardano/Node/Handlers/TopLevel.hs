@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Cardano.Node.Handlers.TopLevel
   ( toplevelExceptionHandler
   ) where
@@ -53,6 +55,7 @@ import           System.Environment
 import           System.Exit
 import           System.IO
 
+import qualified Ouroboros.Network.Diffusion as Network
 
 -- | An exception handler to use for a program top level, as an alternative to
 -- the default top level handler provided by GHC.
@@ -70,7 +73,8 @@ toplevelExceptionHandler prog = do
     hSetBuffering stderr LineBuffering
     catches prog [
         Handler rethrowAsyncExceptions
-      , Handler rethrowExitCode
+      , Handler rethrowExitCode -- TODO this is possibly not needed anymore
+      , Handler rethrowDiffusionErrorExceptionInLinkedThreadExitSuccess
       , Handler handleSomeException
       ]
   where
@@ -79,7 +83,7 @@ toplevelExceptionHandler prog = do
     -- then we rethrow ExitSuccess. This happens for example when using the
     -- `--shutdown-on-slot-synced` option.
     rethrowAsyncExceptions :: SomeAsyncException -> IO a
-    rethrowAsyncExceptions full@(SomeAsyncException e) = do
+    rethrowAsyncExceptions full@(SomeAsyncException e) =
       case fromException (toException e) of
         Just (ExceptionInLinkedThread _ eInner)
           | Just ExitSuccess <- fromException eInner
@@ -90,6 +94,17 @@ toplevelExceptionHandler prog = do
     -- top handler because that sets the actual OS process exit code.
     rethrowExitCode :: ExitCode -> IO a
     rethrowExitCode = throwIO
+
+    rethrowDiffusionErrorExceptionInLinkedThreadExitSuccess :: Network.Failure -> IO a
+    rethrowDiffusionErrorExceptionInLinkedThreadExitSuccess full =
+      case full of
+        Network.DiffusionError e ->
+          case fromException (toException e) of
+            Just (ExceptionInLinkedThread _ eInner)
+              | Just exitCode <- fromException eInner
+              -> throwIO @ExitCode exitCode
+            _ -> throwIO full
+        _ -> throwIO full
 
     -- Print all other exceptions
     handleSomeException :: SomeException -> IO a

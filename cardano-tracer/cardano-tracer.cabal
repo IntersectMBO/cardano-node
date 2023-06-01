@@ -146,7 +146,7 @@ library
                       , filepath
                       , mime-mail
                       , optparse-applicative
-                      , ouroboros-network
+                      , ouroboros-network ^>= 0.8.1.0
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , signal
@@ -358,7 +358,7 @@ test-suite cardano-tracer-test-ext
                       , generic-data
                       , Glob
                       , optparse-applicative-fork
-                      , ouroboros-network
+                      , ouroboros-network ^>= 0.8.1.0
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , process
