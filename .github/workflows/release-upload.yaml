@@ -1,0 +1,47 @@
+name: Post Release Upload
+# This makes it easy to get download release binaries built using
+# a github action for any tagged commit.
+#
+# This workflow builds and uploads the macOS, win64 and linux
+# binary packages as github assets.
+#
+# It uses `--builders "" --max-jobs 0` to ensure the assets are
+# from the IOG cache.
+on:
+  release:
+    types:
+      - published
+  push:
+    tags:
+      - '**'
+
+jobs:
+  build:
+    name: "Upload Assets"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Nix with good defaults
+        uses: input-output-hk/install-nix-action@v20
+        with:
+          extra_nix_config: |
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
+            substituters = https://cache.iog.io/ https://cache.nixos.org/
+          nix_path: nixpkgs=channel:nixos-unstable
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Build
+        run: |
+          nix build --builders "" --max-jobs 0 .#hydraJobs.musl.cardano-node-linux
+          cp result/cardano-node-*-linux.tar.gz .
+          nix build --builders "" --max-jobs 0 .#legacyPackages.x86_64-darwin.hydraJobs.native.cardano-node-macos
+          cp result/cardano-node-*-macos.tar.gz .
+          nix build --builders "" --max-jobs 0 .#hydraJobs.windows.cardano-node-win64
+          cp result/cardano-node-*-win64.zip .
+      - name: Release
+        uses: input-output-hk/action-gh-release@v1
+        with:
+          draft: true
+          files: |
+            cardano-node-*-win64.zip
+            cardano-node-*-macos.tar.gz
+            cardano-node-*-linux.tar.gz
