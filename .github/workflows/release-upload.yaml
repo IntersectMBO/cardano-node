@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install Nix with good defaults
-        uses: cachix/install-nix-action@v20
+        uses: input-output-hk/install-nix-action@v20
         with:
           extra_nix_config: |
             trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
@@ -38,7 +38,7 @@ jobs:
           nix build --builders "" --max-jobs 0 .#hydraJobs.windows.cardano-node-win64
           cp result/cardano-node-*-win64.zip .
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: input-output-hk/action-gh-release@v1
         with:
           draft: true
           files: |
