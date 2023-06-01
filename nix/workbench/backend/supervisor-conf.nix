@@ -2,6 +2,7 @@
 , lib
 , stateDir
 , nodeSpecs
+, withGenerator
 , withTracer
 , unixHttpServerPort ? null
 , inetHttpServerPort ? null
@@ -114,6 +115,7 @@ let
       })
     nodeSpecs))
     //
+    lib.attrsets.optionalAttrs withGenerator
     {
       "program:generator" = {
         # "command" below assumes "directory" is set accordingly.

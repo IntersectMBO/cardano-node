@@ -470,6 +470,8 @@ let
                       then {}
                       else {"${nodeSpec.name}"=nodeSpec;}
                     ;
+                    # Only for the node that will run the generator
+                    withGenerator = taskName == "node-0";
                     # Only for the tracer task or also nodes if oneTracerPerNode
                     withTracer = oneTracerPerNode || taskName == "tracer";
                     # ''{{ env "NOMAD_TASK_DIR" }}/supervisor.sock''
@@ -477,26 +479,6 @@ let
                   };
                 in supervisorConf.INI
               ));
-              change_mode = "noop";
-              error_on_missing_key = true;
-            }
-            # Generator
-            ## Generator start.sh script.
-            {
-              env = false;
-              destination = "${task_statedir}/generator/start.sh";
-              data = escapeTemplate
-                profileData.generator-service.startupScript.value;
-              change_mode = "noop";
-              error_on_missing_key = true;
-              perms = "744"; # Only for every "start.sh" script. Default: "644"
-            }
-            ## Generator configuration file.
-            {
-              env = false;
-              destination = "${task_statedir}/generator/run-script.json";
-              data = escapeTemplate (__readFile
-                profileData.generator-service.runScript.JSON.outPath);
               change_mode = "noop";
               error_on_missing_key = true;
             }
@@ -585,6 +567,29 @@ let
                   then (topologyToGoTemplate topology.value)
                   else (__readFile           topology.JSON )
               );
+              change_mode = "noop";
+              error_on_missing_key = true;
+            }
+          ])
+          ++
+          (lib.optionals (taskName == "node-0") [
+            # Generator
+            ## Generator start.sh script.
+            {
+              env = false;
+              destination = "${task_statedir}/generator/start.sh";
+              data = escapeTemplate
+                profileData.generator-service.startupScript.value;
+              change_mode = "noop";
+              error_on_missing_key = true;
+              perms = "744"; # Only for every "start.sh" script. Default: "644"
+            }
+            ## Generator configuration file.
+            {
+              env = false;
+              destination = "${task_statedir}/generator/run-script.json";
+              data = escapeTemplate (__readFile
+                profileData.generator-service.runScript.JSON.outPath);
               change_mode = "noop";
               error_on_missing_key = true;
             }
