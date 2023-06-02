@@ -69,6 +69,7 @@ main = do
           , teRTViewPageOpened  = rtViewPageOpened
           , teRTViewStateDir    = Nothing
           , teTracer            = tr
+          , teReforwardTraceObjects = \_-> pure ()
           }
       te2 =
         TracerEnv
@@ -88,6 +89,7 @@ main = do
           , teRTViewPageOpened  = rtViewPageOpened
           , teRTViewStateDir    = Nothing
           , teTracer            = tr
+          , teReforwardTraceObjects = \_-> pure ()
           }
 
   removePathForcibly root
