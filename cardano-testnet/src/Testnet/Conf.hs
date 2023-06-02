@@ -23,18 +23,16 @@ newtype YamlFilePath = YamlFilePath
 data Conf = Conf
   { tempAbsPath :: TmpAbsolutePath
   , configurationTemplate :: Maybe FilePath
-  , testnetMagic :: Int
   } deriving (Eq, Show)
 
 mkConf :: Maybe YamlFilePath -> FilePath -> Maybe Int -> H.Integration Conf
 mkConf mConfigTemplate tempAbsPath' maybeMagic = do
-  testnetMagic' <- H.noteShowIO $ maybe (IO.randomRIO (1000, 2000)) return maybeMagic
+  _testnetMagic' <- H.noteShowIO $ maybe (IO.randomRIO (1000, 2000)) return maybeMagic
   let configTemplate = unYamlFilePath <$> mConfigTemplate
 
   return $ Conf
     { tempAbsPath = TmpAbsolutePath tempAbsPath'
     , configurationTemplate = configTemplate
-    , testnetMagic = testnetMagic'
     }
 
 
