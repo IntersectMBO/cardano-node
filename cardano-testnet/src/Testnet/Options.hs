@@ -32,6 +32,7 @@ data BabbageTestnetOptions = BabbageTestnetOptions
   { babbageNumSpoNodes :: Int
   , babbageSlotDuration :: Int
   , babbageSecurityParam :: Int
+  , babbageTestnetMagic :: Int
   , babbageTotalBalance :: Int
   , babbageNodeLoggingFormat :: NodeLoggingFormat
   } deriving (Eq, Show)
@@ -41,6 +42,7 @@ defaultTestnetOptions = BabbageTestnetOptions
   { babbageNumSpoNodes = 3
   , babbageSlotDuration = 200
   , babbageSecurityParam = 10
+  , babbageTestnetMagic = 42
   , babbageTotalBalance = 10020000000
   , babbageNodeLoggingFormat = NodeLoggingFormatAsJson
   }
