@@ -41,6 +41,7 @@ optsTestnet = CardanoTestnetOptions
       <>  OA.showDefault
       <>  OA.value (cardanoSlotLength defaultTestnetOptions)
       )
+  <*> error "parse testnet magic"
   <*> OA.option auto
       (   OA.long "active-slots-coeff"
       <>  OA.help "Active slots co-efficient"
