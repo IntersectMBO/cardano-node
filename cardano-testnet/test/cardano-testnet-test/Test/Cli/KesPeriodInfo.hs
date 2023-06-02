@@ -39,11 +39,13 @@ import           Testnet.Util.Runtime
 hprop_kes_period_info :: Property
 hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
-  conf@Conf { tempBaseAbsPath, tempAbsPath }
+  conf@Conf { tempAbsPath }
     -- TODO: Move yaml filepath specification into individual node options
     <- H.noteShowM $ mkConf Nothing tempAbsBasePath' Nothing
 
-  let fastTestnetOptions = CardanoOnlyTestnetOptions $ cardanoDefaultTestnetOptions
+  let tempAbsPath' = unTmpAbsPath tempAbsPath
+      tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
+      fastTestnetOptions = CardanoOnlyTestnetOptions $ cardanoDefaultTestnetOptions
                              { cardanoNodes = cardanoDefaultTestnetNodeOptions
                              , cardanoEpochLength = 500
                              , cardanoSlotLength = 0.02
@@ -54,13 +56,13 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   execConfig <- H.headM (bftSprockets runTime) >>= H.mkExecConfig tempBaseAbsPath
 
   -- First we note all the relevant files
-  work <- H.note tempAbsPath
+  work <- H.note tempAbsPath'
 
   -- We get our UTxOs from here
-  utxoVKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.vkey"
-  utxoSKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.skey"
-  utxoVKeyFile2 <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo2.vkey"
-  utxoSKeyFile2 <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo2.skey"
+  utxoVKeyFile <- H.note $ tempAbsPath' </> "shelley/utxo-keys/utxo1.vkey"
+  utxoSKeyFile <- H.note $ tempAbsPath' </> "shelley/utxo-keys/utxo1.skey"
+  utxoVKeyFile2 <- H.note $ tempAbsPath' </> "shelley/utxo-keys/utxo2.vkey"
+  utxoSKeyFile2 <- H.note $ tempAbsPath' </> "shelley/utxo-keys/utxo2.skey"
 
   utxoAddr <- execCli
                 [ "address", "build"
@@ -83,8 +85,8 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   txin <- H.noteShow =<< H.headM (Map.keys utxo1)
 
   -- Staking keys
-  utxoStakingVkey2 <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo2-stake.vkey"
-  utxoStakingSkey2 <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo2-stake.skey"
+  utxoStakingVkey2 <- H.note $ tempAbsPath' </> "shelley/utxo-keys/utxo2-stake.vkey"
+  utxoStakingSkey2 <- H.note $ tempAbsPath' </> "shelley/utxo-keys/utxo2-stake.skey"
 
   utxoaddrwithstaking <- execCli [ "address", "build"
                                    , "--payment-verification-key-file", utxoVKeyFile2
@@ -101,8 +103,8 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
 
 
   -- Stake pool related
-  poolownerstakekey <- H.note $ tempAbsPath </> "addresses/pool-owner1-stake.vkey"
-  poolownerverkey <- H.note $ tempAbsPath </> "addresses/pool-owner1.vkey"
+  poolownerstakekey <- H.note $ tempAbsPath' </> "addresses/pool-owner1-stake.vkey"
+  poolownerverkey <- H.note $ tempAbsPath' </> "addresses/pool-owner1.vkey"
   poolownerstakeaddr <- filter (/= '\n')
                           <$> execCli
                                 [ "stake-address", "build"
@@ -115,8 +117,8 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
                                           , "--stake-verification-key-file",  poolownerstakekey
                                           , "--testnet-magic", show @Int testnetMagic
                                           ]
-  poolcoldVkey <- H.note $ tempAbsPath </> "node-pool1/shelley/operator.vkey"
-  poolcoldSkey <- H.note $ tempAbsPath </> "node-pool1/shelley/operator.skey"
+  poolcoldVkey <- H.note $ tempAbsPath' </> "node-pool1/shelley/operator.vkey"
+  poolcoldSkey <- H.note $ tempAbsPath' </> "node-pool1/shelley/operator.skey"
 
   stakePoolId <- filter ( /= '\n') <$>
                    execCli [ "stake-pool", "id"
@@ -286,7 +288,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
     , "--tx-in", T.unpack $ renderTxIn txin2
     , "--tx-out", utxoAddr <> "+" <> show @Int 10000000
     , "--witness-override", show @Int 3
-    , "--certificate-file", tempAbsPath </> "node-pool1/registration.cert"
+    , "--certificate-file", tempAbsPath' </> "node-pool1/registration.cert"
     , "--certificate-file", work </> "pledger.delegcert"
     , "--out-file", work </> "register-stake-pool.txbody"
     ]
@@ -297,7 +299,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
     , "--testnet-magic", show @Int testnetMagic
     , "--signing-key-file", utxoSKeyFile
     , "--signing-key-file", poolcoldSkey
-    , "--signing-key-file", tempAbsPath </> "node-pool1/owner.skey"
+    , "--signing-key-file", tempAbsPath' </> "node-pool1/owner.skey"
     , "--out-file", work </> "register-stake-pool.tx"
     ]
 
@@ -345,7 +347,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   H.note_ "We have a fully functioning stake pool at this point."
 
   -- TODO: Linking directly to the node certificate is fragile
-  nodeOperationalCertFp <- H.note $ tempAbsPath </> "node-pool1/shelley/node.cert"
+  nodeOperationalCertFp <- H.note $ tempAbsPath' </> "node-pool1/shelley/node.cert"
 
   void $ execCli' execConfig
     [ "query", "kes-period-info"
@@ -437,5 +439,5 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
     ]
 
   -- TODO: Linking to the node log file like this is fragile.
-  spoLogFile <- H.note $ tempAbsPath </> "logs/node-pool1.stdout.log"
+  spoLogFile <- H.note $ tempAbsPath' </> "logs/node-pool1.stdout.log"
   prop_node_minted_block spoLogFile
