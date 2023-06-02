@@ -73,6 +73,7 @@ data ShelleyTestnetOptions = ShelleyTestnetOptions
   , shelleySecurityParam :: Int
   , shelleyEpochLength :: Int
   , shelleySlotLength :: Double
+  , shelleyTestnetMagic :: Int
   , shelleyMaxLovelaceSupply :: Word64
   , shelleyEnableP2P :: Bool
   } deriving (Eq, Show)
@@ -83,6 +84,7 @@ defaultTestnetOptions = ShelleyTestnetOptions
   , shelleyNumPoolNodes = 1
   , shelleyActiveSlotsCoeff = 0.1
   , shelleySecurityParam = 10
+  , shelleyTestnetMagic = 42
   , shelleyEpochLength = 1000
   , shelleySlotLength = 0.2
   , shelleyMaxLovelaceSupply = 1000000000
@@ -150,9 +152,10 @@ mkTopologyConfig numPraosNodes allPorts port True = J.encode topologyP2P
         (P2P.UseLedger DontUseLedger)
 
 shelleyTestnet :: ShelleyTestnetOptions -> H.Conf -> H.Integration TestnetRuntime
-shelleyTestnet testnetOptions H.Conf {H.tempAbsPath, H.testnetMagic} = do
+shelleyTestnet testnetOptions H.Conf {H.tempAbsPath} = do
   void $ H.note OS.os
   let tempAbsPath' = unTmpAbsPath tempAbsPath
+      testnetMagic = shelleyTestnetMagic testnetOptions
   let praosNodesN = show @Int <$> [1 .. shelleyNumPraosNodes testnetOptions]
   let praosNodes = ("node-praos" <>) <$> praosNodesN
   let poolNodesN = show @Int <$> [1 .. shelleyNumPoolNodes testnetOptions]
@@ -409,7 +412,7 @@ shelleyTestnet testnetOptions H.Conf {H.tempAbsPath, H.testnetMagic} = do
   return TestnetRuntime
     { configurationFile = alonzoSpecFile
     , shelleyGenesisFile = tempAbsPath' </> "genesis/shelley/genesis.json"
-    , testnetMagic
+    , testnetMagic = testnetMagic
     , poolNodes = [ ]
     , wallets = [ ]
     , bftNodes = allNodeRuntimes
