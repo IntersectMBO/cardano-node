@@ -246,8 +246,6 @@ First section relates the basic node configuration parameters. Make sure you hav
 
 This protocol version number gets used by block producing nodes as part of the system for agreeing on and synchronising protocol updates. You just need to be aware of the latest version supported by the network. You don't need to change anything here.
 
-	  "ApplicationName": "cardano-sl",
-	  "ApplicationVersion": 0,
 	  "LastKnownBlockVersion-Alt": 0,
 	  "LastKnownBlockVersion-Major": 2,
 	  "LastKnownBlockVersion-Minor": 0,

@@ -37,7 +37,6 @@ import           GHC.Generics (Generic)
 import           Options.Applicative
 import           System.FilePath (takeDirectory, (</>))
 
-import qualified Cardano.Chain.Update as Byron
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import           Cardano.Logging.Types
 import           Cardano.Node.Configuration.NodeAddress (SocketPath)
@@ -351,9 +350,6 @@ instance FromJSON PartialNodeConfiguration where
         npcByronReqNetworkMagic     <- v .:? "RequiresNetworkMagic"
                                          .!= RequiresNoMagic
         npcByronPbftSignatureThresh <- v .:? "PBftSignatureThreshold"
-        npcByronApplicationName     <- v .:? "ApplicationName"
-                                         .!= Byron.ApplicationName "cardano-sl"
-        npcByronApplicationVersion  <- v .:? "ApplicationVersion" .!= 1
         protVerMajor                <- v .: "LastKnownBlockVersion-Major"
         protVerMinor                <- v .: "LastKnownBlockVersion-Minor"
         protVerAlt                  <- v .: "LastKnownBlockVersion-Alt" .!= 0
@@ -363,8 +359,6 @@ instance FromJSON PartialNodeConfiguration where
              , npcByronGenesisFileHash
              , npcByronReqNetworkMagic
              , npcByronPbftSignatureThresh
-             , npcByronApplicationName
-             , npcByronApplicationVersion
              , npcByronSupportedProtocolVersionMajor = protVerMajor
              , npcByronSupportedProtocolVersionMinor = protVerMinor
              , npcByronSupportedProtocolVersionAlt   = protVerAlt

@@ -129,10 +129,8 @@ snapshot-at-slot )
              , ShelleyGenesisHash:            "'$shelleyGenesisHash'"
              , RequiresNetworkMagic:          "RequiresNoMagic"
              # , Protocol:                      "Cardano"
-             # , ApplicationVersion:            1
              # , "LastKnownBlockVersion-Major": 3
              ##
-             , ApplicationName:               "cardano-sl"
              }' <<<$geneses > $analyser_config
          local maybe_precedent=$(chaindb_mainnet_ledger_snapshots_before_slot $cachedir $slotno)
          cmd=(db-analyser

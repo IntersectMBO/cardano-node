@@ -39,7 +39,6 @@ import qualified Data.Text as Text
 import           Data.Word (Word16, Word8)
 
 import           Cardano.Api
-import qualified Cardano.Chain.Update as Byron
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import qualified Cardano.Crypto.Hash as Crypto
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
@@ -156,14 +155,6 @@ data NodeByronProtocolConfiguration =
      , npcByronGenesisFileHash               :: !(Maybe GenesisHash)
      , npcByronReqNetworkMagic               :: !RequiresNetworkMagic
      , npcByronPbftSignatureThresh           :: !(Maybe Double)
-
-       --TODO: eliminate these two: it can be hard-coded
-       -- | Update application name.
-     , npcByronApplicationName               :: !Byron.ApplicationName
-
-       -- | Application (ie software) version.
-     , npcByronApplicationVersion            :: !Byron.NumSoftwareVersion
-
        --TODO: eliminate these: it can be done automatically in consensus
        -- | These declare the version of the protocol that the node is prepared
        -- to run. This is usually the version of the protocol in use on the

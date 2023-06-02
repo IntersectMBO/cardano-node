@@ -31,12 +31,6 @@ LastKnownBlockVersion-Major: 0
 LastKnownBlockVersion-Minor: 2
 LastKnownBlockVersion-Alt: 0
 
-# In the Byron era some software versions are also published on the chain.
-# We do this only for Byron compatibility now.
-ApplicationName: cardano-sl
-ApplicationVersion: 1
-
-
 ##### Logging configuration #####
 
 # Enable or disable logging overall

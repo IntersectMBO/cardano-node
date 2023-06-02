@@ -5,8 +5,6 @@ RequiresNetworkMagic: RequiresNoMagic
 LastKnownBlockVersion-Major: 0
 LastKnownBlockVersion-Minor: 2
 LastKnownBlockVersion-Alt: 0
-ApplicationName: cardano-sl
-ApplicationVersion: 1
 
 # Minimal logging
 TurnOnLogging: False

@@ -20,31 +20,28 @@ import           Prelude
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
 
-import qualified Cardano.Chain.Update as Byron
-
 import           Ouroboros.Consensus.Cardano
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Cardano.CanHardFork as Consensus
+import           Ouroboros.Consensus.Cardano.Condense ()
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
+import qualified Ouroboros.Consensus.Mempool.Capacity as TxLimits
 import qualified Ouroboros.Consensus.Shelley.Node.Praos as Praos
 
-import           Ouroboros.Consensus.Cardano.Condense ()
-import qualified Ouroboros.Consensus.Mempool.Capacity as TxLimits
-
 import           Cardano.Api
-import           Cardano.Node.Types
-
-import           Cardano.Tracing.OrphanInstances.Byron ()
-import           Cardano.Tracing.OrphanInstances.Shelley ()
+import           Cardano.Api.Byron as Byron
+import qualified Cardano.Chain.Update as Update
 
 import           Cardano.Ledger.BaseTypes (natVersion)
 import           Cardano.Ledger.Shelley.Translation (emptyFromByronTranslationContext)
-
 import qualified Cardano.Node.Protocol.Alonzo as Alonzo
 import qualified Cardano.Node.Protocol.Byron as Byron
 import qualified Cardano.Node.Protocol.Conway as Conway
 import qualified Cardano.Node.Protocol.Shelley as Shelley
 import           Cardano.Node.Protocol.Types
+import           Cardano.Node.Types
+import           Cardano.Tracing.OrphanInstances.Byron ()
+import           Cardano.Tracing.OrphanInstances.Shelley ()
 
 ------------------------------------------------------------------------------
 -- Real Cardano protocol
@@ -75,8 +72,6 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcByronGenesisFileHash,
                              npcByronReqNetworkMagic,
                              npcByronPbftSignatureThresh,
-                             npcByronApplicationName,
-                             npcByronApplicationVersion,
                              npcByronSupportedProtocolVersionMajor,
                              npcByronSupportedProtocolVersionMinor,
                              npcByronSupportedProtocolVersionAlt
@@ -161,14 +156,11 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           -- protocol version is 1, this should be 2 to indicate we are ready
           -- to move into the Shelley era.
           byronProtocolVersion =
-            Byron.ProtocolVersion
+            Update.ProtocolVersion
               npcByronSupportedProtocolVersionMajor
               npcByronSupportedProtocolVersionMinor
               npcByronSupportedProtocolVersionAlt,
-          byronSoftwareVersion =
-            Byron.SoftwareVersion
-              npcByronApplicationName
-              npcByronApplicationVersion,
+          byronSoftwareVersion = Byron.softwareVersion,
           byronLeaderCredentials =
             byronLeaderCredentials,
           byronMaxTxCapacityOverrides =

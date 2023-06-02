@@ -1,8 +1,6 @@
 {
   "AlonzoGenesisFile": "mainnet-alonzo-genesis.json",
   "AlonzoGenesisHash": "7e94a15f55d1e82d10f09203fa1d40f8eede58fd8066542cf6566008068ed874",
-  "ApplicationName": "cardano-sl",
-  "ApplicationVersion": 1,
   "ByronGenesisFile": "mainnet-byron-genesis.json",
   "ByronGenesisHash": "5f20df933584822601f9e3f8c024eb5eb252fe8cefb24d1317dc3d432e940ebb",
   "ConwayGenesisFile": "mainnet-conway-genesis.json",
