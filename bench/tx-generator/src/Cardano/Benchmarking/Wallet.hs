@@ -64,11 +64,25 @@ walletPreview ref munch = do
   fifo <- readMVar ref
   return $ maybe (toList fifo) snd (removeFunds munch fifo)
 
+-- | The second argument to 'mangleWithChange' is hidden in the
+-- 'CreateAndStoreList' type. When there is change to be made,
+-- it makes separate transactions to pay the change and sends
+-- them off to 'mangle' to get zips of applications.
 mangleWithChange :: Monad m => CreateAndStore m era -> CreateAndStore m era -> CreateAndStoreList m era PayWithChange
 mangleWithChange mkChange mkPayment outs = case outs of
   PayExact l -> mangle (repeat mkPayment) l
   PayWithChange change payments -> mangle (mkChange : repeat mkPayment) (change : payments)
 
+-- | The second argument to 'mangle' is hidden in the
+-- 'CreateAndStoreList' type. This is basically
+-- @second (\x -> (mapM_ ($ x)))
+-- . unzip
+-- $ zipWith3 (\x y z -> second ($ z) (x y))@
+-- but relatively obfuscated.
+-- This appears to mostly be list processing and function application.
+-- and gets used by 'Cardano.Bencharking.Script.Core.evalGenerator'
+-- to handle several of the cases of
+-- 'Cardano.Benchmarking.Script.Types.Generator'
 mangle :: Monad m => [ CreateAndStore m era ] -> CreateAndStoreList m era [ Lovelace ]
 mangle fkts values 
   = (outs, \txId -> mapM_ (\f -> f txId) fs)

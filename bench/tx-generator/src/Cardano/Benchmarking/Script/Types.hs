@@ -135,11 +135,14 @@ data Generator where
   -- 'Cardano.TxGenerator.Genesis.genesisSecureInitialFundForKey'.
   -- This is where streams of transactions start.
   SecureGenesis :: !String -> !String -> !String -> Generator -- 0 to N
-  -- 'Split' is difficult to interpret as a particular kind of
-  -- transaction, but appears limited to 3 participants.
+  -- | 'Split' makes payments with change depending on the pay mode.
+  -- The splitting is from potentially sending the change to a
+  -- different place.
   Split :: !String -> !PayMode -> !PayMode -> [ Lovelace ] -> Generator
-  -- 'SplitN' seems to infinitely 'repeat' the operation but
-  -- it's less clear where the fee came from or other things.
+  -- | 'SplitN' divides the funds by N and divides them up into that
+  -- many transactions in a finite sequence. The handling starts from
+  -- a case in 'Cardano.Benchmarking.Script.Core.evalGenerator' and
+  -- has some complexity to it.
   SplitN :: !String -> !PayMode -> !Int -> Generator            -- 1 to N
   -- 'NtoM' seems like it should issue a single N-to-M transaction,
   -- but it's difficult to tell what it's doing.
