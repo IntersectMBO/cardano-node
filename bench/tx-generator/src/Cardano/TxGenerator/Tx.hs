@@ -7,6 +7,8 @@ module  Cardano.TxGenerator.Tx
         (module Cardano.TxGenerator.Tx)
         where
 
+import           Control.Monad.Trans.Except (runExceptT, except)
+import           Control.Monad.Trans (lift)
 import           Data.Bifunctor (bimap, second)
 import qualified Data.ByteString as BS (length)
 import           Data.Function ((&))
@@ -23,7 +25,6 @@ import           Cardano.TxGenerator.UTxO (ToUTxOList)
 type CreateAndStore m era           = Lovelace -> (TxOut CtxTx era, TxIx -> TxId -> m ())
 type CreateAndStoreList m era split = split -> ([TxOut CtxTx era], TxId -> m ())
 
---TODO: use Error monad
 --TODO: need to break this up
 sourceToStoreTransaction ::
      Monad m
@@ -33,18 +34,14 @@ sourceToStoreTransaction ::
   -> ToUTxOList era split
   -> FundToStoreList m                --inline to ToUTxOList
   -> m (Either TxGenError (Tx era))
-sourceToStoreTransaction txGenerator fundSource inToOut mkTxOut fundToStore =
-  fundSource >>= either (return . Left) go
- where
-  go inputFunds = do
-    let
-      outValues = inToOut $ map getFundLovelace inputFunds
-      (outputs, toFunds) = mkTxOut outValues
-    case txGenerator inputFunds outputs of
-        Left err -> return $ Left err
-        Right (tx, txId) -> do
-          fundToStore $ toFunds txId
-          return $ Right tx
+sourceToStoreTransaction txGenerator fundSource inToOut mkTxOut fundToStore
+  = runExceptT
+  $ do
+    inputFunds <- except =<< lift fundSource
+    let (outputs, toFunds) = mkTxOut . inToOut $ map getFundLovelace inputFunds
+    (tx, txId) <- except $ txGenerator inputFunds outputs
+    lift . fundToStore $ toFunds txId
+    return tx
 
 sourceToStoreTransactionNew ::
      Monad m
@@ -53,18 +50,14 @@ sourceToStoreTransactionNew ::
   -> ([Lovelace] -> split)
   -> CreateAndStoreList m era split
   -> m (Either TxGenError (Tx era))
-sourceToStoreTransactionNew txGenerator fundSource valueSplitter toStore =
-  fundSource >>= either (return . Left) go
- where
-  go inputFunds = do
-    let
-      split = valueSplitter $ map getFundLovelace inputFunds
-      (outputs, storeAction) = toStore split
-    case txGenerator inputFunds outputs of
-        Left err -> return $ Left err
-        Right (tx, txId) -> do
-          storeAction txId
-          return $ Right tx
+sourceToStoreTransactionNew txGenerator fundSource valueSplitter toStore
+  = runExceptT
+  $ do
+      inputFunds <- except =<< lift fundSource
+      let (outputs, storeAction) = toStore . valueSplitter $ map getFundLovelace inputFunds
+      (tx, txId) <- except $ txGenerator inputFunds outputs
+      lift $ storeAction txId
+      return tx
 
 -- just a preview of a transaction:
 -- not intended to be submitted; funds remain unchanged
@@ -75,11 +68,9 @@ sourceTransactionPreview ::
   -> CreateAndStoreList m era split
   -> Either TxGenError (Tx era)
 sourceTransactionPreview txGenerator inputFunds valueSplitter toStore =
-  second fst $
-    txGenerator inputFunds outputs
+  second fst $ txGenerator inputFunds outputs
  where
-  split         = valueSplitter $ map getFundLovelace inputFunds
-  (outputs, _)  = toStore split
+  (outputs, _)  = toStore . valueSplitter $ map getFundLovelace inputFunds
 
 genTx :: forall era. ()
   => IsShelleyBasedEra era
