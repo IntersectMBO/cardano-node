@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
 
@@ -7,8 +8,10 @@ module  Cardano.TxGenerator.PureExample
         where
 
 import           Control.Monad (foldM)
+import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.State.Strict
 import           Data.Either (fromRight)
+import           Data.Functor.Identity (runIdentity)
 import           Data.List (foldl')
 import           Data.String (fromString)
 import           System.Exit (die)
@@ -119,8 +122,8 @@ generateTx TxEnvironment{..}
     addNewOutputFunds :: [Fund] -> Generator ()
     addNewOutputFunds = put . foldl' insertFund emptyFundQueue
 
-    computeOutputValues :: [Lovelace] -> [Lovelace]
-    computeOutputValues = inputsToOutputsWithFee fee numOfOutputs
+    computeOutputValues :: Monad m => [Lovelace] -> ExceptT TxGenError m [Lovelace]
+    computeOutputValues = withExceptT TxGenError . inputsToOutputsWithFee fee numOfOutputs
       where numOfOutputs = 2
 
     computeUTxO = mkUTxOVariant txEnvNetworkId signingKey
@@ -142,6 +145,8 @@ generateTxPure ::
   -> Either TxGenError (Tx BabbageEra, FundQueue)
 generateTxPure TxEnvironment{..} inQueue
   = do
+      outValues <- runIdentity . runExceptT . withExcept TxGenError . computeOutputValues $ map getFundLovelace inputs
+      let (outputs, toFunds) = makeToUTxOList (repeat computeUTxO) outValues
       (tx, txId) <- generator inputs outputs
       let outQueue = foldl' insertFund emptyFundQueue (toFunds txId)
       pure (tx, outQueue)
@@ -156,10 +161,7 @@ generateTxPure TxEnvironment{..} inQueue
         collateralFunds :: (TxInsCollateral BabbageEra, [Fund])
         collateralFunds = (TxInsCollateralNone, [])
 
-    outValues = computeOutputValues $ map getFundLovelace inputs
-    (outputs, toFunds) = makeToUTxOList (repeat computeUTxO) outValues
-
-    computeOutputValues :: [Lovelace] -> [Lovelace]
+    computeOutputValues :: Monad m => [Lovelace] -> ExceptT String m [Lovelace]
     computeOutputValues = inputsToOutputsWithFee fee numOfOutputs
       where numOfOutputs = 2
 

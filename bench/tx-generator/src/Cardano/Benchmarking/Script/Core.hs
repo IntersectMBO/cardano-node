@@ -306,7 +306,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
       traceDebug $ "split change address : " ++ addressChange
       let
         fundSource = walletSource wallet 1
-        inToOut = Utils.includeChange fee coins
+        inToOut = return . Utils.includeChange fee coins
         txGenerator = genTx (cardanoEra @era) protocolParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
         sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut $ mangleWithChange toUTxOChange toUTxO
       return $ Streaming.effect (Streaming.yield <$> sourceToStore)
@@ -316,8 +316,8 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
       (toUTxO, addressOut) <- interpretPayMode payMode
       traceDebug $ "SplitN output address : " ++ addressOut
       let
+        inToOut = withExceptT TxGenError . Utils.inputsToOutputsWithFee fee count
         fundSource = walletSource wallet 1
-        inToOut = Utils.inputsToOutputsWithFee fee count
         txGenerator = genTx (cardanoEra @era) protocolParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
         sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
       return $ Streaming.effect (Streaming.yield <$> sourceToStore)
@@ -328,13 +328,14 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
       (toUTxO, addressOut) <- interpretPayMode payMode
       traceDebug $ "NtoM output address : " ++ addressOut
       let
+        inToOut = withExceptT TxGenError . Utils.inputsToOutputsWithFee fee outputs
         fundSource = walletSource wallet inputs
-        inToOut = Utils.inputsToOutputsWithFee fee outputs
         txGenerator = genTx (cardanoEra @era) protocolParameters collaterals feeInEra (toMetadata metadataSize)
         sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
 
       fundPreview <- liftIO $ walletPreview wallet inputs
-      case sourceTransactionPreview txGenerator fundPreview inToOut (mangle $ repeat toUTxO) of
+      preview <- lift . lift $ sourceTransactionPreview txGenerator fundPreview inToOut (mangle $ repeat toUTxO)
+      case preview of
         Left err -> traceDebug $ "Error creating Tx preview: " ++ show err
         Right tx -> do
           let txSize = txSizeInBytes tx
