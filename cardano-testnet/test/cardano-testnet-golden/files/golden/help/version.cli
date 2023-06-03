@@ -1,0 +1,6 @@
+Usage: cardano-testnet version 
+
+  Show cardano-testnet version
+
+Available options:
+  -h,--help                Show this help text

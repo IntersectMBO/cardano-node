@@ -15,7 +15,7 @@ import           Data.Text (Text)
 import           Hedgehog (Property)
 import           Hedgehog.Extras.Stock.OS (isWin32)
 import           System.FilePath ((</>))
-import           Test.Cardano.CLI.Util
+import           Test.Golden.Testnet.Util
 import           Text.Regex (Regex, mkRegex, subRegex)
 
 import qualified Data.Char as Char
@@ -49,20 +49,20 @@ extractCmd = id
 golden_HelpAll :: Property
 golden_HelpAll =
   H.propertyOnce . H.moduleWorkspace "help" $ \_ -> do
-    -- These tests are not run on Windows because the cardano-cli usage
+    -- These tests are not run on Windows because the cardano-testnet usage
     -- output is slightly different on Windows.  For example it uses
-    -- "cardano-cli.exe" instead of "cardano-cli".
+    -- "cardano-testnet.exe" instead of "cardano-testnet".
     unless isWin32 $ do
       helpFp <- H.note "test/cardano-testnet-golden/files/golden/help.cli"
 
-      help <- filterAnsi <$> execCardanoCLI
+      help <- filterAnsi <$> execCardanoTestnet
         [ "help"
         ]
 
       H.diffVsGoldenFile help helpFp
 
-third :: (a, b, c) -> c
-third (_, _, c) = c
+second :: (a, b, c) -> b
+second (_, b, _) = b
 
 -- | Return the string with the prefix dropped if the prefix is present, otherwise return Nothing.
 selectAndDropPrefix :: Text -> Text -> Maybe Text
@@ -78,16 +78,16 @@ deselectSuffix suffix text =
     else Just text
 
 selectCmd :: Text -> Maybe Text
-selectCmd = selectAndDropPrefix "Usage: cardano-cli " <=< deselectSuffix " COMMAND"
+selectCmd = selectAndDropPrefix "Usage: cardano-testnet " <=< deselectSuffix " COMMAND"
 
 golden_HelpCmds :: Property
 golden_HelpCmds =
   H.propertyOnce . H.moduleWorkspace "help-commands" $ \_ -> do
-    -- These tests are not run on Windows because the cardano-cli usage
+    -- These tests are not run on Windows because the cardano-testnet usage
     -- output is slightly different on Windows.  For example it uses
-    -- "cardano-cli.exe" instead of "cardano-cli".
+    -- "cardano-testnet.exe" instead of "cardano-testnet".
     unless isWin32 $ do
-      help <- filterAnsi <$> execCardanoCLI
+      help <- filterAnsi <$> execCardanoTestnet
         [ "help"
         ]
 
@@ -98,6 +98,6 @@ golden_HelpCmds =
         H.noteShow_ usage
         let expectedCmdHelpFp = "test/cardano-testnet-golden/files/golden/help" </> Text.unpack (Text.intercalate "_" usage) <> ".cli"
 
-        cmdHelp <- filterAnsi . third <$> execDetailCardanoCli (fmap Text.unpack usage)
+        cmdHelp <- filterAnsi . second <$> execDetailCardanoTestnet (fmap Text.unpack usage <> ["--help"])
 
         H.diffVsGoldenFile cmdHelp expectedCmdHelpFp
