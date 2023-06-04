@@ -7,6 +7,7 @@ module  Cardano.TxGenerator.PureExample
         (demo)
         where
 
+import           Control.Arrow ((|||))
 import           Control.Monad (foldM)
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.State.Strict
@@ -95,13 +96,15 @@ type Generator = State FundQueue
 generateTx ::
      TxEnvironment BabbageEra
   -> Generator (Either TxGenError (Tx BabbageEra))
-generateTx TxEnvironment{..}
-  = sourceToStoreTransaction
-        generator
-        consumeInputFunds
-        computeOutputValues
-        (makeToUTxOList $ repeat computeUTxO)
-        addNewOutputFunds
+generateTx TxEnvironment{..} = do
+  consumeInputFunds
+    >>= (pure . Left) ||| \funds -> runExceptT
+                                      $ sourceToStoreTransaction
+                                          generator
+                                          funds
+                                          computeOutputValues
+                                          (makeToUTxOList $ repeat computeUTxO)
+                                          addNewOutputFunds
   where
     TxFeeExplicit _ fee = txEnvFee
 
