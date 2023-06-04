@@ -18,7 +18,6 @@
 module Cardano.Benchmarking.Script.Core
 where
 
-import           Control.Arrow ((|||))
 import           Control.Concurrent (threadDelay)
 import           Control.Monad
 import           Control.Monad.IO.Class
@@ -366,7 +365,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
     -- This combinator lifts the 'Either' hand-rolled exceptions sitting
     -- as result values to the monad transformer stack by throwing the
     -- 'Left' case as an exception, after some additional wrapping.
-    promoteEither = throwE . Env.TxGenError ||| pure
+    promoteEither = withExceptT Env.TxGenError . hoistEither
     -- 'liftIOCreateAndStore' is supposed to be some indication that 'liftIO'
     -- is applied to a 'CreateAndStore'.
     -- This could be golfed as @((liftIO .) .)@ but it's unreadable.
