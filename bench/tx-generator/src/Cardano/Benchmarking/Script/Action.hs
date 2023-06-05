@@ -9,7 +9,6 @@ module Cardano.Benchmarking.Script.Action
 import qualified Data.Text as Text (unpack)
 
 import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Except.Extra
 
 import           Cardano.Benchmarking.OuroborosImports as Core (protocolToNetworkId)
 import           Cardano.Benchmarking.Script.Core
@@ -17,7 +16,6 @@ import           Cardano.Benchmarking.Script.Env
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Tracer
 import           Cardano.TxGenerator.Setup.NodeConfig
-import           Cardano.TxGenerator.Types (TxGenError)
 
 
 action :: Action -> ActionM ()
@@ -37,9 +35,6 @@ action a = case a of
   WaitForEra era -> waitForEra era
   LogMsg txt -> traceDebug $ Text.unpack txt
   Reserved options -> reserved options
-
-liftToAction :: IO (Either TxGenError a) -> ActionM a
-liftToAction = firstExceptT TxGenError . newExceptT . liftIO
 
 startProtocol :: FilePath -> Maybe FilePath -> ActionM ()
 startProtocol configFile tracerSocket = do

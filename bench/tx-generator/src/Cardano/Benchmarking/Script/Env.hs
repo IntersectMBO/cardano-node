@@ -15,8 +15,10 @@ module Cardano.Benchmarking.Script.Env (
         , Error(..)
         , runActionM
         , runActionMEnv
+        , liftToAction
         , liftTxGenError
         , liftIOSafe
+        , withTxGenError
         , askIOManager
         , traceDebug
         , traceError
@@ -109,6 +111,12 @@ data Error where
   WalletError :: !String     -> Error
 
 deriving instance Show Error
+
+withTxGenError :: Monad m => ExceptT TxGenError m a -> ExceptT Error m a
+withTxGenError = withExceptT Cardano.Benchmarking.Script.Env.TxGenError
+
+liftToAction :: IO (Either TxGenError a) -> ActionM a
+liftToAction = withTxGenError . ExceptT . liftIO
 
 liftTxGenError :: TxGenError -> ActionM a
 liftTxGenError = throwE . Cardano.Benchmarking.Script.Env.TxGenError
