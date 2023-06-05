@@ -51,7 +51,7 @@ type CreateAndStoreList m era split = split -> ([TxOut CtxTx era], TxId -> m ())
 -- @mkTxOut@ gets built from functions in "Cardano.TxGenerator.UTxO".
 -- The other functions take 'CreateAndStoreList' arguments and name
 -- them @valueSplitter@ and callers construct the argument from the
--- mangling functions in 'Cardano.TxGenerator.Utils". 
+-- mangling functions in 'Cardano.TxGenerator.Utils".
 -- @fundToStore@ commits the single-threaded fund state in its sole
 -- caller with 'Control.Monad.State.put', using a @State@ monad.
 sourceToStoreTransaction ::
