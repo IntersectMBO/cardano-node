@@ -39,7 +39,8 @@ prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath'
   -- Start testnet
   conf <- HE.noteShowM $ TN.mkConf Nothing (tempAbsBasePath' <> "/") Nothing
 
-  let options = CardanoOnlyTestnetOptions $ cardanoDefaultTestnetOptions
+  let tempAbsPath' = unTmpAbsPath $ tempAbsPath conf
+      options = CardanoOnlyTestnetOptions $ cardanoDefaultTestnetOptions
         -- NB! The `activeSlotsCoeff` value is very important for
         -- chain extension for the two-node/one-pool testnet that
         -- `defaultTestnetOptions` define. The default 0.2 often fails
@@ -51,9 +52,9 @@ prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath'
   -- Get socketPath
   socketPathAbs <- do
     socketPath' <- HE.sprocketArgumentName <$> HE.headM (nodeSprocket <$> bftNodes runtime)
-    H.noteIO (IO.canonicalizePath $ tempAbsPath conf </> socketPath')
+    H.noteIO (IO.canonicalizePath $ tempAbsPath' </> socketPath')
 
-  configFile <- H.noteShow $ tempAbsPath conf </> "configuration.yaml"
+  configFile <- H.noteShow $ tempAbsPath' </> "configuration.yaml"
 
   -- Start foldBlocks in a separate thread
   lock <- H.evalIO IO.newEmptyMVar

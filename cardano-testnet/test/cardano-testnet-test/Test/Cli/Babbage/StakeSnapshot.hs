@@ -43,12 +43,12 @@ import           Testnet.Util.Runtime
 hprop_stakeSnapshot :: Property
 hprop_stakeSnapshot = H.integrationRetryWorkspace 2 "babbage-stake-snapshot" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
-  conf@Conf { tempBaseAbsPath, tempAbsPath } <- H.noteShowM $
-    mkConf Nothing tempAbsBasePath' Nothing
-
-  work <- H.createDirectoryIfMissing $ tempAbsPath </> "work"
+  conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf Nothing tempAbsBasePath' Nothing
+  let tempAbsPath' = unTmpAbsPath tempAbsPath
+  work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   let
+    tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
     testnetOptions = BabbageOnlyTestnetOptions $ babbageDefaultTestnetOptions
       { babbageNodeLoggingFormat = NodeLoggingFormatAsJson
       }

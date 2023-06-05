@@ -25,29 +25,25 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified Hedgehog.Internal.Property as H
 import           Prelude
-import qualified System.Directory as IO
 import           System.Environment (getEnvironment)
-import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
 import           Cardano.Testnet
 import qualified Testnet.Util.Base as H
 import           Testnet.Util.Process
+import qualified Testnet.Util.Runtime as TR
 import           Testnet.Util.Runtime
 
 -- | Tests @query slot-number@ cardano-cli command that it returns correct slot numbers for provided utc time
 hprop_querySlotNumber :: Property
 hprop_querySlotNumber = H.integrationRetryWorkspace 2 "query-slot-number" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
-  base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
-  configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
-  conf@Conf { tempBaseAbsPath } <- H.noteShowM $
-    mkConf (Just $ YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
+  conf <- H.noteShowM $ mkConf Nothing tempAbsBasePath' Nothing
 
-  let
-    testnetOptions = BabbageOnlyTestnetOptions $ babbageDefaultTestnetOptions
-      { babbageNodeLoggingFormat = NodeLoggingFormatAsJson
-      }
+  let tempBaseAbsPath' = TR.makeTmpBaseAbsPath $ tempAbsPath conf
+      testnetOptions = BabbageOnlyTestnetOptions $ babbageDefaultTestnetOptions
+        { babbageNodeLoggingFormat = NodeLoggingFormatAsJson
+        }
   tr@TestnetRuntime
     { testnetMagic
     , poolNodes
@@ -71,7 +67,7 @@ hprop_querySlotNumber = H.integrationRetryWorkspace 2 "query-slot-number" $ \tem
       -- The environment must be passed onto child process on Windows in order to
       -- successfully start that process.
       <> env
-    , H.execConfigCwd = Last $ Just tempBaseAbsPath
+    , H.execConfigCwd = Last $ Just tempBaseAbsPath'
     }
 
   id do

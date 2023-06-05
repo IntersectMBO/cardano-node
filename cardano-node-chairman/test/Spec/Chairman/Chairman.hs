@@ -1,5 +1,5 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Spec.Chairman.Chairman
@@ -22,6 +22,7 @@ import qualified System.Environment as IO
 import qualified System.IO as IO
 import qualified System.Process as IO
 
+import           Cardano.Testnet (TmpAbsolutePath (TmpAbsolutePath), makeLogDir)
 import qualified Cardano.Testnet as H
 
 {- HLINT ignore "Reduce duplication" -}
@@ -32,9 +33,12 @@ mkSprocket :: FilePath -> FilePath -> String -> Sprocket
 mkSprocket tempBaseAbsPath socketDir node = Sprocket tempBaseAbsPath (socketDir </> node)
 
 chairmanOver :: Int -> Int -> H.Conf -> [String] -> Integration ()
-chairmanOver timeoutSeconds requiredProgress H.Conf {..} allNodes = do
+chairmanOver timeoutSeconds requiredProgress H.Conf {H.tempAbsPath} allNodes = do
   maybeChairman <- H.evalIO $ IO.lookupEnv "DISABLE_CHAIRMAN"
-
+  let tempAbsPath' = H.unTmpAbsPath tempAbsPath
+      logDir = makeLogDir $ TmpAbsolutePath tempAbsPath'
+      tempBaseAbsPath = H.makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
+      socketDir = H.makeSocketDir $ TmpAbsolutePath tempAbsPath'
   when (maybeChairman /= Just "1") $ do
     nodeStdoutFile <- H.noteTempFile logDir $ "chairman" <> ".stdout.log"
     nodeStderrFile <- H.noteTempFile logDir $ "chairman" <> ".stderr.log"
@@ -47,7 +51,7 @@ chairmanOver timeoutSeconds requiredProgress H.Conf {..} allNodes = do
     (_, _, _, hProcess, _) <- H.createProcess =<<
       ( H.procChairman
         ( [ "--timeout", show @Int timeoutSeconds
-          , "--config", tempAbsPath </> "configuration.yaml"
+          , "--config", tempAbsPath' </> "configuration.yaml"
           , "--require-progress", show @Int requiredProgress
           ]
         <> (sprockets >>= (\sprocket -> ["--socket-path", IO.sprocketArgumentName sprocket]))

@@ -46,6 +46,7 @@ import           Testnet.Commands.Genesis
 import qualified Testnet.Conf as H
 import           Testnet.Options hiding (defaultTestnetOptions)
 import qualified Testnet.Util.Process as H
+import qualified Testnet.Util.Runtime as TR
 import           Testnet.Utils
 
 {- HLINT ignore "Reduce duplication" -}
@@ -121,9 +122,11 @@ testnet testnetOptions conf = do
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime 15 currentTime -- 15 seconds into the future
   allPorts <- H.noteShowIO $ IO.allocateRandomPorts (numBftNodes testnetOptions)
-  let tempAbsPath' = H.tempAbsPath conf
-      sockDir = H.socketDir conf
-      tempBaseAbsPath' = H.tempBaseAbsPath conf
+  let tempAbsPath' = TR.unTmpAbsPath $ H.tempAbsPath conf
+      sockDir = TR.makeSocketDir $ H.tempAbsPath conf
+      tempBaseAbsPath' = TR.makeTmpBaseAbsPath $ H.tempAbsPath conf
+      logDir = TR.makeLogDir $ H.tempAbsPath conf
+
 
   H.lbsWriteFile (tempAbsPath' </> "byron.genesis.spec.json")
     . J.encode $ defaultByronProtocolParamsJsonValue
@@ -161,19 +164,23 @@ testnet testnetOptions conf = do
   let nodeIndexes = [0..numBftNodes testnetOptions - 1]
   let allNodes = fmap (\i -> "node-" <> show @Int i) nodeIndexes
 
+  H.createDirectoryIfMissing_ logDir
+
+
   -- Launch cluster of three nodes in P2P Mode
   forM_ nodeIndexes $ \i -> do
     si <- H.noteShow $ show @Int i
+    let dbDir = TR.makeDbDir i (TR.TmpAbsolutePath tempAbsPath')
+    H.createDirectoryIfMissing_ dbDir
     nodeStdoutFile <- H.noteTempFile tempAbsPath' $ "cardano-node-" <> si <> ".stdout.log"
     nodeStderrFile <- H.noteTempFile tempAbsPath' $ "cardano-node-" <> si <> ".stderr.log"
-    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath' (sockDir </> "node-" <> si)
+    sprocket <- H.noteShow $ TR.makeSprocket (TR.TmpAbsolutePath tempAbsPath') $ "node-" <> si
     portString <- H.note $ show @Int (allPorts L.!! i)
     topologyFile <- H.noteShow $ tempAbsPath' </> "topology-node-" <> si <> ".json"
     configFile <- H.noteShow $ tempAbsPath' </> "config-" <> si <> ".yaml"
     signingKeyFile <- H.noteShow $ tempAbsPath' </> "genesis/delegate-keys.00" <> si <> ".key"
     delegationCertificateFile <- H.noteShow $ tempAbsPath' </> "genesis/delegation-cert.00" <> si <> ".json"
 
-    dbDir <- H.createDirectoryIfMissing $ tempAbsPath' </> "db/node-" <> si
 
     H.lbsWriteFile (tempAbsPath' </> "topology-node-" <> si <> ".json") $
       mkTopologyConfig i (numBftNodes testnetOptions) allPorts (enableP2P testnetOptions)

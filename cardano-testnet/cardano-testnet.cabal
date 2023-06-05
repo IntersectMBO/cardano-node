@@ -76,6 +76,7 @@ library
                         Testnet.Babbage
                         Testnet.Byron
                         Testnet.Commands.Genesis
+                        Testnet.Conf
                         Testnet.Options
                         Testnet.Topology 
                         Testnet.Utils
@@ -95,7 +96,6 @@ library
                         Parsers.Version
                         Testnet
                         Testnet.Cardano
-                        Testnet.Conf
                         Testnet.Commands.Governance
                         Testnet.Run
                         Testnet.Shelley
@@ -153,6 +153,7 @@ test-suite cardano-testnet-golden
   build-tool-depends:   cardano-node:cardano-node
                       , cardano-cli:cardano-cli
                       , cardano-submit-api:cardano-submit-api
+                      , cardano-testnet:cardano-testnet
 
 test-suite cardano-testnet-test
   import:               project-config
@@ -197,3 +198,4 @@ test-suite cardano-testnet-test
   build-tool-depends:   cardano-node:cardano-node
                       , cardano-cli:cardano-cli
                       , cardano-submit-api:cardano-submit-api
+                      , cardano-testnet:cardano-testnet

@@ -38,6 +38,7 @@ import           Testnet.Commands.Genesis
 import           Testnet.Options
 import           Testnet.Topology
 import           Testnet.Util.Process (execCli_, procNode)
+import qualified Testnet.Util.Runtime as TR
 import           Testnet.Utils
 
 {- HLINT ignore "Redundant <&>" -}
@@ -46,11 +47,16 @@ hprop_shutdown :: Property
 hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> do
   conf <- H.noteShowM $
     mkConf Nothing tempAbsBasePath' Nothing
-  let tempBaseAbsPath' = tempBaseAbsPath conf
-      tempAbsPath' = tempAbsPath conf
-      logDir' = logDir conf
-      socketDir' = socketDir conf
+  let tempBaseAbsPath' = TR.makeTmpBaseAbsPath $ tempAbsPath conf
+      tempAbsPath' = TR.unTmpAbsPath $ tempAbsPath conf
+      logDir' = TR.makeLogDir $ tempAbsPath conf
+      socketDir' = TR.makeSocketDir $ tempAbsPath conf
       testnetMagic' = testnetMagic conf
+
+  -- TODO: We need to uniformly create these directories
+  H.createDirectoryIfMissing_ logDir'
+  H.createSubdirectoryIfMissing_ tempBaseAbsPath' socketDir'
+
   [port] <- H.noteShowIO $ IO.allocateRandomPorts 1
 
   sprocket <- H.noteShow $ IO.Sprocket tempBaseAbsPath' (socketDir' </> "node")
@@ -95,8 +101,6 @@ hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' ->
     , "--genesis-dir", shelleyDir
     , "--start-time", formatIso8601 startTime
     ]
-
-
 
 
   byronGenesisHash <- getByronGenesisHash $ tempAbsPath' </> "byron/genesis.json"

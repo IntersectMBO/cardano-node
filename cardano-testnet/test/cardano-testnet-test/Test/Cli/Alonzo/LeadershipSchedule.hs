@@ -51,9 +51,10 @@ import           Testnet.Util.Runtime
 hprop_leadershipSchedule :: Property
 hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedule" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
-  conf@Conf { tempBaseAbsPath, tempAbsPath } <- H.noteShowM $
-    mkConf Nothing tempAbsBasePath' Nothing
+  conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf Nothing tempAbsBasePath' Nothing
   let
+    tempAbsPath' = unTmpAbsPath tempAbsPath
+    tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
     fastTestnetOptions = CardanoOnlyTestnetOptions cardanoDefaultTestnetOptions
       { cardanoEpochLength = 500
       , cardanoSlotLength = 0.01
@@ -70,13 +71,13 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedu
   execConfig <- H.headM (bftSprockets tr) >>= H.mkExecConfig tempBaseAbsPath
 
   -- First we note all the relevant files
-  work <- H.note tempAbsPath
+  work <- H.note tempAbsPath'
 
   -- We get our UTxOs from here
-  utxoVKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.vkey"
-  utxoSKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.skey"
-  utxoVKeyFile2 <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo2.vkey"
-  utxoSKeyFile2 <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo2.skey"
+  utxoVKeyFile <- H.note $ tempAbsPath' </> "shelley/utxo-keys/utxo1.vkey"
+  utxoSKeyFile <- H.note $ tempAbsPath' </> "shelley/utxo-keys/utxo1.skey"
+  utxoVKeyFile2 <- H.note $ tempAbsPath' </> "shelley/utxo-keys/utxo2.vkey"
+  utxoSKeyFile2 <- H.note $ tempAbsPath' </> "shelley/utxo-keys/utxo2.skey"
 
   utxoAddr <- execCli
     [ "address", "build"
@@ -99,8 +100,8 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedu
   txin <- H.noteShow $ head $ Map.keys utxo1
 
   -- Staking keys
-  utxoStakingVkey2 <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo2-stake.vkey"
-  utxoStakingSkey2 <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo2-stake.skey"
+  utxoStakingVkey2 <- H.note $ tempAbsPath' </> "shelley/utxo-keys/utxo2-stake.vkey"
+  utxoStakingSkey2 <- H.note $ tempAbsPath' </> "shelley/utxo-keys/utxo2-stake.skey"
 
   utxoaddrwithstaking <- execCli
     [ "address", "build"
@@ -116,9 +117,9 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedu
     ]
 
   -- Stake pool related
-  H.createDirectoryIfMissing_ $ tempAbsPath </> "addresses"
-  poolownerstakekey <- H.note $ tempAbsPath </> "addresses/pool-owner1-stake.vkey"
-  poolownerverkey <- H.note $ tempAbsPath </> "addresses/pool-owner1.vkey"
+  H.createDirectoryIfMissing_ $ tempAbsPath' </> "addresses"
+  poolownerstakekey <- H.note $ tempAbsPath' </> "addresses/pool-owner1-stake.vkey"
+  poolownerverkey <- H.note $ tempAbsPath' </> "addresses/pool-owner1.vkey"
   poolownerstakeaddr <- filter (/= '\n') <$> execCli
     [ "stake-address", "build"
     , "--stake-verification-key-file", poolownerstakekey
@@ -132,8 +133,8 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedu
     , "--testnet-magic", show @Int testnetMagic
     ]
 
-  poolcoldVkey <- H.note $ tempAbsPath </> "node-pool1/shelley/operator.vkey"
-  poolcoldSkey <- H.note $ tempAbsPath </> "node-pool1/shelley/operator.skey"
+  poolcoldVkey <- H.note $ tempAbsPath' </> "node-pool1/shelley/operator.vkey"
+  poolcoldSkey <- H.note $ tempAbsPath' </> "node-pool1/shelley/operator.skey"
 
   stakePoolId <- filter ( /= '\n') <$> execCli
     [ "stake-pool", "id"
@@ -307,7 +308,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedu
     , "--tx-in", T.unpack $ Api.renderTxIn txin2
     , "--tx-out", utxoAddr <> "+" <> show @Int 10000000
     , "--witness-override", show @Int 3
-    , "--certificate-file", tempAbsPath </> "node-pool1/registration.cert"
+    , "--certificate-file", tempAbsPath' </> "node-pool1/registration.cert"
     , "--certificate-file", work </> "pledger.delegcert"
     , "--out-file", work </> "register-stake-pool.txbody"
     ]
@@ -318,7 +319,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedu
     , "--testnet-magic", show @Int testnetMagic
     , "--signing-key-file", utxoSKeyFile
     , "--signing-key-file", poolcoldSkey
-    , "--signing-key-file", tempAbsPath </> "node-pool1/owner.skey"
+    , "--signing-key-file", tempAbsPath' </> "node-pool1/owner.skey"
     , "--out-file", work </> "register-stake-pool.tx"
     ]
 
@@ -465,7 +466,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedu
   H.note_ "Done"
 
   let poolVrfSkey = poolNodeKeysVrfSkey $ poolKeys poolNode1
-  scheduleFile <- H.noteTempFile tempAbsPath "schedule.log"
+  scheduleFile <- H.noteTempFile tempAbsPath' "schedule.log"
 
   void $ execCli' execConfig
     [ "query", "leadership-schedule"

@@ -44,12 +44,12 @@ import           Testnet.Util.Runtime
 hprop_leadershipSchedule :: Property
 hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-schedule" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
-  conf@Conf { tempBaseAbsPath, tempAbsPath } <- H.noteShowM $
-    mkConf Nothing tempAbsBasePath' Nothing
-
-  work <- H.createDirectoryIfMissing $ tempAbsPath </> "work"
+  conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf Nothing tempAbsBasePath' Nothing
+  let tempAbsPath' = unTmpAbsPath tempAbsPath
+  work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
   let
+    tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
     testnetOptions = BabbageOnlyTestnetOptions $ babbageDefaultTestnetOptions
       { babbageNodeLoggingFormat = NodeLoggingFormatAsJson
       }
@@ -93,7 +93,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
   let poolVrfSkey = poolNodeKeysVrfSkey $ poolKeys poolNode1
 
   id do
-    scheduleFile <- H.noteTempFile tempAbsPath "schedule.log"
+    scheduleFile <- H.noteTempFile tempAbsPath' "schedule.log"
 
     leadershipScheduleDeadline <- H.noteShowM $ DTC.addUTCTime 180 <$> H.noteShowIO DTC.getCurrentTime
 
@@ -141,7 +141,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
     H.assert $ L.null (expectedLeadershipSlotNumbers \\ leaderSlots)
 
   id do
-    scheduleFile <- H.noteTempFile tempAbsPath "schedule.log"
+    scheduleFile <- H.noteTempFile tempAbsPath' "schedule.log"
 
     leadershipScheduleDeadline <- H.noteShowM $ DTC.addUTCTime 180 <$> H.noteShowIO DTC.getCurrentTime
 
