@@ -51,44 +51,28 @@ main = do
 
   tr <- mkTracerTracer $ SeverityF $ Just Warning
 
-  let te1 =
+  let te c =
         TracerEnv
-          { teConfig            = c1
-          , teConnectedNodes    = connectedNodes
-          , teConnectedNodesNames = connectedNodesNames
-          , teAcceptedMetrics   = acceptedMetrics
-          , teSavedTO           = savedTO
-          , teBlockchainHistory = chainHistory
-          , teResourcesHistory  = resourcesHistory
-          , teTxHistory         = txHistory
-          , teCurrentLogLock    = currentLogLock
-          , teCurrentDPLock     = currentDPLock
-          , teEventsQueues      = eventsQueues
-          , teDPRequestors      = dpRequestors
-          , teProtocolsBrake    = protocolsBrake
-          , teRTViewPageOpened  = rtViewPageOpened
-          , teRTViewStateDir    = Nothing
-          , teTracer            = tr
+          { teConfig                = c
+          , teConnectedNodes        = connectedNodes
+          , teConnectedNodesNames   = connectedNodesNames
+          , teAcceptedMetrics       = acceptedMetrics
+          , teSavedTO               = savedTO
+          , teBlockchainHistory     = chainHistory
+          , teResourcesHistory      = resourcesHistory
+          , teTxHistory             = txHistory
+          , teCurrentLogLock        = currentLogLock
+          , teCurrentDPLock         = currentDPLock
+          , teEventsQueues          = eventsQueues
+          , teDPRequestors          = dpRequestors
+          , teProtocolsBrake        = protocolsBrake
+          , teRTViewPageOpened      = rtViewPageOpened
+          , teRTViewStateDir        = Nothing
+          , teTracer                = tr
+          , teReforwardTraceObjects = \_-> pure ()
           }
-      te2 =
-        TracerEnv
-          { teConfig            = c2
-          , teConnectedNodes    = connectedNodes
-          , teConnectedNodesNames = connectedNodesNames
-          , teAcceptedMetrics   = acceptedMetrics
-          , teSavedTO           = savedTO
-          , teBlockchainHistory = chainHistory
-          , teResourcesHistory  = resourcesHistory
-          , teTxHistory         = txHistory
-          , teCurrentLogLock    = currentLogLock
-          , teCurrentDPLock     = currentDPLock
-          , teEventsQueues      = eventsQueues
-          , teDPRequestors      = dpRequestors
-          , teProtocolsBrake    = protocolsBrake
-          , teRTViewPageOpened  = rtViewPageOpened
-          , teRTViewStateDir    = Nothing
-          , teTracer            = tr
-          }
+      te1 = te c1
+      te2 = te c2
 
   removePathForcibly root
 

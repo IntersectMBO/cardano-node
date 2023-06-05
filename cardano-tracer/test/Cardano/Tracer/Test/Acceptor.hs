@@ -54,24 +54,25 @@ launchAcceptorsSimple mode localSock dpName = do
 
   let tracerEnv =
         TracerEnv
-          { teConfig              = mkConfig
-          , teConnectedNodes      = connectedNodes
-          , teConnectedNodesNames = connectedNodesNames
-          , teAcceptedMetrics     = acceptedMetrics
-          , teSavedTO             = savedTO
-          , teBlockchainHistory   = chainHistory
-          , teResourcesHistory    = resourcesHistory
-          , teTxHistory           = txHistory
-          , teCurrentLogLock      = currentLogLock
-          , teCurrentDPLock       = currentDPLock
-          , teEventsQueues        = eventsQueues
-          , teDPRequestors        = dpRequestors
-          , teProtocolsBrake      = protocolsBrake
-          , teRTViewPageOpened    = rtViewPageOpened
-          , teRTViewStateDir      = Nothing
-          , teTracer              = tr
+          { teConfig                = mkConfig
+          , teConnectedNodes        = connectedNodes
+          , teConnectedNodesNames   = connectedNodesNames
+          , teAcceptedMetrics       = acceptedMetrics
+          , teSavedTO               = savedTO
+          , teBlockchainHistory     = chainHistory
+          , teResourcesHistory      = resourcesHistory
+          , teTxHistory             = txHistory
+          , teCurrentLogLock        = currentLogLock
+          , teCurrentDPLock         = currentDPLock
+          , teEventsQueues          = eventsQueues
+          , teDPRequestors          = dpRequestors
+          , teProtocolsBrake        = protocolsBrake
+          , teRTViewPageOpened      = rtViewPageOpened
+          , teRTViewStateDir        = Nothing
+          , teTracer                = tr
+          , teReforwardTraceObjects = \_-> pure ()
           }
-
+            -- NOTE: no reforwarding in this acceptor.
   void . sequenceConcurrently $
     [ runAcceptors tracerEnv
     , runDataPointsPrinter dpName dpRequestors

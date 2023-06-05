@@ -50,7 +50,7 @@ data TracerTrace
   | TracerStartedAcceptors
     { ttAcceptorsAddr        :: !Network }
   | TracerStartedRTView
-  | TracerStartedDataPoints
+  | TracerStartedReforwarder
   | TracerSockListen
     { ttListenAt             :: !FilePath }
   | TracerSockIncoming
@@ -101,7 +101,7 @@ instance MetaTrace TracerTrace where
     namespaceFor TracerStartedPrometheus = Namespace [] ["StartedPrometheus"]
     namespaceFor TracerStartedAcceptors {} = Namespace [] ["StartedAcceptors"]
     namespaceFor TracerStartedRTView = Namespace [] ["StartedRTView"]
-    namespaceFor TracerStartedDataPoints = Namespace [] ["StartedDataPoints"]
+    namespaceFor TracerStartedReforwarder = Namespace [] ["StartedReforwarder"]
     namespaceFor TracerSockListen {} = Namespace [] ["SockListen"]
     namespaceFor TracerSockIncoming {} = Namespace [] ["SockIncoming"]
     namespaceFor TracerSockConnecting {} = Namespace [] ["SockConnecting"]
@@ -120,7 +120,7 @@ instance MetaTrace TracerTrace where
     severityFor (Namespace _ ["StartedPrometheus"]) _ = Just Info
     severityFor (Namespace _ ["StartedAcceptors"]) _ = Just Info
     severityFor (Namespace _ ["StartedRTView"]) _ = Just Info
-    severityFor (Namespace _ ["StartedDataPoints"]) _ = Just Info
+    severityFor (Namespace _ ["StartedReforwarder"]) _ = Just Info
     severityFor (Namespace _ ["SockListen"]) _ = Just Info
     severityFor (Namespace _ ["SockIncoming"]) _ = Just Info
     severityFor (Namespace _ ["SockConnecting"]) _ = Just Info
@@ -143,7 +143,7 @@ instance MetaTrace TracerTrace where
       , Namespace [] ["StartedPrometheus"]
       , Namespace [] ["StartedAcceptors"]
       , Namespace [] ["StartedRTView"]
-      , Namespace [] ["StartedDataPoints"]
+      , Namespace [] ["StartedReforwarder"]
       , Namespace [] ["SockListen"]
       , Namespace [] ["SockIncoming"]
       , Namespace [] ["SockConnecting"]

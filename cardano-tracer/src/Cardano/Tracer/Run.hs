@@ -17,13 +17,14 @@ import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Logs.Rotator
 import           Cardano.Tracer.Handlers.Metrics.Servers
-import           Cardano.Tracer.Handlers.Datapoints.Run
+import           Cardano.Tracer.Handlers.ReForwarder
 import           Cardano.Tracer.Handlers.RTView.Run
 import           Cardano.Tracer.Handlers.RTView.State.Historical
 import           Cardano.Tracer.Handlers.RTView.Update.Historical
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
+
 
 -- | Top-level run function, called by 'cardano-tracer' app.
 runCardanoTracer :: TracerParams -> IO ()
@@ -65,25 +66,28 @@ doRunCardanoTracer config rtViewStateDir tr protocolsBrake dpRequestors = do
 
   rtViewPageOpened <- newTVarIO False
 
+  (reforwardTraceObject,_trDataPoint) <- initReForwarder config tr
+
   -- Environment for all following functions.
   let tracerEnv =
         TracerEnv
-          { teConfig              = config
-          , teConnectedNodes      = connectedNodes
-          , teConnectedNodesNames = connectedNodesNames
-          , teAcceptedMetrics     = acceptedMetrics
-          , teSavedTO             = savedTO
-          , teBlockchainHistory   = chainHistory
-          , teResourcesHistory    = resourcesHistory
-          , teTxHistory           = txHistory
-          , teCurrentLogLock      = currentLogLock
-          , teCurrentDPLock       = currentDPLock
-          , teEventsQueues        = eventsQueues
-          , teDPRequestors        = dpRequestors
-          , teProtocolsBrake      = protocolsBrake
-          , teRTViewPageOpened    = rtViewPageOpened
-          , teRTViewStateDir      = rtViewStateDir
-          , teTracer              = tr
+          { teConfig                = config
+          , teConnectedNodes        = connectedNodes
+          , teConnectedNodesNames   = connectedNodesNames
+          , teAcceptedMetrics       = acceptedMetrics
+          , teSavedTO               = savedTO
+          , teBlockchainHistory     = chainHistory
+          , teResourcesHistory      = resourcesHistory
+          , teTxHistory             = txHistory
+          , teCurrentLogLock        = currentLogLock
+          , teCurrentDPLock         = currentDPLock
+          , teEventsQueues          = eventsQueues
+          , teDPRequestors          = dpRequestors
+          , teProtocolsBrake        = protocolsBrake
+          , teRTViewPageOpened      = rtViewPageOpened
+          , teRTViewStateDir        = rtViewStateDir
+          , teTracer                = tr
+          , teReforwardTraceObjects = reforwardTraceObject
           }
 
   -- Specify what should be done before 'cardano-tracer' stops.
@@ -100,5 +104,4 @@ doRunCardanoTracer config rtViewStateDir tr protocolsBrake dpRequestors = do
     , runMetricsServers tracerEnv
     , runAcceptors      tracerEnv
     , runRTView         tracerEnv
-    , runDatapoints     config tr
     ]
