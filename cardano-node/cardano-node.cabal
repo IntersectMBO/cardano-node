@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-node
-version:                8.0.0
+version:                8000.0.0
 synopsis:               The cardano full node
 description:            The cardano full node.
 category:               Cardano,
@@ -146,7 +146,7 @@ library
                       , cardano-ledger-babbage
                       , cardano-ledger-byron
                       , cardano-ledger-conway
-                      , cardano-ledger-core
+                      , cardano-ledger-core == 1.3.0.0
                       , cardano-ledger-shelley
                       , cardano-prelude
                       , cardano-protocol-tpraos >= 1.0.2
