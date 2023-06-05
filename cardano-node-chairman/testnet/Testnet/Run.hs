@@ -27,7 +27,7 @@ testnetProperty :: Maybe Int -> (H.Conf -> H.Integration ()) -> H.Property
 testnetProperty maybeTestnetMagic tn = H.integrationRetryWorkspace 2 "testnet-chairman" $ \tempAbsPath' -> do
   base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
-  conf <- H.mkConf (H.ProjectBase base) (Just $ H.YamlFilePath configurationTemplate) tempAbsPath' maybeTestnetMagic
+  conf <- H.mkConf (Just $ H.YamlFilePath configurationTemplate) tempAbsPath' maybeTestnetMagic
 
   -- Fork a thread to keep alive indefinitely any resources allocated by testnet.
   void . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000

@@ -37,11 +37,7 @@ prop_foldBlocks :: H.Property
 prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath' -> do
 
   -- Start testnet
-  base <- HE.noteM $ H.evalIO . IO.canonicalizePath =<< HE.getProjectBase
-  conf <- HE.noteShowM $
-    TN.mkConf (TN.ProjectBase base) Nothing
-      (tempAbsBasePath' <> "/")
-      Nothing
+  conf <- HE.noteShowM $ TN.mkConf Nothing (tempAbsBasePath' <> "/") Nothing
 
   let options = CardanoOnlyTestnetOptions $ cardanoDefaultTestnetOptions
         -- NB! The `activeSlotsCoeff` value is very important for

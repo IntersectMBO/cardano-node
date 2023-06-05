@@ -27,8 +27,6 @@ import qualified Data.Text as T
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
-import qualified Hedgehog.Extras.Test.Process as H
-import qualified System.Directory as IO
 import qualified System.Info as SYS
 import qualified Testnet.Util.Base as H
 import qualified Testnet.Util.Process as H
@@ -41,11 +39,9 @@ import           Testnet.Util.Runtime
 hprop_kes_period_info :: Property
 hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
-  base <- H.note =<< H.evalIO . IO.canonicalizePath =<< H.getProjectBase
   conf@Conf { tempBaseAbsPath, tempAbsPath }
     -- TODO: Move yaml filepath specification into individual node options
-    <- H.noteShowM $ mkConf (ProjectBase base) Nothing
-                              tempAbsBasePath' Nothing
+    <- H.noteShowM $ mkConf Nothing tempAbsBasePath' Nothing
 
   let fastTestnetOptions = CardanoOnlyTestnetOptions $ cardanoDefaultTestnetOptions
                              { cardanoNodes = cardanoDefaultTestnetNodeOptions

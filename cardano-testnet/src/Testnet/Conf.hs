@@ -27,14 +27,13 @@ data Conf = Conf
   , tempRelPath :: FilePath
   , tempBaseAbsPath :: FilePath
   , logDir :: FilePath
-  , base :: FilePath
   , socketDir :: FilePath
   , configurationTemplate :: Maybe FilePath
   , testnetMagic :: Int
   } deriving (Eq, Show)
 
-mkConf :: ProjectBase -> Maybe YamlFilePath -> FilePath -> Maybe Int -> H.Integration Conf
-mkConf (ProjectBase base') mConfigTemplate tempAbsPath' maybeMagic = do
+mkConf :: Maybe YamlFilePath -> FilePath -> Maybe Int -> H.Integration Conf
+mkConf mConfigTemplate tempAbsPath' maybeMagic = do
   testnetMagic' <- H.noteShowIO $ maybe (IO.randomRIO (1000, 2000)) return maybeMagic
   tempBaseAbsPath' <- H.noteShow $ FP.takeDirectory tempAbsPath'
   tempRelPath' <- H.noteShow $ FP.makeRelative tempBaseAbsPath' tempAbsPath'
@@ -47,7 +46,6 @@ mkConf (ProjectBase base') mConfigTemplate tempAbsPath' maybeMagic = do
     , tempRelPath = tempRelPath'
     , tempBaseAbsPath = tempBaseAbsPath'
     , logDir = logDir'
-    , base = base'
     , socketDir = socketDir'
     , configurationTemplate = configTemplate
     , testnetMagic = testnetMagic'

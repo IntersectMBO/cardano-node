@@ -19,8 +19,9 @@ import           Control.Monad
 import           Control.Monad.IO.Class (MonadIO (liftIO))
 import           Control.Monad.Trans.Resource (MonadResource (liftResourceT), resourceForkIO)
 import           Data.Aeson (ToJSON (toJSON), Value)
+import           Data.Bifunctor
 import           Data.ByteString.Lazy (ByteString)
-import           Data.Functor
+import qualified Data.ByteString.Lazy as LBS
 import           Data.List ((\\))
 import           Data.Maybe
 import           Data.String
@@ -32,6 +33,7 @@ import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           System.FilePath.Posix ((</>))
 
+import           Cardano.Api hiding (Value)
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 import qualified Control.Concurrent as IO
@@ -50,9 +52,9 @@ import qualified Hedgehog.Extras.Stock.Time as DTC
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Network as H
-import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
 import qualified System.Info as OS
+import           Testnet.Options (defaultShelleyOnlyYamlConfig)
 
 import           Testnet.Commands.Genesis
 import qualified Testnet.Conf as H
@@ -88,14 +90,6 @@ defaultTestnetOptions = ShelleyTestnetOptions
   , shelleyMaxLovelaceSupply = 1000000000
   , shelleyEnableP2P = False
   }
-
--- TODO: We need to refactor this to directly check the parsed configuration
--- and fail with a suitable error message.
--- | Rewrite a line in the configuration file
-rewriteConfiguration :: Bool -> String -> String
-rewriteConfiguration True "EnableP2P: False" = "EnableP2P: True"
-rewriteConfiguration False "EnableP2P: True" = "EnableP2P: False"
-rewriteConfiguration _ s                     = s
 
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"
@@ -178,15 +172,13 @@ shelleyTestnet testnetOptions H.Conf {..} = do
   let poolAddrs = ("pool-owner" <>) <$> poolNodesN
   let addrs = userAddrs <> poolAddrs
 
-  -- TODO: This is fragile, we should be passing in all necessary
-  -- configuration files.
-  let sourceAlonzoGenesisSpecFile = base </> "cardano-testnet/files/data/alonzo/genesis.alonzo.spec.json"
   alonzoSpecFile <- H.noteTempFile tempAbsPath "genesis.alonzo.spec.json"
-  H.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
+  gen <- H.evalEither $ first displayError defaultAlonzoGenesis
+  H.evalIO $ LBS.writeFile alonzoSpecFile $ J.encode gen
 
-  let sourceConwayGenesisSpecFile = base </> "cardano-testnet/files/data/conway/genesis.conway.spec.json"
+
   conwaySpecFile <- H.noteTempFile tempAbsPath "genesis.conway.spec.json"
-  H.copyFile sourceConwayGenesisSpecFile conwaySpecFile
+  H.evalIO $ LBS.writeFile conwaySpecFile $ J.encode defaultConwayGenesis
 
   -- Set up our template
   execCli_
@@ -387,10 +379,8 @@ shelleyTestnet testnetOptions H.Conf {..} = do
 
   --------------------------------
   -- Launch cluster of three nodes
+  H.evalIO $ LBS.writeFile (tempAbsPath </> "configuration.yaml") $ J.encode defaultShelleyOnlyYamlConfig
 
-  H.readFile (base </> "configuration/chairman/shelley-only/configuration.yaml")
-    <&> L.unlines . fmap (rewriteConfiguration (shelleyEnableP2P testnetOptions)) . L.lines
-    >>= H.writeFile (tempAbsPath </> "configuration.yaml")
 
   allNodeRuntimes <- forM allNodes
      $ \node -> startNode tempBaseAbsPath tempAbsPath logDir socketDir node
@@ -431,8 +421,7 @@ shelleyTestnet testnetOptions H.Conf {..} = do
 
 hprop_testnet :: H.Property
 hprop_testnet = H.integrationRetryWorkspace 2 "shelley-testnet" $ \tempAbsPath' -> do
-  base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
-  conf <- H.mkConf (H.ProjectBase base) Nothing tempAbsPath' Nothing
+  conf <- H.mkConf Nothing tempAbsPath' Nothing
 
   void . H.evalM . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000
 

@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-unused-local-binds -Wno-unused-matches #-}
@@ -14,6 +13,7 @@ module Testnet.Byron
 import           Control.Monad (forM_, void, when)
 import           Data.Aeson (Value)
 import           Data.ByteString.Lazy (ByteString)
+import qualified Data.ByteString.Lazy as LBS
 import           Data.Functor ((<&>))
 import           Hedgehog.Extras.Stock.Aeson (rewriteObject)
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
@@ -22,12 +22,13 @@ import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           System.FilePath.Posix ((</>))
 
+import           Cardano.Api hiding (Value)
+
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 import qualified Data.Aeson as J
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
-import qualified Data.Text as T
 import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.File as IO
@@ -41,8 +42,11 @@ import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Info as OS
 import qualified System.IO as IO
 import qualified System.Process as IO
+import           Testnet.Commands.Genesis
 import qualified Testnet.Conf as H
+import           Testnet.Options hiding (defaultTestnetOptions)
 import qualified Testnet.Util.Process as H
+import           Testnet.Utils
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Redundant <&>" -}
@@ -68,20 +72,6 @@ defaultTestnetOptions = TestnetOptions
   , enableP2P = False
   }
 
-replaceNodeLog :: Int -> String -> String
-replaceNodeLog n s = T.unpack (T.replace "logs/node-0.log" replacement (T.pack s))
-  where replacement = T.pack ("logs/node-" <> show @Int n <> ".log")
-
--- TODO: We need to refactor this to directly check the parsed configuration
--- and fail with a suitable error message.
--- | Rewrite a line in the configuration file
-rewriteConfiguration :: Bool -> Int -> String -> String
-rewriteConfiguration _ _ "TraceBlockchainTime: False"          = "TraceBlockchainTime: True"
-rewriteConfiguration _ n s | "logs/node-0.log" `L.isInfixOf` s = replaceNodeLog n s
-rewriteConfiguration True _ "EnableP2P: False"                 = "EnableP2P: True"
-rewriteConfiguration False _ "EnableP2P: True"                 = "EnableP2P: False"
-rewriteConfiguration _ _ s                                     = s
-
 rewriteParams :: TestnetOptions -> Value -> Value
 rewriteParams testnetOptions = rewriteObject
   $ HM.insert "slotDuration" (J.toJSON @String (show @Int (slotDuration testnetOptions)))
@@ -89,21 +79,21 @@ rewriteParams testnetOptions = rewriteObject
 mkTopologyConfig :: Int -> Int -> [Int]
                  -> Bool -- ^ if true use p2p topology configuration
                  -> ByteString
-mkTopologyConfig i numBftNodes allPorts False = J.encode topologyNonP2P
+mkTopologyConfig i numBftNodes' allPorts False = J.encode topologyNonP2P
   where
     topologyNonP2P :: NonP2P.NetworkTopology
     topologyNonP2P =
       NonP2P.RealNodeTopology
-        $ flip fmap ([0 .. numBftNodes - 1] L.\\ [i])
+        $ flip fmap ([0 .. numBftNodes' - 1] L.\\ [i])
         $ \j -> NonP2P.RemoteAddress "127.0.0.1"
                                     (fromIntegral $ allPorts L.!! j)
                                     1
-mkTopologyConfig i numBftNodes allPorts True = J.encode topologyP2P
+mkTopologyConfig i numBftNodes' allPorts True = J.encode topologyP2P
   where
     rootConfig :: P2P.RootConfig
     rootConfig =
       P2P.RootConfig
-        (flip fmap ([0 .. numBftNodes - 1] L.\\ [i])
+        (flip fmap ([0 .. numBftNodes' - 1] L.\\ [i])
         $ \j -> RelayAccessAddress "127.0.0.1"
                             (fromIntegral $ allPorts L.!! j)
         )
@@ -113,7 +103,7 @@ mkTopologyConfig i numBftNodes allPorts True = J.encode topologyP2P
     localRootPeerGroups =
       P2P.LocalRootPeersGroups
         [ P2P.LocalRootPeersGroup rootConfig
-                                  (numBftNodes - 1)
+                                  (numBftNodes' - 1)
         ]
 
     topologyP2P :: P2P.NetworkTopology
@@ -125,16 +115,22 @@ mkTopologyConfig i numBftNodes allPorts True = J.encode topologyP2P
 
 
 testnet :: TestnetOptions -> H.Conf -> H.Integration [String]
-testnet testnetOptions H.Conf {..} = do
+testnet testnetOptions conf = do
   void $ H.note OS.os
-  baseConfig <- H.noteShow $ base </> "configuration/chairman/defaults/simpleview"
+  let tNetMagic = H.testnetMagic conf
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime 15 currentTime -- 15 seconds into the future
   allPorts <- H.noteShowIO $ IO.allocateRandomPorts (numBftNodes testnetOptions)
+  let tempAbsPath' = H.tempAbsPath conf
+      sockDir = H.socketDir conf
+      tempBaseAbsPath' = H.tempBaseAbsPath conf
+
+  H.lbsWriteFile (tempAbsPath' </> "byron.genesis.spec.json")
+    . J.encode $ defaultByronProtocolParamsJsonValue
 
   H.copyRewriteJsonFile
-    (base </> "scripts/protocol-params.json")
-    (tempAbsPath </> "protocol-params.json")
+    (tempAbsPath' </> "byron.genesis.spec.json")
+    (tempAbsPath' </> "protocol-params.json")
     (rewriteParams testnetOptions)
 
   -- Generate keys
@@ -142,11 +138,11 @@ testnet testnetOptions H.Conf {..} = do
     [ "byron"
     , "genesis"
     , "genesis"
-    , "--genesis-output-dir", tempAbsPath </> "genesis"
+    , "--genesis-output-dir", tempAbsPath' </> "genesis"
     , "--start-time", showUTCTimeSeconds startTime
-    , "--protocol-parameters-file", tempAbsPath </> "protocol-params.json"
+    , "--protocol-parameters-file", tempAbsPath' </> "protocol-params.json"
     , "--k", show @Int (securityParam testnetOptions)
-    , "--protocol-magic", show @Int testnetMagic
+    , "--protocol-magic", show @Int tNetMagic
     , "--n-poor-addresses", show @Int (nPoorAddresses testnetOptions)
     , "--n-delegate-addresses", show @Int (numBftNodes testnetOptions)
     , "--total-balance", show @Int (totalBalance testnetOptions)
@@ -156,10 +152,10 @@ testnet testnetOptions H.Conf {..} = do
     , "--secret-seed", "2718281828"
     ]
 
-  H.writeFile (tempAbsPath </> "genesis/GENHASH") . S.lastLine =<< H.execCli
+  H.writeFile (tempAbsPath' </> "genesis/GENHASH") . S.lastLine =<< H.execCli
     [ "print-genesis-hash"
     , "--genesis-json"
-    , tempAbsPath </> "genesis/genesis.json"
+    , tempAbsPath' </> "genesis/genesis.json"
     ]
 
   let nodeIndexes = [0..numBftNodes testnetOptions - 1]
@@ -168,22 +164,29 @@ testnet testnetOptions H.Conf {..} = do
   -- Launch cluster of three nodes in P2P Mode
   forM_ nodeIndexes $ \i -> do
     si <- H.noteShow $ show @Int i
-    nodeStdoutFile <- H.noteTempFile tempAbsPath $ "cardano-node-" <> si <> ".stdout.log"
-    nodeStderrFile <- H.noteTempFile tempAbsPath $ "cardano-node-" <> si <> ".stderr.log"
-    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> "node-" <> si)
+    nodeStdoutFile <- H.noteTempFile tempAbsPath' $ "cardano-node-" <> si <> ".stdout.log"
+    nodeStderrFile <- H.noteTempFile tempAbsPath' $ "cardano-node-" <> si <> ".stderr.log"
+    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath' (sockDir </> "node-" <> si)
     portString <- H.note $ show @Int (allPorts L.!! i)
-    topologyFile <- H.noteShow $ tempAbsPath </> "topology-node-" <> si <> ".json"
-    configFile <- H.noteShow $ tempAbsPath </> "config-" <> si <> ".yaml"
-    signingKeyFile <- H.noteShow $ tempAbsPath </> "genesis/delegate-keys.00" <> si <> ".key"
-    delegationCertificateFile <- H.noteShow $ tempAbsPath </> "genesis/delegation-cert.00" <> si <> ".json"
+    topologyFile <- H.noteShow $ tempAbsPath' </> "topology-node-" <> si <> ".json"
+    configFile <- H.noteShow $ tempAbsPath' </> "config-" <> si <> ".yaml"
+    signingKeyFile <- H.noteShow $ tempAbsPath' </> "genesis/delegate-keys.00" <> si <> ".key"
+    delegationCertificateFile <- H.noteShow $ tempAbsPath' </> "genesis/delegation-cert.00" <> si <> ".json"
 
-    dbDir <- H.createDirectoryIfMissing $ tempAbsPath </> "db/node-" <> si
+    dbDir <- H.createDirectoryIfMissing $ tempAbsPath' </> "db/node-" <> si
 
-    H.lbsWriteFile (tempAbsPath </> "topology-node-" <> si <> ".json") $
+    H.lbsWriteFile (tempAbsPath' </> "topology-node-" <> si <> ".json") $
       mkTopologyConfig i (numBftNodes testnetOptions) allPorts (enableP2P testnetOptions)
 
-    H.writeFile (tempAbsPath </> "config-" <> si <> ".yaml") . L.unlines . fmap (rewriteConfiguration (enableP2P testnetOptions) i) . L.lines =<<
-      H.readFile (baseConfig </> "config-0.yaml")
+    byronGenesisHash <- getByronGenesisHash $ tempAbsPath' </> "genesis/genesis.json"
+
+    let finalYamlConfig :: LBS.ByteString
+        finalYamlConfig = J.encode . J.Object
+                            $ mconcat [ byronGenesisHash
+                                      , defaultYamlHardforkViaConfig $ AnyCardanoEra ByronEra
+                                      ]
+
+    H.evalIO $ LBS.writeFile (tempAbsPath' </> "config-" <> si <> ".yaml")  finalYamlConfig
 
     hNodeStdout <- H.openFile nodeStdoutFile IO.WriteMode
     hNodeStderr <- H.openFile nodeStderrFile IO.WriteMode
@@ -206,7 +209,7 @@ testnet testnetOptions H.Conf {..} = do
           { IO.std_in = IO.CreatePipe
           , IO.std_out = IO.UseHandle hNodeStdout
           , IO.std_err = IO.UseHandle hNodeStderr
-          , IO.cwd = Just tempBaseAbsPath
+          , IO.cwd = Just tempBaseAbsPath'
           }
         )
       )
@@ -219,16 +222,16 @@ testnet testnetOptions H.Conf {..} = do
 
   forM_ nodeIndexes $ \i -> do
     si <- H.noteShow $ show @Int i
-    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> "node-" <> si)
+    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath' (sockDir </> "node-" <> si)
     _spocketSystemNameFile <- H.noteShow $ IO.sprocketSystemName sprocket
     -- TODO: Better error message need to indicate a sprocket was not created
     H.byDeadlineM 10 deadline "Failed to connect to node socket" $ H.assertM $ H.doesSprocketExist sprocket
 
   forM_ nodeIndexes $ \i -> do
     si <- H.noteShow $ show @Int i
-    nodeStdoutFile <- H.noteTempFile tempAbsPath $ "cardano-node-" <> si <> ".stdout.log"
+    nodeStdoutFile <- H.noteTempFile tempAbsPath' $ "cardano-node-" <> si <> ".stdout.log"
     H.assertByDeadlineIOCustom "stdout does not contain \"until genesis start time\"" deadline $ IO.fileContains "until genesis start time at" nodeStdoutFile
 
-  H.copyFile (tempAbsPath </> "config-1.yaml") (tempAbsPath </> "configuration.yaml")
+  H.copyFile (tempAbsPath' </> "config-1.yaml") (tempAbsPath' </> "configuration.yaml")
 
   return allNodes

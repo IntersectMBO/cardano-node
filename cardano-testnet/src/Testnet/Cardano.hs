@@ -26,6 +26,7 @@ import           Cardano.Api hiding (cardanoEra)
 
 import           Control.Monad
 import qualified Data.Aeson as J
+import           Data.Bifunctor
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Lazy as HM
 import           Data.List ((\\))
@@ -219,7 +220,7 @@ cardanoTestnet testnetOptions H.Conf {..} = do
     H.writeFile (tempAbsPath </> node </> "port") (show port)
 
   H.lbsWriteFile (tempAbsPath </> "byron.genesis.spec.json")
-    . J.encode $ defaultByronGenesisJsonValue
+    . J.encode $ defaultByronProtocolParamsJsonValue
 
   -- stuff
   execCli_
@@ -317,15 +318,13 @@ cardanoTestnet testnetOptions H.Conf {..} = do
   -- Set up our template
   shelleyDir <- H.createDirectoryIfMissing $ tempAbsPath </> "shelley"
 
-  -- TODO: This is fragile, we should be passing in all necessary
-  -- configuration files.
-  let sourceAlonzoGenesisSpecFile = base </> "cardano-testnet/files/data/alonzo/genesis.alonzo.spec.json"
   alonzoSpecFile <- H.noteTempFile tempAbsPath "shelley/genesis.alonzo.spec.json"
-  H.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
+  gen <- H.evalEither $ first displayError defaultAlonzoGenesis
+  H.evalIO $ LBS.writeFile alonzoSpecFile $ J.encode gen
 
-  let sourceConwayGenesisSpecFile = base </> "cardano-testnet/files/data/conway/genesis.conway.spec.json"
+
   conwaySpecFile <- H.noteTempFile tempAbsPath "shelley/genesis.conway.spec.json"
-  H.copyFile sourceConwayGenesisSpecFile conwaySpecFile
+  H.evalIO $ LBS.writeFile conwaySpecFile $ J.encode defaultConwayGenesis
 
   execCli_
     [ "genesis", "create"

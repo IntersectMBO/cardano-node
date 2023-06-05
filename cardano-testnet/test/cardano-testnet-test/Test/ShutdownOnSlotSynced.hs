@@ -17,7 +17,6 @@ import           Data.Either (isRight)
 import           Data.Maybe
 import           GHC.IO.Exception (ExitCode (ExitSuccess))
 import           GHC.Stack (callStack)
-import qualified System.Directory as IO
 
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
@@ -31,10 +30,9 @@ import           Testnet.Util.Runtime (TestnetRuntime (..))
 hprop_shutdownOnSlotSynced :: Property
 hprop_shutdownOnSlotSynced = H.integrationRetryWorkspace 2 "shutdown-on-slot-synced" $ \tempAbsBasePath' -> do
   -- Start a local test net
-  baseDir <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
-  conf <- H.noteShowM $
-    -- TODO: Move yaml filepath specification into individual node options
-    mkConf (ProjectBase baseDir) Nothing tempAbsBasePath' Nothing
+  -- TODO: Move yaml filepath specification into individual node options
+  conf <- H.noteShowM $  mkConf Nothing tempAbsBasePath' Nothing
+
   let maxSlot = 1500
       slotLen = 0.01
   let fastTestnetOptions = CardanoOnlyTestnetOptions $ cardanoDefaultTestnetOptions

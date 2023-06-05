@@ -18,6 +18,7 @@ import           Prelude
 
 import           Control.Monad
 import           Data.Aeson (Value (..), encode, object, toJSON, (.=))
+import           Data.Bifunctor
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
@@ -54,7 +55,7 @@ startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
 babbageTestnet :: BabbageTestnetOptions -> H.Conf -> H.Integration TestnetRuntime
 babbageTestnet testnetOptions H.Conf {..} = do
   H.lbsWriteFile (tempAbsPath </> "byron.genesis.spec.json")
-    . encode $ defaultByronGenesisJsonValue
+    . encode $ defaultByronProtocolParamsJsonValue
 
   void $ H.note OS.os
   currentTime <- H.noteShowIO DTC.getCurrentTime
@@ -72,13 +73,12 @@ babbageTestnet testnetOptions H.Conf {..} = do
   -- are deprecated, we must use the "create-staked" cli command to create
   -- SPOs in the ShelleyGenesis
 
-  alonzoBabbageTestGenesisJsonSourceFile <- H.noteShow $ base </> "scripts/babbage/alonzo-babbage-test-genesis.json"
   alonzoBabbageTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath </> "genesis.alonzo.spec.json"
-  H.copyFile alonzoBabbageTestGenesisJsonSourceFile alonzoBabbageTestGenesisJsonTargetFile
+  gen <- H.evalEither $ first displayError defaultAlonzoGenesis
+  H.evalIO $ LBS.writeFile alonzoBabbageTestGenesisJsonTargetFile $ encode gen
 
-  conwayBabbageTestGenesisJsonSourceFile <- H.noteShow $ base </> "scripts/babbage/conway-babbage-test-genesis.json"
   conwayBabbageTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath </> "genesis.conway.spec.json"
-  H.copyFile conwayBabbageTestGenesisJsonSourceFile conwayBabbageTestGenesisJsonTargetFile
+  H.evalIO $ LBS.writeFile conwayBabbageTestGenesisJsonTargetFile $ encode defaultConwayGenesis
 
   configurationFile <- H.noteShow $ tempAbsPath </> "configuration.yaml"
 
