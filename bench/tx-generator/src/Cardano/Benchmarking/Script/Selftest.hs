@@ -1,4 +1,11 @@
 {-# LANGUAGE LambdaCase #-}
+{-|
+Module      : Cardano.Benchmarking.Script.Selftest
+Description : Run self-tests using statically-defined data.
+
+The statically-defined data is the action list to execute, 'testScript'.
+It actually does use a protocol file taken in from IO.
+-}
 module Cardano.Benchmarking.Script.Selftest
 where
 
@@ -24,6 +31,13 @@ import           Cardano.TxGenerator.Types
 
 import           Paths_tx_generator
 
+-- | 'runSelftest' is the interface to actually run the self-test.
+-- @iom@ is the IO manager from "Ouroboros.Network.IOManager".
+-- @outFile@ is the file to output to;
+-- 'Cardano.Benchmarking.Script.Core.evalGenerator' returns a
+-- transaction 'Streaming.Stream' that
+-- 'Cardano.Benchmarking.Script.Core.submitInEra'
+-- does 'show' and 'writeFile' on.
 runSelftest :: IOManager -> Maybe FilePath -> IO (Either Script.Error ())
 runSelftest iom outFile = do
   protocolFile <-  getDataFileName "data/protocol-parameters.json"
@@ -36,9 +50,14 @@ runSelftest iom outFile = do
     (Right a  , _ ,  ()) -> return $ Right a
     (Left err , _  , ()) -> return $ Left err
 
+-- | 'printJSON' prints out the list of actions using Aeson.
+-- It has no callers within @cardano-node@.
 printJSON :: IO ()
 printJSON = BSL.putStrLn $ prettyPrint $ testScript "/dev/zero" DiscardTX
 
+-- | 'testScript' is a static list of 'Action' parametrised with a
+-- file name and a mode indicating how to submit a transaction in
+-- 'SubmitMode' passed along as a parameter within a 'Submit' action.
 testScript :: FilePath -> SubmitMode -> [Action]
 testScript protocolFile submitMode =
   [ SetProtocolParameters (UseLocalProtocolFile protocolFile)
