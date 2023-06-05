@@ -34,6 +34,7 @@ packages:
     trace-resources
     trace-forward
 
+
 package cardano-api
   ghc-options: -Werror
 
@@ -106,3 +107,10 @@ package snap-server
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-network
+  tag: 049c116d7ab6db3b8aeb7596935c6b57e1c38e96
+  subdir: ouroboros-network
+  --sha256: sha256-V8NZ81cLNqhqVwlykNC1WA7D7AcNyZV/8eG/J+VlCvI=
