@@ -153,6 +153,7 @@ test-suite cardano-testnet-golden
   build-tool-depends:   cardano-node:cardano-node
                       , cardano-cli:cardano-cli
                       , cardano-submit-api:cardano-submit-api
+                      , cardano-testnet:cardano-testnet
 
 test-suite cardano-testnet-test
   import:               project-config
@@ -197,3 +198,4 @@ test-suite cardano-testnet-test
   build-tool-depends:   cardano-node:cardano-node
                       , cardano-cli:cardano-cli
                       , cardano-submit-api:cardano-submit-api
+                      , cardano-testnet:cardano-testnet
