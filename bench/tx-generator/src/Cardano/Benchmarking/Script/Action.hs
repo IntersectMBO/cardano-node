@@ -3,8 +3,8 @@
 Module      : Cardano.Benchmarking.Script.Action
 Description : Convert an 'Action' to a monadic 'ActionM'.
 
-This is just exporting 'action', and 'liftToAction' is tough
-to use because of the risk of circular imports.
+This is just exporting 'action' in order to avoid circular
+module dependencies.
 -}
 
 module Cardano.Benchmarking.Script.Action
@@ -51,18 +51,9 @@ action a = case a of
   LogMsg txt -> traceDebug $ Text.unpack txt
   Reserved options -> reserved options
 
-<<<<<<< HEAD
-=======
--- | 'liftToAction' first lifts from IO, then converts an 'Either'
--- to an 'Control.Monad.Trans.Except.ExceptT' and then transforms
--- the error type to 'Cardano.Benchmarking.Script.Env.Error'.
-liftToAction :: IO (Either TxGenError a) -> ActionM a
-liftToAction = firstExceptT TxGenError . newExceptT . liftIO
-
 -- | 'startProtocol' sets up the protocol for the transaction
 -- generator from the first argument, @configFile@ and optionally
 -- traces to the second, @tracerSocket@.
->>>>>>> c652bd410 (Document Selftest and Action modules.)
 startProtocol :: FilePath -> Maybe FilePath -> ActionM ()
 startProtocol configFile tracerSocket = do
   nodeConfig <- liftToAction $ mkNodeConfig configFile
