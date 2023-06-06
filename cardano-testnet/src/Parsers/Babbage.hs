@@ -9,11 +9,12 @@ import           Prelude
 import           Options.Applicative
 import qualified Options.Applicative as OA
 
-import           Cardano.CLI.Common.Parsers
+import           Cardano.CLI.Common.Parsers hiding (pNetworkId)
 
 import           Testnet
 import           Testnet.Options
 import           Testnet.Run (runTestnet)
+import           Testnet.Util.Cli
 import           Testnet.Util.Runtime (readNodeLoggingFormat)
 
 data BabbageOptions = BabbageOptions
@@ -44,6 +45,7 @@ optsTestnet = BabbageTestnetOptions
       <>  OA.showDefault
       <>  OA.value (babbageSecurityParam defaultTestnetOptions)
       )
+  <*> pNetworkId
   <*> OA.option auto
       (   OA.long "total-balance"
       <>  OA.help "Total balance"
