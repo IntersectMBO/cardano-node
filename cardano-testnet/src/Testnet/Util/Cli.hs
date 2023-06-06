@@ -4,6 +4,7 @@ module Testnet.Util.Cli
   , cliNodeKeyGenVrf
   , cliNodeKeyGenKes
   , cliStakeAddressKeyGen
+  , pNetworkId
   , KeyGen
   , KeyNames (..)
 
@@ -25,12 +26,14 @@ module Testnet.Util.Cli
   , cliByronSigningKeyAddress
   ) where
 
+import           Options.Applicative hiding (command)
+import qualified Options.Applicative as Opt
 import           System.FilePath.Posix
 
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H (writeFile)
 
-import           Cardano.Api (ByronAddr, ByronKeyLegacy, PaymentKey, StakeKey)
+import           Cardano.Api (ByronAddr, ByronKeyLegacy, PaymentKey, StakeKey, bounded)
 import           Cardano.Api.Shelley (KesKey, StakePoolKey, VrfKey)
 
 import           Testnet.Util.Process
@@ -136,3 +139,12 @@ cliByronSigningKeyAddress tmp testnetMagic (File key) destPath = do
       ]
   H.writeFile addrPath addr
   return $ File addrPath
+
+pNetworkId :: Parser Int
+pNetworkId =
+  Opt.option (bounded "TESTNET_MAGIC")
+     $ mconcat [ Opt.long "testnet-magic"
+               , Opt.metavar "INT"
+               , Opt.help "Specify a testnet magic id."
+               ]
+

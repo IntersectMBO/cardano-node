@@ -57,7 +57,6 @@ import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Network as H
 
-import           Cardano.Testnet (testnet)
 import           Testnet.Commands.Genesis
 import           Testnet.Commands.Governance
 import qualified Testnet.Conf as H
@@ -97,6 +96,7 @@ defaultTestnetOptions = CardanoTestnetOptions
   , cardanoEra = AnyCardanoEra AlonzoEra
   , cardanoEpochLength = 1500
   , cardanoSlotLength = 0.2
+  , cardanoTestnetMagic = 42
   , cardanoActiveSlotsCoeff = 0.2
   , cardanoMaxSupply = 10020000000
   , cardanoEnableP2P = False

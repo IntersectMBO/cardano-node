@@ -59,6 +59,7 @@ data TestnetOptions = TestnetOptions
   , slotDuration :: Int
   , securityParam :: Int
   , nPoorAddresses :: Int
+  , testnetMagic :: Int
   , totalBalance :: Int
   , enableP2P :: Bool
   } deriving (Eq, Show)
@@ -68,6 +69,7 @@ defaultTestnetOptions = TestnetOptions
   { numBftNodes = 3
   , slotDuration = 2000
   , securityParam = 10
+  , testnetMagic = 42
   , nPoorAddresses = 128
   , totalBalance = 8000000000000000
   , enableP2P = False
@@ -118,7 +120,7 @@ mkTopologyConfig i numBftNodes' allPorts True = J.encode topologyP2P
 testnet :: TestnetOptions -> H.Conf -> H.Integration [String]
 testnet testnetOptions conf = do
   void $ H.note OS.os
-  let tNetMagic = H.testnetMagic conf
+  let tNetMagic = testnetMagic testnetOptions
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime 15 currentTime -- 15 seconds into the future
   allPorts <- H.noteShowIO $ IO.allocateRandomPorts (numBftNodes testnetOptions)
