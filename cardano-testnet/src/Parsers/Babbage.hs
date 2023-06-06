@@ -71,8 +71,8 @@ optsBabbage = BabbageOptions
   <*> optsTestnet
 
 runBabbageOptions :: BabbageOptions -> IO ()
-runBabbageOptions options = runTestnet (maybeTestnetMagic options) $
-  Testnet.testnet (BabbageOnlyTestnetOptions $ testnetOptions options)
+runBabbageOptions options =
+  runTestnet $ Testnet.testnet (BabbageOnlyTestnetOptions $ testnetOptions options)
 
 cmdBabbage :: Mod CommandFields BabbageOptions
 cmdBabbage = command' "babbage" "Start a babbage testnet " optsBabbage

@@ -96,8 +96,8 @@ optsCardano = CardanoOptions
   <*> optsTestnet
 
 runCardanoOptions :: CardanoOptions -> IO ()
-runCardanoOptions options = runTestnet (maybeTestnetMagic options) $
-  Testnet.testnet (CardanoOnlyTestnetOptions $ testnetOptions options)
+runCardanoOptions options =
+  runTestnet $ Testnet.testnet (CardanoOnlyTestnetOptions $ testnetOptions options)
 
 cmdCardano :: Mod CommandFields CardanoOptions
 cmdCardano = command' "cardano" "Start a testnet in any era" optsCardano

@@ -87,8 +87,8 @@ optsShelley = ShelleyOptions
   <*> optsTestnet
 
 runShelleyOptions :: ShelleyOptions -> IO ()
-runShelleyOptions options = runTestnet (maybeTestnetMagic options) $
-  Testnet.testnet (ShelleyOnlyTestnetOptions $ testnetOptions options)
+runShelleyOptions options =
+  runTestnet $ Testnet.testnet (ShelleyOnlyTestnetOptions $ testnetOptions options)
 
 cmdShelley :: Mod CommandFields ShelleyOptions
 cmdShelley = command' "shelley" "Start a Shelley testnet" optsShelley

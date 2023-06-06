@@ -57,7 +57,6 @@ library
                       , ouroboros-network ^>= 0.8.1.0
                       , ouroboros-network-api
                       , process
-                      , random
                       , resourcet
                       , safe-exceptions
                       , scientific

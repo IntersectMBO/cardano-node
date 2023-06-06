@@ -74,7 +74,7 @@ optsTestnet = TestnetOptions
       )
 
 runByronOptions :: ByronOptions -> IO ()
-runByronOptions opts = runTestnet (maybeTestnetMagic opts) (Testnet.Byron.testnet (testnetOptions opts))
+runByronOptions opts = runTestnet (Testnet.Byron.testnet (testnetOptions opts))
 
 cmdByron :: Mod CommandFields ByronOptions
 cmdByron = command' "byron" "Start a Byron testnet" optsByron

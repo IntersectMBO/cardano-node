@@ -418,7 +418,7 @@ shelleyTestnet testnetOptions H.Conf {H.tempAbsPath, H.testnetMagic} = do
 
 hprop_testnet :: H.Property
 hprop_testnet = H.integrationRetryWorkspace 2 "shelley-testnet" $ \tempAbsPath' -> do
-  conf <- H.mkConf Nothing tempAbsPath' Nothing
+  conf <- H.mkConf Nothing tempAbsPath'
 
   void . H.evalM . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000
 

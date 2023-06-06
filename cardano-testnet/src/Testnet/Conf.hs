@@ -10,8 +10,6 @@ module Testnet.Conf
 import           Testnet.Util.Runtime
 
 import qualified Hedgehog.Extras.Test.Base as H
-import qualified System.Random as IO
-
 newtype ProjectBase = ProjectBase
   { projectBase :: FilePath
   } deriving (Eq, Show)
@@ -25,9 +23,8 @@ data Conf = Conf
   , configurationTemplate :: Maybe FilePath
   } deriving (Eq, Show)
 
-mkConf :: Maybe YamlFilePath -> FilePath -> Maybe Int -> H.Integration Conf
-mkConf mConfigTemplate tempAbsPath' maybeMagic = do
-  _testnetMagic' <- H.noteShowIO $ maybe (IO.randomRIO (1000, 2000)) return maybeMagic
+mkConf :: Maybe YamlFilePath -> FilePath -> H.Integration Conf
+mkConf mConfigTemplate tempAbsPath' = do
   let configTemplate = unYamlFilePath <$> mConfigTemplate
 
   return $ Conf
