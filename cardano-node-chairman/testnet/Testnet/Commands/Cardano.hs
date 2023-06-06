@@ -6,12 +6,12 @@ module Testnet.Commands.Cardano
   , runCardanoOptions
   ) where
 
-import           GHC.Enum
 import           Data.Eq
 import           Data.Function
 import           Data.Int
 import           Data.Maybe
 import           Data.Semigroup
+import           GHC.Enum
 import           Options.Applicative
 import           System.IO (IO)
 import           Testnet.Cardano
@@ -83,8 +83,8 @@ optsCardano = CardanoOptions
   <*> optsTestnet
 
 runCardanoOptions :: CardanoOptions -> IO ()
-runCardanoOptions options = runTestnet (maybeTestnetMagic options) $
-  Testnet.Cardano.testnet (testnetOptions options)
+runCardanoOptions options =
+  runTestnet $ Testnet.Cardano.testnet (testnetOptions options)
 
 cmdCardano :: Mod CommandFields (IO ())
 cmdCardano = command "cardano"  $ flip info idm $ runCardanoOptions <$> optsCardano
