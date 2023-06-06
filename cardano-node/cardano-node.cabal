@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-node
-version:                8.1.0
+version:                8.1.1
 synopsis:               The cardano full node
 description:            The cardano full node.
 category:               Cardano,
@@ -179,7 +179,7 @@ library
                       , ouroboros-consensus-diffusion >= 0.5.1
                       , ouroboros-consensus-protocol >= 0.5
                       , ouroboros-network-api
-                      , ouroboros-network ^>= 0.8.1.0
+                      , ouroboros-network ^>= 0.8.1.1
                       , ouroboros-network-framework >= 0.6
                       , ouroboros-network-protocols
                       , prettyprinter
