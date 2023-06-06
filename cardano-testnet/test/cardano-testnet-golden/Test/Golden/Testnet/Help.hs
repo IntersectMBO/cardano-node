@@ -90,7 +90,6 @@ golden_HelpCmds =
       help <- filterAnsi <$> execCardanoTestnet
         [ "help"
         ]
-
       let lines = Text.lines $ Text.pack help
       let usages = List.filter (not . null) $ fmap extractCmd $ maybeToList . selectCmd =<< lines
 
