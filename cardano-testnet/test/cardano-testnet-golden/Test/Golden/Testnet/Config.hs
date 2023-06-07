@@ -16,7 +16,7 @@ import           System.FilePath ((</>))
 
 import           Cardano.Api
 
-import           Testnet.Options
+import           Testnet.Byron
 
 import           Hedgehog
 import           Hedgehog.Extras.Test.Base (propertyOnce)

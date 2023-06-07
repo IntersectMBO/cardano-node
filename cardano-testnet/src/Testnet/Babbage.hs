@@ -7,10 +7,12 @@
 {-# OPTIONS_GHC -Wno-unused-local-binds -Wno-unused-matches #-}
 
 module Testnet.Babbage
-  ( TestnetRuntime (..)
+  ( BabbageTestnetOptions(..)
+  , TestnetRuntime (..)
   , PaymentKeyPair(..)
 
   , babbageTestnet
+  , babbageDefaultTestnetOptions
   ) where
 
 import           Prelude
@@ -27,13 +29,13 @@ import qualified System.Info as OS
 
 import           Cardano.Api
 
+import qualified Testnet.Byron as Byron
 import           Testnet.Commands.Genesis
 import qualified Testnet.Conf as H
-import           Testnet.Options (BabbageTestnetOptions (..), defaultYamlHardforkViaConfig)
 import qualified Testnet.Util.Assert as H
 import           Testnet.Util.Process (execCli_)
-import           Testnet.Util.Runtime (Delegator (..), PaymentKeyPair (..), PoolNode (PoolNode),
-                   PoolNodeKeys (..), StakingKeyPair (..), TestnetRuntime (..),
+import           Testnet.Util.Runtime (Delegator (..), NodeLoggingFormat (..), PaymentKeyPair (..),
+                   PoolNode (PoolNode), PoolNodeKeys (..), StakingKeyPair (..), TestnetRuntime (..),
                    TmpAbsolutePath (..), makeLogDir, startNode)
 import           Testnet.Utils
 
@@ -50,6 +52,26 @@ import qualified Hedgehog.Extras.Test.File as H
 startTimeOffsetSeconds :: DTC.NominalDiffTime
 startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
 
+data BabbageTestnetOptions = BabbageTestnetOptions
+  { babbageNumSpoNodes :: Int
+  , babbageSlotDuration :: Int
+  , babbageSecurityParam :: Int
+  , babbageTestnetMagic :: Int
+  , babbageTotalBalance :: Int
+  , babbageNodeLoggingFormat :: NodeLoggingFormat
+  } deriving (Eq, Show)
+
+babbageDefaultTestnetOptions :: BabbageTestnetOptions
+babbageDefaultTestnetOptions = BabbageTestnetOptions
+  { babbageNumSpoNodes = 3
+  , babbageSlotDuration = 200
+  , babbageSecurityParam = 10
+  , babbageTestnetMagic = 42
+  , babbageTotalBalance = 10020000000
+  , babbageNodeLoggingFormat = NodeLoggingFormatAsJson
+  }
+
+
 babbageTestnet :: BabbageTestnetOptions -> H.Conf -> H.Integration TestnetRuntime
 babbageTestnet testnetOptions H.Conf {H.configurationTemplate, H.tempAbsPath} = do
   let logDir = makeLogDir tempAbsPath
@@ -58,16 +80,16 @@ babbageTestnet testnetOptions H.Conf {H.configurationTemplate, H.tempAbsPath} = 
   H.createDirectoryIfMissing_ logDir
 
   H.lbsWriteFile (tempAbsPath' </> "byron.genesis.spec.json")
-    . encode $ defaultByronProtocolParamsJsonValue
+    . encode $ Byron.defaultByronProtocolParamsJsonValue
 
   void $ H.note OS.os
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
 
-  createByronGenesis
+  Byron.createByronGenesis
     testnetMagic
     startTime
-    testnetOptions
+    Byron.byronDefaultTestnetOptions
     (tempAbsPath' </> "byron.genesis.spec.json")
     (tempAbsPath' </> "byron-gen-command")
 
@@ -194,7 +216,7 @@ babbageTestnet testnetOptions H.Conf {H.configurationTemplate, H.tempAbsPath} = 
                                            , shelleyGenesisHash
                                            , alonzoGenesisHash
                                            , conwayGenesisHash
-                                           , defaultYamlHardforkViaConfig (AnyCardanoEra BabbageEra)]
+                                           , Byron.defaultYamlHardforkViaConfig (AnyCardanoEra BabbageEra)]
 
   H.evalIO $ LBS.writeFile (tempAbsPath' </> "configuration.yaml") finalYamlConfig
 

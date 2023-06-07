@@ -34,8 +34,8 @@ import qualified System.Process as IO
 import qualified Testnet.Util.Base as H
 
 import           Cardano.Testnet
+import           Testnet.Byron
 import           Testnet.Commands.Genesis
-import           Testnet.Options
 import           Testnet.Topology
 import           Testnet.Util.Process (execCli_, procNode)
 import qualified Testnet.Util.Runtime as TR
@@ -78,7 +78,7 @@ hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' ->
   createByronGenesis
     testnetMagic'
     startTime
-    babbageDefaultTestnetOptions
+    byronDefaultTestnetOptions
     (tempAbsPath' </> "byron.genesis.spec.json")
     (tempAbsPath' </> "byron")
 

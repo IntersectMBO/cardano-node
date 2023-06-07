@@ -11,12 +11,14 @@ module Testnet.Parsers
 import           Data.Foldable
 import           Options.Applicative
 import qualified Options.Applicative as Opt
-import           Parsers.Babbage
+import           Parsers.Babbage as Babbage
 import           Parsers.Byron
 import           Parsers.Cardano
 import           Parsers.Help
 import           Parsers.Shelley
 import           Parsers.Version
+import           Testnet.Options
+import           Testnet.Run (runTestnet)
 
 pref :: ParserPrefs
 pref = Opt.prefs $ showHelpOnEmpty <> showHelpOnError
@@ -55,3 +57,8 @@ runTestnetCmd = \case
   StartShelleyTestnet cmdOpts -> runShelleyOptions cmdOpts
   GetVersion cmdOpts -> runVersionOptions cmdOpts
   Help pPrefs pInfo cmdOpts -> runHelpOptions pPrefs pInfo cmdOpts
+
+runBabbageOptions :: BabbageOptions -> IO ()
+runBabbageOptions options =
+  runTestnet $ testnet (BabbageOnlyTestnetOptions $ Babbage.testnetOptions options)
+

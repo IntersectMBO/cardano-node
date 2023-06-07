@@ -1,7 +1,6 @@
 module Parsers.Babbage
   ( BabbageOptions(..)
   , cmdBabbage
-  , runBabbageOptions
   ) where
 
 import           Prelude
@@ -11,9 +10,7 @@ import qualified Options.Applicative as OA
 
 import           Cardano.CLI.Common.Parsers hiding (pNetworkId)
 
-import           Testnet
-import           Testnet.Options
-import           Testnet.Run (runTestnet)
+import           Testnet.Babbage
 import           Testnet.Util.Cli
 import           Testnet.Util.Runtime (readNodeLoggingFormat)
 
@@ -62,10 +59,6 @@ optsTestnet = BabbageTestnetOptions
 
 optsBabbage :: Parser BabbageOptions
 optsBabbage = BabbageOptions <$> optsTestnet
-
-runBabbageOptions :: BabbageOptions -> IO ()
-runBabbageOptions options =
-  runTestnet $ Testnet.testnet (BabbageOnlyTestnetOptions $ testnetOptions options)
 
 cmdBabbage :: Mod CommandFields BabbageOptions
 cmdBabbage = command' "babbage" "Start a babbage testnet " optsBabbage

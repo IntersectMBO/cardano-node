@@ -93,7 +93,6 @@ library
                         Parsers.Help
                         Parsers.Shelley
                         Parsers.Version
-                        Testnet
                         Testnet.Cardano
                         Testnet.Commands.Governance
                         Testnet.Run

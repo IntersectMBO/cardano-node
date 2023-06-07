@@ -9,8 +9,8 @@ module Testnet.Cardano
   , cardanoBftNodes
   , cardanoNumPoolNodes
   , extraBftNodeCliArgs
-  , cardanoDefaultTestnetOptions
   , TestnetNodeOptions(..)
+  , cardanoDefaultTestnetOptions
   , cardanoDefaultTestnetNodeOptions
 
   , TestnetRuntime (..)
@@ -57,10 +57,10 @@ import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Network as H
 
+import qualified Testnet.Byron as Byron
 import           Testnet.Commands.Genesis
 import           Testnet.Commands.Governance
 import qualified Testnet.Conf as H
-import           Testnet.Options
 import qualified Testnet.Util.Assert as H
 import qualified Testnet.Util.Process as H
 import           Testnet.Util.Process (execCli_)
@@ -70,11 +70,6 @@ import           Testnet.Utils
 {- HLINT ignore "Redundant flip" -}
 {- HLINT ignore "Redundant id" -}
 {- HLINT ignore "Use let" -}
-
-data ForkPoint
-  = AtVersion Int
-  | AtEpoch Int
-  deriving (Show, Eq, Read)
 
 data CardanoTestnetOptions = CardanoTestnetOptions
   { -- | List of node options. Each option will result in a single node being
@@ -102,6 +97,12 @@ cardanoDefaultTestnetOptions = CardanoTestnetOptions
   , cardanoEnableP2P = False
   , cardanoNodeLoggingFormat = NodeLoggingFormatAsJson
   }
+
+
+data ForkPoint
+  = AtVersion Int
+  | AtEpoch Int
+  deriving (Show, Eq, Read)
 
 -- | Specify a BFT node (Pre-Babbage era only) or an SPO (Shelley era onwards only)
 data TestnetNodeOptions
@@ -221,7 +222,7 @@ cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
     H.writeFile (tempAbsPath' </> node </> "port") (show port)
 
   H.lbsWriteFile (tempAbsPath' </> "byron.genesis.spec.json")
-    . J.encode $ defaultByronProtocolParamsJsonValue
+    . J.encode $ Byron.defaultByronProtocolParamsJsonValue
 
   -- stuff
   execCli_
@@ -656,7 +657,7 @@ cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
                                            , shelleyGenesisHash
                                            , alonzoGenesisHash
                                            , conwayGenesisHash
-                                           , defaultYamlHardforkViaConfig $ cardanoEra testnetOptions]
+                                           , Byron.defaultYamlHardforkViaConfig $ cardanoEra testnetOptions]
 
   H.evalIO $ LBS.writeFile (tempAbsPath' </> "configuration.yaml") finalYamlConfig
 

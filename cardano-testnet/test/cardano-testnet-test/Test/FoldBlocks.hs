@@ -21,6 +21,7 @@ import           Cardano.Api (File (..))
 import qualified Cardano.Api as C
 import           Cardano.Testnet as TN
 
+import           Testnet.Options
 import qualified Testnet.Util.Base as H
 import           Testnet.Util.Runtime
 

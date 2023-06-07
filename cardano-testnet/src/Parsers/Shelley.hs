@@ -1,7 +1,6 @@
 module Parsers.Shelley
   ( ShelleyOptions(..)
   , cmdShelley
-  , runShelleyOptions
   ) where
 
 import           Prelude
@@ -11,8 +10,6 @@ import qualified Options.Applicative as OA
 
 import           Cardano.CLI.Common.Parsers hiding (pNetworkId)
 
-import           Testnet
-import           Testnet.Run (runTestnet)
 import           Testnet.Shelley
 import           Testnet.Util.Cli
 import           Testnet.Utils
@@ -79,9 +76,6 @@ optsTestnet = ShelleyTestnetOptions
 optsShelley :: Parser ShelleyOptions
 optsShelley = ShelleyOptions <$> optsTestnet
 
-runShelleyOptions :: ShelleyOptions -> IO ()
-runShelleyOptions options =
-  runTestnet $ Testnet.testnet (ShelleyOnlyTestnetOptions $ testnetOptions options)
 
 cmdShelley :: Mod CommandFields ShelleyOptions
 cmdShelley = command' "shelley" "Start a Shelley testnet" optsShelley

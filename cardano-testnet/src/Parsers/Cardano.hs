@@ -1,7 +1,6 @@
 module Parsers.Cardano
   ( CardanoOptions(..)
   , cmdCardano
-  , runCardanoOptions
   ) where
 
 import           Prelude
@@ -12,9 +11,7 @@ import qualified Options.Applicative as OA
 
 import           Cardano.CLI.Common.Parsers hiding (pNetworkId)
 
-import           Testnet
 import           Testnet.Cardano
-import           Testnet.Run (runTestnet)
 import           Testnet.Util.Cli
 import           Testnet.Util.Runtime (readNodeLoggingFormat)
 import           Testnet.Utils
@@ -87,10 +84,6 @@ pNumBftAndSpoNodes =
 
 optsCardano :: Parser CardanoOptions
 optsCardano = CardanoOptions <$> optsTestnet
-
-runCardanoOptions :: CardanoOptions -> IO ()
-runCardanoOptions options =
-  runTestnet $ Testnet.testnet (CardanoOnlyTestnetOptions $ testnetOptions options)
 
 cmdCardano :: Mod CommandFields CardanoOptions
 cmdCardano = command' "cardano" "Start a testnet in any era" optsCardano

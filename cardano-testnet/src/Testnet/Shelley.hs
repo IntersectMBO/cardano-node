@@ -18,6 +18,8 @@ import           Control.Monad
 import           Control.Monad.IO.Class (MonadIO (liftIO))
 import           Control.Monad.Trans.Resource (MonadResource (liftResourceT), resourceForkIO)
 import           Data.Aeson (ToJSON (toJSON), Value)
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.KeyMap as KeyMapAeson
 import           Data.Bifunctor
 import           Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString.Lazy as LBS
@@ -52,8 +54,8 @@ import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Network as H
 import qualified System.Directory as IO
 import qualified System.Info as OS
-import           Testnet.Options (defaultShelleyOnlyYamlConfig)
 
+import qualified Testnet.Byron as Byron
 import           Testnet.Commands.Genesis
 import qualified Testnet.Conf as H
 import qualified Testnet.Util.Base as H
@@ -432,3 +434,14 @@ hprop_testnet = H.integrationRetryWorkspace 2 "shelley-testnet" $ \tempAbsPath' 
 hprop_testnet_pause :: H.Property
 hprop_testnet_pause = H.integration $ do
   void . forever . H.evalIO $ IO.threadDelay 10000000
+
+
+defaultShelleyOnlyYamlConfig :: KeyMapAeson.KeyMap Aeson.Value
+defaultShelleyOnlyYamlConfig =
+   let shelleyOnly = mconcat $ map (uncurry KeyMapAeson.singleton)
+          [ ("LastKnownBlockVersion-Major", Aeson.Number 2)
+          , ("LastKnownBlockVersion-Minor", Aeson.Number 0)
+          , ("LastKnownBlockVersion-Alt", Aeson.Number 0)
+          , ("Protocol", "TPraos")
+          ]
+   in shelleyOnly <> mconcat Byron.defaultYamlConfig

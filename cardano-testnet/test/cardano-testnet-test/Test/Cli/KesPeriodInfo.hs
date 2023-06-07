@@ -33,6 +33,7 @@ import qualified Testnet.Util.Process as H
 
 import           Cardano.Testnet
 import           Test.Misc
+import           Testnet.Options
 import           Testnet.Util.Process
 import           Testnet.Util.Runtime
 

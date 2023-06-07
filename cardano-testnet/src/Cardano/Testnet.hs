@@ -7,7 +7,7 @@ module Cardano.Testnet (
   testnet,
 
   -- ** Testnet options
-  TestnetOptions(..),
+  Byron.TestnetOptions(..),
   CardanoTestnetOptions(..),
   BabbageTestnetOptions(..),
   ShelleyTestnetOptions(..),
@@ -40,7 +40,8 @@ module Cardano.Testnet (
 
   ) where
 
-import           Testnet
+import           Testnet.Babbage
+import qualified Testnet.Byron as Byron
 import           Testnet.Cardano
 import           Testnet.Conf
 import           Testnet.Options

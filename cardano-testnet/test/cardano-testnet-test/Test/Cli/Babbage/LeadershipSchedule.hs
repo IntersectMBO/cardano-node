@@ -36,6 +36,7 @@ import qualified System.Info as SYS
 import qualified Testnet.Util.Base as H
 
 import           Cardano.Testnet
+import           Testnet.Options
 import           Testnet.Util.Assert
 import qualified Testnet.Util.Process as H
 import           Testnet.Util.Process
