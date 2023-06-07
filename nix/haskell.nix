@@ -213,6 +213,24 @@ let
                   export TMPDIR=$(mktemp -d)
                   export TMP=$TMPDIR
                 '';
+              packages.cardano-testnet.components.tests.cardano-testnet-golden.preCheck =
+                let
+                  # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
+                  filteredProjectBase = incl ../. [
+                    "cardano-testnet/test/cardano-testnet-test/files/golden/byron_node_default_config.json"
+                    "cardano-testnet/test/cardano-testnet-test/files/golden/shelley_node_default_config.json"
+                    "cardano-testnet/test/cardano-testnet-test/files/golden/allegra_node_default_config.json"
+                    "cardano-testnet/test/cardano-testnet-test/files/golden/mary_node_default_config.json"
+                    "cardano-testnet/test/cardano-testnet-test/files/golden/alonzo_node_default_config.json"
+                    "cardano-testnet/test/cardano-testnet-test/files/golden/babbage_node_default_config.json"
+                    "cardano-testnet/test/cardano-testnet-test/files/golden/conway_node_default_config.json"
+                  ];
+                in
+                ''
+                  ${exportCliPath}
+                  export CARDANO_TESTNET=${config.hsPkgs.cardano-testnet.components.exes.cardano-testnet}/bin/cardano-testnet${pkgs.stdenv.hostPlatform.extensions.executable}
+                  export CARDANO_NODE_SRC=${filteredProjectBase}
+                '';
               # cardano-tracer-test-ext, will default to /tmp/testTracerExt, which means
               # if this test is run in parallel, things will just hang; or break.
               packages.cardano-tracer.components.tests.cardano-tracer-test-ext.preCheck = ''
