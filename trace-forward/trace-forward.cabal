@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   trace-forward
-version:                2.0.0
+version:                2.0.1
 synopsis:               The forwarding protocols library for cardano node.
 description:            The library providing typed protocols for forwarding different
                         information from the cardano node to an external application.
