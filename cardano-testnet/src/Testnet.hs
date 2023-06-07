@@ -1,8 +1,5 @@
 module Testnet
   ( TestnetOptions(..)
-  , babbageDefaultTestnetOptions
-  , cardanoDefaultTestnetOptions
-  , shelleyDefaultTestnetOptions
   , Testnet.testnet
   ) where
 
@@ -16,10 +13,8 @@ import           Hedgehog.Extras.Test.Base (Integration, noteShow_)
 import           Testnet.Babbage as Babbage
 import           Testnet.Cardano as Cardano
 import           Testnet.Conf
-import qualified Testnet.Options as Options
 import           Testnet.Options
-import           Testnet.Shelley as Shelley (ShelleyTestnetOptions, defaultTestnetOptions,
-                   shelleyTestnet)
+import           Testnet.Shelley as Shelley (ShelleyTestnetOptions, shelleyTestnet)
 
 data TestnetOptions
   = ShelleyOnlyTestnetOptions ShelleyTestnetOptions
@@ -49,11 +44,3 @@ testnet options conf = case options of
     testnetMinimumConfigurationRequirements o
     cardanoTestnet o conf
 
-babbageDefaultTestnetOptions :: BabbageTestnetOptions
-babbageDefaultTestnetOptions = Options.defaultTestnetOptions
-
-cardanoDefaultTestnetOptions :: CardanoTestnetOptions
-cardanoDefaultTestnetOptions = Cardano.defaultTestnetOptions
-
-shelleyDefaultTestnetOptions :: ShelleyTestnetOptions
-shelleyDefaultTestnetOptions = Shelley.defaultTestnetOptions

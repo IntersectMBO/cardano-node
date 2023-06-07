@@ -32,14 +32,14 @@ optsTestnet = CardanoTestnetOptions
       <>  OA.help "Epoch length"
       <>  OA.metavar "MILLISECONDS"
       <>  OA.showDefault
-      <>  OA.value (cardanoEpochLength defaultTestnetOptions)
+      <>  OA.value (cardanoEpochLength cardanoDefaultTestnetOptions)
       )
   <*> OA.option auto
       (   OA.long "slot-length"
       <>  OA.help "Slot length"
       <>  OA.metavar "SECONDS"
       <>  OA.showDefault
-      <>  OA.value (cardanoSlotLength defaultTestnetOptions)
+      <>  OA.value (cardanoSlotLength cardanoDefaultTestnetOptions)
       )
   <*> pNetworkId
   <*> OA.option auto
@@ -47,7 +47,7 @@ optsTestnet = CardanoTestnetOptions
       <>  OA.help "Active slots co-efficient"
       <>  OA.metavar "DOUBLE"
       <>  OA.showDefault
-      <>  OA.value (cardanoActiveSlotsCoeff defaultTestnetOptions)
+      <>  OA.value (cardanoActiveSlotsCoeff cardanoDefaultTestnetOptions)
       )
   <*> pMaxLovelaceSupply
   <*> OA.option auto
@@ -55,14 +55,14 @@ optsTestnet = CardanoTestnetOptions
       <>  OA.help "Enable P2P"
       <>  OA.metavar "BOOL"
       <>  OA.showDefault
-      <>  OA.value (cardanoEnableP2P defaultTestnetOptions)
+      <>  OA.value (cardanoEnableP2P cardanoDefaultTestnetOptions)
       )
   <*> OA.option (OA.eitherReader readNodeLoggingFormat)
       (   OA.long "nodeLoggingFormat"
       <>  OA.help "Node logging format (json|text)"
       <>  OA.metavar "LOGGING_FORMAT"
       <>  OA.showDefault
-      <>  OA.value (cardanoNodeLoggingFormat defaultTestnetOptions)
+      <>  OA.value (cardanoNodeLoggingFormat cardanoDefaultTestnetOptions)
       )
 
 pNumBftAndSpoNodes :: Parser [TestnetNodeOptions]
@@ -74,7 +74,7 @@ pNumBftAndSpoNodes =
           <>  OA.help "Number of BFT nodes"
           <>  OA.metavar "COUNT"
           <>  OA.showDefault
-          <>  OA.value (cardanoNodes defaultTestnetOptions)
+          <>  OA.value (cardanoNodes cardanoDefaultTestnetOptions)
           )
     <*> OA.option
           ((`L.replicate` SpoTestnetNodeOptions) <$> auto)
@@ -82,7 +82,7 @@ pNumBftAndSpoNodes =
           <>  OA.help "Number of pool nodes"
           <>  OA.metavar "COUNT"
           <>  OA.showDefault
-          <>  OA.value (cardanoNodes defaultTestnetOptions)
+          <>  OA.value (cardanoNodes cardanoDefaultTestnetOptions)
           )
 
 optsCardano :: Parser CardanoOptions

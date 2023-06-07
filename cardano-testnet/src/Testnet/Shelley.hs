@@ -5,7 +5,7 @@
 
 module Testnet.Shelley
   ( ShelleyTestnetOptions(..)
-  , defaultTestnetOptions
+  , shelleyDefaultTestnetOptions
   , shelleyTestnet
   , hprop_testnet
   , hprop_testnet_pause
@@ -78,8 +78,8 @@ data ShelleyTestnetOptions = ShelleyTestnetOptions
   , shelleyEnableP2P :: Bool
   } deriving (Eq, Show)
 
-defaultTestnetOptions :: ShelleyTestnetOptions
-defaultTestnetOptions = ShelleyTestnetOptions
+shelleyDefaultTestnetOptions :: ShelleyTestnetOptions
+shelleyDefaultTestnetOptions = ShelleyTestnetOptions
   { shelleyNumPraosNodes = 2
   , shelleyNumPoolNodes = 1
   , shelleyActiveSlotsCoeff = 0.1
@@ -425,7 +425,7 @@ hprop_testnet = H.integrationRetryWorkspace 2 "shelley-testnet" $ \tempAbsPath' 
 
   void . H.evalM . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000
 
-  void $ shelleyTestnet defaultTestnetOptions conf
+  void $ shelleyTestnet shelleyDefaultTestnetOptions conf
 
   H.failure -- Intentional failure to force failure report
 

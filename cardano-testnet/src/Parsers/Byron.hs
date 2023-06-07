@@ -27,14 +27,14 @@ optsTestnet = TestnetOptions
       <>  OA.help "Number of BFT nodes"
       <>  OA.metavar "COUNT"
       <>  OA.showDefault
-      <>  OA.value (numBftNodes defaultTestnetOptions)
+      <>  OA.value (numBftNodes byronDefaultTestnetOptions)
       )
   <*> OA.option auto
       (   OA.long "slot-duration"
       <>  OA.help "Slot duration"
       <>  OA.metavar "MILLISECONDS"
       <>  OA.showDefault
-      <>  OA.value (slotDuration defaultTestnetOptions)
+      <>  OA.value (slotDuration byronDefaultTestnetOptions)
       )
   <*> pNetworkId
   <*> OA.option auto
@@ -42,28 +42,28 @@ optsTestnet = TestnetOptions
       <>  OA.help "Security parameter"
       <>  OA.metavar "INT"
       <>  OA.showDefault
-      <>  OA.value (securityParam defaultTestnetOptions)
+      <>  OA.value (securityParam byronDefaultTestnetOptions)
       )
   <*> OA.option auto
       (   OA.long "n-poor-addresses"
       <>  OA.help "N poor addresses"
       <>  OA.metavar "INT"
       <>  OA.showDefault
-      <>  OA.value (nPoorAddresses defaultTestnetOptions)
+      <>  OA.value (nPoorAddresses byronDefaultTestnetOptions)
       )
   <*> OA.option auto
       (   OA.long "total-balance"
       <>  OA.help "Total Balance"
       <>  OA.metavar "INT"
       <>  OA.showDefault
-      <>  OA.value (totalBalance defaultTestnetOptions)
+      <>  OA.value (totalBalance byronDefaultTestnetOptions)
       )
   <*> OA.option auto
       (   OA.long "enable-p2p"
       <>  OA.help "Enable P2P"
       <>  OA.metavar "BOOL"
       <>  OA.showDefault
-      <>  OA.value (enableP2P defaultTestnetOptions)
+      <>  OA.value (enableP2P byronDefaultTestnetOptions)
       )
 
 runByronOptions :: ByronOptions -> IO ()

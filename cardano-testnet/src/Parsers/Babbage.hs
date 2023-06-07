@@ -28,21 +28,21 @@ optsTestnet = BabbageTestnetOptions
       <>  OA.help "Number of SPO nodes"
       <>  OA.metavar "COUNT"
       <>  OA.showDefault
-      <>  OA.value (babbageNumSpoNodes defaultTestnetOptions)
+      <>  OA.value (babbageNumSpoNodes babbageDefaultTestnetOptions)
       )
   <*> OA.option auto
       (   OA.long "slot-duration"
       <>  OA.help "Slot duration"
       <>  OA.metavar "MILLISECONDS"
       <>  OA.showDefault
-      <>  OA.value (babbageSlotDuration defaultTestnetOptions)
+      <>  OA.value (babbageSlotDuration babbageDefaultTestnetOptions)
       )
   <*> OA.option auto
       (   OA.long "security-param"
       <>  OA.help "Security parameter"
       <>  OA.metavar "INT"
       <>  OA.showDefault
-      <>  OA.value (babbageSecurityParam defaultTestnetOptions)
+      <>  OA.value (babbageSecurityParam babbageDefaultTestnetOptions)
       )
   <*> pNetworkId
   <*> OA.option auto
@@ -50,14 +50,14 @@ optsTestnet = BabbageTestnetOptions
       <>  OA.help "Total balance"
       <>  OA.metavar "INT"
       <>  OA.showDefault
-      <>  OA.value (babbageTotalBalance defaultTestnetOptions)
+      <>  OA.value (babbageTotalBalance babbageDefaultTestnetOptions)
       )
   <*> OA.option (OA.eitherReader readNodeLoggingFormat)
       (   OA.long "nodeLoggingFormat"
       <>  OA.help "Node logging format (json|text)"
       <>  OA.metavar "LOGGING_FORMAT"
       <>  OA.showDefault
-      <>  OA.value (babbageNodeLoggingFormat defaultTestnetOptions)
+      <>  OA.value (babbageNodeLoggingFormat babbageDefaultTestnetOptions)
       )
 
 optsBabbage :: Parser BabbageOptions

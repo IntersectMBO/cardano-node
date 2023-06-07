@@ -7,7 +7,7 @@ module Testnet.Byron
   ( testnet
 
   , TestnetOptions(..)
-  , defaultTestnetOptions
+  , byronDefaultTestnetOptions
   ) where
 
 import           Control.Monad (forM_, void, when)
@@ -44,7 +44,7 @@ import qualified System.IO as IO
 import qualified System.Process as IO
 import           Testnet.Commands.Genesis
 import qualified Testnet.Conf as H
-import           Testnet.Options hiding (defaultTestnetOptions)
+import           Testnet.Options
 import qualified Testnet.Util.Process as H
 import qualified Testnet.Util.Runtime as TR
 import           Testnet.Utils
@@ -64,8 +64,8 @@ data TestnetOptions = TestnetOptions
   , enableP2P :: Bool
   } deriving (Eq, Show)
 
-defaultTestnetOptions :: TestnetOptions
-defaultTestnetOptions = TestnetOptions
+byronDefaultTestnetOptions :: TestnetOptions
+byronDefaultTestnetOptions = TestnetOptions
   { numBftNodes = 3
   , slotDuration = 2000
   , securityParam = 10

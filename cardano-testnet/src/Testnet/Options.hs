@@ -8,7 +8,7 @@
 module Testnet.Options
   ( BabbageTestnetOptions(..)
   , defaultShelleyOnlyYamlConfig
-  , defaultTestnetOptions
+  , babbageDefaultTestnetOptions
   , defaultYamlHardforkViaConfig
   ) where
 
@@ -37,8 +37,8 @@ data BabbageTestnetOptions = BabbageTestnetOptions
   , babbageNodeLoggingFormat :: NodeLoggingFormat
   } deriving (Eq, Show)
 
-defaultTestnetOptions :: BabbageTestnetOptions
-defaultTestnetOptions = BabbageTestnetOptions
+babbageDefaultTestnetOptions :: BabbageTestnetOptions
+babbageDefaultTestnetOptions = BabbageTestnetOptions
   { babbageNumSpoNodes = 3
   , babbageSlotDuration = 200
   , babbageSecurityParam = 10

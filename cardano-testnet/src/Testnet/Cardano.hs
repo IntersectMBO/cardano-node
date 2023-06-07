@@ -9,7 +9,7 @@ module Testnet.Cardano
   , cardanoBftNodes
   , cardanoNumPoolNodes
   , extraBftNodeCliArgs
-  , defaultTestnetOptions
+  , cardanoDefaultTestnetOptions
   , TestnetNodeOptions(..)
   , cardanoDefaultTestnetNodeOptions
 
@@ -60,7 +60,7 @@ import qualified Hedgehog.Extras.Test.Network as H
 import           Testnet.Commands.Genesis
 import           Testnet.Commands.Governance
 import qualified Testnet.Conf as H
-import           Testnet.Options hiding (defaultTestnetOptions)
+import           Testnet.Options
 import qualified Testnet.Util.Assert as H
 import qualified Testnet.Util.Process as H
 import           Testnet.Util.Process (execCli_)
@@ -90,8 +90,8 @@ data CardanoTestnetOptions = CardanoTestnetOptions
   , cardanoNodeLoggingFormat :: NodeLoggingFormat
   } deriving (Eq, Show)
 
-defaultTestnetOptions :: CardanoTestnetOptions
-defaultTestnetOptions = CardanoTestnetOptions
+cardanoDefaultTestnetOptions :: CardanoTestnetOptions
+cardanoDefaultTestnetOptions = CardanoTestnetOptions
   { cardanoNodes = cardanoDefaultTestnetNodeOptions
   , cardanoEra = AnyCardanoEra AlonzoEra
   , cardanoEpochLength = 1500
