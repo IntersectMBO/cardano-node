@@ -109,7 +109,8 @@ import           Ouroboros.Network.NodeToClient (LocalAddress)
 import           Ouroboros.Network.NodeToNode (RemoteAddress)
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
-import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
+import qualified Ouroboros.Consensus.Storage.LedgerDB.Impl as LedgerDB
+import qualified Ouroboros.Consensus.Storage.LedgerDB.DbChangelog.Update as LedgerDB
 
 import           Cardano.Tracing.Config
 import           Cardano.Tracing.HasIssuer (BlockIssuerVerificationKeyHash (..), HasIssuer (..))
@@ -1184,11 +1185,12 @@ notifyTxsProcessed fStats tr = Tracer $ \case
 mempoolMetricsTraceTransformer :: Trace IO a -> Tracer IO (TraceEventMempool blk)
 mempoolMetricsTraceTransformer tr = Tracer $ \mempoolEvent -> do
   let tr' = appendName "metrics" tr
-      (_n, tot) = case mempoolEvent of
+      (n, tot) = case mempoolEvent of
                     TraceMempoolAddedTx     _tx0 _ tot0 -> (1, tot0)
                     TraceMempoolRejectedTx  _tx0 _ tot0 -> (1, tot0)
                     TraceMempoolRemoveTxs   txs0   tot0 -> (length txs0, tot0)
                     TraceMempoolManuallyRemovedTxs txs0 txs1 tot0 -> ( length txs0 + length txs1, tot0)
+                    _ -> (n, tot)
       logValue1 :: LOContent a
       logValue1 = LogValue "txsInMempool" $ PureI $ fromIntegral (msNumTxs tot)
       logValue2 :: LOContent a

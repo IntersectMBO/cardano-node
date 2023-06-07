@@ -117,6 +117,10 @@ import           Cardano.Node.TraceConstraints (TraceConstraints)
 import           Cardano.Tracing.Tracers
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 
+import Cardano.Node.Configuration.LedgerDB
+import Ouroboros.Consensus.Storage.LedgerDB.BackingStore.LMDB (LMDBLimits(..))
+import Ouroboros.Consensus.Storage.LedgerDB.BackingStore.Init
+
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
 {- HLINT ignore "Use fewer imports" -}
@@ -410,6 +414,10 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
               onKernel nodeKernel
           , rnEnableP2P      = p2pMode
           , rnPeerSharing    = ncPeerSharing nc
+          , rnBackingStoreSelector = case ncLedgerDBBackend nc of
+              LMDB newLimit -> LMDBBackingStore $
+                maybe id (\y x -> x { lmdbMapSize = toBytes y }) newLimit defaultLMDBLimits
+              InMemory      -> InMemoryBackingStore
           }
     in case p2pMode of
       EnabledP2PMode -> do

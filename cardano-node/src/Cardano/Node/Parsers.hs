@@ -27,7 +27,7 @@ import           Text.Read (readMaybe)
 
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
                    MempoolCapacityBytesOverride (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.Config (SnapshotInterval (..))
 
 import           Cardano.Logging.Types
 import           Cardano.Node.Configuration.NodeAddress (File (..),
@@ -37,6 +37,7 @@ import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..), 
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
+import Cardano.Node.Configuration.LedgerDB
 
 nodeCLIParser  :: Parser PartialNodeConfiguration
 nodeCLIParser = subparser
@@ -78,6 +79,8 @@ nodeRunParser = do
 
   maybeMempoolCapacityOverride <- lastOption parseMempoolCapacityOverride
 
+  ledgerDBBackend <- lastOption parseLedgerDBBackend
+
   pure $ PartialNodeConfiguration
            { pncSocketConfig =
                Last . Just $ SocketConfig
@@ -110,6 +113,7 @@ nodeRunParser = do
            , pncTraceConfig = mempty
            , pncTraceForwardSocket = traceForwardSocket
            , pncMaybeMempoolCapacityOverride = maybeMempoolCapacityOverride
+           , pncLedgerDBBackend = ledgerDBBackend
            , pncProtocolIdleTimeout = mempty
            , pncTimeWaitTimeout = mempty
            , pncAcceptedConnectionsLimit = mempty
@@ -214,8 +218,42 @@ parseMempoolCapacityOverride = parseOverride <|> parseNoOverride
     parseNoOverride =
       flag' NoMempoolCapacityBytesOverride
         (  long "no-mempool-capacity-override"
-        <> help "The port number"
+        <> help "Don't override the mempool capacity"
         )
+
+parseLedgerDBBackend :: Parser BackingStoreSelectorFlag
+parseLedgerDBBackend = parseInMemory <|> parseLMDB <*> optional parseMapSize
+  where
+    parseInMemory :: Parser BackingStoreSelectorFlag
+    parseInMemory =
+      flag' InMemory (  long "in-memory-ledger-db-backend"
+                     <> help "Use the InMemory ledger DB backend. \
+                             \ Incompatible with `--lmdb-ledger-db-backend`. \
+                             \ The node uses the in-memory backend by default \
+                             \ if no ``--*-db-backend`` flags are set."
+                     )
+
+    parseLMDB :: Parser (Maybe Gigabytes -> BackingStoreSelectorFlag)
+    parseLMDB =
+      flag' LMDB (  long "lmdb-ledger-db-backend"
+                 <> help "Use the LMDB ledger DB backend. By default, the \
+                         \ mapsize (maximum database size) of the backend \
+                         \ is set to 16 Gigabytes. Warning: if the database \
+                         \ size exceeds the given mapsize, the node will \
+                         \ abort. Therefore, the mapsize should be set to a \
+                         \ value high enough to guarantee that the maximum \
+                         \ database size will not be reached during the \
+                         \ expected node uptime. \
+                         \ Incompatible with `--in-memory-ledger-db-backend`."
+                )
+
+    parseMapSize :: Parser Gigabytes
+    parseMapSize =
+      option auto (
+           long "lmdb-mapsize"
+        <> metavar "NR_GIGABYTES"
+        <> help "The maximum database size defined in number of Gigabytes."
+      )
 
 parseDbPath :: Parser FilePath
 parseDbPath =

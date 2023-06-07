@@ -857,6 +857,12 @@ instance
       , "txsInvalidated" .= map (forMachine dtal . txForgetValidated) txs1
       , "mempoolSize" .= forMachine dtal mpSz
       ]
+  forMachine _ TraceMempoolAttemptingSync = undefined
+  forMachine _ TraceMempoolSyncNotNeeded {} = undefined
+  forMachine _ TraceMempoolSyncDone = undefined
+  forMachine _ TraceMempoolAttemptingAdd {} = undefined
+  forMachine _ TraceMempoolLedgerFound {} = undefined
+  forMachine _ TraceMempoolLedgerNotFound {} = undefined
 
   asMetrics (TraceMempoolAddedTx _tx _mpSzBefore mpSz) =
     [ IntM "Mempool.TxsInMempool" (fromIntegral $ msNumTxs mpSz)
@@ -870,15 +876,17 @@ instance
     [ IntM "Mempool.TxsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "Mempool.MempoolBytes" (fromIntegral $ msNumBytes mpSz)
     ]
-  asMetrics (TraceMempoolManuallyRemovedTxs [] _txs1 mpSz) =
-    [ IntM "Mempool.TxsInMempool" (fromIntegral $ msNumTxs mpSz)
-    , IntM "Mempool.MempoolBytes" (fromIntegral $ msNumBytes mpSz)
-    ]
   asMetrics (TraceMempoolManuallyRemovedTxs txs _txs1 mpSz) =
     [ IntM "Mempool.TxsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "Mempool.MempoolBytes" (fromIntegral $ msNumBytes mpSz)
     , CounterM "Mempool.TxsProcessedNum" (Just (fromIntegral $ length txs))
     ]
+  asMetrics TraceMempoolAttemptingSync = undefined
+  asMetrics TraceMempoolSyncNotNeeded {} = undefined
+  asMetrics TraceMempoolSyncDone = undefined
+  asMetrics TraceMempoolAttemptingAdd {} = undefined
+  asMetrics TraceMempoolLedgerFound {} = undefined
+  asMetrics TraceMempoolLedgerNotFound {} = undefined
 
 instance LogFormatting MempoolSize where
   forMachine _dtal MempoolSize{msNumTxs, msNumBytes} =
@@ -893,6 +901,12 @@ instance MetaTrace (TraceEventMempool blk) where
     namespaceFor TraceMempoolRejectedTx {} = Namespace [] ["RejectedTx"]
     namespaceFor TraceMempoolRemoveTxs {} = Namespace [] ["RemoveTxs"]
     namespaceFor TraceMempoolManuallyRemovedTxs {} = Namespace [] ["ManuallyRemovedTxs"]
+    namespaceFor TraceMempoolAttemptingSync = Namespace [] ["MempoolSyncing"]
+    namespaceFor TraceMempoolSyncNotNeeded {} = Namespace [] ["MempoolSyncing"]
+    namespaceFor TraceMempoolSyncDone = Namespace [] ["MempoolSyncing"]
+    namespaceFor TraceMempoolAttemptingAdd {} = Namespace [] ["MepoolAdd"]
+    namespaceFor TraceMempoolLedgerFound {} = Namespace [] ["MempoolLedger"]
+    namespaceFor TraceMempoolLedgerNotFound {} = Namespace [] ["MempoolLedger"]
 
     severityFor (Namespace _ ["AddedTx"]) _ = Just Info
     severityFor (Namespace _ ["RejectedTx"]) _ = Just Info

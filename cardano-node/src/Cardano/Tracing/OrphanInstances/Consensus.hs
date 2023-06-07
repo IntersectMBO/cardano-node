@@ -68,7 +68,8 @@ import qualified Ouroboros.Consensus.Protocol.BFT as BFT
 import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
 import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (ChunkNo (..),
                    chunkNoToInt)
-import           Ouroboros.Consensus.Storage.LedgerDB (PushGoal (..), Pushing (..), PushStart (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.DbChangelog.Update (PushGoal (..), Pushing (..), PushStart (..), UpdateLedgerDbTraceEvent(..))
+import qualified Ouroboros.Consensus.Storage.LedgerDB.Impl as LedgerDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import qualified Ouroboros.Consensus.Storage.VolatileDB.Impl as VolDb
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
@@ -150,10 +151,13 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     LedgerDB.ReplayFromSnapshot {} -> Info
     LedgerDB.ReplayedBlock {} -> Info
 
-  getSeverityAnnotation (ChainDB.TraceSnapshotEvent ev) = case ev of
-    LedgerDB.TookSnapshot {} -> Info
-    LedgerDB.DeletedSnapshot {} -> Debug
-    LedgerDB.InvalidSnapshot {} -> Error
+  getSeverityAnnotation (ChainDB.TraceLedgerDBEvent ev) = case ev of
+    LedgerDB.LedgerDBSnapshotEvent ev' -> case ev' of
+      LedgerDB.TookSnapshot {} -> Info
+      LedgerDB.DeletedSnapshot {} -> Debug
+      LedgerDB.InvalidSnapshot {} -> Error
+    LedgerDB.BackingStoreEvent {} -> Debug
+    LedgerDB.BackingStoreInitEvent {} -> Info
 
   getSeverityAnnotation (ChainDB.TraceCopyToImmutableDBEvent ev) = case ev of
     ChainDB.CopiedBlockToImmutableDB {} -> Debug
@@ -520,7 +524,7 @@ instance ( ConvertRawHash blk
             "Candidate contains blocks from future exceeding clock skew limit: " <>
             renderPointAsPhrase (AF.headPoint c) <> ", slots " <>
             Text.intercalate ", " (map (renderPoint . headerPoint) hdrs)
-          ChainDB.UpdateLedgerDbTraceEvent (LedgerDB.StartedPushingBlockToTheLedgerDb  (PushStart start) (PushGoal goal) (Pushing curr)) ->
+          ChainDB.UpdateLedgerDbTraceEvent (StartedPushingBlockToTheLedgerDb  (PushStart start) (PushGoal goal) (Pushing curr)) ->
             let fromSlot = unSlotNo $ realPointSlot start
                 atSlot   = unSlotNo $ realPointSlot curr
                 atDiff   = atSlot - fromSlot
@@ -561,14 +565,21 @@ instance ( ConvertRawHash blk
           <> ". Progress: "
           <> showProgressT (fromIntegral atDiff) (fromIntegral toDiff)
           <> "%"
-      ChainDB.TraceSnapshotEvent ev -> case ev of
-        LedgerDB.InvalidSnapshot snap failure ->
-          "Invalid snapshot " <> showT snap <> showT failure
-        LedgerDB.TookSnapshot snap pt ->
-          "Took ledger snapshot " <> showT snap <>
-          " at " <> renderRealPointAsPhrase pt
-        LedgerDB.DeletedSnapshot snap ->
-          "Deleted old snapshot " <> showT snap
+      ChainDB.TraceLedgerDBEvent ev -> case ev of
+        LedgerDB.LedgerDBSnapshotEvent ev' -> case ev' of
+          LedgerDB.InvalidSnapshot snap failure ->
+            "Invalid snapshot " <> showT snap <> showT failure
+          LedgerDB.TookSnapshot snap pt ->
+            "Took ledger snapshot " <> showT snap <>
+            " at " <> renderRealPointAsPhrase pt
+          LedgerDB.DeletedSnapshot snap ->
+            "Deleted old snapshot " <> showT snap
+        LedgerDB.BackingStoreEvent {} -> "BackingStoreEvent tracer not implemented :D"
+        LedgerDB.BackingStoreInitEvent ev' -> case ev' of
+          LedgerDB.BackingStoreInitialisedInMemory ->
+            "Initialising In-Memory backing store"
+          LedgerDB.BackingStoreInitialisedLMDB limits ->
+            "Initialising LMDB backing store " <> showT limits
       ChainDB.TraceCopyToImmutableDBEvent ev -> case ev of
         ChainDB.CopiedBlockToImmutableDB pt ->
           "Copied block " <> renderPointAsPhrase pt <> " to the ImmutableDB"
@@ -608,7 +619,7 @@ instance ( ConvertRawHash blk
           ChainDB.ValidCandidate af     -> "Valid candidate at tip " <> renderPointAsPhrase (AF.lastPoint af)
           ChainDB.CandidateContainsFutureBlocks {} -> "Found a candidate containing future blocks during Initial chain selection, truncating the candidate and retrying to select a best candidate."
           ChainDB.CandidateContainsFutureBlocksExceedingClockSkew {} -> "Found a candidate containing future blocks exceeding clock skew during Initial chain selection, truncating the candidate and retrying to select a best candidate."
-          ChainDB.UpdateLedgerDbTraceEvent (LedgerDB.StartedPushingBlockToTheLedgerDb (PushStart start) (PushGoal goal) (Pushing curr)) ->
+          ChainDB.UpdateLedgerDbTraceEvent (StartedPushingBlockToTheLedgerDb (PushStart start) (PushGoal goal) (Pushing curr)) ->
             let fromSlot = unSlotNo $ realPointSlot start
                 atSlot   = unSlotNo $ realPointSlot curr
                 atDiff   = atSlot - fromSlot
@@ -934,7 +945,7 @@ instance ( ConvertRawHash blk
         mconcat [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.CandidateContainsFutureBlocksExceedingClockSkew"
                  , "block"   .= renderPointForVerbosity verb (AF.headPoint c)
                  , "headers" .= map (renderPointForVerbosity verb . headerPoint) hdrs ]
-      ChainDB.UpdateLedgerDbTraceEvent (LedgerDB.StartedPushingBlockToTheLedgerDb (PushStart start) (PushGoal goal) (Pushing curr)) ->
+      ChainDB.UpdateLedgerDbTraceEvent (StartedPushingBlockToTheLedgerDb (PushStart start) (PushGoal goal) (Pushing curr)) ->
         mconcat [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.UpdateLedgerDb"
                  , "startingBlock" .= renderRealPoint start
                  , "currentBlock" .= renderRealPoint curr
@@ -989,19 +1000,29 @@ instance ( ConvertRawHash blk
                , "slot" .= unSlotNo (realPointSlot pt)
                , "tip"  .= withOrigin 0 unSlotNo (pointSlot replayTo) ]
 
-  toObject MinimalVerbosity (ChainDB.TraceSnapshotEvent _ev) = mempty -- no output
-  toObject verb (ChainDB.TraceSnapshotEvent ev) = case ev of
-    LedgerDB.TookSnapshot snap pt ->
-      mconcat [ "kind" .= String "TraceSnapshotEvent.TookSnapshot"
-               , "snapshot" .= toObject verb snap
-               , "tip" .= show pt ]
-    LedgerDB.DeletedSnapshot snap ->
-      mconcat [ "kind" .= String "TraceSnapshotEvent.DeletedSnapshot"
-               , "snapshot" .= toObject verb snap ]
-    LedgerDB.InvalidSnapshot snap failure ->
-      mconcat [ "kind" .= String "TraceSnapshotEvent.InvalidSnapshot"
-               , "snapshot" .= toObject verb snap
-               , "failure" .= show failure ]
+  toObject MinimalVerbosity (ChainDB.TraceLedgerDBEvent _ev) = mempty -- no output
+  toObject verb (ChainDB.TraceLedgerDBEvent ev) = case ev of
+    LedgerDB.LedgerDBSnapshotEvent ev' -> case ev' of
+      LedgerDB.TookSnapshot snap pt ->
+        mconcat [ "kind" .= String "TraceLedgerDBEvent.LedgerDBSnapshotEvent.TookSnapshot"
+                 , "snapshot" .= toObject verb snap
+                 , "tip" .= show pt ]
+      LedgerDB.DeletedSnapshot snap ->
+        mconcat [ "kind" .= String "TraceLedgerDBEvent.LedgerDBSnapshotEvent.DeletedSnapshot"
+                 , "snapshot" .= toObject verb snap ]
+      LedgerDB.InvalidSnapshot snap failure ->
+        mconcat [ "kind" .= String "TraceLedgerDBEvent.LedgerDBSnapshotEvent.InvalidSnapshot"
+                 , "snapshot" .= toObject verb snap
+                 , "failure" .= show failure ]
+    LedgerDB.BackingStoreEvent {} ->
+      mconcat [ "kind" .= String "TraceLedgerDBEvent.BackingStoreEvent" ]
+    LedgerDB.BackingStoreInitEvent ev' -> case ev' of
+      LedgerDB.BackingStoreInitialisedLMDB limits ->
+        mconcat [ "kind" .= String "TraceLedgerDBEvent.BackingStoreInitialisedLMDB"
+                , "limits" .= String (showT limits)
+                ]
+      LedgerDB.BackingStoreInitialisedInMemory ->
+        mconcat [ "kind" .= String "TraceLedgerDBEvent.BackingStoreInitialisedInMemory" ]
 
   toObject verb (ChainDB.TraceCopyToImmutableDBEvent ev) = case ev of
     ChainDB.CopiedBlockToImmutableDB pt ->
@@ -1076,7 +1097,7 @@ instance ( ConvertRawHash blk
                  , "block"   .= renderPointForVerbosity verb (AF.headPoint c)
                  , "headers" .= map (renderPointForVerbosity verb . headerPoint) hdrs ]
       ChainDB.UpdateLedgerDbTraceEvent
-        (LedgerDB.StartedPushingBlockToTheLedgerDb (PushStart start) (PushGoal goal) (Pushing curr) ) ->
+        (StartedPushingBlockToTheLedgerDb (PushStart start) (PushGoal goal) (Pushing curr) ) ->
           mconcat [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.UpdateLedgerDbTraceEvent.StartedPushingBlockToTheLedgerDb"
                    , "startingBlock" .= renderRealPoint start
                    , "currentBlock" .= renderRealPoint curr
@@ -1329,6 +1350,12 @@ instance ( ToObject (ApplyTxErr blk), ToObject (GenTx blk),
       , "txsInvalidated" .= map (toObject verb . txForgetValidated) txs1
       , "mempoolSize" .= toObject verb mpSz
       ]
+  toObject _ TraceMempoolAttemptingSync = undefined
+  toObject _ (TraceMempoolSyncNotNeeded _ _) = undefined
+  toObject _ TraceMempoolSyncDone = undefined
+  toObject _ (TraceMempoolAttemptingAdd _) = undefined
+  toObject _ (TraceMempoolLedgerFound _) = undefined
+  toObject _ (TraceMempoolLedgerNotFound _) = undefined
 
 instance ToObject MempoolSize where
   toObject _verb MempoolSize{msNumTxs, msNumBytes} =

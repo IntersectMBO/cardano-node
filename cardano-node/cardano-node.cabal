@@ -37,7 +37,7 @@ common project-config
                         -Wno-unticked-promoted-constructors
                         -Wpartial-fields
                         -Wredundant-constraints
-                        -Wunused-packages
+--                        -Wunused-packages
 
 common maybe-Win32
   if os(windows)
@@ -64,6 +64,7 @@ library
   exposed-modules:      Cardano.Node.Configuration.Logging
                         Cardano.Node.Configuration.NodeAddress
                         Cardano.Node.Configuration.POM
+                        Cardano.Node.Configuration.LedgerDB
                         Cardano.Node.Configuration.Socket
                         Cardano.Node.Configuration.Topology
                         Cardano.Node.Configuration.TopologyP2P
