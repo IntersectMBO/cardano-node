@@ -5,9 +5,6 @@ cardano-cli/README.md                                         @Jimbo4350 @newhog
 # Release manager added for notification on dependency updates
 cabal.project                                                 @Jimbo4350 @newhoggy @carbolymer @LaurenceIO
 
-# General reviewers per PR
-#                        Duncan   Jordan     Erik   John      Jared         Carlos
-*                        @dcoutts @Jimbo4350 @erikd @newhoggy @carbolymer @JaredCorduan @CarlosLopezDeLara
 
 # Specific reviewers for code pieces
 # NB - The last matching pattern takes precedence
@@ -32,11 +29,11 @@ nix/                                                          @input-output-hk/d
 *.nix                                                         @input-output-hk/devx-core-tech @input-output-hk/devops @deepfire @mgmeier @fmaste
 flake.lock                                                    @input-output-hk/devx-core-tech @input-output-hk/devops @deepfire @mgmeier @fmaste
 
-.buildkite                                                    @Jimbo4350 @newhoggy @carbolymer @input-output-hk/devx-core-tech @input-output-hk/devops
-.github                                                       @Jimbo4350 @newhoggy @carbolymer @input-output-hk/devx-core-tech @input-output-hk/devops
-ci/                                                           @Jimbo4350 @newhoggy @carbolymer @input-output-hk/devx-core-tech @input-output-hk/devops
-configuration/                                                @Jimbo4350 @newhoggy @carbolymer @input-output-hk/devx-core-tech @input-output-hk/devops
-bors.toml                                                     @Jimbo4350 @newhoggy @carbolymer @input-output-hk/devx-core-tech @input-output-hk/devops
-docker-compose.yml                                            @Jimbo4350 @newhoggy @carbolymer @input-output-hk/devx-core-tech @input-output-hk/devops
-cardano-node/src/Cardano/Node/Tracing/                        @Jimbo4350 @newhoggy @carbolymer @deepfire @jutaro @coot
-cardano-node/src/Cardano/Tracing/OrphanInstances/             @Jimbo4350 @newhoggy @carbolymer @input-output-hk/devops @coot
+.buildkite                                                    @input-output-hk/devx-core-tech @input-output-hk/devops
+.github                                                       @input-output-hk/devx-core-tech @input-output-hk/devops
+ci/                                                           @input-output-hk/devx-core-tech @input-output-hk/devops
+configuration/                                                @input-output-hk/devx-core-tech @input-output-hk/devops
+bors.toml                                                     @input-output-hk/devx-core-tech @input-output-hk/devops
+docker-compose.yml                                            @input-output-hk/devx-core-tech @input-output-hk/devops
+cardano-node/src/Cardano/Node/Tracing/                        @deepfire @jutaro @coot
+cardano-node/src/Cardano/Tracing/OrphanInstances/             @input-output-hk/devops @coot
