@@ -83,6 +83,7 @@ data CardanoTestnetOptions = CardanoTestnetOptions
   , cardanoEra :: AnyCardanoEra
   , cardanoEpochLength :: Int
   , cardanoSlotLength :: Double
+  , cardanoTestnetMagic :: Int
   , cardanoActiveSlotsCoeff :: Double
   , cardanoMaxSupply :: Word64 -- ^ The amount of ADA you are starting your testnet with
   , cardanoEnableP2P :: Bool
@@ -95,6 +96,7 @@ defaultTestnetOptions = CardanoTestnetOptions
   , cardanoEra = AnyCardanoEra AlonzoEra
   , cardanoEpochLength = 1500
   , cardanoSlotLength = 0.2
+  , cardanoTestnetMagic = 42
   , cardanoActiveSlotsCoeff = 0.2
   , cardanoMaxSupply = 10020000000
   , cardanoEnableP2P = False
@@ -178,13 +180,14 @@ mkTopologyConfig numNodes allPorts port True = J.encode topologyP2P
         (P2P.UseLedger DontUseLedger)
 
 cardanoTestnet :: CardanoTestnetOptions -> H.Conf -> H.Integration TestnetRuntime
-cardanoTestnet testnetOptions H.Conf {H.tempAbsPath, H.testnetMagic} = do
+cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
   void $ H.note OS.os
   currentTime <- H.noteShowIO DTC.getCurrentTime
   let tempAbsPath' = unTmpAbsPath tempAbsPath
   startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
   configurationFile <- H.noteShow $ tempAbsPath' </> "configuration.yaml"
-  let numBftNodes = cardanoNumBftNodes $ cardanoNodes testnetOptions
+  let testnetMagic = cardanoTestnetMagic testnetOptions
+      numBftNodes = cardanoNumBftNodes $ cardanoNodes testnetOptions
       bftNodesN = [1 .. numBftNodes]
       poolNodesN = [1 .. cardanoNumPoolNodes $ cardanoNodes testnetOptions]
       bftNodeNames = ("node-bft" <>) . show @Int <$> bftNodesN

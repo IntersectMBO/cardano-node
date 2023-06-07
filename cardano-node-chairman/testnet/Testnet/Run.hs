@@ -23,11 +23,11 @@ import qualified System.IO as IO
 import qualified Test.Base as H
 import qualified Testnet.Conf as H
 
-testnetProperty :: Maybe Int -> (H.Conf -> H.Integration ()) -> H.Property
-testnetProperty maybeTestnetMagic tn = H.integrationRetryWorkspace 2 "testnet-chairman" $ \tempAbsPath' -> do
+testnetProperty :: (H.Conf -> H.Integration ()) -> H.Property
+testnetProperty tn = H.integrationRetryWorkspace 2 "testnet-chairman" $ \tempAbsPath' -> do
   base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
-  conf <- H.mkConf Nothing tempAbsPath' maybeTestnetMagic
+  conf <- H.mkConf Nothing tempAbsPath'
 
   -- Fork a thread to keep alive indefinitely any resources allocated by testnet.
   void . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000
@@ -36,11 +36,11 @@ testnetProperty maybeTestnetMagic tn = H.integrationRetryWorkspace 2 "testnet-ch
 
   H.failure -- Intentional failure to force failure report
 
-runTestnet :: Maybe Int -> (H.Conf -> H.Integration a) -> IO ()
-runTestnet maybeTestnetMagic tn = do
+runTestnet :: (H.Conf -> H.Integration a) -> IO ()
+runTestnet tn = do
   tvRunning <- STM.newTVarIO False
 
-  void . H.check $ testnetProperty maybeTestnetMagic $ \c -> do
+  void . H.check $ testnetProperty $ \c -> do
     void $ tn c
     H.evalIO . STM.atomically $ STM.writeTVar tvRunning True
 

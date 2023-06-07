@@ -1,5 +1,4 @@
-Usage: cardano-testnet cardano [--testnet-magic INT]
-                                 [--num-bft-nodes COUNT]
+Usage: cardano-testnet cardano [--num-bft-nodes COUNT]
                                  [--num-pool-nodes COUNT]
                                  [ --byron-era
                                  | --shelley-era
@@ -10,6 +9,7 @@ Usage: cardano-testnet cardano [--testnet-magic INT]
                                  ]
                                  [--epoch-length MILLISECONDS]
                                  [--slot-length SECONDS]
+                                 --testnet-magic INT
                                  [--active-slots-coeff DOUBLE]
                                  [--max-lovelace-supply WORD64]
                                  [--enable-p2p BOOL]
@@ -18,7 +18,6 @@ Usage: cardano-testnet cardano [--testnet-magic INT]
   Start a testnet in any era
 
 Available options:
-  --testnet-magic INT      Testnet magic
   --num-bft-nodes COUNT    Number of BFT nodes
                            (default: [BftTestnetNodeOptions [],BftTestnetNodeOptions [],SpoTestnetNodeOptions])
   --num-pool-nodes COUNT   Number of pool nodes
@@ -32,6 +31,7 @@ Available options:
   --epoch-length MILLISECONDS
                            Epoch length (default: 1500)
   --slot-length SECONDS    Slot length (default: 0.2)
+  --testnet-magic INT      Specify a testnet magic id.
   --active-slots-coeff DOUBLE
                            Active slots co-efficient (default: 0.2)
   --max-lovelace-supply WORD64

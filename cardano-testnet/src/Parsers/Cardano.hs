@@ -10,17 +10,17 @@ import qualified Data.List as L
 import           Options.Applicative
 import qualified Options.Applicative as OA
 
-import           Cardano.CLI.Common.Parsers
+import           Cardano.CLI.Common.Parsers hiding (pNetworkId)
 
 import           Testnet
 import           Testnet.Cardano
 import           Testnet.Run (runTestnet)
+import           Testnet.Util.Cli
 import           Testnet.Util.Runtime (readNodeLoggingFormat)
 import           Testnet.Utils
 
-data CardanoOptions = CardanoOptions
-  { maybeTestnetMagic :: Maybe Int
-  , testnetOptions :: CardanoTestnetOptions
+newtype CardanoOptions = CardanoOptions
+  { testnetOptions :: CardanoTestnetOptions
   } deriving (Eq, Show)
 
 optsTestnet :: Parser CardanoTestnetOptions
@@ -41,6 +41,7 @@ optsTestnet = CardanoTestnetOptions
       <>  OA.showDefault
       <>  OA.value (cardanoSlotLength defaultTestnetOptions)
       )
+  <*> pNetworkId
   <*> OA.option auto
       (   OA.long "active-slots-coeff"
       <>  OA.help "Active slots co-efficient"
@@ -85,19 +86,11 @@ pNumBftAndSpoNodes =
           )
 
 optsCardano :: Parser CardanoOptions
-optsCardano = CardanoOptions
-  <$> optional
-      ( OA.option auto
-        (   long "testnet-magic"
-        <>  help "Testnet magic"
-        <>  metavar "INT"
-        )
-      )
-  <*> optsTestnet
+optsCardano = CardanoOptions <$> optsTestnet
 
 runCardanoOptions :: CardanoOptions -> IO ()
-runCardanoOptions options = runTestnet (maybeTestnetMagic options) $
-  Testnet.testnet (CardanoOnlyTestnetOptions $ testnetOptions options)
+runCardanoOptions options =
+  runTestnet $ Testnet.testnet (CardanoOnlyTestnetOptions $ testnetOptions options)
 
 cmdCardano :: Mod CommandFields CardanoOptions
 cmdCardano = command' "cardano" "Start a testnet in any era" optsCardano

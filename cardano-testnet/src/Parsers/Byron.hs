@@ -7,10 +7,11 @@ module Parsers.Byron
 import           Options.Applicative
 import qualified Options.Applicative as OA
 
-import           Cardano.CLI.Common.Parsers
+import           Cardano.CLI.Common.Parsers hiding (pNetworkId)
 
 import           Testnet.Byron
 import           Testnet.Run (runTestnet)
+import           Testnet.Util.Cli
 
 data ByronOptions = ByronOptions
   { maybeTestnetMagic :: Maybe Int
@@ -44,6 +45,7 @@ optsTestnet = TestnetOptions
       <>  OA.showDefault
       <>  OA.value (slotDuration defaultTestnetOptions)
       )
+  <*> pNetworkId
   <*> OA.option auto
       (   OA.long "security-param"
       <>  OA.help "Security parameter"
@@ -74,7 +76,7 @@ optsTestnet = TestnetOptions
       )
 
 runByronOptions :: ByronOptions -> IO ()
-runByronOptions opts = runTestnet (maybeTestnetMagic opts) (Testnet.Byron.testnet (testnetOptions opts))
+runByronOptions opts = runTestnet (Testnet.Byron.testnet (testnetOptions opts))
 
 cmdByron :: Mod CommandFields ByronOptions
 cmdByron = command' "byron" "Start a Byron testnet" optsByron

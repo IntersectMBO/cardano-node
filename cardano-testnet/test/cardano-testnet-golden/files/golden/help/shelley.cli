@@ -5,6 +5,7 @@ Usage: cardano-testnet shelley [--testnet-magic INT]
                                  [--security-param INT]
                                  [--epoch-length MILLISECONDS]
                                  [--slot-length MILLISECONDS]
+                                 --testnet-magic INT
                                  [--max-lovelace-supply WORD64]
                                  [--enable-p2p BOOL]
 
@@ -21,6 +22,7 @@ Available options:
                            Epoch length (default: 1000)
   --slot-length MILLISECONDS
                            Slot length (default: 0.2)
+  --testnet-magic INT      Specify a testnet magic id.
   --max-lovelace-supply WORD64
                            Max lovelace supply that your testnet starts with.
                            (default: 10020000000)

@@ -44,7 +44,7 @@ import           Testnet.Util.Runtime
 hprop_leadershipSchedule :: Property
 hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-schedule" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
-  conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf Nothing tempAbsBasePath' Nothing
+  conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf Nothing tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 

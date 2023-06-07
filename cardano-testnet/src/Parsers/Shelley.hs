@@ -9,11 +9,12 @@ import           Prelude
 import           Options.Applicative
 import qualified Options.Applicative as OA
 
-import           Cardano.CLI.Common.Parsers
+import           Cardano.CLI.Common.Parsers hiding (pNetworkId)
 
 import           Testnet
 import           Testnet.Run (runTestnet)
 import           Testnet.Shelley
+import           Testnet.Util.Cli
 import           Testnet.Utils
 
 
@@ -66,6 +67,7 @@ optsTestnet = ShelleyTestnetOptions
       <>  OA.showDefault
       <>  OA.value (shelleySlotLength defaultTestnetOptions)
       )
+  <*> pNetworkId
   <*> pMaxLovelaceSupply
   <*> OA.option auto
       (   OA.long "enable-p2p"
@@ -87,8 +89,8 @@ optsShelley = ShelleyOptions
   <*> optsTestnet
 
 runShelleyOptions :: ShelleyOptions -> IO ()
-runShelleyOptions options = runTestnet (maybeTestnetMagic options) $
-  Testnet.testnet (ShelleyOnlyTestnetOptions $ testnetOptions options)
+runShelleyOptions options =
+  runTestnet $ Testnet.testnet (ShelleyOnlyTestnetOptions $ testnetOptions options)
 
 cmdShelley :: Mod CommandFields ShelleyOptions
 cmdShelley = command' "shelley" "Start a Shelley testnet" optsShelley

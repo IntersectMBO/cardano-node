@@ -45,13 +45,12 @@ import           Testnet.Utils
 
 hprop_shutdown :: Property
 hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> do
-  conf <- H.noteShowM $
-    mkConf Nothing tempAbsBasePath' Nothing
+  conf <- H.noteShowM $ mkConf Nothing tempAbsBasePath'
   let tempBaseAbsPath' = TR.makeTmpBaseAbsPath $ tempAbsPath conf
       tempAbsPath' = TR.unTmpAbsPath $ tempAbsPath conf
       logDir' = TR.makeLogDir $ tempAbsPath conf
       socketDir' = TR.makeSocketDir $ tempAbsPath conf
-      testnetMagic' = testnetMagic conf
+      testnetMagic' = 42
 
   -- TODO: We need to uniformly create these directories
   H.createDirectoryIfMissing_ logDir'

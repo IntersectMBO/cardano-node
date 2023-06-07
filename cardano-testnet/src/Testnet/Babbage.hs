@@ -29,9 +29,7 @@ import           Cardano.Api
 
 import           Testnet.Commands.Genesis
 import qualified Testnet.Conf as H
-import           Testnet.Options
-                   (BabbageTestnetOptions (babbageNodeLoggingFormat, babbageNumSpoNodes),
-                   defaultYamlHardforkViaConfig)
+import           Testnet.Options (BabbageTestnetOptions (..), defaultYamlHardforkViaConfig)
 import qualified Testnet.Util.Assert as H
 import           Testnet.Util.Process (execCli_)
 import           Testnet.Util.Runtime (Delegator (..), PaymentKeyPair (..), PoolNode (PoolNode),
@@ -53,9 +51,10 @@ startTimeOffsetSeconds :: DTC.NominalDiffTime
 startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
 
 babbageTestnet :: BabbageTestnetOptions -> H.Conf -> H.Integration TestnetRuntime
-babbageTestnet testnetOptions H.Conf {H.configurationTemplate, H.tempAbsPath, H.testnetMagic} = do
+babbageTestnet testnetOptions H.Conf {H.configurationTemplate, H.tempAbsPath} = do
   let logDir = makeLogDir tempAbsPath
       tempAbsPath' = unTmpAbsPath tempAbsPath
+      testnetMagic = babbageTestnetMagic testnetOptions
   H.createDirectoryIfMissing_ logDir
 
   H.lbsWriteFile (tempAbsPath' </> "byron.genesis.spec.json")
@@ -86,7 +85,7 @@ babbageTestnet testnetOptions H.Conf {H.configurationTemplate, H.tempAbsPath, H.
 
   configurationFile <- H.noteShow $ tempAbsPath' </> "configuration.yaml"
 
-  let numPoolNodes = 3 :: Int
+  let numPoolNodes = babbageNumSpoNodes testnetOptions
 
   execCli_
     [ "genesis", "create-staked"

@@ -17,9 +17,9 @@ import qualified System.IO as IO
 import qualified Testnet.Conf as H
 import qualified Testnet.Util.Base as H
 
-testnetProperty :: Maybe Int -> (H.Conf -> H.Integration ()) -> H.Property
-testnetProperty maybeTestnetMagic tn = H.integrationRetryWorkspace 2 "testnet" $ \workspaceDir -> do
-  conf <- H.mkConf Nothing workspaceDir maybeTestnetMagic
+testnetProperty :: (H.Conf -> H.Integration ()) -> H.Property
+testnetProperty tn = H.integrationRetryWorkspace 2 "testnet" $ \workspaceDir -> do
+  conf <- H.mkConf Nothing workspaceDir
 
   -- Fork a thread to keep alive indefinitely any resources allocated by testnet.
   void . H.evalM . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000
@@ -28,11 +28,11 @@ testnetProperty maybeTestnetMagic tn = H.integrationRetryWorkspace 2 "testnet" $
 
   H.failure -- Intentional failure to force failure report
 
-runTestnet :: Maybe Int -> (H.Conf -> H.Integration a) -> IO ()
-runTestnet maybeTestnetMagic tn = do
+runTestnet :: (H.Conf -> H.Integration a) -> IO ()
+runTestnet tn = do
   tvRunning <- STM.newTVarIO False
 
-  void . H.check $ testnetProperty maybeTestnetMagic $ \c -> do
+  void . H.check $ testnetProperty $ \c -> do
     void $ tn c
     H.evalIO . STM.atomically $ STM.writeTVar tvRunning True
 

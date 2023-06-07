@@ -74,7 +74,7 @@ optsTestnet = TestnetOptions
   <*> pure False
 
 runByronOptions :: ByronOptions -> IO ()
-runByronOptions opts = runTestnet (maybeTestnetMagic opts) (Testnet.Byron.testnet (testnetOptions opts))
+runByronOptions opts = runTestnet (Testnet.Byron.testnet (testnetOptions opts))
 
 cmdByron :: Mod CommandFields (IO ())
 cmdByron = command "byron" $ flip info idm $ runByronOptions <$> optsByron

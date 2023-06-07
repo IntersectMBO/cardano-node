@@ -51,7 +51,7 @@ import           Testnet.Util.Runtime
 hprop_leadershipSchedule :: Property
 hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedule" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
-  conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf Nothing tempAbsBasePath' Nothing
+  conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf Nothing tempAbsBasePath'
   let
     tempAbsPath' = unTmpAbsPath tempAbsPath
     tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath

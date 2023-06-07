@@ -43,7 +43,7 @@ import           Testnet.Util.Runtime
 hprop_stakeSnapshot :: Property
 hprop_stakeSnapshot = H.integrationRetryWorkspace 2 "babbage-stake-snapshot" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
-  conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf Nothing tempAbsBasePath' Nothing
+  conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf Nothing tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 

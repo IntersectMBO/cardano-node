@@ -37,7 +37,7 @@ prop_foldBlocks :: H.Property
 prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath' -> do
 
   -- Start testnet
-  conf <- HE.noteShowM $ TN.mkConf Nothing (tempAbsBasePath' <> "/") Nothing
+  conf <- HE.noteShowM $ TN.mkConf Nothing (tempAbsBasePath' <> "/")
 
   let tempAbsPath' = unTmpAbsPath $ tempAbsPath conf
       options = CardanoOnlyTestnetOptions $ cardanoDefaultTestnetOptions
