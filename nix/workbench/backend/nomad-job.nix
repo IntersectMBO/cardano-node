@@ -9,6 +9,7 @@
 , profileData
 , containerSpecs
 , execTaskDriver
+, generatorTaskName
 , oneTracerPerNode ? false
 }:
 
@@ -471,7 +472,7 @@ let
                       else {"${nodeSpec.name}"=nodeSpec;}
                     ;
                     # Only for the node that will run the generator
-                    withGenerator = taskName == "node-0";
+                    withGenerator = taskName == generatorTaskName;
                     # Only for the tracer task or also nodes if oneTracerPerNode
                     withTracer = oneTracerPerNode || taskName == "tracer";
                     # ''{{ env "NOMAD_TASK_DIR" }}/supervisor.sock''
@@ -572,8 +573,8 @@ let
             }
           ])
           ++
-          (lib.optionals (taskName == "node-0") [
-            # Generator
+          # Generator
+          (lib.optionals (taskName == generatorTaskName) [
             ## Generator start.sh script.
             {
               env = false;

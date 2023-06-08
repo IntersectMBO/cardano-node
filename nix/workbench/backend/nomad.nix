@@ -15,6 +15,11 @@ let
   materialise-profile =
     { profileData }:
       let
+        # TODO: Repeated code, add the generator's node name to profile.json
+        generatorTaskName = if builtins.hasAttr "explorer" profileData.node-specs.value
+          then "explorer"
+          else "node-0"
+        ;
         # Intermediate / workbench-adhoc container specifications
         containerSpecs = rec {
           #
@@ -110,6 +115,7 @@ let
             }
           ;
           nomadJob = {
+            inherit generatorTaskName;
             podman = {
               # TODO: oneTracerPerGroup
               oneTracerPerCluster = import ./nomad-job.nix
@@ -118,6 +124,7 @@ let
                   inherit containerSpecs;
                   # May evolve to a "cloud" flag!
                   execTaskDriver = false;
+                  inherit generatorTaskName;
                   oneTracerPerNode = false;
                 };
               oneTracerPerNode = import ./nomad-job.nix
@@ -126,6 +133,7 @@ let
                   inherit containerSpecs;
                   # May evolve to a "cloud" flag!
                   execTaskDriver = false;
+                  inherit generatorTaskName;
                   oneTracerPerNode = true;
                 };
             };
@@ -137,6 +145,7 @@ let
                   inherit containerSpecs;
                   # May evolve to a "cloud" flag!
                   execTaskDriver = true;
+                  inherit generatorTaskName;
                   oneTracerPerNode = false;
                 };
               oneTracerPerNode = import ./nomad-job.nix
@@ -145,6 +154,7 @@ let
                   inherit containerSpecs;
                   # May evolve to a "cloud" flag!
                   execTaskDriver = true;
+                  inherit generatorTaskName;
                   oneTracerPerNode = true;
                 };
             };

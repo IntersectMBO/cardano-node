@@ -98,6 +98,9 @@ backend_nomadcloud() {
       setenvjqstr 'nomad_environment'   "cloud"
       setenvjqstr 'one_tracer_per_node' "true" # TODO: Not implemented yet!
 
+      # Cloud runs always run the generator inside Nomad Task "explorer"
+      setenvjqstr 'generator_task_name' "$(jq -r .nomadJob.generatorTaskName "${profile_container_specs_file}")"
+
       backend_nomadcloud setenv-nomadcloud "${profile_container_specs_file}"
     ;;
 
