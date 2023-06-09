@@ -116,29 +116,29 @@ let
       "--config ${nodeConfigFile}"
       "--database-path ${instanceDbPath}"
       "--topology ${topology}"
-    ] ++ lib.optionals (!cfg.systemdSocketActivation) [
+    ] ++ lib.optionals (!cfg.systemdSocketActivation) ([
       "--host-addr ${cfg.hostAddr}"
       "--port ${toString (cfg.port + i)}"
       "--socket-path ${cfg.socketPath i}"
-    ] ++ lib.optionals (cfg.tracerSocketPathAccept i != null) [
-        "--tracer-socket-path-accept ${cfg.tracerSocketPathAccept i}"
-    ] ++ lib.optionals (cfg.tracerSocketPathConnect i != null) [
-        "--tracer-socket-path-connect ${cfg.tracerSocketPathConnect i}"
     ] ++ lib.optionals (cfg.ipv6HostAddr i != null) [
-        "--host-ipv6-addr ${cfg.ipv6HostAddr i}"
+      "--host-ipv6-addr ${cfg.ipv6HostAddr i}"
+    ]) ++ lib.optionals (cfg.tracerSocketPathAccept i != null) [
+      "--tracer-socket-path-accept ${cfg.tracerSocketPathAccept i}"
+    ] ++ lib.optionals (cfg.tracerSocketPathConnect i != null) [
+      "--tracer-socket-path-connect ${cfg.tracerSocketPathConnect i}"
     ] ++ consensusParams.${cfg.nodeConfig.Protocol} ++ cfg.extraArgs ++ cfg.rtsArgs;
     in ''
-        echo "Starting: ${concatStringsSep "\"\n   echo \"" cmd}"
-        echo "..or, once again, in a single line:"
-        echo "${toString cmd}"
-        ${lib.optionalString (i > 0) ''
-        # If exist copy state from existing instance instead of syncing from scratch:
-        if [ ! -d ${instanceDbPath} ] && [ -d ${cfg.databasePath 0} ]; then
-          echo "Copying existing immutable db from ${cfg.databasePath 0}"
-          ${pkgs.rsync}/bin/rsync --archive --ignore-errors --exclude 'clean' ${cfg.databasePath 0}/ ${instanceDbPath}/ || true
-        fi
-        ''}
-        ${toString cmd}'';
+      echo "Starting: ${concatStringsSep "\"\n   echo \"" cmd}"
+      echo "..or, once again, in a single line:"
+      echo "${toString cmd}"
+      ${lib.optionalString (i > 0) ''
+      # If exist copy state from existing instance instead of syncing from scratch:
+      if [ ! -d ${instanceDbPath} ] && [ -d ${cfg.databasePath 0} ]; then
+        echo "Copying existing immutable db from ${cfg.databasePath 0}"
+        ${pkgs.rsync}/bin/rsync --archive --ignore-errors --exclude 'clean' ${cfg.databasePath 0}/ ${instanceDbPath}/ || true
+      fi
+      ''}
+      ${toString cmd}'';
 in {
   options = {
     services.cardano-node = {
