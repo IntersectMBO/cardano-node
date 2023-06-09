@@ -56,6 +56,7 @@ case "$op" in
         scenario_setup_exit_trap     "$dir"
         backend start-nodes          "$dir"
         backend start-generator      "$dir"
+        backend start-healthchecks   "$dir"
 
         scenario_setup_workload_termination   "$dir"
         backend wait-pools-stopped   "$dir"
