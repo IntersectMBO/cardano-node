@@ -1,6 +1,7 @@
 module Testnet.Util.Base
   ( integration
   , integrationRetryWorkspace
+  , integrationWorkspace
   , isLinux
   ) where
 
@@ -21,6 +22,12 @@ integrationRetryWorkspace :: HasCallStack => Int -> FilePath -> (FilePath -> H.I
 integrationRetryWorkspace n workspaceName f = GHC.withFrozenCallStack $
   integration $ H.retry n $ \i ->
     H.runFinallies $ H.workspace (workspaceName <> "-" <> show i) f
+
+-- | The 'FilePath' in '(FilePath -> H.Integration ())' is the work space directory.
+-- This is created (and returned) via 'H.workspace'.
+integrationWorkspace :: HasCallStack => FilePath -> (FilePath -> H.Integration ()) -> H.Property
+integrationWorkspace workspaceName f = GHC.withFrozenCallStack $
+  integration $ H.runFinallies $ H.workspace workspaceName f
 
 isLinux :: Bool
 isLinux = os == "linux"
