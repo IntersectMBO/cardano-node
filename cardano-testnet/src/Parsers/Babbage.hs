@@ -17,9 +17,8 @@ import           Testnet.Run (runTestnet)
 import           Testnet.Util.Cli
 import           Testnet.Util.Runtime (readNodeLoggingFormat)
 
-data BabbageOptions = BabbageOptions
-  { maybeTestnetMagic :: Maybe Int
-  , testnetOptions :: BabbageTestnetOptions
+newtype BabbageOptions = BabbageOptions
+  { testnetOptions :: BabbageTestnetOptions
   } deriving (Eq, Show)
 
 optsTestnet :: Parser BabbageTestnetOptions
@@ -62,15 +61,7 @@ optsTestnet = BabbageTestnetOptions
       )
 
 optsBabbage :: Parser BabbageOptions
-optsBabbage = BabbageOptions
-  <$> optional
-      ( OA.option auto
-        (   long "testnet-magic"
-        <>  help "Testnet magic"
-        <>  metavar "INT"
-        )
-      )
-  <*> optsTestnet
+optsBabbage = BabbageOptions <$> optsTestnet
 
 runBabbageOptions :: BabbageOptions -> IO ()
 runBabbageOptions options =

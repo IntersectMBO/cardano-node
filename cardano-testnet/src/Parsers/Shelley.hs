@@ -18,9 +18,8 @@ import           Testnet.Util.Cli
 import           Testnet.Utils
 
 
-data ShelleyOptions = ShelleyOptions
-  { maybeTestnetMagic :: Maybe Int
-  , testnetOptions :: ShelleyTestnetOptions
+newtype ShelleyOptions = ShelleyOptions
+  { testnetOptions :: ShelleyTestnetOptions
   } deriving (Eq, Show)
 
 optsTestnet :: Parser ShelleyTestnetOptions
@@ -78,15 +77,7 @@ optsTestnet = ShelleyTestnetOptions
       )
 
 optsShelley :: Parser ShelleyOptions
-optsShelley = ShelleyOptions
-  <$> optional
-      ( OA.option auto
-        (   long "testnet-magic"
-        <>  help "Testnet magic"
-        <>  metavar "INT"
-        )
-      )
-  <*> optsTestnet
+optsShelley = ShelleyOptions <$> optsTestnet
 
 runShelleyOptions :: ShelleyOptions -> IO ()
 runShelleyOptions options =

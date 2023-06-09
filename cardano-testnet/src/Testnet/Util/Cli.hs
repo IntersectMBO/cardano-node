@@ -142,9 +142,9 @@ cliByronSigningKeyAddress tmp testnetMagic (File key) destPath = do
 
 pNetworkId :: Parser Int
 pNetworkId =
-  Opt.option (bounded "TESTNET_MAGIC")
-     $ mconcat [ Opt.long "testnet-magic"
-               , Opt.metavar "INT"
-               , Opt.help "Specify a testnet magic id."
-               ]
+  Opt.option (bounded "TESTNET_MAGIC") $ mconcat
+    [ Opt.long "testnet-magic"
+    , Opt.metavar "INT"
+    , Opt.help "Specify a testnet magic id."
+    ]
 
