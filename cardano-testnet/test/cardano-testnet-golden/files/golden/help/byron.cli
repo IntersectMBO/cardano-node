@@ -1,5 +1,4 @@
-Usage: cardano-testnet byron [--testnet-magic INT]
-                               [--num-bft-nodes COUNT]
+Usage: cardano-testnet byron [--num-bft-nodes COUNT]
                                [--slot-duration MILLISECONDS]
                                --testnet-magic INT
                                [--security-param INT]
@@ -10,7 +9,6 @@ Usage: cardano-testnet byron [--testnet-magic INT]
   Start a Byron testnet
 
 Available options:
-  --testnet-magic INT      Testnet magic
   --num-bft-nodes COUNT    Number of BFT nodes (default: 3)
   --slot-duration MILLISECONDS
                            Slot duration (default: 2000)
