@@ -1,7 +1,7 @@
-module Parsers.Babbage
-  ( BabbageOptions(..)
-  , cmdBabbage
-  , runBabbageOptions
+module Parsers.Conway
+  ( ConwayOptions(..)
+  , cmdConway
+  , runConwayOptions
   ) where
 
 import           Prelude
@@ -17,32 +17,32 @@ import           Testnet.Run (runTestnet)
 import           Testnet.Util.Cli
 import           Testnet.Util.Runtime (readNodeLoggingFormat)
 
-newtype BabbageOptions = BabbageOptions
-  { testnetOptions :: BabbageTestnetOptions
+newtype ConwayOptions = ConwayOptions
+  { testnetOptions :: ConwayTestnetOptions
   } deriving (Eq, Show)
 
-optsTestnet :: Parser BabbageTestnetOptions
-optsTestnet = BabbageTestnetOptions
+optsTestnet :: Parser ConwayTestnetOptions
+optsTestnet = ConwayTestnetOptions
   <$> OA.option auto
       (   OA.long "num-spo-nodes"
       <>  OA.help "Number of SPO nodes"
       <>  OA.metavar "COUNT"
       <>  OA.showDefault
-      <>  OA.value (babbageNumSpoNodes defaultBabbageTestnetOptions)
+      <>  OA.value (conwayNumSpoNodes defaultConwayTestnetOptions)
       )
   <*> OA.option auto
       (   OA.long "slot-duration"
       <>  OA.help "Slot duration"
       <>  OA.metavar "MILLISECONDS"
       <>  OA.showDefault
-      <>  OA.value (babbageSlotDuration defaultBabbageTestnetOptions)
+      <>  OA.value (conwaySlotDuration defaultConwayTestnetOptions)
       )
   <*> OA.option auto
       (   OA.long "security-param"
       <>  OA.help "Security parameter"
       <>  OA.metavar "INT"
       <>  OA.showDefault
-      <>  OA.value (babbageSecurityParam defaultBabbageTestnetOptions)
+      <>  OA.value (conwaySecurityParam defaultConwayTestnetOptions)
       )
   <*> pNetworkId
   <*> OA.option auto
@@ -50,22 +50,22 @@ optsTestnet = BabbageTestnetOptions
       <>  OA.help "Total balance"
       <>  OA.metavar "INT"
       <>  OA.showDefault
-      <>  OA.value (babbageTotalBalance defaultBabbageTestnetOptions)
+      <>  OA.value (conwayTotalBalance defaultConwayTestnetOptions)
       )
   <*> OA.option (OA.eitherReader readNodeLoggingFormat)
       (   OA.long "nodeLoggingFormat"
       <>  OA.help "Node logging format (json|text)"
       <>  OA.metavar "LOGGING_FORMAT"
       <>  OA.showDefault
-      <>  OA.value (babbageNodeLoggingFormat defaultBabbageTestnetOptions)
+      <>  OA.value (conwayNodeLoggingFormat defaultConwayTestnetOptions)
       )
 
-optsBabbage :: Parser BabbageOptions
-optsBabbage = BabbageOptions <$> optsTestnet
+optsConway :: Parser ConwayOptions
+optsConway = ConwayOptions <$> optsTestnet
 
-runBabbageOptions :: BabbageOptions -> IO ()
-runBabbageOptions options =
-  runTestnet $ Testnet.testnet (BabbageOnlyTestnetOptions $ testnetOptions options)
+runConwayOptions :: ConwayOptions -> IO ()
+runConwayOptions options =
+  runTestnet $ Testnet.testnet (ConwayOnlyTestnetOptions $ testnetOptions options)
 
-cmdBabbage :: Mod CommandFields BabbageOptions
-cmdBabbage = command' "babbage" "Start a babbage testnet " optsBabbage
+cmdConway :: Mod CommandFields ConwayOptions
+cmdConway = command' "conway" "Start a conway testnet " optsConway

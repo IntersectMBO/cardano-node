@@ -44,7 +44,7 @@ import qualified System.IO as IO
 import qualified System.Process as IO
 import           Testnet.Commands.Genesis
 import qualified Testnet.Conf as H
-import           Testnet.Options hiding (defaultTestnetOptions)
+import           Testnet.Options
 import qualified Testnet.Util.Process as H
 import qualified Testnet.Util.Runtime as TR
 import           Testnet.Utils

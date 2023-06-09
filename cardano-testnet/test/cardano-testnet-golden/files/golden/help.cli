@@ -1,4 +1,12 @@
-Usage: cardano-testnet (cardano | byron | shelley | babbage | version | help)
+Usage: cardano-testnet 
+                         ( cardano
+                         | byron
+                         | shelley
+                         | babbage
+                         | conway
+                         | version
+                         | help
+                         )
 
 Usage: cardano-testnet cardano [--num-bft-nodes COUNT]
                                  [--num-pool-nodes COUNT]
@@ -50,6 +58,15 @@ Usage: cardano-testnet babbage [--num-spo-nodes COUNT]
                                  [--nodeLoggingFormat LOGGING_FORMAT]
 
   Start a babbage testnet
+
+Usage: cardano-testnet conway [--num-spo-nodes COUNT]
+                                [--slot-duration MILLISECONDS]
+                                [--security-param INT]
+                                --testnet-magic INT
+                                [--total-balance INT]
+                                [--nodeLoggingFormat LOGGING_FORMAT]
+
+  Start a conway testnet
 
 Usage: cardano-testnet version 
 

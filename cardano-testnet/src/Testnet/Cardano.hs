@@ -60,7 +60,7 @@ import qualified Hedgehog.Extras.Test.Network as H
 import           Testnet.Commands.Genesis
 import           Testnet.Commands.Governance
 import qualified Testnet.Conf as H
-import           Testnet.Options hiding (defaultTestnetOptions)
+import           Testnet.Options
 import qualified Testnet.Util.Assert as H
 import qualified Testnet.Util.Process as H
 import           Testnet.Util.Process (execCli_)

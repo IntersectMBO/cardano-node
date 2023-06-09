@@ -6,11 +6,11 @@
 
 {-# OPTIONS_GHC -Wno-unused-local-binds -Wno-unused-matches #-}
 
-module Testnet.Babbage
+module Testnet.Conway
   ( TestnetRuntime (..)
   , PaymentKeyPair(..)
 
-  , babbageTestnet
+  , conwayTestnet
   ) where
 
 import           Prelude
@@ -29,7 +29,7 @@ import           Cardano.Api
 
 import           Testnet.Commands.Genesis
 import qualified Testnet.Conf as H
-import           Testnet.Options (BabbageTestnetOptions (..), defaultYamlHardforkViaConfig)
+import           Testnet.Options (ConwayTestnetOptions (..), defaultYamlHardforkViaConfig)
 import qualified Testnet.Util.Assert as H
 import           Testnet.Util.Process (execCli_)
 import           Testnet.Util.Runtime (Delegator (..), PaymentKeyPair (..), PoolNode (PoolNode),
@@ -50,11 +50,11 @@ import qualified Hedgehog.Extras.Test.File as H
 startTimeOffsetSeconds :: DTC.NominalDiffTime
 startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
 
-babbageTestnet :: BabbageTestnetOptions -> H.Conf -> H.Integration TestnetRuntime
-babbageTestnet testnetOptions H.Conf {H.configurationTemplate, H.tempAbsPath} = do
+conwayTestnet :: ConwayTestnetOptions -> H.Conf -> H.Integration TestnetRuntime
+conwayTestnet testnetOptions H.Conf {H.configurationTemplate, H.tempAbsPath} = do
   let logDir = makeLogDir tempAbsPath
       tempAbsPath' = unTmpAbsPath tempAbsPath
-      testnetMagic = babbageTestnetMagic testnetOptions
+      testnetMagic = conwayTestnetMagic testnetOptions
   H.createDirectoryIfMissing_ logDir
 
   H.lbsWriteFile (tempAbsPath' </> "byron.genesis.spec.json")
@@ -64,7 +64,7 @@ babbageTestnet testnetOptions H.Conf {H.configurationTemplate, H.tempAbsPath} = 
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
 
-  createByronGenesisForBabbage
+  createByronGenesisForConway
     testnetMagic
     startTime
     testnetOptions
@@ -72,20 +72,20 @@ babbageTestnet testnetOptions H.Conf {H.configurationTemplate, H.tempAbsPath} = 
     (tempAbsPath' </> "byron-gen-command")
 
 
-  -- Because in Babbage the overlay schedule and decentralization parameter
+  -- Because in Conway the overlay schedule and decentralization parameter
   -- are deprecated, we must use the "create-staked" cli command to create
   -- SPOs in the ShelleyGenesis
 
-  alonzoBabbageTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath' </> "genesis.alonzo.spec.json"
+  alonzoConwayTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath' </> "genesis.alonzo.spec.json"
   gen <- H.evalEither $ first displayError defaultAlonzoGenesis
-  H.evalIO $ LBS.writeFile alonzoBabbageTestGenesisJsonTargetFile $ encode gen
+  H.evalIO $ LBS.writeFile alonzoConwayTestGenesisJsonTargetFile $ encode gen
 
-  conwayBabbageTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath' </> "genesis.conway.spec.json"
-  H.evalIO $ LBS.writeFile conwayBabbageTestGenesisJsonTargetFile $ encode defaultConwayGenesis
+  conwayConwayTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath' </> "genesis.conway.spec.json"
+  H.evalIO $ LBS.writeFile conwayConwayTestGenesisJsonTargetFile $ encode defaultConwayGenesis
 
   configurationFile <- H.noteShow $ tempAbsPath' </> "configuration.yaml"
 
-  let numPoolNodes = babbageNumSpoNodes testnetOptions
+  let numPoolNodes = conwayNumSpoNodes testnetOptions
 
   execCli_
     [ "genesis", "create-staked"
@@ -126,7 +126,7 @@ babbageTestnet testnetOptions H.Conf {H.configurationTemplate, H.tempAbsPath} = 
         }
       }
 
-  let spoNodes :: [String] = ("node-spo" <>) . show <$> [1 .. babbageNumSpoNodes testnetOptions]
+  let spoNodes :: [String] = ("node-spo" <>) . show <$> [1 .. conwayNumSpoNodes testnetOptions]
 
   -- Create the node directories
 
@@ -194,7 +194,7 @@ babbageTestnet testnetOptions H.Conf {H.configurationTemplate, H.tempAbsPath} = 
                                            , shelleyGenesisHash
                                            , alonzoGenesisHash
                                            , conwayGenesisHash
-                                           , defaultYamlHardforkViaConfig (AnyCardanoEra BabbageEra)]
+                                           , defaultYamlHardforkViaConfig (AnyCardanoEra ConwayEra)]
 
   H.evalIO $ LBS.writeFile (tempAbsPath' </> "configuration.yaml") finalYamlConfig
 
@@ -296,7 +296,7 @@ babbageTestnet testnetOptions H.Conf {H.configurationTemplate, H.tempAbsPath} = 
 
   forM_ spoNodes $ \node -> do
     nodeStdoutFile <- H.noteTempFile (makeLogDir $ TmpAbsolutePath tempAbsPath') $ node <> ".stdout.log"
-    H.assertChainExtended deadline (babbageNodeLoggingFormat testnetOptions) nodeStdoutFile
+    H.assertChainExtended deadline (conwayNodeLoggingFormat testnetOptions) nodeStdoutFile
 
   H.noteShowIO_ DTC.getCurrentTime
 
