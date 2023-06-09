@@ -4,7 +4,8 @@
 -- | All Byron and Shelley Genesis related functionality
 module Testnet.Commands.Genesis
   ( createShelleyGenesisInitialTxIn
-  , createByronGenesis
+  , createByronGenesisForBabbage
+  , createByronGenesisForConway
   , defaultAlonzoGenesis
   , defaultConwayGenesis
   , defaultByronProtocolParamsJsonValue
@@ -41,7 +42,7 @@ import           Testnet.Util.Process
 
 -- | Creates a default Byron genesis. This is required for any testnet, predominantly because
 -- we inject our ADA supply into our testnet via the Byron genesis.
-createByronGenesis
+createByronGenesisForBabbage
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => Int
   -> UTCTime
@@ -49,7 +50,7 @@ createByronGenesis
   -> String
   -> String
   -> m ()
-createByronGenesis testnetMagic startTime testnetOptions pParamFp genOutputDir =
+createByronGenesisForBabbage testnetMagic startTime testnetOptions pParamFp genOutputDir =
   withFrozenCallStack $ execCli_
     [ "byron", "genesis", "genesis"
     , "--protocol-magic", show testnetMagic
@@ -58,6 +59,32 @@ createByronGenesis testnetMagic startTime testnetOptions pParamFp genOutputDir =
     , "--n-poor-addresses", "0"
     , "--n-delegate-addresses", show @Int (babbageNumSpoNodes testnetOptions)
     , "--total-balance", show @Int (babbageTotalBalance testnetOptions)
+    , "--delegate-share", "1"
+    , "--avvm-entry-count", "0"
+    , "--avvm-entry-balance", "0"
+    , "--protocol-parameters-file", pParamFp
+    , "--genesis-output-dir", genOutputDir
+    ]
+
+-- | Creates a default Byron genesis. This is required for any testnet, predominantly because
+-- we inject our ADA supply into our testnet via the Byron genesis.
+createByronGenesisForConway
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  => Int
+  -> UTCTime
+  -> ConwayTestnetOptions
+  -> String
+  -> String
+  -> m ()
+createByronGenesisForConway testnetMagic startTime testnetOptions pParamFp genOutputDir =
+  withFrozenCallStack $ execCli_
+    [ "byron", "genesis", "genesis"
+    , "--protocol-magic", show testnetMagic
+    , "--start-time", showUTCTimeSeconds startTime
+    , "--k", show (conwaySecurityParam testnetOptions)
+    , "--n-poor-addresses", "0"
+    , "--n-delegate-addresses", show @Int (conwayNumSpoNodes testnetOptions)
+    , "--total-balance", show @Int (conwayTotalBalance testnetOptions)
     , "--delegate-share", "1"
     , "--avvm-entry-count", "0"
     , "--avvm-entry-balance", "0"

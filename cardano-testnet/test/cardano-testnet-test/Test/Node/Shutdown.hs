@@ -75,10 +75,10 @@ hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' ->
     . encode $ defaultByronProtocolParamsJsonValue
 
   startTime <- H.noteShowIO DTC.getCurrentTime
-  createByronGenesis
+  createByronGenesisForConway
     testnetMagic'
     startTime
-    babbageDefaultTestnetOptions
+    conwayDefaultTestnetOptions
     (tempAbsPath' </> "byron.genesis.spec.json")
     (tempAbsPath' </> "byron")
 

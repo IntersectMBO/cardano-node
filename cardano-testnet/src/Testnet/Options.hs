@@ -7,8 +7,10 @@
 
 module Testnet.Options
   ( BabbageTestnetOptions(..)
+  , ConwayTestnetOptions(..)
+  , defaultBabbageTestnetOptions
+  , defaultConwayTestnetOptions
   , defaultShelleyOnlyYamlConfig
-  , defaultTestnetOptions
   , defaultYamlHardforkViaConfig
   ) where
 
@@ -37,8 +39,8 @@ data BabbageTestnetOptions = BabbageTestnetOptions
   , babbageNodeLoggingFormat :: NodeLoggingFormat
   } deriving (Eq, Show)
 
-defaultTestnetOptions :: BabbageTestnetOptions
-defaultTestnetOptions = BabbageTestnetOptions
+defaultBabbageTestnetOptions :: BabbageTestnetOptions
+defaultBabbageTestnetOptions = BabbageTestnetOptions
   { babbageNumSpoNodes = 3
   , babbageSlotDuration = 200
   , babbageSecurityParam = 10
@@ -47,6 +49,24 @@ defaultTestnetOptions = BabbageTestnetOptions
   , babbageNodeLoggingFormat = NodeLoggingFormatAsJson
   }
 
+data ConwayTestnetOptions = ConwayTestnetOptions
+  { conwayNumSpoNodes :: Int
+  , conwaySlotDuration :: Int
+  , conwaySecurityParam :: Int
+  , conwayTestnetMagic :: Int
+  , conwayTotalBalance :: Int
+  , conwayNodeLoggingFormat :: NodeLoggingFormat
+  } deriving (Eq, Show)
+
+defaultConwayTestnetOptions :: ConwayTestnetOptions
+defaultConwayTestnetOptions = ConwayTestnetOptions
+  { conwayNumSpoNodes = 3
+  , conwaySlotDuration = 200
+  , conwaySecurityParam = 10
+  , conwayTestnetMagic = 42
+  , conwayTotalBalance = 10020000000
+  , conwayNodeLoggingFormat = NodeLoggingFormatAsJson
+  }
 
 defaultYamlConfig :: [KeyMapAeson.KeyMap Aeson.Value]
 defaultYamlConfig =
