@@ -1,5 +1,4 @@
-Usage: cardano-testnet babbage [--testnet-magic INT]
-                                 [--num-spo-nodes COUNT]
+Usage: cardano-testnet babbage [--num-spo-nodes COUNT]
                                  [--slot-duration MILLISECONDS]
                                  [--security-param INT]
                                  --testnet-magic INT
@@ -9,7 +8,6 @@ Usage: cardano-testnet babbage [--testnet-magic INT]
   Start a babbage testnet
 
 Available options:
-  --testnet-magic INT      Testnet magic
   --num-spo-nodes COUNT    Number of SPO nodes (default: 3)
   --slot-duration MILLISECONDS
                            Slot duration (default: 200)

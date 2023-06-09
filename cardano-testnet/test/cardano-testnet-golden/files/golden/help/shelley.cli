@@ -1,5 +1,4 @@
-Usage: cardano-testnet shelley [--testnet-magic INT]
-                                 [--num-praos-nodes COUNT]
+Usage: cardano-testnet shelley [--num-praos-nodes COUNT]
                                  [--num-pool-nodes COUNT]
                                  [--active-slots-coeff DOUBLE]
                                  [--security-param INT]
@@ -12,7 +11,6 @@ Usage: cardano-testnet shelley [--testnet-magic INT]
   Start a Shelley testnet
 
 Available options:
-  --testnet-magic INT      Testnet magic
   --num-praos-nodes COUNT  Number of PRAOS nodes (default: 2)
   --num-pool-nodes COUNT   Number of pool nodes (default: 1)
   --active-slots-coeff DOUBLE
