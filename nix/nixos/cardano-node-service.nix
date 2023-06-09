@@ -51,20 +51,14 @@ let
     nodeConfigFile = if (cfg.nodeConfigFile != null) then cfg.nodeConfigFile
       else toFile "config-${toString cfg.nodeId}-${toString i}.json" (toJSON instanceConfig);
     newTopology = {
-      LocalRoots = {
-        groups = map (g: {
-          localRoots = {
-            inherit (g) accessPoints;
-            advertise = g.advertise or false;
-          };
-          valency = g.valency or (length g.accessPoints);
-        }) (cfg.producers ++ (cfg.instanceProducers i));
-      };
-      PublicRoots = map (g: {
-        publicRoots = {
-          inherit (g) accessPoints;
-          advertise = g.advertise or false;
-        };
+      localRoots = map (g: {
+        inherit (g) accessPoints;
+        advertise = g.advertise or false;
+        valency = g.valency or (length g.accessPoints);
+      }) (cfg.producers ++ (cfg.instanceProducers i));
+      publicRoots = map (g: {
+        inherit (g) accessPoints;
+        advertise = g.advertise or false;
       }) (cfg.publicProducers ++ (cfg.instancePublicProducers i));
     } // optionalAttrs (cfg.usePeersFromLedgerAfterSlot != null) {
       useLedgerAfterSlot = cfg.usePeersFromLedgerAfterSlot;
