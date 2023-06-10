@@ -96,6 +96,13 @@ case "${op}" in
         sponge "$outdir"/topology.json
         ;;
 
+    # For the value profile returns:
+    # {
+    # "0":1,
+    # "1":1,
+    # ...
+    # "51":1
+    # }
     density-map )
         local usage="USAGE:  wb topology density-map NODE-SPECS-JSON"
         local node_specs_json=${1:?$usage}
@@ -103,12 +110,15 @@ case "${op}" in
         args=(--slurpfile node_specs "$node_specs_json"
               --null-input --compact-output
              )
+        # Filter the explorer node if not {...,"52":0}
         jq ' $node_specs[0]
-           | map
-             ({ key:   "\(.i)"
-              , value: ((.pools) // 0)
-              })
-           | from_entries
+          | to_entries
+          | map( select(.value.kind == "pool") )
+          | map
+            ({ key:   "\(.value.i)"
+             , value: ((.value.pools) // 0)
+             })
+          | from_entries
            ' "${args[@]}";;
 
     projection-for )
