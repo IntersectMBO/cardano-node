@@ -21,6 +21,7 @@ import           Data.Bifunctor
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
+import qualified Data.Text as Text
 import qualified Data.Time.Clock as DTC
 import           System.FilePath.Posix ((</>))
 import qualified System.Info as OS
@@ -31,7 +32,7 @@ import           Testnet.Commands.Genesis
 import qualified Testnet.Conf as H
 import           Testnet.Options (ConwayTestnetOptions (..), defaultYamlHardforkViaConfig)
 import qualified Testnet.Util.Assert as H
-import           Testnet.Util.Process (execCli_)
+import           Testnet.Util.Process (execCli, execCli_)
 import           Testnet.Util.Runtime (Delegator (..), PaymentKeyPair (..), PoolNode (PoolNode),
                    PoolNodeKeys (..), StakingKeyPair (..), TestnetRuntime (..),
                    TmpAbsolutePath (..), makeLogDir, startNode)
@@ -277,7 +278,12 @@ conwayTestnet testnetOptions H.Conf {H.configurationTemplate, H.tempAbsPath} = d
       ]
     ]
 
-  poolNodes <- forM (L.zip spoNodes poolKeys) $ \(node,key) -> do
+  poolNodes <- forM (L.zip spoNodes poolKeys) $ \(node, keys) -> do
+    poolId <- H.noteShowM $ Text.pack . filter ( /= '\n') <$> execCli
+      [ "stake-pool", "id"
+      , "--cold-verification-key-file", poolNodeKeysColdVkey keys
+      ]
+
     runtime <- startNode (TmpAbsolutePath tempAbsPath') node
         [ "run"
         , "--config", tempAbsPath' </> "configuration.yaml"
@@ -289,7 +295,8 @@ conwayTestnet testnetOptions H.Conf {H.configurationTemplate, H.tempAbsPath} = d
         , "--byron-signing-key", tempAbsPath' </> node </> "byron-delegate.key"
         , "--shelley-operational-certificate", tempAbsPath' </> node </> "opcert.cert"
         ]
-    return $ PoolNode runtime key
+
+    return $ PoolNode poolId runtime keys
 
   now <- H.noteShowIO DTC.getCurrentTime
   deadline <- H.noteShow $ DTC.addUTCTime 90 now

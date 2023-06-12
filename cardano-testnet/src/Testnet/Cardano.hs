@@ -33,6 +33,7 @@ import qualified Data.List as L
 import qualified Data.Map.Strict as M
 import           Data.Maybe
 import           Data.String
+import qualified Data.Text as Text
 import qualified Data.Time.Clock as DTC
 import           Data.Word
 import qualified System.Directory as IO
@@ -63,7 +64,7 @@ import qualified Testnet.Conf as H
 import           Testnet.Options
 import qualified Testnet.Util.Assert as H
 import qualified Testnet.Util.Process as H
-import           Testnet.Util.Process (execCli_)
+import           Testnet.Util.Process (execCli, execCli_)
 import           Testnet.Util.Runtime as TR
 import           Testnet.Utils
 
@@ -679,7 +680,12 @@ cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
 
   H.threadDelay 100000
 
-  poolNodes <- forM (L.zip poolNodeNames poolKeys) $ \(node, key) -> do
+  poolNodes <- forM (L.zip poolNodeNames poolKeys) $ \(node, keys) -> do
+    poolId <- H.noteShowM $ Text.pack . filter ( /= '\n') <$> execCli
+      [ "stake-pool", "id"
+      , "--cold-verification-key-file", poolNodeKeysColdVkey keys
+      ]
+
     runtime <- startNode (TmpAbsolutePath tempAbsPath') node
         [ "run"
         , "--config", tempAbsPath' </> "configuration.yaml"
@@ -690,7 +696,8 @@ cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
         , "--shelley-operational-certificate", tempAbsPath' </> node </> "shelley/node.cert"
         , "--host-addr", ifaceAddress
         ]
-    return $ PoolNode runtime key
+
+    return $ PoolNode poolId runtime keys
 
   now <- H.noteShowIO DTC.getCurrentTime
   deadline <- H.noteShow $ DTC.addUTCTime 90 now

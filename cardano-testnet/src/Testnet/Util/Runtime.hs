@@ -89,7 +89,8 @@ data NodeRuntime = NodeRuntime
   }
 
 data PoolNode = PoolNode
-  { poolRuntime :: NodeRuntime
+  { poolId :: Text
+  , poolRuntime :: NodeRuntime
   , poolKeys :: PoolNodeKeys
   }
 
