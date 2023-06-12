@@ -33,9 +33,9 @@ import qualified Testnet.Conf as H
 import           Testnet.Options (BabbageTestnetOptions (..), defaultYamlHardforkViaConfig)
 import qualified Testnet.Util.Assert as H
 import           Testnet.Util.Process (execCli, execCli_)
-import           Testnet.Util.Runtime (Delegator (..), PaymentKeyPair (..), PoolNode (PoolNode),
+import           Testnet.Util.Runtime (Delegator (..), PaymentInfo (..), PaymentKeyPair (..), PoolNode (PoolNode),
                    PoolNodeKeys (..), StakingKeyPair (..), TestnetRuntime (..),
-                   TmpAbsolutePath (..), makeLogDir, startNode)
+                   TmpAbsolutePath (..), makeLogDir, makeTmpBaseAbsPath, poolSprockets, startNode)
 import           Testnet.Utils
 
 import qualified Hedgehog as H
@@ -43,6 +43,7 @@ import qualified Hedgehog.Extras.Stock.Aeson as J
 import qualified Hedgehog.Extras.Stock.OS as OS
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
+import qualified Testnet.Util.Process as H
 
 {- HLINT ignore "Redundant flip" -}
 
@@ -110,18 +111,30 @@ babbageTestnet testnetOptions H.Conf {H.configurationTemplate, H.tempAbsPath} = 
       }
 
   wallets <- forM [1..3] $ \idx -> do
-    pure $ PaymentKeyPair
-      { paymentSKey = tempAbsPath' </> "utxo-keys/utxo" <> show @Int idx <> ".skey"
-      , paymentVKey = tempAbsPath' </> "utxo-keys/utxo" <> show @Int idx <> ".vkey"
+    let paymentSKey = tempAbsPath' </> "utxo-keys/utxo" <> show @Int idx <> ".skey"
+    let paymentVKey = tempAbsPath' </> "utxo-keys/utxo" <> show @Int idx <> ".vkey"
+
+    paymentAddress <- fmap Text.pack $ execCli
+      [ "address", "build"
+      , "--payment-verification-key-file", paymentVKey
+      , "--testnet-magic", show @Int testnetMagic
+      ]
+
+    pure $ PaymentInfo
+      { paymentInfoAddress = paymentAddress
+      , paymentInfoKeyPair = PaymentKeyPair
+        { paymentSKey
+        , paymentVKey
+        }
       }
 
   delegators <- forM [1..3] $ \idx -> do
     pure $ Delegator
-      { paymentKeyPair = PaymentKeyPair
+      { delegatorPaymentKeyPair = PaymentKeyPair
         { paymentSKey = tempAbsPath' </> "stake-delegator-keys/payment" <> show @Int idx <> ".skey"
         , paymentVKey = tempAbsPath' </> "stake-delegator-keys/payment" <> show @Int idx <> ".vkey"
         }
-      , stakingKeyPair = StakingKeyPair
+      , delegatorStakingKeyPair = StakingKeyPair
         { stakingSKey = tempAbsPath' </> "stake-delegator-keys/staking" <> show @Int idx <> ".skey"
         , stakingVKey = tempAbsPath' </> "stake-delegator-keys/staking" <> show @Int idx <> ".vkey"
         }
@@ -307,11 +320,9 @@ babbageTestnet testnetOptions H.Conf {H.configurationTemplate, H.tempAbsPath} = 
 
   H.noteShowIO_ DTC.getCurrentTime
 
-  forM_ wallets $ \wallet -> do
-    H.cat $ paymentSKey wallet
-    H.cat $ paymentVKey wallet
+  let tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
 
-  return TestnetRuntime
+  runtime <- pure $ TestnetRuntime
     { configurationFile
     , shelleyGenesisFile = genesisShelleyDir </> "genesis.json"
     , testnetMagic
@@ -320,3 +331,20 @@ babbageTestnet testnetOptions H.Conf {H.configurationTemplate, H.tempAbsPath} = 
     , bftNodes = []
     , delegators = delegators
     }
+
+  execConfig <- H.headM (poolSprockets runtime) >>= H.mkExecConfig tempBaseAbsPath
+
+  forM_ wallets $ \wallet -> do
+    H.note_ $ paymentSKey $ paymentInfoKeyPair wallet
+    H.note_ $ paymentVKey $ paymentInfoKeyPair wallet
+
+    out <- H.execCli' execConfig
+      [ "query", "utxo"
+      , "--address", Text.unpack $ paymentInfoAddress wallet
+      , "--cardano-mode"
+      , "--testnet-magic", show @Int testnetMagic
+      ]
+
+    H.note_ out
+
+  return runtime
