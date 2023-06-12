@@ -52,12 +52,12 @@ let
       else toFile "config-${toString cfg.nodeId}-${toString i}.json" (toJSON instanceConfig);
     newTopology = {
       localRoots = map (g: {
-        inherit (g) accessPoints;
+        accessPoints = map (e: builtins.removeAttrs e ["valency"]) g.accessPoints;
         advertise = g.advertise or false;
         valency = g.valency or (length g.accessPoints);
       }) (cfg.producers ++ (cfg.instanceProducers i));
       publicRoots = map (g: {
-        inherit (g) accessPoints;
+        accessPoints = map (e: builtins.removeAttrs e ["valency"]) g.accessPoints;
         advertise = g.advertise or false;
       }) (cfg.publicProducers ++ (cfg.instancePublicProducers i));
     } // optionalAttrs (cfg.usePeersFromLedgerAfterSlot != null) {
