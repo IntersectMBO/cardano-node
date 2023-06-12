@@ -11,6 +11,7 @@ import           Test.Tasty (TestTree)
 import qualified System.Environment as E
 import qualified Test.Cli.Babbage.LeadershipSchedule
 import qualified Test.Cli.Babbage.StakeSnapshot
+import qualified Test.Cli.Conway.LeadershipSchedule
 import qualified Test.Cli.Conway.StakeSnapshot
 import qualified Test.Cli.KesPeriodInfo
 import qualified Test.Cli.QuerySlotNumber
@@ -39,7 +40,8 @@ tests = pure $ T.testGroup "test/Spec.hs"
       , H.ignoreOnWindows "stake-snapshot" Test.Cli.Babbage.StakeSnapshot.hprop_stakeSnapshot
       ]
     , T.testGroup "Conway"
-      [ H.ignoreOnWindows "stake-snapshot" Test.Cli.Conway.StakeSnapshot.hprop_stakeSnapshot
+      [ H.ignoreOnWindows "leadership-schedule" Test.Cli.Conway.LeadershipSchedule.hprop_leadershipSchedule
+      , H.ignoreOnWindows "stake-snapshot" Test.Cli.Conway.StakeSnapshot.hprop_stakeSnapshot
       ]
       -- Ignored on Windows due to <stdout>: commitBuffer: invalid argument (invalid character)
       -- as a result of the kes-period-info output to stdout.

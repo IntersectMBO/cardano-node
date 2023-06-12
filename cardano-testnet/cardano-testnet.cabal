@@ -166,6 +166,7 @@ test-suite cardano-testnet-test
   other-modules:        Test.Cli.Alonzo.LeadershipSchedule
                         Test.Cli.Babbage.LeadershipSchedule
                         Test.Cli.Babbage.StakeSnapshot
+                        Test.Cli.Conway.LeadershipSchedule
                         Test.Cli.Conway.StakeSnapshot
                         Test.Cli.KesPeriodInfo
                         Test.Cli.QuerySlotNumber
