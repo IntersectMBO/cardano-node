@@ -68,6 +68,8 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedu
 
   poolNode1 <- H.headM poolNodes
 
+  let poolId1 = poolId poolNode1
+
   execConfig <- H.headM (bftSprockets tr) >>= H.mkExecConfig tempBaseAbsPath
 
   -- First we note all the relevant files
@@ -135,11 +137,6 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedu
 
   poolcoldVkey <- H.note $ tempAbsPath' </> "node-pool1/shelley/operator.vkey"
   poolcoldSkey <- H.note $ tempAbsPath' </> "node-pool1/shelley/operator.skey"
-
-  stakePoolId <- filter ( /= '\n') <$> execCli
-    [ "stake-pool", "id"
-    , "--cold-verification-key-file", poolcoldVkey
-    ]
 
   -- REGISTER PLEDGER POOL
 
@@ -344,7 +341,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedu
   poolId <- H.noteShow $ head $ Set.toList poolIds
 
   H.note_ "Check stake pool was successfully registered"
-  T.unpack (Api.serialiseToBech32 poolId) === stakePoolId
+  Api.serialiseToBech32 poolId === poolId1
 
   H.note_ "Check pledge was successfully delegated"
   void $ execCli' execConfig
@@ -363,7 +360,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedu
   H.note_ "Check pledge has been delegated to pool"
   case pledgerDelegPoolId of
     Nothing               -> H.failMessage callStack "Pledge was not delegated to pool"
-    Just pledgerDelagator -> T.unpack (Api.serialiseToBech32 pledgerDelagator) === stakePoolId
+    Just pledgerDelagator -> Api.serialiseToBech32 pledgerDelagator === poolId1
   T.unpack (serialiseAddress pledgeSAddr) === poolownerstakeaddr
 
   H.note_ "Get updated UTxO"
@@ -472,7 +469,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedu
     [ "query", "leadership-schedule"
     , "--testnet-magic", show @Int testnetMagic
     , "--genesis", shelleyGenesisFile tr
-    , "--stake-pool-id", stakePoolId
+    , "--stake-pool-id", T.unpack poolId1
     , "--vrf-signing-key-file", poolVrfSkey
     , "--out-file", scheduleFile
     , "--current"

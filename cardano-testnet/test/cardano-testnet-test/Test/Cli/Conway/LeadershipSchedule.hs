@@ -20,6 +20,7 @@ import           Cardano.CLI.Shelley.Output (QueryTipLocalStateOutput (..))
 import           Control.Monad (void)
 import           Data.List ((\\))
 import           Data.Text (Text)
+import qualified Data.Text as Text
 import           GHC.Stack (callStack)
 import           Hedgehog (Property, (===))
 import           Prelude
@@ -62,6 +63,9 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "conway-leadership-sche
 
   poolNode1 <- H.headM poolNodes
 
+  let poolId1 = poolId poolNode1
+  let poolVrfSkey = poolNodeKeysVrfSkey $ poolKeys poolNode1
+
   poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
 
   execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1
@@ -85,13 +89,6 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "conway-leadership-sche
     H.note_ $ "Current Epoch: " <> show currEpoch
     H.assert $ currEpoch > 2
 
-  stakePoolId <- filter ( /= '\n') <$> execCli
-    [ "stake-pool", "id"
-    , "--cold-verification-key-file", poolNodeKeysColdVkey $ poolKeys poolNode1
-    ]
-
-  let poolVrfSkey = poolNodeKeysVrfSkey $ poolKeys poolNode1
-
   id do
     scheduleFile <- H.noteTempFile tempAbsPath' "schedule.log"
 
@@ -102,7 +99,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "conway-leadership-sche
         [ "query", "leadership-schedule"
         , "--testnet-magic", show @Int testnetMagic
         , "--genesis", shelleyGenesisFile tr
-        , "--stake-pool-id", stakePoolId
+        , "--stake-pool-id", Text.unpack poolId1
         , "--vrf-signing-key-file", poolVrfSkey
         , "--out-file", scheduleFile
         , "--current"
@@ -150,7 +147,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "conway-leadership-sche
         [ "query", "leadership-schedule"
         , "--testnet-magic", show @Int testnetMagic
         , "--genesis", shelleyGenesisFile tr
-        , "--stake-pool-id", stakePoolId
+        , "--stake-pool-id", Text.unpack poolId1
         , "--vrf-signing-key-file", poolVrfSkey
         , "--out-file", scheduleFile
         , "--next"

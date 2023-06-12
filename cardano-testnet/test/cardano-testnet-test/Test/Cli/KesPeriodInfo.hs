@@ -51,7 +51,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
                              , cardanoSlotLength = 0.02
                              , cardanoActiveSlotsCoeff = 0.1
                              }
-  runTime@TestnetRuntime { testnetMagic } <- testnet fastTestnetOptions conf
+  runTime@TestnetRuntime { testnetMagic, poolNodes } <- testnet fastTestnetOptions conf
 
   execConfig <- H.headM (bftSprockets runTime) >>= H.mkExecConfig tempBaseAbsPath
 
@@ -120,10 +120,9 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   poolcoldVkey <- H.note $ tempAbsPath' </> "node-pool1/shelley/operator.vkey"
   poolcoldSkey <- H.note $ tempAbsPath' </> "node-pool1/shelley/operator.skey"
 
-  stakePoolId <- filter ( /= '\n') <$>
-                   execCli [ "stake-pool", "id"
-                             , "--cold-verification-key-file", poolcoldVkey
-                             ]
+  poolNode1 <- H.headM poolNodes
+
+  let poolId1 = poolId poolNode1
 
   -- REGISTER PLEDGER POOL
 
@@ -321,7 +320,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
     poolId <- H.noteShow =<< H.headM (Set.toList poolIds)
 
     H.note_ "Check stake pool was successfully registered"
-    T.unpack (serialiseToBech32 poolId) === stakePoolId
+    serialiseToBech32 poolId === poolId1
 
   H.note_ "Check pledge was successfully delegated"
   void $ execCli' execConfig
@@ -341,7 +340,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   H.note_ "Check pledge has been delegated to pool"
   case pledgerDelegPoolId of
     Nothing -> H.failMessage callStack "Pledge was not delegated to pool"
-    Just pledgerDelagator ->  T.unpack (serialiseToBech32 pledgerDelagator) === stakePoolId
+    Just pledgerDelagator -> serialiseToBech32 pledgerDelagator === poolId1
   T.unpack (serialiseAddress pledgeSAddr) === poolownerstakeaddr
 
   H.note_ "We have a fully functioning stake pool at this point."
