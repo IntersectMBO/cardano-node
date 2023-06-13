@@ -30,8 +30,8 @@ import qualified System.Info as OS
 import           Cardano.Api
 
 import qualified Testnet.Byron as Byron
-import           Testnet.Commands.Genesis
 import qualified Testnet.Conf as H
+import           Testnet.Defaults
 import qualified Testnet.Util.Assert as H
 import           Testnet.Util.Process (execCli_)
 import           Testnet.Util.Runtime (Delegator (..), NodeLoggingFormat (..), PaymentKeyPair (..),
@@ -80,7 +80,7 @@ babbageTestnet testnetOptions H.Conf {H.configurationTemplate, H.tempAbsPath} = 
   H.createDirectoryIfMissing_ logDir
 
   H.lbsWriteFile (tempAbsPath' </> "byron.genesis.spec.json")
-    . encode $ Byron.defaultByronProtocolParamsJsonValue
+    . encode $ defaultByronProtocolParamsJsonValue
 
   void $ H.note OS.os
   currentTime <- H.noteShowIO DTC.getCurrentTime
@@ -216,7 +216,7 @@ babbageTestnet testnetOptions H.Conf {H.configurationTemplate, H.tempAbsPath} = 
                                            , shelleyGenesisHash
                                            , alonzoGenesisHash
                                            , conwayGenesisHash
-                                           , Byron.defaultYamlHardforkViaConfig (AnyCardanoEra BabbageEra)]
+                                           , defaultYamlHardforkViaConfig (AnyCardanoEra BabbageEra)]
 
   H.evalIO $ LBS.writeFile (tempAbsPath' </> "configuration.yaml") finalYamlConfig
 

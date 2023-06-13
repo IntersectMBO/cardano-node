@@ -74,7 +74,7 @@ library
   exposed-modules:      Cardano.Testnet
                         Testnet.Babbage
                         Testnet.Byron
-                        Testnet.Commands.Genesis
+                        Testnet.Defaults
                         Testnet.Conf
                         Testnet.Options
                         Testnet.Topology 

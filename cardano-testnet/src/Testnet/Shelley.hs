@@ -7,12 +7,16 @@ module Testnet.Shelley
   ( ShelleyTestnetOptions(..)
   , shelleyDefaultTestnetOptions
   , shelleyTestnet
+
+  , createShelleyGenesisInitialTxIn
   ) where
 
 import           Prelude
 
 
 import           Control.Monad
+import           Control.Monad.Catch
+import           Control.Monad.IO.Class
 import           Data.Aeson (ToJSON (toJSON), Value)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.KeyMap as KeyMapAeson
@@ -24,10 +28,12 @@ import           Data.Maybe
 import           Data.String
 import           Data.Time.Clock (UTCTime)
 import           Data.Word
+import           GHC.Stack (HasCallStack, withFrozenCallStack)
+import           System.FilePath.Posix ((</>))
+
 import           Hedgehog.Extras.Stock.Aeson (rewriteObject)
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
-import           System.FilePath.Posix ((</>))
 
 import           Cardano.Api hiding (Value)
 import qualified Cardano.Node.Configuration.Topology as NonP2P
@@ -47,15 +53,15 @@ import qualified Hedgehog.Extras.Stock.Time as DTC
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Network as H
+import           Hedgehog.Internal.Property
 import qualified System.Directory as IO
 import qualified System.Info as OS
 
-import qualified Testnet.Byron as Byron
-import           Testnet.Commands.Genesis
 import qualified Testnet.Conf as H
+import           Testnet.Defaults
 import           Testnet.Util.Cli
 import qualified Testnet.Util.Process as H
-import           Testnet.Util.Process (execCli_)
+import           Testnet.Util.Process
 import           Testnet.Util.Runtime hiding (allNodes)
 
 
@@ -416,6 +422,20 @@ shelleyTestnet testnetOptions H.Conf {H.tempAbsPath} = do
     }
 
 
+-- | The Shelley initial UTxO is constructed from the 'sgInitialFunds' field which
+-- is not a full UTxO but just a map from addresses to coin values. Therefore this
+-- command creates a transaction input that defaults to the 0th index and therefore
+-- we can spend spend this tx input in a transaction.
+createShelleyGenesisInitialTxIn
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  => Int -> FilePath -> m String
+createShelleyGenesisInitialTxIn testnetMagic vKeyFp =
+  withFrozenCallStack $ execCli
+      [ "genesis", "initial-txin"
+      , "--testnet-magic", show @Int testnetMagic
+      , "--verification-key-file", vKeyFp
+      ]
+
 defaultShelleyOnlyYamlConfig :: KeyMapAeson.KeyMap Aeson.Value
 defaultShelleyOnlyYamlConfig =
    let shelleyOnly = mconcat $ map (uncurry KeyMapAeson.singleton)
@@ -424,4 +444,4 @@ defaultShelleyOnlyYamlConfig =
           , ("LastKnownBlockVersion-Alt", Aeson.Number 0)
           , ("Protocol", "TPraos")
           ]
-   in shelleyOnly <> mconcat Byron.defaultYamlConfig
+   in shelleyOnly <> mconcat defaultYamlConfig

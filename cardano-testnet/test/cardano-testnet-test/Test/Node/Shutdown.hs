@@ -35,7 +35,7 @@ import qualified Testnet.Util.Base as H
 
 import           Cardano.Testnet
 import           Testnet.Byron
-import           Testnet.Commands.Genesis
+import           Testnet.Defaults
 import           Testnet.Topology
 import           Testnet.Util.Process (execCli_, procNode)
 import qualified Testnet.Util.Runtime as TR

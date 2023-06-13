@@ -57,10 +57,10 @@ import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Network as H
 
-import qualified Testnet.Byron as Byron
-import           Testnet.Commands.Genesis
 import           Testnet.Commands.Governance
 import qualified Testnet.Conf as H
+import           Testnet.Defaults
+import           Testnet.Shelley
 import qualified Testnet.Util.Assert as H
 import qualified Testnet.Util.Process as H
 import           Testnet.Util.Process (execCli_)
@@ -222,7 +222,7 @@ cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
     H.writeFile (tempAbsPath' </> node </> "port") (show port)
 
   H.lbsWriteFile (tempAbsPath' </> "byron.genesis.spec.json")
-    . J.encode $ Byron.defaultByronProtocolParamsJsonValue
+    . J.encode $ defaultByronProtocolParamsJsonValue
 
   -- stuff
   execCli_
@@ -657,7 +657,7 @@ cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
                                            , shelleyGenesisHash
                                            , alonzoGenesisHash
                                            , conwayGenesisHash
-                                           , Byron.defaultYamlHardforkViaConfig $ cardanoEra testnetOptions]
+                                           , defaultYamlHardforkViaConfig $ cardanoEra testnetOptions]
 
   H.evalIO $ LBS.writeFile (tempAbsPath' </> "configuration.yaml") finalYamlConfig
 
