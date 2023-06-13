@@ -4,7 +4,6 @@ module Main
   ( main
   ) where
 
-import           Data.String
 import           Prelude
 import           System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
 import           Test.Tasty (TestTree)
@@ -21,9 +20,9 @@ import qualified Cardano.Crypto.Init as Crypto
 
 tests :: IO TestTree
 tests = pure $ T.testGroup "Golden tests"
-  [ H.testPropertyNamed "golden_DefaultConfig" (fromString "golden_DefaultConfig") Test.Golden.Testnet.Config.goldenDefaultConfigYaml
-  , H.testPropertyNamed "golden_HelpAll" (fromString "golden_HelpAll") Test.Golden.Testnet.Help.golden_HelpAll
-  , H.testPropertyNamed "golden_HelpCmds" (fromString "golden_HelpCmds") Test.Golden.Testnet.Help.golden_HelpCmds
+  [ H.testProperty "golden_DefaultConfig" Test.Golden.Testnet.Config.goldenDefaultConfigYaml
+  , H.testProperty "golden_HelpAll" Test.Golden.Testnet.Help.golden_HelpAll
+  , H.testProperty "golden_HelpCmds" Test.Golden.Testnet.Help.golden_HelpCmds
   ]
 
 ingredients :: [T.Ingredient]

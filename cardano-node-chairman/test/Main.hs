@@ -4,7 +4,6 @@ module Main
   ( main
   ) where
 
-import           Data.String (IsString (..))
 import           Prelude
 
 import qualified System.Environment as E
@@ -20,9 +19,9 @@ import qualified Cardano.Crypto.Init as Crypto
 
 tests :: IO T.TestTree
 tests = do
-  let t0 = H.testPropertyNamed "isPortOpen False" (fromString "isPortOpen False") Spec.Network.hprop_isPortOpen_False
-  let t1 = H.testPropertyNamed "isPortOpen True"  (fromString "isPortOpen True" ) Spec.Network.hprop_isPortOpen_True
-  let t2 = H.testPropertyNamed "chairman"         (fromString "chairman"        ) Spec.Chairman.Cardano.hprop_chairman
+  let t0 = H.testProperty "isPortOpen False" Spec.Network.hprop_isPortOpen_False
+  let t1 = H.testProperty "isPortOpen True"  Spec.Network.hprop_isPortOpen_True
+  let t2 = H.testProperty "chairman"         Spec.Chairman.Cardano.hprop_chairman
 
   pure $ T.testGroup "test/Spec.hs"
     [ T.testGroup "Spec"
