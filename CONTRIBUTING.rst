@@ -159,8 +159,6 @@ Without further ado (**NOTE**: *the order of steps is important!*):
         .. code-block:: console
 
             packages:
-                cardano-api
-                cardano-cli
                 ...
                 trace-resources
                 trace-forward
