@@ -44,8 +44,8 @@ import           Cardano.CLI.Shelley.Run.Query (DelegationsAndRewards, mergeDele
 
 import           Cardano.Testnet
 import           Testnet.Options
+import           Testnet.Property.Utils
 import           Testnet.Util.Assert
-import           Testnet.Util.Base
 import           Testnet.Util.Process
 import           Testnet.Util.Runtime
 

@@ -15,7 +15,7 @@ import qualified System.Console.ANSI as ANSI
 import qualified System.Exit as IO
 import qualified System.IO as IO
 import qualified Testnet.Conf as H
-import qualified Testnet.Util.Base as H
+import qualified Testnet.Property.Utils as H
 
 testnetProperty :: (H.Conf -> H.Integration ()) -> H.Property
 testnetProperty tn = H.integrationRetryWorkspace 2 "testnet" $ \workspaceDir -> do

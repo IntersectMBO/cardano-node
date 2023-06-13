@@ -1,4 +1,4 @@
-module Testnet.Util.Base
+module Testnet.Property.Utils
   ( integration
   , integrationRetryWorkspace
   , isLinux
@@ -11,7 +11,7 @@ import qualified GHC.Stack as GHC
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 
-
+-- TODO: Document what an Integration is
 integration :: HasCallStack => H.Integration () -> H.Property
 integration f = GHC.withFrozenCallStack $ H.withTests 1 $ H.propertyOnce f
 

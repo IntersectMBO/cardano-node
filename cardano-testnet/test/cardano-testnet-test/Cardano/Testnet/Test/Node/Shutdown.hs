@@ -31,7 +31,7 @@ import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Exit as IO
 import qualified System.IO as IO
 import qualified System.Process as IO
-import qualified Testnet.Util.Base as H
+import qualified Testnet.Property.Utils as H
 
 import           Cardano.Testnet
 import           Testnet.Byron

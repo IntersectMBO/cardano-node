@@ -77,10 +77,10 @@ library
                         Testnet.Defaults
                         Testnet.Conf
                         Testnet.Options
+                        Testnet.Property.Utils
                         Testnet.Topology 
                         Testnet.Utils
                         Testnet.Util.Assert
-                        Testnet.Util.Base
                         Testnet.Util.Cli
                         Testnet.Util.Ignore
                         Testnet.Util.Process

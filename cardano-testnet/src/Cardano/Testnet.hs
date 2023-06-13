@@ -48,6 +48,6 @@ import           Testnet.Options
 import           Testnet.Shelley as Shelley
 import           Testnet.Utils (waitUntilEpoch)
 
-import           Testnet.Util.Base (integration)
+import           Testnet.Property.Utils (integration)
 import           Testnet.Util.Process (procChairman)
 import           Testnet.Util.Runtime
