@@ -7,16 +7,12 @@ module Testnet.Shelley
   ( ShelleyTestnetOptions(..)
   , shelleyDefaultTestnetOptions
   , shelleyTestnet
-  , hprop_testnet
-  , hprop_testnet_pause
   ) where
 
 import           Prelude
 
 
 import           Control.Monad
-import           Control.Monad.IO.Class (MonadIO (liftIO))
-import           Control.Monad.Trans.Resource (MonadResource (liftResourceT), resourceForkIO)
 import           Data.Aeson (ToJSON (toJSON), Value)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.KeyMap as KeyMapAeson
@@ -36,7 +32,6 @@ import           System.FilePath.Posix ((</>))
 import           Cardano.Api hiding (Value)
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
-import qualified Control.Concurrent as IO
 import qualified Data.Aeson as J
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
@@ -58,7 +53,6 @@ import qualified System.Info as OS
 import qualified Testnet.Byron as Byron
 import           Testnet.Commands.Genesis
 import qualified Testnet.Conf as H
-import qualified Testnet.Util.Base as H
 import           Testnet.Util.Cli
 import qualified Testnet.Util.Process as H
 import           Testnet.Util.Process (execCli_)
@@ -420,20 +414,6 @@ shelleyTestnet testnetOptions H.Conf {H.tempAbsPath} = do
     , bftNodes = allNodeRuntimes
     , delegators = [ ]
     }
-
-hprop_testnet :: H.Property
-hprop_testnet = H.integrationRetryWorkspace 2 "shelley-testnet" $ \tempAbsPath' -> do
-  conf <- H.mkConf Nothing tempAbsPath'
-
-  void . H.evalM . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000
-
-  void $ shelleyTestnet shelleyDefaultTestnetOptions conf
-
-  H.failure -- Intentional failure to force failure report
-
-hprop_testnet_pause :: H.Property
-hprop_testnet_pause = H.integration $ do
-  void . forever . H.evalIO $ IO.threadDelay 10000000
 
 
 defaultShelleyOnlyYamlConfig :: KeyMapAeson.KeyMap Aeson.Value
