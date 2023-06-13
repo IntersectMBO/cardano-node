@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   trace-resources
-version:                0.2.0.0
+version:                0.2.0.1
 synopsis:               Package for tracing resources for linux, mac and windows
 description:            Package for tracing resources for linux, mac and windows.
 category:               Cardano,
