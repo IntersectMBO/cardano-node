@@ -422,7 +422,7 @@
           customConfig.haskellNix
         ];
         cardanoNodePackages = mkCardanoNodePackages final.cardanoNodeProject;
-        inherit (final.cardanoNodePackages) cardano-node cardano-cli cardano-submit-api cardano-tracer bech32 locli db-analyser;
+        inherit (final.cardanoNodePackages) cardano-node cardano-submit-api cardano-tracer bech32 locli db-analyser;
       };
       nixosModules = {
         cardano-node = { pkgs, lib, ... }: {
