@@ -11,10 +11,10 @@ import qualified Options.Applicative as OA
 
 import           Cardano.CLI.Common.Parsers hiding (pNetworkId)
 
-import           Testnet.Cardano
 import           Testnet.Process.Cli
 import           Testnet.Property.Utils
 import           Testnet.Runtime (readNodeLoggingFormat)
+import           Testnet.Start.Cardano
 
 newtype CardanoOptions = CardanoOptions
   { testnetOptions :: CardanoTestnetOptions

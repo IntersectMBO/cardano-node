@@ -73,8 +73,8 @@ library
   hs-source-dirs:       src
   exposed-modules:      Cardano.Testnet
                         Parsers.Run
-                        Testnet.Babbage
-                        Testnet.Byron
+                        Testnet.Start.Babbage
+                        Testnet.Start.Byron
                         Testnet.Conf
                         Testnet.Defaults
                         Testnet.Filepath
@@ -93,8 +93,8 @@ library
                         Parsers.Help
                         Parsers.Shelley
                         Parsers.Version
-                        Testnet.Cardano
-                        Testnet.Shelley
+                        Testnet.Start.Cardano
+                        Testnet.Start.Shelley
                         Paths_cardano_testnet
 
   autogen-modules:      Paths_cardano_testnet

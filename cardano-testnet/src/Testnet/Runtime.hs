@@ -18,11 +18,6 @@ module Testnet.Runtime
   , Delegator(..)
   , allNodes
   , bftSprockets
-  , makeDbDir
-  , makeLogDir
-  , makeSocketDir
-  , makeSprocket
-  , makeTmpBaseAbsPath
   , poolSprockets
   , poolNodeStdout
   , readNodeLoggingFormat

@@ -43,7 +43,6 @@ import           Cardano.CLI.Shelley.Output (QueryTipLocalStateOutput (mEpoch))
 import           Cardano.CLI.Shelley.Run.Query (DelegationsAndRewards, mergeDelegsAndRewards)
 
 import           Cardano.Testnet
-import           Testnet.Options
 import           Testnet.Process.Run
 import           Testnet.Property.Assert
 import           Testnet.Property.Utils

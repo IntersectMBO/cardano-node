@@ -18,11 +18,11 @@ import           Control.Monad
 
 import           Parsers.Cardano as Cardano
 import           Parsers.Shelley as Shelley
-import           Testnet.Babbage
-import           Testnet.Cardano
 import           Testnet.Conf
 import           Testnet.Property.Run
-import           Testnet.Shelley
+import           Testnet.Start.Babbage
+import           Testnet.Start.Cardano
+import           Testnet.Start.Shelley
 
 import qualified Hedgehog as H
 import           Hedgehog.Extras.Test.Base (Integration, noteShow_)

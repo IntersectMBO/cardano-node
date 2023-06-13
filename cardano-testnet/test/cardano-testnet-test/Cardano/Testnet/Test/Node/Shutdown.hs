@@ -34,11 +34,10 @@ import qualified System.Process as IO
 import qualified Testnet.Property.Utils as H
 
 import           Cardano.Testnet
-import           Testnet.Byron
 import           Testnet.Defaults
 import           Testnet.Process.Run (execCli_, procNode)
 import           Testnet.Property.Utils
-import qualified Testnet.Runtime as TR
+import           Testnet.Start.Byron
 import           Testnet.Topology
 
 {- HLINT ignore "Redundant <&>" -}
@@ -46,10 +45,10 @@ import           Testnet.Topology
 hprop_shutdown :: Property
 hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> do
   conf <- H.noteShowM $ mkConf Nothing tempAbsBasePath'
-  let tempBaseAbsPath' = TR.makeTmpBaseAbsPath $ tempAbsPath conf
-      tempAbsPath' = TR.unTmpAbsPath $ tempAbsPath conf
-      logDir' = TR.makeLogDir $ tempAbsPath conf
-      socketDir' = TR.makeSocketDir $ tempAbsPath conf
+  let tempBaseAbsPath' = makeTmpBaseAbsPath $ tempAbsPath conf
+      tempAbsPath' = unTmpAbsPath $ tempAbsPath conf
+      logDir' = makeLogDir $ tempAbsPath conf
+      socketDir' = makeSocketDir $ tempAbsPath conf
       testnetMagic' = 42
 
   -- TODO: We need to uniformly create these directories

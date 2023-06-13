@@ -10,9 +10,9 @@ import qualified Options.Applicative as OA
 
 import           Cardano.CLI.Common.Parsers hiding (pNetworkId)
 
-import           Testnet.Babbage
 import           Testnet.Process.Cli
 import           Testnet.Runtime (readNodeLoggingFormat)
+import           Testnet.Start.Babbage
 
 newtype BabbageOptions = BabbageOptions
   { testnetOptions :: BabbageTestnetOptions

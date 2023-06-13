@@ -1,8 +1,5 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Testnet.Filepath
@@ -16,6 +13,7 @@ module Testnet.Filepath
 
 import           Prelude
 
+import           Data.String (IsString (..))
 import           System.FilePath
 
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
@@ -33,7 +31,7 @@ makeSprocket tmpAbsPath node
 -- Temporary path used at runtime
 newtype TmpAbsolutePath = TmpAbsolutePath
   { unTmpAbsPath :: FilePath
-  } deriving (Eq, Show)
+  } deriving (Eq, Show, IsString)
 
 makeTmpRelPath :: TmpAbsolutePath -> FilePath
 makeTmpRelPath (TmpAbsolutePath fp) = makeRelative (makeTmpBaseAbsPath (TmpAbsolutePath fp)) fp

@@ -6,7 +6,7 @@
 
 {-# OPTIONS_GHC -Wno-unused-local-binds -Wno-unused-matches #-}
 
-module Testnet.Babbage
+module Testnet.Start.Babbage
   ( BabbageTestnetOptions(..)
   , TestnetRuntime (..)
   , PaymentKeyPair(..)
@@ -29,7 +29,6 @@ import qualified System.Info as OS
 
 import           Cardano.Api
 
-import qualified Testnet.Byron as Byron
 import qualified Testnet.Conf as H
 import           Testnet.Defaults
 import           Testnet.Filepath

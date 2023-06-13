@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Testnet.Cardano
+module Testnet.Start.Cardano
   ( ForkPoint(..)
   , CardanoTestnetOptions(..)
   , cardanoPoolNodes
@@ -57,7 +57,6 @@ import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Network as H
 
-import           Testnet.Byron hiding (TestnetOptions (..))
 import qualified Testnet.Conf as H
 import           Testnet.Defaults
 import           Testnet.Filepath
@@ -66,7 +65,8 @@ import           Testnet.Process.Run (execCli_)
 import qualified Testnet.Property.Assert as H
 import           Testnet.Property.Utils
 import           Testnet.Runtime as TR
-import           Testnet.Shelley
+import           Testnet.Start.Byron hiding (TestnetOptions (..))
+import           Testnet.Start.Shelley
 
 {- HLINT ignore "Redundant flip" -}
 {- HLINT ignore "Redundant id" -}

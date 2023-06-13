@@ -29,10 +29,8 @@ import           System.Environment (getEnvironment)
 import qualified System.Info as SYS
 
 import           Cardano.Testnet
-import           Testnet.Options
 import           Testnet.Process.Run
 import qualified Testnet.Property.Utils as H
-import qualified Testnet.Runtime as TR
 import           Testnet.Runtime
 
 -- | Tests @query slot-number@ cardano-cli command that it returns correct slot numbers for provided utc time
@@ -41,7 +39,7 @@ hprop_querySlotNumber = H.integrationRetryWorkspace 2 "query-slot-number" $ \tem
   H.note_ SYS.os
   conf <- H.noteShowM $ mkConf Nothing tempAbsBasePath'
 
-  let tempBaseAbsPath' = TR.makeTmpBaseAbsPath $ tempAbsPath conf
+  let tempBaseAbsPath' = makeTmpBaseAbsPath $ tempAbsPath conf
       testnetOptions = BabbageOnlyTestnetOptions $ babbageDefaultTestnetOptions
         { babbageNodeLoggingFormat = NodeLoggingFormatAsJson
         }

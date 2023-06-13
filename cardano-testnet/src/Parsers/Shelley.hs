@@ -12,7 +12,7 @@ import           Cardano.CLI.Common.Parsers hiding (pNetworkId)
 
 import           Testnet.Process.Cli
 import           Testnet.Property.Utils
-import           Testnet.Shelley
+import           Testnet.Start.Shelley
 
 
 newtype ShelleyOptions = ShelleyOptions

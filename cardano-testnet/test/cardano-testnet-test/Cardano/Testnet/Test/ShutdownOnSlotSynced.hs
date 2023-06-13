@@ -25,7 +25,6 @@ import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified Testnet.Property.Utils as H
 
-import           Testnet.Options
 import           Testnet.Runtime (TestnetRuntime (..))
 
 hprop_shutdownOnSlotSynced :: Property

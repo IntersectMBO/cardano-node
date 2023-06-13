@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Testnet.Shelley
+module Testnet.Start.Shelley
   ( ShelleyTestnetOptions(..)
   , shelleyDefaultTestnetOptions
   , shelleyTestnet

@@ -11,9 +11,9 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
-import qualified Testnet.Util.Base as H
 
 import qualified Cardano.Testnet as H
+import qualified Testnet.Property.Utils as H
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Redundant <&>" -}

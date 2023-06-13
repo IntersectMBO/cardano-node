@@ -9,9 +9,9 @@ import qualified Options.Applicative as OA
 
 import           Cardano.CLI.Common.Parsers hiding (pNetworkId)
 
-import           Testnet.Byron
 import           Testnet.Process.Cli
 import           Testnet.Property.Run (runTestnet)
+import           Testnet.Start.Byron
 
 newtype ByronOptions = ByronOptions
   { testnetOptions :: TestnetOptions
@@ -67,7 +67,7 @@ optsTestnet = TestnetOptions
       )
 
 runByronOptions :: ByronOptions -> IO ()
-runByronOptions opts = runTestnet (Testnet.Byron.testnet (testnetOptions opts))
+runByronOptions opts = runTestnet (Testnet.Start.Byron.testnet (testnetOptions opts))
 
 cmdByron :: Mod CommandFields ByronOptions
 cmdByron = command' "byron" "Start a Byron testnet" optsByron
