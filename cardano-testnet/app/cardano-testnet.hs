@@ -4,7 +4,7 @@ import qualified Cardano.Crypto.Init as Crypto
 
 import qualified Options.Applicative as Opt
 
-import           Testnet.Parsers (opts, pref, runTestnetCmd)
+import           Parsers.Run (opts, pref, runTestnetCmd)
 
 main :: IO ()
 main = do

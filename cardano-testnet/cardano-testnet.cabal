@@ -77,7 +77,7 @@ library
                         Testnet.Conf
                         Testnet.Defaults
                         Testnet.Options
-                        Testnet.Parsers
+                        Parsers.Run
                         Testnet.Property.Assert
                         Testnet.Property.Run
                         Testnet.Property.Utils

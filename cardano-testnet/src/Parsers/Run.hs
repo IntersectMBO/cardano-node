@@ -1,7 +1,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Testnet.Parsers
+module Parsers.Run
   ( commands
   , runTestnetCmd
   , pref
