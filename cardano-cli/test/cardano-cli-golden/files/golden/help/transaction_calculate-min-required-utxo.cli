@@ -5,6 +5,7 @@ Usage: cardano-cli transaction calculate-min-required-utxo
             | --mary-era
             | --alonzo-era
             | --babbage-era
+            | --conway-era
             ]
             --protocol-params-file FILE
             --tx-out ADDRESS VALUE
@@ -30,6 +31,7 @@ Available options:
   --mary-era               Specify the Mary era
   --alonzo-era             Specify the Alonzo era
   --babbage-era            Specify the Babbage era (default)
+  --conway-era             Specify the Conway era
   --protocol-params-file FILE
                            Filepath of the JSON-encoded protocol parameters file
   --tx-out ADDRESS VALUE   The transaction output as ADDRESS VALUE where ADDRESS

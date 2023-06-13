@@ -8,6 +8,7 @@ Usage: cardano-testnet cardano [--num-bft-nodes COUNT]
                                  | --mary-era
                                  | --alonzo-era
                                  | --babbage-era
+                                 | --conway-era
                                  ]
                                  [--epoch-length MILLISECONDS]
                                  [--slot-length SECONDS]

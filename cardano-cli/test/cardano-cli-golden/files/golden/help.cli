@@ -562,6 +562,7 @@ Usage: cardano-cli transaction build-raw
             | --mary-era
             | --alonzo-era
             | --babbage-era
+            | --conway-era
             ]
             [--script-valid | --script-invalid]
             (--tx-in TX-IN
@@ -680,6 +681,7 @@ Usage: cardano-cli transaction build --socket-path SOCKET_PATH
             | --mary-era
             | --alonzo-era
             | --babbage-era
+            | --conway-era
             ]
             [ --shelley-mode
             | --byron-mode [--epoch-slots SLOTS]
@@ -845,6 +847,7 @@ Usage: cardano-cli transaction calculate-min-required-utxo
             | --mary-era
             | --alonzo-era
             | --babbage-era
+            | --conway-era
             ]
             --protocol-params-file FILE
             --tx-out ADDRESS VALUE
@@ -870,6 +873,7 @@ Usage: cardano-cli transaction calculate-min-value
             | --mary-era
             | --alonzo-era
             | --babbage-era
+            | --conway-era
             ]
             --protocol-params-file FILE
             --tx-out ADDRESS VALUE
