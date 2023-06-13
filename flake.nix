@@ -130,6 +130,7 @@
         in project.exes // (with project.hsPkgs; {
           inherit (ouroboros-consensus-cardano.components.exes) db-analyser db-synthesizer;
           inherit (bech32.components.exes) bech32;
+          inherit (cardano-cli.components.exes) cardano-cli;
         } // lib.optionalAttrs hostPlatform.isUnix {
         });
 
@@ -422,7 +423,7 @@
           customConfig.haskellNix
         ];
         cardanoNodePackages = mkCardanoNodePackages final.cardanoNodeProject;
-        inherit (final.cardanoNodePackages) cardano-node cardano-submit-api cardano-tracer bech32 locli db-analyser;
+        inherit (final.cardanoNodePackages) cardano-node cardano-cli cardano-submit-api cardano-tracer bech32 locli db-analyser;
       };
       nixosModules = {
         cardano-node = { pkgs, lib, ... }: {
