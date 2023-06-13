@@ -6,6 +6,7 @@ Usage: cardano-testnet cardano [--num-bft-nodes COUNT]
                                  | --mary-era
                                  | --alonzo-era
                                  | --babbage-era
+                                 | --conway-era
                                  ]
                                  [--epoch-length MILLISECONDS]
                                  [--slot-length SECONDS]
@@ -28,6 +29,7 @@ Available options:
   --mary-era               Specify the Mary era
   --alonzo-era             Specify the Alonzo era
   --babbage-era            Specify the Babbage era (default)
+  --conway-era             Specify the Conway era
   --epoch-length MILLISECONDS
                            Epoch length (default: 1500)
   --slot-length SECONDS    Slot length (default: 0.2)

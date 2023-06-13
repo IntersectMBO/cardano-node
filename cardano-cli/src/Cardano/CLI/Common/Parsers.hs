@@ -19,30 +19,38 @@ import qualified Options.Applicative as Opt
 
 pCardanoEra :: Parser AnyCardanoEra
 pCardanoEra = asum
-  [ Opt.flag' (AnyCardanoEra ByronEra)
-      (  Opt.long "byron-era"
-      <> Opt.help "Specify the Byron era"
-      )
-  , Opt.flag' (AnyCardanoEra ShelleyEra)
-      (  Opt.long "shelley-era"
-      <> Opt.help "Specify the Shelley era"
-      )
-  , Opt.flag' (AnyCardanoEra AllegraEra)
-      (  Opt.long "allegra-era"
-      <> Opt.help "Specify the Allegra era"
-      )
-  , Opt.flag' (AnyCardanoEra MaryEra)
-      (  Opt.long "mary-era"
-      <> Opt.help "Specify the Mary era"
-      )
-  , Opt.flag' (AnyCardanoEra AlonzoEra)
-      (  Opt.long "alonzo-era"
-      <> Opt.help "Specify the Alonzo era"
-      )
-  , Opt.flag' (AnyCardanoEra BabbageEra)
-      (  Opt.long "babbage-era"
-      <> Opt.help "Specify the Babbage era (default)"
-      )
+  [ Opt.flag' (AnyCardanoEra ByronEra) $ mconcat
+    [ Opt.long "byron-era"
+    , Opt.help "Specify the Byron era"
+    ]
+  , Opt.flag' (AnyCardanoEra ShelleyEra) $ mconcat
+    [ Opt.long "shelley-era"
+    , Opt.help "Specify the Shelley era"
+    ]
+  , Opt.flag' (AnyCardanoEra AllegraEra) $ mconcat
+    [ Opt.long "allegra-era"
+    , Opt.help "Specify the Allegra era"
+    ]
+  , Opt.flag' (AnyCardanoEra MaryEra) $ mconcat
+    [ Opt.long "mary-era"
+    , Opt.help "Specify the Mary era"
+    ]
+  , Opt.flag' (AnyCardanoEra AlonzoEra) $ mconcat
+    [ Opt.long "alonzo-era"
+    , Opt.help "Specify the Alonzo era"
+    ]
+  , Opt.flag' (AnyCardanoEra BabbageEra) $ mconcat
+    [ Opt.long "babbage-era"
+    , Opt.help "Specify the Babbage era (default)"
+    ]
+  , Opt.flag' (AnyCardanoEra ConwayEra) $ mconcat
+    [ Opt.long "conway-era"
+    , Opt.help "Specify the Conway era"
+    ]
+
+  -- NEW-ERA-ADD-NEW: When a new era is added, add a new flag here.
+  -- NEW-ERA-SET-DEFAULT: When a new era is working, select a new default above and below.
+
     -- Default for now:
   , pure (AnyCardanoEra BabbageEra)
   ]
