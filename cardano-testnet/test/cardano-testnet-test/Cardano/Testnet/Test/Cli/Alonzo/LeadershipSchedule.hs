@@ -34,7 +34,7 @@ import qualified Hedgehog.Extras.Test.File as H
 import           Prelude
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
-import qualified Testnet.Util.Process as H
+import qualified Testnet.Process.Run as H
 
 import           Cardano.Api (AlonzoEra, SerialiseAddress (serialiseAddress), UTxO (UTxO))
 import qualified Cardano.Api as Api
@@ -44,10 +44,10 @@ import           Cardano.CLI.Shelley.Run.Query (DelegationsAndRewards, mergeDele
 
 import           Cardano.Testnet
 import           Testnet.Options
+import           Testnet.Process.Run
+import           Testnet.Property.Assert
 import           Testnet.Property.Utils
-import           Testnet.Util.Assert
-import           Testnet.Util.Process
-import           Testnet.Util.Runtime
+import           Testnet.Runtime
 
 hprop_leadershipSchedule :: Property
 hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedule" $ \tempAbsBasePath' -> do

@@ -23,7 +23,7 @@ import           Cardano.Testnet as TN
 
 import           Testnet.Options
 import qualified Testnet.Property.Utils as H
-import           Testnet.Util.Runtime
+import           Testnet.Runtime
 
 newtype FoldBlocksException = FoldBlocksException C.FoldBlocksError
 instance Exception FoldBlocksException

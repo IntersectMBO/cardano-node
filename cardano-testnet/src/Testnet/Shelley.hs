@@ -59,10 +59,10 @@ import qualified System.Info as OS
 
 import qualified Testnet.Conf as H
 import           Testnet.Defaults
-import           Testnet.Util.Cli
-import qualified Testnet.Util.Process as H
-import           Testnet.Util.Process
-import           Testnet.Util.Runtime hiding (allNodes)
+import           Testnet.Process.Cli
+import           Testnet.Process.Run
+import           Testnet.Property.Assert
+import           Testnet.Runtime hiding (allNodes)
 
 
 {- HLINT ignore "Redundant <&>" -}
@@ -406,8 +406,8 @@ shelleyTestnet testnetOptions H.Conf {H.tempAbsPath} = do
   let logDir = makeLogDir (TmpAbsolutePath tempAbsPath')
   forM_ allNodes $ \node -> do
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
-    H.assertByDeadlineIOCustom "stdout does not contain \"until genesis start time\"" deadline $ IO.fileContains "until genesis start time at" nodeStdoutFile
-    H.assertByDeadlineIOCustom "stdout does not contain \"Chain extended\"" deadline $ IO.fileContains "Chain extended, new tip" nodeStdoutFile
+    assertByDeadlineIOCustom "stdout does not contain \"until genesis start time\"" deadline $ IO.fileContains "until genesis start time at" nodeStdoutFile
+    assertByDeadlineIOCustom "stdout does not contain \"Chain extended\"" deadline $ IO.fileContains "Chain extended, new tip" nodeStdoutFile
 
   H.noteShowIO_ DTC.getCurrentTime
 

@@ -4,14 +4,17 @@
 
 {- HLINT ignore "Redundant return" -}
 
-module Testnet.Util.Assert
-  ( readJsonLines
+module Testnet.Property.Assert
+  ( assertByDeadlineIOCustom
+  , readJsonLines
   , assertChainExtended
   , getRelevantSlots
   ) where
 
 import           Prelude hiding (lines)
 
+import qualified Control.Concurrent as IO
+import           Control.Monad
 import           Control.Monad.IO.Class (MonadIO)
 import           Control.Monad.Trans.Reader (ReaderT)
 import           Control.Monad.Trans.Resource (ResourceT)
@@ -19,6 +22,7 @@ import           Data.Aeson (FromJSON (..), Value, (.:))
 import           Data.Text (Text)
 import           Data.Word (Word8)
 import           GHC.Stack (HasCallStack)
+import qualified GHC.Stack as GHC
 import           Hedgehog (MonadTest)
 import           Hedgehog.Extras.Internal.Test.Integration (IntegrationState)
 
@@ -32,8 +36,7 @@ import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.File as IO
 import qualified Hedgehog.Extras.Test.Base as H
-import qualified Testnet.Util.Process as H
-import           Testnet.Util.Runtime (NodeLoggingFormat (..))
+import           Testnet.Runtime (NodeLoggingFormat (..))
 
 newlineBytes :: Word8
 newlineBytes = 10
@@ -47,13 +50,28 @@ fileJsonGrep fp f = do
   let jsons = mapMaybe (Aeson.decode @Value) lines
   return $ L.any f jsons
 
+assertByDeadlineIOCustom
+  :: (MonadTest m, MonadIO m, HasCallStack)
+  => String -> DTC.UTCTime -> IO Bool -> m ()
+assertByDeadlineIOCustom str deadline f = GHC.withFrozenCallStack $ do
+  success <- H.evalIO f
+  unless success $ do
+    currentTime <- H.evalIO DTC.getCurrentTime
+    if currentTime < deadline
+      then do
+        H.evalIO $ IO.threadDelay 1000000
+        assertByDeadlineIOCustom str deadline f
+      else do
+        H.annotateShow currentTime
+        H.failMessage GHC.callStack $ "Condition not met by deadline: " <> str
+
 assertChainExtended :: (H.MonadTest m, MonadIO m)
   => DTC.UTCTime
   -> NodeLoggingFormat
   -> FilePath
   -> m ()
 assertChainExtended deadline nodeLoggingFormat nodeStdoutFile =
-  H.assertByDeadlineIOCustom "Chain not extended" deadline $ do
+  assertByDeadlineIOCustom "Chain not extended" deadline $ do
     case nodeLoggingFormat of
       NodeLoggingFormatAsText -> IO.fileContains "Chain extended, new tip" nodeStdoutFile
       NodeLoggingFormatAsJson -> fileJsonGrep nodeStdoutFile $ \v ->

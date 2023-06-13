@@ -50,10 +50,11 @@ import qualified System.IO as IO
 import qualified System.Process as IO
 import qualified Testnet.Conf as H
 import           Testnet.Defaults
-import qualified Testnet.Util.Process as H
-import           Testnet.Util.Process
-import qualified Testnet.Util.Runtime as TR
-import           Testnet.Utils
+import qualified Testnet.Process.Run as H
+import           Testnet.Process.Run
+import           Testnet.Property.Assert
+import           Testnet.Property.Utils
+import qualified Testnet.Runtime as TR
 
 
 {- HLINT ignore "Reduce duplication" -}
@@ -274,7 +275,7 @@ testnet testnetOptions conf = do
   forM_ nodeIndexes $ \i -> do
     si <- H.noteShow $ show @Int i
     nodeStdoutFile <- H.noteTempFile tempAbsPath' $ "cardano-node-" <> si <> ".stdout.log"
-    H.assertByDeadlineIOCustom "stdout does not contain \"until genesis start time\"" deadline $ IO.fileContains "until genesis start time at" nodeStdoutFile
+    assertByDeadlineIOCustom "stdout does not contain \"until genesis start time\"" deadline $ IO.fileContains "until genesis start time at" nodeStdoutFile
 
   H.copyFile (tempAbsPath' </> "config-1.yaml") (tempAbsPath' </> "configuration.yaml")
 

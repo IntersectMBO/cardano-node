@@ -60,12 +60,12 @@ import qualified Hedgehog.Extras.Test.Network as H
 import           Testnet.Commands.Governance
 import qualified Testnet.Conf as H
 import           Testnet.Defaults
+import qualified Testnet.Process.Run as H
+import           Testnet.Process.Run (execCli_)
+import qualified Testnet.Property.Assert as H
+import           Testnet.Property.Utils
+import           Testnet.Runtime as TR
 import           Testnet.Shelley
-import qualified Testnet.Util.Assert as H
-import qualified Testnet.Util.Process as H
-import           Testnet.Util.Process (execCli_)
-import           Testnet.Util.Runtime as TR
-import           Testnet.Utils
 
 {- HLINT ignore "Redundant flip" -}
 {- HLINT ignore "Redundant id" -}

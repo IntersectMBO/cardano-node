@@ -30,10 +30,10 @@ import qualified System.Info as SYS
 
 import           Cardano.Testnet
 import           Testnet.Options
+import           Testnet.Process.Run
 import qualified Testnet.Property.Utils as H
-import           Testnet.Util.Process
-import qualified Testnet.Util.Runtime as TR
-import           Testnet.Util.Runtime
+import qualified Testnet.Runtime as TR
+import           Testnet.Runtime
 
 -- | Tests @query slot-number@ cardano-cli command that it returns correct slot numbers for provided utc time
 hprop_querySlotNumber :: Property

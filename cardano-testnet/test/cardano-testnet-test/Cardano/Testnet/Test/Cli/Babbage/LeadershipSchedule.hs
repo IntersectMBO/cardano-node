@@ -37,10 +37,10 @@ import qualified Testnet.Property.Utils as H
 
 import           Cardano.Testnet
 import           Testnet.Options
-import           Testnet.Util.Assert
-import qualified Testnet.Util.Process as H
-import           Testnet.Util.Process
-import           Testnet.Util.Runtime
+import qualified Testnet.Process.Run as H
+import           Testnet.Process.Run
+import           Testnet.Property.Assert
+import           Testnet.Runtime
 
 hprop_leadershipSchedule :: Property
 hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-schedule" $ \tempAbsBasePath' -> do

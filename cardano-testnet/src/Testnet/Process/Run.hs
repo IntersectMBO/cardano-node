@@ -1,6 +1,5 @@
-module Testnet.Util.Process
-  ( assertByDeadlineIOCustom
-  , bashPath
+module Testnet.Process.Run
+  ( bashPath
   , execCli
   , execCli_
   , execCli'
@@ -15,12 +14,9 @@ module Testnet.Util.Process
 
 import           Prelude
 
-import qualified Control.Concurrent as IO
 import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
 import           Control.Monad.IO.Class
-import           Data.Time.Clock (UTCTime)
-import qualified Data.Time.Clock as DTC
 import           GHC.Stack (HasCallStack)
 import           Hedgehog (MonadTest)
 import           Hedgehog.Extras.Test.Process (ExecConfig)
@@ -126,21 +122,6 @@ procChairman
   -> m CreateProcess
   -- ^ Captured stdout
 procChairman = GHC.withFrozenCallStack $ H.procFlex "cardano-node-chairman" "CARDANO_NODE_CHAIRMAN" . ("run":)
-
-assertByDeadlineIOCustom
-  :: (MonadTest m, MonadIO m, HasCallStack)
-  => String -> UTCTime -> IO Bool -> m ()
-assertByDeadlineIOCustom str deadline f = GHC.withFrozenCallStack $ do
-  success <- H.evalIO f
-  unless success $ do
-    currentTime <- H.evalIO DTC.getCurrentTime
-    if currentTime < deadline
-      then do
-        H.evalIO $ IO.threadDelay 1000000
-        assertByDeadlineIOCustom str deadline f
-      else do
-        H.annotateShow currentTime
-        failMessage GHC.callStack $ "Condition not met by deadline: " <> str
 
 mkExecConfig :: ()
   => MonadTest m

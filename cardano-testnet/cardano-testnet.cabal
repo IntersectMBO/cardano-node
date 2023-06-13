@@ -74,18 +74,17 @@ library
   exposed-modules:      Cardano.Testnet
                         Testnet.Babbage
                         Testnet.Byron
-                        Testnet.Defaults
                         Testnet.Conf
+                        Testnet.Defaults
                         Testnet.Options
-                        Testnet.Property.Utils
-                        Testnet.Topology 
-                        Testnet.Utils
-                        Testnet.Util.Assert
-                        Testnet.Util.Cli
-                        Testnet.Util.Ignore
-                        Testnet.Util.Process
-                        Testnet.Util.Runtime
                         Testnet.Parsers
+                        Testnet.Property.Assert
+                        Testnet.Property.Run
+                        Testnet.Property.Utils
+                        Testnet.Process.Cli
+                        Testnet.Process.Run
+                        Testnet.Runtime
+                        Testnet.Topology 
 
   other-modules:        Parsers.Babbage
                         Parsers.Byron
@@ -95,7 +94,6 @@ library
                         Parsers.Version
                         Testnet.Cardano
                         Testnet.Commands.Governance
-                        Testnet.Run
                         Testnet.Shelley
                         Paths_cardano_testnet
 

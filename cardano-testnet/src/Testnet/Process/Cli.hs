@@ -1,4 +1,4 @@
-module Testnet.Util.Cli
+module Testnet.Process.Cli
   ( cliAddressKeyGen
   , cliNodeKeyGen
   , cliNodeKeyGenVrf
@@ -36,7 +36,7 @@ import qualified Hedgehog.Extras.Test.File as H (writeFile)
 import           Cardano.Api (ByronAddr, ByronKeyLegacy, PaymentKey, StakeKey, bounded)
 import           Cardano.Api.Shelley (KesKey, StakePoolKey, VrfKey)
 
-import           Testnet.Util.Process
+import           Testnet.Process.Run
 
 data KeyNames = KeyNames
   { verificationKeyFile :: FilePath

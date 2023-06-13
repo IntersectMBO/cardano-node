@@ -26,7 +26,7 @@ import qualified Hedgehog.Extras.Test.Process as H
 import qualified Testnet.Property.Utils as H
 
 import           Testnet.Options
-import           Testnet.Util.Runtime (TestnetRuntime (..))
+import           Testnet.Runtime (TestnetRuntime (..))
 
 hprop_shutdownOnSlotSynced :: Property
 hprop_shutdownOnSlotSynced = H.integrationRetryWorkspace 2 "shutdown-on-slot-synced" $ \tempAbsBasePath' -> do

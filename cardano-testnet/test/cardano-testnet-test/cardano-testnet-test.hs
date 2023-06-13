@@ -18,7 +18,7 @@ import qualified Cardano.Testnet.Test.ShutdownOnSlotSynced
 import qualified System.Environment as E
 import qualified Test.Tasty as T
 import qualified Test.Tasty.Ingredients as T
-import qualified Testnet.Util.Ignore as H
+import qualified Testnet.Property.Run as H
 
 
 import qualified Cardano.Crypto.Init as Crypto

@@ -5,7 +5,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Testnet.Util.Runtime
+module Testnet.Runtime
   ( LeadershipSlot(..)
   , NodeLoggingFormat(..)
   , PaymentKeyPair(..)
@@ -65,7 +65,7 @@ import           Cardano.Ledger.Shelley.Genesis
 import           Cardano.Node.Configuration.POM
 import qualified Cardano.Node.Protocol.Byron as Byron
 import           Cardano.Node.Types
-import qualified Testnet.Util.Process as H
+import qualified Testnet.Process.Run as H
 
 data NodeLoggingFormat = NodeLoggingFormatAsJson | NodeLoggingFormatAsText deriving (Eq, Show)
 

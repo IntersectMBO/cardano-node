@@ -10,9 +10,9 @@ import qualified Options.Applicative as OA
 
 import           Cardano.CLI.Common.Parsers hiding (pNetworkId)
 
+import           Testnet.Process.Cli
+import           Testnet.Property.Utils
 import           Testnet.Shelley
-import           Testnet.Util.Cli
-import           Testnet.Utils
 
 
 newtype ShelleyOptions = ShelleyOptions

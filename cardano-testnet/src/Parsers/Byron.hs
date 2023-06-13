@@ -10,8 +10,8 @@ import qualified Options.Applicative as OA
 import           Cardano.CLI.Common.Parsers hiding (pNetworkId)
 
 import           Testnet.Byron
-import           Testnet.Run (runTestnet)
-import           Testnet.Util.Cli
+import           Testnet.Process.Cli
+import           Testnet.Property.Run (runTestnet)
 
 newtype ByronOptions = ByronOptions
   { testnetOptions :: TestnetOptions

@@ -36,10 +36,10 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import           Testnet.Options
+import qualified Testnet.Process.Run as H
+import           Testnet.Process.Run
 import qualified Testnet.Property.Utils as H
-import qualified Testnet.Util.Process as H
-import           Testnet.Util.Process
-import           Testnet.Util.Runtime
+import           Testnet.Runtime
 
 hprop_stakeSnapshot :: Property
 hprop_stakeSnapshot = H.integrationRetryWorkspace 2 "babbage-stake-snapshot" $ \tempAbsBasePath' -> do

@@ -9,7 +9,7 @@ import           Control.Monad.Catch
 import           Control.Monad.IO.Class
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
 
-import           Testnet.Util.Process (execCli_)
+import           Testnet.Process.Run (execCli_)
 
 import           Hedgehog.Internal.Property
 

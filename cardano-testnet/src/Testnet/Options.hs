@@ -21,7 +21,7 @@ import           Parsers.Shelley as Shelley
 import           Testnet.Babbage
 import           Testnet.Cardano
 import           Testnet.Conf
-import           Testnet.Run
+import           Testnet.Property.Run
 import           Testnet.Shelley
 
 import qualified Hedgehog as H

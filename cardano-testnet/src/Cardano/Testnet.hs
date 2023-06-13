@@ -45,9 +45,9 @@ import qualified Testnet.Byron as Byron
 import           Testnet.Cardano
 import           Testnet.Conf
 import           Testnet.Options
+import           Testnet.Property.Utils (waitUntilEpoch)
 import           Testnet.Shelley as Shelley
-import           Testnet.Utils (waitUntilEpoch)
 
+import           Testnet.Process.Run (procChairman)
 import           Testnet.Property.Utils (integration)
-import           Testnet.Util.Process (procChairman)
-import           Testnet.Util.Runtime
+import           Testnet.Runtime

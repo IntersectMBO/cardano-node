@@ -36,10 +36,10 @@ import qualified Testnet.Property.Utils as H
 import           Cardano.Testnet
 import           Testnet.Byron
 import           Testnet.Defaults
+import           Testnet.Process.Run (execCli_, procNode)
+import           Testnet.Property.Utils
+import qualified Testnet.Runtime as TR
 import           Testnet.Topology
-import           Testnet.Util.Process (execCli_, procNode)
-import qualified Testnet.Util.Runtime as TR
-import           Testnet.Utils
 
 {- HLINT ignore "Redundant <&>" -}
 

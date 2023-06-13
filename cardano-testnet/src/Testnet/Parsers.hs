@@ -18,7 +18,7 @@ import           Parsers.Help
 import           Parsers.Shelley
 import           Parsers.Version
 import           Testnet.Options
-import           Testnet.Run (runTestnet)
+import           Testnet.Property.Run (runTestnet)
 
 pref :: ParserPrefs
 pref = Opt.prefs $ showHelpOnEmpty <> showHelpOnError

@@ -32,12 +32,12 @@ import           Cardano.Api
 import qualified Testnet.Byron as Byron
 import qualified Testnet.Conf as H
 import           Testnet.Defaults
-import qualified Testnet.Util.Assert as H
-import           Testnet.Util.Process (execCli_)
-import           Testnet.Util.Runtime (Delegator (..), NodeLoggingFormat (..), PaymentKeyPair (..),
+import           Testnet.Process.Run (execCli_)
+import qualified Testnet.Property.Assert as H
+import           Testnet.Property.Utils
+import           Testnet.Runtime (Delegator (..), NodeLoggingFormat (..), PaymentKeyPair (..),
                    PoolNode (PoolNode), PoolNodeKeys (..), StakingKeyPair (..), TestnetRuntime (..),
                    TmpAbsolutePath (..), makeLogDir, startNode)
-import           Testnet.Utils
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.Aeson as J

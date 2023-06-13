@@ -28,14 +28,14 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified System.Info as SYS
+import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Utils as H
-import qualified Testnet.Util.Process as H
 
 import           Cardano.Testnet
 import           Cardano.Testnet.Test.Misc
 import           Testnet.Options
-import           Testnet.Util.Process
-import           Testnet.Util.Runtime
+import           Testnet.Process.Run
+import           Testnet.Runtime
 
 hprop_kes_period_info :: Property
 hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempAbsBasePath' -> do
