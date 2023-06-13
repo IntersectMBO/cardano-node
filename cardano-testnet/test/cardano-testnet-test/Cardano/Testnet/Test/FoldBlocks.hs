@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.FoldBlocks where
+module Cardano.Testnet.Test.FoldBlocks where
 
 import qualified Control.Concurrent as IO
 import           Control.Concurrent.Async (async, link)

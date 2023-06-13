@@ -12,7 +12,7 @@
 {- HLINT ignore "Use head" -}
 {- HLINT ignore "Use let" -}
 
-module Test.Cli.Babbage.LeadershipSchedule
+module Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule
   ( hprop_leadershipSchedule
   ) where
 

@@ -10,7 +10,7 @@
 {- HLINT ignore "Redundant return" -}
 {- HLINT ignore "Use let" -}
 
-module Test.Cli.Alonzo.LeadershipSchedule
+module Cardano.Testnet.Test.Cli.Alonzo.LeadershipSchedule
   ( hprop_leadershipSchedule
   ) where
 

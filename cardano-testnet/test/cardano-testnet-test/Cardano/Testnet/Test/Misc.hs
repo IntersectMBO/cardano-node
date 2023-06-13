@@ -1,4 +1,4 @@
-module Test.Misc where
+module Cardano.Testnet.Test.Misc where
 
 import           Prelude
 

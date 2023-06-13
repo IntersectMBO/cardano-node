@@ -4,7 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cli.KesPeriodInfo
+module Cardano.Testnet.Test.Cli.KesPeriodInfo
   ( hprop_kes_period_info
   ) where
 
@@ -32,7 +32,7 @@ import qualified Testnet.Util.Base as H
 import qualified Testnet.Util.Process as H
 
 import           Cardano.Testnet
-import           Test.Misc
+import           Cardano.Testnet.Test.Misc
 import           Testnet.Options
 import           Testnet.Util.Process
 import           Testnet.Util.Runtime

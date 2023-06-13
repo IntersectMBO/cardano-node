@@ -11,7 +11,7 @@
 {- HLINT ignore "Use head" -}
 {- HLINT ignore "Use let" -}
 
-module Test.Cli.Babbage.StakeSnapshot
+module Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot
   ( hprop_stakeSnapshot
   ) where
 

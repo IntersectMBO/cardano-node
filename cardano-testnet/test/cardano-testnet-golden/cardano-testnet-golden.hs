@@ -14,16 +14,16 @@ import qualified Test.Tasty as T
 import qualified Test.Tasty.Hedgehog as H
 import qualified Test.Tasty.Ingredients as T
 
-import qualified Test.Golden.Testnet.Config
-import qualified Test.Golden.Testnet.Help
+import qualified Cardano.Testnet.Test.Golden.Config
+import qualified Cardano.Testnet.Test.Golden.Help
 
 import qualified Cardano.Crypto.Init as Crypto
 
 tests :: IO TestTree
 tests = pure $ T.testGroup "Golden tests"
-  [ H.testPropertyNamed "golden_DefaultConfig" (fromString "golden_DefaultConfig") Test.Golden.Testnet.Config.goldenDefaultConfigYaml
-  , H.testPropertyNamed "golden_HelpAll" (fromString "golden_HelpAll") Test.Golden.Testnet.Help.golden_HelpAll
-  , H.testPropertyNamed "golden_HelpCmds" (fromString "golden_HelpCmds") Test.Golden.Testnet.Help.golden_HelpCmds
+  [ H.testPropertyNamed "golden_DefaultConfig" (fromString "golden_DefaultConfig") Cardano.Testnet.Test.Golden.Config.goldenDefaultConfigYaml
+  , H.testPropertyNamed "golden_HelpAll" (fromString "golden_HelpAll") Cardano.Testnet.Test.Golden.Help.golden_HelpAll
+  , H.testPropertyNamed "golden_HelpCmds" (fromString "golden_HelpCmds") Cardano.Testnet.Test.Golden.Help.golden_HelpCmds
   ]
 
 ingredients :: [T.Ingredient]

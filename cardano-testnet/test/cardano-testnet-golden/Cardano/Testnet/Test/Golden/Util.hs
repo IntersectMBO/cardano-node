@@ -1,4 +1,4 @@
-module Test.Golden.Testnet.Util
+module Cardano.Testnet.Test.Golden.Util
   ( checkTextEnvelopeFormat
   , equivalence
   , execCardanoTestnet

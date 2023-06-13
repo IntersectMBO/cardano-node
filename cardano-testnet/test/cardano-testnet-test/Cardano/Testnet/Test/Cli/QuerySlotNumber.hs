@@ -8,7 +8,7 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Redundant id" #-}
 
-module Test.Cli.QuerySlotNumber
+module Cardano.Testnet.Test.Cli.QuerySlotNumber
   ( hprop_querySlotNumber
   ) where
 

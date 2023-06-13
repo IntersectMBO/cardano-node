@@ -2,20 +2,20 @@
 
 {- HLINT ignore "Redundant id" -}
 
-module Test.Golden.Testnet.Help
+module Cardano.Testnet.Test.Golden.Help
   ( golden_HelpAll
   , golden_HelpCmds
   ) where
 
 import           Prelude hiding (lines)
 
+import           Cardano.Testnet.Test.Golden.Util
 import           Control.Monad (forM_, unless, (<=<))
 import           Data.Maybe (maybeToList)
 import           Data.Text (Text)
 import           Hedgehog (Property)
 import           Hedgehog.Extras.Stock.OS (isWin32)
 import           System.FilePath ((</>))
-import           Test.Golden.Testnet.Util
 import           Text.Regex (Regex, mkRegex, subRegex)
 
 import qualified Data.Char as Char

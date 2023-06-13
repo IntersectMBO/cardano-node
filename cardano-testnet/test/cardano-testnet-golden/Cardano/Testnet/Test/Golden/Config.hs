@@ -1,7 +1,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Test.Golden.Testnet.Config
+module Cardano.Testnet.Test.Golden.Config
   ( goldenDefaultConfigYaml
   ) where
 
@@ -16,7 +16,7 @@ import           System.FilePath ((</>))
 
 import           Cardano.Api
 
-import           Testnet.Byron
+import           Testnet.Defaults
 
 import           Hedgehog
 import           Hedgehog.Extras.Test.Base (propertyOnce)

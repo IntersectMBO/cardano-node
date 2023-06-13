@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Test.ShutdownOnSlotSynced
+module Cardano.Testnet.Test.ShutdownOnSlotSynced
   ( hprop_shutdownOnSlotSynced
   ) where
 

@@ -3,7 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Node.Shutdown
+module Cardano.Testnet.Test.Node.Shutdown
   ( hprop_shutdown
   ) where
 
