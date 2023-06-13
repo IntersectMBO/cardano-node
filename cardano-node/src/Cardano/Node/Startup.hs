@@ -4,6 +4,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Node.Startup where
 
@@ -199,7 +200,7 @@ prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
     , niSystemStartTime = systemStartTime
     }
  where
-  cfg = pInfoConfig $ Api.protocolInfo pForInfo
+  cfg = pInfoConfig $ fst $ Api.protocolInfo @IO pForInfo
 
   systemStartTime :: UTCTime
   systemStartTime =

@@ -60,5 +60,5 @@ data SomeConsensusProtocol where
                                           , TraceConstraints blk
                                           )
                            => Api.BlockType blk
-                           -> Api.ProtocolInfoArgs IO blk
+                           -> Api.ProtocolInfoArgs blk
                            -> SomeConsensusProtocol

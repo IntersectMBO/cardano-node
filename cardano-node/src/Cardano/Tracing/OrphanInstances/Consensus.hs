@@ -275,6 +275,7 @@ instance HasSeverityAnnotation (TraceForgeEvent blk) where
   getSeverityAnnotation TraceDidntAdoptBlock {}        = Error
   getSeverityAnnotation TraceForgedInvalidBlock {}     = Error
   getSeverityAnnotation TraceAdoptedBlock {}           = Info
+  getSeverityAnnotation TraceAdoptionThreadDied {}     = Error
 
 
 instance HasPrivacyAnnotation (TraceLocalTxSubmissionServerEvent blk)
@@ -440,6 +441,10 @@ instance ( tx ~ GenTx blk
         <> showT (unSlotNo slotNo)
         <> ": " <> renderHeaderHash (Proxy @blk) (blockHash blk)
         <> ", TxIds: " <> showT (map (txId . txForgetValidated) txs)
+    TraceAdoptionThreadDied slotNo blk -> const $
+      "Adoption Thread died in slot "
+        <> showT (unSlotNo slotNo)
+        <> ": " <> renderHeaderHash (Proxy @blk) (blockHash blk)
 
 
 instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
@@ -1465,6 +1470,16 @@ instance ( RunNode blk
   toObject verb (TraceAdoptedBlock slotNo blk _txs) =
     mconcat
       [ "kind" .= String "TraceAdoptedBlock"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      , "blockHash" .= renderHeaderHashForVerbosity
+          (Proxy @blk)
+          verb
+          (blockHash blk)
+      , "blockSize" .= toJSON (getSizeInBytes $ estimateBlockSize (getHeader blk))
+      ]
+  toObject verb (TraceAdoptionThreadDied slotNo blk) =
+    mconcat
+      [ "kind" .= String "TraceAdoptionThreadDied"
       , "slot" .= toJSON (unSlotNo slotNo)
       , "blockHash" .= renderHeaderHashForVerbosity
           (Proxy @blk)

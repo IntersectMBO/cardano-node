@@ -160,7 +160,7 @@ runNode cmdPc = do
     let networkMagic :: Api.NetworkMagic =
           case p of
             SomeConsensusProtocol _ runP ->
-              let ProtocolInfo { pInfoConfig } = Api.protocolInfo runP
+              let ProtocolInfo { pInfoConfig } = fst $ Api.protocolInfo @IO runP
               in getNetworkMagic $ Consensus.configBlock pInfoConfig
 
     case p of
@@ -193,13 +193,13 @@ handleNodeWithTracers
   -> NodeConfiguration
   -> SomeConsensusProtocol
   -> Api.NetworkMagic
-  -> Api.ProtocolInfoArgs IO blk
+  -> Api.ProtocolInfoArgs blk
   -> IO ()
 handleNodeWithTracers cmdPc nc p networkMagic runP = do
   -- This IORef contains node kernel structure which holds node kernel.
   -- Used for ledger queries and peer connection status.
   nodeKernelData <- mkNodeKernelData
-  let ProtocolInfo { pInfoConfig = cfg } = Api.protocolInfo runP
+  let ProtocolInfo { pInfoConfig = cfg } = fst $ Api.protocolInfo @IO runP
   case ncEnableP2P nc of
     SomeNetworkP2PMode p2pMode -> do
       let fp = maybe  "No file path found!"
@@ -325,7 +325,7 @@ handlePeersListSimple tr nodeKern = forever $ do
 
 handleSimpleNode
   :: forall blk p2p . Api.Protocol IO blk
-  => Api.ProtocolInfoArgs IO blk
+  => Api.ProtocolInfoArgs blk
   -> NetworkP2PMode p2p
   -> Tracers RemoteConnectionId LocalConnectionId blk p2p
   -> NodeConfiguration
@@ -344,7 +344,7 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
     traceWith (startupTracer tracers)
       StartupDBValidation
 
-  let pInfo = Api.protocolInfo runP
+  let pInfo = fst $ Api.protocolInfo @IO runP
 
   (publicIPv4SocketOrAddr, publicIPv6SocketOrAddr, localSocketOrPath) <- do
     result <- runExceptT (gatherConfiguredSockets $ ncSocketConfig nc)

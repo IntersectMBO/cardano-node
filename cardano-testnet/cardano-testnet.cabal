@@ -34,7 +34,7 @@ library
   build-depends:        aeson
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 8.2
+                      , cardano-api ^>= 8.5
                       , cardano-cli ^>= 8.2
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
@@ -86,7 +86,7 @@ library
                         Testnet.Process.Cli
                         Testnet.Process.Run
                         Testnet.Runtime
-                        Testnet.Topology 
+                        Testnet.Topology
 
   other-modules:        Parsers.Babbage
                         Parsers.Byron
@@ -176,7 +176,7 @@ test-suite cardano-testnet-test
   build-depends:        aeson
                       , async
                       , bytestring
-                      , cardano-api ^>= 8.2
+                      , cardano-api ^>= 8.5
                       , cardano-cli ^>= 8.2
                       , cardano-crypto-class
                       , cardano-testnet

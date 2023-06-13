@@ -6,6 +6,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-name-shadowing -Wno-orphans #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Node.Tracing.Tracers.Startup
 
@@ -68,7 +69,7 @@ getStartupInfo
   -> IO [StartupTrace blk]
 getStartupInfo nc (SomeConsensusProtocol whichP pForInfo) fp = do
   nodeStartTime <- getCurrentTime
-  let cfg = pInfoConfig $ Api.protocolInfo pForInfo
+  let cfg = pInfoConfig $ fst $ Api.protocolInfo @IO pForInfo
       basicInfoCommon = BICommon $ BasicInfoCommon {
                 biProtocol = pack . show $ ncProtocol nc
               , biVersion  = pack . showVersion $ version
