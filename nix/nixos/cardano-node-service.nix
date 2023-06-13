@@ -679,6 +679,7 @@ in {
             ++ [(cfg.socketPath i)];
           RuntimeDirectory = lib.removePrefix runDirBase
             (cfg.runtimeDir i);
+          NoDelay = "yes";
           ReusePort = "yes";
           SocketMode = "0660";
           SocketUser = "cardano-node";
