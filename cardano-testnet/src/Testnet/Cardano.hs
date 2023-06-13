@@ -60,6 +60,7 @@ import qualified Hedgehog.Extras.Test.Network as H
 import           Testnet.Byron hiding (TestnetOptions (..))
 import qualified Testnet.Conf as H
 import           Testnet.Defaults
+import           Testnet.Filepath
 import qualified Testnet.Process.Run as H
 import           Testnet.Process.Run (execCli_)
 import qualified Testnet.Property.Assert as H
@@ -204,7 +205,7 @@ cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
   nodeToPort <- H.noteShow (M.fromList (L.zip allNodeNames allPorts))
 
   let securityParam = 10
-  let logDir = TR.makeLogDir $ TR.TmpAbsolutePath tempAbsPath'
+  let logDir = makeLogDir $ TmpAbsolutePath tempAbsPath'
   H.createDirectoryIfMissing_ logDir
 
   forM_ allNodeNames $ \node -> do
@@ -411,12 +412,12 @@ cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
       ]
 
     return PoolNodeKeys
-      { TR.poolNodeKeysColdVkey
-      , TR.poolNodeKeysColdSkey
-      , TR.poolNodeKeysVrfVkey
-      , TR.poolNodeKeysVrfSkey
-      , TR.poolNodeKeysStakingVkey
-      , TR.poolNodeKeysStakingSkey
+      { poolNodeKeysColdVkey
+      , poolNodeKeysColdSkey
+      , poolNodeKeysVrfVkey
+      , poolNodeKeysVrfSkey
+      , poolNodeKeysStakingVkey
+      , poolNodeKeysStakingSkey
       }
 
   -- Symlink the BFT operator keys from the genesis delegates, for uniformity
@@ -697,7 +698,7 @@ cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
   deadline <- H.noteShow $ DTC.addUTCTime 90 now
 
   forM_ allNodeNames $ \node -> do
-    sprocket <- H.noteShow $ TR.makeSprocket (TR.TmpAbsolutePath tempAbsPath') node
+    sprocket <- H.noteShow $ makeSprocket (TmpAbsolutePath tempAbsPath') node
     _spocketSystemNameFile <- H.noteShow $ IO.sprocketSystemName sprocket
     H.byDeadlineM 10 deadline "Failed to connect to node socket" $ H.assertM $ H.doesSprocketExist sprocket
 

@@ -52,11 +52,11 @@ import qualified System.IO as IO
 import qualified System.Process as IO
 import qualified Testnet.Conf as H
 import           Testnet.Defaults
+import           Testnet.Filepath
 import qualified Testnet.Process.Run as H
 import           Testnet.Process.Run
 import           Testnet.Property.Assert
 import           Testnet.Property.Utils
-import qualified Testnet.Runtime as TR
 
 
 {- HLINT ignore "Reduce duplication" -}
@@ -194,10 +194,10 @@ testnet testnetOptions conf = do
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime 15 currentTime -- 15 seconds into the future
   allPorts <- H.noteShowIO $ IO.allocateRandomPorts (numBftNodes testnetOptions)
-  let tempAbsPath' = TR.unTmpAbsPath $ H.tempAbsPath conf
-      sockDir = TR.makeSocketDir $ H.tempAbsPath conf
-      tempBaseAbsPath' = TR.makeTmpBaseAbsPath $ H.tempAbsPath conf
-      logDir = TR.makeLogDir $ H.tempAbsPath conf
+  let tempAbsPath' = unTmpAbsPath $ H.tempAbsPath conf
+      sockDir = makeSocketDir $ H.tempAbsPath conf
+      tempBaseAbsPath' = makeTmpBaseAbsPath $ H.tempAbsPath conf
+      logDir = makeLogDir $ H.tempAbsPath conf
 
 
   H.lbsWriteFile (tempAbsPath' </> "byron.genesis.spec.json")
@@ -242,11 +242,11 @@ testnet testnetOptions conf = do
   -- Launch cluster of three nodes in P2P Mode
   forM_ nodeIndexes $ \i -> do
     si <- H.noteShow $ show @Int i
-    let dbDir = TR.makeDbDir i (TR.TmpAbsolutePath tempAbsPath')
+    let dbDir = makeDbDir i (TmpAbsolutePath tempAbsPath')
     H.createDirectoryIfMissing_ dbDir
     nodeStdoutFile <- H.noteTempFile tempAbsPath' $ "cardano-node-" <> si <> ".stdout.log"
     nodeStderrFile <- H.noteTempFile tempAbsPath' $ "cardano-node-" <> si <> ".stderr.log"
-    sprocket <- H.noteShow $ TR.makeSprocket (TR.TmpAbsolutePath tempAbsPath') $ "node-" <> si
+    sprocket <- H.noteShow $ makeSprocket (TmpAbsolutePath tempAbsPath') $ "node-" <> si
     portString <- H.note $ show @Int (allPorts L.!! i)
     topologyFile <- H.noteShow $ tempAbsPath' </> "topology-node-" <> si <> ".json"
     configFile <- H.noteShow $ tempAbsPath' </> "config-" <> si <> ".yaml"

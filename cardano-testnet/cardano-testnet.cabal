@@ -72,12 +72,13 @@ library
 
   hs-source-dirs:       src
   exposed-modules:      Cardano.Testnet
+                        Parsers.Run
                         Testnet.Babbage
                         Testnet.Byron
                         Testnet.Conf
                         Testnet.Defaults
+                        Testnet.Filepath
                         Testnet.Options
-                        Parsers.Run
                         Testnet.Property.Assert
                         Testnet.Property.Run
                         Testnet.Property.Utils

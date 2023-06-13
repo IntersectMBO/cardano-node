@@ -65,6 +65,7 @@ import           Cardano.Ledger.Shelley.Genesis
 import           Cardano.Node.Configuration.POM
 import qualified Cardano.Node.Protocol.Byron as Byron
 import           Cardano.Node.Types
+import           Testnet.Filepath
 import qualified Testnet.Process.Run as H
 
 data NodeLoggingFormat = NodeLoggingFormatAsJson | NodeLoggingFormatAsText deriving (Eq, Show)
@@ -122,32 +123,6 @@ data LeadershipSlot = LeadershipSlot
   , slotTime    :: Text
   } deriving (Eq, Show, Generic, FromJSON)
 
-makeSprocket
-  :: TmpAbsolutePath
-  -> String -- ^ node name
-  -> Sprocket
-makeSprocket tmpAbsPath node
-  = Sprocket (makeTmpBaseAbsPath tmpAbsPath) (makeSocketDir tmpAbsPath </> node)
-
--- Temporary path used at runtime
-newtype TmpAbsolutePath = TmpAbsolutePath
-  { unTmpAbsPath :: FilePath
-  } deriving (Eq, Show)
-
-makeTmpRelPath :: TmpAbsolutePath -> FilePath
-makeTmpRelPath (TmpAbsolutePath fp) = makeRelative (makeTmpBaseAbsPath (TmpAbsolutePath fp)) fp
-
-makeSocketDir :: TmpAbsolutePath -> FilePath
-makeSocketDir fp = makeTmpRelPath fp </> "socket"
-
-makeTmpBaseAbsPath :: TmpAbsolutePath -> FilePath
-makeTmpBaseAbsPath (TmpAbsolutePath fp) = takeDirectory fp
-
-makeLogDir :: TmpAbsolutePath -> FilePath
-makeLogDir (TmpAbsolutePath fp) = fp </> "logs"
-
-makeDbDir :: Int -> TmpAbsolutePath -> FilePath
-makeDbDir nodeNumber (TmpAbsolutePath fp) = fp </> "db/node-" </> show nodeNumber
 
 poolNodeStdout :: PoolNode -> FilePath
 poolNodeStdout = nodeStdout . poolRuntime

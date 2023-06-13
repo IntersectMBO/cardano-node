@@ -59,6 +59,7 @@ import qualified System.Info as OS
 
 import qualified Testnet.Conf as H
 import           Testnet.Defaults
+import           Testnet.Filepath
 import           Testnet.Process.Cli
 import           Testnet.Process.Run
 import           Testnet.Property.Assert
