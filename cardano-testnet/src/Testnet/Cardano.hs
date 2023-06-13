@@ -518,9 +518,18 @@ cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
       , "--out-file", tempAbsPath' </> "addresses/" <> addr <> "-stake.reg.cert"
       ]
 
-    pure $ PaymentKeyPair
-      { paymentSKey
-      , paymentVKey
+    paymentAddress <- fmap Text.pack $ execCli
+      [ "address", "build"
+      , "--payment-verification-key-file", paymentVKey
+      , "--testnet-magic", show @Int testnetMagic
+      ]
+
+    pure $ PaymentInfo
+      { paymentInfoAddress = paymentAddress
+      , paymentInfoKeyPair = PaymentKeyPair
+        { paymentSKey
+        , paymentVKey
+        }
       }
 
   -- user N will delegate to pool N
@@ -713,7 +722,9 @@ cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
 
   H.noteShowIO_ DTC.getCurrentTime
 
-  return TestnetRuntime
+  let tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
+
+  runtime <- pure $ TestnetRuntime
     { configurationFile
     , shelleyGenesisFile = tempAbsPath' </> "shelley/genesis.json"
     , testnetMagic
@@ -723,3 +734,19 @@ cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
     , delegators = [] -- TODO this should be populated
     }
 
+  execConfig <- H.headM (poolSprockets runtime) >>= H.mkExecConfig tempBaseAbsPath
+
+  forM_ wallets $ \wallet -> do
+    H.note_ $ paymentSKey $ paymentInfoKeyPair wallet
+    H.note_ $ paymentVKey $ paymentInfoKeyPair wallet
+
+    out <- H.execCli' execConfig
+      [ "query", "utxo"
+      , "--address", Text.unpack $ paymentInfoAddress wallet
+      , "--cardano-mode"
+      , "--testnet-magic", show @Int testnetMagic
+      ]
+
+    H.note_ out
+
+  return runtime

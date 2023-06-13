@@ -8,6 +8,7 @@
 module Testnet.Util.Runtime
   ( LeadershipSlot(..)
   , NodeLoggingFormat(..)
+  , PaymentInfo(..)
   , PaymentKeyPair(..)
   , StakingKeyPair(..)
   , TmpAbsolutePath(..)
@@ -75,7 +76,7 @@ data TestnetRuntime = TestnetRuntime
   , testnetMagic :: Int
   , bftNodes :: [NodeRuntime]
   , poolNodes :: [PoolNode]
-  , wallets :: [PaymentKeyPair]
+  , wallets :: [PaymentInfo]
   , delegators :: [Delegator]
   }
 
@@ -103,6 +104,11 @@ data PoolNodeKeys = PoolNodeKeys
   , poolNodeKeysStakingSkey :: FilePath
   } deriving (Eq, Show)
 
+data PaymentInfo = PaymentInfo
+  { paymentInfoAddress :: Text
+  , paymentInfoKeyPair :: PaymentKeyPair
+  } deriving (Eq, Show)
+
 data PaymentKeyPair = PaymentKeyPair
   { paymentVKey :: FilePath
   , paymentSKey :: FilePath
@@ -114,8 +120,8 @@ data StakingKeyPair = StakingKeyPair
   } deriving (Eq, Show)
 
 data Delegator = Delegator
-  { paymentKeyPair :: PaymentKeyPair
-  , stakingKeyPair :: StakingKeyPair
+  { delegatorPaymentKeyPair :: PaymentKeyPair
+  , delegatorStakingKeyPair :: StakingKeyPair
   } deriving (Eq, Show)
 
 data LeadershipSlot = LeadershipSlot
