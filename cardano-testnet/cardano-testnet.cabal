@@ -93,7 +93,6 @@ library
                         Parsers.Shelley
                         Parsers.Version
                         Testnet.Cardano
-                        Testnet.Commands.Governance
                         Testnet.Shelley
                         Paths_cardano_testnet
 

@@ -57,7 +57,7 @@ import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Network as H
 
-import           Testnet.Commands.Governance
+import           Testnet.Byron hiding (TestnetOptions (..))
 import qualified Testnet.Conf as H
 import           Testnet.Defaults
 import qualified Testnet.Process.Run as H
