@@ -38,6 +38,7 @@ import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPo
 import           Cardano.Api hiding (Value)
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
+import           Cardano.Node.Types (UseLedger(..))
 import qualified Data.Aeson as J
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
@@ -152,7 +153,7 @@ mkTopologyConfig numPraosNodes allPorts port True = J.encode topologyP2P
       P2P.RealNodeTopology
         localRootPeerGroups
         []
-        (P2P.UseLedger DontUseLedger)
+        (UseLedger DontUseLedger)
 
 shelleyTestnet :: ShelleyTestnetOptions -> H.Conf -> H.Integration TestnetRuntime
 shelleyTestnet testnetOptions H.Conf {H.tempAbsPath} = do

@@ -49,6 +49,7 @@ import           Cardano.Logging
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
+import           Cardano.Node.Protocol (ProtocolInstantiationError)
 
 import           Cardano.Git.Rev (gitRev)
 import           Paths_cardano_node (version)
@@ -76,6 +77,17 @@ data StartupTrace blk =
   | StartupSocketConfigError SocketConfigError
 
   | StartupDBValidation
+
+  -- | Log that the block forging is being updated
+  | BlockForgingUpdate
+
+  -- | Protocol instantiation error when updating block forging
+  | BlockForgingUpdateError ProtocolInstantiationError
+
+  -- | Mismatched block type
+  | BlockForgingBlockTypeMismatch
+       Api.SomeBlockType -- ^ expected
+       Api.SomeBlockType -- ^ provided
 
   -- | Log that the network configuration is being updated.
   --

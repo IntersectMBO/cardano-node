@@ -33,6 +33,7 @@ import           Cardano.Api hiding (Value)
 
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
+import           Cardano.Node.Types (UseLedger(..))
 import qualified Data.Aeson as J
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
@@ -188,7 +189,7 @@ mkTopologyConfig i numBftNodes' allPorts True = J.encode topologyP2P
       P2P.RealNodeTopology
         localRootPeerGroups
         []
-        (P2P.UseLedger DontUseLedger)
+        (UseLedger DontUseLedger)
 
 
 testnet :: TestnetOptions -> H.Conf -> H.Integration [String]

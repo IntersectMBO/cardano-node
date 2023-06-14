@@ -39,8 +39,8 @@ import           Network.TypedProtocol.Core (PeerHasAgency (..))
 import           Network.Mux (MiniProtocolNum (..), MuxTrace (..), WithMuxBearer (..))
 import           Network.Socket (SockAddr (..))
 
-import           Cardano.Node.Configuration.TopologyP2P (UseLedger (..))
 import           Cardano.Node.Queries (ConvertTxId)
+import           Cardano.Node.Types (UseLedger(..))
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.Render
 

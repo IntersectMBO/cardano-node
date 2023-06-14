@@ -22,12 +22,13 @@ import qualified Data.Aeson.KeyMap as Aeson.KeyMap
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Vector as Vector
 
+import           Cardano.Node.Types (UseLedger(..))
 import           Cardano.Node.Configuration.NodeAddress (NodeAddress' (..), NodeHostIPAddress (..),
                    NodeHostIPv4Address (..), NodeHostIPv6Address (..), NodeIPAddress,
                    NodeIPv4Address, NodeIPv6Address)
 import           Cardano.Node.Configuration.TopologyP2P (LocalRootPeersGroup (..),
                    LocalRootPeersGroups (..), NetworkTopology (..), NodeSetup (..),
-                   PeerAdvertise (..), PublicRootPeers (..), RootConfig (..), UseLedger (..))
+                   PeerAdvertise (..), PublicRootPeers (..), RootConfig (..))
 import           Cardano.Slotting.Slot (SlotNo (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (DomainAccessPoint (..),

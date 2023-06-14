@@ -45,6 +45,7 @@ import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPo
 
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
+import           Cardano.Node.Types (UseLedger(..))
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.Aeson as J
@@ -180,7 +181,7 @@ mkTopologyConfig numNodes allPorts port True = J.encode topologyP2P
       P2P.RealNodeTopology
         localRootPeerGroups
         []
-        (P2P.UseLedger DontUseLedger)
+        (UseLedger DontUseLedger)
 
 cardanoTestnet :: CardanoTestnetOptions -> H.Conf -> H.Integration TestnetRuntime
 cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
