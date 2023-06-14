@@ -20,8 +20,7 @@ Usage: cardano-testnet cardano [--num-bft-nodes COUNT]
 
   Start a testnet in any era
 
-Usage: cardano-testnet byron [--testnet-magic INT]
-                               [--num-bft-nodes COUNT]
+Usage: cardano-testnet byron [--num-bft-nodes COUNT]
                                [--slot-duration MILLISECONDS]
                                --testnet-magic INT
                                [--security-param INT]
@@ -31,8 +30,7 @@ Usage: cardano-testnet byron [--testnet-magic INT]
 
   Start a Byron testnet
 
-Usage: cardano-testnet shelley [--testnet-magic INT]
-                                 [--num-praos-nodes COUNT]
+Usage: cardano-testnet shelley [--num-praos-nodes COUNT]
                                  [--num-pool-nodes COUNT]
                                  [--active-slots-coeff DOUBLE]
                                  [--security-param INT]
@@ -44,8 +42,7 @@ Usage: cardano-testnet shelley [--testnet-magic INT]
 
   Start a Shelley testnet
 
-Usage: cardano-testnet babbage [--testnet-magic INT]
-                                 [--num-spo-nodes COUNT]
+Usage: cardano-testnet babbage [--num-spo-nodes COUNT]
                                  [--slot-duration MILLISECONDS]
                                  [--security-param INT]
                                  --testnet-magic INT

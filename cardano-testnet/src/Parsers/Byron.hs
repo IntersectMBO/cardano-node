@@ -13,21 +13,12 @@ import           Testnet.Byron
 import           Testnet.Run (runTestnet)
 import           Testnet.Util.Cli
 
-data ByronOptions = ByronOptions
-  { maybeTestnetMagic :: Maybe Int
-  , testnetOptions :: TestnetOptions
+newtype ByronOptions = ByronOptions
+  { testnetOptions :: TestnetOptions
   } deriving (Eq, Show)
 
 optsByron :: Parser ByronOptions
-optsByron = ByronOptions
-  <$> optional
-      ( OA.option auto
-        (   long "testnet-magic"
-        <>  help "Testnet magic"
-        <>  metavar "INT"
-        )
-      )
-  <*> optsTestnet
+optsByron = ByronOptions <$> optsTestnet
 
 optsTestnet :: Parser TestnetOptions
 optsTestnet = TestnetOptions
