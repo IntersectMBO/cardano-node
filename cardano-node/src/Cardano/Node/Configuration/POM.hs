@@ -87,6 +87,8 @@ data NodeConfiguration
        , ncValidateDB      :: !Bool
        , ncShutdownConfig  :: !ShutdownConfig
 
+       , ncStartAsNonProducingNode :: !Bool
+
         -- Protocol-specific parameters:
        , ncProtocolConfig :: !NodeProtocolConfiguration
 
@@ -158,6 +160,8 @@ data PartialNodeConfiguration
        , pncProtocolFiles   :: !(Last ProtocolFilepaths)
        , pncValidateDB      :: !(Last Bool)
        , pncShutdownConfig  :: !(Last ShutdownConfig)
+
+       , pncStartAsNonProducingNode :: !(Last Bool)
 
          -- Protocol-specific parameters:
        , pncProtocolConfig :: !(Last NodeProtocolConfiguration)
@@ -309,6 +313,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncProtocolFiles = mempty
            , pncValidateDB = mempty
            , pncShutdownConfig = mempty
+           , pncStartAsNonProducingNode = Last $ Just False
            , pncMaybeMempoolCapacityOverride
            , pncProtocolIdleTimeout
            , pncTimeWaitTimeout
@@ -466,6 +471,7 @@ defaultPartialNodeConfiguration =
     , pncProtocolFiles = mempty
     , pncValidateDB = Last $ Just False
     , pncShutdownConfig = Last . Just $ ShutdownConfig Nothing Nothing
+    , pncStartAsNonProducingNode = Last $ Just False
     , pncProtocolConfig = mempty
     , pncMaxConcurrencyBulkSync = mempty
     , pncMaxConcurrencyDeadline = mempty
@@ -500,6 +506,7 @@ makeNodeConfiguration pnc = do
   topologyFile <- lastToEither "Missing TopologyFile" $ pncTopologyFile pnc
   databaseFile <- lastToEither "Missing DatabaseFile" $ pncDatabaseFile pnc
   validateDB <- lastToEither "Missing ValidateDB" $ pncValidateDB pnc
+  startAsNonProducingNode <- lastToEither "Missing StartAsNonProducingNode" $ pncStartAsNonProducingNode pnc
   protocolConfig <- lastToEither "Missing ProtocolConfig" $ pncProtocolConfig pnc
   loggingSwitch <- lastToEither "Missing LoggingSwitch" $ pncLoggingSwitch pnc
   logMetrics <- lastToEither "Missing LogMetrics" $ pncLogMetrics pnc
@@ -555,6 +562,7 @@ makeNodeConfiguration pnc = do
                    Nothing -> ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing
              , ncValidateDB = validateDB
              , ncShutdownConfig = shutdownConfig
+             , ncStartAsNonProducingNode = startAsNonProducingNode
              , ncProtocolConfig = protocolConfig
              , ncSocketConfig = socketConfig
              , ncDiffusionMode = diffusionMode

@@ -79,7 +79,7 @@ data StartupTrace blk =
   | StartupDBValidation
 
   -- | Log that the block forging is being updated
-  | BlockForgingUpdate
+  | BlockForgingUpdate EnabledBlockForging
 
   -- | Protocol instantiation error when updating block forging
   | BlockForgingUpdateError ProtocolInstantiationError
@@ -133,7 +133,9 @@ data StartupTrace blk =
   | BIByron BasicInfoByron
   | BINetwork BasicInfoNetwork
 
-
+data EnabledBlockForging = EnabledBlockForging
+                         | DisabledBlockForging
+                         deriving (Eq, Show)
 
 data BasicInfoCommon = BasicInfoCommon {
     biConfigPath    :: FilePath

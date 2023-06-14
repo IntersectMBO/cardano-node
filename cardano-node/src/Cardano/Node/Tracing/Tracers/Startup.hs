@@ -202,8 +202,10 @@ instance ( Show (BlockNodeToNodeVersion blk)
   forMachine _dtal StartupDBValidation =
       mconcat [ "kind" .= String "StartupDBValidation"
                , "message" .= String "start db validation" ]
-  forMachine _dtal BlockForgingUpdate =
-      mconcat [ "kind" .= String "BlockForgingUpdate" ]
+  forMachine _dtal (BlockForgingUpdate b) =
+      mconcat [ "kind" .= String "BlockForgingUpdate"
+              , "enabled" .= String (showT b)
+              ]
   forMachine _dtal (BlockForgingUpdateError err) =
       mconcat [ "kind" .= String "BlockForgingUpdateError"
               , "error" .= String (showT err)
@@ -292,7 +294,7 @@ instance MetaTrace  (StartupTrace blk) where
      Namespace [] ["SocketConfigError"]
   namespaceFor StartupDBValidation {}  =
     Namespace [] ["DBValidation"]
-  namespaceFor BlockForgingUpdate =
+  namespaceFor BlockForgingUpdate {} =
     Namespace [] ["BlockForgingUpdate"]
   namespaceFor BlockForgingUpdateError {} =
     Namespace [] ["BlockForgingUpdateError"]
@@ -480,10 +482,22 @@ ppStartupInfoTrace (StartupSocketConfigError err) =
 
 ppStartupInfoTrace StartupDBValidation = "Performing DB validation"
 
-ppStartupInfoTrace BlockForgingUpdate = "Performing block forging reconfiguration"
+ppStartupInfoTrace (BlockForgingUpdate b) =
+  "Performing block forging reconfiguration: "
+    <> case b of
+        EnabledBlockForging  ->
+            "Enabling block forging. To disable it please move/rename/remove "
+          <> "the credentials files and then trigger reconfiguration via SIGHUP "
+          <> "signal."
+        DisabledBlockForging ->
+            "Disabling block forging, to enable it please make the credentials "
+          <> "files available again and then re-trigger reconfiguration via SIGHUP "
+          <> "signal."
+
 ppStartupInfoTrace (BlockForgingUpdateError err) =
-  "Block forging reconfiguration error "
-    <> showT err
+  "Block forging reconfiguration error: "
+    <> showT err <> "\n"
+    <> "Block forging is not reconfigured."
 ppStartupInfoTrace (BlockForgingBlockTypeMismatch expected provided) =
   "Block forging reconfiguration block type mismatch: expected "
     <> showT expected
