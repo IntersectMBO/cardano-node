@@ -19,7 +19,6 @@ module Cardano.Testnet (
 
   -- * Configuration
   Conf(..),
-  ProjectBase(..),
   TmpAbsolutePath(..),
   YamlFilePath(..),
   mkConf,
