@@ -86,6 +86,9 @@ let
         command        = "${command}";
         stdout_logfile = "${stateDir}/tracer/stdout";
         stderr_logfile = "${stateDir}/tracer/stderr";
+        # Set these values to 0 to indicate an unlimited log size / no rotation.
+        stdout_logfile_maxbytes = 0;
+        stderr_logfile_maxbytes = 0;
         stopasgroup    = true;
         killasgroup    = true;
         autostart      = false;
@@ -104,6 +107,9 @@ let
         command        = "${command}";
         stdout_logfile = "${stateDir}/${nodeName}/stdout";
         stderr_logfile = "${stateDir}/${nodeName}/stderr";
+        # Set these values to 0 to indicate an unlimited log size / no rotation.
+        stdout_logfile_maxbytes = 0;
+        stderr_logfile_maxbytes = 0;
         stopasgroup    = false;
         killasgroup    = false;
         autostart      = false;
@@ -123,6 +129,9 @@ let
         command        = "${command}";
         stdout_logfile = "${stateDir}/generator/stdout";
         stderr_logfile = "${stateDir}/generator/stderr";
+        # Set these values to 0 to indicate an unlimited log size / no rotation.
+        stdout_logfile_maxbytes = 0;
+        stderr_logfile_maxbytes = 0;
         stopasgroup    = false;
         killasgroup    = false;
         autostart      = false;
@@ -141,6 +150,9 @@ let
         command        = "${command}";
         stdout_logfile = "${stateDir}/healthcheck/stdout";
         stderr_logfile = "${stateDir}/healthcheck/stderr";
+        # Set these values to 0 to indicate an unlimited log size / no rotation.
+        stdout_logfile_maxbytes = 0;
+        stderr_logfile_maxbytes = 0;
         stopasgroup    = false;
         killasgroup    = false;
         autostart      = false;
