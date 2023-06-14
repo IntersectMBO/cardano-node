@@ -5,12 +5,8 @@ module Spec.Chairman.Cardano
   ) where
 
 import           Spec.Chairman.Chairman (chairmanOver)
-import           System.FilePath ((</>))
 
 import qualified Hedgehog as H
-import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.Process as H
-import qualified System.Directory as IO
 
 import qualified Cardano.Testnet as H
 import qualified Testnet.Property.Utils as H
@@ -21,9 +17,7 @@ import qualified Testnet.Property.Utils as H
 
 hprop_chairman :: H.Property
 hprop_chairman = H.integrationRetryWorkspace 2 "cardano-chairman" $ \tempAbsPath' -> do
-  base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
-  configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
-  conf <- H.mkConf (Just $ H.YamlFilePath configurationTemplate) tempAbsPath'
+  conf <- H.mkConf tempAbsPath'
 
   allNodes <- fmap H.nodeName . H.allNodes <$> H.testnet (H.CardanoOnlyTestnetOptions H.cardanoDefaultTestnetOptions) conf
 

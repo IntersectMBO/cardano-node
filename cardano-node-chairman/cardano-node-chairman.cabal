@@ -70,7 +70,6 @@ test-suite chairman-tests
 
   build-depends:        cardano-testnet
                       , cardano-crypto-class ^>= 2.1
-                      , directory
                       , filepath
                       , hedgehog
                       , hedgehog-extras ^>= 0.4.5.1
