@@ -1,5 +1,12 @@
 # Changelog for cardano-cli
 
+## next version
+
+- `cardano-cli ping`: timestamp format changed to `ISO8601`
+- `cardano-cli ping`: support `NodeToNodeV_11`, `NodeToNodeV_12` and `NodeToClientV_16`.
+- `cardano-cli ping`: added `--query-versions` flag, instread of doing version
+  negotiation the remote side will reply with its set of supported versions.
+
 ## 8.1.0
 
 - Delete deprecated shelley command group
