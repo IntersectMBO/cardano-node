@@ -111,4 +111,32 @@ source-repository-package
   type: git
   location: https://github.com/input-output-hk/ekg-forward
   tag: 61d6e739ce7015a44cf8acecb64528cd87a962ad
-  --sha256: caae341a02e1908454b2f0f5c86a07774550cd3912a0fd2e6f2bb64bfac46fa9
+  --sha256: 17hb7wljkjn9r7ac1zi8zg4ywzajqpw87yj45qgv73akz2lym3pm
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-network
+  tag: 131532fd8d53acddbc6641e50f223cffe674b0a1
+  --sha256: 0j5z9hbq3f7ja1kyb5wv56wp64knxkh3v96r0r4m23hfq780zzia
+  subdir: ouroboros-network-api
+          ouroboros-network
+          ouroboros-network-framework
+          ouroboros-network-testing
+          ouroboros-network-protocols
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-consensus
+  tag: a27a3bfdf6ad8dcb382da082c8f43b44ae55ea9a
+  --sha256: 1q0br4r7mgg53ga4pkdl8hi2c0bnvnv0z99jyfra7nzx7njf67q8
+  subdir: ouroboros-consensus
+          ouroboros-consensus-protocol
+          ouroboros-consensus-cardano
+          ouroboros-consensus-diffusion
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-api
+  tag: cbe6708fbdc59d6ca1ac85a4750d31aaefd895cb
+  --sha256: 0v4s314hnvrl9paf4gv64l5r0h7y82mj8h5qspmv2yy2zjd56mds
+  subdir: cardano-api
