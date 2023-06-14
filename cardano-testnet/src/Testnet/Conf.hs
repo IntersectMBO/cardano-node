@@ -7,7 +7,7 @@ module Testnet.Conf
   , mkConf
   ) where
 
-import           Testnet.Util.Runtime
+import           Testnet.Runtime
 
 import qualified Hedgehog.Extras.Test.Base as H
 newtype ProjectBase = ProjectBase

@@ -15,6 +15,6 @@ Available options:
   --testnet-magic INT      Specify a testnet magic id.
   --security-param INT     Security parameter (default: 10)
   --n-poor-addresses INT   N poor addresses (default: 128)
-  --total-balance INT      Total Balance (default: 8000000000000000)
+  --total-balance INT      Total Balance (default: 8000000000000001)
   --enable-p2p BOOL        Enable P2P (default: False)
   -h,--help                Show this help text
