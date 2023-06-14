@@ -1,10 +1,18 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-
+{-|
+Module      : Cardano.TxGenerator.Fund
+Description : A type for funds to build transactions with.
+-}
 module Cardano.TxGenerator.Fund
-    ( Fund(..)
+    (
+    -- * Types
+    -- $Types
+      Fund(..)
     , FundInEra(..)
+    -- * Accessors
+    -- $Accessors
     , getFundTxIn
     , getFundKey
     , getFundLovelace
@@ -17,8 +25,13 @@ import           Data.Function (on)
 import           Cardano.Api as Api
 
 
--- | Outputs that are available for spending.
--- When building a new transaction, they provide the TxIn parts.
+-- $Types
+--
+-- Outputs that are available for spending.
+-- When building a new transaction, they provide the `TxIn` parts.
+
+-- | `FundInEra` has field naming conventions suggesting anticipated
+-- use of lenses.
 data FundInEra era = FundInEra {
     _fundTxIn       :: !TxIn
   , _fundWitness    :: Witness WitCtxTxIn era
@@ -27,6 +40,7 @@ data FundInEra era = FundInEra {
   }
   deriving (Show)
 
+-- | `InAnyCardanoEra` helps form heterogenous collections wrt. eras.
 newtype Fund = Fund {unFund :: InAnyCardanoEra FundInEra}
 
 instance Eq Fund where
@@ -39,18 +53,28 @@ instance Show Fund where
   show (Fund (InAnyCardanoEra _ f)) = show f
 
 
+-- $Accessors
+--
+-- Accessors for the various fields of `FundInEra` starting from a
+-- `Fund`.
+
+-- | The `TxIn` is only a `TxId` and `TxIx` pair, and so era-independent.
 getFundTxIn :: Fund -> TxIn
 getFundTxIn (Fund (InAnyCardanoEra _ a)) = _fundTxIn a
 
+-- | Signing keys are optional as far as funds go.
 getFundKey :: Fund -> Maybe (SigningKey PaymentKey)
 getFundKey (Fund (InAnyCardanoEra _ a)) = _fundSigningKey a
 
+-- | Converting a `TxOutValue` to `Lovelace` requires case analysis.
 getFundLovelace :: Fund -> Lovelace
 getFundLovelace (Fund (InAnyCardanoEra _ a)) = case _fundVal a of
   TxOutAdaOnly _era l -> l
   TxOutValue _era v -> selectLovelace v
 
 -- TODO: facilitate casting KeyWitnesses between eras -- Note [Era transitions]
+-- | The `Fund` alternative is checked against `cardanoEra`, but
+-- `getFundWitness` otherwise wraps `_fundWitness`.
 getFundWitness :: forall era. IsShelleyBasedEra era => Fund -> Witness WitCtxTxIn era
 getFundWitness fund = case (cardanoEra @era, fund) of
   (ByronEra   , Fund (InAnyCardanoEra ByronEra   a)) -> _fundWitness a

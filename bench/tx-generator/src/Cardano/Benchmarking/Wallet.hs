@@ -23,17 +23,20 @@ import           Cardano.TxGenerator.Types
 import           Cardano.TxGenerator.Tx
 import           Cardano.TxGenerator.UTxO
 
--- All the actual functionality of Wallet / WalletRef has been removed
+-- | All the actual functionality of Wallet / WalletRef has been removed
 -- and WalletRef has been stripped down to MVar FundQueue.
 -- The implementation of Wallet has become trivial.
 -- Todo: Remove trivial wrapper functions.
-
 type WalletRef = MVar FundQueue
 
--- 'ToUTxOList era' is more powerful than '[ ToUTxO era ]' but
+-- | 'ToUTxOList era' is more powerful than '[ ToUTxO era ]' but
 -- '[ ToUTxO era ]` is easier to construct.
-
---type TxStream m era = Stream (Of (Tx era)) m (Maybe TxGenError)
+-- There is also a thought that a `Control.Monad.Error.MonadError`
+-- might fit here, but that's a deprecated interface relative to
+-- `Control.Monad.Trans.Except.ExceptT`:
+-- @
+-- type TxStream m era = Stream (Of (Tx era)) m (Maybe TxGenError)
+-- @
 type TxStream m era = Stream (Of (Either TxGenError (Tx era))) m ()
 
 -- | 'createAndStore' hides its 3rd argument in the 'CreateAndStore'
@@ -47,14 +50,18 @@ createAndStore create store lovelace = (utxo, toStore)
     (utxo, mkFund) = create lovelace
     toStore txIx txId = store $ mkFund txIx txId
 
+-- | This creates a new `MVar` with an `emptyFundQueue` vs. truly
+-- initializing a preexisting `WalletRef`.
 initWallet :: IO WalletRef
 initWallet = newMVar emptyFundQueue
 
+-- | This reads an `MVar` and applies a function to the copied content.
 askWalletRef :: WalletRef -> (FundQueue -> a) -> IO a
 askWalletRef r f = do
   w <- readMVar r
   return $ f w
 
+-- | This does an insertion into the `MVar` contents.
 walletRefInsertFund :: WalletRef -> Fund -> IO ()
 walletRefInsertFund ref fund = modifyMVar_  ref $ \w -> return $ FundQueue.insertFund w fund
 
@@ -82,7 +89,7 @@ walletSource ref munch = modifyMVar ref $ \fifo -> return $ case removeFunds mun
   Nothing -> (fifo, Left $ TxGenError "WalletSource: out of funds")
   Just (newFifo, funds) -> (newFifo, Right funds)
 
--- just a preview of the wallet's funds; wallet remains unmodified
+-- | Just a preview of the wallet's funds; wallet remains unmodified.
 walletPreview :: WalletRef -> Int -> IO [Fund]
 walletPreview ref munch = do
   fifo <- readMVar ref

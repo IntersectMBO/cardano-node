@@ -2,7 +2,10 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
-
+{-|
+Module      : Cardano.Benchmarking.Types
+Description : Types for running benchmarks.
+-}
 module Cardano.Benchmarking.Types
   ( module Cardano.Benchmarking.Types
   ) where
@@ -31,6 +34,7 @@ deriving stock instance Generic Sent
 newtype Unav = Unav Int deriving newtype (Enum, Eq, Integral, Num, Ord, Real, Show)
 deriving stock instance Generic Unav
 
+-- | This controls how to react to errors during the benchmark.
 data SubmissionErrorPolicy
   = FailOnError
   | LogErrors

@@ -68,12 +68,12 @@ data TraceBenchTxSubmit txid
   | TraceBenchTxSubRecv [txid]
   -- ^ Received from generator.
   | TraceBenchTxSubStart [txid]
-  -- ^ The @txid@ has been submitted to `TxSubmission`
+  -- ^ The @txid@ has been submitted to `TxSubmission2`
   --   protocol peer.
   | SubmissionClientReplyTxIds [txid]
   -- ^ Announcing txids in response for server's request.
   | TraceBenchTxSubServReq [txid]
-  -- ^ Request for @tx@ received from `TxSubmission` protocol
+  -- ^ Request for @tx@ received from `TxSubmission2` protocol
   --   peer.
   | SubmissionClientDiscardAcknowledged [txid]
   -- ^ An ack (window moved over) received for these transactions.

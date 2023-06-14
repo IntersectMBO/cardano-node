@@ -3,6 +3,10 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
+{-
+Module      : Cardano.TxGenerator.Utils
+Description : Utility functions used across the transaction generator.
+-}
 module  Cardano.TxGenerator.Utils
         (module Cardano.TxGenerator.Utils)
         where
@@ -15,6 +19,8 @@ import           Cardano.Api as Api
 import           Cardano.TxGenerator.Types
 
 
+-- | `liftAnyEra` applies a function to the value in `InAnyCardanoEra`
+-- regardless of which particular era.
 liftAnyEra :: ( forall era. IsCardanoEra era => f1 era -> f2 era ) -> InAnyCardanoEra f1 -> InAnyCardanoEra f2
 liftAnyEra f x = case x of
   InAnyCardanoEra ByronEra a   ->   InAnyCardanoEra ByronEra $ f a
@@ -25,6 +31,7 @@ liftAnyEra f x = case x of
   InAnyCardanoEra BabbageEra a ->   InAnyCardanoEra BabbageEra $ f a
   InAnyCardanoEra ConwayEra a  ->   InAnyCardanoEra ConwayEra $ f a
 
+-- | `keyAddress` determines an address for the relevant era.
 keyAddress :: forall era. IsShelleyBasedEra era => NetworkId -> SigningKey PaymentKey -> AddressInEra era
 keyAddress networkId k
   = makeShelleyAddressInEra
@@ -67,22 +74,31 @@ includeChange fee spend have = case compare changeValue 0 of
 
 
 -- some convenience constructors
+
+-- | `mkTxFee` reinterprets the `Either` returned by
+-- `txFeesExplicitInEra` with `TxFee` constructors.
 mkTxFee :: forall era. IsCardanoEra era => Lovelace -> TxFee era
 mkTxFee f = either
   TxFeeImplicit
   (`TxFeeExplicit` f)
   (txFeesExplicitInEra (cardanoEra @era))
 
+-- | `mkTxValidityUpperBound` rules out needing the
+-- `TxValidityNoUpperBound` with the constraint of `IsShelleyBasedEra`.
 mkTxValidityUpperBound :: forall era. IsShelleyBasedEra era => SlotNo -> TxValidityUpperBound era
 mkTxValidityUpperBound =
   TxValidityUpperBound (fromJust $ validityUpperBoundSupportedInEra (cardanoEra @era))
 
+-- | `mkTxOutValueAdaOnly` reinterprets the `Either` returned by
+-- `multiAssetSupportedInEra` with `TxOutValue` constructors.
 mkTxOutValueAdaOnly :: forall era . IsShelleyBasedEra era => Lovelace -> TxOutValue era
 mkTxOutValueAdaOnly l = either
   (`TxOutAdaOnly` l)
   (\p -> TxOutValue p $ lovelaceToValue l)
   (multiAssetSupportedInEra (cardanoEra @era))
 
+-- | `mkTxInModeCardano` never uses the `TxInByronSpecial` constructor
+-- because its type enforces it being a Shelley-based era.
 mkTxInModeCardano :: forall era . IsShelleyBasedEra era => Tx era -> TxInMode CardanoMode
 mkTxInModeCardano tx =
   TxInMode tx (fromJust $ toEraInMode (cardanoEra @era) CardanoMode)
