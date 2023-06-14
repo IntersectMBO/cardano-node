@@ -44,7 +44,7 @@ import           Testnet.Topology
 
 hprop_shutdown :: Property
 hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> do
-  conf <- H.noteShowM $ mkConf Nothing tempAbsBasePath'
+  conf <- H.noteShowM $ mkConf tempAbsBasePath'
   let tempBaseAbsPath' = makeTmpBaseAbsPath $ tempAbsPath conf
       tempAbsPath' = unTmpAbsPath $ tempAbsPath conf
       logDir' = makeLogDir $ tempAbsPath conf
