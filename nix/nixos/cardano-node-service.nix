@@ -24,7 +24,6 @@ let
               TargetNumberOfKnownPeers = cfg.targetNumberOfKnownPeers;
               TargetNumberOfEstablishedPeers = cfg.targetNumberOfEstablishedPeers;
               TargetNumberOfActivePeers = cfg.targetNumberOfActivePeers;
-              ExperimentalProtocolsEnabled = true;
               MaxConcurrencyBulkSync = 2;
             })) cfg.extraNodeConfig;
         baseInstanceConfig =
@@ -51,20 +50,14 @@ let
     nodeConfigFile = if (cfg.nodeConfigFile != null) then cfg.nodeConfigFile
       else toFile "config-${toString cfg.nodeId}-${toString i}.json" (toJSON instanceConfig);
     newTopology = {
-      LocalRoots = {
-        groups = map (g: {
-          localRoots = {
-            inherit (g) accessPoints;
-            advertise = g.advertise or false;
-          };
-          valency = g.valency or (length g.accessPoints);
-        }) (cfg.producers ++ (cfg.instanceProducers i));
-      };
-      PublicRoots = map (g: {
-        publicRoots = {
-          inherit (g) accessPoints;
-          advertise = g.advertise or false;
-        };
+      localRoots = map (g: {
+        accessPoints = map (e: builtins.removeAttrs e ["valency"]) g.accessPoints;
+        advertise = g.advertise or false;
+        valency = g.valency or (length g.accessPoints);
+      }) (cfg.producers ++ (cfg.instanceProducers i));
+      publicRoots = map (g: {
+        accessPoints = map (e: builtins.removeAttrs e ["valency"]) g.accessPoints;
+        advertise = g.advertise or false;
       }) (cfg.publicProducers ++ (cfg.instancePublicProducers i));
     } // optionalAttrs (cfg.usePeersFromLedgerAfterSlot != null) {
       useLedgerAfterSlot = cfg.usePeersFromLedgerAfterSlot;
@@ -116,29 +109,29 @@ let
       "--config ${nodeConfigFile}"
       "--database-path ${instanceDbPath}"
       "--topology ${topology}"
-    ] ++ lib.optionals (!cfg.systemdSocketActivation) [
+    ] ++ lib.optionals (!cfg.systemdSocketActivation) ([
       "--host-addr ${cfg.hostAddr}"
       "--port ${toString (cfg.port + i)}"
       "--socket-path ${cfg.socketPath i}"
-    ] ++ lib.optionals (cfg.tracerSocketPathAccept i != null) [
-        "--tracer-socket-path-accept ${cfg.tracerSocketPathAccept i}"
-    ] ++ lib.optionals (cfg.tracerSocketPathConnect i != null) [
-        "--tracer-socket-path-connect ${cfg.tracerSocketPathConnect i}"
     ] ++ lib.optionals (cfg.ipv6HostAddr i != null) [
-        "--host-ipv6-addr ${cfg.ipv6HostAddr i}"
+      "--host-ipv6-addr ${cfg.ipv6HostAddr i}"
+    ]) ++ lib.optionals (cfg.tracerSocketPathAccept i != null) [
+      "--tracer-socket-path-accept ${cfg.tracerSocketPathAccept i}"
+    ] ++ lib.optionals (cfg.tracerSocketPathConnect i != null) [
+      "--tracer-socket-path-connect ${cfg.tracerSocketPathConnect i}"
     ] ++ consensusParams.${cfg.nodeConfig.Protocol} ++ cfg.extraArgs ++ cfg.rtsArgs;
     in ''
-        echo "Starting: ${concatStringsSep "\"\n   echo \"" cmd}"
-        echo "..or, once again, in a single line:"
-        echo "${toString cmd}"
-        ${lib.optionalString (i > 0) ''
-        # If exist copy state from existing instance instead of syncing from scratch:
-        if [ ! -d ${instanceDbPath} ] && [ -d ${cfg.databasePath 0} ]; then
-          echo "Copying existing immutable db from ${cfg.databasePath 0}"
-          ${pkgs.rsync}/bin/rsync --archive --ignore-errors --exclude 'clean' ${cfg.databasePath 0}/ ${instanceDbPath}/ || true
-        fi
-        ''}
-        ${toString cmd}'';
+      echo "Starting: ${concatStringsSep "\"\n   echo \"" cmd}"
+      echo "..or, once again, in a single line:"
+      echo "${toString cmd}"
+      ${lib.optionalString (i > 0) ''
+      # If exist copy state from existing instance instead of syncing from scratch:
+      if [ ! -d ${instanceDbPath} ] && [ -d ${cfg.databasePath 0} ]; then
+        echo "Copying existing immutable db from ${cfg.databasePath 0}"
+        ${pkgs.rsync}/bin/rsync --archive --ignore-errors --exclude 'clean' ${cfg.databasePath 0}/ ${instanceDbPath}/ || true
+      fi
+      ''}
+      ${toString cmd}'';
 in {
   options = {
     services.cardano-node = {
@@ -685,6 +678,7 @@ in {
             ++ [(cfg.socketPath i)];
           RuntimeDirectory = lib.removePrefix runDirBase
             (cfg.runtimeDir i);
+          NoDelay = "yes";
           ReusePort = "yes";
           SocketMode = "0660";
           SocketUser = "cardano-node";
@@ -721,6 +715,10 @@ in {
         {
           assertion = (cfg.kesKey == null) == (cfg.vrfKey == null) && (cfg.kesKey == null) == (cfg.operationalCertificate == null);
           message = "Shelley Era: all of three [operationalCertificate kesKey vrfKey] options must be defined (or none of them).";
+        }
+        {
+          assertion = !(cfg.systemdSocketActivation && cfg.useNewTopology);
+          message = "Systemd socket activation cannot be used with p2p topology due to a systemd socket re-use issue.";
         }
       ];
     }
