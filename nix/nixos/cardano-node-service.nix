@@ -716,6 +716,10 @@ in {
           assertion = (cfg.kesKey == null) == (cfg.vrfKey == null) && (cfg.kesKey == null) == (cfg.operationalCertificate == null);
           message = "Shelley Era: all of three [operationalCertificate kesKey vrfKey] options must be defined (or none of them).";
         }
+        {
+          assertion = !(cfg.systemdSocketActivation && cfg.useNewTopology);
+          message = "Systemd socket activation cannot be used with p2p topology due to a systemd socket re-use issue.";
+        }
       ];
     }
   ]);
