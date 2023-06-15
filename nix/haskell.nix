@@ -272,7 +272,7 @@ let
               };
             in
             {
-              packages = lib.genAttrs projectPackageNames (name: fullyStaticOptions);
+              packages = lib.genAttrs (projectPackageNames ++ ["cardano-cli"]) (name: fullyStaticOptions);
               # Haddock not working and not needed for cross builds
               doHaddock = false;
             }
