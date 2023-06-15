@@ -123,7 +123,7 @@ library
                       , cardano-ledger-core >= 1.2
                       , cardano-ledger-conway >= 1.1
                       , cardano-ledger-shelley >= 1.1.1
-                      , cardano-ping ^>= 0.2.0.4
+                      , cardano-ping ^>= 0.2.0.5
                       , cardano-prelude
                       , cardano-protocol-tpraos >= 1.0
                       , cardano-slotting ^>= 0.1

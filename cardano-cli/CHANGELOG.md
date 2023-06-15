@@ -6,6 +6,8 @@
 - `cardano-cli ping`: support `NodeToNodeV_11`, `NodeToNodeV_12` and `NodeToClientV_16`.
 - `cardano-cli ping`: added `--query-versions` flag, instread of doing version
   negotiation the remote side will reply with its set of supported versions.
+- `cardano-cli ping`: fixed support for `node-to-client` mini-protocol over
+  Unix socket.
 
 ## 8.1.0
 
