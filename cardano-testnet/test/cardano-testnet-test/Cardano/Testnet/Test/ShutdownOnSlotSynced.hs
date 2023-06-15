@@ -31,7 +31,7 @@ hprop_shutdownOnSlotSynced :: Property
 hprop_shutdownOnSlotSynced = H.integrationRetryWorkspace 2 "shutdown-on-slot-synced" $ \tempAbsBasePath' -> do
   -- Start a local test net
   -- TODO: Move yaml filepath specification into individual node options
-  conf <- H.noteShowM $  mkConf Nothing tempAbsBasePath'
+  conf <- H.noteShowM $  mkConf tempAbsBasePath'
 
   let maxSlot = 1500
       slotLen = 0.01

@@ -74,7 +74,7 @@ babbageDefaultTestnetOptions = BabbageTestnetOptions
 
 
 babbageTestnet :: BabbageTestnetOptions -> H.Conf -> H.Integration TestnetRuntime
-babbageTestnet testnetOptions H.Conf {H.configurationTemplate, H.tempAbsPath} = do
+babbageTestnet testnetOptions (H.Conf tempAbsPath) = do
   let logDir = makeLogDir tempAbsPath
       tempAbsPath' = unTmpAbsPath tempAbsPath
       testnetMagic = babbageTestnetMagic testnetOptions

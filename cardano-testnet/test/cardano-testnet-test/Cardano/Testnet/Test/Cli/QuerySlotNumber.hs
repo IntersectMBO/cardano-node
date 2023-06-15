@@ -37,7 +37,7 @@ import           Testnet.Runtime
 hprop_querySlotNumber :: Property
 hprop_querySlotNumber = H.integrationRetryWorkspace 2 "query-slot-number" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
-  conf <- H.noteShowM $ mkConf Nothing tempAbsBasePath'
+  conf <- H.noteShowM $ mkConf tempAbsBasePath'
 
   let tempBaseAbsPath' = makeTmpBaseAbsPath $ tempAbsPath conf
       testnetOptions = BabbageOnlyTestnetOptions $ babbageDefaultTestnetOptions

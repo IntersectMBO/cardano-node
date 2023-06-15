@@ -41,7 +41,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   H.note_ SYS.os
   conf@Conf { tempAbsPath }
     -- TODO: Move yaml filepath specification into individual node options
-    <- H.noteShowM $ mkConf Nothing tempAbsBasePath'
+    <- H.noteShowM $ mkConf tempAbsBasePath'
 
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath

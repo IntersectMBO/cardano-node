@@ -27,7 +27,7 @@ testnetProperty :: (H.Conf -> H.Integration ()) -> H.Property
 testnetProperty tn = H.integrationRetryWorkspace 2 "testnet-chairman" $ \tempAbsPath' -> do
   base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
-  conf <- H.mkConf Nothing tempAbsPath'
+  conf <- H.mkConf tempAbsPath'
 
   -- Fork a thread to keep alive indefinitely any resources allocated by testnet.
   void . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000
