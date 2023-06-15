@@ -702,7 +702,7 @@ backend_nomad() {
           fatal "Failed to stop tracer(s)"
         fi
       else
-        backend_nomad stop-cluster-node "${dir}" "tracer"
+        backend_nomad stop-cluster-tracer "${dir}" "tracer"
       fi
 
       # Download logs!
@@ -1675,6 +1675,8 @@ backend_nomad() {
       return 0
     ;;
 
+    # TODO: scenario.sh is not using it, but should call stop-cluster-node
+    # and/or stop-cluster-healthcheck and set the "stopped" flags
     stop-node )
       local usage="USAGE: wb backend $op RUN-DIR NODE-NAME"
       local dir=${1:?$usage};  shift
