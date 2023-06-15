@@ -74,10 +74,6 @@ let
           ({ pkgs, ... }: {
             # Needed for the CLI tests.
             # Coreutils because we need 'paste'.
-            packages.cardano-cli.components.tests.cardano-cli-test.build-tools =
-              lib.mkForce (with pkgs.buildPackages; [ jq coreutils shellcheck ]);
-            packages.cardano-cli.components.tests.cardano-cli-golden.build-tools =
-              lib.mkForce (with pkgs.buildPackages; [ jq coreutils shellcheck ]);
             packages.cardano-testnet.components.tests.cardano-testnet-tests.build-tools =
               lib.mkForce (with pkgs.buildPackages; [ jq coreutils shellcheck lsof ]);
           })
@@ -118,8 +114,6 @@ let
               ];
               goldenConfigFiles = [
                 "configuration/defaults/byron-mainnet"
-                "cardano-cli/test/cardano-cli-golden/files/golden/alonzo/genesis.alonzo.spec.json"
-                "cardano-cli/test/cardano-cli-golden/files/golden/conway/genesis.conway.spec.json"
                 "cardano-testnet/test/cardano-testnet-test/files/golden/allegra_node_default_config.json"
                 "cardano-testnet/test/cardano-testnet-test/files/golden/alonzo_node_default_config.json"
                 "cardano-testnet/test/cardano-testnet-test/files/golden/babbage_node_default_config.json"
@@ -134,27 +128,6 @@ let
             {
               # split data output for ekg to reduce closure size
               packages.ekg.components.library.enableSeparateDataOutput = true;
-              # cardano-cli tests depend on cardano-cli and some config files:
-              packages.cardano-cli.components.tests.cardano-cli-golden.preCheck =
-                let
-                  # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
-                  filteredProjectBase = incl ../. [
-                    "scripts/plutus/scripts/v1/custom-guess-42-datum-42.plutus"
-                  ];
-                in
-                ''
-                  ${exportCliPath}
-                  export CARDANO_NODE_SRC=${filteredProjectBase}
-                '';
-              packages.cardano-cli.components.tests.cardano-cli-test.preCheck =
-                let
-                  # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
-                  filteredProjectBase = incl ../. mainnetConfigFiles;
-                in
-                ''
-                  ${exportCliPath}
-                  export CARDANO_NODE_SRC=${filteredProjectBase}
-                '';
               packages.cardano-node-chairman.components.tests.chairman-tests.build-tools =
                 lib.mkForce [
                   pkgs.lsof
