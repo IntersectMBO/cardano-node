@@ -49,56 +49,41 @@ let
         withHoogle = true;
       };
       modules =
-        let
-          inherit (config) src;
-          # deduce package names and exes from the cabal project to avoid hard-coding them:
-          projectPackagesExes =
-            let
-              project = haskell-nix.cabalProject' (builtins.removeAttrs config [ "modules" ]);
-              packages = haskellLib.selectProjectPackages project.hsPkgs;
-            in
-            lib.genAttrs
-              (lib.attrNames packages)
-              (name: lib.attrNames packages.${name}.components.exes);
-          projectPackageNames = builtins.attrNames projectPackagesExes;
-        in
         [
-          ({ pkgs, ... }: {
+          ({ lib, pkgs, ... }: {
             packages.cardano-tracer.package.buildable = with pkgs.stdenv.hostPlatform; lib.mkForce (!isMusl);
             packages.cardano-node-chairman.components.tests.chairman-tests.buildable = lib.mkForce pkgs.stdenv.hostPlatform.isUnix;
             packages.plutus-tx-plugin.components.library.platforms = with lib.platforms; [ linux darwin ];
             packages.tx-generator.package.buildable = with pkgs.stdenv.hostPlatform; !isMusl;
           })
-          ({ pkgs, ... }: {
+          ({ lib, pkgs, ... }: {
             # Needed for the CLI tests.
             # Coreutils because we need 'paste'.
             packages.cardano-testnet.components.tests.cardano-testnet-tests.build-tools =
               lib.mkForce (with pkgs.buildPackages; [ jq coreutils shellcheck lsof ]);
           })
-          ({ pkgs, ... }: {
+          ({ lib, pkgs, ... }: {
             # Use the VRF fork of libsodium
             packages.cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [ [ pkgs.libsodium-vrf ] ];
             packages.cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ pkgs.libsodium-vrf pkgs.secp256k1 ] ];
           })
-          ({ pkgs, options, ... }: {
+          ({ lib, pkgs, ... }:
+          let postInstall = exeName: ''
+              BASH_COMPLETIONS=$out/share/bash-completion/completions
+              ZSH_COMPLETIONS=$out/share/zsh/site-functions
+              mkdir -p $BASH_COMPLETIONS $ZSH_COMPLETIONS
+              $out/bin/${exeName} --bash-completion-script ${exeName} > $BASH_COMPLETIONS/${exeName}
+              $out/bin/${exeName} --zsh-completion-script ${exeName} > $ZSH_COMPLETIONS/_${exeName}
+            '';
+          in lib.mkIf (!pkgs.stdenv.hostPlatform.isWindows)
+          {
             # add shell completion:
-            packages = lib.mapAttrs
-              (name: exes: {
-                components.exes = lib.genAttrs exes (exe: {
-                  postInstall = lib.optionalString
-                    (!pkgs.stdenv.hostPlatform.isWindows
-                      && lib.elem exe [ "cardano-node" "cardano-cli" "cardano-topology" "locli" ]) ''
-                    BASH_COMPLETIONS=$out/share/bash-completion/completions
-                    ZSH_COMPLETIONS=$out/share/zsh/site-functions
-                    mkdir -p $BASH_COMPLETIONS $ZSH_COMPLETIONS
-                    $out/bin/${exe} --bash-completion-script ${exe} > $BASH_COMPLETIONS/${exe}
-                    $out/bin/${exe} --zsh-completion-script ${exe} > $ZSH_COMPLETIONS/_${exe}
-                  '';
-                });
-              })
-              projectPackagesExes;
+            packages.cardano-node.components.exes.cardano-node.postInstall = postInstall "cardano-node";
+            packages.cardano-cli.components.exes.cardano-cli.postInstall = postInstall "cardano-cli";
+            packages.cardano-topology.components.exes.cardano-topology.postInstall = postInstall "cardano-topology";
+            packages.locli.components.exes.locli.postInstall = postInstall "locli";
           })
-          ({ pkgs, config, ... }:
+          ({ lib, pkgs, config, ... }:
             let
               exportCliPath = "export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}";
               exportNodePath = "export CARDANO_NODE=${config.hsPkgs.cardano-node.components.exes.cardano-node}/bin/cardano-node${pkgs.stdenv.hostPlatform.extensions.executable}";
@@ -216,39 +201,53 @@ let
                   export WORKDIR=$TMP/testTracerExt
               '';
             })
-          ({ pkgs, ... }: lib.mkIf (!pkgs.stdenv.hostPlatform.isDarwin) {
+          ({ lib, pkgs, ... }: lib.mkIf (!pkgs.stdenv.hostPlatform.isDarwin) {
             # Needed for profiled builds to fix an issue loading recursion-schemes part of makeBaseFunctor
             # that is missing from the `_p` output.  See https://gitlab.haskell.org/ghc/ghc/-/issues/18320
             # This work around currently breaks regular builds on macOS with:
             # <no location info>: error: ghc: ghc-iserv terminated (-11)
             packages.plutus-core.components.library.ghcOptions = [ "-fexternal-interpreter" ];
           })
-          {
-            packages = lib.genAttrs projectPackageNames
-              (name: { configureFlags = [ "--ghc-option=-Werror" ]; });
-          }
-          ({ pkgs, ... }: lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
+          ({ lib, ... }: {
+            options.packages = lib.mkOption {
+              type = lib.types.attrsOf (lib.types.submodule (
+                { config, lib, ...}:
+                lib.mkIf config.package.isLocal
+                {
+                  configureFlags = [ "--ghc-option=-Werror"];
+                }
+              ));
+            };
+          })
+          ({ lib, pkgs, ... }: lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
             # systemd can't be statically linked
             packages.cardano-git-rev.flags.systemd = !pkgs.stdenv.hostPlatform.isMusl;
             packages.cardano-node.flags.systemd = !pkgs.stdenv.hostPlatform.isMusl;
             packages.cardano-tracer.flags.systemd = !pkgs.stdenv.hostPlatform.isMusl;
           })
           # Musl libc fully static build
-          ({ pkgs, ... }: lib.mkIf pkgs.stdenv.hostPlatform.isMusl (
-            let
-              # Module options which adds GHC flags and libraries for a fully static build
-              fullyStaticOptions = {
-                enableShared = false;
-                enableStatic = true;
+          ({ lib, ... }: {
+            options.packages = lib.mkOption {
+              type = lib.types.attrsOf (lib.types.submodule (
+                { config, lib, pkgs, ...}:
+                lib.mkIf (pkgs.stdenv.hostPlatform.isMusl && config.package.isLocal)
+                {
+                  # Module options which adds GHC flags and libraries for a fully static build
+                  enableShared = false;
+                  enableStatic = true;
+                }
+              ));
+            };
+            config =
+              lib.mkIf pkgs.stdenv.hostPlatform.isMusl
+              {
+                # Haddock not working and not needed for cross builds
+                doHaddock = false;
+                packages.cardano-cli.enableShared = false;
+                packages.cardano-cli.enableStatic = true;
               };
-            in
-            {
-              packages = lib.genAttrs (projectPackageNames ++ ["cardano-cli"]) (name: fullyStaticOptions);
-              # Haddock not working and not needed for cross builds
-              doHaddock = false;
-            }
-          ))
-          ({ pkgs, ... }: lib.mkIf (pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform) {
+          })
+          ({ lib, pkgs, ... }: lib.mkIf (pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform) {
             # Remove hsc2hs build-tool dependencies (suitable version will be available as part of the ghc derivation)
             packages.Win32.components.library.build-tools = lib.mkForce [ ];
             packages.terminal-size.components.library.build-tools = lib.mkForce [ ];
