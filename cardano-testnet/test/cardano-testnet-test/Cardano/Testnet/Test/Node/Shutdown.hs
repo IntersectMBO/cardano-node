@@ -1,17 +1,21 @@
 {-# LANGUAGE DisambiguateRecordFields #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Testnet.Test.Node.Shutdown
   ( hprop_shutdown
+  , hprop_shutdownOnSlotSynced
+  , hprop_shutdownOnSigint
   ) where
 
 import           Cardano.Api
 import           Control.Monad
 import           Data.Aeson
+import           Data.Aeson.Types
 import           Data.Bifunctor
-import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Functor ((<&>))
 import qualified Data.List as L
 import           Data.Maybe
@@ -34,9 +38,14 @@ import qualified System.Process as IO
 import qualified Testnet.Property.Utils as H
 
 import           Cardano.Testnet
+import           Data.Either (isRight)
+import           GHC.IO.Exception (ExitCode (ExitSuccess, ExitFailure))
+import           GHC.Stack (callStack)
+import           System.Process (interruptProcessGroupOf)
 import           Testnet.Defaults
 import           Testnet.Process.Run (execCli_, procNode)
 import           Testnet.Property.Utils
+import           Testnet.Runtime
 import           Testnet.Start.Byron
 import           Testnet.Topology
 
@@ -160,3 +169,89 @@ hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' ->
   mExitCode === Just IO.ExitSuccess
 
   return ()
+
+hprop_shutdownOnSlotSynced :: Property
+hprop_shutdownOnSlotSynced = H.integrationRetryWorkspace 2 "shutdown-on-slot-synced" $ \tempAbsBasePath' -> do
+  -- Start a local test net
+  -- TODO: Move yaml filepath specification into individual node options
+  conf <- H.noteShowM $  mkConf tempAbsBasePath'
+
+  let maxSlot = 1500
+      slotLen = 0.01
+  let fastTestnetOptions = CardanoOnlyTestnetOptions $ cardanoDefaultTestnetOptions
+        { cardanoEpochLength = 300
+        , cardanoSlotLength = slotLen
+        , cardanoNodes =
+          [ BftTestnetNodeOptions ["--shutdown-on-slot-synced", show maxSlot]
+          , BftTestnetNodeOptions []
+          , SpoTestnetNodeOptions
+          ]
+        }
+  TestnetRuntime { bftNodes = node:_ } <- Cardano.Testnet.testnet fastTestnetOptions conf
+
+  -- Wait for the node to exit
+  let timeout :: Int
+      timeout = round (40 + (fromIntegral maxSlot * slotLen))
+  mExitCodeRunning <- H.waitSecondsForProcess timeout (nodeProcessHandle node)
+
+  -- Check results
+  when (isRight mExitCodeRunning) $ do
+    H.cat (nodeStdout node)
+    H.cat (nodeStderr node)
+  mExitCodeRunning === Right ExitSuccess
+
+  logs <- H.readFile (nodeStdout node)
+  slotTip <- case mapMaybe parseMsg $ reverse $ lines logs of
+    [] -> H.failMessage callStack "Could not find close DB message."
+    (Left err):_ -> H.failMessage callStack err
+    (Right s):_ -> return s
+
+  let epsilon = 50
+
+  H.assert (maxSlot <= slotTip && slotTip <= maxSlot + epsilon)
+
+hprop_shutdownOnSigint :: Property
+hprop_shutdownOnSigint = H.integrationRetryWorkspace 2 "shutdown-on-sigint" $ \tempAbsBasePath' -> do
+  -- Start a local test net
+  -- TODO: Move yaml filepath specification into individual node options
+  conf <- H.noteShowM $  mkConf tempAbsBasePath'
+
+  let fastTestnetOptions = CardanoOnlyTestnetOptions $ cardanoDefaultTestnetOptions
+        { cardanoEpochLength = 300
+        , cardanoSlotLength = 0.01
+        }
+  TestnetRuntime { bftNodes = node@NodeRuntime{nodeProcessHandle}:_ }
+    <- Cardano.Testnet.testnet fastTestnetOptions conf
+
+  -- send SIGINT
+  H.evalIO $ interruptProcessGroupOf nodeProcessHandle
+
+  -- Wait for the node to exit
+  mExitCodeRunning <- H.waitSecondsForProcess 5 nodeProcessHandle
+
+  -- Check results
+  when (isRight mExitCodeRunning) $ do
+    H.cat (nodeStdout node)
+    H.cat (nodeStderr node)
+  mExitCodeRunning === Right (ExitFailure 1)
+
+  logs <- H.readFile (nodeStdout node)
+  case mapMaybe parseMsg $ reverse $ lines logs of
+    [] -> H.failMessage callStack "Could not find close DB message."
+    (Left err):_ -> H.failMessage callStack err
+    (Right _):_ -> pure ()
+
+
+parseMsg :: String -> Maybe (Either String Integer)
+parseMsg line = case decode $ LBS.pack line of
+  Nothing -> Just $ Left $ "Expected JSON formated log message, but got: " ++ line
+  Just obj -> Right <$> parseMaybe parseTipSlot obj
+
+parseTipSlot :: Object -> Parser Integer
+parseTipSlot obj = do
+  body <- obj .: "data"
+  tip <- body .: "tip"
+  kind <- body .: "kind"
+  if kind == ("TraceOpenEvent.ClosedDB" :: String)
+    then tip .: "slot"
+    else mzero

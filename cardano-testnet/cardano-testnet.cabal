@@ -51,7 +51,7 @@ library
                       , exceptions
                       , filepath
                       , hedgehog
-                      , hedgehog-extras ^>= 0.4.5.1
+                      , hedgehog-extras ^>= 0.4.6.0
                       , mtl
                       , optparse-applicative-fork
                       , ouroboros-network ^>= 0.8.1.0
@@ -85,7 +85,7 @@ library
                         Testnet.Process.Cli
                         Testnet.Process.Run
                         Testnet.Runtime
-                        Testnet.Topology 
+                        Testnet.Topology
 
   other-modules:        Parsers.Babbage
                         Parsers.Byron
@@ -136,7 +136,7 @@ test-suite cardano-testnet-golden
                       , exceptions
                       , filepath
                       , hedgehog
-                      , hedgehog-extras ^>= 0.4.5.1
+                      , hedgehog-extras ^>= 0.4.6.0
                       , process
                       , regex-compat
                       , tasty
@@ -166,7 +166,6 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.FoldBlocks
                         Cardano.Testnet.Test.Misc
                         Cardano.Testnet.Test.Node.Shutdown
-                        Cardano.Testnet.Test.ShutdownOnSlotSynced
 
   type:                 exitcode-stdio-1.0
 
@@ -181,7 +180,7 @@ test-suite cardano-testnet-test
                       , directory
                       , filepath
                       , hedgehog
-                      , hedgehog-extras ^>= 0.4.5.1
+                      , hedgehog-extras ^>= 0.4.6.0
                       , process
                       , tasty
                       , text
