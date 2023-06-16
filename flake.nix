@@ -130,6 +130,7 @@
         in project.exes // (with project.hsPkgs; {
           inherit (ouroboros-consensus-cardano.components.exes) db-analyser db-synthesizer;
           inherit (bech32.components.exes) bech32;
+          inherit (cardano-cli.components.exes) cardano-cli;
         } // lib.optionalAttrs hostPlatform.isUnix {
         });
 

@@ -17,22 +17,24 @@ index-state:
   , cardano-haskell-packages 2023-06-15T12:05:43Z
 
 packages:
-    cardano-cli
-    cardano-client-demo
-    cardano-git-rev
-    cardano-node
-    cardano-node-capi
-    cardano-node-chairman
-    cardano-submit-api
-    cardano-testnet
-    cardano-tracer
-    bench/cardano-topology
-    bench/locli
-    bench/plutus-scripts-bench
-    bench/tx-generator
-    trace-dispatcher
-    trace-resources
-    trace-forward
+  cardano-client-demo
+  cardano-git-rev
+  cardano-node
+  cardano-node-capi
+  cardano-node-chairman
+  cardano-submit-api
+  cardano-testnet
+  cardano-tracer
+  bench/cardano-topology
+  bench/locli
+  bench/plutus-scripts-bench
+  bench/tx-generator
+  trace-dispatcher
+  trace-resources
+  trace-forward
+
+extra-packages:
+  cardano-cli
 
 package cardano-api
   ghc-options: -Werror
