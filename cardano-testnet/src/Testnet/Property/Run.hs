@@ -61,7 +61,7 @@ runTestnet tn = do
 
 
 testnetProperty :: (H.Conf -> H.Integration ()) -> H.Property
-testnetProperty tn = H.integrationRetryWorkspace 2 "testnet" $ \workspaceDir -> do
+testnetProperty tn = H.integrationWorkspace "testnet" $ \workspaceDir -> do
   conf <- H.mkConf workspaceDir
 
   -- Fork a thread to keep alive indefinitely any resources allocated by testnet.
