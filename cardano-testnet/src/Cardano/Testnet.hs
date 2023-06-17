@@ -10,6 +10,7 @@ module Cardano.Testnet (
   TestnetOptions(..),
   CardanoTestnetOptions(..),
   BabbageTestnetOptions(..),
+  ConwayTestnetOptions(..),
   ShelleyTestnetOptions(..),
   TestnetNodeOptions(..),
   cardanoDefaultTestnetOptions,

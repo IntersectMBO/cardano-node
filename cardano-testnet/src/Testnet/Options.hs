@@ -6,6 +6,7 @@
 
 module Testnet.Options
   ( BabbageTestnetOptions(..)
+  , ConwayTestnetOptions(..)
   , TestnetOptions(..)
   , testnet
   , runCardanoOptions
@@ -22,6 +23,7 @@ import           Testnet.Conf
 import           Testnet.Property.Run
 import           Testnet.Start.Babbage
 import           Testnet.Start.Cardano
+import           Testnet.Start.Conway
 import           Testnet.Start.Shelley
 
 import qualified Hedgehog as H
@@ -33,6 +35,7 @@ import           Hedgehog.Extras.Test.Base (Integration, noteShow_)
 data TestnetOptions
   = ShelleyOnlyTestnetOptions ShelleyTestnetOptions
   | BabbageOnlyTestnetOptions BabbageTestnetOptions
+  | ConwayOnlyTestnetOptions ConwayTestnetOptions
   | CardanoOnlyTestnetOptions CardanoTestnetOptions
   deriving (Eq, Show)
 
@@ -40,6 +43,7 @@ testnet :: TestnetOptions -> Conf -> Integration TestnetRuntime
 testnet options conf = case options of
   ShelleyOnlyTestnetOptions o -> shelleyTestnet o conf
   BabbageOnlyTestnetOptions o -> babbageTestnet o conf
+  ConwayOnlyTestnetOptions o -> conwayTestnet o conf
   CardanoOnlyTestnetOptions o -> do
     testnetMinimumConfigurationRequirements o
     cardanoTestnet o conf
