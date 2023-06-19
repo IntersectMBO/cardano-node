@@ -75,6 +75,7 @@ library
                         Parsers.Run
                         Testnet.Start.Babbage
                         Testnet.Start.Byron
+                        Testnet.Start.Conway
                         Testnet.Conf
                         Testnet.Defaults
                         Testnet.Filepath
@@ -90,6 +91,7 @@ library
   other-modules:        Parsers.Babbage
                         Parsers.Byron
                         Parsers.Cardano
+                        Parsers.Conway
                         Parsers.Help
                         Parsers.Shelley
                         Parsers.Version

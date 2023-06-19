@@ -12,6 +12,7 @@ import           Data.Foldable
 import           Options.Applicative
 import qualified Options.Applicative as Opt
 import           Parsers.Babbage as Babbage
+import           Parsers.Conway as Conway
 import           Parsers.Byron
 import           Parsers.Cardano
 import           Parsers.Help
@@ -30,7 +31,8 @@ opts = Opt.info (commands <**> helper) idm
 -- by allowing the user to start testnets in any era (excluding Byron)
 -- via StartCardanoTestnet
 data CardanoTestnetCommands
-  = StartBabbageTestnet BabbageOptions
+  = StartConwayTestnet ConwayOptions
+  | StartBabbageTestnet BabbageOptions
   | StartByrontestnet ByronOptions -- TODO: Do we care about being able to start a Byron only testnet?
   | StartCardanoTestnet CardanoOptions
   | StartShelleyTestnet ShelleyOptions
@@ -44,6 +46,7 @@ commands =
     , fmap StartByrontestnet (subparser cmdByron)
     , fmap StartShelleyTestnet (subparser cmdShelley)
     , fmap StartBabbageTestnet (subparser cmdBabbage)
+    , fmap StartConwayTestnet (subparser cmdConway)
     , fmap GetVersion (subparser cmdVersion)
     , fmap (Help pref opts) (subparser cmdHelp)
     ]
@@ -52,6 +55,7 @@ commands =
 runTestnetCmd :: CardanoTestnetCommands -> IO ()
 runTestnetCmd = \case
   StartBabbageTestnet cmdOpts -> runBabbageOptions cmdOpts
+  StartConwayTestnet cmdOpts -> runConwayOptions cmdOpts
   StartByrontestnet cmdOpts -> runByronOptions cmdOpts
   StartCardanoTestnet cmdOpts -> runCardanoOptions cmdOpts
   StartShelleyTestnet cmdOpts -> runShelleyOptions cmdOpts
@@ -62,3 +66,6 @@ runBabbageOptions :: BabbageOptions -> IO ()
 runBabbageOptions options =
   runTestnet $ testnet (BabbageOnlyTestnetOptions $ Babbage.testnetOptions options)
 
+runConwayOptions :: ConwayOptions -> IO ()
+runConwayOptions options =
+  runTestnet $ testnet (ConwayOnlyTestnetOptions $ Conway.testnetOptions options)
