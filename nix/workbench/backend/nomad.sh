@@ -913,6 +913,7 @@ backend_nomad() {
         if test -n "${healthchecks_array:-}"
         then
           msg "Retrying Healthcheck(s) [${healthchecks_array[@]}] logs download"
+          read -p "Hit enter to continue ..."
         fi
       done
       msg "$(green "Finished downloading Healthcheck(s) logs")"
@@ -928,6 +929,7 @@ backend_nomad() {
       while ! backend_nomad download-logs-generator "${dir}" "${generator_task}"
       do
         msg "Retrying \"generator\" logs download"
+        read -p "Hit enter to continue ..."
       done
       msg "$(green "Finished downloading \"generator\" logs")"
       # Download node(s) logs. #################################################
@@ -964,6 +966,7 @@ backend_nomad() {
         if test -n "${nodes_array:-}"
         then
           msg "Retrying node(s) [${nodes_array[@]}] logs download"
+          read -p "Hit enter to continue ..."
         fi
       done
       msg "$(green "Finished downloading node(s) logs")"
@@ -1013,6 +1016,7 @@ backend_nomad() {
             if test -n "${tracers_array:-}"
             then
               msg "Retrying tracer(s) [${tracers_array[@]}] logs download"
+              read -p "Hit enter to continue ..."
             fi
           done
           msg "$(green "Finished downloading tracer(s) logs")"
@@ -1031,6 +1035,7 @@ backend_nomad() {
           while ! backend_nomad download-logs-tracer "${dir}" "tracer"
           do
             msg "Retrying \"tracer\" logs download from \"tracer\""
+            read -p "Hit enter to continue ..."
           done
           msg "$(green "Finished downloading \"tracer\" logs from \"tracer\"")"
           # TODO: These files are needed at all?
