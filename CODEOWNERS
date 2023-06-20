@@ -1,15 +1,15 @@
 # catch-all
 
-* @input-output-hk/cardano-sl
+* @input-output-hk/core-tech
 
 # Specific reviewers for code pieces
 # NB - The last matching pattern takes precedence
 
 # Technical writers
 # /doc folder and README.* needs to be owned by @docs-access
-doc/                                                          @input-output-hk/docs-access @input-output-hk/cardano-sl
-README.*                                                      @input-output-hk/docs-access @input-output-hk/cardano-sl
-CONTRIBUTING.rst                                              @input-output-hk/docs-access @input-output-hk/cardano-sl
+doc/                                                          @input-output-hk/docs-access @input-output-hk/core-tech
+README.*                                                      @input-output-hk/docs-access @input-output-hk/core-tech
+CONTRIBUTING.rst                                              @input-output-hk/docs-access @input-output-hk/core-tech
 
 # Perf/Tracing
 bench/                                                        @input-output-hk/performance-tracing
@@ -25,7 +25,7 @@ nix/                                                          @input-output-hk/c
 *.nix                                                         @input-output-hk/core-tech-devx @input-output-hk/core-tech-release
 flake.lock                                                    @input-output-hk/core-tech-devx @input-output-hk/core-tech-release
 .buildkite                                                    @input-output-hk/core-tech-devx @input-output-hk/core-tech-release
-.github                                                       @input-output-hk/core-tech-devx @input-output-hk/core-tech-release
+.github/workflows                                             @input-output-hk/core-tech-devx @input-output-hk/core-tech-release
 ci/                                                           @input-output-hk/core-tech-devx @input-output-hk/core-tech-release
 configuration/                                                @input-output-hk/core-tech-devx @input-output-hk/core-tech-release
 docker-compose.yml                                            @input-output-hk/core-tech-devx @input-output-hk/core-tech-release
