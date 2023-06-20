@@ -224,7 +224,14 @@ backend_nomad() {
       then
         installables_array=$(jq '.containerPkgs | map(."nix-store-path")' "${dir}"/container-specs.json)
       else
-        installables_array=$(jq '.containerPkgs | map(.installable)' "${dir}"/container-specs.json)
+        # Building the Nix reference here allows the commit ID to be changed
+        # See nomad/cloud.sh
+        if test -n "${COMMIT_ID:-}"
+        then
+          jq ".gitrev = \"${COMMIT_ID}\"" "${dir}"/container-specs.json | sponge "${dir}"/container-specs.json
+        fi
+        local gitrev=$(jq -r .gitrev "${dir}"/container-specs.json)
+        installables_array=$(jq '.containerPkgs | map( .["flake-reference"] + "/" + $gitrev + "#" + .["flake-output"] )' --argjson gitrev "\"${gitrev}\"" "${dir}"/container-specs.json)
       fi
       # nix_installables
       local groups_array=$(jq -r ".[\"job\"][\"${nomad_job_name}\"][\"group\"] | keys | join (\" \")" "${dir}"/nomad/nomad-job.json)

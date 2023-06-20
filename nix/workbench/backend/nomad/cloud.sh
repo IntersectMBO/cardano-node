@@ -147,17 +147,41 @@ backend_nomadcloud() {
         export AWS_ACCESS_KEY_ID=$(echo "${aws_credentials}" | jq -r .data.access_key)
         export AWS_SECRET_ACCESS_KEY=$(echo "${aws_credentials}" | jq -r .data.secret_key)
       fi
-      # The Nomad job spec will contain links ("nix_installables" stanza) to
-      # the Nix Flake outputs it needs inside the container, these are
-      # refereced with a GitHub commit ID inside the "container-specs" file.
-      local gitrev=$(jq -r .gitrev "${profile_container_specs_file}")
-      msg $(blue "INFO: Found GitHub commit with ID \"$gitrev\"")
+      # The Nomad job spec will contain links (inside the "nix_installables"
+      # stanza) to the Nix Flake outputs it needs inside the container, these
+      # are build with the flake references, flake outputs and GitHub commit ID
+      # inside the "container-specs" file.
+      # For example:
+      # "gitrev": 0000000000000000000000000000000000000000
+      # containerPkgs: {
+      #   "bashInteractive": {
+      #     "flake-output": "legacyPackages.x86_64-linux.bashInteractive",
+      #     "flake-reference": "github:input-output-hk/cardano-node",
+      #   }
+      # }
+      # The "installable" will be:
+      # "github:input-output-hk/cardano-node/COMMIT_ID#legacyPackages.x86_64-linux.bashInteractive"
+      #
+      # The commit ID is fetched from Nix when you enter the workbench shell and
+      # here we allow to test any commit from any workbench version. But ...
+      # WARNING: The start.sh or config.json like files can become incomaptible
+      # with the binaries referenced by the commit. Because of this we are not
+      # making this functionality "public".
+      # TODO: Why not at least try to make it a "first class citizen" ?
+      local gitrev
+      if test -z "${COMMIT_ID:-}"
+      then
+        gitrev=$(jq -r .gitrev "${profile_container_specs_file}")
+      else
+        gitrev="${COMMIT_ID}"
+      fi
+      msg $(blue "INFO: Found GitHub commit with ID \"${gitrev}\"")
       # Check if the Nix package was created from a dirty git tree
-      if test "$gitrev" = "0000000000000000000000000000000000000000"
+      if test "${gitrev}" = "0000000000000000000000000000000000000000"
       then
         fatal "Can't run a cluster in the Nomad cloud without a publicly accessible GitHub commit ID"
       else
-        msg "Checking if GitHub commit \"$gitrev\" is publicly accessible ..."
+        msg "Checking if GitHub commit \"${gitrev}\" is publicly accessible ..."
         local curl_response
         # Makes `curl` return two objects, one with the body the other with
         # the headers, separated by a newline (`jq -s`).
@@ -168,7 +192,7 @@ backend_nomadcloud() {
           local headers=$(echo "${curl_response}" | jq -s .[1])
           if test "$(echo "${headers}" | jq .http_code)" != 200
           then
-            fatal "GitHub commit \"$gitrev\" is not available online!"
+            fatal "GitHub commit \"${gitrev}\" is not available online!"
           fi
           # Show returned commit info in `git log` fashion
           local body=$(echo "${curl_response}" | jq -s .[0])
