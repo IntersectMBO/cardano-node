@@ -114,13 +114,13 @@ let
               ];
               goldenConfigFiles = [
                 "configuration/defaults/byron-mainnet"
-                "cardano-testnet/test/cardano-testnet-test/files/golden/allegra_node_default_config.json"
-                "cardano-testnet/test/cardano-testnet-test/files/golden/alonzo_node_default_config.json"
-                "cardano-testnet/test/cardano-testnet-test/files/golden/babbage_node_default_config.json"
-                "cardano-testnet/test/cardano-testnet-test/files/golden/byron_node_default_config.json"
-                "cardano-testnet/test/cardano-testnet-test/files/golden/conway_node_default_config.json"
-                "cardano-testnet/test/cardano-testnet-test/files/golden/mary_node_default_config.json"
-                "cardano-testnet/test/cardano-testnet-test/files/golden/shelley_node_default_config.json"
+                "cardano-testnet/test/cardano-testnet-golden/files/golden/allegra_node_default_config.json"
+                "cardano-testnet/test/cardano-testnet-golden/files/golden/alonzo_node_default_config.json"
+                "cardano-testnet/test/cardano-testnet-golden/files/golden/babbage_node_default_config.json"
+                "cardano-testnet/test/cardano-testnet-golden/files/golden/byron_node_default_config.json"
+                "cardano-testnet/test/cardano-testnet-golden/files/golden/conway_node_default_config.json"
+                "cardano-testnet/test/cardano-testnet-golden/files/golden/mary_node_default_config.json"
+                "cardano-testnet/test/cardano-testnet-golden/files/golden/shelley_node_default_config.json"
                 "cardano-testnet/files/data/alonzo/genesis.alonzo.spec.json"
                 "cardano-testnet/files/data/conway/genesis.conway.spec.json"
               ];
@@ -190,13 +190,13 @@ let
                 let
                   # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
                   filteredProjectBase = incl ../. [
-                    "cardano-testnet/test/cardano-testnet-test/files/golden/byron_node_default_config.json"
-                    "cardano-testnet/test/cardano-testnet-test/files/golden/shelley_node_default_config.json"
-                    "cardano-testnet/test/cardano-testnet-test/files/golden/allegra_node_default_config.json"
-                    "cardano-testnet/test/cardano-testnet-test/files/golden/mary_node_default_config.json"
-                    "cardano-testnet/test/cardano-testnet-test/files/golden/alonzo_node_default_config.json"
-                    "cardano-testnet/test/cardano-testnet-test/files/golden/babbage_node_default_config.json"
-                    "cardano-testnet/test/cardano-testnet-test/files/golden/conway_node_default_config.json"
+                    "cardano-testnet/test/cardano-testnet-golden/files/golden/allegra_node_default_config.json"
+                    "cardano-testnet/test/cardano-testnet-golden/files/golden/alonzo_node_default_config.json"
+                    "cardano-testnet/test/cardano-testnet-golden/files/golden/babbage_node_default_config.json"
+                    "cardano-testnet/test/cardano-testnet-golden/files/golden/byron_node_default_config.json"
+                    "cardano-testnet/test/cardano-testnet-golden/files/golden/conway_node_default_config.json"
+                    "cardano-testnet/test/cardano-testnet-golden/files/golden/mary_node_default_config.json"
+                    "cardano-testnet/test/cardano-testnet-golden/files/golden/shelley_node_default_config.json"
                   ];
                 in
                 ''
