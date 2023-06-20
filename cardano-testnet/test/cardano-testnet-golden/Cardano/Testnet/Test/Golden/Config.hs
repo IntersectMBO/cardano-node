@@ -38,19 +38,19 @@ createConfigStringAndPath base era =
 createGoldenFilePath :: AnyCardanoEra -> FilePath
 createGoldenFilePath = \case
   AnyCardanoEra ByronEra ->
-    "cardano-testnet/test/cardano-testnet-test/files/golden/byron_node_default_config.json"
+    "cardano-testnet/test/cardano-testnet-golden/files/golden/byron_node_default_config.json"
   AnyCardanoEra ShelleyEra ->
-    "cardano-testnet/test/cardano-testnet-test/files/golden/shelley_node_default_config.json"
+    "cardano-testnet/test/cardano-testnet-golden/files/golden/shelley_node_default_config.json"
   AnyCardanoEra AllegraEra ->
-    "cardano-testnet/test/cardano-testnet-test/files/golden/allegra_node_default_config.json"
+    "cardano-testnet/test/cardano-testnet-golden/files/golden/allegra_node_default_config.json"
   AnyCardanoEra MaryEra ->
-    "cardano-testnet/test/cardano-testnet-test/files/golden/mary_node_default_config.json"
+    "cardano-testnet/test/cardano-testnet-golden/files/golden/mary_node_default_config.json"
   AnyCardanoEra AlonzoEra ->
-    "cardano-testnet/test/cardano-testnet-test/files/golden/alonzo_node_default_config.json"
+    "cardano-testnet/test/cardano-testnet-golden/files/golden/alonzo_node_default_config.json"
   AnyCardanoEra BabbageEra ->
-    "cardano-testnet/test/cardano-testnet-test/files/golden/babbage_node_default_config.json"
+    "cardano-testnet/test/cardano-testnet-golden/files/golden/babbage_node_default_config.json"
   AnyCardanoEra ConwayEra ->
-    "cardano-testnet/test/cardano-testnet-test/files/golden/conway_node_default_config.json"
+    "cardano-testnet/test/cardano-testnet-golden/files/golden/conway_node_default_config.json"
 
 createConfigYamlString :: AnyCardanoEra -> String
 createConfigYamlString era =
