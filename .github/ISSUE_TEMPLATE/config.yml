@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Cardano CLI Issues
+    url: https://github.com/input-output-hk/cardano-cli/issues
+    about: Report CLI related issues here
+  - name: Cardano API Issues
+    url: https://github.com/input-output-hk/cardano-api/issues
+    about: Report API related issues here
