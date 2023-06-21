@@ -1,0 +1,17 @@
+name: Add bugs to bugs project
+
+on:
+  issues:
+    types:
+      - opened
+
+jobs:
+  add-to-project:
+    name: Add issue to project
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/add-to-project@v0.5.0
+        with:
+          project-url: https://github.com/orgs/input-output-hk/projects/85
+          github-token: ${{ secrets.ADD_TO_PROJECT_PAT }}
+          labeled: 'type: bug'
