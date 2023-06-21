@@ -51,20 +51,9 @@ It is possible to have more fine-grained control over filtering of trace output,
 
 **Topology.json**
 
-The information contained in this file tells the node which nodes in the network it should talk to.
 
-A simple topology file might look like this:
-```json
-   {
-  "Producers": [
-    {
-      "addr": "x.x.x.x",
-      "port": 3001,
-      "valency": 1
-    }
-  ]
-}
-```
+See [Understanding your configuration files and how to use them](https://github.com/input-output-hk/cardano-tutorials/blob/master/node-setup/012_understanding-config-files.md#the-topologyjson-file).
+
 **Genesis.json**
 
 The [genesis file](https://github.com/input-output-hk/cardano-tutorials/blob/master/node-setup/012_understanding-config-files.md#the-genesisjson-file) is generated with the cardano-cli by reading a genesis.spec.json file.
