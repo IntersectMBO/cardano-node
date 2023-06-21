@@ -20,6 +20,8 @@ concurrency:
 
 jobs:
   build:
+    environment: build
+
     runs-on: ubuntu-latest
 
     strategy:

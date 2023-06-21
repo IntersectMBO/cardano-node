@@ -7,6 +7,8 @@ on:
 
 jobs:
   build:
+    environment: build
+
     runs-on: ${{ matrix.os }}
 
     defaults:

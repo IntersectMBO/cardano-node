@@ -20,6 +20,8 @@ on:
 
 jobs:
   linux_ci:
+    environment: build
+
     runs-on: ${{ matrix.os }}
 
     strategy:
