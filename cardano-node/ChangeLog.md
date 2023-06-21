@@ -1,5 +1,13 @@
 # Changelog for cardano-node
 
+# next version
+
+### node changes
+
+- Turned on by default the following traces: `TraceLocalConnectionManager`,
+  `TraceLocalHandshake`, `TraceLocalInboundGovernor`, `TraceLocalServer` and
+  `TraceServer`.
+
 ## 8.1.0
 
 -
