@@ -1,5 +1,8 @@
-{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE StandaloneDeriving #-}
+
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Node.Configuration.LedgerDB (
     BackingStoreSelectorFlag(..)
@@ -10,8 +13,8 @@ module Cardano.Node.Configuration.LedgerDB (
 
 import           Prelude
 
-import           Ouroboros.Consensus.Storage.LedgerDB.BackingStore.LMDB (LMDBLimits (..))
 import qualified Data.Aeson.Types as Aeson (FromJSON)
+import           Ouroboros.Consensus.Storage.LedgerDB.BackingStore.LMDB (LMDBLimits (..))
 
 -- | Choose the LedgerDB Backend
 --

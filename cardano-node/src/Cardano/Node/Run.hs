@@ -451,7 +451,6 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
               { srnBfcMaxConcurrencyBulkSync    = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
               , srnBfcMaxConcurrencyDeadline    = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
               , srnChainDbValidateOverride      = ncValidateDB nc
-              , srnSnapshotInterval             = ncSnapshotInterval nc
               , srnDatabasePath                 = dbPath
               , srnDiffusionArguments           = diffusionArguments
               , srnDiffusionArgumentsExtra      = diffusionArgumentsExtra
@@ -460,6 +459,9 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
               , srnEnableInDevelopmentVersions  = ncExperimentalProtocolsEnabled nc
               , srnTraceChainDB                 = chainDBTracer tracers
               , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
+              , srnSnapshotInterval             = ncSnapshotInterval nc
+              , srnFlushFrequency               = ncFlushFrequency nc
+              , srnQueryBatchSize               = ncQueryBatchSize nc
               }
       DisabledP2PMode -> do
 #ifdef UNIX
@@ -491,7 +493,6 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
               { srnBfcMaxConcurrencyBulkSync   = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
               , srnBfcMaxConcurrencyDeadline   = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
               , srnChainDbValidateOverride     = ncValidateDB nc
-              , srnSnapshotInterval            = ncSnapshotInterval nc
               , srnDatabasePath                = dbPath
               , srnDiffusionArguments          = diffusionArguments
               , srnDiffusionArgumentsExtra     = mkNonP2PArguments ipProducers dnsProducers
@@ -500,6 +501,9 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
               , srnEnableInDevelopmentVersions = ncExperimentalProtocolsEnabled nc
               , srnTraceChainDB                = chainDBTracer tracers
               , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
+              , srnSnapshotInterval            = ncSnapshotInterval nc
+              , srnFlushFrequency              = ncFlushFrequency nc
+              , srnQueryBatchSize              = ncQueryBatchSize nc
               }
  where
   logStartupWarnings :: IO ()

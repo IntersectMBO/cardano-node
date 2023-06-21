@@ -63,8 +63,8 @@ constraints:
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-consensus
-  tag: d85fe66567cfc7f377a0a5dd2df192f8c14ab3c6
-  --sha256: 14ciwz804c4j6qf25jfr2dmmlj6cry3sbi404kqqlhyvgqkarx6v
+  tag: 3848352057d66d0378a3d87818f5952188cd11ad
+  --sha256: 0a4wflglhmf90hzbx3z6a6zl56ixyn91cm2s9ghj453r804wvf6p
   subdir:
    ouroboros-consensus
    ouroboros-consensus-protocol

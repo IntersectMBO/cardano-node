@@ -27,9 +27,10 @@ import           Text.Read (readMaybe)
 
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
                    MempoolCapacityBytesOverride (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.Config (SnapshotInterval (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.Config (SnapshotInterval (..), FlushFrequency (..), QueryBatchSize (..))
 
 import           Cardano.Logging.Types
+import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.NodeAddress (File (..),
                    NodeHostIPv4Address (NodeHostIPv4Address),
                    NodeHostIPv6Address (NodeHostIPv6Address), PortNumber, SocketPath)
@@ -37,7 +38,6 @@ import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..), 
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
-import Cardano.Node.Configuration.LedgerDB
 
 nodeCLIParser  :: Parser PartialNodeConfiguration
 nodeCLIParser = subparser
@@ -71,7 +71,6 @@ nodeRunParser = do
 
   -- NodeConfiguration filepath
   nodeConfigFp <- lastOption parseConfigFile
-  snapshotInterval <- lastOption parseSnapshotInterval
 
   validate <- lastOption parseValidateDB
   shutdownIPC <- lastOption parseShutdownIPC
@@ -79,7 +78,11 @@ nodeRunParser = do
 
   maybeMempoolCapacityOverride <- lastOption parseMempoolCapacityOverride
 
-  ledgerDBBackend <- lastOption parseLedgerDBBackend
+  -- LedgerDB configuration
+  snapshotInterval  <- lastOption parseSnapshotInterval
+  ledgerDBBackend   <- lastOption parseLedgerDBBackend
+  pncFlushFrequency <- lastOption parseFlushFrequency
+  pncQueryBatchSize <- lastOption parseQueryBatchSize
 
   pure $ PartialNodeConfiguration
            { pncSocketConfig =
@@ -92,7 +95,6 @@ nodeRunParser = do
            , pncTopologyFile = TopologyFile <$> topFp
            , pncDatabaseFile = DbFile <$> dbFp
            , pncDiffusionMode = mempty
-           , pncSnapshotInterval = snapshotInterval
            , pncExperimentalProtocolsEnabled = mempty
            , pncProtocolFiles = Last $ Just ProtocolFilepaths
              { byronCertFile
@@ -113,7 +115,10 @@ nodeRunParser = do
            , pncTraceConfig = mempty
            , pncTraceForwardSocket = traceForwardSocket
            , pncMaybeMempoolCapacityOverride = maybeMempoolCapacityOverride
+           , pncSnapshotInterval = snapshotInterval
            , pncLedgerDBBackend = ledgerDBBackend
+           , pncFlushFrequency
+           , pncQueryBatchSize
            , pncProtocolIdleTimeout = mempty
            , pncTimeWaitTimeout = mempty
            , pncAcceptedConnectionsLimit = mempty
@@ -254,6 +259,26 @@ parseLedgerDBBackend = parseInMemory <|> parseLMDB <*> optional parseMapSize
         <> metavar "NR_GIGABYTES"
         <> help "The maximum database size defined in number of Gigabytes."
       )
+
+parseFlushFrequency :: Parser FlushFrequency
+parseFlushFrequency = RequestedFlushFrequency <$>
+  option auto (
+      long "flush-frequency"
+    <> metavar "WORD"
+    <> help "Flush parts of the ledger state to disk after WORD blocks have \
+            \moved into the immutable part of the chain. This should be at \
+            \least 0."
+    )
+
+parseQueryBatchSize :: Parser QueryBatchSize
+parseQueryBatchSize = RequestedQueryBatchSize <$>
+  option auto (
+       long "query-batch-size"
+    <> metavar "WORD"
+    <> help "When reading large amounts of ledger state data from disk for a \
+            \ledger state query, perform reads in batches of WORD size. This \
+            \should be at least 1."
+    )
 
 parseDbPath :: Parser FilePath
 parseDbPath =
