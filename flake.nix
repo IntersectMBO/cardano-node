@@ -54,8 +54,7 @@
 
     cardano-mainnet-mirror.url = "github:input-output-hk/cardano-mainnet-mirror/nix";
 
-    tullia.url = "github:input-output-hk/tullia";
-    std.follows = "tullia/std";
+    std.url = "github:divnix/std";
 
     nix2container.url = "github:nlewo/nix2container";
 
@@ -63,7 +62,6 @@
       url = "github:input-output-hk/cardano-automation";
       inputs = {
         haskellNix.follows = "haskellNix";
-        tullia.follows = "tullia";
         nixpkgs.follows = "nixpkgs";
       };
     };
@@ -79,7 +77,6 @@
     , iohkNix
     , ops-lib
     , cardano-mainnet-mirror
-    , tullia
     , std
     , nix2container
     , cardano-automation
@@ -110,7 +107,6 @@
         iohkNix.overlays.utils
         (final: prev: {
           inherit customConfig nix2container;
-          inherit (tullia.packages.${final.system}) tullia nix-systems;
           bench-data-publish = cardano-automation.outputs.packages.${final.system}."bench-data-publish:exe:bench-data-publish";
           em = import em { inherit (final) system;
                            nixpkgsSrcs = nixpkgs.outPath;
@@ -387,8 +383,7 @@
             default = apps.cardano-node;
           };
 
-        } //
-        tullia.fromSimple system (import ./nix/tullia.nix)
+        }
       );
 
     in
