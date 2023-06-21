@@ -394,14 +394,7 @@
     in
     removeAttrs flake [ "ciJobsPrs" ] // {
 
-      hydraJobs =
-        # we comment out flake.ciJobsPrs. While this will make debugging on hydra
-        # much easier, it will result in 400+ status updates for each PR.  This
-        # can be a bit excessive.  DevX will work on only reporting failed jobs,
-        # and the required/nonrequired success jobs.  This should make it easier
-        # to handle on GitHub, but also easier on the rate-limits set of status
-        # updates per commit.
-        # flake.ciJobsPrs //
+      hydraJobs = flake.ciJobsPrs //
         (let pkgs = self.legacyPackages.${defaultSystem}; in {
         inherit (pkgs.callPackages iohkNix.utils.ciJobsAggregates {
           ciJobs = lib.mapAttrs (_: lib.getAttr "required") flake.ciJobsPrs // {
