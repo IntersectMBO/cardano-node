@@ -6,6 +6,10 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -fno-warn-partial-fields #-}
 
+{-|
+Module      : Cardano.TxGenerator.Types
+Description : Types internal to the transaction generator.
+-}
 module  Cardano.TxGenerator.Types
         (module Cardano.TxGenerator.Types)
         where
