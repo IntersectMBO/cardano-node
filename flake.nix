@@ -363,18 +363,14 @@
             inherit config system overlays;
           };
           inherit (mkFlakeAttrs pkgs) environments packages checks apps project ciJobs devShells workbench;
-          # We use a generic gitrev for PR CI to avoid unecessary rebuilds:
-          ciJobsPrs = (mkFlakeAttrs (pkgs.extend (prev: final: { gitrev = "0000000000000000000000000000000000000000"; }))).ciJobs;
         in
         {
 
-          inherit environments checks project ciJobsPrs devShells workbench;
+          inherit environments checks project ciJobs devShells workbench;
 
           legacyPackages = pkgs // {
             # allows access to hydraJobs without specifying <arch>:
-            hydraJobs = ciJobs // {
-              pr = ciJobsPrs;
-            };
+            hydraJobs = ciJobs;
           };
 
           packages = packages // {
@@ -392,12 +388,12 @@
       );
 
     in
-    removeAttrs flake [ "ciJobsPrs" ] // {
+    removeAttrs flake [ "ciJobs" ] // {
 
-      hydraJobs = flake.ciJobsPrs //
+      hydraJobs = flake.ciJobs //
         (let pkgs = self.legacyPackages.${defaultSystem}; in {
         inherit (pkgs.callPackages iohkNix.utils.ciJobsAggregates {
-          ciJobs = lib.mapAttrs (_: lib.getAttr "required") flake.ciJobsPrs // {
+          ciJobs = lib.mapAttrs (_: lib.getAttr "required") flake.ciJobs // {
             # ensure hydra notify:
             gitrev = pkgs.writeText "gitrev" pkgs.gitrev;
           };
