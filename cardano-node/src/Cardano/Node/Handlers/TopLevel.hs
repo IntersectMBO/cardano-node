@@ -73,8 +73,8 @@ toplevelExceptionHandler prog = do
     hSetBuffering stderr LineBuffering
     catches prog [
         Handler rethrowAsyncExceptions
-      , Handler rethrowExitCode -- TODO this is possibly not needed anymore
-      , Handler rethrowDiffusionErrorExceptionInLinkedThreadExitSuccess
+      , Handler rethrowExitCode
+      , Handler handleDiffusionError
       , Handler handleSomeException
       ]
   where
@@ -95,30 +95,40 @@ toplevelExceptionHandler prog = do
     rethrowExitCode :: ExitCode -> IO a
     rethrowExitCode = throwIO
 
-    rethrowDiffusionErrorExceptionInLinkedThreadExitSuccess :: Network.Failure -> IO a
-    rethrowDiffusionErrorExceptionInLinkedThreadExitSuccess full =
+    -- Handle errors thrown by the diffusion.
+    handleDiffusionError :: Network.Failure -> IO a
+    handleDiffusionError full =
       case full of
-        Network.DiffusionError e ->
-          case fromException (toException e) of
-            Just (ExceptionInLinkedThread _ eInner)
-              | Just exitCode <- fromException eInner
-              -> throwIO @ExitCode exitCode
-            _ -> throwIO full
-        _ -> throwIO full
+        Network.DiffusionError e
+          | Just e' <- fromException @SomeAsyncException e
+          -> rethrowAsyncExceptions e'
+
+          | Just e' <- fromException @ExitCode e
+          -> rethrowExitCode e'
+
+        _ -> handleException full
 
     -- Print all other exceptions
     handleSomeException :: SomeException -> IO a
-    handleSomeException e = do
+    handleSomeException = handleException
+
+    --
+    -- utils
+    --
+
+    -- A helper function to handle an exception.
+    handleException :: Exception e => e -> IO a
+    handleException e = do
       hFlush stdout
       progname <- getProgName
-      hPutStr stderr (renderSomeException progname e)
+      hPutStr stderr (renderException progname e)
       throwIO (ExitFailure 1)
 
     -- Print the human-readable output of 'displayException' if it differs
     -- from the default output (of 'show'), so that the user/sysadmin
     -- sees something readable in the log.
-    renderSomeException :: String -> SomeException -> String
-    renderSomeException progname e
+    renderException :: Exception e => String -> e -> String
+    renderException progname e
       | showOutput /= displayOutput
       = showOutput ++ "\n\n" ++ progname ++ ": " ++ displayOutput
 
