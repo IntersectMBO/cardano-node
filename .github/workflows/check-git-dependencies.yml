@@ -1,7 +1,7 @@
 name: Check git dependencies
 
 on:
-  push:
+  pull_request: # Required for workflows to be able to be approved from forks
   merge_group:
 
 jobs:

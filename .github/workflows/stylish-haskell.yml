@@ -1,7 +1,7 @@
 name: Check Stylish Haskell
 
 on:
-  push:
+  pull_request: # Required for workflows to be able to be approved from forks
   merge_group:
 
 # When pushing branches (and/or updating PRs), we do want to cancel previous
