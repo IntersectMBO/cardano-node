@@ -217,7 +217,6 @@ Here is a brief description of each parameter. You can learn more in the [spec](
 | updateQuorum | Determines the quorum needed for votes on the protocol parameter updates |
 | initialFunds | Mapping address to values |
 | maxLovelaceSupply | The total number of lovelace in the system, used in the reward calculation. |
-| networkMagic | To identify the testnet |
 | epochLength | Number of slots in an epoch. |
 | staking | Initial delegation |
 | slotsPerKESPeriod | Number of slots in an KES period |
