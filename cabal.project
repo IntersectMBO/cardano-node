@@ -60,22 +60,24 @@ constraints:
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
+-- utxo-hd
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-consensus
-  tag: 3848352057d66d0378a3d87818f5952188cd11ad
-  --sha256: 0a4wflglhmf90hzbx3z6a6zl56ixyn91cm2s9ghj453r804wvf6p
+  tag: 091bcc58c65b5bc4b381ab5bbe5e429179880f64
+  -- sha256: 1a4yl521xkgq9zkrvq9mf5wdr6bf4zpjqbk57nkpqqbzzwb02gf6
   subdir:
    ouroboros-consensus
    ouroboros-consensus-protocol
    ouroboros-consensus-diffusion
    ouroboros-consensus-cardano
 
+-- utxo-hd
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-api
-  tag: 675f4a7edde55cd43965fb7f8cbde52fa822488c
-  --sha256: 1qnx0187mffc9yflhyzh3p33ki1vlcr81gvj3yra0z3jzf3s0gal
+  tag: fcc3a89d7fe0c2d15428afbdb5157e3ca692127d
+  --sha256: 0v6ikirgink0whqzmmnzxxdid7hvxvg7ngla3qxv0l7v1z4qh1if
   subdir:
     cardano-api
 
@@ -88,6 +90,7 @@ source-repository-package
   subdir:
     strict-mvar
 
+-- 0.5.0.3 with -fno-full-laziness
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
