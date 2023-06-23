@@ -25,7 +25,7 @@ nix/                                                          @input-output-hk/c
 *.nix                                                         @input-output-hk/core-tech-devx @input-output-hk/core-tech-release
 flake.lock                                                    @input-output-hk/core-tech-devx @input-output-hk/core-tech-release
 .buildkite                                                    @input-output-hk/core-tech-devx @input-output-hk/core-tech-release
-.github/workflows                                             @input-output-hk/core-tech-devx @input-output-hk/core-tech-release
+.github/workflows                                             @input-output-hk/core-tech-devx @input-output-hk/core-tech-release @input-output-hk/core-tech
 ci/                                                           @input-output-hk/core-tech-devx @input-output-hk/core-tech-release
 configuration/                                                @input-output-hk/core-tech-devx @input-output-hk/core-tech-release
 docker-compose.yml                                            @input-output-hk/core-tech-devx @input-output-hk/core-tech-release
