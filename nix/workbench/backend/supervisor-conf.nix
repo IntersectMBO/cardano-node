@@ -20,7 +20,7 @@ let
   # echoing their exit code after the script to a file named `exit_code` that is
   # created and/or emptied before every script run.
   # Warning: This command assumes the "directory" is set correctly.
-  command = "${sh} -c \":> ./exit_code; ./start.sh; echo \"$?\" > ./exit_code\"";
+  command = "${sh} -c ':> ./exit_code; ./start.sh; exit_code=\"''$?\"; echo \"''$exit_code\" > ./exit_code; exit \"''$exit_code\"'";
   ##
   ## supervisorConf :: SupervisorConf
   ##
