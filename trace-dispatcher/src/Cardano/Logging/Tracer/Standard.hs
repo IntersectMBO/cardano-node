@@ -13,6 +13,7 @@ import           Data.IORef (IORef, modifyIORef', newIORef, readIORef)
 import           Data.Maybe (isNothing)
 import           Data.Text (Text)
 import qualified Data.Text.IO as TIO
+import           GHC.Conc (labelThread, myThreadId)
 import           System.IO (hFlush, stdout)
 
 import           Cardano.Logging.DocuGenerator
@@ -65,7 +66,8 @@ standardTracer = do
 startStdoutThread :: IORef StandardTracerState -> IO ()
 startStdoutThread stateRef = do
     (inChan, outChan) <- newChan 2048
-    as <- async (stdoutThread outChan)
+    as <- async (myThreadId >>= flip labelThread "TraceStdoutWriter"
+                            >> stdoutThread outChan)
     link as
     modifyIORef' stateRef (\ st ->
       st {stRunning = Just (inChan, outChan, as)})
