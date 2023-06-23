@@ -44,8 +44,6 @@ let
           ghcid
           haskell-language-server
           cabal
-          tullia
-          nix-systems
         ];
 
         withHoogle = true;
