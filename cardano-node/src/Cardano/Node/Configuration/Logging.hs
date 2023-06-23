@@ -43,6 +43,7 @@ import           Data.Maybe (isJust)
 import           Data.Text (Text, pack)
 import           Data.Time.Clock (UTCTime, getCurrentTime)
 import           Data.Version (showVersion)
+import           GHC.Conc (labelThread, myThreadId)
 import           System.Metrics.Counter (Counter)
 import           System.Metrics.Gauge (Gauge)
 import           System.Metrics.Label (Label)
@@ -283,12 +284,13 @@ createLoggingLayer ver nodeConfig' p = do
       pure ()
 
    startCapturingMetrics _ tr = do
-     void . Async.async . forever $ do
-       readResourceStats
-         >>= maybe (pure ())
-                   (traceResourceStats
-                      (appendName "node" tr))
-       Conc.threadDelay 1000000 -- TODO:  make configurable
+     void . Async.async $ myThreadId >>= flip labelThread "MetricsCapturing"
+      >> forever (do
+            readResourceStats
+              >>= maybe (pure ())
+                        (traceResourceStats
+                            (appendName "node" tr))
+            Conc.threadDelay 1000000) -- TODO:  make configurable
 
    traceResourceStats :: Trace IO Text -> ResourceStats -> IO ()
    traceResourceStats tr rs = do
