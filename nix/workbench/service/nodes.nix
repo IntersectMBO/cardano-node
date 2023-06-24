@@ -56,6 +56,7 @@ let
       inherit isProducer port;
 
       nodeId         = i;
+      databasePath   = "db";
       socketPath     = "node.socket";
       topology       = "topology.json";
       nodeConfigFile = "config.json";
