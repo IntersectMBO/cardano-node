@@ -15,6 +15,7 @@ module Cardano.Testnet (
   TestnetNodeOptions(..),
   cardanoDefaultTestnetOptions,
   babbageDefaultTestnetOptions,
+  conwayDefaultTestnetOptions,
   shelleyDefaultTestnetOptions,
   cardanoDefaultTestnetNodeOptions,
 
@@ -45,6 +46,7 @@ import           Testnet.Filepath
 import           Testnet.Options
 import           Testnet.Start.Babbage
 import           Testnet.Start.Cardano
+import           Testnet.Start.Conway
 import           Testnet.Start.Shelley as Shelley
 
 import           Testnet.Process.Run (procChairman)
