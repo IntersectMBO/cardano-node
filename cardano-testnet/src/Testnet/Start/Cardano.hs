@@ -33,6 +33,7 @@ import qualified Data.List as L
 import qualified Data.Map.Strict as M
 import           Data.Maybe
 import           Data.String
+import qualified Data.Text as Text
 import qualified Data.Time.Clock as DTC
 import           Data.Word
 import qualified System.Directory as IO
@@ -457,18 +458,18 @@ cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
       poolAddrs = ("pool-owner" <>) . show @Int <$> poolNodesN
       addrs = userAddrs <> poolAddrs
 
-
   H.createDirectoryIfMissing_ $ tempAbsPath' </> "addresses"
 
   wallets <- forM addrs $ \addr -> do
-    let paymentSKey = tempAbsPath' </> "addresses/" <> addr <> ".skey"
-    let paymentVKey = tempAbsPath' </> "addresses/" <> addr <> ".vkey"
+    let paymentSKeyFile = tempAbsPath' </> "addresses" </> addr <> ".skey"
+    let paymentVKeyFile = tempAbsPath' </> "addresses" </> addr <> ".vkey"
+    let paymentAddrFile = tempAbsPath' </> "addresses" </> addr <> ".addr"
 
     -- Payment address keys
     execCli_
       [ "address", "key-gen"
-      , "--verification-key-file", paymentVKey
-      , "--signing-key-file", paymentSKey
+      , "--verification-key-file", paymentVKeyFile
+      , "--signing-key-file", paymentSKeyFile
       ]
 
     execCli_
@@ -519,9 +520,14 @@ cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
       , "--out-file", tempAbsPath' </> "addresses/" <> addr <> "-stake.reg.cert"
       ]
 
-    pure $ PaymentKeyPair
-      { paymentSKey
-      , paymentVKey
+    paymentAddr <- H.readFile paymentAddrFile
+
+    pure $ PaymentKeyInfo
+      { paymentKeyInfoPair = PaymentKeyPair
+        { paymentSKey = paymentSKeyFile
+        , paymentVKey = paymentVKeyFile
+        }
+      , paymentKeyInfoAddr = Text.pack paymentAddr
       }
 
   -- user N will delegate to pool N
@@ -708,13 +714,31 @@ cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
 
   H.noteShowIO_ DTC.getCurrentTime
 
-  return TestnetRuntime
-    { configurationFile
-    , shelleyGenesisFile = tempAbsPath' </> "shelley/genesis.json"
-    , testnetMagic
-    , bftNodes
-    , poolNodes
-    , wallets
-    , delegators = [] -- TODO this should be populated
-    }
+  let runtime = TestnetRuntime
+        { configurationFile
+        , shelleyGenesisFile = tempAbsPath' </> "shelley/genesis.json"
+        , testnetMagic
+        , bftNodes
+        , poolNodes
+        , wallets
+        , delegators = [] -- TODO this should be populated
+        }
 
+  let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
+
+  execConfig <- H.headM (poolSprockets runtime) >>= H.mkExecConfig tempBaseAbsPath
+
+  forM_ wallets $ \wallet -> do
+    H.cat $ paymentSKey $ paymentKeyInfoPair wallet
+    H.cat $ paymentVKey $ paymentKeyInfoPair wallet
+
+    utxos <- H.execCli' execConfig
+      [ "query", "utxo"
+      , "--address", Text.unpack $ paymentKeyInfoAddr wallet
+      , "--cardano-mode"
+      , "--testnet-magic", show @Int testnetMagic
+      ]
+
+    H.note_ utxos
+
+  pure runtime

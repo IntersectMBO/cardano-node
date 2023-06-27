@@ -23,6 +23,7 @@ import           Data.Bifunctor
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
+import qualified Data.Text as Text
 import qualified Data.Time.Clock as DTC
 import           System.FilePath.Posix ((</>))
 import qualified System.Info as OS
@@ -32,12 +33,13 @@ import           Cardano.Api
 import qualified Testnet.Conf as H
 import           Testnet.Defaults
 import           Testnet.Filepath
-import           Testnet.Process.Run (execCli_)
+import qualified Testnet.Process.Run as H
+import           Testnet.Process.Run (execCli', execCli_)
 import qualified Testnet.Property.Assert as H
 import           Testnet.Property.Utils
-import           Testnet.Runtime (Delegator (..), NodeLoggingFormat (..), PaymentKeyPair (..),
-                   PoolNode (PoolNode), PoolNodeKeys (..), StakingKeyPair (..), TestnetRuntime (..),
-                   startNode)
+import           Testnet.Runtime (Delegator (..), NodeLoggingFormat (..), PaymentKeyInfo (..),
+                   PaymentKeyPair (..), PoolNode (PoolNode), PoolNodeKeys (..), StakingKeyPair (..),
+                   TestnetRuntime (..), poolSprockets, startNode)
 import qualified Testnet.Start.Byron as Byron
 
 import qualified Hedgehog as H
@@ -132,9 +134,25 @@ conwayTestnet testnetOptions (H.Conf tempAbsPath) = do
       }
 
   wallets <- forM [1..3] $ \idx -> do
-    pure $ PaymentKeyPair
-      { paymentSKey = tempAbsPath' </> "utxo-keys/utxo" <> show @Int idx <> ".skey"
-      , paymentVKey = tempAbsPath' </> "utxo-keys/utxo" <> show @Int idx <> ".vkey"
+    let paymentSKeyFile = tempAbsPath' </> "utxo-keys/utxo" <> show @Int idx <> ".skey"
+    let paymentVKeyFile = tempAbsPath' </> "utxo-keys/utxo" <> show @Int idx <> ".vkey"
+    let paymentAddrFile = tempAbsPath' </> "utxo-keys/utxo" <> show @Int idx <> ".addr"
+
+    execCli_
+      [ "address", "build"
+      , "--payment-verification-key-file", paymentVKeyFile
+      , "--testnet-magic", show @Int testnetMagic
+      , "--out-file", paymentAddrFile
+      ]
+
+    paymentAddr <- H.readFile paymentAddrFile
+
+    pure $ PaymentKeyInfo
+      { paymentKeyInfoPair = PaymentKeyPair
+        { paymentSKey = paymentSKeyFile
+        , paymentVKey = paymentVKeyFile
+        }
+      , paymentKeyInfoAddr = Text.pack paymentAddr
       }
 
   delegators <- forM [1..3] $ \idx -> do
@@ -324,15 +342,34 @@ conwayTestnet testnetOptions (H.Conf tempAbsPath) = do
   H.noteShowIO_ DTC.getCurrentTime
 
   forM_ wallets $ \wallet -> do
-    H.cat $ paymentSKey wallet
-    H.cat $ paymentVKey wallet
+    H.cat $ paymentSKey $ paymentKeyInfoPair wallet
+    H.cat $ paymentVKey $ paymentKeyInfoPair wallet
 
-  return TestnetRuntime
-    { configurationFile
-    , shelleyGenesisFile = genesisShelleyDir </> "genesis.json"
-    , testnetMagic
-    , poolNodes
-    , wallets = wallets
-    , bftNodes = []
-    , delegators = delegators
-    }
+  let runtime = TestnetRuntime
+        { configurationFile
+        , shelleyGenesisFile = genesisShelleyDir </> "genesis.json"
+        , testnetMagic
+        , poolNodes
+        , wallets = wallets
+        , bftNodes = []
+        , delegators = delegators
+        }
+
+  let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
+
+  execConfig <- H.headM (poolSprockets runtime) >>= H.mkExecConfig tempBaseAbsPath
+
+  forM_ wallets $ \wallet -> do
+    H.cat $ paymentSKey $ paymentKeyInfoPair wallet
+    H.cat $ paymentVKey $ paymentKeyInfoPair wallet
+
+    utxos <- execCli' execConfig
+      [ "query", "utxo"
+      , "--address", Text.unpack $ paymentKeyInfoAddr wallet
+      , "--cardano-mode"
+      , "--testnet-magic", show @Int testnetMagic
+      ]
+
+    H.note_ utxos
+
+  pure runtime
