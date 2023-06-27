@@ -12,6 +12,7 @@ import qualified Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule
 import qualified Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot
 import qualified Cardano.Testnet.Test.Cli.Babbage.Transaction
 import qualified Cardano.Testnet.Test.Cli.Conway.StakeSnapshot
+import qualified Cardano.Testnet.Test.Cli.Conway.Transaction
 import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
 import qualified Cardano.Testnet.Test.FoldBlocks
@@ -41,6 +42,7 @@ tests = pure $ T.testGroup "test/Spec.hs"
       ]
     , T.testGroup "Conway"
       [ H.ignoreOnWindows "stake-snapshot" Cardano.Testnet.Test.Cli.Conway.StakeSnapshot.hprop_stakeSnapshot
+      , H.ignoreOnWindows "transaction" Cardano.Testnet.Test.Cli.Conway.Transaction.hprop_transaction
       ]
       -- Ignored on Windows due to <stdout>: commitBuffer: invalid argument (invalid character)
       -- as a result of the kes-period-info output to stdout.
