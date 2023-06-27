@@ -10,6 +10,7 @@ import           Test.Tasty (TestTree)
 
 import qualified Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule
 import qualified Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot
+import qualified Cardano.Testnet.Test.Cli.Babbage.Transaction
 import qualified Cardano.Testnet.Test.Cli.Conway.StakeSnapshot
 import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
@@ -36,6 +37,7 @@ tests = pure $ T.testGroup "test/Spec.hs"
     , T.testGroup "Babbage"
       [ H.ignoreOnWindows "leadership-schedule" Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule.hprop_leadershipSchedule
       , H.ignoreOnWindows "stake-snapshot" Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot.hprop_stakeSnapshot
+      , H.ignoreOnWindows "transaction" Cardano.Testnet.Test.Cli.Babbage.Transaction.hprop_transaction
       ]
     , T.testGroup "Conway"
       [ H.ignoreOnWindows "stake-snapshot" Cardano.Testnet.Test.Cli.Conway.StakeSnapshot.hprop_stakeSnapshot
