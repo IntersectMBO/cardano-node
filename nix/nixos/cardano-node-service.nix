@@ -111,7 +111,7 @@ let
       "--topology ${topology}"
     ] ++ lib.optionals (!cfg.systemdSocketActivation) ([
       "--host-addr ${cfg.hostAddr}"
-      "--port ${toString (cfg.port + i)}"
+      "--port ${if (cfg.shareIpv4port || cfg.shareIpv6port) then toString cfg.port else toString (cfg.port + i)}"
       "--socket-path ${cfg.socketPath i}"
     ] ++ lib.optionals (cfg.ipv6HostAddr i != null) [
       "--host-ipv6-addr ${cfg.ipv6HostAddr i}"
@@ -413,7 +413,7 @@ in {
         default = cfg.systemdSocketActivation;
         description = ''
           Should instances on same machine share ipv4 port.
-          Default: true if systemd activated socket. Otherwise always false.
+          Default: true if systemd activated socket. Otherwise false.
           If false use port increments starting from `port`.
         '';
       };
@@ -423,8 +423,7 @@ in {
         default = cfg.systemdSocketActivation;
         description = ''
           Should instances on same machine share ipv6 port.
-          Only works with systemd socket.
-          Default: true if systemd activated socket. Otherwise always false.
+          Default: true if systemd activated socket. Otherwise false.
           If false use port increments starting from `port`.
         '';
       };
