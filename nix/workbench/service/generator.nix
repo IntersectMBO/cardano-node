@@ -78,12 +78,6 @@ let
               })
             (filterAttrs (_: spec: spec.isProducer) nodeSpecs);
 
-          ## nodeConfig of the locally running node.
-          localNodeConf = removeAttrs exemplarNode.serviceConfig.value ["executable"];
-
-          ## The nodeConfig of the Tx generator itself.
-          nodeConfig = finaliseGeneratorConfig generatorNodeConfigDefault;
-
           dsmPassthrough = {
             # rtsOpts = ["-xc"];
           };
@@ -150,18 +144,6 @@ let
         value = __fromJSON (__readFile JSON);
         JSON  = jsonFilePretty "generator-run-script.json"
                 (service.decideRunScript service);
-      };
-
-      service = {
-        value = service;
-        JSON  = jsonFilePretty "generator-service.json"
-                (__toJSON service);
-      };
-
-      nodeConfig = {
-        value = service.nodeConfig;
-        JSON  = jsonFilePretty "generator-config.json"
-                (__toJSON service.nodeConfig);
       };
     })
     nodeSpecs;

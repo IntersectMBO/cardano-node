@@ -203,22 +203,6 @@ let
                   '' "$x";
       };
 
-      nodeSpec = {
-        value = nodeSpec;
-        JSON  = runJq "node-spec-${name + modeIdSuffix}.json"
-                  ''--null-input --sort-keys
-                    --argjson x '${__toJSON nodeSpec}'
-                  '' "$x";
-      };
-
-      service = {
-        value = service;
-        JSON  = runJq "node-service-${name + modeIdSuffix}.json"
-                  ''--null-input --sort-keys
-                    --argjson x '${__toJSON service}'
-                  '' "$x";
-      };
-
       topology =
         rec {
           JSON  = runWorkbench

@@ -1053,7 +1053,6 @@ run_instantiate_rundir_profile_services() {
        cp $(jq '."'"$node"'"."start"'          -r $svcs) "$node_dir"/start.sh
        cp $(jq '."'"$node"'"."config"'         -r $svcs) "$node_dir"/config.json
        cp $(jq '."'"$node"'"."topology"'       -r $svcs) "$node_dir"/topology.json
-       jq      '."'"$node"'"' "$dir"/node-specs.json   > "$node_dir"/node-spec.json
     done
 
     local gen_dir="$dir"/generator
