@@ -247,7 +247,7 @@ git_repo_commit_description() {
 wait_fail_any () {
   local processes=("$@")
   # There are any processes left?
-  if test -n "${processes[*]}"
+  if test -n "${processes[*]:-}"
   then
     local wait_exit_status
     local exited_process
@@ -263,7 +263,7 @@ wait_fail_any () {
       fi
     done
     # Something else to wait for?
-    if test -n "${processes_p[*]}"
+    if test -n "${processes_p[*]:-}"
     then
       # Keep waiting or kill 'em all ?'
       if test "${wait_exit_status}" -eq 0

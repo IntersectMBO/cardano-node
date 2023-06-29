@@ -47,6 +47,10 @@ backend_nomadcloud() {
       backend_nomad stop-node            "$@"
     ;;
 
+    start-healthchecks )
+      backend_nomad start-healthchecks   "$@"
+    ;;
+
     start-generator )
       backend_nomad start-generator      "$@"
     ;;
@@ -97,6 +101,9 @@ backend_nomadcloud() {
       setenvjqstr 'profile_container_specs_file' "${profile_container_specs_file}"
       setenvjqstr 'nomad_environment'   "cloud"
       setenvjqstr 'one_tracer_per_node' "true" # TODO: Not implemented yet!
+
+      # Cloud runs always run the generator inside Nomad Task "explorer"
+      setenvjqstr 'generator_task_name' "$(jq -r .nomadJob.generatorTaskName "${profile_container_specs_file}")"
 
       backend_nomadcloud setenv-nomadcloud "${profile_container_specs_file}"
     ;;
@@ -263,7 +270,6 @@ backend_nomadcloud() {
           ## c5.2xlarge: 8 vCPU and 16 Memory (GiB)
           ## https://aws.amazon.com/ec2/instance-types/c5/
           # Nomad:
-          ## - cpu.reservablecores  = 8
           ## - cpu.arch:            = amd64
           ## - cpu.frequency:       = 3400
           ## - cpu.modelname:       = Intel(R) Xeon(R) Platinum 8275CL CPU @ 3.00GHz
@@ -275,7 +281,7 @@ backend_nomadcloud() {
           ## Optimistic: 1,396 MiB / 15,545 MiB Total
           local resources='{
               "cores":      8
-            , "memory":     12000
+            , "memory":     13000
             , "memory_max": 15000
           }'
             jq \
@@ -284,14 +290,29 @@ backend_nomadcloud() {
               "${dir}"/nomad/nomad-job.json \
           | \
             sponge "${dir}"/nomad/nomad-job.json
-          # Fix for region mismatches
-          ###########################
-          # There are USx16 and APx18 and we need USx17 and APx17
+          # The explorer node: Using an "m5.4xlarge" instance type
+          ## - cpu.arch             = amd64
+          ## - cpu.frequency        = 3100
+          ## - cpu.modelname        = Intel(R) Xeon(R) Platinum 8175M CPU @ 2.50GHz
+          ## - cpu.numcores         = 16
+          ## - cpu.reservablecores  = 16
+          ## - cpu.totalcompute     = 54400
+          ## - memory.totalbytes    = 65900154880
+          # Node ID: 00db7a3a-a05b-7ae0-2b2a-b50b9db139a4
+          # client named "ip-10-24-30-90.eu-central-1.compute.internal"
+          local explorer_resources='{
+              "cores":      16
+            , "memory":     29000
+            , "memory_max": 31000
+          }'
             jq \
-              ".[\"job\"][\"${nomad_job_name}\"][\"group\"][\"node-49\"][\"affinity\"][\"value\"] = \"ap-southeast-2\"" \
+              --argjson resources "${explorer_resources}" \
+              ".[\"job\"][\"${nomad_job_name}\"][\"group\"][\"explorer\"][\"task\"] |= with_entries( .value.resources = \$resources )" \
               "${dir}"/nomad/nomad-job.json \
           | \
             sponge "${dir}"/nomad/nomad-job.json
+          # Fix for region mismatches
+          ###########################
           # We use "us-east-2" and they use "us-east-1"
             jq \
               ".[\"job\"][\"${nomad_job_name}\"][\"datacenters\"] |= [\"eu-central-1\", \"us-east-1\", \"ap-southeast-2\"]" \

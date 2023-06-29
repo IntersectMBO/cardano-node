@@ -56,6 +56,7 @@ case "$op" in
         scenario_setup_exit_trap     "$dir"
         backend start-nodes          "$dir"
         backend start-generator      "$dir"
+        backend start-healthchecks   "$dir"
 
         scenario_setup_workload_termination   "$dir"
         backend wait-pools-stopped   "$dir"
@@ -74,7 +75,7 @@ case "$op" in
         # `chaindb` explorer:
         local explorer=(
             mainnet-chunks-with-snapshot-at-slot
-            "$dir"/node-1/run/current/node-1/db-testnet
+            "$dir"/node-1/db
             $(jq '.chaindb.ledger_snapshot.explorer'       $p)
             $(jq '.chaindb.mainnet_chunks.explorer'        $p)
         )
@@ -83,7 +84,7 @@ case "$op" in
         # `chaindb` server:
         local chaindb_server=(
             mainnet-chunks-with-snapshot-at-slot
-            "$dir"/node-0/run/current/node-0/db-testnet
+            "$dir"/node-0/db
             $(jq '.chaindb.ledger_snapshot.chaindb_server' $p)
             $(jq '.chaindb.mainnet_chunks.chaindb_server'  $p)
         )

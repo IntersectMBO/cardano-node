@@ -47,6 +47,10 @@ backend_nomadexec() {
       backend_nomad stop-node            "$@"
     ;;
 
+    start-healthchecks )
+      backend_nomad start-healthchecks   "$@"
+    ;;
+
     start-generator )
       backend_nomad start-generator      "$@"
     ;;
@@ -97,6 +101,9 @@ backend_nomadexec() {
       setenvjqstr 'profile_container_specs_file' "${profile_container_specs_file}"
       setenvjqstr 'nomad_environment'   "local"
       setenvjqstr 'one_tracer_per_node' "true"
+
+      # Local runs always run the generator inside Nomad Task "node-0"
+      setenvjqstr 'generator_task_name' "$(jq -r .nomadJob.generatorTaskName "${profile_container_specs_file}")"
     ;;
 
     # Sub-backend specific allocs and calls `backend_nomad`'s `allocate-run`.

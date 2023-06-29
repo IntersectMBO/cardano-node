@@ -9,6 +9,7 @@
 , profileData
 , containerSpecs
 , execTaskDriver
+, generatorTaskName
 , oneTracerPerNode ? false
 }:
 
@@ -101,7 +102,9 @@ let
       LOGLEVEL="''${SUPERVISORD_LOGLEVEL:-info}"
 
       # Start `supervisord` on the foreground.
-      ${supervisor}/bin/supervisord --nodaemon --configuration "$SUPERVISORD_CONFIG" --loglevel="$LOGLEVEL"
+      # Avoid buffer related problems with stdout and stderr disabling buffering
+      # https://docs.python.org/3/using/cmdline.html#envvar-PYTHONUNBUFFERED
+      PYTHONUNBUFFERED=TRUE ${supervisor}/bin/supervisord --nodaemon --configuration "$SUPERVISORD_CONFIG" --loglevel="$LOGLEVEL"
       ''
   ;
 
@@ -370,9 +373,17 @@ let
             # - host: Advertise the host port for this service. port must match
             # a port label specified in the network block.
             port = portName;
-            # TODO: Use it to heartbeat with cardano-ping!!!
+            # Checks of type "script" need "consul" instead of "nomad" as
+            # service provider, so as healthcheck we are using a supervisord
+            # "program".
+            # The initial idea was to use Nomad's builtin `service -> check`
+            # functionality but it won't be 100% compatible/interchangeable with
+            # local runs using the `supervisord` backend and critical business
+            # logic, like when to start it/how to control it, will be delegated
+            # to Nomad. Plus, Nomad needs `consul` to configure "check"s and
+            # that means an extra dependency for local runs.
             # https://developer.hashicorp.com/nomad/docs/job-specification/check
-            # check = {};
+            check = null;
           };
 
           # Specifies the set of templates to render for the task. Templates can
@@ -402,6 +413,24 @@ let
               # the template to the specified destination. The following
               # possible values describe Nomad's action after writing the
               # template to disk.
+              change_mode = "noop";
+              error_on_missing_key = true;
+            }
+            ## Make the profile.json file available (mainly for healthchecks)
+            {
+              env = false;
+              destination = "${task_statedir}/profile.json";
+              data = escapeTemplate (__readFile
+                profileData.JSON.outPath);
+              change_mode = "noop";
+              error_on_missing_key = true;
+            }
+            ## Make the node-specs.json file available (mainly for healthchecks)
+            {
+              env = false;
+              destination = "${task_statedir}/node-specs.json";
+              data = escapeTemplate (__readFile
+                profileData.node-specs.JSON.outPath);
               change_mode = "noop";
               error_on_missing_key = true;
             }
@@ -468,6 +497,8 @@ let
                       then {}
                       else {"${nodeSpec.name}"=nodeSpec;}
                     ;
+                    # Only for the node that will run the generator
+                    withGenerator = taskName == generatorTaskName;
                     # Only for the tracer task or also nodes if oneTracerPerNode
                     withTracer = oneTracerPerNode || taskName == "tracer";
                     # ''{{ env "NOMAD_TASK_DIR" }}/supervisor.sock''
@@ -475,26 +506,6 @@ let
                   };
                 in supervisorConf.INI
               ));
-              change_mode = "noop";
-              error_on_missing_key = true;
-            }
-            # Generator
-            ## Generator start.sh script.
-            {
-              env = false;
-              destination = "${task_statedir}/generator/start.sh";
-              data = escapeTemplate
-                profileData.generator-service.startupScript.value;
-              change_mode = "noop";
-              error_on_missing_key = true;
-              perms = "744"; # Only for every "start.sh" script. Default: "644"
-            }
-            ## Generator configuration file.
-            {
-              env = false;
-              destination = "${task_statedir}/generator/run-script.json";
-              data = escapeTemplate (__readFile
-                profileData.generator-service.runScript.JSON.outPath);
               change_mode = "noop";
               error_on_missing_key = true;
             }
@@ -587,6 +598,47 @@ let
               error_on_missing_key = true;
             }
           ])
+          ++
+          # Generator
+          (lib.optionals (taskName == generatorTaskName) [
+            ## Generator start.sh script.
+            {
+              env = false;
+              destination = "${task_statedir}/generator/start.sh";
+              data = escapeTemplate
+                profileData.generator-service.startupScript.value;
+              change_mode = "noop";
+              error_on_missing_key = true;
+              perms = "744"; # Only for every "start.sh" script. Default: "644"
+            }
+            ## Generator configuration file.
+            {
+              env = false;
+              destination = "${task_statedir}/generator/run-script.json";
+              data = escapeTemplate (
+                let runScript = profileData.generator-service.runScript;
+                in if execTaskDriver
+                  then (runScriptToGoTemplate runScript.value)
+                  else (__readFile            runScript.JSON )
+              );
+              change_mode = "noop";
+              error_on_missing_key = true;
+            }
+          ])
+          ++
+          # healthcheck
+          [
+            ## healthcheck start.sh script.
+            {
+              env = false;
+              destination = "${task_statedir}/healthcheck/start.sh";
+              data = escapeTemplate
+                profileData.healthcheck-service.startupScript.value;
+              change_mode = "noop";
+              error_on_missing_key = true;
+              perms = "744"; # Only for every "start.sh" script. Default: "644"
+            }
+          ]
           ;
 
           # Specifies logging configuration for the stdout and stderr of the
@@ -1042,14 +1094,56 @@ let
             ${builtins.concatStringsSep "," (
                 builtins.map
                   mergedNodeSpecToStr
-                  (insertNodeSpecsInProducers topology).Producers
+                  (insertNodeSpecsInAddressesArray topology).Producers
             )}
           ]
         }
       ''
   ;
+
+  # Input is a profileData.node-services."${nodeSpec.name}".topology.value
+  runScriptToGoTemplate =
+    let
+      mergedNodeSpecToStr = mergedNodeSpecs: ''
+        {
+            "addr": "{{range nomadService "${"perf-node-" + (toString mergedNodeSpecs.i)}"}}{{.Address}}{{end}}"
+          , "port":  {{range nomadService "${"perf-node-" + (toString mergedNodeSpecs.i)}"}}{{.Port}}{{end}}
+        }
+      '';
+    in
+      runScript: builtins.replaceStrings
+        # builtins.toJSON {a=null;} => "{\"a\":null}"
+        ["\"targetNodes\":null"]
+        [''
+          "targetNodes": [
+            ${builtins.concatStringsSep "," (
+              builtins.map
+                mergedNodeSpecToStr
+                (insertNodeSpecsInAddressesArray runScript).targetNodes
+            )}
+          ]
+        '']
+        (lib.generators.toJSON {} (runScript // {targetNodes=null;}))
+  ;
+
+  # Topology.Producers are like:
+  # "Producers": [
+  #   {
+  #     "addr": "127.0.0.1",
+  #     "port": 30001,
+  #     "valency": 1
+  #   }
+  # ]
+  # Tracer.targetNodes are like:
+  # "targetNodes": [
+  #   {
+  #     "addr": "127.0.0.1",
+  #     "port": 30000
+  #   }
+  # ]
+
   # builtins.concatStringsSep
-  insertNodeSpecsInProducers =
+  insertNodeSpecsInAddressesArray =
     let fromPortToNodeSpec = port: (
       builtins.head # Must exist!
         # Returns
@@ -1061,10 +1155,10 @@ let
           )
         )
     );
-# lib.debug.traceVal
-    in topology: builtins.mapAttrs
+    # lib.debug.traceVal
+    in addressesArray: builtins.mapAttrs
       (key: value:
-        if key == "Producers"
+        if key == "Producers" || key == "targetNodes"
         then builtins.map
           (remoteAddress:
             remoteAddress // (fromPortToNodeSpec remoteAddress.port)
@@ -1072,7 +1166,7 @@ let
           value
         else value # Error!
       )
-      topology
+      addressesArray
   ;
 
 in lib.generators.toJSON {} clusterJob

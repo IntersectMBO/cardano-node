@@ -10,6 +10,13 @@
 with pkgs.lib;
 
 let
+  # If there is an "explorer" node, the generator will run there!
+  # TODO: Repeated code, add the generator's node name to profile.json
+  runningNode = if builtins.hasAttr "explorer" nodeSpecs
+    then "explorer"
+    else "node-0"
+  ;
+
   # We're reusing configuration from a cluster node.
   exemplarNode = node-services."node-0";
 
@@ -23,8 +30,8 @@ let
         sigKey         = "../genesis/utxo-keys/utxo1.skey";
         runScriptFile  = "run-script.json";
         ## path to the config and socket of the locally running node.
-        nodeConfigFile = "../node-0/config.json";
-        localNodeSocketPath = "../node-0/node.socket";
+        nodeConfigFile = "../${runningNode}/config.json";
+        localNodeSocketPath = "../${runningNode}/node.socket";
       } // optionalAttrs profile.node.tracer {
         tracerSocketPath = "../tracer/tracer.socket";
       } // optionalAttrs backend.useCabalRun {
@@ -145,10 +152,11 @@ let
                 (__toJSON service.nodeConfig);
       };
 
-      runScript = {
+      runScript = rec {
         # TODO / FIXME
         # the string '...' is not allowed to refer to a store path (such as '')
         # value = service.decideRunScript service;
+        value = __fromJSON (__readFile JSON);
         JSON  = jsonFilePretty "generator-run-script.json"
                 (service.decideRunScript service);
       };

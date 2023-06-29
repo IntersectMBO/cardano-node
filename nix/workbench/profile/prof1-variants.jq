@@ -715,7 +715,7 @@ def all_profile_variants:
     }
 
 ## Cardano World QA cluster: 52 nodes, 3 regions, value variant
-  , $cw_perf_base * $cardano_world_perf *
+  , $cw_perf_base * $cardano_world_perf * $costmodel_v8_preview *
     { name: "cw-perf-value"
     }
 
