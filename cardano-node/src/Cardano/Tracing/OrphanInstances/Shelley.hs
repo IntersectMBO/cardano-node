@@ -10,6 +10,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -21,10 +22,12 @@ import           Data.Aeson (Value (..), object)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.Types as Aeson
+import           Data.Proxy
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import           Data.Typeable
 
 import           Cardano.Api (textShow)
 import qualified Cardano.Api as Api
@@ -275,7 +278,7 @@ instance ( ShelleyBasedEra era
     toObject v utxoPredFail
   toObject _ (MissingRedeemers scripts) =
     mconcat [ "kind" .= String "MissingRedeemers"
-             , "scripts" .= renderMissingRedeemers scripts
+             , "scripts" .= renderMissingRedeemers (Proxy @era) scripts
              ]
   toObject _ (MissingRequiredDatums required received) =
     mconcat [ "kind" .= String "MissingRequiredDatums"
@@ -316,22 +319,22 @@ renderScriptIntegrityHash Nothing = Aeson.Null
 renderScriptHash :: ScriptHash StandardCrypto -> Text
 renderScriptHash = Api.serialiseToRawBytesHexText . Api.fromShelleyScriptHash
 
-renderMissingRedeemers :: [(Alonzo.ScriptPurpose StandardCrypto, ScriptHash StandardCrypto)] -> Aeson.Value
-renderMissingRedeemers scripts = Aeson.object $ map renderTuple  scripts
+renderMissingRedeemers :: Typeable era => Proxy era -> [(Alonzo.ScriptPurpose StandardCrypto, ScriptHash StandardCrypto)] -> Aeson.Value
+renderMissingRedeemers proxy scripts = Aeson.object $ map renderTuple  scripts
  where
   renderTuple :: (Alonzo.ScriptPurpose StandardCrypto, ScriptHash StandardCrypto) -> Aeson.Pair
   renderTuple (scriptPurpose, sHash) =
-    Aeson.fromText (renderScriptHash sHash) .= renderScriptPurpose scriptPurpose
+    Aeson.fromText (renderScriptHash sHash) .= renderScriptPurpose proxy scriptPurpose
 
-renderScriptPurpose :: Alonzo.ScriptPurpose StandardCrypto -> Aeson.Value
-renderScriptPurpose (Alonzo.Minting pid) =
+renderScriptPurpose :: forall era. Typeable era => Proxy era -> Alonzo.ScriptPurpose StandardCrypto -> Aeson.Value
+renderScriptPurpose Proxy (Alonzo.Minting pid) =
   Aeson.object [ "minting" .= toJSON pid]
-renderScriptPurpose (Alonzo.Spending txin) =
+renderScriptPurpose Proxy (Alonzo.Spending txin) =
   Aeson.object [ "spending" .= Api.fromShelleyTxIn txin]
-renderScriptPurpose (Alonzo.Rewarding rwdAcct) =
+renderScriptPurpose Proxy (Alonzo.Rewarding rwdAcct) =
   Aeson.object [ "rewarding" .= Aeson.String (Api.serialiseAddress $ Api.fromShelleyStakeAddr rwdAcct)]
-renderScriptPurpose (Alonzo.Certifying cert) =
-  Aeson.object [ "certifying" .= toJSON (Api.textEnvelopeDefaultDescr $ Api.fromShelleyCertificate cert)]
+renderScriptPurpose Proxy (Alonzo.Certifying cert) =
+  Aeson.object [ "certifying" .= toJSON (Api.textEnvelopeDefaultDescr $ Api.fromShelleyCertificate @era cert)]
 
 instance ( ShelleyBasedEra era
          , ToObject (PredicateFailure (ShelleyUTXO era))
@@ -1008,11 +1011,11 @@ deriving newtype instance ToJSON Alonzo.IsValid
 instance ToJSON (Alonzo.CollectError StandardCrypto) where
   toJSON cError =
     case cError of
-      Alonzo.NoRedeemer sPurpose ->
+      Alonzo.NoRedeemer _sPurpose ->
         object
           [ "kind" .= String "CollectError"
           , "error" .= String "NoRedeemer"
-          , "scriptpurpose" .= renderScriptPurpose sPurpose
+          -- , "scriptpurpose" .= renderScriptPurpose proxy sPurpose
           ]
       Alonzo.NoWitness sHash ->
         object

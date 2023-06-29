@@ -31,6 +31,8 @@ module Cardano.Api.IO
   , onlyOut
 
   , intoFile
+
+  , mapContent
   ) where
 
 #if !defined(mingw32_HOST_OS)
@@ -58,6 +60,7 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy as LBSC
+import           Data.Proxy
 import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text.IO as Text
@@ -252,3 +255,6 @@ intoFile fp content write serialise = write fp (serialise content)
 data Socket
 
 type SocketPath = File Socket 'InOut
+
+mapContent :: Proxy content' -> File content (direction :: FileDirection) -> File content' direction
+mapContent Proxy (File fp) = File fp

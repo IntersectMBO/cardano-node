@@ -303,7 +303,7 @@ friendlyCertificates = \case
   TxCertificatesNone -> Null
   TxCertificates _ cs _ -> array $ map friendlyCertificate cs
 
-friendlyCertificate :: Certificate -> Aeson.Value
+friendlyCertificate :: Certificate era -> Aeson.Value
 friendlyCertificate =
   object
     . (: [])

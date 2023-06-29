@@ -4,7 +4,7 @@ module Test.Golden.Shelley.TextEnvelope.Certificates.StakeAddressCertificates
   ( golden_shelleyStakeAddressCertificates
   ) where
 
-import           Cardano.Api (AsType (..), HasTextEnvelope (..))
+import           Cardano.Api (AsType (..), CardanoEra (..), textEnvelopeTypeInEra)
 import           Control.Monad (void)
 import           Hedgehog (Property)
 import           Test.OptParse
@@ -19,6 +19,8 @@ import qualified Hedgehog.Extras.Test.File as H
 --   3. Check the TextEnvelope serialization format has not changed.
 golden_shelleyStakeAddressCertificates :: Property
 golden_shelleyStakeAddressCertificates = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
+  let era = BabbageEra
+
   -- Reference files
   referenceRegistrationCertificate <- noteInputFile "test/data/golden/shelley/certificates/stake_address_registration_certificate"
   referenceDeregistrationCertificate <- noteInputFile "test/data/golden/shelley/certificates/stake_address_deregistration_certificate"
@@ -45,7 +47,7 @@ golden_shelleyStakeAddressCertificates = propertyOnce . H.moduleWorkspace "tmp" 
     , "--out-file", registrationCertificate
     ]
 
-  let registrationCertificateType = textEnvelopeType AsCertificate
+  let registrationCertificateType = textEnvelopeTypeInEra era AsCertificate
 
   -- Check the newly created files have not deviated from the
   -- golden files

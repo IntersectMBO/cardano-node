@@ -10,6 +10,7 @@
 --
 module Cardano.Api.SerialiseTextEnvelope
   ( HasTextEnvelope(..)
+  , textEnvelopeTypeInEra
   , TextEnvelope(..)
   , TextEnvelopeType(..)
   , TextEnvelopeDescr(..)
@@ -53,6 +54,7 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 
 import           Cardano.Binary (DecoderError)
 
+import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.IO
@@ -165,6 +167,8 @@ class SerialiseAsCBOR a => HasTextEnvelope a where
     textEnvelopeDefaultDescr :: a -> TextEnvelopeDescr
     textEnvelopeDefaultDescr _ = ""
 
+textEnvelopeTypeInEra :: HasTextEnvelope (f era) => CardanoEra era -> AsType (f era) -> TextEnvelopeType
+textEnvelopeTypeInEra _ = textEnvelopeType
 
 serialiseToTextEnvelope :: forall a. HasTextEnvelope a
                         => Maybe TextEnvelopeDescr -> a -> TextEnvelope

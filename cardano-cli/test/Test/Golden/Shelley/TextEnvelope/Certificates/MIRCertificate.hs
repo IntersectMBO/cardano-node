@@ -4,7 +4,7 @@ module Test.Golden.Shelley.TextEnvelope.Certificates.MIRCertificate
   ( golden_shelleyMIRCertificate
   ) where
 
-import           Cardano.Api (AsType (..), HasTextEnvelope (..))
+import           Cardano.Api (AsType (..), CardanoEra (..), textEnvelopeTypeInEra)
 import           Control.Monad (void)
 import           Hedgehog (Property)
 import           Test.OptParse
@@ -19,6 +19,8 @@ import qualified Hedgehog.Extras.Test.File as H
 --   s. Check the TextEnvelope serialization format has not changed.
 golden_shelleyMIRCertificate :: Property
 golden_shelleyMIRCertificate = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
+  let era = BabbageEra
+
   -- Reference keys
   referenceMIRCertificate <- noteInputFile "test/data/golden/shelley/certificates/mir_certificate"
 
@@ -48,6 +50,6 @@ golden_shelleyMIRCertificate = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir
 
   H.assertFilesExist [mirCertificate]
 
-  let registrationCertificateType = textEnvelopeType AsCertificate
+  let registrationCertificateType = textEnvelopeTypeInEra era AsCertificate
 
   checkTextEnvelopeFormat registrationCertificateType referenceMIRCertificate mirCertificate

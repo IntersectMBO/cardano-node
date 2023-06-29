@@ -2,6 +2,8 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TypeApplications #-}
 
+{- HLINT ignore "Monad law, left identity" -}
+
 module Cardano.CLI.Shelley.Run.StakeAddress
   ( ShelleyStakeAddressCmdError(ShelleyStakeAddressCmdReadKeyFileError)
   , renderShelleyStakeAddressCmdError
@@ -47,12 +49,12 @@ runStakeAddressCmd (StakeAddressKeyGen vk sk) = runStakeAddressKeyGenToFile vk s
 runStakeAddressCmd (StakeAddressKeyHash vk mOutputFp) = runStakeAddressKeyHash vk mOutputFp
 runStakeAddressCmd (StakeAddressBuild stakeVerifier nw mOutputFp) =
   runStakeAddressBuild stakeVerifier nw mOutputFp
-runStakeAddressCmd (StakeRegistrationCert stakeIdentifier outputFp) =
-  runStakeCredentialRegistrationCert stakeIdentifier outputFp
-runStakeAddressCmd (StakeCredentialDelegationCert stakeIdentifier stkPoolVerKeyHashOrFp outputFp) =
-  runStakeCredentialDelegationCert stakeIdentifier stkPoolVerKeyHashOrFp outputFp
-runStakeAddressCmd (StakeCredentialDeRegistrationCert stakeIdentifier outputFp) =
-  runStakeCredentialDeRegistrationCert stakeIdentifier outputFp
+runStakeAddressCmd (StakeRegistrationCert anyEra stakeIdentifier outputFp) =
+  runStakeCredentialRegistrationCert anyEra stakeIdentifier outputFp
+runStakeAddressCmd (StakeCredentialDelegationCert anyEra stakeIdentifier stkPoolVerKeyHashOrFp outputFp) =
+  runStakeCredentialDelegationCert anyEra stakeIdentifier stkPoolVerKeyHashOrFp outputFp
+runStakeAddressCmd (StakeCredentialDeRegistrationCert anyEra stakeIdentifier outputFp) =
+  runStakeCredentialDeRegistrationCert anyEra stakeIdentifier outputFp
 
 
 --
@@ -105,22 +107,26 @@ runStakeAddressBuild stakeVerifier network mOutputFp = do
 
 
 runStakeCredentialRegistrationCert
-  :: StakeIdentifier
+  :: AnyCardanoEra
+  -> StakeIdentifier
   -> File () Out
   -> ExceptT ShelleyStakeAddressCmdError IO ()
-runStakeCredentialRegistrationCert stakeIdentifier oFp = do
+runStakeCredentialRegistrationCert anyEra stakeIdentifier oFp = do
+  AnyCardanoEra era <- pure anyEra
   stakeCred <- getStakeCredentialFromIdentifier stakeIdentifier
-  writeRegistrationCert stakeCred
+  writeRegistrationCert era stakeCred
 
  where
   writeRegistrationCert
-    :: StakeCredential
+    :: CardanoEra era
+    -> StakeCredential
     -> ExceptT ShelleyStakeAddressCmdError IO ()
-  writeRegistrationCert sCred = do
-    let deRegCert = makeStakeAddressRegistrationCertificate sCred
+  writeRegistrationCert era sCred = do
+    let deRegCert = makeStakeAddressRegistrationCertificate era sCred
     firstExceptT ShelleyStakeAddressCmdWriteFileError
       . newExceptT
       $ writeLazyByteStringFile oFp
+      $ cardanoEraConstraints era
       $ textEnvelopeToJSON (Just regCertDesc) deRegCert
 
   regCertDesc :: TextEnvelopeDescr
@@ -128,42 +134,49 @@ runStakeCredentialRegistrationCert stakeIdentifier oFp = do
 
 
 runStakeCredentialDelegationCert
-  :: StakeIdentifier
+  :: AnyCardanoEra
+  -> StakeIdentifier
   -- ^ Delegator stake verification key, verification key file or script file.
   -> DelegationTarget
   -- ^ Delegatee stake pool verification key or verification key file or
   -- verification key hash.
   -> File () Out
   -> ExceptT ShelleyStakeAddressCmdError IO ()
-runStakeCredentialDelegationCert stakeVerifier delegationTarget outFp =
+runStakeCredentialDelegationCert anyEra stakeVerifier delegationTarget outFp = do
+  AnyCardanoEra era <- pure anyEra
   case delegationTarget of
     StakePoolDelegationTarget poolVKeyOrHashOrFile -> do
       poolStakeVKeyHash <- lift (readVerificationKeyOrHashOrFile AsStakePoolKey poolVKeyOrHashOrFile)
         & onLeft (left . ShelleyStakeAddressCmdReadKeyFileError)
       stakeCred <- getStakeCredentialFromIdentifier stakeVerifier
-      let delegCert = makeStakeAddressPoolDelegationCertificate stakeCred poolStakeVKeyHash
+      let delegCert = makeStakeAddressPoolDelegationCertificate era stakeCred poolStakeVKeyHash
       firstExceptT ShelleyStakeAddressCmdWriteFileError
         . newExceptT
         $ writeLazyByteStringFile outFp
+        $ cardanoEraConstraints era
         $ textEnvelopeToJSON (Just @TextEnvelopeDescr "Stake Address Delegation Certificate") delegCert
 
 runStakeCredentialDeRegistrationCert
-  :: StakeIdentifier
+  :: AnyCardanoEra
+  -> StakeIdentifier
   -> File () Out
   -> ExceptT ShelleyStakeAddressCmdError IO ()
-runStakeCredentialDeRegistrationCert stakeVerifier oFp = do
+runStakeCredentialDeRegistrationCert anyEra stakeVerifier oFp = do
+  AnyCardanoEra era <- pure anyEra
   stakeCred <- getStakeCredentialFromIdentifier stakeVerifier
-  writeDeregistrationCert stakeCred
+  writeDeregistrationCert era stakeCred
 
   where
     writeDeregistrationCert
-      :: StakeCredential
+      :: CardanoEra era
+      -> StakeCredential
       -> ExceptT ShelleyStakeAddressCmdError IO ()
-    writeDeregistrationCert sCred = do
-      let deRegCert = makeStakeAddressDeregistrationCertificate sCred
+    writeDeregistrationCert era sCred = do
+      let deRegCert = makeStakeAddressDeregistrationCertificate era sCred
       firstExceptT ShelleyStakeAddressCmdWriteFileError
         . newExceptT
         $ writeLazyByteStringFile oFp
+        $ cardanoEraConstraints era
         $ textEnvelopeToJSON (Just deregCertDesc) deRegCert
 
     deregCertDesc :: TextEnvelopeDescr

@@ -261,7 +261,7 @@ instance Error TxCertificatesValidationError where
 validateTxCertificates
   :: forall era.
      CardanoEra era
-  -> [(Certificate, Maybe (ScriptWitness WitCtxStake era))]
+  -> [(Certificate era, Maybe (ScriptWitness WitCtxStake era))]
   -> Either TxCertificatesValidationError (TxCertificates BuildTx era)
 validateTxCertificates _ [] = return TxCertificatesNone
 validateTxCertificates era certsAndScriptWitnesses =
@@ -278,7 +278,7 @@ validateTxCertificates era certsAndScriptWitnesses =
    -- NB: Only stake address deregistration and delegation requires
    -- witnessing (witness can be script or key)
    deriveStakeCredentialWitness
-     :: Certificate
+     :: Certificate era
      -> Maybe StakeCredential
    deriveStakeCredentialWitness cert = do
      case cert of
@@ -287,7 +287,7 @@ validateTxCertificates era certsAndScriptWitnesses =
        _ -> Nothing
 
    convert
-     :: (Certificate, Maybe (ScriptWitness WitCtxStake era))
+     :: (Certificate era, Maybe (ScriptWitness WitCtxStake era))
      -> Maybe (StakeCredential, Witness WitCtxStake era)
    convert (cert, mScriptWitnessFiles) = do
      sCred <- deriveStakeCredentialWitness cert

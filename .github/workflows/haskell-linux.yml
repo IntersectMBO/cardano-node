@@ -149,7 +149,7 @@ jobs:
 
 
     - name: Build remaining components
-      run: cabal build all
+      run: cabal build cardano-api cardano-node cardano-client-demo
 
     - name: Run tests
       env:

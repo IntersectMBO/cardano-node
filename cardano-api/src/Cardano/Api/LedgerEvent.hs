@@ -19,7 +19,6 @@ where
 
 import           Cardano.Api.Address (StakeCredential, fromShelleyStakeCredential)
 import           Cardano.Api.Block (EpochNo)
-import           Cardano.Api.Certificate (Certificate)
 import           Cardano.Api.Keys.Shelley (Hash (StakePoolKeyHash), StakePoolKey)
 import           Cardano.Api.Value (Lovelace, fromShelleyDeltaLovelace, fromShelleyLovelace)
 import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyEvent (..), AlonzoUtxoEvent (..),
@@ -58,9 +57,9 @@ import           Ouroboros.Consensus.TypeFamilyWrappers (WrapLedgerEvent (unwrap
 
 data LedgerEvent
   = -- | The given pool is being registered for the first time on chain.
-    PoolRegistration Certificate
+    PoolRegistration
   | -- | The given pool already exists and is being re-registered.
-    PoolReRegistration Certificate
+    PoolReRegistration
   | -- | Incremental rewards are being computed.
     IncrementalRewardsDistribution EpochNo (Map StakeCredential (Set (Reward StandardCrypto)))
   | -- | Reward distribution has completed.

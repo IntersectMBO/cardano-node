@@ -2,6 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -23,6 +24,7 @@ module Cardano.Api.Eras
   , IsCardanoEra(..)
   , AnyCardanoEra(..)
   , anyCardanoEra
+  , cardanoEraConstraints
   , InAnyCardanoEra(..)
 
     -- * Deprecated aliases
@@ -57,6 +59,7 @@ import           Control.DeepSeq
 import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
 import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
+import           Data.Typeable (Typeable)
 
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.BaseTypes as L
@@ -523,3 +526,13 @@ eraProtVerLow era =
     ShelleyBasedEraAlonzo  -> L.eraProtVerLow @L.Alonzo
     ShelleyBasedEraBabbage -> L.eraProtVerLow @L.Babbage
     ShelleyBasedEraConway  -> L.eraProtVerLow @L.Conway
+
+cardanoEraConstraints :: CardanoEra era -> (Typeable era => IsCardanoEra era => a) -> a
+cardanoEraConstraints = \case
+  ByronEra   -> id
+  ShelleyEra -> id
+  AllegraEra -> id
+  MaryEra    -> id
+  AlonzoEra  -> id
+  BabbageEra -> id
+  ConwayEra  -> id
