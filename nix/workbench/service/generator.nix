@@ -57,7 +57,7 @@ let
     let
       generatorNodeConfigDefault =
         (__fromJSON (__readFile ../../../bench/tx-generator-config-base.json))
-        // { inherit (exemplarNode.nodeConfig.value)
+        // { inherit (exemplarNode.config.value)
                Protocol
                ByronGenesisFile
                ShelleyGenesisFile
@@ -134,6 +134,23 @@ let
       serviceConfig = generatorServiceConfig nodeSpecs;
       service       = generatorServiceConfigService serviceConfig;
     in {
+      start = rec {
+        value = ''
+          #!${pkgs.stdenv.shell}
+
+          ${service.script}
+          '';
+        JSON = pkgs.writeScript "startup-generator.sh" value;
+      };
+
+      config = rec {
+        # TODO / FIXME
+        # the string '...' is not allowed to refer to a store path (such as '')
+        # value = service.decideRunScript service;
+        value = __fromJSON (__readFile JSON);
+        JSON  = jsonFilePretty "generator-run-script.json"
+                (service.decideRunScript service);
+      };
 
       service = {
         value = service;
@@ -145,24 +162,6 @@ let
         value = service.nodeConfig;
         JSON  = jsonFilePretty "generator-config.json"
                 (__toJSON service.nodeConfig);
-      };
-
-      runScript = rec {
-        # TODO / FIXME
-        # the string '...' is not allowed to refer to a store path (such as '')
-        # value = service.decideRunScript service;
-        value = __fromJSON (__readFile JSON);
-        JSON  = jsonFilePretty "generator-run-script.json"
-                (service.decideRunScript service);
-      };
-
-      startupScript = rec {
-        JSON = pkgs.writeScript "startup-generator.sh" value;
-        value = ''
-          #!${pkgs.stdenv.shell}
-
-          ${service.script}
-          '';
       };
     })
     nodeSpecs;

@@ -84,21 +84,21 @@ let
       nixosServiceConfigFns = ["configJSONfn"];
       execConfig            = nixosServiceConfig.configJSONfn nixosServiceConfig;
     in {
+      start = rec {
+        value = ''
+          #!${pkgs.stdenv.shell}
+
+          ${nixosServiceConfig.script}
+          '';
+        JSON = pkgs.writeScript "startup-tracer.sh" value;
+      };
+
       config = rec {
         value = execConfig;
         JSON  = runJq "config.json"
                   ''--null-input
                     --argjson x '${__toJSON execConfig}'
                   '' "$x";
-      };
-
-      startupScript = rec {
-        JSON = pkgs.writeScript "startup-tracer.sh" value;
-        value = ''
-          #!${pkgs.stdenv.shell}
-
-          ${nixosServiceConfig.script}
-          '';
       };
     })
     nodeSpecs.value;

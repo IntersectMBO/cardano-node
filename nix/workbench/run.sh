@@ -1050,23 +1050,23 @@ run_instantiate_rundir_profile_services() {
     for node in $(jq_tolist 'keys' "$dir"/node-specs.json)
     do local node_dir="$dir"/$node
        mkdir -p                                          "$node_dir"
-       jq      '."'"$node"'"' "$dir"/node-specs.json   > "$node_dir"/node-spec.json
-       cp $(jq '."'"$node"'"."config"'         -r $svcs) "$node_dir"/config.json
        cp $(jq '."'"$node"'"."start"'          -r $svcs) "$node_dir"/start.sh
+       cp $(jq '."'"$node"'"."config"'         -r $svcs) "$node_dir"/config.json
        cp $(jq '."'"$node"'"."topology"'       -r $svcs) "$node_dir"/topology.json
+       jq      '."'"$node"'"' "$dir"/node-specs.json   > "$node_dir"/node-spec.json
     done
 
     local gen_dir="$dir"/generator
     mkdir -p                                              "$gen_dir"
-    cp $(jq '."run-script"'                    -r $gtor)  "$gen_dir"/run-script.json
     cp $(jq '."start"'                         -r $gtor)  "$gen_dir"/start.sh
+    cp $(jq '."config"'                        -r $gtor)  "$gen_dir"/run-script.json
 
     local trac_dir="$dir"/tracer
     mkdir -p                                    "$trac_dir"
+    cp $(jq '."start"'                        -r $trac) "$trac_dir"/start.sh
     cp $(jq '."config"'                        -r $trac) "$trac_dir"/config.json
-    cp $(jq '."start"'                         -r $trac) "$trac_dir"/start.sh
 
     local hche_dir="$dir"/healthcheck
     mkdir -p                                    "$hche_dir"
-    cp $(jq '."start"'                         -r $hche) "$hche_dir"/start.sh
+    cp $(jq '."start"'                        -r $hche) "$hche_dir"/start.sh
 }

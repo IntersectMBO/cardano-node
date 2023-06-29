@@ -124,29 +124,29 @@ rec {
             (name: node-service:
               with node-service;
               { inherit name;
-                start          = startupScript.JSON;
-                config         = nodeConfig.JSON;
+                start          = start.JSON;
+                config         = config.JSON;
                 topology       = topology.JSON;
               }));
         generatorService =
           with profile.generator-service;
           __toJSON
           { name           = "generator";
-            start          = startupScript.JSON;
-            run-script     = runScript.JSON;
+            start          = start.JSON;
+            config         = config.JSON;
           };
         tracerService =
           with profile.tracer-service;
           __toJSON
           { name                 = "tracer";
+            start                = start.JSON;
             config               = config.JSON;
-            start                = startupScript.JSON;
           };
         healthcheckService =
           with profile.healthcheck-service;
           __toJSON
           { name                 = "healthcheck";
-            start                = startupScript.JSON;
+            start                = start.JSON;
           };
         passAsFile =
           [

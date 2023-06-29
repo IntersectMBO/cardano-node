@@ -21,9 +21,7 @@ let
       jq              = pkgs.jq;
       cardano-cli     = pkgs.cardanoNodePackages.cardano-cli;
     in {
-      startupScript = rec {
-        JSON = pkgs.writeScript "startup-healthcheck.sh" value;
-        jqFilter = "";
+      start = rec {
         # Assumptions:
         # - Command `date` and node's log use the same timezone!
         value = ''
@@ -754,6 +752,7 @@ let
 
           healthcheck $@
         '';
+        JSON = pkgs.writeScript "startup-healthcheck.sh" value;
       };
     })
     nodeSpecs.value;
