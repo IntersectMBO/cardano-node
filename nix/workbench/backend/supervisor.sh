@@ -162,8 +162,8 @@ EOF
         if jqtest ".node.tracer" "$dir"/profile.json
         then if ! supervisorctl start tracer
              then progress "supervisor" "$(red fatal: failed to start) $(white cardano-tracer)"
-                  echo "$(red tracer-config.json) ------------------------------" >&2
-                  cat "$dir"/tracer/tracer-config.json
+                  echo "$(red config.json) -------------------------------------" >&2
+                  cat "$dir"/tracer/config.json
                   echo "$(red tracer stdout) -----------------------------------" >&2
                   cat "$dir"/tracer/stdout
                   echo "$(red tracer stderr) -----------------------------------" >&2

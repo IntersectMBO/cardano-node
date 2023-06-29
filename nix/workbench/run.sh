@@ -1063,7 +1063,6 @@ run_instantiate_rundir_profile_services() {
 
     local trac_dir="$dir"/tracer
     mkdir -p                                    "$trac_dir"
-    cp $(jq '."tracer-config"'                 -r $trac) "$trac_dir"/tracer-config.json
     cp $(jq '."config"'                        -r $trac) "$trac_dir"/config.json
     cp $(jq '."start"'                         -r $trac) "$trac_dir"/start.sh
 

@@ -84,14 +84,6 @@ let
       nixosServiceConfigFns = ["configJSONfn"];
       execConfig            = nixosServiceConfig.configJSONfn nixosServiceConfig;
     in {
-      tracer-config = {
-        value = tracerConfig;
-        JSON  = runJq "tracer-config.json"
-                  ''--null-input --sort-keys
-                    --argjson x '${__toJSON tracerConfig}'
-                  '' "$x";
-      };
-
       config = rec {
         value = execConfig;
         JSON  = runJq "config.json"

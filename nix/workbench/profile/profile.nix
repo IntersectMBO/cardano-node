@@ -139,7 +139,6 @@ rec {
           with profile.tracer-service;
           __toJSON
           { name                 = "tracer";
-            tracer-config        = tracer-config.JSON;
             config               = config.JSON;
             start                = startupScript.JSON;
           };
