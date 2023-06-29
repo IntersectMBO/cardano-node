@@ -194,14 +194,6 @@ let
                   '' "$x";
       };
 
-      serviceConfig = {
-        value = serviceConfig;
-        JSON  = runJq "node-service-config-${name + modeIdSuffix}.json"
-                  ''--null-input --sort-keys
-                    --argjson x '${__toJSON serviceConfig}'
-                  '' "$x";
-      };
-
       service = {
         value = service;
         JSON  = runJq "node-service-${name + modeIdSuffix}.json"

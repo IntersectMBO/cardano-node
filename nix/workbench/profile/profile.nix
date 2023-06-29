@@ -124,7 +124,6 @@ rec {
             (name: node-service:
               with node-service;
               { inherit name;
-                service-config = serviceConfig.JSON;
                 start          = startupScript.JSON;
                 config         = nodeConfig.JSON;
                 topology       = topology.JSON;
@@ -133,7 +132,6 @@ rec {
           with profile.generator-service;
           __toJSON
           { name           = "generator";
-            service-config = serviceConfig.JSON;
             start          = startupScript.JSON;
             run-script     = runScript.JSON;
           };
@@ -142,7 +140,6 @@ rec {
           __toJSON
           { name                 = "tracer";
             tracer-config        = tracer-config.JSON;
-            service-config       = serviceConfig.JSON;
             config               = config.JSON;
             start                = startupScript.JSON;
           };

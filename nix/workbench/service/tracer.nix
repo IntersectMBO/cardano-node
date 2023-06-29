@@ -92,15 +92,6 @@ let
                   '' "$x";
       };
 
-      serviceConfig = {
-        ## XXX: service == appallingly bad name -- it's bona-fide NixOS service "config", not a service!
-        value = nixosServiceConfig;
-        JSON  = runJq "service-config.json"
-                  ''--null-input --sort-keys
-                    --argjson x '${__toJSON (removeAttrs nixosServiceConfig nixosServiceConfigFns)}'
-                  '' "$x";
-      };
-
       config = rec {
         value = execConfig;
         JSON  = runJq "config.json"

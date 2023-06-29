@@ -134,11 +134,6 @@ let
       serviceConfig = generatorServiceConfig nodeSpecs;
       service       = generatorServiceConfigService serviceConfig;
     in {
-      serviceConfig = {
-        value = serviceConfig;
-        JSON  = jsonFilePretty "generator-service-config.json"
-                (__toJSON serviceConfig);
-      };
 
       service = {
         value = service;

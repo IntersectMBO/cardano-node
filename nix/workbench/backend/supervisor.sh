@@ -219,8 +219,8 @@ EOF
         ls -l $dir/{tracer/tracer,node-{0,1}/node}.socket || true
         if ! supervisorctl start generator
         then progress "supervisor" "$(red fatal: failed to start) $(white generator)"
-             echo "$(red generator.json) ------------------------------" >&2
-             cat "$dir"/generator/service-config.json
+             echo "$(red run-script.json) ------------------------------------" >&2
+             cat "$dir"/generator/run-script.json
              echo "$(red generator stdout) -----------------------------------" >&2
              cat "$dir"/generator/stdout
              echo "$(red generator stderr) -----------------------------------" >&2
