@@ -341,7 +341,7 @@ main = do
       TxCertificatesNone    -> return ()
       TxCertificates _ cs _ -> mapM_ msg $ mapMaybe (targetedCert t epochNo slotNo) cs
 
-    targetedCert :: StakeCredential -> EpochNo -> SlotNo -> Certificate -> Maybe (Event c)
+    targetedCert :: StakeCredential -> EpochNo -> SlotNo -> Certificate era -> Maybe (Event c)
     targetedCert t epochNo slotNo (StakeAddressRegistrationCertificate cred)   =
       if t == cred then Just (StakeRegistrationEvent epochNo slotNo) else Nothing
     targetedCert t epochNo slotNo (StakeAddressDeregistrationCertificate cred) =
