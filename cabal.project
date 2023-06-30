@@ -68,6 +68,7 @@ source-repository-package
    ouroboros-consensus-protocol
    ouroboros-consensus-cardano-legacy-block
    ouroboros-consensus-diffusion
+   ouroboros-consensus-cardano-legacy-block
    ouroboros-consensus-cardano
 
 -- utxo-hd on 8.2.0.0

@@ -23,6 +23,8 @@ import           Data.Word (Word32)
 import qualified GHC.TypeLits as GHC
 import           System.Environment (getArgs)
 import           System.FilePath ((</>))
+import Data.SOP.Functors
+import Ouroboros.Consensus.Ledger.Tables (EmptyMK)
 
 -- | Connects to a local cardano node, requests the blocks and prints out some
 -- information from each ledger state. To run this, you must first start a local
@@ -127,7 +129,7 @@ chainSyncClient = ChainSyncClient $ do
             return clientStIdle
         }
 
-    printLedgerState :: TSP.Telescope (SOP.K C.Past) (C.Current C.LedgerState) xs -> IO ()
+    printLedgerState :: TSP.Telescope (SOP.K C.Past) (C.Current (Flip C.LedgerState EmptyMK)) xs -> IO ()
     printLedgerState ls = case ls of
       TSP.TZ (C.Current bound _) -> putStrLn $ "curren't era bounds: " <> show bound
       TSP.TS _ ls' -> printLedgerState ls'
