@@ -423,6 +423,19 @@ let
             # alphanumeric and hyphen characters (i.e. [a-z0-9\-]), and be less
             # than 64 characters in length.
             name = serviceName;
+            # Specifies a custom address to advertise in Consul or Nomad service
+            # registration. If set, address_mode must be in auto mode. Useful
+            # with interpolation - for example to advertise the public IP
+            # address of an AWS EC2 instance set this to
+            # ${attr.unique.platform.aws.public-ipv4}.
+            address =
+              # When using Cardano World (nomad.world.dev.cardano.org) "perf"
+              # class nodes we use public IPs/routing, all the other cloud runs
+              # are behind a VPC/firewall. Local runs just use 12.0.0.1.
+              if lib.strings.hasPrefix "cw-perf" profileData.profileName
+              then "\${attr.unique.platform.aws.public-ipv4}"
+              else ""
+            ;
             # Specifies the port to advertise for this service. The value of
             # port depends on which address_mode is being used:
             # - alloc:  Advertise the mapped to value of the labeled port and the
@@ -1102,15 +1115,22 @@ let
         # Port string from
         ''--port ${toString profileData.node-specs.value."${nodeSpec.name}".port}''
       ]
+      # On cloud deployments with cardano world, that uses AWS, the hosts at the
+      # Linux level aren't aware of the EIP public address they have, so the
+      # private IP is the only network interface address to bind to.
+      # An alternative is to bind to 0.0.0.0 but I prefer being more specific.
       [
         # Address string to
-        #''--host-addr {{ env "NOMAD_IP_${portName}" }}''
         ''--host-addr {{ env "NOMAD_HOST_IP_${portName}" }}''
+        # Alternatives (may not work):
+        #''--host-addr {{ env "NOMAD_IP_${portName}" }}''
         #''--host-addr {{range nomadService "${serviceName}"}}{{.Address}}{{end}}''
         #''--host-addr 0.0.0.0''
+
         # Port string to
-        #''--port {{ env "NOMAD_PORT_${portName}" }}''
         ''--port {{ env "NOMAD_HOST_PORT_${portName}" }}''
+        # Alternatives (may not work):
+        #''--port {{ env "NOMAD_PORT_${portName}" }}''
         #''--port {{ env "NOMAD_ALLOC_PORT_${name}" }}''
         #''--port {{range nomadService "${serviceName}"}}{{.Port}}{{end}}''
       ]
@@ -1147,17 +1167,9 @@ let
   # Input is a profileData.node-services."${nodeSpec.name}".topology.value
   topologyToGoTemplate =
     let
-#            "addr": "127.0.0.1"
-#          , "port":  {{range nomadService "${"perf-node-" + (toString mergedNodeSpecs.i)}"}}{{.Port}}{{end}}
-# OR
-#            "addr": "{{range nomadService "${"perf-node-" + (toString mergedNodeSpecs.i)}"}}{{.Address}}{{end}}"
-#          , "port":  {{range nomadService "${"perf-node-" + (toString mergedNodeSpecs.i)}"}}{{.Port}}{{end}}
-# OR
-#            "addr": "{{ env "NOMAD_IP_${"node" + (toString mergedNodeSpecs.i)}"   }}"
-#          , "port":  {{ env "NOMAD_PORT_${"node" + (toString mergedNodeSpecs.i)}" }}
-# OR
-#            "addr": "''${NOMAD_HOST_IP_${"node" + (toString mergedNodeSpecs.i)}}"
-#          , "port":  ''${NOMAD_HOST_PORT_${"node" + (toString mergedNodeSpecs.i)}}
+      # Here we must use the "service" definitions to resolve dynamically the
+      # other nodes' IPs and PORTs. Envars will only contain information from
+      # the actual node the "template" will run.
       mergedNodeSpecToStr = mergedNodeSpecs: ''
         {
             "addr": "{{range nomadService "${"perf-node-" + (toString mergedNodeSpecs.i)}"}}{{.Address}}{{end}}"
