@@ -137,7 +137,7 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 8.2
+                      , cardano-api ^>= 8.7
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev
@@ -174,9 +174,9 @@ library
                       , network-mux >= 0.4
                       , nothunks
                       , optparse-applicative-fork
-                      , ouroboros-consensus >= 0.6
-                      , ouroboros-consensus-cardano >= 0.5
-                      , ouroboros-consensus-diffusion >= 0.5.1
+                      , ouroboros-consensus >= 0.7
+                      , ouroboros-consensus-cardano >= 0.6
+                      , ouroboros-consensus-diffusion >= 0.6
                       , ouroboros-consensus-protocol >= 0.5
                       , ouroboros-network-api
                       , ouroboros-network ^>= 0.8.1.1
@@ -234,7 +234,7 @@ test-suite cardano-node-test
                       , aeson >= 1.5.6.0
                       , bytestring
                       , cardano-crypto-class
-                      , cardano-api ^>= 8.2
+                      , cardano-api ^>= 8.7
                       , cardano-ledger-core
                       , cardano-node
                       , cardano-slotting >= 0.1

@@ -50,8 +50,8 @@ executable cardano-node-chairman
                       , contra-tracer
                       , io-classes
                       , optparse-applicative-fork
-                      , ouroboros-consensus >= 0.6
-                      , ouroboros-network-api >= 0.3
+                      , ouroboros-consensus >= 0.7
+                      , ouroboros-network-api >= 0.5
                       , ouroboros-network-protocols >= 0.5
                       , strict-stm
                       , si-timers

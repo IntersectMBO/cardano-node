@@ -97,7 +97,7 @@ library
                       , attoparsec
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 8.2
+                      , cardano-api ^>= 8.7
                       , cardano-binary
                       , cardano-cli ^>= 8.2
                       , cardano-crypto-class
@@ -123,9 +123,9 @@ library
                       , network
                       , network-mux
                       , optparse-applicative-fork
-                      , ouroboros-consensus >= 0.6
-                      , ouroboros-consensus-cardano >= 0.5
-                      , ouroboros-consensus-diffusion >= 0.5.1
+                      , ouroboros-consensus >= 0.7
+                      , ouroboros-consensus-cardano >= 0.6
+                      , ouroboros-consensus-diffusion >= 0.6
                       , ouroboros-network ^>= 0.8.1.0
                       , ouroboros-network-api
                       , ouroboros-network-framework
@@ -193,7 +193,7 @@ test-suite tx-generator-apitest
                       , bytestring
                       , filepath
                       , optparse-applicative-fork
-                      , cardano-api ^>= 8.2
+                      , cardano-api ^>= 8.7
                       , cardano-cli ^>= 8.2
                       , cardano-node
                       , plutus-tx
@@ -209,7 +209,7 @@ test-suite tx-generator-apitest
                      , bytestring
                      , filepath
                      , optparse-applicative-fork
-                     , cardano-api ^>= 8.2
+                     , cardano-api ^>= 8.7
                      , cardano-cli ^>= 8.2
                      , cardano-node
                      , transformers

@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2023-05-10T10:34:57Z
-  , cardano-haskell-packages 2023-06-15T12:05:43Z
+  , cardano-haskell-packages 2023-06-30T19:15:00Z
 
 packages:
   cardano-client-demo
@@ -107,13 +107,8 @@ package snap-server
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
 source-repository-package
-    type: git
-    location: https://github.com/input-output-hk/cardano-api
-    tag: c72faf1f8ac186d3052124f7290c1c19d003f967
-    subdir: cardano-api
-
-source-repository-package
-    type: git
-    location: https://github.com/input-output-hk/cardano-cli
-    tag: aae74fb51c49e2cc6c4a31b13aecbaf293eea5b6
-    subdir: cardano-cli
+  type: git
+  location: https://github.com/input-output-hk/cardano-cli.git
+  tag: bd67a608efca893b0b4951e9bc0b2e6c50565c48
+  --sha256: sha256-mWOxrcFQy1zC9m/pALcDHq0vuaV3NQnNQ8X3kFugt+g=
+  subdir: cardano-cli
