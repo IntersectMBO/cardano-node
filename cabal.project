@@ -61,20 +61,21 @@ constraints:
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-consensus
-  tag: 5a9fb991d0eb79c57911a3a5f1759f560312327b
-  -- sha256: 106pakxkhgpa84as7zh5r7nxa43bprgb9f6dmr6h12b64rlc33sr
+  tag: d3653deec5cfe1f21322c84845eae6ba9d2bc135
+  -- sha256: 1a4j40hxq3zxnfv40117f8jb5j8xqds05lzj22i9pq4cnybnldkl
   subdir:
    ouroboros-consensus
    ouroboros-consensus-protocol
    ouroboros-consensus-diffusion
+   ouroboros-consensus-cardano-legacy-block
    ouroboros-consensus-cardano
 
 -- utxo-hd on 8.2.0.0
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-api
-  tag: 324e6e7a8c268e1780b74200bc0cfcc62f5b0b6d
-  --sha256: 0f34j79wbmmqmn8x23zagh11skmxqr3yg3vswfwrv7pcrfwqfld1
+  tag: fcb70c83e8a31f6f2912dfb7ef7381f37ba62fc6
+  --sha256: 0qfy94jb7qzsqvclkg29cq48rvm0qpnxchyfqixnvvqpnmkl4syy
   subdir:
     cardano-api
 

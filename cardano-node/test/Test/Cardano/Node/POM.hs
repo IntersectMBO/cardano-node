@@ -16,7 +16,7 @@ import           Cardano.Node.Types
 import           Cardano.Tracing.Config (PartialTraceOptions (..), defaultPartialTraceConfiguration,
                    partialTraceSelectionToEither)
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.Config (SnapshotInterval (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.Config (SnapshotInterval (..), FlushFrequency (DefaultFlushFrequency), QueryBatchSize (DefaultQueryBatchSize))
 import           Ouroboros.Network.Block (SlotNo (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
                    DiffusionMode (InitiatorAndResponderDiffusionMode))
@@ -25,6 +25,7 @@ import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Hedgehog (Property, discover, withTests, (===))
 import qualified Hedgehog
 import           Hedgehog.Internal.Property (evalEither, failWith)
+import Cardano.Node.Configuration.LedgerDB
 
 
 -- This is a simple test to check that the POM technique is working as intended.
@@ -79,6 +80,9 @@ testPartialYamlConfig =
     , pncTargetNumberOfActivePeers = mempty
     , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just NoPeerSharing)
+    , pncLedgerDBBackend = Last (Just InMemory)
+    , pncFlushFrequency = Last (Just DefaultFlushFrequency)
+    , pncQueryBatchSize = Last (Just DefaultQueryBatchSize)
     }
 
 -- | Example partial configuration theoretically created
@@ -113,6 +117,9 @@ testPartialCliConfig =
     , pncTargetNumberOfActivePeers = mempty
     , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just NoPeerSharing)
+    , pncLedgerDBBackend = Last (Just InMemory)
+    , pncFlushFrequency = Last (Just DefaultFlushFrequency)
+    , pncQueryBatchSize = Last (Just DefaultQueryBatchSize)
     }
 
 -- | Expected final NodeConfiguration
@@ -155,6 +162,9 @@ eExpectedConfig = do
     , ncTargetNumberOfActivePeers = 20
     , ncEnableP2P = SomeNetworkP2PMode Consensus.DisabledP2PMode
     , ncPeerSharing = NoPeerSharing
+    , ncLedgerDBBackend = InMemory
+    , ncFlushFrequency = DefaultFlushFrequency
+    , ncQueryBatchSize = DefaultQueryBatchSize
     }
 
 -- -----------------------------------------------------------------------------
