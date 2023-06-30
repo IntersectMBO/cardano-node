@@ -755,6 +755,6 @@ let
         JSON = pkgs.writeScript "startup-healthcheck.sh" value;
       };
     })
-    nodeSpecs.value;
+    nodeSpecs;
 in
   { inherit healthcheck-service; }

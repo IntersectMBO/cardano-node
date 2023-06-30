@@ -149,5 +149,5 @@ let
     nodeSpecs;
 in
 {
-  inherit generator-service mkGeneratorScript;
+  inherit generator-service;
 }

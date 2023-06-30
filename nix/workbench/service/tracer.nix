@@ -92,7 +92,7 @@ let
                   '' "$x";
       };
     })
-    nodeSpecs.value;
+    nodeSpecs;
 in
 {
   inherit tracer-service;
