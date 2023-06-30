@@ -4,7 +4,7 @@
 , runWorkbenchJqOnly,  runWorkbench
 }:
 
-rec {
+let
   profileJson = { profileName }:
     runWorkbenchJqOnly "profile-${profileName}.json"
       "profile json ${profileName}";
@@ -189,4 +189,9 @@ rec {
     in
       ps."${profileName}"
         or (throw "No such profile: ${profileName};  Known profiles: ${toString (__attrNames ps)}");
-}
+in
+  {
+    inherit profile-names-json;
+    inherit profile-names;
+    inherit materialise-profile;
+  }

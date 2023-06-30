@@ -93,16 +93,7 @@ in {
       {
         inherit runJq jsonFilePretty runWorkbenchJqOnly runWorkbench;
       })
-    profileJson
-    topologyFiles
-    nodeSpecsJson
-    genesisFiles
-    services
-    profile
-    profileData
-
     profile-names-json
     profile-names
-
     materialise-profile;
 }
