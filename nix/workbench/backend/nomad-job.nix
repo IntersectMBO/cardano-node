@@ -212,7 +212,7 @@ let
     # https://developer.hashicorp.com/nomad/docs/job-specification/group
     group = let
       # For each node-specs.json object
-      valueF = (taskName: serviceName: portName: portNum: nodeSpec: (groupDefaults // {
+      valueF = (taskName: nodeSpec: servicePortName: portNum: (groupDefaults // {
 
         # Specifies the number of instances that should be running under for
         # this group. This value must be non-negative. This defaults to the min
@@ -314,7 +314,7 @@ let
               # application should bind to (envar only available for the
               # ports of current Tasks, not to resolve all port names).
               # Names need to be "node#" instead of "node-#" (without "-").
-              name = portName;
+              name = servicePortName;
               value =
                 if portNum != null && portNum != 0
                 then
@@ -422,7 +422,7 @@ let
             # the cluster. Names must adhere to RFC-1123 §2.1 and are limited to
             # alphanumeric and hyphen characters (i.e. [a-z0-9\-]), and be less
             # than 64 characters in length.
-            name = serviceName;
+            name = servicePortName;
             # Specifies a custom address to advertise in Consul or Nomad service
             # registration. If set, address_mode must be in auto mode. Useful
             # with interpolation - for example to advertise the public IP
@@ -449,7 +449,7 @@ let
             # - host:   Advertise the host port for this service. port must
             #           match a port label specified in the network block.
             # Here we use "network"->"port"->"name" specified in the Group.
-            port = portName;
+            port = servicePortName;
             # Checks of type "script" need "consul" instead of "nomad" as
             # service provider, so as healthcheck we are using a supervisord
             # "program".
@@ -654,10 +654,8 @@ let
                 let scriptValue = profileData.node-services."${nodeSpec.name}".start.value;
                 in if execTaskDriver
                   then (startScriptToGoTemplate
-                    taskName                         # taskName
-                    serviceName                      # serviceName
-                    portName                         # portName (can't have "-")
                     nodeSpec                         # nodeSpec
+                    servicePortName                  # servicePortName
                     scriptValue                      # startScript
                   )
                   else scriptValue
@@ -815,7 +813,7 @@ let
 
                 # This can be used here but not with "exec"!
                 # All names of the form node#, without the "-", instead of node-#
-                ports = [ portName ];
+                ports = [ servicePortName ];
 
                 # A list of /container_path strings for tmpfs mount points. See
                 # podman run --tmpfs options for details.
@@ -844,11 +842,12 @@ let
             name = "tracer";
             value = valueF
               "tracer"                               # taskName
-              "perf-tracer"                          # serviceName
-              "tracer"                               # portName (can't have "-")
-              0                                      # portNum
               # TODO: Which region?
-              {region=null;};                        # node-spec
+              {region=null;}                         # node-spec
+              # (can't have "-")
+              "perftracer"                           # servicePortName
+              0                                      # portNum
+            ;
           }
         ]
         ++
@@ -864,10 +863,11 @@ let
             name = nodeSpec.name;
             value = valueF
               nodeSpec.name                          # taskName
-              ("perf-node-" + (toString nodeSpec.i)) # serviceName
-              ("node" + (toString nodeSpec.i))       # portName (can't have "-")
+              nodeSpec                               # node-spec
+              # (can't have "-")
+              (nodeSpecToServicePortName nodeSpec)   # servicePortName
               nodeSpec.port                          # portNum
-              nodeSpec;                              # node-spec
+            ;
           })
           (profileData.node-specs.value)
         )
@@ -1107,13 +1107,19 @@ let
   # https://developer.hashicorp.com/nomad/docs/job-specification/hcl2/expressions#string-literals
   escapeTemplate = str: builtins.replaceStrings ["\${" "%{"] ["\$\${" "%%{"] str;
 
-  startScriptToGoTemplate = taskName: serviceName: portName: nodeSpec: startScript:
+  # A single node's service and network port use the same name, they are
+  # "perfnode0" .. "perfnode53" without "-" because they are not allowed for
+  # port names, I guess it's because Nomad uses them to create "NOMAD_HOST_IP_?"
+  # like envars.
+  nodeSpecToServicePortName = nodeSpec: "${"perfnode" + (toString nodeSpec.i)}";
+
+  startScriptToGoTemplate = nodeSpec: servicePortName: startScript:
     builtins.replaceStrings
       [
         # Address string from
         ''--host-addr 127.0.0.1''
         # Port string from
-        ''--port ${toString profileData.node-specs.value."${nodeSpec.name}".port}''
+        ''--port ${toString nodeSpec.port}''
       ]
       # On cloud deployments with cardano world, that uses AWS, the hosts at the
       # Linux level aren't aware of the EIP public address they have, so the
@@ -1121,18 +1127,18 @@ let
       # An alternative is to bind to 0.0.0.0 but I prefer being more specific.
       [
         # Address string to
-        ''--host-addr {{ env "NOMAD_HOST_IP_${portName}" }}''
+        ''--host-addr {{ env "NOMAD_HOST_IP_${servicePortName}" }}''
         # Alternatives (may not work):
-        #''--host-addr {{ env "NOMAD_IP_${portName}" }}''
-        #''--host-addr {{range nomadService "${serviceName}"}}{{.Address}}{{end}}''
+        #''--host-addr {{ env "NOMAD_IP_${servicePortName}" }}''
+        #''--host-addr {{range nomadService "${servicePortName}"}}{{.Address}}{{end}}''
         #''--host-addr 0.0.0.0''
 
         # Port string to
-        ''--port {{ env "NOMAD_HOST_PORT_${portName}" }}''
+        ''--port {{ env "NOMAD_HOST_PORT_${servicePortName}" }}''
         # Alternatives (may not work):
-        #''--port {{ env "NOMAD_PORT_${portName}" }}''
+        #''--port {{ env "NOMAD_PORT_${servicePortName}" }}''
         #''--port {{ env "NOMAD_ALLOC_PORT_${name}" }}''
-        #''--port {{range nomadService "${serviceName}"}}{{.Port}}{{end}}''
+        #''--port {{range nomadService "${servicePortName}"}}{{.Port}}{{end}}''
       ]
       startScript
   ;
@@ -1172,8 +1178,8 @@ let
       # the actual node the "template" will run.
       mergedNodeSpecToStr = mergedNodeSpecs: ''
         {
-            "addr": "{{range nomadService "${"perf-node-" + (toString mergedNodeSpecs.i)}"}}{{.Address}}{{end}}"
-          , "port":  {{range nomadService "${"perf-node-" + (toString mergedNodeSpecs.i)}"}}{{.Port}}{{end}}
+            "addr": "{{range nomadService "${(nodeSpecToServicePortName mergedNodeSpecs)}"}}{{.Address}}{{end}}"
+          , "port":  {{range nomadService "${(nodeSpecToServicePortName mergedNodeSpecs)}"}}{{.Port}}{{end}}
           , "valency": ${toString mergedNodeSpecs.valency}
         }
       '';
@@ -1196,8 +1202,8 @@ let
     let
       mergedNodeSpecToStr = mergedNodeSpecs: ''
         {
-            "addr": "{{range nomadService "${"perf-node-" + (toString mergedNodeSpecs.i)}"}}{{.Address}}{{end}}"
-          , "port":  {{range nomadService "${"perf-node-" + (toString mergedNodeSpecs.i)}"}}{{.Port}}{{end}}
+            "addr": "{{range nomadService "${(nodeSpecToServicePortName mergedNodeSpecs)}"}}{{.Address}}{{end}}"
+          , "port":  {{range nomadService "${(nodeSpecToServicePortName mergedNodeSpecs)}"}}{{.Port}}{{end}}
         }
       '';
     in
