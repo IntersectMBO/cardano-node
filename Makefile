@@ -94,9 +94,9 @@ PROFILES_VENDOR           := dish dish-plutus dish-10M dish-10M-plutus
 # "qa" and "perf" namespaces for cardano world (world.dev.cardano.org) Nomad
 # Not all local profiles are compatible (yet) with a cloud run
 # Cloud version of "default", "ci-test" and "ci-bench"
-PROFILES_CW_QA            := cw-qa-default cw-qa-ci-test cw-qa-ci-bench
+PROFILES_CW_QA            := default-cw-qa ci-test-cw-qa ci-bench-cw-qa
 # The 52+explorer profile
-PROFILES_CW_PERF          := cw-perf-value
+PROFILES_CW_PERF          := default-cw-perf ci-test-cw-perf ci-bench-cw-perf cw-perf-value
 
 LOCAL_PROFILES += $(PROFILES_BASE)
 LOCAL_PROFILES += $(PROFILES_FAST)

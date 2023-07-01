@@ -600,6 +600,14 @@ def all_profile_variants:
   , { name: "default"
     , desc: "Default, as per nix/workbench/profile/prof0-defaults.jq"
     }
+  , $cardano_world_qa *
+    { name: "default-cw-qa"
+    , desc: "Default, but on Cardano World QA"
+    }
+  , $cardano_world_perf *
+    { name: "default-cw-perf"
+    , desc: "Default, but on Cardano World perf"
+    }
   , $plutus_base * $costmodel_v8_preview * $plutus_loop_counter *
     { name: "plutus"
     , desc: "Default with Plutus workload: CPU/memory limit saturation counter loop"
@@ -623,10 +631,6 @@ def all_profile_variants:
   , $scenario_tracer_only *
     { name: "tracer-only"
     , desc: "Idle scenario:  start only the tracer & detach from tty;  no termination"
-    }
-  , $cardano_world_qa *
-    { name: "cw-qa-default"
-    , desc: "Default, but on Cardano World QA"
     }
 
   ## Fastest profile to pass analysis: just 1 block
@@ -663,8 +667,12 @@ def all_profile_variants:
     { name: "ci-test-rtview"
     }
   , $citest_base * $cardano_world_qa *
-    { name: "cw-qa-ci-test"
+    { name: "ci-test-cw-qa"
     , desc: "ci-test, but on Cardano World QA"
+    }
+  , $citest_base * $cardano_world_perf *
+    { name: "ci-test-cw-perf"
+    , desc: "ci-test, but on Cardano World perf"
     }
 
   ## CI variants: bench duration, 15 blocks
@@ -690,8 +698,12 @@ def all_profile_variants:
     { name: "ci-bench-rtview"
     }
   , $cibench_base * $cardano_world_qa *
-    { name: "cw-qa-ci-bench"
+    { name: "ci-bench-cw-qa"
     , desc: "ci-bench but on Cardano World QA"
+    }
+  , $cibench_base * $cardano_world_perf *
+    { name: "ci-bench-cw-perf"
+    , desc: "ci-bench but on Cardano World perf"
     }
 
   ## CI variants: test duration, 3 blocks, dense10
