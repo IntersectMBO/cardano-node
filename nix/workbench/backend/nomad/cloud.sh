@@ -394,7 +394,7 @@ backend_nomadcloud() {
           # ".attributes.unique.platform.aws.mac".
           if test -z "${NOMAD_CLIENTS_FILE:-}" || ! test -f "${NOMAD_CLIENTS_FILE}"
           then
-            fatal "No \"\$NOMAD_CLIENTS_FILE\""
+            fatal "No \"\$NOMAD_CLIENTS_FILE\". For reproducible builds provide this file that ensures cluster nodes are always placed on the same machines, or create a new one with 'wb nomad nodes' if Nomad Clients have suffered changes and runs fail with \"placement errors\""
           fi
           # For each (instance-type, datacener/region) we look incrementally for
           # the unique AWS EC2 "instance-id" only after ordering the Nomad

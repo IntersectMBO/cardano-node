@@ -21,6 +21,11 @@ usage_nomad() {
                      Gets Cardano World's AWS S3 crdentials from Vault in JSON
                      (WARNING: shows secrets!!!).
 
+    $(helpcmd nodes)
+                     Creates a JSON array with all the SRE's perf nodes in a
+                     format that can be used to ensure cloud runs are
+                     reproducible.
+
     $(helpcmd agents start SERVER-NAME CLIENT-NAME TASK-DRIVER-NAME)
                      Start a default 1 server 1 client Nomad cluster.
     $(helpcmd agents stop  SERVER-NAME CLIENT-NAME TASK-DRIVER-NAME)
@@ -309,6 +314,97 @@ wb_nomad() {
           usage_nomad
         ;;
       esac
+    ;;
+################################################################################
+### nodes ) ###################################################################
+################################################################################
+    nodes )
+      local usage="USAGE: wb nomad ${op}"
+      local nomad_address="https://nomad.world.dev.cardano.org"
+      local nomad_token
+      nomad_token=$(wb_nomad vault world nomad-token)
+      # Fetch the status of all nodes of class "perf"
+      local perf_nodes
+      perf_nodes="$(NOMAD_TOKEN="${nomad_token}" NOMAD_NAMESPACE=perf nomad node status -address="${nomad_address}" -filter 'NodeClass=="perf"' -json)"
+      # Create the base JSON string but without the "attributes" because those
+      # are only available when fetching the status of individual nodes.
+      local nodes_json
+      nodes_json="$( \
+          echo "${perf_nodes}" \
+        | \
+          jq \
+            "map( {                                   \
+                \"id\":         .ID                   \
+              , \"name\":       .Name                 \
+              , \"datacenter\": .Datacenter           \
+              , \"ip\":         .Address              \
+              , \"attributes\":  null                 \
+            } )"                                      \
+      )"
+      # For each node
+      local nodes_ids
+      nodes_ids="$( \
+          echo "${nodes_json}" \
+        | \
+          jq -S -r "map(.id) | sort | join (\" \")" \
+      )"
+      for node_id in ${nodes_ids[*]}
+      do
+        # Fetch the attributes
+        local node_attributes
+        node_attributes="$(NOMAD_TOKEN="${nomad_token}" NOMAD_NAMESPACE=perf nomad node status -address="${nomad_address}" -json "${node_id}" | jq .Attributes)"
+        # Add the attributes of this node to the JSON string
+        nodes_json="$( \
+            echo "${nodes_json}" \
+          | \
+            jq --argjson attrs "${node_attributes}" "                          \
+                .[]                                                            \
+              |= (                                                             \
+                if ( .id == \"${node_id}\" )                                   \
+                then (                                                         \
+                    .attributes                                                \
+                  |=                                                           \
+                    {                                                          \
+                      \"os\": {                                                \
+                         \"name\": \$attrs[\"os.name\"]                        \
+                       , \"version\": \$attrs[\"os.version\"]                  \
+                      }                                                        \
+                    , \"platform\": {                                          \
+                        \"aws\": {                                             \
+                            \"ami-id\": \$attrs[\"platform.aws.ami-id\"]       \
+                          , \"instance-type\": \$attrs[\"platform.aws.instance-type\"] \
+                          , \"placement\": {                                   \
+                              \"availability-zone\": \$attrs[\"platform.aws.placement.availability-zone\"] \
+                          }                                                    \
+                        }                                                      \
+                      }                                                        \
+                    , \"unique\": {                                            \
+                        \"hostname\": \$attrs[\"unique.hostname\"]             \
+                      , \"network\": {                                         \
+                            \"ip-address\": \$attrs[\"unique.network.ip-address\"] \
+                        }                                                      \
+                      , \"platform\": {                                        \
+                            \"aws\": {                                         \
+                                \"hostname\":        \$attrs[\"unique.platform.aws.hostname\"       ] \
+                              , \"instance-id\":     \$attrs[\"unique.platform.aws.instance-id\"    ] \
+                              , \"local-hostname\":  \$attrs[\"unique.platform.aws.local-hostname\" ] \
+                              , \"local-ipv4\":      \$attrs[\"unique.platform.aws.local-ipv4\"     ] \
+                              , \"mac\":             \$attrs[\"unique.platform.aws.mac\"            ] \
+                              , \"public-hostname\": \$attrs[\"unique.platform.aws.public-hostname\"] \
+                              , \"public-ipv4\":     \$attrs[\"unique.platform.aws.public-ipv4\"    ] \
+                            }                                                  \
+                        }                                                      \
+                      }                                                        \
+                    }                                                          \
+                ) else (                                                       \
+                  .                                                            \
+                ) end                                                          \
+              )                                                                \
+            " \
+        )"
+      done
+      # Output the JSON string ordered by Nomad Client "id"
+      echo "${nodes_json}" | jq '. | sort_by(.id)'
     ;;
 ################################################################################
 ### agents ) ###################################################################
