@@ -388,7 +388,7 @@ def all_profile_variants:
     ({ extra_desc:                     "with legacy iohk-monitoring"
      , suffix:                         "iomf"
      }|
-     .node.tracing_backend           = "iohk-monitoring"
+     .node.tracing_backend            = "iohk-monitoring"
     ) as $old_tracing
   |
     ({ extra_desc:                     "with P2P networking"
@@ -396,6 +396,39 @@ def all_profile_variants:
      }|
      .node.verbatim.EnableP2P         = true
     ) as $p2p
+  |
+  ##
+  ### Definition vocabulary:  RTS config variants
+  ##
+    ({ extra_desc:                     "RTSflags A4m"
+     , suffix:                         "rtsA4m"
+     }|
+     .node.rts_flags_override         = ["-A4m"]
+    ) as $rts_A4m
+  |
+    ({ extra_desc:                     "RTSflags A64m"
+     , suffix:                         "rtsA64m"
+     }|
+     .node.rts_flags_override         = ["-A64m"]
+    ) as $rts_A64m
+  |
+    ({ extra_desc:                     "RTSflags N3"
+     , suffix:                         "rtsN3"
+     }|
+     .node.rts_flags_override         = ["-N3"]
+    ) as $rts_N3
+  |
+    ({ extra_desc:                     "RTSflags A4m N3"
+     , suffix:                         "rtsA4mN3"
+     }|
+     .node.rts_flags_override         = ["-A4m", "-N3"]
+    ) as $rts_A4mN3
+  |
+    ({ extra_desc:                     "RTSflags A64m N3"
+     , suffix:                         "rtsA64mN3"
+     }|
+     .node.rts_flags_override         = ["-A64m", "-N3"]
+    ) as $rts_A64mN3
   |
   ##
   ### Definition vocabulary:  scenario
@@ -813,6 +846,23 @@ def all_profile_variants:
     }
   , $forge_stress_pre_base * $without_tracer *
     { name: "forge-stress-pre-notracer"
+    }
+
+  ## Large dataset, small cluster (3 nodes), variants for RTS parametrization
+  , $forge_stress_pre_base * $rts_A4m *
+    { name: "forge-stress-pre-rtsA4m"
+    }
+  , $forge_stress_pre_base * $rts_A64m *
+    { name: "forge-stress-pre-rtsA64m"
+    }
+  , $forge_stress_pre_base * $rts_N3 *
+    { name: "forge-stress-pre-rtsN3"
+    }
+  , $forge_stress_pre_base * $rts_A4mN3 *
+    { name: "forge-stress-pre-rtsA4mN3"
+    }
+  , $forge_stress_pre_base * $rts_A64mN3 *
+    { name: "forge-stress-pre-rtsA64mN3"
     }
 
   , $scenario_chainsync * $chaindb_early_byron *
