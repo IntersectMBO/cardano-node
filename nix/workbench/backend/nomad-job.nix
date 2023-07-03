@@ -521,7 +521,7 @@ let
               env = false;
               destination = "${task_statedir}/tracer/start.sh";
               data = escapeTemplate
-                profileData.tracer-service.startupScript.value;
+                profileData.tracer-service.start.value;
               change_mode = "noop";
               error_on_missing_key = true;
               perms = "744"; # Only for every "start.sh" script. Default: "644"
@@ -560,7 +560,7 @@ let
               env = false;
               destination = "${task_statedir}/${nodeSpec.name}/start.sh";
               data = escapeTemplate (
-                let scriptValue = profileData.node-services."${nodeSpec.name}".startupScript.value;
+                let scriptValue = profileData.node-services."${nodeSpec.name}".start.value;
                 in if execTaskDriver
                   then (startScriptToGoTemplate
                     taskName                         # taskName
@@ -580,7 +580,7 @@ let
               env = false;
               destination = "${task_statedir}/${nodeSpec.name}/config.json";
               data = escapeTemplate (lib.generators.toJSON {}
-                profileData.node-services."${nodeSpec.name}".nodeConfig.value);
+                profileData.node-services."${nodeSpec.name}".config.value);
               change_mode = "noop";
               error_on_missing_key = true;
             }
@@ -606,7 +606,7 @@ let
               env = false;
               destination = "${task_statedir}/generator/start.sh";
               data = escapeTemplate
-                profileData.generator-service.startupScript.value;
+                profileData.generator-service.start.value;
               change_mode = "noop";
               error_on_missing_key = true;
               perms = "744"; # Only for every "start.sh" script. Default: "644"
@@ -616,7 +616,7 @@ let
               env = false;
               destination = "${task_statedir}/generator/run-script.json";
               data = escapeTemplate (
-                let runScript = profileData.generator-service.runScript;
+                let runScript = profileData.generator-service.config;
                 in if execTaskDriver
                   then (runScriptToGoTemplate runScript.value)
                   else (__readFile            runScript.JSON )
@@ -633,7 +633,7 @@ let
               env = false;
               destination = "${task_statedir}/healthcheck/start.sh";
               data = escapeTemplate
-                profileData.healthcheck-service.startupScript.value;
+                profileData.healthcheck-service.start.value;
               change_mode = "noop";
               error_on_missing_key = true;
               perms = "744"; # Only for every "start.sh" script. Default: "644"

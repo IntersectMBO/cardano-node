@@ -57,7 +57,7 @@ let
     let
       generatorNodeConfigDefault =
         (__fromJSON (__readFile ../../../bench/tx-generator-config-base.json))
-        // { inherit (exemplarNode.nodeConfig.value)
+        // { inherit (exemplarNode.config.value)
                Protocol
                ByronGenesisFile
                ShelleyGenesisFile
@@ -77,12 +77,6 @@ let
                      in __trace "generator target:  ${name}/${ip}:${toString port}" ip;
               })
             (filterAttrs (_: spec: spec.isProducer) nodeSpecs);
-
-          ## nodeConfig of the locally running node.
-          localNodeConf = removeAttrs exemplarNode.serviceConfig.value ["executable"];
-
-          ## The nodeConfig of the Tx generator itself.
-          nodeConfig = finaliseGeneratorConfig generatorNodeConfigDefault;
 
           dsmPassthrough = {
             # rtsOpts = ["-xc"];
@@ -134,25 +128,16 @@ let
       serviceConfig = generatorServiceConfig nodeSpecs;
       service       = generatorServiceConfigService serviceConfig;
     in {
-      serviceConfig = {
-        value = serviceConfig;
-        JSON  = jsonFilePretty "generator-service-config.json"
-                (__toJSON serviceConfig);
+      start = rec {
+        value = ''
+          #!${pkgs.stdenv.shell}
+
+          ${service.script}
+          '';
+        JSON = pkgs.writeScript "startup-generator.sh" value;
       };
 
-      service = {
-        value = service;
-        JSON  = jsonFilePretty "generator-service.json"
-                (__toJSON service);
-      };
-
-      nodeConfig = {
-        value = service.nodeConfig;
-        JSON  = jsonFilePretty "generator-config.json"
-                (__toJSON service.nodeConfig);
-      };
-
-      runScript = rec {
+      config = rec {
         # TODO / FIXME
         # the string '...' is not allowed to refer to a store path (such as '')
         # value = service.decideRunScript service;
@@ -160,18 +145,9 @@ let
         JSON  = jsonFilePretty "generator-run-script.json"
                 (service.decideRunScript service);
       };
-
-      startupScript = rec {
-        JSON = pkgs.writeScript "startup-generator.sh" value;
-        value = ''
-          #!${pkgs.stdenv.shell}
-
-          ${service.script}
-          '';
-      };
     })
     nodeSpecs;
 in
 {
-  inherit generator-service mkGeneratorScript;
+  inherit generator-service;
 }

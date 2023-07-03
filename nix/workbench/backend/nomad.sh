@@ -187,9 +187,6 @@ backend_nomad() {
           done
         elif test "${nomad_task_driver}" = "podman"
         then
-          # FIXME: Looks like I'm not using these ones!!!
-         #cp $(jq '."tracer-config"'  -r ${dir}/profile/tracer-service.json) "${dir}"/tracer/tracer-config.json
-         #cp $(jq '."service-config"' -r ${dir}/profile/tracer-service.json) "${dir}"/tracer/service-config.json
           cp $(jq '."config"' -r ${dir}/profile/tracer-service.json) "${dir}"/tracer/config.json
           cp $(jq '."start"'  -r ${dir}/profile/tracer-service.json) "${dir}"/tracer/start.sh
         fi
